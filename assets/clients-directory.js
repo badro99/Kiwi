@@ -26,7 +26,7 @@
   var campaignsEnabled = function () { return window.KiwiConfig?.features?.ultraCampaigns === true; };
 
   var STR = {
-    fr: { title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
+    fr: { merge: 'Fusionner', mergePick: 'Fiche à fusionner dans celle-ci', mergeConfirm: 'Confirmer la fusion', mergeExplain: 'Les visites et dépenses seront additionnées, sans compter deux fois un achat identifié. Points et tampons seront réunis, notes concaténées, étiquettes réunies. Cette fiche conserve ses coordonnées, sauf les champs vides. Les avoirs seront rattachés à cette fiche sans modifier leurs soldes ni leurs échéances. L’ancien identifiant continuera de fonctionner. Cette opération ne peut pas être annulée.', mergeError: 'Fusion impossible. Vérifiez vos droits propriétaire ou responsable et réessayez.', mergeDone: 'Fiches fusionnées', title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
       search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', retention: 'Fidélisation', newClient: '+ Nouveau client',
       total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
       seg: { all: 'Tous', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
@@ -39,7 +39,7 @@
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
         consentHint: 'Facultatif · cochez uniquement les canaux acceptés par le client pour les communications marketing.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
-    en: { title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
+    en: { merge: 'Merge', mergePick: 'Profile to merge into this one', mergeConfirm: 'Confirm merge', mergeExplain: 'Visits and spend will be added, counting each identified purchase once. Points and stamps will be combined, notes concatenated and tags united. This profile keeps its contact details unless empty. Credit instruments will move to this profile with their balances and expiry dates preserved. The old ID will keep working. This operation cannot be undone.', mergeError: 'Merge unavailable. Check your owner or manager access and retry.', mergeDone: 'Profiles merged', title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
       search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', retention: 'Retention', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
@@ -51,7 +51,7 @@
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
         consentHint: 'Optional · select only the channels the customer has agreed to for marketing messages.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
-    ar: { title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
+    ar: { merge: 'دمج', mergePick: 'الملف المراد دمجه في هذا الملف', mergeConfirm: 'تأكيد الدمج', mergeExplain: 'ستجمع الزيارات والمبالغ مع احتساب كل عملية شراء محددة مرة واحدة. ستجمع النقاط والأختام والملاحظات والوسوم. يحتفظ هذا الملف ببيانات الاتصال إلا إذا كانت فارغة. ستنقل قسائم الرصيد إلى هذا الملف مع الاحتفاظ بأرصدتها وتواريخ صلاحيتها. سيستمر المعرف القديم في العمل. لا يمكن التراجع عن هذه العملية.', mergeError: 'تعذر الدمج. تحقق من صلاحيات المالك أو المدير وأعد المحاولة.', mergeDone: 'تم دمج الملفين', title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
       search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', retention: 'الاحتفاظ', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
@@ -86,7 +86,7 @@
       nationality: 'Nationalité', identity: 'Passeport / ID', language: 'Langue', room: 'Préférences chambre', food: 'Préférences repas', allergies: 'Allergies', access: 'Besoins particuliers', stays: 'Séjours' },
     en: { title: 'Hospitality+', sub: 'Every stay enriches one guest profile · identity, preferences and personalised care.', empty: 'No guests yet · create the first profile with “New customer”.',
       nationality: 'Nationality', identity: 'Passport / ID', language: 'Language', room: 'Room preferences', food: 'Food preferences', allergies: 'Allergies', access: 'Accessibility needs', stays: 'Stays' },
-    ar: { title: 'Hospitality+', sub: 'كل إقامة تثري ملف ضيف واحداً · الهوية والتفضيلات والعناية الشخصية.', empty: 'لا يوجد ضيوف بعد · أنشئ أول ملف بزر «عميل جديد».',
+    ar: { merge: 'دمج', mergePick: 'الملف المراد دمجه في هذا الملف', mergeConfirm: 'تأكيد الدمج', mergeExplain: 'ستجمع الزيارات والمبالغ مع احتساب كل عملية شراء محددة مرة واحدة. ستجمع النقاط والأختام والملاحظات والوسوم. يحتفظ هذا الملف ببيانات الاتصال إلا إذا كانت فارغة. ستنقل قسائم الرصيد إلى هذا الملف مع الاحتفاظ بأرصدتها وتواريخ صلاحيتها. سيستمر المعرف القديم في العمل. لا يمكن التراجع عن هذه العملية.', mergeError: 'تعذر الدمج. تحقق من صلاحيات المالك أو المدير وأعد المحاولة.', mergeDone: 'تم دمج الملفين', title: 'Hospitality+', sub: 'كل إقامة تثري ملف ضيف واحداً · الهوية والتفضيلات والعناية الشخصية.', empty: 'لا يوجد ضيوف بعد · أنشئ أول ملف بزر «عميل جديد».',
       nationality: 'الجنسية', identity: 'جواز السفر / الهوية', language: 'اللغة', room: 'تفضيلات الغرفة', food: 'تفضيلات الطعام', allergies: 'الحساسيات', access: 'احتياجات خاصة', stays: 'الإقامات' },
   };
 
@@ -511,6 +511,41 @@
     kitPublish();
   };
 
+  function openMerge(c, T) {
+    var book = window.KiwiClients && KiwiClients.bookId();
+    if (!book) return;
+    var candidates = KiwiClients.list(book).filter(function (row) { return row.id !== c.id; });
+    var m = Kiwi.modal({ title: T.merge, width: 460, body:
+      '<p>' + esc(T.mergePick) + ': <b>' + esc(c.name || c.id) + '</b></p>' +
+      '<label class="cd-f"><span>' + esc(T.mergePick) + '</span><select>' + candidates.map(function (row) {
+        return '<option value="' + esc(row.id) + '">' + esc((row.name || row.id) + (row.phone ? ' · ' + row.phone : '')) + '</option>';
+      }).join('') + '</select></label><p>' + esc(T.mergeExplain) + '</p>' +
+      '<button type="button" class="kb"' + (candidates.length ? '' : ' disabled') + '>' + esc(T.merge) + '</button>' });
+    var select = m.el.querySelector('select'), button = m.el.querySelector('button');
+    button.addEventListener('click', function () {
+      var from = select.value;
+      if (!from || from === c.id) return;
+      var source = candidates.filter(function (row) { return row.id === from; })[0];
+      if (!source) return;
+      var confirm = Kiwi.modal({ title: T.mergeConfirm, width: 460, body:
+        '<p>' + esc(source.name || from) + ' → <b>' + esc(c.name || c.id) + '</b></p><p>' + esc(T.mergeExplain) + '</p>' +
+        '<button type="button" class="kb">' + esc(T.mergeConfirm) + '</button>' });
+      var submit = confirm.el.querySelector('button');
+      submit.addEventListener('click', async function () {
+        if (submit.disabled) return;
+        submit.disabled = true;
+        try {
+          var response = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: book, merge: { from: from, to: c.id } }) });
+          if (!response.ok) throw new Error('merge-refused');
+          confirm.close(); m.close();
+          KiwiClients.pull(function () {});
+          if (Kiwi.toast) Kiwi.toast(T.mergeDone);
+        } catch (_) { submit.disabled = false; if (Kiwi.toast) Kiwi.toast(T.mergeError, { type: 'error' }); }
+      });
+    });
+  }
+
   function openDetail(c, T) {
     if (!c || !window.Kiwi.modal) return;
     function row(k, v) { return v ? '<div class="cd-drow"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>' : ''; }
@@ -552,6 +587,7 @@
     var intl = /^00/.test(digits) ? digits.slice(2) : /^0\d{9}$/.test(digits) ? '212' + digits.slice(1) : digits;
     var link = function (href, label, cls) { return '<a class="cd-act' + (cls ? ' ' + cls : '') + '" href="' + esc(href) + '"' + (/^https:/.test(href) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(label) + '</a>'; };
     var actions = [
+      isRealTenant() && window.KiwiClients ? '<button type="button" class="cd-act" data-client-merge>' + esc(T.merge) + '</button>' : '',
       digits ? link('tel:' + (String(c.phone).trim().charAt(0) === '+' ? '+' : '') + digits, T.call || 'Call') : '',
       intl && c.consent ? link('https://wa.me/' + intl, T.whatsapp || 'WhatsApp') : '',
       c.email ? link('mailto:' + c.email, T.mail || 'Email') : ''
@@ -586,6 +622,6 @@
       var card = m.el.querySelector('.kiwi-modal');
       if (card && !card.querySelector('.cd-grabber')) { var grab = document.createElement('div'); grab.className = 'cd-grabber'; grab.setAttribute('aria-hidden', 'true'); card.insertBefore(grab, card.firstChild); }
     }
-    m.el.addEventListener('click', function (e) { if (e.target.closest('[data-close]')) m.close(); });
+    m.el.addEventListener('click', function (e) { if (e.target.closest('[data-client-merge]')) { m.close(); openMerge(c, T); return; } if (e.target.closest('[data-close]')) m.close(); });
   }
 })();

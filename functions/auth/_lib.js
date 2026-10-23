@@ -89,6 +89,10 @@ const COMMON_PASSWORDS = new Set([
   'welcome', 'bienvenue', 'administrator', 'princess', 'iloveyou'
 ]);
 
+/**
+ * @param {unknown} password
+ * @param {{email?: unknown, business?: unknown}} [ctx]
+ */
 export function passwordProblem(password, ctx = {}) {
   const p = String(password || '');
   if (p.length < 10) return 'short';
@@ -134,6 +138,9 @@ async function hmacHex(secret, message) {
  * server verifies that PIN, it can instead mint this short-lived capability.
  * It is bound to one exact refund command, so stealing/replaying it cannot
  * authorize a different sale, amount, merchant or refund id. */
+/**
+ * @param {import('../../types/tenant').RefundClaims} claims
+ */
 export async function managerRefundProof(authSecret, claims) {
   const body = {
     v: 1,
@@ -153,6 +160,9 @@ export async function managerRefundProof(authSecret, claims) {
   return payload + '.' + await hmacHex(authSecret, 'kiwi-manager-refund-v1:' + payload);
 }
 
+/**
+ * @returns {Promise<import('../../types/tenant').RefundProof | null>}
+ */
 export async function readManagerRefundProof(token, authSecret) {
   if (!token || !authSecret || typeof token !== 'string' || token.indexOf('.') < 1) return null;
   const dot = token.indexOf('.');
@@ -163,7 +173,8 @@ export async function readManagerRefundProof(token, authSecret) {
   let body;
   try { body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
   if (!body || body.v !== 1 || !Number.isFinite(body.exp) || body.exp < Date.now()) return null;
-  return body;
+  // Trust boundary: signature, proof version and expiry checked above.
+  return /** @type {import('../../types/tenant').RefundProof} */ (body);
 }
 
 /* Le même principe, pour un MOUVEMENT DE STOCK décidé au comptoir.
@@ -180,6 +191,9 @@ export function stockProofScope(ids) {
     .map((id) => String(id || '').slice(0, 80)).filter(Boolean).sort().join(',').slice(0, 2000);
 }
 
+/**
+ * @param {import('../../types/tenant').StockClaims} claims
+ */
 export async function managerStockProof(authSecret, claims) {
   const body = {
     v: 1,
@@ -195,6 +209,10 @@ export async function managerStockProof(authSecret, claims) {
   return payload + '.' + await hmacHex(authSecret, 'kiwi-manager-stock-v1:' + payload);
 }
 
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @returns {Promise<import('../../types/tenant').StockProof | null>}
+ */
 export async function readManagerStockProof(token, authSecret, merchant) {
   if (!token || !authSecret || typeof token !== 'string' || token.indexOf('.') < 1) return null;
   const dot = token.indexOf('.');
@@ -205,17 +223,26 @@ export async function readManagerStockProof(token, authSecret, merchant) {
   try { body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
   if (!body || body.v !== 1 || !Number.isFinite(body.exp) || body.exp < Date.now()) return null;
   if (merchant && body.merchant !== merchant) return null;
-  return body;
+  // Trust boundary: signature, proof version and expiry checked above.
+  return /** @type {import('../../types/tenant').StockProof} */ (body);
 }
 
 // Identity attestation only: the receiving route still enforces merchant/till
 // authorization. Never trust a client-supplied display name as a PIN identity.
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {{id?: import('../../types/tenant').EmployeeInput, name?: string, role?: string}} staff
+ */
 export async function tillActorProof(secret, merchant, staff) {
   if (!secret || !merchant || !staff?.id) return '';
   const body = { merchant, id: staff.id, name: staff.name, role: staff.role, exp: Date.now() + 5 * 60000 };
   const payload = bytesToB64url(encoder.encode(JSON.stringify(body)));
   return payload + '.' + await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @returns {Promise<import('../../types/tenant').TillActor | null>}
+ */
 export async function readTillActorProof(token, secret, merchant) {
   if (!secret || typeof token !== 'string' || token.length > 2048 || !token.includes('.')) return null;
   const [payload, signature] = token.split('.');
@@ -223,7 +250,8 @@ export async function readTillActorProof(token, secret, merchant) {
   if (!timingSafeEqualHex(signature || '', expected)) return null;
   try {
     const body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload)));
-    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > Date.now() ? body : null;
+    // Trust boundary: signature, merchant match, identity and expiry checked here.
+    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > Date.now() ? /** @type {import('../../types/tenant').TillActor} */ (body) : null;
   } catch (_) { return null; }
 }
 
@@ -274,6 +302,9 @@ export const TERMINAL_COOKIE = 'kiwi_terminal';
  * ne tombe au déploiement. Au premier dépairage, elle cesse de l'être : c'est
  * exactement ce qu'on attend d'une révocation.
  * ───────────────────────────────────────────────────────────────────────── */
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export async function tillToken(authSecret, merchant, epoch = 0) {
   const n = Math.max(0, Math.round(Number(epoch) || 0));
   const sig = await hmacHex(authSecret, 'kiwi-till-v2:' + String(merchant || '') + ':' + n);
@@ -291,6 +322,10 @@ export async function tillToken(authSecret, merchant, epoch = 0) {
  * l'ancienne forme (sans appareil) reste valable jusqu'à ce que la caisse le
  * renouvelle (GET /api/pair/state le remplace dès qu'elle prouve son terminal). */
 export const DEVICE_ID = /^[A-Za-z0-9_-]{12,80}$/;
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').DeviceInput} deviceId
+ */
 export async function tillDeviceToken(authSecret, merchant, epoch, deviceId) {
   const n = Math.max(0, Math.round(Number(epoch) || 0));
   const d = String(deviceId || '');
@@ -309,6 +344,10 @@ export async function ensureTillDevices(env) {
 /* L'appairage (ou sa réparation) inscrit l'appareil et lève une ancienne
  * révocation : le propriétaire a volontairement donné un nouveau code. */
 const tillDeviceSeenByDb = new WeakMap();
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').DeviceInput} deviceId
+ */
 export async function recordTillDevice(env, merchant, deviceId, opts) {
   if (!env || !env.DB || !merchant || !DEVICE_ID.test(String(deviceId || ''))) return false;
   const now = Date.now();
@@ -342,6 +381,10 @@ const tillDeviceCacheRefs = new Set();
 /* Même compromis que le millésime : une minute de mémoire d'isolat. Table
  * absente = aucun retrait n'a jamais pu être écrit (seul le retrait la crée
  * avec l'appairage), donc « non retiré » ; une vraie panne reste indisponible. */
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').DeviceInput} deviceId
+ */
 export async function tillDeviceRevoked(env, merchant, deviceId) {
   const key = String(merchant || '') + '\u0000' + String(deviceId || '');
   if (!env || !env.DB) return null;
@@ -361,6 +404,10 @@ export async function tillDeviceRevoked(env, merchant, deviceId) {
     return false;
   }
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').DeviceInput} deviceId
+ */
 export function forgetTillDevice(merchant, deviceId) {
   const key = String(merchant || '') + '\u0000' + String(deviceId || '');
   for (const cache of tillDeviceCacheRefs) cache.delete(key);
@@ -368,6 +415,9 @@ export function forgetTillDevice(merchant, deviceId) {
 
 /* La forme d'avant le millésime. Conservée pour la reconnaître, jamais pour en
  * émettre une nouvelle. */
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 async function legacyTillToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
 }
@@ -408,6 +458,9 @@ function missingSchema(err) {
   const msg = String((err && (err.message || err.cause && err.cause.message)) || err || '').toLowerCase();
   return msg.includes('no such column') || msg.includes('no such table') || msg.includes('has no column named');
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export async function tillEpoch(env, merchant) {
   const key = String(merchant || '');
   if (!key || !env || !env.DB) return null;
@@ -428,6 +481,9 @@ export async function tillEpoch(env, merchant) {
     return 0;
   }
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export function forgetTillEpoch(merchant, db = null) {
   const key = String(merchant || '');
   if (db && typeof db === 'object') {
@@ -438,6 +494,10 @@ export function forgetTillEpoch(merchant, db = null) {
   for (const cache of tillEpochCacheRefs) cache.delete(key);
 }
 
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').DeviceInput} terminalId
+ */
 export async function terminalToken(authSecret, merchant, terminalId, epoch = null) {
   /* Passing an epoch emits the revocable form used by current pairing flows.
    * The three-argument form remains the legacy v1 helper so existing epoch-0
@@ -453,9 +513,15 @@ export async function terminalToken(authSecret, merchant, terminalId, epoch = nu
 // Stable, store-scoped proof written to the physical attendance NFC tag. The
 // employee still needs their own authenticated session; this token only proves
 // that their phone opened the tag installed at that specific establishment.
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export async function attendanceTagToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-attendance-v1:' + String(merchant || ''));
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export async function isAttendanceTagFor(token, env, merchant) {
   if (!token || !env || !env.AUTH_SECRET || !merchant) return false;
   return timingSafeEqualHex(String(token), await attendanceTagToken(env.AUTH_SECRET, merchant));
@@ -476,16 +542,26 @@ export function terminalCookie(value) {
  * que rater la vérification. Même durée que le jeton qu'il accompagne. */
 export const TILL_STORE_COOKIE = 'kiwi_till_store';
 export const TILL_STORE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export function tillStoreCookie(merchant) {
   const slug = String(merchant || '');
   if (!TILL_STORE.test(slug)) return '';
   return `${TILL_STORE_COOKIE}=${slug}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
 }
 // True when the request proves it is the till of `merchant`.
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ */
 export async function isTillFor(request, env, merchant) {
   const result = await tillVerification(request, env, merchant);
   return result.ok;
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @returns {Promise<import('../../types/tenant').TillVerification>}
+ */
 export async function tillVerification(request, env, merchant) {
   const secret = env && env.AUTH_SECRET;
   if (!secret || !merchant) return { ok: false };
@@ -495,7 +571,8 @@ export async function tillVerification(request, env, merchant) {
   if (!Number.isFinite(epoch)) return { ok: false, unavailable: true };
   const parts = String(got).split('.');
   if (parts.length === 3) {
-    const deviceId = parts[1];
+    // Parsed device identity is format checked and its HMAC verified below.
+    const deviceId = /** @type {import('../../types/tenant').DeviceId} */ (parts[1]);
     if (!DEVICE_ID.test(deviceId)) return { ok: false };
     if (!timingSafeEqualHex(got, await tillDeviceToken(secret, merchant, epoch, deviceId))) return { ok: false };
     const revoked = await tillDeviceRevoked(env, merchant, deviceId);
@@ -510,6 +587,10 @@ export async function tillVerification(request, env, merchant) {
   }
   return { ok: false };
 }
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').DeviceInput} terminalId
+ */
 export async function isTerminalFor(request, env, merchant, terminalId) {
   const secret = env && env.AUTH_SECRET;
   if (!secret || !merchant || !terminalId) return false;
@@ -540,6 +621,9 @@ export const EMPLOYEE_COOKIE = 'kiwi_employee';
 // an accidental clock-out.
 const EMPLOYEE_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * @param {{merchant?: import('../../types/tenant').MerchantInput, staffId?: import('../../types/tenant').EmployeeInput, authVersion?: number}} employee
+ */
 export async function employeeToken(authSecret, employee) {
   const payload = {
     merchant: String(employee && employee.merchant || '').slice(0, 64),
@@ -551,6 +635,9 @@ export async function employeeToken(authSecret, employee) {
   return body + '.' + await hmacHex(authSecret, 'kiwi-employee-v1:' + body);
 }
 
+/**
+ * @returns {Promise<import('../../types/tenant').EmployeeSession | null>}
+ */
 export async function readEmployee(request, env) {
   const secret = env && env.AUTH_SECRET;
   const raw = readCookie(request, EMPLOYEE_COOKIE);
@@ -563,7 +650,8 @@ export async function readEmployee(request, env) {
   try {
     const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body)));
     if (!payload || !payload.merchant || !payload.staffId || Number(payload.exp) <= Date.now()) return null;
-    return payload;
+    // Trust boundary: employee signature and expiry verified above.
+    return /** @type {import('../../types/tenant').EmployeeSession} */ (payload);
   } catch (_) { return null; }
 }
 
@@ -574,6 +662,9 @@ export function employeeCookie(value) {
 // Même raison que sessionNeedsRefresh, côté employé : la session de service a
 // elle aussi une fenêtre fixe, et l'app employé d'une salle qui tourne tous les
 // jours n'a aucune raison de redemander un code au bout d'un mois pile.
+/**
+ * @param {import('../../types/tenant').EmployeeSession | null} payload
+ */
 export function employeeNeedsRefresh(payload) {
   if (!payload || typeof payload.exp !== 'number') return false;
   return payload.exp - Date.now() < EMPLOYEE_SESSION_MS / 2;
@@ -586,6 +677,10 @@ export function employeeNeedsRefresh(payload) {
  * A row-less revision is tolerated only for an explicitly zero-version
  * document, preserving old never-rotated rosters during migration. A missing
  * table, failed read, or malformed row is unavailable — never implicit zero. */
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {import('../../types/tenant').EmployeeInput} memberId
+ */
 export async function employeeAuthRevision(env, merchant, memberId, documentVersion = 0) {
   const docVersion = Math.max(0, Math.round(Number(documentVersion) || 0));
   const store = String(merchant || '').trim();
@@ -611,6 +706,9 @@ export async function employeeAuthRevision(env, merchant, memberId, documentVers
 // Resolve the credentials the owner records on Dashboard → Équipe. Email is
 // read from the private access mirror written with the cashier PIN roster. Old
 // stores without that mirror still fall back to their Team document.
+/**
+ * @returns {Promise<import('../../types/tenant').EmployeeCredential | import('../../types/tenant').AmbiguousCredential | null>}
+ */
 export async function findEmployeeCredential(env, emailValue, pinValue) {
   const email = String(emailValue || '').trim().toLocaleLowerCase('en').slice(0, 254);
   const pin = String(pinValue || '').trim();
@@ -696,8 +794,9 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
     const revision = await employeeAuthRevision(env, match.merchant, memberId, documentVersion);
     if (!revision.ok) return null;
     return {
-      id: memberId,
-      merchant: match.merchant,
+      // Trust boundary: unique credentials, merchant config and auth revision verified above.
+      id: /** @type {import('../../types/tenant').EmployeeId} */ (memberId),
+      merchant: /** @type {import('../../types/tenant').MerchantSlug} */ (match.merchant),
       name: [match.member.firstName, match.member.lastName].filter(Boolean).join(' ').trim(),
       role: String(match.member.function || match.member.department || 'staff'),
       status: cfg.status || 'active',
@@ -806,6 +905,9 @@ export async function namedOperatorId(request, env) {
  * entrer. Le code se sème hors ligne (tools/, ou un INSERT dans D1) — c'est déjà
  * le chemin documenté, et la production en compte deux au moment de ce
  * changement, donc aucun accès n'est perdu ici. */
+/**
+ * @returns {Promise<boolean>}
+ */
 export async function isOperator(request, env) {
   return !!(await namedOperatorId(request, env));
 }
@@ -911,6 +1013,9 @@ export async function sendMail(env, msg) {
 // session_epoch, qui couperait TOUS les appareils du compte (la caisse du
 // comptoir comme le téléphone du patron) pour un seul « Sortir ».
 const SID_RE = /^[0-9a-f]{32}$/;
+/**
+ * @param {import('../../types/tenant').AccountInput} accountId
+ */
 export async function makeSession(accountId, secret, sessionVersion = 0, sessionId = '') {
   const exp = Date.now() + SESS_DAYS * 86400 * 1000;
   const sv = Math.max(0, Math.round(Number(sessionVersion) || 0));
@@ -921,6 +1026,9 @@ export async function makeSession(accountId, secret, sessionVersion = 0, session
   return payload + '.' + sig;
 }
 
+/**
+ * @returns {Promise<import('../../types/tenant').AccountSession | null>}
+ */
 export async function readSession(token, secret) {
   if (!token || typeof token !== 'string' || token.indexOf('.') === -1) return null;
   const dot = token.indexOf('.');
@@ -936,7 +1044,8 @@ export async function readSession(token, secret) {
   if (!SID_RE.test(String(obj.sid || ''))) {
     obj.sid = toHex(await crypto.subtle.digest('SHA-256', encoder.encode('kiwi-sid-v1:' + payload))).slice(0, 32);
   }
-  return obj;
+  // Trust boundary: signature and expiry verified above.
+  return /** @type {import('../../types/tenant').AccountSession} */ (obj);
 }
 
 /* ── RÉVOCATION D'UNE SESSION ─────────────────────────────────────────────────
@@ -947,6 +1056,9 @@ export async function readSession(token, secret) {
  *                           sur le comportement d'avant plutôt que de couper
  *                           toutes les sessions au déploiement) ;
  *   · toute autre erreur  → indisponible, l'appelant refuse comme pour accounts. */
+/**
+ * @param {import('../../types/tenant').AccountSession | null} sess
+ */
 export async function sessionRevocation(env, sess) {
   if (!sess || !SID_RE.test(String(sess.sid || ''))) return { revoked: false };
   try {
@@ -964,6 +1076,9 @@ export async function sessionRevocation(env, sess) {
  * est celle du jeton le plus tardif que cette lignée ait pu recevoir jusqu'ici
  * (un renouvellement à l'instant), pas celle du jeton présenté : une copie
  * renouvelée avant la déconnexion vit plus longtemps que l'original. */
+/**
+ * @param {import('../../types/tenant').AccountSession | null} sess
+ */
 export async function revokeSession(env, sess) {
   if (!env || !env.DB || !sess || !sess.aid || !SID_RE.test(String(sess.sid || ''))) return false;
   const now = Date.now();
@@ -982,6 +1097,9 @@ export async function revokeSession(env, sess) {
  * owner-only route that is called directly (or is reached through a valid till
  * cookie) must use this database-backed check before treating the session as
  * an account identity. Missing/failed revocation reads deny the identity. */
+/**
+ * @returns {Promise<import('../../types/tenant').AccountSession | null>}
+ */
 export async function activeAccountSession(request, env) {
   if (!env || !env.DB || !env.AUTH_SECRET) return null;
   const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
@@ -1016,6 +1134,9 @@ export function clearSessionCookie() {
 // qui sert reste connecté indéfiniment, un appareil oublié expire toujours au
 // bout de 30 jours. Ne prolonge AUCUN droit : la révocation reste vérifiée en
 // base à chaque requête, et un compte supprimé est coupé au chargement suivant.
+/**
+ * @param {import('../../types/tenant').AccountSession | null} sess
+ */
 export function sessionNeedsRefresh(sess) {
   if (!sess || typeof sess.exp !== 'number') return false;
   return sess.exp - Date.now() < (SESS_DAYS * 86400 * 1000) / 2;
@@ -1055,7 +1176,9 @@ export function normEmail(e) {
 // so the taken-check still catches a duplicate). The hash is plain FNV-style over
 // the normalised name so the browser twins (caisse-link.js, orderpro-publish.js)
 // can mirror it byte for byte without crypto.
-export const LEGACY_SLUG = 'client';
+/** @type {import('../../types/tenant').MerchantSlug} */
+// Fixed legacy identity; no request data enters here.
+export const LEGACY_SLUG = /** @type {import('../../types/tenant').MerchantSlug} */ ('client');
 /* Accounts created before this instant and whose name has no latin letter were
  * all filed under 'client'. They keep it (see accountSlug) rather than being
  * silently re-homed onto an empty tenant; nothing created after it ever gets it.
@@ -1087,8 +1210,13 @@ export function nonLatinSlug(s) {
   return 'shop-' + h1.toString(36).padStart(7, '0') + h2.toString(36).padStart(7, '0');
 }
 
+/**
+ * @param {import('../../types/tenant').MerchantInput} s
+ * @returns {import('../../types/tenant').MerchantSlug}
+ */
 export function slugMerchant(s) {
-  return latinSlug(s) || nonLatinSlug(s) || LEGACY_SLUG;
+  /** Normalization boundary: canonical identity kind; entitlement is checked separately. */
+  return /** @type {import('../../types/tenant').MerchantSlug} */ (latinSlug(s) || nonLatinSlug(s) || LEGACY_SLUG);
 }
 
 /* True when a business name has letters, none of them latin: the case that used
@@ -1102,6 +1230,10 @@ export function isNonLatinName(s) {
  * already filed (sales, config, registry row) under 'client', and re-deriving it
  * would strand that data on an empty tenant. Only that narrow case pays a query;
  * every latin name answers with no I/O. */
+/**
+ * @param {import('../../types/tenant').AccountInput} aid
+ * @returns {Promise<import('../../types/tenant').MerchantSlug>}
+ */
 export async function accountSlug(env, business, aid) {
   const slug = slugMerchant(business);
   if (!isNonLatinName(business) || !aid || !env || !env.DB) return slug;
@@ -1195,10 +1327,15 @@ export const DEMO_MERCHANTS = { 'cafe-atlas': 1, 'maison-mansour': 1, 'spa-bahia
  * the account slug — which is what makes the widening below safe to deploy
  * before the ALTER runs. config.js, menu.js and _private.js each carry an older
  * copy of this with identical semantics; new endpoints should import this one. */
+/**
+ * @param {import('../../types/tenant').MerchantInput} slug
+ * @returns {Promise<import('../../types/tenant').AccountId | '' | null>}
+ */
 export async function storeOwner(env, slug) {
   try {
     const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
       .bind(slug).first();
+    // Registry boundary: account_id is the owner column, never a merchant slug.
     return row ? (row.account_id || '') : null;
   } catch (_) { return null; }
 }
@@ -1216,21 +1353,31 @@ export async function storeOwner(env, slug) {
  * propriétaire légitime ne peut pas se retrouver enfermé dehors par elle, même
  * pendant une panne de base — le seul cas refusé est celui où la base affirme
  * que la boutique est à un autre. */
+/**
+ * @param {import('../../types/tenant').MerchantInput} slug
+ * @param {import('../../types/tenant').AccountInput} aid
+ */
 export async function slugClaimedByOther(env, slug, aid) {
   if (!slug || !aid) return false;
   const owner = await storeOwner(env, slug);
   return typeof owner === 'string' && owner !== '' && owner !== aid;
 }
 
+/**
+ * Raw requested slugs acquire their identity kind only on the authorized return
+ * branches below (or the existing no-auth preview/demo policy).
+ * @param {import('../../types/tenant').MerchantInput} asked
+ * @returns {Promise<import('../../types/tenant').MerchantSlug | ''>}
+ */
 export async function entitledMerchant(request, env, asked, opts) {
   asked = String(asked || '').slice(0, 64);
   /* No auth configured at all (local static server, preview without secrets):
    * the gate is inert there, so keep the historical behaviour rather than
    * bricking local development. */
-  if (!env || !env.AUTH_SECRET) return asked;
+  if (!env || !env.AUTH_SECRET) return /** @type {import('../../types/tenant').MerchantSlug | ''} */ (asked);
 
   if (opts && opts.allowTill && asked) {
-    try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
+    try { if (await isTillFor(request, env, asked)) return /** @type {import('../../types/tenant').MerchantSlug | ''} */ (asked); } catch (_) {}
   }
   /* The employee app has its own short-lived, store-scoped cookie. It used to
    * open /api/employee only, so the waiter UI could say "commande envoyée"
@@ -1240,7 +1387,7 @@ export async function entitledMerchant(request, env, asked, opts) {
   if (opts && opts.allowEmployee && asked) {
     try {
       const employee = await activeServiceEmployee(request, env, asked);
-      if (employee) return asked;
+      if (employee) return /** @type {import('../../types/tenant').MerchantSlug | ''} */ (asked);
     } catch (_) {}
   }
   /* God mode, BEFORE the account session — the console is opened from a browser
@@ -1255,7 +1402,7 @@ export async function entitledMerchant(request, env, asked, opts) {
    * fall through to the session branch and reach nothing but their own shops.
    * That last part is the fix for the cross-tenant read; see isOperator(). */
   if (asked) {
-    try { if (await isOperator(request, env)) return asked; } catch (_) {}
+    try { if (await isOperator(request, env)) return /** @type {import('../../types/tenant').MerchantSlug | ''} */ (asked); } catch (_) {}
   }
   try {
     const sess = await activeAccountSession(request, env);
@@ -1272,7 +1419,7 @@ export async function entitledMerchant(request, env, asked, opts) {
        * already resolve their tenant this way; the sales path was the one left
        * behind. An unowned or unclaimed slug still snaps back to the account,
        * so nothing widens beyond the caller's own shops. */
-      if (asked && asked !== accSlug && (await storeOwner(env, asked)) === sess.aid) return asked;
+      if (asked && asked !== accSlug && (await storeOwner(env, asked)) === sess.aid) return /** @type {import('../../types/tenant').MerchantSlug | ''} */ (asked);
       /* Le repli sur le slug du compte était le trou : il rendait `accSlug` sans
        * jamais demander à qui appartient cette boutique. Quiconque s'inscrivait
        * avec le nom d'un commerçant existant héritait de son tenant. */
@@ -1280,8 +1427,8 @@ export async function entitledMerchant(request, env, asked, opts) {
       return accSlug;
     }
   } catch (_) { /* fall through to operator / demo */ }
-  try { if (await isOperator(request, env)) return asked; } catch (_) {}
-  return DEMO_MERCHANTS[asked] ? asked : '';
+  try { if (await isOperator(request, env)) return /** @type {import('../../types/tenant').MerchantSlug | ''} */ (asked); } catch (_) {}
+  return DEMO_MERCHANTS[asked] ? /** @type {import('../../types/tenant').MerchantSlug} */ (asked) : '';
 }
 
 /* Ids retirés du document `team` (pierres tombales `removed: [{ id, ts }]`,
@@ -1294,6 +1441,10 @@ export function teamRemovedIds(teamDoc) {
 /* A signed employee cookie is not enough on its own: the member must still be
  * present in this store's Team document. This helper is intentionally exported
  * so the edge gate and staff-only endpoints enforce the same revocation rule. */
+/**
+ * @param {import('../../types/tenant').MerchantInput} asked
+ * @returns {Promise<import('../../types/tenant').ActiveEmployee | null>}
+ */
 export async function activeEmployee(request, env, asked) {
   if (!env || !env.DB || !env.AUTH_SECRET) return null;
   const session = await readEmployee(request, env);
@@ -1437,6 +1588,9 @@ export async function faceMarkState(request, env, access) {
  * entry may use the operational order/event channels. Kitchen, dishwasher and
  * off-shift accounts remain confined to /api/employee (schedule, hours and
  * clock-in/out). */
+/**
+ * @param {import('../../types/tenant').MerchantInput} [asked]
+ */
 export async function activeServiceEmployee(request, env, asked) {
   const employee = await activeEmployee(request, env, asked);
   if (!employee) return null;
@@ -1568,6 +1722,10 @@ export function rateLimitUnavailable() {
  *  3. Projection stricte : ne sélectionne et ne retourne JAMAIS le code PIN,
  *     uniquement l'identité { id, name, role }.
  * ───────────────────────────────────────────────────────────────────────── */
+/**
+ * @param {import('../../types/tenant').MerchantInput} merchant
+ * @returns {Promise<import('../../types/tenant').PinResult>}
+ */
 export async function verifyStaffPin(request, env, merchant, pin, { requireTill = true } = {}) {
   if (!env || !env.DB) return { ok: false, error: 'not-configured', status: 503 };
   merchant = slugMerchant(merchant);
@@ -1682,7 +1840,8 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   return {
     ok: true,
     staff: {
-      id: String(staff.id || ''),
+      // Trust boundary: identity projected from the matched server-side PIN row.
+      id: /** @type {import('../../types/tenant').EmployeeId} */ (String(staff.id || '')),
       name: String(staff.name || ''),
       role: String(staff.role || ''),
     },
@@ -1702,6 +1861,9 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
  * projection stricte que verifyStaffPin : { id, name, role } et le slug où le
  * code a été trouvé — jamais le code.
  * ───────────────────────────────────────────────────────────────────────── */
+/**
+ * @returns {Promise<import('../../types/tenant').PinResult>}
+ */
 export async function verifyAccountPin(request, env, pin) {
   if (!env || !env.DB || !env.AUTH_SECRET) return { ok: false, error: 'not-configured', status: 503 };
   pin = String(pin || '').trim();
@@ -1787,9 +1949,11 @@ export async function verifyAccountPin(request, env, pin) {
   if (faceAccessTier(staff.role) === 'owner') await limitClear(request, env, 'pin:account', identity);
   return {
     ok: true,
-    merchant: String(staff.merchant || ''),
+    // Trust boundary: merchant comes from the account-scoped matched PIN row.
+    merchant: /** @type {import('../../types/tenant').MerchantSlug} */ (String(staff.merchant || '')),
     staff: {
-      id: String(staff.id || ''),
+      // Trust boundary: identity projected from the matched server-side PIN row.
+      id: /** @type {import('../../types/tenant').EmployeeId} */ (String(staff.id || '')),
       name: String(staff.name || ''),
       role: String(staff.role || ''),
     },

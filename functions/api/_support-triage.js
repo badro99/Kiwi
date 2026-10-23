@@ -100,6 +100,7 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
  * (clef et clef-flash, schema-input.json) : { model:'clef', state, questions,
  * images? } ; images = { content_type, base64 } (PNG, JPEG ou WebP, 4 max, pas
  * d'URL distante). */
+/** @param {{summary?: unknown, storeType?: unknown, images?: {content_type?: string, base64?: string}[]}} [input] */
 export function buildTriageRequest({ summary, storeType, images } = {}) {
   const text = cleanText(summary, MAX_SUMMARY_CHARS);
   const type = cleanText(storeType, 40);

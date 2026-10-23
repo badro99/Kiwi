@@ -199,18 +199,47 @@ nothing.** If you add a suite, wire it in. And a red run isn't automatically you
 prove a failure is pre-existing by running it in a detached worktree at the untouched
 base before you chase it.
 
-**Two tiers.** `npm run check:fast` (`node tools/check.js --fast`) skips every
-child test whose source drives a browser — about 77 of ~600 suites, most of the
-ten minutes — and lists each one it did not run; it also never waits behind
-another session's full run, since it launches no browser. Use it between edits.
-A green fast run is **not** the gate: it says so in its last line. `npm test`,
-`npm run check` and `npm run check:full` stay the full run, and that is the one
-that must be green before a push. A suite counts as slow by reading its source
-(puppeteer, browser-trace, Chromium, Playwright, Chrome), not its filename, so a
-new browser suite lands in the right tier without being registered
-(`tools/check-guard.js`).
+**Three tiers, and the rule for using them (owner, 2026-10-23, for every
+session and every GPT job):**
+- **Between edits: `npm run check:changed`** (`node tools/check.js --changed`).
+  It runs only the child tests your working tree can affect, plus every
+  in-process check (syntax, data-action, i18n keys, secrets): seconds to a
+  couple of minutes instead of thirteen. A test is selected when it is a
+  changed file, when it touched a changed file the last time it passed (the
+  parallel pool records every import and fs read through `tools/dep-trace.cjs`
+  into `kiwi-test-deps.json` in the temp dir), or when its source names the
+  file. A change that only moves stamps selects the stamp suites. A browser
+  suite runs when it names the file; one that only loaded it with its page is
+  listed and left to the full gate (`--browsers` runs it now; `--no-browsers`
+  leaves every browser suite, for a sandbox without Chromium such as GPT's). `--base <ref>`
+  compares against a merge base instead of HEAD. On a fresh machine the map is
+  empty and selection falls back to names until one fast or full run records it.
+- **`npm run check:fast`** skips every browser suite (about 190 of ~900; a
+  suite that reaches Chromium through a local harness such as
+  `surface-matrix-lib.mjs` counts as one).
+- **Before every push: the full gate**, `npm test` / `npm run check:full`.
+  A green changed or fast run is **not** the gate, and each says so in its
+  last line.
 
-**Both tiers run in parallel by default.** Before its sections start, check.js
+A suite counts as slow (browser) by reading its source and the local files it
+imports (puppeteer, browser-trace, Chromium, Playwright, Chrome), not its
+filename (`tools/check-guard.js`).
+
+**Suites stay fast (CPU ratchet).** After the parallel run, check.js compares
+each suite's node CPU time (every process it starts included) with
+`tools/suite-cpu-baseline.json`: a pinned suite fails past twice its pin plus
+15 s, any other suite past 30 s. Pins only come down
+(`KIWI_UPDATE_CPU_BASELINE=1`); never raise one to make a red go away. When a
+suite is slow, profile it (`node --cpu-prof`) before touching it. The first
+pass (23 October) found the same four causes again and again, so look for them
+first: a fixture rebuilt per case (build the schema once, copy it with
+`DatabaseSync.serialize()`/`deserialize()`), a deliberate cost paid in a case
+that does not test it (a million-round key derivation in a behaviour case), a
+regex that restarts at every character, and production code that rebuilds an
+`Intl.DateTimeFormat` per call (it cost the server too). Browser suites reuse
+one browser and one page per locale and viewport instead of relaunching.
+
+**Every tier runs in parallel by default.** Before its sections start, check.js
 reads every test file it names and runs them side by side (`tools/check-pool.js`,
 up to 8 at a time, 3 browsers, longest first from the last run's timings), then
 replays its sections in order against those results: same output, same verdict.

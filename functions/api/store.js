@@ -545,10 +545,17 @@ function shapeOk(feature, raw) {
  * On rend donc l'équipe SANS les codes à qui n'est pas en train de la tenir à
  * jour. La caisse garde ce qu'elle utilise — des noms, des rôles, des heures —
  * et perd ce qu'elle n'a jamais lu. */
+/**
+ * The guard assertions describe documents with no member array; they do not
+ * assert that any stored member is safe. Member-bearing documents must pass
+ * through the destructuring projection below.
+ * @param {import('../../types/tenant').StoredTeamDocument | null} doc
+ * @returns {import('../../types/tenant').TillTeamDocument | null}
+ */
 function stripTeamCodes(doc) {
-  if (!doc || typeof doc !== 'object') return doc;
+  if (!doc || typeof doc !== 'object') return /** @type {Omit<import('../../types/tenant').StoredTeamDocument, 'members'>} */ (doc);
   const members = Array.isArray(doc.members) ? doc.members : null;
-  if (!members) return doc;
+  if (!members) return /** @type {Omit<import('../../types/tenant').StoredTeamDocument, 'members'>} */ (doc);
   return { ...doc, members: members.map((m) => {
     if (!m || typeof m !== 'object') return m;
     /* La paie et la fiche personnelle suivent les codes : une caisse appairée

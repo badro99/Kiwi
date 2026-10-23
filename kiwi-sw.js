@@ -169,7 +169,7 @@ var SHELL = [
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
-  '/assets/floorplan-core.js?v=2054',
+  '/assets/floorplan-core.js?v=2055',
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=6',
@@ -195,7 +195,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=31',
+  '/assets/day-report.js?v=32',
   '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=36',
   '/assets/day-report-export.js?v=13',
@@ -284,21 +284,21 @@ var SHELL = [
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=17',
   '/assets/clients-book.js?v=31',
-  '/assets/clients-directory.js?v=24',
+  '/assets/clients-directory.js?v=25',
   '/assets/customer-retention.js?v=11',
   '/assets/menu-catalog.js?v=33',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=605',
+  '/assets/employee-live.js?v=606',
   '/assets/employee-planning.js?v=17',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=6',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=12',
-  '/assets/team.js?v=316',
+  '/assets/team.js?v=317',
   '/assets/team/profile-ui.js?v=1',
-  '/assets/team-hours.js?v=5',
+  '/assets/team-hours.js?v=6',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=119',
   '/assets/menu-promos-dashboard.js?v=3',
@@ -326,7 +326,7 @@ var SHELL = [
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
-  '/assets/kit/haptics.js?v=6',
+  '/assets/kit/haptics.js?v=7',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
@@ -341,7 +341,7 @@ var SHELL = [
   '/assets/kit/strings/till.ar.js?v=6',
   '/assets/kit/strings.js?v=2',
   '/assets/kit/format.js?v=3',
-  '/assets/kit/business-day.js?v=3',
+  '/assets/kit/business-day.js?v=4',
   '/assets/kit/core.js?v=2',
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',

@@ -133,7 +133,7 @@ export async function workspace(env, merchant = '') {
   if (!merchant) definitions.board = [`SELECT id,status,kind,area,money_at_risk,substr(body,1,160) AS summary,created_ts,updated_ts FROM kiwi_tickets WHERE status!='done' ORDER BY money_at_risk DESC,id DESC LIMIT 101`,[],100];
   const entries = await Promise.all(Object.entries(definitions).map(async ([name,definition]) => {
     if (typeof definition === 'function') return [name,await definition()];
-    const [sql,args,limit] = definition;
+    const [sql,args,limit] = /** @type {[string, any[], number?]} */ (definition);
     return [name,await source(env,name,sql,args,limit)];
   }));
   const sources = Object.fromEntries(entries);

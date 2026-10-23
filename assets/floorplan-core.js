@@ -1052,7 +1052,8 @@ function pdsGeneratePlan(a, variant) {
  *      ceux de cet appareil : changer d'onglet sur l'iPad ne déplace pas la vue
  *      du portable.
  * `union` = KiwiCloudDoc.mergeDefault, passé par l'appelant pour que ce fichier
- * reste sans dépendance. Les tombales expirent après 30 jours. */
+ * reste sans dépendance. Les tombales expirent après 30 jours ; leur horizon
+ * reste pour empêcher une ancienne copie de réintroduire les identifiants purgés. */
 const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;
 /* ─── L'horloge des écritures (horloge hybride) ────────────────────────────
  * Les horodatages du plan (`updatedAt` des éléments, `gone[id]` des pierres
@@ -1164,6 +1165,33 @@ function pdsMergePlans(mine, theirs, union) {
         return w;
       });
     });
+    /* A compact deletion frontier, advanced only by actual expired tombstones.
+     * A peer with an older frontier has not observed all forgotten deletions:
+     * its IDs absent from the informed peer, last written before the frontier,
+     * cannot safely be additions. Anything it wrote after the frontier stays.
+     * No wall-clock 'last sync' is minted by merging two equally stale peers.
+     * Legacy documents without a frontier/tombstones retain the old union. */
+    const now = Date.now();
+    const horizons = [mine, theirs].map(doc => {
+      let h = Number.isFinite(+doc.goneHorizon) && +doc.goneHorizon > 0 ? +doc.goneHorizon : 0;
+      const g = doc.gone;
+      if (g && typeof g === 'object' && !Array.isArray(g)) Object.keys(g).forEach(id => {
+        const ts = +g[id];
+        if (Number.isFinite(ts) && ts > 0 && now - ts >= PDS_GONE_TTL) h = Math.max(h, ts);
+      });
+      return h;
+    });
+    ['tables', 'elements'].forEach(key => {
+      if (!Array.isArray(out[key])) return;
+      [mine, theirs].forEach((doc, i) => {
+        if (horizons[i] <= horizons[1 - i] || !Array.isArray(doc[key])) return;
+        const known = new Set(doc[key].filter(x => x && x.id != null).map(x => String(x.id)));
+        // Written after the frontier: a real addition (or an edit after the
+        // forgotten deletion, which last-writer-wins lets win anyway). Keep it.
+        out[key] = out[key].filter(x => !x || x.id == null || known.has(String(x.id)) || +x.updatedAt > horizons[i]);
+      });
+    });
+    if (Math.max(...horizons) > 0) out.goneHorizon = Math.max(...horizons);
     const gone = pdsGoneOf(mine, theirs);
     const keep = x => !(x && x.id != null && gone[String(x.id)]);
     if (Array.isArray(out.tables)) out.tables = out.tables.filter(keep);

@@ -173,6 +173,11 @@ export function planReplay(data, links, orders) {
   return plan;
 }
 
+/**
+ * @param {*} env Untyped Worker bindings; D1 rows are external input.
+ * @param {string} merchant
+ * @param {{sinceTs?: number, dryRun?: boolean}} [options]
+ */
 export async function replayShopifyOrders(env, merchant, { sinceTs, dryRun } = {}) {
   const rs = await env.DB.prepare(
     `SELECT kiwi_variant_id, shopify_variant_id FROM shopify_variant_links

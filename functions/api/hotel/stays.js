@@ -763,7 +763,7 @@ export async function onRequestPost({ request, env }) {
       if (old && ['completed', 'cancelled', 'no_show'].includes(old.status)) return json({ error: 'closed-commercial' }, 409);
       if (commercial?.accountId) return json({ error: 'mixed-pricing' }, 409);
       try {
-        pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, checkOut, board: newBoard, direct, actor, now });
+        pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, board: newBoard, direct, actor, now });
       } catch (e) { return json({ error: e?.code || 'commercial-invalid' }, e?.code ? 409 : 503); }
       standaloneDirect = true;
     }
@@ -798,7 +798,7 @@ export async function onRequestPost({ request, env }) {
           return json({ error: 'direct-pricing-required' }, 409);
         }
         if (direct) {
-          pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, checkOut, board, direct, actor, now });
+          pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, board, direct, actor, now });
         }
         commercial = { accountId, billTo: accountId === commercial?.accountId ? commercial.billTo : selected,
           booker: str(spec?.booker, 160), voucher: str(spec?.voucher, 100), board, occupancy: partySize,

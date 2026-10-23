@@ -124,8 +124,10 @@ for (const file of files) {
   const ext = path.extname(file).toLowerCase();
   if (ext === '.css' || ext === '.html' || ext === '.svg') {
     if (source.includes('var(--serif)') || source.includes('var(--font-editorial)')) {
-      for (const rule of source.match(/[^{}]*\{[^{}]*(?:var\(--serif\)|var\(--font-editorial\))[^{}]*\}/gi) || []) {
-        if (/font-style\s*:\s*italic/i.test(rule)) fail(file, 'editorial alias is italic');
+      /* Each innermost { … } body once (the old pattern restarted at every
+         character of a long stylesheet: 8 s of the gate on one regex). */
+      for (const [, body] of source.matchAll(/\{([^{}]*)\}/g)) {
+        if (/var\(--(?:serif|font-editorial)\)/i.test(body) && /font-style\s*:\s*italic/i.test(body)) fail(file, 'editorial alias is italic');
       }
     }
   }

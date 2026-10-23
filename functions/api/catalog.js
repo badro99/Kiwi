@@ -54,6 +54,7 @@ const ts = (v) => Math.max(0, Math.min(1e15, Math.round(Number(v) || 0)));
  * forme dans onRequestPost, qui refuse un document qui n'est pas un catalogue. */
 /* Les bornes du document, partagées par sanitize() (garde-fou en lecture) et
  * onRequestPost (refus explicite en écriture). */
+/** @type {[string, number][]} */
 const CATALOG_LIMITS = [['categories', 200], ['products', 5000], ['variants', 20000]];
 const LIMIT = Object.fromEntries(CATALOG_LIMITS);
 
@@ -73,7 +74,7 @@ function sanitize(raw) {
    * celles que l'autre appareil n'a pas encore vues. */
   if (raw.removed && typeof raw.removed === 'object' && !Array.isArray(raw.removed)) {
     Object.keys(raw.removed)
-      .map((id) => [str(id, 40), ts(raw.removed[id])])
+      .map((id) => /** @type {[string, number]} */ ([str(id, 40), ts(raw.removed[id])]))
       .filter(([id, t]) => id && t > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20000)

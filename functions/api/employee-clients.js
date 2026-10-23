@@ -1,5 +1,5 @@
 import { json, activeServiceEmployee } from '../auth/_lib.js';
-import { nextSrvTs } from './clients.js';
+import { nextSrvTs, resolveClientId } from './clients.js';
 
 /* Un encaissement de salle ne dépasse pas ces bornes. Elles ne remplacent pas le
  * lien avec une vente (voir plus bas), elles empêchent seulement qu'un appel
@@ -51,7 +51,7 @@ export async function onRequestPost({ request, env }) {
   const asked = text(body.merchant, 64).toLowerCase();
   const employee = await activeServiceEmployee(request, env, asked);
   if (!employee) return json({ error: 'on-shift-service-required' }, 403);
-  const id = text(body.clientId, 64);
+  const id = await resolveClientId(env, employee.merchant, text(body.clientId, 64));
   const saleId = text(body.saleId, 96).replace(/[^A-Za-z0-9:._-]/g, '');
   let ref = text(body.ref, 96).replace(/[^A-Za-z0-9:_-]/g, '');
   /* Quand la vente est nommée, la fidélité se tire de CETTE vente : son montant

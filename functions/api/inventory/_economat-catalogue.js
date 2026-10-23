@@ -5,7 +5,7 @@
 
 export const ECONOMAT_CATALOGUE_FEATURE = 'economat-catalogue';
 
-export const RESTAURANT_UNITS = Object.freeze([
+export const RESTAURANT_UNITS = Object.freeze(/** @type {[string, string, number][]} */ ([
   ['mg', 'mass', 0.001], ['g', 'mass', 1], ['kg', 'mass', 1000],
   ['ml', 'volume', 1], ['cl', 'volume', 10], ['L', 'volume', 1000],
   ['unite', 'count', 1],
@@ -16,11 +16,11 @@ export const RESTAURANT_UNITS = Object.freeze([
   ['bidon', 'package', 1], ['seau', 'package', 1], ['fut', 'package', 1],
   ['bac', 'package', 1], ['botte', 'package', 1], ['caisse', 'package', 1],
   ['plateau', 'package', 1], ['rouleau', 'package', 1],
-].map(([id, family, factor]) => Object.freeze({ id, family, factor })));
+]).map(([id, family, factor]) => Object.freeze({ id, family, factor })));
 
 const ALIASES = new Map([
   ['unite', 'unite'], ['unite', 'unite'], ['boite', 'boite'], ['fut', 'fut'],
-  ...RESTAURANT_UNITS.map((unit) => [unit.id.toLocaleLowerCase('fr'), unit.id]),
+  ...RESTAURANT_UNITS.map((unit) => /** @type {[string, string]} */ ([unit.id.toLocaleLowerCase('fr'), unit.id])),
 ]);
 const BY_ID = new Map(RESTAURANT_UNITS.map((unit) => [unit.id, unit]));
 const ITEM_KEYS = new Set([

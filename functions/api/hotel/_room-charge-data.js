@@ -91,6 +91,10 @@ export function reverseRoomCharge(linesValue, saleIdValue, inputValue = {}) {
   return { ok: true, created: true, line, lines: [...lines, line] };
 }
 
+/**
+ * @param {unknown} linesValue
+ * @param {{shiftId?: unknown, since?: unknown, until?: unknown}} [optionsValue]
+ */
 export function roomChargesByCashier(linesValue, optionsValue = {}) {
   const options = optionsValue && typeof optionsValue === 'object' ? optionsValue : {};
   const shiftId = token(options.shiftId, 80);

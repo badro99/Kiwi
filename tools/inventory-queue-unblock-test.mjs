@@ -155,9 +155,20 @@ const sale = (I, id, item, qty = 1) => I.add({ id, itemId: item, qty: -qty, reas
   const srv = makeServer();
   srv.down = true;  // nothing gets acknowledged
   const { I } = till(srv);
-  for (let i = 0; i < 6100; i++) sale(I, 'q' + i, 'penne');
+  /* The first 6 000 go in as one staged batch (addMany folds row by row exactly
+   * like add, but writes once: 6 000 single adds re-serialise the growing ledger
+   * 6 000 times, 13 s for nothing this case checks). The 100 that cross the
+   * 6 000-row compaction line still go one by one through add(). */
+  I.addMany(Array.from({ length: 6000 }, (_, i) => ({ id: 'q' + i, itemId: 'penne', qty: -1, reason: 'sale', refType: 'sale', refId: 'T-q' + i, occurredTs: 1790800000000 + pass })));
+  for (let i = 6000; i < 6100; i++) sale(I, 'q' + i, 'penne');
   ok(I.pending() === 6100, 'past 6 000 rows, every unacknowledged movement is still queued', `${I.pending()} queued of 6100`);
   ok(Math.abs(I.balance('penne') + 6100) < 1e-6, 'and still counted in the local stock', `balance ${I.balance('penne')}`);
+  /* A queued id is only worth something if its row is still there to send: the
+   * server comes back and every one of the 6 100 must arrive. */
+  srv.down = false;
+  for (let n = 0; n < 60 && I.pending() > 0; n++) await I.sync();
+  const arrived = [...srv.stored.keys()].filter((id) => /^q\d+$/.test(id)).length;
+  ok(arrived === 6100 && I.pending() === 0, 'once the server is back, every queued movement reaches it, the oldest included', `${arrived} of 6100 arrived, ${I.pending()} still queued`);
 }
 {
   const srv = makeServer();

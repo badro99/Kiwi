@@ -687,6 +687,7 @@ export async function onRequestPost(context) {
    * et seul un client qui a d'abord RELU la carte du serveur l'affirme. */
   const wasEmpty = shop ? shopEmpty(data) : menuEmpty(data);
   if (wasEmpty) {
+    /** @type {ReturnType<typeof sanitizeMenu> | ReturnType<typeof sanitizeShop> | null} */
     let cur = !shop ? currentMenu : null;
     try {
       const row = shop ? await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first() : null;

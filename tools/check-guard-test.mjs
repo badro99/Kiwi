@@ -18,7 +18,7 @@ const cp = require('node:child_process');
 const realSpawnSync = cp.spawnSync;
 
 let passed = 0, failed = 0;
-function ok(label, fn) { try { fn(); passed++; console.log(`  ✓ ${label}`); } catch (e) { failed++; console.log(`  ✗ ${label}\n      ${String(e.message).split('\n')[0]}`); } }
+function ok(label, fn) { try { fn(); passed++; console.log(`  ✓ ${label}`); } catch (e) { failed++; console.log(`  ✗ ${label}\n      ${String(e.message).split('\n').slice(0, 8).join(' ')}`); } }
 
 const dir = mkdtempSync(path.join(tmpdir(), 'kiwi-guard-'));
 const hang = path.join(dir, 'hang-test.mjs');
@@ -153,7 +153,10 @@ ok('the full tier runs a browser suite; the fast tier skips it by name and never
 ok('the fast tier is opt-in, never says "all checks passed", and never waits behind a full run', () => {
   const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
   assert.match(src, /process\.argv\.includes\('--fast'\)\) process\.env\.KIWI_CHECK_TIER = 'fast'/);
-  assert.match(src, /if \(process\.env\.KIWI_CHECK_TIER !== 'fast'\) require\('\.\/check-guard'\)\.acquireLock\(\);/);
+  /* The lock and the browser preflight follow what the run will launch: the
+     full tier always, the fast tier never, the changed tier when it selected a
+     browser suite (runsBrowsers, proven below). */
+  assert.match(src, /if \(require\('\.\/check-guard'\)\.runsBrowsers\(\)\) require\('\.\/check-guard'\)\.acquireLock\(\);/);
   const tail = src.slice(src.lastIndexOf("if (failures)"));
   assert.ok(tail.indexOf("guard.tier() === 'fast'") > 0 && tail.indexOf("guard.tier() === 'fast'") < tail.indexOf('all checks passed'), 'the fast verdict comes first');
   assert.match(tail, /NOT run, so this is not the gate/);
@@ -210,10 +213,156 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
   const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
   const at = src.indexOf('browserPreflight()');
   const block = src.slice(at - 200, at + 900);
-  assert.match(block, /KIWI_CHECK_TIER !== 'fast' && process\.env\.KIWI_ALLOW_BROWSER_SKIP !== '1'/, 'only the full run refuses');
-  assert.match(block, /else if \(process\.env\.KIWI_CHECK_TIER === 'fast'\)[\s\S]*findBrowser\(\)[\s\S]*⚠/, 'the fast tier warns');
+  assert.match(block, /runsBrowsers\(\) && process\.env\.KIWI_ALLOW_BROWSER_SKIP !== '1'/, 'only a run that launches a browser refuses');
+  assert.match(block, /else if \(process\.env\.KIWI_CHECK_TIER === 'fast' \|\| process\.env\.KIWI_CHECK_TIER === 'changed'\)[\s\S]*findBrowser\(\)[\s\S]*⚠/, 'the fast and changed tiers warn');
   assert.ok(at < src.indexOf('.acquireLock();'), 'the refusal comes before the lock and every suite');
 });
+
+/* ── Changed tier ─────────────────────────────────────────────────────────
+ * A throwaway git repo with a check.js naming four suites: one names the
+ * changed asset, one does not, one drives a browser and only read the asset
+ * (recorded map), and the stamp suite. */
+{
+  const g = (cwd, ...args) => { const r = realSpawnSync('git', args, { cwd, encoding: 'utf8' }); if (r.status) throw new Error(r.stderr); return r.stdout; };
+  const repo = mkdtempSync(path.join(tmpdir(), 'kiwi-changed-'));
+  const put = (rel, text) => { const f = path.join(repo, rel); require('node:fs').mkdirSync(path.dirname(f), { recursive: true }); writeFileSync(f, text); };
+  put('tools/check.js', "run('names-test.mjs'); run('other-test.mjs'); run('page-browser-test.mjs'); run('harness-user-test.mjs'); run('stamp-drift-test.js');\n");
+  put('tools/names-test.mjs', "import x from '../assets/x.js';\n");
+  put('tools/other-test.mjs', "// about assets/y.js\n");
+  put('tools/page-browser-test.mjs', "import puppeteer from 'puppeteer-core';\n");
+  put('tools/harness.mjs', "export const launch = () => require('puppeteer-core');\n");
+  put('tools/harness-user-test.mjs', "import { launch } from './harness.mjs';\n");
+  put('tools/stamp-drift-test.js', '// stamps\n');
+  put('assets/x.js', 'export default 1;\n');
+  put('assets/y.js', 'export default 2;\n');
+  put('dashboard.html', '<script src="assets/x.js?v=1"></script>\n');
+  put('lib/check-guard.js', "/* puppeteer chromium: the runner names these words */\n");
+  put('tools/uses-guard-test.mjs', "const g = require('../lib/check-guard.js');\n");
+  g(repo, 'init', '-q'); g(repo, 'add', '.');
+  g(repo, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'base');
+  const T = (n) => path.join(repo, 'tools', n);
+  const deps = { 'tools/page-browser-test.mjs': ['assets/x.js', 'dashboard.html'], 'tools/other-test.mjs': ['assets/y.js'] };
+  const sel = (o) => guard.selection(Object.assign({ root: repo, script: T('check.js'), base: null, deps, browsers: false }, o));
+
+  ok('isSlow follows a local harness import, and never counts the runner itself', () => {
+    assert.equal(guard.isSlow(T('harness-user-test.mjs')), true);
+    assert.equal(guard.isSlow(T('names-test.mjs')), false);
+    assert.equal(guard.isSlow(T('uses-guard-test.mjs')), false, 'requiring the runner does not make a test slow');
+  });
+  ok('the changed tier runs the tests that name or read a changed file, and nothing else', () => {
+    put('assets/x.js', 'export default 3;\n');
+    const s = sel();
+    assert.deepEqual(s.changed.filter((c) => c.startsWith('assets/')), ['assets/x.js']);
+    assert.ok(s.picked.has(T('names-test.mjs')), 'the suite that imports it');
+    assert.ok(!s.picked.has(T('other-test.mjs')), 'an unrelated suite is left out');
+    assert.ok(!s.picked.has(T('page-browser-test.mjs')), 'a browser suite that only loaded it waits for the full gate');
+    assert.ok(s.browserLater.includes(T('page-browser-test.mjs')), '…and is listed as such');
+    assert.ok(sel({ browsers: true }).picked.has(T('page-browser-test.mjs')), '--browsers runs it now');
+    put('tools/page-browser-test.mjs', "import puppeteer from 'puppeteer-core'; // assets/x.js\n");
+    assert.ok(sel().picked.has(T('page-browser-test.mjs')), 'a browser suite that names the file runs');
+    assert.ok(!sel({ noBrowsers: true }).picked.has(T('page-browser-test.mjs')), '…unless --no-browsers (a sandbox without Chromium)');
+    g(repo, 'checkout', '-q', '--', 'tools/page-browser-test.mjs');
+    g(repo, 'checkout', '-q', '--', 'assets/x.js');
+  });
+  ok('a change that only moves stamps selects the stamp suites, not every page suite', () => {
+    put('dashboard.html', '<script src="assets/x.js?v=2"></script>\n');
+    const s = sel({ browsers: true });
+    assert.deepEqual(s.stampOnly, ['dashboard.html']);
+    assert.ok(s.picked.has(T('stamp-drift-test.js')));
+    assert.ok(!s.picked.has(T('page-browser-test.mjs')), 'the page suite that read dashboard.html is not run for a stamp');
+    put('dashboard.html', '<script src="assets/x.js?v=2"></script><p>new</p>\n');
+    assert.ok(sel({ browsers: true }).picked.has(T('page-browser-test.mjs')), 'a real edit to the page does select it');
+    g(repo, 'checkout', '-q', '--', 'dashboard.html');
+  });
+  ok('a changed test runs itself, a new file is seen, and a runner change selects every plain suite', () => {
+    put('tools/other-test.mjs', '// edited\n');
+    put('assets/new.js', '1;\n');
+    let s = sel();
+    assert.ok(s.picked.has(T('other-test.mjs')));
+    assert.ok(s.changed.includes('assets/new.js'), 'untracked files count as changed');
+    g(repo, 'checkout', '-q', '--', 'tools/other-test.mjs');
+    put('tools/check.js', "run('names-test.mjs'); run('other-test.mjs'); run('page-browser-test.mjs'); run('harness-user-test.mjs'); run('stamp-drift-test.js'); // edited\n");
+    s = sel();
+    assert.equal(s.all, true);
+    assert.ok(s.picked.has(T('other-test.mjs')) && s.picked.has(T('names-test.mjs')));
+    assert.ok(!s.picked.has(T('page-browser-test.mjs')), 'still no browser suite without --browsers');
+  });
+  ok('the changed tier says it is not the gate, and package.json offers it', () => {
+    const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
+    assert.match(src, /process\.argv\.includes\('--changed'\)\) process\.env\.KIWI_CHECK_TIER = 'changed'/);
+    const tail = src.slice(src.lastIndexOf('if (failures)'));
+    assert.ok(tail.indexOf("guard.tier() === 'changed'") > 0 && tail.indexOf("guard.tier() === 'changed'") < tail.indexOf('all checks passed'));
+    assert.match(tail, /so this is not the gate/);
+    const pkg = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+    assert.equal(pkg.scripts['check:changed'], 'node tools/check.js --changed');
+  });
+  ok('dep-trace records the repo files a process imports and reads, and nothing outside it', () => {
+    const out = path.join(repo, 'trace.txt');
+    put('tools/reader.mjs', "import fs from 'node:fs';\nimport './harness.mjs';\nfs.readFileSync(new URL('../assets/y.js', import.meta.url), 'utf8');\nfs.readFileSync('/etc/hosts', 'utf8');\n");
+    const r = realSpawnSync(process.execPath, [T('reader.mjs')], { encoding: 'utf8', env: { ...process.env,
+      KIWI_DEP_TRACE: out, KIWI_DEP_ROOT: repo, NODE_OPTIONS: '--require=' + path.join(ROOT, 'tools/dep-trace.cjs') } });
+    assert.equal(r.status, 0, r.stderr);
+    const got = readFileSync(out, 'utf8').split('\n').filter(Boolean);
+    assert.ok(got.includes('assets/y.js'), 'an fs read');
+    assert.ok(got.includes('tools/harness.mjs'), 'an import');
+    assert.ok(!got.some((f) => f.includes('hosts') || f.startsWith('node:')), 'nothing outside the repo');
+  });
+  ok('in the changed tier an unselected suite is skipped with a line its section can parse', () => {
+    const saved = process.env.KIWI_CHECK_TIER;
+    try {
+      process.env.KIWI_CHECK_TIER = 'full';
+      assert.equal(guard.runsBrowsers(), true, 'the full tier always launches browsers (lock, preflight)');
+      process.env.KIWI_CHECK_TIER = 'fast';
+      assert.equal(guard.runsBrowsers(), false, 'the fast tier never does');
+      process.env.KIWI_CHECK_TIER = 'changed';
+      const named = [...guard.selection().named].find((f) => !guard.selection().picked.has(f));
+      if (named) {
+        guard.install({ timeoutMs: 5000, log: () => {} });   // earlier cases put the real spawnSync back
+        const r = cp.spawnSync(process.execPath, [named], { encoding: 'utf8' });
+        assert.equal(r.status, 0);
+        assert.equal(r.kiwiSkipped, true);
+        assert.match(r.stdout, /✓ .* not affected by this change/);
+        assert.equal(guard.takeSkip(), path.basename(named));
+      }
+    } finally { if (saved === undefined) delete process.env.KIWI_CHECK_TIER; else process.env.KIWI_CHECK_TIER = saved; }
+  });
+}
+
+/* ── Suite CPU ratchet ──────────────────────────────────────────────────── */
+{
+  const d = mkdtempSync(path.join(tmpdir(), 'kiwi-cpu-'));
+  const file = path.join(d, 'suite-cpu-baseline.json');
+  ok('the first measurement pins only the suites above the budget', () => {
+    const r = guard.cpuRatchet({ file, update: true, times: { 'a-test.mjs': 90000, 'b-test.mjs': 2000 } });
+    assert.equal(r.wrote, true);
+    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pins, { 'a-test.mjs': 90000 });
+  });
+  ok('a pinned suite fails past twice its pin; a new one fails past the budget', () => {
+    let r = guard.cpuRatchet({ file, update: false, times: { 'a-test.mjs': 170000, 'c-test.mjs': guard.CPU_BUDGET_MS - 1 } });
+    assert.equal(r.over.length, 0, 'within the margins');
+    r = guard.cpuRatchet({ file, update: false, times: { 'a-test.mjs': 190000, 'c-test.mjs': guard.CPU_BUDGET_MS + 1 } });
+    assert.deepEqual(r.over.map((o) => o.name).sort(), ['a-test.mjs', 'c-test.mjs']);
+  });
+  ok('the update lowers a pin, drops one that fell under the budget, and never raises or adds', () => {
+    guard.cpuRatchet({ file, update: true, times: { 'a-test.mjs': 50000, 'z-test.mjs': 25000 } });
+    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pins, { 'a-test.mjs': 50000 }, 'lowered, nothing added');
+    const r = guard.cpuRatchet({ file, update: true, times: { 'a-test.mjs': 80000 } });
+    assert.equal(r.wrote, false);
+    assert.equal(JSON.parse(readFileSync(file, 'utf8')).pins['a-test.mjs'], 50000, 'never raised');
+    guard.cpuRatchet({ file, update: true, times: { 'a-test.mjs': 4000 } });
+    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pins, {}, 'under the budget, the pin goes');
+  });
+  ok('an over-budget run never rewrites the baseline', () => {
+    writeFileSync(file, JSON.stringify({ pins: { 'a-test.mjs': 40000 } }));
+    const r = guard.cpuRatchet({ file, update: true, times: { 'a-test.mjs': 10000, 'n-test.mjs': 99000 } });
+    assert.equal(r.wrote, false);
+    assert.equal(JSON.parse(readFileSync(file, 'utf8')).pins['a-test.mjs'], 40000);
+  });
+  ok('check.js runs the ratchet before its verdict', () => {
+    const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
+    assert.ok(src.indexOf('guard.cpuRatchet()') > 0 && src.indexOf('guard.cpuRatchet()') < src.lastIndexOf('if (failures)'));
+  });
+}
 
 console.log(`\ncheck-guard: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

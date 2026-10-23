@@ -1068,7 +1068,7 @@
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then((response) => response.ok ? response.json() : null).then((data) => {
       if (!data || !data.ok || data.merchant !== merchant) return;
-      const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}]);
+      const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}, data.pendingCorrections || []]);
       /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
          La fusion des heures pointées se faisait à CHAQUE réponse, donc
          persistTeams() réécrivait 70 ko de localStorage toutes les secondes
@@ -1096,6 +1096,7 @@
         if (touched) persistTeams();
         // Pointages envoyés plus tard depuis le téléphone : marqués sur la grille des heures.
         (root.deferredByVenue || (root.deferredByVenue = {}))[venueKey] = data.deferredPunches || {};
+        (root.correctionsByVenue || (root.correctionsByVenue = {}))[venueKey] = data.pendingCorrections || [];
       }
       /* La signature est déjà posée plus haut : l'ancien test
          « signature !== liveTeamSignature » était donc toujours faux, et un

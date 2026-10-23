@@ -212,8 +212,8 @@
     "sha": "c03b034d433e92e3"
   },
   "assets/clients-directory.js": {
-    "v": "24",
-    "sha": "fa3d954408955e5c"
+    "v": "25",
+    "sha": "c18a440722d4bd3b"
   },
   "assets/clients-store.js": {
     "v": "17",
@@ -280,8 +280,8 @@
     "sha": "10c4573f4f7f579c"
   },
   "assets/day-report.js": {
-    "v": "31",
-    "sha": "8bcd4c1460d58a8f"
+    "v": "32",
+    "sha": "fa85edd77f0ce06a"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -328,8 +328,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "605",
-    "sha": "d2a6f427c6c61281"
+    "v": "606",
+    "sha": "79ad1114edf95aad"
   },
   "assets/employee-planning.js": {
     "v": "17",
@@ -372,8 +372,8 @@
     "sha": "1b89e9b34cd03ac6"
   },
   "assets/floorplan-core.js": {
-    "v": "2054",
-    "sha": "c83d98b34732e1c4"
+    "v": "2055",
+    "sha": "2842924bf589cc5a"
   },
   "assets/floorplan-live.js": {
     "v": "4",
@@ -552,8 +552,8 @@
     "sha": "4a87bdd1066f813d"
   },
   "assets/kit/business-day.js": {
-    "v": "3",
-    "sha": "9b22590d0c1cc9e7"
+    "v": "4",
+    "sha": "0d62b1ddf899cd27"
   },
   "assets/kit/controls/button.js": {
     "v": "1",
@@ -644,8 +644,8 @@
     "sha": "7e500d14bed72e6b"
   },
   "assets/kit/haptics.js": {
-    "v": "6",
-    "sha": "c044999e8392bfc8"
+    "v": "7",
+    "sha": "b5ce40bdc99d649a"
   },
   "assets/kit/kds-board.js": {
     "v": "2",
@@ -1504,12 +1504,12 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "5",
-    "sha": "a3f95f888bc08ac6"
+    "v": "6",
+    "sha": "820e6e70f1d14c52"
   },
   "assets/team.js": {
-    "v": "316",
-    "sha": "30ee64d8e954a8f9"
+    "v": "317",
+    "sha": "5c0a6520453e2ff2"
   },
   "assets/team/profile-ui.js": {
     "v": "1",

@@ -1,0 +1,10 @@
+{
+  "note": "Type errors per file in functions/ (and the shared assets it imports), checked by tools/typecheck-ratchet-test.mjs. Pins only go down: KIWI_UPDATE_TS_BASELINE=1 after a fix.",
+  "errors": {
+    "assets/admin-policy.js": 3,
+    "assets/kit/haptics.js": 4,
+    "assets/menu-promos.js": 2,
+    "assets/refund-split.js": 1
+  },
+  "hatches": {}
+}

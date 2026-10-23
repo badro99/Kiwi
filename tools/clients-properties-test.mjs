@@ -72,7 +72,7 @@ await strict('shipped browser devices preserve independent queued edits and conv
 }));
 /* Une caisse hors ligne longtemps : la file des fiches à renvoyer est regroupée
  * par client et ne perd aucun jeton, même au-delà de 500 fiches en souffrance. */
-{const label='offline profile outbox keeps one token per client and drops none past 500 clients',n=520;try{
+{const label='offline profile outbox keeps one token per client and drops none past 500 clients',n=520;if(!process.env.KIWI_PROPERTY_ONLY||label.includes(process.env.KIWI_PROPERTY_ONLY))try{
  await reset();const d=syncDevice(0);await d.pull();const outbox=()=>JSON.parse(d.storage.get('kiwi:clients-out:v1:'+f.merchant)||'[]');
  const ids=[];for(let i=0;i<n;i++)ids.push(d.book.upsert({name:'Offline '+i,phone:'06'+String(10000000+i)},f.merchant).id);
  for(let i=0;i<3;i++)d.book.upsert({id:ids[0],notes:'Edit '+i},f.merchant);
@@ -89,10 +89,108 @@ await strict('same field follows server arrival for current browsers and future 
  * après une coupure : sa fiche entière, plus vieille que la correction faite
  * entre-temps depuis le tableau de bord, ne l'écrase pas. */
 await strict('a legacy whole-record replay older than the stored record does not overwrite it',fc.asyncProperty(fc.integer({min:1,max:3600000}),async age=>{await reset();const fixedAt=Date.now();ok(await request(post,{id:'client-fixture',name:'Fixed',updated:fixedAt,profileBase:{name:'Before'}}));ok(await request(post,{id:'client-fixture',name:'Stale',updated:fixedAt-age}));assert.equal(f.rowClient().name,'Fixed')}))
-await knownIssue('CL-2','no duplicate merge contract exists: union of visits/spend/notes/tags and reverse-merge semantics require design',fc.asyncProperty(cents,async amount=>{await reset();ok(await request(post,{id:'duplicate',name:'Duplicate',notes:'Second',tags:['second']}));const r=await request(post,{merge:{from:'duplicate',to:'client-fixture'}});return r.status===200&&f.sql.prepare("SELECT deleted FROM clients WHERE id='duplicate'").get().deleted===1;}));
+await strict('CL-2 existing profiles merge once, union fields and totals, preserve aliases and tenant boundaries',fc.asyncProperty(cents,async amount=>{
+ await reset();
+ ok(await request(post,{id:'client-fixture',name:'Survivor',notes:'First',tags:['first'],financialImport:true,spend:amount/100,visits:2,points:4,stamps:2},'owner'));
+ ok(await request(post,{id:'duplicate',name:'Duplicate',email:'fixture@example.test',notes:'Second',tags:['second'],financialImport:true,spend:amount/100,visits:3,points:6,stamps:3},'owner'));
+ f.sql.prepare('UPDATE clients SET spend=?, visits=2, points=4, stamps=2 WHERE merchant=? AND id=?').run(amount/100,f.merchant,'client-fixture');
+ const merge={merge:{from:'duplicate',to:'client-fixture'}};
+ assert.equal((await request(post,merge,'till')).status,403);
+ ok(await request(post,merge,'owner'));
+ let row=f.rowClient();assert.equal(row.name,'Survivor');assert.equal(row.email,'fixture@example.test');assert.equal(row.notes,'First\nSecond');assert.deepEqual(JSON.parse(row.tags),['first','second']);
+ assert.equal(C(row.spend),amount*2);assert.equal(row.visits,5);assert.equal(row.points,10);assert.equal(row.stamps,5);
+ ok(await request(post,merge,'owner'));assert.equal(C(f.rowClient().spend),amount*2);
+ assert.equal(f.sql.prepare("SELECT source FROM clients WHERE id='duplicate'").get().source,'merged:client-fixture');
+ ok(await request(post,{purchase:{clientId:'duplicate',ref:'queued',amount:1}}));assert.equal(f.rowClient().visits,6);
+ ok(await request(post,{id:'duplicate',city:'Fixture city'}));assert.equal(f.rowClient().city,'Fixture city');
+ assert.equal((await request(post,{merge:{from:'client-fixture',to:'duplicate'}},'owner')).status,409);
+}));
 /* CL-3 · les étiquettes voyagent : écrites par une caisse, lues par l'autre, jamais
  * effacées par un tirage, vidées avec la fiche supprimée ; avant la migration 0009
  * les routes répondent comme avant et l'appareil garde les siennes. */
+await strict('CL-2 duplicate sale ids count once, event retries and credits survive a concurrent merge',fc.asyncProperty(cents,async amount=>{
+ await reset();ok(await request(post,{id:'duplicate',name:'Duplicate'},'owner'));
+ const purchase=id=>({purchase:{clientId:id,ref:'purchase:'+id+':shared',saleRef:'shared',amount:amount/100}});
+ ok(await request(post,purchase('client-fixture')));ok(await request(post,purchase('duplicate')));
+ f.sql.prepare(`INSERT INTO store_credits(id,merchant,code,customer_id,amount_cents,balance_cents,expires_ts,created_ts,updated_ts) VALUES('credit-fixture',?,'synthetic-credit','duplicate',?,?,?,1,1)`).run(f.merchant,amount,amount,Date.now()+100000);
+ const merge={merge:{from:'duplicate',to:'client-fixture'}};
+ (await Promise.all([request(post,merge,'owner'),request(post,merge,'owner')])).forEach(ok);
+ assert.equal(C(f.rowClient().spend),amount);assert.equal(f.rowClient().visits,1);
+ ok(await request(post,purchase('duplicate')));
+ const history=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture').purchase_history;
+ assert.equal(history.length,1);assert.equal(C(history[0].amount),amount);
+ const credit=f.sql.prepare("SELECT * FROM store_credits WHERE id='credit-fixture'").get();assert.equal(credit.customer_id,'client-fixture');assert.equal(credit.balance_cents,amount);
+ assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM store_credit_events WHERE action='client-merge'").get().n,1);
+ ok(await request(post,{id:'third',name:'Third'},'owner'));ok(await request(post,{merge:{from:'client-fixture',to:'third'}},'owner'));
+ ok(await request(post,{purchase:{clientId:'duplicate',ref:'late-queued',amount:1}}));assert.equal(f.sql.prepare("SELECT visits FROM clients WHERE id='third'").get().visits,2);
+}));
+await strict('CL-2 queued purchases with a different ref for the same sale cannot earn twice',fc.asyncProperty(cents,async amount=>{
+ await reset();ok(await request(post,{id:'duplicate',name:'Duplicate'},'owner'));
+ ok(await request(post,{purchase:{clientId:'client-fixture',ref:'first-ref',saleRef:'shared-sale',amount:amount/100}}));
+ ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'));
+ ok(await request(post,{purchase:{clientId:'duplicate',ref:'late-ref',saleRef:'shared-sale',amount:amount/100}}));
+ assert.equal(C(f.rowClient().spend),amount);assert.equal(f.rowClient().visits,1);
+}));
+await strict('CL-2 authenticated manager can merge, service employee and foreign records cannot',fc.asyncProperty(fc.constant(null),async()=>{
+ await reset();ok(await request(post,{id:'duplicate',name:'Duplicate'},'owner'));
+ assert.equal((await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'employee')).status,403);
+ doc('team',{members:[{id:'service-fixture',function:'Manager'}]});
+ ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'employee'));
+ f.sql.prepare("INSERT INTO clients(merchant,id,name) VALUES('server-other-shop','foreign-merge','Foreign')").run();
+ assert.equal((await request(post,{merge:{from:'foreign-merge',to:'client-fixture'}},'owner')).status,404);
+ assert.equal(f.sql.prepare("SELECT deleted FROM clients WHERE id='foreign-merge'").get().deleted,0);
+}));
+await strict('CL-2 employee and credit writes queued with an alias reach the survivor',fc.asyncProperty(cents,async amount=>{
+ await reset();ok(await request(post,{id:'duplicate',name:'Duplicate'},'owner'));
+ f.insert('employee-linked',amount);ok(await request(employeePost,{clientId:'duplicate',saleId:'employee-linked'},'employee'));
+ ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'));
+ ok(await request(employeePost,{clientId:'duplicate',saleId:'employee-linked'},'employee'));
+ f.insert('employee-next',amount);ok(await request(employeePost,{clientId:'duplicate',saleId:'employee-next'},'employee'));
+ assert.equal(C(f.rowClient().spend),amount*2);
+ f.insert('credit-sale',amount);ok(await f.call('credit',{action:'issue',id:'credit-alias',originalSaleId:'credit-sale',amountCents:amount,customerId:'duplicate'},'owner'));
+ assert.equal(f.sql.prepare("SELECT customer_id FROM store_credits WHERE id='credit-alias'").get().customer_id,'client-fixture');
+}));
+await strict('CL-2 a sale recorded through both employee and till paths contributes once after merge',fc.asyncProperty(cents,async amount=>{
+ await reset();ok(await request(post,{id:'duplicate',name:'Duplicate'},'owner'));
+ f.insert('shared-channel-sale',amount);
+ ok(await request(employeePost,{clientId:'duplicate',saleId:'shared-channel-sale'},'employee'));
+ ok(await request(post,{purchase:{clientId:'client-fixture',ref:'purchase:client-fixture:shared-channel-sale',saleRef:'shared-channel-sale',amount:amount/100}}));
+ ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'));
+ assert.equal(C(f.rowClient().spend),amount);assert.equal(f.rowClient().visits,1);
+ const cursors=f.sql.prepare('SELECT srv_ts FROM clients WHERE merchant=?').all(f.merchant).map(r=>r.srv_ts);assert.equal(new Set(cursors).size,cursors.length);
+ ok(await request(post,{purchase:{clientId:'duplicate',ref:'purchase:duplicate:shared-channel-sale',saleRef:'shared-channel-sale',amount:amount/100}}));
+ assert.equal(C(f.rowClient().spend),amount);assert.equal(f.rowClient().visits,1);
+}));
+await strict('CL-2 distinct sale ids sharing a receipt reference keep both purchases',fc.asyncProperty(cents,async amount=>{
+ await reset();
+ for(const id of ['split-a','split-b']){f.insert(id,amount);ok(await request(post,{purchase:{clientId:'client-fixture',ref:'purchase:client-fixture:'+id,saleRef:'shared-receipt',amount:amount/100}}));}
+ assert.equal(C(f.rowClient().spend),amount*2);assert.equal(f.rowClient().visits,2);
+}));
+await strict('CL-2 credit issuance concurrent with merge cannot strand a credit under an alias',fc.asyncProperty(fc.constant(null),async()=>{
+ await reset();ok(await request(post,{id:'duplicate',name:'Duplicate'},'owner'));f.insert('credit-race-sale',100);
+ const results=await f.race(()=>Promise.all([
+   request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'),
+   f.call('credit',{action:'issue',id:'credit-race',originalSaleId:'credit-race-sale',amountCents:100,customerId:'duplicate'},'owner'),
+ ]));results.forEach(ok);
+ assert.equal(f.sql.prepare("SELECT customer_id FROM store_credits WHERE id='credit-race'").get().customer_id,'client-fixture');
+}));
+await strict('CL-2 full notes and tag unions remain readable beyond one profile input limit',fc.asyncProperty(fc.constant(null),async()=>{
+ await reset();const first=Array.from({length:20},(_,i)=>'first-'+i),second=Array.from({length:20},(_,i)=>'second-'+i);
+ ok(await request(post,{id:'client-fixture',notes:'A'.repeat(1000),tags:first},'owner'));ok(await request(post,{id:'duplicate',notes:'B'.repeat(1000),tags:second},'owner'));
+ ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'));
+ const row=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture');assert.deepEqual(row.tags,[...first,...second]);assert.equal(row.notes.length,2001);
+ ok(await request(post,{id:'duplicate',notes:'Queued note',tags:['queued']}));
+ const after=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture');assert.deepEqual(after.tags,[...first,...second,'queued']);assert.ok(after.notes.includes('B'.repeat(1000)));assert.ok(after.notes.includes('Queued note'));
+}));
+await strict('CL-2 directory confirmation names the survivor in FR EN AR and sends only after confirmation',fc.asyncProperty(fc.constantFrom('fr','en','ar'),async language=>{
+ const modals=[],calls=[],buttons={};let click;
+ const selected={value:'duplicate'},button={disabled:false,addEventListener(_,fn){click=fn;}};
+ const window={Kiwi:{handlers:{},modal(options){modals.push(options);return {el:{querySelector(selector){return selector==='select'?selected:button;}},close(){}};},toast(){}},KiwiClients:{bookId:()=>f.merchant,list:()=>[{id:'duplicate',name:'Duplicate',phone:''}],pull(cb){cb();}},KiwiI18n:{getLang:()=>language}};
+ const context=vm.createContext({window,KiwiClients:window.KiwiClients,KiwiI18n:window.KiwiI18n,document:{createElement:()=>({}),head:{appendChild(){}}},fetch:async(url,options)=>{calls.push(JSON.parse(options.body));return {ok:true};},console});
+ const source=fs.readFileSync(path.join(ROOT,'assets/clients-directory.js'),'utf8').replace(/\}\)\(\);\s*$/, 'window.testMerge = openMerge; window.testStrings = STR;})();');
+ vm.runInContext(source,context);assert.equal(typeof window.testMerge,'function');
+ window.testMerge({id:'client-fixture',name:'Survivor'},window.testStrings[language]);assert.equal(calls.length,0);assert.ok(modals[0].body.includes('Survivor'));await click();assert.equal(calls.length,0);await click();assert.equal(calls.length,1);assert.equal(calls[0].merge.to,'client-fixture');assert.equal(calls[0].merge.from,'duplicate');
+}));
 await strict('CL-3 tags persist on the server, reach a second device and survive pulls',fc.asyncProperty(fc.array(fc.constantFrom('vip','grossiste','famille','Riad 3'),{minLength:1,maxLength:3}),async tags=>{await reset();ok(await request(post,{id:'client-fixture',tags}));const want=[...new Set(tags)];assert.deepEqual(ok(await request(get,{},'till','GET')).clients[0].tags,want);
  const a=syncDevice(0),b=syncDevice(0);await a.pull();await b.pull();assert.deepEqual(a.book.get('client-fixture',f.merchant).tags,want);
  a.book.upsert({id:'client-fixture',tags:['nouveau']},f.merchant);await a.pull();assert.deepEqual(a.book.get('client-fixture',f.merchant).tags,['nouveau']);await a.flush();await b.pull();await a.pull();

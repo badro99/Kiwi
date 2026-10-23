@@ -13,6 +13,10 @@
  *
  * Browser suites (they launch Chromium) are capped separately and start first:
  * they are the long ones, and too many browsers at once time out on their own.
+ * Each test also runs with tools/dep-trace.cjs preloaded: a test that passes
+ * leaves the list of repo files it touched in kiwi-test-deps.json (temp dir,
+ * next to the durations), which is how `check.js --changed` knows what a change
+ * can affect. KIWI_DEP_TRACE=0 turns the tracing off.
  * Zero dependencies, like check.js. */
 const cp = require('child_process');
 const fs = require('fs');
@@ -46,6 +50,34 @@ const nameOf = (t) => String(t.args[t.args.length - 1]).replace(/^.*\//, '');
 const guess = (t) => (times[nameOf(t)] != null ? times[nameOf(t)] : (t.slow ? 60000 : 2000));
 tasks.sort((a, b) => guess(b) - guess(a));
 
+/* What each passing test read or imported (tools/dep-trace.cjs). */
+const ROOT = path.resolve(__dirname, '..');
+const TRACER = path.join(__dirname, 'dep-trace.cjs');
+const DEPS = path.join(os.tmpdir(), 'kiwi-test-deps.json');
+const tracing = process.env.KIWI_DEP_TRACE !== '0' && fs.existsSync(TRACER);
+const traceDir = tracing ? fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-deps-')) : null;
+const deps = {};
+let traceN = 0;
+const relOf = (f) => path.relative(ROOT, path.resolve(f)).split(path.sep).join('/');
+function envFor(task) {
+  if (!tracing) return { env: process.env, file: null };
+  const file = path.join(traceDir, (traceN++) + '.txt');
+  const req = '--require=' + (/\s/.test(TRACER) ? JSON.stringify(TRACER) : TRACER);
+  return { file, env: Object.assign({}, process.env, {
+    KIWI_DEP_TRACE: file, KIWI_DEP_ROOT: ROOT,
+    NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' ' + req).trim(),
+  }) };
+}
+function saveDeps() {
+  if (!tracing) return;
+  try { fs.rmSync(traceDir, { recursive: true, force: true }); } catch (_) {}
+  if (!Object.keys(deps).length) return;
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(DEPS, 'utf8')) || {}; } catch (_) { all = {}; }
+  Object.assign(all, deps);
+  try { fs.writeFileSync(DEPS, JSON.stringify(all)); } catch (_) {}
+}
+
 const results = {};
 let running = 0, runningSlow = 0, done = 0;
 const t0 = Date.now();
@@ -58,7 +90,8 @@ function next() {
 
 function start(task) {
   running++; if (task.slow) runningSlow++;
-  const child = cp.spawn(process.execPath, task.args, { cwd: task.cwd || undefined, stdio: ['ignore', 'pipe', 'pipe'] });
+  const trace = envFor(task);
+  const child = cp.spawn(process.execPath, task.args, { cwd: task.cwd || undefined, env: trace.env, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = '';
   child.stdout.on('data', (d) => { stdout += d; });
   child.stderr.on('data', (d) => { stderr += d; });
@@ -67,9 +100,22 @@ function start(task) {
   child.on('close', (status, signal) => {
     clearTimeout(timer);
     if (status === 0) times[nameOf(task)] = Date.now() - began;
+    let cpuMs = null;
+    if (trace.file) {
+      try {
+        const own = relOf(task.args[task.args.length - 1]);
+        const lines = fs.readFileSync(trace.file, 'utf8').split('\n').filter(Boolean);
+        cpuMs = lines.filter((l) => l.startsWith('#cpu ')).reduce((n, l) => n + (Number(l.slice(5)) || 0), 0);
+        if (status === 0) {
+          const list = new Set(lines.filter((l) => !l.startsWith('#')));
+          list.delete(own);
+          deps[own] = [...list].sort();
+        }
+      } catch (_) {}
+    }
     running--; if (task.slow) runningSlow--;
     done++;
-    results[task.key] = { status, signal, stdout, stderr };
+    results[task.key] = { status, signal, stdout, stderr, cpuMs, wallMs: Date.now() - began };
     if (status !== 0) {
       const name = String(task.args[task.args.length - 1]).replace(/^.*\//, '');
       console.log(`  … ${name} did not pass in parallel (exit ${status === null ? signal : status}), it will run again alone`);
@@ -87,6 +133,7 @@ function pump() {
   if (!running && !tasks.length) {
     fs.writeFileSync(resultsFile, JSON.stringify(results));
     try { fs.writeFileSync(TIMES, JSON.stringify(times)); } catch (_) {}
+    saveDeps();
     console.log(`  ✓ ${done} test files run in parallel in ${Math.round((Date.now() - t0) / 1000)}s (${jobs} at a time, ${browserJobs} browsers)`);
   }
 }

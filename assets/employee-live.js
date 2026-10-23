@@ -123,7 +123,11 @@
     return writeQueue(owner, items).then(function () { copies[owner] = items; });
   }
   function bodyFor(item) {
-    return { action: item.kind, attendanceCode: item.code || '', opId: item.opId, progress: item.progress || null,
+    var deviceId = item.deviceId || '';
+    if (!deviceId) {
+      try { deviceId = store().getItem('kiwiAttendanceDevice') || newOpId(); store().setItem('kiwiAttendanceDevice', deviceId); } catch (_) { deviceId = 'legacy-device'; }
+    }
+    return { capturedAt: Number(item.at) || 0, deviceId: deviceId, action: item.kind, attendanceCode: item.code || '', opId: item.opId, progress: item.progress || null,
       capturedAgoMs: Math.max(0, Date.now() - (Number(item.at) || Date.now())) };
   }
   // Réseau absent, serveur indisponible : on garde et on retente.
@@ -140,7 +144,7 @@
   function runOnce() {
     var owner = queueOwner;
     if (!owner) return Promise.resolve();
-    var sent = 0, rejected = [];
+    var sent = 0, approvals = 0, rejected = [];
     function step() {
       if (queueOwner !== owner) return Promise.resolve();
       var item = readQueue(owner)[0];
@@ -148,6 +152,7 @@
       return call('POST', bodyFor(item)).then(function (data) {
         return dropItem(owner, item.opId).then(function () {
           outcomes[item.opId] = { data: data };
+          if (data.pendingApproval) approvals++;
           sent++;
           return step();
         });
@@ -167,7 +172,11 @@
         retryDelay = Math.min(300000, retryDelay ? retryDelay * 2 : 15000);
         schedule(retryDelay);
       } else if (!pending) retryDelay = 0;
-      if (sent || rejected.length) notify({ pending: pending, sent: sent, rejected: rejected });
+      if (approvals && typeof window.toast === 'function') {
+        var lang = document.documentElement.lang;
+        window.toast(lang === 'ar' ? 'تم حفظ تسجيل الحضور لموافقة المسؤول' : lang === 'en' ? 'Punch kept for manager approval' : 'Pointage conservé pour validation du responsable', 4200);
+      }
+      if (sent || rejected.length) notify({ pending: pending, sent: approvals ? 0 : sent, approvals: approvals, rejected: rejected });
       if (sent && queueOwner === owner) call('GET').then(remember).catch(function () {});
     });
   }

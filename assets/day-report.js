@@ -80,10 +80,11 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
    * un exercice comptable entier plus un mois de marge, et 30 clés de rab avant
    * la limite du serveur. Le budget de nœuds est le vrai garde-fou : une
    * brasserie qui vend 90 références par jour pèse ~500 nœuds la journée, soit
-   * 185 000 sur un an — au-delà du plafond. `pruneToBudget()` élague donc les
-   * journées les plus ANCIENNES jusqu'à tenir, au lieu de laisser le serveur
-   * refuser tout le classeur. Un magasin ordinaire (20 à 40 références par jour)
-   * garde ses 370 journées sans jamais approcher le budget.
+   * 185 000 sur un an — au-delà du plafond. `pruneToBudget()` retire d'abord
+   * le détail par catégorie des anciennes journées (leurs totaux restent),
+   * puis seulement les journées les plus ANCIENNES, jamais celles du mois
+   * précédent ni du mois en cours. Un magasin ordinaire (20 à 40 références
+   * par jour) garde ses 370 journées sans jamais approcher le budget.
    *
    * Le serveur borne AUSSI la taille du texte : `max` de `dayreports`, 1 500 000
    * caractères de JSON. Les nœuds ne la tiennent pas : un produit compte 4 nœuds
@@ -913,28 +914,50 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     if (r.duplicates) n += 3;
     return n;
   }
-  /* Élague les journées les plus ANCIENNES jusqu'à tenir dans le budget. On
-     coupe par le passé et jamais par le présent : le rapport d'hier matin est
-     celui qu'on ouvre, celui de l'an dernier est celui qu'on archive. */
+  /* Keep the cloud copy inside the server's limits without losing a recent
+     closing. In order: (1) the documented archive span, KEEP_DAYS, oldest
+     first; (2) optional category detail, oldest days first, totals kept
+     (detailTrimmed); (3) only then whole days, oldest first, but never a day
+     of the previous or current month (budgetExceeded says the copy may still
+     be refused). Changed days are copies: merge inputs may still be in use. */
   function pruneToBudget(doc) {
     var keys = Object.keys(doc.days || {}).sort();          /* ancien → récent */
+    delete doc.budgetExceeded;
     while (keys.length > KEEP_DAYS) { delete doc.days[keys.shift()]; }
     var total = 0;
     keys.forEach(function (k) { total += nodeCost(doc.days[k]); });
-    while (total > NODE_BUDGET && keys.length > 1) {
-      var oldest = keys.shift();
-      total -= nodeCost(doc.days[oldest]);
-      delete doc.days[oldest];
-    }
-    /* Puis la taille du texte, mesurée comme le serveur la mesure
-       (JSON.stringify(...).length). Retirer une journée retire exactement
-       `"clé":valeur` et une virgule. */
     var size = JSON.stringify(doc).length;
-    while (size > BYTE_BUDGET && keys.length > 1) {
-      var old = keys.shift();
-      size -= JSON.stringify(old).length + String(JSON.stringify(doc.days[old]) || '').length + 2;
-      delete doc.days[old];
+    var over = function () { return total > NODE_BUDGET || size > BYTE_BUDGET; };
+    keys.forEach(function (k) {
+      if (!over()) return;
+      var old = doc.days[k];
+      if (!old || (!old.categories && !(old.carried && old.carried.categories))) return;
+      var compact = Object.assign({}, old);
+      delete compact.categories;
+      if (old.carried && old.carried.categories) {
+        compact.carried = Object.assign({}, old.carried);
+        delete compact.carried.categories;
+      }
+      compact.detailTrimmed = true;
+      total += nodeCost(compact) - nodeCost(old);
+      size += JSON.stringify(compact).length - JSON.stringify(old).length;
+      doc.days[k] = compact;
+    });
+    /* First day of the month before the newest day: from there on, protected. */
+    var last = keys[keys.length - 1] || '';
+    var m = /^(\d{4})-(\d{2})/.exec(last), protectFrom = '';
+    if (m) {
+      var y = +m[1], mo = +m[2] - 1;
+      if (mo < 1) { mo = 12; y -= 1; }
+      protectFrom = y + '-' + (mo < 10 ? '0' : '') + mo + '-01';
     }
+    while (over() && keys.length > 1 && keys[0] < protectFrom) {
+      var gone = keys.shift();
+      total -= nodeCost(doc.days[gone]);
+      size -= JSON.stringify(gone).length + String(JSON.stringify(doc.days[gone]) || '').length + 2;
+      delete doc.days[gone];
+    }
+    if (over()) doc.budgetExceeded = true;
     return doc;
   }
 

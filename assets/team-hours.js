@@ -58,6 +58,31 @@
     return `<span class="kt-deferred" data-kt-deferred title="${label}" aria-label="${label}" role="img"><i data-icon="smartphone" style="width:12px;height:12px" aria-hidden="true"></i></span>`;
   }
 
+  function correctionCopy() {
+    if (trLang() === 'ar') return {title:'تصحيحات الحضور المعلقة',approve:'موافقة',reject:'رفض',in:'دخول',out:'خروج',captured:'وقت الهاتف',received:'وقت الاستلام',error:'تعذر تنفيذ القرار. تحقق من ترتيب التسجيلات والصلاحيات.'};
+    if (trLang() === 'en') return {title:'Pending attendance corrections',approve:'Approve',reject:'Reject',in:'Clock in',out:'Clock out',captured:'Phone capture',received:'Received',error:'Could not apply decision. Check punch order and permissions.'};
+    return {title:'Corrections de présence en attente',approve:'Approuver',reject:'Refuser',in:'Arrivée',out:'Départ',captured:'Heure du téléphone',received:'Reçu',error:'Décision impossible. Vérifiez l’ordre des pointages et vos droits.'};
+  }
+  function correctionTime(item, field) {
+    return new Date(item[field]).toLocaleString(dateLocale(), {timeZone:item.timeZone || 'UTC',timeZoneName:'short'});
+  }
+  function correctionsHtml(venueType) {
+    const items = ((window.__kiwiTeamV2.correctionsByVenue || {})[venueType] || []), C = correctionCopy();
+    if (!items.length) return '';
+    return `<section><h3>${esc(C.title)}</h3>${items.map(item => `<article><strong>${esc(item.name)} · ${esc(item.action === 'clock-in' ? C.in : C.out)}</strong><p>${esc(correctionTime(item, 'claimedTs'))} · ${esc(C.captured)}: ${esc(correctionTime(item, 'capturedTs'))} · ${esc(C.received)}: ${esc(correctionTime(item, 'receivedTs'))} · ${esc(item.deviceId)}</p><button class="kb atlas" data-action="kt-attendance-decision" data-rid="${esc(item.id)}" data-decision="approved">${esc(C.approve)}</button><button class="kb ghost" data-action="kt-attendance-decision" data-rid="${esc(item.id)}" data-decision="rejected">${esc(C.reject)}</button></article>`).join('')}</section>`;
+  }
+  handlers['kt-attendance-decision'] = async (el) => {
+    const merchant = Kiwi.__teamProfileCore.teamSlug(), correctionId = el.dataset.rid, decision = el.dataset.decision;
+    el.disabled = true;
+    try {
+      const response = await fetch('/api/team/live', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,action:'attendance-correction-decision',correctionId,decision})});
+      if (!response.ok) throw new Error('decision-failed');
+      const root = window.__kiwiTeamV2;
+      Object.keys(root.correctionsByVenue || {}).forEach(key => {root.correctionsByVenue[key] = root.correctionsByVenue[key].filter(item => item.id !== correctionId);});
+      render();
+    } catch (_) { toast(correctionCopy().error); el.disabled = false; }
+  };
+
   /* ═══════════════ HOURS PANE ═══════════════ */
   function renderHoursPane(T, venue, venueType, members) {
     const root = window.__kiwiTeamV2;
@@ -117,6 +142,7 @@
     const periodPills = periodPillsHtml(T);
 
     return `
+      ${correctionsHtml(venueType)}
       <div class="eq-section">
         <div class="eq-section-head">
           <h3>${esc(T.tabHours)}</h3>

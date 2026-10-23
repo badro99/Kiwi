@@ -1,3 +1,4 @@
+import { resolveClientId } from './clients.js';
 // /api/store-credits — server-authoritative Maison store-credit ledger.
 //
 // Credits are liabilities, not browser preferences.  Issuance and redemption
@@ -165,9 +166,11 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   await ensureSchema(env);
   const code = clean(url.searchParams.get('code'), 40);
-  const customerId = cleanId(url.searchParams.get('customerId'), 96);
+  const customerId = await resolveClientId(env, merchant, cleanId(url.searchParams.get('customerId'), 96));
   const active = url.searchParams.get('active') === '1';
-  const clauses = ['merchant = ?']; const binds = [merchant];
+  const clauses = ['merchant = ?'];
+  /** @type {(string | number)[]} */
+  const binds = [merchant];
   if (code) { clauses.push(`${FOLDED_CODE_SQL} = ?`); binds.push(foldedCode(code)); }
   if (customerId) { clauses.push('customer_id = ?'); binds.push(customerId); }
   if (active) { clauses.push("status = 'active' AND balance_cents > 0 AND expires_ts >= ?"); binds.push(now()); }
@@ -246,7 +249,9 @@ export async function onRequestPost({ request, env }) {
              (id, merchant, code, customer_id, customer_name, original_sale_id, original_ref,
               amount_cents, balance_cents, status, expires_ts, reason, issued_by,
               last_event_id, created_ts, updated_ts)
-           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?
+           SELECT ?, ?, ?, COALESCE((SELECT CASE
+             WHEN deleted = 1 AND substr(source, 1, 7) = 'merged:' THEN substr(source, 8) ELSE id END
+             FROM clients WHERE merchant = ? AND id = ?), ?), ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?
              FROM sales s
             WHERE s.merchant = ? AND s.id = ? AND s.void_ts IS NULL
               AND ? <= COALESCE((
@@ -259,7 +264,7 @@ export async function onRequestPost({ request, env }) {
                 SELECT SUM(COALESCE(a.amount_cents, a.amount * 100)) FROM sale_audit a
                  WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund'
               ), 0)`
-        ).bind(requestId, merchant, code, customerId, customerName, originalSaleId, originalRef,
+        ).bind(requestId, merchant, code, merchant, customerId, customerId, customerName, originalSaleId, originalRef,
           cents, cents, expiresAt, reason, issuer, eventId, at, at,
           merchant, originalSaleId, cents, merchant, originalSaleId),
         env.DB.prepare(

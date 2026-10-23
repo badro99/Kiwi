@@ -89,9 +89,17 @@ ok(/'\/assets\/dashboard-pin-vault\.js\?v=\d+'/.test(read('kiwi-sw.js')), 'le co
 /* ── 2 · le coffre, tel que livré ───────────────────────────────────────── */
 console.log('2 · le coffre');
 const vaultSrc = read('assets/dashboard-pin-vault.js');
+/* The behaviour cases (rows kept, replaced, forgotten, expired) do not depend on
+ * the cost of one derivation, and at a million rounds each they spent fifteen
+ * seconds of every gate hashing. They run on a copy at 1 000 rounds; the block
+ * that proves the shipped cost (a million rounds, ten thousand codes > ten
+ * minutes) loads the file as shipped. */
+const ITER_LINE = /var ITER = 1000000;/g;
+if ((vaultSrc.match(ITER_LINE) || []).length !== 1) throw new Error('dashboard-pin-vault.js no longer declares `var ITER = 1000000;` once: update the fast copy in this test');
+const fastSrc = vaultSrc.replace(ITER_LINE, 'var ITER = 1000;');
 const store = new Map();
 let now = Date.UTC(2026, 9, 13, 10, 0, 0);
-function load(preset = {}, cryptoImpl = webcrypto) {
+function load(preset = {}, cryptoImpl = webcrypto, src = fastSrc) {
   store.clear();
   for (const [k, v] of Object.entries(preset)) store.set(k, v);
   const localStorage = {
@@ -103,7 +111,7 @@ function load(preset = {}, cryptoImpl = webcrypto) {
   const sandbox = { localStorage, crypto: cryptoImpl, TextEncoder, Date: FakeDate, Promise, JSON, Array, Object, String, Number, Uint8Array };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(vaultSrc, sandbox);
+  vm.runInContext(src, sandbox);
   return sandbox.window.KiwiDashPinVault;
 }
 const OWNER = { id: 'st_owner', name: 'Amira', role: 'owner' };
@@ -229,7 +237,7 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
       deriveBits: (...a) => { n++; return webcrypto.subtle.deriveBits(...a); },
     },
   };
-  const v = load({ kiwiAccountKey: 'kdf@x.com' }, counting);
+  const v = load({ kiwiAccountKey: 'kdf@x.com' }, counting, vaultSrc);
   for (const [c, id] of [['1111', 'a'], ['2222', 'b'], ['3333', 'c']]) await v.remember(c, { id, name: id, role: 'manager' });
   let rows = JSON.parse(store.get(scopeKey(v)));
   ok(rows.length === 3 && rows.every((r) => r.it >= 1000000), 'chaque ligne neuve est PBKDF2-SHA-256 à un million de tours au moins');
@@ -254,7 +262,7 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   console.log(`    (dix mille essais sur un stockage copié : ${minutes.toFixed(1)} min sur cette machine)`);
   ok(minutes > 10, 'énumérer les dix mille codes d\'un stockage copié prend plus de dix minutes ici');
   /* Le compte change pendant le calcul : rien ne s'écrit pour l'ancien. */
-  const w = load({ kiwiAccountKey: 'first@x.com' }, counting);
+  const w = load({ kiwiAccountKey: 'first@x.com' }, counting, vaultSrc);
   const firstKey = scopeKey(w);
   const pending = w.remember('5555', { id: 'e', name: 'e', role: 'owner' });
   store.set('kiwiAccountKey', 'second@x.com');

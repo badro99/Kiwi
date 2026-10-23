@@ -89,20 +89,27 @@ export function shapeOf(db) {
     .map((row) => row.name)
     .filter((name) => !INTERNAL.test(name));
 
+  /* Prepared once and reused: a statement per table and per index was most of
+   * the time this took on a 330-table schema. */
+  const tableInfo = db.prepare('SELECT * FROM pragma_table_info(?)');
+  const foreignKeyList = db.prepare('SELECT * FROM pragma_foreign_key_list(?)');
+  const indexList = db.prepare('SELECT * FROM pragma_index_list(?)');
+  const indexInfo = db.prepare('SELECT name FROM pragma_index_info(?)');
+  const indexSql = db.prepare('SELECT sql FROM sqlite_master WHERE name = ?');
   for (const table of names) {
     const columns = new Map();
-    for (const c of db.prepare('SELECT * FROM pragma_table_info(?)').all(table)) {
+    for (const c of tableInfo.all(table)) {
       columns.set(c.name, `${String(c.type).toUpperCase()} · notnull=${c.notnull} · default=${c.dflt_value} · pk=${c.pk}`);
     }
-    const foreignKeys = db.prepare('SELECT * FROM pragma_foreign_key_list(?)').all(table)
+    const foreignKeys = foreignKeyList.all(table)
       .map((fk) => `${fk.from}→${fk.table}.${fk.to} on delete ${fk.on_delete}`)
       .sort();
     tables.set(table, { columns, foreignKeys });
 
-    for (const index of db.prepare('SELECT * FROM pragma_index_list(?)').all(table)) {
-      const cols = db.prepare('SELECT name FROM pragma_index_info(?)').all(index.name).map((r) => r.name).join(',');
+    for (const index of indexList.all(table)) {
+      const cols = indexInfo.all(index.name).map((r) => r.name).join(',');
       if (index.origin === 'c') {
-        const { sql } = db.prepare('SELECT sql FROM sqlite_master WHERE name = ?').get(index.name);
+        const { sql } = indexSql.get(index.name);
         indexes.set(index.name, { table, describe: normalizeIndexSql(sql) });
       } else {
         /* Index implicites (PRIMARY KEY / UNIQUE de table) : leur nom

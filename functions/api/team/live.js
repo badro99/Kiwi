@@ -6,6 +6,7 @@
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { storeOperationalState } from '../_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
+import { correctionList, decideCorrection } from '../_attendance-corrections.js';
 import { hoursByDay } from '../_worked-hours.js';
 
 const TEAM = 'team';
@@ -156,6 +157,7 @@ export async function onRequestGet({ request, env }) {
         outDeferredMs: Number(entry && entry.deferred && entry.outDeferredMs) || 0,
       })),
     deferredPunches: deferredPunches(attendance.data, zone),
+    pendingCorrections: (await correctionList(env, merchant)).map(item => ({ ...item, timeZone: zone })),
     messages: (Array.isArray(messages.data.messages) ? messages.data.messages : []).slice(-MAX_MESSAGES),
     now: Date.now(),
   }, 200, { 'Cache-Control': 'no-store' });
@@ -173,6 +175,7 @@ export async function onRequestPost({ request, env }) {
   if (storeState.pending) return json({ error: 'subscription-required' }, 402);
   if (storeState.suspended) return json({ error: 'store-suspended' }, 403);
   const action = String(body.action || '');
+  if (action === 'attendance-correction-decision') return decideCorrection(request, env, merchant, body);
   const targetId = String(body.memberId || '').trim().slice(0, 96);
 
   /* A new six-digit code, never the one it replaces, alive 5 minutes. */

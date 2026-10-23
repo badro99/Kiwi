@@ -41,10 +41,18 @@ if (typeof module === 'object' && typeof require === 'function') require('./hapt
   var DEFAULT_ZONE = 'Africa/Casablanca';
 
   /* Un nom de zone IANA plausible ET connu de ce navigateur, sinon ''. */
+  /* La réponse par nom est gardée : construire un formateur Intl coûte bien plus
+     que s'en servir, et chaque businessDate() redemandait (sur une tablette
+     d'entrée de gamme, à chaque ligne de rapport). Borné : le nom vient d'ailleurs. */
+  var zoneChecks = {}, zoneCount = 0;
   function validZone(zone) {
     var z = String(zone == null ? '' : zone).trim();
     if (!z || z.length > 64 || !/^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){0,2}$|^UTC$/.test(z)) return '';
-    try { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: z }).format(0); return z; } catch (_) { return ''; }
+    if (Object.prototype.hasOwnProperty.call(zoneChecks, z)) return zoneChecks[z];
+    var ok = '';
+    try { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: z }).format(0); ok = z; } catch (_) { ok = ''; }
+    if (zoneCount < 512) { zoneChecks[z] = ok; zoneCount++; }
+    return ok;
   }
   /* Une heure de bascule : un entier de 0 à 12, sinon -1. */
   function validCutoff(value) {

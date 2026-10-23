@@ -40,6 +40,23 @@ if (process.env.KIWI_CHROMIUM_BIN && !process.env.CHROME_BIN) process.env.CHROME
 
 /* One run at a time, and no child test can hang the gate (tools/check-guard.js). */
 if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
+if (process.argv.includes('--changed')) process.env.KIWI_CHECK_TIER = 'changed';
+/* The changed tier names what it will run, and why, before anything starts. */
+if (process.env.KIWI_CHECK_TIER === 'changed') {
+  const g = require('./check-guard');
+  let s;
+  try { s = g.selection(); }
+  catch (e) { console.log(`✗ --changed could not list the changes (${e.message}); run \`npm run check:fast\` instead`); process.exit(1); }
+  const rel = (f) => path.relative(ROOT, f);
+  console.log(`■ Changed tier · ${s.changed.length} changed file(s) against ${s.base ? 'the merge base with ' + s.base : 'HEAD'}`);
+  for (const c of s.changed.slice(0, 40)) console.log('  · ' + c + (s.stampOnly.includes(c) ? '  (stamps only)' : ''));
+  if (s.changed.length > 40) console.log(`  · … and ${s.changed.length - 40} more`);
+  if (!s.depsKnown) console.log('  ⚠ no dependency map on this machine yet: tests are chosen by the files they name. One `npm run check:fast` (or a full run) records what each test reads.');
+  if (s.all) console.log('  ⚠ the runner itself changed: every fast-tier suite runs');
+  console.log(`  → ${s.picked.size} of ${s.named.size} child test(s) selected${s.picked.size ? ':' : ''}`);
+  for (const [f, why] of s.picked) console.log(`    ${rel(f)}  (${why})`);
+  if (s.browserLater.length) console.log(`  ⏭ ${s.browserLater.length} browser suite(s) load these files with their page but are not about them; the full gate runs them (--browsers runs them now; --no-browsers leaves every browser suite): ${s.browserLater.map((f) => path.basename(f)).join(', ')}`);
+}
 /* The money, payroll, books and accessibility suites need fast-check and
  * axe-core from app/node_modules; without them each one prints "○ skip" and
  * exits 0, so a fresh worktree passed the gate with no money property run
@@ -50,7 +67,7 @@ if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
     .filter((m) => !fs.existsSync(path.join(ROOT, 'app', 'node_modules', m, 'package.json')));
   if (missing.length) {
     const fix = `npm --prefix app ci, or in a worktree: ln -s <main checkout>/app/node_modules app/node_modules`;
-    if (process.env.KIWI_CHECK_TIER !== 'fast' && process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
+    if ((process.env.KIWI_CHECK_TIER || 'full') === 'full' && process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
       console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money and accessibility suites would skip and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs anyway, knowingly.)`);
       process.exit(1);
     }
@@ -62,19 +79,19 @@ if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
  * with none of them run. The full run finds the executable the suites would use
  * and launches it once; the fast tier launches no browser suite and only warns.
  * KIWI_ALLOW_BROWSER_SKIP=1 lets a full run go on anyway, knowingly. */
-if (process.env.KIWI_CHECK_TIER !== 'fast' && process.env.KIWI_ALLOW_BROWSER_SKIP !== '1') {
+if (require('./check-guard').runsBrowsers() && process.env.KIWI_ALLOW_BROWSER_SKIP !== '1') {
   const b = require('./check-guard').browserPreflight();
   if (!b.ok) {
     console.log(`✗ no working Chromium: ${b.reason}.\n  Every browser suite would skip and still read green.\n  Fix: install Chrome or Chromium, or point KIWI_CHROMIUM_BIN at one that starts.\n  (KIWI_ALLOW_BROWSER_SKIP=1 runs anyway, knowingly; --fast needs no browser.)`);
     process.exit(1);
   }
-} else if (process.env.KIWI_CHECK_TIER === 'fast') {
+} else if (process.env.KIWI_CHECK_TIER === 'fast' || process.env.KIWI_CHECK_TIER === 'changed') {
   const bin = require('./check-guard').findBrowser();
   if (!bin || !fs.existsSync(bin)) console.log(`⚠ no Chromium found${bin ? ' at ' + bin : ''}: a full run will refuse to start until one is (KIWI_CHROMIUM_BIN)`);
 }
 /* The machine-wide lock exists so two runs do not drown the machine in headless
  * browsers; the fast tier launches none, so it never waits behind a full run. */
-if (process.env.KIWI_CHECK_TIER !== 'fast') require('./check-guard').acquireLock();
+if (require('./check-guard').runsBrowsers()) require('./check-guard').acquireLock();
 require('./check-guard').install();
 /* …and the child tests run side by side first, then replay here in order
  * (tools/check-pool.js). KIWI_CHECK_JOBS=1 runs everything serially. */
@@ -104,7 +121,7 @@ const warn = (msg) => { warnings++; console.log('  ⚠ ' + msg); };
 const guard = require('./check-guard');
 const ok = (msg) => {
   const s = guard.takeSkip();
-  if (s) { console.log('  ⏭ ' + s + ' not run (fast tier)'); return; }
+  if (s) { if (guard.tier() === 'fast') console.log('  ⏭ ' + s + ' not run (fast tier)'); return; }
   console.log('  ✓ ' + msg);
 };
 const section = (t) => console.log('\n■ ' + t);
@@ -670,6 +687,8 @@ for (const test of [
   'team-split-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
+  /* TypeScript reads functions/ as plain JS (checkJs): type errors per file pinned, only ever down. */
+  'typecheck-ratchet-test.mjs',
   /* One owner per window.Kiwi* global, no new dangling read, the large files' coupling pinned. */
   'global-ownership-test.mjs',
   'pages-pro-lazy-registry-test.mjs',
@@ -2841,8 +2860,28 @@ for (const test of ['strings-completeness-test.mjs', 'strings-lint.mjs', 'string
   }
 }
 
+/* ── Suite time ratchet (tools/check-guard.js cpuRatchet) ───────────────── */
+section('Suite CPU time (tools/suite-cpu-baseline.json)');
+{
+  guard.takeSkip();   // a skip flag left by the last child test is not this section's
+  const r = guard.cpuRatchet();
+  if (!r.measured) console.log('  ○ no suite timed (serial run, KIWI_CHECK_JOBS=1, or tracing off)');
+  else {
+    for (const o of r.over) fail(`${o.name}: ${Math.round(o.ms / 1000)} s of CPU, ${o.pin ? `pinned at ${Math.round(o.pin / 1000)} s` : `no pin`}, limit ${Math.round(o.limit / 1000)} s. Make it faster (one browser, one page per locale, a fixture built once); never raise a pin`);
+    if (!r.hasBaseline && !r.wrote) warn('no tools/suite-cpu-baseline.json yet: KIWI_UPDATE_CPU_BASELINE=1 on a full run writes the first one');
+    if (r.wrote) console.log(`  ✓ baseline written (${r.hasBaseline ? 'pins lowered' : 'first measurement'})`);
+    else if (r.lower.length) console.log(`  ! ${r.lower.length} pin(s) could come down, KIWI_UPDATE_CPU_BASELINE=1: ${r.lower.map((x) => `${x.name} ${Math.round(x.pin / 1000)}→${Math.round(x.ms / 1000)} s`).join(' · ')}`);
+    if (!r.over.length) ok(`${r.measured} suites within their CPU time (${r.pinned} pinned, ${Math.round(guard.CPU_BUDGET_MS / 1000)} s for any other)`);
+  }
+}
+
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
+if (guard.tier() === 'changed') {
+  const n = guard.selection().picked.size;
+  console.log(`✓ changed tier passed (${warnings} warning(s)) · ${n} affected test(s) run, ${guard.skipped.length} left out, so this is not the gate: run \`npm run check:full\` before pushing`);
+  process.exit(0);
+}
 if (guard.tier() === 'fast') {
   console.log(`✓ fast tier passed (${warnings} warning(s)) · ${guard.skipped.length} browser suite(s) NOT run, so this is not the gate: run \`npm run check:full\` (or \`node tools/check.js\`) before pushing`);
   process.exit(0);

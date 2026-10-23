@@ -386,6 +386,7 @@ export async function onRequestPost(context) {
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
   // Which of this account's stores is being synced?
+  /** @type {import('../../types/tenant').MerchantInput} */
   let merchant = accSlug;
   let storeName = String(acc.business || '').trim().slice(0, 120);
   const wanted = String((body && body.merchant) || '').trim().slice(0, 80);

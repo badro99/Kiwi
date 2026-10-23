@@ -10,6 +10,9 @@ const cache=new Map();
 export function named(text,name){let m=cache.get(text);if(!m)cache.set(text,m=new Map());if(m.has(name))return m.get(name);const re=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+name+'\\s*\\(|(?:const|let|var)\\s+'+name+'\\s*=)');const found=re.exec(text);if(!found)throw Error('Missing declaration '+name);const out=scan(text.slice(found.index).trimStart(),name);m.set(name,out);return out;}
 const files=new Map(),scripts=new Map();
 export const read=file=>{if(!files.has(file))files.set(file,fs.readFileSync(path.join(ROOT,file),'utf8'));return files.get(file);};
+/* Built once per process: a fresh string per boot missed both caches above, so
+ * every boot recompiled live-link.js and re-scanned the restaurant files. */
+const derived=new Map();const once=(key,make)=>{if(!derived.has(key))derived.set(key,make());return derived.get(key);};
 function run(text,c,opts={}){if(!scripts.has(text))scripts.set(text,new vm.Script(text,opts));return scripts.get(text).runInContext(c);}
 const copy=x=>x==null?x:JSON.parse(JSON.stringify(x));
 export async function harness(f){
@@ -55,12 +58,12 @@ export async function harness(f){
   Object.assign(c,{console,window,document,localStorage,location:{search:'',hostname:'kiwi.test'},navigator:{get onLine(){return s.online;}},Date:Clock,URLSearchParams,URL,AbortController,Uint8Array,crypto:window.crypto,structuredClone,CustomEvent:function(type,init){this.type=type;this.detail=init?.detail;},setTimeout:(fn,ms=0)=>{const id=++s.id;s.timers.set(id,{fn,ms,at:s.now+ms,epoch});return id;},clearTimeout:id=>s.timers.delete(id),setInterval:()=>0,clearInterval(){},fetch:request});
   window.window=window;
   if(indexed){window.Dexie=Dexie;run(read('assets/offline-db.js'),c);}
-  let source=read('assets/live-link.js');source=source.replace('  window.KiwiLiveLink = window.KiwiLive;','  window.KiwiLiveLink = window.KiwiLive; window.__queue={initOutbox,qRead,qWrite,accumulateFeed,bridgeToStore,applyVoids};');
+  const source=once('live-link',()=>read('assets/live-link.js').replace('  window.KiwiLiveLink = window.KiwiLive;','  window.KiwiLiveLink = window.KiwiLive; window.__queue={initOutbox,qRead,qWrite,accumulateFeed,bridgeToStore,applyVoids};'));
   run(source,c,{filename:'assets/live-link.js'});installStore(c);
-  run(read('assets/retail-sale-hold.js'),c);run(read('assets/pos-sale.js').replace('  window.KiwiPosSale = {','  window.__posHold={heldRead,heldWrite}; window.KiwiPosSale = {'),c);
+  run(read('assets/retail-sale-hold.js'),c);run(once('pos-sale',()=>read('assets/pos-sale.js').replace('  window.KiwiPosSale = {','  window.__posHold={heldRead,heldWrite}; window.KiwiPosSale = {')),c);
   c.HELD_SALES_PREFIX='kiwi-caisse-held-sales:';c.heldSalesCache=null;c.journal=[];c.shiftOpenedAt=new Clock();c.shiftMerchant=s.active;c.currentMerchantSlug=()=>s.active;c.paintHeldSales=()=>{};c.persistShift=()=>localStorage.setItem('test:journal',JSON.stringify(c.journal));
-  const restaurant=['assets/caisse-accounting.js','assets/caisse-floor.js','assets/caisse-kitchen.js','assets/caisse-app.js'].map(read).join('\n');
-  run('(function(){'+['money','reviveJournalEntry','heldSalesKey','heldSaleRows','saveHeldSales','holdSaleLocally','releaseHeldSale','retryHeldSales'].map(n=>named(restaurant,n)).join('\n')+'\nwindow.__restaurant={hold:holdSaleLocally,replay:retryHeldSales,rows:heldSaleRows};})();',c);
+  run(once('restaurant',()=>{const restaurant=['assets/caisse-accounting.js','assets/caisse-floor.js','assets/caisse-kitchen.js','assets/caisse-app.js'].map(read).join('\n');
+   return '(function(){'+['money','reviveJournalEntry','heldSalesKey','heldSaleRows','saveHeldSales','holdSaleLocally','releaseHeldSale','retryHeldSales'].map(n=>named(restaurant,n)).join('\n')+'\nwindow.__restaurant={hold:holdSaleLocally,replay:retryHeldSales,rows:heldSaleRows};})();';}),c);
   browser={c,window,api:window.KiwiLive,q:window.__queue};if(indexed)await browser.q.initOutbox();await drain();return browser;
  }
  async function until(test,label){const deadline=Date.now()+5000;while(!test()){if(Date.now()>deadline)throw Error(label);await new Promise(r=>setImmediate(r));}}

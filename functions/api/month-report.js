@@ -5,6 +5,7 @@ import { DateTimeFormat } from './_zone-law.js';
 import { entitledMerchant, activeAccountSession, isOperator, json } from '../auth/_lib.js';
 import { merchantZone, merchantCutoff, businessBoundary, businessDate } from './_business-day.js';
 
+/** @type {Readonly<Record<string, {table: string, time: string, columns: string, history?: boolean, allTime?: boolean, filter?: {columns: string[], sql: string}}>>} */
 export const SOURCES = Object.freeze({
   sales: { table: 'sales', time: 'ts', columns: 'id merchant amount amount_cents gross_amount_cents discount_amount_cents discount_reason method payment_parts label ref ts channel session_id split_flow_id lines void_ts void_reason void_note void_actor_id' },
   audits: { table: 'sale_audit', time: 'ts', columns: 'id merchant sale_id action reason note actor actor_id amount amount_cents method ref sale_ts impact ts' },

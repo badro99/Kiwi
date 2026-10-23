@@ -38,9 +38,10 @@
 // neutre en lecture, 503 en écriture. Le carnet local reste la vérité de travail
 // et la caisse continue d'encaisser.
 
-import { json } from '../auth/_lib.js';
-import { tenantFor } from './_private.js';
+import { json, activeEmployee } from '../auth/_lib.js';
+import { tenantFor, storeOperationalState } from './_private.js';
 import { phoneKey } from './_phone.js';
+import { mayMergeClients, mergeClients, purchaseKey, purchaseKeySql } from './_client-merge.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
@@ -118,7 +119,8 @@ function tagsJson(value) {
   return JSON.stringify(out);
 }
 function tagsList(value) {
-  try { return JSON.parse(tagsJson(JSON.parse(value || '[]'))); } catch (_) { return []; }
+  // Stored unions can exceed one profile's input limit; never truncate reads.
+  try { const tags = JSON.parse(value || '[]'); return Array.isArray(tags) ? tags.filter(tag => typeof tag === 'string') : []; } catch (_) { return []; }
 }
 /* La colonne `tags` arrive par migrations/0009_client_tags.sql. Tant qu'elle
  * n'est pas appliquée en production, lecture et écriture retombent sur
@@ -300,7 +302,7 @@ export async function onRequestGet(context) {
                 FROM client_purchase_events AS event
                 JOIN page ON page.client_id = event.client_id
                WHERE event.merchant = ?
-                 AND event.ref NOT LIKE 'refund:%'
+                 AND event.ref NOT LIKE 'refund:%' AND event.visits > 0
             )
        SELECT client_id, ref, amount, method, items, sale_ref, created_ts
          FROM ranked WHERE rn <= 50 ORDER BY created_ts DESC`
@@ -436,7 +438,7 @@ async function receivedOrDeclared(env, merchant, clientId, ref, saleRef, method)
   return declaredNoMoney(method) ? 0 : null;
 }
 
-async function applyPurchase(env, merchant, raw) {
+async function applyPurchase(env, merchant, raw, attempt = 0) {
   const purchase = raw && typeof raw === 'object' ? raw : {};
   // Un id fusionné dans une autre fiche (CL-5) écrit sur celle-ci.
   const clientId = await resolveClientId(env, merchant, str(purchase.clientId || purchase.client_id, 64));
@@ -468,7 +470,7 @@ async function applyPurchase(env, merchant, raw) {
     return json({ ok: true, replayed: true, points: Number(previous.points || 0), stamps: Number(previous.stamps || 0) });
   }
   const client = await env.DB.prepare(
-    'SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
+    'SELECT id, srv_ts FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
   if (!client) return json({ error: 'client-not-found' }, 404);
   const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
@@ -483,8 +485,22 @@ async function applyPurchase(env, merchant, raw) {
    * dépense comptent toujours ; les points et tampons, seulement si le
    * commerçant a choisi un programme (un défaut déduit, `auto`, n'en est pas un). */
   const on = loyaltyOn(cfg);
-  const points = on && cfg.model === 'amount' ? pointsFor(amount, cfg) : 0;
-  const stamps = stampsFor(cfg, purchase.items);
+  const key = purchaseKey({ ref, sale_ref: saleRef });
+  let duplicate = await env.DB.prepare(
+    `SELECT ref FROM client_purchase_events WHERE merchant = ? AND client_id = ? AND (${purchaseKeySql}) = ? AND visits > 0 LIMIT 1`
+  ).bind(merchant, clientId, key).first();
+  if (!duplicate) {
+    try {
+      duplicate = await env.DB.prepare(
+        'SELECT ref FROM employee_loyalty_events WHERE merchant = ? AND client_id = ? AND ref = ?'
+      ).bind(merchant, clientId, ('employee-sale:' + key).slice(0, 96)).first();
+    } catch (error) {
+      if (!/no such table/i.test(String(error && error.message || error))) throw error;
+    }
+  }
+  const points = !duplicate && on && cfg.model === 'amount' ? pointsFor(amount, cfg) : 0;
+  const stamps = duplicate ? 0 : stampsFor(cfg, purchase.items);
+  const visits = duplicate ? 0 : 1, spend = duplicate ? 0 : amount;
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
@@ -492,15 +508,15 @@ async function applyPurchase(env, merchant, raw) {
   const results = await env.DB.batch([
     ...clientCursorStatements(env, merchant, now),
     env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
-      visits = visits + 1, spend = spend + ?, first_seen = CASE WHEN first_seen > 0 THEN first_seen ELSE ? END,
+      visits = visits + ?, spend = spend + ?, first_seen = CASE WHEN first_seen > 0 THEN first_seen ELSE ? END,
       last_seen = ?, updated_ts = ?, srv_ts = ${cursor}
-      WHERE merchant = ? AND id = ? AND deleted = 0
+      WHERE merchant = ? AND id = ? AND deleted = 0 AND srv_ts = ?
         AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
-      .bind(points, stamps, amount, now, now, now, merchant, merchant, clientId, merchant, ref),
+      .bind(points, stamps, visits, spend, now, now, now, merchant, merchant, clientId, client.srv_ts, merchant, ref),
     env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
       (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
-      SELECT ?, ?, ?, ?, ?, ?, 1, ?, ${cursor}, ?, ?, ? WHERE changes() > 0`)
-      .bind(merchant, ref, clientId, amount, points, stamps, now, merchant, method, items, saleRef),
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ${cursor}, ?, ?, ? WHERE changes() > 0`)
+      .bind(merchant, ref, clientId, amount, points, stamps, visits, now, merchant, method, items, saleRef),
   ]);
   if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
     const replay = await env.DB.prepare(
@@ -509,12 +525,13 @@ async function applyPurchase(env, merchant, raw) {
     if (replay && replay.client_id === clientId) {
       return json({ ok: true, replayed: true, points: Number(replay.points || 0), stamps: Number(replay.stamps || 0) });
     }
+    if (attempt < 4) return applyPurchase(env, merchant, raw, attempt + 1);
     return json({ error: 'purchase-write-failed' }, 503);
   }
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) {
     return json({ error: 'purchase-write-failed' }, 503);
   }
-  return json({ ok: true, points, stamps, visits: 1, spend: amount });
+  return json({ ok: true, points, stamps, visits, spend });
 }
 
 /* Un retour contre avoir rend l'argent à la cliente sous une autre forme : sans
@@ -555,7 +572,8 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
             COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -stamps ELSE 0 END), 0) AS unstamped,
             COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -amount ELSE 0 END), 0) AS refunded,
             COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -points ELSE 0 END), 0) AS clawed
-       FROM client_purchase_events WHERE merchant = ? AND client_id = ? AND sale_ref = ?`
+       FROM client_purchase_events WHERE merchant = ? AND client_id = ? AND sale_ref = ?
+         AND (visits > 0 OR ref LIKE 'refund:%')`
   ).bind(merchant, clientId, saleRef).first();
   const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
   const take = Math.max(0, Math.min(amount, Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100));
@@ -649,7 +667,7 @@ async function saleLoyaltyGroups(env, merchant, sale) {
   // Exact matches only: no LIKE pattern built from an id.
   const own = await env.DB.prepare(
     `SELECT client_id, sale_ref, COALESCE(SUM(amount), 0) AS paid FROM client_purchase_events
-      WHERE merchant = ? AND substr(ref, 1, 7) <> 'refund:' AND sale_ref <> ''
+      WHERE merchant = ? AND visits > 0 AND substr(ref, 1, 7) <> 'refund:' AND sale_ref <> ''
         AND (ref = ? OR (substr(ref, 1, 9) = 'purchase:' AND substr(ref, -length(?)) = ?))
       GROUP BY client_id, sale_ref`
   ).bind(merchant, id, ':' + id, ':' + id).all();
@@ -663,7 +681,7 @@ async function saleLoyaltyGroups(env, merchant, sale) {
   }
   const rows = await env.DB.prepare(
     `SELECT client_id, sale_ref, COALESCE(SUM(amount), 0) AS paid FROM client_purchase_events
-      WHERE merchant = ? AND substr(ref, 1, 7) <> 'refund:' AND (sale_ref = ? OR (? <> '' AND sale_ref = ?))
+      WHERE merchant = ? AND visits > 0 AND substr(ref, 1, 7) <> 'refund:' AND (sale_ref = ? OR (? <> '' AND sale_ref = ?))
       GROUP BY client_id, sale_ref`
   ).bind(merchant, id, ref, ref).all();
   return (rows && rows.results) || [];
@@ -809,7 +827,7 @@ function aliasOf(row) {
 }
 /* L'id auquel une écriture du registre s'applique : le sien, ou celui de la
  * fiche dans laquelle il a été fusionné. */
-async function resolveClientId(env, merchant, id) {
+export async function resolveClientId(env, merchant, id) {
   if (!id) return id;
   try {
     const row = await env.DB.prepare('SELECT deleted, source FROM clients WHERE merchant = ? AND id = ?')
@@ -832,10 +850,10 @@ async function phoneTwins(env, merchant, phone, exceptId) {
   ).bind(merchant, exceptId, '%' + key.slice(-8)).all();
   return ((res && res.results) || []).filter((r) => phoneKey(r.phone) === key);
 }
-function mergedText(current, incoming, max) {
+function mergedText(current, incoming) {
   const a = String(current || ''), b = String(incoming || '');
   if (!b || a === b || a.includes(b)) return a;
-  return a ? (a + '\n' + b).slice(0, max) : b.slice(0, max);
+  return a ? a + '\n' + b : b;
 }
 function mergedHospitality(current, incoming) {
   const parse = (v) => { try { return JSON.parse(v || '{}') || {}; } catch (_) { return {}; } };
@@ -861,9 +879,9 @@ async function mergeIntoTwin(env, merchant, targetId, c, selfId, replaceSelf) {
     for (const column of ['name', 'phone', 'email', 'birthday', 'gender', 'city', 'address']) {
       if (!t[column] && c[column]) set[column] = c[column];
     }
-    set.notes = mergedText(t.notes, c.notes, 1000);
+    set.notes = mergedText(t.notes, c.notes);
     set.hospitality = mergedHospitality(t.hospitality, c.hospitality);
-    if (hasTags) set.tags = tagsJson([...tagsList(t.tags), ...tagsList(c.tags)]);
+    if (hasTags) set.tags = JSON.stringify([...new Set([...tagsList(t.tags), ...tagsList(c.tags)])]);
     set.consent = Math.max(Number(t.consent) || 0, c.consent);
     set.consent_email = Math.max(Number(t.consent_email) || 0, c.consent_email);
     const seen = [Number(t.first_seen) || 0, c.first_seen].filter((n) => n > 0);
@@ -906,9 +924,28 @@ export async function onRequestPost(context) {
   /* Pending hotels may prepare ordinary Hospitality+ profiles before opening.
    * Financial loyalty mutations still cross the normal operational gate below;
    * this exception cannot spend points or record purchases. */
-  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true, allowPending: true });
+  let merchant = await tenantFor(request, env, body && body.merchant, { strict: true, allowPending: true });
+  if (!merchant && body && body.merge) {
+    const employee = await activeEmployee(request, env, body.merchant);
+    if (employee) merchant = employee.merchant;
+  }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
-  const operational = await tenantFor(request, env, merchant, { strict: true }) === merchant;
+  const state = body && body.merge ? await storeOperationalState(env, merchant) : null;
+  const operational = state ? state.ok && !state.pending && !state.suspended
+    : await tenantFor(request, env, merchant, { strict: true }) === merchant;
+
+  if (body && body.merge) {
+    const merge = body.merge;
+    if (merge.from && merge.from === merge.to) return json({ error: 'invalid-merge' }, 400);
+    if (!operational) return json({ error: 'unauthorized' }, 401);
+    try {
+      if (!await mayMergeClients(request, env, merchant)) return json({ error: 'manager-required' }, 403);
+      return await mergeClients(env, merchant, merge, {
+        prepare: sql => env.DB.prepare(sql), cursorStatements: clientCursorStatements, cursorSql: clientCursorSql,
+        ensure: async () => { await ensurePurchaseEvents(env); await ensureRewardEvents(env); await ensureClientSyncSequence(env); },
+      });
+    } catch (_) { return json({ error: 'merge-unavailable' }, 503); }
+  }
 
   if (body && body.redemption) {
     if (!operational) return json({ error: 'unauthorized' }, 401);

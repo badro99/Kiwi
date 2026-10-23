@@ -76,6 +76,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     .catch(() => null);
   if (typeof waitUntil === 'function') waitUntil(triage);
 
+  /** @type {{ok: boolean, channel?: string, reason?: string, handoff?: {phone: string, text: string}}} */
   let confirmation = { ok: true, channel: 'whatsapp', reason: 'recorded' };
   if (channel === 'email') {
     confirmation = await sendMail(env, {

@@ -33,8 +33,9 @@ export async function cleanupHotelMedia(env,options={}){
   if(!dryRun&&candidates.length)await env.MEDIA.delete(candidates);
   return{ok:true,merchant,dryRun,live:live.size,candidates:candidates.length,deleted:dryRun?0:candidates.length,keys:dryRun?candidates:[]};
 }
+/** @typedef {Awaited<ReturnType<typeof cleanupHotelMedia>> | {ok: boolean, merchant: string, error: string, deleted?: never}} CleanupOutcome */
 export async function cleanupHotelMediaAll(env,options={}){
-  const result=await env.DB.prepare("SELECT merchant FROM merchant_config WHERE status='active' AND LOWER(type) IN ('hotel','riad') ORDER BY merchant LIMIT 100").all(),rows=[];
+  const result=await env.DB.prepare("SELECT merchant FROM merchant_config WHERE status='active' AND LOWER(type) IN ('hotel','riad') ORDER BY merchant LIMIT 100").all(),rows=/** @type {CleanupOutcome[]} */ ([]);
   for(const item of result.results||[]){try{rows.push(await cleanupHotelMedia(env,{merchant:item.merchant,dryRun:false,limit:100,now:options.now}));}catch(error){rows.push({ok:false,merchant:item.merchant,error:str(error?.message||error,160)});}}
   return{ok:true,processed:rows.length,failed:rows.filter((x)=>!x.ok).length,deleted:rows.reduce((n,x)=>n+(x.deleted||0),0),results:rows};
 }

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fixture} from './server-money-fixture.mjs';
-import {employeeToken,employeeCookie,tillToken,TILL_COOKIE} from '../functions/auth/_lib.js';
+import {employeeToken,employeeCookie,tillToken,TILL_COOKIE,makeSession,sessionCookie} from '../functions/auth/_lib.js';
 import {onRequestPost as teamLive} from '../functions/api/team/live.js';
 import {onRequestGet as get,onRequestPost as post} from '../functions/api/employee.js';
 import {onRequestGet as storeGet,onRequestPost as storePost} from '../functions/api/store.js';
@@ -40,17 +40,17 @@ await strict('mixed two-device punch retries keep at most one open shift and non
 // EP-1 tient : chaque pointage d'arrivée porte l'identité du geste (opId), gardée pour ses nouvelles tentatives.
 await strict('EP-1 · a delayed clock-in retry after clock-out returns the shift it opened; a new tap opens the next one',fc.asyncProperty(fc.integer({min:1,max:3}),async retries=>{await reset();const opId=crypto.randomUUID();ok(await call({action:'clock-in',attendanceCode,opId}));ok(await call({action:'clock-out',attendanceCode}));for(let i=0;i<retries;i++){const r=await call({action:'clock-in',attendanceCode,opId});ok(r);assert.ok(r.body.entry.outTs>0);}assert.equal(doc('attendance').entries.length,1);ok(await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID()}));const es=doc('attendance').entries;assert.equal(es.length,2);assert.equal(es.filter(e=>!e.outTs).length,1);}));
 // EP-2 · un pointage gardé hors ligne garde son heure réelle, bornée : jamais dans le futur,
-// jamais plus de 12 h, jamais avant le pointage précédent (refusé sans écriture), et il porte
+// jamais plus de 12 h automatiquement (sinon correction en attente), jamais avant le pointage précédent, et il porte
 // la mention `deferred` avec le délai déclaré, que le gérant voit.
 const H=3600000;
-await strict('EP-2 · a deferred punch keeps its captured time, is marked deferred with its declared delay, never in the future, never older than 12 h, never before the previous punch',fc.asyncProperty(fc.integer({min:-2*H,max:16*H}),fc.integer({min:0,max:14*H}),fc.integer({min:0,max:H}),async(agoIn,prevOutAgo,stay)=>{
+await strict('EP-2 · a deferred punch keeps its captured time, is marked deferred with its declared delay, never in the future, stale punches never count automatically, never before the previous punch',fc.asyncProperty(fc.integer({min:-2*H,max:16*H}),fc.integer({min:0,max:14*H}),fc.integer({min:0,max:H}),async(agoIn,prevOutAgo,stay)=>{
   await reset();const t=Date.now(),prevOut=t-prevOutAgo;
   // Un code de présence dont la fenêtre couvre tout l'essai : seules les bornes d'heure sont en jeu.
   put('attendance-code',{code:attendanceCode,createdTs:t-31*H,expiresTs:t+H});
   put('attendance',{entries:[{id:'prev',staffId:'a',memberId:'a',inTs:prevOut-H,outTs:prevOut}]});
   const before=doc('attendance'),t0=Date.now(),r=await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoIn}),t1=Date.now();
   const unchanged=error=>{assert.equal(r.status,409);assert.equal(r.body.error,error);assert.deepEqual(doc('attendance'),before);};
-  if(agoIn>12*H)return unchanged('attendance-capture-too-old');
+  if(agoIn>12*H){ok(r);assert.equal(r.body.pendingApproval,true);assert.deepEqual(doc('attendance'),before);return;}
   const ago=Math.max(0,agoIn);
   if(ago>0&&t1-ago<prevOut)return unchanged('attendance-capture-overlaps');
   if(ago>0&&t0-ago<prevOut)return;
@@ -60,6 +60,56 @@ await strict('EP-2 · a deferred punch keeps its captured time, is marked deferr
   const agoOut=Math.max(0,ago-stay),o=await call({action:'clock-out',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoOut}),t2=Date.now();
   ok(o);const x=o.body.entry,outTs=x.outTs;assert.ok(outTs<=t2&&outTs>=inTs);assert.ok(outTs>=Math.max(t1-agoOut,inTs)&&outTs<=Math.max(t2-agoOut,inTs));
   if(agoOut>0){assert.equal(x.deferred,true);assert.equal(x.outDeferredMs,agoOut);}else assert.ok(!x.outDeferredMs);}));
+await strict('EP-7 · stale punches are durably retained once for manager approval without automatic hours',fc.asyncProperty(fc.constantFrom('clock-in','clock-out'),fc.integer({min:13,max:72}),async(action,age)=>{
+  await reset();const before=doc('attendance'),hours=doc('team').hours,opId=crypto.randomUUID();
+  for(let n=0;n<2;n++){const r=await call({action,opId,capturedAgoMs:age*H,deviceId:'synthetic-device',capturedAt:Date.now()-age*H});ok(r);assert.equal(r.body.pendingApproval,true);}
+  assert.deepEqual(doc('attendance'),before);assert.deepEqual(doc('team').hours,hours);
+  const items=doc('attendance-corrections').items;assert.equal(items.length,1);assert.equal(items[0].staffId,'a');assert.equal(items[0].status,'pending');assert.equal(items[0].deviceId,'synthetic-device');assert.ok(items[0].claimedTs<items[0].receivedTs-12*H);
+}));
+await strict('EP-7b · one person cannot flood the approval queue, and decided items older than 90 days leave the document',fc.asyncProperty(fc.integer({min:0,max:3}),async(extra)=>{
+  await reset();const now=Date.now(),old={id:'old',opId:'old',staffId:'b',memberId:'b',action:'clock-in',claimedTs:1,capturedTs:1,receivedTs:1,status:'approved',decidedAt:now-91*24*H},recent={...old,id:'recent',opId:'recent',decidedAt:now-10*24*H};
+  put('attendance-corrections',{items:[old,recent]});
+  for(let n=0;n<20;n++){const r=await call({action:'clock-in',opId:'q'+n,capturedAgoMs:13*H});ok(r);assert.equal(r.body.pendingApproval,true);}
+  for(let n=0;n<=extra;n++)assert.equal((await call({action:'clock-in',opId:'over'+n,capturedAgoMs:13*H})).status,429);
+  const items=doc('attendance-corrections').items;
+  assert.equal(items.filter(i=>i.status==='pending'&&i.staffId==='a').length,20);
+  assert.ok(!items.some(i=>i.id==='old'),'a decision older than 90 days is pruned');assert.ok(items.some(i=>i.id==='recent'),'a recent decision stays');
+}));
+await strict('EP-8 · only attendance owners decide, self decisions fail, decisions are audited and atomic retries credit exactly once',fc.asyncProperty(fc.boolean(),fc.integer({min:1,max:4}),async(approve,retries)=>{
+  await reset();const ts=Date.now();put('attendance',{entries:[{id:'old-open',staffId:'a',memberId:'a',inTs:ts-16*H,outTs:0}]});
+  const retained=await call({action:'clock-out',opId:crypto.randomUUID(),capturedAgoMs:13*H,deviceId:'test-device'});ok(retained);
+  const id=retained.body.correction.id,decision=approve?'approved':'rejected',body={merchant,action:'attendance-correction-decision',correctionId:id,decision};
+  const before=doc('team').hours,employeeCookieValue=cookie;
+  assert.equal((await call(body,teamLive)).status,403);
+  cookie=TILL_COOKIE+'='+await tillToken(f.env.AUTH_SECRET,merchant);assert.equal((await call(body,teamLive)).status,403);
+  const owner=sessionCookie(await makeSession('money-owner',f.env.AUTH_SECRET));
+  cookie=owner+'; '+employeeCookieValue;assert.equal((await call(body,teamLive)).status,403);
+  cookie=owner;
+  const roster=doc('team');roster.members[0].email='money@example.test';put('team',roster);
+  assert.equal((await call(body,teamLive)).status,403);
+  delete roster.members[0].email;put('team',roster);
+  const rs=await Promise.all(Array.from({length:retries},()=>call(body,teamLive)));rs.forEach(ok);
+  const record=doc('attendance-corrections').items[0];assert.equal(record.status,decision);assert.equal(record.actor.id,'money-owner');assert.ok(record.decidedAt>=ts);
+  const hours=JSON.stringify(doc('team').hours);ok(await call(body,teamLive));assert.equal(JSON.stringify(doc('team').hours),hours);
+  if(approve){assert.ok(doc('attendance').entries[0].outTs>0);const added=Object.values(doc('team').hours.a).reduce((a,b)=>a+b,0)-Object.values(before.a).reduce((a,b)=>a+b,0);assert.ok(Math.abs(added-3)<0.001);}else{assert.equal(doc('attendance').entries[0].outTs,0);assert.deepEqual(doc('team').hours,before);}
+  assert.equal((await call({...body,decision:approve?'rejected':'approved'},teamLive)).status,409);
+}));
+await strict('EP-9 · failed atomic approval leaves pending audit, attendance and hours intact',fc.asyncProperty(fc.integer({min:13,max:24}),async age=>{
+  await reset();put('attendance',{entries:[{id:'open',staffId:'a',memberId:'a',inTs:Date.now()-(age+2)*H,outTs:0}]});
+  const r=await call({action:'clock-out',opId:crypto.randomUUID(),capturedAgoMs:age*H});ok(r);
+  const snapshot=['attendance-corrections','attendance','team'].map(feature=>doc(feature));
+  sql.exec("CREATE TRIGGER fail_correction_credit BEFORE UPDATE ON store_docs WHEN NEW.feature='team' BEGIN SELECT RAISE(ABORT, 'synthetic write failure'); END");
+  cookie=sessionCookie(await makeSession('money-owner',f.env.AUTH_SECRET));
+  try {assert.equal((await call({merchant,action:'attendance-correction-decision',correctionId:r.body.correction.id,decision:'approved'},teamLive)).status,503);assert.deepEqual(['attendance-corrections','attendance','team'].map(feature=>doc(feature)),snapshot);} finally {sql.exec('DROP TRIGGER fail_correction_credit');}
+}));
+await strict('EP-10 · approved stale arrival and departure apply claimed times once while preserving legacy documents',fc.asyncProperty(fc.integer({min:14,max:72}),async age=>{
+  await reset();const legacy={id:'legacy',staffId:'b',memberId:'b',inTs:1,outTs:2,custom:'preserved'};put('attendance',{entries:[legacy],custom:'preserved'});
+  const inOp=crypto.randomUUID(),outOp=crypto.randomUUID();
+  const a=await call({action:'clock-in',opId:inOp,capturedAgoMs:(age+2)*H}),b=await call({action:'clock-out',opId:outOp,capturedAgoMs:age*H});ok(a);ok(b);
+  cookie=sessionCookie(await makeSession('money-owner',f.env.AUTH_SECRET));
+  for(const r of [a,b])ok(await call({merchant,action:'attendance-correction-decision',correctionId:r.body.correction.id,decision:'approved'},teamLive));
+  const attendance=doc('attendance'),e=attendance.entries.find(e=>e.staffId==='a');assert.deepEqual(attendance.entries[0],legacy);assert.equal(attendance.custom,'preserved');assert.equal(e.inTs,a.body.correction.claimedTs);assert.equal(e.outTs,b.body.correction.claimedTs);
+}));
 // EP-5 · un départ différé ne fait pas un service plus long que le plafond quotidien du planning.
 await strict('EP-5 · a deferred clock-out never makes a shift longer than the planning maximum daily hours',fc.asyncProperty(fc.integer({min:4,max:12}),fc.integer({min:1,max:14}),fc.integer({min:1,max:60}),async(maxH,openH,agoMin)=>{
   await reset();const t=Date.now(),team=doc('team');team.planning={...team.planning,settings:{maxDailyHours:maxH}};put('team',team);

@@ -90,6 +90,7 @@ function itemBalances(rows) {
   }).sort((a, b) => a.itemId.localeCompare(b.itemId) || a.variantId.localeCompare(b.variantId));
 }
 
+/** @param {{at?: unknown, movements?: object[], physicalCounts?: object[]}} [inputValue] */
 export function buildHotelInventoryReport(inputValue = {}) {
   const input = inputValue && typeof inputValue === 'object' ? inputValue : {};
   const at = integer(input.at) || Number.MAX_SAFE_INTEGER;
@@ -122,6 +123,10 @@ export function buildHotelInventoryReport(inputValue = {}) {
   };
 }
 
+/**
+ * @param {unknown} merchantValue
+ * @param {{at?: unknown, locationIds?: unknown[], unitIds?: unknown[], projectLocation?: (value: string) => string}} [optionsValue]
+ */
 export async function queryHotelInventoryReport(db, merchantValue, optionsValue = {}) {
   const merchant = token(merchantValue);
   const at = integer(optionsValue && optionsValue.at) || Date.now();
@@ -156,8 +161,8 @@ export async function queryHotelInventoryReport(db, merchantValue, optionsValue 
     throw unavailable('inventory_counts', error);
   }
   const options = optionsValue && typeof optionsValue === 'object' ? optionsValue : {};
-  const locationIds = new Set((Array.isArray(options.locationIds) ? options.locationIds : []).map(token).filter(Boolean));
-  const unitIds = new Set((Array.isArray(options.unitIds) ? options.unitIds : []).map(token).filter(Boolean));
+  const locationIds = new Set((Array.isArray(options.locationIds) ? options.locationIds : []).map((value) => token(value)).filter(Boolean));
+  const unitIds = new Set((Array.isArray(options.unitIds) ? options.unitIds : []).map((value) => token(value)).filter(Boolean));
   const projectLocation = typeof options.projectLocation === 'function' ? options.projectLocation : (value) => value;
   const movements = ((movementResult && movementResult.results) || []).map((row) => ({
     ...row, location_id: token(projectLocation(row.location_id), 'principal'),

@@ -9,11 +9,20 @@ export const DEFAULT_ZONE = 'Africa/Casablanca';
 // the browser; tools/business-day-default-test.mjs fails if the two drift.
 export const DEFAULT_CUTOFF = 5;
 const clocks = new Map();
+// Building an Intl formatter costs far more than formatting with one, and every
+// businessDate() asks again: the answer per zone name is kept (bounded, since
+// the name can come from a request).
+const zoneChecks = new Map();
 
 export function validZone(zone) {
   const z = String(zone || '').trim();
   if (!z || z.length > 64 || !/^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){0,2}$|^UTC$/.test(z)) return '';
-  try { new DateTimeFormat('en-GB', { timeZone: z }).format(0); return z; } catch (_) { return ''; }
+  const known = zoneChecks.get(z);
+  if (known !== undefined) return known;
+  let ok = '';
+  try { new DateTimeFormat('en-GB', { timeZone: z }).format(0); ok = z; } catch (_) { ok = ''; }
+  if (zoneChecks.size < 512) zoneChecks.set(z, ok);
+  return ok;
 }
 function clock(zone) {
   const z = validZone(zone) || DEFAULT_ZONE;

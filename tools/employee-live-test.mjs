@@ -825,9 +825,9 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   }
   function boot() {
     const timers = new Map(); let timerId = 0;
-    const listeners = {}; const events = [];
-    const window = { localStorage, crypto, addEventListener(t, fn) { (listeners[t] = listeners[t] || []).push(fn); } };
-    const document = { visibilityState: 'visible', addEventListener() {}, dispatchEvent(e) { events.push(e); } };
+    const listeners = {}; const events = []; const toasts = [];
+    const window = { localStorage, crypto, toast(message) { toasts.push(message); }, addEventListener(t, fn) { (listeners[t] = listeners[t] || []).push(fn); } };
+    const document = { documentElement:{lang:'en'}, visibilityState: 'visible', addEventListener() {}, dispatchEvent(e) { events.push(e); } };
     const context = {
       window, document, navigator: {}, location: { protocol: 'file:' }, fetch: fakeFetch,
       CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
@@ -836,7 +836,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     vm.runInNewContext(liveSource, context);
     const app = window.KiwiEmployeeLive;
     return {
-      live: app, events,
+      live: app, events, toasts,
       queueEvents: () => events.filter((e) => e.type === 'kiwi-employee-punch-queue').map((e) => e.detail),
       async tick() { const fns = [...timers.values()]; timers.clear(); fns.forEach((fn) => fn()); if (app.flushPunches) await app.flushPunches(); },
       fire(t) { (listeners[t] || []).forEach((fn) => fn()); },
@@ -926,8 +926,10 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   await flushAll(B.live);
   const rejected = B.queueEvents().filter((d) => d.rejected && d.rejected.length).flatMap((d) => d.rejected).map((r) => r.error);
   ok(two.length === 2 && !storage.has(QKEY) && JSON.stringify(attendanceDoc()) === before
-    && rejected.includes('attendance-capture-too-old') && rejected.includes('attendance-code-invalid'),
-  "un pointage refusé (trop ancien, code faux) quitte la file, est signalé à l'employé et n'écrit rien");
+    && rejected.includes('attendance-code-invalid')
+    && B.queueEvents().some(d => d.approvals === 1) && B.toasts.includes('Punch kept for manager approval')
+    && JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance-corrections'").get('amira-cafe').data).items.some(item => item.status === 'pending'),
+  "un pointage périmé est gardé pour approbation, un code faux est refusé, sans modifier les heures");
 
   // 6. Hors ligne avec un départ en attente, la déconnexion garde la session qui l'enverra.
   net.offline = true;
@@ -997,7 +999,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     ok(mode === 'neither' ? !result : result?.queued === true,
       'durabilité ' + mode + ' : accepté seulement avec une copie durable');
     if (mode === 'both' || mode === 'stale-local') {
-      ok(local.size === 1 && disk.size === 1, 'le geste est écrit dans les deux magasins');
+      ok(Array.from(local.keys()).filter(key => key !== 'kiwiAttendanceDevice').length === 1 && disk.size === 1, 'le geste est écrit dans les deux magasins');
     }
     if (mode === 'stale-local') failLocal = true;
     offline = false;
@@ -1049,13 +1051,30 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   'la grille des heures marque le jour du pointage envoyé plus tard, délai déclaré compris, en français, anglais et arabe');
   const teamSourceNow = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
   ok(/deferredByVenue[\s\S]{0,80}\[venueKey\] = data\.deferredPunches/.test(teamSourceNow)
-    && teamSourceNow.includes('data.deferredPunches || {}]);'),
+    && teamSourceNow.includes('data.deferredPunches || {}, data.pendingCorrections || []]);'),
   'le tableau de bord range les pointages envoyés plus tard du magasin pour la grille des heures');
   const caisseRefresh = fs.readFileSync(path.join(ROOT, 'assets/caisse-refresh.js'), 'utf8');
   const caisseApp = fs.readFileSync(path.join(ROOT, 'assets/caisse-app.js'), 'utf8');
   ok(caisseRefresh.includes('deferredNote(entry)') && caisseRefresh.includes('Envoyé plus tard depuis le téléphone')
     && caisseApp.includes('data-attendance-deferred') && caisseApp.includes('Sent later from the phone'),
   'les derniers pointages de la caisse disent quand un pointage a été envoyé plus tard depuis le téléphone');
+}
+
+// Review controls use the existing hours surface and the audited server route.
+{
+  const src = fs.readFileSync(path.join(ROOT,'assets/team-hours.js'),'utf8');
+  const block = src.slice(src.indexOf('  function correctionCopy()'),src.indexOf('  /* ═══════════════ HOURS PANE'));
+  for (const lang of ['fr','en','ar']) {
+    const handlers={},requests=[],notices=[];
+    const root={correctionsByVenue:{synthetic:[{id:'pending-one',name:'<synthetic>',action:'clock-out',claimedTs:1,capturedTs:2,receivedTs:3,deviceId:'test-device'}]}};
+    const Kiwi={__teamProfileCore:{teamSlug:()=> 'synthetic-shop'}};
+    const context={handlers,Kiwi,window:{__kiwiTeamV2:root},trLang:()=>lang,esc:value=>String(value).replaceAll('<','&lt;'),dateLocale:()=> 'en-GB',toast:message=>notices.push(message),render(){},fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true};}};
+    vm.createContext(context);vm.runInContext(block,context);
+    const html=vm.runInContext("correctionsHtml('synthetic')",context);
+    ok(html.includes('&lt;synthetic>') && html.includes('test-device') && html.includes('data-decision="approved"') && html.includes('data-decision="rejected"'), 'corrections '+lang+' : identité échappée, appareil et deux décisions visibles');
+    await handlers['kt-attendance-decision']({dataset:{rid:'pending-one',decision:'approved'}});
+    ok(requests[0]?.url==='/api/team/live' && requests[0].body.merchant==='synthetic-shop' && requests[0].body.action==='attendance-correction-decision' && root.correctionsByVenue.synthetic.length===0, 'corrections '+lang+' : décision envoyée au serveur et liste actualisée');
+  }
 }
 
 if (failures) process.exit(1);

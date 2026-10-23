@@ -11,8 +11,15 @@ import {onRequestGet as balances} from '../functions/api/retail-balances.js';
 import {onRequestPost as z} from '../functions/api/z-reconciliation.js';
 import {onRequestGet as feed} from '../functions/api/feed.js';
 import {onRequestPost as admin} from '../functions/api/admin/sales.js';
+/* schema.sql is built once per process and every fixture starts from a copy of
+ * that image: a property suite builds hundreds of fixtures, and replaying the
+ * whole schema each time was most of its run (the copy is exact, schema.sql
+ * sets no connection pragma). Statements are prepared once per fixture too. */
+const images=new Map();
+function schemaImage(root){const text=fs.readFileSync(path.join(root,'schema.sql'),'utf8');let hit=images.get(root);if(!hit||hit.text!==text){const db=new DatabaseSync(':memory:');db.exec(text);hit={text,image:db.serialize()};db.close();images.set(root,hit);}return hit.image;}
 export async function fixture(root){
- const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(path.join(root,'schema.sql'),'utf8'));
+ const sql=new DatabaseSync(':memory:');sql.deserialize(schemaImage(root));
+ const statements=new Map();const prepared=q=>{let st=statements.get(q);if(!st){st=sql.prepare(q);statements.set(q,st);}return st;};
  let queue=Promise.resolve(),gate=null;const trace=[];
  const financial=/(?:INSERT(?: OR IGNORE)? INTO (?:sales|retail_balance_receipts|store_credits)|UPDATE store_credits|INSERT INTO delivery_collections)/i;
  function schedule(query,execute){
@@ -20,7 +27,7 @@ export async function fixture(root){
   const active=gate;active.seen++;
   return new Promise((resolve,reject)=>{active.waiters.push(()=>{try{resolve(execute());}catch(e){reject(e);}});if(active.seen===2){clearTimeout(active.timer);for(const resume of active.waiters)queueMicrotask(resume);}});
  }
- const DB={prepare(query){let args=[];const s={query,bind(...values){if(values.length>100)throw Error('D1 bound parameter limit');args=values;return s;},run(){return schedule(query,()=>{trace.push(query);const r=sql.prepare(query).run(...args);return{success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};});},first(){trace.push(query);return sql.prepare(query).get(...args)||null;},all(){trace.push(query);return{results:sql.prepare(query).all(...args)};}};return s;},
+ const DB={prepare(query){let args=[];const s={query,bind(...values){if(values.length>100)throw Error('D1 bound parameter limit');args=values;return s;},run(){return schedule(query,()=>{trace.push(query);const r=prepared(query).run(...args);return{success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};});},first(){trace.push(query);return prepared(query).get(...args)||null;},all(){trace.push(query);return{results:prepared(query).all(...args)};}};return s;},
  batch(statements){const execute=()=>{sql.exec('BEGIN IMMEDIATE');try{const r=statements.map(s=>s.run());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}};return schedule(statements.map(s=>s.query).join('\n'),()=>{const task=queue.then(execute,execute);queue=task.catch(()=>{});return task;});}};
  const merchant='server-money-shop',secret='fake-server-money-secret',env={DB,AUTH_SECRET:secret};
  sql.prepare("INSERT INTO accounts(id,email,business,salt,hash,created_ts,status) VALUES('money-owner','money@example.test','Server Properties','s','h',?,'active')").run(Date.now());
@@ -38,8 +45,9 @@ export async function fixture(root){
   const request=new Request(url,{method:get?'GET':'POST',headers:{Cookie:cookies[role]||'', 'Content-Type':'application/json'},...(get?{}:{body:JSON.stringify({merchant,...body})})});
   const response=await routes[route]({request,env});return{status:response.status,body:await response.json()};
  }
+ const present=()=>tables.filter(t=>prepared("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t));   // live: a handler may create a table on first use
  const tables=['sale_sync_conflicts','sale_settlement_keys','sale_receipts','sale_audit','sale_changes','sale_invoices','delivery_collections','retail_balance_receipts','retail_balances','store_credit_events','store_credits','z_reconciliations','sales'];
- return{sql,DB,env,merchant,devices,trace,call,async race(work){const active={seen:0,waiters:[],timer:null};gate=active;const timeout=new Promise((_,reject)=>{active.timer=setTimeout(()=>reject(Error('Race failed to reach both financial writes')),5000);});try{const result=await Promise.race([work(),timeout]);if(active.seen!==2)throw Error('Race did not synchronize both requests');return result;}finally{clearTimeout(active.timer);gate=null;}},close:()=>sql.close(),async reset(){await queue;for(const t of tables)if(sql.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t))sql.exec('DELETE FROM '+t);trace.length=0;},
+ return{sql,DB,env,merchant,devices,trace,call,async race(work){const active={seen:0,waiters:[],timer:null};gate=active;const timeout=new Promise((_,reject)=>{active.timer=setTimeout(()=>reject(Error('Race failed to reach both financial writes')),5000);});try{const result=await Promise.race([work(),timeout]);if(active.seen!==2)throw Error('Race did not synchronize both requests');return result;}finally{clearTimeout(active.timer);gate=null;}},close:()=>sql.close(),async reset(){await queue;for(const t of present())sql.exec('DELETE FROM '+t);trace.length=0;},
  insert(id,cents,extra={}){sql.prepare('INSERT INTO sales(id,merchant,amount,amount_cents,method,label,ref,ts,lines,channel,tip_cents,payment_parts,void_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(id,extra.merchant||merchant,Math.round(cents/100),cents,extra.method||'cash',extra.label||id,extra.ref||id,extra.ts||Date.now(),JSON.stringify(extra.lines||[{n:'Article',q:1,t:Math.abs(cents)/100}]),extra.channel||'counter',extra.tip||null,extra.parts?JSON.stringify(extra.parts):null,extra.voided?Date.now():null);},
  async refund(id,originalSaleId,amountCents){const approval=await managerRefundProof(secret,{merchant,staffId:'manager-fixture',staffName:'Fixture Manager',staffRole:'manager',refundId:id,originalSaleId,amountCents});return call('refund',{id,originalSaleId,amountCents,approval,reason:'Property return',ref:id});},
  row:id=>sql.prepare('SELECT * FROM sales WHERE merchant=? AND id=?').get(merchant,id),

@@ -58,6 +58,7 @@ export async function onRequestPatch({request,env}){
     await env.DB.prepare(`UPDATE support_tickets SET updated_ts=? WHERE id=?`).bind(now,id).run();
   }else if(action==='reply'){
     const body=cleanText(b.body,5000); if(!body)return json({error:'body-required'},400);
+    /** @type {{ok: boolean, reason?: string}} */
     let delivery={ok:false,reason:'manual-whatsapp-handoff'};
     if(ticket.channel==='email')delivery=await sendMail(env,{to:ticket.contact,subject:`Re: ${ticket.reference} · Kiwi Support`,text:`${body}\n\nRépondez à cet e-mail en gardant ${ticket.reference} dans l’objet.`});
     await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'reply',ticket.channel,actor,body,delivery.ok?'sent':delivery.reason,now).run();

@@ -1,0 +1,7 @@
+{
+  "note": "Node CPU ms per suite above the budget, measured by tools/check-pool.js. Pins only come down (KIWI_UPDATE_CPU_BASELINE=1).",
+  "pins": {
+    "dayreport-properties-test.mjs": 75540,
+    "economat-rd-invariants-test.mjs": 57446
+  }
+}

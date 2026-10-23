@@ -209,6 +209,7 @@ export async function onRequestGet(context) {
   /* Recherche. Chaque critère est facultatif et s'ajoute au WHERE avec son
      paramètre lié — jamais de concaténation de valeurs dans le SQL. */
   const where = ['merchant = ?'];
+  /** @type {(string | number)[]} */
   const args = [merchant];
 
   const q = (url.searchParams.get('q') || '').trim().slice(0, 60);

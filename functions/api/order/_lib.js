@@ -305,6 +305,7 @@ export function hoursOpenAt(hours, ts, zone) {
   for (const base of [day0 - 864e5, day0]) {
     const d = new Date(base);
     const key = d.toISOString().slice(0, 10);
+    /** @type {{kind?: string, periods?: {from: string, to: string}[]} | null} Selected by the synchronous exception scan. */
     let ex = null;
     (Array.isArray(hours.exceptions) ? hours.exceptions : []).forEach((e) => { if (e && key >= e.from && key <= e.to) ex = e; });
     const wd = week[H_DAYS[d.getUTCDay()]];

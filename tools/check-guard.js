@@ -32,6 +32,11 @@
  *   Chromium, Playwright, Chrome), read from the file rather than guessed from
  *   its name, so a new browser suite is classed correctly without anyone
  *   registering it.
+ *   changed         `node tools/check.js --changed [--base <ref>]`: only the child
+ *                   tests the working tree's changes can affect (see selection()
+ *                   below), browser suites included when they are affected. The
+ *                   in-process checks (syntax, data-action, i18n keys…) all run.
+ *                   Seconds instead of minutes between edits; NOT the gate either.
  * Parallel (default, KIWI_CHECK_JOBS=1 to turn off): prefetch() reads the
  * test files check.js names (every one of them lives in tools/), and
  * tools/check-pool.js runs them side by side before check.js starts its
@@ -54,16 +59,32 @@ const SLOW_SOURCE = /puppeteer|browser-trace|chromium|playwright|google chrome/i
 const slowCache = new Map();
 /* True when the test file at `file` drives a real browser. Unreadable ⇒ false:
    a file we cannot read is run, never skipped. */
-function isSlow(file) {
-  if (!file || !/\.(m?js)$/.test(file)) return false;
-  if (!slowCache.has(file)) {
-    let slow = false;
-    try { slow = SLOW_SOURCE.test(fs.readFileSync(file, 'utf8')); } catch (_) { slow = false; }
-    slowCache.set(file, slow);
+/* A suite that reaches the browser through a shared harness (surface-matrix-lib,
+   a local helper) is slow too: local imports and requires are followed. */
+const LOCAL_IMPORT = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)['"](\.{1,2}\/[^'"]+\.(?:m?js|cjs))['"]/gm;
+function isSlow(file, seen) {
+  if (!file || !/\.(m?js|cjs)$/.test(file)) return false;
+  if (slowCache.has(file)) return slowCache.get(file);
+  seen = seen || new Set();
+  if (seen.has(file)) return false;
+  seen.add(file);
+  /* The runner names these words itself (the regex above); it launches nothing. */
+  if (/(^|[\\/])(check|check-guard|check-pool)\.js$|dep-trace\.cjs$/.test(file) && seen.size > 1) { slowCache.set(file, false); return false; }
+  let slow = false, src = '';
+  try { src = fs.readFileSync(file, 'utf8'); } catch (_) { src = ''; }
+  if (SLOW_SOURCE.test(src)) slow = true;
+  else {
+    LOCAL_IMPORT.lastIndex = 0;
+    let m;
+    while (!slow && (m = LOCAL_IMPORT.exec(src))) slow = isSlow(path.resolve(path.dirname(file), m[1]), seen);
   }
-  return slowCache.get(file);
+  slowCache.set(file, slow);
+  return slow;
 }
-const tier = () => (process.env.KIWI_CHECK_TIER === 'fast' ? 'fast' : 'full');
+const tier = () => {
+  const t = process.env.KIWI_CHECK_TIER;
+  return t === 'fast' || t === 'changed' ? t : 'full';
+};
 
 /* ── Replay (see prefetch) ─────────────────────────────────────────────── */
 let replay = null;                      // key → { status, signal, stdout, stderr }
@@ -92,6 +113,18 @@ function install(opts) {
       skipped.push(n);
       skipFlag = n;
       return { status: 0, signal: null, stdout: '', stderr: '', output: [], pid: 0, kiwiSkipped: true };
+    }
+    if (tier() === 'changed' && cmd === process.execPath && script && !isSelected(path.resolve(o.cwd || process.cwd(), script))) {
+      const n = path.basename(script);
+      skipped.push(n);
+      skipFlag = n;
+      /* Sections read a test's output ("the ✓ line", "N passed"): a skipped
+         test answers with one line they can parse, and ok() then prints nothing. */
+      const text = '  ✓ ' + n + ' not affected by this change (0 failed, 1 passed)\n';
+      const out = { status: 0, signal: null, stdout: text, stderr: '', pid: 0, kiwiSkipped: true };
+      if (!o.encoding) { out.stdout = Buffer.from(text); out.stderr = Buffer.from(''); }
+      out.output = [null, out.stdout, out.stderr];
+      return out;
     }
     if (cmd === process.execPath && Array.isArray(args) && !o.input && !o.env) {
       const key = keyOf(cmd, args, o);
@@ -165,13 +198,18 @@ function prefetch(opts) {
   const records = path.join(dir, 'records.jsonl'), results = path.join(dir, 'results.json');
   try {
     const script = path.resolve(opts.script || process.argv[1]);
-    const files = namedTests(script).filter((f) => !(tier() === 'fast' && isSlow(f)));
+    const files = namedTests(script).filter((f) => !(tier() === 'fast' && isSlow(f)) && isSelected(f));
+    if (!files.length) return;
     fs.writeFileSync(records, files.map((f) => JSON.stringify({ key: keyOf(process.execPath, [f], {}), args: [f], cwd: '' })).join('\n'));
     const pool = real.call(cp, process.execPath, [path.join(__dirname, 'check-pool.js'), records, results, String(jobs), String(browserJobs)], {
       stdio: ['ignore', 'inherit', 'inherit'], timeout: 60 * 60 * 1000,
     });
     if (pool.error) throw pool.error;
     replay = JSON.parse(fs.readFileSync(results, 'utf8'));
+    for (const [key, r] of Object.entries(replay)) {
+      if (!r || r.status !== 0 || !(r.cpuMs > 0)) continue;
+      try { const args = JSON.parse(key)[1]; cpu[path.basename(String(args[args.length - 1]))] = r.cpuMs; } catch (_) {}
+    }
   } catch (e) {
     replay = null;
     log(`  ! parallel prefetch unavailable (${(e && e.message) || e}), running serially`);
@@ -180,6 +218,169 @@ function prefetch(opts) {
   }
 }
 const reusedCount = () => reused;
+
+/* ── Suite time ratchet ────────────────────────────────────────────────────
+ * A gate that took thirteen minutes did so one slow suite at a time: a schema
+ * replayed a thousand times, a key derivation at a million rounds in a
+ * behaviour case, a regex that restarted at every character. Each suite's node
+ * CPU time (tools/dep-trace.cjs, every process it starts included) is checked
+ * after the parallel run:
+ *   · a suite pinned in tools/suite-cpu-baseline.json may not pass twice its
+ *     pin (and 15 s more); KIWI_UPDATE_CPU_BASELINE=1 lowers pins, never raises;
+ *   · any other suite gets CPU_BUDGET_MS. A new suite that needs more is made
+ *     faster (one browser, one page per locale, a fixture built once), not pinned.
+ * CPU time, not wall time: wall time doubles when the machine is busy, CPU
+ * time barely moves. Only suites the parallel pool ran are measured. */
+const CPU_BUDGET_MS = 30000;
+const cpu = {};
+const cpuTimes = () => cpu;
+function cpuRatchet(opts) {
+  opts = opts || {};
+  const file = opts.file || path.join(__dirname, 'suite-cpu-baseline.json');
+  const times = opts.times || cpu;
+  const update = opts.update != null ? opts.update : process.env.KIWI_UPDATE_CPU_BASELINE === '1';
+  let base = null;
+  try { base = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { base = null; }
+  const pins = (base && base.pins) || {};
+  const over = [], lower = [];
+  for (const [name, ms] of Object.entries(base ? times : {})) {   // no baseline yet: measure, judge nothing
+    const pin = pins[name];
+    const limit = pin ? Math.max(pin * 2, pin + 15000) : CPU_BUDGET_MS;
+    if (ms > limit) over.push({ name, ms, pin: pin || 0, limit });
+    else if (pin && ms < pin * 0.6) lower.push({ name, ms, pin });
+  }
+  let wrote = false;
+  if (update && (!base || lower.length) && !over.length) {
+    const next = { note: (base && base.note) || 'Node CPU ms per suite above the budget, measured by tools/check-pool.js. Pins only come down (KIWI_UPDATE_CPU_BASELINE=1).', pins: {} };
+    const src = base ? pins : Object.fromEntries(Object.entries(times).filter(([, ms]) => ms > CPU_BUDGET_MS));
+    for (const [name, pin] of Object.entries(src).sort()) {
+      const now = times[name];
+      const v = base ? (now != null && now < pin ? now : pin) : pin;
+      if (v > CPU_BUDGET_MS) next.pins[name] = Math.round(v);
+    }
+    fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+    wrote = true;
+  }
+  return { measured: Object.keys(times).length, over, lower, wrote, pinned: Object.keys(pins).length, hasBaseline: !!base };
+}
+
+
+/* ── Changed tier: which child tests can this change affect? ──────────────
+ * The changed files are the working tree against HEAD (staged, unstaged and
+ * untracked), or against the merge base with --base <ref>. A child test is
+ * selected when:
+ *   · it is itself one of the changed files;
+ *   · it touched a changed file the last time it passed in the parallel pool
+ *     (tools/dep-trace.cjs records every import and fs read; the map lives in
+ *     the temp dir as kiwi-test-deps.json and every fast or full run refreshes
+ *     it);
+ *   · its source names a changed file (its repo path, or its file name when
+ *     that name is unique in the repo): this covers tests never traced yet.
+ * A change that only moves asset stamps (`?v=`, `rev:`, the cache generation,
+ * tools/asset-stamps.json) selects the stamp suites, not every page suite.
+ * A change to the runner itself selects the whole fast tier. */
+const RUNNER = new Set(['tools/check.js', 'tools/check-guard.js', 'tools/check-pool.js', 'tools/dep-trace.cjs']);
+const STAMP_SUITES = ['stamp-drift-test.js', 'pwa-shell-test.js', 'asset-stamp-coverage-test.mjs'];
+const DEPS_FILE = path.join(os.tmpdir(), 'kiwi-test-deps.json');
+const STALE_COPY = / \d+\.[a-z]+$/i;
+const stampNorm = (t) => String(t)
+  .replace(/([?&]v=)[\w.-]+/g, '$1#')
+  .replace(/(\brev\s*:\s*['"])[^'"]*/g, '$1#')
+  .replace(/("(?:v|sha)"\s*:\s*")[^"]*/g, '$1#')
+  .replace(/(kiwi-app-v)\d+/g, '$1#');
+
+let sel = null;
+function git(root, args) {
+  const real = cp.spawnSync.kiwiReal || cp.spawnSync;
+  const r = real.call(cp, 'git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 << 20 });
+  if (r.status !== 0) throw new Error('git ' + args.join(' ') + ': ' + String(r.stderr || '').trim().split('\n')[0]);
+  return r.stdout;
+}
+function selection(opts) {
+  if (sel && !opts) return sel;
+  opts = opts || {};
+  const root = path.resolve(opts.root || path.join(__dirname, '..'));
+  const script = path.resolve(opts.script || path.join(__dirname, 'check.js'));
+  let base = opts.base;
+  if (base === undefined) { const i = process.argv.indexOf('--base'); base = i > 0 ? process.argv[i + 1] : null; }
+  const lines = (t) => t.split('\n').map((x) => x.trim()).filter(Boolean);
+  const ref = base ? git(root, ['merge-base', base, 'HEAD']).trim() : 'HEAD';
+  const changed = [...new Set(lines(git(root, ['diff', '--name-only', ref]))
+    .concat(lines(git(root, ['ls-files', '--others', '--exclude-standard']))))]
+    .filter((f) => !STALE_COPY.test(f)).sort();
+  const tests = namedTests(script);
+  const rel = (f) => path.relative(root, f).split(path.sep).join('/');
+  const byRel = new Map(tests.map((f) => [rel(f), f]));
+  const why = new Map();                          // abs test → every reason it qualifies
+  const pick = (f, reason) => { if (!f) return; if (!why.has(f)) why.set(f, []); why.get(f).push(reason); };
+  let browsers = opts.browsers;
+  if (browsers === undefined) browsers = process.argv.includes('--browsers') || process.env.KIWI_CHANGED_BROWSERS === '1';
+  /* --no-browsers (or KIWI_CHANGED_BROWSERS=0): a sandbox that cannot launch
+     Chromium leaves every browser suite to the full gate, listed. */
+  const noBrowsers = opts.noBrowsers != null ? opts.noBrowsers : (process.argv.includes('--no-browsers') || process.env.KIWI_CHANGED_BROWSERS === '0');
+  const picked = new Map();                       // abs test → reason shown
+  const out = { root, base: base || null, ref, changed, stampOnly: [], all: false, picked, depsKnown: false, named: new Set(tests), browserLater: [] };
+
+  let deps = opts.deps;
+  if (!deps) { try { deps = JSON.parse(fs.readFileSync(DEPS_FILE, 'utf8')) || {}; } catch (_) { deps = {}; } }
+  out.depsKnown = Object.keys(deps).length > 0;
+  const tracked = lines(git(root, ['ls-files']));
+  const nameCount = new Map();
+  for (const f of tracked) { const b = path.posix.basename(f); nameCount.set(b, (nameCount.get(b) || 0) + 1); }
+  const srcCache = new Map();
+  const src = (f) => { if (!srcCache.has(f)) { let t = ''; try { t = fs.readFileSync(f, 'utf8'); } catch (_) {} srcCache.set(f, t); } return srcCache.get(f); };
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  for (const c of changed) {
+    if (RUNNER.has(c)) { out.all = true; continue; }
+    if (byRel.has(c)) { pick(byRel.get(c), 'changed'); continue; }
+    let stampOnly = false;
+    if (/\.(html|js|json)$/.test(c) && fs.existsSync(path.join(root, c))) {
+      try {
+        const before = git(root, ['show', ref + ':' + c]);
+        const now = fs.readFileSync(path.join(root, c), 'utf8');
+        stampOnly = before !== now && stampNorm(before) === stampNorm(now);
+      } catch (_) { stampOnly = false; }
+    }
+    if (stampOnly) {
+      out.stampOnly.push(c);
+      for (const n of STAMP_SUITES) pick(byRel.get('tools/' + n), 'stamps of ' + c);
+      continue;
+    }
+    for (const [t, list] of Object.entries(deps)) if (byRel.has(t) && Array.isArray(list) && list.includes(c)) pick(byRel.get(t), 'reads ' + c);
+    const b = path.posix.basename(c);
+    const needles = [c];
+    if ((nameCount.get(b) || 0) <= 1) needles.push(b);
+    else { const two = c.split('/').slice(-2).join('/'); if (two !== c) needles.push(two); }
+    const re = new RegExp('(^|[^A-Za-z0-9_.-])(' + needles.map(esc).join('|') + ')(?![A-Za-z0-9_-])');
+    for (const t of tests) if (re.test(src(t))) pick(t, 'names ' + c);
+  }
+  if (out.all) for (const t of tests) if (!isSlow(t)) pick(t, 'the runner changed');
+  /* A browser suite that opens a whole page reads nearly every asset, so the
+     recorded map ties it to almost any change. It runs here when it is about the
+     file (it names it, or is it); one that only loaded the file along with the
+     page waits for the full gate, listed, unless --browsers asks for it. */
+  for (const [t, list] of why) {
+    const direct = list.filter((r) => !r.startsWith('reads '));
+    if (isSlow(t) && (noBrowsers || (!direct.length && !browsers))) { out.browserLater.push(t); continue; }
+    picked.set(t, (direct[0] || list[0]) + (list.length > 1 ? ` +${list.length - 1}` : ''));
+  }
+  if (!opts.root) sel = out;
+  return out;
+}
+function isSelected(file) {
+  if (tier() !== 'changed') return true;
+  const s = selection(), f = path.resolve(file);
+  return !s.named.has(f) || s.picked.has(f);   // only the tests check.js names are ever skipped
+}
+/* True when this run will launch a browser suite (decides lock and preflight). */
+function runsBrowsers() {
+  const t = tier();
+  if (t === 'full') return true;
+  if (t === 'fast') return false;
+  for (const f of selection().picked.keys()) if (isSlow(f)) return true;
+  return false;
+}
 
 /* Take the machine-wide lock, waiting for a live holder. Returns release(). */
 function acquireLock(opts) {
@@ -260,4 +461,4 @@ function browserPreflight(opts) {
   }
 }
 
-module.exports = { install, acquireLock, prefetch, reusedCount, isSlow, tier, skipped, takeSkip, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
+module.exports = { install, acquireLock, prefetch, reusedCount, cpuTimes, cpuRatchet, CPU_BUDGET_MS, isSlow, tier, skipped, takeSkip, selection, isSelected, runsBrowsers, namedTests, stampNorm, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };

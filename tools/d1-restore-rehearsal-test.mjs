@@ -188,11 +188,31 @@ try {
   delete originalRows.d1_migrations;
   const want = appShape(applySchema(fresh()));
   const unsafe = new Set();
+  /* The backup was restored from SQL and proven above; every probe below starts
+   * from an exact copy of that restored database instead of executing the dump
+   * again (same bytes, a fraction of the time). Recovery from the backup and the
+   * per-file control never depend on the prefix, so each is built once. */
+  const image = restored.serialize();
+  const fromBackup = () => { const db = fresh(); db.deserialize(image); db.exec('PRAGMA foreign_keys=ON'); return db; };
+  const recoveredOnce = fromBackup();
+  same(recoveredOnce, before);
+  for (const pending of files.slice(1)) applyFile(recoveredOnce, pending);
+  assert.deepEqual(compareShapes(want, appShape(recoveredOnce)), []);
+  same(recoveredOnce, originalRows, true);
+  const controls = new Map();
+  const controlFor = (f) => {
+    if (!controls.has(f)) {
+      const control = fromBackup();
+      for (let p = 1; p <= f; p++) applyFile(control, files[p]);
+      controls.set(f, { rows: snapshot(control, originalRows), shape: appShape(control) });
+    }
+    return controls.get(f);
+  };
   // Probe EVERY nonempty prefix, including full apply (lost acknowledgement).
   for (let f = 0; f < files.length; f++) {
     const name = files[f], parts = statements(read(name));
     for (let k = 1; k <= parts.length; k++) {
-      const probe = restore(backup);
+      const probe = fromBackup();
       for (let p = 1; p < f; p++) applyFile(probe, files[p]);
       for (const sql of parts.slice(0, k)) probe.exec(sql);
       if (f === 1 && k === Math.floor(parts.length / 2)) {
@@ -207,19 +227,13 @@ try {
         assert.match(replayError.message, /duplicate column name/);
         unsafe.add(name);
       } else {
-        const control = restore(backup);
-        for (let p = 1; p <= f; p++) applyFile(control, files[p]);
-        same(probe, snapshot(control, originalRows), true);
-        assert.deepEqual(compareShapes(appShape(control), appShape(probe)), []);
+        const control = controlFor(f);
+        same(probe, control.rows, true);
+        assert.deepEqual(compareShapes(control.shape, appShape(probe)), []);
       }
-      // Fresh restore is recovery even for the harsher non-atomic prefix.
-      const recovered = restore(backup);
-      same(recovered, before);
-      for (const pending of files.slice(1)) applyFile(recovered, pending);
-      assert.deepEqual(compareShapes(want, appShape(recovered)), []);
-      same(recovered, originalRows, true);
+      // Fresh restore is recovery even for the harsher non-atomic prefix: it
+      // never reads the damaged probe, so it was proven once, above the loop.
       probe.close(); dbs.splice(dbs.indexOf(probe), 1);
-      recovered.close(); dbs.splice(dbs.indexOf(recovered), 1);
     }
     console.log(`${unsafe.has(name) ? '! NOT safe to replay after partial apply' : '✓ safe to replay every prefix'}: ${name}`);
   }

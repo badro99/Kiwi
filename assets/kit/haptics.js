@@ -13,7 +13,7 @@ function effectiveZone(zone, epoch) {
   return stale ? rule.zone : zone;
 }
 // Le choix se fait par instant, pas à la création du cache : un rapport peut traverser la réforme.
-function DateTimeFormat(locale, options) {
+function zoneDateTimeFormat(locale, options) {
   const base = new Intl.DateTimeFormat(locale, options);
   if (!ZONE_LAWS[0].zones.includes(options && options.timeZone) || effectiveZone(options.timeZone, ZONE_LAWS[0].probe) === options.timeZone) return base;
   const format = base.format, parts = base.formatToParts.bind(base);
@@ -28,6 +28,9 @@ function DateTimeFormat(locale, options) {
   });
   return base;
 }
+/* Called with `new` everywhere, like Intl.DateTimeFormat; it returns the
+   Intl object it built. The cast only tells the type checker so. */
+const DateTimeFormat = /** @type {new (locale?: string | string[], options?: Intl.DateTimeFormatOptions) => Intl.DateTimeFormat} */ (/** @type {unknown} */ (zoneDateTimeFormat));
 root.KiwiZoneLaw = { ZONE_LAWS, effectiveZone, DateTimeFormat };
 })(globalThis);
 

@@ -492,7 +492,7 @@ function run(opts) {
   /* ── Pierres tombales (floorplan-core.js › pdsMergePlans) ─────────────────
    * La fusion partagée : à époque égale, un identifiant enterré d'un côté
    * disparaît des deux ; l'époque continue de gagner en bloc ; une tombale
-   * expirée ne retire plus rien ; et les deux surfaces passent bien par elle. */
+   * expirée est compactée sans résurrection ; les deux surfaces passent par elle. */
   const CORE = fs.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
   const Core = new Function(
     'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
@@ -527,10 +527,31 @@ function run(opts) {
   const und = mk(['t1']); Core.pdsBury(und, 't2'); Core.pdsUnbury(und, 't2');
   eq('pdsUnbury efface la tombale', Object.keys(und.gone).length, 0);
 
-  // Une tombale expirée ne retire plus rien et disparaît du registre.
+  // Après 31 jours hors ligne, la suppression survit à la purge du registre.
   const old = mk(['t1'], { gone: { t2: Date.now() - 31 * 24 * 3600 * 1000 } });
   const m4 = Core.pdsMergePlans(old, mk(['t1', 't2']), mergeDefault);
-  eq('tombale expirée : la table revient, le registre est purgé', m4.tables.length + '/' + Object.keys(m4.gone).length, '2/0');
+  eq('31 jours hors ligne : table supprimée absente, tombale purgée', m4.tables.length + '/' + Object.keys(m4.gone).length, '1/0');
+  ok('la purge conserve un horizon de suppression', m4.goneHorizon >= old.gone.t2);
+  const offline = mk(['t1', 't2'], { elements: [{ id: 'eDeleted' }] });
+  const deleted = mk(['t1'], { gone: { t2: old.gone.t2, eDeleted: old.gone.t2 } });
+  const compact = Core.pdsMergePlans(deleted, mk(['t1']), mergeDefault);
+  for (const [a, b] of [[compact, offline], [offline, compact]]) {
+    const merged = Core.pdsMergePlans(a, b, mergeDefault);
+    eq('horizon compacté : aucune résurrection dans les deux sens', merged.tables.length + '/' + merged.elements.length, '1/0');
+    eq('le registre reste borné après reconnexion', Object.keys(merged.gone).length, 0);
+  }
+  // The stale device also added a table while offline, after the deletion:
+  // that table is new, it must survive; the deleted one, written before, must not.
+  const before = old.gone.t2 - 1000;
+  const offlineAdd = mk([], { tables: [{ id: 't1' }, { id: 't2', updatedAt: before }, { id: 'tNewOffline', updatedAt: Date.now() - 1000 }] });
+  for (const [a, b] of [[compact, offlineAdd], [offlineAdd, compact]]) {
+    const merged = Core.pdsMergePlans(a, b, mergeDefault);
+    eq('hors ligne 31 jours : la table ajoutée reste, la supprimée ne revient pas', merged.tables.map(x => x.id).sort().join(','), 't1,tNewOffline');
+  }
+  const aware = JSON.parse(JSON.stringify(compact));
+  aware.tables.push({ id: 'newAfterSync' });
+  eq('ajout après adoption de l’horizon conservé', Core.pdsMergePlans(compact, aware, mergeDefault).tables.length, 2);
+  eq('anciens plans sans horizon : union inchangée', Core.pdsMergePlans(mk(['a']), mk(['b']), mergeDefault).tables.length, 2);
 
   // L'époque gagne toujours en bloc, tombales ou non.
   const m5 = Core.pdsMergePlans(mk(['t1', 'tX']), mk(['t1'], { epoch: 1 }), mergeDefault);

@@ -9,7 +9,7 @@ process.on('unhandledRejection', (error) => {
   process.exit(1);
 });
 
-const EXPECTED = 14;
+const EXPECTED = 15;
 let checks = 0;
 
 async function check(name, fn) {
@@ -139,6 +139,14 @@ const fakeDb = {
     };
   },
 };
+const queriedFirst = await queryHotelInventoryReport(fakeDb, 'hotel-fixture', { at: 5000 });
+// Blank filter ids mean no filter. `.map(token)` used to pass each index as the
+// fallback, so ['', ''] became {1} and filtered every movement out.
+const blankFilter = await queryHotelInventoryReport(fakeDb, 'hotel-fixture', { at: 5000, locationIds: ['', ' '], unitIds: ['', ''] });
+await check('blank location and unit filters do not empty the report', async () => {
+  assert.equal(blankFilter.consolidated.closingMilli, report.consolidated.closingMilli);
+});
+queryCalls.length = 0;
 const queried = await queryHotelInventoryReport(fakeDb, 'hotel-fixture', { at: 5000 });
 await check('the query layer binds tenant and as-of to movements and count metadata', async () => {
   assert.equal(queryCalls.length, 2);
