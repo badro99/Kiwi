@@ -1973,6 +1973,10 @@
       if (tillKit) {
         document.documentElement.setAttribute('data-k-till', '');
         tillKitMoreScrim();
+        /* La cuisine s'ouvre à côté du rail, comme les autres pages (kit.css) :
+           ce n'est plus une fenêtre modale qui cache le rail aux lecteurs d'écran. */
+        const kdsScreen = document.getElementById('kds-screen');
+        if (kdsScreen) { kdsScreen.setAttribute('role', 'region'); kdsScreen.removeAttribute('aria-modal'); }
         /* §18.9 : « Ouvrir la caisse » ouvre le comptage du fond sur le kit. */
         const ci = document.getElementById('clockin-btn');
         if (ci && !ci.classList.contains('is-confirmed')) ci.disabled = false;

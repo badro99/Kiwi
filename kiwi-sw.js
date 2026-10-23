@@ -24,7 +24,7 @@ var SHELL = [
   '/assets/caisse-accounting.js?v=5',
   '/assets/caisse-floor.js?v=1',
   '/assets/caisse-kitchen.js?v=1',
-  '/assets/caisse-app.js?v=10',
+  '/assets/caisse-app.js?v=11',
   '/assets/caisse-refresh.js?v=5',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -322,7 +322,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=38',
+  '/assets/kit/kit.css?v=39',
   '/assets/kit/dash-desktop.css?v=5',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',

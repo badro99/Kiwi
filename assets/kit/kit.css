@@ -184,6 +184,16 @@ html[data-k-pay-scroll] #kit-pay-layer { position: absolute; inset-block: 0 auto
 html[data-k-till] .sidebar { display: none !important; }
 #kit-rail { flex: 0 0 88px; width: 88px; height: 100%; min-height: 0; }
 #kit-rail > k-rail { display: block; height: 100%; }
+/* Cuisine on the rail opens in the till's own place, beside the rail, like
+   Salle, À emporter and Attente (owner, 2026-10-22): the kitchen used to cover
+   the whole window, rail included. It sits under Plus's panel (42) and its
+   scrim (41), so Plus still opens over it. The phone keeps its full screen,
+   and a kitchen-only device (body.is-kitchen) keeps its own. */
+@media (min-width: 1025px), (min-width: 901px) and (min-height: 601px) {
+  html[data-k-till] body:not(.is-kitchen) .kds-screen { inset-inline-start: 88px; z-index: 39; }
+  /* No Fermer: like the other pages, the rail is the way out. */
+  html[data-k-till] body:not(.is-kitchen) #kds-close-btn { display: none; }
+}
 /* Plus REPLACES the rail with the shipped sidebar (owner, 2026-10-16): not a
    second bar beside it, which only made the screen tighter. The black bar
    takes the rail's own place and carries the same five destinations at its

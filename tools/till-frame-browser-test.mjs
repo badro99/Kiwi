@@ -448,6 +448,49 @@ try {
     check(fired, 'a More row fires its shipped control (Cash in or out)');
     check(errors.length === 0, 'rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
+
+  /* Cuisine s'ouvre à côté du rail, comme Salle, À emporter et Attente
+     (propriétaire, 2026-10-22) : elle couvrait toute la fenêtre, rail compris. */
+  await S.run('flag on · Cuisine opens beside the rail, like the other pages', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const tapRail = (id) => page.evaluate((i) => document.querySelector('k-rail').shadowRoot.querySelector(`[data-id="${i}"]`).click(), id);
+    const view = () => page.evaluate(() => {
+      const kds = document.getElementById('kds-screen');
+      const k = kds.getBoundingClientRect();
+      const rail = document.getElementById('kit-rail').getBoundingClientRect();
+      const kitchenItem = document.querySelector('k-rail').shadowRoot.querySelector('[data-id="kitchen"]').getBoundingClientRect();
+      const hit = document.elementFromPoint(Math.round(kitchenItem.x + kitchenItem.width / 2), Math.round(kitchenItem.y + kitchenItem.height / 2));
+      return { open: kds.classList.contains('is-open'), x: Math.round(k.x), right: Math.round(k.right), width: innerWidth,
+        railRight: Math.round(rail.right), railTakesTap: !!hit && !!hit.closest('#kit-rail'),
+        value: document.querySelector('k-rail').getAttribute('value'),
+        closeShown: getComputedStyle(document.getElementById('kds-close-btn')).display !== 'none',
+        modal: kds.getAttribute('aria-modal'), role: kds.getAttribute('role') };
+    });
+    await tapRail('kitchen');
+    await sleep(400);
+    const v = await view();
+    check(v.open && v.value === 'kitchen', `Cuisine on the rail opens the kitchen, and the rail says so (${v.value})`);
+    check(v.x === v.railRight && v.right === v.width, `the kitchen fills the page beside the rail, not the window (${v.x}..${v.right}, rail ends at ${v.railRight})`);
+    check(v.railTakesTap, 'the rail stays on screen and takes the tap');
+    check(!v.closeShown, 'no Fermer in its header: the rail is the way out, as on the other pages');
+    check(v.modal === null && v.role === 'region', `the kitchen is a page, not a modal window (role ${v.role}, aria-modal ${v.modal})`);
+    await tapRail('more');
+    await sleep(700);
+    check(await page.evaluate(() => {
+      const el = document.querySelector('.sidebar [data-action="cash-move"]');
+      if (!el) return false;
+      const b = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+      return b.width > 0 && !!hit && el.contains(hit);
+    }), 'Plus still opens its panel over the kitchen');
+    await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await sleep(700);
+    await tapRail('floor');
+    await sleep(400);
+    const back = await view();
+    check(!back.open && back.value === 'floor' && await page.evaluate(() => mode === 'salle'), 'Salle on the rail leaves the kitchen for the floor plan');
+    check(errors.length === 0, 'kitchen beside the rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
 } finally {
   await browser.close().catch(() => {});
   server.closeAllConnections();
