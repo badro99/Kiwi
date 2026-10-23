@@ -230,7 +230,7 @@ window.Kiwi = {
   toast: (m, opts) => { window.__toasts.push({ message: String(m), type: (opts && opts.type) || '' }); },
 };
 </script>
-<script src="/assets/hotel-language.js"></script><script src="/assets/hotel.js"></script>
+<script src="/assets/hotel-language.js"></script><script src="/assets/hotel-rates.js"></script><script src="/assets/hotel-housekeeping.js"></script><script src="/assets/hotel-folio.js"></script><script src="/assets/hotel-channels.js"></script><script src="/assets/hotel.js"></script>
 </body></html>`;
 }
 

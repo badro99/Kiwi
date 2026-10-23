@@ -69,6 +69,12 @@ var SHELL = [
   '/assets/trade-workspaces.css?v=6',
   '/assets/reservations.css?v=9',
   '/assets/hotel.css?v=45',
+  '/assets/hotel-language.js?v=1',
+  '/assets/hotel-rates.js?v=1',
+  '/assets/hotel-housekeeping.js?v=1',
+  '/assets/hotel-folio.js?v=1',
+  '/assets/hotel-channels.js?v=1',
+  '/assets/hotel.js?v=83',
   '/assets/hotel-economat.js?v=5',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
@@ -80,7 +86,6 @@ var SHELL = [
   '/assets/liquid-glass.css',
   '/assets/liquid-glass.js?v=1',
   '/assets/agent-skin.css?v=15',
-  '/assets/agent-skin.js?v=4',
   '/assets/dashboard-native.css',
   '/assets/cloud-doc.js?v=11',
   '/assets/agent-action-center.js?v=4',
@@ -92,7 +97,6 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
-  '/assets/agent-vision.js?v=7',
   '/assets/i18n.js?v=32',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
@@ -195,9 +199,6 @@ var SHELL = [
   '/assets/day-report-dash.js?v=35',
   '/assets/day-report-export.js?v=12',
   '/assets/month-report.js?v=15',
-  '/assets/month-report-tools.js?v=8',
-  '/assets/month-report-pdf.js?v=15',
-  '/assets/month-report-ui.js?v=10',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et

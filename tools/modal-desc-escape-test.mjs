@@ -10,6 +10,7 @@ import stockTestSource from './stock-test-source.cjs';
  * la fenêtre de confirmation. Même défaut dans le rendu des résultats du scan
  * de documents (agent-vision.js), où le texte vient d'une facture photographiée.
  * ─────────────────────────────────────────────────────────────────────────── */
+import mergedPart from './merged-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -45,7 +46,7 @@ has(hotel, "desc: esc(booking.customer.name) + ' · ' + esc(cuDay(", 'hôtel : n
 has(hotel, 'dernier : ${esc(g.last)}', 'hôtel : fiche client échappée');
 
 /* Le scan de documents : tout ce qui vient du modèle ou du fichier passe par esc(). */
-const vision = read('assets/agent-vision.js');
+const vision = mergedPart('assets/agent-voice.js', 'assets/agent-vision.js');
 const escSrc = vision.slice(vision.indexOf('function esc(v)'), vision.indexOf('function toast(msg)'));
 const sandbox = {};
 vm.createContext(sandbox);

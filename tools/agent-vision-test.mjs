@@ -1,12 +1,13 @@
 // agent-vision-test — l'attachement photo et analyse visuelle de l'assistant :
 // l'endpoint est fermé (session, quota, models @cf/), le client gère le drop/coller/resize,
 // et le câblage HTML/SW porte le nouveau fichier avec estampille.
+import mergedPart from './merged-source.cjs';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-const vision = read('assets/agent-vision.js');
+const vision = mergedPart('assets/agent-voice.js', 'assets/agent-vision.js');
 const fn = read('functions/api/ai/vision-inspect.js');
 const quota = read('functions/api/ai/_quota.js');
 const dashboard = read('dashboard.html');
@@ -43,10 +44,10 @@ const controls = [
     return used.length > 5 && used.every((v) => defined.has(v));
   })()],
   // ── le câblage : la coquille et le HTML s'accordent ───────────────────
-  ['dashboard loads the vision layer with a stamp', /assets\/agent-vision\.js\?v=\d+/.test(dashboard)],
+  ['dashboard loads the vision layer with a stamp', /assets\/agent-voice\.js\?v=\d+/.test(dashboard)],
   ['the offline shell precaches the same stamped URL', (() => {
-    const m = dashboard.match(/assets\/agent-vision\.js\?v=(\d+)/);
-    return !!m && sw.includes(`'/assets/agent-vision.js?v=${m[1]}'`);
+    const m = dashboard.match(/assets\/agent-voice\.js\?v=(\d+)/);
+    return !!m && sw.includes(`'/assets/agent-voice.js?v=${m[1]}'`);
   })()],
 ];
 

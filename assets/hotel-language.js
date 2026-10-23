@@ -3,7 +3,20 @@
  * conserve les dictionnaires et fonctions dans leur propre fermeture. */
 (() => {
   'use strict';
+  const factories = Object.seal({ rates: null, housekeeping: null, folio: null, channels: null });
+  let shared = null;
+  let instances = Object.create(null);
+  const define = (name, factory) => {
+    if (!Object.prototype.hasOwnProperty.call(factories, name)) throw new Error('Unknown hotel part: ' + name);
+    factories[name] = factory;
+  };
+  const bind = (scope) => { shared = scope; instances = Object.create(null); };
+  const part = (name) => {
+    if (!instances[name]) instances[name] = factories[name](shared);
+    return instances[name];
+  };
   window.__kiwiHotelInternal = Object.freeze({
+    define, bind, part,
     language: function () {
   /* ═══════════════ LANGUE · le français à l'appel, l'anglais et l'arabe ici ═══════════════
    * Every merchant-facing string in this file is written in French where it

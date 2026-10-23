@@ -1,11 +1,12 @@
 // agent-voice-test — la dictée vocale de l'assistant tient ses trois murs :
 // l'endpoint est fermé (session, quota, binding nommé), le client sait
 // retomber sur le navigateur, et le câblage HTML/SW porte le nouveau fichier.
+import mergedPart from './merged-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-const voice = read('assets/agent-voice.js');
+const voice = mergedPart('assets/agent-voice.js');
 const fn = read('functions/api/ai/voice.js');
 const quota = read('functions/api/ai/_quota.js');
 const dashboard = read('dashboard.html');

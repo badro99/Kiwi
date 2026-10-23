@@ -1,3 +1,4 @@
+import mergedPart from './merged-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { engine,fixture,ROOT,runtime } from './month-report-fixtures.mjs';
@@ -45,7 +46,7 @@ check(M.number(null)===null&&M.number('')===null&&M.number(false)===null,'absent
 for(const date of ['2026-02-31','2026-99-01','invalid'])check(validateMonthReportPolicy({taxPeriods:[{id:'a',effectiveFrom:date,rate:10,category:'*',recordedAt:1}]},{}).ok===false,'invalid date rejected without throwing '+date);
 const p={id:'a',effectiveFrom:'2026-01-01',rate:10,category:'*',recordedAt:1};check(validateMonthReportPolicy({taxPeriods:[p]},{}).ok,'dated configuration accepted');check(!validateMonthReportPolicy({taxPeriods:[{...p,rate:11}]},{taxPeriods:[p]}).ok,'historical rate immutable');check(!validateMonthReportPolicy({taxPeriods:[]},{taxPeriods:[p]}).ok,'historical rate cannot be deleted');check(validateMonthReportPolicy({taxPeriods:[p,{...p,id:'b',effectiveFrom:'2027-01-01',rate:12}]},{taxPeriods:[p]}).ok,'new legal period appended without changing past');
 check(r.notice.includes('not a certified set of accounts'),'required non-certification notice');
-const ui=fs.readFileSync(ROOT+'/assets/month-report-ui.js','utf8');check(ui.includes('تقرير نهاية الشهر')&&ui.includes('End of Month Report')&&ui.includes('Rapport de fin de mois'),'all three button labels');
+const ui=mergedPart('assets/month-report.js', 'assets/month-report-ui.js');check(ui.includes('تقرير نهاية الشهر')&&ui.includes('End of Month Report')&&ui.includes('Rapport de fin de mois'),'all three button labels');
 const W=runtime(),T=W.KiwiMonthReportTools,C=W.KiwiMonthReportCSV;
 r=M.build(fixture());const grouped=T.warnings(r.warnings,'fr');
 check(grouped.reduce((a,g)=>a+g.count,0)===r.warnings.length,'group counts equal every raw diagnostic');

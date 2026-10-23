@@ -24,6 +24,67 @@
 (() => {
   'use strict';
 
+  /* Accès privés paresseux : aucun état n'est lu pendant cette liaison. */
+  window.__kiwiHotelInternal.bind(Object.freeze({
+    get CHANNELS() { return CHANNELS; },
+    get DIRECT_TREND() { return DIRECT_TREND; },
+    get F() { return F; },
+    get FOLIOS() { return FOLIOS; },
+    get HK_DONE() { return HK_DONE; },
+    get HK_QUEUE() { return HK_QUEUE; },
+    get HK_STAFF() { return HK_STAFF; },
+    get HX_TARIFF_SYNC_COPY() { return HX_TARIFF_SYNC_COPY; },
+    get K() { return K; },
+    get MAD() { return MAD; },
+    get QUICK_ITEMS() { return QUICK_ITEMS; },
+    get R() { return R; },
+    get ROOMS() { return ROOMS; },
+    get SRC() { return SRC; },
+    get SRC_DOT() { return SRC_DOT; },
+    get SRC_LBL() { return SRC_LBL; },
+    get TYPES() { return TYPES; },
+    get cuAwaitTariffAck() { return cuAwaitTariffAck; },
+    get cuBoards() { return cuBoards; },
+    get cuChannelState() { return cuChannelState; },
+    get cuCommercialError() { return cuCommercialError; },
+    get cuCommercialState() { return cuCommercialState; },
+    get cuDay() { return cuDay; },
+    get cuDraftMoney() { return cuDraftMoney; },
+    get cuDraftStatus() { return cuDraftStatus; },
+    get cuKinds() { return cuKinds; },
+    get cuLoadCommercial() { return cuLoadCommercial; },
+    get cuLoadPerformance() { return cuLoadPerformance; },
+    get cuMerchantSlug() { return cuMerchantSlug; },
+    get cuPerfByScope() { return cuPerfByScope; },
+    get cuRoomStatus() { return cuRoomStatus; },
+    get cuSave() { return cuSave; },
+    get cuStamp() { return cuStamp; },
+    get cuStarter() { return cuStarter; },
+    get cuState() { return cuState; },
+    get cuStayScope() { return cuStayScope; },
+    get cuStrip() { return cuStrip; },
+    get cuTypes() { return cuTypes; },
+    get cuWarmState() { return cuWarmState; },
+    get donutCss() { return donutCss; },
+    get esc() { return esc; },
+    get fmt() { return fmt; },
+    get folioBySrc() { return folioBySrc; },
+    get folioPaid() { return folioPaid; },
+    get folioTotal() { return folioTotal; },
+    get hxLang() { return hxLang; },
+    get hxLocale() { return hxLocale; },
+    get hxTo() { return hxTo; },
+    get isCustomHotel() { return isCustomHotel; },
+    get ltr() { return ltr; },
+    get rerender() { return rerender; },
+    get roomTypeOf() { return roomTypeOf; },
+    get srcPill() { return srcPill; },
+    get toast() { return toast; },
+    get tx() { return tx; },
+    get txk() { return txk; },
+    get txn() { return txn; },
+  }));
+
   /* ═══════════════ HELPERS ═══════════════ */
   const fmt = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   /* An amount reads left to right inside Arabic: the isolate keeps « MAD »
@@ -1028,44 +1089,7 @@
   }
 
   /* ═══════════════ FOLIO MODAL · la note unifiée ═══════════════ */
-  function folioModalHtml(room, highlightNew) {
-    const f = F()[room];
-    if (!f) return `<div style="padding:20px;color:var(--n-500);font-size:13px;">${tx('Aucun folio ouvert pour cette chambre.')}</div>`;
-    const total = folioTotal(f);
-    const paid = folioPaid(f);
-    const groups = ['room', 'resto', 'spa', 'fee', 'taxe'];
-    const gHtml = groups.map((g) => {
-      const lines = f.lines.filter((l) => l.src === g);
-      if (!lines.length) return '';
-      return `<div class="hx-fol-grp">
-        <div class="gh"><span class="hx-srcdot ${SRC_DOT[g]}"></span>${SRC_LBL[g]}<span style="margin-left:auto;font-weight:600;color:var(--ink);">${MAD(folioBySrc(f, g))}</span></div>
-        ${lines.map((l) => `<div class="hx-fol-line${l.isNew && highlightNew ? ' new' : ''}">
-          <span><span class="tm">${l.t}</span>${l.label}${l.paid ? ` <span class="hx-pill ok" style="margin-inline-start:6px;">${tx('RÉGLÉ')}</span>` : ''}</span>
-          <span class="qt">${l.qty || ''}</span>
-          <span class="am">${MAD(l.amt)}</span>
-        </div>`).join('')}
-      </div>`;
-    }).join('');
-    const commission = SRC[f.src].fee > 0
-      ? `<div class="hx-fol-meta warn"><span>${isCustomHotel() ? tx('Commission {src} ({p} %) · facturée par la plateforme', { src: SRC[f.src].label, p: Math.round(SRC[f.src].fee * 100) }) : `Commission ${SRC[f.src].label} (${Math.round(SRC[f.src].fee * 100)} %) · facturée au riad en fin de mois`}</span><span style="font-family:var(--mono);">${ltr('−' + MAD(folioBySrc(f, 'room') * SRC[f.src].fee))}</span></div>`
-      : `<div class="hx-fol-meta"><span>${tx('Réservation directe, aucune commission OTA')}</span><span class="hx-pill ok">${MAD(0)}</span></div>`;
-    return `
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
-        ${srcPill(f.src)}
-        <span style="font-size:12px;color:var(--n-500);">${tx('{n} pers', { n: f.pax })} · ${tx('séjour {c}', { c: txn(f.nights, 'nuit') })} · ${roomTypeOf(room).name}</span>
-      </div>
-      ${gHtml}
-      <div class="hx-fol-tot"><span>${tx('Total folio')}</span><span class="am">${MAD(total)}</span></div>
-      ${paid > 0 ? `<div class="hx-fol-meta"><span>${tx('Dont déjà réglé')}</span><span style="font-family:var(--mono);">${MAD(paid)}</span></div>` : ''}
-      ${commission}
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;">
-        <button class="hx-btn ghost" data-action="hx-add-charge" data-arg="${room}">${tx('+ Ajouter une charge')}</button>
-        ${isCustomHotel() && total - paid > 0
-          ? `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|cash">${tx('Espèces · {amount}', { amount: MAD(total - paid) })}</button>
-             <button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|card">${tx('Carte · {amount}', { amount: MAD(total - paid) })}</button>`
-          : `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>`}
-      </div>`;
-  }
+  function folioModalHtml(room, highlightNew) { return window.__kiwiHotelInternal.part('folio').folioModalHtml.apply(this, arguments); }
   function openFolio(room, highlightNew) {
     const f = F()[room];
     const m = K().modal({
@@ -1090,47 +1114,11 @@
   ];
   /* Custom hotel → generic picker shaped by the step-2 profile (resto / spa
    * answered ⇒ their item families appear); riad → the Café-Atlas-DNA carte. */
-  function quickItems() {
-    if (!isCustomHotel()) return QUICK_ITEMS;
-    const p = ((window.KiwiVenue.getCurrentVenueData() || {}).profileInfo) || {};
-    const items = [];
-    if (p.resto || p.resto === undefined) items.push(
-      { label: tx('Petit-déjeuner'), amt: 80, src: 'resto' },
-      { label: tx('Dîner · couvert'), amt: 240, src: 'resto' },
-    );
-    if (p.spa) items.push({ label: tx('Soin spa / hammam'), amt: 300, src: 'spa' });
-    items.push({ label: tx('Minibar'), amt: 45, src: 'resto' }, { label: tx('Late check-out'), amt: 150, src: 'fee' });
-    return items;
-  }
-  function addChargeHtml(room) {
-    const intro = isCustomHotel()
-      ? tx('Votre caisse, la charge se poste directement sur la note de la chambre {n}.', { n: room })
-      : `Caisse restaurant et hammam du riad, la charge se poste directement sur la note de la chambre ${room}.`;
-    return `
-      <div style="font-size:12px;color:var(--n-500);margin-bottom:10px;">${intro}</div>
-      ${quickItems().map((q, i) => `<div class="hx-fol-line" style="cursor:pointer;" data-action="hx-post-charge" data-arg="${room}|${i}">
-        <span><span class="hx-srcdot ${SRC_DOT[q.src]}" style="margin-right:7px;"></span>${q.label}</span>
-        <span class="qt">${q.src === 'resto' ? 'POS' : q.src === 'spa' ? 'SPA' : tx('FRAIS')}</span>
-        <span class="am">${MAD(q.amt)}</span>
-      </div>`).join('')}
-      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-        <button class="hx-btn ghost" data-action="hx-folio-back" data-arg="${room}">${hxLang() === 'ar' ? '→' : '←'} ${tx('Retour au folio')}</button>
-      </div>`;
-  }
+  function quickItems() { return window.__kiwiHotelInternal.part('folio').quickItems.apply(this, arguments); }
+  function addChargeHtml(room) { return window.__kiwiHotelInternal.part('folio').addChargeHtml.apply(this, arguments); }
 
-  function nowLabel() {
-    const sim = window.KiwiDemoClock?.getSimState?.();
-    if (!isCustomHotel() && sim) return sim.simHourLabel.replace('h', 'h') + String(sim.simMinute).padStart(2, '0');
-    return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('fr-FR', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
-  }
-  function postCharge(room, label, amt, src, silent) {
-    const f = F()[room];
-    if (!f) return;
-    f.lines.push({ t: nowLabel(), serviceAt: Date.now(), label, qty: '', amt, src, isNew: true });
-    f.updatedAt = cuStamp();
-    if (isCustomHotel()) cuSave();
-    if (!silent) K().toast(tx('{label} → folio Ch. {n}', { label, n: room }), { type: 'success', desc: (src === 'resto' ? tx('Restaurant · POS') : tx('Hammam & spa')) + ' · ' + tx('{amount} postés sur la note de chambre.', { amount: MAD(amt) }) });
-  }
+  function nowLabel() { return window.__kiwiHotelInternal.part('folio').nowLabel.apply(this, arguments); }
+  function postCharge(room, label, amt, src, silent) { return window.__kiwiHotelInternal.part('folio').postCharge.apply(this, arguments); }
 
   /* ═══════════════ PAGE · RÉCEPTION ═══════════════ */
   function counts() {
@@ -1342,46 +1330,7 @@
   }
 
   /* ═══════════════ PAGE · MÉNAGE ═══════════════ */
-  function menageBody() {
-    const stPill = { encours: '<span class="hx-pill pend">EN COURS</span>', file: '<span class="hx-pill neutral">EN FILE</span>', attente: '<span class="hx-pill late">APRÈS DÉPART</span>', inspect: '<span class="hx-pill pend">À INSPECTER</span>' };
-    const q = HK_QUEUE.map((it) => `
-      <div class="hx-q">
-        <i class="dot" style="background:${it.prio ? 'var(--danger)' : 'var(--warning)'};"></i>
-        <div><div class="nm">Ch. ${it.room} · ${TYPES[ROOMS[it.room].type].name}</div><div class="nt">${it.note}</div></div>
-        ${stPill[it.st] || ''}
-        ${it.st === 'encours'
-          ? `<button class="hx-btn ghost" data-action="hx-hk-done" data-arg="${it.room}">Terminer → inspection</button>`
-          : it.who
-            ? `<span style="font-size:12px;font-family:var(--mono);color:var(--n-500);">${it.who}</span>`
-            : `<button class="hx-btn atlas" data-action="hx-hk-assign" data-arg="${it.room}">Assigner</button>`}
-      </div>`).join('');
-    const done = HK_DONE.map((d) => `
-      <div class="hx-q">
-        <i class="dot" style="background:var(--mint);"></i>
-        <div><div class="nm">Ch. ${d.room} · remise ${d.at}</div><div class="nt">${d.by} · ${d.note}</div></div>
-        <span class="hx-pill ok">INSPECTÉE ✓</span><span></span>
-      </div>`).join('');
-    const staff = HK_STAFF.map((s) => `
-      <div class="hx-hk">
-        <span class="hx-av ${s.cls}">${s.av}</span>
-        <div><div style="font-weight:600;font-size:13px;color:var(--ink);">${s.name}</div><div style="font-size:11.5px;color:var(--n-500);">${s.role}</div></div>
-        <span style="font-size:11.5px;color:var(--n-500);text-align:right;">${s.today}</span>
-      </div>`).join('');
-    return `<div class="hx-page">
-      <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">En file</div><div class="v">${HK_QUEUE.length}</div><div class="d">dont 1 prioritaire · arrivée 17h00</div></div>
-        <div class="hx-kpi"><div class="l">Remises aujourd'hui</div><div class="v">${HK_DONE.length}</div><div class="d up">relouées ce soir</div></div>
-        <div class="hx-kpi"><div class="l">Tourné moyen</div><div class="v">42 <small>min</small></div><div class="d warn">cible 35 min · −7 à gagner</div><div class="hx-turn-bar"><i style="width:${Math.round(35 / 42 * 100)}%;"></i></div></div>
-        <div class="hx-kpi"><div class="l">Inspections</div><div class="v">2 / 2</div><div class="d up">Khadija · gouvernante</div></div>
-      </div>
-      <div class="hx-h"><span class="t">File de remise à blanc</span><span class="s">sale → en cours → à inspecter → inspectée · la chambre repasse « libre propre »</span></div>
-      <div class="block" style="padding:6px 14px;">${q || '<div style="padding:14px;font-size:13px;color:var(--n-500);">File vide, toutes les chambres sont prêtes.</div>'}</div>
-      <div class="hx-h"><span class="t">Remises terminées · aujourd'hui</span></div>
-      <div class="block" style="padding:6px 14px;">${done}</div>
-      <div class="hx-h"><span class="t">Équipe ménage · 4</span><span class="a" data-action="nav-equipe">Gérer l'équipe →</span></div>
-      <div class="block" style="padding:6px 14px;">${staff}</div>
-    </div>`;
-  }
+  function menageBody() { return window.__kiwiHotelInternal.part('housekeeping').menageBody.apply(this, arguments); }
 
   /* ═══════════════ PAGE · TARIFS & OCCUPATION ═══════════════ */
   function tarifsBody() {
@@ -1506,103 +1455,10 @@
   }
 
   /* ═══════════════ PAGE · FOLIOS ═══════════════ */
-  function foliosBody() {
-    const open = Object.values(FOLIOS).filter((f) => ROOMS[f.room].guest);
-    const totalOpen = open.reduce((a, f) => a + folioTotal(f), 0);
-    const rows = open.sort((a, b) => folioTotal(b) - folioTotal(a)).map((f) => {
-      const r = ROOMS[f.room];
-      const resto = folioBySrc(f, 'resto'), spa = folioBySrc(f, 'spa');
-      return `<div class="hx-folio-row" data-action="hx-folio" data-arg="${f.room}">
-        <div>
-          <div style="font-weight:600;color:var(--ink);font-size:13.5px;">Ch. ${f.room} · ${f.guest} ${r.status === 'depart' ? '<span class="hx-pill late">DÉPART EN RETARD</span>' : ''}</div>
-          <div style="font-size:11.5px;color:var(--n-500);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${srcPill(f.src)} ${f.nights} nuit${f.nights > 1 ? 's' : ''} · ${f.pax} pers
-            ${resto ? `<span><span class="hx-srcdot resto"></span> resto ${MAD(resto)}</span>` : ''}
-            ${spa ? `<span><span class="hx-srcdot spa"></span> hammam ${MAD(spa)}</span>` : ''}
-            <span><span class="hx-srcdot taxe"></span> taxe incluse</span>
-          </div>
-        </div>
-        <div class="amt">${MAD(folioTotal(f))}</div>
-      </div>`;
-    }).join('');
-    return `<div class="hx-page">
-      <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">Folios ouverts</div><div class="v">${open.length}</div><div class="d">chambres + resto + hammam unifiés</div></div>
-        <div class="hx-kpi"><div class="l">En-cours total</div><div class="v">${fmt(totalOpen)} <small>MAD</small></div><div class="d up">encaissé au check-out · T+1</div></div>
-        <div class="hx-kpi"><div class="l">Taxe de séjour · juin</div><div class="v">14 350 <small>MAD</small></div><div class="d">25 MAD / adulte / nuit</div></div>
-        <div class="hx-kpi"><div class="l">Déclaration</div><div class="v" style="font-size:15px;">avant le 10 juil.</div><div class="d up">mai : 24 600 MAD déclarés ✓</div></div>
-      </div>
-      <div class="hx-h"><span class="t">Notes clients en cours</span><span class="s">un séjour = une note · le restaurant et le hammam postent dessus en direct</span>
-        <button class="hx-btn ghost" data-action="hx-taxe-export">Exporter le registre taxe (CSV)</button>
-      </div>
-      <div class="block" style="padding:6px 14px;">${rows}</div>
-      <div class="block" style="padding:16px;background:var(--mint-soft);border-color:var(--atlas);">
-        <div style="font-size:13px;color:var(--riad);line-height:1.65;">
-          <b>C'est ça, le pitch Kiwi.</b> Un thé commandé en terrasse, un hammam réservé à l'accueil, trois nuits en Suite Yasmina,
-          tout atterrit sur la même note, taxe de séjour calculée, encaissée en un geste au départ. Aucun PMS étranger ne fait
-          caisse + spa + chambres nativement pour un riad marocain.
-        </div>
-      </div>
-    </div>`;
-  }
+  function foliosBody() { return window.__kiwiHotelInternal.part('folio').foliosBody.apply(this, arguments); }
 
   /* ═══════════════ PAGE · CANAUX & OTA ═══════════════ */
-  function canauxBody() {
-    const totFee = CHANNELS.reduce((a, c) => a + c.fee, 0);
-    const donutParts = CHANNELS.map((c) => ({ pct: c.pct, color: c.color }));
-    const rows = CHANNELS.map((c) => `<div class="r">
-      <span class="sw" style="background:${c.color};"></span>
-      <span>${c.label}<div style="font-size:11px;color:var(--n-500);">${c.nights} nuitées · ${MAD(c.rev)}</div></span>
-      <span class="pc">${c.pct} %</span>
-      <span class="am">${c.fee ? '−' + MAD(c.fee) : '0 MAD'}</span>
-    </div>`).join('');
-    const trend = DIRECT_TREND.map((v, i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-      <div style="width:100%;max-width:34px;height:${v * 2.6}px;background:${i === DIRECT_TREND.length - 1 ? 'var(--atlas)' : 'var(--n-200)'};border-radius:6px 6px 0 0;align-self:center;"></div>
-      <span style="font-size:11px;font-family:var(--mono);color:var(--n-500);">${['J', 'F', 'M', 'A', 'M', 'J'][i]}</span>
-    </div>`).join('');
-    return `<div class="hx-page">
-      <div class="hx-row r-21">
-        <div class="block" style="padding:16px;">
-          <div class="hx-h" style="margin:0 0 12px;"><span class="t">Mix canaux · nuitées 30 jours</span><span class="s">547 nuitées vendues</span></div>
-          <div class="hx-donut-wrap">
-            <div class="hx-donut" style="${donutCss(donutParts)}"><div class="ctr"><b>54 %</b><span>BOOKING</span></div></div>
-            <div class="hx-dlg">${rows}
-              <div class="r" style="border-top:1px solid var(--n-200);padding-top:8px;margin-top:2px;">
-                <span></span><span style="font-weight:600;color:var(--ink);">Commissions payées · 30 j</span><span></span>
-                <span class="am" style="color:var(--danger);">−${MAD(totFee)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="hx-bleed">
-          <div class="lbl">LA MORSURE BOOKING · 30 JOURS</div>
-          <div class="big">−${MAD(56180)}</div>
-          <div class="sub">17 % de commission sur 295 nuitées. La même Confort Médina à 950 MAD vous laisse
-            <b style="color:var(--paper);">788,50 MAD via Booking</b>, et <b style="color:var(--mint);">950 MAD en direct</b>.</div>
-          <div style="margin-top:14px;">
-            <div class="hx-bleed-row"><div>1 séjour direct de 3 nuits<div class="nt">au lieu de Booking</div></div><span class="am" style="color:var(--mint);">+484 MAD</span></div>
-            <div class="hx-bleed-row"><div>22 clients fidèles encore sur OTA<div class="nt">relance « revenez en direct −10 % »</div></div><span class="am" style="color:var(--mint);">+4 100 MAD / mois</span></div>
-          </div>
-          <button class="hx-btn" style="margin-top:14px;background:var(--mint);color:var(--riad);width:100%;" data-action="hx-direct-push">Activer la relance directe WhatsApp</button>
-        </div>
-      </div>
-      <div class="hx-row r-2">
-        <div class="block" style="padding:16px;">
-          <div class="hx-h" style="margin:0 0 10px;"><span class="t">Part du direct · 6 mois</span><span class="s">18 % → 25 % depuis la relance Kiwi</span></div>
-          <div style="display:flex;align-items:flex-end;gap:8px;height:80px;">${trend}</div>
-        </div>
-        <div class="block" style="padding:16px;">
-          <div class="hx-h" style="margin:0 0 10px;"><span class="t">Règles par canal</span></div>
-          <div style="font-size:12.5px;color:var(--n-500);line-height:1.9;">
-            <div style="display:flex;justify-content:space-between;"><span>Booking.com, annulation flexible</span><b style="color:var(--ink);">no-show : 1ʳᵉ nuit retenue</b></div>
-            <div style="display:flex;justify-content:space-between;"><span>Expedia, prépaiement virtuel (VCC)</span><b style="color:var(--ink);">encaissé à l'arrivée</b></div>
-            <div style="display:flex;justify-content:space-between;"><span>Airbnb, versement J+1 après arrivée</span><b style="color:var(--ink);">frais hôte 3 %</b></div>
-            <div style="display:flex;justify-content:space-between;"><span>Direct, acompte 30 % WhatsApp Pay</span><b style="color:var(--atlas);">0 % commission</b></div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }
+  function canauxBody() { return window.__kiwiHotelInternal.part('channels').canauxBody.apply(this, arguments); }
 
   /* ═══════════════ PAGE · INTELLIGENCE ═══════════════ */
   function forecastSvg() {
@@ -2456,11 +2312,7 @@
   }
   /* Ménage vu de l'Accueil : mêmes règles que le plan (cuRoomStatus), donc le
    * même nombre que « À nettoyer » sur le plan des chambres. */
-  function cuHousekeeping() {
-    if (!isCustomHotel()) return null;
-    const rooms = Object.values(R() || {}).filter((r) => r && r.id);
-    return { total: rooms.length, toClean: rooms.filter((r) => cuRoomStatus(r).key === 'sale').length, loading: cuWarmState.loading };
-  }
+  function cuHousekeeping() { return window.__kiwiHotelInternal.part('housekeeping').cuHousekeeping.apply(this, arguments); }
   /* « À nettoyer » dépend des départs terminés, qui ne sont dans le cache de
    * séjours qu'après une visite du plan ou de la réception. L'Accueil les
    * charge lui-même (60 jours en arrière, demain en avant), au plus une fois
@@ -3039,40 +2891,7 @@
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
     openModal = { el: m.el, close: m.close };
   }
-  function cuMenageBody() {
-    const dirty = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'sale');
-    const clean = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'libre').length;
-    const occupied = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'occ').length;
-    const offline = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'hs').length;
-    const rows = dirty.map((r) => `
-      <div class="hx-q">
-        <i class="dot" style="background:var(--warning);"></i>
-        <div><div class="nm">${tx('Ch. {n}', { n: r.n })} · ${esc(roomTypeOf(r.n).name)}</div><div class="nt">${esc(r.floor)} · ${esc(r.status === 'sale' ? (tx(r.meta) || tx('À remettre à blanc')) : tx('Départ enregistré · remise à blanc à faire'))}</div></div>
-        <span class="hx-pill late">${tx('À FAIRE')}</span>
-        <button class="hx-btn ghost" data-action="hx-hk-done" data-arg="${r.n}">${tx('Marquer propre')}</button>
-      </div>`).join('');
-    return `<div class="hx-page hx-room-workspace">
-      <div class="hx-room-section-tabs" role="tablist" aria-label="${tx('Espaces hôtel')}">
-        <button role="tab" aria-selected="false" data-action="nav-chambres"><span>${tx('Plan')}</span><small>${txn(Object.values(R()).length, 'chambre')}</small></button>
-        <button class="on" role="tab" aria-selected="true" data-action="nav-menage"><span>${tx('Ménage')}</span><small>${tx('{n} à nettoyer', { n: dirty.length })}</small></button>
-        <button role="tab" aria-selected="false" data-action="nav-tarifs"><span>${tx('Tarifs')}</span><small>${tx('par catégorie')}</small></button>
-      </div>
-      <div class="hx-room-kpis hx-hk-kpis">
-        <button><span>${tx('À nettoyer')}</span><b>${dirty.length}</b><small>${tx('file active')}</small></button>
-        <button class="ready"><span>${tx('Prêtes')}</span><b>${clean}</b><small>${tx('à vendre')}</small></button>
-        <button class="occupied"><span>${tx('Occupées')}</span><b>${occupied}</b><small>${tx('en maison')}</small></button>
-        <button class="offline"><span>${tx('Hors-service')}</span><b>${offline}</b><small>${tx('maintenance')}</small></button>
-      </div>
-      <div class="hx-h"><span class="t">${tx('File de remise à blanc')}</span><span class="s">${tx('chaque départ encaissé arrive ici automatiquement')}</span><button class="hx-btn ghost" data-action="nav-chambres">${tx('Voir le plan')}</button></div>
-      <div class="block" style="padding:8px 14px;">
-        ${dirty.length ? `<div class="hx-list">${rows}</div>` : cuStarter(
-          tx('Tout est propre.'),
-          tx('Quand un départ est encaissé, sa chambre arrive ici pour remise à blanc, assignable à votre équipe.'),
-          [tx('File priorisée par les arrivées du soir'), tx('Assignation femme de chambre en un geste'), tx('Temps de rotation mesuré automatiquement')]
-        )}
-      </div>
-    </div>`;
-  }
+  function cuMenageBody() { return window.__kiwiHotelInternal.part('housekeeping').cuMenageBody.apply(this, arguments); }
   /* ═══ Performance réelle d'un hôtel (occupation, ADR, RevPAR) ═══
    * « Tarifs & occupation » promettait « ADR, RevPAR et tarification IA
    * s'activent ici » avec « suggestions IA » et « occupation prévisionnelle sur
@@ -3085,11 +2904,7 @@
     const day = (n) => new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
     return { past: { from: day(-30), to: day(-1) }, ahead: { from: day(0), to: day(29) } };
   };
-  function cuPerfState() {
-    const scope = cuStayScope();
-    if (!cuPerfByScope.has(scope)) cuPerfByScope.set(scope, { past: null, ahead: null, error: '', loading: false, at: 0 });
-    return cuPerfByScope.get(scope);
-  }
+  function cuPerfState() { return window.__kiwiHotelInternal.part('rates').cuPerfState.apply(this, arguments); }
   async function cuLoadPerformance(force) {
     const slug = cuMerchantSlug(), st = cuPerfState();
     if (!slug || st.loading || (!force && Date.now() - st.at < 30000)) return;
@@ -3108,67 +2923,8 @@
       if (openDrawer?.page === 'tarifs') rerender();
     }
   }
-  function cuPerformanceBlock() {
-    cuLoadPerformance();
-    const st = cuPerfState(), p = st.past, a = st.ahead;
-    const pct = (v) => (v == null ? '·' : ltr((window.KiwiNumber?.number(v, 1) ?? String(v).replace('.', ',')) + ' <small>%</small>'));
-    const money = (v) => (v == null ? '·' : ltr(fmt(v) + ' <small>MAD</small>'));
-    const head = `<div class="hx-h"><span class="t">${tx('Performance réelle')}</span><span class="s">${tx('calculée sur vos séjours')}</span></div>`;
-    if (!p || !a) {
-      return `${head}
-        <div class="block" style="padding:16px 18px;"><p style="margin:0;font-size:13px;color:var(--n-500);">${st.error ? tx('Calcul indisponible pour le moment. Aucun chiffre n’est estimé : le registre des séjours est nécessaire.') : tx('Lecture des séjours…')}</p></div>`;
-    }
-    if (!p.rooms || !p.rooms.total) {
-      return `${head}
-        <div class="block" style="padding:16px 18px;"><p style="margin:0;font-size:13px;color:var(--n-500);">${tx('Déclarez vos chambres dans le plan : l’occupation se calcule sur le nombre de chambres que vous vendez.')}</p></div>`;
-    }
-    const maxNights = Math.max(p.rooms.total, ...a.perDay.map((d) => d.nights));
-    const bars = a.perDay.map((d) => {
-      const h = Math.max(2, Math.round(d.nights / maxNights * 64));
-      const [, mm, dd] = d.date.split('-');
-      return `<div title="${esc(tx(d.nights === 1 ? '{date} · {n} chambre vendue sur {total}' : '{date} · {n} chambres vendues sur {total}', { date: dd + '/' + mm, n: d.nights, c: txn(d.nights, 'chambre'), total: p.rooms.total }))}" style="flex:1;min-width:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">
-        <div style="width:100%;height:${h}px;border-radius:3px;background:${d.nights ? 'var(--atlas)' : 'var(--n-200)'};"></div>
-        <span style="font-size:9px;color:var(--n-500);font-family:var(--mono);">${dd}</span></div>`;
-    }).join('');
-    const unpriced = p.unpricedNights + a.unpricedNights;
-    const oos = p.rooms.outOfService;
-    return `<div class="hx-h"><span class="t">${tx('Performance réelle')}</span><span class="s">${tx('30 dernières nuits · séjours confirmés, en maison et terminés · TTC')}</span></div>
-      <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">${tx('Occupation')}</div><div class="v">${pct(p.occupancyPct)}</div><div class="d">${tx(p.nights === 1 ? '{n} nuitée vendue sur {total}' : '{n} nuitées vendues sur {total}', { n: p.nights, total: fmt(p.availableNights) })}</div></div>
-        <div class="hx-kpi"><div class="l">${tx('ADR · prix moyen / nuit')}</div><div class="v">${money(p.adr)}</div><div class="d">${p.adr == null ? tx('aucune nuit chiffrée') : tx('revenu ÷ nuitées vendues')}</div></div>
-        <div class="hx-kpi"><div class="l">RevPAR</div><div class="v">${money(p.revpar)}</div><div class="d">${tx('revenu ÷ nuitées disponibles')}</div></div>
-        <div class="hx-kpi"><div class="l">${tx('Revenu hébergement')}</div><div class="v">${money(p.revenue)}</div><div class="d">${tx('logement + formule repas')}</div></div>
-      </div>
-      <div class="hx-h" style="margin-top:18px;"><span class="t">${tx('Occupation à venir')}</span><span class="s">${tx('30 prochaines nuits · {pct} réservées sur {rooms}', { pct: pct(a.occupancyPct), rooms: txn(p.rooms.total, 'chambre') })}</span></div>
-      <div class="block" style="padding:14px 16px 10px;">
-        <div style="display:flex;gap:3px;align-items:flex-end;height:84px;">${bars}</div>
-        <p style="margin:10px 0 0;font-size:11.5px;color:var(--n-500);line-height:1.5;">${tx('Une barre = les chambres déjà vendues cette nuit-là, jour d’arrivée compris, jour de départ exclu. Ce n’est pas une prévision : ce sont vos réservations.')}${oos ? ' ' + tx(oos === 1 ? '{n} chambre hors-service reste dans l’inventaire.' : '{n} chambres hors-service restent dans l’inventaire.', { n: oos, c: txn(oos, 'chambre') }) : ''}${unpriced ? ' ' + tx(unpriced === 1 ? '{n} nuitée sans prix est exclue de l’ADR et du revenu.' : '{n} nuitées sans prix sont exclues de l’ADR et du revenu.', { n: unpriced }) : ''}</p>
-      </div>`;
-  }
-  function cuTarifsBody() {
-    const st = cuState();
-    const typeCards = cuTypes().map((t) => {
-      const roomCount = Object.values(st.rooms).filter((r) => r.typeId === t.id).length;
-      return `<button class="hx-type-card" data-action="hx-room-type-edit" data-arg="${esc(t.id)}">
-        <span class="hx-type-icon">${esc(t.name.slice(0, 1).toUpperCase())}</span>
-        <span class="hx-type-copy"><b>${esc(t.name)}</b><small>${txn(roomCount, 'chambre')}</small></span>
-        <span class="hx-type-rate">${t.rate == null ? (st.baseRate == null ? tx('À définir') : MAD(st.baseRate)) : MAD(t.rate)}<small>${t.rate == null ? tx('tarif général') : tx('par nuit')}</small></span>
-        <span class="hx-type-arrow">›</span>
-      </button>`;
-    }).join('');
-    return `<div class="hx-page">
-      ${cuStrip()}
-      <div class="hx-h"><span class="t">${tx('Tarif général')}</span><span class="s">${tx('utilisé uniquement par les types sans tarif propre')}</span><button class="hx-btn ghost" data-action="hx-commercial">${tx('Contrats agences & sociétés')}</button></div>
-      <div class="block" style="padding:22px 14px;display:flex;align-items:center;justify-content:center;gap:20px;" dir="ltr">
-        <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="-50">−50</button>
-        <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${st.baseRate == null ? '·' : fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">${tx('MAD / nuit')}</span></div>
-        <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="50">+50</button>
-      </div>
-      <div class="hx-h" style="margin-top:18px;"><span class="t">${tx('Tarifs par type')}</span><span class="s">${tx('un changement met à jour toutes les chambres concernées')}</span><button class="hx-btn atlas" data-action="hx-room-type-new">+ ${tx('Nouveau type')}</button></div>
-      <div class="hx-type-list">${typeCards}</div>
-      <div style="margin-top:18px;">${cuPerformanceBlock()}</div>
-    </div>`;
-  }
+  function cuPerformanceBlock() { return window.__kiwiHotelInternal.part('rates').cuPerformanceBlock.apply(this, arguments); }
+  function cuTarifsBody() { return window.__kiwiHotelInternal.part('rates').cuTarifsBody.apply(this, arguments); }
   function cuFoliosBody() {
     cuWarmStays();
     const fl = Object.values(F());
@@ -4070,67 +3826,16 @@
 
   const cuDraftMoney = n => (window.KiwiNumber?.format((n / 100), {minimumFractionDigits:2,maximumFractionDigits:2}) ?? (n / 100).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}));
   const cuDraftStatus = v => ({requested:tx('Demandée'),confirmed:tx('Confirmée'),checked_in:tx('En séjour'),completed:tx('Terminée'),cancelled:tx('Annulée'),no_show:tx('Non présenté')})[v] || v;
-  function cuDraftRoom(id) { const room=Object.values(cuState().rooms||{}).find(r=>r.id===id);return room?tx('Ch. {n}',{n:room.n}):/^room:\d+$/.test(id)?tx('Ch. {n}',{n:id.slice(5)}):id?tx('Chambre attribuée'):tx('Supplément proposé'); }
-  function cuBillingLine(l, payers) {
-    const parts=l.parts || [{payer:l.payer,amountCents:l.amountCents}];
-    const options = selected => payers.map(p=>`<option value="${esc(p.id)}" ${p.id===selected?'selected':''}>${esc(p.name)}</option>`).join('');
-    return `<article class="hx-billing-line" data-hx-billing-line="${esc(l.id)}" data-amount="${l.amountCents}"><header><div><b>${esc(l.label)}</b><span>${esc(l.date)} · ${esc(cuDraftRoom(l.roomId))} · ${tx('{n} unité(s)', { n: l.quantity })}${l.board ? ' · '+esc(cuBoards[l.board] || l.board) : ''}</span></div><strong>${ltr(cuDraftMoney(l.amountCents) + ' MAD')}</strong></header><div class="hx-room-form hx-type-form"><label><span>${tx('Payeur principal')}</span><select data-hx-payer>${options(parts[0]?.payer || l.payer)}</select></label><label><span>${tx('Part du second payeur · MAD')}</span><input data-hx-part inputmode="decimal" dir="ltr" value="${((parts[1]?.amountCents || 0)/100).toFixed(2)}"></label><label><span>${tx('Second payeur · si partage')}</span><select data-hx-second><option value="">${tx('Aucun')}</option>${options(parts[1]?.payer)}</select></label></div>${l.kind==='extra'?`<button class="hx-btn ghost" type="button" data-hx-remove-extra>${tx('Retirer ce supplément proposé')}</button>`:''}</article>`;
-  }
-  function cuDossierRooms(data) {
-    return `<div class="hx-dossier-rooms">${(data.source.rooms || []).map(r=>`<article><b>${esc(r.name || tx('Séjour'))}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(cuDay(r.checkIn))}${hxTo()}${esc(cuDay(r.checkOut))}${r.dayUse?' · '+tx('Day-use')+' '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">${tx('Modifier cette chambre')}</button></article>`).join('')}</div>`;
-  }
+  function cuDraftRoom(id) { return window.__kiwiHotelInternal.part('folio').cuDraftRoom.apply(this, arguments); }
+  function cuBillingLine(l, payers) { return window.__kiwiHotelInternal.part('folio').cuBillingLine.apply(this, arguments); }
+  function cuDossierRooms(data) { return window.__kiwiHotelInternal.part('folio').cuDossierRooms.apply(this, arguments); }
   /* A billing breakage hides no room: the dossier lists its rooms with a
    * targeted reason instead of the blanket "indisponible", and the money form
    * is withheld until the stay data is repaired. Ticket #0003. */
-  function cuBillingBlocked(code) {
-    if (code==='billing-quote-mismatch') return tx('Le prix accepté ne correspond plus au séjour : dates, chambre ou tarif modifiés depuis l’acceptation. Rouvrez « Modifier cette chambre », vérifiez le prix et acceptez le nouveau devis, puis revenez. Aucune donnée comptable n’a été modifiée.');
-    if (code==='billing-bad-status') return tx('Le statut d’un séjour du dossier bloque la préfacture. Rouvrez « Modifier cette chambre », vérifiez son statut et enregistrez, puis revenez. Aucune donnée comptable n’a été modifiée.');
-    if (code==='billing-bad-stay' || code==='billing-bad-dates') return tx('Une donnée d’un séjour (dates, chambre ou montant) bloque la préfacture. Rouvrez « Modifier cette chambre », vérifiez puis enregistrez, puis revenez. Aucune donnée comptable n’a été modifiée.');
-    if (code==='directory-unreadable') return tx('Le répertoire des comptes est illisible : la préfacture est suspendue le temps de le réparer. Les chambres restent modifiables séparément.');
-    return tx('Préfacturation indisponible. Aucune donnée comptable n’a été modifiée.');
-  }
-  function cuBillingBody(data) {
-    const roomsHtml=cuDossierRooms(data);
-    const savedWarn=data.savedWarning?`<div class="hx-billing-notice" role="alert"><b>${tx('Ancien brouillon illisible.')}</b><p>${tx('Il sera remplacé proprement au prochain enregistrement. Aucune donnée comptable n’a été modifiée.')}</p></div>`:'';
-    if (data.billingError || !data.preview) {
-      const count=(data.source.rooms || []).length;
-      return `<section class="hx-billing"><header class="hx-commercial-hero"><div><span class="hx-commercial-eyebrow">${tx('DOSSIER HÔTEL · PRÉFACTURATION')}</span><h2>${tx('Un séjour, plusieurs chambres.')}</h2><p>${tx('Les chambres restent modifiables et annulables séparément.')}</p></div><div><small>${tx('Chambres au dossier')}</small><strong>${count}</strong></div></header>
-      ${roomsHtml}
-      <div class="hx-billing-notice" role="alert"><b>${tx('Préfacture suspendue.')}</b><p>${cuBillingBlocked(data.billingError)}</p></div>
-      ${savedWarn}
-      <p role="status" data-hx-dossier-error></p></section>`;
-    }
-    const saved=data.saved?.draft, draft=data.stale ? data.preview : (saved || data.preview);
-    return `<section class="hx-billing"><header class="hx-commercial-hero"><div><span class="hx-commercial-eyebrow">${tx('DOSSIER HÔTEL · PRÉFACTURATION')}</span><h2>${tx('Un séjour, plusieurs chambres.')}</h2><p>${tx('Répartissez les prestations entre voyageurs, agence et société.')}</p></div><div><small>${tx('Total proposé')}</small><strong data-hx-draft-total dir="ltr">${cuDraftMoney(draft.totalCents)} MAD</strong></div></header>
-      <p class="hx-billing-notice">${tx('Préfacture non fiscale. Taxes non validées et encaissements non rapprochés. Les suppléments saisis ici ne sont pas envoyés à la caisse. Aucune facture définitive ni paiement n’est créé.')}</p>
-      ${roomsHtml}
-      ${data.stale?`<div class="hx-billing-notice" role="alert"><b>${tx('Le dossier a changé depuis la dernière préfacture.')}</b><p>${tx('Le nouveau prix est affiché. Les répartitions et suppléments de l’ancien brouillon ne seront pas repris automatiquement.')}</p><button type="button" class="hx-btn ghost" data-hx-reset-draft>${tx('Repartir des séjours actuels et remplacer le brouillon')}</button></div>`:''}
-      ${savedWarn}
-      <form data-hx-billing-form><fieldset ${data.stale?'disabled':''}><legend>${tx('Prestations et répartition')}</legend><div data-hx-billing-lines>${draft.lines.map(l=>cuBillingLine(l,data.source.payers)).join('')}</div>
-        <details class="hx-commercial-stay"><summary>${tx('Ajouter un supplément proposé')}</summary><div class="hx-room-form hx-type-form"><label><span>${tx('Date de prestation')}</span><input type="date" name="extraDate" value="${esc(data.source.rooms[0]?.checkIn || '')}"></label><label><span>${tx('Libellé')}</span><input name="extraLabel" maxlength="160" placeholder="${tx('Repas, parking, service…')}"></label><label><span>${tx('Quantité')}</span><input name="extraQuantity" type="number" min="1" max="10000" value="1"></label><label><span>${tx('Prix unitaire proposé · MAD')}</span><input name="extraPrice" inputmode="decimal" dir="ltr" placeholder="0,00"></label></div><button class="hx-btn ghost" type="button" data-hx-add-extra>${tx('Ajouter au brouillon')}</button></details>
-        <label class="hx-billing-note"><span>${tx('Observations de préfacturation')}</span><textarea name="billingNote" maxlength="1000" rows="2">${esc(draft.note || '')}</textarea></label>
-        <div class="hx-billing-summary" data-hx-billing-summary>${draft.payers.map(p=>`<span>${esc(p.name)} <b>${ltr(cuDraftMoney(p.amountCents) + ' MAD')}</b></span>`).join('')}</div>
-        <p role="status" data-hx-billing-error></p><div class="hx-room-form-actions"><button type="button" class="hx-btn ghost" data-hx-print-draft ${!saved || data.stale?'disabled':''}>${tx('Imprimer la version enregistrée')}</button><button type="submit" class="hx-btn atlas">${tx('Enregistrer la préfacture')}</button></div></fieldset></form></section>`;
-  }
-  function cuDraftInput(form, extras) {
-    const allocations=[...form.querySelectorAll('[data-hx-billing-line]')].map(row=>{
-      const total=Number(row.dataset.amount),first=row.querySelector('[data-hx-payer]').value,second=row.querySelector('[data-hx-second]').value;
-      const raw=row.querySelector('[data-hx-part]').value.trim().replace(',','.');
-      if(!/^\d{1,9}(\.\d{1,2})?$/.test(raw))throw new Error(tx('Partage invalide. Utilisez deux décimales maximum.'));
-      const amount=Math.round(Number(raw)*100);
-      if(amount>total || (amount>0 && (!second || second===first)))throw new Error(tx('Le partage doit respecter le montant de la ligne et utiliser deux payeurs distincts.'));
-      return {lineId:row.dataset.hxBillingLine,parts:[{payer:first,amountCents:total-amount},...(amount?[{payer:second,amountCents:amount}]:[])]};
-    });
-    return {extras,allocations,note:form.elements.billingNote.value};
-  }
-  function cuPrintDraft(saved) {
-    const d=saved.draft, frame=document.createElement('iframe');
-    const lang=hxLang(), rtl=lang==='ar', amount=(c)=>'<bdi dir="ltr">'+cuDraftMoney(c)+'</bdi>';
-    frame.title=tx('Préfacture à imprimer'); frame.style.cssText='position:fixed;left:-10000px;width:800px;height:1000px;border:0';
-    frame.srcdoc=`<!doctype html><html lang="${lang}"${rtl?' dir="rtl"':''}><meta charset="utf-8"><title>${tx('Préfacture non fiscale')}</title><style>@page{size:A4;margin:16mm}body{font:12px system-ui;color:#17221d}h1{font-size:28px}table{border-collapse:collapse;width:100%;margin:24px 0}th,td{padding:8px;text-align:start;border-bottom:1px solid #ccd5cf}thead{display:table-header-group}tr{break-inside:avoid}.notice{padding:12px;border:1px solid #9caea2}small{display:block;margin-top:6px}</style><h1>${tx('Préfacture non fiscale')}</h1><p>${tx('Version enregistrée le {date}', { date: esc(new Date(saved.updatedAt).toLocaleString(hxLocale())) })}</p><p class="notice">${tx('Taxes non validées. Encaissements non rapprochés. Ce document n’est ni une facture définitive, ni un reçu de paiement.')}</p><table><thead><tr><th>${tx('Date / chambre')}</th><th>${tx('Prestation')}</th><th>${tx('Quantité')}</th><th>${tx('Montant proposé MAD')}</th></tr></thead><tbody>${d.lines.map(l=>`<tr><td>${esc(l.date)}<small>${esc(l.roomId||'')}</small></td><td>${esc(l.label)}<small>${l.parts.map(p=>esc(d.payers.find(x=>x.id===p.payer)?.name||tx('Payeur'))+': '+amount(p.amountCents)).join(' · ')}</small></td><td>${l.quantity}</td><td>${amount(l.amountCents)}</td></tr>`).join('')}</tbody></table><h2>${tx('Total proposé : {amount} MAD', { amount: amount(d.totalCents) })}</h2>${d.payers.map(p=>`<p><b>${esc(p.name)} : <bdi dir="ltr">${cuDraftMoney(p.amountCents)} MAD</bdi></b><small>${esc(p.address||'')} ${p.ice?' · ICE '+esc(p.ice):''}</small></p>`).join('')}<p>${esc(d.note||'')}</p></html>`;
-    frame.onload=()=>{frame.contentWindow.addEventListener('afterprint',()=>frame.remove(),{once:true});frame.contentWindow.focus();frame.contentWindow.print();};
-    document.body.appendChild(frame);
-  }
+  function cuBillingBlocked(code) { return window.__kiwiHotelInternal.part('folio').cuBillingBlocked.apply(this, arguments); }
+  function cuBillingBody(data) { return window.__kiwiHotelInternal.part('folio').cuBillingBody.apply(this, arguments); }
+  function cuDraftInput(form, extras) { return window.__kiwiHotelInternal.part('folio').cuDraftInput.apply(this, arguments); }
+  function cuPrintDraft(saved) { return window.__kiwiHotelInternal.part('folio').cuPrintDraft.apply(this, arguments); }
   async function cuOpenDossier(booking) {
     const scope=cuStayScope(),merchant=cuChannelMerchant(),id=booking.hotel.dossierId||booking.id;
     openModal?.close?.();
@@ -6232,9 +5937,7 @@
     get full_board() { return tx('Pension complète'); },
   };
   const cuKinds = { get individual() { return tx('Particulier'); }, get agency() { return tx('Agence'); }, get company() { return tx('Société'); } };
-  function cuStayQuoteSignature(form) {
-    return JSON.stringify(['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].map(k => form.elements[k]?.value || ''));
-  }
+  function cuStayQuoteSignature(form) { return window.__kiwiHotelInternal.part('rates').cuStayQuoteSignature.apply(this, arguments); }
   /* Direct-guest pricing, pure and shared (single editor + group modal +
    * unit tests): room nightly rate plus the meal supplement per person per
    * night, from the hotel's own type configuration — never a contract, never
@@ -6276,26 +5979,7 @@
     get offline() { return tx('Connexion perdue : tarif enregistré sur cet appareil uniquement. Votre brouillon est intact.'); },
     get retry() { return tx('Réessayer la synchronisation'); },
   };
-  function cuSetTariffSync(form, state, render = true) {
-    if (!form) return;
-    const blocked = state === 'pending' || state === 'failed' || state === 'offline';
-    form.__hxTariffSyncState = state || 'ready';
-    const submit = form.querySelector('[type="submit"]');
-    if (submit && blocked) {
-      submit.setAttribute('data-hx-tariff-disabled', '');
-      submit.disabled = true;
-    } else if (submit && submit.hasAttribute('data-hx-tariff-disabled')) {
-      submit.removeAttribute('data-hx-tariff-disabled');
-      if (!form.__hxSubmitting) submit.disabled = false;
-    }
-    if (!render) return;
-    const host = form.querySelector('[data-hx-tariff-sync]');
-    if (!host) return;
-    if (state === 'ready' || !state) { host.innerHTML = ''; return; }
-    if (state === 'pending') { host.innerHTML = `<p class="hx-tariff-pending">${HX_TARIFF_SYNC_COPY.pending}</p>`; return; }
-    const text = state === 'offline' ? HX_TARIFF_SYNC_COPY.offline : HX_TARIFF_SYNC_COPY.failed;
-    host.innerHTML = `<div class="hx-tariff-sync-fail"><p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${text}</p><button type="button" class="hx-btn ghost" data-action="hx-tariff-retry">${HX_TARIFF_SYNC_COPY.retry}</button></div>`;
-  }
+  function cuSetTariffSync(form, state, render = true) { return window.__kiwiHotelInternal.part('rates').cuSetTariffSync.apply(this, arguments); }
   async function cuAwaitTariffAck(form) {
     // A scheduled save can already own the cloud writer when this flow starts.
     // Busy means "still pending", not "failed". Wait beyond cloud-doc's 10 s
@@ -6311,284 +5995,11 @@
     }
     return { ok: false, cancelled: true };
   }
-  async function cuTariffSyncCycle(form, pendingDelayMs) {
-    if (!form || !form.isConnected) return;
-    const run = (form.__hxTariffSyncRun || 0) + 1;
-    form.__hxTariffSyncRun = run;
-    if (form.__hxTariffRetryTimer) clearTimeout(form.__hxTariffRetryTimer);
-    form.__hxTariffRetryTimer = 0;
-    if (form.__hxTariffOnlineHandler) {
-      window.removeEventListener('online', form.__hxTariffOnlineHandler);
-      form.__hxTariffOnlineHandler = null;
-    }
-    let done = false, timer = 0;
-    // Block immediately. Only the cosmetic pending line may wait briefly, so
-    // the stacked type editor can close without a flash on very fast saves.
-    cuSetTariffSync(form, 'pending', !pendingDelayMs);
-    if (pendingDelayMs) timer = setTimeout(() => {
-      if (!done && form.isConnected && form.__hxTariffSyncRun === run) cuSetTariffSync(form, 'pending');
-    }, pendingDelayMs);
-    const res = await cuAwaitTariffAck(form);
-    done = true;
-    if (timer) clearTimeout(timer);
-    if (!form.isConnected || form.__hxTariffSyncRun !== run || res.cancelled) return;
-    if (res.ok) {
-      cuSetTariffSync(form, 'ready');
-      form.dispatchEvent(new Event('hx-refresh-direct'));
-    } else if (res.pending) {
-      cuSetTariffSync(form, 'pending');
-      form.__hxTariffRetryTimer = setTimeout(() => {
-        if (form.isConnected && form.__hxTariffSyncState === 'pending') cuTariffSyncCycle(form, 0);
-      }, 800);
-    } else {
-      cuSetTariffSync(form, res.offline ? 'offline' : 'failed');
-      if (res.offline) {
-        form.__hxTariffOnlineHandler = () => {
-          form.__hxTariffOnlineHandler = null;
-          cuTariffRetry(form);
-        };
-        window.addEventListener('online', form.__hxTariffOnlineHandler, { once: true });
-      }
-    }
-  }
-  async function cuTariffRetry(form) {
-    cuTariffSyncCycle(form, 0);
-  }
-  function cuDirectQuote(input) {
-    const { typeRate = null, baseRate = null, boardRates = null, board = 'room_only', checkIn = '', checkOut = '', occupancy = 1 } = input || {};
-    const roomRate = typeRate == null ? baseRate : typeRate;
-    if (roomRate == null || !Number.isFinite(+roomRate) || +roomRate < 0) return { ok: false, missing: ['room'] };
-    const start = Date.parse(checkIn + 'T12:00:00Z'), end = Date.parse(checkOut + 'T12:00:00Z');
-    const nights = Math.round((end - start) / 86400000);
-    if (!Number.isFinite(nights) || nights < 1 || nights > 365) return { ok: false, missing: ['dates'] };
-    let meal = 0;
-    if (board !== 'room_only') {
-      const sup = boardRates && typeof boardRates === 'object' ? boardRates[board] : null;
-      if (sup == null || sup === '' || !Number.isFinite(+sup) || +sup < 0) return { ok: false, missing: ['meal'] };
-      meal = +sup;
-    }
-    const roomCents = Math.round(+roomRate * 100);
-    const mealCents = Math.round(meal * 100);
-    const qty = Math.max(1, Math.round(Number(occupancy) || 1));
-    const rows = [];
-    for (let i = 0; i < nights; i++) {
-      const d = new Date(start + i * 86400000).toISOString().slice(0, 10);
-      rows.push({ date: d, roomCents, mealCents, quantity: qty, amountCents: roomCents + mealCents * qty });
-    }
-    return { ok: true, rows, totalCents: rows.reduce((s, r) => s + r.amountCents, 0), nights, roomCents, mealCents };
-  }
-  function cuQuoteRows(q) {
-    const period = q.contract?.from && q.contract?.to ? `${esc(q.contract.from)} → ${esc(q.contract.to)}` : '';
-    const occupancyLabel = ['', tx('Single · 1 personne'), tx('Double · 2 personnes'), tx('Triple · 3 personnes')][q.contract?.occupancy] || (q.contract?.occupancy ? tx('{n} pers.', { n: q.contract.occupancy }) : '');
-    const accountName = q.account?.name || '';
-    const boardLabel = cuBoards[q.contract?.board] || q.contract?.board || '';
-    return `<div class="hx-simulation-notice"><strong>${tx('Simulation contractuelle informative')}</strong> · ${tx('Aucune réservation ni blocage créé à cette étape.')}${accountName ? `<div>${tx('Compte :')} <b>${esc(accountName)}</b>${q.account?.paymentDays ? ` · ${tx('Échéance {n} j', { n: q.account.paymentDays })}` : ''}</div>` : ''}${occupancyLabel ? `<div>${tx('Formule :')} ${esc(occupancyLabel)} · ${esc(boardLabel)}${period ? ` (${ltr(period)})` : ''}</div>` : ''}</div><div class="hx-quote-lines">${q.rows.map(r => `<div><span>${ltr(esc(r.date))} · ${esc(r.label)}</span><span>${ltr(`${r.quantity} × ${cuDraftMoney(r.unitCents)} = <b>${cuDraftMoney(r.amountCents)} MAD</b>`)}</span></div>`).join('')}</div><p class="hx-total-band"><span>${tx('Total formule :')} </span><b>${ltr(cuDraftMoney(q.totalCents) + ' MAD')} ${q.taxBasis === 'exclusive' ? tx('HT') : tx('TTC')}</b></p><small>${tx('Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.')}</small>`;
-  }
-  async function cuWireStayCommercial(form, booking) {
-    const box = form.querySelector('[data-hx-commercial-stay]');
-    if (!box) return;
-    const scope = cuStayScope();
-    await cuLoadCommercial();
-    if (scope !== cuStayScope() || form.isConnected === false) return;
-    const st = cuCommercialState();
-    if (!st.loaded || st.error) { box.innerHTML = `<legend>${tx('Compte & formule')}</legend><p>${esc(st.error || tx('Répertoire indisponible. Les informations existantes sont conservées.'))}</p>`; form.__commercialFailed = true; return; }
-    // A direct-priced booking without a commercial block (empty booker at
-    // save time nulls it) still owns its formula via the pricing snapshot:
-    // reopening must show it, never silently fall back to room-only.
-    const c = { ...(booking?.commercial || {}) };
-    if (!c.board && booking?.pricing?.board) c.board = booking.pricing.board;
-    const hasAccount = !!c.accountId;
-    box.innerHTML = `<legend>${tx('Compte & formule de réservation')}</legend><div class="hx-room-form hx-type-form"><label><span>${tx('Compte à facturer')}</span><select name="accountId"><option value="">${tx('Voyageur · sans compte commercial')}</option>${st.accounts.filter(a => !a.archived || a.id === c.accountId).map(a => `<option value="${esc(a.id)}" ${a.id === c.accountId ? 'selected' : ''}>${esc(cuKinds[a.kind] + ' · ' + a.name)}${a.archived ? ' ' + tx('(archivé)') : ''}</option>`).join('')}</select></label><label><span>${tx('Mode tarifaire')}</span><select name="priceMode"><option value="catalogue" ${c.quoted ? 'disabled' : ''}>${tx('Tarif maison · sans compte')}</option><option value="contract" ${c.quoted ? 'selected' : ''} ${!hasAccount ? 'disabled' : ''}>${tx('Contrat du compte')}</option></select></label><label><span>${tx('Réservant / interlocuteur')}</span><input name="booker" maxlength="160" value="${esc(c.booker || '')}"></label><label><span>${tx('Voucher / bon de commande')}</span><input name="voucher" dir="ltr" maxlength="100" value="${esc(c.voucher || '')}"></label><label><span>${tx('Formule')}</span><select name="board">${Object.entries(cuBoards).map(([v,l]) => `<option value="${v}" ${v === c.board ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div><p data-hx-commercial-help></p><button type="button" class="hx-btn ghost" data-hx-quote>${tx('Simuler le contrat')}</button><div data-hx-quote-result role="status">${c.quote ? `<p>${tx('Tarif précédemment accepté et conservé :')}</p>` + cuQuoteRows(c.quote) : ''}</div>
-    <div data-hx-direct-panel hidden><div data-hx-direct-breakdown role="status"></div>
-      <div data-hx-agreed-box hidden style="margin-top:8px;padding:10px;border:1px dashed var(--n-200);border-radius:8px;">
-        <b style="font-size:12px;">${tx('Prix convenu avec le client')}</b>
-        <p style="font-size:11.5px;color:var(--n-600);margin:4px 0;">${tx('Uniquement parce qu’aucun tarif configuré ne couvre cette demande. Le montant, le motif et votre identité seront enregistrés sur la réservation.')}</p>
-        <div data-hx-agreed-by style="font-size:11.5px;color:var(--n-600);"></div>
-        <label><span>${tx('Montant total TTC convenu · MAD')}</span><input data-hx-agreed-amount dir="ltr" inputmode="decimal" placeholder="${tx('Ex. 950')}"></label>
-        <label><span>${tx('Motif')}</span><input data-hx-agreed-reason maxlength="280" placeholder="${tx('Ex. geste commercial, dernière chambre')}"></label>
-        <label class="hx-check-row"><input type="checkbox" data-hx-agreed-confirm> <span>${tx('Je confirme ce prix convenu pour ce séjour.')}</span></label>
-      </div>
-        <label class="hx-check-row" data-hx-reprice-wrap hidden><input type="checkbox" data-hx-reprice-confirm> <span data-hx-reprice-label></span></label>
-        <div data-hx-tariff-sync role="status"></div>
-    </div>`;
-    if (booking && ['completed', 'cancelled', 'no_show'].includes(booking.status)) { box.disabled = true; return; }
-    form.__commercialReady = true;
-    const previewButton = box.querySelector('[data-hx-quote]'), result = box.querySelector('[data-hx-quote-result]');
-    // Mode switch (defect: ordinary travelers need no account). Contract UI
-    // only makes sense with an account; without one the stay is priced from
-    // the hotel's own type configuration, shown live below.
-    const syncCommercialMode = () => {
-      const noAccount = !form.elements.accountId?.value;
-      const priceModeEl = form.elements.priceMode;
-      const contractOpt = (priceModeEl && typeof priceModeEl.querySelector === 'function')
-        ? priceModeEl.querySelector('option[value="contract"]')
-        : null;
-      if (contractOpt) contractOpt.disabled = noAccount;
-      if (noAccount && form.elements.priceMode) form.elements.priceMode.value = 'catalogue';
-      if (previewButton) previewButton.hidden = noAccount;
-      const help = box.querySelector('[data-hx-commercial-help]');
-      if (help) {
-        help.textContent = noAccount
-          ? tx('Sans compte : séjour chiffré au tarif maison (logement + formule, configurés dans Types de chambres). Aucun contrat requis.')
-          : tx('Avec compte : simulez le contrat et acceptez le prix avant confirmation. Occupation totale de 1 à 3 personnes, sans calcul enfant automatique.');
-      }
-      updateDirectQuote();
-    };
-    // Pricing inputs captured at open (defects 1+3): guest, contact, note,
-    // status and traveler-detail edits must preserve the accepted snapshot
-    // without renegotiation. Only these seven can move money.
-    const PRICE_INPUTS = ['roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'accountId', 'priceMode'];
-    const readPriceInputs = () => {
-      const o = {};
-      PRICE_INPUTS.forEach(k => { o[k] = String(form.elements[k]?.value ?? ''); });
-      return o;
-    };
-    const pricingBaseline = booking ? readPriceInputs() : null;
-    const storedDirect = (booking && booking.pricing && booking.pricing.kind === 'direct') ? booking.pricing : null;
-    const storedQuoted = !!(booking && booking.commercial && booking.commercial.quoted);
-    const hasStoredPricing = !!(storedDirect || storedQuoted);
-    const pricingInputsChanged = () => {
-      if (!booking || !pricingBaseline) return true;
-      return PRICE_INPUTS.some(k => String(form.elements[k]?.value ?? '') !== String(pricingBaseline[k] ?? ''));
-    };
-    const storedAgreed = (storedDirect && storedDirect.agreed) ? storedDirect : null;
-    const agreedInputsNow = () => ({
-      amount: String(box.querySelector('[data-hx-agreed-amount]')?.value || '').trim().replace(',', '.'),
-      reason: String(box.querySelector('[data-hx-agreed-reason]')?.value || '').trim(),
-      checked: !!box.querySelector('[data-hx-agreed-confirm]')?.checked,
-    });
-    const agreedFieldsDiffer = () => {
-      if (!storedAgreed) return false;
-      const cur = agreedInputsNow();
-      const sameAmount = Math.round(Number(cur.amount) * 100) === Number(storedAgreed.totalCents || 0);
-      return !(cur.amount !== '' && sameAmount && cur.reason === String(storedAgreed.reason || ''));
-    };
-    const updateDirectQuote = () => {
-      const panel = box.querySelector('[data-hx-direct-panel]');
-      if (!panel) return;
-      const noAccount = !form.elements.accountId?.value;
-      const day = form.elements.stayMode?.value === 'day_use';
-      if (!noAccount || day) { panel.hidden = true; form.__directQuote = null; return; }
-      panel.hidden = false;
-      const changed = pricingInputsChanged();
-      // Pristine edit on accepted direct pricing: show the SAVED snapshot,
-      // never a live recompute that a catalogue change could have moved.
-      if (booking && storedDirect && !changed && !agreedFieldsDiffer()) {
-        const sp = storedDirect;
-        form.__directQuote = null;
-        const area = box.querySelector('[data-hx-direct-breakdown]');
-        if (area) {
-          const when = Number(sp.acceptedAt) > 0 ? new Date(sp.acceptedAt).toLocaleDateString(hxLocale()) : '';
-          const rows = (sp.rows || []).map(r => `<div><span>${ltr(esc(r.date))} · ${tx('Logement {amount}', { amount: ltr(cuDraftMoney(Number(r.roomCents || 0))) })}${Number(r.mealCents || 0) ? ` + ${tx('repas {amount} ({n} pers.)', { amount: ltr(cuDraftMoney((Number(r.mealCents || 0) * Number(r.quantity || 1)))), n: Number(r.quantity || 1) })}` : ''}</span><span><b>${ltr(cuDraftMoney(Number(r.amountCents || 0)) + ' MAD')}</b></span></div>`).join('');
-          area.innerHTML = `<div class="hx-quote-lines">${rows}</div><p class="hx-total-band"><span>${tx('Total séjour :')} </span><b>${ltr(cuDraftMoney(Number(sp.totalCents || 0)) + ' MAD')} ${tx('TTC')}</b></p>`
-            + (sp.agreed
-              ? `<small>${tx('Prix convenu accepté')}${when ? ' ' + tx('le {date}', { date: esc(when) }) : ''} · ${tx('motif :')} ${esc(sp.reason || '·')}${sp.agreedBy ? ` · ${tx('par {who}', { who: esc(((sp.agreedBy.role || '') + ' ' + (sp.agreedBy.id || '')).trim()) })}` : ''} · ${tx('conservé tant que le séjour ne change pas.')}</small>`
-              : `<small>${tx('Tarif accepté')}${when ? ' ' + tx('le {date}', { date: esc(when) }) : ''} · ${tx('conservé tant que les dates, la chambre, la formule ou le compte ne changent pas.')}</small>`);
-        }
-        const rw = box.querySelector('[data-hx-reprice-wrap]');
-        if (rw) rw.hidden = true;
-        return;
-      }
-      const type = cuTypes().find(t => t.id === form.elements.roomTypeId?.value);
-      const q = cuDirectQuote({
-        typeRate: type ? type.rate : null, baseRate: cuState().baseRate, boardRates: type ? type.boardRates : null,
-        board: form.elements.board?.value || 'room_only',
-        checkIn: form.elements.checkIn?.value || '', checkOut: form.elements.checkOut?.value || '',
-        occupancy: Number(form.elements.partySize?.value) || 1,
-      });
-      const area = box.querySelector('[data-hx-direct-breakdown]');
-      const agreedBox = box.querySelector('[data-hx-agreed-box]');
-      if (q.ok) {
-        form.__directQuote = { rows: q.rows, totalCents: q.totalCents, nights: q.nights };
-        if (area) {
-          area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${ltr(esc(r.date))} · ${tx('Logement {amount}', { amount: ltr(cuDraftMoney(r.roomCents)) })}${r.mealCents ? ` + ${tx('repas {amount} ({n} pers.)', { amount: ltr(esc(cuDraftMoney(r.mealCents * r.quantity))), n: r.quantity })}` : ''}</span><span><b>${ltr(cuDraftMoney(r.amountCents) + ' MAD')}</b></span></div>`).join('')}</div><p class="hx-total-band"><span>${tx('Total séjour :')} </span><b>${ltr(cuDraftMoney(q.totalCents) + ' MAD')} ${tx('TTC')}</b></p><small>${tx('Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.')}</small>`;
-        }
-        if (agreedBox) { agreedBox.hidden = true; const cb = agreedBox.querySelector('[data-hx-agreed-confirm]'); if (cb) cb.checked = false; }
-        // Explicit reviewed repricing (defect 1): on an edit whose inputs
-        // moved money, the new total needs its own confirmation click.
-        const rw = box.querySelector('[data-hx-reprice-wrap]');
-        if (rw) {
-          const needReprice = !!(booking && storedDirect && pricingInputsChanged());
-          rw.hidden = !needReprice;
-          if (needReprice) {
-            const label = rw.querySelector('[data-hx-reprice-label]');
-            if (label) label.textContent = tx('Le nouveau total est de {amount} MAD TTC, je l’ai vérifié.', { amount: cuDraftMoney(q.totalCents) });
-          } else {
-            const cb = rw.querySelector('[data-hx-reprice-confirm]');
-            if (cb) cb.checked = false;
-          }
-        }
-      } else {
-        form.__directQuote = null;
-        if (area) {
-          const typeName = type ? type.name : tx('cette catégorie');
-          const what = q.missing.includes('room')
-            ? tx('Aucun tarif logement configuré pour « {type} ».', { type: esc(typeName) })
-            : (q.missing.includes('dates') ? tx('Dates du séjour invalides.') : tx('Aucun tarif « {board} » configuré pour « {type} ».', { board: esc(cuBoards[form.elements.board?.value] || form.elements.board?.value || ''), type: esc(typeName) }));
-          const cfgArg = (type && type.id && !q.missing.includes('dates'))
-            ? `${type.id}:${form.elements.board?.value || 'room_only'}:${q.missing.includes('room') ? 'room' : 'meal'}` : '';
-          area.innerHTML = `<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${what} ${cfgArg ? `<button type="button" class="hx-link-btn" data-action="hx-configure-rate" data-arg="${esc(cfgArg)}">${tx('Configurer ce tarif dans Types de chambres')}</button>${tx(', ou convenez un prix ci-dessous.')}` : tx('Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.')}</p>`;
-        }
-        if (agreedBox) {
-          agreedBox.hidden = false;
-          // Prefill once from the stored agreement so a deliberate change
-          // starts from the authorized values; never overwrite typing.
-          if (storedAgreed) {
-            const amt = agreedBox.querySelector('[data-hx-agreed-amount]');
-            const rsn = agreedBox.querySelector('[data-hx-agreed-reason]');
-            const by = agreedBox.querySelector('[data-hx-agreed-by]');
-            if (amt && !amt.value) amt.value = (Number(storedAgreed.totalCents || 0) / 100).toFixed(2);
-            if (rsn && !rsn.value) rsn.value = storedAgreed.reason || '';
-            if (by && !by.textContent) {
-              const who = storedAgreed.agreedBy;
-              by.textContent = tx('Précédent prix convenu') + (who ? ' ' + tx('par {who}', { who: `${who.role || ''} ${who.id || ''}`.trim() }) : '') + '. ' + tx('Le modifier exige une nouvelle confirmation ci-dessous.');
-            }
-          }
-        }
-        const rw2 = box.querySelector('[data-hx-reprice-wrap]');
-        if (rw2) rw2.hidden = true;
-      }
-    };
-    const reset = e => {
-      if (!['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].includes(e.target?.name)) return;
-      if (e.target?.name === 'accountId') syncCommercialMode();
-      form.__commercialQuote = null;
-      if (form.elements.accountId?.value) {
-        result.textContent = tx('Paramètres modifiés. Simulez le contrat avant confirmation.');
-      } else {
-        result.textContent = '';
-      }
-      updateDirectQuote();
-    };
-    form.addEventListener('input', reset); form.addEventListener('change', reset);
-    form.elements.stayMode?.addEventListener('change', () => updateDirectQuote());
-    form.addEventListener('hx-refresh-direct', () => updateDirectQuote());
-    // Pricing-change detector for the submit gate (defects 1+3 live in
-    // cuSubmitStay, a sibling scope): true on creates, or when any of the
-    // seven money-moving inputs drifted since the editor opened.
-    form.__pricingChanged = () => pricingInputsChanged();
-    syncCommercialMode();
-    previewButton.addEventListener('click', async () => {
-      if (scope !== cuStayScope()) return;
-      const signature = cuStayQuoteSignature(form), fd = new FormData(form);
-      const accountId = fd.get('accountId');
-      if (!accountId || !String(accountId).trim()) {
-        result.innerHTML = `<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${tx('Sélectionnez un compte commercial avant de simuler un contrat.')}</p>`;
-        return;
-      }
-      previewButton.disabled = true; form.__commercialQuote = null; result.textContent = tx('Calcul des nuitées…');
-      try {
-        const res = await fetch('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'quote', merchant: cuMerchantSlug(), accountId, roomTypeId: fd.get('roomTypeId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: Number(fd.get('partySize')), board: fd.get('board') }) });
-        const b = await res.json();
-        if (scope !== cuStayScope() || signature !== cuStayQuoteSignature(form)) return;
-        if (!res.ok) { result.textContent = cuCommercialError(b.error); return; }
-        form.elements.priceMode.value = 'contract';
-        form.__commercialQuote = { rev: b.rev, signature: cuStayQuoteSignature(form) };
-        result.innerHTML = cuQuoteRows(b.quote) + (b.quote.taxBasis === 'inclusive' ? `<div class="hx-quote-accept-wrap"><label class="hx-check-row hx-quote-accept"><input type="checkbox" data-hx-accept-quote> <span>${tx('J’accepte ce prix pour la formule et les dates affichées.')}</span></label></div>` : `<p class="hx-warn-note" style="color:var(--warn-ink);margin-top:6px;">${tx('HT : configuration fiscale nécessaire avant confirmation du séjour.')}</p>`);
-      } catch (_) { result.textContent = tx('Simulation indisponible. Aucun nouveau tarif accepté.'); }
-      finally { previewButton.disabled = false; }
-    });
-  }
+  function cuTariffSyncCycle(form, pendingDelayMs) { return window.__kiwiHotelInternal.part('rates').cuTariffSyncCycle.apply(this, arguments); }
+  function cuTariffRetry(form) { return window.__kiwiHotelInternal.part('rates').cuTariffRetry.apply(this, arguments); }
+  function cuDirectQuote(input) { return window.__kiwiHotelInternal.part('rates').cuDirectQuote.apply(this, arguments); }
+  function cuQuoteRows(q) { return window.__kiwiHotelInternal.part('rates').cuQuoteRows.apply(this, arguments); }
+  function cuWireStayCommercial(form, booking) { return window.__kiwiHotelInternal.part('rates').cuWireStayCommercial.apply(this, arguments); }
   function cuCommercialState() {
     const scope = cuStayScope();
     if (!cuCommercialByScope.has(scope)) cuCommercialByScope.set(scope, { accounts: [], contracts: [], rev: 0, loaded: false, loading: false, error: '', kind: '', search: '' });
@@ -6748,26 +6159,9 @@
     </div>`;
   }
   const cuChannelState = { loading: false, loaded: false, rows: [], error: '' };
-  function cuChannelMerchant() { return cuMerchantSlug(); }
-  async function cuLoadChannels(sync) {
-    const merchant = cuChannelMerchant(); if (!merchant || cuChannelState.loading) return;
-    cuChannelState.loading = true; cuChannelState.error = ''; rerender();
-    try {
-      const res = sync
-        ? await fetch('/api/hotel/channels', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'sync', merchant }) })
-        : await fetch('/api/hotel/channels?merchant=' + encodeURIComponent(merchant), { headers:{Accept:'application/json'} });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || 'unavailable');
-      cuChannelState.rows = Array.isArray(body.channels) ? body.channels : [];
-      cuChannelState.loaded = true;
-      if (sync) toast(tx('Calendriers actualisés'), { type:'success', desc: tx((body.processed || 0) === 1 ? '{n} connexion vérifiée.' : '{n} connexions vérifiées.', { n: body.processed || 0 }) });
-    } catch (_) { cuChannelState.error = txk('Synchronisation indisponible. Vos réservations existantes restent intactes.'); }
-    finally { cuChannelState.loading = false; rerender(); }
-  }
-  function cuChannelRoomLabel(id) {
-    const room = Object.values(cuState().rooms || {}).find((x) => x.id === id);
-    return room ? tx('Chambre {n}', { n: room.n }) : tx('Chambre supprimée');
-  }
+  function cuChannelMerchant() { return window.__kiwiHotelInternal.part('channels').cuChannelMerchant.apply(this, arguments); }
+  function cuLoadChannels(sync) { return window.__kiwiHotelInternal.part('channels').cuLoadChannels.apply(this, arguments); }
+  function cuChannelRoomLabel(id) { return window.__kiwiHotelInternal.part('channels').cuChannelRoomLabel.apply(this, arguments); }
   function cuChannelEditor(provider) {
     const name = ({ airbnb: 'Airbnb', expedia: 'Expedia', agoda: 'Agoda' })[provider] || 'Booking.com';
     const rooms = Object.values(cuState().rooms || {}).sort((a,b) => a.n-b.n);
@@ -6804,35 +6198,8 @@
   /* Le lien de réservation publique est-il ouvert ? La tuile disait « source de
    * réservations non connectée » quoi qu'il arrive, y compris avec le lien ouvert
    * et des clients qui réservent. */
-  function cuDirectOpen() {
-    try { return window.KiwiReservations?.get?.()?.settings?.published === true; } catch (_) { return false; }
-  }
-  function cuCanauxBody() {
-    const connected = cuChannelState.rows.map((c) => `<div class="hx-arr">
-      <span class="tm ${c.lastError ? 'red' : ''}">${({ airbnb: 'AIRBNB', expedia: 'EXPEDIA', agoda: 'AGODA' })[c.channel] || 'BOOKING'}</span>
-      <div class="who"><b>${esc(c.label)}</b><div class="sub">${esc(cuChannelRoomLabel(c.roomId))} · ${c.lastError ? tx('erreur : {reason}', { reason: esc(c.lastError) }) : c.lastSyncAt ? tx('actualisé {when}', { when: new Date(c.lastSyncAt).toLocaleString(hxLocale()) }) : tx('première synchronisation en attente')}</div></div>
-      <button class="hx-btn ghost" data-action="hx-channel-status" data-arg="${esc(c.id)}:${c.status === 'paused' ? 'active' : 'paused'}">${c.status === 'paused' ? tx('Réactiver') : tx('Pause')}</button>
-      <button class="hx-btn ghost" data-action="hx-channel-delete" data-arg="${esc(c.id)}">${tx('Retirer')}</button>
-    </div>`).join('');
-    const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'},{id:'expedia',name:'Expedia'},{id:'agoda',name:'Agoda'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">${tx('Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal')}</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">${tx('Importer un calendrier')}</button></div>`).join('');
-    return `<div class="hx-page">
-      <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">${tx('Réservation directe')}</div><div class="v">${cuDirectOpen() ? tx('En ligne') : '·'}</div><div class="d">${cuDirectOpen() ? tx('lien de réservation ouvert · les arrivées apparaissent dans la Réception') : tx('lien de réservation fermé · à ouvrir dans Réservations &amp; RDV')}</div></div>
-        <div class="hx-kpi"><div class="l">${tx('Canaux connectés')}</div><div class="v">${cuChannelState.loaded ? cuChannelState.rows.filter((x)=>x.status==='active').length : '·'}</div><div class="d">${tx('calendriers actifs')}</div></div>
-      </div>
-      <div class="hx-h"><span class="t">${tx('Calendriers connectés')}</span><span class="s">${tx('les liens privés ne sont jamais renvoyés au navigateur')}</span><button class="hx-btn ghost" data-action="hx-channel-sync" ${cuChannelState.loading?'disabled':''}>${cuChannelState.loading ? tx('Actualisation…') : tx('Actualiser maintenant')}</button></div>
-      <div class="block" style="padding:8px 14px;"><div class="hx-list">${cuChannelState.error?`<div class="hx-empty">${esc(tx(cuChannelState.error))}</div>`:connected||`<div class="hx-empty">${tx('Aucun calendrier connecté.')}</div>`}</div></div>
-      <div class="hx-h"><span class="t">${tx('Connecter un canal')}</span><span class="s">${tx('Kiwi bloque les dates OTA dans la disponibilité directe')}</span><button class="hx-btn ghost" data-action="hx-channel-guide">${tx('Où trouver le lien ?')}</button></div>
-      <div class="block" style="padding:8px 14px;"><div class="hx-list">${choices}</div></div>
-      <div class="block" style="padding:8px 14px;margin-top:14px;">
-        ${cuStarter(
-          tx('Import iCal, pas de synchronisation bidirectionnelle.'),
-          tx('Les calendriers importent des périodes bloquées. Ils ne transmettent pas vos prix, vos stocks ou vos annulations de Kiwi vers les plateformes.'),
-          [tx('Les détails clients, prestations et montants sont à vérifier sur la réservation d’origine'), tx('JumboTours et centrales B2B sans iCal : saisie manuelle via + Réservation'), tx('Les commissions réelles ne sont pas fournies par ces calendriers')]
-        )}
-      </div>
-    </div>`;
-  }
+  function cuDirectOpen() { return window.__kiwiHotelInternal.part('channels').cuDirectOpen.apply(this, arguments); }
+  function cuCanauxBody() { return window.__kiwiHotelInternal.part('channels').cuCanauxBody.apply(this, arguments); }
   const cuEconomatState = {
     loading: false, loaded: false, saving: false, error: '', rev: 0,
     registry: { units: [], terminalUnits: {} }, draft: null,
