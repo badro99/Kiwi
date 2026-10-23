@@ -177,7 +177,6 @@
     const d = new Date(value.length === 10 ? value + 'T12:00:00' : value);
     return Number.isNaN(d.getTime()) ? '' : [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   }
-  function todayKey() { return dayKey(new Date().toISOString()); }
   /* Les centimes comptent : 330,50 MAD ne devient pas « 331 » (un prix réel n'est plus un entier de démo). */
   function money(n) {
     const v = Math.round((+n || 0) * 100) / 100, frac = Math.abs(v - Math.round(v)) > 0.004;

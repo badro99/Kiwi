@@ -1106,8 +1106,6 @@
     /* ============ cart logic — line keys support variants ============ */
     const itemOf  = id => MENU.find(m => m.id === id);
     const nameOf  = id => itemI18n(id).name || itemOf(id)?.name || '';
-    const descOf  = id => itemI18n(id).desc || itemOf(id)?.desc || '';
-    const basePriceOf = id => itemOf(id)?.price || 0;
     const cur = () => t('currency');
     /* Un prix est en dirhams ET centimes. La carte arrondissait au dirham
        entier (un café à 14,50 s'affichait 15) puis ajoutait l'option telle

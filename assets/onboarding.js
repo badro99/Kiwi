@@ -179,16 +179,6 @@
   // True once the ACCOUNT answered step 1 for us — see prefillFromAccount().
   let namePrefilled = false;
 
-  function entryBrand() {
-    return `<span class="kob-brand" aria-label="Kiwi">
-      <span class="kob-brand-legacy">kiwi<i></i></span>
-      <span class="vx-entry-logo" aria-hidden="true">
-        <img class="brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="" />
-        <img class="brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />
-      </span>
-    </span>`;
-  }
-
   /* ── Styles (scoped .kob-) ───────────────────────────────────────────── */
   function inject() {
     if (injected) return; injected = true;

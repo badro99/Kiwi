@@ -2736,7 +2736,6 @@
   };
   const FUSION_HOUR_LABELS = ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'];
   const FUSION_N = FUSION_HOUR_LABELS.length;
-  const KIWI_NET_RATIO = 0.839;                // matches dateRange.js fee constant
   const FUSION_PORTFOLIO_GOAL = 55000;         // daily target — referenced by spec
   const FUSION_VENUE_IDS = ['cafeAtlas', 'maisonMansour', 'spaBahia'];
 
@@ -2905,12 +2904,6 @@
     return r === 'personnalise' ? 'aujourdhui' : r;
   }
 
-  const FUSION_INTEL_ICONS = {
-    users:     '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
-    pie:       '<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
-    link:      '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
-    alert:     '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
-  };
   const FUSION_MATERIAL_ICONS = { users: 'users', pie: 'pie-chart', link: 'link', alert: 'alert-triangle' };
   const fusionIcon = (key) => `<i data-lucide="${FUSION_MATERIAL_ICONS[key] || 'help'}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   /* Portfolio rows use the same Material trade truth as the switcher. */
