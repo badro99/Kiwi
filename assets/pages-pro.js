@@ -2269,7 +2269,7 @@ function pdsPhoneBody(state, P, openSid) {
       ? mine.slice(0, 5).map(t => `<span class="pdsp-chip">${pdsEsc(pdsTableNum(t))}</span>`).join('') + (mine.length > 5 ? `<span class="pdsp-chip more">+${mine.length - 5}</span>` : '')
       : `<span class="pdsp-none">${pdsEsc(P.none)}</span>`;
     const paint = pdsBadge(s.color);
-    html += `<div class="pdsp-srv${open ? ' open' : ''}" role="group" style="--c:${pdsEsc(paint.bg)};--c-ink:${paint.ink}">
+    html += `<div class="pdsp-srv${open ? ' open' : ''}" role="group" style="--c:${pdsEsc(s.color)};--c-bg:${pdsEsc(paint.bg)};--c-ink:${paint.ink}">
       <button type="button" class="pdsp-head" data-pdsp-srv="${pdsEsc(sid)}" aria-expanded="${open}">
         <span class="pdsp-av">${pdsEsc(pdsInitials(s.name))}</span>
         <span class="pdsp-who"><b>${pdsEsc(s.name)}</b><small>${pdsEsc(P.count(mine.length, covers))}</small></span>
@@ -2320,7 +2320,7 @@ const PDS_PHONE_CSS = `
 .pdsp-srv{min-height:0;margin:0;padding:0;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--n-200);overflow:hidden}
 .pdsp-srv.open{box-shadow:inset 0 0 0 1.5px var(--c)}
 .pdsp-head{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px 4px;border:0;background:none;color:inherit;text-align:start;font:inherit;cursor:pointer}
-.pdsp-av{flex:0 0 auto;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:var(--c-ink,#fff);font-weight:600;font-size:13px}
+.pdsp-av{flex:0 0 auto;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--c-bg,var(--c));color:var(--c-ink,#fff);font-weight:600;font-size:13px}
 .pdsp-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .pdsp-who b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pdsp-who small{font-size:13px;color:var(--n-600)}
@@ -2340,7 +2340,7 @@ const PDS_PHONE_CSS = `
 .pdsp-t b{font:600 16px/1.1 "JetBrains Mono",monospace}
 .pdsp-t small{font-size:11px;color:var(--n-500)}
 .pdsp-t i{position:absolute;top:3px;inset-inline-end:5px;font-size:11px;font-weight:600;color:var(--n-500)}
-.pdsp-t.on{background:var(--c);border-color:var(--c);color:var(--c-ink,#fff)}
+.pdsp-t.on{background:var(--c-bg,var(--c));border-color:var(--c-bg,var(--c));color:var(--c-ink,#fff)}
 .pdsp-t.on small,.pdsp-t.on i{color:var(--c-ink,#fff)}
 html[data-theme="dark"] .pdsp-t:not(.on){background:rgba(255,255,255,.04)}
 @media (prefers-reduced-motion: reduce){.pdsp-chev,.pdsp-t{transition:none}}
