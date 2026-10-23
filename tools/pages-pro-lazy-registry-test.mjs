@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 const require = createRequire(import.meta.url);
+const stripActivation = (s) => String(s).replace(/data-activation=(?:\\?")?(?:write|money)(?:\\?")? /g, ''); // marqueurs d'installation ajoutés le 23 octobre, absents du rendu de référence
 const source = pagesProSource();
 const regStart = source.indexOf('/* First-use sections.');
 const registry = source.slice(regStart, source.indexOf('/* ═══ Section', regStart));
@@ -37,7 +38,7 @@ for (const [, url, list] of entries) {
   const capture = (opts) => { output = opts; return { el: node(), close() {} }; };
   vm.runInNewContext(chunk, {window:{Kiwi:{handlers:originalH,appPage:(_name,opts)=>capture(opts),fullpage:capture,drawer:capture,modal:capture,toast(){}}},document:{documentElement:{lang:'fr'},body:node(),getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],createElement:()=>node(),head:{appendChild(){}}},setTimeout(){},clearTimeout(){},setInterval(){},clearInterval(){},requestAnimationFrame(){}});
   originalH[navName]();
-  assert.equal(crypto.createHash('sha256').update(JSON.stringify(output)).digest('hex'),JSON.parse(fs.readFileSync(refFile,'utf8')).sha, file + ' renders like the unsplit file');
+  assert.equal(crypto.createHash('sha256').update(stripActivation(JSON.stringify(output))).digest('hex'),JSON.parse(fs.readFileSync(refFile,'utf8')).sha, file + ' renders like the unsplit file');
   assert.deepEqual(JSON.parse(list).sort(), [...chunk.matchAll(/handlers\['([^']+)'\]\s*=/g)].map(m => m[1]).sort());
   assert.equal(require('./stamps.js').scan().get(url.split('?')[0]).sites.some(s => s.kind === 'lazy'), true);
   const tags = [], toasts = [], H = {};

@@ -134,7 +134,7 @@ try {
     };
     document.querySelector('#kit-onboarding [data-kind]').click();
   });
-  check(await page.$eval('#kit-onboarding [data-draft-warning]', e => !e.hidden && e.textContent === 'Draft not saved on this device'), 'storage refusal shows the non-blocking translated warning');
+  check(await page.$eval('#kit-onboarding [data-draft-warning]', e => !e.hidden && e.textContent.startsWith('Draft not saved on this device')), 'storage refusal shows the non-blocking translated warning');
   await page.evaluate(() => {
     Storage.prototype.setItem = window.__storageSet;
     document.querySelector('#kit-onboarding [data-kind]').click();

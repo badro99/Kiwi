@@ -4,6 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
+const stripActivation = (s) => String(s).replace(/data-activation=(?:\\?")?(?:write|money)(?:\\?")? /g, ''); // marqueurs d'installation ajoutés le 23 octobre, absents du rendu de référence
 import { suite } from './browser-trace.mjs';
 const root = path.resolve(import.meta.dirname, '..');
 const puppeteer = createRequire(path.join(root, 'app/package.json'))('puppeteer-core');
@@ -62,7 +63,7 @@ try {
     assert.equal(await page.evaluate(()=>window.__spaWrapper),true,'captured apply wrapper works');
     const rendered = await page.evaluate(()=>window.__spaOptions);
     const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-spa-reference.json'),'utf8'));
-    assert.equal(crypto.createHash('sha256').update(rendered).digest('hex'),reference.sha,'same appPage DOM input as unsplit file');
+    assert.equal(crypto.createHash('sha256').update(stripActivation(rendered)).digest('hex'),reference.sha,'same appPage DOM input as unsplit file');
     await page.click('[data-action="appt-filter"]');
     assert.equal(await count(),1,'second spa handler reuses chunk');
     /* The toast lands asynchronously: wait for it rather than read the next line. */
@@ -109,7 +110,7 @@ try {
     });
     await page.click('.sidebar [data-nav="practitioners"]');
     await page.waitForFunction(() => !!window.__pracOptions, {timeout:10000});
-    const sha = crypto.createHash('sha256').update(await page.evaluate(()=>window.__pracOptions)).digest('hex');
+    const sha = crypto.createHash('sha256').update(stripActivation(await page.evaluate(()=>window.__pracOptions))).digest('hex');
     if (printRef) { console.log('PRACTITIONERS_REF ' + sha); return; }
     assert.equal(await count(),1,'chunk loaded on first use');
     const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-spa-practitioners-reference.json'),'utf8'));
@@ -164,7 +165,7 @@ try {
     });
     await page.click('.sidebar [data-nav="returns"]');
     await page.waitForFunction(() => !!window.__retOptions, {timeout:10000});
-    const sha = crypto.createHash('sha256').update(await page.evaluate(()=>window.__retOptions)).digest('hex');
+    const sha = crypto.createHash('sha256').update(stripActivation(await page.evaluate(()=>window.__retOptions))).digest('hex');
     if (printRef) { console.log('RETURNS_REF ' + sha); return; }
     assert.equal(await count(),1,'chunk loaded on first use');
     const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-boutique-returns-reference.json'),'utf8'));
@@ -213,7 +214,7 @@ try {
     await page.waitForFunction(() => document.querySelector('.kit-screen [data-kit-new] .kit-col-stack')?.children.length > 0, {timeout:10000});
     /* Painted queue, with clock readings masked (the screen ticks every second). */
     const painted = await page.evaluate(() => document.querySelector('.kit-screen').innerHTML.replace(/\d{1,2}:\d{2}/g, 'T'));
-    const paintSha = crypto.createHash('sha256').update(painted).digest('hex');
+    const paintSha = crypto.createHash('sha256').update(stripActivation(painted)).digest('hex');
     if (printRef) { console.log('KDS_REF ' + paintSha); return; }
     assert.equal(await count(),1,'chunk loaded on first use');
     const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-restaurant-stations-reference.json'),'utf8'));
