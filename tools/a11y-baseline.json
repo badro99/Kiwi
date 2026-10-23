@@ -21,5 +21,21 @@
   "employee-ar": {},
   "caisse-carnet-fr": {},
   "caisse-carnet-ar": {},
-  "foodcost": {}
+  "foodcost": {},
+  "matrix-caisse-restaurant-fr-phone": {},
+  "matrix-caisse-restaurant-fr-tablet": {},
+  "matrix-caisse-restaurant-en-phone": {},
+  "matrix-caisse-restaurant-ar-phone": {},
+  "matrix-caisse-boutique-fr-phone": {},
+  "matrix-caisse-boutique-en-phone": {},
+  "matrix-caisse-boutique-ar-phone": {},
+  "matrix-dashboard-transactions-fr-phone": {},
+  "matrix-dashboard-transactions-en-phone": {},
+  "matrix-dashboard-transactions-ar-phone": {},
+  "matrix-dashboard-payroll-fr-tablet": {},
+  "matrix-dashboard-payroll-en-phone": {},
+  "matrix-dashboard-payroll-ar-phone": {},
+  "matrix-dashboard-stock-fr-phone": {},
+  "matrix-dashboard-stock-en-phone": {},
+  "matrix-dashboard-stock-ar-phone": {}
 }

@@ -139,7 +139,6 @@
     if (!ticket.id) ticket.id = 'vx-ticket-' + Math.random().toString(36).slice(2, 9);
     peek.setAttribute('aria-controls', ticket.id);
     peek.setAttribute('aria-expanded', 'false');
-    peek.setAttribute('aria-label', 'Afficher le ticket');
     peek.innerHTML = '<span class="vx-peek-l">Ticket</span><span class="vx-peek-r"></span>';
     var amount = peek.querySelector('.vx-peek-r');
 
@@ -165,7 +164,6 @@
       var burger = screen.querySelector('.vx-burger');
       if (burger) burger.setAttribute('aria-expanded', 'false');
       peek.setAttribute('aria-expanded', open ? 'true' : 'false');
-      peek.setAttribute('aria-label', open ? 'Réduire le ticket' : 'Afficher le ticket');
     });
     /* An open sheet hides the menu trigger and has no scrim, so the only way
      * back was to spot that the top row is a button: to a cashier the till
@@ -185,7 +183,6 @@
         var open = screen.querySelector('.vx-peek');
         if (open) {
           open.setAttribute('aria-expanded', 'false');
-          open.setAttribute('aria-label', 'Afficher le ticket');
         }
       }, true);
     }
@@ -271,7 +268,6 @@
       var peek = screen.querySelector('.vx-peek');
       if (peek) {
         peek.setAttribute('aria-expanded', 'false');
-        peek.setAttribute('aria-label', 'Afficher le ticket');
       }
     });
     screen.addEventListener('keydown', function (e) {
@@ -282,7 +278,6 @@
       if (burger) burger.setAttribute('aria-expanded', 'false');
       if (peek) {
         peek.setAttribute('aria-expanded', 'false');
-        peek.setAttribute('aria-label', 'Afficher le ticket');
       }
     });
     window.addEventListener('resize', schedule);

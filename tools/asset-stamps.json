@@ -308,8 +308,8 @@
     "sha": "4600d76604d8462a"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2096",
-    "sha": "c632bbcb74c60a31"
+    "v": "2097",
+    "sha": "f3caad37a4c63eed"
   },
   "assets/design-vexel.css": {
     "v": "2125",
@@ -476,8 +476,8 @@
     "sha": "e41f82cc7143441b"
   },
   "assets/i18n.js": {
-    "v": "32",
-    "sha": "c8f84c42cfa860bf"
+    "v": "33",
+    "sha": "9713e7cd11ecc956"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -632,8 +632,8 @@
     "sha": "b4d788c7452ec0e1"
   },
   "assets/kit/elements.js": {
-    "v": "2",
-    "sha": "05c214dfbfd6c6b5"
+    "v": "3",
+    "sha": "33ffb0d7c8906d57"
   },
   "assets/kit/format.js": {
     "v": "3",
@@ -1240,8 +1240,8 @@
     "sha": "9cae03a3a01f29dc"
   },
   "assets/pos-mobile.js": {
-    "v": "8",
-    "sha": "a8d378f212693a1d"
+    "v": "9",
+    "sha": "40d8c180976ebb21"
   },
   "assets/pos-pharmacie.css": {
     "v": "9",
@@ -1504,8 +1504,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "3",
-    "sha": "b7510a6f723d8016"
+    "v": "4",
+    "sha": "c05175fd87a00f5e"
   },
   "assets/team.js": {
     "v": "316",

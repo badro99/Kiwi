@@ -2254,6 +2254,16 @@ section('Accessibility, axe-core (tools/a11y-browser-test.mjs)');
   }
 }
 
+section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'surface-matrix-browser-test.mjs')], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('surface matrix skipped, browser assertions not executed');
+  else if (r.status === 0) ok('surface matrix green');
+  else fail(`surface-matrix-browser-test.mjs exited ${r.status}: ${out.trim()}`);
+}
+
 /* ── 13b · coquille native, pilotée pour de vrai ──────────────────────────
  * app-bundle-test.mjs prouve le paquet ; celui-ci conduit la coquille dans un
  * vrai Chromium : boot borné, parcours guidé, appairage, imprimante, locales,

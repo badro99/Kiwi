@@ -98,7 +98,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=10',
-  '/assets/i18n.js?v=32',
+  '/assets/i18n.js?v=33',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -298,7 +298,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=12',
   '/assets/team.js?v=316',
   '/assets/team/profile-ui.js?v=1',
-  '/assets/team-hours.js?v=3',
+  '/assets/team-hours.js?v=4',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=118',
   '/assets/menu-promos-dashboard.js?v=3',
@@ -389,7 +389,7 @@ var SHELL = [
   '/assets/kit/controls/keypad.js?v=1',
   '/assets/kit/controls/stepper.js?v=1',
   '/assets/kit/controls/switch.js?v=1',
-  '/assets/kit/elements.js?v=2',
+  '/assets/kit/elements.js?v=3',
   '/assets/kit/layout.js?v=1',
   '/assets/kit/nav.js?v=3',
   '/assets/kit/till.js?v=11',
@@ -400,7 +400,7 @@ var SHELL = [
   '/assets/retail-scan.js?v=11',
   '/assets/caisse-dna.css?v=7',
   '/assets/caisse-dna.js?v=3',
-  '/assets/pos-mobile.js?v=8',
+  '/assets/pos-mobile.js?v=9',
   '/assets/pos-workspaces.css?v=5',
   '/assets/pos-workspaces.js?v=9',
   /* La boutique est chargée après le code employé. La garder dans la coquille

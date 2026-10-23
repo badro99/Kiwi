@@ -494,13 +494,12 @@
       var swipe = acts.length && !this.fine() ? '<div class="sw-acts" aria-hidden="true">' + acts.map(function (a) {
         return '<button type="button" tabindex="-1" class="sw-a ' + (a.tone === 'danger' ? 'dng' : '') + ' k-foot-s" data-act="' + esc(a.id) + '" data-tier="' + esc(a.tier || 'A') + '">' + esc(a.label) + '</button>';
       }).join('') + '</div>' : '';
-      var name = r.title + (r.subtitle ? ', ' + r.subtitle : '') + (r.value ? ', ' + r.value : '');
       var sel = this.flag('selectable');
       var role = r.radio ? ' role="radio" aria-checked="' + (r.selected ? 'true' : 'false') + '"' : (sel ? ' role="option" aria-selected="' + (r.selected ? 'true' : 'false') + '"' : '');
       var mainTag = r.trailing === 'switch' || r.trailing === 'button' || r.error ? 'div' : 'button';
       return '<li class="li' + (i === n - 1 ? ' last' : '') + '" data-id="' + esc(r.id) + '"' + (r.radio || sel ? ' role="none"' : '') + '>' + swipe +
         '<' + mainTag + (mainTag === 'button' ? ' type="button" data-row' : '') + ' class="r k-in' + (two ? ' two' : '') + (r.avatar ? ' avr' : '') + (r.selected && !r.radio ? ' sel' : '') + (r.disabled ? ' dis' : '') + '"' +
-        (mainTag === 'button' ? role + ' aria-label="' + esc(name) + '"' + (r.disabled ? ' aria-disabled="true"' : '') : '') + '>' +
+        (mainTag === 'button' ? role + (r.disabled ? ' aria-disabled="true"' : '') : '') + '>' +
         /* The spaces between title, subtitle and value are not painted (every
            container here is a flexbox) but they give the row's text its word
            breaks: without them a screen reader and axe read « T614:48 » while

@@ -105,9 +105,23 @@
     var profile = source.cloneNode(true);
     profile.classList.add('vexel-topbar-merchant');
     profile.dataset.action = 'profile-menu';
-    /* Its name comes from what it shows (name, role): a label of the name
-     * alone left the visible role out of what a screen reader says. */
+    /* Explicit references keep the name available when responsive CSS hides
+     * the identity, and include every visible word at wider sizes. */
     profile.removeAttribute('aria-label');
+    var info = profile.querySelector('.m-info');
+    if (info) info.id = 'vexel-profile-identity';
+    /* At tablet width only the initials show: they open the name, so what a
+     * voice-control user reads on screen is what the button answers to. */
+    var avatar = profile.querySelector('.avatar');
+    if (avatar) avatar.id = 'vexel-profile-avatar';
+    var label = el('span', 'sr-only');
+    label.id = 'vexel-profile-label';
+    label.hidden = true;
+    label.dataset.i18n = 'dash.profile.open';
+    var translations = window.KiwiI18n && window.KiwiI18n.T;
+    label.textContent = translations && translations[lang()] && translations[lang()]['dash.profile.open'] || 'Mon profil';
+    profile.appendChild(label);
+    profile.setAttribute('aria-labelledby', (avatar ? avatar.id + ' ' : '') + (info ? info.id + ' ' : '') + label.id);
     return profile;
   }
 

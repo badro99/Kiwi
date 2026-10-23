@@ -14,6 +14,7 @@
   /* ─── TRANSLATIONS ─── */
   const T = {
     en: {
+      'dash.profile.open': 'My profile',
       'salleScan.title': "Scan my floor",
       'salleScan.cancel': "Cancel",
       'salleScan.dropT': "Photo of your dining room · or a sketch of the plan",
@@ -723,6 +724,7 @@
     },
 
     ar: {
+      'dash.profile.open': 'ملفي الشخصي',
       'salleScan.title': "مسح قاعتي",
       'salleScan.cancel': "إلغاء",
       'salleScan.dropT': "صورة لقاعتك · أو رسم تخطيطي للمخطط",
@@ -1429,7 +1431,7 @@
   };
 
   /* ─── Capture originals (FR) ─── */
-  const ORIG = {};
+  const ORIG = { 'dash.profile.open': 'Mon profil' };
   const ORIG_ATTR = new WeakMap(); // el -> { attr: frValue }
   function captureOriginals() {
     document.querySelectorAll('[data-i18n]').forEach(el => {

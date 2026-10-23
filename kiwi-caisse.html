@@ -175,7 +175,7 @@
         js("assets/kit/controls/keypad.js?v=1") +
         js("assets/kit/controls/stepper.js?v=1") +
         js("assets/kit/controls/switch.js?v=1") +
-        js("assets/kit/elements.js?v=2") +
+        js("assets/kit/elements.js?v=3") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=3") +
         js("assets/kit/till.js?v=11") +
@@ -201,7 +201,7 @@
   <link rel="stylesheet" href="assets/caisse-dna.css?v=7" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
-  <script src="assets/pos-mobile.js?v=8" defer></script>
+  <script src="assets/pos-mobile.js?v=9" defer></script>
 
   <!-- Shared material tokens (elevation, paper, spring). Linked BEFORE the
        inline <style> so the caisse's own palette still wins; only the tokens
@@ -263,6 +263,9 @@
     #cat-pills .cat-pill .count, #subcat-pills .cat-pill .count {
       margin-left: 0;
       font-size: 12px;
+      opacity: 1;
+      color: var(--riad);
+      background: var(--paper);
     }
   </style>
   <link rel="stylesheet" href="assets/pos-mobile.css?v=9" />
@@ -696,7 +699,7 @@
 
       <div class="stats-section" aria-label="Stats du shift">
         <div id="stat-service-scope" class="stat-label" style="grid-column:1/-1" aria-live="polite">Aucun service ouvert</div>
-        <button class="stat-card stat-card--tap" id="stat-txns-card" type="button" aria-label="Ouvrir le journal des ventes">
+        <button class="stat-card stat-card--tap" id="stat-txns-card" type="button">
           <div class="stat-label">Transactions</div>
           <div class="stat-value" id="stat-txns">53</div>
           <div class="stat-delta" id="stat-txns-delta">Carte 63% · Cash 37%</div>
@@ -715,24 +718,24 @@
       </div>
 
       <div class="rail-links" aria-label="Espaces de travail">
-        <button class="team-trigger" id="open-attendance-code" aria-label="Code de pointage">
+        <button class="team-trigger" id="open-attendance-code">
           <i data-lucide="key-round"></i>
           <span>Code de pointage</span>
         </button>
 
-        <button class="team-trigger" id="open-team" aria-label="Équipe">
+        <button class="team-trigger" id="open-team">
           <i data-lucide="users"></i>
           <span>Équipe</span>
           <span class="count" id="team-count">3</span>
         </button>
 
-        <button class="team-trigger" id="open-kds" data-feature="kds" aria-label="Écran cuisine">
+        <button class="team-trigger" id="open-kds" data-feature="kds">
           <i data-lucide="chef-hat"></i>
           <span>Écran cuisine</span>
           <span class="count" id="kds-count">0</span>
         </button>
 
-        <button class="team-trigger" id="open-kitchen-print" data-action="printer-connect" aria-label="Impression cuisine">
+        <button class="team-trigger" id="open-kitchen-print" data-action="printer-connect">
           <i data-lucide="printer"></i>
           <span>Impression cuisine</span>
           <span class="count is-state" id="kitchen-print-count" aria-label="État de l’impression">Inactif</span>
@@ -741,7 +744,7 @@
         <!-- Stock : retiré par cd4273a comme « doublon », mais l'autre accès
              n'existait déjà plus · l'écran Stock & appro n'était donc plus
              atteignable depuis la caisse. Ce bouton est le seul point d'entrée. -->
-        <button class="team-trigger" id="open-stock" aria-label="Stock et approvisionnement">
+        <button class="team-trigger" id="open-stock">
           <i data-lucide="boxes"></i>
           <span>Stock</span>
           <span class="count" id="stock-alert-count">0</span>
@@ -936,7 +939,7 @@
 
     <!-- --------- RIGHT BILL PANEL --------- -->
     <aside class="rightpanel" aria-label="Addition">
-      <button class="rp-peek" id="rp-peek" data-action="toggle-ticket" aria-label="Afficher l'addition">
+      <button class="rp-peek" id="rp-peek" data-action="toggle-ticket">
         <span>Addition</span>
         <span id="rp-peek-total">0 MAD</span>
       </button>

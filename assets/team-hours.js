@@ -1222,7 +1222,6 @@
       const meta = calendarMeta[d] || {};
       return `<button class="kt-pd-pill${on ? ' on' : ''}${d === today ? ' today' : ''}${meta.closed ? ' is-closed' : ''}" type="button" role="tab"
         id="kt-pd-tab-${esc(d)}" aria-controls="kt-pd-${esc(d)}" aria-selected="${on ? 'true' : 'false'}"
-        aria-label="${esc(dt.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))}"
         data-action="kt-plan-day" data-arg="${esc(d)}"><span class="w">${esc(dt.toLocaleDateString(dateLocale(), { weekday: 'short' }))}</span><span class="d">${dt.getDate()}</span></button>`;
     }).join('');
     const panels = view.map((d) => {
