@@ -9214,10 +9214,10 @@ handlers['menu-publish'] = () => {
   if (!window.Kiwi?.handlers) return;
   const H = window.Kiwi.handlers;
   const LAZY_SECTIONS = [
-    { url: 'assets/pages-pro/spa-appointments.js?v=1', handlers: ["nav-appointments", "appt-filter", "appt-export", "appt-wait-add", "appt-auto-toggle", "appt-wait-detail", "appt-cancel-confirm", "appt-new", "nav-services", "svc-export", "svc-season", "svc-season-edit", "svc-ai-action", "pkg-edit-go"] },
-    { url: 'assets/pages-pro/spa-practitioners.js?v=1', handlers: ["nav-practitioners", "practitioner-add", "practitioner-commission", "practitioner-edit", "practitioner-tracker"] },
-    { url: 'assets/pages-pro/boutique-promos-returns.js?v=3', handlers: ["nav-promos", "nav-returns", "credit-adjust", "credit-adjust-confirm", "credit-cancel", "promo-archive-detail", "promo-edit", "promo-end", "promo-pause", "promo-schedule", "promo-segment", "ret-approve", "ret-block", "ret-detail", "ret-exchange", "ret-export", "ret-policy-jump", "ret-policy-save", "ret-refund-credit", "ret-refund-original", "ret-refund-whatsapp", "ret-refuse"] },
-    { url: 'assets/pages-pro/restaurant-stations.js?v=1', handlers: ["nav-menu", "nav-kds", "menu-stations-manage", "menu-station-create", "menu-cat-add", "menu-cat-edit", "menu-opt-add", "menu-promote", "menu-add", "menu-schedule", "menu-publish", "kds-bump", "kds-recall", "kds-86", "kds-fullscreen", "kds-reassign", "kds-print-summary"] },
+    { url: 'assets/pages-pro/spa-appointments.js?v=2', handlers: ["nav-appointments", "appt-filter", "appt-export", "appt-wait-add", "appt-auto-toggle", "appt-wait-detail", "appt-cancel-confirm", "appt-new", "nav-services", "svc-export", "svc-season", "svc-season-edit", "svc-ai-action", "pkg-edit-go"] },
+    { url: 'assets/pages-pro/spa-practitioners.js?v=2', handlers: ["nav-practitioners", "practitioner-add", "practitioner-commission", "practitioner-edit", "practitioner-tracker"] },
+    { url: 'assets/pages-pro/boutique-promos-returns.js?v=4', handlers: ["nav-promos", "nav-returns", "credit-adjust", "credit-adjust-confirm", "credit-cancel", "promo-archive-detail", "promo-edit", "promo-end", "promo-pause", "promo-schedule", "promo-segment", "ret-approve", "ret-block", "ret-detail", "ret-exchange", "ret-export", "ret-policy-jump", "ret-policy-save", "ret-refund-credit", "ret-refund-original", "ret-refund-whatsapp", "ret-refuse"] },
+    { url: 'assets/pages-pro/restaurant-stations.js?v=2', handlers: ["nav-menu", "nav-kds", "menu-stations-manage", "menu-station-create", "menu-cat-add", "menu-cat-edit", "menu-opt-add", "menu-promote", "menu-add", "menu-schedule", "menu-publish", "kds-bump", "kds-recall", "kds-86", "kds-fullscreen", "kds-reassign", "kds-print-summary"] },
   ];
   LAZY_SECTIONS.forEach(entry => {
     let loading;

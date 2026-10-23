@@ -99,7 +99,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=14" defer></script>
-  <script src="assets/printer-bridge.js?v=27" defer></script>
+  <script src="assets/printer-bridge.js?v=28" defer></script>
   <script src="assets/caisse-hardware.js?v=6" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -113,11 +113,11 @@
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=11" defer></script>
-  <script src="assets/pressing-catalog.js?v=9" defer></script>
+  <script src="assets/pressing-catalog.js?v=10" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
        dashboard read/write the SAME product catalog (localStorage). -->
-  <script src="assets/barcode.js?v=1" defer></script>
+  <script src="assets/barcode.js?v=2" defer></script>
   <script src="assets/scan-wedge.js?v=1" defer></script>
   <!-- Même vocabulaire couleur que le tableau de bord (familles générales,
        choisies à la pastille). Chargé AVANT le catalogue, qui s'en sert pour
@@ -280,7 +280,7 @@
   <script src="assets/retail-balances.js?v=4" defer></script>
   <script src="assets/retail-sale-hold.js?v=3" defer></script>
   <script src="assets/repeat-sale-guard.js?v=3" defer></script>
-  <script src="assets/delivery-collect.js?v=2" defer></script>
+  <script src="assets/delivery-collect.js?v=3" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -314,7 +314,7 @@
   <script src="assets/venue-store.js?v=4" defer></script>
   <script src="assets/discount-policy.js?v=4" defer></script>
   <script src="assets/menu-promos.js?v=4" defer></script>
-  <script src="assets/vertical-state.js?v=5" defer></script>
+  <script src="assets/vertical-state.js?v=6" defer></script>
   <script src="assets/image-proof.js?v=2" defer></script>
   <script src="assets/inventory-ledger.js?v=15" defer></script>
   <script src="assets/maison-stock-movements.js?v=6" defer></script>
@@ -346,7 +346,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=16" defer></script>
   <script src="assets/clients-store.js?v=17" defer></script>
-  <script src="assets/clients-book.js?v=29" defer></script>
+  <script src="assets/clients-book.js?v=30" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -374,7 +374,7 @@
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
-  <script src="assets/invoice.js?v=19" defer></script>
+  <script src="assets/invoice.js?v=20" defer></script>
   <script src="assets/pos-reprint.js?v=12" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
