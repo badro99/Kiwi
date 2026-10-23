@@ -75,16 +75,6 @@ const NEW_STORE_FEATURES = {
  * bord ne doit rien voir changer. */
 const NEW_ACCOUNT_FROM = 1785110400000;   // 2026-07-27T00:00:00Z
 
-/* Une fiche « vide » = créée mais jamais configurée. Deux appels concurrents
- * arrivent à la création d'un établissement (l'enregistrement du magasin et la
- * synchro du type), et c'est une course : si l'anodin gagne, la fiche naît avec
- * '{}' et le signal `fresh` arrive une milliseconde trop tard. On rattrape donc
- * une fiche encore vierge — jamais une fiche que quelqu'un a déjà réglée. */
-function isBlankFeatures(v) {
-  const s = String(v == null ? '' : v).trim();
-  return s === '' || s === '{}';
-}
-
 /* Who owns a store slug?
  *   '<acc-id>' → claimed by that account
  *   ''         → a row exists but is unclaimed (a pre-registry row, or a store an

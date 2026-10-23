@@ -19,7 +19,6 @@ import { hoursByDay } from './_worked-hours.js';
 const ATTENDANCE_FEATURE = 'attendance';
 const ATTENDANCE_CODE_FEATURE = 'attendance-code';
 const TEAM_FEATURE = 'team';
-const ACCESS_FEATURE = 'employee-access';
 const FLOOR_FEATURE = 'floorplan';
 const MESSAGES_FEATURE = 'team-messages';
 const MESSAGE_WINDOW_MS = 24 * 3600000;

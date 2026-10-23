@@ -9,7 +9,6 @@
 
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
-import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
 import { settleCoveredOrders } from './_visit-cover.js';
@@ -114,7 +113,6 @@ async function claimRestaurantBill(env, merchant, sessionId, number, day, id) {
 const VISIT_BIND_SKEW_MS = 2 * 60 * 1000;
 
 const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
-const MAX_AMOUNT_DIRHAMS = 200000; // legacy ceiling
 const DISCOUNT_REASONS = new Set(['commercial', 'loyal-customer', 'kitchen-error', 'other']);
 
 async function ensureReceiptSchema(env) {

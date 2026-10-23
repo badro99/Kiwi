@@ -551,7 +551,6 @@ const PRINTER_WARM_WINDOW_MS = Number(process.env.KIWI_PRINTER_WARM_WINDOW_MS)
 // insister toutes les 10 s ne réveille personne et coûte une connexion morte
 // par cycle : on s'espace jusqu'à 5 min, et on revient à 10 s dès qu'elle répond.
 const PRINTER_WARM_BACKOFF_MAX_MS = 5 * 60 * 1000;
-const PRINTER_WAKE_BYTES = Buffer.from([0x1b, 0x40]);        // ESC @
 const PRINTER_PROBE_BYTES = Buffer.from([0x10, 0x04, 0x01]); // DLE EOT 1: real-time status request
 const PRINTER_PROBE_TIMEOUT_MS = 2500;
 const printerChannels = new Map();

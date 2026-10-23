@@ -805,5 +805,3 @@ export async function onRequestPost({ request, env }) {
     ? createDraft(request, env, body, merchant, idempotencyKey)
     : command(request, env, body, merchant, action, idempotencyKey);
 }
-
-export const INTERNAL_REQUEST_TABLES = Object.freeze([REQUEST_TABLE, LINE_TABLE, EVENT_TABLE]);

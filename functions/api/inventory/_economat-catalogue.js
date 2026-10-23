@@ -74,14 +74,6 @@ export function quantityToBase(quantityValue, snapshot) {
   return rounded / 1000;
 }
 
-export function quantityFromBase(baseQuantityValue, snapshot) {
-  const baseQuantity = Number(baseQuantityValue);
-  const factor = snapshot && finitePositive(snapshot.basePerUnit);
-  if (!Number.isFinite(baseQuantity) || baseQuantity < 0 || factor == null) return null;
-  const quantity = baseQuantity / factor;
-  return Number.isFinite(quantity) ? quantity : null;
-}
-
 function cleanItem(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: 'bad-item' };
   const unexpected = Object.keys(raw).find((name) => !ITEM_KEYS.has(name));

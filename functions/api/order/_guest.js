@@ -273,15 +273,6 @@ export function waitStats(rows) {
   return { overall, items, samples: all.length };
 }
 
-/* L'estimation d'UNE commande : son plat le plus long, ou la médiane de la
- * maison quand aucun de ses plats n'a d'historique. null = on ne dit rien. */
-export function estimateMinutes(waits, ids) {
-  if (!waits) return null;
-  const known = (ids || []).map((id) => waits.items && waits.items[String(id)]).filter((m) => Number.isFinite(m));
-  if (known.length) return Math.max(...known);
-  return Number.isFinite(waits.overall) ? waits.overall : null;
-}
-
 /* ── Coucher du soleil ───────────────────────────────────────────────────── */
 /* L'algorithme de l'almanach nautique (NOAA), précis à une minute près sous
  * nos latitudes. Rend l'instant UTC (ms) du coucher pour une date civile. */
