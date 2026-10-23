@@ -24,7 +24,7 @@ var SHELL = [
   '/assets/caisse-accounting.js?v=5',
   '/assets/caisse-floor.js?v=2',
   '/assets/caisse-kitchen.js?v=1',
-  '/assets/caisse-app.js?v=13',
+  '/assets/caisse-app.js?v=14',
   '/assets/caisse-refresh.js?v=6',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -54,7 +54,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=2',
+  '/assets/caisse-shell.css?v=3',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
@@ -118,7 +118,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=63',
+  '/assets/venues.js?v=65',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=9',
   '/assets/trade-workspaces.js?v=12',
@@ -283,7 +283,7 @@ var SHELL = [
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=17',
-  '/assets/clients-book.js?v=32',
+  '/assets/clients-book.js?v=33',
   '/assets/clients-directory.js?v=25',
   '/assets/customer-retention.js?v=11',
   '/assets/menu-catalog.js?v=33',
@@ -329,16 +329,16 @@ var SHELL = [
   '/assets/kit/haptics.js?v=7',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
-  '/assets/icons/material/sprite.till.svg?v=5',
+  '/assets/icons/material/sprite.till.svg?v=7',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=40',
+  '/assets/kit/kit.css?v=43',
   '/assets/kit/dash-desktop.css?v=6',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
-  '/assets/kit/strings/till.fr.js?v=6',
-  '/assets/kit/strings/till.en.js?v=6',
-  '/assets/kit/strings/till.ar.js?v=6',
+  '/assets/kit/strings/till.fr.js?v=8',
+  '/assets/kit/strings/till.en.js?v=8',
+  '/assets/kit/strings/till.ar.js?v=8',
   '/assets/kit/strings.js?v=2',
   '/assets/kit/format.js?v=3',
   '/assets/kit/business-day.js?v=4',

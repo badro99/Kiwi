@@ -1973,6 +1973,9 @@
       if (tillKit) {
         document.documentElement.setAttribute('data-k-till', '');
         tillKitMoreScrim();
+        /* Le carnet clients se ferme aussi par sa flèche ou Échap : le rail suit. */
+        document.addEventListener('kiwi:clientsbook', () => tillKitPaint());
+        if (window.KiwiClientsBook) window.KiwiClientsBook.ensureChip();
         /* La cuisine s'ouvre à côté du rail, comme les autres pages (kit.css) :
            ce n'est plus une fenêtre modale qui cache le rail aux lecteurs d'écran. */
         const kdsScreen = document.getElementById('kds-screen');
@@ -2342,10 +2345,12 @@
         ['device_id', 'till.more.device_id', '#caisse-terminal-id'],
       ]],
     ];
+    const TILL_KIT_CLIENTS = '.rail-links [data-kcb-navitem]';
+    const tillKitClientsOpen = () => { const r = document.getElementById('kcb-root'); return !!(r && r.style.display !== 'none'); };
     const tillKitLive = (sel) => { const el = sel && document.querySelector(sel); return el && !el.hasAttribute('hidden') ? el : null; };
     function tillKitRail() {
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
-      const value = kdsOpen ? 'kitchen' : mode === 'vrap' ? 'takeaway' : mode === 'waitlist' ? 'waiting' : 'floor';
+      const value = tillKitClientsOpen() ? 'clients' : kdsOpen ? 'kitchen' : mode === 'vrap' ? 'takeaway' : mode === 'waitlist' ? 'waiting' : 'floor';
       const newTickets = (typeof kdsOrders !== 'undefined' ? kdsOrders : []).filter((o) => o && o.status === 'new').length;
       /* §18.3 : le badge À emporter compte les commandes en ligne à accepter. */
       const toAccept = window.KiwiTillOnline ? window.KiwiTillOnline.pending() : 0;
@@ -2354,6 +2359,10 @@
         ['takeaway', 'shopping_bag', 'till.nav.takeaway', '.mode-pill[data-mode="vrap"]'],
         ['waiting', 'schedule', 'till.nav.waiting', '.mode-pill[data-mode="waitlist"]'],
         ['kitchen', 'skillet', 'till.nav.kitchen', '#open-kds'],
+        /* Le carnet clients sur le rail, pas en pastille flottante sur l'écran
+           (propriétaire, 2026-10-23). Il ouvre l'entrée que clients-book.js
+           pose dans la barre latérale livrée, la même que Plus · Fidélité. */
+        ['clients', 'group', 'till.nav.clients', TILL_KIT_CLIENTS],
       ].filter((r) => tillKitLive(r[3])).map(([id, icon, key]) => {
         const it = { id, icon, label: kkt(key), badge: id === 'kitchen' ? newTickets : id === 'takeaway' ? toAccept : 0 };
         if (id === 'takeaway' && toAccept) it.a11y = kkt('till.nav.takeaway_a11y', { n: toAccept });
@@ -2451,6 +2460,14 @@
       if (id === 'more') { tillKitToggleMore(); return; }
       tillKitSetMore(false);
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
+      if (id === 'clients') {
+        if (kdsOpen) closeKds();
+        const entry = tillKitLive(TILL_KIT_CLIENTS);
+        if (entry && !tillKitClientsOpen()) entry.click();
+        tillKitPaint();
+        return;
+      }
+      if (tillKitClientsOpen() && window.KiwiClientsBook) window.KiwiClientsBook.close();
       if (id === 'kitchen') { if (!kdsOpen) openKds(); tillKitPaint(); return; }
       if (kdsOpen) closeKds();
       const pill = { floor: 'salle', takeaway: 'vrap', waiting: 'waitlist' }[id];

@@ -380,7 +380,7 @@ try {
     const { page, errors } = await till(tr, { flag: true });
     const railIds = await page.evaluate(() => [...document.querySelector('k-rail').shadowRoot.querySelectorAll('[data-id]')].map((b) => b.getAttribute('data-id')));
     check(await page.evaluate(() => getComputedStyle(document.querySelector('.sidebar')).display === 'none'), 'the shipped sidebar is hidden');
-    check(railIds.join() === 'floor,takeaway,waiting,kitchen,more', `the rail: ${railIds.join(', ')}`);
+    check(railIds.join() === 'floor,takeaway,waiting,kitchen,clients,more', `the rail: ${railIds.join(', ')}`);
     check(await page.evaluate(() => mode === 'vrap' && document.querySelector('k-rail').getAttribute('value') === 'takeaway'), 'Takeaway on the rail is the takeaway mode, and the rail says so');
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="floor"]').click());
     await sleep(300);
@@ -414,8 +414,8 @@ try {
     check(out.display === 'flex' && out.width === 260 && out.x === 0 && out.height === 1024 && out.railWidth === 88,
       `Plus puts the shipped sidebar in the rail's own place, 260 wide (${JSON.stringify(out)})`);
     check(out.railShown === 'hidden', 'the rail steps back under it, its 88 still in the layout so nothing reflows');
-    check(out.navIds && out.navIds.join() === 'floor,takeaway,waiting,kitchen,more' && out.navValue === 'floor',
-      `the panel's head carries the same five destinations (${out.navIds && out.navIds.join(', ')})`);
+    check(out.navIds && out.navIds.join() === 'floor,takeaway,waiting,kitchen,clients,more' && out.navValue === 'floor',
+      `the panel's head carries the same destinations as the rail (${out.navIds && out.navIds.join(', ')})`);
     check(out.pillsShown === 'hidden', "and the shipped mode pills, which repeat three of them, are not drawn twice");
     check(out.scrim === 'auto', 'the scrim takes the taps meant for elsewhere');
     const moinsOut = await railMore();
@@ -514,6 +514,77 @@ try {
     check(!back.open && back.value === 'floor' && await page.evaluate(() => mode === 'salle'), 'Salle on the rail leaves the kitchen for the floor plan');
     check(errors.length === 0, 'kitchen beside the rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
+  /* Le carnet clients sur le rail, et plus de pastille « Clients » posée sur
+     l'écran (propriétaire, 2026-10-23). */
+  await S.run('flag on · Clients is on the rail, never a floating tag', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const page = tr.watch(await ctx.newPage());
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.setViewport({ width: 1366, height: 1024 });
+    await page.setBypassServiceWorker(true);
+    await page.setRequestInterception(true);
+    page.on('request', (r) => {
+      const u = r.url();
+      if (u.startsWith(base + '/api/')) return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+      return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
+    });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('kiwiSkin2027:till', '1');
+      try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
+    });
+    await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof doOpenService === 'function' && window.KiwiClientsBook && document.documentElement.hasAttribute('data-k-till'), { timeout: 30000 });
+    /* The chip's other conditions met: a paired till with a client book. */
+    await page.evaluate(() => {
+      if (window.KiwiCaissePairing) window.KiwiCaissePairing.isPaired = () => true;
+      window.KiwiClients.bookId = () => 'test-book';
+    });
+    const chip = () => page.evaluate(() => { KiwiClientsBook.ensureChip(); return !!document.getElementById('kcb-chip'); });
+    /* Without the kit's rail and with no host on screen, only the rule under test is left. */
+    const bare = (on) => page.evaluate((o) => {
+      const h = document.documentElement;
+      if (o) { h.removeAttribute('data-k-till'); const s = document.createElement('style'); s.id = 't-bare'; s.textContent = '.sidebar,.act-selector,nav[class$="-nav"]{display:none!important}'; document.head.appendChild(s); }
+      else { h.setAttribute('data-k-till', ''); document.getElementById('t-bare')?.remove(); }
+    }, on);
+    await page.evaluate(() => doOpenService());
+    await page.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout: 20000 });
+    await sleep(400);
+    check(!(await chip()), 'unlocked, the 2027 till draws no floating tag: the rail carries Clients');
+    await bare(true);
+    check(await chip(), 'a layout with no rail still gets the tag (the fallback stays)');
+    await bare(false);
+    await chip();
+    const tapRail = (id) => page.evaluate((i) => document.querySelector('k-rail').shadowRoot.querySelector(`[data-id="${i}"]`).click(), id);
+    const view = () => page.evaluate(() => {
+      const root = document.getElementById('kcb-root');
+      const open = !!root && root.style.display !== 'none';
+      const r = open ? root.getBoundingClientRect() : null;
+      const item = document.querySelector('k-rail').shadowRoot.querySelector('[data-id="clients"]');
+      return { open, item: !!item, label: item ? item.textContent.trim() : '', x: r ? Math.round(r.x) : -1,
+        railRight: Math.round(document.getElementById('kit-rail').getBoundingClientRect().right),
+        value: document.querySelector('k-rail').getAttribute('value') };
+    });
+    let v = await view();
+    check(v.item && /Clients/.test(v.label), `the rail has a Clients entry (${v.label})`);
+    await tapRail('clients');
+    await sleep(400);
+    v = await view();
+    check(v.open && v.value === 'clients', `Clients on the rail opens the client book, and the rail says so (${v.value})`);
+    check(Math.abs(v.x - v.railRight) <= 1, `the book opens beside the rail (${v.x}, rail ends at ${v.railRight})`);
+    await tapRail('floor');
+    await sleep(400);
+    v = await view();
+    check(!v.open && v.value === 'floor', 'Salle on the rail leaves the book for the floor plan');
+    await tapRail('clients');
+    await sleep(400);
+    await page.evaluate(() => document.getElementById('kcb-back').click());
+    await sleep(300);
+    v = await view();
+    check(!v.open && v.value !== 'clients', `closing the book by its own button gives the rail back its page (${v.value})`);
+    check(errors.length === 0, 'clients on the rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
 } finally {
   await browser.close().catch(() => {});
   server.closeAllConnections();

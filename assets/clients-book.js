@@ -59,7 +59,9 @@
       return !!(s && s.style.display !== 'none' && getComputedStyle(s).display !== 'none');
     });
   }
-  function shouldShow() { return !tillLocked() && !integrationHost() && !!KC.bookId() && (paired() || KC.count() > 0); }
+  /* La caisse 2027 porte le carnet sur son rail (caisse-app.js, tillKitRail). */
+  function kitRail() { return document.documentElement.hasAttribute('data-k-till'); }
+  function shouldShow() { return !tillLocked() && !integrationHost() && !kitRail() && !!KC.bookId() && (paired() || KC.count() > 0); }
 
   function toast(msg, desc) {
     if (window.KiwiCaisseLang) { msg = window.KiwiCaisseLang.tr(msg); if (desc) desc = window.KiwiCaisseLang.tr(desc); }
@@ -451,7 +453,7 @@
   function panelInset() {
     var res = { left: 0, top: 0, right: 0, bottom: 0 };
     try {
-      var rail = null, cands = document.querySelectorAll('.sidebar, nav[class$="-nav"]');
+      var rail = null, cands = document.querySelectorAll('#kit-rail, .sidebar, nav[class$="-nav"]');
       for (var i = 0; i < cands.length; i++) {
         var el = cands[i]; if (el.offsetParent === null) continue;
         var rr = railBox(el);
@@ -520,13 +522,16 @@
     // A phone keyboard that rises the moment the page opens hides the list
     // the merchant came to read.
     if (!isPhone()) q.focus();
+    announce(true);
   }
+  /* Le rail de la caisse 2027 allume son entrée tant que le carnet est ouvert. */
+  function announce(on) { try { document.dispatchEvent(new CustomEvent('kiwi:clientsbook', { detail: { open: on } })); } catch (_) {} }
   function close() {
     // La fiche cliente part avec le carnet : ouverte par-dessus, elle restait
     // sinon posée seule au milieu de l'écran de vente.
     closeSheet();
     var r = document.getElementById('kcb-root'); if (r) r.style.display = 'none';
-    clearNav(); ensureChip();
+    clearNav(); ensureChip(); announce(false);
   }
 
   function foldText(s) {
@@ -1018,6 +1023,8 @@
       if (rail.querySelector('[data-kcb-navitem]')) return;
       var sample = rail.querySelector('.team-trigger, button'); if (!sample) return;
       rail.appendChild(makeItem('button', sample.className.replace(/\s+/g, ' ').trim(), 'Clients & fidélité'));
+      // The 2027 rail draws its Clients entry once this one exists.
+      try { document.dispatchEvent(new CustomEvent('kiwi:clientsbook', { detail: { entry: true } })); } catch (_) {}
     });
   }
 

@@ -2561,6 +2561,12 @@
    * l'effacer : même chaîne de repli que le script de <head>. */
   function themeChoiceIsDark() {
     try {
+      /* The dashboard's <head> starts light unless kiwiDashTheme says dark,
+       * whatever the system or the public site prefer (it marks <html> with
+       * data-vexel-mode). Falling back to the system here painted the page
+       * dark for a second on every load on a Mac in dark mode, until
+       * design-vexel.js put it back to light (owner, 2026-10-23). */
+      if (document.documentElement.hasAttribute('data-vexel-mode')) return localStorage.getItem('kiwiDashTheme') === 'dark';
       const t = localStorage.getItem('kiwiDashTheme') || localStorage.getItem('kiwiTheme');
       if (t) return t === 'dark';
       return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);

@@ -2969,6 +2969,12 @@
       from { opacity: 0; transform: scale(1.02); filter: blur(4px); }
       to   { opacity: 1; transform: scale(1); filter: blur(0); }
     }
+    /* Design 2027 : l'écran d'ouverture arrive en fondu depuis le transparent ;
+       au premier affichage de la caisse il n'y a derrière lui que la page
+       claire, et le fondu se lisait comme un éclair blanc (propriétaire,
+       2026-10-23). Tant qu'il est là, la page sous lui prend son fond. */
+    html[data-skin-2027="till"]:has(#clockin-screen.is-visible:not(.is-leaving)),
+    html[data-skin-2027="till"]:has(#clockin-screen.is-visible:not(.is-leaving)) body { background-color: #04120D; }
     .clockin-screen.is-leaving {
       animation: clockin-out 480ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }

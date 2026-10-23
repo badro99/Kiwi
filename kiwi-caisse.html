@@ -147,18 +147,23 @@
       try { on = document.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:till') === '1'; } catch (_) { on = false; }
       if (!on) return;
       document.documentElement.setAttribute('data-skin-2027', 'till');
+      /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,
+         two frames after DOMContentLoaded (every kit script is deferred, so it has run by then), at most 8 s. */
+      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{visibility:hidden;opacity:0}'; d.head.appendChild(s);
+        var go = function () { var c = d.getElementById('k-cloak'); if (c) c.remove(); };
+        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 8000); })(document);
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
-        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=7">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=40">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=43">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=6") +
-        js("assets/kit/strings/till.en.js?v=6") +
-        js("assets/kit/strings/till.ar.js?v=6") +
+        js("assets/kit/strings/till.fr.js?v=8") +
+        js("assets/kit/strings/till.en.js?v=8") +
+        js("assets/kit/strings/till.ar.js?v=8") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -209,7 +214,7 @@
        are inherited from here. -->
   <link rel="stylesheet" href="assets/tokens.css?v=2053" />
 
-  <link rel="stylesheet" href="assets/caisse-shell.css?v=2" />
+  <link rel="stylesheet" href="assets/caisse-shell.css?v=3" />
   <link rel="stylesheet" href="assets/caisse-skin.css?v=3" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
@@ -354,7 +359,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=16" defer></script>
   <script src="assets/clients-store.js?v=17" defer></script>
-  <script src="assets/clients-book.js?v=32" defer></script>
+  <script src="assets/clients-book.js?v=33" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -1954,6 +1959,6 @@
   <script src="assets/caisse-accounting.js?v=5"></script>
   <script src="assets/caisse-floor.js?v=2"></script>
   <script src="assets/caisse-kitchen.js?v=1"></script>
-  <script src="assets/caisse-app.js?v=13"></script>
+  <script src="assets/caisse-app.js?v=14"></script>
 </body>
 </html>

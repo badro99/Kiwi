@@ -127,6 +127,7 @@
   "till.nav.takeaway": "Takeaway",
   "till.nav.waiting": "Waiting",
   "till.nav.kitchen": "Kitchen",
+  "till.nav.clients": "Customers",
   "till.nav.more": "More",
   "till.nav.less": "Less",
   "till.more.shift": "Shift",

@@ -86,19 +86,29 @@ const page = read('OrderPro.html');
 const head = page.match(/<script>\s*\(function \(d, q\) \{[\s\S]*?<\/script>/);
 ok(!!head && page.indexOf(head[0]) < page.indexOf('<title>'), 'the check is in the head');
 function boot({ search = '', stored = null, supports = true, mark = null } = {}) {
-  const went = [], wrote = [], attrs = {};
+  const went = [], wrote = [], attrs = {}, styles = [];
   const ctx = {
     location: { search, replace: (u) => went.push(u) },
     localStorage: { getItem: (k) => (k === 'kiwiSkin2027:ordering' ? stored : null) },
     CSS: { supports: () => supports },
-    document: { documentElement: { getAttribute: (k) => (k === 'data-store-skin' ? mark : null), setAttribute: (k, v) => { attrs[k] = v; } }, write: (h) => wrote.push(h) },
+    document: {
+      documentElement: { getAttribute: (k) => (k === 'data-store-skin' ? mark : null), setAttribute: (k, v) => { attrs[k] = v; } },
+      write: (h) => wrote.push(h),
+      // the no-flash cloak (skin-cloak-test holds its timing)
+      head: { appendChild: (el) => styles.push(el) },
+      createElement: () => ({}),
+      getElementById: () => null,
+      addEventListener: () => {},
+    },
+    requestAnimationFrame: () => {},
+    setTimeout: () => {},
   };
   ctx.window = ctx;
   vm.runInNewContext(head[0].replace(/^<script>|<\/script>$/g, ''), ctx);
-  return { went, wrote: wrote.join(''), attrs };
+  return { went, wrote: wrote.join(''), attrs, cloak: styles.some((el) => el.id === 'k-cloak') };
 }
 let b = boot({ search: '?s=x&t=2' });
-ok(!b.went.length && !b.wrote && !Object.keys(b.attrs).length, 'flag off: nothing happens, even in an old browser');
+ok(!b.went.length && !b.wrote && !Object.keys(b.attrs).length && !b.cloak, 'flag off: nothing happens, even in an old browser');
 b = boot({ search: '?s=x&t=2', supports: false });
 ok(!b.went.length, 'flag off, old browser: the shipped page, as today');
 b = boot({ search: '?s=x&t=2&skin=2027', supports: false });
@@ -107,6 +117,7 @@ b = boot({ search: '?s=x', stored: '1' });
 ok(b.attrs['data-skin-2027'] === 'ordering' && b.attrs['data-theme'] === 'light'
   && /assets\/kit\/tokens-2027\.css\?v=\d+/.test(b.wrote) && /assets\/kit\/ordering\.css\?v=\d+/.test(b.wrote) && !/<script/.test(b.wrote),
   'flag on: the kit’s tokens and the skin’s sheet, no script');
+ok(b.cloak, 'flag on: the page stays blank until the kit has drawn, no flash of the shipped screen');
 b = boot({ search: '?s=x&t=2', mark: '2027' });
 ok(b.attrs['data-skin-2027'] === 'ordering' && /assets\/kit\/ordering\.css\?v=\d+/.test(b.wrote), 'a store the operator switched on: the skin, with no flag in the browser');
 b = boot({ search: '?s=x&t=2', mark: '2027', supports: false });

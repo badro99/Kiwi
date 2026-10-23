@@ -127,6 +127,7 @@
   "till.nav.takeaway": "À emporter",
   "till.nav.waiting": "En attente",
   "till.nav.kitchen": "Cuisine",
+  "till.nav.clients": "Clients",
   "till.nav.more": "Plus",
   "till.nav.less": "Moins",
   "till.more.shift": "Service",

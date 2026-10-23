@@ -127,6 +127,7 @@
   "till.nav.takeaway": "للأخذ",
   "till.nav.waiting": "قيد الانتظار",
   "till.nav.kitchen": "المطبخ",
+  "till.nav.clients": "الزبناء",
   "till.nav.more": "المزيد",
   "till.nav.less": "أقل",
   "till.more.shift": "الوردية",
