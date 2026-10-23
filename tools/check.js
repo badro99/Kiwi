@@ -92,7 +92,7 @@ const list = (dir, ext) => fs.readdirSync(dir)
   .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
-const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/pos-maison', 'assets/pos-boutique'].map(dir => list(path.join(ROOT, dir), '.js')));
+const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/pos-maison', 'assets/pos-boutique', 'assets/team', 'assets/printer', 'assets/serveur', 'assets/stock', 'assets/pages-pro'].map(dir => list(path.join(ROOT, dir), '.js')));
 const CSS_FILES = list(path.join(ROOT, 'assets'), '.css');
 const HTML_FILES = list(ROOT, '.html');
 
