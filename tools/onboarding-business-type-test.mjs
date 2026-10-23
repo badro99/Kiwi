@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OB = readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
+const DATA = readFileSync(path.join(ROOT, 'assets/onboarding-data.js'), 'utf8');
 
 function grab(start, open = '{') {
   const i = OB.indexOf(start);
@@ -98,6 +99,6 @@ check(/nextBtn\.disabled = false/.test(click) && /hint\.hidden = true/.test(clic
 check(/S\.typeId = tc\.dataset\.type;/.test(click), 'et mémorise le choix');
 
 /* Le brouillon ne réinjecte pas un défaut. */
-check(/S\.typeId = knownType \? d\.typeId : S\.typeId;/.test(OB), 'un brouillon sans type valide laisse le choix vide');
+check(/S\.typeId = knownType \? d\.typeId : S\.typeId;/.test(DATA), 'un brouillon sans type valide laisse le choix vide');
 
 console.log(`\n✓ ${checks} checks`);

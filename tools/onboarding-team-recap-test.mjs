@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OB = readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
+const DATA = readFileSync(path.join(ROOT, 'assets/onboarding-data.js'), 'utf8');
 
 function grab(start) {
   const i = OB.indexOf(start);
@@ -78,9 +79,9 @@ const button = (skip) => ({ dataset: { go: 'next' }, hasAttribute: (a) => skip &
   ctx.noteTeamAnswer(button(true));
   check(ctx.S.teamGiven === true, '« Passer » on another step leaves the team answer alone');
 }
-check(/staffCount: S\.teamGiven \? S\.teamSize : 0,/.test(OB), 'the business is created without a staff count nobody gave');
-check(/if \(S\.teamGiven\) LS\.set\('kiwiTeamSize', String\(S\.teamSize\)\); else LS\.del\('kiwiTeamSize'\);/.test(OB), 'kiwiTeamSize is only kept when it was given');
-check(/teamGiven: !!S\.teamGiven/.test(OB) && /S\.teamGiven = !!d\.teamGiven;/.test(OB), 'a resumed draft remembers whether the team was given');
+check(/staffCount: S\.teamGiven \? S\.teamSize : 0,/.test(DATA), 'the business is created without a staff count nobody gave');
+check(/if \(S\.teamGiven\) storage\.set\('kiwiTeamSize', String\(S\.teamSize\)\); else storage\.del\('kiwiTeamSize'\);/.test(DATA), 'kiwiTeamSize is only kept when it was given');
+check(/teamGiven: !!S\.teamGiven/.test(DATA) && /S\.teamGiven = !!d\.teamGiven;/.test(DATA), 'a resumed draft remembers whether the team was given');
 check(!/aria-label="(moins|plus)"/.test(OB), 'the stepper buttons are named in the screen\'s language');
 
 console.log(`\nonboarding-team-recap: ${checks} passed, 0 failed`);

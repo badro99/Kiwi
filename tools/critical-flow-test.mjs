@@ -59,7 +59,7 @@ ok('team composer uses a real transport or labels copy-only behavior honestly',
   (caisse.includes("fetch('/api/team/live'") && caisse.includes("if (!response.ok) throw"))
   || (caisse.includes('Copier le message') && !caisse.includes('Message envoyé à ${target}')));
 
-ok('onboarding draft never persists PIN codes', onboarding.includes("name: String((p && p.name) || '').slice(0, 20), code: ''"));
+ok('onboarding draft never persists PIN codes', read('assets/onboarding-data.js').includes("name: String((p && p.name) || '').slice(0, 20), code: ''"));
 ok('onboarding rejects missing owner and malformed goals', onboarding.includes("S.step === 1 || S.step === 7") && onboarding.includes('function parsedDailyGoal()'));
 ok('onboarding success has no confetti', !onboarding.includes('Kiwi.confetti'));
 ok('zero-sale payment mix always has a finite center total', ranges.includes('return { rows: [], total: 0') && ranges.includes('Number.isFinite(Number(rawCenterMad))'));

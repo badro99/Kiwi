@@ -51,14 +51,14 @@ ok(!!id && saved().length === 1 && saved()[0].id === id && saved()[0].location =
   'one real venue persisted after ACK');
 
 const merchantConfig = read('assets/merchant-config.js');
-const onboarding = read('assets/onboarding.js');
+const onboarding = read('assets/onboarding-data.js');
 const server = read('functions/api/config.js');
 const me = read('functions/api/me.js');
 const dates = read('assets/dateRange.js');
 const identity = read('assets/identity.js');
 ok(!/payload\.name = name; freshAdd\(slug\)/.test(merchantConfig),
   'refused creation does not queue a fresh ghost for later sync');
-ok(/await KiwiVenue\.createVenue\(/.test(onboarding)
+ok(/await venueApi\.createVenue\(/.test(onboarding)
   && !/KiwiConfig\.syncPins\(validPins\)/.test(onboarding),
   'onboarding awaits creation and does not race an old-store PIN write');
 ok(/account_id = \? AND \(city IS NULL OR TRIM\(city\) = ''\)/.test(server)

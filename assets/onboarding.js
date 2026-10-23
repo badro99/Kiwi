@@ -101,47 +101,41 @@
     goals: [], dailyGoal: '',
     pins: [ { role: 'owner', name: '', code: '' }, { role: 'manager', name: '', code: '' }, { role: 'staff', name: '', code: '' }, { role: 'staff', name: '', code: '' } ],
   };
-  const DRAFT_KEY = 'kiwiOnboardingDraft:v1';
+  let dataLoad = null, draft = null;
+  function loadData() {
+    if (window.KiwiOnboardingData) return Promise.resolve(window.KiwiOnboardingData);
+    if (dataLoad) return dataLoad;
+    dataLoad = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/assets/onboarding-data.js?v=1';
+      const failed = () => { dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
+      script.onload = () => window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed();
+      script.onerror = failed;
+      document.head.appendChild(script);
+    });
+    return dataLoad;
+  }
+  function dataFailure() {
+    const message = tr({ fr: 'Impossible de charger la configuration. Réessayez.', en: 'Could not load setup. Try again.', ar: 'تعذر تحميل الإعداد. أعد المحاولة.' });
+    try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(message, { type: 'warn', force: true }); } catch (_) {}
+  }
+  const warmData = () => { loadData().catch(() => {}); };
+  if (window.requestIdleCallback) window.requestIdleCallback(warmData);
+  else setTimeout(warmData, 1200);
   function saveDraft() {
-    /* Access codes are credentials. Never put them in persistent browser
-       storage merely to make the wizard resumable. Names/roles may resume;
-       every PIN must be entered again after a reload. */
-    const safe = {
-      step: Math.max(0, Math.min(6, Number(S.step) || 0)),
-      ownerName: S.ownerName, bizName: S.bizName, typeId: S.typeId,
-      venueCount: S.venueCount, city: S.city, teamSize: S.teamSize, teamGiven: !!S.teamGiven,
-      goals: Array.isArray(S.goals) ? S.goals.slice(0, GOALS.length) : [],
-      dailyGoal: S.dailyGoal,
-      pins: (Array.isArray(S.pins) ? S.pins : []).slice(0, 20).map((p) => ({
-        role: p && p.role === 'manager' ? 'manager' : (p && p.role === 'owner' ? 'owner' : 'staff'),
-        name: String((p && p.name) || '').slice(0, 20), code: '',
-      })),
-    };
-    /* Rend vrai si le brouillon a pris sur cet appareil. Quota plein ou
-       stockage refusé : avant, l'échec était avalé et le commerçant avançait
-       en croyant pouvoir reprendre plus tard, puis perdait tout au
-       rechargement. L'assistant continue (rien n'est bloqué), mais il le dit
-       sous la carte tant qu'une écriture n'a pas repris. */
-    const ok = LS.set(DRAFT_KEY, JSON.stringify(safe)) === true;
-    const was = draftKept;
-    draftKept = ok;
+    const was = draft.saved();
+    const ok = draft.save(S);
     if (!(ok && was)) {
-      try { window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'onboarding', key: DRAFT_KEY, durable: ok } })); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'onboarding', key: 'kiwiOnboardingDraft:v1', durable: ok } })); } catch (_) {}
     }
     paintDraftNote();
     return ok;
   }
-  let draftKept = true;
-  const DRAFT_NOTE = {
-    fr: 'Brouillon non enregistré sur cet appareil : le stockage du navigateur est plein ou bloqué. Terminez la configuration sans recharger la page.',
-    en: 'Draft not saved on this device: browser storage is full or blocked. Finish setup without reloading the page.',
-    ar: 'لم تُحفظ المسودة على هذا الجهاز: تخزين المتصفح ممتلئ أو محظور. أكمل الإعداد دون إعادة تحميل الصفحة.',
-  };
   function paintDraftNote() {
     const card = root && root.querySelector && root.querySelector('.kob-card');
     if (!card) return;
     let note = card.querySelector('[data-draft-note]');
-    if (draftKept) { if (note) note.remove(); return; }
+    if (draft.saved()) { if (note) note.remove(); return; }
     if (!note) {
       note = document.createElement('p');
       note.className = 'kob-err';
@@ -149,175 +143,13 @@
       note.setAttribute('role', 'status');
       card.insertBefore(note, card.querySelector('.kob-foot'));
     }
-    note.textContent = tr(DRAFT_NOTE);
+    note.textContent = draft.warning(lang());
   }
-  function restoreDraft() {
-    let d = null;
-    try { d = JSON.parse(LS.get(DRAFT_KEY) || 'null'); } catch (_) {}
-    if (!d || typeof d !== 'object') return;
-    const knownType = TYPES.some((t) => t.id === d.typeId);
-    S.step = Math.max(0, Math.min(6, Number(d.step) || 0));
-    S.ownerName = String(d.ownerName || '').slice(0, 40);
-    S.bizName = String(d.bizName || '').slice(0, 60);
-    S.typeId = knownType ? d.typeId : S.typeId;
-    S.venueCount = Math.max(1, Math.min(60, Number(d.venueCount) || 1));
-    S.city = String(d.city || '').slice(0, 30);
-    S.teamSize = Math.max(1, Math.min(200, Number(d.teamSize) || 1));
-    S.teamGiven = !!d.teamGiven;
-    S.goals = Array.isArray(d.goals) ? d.goals.filter((g) => GOALS.some((x) => x.id === g)).slice(0, GOALS.length) : [];
-    S.dailyGoal = String(d.dailyGoal || '').slice(0, 24);
-    if (Array.isArray(d.pins) && d.pins.length) {
-      S.pins = d.pins.slice(0, 20).map((p, i) => ({
-        role: i === 0 ? 'owner' : (p && p.role === 'manager' ? 'manager' : 'staff'),
-        name: String((p && p.name) || '').slice(0, 20), code: '',
-      }));
-    }
-  }
-  restoreDraft();
   const TOTAL = 6; // counted steps (welcome + finish are bookends)
-  let root = null, injected = false, opened = false;
+  let root = null, opened = false;
   // True once the ACCOUNT answered step 1 for us — see prefillFromAccount().
   let namePrefilled = false;
 
-  /* ── Styles (scoped .kob-) ───────────────────────────────────────────── */
-  function inject() {
-    if (injected) return; injected = true;
-    const css = `
-    .kob-root{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;
-      padding:24px;color:var(--paper);opacity:0;transition:opacity .5s cubic-bezier(.32,.72,0,1);
-      background:radial-gradient(80% 60% at 28% 16%,rgba(125,242,176,.12),transparent 60%),
-                 radial-gradient(70% 55% at 78% 88%,rgba(11,110,79,.24),transparent 62%),
-                 linear-gradient(135deg,#0A1612,#0A0F0D);}
-    .kob-root.kob-in{opacity:1;}
-    .kob-root.kob-out{opacity:0;transform:scale(1.02);pointer-events:none;}
-    .kob-card{width:100%;max-width:560px;max-height:calc(100vh - 48px);display:flex;flex-direction:column;
-      background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:26px;
-      padding:30px 32px 26px;box-shadow:0 40px 90px -30px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);}
-    /* Liquid Glass · real refraction when assets/liquid-glass.js is present and enabled.
-       Same fill/blur (legibility preserved); only adds the #kiwi-lg displacement. Inert otherwise. */
-    @supports ((-webkit-backdrop-filter:url("#k")) or (backdrop-filter:url("#k"))){
-      html[data-kiwi-glass="on"] .kob-card{-webkit-backdrop-filter:url(#kiwi-lg) blur(18px) saturate(1.1);backdrop-filter:url(#kiwi-lg) blur(18px) saturate(1.1);}
-    }
-    .kob-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;min-height:24px;}
-    .kob-brand{font-family:var(--sans);font-weight:600;font-size:19px;letter-spacing:-.03em;display:inline-flex;align-items:center;}
-    .kob-brand i{width:6px;height:6px;border-radius:50%;background:var(--mint);display:inline-block;margin-left:3px;transform:translateY(1px);}
-    /* The real wordmark only rides in under the Vexel skin, which swaps the
-       legacy text mark for it (design-vexel.css § 13). Hidden by default so the
-       pre-Vexel presentation is untouched. */
-    .kob-brand .vx-entry-logo{display:none;}
-    .kob-config-label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(233,239,233,.4);}
-    .kob-rail{display:flex;gap:6px;align-items:center;}
-    .kob-rail b{width:20px;height:4px;border-radius:2px;background:rgba(255,255,255,.16);transition:background .3s,width .3s;display:block;}
-    .kob-rail b.on{background:var(--mint);width:30px;}
-    .kob-rail b.done{background:rgba(125,242,176,.55);}
-    .kob-body{overflow-y:auto;overflow-x:hidden;flex:1;margin:-4px -6px 0;padding:4px 6px 2px;}
-    .kob-body::-webkit-scrollbar{width:7px;}.kob-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:6px;}
-    .kob-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);margin:0 0 12px;}
-    .kob-h{font-family:var(--serif);font-weight:400;font-size:clamp(30px,5vw,42px);line-height:1.04;letter-spacing:-.01em;margin:0 0 10px;color:#fff;}
-    .kob-h .k-sans{font-family:var(--sans);font-style:normal;font-weight:600;letter-spacing:-.02em;}
-    .kob-sub{font-size:14.5px;line-height:1.55;color:rgba(233,239,233,.72);margin:0 0 22px;max-width:44ch;}
-    .kob-anim{animation:kob-rise .44s cubic-bezier(.32,.72,0,1) both;}
-    @keyframes kob-rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
-    .kob-field{width:100%;box-sizing:border-box;font-family:var(--sans);font-size:16px;color:#fff;
-      background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.14);border-radius:14px;padding:15px 16px;outline:none;
-      transition:border-color .16s,background .16s;}
-    .kob-field::placeholder{color:rgba(233,239,233,.4);}
-    .kob-field:focus{border-color:var(--mint);background:rgba(255,255,255,.09);}
-    .kob-lbl{display:block;font-size:12.5px;font-weight:500;color:rgba(233,239,233,.62);margin:16px 0 7px;letter-spacing:.005em;}
-    .kob-lbl .opt{color:rgba(233,239,233,.4);font-weight:400;}
-    .kob-types{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
-    .kob-type{display:flex;flex-direction:column;align-items:center;gap:8px;padding:15px 8px;cursor:pointer;text-align:center;
-      background:rgba(255,255,255,.045);border:1.5px solid rgba(255,255,255,.1);border-radius:15px;
-      font-family:var(--sans);font-size:12px;font-weight:500;color:rgba(233,239,233,.82);transition:border-color .14s,background .14s,transform .14s;}
-    .kob-type svg{width:24px;height:24px;color:rgba(233,239,233,.7);transition:color .14s;}
-    .kob-type:hover{border-color:rgba(255,255,255,.28);transform:translateY(-1px);}
-    .kob-type.sel{border-color:var(--mint);background:rgba(125,242,176,.13);color:#fff;}
-    .kob-type.sel svg{color:var(--mint);}
-    .kob-type.hide{display:none;}
-    .kob-more{margin-top:10px;width:100%;padding:11px;cursor:pointer;background:transparent;border:1.5px dashed rgba(255,255,255,.2);
-      border-radius:13px;font-family:var(--sans);font-size:13px;font-weight:500;color:rgba(233,239,233,.72);transition:border-color .14s,color .14s;}
-    .kob-more:hover{border-color:var(--mint);color:var(--mint);}
-    .kob-step{display:flex;align-items:center;gap:14px;justify-content:center;margin:6px 0 4px;}
-    .kob-step button{width:52px;height:52px;border-radius:50%;cursor:pointer;font-size:26px;line-height:1;color:#fff;
-      background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.16);transition:background .14s,border-color .14s,transform .1s;
-      display:flex;align-items:center;justify-content:center;}
-    .kob-step button:hover{background:rgba(255,255,255,.13);border-color:var(--mint);}
-    .kob-step button:active{transform:scale(.92);}
-    .kob-step .kob-num{min-width:96px;text-align:center;font-family:var(--sans);font-weight:600;font-size:46px;letter-spacing:-.03em;font-feature-settings:'tnum' 1;color:#fff;}
-    .kob-step .kob-num small{display:block;font-size:12px;font-weight:500;letter-spacing:.02em;color:rgba(233,239,233,.5);margin-top:2px;}
-    .kob-chips{display:flex;flex-wrap:wrap;gap:9px;}
-    .kob-chip{display:inline-flex;align-items:center;gap:8px;padding:11px 15px 11px 13px;cursor:pointer;
-      background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);border-radius:13px;
-      font-family:var(--sans);font-size:13.5px;font-weight:500;color:rgba(233,239,233,.85);transition:border-color .14s,background .14s;}
-    .kob-chip svg{width:17px;height:17px;color:rgba(233,239,233,.6);transition:color .14s;}
-    .kob-chip:hover{border-color:rgba(255,255,255,.3);}
-    .kob-chip.sel{border-color:var(--mint);background:rgba(125,242,176,.13);color:#fff;}
-    .kob-chip.sel svg{color:var(--mint);}
-    .kob-chip .tick{width:16px;height:16px;opacity:0;transition:opacity .14s;}
-    .kob-chip.sel .tick{opacity:1;}
-    .kob-access{display:flex;flex-direction:column;gap:11px;}
-    .kob-acc{background:rgba(255,255,255,.045);border:1.5px solid rgba(255,255,255,.1);border-radius:16px;padding:14px 15px;transition:border-color .16s,background .16s;}
-    .kob-acc.filled{border-color:rgba(125,242,176,.42);background:rgba(125,242,176,.05);}
-    .kob-acc-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;}
-    .kob-acc-ttl{font-family:var(--sans);font-weight:600;font-size:14.5px;color:#fff;letter-spacing:-.01em;}
-    .kob-acc-perm{font-size:11.5px;color:rgba(233,239,233,.52);line-height:1.4;margin-top:2px;}
-    .kob-acc-tag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:99px;white-space:nowrap;
-      background:rgba(125,242,176,.14);color:var(--mint);}
-    .kob-acc-tag.req{background:rgba(217,154,43,.16);color:#f0c46a;}
-    .kob-acc-row{display:flex;gap:9px;}
-    .kob-acc-row .kob-field{padding:11px 13px;font-size:14px;}
-    .kob-name{flex:1.3;}
-    .kob-code{flex:1;font-family:var(--mono);letter-spacing:.42em;text-align:center;font-size:17px;padding-right:8px;}
-    .kob-code::placeholder{letter-spacing:.28em;}
-    .kob-role{flex:1;padding:10px 34px 10px 13px;font-size:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e9efe9' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
-    .kob-role option{color:#0A0F0D;}
-    .kob-acc-rm{background:none;border:0;cursor:pointer;color:rgba(233,239,233,.5);font-size:24px;line-height:1;width:34px;height:34px;border-radius:9px;flex:none;margin-left:8px;transition:color .14s,background .14s;}
-    .kob-acc-rm:hover{color:#ffb3a3;background:rgba(255,255,255,.07);}
-    .kob-acc-add{margin-top:11px;width:100%;padding:12px;cursor:pointer;background:transparent;border:1.5px dashed rgba(255,255,255,.2);
-      border-radius:13px;font-family:var(--sans);font-size:13.5px;font-weight:500;color:rgba(233,239,233,.72);transition:border-color .14s,color .14s;}
-    .kob-acc-add:hover{border-color:var(--mint);color:var(--mint);}
-    .kob-foot{display:flex;gap:10px;align-items:center;margin-top:20px;flex-wrap:wrap;}
-    .kob-btn{font-family:var(--sans);font-weight:600;font-size:15px;cursor:pointer;border:0;border-radius:14px;padding:15px 22px;
-      transition:transform .12s,box-shadow .2s,background .16s;display:inline-flex;align-items:center;justify-content:center;gap:7px;}
-    .kob-btn.primary{flex:1;color:#06231a;background:linear-gradient(135deg,#9dfbc4,var(--mint));box-shadow:0 14px 30px -12px rgba(125,242,176,.6);}
-    .kob-btn.primary:hover{transform:translateY(-1px);box-shadow:0 18px 36px -12px rgba(125,242,176,.7);}
-    .kob-btn.primary:active{transform:translateY(0);}
-    .kob-btn.primary:disabled,body.design-vexel .kob-btn.primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;filter:grayscale(.3);}
-    .kob-btn.ghost{background:rgba(255,255,255,.06);color:rgba(233,239,233,.82);border:1.5px solid rgba(255,255,255,.14);}
-    .kob-btn.ghost:hover{background:rgba(255,255,255,.11);color:#fff;}
-    .kob-back{background:none;border:0;cursor:pointer;color:rgba(233,239,233,.55);font-family:var(--sans);font-size:13.5px;font-weight:500;
-      padding:8px 4px;display:inline-flex;align-items:center;gap:5px;transition:color .14s;}
-    .kob-back:hover{color:#fff;}
-    .kob-skip{background:none;border:0;cursor:pointer;color:rgba(233,239,233,.5);font-family:var(--sans);font-size:13px;font-weight:500;text-decoration:underline;text-underline-offset:3px;padding:8px;transition:color .14s;}
-    .kob-skip:hover{color:rgba(233,239,233,.85);}
-    .kob-err{color:#ffb3a3;font-size:12.5px;margin:9px 2px 0;min-height:1px;}
-    .kob-explore{text-align:center;margin-top:16px;}
-    a.kob-skip{display:inline-block;}
-    .kob-explore .kob-sep{color:rgba(233,239,233,.28);font-size:12px;}
-    .kob-recap{display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;margin:2px 0 6px;}
-    .kob-recap .r{display:flex;justify-content:space-between;gap:14px;padding:12px 15px;font-size:13.5px;}
-    .kob-recap .r+.r{border-top:1px solid rgba(255,255,255,.07);}
-    .kob-recap .r span{color:rgba(233,239,233,.55);}
-    .kob-recap .r b{color:#fff;font-weight:600;text-align:right;}
-    .kob-hero-mark{width:60px;height:60px;border-radius:18px;background:linear-gradient(140deg,var(--atlas),var(--riad));
-      display:flex;align-items:center;justify-content:center;margin:0 0 22px;box-shadow:0 12px 30px -10px rgba(11,110,79,.8);}
-    .kob-hero-mark svg{width:32px;height:32px;}
-    .kob-celebrate{text-align:center;padding:12px 0;}
-    .kob-celebrate .kob-hero-mark{margin:0 auto 22px;animation:kob-pop .5s cubic-bezier(0.34, 1.45, 0.5, 1) both;}
-    @keyframes kob-pop{from{opacity:0;transform:scale(.4);}to{opacity:1;transform:none;}}
-    @media (max-width:560px){
-      .kob-card{padding:24px 20px 20px;border-radius:22px;}
-      .kob-types{grid-template-columns:repeat(2,1fr);}
-      .kob-acc-row{flex-direction:column;}
-      .kob-h{font-size:30px;}
-    }
-    html[dir="rtl"] .kob-sub{margin-left:auto;}
-    @media (prefers-reduced-motion:reduce){.kob-anim,.kob-celebrate .kob-hero-mark{animation:none;}.kob-root{transition:none;}}
-    `;
-    const s = document.createElement('style'); s.id = 'kob-style'; s.textContent = css;
-    document.head.appendChild(s);
-  }
 
   /* ── Rail ────────────────────────────────────────────────────────────── */
   // Same two-mark structure the lock screen and the account gate use: the
@@ -674,24 +506,14 @@
     if (!kit) capture();
     const finishErr = kit ? kitProblem() : validate();
     if (finishErr) { if (kit) return { error: finishErr }; flashErr(finishErr); return; }
-    const t = TYPES.find((x) => x.id === S.typeId) || TYPES[0];
-    const validPins = S.pins.filter((p) => /^\d{4}$/.test(p.code)).map((p) => ({
-      role: p.role, code: p.code,
-      name: p.name || (p.role === 'owner' ? (S.ownerName || tr({ fr: 'Propriétaire', en: 'Owner', ar: 'المالك' })) : ''),
-    }));
     finishing = true;
     const finishButton = root ? root.querySelector('[data-finish]') : null;
     if (finishButton) finishButton.disabled = true;
     let vid = null;
     try {
-      vid = window.KiwiVenue && KiwiVenue.createVenue && await KiwiVenue.createVenue({
-        type: t.base, subtype: t.id,
-        name: S.bizName.trim() || tr({ fr: 'Mon activité', en: 'My business', ar: 'نشاطي' }),
-        location: S.city.trim(), pins: validPins,
-        goal: parsedDailyGoal() || 0,
-        staffCount: S.teamGiven ? S.teamSize : 0,
-        profile: { goals: S.goals, venueCount: S.venueCount, owner: S.ownerName.trim() },
-      });
+      const data = await loadData();
+      vid = await data.submit({ S, t: TYPES.find((x) => x.id === S.typeId) || TYPES[0],
+        goal: parsedDailyGoal(), tr, storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });
     } catch (_) {}
     if (!vid) {
       finishing = false;
@@ -701,44 +523,13 @@
       flashErr(failed);
       return;
     }
-    LS.set('kiwiOwnerName', S.ownerName.trim());
-    LS.set('kiwiBizName', S.bizName.trim());
-    LS.set('kiwiBizType', S.typeId);
-    LS.set('kiwiCity', S.city.trim());
-    LS.set('kiwiVenueCount', String(S.venueCount));
-    if (S.teamGiven) LS.set('kiwiTeamSize', String(S.teamSize)); else LS.del('kiwiTeamSize');
-    LS.set('kiwiGoals', JSON.stringify(S.goals));
-    /* Les codes sont partis avec la création confirmée, vers le serveur : c'est
-       lui qui les compare. Ce navigateur n'en garde AUCUN (kiwiPins, en clair, a
-       été retiré) ; le premier déverrouillage en ligne écrit la ligne salée dont
-       la porte a besoin hors ligne (assets/dashboard-pin-vault.js). */
-    LS.del('kiwiPins');
-    // PINs and type were sent with the confirmed creation to the NEW slug.
-    LS.set('kiwiRole', 'owner');
-    LS.set('kiwiOnboarded', '1');
-    LS.del('kiwiSkipOnboard');
-
-    try { if (KiwiVenue.setVenue) KiwiVenue.setVenue(vid); } catch (_) {}
-
-    /* Seed the entered staff into the REAL per-venue roster (team.js) so they
-     * persist and show on the Équipe page. */
-    try {
-      const teamPeople = S.pins.map((p) => ({
-        role: p.role,
-        code: /^\d{4}$/.test(p.code) ? p.code : '',
-        name: (p.name || '').trim() || (p.role === 'owner' ? (S.ownerName || '').trim() : ''),
-      })).filter((p) => p.name);
-      const venue = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
-      if (venue && window.KiwiTeam && KiwiTeam.importMembers) KiwiTeam.importMembers(venue, teamPeople);
-    } catch (_) {}
-
     try {
       window.__kiwiRole = 'owner';
       document.body.classList.remove('role-manager', 'role-staff');
       document.body.classList.add('role-owner');
     } catch (_) {}
 
-    LS.del(DRAFT_KEY);
+    if (draft) draft.clear();
     if (kit) return { vid: vid };
     celebrate(vid);
   }
@@ -810,14 +601,13 @@
   /* ── Explore the demo instead (bail to the PIN lock) ─────────────────── */
   function exploreDemo() {
     LS.set('kiwiSkipOnboard', '1');
-    LS.del(DRAFT_KEY);
+    if (draft) draft.clear();
     close();
     try { if (window.__kiwiLock && window.__kiwiLock.show) window.__kiwiLock.show(); } catch (_) {}
   }
 
   /* ── Overlay lifecycle ───────────────────────────────────────────────── */
   function build() {
-    inject();
     root = document.createElement('div');
     root.className = 'kob-root';
     root.setAttribute('role', 'dialog');
@@ -916,7 +706,14 @@
     });
   }
 
-  function open(opts) {
+  async function open(opts) {
+    try {
+      const data = await loadData();
+      if (!draft) {
+        draft = data.createDraft(LS, TYPES.map((t) => t.id), GOALS.map((g) => g.id));
+        draft.load(S);
+      }
+    } catch (_) { dataFailure(); return; }
     opts = opts || {};
     if (opened) return;
     opened = true;
@@ -941,7 +738,8 @@
 
   function isComplete() { return LS.get('kiwiOnboarded') === '1'; }
   function reset() {
-    ['kiwiOnboarded', 'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiVenueCount', 'kiwiTeamSize', 'kiwiGoals', 'kiwiPins', 'kiwiSkipOnboard', DRAFT_KEY].forEach(LS.del);
+    ['kiwiOnboarded', 'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiVenueCount', 'kiwiTeamSize', 'kiwiGoals', 'kiwiPins', 'kiwiSkipOnboard'].forEach(LS.del);
+    LS.del('kiwiOnboardingDraft:v1');
   }
 
   /* ── L'inscription a déjà répondu à deux de ces questions ──────────────
@@ -1107,8 +905,8 @@
     dailyGoal: () => parsedDailyGoal(),
     codeProblem: kitCodeProblem,
     save: saveDraft,              // vrai si le brouillon a pris sur cet appareil
-    draftSaved: () => draftKept,
-    draftWarning: () => (draftKept ? '' : tr(DRAFT_NOTE)),
+    draftSaved: () => !draft || draft.saved(),
+    draftWarning: () => draft ? draft.warning(lang()) : '',
     finish: () => finish({ kit: true }),
     enter: () => enterApp(),
     done: () => { opened = false; },

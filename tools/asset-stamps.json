@@ -959,9 +959,17 @@
     "v": "10",
     "sha": "61f5515f64d1d79a"
   },
+  "assets/onboarding-data.js": {
+    "v": "1",
+    "sha": "6716214104228a85"
+  },
+  "assets/onboarding.css": {
+    "v": "1",
+    "sha": "164e9d8c308ea77e"
+  },
   "assets/onboarding.js": {
-    "v": "2096",
-    "sha": "600091b360932911"
+    "v": "2097",
+    "sha": "8400c05916fd8a52"
   },
   "assets/operations-ui.js": {
     "v": "24",

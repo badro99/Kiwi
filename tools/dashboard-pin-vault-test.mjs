@@ -65,13 +65,13 @@ for (const rel of shipped) {
 ok(offenders.length === 0, 'aucun fichier livré ne lit ni n\'écrit kiwiPins (seulement removeItem / del)' + (offenders.length ? ' : ' + offenders.join(' ; ') : ''));
 
 /* L'assistant d'installation ne réécrit jamais le clair. */
-const onboarding = stripComments(read('assets/onboarding.js'));
-ok(!/LS\.set\(\s*['"]kiwiPins['"]/.test(onboarding) && /LS\.del\(\s*['"]kiwiPins['"]/.test(onboarding),
+const onboarding = stripComments(read('assets/onboarding.js') + read('assets/onboarding-data.js'));
+ok(!/(?:LS|storage)\.set\(\s*['"]kiwiPins['"]/.test(onboarding) && /(?:LS|storage)\.del\(\s*['"]kiwiPins['"]/.test(onboarding),
   'onboarding.js n\'écrit plus kiwiPins et balaie ce qui en reste');
 ok(/'kiwiPins'/.test(read('assets/tenant-purge.js')), 'la purge de locataire efface encore kiwiPins (reliquats d\'avant)');
 
 /* Le brouillon de l'assistant, lui, a toujours vidé les codes. */
-ok(/name: String\(\(p && p\.name\) \|\| ''\)\.slice\(0, 20\), code: ''/.test(read('assets/onboarding.js')),
+ok(/name: String\(\(p && p\.name\) \|\| ''\)\.slice\(0, 20\), code: ''/.test(read('assets/onboarding-data.js')),
   'le brouillon de l\'assistant n\'enregistre aucun code');
 
 /* La porte du dashboard. */

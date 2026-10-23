@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OB = readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
+const DATA = readFileSync(path.join(ROOT, 'assets/onboarding-data.js'), 'utf8');
+const dataApi = (await import('../assets/onboarding-data.js')).default;
 const ENT = readFileSync(path.join(ROOT, 'assets/entitlements-v2.js'), 'utf8');
 
 function grab(src, start) {
@@ -112,15 +114,14 @@ function draftRun(fails, lang) {
   const store = {};
   const ctx = vm.createContext({
     S: { step: 2, ownerName: 'Salma', bizName: 'Atlas', typeId: 'boutique', venueCount: 1, city: '', teamSize: 1, teamGiven: false, goals: [], dailyGoal: '', pins: [owner()] },
-    GOALS: [], LS, DRAFT_KEY: 'kiwiOnboardingDraft:v1',
+    draft: dataApi.createDraft(LS, ['boutique'], []), lang: () => lang,
     tr: (o) => (o == null ? '' : (o[lang] ?? o.fr ?? '')),
     root: { querySelector: (s) => (s === '.kob-card' ? card : null) },
     document: { createElement: () => ({ className: '', textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }) },
     window: { dispatchEvent: (e) => { events.push(e); return true; } },
     CustomEvent: class { constructor(type, o) { this.type = type; this.detail = (o || {}).detail; } },
   });
-  vm.runInContext('var draftKept = true;\n' + grab(OB, 'const DRAFT_NOTE = {').replace(/^const /, 'var ') + ';\n'
-    + grab(OB, 'function saveDraft(') + '\n' + grab(OB, 'function paintDraftNote('), ctx);
+  vm.runInContext(grab(OB, 'function saveDraft(') + '\n' + grab(OB, 'function paintDraftNote('), ctx);
   return { ctx, card, events, store };
 }
 ok('un brouillon qui ne prend pas le dit, sans bloquer l’assistant', () => {
@@ -151,7 +152,7 @@ ok('chaque rendu de l’assistant repeint l’avertissement', () => {
 
 ok('kit : un brouillon refusé par le navigateur est signalé dans les trois langues, puis effacé au succès suivant', () => {
   const KIT = readFileSync(path.join(ROOT, 'assets/kit/dash-onboarding.js'), 'utf8');
-  const note = OB.match(/const DRAFT_NOTE = \{[\s\S]*?\n  \};/)[0];
+  const note = DATA.match(/const DRAFT_NOTE = \{[\s\S]*?\n  \};/)[0];
   for (const lang of ['fr', 'en', 'ar']) {
     const warning = { textContent: '', hidden: true };
     const ctx = vm.createContext({ $: () => warning, lang, refuses: true });
@@ -172,7 +173,7 @@ ok('kit : un brouillon refusé par le navigateur est signalé dans les trois lan
     assert.equal(warning.hidden, true);
     assert.equal(warning.textContent, '');
   }
-  assert.match(OB, /draftWarning: \(\) => \(draftKept \? '' : tr\(DRAFT_NOTE\)\)/, 'le vrai assistant expose le message au kit');
+  assert.ok(OB.includes("draftWarning: () => draft ? draft.warning(lang()) : ''"), 'le vrai assistant expose le message au kit');
 });
 
 console.log(`\nonboarding-truth: ${passed} passed, ${failed} failed`);

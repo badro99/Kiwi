@@ -1957,6 +1957,7 @@ section('Whole-project regressions');
     'caisse-color-picker-language-test.mjs',
     'booking-truth-test.mjs',
     'onboarding-truth-test.mjs',
+    'onboarding-data-test.mjs',
     'onboarding-team-recap-test.mjs',
     'onboarding-business-type-test.mjs',
     'menu-truth-test.mjs',
@@ -2718,6 +2719,7 @@ section('Kiwi 2027 · l\'accès et le reste sur le kit');
     ['reset-states-test.mjs', 'reset-states-test'],
     ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
     ['team-split-browser-test.mjs', 'team-split-browser-test'],
+    ['onboarding-recovery-browser-test.mjs', 'onboarding-recovery-browser-test'],
     ['dash-onboarding-browser-test.mjs', 'dash-onboarding-browser-test'],
   ];
   for (const [file, label] of gates) {
