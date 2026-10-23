@@ -25,13 +25,13 @@ var SHELL = [
   '/assets/caisse-floor.js?v=1',
   '/assets/caisse-kitchen.js?v=1',
   '/assets/caisse-app.js?v=11',
-  '/assets/caisse-refresh.js?v=5',
+  '/assets/caisse-refresh.js?v=6',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
-  '/assets/serveur-shell.css?v=1',
+  '/assets/serveur-shell.css?v=2',
   '/assets/serveur-app.js?v=13',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
@@ -252,7 +252,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=18',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=57',
+  '/assets/caisse-lang.js?v=58',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -282,8 +282,8 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=604',
-  '/assets/employee-planning.js?v=16',
+  '/assets/employee-live.js?v=605',
+  '/assets/employee-planning.js?v=17',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=6',
   '/assets/planning-core.js?v=8',
@@ -313,8 +313,8 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=157',
-  '/assets/retail-scan.css?v=9',
+  '/assets/pos-dispatch.js?v=158',
+  '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/kit/haptics.js?v=6',
@@ -389,7 +389,7 @@ var SHELL = [
   '/assets/kit/till-online.js?v=2',
   '/assets/kit/till-z.js?v=1',
   '/assets/retail-scan.js?v=11',
-  '/assets/caisse-dna.css?v=6',
+  '/assets/caisse-dna.css?v=7',
   '/assets/caisse-dna.js?v=3',
   '/assets/pos-mobile.js?v=8',
   '/assets/pos-workspaces.css?v=5',
@@ -419,8 +419,8 @@ var SHELL = [
   '/assets/pos-traiteur.js?v=11',
   '/assets/pos-foodtruck.css?v=9',
   '/assets/pos-foodtruck.js?v=9',
-  '/assets/pos-epicerie.css?v=20',
-  '/assets/pos-epicerie.js?v=20',
+  '/assets/pos-epicerie.css?v=22',
+  '/assets/pos-epicerie.js?v=22',
   '/assets/pos-pharmacie.css?v=9',
   '/assets/pos-pharmacie.js?v=9',
   '/assets/pos-librairie.css?v=12',

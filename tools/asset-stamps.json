@@ -28,8 +28,8 @@
     "sha": "e41204f684cf668c"
   },
   "assets/admin-workspace.js": {
-    "v": "18",
-    "sha": "b1beff78f2248a99"
+    "v": "19",
+    "sha": "916deb74589a5658"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -112,8 +112,8 @@
     "sha": "7d00749c6668a45a"
   },
   "assets/caisse-dna.css": {
-    "v": "6",
-    "sha": "d3ab26277dddf5fa"
+    "v": "7",
+    "sha": "43531da8b521b1c6"
   },
   "assets/caisse-dna.js": {
     "v": "3",
@@ -136,8 +136,8 @@
     "sha": "2a5f2ea06537572d"
   },
   "assets/caisse-lang.js": {
-    "v": "57",
-    "sha": "bdba27cdc3957df1"
+    "v": "58",
+    "sha": "ae13ff02eb00d934"
   },
   "assets/caisse-link.js": {
     "v": "20",
@@ -164,8 +164,8 @@
     "sha": "7609b693c25d4ae9"
   },
   "assets/caisse-refresh.js": {
-    "v": "5",
-    "sha": "5cb1cd5d756bd135"
+    "v": "6",
+    "sha": "217d4da2a265be9a"
   },
   "assets/caisse-shell.css": {
     "v": "1",
@@ -336,12 +336,12 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "604",
-    "sha": "5e1f33e4eceb47bb"
+    "v": "605",
+    "sha": "d2a6f427c6c61281"
   },
   "assets/employee-planning.js": {
-    "v": "16",
-    "sha": "de4aefb46ee0061c"
+    "v": "17",
+    "sha": "42bcb0a56d2ecb80"
   },
   "assets/employee-pwa.js": {
     "v": "2",
@@ -1144,16 +1144,16 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "157",
-    "sha": "661ac64d5a10d094"
+    "v": "158",
+    "sha": "3ed713c3b83c48d0"
   },
   "assets/pos-epicerie.css": {
-    "v": "20",
-    "sha": "9e5d46709ec53871"
+    "v": "22",
+    "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "20",
-    "sha": "774ff53004d1c467"
+    "v": "22",
+    "sha": "e208d5abb03f1982"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -1396,8 +1396,8 @@
     "sha": "db1d3c05d9d49876"
   },
   "assets/retail-scan.css": {
-    "v": "9",
-    "sha": "c4fc6e321801bf09"
+    "v": "10",
+    "sha": "6eac1d318ebd3873"
   },
   "assets/retail-scan.js": {
     "v": "11",
@@ -1428,16 +1428,16 @@
     "sha": "202aa842881fc803"
   },
   "assets/serveur-shell.css": {
-    "v": "1",
-    "sha": "d30bdf9665b7b613"
+    "v": "2",
+    "sha": "8e7d3451be835f28"
   },
   "assets/service-requests.js": {
     "v": "2",
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "8",
-    "sha": "c0f259c4e71855d8"
+    "v": "9",
+    "sha": "84475d826d46fe41"
   },
   "assets/simple.js": {
     "v": "11",
