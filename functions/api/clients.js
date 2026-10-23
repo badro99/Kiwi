@@ -850,10 +850,18 @@ async function phoneTwins(env, merchant, phone, exceptId) {
   ).bind(merchant, exceptId, '%' + key.slice(-8)).all();
   return ((res && res.results) || []).filter((r) => phoneKey(r.phone) === key);
 }
+/* A merge keeps both profiles' notes and tags, so a merged row may hold more
+ * than one profile's input limit. It still has a ceiling: the automatic twin
+ * merge runs on every device sync, and without one a phone number shared by
+ * two tills would grow the row forever. Existing text is kept first. */
+const MERGED_NOTES_MAX = 8000, MERGED_TAGS_MAX = 100;
 function mergedText(current, incoming) {
   const a = String(current || ''), b = String(incoming || '');
-  if (!b || a === b || a.includes(b)) return a;
-  return a ? a + '\n' + b : b;
+  if (!b || a === b || a.includes(b)) return a.slice(0, MERGED_NOTES_MAX);
+  return (a ? a + '\n' + b : b).slice(0, MERGED_NOTES_MAX);
+}
+function mergedTags(current, incoming) {
+  return JSON.stringify([...new Set([...tagsList(current), ...tagsList(incoming)])].slice(0, MERGED_TAGS_MAX));
 }
 function mergedHospitality(current, incoming) {
   const parse = (v) => { try { return JSON.parse(v || '{}') || {}; } catch (_) { return {}; } };
@@ -881,7 +889,7 @@ async function mergeIntoTwin(env, merchant, targetId, c, selfId, replaceSelf) {
     }
     set.notes = mergedText(t.notes, c.notes);
     set.hospitality = mergedHospitality(t.hospitality, c.hospitality);
-    if (hasTags) set.tags = JSON.stringify([...new Set([...tagsList(t.tags), ...tagsList(c.tags)])]);
+    if (hasTags) set.tags = mergedTags(t.tags, c.tags);
     set.consent = Math.max(Number(t.consent) || 0, c.consent);
     set.consent_email = Math.max(Number(t.consent_email) || 0, c.consent_email);
     const seen = [Number(t.first_seen) || 0, c.first_seen].filter((n) => n > 0);

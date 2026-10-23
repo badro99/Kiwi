@@ -182,6 +182,14 @@ await strict('CL-2 full notes and tag unions remain readable beyond one profile 
  ok(await request(post,{id:'duplicate',notes:'Queued note',tags:['queued']}));
  const after=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture');assert.deepEqual(after.tags,[...first,...second,'queued']);assert.ok(after.notes.includes('B'.repeat(1000)));assert.ok(after.notes.includes('Queued note'));
 }));
+await strict('CL-2 repeated syncs into a merged profile stay bounded (8000 note characters, 100 tags) and keep the oldest text',fc.asyncProperty(fc.constant(null),async()=>{
+ await reset();ok(await request(post,{id:'client-fixture',notes:'A'.repeat(1000),tags:['keep']},'owner'));ok(await request(post,{id:'duplicate',notes:'B',tags:['dup']},'owner'));
+ ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'));
+ for(let i=0;i<20;i++)ok(await request(post,{id:'duplicate',notes:String.fromCharCode(67+i).repeat(1000),tags:Array.from({length:20},(_,j)=>'sync-'+i+'-'+j)}));
+ const row=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture');
+ assert.ok(row.notes.length<=8000,'notes capped, got '+row.notes.length);assert.ok(row.tags.length<=100,'tags capped, got '+row.tags.length);
+ assert.ok(row.notes.startsWith('A'.repeat(1000)),'existing notes kept first');assert.ok(row.tags.includes('keep'),'existing tags kept first');
+}));
 await strict('CL-2 directory confirmation names the survivor in FR EN AR and sends only after confirmation',fc.asyncProperty(fc.constantFrom('fr','en','ar'),async language=>{
  const modals=[],calls=[],buttons={};let click;
  const selected={value:'duplicate'},button={disabled:false,addEventListener(_,fn){click=fn;}};

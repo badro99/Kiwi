@@ -52,8 +52,9 @@ export async function mergeClients(env, merchant, raw, helpers) {
     }
     const set = {};
     for (const key of ['name','phone','email','birthday','gender','city','address']) set[key] = target[key] || source[key];
-    set.notes = [target.notes, source.notes].filter(Boolean).join('\n');
-    if (Object.hasOwn(target, 'tags')) set.tags = JSON.stringify([...new Set([...list(target.tags), ...list(source.tags)])]);
+    // Same ceilings as the automatic twin merge in clients.js (8000 characters, 100 tags).
+    set.notes = [target.notes, source.notes].filter(Boolean).join('\n').slice(0, 8000);
+    if (Object.hasOwn(target, 'tags')) set.tags = JSON.stringify([...new Set([...list(target.tags), ...list(source.tags)])].slice(0, 100));
     const parse = value => { try { return JSON.parse(value || '{}'); } catch (_) { return {}; } };
     const hospitality = parse(target.hospitality);
     for (const [key, value] of Object.entries(parse(source.hospitality))) if (!hospitality[key]) hospitality[key] = value;
