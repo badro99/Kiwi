@@ -1468,6 +1468,7 @@ section('Whole-project regressions');
     'clients-campaign-flag-test.mjs',
     'dashboard-unoffered-actions-test.mjs',
     'support-system-test.mjs',
+    'admin-support-format-test.mjs',
     'operator-snapshot-test.mjs',
     'ledger-cache-test.mjs',
     'caisse-support-entry-test.mjs',

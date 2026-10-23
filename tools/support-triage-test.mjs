@@ -346,7 +346,7 @@ try {
       ['urgent/normal/open', '/urgent/open', 'watch/normal/open', '/normal/open', 'urgent/normal/resolved'],
       'alerte IA en tête, puis mots-clés ou « à vérifier », les demandes résolues redescendent');
     const consoleSrc = fs.readFileSync(new URL('../assets/admin-support.js', import.meta.url), 'utf8');
-    ok(/CONFIDENT=0\.6/.test(consoleSrc) && consoleSrc.includes('à vérifier (piste'), 'la console écrit « à vérifier » sous 60 %');
+    ok(/CONFIDENT\s*=\s*0\.6/.test(consoleSrc) && consoleSrc.includes('à vérifier (piste'), 'la console écrit « à vérifier » sous 60 %');
     ok(consoleSrc.includes('Non triée') && consoleSrc.includes('SUPPORT_ALERT_EMAIL ou MAIL_WEBHOOK'), 'la console dit « non triée » et « aucune alerte envoyée » tels quels');
     const adminApi = fs.readFileSync(new URL('../functions/api/admin/support.js', import.meta.url), 'utf8');
     ok(adminApi.includes('publicTriage(row)') && adminApi.includes('consoleRank'), 'l\'API opérateur renvoie le tri et trie par rang');
