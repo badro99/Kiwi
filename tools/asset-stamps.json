@@ -100,8 +100,8 @@
     "sha": "8eb3fe5595e9eba4"
   },
   "assets/caisse-app.js": {
-    "v": "12",
-    "sha": "6f847f5e09e156f9"
+    "v": "13",
+    "sha": "410d171630346b6a"
   },
   "assets/caisse-dna.css": {
     "v": "7",
@@ -208,8 +208,8 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "31",
-    "sha": "c03b034d433e92e3"
+    "v": "32",
+    "sha": "724b96fe73c5e55d"
   },
   "assets/clients-directory.js": {
     "v": "25",
@@ -652,8 +652,8 @@
     "sha": "ea6043cb8cb287db"
   },
   "assets/kit/kds.js": {
-    "v": "4",
-    "sha": "3efcd974fdefc529"
+    "v": "5",
+    "sha": "43cf4f0f15cf5740"
   },
   "assets/kit/kit.css": {
     "v": "40",
@@ -796,16 +796,16 @@
     "sha": "72e0c148f4aafc5d"
   },
   "assets/kit/till-pin.js": {
-    "v": "2",
-    "sha": "373c1458c50f9977"
+    "v": "3",
+    "sha": "a4db4977ded7fd32"
   },
   "assets/kit/till-z.js": {
     "v": "1",
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "11",
-    "sha": "0308f2dc7edd3a1f"
+    "v": "12",
+    "sha": "4ba6a8b7657b2d48"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",
@@ -1016,8 +1016,8 @@
     "sha": "97b2b65a84876794"
   },
   "assets/orderpro-page.css": {
-    "v": "1",
-    "sha": "8955832b74db091b"
+    "v": "2",
+    "sha": "d8a57db5f122fde6"
   },
   "assets/orderpro-page.js": {
     "v": "3",
@@ -1440,8 +1440,8 @@
     "sha": "202aa842881fc803"
   },
   "assets/serveur-shell.css": {
-    "v": "2",
-    "sha": "8e7d3451be835f28"
+    "v": "3",
+    "sha": "6123529badc8a58c"
   },
   "assets/serveur/service.js": {
     "v": "1",

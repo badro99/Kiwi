@@ -24,14 +24,14 @@ var SHELL = [
   '/assets/caisse-accounting.js?v=5',
   '/assets/caisse-floor.js?v=2',
   '/assets/caisse-kitchen.js?v=1',
-  '/assets/caisse-app.js?v=12',
+  '/assets/caisse-app.js?v=13',
   '/assets/caisse-refresh.js?v=6',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
-  '/assets/serveur-shell.css?v=2',
+  '/assets/serveur-shell.css?v=3',
   '/assets/serveur/service.js?v=1',
   '/assets/serveur-app.js?v=14',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
@@ -283,7 +283,7 @@ var SHELL = [
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=17',
-  '/assets/clients-book.js?v=31',
+  '/assets/clients-book.js?v=32',
   '/assets/clients-directory.js?v=25',
   '/assets/customer-retention.js?v=11',
   '/assets/menu-catalog.js?v=33',
@@ -346,7 +346,7 @@ var SHELL = [
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=3',
-  '/assets/kit/till-pin.js?v=2',
+  '/assets/kit/till-pin.js?v=3',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=9',
   '/assets/kit/dash-pin.js?v=1',
@@ -382,7 +382,7 @@ var SHELL = [
   '/assets/kit/strings/kds.en.js?v=3',
   '/assets/kit/strings/kds.ar.js?v=3',
   '/assets/kit/controls/button.js?v=1',
-  '/assets/kit/kds.js?v=4',
+  '/assets/kit/kds.js?v=5',
   '/assets/kit/kds-board.js?v=2',
   /* and the till's menu and bill on the kit, behind kiwiSkin2027:till (stage 4). */
   '/assets/kit/controls/chip.js?v=1',
@@ -392,7 +392,7 @@ var SHELL = [
   '/assets/kit/elements.js?v=3',
   '/assets/kit/layout.js?v=1',
   '/assets/kit/nav.js?v=3',
-  '/assets/kit/till.js?v=11',
+  '/assets/kit/till.js?v=12',
   '/assets/kit/till-frame.js?v=5',
   '/assets/kit/till-attendance.js?v=1',
   '/assets/kit/till-online.js?v=2',

@@ -207,6 +207,51 @@
     return true;
   }
 
+  /* ── the doors are modal ─────────────────────────────────────────────────
+     While the lock or the pairing pad shows, the till behind it is inert: Tab
+     and a screen reader stay on the pad. They used to walk on to the floor
+     tabs and the 21 tables of a locked till (owner, 2026-10-23). A door is
+     hidden by display:none (caisse-pairing.js), so its style is watched. The
+     toasts, live regions and other modal layers keep their voice. */
+  var DOORS = ['cp-pin-screen', 'cp-screen'];
+  function doorShown(el) {
+    return !!(el && el.isConnected && el.style.display !== 'none' && root.getComputedStyle(el).display !== 'none');
+  }
+  function keepsVoice(el) {
+    var role = el.getAttribute('role');
+    return DOORS.indexOf(el.id) >= 0 || el.id === 'toast-stack' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE' ||
+      el.tagName === 'K-TOAST' || el.tagName === 'K-SHEET' || el.tagName === 'K-POPOVER' ||
+      role === 'alert' || role === 'status' || el.getAttribute('aria-modal') === 'true';
+  }
+  function syncDoors() {
+    if (!doc.body) return;
+    var shut = DOORS.some(function (id) { return doorShown(doc.getElementById(id)); });
+    Array.prototype.forEach.call(doc.body.children, function (el) {
+      if (shut && !keepsVoice(el)) {
+        if (!el.__kDoor) { el.__kDoor = { inert: el.inert }; el.inert = true; }
+      } else if (el.__kDoor) {
+        el.inert = el.__kDoor.inert;
+        el.__kDoor = null;
+      }
+    });
+  }
+  var watched = [];
+  var styleWatch = typeof MutationObserver === 'function' ? new MutationObserver(syncDoors) : null;
+  function watchDoors() {
+    if (!styleWatch || !doc.body) return;
+    DOORS.forEach(function (id) {
+      var el = doc.getElementById(id);
+      if (el && watched.indexOf(el) < 0) { watched.push(el); styleWatch.observe(el, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] }); }
+    });
+    syncDoors();
+  }
+  function startDoors() {
+    if (typeof MutationObserver !== 'function') return;
+    new MutationObserver(watchDoors).observe(doc.body, { childList: true });
+    watchDoors();
+  }
+  if (doc.body) startDoors(); else doc.addEventListener('DOMContentLoaded', startDoors);
+
   try { authLog = JSON.parse(sessionStorage.getItem(LOG_KEY) || '[]') || []; } catch (_) { authLog = []; }
 
   /* The till paints its own theme (html[data-caisse-theme]); the kit follows

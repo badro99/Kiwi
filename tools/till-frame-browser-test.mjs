@@ -182,6 +182,28 @@ try {
     check(errors.length === 0, 'flag on: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 
+  /* 23 octobre : le ⋯ de l'addition émettait k.bill.overflow et personne ne
+     l'écoutait. Il n'apparaît plus que s'il a quelque chose à offrir, et ce
+     qu'il offre passe par le contrôle livré (ici, vider : le code d'abord). */
+  await S.run('flag on · the bill\'s ⋯ opens its menu, or is not there', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const hasMore = () => page.evaluate(() => !!document.querySelector('k-bill').shadowRoot.querySelector('#mo'));
+    check(!(await hasMore()), 'an empty takeaway bill has no ⋯ (nothing to offer)');
+    const plain = (await tiles(page)).find((t) => !t.opts && !t.out);
+    await tapTile(page, plain.id);
+    await sleep(300);
+    check(await hasMore(), 'with a line, the ⋯ is there');
+    await page.evaluate(() => document.querySelector('k-bill').shadowRoot.querySelector('#mo').click());
+    await sleep(400);
+    const rows = await page.evaluate(() => { const p = [...document.querySelectorAll('k-popover')].find((x) => x.hasAttribute('open')); return p ? [...p.querySelectorAll('k-button')].map((b) => b.getAttribute('data-row')) : null; });
+    check(rows && rows.length === 1 && rows[0] === 'clear', 'the ⋯ opens a menu with Clear the bill (' + JSON.stringify(rows) + ')');
+    const opened = page.evaluate(() => new Promise((res) => { document.addEventListener('kiwi:approval-open', (e) => res(e.detail && e.detail.act), { once: true }); setTimeout(() => res(null), 3000); }));
+    await page.evaluate(() => { const p = [...document.querySelectorAll('k-popover')].find((x) => x.hasAttribute('open')); const b = p.querySelector('k-button[data-row="clear"]'); b.dispatchEvent(new CustomEvent('kiwi:action', { bubbles: true, composed: true, detail: { action: 'k.button.press' } })); });
+    check(await opened === 'clear_order', 'Clear asks for a code first, through the shipped guard');
+    check(await page.evaluate(() => cart.length === 1), 'and nothing is cleared before the code');
+    check(errors.length === 0, 'no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
   await S.run('flag on · payment inside the pane, recorded by the shipped tender', async (tr) => {
     const { page, errors } = await till(tr, { flag: true });
     const tap = (sel) => page.evaluate((s) => {

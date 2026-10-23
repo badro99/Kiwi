@@ -193,7 +193,10 @@
       var head = '<header class="hd"><div class="ht"><h2 class="k-title ti">' + esc(b.title || '') + '</h2>' +
         (b.meta ? '<p class="k-foot k-ink2 mt">' + esc(b.meta) + '</p>' : '') + '</div>' +
         (b.plain ? '' : C.button.render({ variant: 'icon', icon: 'print', label: t('bill.print'), id: 'pr', attrs: ' data-w="print"' }) +
-        C.button.render({ variant: 'icon', icon: 'more_horiz', label: t('action.more'), id: 'mo', attrs: ' data-w="overflow"' })) + '</header>';
+        /* The overflow (k.bill.overflow) shows only when the page says it has
+           something to put in it (b.more): a ⋯ that opened nothing was a dead
+           button on every till (owner, 2026-10-23). */
+        (b.more ? C.button.render({ variant: 'icon', icon: 'more_horiz', label: t('action.more'), id: 'mo', attrs: ' data-w="overflow" aria-haspopup="true"' }) : '')) + '</header>';
       var body;
       if (st === 'loading') body = '<div class="sk"><span class="k-skel"></span><span class="k-skel"></span><span class="k-skel"></span></div>';
       else if (!lines.length) body = '<div class="em"><p class="k-heading">' + th('bill.empty.title') + '</p><p class="k-foot k-ink2">' + th('bill.empty.body') + '</p></div>';

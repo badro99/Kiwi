@@ -184,7 +184,9 @@
       }
       var rest = list.length - shown;
       if (rest > 0) {
-        colEls[c].insertAdjacentHTML('beforeend', '<div class="nw">' + C.button.render({ variant: 'secondary', size: 'K', full: true, label: t('kds.newer', { n: rest }), ariaLabel: t('kds.newer_open'), id: 'nw', attrs: ' data-w="newer"' }) + '</div>');
+        /* The spoken name starts with what the button shows (WCAG 2.5.3): a
+           voice-control user says "+2 newer" (axe on the 2027 kitchen, 2026-10-23). */
+        colEls[c].insertAdjacentHTML('beforeend', '<div class="nw">' + C.button.render({ variant: 'secondary', size: 'K', full: true, label: t('kds.newer', { n: rest }), ariaLabel: t('kds.newer', { n: rest }) + ', ' + t('kds.newer_open'), id: 'nw', attrs: ' data-w="newer"' }) + '</div>');
       }
       self.setAttribute('data-shown', String(shown));
     },

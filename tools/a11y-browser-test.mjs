@@ -348,6 +348,15 @@ await S.run('écran de cuisine', async (t) => {
   await page.waitForFunction(() => document.querySelectorAll('.tk .tk-act').length >= 4, { timeout: 20000 });
   await sleep(800);
   compare('kds', await audit(t, page));
+  /* 23 octobre : la même cuisine sur le design 2027 (kiwiSkin2027:kds), que
+     les commerces passés en 2027 voient. Ses bons vivent dans les racines
+     fantômes du kit ; axe les parcourt. Le bouton « +2 plus récentes » y
+     portait un nom qui ne contenait pas son texte. */
+  const kit = await open(t, '/kiwi-cuisine.html', { kiwiLiveMerchant: MERCHANT, kiwiPaired: '1', kiwiCuisineLang: 'fr', 'kiwiSkin2027:kds': '1' }, { width: 1280, height: 800, api, pin: false });
+  t.step('wait for the kit board');
+  await kit.waitForFunction(() => { let n = 0; const w = (r) => r.querySelectorAll('*').forEach((e) => { if (e.classList && e.classList.contains('tk')) n++; if (e.shadowRoot) w(e.shadowRoot); }); w(document); return n >= 2; }, { timeout: 20000 });   // a lane shows its first bons, the rest behind « +N plus récentes »
+  await sleep(800);
+  compare('kds-2027', await audit(t, kit));
 });
 
 /* 23 octobre : cinq écrans relevés par une revue à l'aveugle comme absents de

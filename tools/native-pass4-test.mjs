@@ -118,6 +118,7 @@ ok(/button\.setAttribute\('aria-label', labels\[lang\(\)\]\)/.test(vexelLayout),
 ok(!/c: '#B26B0F'/.test(team), 'team avatar colours pass 4.5:1 against paper');
 ok(/\.acts \.approve,\.acts \.dismiss,\.cd-exp,\.eq-icon-btn\)\{min-height:44px/.test(runtimeCss), 'small drawer controls get 44 pt targets');
 ok(!/maximum-scale/.test(serveur) && !/maximum-scale/.test(cuisine), 'Team and Kitchen allow pinch zoom');
+ok(!/maximum-scale|user-scalable=no/.test(read('OrderPro.html')) && /@media \(pointer: coarse\) \{\s*input:not[^{]*textarea:not\(\[hidden\]\)[^{]*\{ font-size: 16px; \}/.test(read('assets/orderpro-page.css')), 'QR ordering allows pinch zoom, and its fields are 16 px on touch so Safari does not jump in (2026-10-23)');
 ok(/class="mode-selector" role="group"/.test(caisse), 'till mode pills are a group of toggles, not a tablist');
 
 // iOS swipe from the leading edge = back

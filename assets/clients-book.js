@@ -49,7 +49,17 @@
     for (var i = 0; i < hosts.length; i++) { if (hosts[i].offsetParent !== null) return hosts[i]; }
     return null;
   }
-  function shouldShow() { return !integrationHost() && !!KC.bookId() && (paired() || KC.count() > 0); }
+  /* The till's code doors (caisse-pairing.js, assets/kit/till-pin.js): while
+     the lock or the pairing pad shows, nobody has entered a code yet, so the
+     customer book (names, phones, credit) stays shut. The chip used to float
+     over the lock screen and open the book to anyone (owner, 2026-10-23). */
+  function tillLocked() {
+    return ['cp-pin-screen', 'cp-screen'].some(function (id) {
+      var s = document.getElementById(id);
+      return !!(s && s.style.display !== 'none' && getComputedStyle(s).display !== 'none');
+    });
+  }
+  function shouldShow() { return !tillLocked() && !integrationHost() && !!KC.bookId() && (paired() || KC.count() > 0); }
 
   function toast(msg, desc) {
     if (window.KiwiCaisseLang) { msg = window.KiwiCaisseLang.tr(msg); if (desc) desc = window.KiwiCaisseLang.tr(desc); }
@@ -393,6 +403,7 @@
 
   /* ── launcher chip ─────────────────────────────────────────────────────── */
   function ensureChip() {
+    if (tillLocked() && isOpen()) close();
     if (!shouldShow()) { var ex = document.getElementById('kcb-chip'); if (ex) ex.remove(); return; }
     css();
     var b = document.getElementById('kcb-chip');
@@ -477,6 +488,7 @@
   /* Pas de croix : une page ne se ferme pas, elle se quitte. On sort du carnet
      comme on sort de l'Inventaire — en touchant l'entrée suivante du rail. */
   function open(entry) {
+    if (tillLocked()) return;
     css();
     var root = document.getElementById('kcb-root');
     if (!root) {
@@ -1013,7 +1025,18 @@
   var wireScheduled = false;
   function scheduleWire() {
     if (wireScheduled) return; wireScheduled = true;
-    setTimeout(function () { wireScheduled = false; try { wireCaisseEntry(); ensureChip(); } catch (_) {} }, 120);
+    setTimeout(function () { wireScheduled = false; try { watchDoors(); wireCaisseEntry(); ensureChip(); } catch (_) {} }, 120);
+  }
+  /* A door hides and shows by its style alone (display:none), which the
+     childList watch in boot() does not see: each door is watched once. */
+  var doorWatch = null, watchedDoors = [];
+  function watchDoors() {
+    if (typeof MutationObserver !== 'function') return;
+    if (!doorWatch) doorWatch = new MutationObserver(scheduleWire);
+    ['cp-pin-screen', 'cp-screen'].forEach(function (id) {
+      var s = document.getElementById(id);
+      if (s && watchedDoors.indexOf(s) < 0) { watchedDoors.push(s); doorWatch.observe(s, { attributes: true, attributeFilter: ['style', 'class'] }); }
+    });
   }
   /* ── le carnet est une PAGE, pas une fenêtre ──────────────────────────────
      Il s'ouvre depuis le rail, à côté de Vente, Inventaire et Promotions, et il

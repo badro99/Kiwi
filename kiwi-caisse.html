@@ -169,7 +169,7 @@
         js("assets/kit/overlays.js?v=2") +
         js("assets/kit/pin.js?v=3") +
         js("assets/kit/pin-flow.js?v=3") +
-        js("assets/kit/till-pin.js?v=2") +
+        js("assets/kit/till-pin.js?v=3") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/controls/chip.js?v=1") +
         js("assets/kit/controls/keypad.js?v=1") +
@@ -178,12 +178,12 @@
         js("assets/kit/elements.js?v=3") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=3") +
-        js("assets/kit/till.js?v=11") +
+        js("assets/kit/till.js?v=12") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=2") +
         js("assets/kit/till-z.js?v=1") +
-        js("assets/kit/kds.js?v=4") +
+        js("assets/kit/kds.js?v=5") +
         js("assets/kit/kds-board.js?v=2")
       );
     })();
@@ -266,6 +266,11 @@
       opacity: 1;
       color: var(--riad);
       background: var(--paper);
+      /* A badge, not a bare rectangle: on the active pill a square of paper
+         read as selected text (owner, 2026-10-23). */
+      padding: 1px 6px;
+      border-radius: 999px;
+      line-height: 1.35;
     }
   </style>
   <link rel="stylesheet" href="assets/pos-mobile.css?v=9" />
@@ -349,7 +354,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=16" defer></script>
   <script src="assets/clients-store.js?v=17" defer></script>
-  <script src="assets/clients-book.js?v=31" defer></script>
+  <script src="assets/clients-book.js?v=32" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -1949,6 +1954,6 @@
   <script src="assets/caisse-accounting.js?v=5"></script>
   <script src="assets/caisse-floor.js?v=2"></script>
   <script src="assets/caisse-kitchen.js?v=1"></script>
-  <script src="assets/caisse-app.js?v=12"></script>
+  <script src="assets/caisse-app.js?v=13"></script>
 </body>
 </html>

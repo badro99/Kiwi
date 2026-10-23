@@ -2052,20 +2052,75 @@
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         const disc = vrapDiscountAmount(gross);
         return { title, meta, lines: cart.map(tillKitLine), discount: tillKitDiscount(vrapDiscount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true };
+          total: Math.max(0, gross - disc), sendOnPay: true, more: tillKitOverflowRows().length > 0 };
       }
       if (mode === 'order' && selectedId) {
         const order = tableOrders[selectedId] || [];
-        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0) };
+        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0), more: tillKitOverflowRows().length > 0 };
       }
       if (selectedId && tables[selectedId]) {
         const lines = generateOrder(selectedId, tables[selectedId]);
         const gross = lines.reduce((s, l) => s + l.total, 0);
         const disc = discountAmountFor(selectedId, gross);
         return { title, meta, lines: lines.map(tillKitLine), discount: tillKitDiscount(tables[selectedId].discount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true };
+          total: Math.max(0, gross - disc), sendOnPay: true, more: tillKitOverflowRows().length > 0 };
       }
       return empty;
+    }
+    /* The bill's ⋯ (design 2027 §10: bill.transfer, bill.merge, bill.clear,
+       bill.cancel_table). It emitted k.bill.overflow and nothing listened, so
+       the button did nothing (owner, 2026-10-23). Each row presses the
+       shipped control, which keeps its own guards: the feature switches, and
+       the server-checked code before anything is cleared or cancelled. */
+    function tillKitOverflowRows() {
+      const rows = [];
+      const cancel = '[data-action="cancel-table"]';
+      if (mode === 'vrap') {
+        if (cart.length || vrapEditingNum != null) rows.push(['clear', 'bill.clear', cancel]);
+        return rows;
+      }
+      if (mode === 'order') {
+        if (selectedId) rows.push(['cancel_order', 'bill.cancel_order', cancel]);
+        return rows;
+      }
+      if (!selectedId || !tables[selectedId]) return rows;
+      if (hasTables() && !isFeatureOff('tableTransfer') && !isFeatureOff('table-transfer') && $('#rp-transfer-table')) rows.push(['transfer', 'bill.transfer', '#rp-transfer-table']);
+      if (hasTables() && !isFeatureOff('tableMerge') && !isFeatureOff('table-merge') && $('#rp-merge-table')) rows.push(['merge', 'bill.merge', '#rp-merge-table']);
+      rows.push(['cancel_table', 'bill.cancel_table', cancel]);
+      return rows;
+    }
+    let tillKitOverflowPop = null;
+    function tillKitOpenOverflow(anchor) {
+      if (!customElements.get('k-popover')) return;
+      const rows = tillKitOverflowRows();
+      if (!rows.length) return;
+      if (!tillKitOverflowPop) {
+        tillKitOverflowPop = document.createElement('k-popover');
+        tillKitOverflowPop.addEventListener('kiwi:action', (e) => {
+          const d = e.detail || {};
+          if (d.action !== 'k.button.press') return;
+          e.stopPropagation();
+          const host = e.composedPath().find((n) => n && n.getAttribute && n.hasAttribute('data-row'));
+          const row = host && tillKitOverflowRows().find((r) => r[0] === host.getAttribute('data-row'));
+          tillKitOverflowPop.removeAttribute('open');
+          const el = row && document.querySelector(row[2]);
+          if (el) el.click();
+        });
+        document.body.appendChild(tillKitOverflowPop);
+      }
+      tillKitOverflowPop.setAttribute('heading', kkt('action.more'));
+      tillKitOverflowPop.textContent = '';
+      rows.forEach(([id, key]) => {
+        const b = document.createElement('k-button');
+        b.setAttribute('label', kkt(key));
+        b.setAttribute('data-row', id);
+        if (id === 'clear' || id === 'cancel_order' || id === 'cancel_table') b.setAttribute('variant', 'tonal-danger');
+        b.style.display = 'block';
+        b.style.marginBlockEnd = '8px';
+        tillKitOverflowPop.appendChild(b);
+      });
+      tillKitOverflowPop.anchor = anchor || null;
+      tillKitOverflowPop.setAttribute('open', '');
     }
     /* L'encaissement dans le volet (étape 4 (2)). <k-pay> dessine et rapporte ;
        la vente passe par finalizeTender, la même frontière que les fenêtres
@@ -2576,6 +2631,7 @@
         case 'split': tillKitOpenSplit(); return;
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
+        case 'overflow': tillKitOpenOverflow(value && value.anchor); return;
       }
     }
     function tillKitPaint() {

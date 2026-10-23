@@ -3096,3 +3096,10 @@ em, i, cite, dfn, var { font-style: normal; }
     [dir="rtl"] .prep-eta strong,
     [dir="rtl"] #cart-grand { direction: ltr; unicode-bidi: isolate; }
     /* Greeting em-clip behaves the same in RTL — just measured by the script */
+
+/* Pinch zoom is allowed (owner, 2026-10-23; WCAG 1.4.4): a customer who needs
+   bigger text can zoom the menu. Safari zooms the page in on any field under
+   16 px when it takes focus, so on a touch screen every field is 16 px. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea:not([hidden]), select:not([hidden]) { font-size: 16px; }
+}

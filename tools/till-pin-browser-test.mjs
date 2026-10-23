@@ -118,6 +118,43 @@ await S.run('flag off: the shipped pad, no kit file fetched', async (tr) => {
   check(st.fetched.length === 0, 'no kit file was fetched (' + st.fetched.length + ')');
 });
 
+/* 23 octobre : le bouton « Clients » flottait sur l'écran de code et ouvrait le
+ * carnet (noms, téléphones, crédit) avant que quiconque ait tapé un code ; et,
+ * en 2027, Tab sortait du pavé vers les 21 tables du plan derrière lui. */
+const behindLock = (page) => page.evaluate(() => ({
+  chip: !!document.getElementById('kcb-chip'),
+  book: (() => { try { window.KiwiClientsBook.open(); } catch (_) {} const r = document.getElementById('kcb-root'); return !!(r && r.style.display !== 'none'); })(),
+  reachable: [...document.querySelectorAll('button, a[href], input, [tabindex="0"]')].filter((el) => {
+    if (el.closest('#cp-pin-screen, #cp-screen, #toast-stack') || el.closest('[inert]') || el.closest('[aria-hidden="true"]')) return false;
+    const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden';
+  }).map((el) => (el.getAttribute('aria-label') || el.textContent || el.id).trim().slice(0, 30)),
+}));
+for (const flag of [false, true]) {
+  await S.run(`flag ${flag ? 'on' : 'off'}: nothing behind the lock, the customer book shut`, async (tr) => {
+    const { page } = await till(tr, { flag });
+    await settle(page, 1500);                     /* the chip's own late checks (1.4 s) */
+    const st = await behindLock(page);
+    check(!st.chip, 'no Clients button over the lock');
+    check(!st.book, 'the customer book does not open while locked');
+    if (!flag) return;
+    check(st.reachable.length === 0, 'nothing behind the lock is reachable (' + st.reachable.slice(0, 4).join(' · ') + ')');
+    for (let i = 0; i < 16; i++) await page.keyboard.press('Tab');
+    check(await page.evaluate(() => { const a = document.activeElement; return !!(a && a.closest('#cp-pin-screen')); }), 'Tab stays on the pad');
+    await press(page, LOCK, '1111');
+    await page.waitForFunction(() => document.getElementById('cp-pin-screen').style.display === 'none', { timeout: 5000 });
+    await settle(page, 400);
+    check(await page.evaluate(() => ![...document.body.children].some((el) => el.inert)), 'unlocked: the till is reachable again');
+    await page.evaluate(() => { window.KiwiClientsBook.open(); });
+    await settle(page, 300);
+    check(await page.evaluate(() => { const r = document.getElementById('kcb-root'); return !!(r && r.style.display !== 'none'); }), 'unlocked: the customer book opens');
+    await page.evaluate(() => { document.getElementById('cp-pin-screen').style.display = ''; });
+    await settle(page, 600);
+    const re = await behindLock(page);
+    check(!re.book && !re.chip, 'locked again: the open book closes and stays shut');
+  });
+}
+
 await S.run('flag on: the lock on the kit pad', async (tr) => {
   const { page, net } = await till(tr);
   const st = await page.evaluate(() => { const p = document.querySelector('#cp-pin-screen k-pin-pad'); return p && { identity: p.getAttribute('identity'), len: p.getAttribute('length'), legacy: !!document.querySelector('#cp-pin-pad') }; });
