@@ -1846,6 +1846,7 @@ section('Whole-project regressions');
     'close-register-durability-test.mjs',
     'kitchen-ticket-wrap-test.mjs',
     'escpos-arabic-browser-test.mjs',
+    'escpos-unsupported-test.mjs',
     'settled-table-reopen-test.mjs',
     'order-line-cap-test.mjs',
     'kitchen-reprint-test.mjs',

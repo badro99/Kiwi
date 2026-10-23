@@ -938,8 +938,26 @@
     });
   }
 
+  /* Un ticket dont l'encodeur n'a pas pu dessiner l'arabe (pas de canvas sur
+     cet appareil) sortirait en « ????? » : en cuisine, un bon illisible envoie
+     un autre plat. On ne l'envoie pas. Le résultat le dit (reason), la file
+     cuisine le garde en erreur visible, le reçu passe au repli système (qui,
+     lui, sait écrire l'arabe), et l'avis s'affiche une seule fois. */
+  var ARABIC_LOST = 'Impression arrêtée · cet appareil ne sait pas dessiner l’arabe de ce ticket. Rien n’est sorti en « ? ».';
+  function refuseUnsupported(bytes) {
+    var lost = window.KiwiEscPos && window.KiwiEscPos.unsupportedLines ? window.KiwiEscPos.unsupportedLines(bytes) : 0;
+    if (!lost) return null;
+    if (!bytes.unsupportedNoticed) {
+      try { bytes.unsupportedNoticed = true; } catch (_) {}
+      fallbackNotice(say(ARABIC_LOST));
+    }
+    return Promise.resolve({ ok: false, reason: 'text-not-drawable', lines: lost });
+  }
+
   /* Imprime directement sur un profil ou une cible donnée ({ type, ip, port, osPrinter }). */
   function printBytesToTarget(bytes, target, ref) {
+    var refused = refuseUnsupported(bytes);
+    if (refused) return refused;
     if (!target) return printBytes(bytes);
     var type = target.type || (target.ip ? 'ip' : target.osPrinter ? 'os' : '');
     if (type === 'bt') {
@@ -964,6 +982,8 @@
   // the network bridge. Callers fail soft when this resolves { ok:false }.
   function printBytes(bytes, targetOrStation) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
+    var refused = refuseUnsupported(bytes);
+    if (refused) return refused;
     if (typeof targetOrStation === 'string') {
       var t = resolveStationTarget(targetOrStation);
       if (t) return printBytesToTarget(bytes, t);
@@ -1003,6 +1023,8 @@
     var target = resolveStationTarget('caisse', options && options.merchant);
     var paper = (target && target.paper) || withPaper(o).paper;
     var bytes = window.KiwiEscPos.receipt(Object.assign({}, o, { paper: paper }));
+    var refused = refuseUnsupported(bytes);
+    if (refused) return refused;
     if (target) {
       return printBytesToTarget(bytes, target).then(function (res) {
         if (res && (res.ok || res.uncertain)) return res;
@@ -1043,6 +1065,8 @@
     var target = stationId ? resolveStationTarget(stationId, options && options.merchant) : resolveStationTarget('cuisson', options && options.merchant);
     var paper = (target && target.paper) || withPaper(o).paper;
     var bytes = window.KiwiEscPos.kitchenTicket(Object.assign({}, o, { paper: paper }));
+    var refusedK = refuseUnsupported(bytes);
+    if (refusedK) return refusedK;
     /* La file durable nous donne l'identifiant stable du travail : il devient la
        clé d'idempotence du relais. Le repli caisse imprime un AUTRE papier sur
        une AUTRE imprimante — il porte donc sa propre clé, sinon le serveur le

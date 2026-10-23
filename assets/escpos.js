@@ -60,7 +60,10 @@
    * garde ses deux colonnes, inversées quand le libellé est en arabe (le
    * libellé à droite, comme le reçu à l'écran). Une ligne trop large est
    * resserrée, jamais coupée. Sans canvas (Node, tests), on retombe sur le
-   * texte d'avant : l'encodeur ne lève jamais. */
+   * texte d'avant : l'encodeur ne lève jamais. Mais il le DIT : chaque ligne
+   * qui n'a pas pu être dessinée est comptée, et les octets rendus portent ce
+   * compte (unsupportedLines). Le pont d'impression refuse d'envoyer un tel
+   * ticket et l'annonce, plutôt que de laisser sortir « ????? » en silence. */
   function needsRaster(str) {
     str = String(str == null ? '' : str);
     for (var i = 0; i < str.length; i++) {
@@ -160,7 +163,7 @@
     return out;
   }
 
-  function Builder(paper) { this._ = []; this._st = { align: 0, bold: false, w: 1, h: 1, dots: cols(paper) * 12 }; }
+  function Builder(paper) { this._ = []; this.lost = 0; this._st = { align: 0, bold: false, w: 1, h: 1, dots: cols(paper) * 12 }; }
   Builder.prototype.raw = function (arr) { for (var i = 0; i < arr.length; i++) this._.push(arr[i] & 0xFF); return this; };
   Builder.prototype.init = function () { this._st.align = 0; this._st.bold = false; this._st.w = 1; this._st.h = 1; return this.raw([ESC, 0x40]).raw([ESC, 0x74, 16]); }; // reset + CP1252
   Builder.prototype.text = function (s) { return this.raw(encodeCp1252(s)); };
@@ -170,6 +173,7 @@
       var img = null;
       try { img = rasterLine(s, this._st); } catch (_) { img = null; }
       if (img) return this.raw(img);
+      this.lost++;
     }
     return this.text(s).raw([0x0A]);
   };
@@ -209,7 +213,7 @@
     return this.raw([ESC, 0x61, 0]); // back to left
   };
 
-  Builder.prototype.bytes = function () { return new Uint8Array(this._); };
+  Builder.prototype.bytes = function () { var u = new Uint8Array(this._); if (this.lost) u.unsupportedLines = this.lost; return u; };
 
   // ── helpers ────────────────────────────────────────────────────────────────
   /* Character columns per roll width, Font A (12 dots wide). These are the widths
@@ -623,6 +627,9 @@
   window.KiwiEscPos = {
     builder: function (paper) { return new Builder(paper); },
     needsRaster: needsRaster,
+    /* Lignes que ce ticket n'a pas pu dessiner (arabe sans canvas) : 0 = tout
+       le texte sortira lisible. */
+    unsupportedLines: function (bytes) { return (bytes && bytes.unsupportedLines) | 0; },
     encodeCp1252: encodeCp1252,
     toB64: toB64,
     receipt: receipt,

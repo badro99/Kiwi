@@ -1167,6 +1167,7 @@
       'Pont': ['Bridge', 'جسر'],
       'en ligne': ['online', 'متصل'],
       'Dissocier': ['Unlink', 'فك الارتباط'],
+      'Impression arrêtée · cet appareil ne sait pas dessiner l’arabe de ce ticket. Rien n’est sorti en « ? ».': ['Printing stopped · this device cannot draw the Arabic on this ticket. Nothing was printed as « ? ».', 'توقفت الطباعة · هذا الجهاز لا يستطيع رسم النص العربي في هذه التذكرة. لم يُطبع أي شيء على شكل « ? ».'],
       'Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.': ['Unlink this bridge? It will no longer receive tickets from your tablets.', 'فك ارتباط هذا الجسر؟ لن يستقبل بعد الآن تذاكر أجهزتك اللوحية.'],
       'Pont dissocié': ['Bridge unlinked', 'تم فك ارتباط الجسر'],
       'Sur l’ordinateur du comptoir, lancez Kiwi Printer Bridge puis ouvrez': ['On the counter computer, start Kiwi Printer Bridge, then open', 'على حاسوب الكاونتر، شغّل Kiwi Printer Bridge ثم افتح'],
