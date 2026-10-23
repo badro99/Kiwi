@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const source=fs.readFileSync(new URL('../assets/stock.js',import.meta.url),'utf8');
+const source=stockTestSource();
 const body=source.slice(source.indexOf('  function supplierHistory(s){'),source.indexOf('  function renderSupplierCard'));
 let receipts=[];let movements=[];
 const history=new Function('window','getInv','itemHistory',body+';return supplierHistory;')({KiwiProcurement:{doc:()=>({receipts})}},()=>[{id:'i1'}],()=>movements);

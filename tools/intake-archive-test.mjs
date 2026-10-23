@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · intake archive test — le coffre privé des pièces déposées.
  *
@@ -33,7 +34,7 @@ async function check(name, fn) {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSrc = fs.readFileSync(path.join(root, 'functions/api/ai/intake-archive.js'), 'utf8');
-const stockSrc = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
+const stockSrc = stockTestSource(root);
 
 /* ── Vrai code auth + vraies routes, sosies D1/R2 ────────────────────────── */
 const auth = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')).href);

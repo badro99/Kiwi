@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · inventory count review test — approbation vraie et exactement une fois.
  *
@@ -31,7 +32,7 @@ function jseq(actual, expected, msg) {
 }
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
+const src = stockTestSource(root);
 
 /* Les fonctions module de stock.js se ferment par `\n  }` à l'indent 2. */
 function extractFn(name) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · GESTION DES PÉREMPTIONS & DLC / DDM — tools/inventory-expiry-test.mjs
@@ -164,7 +165,7 @@ ok(!expiringAfter.some(l => l.status === 'expired'), 'plus aucun lot n\'est en s
 
 // Les écrans écrivent bien la DLC : un moteur qui lit meta.expiresAt que personne ne renseigne
 // est une alerte toujours vide. On vérifie les trois formulaires de réception + la bannière caisse.
-const stockSrc = fs.readFileSync(path.join(root, 'assets', 'stock.js'), 'utf8');
+const stockSrc = stockTestSource(root);
 const caisseSrc = caisseTestSource(fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8'));
 ok((stockSrc.match(/data-stock-receive-dlc/g) || []).length >= 3, 'tableau de bord · la réception fournisseur saisit une DLC par ligne (2 gabarits + lecture)');
 ok(/expiresAt:\s*line\.dlc/.test(stockSrc), 'tableau de bord · la DLC de réception est écrite dans meta.expiresAt du mouvement receipt');

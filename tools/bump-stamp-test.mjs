@@ -295,5 +295,25 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
+/* Les parties du stock remontent au chargeur, puis à la coquille. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-stamp-stock-'));
+  try {
+    fixture(dir);
+    fs.mkdirSync(path.join(dir, 'assets/stock'));
+    fs.writeFileSync(path.join(dir, 'assets/stock/counts.js'), '// counts\n');
+    fs.writeFileSync(path.join(dir, 'assets/stock.js'), "const urls = ['assets/stock/counts.js?v=1'];\n");
+    fs.appendFileSync(path.join(dir, 'dashboard.html'), '<script src="assets/stock.js?v=1"></script>\n');
+    fs.appendFileSync(path.join(dir, 'kiwi-sw.js'), "const stock = ['/assets/stock.js?v=1','/assets/stock/counts.js?v=1'];\n");
+    ok(run(dir, ['--sync']).status === 0, 'stock : graphe initial scellé');
+    fs.appendFileSync(path.join(dir, 'assets/stock/counts.js'), '// modification\n');
+    ok(run(dir, ['assets/stock/counts.js']).status === 0, 'stock : partie et chargeur avancent ensemble');
+    ok(rd(dir, 'assets/stock.js').includes('assets/stock/counts.js?v=2'), 'stock : URL littérale mise à jour');
+    ok(rd(dir, 'dashboard.html').includes('assets/stock.js?v=2'), 'stock : chargeur remonté dans la coquille');
+    const check = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+    ok(check.status === 0, 'stock : manifeste et précache cohérents après cascade');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
 console.log(`\n${failures.length ? '✗' : '✓'} ${passed} passed · ${failures.length} failed`);
 if (failures.length) { failures.forEach((f) => console.log(`  ✗ ${f}`)); process.exit(1); }

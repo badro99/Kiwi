@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+const stockTestSource = require('./stock-test-source.cjs');
 
 const fs = require('fs');
 const vm = require('vm');
@@ -8,7 +9,7 @@ const assert = require('assert');
 const source = fs.readFileSync('assets/restaurant-units.js', 'utf8');
 const recipesSource = fs.readFileSync('assets/restaurant-recipes.js', 'utf8');
 const workspaceSource = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
-const stockSource = fs.readFileSync('assets/stock.js', 'utf8');
+const stockSource = stockTestSource();
 const dashboard = fs.readFileSync('dashboard.html', 'utf8');
 
 let recipeDoc = { items: {} };

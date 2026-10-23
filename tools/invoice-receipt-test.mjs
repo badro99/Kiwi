@@ -1,3 +1,4 @@
+import stockTestSource from './stock-test-source.cjs';
 // tools/invoice-receipt-test.mjs — suite de tests pour la réception de factures fournisseur (PDF/OCR).
 //
 // Valide :
@@ -97,7 +98,7 @@ if (validateInvoiceData) {
 }
 
 // ── 2. Client Matcher & Comparison (assets/stock.js) ─────────────────────────
-const stockSource = fs.readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
+const stockSource = stockTestSource(ROOT);
 
 // Extraction des fonctions pures de matching et comparaison
 const normMatch = stockSource.match(/function normalizeMatchStr\([\s\S]*?\n  \}/);

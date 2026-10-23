@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -96,7 +97,7 @@ ok('legacy storage is never rewritten during mapping', unchanged.rows[0].locatio
 ok('unfiltered history preserves its legacy representation',
   window.KiwiInventory.history('olive-oil')[0].locationId === 'principal');
 
-const stockCode = read('assets/stock.js');
+const stockCode = stockTestSource();
 const countCode = read('functions/api/inventory/counts.js');
 const movementCode = read('functions/api/inventory/movements.js');
 ok('receipts and manual adjustments use the resolved stock location',

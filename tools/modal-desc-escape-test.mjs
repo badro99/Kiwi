@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Les noms saisis par le commerçant n'entrent pas en HTML brut
  *
@@ -33,7 +34,7 @@ hasNot(pages, 'desc: `« ${c.name} » contient', 'plus de nom de catégorie brut
 hasNot(pages, '`« ${c.name} » contient', 'plus de nom de catégorie brut (traduit)');
 hasNot(pages, '`"${c.name}" contains', 'plus de nom de catégorie brut (anglais)');
 
-const stock = read('assets/stock.js');
+const stock = stockTestSource();
 has(stock, 'desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,', 'stock : article et catégorie échappés (fournisseur de secours)');
 has(stock, 'desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,', 'stock : unité échappée');
 has(stock, 'desc: `${esc(catLabel(it.category))} · ${st ===', 'stock : catégorie échappée (fiche article)');

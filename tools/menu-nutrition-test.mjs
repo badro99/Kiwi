@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -163,7 +164,7 @@ assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} o
 assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
 assert.ok(ciqual.foods.every((food) => food.nameFr && food.nameEn && N.NUTRIENT_KEYS.every((key) => Number.isFinite(food[key]) && food[key] >= 0)));
 assert.ok(ciqual.foods.every((food) => food.allergenHints.every((key) => N.ALLERGEN_KEYS.includes(key))));
-const stockSource = fs.readFileSync(new URL('../assets/stock.js', import.meta.url), 'utf8');
+const stockSource = stockTestSource();
 const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json\?v=\d+'/,
   'Ciqual reste chargé à la demande dans l’éditeur, avec une URL versionnée');

@@ -1,8 +1,9 @@
+import stockTestSource from './stock-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/stock.js', import.meta.url), 'utf8');
+const source = stockTestSource();
 const data = new Map();
 const catalogue = {
   venue: 'wrong-demo-key',

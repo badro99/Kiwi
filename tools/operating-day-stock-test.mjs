@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* Focused regression coverage for the stock page's operating-day and alert
  * semantics. This loads the shipped asset and exercises its read-only seam,
  * rather than copying the implementation into a test helper. */
@@ -7,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/stock.js', import.meta.url), 'utf8');
+const source = stockTestSource();
 const consumptionSource = fs.readFileSync(new URL('../assets/inventory-consumption.js', import.meta.url), 'utf8');
 assert.equal(source.includes("new Date('2026-05-23"), false,
   'operational stock dates must not be pinned to the old May 23 snapshot');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Tests des actions fournisseurs (tools/supplier-actions-test.mjs)
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -24,7 +25,7 @@ function check(label, condition, extra) {
 
 console.log('\n■ Supplier Table Actions & Rating Tests (tools/supplier-actions-test.mjs)');
 
-const stockSource = fs.readFileSync(path.join(ROOT, 'assets', 'stock.js'), 'utf8');
+const stockSource = stockTestSource(ROOT);
 
 // Mock browser environment
 let lastNavHref = '';

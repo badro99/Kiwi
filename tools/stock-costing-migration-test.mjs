@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Multi-Supplier Stock Costing — Phase 1 Migration Test Suite
  *
@@ -19,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
-const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const R = (p) => p === 'assets/stock.js' ? stockTestSource(ROOT) : fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 let pass = 0;
 const ok = (label, cond, detail) => {
@@ -163,7 +164,7 @@ vm.createContext(context);
 // Load units, stock, recipes, cost, consumption, ledger
 vm.runInContext(R('assets/restaurant-units.js'), context);
 vm.runInContext(R('assets/inventory-ledger.js'), context);
-vm.runInContext(R('assets/stock.js'), context);
+vm.runInContext(stockTestSource(ROOT), context);
 vm.runInContext(R('assets/caisse-stock-sync.js'), context);
 vm.runInContext(R('assets/restaurant-recipes.js'), context);
 vm.runInContext(R('assets/cost.js'), context);
@@ -467,7 +468,7 @@ ok('Full coverage with null default returns exact lot cost (95.00)', costPartial
  * exige window.KiwiCloudDoc.mergeDefault — sans lui la fonction rend `mine`
  * intact et un test naïf passe au vert sans avoir rien exercé. */
 {
-  const all = R('assets/stock.js');
+  const all = stockTestSource(ROOT);
   const grab = (name) => {
     const i = all.indexOf('function ' + name);
     let depth = 0, k = all.indexOf('{', i);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 // iPhone pass 5 (tickets #0107 to #0114): one source-level guard per fix, so a
 // later edit that quietly undoes one of them goes red here instead of on the
 // tester's phone. Static reads only: no browser, no network, no credentials.
@@ -21,7 +22,7 @@ const pages = read('assets/pages.js');
 const pagesPro = pagesProSource();
 const menu = read('assets/restaurant-menu-workspace.js');
 const team = teamTestSource();
-const stock = read('assets/stock.js');
+const stock = stockTestSource();
 
 // #0107 · date range reachable and swipeable
 ok(/function initPeriodSwipe\(/.test(runtime) && /initPeriodSwipe\(\)/.test(runtime.replace(/function initPeriodSwipe\(/, '')), 'the hero chart steps through ranges; horizontal pill swipes only scroll (#144)');
@@ -103,7 +104,7 @@ numberScope.localStorage.lang = 'fr';
 ok(numberScope.window.KiwiNumber.number(15765.38, 2) === '15\u202f765,38', 'French numbers use narrow-space grouping and comma decimals');
 numberScope.localStorage.lang = 'ar';
 ok(numberScope.window.KiwiNumber.percent(70.2) === '70,2 %', 'Arabic keeps Latin digits with joined-script-safe number punctuation');
-ok([read('assets/stock.js'), read('assets/finance.js'), pagesProSource(), read('assets/dateRange.js'), read('assets/interactive.js'), read('assets/agent.js')]
+ok([stockTestSource(), read('assets/finance.js'), pagesProSource(), read('assets/dateRange.js'), read('assets/interactive.js'), read('assets/agent.js')]
   .every((src) => src.includes('KiwiNumber')), 'stock, finance, orders, terminals, home, notifications and AI use the shared rule');
 ok(/if \(spec\.fmt === 'pct2'\) return \(window\.KiwiNumber\?\.number\(v, 2\)/.test(dateRange)
   && /if \(spec\.fmt === 'pct1'\) return \(window\.KiwiNumber\?\.number\(v, 1\)/.test(dateRange)

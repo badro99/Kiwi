@@ -1,9 +1,10 @@
+import stockTestSource from './stock-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
+const src = stockTestSource(ROOT);
 let failures = 0;
 function ok(condition, label) {
   if (condition) console.log('  ✓ ' + label);

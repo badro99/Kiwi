@@ -2806,193 +2806,11 @@
     return U ? U[l === 'en' ? 0 : 1] : s;
   }
 
-  function getWasteMovements() {
-    const I = window.KiwiInventory;
-    if (!I || !I.history) return [];
-    const all = I.history() || [];
-    let wasteRows = all.filter(r => r && (r.refType === 'waste' || ['loss', 'expiry', 'gift', 'staff-meal'].includes(r.reason)));
-    
-    // Apply date range filter
-    const now = Date.now();
-    const dayStart = (window.KiwiDayReport && window.KiwiDayReport.dayBounds)
-      ? window.KiwiDayReport.dayBounds(window.KiwiDayReport.businessDay(now)).from
-      : new Date().setHours(5, 0, 0, 0);
-    
-    if (stWasteDateRange === 'aujourdhui') {
-      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= dayStart);
-    } else if (stWasteDateRange === '7j') {
-      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= now - 7 * 864e5);
-    } else if (stWasteDateRange === '30j') {
-      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= now - 30 * 864e5);
-    }
-    
-    // Reason filter
-    if (stWasteFilterReason !== 'all') {
-      wasteRows = wasteRows.filter(r => {
-        const fine = r.meta && r.meta.wasteReason;
-        if (fine === stWasteFilterReason) return true;
-        if (stWasteFilterReason === 'expiry' && r.reason === 'expiry') return true;
-        if (stWasteFilterReason === 'gift' && r.reason === 'gift') return true;
-        if (stWasteFilterReason === 'staff-meal' && r.reason === 'staff-meal') return true;
-        if (stWasteFilterReason === 'loss' && r.reason === 'loss') return true;
-        return false;
-      });
-    }
+  function getWasteMovements(...args) { return stockParts.loss.getWasteMovements.apply(this, args); }
 
-    // Search filter
-    if (stWasteSearch) {
-      const q = stWasteSearch.toLowerCase();
-      wasteRows = wasteRows.filter(r => {
-        const it = getInv().find(x => x.id === r.itemId);
-        const name = (it ? it.name : r.itemId).toLowerCase();
-        const actor = `${r.actor || ''} ${ctWho(r.actor || '')}`.toLowerCase();
-        const note = `${r.note || ''} ${ctWasteNote(r.note || '')}`.toLowerCase();
-        return name.includes(q) || actor.includes(q) || note.includes(q);
-      });
-    }
+  function renderWasteJournal(...args) { return stockParts.loss.renderWasteJournal.apply(this, args); }
 
-    return wasteRows;
-  }
-
-  function renderWasteJournal() {
-    const rows = getWasteMovements();
-    const inv = getInv();
-    const totalQty = rows.reduce((acc, r) => acc + Math.abs(+r.qty || 0), 0);
-    const totalVal = rows.reduce((acc, r) => {
-      const it = inv.find(x => x.id === r.itemId);
-      const cost = r.unitCost != null ? r.unitCost : (it ? it.costPerUnit : 0);
-      return acc + Math.abs(+r.qty || 0) * cost;
-    }, 0);
-
-    const rangePill = (id, label) => `<button class="st-cat-pill${stWasteDateRange === id ? ' on' : ''}" type="button" data-action="stock-waste-range" data-range="${id}">${esc(label)}</button>`;
-    const reasonPill = (id, label) => `<button class="st-cat-pill${stWasteFilterReason === id ? ' on' : ''}" type="button" data-action="stock-waste-reason" data-reason="${id}">${esc(label)}</button>`;
-
-    return `
-      <div class="st-section">
-        <div class="st-toolbar" style="margin-bottom:16px;">
-          <div class="st-search-row">
-            <div class="st-search-wrap">
-              ${svg('search', 16)}
-              <input class="st-search" type="text" placeholder="${esc(ct('wasteSearchPh'))}" value="${esc(stWasteSearch)}" data-stock-waste-search aria-label="${esc(ct('wasteSearchAria'))}" />
-            </div>
-            <button class="st-btn primary" type="button" data-action="stock-open-declare-waste" style="background:#b91c1c;border-color:#991b1b;color:#fff;display:flex;align-items:center;gap:6px;">
-              ${svg('trash2', 14)}<span>${esc(ct('declareBtn'))}</span>
-            </button>
-            <button class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
-              ${svg('download', 14)}<span>${esc(ct('exportCsv'))}</span>
-            </button>
-          </div>
-          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${rangePill('aujourdhui', ct('rangeToday'))}
-            ${rangePill('7j', ct('range7'))}
-            ${rangePill('30j', ct('range30'))}
-            ${rangePill('tout', ct('rangeAll'))}
-          </div>
-          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${reasonPill('all', ct('reasonAll'))}
-            ${reasonPill('perime', ct('rsPerime'))}
-            ${reasonPill('casse', ct('rsCasse'))}
-            ${reasonPill('avarie', ct('rsAvarieShort'))}
-            ${reasonPill('offert', ct('rsOffert'))}
-            ${reasonPill('repas-equipe', ct('rsStaff'))}
-          </div>
-        </div>
-
-        <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
-          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiLostValue'))}</div><div class="st-kpi-v" style="color:#b91c1c;">${ctMad(totalVal)}</div><div class="st-kpi-sub">${esc(ct('kpiLostRecords', rows.length))}</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiLostVolume'))}</div><div class="st-kpi-v">${ctNum(Math.round(totalQty * 10) / 10)}</div><div class="st-kpi-sub">${esc(ct('kpiLostVolumeSub'))}</div></div>
-        </div>
-
-        <div class="st-tbl-wrap">
-          <table class="st-tbl">
-            <thead>
-              <tr>
-                <th>${esc(ct('thDate'))}</th>
-                <th>${esc(ct('thItem'))}</th>
-                <th>${esc(ct('thQty'))}</th>
-                <th>${esc(ct('thUnit'))}</th>
-                <th>${esc(ct('thReason'))}</th>
-                <th>${esc(ct('thValueMad'))}</th>
-                <th>${esc(ct('thEmployee'))}</th>
-                <th>${esc(ct('thNote'))}</th>
-                <th style="text-align:right;">${esc(ct('thActions'))}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.length ? rows.map(r => {
-                const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
-                const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
-                const valMAD = Math.abs(+r.qty || 0) * cost;
-                const when = ctWhen(r.occurredTs);
-                const isReversal = !!r.reversalOf;
-                const reasonLabel = ctReason((r.meta && r.meta.wasteReason) || r.reason, isReversal);
-                const note = ctWasteNote(r.note || '');
-                return `
-                  <tr style="${isReversal ? 'opacity:0.6;' : ''}">
-                    <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${esc(when.date + ' ' + when.time)}</td>
-                    <td><b>${esc(it.name)}</b>${r.meta?.lotId ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('lot', r.meta.lotId))}</div>` : ''}</td>
-                    <td class="st-mono" style="color:${+r.qty < 0 ? '#b91c1c' : 'var(--atlas)'};font-weight:600;">${+r.qty < 0 ? '−' : '+'}${ctNum(Math.abs(+r.qty || 0))}</td>
-                    <td>${esc(ctUnit(it.unit))}</td>
-                    <td><span class="st-badge warn" style="font-size:11px;">${esc(reasonLabel)}</span></td>
-                    <td class="st-mono">${ctMad(valMAD)}</td>
-                    <td style="font-size:12.5px;">${esc(ctWho(r.actor || (r.meta && r.meta.actor) || '') || '·')}</td>
-                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(note)}">${esc(note || '·')}</td>
-                    <td style="text-align:right;">
-                      ${stShowReal() && !isReversal ? `
-                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="${esc(ct('cancelLossTitle'))}" style="color:#b91c1c;border-color:rgba(185,28,28,0.25);">
-                          ${esc(ct('cancel'))}
-                        </button>
-                      ` : '·'}
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--n-500);">${esc(ct('wasteEmpty'))}</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-        <div class="st-tbl-foot">
-          ${ct('wasteFoot', rows.length, ctMad(totalVal))}
-        </div>
-      </div>
-    `;
-  }
-
-  function exportWasteCsv() {
-    const rows = getWasteMovements();
-    const inv = getInv();
-    function csvSafe(v) {
-      let s = String(v == null ? '' : v);
-      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    const header = ct('csvWaste');
-    const lines = [header.join(';')];
-    rows.forEach(r => {
-      const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
-      const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
-      const valMAD = Math.abs(+r.qty || 0) * cost;
-      const d = new Date(r.occurredTs).toISOString().slice(0, 19).replace('T', ' ');
-      lines.push([
-        d,
-        csvSafe(it.name),
-        Math.abs(+r.qty || 0),
-        csvSafe(ctUnit(it.unit)),
-        csvSafe(ctReason((r.meta && r.meta.wasteReason) || r.reason, !!r.reversalOf)),
-        valMAD.toFixed(2),
-        csvSafe(ctWho(r.actor || '')),
-        csvSafe(ctWasteNote(r.note || '')),
-        r.id
-      ].join(';'));
-    });
-    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${ct('csvWasteFile')}-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-  }
+  function exportWasteCsv(...args) { return stockParts.loss.exportWasteCsv.apply(this, args); }
 
   function cancelWasteMovement(movementId) {
     if (!movementId || !window.KiwiInventory) return;
@@ -3022,710 +2840,44 @@
     });
   }
 
-  function openDeclareWasteModal(prefill) {
-    prefill = prefill || {};
-    const items = getInv();
-    const prefillId = prefill.itemId || (items[0] && items[0].id) || '';
-    const prefillQty = prefill.qty != null ? prefill.qty : 1;
-    const prefillReason = prefill.reason || 'perime';
-
-    const itemOptions = items.map(it => `
-      <option value="${esc(it.id)}"${it.id === prefillId ? ' selected' : ''}>
-        ${esc(it.name)} (${ctNum(it.currentStock)} ${esc(ctUnit(it.unit || 'unité'))})
-      </option>
-    `).join('');
-
-    const html = `
-      <div class="st-modal-head">
-        <div>
-          <h3>${esc(ct('declareTitle'))}</h3>
-          <p style="margin:2px 0 0;font-size:12.5px;color:var(--n-500);">${esc(ct('declareSub'))}</p>
-        </div>
-        <button class="st-modal-x" type="button" data-action="stock-modal-close">${svg('x', 18)}</button>
-      </div>
-      <form class="st-form" id="st-waste-declare-form" style="padding:16px 20px;">
-        <div class="st-field" style="margin-bottom:12px;">
-          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareItem'))}</label>
-          <select class="st-select" id="st-wf-item" required style="width:100%;">
-            ${itemOptions}
-          </select>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:12px;">
-          <div class="st-field" style="flex:1;">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareQty'))}</label>
-            <input class="st-input" id="st-wf-qty" type="number" step="any" min="0.001" value="${prefillQty}" required style="width:100%;" />
-          </div>
-          <div class="st-field" style="flex:1.5;">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareReason'))}</label>
-            <select class="st-select" id="st-wf-reason" style="width:100%;">
-              <option value="perime"${prefillReason === 'perime' || prefillReason === 'Péremption' || prefillReason === 'expiry' ? ' selected' : ''}>${esc(ct('optPerime'))}</option>
-              <option value="casse"${prefillReason === 'casse' ? ' selected' : ''}>${esc(ct('optCasse'))}</option>
-              <option value="avarie"${prefillReason === 'avarie' ? ' selected' : ''}>${esc(ct('optAvarie'))}</option>
-              <option value="offert"${prefillReason === 'offert' ? ' selected' : ''}>${esc(ct('optOffert'))}</option>
-              <option value="repas-equipe"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>
-              <option value="autre"${prefillReason === 'autre' ? ' selected' : ''}>${esc(ct('optOther'))}</option>
-            </select>
-          </div>
-        </div>
-        <div class="st-field" style="margin-bottom:16px;">
-          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareNote'))}</label>
-          <input class="st-input" id="st-wf-note" type="text" placeholder="${esc(ct('declareNotePh'))}" style="width:100%;" />
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="st-btn secondary" type="button" data-action="stock-modal-close">${esc(ct('cancel'))}</button>
-          <button class="st-btn primary" type="submit" style="background:#b91c1c;border-color:#991b1b;color:#fff;">
-            ${svg('trash2', 14)}<span style="margin-left:4px;">${esc(ct('declareSave'))}</span>
-          </button>
-        </div>
-      </form>
-    `;
-
-    openModal(html);
-
-    const form = document.getElementById('st-waste-declare-form');
-    if (form) {
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const itemId = document.getElementById('st-wf-item')?.value;
-        const qty = parseFloat(document.getElementById('st-wf-qty')?.value) || 0;
-        const reason = document.getElementById('st-wf-reason')?.value || 'perime';
-        const note = (document.getElementById('st-wf-note')?.value || '').trim();
-        if (!itemId || !(qty > 0)) {
-          window.Kiwi?.toast?.(ct('qtyInvalid'), { type: 'warn' });
-          return;
-        }
-        if (window.KiwiInventory) {
-          const it = items.find(x => x.id === itemId);
-          const unitCost = it ? (it.costPerUnit || it.cost || null) : null;
-          window.KiwiInventory.add({
-            locationId: stockLocationId(),
-            itemId,
-            qty: -qty,
-            /* « loss » : le motif que le serveur connaît. « waste » était refusé
-               et bloquait la file de stock de l'appareil. */
-            reason: 'loss',
-            refType: 'waste',
-            refId: 'waste-' + Date.now().toString(36),
-            unitCost,
-            note: note || `Déclaration perte · ${reason}`,
-            meta: {
-              wasteReason: reason,
-              actor: 'Propriétaire',
-              actorId: 'owner'
-            }
-          });
-          window.KiwiInventory.sync();
-          window.Kiwi?.toast?.(ct('lossSavedToast'), { type: 'success' });
-          closeModal();
-          if (stPageActive) render();
-        }
-      };
-    }
-  }
+  function openDeclareWasteModal(...args) { return stockParts.loss.openDeclareWasteModal.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * HISTORIQUE DES INVENTAIRES PHYSIQUES & REVUE PROPRIÉTAIRE
    * ═══════════════════════════════════════════════════════════════════════ */
-  async function fetchServerCounts() {
-    try {
-      const resp = await fetch('/api/inventory/counts');
-      const data = await resp.json();
-      if (data && Array.isArray(data.counts)) {
-        stCountsCache = data.counts;
-        stCountsLastFetched = Date.now();
-      }
-    } catch (_) {}
-  }
+  function fetchServerCounts(...args) { return stockParts.counts.fetchServerCounts.apply(this, args); }
 
-  function getAllCounts() {
-    const serverCounts = Array.isArray(stCountsCache) ? stCountsCache : [];
-    const localHist = stCountHistory() || [];
-    
-    const localMapped = localHist.map((h, i) => {
-      const gaps = Array.isArray(h.gaps) ? h.gaps : [];
-      return {
-        id: h.ref || `local_cnt_${h.ts || i}`,
-        engine: 'ledger',
-        status: 'applied',
-        storeId: '',
-        storeName: 'Magasin principal',
-        employeeId: '',
-        employeeName: 'Propriétaire',
-        employeeRole: 'Admin',
-        submittedAt: h.ts || Date.now(),
-        reviewedAt: h.ts || Date.now(),
-        reviewerName: 'Propriétaire',
-        reviewDecision: 'approved',
-        appliedAt: h.ts || Date.now(),
-        totalLines: h.counted || gaps.length,
-        totalDiff: gaps.reduce((acc, g) => acc + (g.diff || 0), 0),
-        totalVarianceCostMAD: h.varMad || gaps.reduce((acc, g) => acc + (g.mad || 0), 0),
-        absVarianceCostMAD: Math.abs(h.varMad || gaps.reduce((acc, g) => acc + Math.abs(g.mad || 0), 0)),
-        lines: gaps.map(g => ({
-          key: g.id,
-          itemId: g.id,
-          productName: g.name,
-          color: '',
-          size: '',
-          sku: g.id,
-          unit: g.unit || 'unité',
-          unitCost: 0,
-          systemQty: g.theo || 0,
-          countedQty: g.counted || 0,
-          diff: g.diff || 0,
-          varianceCost: g.mad || 0,
-          explanation: g.reason || '',
-          note: ''
-        }))
-      };
-    });
+  function getAllCounts(...args) { return stockParts.counts.getAllCounts.apply(this, args); }
 
-    const byId = new Map();
-    serverCounts.forEach(c => byId.set(c.id, c));
-    localMapped.forEach(c => { if (!byId.has(c.id)) byId.set(c.id, c); });
-    
-    return Array.from(byId.values()).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
-  }
+  function filterCounts(...args) { return stockParts.counts.filterCounts.apply(this, args); }
 
-  function filterCounts(counts) {
-    const now = Date.now();
-    let rows = counts.slice();
+  function renderCountsHistory(...args) { return stockParts.counts.renderCountsHistory.apply(this, args); }
 
-    if (stCountDateFilter === 'aujourdhui') {
-      const dayStart = (window.KiwiDayReport && window.KiwiDayReport.dayBounds)
-        ? window.KiwiDayReport.dayBounds(window.KiwiDayReport.businessDay(now)).from
-        : new Date().setHours(5, 0, 0, 0);
-      rows = rows.filter(r => (r.submittedAt || 0) >= dayStart);
-    } else if (stCountDateFilter === '7j') {
-      rows = rows.filter(r => (r.submittedAt || 0) >= now - 7 * 864e5);
-    } else if (stCountDateFilter === '30j') {
-      rows = rows.filter(r => (r.submittedAt || 0) >= now - 30 * 864e5);
-    }
+  function renderCountsRollup(...args) { return stockParts.counts.renderCountsRollup.apply(this, args); }
 
-    if (stCountStatusFilter !== 'all') {
-      rows = rows.filter(r => r.status === stCountStatusFilter);
-    }
-
-    if (stCountSearch) {
-      const q = stCountSearch.toLowerCase();
-      rows = rows.filter(r => {
-        const emp = `${r.employeeName || ''} ${ctWho(r.employeeName)}`.toLowerCase();
-        const stn = `${r.storeName || ''} ${ctStore(r.storeName)}`.toLowerCase();
-        const cid = (r.id || '').toLowerCase();
-        return emp.includes(q) || stn.includes(q) || cid.includes(q);
-      });
-    }
-
-    return rows;
-  }
-
-  function renderCountsHistory() {
-    if (Date.now() - stCountsLastFetched > 30000) {
-      fetchServerCounts().then(() => {
-        if (stPageActive && stItemSubView === 'counts') rerenderTabBody();
-      });
-    }
-
-    const allCounts = getAllCounts();
-    const filtered = filterCounts(allCounts);
-
-    const rangePill = (id, label) => `<button class="st-cat-pill${stCountDateFilter === id ? ' on' : ''}" type="button" data-action="stock-count-range" data-range="${id}">${esc(label)}</button>`;
-    const statusPill = (id, label) => `<button class="st-cat-pill${stCountStatusFilter === id ? ' on' : ''}" type="button" data-action="stock-count-status" data-status="${id}">${esc(label)}</button>`;
-    const tabBtn = (id, label) => `<button class="st-cat-pill${stCountSubTab === id ? ' on' : ''}" type="button" data-action="stock-count-tab" data-tab="${id}" style="font-weight:600;">${esc(label)}</button>`;
-
-    const totalEcartsMad = filtered.reduce((acc, c) => acc + (c.totalVarianceCostMAD || 0), 0);
-    const totalAbsEcartsMad = filtered.reduce((acc, c) => acc + (c.absVarianceCostMAD || 0), 0);
-    const pendingCount = allCounts.filter(c => c.status === 'submitted').length;
-
-    return `
-      <div class="st-section">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-          <div style="display:flex;gap:6px;">
-            ${tabBtn('list', ct('tabList'))}
-            ${tabBtn('rollup', ct('tabRollup'))}
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="st-btn secondary" type="button" data-action="stock-export-counts-csv" style="display:flex;align-items:center;gap:6px;">
-              ${svg('download', 14)}<span>${esc(ct('exportCsv'))}</span>
-            </button>
-            <button class="st-btn primary" type="button" data-action="stock-physical-count">
-              ${svg('plus', 14)}<span>${esc(ct('newCount'))}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="st-toolbar" style="margin-bottom:16px;">
-          <div class="st-search-row">
-            <div class="st-search-wrap">
-              ${svg('search', 16)}
-              <input class="st-search" type="text" placeholder="${esc(ct('countSearchPh'))}" value="${esc(stCountSearch)}" data-stock-count-search aria-label="${esc(ct('countSearchAria'))}" />
-            </div>
-          </div>
-          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${rangePill('aujourdhui', ct('rangeToday'))}
-            ${rangePill('7j', ct('range7'))}
-            ${rangePill('30j', ct('range30'))}
-            ${rangePill('tout', ct('rangeAll'))}
-          </div>
-          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${statusPill('all', ct('statusAll'))}
-            ${statusPill('submitted', ct('statusPending', pendingCount))}
-            ${statusPill('applied', ct('statusApplied'))}
-            ${statusPill('rejected', ct('statusRejected'))}
-          </div>
-        </div>
-
-        <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
-          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiCounts'))}</div><div class="st-kpi-v">${filtered.length}</div><div class="st-kpi-sub">${esc(ct('kpiCountsSub', pendingCount))}</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiNet'))}</div><div class="st-kpi-v" style="color:${totalEcartsMad < 0 ? '#b91c1c' : 'var(--atlas)'};">${totalEcartsMad > 0 ? '+' : ''}${ctMad(totalEcartsMad)}</div><div class="st-kpi-sub">${esc(ct('kpiAbs', ctMad(totalAbsEcartsMad)))}</div></div>
-        </div>
-
-        ${stCountSubTab === 'rollup' ? renderCountsRollup(filtered) : `
-          <div class="st-tbl-wrap">
-            <table class="st-tbl">
-              <thead>
-                <tr>
-                  <th>${esc(ct('thDate'))}</th>
-                  <th>${esc(ct('thRef'))}</th>
-                  <th>${esc(ct('thStore'))}</th>
-                  <th>${esc(ct('thEmployee'))}</th>
-                  <th style="text-align:center;">${esc(ct('thItems'))}</th>
-                  <th style="text-align:right;">${esc(ct('thNetMad'))}</th>
-                  <th style="text-align:center;">${esc(ct('thStatus'))}</th>
-                  <th style="text-align:right;">${esc(ct('thActions'))}</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filtered.length ? filtered.map(c => {
-                  const when = ctWhen(c.submittedAt);
-                  const stLabel = c.status === 'submitted' ? ct('stPending') : (c.status === 'applied' || c.status === 'approved' ? ct('stApplied') : ct('stRejected'));
-                  const stClass = c.status === 'submitted' ? 'warn' : (c.status === 'applied' || c.status === 'approved' ? 'ok' : 'bad');
-                  const mad = c.totalVarianceCostMAD || 0;
-                  return `
-                    <tr>
-                      <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${esc(when.date + ' ' + when.time)}</td>
-                      <td><b>${esc(c.id)}</b></td>
-                      <td>${esc(ctStore(c.storeName))}</td>
-                      <td>${esc(ctWho(c.employeeName) || '·')} <span style="font-size:11px;color:var(--n-500);">(${esc(ctRole(c.employeeRole) || '·')})</span></td>
-                      <td style="text-align:center;" class="st-mono">${c.totalLines || 0}</td>
-                      <td style="text-align:right;font-weight:600;color:${mad < 0 ? '#b91c1c' : mad > 0 ? 'var(--atlas)' : 'inherit'};" class="st-mono">
-                        ${mad > 0 ? '+' : ''}${ctMad(mad)}
-                      </td>
-                      <td style="text-align:center;">
-                        <span class="st-badge ${stClass}" style="font-size:11px;">${esc(stLabel)}</span>
-                      </td>
-                      <td style="text-align:right;">
-                        <button class="st-btn small" type="button" data-action="stock-count-detail" data-count-id="${esc(c.id)}" style="${c.status === 'submitted' ? 'background:#059669;color:#fff;border-color:#047857;' : ''}">
-                          ${esc(c.status === 'submitted' ? ct('btnReview') : ct('btnDetails'))}
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--n-500);">${esc(ct('countsEmpty'))}</td></tr>`}
-              </tbody>
-            </table>
-          </div>
-          <div class="st-tbl-foot">
-            ${esc(ct('countsFoot', filtered.length))}
-          </div>
-        `}
-      </div>
-    `;
-  }
-
-  function renderCountsRollup(counts) {
-    const variantMap = new Map();
-    const employeeMap = new Map();
-    const storeMap = new Map();
-
-    counts.forEach(c => {
-      const lines = Array.isArray(c.lines) ? c.lines : [];
-      lines.forEach(l => {
-        const vKey = l.variantId || l.itemId || l.key;
-        const vLabel = l.productName ? `${l.productName}${l.color ? ' · ' + l.color : ''}${l.size ? ' · ' + l.size : ''}` : (l.name || vKey);
-        const curV = variantMap.get(vKey) || { key: vKey, label: vLabel, sku: l.sku || '', countTimes: 0, absDiffSum: 0, absCostSum: 0, netDiffSum: 0, unit: l.unit || 'unité' };
-        curV.countTimes++;
-        curV.absDiffSum += Math.abs(Number(l.diff) || 0);
-        curV.absCostSum += Math.abs(Number(l.varianceCost) || 0);
-        curV.netDiffSum += Number(l.diff) || 0;
-        variantMap.set(vKey, curV);
-      });
-
-      const empKey = c.employeeId || c.employeeName || 'Inconnu';
-      const curE = employeeMap.get(empKey) || { id: empKey, name: c.employeeName || empKey, countTimes: 0, absCostSum: 0, netCostSum: 0 };
-      curE.countTimes++;
-      curE.absCostSum += Number(c.absVarianceCostMAD) || Math.abs(Number(c.totalVarianceCostMAD) || 0);
-      curE.netCostSum += Number(c.totalVarianceCostMAD) || 0;
-      employeeMap.set(empKey, curE);
-
-      const stKey = c.storeId || c.storeName || 'Principal';
-      const curS = storeMap.get(stKey) || { id: stKey, name: c.storeName || stKey, countTimes: 0, absCostSum: 0, netCostSum: 0 };
-      curS.countTimes++;
-      curS.absCostSum += Number(c.absVarianceCostMAD) || Math.abs(Number(c.totalVarianceCostMAD) || 0);
-      curS.netCostSum += Number(c.totalVarianceCostMAD) || 0;
-      storeMap.set(stKey, curS);
-    });
-
-    const topVariants = Array.from(variantMap.values()).sort((a, b) => b.absCostSum - a.absCostSum).slice(0, 15);
-    const topEmployees = Array.from(employeeMap.values()).sort((a, b) => b.absCostSum - a.absCostSum).slice(0, 8);
-    const stores = Array.from(storeMap.values());
-
-    return `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;">
-        <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
-          <h4 style="margin:0 0 12px;font-size:15px;">${esc(ct('rollTopItems'))}</h4>
-          <div class="st-tbl-wrap">
-            <table class="st-tbl" style="font-size:12.5px;">
-              <thead><tr><th>${esc(ct('thItem'))}</th><th>${esc(ct('thCountTimes'))}</th><th style="text-align:right;">${esc(ct('thCumDiff'))}</th><th style="text-align:right;">${esc(ct('thImpactMad'))}</th></tr></thead>
-              <tbody>
-                ${topVariants.length ? topVariants.map(v => `
-                  <tr>
-                    <td><b>${esc(v.label)}</b>${v.sku ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('sku', v.sku))}</div>` : ''}</td>
-                    <td class="st-mono">${v.countTimes}</td>
-                    <td style="text-align:right;" class="st-mono">${v.netDiffSum > 0 ? '+' : ''}${ctNum(Math.round(v.netDiffSum * 10) / 10)} ${esc(ctUnit(v.unit))}</td>
-                    <td style="text-align:right;font-weight:600;color:#b91c1c;" class="st-mono">${ctMad(v.absCostSum)}</td>
-                  </tr>
-                `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">${esc(ct('rollNoVariance'))}</td></tr>`}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div style="display:grid;gap:16px;">
-          <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
-            <h4 style="margin:0 0 12px;font-size:15px;">${esc(ct('rollByEmployee'))}</h4>
-            <div class="st-tbl-wrap">
-              <table class="st-tbl" style="font-size:12.5px;">
-                <thead><tr><th>${esc(ct('thEmployee'))}</th><th>${esc(ct('thCountsN'))}</th><th style="text-align:right;">${esc(ct('thAbsCum'))}</th></tr></thead>
-                <tbody>
-                  ${topEmployees.length ? topEmployees.map(e => `
-                    <tr>
-                      <td><b>${esc(ctWho(e.name))}</b></td>
-                      <td class="st-mono">${e.countTimes}</td>
-                      <td style="text-align:right;font-weight:600;" class="st-mono">${ctMad(e.absCostSum)}</td>
-                    </tr>
-                  `).join('') : `<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--n-500);">${esc(ct('rollNoCount'))}</td></tr>`}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
-            <h4 style="margin:0 0 12px;font-size:15px;">${esc(ct('rollByStore'))}</h4>
-            <div class="st-tbl-wrap">
-              <table class="st-tbl" style="font-size:12.5px;">
-                <thead><tr><th>${esc(ct('thVenue'))}</th><th>${esc(ct('thCountsN'))}</th><th style="text-align:right;">${esc(ct('thNet'))}</th><th style="text-align:right;">${esc(ct('thAbs'))}</th></tr></thead>
-                <tbody>
-                  ${stores.length ? stores.map(s => `
-                    <tr>
-                      <td><b>${esc(ctStore(s.name))}</b></td>
-                      <td class="st-mono">${s.countTimes}</td>
-                      <td style="text-align:right;" class="st-mono">${s.netCostSum > 0 ? '+' : ''}${ctMad(s.netCostSum)}</td>
-                      <td style="text-align:right;font-weight:600;" class="st-mono">${ctMad(s.absCostSum)}</td>
-                    </tr>
-                  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">${esc(ct('rollNoCount'))}</td></tr>`}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  async function openCountDetailModal(countId) {
-    if (!countId) return;
-    let count = getAllCounts().find(c => c.id === countId);
-    
-    // Fetch full frozen details from server if missing lines
-    if (!count || !count.lines || !count.lines.length) {
-      try {
-        const resp = await fetch(`/api/inventory/counts?id=${encodeURIComponent(countId)}`);
-        const data = await resp.json();
-        if (data && data.count) count = data.count;
-      } catch (_) {}
-    }
-
-    if (!count) {
-      window.Kiwi?.toast?.(ct('countNotFound'), { type: 'warn' });
-      return;
-    }
-
-    const lines = Array.isArray(count.lines) ? count.lines : [];
-    const submitted = ctWhen(count.submittedAt);
-    const isSubmitted = count.status === 'submitted';
-    const isApproved = count.status === 'applied' || count.status === 'approved';
-    const isRejected = count.status === 'rejected';
-
-    const modal = window.Kiwi.modal({
-      title: ct('dTitle', count.id),
-      desc: esc(ct('dDesc', ctStore(count.storeName), ctWho(count.employeeName || 'Employé'), submitted.date, submitted.time)),
-      width: 820,
-      body: `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="st-badge ${isSubmitted ? 'warn' : isApproved ? 'ok' : 'bad'}" style="font-size:13px;padding:4px 10px;">
-              ${esc(isSubmitted ? ct('dPending') : isApproved ? ct('dApplied') : ct('stRejected'))}
-            </span>
-            <span style="font-size:13px;color:var(--n-600);">${esc(ct('dLines', lines.length))}</span>
-          </div>
-          <div style="font-size:14px;">
-            ${esc(ct('dTotal'))} <b style="color:${(count.totalVarianceCostMAD || 0) < 0 ? '#b91c1c' : (count.totalVarianceCostMAD || 0) > 0 ? 'var(--atlas)' : 'inherit'};">${(count.totalVarianceCostMAD || 0) > 0 ? '+' : ''}${ctMad(count.totalVarianceCostMAD || 0)}</b>
-          </div>
-        </div>
-
-        ${count.reviewNote ? `
-          <div class="st-notice ${isApproved ? 'ok' : 'warn'}" style="margin-bottom:14px;">
-            ${svg(isApproved ? 'checkCircle' : 'alertTriangle', 14)}
-            <div><b>${esc(ct('dReviewNote'))}</b> ${esc(ctReviewNote(count.reviewNote))} ${count.reviewerName ? `<span style="font-size:11px;color:var(--n-500);">${esc(ct('dBy', ctWho(count.reviewerName)))}</span>` : ''}</div>
-          </div>
-        ` : ''}
-
-        <div class="st-tbl-wrap" style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
-          <table class="st-tbl" style="font-size:12.5px;">
-            <thead>
-              <tr>
-                <th>${esc(ct('thItemVariant'))}</th>
-                <th style="text-align:right;">${esc(ct('thBefore'))}</th>
-                <th style="text-align:right;">${esc(ct('thCounted'))}</th>
-                <th style="text-align:right;">${esc(ct('thDiff'))}</th>
-                <th style="text-align:right;">${esc(ct('thValueMad'))}</th>
-                <th>${esc(ct('thRemark'))}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${lines.length ? lines.map(l => {
-                const label = l.productName ? `${l.productName}${l.color ? ' · ' + l.color : ''}${l.size ? ' · ' + l.size : ''}` : (l.name || l.itemId);
-                const diff = Number(l.diff) || 0;
-                const cost = Number(l.varianceCost) || 0;
-                const diffColor = diff < 0 ? '#b91c1c' : diff > 0 ? 'var(--atlas)' : 'inherit';
-                return `
-                  <tr>
-                    <td>
-                      <b>${esc(label)}</b>
-                      ${l.sku ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('sku', l.sku))}</div>` : ''}
-                    </td>
-                    <td style="text-align:right;" class="st-mono">${ctNum(l.systemQty)} ${esc(ctUnit(l.unit))}</td>
-                    <td style="text-align:right;font-weight:700;" class="st-mono">${ctNum(l.countedQty)} ${esc(ctUnit(l.unit))}</td>
-                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${ctNum(diff)} ${esc(ctUnit(l.unit))}</td>
-                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${ctMad(cost)}</td>
-                    <td style="color:var(--n-600);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.explanation || l.note || '')}">
-                      ${esc(l.explanation || l.note || '·')}
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--n-500);">${esc(ct('dNoLines'))}</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-
-        ${isSubmitted ? `
-          <div style="background:var(--paper-soft);border:1px solid var(--n-200);border-radius:12px;padding:12px;margin-bottom:12px;">
-            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">${esc(ct('dNoteLabel'))}</label>
-            <input class="st-search" id="st-cnt-review-note" placeholder="${esc(ct('dNotePh'))}" style="width:100%;">
-          </div>
-        ` : ''}
-      `,
-      foot: `
-        <button class="st-btn" data-dismiss-modal>${esc(ct('dClose'))}</button>
-        ${isSubmitted ? `
-          <button class="st-btn" id="st-cnt-reject-btn" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);">${esc(ct('dReject'))}</button>
-          <button class="st-btn primary" id="st-cnt-approve-btn" style="background:#059669;border-color:#047857;">${esc(ct('dApprove'))}</button>
-        ` : ''}
-      `
-    });
-
-    const scope = modal?.el || topBackdrop();
-    wireDismiss(scope);
-
-    scope?.querySelector('#st-cnt-approve-btn')?.addEventListener('click', () => {
-      const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
-      reviewCount(count.id, 'approved', note);
-    });
-
-    scope?.querySelector('#st-cnt-reject-btn')?.addEventListener('click', () => {
-      const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
-      reviewCount(count.id, 'rejected', note);
-    });
-  }
+  function openCountDetailModal(...args) { return stockParts.counts.openCountDetailModal.apply(this, args); }
 
   /* Garde partagée approve/reject : un seul appui effectif à la fois. Le
    * fanion module bloque le ré-appui pendant la requête ; les boutons portent
    * disabled + aria-busy sur la modale pour les lecteurs d'écran et le tactile. */
   let stReviewBusy = false;
-  function stReviewBusyTake(btns, root) {
-    if (stReviewBusy) return false;
-    stReviewBusy = true;
-    (btns || []).forEach((b) => { try { if (b) b.setAttribute('disabled', ''); } catch (_) {} });
-    try { if (root && root.setAttribute) root.setAttribute('aria-busy', 'true'); } catch (_) {}
-    return true;
-  }
-  function stReviewBusyRelease(btns, root) {
-    stReviewBusy = false;
-    (btns || []).forEach((b) => { try { if (b && b.removeAttribute) b.removeAttribute('disabled'); } catch (_) {} });
-    try { if (root && root.removeAttribute) root.removeAttribute('aria-busy'); } catch (_) {}
-  }
+  function stReviewBusyTake(...args) { return stockParts.counts.stReviewBusyTake.apply(this, args); }
+  function stReviewBusyRelease(...args) { return stockParts.counts.stReviewBusyRelease.apply(this, args); }
 
   /* Envoi seul, sans état : construit le corps, appelle, rend le verdict brut.
    * fetchFn injectable pour les tests (défaut : fetch global). */
-  async function stReviewCountSend({ countId, decision, note, fetchFn }) {
-    const F = fetchFn || fetch;
-    const res = await F('/api/inventory/counts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'review',
-        id: countId,
-        decision: decision,
-        reviewNote: note || '',
-        reviewerName: 'Propriétaire'
-      })
-    });
-    let data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
-    return { ok: !!res.ok, status: res.status, data };
-  }
+  function stReviewCountSend(...args) { return stockParts.counts.stReviewCountSend.apply(this, args); }
 
   /* Décision pure : que doit faire la coquille à partir du verdict ?
    * Jamais d'écriture ici — seulement un plan. Le serveur reste le seul
    * écrivain des approbations réelles ; la surcouche locale (démo) rejoue
    * le comportement historique, jamais en plus d'un succès serveur. */
-  function stReviewCountErr(send) {
-    if (!send) return 'mCountErrGeneric';
-    if (send.network) return 'mCountErrOffline';
-    const code = send.data && send.data.error;
-    if (send.status === 403 || code === 'forbidden') return 'mCountErrDenied';
-    if (send.status === 404 || code === 'not_found') return 'mCountErrGone';
-    if (send.status === 409 || code === 'catalog-conflict') return 'mCountErrConflict';
-    return 'mCountErrGeneric';
-  }
-  function stReviewCountPlan(decision, isReal, send) {
-    if (!send || !send.ok || !(send.data && send.data.success)) {
-      return { ok: false, err: stReviewCountErr(send), setStatus: null, overlay: false, close: false, sync: false };
-    }
-    const approved = decision === 'approved';
-    return {
-      ok: true, err: null,
-      setStatus: approved ? 'applied' : 'rejected',
-      overlay: !isReal && approved,
-      close: true,
-      sync: isReal && approved,
-    };
-  }
+  function stReviewCountErr(...args) { return stockParts.counts.stReviewCountErr.apply(this, args); }
+  function stReviewCountPlan(...args) { return stockParts.counts.stReviewCountPlan.apply(this, args); }
 
-  async function reviewCount(countId, decision, note) {
-    if (!countId) return;
-    const scope = topBackdrop() || document;
-    const approveBtn = scope.querySelector('#st-cnt-approve-btn');
-    const rejectBtn = scope.querySelector('#st-cnt-reject-btn');
-    if (!stReviewBusyTake([approveBtn, rejectBtn], scope)) return;
-    const release = () => stReviewBusyRelease([approveBtn, rejectBtn], scope);
-    try {
-      const count = getAllCounts().find(c => c.id === countId);
-      // Idempotence locale : un compte déjà tranché ne repasse jamais —
-      // couvre le second clic mis en file après fermeture (boutons détachés
-      // mais écouteurs vivants). Seul un échec (jamais muté) peut rejouer.
-      if (count && count.reviewDecision && (count.status === 'applied' || count.status === 'rejected')) {
-        release();
-        return;
-      }
-      let real = false;
-      try { real = stShowReal(); } catch (_) { real = false; }
-      let send;
-      if (!real) {
-        // Démo / hors-ligne local : pas d'appel serveur, comportement
-        // historique (surcouche locale), jamais présenté comme une écriture.
-        send = { ok: true, status: 200, data: { success: true, demo: true } };
-      } else {
-        try {
-          send = await stReviewCountSend({ countId, decision, note });
-        } catch (_) {
-          send = { ok: false, network: true };
-        }
-      }
-      const plan = stReviewCountPlan(decision, real, send);
-      if (!plan.ok) {
-        window.Kiwi?.toast?.(t(plan.err), { type: 'error' });
-        release();
-        return; // modale ouverte, contrôles réactivés, RIEN d'appliqué
-      }
+  function reviewCount(...args) { return stockParts.counts.reviewCount.apply(this, args); }
 
-      if (count) {
-        count.status = plan.setStatus;
-        count.reviewDecision = decision;
-        count.reviewedAt = Date.now();
-        count.reviewerName = 'Propriétaire';
-        count.reviewNote = note || '';
-        if (decision === 'approved') count.appliedAt = Date.now();
-      }
-
-      // Surcouche locale : démo uniquement, jamais après un succès serveur.
-      if (plan.overlay && count && Array.isArray(count.lines)) {
-        count.lines.forEach(l => {
-          if (l.diff) {
-            moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId,
-              l.explanation || 'Inventaire physique validé', null,
-              { locationId: l.locationId || stockLocationId(), unitId: count.storeId || '' });
-          }
-        });
-        stSaveOverlay();
-      }
-
-      if (decision === 'approved') {
-        try {
-          if (window.KiwiBoutiqueCatalog?.sync) window.KiwiBoutiqueCatalog.sync();
-        } catch (_) {}
-      }
-      if (plan.sync) {
-        // Succès réel : on tire l'état faisant foi, on ne reposte rien.
-        try { await window.KiwiInventory?.sync?.(); } catch (_) {}
-      }
-
-      try { closeTopModal(); } catch (_) {}
-      release();
-      window.Kiwi?.toast?.(decision === 'approved' ? ct('toastApproved') : ct('toastRejected'), { type: decision === 'approved' ? 'success' : 'info' });
-      if (stPageActive) render();
-    } catch (_) {
-      release();
-      try { window.Kiwi?.toast?.(t('mCountErrGeneric'), { type: 'error' }); } catch (_) {}
-    }
-  }
-
-  function exportCountsCsv() {
-    const counts = filterCounts(getAllCounts());
-    function csvSafe(v) {
-      let s = String(v == null ? '' : v);
-      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    const header = ct('csvCounts');
-    const lines = [header.join(';')];
-    counts.forEach(c => {
-      const d = new Date(c.submittedAt || Date.now()).toISOString().slice(0, 19).replace('T', ' ');
-      lines.push([
-        csvSafe(c.id),
-        d,
-        csvSafe(ctStore(c.storeName || 'Principal')),
-        csvSafe(ctWho(c.employeeName) || '·'),
-        csvSafe(ctRole(c.employeeRole) || '·'),
-        csvSafe(c.status),
-        c.totalLines || 0,
-        (c.totalVarianceCostMAD || 0).toFixed(2),
-        (c.absVarianceCostMAD || 0).toFixed(2),
-        csvSafe(ctWho(c.reviewerName) || '·'),
-        csvSafe(c.reviewDecision || '·'),
-        csvSafe(ctReviewNote(c.reviewNote) || '·')
-      ].join(';'));
-    });
-    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${ct('csvCountsFile')}-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-  }
+  function exportCountsCsv(...args) { return stockParts.counts.exportCountsCsv.apply(this, args); }
 
   function renderItems() {
     const subNav = `
@@ -3957,418 +3109,30 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 3 · Fournisseurs
    * ═══════════════════════════════════════════════════════════════════════ */
-  function computeRealSupplierPriceChanges() {
-    if (!window.KiwiInventory || !window.KiwiInventory.history) return [];
-    const raw = stOverlayRaw();
-    const subList = Array.isArray(raw.subcategories) ? raw.subcategories : [];
-    const changes = [];
-    
-    subList.forEach(sub => {
-      const hist = (window.KiwiInventory.history(sub.id) || []).filter(m => m.reason === 'receipt' && m.unitCost != null);
-      if (!hist.length) return;
-      
-      const bySup = new Map();
-      hist.forEach(m => {
-        const supName = (m.meta && m.meta.supplierName) || (m.meta && m.meta.supplierId) || 'Fournisseur';
-        if (!bySup.has(supName)) bySup.set(supName, []);
-        bySup.get(supName).push(m);
-      });
+  function computeRealSupplierPriceChanges(...args) { return stockParts.purchasing.computeRealSupplierPriceChanges.apply(this, args); }
 
-      bySup.forEach((mList, supName) => {
-        mList.sort((a, b) => (+b.occurredTs || 0) - (+a.occurredTs || 0));
-        const latest = mList[0];
-        const prev = mList[1] || null;
-        if (!prev) return;
-        const pLast = latest.unitCost;
-        const pPrev = prev.unitCost;
-        if (pLast != null && pPrev != null && pLast !== pPrev) {
-          const delta = Math.round((pLast - pPrev) * 100) / 100;
-          const pct = Math.round(((delta) / pPrev) * 1000) / 10;
-          
-          const impactedRecipes = [];
-          try {
-            const costDoc = window.KiwiCost && window.KiwiCost.doc ? window.KiwiCost.doc() : (window.KiwiCost && window.KiwiCost.store ? window.KiwiCost.store.get(stOverlayScope()) : null);
-            const recipes = (costDoc && costDoc.recipes) || (window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.getAll ? window.KiwiRestaurantRecipes.getAll() : {});
-            Object.entries(recipes).forEach(([rId, rec]) => {
-              if (!rec || !Array.isArray(rec.ingredients)) return;
-              const line = rec.ingredients.find(ing => ing.stockId === sub.id || ing.name === sub.name);
-              if (line) {
-                const portionQty = +line.qty || 0;
-                const dishCostDelta = Math.round(portionQty * delta * 100) / 100;
-                impactedRecipes.push({
-                  id: rId,
-                  name: rec.itemName || rec.name || rId,
-                  dishCostDelta: dishCostDelta,
-                });
-              }
-            });
-          } catch (_) {}
+  function renderRealSupplierPriceChanges(...args) { return stockParts.purchasing.renderRealSupplierPriceChanges.apply(this, args); }
 
-          changes.push({
-            subId: sub.id,
-            subName: sub.name,
-            unit: sub.unit,
-            supplierName: supName,
-            pLast: pLast,
-            pPrev: pPrev,
-            delta: delta,
-            pct: pct,
-            date: latest.occurredTs || Date.now(),
-            impactedRecipes: impactedRecipes,
-          });
-        }
-      });
-    });
+  function renderSuppliers(...args) { return stockParts.purchasing.renderSuppliers.apply(this, args); }
 
-    return changes;
-  }
-
-  function renderRealSupplierPriceChanges() {
-    const changes = computeRealSupplierPriceChanges();
-    if (!changes.length) {
-      return `
-        <div class="st-ai" style="margin-top:16px;">
-          <div class="st-ai-t">Évolution des tarifs fournisseurs</div>
-          <div class="st-ai-b">Tous les tarifs facturés lors des dernières réceptions sont stables. Kiwi analyse automatiquement l'historique des bons de livraison pour détecter les variations de prix.</div>
-        </div>
-      `;
-    }
-    return changes.map(ch => {
-      const isUp = ch.delta > 0;
-      const recipesText = ch.impactedRecipes.length > 0
-        ? ` · Impact sur ${ch.impactedRecipes.length} recette${ch.impactedRecipes.length > 1 ? 's' : ''} (ex: ${esc(ch.impactedRecipes[0].name)} ${isUp ? '+' : ''}${fmtMad(ch.impactedRecipes[0].dishCostDelta)}/portion)`
-        : '';
-      return `
-        <div class="st-ai ${isUp ? 'warn' : 'ok'}" style="margin-top:14px;">
-          <div class="st-ai-t" style="display:flex; align-items:center; gap:6px;">
-            ${svg(isUp ? 'trendingUp' : 'trendingDown', 14)}
-            <span>${esc(ch.supplierName)} : variation de tarif sur ${esc(ch.subName)} (${isUp ? '+' : ''}${fmtPct(ch.pct, 1)})</span>
-          </div>
-          <div class="st-ai-b">
-            Passage de <b>${esc(fmtMad(ch.pPrev))}</b> à <b>${esc(fmtMad(ch.pLast))}</b> / ${esc(ch.unit)}${recipesText}.
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function renderSuppliers() {
-    const sup = getSup();
-    const totalSpend = sup.reduce((s, x) => s + x.monthlySpend, 0);
-    const weightedPrice = sup.reduce((s, x) => s + (x.priceChangeLast30d * x.monthlySpend), 0) / (totalSpend || 1);
-    const trendCls = weightedPrice > 1 ? 'up' : weightedPrice < -1 ? 'down' : '';
-    return `
-      <div class="st-section">
-        <div class="st-section-head" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
-            <h3>${esc(t('supTitle'))}</h3>
-            <span class="st-section-sub">${esc(t('supSub', sup.length))}</span>
-          </div>
-          <button class="st-btn primary" type="button" data-action="stock-add-supplier">${svg('plus', 13)}<span>${esc(t('addSupCta'))}</span></button>
-        </div>
-        <div class="st-sup-stats">
-          <div class="st-sup-stat"><div class="l">${esc(t('supStatActive'))}</div><div class="v">${sup.length}</div></div>
-          <div class="st-sup-stat"><div class="l">${esc(t('supStatSpend'))}</div><div class="v">${esc(fmtMad(totalSpend))}</div></div>
-          <div class="st-sup-stat"><div class="l">${esc(t('supStatPriceTrend'))}</div><div class="v ${trendCls}">${esc(fmtPct(weightedPrice, 1))}</div></div>
-        </div>
-        <div class="st-supplier-cards">${sup.map(renderSupplierCard).join('')||`<div class="rmw-empty">${catalogLabel('noSuppliers','Aucun fournisseur enregistré.')}</div>`}</div>
-        <div class="st-tbl-wrap st-supplier-table">
-          <table class="st-sup-table">
-            <thead>
-              <tr>
-                <th>${esc(t('colSupplier'))}</th>
-                <th>${esc(t('colSupCat'))}</th>
-                <th class="r">${esc(t('colSupSpend'))}</th>
-                <th>${esc(t('colSupPrice'))}</th>
-                <th>${esc(t('colSupDeliv'))}</th>
-                <th>${esc(t('colSupRate'))}</th>
-                <th class="r">${esc(t('colActions'))}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sup.map(renderSupRow).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      ${stShowReal() ? renderRealSupplierPriceChanges() : renderAiCard(t('aiPriceUpT'), t('aiPriceUpB'), t('aiPriceUpA'))}
-    `;
-  }
-
-  function supplierDate(at){const n=typeof at==='string'&&/^\d+$/.test(at)?+at:at;const d=new Date(n);return Number.isFinite(d.getTime())?fmtDateShort(d.toISOString()):catalogText('notRecorded','Non enregistrée');}
-  function supplierHistory(s){
-    const receipts=(window.KiwiProcurement?.doc?.()?.receipts||[]).filter(r=>String(r.supplierId)===String(s.id)).map(r=>({at:r.receivedAt||r.createdAt,reference:r.number||r.id,total:(r.lines||[]).reduce((n,l)=>n+(+l.qty||0)*(+l.unitCost||0),0)}));
-    const stamp=at=>{const value=typeof at==='string'&&/^\d+$/.test(at)?+at:at;return new Date(value).getTime()||0;};
-    if(receipts.length)return receipts.sort((a,b)=>stamp(b.at)-stamp(a.at));
-    // A delivery can have multiple item movements. Count/group its receipt once.
-    const groups=new Map();
-    getInv().forEach(it=>itemHistory(it).filter(m=>m.reason==='receipt'&&(String(m.meta?.supplierId||'')===String(s.id)||(s.name&&m.meta?.supplierName===s.name))).forEach(m=>{
-      const key=m.refId||m.meta?.receiptRef||m.id,at=m.occurredTs||m.createdTs;
-      const row=groups.get(key)||{at,reference:m.meta?.externalRef||m.refId||it.name,total:0};
-      row.total+=Math.max(0,+m.qty||0)*(+m.unitCost||0);groups.set(key,row);
-    }));
-    return [...groups.values()].sort((a,b)=>stamp(b.at)-stamp(a.at));
-  }
+  function supplierDate(...args) { return stockParts.purchasing.supplierDate.apply(this, args); }
+  function supplierHistory(...args) { return stockParts.purchasing.supplierHistory.apply(this, args); }
   /* #0151 · One tap target per supplier: the card opens the supplier, the
      round button calls them. Category and area share one quiet line. */
-  function renderSupplierCard(s){
-    const last=supplierHistory(s)[0];
-    const sub=[catLabel(s.category),s.location].filter(Boolean).map(esc).join(' · ');
-    return `<article class="st-supplier-card"><button class="st-supplier-open" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" aria-label="${esc(t('btnDetail'))} · ${esc(s.name)}">
-      <span class="st-supplier-card-head"><span class="st-sup-name">${esc(s.name)}</span><small class="st-sup-loc">${sub}</small></span>
-      <span class="st-supplier-card-meta"><span><span>${esc(t('colSupSpend'))}</span><b>${esc(fmtMad(s.monthlySpend))}</b></span><span><span>${catalogLabel('lastDelivery','Dernière livraison')}</span><b>${last?esc(supplierDate(last.at)):catalogLabel('notRecorded','Non enregistrée')}</b></span></span></button>
-      <button class="st-supplier-call" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}"${s.contact?'':' disabled'} aria-label="${esc(t('mSupCall'))} · ${esc(s.name)}">${svg('phone',16)}</button></article>`;
-  }
+  function renderSupplierCard(...args) { return stockParts.purchasing.renderSupplierCard.apply(this, args); }
 
-  function renderSupRow(s) {
-    const pcl = s.priceChangeLast30d;
-    const priceCls = pcl > 1 ? 'up' : pcl < -1 ? 'down' : 'neutral';
-    const priceIco = pcl > 1 ? 'trendingUp' : pcl < -1 ? 'trendingDown' : 'minus';
-    const priceLabel = pcl === 0 ? t('priceStable') : fmtPct(pcl, 1);
-    const risePill = pcl > 5 ? `<span class="st-sup-rise-pill">${esc(t('priceUp'))}</span>` : '';
-    const rateVal = (s.rating != null && !isNaN(s.rating) && s.rating !== '') ? Number(s.rating) : null;
-    const rateHtml = rateVal != null
-      ? `<span class="st-sup-rate"><span class="st">${'★'.repeat(Math.round(rateVal))}</span>${esc(rateVal.toFixed(1))}</span>`
-      : `<span class="st-sup-rate muted" style="color:var(--n-500);">·</span>`;
-    return `
-      <tr>
-        <td>
-          <div class="st-sup-name">${esc(s.name)}</div>
-          <div class="st-sup-loc">${esc(s.location)}</div>
-          <div class="st-sup-phone">${esc(s.contact)}</div>
-        </td>
-        <td><span class="st-sup-cat">${esc(catLabel(s.category))}</span></td>
-        <td class="r"><span class="st-sup-spend">${esc(fmtMad(s.monthlySpend))}</span></td>
-        <td><span class="st-sup-price ${priceCls}">${svg(priceIco, 12)}${esc(priceLabel)}</span>${risePill}</td>
-        <td>
-          <div class="st-sup-deliv">${esc(s.deliverySchedule)}</div>
-          <div class="st-sup-deliv-sub">${esc(s.paymentTerms)}</div>
-        </td>
-        <td>${rateHtml}</td>
-        <td class="r">
-          <div class="st-actions">
-            <button class="st-icon-btn" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupCall'))}" aria-label="${esc(t('mSupCall'))}">${svg('phone', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupWa'))}" aria-label="${esc(t('mSupWa'))}">${svg('messageCircle', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" title="${esc(t('btnDetail'))}" aria-label="${esc(t('btnDetail'))}">${svg('eye', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-edit-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleEdit'))}" aria-label="${esc(t('titleEdit'))}">${svg('edit', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-new-po" data-supplier-id="${esc(s.id)}" title="${esc(t('mSupOrd'))}" aria-label="${esc(t('mSupOrd'))}">${svg('plus', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-delete-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleDelete'))}" aria-label="${esc(t('titleDelete'))}" style="color:#9a1f1f;">${svg('x', 14)}</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }
+  function renderSupRow(...args) { return stockParts.purchasing.renderSupRow.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 4 · Commandes
    * ═══════════════════════════════════════════════════════════════════════ */
-  function renderOrders() {
-    if (stShowReal()) {
-      const d = retailProcurementDoc();
-      const suppliers = new Map((d.suppliers || []).map((s) => [String(s.id), s]));
-      const total = (row) => (row.lines || []).reduce((sum, line) => sum + (+line.qty || 0) * (+line.unitCost || 0), 0);
-      const statusLabel = (status) => ({ draft: 'Brouillon', sent: 'Envoyée', partial: 'Partielle', received: 'Reçue', cancelled: 'Annulée' }[status] || status || '·');
-      const active = (d.orders || []).filter((o) => !['received', 'cancelled'].includes(o.status));
-      const history = [
-        ...(d.orders || []).filter((o) => ['received', 'cancelled'].includes(o.status)).map((o) => ({
-          id: o.id, at: o.updatedAt || o.createdAt, supplierId: o.supplierId, total: total(o), status: statusLabel(o.status), number: o.number,
-        })),
-        ...(d.receipts || []).filter((r) => !r.orderId).map((r) => ({
-          id: r.id, at: r.receivedAt || r.createdAt, supplierId: r.supplierId, total: total(r), status: 'Reçue', number: r.number,
-        })),
-      ].sort((a, b) => (+b.at || 0) - (+a.at || 0));
-      return `
-      <div class="st-section">
-        <div class="st-section-head" style="justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <h3>${esc(t('ordTitle'))}</h3>
-          </div>
-          <button class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
-        </div>
-        ${active.length ? `<div class="st-ord-list">${active.map((o) => `
-          <div class="st-ord-card">
-            <div class="st-ord-body">
-              <div class="st-ord-top"><span class="st-ord-id">${esc(o.number || o.id)}</span><span class="st-ord-when">${esc(o.expectedDate || '·')}</span><span class="st-ord-status ${o.status === 'partial' ? 'pending' : 'ok'}">${esc(statusLabel(o.status))}</span></div>
-              <div class="st-ord-items"><b>${esc(suppliers.get(String(o.supplierId))?.name || 'Fournisseur')}</b> · ${esc((o.lines || []).map((line) => `${line.name || line.itemId} ${line.qty} ${line.unit || ''}`).join(' · '))}</div>
-              <div class="st-ord-total">${esc(fmtMad(total(o)))}</div>
-            </div>
-          </div>`).join('')}</div>` : `<div style="color:var(--n-500); font-size:13px; padding:14px 2px;">${esc(t('ordEmpty'))}</div>`}
-      </div>
-      ${history.length ? `
-      <div class="st-section">
-        <div class="st-section-head"><h3>${esc(t('ordHistory'))}</h3></div>
-        <div class="st-tbl-wrap st-order-table"><table class="st-sup-table"><thead><tr><th>DATE</th><th>${esc(t('colSupplier'))}</th><th class="r">${esc(t('mScanTotal'))}</th><th>${esc(t('colStatus'))}</th></tr></thead><tbody>
-          ${history.map((h) => `<tr><td>${esc(fmtDateShort(new Date(h.at || Date.now()).toISOString()))}</td><td><span class="st-sup-name">${esc(suppliers.get(String(h.supplierId))?.name || 'Fournisseur')}</span><div class="st-sup-deliv-sub">${esc(h.number || h.id)}</div></td><td class="r"><span class="st-sup-spend">${esc(fmtMad(h.total))}</span></td><td><span class="status-ok">${esc(h.status)}</span></td></tr>`).join('')}
-        </tbody></table></div>
-      </div>` : ''}`;
-    }
-    return `
-      <div class="st-section">
-        <div class="st-section-head" style="justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <h3>${esc(t('ordTitle'))}</h3>
-            <span class="st-count-badge">4</span>
-          </div>
-          <button class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
-        </div>
-        <div class="st-ord-stats">
-          <div class="st-sup-stat"><div class="l">${esc(t('ordStatActive'))}</div><div class="v">4</div></div>
-          <div class="st-sup-stat"><div class="l">${esc(t('ordStatPending'))}</div><div class="v">${esc(fmtMad(12458))}</div></div>
-          <div class="st-sup-stat"><div class="l">${esc(t('ordStatMonth'))}</div><div class="v">47</div></div>
-        </div>
-        <div class="st-ord-list">
-          ${renderActiveOrders()}
-        </div>
-      </div>
+  function renderOrders(...args) { return stockParts.purchasing.renderOrders.apply(this, args); }
 
-      <div class="st-section">
-        <div class="st-section-head"><h3>${esc(t('ordHistory'))}</h3></div>
-        ${renderHistoryTable()}
-      </div>
+  function renderActiveOrders(...args) { return stockParts.purchasing.renderActiveOrders.apply(this, args); }
 
-      ${renderSuggestedOrder()}
-    `;
-  }
+  function renderHistoryTable(...args) { return stockParts.purchasing.renderHistoryTable.apply(this, args); }
 
-  function renderActiveOrders() {
-    const orders = [
-      {
-        id: '2843', sup: 'Boucherie Errazi', when: `${t('ramTomorrow')} 06h`,
-        items: 'Viande hachée 12 kg · Agneau épaule 14 kg · Merguez 4 kg',
-        total: 3250, status: 'ok', statusLabel: t('stConfirmed'),
-        acts: [['btnDetail', 'stock-ord-detail'], ['btnEditOrd', 'stock-ord-edit'], ['btnCancel', 'stock-ord-cancel']],
-        urgent: false,
-      },
-      {
-        id: '2844', sup: 'Marché de gros Inezgane', when: `${t('ramFriday')} 06h`,
-        items: 'Tomates 20 kg · Oignons 15 kg · Coriandre 30 bottes · Menthe 40 bottes · Persil 25 bottes',
-        total: 1840, status: stConfirmedOrders.has('2844') ? 'ok' : 'pending',
-        statusLabel: stConfirmedOrders.has('2844') ? t('stConfirmed') : t('stPending'),
-        acts: stConfirmedOrders.has('2844')
-          ? [['btnDetail', 'stock-ord-detail'], ['btnEditOrd', 'stock-ord-edit']]
-          : [['btnConfirm', 'stock-confirm-order', 'primary'], ['btnEditOrd', 'stock-ord-edit']],
-        urgent: false,
-      },
-      {
-        id: '2845', sup: 'Métro Casablanca (récurrente)', when: `${t('ramNextThu')} 14h`,
-        items: 'Liste type, 14 articles',
-        total: 4620, status: 'rec', statusLabel: t('stRecurring'),
-        acts: [['btnEditList', 'stock-ord-edit'], ['btnPause', 'stock-ord-pause']],
-        urgent: false,
-      },
-      {
-        id: '2846', sup: 'Marché Central · Port', when: t('ramTodayLate'),
-        items: 'Poisson frais sole 6 kg · Crevettes 2 kg',
-        total: 1188, status: 'urgent', statusLabel: t('stUrgent'),
-        acts: [['btnTrack', 'stock-ord-track'], ['btnContactSup', 'stock-ord-contact']],
-        urgent: true,
-      },
-    ];
-    return orders.map(o => {
-      return `
-        <div class="st-ord-card ${o.urgent ? 'urgent' : ''}">
-          <div class="st-ord-body">
-            <div class="st-ord-top">
-              <span class="st-ord-id">${esc(t('ramOrder'))}${esc(o.id)}</span>
-              <span class="st-ord-when">${esc(o.when)}</span>
-              <span class="st-ord-status ${o.status}">${esc(o.statusLabel)}</span>
-            </div>
-            <div class="st-ord-items"><b>${esc(o.sup)}</b> · ${esc(o.items)}</div>
-            <div class="st-ord-total">${esc(fmtMad(o.total))}</div>
-          </div>
-          <div class="st-ord-acts">
-            ${o.acts.map(a => `<button class="st-btn${a[2] ? ' ' + a[2] : ''}" type="button" data-action="${a[1]}" data-order-id="${esc(o.id)}">${esc(t(a[0]))}</button>`).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function renderHistoryTable() {
-    const hist = [
-      { date: '2026-05-13', sup: 'Boucherie Errazi', total: 3120, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-13', sup: 'Centrale Danone', total: 1180, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-12', sup: 'Marché de gros Inezgane', total: 1720, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-12', sup: 'NABC', total: 2160, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-10', sup: 'Métro Casablanca', total: 4480, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-09', sup: 'Minoterie Lazaar', total: 480, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-08', sup: 'Marché Central · Port', total: 920, status: t('stPartial'), cls: 'warn' },
-      { date: '2026-05-07', sup: 'Huileries Sefrioui', total: 1680, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-06', sup: 'Boucherie Errazi', total: 3540, status: t('stReceived'), cls: 'ok' },
-      { date: '2026-05-05', sup: 'Avicole Atlas', total: 480, status: t('stCancelled'), cls: 'bad' },
-    ];
-    return `
-      <div class="st-tbl-wrap st-order-table">
-        <table class="st-sup-table">
-          <thead>
-            <tr><th>DATE</th><th>${esc(t('colSupplier'))}</th><th class="r">${esc(t('mScanTotal'))}</th><th>${esc(t('colStatus'))}</th></tr>
-          </thead>
-          <tbody>
-            ${hist.map(h => `
-              <tr>
-                <td><span class="st-sup-deliv-sub">${esc(fmtDateShort(h.date))}</span></td>
-                <td><span class="st-sup-name">${esc(h.sup)}</span></td>
-                <td class="r"><span class="st-sup-spend">${esc(fmtMad(h.total))}</span></td>
-                <td><span class="status-${h.cls === 'ok' ? 'ok' : h.cls === 'warn' ? 'warn' : 'bad'}" style="font-weight:600; font-size:11.5px;">${esc(h.status)}</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  function renderSuggestedOrder() {
-    const items = [
-      { n: 'Viande hachée bœuf', q: '14 kg', c: 1330, sup: 'Boucherie Errazi' },
-      { n: 'Agneau épaule', q: '12 kg', c: 2016, sup: 'Boucherie Errazi' },
-      { n: 'Merguez', q: '4 kg', c: 312, sup: 'Boucherie Errazi' },
-      { n: 'Tomates fraîches', q: '24 kg', c: 192, sup: 'Marché Inezgane' },
-      { n: 'Courgettes', q: '12 kg', c: 108, sup: 'Marché Inezgane' },
-      { n: 'Menthe fraîche', q: '80 bottes', c: 240, sup: 'Marché Inezgane' },
-      { n: 'Avocats', q: '8 kg', c: 256, sup: 'Fruits Premium' },
-      { n: 'Coriandre fraîche', q: '24 bottes', c: 96, sup: 'Marché Inezgane' },
-      { n: 'Lait entier', q: '60 L', c: 480, sup: 'Centrale Danone' },
-      { n: 'Œufs', q: '240 unités', c: 336, sup: 'Avicole Atlas' },
-      { n: 'Coca-Cola 33cl', q: '240 bouteilles', c: 1440, sup: 'NABC' },
-      { n: 'Eau minérale 50cl', q: '120 bouteilles', c: 360, sup: 'Sidi Ali' },
-      { n: 'Pain rond', q: '120 unités', c: 240, sup: 'Bakery El Ouafy' },
-      { n: 'Couscous fin', q: '12 kg', c: 216, sup: 'Métro Casablanca' },
-      { n: 'Semoule fine', q: '14 kg', c: 168, sup: 'Métro Casablanca' },
-      { n: 'Sucre blanc', q: '10 kg', c: 90, sup: 'Métro Casablanca' },
-      { n: 'Fromage frais', q: '4 kg', c: 248, sup: 'Métro Casablanca' },
-      { n: 'Beurre', q: '6 kg', c: 468, sup: 'Centrale Danone' },
-    ];
-    const total = items.reduce((s, x) => s + x.c, 0);
-    return `
-      <div class="st-suggest">
-        <div class="st-suggest-eyebrow">KIWI AI · AUTO-COMMANDE</div>
-        <div class="st-suggest-t">${esc(t('autoOrderT'))}</div>
-        <div class="st-suggest-b">${esc(t('autoOrderB'))}</div>
-        <div class="st-suggest-items">
-          ${items.map(x => `
-            <div class="st-suggest-item">
-              <span class="n">${esc(x.n)} <span style="color:rgba(247,245,240,0.5); font-size:11px;">· ${esc(x.sup)}</span></span>
-              <span class="q">${esc(x.q)}</span>
-              <span class="c">${esc(fmtMad(x.c))}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="st-suggest-foot">
-          <div class="st-suggest-total">
-            <span class="l">${esc(t('autoOrderTotal'))}</span>
-            <span class="v">${esc(fmtMad(total))}</span>
-            <span class="st-suggest-save">${esc(t('autoOrderSave'))}</span>
-          </div>
-          <div class="st-suggest-acts">
-            <button class="st-btn" type="button" data-action="stock-edit-suggested">${esc(t('btnEditFirst'))}</button>
-            <button class="st-btn primary" type="button" data-action="stock-send-suggested">${esc(t('btnSendSuggested'))}</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
+  function renderSuggestedOrder(...args) { return stockParts.purchasing.renderSuggestedOrder.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 5 · Prévisions IA (Ultra)
@@ -4497,94 +3261,7 @@
    * quoted. Kiwi does not deliver orders to suppliers. It prepares the message
    * and opens WhatsApp on the supplier's own number; the merchant sends it.
    * With no number on file, the order is copied for any other channel. */
-  function openQuickOrder(itemId, opts = {}) {
-    const it = getInv().find(x => x.id === itemId);
-    if (!it) return;
-    const L = QO_COPY[lang()] || QO_COPY.fr;
-    const suggested = Math.max(1, Math.round((it.parLevel * 1.2 - currentStockFor(it)) * 10) / 10);
-    const sups = getSup();
-    const sup = sups.find(s => it.supplierId && s.id === it.supplierId) || sups.find(s => s.name === String(it.supplier || '').split(' · ')[0]) || sups[0] || null;
-    const supOptions = sups.map(s => `<option value="${esc(s.id || s.name)}" ${sup && s === sup ? 'selected' : ''}>${esc(s.name)}${s.location ? ' · ' + esc(s.location) : ''}</option>`).join('');
-    const phoneOk = (v) => /^\+?[\d\s.-]{8,}$/.test(String(v || '').trim());
-    const waNum = (v) => { let d = String(v || '').replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); if (d.startsWith('0')) d = '212' + d.slice(1); return d; };
-    const costLine = (q) => it.costPerUnit > 0 ? fmtMad(q * it.costPerUnit) : L.noCost;
-    const m = window.Kiwi.modal({
-      title: t('mQoTitle'),
-      tag: opts.urgent === true ? 'URGENT' : '',
-      desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,
-      width: 560,
-      body: `
-        <div class="st-mb-row">
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('mQoQty'))}</label>
-            <div class="st-qo-qty">
-              <button type="button" data-stock-qo-dec>−</button>
-              <input class="st-mb-input mono" type="number" step="0.5" min="0.5" value="${suggested}" data-stock-qo-qty />
-              <button type="button" data-stock-qo-inc>+</button>
-              <span style="font-size:12px; color:var(--n-500); margin-left:6px;">${esc(it.unit)}</span>
-            </div>
-          </div>
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('mQoSup'))}</label>
-            ${sups.length ? `<select class="st-mb-input" data-stock-qo-sup>${supOptions}</select>` : `<input class="st-mb-input" type="text" value="${esc(L.noSupplier)}" disabled />`}
-          </div>
-        </div>
-        <div class="st-mb-field" style="margin-bottom:14px;">
-          <label class="st-mb-label">${esc(t('mQoNote'))}</label>
-          <textarea class="st-mb-textarea" placeholder="${esc(L.notePh)}" data-stock-qo-note></textarea>
-        </div>
-        <div class="st-qo-summary">
-          <span class="l">${esc(L.costLabel)}</span>
-          <span class="v" data-stock-qo-total>${esc(costLine(suggested))}</span>
-        </div>
-        <p class="st-qo-how" data-stock-qo-how style="margin:12px 0 0; font-size:12px; color:var(--n-500); line-height:1.5;"></p>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-qo-send></button>`,
-    });
-    requestAnimationFrame(() => {
-      wireDismiss(m?.el || topBackdrop());
-      const qty = document.querySelector('[data-stock-qo-qty]');
-      const totalEl = document.querySelector('[data-stock-qo-total]');
-      const supSel = document.querySelector('[data-stock-qo-sup]');
-      const how = document.querySelector('[data-stock-qo-how]');
-      const sendBtn = document.querySelector('[data-stock-qo-send]');
-      const chosen = () => sups.find(s => (s.id || s.name) === supSel?.value) || sup;
-      const sync = () => {
-        const s = chosen();
-        const wa = !!(s && phoneOk(s.contact));
-        if (sendBtn) sendBtn.textContent = wa ? L.sendWa : L.copy;
-        if (how) how.textContent = wa ? L.howWa(s.name) : s ? L.howNoPhone(s.name) : L.howNoSupplier;
-      };
-      const recompute = () => { if (totalEl) totalEl.textContent = costLine(parseFloat(qty.value) || 0); };
-      document.querySelector('[data-stock-qo-dec]')?.addEventListener('click', () => { qty.value = Math.max(0.5, (parseFloat(qty.value) || 1) - 0.5); recompute(); });
-      document.querySelector('[data-stock-qo-inc]')?.addEventListener('click', () => { qty.value = (parseFloat(qty.value) || 1) + 0.5; recompute(); });
-      qty?.addEventListener('input', recompute);
-      supSel?.addEventListener('change', sync);
-      sync();
-      sendBtn?.addEventListener('click', () => {
-        const s = chosen();
-        const q = Math.max(0, parseFloat(qty.value) || 0);
-        if (!q) return;
-        const note = (document.querySelector('[data-stock-qo-note]')?.value || '').trim();
-        /* « 16,8 kg » pour un fournisseur francophone, pas « 16.8 ». Chiffres
-         * latins dans les trois langues, comme partout ailleurs dans Kiwi. */
-        const qTxt = Number(q).toLocaleString(lang() === 'en' ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 });
-        const text = L.message(s ? s.name : '', qTxt, it.unit, it.name, note);
-        const po = recordQuickOrder(it, s, q, note);
-        closeTopModal();
-        if (po) { try { rerenderTabBody(); } catch (_) {} }
-        if (s && phoneOk(s.contact)) {
-          window.open(`https://wa.me/${waNum(s.contact)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-          window.Kiwi.toast(L.toastWa(s.name), { type: 'info', desc: po ? `${L.toastWaDesc} ${L.poSaved(po.number)}` : L.toastWaDesc, duration: 5200 });
-        } else {
-          Promise.resolve(navigator.clipboard?.writeText?.(text)).then(
-            () => window.Kiwi.toast(L.toastCopied, { type: 'info', desc: s ? L.howNoPhone(s.name) : L.howNoSupplier, duration: 4200 }),
-            () => window.Kiwi.toast(L.toastCopyFail, { type: 'warning', desc: text, duration: 6000 }),
-          );
-        }
-      });
-    });
-  }
+  function openQuickOrder(...args) { return stockParts.purchasing.openQuickOrder.apply(this, args); }
   const QO_COPY = {
     fr: {
       noSupplier: 'Aucun fournisseur enregistré', notePh: 'Ex. livraison avant 11h, entrée arrière',
@@ -4629,217 +3306,29 @@
     en: { title: 'New order', intro: 'Pick the item to order. Lowest stock first.', empty: 'No stock items yet.', stock: 'in stock' },
     ar: { title: 'طلبية جديدة', intro: 'اختر المادة المراد طلبها. الأقل مخزونًا أولًا.', empty: 'لا توجد مواد في المخزون بعد.', stock: 'في المخزون' },
   };
-  function openOrderPicker() {
-    const L = PICK_COPY[lang()] || PICK_COPY.fr;
-    const items = getInv().slice().sort((a, b) => {
-      const ra = a.parLevel > 0 ? currentStockFor(a) / a.parLevel : 9, rb = b.parLevel > 0 ? currentStockFor(b) / b.parLevel : 9;
-      return ra - rb || String(a.name).localeCompare(String(b.name));
-    });
-    if (!items.length) { window.Kiwi.toast(L.empty, { type: 'info' }); return; }
-    const m = window.Kiwi.modal({
-      title: L.title, width: 480,
-      body: `<p style="margin:0 0 12px; font-size:13px; color:var(--n-500);">${esc(L.intro)}</p>
-        <div style="display:grid; gap:6px; max-height:56vh; overflow:auto;">${items.slice(0, 200).map((it) => `
-          <button type="button" class="st-btn" data-pick-item="${esc(it.id)}" style="display:flex; justify-content:space-between; width:100%; text-align:start;">
-            <span>${esc(it.name)}</span><span style="color:var(--n-500); font-size:12px;">${esc(fmtUnit(currentStockFor(it), it.unit))} ${esc(L.stock)}</span>
-          </button>`).join('')}</div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
-    });
-    requestAnimationFrame(() => {
-      const scope = m?.el || topBackdrop();
-      wireDismiss(scope);
-      scope?.querySelectorAll('[data-pick-item]').forEach((b) => b.addEventListener('click', () => {
-        const id = b.dataset.pickItem; closeTopModal(); openQuickOrder(id);
-      }));
-    });
-  }
+  function openOrderPicker(...args) { return stockParts.purchasing.openOrderPicker.apply(this, args); }
   /* Where the store keeps purchase orders (retail, Ultra), the quick order is
    * recorded as a draft BC: it shows in « Commandes » and is received against
    * later. It stays a draft: Kiwi cannot know the WhatsApp message left. */
-  function recordQuickOrder(it, supplier, qty, note) {
-    const P = window.KiwiProcurement;
-    if (!P?.createOrder || !it.retail || !supplier?.id || !(P.isUltra?.())) return null;
-    const row = P.createOrder({ supplierId: supplier.id, note, lines: [{ itemId: it.id, name: it.name, qty, unit: it.unit, unitCost: it.costPerUnit }] });
-    return row && !row.error ? row : null;
-  }
+  function recordQuickOrder(...args) { return stockParts.purchasing.recordQuickOrder.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * EXTRACTION & MATCHING FACTURES FOURNISSEUR
    * ═══════════════════════════════════════════════════════════════════════ */
-  function normalizeMatchStr(s) {
-    return String(s || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
+  function normalizeMatchStr(...args) { return stockParts.intake.normalizeMatchStr.apply(this, args); }
 
-  function tokenizeMatchStr(s) {
-    return normalizeMatchStr(s).split(' ').filter((w) => w.length >= 2);
-  }
+  function tokenizeMatchStr(...args) { return stockParts.intake.tokenizeMatchStr.apply(this, args); }
 
-  function tokenOverlapScore(a, b) {
-    const setA = new Set(tokenizeMatchStr(a));
-    const setB = new Set(tokenizeMatchStr(b));
-    if (!setA.size || !setB.size) return 0;
-    let inter = 0;
-    for (const t of setA) {
-      if (setB.has(t)) inter++;
-    }
-    return inter / Math.max(setA.size, setB.size);
-  }
+  function tokenOverlapScore(...args) { return stockParts.intake.tokenOverlapScore.apply(this, args); }
 
-  function matchInvoiceLines(lines, items) {
-    const allItems = Array.isArray(items) ? items : [];
-    return (lines || []).map((line) => {
-      if (!line) return { itemId: null, confidence: 0 };
+  function matchInvoiceLines(...args) { return stockParts.intake.matchInvoiceLines.apply(this, args); }
 
-      // 1. EAN / Code-barres
-      if (line.ean) {
-        const eanHit = allItems.find((it) => it.barcode === line.ean || it.ean === line.ean);
-        if (eanHit) return { itemId: eanHit.id, confidence: 1.0 };
-      }
-
-      // 2. Ref / SKU sur la carte fournisseur ou sur l'article
-      if (line.ref) {
-        const refHit = allItems.find((it) => {
-          if (it.sku === line.ref) return true;
-          const cards = Array.isArray(it.suppliers) ? it.suppliers : [];
-          return cards.some((c) => c.ref === line.ref);
-        });
-        if (refHit) return { itemId: refHit.id, confidence: 0.95 };
-      }
-
-      // 3. Correspondance exacte du nom normalisé
-      const normLabel = normalizeMatchStr(line.label);
-      if (normLabel) {
-        const exactHit = allItems.find((it) => normalizeMatchStr(it.name) === normLabel);
-        if (exactHit) return { itemId: exactHit.id, confidence: 0.9 };
-      }
-
-      // 4. Chevauchement de jetons (seuil >= 0.6)
-      let bestHit = null;
-      let bestScore = 0;
-      for (const it of allItems) {
-        const score = tokenOverlapScore(line.label, it.name);
-        if (score > bestScore) {
-          bestScore = score;
-          bestHit = it;
-        }
-      }
-      if (bestScore >= 0.6 && bestHit) {
-        return { itemId: bestHit.id, confidence: Math.round(bestScore * 100) / 100 };
-      }
-
-      return { itemId: null, confidence: 0 };
-    });
-  }
-
-  function compareLineCost(item, invoicedCost, supplierName) {
-    const invCostNum = Math.max(0, Number(invoicedCost) || 0);
-    if (!item) {
-      return {
-        currentCost: 0,
-        invoicedPerUnit: invCostNum,
-        pct: 0,
-        isRise: false,
-        isDrop: false,
-        isChecked: invCostNum > 0,
-        factor: 1,
-        card: null,
-      };
-    }
-
-    const cards = Array.isArray(item.suppliers) ? item.suppliers : [];
-    let card = null;
-    if (supplierName) {
-      card = cards.find((c) => String(c.supplierName || '').trim().toLowerCase() === String(supplierName).trim().toLowerCase());
-    }
-    if (!card) card = cards[0] || null;
-
-    const factor = (card && Number.isFinite(+card.factor) && +card.factor > 0) ? +card.factor : 1;
-    const current = (card && card.defaultPrice != null && Number.isFinite(+card.defaultPrice))
-      ? +card.defaultPrice
-      : (Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : 0);
-
-    // Facture en unité d'achat ramenée à l'unité de la carte
-    const invoicedPerUnit = Math.round((invCostNum / factor) * 10000) / 10000;
-
-    if (current <= 0) {
-      return {
-        currentCost: current,
-        invoicedPerUnit,
-        pct: 0,
-        isRise: false,
-        isDrop: false,
-        isChecked: invoicedPerUnit > 0,
-        factor,
-        card,
-      };
-    }
-
-    const diff = invoicedPerUnit - current;
-    const pct = Math.round((diff / current) * 100);
-    const isRise = diff > 0.001;
-    const isDrop = diff < -0.001;
-    const isChecked = isRise; // Coché par défaut uniquement en cas de hausse réelle
-
-    return {
-      currentCost: current,
-      invoicedPerUnit,
-      pct,
-      isRise,
-      isDrop,
-      isChecked,
-      factor,
-      card,
-    };
-  }
+  function compareLineCost(...args) { return stockParts.intake.compareLineCost.apply(this, args); }
 
   let _pdfjsPromise = null;
-  function loadPdfJs() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.reject(new Error('no-dom'));
-    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-    if (_pdfjsPromise) return _pdfjsPromise;
-    _pdfjsPromise = new Promise((resolve, reject) => {
-      if (typeof document.createElement !== 'function') {
-        return resolve(window.pdfjsLib || null);
-      }
-      const script = document.createElement('script');
-      script.src = 'assets/vendor/pdfjs/pdf.min.js';
-      script.onload = () => {
-        if (window.pdfjsLib) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
-          resolve(window.pdfjsLib);
-        } else {
-          resolve(null);
-        }
-      };
-      script.onerror = () => reject(new Error('Erreur de chargement pdf.js'));
-      const target = document.head || document.body || document.documentElement;
-      if (target && target.appendChild) target.appendChild(script);
-      else resolve(null);
-    });
-    return _pdfjsPromise;
-  }
+  function loadPdfJs(...args) { return stockParts.intake.loadPdfJs.apply(this, args); }
 
-  async function extractPdfText(file) {
-    const pdfjs = await loadPdfJs();
-    const ab = await file.arrayBuffer();
-    const loadingTask = pdfjs.getDocument({ data: ab, isEvalSupported: false });
-    const pdf = await loadingTask.promise;
-    const maxPages = Math.min(pdf.numPages, 10);
-    let fullText = '';
-    for (let i = 1; i <= maxPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const strings = (content.items || []).map((it) => it.str);
-      fullText += strings.join(' ') + '\n';
-    }
-    return fullText.trim();
-  }
+  function extractPdfText(...args) { return stockParts.intake.extractPdfText.apply(this, args); }
 
   /* ── Guichet unique, slice 1 (facture PDF) — derrière fanion ────────────
    * Fanion : ?intake=1 ou localStorage kiwiIntake1=1. Éteint = comportement
@@ -4853,94 +3342,16 @@
    * id fourni (déterministe sur le chemin guichet) ou historique sinon.
    * Ne poste JAMAIS de mouvement — le propriétaire des mouvements est
    * l'appelant. Extraite du flux de confirmation, comportement identique. */
-  function stUpsertSupplierCard(it, supplier, line, forcedId) {
-    let supRank = 1;
-    let supId = forcedId || ('sup-' + Date.now().toString(36));
-    if (!stShowReal()) return { supId, supRank };
-    const ov = stItemOverrides[it.id] || {};
-    const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
-    let existing = cards.find((s) => String(s.supplierName || '').trim().toLowerCase() === String(supplier).toLowerCase());
-
-    if (!existing) {
-      supRank = cards.length + 1;
-      existing = {
-        id: supId,
-        supplierName: supplier,
-        defaultPrice: line.cost || +it.costPerUnit || 0,
-        purchaseUnit: it.unit || 'unité',
-        factor: 1,
-        rank: supRank,
-      };
-      if (line.updateCost) {
-        cards.push(existing);
-      }
-    } else {
-      supId = existing.id;
-      supRank = existing.rank || 1;
-      // MISE À JOUR DE defaultPrice SEULEMENT SI LA CASE EST COCHÉE
-      if (line.updateCost && line.cost > 0) {
-        const factor = (Number.isFinite(+existing.factor) && +existing.factor > 0) ? +existing.factor : 1;
-        existing.defaultPrice = Math.round((line.cost / factor) * 100) / 100;
-      }
-    }
-    if (cards.length > 0) {
-      ov.suppliers = cards;
-      ov.updatedAt = Date.now();
-      stItemOverrides[it.id] = ov;
-    }
-    return { supId, supRank };
-  }
+  function stUpsertSupplierCard(...args) { return stockParts.intake.stUpsertSupplierCard.apply(this, args); }
 
   /* Empreinte du brouillon RELU, distincte du hash du PDF. L'ordre des lignes
    * est volontairement significatif puisque les ids de mouvement portent
    * l'index : une reprise réordonnée doit être refusée avant toute écriture,
    * jamais mêlée silencieusement à la tentative précédente. */
-  function stIntakePostingLines(ctx) {
-    return ((ctx && ctx.lines) || []).map((l) => ({
-      itemId: String(l.itemId || '').slice(0, 80),
-      name: String(l.name || l.itemId || '').slice(0, 120),
-      qty: Math.round(Math.max(0, +(l.qty || 0)) * 1000) / 1000,
-      unit: String(l.unit || 'unité').slice(0, 24),
-      unitCost: Math.round(Math.max(0, +(l.unitCost || 0)) * 10000) / 10000,
-      updateCost: !!l.updateCost,
-      dlc: String(l.dlc || '').slice(0, 10),
-      /* Dérivés de la carte locale : nécessaires au mouvement, mais exclus de
-       * l'empreinte pour que deux appareils au cache différent ne divergent. */
-      cardSupplierId: String(l.cardSupplierId || '').slice(0, 80),
-      cardRank: Math.max(1, Math.round(+l.cardRank || 1)),
-    })).filter((l) => l.itemId && l.qty > 0);
-  }
-  function stIntakePostingCanonical(ctx) {
-    ctx = ctx || {};
-    return {
-      supplierName: String(ctx.supplierName || ''),
-      externalRef: String(ctx.externalRef || ''),
-      receivedAt: Math.max(0, Math.round(+ctx.receivedAt || 0)),
-      issuedAt: Math.max(0, Math.round(+ctx.issuedAt || 0)),
-      source: String(ctx.source || 'pdf'),
-      lines: stIntakePostingLines(ctx).map((l) => ({
-        itemId: l.itemId, name: l.name, qty: l.qty, unit: l.unit,
-        unitCost: l.unitCost, updateCost: l.updateCost, dlc: l.dlc,
-      })),
-    };
-  }
-  async function stIntakePostingFingerprint(ctx) {
-    const bytes = new TextEncoder().encode(JSON.stringify(stIntakePostingCanonical(ctx)));
-    return stSha256Hex(bytes);
-  }
-  async function stIntakePrepare(docId, postingHash, lineCount) {
-    const res = await fetch('/api/ai/intake', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'prepare', docId, postingHash, lineCount }),
-    });
-    let data = null;
-    try { data = await res.json(); } catch (_) {}
-    if (!res.ok || !data || data.ok !== true || data.prepared !== true) {
-      throw new Error('intake-' + String((data && data.error) || ('prepare-' + res.status)));
-    }
-    return true;
-  }
+  function stIntakePostingLines(...args) { return stockParts.intake.stIntakePostingLines.apply(this, args); }
+  function stIntakePostingCanonical(...args) { return stockParts.intake.stIntakePostingCanonical.apply(this, args); }
+  function stIntakePostingFingerprint(...args) { return stockParts.intake.stIntakePostingFingerprint.apply(this, args); }
+  function stIntakePrepare(...args) { return stockParts.intake.stIntakePrepare.apply(this, args); }
 
   /* ── Guichet unique : le SEUL propriétaire des écritures d'un dépôt ──────
    * Reçoit des données pures (aucun DOM), écrit : ligne comptable
@@ -4949,133 +3360,14 @@
    * Chaque couche converge : rejouer après N'IMPORTE QUELLE interruption
    * (y compris entre deux lignes) produit exactement le même état.
    * Dépend uniquement de window.* — exécutable en test sur le vrai code. */
-  async function stIntakePostAll(ctx) {
-    const P = window.KiwiProcurement || null;
-    const K = window.KiwiInventory || null;
-    const C = window.KiwiCost || null;
-    const docId = String((ctx && ctx.docId) || '');
-    if (!docId) throw new Error('intake-doc-required');
-    /* Sans registre, aucun mouvement ne doit partir : un K.add absent
-     * avalerait chaque ligne en silence et le document serait marqué
-     * confirmé sur du vide. */
-    if (!K || typeof K.add !== 'function') throw new Error('intake-ledger-required');
-    const owner = (typeof K.merchant === 'function') ? String(K.merchant() || '') : '';
-    if (!owner) throw new Error('intake-merchant-required');
-    const supplierName = String(ctx.supplierName || '');
-    const externalRef = String(ctx.externalRef || '');
-    const receivedAt = +ctx.receivedAt || Date.now();
-    const issuedAt = +ctx.issuedAt || receivedAt;
-
-    let supplierId = '';
-    if (P) {
-      const list = (P.doc && P.doc().suppliers) || [];
-      const norm = supplierName.trim().toLowerCase();
-      const known = list.find((s) => String((s && s.name) || '').trim().toLowerCase() === norm);
-      if (known) supplierId = known.id;
-      else if (norm) {
-        const created = P.addSupplier({ id: stIntakeSupplierId(supplierName), name: supplierName });
-        supplierId = (created && created.id) || '';
-      }
-    }
-
-    const normalizedCtx = Object.assign({}, ctx, {
-      receivedAt, issuedAt, lines: ctx.lines || [],
-    });
-    const canonical = stIntakePostingCanonical(normalizedCtx);
-    const postLines = stIntakePostingLines(normalizedCtx);
-    const cleanLines = postLines.map((l) => ({
-      itemId: l.itemId, name: l.name, qty: l.qty, unit: l.unit, unitCost: l.unitCost,
-    }));
-    if (!cleanLines.length) throw new Error('intake-lines-required');
-    const ids = await stIntakePostingIds(owner, docId, postLines.length);
-
-    /* Avant la première écriture locale, le serveur fige l'empreinte du
-     * brouillon relu. Un crash puis une nouvelle extraction/correction ne peut
-     * donc pas réutiliser les ids indexés avec un autre contenu. */
-    const postingHash = await stSha256Hex(new TextEncoder().encode(JSON.stringify(canonical)));
-    await stIntakePrepare(docId, postingHash, cleanLines.length);
-
-    let receipt = null;
-    if (P && P.receiveDirect) {
-      receipt = P.receiveDirect({
-        receiptId: ids.receiptId, supplierId, externalRef, receivedAt,
-        lines: cleanLines, skipMovements: true, skipCosts: true,
-      });
-      if (!receipt || receipt.error) throw new Error((receipt && receipt.error) || 'receipt-failed');
-    }
-
-    postLines.forEach((l, idx) => {
-      /* Acceptation vérifiée ligne par ligne : K.add rend null quand le
-       * registre refuse (pas réel, pas de marchand, ligne invalide). Un
-       * refus silencieux serait une confirmation mensongère — on lève, la
-       * reprise rejouera (ids déterministes, couches convergentes). */
-      const accepted = K.add({
-        id: ids.movementIds[idx],
-        itemId: l.itemId, qty: +l.qty, reason: 'receipt',
-        refType: 'receipt', refId: receipt ? receipt.id : ids.receiptId,
-        note: [supplierName, externalRef].filter(Boolean).join(' · '),
-        unitCost: l.unitCost, occurredTs: receivedAt,
-        meta: {
-          supplierId: l.cardSupplierId || supplierId,
-          supplierName, externalRef, receiptRef: ids.receiptId,
-          receivedAt, rank: l.cardRank || 1,
-          expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
-        },
-      });
-      if (!accepted) throw new Error('intake-movement-rejected:' + l.itemId);
-      if (l.updateCost && +l.unitCost > 0 && C && C.setItemCost) {
-        try { C.setItemCost(l.itemId, +l.unitCost, supplierName); } catch (_) {}
-      }
-    });
-
-    /* K.add est local-first et ne constitue pas un accusé de réception D1.
-     * Sans ce sync explicite, le document pouvait être marqué confirmed puis
-     * l'onglet mourir avant que le setTimeout du registre pousse ses lignes. */
-    if (typeof K.sync !== 'function' || await K.sync() !== true) {
-      throw new Error('intake-movement-sync-required');
-    }
-
-    let invoice = null;
-    if (P && P.attachInvoice) {
-      const inv = P.attachInvoice({
-        invoiceId: ids.invoiceId, supplierId, number: externalRef,
-        issuedAt, receiptId: receipt ? receipt.id : ids.receiptId,
-        lines: cleanLines, source: String(ctx.source || 'pdf'),
-      });
-      if (inv && !inv.error) invoice = inv;
-    }
-    return { receiptId: receipt ? receipt.id : ids.receiptId, invoiceId: invoice ? invoice.id : null, movementIds: ids.movementIds };
-  }
-  function stIntakeEnabled() {
-    try {
-      if (new URLSearchParams(window.location.search).get('intake') === '1') return true;
-      return window.localStorage.getItem('kiwiIntake1') === '1';
-    } catch (_) { return false; }
-  }
-  function stIntakeIdHint(text) {
-    return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(String(text || ''));
-  }
-  function stIntakeMrzZone(text) {
-    const lines = String(text || '').split(/\r?\n/);
-    for (const raw of lines) {
-      const line = raw.replace(/\s+/g, '').toUpperCase();
-      if (line.length < 30) continue;
-      if (!/^[A-Z0-9<]+$/.test(line)) continue;
-      let fillers = 0;
-      for (const ch of line) if (ch === '<') fillers++;
-      if (fillers >= 10) return true;
-    }
-    return false;
-  }
+  function stIntakePostAll(...args) { return stockParts.intake.stIntakePostAll.apply(this, args); }
+  function stIntakeEnabled(...args) { return stockParts.intake.stIntakeEnabled.apply(this, args); }
+  function stIntakeIdHint(...args) { return stockParts.intake.stIntakeIdHint.apply(this, args); }
+  function stIntakeMrzZone(...args) { return stockParts.intake.stIntakeMrzZone.apply(this, args); }
   /* FNV-1a 32 bits → hex : empreinte courte stable pour dériver des ids
    * déterministes (ce n'est PAS un identifiant de sécurité, cf. SHA-256
    * côté registre). Pure, testée. */
-  function stIntakeHash(str) {
-    let h = 2166136261;
-    const s = String(str || '');
-    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return (h >>> 0).toString(16).padStart(8, '0');
-  }
+  function stIntakeHash(...args) { return stockParts.intake.stIntakeHash.apply(this, args); }
   /* Ids primaires d'un dépôt — contrat d'idempotence inter-marchands.
    * `inventory_movements.id` est GLOBALEMENT unique : sans le marchand dans
    * l'empreinte, deux marchands traitant le même PDF partageraient les ids —
@@ -5086,152 +3378,29 @@
    * Les ids comptables (réception/facture) restent doc-scopés : leurs
    * magasins sont par-marchand, seule la table des mouvements est globale.
    * Async (SubtleCrypto) ; échoue fermé sans marchand ni crypto. */
-  async function stIntakePostingIds(merchant, docId, lineCount) {
-    const m = String(merchant || '');
-    const d = String(docId || '');
-    if (!m || !d) throw new Error('intake-id-scope-required');
-    const subtle = (window.crypto && window.crypto.subtle) || null;
-    if (!subtle) throw new Error('intake-crypto-required');
-    const enc = new TextEncoder();
-    const movementIds = [];
-    const n = Math.max(0, Math.min(200, lineCount | 0));
-    for (let i = 0; i < n; i++) {
-      const digest = await subtle.digest('SHA-256', enc.encode(m + '\n' + d + '\n' + i));
-      const hex = Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
-      movementIds.push('mov-intake-' + hex.slice(0, 20) + '-' + i);
-    }
-    return {
-      receiptId: 'grn-intake-' + d.slice(0, 16),
-      invoiceId: 'invdoc-intake-' + d.slice(0, 16),
-      movementIds,
-    };
-  }
-  function stIntakeSupplierId(name) {
-    return 'sup-intake-' + stIntakeHash(String(name || '').trim().toLowerCase());
-  }
-  async function stSha256Hex(buffer) {
-    const digest = await window.crypto.subtle.digest('SHA-256', buffer);
-    return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
-  }
-  function stIntakeMerchant() {
-    try { return (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || ''; } catch (_) { return ''; }
-  }
-  async function stIntakeCommit(payload) {
-    const res = await fetch('/api/ai/intake', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'commit', ...payload }),
-    });
-    let data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
-    return { status: res.status, data };
-  }
-  async function stIntakeUpload(docId, bytes) {
-    // Booléen, jamais d'exception : l'appelant décide (archive ou repli).
-    try {
-      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/pdf' },
-        body: bytes,
-      });
-      return res.ok;
-    } catch (_) { return false; }
-  }
-  function stIntakeOutboxKey() { return 'kiwi:intakeOutbox:v1:' + (stIntakeMerchant() || 'local'); }
-  function stIntakeOutboxRead() {
-    try {
-      const raw = window.localStorage.getItem(stIntakeOutboxKey());
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr.filter((e) => e && typeof e.docId === 'string').slice(-50) : [];
-    } catch (_) { return []; }
-  }
-  function stIntakeOutboxWrite(list) {
-    try { window.localStorage.setItem(stIntakeOutboxKey(), JSON.stringify((list || []).slice(-50))); } catch (_) {}
-  }
-  function stIntakePostedKey() { return 'kiwi:intakePosted:v1:' + (stIntakeMerchant() || 'local'); }
-  function stIntakePostedHas(docId) {
-    try {
-      const raw = window.localStorage.getItem(stIntakePostedKey());
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) && arr.indexOf(docId) !== -1;
-    } catch (_) { return false; }
-  }
-  function stIntakePostedAdd(docId) {
-    try {
-      const raw = window.localStorage.getItem(stIntakePostedKey());
-      const arr = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(arr) ? arr : [];
-      if (list.indexOf(docId) === -1) list.push(docId);
-      window.localStorage.setItem(stIntakePostedKey(), JSON.stringify(list.slice(-200)));
-    } catch (_) {}
-  }
+  function stIntakePostingIds(...args) { return stockParts.intake.stIntakePostingIds.apply(this, args); }
+  function stIntakeSupplierId(...args) { return stockParts.intake.stIntakeSupplierId.apply(this, args); }
+  function stSha256Hex(...args) { return stockParts.intake.stSha256Hex.apply(this, args); }
+  function stIntakeMerchant(...args) { return stockParts.intake.stIntakeMerchant.apply(this, args); }
+  function stIntakeCommit(...args) { return stockParts.intake.stIntakeCommit.apply(this, args); }
+  function stIntakeUpload(...args) { return stockParts.intake.stIntakeUpload.apply(this, args); }
+  function stIntakeOutboxKey(...args) { return stockParts.intake.stIntakeOutboxKey.apply(this, args); }
+  function stIntakeOutboxRead(...args) { return stockParts.intake.stIntakeOutboxRead.apply(this, args); }
+  function stIntakeOutboxWrite(...args) { return stockParts.intake.stIntakeOutboxWrite.apply(this, args); }
+  function stIntakePostedKey(...args) { return stockParts.intake.stIntakePostedKey.apply(this, args); }
+  function stIntakePostedHas(...args) { return stockParts.intake.stIntakePostedHas.apply(this, args); }
+  function stIntakePostedAdd(...args) { return stockParts.intake.stIntakePostedAdd.apply(this, args); }
   /* Garde pure : un docId déjà posté ici, ou déjà confirmé côté serveur
    * (deuxième appareil), ne reposte jamais le stock. Testée. */
-  function stIntakePostGuard(posted, serverStatus) {
-    if (posted) return 'duplicate-local';
-    if (serverStatus === 'confirmed') return 'duplicate-server';
-    return 'ok';
-  }
-  async function stIntakeServerStatus(docId) {
-    // Injoignable → '' : la garde reste ouverte, l'outbox garde la vérité.
-    try {
-      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`);
-      if (!res.ok) return '';
-      const data = await res.json().catch(() => null);
-      return (data && data.doc && data.doc.status) || '';
-    } catch (_) { return ''; }
-  }
+  function stIntakePostGuard(...args) { return stockParts.intake.stIntakePostGuard.apply(this, args); }
+  function stIntakeServerStatus(...args) { return stockParts.intake.stIntakeServerStatus.apply(this, args); }
   /* Une seule tentative de marquage, outbox tenue à jour. L'outbox ne
    * contient que des « stock déjà posté, marquage en attente » : la rejouer
    * ne reposte jamais le stock, elle ne renvoie que le marquage. */
-  async function stIntakeMarkOnce(docId) {
-    const box = stIntakeOutboxRead();
-    if (!box.some((e) => e.docId === docId)) {
-      box.push({ docId, ts: Date.now() });
-      stIntakeOutboxWrite(box);
-    }
-    try {
-      const res = await fetch('/api/ai/intake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'mark', docId, status: 'confirmed' }),
-      });
-      if (res.ok) {
-        stIntakeOutboxWrite(stIntakeOutboxRead().filter((e) => e.docId !== docId));
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-  async function stIntakeFlushOutbox() {
-    const pending = stIntakeOutboxRead();
-    for (const e of pending) {
-      try {
-        if (await stIntakeServerStatus(e.docId) === 'confirmed') {
-          stIntakeOutboxWrite(stIntakeOutboxRead().filter((x) => x.docId !== e.docId));
-          continue;
-        }
-        await stIntakeMarkOnce(e.docId);
-      } catch (_) {}
-    }
-  }
-  function stRenderIntakeStop(title, body) {
-    return `
-      <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(title)}</b><br />${esc(body)}</div></div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
-        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
-        <button class="st-btn" type="button" data-stock-scan-manual2>${esc(t('mScanManual'))}</button>
-      </div>`;
-  }
-  function wireIntakeStop() {
-    const scope = topBackdrop() || document;
-    const stage = scope.querySelector('[data-stock-scan-stage]');
-    scope.querySelector('[data-stock-scan-manual2]')?.addEventListener('click', () => {
-      if (!stage) return;
-      stage.innerHTML = renderRealReceiptReview({ supplier: null });
-      wireScanReview();
-    });
-  }
+  function stIntakeMarkOnce(...args) { return stockParts.intake.stIntakeMarkOnce.apply(this, args); }
+  function stIntakeFlushOutbox(...args) { return stockParts.intake.stIntakeFlushOutbox.apply(this, args); }
+  function stRenderIntakeStop(...args) { return stockParts.intake.stRenderIntakeStop.apply(this, args); }
+  function wireIntakeStop(...args) { return stockParts.intake.wireIntakeStop.apply(this, args); }
 
   /* ── Conflit de reprise (409 posting-conflict) ──────────────────────────
    * Un premier envoi a figé une empreinte différente : la tentative en cours
@@ -5244,344 +3413,21 @@
    * Stash DOM : les nœuds de la relecture sont mis de côté (valeurs saisies
    * et écouteurs intacts, aucun réaffichage) puis restaurés au retour. */
   let stConflictStash = null;
-  async function stIntakeFetchRecorded(docId) {
-    const refId = 'grn-intake-' + String(docId || '').slice(0, 16);
-    const res = await fetch(`/api/inventory/movements?merchant=${encodeURIComponent(stIntakeMerchant())}&refId=${encodeURIComponent(refId)}&reason=receipt`);
-    if (!res.ok) throw new Error('intake-recorded-' + res.status);
-    const data = await res.json().catch(() => null);
-    const rows = data && Array.isArray(data.movements) ? data.movements : [];
-    return rows.map((r) => ({
-      itemId: String((r && r.itemId) || ''),
-      qty: +(r && r.qty) || 0,
-      unitCost: r && r.unitCost == null ? null : +(r.unitCost),
-    })).filter((r) => r.itemId);
-  }
-  function stIntakeCompareConflict(recorded, current) {
-    /* Plusieurs lignes d'une même facture peuvent pointer vers le même article
-     * (lots ou DLC différents). On conserve donc chaque occurrence dans l'ordre
-     * au lieu d'écraser silencieusement les suivantes dans une Map par article. */
-    const index = (rows, pick) => {
-      const m = new Map();
-      for (const r of rows || []) {
-        const id = String((r && r.itemId) || '');
-        if (!id) continue;
-        if (!m.has(id)) m.set(id, []);
-        m.get(id).push(pick(r));
-      }
-      return m;
-    };
-    const rec = index(recorded, (r) => ({ qty: +r.qty || 0, unitCost: r.unitCost == null ? null : +r.unitCost }));
-    const cur = index(current, (r) => ({ name: String(r.name || r.itemId || ''), qty: +r.qty || 0, unit: String(r.unit || ''), unitCost: r.unitCost == null ? null : +r.unitCost }));
-    const sameCost = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(a - b) < 0.00005);
-    const rows = [];
-    const ids = new Set([...cur.keys(), ...rec.keys()]);
-    for (const id of ids) {
-      const currentRows = cur.get(id) || [];
-      const recordedRows = rec.get(id) || [];
-      const count = Math.max(currentRows.length, recordedRows.length);
-      for (let occurrence = 0; occurrence < count; occurrence += 1) {
-        const c = currentRows[occurrence] || null;
-        const r = recordedRows[occurrence] || null;
-        if (c && !r) rows.push({ kind: 'added', itemId: id, name: c.name, recQty: null, recCost: null, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
-        else if (r && !c) rows.push({ kind: 'missing', itemId: id, name: id, recQty: r.qty, recCost: r.unitCost, curQty: null, curCost: null, unit: '' });
-        else if (r && c && (r.qty !== c.qty || !sameCost(r.unitCost, c.unitCost))) {
-          rows.push({ kind: 'changed', itemId: id, name: c.name, recQty: r.qty, recCost: r.unitCost, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
-        }
-      }
-    }
-    return rows;
-  }
-  function stRenderIntakeConflict(cmp) {
-    const rows = (cmp && cmp.rows) || [];
-    const fetchFailed = !!(cmp && cmp.fetchFailed);
-    const badge = (kind) => {
-      const label = kind === 'added' ? t('mScanConflictAdded') : kind === 'missing' ? t('mScanConflictMissing') : t('mScanConflictChanged');
-      const paint = kind === 'added'
-        ? 'background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);'
-        : kind === 'missing'
-          ? 'background:#fdecec;color:#C94A3A;'
-          : 'background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);';
-      return `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;${paint}">${esc(label)}</span>`;
-    };
-    const cell = (v, suffix) => (v == null
-      ? '<span style="color:var(--n-400,#9ca3af);">·</span>'
-      : `<bdi dir="ltr" class="mono">${esc(String(v))}${suffix ? ' ' + esc(suffix) : ''}</bdi>`);
-    const firstId = rows.length ? rows[0].itemId : '';
-    return `
-      <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(t('mScanConflictT'))}</b><br />${esc(t('mScanConflictB1'))}<br />${esc(t('mScanConflictB2'))}<br />${esc(t('mScanConflictB3'))}</div></div>
-      ${fetchFailed
-        ? `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictNoRec'))}</div></div>`
-        : rows.length ? `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictPartial'))}</div></div>
-        <div style="overflow-x:auto;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
-        <table class="st-inv-items" style="margin:0;width:100%;">
-          <thead><tr><th>${esc(t('mScanConflictColItem'))}</th><th class="r">${esc(t('mScanConflictRec'))}</th><th class="r">${esc(t('mScanConflictCur'))}</th><th></th></tr></thead>
-          <tbody>${rows.map((r) => `
-            <tr>
-              <td style="min-width:140px;"><div style="font-size:12px;font-weight:500;color:var(--n-800);">${esc(r.name)}</div></td>
-              <td class="r" style="font-size:12px;"><span>${esc(t('mScanConflictColQty'))} · ${cell(r.recQty, r.unit)}</span><br /><span>${esc(t('mScanConflictColCost'))} · ${cell(r.recCost)}</span></td>
-              <td class="r" style="font-size:12px;"><span>${esc(t('mScanConflictColQty'))} · ${cell(r.curQty, r.unit)}</span><br /><span>${esc(t('mScanConflictColCost'))} · ${cell(r.curCost)}</span></td>
-              <td style="min-width:90px;">${badge(r.kind)}</td>
-            </tr>`).join('')}</tbody>
-        </table>
-      </div>` : `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictNoDiff'))}</div></div>`}
-      <div style="display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:14px;">
-        ${firstId && !fetchFailed ? `<button class="st-btn" type="button" data-action="stock-item-detail" data-item-id="${esc(firstId)}">${svg('eye', 12)}<span>${esc(t('mScanConflictHistory'))}</span></button>` : ''}
-        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
-        <button class="st-btn primary" type="button" data-stock-conflict-back>${esc(t('mScanConflictBack'))}</button>
-      </div>`;
-  }
-  async function stShowIntakeConflict(scope, stage, opts) {
-    const o = opts || {};
-    const currentLines = Array.isArray(o.currentLines) ? o.currentLines : [];
-    stConflictStash = [];
-    if (stage && stage.firstChild) {
-      let n = stage.firstChild;
-      const kept = [];
-      while (n) { kept.push(n); n = n.nextSibling; }
-      kept.forEach((node) => { try { stage.removeChild(node); } catch (_) {} });
-      stConflictStash = kept;
-    }
-    let recorded = null, fetchFailed = false;
-    try { recorded = await stIntakeFetchRecorded(o.docId); }
-    catch (_) { recorded = null; fetchFailed = true; }
-    const rows = fetchFailed ? [] : stIntakeCompareConflict(recorded, currentLines);
-    if (stage) {
-      stage.innerHTML = stRenderIntakeConflict({ rows, fetchFailed });
-      stage.querySelector('[data-stock-conflict-back]')?.addEventListener('click', () => {
-        stRestoreIntakeReview(scope, stage);
-      });
-    }
-    return { rows, fetchFailed };
-  }
-  async function stHandleIntakePostingConflict(scope, err, docId, currentLines) {
-    if (!docId || String((err && err.message) || err).indexOf('posting-conflict') === -1) return false;
-    const stage = scope && scope.querySelector ? scope.querySelector('[data-stock-scan-stage]') : null;
-    if (stage) await stShowIntakeConflict(scope, stage, { docId, currentLines });
-    else window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
-    return true;
-  }
-  function stRestoreIntakeReview(scope, stage) {
-    const kept = stConflictStash; stConflictStash = null;
-    if (!stage) return false;
-    if (kept && kept.length) {
-      stage.innerHTML = '';
-      kept.forEach((node) => { try { stage.appendChild(node); } catch (_) {} });
-      return true;
-    }
-    stage.innerHTML = renderRealReceiptReview({ supplier: null });
-    wireScanReview();
-    return false;
-  }
+  function stIntakeFetchRecorded(...args) { return stockParts.intake.stIntakeFetchRecorded.apply(this, args); }
+  function stIntakeCompareConflict(...args) { return stockParts.intake.stIntakeCompareConflict.apply(this, args); }
+  function stRenderIntakeConflict(...args) { return stockParts.intake.stRenderIntakeConflict.apply(this, args); }
+  function stShowIntakeConflict(...args) { return stockParts.intake.stShowIntakeConflict.apply(this, args); }
+  function stHandleIntakePostingConflict(...args) { return stockParts.intake.stHandleIntakePostingConflict.apply(this, args); }
+  function stRestoreIntakeReview(...args) { return stockParts.intake.stRestoreIntakeReview.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Scan invoice
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openInvoiceScan(opts) {
-    // Pré-chargement discret en tâche de fond de pdf.js
-    try { loadPdfJs(); } catch (_) {}
-    // Guichet unique : rejoue les marquages interrompus (marquage seul).
-    try { if (stIntakeEnabled()) stIntakeFlushOutbox(); } catch (_) {}
-    stConflictStash = null;
+  function openInvoiceScan(...args) { return stockParts.intake.openInvoiceScan.apply(this, args); }
 
-    const preSupId = typeof opts === 'string' ? opts : opts?.supplierId;
-    const sup = preSupId ? getSup().find((s) => s.id === preSupId) : null;
-    const m = window.Kiwi.modal({
-      title: t('mScanTitle'),
-      width: 720,
-      body: `<div data-stock-scan-stage>${sup ? renderRealReceiptReview({ supplier: sup }) : renderScanStage1()}</div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
-    });
-    requestAnimationFrame(() => {
-      wireDismiss(m?.el || topBackdrop());
-      if (sup) {
-        wireScanReview();
-      } else {
-        wireScanStage1();
-      }
-    });
-  }
+  function renderScanStage1(...args) { return stockParts.intake.renderScanStage1.apply(this, args); }
 
-  function renderScanStage1() {
-    return `
-      <div class="st-dropzone" data-stock-dropzone>
-        <input type="file" data-stock-file-input accept="application/pdf,image/*" style="display:none;" />
-        <input type="file" data-stock-cam-input accept="image/*" capture="environment" style="display:none;" />
-        <div class="st-dropzone-ico">${svg('upload', 26)}</div>
-        <div class="st-dropzone-t">${esc(t('mScanDropT'))}</div>
-        <div class="st-dropzone-s">${esc(t('mScanDropS'))}</div>
-        <div class="st-dropzone-acts" style="display:flex;gap:10px;margin-top:12px;">
-          <button class="st-btn" type="button" data-stock-pick-file>${esc(t('mScanBtnFile'))}</button>
-          <button class="st-btn" type="button" data-stock-pick-cam>${svg('camera', 12)}<span>${esc(t('mScanBtnCam'))}</span></button>
-        </div>
-      </div>
-      <div style="font-size:11.5px;color:var(--n-500,#6b7280);text-align:center;margin-top:8px;">
-        ${esc(t('mScanServerNotice'))}
-      </div>
-      <div class="st-dropzone-link" data-stock-scan-manual style="text-align:center;margin-top:12px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
-        ${esc(t('mScanManual'))}
-      </div>
-      ${stIntakeEnabled() ? `<div class="st-dropzone-link" data-stock-scan-archive style="text-align:center;margin-top:6px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
-        ${esc(t('mScanArcLink'))}
-      </div>` : ''}
-    `;
-  }
-
-  function wireScanStage1() {
-    const scope = topBackdrop() || document;
-    const dropzone = scope.querySelector('[data-stock-dropzone]');
-    const fileInp = scope.querySelector('[data-stock-file-input]');
-    const camInp = scope.querySelector('[data-stock-cam-input]');
-    const btnFile = scope.querySelector('[data-stock-pick-file]');
-    const btnCam = scope.querySelector('[data-stock-pick-cam]');
-    const linkManual = scope.querySelector('[data-stock-scan-manual]');
-    const stage = scope.querySelector('[data-stock-scan-stage]');
-
-    if (linkManual) {
-      linkManual.onclick = () => {
-        if (!stage) return;
-        stage.innerHTML = renderRealReceiptReview({ supplier: null });
-        wireScanReview();
-      };
-    }
-
-    const linkArchive = scope.querySelector('[data-stock-scan-archive]');
-    if (linkArchive) {
-      linkArchive.onclick = () => {
-        if (!stage) return;
-        openScanArchive(scope, stage);
-      };
-    }
-
-    if (btnFile && fileInp) {
-      btnFile.onclick = () => fileInp.click();
-    }
-    if (btnCam && camInp) {
-      btnCam.onclick = () => camInp.click();
-    }
-
-    const processFile = async (file) => {
-      if (!file || !stage) return;
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-
-      stage.innerHTML = `
-        <div class="st-scanning" style="text-align:center;padding:40px 20px;">
-          <div class="st-scanning-spinner" style="margin:0 auto 16px;"></div>
-          <div class="st-scanning-t" style="font-weight:600;font-size:15px;margin-bottom:4px;">${esc(isPdf ? t('mScanReadingFile') : t('mScanReadingT'))}</div>
-          <div class="st-scanning-s" style="font-size:12px;color:var(--n-500);">${esc(t('mScanReadingS'))}</div>
-        </div>
-      `;
-
-      if (isPdf) {
-        try {
-          const text = await extractPdfText(file);
-          if (!text) throw new Error('empty-text');
-
-          // Guichet unique (fanion stIntakeEnabled) : le texte est déjà là,
-          // donc le pré-filtre identité ne coûte aucun appel et précède tout.
-          let intakeDocId = '';
-          if (stIntakeEnabled()) {
-            if (stIntakeIdHint(text) || stIntakeMrzZone(text)) {
-              stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
-              wireIntakeStop();
-              return;
-            }
-            try {
-              const bytes = await file.arrayBuffer();
-              if (!bytes.byteLength || bytes.byteLength > 10 * 1024 * 1024) throw new Error('too-large');
-              const sha = await stSha256Hex(bytes);
-              const commit = await stIntakeCommit({
-                sha256: sha, mime: 'application/pdf', size: bytes.byteLength,
-                docType: 'supplier_invoice', source: 'stock-scan',
-                textSample: text.slice(0, 4000),
-              });
-              if (commit.status === 422) {
-                stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
-                wireIntakeStop();
-                return;
-              }
-              if (commit.data && commit.data.duplicate && commit.data.doc && commit.data.doc.status === 'confirmed') {
-                const d = commit.data.doc.createdTs ? new Date(commit.data.doc.createdTs).toLocaleDateString() : '';
-                stage.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', d));
-                wireIntakeStop();
-                return;
-              }
-              if (commit.data && (commit.data.docId || (commit.data.doc && commit.data.doc.docId))) {
-                const candidate = commit.data.docId || commit.data.doc.docId;
-                // Vérité de l'archive : intakeDocId n'est posé que si l'objet
-                // R2 est écrit et vérifié (le serveur compare le SHA-256).
-                // Sans archive, l'extraction continue mais l'UI ne prétend
-                // rien et aucun marquage ne sera possible (409 not-archived).
-                if (await stIntakeUpload(candidate, bytes)) {
-                  intakeDocId = candidate;
-                  if (commit.data.duplicate) window.Kiwi.toast?.(t('mScanResume'), { type: 'info' });
-                } else {
-                  intakeDocId = '';
-                }
-              }
-              // Registre ou quota indisponible (429, 503, réseau) : on ne
-              // bloque jamais le travail, l'extraction continue sans archive.
-            } catch (_) { intakeDocId = ''; }
-          }
-
-          const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';
-          const res = await fetch('/api/ai/invoice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ merchant: venue, kind: 'text', text }),
-          });
-
-          if (!res.ok) {
-            throw new Error('server-error-' + res.status);
-          }
-          const data = await res.json();
-          if (data.ok && Array.isArray(data.lines) && data.lines.length) {
-            stage.innerHTML = renderRealReceiptReview({ parsed: data, intakeDocId });
-            wireScanReview();
-            return;
-          }
-          throw new Error(data.error || data.reason || 'unparsed');
-        } catch (err) {
-          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
-          // Repli manuel : le contexte documentaire est préservé (si le
-          // PDF est archivé, la confirmation marquera le brouillon).
-          stage.innerHTML = renderRealReceiptReview({ supplier: null, intakeDocId });
-          wireScanReview();
-          return;
-        }
-      } else {
-        // Image scan / photo — repli sur la table pour l'instant (Commit 1)
-        setTimeout(() => {
-          stage.innerHTML = renderRealReceiptReview({ supplier: null });
-          wireScanReview();
-        }, 800);
-      }
-    };
-
-    if (fileInp) {
-      fileInp.onchange = (e) => {
-        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
-      };
-    }
-    if (camInp) {
-      camInp.onchange = (e) => {
-        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
-      };
-    }
-
-    if (dropzone) {
-      ['dragenter', 'dragover'].forEach((eventName) => {
-        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('is-dragover'); });
-      });
-      ['dragleave', 'drop'].forEach((eventName) => {
-        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('is-dragover'); });
-      });
-      dropzone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt?.files;
-        if (files && files[0]) processFile(files[0]);
-      });
-    }
-  }
+  function wireScanStage1(...args) { return stockParts.intake.wireScanStage1.apply(this, args); }
 
   /* ── Coffre des pièces déposées (lecture seule) ─────────────────────────
    * Liste paginée des métadonnées + visionneuse PDF authentifiée (cookie de
@@ -5589,610 +3435,34 @@
    * type, la date, le statut, la taille et l'identifiant raccourci. Aucune
    * mention « archivé » sans hasObject. Mise en page fluide (aucune largeur
    * fixe) : 320 px comme desktop, sens de lecture hérité de la page. */
-  function stArchiveUrl(docId, download) {
-    return '/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
-      '&docId=' + encodeURIComponent(String(docId || '')) + (download ? '&download=1' : '');
-  }
-  async function stIntakeArchiveList(cursor) {
-    const res = await fetch('/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
-      '&limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
-    if (!res.ok) throw new Error('archive-' + res.status);
-    const data = await res.json().catch(() => null);
-    if (!data || data.ok !== true || !Array.isArray(data.docs)) throw new Error('archive-bad-shape');
-    return data;
-  }
-  function stFmtSize(bytes) {
-    const n = Math.max(0, Number(bytes) || 0);
-    const dec = (x) => x.toFixed(1).replace('.', lang() === 'en' ? '.' : ',');
-    if (n >= 1048576) return dec(n / 1048576) + ' ' + t('mScanArcUMB');
-    if (n >= 1024) return dec(n / 1024) + ' ' + t('mScanArcUKB');
-    return Math.round(n) + ' ' + t('mScanArcUB');
-  }
-  function stFmtArcDate(ts) {
-    try {
-      const loc = lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA';
-      return new Date(Number(ts) || 0).toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
-    } catch (_) { return ''; }
-  }
-  function stArcTypeLabel(docType) {
-    if (docType === 'supplier_invoice') return t('mScanArcTypeInvoice');
-    const raw = String(docType || '').trim();
-    return raw ? raw.slice(0, 24) : t('mScanArcTypeOther');
-  }
-  function stArcStatusLabel(status) {
-    return status === 'confirmed' ? t('mScanArcStConfirmed') : t('mScanArcStReceived');
-  }
-  function renderScanArchive(state) {
-    const st = state || {};
-    const status = st.status || 'loading';
-    const docs = Array.isArray(st.docs) ? st.docs : [];
-    const head = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <button class="st-btn small" type="button" data-stock-arc-back>${esc(t('mScanArcBack'))}</button>
-        <div class="st-mb-eyebrow" style="margin:0;">${esc(t('mScanArcTitle'))}</div>
-      </div>`;
-    if (status === 'loading') {
-      return head + `<div style="text-align:center;padding:28px 12px;font-size:13px;color:var(--n-500,#6b7280);">${esc(t('mScanArcLoading'))}</div>`;
-    }
-    if (status === 'unavailable' && !docs.length) {
-      return head + `<div class="st-notice warn">${svg('alertTriangle', 14)}<div>${esc(t('mScanArcDown'))}</div></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-          <button class="st-btn" type="button" data-stock-arc-retry>${esc(t('mScanArcRetry'))}</button>
-        </div>`;
-    }
-    if (!docs.length) {
-      return head + `<div class="st-notice">${svg('info', 14)}<div>${esc(t('mScanArcEmpty'))}</div></div>`;
-    }
-    const rows = docs.map((d) => {
-      const id = String((d && d.docId) || '');
-      const short = id ? id.slice(0, 12) + '…' : '·';
-      const archived = !!d.hasObject && !!id;
-      const acts = archived
-        ? `<a class="st-btn small" href="${esc(stArchiveUrl(id, false))}" target="_blank" rel="noopener">${esc(t('mScanArcView'))}</a>`
-          + `<a class="st-btn small" href="${esc(stArchiveUrl(id, true))}" download>${esc(t('mScanArcDownload'))}</a>`
-        : `<span style="font-size:11.5px;color:var(--n-500,#6b7280);">${esc(t('mScanArcPending'))}</span>`;
-      return `
-        <div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--n-200,#e5e7eb);">
-          <div style="min-width:0;flex:1 1 180px;">
-            <div style="font-size:13px;font-weight:600;">${esc(stArcTypeLabel(d.docType))}</div>
-            <div style="font-size:11.5px;color:var(--n-500,#6b7280);display:flex;flex-wrap:wrap;gap:2px 8px;">
-              <bdi dir="ltr" class="mono">${esc(short)}</bdi>
-              <bdi dir="ltr">${esc(stFmtArcDate(d.createdTs))}</bdi>
-              <bdi dir="ltr">${esc(stFmtSize(d.size))}</bdi>
-              <span>${esc(stArcStatusLabel(d.status))}</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-shrink:0;">${acts}</div>
-        </div>`;
-    }).join('');
-    return head + `<div>${rows}</div>` + (st.nextCursor
-      ? `<div style="display:flex;justify-content:center;margin-top:12px;">
-          <button class="st-btn" type="button" data-stock-arc-more data-cursor="${esc(st.nextCursor)}">${esc(t('mScanArcMore'))}</button>
-        </div>`
-      : '');
-  }
-  function openScanArchive(scope, stage) {
-    if (!stage) return;
-    const acc = [];
-    let cursor = null;
-    let busy = false;
-    function paint(state) {
-      stage.innerHTML = renderScanArchive(state);
-      const back = scope.querySelector('[data-stock-arc-back]');
-      if (back) back.onclick = () => { stage.innerHTML = renderScanStage1(); wireScanStage1(); };
-      const retry = scope.querySelector('[data-stock-arc-retry]');
-      if (retry) retry.onclick = () => load(true);
-      const more = scope.querySelector('[data-stock-arc-more]');
-      if (more) more.onclick = () => load(false);
-    }
-    async function load(reset) {
-      if (reset) { acc.length = 0; cursor = null; paint({ status: 'loading', docs: [] }); }
-      else if (busy) return;
-      busy = true;
-      try {
-        const data = await stIntakeArchiveList(reset ? null : cursor);
-        for (const d of data.docs) acc.push(d);
-        cursor = data.nextCursor || null;
-        paint({ status: acc.length ? 'ready' : 'empty', docs: acc, nextCursor: cursor });
-      } catch (_) {
-        paint({ status: acc.length ? 'ready' : 'unavailable', docs: acc, nextCursor: cursor });
-      }
-      busy = false;
-    }
-    load(true);
-  }
+  function stArchiveUrl(...args) { return stockParts.intake.stArchiveUrl.apply(this, args); }
+  function stIntakeArchiveList(...args) { return stockParts.intake.stIntakeArchiveList.apply(this, args); }
+  function stFmtSize(...args) { return stockParts.intake.stFmtSize.apply(this, args); }
+  function stFmtArcDate(...args) { return stockParts.intake.stFmtArcDate.apply(this, args); }
+  function stArcTypeLabel(...args) { return stockParts.intake.stArcTypeLabel.apply(this, args); }
+  function stArcStatusLabel(...args) { return stockParts.intake.stArcStatusLabel.apply(this, args); }
+  function renderScanArchive(...args) { return stockParts.intake.renderScanArchive.apply(this, args); }
+  function openScanArchive(...args) { return stockParts.intake.openScanArchive.apply(this, args); }
 
-  function renderScanReview(opts) {
-    if (stShowReal() || opts?.supplier) return renderRealReceiptReview(opts);
-    const inv = getInv();
-    const rows = [
-      { id: 'inv01', name: 'Viande hachée bœuf', qty: 12, total: 1140 },
-      { id: 'inv03', name: 'Agneau épaule', qty: 14, total: 2352 },
-      { id: 'inv04', name: 'Merguez', qty: 4, total: 312 },
-    ];
-    return `
-      <div class="st-mb-eyebrow">${esc(t('mScanReviewT'))}</div>
-      <div class="st-mb-row three">
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label><input class="st-mb-input" value="Boucherie Errazi" /></div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" value="14/05/2026" /></div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" value="FAC-2026-1842" /></div>
-      </div>
-      <table class="st-inv-items">
-        <thead><tr><th>Article</th><th class="r">Qté</th><th>Unité</th><th class="r">Total</th></tr></thead>
-        <tbody>
-          ${rows.map((row) => {
-            const item = inv.find((candidate) => candidate.id === row.id), unit = stockUnit(item?.unit || 'kg');
-            return `<tr data-stock-scan-row="${esc(row.id)}"><td>${esc(item?.name || row.name)}</td><td class="r"><input class="st-pc-input mono" type="number" min="0" step="0.001" value="${row.qty}" data-stock-scan-qty /></td><td><select class="st-mb-input" data-stock-scan-unit>${stockUnitOptions(unit)}</select></td><td class="r mono">${esc(fmtMad(row.total))}</td></tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-      <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--n-600); padding:6px 0;">
-        <span>${esc(t('mScanTva'))} : −20 % comprise</span>
-      </div>
-      <div class="st-inv-foot"><span>${esc(t('mScanTotal'))}</span><b>3 804 MAD</b></div>
-      <div class="st-notice ok">${svg('checkCircle', 14)}<div><b>${esc(t('mScanOk'))}</b></div></div>
-      <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(t('mScanWarn'))}</b></div></div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
-        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
-        <button class="st-btn primary" data-stock-scan-confirm>${esc(t('mScanConfirm'))}</button>
-      </div>
-    `;
-  }
+  function renderScanReview(...args) { return stockParts.intake.renderScanReview.apply(this, args); }
 
-  function renderRealReceiptReview(opts) {
-    const preSupplier = opts?.supplier || null;
-    const parsed = opts?.parsed || null;
-    const allItems = getInv();
-    let items = allItems;
-    if (preSupplier) {
-      const match = allItems.filter((it) => {
-        const hasCard = (it.suppliers || []).some((card) =>
-          String(card.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || card.id === preSupplier.id
-        );
-        return hasCard || (it.category === preSupplier.category) || (String(it.supplier || '').trim().toLowerCase() === preSupplier.name.toLowerCase());
-      });
-      if (match.length > 0) items = match;
-    }
-
-    const supName = parsed?.supplier?.name || preSupplier?.name || '';
-    const today = new Date().toISOString().slice(0, 10);
-    const invoiceDate = parsed?.date || today;
-    const invoiceNum = parsed?.number || '';
-
-    const matches = parsed?.lines ? matchInvoiceLines(parsed.lines, items) : [];
-
-    const makeRow = (line, matchHit) => {
-      const matchedId = matchHit?.itemId || '';
-      const matchedItem = matchedId ? items.find((it) => it.id === matchedId) : null;
-
-      const lineQty = line ? line.qty : '';
-      const lineCost = line ? line.unitCost : '';
-
-      const comparison = compareLineCost(matchedItem, lineCost, supName);
-      const isChecked = comparison.isChecked;
-
-      let badgeHtml = '';
-      if (matchedItem && comparison.currentCost > 0 && Number.isFinite(lineCost) && lineCost > 0) {
-        if (comparison.isRise) {
-          badgeHtml = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);margin-right:6px;">↑ +${comparison.pct}%</span>`;
-        } else if (comparison.isDrop) {
-          badgeHtml = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:6px;">↓ −${Math.abs(comparison.pct)}%</span>`;
-        }
-      }
-
-      const optionsHtml = `<option value="">${esc(t('mScanChoose'))}</option>` + items.map((it) => {
-        const isSel = it.id === matchedId;
-        const card = (it.suppliers || []).find((c) =>
-          preSupplier && (String(c.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || c.id === preSupplier.id)
-        );
-        const defaultCost = card?.defaultPrice ?? it.costPerUnit ?? 0;
-        return `<option value="${esc(it.id)}" data-default-cost="${defaultCost}" ${isSel ? 'selected' : ''}>${esc(it.name)} (${esc(it.unit || 'unité')})</option>`;
-      }).join('');
-
-      return `
-        <tr data-stock-receive-row>
-          <td style="min-width:180px;">
-            <div style="font-size:12px;font-weight:500;margin-bottom:3px;color:var(--n-800);">${line ? esc(line.label) : ''}</div>
-            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
-          </td>
-          <td class="r" style="width:90px;">
-            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" value="${lineQty}" style="font-size:12px;" />
-          </td>
-          <td class="r" style="width:100px;">
-            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${lineCost}" style="font-size:12px;" />
-          </td>
-          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
-          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
-            ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '·'}
-          </td>
-          <td style="min-width:170px;font-size:12px;">
-            <div style="display:flex;align-items:center;">
-              <span data-stock-receive-badge>${badgeHtml}</span>
-              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
-                <input type="checkbox" data-stock-receive-update-cost ${isChecked ? 'checked' : ''} />
-                <span>${esc(t('mScanUpdateCost'))}</span>
-              </label>
-            </div>
-          </td>
-          <td class="r" style="width:30px;">
-            <button class="st-btn" type="button" data-stock-receive-remove aria-label="${esc(t('mScanIgnore'))}" style="padding:4px 8px;font-size:12px;">×</button>
-          </td>
-        </tr>`;
-    };
-
-    let rowsHtml = '';
-    if (parsed?.lines?.length) {
-      rowsHtml = parsed.lines.map((l, i) => makeRow(l, matches[i])).join('');
-    } else {
-      rowsHtml = makeRow(null, null) + makeRow(null, null) + makeRow(null, null);
-    }
-
-    const supInputHtml = preSupplier
-      ? `<input class="st-mb-input" data-stock-receive-supplier value="${esc(preSupplier.name)}" readonly style="background:var(--n-100,#f4f5f6); cursor:not-allowed;" />`
-      : `<input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" value="${esc(supName)}" />`;
-
-    return `
-      <div class="st-mb-eyebrow">${parsed ? esc(t('mScanReviewT')) : 'Réception fournisseur'}</div>
-      <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : les prix et quantités sont pré-remplis pour vérification humaine.</div></div>
-      ${opts?.intakeDocId ? `<input type="hidden" data-stock-intake-doc value="${esc(String(opts.intakeDocId))}" /><div class="st-notice info" style="margin-top:8px;">${svg('receipt', 14)}<div>${esc(t('mScanArchived'))} · <span class="mono">${esc(String(opts.intakeDocId).slice(0, 12))}…</span></div></div>` : ''}
-      <div class="st-mb-row three" style="margin-top:12px;">
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label>${supInputHtml}</div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${invoiceDate}" /></div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" value="${esc(invoiceNum)}" /></div>
-      </div>
-      <div style="overflow-x:auto;max-height:360px;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
-        <table class="st-inv-items" style="margin:0;width:100%;">
-          <thead>
-            <tr>
-              <th>Article reçu</th>
-              <th class="r">Quantité</th>
-              <th class="r">${esc(t('mScanColInvoicedCost'))} MAD</th>
-              <th class="r">DLC</th>
-              <th class="r">${esc(t('mScanColCurrentCost'))}</th>
-              <th>Évolution & MAJ</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody data-stock-receive-rows>${rowsHtml}</tbody>
-        </table>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-        <button class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
-        <div class="st-inv-foot" style="margin:0;padding:0;border:none;"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
-      </div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
-        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
-        <button class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
-      </div>`;
-  }
+  function renderRealReceiptReview(...args) { return stockParts.intake.renderRealReceiptReview.apply(this, args); }
 
   /* Chemin historique (hors guichet) : UN SEUL propriétaire des mouvements.
    * La boucle moveStock du handler reste l'unique écrivain ; receiveDirect ne
    * fait que la pièce comptable (skipMovements) et n'applique aucun coût
    * (skipCosts — la case à cocher du handler reste seule décisionnaire).
    * Reçoit des données pures + le catalogue résolu ; testable en vm. */
-  function stLegacyPostAll(ctx) {
-    const supplier = String((ctx && ctx.supplier) || '');
-    const externalRef = String((ctx && ctx.externalRef) || '');
-    const date = String((ctx && ctx.date) || '');
-    const receivedAt = +((ctx && ctx.receivedAt) || Date.now());
-    const receiptRef = String((ctx && ctx.receiptRef) || ('receipt-' + Date.now().toString(36)));
-    const lines = Array.isArray(ctx && ctx.lines) ? ctx.lines : [];
-    const items = Array.isArray(ctx && ctx.items) ? ctx.items : [];
-    const receivingLines = lines.map((line) => {
-      const it = items.find((x) => x.id === line.itemId);
-      return {
-        itemId: line.itemId,
-        name: it?.name || line.itemId,
-        qty: line.qty,
-        unit: it?.unit || 'unité',
-        unitCost: line.cost,
-      };
-    });
-    let receiptId = receiptRef;
-    if (window.KiwiProcurement?.receiveDirect) {
-      let known = window.KiwiProcurement.doc()?.suppliers?.find((s) => String(s.name || '').toLowerCase() === supplier.toLowerCase());
-      if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
-      const receipt = window.KiwiProcurement.receiveDirect({
-        receiptId: receiptRef,
-        supplierId: known?.id || supplier,
-        externalRef,
-        receivedAt,
-        lines: receivingLines,
-        skipMovements: true,
-        skipCosts: true,
-      });
-      if (receipt && receipt.id) receiptId = receipt.id;
-      if (window.KiwiProcurement?.attachInvoice) {
-        try {
-          window.KiwiProcurement.attachInvoice({
-            supplierId: known?.id || supplier,
-            number: externalRef,
-            date,
-            receiptId,
-            lines: receivingLines,
-            source: 'pdf',
-          });
-        } catch (_) {}
-      }
-    }
-    // La boucle moveStock reste la SEULE à écrire des mouvements sur ce chemin.
-    lines.forEach((line) => {
-      const it = items.find((x) => x.id === line.itemId);
-      if (!it) return;
-      const { supId, supRank } = stUpsertSupplierCard(it, supplier, line);
-      moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
-        [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
-          supplierId: supId,
-          supplierName: supplier,
-          externalRef,
-          receiptRef,
-          receivedAt,
-          rank: supRank,
-          expiresAt: line.dlc ? new Date(line.dlc + 'T23:59:59').getTime() : null,
-        });
-      if (line.updateCost && line.cost > 0 && window.KiwiCost?.setItemCost) {
-        window.KiwiCost.setItemCost(it.id, line.cost, supplier);
-      }
-    });
-    return { receiptId };
-  }
+  function stLegacyPostAll(...args) { return stockParts.intake.stLegacyPostAll.apply(this, args); }
 
   /* Garde anti double-clic du bouton de confirmation : le premier appui
    * pose le fanion et désactive le bouton ; tout appui concurrent est jeté.
    * Libérer (stReleaseConfirmBusy) sur chaque échec récupérable ; le succès
    * ferme la modale, le bouton disparaît avec elle. */
-  function stClaimConfirmBusy(btn) {
-    if (!btn || btn.dataset?.busy === '1') return false;
-    try {
-      btn.dataset.busy = '1';
-      if (typeof btn.setAttribute === 'function') btn.setAttribute('disabled', '');
-    } catch (_) {}
-    return true;
-  }
-  function stReleaseConfirmBusy(btn) {
-    if (!btn) return;
-    try {
-      delete btn.dataset.busy;
-      if (typeof btn.removeAttribute === 'function') btn.removeAttribute('disabled');
-    } catch (_) {}
-  }
+  function stClaimConfirmBusy(...args) { return stockParts.intake.stClaimConfirmBusy.apply(this, args); }
+  function stReleaseConfirmBusy(...args) { return stockParts.intake.stReleaseConfirmBusy.apply(this, args); }
 
-  function wireScanReview() {
-    const scope = topBackdrop() || document;
-    const tbody = scope.querySelector('[data-stock-receive-rows]');
-    const allItems = getInv();
-
-    const recompute = () => {
-      let total = 0;
-      const supInput = scope.querySelector('[data-stock-receive-supplier]');
-      const currentSup = supInput ? supInput.value.trim() : '';
-
-      scope.querySelectorAll('[data-stock-receive-row]').forEach((row) => {
-        const qty = Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0));
-        const cost = Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0));
-        total += qty * cost;
-
-        const sel = row.querySelector('[data-stock-receive-item]');
-        const itemId = sel ? sel.value : '';
-        const item = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
-
-        const comp = compareLineCost(item, cost, currentSup);
-        const refCostEl = row.querySelector('[data-stock-receive-ref-cost]');
-        if (refCostEl) {
-          refCostEl.textContent = comp.currentCost > 0 ? fmtMad(comp.currentCost) : '·';
-        }
-
-        const cb = row.querySelector('[data-stock-receive-update-cost]');
-        if (cb && cb.dataset.userSet !== '1') {
-          cb.checked = !!(item && comp.currentCost > 0 && cost > 0 && comp.isRise);
-        }
-
-        const badgeSpan = row.querySelector('[data-stock-receive-badge]');
-        if (badgeSpan) {
-          if (item && comp.currentCost > 0 && cost > 0) {
-            if (comp.isRise) {
-              badgeSpan.innerHTML = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);margin-right:6px;">↑ +${comp.pct}%</span>`;
-            } else if (comp.isDrop) {
-              badgeSpan.innerHTML = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:6px;">↓ −${Math.abs(comp.pct)}%</span>`;
-            } else {
-              badgeSpan.innerHTML = '';
-            }
-          } else {
-            badgeSpan.innerHTML = '';
-          }
-        }
-      });
-
-      const out = scope.querySelector('[data-stock-receive-total]');
-      if (out) out.textContent = fmtMad(total);
-    };
-
-    const wireRows = () => {
-      scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach((el) => {
-        el.oninput = recompute;
-      });
-      scope.querySelectorAll('[data-stock-receive-update-cost]').forEach((cb) => {
-        cb.onchange = () => {
-          cb.dataset.userSet = '1';
-        };
-      });
-      scope.querySelectorAll('[data-stock-receive-item]').forEach((sel) => {
-        sel.onchange = () => {
-          const row = sel.closest('tr');
-          const cb = row?.querySelector('[data-stock-receive-update-cost]');
-          if (cb) delete cb.dataset.userSet;
-          const costInp = row?.querySelector('[data-stock-receive-cost]');
-          const itemId = sel.value;
-          const it = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
-          if (it && costInp && !costInp.value) {
-            const comp = compareLineCost(it, 0, scope.querySelector('[data-stock-receive-supplier]')?.value);
-            if (comp.currentCost > 0) costInp.value = comp.currentCost;
-          }
-          recompute();
-        };
-      });
-      scope.querySelectorAll('[data-stock-receive-remove]').forEach((el) => {
-        el.onclick = () => {
-          if (scope.querySelectorAll('[data-stock-receive-row]').length > 1) {
-            el.closest('tr')?.remove();
-          }
-          recompute();
-        };
-      });
-    };
-
-    scope.querySelector('[data-stock-receive-add]')?.addEventListener('click', () => {
-      const optionsHtml = `<option value="">${esc(t('mScanChoose'))}</option>` + allItems.map((it) => `<option value="${esc(it.id)}">${esc(it.name)} (${esc(it.unit || 'unité')})</option>`).join('');
-      const emptyRowHtml = `
-        <tr data-stock-receive-row>
-          <td style="min-width:180px;">
-            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
-          </td>
-          <td class="r" style="width:90px;">
-            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" style="font-size:12px;" />
-          </td>
-          <td class="r" style="width:100px;">
-            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
-          </td>
-          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
-          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">·</td>
-          <td style="min-width:170px;font-size:12px;">
-            <div style="display:flex;align-items:center;">
-              <span data-stock-receive-badge></span>
-              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
-                <input type="checkbox" data-stock-receive-update-cost />
-                <span>${esc(t('mScanUpdateCost'))}</span>
-              </label>
-            </div>
-          </td>
-          <td class="r" style="width:30px;">
-            <button class="st-btn" type="button" data-stock-receive-remove aria-label="${esc(t('mScanIgnore'))}" style="padding:4px 8px;font-size:12px;">×</button>
-          </td>
-        </tr>`;
-      tbody?.insertAdjacentHTML('beforeend', emptyRowHtml);
-      wireRows();
-      recompute();
-    });
-
-    wireRows();
-    recompute();
-
-    const confirmBtn = scope.querySelector('[data-stock-scan-confirm]');
-    confirmBtn?.addEventListener('click', async () => {
-      const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
-      const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
-      const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
-      const intakeDocId = scope.querySelector('[data-stock-intake-doc]')?.value || '';
-
-      const lines = Array.from(scope.querySelectorAll('[data-stock-receive-row]')).map((row) => ({
-        itemId: row.querySelector('[data-stock-receive-item]')?.value || '',
-        qty: Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0)),
-        cost: Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0)),
-        updateCost: !!row.querySelector('[data-stock-receive-update-cost]')?.checked,
-        // DLC / DDM saisie à la réception — alimente le suivi de péremption (lots FIFO)
-        dlc: row.querySelector('[data-stock-receive-dlc]')?.value || '',
-      })).filter((line) => line.itemId && line.qty > 0);
-
-      if (!supplier || !lines.length) {
-        window.Kiwi.toast?.('Indiquez le fournisseur et au moins une ligne reçue.', { type: 'warning' });
-        return;
-      }
-
-      // Garde anti double-clic : un seul appui effectif jusqu'à la fermeture
-      // ou l'échec récupérable. Les appuis concurrents sont jetés.
-      if (!stClaimConfirmBusy(confirmBtn)) return;
-      const releaseBusy = () => stReleaseConfirmBusy(confirmBtn);
-
-      // Guichet unique : jamais deux écritures stock pour le même document.
-      // Le même PDF re-déposé (deuxième appareil, marquage interrompu) est
-      // arrêté ici, AVANT tout moveStock.
-      if (intakeDocId) {
-        const guard = stIntakePostGuard(stIntakePostedHas(intakeDocId), await stIntakeServerStatus(intakeDocId));
-        if (guard !== 'ok') {
-          const st = scope.querySelector('[data-stock-scan-stage]');
-          if (st) { st.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', '')); wireIntakeStop(); }
-          else window.Kiwi.toast?.(t('mScanDupT'), { type: 'warn' });
-          releaseBusy();
-          return;
-        }
-      }
-
-      // Chemin historique (hors guichet) : référence aléatoire, inchangé.
-      const receiptRef = 'receipt-' + Date.now().toString(36);
-      const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
-      const inv = getInv();
-
-      if (intakeDocId) {
-        // Guichet unique : UN SEUL propriétaire des écritures (stIntakePostAll
-        // : ligne comptable + mouvements + coûts + facture, tout déterministe
-        // et rejouable après n'importe quelle interruption). Ni receiveDirect
-        // ni moveStock ne sont appelés sur ce chemin.
-        const ctxLines = lines.map((line) => {
-          const it = inv.find((x) => x.id === line.itemId);
-          let cardSupplierId = '';
-          let cardRank = 1;
-          if (it) {
-            const card = stUpsertSupplierCard(it, supplier, line,
-              'supc-intake-' + stIntakeHash(it.id + '|' + String(supplier).toLowerCase()));
-            cardSupplierId = card.supId;
-            cardRank = card.supRank;
-          }
-          return {
-            itemId: line.itemId,
-            name: it?.name || line.itemId,
-            qty: line.qty,
-            unit: it?.unit || 'unité',
-            unitCost: line.cost,
-            updateCost: line.updateCost,
-            dlc: line.dlc || '',
-            cardSupplierId, cardRank,
-          };
-        }).filter((l) => l.itemId && l.qty > 0);
-        try {
-          await stIntakePostAll({
-            docId: intakeDocId, supplierName: supplier, externalRef, receivedAt,
-            issuedAt: date ? new Date(`${date}T12:00:00`).getTime() : receivedAt,
-            source: 'pdf', lines: ctxLines,
-          });
-        } catch (err) {
-          /* Reprise divergente : aucun écrit n'a eu lieu (le prepare précède
-           * tout), on montre l'état dédié plutôt que l'échec générique — et
-           * toujours ni postedAdd, ni marquage, ni fermeture. */
-          if (await stHandleIntakePostingConflict(scope, err, intakeDocId, ctxLines)) { releaseBusy(); return; }
-          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
-          releaseBusy();
-          return; // ni postedAdd, ni marquage, ni fermeture : la reprise converge.
-        }
-      } else {
-
-      // Chemin historique : stLegacyPostAll est l'unique écrivain (boucle
-      // moveStock seule ; receiveDirect ne fait que la pièce + facture).
-      try {
-        stLegacyPostAll({ supplier, externalRef, date, receivedAt, lines, items: inv, receiptRef });
-      } catch (_) {
-        window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
-        releaseBusy();
-        return;
-      }
-      } // fin chemin historique
-
-      stSaveOverlay();
-      // Guichet unique : le stock est écrit, on scelle le brouillon. Si le
-      // marquage échoue (onglet tué, réseau coupé), l'outbox le rejouera —
-      // marquage seul, jamais de repost — à la prochaine ouverture du scan.
-      if (intakeDocId) {
-        stIntakePostedAdd(intakeDocId);
-        try {
-          const marked = await stIntakeMarkOnce(intakeDocId);
-          if (!marked) window.Kiwi.toast?.(t('mScanMarkRetry'), { type: 'warn' });
-        } catch (_) {}
-      }
-      closeTopModal();
-      window.Kiwi.toast?.(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
-      if (stPageActive) render();
-    });
-  }
+  function wireScanReview(...args) { return stockParts.intake.wireScanReview.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Physical count
@@ -6204,59 +3474,16 @@
    * est un choix métier — un signal enregistré (pertes déclarées, livraison
    * récente) explique mieux qu'une heuristique de catégorie, donc il passe
    * avant. `moves` vient du registre (7 derniers jours, hors 'count'). */
-  function stCountReason(ctx) {
-    const diff = +ctx.diff || 0;
-    if (!diff) return '';
-    const expected = +ctx.expected || 0;
-    const counted = +ctx.counted || 0;
-    const theoUsage = +ctx.theoUsage || 0;
-    const moves = Array.isArray(ctx.moves) ? ctx.moves : [];
-    const now = +ctx.now || Date.now();
-    if (counted === 0 && expected > 0) return 'reasonZero';
-    if (diff > 0 && expected > 0 && counted >= expected * 20) return 'reasonUnit';
-    if (diff < 0) {
-      if (moves.some((m) => m && (m.reason === 'loss' || m.reason === 'waste'))) return 'reasonWaste';
-      if (theoUsage > 0 && Math.abs(diff) <= theoUsage * 1.25) return 'reasonRecipes';
-      if (['viandes', 'poissons', 'legumes', 'laitiers'].indexOf(String(ctx.cat)) !== -1) return 'reasonPerish';
-      return 'reasonLoss';
-    }
-    if (moves.some((m) => m && +m.qty > 0 && /receipt|procurement|delivery|invoice/.test(String(m.refType || '')) && now - (+m.occurredTs || 0) < 48 * 3600 * 1000)) return 'reasonDeliv';
-    return 'reasonExtra';
-  }
+  function stCountReason(...args) { return stockParts.counts.stCountReason.apply(this, args); }
   /* Mouvements récents d'un article, pour nourrir stCountReason. Registre réel
    * uniquement : les fixtures démo n'ont pas d'historique de mouvements. */
-  function stRecentMoves(itemId) {
-    try {
-      const L = window.KiwiInventory;
-      if (!L || !L.isReal || !L.isReal()) return [];
-      const since = Date.now() - 7 * 24 * 3600 * 1000;
-      return (L.history(itemId) || []).filter((m) => (+m.occurredTs || 0) >= since && m.reason !== 'count');
-    } catch (_) { return []; }
-  }
+  function stRecentMoves(...args) { return stockParts.counts.stRecentMoves.apply(this, args); }
   /* Historique des inventaires validés — même portée tenant que l'overlay
    * stock (compte réel = slug cloud, sinon venue id). Plafonné : c'est un
    * journal de tendance, pas une base ; le registre reste la vérité. */
   const stCountHistKey = () => 'kiwi:inventoryCounts:v1:' + stOverlayScope();
-  function stCountHistory() {
-    try {
-      const a = JSON.parse(localStorage.getItem(stCountHistKey()) || '[]');
-      return Array.isArray(a) ? a : [];
-    } catch (_) { return []; }
-  }
-  function stSaveCountHistory(ref, lines) {
-    const gaps = lines.filter((l) => l.diff);
-    const entry = {
-      ref: String(ref), ts: Date.now(), counted: lines.length,
-      varMad: Math.round(gaps.reduce((s, l) => s + (+l.costDiff || 0), 0)),
-      gaps: gaps.slice(0, 200).map((l) => ({
-        id: l.it.id, name: l.it.name, unit: l.it.unit,
-        theo: l.theo, counted: l.counted, diff: l.diff,
-        mad: Math.round(+l.costDiff || 0), reason: l.reasonKey || '',
-      })),
-    };
-    try { localStorage.setItem(stCountHistKey(), JSON.stringify([entry, ...stCountHistory()].slice(0, 24))); } catch (_) {}
-    return entry;
-  }
+  function stCountHistory(...args) { return stockParts.counts.stCountHistory.apply(this, args); }
+  function stSaveCountHistory(...args) { return stockParts.counts.stSaveCountHistory.apply(this, args); }
   const stCountDate = (ts) => {
     try {
       const loc = lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR';
@@ -6267,1042 +3494,73 @@
   /* Feuille d'inventaire papier. À l'aveugle par défaut : sans la colonne
    * théorique, le compteur note ce qu'il voit au lieu de confirmer le chiffre
    * attendu. Impression via iframe caché (même motif qu'operational-print). */
-  function stSheetHtml(showTheo) {
-    const items = getInv();
-    const cats = allCategories();
-    const catName = (id) => { const c = cats.find((x) => x.id === id); return c ? c.label : id; };
-    const groups = new Map();
-    items.forEach((it) => {
-      const id = String(it.category || it.cat || 'epicerie');
-      if (!groups.has(id)) groups.set(id, []);
-      groups.get(id).push(it);
-    });
-    let venueName = '';
-    try { venueName = window.KiwiVenue?.getCurrentVenueData?.()?.name || ''; } catch (_) {}
-    const last = stCountHistory()[0];
-    const rtl = lang() === 'ar';
-    const sections = Array.from(groups.entries()).map(([id, rows]) => `
-      <section>
-        <h2>${esc(catName(id))}</h2>
-        <table>
-          <thead><tr><th class="w-name">${esc(t('sheetColItem'))}</th><th>${esc(t('sheetColUnit'))}</th>${showTheo ? `<th>${esc(t('mCountColTheo'))}</th>` : ''}<th class="w-count">${esc(t('mCountColReal'))}</th><th class="w-note">${esc(t('sheetColNotes'))}</th></tr></thead>
-          <tbody>${rows.map((it) => `<tr><td class="w-name">${esc(it.name)}</td><td>${esc(it.unit)}</td>${showTheo ? `<td class="mono">${esc(fmtUnit(currentStockFor(it), it.unit))}</td>` : ''}<td class="w-count"></td><td class="w-note"></td></tr>`).join('')}</tbody>
-        </table>
-      </section>`).join('');
-    return `<!doctype html><html dir="${rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${esc(t('mSheetTitle'))}</title><style>
-      @page { margin: 12mm; }
-      html, body { background: #fff; color: #0A0F0D; color-scheme: light; }
-      body { margin: 0; font: 12px/1.5 Arial, sans-serif; }
-      header { border-bottom: 2px solid #0B6E4F; padding-bottom: 10px; }
-      header h1 { margin: 0; font-size: 20px; }
-      header p { margin: 3px 0 0; color: #555; }
-      .meta { display: flex; gap: 26px; margin: 12px 0 4px; font-size: 12px; }
-      .meta span { display: inline-block; border-bottom: 1px solid #999; min-width: 150px; padding: 0 4px 2px; }
-      section { break-inside: avoid-page; }
-      h2 { font-size: 13px; margin: 16px 0 6px; color: #0B6E4F; text-transform: uppercase; letter-spacing: 0.06em; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid #bbb; padding: 6px 8px; text-align: ${rtl ? 'right' : 'left'}; font-size: 11.5px; }
-      th { background: #F7F5F0; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; color: #444; }
-      td { height: 18px; }
-      .w-count { width: 110px; } .w-note { width: 170px; } .mono { font-family: monospace; }
-      footer { margin-top: 18px; font-size: 11px; color: #666; }
-    </style></head><body>
-      <header>
-        <h1>${esc(t('mSheetTitle'))}${venueName ? ' · ' + esc(venueName) : ''}</h1>
-        <p>${esc(stCountDate(Date.now()))}${last ? ' · ' + esc(t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad))) : ''}</p>
-      </header>
-      <div class="meta">
-        <div>${esc(t('sheetCounter'))} : <span>&nbsp;</span></div>
-        <div>${esc(t('sheetSign'))} : <span>&nbsp;</span></div>
-      </div>
-      ${sections}
-      <footer>${esc(t('sheetFoot'))}</footer>
-    </body></html>`;
-  }
-  function printCountSheet(showTheo) {
-    const frame = document.createElement('iframe');
-    frame.setAttribute('title', t('mSheetTitle'));
-    frame.style.cssText = 'position:fixed;width:1px;height:1px;right:0;bottom:0;opacity:0;';
-    document.body.appendChild(frame);
-    const doc = frame.contentDocument;
-    doc.open(); doc.write(stSheetHtml(showTheo)); doc.close();
-    setTimeout(() => {
-      try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) {}
-      setTimeout(() => frame.remove(), 1500);
-    }, 120);
-  }
-  function openCountSheet() {
-    const n = getInv().length;
-    const m = window.Kiwi.modal({
-      title: t('mSheetTitle'),
-      desc: t('mSheetSub'),
-      width: 520,
-      body: `
-        <label class="st-pc-blindrow">
-          <input type="checkbox" data-sheet-theo />
-          <span><b>${esc(t('mSheetTheo'))}</b> · ${esc(t('mSheetTheoTip'))}</span>
-        </label>
-        <p style="font-size:12px;color:var(--n-600);margin:10px 2px 0;">${esc(t('mSheetCount', n))}</p>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-sheet-print>${esc(t('mSheetPrint'))}</button>`,
-    });
-    requestAnimationFrame(() => {
-      const scope = m?.el || topBackdrop();
-      wireDismiss(scope);
-      scope?.querySelector('[data-stock-sheet-print]')?.addEventListener('click', () => {
-        printCountSheet(!!scope.querySelector('[data-sheet-theo]')?.checked);
-        closeTopModal();
-      }, { once: true });
-    });
-  }
+  function stSheetHtml(...args) { return stockParts.counts.stSheetHtml.apply(this, args); }
+  function printCountSheet(...args) { return stockParts.counts.printCountSheet.apply(this, args); }
+  function openCountSheet(...args) { return stockParts.counts.openCountSheet.apply(this, args); }
   /* Revue des écarts avant application. Seul chemin d'écriture : countStock →
    * moveStock → registre. Rien ne bouge tant que le propriétaire n'a pas vu
    * chaque écart, sa valeur en MAD et sa cause probable. */
-  function openCountReview(lines, countBack) {
-    const countRef = 'count-' + Date.now().toString(36);
-    const gaps = lines.filter((l) => l.diff);
-    gaps.forEach((l) => {
-      l.reasonKey = stCountReason({
-        diff: l.diff, expected: l.theo, counted: l.counted,
-        cat: String(l.it.category || l.it.cat || ''),
-        theoUsage: theoreticalUsageFor(l.it),
-        moves: stRecentMoves(l.it.id),
-      });
-    });
-    const totalVar = gaps.reduce((s, l) => s + l.costDiff, 0);
-    const m = window.Kiwi.modal({
-      title: t('mRevTitle'),
-      desc: t('mRevSub', lines.length),
-      width: 860,
-      body: gaps.length ? `
-        <div class="st-pc-wrap">
-          <table class="st-pc-tbl">
-            <thead><tr>
-              <th>${esc(t('colArticle'))}</th>
-              <th class="r">${esc(t('mCountColTheo'))}</th>
-              <th class="r">${esc(t('mCountColReal'))}</th>
-              <th class="r">${esc(t('mCountColVar'))}</th>
-              <th class="r">${esc(t('mCountColCost'))}</th>
-              <th>${esc(t('mRevColReason'))}</th>
-            </tr></thead>
-            <tbody>
-              ${gaps.map((l) => {
-                const pct = l.theo > 0 ? Math.abs(l.diff / l.theo) * 100 : 100;
-                const cls = pct < 2 ? 'ok' : pct < 10 ? 'warn' : 'bad';
-                return `<tr>
-                  <td><b>${esc(l.it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(l.it.unit)}</span></td>
-                  <td class="r mono">${esc(fmtUnit(l.theo, l.it.unit))}</td>
-                  <td class="r mono">${esc(fmtUnit(l.counted, l.it.unit))}</td>
-                  <td class="r"><span class="st-pc-var ${cls}">${l.diff > 0 ? '+' : ''}${fmtNum(l.diff, Math.abs(l.diff) < 10 ? 1 : 0)} ${esc(l.it.unit)}</span></td>
-                  <td class="r"><span class="st-pc-var ${cls}">${l.costDiff > 0 ? '+' : ''}${esc(fmtMad(l.costDiff))}</span></td>
-                  <td class="st-rev-reason">${esc(t(l.reasonKey))}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="st-pc-prog"><span class="st-pc-prog-l">${esc(t('mRevTotal', gaps.length, fmtMad(totalVar)))}</span></div>
-      ` : `<div class="st-notice"><b>${esc(t('mRevNoneT'))}</b>${esc(t('mRevNone'))}</div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-rev-apply>${esc(t('mRevApply'))}</button>`,
-    });
-    requestAnimationFrame(() => {
-      const scope = m?.el || topBackdrop();
-      wireDismiss(scope);
-      scope?.querySelector('[data-stock-rev-apply]')?.addEventListener('click', () => {
-        lines.forEach((l) => countStock(l.it, l.counted, countRef));
-        stSaveOverlay();
-        stSaveCountHistory(countRef, lines);
-        closeTopModal();
-        try { countBack?.querySelector('.kiwi-modal-close')?.click(); } catch (_) {}
-        window.Kiwi.toast(t('mCountToast', fmtMad(totalVar)), { type: 'success', duration: 4200 });
-        if (stPageActive) render();
-      }, { once: true });
-    });
-  }
+  function openCountReview(...args) { return stockParts.counts.openCountReview.apply(this, args); }
 
-  function openPhysicalCount() {
-    const items = getInv();
-    const last = stCountHistory()[0];
-    const m = window.Kiwi.modal({
-      title: t('mCountTitle'),
-      desc: (last ? t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad)) + ' · ' : '') + t('mCountSub'),
-      width: 760,
-      body: `
-        <label class="st-pc-blindrow">
-          <input type="checkbox" data-pc-blind checked />
-          <span><b>${esc(t('mCountBlind'))}</b> · ${esc(t('mCountBlindTip'))}</span>
-        </label>
-        <div class="st-pc-wrap st-pc-blind">
-          <table class="st-pc-tbl">
-            <thead>
-              <tr>
-                <th>${esc(t('colArticle'))}</th>
-                <th class="r">${esc(t('mCountColTheo'))}</th>
-                <th class="r">${esc(t('mCountColReal'))}</th>
-                <th class="r">${esc(t('mCountColVar'))}</th>
-                <th class="r">${esc(t('mCountColCost'))}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map(it => {
-                const cur = currentStockFor(it);
-                return `
-                  <tr data-stock-pc-row="${esc(it.id)}">
-                    <td><b>${esc(it.name)}</b> <span style="color:var(--n-500); font-size:11px;">${esc(it.unit)}</span></td>
-                    <td class="r mono"><span data-pc-theo>${esc(fmtUnit(cur, it.unit))}</span></td>
-                    <td class="r"><input class="st-pc-input" type="number" inputmode="decimal" step="0.1" min="0" aria-label="${esc(t('mCountColReal'))}: ${esc(it.name)}" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
-                    <td class="r"><span class="st-pc-var" data-pc-var></span></td>
-                    <td class="r"><span class="st-pc-var" data-pc-cost-out></span></td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="st-pc-prog">
-          <div class="st-pc-prog-bar"><div class="st-pc-prog-fill" data-pc-prog></div></div>
-          <span class="st-pc-prog-l" data-pc-prog-l>${esc(t('mCountProg', 0, items.length))}</span>
-        </div>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mCountSave'))}</button><button class="st-btn primary" data-stock-pc-validate disabled>${esc(t('mCountValidate'))}</button>`,
-    });
-    requestAnimationFrame(() => { wireDismiss(m?.el || topBackdrop()); wirePhysicalCount(items); });
-  }
+  function openPhysicalCount(...args) { return stockParts.counts.openPhysicalCount.apply(this, args); }
 
-  function wirePhysicalCount(items) {
-    const recomputeProgress = () => {
-      const inputs = document.querySelectorAll('[data-pc-real]');
-      let counted = 0;
-      inputs.forEach(inp => {
-        const val = parseFloat(inp.value);
-        if (!isNaN(val) && inp.value !== '') {
-          counted++;
-          const theo = parseFloat(inp.dataset.pcTheoVal);
-          const cost = parseFloat(inp.dataset.pcCost);
-          const unit = inp.dataset.pcUnit;
-          const diff = val - theo;
-          const costDiff = diff * cost;
-          const varCell = inp.closest('tr').querySelector('[data-pc-var]');
-          const costCell = inp.closest('tr').querySelector('[data-pc-cost-out]');
-          inp.closest('tr').classList.add('has-count');
-          const absDiff = Math.abs(diff);
-          const pctDiff = theo > 0 ? Math.abs(diff / theo) * 100 : 0;
-          const cls = pctDiff < 2 ? 'ok' : pctDiff < 10 ? 'warn' : 'bad';
-          varCell.className = `st-pc-var ${cls}`;
-          varCell.textContent = `${diff > 0 ? '+' : ''}${fmtNum(diff, Math.abs(diff) < 10 ? 1 : 0)} ${unit}`;
-          costCell.className = `st-pc-var ${cls}`;
-          costCell.textContent = `${costDiff > 0 ? '+' : ''}${fmtMad(costDiff)}`;
-        } else {
-          const tr = inp.closest('tr');
-          tr.classList.remove('has-count');
-          tr.querySelector('[data-pc-var]').textContent = '';
-          tr.querySelector('[data-pc-var]').className = 'st-pc-var';
-          tr.querySelector('[data-pc-cost-out]').textContent = '';
-          tr.querySelector('[data-pc-cost-out]').className = 'st-pc-var';
-        }
-      });
-      const fill = document.querySelector('[data-pc-prog]');
-      const lbl = document.querySelector('[data-pc-prog-l]');
-      const validateBtn = document.querySelector('[data-stock-pc-validate]');
-      if (fill) fill.style.width = `${(counted / items.length) * 100}%`;
-      if (lbl) lbl.textContent = t('mCountProg', counted, items.length);
-      if (validateBtn) {
-        if (counted === items.length) validateBtn.removeAttribute('disabled');
-        else validateBtn.setAttribute('disabled', '');
-      }
-    };
-    document.querySelectorAll('[data-pc-real]').forEach(inp => inp.addEventListener('input', recomputeProgress));
-    /* À l'aveugle par défaut : les colonnes théorique / écart / valeur restent
-     * masquées pendant la saisie (CSS), le propriétaire peut les révéler. */
-    const blindBox = document.querySelector('[data-pc-blind]');
-    blindBox?.addEventListener('change', () => {
-      document.querySelector('.st-pc-wrap')?.classList.toggle('st-pc-blind', blindBox.checked);
-    });
-    /* Valider n'écrit plus directement : on passe par la revue des écarts
-     * (cause probable + valeur MAD), qui seule applique via countStock. */
-    document.querySelector('[data-stock-pc-validate]')?.addEventListener('click', () => {
-      const lines = [];
-      document.querySelectorAll('[data-pc-real]').forEach(inp => {
-        const v = parseFloat(inp.value);
-        const it = items.find((x) => x.id === inp.dataset.pcReal);
-        if (isNaN(v) || inp.value === '' || !it) return;
-        const theo = parseFloat(inp.dataset.pcTheoVal) || 0;
-        const diff = Math.round((v - theo) * 1000) / 1000;
-        lines.push({ it, theo, counted: v, diff, costDiff: diff * (+it.costPerUnit || 0) });
-      });
-      /* La revue s'empile SUR la grille de comptage : Annuler doit rendre les
-       * 40 saisies intactes (corriger une erreur d'unité), pas une page vide. */
-      openCountReview(lines, topBackdrop());
-    });
-  }
+  function wirePhysicalCount(...args) { return stockParts.counts.wirePhysicalCount.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Supplier profile
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openSupplierProfile(supplierId) {
-    const s=getSup().find(x=>x.id===supplierId);if(!s)return;
-    const history=supplierHistory(s),pcl=+s.priceChangeLast30d||0;
-    const m=window.Kiwi.modal({title:s.name,desc:`${esc(s.location)} · ${esc(catLabel(s.category))}`,width:720,
-      body:`<div class="st-md-stats"><div class="st-md-stat"><div class="l">${esc(t('colSupSpend'))}</div><div class="v">${esc(fmtMad(s.monthlySpend))}</div></div><div class="st-md-stat"><div class="l">${catalogLabel('recordedDeliveries','Livraisons enregistrées')}</div><div class="v">${history.length}</div></div><div class="st-md-stat"><div class="l">${esc(t('colSupPrice'))}</div><div class="v">${esc(fmtPct(pcl,1))}</div></div></div>
-      <div class="st-md-section"><div class="st-md-section-t">${esc(t('colSupDeliv'))}</div><p>${esc(s.deliverySchedule||'')} · ${esc(s.paymentTerms||'')}</p></div>
-      <div class="st-md-section"><div class="st-md-section-t">${esc(t('mSupHistory'))}</div><div class="st-md-list">${history.length?history.map(h=>`<div class="st-md-list-row"><div><span class="d">${esc(supplierDate(h.at))}</span><span class="n">${esc(h.reference)}</span></div><div class="v">${esc(fmtMad(h.total))}</div></div>`).join(''):`<div class="rmw-empty">${catalogLabel('noDeliveries','Aucune livraison enregistrée pour ce fournisseur.')}</div>`}</div></div>`,
-      foot:`<div class="catalog-supplier-actions"><button class="st-btn" data-catalog-profile="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone',14)}${esc(t('mSupCall'))}</button><button class="st-btn" data-catalog-profile="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${esc(t('mSupWa'))}</button><button class="st-btn" data-catalog-profile="stock-edit-supplier" data-supplier-id="${esc(s.id)}">${esc(t('titleEdit'))}</button><button class="st-btn primary" data-catalog-profile="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button></div>`});
-    m.el.querySelectorAll('[data-catalog-profile]').forEach(button=>button.onclick=()=>{m.close();window.Kiwi.handlers[button.dataset.catalogProfile]?.(button);});
-    requestAnimationFrame(()=>wireDismiss(m?.el||topBackdrop()));
-  }
+  function openSupplierProfile(...args) { return stockParts.purchasing.openSupplierProfile.apply(this, args); }
 
-  function renderMiniPriceChart(values) {
-    const W = 600, H = 90, PAD = { l: 28, r: 8, t: 6, b: 16 };
-    const innerW = W - PAD.l - PAD.r, innerH = H - PAD.t - PAD.b;
-    const max = Math.max(...values), min = Math.min(...values);
-    const range = max - min || 1;
-    const labels = ['Déc', 'Jan', 'Fév', 'Mars', 'Avr', 'Mai'];
-    const xAt = (i) => PAD.l + (i / (values.length - 1)) * innerW;
-    const yAt = (v) => PAD.t + innerH - ((v - min) / range) * innerH * 0.85;
-    const path = values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(v)}`).join(' ');
-    const points = values.map((v, i) => `<circle cx="${xAt(i)}" cy="${yAt(v)}" r="3" fill="var(--atlas)" />`).join('');
-    const xLabels = labels.map((l, i) => `<text x="${xAt(i)}" y="${H - 4}" text-anchor="middle" font-size="9">${esc(l)}</text>`).join('');
-    return `
-      <svg class="st-md-mini-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-        <path class="line" d="${path}" />
-        ${points}
-        <g class="axis">${xLabels}</g>
-      </svg>
-    `;
-  }
+  function renderMiniPriceChart(...args) { return stockParts.purchasing.renderMiniPriceChart.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Item detail
    * ═══════════════════════════════════════════════════════════════════════ */
-  function movementLabel(reason) {
-    return ({
-      opening: 'Solde initial', receipt: 'Réception', 'supplier-return': 'Retour fournisseur',
-      sale: 'Vente', 'sale-reversal': 'Annulation de vente', 'production-input': 'Matière consommée',
-      'production-output': 'Production', 'transfer-out': 'Transfert sortant', 'transfer-in': 'Transfert entrant',
-      loss: 'Perte', expiry: 'Périmé', gift: 'Offert', 'staff-meal': 'Consommation équipe',
-      count: 'Écart de comptage', return: 'Retour client', manual: 'Ajustement manuel',
-    })[reason] || reason || 'Mouvement';
-  }
-  function itemHistory(it) {
-    try { return window.KiwiInventory?.history?.(it.id) || []; } catch (_) { return []; }
-  }
-  function renderRealItemMovementSummary(it) {
-    const rows = itemHistory(it);
-    const received = rows.filter(r => r.reason === 'receipt').reduce((n, r) => n + Math.max(0, +r.qty || 0), 0);
-    const consumed = rows.filter(r => (+r.qty || 0) < 0).reduce((n, r) => n + Math.abs(+r.qty || 0), 0);
-    return `
-      <div class="st-md-col-t">Activité enregistrée</div>
-      <div class="st-md-pair"><span class="l">Entrées fournisseur</span><span class="v">${esc(fmtUnit(received, it.unit))}</span></div>
-      <div class="st-md-pair"><span class="l">Sorties enregistrées</span><span class="v">${esc(fmtUnit(consumed, it.unit))}</span></div>
-      <div class="st-md-pair"><span class="l">Mouvements</span><span class="v">${rows.length}</span></div>
-      <div class="st-notice ${rows.length ? 'ok' : 'warn'}" style="margin-top:12px;">
-        ${svg(rows.length ? 'checkCircle' : 'alertTriangle', 14)}
-        <div>${rows.length ? 'Le stock affiché est reconstruit depuis le registre de mouvements.' : 'Aucun mouvement n’a encore été enregistré pour cet article.'}</div>
-      </div>`;
-  }
-  function swapSupplierRanks(itemId) {
-    if (!itemId) return;
-    const raw = stOverlayRaw();
-    const sub = (raw.subcategories || []).find(s => s.id === itemId);
-    if (!sub || !Array.isArray(sub.suppliers) || sub.suppliers.length < 2) return;
-    const s0 = sub.suppliers[0];
-    const s1 = sub.suppliers[1];
-    s0.rank = 2;
-    s1.rank = 1;
-    sub.suppliers = [s1, s0, ...sub.suppliers.slice(2)];
-    sub.updatedAt = Date.now();
-    stItemOverrides[itemId] = Object.assign({}, stItemOverrides[itemId] || {}, {
-      suppliers: sub.suppliers,
-      supplier: s1.supplierName,
-      updatedAt: Date.now(),
-    });
-    stSaveOverlay();
-    window.Kiwi?.toast?.(`Fournisseur principal défini sur ${s1.supplierName} (s'applique aux prochaines livraisons)`, { type: 'success' });
-    closeTopModal();
-    if (stPageActive) render();
-  }
+  function movementLabel(...args) { return stockParts.catalog.movementLabel.apply(this, args); }
+  function itemHistory(...args) { return stockParts.catalog.itemHistory.apply(this, args); }
+  function renderRealItemMovementSummary(...args) { return stockParts.catalog.renderRealItemMovementSummary.apply(this, args); }
+  function swapSupplierRanks(...args) { return stockParts.catalog.swapSupplierRanks.apply(this, args); }
 
-  function renderRealItemHistory(it) {
-    const raw = stOverlayRaw();
-    const sub = (raw.subcategories || []).find(s => s.id === it.id);
-    const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
-    let advisoryHtml = '';
-    if (cards.length >= 2) {
-      const c1 = cards[0];
-      const c2 = cards[1];
-      if (c2.defaultPrice != null && c1.defaultPrice != null && c2.defaultPrice < c1.defaultPrice) {
-        advisoryHtml = `
-          <div class="st-notice info" style="margin:10px 0; display:flex; align-items:flex-start; gap:8px;">
-            ${svg('info', 16)}
-            <div style="flex:1;">
-              <div><b>Opportunité tarifaire :</b> ${esc(c2.supplierName)} propose <b>${esc(fmtMad(c2.defaultPrice))}/${esc(sub.unit)}</b> (vs ${esc(fmtMad(c1.defaultPrice))}/${esc(sub.unit)} chez ${esc(c1.supplierName)}).</div>
-              <button class="st-btn small" type="button" data-stock-swap-ranks data-item-id="${esc(it.id)}" style="margin-top:6px;">
-                Définir en fournisseur principal (s'applique aux prochaines livraisons)
-              </button>
-            </div>
-          </div>
-        `;
-      }
-    }
-    const rows = itemHistory(it).slice(0, 12);
-    return `
-      ${advisoryHtml}
-      <div class="st-md-section">
-        <div class="st-md-section-t">${esc(t('mItSuppliersT'))}</div>
-        <div class="st-md-list">
-          ${cards.length ? cards.map(c => `
-            <div class="st-md-list-row">
-              <div>
-                <span class="n">${esc(c.supplierName)}</span>
-                <span class="${c.rank === 1 ? 'status-ok' : 'status-warn'}" style="margin-left:8px; font-size:11px; padding:2px 6px; border-radius:4px;">
-                  ${c.rank === 1 ? esc(t('supRankPrincipal')) : `${esc(t('supRankBackup'))} ${c.rank - 1}`}
-                </span>
-              </div>
-              <div class="v">${c.defaultPrice != null ? `${esc(fmtMad(c.defaultPrice))} / ${esc(sub?.unit || it.unit || 'unité')}` : '·'}</div>
-            </div>`).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">${esc(t('mItNoSuppliers'))}</div>`}
-        </div>
-        <button class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
-          ${svg('plus', 12)}<span>${esc(t('mItAddBackupSup'))}</span>
-        </button>
-      </div>
-      <div class="st-md-section">
-        <div class="st-md-section-t">Historique des mouvements</div>
-        <div class="st-md-list">
-          ${rows.length ? rows.map(r => `
-            <div class="st-md-list-row">
-              <div><span class="n">${esc(movementLabel(r.reason))}</span><span class="d" style="margin-left:6px;">${esc(r.note || r.refId || '')}</span></div>
-              <div class="v" style="color:${(+r.qty || 0) >= 0 ? 'var(--atlas)' : 'var(--danger)'};">${(+r.qty || 0) > 0 ? '+' : ''}${esc(fmtUnit(+r.qty || 0, it.unit))}</div>
-              <div class="d">${esc(new Date(r.occurredTs || Date.now()).toLocaleDateString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA'))}</div>
-            </div>`).join('') : `<div style="padding:12px 4px; font-size:12.5px; color:var(--n-500);">Aucun mouvement enregistré.</div>`}
-        </div>
-      </div>
-      ${(function(){
-        const wasteMoves = rows.filter(r => r && (r.refType === 'waste' || ['loss', 'expiry', 'gift', 'staff-meal'].includes(r.reason)));
-        if (!wasteMoves.length) return '';
-        return `
-          <div class="st-md-section" style="margin-top:16px;">
-            <div class="st-md-section-t" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>Pertes &amp; sorties exceptionnelles</span>
-              <span style="font-size:11.5px;color:#b91c1c;font-weight:600;">${wasteMoves.length} déclaration${wasteMoves.length > 1 ? 's' : ''}</span>
-            </div>
-            <div class="st-md-list">
-              ${wasteMoves.map(r => {
-                const d = new Date(r.occurredTs || Date.now());
-                const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                const fine = (r.meta && r.meta.wasteReason) || r.reason;
-                const reasonLabel = (function(why){
-                  if (why === 'perime' || r.reason === 'expiry') return 'Périmé';
-                  if (why === 'casse') return 'Casse';
-                  if (why === 'avarie') return 'Avarié';
-                  if (why === 'offert' || r.reason === 'gift') return 'Offert';
-                  if (why === 'repas-equipe' || r.reason === 'staff-meal') return 'Repas équipe';
-                  return 'Perte';
-                })(fine);
-                const isReversal = !!r.reversalOf;
-                return `
-                  <div class="st-md-list-row" style="${isReversal ? 'opacity:0.5;' : ''}">
-                    <div>
-                      <span class="n" style="color:#b91c1c;">${esc(reasonLabel)}</span>
-                      <span class="d" style="margin-left:6px;">${esc(r.actor || '·')} ${r.note ? `· ${esc(r.note)}` : ''}</span>
-                    </div>
-                    <div class="v" style="color:#b91c1c;font-weight:600;">−${Math.abs(+r.qty || 0)} ${esc(it.unit)}</div>
-                    <div class="d" style="display:flex;align-items:center;gap:6px;">
-                      <span>${dateStr}</span>
-                      ${stShowReal() && !isReversal ? `
-                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;padding:1px 6px;font-size:11px;">
-                          Annuler
-                        </button>
-                      ` : ''}
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      })()}`;
-  }
-  function openAddBackupSupplier(itemId) {
-    const it = getInv().find(x => x.id === itemId);
-    if (!it) return;
-    const raw = stOverlayRaw();
-    const sub = (raw.subcategories || []).find(s => s.id === itemId);
-    const unit = (sub && sub.unit) || it.unit || 'unité';
+  function renderRealItemHistory(...args) { return stockParts.catalog.renderRealItemHistory.apply(this, args); }
+  function openAddBackupSupplier(...args) { return stockParts.catalog.openAddBackupSupplier.apply(this, args); }
 
-    const m = window.Kiwi.modal({
-      title: t('addBackupSupTitle'),
-      desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,
-      width: 520,
-      body: `
-        <div class="st-mb-field" style="margin-bottom:12px;">
-          <label class="st-mb-label">${esc(t('addBackupSupLabel'))}</label>
-          <select class="st-mb-input" data-stock-backup-sup>
-            ${renderSupOptions()}
-            <option value="__new__">${esc(t('addBackupSupOptNew'))}</option>
-          </select>
-          <div data-stock-newsup-wrap style="display:none; margin-top:8px;">
-            <input class="st-mb-input" type="text" placeholder="${esc(t('addBackupSupNewName'))}" data-stock-newsup-name />
-          </div>
-        </div>
-        <div class="st-mb-field">
-          <label class="st-mb-label">${esc(t('addBackupSupPrice'))} (MAD / ${esc(unit)})</label>
-          <input class="st-mb-input mono" type="number" min="0" step="0.01" placeholder="0.00" data-stock-backup-price />
-        </div>
-        <div class="st-notice ok" style="margin-top:12px;">
-          ${svg('checkCircle', 14)}
-          <div>${esc(t('addBackupSupHelp'))}</div>
-        </div>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()]?.btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-backup-save>${esc(t('addBackupSupConfirm'))}</button>`,
-    });
+  function openItemMovement(...args) { return stockParts.catalog.openItemMovement.apply(this, args); }
+  function openItemDetail(...args) { return stockParts.catalog.openItemDetail.apply(this, args); }
 
-    const scope = m?.el || topBackdrop();
-    wireDismiss(scope);
-
-    const supSel = scope?.querySelector('[data-stock-backup-sup]');
-    const newsupWrap = scope?.querySelector('[data-stock-newsup-wrap]');
-    const newsupInput = scope?.querySelector('[data-stock-newsup-name]');
-
-    supSel?.addEventListener('change', () => {
-      if (supSel.value === '__new__') {
-        if (newsupWrap) newsupWrap.style.display = '';
-        newsupInput?.focus();
-      } else {
-        if (newsupWrap) newsupWrap.style.display = 'none';
-      }
-    });
-
-    scope?.querySelector('[data-stock-backup-save]')?.addEventListener('click', () => {
-      let rawSup = '';
-      if (supSel?.value === '__new__') {
-        rawSup = (newsupInput?.value || '').trim();
-        if (!rawSup) { newsupInput?.focus(); return; }
-      } else {
-        rawSup = (supSel?.value || '').trim();
-      }
-      if (!rawSup) return;
-
-      const foundSup = getSup().find(s => s.name === rawSup || `${s.name} · ${s.location || ''}`.trim().replace(/ ·\s*$/, '') === rawSup);
-      const supplierName = foundSup ? foundSup.name : rawSup;
-
-      if (window.KiwiProcurement?.addSupplier) {
-        const known = window.KiwiProcurement.doc?.()?.suppliers?.find(s => String(s.name || '').trim().toLowerCase() === supplierName.toLowerCase());
-        if (!known) {
-          try { window.KiwiProcurement.addSupplier({ name: supplierName }); } catch (_) {}
-        }
-      }
-
-      const priceVal = parseFloat(scope.querySelector('[data-stock-backup-price]')?.value);
-      const defaultPrice = (Number.isFinite(priceVal) && priceVal >= 0) ? Math.round(priceVal * 100) / 100 : (+it.costPerUnit || 0);
-
-      const rawDoc = stOverlayRaw();
-      let subcat = (rawDoc.subcategories || []).find(s => s.id === itemId);
-      if (!subcat) {
-        subcat = {
-          id: itemId,
-          categoryId: it.category || 'legumes',
-          name: it.name,
-          unit: unit,
-          defaultCost: +it.costPerUnit || 0,
-          suppliers: [],
-          currentStock: currentStockFor(it),
-          parLevel: it.parLevel,
-          reorderLevel: it.reorderLevel,
-          usageThisWeek: it.usageThisWeek || 0,
-          theoreticalUsage: it.theoreticalUsage || 0,
-          updatedAt: Date.now(),
-        };
-        if (!Array.isArray(rawDoc.subcategories)) rawDoc.subcategories = [];
-        rawDoc.subcategories.push(subcat);
-      }
-
-      const cards = Array.isArray(subcat.suppliers) ? subcat.suppliers.slice() : [];
-      if (!cards.length && it.supplier) {
-        cards.push({
-          id: 'sup-' + Date.now().toString(36) + '-main',
-          supplierName: it.supplier,
-          defaultPrice: +it.costPerUnit || 0,
-          purchaseUnit: unit,
-          factor: 1,
-          rank: 1,
-        });
-      }
-
-      const normName = supplierName.trim().toLowerCase();
-      const existingCard = cards.find(s => String(s.supplierName || '').trim().toLowerCase() === normName);
-
-      let toastMsg = '';
-      if (existingCard) {
-        existingCard.defaultPrice = defaultPrice;
-        toastMsg = t('backupSupUpdatedToast', existingCard.supplierName, defaultPrice);
-      } else {
-        const rank = cards.length + 1;
-        const newCard = {
-          id: 'sup-' + Date.now().toString(36),
-          supplierName: supplierName,
-          defaultPrice: defaultPrice,
-          purchaseUnit: unit,
-          factor: 1,
-          rank: rank,
-        };
-        cards.push(newCard);
-        toastMsg = t('backupSupAddedToast', supplierName);
-      }
-
-      subcat.suppliers = cards;
-      subcat.updatedAt = Date.now();
-
-      stItemOverrides[itemId] = Object.assign({}, stItemOverrides[itemId] || {}, {
-        suppliers: cards,
-        updatedAt: Date.now(),
-      });
-
-      stSaveOverlay();
-      closeTopModal();
-      window.Kiwi?.toast?.(toastMsg, { type: 'success' });
-      if (stPageActive) render();
-    });
-  }
-
-  function openItemMovement(itemId) {
-    const it = getInv().find(x => x.id === itemId); if (!it) return;
-    const m = window.Kiwi.modal({
-      title: `Mouvement · ${it.name}`,
-      desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,
-      width: 560,
-      body: `
-        <div class="st-mb-row two">
-          <div class="st-mb-field"><label class="st-mb-label">Motif</label>
-            <select class="st-mb-input" data-stock-move-reason>
-              <option value="receipt">Réception fournisseur</option>
-              <option value="return">Retour client</option>
-              <option value="loss">Perte / casse</option>
-              <option value="expiry">Périmé</option>
-              <option value="gift">Offert</option>
-              <option value="staff-meal">Consommation équipe</option>
-              <option value="count">Comptage physique</option>
-              <option value="manual">Correction manuelle</option>
-            </select>
-          </div>
-          <div class="st-mb-field"><label class="st-mb-label" data-stock-move-qty-label>Quantité</label><input class="st-mb-input mono" data-stock-move-qty type="number" min="0" step="0.001" placeholder="0" /></div>
-        </div>
-        <div class="st-mb-field"><label class="st-mb-label">Référence / note</label><input class="st-mb-input" data-stock-move-note placeholder="Motif, document ou responsable" /></div>
-        <div class="st-mb-field" data-stock-move-dlc-wrap><label class="st-mb-label">DLC / DDM (optionnel)</label><input class="st-mb-input mono" data-stock-move-dlc type="date" /></div>
-        <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    const reason = scope?.querySelector('[data-stock-move-reason]');
-    const label = scope?.querySelector('[data-stock-move-qty-label]');
-    const help = scope?.querySelector('[data-stock-move-help] div');
-    const dlcWrap = scope?.querySelector('[data-stock-move-dlc-wrap]');
-    const updateHelp = () => {
-      const isCount = reason?.value === 'count';
-      if (dlcWrap) dlcWrap.style.display = reason?.value === 'receipt' ? '' : 'none';
-      if (label) label.textContent = isCount ? `Quantité réellement comptée (${it.unit})` : `Quantité (${it.unit})`;
-      if (help) help.textContent = isCount
-        ? 'Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.'
-        : ['receipt', 'return'].includes(reason?.value) ? 'Cette entrée augmente le stock et reste traçable.' : 'Cette sortie diminue le stock et reste traçable.';
-    };
-    reason?.addEventListener('change', updateHelp); updateHelp();
-    scope?.querySelector('[data-stock-move-save]')?.addEventListener('click', () => {
-      const value = Math.max(0, +(scope.querySelector('[data-stock-move-qty]')?.value || 0));
-      const why = reason?.value || 'manual';
-      const note = scope.querySelector('[data-stock-move-note]')?.value.trim() || '';
-      if (!(value >= 0) || (why !== 'count' && value <= 0)) {
-        window.Kiwi.toast('Indiquez une quantité valide.', { type: 'warning' }); return;
-      }
-      const ref = `manual-${Date.now().toString(36)}`;
-      if (why === 'count') countStock(it, value, ref);
-      else {
-        const dlc = why === 'receipt' ? (scope.querySelector('[data-stock-move-dlc]')?.value || '') : '';
-        moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note, null,
-          dlc ? { expiresAt: new Date(dlc + 'T23:59:59').getTime() } : null);
-      }
-      closeTopModal(); window.Kiwi.toast('Mouvement de stock enregistré.', { type: 'success' });
-      if (stPageActive) render();
-    });
-    wireDismiss(scope);
-  }
-  function openItemDetail(itemId) {
-    const it = getInv().find(x => x.id === itemId);
-    if (!it) return;
-    const cur = currentStockFor(it);
-    const st = statusOf(it);
-    const v = variance(it);
-    const days = daysOfStock(it);
-    const altSups = getSup().filter(s => s.category === it.category && !it.supplier.toLowerCase().includes(s.name.toLowerCase())).slice(0, 3);
-
-    const m = window.Kiwi.modal({
-      title: it.name,
-      desc: `${esc(catLabel(it.category))} · ${st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut')}`,
-      width: 720,
-      body: `
-        <div class="st-md-2col">
-          <div>
-            <div class="st-md-col-t">État actuel</div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItStockActual'))}</span><span class="v">${esc(fmtUnit(cur, it.unit))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItParR'))}</span><span class="v">${esc(fmtUnit(it.parLevel, it.unit))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItReorderR'))}</span><span class="v">${esc(fmtUnit(it.reorderLevel, it.unit))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItValue'))}</span><span class="v">${esc(fmtMad(cur * it.costPerUnit))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItCost'))}</span><span class="v">${esc(fmtMad(it.costPerUnit))} / ${esc(it.unit)}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItVarW'))}</span><span class="v" style="color:var(--${Math.abs(v) <= 5 ? 'n-600' : Math.abs(v) <= 15 ? 'warning' : 'danger'});">${esc(fmtPct(v))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItDaysL'))}</span><span class="v">${days >= 999 ? '·' : Math.round(days) + ' j'}</span></div>
-          </div>
-          <div>
-            ${stShowReal() ? renderRealItemMovementSummary(it) : `
-              <div class="st-md-col-t">${esc(t('mItUsageT'))}</div>
-              ${renderItemUsageChart(it)}
-              <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px; color:var(--n-500);">
-                <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--atlas);"></span>${esc(t('mItUsageL'))}</span>
-                <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--n-400); border-top:1.5px dashed var(--n-400);"></span>${esc(t('mItUsageTheo'))}</span>
-              </div>`}
-          </div>
-        </div>
-        ${stShowReal() ? renderRealItemHistory(it) : `<div class="st-md-section">
-          <div class="st-md-section-t">${esc(t('mItPricesT'))}</div>
-          <div class="st-md-list">
-            ${[0.92, 0.95, 0.97, 1.0, 1.02].map((m, i) => `
-              <div class="st-md-list-row">
-                <div><span class="d">${esc(['Janv','Févr','Mars','Avr','Mai'][i])}</span></div>
-                <div class="v">${esc(fmtMad(it.costPerUnit * m))} / ${esc(it.unit)}</div>
-                <div class="${m > 1 ? 'status-warn' : m < 1 ? 'status-ok' : 'status-bad'}" style="font-size:11px;">${fmtPct((m - 1) * 100, 1)}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="st-md-section">
-          <div class="st-md-section-t">${esc(t('mItAltT'))}</div>
-          <div class="st-md-list">
-            ${altSups.length > 0 ? altSups.map(s => `
-              <div class="st-md-list-row">
-                <div><span class="n">${esc(s.name)}</span> <span class="d" style="margin-left:6px;">${esc(s.location)}</span></div>
-                <div class="v">${esc(fmtMad(it.costPerUnit * (0.92 + Math.random() * 0.15)))} / ${esc(it.unit)}</div>
-                <div style="font-size:11px; color:var(--n-500);">★ ${s.rating.toFixed(1)}</div>
-              </div>
-            `).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">Aucun fournisseur alternatif identifié dans cette catégorie.</div>`}
-          </div>
-        </div>`}
-      `,
-      foot: `
-        <button class="st-btn" data-stock-mark-86 data-item-name="${esc(it.name)}">${esc(t('mItMark'))}</button>
-        ${stShowReal() ? `<button class="st-btn" data-stock-detail-move data-item-id="${esc(it.id)}">${svg('swap', 12)}<span>Mouvement</span></button>` : ''}
-        <button class="st-btn" data-stock-detail-edit data-item-id="${esc(it.id)}">${svg('edit', 12)}<span>${esc(t('mItEdit'))}</span></button>
-        <button class="st-btn" data-stock-detail-delete data-item-id="${esc(it.id)}" style="color:#9a1f1f; border-color:rgba(154,31,31,0.35);">${esc(t('mItDelete'))}</button>
-        <button class="st-btn" data-dismiss-modal>${esc(t('mItClose'))}</button>
-        <button class="st-btn primary" data-stock-reorder data-item-id="${esc(it.id)}">${esc(t('mItOrder'))}</button>
-      `,
-    });
-    const scope = m?.el || topBackdrop();
-    scope?.querySelector('[data-stock-mark-86]')?.addEventListener('click', (e) => {
-      const name = e.currentTarget.dataset.itemName;
-      closeTopModal();
-      openMark86(name);
-    });
-    scope?.querySelector('[data-stock-reorder]')?.addEventListener('click', (e) => {
-      closeTopModal();
-      openQuickOrder(e.currentTarget.dataset.itemId);
-    });
-    scope?.querySelector('[data-stock-detail-edit]')?.addEventListener('click', (e) => {
-      const id = e.currentTarget.dataset.itemId;
-      closeTopModal();
-      openEditItem(id);
-    });
-    scope?.querySelector('[data-stock-detail-move]')?.addEventListener('click', (e) => {
-      const id = e.currentTarget.dataset.itemId;
-      closeTopModal(); openItemMovement(id);
-    });
-    scope?.querySelector('[data-stock-swap-ranks]')?.addEventListener('click', (e) => {
-      swapSupplierRanks(e.currentTarget.dataset.itemId);
-    });
-    scope?.querySelector('[data-stock-add-backup-supplier]')?.addEventListener('click', (e) => {
-      const id = e.currentTarget.dataset.itemId;
-      closeTopModal();
-      openAddBackupSupplier(id);
-    });
-    scope?.querySelector('[data-stock-detail-delete]')?.addEventListener('click', (e) => {
-      const id = e.currentTarget.dataset.itemId;
-      closeTopModal();
-      confirmDeleteItem(id);
-    });
-  }
-
-  function renderItemUsageChart(it) {
-    const W = 320, H = 130, PAD = { l: 24, r: 8, t: 10, b: 20 };
-    const innerW = W - PAD.l - PAD.r, innerH = H - PAD.t - PAD.b;
-    const daily = (it.usageThisWeek / 7);
-    const theoDaily = (theoreticalUsageFor(it) / 7);
-    // Generate 14 days of mock data around the daily average
-    const actual = Array.from({ length: 14 }, (_, i) => daily * (0.85 + Math.random() * 0.3));
-    const theo = Array.from({ length: 14 }, () => theoDaily);
-    const max = Math.max(...actual, ...theo) * 1.15;
-    const xAt = (i) => PAD.l + (i / 13) * innerW;
-    const yAt = (v) => PAD.t + innerH - (v / max) * innerH;
-    const pathActual = actual.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(v)}`).join(' ');
-    const pathTheo = theo.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(v)}`).join(' ');
-    return `
-      <svg class="st-md-mini-chart" style="height:140px;" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-        <path class="line-dashed" d="${pathTheo}" />
-        <path class="line" d="${pathActual}" />
-        <g class="axis">
-          <text x="${PAD.l}" y="${H - 4}" font-size="9">−14j</text>
-          <text x="${PAD.l + innerW}" y="${H - 4}" text-anchor="end" font-size="9">${t('today').toLowerCase()}</text>
-        </g>
-      </svg>
-    `;
-  }
+  function renderItemUsageChart(...args) { return stockParts.catalog.renderItemUsageChart.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Add / Edit item
    * Shared form. existingId === null → add, otherwise edit overlay.
    * ═══════════════════════════════════════════════════════════════════════ */
-  function renderCatOptions(selectedId) {
-    const opts = allCategories().map(c =>
-      `<option value="${esc(c.id)}" ${c.id === selectedId ? 'selected' : ''}>${esc(c.label)}</option>`
-    ).join('');
-    return `${opts}<option value="__new__">${esc(t('addCatOpt'))}</option>`;
-  }
-  function renderSupOptions(selectedSupplierName) {
-    return getSup().map(s => {
-      const label = `${s.name} · ${s.location || ''}`.trim().replace(/ ·\s*$/, '');
-      const sel = selectedSupplierName && (selectedSupplierName === s.name || selectedSupplierName.startsWith(s.name)) ? 'selected' : '';
-      return `<option value="${esc(label)}" ${sel}>${esc(label)}</option>`;
-    }).join('');
-  }
+  function renderCatOptions(...args) { return stockParts.catalog.renderCatOptions.apply(this, args); }
+  function renderSupOptions(...args) { return stockParts.catalog.renderSupOptions.apply(this, args); }
   /* Return the modal container of the most-recently-opened backdrop,
    * so multiple stacked modals don't collide on the selectors above. */
-  function topBackdrop() {
-    const all = document.querySelectorAll('.kiwi-backdrop');
-    return all.length ? all[all.length - 1] : null;
-  }
+  function topBackdrop(...args) { return stockParts.catalog.topBackdrop.apply(this, args); }
   /* Wire the [data-dismiss-modal] cancel buttons inside this scope to close
    * the modal — interactive.js doesn't bind these globally. */
-  function wireDismiss(scope) {
-    if (!scope) return;
-    scope.querySelectorAll('[data-dismiss-modal]').forEach(b => {
-      b.addEventListener('click', () => scope.querySelector('.kiwi-modal-close')?.click());
-    });
-  }
+  function wireDismiss(...args) { return stockParts.catalog.wireDismiss.apply(this, args); }
   /* Properly close the top stock modal so unlockPageScroll() runs. The bug
    * fix for the scroll-lock leak: direct `.kiwi-backdrop?.remove()` skips
    * the modal helper's close handler — counter stays > 0, html.kiwi-locked
    * stays on, page won't scroll until reload. Click the wired X instead. */
-  function closeTopModal() {
-    (topBackdrop() || document).querySelector('.kiwi-modal-close')?.click();
-  }
-  function wireCatNewToggle(scope) {
-    const root = scope || topBackdrop() || document;
-    const sel = root.querySelector('[data-stock-add-cat]');
-    const inlineWrap = root.querySelector('[data-stock-newcat-wrap]');
-    const inlineInput = root.querySelector('[data-stock-newcat-name]');
-    const inlineBtn = root.querySelector('[data-stock-newcat-confirm]');
-    if (!sel || !inlineWrap) return;
-    sel.addEventListener('change', () => {
-      if (sel.value === '__new__') {
-        inlineWrap.hidden = false;
-        inlineInput?.focus();
-      } else {
-        inlineWrap.hidden = true;
-      }
-    });
-    inlineBtn?.addEventListener('click', () => {
-      const raw = (inlineInput?.value || '').trim();
-      if (!raw) { inlineInput?.focus(); return; }
-      let id;
-      if (retailCatalog()) {
-        const created = retailCatalog().addCategory(raw, 'atlas');
-        id = created?.id;
-      } else {
-        id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
-        stUserCategories.push({ id, label: raw });
-        stSaveOverlay();
-      }
-      if (!id) return;
-      // Rebuild the select preserving "+ Nouvelle…" option last, select new id.
-      sel.innerHTML = renderCatOptions(id);
-      sel.value = id;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      inlineWrap.hidden = true;
-      inlineInput.value = '';
-      window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
-    });
-  }
+  function closeTopModal(...args) { return stockParts.catalog.closeTopModal.apply(this, args); }
+  function wireCatNewToggle(...args) { return stockParts.catalog.wireCatNewToggle.apply(this, args); }
   const nutritionKeys = ['kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt'];
   const allergenKeys = () => window.KiwiMenuNutrition?.ALLERGEN_KEYS || [
     'gluten', 'crustaces', 'oeufs', 'poissons', 'arachides', 'soja', 'lait',
     'fruits_a_coque', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques',
   ];
   let ciqualPromise = null;
-  function loadCiqual() {
-    if (!ciqualPromise) {
-      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=4', { credentials: 'same-origin' })
-        .then((response) => { if (!response.ok) throw new Error('ciqual ' + response.status); return response.json(); })
-        .then((payload) => ({
-          foods: Array.isArray(payload?.foods) ? payload.foods : [],
-          aliases: payload?.aliases && typeof payload.aliases === 'object' ? payload.aliases : {},
-          portionSuggestions: payload?.portionSuggestions && typeof payload.portionSuggestions === 'object' ? payload.portionSuggestions : {},
-        }))
-        .catch(() => ({ foods: [], aliases: {}, portionSuggestions: {} }));
-    }
-    return ciqualPromise;
-  }
-  function searchKey(value) {
-    return String(value || '').toLocaleLowerCase('fr').replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-  }
-  function nutrientLabel(key) {
-    return t({ kcal: 'nutriKcal', protein: 'nutriProtein', carbs: 'nutriCarbs', fat: 'nutriFat', sugars: 'nutriSugars', salt: 'nutriSalt' }[key]);
-  }
-  function nutrientSection(existing) {
-    const per100g = existing?.nutrition?.per100g || {};
-    const selected = new Set(Array.isArray(existing?.allergens) ? existing.allergens : []);
-    const source = ['ciqual', 'off', 'manual'].includes(existing?.nutrition?.source) ? existing.nutrition.source : 'manual';
-    return `<details class="st-nutrition" data-stock-nutrition data-source="${esc(source)}" data-ref="${esc(existing?.nutrition?.ref || '')}">
-      <summary><span><b>${esc(t('nutriTitle'))}</b><small>${esc(t('nutriSummary'))}</small></span></summary>
-      <div class="st-nutrition-body">
-        <div class="st-ciqual-search">
-          <label class="st-mb-label">${esc(t('nutriSearch'))}</label>
-          <input class="st-mb-input" type="search" autocomplete="off" placeholder="${esc(t('nutriSearchPh'))}" data-ciqual-search />
-          <div class="st-ciqual-results" data-ciqual-results hidden></div>
-        </div>
-        <div class="st-nutrition-meta"><span>${esc(t('nutriSource'))}</span><b data-nutri-source-label>${esc(source === 'ciqual' ? t('nutriCiqual') : t('nutriManual'))}</b></div>
-        <div class="st-mb-label st-nutrition-kicker">${esc(t('nutriPer100'))}</div>
-        <div class="st-nutrient-grid">${nutritionKeys.map((key) => `<label><span>${esc(nutrientLabel(key))}</span><input class="st-mb-input mono" type="number" min="0" step="${key === 'kcal' ? '1' : '0.01'}" value="${esc(per100g[key] ?? '')}" data-stock-nutrient="${key}" /></label>`).join('')}</div>
-        <div class="st-mb-field st-grams-field" data-grams-wrap hidden>
-          <label class="st-mb-label" data-grams-label>${esc(t('nutriGramsPiece'))}</label>
-          <input class="st-mb-input mono" type="number" min="0.001" step="0.001" value="${esc(existing?.gramsPerUnit ?? '')}" data-stock-grams />
-          <small>${esc(t('nutriGramsHint'))}</small>
-          <div class="st-portion-prefill" data-portion-prefill hidden><span data-portion-copy></span><button type="button" data-apply-grams>${esc(t('nutriPortionApply'))}</button></div>
-        </div>
-        <div class="st-mb-label st-nutrition-kicker">${esc(t('allergenTitle'))}</div>
-        <div class="st-allergen-chips">${allergenKeys().map((key) => `<button type="button" data-allergen="${key}" aria-pressed="${selected.has(key) ? 'true' : 'false'}">${esc(t('allergen.' + key))}</button>`).join('')}</div>
-        <p class="st-allergen-help">${esc(t('allergenSuggested'))}</p>
-        <label class="st-allergen-confirm"><input type="checkbox" data-allergen-confirm${Array.isArray(existing?.allergens) ? ' checked' : ''}/><span>${esc(t('allergenConfirm'))}</span></label>
-      </div>
-    </details>`;
-  }
-  function wireNutrition(scope, existing) {
-    const section = scope?.querySelector('[data-stock-nutrition]');
-    const unitSelect = scope?.querySelector('[data-stock-add-unit]');
-    if (!section || !unitSelect) return;
-    const sourceLabel = section.querySelector('[data-nutri-source-label]');
-    const gramsWrap = section.querySelector('[data-grams-wrap]');
-    const gramsInput = section.querySelector('[data-stock-grams]');
-    const gramsLabel = section.querySelector('[data-grams-label]');
-    const portionPrefill = section.querySelector('[data-portion-prefill]');
-    const portionCopy = section.querySelector('[data-portion-copy]');
-    const nameInput = scope.querySelector('[data-stock-add-name]');
-    let portionSuggestions = {};
-    const updateGrams = () => {
-      const unit = stockUnit(unitSelect.value), visible = ['unité', 'ml', 'cl', 'L'].includes(unit);
-      gramsWrap.hidden = !visible;
-      gramsLabel.textContent = t(unit === 'unité' ? 'nutriGramsPiece' : 'nutriGramsMl');
-      gramsInput.placeholder = ['ml', 'cl', 'L'].includes(unit) ? '1' : '';
-      const suggestion = unit === 'unité' ? portionSuggestions[section.dataset.portionCategory || ''] : null;
-      portionPrefill.hidden = !suggestion || !!gramsInput.value;
-      if (suggestion) portionCopy.textContent = t('nutriPortionPrefill', suggestion.grams, suggestion['label' + (lang() === 'en' ? 'En' : lang() === 'ar' ? 'Ar' : 'Fr')]);
-    };
-    updateGrams();
-    unitSelect.addEventListener('change', updateGrams);
-    nameInput?.addEventListener('input', updateGrams);
-    section.addEventListener('toggle', () => {
-      if (!section.open || section.dataset.loaded) return;
-      section.dataset.loaded = '1';
-      const results = section.querySelector('[data-ciqual-results]');
-      results.hidden = false; results.textContent = t('nutriLoading');
-      loadCiqual().then((ciqual) => {
-        portionSuggestions = ciqual.portionSuggestions;
-        const food = ciqual.foods.find((row) => String(row.id) === String(section.dataset.ref || ''));
-        section.dataset.portionCategory = food?.portionCategory || '';
-        updateGrams(); results.hidden = true; results.textContent = '';
-      });
-    });
-    const results = section.querySelector('[data-ciqual-results]');
-    const search = section.querySelector('[data-ciqual-search]');
-    search.addEventListener('input', async () => {
-      const query = searchKey(search.value);
-      if (query.length < 2) { results.hidden = true; results.textContent = ''; return; }
-      const ciqual = await loadCiqual();
-      /* Classement (alias exact, premier mot, début de nom, mot entier, préfixe de
-       * mot, sous-chaîne ; FR avant EN ; le plus court d'abord) : dans
-       * assets/menu-nutrition.js · searchFoods. Sans lui, « oeuf » ne montrait
-       * jamais l'œuf : un biscuit et sept « Boeuf » remplissaient les huit places. */
-      const N = window.KiwiMenuNutrition;
-      const hits = N && N.searchFoods ? N.searchFoods(ciqual, search.value, 8) : (() => {
-        const aliasHits = Object.entries(ciqual.aliases)
-          .filter(([alias]) => searchKey(alias).includes(query))
-          .map(([alias, id]) => ({ alias, food: ciqual.foods.find((row) => String(row.id) === String(id)) }))
-          .filter((entry) => entry.food);
-        const canonicalHits = ciqual.foods
-          .filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query))
-          .map((food) => ({ alias: '', food }));
-        const seen = new Set();
-        return [...aliasHits, ...canonicalHits].filter((entry) => {
-          const id = String(entry.food.id);
-          if (seen.has(id)) return false;
-          seen.add(id); return true;
-        }).slice(0, 8);
-      })();
-      results.hidden = false;
-      results.innerHTML = hits.length ? hits.map(({ food, alias }) => `<button type="button" data-ciqual-id="${esc(food.id)}"><b>${esc(lang() === 'en' ? food.nameEn : food.nameFr)}</b><span>${alias ? esc(alias) + ' · ' : ''}${esc(lang() === 'en' ? food.nameFr : food.nameEn)} · ${esc(food.kcal)} kcal</span></button>`).join('') : `<span>${esc(t('nutriNoMatch'))}</span>`;
-    });
-    results.addEventListener('click', async (event) => {
-      const button = event.target.closest('[data-ciqual-id]'); if (!button) return;
-      const food = (await loadCiqual()).foods.find((row) => String(row.id) === button.dataset.ciqualId); if (!food) return;
-      nutritionKeys.forEach((key) => { const input = section.querySelector(`[data-stock-nutrient="${key}"]`); if (input) input.value = food[key]; });
-      section.dataset.source = 'ciqual'; section.dataset.ref = String(food.id); sourceLabel.textContent = t('nutriCiqual');
-      portionSuggestions = (await loadCiqual()).portionSuggestions;
-      section.dataset.portionCategory = food.portionCategory || '';
-      search.value = lang() === 'en' ? food.nameEn : food.nameFr; results.hidden = true;
-      const hints = new Set(food.allergenHints || []);
-      section.querySelectorAll('[data-allergen]').forEach((chip) => chip.setAttribute('aria-pressed', hints.has(chip.dataset.allergen) ? 'true' : 'false'));
-      section.dataset.allergensTouched = '1';
-      const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = false;
-      updateGrams();
-    });
-    section.querySelector('[data-apply-grams]')?.addEventListener('click', () => {
-      const suggestion = portionSuggestions[section.dataset.portionCategory || ''];
-      if (!suggestion || gramsInput.value) return;
-      gramsInput.value = String(suggestion.grams);
-      updateGrams();
-    });
-    gramsInput.addEventListener('input', updateGrams);
-    section.querySelectorAll('[data-stock-nutrient]').forEach((input) => input.addEventListener('input', () => {
-      section.dataset.source = 'manual'; sourceLabel.textContent = t('nutriManual');
-    }));
-    section.querySelector('.st-allergen-chips')?.addEventListener('click', (event) => {
-      const chip = event.target.closest('[data-allergen]'); if (!chip) return;
-      chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-      section.dataset.allergensTouched = '1';
-      const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = true;
-    });
-    section.querySelector('[data-allergen-confirm]')?.addEventListener('change', () => { section.dataset.allergensTouched = '1'; });
-  }
-  function readNutrition(scope) {
-    const section = scope.querySelector('[data-stock-nutrition]'), per100g = {};
-    let hasNutrition = false;
-    nutritionKeys.forEach((key) => {
-      const raw = section.querySelector(`[data-stock-nutrient="${key}"]`)?.value.trim();
-      if (raw === '') return;
-      const value = Number(raw);
-      if (Number.isFinite(value) && value >= 0) { per100g[key] = value; hasNutrition = true; }
-    });
-    const grams = Number(section.querySelector('[data-stock-grams]')?.value);
-    const confirm = section.querySelector('[data-allergen-confirm]');
-    let allergens;
-    if (confirm?.checked) allergens = [...section.querySelectorAll('[data-allergen][aria-pressed="true"]')].map((chip) => chip.dataset.allergen);
-    else if (section.dataset.allergensTouched) allergens = null;
-    return {
-      nutrition: hasNutrition ? { per100g, source: section.dataset.source || 'manual', ref: section.dataset.ref || '' } : null,
-      gramsPerUnit: Number.isFinite(grams) && grams > 0 ? grams : null,
-      allergens,
-    };
-  }
-  function openAddItem() { openItemForm(null); }
-  function openEditItem(itemId) {
-    const it = getInv().find(x => x.id === itemId);
-    if (it) openItemForm(it);
-  }
+  function loadCiqual(...args) { return stockParts.catalog.loadCiqual.apply(this, args); }
+  function searchKey(...args) { return stockParts.catalog.searchKey.apply(this, args); }
+  function nutrientLabel(...args) { return stockParts.catalog.nutrientLabel.apply(this, args); }
+  function nutrientSection(...args) { return stockParts.catalog.nutrientSection.apply(this, args); }
+  function wireNutrition(...args) { return stockParts.catalog.wireNutrition.apply(this, args); }
+  function readNutrition(...args) { return stockParts.catalog.readNutrition.apply(this, args); }
+  function openAddItem(...args) { return stockParts.catalog.openAddItem.apply(this, args); }
+  function openEditItem(...args) { return stockParts.catalog.openEditItem.apply(this, args); }
   /* ── Article de stock · création et modification ──────────────────────────
    * 2026-10-12, what this form replaced:
    *  · a new article saved with « Stock actuel » left empty was written with
@@ -7317,659 +3575,39 @@
    *  · the « Nom de la catégorie / Confirmer » row was always visible (inline
    *    display:none followed by display:flex), the unit and the third number
    *    were cut off on a phone, and an empty name only moved the focus. */
-  function stItemNum(raw) {
-    let s = String(raw == null ? '' : raw)
-      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-      .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
-      .replace(/\u066B/g, '.')
-      .replace(/[\s\u00a0\u202F\u066C]/g, '');
-    if (!s) return { empty: true };
-    if (/^\d+,\d{1,3}$/.test(s)) s = s.replace(',', '.');
-    if (!/^\d+(\.\d{1,3})?$/.test(s)) return { bad: true };
-    return { n: Math.round(parseFloat(s) * 1000) / 1000 };
-  }
-  function stItemVal(n) {
-    if (n == null || n === '' || !Number.isFinite(+n)) return '';
-    const s = String(Math.round(+n * 1000) / 1000);
-    return lang() === 'en' ? s : s.replace('.', ',');
-  }
-  function stItemCss() {
-    if (document.getElementById('st-if-css')) return;
-    const st = document.createElement('style');
-    st.id = 'st-if-css';
-    st.textContent = `
-      .kiwi-backdrop.st-if-modal .kiwi-modal.kiwi-modal { --if-bg: var(--paper); --if-card: color-mix(in srgb, var(--paper) 55%, #fff); --if-field: var(--paper); background: var(--if-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 1px solid var(--n-200); }
-      html[data-theme="dark"] .kiwi-backdrop.st-if-modal .kiwi-modal.kiwi-modal,
-      body[data-vexel-mode="dark"] .kiwi-backdrop.st-if-modal .kiwi-modal.kiwi-modal { --if-bg: #0F1512; --if-card: #151C18; --if-field: #0B100E; }
-      .kiwi-backdrop.st-if-modal .kiwi-modal-foot.kiwi-modal-foot { background: var(--if-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border-top: 1px solid var(--n-200); }
-      .st-if { display: grid; gap: 14px; color: var(--ink); }
-      .st-if [hidden] { display: none !important; }
-      .st-if-sec { min-width: 0; padding: 16px 18px 2px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--if-card); }
-      .st-if-sec > h4 { margin: 0 0 12px; font: 600 14.5px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
-      .st-if-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
-      .st-if-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .st-if .st-if-f { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; align-content: start; min-width: 0; margin: 0 0 14px; }
-      .st-if-l { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 6px; font-size: 12px; font-weight: 600; color: var(--n-600); }
-      .st-if-tag { font-size: 11px; font-weight: 500; color: var(--n-400, var(--n-500)); }
-      .st-if-in { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--if-field); color: var(--ink); font: 500 13.5px var(--sans); transition: border-color 140ms, box-shadow 140ms; }
-      .st-if-in::placeholder { color: var(--n-400, var(--n-500)); font-weight: 400; }
-      .st-if-in:focus { outline: 0; border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 16%, transparent); }
-      .st-if-in[aria-invalid="true"] { border-color: var(--danger, #cb5238); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #cb5238) 14%, transparent); }
-      .kiwi-backdrop.st-if-modal .st-if .kiwi-select-trigger { min-height: 40px; padding-inline: 12px 10px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--if-field); box-shadow: none; font: 500 13.5px var(--sans); }
-      .st-if-num { position: relative; display: block; }
-      .st-if-num .st-if-in { padding-inline-end: 64px; font-variant-numeric: tabular-nums; }
-      .st-if-num.wide .st-if-in { padding-inline-end: 96px; }
-      .st-if-unit { position: absolute; inset-inline-end: 12px; top: 50%; max-width: 56%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-50%); font: 500 12px var(--sans); color: var(--n-500); pointer-events: none; }
-      .st-if-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); }
-      .st-if-use { justify-self: start; align-self: start; margin-top: 2px; padding: 5px 10px; border: 1px solid var(--n-200); border-radius: 8px; background: transparent; color: var(--atlas); font: 600 12px var(--sans); cursor: pointer; }
-      .st-if-use:hover { background: color-mix(in srgb, var(--atlas) 8%, transparent); }
-      .st-if-use:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
-      .st-if-err { font-size: 11.5px; font-weight: 600; line-height: 1.35; color: var(--danger, #cb5238); }
-      .st-if-note { display: block; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 5%, var(--if-field)); font-size: 12.5px; line-height: 1.45; color: var(--n-600); }
-      .st-if-newcat { display: flex; gap: 6px; margin-top: 2px; }
-      .st-if-newcat .st-if-in { flex: 1; min-width: 0; }
-      .st-if-btn { flex: none; height: 40px; padding: 0 14px; border: 1px solid var(--atlas); border-radius: 10px; background: var(--atlas); color: var(--paper); font: 600 13px var(--sans); cursor: pointer; }
-      .st-if-btn:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
-      .st-if .st-nutrition { margin-top: 0; border-color: var(--n-200); border-radius: 14px; background: var(--if-card); }
-      .st-if .st-nutrition > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; list-style: none; }
-      .st-if .st-nutrition > summary::-webkit-details-marker { display: none; }
-      .st-if .st-nutrition > summary::after { content: ''; flex: none; width: 8px; height: 8px; border-inline-end: 1.6px solid var(--n-500); border-bottom: 1.6px solid var(--n-500); transform: rotate(45deg) translateY(-2px); transition: transform 160ms; }
-      .st-if .st-nutrition[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
-      .st-if .st-nutrition > summary b { font: 600 14.5px var(--sans); letter-spacing: -0.01em; }
-      .st-if .st-nutrition-body { padding: 0 18px 16px; }
-      @media (max-width: 640px) {
-        .st-if-grid.three { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-        .st-if-grid.three > :first-child { grid-column: 1 / -1; }
-      }
-      @media (max-width: 480px) {
-        .st-if-grid, .st-if-grid.three { grid-template-columns: minmax(0, 1fr); }
-        .st-if-in, .kiwi-backdrop.st-if-modal .st-if .kiwi-select-trigger { font-size: 16px; }
-        .st-if-sec { padding: 14px 14px 2px; }
-      }
-    `;
-    document.head.appendChild(st);
-  }
+  function stItemNum(...args) { return stockParts.catalog.stItemNum.apply(this, args); }
+  function stItemVal(...args) { return stockParts.catalog.stItemVal.apply(this, args); }
+  function stItemCss(...args) { return stockParts.catalog.stItemCss.apply(this, args); }
   /* Le niveau de réappro, mesuré. Sous ce qu'on consomme entre deux
      livraisons, le stock ne tient plus jusqu'à la suivante. Il faut les deux
      mesures : la consommation réelle de la semaine (usageThisWeek) et au
      moins trois livraisons enregistrées au registre, soit deux intervalles ;
      sinon rien n'est proposé. Le chiffre n'est qu'une proposition : il
      n'entre dans le champ que si le commerçant clique. */
-  function reorderFromHistory(perDay, receiptDays) {
-    const days = [...new Set((receiptDays || []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-4);
-    if (!(perDay > 0) || days.length < 3) return null;
-    let sum = 0;
-    for (let i = 1; i < days.length; i++) sum += (Date.parse(days[i] + 'T12:00:00Z') - Date.parse(days[i - 1] + 'T12:00:00Z')) / 864e5;
-    const gap = sum / (days.length - 1);
-    if (!(gap >= 1)) return null;
-    return { perDay, gap: Math.round(gap * 10) / 10, deliveries: days.length, qty: Math.ceil(perDay * gap * 10) / 10 };
-  }
-  function reorderSuggestionFor(it) {
-    if (!it) return null;
-    let rows = [];
-    try { rows = itemHistory(it).filter((r) => (+r.qty || 0) > 0 && r.reason === 'receipt' && +r.occurredTs > 0); } catch (_) { rows = []; }
-    return reorderFromHistory(+it.usageThisWeek > 0 ? it.usageThisWeek / 7 : 0, rows.map((r) => stockBusinessDate(+r.occurredTs)));
-  }
-  function openItemForm(existing) {
-    const isEdit = !!existing;
-    const reorderSugg = isEdit ? reorderSuggestionFor(existing) : null;
-    const title = isEdit ? t('editItemTitle') : t('addItemTitle');
-    const cta = isEdit ? t('editItemBtn') : t('addItemBtn');
-    const unitOptions = stockUnitOptions(existing?.unit || 'unité');
-    stItemCss();
-    /* The supplier list starts with « Aucun »: nothing is chosen for the
-       merchant. A supplier already on the article that is no longer in the
-       list stays selected rather than being swapped for another. */
-    const sups = getSup();
-    const supLabel = (s) => `${s.name} · ${s.location || ''}`.trim().replace(/ ·\s*$/, '');
-    const curSup = existing?.supplier || '';
-    const supHit = curSup ? sups.find((s) => curSup === s.name || curSup.startsWith(s.name)) : null;
-    const supOpts = `<option value="">${esc(t('itemNoSupplierOpt'))}</option>`
-      + (curSup && !supHit ? `<option value="${esc(curSup)}" selected>${esc(curSup)}</option>` : '')
-      + sups.map((s) => { const l = supLabel(s); return `<option value="${esc(l)}"${s === supHit ? ' selected' : ''}>${esc(l)}</option>`; }).join('');
-    const opt = `<span class="st-if-tag">${esc(t('itemOptional'))}</span>`;
-    const num = (key, value, extra) => `<span class="st-if-num${extra || ''}"><input class="st-if-in" inputmode="decimal" autocomplete="off" value="${esc(value)}" data-stock-add-${key} aria-describedby="st-if-e-${key}" /><span class="st-if-unit" data-st-if-unit="${key}" aria-hidden="true"></span></span>
-      <span class="st-if-err" id="st-if-e-${key}" data-st-if-err="${key}" hidden></span>`;
-    const m = window.Kiwi.modal({
-      title,
-      width: 720,
-      body: `
-        <div class="st-if" data-st-if>
-          <section class="st-if-sec">
-            <h4>${esc(t('itemSecItem'))}</h4>
-            <label class="st-if-f">
-              <span class="st-if-l">${esc(t('addItemName'))}</span>
-              <input class="st-if-in" type="text" maxlength="120" required autocomplete="off" placeholder="${esc(t('itemNamePh'))}" value="${esc(existing?.name || '')}" data-stock-add-name aria-describedby="st-if-e-name" />
-              <span class="st-if-err" id="st-if-e-name" data-st-if-err="name" hidden>${esc(t('itemNameErr'))}</span>
-            </label>
-            <div class="st-if-grid">
-              <div class="st-if-f">
-                <label class="st-if-l" for="st-if-cat">${esc(t('addItemCat'))}</label>
-                <select class="st-if-in" id="st-if-cat" data-stock-add-cat>
-                  ${renderCatOptions(existing?.category || 'legumes')}
-                </select>
-                <div class="st-if-newcat" data-stock-newcat-wrap hidden>
-                  <input class="st-if-in" type="text" placeholder="${esc(t('addCatName'))}" data-stock-newcat-name aria-describedby="st-if-e-newcat" />
-                  <button class="st-if-btn" type="button" data-stock-newcat-confirm>${esc(t('addCatInline'))}</button>
-                </div>
-                <span class="st-if-err" id="st-if-e-newcat" data-st-if-err="newcat" hidden>${esc(t('itemNewCatErr'))}</span>
-              </div>
-              <label class="st-if-f">
-                <span class="st-if-l">${esc(t('addItemUnit'))}</span>
-                <select class="st-if-in" data-stock-add-unit>${unitOptions}</select>
-              </label>
-            </div>
-            <label class="st-if-f">
-              <span class="st-if-l">${esc(t('addItemSupplier'))}${opt}</span>
-              <select class="st-if-in" data-stock-add-sup>${supOpts}</select>
-              ${sups.length ? '' : `<span class="st-if-hint">${esc(t('itemNoSupplier'))}</span>`}
-            </label>
-          </section>
-          <section class="st-if-sec">
-            <h4>${esc(t('itemSecStock'))}</h4>
-            <div class="st-if-grid three">
-              <label class="st-if-f">
-                <span class="st-if-l">${esc(t('addItemStock'))}</span>
-                ${num('current', existing != null ? stItemVal(currentStockFor(existing)) : '')}
-                ${isEdit ? '' : `<span class="st-if-hint">${esc(t('itemStockHint'))}</span>`}
-              </label>
-              <label class="st-if-f">
-                <span class="st-if-l">${esc(t('addItemPar'))}${opt}</span>
-                ${num('par', stItemVal(existing?.parLevel))}
-                <span class="st-if-hint">${esc(t('itemParHint'))}</span>
-              </label>
-              <label class="st-if-f">
-                <span class="st-if-l">${esc(t('addItemReorder'))}${opt}</span>
-                ${num('reorder', stItemVal(existing?.reorderLevel))}
-                <span class="st-if-hint" data-st-if-reorder-hint></span>
-                ${reorderSugg ? `<span class="st-if-hint" data-st-if-reorder-measured>${esc(t('itemReorderMeasured', fmtUnit(Math.round(reorderSugg.perDay * 10) / 10, existing.unit), stItemVal(reorderSugg.gap), reorderSugg.deliveries, fmtUnit(reorderSugg.qty, existing.unit)))}</span><button type="button" class="st-if-use" data-st-if-reorder-use="${esc(stItemVal(reorderSugg.qty))}">${esc(t('itemReorderUse', fmtUnit(reorderSugg.qty, existing.unit)))}</button>` : ''}
-              </label>
-            </div>
-          </section>
-          <section class="st-if-sec">
-            <h4>${esc(t('itemSecCost'))}</h4>
-            <label class="st-if-f">
-              <span class="st-if-l">${esc(t('itemCostLabel'))}${opt}</span>
-              ${num('cost', stItemVal(existing?.costPerUnit), ' wide')}
-            </label>
-          </section>
-          ${nutrientSection(existing)}
-        </div>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-add-confirm>${esc(cta)}</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    scope?.classList.add('st-if-modal');
-    wireDismiss(scope);
-    /* Attach listeners synchronously — the modal markup is already in DOM by now
-     * (interactive.js's modal() appendChild is synchronous) so we don't need rAF. */
-    try { wireCatNewToggle(scope); wireNutrition(scope, existing); } catch (err) { console.error('wireItemForm failed', err); }
-    const q = (sel) => scope?.querySelector(sel);
-    const mark = (key, msg) => {
-      const e = q(`[data-st-if-err="${key}"]`);
-      const f = key === 'newcat' ? q('[data-stock-newcat-name]') : q(`[data-stock-add-${key}]`);
-      if (e) { if (msg) e.textContent = msg; e.hidden = !msg; }
-      if (f) { if (msg) f.setAttribute('aria-invalid', 'true'); else f.removeAttribute('aria-invalid'); }
-    };
-    /* The unit follows every quantity, and the reorder hint says what an
-       empty field will mean before it is saved. */
-    const paintUnits = () => {
-      const u = stockUnit(q('[data-stock-add-unit]')?.value);
-      scope?.querySelectorAll('[data-st-if-unit]').forEach((el) => { el.textContent = el.dataset.stIfUnit === 'cost' ? `MAD / ${u}` : u; });
-      const hint = q('[data-st-if-reorder-hint]');
-      if (!hint) return;
-      const r = stItemNum(q('[data-stock-add-reorder]')?.value);
-      const p = stItemNum(q('[data-stock-add-par]')?.value);
-      if (!r.empty) { hint.textContent = t('itemReorderHint'); return; }
-      const auto = Math.max(0, Math.round((p.n || 0) * 0.4));
-      hint.textContent = auto > 0 ? t('itemReorderAuto', fmtUnit(auto, u)) : t('itemReorderNone');
-    };
-    q('[data-st-if-reorder-use]')?.addEventListener('click', (ev) => {
-      ev.preventDefault();
-      const f = q('[data-stock-add-reorder]');
-      if (!f) return;
-      f.value = ev.currentTarget.getAttribute('data-st-if-reorder-use') || '';
-      f.dispatchEvent(new Event('input', { bubbles: true }));
-      f.focus();
-    });
-    q('[data-stock-add-unit]')?.addEventListener('change', paintUnits);
-    ['name', 'current', 'par', 'reorder', 'cost'].forEach((k) => q(`[data-stock-add-${k}]`)?.addEventListener('input', () => { mark(k, ''); paintUnits(); }));
-    q('[data-stock-add-cat]')?.addEventListener('change', () => mark('newcat', ''));
-    q('[data-stock-newcat-name]')?.addEventListener('input', () => mark('newcat', ''));
-    paintUnits();
-    scope?.querySelector('[data-stock-add-confirm]')?.addEventListener('click', () => {
-        const name = (scope.querySelector('[data-stock-add-name]')?.value || '').trim();
-        const nCur = stItemNum(q('[data-stock-add-current]')?.value);
-        const nPar = stItemNum(q('[data-stock-add-par]')?.value);
-        const nReorder = stItemNum(q('[data-stock-add-reorder]')?.value);
-        const nCost = stItemNum(q('[data-stock-add-cost]')?.value);
-        const catSel = scope.querySelector('[data-stock-add-cat]');
-        mark('name', name ? '' : t('itemNameErr'));
-        mark('newcat', catSel?.value === '__new__' ? t('itemNewCatErr') : '');
-        mark('current', nCur.bad ? t('itemNumBad') : (nCur.empty && !isEdit) ? t('itemStockErr') : '');
-        mark('par', nPar.bad ? t('itemNumBad') : '');
-        mark('reorder', nReorder.bad ? t('itemNumBad') : '');
-        mark('cost', nCost.bad ? t('itemNumBad') : '');
-        const firstBad = scope.querySelector('.st-if [aria-invalid="true"]');
-        if (firstBad) { firstBad.focus(); return; }
-        const category = catSel?.value || existing?.category || 'legumes';
-        const unit = stockUnit(scope.querySelector('[data-stock-add-unit]')?.value);
-        const supSel = scope.querySelector('[data-stock-add-sup]');
-        const supplier = supSel ? supSel.value : (existing?.supplier || '');
-        const supplierRow = supplier ? getSup().find((s) => supplier === s.name || supplier.startsWith(`${s.name} ·`)) : null;
-        const parLevel = nPar.empty ? 0 : nPar.n;
-        /* Empty = the house rule, 40 % of the par level, which the hint under
-           the field spelled out before the merchant pressed the button. */
-        const reorderLevel = nReorder.empty ? Math.max(0, Math.round(parLevel * 0.4)) : nReorder.n;
-        const costPerUnit = nCost.empty ? 0 : nCost.n;
-        /* Never the par level any more: a new article has the stock the
-           merchant typed (required), an edited one keeps its own if cleared. */
-        const currentStock = nCur.empty ? (existing ? currentStockFor(existing) : 0) : nCur.n;
-        const nutritionData = readNutrition(scope);
-        const nutritionPatch = { nutrition: nutritionData.nutrition, gramsPerUnit: nutritionData.gramsPerUnit };
-        if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;
-
-        if (isEdit) {
-          const before = currentStockFor(existing);
-          if (existing.retail && retailCatalog()) {
-            retailCatalog().updateProduct(existing.id, {
-              name, categoryId: category, cost: costPerUnit, supplierId: supplierRow?.id || '',
-              parLevel, reorderLevel,
-            });
-            retailSetProductStock(existing.id, currentStock, 'comptage');
-            closeTopModal();
-            window.Kiwi.toast(t('editItemToast', name), { type: 'success' });
-            if (stPageActive) render();
-            return;
-          }
-          // Edit path: update overlay (or user item directly)
-          if (existing.id.startsWith('usr-')) {
-            const i = stUserItems.findIndex(x => x.id === existing.id);
-            if (i >= 0) {
-              stUserItems[i] = {
-                ...stUserItems[i],
-                name, category, unit, supplier,
-                parLevel, reorderLevel, costPerUnit, currentStock, ...nutritionPatch, updatedAt: Date.now(),
-              };
-              stItemOverrides[existing.id] = {
-                ...(stItemOverrides[existing.id] || {}),
-                name, category, unit, supplier, parLevel, reorderLevel, costPerUnit, ...nutritionPatch,
-                updatedAt: Date.now(),
-              };
-              stSaveOverlay();   // article créé PAR le commerçant : sa correction compte autant
-            }
-          } else {
-            stItemOverrides[existing.id] = {
-              ...(stItemOverrides[existing.id] || {}),
-              name, category, unit, supplier,
-              parLevel, reorderLevel, costPerUnit, currentStock, ...nutritionPatch, updatedAt: Date.now(),
-            };
-            // Reflect current stock in stStockOverrides so statusOf/daysOfStock pick it up.
-            stStockOverrides[existing.id] = currentStock;
-            stSaveOverlay();
-          }
-          if (Math.abs(currentStock - before) > 0.0005) {
-            countStock(existing, currentStock, 'manual-count-' + Date.now().toString(36));
-          }
-          window.KiwiRestaurantRecipes?.recomputeForStock?.(existing.id, stOverlayScope());
-          closeTopModal();
-          window.Kiwi.toast(t('editItemToast', name) + stDemoNote(), { type: 'success' });
-          if (stPageActive) render();
-          return;
-        }
-
-        if (retailCatalog()) {
-          const product = retailCatalog().addProduct({
-            name, categoryId: category, cost: costPerUnit, priceMAD: 0,
-            supplierId: supplierRow?.id || '', parLevel, reorderLevel,
-          });
-          if (product) retailSetProductStock(product.id, currentStock, 'initial');
-          closeTopModal();
-          window.Kiwi.toast(t('addItemToast', name), { type: 'success' });
-          if (stPageActive) render();
-          return;
-        }
-
-        // Add path: build a real item that matches the venues.js shape so
-        // currentStockFor / statusOf / variance / daysOfStock all behave.
-        const status = currentStock <= 0 ? 'out' : (currentStock < reorderLevel ? 'low' : 'ok');
-        const item = {
-          id: 'usr-' + Date.now().toString(36),
-          name, category, unit, supplier,
-          currentStock,
-          parLevel, reorderLevel, costPerUnit,
-          ...nutritionPatch,
-          // An opening balance is not a supplier delivery. Keep delivery
-          // history unknown until a real receipt movement exists.
-          lastDelivery: null,
-          deliveryFrequency: '·',
-          usageThisWeek: 0,
-          theoreticalUsage: 0,
-          status, updatedAt: Date.now(),
-        };
-        stUserItems.push(item);
-        try {
-          if (window.KiwiInventory && stShowReal()) {
-            window.KiwiInventory.ensureOpening(item.id, currentStock, { unitCost: costPerUnit, locationId: stockLocationId() });
-          }
-        } catch (_) {}
-        stSaveOverlay();
-        window.KiwiRestaurantRecipes?.recomputeForStock?.(item.id, stOverlayScope());
-        closeTopModal();
-        window.Kiwi.toast(t('addItemToast', name) + stDemoNote(), { type: 'success' });
-        if (stPageActive) render();
-      });
-  }
+  function reorderFromHistory(...args) { return stockParts.catalog.reorderFromHistory.apply(this, args); }
+  function reorderSuggestionFor(...args) { return stockParts.catalog.reorderSuggestionFor.apply(this, args); }
+  function openItemForm(...args) { return stockParts.catalog.openItemForm.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Confirm delete item
    * ═══════════════════════════════════════════════════════════════════════ */
-  function confirmDeleteItem(itemId) {
-    const it = getInv().find(x => x.id === itemId);
-    if (!it) return;
-    const m = window.Kiwi.modal({
-      title: t('deleteItemTitle'),
-      width: 480,
-      body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(t('deleteItemBody', it.name) + stDemoNote())}</p>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-delete-confirm>${esc(t('deleteItemBtn'))}</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    wireDismiss(scope);
-    scope?.querySelector('[data-stock-delete-confirm]')?.addEventListener('click', () => {
-      if (it.retail && retailCatalog()) {
-        retailCatalog().archiveProduct(it.id, true);
-        closeTopModal();
-        window.Kiwi.toast(t('deleteItemToast', it.name), { type: 'info' });
-        if (stPageActive) render();
-        return;
-      }
-      if (it.id.startsWith('usr-')) {
-        stUserItems = stUserItems.filter(x => x.id !== it.id);
-      } else {
-        stDeletedItems.add(it.id);
-        stSaveOverlay();
-      }
-      closeTopModal();
-      window.Kiwi.toast(t('deleteItemToast', it.name), { type: 'info' });
-      if (stPageActive) render();
-    });
-  }
+  function confirmDeleteItem(...args) { return stockParts.catalog.confirmDeleteItem.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Add / Edit supplier
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openAddSupplier() { openSupplierForm(null); }
-  function openEditSupplier(id) {
-    const s = getSup().find(x => x.id === id);
-    if (s) openSupplierForm(s);
-  }
-  function openSupplierForm(existing) {
-    const isEdit = !!existing;
-    const title = isEdit ? t('editSupTitle') : t('addSupTitle');
-    const cta = isEdit ? t('editSupBtn') : t('addSupBtn');
-    const catOptions = allCategories().map(c =>
-      `<option value="${esc(c.id)}" ${existing?.category === c.id ? 'selected' : ''}>${esc(c.label)}</option>`
-    ).join('');
-    const m = window.Kiwi.modal({
-      title,
-      width: 600,
-      body: `
-        <div class="st-mb-row">
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supName'))}</label>
-            <input class="st-mb-input" type="text" placeholder="Ex. Olives du Souss" value="${esc(existing?.name || '')}" data-stock-sup-name />
-          </div>
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supCat'))}</label>
-            <select class="st-mb-input" data-stock-sup-cat>${catOptions}</select>
-          </div>
-        </div>
-        <div class="st-mb-row">
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supPhone'))}</label>
-            <input class="st-mb-input mono" type="text" placeholder="+212 …" value="${esc(existing?.contact || '')}" data-stock-sup-phone />
-          </div>
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supLoc'))}</label>
-            <input class="st-mb-input" type="text" placeholder="Casablanca" value="${esc(existing?.location || '')}" data-stock-sup-loc />
-          </div>
-        </div>
-        <div class="st-mb-row">
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supPay'))}</label>
-            <select class="st-mb-input" data-stock-sup-pay>
-              ${['Comptant','Net 7','Net 15','Net 30','Net 45'].map(p =>
-                `<option ${existing?.paymentTerms === p ? 'selected' : ''}>${esc(p)}</option>`
-              ).join('')}
-            </select>
-          </div>
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supDeliv'))}</label>
-            <input class="st-mb-input" type="text" placeholder="hebdomadaire · mardi-vendredi…" value="${esc(existing?.deliverySchedule || '')}" data-stock-sup-deliv />
-          </div>
-        </div>
-        <div class="st-mb-row">
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supRating'))}</label>
-            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="·" value="${esc(existing?.rating != null ? existing.rating : '')}" data-stock-sup-rating />
-          </div>
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('supSpend'))}</label>
-            <input class="st-mb-input mono" type="number" min="0" step="50" placeholder="0" value="${esc(existing?.monthlySpend ?? '')}" data-stock-sup-spend />
-          </div>
-        </div>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-sup-confirm>${esc(cta)}</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    wireDismiss(scope);
-    scope?.querySelector('[data-stock-sup-confirm]')?.addEventListener('click', () => {
-      const name = (scope.querySelector('[data-stock-sup-name]')?.value || '').trim();
-      if (!name) { scope.querySelector('[data-stock-sup-name]')?.focus(); return; }
-      const category = scope.querySelector('[data-stock-sup-cat]')?.value || 'epicerie';
-      const contact = (scope.querySelector('[data-stock-sup-phone]')?.value || '').trim();
-      const location = (scope.querySelector('[data-stock-sup-loc]')?.value || '').trim();
-      const paymentTerms = scope.querySelector('[data-stock-sup-pay]')?.value || 'Net 30';
-      const deliverySchedule = (scope.querySelector('[data-stock-sup-deliv]')?.value || '·').trim();
-      const ratingVal = (scope.querySelector('[data-stock-sup-rating]')?.value || '').trim();
-      const ratingRaw = ratingVal ? parseFloat(ratingVal) : NaN;
-      const rating = isNaN(ratingRaw) ? null : Math.min(5, Math.max(1, ratingRaw));
-      const spendRaw = parseFloat(scope.querySelector('[data-stock-sup-spend]')?.value);
-      const monthlySpend = isNaN(spendRaw) ? 0 : spendRaw;
+  function openAddSupplier(...args) { return stockParts.purchasing.openAddSupplier.apply(this, args); }
+  function openEditSupplier(...args) { return stockParts.purchasing.openEditSupplier.apply(this, args); }
+  function openSupplierForm(...args) { return stockParts.purchasing.openSupplierForm.apply(this, args); }
 
-      if (isEdit) {
-        if (existing.retail && window.KiwiProcurement?.updateSupplier) {
-          window.KiwiProcurement.updateSupplier(existing.id, {
-            name, phone: contact, address: location, categories: category, paymentTerms,
-            leadDays: parseInt(deliverySchedule, 10) || 0,
-          });
-          closeTopModal();
-          window.Kiwi.toast(t('editSupToast', name), { type: 'success' });
-          if (stPageActive) render();
-          return;
-        }
-        if (existing.id.startsWith('usr-')) {
-          const i = stUserSuppliers.findIndex(x => x.id === existing.id);
-          if (i >= 0) { stUserSuppliers[i] = { ...stUserSuppliers[i], name, category, contact, location, paymentTerms, deliverySchedule, rating, monthlySpend }; stSaveOverlay(); }
-        } else {
-          stSupOverrides[existing.id] = { ...(stSupOverrides[existing.id] || {}), name, category, contact, location, paymentTerms, deliverySchedule, rating, monthlySpend };
-          stSaveOverlay();
-        }
-        closeTopModal();
-        window.Kiwi.toast(t('editSupToast', name) + stDemoNote(), { type: 'success' });
-        if (stPageActive) render();
-        return;
-      }
-
-      if (isRetailStock() && window.KiwiProcurement?.addSupplier) {
-        window.KiwiProcurement.addSupplier({ name, phone: contact, address: location, categories: category, paymentTerms, leadDays: parseInt(deliverySchedule, 10) || 0 });
-        closeTopModal();
-        window.Kiwi.toast(t('addSupToast', name), { type: 'success' });
-        if (stPageActive) render();
-        return;
-      }
-
-      const sup = {
-        id: 'usr-sup-' + Date.now().toString(36),
-        name, location, category, contact,
-        deliverySchedule,
-        avgInvoice: monthlySpend > 0 ? Math.round(monthlySpend / 4) : 0,
-        paymentTerms,
-        rating,
-        monthlySpend,
-        priceChangeLast30d: 0,
-      };
-      stUserSuppliers.push(sup);
-      stSaveOverlay();
-      closeTopModal();
-      window.Kiwi.toast(t('addSupToast', name) + stDemoNote(), { type: 'success' });
-      if (stPageActive) render();
-    });
-  }
-
-  function confirmDeleteSupplier(id) {
-    const s = getSup().find(x => x.id === id);
-    if (!s) return;
-    const m = window.Kiwi.modal({
-      title: t('deleteSupTitle'),
-      width: 480,
-      body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(t('deleteSupBody', s.name))}</p>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-sup-delete-confirm>${esc(t('deleteSupBtn'))}</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    wireDismiss(scope);
-    scope?.querySelector('[data-stock-sup-delete-confirm]')?.addEventListener('click', () => {
-      if (s.retail && window.KiwiProcurement?.updateSupplier) {
-        window.KiwiProcurement.updateSupplier(s.id, { active: false });
-        closeTopModal();
-        window.Kiwi.toast(t('deleteSupToast', s.name), { type: 'info' });
-        if (stPageActive) render();
-        return;
-      }
-      if (s.id.startsWith('usr-')) {
-        stUserSuppliers = stUserSuppliers.filter(x => x.id !== s.id);
-      } else {
-        stDeletedSups.add(s.id);
-        stSaveOverlay();
-      }
-      closeTopModal();
-      window.Kiwi.toast(t('deleteSupToast', s.name), { type: 'info' });
-      if (stPageActive) render();
-    });
-  }
+  function confirmDeleteSupplier(...args) { return stockParts.purchasing.confirmDeleteSupplier.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Add category (from cat-pill row)
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openAddCategory() {
-    const m = window.Kiwi.modal({
-      title: t('addCatTitle'),
-      width: 440,
-      body: `
-        <div class="st-mb-field">
-          <label class="st-mb-label">${esc(t('addCatName'))}</label>
-          <input class="st-mb-input" type="text" placeholder="Ex. Surgelés" data-stock-cat-name />
-        </div>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-cat-confirm>${esc(t('addCatBtn'))}</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    wireDismiss(scope);
-    const input = scope?.querySelector('[data-stock-cat-name]');
-    input?.focus();
-    const submit = () => {
-      const raw = (input?.value || '').trim();
-      if (!raw) { input?.focus(); return; }
-      if (retailCatalog()) retailCatalog().addCategory(raw, 'atlas');
-      else {
-        const id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
-        stUserCategories.push({ id, label: raw });
-        stSaveOverlay();
-      }
-      scope?.remove();
-      window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
-      if (stPageActive) render();
-    };
-    scope?.querySelector('[data-stock-cat-confirm]')?.addEventListener('click', submit);
-    input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
-  }
+  function openAddCategory(...args) { return stockParts.catalog.openAddCategory.apply(this, args); }
 
-  function openManageCategory(categoryId) {
-    const category = allCategories().find(c => c.id === categoryId);
-    if (!category) return;
-    const assigned = getInv().filter(item => item.category === categoryId);
-    const alternatives = allCategories().filter(c => c.id !== categoryId);
-    const replacement = alternatives[0]?.id || '';
-    const m = window.Kiwi.modal({
-      title: t('manageCatTitle'),
-      width: 480,
-      body: `
-        <div class="st-mb-field">
-          <label class="st-mb-label">${esc(t('renameCatLabel'))}</label>
-          <div style="display:flex;gap:8px;">
-            <input class="st-mb-input" type="text" maxlength="60" value="${esc(category.label)}" data-stock-cat-rename style="flex:1;" />
-            <button class="st-btn primary" type="button" data-stock-cat-rename-confirm>${esc(t('renameCatBtn'))}</button>
-          </div>
-        </div>
-        <div style="border-top:1px solid var(--n-200);margin:20px 0 14px;"></div>
-        ${assigned.length ? `<div class="st-mb-field">
-          <label class="st-mb-label">${esc(t('deleteCatMove'))} · ${assigned.length} article${assigned.length > 1 ? 's' : ''}</label>
-          ${alternatives.length
-            ? `<select class="st-mb-input" data-stock-cat-replacement>${alternatives.map(c => `<option value="${esc(c.id)}"${c.id === replacement ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
-            : `<div class="st-notice warn">${esc(t('deleteCatBlocked'))}</div>`}
-        </div>` : ''}
-        <button class="st-btn" type="button" data-stock-cat-delete-confirm ${assigned.length && !alternatives.length ? 'disabled' : ''} style="color:#9a1f1f;border-color:rgba(154,31,31,.35);width:100%;">${esc(t('deleteCatBtn'))}</button>
-      `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
-    });
-    const scope = m?.el || topBackdrop();
-    wireDismiss(scope);
-    const renameInput = scope?.querySelector('[data-stock-cat-rename]');
-    scope?.querySelector('[data-stock-cat-rename-confirm]')?.addEventListener('click', () => {
-      const name = (renameInput?.value || '').trim();
-      if (!name) { renameInput?.focus(); return; }
-      if (allCategories().some(c => c.id !== categoryId && c.label.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
-        renameInput?.focus(); return;
-      }
-      if (retailCatalog()) {
-        retailCatalog().renameCategory(categoryId, name);
-        closeTopModal();
-        window.Kiwi.toast(t('renameCatToast', name), { type: 'success' });
-        if (stPageActive) render();
-        return;
-      }
-      stCategoryOverrides[categoryId] = { label: name, updatedAt: Date.now() };
-      stSaveOverlay();
-      closeTopModal();
-      window.Kiwi.toast(t('renameCatToast', name), { type: 'success' });
-      if (stPageActive) render();
-    });
-    scope?.querySelector('[data-stock-cat-delete-confirm]')?.addEventListener('click', () => {
-      const target = scope.querySelector('[data-stock-cat-replacement]')?.value || '';
-      if (assigned.length && !target) return;
-      if (retailCatalog()) {
-        retailCatalog().deleteCategory(categoryId, { reassignTo: target || null });
-        if (stCatFilter === categoryId) stCatFilter = target || 'all';
-        closeTopModal();
-        window.Kiwi.toast(t('deleteCatToast', category.label), { type: 'info' });
-        if (stPageActive) render();
-        return;
-      }
-      assigned.forEach((item) => {
-        const userIndex = stUserItems.findIndex(candidate => candidate.id === item.id);
-        if (userIndex >= 0) stUserItems[userIndex] = { ...stUserItems[userIndex], category: target, updatedAt: Date.now() };
-        stItemOverrides[item.id] = { ...(stItemOverrides[item.id] || {}), category: target, updatedAt: Date.now() };
-      });
-      stUserCategories = stUserCategories.filter(c => c.id !== categoryId);
-      delete stCategoryOverrides[categoryId];
-      stDeletedCategories.add(categoryId);
-      if (stCatFilter === categoryId) stCatFilter = target || 'all';
-      stSaveOverlay();
-      closeTopModal();
-      window.Kiwi.toast(t('deleteCatToast', category.label), { type: 'info' });
-      if (stPageActive) render();
-    });
-  }
+  function openManageCategory(...args) { return stockParts.catalog.openManageCategory.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Day deliveries detail
@@ -7999,14 +3637,7 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * Send suggested order
    * ═══════════════════════════════════════════════════════════════════════ */
-  function sendSuggestedOrder() {
-    const btn = document.querySelector('[data-action="stock-send-suggested"]');
-    if (btn) { btn.setAttribute('disabled', ''); btn.style.opacity = '0.65'; btn.innerHTML = 'Envoi en cours…'; }
-    setTimeout(() => {
-      window.Kiwi.toast('4 commandes envoyées · WhatsApp confirmé · 8 920 MAD', { type: 'success', duration: 4500 });
-      if (btn) { btn.removeAttribute('disabled'); btn.style.opacity = '1'; btn.innerHTML = esc(t('btnSendSuggested')); }
-    }, 1500);
-  }
+  function sendSuggestedOrder(...args) { return stockParts.purchasing.sendSuggestedOrder.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * Handler registration
@@ -8147,6 +3778,9 @@
     // Calendar
     H['stock-day-detail'] = (el) => openDayDetail(el.dataset.day, el.dataset.dayName);
 
+    Object.keys(H).filter(name => name === 'nav-stock' || name.startsWith('stock-'))
+      .forEach(name => { H[name] = stockHandler(H[name]); });
+
     // Re-render on venue/language changes
     window.KiwiVenue?.subscribe?.(() => { if (stPageActive) render(); });
     window.addEventListener('kiwi:langchange', () => { if (stPageActive) render(); });
@@ -8164,6 +3798,141 @@
       repaintFromSharedStock();
     });
   }
+
+
+  /* Pont interne unique : les accesseurs gardent les liaisons vivantes.
+   * Les fonctions stables sont capturées par les parties ; les let restent ici. */
+  const stockParts = Object.create(null);
+  const stockScope = {
+    get STR() { return STR; },
+    get lang() { return lang; },
+    get t() { return t; },
+    get catalogText() { return catalogText; },
+    get catalogLabel() { return catalogLabel; },
+    get stCatFilter() { return stCatFilter; }, set stCatFilter(value) { stCatFilter = value; },
+    get stItemSubView() { return stItemSubView; }, set stItemSubView(value) { stItemSubView = value; },
+    get stWasteFilterReason() { return stWasteFilterReason; }, set stWasteFilterReason(value) { stWasteFilterReason = value; },
+    get stWasteDateRange() { return stWasteDateRange; }, set stWasteDateRange(value) { stWasteDateRange = value; },
+    get stWasteSearch() { return stWasteSearch; }, set stWasteSearch(value) { stWasteSearch = value; },
+    get stCountSubTab() { return stCountSubTab; }, set stCountSubTab(value) { stCountSubTab = value; },
+    get stCountStatusFilter() { return stCountStatusFilter; }, set stCountStatusFilter(value) { stCountStatusFilter = value; },
+    get stCountDateFilter() { return stCountDateFilter; }, set stCountDateFilter(value) { stCountDateFilter = value; },
+    get stCountSearch() { return stCountSearch; }, set stCountSearch(value) { stCountSearch = value; },
+    get stCountsCache() { return stCountsCache; }, set stCountsCache(value) { stCountsCache = value; },
+    get stCountsLastFetched() { return stCountsLastFetched; }, set stCountsLastFetched(value) { stCountsLastFetched = value; },
+    get stStockOverrides() { return stStockOverrides; },
+    get stConfirmedOrders() { return stConfirmedOrders; },
+    get stPageActive() { return stPageActive; }, set stPageActive(value) { stPageActive = value; },
+    get stUserItems() { return stUserItems; }, set stUserItems(value) { stUserItems = value; },
+    get stItemOverrides() { return stItemOverrides; },
+    get stDeletedItems() { return stDeletedItems; },
+    get stUserSuppliers() { return stUserSuppliers; }, set stUserSuppliers(value) { stUserSuppliers = value; },
+    get stSupOverrides() { return stSupOverrides; },
+    get stDeletedSups() { return stDeletedSups; },
+    get stUserCategories() { return stUserCategories; }, set stUserCategories(value) { stUserCategories = value; },
+    get stCategoryOverrides() { return stCategoryOverrides; },
+    get stDeletedCategories() { return stDeletedCategories; },
+    get stDemoNote() { return stDemoNote; },
+    get stOverlayScope() { return stOverlayScope; },
+    get stSaveOverlay() { return stSaveOverlay; },
+    get stOverlayRaw() { return stOverlayRaw; },
+    get svg() { return svg; },
+    get esc() { return esc; },
+    get fmtNum() { return fmtNum; },
+    get fmtMad() { return fmtMad; },
+    get fmtUnit() { return fmtUnit; },
+    get stockUnit() { return stockUnit; },
+    get stockUnitOptions() { return stockUnitOptions; },
+    get fmtPct() { return fmtPct; },
+    get fmtDateShort() { return fmtDateShort; },
+    get catLabel() { return catLabel; },
+    get isRetailStock() { return isRetailStock; },
+    get retailCatalog() { return retailCatalog; },
+    get retailProcurementDoc() { return retailProcurementDoc; },
+    get retailSetProductStock() { return retailSetProductStock; },
+    get stockBusinessDate() { return stockBusinessDate; },
+    get stShowReal() { return stShowReal; },
+    get getInv() { return getInv; },
+    get getSup() { return getSup; },
+    get allCategories() { return allCategories; },
+    get stockLocationId() { return stockLocationId; },
+    get currentStockFor() { return currentStockFor; },
+    get moveStock() { return moveStock; },
+    get countStock() { return countStock; },
+    get theoreticalUsageFor() { return theoreticalUsageFor; },
+    get statusOf() { return statusOf; },
+    get variance() { return variance; },
+    get daysOfStock() { return daysOfStock; },
+    get render() { return render; },
+    get rerenderTabBody() { return rerenderTabBody; },
+    get openMark86() { return openMark86; },
+    get renderAiCard() { return renderAiCard; },
+    get ct() { return ct; },
+    get ctMad() { return ctMad; },
+    get ctNum() { return ctNum; },
+    get ctWhen() { return ctWhen; },
+    get ctWho() { return ctWho; },
+    get ctRole() { return ctRole; },
+    get ctStore() { return ctStore; },
+    get ctReviewNote() { return ctReviewNote; },
+    get ctReason() { return ctReason; },
+    get ctWasteNote() { return ctWasteNote; },
+    get ctUnit() { return ctUnit; },
+    get stReviewBusy() { return stReviewBusy; }, set stReviewBusy(value) { stReviewBusy = value; },
+    get openQuickOrder() { return openQuickOrder; },
+    get QO_COPY() { return QO_COPY; },
+    get PICK_COPY() { return PICK_COPY; },
+    get _pdfjsPromise() { return _pdfjsPromise; }, set _pdfjsPromise(value) { _pdfjsPromise = value; },
+    get stConflictStash() { return stConflictStash; }, set stConflictStash(value) { stConflictStash = value; },
+    get stCountHistKey() { return stCountHistKey; },
+    get stCountDate() { return stCountDate; },
+    get itemHistory() { return itemHistory; },
+    get topBackdrop() { return topBackdrop; },
+    get wireDismiss() { return wireDismiss; },
+    get closeTopModal() { return closeTopModal; },
+    get nutritionKeys() { return nutritionKeys; },
+    get allergenKeys() { return allergenKeys; },
+    get ciqualPromise() { return ciqualPromise; }, set ciqualPromise(value) { ciqualPromise = value; },
+  };
+  window.KiwiStockInternal = {
+    install(name, factory) { stockParts[name] = factory(stockScope); },
+  };
+  /* URLs littérales : tools/stamps.js les découvre et remonte au chargeur. */
+  const stockUrls = [
+    'assets/stock/loss.js?v=1',
+    'assets/stock/counts.js?v=1',
+    'assets/stock/purchasing.js?v=1',
+    'assets/stock/intake.js?v=1',
+    'assets/stock/catalog.js?v=1',
+  ];
+  const stockLoads = new Map();
+  function loadStockParts() {
+    return Promise.all(stockUrls.map(url => {
+      if (stockLoads.has(url)) return stockLoads.get(url);
+      const script = document.createElement('script');
+      script.src = url;
+      const loading = new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = () => { stockLoads.delete(url); script.remove(); reject(new Error(url)); };
+        document.head.appendChild(script);
+      });
+      stockLoads.set(url, loading);
+      return loading;
+    }));
+  }
+  function stockHandler(handler) {
+    return function () {
+      if (Object.keys(stockParts).length === stockUrls.length) return handler.apply(this, arguments);
+      const self = this, args = arguments;
+      return loadStockParts().then(() => handler.apply(self, args), () => {
+        window.Kiwi?.toast?.(t('mCountErrOffline'), { type: 'error' });
+      });
+    };
+  }
+  /* Les parties se chargent dès le démarrage (précachées par le service worker) :
+     un premier clic ne doit pas attendre le réseau, sinon un sélecteur de
+     fichier perd l'activation utilisateur (Safari) ou échoue hors ligne. */
+  try { loadStockParts().catch(() => {}); } catch (_) {}
 
   /* Private bridge used by restaurant recipes. It exposes the same persisted
    * inventory the Stock page renders, including edits and physical counts;

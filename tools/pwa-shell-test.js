@@ -64,7 +64,11 @@ const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-c
   .map(read).join('\n');
 /* Files a shell script loads only when needed (the iPhone barcode decoder,
    fetched by retail-scan.js when the camera opens) keep their stamp there. */
-const onDemand = ['assets/retail-scan.js'].map(read).join('\n');
+const onDemand = ['assets/retail-scan.js', 'assets/stock.js'].map(read).join('\n');
+// Chaque partie du stock doit exister hors ligne avant la première ouverture.
+for (const m of read('assets/stock.js').matchAll(/'(assets\/stock\/[^']+\.js\?v=\d+)'/g)) {
+  ok(m[1] + ' is pre-cached', shell.includes('/' + m[1]));
+}
 const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 ['assets/dashboard-pwa.js', 'assets/caisse-pwa.js', 'assets/employee-live.js'].forEach((file) => {
   ok(`${file} registers the current worker version`, !!workerVersion && read(file).includes(`/kiwi-sw.js?v=${workerVersion}`));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* Stock · la ligne « rupture totale » dit vrai et se lit en sombre (owner, 2026-10-12).
  *
  * Le bouton « Commander en urgence » devenait un pavé noir sans texte au
@@ -12,7 +13,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const js = fs.readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
+const js = stockTestSource(ROOT);
 const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/dashboard-shell.css'), 'utf8') + '</style>');
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n++; };

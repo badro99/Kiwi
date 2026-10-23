@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · intake posting test — l'idempotence au niveau d'écriture.
  *
@@ -38,7 +39,7 @@ async function check(name, fn) {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ledgerSrc = fs.readFileSync(path.join(root, 'assets/inventory-ledger.js'), 'utf8');
 const procurementSrc = fs.readFileSync(path.join(root, 'assets/procurement.js'), 'utf8');
-const stockSrc = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
+const stockSrc = stockTestSource(root);
 const intakeSrc = fs.readFileSync(path.join(root, 'functions/api/ai/intake.js'), 'utf8');
 const movementsSrc = fs.readFileSync(path.join(root, 'functions/api/inventory/movements.js'), 'utf8');
 

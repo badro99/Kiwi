@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const briefing = readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
-const stock = readFileSync(new URL('../assets/stock.js', import.meta.url), 'utf8');
+const stock = stockTestSource();
 const actions = readFileSync(new URL('../assets/agent-truth.js', import.meta.url), 'utf8');
 const memory = {}, callbacks = {};
 const storage = { getItem: (k) => memory[k] || null, setItem: (k, v) => { memory[k] = String(v); } };

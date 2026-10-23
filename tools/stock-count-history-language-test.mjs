@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* Historique des inventaires, revue propriétaire et journal des pertes ·
  * ce que le commerçant lit suit la langue de l'écran.
  *
@@ -25,7 +26,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
+const src = stockTestSource(ROOT);
 
 let passed = 0, failed = 0;
 async function ok(label, fn) {

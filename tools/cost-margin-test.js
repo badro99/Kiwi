@@ -31,6 +31,7 @@
  * et `null` remonte jusqu'à l'écran.
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
+const stockTestSource = require('./stock-test-source.cjs');
 
 const fs = require('fs');
 const path = require('path');
@@ -324,7 +325,7 @@ const MENU = [
   ok('finance : plus d\'e-mail de comptable inventé', !/cabinetdouiri|samira@/.test(fin));
   ok('finance : plus de gestionnaire d\'export TVA', !/fin-tva-pdf|fin-tva-xls|fin-tva-send/.test(fin));
 
-  const st = R('assets/stock.js');
+  const st = stockTestSource(ROOT);
   ok('stock : plus de repli sur le CA du Café Atlas',
     !/return VENUE_REVENUE\[currentVenueId\(\)\] \|\| 825000;/.test(st));
 

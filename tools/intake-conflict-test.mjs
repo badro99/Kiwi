@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · intake conflict test — l'état dédié du 409 posting-conflict.
  *
@@ -27,7 +28,7 @@ async function check(name, fn) {
 }
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const stockSrc = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
+const stockSrc = stockTestSource(root);
 
 function grab(re, what) {
   const m = stockSrc.match(re);

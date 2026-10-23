@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* Stock · « Nouvel article » records what the merchant typed, nothing else.
  *
  * 2026-10-12. A new article saved with « Stock actuel » empty was written with
@@ -15,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
+const src = stockTestSource(ROOT);
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

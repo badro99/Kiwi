@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
@@ -91,7 +92,7 @@ ok(pairs.every((m) => !/—/.test(m[4] + m[6])), 'no em dash in the till toast t
 ok(pairs.every((m) => !/God Mode/.test(m[4] + m[6])), 'no internal console name leaks into the till copy');
 
 // App Review 3.1.1: no subscription price reachable in the iOS app
-const stock = read('assets/stock.js');
+const stock = stockTestSource();
 const interactive = read('assets/interactive.js');
 ok(/H\['stock-upgrade-ultra'\] = \(\) => \{\s*if \(document\.documentElement\.classList\.contains\('kiwi-native'\)\) return;/.test(stock) && /\.st-locked-cta\{display:none/.test(runtimeCss), 'the Stock upsell never shows a plan price in the app');
 ok(/'upgrade-pro': \(\) => \{\s*if \(document\.documentElement\.classList\.contains\('kiwi-native'\)\)/.test(interactive), 'the plans sheet stays closed in the app');

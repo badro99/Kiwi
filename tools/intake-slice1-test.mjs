@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · intake slice 1 test — « dépose un papier, il se range tout seul ».
  *
@@ -30,7 +31,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const intakeSrc = fs.readFileSync(path.join(root, 'functions/api/ai/intake.js'), 'utf8');
 const invoiceSrc = fs.readFileSync(path.join(root, 'functions/api/ai/invoice.js'), 'utf8');
 const quotaSrc = fs.readFileSync(path.join(root, 'functions/api/ai/_quota.js'), 'utf8');
-const stockSrc = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
+const stockSrc = stockTestSource(root);
 
 /* Les routes sont des modules ESM sans effets de bord au chargement : on
  * retire les imports et on évalue le reste pour obtenir les vraies fonctions. */
