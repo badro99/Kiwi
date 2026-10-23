@@ -2268,6 +2268,18 @@ section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
   else fail(`surface-matrix-browser-test.mjs exited ${r.status}: ${out.trim()}`);
 }
 
+/* The dashboard destinations at each screen size, FR/EN/AR, walked through the
+ * sidebar: one file per size so the pool runs them side by side. */
+for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs']) {
+  section(`Surface matrix · dashboard (tools/${file})`);
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn(`${file} skipped, browser assertions not executed`);
+  else if (r.status === 0) ok(`${file} green`);
+  else fail(`${file} exited ${r.status}: ${out.trim().split('\n').filter((l) => l.includes('✗')).slice(0, 12).join(' | ') || out.trim().slice(-600)}`);
+}
+
 /* ── 13b · coquille native, pilotée pour de vrai ──────────────────────────
  * app-bundle-test.mjs prouve le paquet ; celui-ci conduit la coquille dans un
  * vrai Chromium : boot borné, parcours guidé, appairage, imprimante, locales,

@@ -73,6 +73,33 @@ function pdsInk(hex) {
   const L = 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
   return L > 0.42 ? '#141A16' : '#F7F3E8';
 }
+/* A staff colour behind small initials. The floor plan sets initials in bone
+   ink; when bone does not reach 4.5:1 (WCAG AA for 11 px text) on a mid-tone
+   colour, the badge darkens that colour a step at a time until it does. Only
+   a genuinely light colour (mint, bone, pale grey) switches to dark ink. The
+   roster keeps the merchant's colour; only the badge paint is adjusted. */
+function pdsLum(hex) {
+  const h = String(hex || '').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  if (!/^[0-9a-fA-F]{6}$/.test(n)) return null;
+  const v = [0, 2, 4].map(i => {
+    const s = parseInt(n.slice(i, i + 2), 16) / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+}
+function pdsBadge(hex) {
+  const LIGHT = '#F7F3E8', DARK = '#141A16', lL = pdsLum(LIGHT), lD = pdsLum(DARK);
+  const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  let bg = pdsLum(hex) == null ? '#0B6E4F' : '#' + String(hex).replace('#', '').replace(/^(.)(.)(.)$/, '$1$1$2$2$3$3');
+  for (let i = 0; i < 20; i++) {
+    const l = pdsLum(bg), onLight = ratio(l, lL), onDark = ratio(l, lD);
+    if (onLight >= 4.5) return { bg, ink: LIGHT };
+    if (i === 0 && l > 0.42 && onDark >= 4.5) return { bg, ink: DARK };
+    bg = pdsShade(bg, -0.03);
+  }
+  return { bg, ink: LIGHT };
+}
 /* Slightly darker/lighter sibling of a material, for edges and shading. */
 function pdsShade(hex, amt) {
   const h = String(hex || '#FBF7EE').replace('#', '');

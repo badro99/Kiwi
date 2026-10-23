@@ -513,7 +513,7 @@ const PDS_STR = {
     tRect: 'Rectangulaire',
     tBar: 'Bar / Comptoir',
     tHigh: 'Mange-debout',
-    seats: 'places',
+    seats: 'places', tableName: 'Table',
     addedTableToast: (id) => `Table ${id} ajoutée`,
     addedTableDesc: (s, z) => `${s} couverts · ${z} · glissez-la pour la positionner.`,
     addedElementToast: 'Élément ajouté',
@@ -742,7 +742,7 @@ const PDS_STR = {
     tRect: 'Rectangular',
     tBar: 'Bar / Counter',
     tHigh: 'High table',
-    seats: 'seats',
+    seats: 'seats', tableName: 'Table',
     addedTableToast: (id) => `Table ${id} added`,
     addedTableDesc: (s, z) => `${s} seats · ${z} · drag to position.`,
     addedElementToast: 'Element added',
@@ -958,7 +958,7 @@ const PDS_STR = {
     tRect: 'مستطيلة',
     tBar: 'بار / كاونتر',
     tHigh: 'طاولة عالية',
-    seats: 'مقاعد',
+    seats: 'مقاعد', tableName: 'طاولة',
     addedTableToast: (id) => `تمت إضافة الطاولة ${id}`,
     addedTableDesc: (s, z) => `${s} مقاعد · ${z} · اسحبها للموقع.`,
     addedElementToast: 'تمت إضافة العنصر',
@@ -2268,7 +2268,8 @@ function pdsPhoneBody(state, P, openSid) {
     const mini = mine.length
       ? mine.slice(0, 5).map(t => `<span class="pdsp-chip">${pdsEsc(pdsTableNum(t))}</span>`).join('') + (mine.length > 5 ? `<span class="pdsp-chip more">+${mine.length - 5}</span>` : '')
       : `<span class="pdsp-none">${pdsEsc(P.none)}</span>`;
-    html += `<div class="pdsp-srv${open ? ' open' : ''}" role="group" style="--c:${pdsEsc(s.color || '#0B6E4F')}">
+    const paint = pdsBadge(s.color);
+    html += `<div class="pdsp-srv${open ? ' open' : ''}" role="group" style="--c:${pdsEsc(paint.bg)};--c-ink:${paint.ink}">
       <button type="button" class="pdsp-head" data-pdsp-srv="${pdsEsc(sid)}" aria-expanded="${open}">
         <span class="pdsp-av">${pdsEsc(pdsInitials(s.name))}</span>
         <span class="pdsp-who"><b>${pdsEsc(s.name)}</b><small>${pdsEsc(P.count(mine.length, covers))}</small></span>
@@ -2319,7 +2320,7 @@ const PDS_PHONE_CSS = `
 .pdsp-srv{min-height:0;margin:0;padding:0;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--n-200);overflow:hidden}
 .pdsp-srv.open{box-shadow:inset 0 0 0 1.5px var(--c)}
 .pdsp-head{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px 4px;border:0;background:none;color:inherit;text-align:start;font:inherit;cursor:pointer}
-.pdsp-av{flex:0 0 auto;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font-weight:600;font-size:13px}
+.pdsp-av{flex:0 0 auto;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:var(--c-ink,#fff);font-weight:600;font-size:13px}
 .pdsp-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .pdsp-who b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pdsp-who small{font-size:13px;color:var(--n-600)}
@@ -2339,8 +2340,8 @@ const PDS_PHONE_CSS = `
 .pdsp-t b{font:600 16px/1.1 "JetBrains Mono",monospace}
 .pdsp-t small{font-size:11px;color:var(--n-500)}
 .pdsp-t i{position:absolute;top:3px;inset-inline-end:5px;font-size:11px;font-weight:600;color:var(--n-500)}
-.pdsp-t.on{background:var(--c);border-color:var(--c);color:#fff}
-.pdsp-t.on small,.pdsp-t.on i{color:rgba(255,255,255,.8)}
+.pdsp-t.on{background:var(--c);border-color:var(--c);color:var(--c-ink,#fff)}
+.pdsp-t.on small,.pdsp-t.on i{color:var(--c-ink,#fff)}
 html[data-theme="dark"] .pdsp-t:not(.on){background:rgba(255,255,255,.04)}
 @media (prefers-reduced-motion: reduce){.pdsp-chev,.pdsp-t{transition:none}}
 `;
@@ -4035,9 +4036,10 @@ function pdsRenderTable(t, state, T) {
   const chairs = showChairs ? pdsNoirChairs(g, g.seats, ring) : '';
   const numDisp = /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
   const serverBadge = assignedServers.length
-    ? `<span class="pds-tbl-servers">${assignedServers.map(server => {
+    ? `<span class="pds-tbl-servers" aria-hidden="true">${assignedServers.map(server => {
         const initials = server.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
-        return `<span class="pds-tbl-server" style="background:${server.color};color:${pdsInk(server.color)};" title="${pdsEsc(server.name)}">${initials}</span>`;
+        const paint = pdsBadge(server.color);
+        return `<span class="pds-tbl-server" style="background:${pdsEsc(paint.bg)};color:${paint.ink};" title="${pdsEsc(server.name)}">${initials}</span>`;
       }).join('')}</span>`
     : '';
   /* La pastille « 6 min » du mockup : le temps depuis l'assise, posé
@@ -4050,8 +4052,8 @@ function pdsRenderTable(t, state, T) {
   const sinceInfo = eff.since ? pdsSince(eff.since) : null;
   if (sinceInfo && (st === 'occupied' || st === 'ordering' || st === 'bill')) {
     sinceChip = sinceInfo.check
-      ? `<span class="pds-tbl-since is-check" title="${pdsEsc(T.liveCheckHint)}">${pdsEsc(T.checkTable)}</span>`
-      : `<span class="pds-tbl-since">${pdsEsc(sinceInfo.label)}</span>`;
+      ? `<span class="pds-tbl-since is-check" aria-hidden="true" title="${pdsEsc(T.liveCheckHint)}">${pdsEsc(T.checkTable)}</span>`
+      : `<span class="pds-tbl-since" aria-hidden="true">${pdsEsc(sinceInfo.label)}</span>`;
   }
   let reservationLabel = '';
   if (st === 'reserved') {
@@ -4062,26 +4064,39 @@ function pdsRenderTable(t, state, T) {
     reservationLabel = T.liveSoon(pdsClock(eff.next.startAt));
   }
   const reservationChip = reservationLabel
-    ? `<span class="pds-resv-chip${st === 'reserved' ? '' : ' is-next'}">${pdsEsc(reservationLabel)}</span>`
+    ? `<span class="pds-resv-chip${st === 'reserved' ? '' : ' is-next'}" aria-hidden="true">${pdsEsc(reservationLabel)}</span>`
     : '';
   const billChip = (st === 'bill' || st === 'occupied' || st === 'ordering') && eff.billCents > 0
-    ? `<span class="pds-bill-chip">${pdsEsc(T.mad(eff.billCents / 100))}</span>` : '';
+    ? `<span class="pds-bill-chip" aria-hidden="true">${pdsEsc(T.mad(eff.billCents / 100))}</span>` : '';
   const heat = pdsHeat(t);
+  /* The button is named by its content: a hidden « Table », the number as
+     printed, then seats, status and whatever the chips say. The chips and the
+     covers line are drawn for the eye and hidden from the tree, so a screen
+     reader hears each fact once and the name starts with the visible number
+     (WCAG 2.5.3, no aria-label that could drift from the face). */
+  const cellRest = [
+    g.seats ? `${eff.covers && st !== 'free' ? eff.covers + '/' : ''}${g.seats} ${T.seats}` : '',
+    pdsStatusLabel(st, T),
+    assignedServers.map(sv => sv.name).join(', '),
+    sinceInfo && sinceChip ? (sinceInfo.check ? T.checkTable : sinceInfo.label) : '',
+    reservationLabel,
+    billChip ? T.mad(eff.billCents / 100) : '',
+    heat && heat.label ? heat.label : '',
+  ].filter(Boolean);
 
   return `
     <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''} ${pdsFiltered(st)?'is-dim':''} ${heat?'has-heat':''}"
          data-pds-table="${t.id}" data-status="${st}" data-pds-sig="${pdsEsc(pdsSig(t))}"
          role="button" tabindex="0"
-         aria-label="Table ${pdsEsc(t.num)}, ${g.seats} ${T.seats}, ${pdsEsc(pdsStatusLabel(st, T))}"
          style="left:${t.x - P}px; top:${t.y - P}px; width:${g.w + P*2}px; height:${g.h + P*2}px;
                 --pad:${P}px; transform:rotate(${t.rot||0}deg);${heat ? ` --heat:${heat.a.toFixed(2)};` : ''}">
       <svg class="pds-tbl-svg" viewBox="${-P} ${-P} ${g.w + P*2} ${g.h + P*2}" aria-hidden="true">
         ${chairs}${body}
       </svg>
       <div class="pds-tbl-face" style="color:${ink};">
-        <span class="pds-tbl-num">${pdsEsc(numDisp)}</span>
-        ${g.seats ? `<span class="pds-tbl-covers">${eff.covers && st !== 'free' ? `${eff.covers}/` : ''}${g.seats}p</span>` : ''}
-        ${heat && heat.label ? `<span class="pds-tbl-heat">${pdsEsc(heat.label)}</span>` : ''}
+        <span class="pds-sr">${pdsEsc(T.tableName || 'Table')} </span><span class="pds-tbl-num">${pdsEsc(numDisp)}</span>${cellRest.length ? `<span class="pds-sr">, ${pdsEsc(cellRest.join(', '))}</span>` : ''}
+        ${g.seats ? `<span class="pds-tbl-covers" aria-hidden="true">${eff.covers && st !== 'free' ? `${eff.covers}/` : ''}${g.seats}p</span>` : ''}
+        ${heat && heat.label ? `<span class="pds-tbl-heat" aria-hidden="true">${pdsEsc(heat.label)}</span>` : ''}
       </div>
       ${serverBadge}
       ${sinceChip}
@@ -5802,7 +5817,7 @@ function pdsExportSvg(state, zone, T) {
       ? `<ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="#FFFFFF" stroke="#0A0F0D" stroke-width="1.5"/>`
       : `<rect width="${g.w}" height="${g.h}" rx="${Math.min(8, g.w / 5, g.h / 5)}" fill="#FFFFFF" stroke="#0A0F0D" stroke-width="1.5"/>`;
     const svs = pdsServerIds(t).map(id => staff.get(id)).filter(Boolean);
-    const dots = svs.map((sv, i) => `<g transform="translate(${g.w - 4 - i * 20} -6)"><circle r="9" fill="${pdsEsc(sv.color || '#0B6E4F')}"/><text y="3.5" text-anchor="middle" font-size="9" font-weight="600" fill="${pdsInk(sv.color || '#0B6E4F')}">${pdsEsc(pdsInitials(sv.name))}</text></g>`).join('');
+    const dots = svs.map((sv, i) => `<g transform="translate(${g.w - 4 - i * 20} -6)"><circle r="9" fill="${pdsEsc(pdsBadge(sv.color).bg)}"/><text y="3.5" text-anchor="middle" font-size="9" font-weight="600" fill="${pdsBadge(sv.color).ink}">${pdsEsc(pdsInitials(sv.name))}</text></g>`).join('');
     return `<g transform="translate(${t.x + pad} ${t.y + pad + 30}) rotate(${t.rot || 0} ${cx} ${cy})">${body}
       <text x="${cx}" y="${cy + 2}" text-anchor="middle" font-size="${Math.max(11, Math.min(18, g.h / 3))}" font-weight="600" fill="#0A0F0D">${pdsEsc(pdsTableNum(t))}</text>
       <text x="${cx}" y="${cy + 15}" text-anchor="middle" font-size="9" fill="#6B655B">${g.seats}p</text>${dots}</g>`;
@@ -7008,7 +7023,7 @@ const PDS_INLINE_CSS = `
   .pds-canvas-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; flex-wrap:wrap; }
   .pds-legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .pds-legend-title { font-size:11px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
-  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:rgba(10,15,13,0.55); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:rgba(10,15,13,0.64); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
   /* Légende jour : les mêmes cases 17 × 13 rx 4 que la nuit, à l'encre sur
      papier · l'atlas ne s'allume que pour l'occupée, comme dans la scène. */
   .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
@@ -7276,6 +7291,8 @@ const PDS_INLINE_CSS = `
   .pds-tbl-cell.pds-has-server .pds-tbl { border-color: var(--pds-server, currentColor); border-width:2px; }
 
   /* Server badge · caisse style: circle pinned to corner, white ring */
+  /* Read aloud, never painted: the table's spoken name around its number. */
+  .pds-sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
   .pds-tbl-server {
     position:absolute;
     top:-10px; right:-10px;
