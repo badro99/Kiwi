@@ -66,6 +66,8 @@ async function open(lang) {
     try { if (navigator.serviceWorker) Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
     try { localStorage.setItem('kiwiLang', lang); } catch (_) {}
   }, lang);
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=ar viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await page.waitForFunction(() => document.readyState === 'complete' && window.KiwiICE && window.Kiwi && window.Kiwi.handlers['account-profile'], { timeout: 20000 });
   await sleep(1200);
@@ -90,6 +92,7 @@ async function typeIce(page, value) {
 }
 
 {
+  // coverage: surface=dashboard locale=fr viewport=desktop
   const { ctx, page, problems } = await open('fr');
   const rule = await page.evaluate(() => ['001561191000066', '001561191000065', '123', '00156119100006A', ''].map((x) => window.KiwiICE.problem(x)));
   check(JSON.stringify(rule) === JSON.stringify([null, 'checksum', 'length', 'digits', null]), 'navigateur · même règle que le serveur');
@@ -125,6 +128,7 @@ async function typeIce(page, value) {
 }
 
 {
+  // coverage: surface=dashboard locale=ar viewport=desktop
   const { ctx, page } = await open('ar');
   await openEditor(page);
   await typeIce(page, '12345');

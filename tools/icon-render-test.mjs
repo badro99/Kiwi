@@ -111,6 +111,7 @@ async function load(t, url, { settle = 600 } = {}) {
   const p = t.watch(await ctx.newPage());
   await p.setViewport({ width: 1100, height: 900 });
   t.step('open ' + url);
+  // coverage: surface=shell-kit locale=en viewport=tablet
   await p.goto(base + url, { waitUntil: 'load', timeout: 60000 });
   /* External <use> references arrive after load: wait until every icon has a non-empty box, or give up and measure. */
   const deadline = Date.now() + 8000;

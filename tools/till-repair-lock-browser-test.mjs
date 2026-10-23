@@ -207,6 +207,7 @@ await S.run('re-pair mid-service: lock, no leak, pair back restores', async (t) 
   }, { a: A, b: B });
 
   t.step('open the service at A, a table, an unsynced sale');
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await openA(page);
   const tableId = await page.evaluate(() => Object.keys(tables)[0] || '');

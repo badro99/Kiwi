@@ -60,6 +60,7 @@ async function dashboard(t, { theme, range }) {
     } catch (_) {}
   }, theme, range);
   t.step(`open dashboard (${theme}, ${range})`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   // A fresh browser lands on the welcome card, then the demo's lock screen.
   for (const label of ['Explorer la démo', 'Entrer dans la démo']) {

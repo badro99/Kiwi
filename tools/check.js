@@ -2207,6 +2207,17 @@ section('Money properties (tools/money-properties-test.mjs)');
     if (!out.includes('✗')) fail(`money-properties-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
 }
+section('Coverage manifest (tools/coverage-manifest-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'coverage-manifest-test.mjs')], { encoding: 'utf8' });
+  const todo = (r.stdout || '').split('\n').filter((l) => /^\s*TODO /.test(l)).length;
+  if (r.stdout) console.log(r.stdout.split('\n').filter((l) => /^(Coverage:|✓|✗)/.test(l.trim())).map((l) => '  ' + l.trim()).join('\n'));
+  if (todo) console.log(`  … ${todo} uncovered cells listed by node tools/coverage-manifest-test.mjs`);
+  if (r.status === 0) ok('coverage manifest green');
+  else fail('coverage manifest failed: ' + (r.stderr || '').trim());
+}
+
 section('Accessibility, axe-core (tools/a11y-browser-test.mjs)');
 {
   const { spawnSync } = require('child_process');

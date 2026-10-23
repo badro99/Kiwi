@@ -85,6 +85,10 @@ async function open(tr, ctx, { flag = true, width = 390, height = 844, lang = 'f
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   }, flag, lang);
   page.setDefaultNavigationTimeout(60000);
+  // coverage: surface=dashboard locale=fr viewport=phone
+  // coverage: surface=dashboard locale=ar viewport=phone
+  // coverage: surface=dashboard locale=fr viewport=tablet
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   /* The demo's greeting lock gives way to Escape, as the shipped intro offers. */
   await sleep(1500);
@@ -165,6 +169,7 @@ try {
   await S.run('flag on · phone · Home', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     tr.step('open the demo store at 390 × 844');
+    // coverage: surface=dashboard locale=fr viewport=phone
     const page = await open(tr, ctx);
     const c = await chrome(page);
     check(c.phone && !c.shippedTabs && !c.burger, 'the shipped phone header and tab bar give way to the kit (html[data-k-phone])');
@@ -234,6 +239,7 @@ try {
 
   await S.run('flag on · phone · the period picker and the Report', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=phone
     const page = await open(tr, ctx);
     tr.step("tap Home's date line");
     await tap(page, '#kit-home .k-dh__pick');
@@ -274,6 +280,7 @@ try {
 
   await S.run('flag on · phone · Arabic Home', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=ar viewport=phone
     const page = await open(tr, ctx, { lang: 'ar' });
     const h = await home(page);
     check(h.chart.shown && h.chart.xl.every((x) => x.l >= h.chart.host.l - 1 && x.r <= h.chart.host.r + 1), `in Arabic the chart's hours stay inside the plot (${h.chart.xl.map((x) => x.t).join(' ')})`);
@@ -299,6 +306,7 @@ try {
      so the kit's phone layout takes it whole, never half-and-half. */
   await S.run('flag on · tablet 820 portrait', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=tablet
     const page = await open(tr, ctx, { width: 820, height: 1180 });
     const c = await chrome(page);
     check(c.phone && !c.shippedTabs && !c.burger && c.tabs, 'the kit phone chrome, without the shipped header and tab bar');
@@ -311,6 +319,7 @@ try {
 
   await S.run('flag off · phone', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=phone
     const page = await open(tr, ctx, { flag: false });
     const c = await chrome(page);
     check(!c.phone && c.shippedTabs && c.burger && !c.tabs, 'flag off: the shipped phone header and tab bar, no kit chrome');
@@ -319,6 +328,7 @@ try {
 
   await S.run('flag on · 1280 wide', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const page = await open(tr, ctx, { width: 1280, height: 900 });
     const c = await chrome(page);
     const d = await page.evaluate(() => {

@@ -176,6 +176,14 @@ for (const lang of ['en', 'ar']) {
     const phone = width < 768;
     const tag = `${lang} ${width}`;
     await S.run(`menu phone/tablet layout ${tag}`, async (t) => {
+      // coverage: surface=dashboard locale=en viewport=phone
+      // coverage: surface=dashboard locale=en viewport=tablet
+      // coverage: surface=dashboard locale=ar viewport=phone
+      // coverage: surface=dashboard locale=ar viewport=tablet
+      // coverage: surface=dashboard-menu locale=en viewport=phone
+      // coverage: surface=dashboard-menu locale=en viewport=tablet
+      // coverage: surface=dashboard-menu locale=ar viewport=phone
+      // coverage: surface=dashboard-menu locale=ar viewport=tablet
       const { page, gid } = await open(t, lang, width);
       check(await page.evaluate((l) => document.documentElement.dir === (l === 'ar' ? 'rtl' : 'ltr'), lang), `${tag}: the page reads ${lang === 'ar' ? 'right to left' : 'left to right'}`);
       check(await noSideScroll(page), `${tag}: no horizontal scroll on Menu`);

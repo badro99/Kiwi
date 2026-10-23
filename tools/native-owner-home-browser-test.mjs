@@ -122,6 +122,7 @@ try {
   /* ── owner home, French ─────────────────────────────────────────────── */
   {
     const { page, ctx, errors } = await phone('fr', 'dashboard');
+    // coverage: surface=dashboard locale=fr viewport=phone
     await page.goto(`${BASE}/dashboard.html`, { waitUntil: 'networkidle2' });
     await sleep(2200);
     const gate = await page.evaluate(() => {
@@ -275,6 +276,7 @@ try {
   /* ── English weekday ticks ──────────────────────────────────────────── */
   {
     const { page, ctx } = await phone('en', 'dashboard');
+    // coverage: surface=dashboard locale=en viewport=phone
     await page.goto(`${BASE}/dashboard.html`, { waitUntil: 'networkidle2' });
     await sleep(2200);
     await click(page, '.kob-root [data-explore]');
@@ -294,6 +296,7 @@ try {
   /* ── till: tiles and the bill pill ──────────────────────────────────── */
   {
     const { page, ctx, errors } = await phone('fr', 'caisse');
+    // coverage: surface=caisse-entry locale=fr viewport=phone
     await page.goto(`${BASE}/kiwi-caisse.html`, { waitUntil: 'networkidle2' });
     await sleep(1800);
     await click(page, '#ci-float-chips [data-float="500"]'); // no float is preselected: count the drawer first

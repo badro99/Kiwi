@@ -105,6 +105,7 @@ try {
       page.setDefaultNavigationTimeout(90000);
       await page.evaluateOnNewDocument((d) => { try { if (d) localStorage.setItem('kiwiCaisseTheme', 'dark'); else localStorage.removeItem('kiwiCaisseTheme'); } catch (_) {} }, dark);
       t.step(`open caisse · ${dark ? 'nuit' : 'jour'}`);
+      // coverage: surface=caisse-entry locale=fr viewport=desktop
       await page.goto(`${base}/kiwi-caisse.html`, { waitUntil: 'load' });
       await sleep(2500);
       const theme = await page.evaluate(() => document.documentElement.getAttribute('data-caisse-theme'));

@@ -63,6 +63,9 @@ async function open({ lang = 'fr', width = 1366 } = {}) {
     try { if (navigator.serviceWorker) Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
     try { localStorage.setItem('kiwiLang', lang); } catch (_) {}
   }, lang);
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=ar viewport=desktop
+  // coverage: surface=dashboard locale=fr viewport=phone
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await page.waitForFunction(() => document.readyState === 'complete' && window.KiwiCharges && window.KiwiFinance && window.Kiwi && window.Kiwi.handlers['nav-finance'], { timeout: 20000 });
   await sleep(1500);
@@ -113,6 +116,8 @@ async function typeIn(page, rowIndex, field, value) {
 try {
   /* 1 · rien de saisi, puis la saisie, puis le résultat */
   {
+    // coverage: surface=dashboard locale=fr viewport=desktop
+    // coverage: surface=dashboard-finance locale=fr viewport=desktop
     const { ctx, page, problems } = await open();
     const before = await text(page);
     check(/Résultat matière/.test(before) && !/Résultat net|Seuil de rentabilité/.test(before), 'without costs, Marges says « Résultat matière » and no net result, no break-even');
@@ -226,6 +231,8 @@ try {
 
   /* 3 · arabe, de droite à gauche */
   {
+    // coverage: surface=dashboard locale=ar viewport=desktop
+    // coverage: surface=dashboard-finance locale=ar viewport=desktop
     const { ctx, page, problems } = await open({ lang: 'ar' });
     await page.evaluate(() => window.KiwiCharges.store.set({ v: 1, lines: [{ id: 'r', label: 'الإيجار', cat: 'rent', freq: 'month', versions: [{ from: '2020-01', amount: 9000 }], until: null, updatedAt: 1 }], social: { rate: 21 }, commissions: { methods: { card: 1.5 }, channels: {} }, updatedAt: 1 }));
     await sleep(800);
@@ -243,6 +250,8 @@ try {
 
   /* 4 · au téléphone */
   {
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard-finance locale=fr viewport=phone
     const { ctx, page, problems } = await open({ width: 390 });
     await page.evaluate(() => window.KiwiCharges.store.set({ v: 1, lines: [{ id: 'r', label: 'Loyer', cat: 'rent', freq: 'month', versions: [{ from: '2020-01', amount: 9000 }], until: null, updatedAt: 1 }], social: { rate: null }, commissions: { methods: {}, channels: {} }, updatedAt: 1 }));
     await sleep(800);

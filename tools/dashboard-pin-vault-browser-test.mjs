@@ -107,6 +107,7 @@ async function open(tr, ctx, { legacy = null, onboarded = true } = {}) {
     } catch (_) {}
   }, ACCOUNT, legacy, onboarded);
   page.setDefaultNavigationTimeout(60000);
+  // coverage: surface=dashboard locale=en viewport=desktop
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-kiwi-pin-input]', { timeout: 30000 });
   await page.waitForFunction(() => !!window.KiwiDashPinVault && window.KiwiConfig && window.KiwiConfig.accountPinsReady !== false, { timeout: 30000 });
@@ -143,6 +144,7 @@ try {
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
     const legacy = JSON.stringify([{ role: 'owner', code: CODE, name: 'Amira' }, { role: 'staff', code: OTHER, name: 'Sara' }]);
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { legacy });
     check(await page.evaluate(() => localStorage.getItem('kiwiPins') === null), 'kiwiPins n\'existe plus après le chargement');
     check(await vaultCount(page) === 0, 'rien n\'a été converti en ligne salée (ces codes n\'ont jamais été prouvés)');
@@ -154,6 +156,7 @@ try {
     asked.length = 0;
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     tr.step('type the proven code');
     await typeCode(page, CODE);
@@ -168,6 +171,7 @@ try {
     tr.step('wrong code online writes nothing');
     const ctx2 = await browser.createBrowserContext();
     tr.defer(() => ctx2.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p2 = await open(tr, ctx2);
     await typeCode(p2, OTHER);
     check(await outcome(p2) === 'refused', 'un code que le serveur refuse ferme la porte');
@@ -179,12 +183,14 @@ try {
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
     {
+      // coverage: surface=dashboard locale=en viewport=desktop
       const first = await open(tr, ctx);
       await typeCode(first, CODE);
       assert.equal(await outcome(first), 'unlocked');
       await first.waitForFunction(() => window.KiwiDashPinVault.count() === 1, { timeout: 5000 });
       await first.close();
     }
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     check(await vaultCount(page) === 1, 'la ligne a survécu au rechargement');
     tr.step('go offline');
@@ -208,6 +214,7 @@ try {
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
     {
+      // coverage: surface=dashboard locale=en viewport=desktop
       const first = await open(tr, ctx);
       await typeCode(first, CODE);
       assert.equal(await outcome(first), 'unlocked');
@@ -215,9 +222,11 @@ try {
       await first.close();
     }
     verifyMode = 'down';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     await typeCode(page, CODE);
     check(await outcome(page) === 'unlocked', 'le serveur ne répond pas : la ligne salée ouvre le code prouvé');
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page2 = await open(tr, ctx);
     await typeCode(page2, OTHER);
     check(await outcome(page2) === 'refused', 'et un autre code reste refusé');
@@ -229,6 +238,7 @@ try {
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
     {
+      // coverage: surface=dashboard locale=en viewport=desktop
       const first = await open(tr, ctx);
       await typeCode(first, CODE);
       assert.equal(await outcome(first), 'unlocked');
@@ -237,6 +247,7 @@ try {
     }
     tr.step('the owner changed the code: the server now refuses everything');
     verifyMode = 'refuse-all';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     check(await vaultCount(page) === 1, 'la ligne est encore là avant la tentative');
     await typeCode(page, CODE);
@@ -251,6 +262,7 @@ try {
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
     {
+      // coverage: surface=dashboard locale=en viewport=desktop
       const first = await open(tr, ctx);
       await typeCode(first, CODE);
       assert.equal(await outcome(first), 'unlocked');
@@ -265,6 +277,7 @@ try {
       tr.step(`the session is dead (${mode}); the owner types the CORRECT code`);
       verifyMode = mode;
       const before = asked.length;
+      // coverage: surface=dashboard locale=en viewport=desktop
       const page = await open(tr, ctx);
       check(await vaultCount(page) === 1, `${mode} · la ligne est encore là avant la tentative`);
       await typeCode(page, CODE);
@@ -280,21 +293,25 @@ try {
     }
     tr.step('a 403 nobody qualifies is "could not know", not a verdict: the salted row opens the code, a stranger stays out');
     verifyMode = 'forbidden';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const open403 = await open(tr, ctx);
     await typeCode(open403, CODE);
     check(await outcome(open403) === 'unlocked', 'un 403 sans corps : ni « non » ni session morte, le repli salé ouvre le code prouvé');
+    // coverage: surface=dashboard locale=en viewport=desktop
     const other403 = await open(tr, ctx);
     await typeCode(other403, OTHER);
     check(await outcome(other403) === 'refused', '…et un code que ce navigateur n\'a jamais vu prouver reste refusé');
     check(await vaultCount(other403) === 1, '…sans rien effacer');
     tr.step('the owner signs in again: the same row still opens the door');
     verifyMode = 'normal';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const back = await open(tr, ctx);
     check(await vaultCount(back) === 1, 'après reconnexion, la ligne est toujours là');
     await typeCode(back, CODE);
     check(await outcome(back) === 'unlocked', 'et le même code ouvre la porte');
     tr.step('contrast: a real bad-pin from a live session still erases the row');
     verifyMode = 'refuse-all';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const bad = await open(tr, ctx);
     await typeCode(bad, CODE);
     check(await outcome(bad) === 'refused', 'un vrai « bad-pin » refuse');
@@ -309,6 +326,7 @@ try {
       verifyMode = mode;
       const ctx = await browser.createBrowserContext();
       tr.defer(() => ctx.close());
+      // coverage: surface=dashboard locale=en viewport=desktop
       const page = await open(tr, ctx, { onboarded });
       await typeCode(page, OTHER);
       return outcome(page);
@@ -324,12 +342,14 @@ try {
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
     {
+      // coverage: surface=dashboard locale=en viewport=desktop
       const first = await open(tr, ctx);
       await typeCode(first, CODE);
       assert.equal(await outcome(first), 'unlocked');
       await first.waitForFunction(() => window.KiwiDashPinVault.count() === 1, { timeout: 5000 });
       await first.close();
     }
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     await page.setOfflineMode(true);
     const wrongCodes = ['1001', '1002', '1003', '1004', '1005'];
@@ -349,6 +369,7 @@ try {
     verifyMode = 'normal';
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     await page.setOfflineMode(true);
     await typeCode(page, CODE);

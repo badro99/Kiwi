@@ -42,6 +42,7 @@ const lensMove = async (page) => {
 };
 
 await s.run('reduced motion parks every part', async (t) => {
+  // coverage: surface=shell-kit locale=en viewport=desktop
   const page = t.watch(await kb.open('/kit.html', { reduced: true }));
 
   t.step('skeleton and spinner');
@@ -97,6 +98,7 @@ await s.run('reduced motion parks every part', async (t) => {
 });
 
 await s.run('without the preference, the same parts do move', async (t) => {
+  // coverage: surface=shell-kit locale=en viewport=desktop
   const page = t.watch(await kb.open('/kit.html'));
   const lm = await lensMove(page);
   check(/transform/.test(lm.mid.tr) && /width/.test(lm.mid.tr), `the lens travels on the spring (${lm.mid.tr.slice(0, 48)}…)`);

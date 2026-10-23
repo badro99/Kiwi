@@ -83,6 +83,7 @@ async function till(tr, { flag = true, lang = 'fr' } = {}) {
       if (flag) localStorage.setItem('kiwiSkin2027:till', '1'); else localStorage.removeItem('kiwiSkin2027:till');
     } catch (_) {}
   }, flag, VENUE, lang);
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(kb.base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => { const s = document.getElementById('cp-pin-screen'); return s && s.style.display !== 'none' && s.getBoundingClientRect().width > 0; }, { timeout: 20000 });
   await settle(page, 300);

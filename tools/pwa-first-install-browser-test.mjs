@@ -79,6 +79,9 @@ async function tab(tr, ctx, url) {
   page.on('dialog', async (d) => { await d.dismiss(); });
   page.setDefaultNavigationTimeout(90000);
   tr.step(`open ${url.replace(base, '')}`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
+  // coverage: surface=team-entry locale=fr viewport=desktop
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   return { page, get loads() { return tr.loads(page).map((l) => l.by); } };
 }

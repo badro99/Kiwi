@@ -208,6 +208,7 @@ async function api(page, method, url, body) {
   }, method, url, body || null);
 }
 async function signIn(page, m) {
+  // coverage: surface=dashboard locale=fr viewport=desktop
   if (!/^http/.test(page.url())) await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/login', { email: m.email, password: m.password });
   if (r.status !== 200) throw new Error(`sign-in ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
@@ -261,10 +262,12 @@ async function until(page, fn, arg, timeout = 20000) {
 async function createMerchant(t, ctx, m) {
   const page = await preparePage(t, await ctx.newPage());
   t.step(`${m.label}: sign up`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/signup', { email: m.email, password: m.password, name: 'Test ' + m.label, business: m.business });
   if (r.status !== 200) throw new Error(`signup ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
   t.step(`${m.label}: onboarding wizard, card « ${m.type} »`);
+  // coverage: surface=onboarding locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // Commencer
   await page.waitForSelector('[data-type]', { visible: true });
@@ -303,6 +306,7 @@ async function pairTill(t, page, m, vertical) {
   log(m.label, 'tablet kiwiBizType', biz.type || '(none)');
   await page.evaluate((h) => localStorage.setItem('kiwiPairHandoff', JSON.stringify({ ...h, ts: Date.now() })),
     { merchant: m.slug, type: m.base, name: m.business, subtype: m.type, location: '' });
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html?pair=1', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction((slug) => {
     try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null')?.merchant === slug; } catch (_) { return false; }
@@ -382,6 +386,7 @@ function after(text, label, nth = 0) {
 /* ── the dashboard ────────────────────────────────────────────────────── */
 async function openDashboard(t, page, m) {
   t.step(`${m.label}: dashboard`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-kiwi-pin-input]', { timeout: 30000 });
   await sleep(800);

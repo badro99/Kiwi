@@ -47,6 +47,7 @@ try {
           let seed = 12345; Math.random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
         });
         t.step(before ? 'Original demo till' : 'Split demo till');
+        // coverage: surface=caisse-entry locale=fr viewport=desktop
         await page.goto(`http://127.0.0.1:${server.address().port}/kiwi-caisse.html?demo=1`, { waitUntil: 'load' });
         await page.waitForFunction(() => !!window.KiwiPosDispatch && !!window.KiwiPosReprint);
         await page.evaluate(() => {

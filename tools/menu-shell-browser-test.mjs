@@ -108,6 +108,10 @@ const closeSheet = async (page) => { const b = await page.$('.kiwi-backdrop .kiw
 for (const width of [390, 1280]) {
   const phone = width < 900;
   await S.run(`menu shell at ${width}`, async (t) => {
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard locale=fr viewport=desktop
+    // coverage: surface=dashboard-menu locale=fr viewport=phone
+    // coverage: surface=dashboard-menu locale=fr viewport=desktop
     const page = await open(t, width);
     check(await noSideScroll(page), `${width}: no horizontal scroll on Menu`);
 

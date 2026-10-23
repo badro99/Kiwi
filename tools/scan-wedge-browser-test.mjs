@@ -52,6 +52,7 @@ async function openTill(id, ready) {
     return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
   });
   await page.evaluateOnNewDocument(() => { try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {} });
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.KiwiPosDispatch && window.KiwiScanWedge, { timeout: 20000 });
   await page.evaluate((id) => window.KiwiPosDispatch.unlockById(id), id);

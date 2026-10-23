@@ -130,6 +130,9 @@ async function openApp(lang, table) {
     localStorage.setItem('kiwiEmployeeMerchant', m);
     localStorage.setItem('kiwi-employee-language:' + m, l);
   }, MERCHANT, lang);
+  // coverage: surface=employee locale=fr viewport=phone
+  // coverage: surface=employee locale=en viewport=phone
+  // coverage: surface=employee locale=ar viewport=phone
   await page.goto(base + '/kiwi-serveur.html', { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('screen-main')?.classList.contains('is-active'), { timeout: 20000 });
   await page.waitForFunction(() => window.KiwiPairs && Object.keys(KiwiPairs._state().pairs || {}).length > 0, { timeout: 15000 });

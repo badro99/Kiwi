@@ -64,6 +64,8 @@ const scan = (page) => page.evaluate(() => {
 
 for (const width of [390, 1280]) {
   await s.run(`Arabic · ${width}`, async (t) => {
+    // coverage: surface=shell-kit locale=ar viewport=phone
+    // coverage: surface=shell-kit locale=ar viewport=desktop
     const page = t.watch(await kb.open('/kit.html', { lang: 'ar', width, height: 900 }));
     await settle(page, 300);
     const r = await scan(page);

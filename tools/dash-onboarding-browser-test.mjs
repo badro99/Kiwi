@@ -79,6 +79,7 @@ async function open(flag = true) {
     });
   }, flag);
   await page.setViewport({ width: 430, height: 900 });
+  // coverage: surface=onboarding locale=en viewport=phone
   await page.goto(base + '/dashboard.html?onboarding=1', { waitUntil: 'load' });
   await page.waitForFunction(() => !!(document.getElementById('kit-onboarding') || document.querySelector('.kob-root')), { timeout: 20000 });
   await sleep(500);
@@ -117,6 +118,7 @@ const padText = (page) => page.evaluate(() => document.querySelector('#kit-onboa
 console.log('dash-onboarding-browser-test');
 try {
   {
+    // coverage: surface=onboarding locale=en viewport=phone
     const { ctx, page, errors } = await open(false);
     const v = await page.evaluate(() => ({ kit: !!document.getElementById('kit-onboarding'), shipped: !!document.querySelector('.kob-root') }));
     check(!v.kit && v.shipped, 'flag off: the shipped wizard draws, no kit page');
@@ -125,6 +127,7 @@ try {
   }
 
   {
+  // coverage: surface=onboarding locale=en viewport=phone
   const { ctx, page } = await open();
   await page.evaluate(() => {
     window.__storageSet = Storage.prototype.setItem;
@@ -142,6 +145,7 @@ try {
   check(await page.$eval('#kit-onboarding [data-draft-warning]', e => e.hidden && !e.textContent), 'next successful save clears the warning');
   await ctx.close();
   }
+  // coverage: surface=onboarding locale=en viewport=phone
   const { ctx, page, errors } = await open();
   let v = await read(page);
   check(v && v.step === 'Step 2 of 5' && v.which === 'kind', `the kit page opens at step 2 of 5, the type (${v && v.step})`);
@@ -231,6 +235,7 @@ try {
 
   /* A team device: sign out, then the team sign-in. */
   {
+    // coverage: surface=onboarding locale=en viewport=phone
     const o = await open();
     await o.page.evaluate(() => document.querySelector('#kit-onboarding [data-kind]').click());
     await next(o.page); await sleep(300);

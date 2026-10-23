@@ -79,6 +79,8 @@ try {
       page.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
       await page.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
       tr.step('open the demo épicerie');
+      // coverage: surface=caisse-entry locale=fr viewport=phone
+      // coverage: surface=caisse-entry locale=ar viewport=phone
       await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => window.KiwiPosDispatch, { timeout: 30000 });
       await page.evaluate(() => window.KiwiPosDispatch.unlockById('epicerie'));

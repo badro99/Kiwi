@@ -62,6 +62,7 @@ async function phone(lang, dark=false, signedOut=false) {
 try {
   const {page,context,verificationRequests,authRequests}=await phone('en');
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  // coverage: surface=dashboard locale=en viewport=phone
   await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
   await page.waitForSelector('.kob-root [data-explore]');
   await page.click('.kob-root [data-explore]');await sleep(1200);

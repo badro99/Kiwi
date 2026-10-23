@@ -32,6 +32,7 @@ try {
     args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/nav-stability.html', { waitUntil: 'load' });
   await page.click('[data-explore]');
   await page.click('[data-kiwi-skip]');

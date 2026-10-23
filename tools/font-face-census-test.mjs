@@ -284,6 +284,9 @@ await s.run('app shell (www construit)', async (t) => {
     await wire(page, wOrigin, log);
     await page.evaluateOnNewDocument((lang) => { try { localStorage.setItem('kiwiLang', lang); localStorage.setItem('kiwiNativeLocale', lang); } catch (_) {} window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios', Plugins: {} }; }, lang);
     t.step(`open ${pageName} (${lang}) from the built bundle`);
+    // coverage: surface=native-shell locale=ar viewport=tablet
+    // coverage: surface=caisse-entry locale=ar viewport=tablet
+    // coverage: surface=dashboard locale=en viewport=tablet
     await page.goto(`${wOrigin}/${pageName}`, { waitUntil: 'load', timeout: 45000 });
     await page.evaluate(() => document.documentElement.classList.add('kiwi-native'));
     await settle(page);

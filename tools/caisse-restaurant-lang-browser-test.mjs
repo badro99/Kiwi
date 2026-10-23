@@ -172,6 +172,7 @@ try {
     }, MERCHANT);
 
     tr.step('open a paired restaurant till');
+    // coverage: surface=caisse-entry locale=fr viewport=desktop
     await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     await openService(page);
     check(true, 'a real paired restaurant till opens by the opening screen (float chosen by tap)');

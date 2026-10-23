@@ -105,6 +105,10 @@ async function open({ api = 'ok', lang = 'fr', theme = 'light', width = 1366, st
   }, lang, theme, store);
   let navs = 0;
   page.on('framenavigated', (f) => { if (f === page.mainFrame()) navs++; });
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=en viewport=desktop
+  // coverage: surface=dashboard locale=ar viewport=desktop
+  // coverage: surface=dashboard locale=fr viewport=phone
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await page.bringToFront();
   /* Belt and braces: interact only once no navigation has happened for a
@@ -129,6 +133,7 @@ const row = (page) => page.$$eval('[data-oppo-band] .oppo-grid > *', (els) => el
 try {
   /* 1 · French, light */
   {
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { ctx, page, problems, asked } = await open();
     await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 15000 });
     const c = await cardText(page);
@@ -197,6 +202,8 @@ try {
 
   /* 2 · English and Arabic, dark */
   for (const [lang, theme, needle] of [['en', 'dark', `${BODY.used} of ${BODY.measured} tools fully in use`], ['ar', 'dark', `${BODY.used} من أصل ${BODY.measured} أدوات مستعملة بالكامل`]]) {
+    // coverage: surface=dashboard locale=en viewport=desktop
+    // coverage: surface=dashboard locale=ar viewport=desktop
     const { ctx, page, problems } = await open({ lang, theme });
     await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 15000 });
     const c = await cardText(page);
@@ -226,6 +233,7 @@ try {
 
   /* 3 · down: one quiet retry, then the demo gives the slot back to an offer */
   {
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { ctx, page, asked } = await open({ api: 'down' });
     await sleep(4000);
     const tiles = await row(page);
@@ -236,6 +244,7 @@ try {
   /* 3b · the store is not known yet when the script runs (a real session
    * learns its slug a moment later): wait for it, never call that unreachable */
   {
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { ctx, page, asked } = await open({ store: 'pas-encore' });
     const before = await page.evaluate(() => ({ status: window.KiwiMerchantHealth.state.status, tile: !!document.querySelector('[data-merchant-health]') }));
     check(before.status === 'idle' && !before.tile && !asked.length, `no store yet: the tile waits, hidden, and asks nothing (${before.status})`);
@@ -246,6 +255,7 @@ try {
   }
   /* 4 · another store's answer is never shown, and does not hang */
   {
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { ctx, page, asked } = await open({ api: 'other' });
     await sleep(4000);   /* past the one quiet retry */
     const tiles = await row(page);
@@ -255,6 +265,7 @@ try {
   }
   /* 5 · phone width */
   {
+    // coverage: surface=dashboard locale=fr viewport=phone
     const { ctx, page } = await open({ width: 390 });
     await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 15000 });
     const fit = await page.$eval('[data-merchant-health]', (e) => {

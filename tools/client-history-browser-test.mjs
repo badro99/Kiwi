@@ -65,6 +65,7 @@ try {
       localStorage.setItem('kiwi:clients:v1:' + venue.slug, JSON.stringify({ list: [client], seq: 1 }));
       localStorage.setItem('kiwiTheme', selectedTheme);
     }, theme);
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html`, { waitUntil: 'load', timeout: 30000 });
     await page.waitForFunction(() => window.Kiwi?.handlers?.['clients-directory'] && window.KiwiClients?.count?.() === 1);
     await page.evaluate(() => { if (window.__kiwiLock?.hide) window.__kiwiLock.hide(); window.Kiwi.handlers['clients-directory'](); });

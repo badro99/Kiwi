@@ -46,6 +46,7 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewport({ width: 1440, height: 1000 });
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.Kiwi && Kiwi.handlers && Kiwi.handlers['bpd-new'] && window.KiwiPromos && window.KiwiBoutiqueCatalog, { timeout: 30000 });
   await sleep(1200);

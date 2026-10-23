@@ -104,6 +104,13 @@ function measureLayout() {
 }
 try {
   for(const [locale,width]of [...[360,390,768,1024,1440,1920].map(w=>['es',w]),['en',390],['en',1440],['fr',390],['fr',1440]]){
+    // coverage: surface=landing locale=es viewport=phone
+    // coverage: surface=landing locale=es viewport=tablet
+    // coverage: surface=landing locale=es viewport=desktop
+    // coverage: surface=landing locale=en viewport=phone
+    // coverage: surface=landing locale=en viewport=desktop
+    // coverage: surface=landing locale=fr viewport=phone
+    // coverage: surface=landing locale=fr viewport=desktop
     const {page,errors}=await open(locale,width);
     // Let each reveal settle in its viewport before taking a full-page capture.
     const height=await page.evaluate(()=>document.body.scrollHeight);
@@ -133,6 +140,7 @@ try {
     await page.close();
   }
   for(const locale of ['fr','en','ar','de','it','nl','es']){
+    // coverage: surface=landing locale=es viewport=desktop
     const {page}=await open('es');await delay(250);await page.click('.kw-locale-trigger');await delay(200);
     const options=await page.$$eval('.kw-locale-option',nodes=>nodes.map(e=>({locale:e.hreflang,current:e.getAttribute('aria-current'),selected:e.getAttribute('aria-selected'),text:e.innerText})));
     ok(options.length===7&&options.find(e=>e.locale==='es')?.current==='page'&&options.find(e=>e.locale==='es')?.selected==='true','seven locales with Spanish current');
@@ -146,6 +154,7 @@ try {
     }
     await page.close();
   }
+  // coverage: surface=landing locale=es viewport=desktop
   const {page,errors}=await open('es');
   for (const width of [390,1440]) {
     await page.setViewport({width,height:900});

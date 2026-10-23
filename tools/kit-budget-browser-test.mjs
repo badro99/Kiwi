@@ -110,6 +110,7 @@ for (const [label, url, spec] of [['Home', '/__kit-home.html', 8], ['Till, bill'
 }
 
 await s.run('the gallery, reported', async (t) => {
+  // coverage: surface=shell-kit locale=en viewport=desktop
   const page = t.watch(await kb.open('/kit.html'));
   const c = await census(page);
   console.log(`    gallery: ${c.n} roots across every component (not a hero frame; §19's 60 applies to product pages)`);

@@ -60,6 +60,15 @@ try {
   for (const lang of ['en','fr','ar']) {
     for (const [file,selector] of [['dashboard.html','[data-kiwi-lock]'],['kiwi-serveur.html','#screen-pin'],['kiwi-cuisine.html','#pair']]) {
       const {page,context}=await phone(lang);
+      // coverage: surface=dashboard locale=fr viewport=phone
+      // coverage: surface=dashboard locale=en viewport=phone
+      // coverage: surface=dashboard locale=ar viewport=phone
+      // coverage: surface=team-entry locale=fr viewport=phone
+      // coverage: surface=team-entry locale=en viewport=phone
+      // coverage: surface=team-entry locale=ar viewport=phone
+      // coverage: surface=kitchen-entry locale=fr viewport=phone
+      // coverage: surface=kitchen-entry locale=en viewport=phone
+      // coverage: surface=kitchen-entry locale=ar viewport=phone
       await page.goto(base+'/'+file,{waitUntil:'networkidle2'});
       if(file==='dashboard.html') { await page.waitForSelector('.kob-root [data-explore]'); await page.click('.kob-root [data-explore]'); }
       await page.waitForSelector(selector+' .kiwi-native-role-back',{visible:true});
@@ -77,6 +86,9 @@ try {
     // authentication bypass, API writes, or merchant session involved.
     for(const [file,id] of [['kiwi-caisse.html','pin-screen'],['kiwi-caisse.html','clockin-screen'],['kiwi-serveur.html','screen-clockin'],['kiwi-serveur.html','screen-table']]) {
       const {page,context}=await phone(lang);
+      // coverage: surface=native-shell locale=fr viewport=phone
+      // coverage: surface=native-shell locale=en viewport=phone
+      // coverage: surface=native-shell locale=ar viewport=phone
       await page.goto(base+'/index.html');
       const raw=fs.readFileSync(path.join(root,file),'utf8');
       await page.evaluate(({raw,file,id,lang,base})=>{

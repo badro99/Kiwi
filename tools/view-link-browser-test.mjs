@@ -64,6 +64,8 @@ async function open(hash = '', lang = 'fr') {
     try { if (navigator.serviceWorker) Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
     try { localStorage.setItem('kiwiLang', lang); localStorage.setItem('kiwiDateRange', 'septJours'); } catch (_) {}
   }, lang);
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=ar viewport=desktop
   await page.goto(base + '/dashboard.html' + hash, { waitUntil: 'load' });
   await page.waitForFunction(() => document.readyState === 'complete' && window.KiwiViewLink && window.Kiwi && window.Kiwi.handlers, { timeout: 20000 });
   await sleep(1200);
@@ -79,6 +81,7 @@ async function open(hash = '', lang = 'fr') {
 const state = (page) => page.evaluate(() => ({ hash: location.hash, active: window.Kiwi.activePage, range: window.KiwiDateRange.getDateRange(), btn: (() => { const b = document.querySelector('.view-link-btn'); return b ? { hidden: b.hidden, label: b.getAttribute('aria-label'), svg: !!b.querySelector('svg') } : null; })() }));
 
 {
+  // coverage: surface=dashboard locale=fr viewport=desktop
   const { ctx, page, problems } = await open();
   let s = await state(page);
   check(s.hash === '' && s.btn && s.btn.hidden, 'on the dashboard the address carries nothing and the copy button is hidden');
@@ -111,6 +114,7 @@ const state = (page) => page.evaluate(() => ({ hash: location.hash, active: wind
 }
 
 {
+  // coverage: surface=dashboard-equipe locale=fr viewport=desktop
   const { ctx, page, problems } = await open('#/equipe?r=trenteJours');
   await page.waitForFunction(() => window.Kiwi.activePage === 'equipe', { timeout: 15000 }).catch(() => {});
   await sleep(800);
@@ -123,6 +127,7 @@ const state = (page) => page.evaluate(() => ({ hash: location.hash, active: wind
 }
 
 for (const bad of ['#/../../etc?r=x', '#/nopage-here?r=septJours', '#/equipe?r=<script>', '#garbage']) {
+  // coverage: surface=dashboard locale=fr viewport=desktop
   const { ctx, page, problems } = await open(bad);
   await sleep(bad.startsWith('#/nopage') ? 4500 : 1500);
   const s = await state(page);
@@ -132,6 +137,7 @@ for (const bad of ['#/../../etc?r=x', '#/nopage-here?r=septJours', '#/equipe?r=<
 }
 
 {
+  // coverage: surface=dashboard locale=ar viewport=desktop
   const { ctx, page } = await open('', 'ar');
   await page.click('.sidebar nav a[data-nav="equipe"]');
   await sleep(900);

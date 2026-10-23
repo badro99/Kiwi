@@ -140,6 +140,7 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 240)));
   await page.evaluateOnNewDocument(() => { try { localStorage.setItem('kiwiLang', 'fr'); } catch (_) {} });
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   const explore = await page.waitForSelector('.kob-root [data-explore]', { visible: true, timeout: 15000 }).catch(() => null);
   if (explore) { await explore.click(); await sleep(900); }

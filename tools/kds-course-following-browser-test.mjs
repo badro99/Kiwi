@@ -177,6 +177,7 @@ try {
     localStorage.setItem('kiwiPaired', '1');
     if (!localStorage.getItem('kiwiCuisineLang')) localStorage.setItem('kiwiCuisineLang', 'fr');
   }, MERCHANT);
+  // coverage: surface=kitchen locale=fr viewport=desktop
   await page.goto(base + '/kiwi-cuisine.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.KiwiKitchenRelay && typeof KiwiKitchenRelay.send === 'function', { timeout: 20000 });
 

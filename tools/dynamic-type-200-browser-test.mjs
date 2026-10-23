@@ -112,6 +112,8 @@ async function phone(t, { role = 'dashboard', scale, ua = IPHONE, url = '/dashbo
   await page.setUserAgent(ua);
   await page.evaluateOnNewDocument(nativeStub, role, scale);
   t.step(`open ${url} at ${scale}`);
+  // coverage: surface=dashboard locale=fr viewport=phone
+  // coverage: surface=caisse-entry locale=fr viewport=phone
   await page.goto(BASE + url, { waitUntil: 'networkidle2' });
   await sleep(2200);
   if (demo) {

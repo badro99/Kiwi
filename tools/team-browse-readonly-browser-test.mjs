@@ -68,6 +68,9 @@ async function open(lang) {
   await page.evaluateOnNewDocument((l) => {
     try { localStorage.setItem('kiwi-employee-language:demo', l); } catch (_) {}
   }, lang);
+  // coverage: surface=team-entry locale=fr viewport=phone
+  // coverage: surface=team-entry locale=en viewport=phone
+  // coverage: surface=team-entry locale=ar viewport=phone
   await page.goto(base + '/kiwi-serveur.html', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof enterBrowseMode === 'function' && !!document.querySelector('#ci-browse-link'), { timeout: 10000 });
   return { page, context, writes };
@@ -76,6 +79,7 @@ async function open(lang) {
 const toastText = (page) => page.evaluate(() => Array.from(document.querySelectorAll('#toast-stack > *')).map((n) => n.textContent.trim()));
 
 try {
+  // coverage: surface=team-entry locale=fr viewport=phone
   const { page, context, writes } = await open('fr');
   await page.evaluate(() => {
     /* Une table occupée et une commande, pour que les gardes aient de quoi
@@ -150,6 +154,8 @@ try {
 
   /* Traductions */
   for (const lang of ['en', 'ar']) {
+    // coverage: surface=team-entry locale=en viewport=phone
+    // coverage: surface=team-entry locale=ar viewport=phone
     const t = await open(lang);
     await t.page.evaluate(() => { enterBrowseMode(); openTableDetail('9'); });
     const toasts = await toastText(t.page);
@@ -158,6 +164,7 @@ try {
   }
 
   /* Sortie : un employé qui pointe retrouve tout */
+  // coverage: surface=team-entry locale=fr viewport=phone
   const out = await open('fr');
   await out.page.evaluate(() => {
     tables['9'] = { status: 'ka-yaklo', covers: 2, elapsed: 5 };

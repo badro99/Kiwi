@@ -143,6 +143,8 @@ async function open(tr, ctx, { flag = true, lang = 'fr', width = 1920, height = 
     localStorage.setItem('kiwiCuisineLang', lang);
     if (flag) localStorage.setItem('kiwiSkin2027:kds', '1');
   }, MERCHANT, flag, lang);
+  // coverage: surface=kitchen locale=fr viewport=desktop
+  // coverage: surface=kitchen locale=ar viewport=desktop
   await page.goto(base + '/kiwi-cuisine.html', { waitUntil: 'load' });
   page.kitFetched = kitFetched;
   page.errors = errors;
@@ -197,6 +199,7 @@ try {
     clearOrders();
     addOrder({ id: 'ord-board-off', table: '3', ageMs: 2 * 60000, lines: [line('Harira')] });
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=fr viewport=desktop
     const page = await open(tr, ctx, { flag: false });
     await page.waitForSelector('#s-new [data-tk="ord-board-off"]', { timeout: 20000 });
     check(true, 'the shipped card arrives in Nouvelles');
@@ -214,6 +217,7 @@ try {
     addOrder({ id: C, mode: 'takeout', ageMs: 16 * 60000, lines: [line('Pastilla', { stationAccepted: true })] });
     addOrder({ id: D, table: '9', ageMs: 7 * 60000 + 56000, lines: [line('Zaalouk', { stationAccepted: true })] });
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=fr viewport=desktop
     const page = await open(tr, ctx);
 
     tr.step('the lanes');
@@ -281,6 +285,7 @@ try {
       line('Salade'),
     ] });
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=fr viewport=desktop
     const page = await open(tr, ctx);
     await waitIn(page, 'new', V, 20000);
     const v = await ticket(page, 'new', V);
@@ -297,6 +302,7 @@ try {
     clearOrders();
     for (let i = 0; i < 7; i++) addOrder({ id: 'ord-board-n' + i, table: String(10 + i), ageMs: (7 - i) * 60000, lines: [line('Harira'), line('Msemen')] });
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=fr viewport=desktop
     const page = await open(tr, ctx, { width: 1280, height: 800 });
     await waitIn(page, 'new', 'ord-board-n0', 20000);
     const st = await page.evaluate(() => {
@@ -326,6 +332,7 @@ try {
     clearOrders();
     addOrder({ id: 'ord-board-ar', table: '5', ageMs: 2 * 60000, lines: [line('Harira')] });
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=ar viewport=desktop
     const page = await open(tr, ctx, { lang: 'ar' });
     await waitIn(page, 'new', 'ord-board-ar', 20000);
     const t = await ticket(page, 'new', 'ord-board-ar');
@@ -351,6 +358,7 @@ try {
       localStorage.setItem('kiwiSkin2027:till', '1');
       try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
     });
+    // coverage: surface=caisse-entry locale=fr viewport=desktop
     await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     await page.waitForFunction(() => typeof doOpenService === 'function' && !!window.KiwiKdsBoard, { timeout: 30000 });
     await page.evaluate(() => doOpenService());

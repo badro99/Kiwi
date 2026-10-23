@@ -60,6 +60,7 @@ await page.evaluateOnNewDocument(() => {
   localStorage.setItem('kiwiSkin2027:dashboard', '1');
   try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
 });
+// coverage: surface=dashboard locale=fr viewport=desktop
 await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
 await sleep(1500);
 await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d/.test(x.textContent)); if (b) b.click(); });

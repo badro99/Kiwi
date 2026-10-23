@@ -133,6 +133,9 @@ async function openTill(lang, skin2027 = false) {
     localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: m, type: 'boutique', name: 'Pairs Boutique', location: 'Casablanca' }));
     localStorage.setItem('kiwiCaisseLang', l);
   }, MERCHANT, lang, skin2027);
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
+  // coverage: surface=caisse-entry locale=en viewport=desktop
+  // coverage: surface=caisse-entry locale=ar viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.__kiwiCaisseBootedAsDemo === false, { timeout: 20000 });
   // La boutique a son propre écran d'ouverture (pos-boutique.js, #bq-clockin).

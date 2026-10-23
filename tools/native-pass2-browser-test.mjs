@@ -80,6 +80,9 @@ try {
   // Invalid/empty native login uses only an empty password, never credentials.
   for (const lang of ['fr','en','ar']) {
     const {page,context,authRequests} = await phone(lang,false,true);
+    // coverage: surface=native-shell locale=fr viewport=phone
+    // coverage: surface=native-shell locale=en viewport=phone
+    // coverage: surface=native-shell locale=ar viewport=phone
     await page.goto(base+'/index.html',{waitUntil:'networkidle2'});
     await page.waitForFunction(()=>window.__host?.screen==='setup');
     for (const email of ['', 'invalid-email']) {
@@ -95,6 +98,8 @@ try {
   // Local onboarding only: synthetic names, no code, no final account creation.
   for (const lang of ['fr','ar']) {
     const {page,context,verificationRequests}=await phone(lang);
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard locale=ar viewport=phone
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
     await page.waitForSelector('.kob-root .kob-foot .primary');
     for(let step=0;step<=6;step++) {
@@ -132,6 +137,9 @@ try {
   }
   for (const lang of ['fr','en','ar']) for (const dark of [false,true]) {
     const {page,context,verificationRequests} = await phone(lang,dark);
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard locale=en viewport=phone
+    // coverage: surface=dashboard locale=ar viewport=phone
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
     await sleep(1600);
     await page.evaluate(()=>document.querySelector('.kob-root [data-explore]')?.click());
@@ -202,6 +210,8 @@ try {
   // Real pairing/login screens, inspected without entering a code.
   for (const [file,role] of [['kiwi-cuisine.html','Kitchen'],['kiwi-serveur.html','Team']]) {
     const {page,context}=await phone('fr');
+    // coverage: surface=kitchen-entry locale=fr viewport=phone
+    // coverage: surface=team-entry locale=fr viewport=phone
     await page.goto(base+'/'+file,{waitUntil:'networkidle2'}); await sleep(1200);
     check(await page.evaluate(()=>window.__host?.tabs.length===0),role+' hides native navigation at the code gate');
     await page.screenshot({path:path.join(work,role.toLowerCase()+'-gate.png')});
@@ -215,6 +225,8 @@ try {
   }
   for (const lang of ['en','ar']) {
     const {page,context}=await phone(lang);
+    // coverage: surface=team-entry locale=en viewport=phone
+    // coverage: surface=team-entry locale=ar viewport=phone
     await page.goto(base+'/kiwi-serveur.html',{waitUntil:'networkidle2'});
     check(await page.evaluate(lang=>document.documentElement.lang===lang && window.__host.locale===lang,lang),'Team inherits native '+lang+' locale before any code entry');
     await context.close();
@@ -224,6 +236,9 @@ try {
   for (const [file,role,screen] of [['kiwi-serveur.html','Team','screen-main'],['kiwi-cuisine.html','Kitchen','screen']]) {
     for (const [lang,dark] of [['fr',false],['en',true],['ar',true]]) {
       const {page,context}=await phone(lang,dark);
+      // coverage: surface=native-shell locale=fr viewport=phone
+      // coverage: surface=native-shell locale=en viewport=phone
+      // coverage: surface=native-shell locale=ar viewport=phone
       await page.goto(base+'/index.html');
       const raw=fs.readFileSync(path.join(root,file),'utf8');
       await page.evaluate(({raw,screen,lang,dark,base})=> {

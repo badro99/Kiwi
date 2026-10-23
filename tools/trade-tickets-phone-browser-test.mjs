@@ -98,6 +98,8 @@ async function open(tr, lang, trade, ready, vp = { width: 390, height: 844 }) {
   page.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
   await page.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
   tr.step(`open the demo ${trade}`);
+  // coverage: surface=caisse-entry locale=fr viewport=phone
+  // coverage: surface=caisse-entry locale=ar viewport=phone
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => window.KiwiPosDispatch, { timeout: 30000 });
   await page.evaluate((t) => window.KiwiPosDispatch.unlockById(t), trade);
@@ -110,6 +112,8 @@ const tap = async (page, sel) => { const ok = await page.evaluate((s) => { const
 try {
   for (const lang of ['fr', 'ar']) {
     await S.run(`librairie · ${lang}`, async (tr) => {
+      // coverage: surface=caisse-librairie locale=fr viewport=phone
+      // coverage: surface=caisse-librairie locale=ar viewport=phone
       const { page, errors } = await open(tr, lang, 'librairie', '.lb-card');
       const s = await sheet(page, '.lb-panier');
       check(s && s.fixed && s.top >= s.h - 90 && s.width >= 380, `${lang}: the librairie basket rests as a bottom sheet (top ${s && s.top} of ${s && s.h})`);
@@ -138,6 +142,8 @@ try {
     });
 
     await S.run(`traiteur · ${lang}`, async (tr) => {
+      // coverage: surface=caisse-traiteur locale=fr viewport=phone
+      // coverage: surface=caisse-traiteur locale=ar viewport=phone
       const { page, errors } = await open(tr, lang, 'traiteur', '.tr-evcard');
       const due = await widthOf(page, '.tr-duebar-txt');
       check(due >= 250, `${lang}: the due banner's sentence keeps ${due} px (≥ 250)`);
@@ -159,6 +165,8 @@ try {
 
   for (const [trade, ready, ticket, view] of [['fleuriste', '.fl-bouquet', '.fl-bouquet'], ['gym', '.gy-cart', '.gy-cart', '[data-gy-view="comptoir"]']]) {
     await S.run(`${trade} · fr`, async (tr) => {
+      // coverage: surface=caisse-fleuriste locale=fr viewport=phone
+      // coverage: surface=caisse-gym locale=fr viewport=phone
       const { page, errors } = await open(tr, 'fr', trade, ready);
       if (view) { tr.step('open the counter'); await tap(page, view); }
       const s = await sheet(page, ticket);
@@ -171,6 +179,7 @@ try {
    * of the pharmacy's « Encaisser » button. Every point of that button must
    * land on the button itself. */
   await S.run('pharmacie · 375 × 667', async (tr) => {
+    // coverage: surface=caisse-pharmacie locale=fr viewport=phone
     const { page, errors } = await open(tr, 'fr', 'pharmacie', '.ph-card', { width: 375, height: 667 });
     tr.step('sell one box and open the payment');
     await tap(page, '.ph-card:not(.is-out)');

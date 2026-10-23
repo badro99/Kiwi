@@ -96,6 +96,7 @@ async function phone({lang='en', record=null, authenticated=true, motion='reduce
   return {page, context, verificationRequests:()=>verificationRequests, faceCalls};
 }
 async function toLock(page) {
+  // coverage: surface=dashboard locale=en viewport=phone
   await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
   await sleep(1600);
   await page.evaluate(()=>document.querySelector('.kob-root [data-explore]')?.click());
@@ -152,6 +153,7 @@ try {
   // 1b · Real motion: the mark settles in place, it never travels across the screen.
   {
     const {page,context} = await phone({motion:'no-preference'});
+    // coverage: surface=dashboard locale=en viewport=phone
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
     await sleep(1600);
     await page.evaluate(()=>document.querySelector('.kob-root [data-explore]')?.click());

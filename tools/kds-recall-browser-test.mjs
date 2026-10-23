@@ -114,6 +114,7 @@ try {
       localStorage.setItem('kiwiPaired', '1');
       localStorage.setItem('kiwiCuisineLang', 'fr');
     }, MERCHANT);
+    // coverage: surface=kitchen locale=fr viewport=desktop
     await page.goto(base + '/kiwi-cuisine.html', { waitUntil: 'load' });
     const card = `[data-tk="${ORDER}"]`;
     await page.waitForSelector(`#s-new ${card}`, { timeout: 20000 });
@@ -185,6 +186,7 @@ try {
       return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
     });
     await page.evaluateOnNewDocument(() => { try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {} });
+    // coverage: surface=caisse-entry locale=fr viewport=desktop
     await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     await page.waitForFunction(() => typeof doOpenService === 'function', { timeout: 30000 });
     await page.evaluate(() => doOpenService());

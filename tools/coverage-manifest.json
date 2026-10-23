@@ -1,0 +1,1747 @@
+{
+  "version": 1,
+  "notes": [
+    "Declared cells describe shipping targets, not proof of translated content or responsive correctness.",
+    "Shared shells require separate surface/state annotations. Unannotated suites are unclassified, never assumed uncovered at runtime."
+  ],
+  "surfaces": [
+    {
+      "id": "landing",
+      "shells": [
+        "index.html",
+        "fr/index.html",
+        "en/index.html",
+        "ar/index.html",
+        "es/index.html",
+        "de/index.html",
+        "it/index.html",
+        "nl/index.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar",
+        "es",
+        "de",
+        "it",
+        "nl"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "dashboard",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "dashboard-conformite",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=conformite"
+    },
+    {
+      "id": "dashboard-equipe",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=equipe"
+    },
+    {
+      "id": "dashboard-payroll",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=payroll"
+    },
+    {
+      "id": "dashboard-rapport",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=rapport"
+    },
+    {
+      "id": "dashboard-reservations",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=reservations"
+    },
+    {
+      "id": "dashboard-terminaux",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=terminaux"
+    },
+    {
+      "id": "dashboard-transactions",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=transactions"
+    },
+    {
+      "id": "onboarding",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "?onboarding=1"
+    },
+    {
+      "id": "caisse-entry",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "locked entry, no vertical selected"
+    },
+    {
+      "id": "caisse-restaurant",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "restaurant unlocked"
+    },
+    {
+      "id": "caisse-boutique",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(boutique)"
+    },
+    {
+      "id": "caisse-pressing",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(pressing)"
+    },
+    {
+      "id": "caisse-spa",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(spa)"
+    },
+    {
+      "id": "caisse-hotel",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(hotel)"
+    },
+    {
+      "id": "caisse-fastfood",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(fastfood)"
+    },
+    {
+      "id": "caisse-boulangerie",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(boulangerie)"
+    },
+    {
+      "id": "caisse-pizzeria",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(pizzeria)"
+    },
+    {
+      "id": "caisse-traiteur",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(traiteur)"
+    },
+    {
+      "id": "caisse-foodtruck",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(foodtruck)"
+    },
+    {
+      "id": "caisse-epicerie",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(epicerie)"
+    },
+    {
+      "id": "caisse-pharmacie",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(pharmacie)"
+    },
+    {
+      "id": "caisse-librairie",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(librairie)"
+    },
+    {
+      "id": "caisse-fleuriste",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(fleuriste)"
+    },
+    {
+      "id": "caisse-coiffure",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(coiffure)"
+    },
+    {
+      "id": "caisse-gym",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(gym)"
+    },
+    {
+      "id": "caisse-autre",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(autre)"
+    },
+    {
+      "id": "caisse-maison",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "KiwiPosDispatch.unlockById(maison)"
+    },
+    {
+      "id": "waiter",
+      "shells": [
+        "kiwi-serveur.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "waiter demo"
+    },
+    {
+      "id": "employee",
+      "shells": [
+        "kiwi-serveur.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "?merchant= fixture, employee session"
+    },
+    {
+      "id": "kitchen",
+      "shells": [
+        "kiwi-cuisine.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "queue"
+    },
+    {
+      "id": "console",
+      "shells": [
+        "kiwi-admin.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "operator session"
+    },
+    {
+      "id": "orderpro",
+      "shells": [
+        "OrderPro.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar",
+        "es"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "guest menu"
+    },
+    {
+      "id": "booking",
+      "shells": [
+        "booking.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "guest booking"
+    },
+    {
+      "id": "credit-book",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "epicerie / carnet"
+    },
+    {
+      "id": "printer",
+      "shells": [
+        "printer.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "settings"
+    },
+    {
+      "id": "shell-404",
+      "shells": [
+        "404.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-404-index",
+      "shells": [
+        "404/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-Kiwi-Brand-Identity",
+      "shells": [
+        "Kiwi-Brand-Identity.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-_not-found-index",
+      "shells": [
+        "_not-found/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-agent-access",
+      "shells": [
+        "agent-access.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-agent-connect",
+      "shells": [
+        "agent-connect.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-index",
+      "shells": [
+        "ar/guides/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-إدارة-مخزون-المطعم-index",
+      "shells": [
+        "ar/guides/إدارة-مخزون-المطعم/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-برنامج-كاشير-للمطعم-في-المغرب-index",
+      "shells": [
+        "ar/guides/برنامج-كاشير-للمطعم-في-المغرب/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-حساب-تكلفة-الطعام-للمطعم-index",
+      "shells": [
+        "ar/guides/حساب-تكلفة-الطعام-للمطعم/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-فتح-مطعم-في-المغرب-index",
+      "shells": [
+        "ar/guides/فتح-مطعم-في-المغرب/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-نقطة-التعادل-للمطعم-index",
+      "shells": [
+        "ar/guides/نقطة-التعادل-للمطعم/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-هندسة-قائمة-الطعام-للمطعم-index",
+      "shells": [
+        "ar/guides/هندسة-قائمة-الطعام-للمطعم/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-guides-ولاء-عملاء-المطعم-والخصومات-index",
+      "shells": [
+        "ar/guides/ولاء-عملاء-المطعم-والخصومات/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-robot-index",
+      "shells": [
+        "ar/robot/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-brand",
+      "shells": [
+        "brand.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-cafe-atlas-qr",
+      "shells": [
+        "cafe-atlas-qr.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-comptable",
+      "shells": [
+        "comptable.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-cookies",
+      "shells": [
+        "cookies.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-demoBanking",
+      "shells": [
+        "demoBanking.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-demoBankingBlue",
+      "shells": [
+        "demoBankingBlue.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-index",
+      "shells": [
+        "en/guides/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-open-restaurant-morocco-index",
+      "shells": [
+        "en/guides/open-restaurant-morocco/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-restaurant-break-even-point-index",
+      "shells": [
+        "en/guides/restaurant-break-even-point/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-restaurant-customer-loyalty-discounts-index",
+      "shells": [
+        "en/guides/restaurant-customer-loyalty-discounts/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-restaurant-food-cost-index",
+      "shells": [
+        "en/guides/restaurant-food-cost/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-restaurant-inventory-management-index",
+      "shells": [
+        "en/guides/restaurant-inventory-management/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-restaurant-menu-engineering-index",
+      "shells": [
+        "en/guides/restaurant-menu-engineering/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-guides-restaurant-pos-software-morocco-index",
+      "shells": [
+        "en/guides/restaurant-pos-software-morocco/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-robot-index",
+      "shells": [
+        "en/robot/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-calcul-food-cost-restaurant-index",
+      "shells": [
+        "fr/guides/calcul-food-cost-restaurant/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-fidelisation-client-remises-restaurant-index",
+      "shells": [
+        "fr/guides/fidelisation-client-remises-restaurant/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-gestion-stock-restaurant-index",
+      "shells": [
+        "fr/guides/gestion-stock-restaurant/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-index",
+      "shells": [
+        "fr/guides/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-logiciel-caisse-restaurant-maroc-index",
+      "shells": [
+        "fr/guides/logiciel-caisse-restaurant-maroc/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-menu-engineering-restaurant-index",
+      "shells": [
+        "fr/guides/menu-engineering-restaurant/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-ouvrir-restaurant-maroc-index",
+      "shells": [
+        "fr/guides/ouvrir-restaurant-maroc/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-guides-seuil-rentabilite-restaurant-index",
+      "shells": [
+        "fr/guides/seuil-rentabilite-restaurant/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-robot-index",
+      "shells": [
+        "fr/robot/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-kit",
+      "shells": [
+        "kit.html"
+      ],
+      "locales": [
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-kiwi-health",
+      "shells": [
+        "kiwi-health.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-kiwi-order",
+      "shells": [
+        "kiwi-order.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-kiwi-report",
+      "shells": [
+        "kiwi-report.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-liquid",
+      "shells": [
+        "liquid.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-mentions-legales",
+      "shells": [
+        "mentions-legales.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-order-tv",
+      "shells": [
+        "order-tv.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-privacy",
+      "shells": [
+        "privacy.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-reset",
+      "shells": [
+        "reset.html"
+      ],
+      "locales": [
+        "fr",
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-status",
+      "shells": [
+        "status.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-support",
+      "shells": [
+        "support.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-terms",
+      "shells": [
+        "terms.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-tickets",
+      "shells": [
+        "tickets.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-wallet",
+      "shells": [
+        "wallet.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "dashboard-kds",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=kds"
+    },
+    {
+      "id": "dashboard-menu",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=menu"
+    },
+    {
+      "id": "dashboard-reglements",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=reglements"
+    },
+    {
+      "id": "dashboard-stock",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=stock"
+    },
+    {
+      "id": "dashboard-tables",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=tables"
+    },
+    {
+      "id": "native-shell",
+      "shells": [
+        "app/src/index.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "built native account, role and device setup shell"
+    },
+    {
+      "id": "team-entry",
+      "shells": [
+        "kiwi-serveur.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "staff sign-in or clock-in entry, before employee session"
+    },
+    {
+      "id": "dashboard-finance",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=finance"
+    },
+    {
+      "id": "kitchen-entry",
+      "shells": [
+        "kiwi-cuisine.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "unpaired kitchen entry, before the live queue"
+    },
+    {
+      "id": "orderpro-basic",
+      "shells": [
+        "OrderPro.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "/order/basic scriptless guest menu fallback"
+    }
+  ],
+  "excludedHtml": [
+    {
+      "path": "content/guides/pages/breakEven/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/breakEven/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/breakEven/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/food/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/food/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/food/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/hub/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/hub/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/hub/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/loyalty/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/loyalty/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/loyalty/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/menu/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/menu/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/menu/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/openRestaurant/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/openRestaurant/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/openRestaurant/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/pos/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/pos/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/pos/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/stock/ar.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/stock/en.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "content/guides/pages/stock/fr.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "docs/audits/evidence/2026-10-01-ticket-0151/gallery.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "docs/specs/kiwi-design-2027-preview.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "docs/templates/article.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "docs/templates/landing-og-es.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "tools/live-link-outbox-browser-test.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "tools/offline-db-browser-test.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    },
+    {
+      "path": "tools/retail-scan-browser-fixture.html",
+      "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
+    }
+  ],
+  "sources": [
+    "dashboard.html [data-nav]",
+    "assets/pages.js and assets/pages-pro.js nav handlers",
+    "assets/pos-dispatch.js REGISTRY",
+    "recursive HTML shell inventory (explicit template exclusions)"
+  ]
+}

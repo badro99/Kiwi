@@ -30,6 +30,7 @@ let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
 await s.run('the map, control by control', async (t) => {
+  // coverage: surface=shell-kit locale=en viewport=desktop
   const page = t.watch(await kb.open('/kit.html', { query: 'hapticsTrace=1', width: 1280, height: 900 }));
   const mark = () => page.evaluate(() => KiwiHaptics.trace.length);
   const since = (n) => page.evaluate((n) => KiwiHaptics.trace.slice(n).map((e) => ({ c: e.class, trig: e.trigger, b: e.bracket })), n);

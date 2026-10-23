@@ -76,6 +76,7 @@ try {
       assert.ok(hit.ok,'actual tap hit test: '+selector+' '+JSON.stringify(hit));
       await page.click(selector,options);await sleep(180);
     };
+    // coverage: surface=dashboard locale=fr viewport=phone
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
     await page.waitForSelector('.kob-root [data-explore]');await click('.kob-root [data-explore]');await sleep(600);
     await page.waitForSelector('[data-kiwi-skip]');await click('[data-kiwi-skip]');await sleep(1200);

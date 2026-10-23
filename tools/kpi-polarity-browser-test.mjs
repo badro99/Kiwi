@@ -57,6 +57,7 @@ const KEYS = Object.values(NAMES).concat(['tips', 'card_revenue', 'cash_revenue'
 
 for (const theme of ['light', 'dark']) {
   await s.run(theme, async (t) => {
+    // coverage: surface=shell-kit locale=en viewport=desktop
     const page = t.watch(await kb.open('/kit.html', { theme: theme === 'dark' ? 'dark' : undefined }));
     await page.evaluate((keys) => {
       const tiles = [];

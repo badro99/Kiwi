@@ -100,6 +100,7 @@ async function open(tr, ctx, { flag = true } = {}) {
     } catch (_) {}
   }, flag);
   page.setDefaultNavigationTimeout(60000);
+  // coverage: surface=team-entry locale=en viewport=phone
   await page.goto(`${base}/kiwi-serveur.html?merchant=team-test`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#screen-pin', { timeout: 30000 });
   if (flag) await page.waitForSelector('.k-team-signin', { timeout: 30000 });
@@ -132,6 +133,7 @@ async function waitText(page, sel, region, want, ms = 6000) {
 try {
   await S.run('flag off · the shipped form, no kit file fetched', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=team-entry locale=en viewport=phone
     const page = await open(tr, ctx, { flag: false });
     check(await page.evaluate(() => !document.querySelector('k-pin-pad') && !window.KiwiTeamPin), 'no pad, no adapter');
     check(page.kitFetched.length === 0, 'no kit script was fetched');
@@ -140,6 +142,7 @@ try {
 
   await S.run('flag on · sign-in in two steps, then clock in and out', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=team-entry locale=en viewport=phone
     const page = await open(tr, ctx);
     check(await page.evaluate(() => getComputedStyle(document.querySelector('#employee-login')).display === 'none'), 'the shipped form gives way to the kit');
     check(await page.evaluate(() => !document.querySelector('.k-team-signin k-pin-pad')), 'step 1 has no pad');

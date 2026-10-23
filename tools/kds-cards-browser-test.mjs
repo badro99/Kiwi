@@ -136,6 +136,9 @@ async function open(tr, ctx, { flag = true, lang = 'fr', width = 1920, height = 
     localStorage.setItem('kiwiCuisineLang', lang);
     if (flag) localStorage.setItem('kiwiSkin2027:kds', '1');
   }, MERCHANT, flag, lang);
+  // coverage: surface=kitchen locale=fr viewport=desktop
+  // coverage: surface=kitchen locale=fr viewport=tablet
+  // coverage: surface=kitchen locale=fr viewport=phone
   await page.goto(base + '/kiwi-cuisine.html', { waitUntil: 'load' });
   page.kitFetched = kitFetched;
   page.errors = errors;

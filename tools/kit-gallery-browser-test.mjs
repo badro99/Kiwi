@@ -47,6 +47,10 @@ const inspect = (page) => page.evaluate(() => {
 for (const theme of ['light', 'dark']) for (const lang of ['en', 'ar']) for (const width of [390, 1280]) {
   const label = `${theme} · ${lang} · ${width}`;
   await s.run(label, async (t) => {
+    // coverage: surface=shell-kit locale=en viewport=phone
+    // coverage: surface=shell-kit locale=en viewport=desktop
+    // coverage: surface=shell-kit locale=ar viewport=phone
+    // coverage: surface=shell-kit locale=ar viewport=desktop
     const page = t.watch(await kb.open('/kit.html', { theme: theme === 'dark' ? 'dark' : undefined, lang, width, height: 900 }));
     const r = await inspect(page);
     check(r.undefinedEls.length === 0 && r.names.length >= 38, `${label}: all ${r.names.length} kit elements on the page are defined${r.undefinedEls.length ? ' (not: ' + [...new Set(r.undefinedEls)].join(', ') + ')' : ''}`);
@@ -58,6 +62,8 @@ for (const theme of ['light', 'dark']) for (const lang of ['en', 'ar']) for (con
 
 for (const [theme, lang, width] of [['light', 'en', 1280], ['dark', 'ar', 390]]) {
   await s.run(`baseline · ${theme} · ${lang} · ${width}`, async (t) => {
+    // coverage: surface=shell-kit locale=en viewport=desktop
+    // coverage: surface=shell-kit locale=ar viewport=phone
     const page = t.watch(await kb.open('/kit.html', { theme: theme === 'dark' ? 'dark' : undefined, lang, width, height: 900, reduced: true }));
     await page.evaluate(() => { document.querySelectorAll('k-toast').forEach((x) => x.remove()); const c = document.querySelector('.k-caret'); if (c) c.remove(); });
     await page.addStyleTag({ content: '*{caret-color:transparent!important}.g-top{position:static!important}' });

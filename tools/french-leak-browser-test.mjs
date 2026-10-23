@@ -93,6 +93,8 @@ try {
     await page.setRequestInterception(true);
     page.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
     await page.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); } catch (_) {} }, lang);
+    // coverage: surface=dashboard locale=en viewport=desktop
+    // coverage: surface=dashboard locale=ar viewport=desktop
     await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
     const explore = await page.waitForSelector('.kob-root [data-explore]', { visible: true, timeout: 15000 }).catch(() => null);
     if (explore) { await explore.click(); await sleep(900); }
@@ -128,6 +130,8 @@ try {
     await till.setRequestInterception(true);
     till.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
     await till.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
+    // coverage: surface=caisse-entry locale=en viewport=desktop
+    // coverage: surface=caisse-entry locale=ar viewport=desktop
     await till.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     await sleep(3000);
     const split = (found) => ({
@@ -153,6 +157,8 @@ try {
     await bq.setRequestInterception(true);
     bq.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
     await bq.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
+    // coverage: surface=caisse-entry locale=en viewport=desktop
+    // coverage: surface=caisse-entry locale=ar viewport=desktop
     await bq.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     const booted = await bq.waitForFunction(() => window.KiwiPosDispatch && window.KiwiBoutiqueCatalog, { timeout: 20000 }).then(() => true).catch(() => false);
     if (booted) {
@@ -188,6 +194,8 @@ try {
     await ep.setRequestInterception(true);
     ep.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
     await ep.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
+    // coverage: surface=caisse-entry locale=en viewport=desktop
+    // coverage: surface=caisse-entry locale=ar viewport=desktop
     await ep.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     const epBooted = await ep.waitForFunction(() => window.KiwiPosDispatch, { timeout: 20000 }).then(() => true).catch(() => false);
     if (epBooted) {

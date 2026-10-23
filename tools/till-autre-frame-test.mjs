@@ -64,6 +64,7 @@ async function openAutre(flag) {
     localStorage.setItem('kiwi:posAutre:catalog:demo-autre', JSON.stringify([{ id: 'a1', name: 'TEST KIWI · Article', price: 20 }]));
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   }, flag);
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => !!window.KiwiPosDispatch, { timeout: 30000 });
   if (flag) await page.waitForFunction(() => document.documentElement.hasAttribute('data-k-till'), { timeout: 30000 });

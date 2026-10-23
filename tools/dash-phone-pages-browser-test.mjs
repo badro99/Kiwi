@@ -68,6 +68,8 @@ async function open(tr, ctx, { flag, lang }) {
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   }, flag, lang);
   page.setDefaultNavigationTimeout(60000);
+  // coverage: surface=dashboard locale=fr viewport=phone
+  // coverage: surface=dashboard locale=ar viewport=phone
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await sleep(1500);
   await page.keyboard.press('Escape');

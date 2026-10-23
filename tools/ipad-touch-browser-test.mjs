@@ -53,6 +53,7 @@ async function open(t, id) {
   });
   await page.evaluateOnNewDocument(() => { try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {} });
   t.step('open the demo ' + id + ' till');
+  // coverage: surface=caisse-entry locale=fr viewport=tablet
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.KiwiPosDispatch, { timeout: 20000 });
   await page.evaluate((v) => window.KiwiPosDispatch.unlockById(v), id);

@@ -183,6 +183,7 @@ async function open({ flag = true, token = '', routes = {}, store = null } = {})
     if (on) localStorage.setItem('kiwiSkin2027:access', '1');
     if (st) localStorage.setItem('kiwiResetEmail', JSON.stringify(st));
   }, flag, store);
+  // coverage: surface=shell-reset locale=en viewport=tablet
   await page.goto(base + '/reset.html?lang=en' + (token ? '&token=' + encodeURIComponent(token) : ''), { waitUntil: 'load' });
   await page.waitForFunction(() => !!document.querySelector('#view').firstChild, { timeout: 15000 });
   await sleep(300);

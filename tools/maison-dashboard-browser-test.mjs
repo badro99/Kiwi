@@ -129,6 +129,7 @@ try {
     localStorage.setItem('kiwiVenue', venue.id);
     localStorage.setItem('kiwiOnboarded', '1');
   });
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(`http://localhost:${server.address().port}/dashboard.html`, { waitUntil: 'load', timeout: 30000 });
   await page.waitForFunction(() => window.KiwiVenue?.getCurrentVenueData?.()?.subtype === 'maison');
   ok(!await page.$('[data-z-badge]'), 'closed-Z finances stay hidden before the dashboard PIN unlock');

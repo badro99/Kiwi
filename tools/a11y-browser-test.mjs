@@ -134,6 +134,7 @@ function compare(surface, found) {
 const DEMO = { kiwiSkin2027: '1', 'kiwiSkin2027:dashboard': '1', kiwiSkipOnboard: '1', kiwiLang: 'fr' };
 
 await S.run('page d’accueil', async (t) => {
+  // coverage: surface=landing locale=fr viewport=desktop
   const page = await open(t, '/index.html', { kiwiLang: 'fr' });
   compare('landing', await audit(t, page));
 });
@@ -166,15 +167,18 @@ async function keyboardWalk(t, page, stops = 40) {
   console.log(`  ✓ clavier : ${seen.length} arrêts visibles, aucun dans une zone masquée`);
 }
 await S.run('page d’accueil, téléphone', async (t) => {
+  // coverage: surface=landing locale=fr viewport=phone
   const page = await open(t, '/index.html', { kiwiLang: 'fr' }, { width: 390, height: 844, mobile: true });
   compare('landing-phone', await audit(t, page));
   await keyboardWalk(t, page);
 });
 await S.run('page d’accueil, arabe', async (t) => {
+  // coverage: surface=landing locale=ar viewport=desktop
   const page = await open(t, '/ar/index.html', { kiwiLang: 'ar' });
   if (await page.evaluate(() => document.documentElement.dir) !== 'rtl') throw new Error('la page arabe ne se lit pas de droite à gauche');
   const desk = await audit(t, page);
   await keyboardWalk(t, page);
+  // coverage: surface=landing locale=ar viewport=phone
   const phone = await open(t, '/ar/index.html', { kiwiLang: 'ar' }, { width: 390, height: 844, mobile: true });
   compare('landing-ar', union(desk, await audit(t, phone)));
 });
@@ -183,9 +187,19 @@ await S.run('page d’accueil, arabe', async (t) => {
  * ordre de Tab que le français a. */
 for (const lang of ['en', 'es', 'de', 'it', 'nl']) {
   await S.run('page d’accueil · ' + lang, async (t) => {
+    // coverage: surface=landing locale=en viewport=desktop
+    // coverage: surface=landing locale=es viewport=desktop
+    // coverage: surface=landing locale=de viewport=desktop
+    // coverage: surface=landing locale=it viewport=desktop
+    // coverage: surface=landing locale=nl viewport=desktop
     const desk = await open(t, `/${lang}/index.html`, { kiwiLang: lang });
     if (await desk.evaluate(() => document.documentElement.lang) .then((l) => !String(l).startsWith(lang))) throw new Error(`la page ${lang} ne déclare pas sa langue`);
     const a = await audit(t, desk);
+    // coverage: surface=landing locale=en viewport=phone
+    // coverage: surface=landing locale=es viewport=phone
+    // coverage: surface=landing locale=de viewport=phone
+    // coverage: surface=landing locale=it viewport=phone
+    // coverage: surface=landing locale=nl viewport=phone
     const phone = await open(t, `/${lang}/index.html`, { kiwiLang: lang }, { width: 390, height: 844, mobile: true });
     const b = await audit(t, phone);
     await keyboardWalk(t, phone);
@@ -193,6 +207,7 @@ for (const lang of ['en', 'es', 'de', 'it', 'nl']) {
   });
 }
 await S.run('tableau de bord démo', async (t) => {
+  // coverage: surface=dashboard locale=fr viewport=desktop
   const page = await open(t, '/dashboard.html', DEMO);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d|Explore the d/.test(x.textContent)); if (b) b.click(); });
   await sleep(800);
@@ -202,6 +217,7 @@ await S.run('tableau de bord démo', async (t) => {
   compare('dashboard', await audit(t, page));
 });
 await S.run('assistant d’installation', async (t) => {
+  // coverage: surface=onboarding locale=fr viewport=phone
   const page = await open(t, '/dashboard.html?onboarding=1', { 'kiwiSkin2027:dashboard': '1', kiwiLang: 'fr' }, { width: 430, height: 900 });
   t.step('wait for the wizard');
   await page.waitForFunction(() => !!(document.getElementById('kit-onboarding') || document.querySelector('.kob-root')), { timeout: 20000 });
@@ -209,6 +225,7 @@ await S.run('assistant d’installation', async (t) => {
   compare('onboarding', await audit(t, page));
 });
 await S.run('caisse démo', async (t) => {
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   const page = await open(t, '/kiwi-caisse.html', { kiwiLang: 'fr' }, { width: 1180, height: 820 });
   await sleep(1200);
   compare('caisse', await audit(t, page));
@@ -228,6 +245,9 @@ await S.run('tableau de bord démo, mode sombre', async (t) => {
 });
 for (const [id, label] of [['pressing', 'caisse pressing'], ['hotel', 'caisse hôtel']]) {
   await S.run(label, async (t) => {
+    // coverage: surface=caisse-entry locale=fr viewport=desktop
+    // coverage: surface=caisse-pressing locale=fr viewport=desktop
+    // coverage: surface=caisse-hotel locale=fr viewport=desktop
     const page = await open(t, '/kiwi-caisse.html', { kiwiLang: 'fr' }, { width: 1180, height: 820 });
     await sleep(1200);
     t.step('open the ' + id + ' till');
@@ -243,6 +263,7 @@ for (const [id, label] of [['pressing', 'caisse pressing'], ['hotel', 'caisse h�
  * rien ne quitte le téléphone), menu à emporter, la feuille d'un plat à options
  * ouverte, puis le panier. */
 await S.run('commande QR, démo', async (t) => {
+  // coverage: surface=orderpro locale=fr viewport=phone
   const page = await open(t, '/OrderPro.html?s=demo', { orderProLang: 'fr' }, { width: 390, height: 844, mobile: true });
   t.step('take away, the menu');
   await page.waitForSelector('#screen-mode.is-active', { timeout: 15000 });
@@ -321,6 +342,7 @@ await S.run('écran de cuisine', async (t) => {
       r.respond({ status: res.status, contentType: 'application/json', body: await res.text() });
     } catch (e) { r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: String(e && e.message) }) }); }
   };
+  // coverage: surface=kitchen locale=fr viewport=desktop
   const page = await open(t, '/kiwi-cuisine.html', { kiwiLiveMerchant: MERCHANT, kiwiPaired: '1', kiwiCuisineLang: 'fr' }, { width: 1280, height: 800, api, pin: false });   // l'âge des bons se lit sur la vraie horloge, celle du serveur
   t.step('wait for the bons');
   await page.waitForFunction(() => document.querySelectorAll('.tk .tk-act').length >= 4, { timeout: 20000 });
@@ -352,6 +374,7 @@ function compareThenFocus(surface, found) {
  * destructeur qu'elle offre. La console n'existe qu'en français (outil interne
  * de l'équipe Kiwi) : pas d'audit arabe ici. */
 await S.run('console opérateur, tablette, suppression', async (t) => {
+  // coverage: surface=console locale=fr viewport=tablet
   const page = await open(t, '/kiwi-admin.html', {}, { width: 768, height: 1024, mobile: true, pin: false });
   t.step('wait for the roster');
   await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Supprimer'), { timeout: 20000 });
@@ -401,6 +424,9 @@ for (const lang of ['fr', 'en', 'ar']) {
       if (lang === 'ar' && await login.evaluate(() => document.documentElement.dir) !== 'rtl') throw new Error('app équipe · l’arabe ne passe pas de droite à gauche');
       states.push(await audit(t, login));
       st.session = true;
+      // coverage: surface=employee locale=fr viewport=phone
+      // coverage: surface=employee locale=en viewport=phone
+      // coverage: surface=employee locale=ar viewport=phone
       const app = await open(t, url, storage, { width: 390, height: 844, mobile: true, api });
       t.step(`the clock-in screen (${theme})`);
       await app.waitForSelector('#screen-clockin.is-active', { timeout: 20000 });
@@ -432,6 +458,10 @@ for (const lang of ['fr', 'en', 'ar']) {
 for (const lang of ['fr', 'ar']) {
   await S.run('carnet de crédit · ' + lang + (lang === 'ar' ? ', sombre' : ''), async (t) => {
     /* le français en clair, l'arabe en sombre : les deux thèmes de la caisse */
+    // coverage: surface=caisse-epicerie locale=fr viewport=desktop
+    // coverage: surface=caisse-epicerie locale=ar viewport=desktop
+    // coverage: surface=credit-book locale=fr viewport=desktop
+    // coverage: surface=credit-book locale=ar viewport=desktop
     const page = await open(t, '/kiwi-caisse.html', { kiwiLang: lang, kiwiCaisseLang: lang, kiwiCaisseTheme: lang === 'ar' ? 'dark' : 'light' }, { width: 1180, height: 820 });
     await sleep(1200);
     t.step('open the épicerie till, the credit book');

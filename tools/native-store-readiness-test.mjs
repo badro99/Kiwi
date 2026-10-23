@@ -100,6 +100,9 @@ try {
     await page.waitForFunction(()=>document.querySelector('.kiwi-native-account [data-submit]').hidden);
     check(await page.$$eval('.kiwi-native-account-actions button',els=>els.filter(el=>!el.hidden).length===1),lang+': unavailable service does not offer a false sign-in fix');
     // Real bundled owner route, entered only using its visible local demo link.
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard locale=en viewport=phone
+    // coverage: surface=dashboard locale=ar viewport=phone
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
     await new Promise(r=>setTimeout(r,1500));
     await page.evaluate(()=>document.querySelector('.kob-root [data-explore]')?.click());

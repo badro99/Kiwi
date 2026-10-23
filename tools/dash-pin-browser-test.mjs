@@ -104,6 +104,7 @@ async function open(tr, ctx, { flag = true, demos = false, onboarded = true } = 
     } catch (_) {}
   }, ACCOUNT, flag, demos, onboarded);
   page.setDefaultNavigationTimeout(60000);
+  // coverage: surface=dashboard locale=en viewport=desktop
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-kiwi-pin-input]', { timeout: 30000 });
   if (flag) await page.waitForFunction(() => { const p = document.querySelector('[data-kiwi-lock] k-pin-pad'); return p && p.shadowRoot && p.shadowRoot.querySelector('[data-key="1"]'); }, { timeout: 30000 });
@@ -147,6 +148,7 @@ const CODE_ = `"${CODE}"`;
 
 async function prove(tr, ctx) {
   verifyMode = 'normal';
+  // coverage: surface=dashboard locale=en viewport=desktop
   const first = await open(tr, ctx);
   await typeCode(first, CODE);
   assert.equal(await outcome(first), 'opened');
@@ -157,6 +159,7 @@ async function prove(tr, ctx) {
 try {
   await S.run('flag off · the shipped cells, no kit file fetched', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { flag: false });
     await sleep(400);
     check(await page.evaluate(() => !document.querySelector('k-pin-pad') && !window.KiwiDashPin && !document.documentElement.hasAttribute('data-skin-2027')), 'no pad, no adapter, no skin mark');
@@ -167,6 +170,7 @@ try {
   await S.run('flag on · online, the server first', async (tr) => {
     verifyMode = 'normal';
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     check(await page.evaluate(() => document.documentElement.getAttribute('data-skin-2027') === 'dashboard'), 'the page carries the dashboard skin mark');
     check(await page.evaluate(() => getComputedStyle(document.querySelector('[data-kiwi-pin]')).display === 'none' && getComputedStyle(document.querySelector('.kiwi-lock-help')).display === 'none'), 'the pad replaces the cells and the help line');
@@ -181,6 +185,7 @@ try {
     await noPlaintext(page, 'and no code in localStorage');
 
     tr.step('a wrong code');
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p2 = await open(tr, ctx);
     await typeCode(p2, OTHER);
     check(await outcome(p2) === 'refused', 'a code the server refuses keeps the lock');
@@ -192,6 +197,7 @@ try {
     check(await vaultCount(p2) === 1, 'a stranger\'s wrong code erases nothing');
 
     tr.step('a cashier\'s code: proven, not a dashboard code');
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p3 = await open(tr, ctx);
     await typeCode(p3, STAFF);
     check(await outcome(p3) === 'refused' && (await regions(p3)).pol === await tr$(p3, 'pin.wrong'), 'a staff-tier 200 is refused with pin.wrong');
@@ -202,6 +208,7 @@ try {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     await prove(tr, ctx);
     verifyMode = 'expired-html';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p1 = await open(tr, ctx);
     await typeCode(p1, CODE);
     check(await outcome(p1) === 'refused', 'a dead session keeps the lock');
@@ -211,6 +218,7 @@ try {
     check(await vaultCount(p1) === 1, 'and the row stays');
 
     verifyMode = 'busy';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p2 = await open(tr, ctx);
     await typeCode(p2, CODE);
     check(await outcome(p2) === 'refused', 'a 429 keeps the lock');
@@ -220,6 +228,7 @@ try {
     check((await regions(p2)).keys === 'false', 'the keys stay enabled (§10.2: the dashboard\'s pause)');
 
     verifyMode = 'refuse-all';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p3 = await open(tr, ctx);
     await typeCode(p3, CODE);
     check(await outcome(p3) === 'refused', 'online, the server\'s no is final whatever this browser holds');
@@ -232,6 +241,7 @@ try {
     verifyMode = 'refuse-unconfigured';
     roster = [];
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     await typeCode(page, OTHER);
     check(await outcome(page) === 'opened', 'the server says this account has no code: the lock opens');
@@ -244,9 +254,11 @@ try {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     await prove(tr, ctx);
     verifyMode = 'down';
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p1 = await open(tr, ctx);
     await typeCode(p1, CODE);
     check(await outcome(p1) === 'opened', 'the server is silent: the proven row opens the code');
+    // coverage: surface=dashboard locale=en viewport=desktop
     const p2 = await open(tr, ctx);
     await p2.setOfflineMode(true);
     const before = asked.length;
@@ -264,6 +276,7 @@ try {
   await S.run('flag on · no code above the staff tier', async (tr) => {
     roster = [{ name: 'Sara', role: 'caisse' }];
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx);
     const want = await tr$(page, 'pin.dashboard.no_owner_code');
     await page.waitForFunction((w) => document.querySelector('[data-kiwi-lock] k-pin-pad').shadowRoot.querySelector('#sub').textContent === w, { timeout: 5000 }, want);
@@ -277,6 +290,7 @@ try {
   await S.run('flag on · a demo surface with nobody configured opens', async (tr) => {
     roster = [];
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { demos: true });
     const before = asked.length;
     await typeCode(page, OTHER);

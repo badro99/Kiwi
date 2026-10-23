@@ -286,6 +286,11 @@ async function openShell({ locale = 'fr', viewport = 'iphone', me = 'login', plu
     return req.abort();
   });
   page.closeCtx = () => ctx.close();
+  // coverage: surface=native-shell locale=fr viewport=phone
+  // coverage: surface=native-shell locale=en viewport=phone
+  // coverage: surface=native-shell locale=ar viewport=phone
+  // coverage: surface=native-shell locale=fr viewport=tablet
+  // coverage: surface=native-shell locale=fr viewport=desktop
   await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
   return page;
 }

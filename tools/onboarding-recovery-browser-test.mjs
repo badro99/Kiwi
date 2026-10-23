@@ -46,6 +46,7 @@ async function open(t, lang, viewport, refused = false) {
     localStorage.removeItem('kiwiSkin2027:dashboard');
     if (refused) Storage.prototype.setItem = function () { throw new DOMException('blocked', 'QuotaExceededError'); };
   }, lang, refused);
+  // coverage: surface=onboarding locale=fr viewport=tablet
   await page.goto(base + '/dashboard.html?onboarding=1', { waitUntil: 'load' });
   await page.evaluate(async () => {
     for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
@@ -62,6 +63,12 @@ const fill = async (page, field, value) => {
 for (const lang of ['fr', 'en', 'ar']) {
   for (const [device, viewport] of Object.entries({ phone: { width: 390, height: 844, isMobile: true }, tablet: { width: 820, height: 1180 } })) {
     await tests.run(`${lang}-${device}-recovery`, async t => {
+      // coverage: surface=onboarding locale=fr viewport=phone
+      // coverage: surface=onboarding locale=fr viewport=tablet
+      // coverage: surface=onboarding locale=en viewport=phone
+      // coverage: surface=onboarding locale=en viewport=tablet
+      // coverage: surface=onboarding locale=ar viewport=phone
+      // coverage: surface=onboarding locale=ar viewport=tablet
       const page = await open(t, lang, viewport);
       t.step('fill the first steps and leave at locations');
       await next(page);
@@ -94,6 +101,12 @@ for (const lang of ['fr', 'en', 'ar']) {
       assert.equal(await page.$eval('[data-f="ownerName"]', el => el.value), 'Salma');
     });
     await tests.run(`${lang}-${device}-storage-refused`, async t => {
+      // coverage: surface=onboarding locale=fr viewport=phone
+      // coverage: surface=onboarding locale=fr viewport=tablet
+      // coverage: surface=onboarding locale=en viewport=phone
+      // coverage: surface=onboarding locale=en viewport=tablet
+      // coverage: surface=onboarding locale=ar viewport=phone
+      // coverage: surface=onboarding locale=ar viewport=tablet
       const page = await open(t, lang, viewport, true);
       await page.waitForSelector('[data-draft-note]');
       assert.ok((await page.$eval('[data-draft-note]', el => el.textContent)).startsWith(notes[lang]));

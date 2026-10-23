@@ -84,6 +84,9 @@ async function open(tr, ctx, { flag = true, width = 1440, height = 900, theme = 
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   }, flag, theme, lang);
   tr.step('open the dashboard');
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=fr viewport=tablet
+  // coverage: surface=dashboard locale=ar viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await sleep(1500);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d|Explore the d/.test(x.textContent)); if (b) b.click(); });
@@ -135,6 +138,7 @@ console.log('dash-desktop-browser-test');
 try {
   await S.run('flag off · nothing of the desktop loads', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { page, fetched } = await open(tr, ctx, { flag: false });
     const v = await page.evaluate(() => ({ side: !!document.getElementById('kit-side'), lum: (() => { const m = getComputedStyle(document.querySelector('aside.sidebar')).backgroundColor.match(/[\d.]+/g) || [255, 255, 255]; return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; })() }));
     check(!fetched.some((p) => /dash-desktop\.(css|js)/.test(p)) && !v.side, 'flag off: dash-desktop.css and .js are never fetched, no kit sidebar');
@@ -144,6 +148,7 @@ try {
   await S.run('flag on · 1440, the frame and Home', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     const errors = [];
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { page } = await open(tr, ctx);
     page.on('pageerror', (e) => errors.push(e.message));
     const v = await measure(page);
@@ -184,6 +189,7 @@ try {
   await S.run('flag on · 1280, sentence case, Orders and Report', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     const errors = [];
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { page } = await open(tr, ctx, { width: 1280, height: 900 });
     page.on('pageerror', (e) => errors.push(e.message));
     /* A label in capitals: a visible text with a word of three capitals or
@@ -232,6 +238,7 @@ try {
 
   await S.run('flag on · 1024 and 1920', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=tablet
     const { page } = await open(tr, ctx, { width: 1024, height: 768 });
     const v = await measure(page);
     const cols = new Set(v.tiles.map((t) => Math.round(t.l))).size;
@@ -247,11 +254,13 @@ try {
 
   await S.run('flag on · dark and Arabic', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { page } = await open(tr, ctx, { theme: 'dark' });
     const v = await measure(page);
     const sys = await page.evaluate(() => ({ html: document.documentElement.getAttribute('data-theme'), body: document.body.getAttribute('data-vexel-mode') }));
     check(v.sb.lum < 0.2 && v.bodyLum < 0.1 && v.bodyBg === v.k.bg, `dark: the sidebar and the ground paint dark, measured (${v.sb.lum.toFixed(2)}, ${v.bodyLum.toFixed(2)}; html ${sys.html}, body ${sys.body})`);
     const ctx2 = await browser.createBrowserContext(); tr.defer(() => ctx2.close());
+    // coverage: surface=dashboard locale=ar viewport=desktop
     const { page: ar } = await open(tr, ctx2, { lang: 'ar' });
     const a = await measure(ar);
     check(a.sb.rect.l > a.main.l && a.hero.r > a.grid.r, 'Arabic: the sidebar at the right edge, the tiles at the left of the chart');
@@ -260,6 +269,7 @@ try {
 
   await S.run('flag on · 800, none of the desktop is drawn', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=tablet
     const { page } = await open(tr, ctx, { width: 800, height: 1000 });
     const v = await page.evaluate(() => ['#kit-side', '#kit-dd-goal', '.k-dd-ground'].map((s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).display : 'none'; }));
     check(v.every((d) => d === 'none'), 'below 900 the kit sidebar, the goal card and the grounds are not drawn');
@@ -271,6 +281,7 @@ try {
   await S.run('flag on · 900, the desktop from the shipped sidebar column', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     const errors = [];
+    // coverage: surface=dashboard locale=fr viewport=tablet
     const { page } = await open(tr, ctx, { width: 900, height: 1000 });
     page.on('pageerror', (e) => errors.push(e.message));
     const v = await page.evaluate(() => ({

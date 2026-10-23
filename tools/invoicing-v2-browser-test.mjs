@@ -256,6 +256,9 @@ async function dashboard(tr, { lang = 'fr', real = false, fake = null, width = 1
     try { localStorage.setItem('kiwiLang', lang); } catch (_) {}
   }, lang);
   tr.step('open the dashboard');
+  // coverage: surface=dashboard locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=ar viewport=desktop
+  // coverage: surface=dashboard locale=fr viewport=phone
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await page.waitForFunction(() => document.readyState === 'complete' && window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers.invoicing, { timeout: 25000 });
   await sleep(1200);

@@ -136,6 +136,7 @@ async function api(page, method, url, body) {
   }, method, url, body || null);
 }
 async function signIn(page, m) {
+  // coverage: surface=dashboard locale=fr viewport=desktop
   if (!/^http/.test(page.url())) await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/login', { email: m.email, password: m.password });
   if (r.status !== 200) throw new Error(`sign-in ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
@@ -161,10 +162,12 @@ async function typeDigits(page, keySel, value) {
 async function createMerchant(t, ctx, m) {
   const page = await preparePage(t, await ctx.newPage());
   t.step(`${m.label}: sign up`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/signup', { email: m.email, password: m.password, name: 'Test ' + m.label, business: m.business });
   if (r.status !== 200) throw new Error(`signup ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
   t.step(`${m.label}: onboarding wizard`);
+  // coverage: surface=onboarding locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // Commencer
   await clickSel(page, `[data-type="${m.type}"]`);
@@ -198,6 +201,7 @@ async function pairTill(t, page, m) {
   await signIn(page, m);
   await page.evaluate((h) => localStorage.setItem('kiwiPairHandoff', JSON.stringify({ ...h, ts: Date.now() })),
     { merchant: m.slug, type: m.type, name: m.business, subtype: '', location: '' });
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html?pair=1', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction((slug) => {
     try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null')?.merchant === slug; } catch (_) { return false; }
@@ -463,6 +467,7 @@ async function restoReport(page) {
 /* ── the dashboard ────────────────────────────────────────────────────── */
 async function openDashboard(t, page, m) {
   t.step(`${m.label}: dashboard`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-kiwi-pin-input]', { timeout: 30000 });
   await sleep(800);
@@ -1065,6 +1070,7 @@ async function qrOrderCashedAtTill(t, tableNo, want, opts = {}) {
   t.step(`guest: table ${tableNo}, Pastilla + Café noir, send`);
   const guestCtx = await browser.createBrowserContext();
   const guest = await preparePage(t, await guestCtx.newPage(), { width: 390, height: 844 });
+  // coverage: surface=orderpro locale=fr viewport=phone
   await guest.goto(base + `/OrderPro.html?s=${encodeURIComponent(NIGHT.slug)}&t=${tableNo}`, { waitUntil: 'load' });
   await guest.waitForSelector('[data-add="n2"]', { visible: true, timeout: 20000 });
   await clickSel(guest, '[data-add="n2"]');
@@ -1230,6 +1236,7 @@ await scenario('restaurant · two QR orders on one off-plan visit, cashed one at
   t.step('guest: table 11, a black coffee, send, then add a Pastilla and send again');
   const guestCtx = await browser.createBrowserContext();
   const guest = await preparePage(t, await guestCtx.newPage(), { width: 390, height: 844 });
+  // coverage: surface=orderpro locale=fr viewport=phone
   await guest.goto(base + `/OrderPro.html?s=${encodeURIComponent(NIGHT.slug)}&t=11`, { waitUntil: 'load' });
   async function send(dish) {
     await guest.waitForSelector(`[data-add="${dish}"]`, { visible: true, timeout: 20000 });
@@ -1370,6 +1377,7 @@ await scenario('restaurant · a QR takeaway order, paid at the counter, ready, h
   t.step('guest: takeaway, Pastilla + Café noir, send');
   const guestCtx = await browser.createBrowserContext();
   const guest = await preparePage(t, await guestCtx.newPage(), { width: 390, height: 844 });
+  // coverage: surface=orderpro locale=fr viewport=phone
   await guest.goto(base + `/OrderPro.html?s=${encodeURIComponent(NIGHT.slug)}&mode=emporter`, { waitUntil: 'load' });
   await guest.waitForSelector('[data-add="n2"]', { visible: true, timeout: 20000 });
   await clickSel(guest, '[data-add="n2"]');

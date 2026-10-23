@@ -63,6 +63,7 @@ async function dashboard(t, { reducedMotion = false, theme = 'dark' } = {}) {
     }).observe(document, { childList: true, subtree: true });
   }, theme);
   t.step('open dashboard (' + theme + (reducedMotion ? ', reduced motion' : '') + ')');
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await page.waitForFunction((th) => (document.documentElement.getAttribute('data-theme') || 'light') === th, { timeout: 15000 }, theme);
   await sleep(4000);

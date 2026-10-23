@@ -130,6 +130,7 @@ try {
     await ctx.close();
   }
   for (const [name, system, dark] of [['reset page, light', 'light', false], ['reset page, dark', 'dark', true]]) {
+    // coverage: surface=shell-reset locale=en viewport=tablet
     const { ctx, page, errors } = await open('/reset.html?lang=en', { system });
     await page.waitForFunction(() => !!document.querySelector('#view k-button'), { timeout: 10000 });
     const v = await capture(page, RESET);
@@ -141,11 +142,13 @@ try {
     await ctx.close();
   }
   {
+    // coverage: surface=printer locale=fr viewport=tablet
     const { ctx, page, fetched } = await open('/printer.html', { flag: false });
     check(!fetched.some((p) => p.startsWith('/assets/kit/')), 'printer page, flag off: no kit file');
     await ctx.close();
   }
   for (const [name, system, dark] of [['printer page, light', 'light', false], ['printer page, dark', 'dark', true]]) {
+    // coverage: surface=printer locale=fr viewport=tablet
     const { ctx, page, errors } = await open('/printer.html', { system });
     const v = await capture(page, PRINTER);
     luminanceCheck(name, v, dark);

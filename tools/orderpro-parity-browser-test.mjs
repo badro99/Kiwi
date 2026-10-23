@@ -162,6 +162,11 @@ async function open(tr, ctx, query, { storage = {}, width = 390, height = 844 } 
   await page.evaluateOnNewDocument((kv) => {
     try { Object.keys(kv).forEach((k) => localStorage.setItem(k, kv[k])); } catch (_) {}
   }, storage);
+  // coverage: surface=orderpro locale=fr viewport=phone
+  // coverage: surface=orderpro locale=es viewport=phone
+  // coverage: surface=orderpro locale=en viewport=phone
+  // coverage: surface=orderpro locale=fr viewport=tablet
+  // coverage: surface=orderpro locale=fr viewport=desktop
   await page.goto(base + '/OrderPro.html?' + query, { waitUntil: 'load' });
   page.errors = errors;
   page.seen = seen;
@@ -184,6 +189,7 @@ const visible = (page, sel) => page.evaluate((s) => {
 try {
   await S.run('without Order Pro · a menu to browse, with its nutrition', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=fr viewport=phone
     const page = await open(tr, ctx, 's=parity-browse&t=4');
     await page.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     check(true, 'the menu opens directly, even from a table link');
@@ -213,6 +219,7 @@ try {
 
   await S.run('five languages · the picker, Spanish from the QR page, Arabic right to left', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=es viewport=phone
     const page = await open(tr, ctx, 's=parity-langs', { storage: { kiwiOrderLang: 'es' } });
     await page.waitForSelector('#screen-mode.is-active', { timeout: 15000 });
     const langs = await page.$$eval('#lang-picker .lang-btn', (b) => b.map((x) => x.dataset.lang));
@@ -244,6 +251,7 @@ try {
 
   await S.run('closed today · the banner, and the send button stays off', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=fr viewport=phone
     const page = await open(tr, ctx, 's=parity-closed', { storage: { orderProLang: 'fr' } });
     await page.waitForSelector('#screen-mode.is-active', { timeout: 15000 });
     await page.waitForSelector('#kh-closed', { timeout: 5000 });
@@ -270,6 +278,7 @@ try {
 
   await S.run('the pitch demo · Café Atlas from the phone, nothing sent', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=en viewport=phone
     const page = await open(tr, ctx, 's=demo', { storage: { orderProLang: 'en' } });
     await page.waitForSelector('#screen-mode.is-active', { timeout: 15000 });
     check(page.seen.includes('/assets/orderpro-demo.js') && !page.seen.includes('/api/menu'), 'the demo menu comes from the phone, not /api/menu');
@@ -304,6 +313,7 @@ try {
   }
   await S.run('the script budget · 60 KB gzip before the first screen (§19)', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=fr viewport=phone
     const browse = await open(tr, ctx, 's=parity-browse&t=4');
     await browse.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     await sleep(1500);
@@ -313,6 +323,7 @@ try {
     check(browse.seen.includes('/assets/material-icons.ordering.js') && !browse.seen.includes('/assets/material-icons.js'), 'the icon subset, not the full set, when every glyph is in it');
     check(!browse.seen.includes('/assets/orderpro-guest.js'), 'no guest page module without Order Pro');
 
+    // coverage: surface=orderpro locale=fr viewport=phone
     const table = await open(tr, ctx, 's=parity-table&t=4');
     await table.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     const first = scripts(table);
@@ -326,6 +337,7 @@ try {
   });
   await S.run('a boutique · its own file, loaded for a boutique only', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=fr viewport=phone
     const page = await open(tr, ctx, 's=parity-shop');
     await page.waitForSelector('#screen-boutique.is-active [data-bq="p1"]', { timeout: 15000 });
     check(page.seen.includes('/assets/orderpro-boutique.js') && !page.seen.includes('/assets/orderpro-guest.js'), 'the boutique file loads, the guest page module does not');
@@ -345,6 +357,7 @@ try {
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => /Chemise lin/.test((document.querySelector('#bq-detail.is-open') || {}).textContent || ''), { timeout: 3000 });
     check(true, 'a barcode typed by hand finds its product');
+    // coverage: surface=orderpro locale=fr viewport=phone
     const table = await open(tr, ctx, 's=parity-table&t=4');
     await table.waitForSelector('#screen-menu.is-active', { timeout: 15000 });
     await sleep(1200);
@@ -354,11 +367,13 @@ try {
 
   await S.run('the 2027 skin · globe, iPad cart pane, desktop column, the basic page (§13, §4.1)', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=orderpro locale=fr viewport=phone
     const off = await open(tr, ctx, 's=parity-table&t=4');
     await off.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     check(!off.seen.some((p) => /ordering\.css|tokens-2027\.css/.test(p)) && !(await off.$('.lang-globe'))
       && (await off.evaluate(() => document.documentElement.getAttribute('data-skin-2027'))) === null, 'flag off: no skin, no kit sheet, the shipped picker');
 
+    // coverage: surface=orderpro locale=fr viewport=phone
     const phone = await open(tr, ctx, 's=parity-table&t=4&skin=2027');
     await phone.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     check(phone.seen.includes('/assets/kit/tokens-2027.css') && phone.seen.includes('/assets/kit/ordering.css'), 'flag on: the kit’s tokens and the skin’s sheet load');
@@ -388,6 +403,7 @@ try {
     console.log(`    skin on: inline ${kb(inline)} + ${Object.entries(js.sizes).map(([f, n]) => f + ' ' + kb(n)).join(' + ')} = ${kb(js.total)}`);
     check(js.total - (js.sizes['orderpro-guest.js'] || 0) <= 60 * 1024, `the skin adds no script: ${kb(js.total - (js.sizes['orderpro-guest.js'] || 0))} before the guest page module`);
 
+    // coverage: surface=orderpro locale=fr viewport=tablet
     const ipad = await open(tr, ctx, 's=parity-table&t=4&skin=2027', { width: 834, height: 1194 });
     await ipad.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     await sleep(800);
@@ -405,6 +421,7 @@ try {
     check(true, 'a dish added shows in the pane at once');
     await shot(ipad, 'skin-ipad');
 
+    // coverage: surface=orderpro locale=fr viewport=desktop
     const desk = await open(tr, ctx, 's=parity-table&t=4&skin=2027', { width: 1440, height: 900 });
     await desk.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
     await sleep(800);
@@ -420,6 +437,7 @@ try {
     const oldSeen = [];
     old.on('request', (r) => { route(r, oldSeen); });
     await old.evaluateOnNewDocument(() => { CSS.supports = () => false; });
+    // coverage: surface=orderpro-basic locale=fr viewport=tablet
     await old.goto(base + '/OrderPro.html?s=parity-table&t=4&skin=2027', { waitUntil: 'load' });
     await old.waitForFunction(() => location.pathname === '/order/basic', { timeout: 8000 });
     const said = await old.evaluate(() => ({ text: document.body.textContent, scripts: document.scripts.length }));

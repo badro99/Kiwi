@@ -219,6 +219,7 @@ async function withCtx(options, fn) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   await page.setCookie({ name: SESS_COOKIE, value: sessionValue, url: base });
+  // coverage: surface=dashboard locale=fr viewport=tablet
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'load', timeout: 60000 });
   const venue = await page.evaluate(() => window.KiwiVenue?.getVenue?.() || 'hx-venue');
   await page.evaluate(

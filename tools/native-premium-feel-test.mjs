@@ -101,6 +101,8 @@ async function phone(scheme, { hostSheet = false, url = '/dashboard.html', demo 
   const requests = [];
   page.on('request', (r) => requests.push(r.url()));
   page.on('dialog', (d) => { if (process.env.FEEL_DEBUG) console.log('dialog:', d.type(), d.message()); d.dismiss().catch(() => {}); });
+  // coverage: surface=dashboard locale=en viewport=phone
+  // coverage: surface=caisse-entry locale=en viewport=phone
   await page.goto(base + url, { waitUntil: 'networkidle2' });
   if (demo) {
     await page.waitForSelector('.kob-root [data-explore]');

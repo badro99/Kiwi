@@ -130,6 +130,7 @@ async function open(tr, ctx, { disk }) {
     subtype: 'maison', custom: true, siblings: '', status: 'En service', ice: '·', txCount: 0, staffCount: 0, hours: '', methods: '', goal: 0,
   }, disk ? JSON.stringify({ byVenue: { [VENUE_ID]: disk }, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} }) : null, 'kiwiTeamV2:custom');
   page.setDefaultNavigationTimeout(60000);
+  // coverage: surface=dashboard locale=en viewport=desktop
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => !!window.__kiwiTeamV2 && !!window.KiwiVenue && !!window.KiwiCloudDoc, { timeout: 30000 });
   return page;
@@ -157,6 +158,7 @@ try {
     resetServer('owner');
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { disk: roster(true) });
     await page.waitForFunction((id, n) => (window.__kiwiTeamV2.byVenue[id] || []).length === n, { timeout: 15000 }, VENUE_ID, 3);
     await page.waitForFunction(() => !/"(4821|7390|1357)"/.test(localStorage.getItem('kiwiTeamV2:custom') || ''), { timeout: 15000 })
@@ -174,6 +176,7 @@ try {
     resetServer('owner');
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { disk: roster(true) });
     await settle(page);
     await noCodesOnDisk(page, 'premier chargement : disque propre');
@@ -194,12 +197,14 @@ try {
     resetServer('owner');
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const first = await open(tr, ctx, { disk: roster(true) });
     await settle(first);
     await noCodesOnDisk(first, 'départ : disque propre');
     await first.close();
     server_.getMode = 'down';
     server_.posts = []; server_.pinPosts = [];
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { disk: null });
     await settle(page, 3000);
     check(server_.pinPosts.length === 0, 'aucun staff_pins n\'est publié tant que les codes manquent');
@@ -212,11 +217,13 @@ try {
     resetServer('owner');
     const ctx = await browser.createBrowserContext();
     tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=en viewport=desktop
     const first = await open(tr, ctx, { disk: roster(true) });
     await settle(first);
     await first.close();
     server_.getMode = 'redacted';
     server_.posts = []; server_.pinPosts = [];
+    // coverage: surface=dashboard locale=en viewport=desktop
     const page = await open(tr, ctx, { disk: null });
     await settle(page, 3000);
     check(server_.pinPosts.length === 0, 'aucun staff_pins publié depuis une copie sans codes');

@@ -35,6 +35,7 @@ try {
     const venue={id:'v-date-selector',name:'Date selector fixture',slug:'date-selector',type:'restaurant',custom:true,status:'En service',txCount:0,staffCount:0};
     localStorage.setItem('kiwiCustomVenues',JSON.stringify([venue])); localStorage.setItem('kiwiVenue',venue.id); localStorage.setItem('kiwiOnboarded','1');
   });
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html`,{waitUntil:'load',timeout:30000});
   await page.waitForSelector('.kiwi-lock-skip',{visible:true}); await page.locator('.kiwi-lock-skip').click();
   await page.waitForSelector('.sidebar nav a[data-nav="transactions"]');

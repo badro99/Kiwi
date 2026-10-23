@@ -65,6 +65,7 @@ async function openTill(flag) {
     localStorage.setItem('kiwi:openingFloat:v1:demo', '500');
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   }, flag);
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof openService === 'function' && !!document.getElementById('clockin-btn'), { timeout: 30000 });
   if (flag) await page.waitForFunction(() => document.documentElement.hasAttribute('data-k-till'), { timeout: 30000 });

@@ -53,6 +53,7 @@ await page.setViewport({ width: 1366, height: 1000 });
 await page.setBypassServiceWorker(true);
 await page.setRequestInterception(true);
 page.on('request', (r) => { const u = r.url(); return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort(); });
+// coverage: surface=shell-kit locale=en viewport=desktop
 await page.goto(base + '/kit.html', { waitUntil: 'load' });
 await page.waitForFunction(() => !!customElements.get('k-chart') && !!window.KiwiFormat, { timeout: 20000 });
 

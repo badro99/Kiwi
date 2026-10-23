@@ -115,6 +115,7 @@ try {
     localStorage.setItem('kiwiLiveMerchant', m);
     localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: m, type: 'restaurant', name: 'Pairs Browser Bistro', location: 'Casablanca' }));
   }, MERCHANT);
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
 
   console.log('■ Opening a real till');

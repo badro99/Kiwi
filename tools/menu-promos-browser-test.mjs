@@ -58,12 +58,16 @@ async function open(tr, url) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
   tr.step('open ' + url);
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
+  // coverage: surface=team-entry locale=fr viewport=desktop
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + url, { waitUntil: 'load', timeout: 60000 });
   return { page, errors };
 }
 
 try {
   await S.run('till · a dessert at −15 %, stacked, and a price frozen when ordered', async (tr) => {
+    // coverage: surface=caisse-entry locale=fr viewport=desktop
     const { page, errors } = await open(tr, '/kiwi-caisse.html?demo=restaurant');
     await page.waitForSelector('#clockin-btn', { visible: true });
     tr.step('count the drawer, then open the till');
@@ -122,6 +126,7 @@ try {
   });
 
   await S.run('waiter app · the same price and stamp on a table line', async (tr) => {
+    // coverage: surface=team-entry locale=fr viewport=desktop
     const { page, errors } = await open(tr, '/kiwi-serveur.html?demo=1');
     await page.waitForFunction(() => !!window.KiwiMenuPromos && typeof addToTableOrder === 'function', { timeout: 20000 });
     const r = await page.evaluate(() => {
@@ -145,6 +150,7 @@ try {
   });
 
   await S.run('dashboard · create, pause and delete a promotion on the Menu page', async (tr) => {
+    // coverage: surface=dashboard locale=fr viewport=desktop
     const { page, errors } = await open(tr, '/dashboard.html');
     tr.step('explore the demo');
     await page.waitForSelector('[data-explore]', { visible: true, timeout: 30000 });

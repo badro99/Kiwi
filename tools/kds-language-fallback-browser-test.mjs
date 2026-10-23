@@ -71,28 +71,36 @@ async function open(store, browserLangs) {
 }
 
 try {
+  // coverage: surface=kitchen-entry locale=en viewport=tablet
   let r = await open({ kiwiLang: 'en' });
   check(r.lang === 'en' && r.dir === 'ltr' && r.button === 'EN', 'kiwiLang=en : l\'écran s\'ouvre en anglais, html lang=en dir=ltr');
   check(r.stored === null, 'une langue déduite n\'est pas persistée comme un choix de l\'écran');
 
+  // coverage: surface=kitchen-entry locale=ar viewport=tablet
   r = await open({ kiwiLang: 'ar' });
   check(r.lang === 'ar' && r.dir === 'rtl', 'kiwiLang=ar : html lang=ar dir=rtl');
 
+  // coverage: surface=kitchen-entry locale=fr viewport=tablet
   r = await open({ kiwiLang: 'en', kiwiCuisineLang: 'fr' });
   check(r.lang === 'fr' && r.dir === 'ltr', 'kiwiCuisineLang l\'emporte sur kiwiLang');
 
+  // coverage: surface=kitchen-entry locale=ar viewport=tablet
   r = await open({}, ['ar-MA', 'fr']);
   check(r.lang === 'ar' && r.dir === 'rtl', 'sans clé : la langue du navigateur (ar-MA) est prise');
 
+  // coverage: surface=kitchen-entry locale=en viewport=tablet
   r = await open({}, ['en-GB']);
   check(r.lang === 'en', 'sans clé : navigateur en-GB donne l\'anglais');
 
+  // coverage: surface=kitchen-entry locale=en viewport=tablet
   r = await open({}, ['de-DE', 'en-US']);
   check(r.lang === 'en', 'une langue non prise en charge est sautée au profit de la suivante');
 
+  // coverage: surface=kitchen-entry locale=fr viewport=tablet
   r = await open({}, ['de-DE']);
   check(r.lang === 'fr' && r.dir === 'ltr', 'rien de reconnu : retombée sur le français');
 
+  // coverage: surface=kitchen-entry locale=en viewport=tablet
   r = await open({ kiwiLang: 'xx' }, ['en-US']);
   check(r.lang === 'en', 'une valeur kiwiLang invalide est ignorée');
 

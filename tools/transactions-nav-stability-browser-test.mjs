@@ -60,6 +60,7 @@ try {
     localStorage.setItem('kiwiVenue', venue.id);
     localStorage.setItem('kiwiOnboarded', '1');
   });
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html`, { waitUntil: 'load', timeout: 30000 });
   await page.evaluate(async () => {
     for (const registration of await navigator.serviceWorker.getRegistrations()) await registration.unregister();

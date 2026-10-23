@@ -86,6 +86,7 @@ try {
     localStorage.setItem('kiwiSkin2027:till', '1');
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   });
+  // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof doOpenService === 'function' && !!window.KiwiTillFrame, { timeout: 30000 });
   await page.evaluate(() => doOpenService());

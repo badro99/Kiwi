@@ -57,6 +57,8 @@ async function open({ flag = true, width = 1180, height = 820, lang = '' } = {})
     if (l) { document.documentElement.setAttribute('dir', 'rtl'); }
   }, flag, lang);
   await page.setViewport({ width, height });
+  // coverage: surface=team-entry locale=fr viewport=desktop
+  // coverage: surface=team-entry locale=fr viewport=phone
   await page.goto(base + '/kiwi-serveur.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof showScreen === 'function' && typeof renderAll === 'function', { timeout: 20000 });
   await page.evaluate((l) => {
@@ -92,6 +94,8 @@ const tapCard = (page, id) => page.evaluate((t) => document.querySelector('#scre
 console.log('team-split-browser-test');
 try {
   {
+    // coverage: surface=team-entry locale=fr viewport=desktop
+    // coverage: surface=waiter locale=fr viewport=desktop
     const { ctx, page, errors } = await open({ flag: false });
     const g = await geo(page);
     check(g.app.w <= 440 && g.capsuleRadius === 'row', `flag off: the shipped phone frame (${g.app.w} wide) and tab capsule`);
@@ -99,6 +103,8 @@ try {
     await ctx.close();
   }
 
+  // coverage: surface=team-entry locale=fr viewport=desktop
+  // coverage: surface=waiter locale=fr viewport=desktop
   const { ctx, page, errors } = await open();
   let g = await geo(page);
   check(g.app.w === g.vw && g.app.l === 0, `flag on: no drawn phone, the app fills the window (${g.app.w})`);
@@ -139,6 +145,8 @@ try {
   await ctx.close();
 
   {
+    // coverage: surface=team-entry locale=fr viewport=desktop
+    // coverage: surface=waiter locale=fr viewport=desktop
     const o = await open({ lang: 'ar' });
     const [t] = await busy(o.page);
     await tapCard(o.page, t);
@@ -148,6 +156,8 @@ try {
     await o.ctx.close();
   }
   {
+    // coverage: surface=team-entry locale=fr viewport=phone
+    // coverage: surface=waiter locale=fr viewport=phone
     const o = await open({ width: 390, height: 844 });
     const [t] = await busy(o.page);
     await tapCard(o.page, t);

@@ -71,6 +71,8 @@ async function open(tr, ctx, { width = 390, height = 844 } = {}) {
   });
   page.setDefaultNavigationTimeout(60000);
   tr.step(`open the demo dashboard at ${width} × ${height}`);
+  // coverage: surface=dashboard locale=fr viewport=phone
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await sleep(1500);
   await page.keyboard.press('Escape');
@@ -183,6 +185,8 @@ const expectWhen = (cur) => {
 try {
   await S.run('phone 390 × 844 · one day at a time', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard-payroll locale=fr viewport=phone
     const page = await open(tr, ctx);
     let s = await state(page);
     check(s.sw <= s.vw, `nothing scrolls sideways (${s.sw} ≤ ${s.vw})`);
@@ -289,6 +293,8 @@ try {
 
   await S.run('desktop 1280 · the week table as before', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=dashboard locale=fr viewport=desktop
+    // coverage: surface=dashboard-payroll locale=fr viewport=desktop
     const page = await open(tr, ctx, { width: 1280, height: 900 });
     const d = await page.evaluate(() => {
       const shown = (el) => !!el && getComputedStyle(el).display !== 'none' && el.getClientRects().length > 0;

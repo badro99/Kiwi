@@ -45,6 +45,7 @@ await S.run('an unchanged server type does not re-render the dashboard', async (
   await page.setViewport({ width: 1440, height: 900 });
   await pinTradingHour(page, 15);
   t.step('open the demo dashboard');
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.KiwiVenue && typeof window.KiwiVenue.applyServerType === 'function', { timeout: 15000 });
   await sleep(2500);

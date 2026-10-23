@@ -168,6 +168,7 @@ async function open(t, ctx, climate) {
     } catch (_) {}
   }, climate);
   t.step(`open dashboard · ${climate.name}`);
+  // coverage: surface=dashboard locale=fr viewport=desktop
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'load' });
   const skip = await page.waitForSelector('.kiwi-lock-skip', { visible: true, timeout: 8000 }).catch(() => null);
   if (skip) await skip.click();

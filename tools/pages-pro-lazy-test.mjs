@@ -38,6 +38,7 @@ try {
       localStorage.setItem('kiwiLang','fr');
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(base + '/dashboard.html',{waitUntil:'load'});
     const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/spa-appointments.js?')).length);
     assert.equal(await count(),0,'chunk absent at boot');
@@ -91,6 +92,7 @@ try {
       localStorage.setItem('kiwiLang','fr');
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(base + '/dashboard.html',{waitUntil:'load'});
     const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/spa-practitioners.js?')).length);
     const printRef = process.env.KIWI_PRINT_REF === '1';
@@ -139,6 +141,7 @@ try {
       localStorage.setItem('kiwiLang','fr');
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(base + '/dashboard.html',{waitUntil:'load'});
     const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/boutique-promos-returns.js?')).length);
     const printRef = process.env.KIWI_PRINT_REF === '1';
@@ -201,6 +204,7 @@ try {
       localStorage.setItem('kiwiLang','fr');
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(base + '/dashboard.html',{waitUntil:'load'});
     const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/restaurant-stations.js?')).length);
     const printRef = process.env.KIWI_PRINT_REF === '1';

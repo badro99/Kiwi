@@ -60,6 +60,9 @@ async function phone(lang, dark=false, signedOut=false) {
 try {
   for(const lang of ['fr','en','ar']) {
     const {page,context}=await phone(lang);
+    // coverage: surface=team-entry locale=fr viewport=phone
+    // coverage: surface=team-entry locale=en viewport=phone
+    // coverage: surface=team-entry locale=ar viewport=phone
     await page.goto(base+'/kiwi-serveur.html',{waitUntil:'networkidle2'});
     await page.waitForFunction(locale=>document.documentElement.lang===locale,{},lang);
     const strings=await page.evaluate(()=>Object.fromEntries(['.pin-tagline','.pin-hint','.pin-foot','#nfc-caption','#ci-button span','#ci-browse-link span','.profil-theme-option[data-theme-choice="auto"] span'].map(s=>[s,document.querySelector(s)?.textContent.trim()])));
@@ -74,10 +77,16 @@ try {
     check(true,lang+': dynamic attendance errors translated');
     await page.evaluate(()=>document.querySelector('#qa-employee-error').remove());
     await page.screenshot({path:path.join(work,'team-'+lang+'.png')});
+    // coverage: surface=caisse-entry locale=fr viewport=phone
+    // coverage: surface=caisse-entry locale=en viewport=phone
+    // coverage: surface=caisse-entry locale=ar viewport=phone
     await page.goto(base+'/kiwi-caisse.html',{waitUntil:'networkidle2'});
     await page.waitForFunction(()=>!!window.KiwiCaisseLang);
     const refund=await page.evaluate(()=>({subtitle:document.querySelector('#rf-search-input')?.closest('.modal')?.querySelector('.modal-subtle')?.textContent,placeholder:document.querySelector('#rf-search-input')?.placeholder,translated:KiwiCaisseLang.tr("Khtar la transaction à rembourser, journal d'lyoum.")}));
     if(lang!=='fr') check(!/Khtar|Rechercher/.test(refund.translated+' '+refund.placeholder),lang+': refund copy has no French or Darija');
+    // coverage: surface=dashboard locale=fr viewport=phone
+    // coverage: surface=dashboard locale=en viewport=phone
+    // coverage: surface=dashboard locale=ar viewport=phone
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
     await page.waitForSelector('.kob-root [data-explore]');await page.click('.kob-root [data-explore]');
     await page.waitForSelector('[data-kiwi-skip]',{visible:true});await page.click('[data-kiwi-skip]');

@@ -51,6 +51,7 @@ page.on('request', (r) => {
   return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
 });
 await page.evaluateOnNewDocument(() => { try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {} });
+// coverage: surface=caisse-entry locale=fr viewport=desktop
 await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
 await page.waitForFunction(() => typeof doOpenService === 'function' && window.KiwiKitchenPrint && window.KiwiEscPos, { timeout: 30000 });
 await page.evaluate(() => {

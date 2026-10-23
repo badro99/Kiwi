@@ -61,6 +61,7 @@ try {
     });
     await page.evaluateOnNewDocument(() => { try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {} });
     page.setDefaultNavigationTimeout(60000);
+    // coverage: surface=caisse-entry locale=fr viewport=desktop
     await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
     await page.waitForFunction(() => typeof doOpenService === 'function', { timeout: 30000 });
     /* « Fermer la caisse » asks for a till operator first. The approval pad
