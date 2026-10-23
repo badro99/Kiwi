@@ -1627,6 +1627,8 @@ section('Whole-project regressions');
     'pos-boutique-split-test.mjs',
     'caisse-app-split-test.mjs',
     'serveur-split-test.mjs',
+    'stock-split-test.mjs',
+    'hotel-split-test.mjs',
     'caisse-money-properties-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',
@@ -2207,6 +2209,23 @@ section('Money properties (tools/money-properties-test.mjs)');
     if (!out.includes('✗')) fail(`money-properties-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
 }
+/* A test file the gate does not name guards nothing (the stock and hotel split
+ * proofs sat unwired for a day and broke unseen). Every tools/*test* file must be
+ * named in this file, or listed here with the reason it cannot run offline. */
+section('Every test file is wired');
+{
+  const offline = {
+    'seo-live-test.mjs': 'reads the live site over the network',
+    'supabase-tenancy-test.mjs': 'needs a Supabase project configured',
+  };
+  const self = fs.readFileSync(__filename, 'utf8');
+  const unwired = fs.readdirSync(path.join(ROOT, 'tools'))
+    .filter((f) => /test\.(?:m?js|cjs)$/.test(f) && !offline[f])
+    .filter((f) => !self.includes("'" + f + "'") && !self.includes('"' + f + '"') && !self.includes('`' + f + '`') && !self.includes('/' + f));
+  if (unwired.length) unwired.forEach((f) => fail(`tools/${f} is not named in tools/check.js: wire it or list it as offline-only`));
+  else ok('every tools/*test* file is named by the gate (' + Object.keys(offline).length + ' network-only exceptions)');
+}
+
 section('Coverage manifest (tools/coverage-manifest-test.mjs)');
 {
   const { spawnSync } = require('child_process');

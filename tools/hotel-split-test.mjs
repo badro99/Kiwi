@@ -41,13 +41,16 @@ for (const [parent, children] of [
   }
 }
 const html = read('dashboard.html');
-assert.equal((html.match(/<script\b[^>]*\bsrc=/gi) || []).length, 161);
+// The split added its five part tags and merged five files away: net zero at the time (161). Later work may add
+// unrelated tags (the shell total is pinned by file-size-ratchet-test), so compare only the tags this split knew.
+const splitTags = (html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g) || []);
 const removed = ['agent-vision.js', 'agent-skin.js', 'month-report-tools.js', 'month-report-pdf.js', 'month-report-ui.js'];
 const expectedTags = hotelParts.scriptsBefore.filter(tag => !removed.some(file => tag.includes('/' + file + '?v=')));
 const hotelAt = expectedTags.findIndex(tag => tag.includes('assets/hotel.js?'));
 expectedTags.splice(hotelAt, 0, ...hotelParts.parts.map(p => '<script src="' + p.file + '?v=1" defer fetchpriority="low"></script>'));
 const unstamped = tags => tags.map(tag => tag.replace(/\?v=\d+/, '?v=N'));
-assert.deepEqual(unstamped(html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g)), unstamped(expectedTags), 'all surviving shell tags retain their exact order and attributes (stamps move freely)');
+const known = new Set(unstamped(expectedTags));
+assert.deepEqual(unstamped(splitTags).filter(tag => known.has(tag)), unstamped(expectedTags), 'all surviving shell tags retain their exact order and attributes (stamps move freely; tags added later are ignored)');
 const tags = hotelFiles.map(file => '<script src="' + file + '?v=');
 let last = -1;
 for (let i = 0; i < tags.length; i++) {
