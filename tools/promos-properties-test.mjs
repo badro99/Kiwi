@@ -7,9 +7,15 @@
  * pause, and the rule that two promotions never stack: the lowest price wins,
  * the oldest on a tie. Its merge() reconciles the rules between devices.
  * Generated catalogues, rule sets and moments run through the real module and
- * are checked against an independent model. Moments are drawn after 20
- * September 2026, when Morocco moved to permanent UTC+0, so the model's wall
- * clock is plain UTC; the module still reads it through the zone law. */
+ * are checked against an independent model. The model reads Casablanca's
+ * wall clock from its own table of offsets (UTC+1, UTC+0 during the Ramadan
+ * months of 2025 and 2026, UTC+0 for good from 20 September 2026), checked
+ * against the platform's tz data where that data is not stale, and moments are
+ * drawn from January 2025 with extra weight on the hours around each change:
+ * the hour that happens twice when the clock goes back, the hour that never
+ * happens when it goes forward. The same properties then run again in child
+ * processes whose device clock is set to Paris, New York, Tokyo and Kiritimati:
+ * a tablet's own time zone must never move a promotion. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,10 +23,13 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+/* KIWI_PROMOS_SRC lets the same properties judge another copy of the module (a mutant, an older file). */
+const PROMOS_SRC = process.env.KIWI_PROMOS_SRC || path.join(ROOT, 'assets/promos.js');
+const CHILD = process.env.KIWI_PROMOS_CHILD === '1';
 let fc; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-check'); } catch { console.log('○ fast-check absent; promotion properties not executed'); process.exit(0); }
 const RUNS = Number(process.env.KIWI_PROPERTY_RUNS) || 500, SEED = Number(process.env.KIWI_PROPERTY_SEED) || 20261022;
 let passed = 0, failed = 0;
-function strict(label, p) { if (process.env.KIWI_PROPERTY_ONLY && !new RegExp(process.env.KIWI_PROPERTY_ONLY).test(label)) return; const r = fc.check(p, { numRuns: RUNS, seed: SEED }); if (r.failed) { failed++; console.error('✗ ' + label, fc.stringify(r.counterexample).slice(0, 1500), r.errorInstance && r.errorInstance.message); } else { passed++; console.log('✓ ' + label); } }
+function strict(label, p, zone) { if (CHILD && !zone) return; if (process.env.KIWI_PROPERTY_ONLY && !new RegExp(process.env.KIWI_PROPERTY_ONLY).test(label)) return; const r = fc.check(p, { numRuns: RUNS, seed: SEED }); if (r.failed) { failed++; console.error('✗ ' + label, fc.stringify(r.counterexample).slice(0, 1500), r.errorInstance && r.errorInstance.message); } else { passed++; console.log('✓ ' + label); } }
 
 const data = new Map();
 const localStorage = { getItem: (k) => (data.has(k) ? data.get(k) : null), setItem: (k, v) => data.set(k, String(v)), removeItem: (k) => data.delete(k) };
@@ -28,7 +37,7 @@ const window = { localStorage };
 const ctx = vm.createContext({ window, localStorage, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl });
 vm.runInContext('globalThis.window = window;', ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/kit/haptics.js'), 'utf8'), ctx, { filename: 'haptics.js' });
-vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'), ctx, { filename: 'promos.js' });
+vm.runInContext(fs.readFileSync(PROMOS_SRC, 'utf8'), ctx, { filename: 'promos.js' });
 const PR = window.KiwiPromos;
 assert.ok(PR && ctx.KiwiZoneLaw, 'module or zone law missing');
 
@@ -63,7 +72,19 @@ function install(rules) { PR.reset(); PR.batch(() => rules.forEach((r) => PR.sav
 /* ── the model ─────────────────────────────────────────────────────────── */
 const HH = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const toMin = (v) => { const m = HH.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; };
-function business(now) { const d = new Date(now); let min = d.getUTCHours() * 60 + d.getUTCMinutes(), wd = d.getUTCDay(); if (min < 300) wd = (wd + 6) % 7; return { wd, min }; }
+/* Casablanca's offset from UTC, in hours, written out from the law and the
+   published transitions rather than read from the module's own clock. */
+const MOROCCO = [
+  [-Infinity, 1],
+  [Date.UTC(2025, 1, 23, 2), 0],   // Ramadan 2025: 03:00 back to 02:00
+  [Date.UTC(2025, 3, 6, 2), 1],    // after Ramadan: 02:00 forward to 03:00
+  [Date.UTC(2026, 1, 15, 2), 0],   // Ramadan 2026
+  [Date.UTC(2026, 2, 22, 2), 1],
+  [Date.UTC(2026, 8, 20, 1), 0],   // the reform: 02:00 back to 01:00, then UTC+0 for good
+];
+const CHANGES = MOROCCO.slice(1).map(([t]) => t);
+const offsetH = (t) => { let o = 1; for (const [at, h] of MOROCCO) if (t >= at) o = h; return o; };
+function business(now) { const d = new Date(now + offsetH(now) * 3600000); let min = d.getUTCHours() * 60 + d.getUTCMinutes(), wd = d.getUTCDay(); if (min < 300) wd = (wd + 6) % 7; return { wd, min }; }
 function running(p, now) {
   if (p.paused) return false;
   if (p.to && now > p.to) return false;
@@ -100,7 +121,39 @@ function model(rules, item, now) {
   return best;
 }
 
-console.log('promos-properties-test');
+console.log('promos-properties-test' + (CHILD ? ' · device clock ' + process.env.TZ : ''));
+
+/* The table must agree with the platform's tz data before the reform (after
+   it, older tz data is known to be stale; the module's zone law corrects it). */
+if (!CHILD) {
+  const f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Casablanca', timeZoneName: 'shortOffset' });
+  for (let t = Date.UTC(2025, 0, 1); t < Date.UTC(2026, 8, 20, 1); t += 3600000) {
+    const name = f.formatToParts(t).find((x) => x.type === 'timeZoneName').value;
+    const h = name === 'GMT' ? 0 : +name.replace('GMT', '');
+    assert.equal(h, offsetH(t), 'offset table disagrees with tz data at ' + new Date(t).toISOString());
+  }
+}
+const WIDE_MIN = Date.UTC(2025, 0, 1);
+const nearChange = fc.tuple(fc.constantFrom(...CHANGES), fc.integer({ min: -4 * 60, max: 4 * 60 })).map(([t, m]) => t + m * MIN);
+const wideNow = fc.oneof(fc.integer({ min: WIDE_MIN, max: T_MAX }), nearChange);
+const wideRule = (i) => promoArb(i).chain((p) => fc.tuple(fc.oneof(fc.constant(0), wideNow), fc.oneof(fc.constant(0), wideNow), fc.option(fc.constantFrom('00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '04:59', '05:00'), { nil: null }), fc.option(fc.constantFrom('01:15', '02:15', '02:45', '03:00', '05:00', '06:00'), { nil: null }))
+  .map(([from, to, a, z]) => ({ ...p, from, to, start: a == null ? p.start : a, end: z == null ? p.end : z })));
+const wideRules = fc.tuple(...[0, 1, 2, 3].map(wideRule)).chain((ps) => fc.subarray(ps));
+
+strict('across Morocco\'s Ramadan clock changes and the 20 September 2026 reform, the till charges the best single promotion of the local business day, the doubled hour and the missing hour included', fc.property(wideRules, itemArb, wideNow, (rules, item, now) => {
+  install(rules);
+  const got = PR.priceFor(item, { now }), want = model(rules, item, now);
+  if (!want) { assert.equal(got, null, 'unexpected ' + (got && got.promo.id) + ' at ' + new Date(now).toISOString()); return; }
+  assert.ok(got, 'no promotion applied at ' + new Date(now).toISOString() + ', expected ' + want.id);
+  assert.equal(got.price, want.price);
+  assert.equal(got.promo.id, want.id);
+}), true);
+
+strict('across the clock changes, the business weekday and minute the module reads are Casablanca\'s, whatever the device clock', fc.property(wideNow, (now) => {
+  const b = PR.businessMoment(now), m = business(now);
+  assert.equal(b.weekday, m.wd, 'weekday at ' + new Date(now).toISOString());
+  assert.equal(b.min, m.min, 'minute at ' + new Date(now).toISOString());
+}), true);
 
 strict('the till charges exactly the best single promotion running now for that item, never two stacked, never above the shelf, never below zero', fc.property(rulesArb, itemArb, nowArb, (rules, item, now) => {
   install(rules);
@@ -197,7 +250,7 @@ function device(clock, offset) {
   const c = vm.createContext({ window: win, localStorage: ls, console, Set, Map, Math, Date: SkewDate, JSON, Number, Object, Array, String, Intl });
   vm.runInContext('globalThis.window = window;', c);
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/kit/haptics.js'), 'utf8'), c, { filename: 'haptics.js' });
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'), c, { filename: 'promos.js' });
+  vm.runInContext(fs.readFileSync(PROMOS_SRC, 'utf8'), c, { filename: 'promos.js' });
   const P = win.KiwiPromos; P.cloud();
   return { P, pull: (other) => hooks.write(hooks.merge(JSON.parse(JSON.stringify(hooks.read())), JSON.parse(JSON.stringify(other.hooks().read())))), hooks: () => hooks };
 }
@@ -256,5 +309,15 @@ strict('a peer record stamped years ahead or non-finite is merged, and an honest
     }
   }));
 
-console.log(`${failed ? '✗' : '✓'} promos-properties-test · ${passed} held, ${failed} failed`);
+/* The same clock properties on tablets set to other time zones. */
+if (!CHILD) {
+  const { spawnSync } = await import('node:child_process');
+  for (const tz of ['Europe/Paris', 'America/New_York', 'Asia/Tokyo', 'Pacific/Kiritimati']) {
+    const r = spawnSync(process.execPath, [new URL(import.meta.url).pathname], { encoding: 'utf8', env: { ...process.env, TZ: tz, KIWI_PROMOS_CHILD: '1', KIWI_PROPERTY_RUNS: String(Math.min(RUNS, 250)) } });
+    if (r.status === 0) { passed++; console.log('✓ device clock on ' + tz + ': the clock properties hold'); }
+    else { failed++; console.error('✗ device clock on ' + tz + '\n' + (r.stdout + r.stderr).split('\n').filter((l) => /✗|Error/.test(l)).slice(0, 6).join('\n')); }
+  }
+}
+
+console.log(`${failed ? '✗' : '✓'} promos-properties-test${CHILD ? ' · ' + process.env.TZ : ''} · ${passed} held, ${failed} failed`);
 process.exit(failed ? 1 : 0);
