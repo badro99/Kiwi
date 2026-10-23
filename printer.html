@@ -1,10 +1,173 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" dir="ltr">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Kiwi · Pont d'impression</title>
+<script id="printer-i18n">
+var PrinterI18n = (function () {
+  var COPY = {
+  "fr": {
+    "s0": "Pont d'impression",
+    "s1": "Imprimez reçus, tickets cuisine et étiquettes code-barres sur votre imprimante thermique réseau, directement depuis Kiwi.",
+    "s2": "Cet appareil ne fait pas tourner le pont",
+    "s3": "Le pont s'installe sur l'ordinateur du comptoir",
+    "s4": "Un iPhone ou un iPad ne peut pas faire tourner le pont d'impression, et il n'y a rien à télécharger ici pour lui. Le pont vit sur l'ordinateur (ou la tablette Android) qui est branché à l'imprimante.",
+    "s5": "Un iPad imprime quand même, par le relais Kiwi : la caisse de l'iPad dépose chaque impression sur le relais, et le pont du comptoir la récupère et l'imprime.",
+    "s6": "Sur l'ordinateur du comptoir, ouvrez cette page ({0}), téléchargez le pont et lancez-le. Il faut la version 1.4.0 ou plus récente.",
+    "s7": "Dans Kiwi, sur l'iPad : <b>Imprimantes → Relais Kiwi → Associer un pont</b>, puis générez le code à 6 chiffres.",
+    "s8": "Saisissez ce code dans le pont, sur l'ordinateur du comptoir. L'association se fait une seule fois.",
+    "s9": "Recherche du pont sur cet ordinateur…",
+    "s10": "Qu'est-ce que c'est ?",
+    "s11": "Un petit programme à installer sur l'ordinateur de la caisse. Kiwi lui envoie les impressions et il les transmet à votre imprimante. Il tourne discrètement en arrière-plan et n'écoute que sur cet ordinateur · aucune donnée ne sort de votre machine.",
+    "s12": "1 · Télécharger",
+    "s13": "Télécharger pour Windows",
+    "s14": "2 · Lancer",
+    "s15": "Double-cliquez le fichier téléchargé {0}.",
+    "s16": "Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. Cette version n'est pas encore signée numériquement, et c'est la seule raison de cet avertissement : Windows ne peut pas vérifier l'éditeur. Ne continuez que si vous avez téléchargé le fichier depuis cette page Kiwi.",
+    "s17": "Laissez la fenêtre ouverte. Si vous la fermez, l'impression s'arrête.",
+    "s18": "<b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC. {0} → {1} → dans le dossier qui s'ouvre, créez un fichier {2} contenant : <br>{3} Adaptez le chemin si vous avez déplacé le {4}. Le pont démarrera seul, en fenêtre réduite.",
+    "s19": "<b>Si le pont ne démarre pas</b> (la fenêtre s'ouvre puis se referme aussitôt) : le port 9110 est déjà pris par un autre logiciel. Dans le {0} ci-dessus, remplacez {1} par {2} (ou 9112 / 9113 / 9114) · Kiwi cherche automatiquement sur cette plage.",
+    "s20": "Double-cliquez le fichier téléchargé · il se décompresse en <b>Kiwi Printer</b>. Glissez-le dans votre dossier <b>Applications</b>.",
+    "s21": "Double-cliquez <b>Kiwi Printer</b>. macOS affiche « développeur non identifié » ou « Apple ne peut pas vérifier ». Cette version du pont n'est pas encore notariée par Apple, donc macOS ne peut pas la valider à votre place, et nous ne pouvons pas vous demander de lui faire confiance sans réserve : ne passez à la suite que si vous l'avez téléchargée depuis cette page Kiwi. Cliquez <b>OK</b>.",
+    "s22": "Ouvrez <b>Réglages Système → Confidentialité et sécurité</b>. Descendez tout en bas : à côté de « <i>Kiwi Printer a été bloqué…</i> », cliquez <b>Ouvrir quand même</b>, puis <b>Ouvrir</b>. C'est nécessaire une seule fois.",
+    "s23": "<b>Aucune fenêtre ne s'ouvre · c'est normal.</b> Kiwi Printer tourne discrètement en arrière-plan. (Sur un Mac Apple Silicon, macOS proposera d'<b>installer Rosetta</b> au premier lancement · cliquez <b>Installer</b>.)",
+    "s24": "<b>Empêcher la veille (pour relayer les iPad) :</b> dans un terminal, lancez {0} ou dans <i>Réglages Système → Batterie / Écran</i>, empêchez la suspension automatique. Laissez le capot ouvert.",
+    "s25": "Option avancée · installation en ligne de commande",
+    "s26": "Pour les personnes à l'aise avec le terminal : ce script installe le pont comme service (LaunchAgent) qui survit aux redémarrages. Il s'exécute avec vos droits, lisez-le avant de le lancer : {0}.",
+    "s27": "<b>Lancement :</b><br>{0}",
+    "s28": "Option avancée · installation en service (Raspberry Pi / Debian / Ubuntu)",
+    "s29": "Ce script s'exécute en administrateur ({0}) et installe le pont comme service systemd ({1}) : il redémarre seul. Lisez-le avant de le lancer : {2}.",
+    "s30": "Téléchargez <b>Kiwi Print Bridge</b> avec le bouton ci-dessus. Si Android le demande, autorisez Chrome à <b>installer des applications inconnues</b>, puis installez l'APK.",
+    "s31": "Ouvrez l'application. Autorisez les notifications : la notification permanente confirme que le pont reste actif.",
+    "s32": "Dans Kiwi → <b>Imprimantes → Relais Kiwi → Associer un pont</b>, générez le code à 6 chiffres, puis saisissez-le dans Kiwi Print Bridge.",
+    "s33": "Dans <b>Paramètres Samsung → Applications → Kiwi Print Bridge → Batterie</b>, choisissez <b>Sans restriction</b>. Le pont redémarrera automatiquement avec la tablette.",
+    "s34": "Configurez l'adresse IP de chaque imprimante dans Kiwi. Pour vérifier le réseau immédiatement, saisissez aussi l'IP dans l'application et imprimez un ticket test.",
+    "s35": "Une fois lancé, revenez dans Kiwi → « Connecter une imprimante » → saisissez l'adresse IP de votre imprimante et lancez un ticket test. Le voyant passe au vert.",
+    "title": "Kiwi · Pont d'impression",
+    "others": "Autres plateformes ·",
+    "download": "Télécharger pour {os}",
+    "android": "Télécharger Kiwi Print Bridge pour Android",
+    "connected": "Pont connecté sur cet ordinateur · v{version}. Tout est prêt.",
+    "idle": "Le pont n'est pas encore installé sur cet ordinateur. Téléchargez-le ci-dessous, puis lancez-le · ce voyant passe au vert une fois lancé.",
+    "recheck": "Revérifier",
+    "checking": "Nouvelle vérification…"
+  },
+  "en": {
+    "s0": "Printer bridge",
+    "s1": "Print receipts, kitchen tickets and barcode labels on your network thermal printer, directly from Kiwi.",
+    "s2": "This device cannot run the bridge",
+    "s3": "Install the bridge on the counter computer",
+    "s4": "An iPhone or iPad cannot run the printer bridge, so there is nothing to download on this device. Install the bridge on the computer or Android tablet connected to the printer.",
+    "s5": "An iPad can still print through Kiwi relay: the iPad till sends each print job to the relay, and the counter bridge retrieves and prints it.",
+    "s6": "On the counter computer, open this page ({0}), download the bridge and launch it. Version 1.4.0 or later is required.",
+    "s7": "In Kiwi on the iPad, go to <b>Printers → Kiwi relay → Pair a bridge</b>, then generate the 6-digit code.",
+    "s8": "Enter that code in the bridge on the counter computer. You only need to pair it once.",
+    "s9": "Looking for the bridge on this computer…",
+    "s10": "What is it?",
+    "s11": "A small program installed on the till computer. Kiwi sends it print jobs, which it forwards to your printer. It runs quietly in the background and only listens on this computer · no data leaves your machine.",
+    "s12": "1 · Download",
+    "s13": "Download for Windows",
+    "s14": "2 · Launch",
+    "s15": "Double-click the downloaded file {0}.",
+    "s16": "If <b>Windows protected your PC</b> appears, click <b>More info</b> → <b>Run anyway</b>. This version is not digitally signed yet, which is why Windows cannot verify the publisher. Only continue if you downloaded the file from this Kiwi page.",
+    "s17": "Leave the window open. Closing it stops printing.",
+    "s18": "<b>Start automatically (recommended for shops).</b> Otherwise, you must launch the bridge again whenever the PC restarts. {0} → {1} → in the folder that opens, create a file named {2} containing: <br>{3} Adjust the path if you moved the {4} file. The bridge will start automatically in a minimized window.",
+    "s19": "<b>If the bridge does not start</b> (the window opens and immediately closes), another program is already using port 9110. In the {0} file above, replace {1} with {2} (or 9112 / 9113 / 9114) · Kiwi automatically checks this range.",
+    "s20": "Double-click the downloaded file to extract <b>Kiwi Printer</b>. Drag it into your <b>Applications</b> folder.",
+    "s21": "Double-click <b>Kiwi Printer</b>. macOS displays “unidentified developer” or “Apple cannot verify”. This version of the bridge has not been notarized by Apple, so macOS cannot validate it for you. Only continue if you downloaded it from this Kiwi page. Click <b>OK</b>.",
+    "s22": "Open <b>System Settings → Privacy & Security</b>. Scroll to the bottom: next to “<i>Kiwi Printer was blocked…</i>”, click <b>Open Anyway</b>, then <b>Open</b>. You only need to do this once.",
+    "s23": "<b>No window opens · this is normal.</b> Kiwi Printer runs quietly in the background. (On an Apple Silicon Mac, macOS will offer to <b>install Rosetta</b> on first launch · click <b>Install</b>.)",
+    "s24": "<b>Prevent sleep (to relay iPad print jobs):</b> run {0} in a terminal, or disable automatic sleep in <i>System Settings → Battery / Display</i>. Keep the lid open.",
+    "s25": "Advanced option · command-line installation",
+    "s26": "For users comfortable with the terminal: this script installs the bridge as a service (LaunchAgent) that survives restarts. It runs with your permissions. Read it before running it: {0}.",
+    "s27": "<b>Launch:</b><br>{0}",
+    "s28": "Advanced option · install as a service (Raspberry Pi / Debian / Ubuntu)",
+    "s29": "This script runs as administrator ({0}) and installs the bridge as a systemd service ({1}), so it restarts automatically. Read it before running it: {2}.",
+    "s30": "Download <b>Kiwi Print Bridge</b> using the button above. If Android asks, allow Chrome to <b>install unknown apps</b>, then install the APK.",
+    "s31": "Open the app and allow notifications. The persistent notification confirms that the bridge is still running.",
+    "s32": "In Kiwi → <b>Printers → Kiwi relay → Pair a bridge</b>, generate the 6-digit code, then enter it in Kiwi Print Bridge.",
+    "s33": "In <b>Samsung Settings → Apps → Kiwi Print Bridge → Battery</b>, choose <b>Unrestricted</b>. The bridge will restart automatically with the tablet.",
+    "s34": "Set each printer’s IP address in Kiwi. To check the network straight away, also enter the IP address in the app and print a test receipt.",
+    "s35": "Once it is running, return to Kiwi → “Connect a printer” → enter your printer’s IP address and print a test receipt. The indicator turns green.",
+    "title": "Kiwi · Printer bridge",
+    "others": "Other platforms ·",
+    "download": "Download for {os}",
+    "android": "Download Kiwi Print Bridge for Android",
+    "connected": "Bridge connected on this computer · v{version}. Everything is ready.",
+    "idle": "The bridge is not installed on this computer yet. Download it below, then launch it · this indicator turns green once it is running.",
+    "recheck": "Check again",
+    "checking": "Checking again…"
+  },
+  "ar": {
+    "s0": "جسر الطباعة",
+    "s1": "اطبع الإيصالات وتذاكر المطبخ وملصقات الباركود على طابعتك الحرارية المتصلة بالشبكة، مباشرة من Kiwi.",
+    "s2": "لا يمكن تشغيل الجسر على هذا الجهاز",
+    "s3": "ثبّت الجسر على حاسوب نقطة البيع",
+    "s4": "لا يمكن تشغيل جسر الطباعة على iPhone أو iPad، لذلك لا يوجد ما يمكنك تنزيله لهذا الجهاز هنا. ثبّت الجسر على الحاسوب أو جهاز Android اللوحي المتصل بالطابعة.",
+    "s5": "يمكن لجهاز iPad الطباعة عبر وسيط Kiwi: ترسل نقطة البيع على iPad كل مهمة طباعة إلى الوسيط، ثم يسترجعها الجسر الموجود على حاسوب نقطة البيع ويطبعها.",
+    "s6": "افتح هذه الصفحة ({0}) على حاسوب نقطة البيع، ثم نزّل الجسر وشغّله. يلزم الإصدار 1.4.0 أو أحدث.",
+    "s7": "في Kiwi على iPad، انتقل إلى <b>الطابعات ← وسيط Kiwi ← إقران جسر</b>، ثم أنشئ رمزًا من 6 أرقام.",
+    "s8": "أدخل هذا الرمز في الجسر على حاسوب نقطة البيع. يكفي إجراء الإقران مرة واحدة.",
+    "s9": "جارٍ البحث عن الجسر على هذا الحاسوب…",
+    "s10": "ما هو جسر الطباعة؟",
+    "s11": "برنامج صغير يُثبّت على حاسوب نقطة البيع. يرسل إليه Kiwi مهام الطباعة ليوصلها إلى طابعتك. يعمل في الخلفية ولا يستقبل الاتصالات إلا على هذا الحاسوب · لا تغادر أي بيانات جهازك.",
+    "s12": "1 · التنزيل",
+    "s13": "تنزيل لنظام Windows",
+    "s14": "2 · التشغيل",
+    "s15": "انقر مرتين على الملف الذي نزّلته {0}.",
+    "s16": "إذا ظهرت رسالة <b>قام Windows بحماية الكمبيوتر</b>، اضغط على <b>معلومات إضافية</b> ← <b>تشغيل على أي حال</b>. هذا الإصدار غير موقّع رقميًا بعد، ولذلك يتعذر على Windows التحقق من الناشر. لا تتابع إلا إذا نزّلت الملف من صفحة Kiwi هذه.",
+    "s17": "اترك النافذة مفتوحة. إغلاقها يوقف الطباعة.",
+    "s18": "<b>التشغيل التلقائي (موصى به في المتجر).</b> بدونه، ستحتاج إلى تشغيل الجسر بعد كل إعادة تشغيل للحاسوب. {0} ← {1} ← في المجلد الذي يفتح، أنشئ ملفًا باسم {2} يحتوي على: <br>{3} عدّل المسار إذا نقلت ملف {4}. سيبدأ الجسر تلقائيًا في نافذة مصغّرة.",
+    "s19": "<b>إذا لم يبدأ الجسر</b> (تفتح النافذة ثم تُغلق فورًا)، فهناك برنامج آخر يستخدم المنفذ 9110. في ملف {0} أعلاه، استبدل {1} بالقيمة {2} (أو 9112 / 9113 / 9114) · يبحث Kiwi تلقائيًا ضمن هذا النطاق.",
+    "s20": "انقر مرتين على الملف الذي نزّلته لفك ضغط <b>Kiwi Printer</b>. اسحبه إلى مجلد <b>التطبيقات</b>.",
+    "s21": "انقر مرتين على <b>Kiwi Printer</b>. يعرض macOS رسالة «مطور غير معروف» أو «يتعذر على Apple التحقق». لم يخضع هذا الإصدار من الجسر للتوثيق لدى Apple بعد، لذا لا يستطيع macOS التحقق منه نيابةً عنك. لا تتابع إلا إذا نزّلته من صفحة Kiwi هذه. اضغط على <b>موافق</b>.",
+    "s22": "افتح <b>إعدادات النظام ← الخصوصية والأمن</b>. انتقل إلى أسفل الصفحة، وبجانب «<i>تم حظر Kiwi Printer…</i>»، اضغط على <b>فتح على أي حال</b> ثم <b>فتح</b>. يلزم ذلك مرة واحدة فقط.",
+    "s23": "<b>عدم ظهور نافذة أمر طبيعي.</b> يعمل Kiwi Printer في الخلفية. (على أجهزة Mac المزودة بمعالج Apple Silicon، سيقترح macOS <b>تثبيت Rosetta</b> عند التشغيل الأول · اضغط على <b>تثبيت</b>.)",
+    "s24": "<b>منع السكون (لتمرير مهام الطباعة من iPad):</b> شغّل {0} في الطرفية، أو عطّل السكون التلقائي من <i>إعدادات النظام ← البطارية / الشاشة</i>. اترك غطاء الحاسوب مفتوحًا.",
+    "s25": "خيار متقدم · التثبيت من سطر الأوامر",
+    "s26": "لمن يجيد استخدام الطرفية: يثبّت هذا البرنامج النصي الجسر كخدمة (LaunchAgent) تستمر بعد إعادة التشغيل. يعمل بصلاحيات حسابك. اقرأه قبل تشغيله: {0}.",
+    "s27": "<b>التشغيل:</b><br>{0}",
+    "s28": "خيار متقدم · التثبيت كخدمة (Raspberry Pi / Debian / Ubuntu)",
+    "s29": "يعمل هذا البرنامج النصي بصلاحيات المسؤول ({0}) ويثبّت الجسر كخدمة systemd ({1}) لتُعاد تشغيلها تلقائيًا. اقرأه قبل تشغيله: {2}.",
+    "s30": "نزّل <b>Kiwi Print Bridge</b> باستخدام الزر أعلاه. إذا طلب Android ذلك، اسمح لمتصفح Chrome <b>بتثبيت تطبيقات غير معروفة</b>، ثم ثبّت ملف APK.",
+    "s31": "افتح التطبيق واسمح بالإشعارات. يؤكد الإشعار الدائم أن الجسر لا يزال يعمل.",
+    "s32": "في Kiwi ← <b>الطابعات ← وسيط Kiwi ← إقران جسر</b>، أنشئ رمزًا من 6 أرقام، ثم أدخله في Kiwi Print Bridge.",
+    "s33": "في <b>إعدادات Samsung ← التطبيقات ← Kiwi Print Bridge ← البطارية</b>، اختر <b>غير مقيّد</b>. سيعمل الجسر تلقائيًا عند إعادة تشغيل الجهاز اللوحي.",
+    "s34": "اضبط عنوان IP لكل طابعة في Kiwi. للتحقق من الشبكة فورًا، أدخل عنوان IP في التطبيق أيضًا واطبع إيصالًا تجريبيًا.",
+    "s35": "بعد تشغيله، ارجع إلى Kiwi ← «توصيل طابعة» ← أدخل عنوان IP للطابعة واطبع إيصالًا تجريبيًا. سيتحول المؤشر إلى اللون الأخضر.",
+    "title": "Kiwi · جسر الطباعة",
+    "others": "أنظمة أخرى ·",
+    "download": "تنزيل لنظام {os}",
+    "android": "تنزيل Kiwi Print Bridge لنظام Android",
+    "connected": "الجسر متصل على هذا الحاسوب · الإصدار {version}. كل شيء جاهز.",
+    "idle": "لم يُثبّت الجسر على هذا الحاسوب بعد. نزّله أدناه ثم شغّله · سيتحول هذا المؤشر إلى اللون الأخضر عند تشغيله.",
+    "recheck": "إعادة التحقق",
+    "checking": "جارٍ التحقق مجددًا…"
+  }
+};
+  function normalize(value) {
+    var base = String(value || '').toLowerCase().split(/[-_]/)[0];
+    return /^(fr|en|ar)$/.test(base) ? base : '';
+  }
+  function stored(key) {
+    try { return localStorage.getItem(key); } catch (_) { return ''; }
+  }
+  var lang = normalize(new URLSearchParams(location.search).get('lang')) ||
+    normalize(stored('kiwiCaisseLang')) || normalize(stored('kiwiLang')) ||
+    normalize(navigator.language) || 'fr';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.title = COPY[lang].title;
+  function text(key, params) {
+    return COPY[lang][key].replace(/\{(\w+)\}/g, function (match, name) {
+      return params && Object.prototype.hasOwnProperty.call(params, name) ? params[name] : match;
+    });
+  }
+  return { text: text };
+})();
+</script>
 <style>
   :root{
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
@@ -39,8 +202,8 @@ em, i, cite, dfn, var { font-style: normal; }
   .status.on{background:#e7f6ee;border:1px solid #bfe6cf;color:var(--atlas)}
   .status.on .dot{background:var(--atlas);box-shadow:0 0 0 4px rgba(11,110,79,.16)}
   .status b{font-weight:700}
-  .recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-left:2px}
-  .step{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--atlas);margin:0 0 10px}
+  .recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-inline-start:2px}
+  .step{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:none;color:var(--atlas);margin:0 0 10px}
   h2{font-size:1.06rem;margin:0 0 10px;letter-spacing:-.01em}
   p{margin:0 0 12px}
   .muted{color:var(--muted)}
@@ -49,7 +212,7 @@ em, i, cite, dfn, var { font-style: normal; }
   .others{margin:12px 0 0;font-size:.9rem;color:var(--muted);text-align:center}
   .others a{color:var(--atlas);font-weight:600;text-decoration:none}
   .others a:hover{text-decoration:underline}
-  ol.run{margin:0;padding-left:20px}
+  ol.run{margin:0;padding-inline-start:20px}
   ol.run li{margin:0 0 9px}
   code,.mono{font-family:'JetBrains Mono', ui-monospace, monospace;font-size:.86em;background:rgba(11,110,79,.08);border:1px solid rgba(11,110,79,.14);padding:2px 6px;border-radius:6px;word-break:break-all}
   .os-tabs{display:flex;gap:8px;margin:0 0 16px}
@@ -65,6 +228,12 @@ em, i, cite, dfn, var { font-style: normal; }
   body.is-ios .not-ios{display:none}
   .foot{text-align:center;color:var(--muted);font-size:.82rem;margin:22px auto 0;max-width:460px;line-height:1.5}
   code.code-block{display:block;white-space:pre;margin-top:6px;padding:8px;background:var(--ink);color:var(--mint);border-radius:6px;overflow-x:auto}
+  code,.mono{direction:ltr;unicode-bidi:isolate;display:inline-block;text-align:start}
+  @font-face{font-family:"IBM Plex Sans Arabic";src:url("assets/fonts/plex-arabic-400.woff2?v=1") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:"IBM Plex Sans Arabic";src:url("assets/fonts/plex-arabic-700.woff2?v=1") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+  html[dir="rtl"] body{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif}
+  [dir="rtl"] .os-tabs{flex-wrap:wrap}
+  [dir="rtl"] .step{letter-spacing:0}
 </style>
 <!-- Design 2027, stage 6: the print bridge page on the kit's tokens, light and
      dark, behind the access flag only (localStorage kiwiSkin2027:access = '1',
@@ -82,32 +251,32 @@ em, i, cite, dfn, var { font-style: normal; }
 <body>
   <main class="wrap">
     <div class="brand"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
-    <h1>Pont d'impression</h1>
-    <p class="lede">Imprimez reçus, tickets cuisine et étiquettes code-barres sur votre imprimante thermique réseau, directement depuis Kiwi.</p>
+    <h1 data-printer-i18n="s0">Pont d'impression</h1>
+    <p class="lede" data-printer-i18n="s1">Imprimez reçus, tickets cuisine et étiquettes code-barres sur votre imprimante thermique réseau, directement depuis Kiwi.</p>
 
     <div class="card ios-only" id="ios-card">
-      <div class="step">Cet appareil ne fait pas tourner le pont</div>
-      <h2>Le pont s'installe sur l'ordinateur du comptoir</h2>
-      <p>Un iPhone ou un iPad ne peut pas faire tourner le pont d'impression, et il n'y a rien à télécharger ici pour lui. Le pont vit sur l'ordinateur (ou la tablette Android) qui est branché à l'imprimante.</p>
-      <p>Un iPad imprime quand même, par le relais Kiwi : la caisse de l'iPad dépose chaque impression sur le relais, et le pont du comptoir la récupère et l'imprime.</p>
+      <div class="step" data-printer-i18n="s2">Cet appareil ne fait pas tourner le pont</div>
+      <h2 data-printer-i18n="s3">Le pont s'installe sur l'ordinateur du comptoir</h2>
+      <p data-printer-i18n="s4">Un iPhone ou un iPad ne peut pas faire tourner le pont d'impression, et il n'y a rien à télécharger ici pour lui. Le pont vit sur l'ordinateur (ou la tablette Android) qui est branché à l'imprimante.</p>
+      <p data-printer-i18n="s5">Un iPad imprime quand même, par le relais Kiwi : la caisse de l'iPad dépose chaque impression sur le relais, et le pont du comptoir la récupère et l'imprime.</p>
       <ol class="run">
-        <li>Sur l'ordinateur du comptoir, ouvrez cette page (<code>kiwi-os.com/printer.html</code>), téléchargez le pont et lancez-le. Il faut la version 1.4.0 ou plus récente.</li>
-        <li>Dans Kiwi, sur l'iPad : <b>Imprimantes → Relais Kiwi → Associer un pont</b>, puis générez le code à 6 chiffres.</li>
-        <li>Saisissez ce code dans le pont, sur l'ordinateur du comptoir. L'association se fait une seule fois.</li>
+        <li data-printer-i18n="s6">Sur l'ordinateur du comptoir, ouvrez cette page (<code>kiwi-os.com/printer.html</code>), téléchargez le pont et lancez-le. Il faut la version 1.4.0 ou plus récente.</li>
+        <li data-printer-i18n="s7">Dans Kiwi, sur l'iPad : <b>Imprimantes → Relais Kiwi → Associer un pont</b>, puis générez le code à 6 chiffres.</li>
+        <li data-printer-i18n="s8">Saisissez ce code dans le pont, sur l'ordinateur du comptoir. L'association se fait une seule fois.</li>
       </ol>
     </div>
 
     <div class="card not-ios">
-      <div class="status idle" id="status"><span class="dot"></span><span id="status-t">Recherche du pont sur cet ordinateur…</span></div>
+      <div class="status idle" id="status"><span class="dot"></span><span id="status-t" data-printer-i18n="s9">Recherche du pont sur cet ordinateur…</span></div>
 
-      <div class="step">Qu'est-ce que c'est ?</div>
-      <p class="muted">Un petit programme à installer sur l'ordinateur de la caisse. Kiwi lui envoie les impressions et il les transmet à votre imprimante. Il tourne discrètement en arrière-plan et n'écoute que sur cet ordinateur · aucune donnée ne sort de votre machine.</p>
+      <div class="step" data-printer-i18n="s10">Qu'est-ce que c'est ?</div>
+      <p class="muted" data-printer-i18n="s11">Un petit programme à installer sur l'ordinateur de la caisse. Kiwi lui envoie les impressions et il les transmet à votre imprimante. Il tourne discrètement en arrière-plan et n'écoute que sur cet ordinateur · aucune donnée ne sort de votre machine.</p>
     </div>
 
     <div class="card not-ios">
-      <div class="step">1 · Télécharger</div>
-      <a class="dl" id="dl-primary" href="#" download>Télécharger pour Windows</a>
-      <p class="others">Autres plateformes ·
+      <div class="step" data-printer-i18n="s12">1 · Télécharger</div>
+      <a class="dl" id="dl-primary" href="#" download data-printer-i18n="s13">Télécharger pour Windows</a>
+      <p class="others"><span data-printer-i18n="others">Autres plateformes ·</span>
         <a id="dl-android" href="/downloads/kiwi-print-bridge.apk" download>Android</a> ·
         <a id="dl-win"   href="#" download>Windows</a> ·
         <a id="dl-mac"   href="#" download>macOS</a> ·
@@ -116,7 +285,7 @@ em, i, cite, dfn, var { font-style: normal; }
     </div>
 
     <div class="card not-ios">
-      <div class="step">2 · Lancer</div>
+      <div class="step" data-printer-i18n="s14">2 · Lancer</div>
       <div class="os-tabs">
         <button class="os-tab" data-os="win">Windows</button>
         <button class="os-tab" data-os="mac">macOS</button>
@@ -125,59 +294,66 @@ em, i, cite, dfn, var { font-style: normal; }
       </div>
       <div class="os-body" data-os="win">
         <ol class="run">
-          <li>Double-cliquez le fichier téléchargé <code>kiwi-printer-bridge-win.exe</code>.</li>
-          <li>Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. Cette version n'est pas encore signée numériquement, et c'est la seule raison de cet avertissement : Windows ne peut pas vérifier l'éditeur. Ne continuez que si vous avez téléchargé le fichier depuis cette page Kiwi.</li>
-          <li>Laissez la fenêtre ouverte. Si vous la fermez, l'impression s'arrête.</li>
-          <li><b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC.
+          <li data-printer-i18n="s15">Double-cliquez le fichier téléchargé <code>kiwi-printer-bridge-win.exe</code>.</li>
+          <li data-printer-i18n="s16">Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. Cette version n'est pas encore signée numériquement, et c'est la seule raison de cet avertissement : Windows ne peut pas vérifier l'éditeur. Ne continuez que si vous avez téléchargé le fichier depuis cette page Kiwi.</li>
+          <li data-printer-i18n="s17">Laissez la fenêtre ouverte. Si vous la fermez, l'impression s'arrête.</li>
+          <li data-printer-i18n="s18"><b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC.
             <span class="mono">Win + R</span> → <code>shell:startup</code> → dans le dossier qui s'ouvre, créez un fichier
             <code>kiwi-printer.cmd</code> contenant :
             <br><code class="code-block">@echo off
 set KIWI_BRIDGE_PORT=9110
 start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
             Adaptez le chemin si vous avez déplacé le <code>.exe</code>. Le pont démarrera seul, en fenêtre réduite.</li>
-          <li><b>Si le pont ne démarre pas</b> (la fenêtre s'ouvre puis se referme aussitôt) : le port 9110 est déjà pris par un autre logiciel. Dans le <code>.cmd</code> ci-dessus, remplacez <code>9110</code> par <code>9111</code> (ou 9112 / 9113 / 9114) · Kiwi cherche automatiquement sur cette plage.</li>
+          <li data-printer-i18n="s19"><b>Si le pont ne démarre pas</b> (la fenêtre s'ouvre puis se referme aussitôt) : le port 9110 est déjà pris par un autre logiciel. Dans le <code>.cmd</code> ci-dessus, remplacez <code>9110</code> par <code>9111</code> (ou 9112 / 9113 / 9114) · Kiwi cherche automatiquement sur cette plage.</li>
         </ol>
       </div>
       <div class="os-body" data-os="mac">
         <ol class="run">
-          <li>Double-cliquez le fichier téléchargé · il se décompresse en <b>Kiwi Printer</b>. Glissez-le dans votre dossier <b>Applications</b>.</li>
-          <li>Double-cliquez <b>Kiwi Printer</b>. macOS affiche « développeur non identifié » ou « Apple ne peut pas vérifier ». Cette version du pont n'est pas encore notariée par Apple, donc macOS ne peut pas la valider à votre place, et nous ne pouvons pas vous demander de lui faire confiance sans réserve : ne passez à la suite que si vous l'avez téléchargée depuis cette page Kiwi. Cliquez <b>OK</b>.</li>
-          <li>Ouvrez <b>Réglages Système → Confidentialité et sécurité</b>. Descendez tout en bas : à côté de « <i>Kiwi Printer a été bloqué…</i> », cliquez <b>Ouvrir quand même</b>, puis <b>Ouvrir</b>. C'est nécessaire une seule fois.</li>
-          <li><b>Aucune fenêtre ne s'ouvre · c'est normal.</b> Kiwi Printer tourne discrètement en arrière-plan. (Sur un Mac Apple Silicon, macOS proposera d'<b>installer Rosetta</b> au premier lancement · cliquez <b>Installer</b>.)</li>
-          <li><b>Empêcher la veille (pour relayer les iPad) :</b> dans un terminal, lancez <code>caffeinate -s &</code> ou dans <i>Réglages Système → Batterie / Écran</i>, empêchez la suspension automatique. Laissez le capot ouvert.</li>
+          <li data-printer-i18n="s20">Double-cliquez le fichier téléchargé · il se décompresse en <b>Kiwi Printer</b>. Glissez-le dans votre dossier <b>Applications</b>.</li>
+          <li data-printer-i18n="s21">Double-cliquez <b>Kiwi Printer</b>. macOS affiche « développeur non identifié » ou « Apple ne peut pas vérifier ». Cette version du pont n'est pas encore notariée par Apple, donc macOS ne peut pas la valider à votre place, et nous ne pouvons pas vous demander de lui faire confiance sans réserve : ne passez à la suite que si vous l'avez téléchargée depuis cette page Kiwi. Cliquez <b>OK</b>.</li>
+          <li data-printer-i18n="s22">Ouvrez <b>Réglages Système → Confidentialité et sécurité</b>. Descendez tout en bas : à côté de « <i>Kiwi Printer a été bloqué…</i> », cliquez <b>Ouvrir quand même</b>, puis <b>Ouvrir</b>. C'est nécessaire une seule fois.</li>
+          <li data-printer-i18n="s23"><b>Aucune fenêtre ne s'ouvre · c'est normal.</b> Kiwi Printer tourne discrètement en arrière-plan. (Sur un Mac Apple Silicon, macOS proposera d'<b>installer Rosetta</b> au premier lancement · cliquez <b>Installer</b>.)</li>
+          <li data-printer-i18n="s24"><b>Empêcher la veille (pour relayer les iPad) :</b> dans un terminal, lancez <code>caffeinate -s &</code> ou dans <i>Réglages Système → Batterie / Écran</i>, empêchez la suspension automatique. Laissez le capot ouvert.</li>
         </ol>
         <details class="adv">
-          <summary>Option avancée · installation en ligne de commande</summary>
-          <p class="adv-note">Pour les personnes à l'aise avec le terminal : ce script installe le pont comme service (LaunchAgent) qui survit aux redémarrages. Il s'exécute avec vos droits, lisez-le avant de le lancer : <a href="https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-macos.sh" target="_blank" rel="noopener">install-macos.sh</a>.</p>
+          <summary data-printer-i18n="s25">Option avancée · installation en ligne de commande</summary>
+          <p class="adv-note" data-printer-i18n="s26">Pour les personnes à l'aise avec le terminal : ce script installe le pont comme service (LaunchAgent) qui survit aux redémarrages. Il s'exécute avec vos droits, lisez-le avant de le lancer : <a href="https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-macos.sh" target="_blank" rel="noopener">install-macos.sh</a>.</p>
           <p><code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-macos.sh | bash</code></p>
         </details>
       </div>
       <div class="os-body" data-os="linux">
         <ol class="run">
-          <li><b>Lancement :</b><br><code>chmod +x ~/Downloads/kiwi-printer-bridge-linux && ~/Downloads/kiwi-printer-bridge-linux</code></li>
+          <li data-printer-i18n="s27"><b>Lancement :</b><br><code>chmod +x ~/Downloads/kiwi-printer-bridge-linux && ~/Downloads/kiwi-printer-bridge-linux</code></li>
         </ol>
         <details class="adv">
-          <summary>Option avancée · installation en service (Raspberry Pi / Debian / Ubuntu)</summary>
-          <p class="adv-note">Ce script s'exécute en administrateur (<code>sudo</code>) et installe le pont comme service systemd (<code>Restart=always</code>) : il redémarre seul. Lisez-le avant de le lancer : <a href="https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-linux.sh" target="_blank" rel="noopener">install-linux.sh</a>.</p>
+          <summary data-printer-i18n="s28">Option avancée · installation en service (Raspberry Pi / Debian / Ubuntu)</summary>
+          <p class="adv-note" data-printer-i18n="s29">Ce script s'exécute en administrateur (<code>sudo</code>) et installe le pont comme service systemd (<code>Restart=always</code>) : il redémarre seul. Lisez-le avant de le lancer : <a href="https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-linux.sh" target="_blank" rel="noopener">install-linux.sh</a>.</p>
           <p><code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-linux.sh | sudo bash</code></p>
         </details>
       </div>
       <div class="os-body" data-os="android">
         <ol class="run">
-          <li>Téléchargez <b>Kiwi Print Bridge</b> avec le bouton ci-dessus. Si Android le demande, autorisez Chrome à <b>installer des applications inconnues</b>, puis installez l'APK.</li>
-          <li>Ouvrez l'application. Autorisez les notifications : la notification permanente confirme que le pont reste actif.</li>
-          <li>Dans Kiwi → <b>Imprimantes → Relais Kiwi → Associer un pont</b>, générez le code à 6 chiffres, puis saisissez-le dans Kiwi Print Bridge.</li>
-          <li>Dans <b>Paramètres Samsung → Applications → Kiwi Print Bridge → Batterie</b>, choisissez <b>Sans restriction</b>. Le pont redémarrera automatiquement avec la tablette.</li>
-          <li>Configurez l'adresse IP de chaque imprimante dans Kiwi. Pour vérifier le réseau immédiatement, saisissez aussi l'IP dans l'application et imprimez un ticket test.</li>
+          <li data-printer-i18n="s30">Téléchargez <b>Kiwi Print Bridge</b> avec le bouton ci-dessus. Si Android le demande, autorisez Chrome à <b>installer des applications inconnues</b>, puis installez l'APK.</li>
+          <li data-printer-i18n="s31">Ouvrez l'application. Autorisez les notifications : la notification permanente confirme que le pont reste actif.</li>
+          <li data-printer-i18n="s32">Dans Kiwi → <b>Imprimantes → Relais Kiwi → Associer un pont</b>, générez le code à 6 chiffres, puis saisissez-le dans Kiwi Print Bridge.</li>
+          <li data-printer-i18n="s33">Dans <b>Paramètres Samsung → Applications → Kiwi Print Bridge → Batterie</b>, choisissez <b>Sans restriction</b>. Le pont redémarrera automatiquement avec la tablette.</li>
+          <li data-printer-i18n="s34">Configurez l'adresse IP de chaque imprimante dans Kiwi. Pour vérifier le réseau immédiatement, saisissez aussi l'IP dans l'application et imprimez un ticket test.</li>
         </ol>
       </div>
     </div>
 
-    <p class="foot not-ios">Une fois lancé, revenez dans Kiwi → « Connecter une imprimante » → saisissez l'adresse IP de votre imprimante et lancez un ticket test. Le voyant passe au vert.</p>
+    <p class="foot not-ios" data-printer-i18n="s35">Une fois lancé, revenez dans Kiwi → « Connecter une imprimante » → saisissez l'adresse IP de votre imprimante et lancez un ticket test. Le voyant passe au vert.</p>
   </main>
 
   <script>
   (function(){
+    var t = PrinterI18n.text;
+    // Preserve commands, filenames and links verbatim while translating the surrounding copy.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-printer-i18n]'), function(el){
+      var parts = [];
+      el.innerHTML.replace(/<code\b[^>]*>[\s\S]*?<\/code>|<a\b[^>]*>[\s\S]*?<\/a>|<span class="mono">[\s\S]*?<\/span>/g, function(part){ parts.push(part); });
+      el.innerHTML = t(el.getAttribute('data-printer-i18n'), parts);
+    });
     var BASE = 'https://github.com/badro99/Kiwi/releases/latest/download/';
     var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos.zip', linux: 'kiwi-printer-bridge-linux', android: '/downloads/kiwi-print-bridge.apk' };
     var LABEL = { win: 'Windows', mac: 'macOS', linux: 'Linux', android: 'Android' };
@@ -208,11 +384,11 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
     } else if (os === 'android') {
       prim.href = FILES.android;
       prim.setAttribute('download', '');
-      prim.textContent = 'Télécharger Kiwi Print Bridge pour Android';
+      prim.textContent = t('android');
     } else {
       prim.href = BASE + FILES[os];
       prim.setAttribute('download', '');
-      prim.textContent = 'Télécharger pour ' + LABEL[os];
+      prim.textContent = t('download', { os: LABEL[os] });
     }
 
     // OS tabs for the "Lancer" instructions
@@ -246,9 +422,12 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
     }
     var st = $('#status'), stt = $('#status-t');
     function render(j){
-      if (j){ st.className = 'status on'; stt.innerHTML = 'Pont connecté sur cet ordinateur · v' + (j.version || '?') + '. Tout est prêt.'; }
-      else { st.className = 'status idle'; stt.innerHTML = 'Le pont n\'est pas encore installé sur cet ordinateur. Téléchargez-le ci-dessous, puis lancez-le · ce voyant passe au vert une fois lancé. <button type="button" class="recheck" id="recheck">Revérifier</button>';
-        var rc = document.getElementById('recheck'); if (rc) rc.addEventListener('click', function(){ stt.textContent = 'Nouvelle vérification…'; check(); }); }
+      if (j){ st.className = 'status on'; stt.textContent = t('connected', { version: j.version || '?' }); }
+      else { st.className = 'status idle'; stt.textContent = t('idle') + ' ';
+        var rc = document.createElement('button');
+        rc.type = 'button'; rc.className = 'recheck'; rc.id = 'recheck'; rc.textContent = t('recheck');
+        stt.appendChild(rc);
+        rc.addEventListener('click', function(){ stt.textContent = t('checking'); check(); }); }
     }
     function check(){ return ping().then(render); }
     /* An iPhone or iPad cannot run the bridge, so there is nothing to look for. */

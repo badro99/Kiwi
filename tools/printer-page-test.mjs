@@ -30,7 +30,7 @@ function stub() {
     href: '#', textContent: '', innerHTML: '', className: '', attrs: {},
     classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), contains: (c) => classes.has(c), toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) },
     setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] || ''; },
-    addEventListener() {},
+    addEventListener() {}, appendChild() {},
   };
 }
 function run(nav) {
@@ -39,9 +39,9 @@ function run(nav) {
   const fetched = [];
   const body = stub();
   const ctx = vm.createContext({
-    navigator: nav,
+    navigator: nav, location: { search: '' }, URLSearchParams,
     document: {
-      body,
+      body, documentElement: {}, createElement: () => stub(),
       getElementById: (id) => get('#' + id),
       querySelector: (sel) => get(sel),
       querySelectorAll: () => [],
@@ -51,6 +51,8 @@ function run(nav) {
     setTimeout: () => 0, clearTimeout: () => {}, setInterval: () => 0,
     Array, console,
   });
+  const i18n = HTML.match(/<script id="printer-i18n">([\s\S]*?)<\/script>/);
+  if (i18n) vm.runInContext(i18n[1], ctx);
   /* Read the detected OS out of the IIFE without changing what ships. */
   vm.runInContext(SCRIPT.replace('var os = detectOS();', 'var os = globalThis.__os = detectOS();'), ctx);
   return { els, body, fetched, prim: get('#dl-primary'), os: ctx.__os };

@@ -142,7 +142,7 @@
 .ht-pill svg { width: 10px; height: 10px; }
 .ht-pill.ok { background: var(--ht-ok-bg); color: var(--forest); }
 .ht-pill.warn { background: var(--ht-warn-bg); color: var(--ht-warn); }
-.ht-pill.due { background: var(--ht-due-bg); color: var(--danger-mute); }
+.ht-pill.due { background: var(--ht-due-bg); color: #9C3F33; }
 .ht-pill.mint { background: var(--mint-tint); color: var(--forest); border: 1px solid var(--mint-edge); }
 .ht-pill.dark { background: #111; color: #fff; font-family: var(--mono); }
 
@@ -179,7 +179,9 @@
   animation-delay: calc(var(--i, 0) * 30ms);
 }
 @keyframes ht-card-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
-.ht-arr.is-done { opacity: 0.62; }
+/* A finished arrival stays set apart by its soft card and green time block,
+   at full contrast: fading the whole row took every label under 4.5:1. */
+.ht-arr.is-done { background: var(--paper-soft); }
 .ht-arr-time {
   flex: 0 0 52px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -190,6 +192,7 @@
 .ht-arr-time b { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
 .ht-arr-time span { font-size: 8.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
 .ht-arr.is-done .ht-arr-time { background: var(--ht-ok-bg); color: var(--forest); }
+.ht-arr.is-done .ht-arr-time span { color: var(--forest); }
 .ht-arr-mid { flex: 1; min-width: 0; }
 .ht-arr-name { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .ht-arr-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }

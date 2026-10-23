@@ -2079,6 +2079,7 @@ section('Whole-project regressions');
     'inventory-count-review-test.mjs',
     'menu-scan-test.mjs',
     'menu-scan-i18n-test.mjs',
+    'printer-i18n-test.mjs',
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',
     'intake-slice1-test.mjs',
@@ -2268,10 +2269,12 @@ section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
   else fail(`surface-matrix-browser-test.mjs exited ${r.status}: ${out.trim()}`);
 }
 
-/* The dashboard destinations at each screen size, FR/EN/AR, walked through the
- * sidebar: one file per size so the pool runs them side by side. */
-for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs']) {
-  section(`Surface matrix · dashboard (tools/${file})`);
+/* The dashboard destinations, the tills and the session-free apps at each
+ * screen size, FR/EN/AR: one file per size so the pool runs them side by side. */
+for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs',
+  'surface-matrix-till-desktop-browser-test.mjs', 'surface-matrix-till-tablet-browser-test.mjs', 'surface-matrix-till-phone-browser-test.mjs',
+  'surface-matrix-apps-browser-test.mjs']) {
+  section(`Surface matrix (tools/${file})`);
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
   const out = (r.stdout || '') + (r.stderr || '');

@@ -160,3 +160,41 @@ export async function verify(h, t, { page, region }, key, locale) {
   assert.equal(failures.length, 0, failures.join('\n'));
   console.log(`  ✓ ${key}: locale, visible surface, overflow and axe`);
 }
+
+/* A till in a fresh demo page. The restaurant opens through the normal
+   float-and-clock-in flow; every other trade through the dispatcher, the same
+   call a paired store uses, and the credit book from the épicerie's tab. */
+export async function openTill(h, t, surface, locale, viewport) {
+  const { ctx, page } = await demoPage(h, locale, viewport);
+  t.defer(() => ctx.close());
+  t.watch(page);
+  t.step('load the demo till');
+  await page.goto(h.base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
+  if (surface === 'caisse-restaurant') {
+    await page.waitForSelector('.ci-float-chip[data-float="300"]', { visible: true, timeout: 30000 });
+    await sleep(600);
+    await page.click('.ci-float-chip[data-float="300"]');
+    await page.waitForFunction(() => !document.getElementById('clockin-btn').disabled);
+    await page.click('#clockin-btn');
+    await page.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout: 20000 });
+    await page.waitForSelector('.view.is-active', { visible: true, timeout: 20000 });
+    await sleep(900);
+    return { page, region: '.view.is-active' };
+  }
+  const id = surface === 'credit-book' ? 'epicerie' : surface.slice('caisse-'.length);
+  await page.waitForFunction(() => window.KiwiPosDispatch, { timeout: 30000 });
+  await sleep(500);
+  t.step('open the ' + id + ' till');
+  await page.evaluate((v) => window.KiwiPosDispatch.unlockById(v), id);
+  // The dispatcher mounts the trade after its two-second greeting.
+  await page.waitForSelector(`#pos-${id}.is-on`, { visible: true, timeout: 20000 });
+  await page.waitForFunction(() => !document.querySelector('.kiwi-greet.is-visible'), { timeout: 8000 });
+  if (surface === 'credit-book') {
+    t.step('open the credit book');
+    await page.waitForSelector('[data-ep-view="carnet"]', { timeout: 15000 });
+    await page.evaluate(() => document.querySelector('[data-ep-view="carnet"]').click());
+    await page.waitForSelector('[data-ep-ard="k1"]', { visible: true, timeout: 8000 });
+  }
+  await sleep(700);
+  return { page, region: `#pos-${id}` };
+}
