@@ -73,6 +73,11 @@
     /* Planning on a phone · one pill per day of the week */
     { sel: '.kt-pd-days', item: '.kt-pd-pill', skin: 'surface',
       active: function (el) { return el.classList.contains('on'); } },
+    /* Public booking page · language switch and the fourteen-day date row */
+    { sel: '.bk-lang', item: 'button', skin: 'surface',
+      active: function (el) { return el.classList.contains('on'); } },
+    { sel: '.bk-date-row', item: '.bk-date', skin: 'brand',
+      active: function (el) { return el.classList.contains('on'); } },
     /* brand page demo + any future opt-in markup */
     { sel: '[data-lens-demo]', item: '[data-lens-item]', skin: 'brand',
       active: function (el) { return el.classList.contains('on'); } },
@@ -99,6 +104,7 @@
       '.pds-zone-tabs .kw-lens,.sc-pills .kw-lens,.kw-menu-tabs .kw-lens,' +
       '.kx-tabs .kw-lens,.kt-ed-seg .kw-lens,.rmw-og-seg .kw-lens,.mz-mv-seg .kw-lens{border-radius:9px;}' +
     '.kt-pd-days .kw-lens{border-radius:10px;}' +
+    '.bk-date-row .kw-lens{border-radius:14px;}' +
     /* the lens carries the active fill — the item itself goes transparent */
     '.dr-pills[data-kw-lens] .dr-pill.on{background:transparent;box-shadow:none;}' +
     '.resv-tabs[data-kw-lens] .resv-tab.on{background:transparent;box-shadow:none;}' +
@@ -113,6 +119,8 @@
     '.rmw-og-seg[data-kw-lens] .rmw-og-segi.on span{background:transparent;box-shadow:none;}' +
     '.mz-mv-seg[data-kw-lens] .mz-mv-segi.on span{background:transparent;box-shadow:none;}' +
     '.kt-pd-days[data-kw-lens] .kt-pd-pill.on{background:transparent;box-shadow:none;}' +
+    '.bk-lang[data-kw-lens] button.on{background:transparent;box-shadow:none;}' +
+    '.bk-date-row[data-kw-lens] .bk-date.on{background:transparent;border-color:transparent;}' +
     /* the lens replaces the landing tabs\' old static ::after indicator */
     '.audience-tabs[data-kw-lens]::after{display:none !important;}' +
     '@media (prefers-reduced-motion:reduce){.kw-lens{transition:none;}}';

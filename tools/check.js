@@ -1959,6 +1959,7 @@ section('Whole-project regressions');
     'stock-count-history-language-test.mjs',
     'caisse-color-picker-language-test.mjs',
     'booking-truth-test.mjs',
+    'booking-lens-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'onboarding-data-test.mjs',
     'onboarding-team-recap-test.mjs',
