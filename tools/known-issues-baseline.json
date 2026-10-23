@@ -50,6 +50,18 @@
       "severity": "data"
     },
     {
+      "suite": "credit-book-properties-test.mjs",
+      "label": "CRB-1",
+      "kind": "decision",
+      "severity": "money"
+    },
+    {
+      "suite": "credit-book-properties-test.mjs",
+      "label": "CRB-2",
+      "kind": "decision",
+      "severity": "security"
+    },
+    {
       "suite": "customer-balance-properties-test.mjs",
       "label": "CB-6",
       "kind": "decision",
