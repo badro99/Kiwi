@@ -305,7 +305,7 @@ var SHELL = [
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=12',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
-  '/assets/menu-scan.js?v=2',
+  '/assets/menu-scan.js?v=3',
   '/assets/salle-scan.js?v=3',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=7',

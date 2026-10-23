@@ -2075,6 +2075,7 @@ section('Whole-project regressions');
     'inventory-count-test.mjs',
     'inventory-count-review-test.mjs',
     'menu-scan-test.mjs',
+    'menu-scan-i18n-test.mjs',
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',
     'intake-slice1-test.mjs',
