@@ -586,7 +586,7 @@
    * store now on screen. Each call takes a ticket and remembers which store it
    * asked for; the answer is dropped unless it is still the newest call AND the
    * store on screen is still the one it was asked for. */
-  var fetchSeq = 0;
+  var fetchSeq = 0, staleRetries = 0;
   function fetchConfig() {
     var ticket = ++fetchSeq;
     var askedSlug = lastSlug = storeSlug();
@@ -598,7 +598,15 @@
         if (ticket !== fetchSeq) return false;     // a newer request is in flight
         /* An operator's scoped view is pinned to one merchant by the URL, and its slug only
            settles once the server confirms the scope: comparing it would drop a good answer. */
-        if (!isScoped() && (storeSlug() !== askedSlug || merchant() !== askedMerchant)) return false;   // stale: another store is on screen
+        if (!isScoped() && (storeSlug() !== askedSlug || merchant() !== askedMerchant)) {
+          /* Stale, and no newer request is in flight (the ticket check above):
+             ask again for the store now on screen. On a first sign-in the store
+             passes through a placeholder before /api/me names it, and the venue
+             watcher has already stopped, so without this nothing asked again
+             until the window regained focus. Capped, reset on success. */
+          if (staleRetries++ < 3) setTimeout(fetchConfig, 0);
+          return false;
+        }
         cfg.features = data.features || {};
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);
@@ -619,6 +627,7 @@
           ? { state: String(data.subscription.state || 'active'), active: data.subscription.active !== false }
           : { state: 'active', active: true };
         cfg.loaded = true;
+        staleRetries = 0;
         applyFeatures();
         // Make the server-stored business type authoritative for the dashboard's
         // vertical section (a boutique shows boutique modules, never restaurant),

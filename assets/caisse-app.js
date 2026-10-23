@@ -7917,7 +7917,7 @@
             <h3>Dernières pertes</h3>
             <span class="sk-badge" style="background:rgba(220,38,38,0.1);color:#991b1b;">${recentWaste.length}</span>
           </div>
-          <div class="sk-tbl-wrap">
+          <div class="sk-tbl-wrap" tabindex="0" role="region" aria-label="${escTeam(window.KiwiCaisseLang?.tr('Dernières pertes') || 'Dernières pertes')}">
             <table class="sk-tbl">
               <thead><tr><th>Date &amp; heure</th><th>Article</th><th>Quantité</th><th>Motif</th><th>Valeur</th><th>Employé</th></tr></thead>
               <tbody>
@@ -8002,7 +8002,7 @@
         </div>
         <div class="sk-filters">${catPills}</div>
         <div class="sk-filters">${statusPills}</div>
-        <div class="sk-tbl-wrap"><table class="sk-tbl"><thead><tr><th>Article</th><th>Catégorie</th><th>Stock</th><th>Par</th><th>Valeur</th><th>Fournisseur</th><th>Statut</th><th class="r">Actions</th></tr></thead><tbody id="sk-tbl-body">${skRowsHTML()}</tbody></table></div>`;
+        <div class="sk-tbl-wrap" tabindex="0" role="region" aria-label="${escTeam(window.KiwiCaisseLang?.tr('Stock') || 'Stock')}"><table class="sk-tbl"><thead><tr><th>Article</th><th>Catégorie</th><th>Stock</th><th>Par</th><th>Valeur</th><th>Fournisseur</th><th>Statut</th><th class="r">Actions</th></tr></thead><tbody id="sk-tbl-body">${skRowsHTML()}</tbody></table></div>`;
     }
 
     function renderSkAppro(){
@@ -8023,7 +8023,7 @@
           <button class="ma-btn primary sk-add" data-sk-neworder><i data-lucide="plus"></i>Nouvelle commande</button>
         </div>
         <div class="sk-ord-grid">${active.length ? active.map(card).join('') : `<div class="sk-empty"><i data-lucide="truck"></i>Aucune commande en cours.</div>`}</div>
-        ${past.length ? `<div class="sk-section"><div class="sk-section-head"><h3>Historique</h3></div><div class="sk-tbl-wrap"><table class="sk-tbl"><thead><tr><th>#</th><th>Fournisseur</th><th>Articles</th><th>Total</th><th>Statut</th></tr></thead><tbody>${past.map(o=>`<tr><td class="sk-mono">#${o.id}</td><td>${kdsEsc(o.supplier)}</td><td>${o.items.length} article${o.items.length>1?'s':''}</td><td class="sk-mono">${fmtMAD(o.total)}</td><td><span class="sk-status ok"><span class="sd"></span>Reçue</span></td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+        ${past.length ? `<div class="sk-section"><div class="sk-section-head"><h3>Historique</h3></div><div class="sk-tbl-wrap" tabindex="0" role="region" aria-label="${escTeam(window.KiwiCaisseLang?.tr('Historique') || 'Historique')}"><table class="sk-tbl"><thead><tr><th>#</th><th>Fournisseur</th><th>Articles</th><th>Total</th><th>Statut</th></tr></thead><tbody>${past.map(o=>`<tr><td class="sk-mono">#${o.id}</td><td>${kdsEsc(o.supplier)}</td><td>${o.items.length} article${o.items.length>1?'s':''}</td><td class="sk-mono">${fmtMAD(o.total)}</td><td><span class="sk-status ok"><span class="sd"></span>Reçue</span></td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
     }
 
     function renderSkInventaire(){

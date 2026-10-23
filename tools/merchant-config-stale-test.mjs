@@ -37,18 +37,18 @@ function grab(src, start) {
 /* fetchConfig tel que livré (avec son compteur) ; le reste est remplacé. */
 function harness({ scoped = false } = {}) {
   const calls = { applyServerType: [], applyFeatures: 0, pins: [] };
-  const st = { slug: 'boutique', merchant: 'boutique', pending: [] };
+  const st = { slug: 'boutique', merchant: 'boutique', pending: [], timers: [] };
   const code = [
     'let lastSlug = "", lastMerchant = "";',
     'const cfg = { features: {}, pins: [], type: "" };',
     'const document = { dispatchEvent() {} }; function CustomEvent() {}',
-    'function setTimeout() {}',
+    'function setTimeout(fn) { st.timers.push(fn); }',
     'function storeSlug() { return st.slug; } function merchant() { return st.merchant; } function isScoped() { return scoped; }',
     'function configUrl() { return "/api/config?merchant=" + st.slug; }',
     'function rememberPins(p) { calls.pins.push(p); } function reportTillZone() {} function adoptTillCutoff() {}',
     'function applyFeatures() { calls.applyFeatures++; } function applyServerType() { calls.applyServerType.push(cfg.type); }',
     'const fetch = () => new Promise((res) => st.pending.push(res));',
-    'var fetchSeq = 0;',
+    'var fetchSeq = 0, staleRetries = 0;',
     grab(SRC, 'function fetchConfig()'),
     'return { fetchConfig, cfg };',
   ].join('\n');
@@ -89,6 +89,34 @@ await ok('magasin changé et AUCUNE nouvelle requête : la réponse périmée n�
   assert.equal(await slow, false);
   assert.equal(h.api.cfg.type, '');
   assert.equal(h.calls.applyFeatures, 0);
+});
+
+await ok('première connexion : la réponse jetée est redemandée pour le magasin affiché', async () => {
+  // Sur un appareil neuf, le magasin passe par « mon-etablissement » avant que
+  // /api/me ne le nomme ; la réponse arrive périmée et plus rien ne la redemandait.
+  const h = harness();
+  h.st.slug = 'matrix-kitchen'; h.st.merchant = 'mon-etablissement';
+  const first = h.api.fetchConfig();
+  h.st.merchant = 'matrix-kitchen';            // la portée suit pendant le vol
+  h.answer(0, resto);
+  assert.equal(await first, false, 'la réponse périmée reste jetée');
+  assert.equal(h.st.timers.length, 1, 'une nouvelle demande est prévue');
+  const again = h.st.timers.shift()();
+  h.answer(1, resto);
+  assert.equal(await again, true);
+  assert.equal(h.api.cfg.type, 'restaurant');
+});
+
+await ok('la relance est bornée : trois au plus, puis on attend le prochain signal', async () => {
+  const h = harness();
+  let n = 0;
+  for (let i = 0; i < 6; i++) {
+    const p = h.api.fetchConfig();
+    h.st.slug = 'flip-' + i;                    // le magasin bouge à chaque vol
+    h.answer(i, resto); await p;
+    n += h.st.timers.length; h.st.timers.length = 0;
+  }
+  assert.equal(n, 3);
 });
 
 await ok('deux requêtes pour le même magasin : seule la plus récente s’applique', async () => {

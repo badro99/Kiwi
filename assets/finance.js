@@ -997,7 +997,7 @@
     }).sort((a, b) => (b.sold * (+b.it.price || 0)) - (a.sold * (+a.it.price || 0)) || String(a.it.name).localeCompare(String(b.it.name), 'fr'));
     const products = `<div class="fin-card fin-products">
       <div class="fin-eyebrow"><span>${esc(c.productsT)}</span><span class="fin-eyebrow-sub">${esc(c.productsS(items.length))}</span></div>
-      <div class="fin-tbl-wrap"><table class="fin-tbl">
+      <div class="fin-tbl-wrap" tabindex="0" role="region" aria-label="${esc(c.productsT)}"><table class="fin-tbl">
         <thead><tr><th>${esc(c.cols[0])}</th><th class="num">${esc(c.cols[1])}</th><th class="num">${esc(c.cols[2])}</th><th class="num">${esc(c.cols[3])}</th><th class="num">${esc(c.cols[4])}</th><th class="num">${esc(c.cols[5])}</th></tr></thead>
         <tbody>${rows.map((r) => `<tr>
           <td>${esc(r.it.name)}</td>

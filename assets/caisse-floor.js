@@ -871,6 +871,7 @@
     function toast(msg, ms = 3200, kind = '', desc = '') {
       const lower = String(msg || '').toLowerCase();
       if (!kind) kind = /refus|erreur|illisible|impossible|requis/.test(lower) ? 'danger' : /d'abord|attention|d\u00e9j\u00e0|scannez/.test(lower) ? 'warn' : 'success';
+      if (window.KiwiCaisseLang) { msg = window.KiwiCaisseLang.tr(msg); if (desc) desc = window.KiwiCaisseLang.tr(desc); }
       const el = document.createElement('div');
       el.className = `toast is-${kind}`;
       el.setAttribute('role', kind === 'danger' ? 'alert' : 'status');

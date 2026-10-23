@@ -19,6 +19,7 @@
 
   if (!window.KiwiClients) { console.warn('clients-book.js: KiwiClients missing (load clients-store.js first)'); return; }
   var KC = window.KiwiClients;
+  var redemptionRequests = {};
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
@@ -51,6 +52,7 @@
   function shouldShow() { return !integrationHost() && !!KC.bookId() && (paired() || KC.count() > 0); }
 
   function toast(msg, desc) {
+    if (window.KiwiCaisseLang) { msg = window.KiwiCaisseLang.tr(msg); if (desc) desc = window.KiwiCaisseLang.tr(desc); }
     try {
       var stack = document.getElementById('toast-stack');
       if (stack) {
@@ -486,7 +488,7 @@
     positionRoot(root);
     markNav(entry);
     root.innerHTML =
-      '<div class="kcb-scroll"><div class="kcb-page">' +
+      '<div class="kcb-scroll" tabindex="0" role="region" aria-label="Clients"><div class="kcb-page">' +
         '<div class="kcb-top"><div><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Clients') + '</h2>' +
           '<span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
           '<button class="kcb-x kcb-back" id="kcb-back" type="button" aria-label="Fermer le carnet clients">' + ICON.close + '</button>' +
@@ -896,8 +898,35 @@
       openDetail(c.id); // re-render with new totals
       toast('Achat enregistré', res && res.rewardReady ? '🎁 Récompense atteinte !' : (amt ? fmt(amt) + ' MAD' : '+1 tampon'));
     };
+    var activeRedemption = redemptionRequests[KC.bookId() + ':' + c.id];
+    if (rewardReady && activeRedemption && activeRedemption.pending) {
+      sh.querySelector('#kcb-redeem').disabled = true;
+      sh.querySelector('#kcb-redeem').textContent = window.KiwiCaisseLang ? window.KiwiCaisseLang.tr('Confirmation en cours…') : 'Confirmation en cours…';
+    }
     if (rewardReady) sh.querySelector('#kcb-redeem').onclick = function () {
-      KC.redeem(c.id); renderList(); openDetail(c.id); toast('Récompense offerte', 'Carte réinitialisée.');
+      var book = KC.bookId(), key = book + ':' + c.id;
+      var request = redemptionRequests[key];
+      if (request && request.pending) return;
+      if (!request) request = redemptionRequests[key] = { ref: KC.redemptionRef(c.id), clientId: c.id };
+      request.pending = true;
+      var button = this;
+      button.disabled = true;
+      button.textContent = window.KiwiCaisseLang ? window.KiwiCaisseLang.tr('Confirmation en cours…') : 'Confirmation en cours…';
+      return KC.reserveRedemption(c.id, book, request).catch(function () {
+        return { accepted: false, refused: false };
+      }).then(function (result) {
+        request.pending = false;
+        delete redemptionRequests[key];
+        /* Server unreachable (offline, demo book, network error): the customer is
+           at the counter, so the reward is given and queued under the same ref,
+           which the server accepts once and refuses on a second till. */
+        var queued = !result.accepted && !result.refused;
+        if (result.accepted) KC.redeem(c.id, book, result);
+        else if (queued) KC.redeem(c.id, book, { ref: request.ref });
+        renderList(); openDetail(c.id);
+        toast(result.refused ? 'Récompense refusée' : 'Récompense offerte',
+          result.accepted ? 'Carte réinitialisée.' : result.refused ? 'La carte est conservée.' : 'Carte réinitialisée. Confirmation au retour du réseau.');
+      });
     };
   }
 

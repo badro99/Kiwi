@@ -1935,17 +1935,17 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-date-kicker">PROMESSE CLIENT</div>
-      <h3 class="modal-title">Prêt pour quand ?</h3>
+      <h3 class="modal-title" id="px-date-title">Prêt pour quand ?</h3>
       <p class="modal-subtle">Choisissez un créneau réaliste. Il sera imprimé sur le ticket et suivi par l'atelier.</p>
       <div class="px-date-chips">
-        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}" aria-label="${esc(o.label)}">
+        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}">
           <span class="px-date-day">${esc(o.day)}</span><b>${esc(o.time)}</b><span class="px-date-meta">${esc(o.sub)}</span>${o.recommended ? '<em>RECOMMANDÉ</em>' : ''}<i data-lucide="check"></i>
         </button>`).join('')}
       </div>
       <div class="px-date-divider"><span>Autre date</span></div>
       <div class="px-date-custom">
         <label class="px-date-field" for="px-date-input" data-px-date-field>
-          <input class="px-in" id="px-date-input" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
+          <input class="px-in" id="px-date-input" aria-labelledby="px-date-title" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
         </label>
         <button class="px-btn primary" id="px-date-ok">Valider</button>
       </div>`;
@@ -2201,7 +2201,7 @@
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${publicOrderNo(order)}</h3>
       <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible au nom du client.</p>
-      <div class="px-tags-grid">
+      <div class="px-tags-grid" tabindex="0" role="region" aria-label="Ticket, duplicata &amp; étiquettes">
         <div class="px-receipts-preview">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>
         <div class="px-tags-list">${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>
       </div>

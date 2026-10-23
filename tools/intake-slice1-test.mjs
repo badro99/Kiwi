@@ -164,7 +164,11 @@ await check('duplicates stop, confirm marks via outbox, flag defaults off', () =
 });
 
 await check('propose-never-post wording survives in the review screen', () => {
-  assert.match(stockSrc, /Le document reste à vérifier/);
+  // Reworded for the photo-to-manual fallback: still a check before confirming, now in FR, EN and AR.
+  assert.match(stockSrc, /Vérifiez les prix et quantités avant de confirmer/);
+  assert.match(stockSrc, /Check prices and quantities before confirming/);
+  assert.match(stockSrc, /تحقق من الأسعار والكميات قبل التأكيد/);
+  assert.match(stockSrc, /st-notice ok[^\n]*intakeText\('notice'\)/);
   assert.match(stockSrc, /data-stock-intake-doc/);
 });
 

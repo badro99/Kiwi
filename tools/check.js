@@ -1995,6 +1995,7 @@ section('Whole-project regressions');
     'team-roster-purge-test.mjs',
     'tenant-purge-sales-test.mjs',
     'merchant-config-stale-test.mjs',
+    'live-link-merchant-identity-test.mjs',
     'account-scope-test.mjs',
     'floorplan-lww-test.mjs',
     'serveur-kitchen-truth-test.mjs',
@@ -2119,7 +2120,7 @@ section('Whole-project regressions');
     'caisse-takeaway-ledger-dedup-test.mjs',
     'caisse-theme-contrast-test.mjs',
     'cash-move-custom-reason-test.mjs',
-    'clients-pending-write-test.mjs',
+    'clients-pending-write-test.mjs', 'loyalty-confirmation-test.mjs',
     'store-pending-setup-test.mjs',
     'till-device-revoke-test.mjs',
     /* Espace comptable : lecture seule d'UN magasin pour son expert-comptable ;
@@ -2277,7 +2278,9 @@ section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
 for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs',
   'surface-matrix-till-desktop-browser-test.mjs', 'surface-matrix-till-tablet-browser-test.mjs', 'surface-matrix-till-phone-browser-test.mjs',
   'surface-matrix-apps-browser-test.mjs', 'keyboard-floor-booking-browser-test.mjs',
-  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs']) {
+  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs', 'surface-matrix-states-real-browser-test.mjs',
+  'surface-matrix-states-intake-browser-test.mjs', 'surface-matrix-states-pressing-browser-test.mjs',
+  'surface-matrix-states-promos-catalogue-browser-test.mjs', 'surface-matrix-states-shopify-browser-test.mjs']) {
   section(`Surface matrix (tools/${file})`);
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

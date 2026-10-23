@@ -1,6 +1,6 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=90';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=8';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=8';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=92';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=10';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=10';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -690,7 +690,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerT
       <i data-lucide="history"></i><b>Aucun mouvement trouvé</b>
       <span>Changez les filtres ou enregistrez une entrée ou une sortie.</span>
     </div>`;
-    return `<div class="mzm-table-wrap"><table class="mzm-table">
+    return `<div class="mzm-table-wrap" tabindex="0" role="region" aria-label="${esc(window.KiwiCaisseLang?.tr('Mouvements') || 'Mouvements')}"><table class="mzm-table">
       <thead><tr><th>Date</th><th>Produit</th><th>Type</th><th>Qté</th><th>Avant → après</th><th>Employé</th><th>Source</th><th>Référence · note</th></tr></thead>
       <tbody>${rows.map((m) => `<tr>
         <td class="mzm-muted">${esc(new Date(m.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }))}${m.pending ? '<small>En attente de synchro</small>' : ''}</td>
@@ -921,12 +921,12 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerT
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(shelf(p.priceMAD))} · ${d.stock} en stock</span></div>
         ${catalogueAdminEnabled() ? `<button class="mz-btn secondary sm" data-inv-edit="${p.id}"><i data-lucide="pencil"></i>Modifier</button>` : '<span class="mzi-dashboard-only">Gestion complète désactivée</span>'}
       </div>
-      <div class="mzi-vtable-wrap"><table class="mzi-vtable">
+      <div class="mzi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="mzi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>
       <div class="mzi-form" style="padding-top:0;">
         <div class="mzi-fg"><label>Historique des mouvements</label>
-          ${movements.length ? `<div class="mzi-vtable-wrap"><table class="mzi-vtable"><thead><tr><th>Date</th><th>Mouvement</th><th>Qté</th><th>Référence</th></tr></thead><tbody>${movements.map((m) => `<tr><td>${esc(whenLabel(m.at))}</td><td>${esc(m.typeLabel || m.reason || 'Mouvement')}${m.note ? `<div class="mzi-csrc">${esc(m.note)}</div>` : ''}</td><td><b>${m.qty > 0 ? '+' : ''}${m.qty}</b></td><td>${esc(m.ref || '·')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mzi-dashboard-only">Aucun mouvement enregistré pour cet article.</div>'}
+          ${movements.length ? `<div class="mzi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="mzi-vtable"><thead><tr><th>Date</th><th>Mouvement</th><th>Qté</th><th>Référence</th></tr></thead><tbody>${movements.map((m) => `<tr><td>${esc(whenLabel(m.at))}</td><td>${esc(m.typeLabel || m.reason || 'Mouvement')}${m.note ? `<div class="mzi-csrc">${esc(m.note)}</div>` : ''}</td><td><b>${m.qty > 0 ? '+' : ''}${m.qty}</b></td><td>${esc(m.ref || '·')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mzi-dashboard-only">Aucun mouvement enregistré pour cet article.</div>'}
         </div>
       </div>
       <div class="mzi-modfoot">

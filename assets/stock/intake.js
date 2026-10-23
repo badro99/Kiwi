@@ -1051,6 +1051,20 @@ window.KiwiStockInternal.install('intake', (S) => {
     `;
   }
 
+  // Review copy also serves the image-to-manual fallback.
+  function intakeText(key) {
+    const words = {
+      receipt: ['Réception fournisseur', 'Supplier receipt', 'استلام المورد'],
+      notice: ['Vérifiez les prix et quantités avant de confirmer.', 'Check prices and quantities before confirming.', 'تحقق من الأسعار والكميات قبل التأكيد.'],
+      item: ['Article reçu', 'Received item', 'الصنف المستلم'],
+      expiry: ['Date limite (facultative)', 'Expiry date (optional)', 'تاريخ الصلاحية (اختياري)'],
+      change: ['Évolution et mise à jour', 'Change and update', 'التغير والتحديث'],
+      add: ['Ajouter une ligne', 'Add a line', 'إضافة سطر'],
+      save: ['Enregistrer la réception', 'Save receipt', 'حفظ الاستلام'],
+    };
+    return words[key][lang() === 'ar' ? 2 : lang() === 'en' ? 1 : 0];
+  }
+
   function renderRealReceiptReview(opts) {
     const preSupplier = opts?.supplier || null;
     const parsed = opts?.parsed || null;
@@ -1105,15 +1119,15 @@ window.KiwiStockInternal.install('intake', (S) => {
         <tr data-stock-receive-row>
           <td style="min-width:180px;">
             <div style="font-size:12px;font-weight:500;margin-bottom:3px;color:var(--n-800);">${line ? esc(line.label) : ''}</div>
-            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
+            <select class="st-mb-input" data-stock-receive-item aria-label="${esc(intakeText('item'))}" style="width:100%;font-size:12px;">${optionsHtml}</select>
           </td>
           <td class="r" style="width:90px;">
-            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" value="${esc(lineQty)}" style="font-size:12px;" />
+            <input class="st-mb-input mono" data-stock-receive-qty aria-label="${esc(t('mScanConflictColQty'))}" type="number" min="0" step="0.001" placeholder="0" value="${esc(lineQty)}" style="font-size:12px;" />
           </td>
           <td class="r" style="width:100px;">
-            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${esc(lineCost)}" style="font-size:12px;" />
+            <input class="st-mb-input mono" data-stock-receive-cost aria-label="${esc(t('mScanColInvoicedCost'))}" type="number" min="0" step="0.01" placeholder="0.00" value="${esc(lineCost)}" style="font-size:12px;" />
           </td>
-          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
+          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="${esc(intakeText('expiry'))}" style="font-size:12px;" /></td>
           <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
             ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '·'}
           </td>
@@ -1140,28 +1154,28 @@ window.KiwiStockInternal.install('intake', (S) => {
     }
 
     const supInputHtml = preSupplier
-      ? `<input class="st-mb-input" data-stock-receive-supplier value="${esc(preSupplier.name)}" readonly style="background:var(--n-100,#f4f5f6); cursor:not-allowed;" />`
-      : `<input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" value="${esc(supName)}" />`;
+      ? `<input class="st-mb-input" data-stock-receive-supplier aria-label="${esc(t('mScanSupplier'))}" value="${esc(preSupplier.name)}" readonly style="background:var(--n-100,#f4f5f6); cursor:not-allowed;" />`
+      : `<input class="st-mb-input" data-stock-receive-supplier aria-label="${esc(t('mScanSupplier'))}" autocomplete="organization" placeholder="${esc(t('mScanSupplier'))}" value="${esc(supName)}" />`;
 
     return `
-      <div class="st-mb-eyebrow">${parsed ? esc(t('mScanReviewT')) : 'Réception fournisseur'}</div>
-      <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : les prix et quantités sont pré-remplis pour vérification humaine.</div></div>
+      <div class="st-mb-eyebrow">${parsed ? esc(t('mScanReviewT')) : esc(intakeText('receipt'))}</div>
+      <div class="st-notice ok">${svg('checkCircle', 14)}<div>${esc(intakeText('notice'))}</div></div>
       ${opts?.intakeDocId ? `<input type="hidden" data-stock-intake-doc value="${esc(String(opts.intakeDocId))}" /><div class="st-notice info" style="margin-top:8px;">${svg('receipt', 14)}<div>${esc(t('mScanArchived'))} · <span class="mono">${esc(String(opts.intakeDocId).slice(0, 12))}…</span></div></div>` : ''}
       <div class="st-mb-row three" style="margin-top:12px;">
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label>${supInputHtml}</div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${esc(invoiceDate)}" /></div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" value="${esc(invoiceNum)}" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date aria-label="${esc(t('mScanDate'))}" type="date" value="${esc(invoiceDate)}" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" data-stock-receive-ref aria-label="${esc(t('mScanNum'))}" placeholder="${esc(t('mScanNum'))}" value="${esc(invoiceNum)}" /></div>
       </div>
       <div style="overflow-x:auto;max-height:360px;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
         <table class="st-inv-items" style="margin:0;width:100%;">
           <thead>
             <tr>
-              <th>Article reçu</th>
-              <th class="r">Quantité</th>
+              <th>${esc(intakeText('item'))}</th>
+              <th class="r">${esc(t('mScanConflictColQty'))}</th>
               <th class="r">${esc(t('mScanColInvoicedCost'))} MAD</th>
-              <th class="r">DLC</th>
+              <th class="r">${esc(intakeText('expiry'))}</th>
               <th class="r">${esc(t('mScanColCurrentCost'))}</th>
-              <th>Évolution & MAJ</th>
+              <th>${esc(intakeText('change'))}</th>
               <th></th>
             </tr>
           </thead>
@@ -1169,12 +1183,12 @@ window.KiwiStockInternal.install('intake', (S) => {
         </table>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-        <button data-activation=write class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
-        <div class="st-inv-foot" style="margin:0;padding:0;border:none;"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
+        <button data-activation=write class="st-btn" type="button" data-stock-receive-add>${esc(intakeText('add'))}</button>
+        <div class="st-inv-foot" style="margin:0;padding:0;border:none;"><span>${esc(t('mScanTotal'))}</span><b data-stock-receive-total>0,00 MAD</b></div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
         <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
-        <button data-activation=write class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
+        <button data-activation=write class="st-btn primary" data-stock-scan-confirm>${esc(intakeText('save'))}</button>
       </div>`;
   }
 
@@ -1351,15 +1365,15 @@ window.KiwiStockInternal.install('intake', (S) => {
       const emptyRowHtml = `
         <tr data-stock-receive-row>
           <td style="min-width:180px;">
-            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
+            <select class="st-mb-input" data-stock-receive-item aria-label="${esc(intakeText('item'))}" style="width:100%;font-size:12px;">${optionsHtml}</select>
           </td>
           <td class="r" style="width:90px;">
-            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" style="font-size:12px;" />
+            <input class="st-mb-input mono" data-stock-receive-qty aria-label="${esc(t('mScanConflictColQty'))}" type="number" min="0" step="0.001" placeholder="0" style="font-size:12px;" />
           </td>
           <td class="r" style="width:100px;">
-            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
+            <input class="st-mb-input mono" data-stock-receive-cost aria-label="${esc(t('mScanColInvoicedCost'))}" type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
           </td>
-          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
+          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="${esc(intakeText('expiry'))}" style="font-size:12px;" /></td>
           <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">·</td>
           <td style="min-width:170px;font-size:12px;">
             <div style="display:flex;align-items:center;">

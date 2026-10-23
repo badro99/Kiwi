@@ -3902,7 +3902,7 @@
     'assets/stock/loss.js?v=1',
     'assets/stock/counts.js?v=1',
     'assets/stock/purchasing.js?v=1',
-    'assets/stock/intake.js?v=1',
+    'assets/stock/intake.js?v=4',
     'assets/stock/catalog.js?v=1',
   ];
   const stockLoads = new Map();

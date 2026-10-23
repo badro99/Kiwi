@@ -850,7 +850,7 @@
       html = `<div class="inv-empty"><p>${esc(t.loading)}</p></div>`;
     } else if (rows.length) {
       const dueHead = tab === 'quote' ? t.colValid : t.colDue;
-      html = `<div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>${esc(t.colNo)}</th><th>${esc(t.colCustomer)}</th><th>${esc(t.colIssued)}</th><th>${esc(tab === 'credit_note' ? '' : dueHead)}</th><th>${esc(t.colStatus)}</th><th>${esc(t.colAmount)}</th></tr></thead><tbody>${rows.map(r => {
+      html = `<div class="inv-table-wrap" tabindex="0" role="region" aria-label="${esc(t.title)}"><table class="inv-table"><thead><tr><th>${esc(t.colNo)}</th><th>${esc(t.colCustomer)}</th><th>${esc(t.colIssued)}</th><th>${esc(tab === 'credit_note' ? '' : dueHead)}</th><th>${esc(t.colStatus)}</th><th>${esc(t.colAmount)}</th></tr></thead><tbody>${rows.map(r => {
         if (r.isSaleInvoice) {
           return `<tr data-inv-act="sale-open" data-inv-sale-open="${esc(r.id)}" data-id="${esc(r.id)}" tabindex="0"><td><span class="inv-no">${esc(r.id)}</span></td><td><span class="inv-customer">${esc(r.customer)}</span><span class="inv-customer-sub">${esc(r.contact || '·')}</span></td><td class="inv-date" data-label="${esc(t.colIssued)}">${esc(fmtDate(r.issueDate))}</td><td class="inv-date" data-label="${esc(t.colDue)}">${esc(fmtDate(r.dueDate))}</td><td>${statusHtml('invoice', 'paid')}</td><td class="inv-money">${money(Math.round((Number(r.total) || 0) * 100))} MAD</td></tr>`;
         }
@@ -1210,7 +1210,7 @@
         <div class="inv-preview-top"><div><div class="inv-preview-logo">${renderSellerLogo(seller, 40)}</div><div class="inv-preview-meta"><strong>${esc(biz)}</strong></div></div><div class="inv-preview-head"><h3 class="inv-preview-title" data-doc-number>${esc(docWord(type))} ${esc(draft ? t.draftNo : doc.number)}</h3><div class="inv-preview-meta">${dateMeta}</div></div></div>
         ${creditRef}
         <div class="inv-preview-parties"><div><div class="inv-preview-label">${esc(t.from)}</div><div class="inv-preview-party">${sellerLines(seller)}</div></div><div><div class="inv-preview-label">${esc(t.billTo)}</div><div class="inv-preview-party">${customerLines(doc.customer)}</div></div></div>
-        <div class="inv-table-wrap"><table class="inv-preview-table"><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unitHT)}</th><th>${esc(t.discount)}</th><th>${esc(t.vat)}</th><th>${esc(t.lineHT)}</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
+        <div class="inv-table-wrap" tabindex="0" role="region" aria-label="${esc(docWord(type))}"><table class="inv-preview-table"><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unitHT)}</th><th>${esc(t.discount)}</th><th>${esc(t.vat)}</th><th>${esc(t.lineHT)}</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
         <div class="inv-preview-totals">${totalsBlock(doc)}${paidBlock}</div>
         ${doc.exemptionMention ? `<div class="inv-preview-note"><strong>${esc(t.exemptionMention)}</strong><br>${esc(doc.exemptionMention)}</div>` : ''}
         ${doc.note ? `<div class="inv-preview-note"><strong>${esc(t.message)}</strong><br>${esc(doc.note)}</div>` : ''}

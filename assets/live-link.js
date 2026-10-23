@@ -116,17 +116,19 @@
       // its own feed and its own money — but KiwiMe.business is a single
       // account-level name, so deriving from it pointed every store on the account
       // at ONE feed: a sale rung up on the boutique till surfaced in the
-      // restaurant's "Encaissé aujourd'hui". Slug the current store's own name,
-      // exactly as caisse-link.js currentBiz() does when it issues the pairing
-      // code — the two must agree or the till posts where the dashboard isn't
-      // listening. Falls through on the caisse (no KiwiVenue) and on demo venues.
+      // restaurant's "Encaissé aujourd'hui". Use the venue's stable identity:
+      // server-restored stores carry merchant_config.merchant as their slug,
+      // and renaming a store must never move its feed or the shared tenant pin.
+      // Falls through on the caisse (no KiwiVenue) and on demo venues.
       var vd = null;
       try {
         var KV = window.KiwiVenue;
         if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) vd = KV.getCurrentVenueData();
       } catch (_) {}
       if (vd && vd.name) {
-        var vs = slugify(vd.name);
+        var vs = realEnv() && !opMode()
+          ? (vd.slug || (KV.slugOf && KV.slugOf()) || slugify(vd.name))
+          : slugify(vd.name);
         if (vs) { pin(vs); return vs; }
       }
       // No store yet (fresh account, identity resolved but onboarding unfinished) —

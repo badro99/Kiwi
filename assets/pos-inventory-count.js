@@ -270,7 +270,7 @@
             <span class="sk-badge" style="background:#e0f2fe;color:#0369a1;font-size:13px;padding:4px 10px;">${countedCount} / ${totalCount} saisis</span>
           </div>
 
-          <div style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
+          <div tabindex="0" role="region" aria-label="${esc(window.KiwiCaisseLang?.tr('Récapitulatif avant transmission') || 'Récapitulatif avant transmission')}" style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
             <table class="sk-tbl" style="margin:0;">
               <thead>
                 <tr>
@@ -343,7 +343,7 @@
             }).join('')}
           </div>
 
-          <div class="sk-tbl-wrap" style="max-height:380px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;">
+          <div class="sk-tbl-wrap" tabindex="0" role="region" aria-label="${esc(window.KiwiCaisseLang?.tr('Inventaire') || 'Inventaire')}" style="max-height:380px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;">
             <table class="sk-tbl">
               <thead>
                 <tr>

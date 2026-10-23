@@ -1,6 +1,6 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor } from '../pos-boutique.js?v=102';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=8';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=8';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor } from '../pos-boutique.js?v=104';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=10';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=10';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -770,7 +770,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
         <span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>
       </div>
-      <div class="bqi-vtable-wrap"><table class="bqi-vtable">
+      <div class="bqi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="bqi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>
       ${movements.length ? `<div class="bqi-movements" style="padding:12px 20px;">

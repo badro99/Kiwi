@@ -492,9 +492,9 @@
       const portion = c.perPortion != null ? money(c.perPortion) : c.lines.length ? `<span class="sfc-unknown">${esc(tr('atLeast', { amount: money(c.knownPerPortion) }))}</span>` : '·';
       return `<tr data-sfc-row="${esc(s.id)}"><td><b>${esc(s.name)}</b>${s.archived ? `<small>${esc(tr('archived'))}</small>` : ''}</td><td>${portion}</td><td>${pct(c.pct)}</td><td><span class="sfc-st ${c.status}">${esc(statusLabel(c.status))}</span></td><td><small>${esc(when(s.updatedTs))}<br>${esc(s.updatedBy || '')}</small></td><td>${s.kind === 'template' && editable() ? `<button type="button" class="sfc-btn" data-sfc="use-template" data-id="${esc(s.id)}">${esc(tr('useTemplate'))}</button> ` : ''}<button type="button" class="sfc-btn" data-sfc="open" data-id="${esc(s.id)}">${esc(tr('open'))}</button></td></tr>`;
     };
-    const table = (rows) => `<div class="mi-list-wrap"><table class="mi-list sfc-table"><thead><tr><th>${esc(tr('colName'))}</th><th>${esc(tr('colPortion'))}</th><th>${esc(tr('colPct'))}</th><th>${esc(tr('colStatus'))}</th><th>${esc(tr('colUpdated'))}</th><th></th></tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>`;
+    const table = (rows, heading) => `<div class="mi-list-wrap" tabindex="0" role="region" aria-label="${esc(tr(heading))}"><table class="mi-list sfc-table"><thead><tr><th>${esc(tr('colName'))}</th><th>${esc(tr('colPortion'))}</th><th>${esc(tr('colPct'))}</th><th>${esc(tr('colStatus'))}</th><th>${esc(tr('colUpdated'))}</th><th></th></tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>`;
     const sheets = list.filter((s) => s.kind !== 'template'), tpls = list.filter((s) => s.kind === 'template');
-    return toolbar + (sheets.length ? `<h3 class="sfc-h3">${esc(tr('sheets'))}</h3>${table(sheets)}` : '') + (tpls.length ? `<h3 class="sfc-h3">${esc(tr('templates'))}</h3>${table(tpls)}` : '');
+    return toolbar + (sheets.length ? `<h3 class="sfc-h3">${esc(tr('sheets'))}</h3>${table(sheets, 'sheets')}` : '') + (tpls.length ? `<h3 class="sfc-h3">${esc(tr('templates'))}</h3>${table(tpls, 'templates')}` : '');
   }
   function unitOptions(selected) {
     const list = units() ? units().list() : [{ id: 'g' }, { id: 'kg' }, { id: 'ml' }, { id: 'L' }, { id: 'unité' }];
@@ -550,7 +550,7 @@
         <label class="wide"><span>${esc(tr('note'))}</span>${inp('sheet.note', d.note, ' maxlength="1000"')}</label>
       </div>
       <h3 class="sfc-h3">${esc(tr('lines'))}</h3>
-      <div class="mi-list-wrap"><table class="mi-list sfc-lines" style="${esc(lbl)}"><thead><tr><th>${esc(tr('lName'))}</th><th>${esc(tr('lCost'))}</th><th>${esc(tr('lType'))}</th><th>${esc(tr('lPackPrice'))}</th><th>${esc(tr('lPackQty'))}</th><th>${esc(tr('lPackUnit'))}</th><th>${esc(tr('lUseQty'))}</th><th>${esc(tr('lUseUnit'))}</th><th>${esc(tr('lYield'))}</th><th>${esc(tr('lDate'))}</th><th></th></tr></thead><tbody>${lines}</tbody></table></div>
+      <div class="mi-list-wrap" tabindex="0" role="region" aria-label="${esc(tr('lines'))}"><table class="mi-list sfc-lines" style="${esc(lbl)}"><thead><tr><th>${esc(tr('lName'))}</th><th>${esc(tr('lCost'))}</th><th>${esc(tr('lType'))}</th><th>${esc(tr('lPackPrice'))}</th><th>${esc(tr('lPackQty'))}</th><th>${esc(tr('lPackUnit'))}</th><th>${esc(tr('lUseQty'))}</th><th>${esc(tr('lUseUnit'))}</th><th>${esc(tr('lYield'))}</th><th>${esc(tr('lDate'))}</th><th></th></tr></thead><tbody>${lines}</tbody></table></div>
       ${editable() ? `<div class="sfc-toolbar"><button data-activation=write type="button" class="sfc-btn" data-sfc="add-food">${esc(tr('addFood'))}</button><button data-activation=write type="button" class="sfc-btn" data-sfc="add-pack">${esc(tr('addPack'))}</button></div>` : ''}
       <div data-sfc-summary-host>${summary(c, d)}</div>
       ${actions}${history}`;

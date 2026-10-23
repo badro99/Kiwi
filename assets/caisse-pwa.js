@@ -62,6 +62,7 @@
   });
 
   function toast(msg, kind) {
+      if (window.KiwiCaisseLang) { msg = window.KiwiCaisseLang.tr(msg); }
     var stack = document.getElementById('toast-stack');
     if (!stack) {
       stack = document.createElement('div');

@@ -77,6 +77,42 @@ export async function demoPage(h, locale, viewport, extraStorage = {}) {
   return { ctx, page };
 }
 
+/* Isolated synthetic real session. Route keys match method + pathname (query
+   parameters remain available on the Puppeteer request passed to a handler).
+   Plain values are JSON bodies; handlers return { status, body }. */
+export async function realPage(h, locale, viewport, routes, extraStorage = {}) {
+  const ctx = await h.browser.createBrowserContext();
+  const page = await ctx.newPage();
+  await pinTradingHour(page);
+  await page.setViewport(SIZES[viewport]);
+  await page.setBypassServiceWorker(true);
+  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.setRequestInterception(true);
+  page.on('request', async (req) => {
+    const url = new URL(req.url());
+    if (url.origin === h.base && url.pathname.startsWith('/api/')) {
+      const key = req.method() + ' ' + url.pathname;
+      const route = Object.hasOwn(routes, key) ? routes[key] : undefined;
+      const result = typeof route === 'function' ? await route(req)
+        : route === undefined ? { status: 503, body: { error: 'offline' } }
+          : { status: 200, body: route };
+      return req.respond({ status: result.status ?? 200, contentType: 'application/json', body: JSON.stringify(result.body) });
+    }
+    return url.origin === h.base || url.protocol === 'data:' ? req.continue() : req.abort();
+  });
+  await page.evaluateOnNewDocument((lang, extra) => {
+    localStorage.setItem('kiwiLang', lang);
+    localStorage.setItem('kiwiCaisseLang', lang);
+    localStorage.setItem('kiwiSkipOnboard', '1');
+    localStorage.setItem('kiwiSkin2027:dashboard', '1');
+    localStorage.setItem('kiwiLiveMerchant', 'matrix-real');
+    for (const [key, value] of Object.entries(extra)) localStorage.setItem(key, value);
+    localStorage.setItem('kiwiDemos', '0');
+    try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
+  }, locale, extraStorage);
+  return { ctx, page };
+}
+
 /* One dashboard per locale and size, reused across its destinations: the
    sidebar is how a merchant moves between them, so the walk is the real one. */
 export function dashboardWalker(h) {
@@ -151,7 +187,11 @@ export async function verify(h, t, { page, region }, key, locale) {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] }, resultTypes: ['violations'],
     });
     return result.violations.filter((v) => ['serious', 'critical'].includes(v.impact))
-      .map((v) => ({ id: v.id, count: v.nodes.length, targets: v.nodes.slice(0, 3).map((n) => n.target.join(' ')) }));
+      .map((v) => ({ id: v.id, count: v.nodes.length, targets: v.nodes.slice(0, 3).map((n) => {
+        // Contrast failures name their colours, so the fix needs no second probe.
+        const d = v.id === 'color-contrast' && n.any && n.any[0] && n.any[0].data;
+        return n.target.join(' ') + (d && d.fgColor ? ` (${d.fgColor} on ${d.bgColor}, ${d.contrastRatio}:1)` : '');
+      }) }));
   });
   assert.ok(Object.hasOwn(h.baseline, key), 'missing a11y baseline key ' + key);
   const was = h.baseline[key];

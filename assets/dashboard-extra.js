@@ -534,6 +534,9 @@
       }
   };
 
+  /* Each card is a mouse target only (data-kb-ready opts it out of the
+   * keyboard layer): its inner button is the control, so the card never
+   * becomes a button inside a button. */
   handlers['add-integration'] = () => {
     const lang = trLang();
     const str = INTEG_STR[lang] || INTEG_STR.fr;
@@ -566,7 +569,7 @@
           </div>
           <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase; margin:4px 0 8px;">${str.available}</div>
           ${catalog.map((i) => `
-            <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">
+            <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-kb-ready="1" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">
               <div style="display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center;">
                 <div style="width:38px; height:38px; border-radius:9px; background:${i.color}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; opacity:0.85;">${i.tag}</div>
                 <div>
@@ -595,7 +598,7 @@
 
         <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase; margin:4px 0 8px;">${str.connected}</div>
         ${INTEGRATIONS_ON.map((i) => `
-          <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-action="integration-configure" data-arg="${i.name}">
+          <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-kb-ready="1" data-action="integration-configure" data-arg="${i.name}">
             <div style="display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center;">
               <div style="width:38px; height:38px; border-radius:9px; background:${i.color}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">${i.tag}</div>
               <div>
@@ -612,7 +615,7 @@
 
         <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase; margin:18px 0 8px;">${str.available}</div>
         ${INTEGRATIONS_OFF.map((i) => `
-          <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">
+          <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-kb-ready="1" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">
             <div style="display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center;">
               <div style="width:38px; height:38px; border-radius:9px; background:${i.color}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; opacity:0.85;">${i.tag}</div>
               <div>

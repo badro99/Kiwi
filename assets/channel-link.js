@@ -478,6 +478,7 @@
     root.appendChild(shopButton(s.reauthorize, function () { return authorizeShopify(connection.shop); }, true));
 
     var select = document.createElement('select'); select.className = 'chl-f-v chl-in shp-select';
+    select.setAttribute('aria-label', s.location);
     var first = document.createElement('option'); first.value = ''; first.textContent = s.location; select.appendChild(first);
     (status.locations || []).forEach(function (loc) {
       var option = document.createElement('option'); option.value = loc.id; option.textContent = loc.name;

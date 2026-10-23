@@ -136,7 +136,7 @@
         </div>
         ${periodNavigatorHtml(T, period)}
 
-        <div class="kt-h-tablewrap">
+        <div class="kt-h-tablewrap" tabindex="0" role="region" aria-label="${esc(T.tabHours)}">
           <table class="kt-h-table">
             <thead>
               <tr>
@@ -1458,7 +1458,7 @@
         ${planningCommand}
         ${stepper}
         ${planDaysHtml(T, members, shifts, view, locked, calendarMeta)}
-        <div class="kt-plan-wrap">
+        <div class="kt-plan-wrap" tabindex="0" role="region" aria-label="${esc(T.tabPlanning)}">
           <table class="kt-h-table kt-plan-table">
             ${cols}
             <thead>
