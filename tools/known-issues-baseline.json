@@ -44,12 +44,6 @@
       "severity": "security"
     },
     {
-      "suite": "clients-properties-test.mjs",
-      "label": "CL-6",
-      "kind": "defect",
-      "severity": "data"
-    },
-    {
       "suite": "credit-book-properties-test.mjs",
       "label": "CRB-1",
       "kind": "decision",

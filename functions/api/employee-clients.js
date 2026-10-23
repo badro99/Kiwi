@@ -19,7 +19,7 @@ const SALE_WINDOW_MS = 24 * 60 * 60 * 1000;
 function text(value, max) { return String(value == null ? '' : value).trim().slice(0, max); }
 function parse(raw) { try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; } }
 
-async function ensureEvents(env) {
+export async function ensureEmployeeLoyaltyEvents(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS employee_loyalty_events (
     merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
     amount INTEGER NOT NULL DEFAULT 0, created_ts INTEGER NOT NULL,
@@ -64,7 +64,7 @@ export async function onRequestPost({ request, env }) {
   let amount = Math.max(0, Math.min(MAX_AMOUNT_MAD, Math.round(Number(body.amount) || 0)));
   let spend = amount;
   try {
-    await ensureEvents(env);
+    await ensureEmployeeLoyaltyEvents(env);
     if (saleId) {
       const sale = await env.DB.prepare(
         `SELECT amount, amount_cents, ts FROM sales
@@ -111,8 +111,9 @@ export async function onRequestPost({ request, env }) {
     const statements = [env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
       visits = visits + 1, spend = spend + ?, last_seen = ?, updated_ts = ?, srv_ts = ?
       WHERE merchant = ? AND id = ? AND deleted = 0
-        AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)`)
-      .bind(points, stamps, spend, now, now, srv, employee.merchant, id, employee.merchant, ref),
+        AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)
+        AND (? = '' OR EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL))`)
+      .bind(points, stamps, spend, now, now, srv, employee.merchant, id, employee.merchant, ref, saleId, employee.merchant, saleId),
     env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
       (merchant, ref, client_id, amount, created_ts)
       SELECT ?, ?, ?, ?, ?

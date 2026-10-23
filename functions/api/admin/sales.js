@@ -53,7 +53,8 @@ import {
   isOperator, isSeniorOperator, operatorActor, json,
 } from '../../auth/_lib.js';
 import { roomChargeId, roomChargeReversalId } from '../hotel/_room-charge-data.js';
-import { voidSaleLoyalty, restoreSaleLoyalty } from '../clients.js';
+import { voidSaleLoyalty, restoreSaleLoyalty, nextSrvTs } from '../clients.js';
+import { ensureEmployeeLoyaltyEvents } from '../employee-clients.js';
 
 /* Les motifs. Fermés côté serveur : un journal dont le motif est du texte libre
    se remplit de « test », « ok », « rien » et ne répond plus à la question qu'on
@@ -509,12 +510,37 @@ export async function onRequestPost(context) {
   const ts = Date.now();
   const stmts = [];
 
+  // The employee ledger is created lazily by employee-clients. Its existing
+  // columns also hold reversal markers; no migration is needed. Keep the debit
+  // and marker in the sale transaction, so a retry cannot lose or repeat it.
+  const employeeEvents = action === 'void';
+  if (employeeEvents) await ensureEmployeeLoyaltyEvents(env);
+  const srv = employeeEvents ? await nextSrvTs(env, merchant) : 0;
+
   rows.forEach((r) => {
     if (action === 'void') {
       stmts.push(env.DB.prepare(
         `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = ?, void_actor = ?, void_actor_id = ?
           WHERE id = ? AND merchant = ?`
       ).bind(ts, reason, note, actor.label, actor.id, r.id, merchant));
+      if (employeeEvents) {
+        const linked = ('employee-sale:' + r.id).slice(0, 96);
+        // A dot cannot occur in a caller-supplied employee ref, reserving
+        // this marker namespace for the server.
+        const reversed = 'employee-void.' + r.id;
+        stmts.push(env.DB.prepare(`UPDATE clients SET
+          spend = MAX(0, ROUND((spend - (SELECT amount FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ?)) * 100) / 100.0), updated_ts = ?, srv_ts = ?
+          WHERE merchant = ? AND id = (SELECT client_id FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ?)
+            AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)`)
+          .bind(merchant, linked, ts, srv, merchant, merchant, linked, merchant, reversed));
+        stmts.push(env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
+          (merchant, ref, client_id, amount, created_ts)
+          SELECT merchant, ?, client_id, -amount, ? FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ? AND changes() > 0`)
+          .bind(reversed, ts, merchant, linked));
+      }
       if (['room', 'folio'].includes(String(r.method || '').toLowerCase())) {
         stmts.push(env.DB.prepare(
           `INSERT OR IGNORE INTO hotel_room_charge_events
