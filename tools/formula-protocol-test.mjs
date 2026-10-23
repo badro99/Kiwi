@@ -11,6 +11,8 @@ import caisseTestSource from './caisse-test-source.cjs';
  * 4. kiwi-serveur.html formula sheet extraction & explosion (extracted code only)
  * ─────────────────────────────────────────────────────────────────────────── */
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+const menuRules = createRequire(import.meta.url)('../assets/menu-catalog.js');
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -1034,7 +1036,7 @@ if (!nidMatch || !cleanFormulaCatalogMatch || !addItemMatch || !updateItemMatch 
       ]
     };
     const tr = (t) => t.fr || 'Produit';
-    const T = { subName: { fr: 'Sous-cat' } };
+    const T = { subName: { fr: 'Sous-cat' }, productDefault: { fr: 'Produit' } };
     const itemById = (d, id) => d.items.find(x => x.id === id);
     const catById = (d, id) => d.cats.find(x => x.id === id);
     const authorizeExplicitEmpty = () => {};
@@ -1058,7 +1060,7 @@ if (!nidMatch || !cleanFormulaCatalogMatch || !addItemMatch || !updateItemMatch 
       deleteItem
     };
   `;
-  const catHarness = new Function(catalogHarnessCode)();
+  const catHarness = new Function('rules', catalogHarnessCode)(menuRules);
 
   // Test adding formula item
   catHarness.addItem({

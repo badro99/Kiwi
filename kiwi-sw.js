@@ -285,7 +285,7 @@ var SHELL = [
   '/assets/clients-book.js?v=30',
   '/assets/clients-directory.js?v=24',
   '/assets/customer-retention.js?v=11',
-  '/assets/menu-catalog.js?v=32',
+  '/assets/menu-catalog.js?v=33',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
@@ -298,7 +298,7 @@ var SHELL = [
   '/assets/team.js?v=315',
   '/assets/team-hours.js?v=3',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=117',
+  '/assets/restaurant-menu-workspace.js?v=118',
   '/assets/menu-promos-dashboard.js?v=3',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=12',

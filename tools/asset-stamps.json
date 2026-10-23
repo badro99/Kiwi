@@ -908,8 +908,8 @@
     "sha": "afe2f50832ba5aa8"
   },
   "assets/menu-catalog.js": {
-    "v": "32",
-    "sha": "562f997e3e63cd1e"
+    "v": "33",
+    "sha": "1db43f9510e0031e"
   },
   "assets/menu-i18n.js": {
     "v": "5",
@@ -1376,8 +1376,8 @@
     "sha": "9d8e9cd1ee95292a"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "117",
-    "sha": "15b0a91b06947577"
+    "v": "118",
+    "sha": "506fa651aac7458c"
   },
   "assets/restaurant-recipes.js": {
     "v": "10",

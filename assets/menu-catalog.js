@@ -1,3 +1,193 @@
+/* MENU RULES BEGIN
+ * Pure value rules. The adapter below only exports the API; no screen boot in Node.
+ * Kept in this asset because dashboard.html already loads it before the workspace.
+ */
+(function (publish) {
+  'use strict';
+  const catById = (d, id) => (d.cats || []).find((c) => c.id === id) || null;
+  const itemById = (d, id) => (d.items || []).find((i) => i.id === id) || null;
+  const itemsIn = (d, catId, subId) => (d.items || []).filter((i) => i.catId === catId && (subId == null || i.subId === subId));
+  const stationsOf = (d) => (d && Array.isArray(d.stations)) ? d.stations : [];
+  const stationById = (d, id) => stationsOf(d).find((s) => s && s.id === id) || null;
+
+  function cleanFormula(formula, items) {
+    const fStr = (v, n) => String(v == null ? '' : v).slice(0, n);
+    const fAmount = (v, max) => Math.round(Math.max(0, Math.min(max, Number(v) || 0)) * 100) / 100;
+    if (!formula || typeof formula !== 'object' || !Array.isArray(formula.slots)) return null;
+    const itemMap = new Set((items || []).filter((i) => i && !i.archived).map((i) => fStr(i.id, 40)).filter(Boolean));
+    const rawSlots = formula.slots.slice(0, 10);
+    const slots = rawSlots.map((s, idx) => {
+      if (!s || typeof s !== 'object') return null;
+      const id = fStr(s.id, 40) || ('sl_' + (idx + 1));
+      const label = fStr(s.label, 400).trim().slice(0, 60).trimEnd();
+      let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
+      let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
+      if (min > max) min = max;
+      const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
+      const choices = rawChoices.map((c) => ({
+        itemId: fStr(c && c.itemId, 40),
+        extra: fAmount(c && c.extra, 1e5),
+      })).filter((c) => c.itemId && itemMap.has(c.itemId));
+      return { id, label, min, max, choices };
+    }).filter((s) => s && s.id && s.choices && s.choices.length > 0);
+    return slots.length ? { slots } : null;
+  }
+
+  function kitchenIdOf(d) {
+    const list = stationsOf(d);
+    const want = d && d.kitchenId;
+    if (want && list.some((s) => s && s.id === want)) return want;
+    return list.length ? list[0].id : '';
+  }
+
+  function healSeq(d) {
+    d = { ...d };
+    let max = +d.seq || 0;
+    const scan = (id) => { const m = /_(\d+)$/.exec(String(id || '')); if (m) max = Math.max(max, +m[1]); };
+    (d.cats || []).forEach((c) => { scan(c.id); (c.sub || []).forEach((s) => scan(s.id)); });
+    (d.items || []).forEach((i) => scan(i.id));
+    // Les postes tirent du même compteur : sans ce balayage, un navigateur neuf
+    // recréerait st_1 par-dessus un poste existant et les plats du serveur
+    // suivraient le mauvais.
+    (d.stations || []).forEach((s) => scan(s.id));
+    // Les groupes d'options et leurs choix tirent du MÊME compteur : sans ce
+    // balayage, un navigateur neuf recréerait og_1 par-dessus un groupe existant
+    // et les produits du serveur pointeraient le mauvais.
+    (d.opts || []).forEach((g) => { scan(g.id); (g.choices || []).forEach((c) => scan(c.id)); });
+    (d.formulaTemplates || []).forEach((t) => scan(t.id));
+    d.seq = max;
+    return d;
+  }
+
+  const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
+  const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
+  const OPT_EMOJIS = Object.freeze([
+    // Fruits, légumes, aromates et ingrédients bruts.
+    '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
+    '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
+    '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
+    '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
+    // Boulangerie, protéines et plats préparés.
+    '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
+    '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
+    '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
+    '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
+    '🥠', '🥮', '🍢', '🍡', '🥡',
+    // Desserts et boissons.
+    '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
+    '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
+    '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
+    // Repères opérationnels : validation, interdiction, température, matériel et couleurs.
+    '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
+    '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
+    '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
+  ]);
+  const cleanOptEmoji = (value) => {
+    const emoji = String(value || '').trim();
+    return OPT_EMOJIS.indexOf(emoji) >= 0 ? emoji : '';
+  };
+
+  function normalizeItem(data, d, id, defaultName) {
+    const formula = cleanFormula(data && data.formula, d.items);
+    const item = {
+      id: id,
+      name: String(data.name || defaultName).trim() || defaultName,
+      price: Math.max(0, +data.price || 0),
+      catId: data.catId || (d.cats[0] && d.cats[0].id) || null,
+      subId: data.subId || null,
+      desc: String(data.desc || '').trim(),
+      avail: data.avail !== false,
+      formulaOnly: data.formulaOnly === true,
+      showPhotoInFormulas: data.showPhotoInFormulas === true,
+      archived: data.archived === true,
+      // Pas de poste sur le plat : il suit sa catégorie. Les valeurs écrites
+      // par la version précédente restent dans le document et ne sont plus
+      // lues — ensureKitchen() les a remontées à la catégorie une fois pour
+      // toutes, les effacer ne rendrait service à personne.
+      // Media are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia), never
+      // bytes — base64 here would blow the localStorage quota in a dozen items.
+      photo: String(data.photo || ''),
+      video: String(data.video || ''),
+      // Les groupes d'options portés par ce produit. Vide = le comptoir
+      // l'ajoute d'un geste, sans rien demander — c'est le cas de presque
+      // tout ce qui se vend.
+      opts: Array.isArray(data.opts) ? data.opts.slice() : [],
+    };
+    if (formula) item.formula = formula;
+    return item;
+  }
+
+  function patchItem(item, patch, items) {
+    const it = { ...item };
+    if (patch.name != null) it.name = String(patch.name).trim() || it.name;
+    if (patch.price != null) it.price = Math.max(0, +patch.price || 0);
+    if (patch.catId != null) it.catId = patch.catId;
+    if ('subId' in patch) it.subId = patch.subId || null;
+    if (patch.desc != null) it.desc = String(patch.desc).trim();
+    if (patch.avail != null) it.avail = !!patch.avail;
+    if (patch.formulaOnly != null) it.formulaOnly = !!patch.formulaOnly;
+    if (patch.showPhotoInFormulas != null) it.showPhotoInFormulas = !!patch.showPhotoInFormulas;
+    if (patch.archived != null) it.archived = !!patch.archived;
+    if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
+    if ('photo' in patch) it.photo = String(patch.photo || '');
+    if ('video' in patch) it.video = String(patch.video || '');
+    if ('nutrition' in patch) {
+      if (patch.nutrition && typeof patch.nutrition === 'object') it.nutrition = { ...patch.nutrition };
+      else delete it.nutrition;
+    }
+    if ('allergens' in patch) it.allergens = Array.isArray(patch.allergens) ? patch.allergens.slice() : [];
+    if ('nutritionComplete' in patch) it.nutritionComplete = patch.nutritionComplete === true;
+    if ('hideNutrition' in patch) it.hideNutrition = patch.hideNutrition === true;
+    if ('formula' in patch) {
+      const formula = cleanFormula(patch.formula, items);
+      if (formula) it.formula = formula;
+      else delete it.formula;
+    }
+    return it;
+  }
+  // These are the editor's existing coercions, including sub-centime input.
+  const nonnegative = (value) => Math.max(0, +value || 0);
+  const isAvailable = (item) => item.avail !== false && !item.formulaOnly && !item.archived;
+  function nextId(seq, prefix) { const next = (seq || 0) + 1; return { seq: next, id: prefix + '_' + next }; }
+  function slug(name) {
+    return String(name).normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  function normalizeCategory(name, id, defaultName) {
+    return { id, name: String(name || defaultName).trim() || defaultName, sub: [], station: '' };
+  }
+  function normalizeChoice(name, price, emoji, id, defaultName) {
+    return { id, name: String(name || '').trim() || defaultName, price: nonnegative(price), emoji: cleanOptEmoji(emoji) };
+  }
+  function normalizeGroup(name, id, defaultName) {
+    return { id, name: String(name || '').trim() || defaultName, kind: 'one', required: false, choices: [] };
+  }
+  function patchGroup(group, patch) {
+    const g = { ...group };
+    if (patch.name != null) g.name = String(patch.name).trim() || g.name;
+    if (patch.kind != null) g.kind = patch.kind === 'many' ? 'many' : 'one';
+    if (patch.required != null) g.required = !!patch.required;
+    return g;
+  }
+  // New centime API, deliberately separate from legacy float screen pricing.
+  // Chosen modifiers are resolved by the caller; prices are MAD. Tax is an
+  // optional additive percentage, rounded once on the extended line subtotal.
+  function priceDish(dish, modifiers = [], quantity = 1, taxPercent = 0) {
+    const cents = (v) => Number.isFinite(+v) ? Math.round(Math.max(0, +v) * 100) : 0;
+    const unitCents = cents(dish.price) + modifiers.reduce((n, choice) => n + cents(choice.price), 0);
+    const qty = Number.isFinite(+quantity) ? Math.max(0, Math.floor(+quantity)) : 0;
+    const subtotalCents = unitCents * qty;
+    const rate = Number.isFinite(+taxPercent) ? Math.max(0, +taxPercent) : 0;
+    const taxCents = Math.round(subtotalCents * rate / 100);
+    return { unitCents, subtotalCents, taxCents, totalCents: subtotalCents + taxCents };
+  }
+  publish(Object.freeze({ catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, healSeq, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, normalizeItem, patchItem, nonnegative, isAvailable, nextId, slug, normalizeCategory, normalizeChoice, normalizeGroup, patchGroup, priceDish }));
+})(function (rules) {
+  if (typeof module === 'object' && module.exports) module.exports = rules;
+  if (typeof window !== 'undefined') window.KiwiMenuRules = rules;
+});
+/* MENU RULES END */
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · MENU CATALOG — window.KiwiMenuStore  (per-venue, persistent)
  * ---------------------------------------------------------------------------
@@ -20,6 +210,8 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  if (typeof window === 'undefined') return;
+  const rules = window.KiwiMenuRules;
   if (!window.KiwiStore) { console.warn('[menu-catalog] KiwiStore missing · load venue-store.js first'); return; }
 
   /* ───────────────── i18n mini ───────────────── */
@@ -256,12 +448,8 @@
   });
 
   /* ───────────────── data ops ───────────────── */
-  function nid(d, prefix) { d.seq = (d.seq || 0) + 1; return prefix + '_' + d.seq; }
-  const catById = (d, id) => (d.cats || []).find((c) => c.id === id) || null;
-  const itemById = (d, id) => (d.items || []).find((i) => i.id === id) || null;
-  const itemsIn = (d, catId, subId) => (d.items || []).filter((i) => i.catId === catId && (subId == null || i.subId === subId));
-  const stationsOf = (d) => (d && Array.isArray(d.stations)) ? d.stations : [];
-  const stationById = (d, id) => stationsOf(d).find((s) => s && s.id === id) || null;
+  function nid(d, prefix) { const next = rules.nextId(d.seq, prefix); d.seq = next.seq; return next.id; }
+  const { catById, itemById, itemsIn, stationsOf, stationById } = rules;
 
   /* Une formule compose des choix parmi des articles existants de la carte.
    * RÈGLE DE LECTURE : un choix qui pointe un article supprimé est retiré dès
@@ -271,28 +459,7 @@
    * supplément arrondi au centime, choix limité aux articles présents et non
    * archivés. tools/menu-properties-test.mjs passe les deux sur les mêmes
    * cartes générées : une règle changée d'un seul côté le fait rougir. */
-  function cleanFormula(formula, items) {
-    const fStr = (v, n) => String(v == null ? '' : v).slice(0, n);
-    const fAmount = (v, max) => Math.round(Math.max(0, Math.min(max, Number(v) || 0)) * 100) / 100;
-    if (!formula || typeof formula !== 'object' || !Array.isArray(formula.slots)) return null;
-    const itemMap = new Set((items || []).filter((i) => i && !i.archived).map((i) => fStr(i.id, 40)).filter(Boolean));
-    const rawSlots = formula.slots.slice(0, 10);
-    const slots = rawSlots.map((s, idx) => {
-      if (!s || typeof s !== 'object') return null;
-      const id = fStr(s.id, 40) || ('sl_' + (idx + 1));
-      const label = fStr(s.label, 400).trim().slice(0, 60);
-      let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
-      let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
-      if (min > max) min = max;
-      const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
-      const choices = rawChoices.map((c) => ({
-        itemId: fStr(c && c.itemId, 40),
-        extra: fAmount(c && c.extra, 1e5),
-      })).filter((c) => c.itemId && itemMap.has(c.itemId));
-      return { id, label, min, max, choices };
-    }).filter((s) => s && s.id && s.choices && s.choices.length > 0);
-    return slots.length ? { slots } : null;
-  }
+  const cleanFormula = rules.cleanFormula;
 
   function saveFormulaTemplate(name, formula) {
     return store.update((d) => {
@@ -329,12 +496,8 @@
    * sur le premier poste, ce qui redonne EXACTEMENT l'ancien comportement pour
    * une carte écrite avant ce changement — personne ne voit son routage bouger
    * le jour de la mise à jour. */
-  function kitchenIdOf(d) {
-    const list = stationsOf(d);
-    const want = d && d.kitchenId;
-    if (want && list.some((s) => s && s.id === want)) return want;
-    return list.length ? list[0].id : '';
-  }
+  const kitchenIdOf = rules.kitchenIdOf;
+
   /* Appelée dès qu'on touche aux postes ou au routage : la cuisine se crée sans
    * rien demander (le patron n'a pas à déclarer que sa cuisine existe), et le
    * repli implicite d'hier devient explicite.
@@ -439,53 +602,19 @@
    * pas une commande, c'est une question posée au cuisinier.
    *
    * Un choix peut porter un supplément (`price`, en MAD, 0 = compris). */
-  const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
-  const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
-  const OPT_EMOJIS = Object.freeze([
-    // Fruits, légumes, aromates et ingrédients bruts.
-    '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
-    '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
-    '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
-    '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
-    // Boulangerie, protéines et plats préparés.
-    '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
-    '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
-    '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
-    '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
-    '🥠', '🥮', '🍢', '🍡', '🥡',
-    // Desserts et boissons.
-    '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
-    '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
-    '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
-    // Repères opérationnels : validation, interdiction, température, matériel et couleurs.
-    '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
-    '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
-    '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
-  ]);
-  const cleanOptEmoji = (value) => {
-    const emoji = String(value || '').trim();
-    return OPT_EMOJIS.indexOf(emoji) >= 0 ? emoji : '';
-  };
+  const { optsOf, optById, OPT_EMOJIS, cleanOptEmoji } = rules;
 
   function addOptGroup(name) {
     return store.update((d) => {
       d.opts = optsOf(d);
-      d.opts.push({
-        id: nid(d, 'og'),
-        name: String(name || '').trim() || tr(T.optNm),
-        kind: 'one',
-        required: false,
-        choices: [],
-      });
+      d.opts.push(rules.normalizeGroup(name, nid(d, 'og'), tr(T.optNm)));
       return d;
     });
   }
   function updateOptGroup(id, patch) {
     return store.update((d) => {
       const g = optById(d, id); if (!g) return d;
-      if (patch.name != null) g.name = String(patch.name).trim() || g.name;
-      if (patch.kind != null) g.kind = patch.kind === 'many' ? 'many' : 'one';
-      if (patch.required != null) g.required = !!patch.required;
+      Object.assign(g, rules.patchGroup(g, patch));
       return d;
     });
   }
@@ -505,7 +634,7 @@
     return store.update((d) => {
       const g = optById(d, gid); if (!g) return d;
       g.choices = Array.isArray(g.choices) ? g.choices : [];
-      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0), emoji: cleanOptEmoji(emoji) });
+      g.choices.push(rules.normalizeChoice(name, price, emoji, nid(d, 'oc'), tr(T.optChNm)));
       return d;
     });
   }
@@ -514,7 +643,7 @@
       const g = optById(d, gid); if (!g) return d;
       const c = (g.choices || []).find((x) => x && x.id === cid); if (!c) return d;
       if (patch.name != null) c.name = String(patch.name).trim() || c.name;
-      if (patch.price != null) c.price = Math.max(0, +patch.price || 0);
+      if (patch.price != null) c.price = rules.nonnegative(patch.price);
       if (patch.emoji != null) c.emoji = cleanOptEmoji(patch.emoji);
       return d;
     });
@@ -541,7 +670,7 @@
   function addCategory(name) {
     return store.update((d) => {
       // Une catégorie neuve part en cuisine — explicitement, pas par omission.
-      const c = { id: nid(d, 'cat'), name: String(name || tr(T.catName)).trim() || tr(T.catName), sub: [], station: '' };
+      const c = rules.normalizeCategory(name, nid(d, 'cat'), tr(T.catName));
       d.cats.push(c);
       return d;
     });
@@ -599,32 +728,7 @@
   }
   function addItem(data) {
     return store.update((d) => {
-      const formula = cleanFormula(data && data.formula, d.items);
-      const item = {
-        id: nid(d, 'it'),
-        name: String(data.name || tr(T.productDefault)).trim() || tr(T.productDefault),
-        price: Math.max(0, +data.price || 0),
-        catId: data.catId || (d.cats[0] && d.cats[0].id) || null,
-        subId: data.subId || null,
-        desc: String(data.desc || '').trim(),
-        avail: data.avail !== false,
-        formulaOnly: data.formulaOnly === true,
-        showPhotoInFormulas: data.showPhotoInFormulas === true,
-        archived: data.archived === true,
-        // Pas de poste sur le plat : il suit sa catégorie. Les valeurs écrites
-        // par la version précédente restent dans le document et ne sont plus
-        // lues — ensureKitchen() les a remontées à la catégorie une fois pour
-        // toutes, les effacer ne rendrait service à personne.
-        // Media are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia), never
-        // bytes — base64 here would blow the localStorage quota in a dozen items.
-        photo: String(data.photo || ''),
-        video: String(data.video || ''),
-        // Les groupes d'options portés par ce produit. Vide = le comptoir
-        // l'ajoute d'un geste, sans rien demander — c'est le cas de presque
-        // tout ce qui se vend.
-        opts: Array.isArray(data.opts) ? data.opts.slice() : [],
-      };
-      if (formula) item.formula = formula;
+      const item = rules.normalizeItem(data, d, nid(d, 'it'), tr(T.productDefault));
       d.items.push(item);
       return d;
     });
@@ -632,30 +736,10 @@
   function updateItem(id, patch) {
     return store.update((d) => {
       const it = itemById(d, id); if (!it) return d;
-      if (patch.name != null) it.name = String(patch.name).trim() || it.name;
-      if (patch.price != null) it.price = Math.max(0, +patch.price || 0);
-      if (patch.catId != null) it.catId = patch.catId;
-      if ('subId' in patch) it.subId = patch.subId || null;
-      if (patch.desc != null) it.desc = String(patch.desc).trim();
-      if (patch.avail != null) it.avail = !!patch.avail;
-      if (patch.formulaOnly != null) it.formulaOnly = !!patch.formulaOnly;
-      if (patch.showPhotoInFormulas != null) it.showPhotoInFormulas = !!patch.showPhotoInFormulas;
-      if (patch.archived != null) it.archived = !!patch.archived;
-      if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
-      if ('photo' in patch) it.photo = String(patch.photo || '');
-      if ('video' in patch) it.video = String(patch.video || '');
-      if ('nutrition' in patch) {
-        if (patch.nutrition && typeof patch.nutrition === 'object') it.nutrition = { ...patch.nutrition };
-        else delete it.nutrition;
-      }
-      if ('allergens' in patch) it.allergens = Array.isArray(patch.allergens) ? patch.allergens.slice() : [];
-      if ('nutritionComplete' in patch) it.nutritionComplete = patch.nutritionComplete === true;
-      if ('hideNutrition' in patch) it.hideNutrition = patch.hideNutrition === true;
-      if ('formula' in patch) {
-        const formula = cleanFormula(patch.formula, d.items);
-        if (formula) it.formula = formula;
-        else delete it.formula;
-      }
+      const next = rules.patchItem(it, patch, d.items);
+      if (!('formula' in next)) delete it.formula;
+      if (!('nutrition' in next)) delete it.nutrition;
+      Object.assign(it, next);
       if ('archived' in patch) {
         (d.items || []).forEach((candidate) => {
           if (!candidate || !candidate.formula) return;
@@ -2246,30 +2330,13 @@
       const vd = KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData && KV.getCurrentVenueData();
       if (vd && vd.name) name = String(vd.name).trim();
     } catch (_) {}
-    return String(name).normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return rules.slug(name);
   }
 
   // Le compteur d'ids (`seq`) ne voyage pas : le serveur ne stocke que la carte.
   // Sans ce rattrapage, un navigateur neuf repartirait de it_1 et écraserait des
   // produits existants dès le premier ajout.
-  function healSeq(d) {
-    let max = +d.seq || 0;
-    const scan = (id) => { const m = /_(\d+)$/.exec(String(id || '')); if (m) max = Math.max(max, +m[1]); };
-    (d.cats || []).forEach((c) => { scan(c.id); (c.sub || []).forEach((s) => scan(s.id)); });
-    (d.items || []).forEach((i) => scan(i.id));
-    // Les postes tirent du même compteur : sans ce balayage, un navigateur neuf
-    // recréerait st_1 par-dessus un poste existant et les plats du serveur
-    // suivraient le mauvais.
-    (d.stations || []).forEach((s) => scan(s.id));
-    // Les groupes d'options et leurs choix tirent du MÊME compteur : sans ce
-    // balayage, un navigateur neuf recréerait og_1 par-dessus un groupe existant
-    // et les produits du serveur pointeraient le mauvais.
-    (d.opts || []).forEach((g) => { scan(g.id); (g.choices || []).forEach((c) => scan(c.id)); });
-    (d.formulaTemplates || []).forEach((t) => scan(t.id));
-    d.seq = max;
-    return d;
-  }
+  function healSeq(d) { d.seq = rules.healSeq(d).seq; return d; }
 
   // Union par id, cet appareil d'abord. Les sous-catégories fusionnent de même,
   // sinon renommer une catégorie sur un poste effacerait les sous-catégories
@@ -2597,7 +2664,7 @@
         return it;
       });
     },
-    availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => i.avail !== false && !i.formulaOnly && !i.archived),
+    availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter(rules.isAvailable),
     formulaItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => !i.archived),
     cleanFormula, saveFormulaTemplate, deleteFormulaTemplate,
     isEmpty: (vid) => store.isEmpty(vid),

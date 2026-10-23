@@ -2519,7 +2519,7 @@
       const name=nameInput.value.trim();
       // Un nom vide n'enregistre rien : le dire, au lieu d'un bouton qui ne répond pas.
       if(!name){nameErr.hidden=false;nameInput.setAttribute('aria-invalid','true');nameInput.focus();return;}
-      const validSlots=isFormulaCb.checked?formulaSlots.filter(s=>(s.label||'').trim()||(s.choices&&s.choices.length)).map(s=>({id:s.id||'sl_'+Math.random().toString(36).slice(2,6),label:s.label||ui('itDefaultStep'),min:s.min!=null?s.min:1,max:s.max!=null?s.max:1,choices:(s.choices||[]).map(c=>({itemId:c.itemId,extra:Math.max(0,+c.extra||0)}))})):[];
+      const validSlots=isFormulaCb.checked?formulaSlots.filter(s=>(s.label||'').trim()||(s.choices&&s.choices.length)).map(s=>({id:s.id||'sl_'+Math.random().toString(36).slice(2,6),label:s.label||ui('itDefaultStep'),min:s.min!=null?s.min:1,max:s.max!=null?s.max:1,choices:(s.choices||[]).map(c=>({itemId:c.itemId,extra:window.KiwiMenuRules.nonnegative(c.extra)}))})):[];
       const p={name,price:+$('[data-price]',m.el).value||0,catId:$('[data-cat]',m.el).value,desc:$('[data-desc]',m.el).value,avail:!!$('[data-avail]',m.el).checked,formulaOnly:!$('[data-standalone]',m.el).checked,showPhotoInFormulas:!!$('[data-formula-choice-photo]',m.el)?.checked,archived:!!x?.archived,photo,video,opts:$$('[data-opt]:checked',m.el).map(e=>e.dataset.opt),formula:validSlots.length?{slots:validSlots}:null};
       x?S().updateItem(x.id,p):S().addItem(p);m.close();render();toast(ui('itSaved'),name);
       if(typeof onSuccess==='function')onSuccess();
