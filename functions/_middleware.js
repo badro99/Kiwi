@@ -26,7 +26,7 @@ import {
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
   limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
-  TILL_COOKIE, TILL_STORE_COOKIE, TILL_STORE, tillVerification,
+  TILL_COOKIE, TILL_STORE_COOKIE, TILL_STORE, tillVerification, readEmployee,
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 
@@ -849,8 +849,81 @@ function secureResponse(response) {
   });
 }
 
+/* The staff apps in the 2027 skin, per store (owner, 2026-10-23), from the same
+ * switch as the guest app above: features.skin2027 in kiwi-admin. Each app's
+ * head already turns the kit on for ?skin=2027 or its local flag; the server
+ * adds <html data-store-skin="2027"> when the store behind the request has the
+ * switch on, so every device of that store gets it without anyone touching the
+ * browser. Which store: the paired device's store (kiwi_till_store) for the
+ * caisse and the kitchen screen, the signed-in employee's store for the team
+ * app, otherwise any store of the signed-in owner's account (the dashboard is
+ * account-wide). It is only a look: no access decision reads it, and anything
+ * unreadable (no cookie, a database error) leaves the page as shipped. */
+const STAFF_SKIN_PAGES = new Map([
+  ['/dashboard', 'account'], ['/dashboard.html', 'account'],
+  ['/kiwi-caisse', 'device'], ['/kiwi-caisse.html', 'device'],
+  ['/kiwi-cuisine', 'device'], ['/kiwi-cuisine.html', 'device'],
+  ['/kiwi-serveur', 'employee'], ['/kiwi-serveur.html', 'employee'],
+]);
+export async function staffSkinOn(request, env, kind) {
+  if (!env || !env.DB || !kind) return false;
+  const slugs = [];
+  let aid = '';
+  try {
+    if (kind === 'device') {
+      const store = readCookie(request, TILL_STORE_COOKIE) || '';
+      if (TILL_STORE.test(store)) slugs.push(store);
+    }
+    if (kind === 'employee' && env.AUTH_SECRET) {
+      const emp = await readEmployee(request, env);
+      if (emp && TILL_STORE.test(String(emp.merchant || ''))) slugs.push(String(emp.merchant));
+    }
+    if (!slugs.length && env.AUTH_SECRET) {
+      const token = readCookie(request, SESS_COOKIE);
+      const sess = token ? await readSession(token, env.AUTH_SECRET) : null;
+      if (sess && sess.aid) aid = String(sess.aid);
+    }
+    if (!slugs.length && !aid) return false;
+    const q = slugs.length
+      ? env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(slugs[0])
+      : env.DB.prepare('SELECT features FROM merchant_config WHERE account_id = ? LIMIT 50').bind(aid);
+    const { results } = await q.all();
+    return (results || []).some((r) => { try { return (JSON.parse(r.features) || {}).skin2027 === true; } catch (_) { return false; } });
+  } catch (_) {
+    return false;
+  }
+}
+async function withStaffSkin(context, response) {
+  const { request, env } = context;
+  if (!response || request.method !== 'GET' || response.webSocket) return response;
+  if (response.status !== 200 && response.status !== 304) return response;
+  const kind = STAFF_SKIN_PAGES.get(new URL(request.url).pathname);
+  if (!kind || !(await staffSkinOn(request, env, kind))) return response;
+  let source = response;
+  /* A copy cached before the switch must not come back as a 304 without the
+     mark: fetch the file again, unconditionally. */
+  if (response.status === 304) {
+    if (!env.ASSETS || typeof env.ASSETS.fetch !== 'function') return response;
+    const ask = new Headers(request.headers);
+    ask.delete('If-None-Match');
+    ask.delete('If-Modified-Since');
+    try { source = await env.ASSETS.fetch(new Request(request.url, { headers: ask })); } catch (_) { return response; }
+    if (!source || !source.ok) return response;
+  }
+  const type = source.headers.get('Content-Type') || '';
+  if (!/text\/html/i.test(type)) return response;
+  const html = (await source.text()).replace(/<html\b/i, '<html data-store-skin="2027"');
+  const headers = new Headers(response.headers);
+  headers.set('Content-Type', type);
+  headers.delete('Content-Length');
+  headers.delete('ETag');
+  headers.delete('Last-Modified');
+  headers.set('Cache-Control', 'no-cache');
+  return new Response(html, { status: 200, headers });
+}
+
 export async function onRequest(context) {
-  const response = secureResponse(await routeRequest(context));
+  const response = await withStaffSkin(context, secureResponse(await routeRequest(context)));
   const lang = landingDocumentLanguage(context.request);
   const nativeAppOrigin = appOrigin(context.request);
   const corsPath = nativeAppOrigin && isAppApiPath(new URL(context.request.url).pathname);

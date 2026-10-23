@@ -37,7 +37,7 @@
   <script>
     (function () {
       var on = false;
-      try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:kds') === '1'; } catch (_) { on = false; }
+      try { on = document.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:kds') === '1'; } catch (_) { on = false; }
       if (!on) return;
       document.documentElement.setAttribute('data-skin-2027', 'kds');
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */

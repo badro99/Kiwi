@@ -652,6 +652,7 @@ for (const test of [
   /* Une caisse appairée s'ouvre sur sa propre preuve, sans le mot de passe du
      patron : page et API de la caisse seulement, jamais le tableau de bord. */
   'till-gate-test.mjs',
+  'staff-skin-test.mjs',
   'employee-timezone-test.mjs',
   'employee-timezone-browser-test.mjs',
   'table-visit-reuse-test.mjs',
