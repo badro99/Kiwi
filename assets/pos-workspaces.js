@@ -42,7 +42,6 @@
   function save(nav,r){const d=read(),a=(d.records[nav]||[]).slice(),i=a.findIndex(x=>x.id===r.id);if(i<0)a.unshift(r);else a[i]=r;d.records[nav]=a.slice(0,500);write(d);bind();cloud?.push?.(0);}
   function active(nav){return(read().records[nav]||[]).filter(r=>!r.deletedAt);}
   function allRecords(){return read().records||{};}
-  function currentBoard(){return openState?.boards?.find(b=>b[0]===openState.nav)||openState?.boards?.[0];}
   function currentSchema(){return window.KiwiTradeSchema?.get?.(posTrade(openState?.id),openState?.nav)||null;}
   function stages(){return currentSchema()?.stages||[L('À traiter','To do','للمعالجة'),L('En cours','In progress','قيد التنفيذ'),L('Prêt','Ready','جاهز'),L('Terminé','Done','مكتمل')];}
   function statusName(n){const list=stages();return pick(list[Math.max(0,Math.min(list.length-1,+n||0))]);}

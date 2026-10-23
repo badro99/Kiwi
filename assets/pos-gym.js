@@ -2023,9 +2023,6 @@
     return waMessage(m);
   }
 
-  /* ───────────────────────── scan modal (member badge) ─────────────── */
-  function openScan() { mockScan(); }
-
   /* ═══════════════════════ PLANNING — cours collectifs ═══════════════════════ */
   const STATE_LBL = { live: 'en cours', soon: 'commence bientôt', upcoming: 'à venir', done: 'terminé' };
 

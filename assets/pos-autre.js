@@ -25,7 +25,6 @@
     if(board&&(board.length||unpriced))return board;
     try{const a=JSON.parse(localStorage.getItem(catalogKey())||'[]');return Array.isArray(a)?a:[];}catch(_){return[];}
   }
-  function saveCatalog(a){try{localStorage.setItem(catalogKey(),JSON.stringify(a.slice(0,300)));}catch(_) {}}
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=n=>{try{return(window.KiwiNumber?.format((+n||0), {maximumFractionDigits:2}) ?? (+n||0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits:2}));}catch(_){return String(+n||0);}};
   const roundMoney=n=>Math.round((+n||0)*100)/100;
