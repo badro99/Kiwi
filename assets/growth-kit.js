@@ -98,5 +98,8 @@
   `;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
-  window.KiwiKit = { qr, reveal };
+  /* KiwiKit is the design kit's namespace (assets/kit/core.js): add the two
+     growth helpers to it, never replace it, or every kit module loaded after
+     this one would find KiwiKit.define and KiwiKit.controls missing. */
+  window.KiwiKit = Object.assign(window.KiwiKit || {}, { qr, reveal });
 })();

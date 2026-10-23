@@ -354,11 +354,13 @@
     return C;
   }
 
-  root.KiwiKit = {
+  /* Merge, never replace: assets/growth-kit.js adds qr and reveal to the same
+     namespace and may have run first. */
+  root.KiwiKit = Object.assign(root.KiwiKit || {}, {
     Element: Element, define: define, make: make, prop: prop,
     BASE: BASE, styleRoot: styleRoot, canAdopt: canAdopt,
     esc: esc, t: t, th: th, numHtml: numHtml, fmt: fmt, money: money, icon: icon, sprite: sprite,
     emit: emit, gid: gid, haptic: haptic, say: say, tap: tap, reduced: reduced, now: now,
-    controls: {}
-  };
+    controls: (root.KiwiKit && root.KiwiKit.controls) || {}
+  });
 })(typeof window !== 'undefined' ? window : globalThis);

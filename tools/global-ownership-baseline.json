@@ -1,0 +1,29 @@
+{
+  "note": "Pins for tools/global-ownership-test.mjs. Both lists only go down. Never raise one to make a red run go away.",
+  "dangling": [
+    "KiwiAgentCorpus",
+    "KiwiAgentTruth",
+    "KiwiAuthorizer",
+    "KiwiCurrentStaff",
+    "KiwiLang",
+    "KiwiOrders",
+    "KiwiPad",
+    "KiwiPinAuthorizer",
+    "KiwiTrade",
+    "KiwiVenues"
+  ],
+  "coupling": {
+    "assets/agent.js": 33,
+    "assets/dateRange.js": 33,
+    "assets/hotel.js": 15,
+    "assets/interactive.js": 26,
+    "assets/pages-pro.js": 11,
+    "assets/pos-boutique.js": 25,
+    "assets/pos-maison.js": 26,
+    "assets/stock.js": 19,
+    "assets/team.js": 9,
+    "assets/venues.js": 16,
+    "assets/caisse-app.js": 37,
+    "assets/serveur-app.js": 12
+  }
+}
