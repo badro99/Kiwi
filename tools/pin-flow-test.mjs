@@ -262,6 +262,23 @@ function fakePad() {
   eq([log.length, log[0].verdict, log[0].provenAt, log[0].act], [1, 'offline', 1000, 'close_till'], 'one authorization-log entry per approval');
 }
 
+{ /* A slow KDF keeps one request and the original candidate until completion. */
+  const S = sandbox(); const pad = fakePad(); let release, requests = 0, successes = 0;
+  const code = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+  S.F.attach(pad, { use: 'till', roles,
+    request: () => { requests++; return Promise.resolve(net); },
+    offline: { verify: () => new Promise(resolve => { release = resolve; }) },
+    onSuccess: () => { successes++; } });
+  const pending = pad.onsubmit(code, 'g', 'final');
+  await S.flush();
+  await pad.onsubmit(code, 'g', 'final');
+  await pad.onsubmit(code, 'g', 'retry');
+  eq(requests, 1, 'submissions are blocked throughout the offline derivation');
+  release({ id: 'generated-staff', name: 'Fixture', role: 'manager' });
+  await pending;
+  eq(successes, 1, 'one unlock after the derivation');
+}
+
 { /* 429 at the till: keys disabled, minutes counted down, the pad re-enables itself */
   const S = sandbox(); const pad = fakePad();
   S.F.attach(pad, { use: 'till', roles, request: () => Promise.resolve(ans(429, { retry_after: 130 })), setTimeout: S.g.setTimeout, clearTimeout: S.g.clearTimeout, now: S.now });

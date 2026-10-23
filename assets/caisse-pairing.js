@@ -50,7 +50,7 @@
 
   /* A real till must keep authorizations usable during a network outage, but
    * never bank the four-digit code itself. After the server proves a code, keep
-   * a tenant-scoped, salted SHA-256 verifier plus the proven identity for seven
+   * a tenant-scoped PBKDF2-SHA-256 verifier plus the proven identity for seven
    * days. A candidate typed offline is hashed again and compared locally. The
    * short TTL limits a revoked code's offline lifetime; the next successful
    * online verification refreshes it. */
@@ -60,44 +60,82 @@
       var rows = JSON.parse(ls(offlinePinKey(merchant)) || '[]');
       var at = Date.now();
       return Array.isArray(rows) ? rows.filter(function (row) {
-        return row && row.digest && Number(row.expiresAt || 0) > at;
+        return row && (row.digest || row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at;
       }) : [];
     } catch (_) { return []; }
   }
   function bytesHex(bytes) {
     return Array.from(new Uint8Array(bytes)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
   }
-  function pinDigest(merchant, salt, code) {
-    if (!(window.crypto && window.crypto.subtle && window.TextEncoder)) return Promise.resolve('');
-    var material = new TextEncoder().encode(String(merchant) + ':' + String(salt) + ':' + String(code));
-    return window.crypto.subtle.digest('SHA-256', material).then(bytesHex, function () { return ''; });
+  /* 1M PBKDF2-SHA-256 rounds: about 85 ms on a recent Mac, a few hundred ms on
+     a cheap tablet. A four-digit code cannot be made unguessable offline; this
+     moves enumerating a copied cache from milliseconds to many minutes. Every
+     row of one till shares one salt, so an unlock costs ONE derivation however
+     many staff are cached (twelve rows used to mean twelve). */
+  var PIN_ITERATIONS = 1000000;
+  function hasSubtle() { return !!(window.crypto && window.crypto.subtle && window.TextEncoder); }
+  function pinDigest(merchant, salt, code, iterations) {
+    if (!hasSubtle()) return Promise.resolve('');
+    var subtle = window.crypto.subtle;
+    if (!iterations) {
+      return subtle.digest('SHA-256', new TextEncoder().encode(String(merchant) + ':' + salt + ':' + code)).then(bytesHex);
+    }
+    var bytes = new Uint8Array(salt.match(/../g).map(function (h) { return parseInt(h, 16); }));
+    return subtle.importKey('raw', new TextEncoder().encode(String(merchant) + ':' + code),
+      'PBKDF2', false, ['deriveBits']).then(function (key) {
+      return subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes, iterations: iterations }, key, 256);
+    }).then(bytesHex);
   }
-  function rememberOfflinePin(merchant, code, staff) {
+  function sameDigest(a, b) {
+    if (!/^[a-f0-9]{64}$/.test(a) || !/^[a-f0-9]{64}$/.test(b)) return false;
+    var diff = 0;
+    for (var i = 0; i < 64; i += 2) diff |= parseInt(a.slice(i, i + 2), 16) ^ parseInt(b.slice(i, i + 2), 16);
+    return diff === 0;
+  }
+  function rememberOfflinePin(merchant, code, staff, expiresAt) {
     if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
-    var salt;
-    try { salt = bytesHex(window.crypto.getRandomValues(new Uint8Array(16))); }
-    catch (_) { salt = terminalId() + ':' + Date.now().toString(36); }
-    return pinDigest(merchant, salt, code).then(function (digest) {
-      if (!digest) return staff;
-      var rows = offlinePinRows(merchant).filter(function (row) {
-        return String(row.staff && row.staff.id || '') !== String(staff.id || '');
+    // In an insecure context subtle is absent: retain the existing behaviour
+    // (no local verification or new cache entry), never a JS PBKDF2 fallback.
+    if (!hasSubtle()) return Promise.resolve(staff);
+    return Promise.resolve().then(function () {
+      var shared = offlinePinRows(merchant).find(function (row) {
+        return row.v === 2 && row.it === PIN_ITERATIONS && /^[a-f0-9]{32}$/.test(row.salt);
       });
-      rows.push({ salt: salt, digest: digest, expiresAt: Date.now() + OFFLINE_PIN_TTL,
-        staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
-          role: String(staff.role || '').slice(0, 80) } });
-      set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12)));
-      return staff;
-    });
+      var salt = shared ? shared.salt : bytesHex(window.crypto.getRandomValues(new Uint8Array(16)));
+      return pinDigest(merchant, salt, code, PIN_ITERATIONS).then(function (hash) {
+        var rows = offlinePinRows(merchant).filter(function (row) {
+          return String(row.staff && row.staff.id || '') !== String(staff.id || '');
+        });
+        rows.push({ v: 2, kdf: 'pbkdf2-sha256', it: PIN_ITERATIONS, salt: salt, hash: hash,
+          expiresAt: expiresAt || Date.now() + OFFLINE_PIN_TTL,
+          staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
+            role: String(staff.role || '').slice(0, 80) } });
+        set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12)));
+        return staff;
+      });
+    }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
   function verifyOfflinePin(merchant, code) {
+    if (!hasSubtle()) return Promise.resolve(null);
     var rows = offlinePinRows(merchant);
+    /* One derivation per (salt, rounds) pair, not per row. */
+    var derived = {};
+    function derive(row, v2) {
+      var k = (v2 ? row.it : 0) + ':' + row.salt;
+      if (!derived[k]) derived[k] = pinDigest(merchant, row.salt, code, v2 ? row.it : 0);
+      return derived[k];
+    }
     return Promise.all(rows.map(function (row) {
-      return pinDigest(merchant, row.salt, code).then(function (digest) {
-        /* provenAt: when the server last proved this code here (§10.2,
-           Staleness row). Callers that read only id, name and role are
-           unaffected. */
-        return digest && digest === row.digest ? Object.assign({}, row.staff, { provenAt: Number(row.expiresAt || 0) - OFFLINE_PIN_TTL }) : null;
-      });
+      var v2 = row.v === 2;
+      if (v2 && (row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
+          row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt))) return null;
+      return derive(row, v2).then(function (digest) {
+        if (!sameDigest(digest, v2 ? row.hash : row.digest)) return null;
+        var who = Object.assign({}, row.staff, { provenAt: Number(row.expiresAt || 0) - OFFLINE_PIN_TTL });
+        /* An old SHA-256 row is rewritten in the background: the unlock does not wait. */
+        if (!v2) rememberOfflinePin(merchant, code, row.staff, row.expiresAt);
+        return who;
+      }).catch(function () { return null; });
     })).then(function (matches) { return matches.find(Boolean) || null; });
   }
 
@@ -849,7 +887,9 @@
     if (scr) scr.style.display = 'none';
     bootVertical(venue);
   }
+  var pinSubmitting = false;
   function feedPin(d) {
+    if (pinSubmitting) return;
     if (d === 'clear') { pinBuf = ''; }
     else if (d === 'back') { pinBuf = pinBuf.slice(0, -1); }
     else if (/^[0-9]$/.test(d) && pinBuf.length < 4) { pinBuf += d; }
@@ -857,6 +897,7 @@
     if (pinBuf.length === 4) submitPin();
   }
   function submitPin() {
+    if (pinSubmitting) return;
     var code = pinBuf;
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
@@ -886,6 +927,7 @@
     /* Online, the server remains the judge. A successful verdict also refreshes
      * the short-lived local verifier used when this physical till loses Wi-Fi. */
     if (!merchant) { refuse('Caisse non appairée.'); return; }
+    pinSubmitting = true;
     verifyCode(code).then(function (who) {
       if (who) { acceptStaff(who); return; }
       if (lastVerify.status === 429) {
@@ -896,7 +938,7 @@
       refuse(navigator.onLine === false
         ? 'Code non disponible hors ligne. Connectez-vous une fois avec ce code.'
         : 'Code incorrect ou impossible à vérifier.');
-    });
+    }).finally(function () { pinSubmitting = false; });
   }
 
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
@@ -1066,7 +1108,9 @@
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
         var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
-        return rememberOfflinePin(merchant, code, staff);
+        /* The server said yes: unlock now, refresh the offline verifier behind. */
+        rememberOfflinePin(merchant, code, staff);
+        return staff;
       })
       .catch(function () {
         if (opts && opts.needsServer) { lastVerify.offline = true; return null; }

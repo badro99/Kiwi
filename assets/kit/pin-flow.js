@@ -332,12 +332,11 @@
       var code = state.code;
       var p = typeof opts.request === 'function' ? Promise.resolve(opts.request(code)) : send(spec.url, body(code), { fetch: opts.fetch });
       return p.then(function (reply) { return reply || { kind: 'network' }; }, function () { return { kind: 'network' }; }).then(function (reply) {
-        state.inflight = false;
         if (state.dead) return;
         var mine = !automatic || state.joined;
         state.joined = false;
         return decide(reply, !mine);
-      });
+      }).finally(function () { state.inflight = false; });
     }
 
     function schedule() {
@@ -363,6 +362,7 @@
 
     pad.onsubmit = function (code, gid, cause) {
       if (state.dead) return;
+      if (state.inflight && cause !== 'retry') return;
       if (cause === 'retry') {
         /* Try again joins an automatic request in flight: its answer is the person's. */
         if (state.inflight) { state.joined = true; return; }

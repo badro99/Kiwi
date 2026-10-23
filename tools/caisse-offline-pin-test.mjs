@@ -35,6 +35,8 @@ context.window.KiwiRoles = { opensTill: role => /manager|owner|caiss/i.test(Stri
 vm.runInNewContext(source, context, { filename: 'assets/caisse-pairing.js' });
 
 assert.equal(await context.KiwiCaissePairing.authorizeTill('2468'), true);
+/* The verifier is written behind the unlock: wait for it. */
+for (let i = 0; i < 200 && ![...storage.keys()].some((k) => k.startsWith('kiwi:caisse:offline-pins:v1:')); i++) await new Promise((r) => setTimeout(r, 25));
 const key = [...storage.keys()].find(value => value.startsWith('kiwi:caisse:offline-pins:v1:'));
 assert.ok(key, 'successful online verification creates a tenant-scoped offline verifier');
 assert.ok(!storage.get(key).includes('2468'), 'the raw PIN is never persisted');
