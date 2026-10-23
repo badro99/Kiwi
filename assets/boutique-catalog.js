@@ -214,6 +214,9 @@
   const ledger = part('ledger', 'assets/boutique-catalog-parts.js')(core);
   const { MOVE_MAX, now, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs } = ledger;
 
+  const well = part('well', 'assets/boutique-catalog-parts.js')();
+  let loadEpoch = 0, saveEpoch = 0;
+
   // Airtight backstop: the Maison Mansour demo cast is a LOCAL-pitch affordance
   // only. A real signed-in / hosted merchant or a paired till must never inherit
   // it — not even if the active venue key resolves to the demo store.
@@ -229,6 +232,15 @@
     // serveur. Asynchrone — `load()` rend tout de suite ce que le navigateur a,
     // et la page se re-rend via notify() quand la copie arrive.
     setTimeout(cloudBind, 0);
+    const key = KEY, epoch = ++loadEpoch;
+    localKept = true;
+    // La lecture précède toute écriture du document vide de démarrage.
+    well.read(key).then(copy => {
+      if (epoch !== loadEpoch || key !== KEY || !copy || !copy.doc) return;
+      db = mergeDocs(db, copy.doc);
+      materialize(db); dropIndex(); migrate();
+      persist(); notify(); schedulePush();
+    }).catch(() => {});
     let raw = null;
     try { raw = localStorage.getItem(KEY); } catch (e) {}
     if (raw) {
@@ -238,7 +250,8 @@
       db = blank();
       dropIndex();
       if (DEMO_SEEDS[VENUE] && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
-      persist();
+      // Ne jamais remplacer le secours par le vide avant sa lecture.
+      persist(true);
     } else {
       /* Un document d'avant le journal n'a ni socle ni mouvements : on le
          normalise une fois, en place, pour qu'il cesse d'être ambigu. compact()
@@ -286,10 +299,15 @@
       }
     } catch (e) {}
   }
-  function persist() {
+  function persist(startingEmpty) {
     let ok = false;
     try { localStorage.setItem(KEY, JSON.stringify(db)); ok = true; } catch (e) {}
+    const key = KEY, epoch = ++saveEpoch, load = loadEpoch;
     sayKept(ok);
+    if (!ok && !startingEmpty) well.save(key, db, kept => {
+      if (key === KEY && epoch === saveEpoch && load === loadEpoch) sayKept(kept);
+    });
+    else if (ok && !startingEmpty) well.save(key, null, () => {});
     return ok;
   }
 

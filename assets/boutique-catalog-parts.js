@@ -1082,3 +1082,50 @@ window.__kiwiBoutiqueCatalogParts.csv = function (core) {
 
   return { exportCsv };
 };
+
+/* Second puits local, uniquement quand localStorage refuse. Les opérations
+ * sont sérialisées ; les documents en attente sont remplacés par le dernier
+ * de CHAQUE clé, jamais par celui d'une autre boutique. */
+window.__kiwiBoutiqueCatalogParts.well = function () {
+  'use strict';
+  let opening, tail = Promise.resolve();
+  const pending = new Map(), copies = new Set();
+  function open() {
+    if (!opening) opening = new Promise((resolve, reject) => {
+      try {
+        const r = window.indexedDB.open('kiwi-catalog', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('docs');
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = r.onblocked = () => reject(new Error('catalog storage unavailable'));
+      } catch (e) { reject(e); }
+    });
+    return opening;
+  }
+  function transaction(key, action, value) {
+    return open().then(db => new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('docs', action === 'get' ? 'readonly' : 'readwrite');
+        let result;
+        tx.oncomplete = () => resolve(result);
+        tx.onerror = tx.onabort = () => reject(new Error('catalog storage transaction failed'));
+        const store = tx.objectStore('docs');
+        const r = action === 'put' ? store.put(value, key) : store[action](key);
+        r.onsuccess = () => { result = r.result; };
+      } catch (e) { reject(e); }
+    }));
+  }
+  function enqueue(fn) { const job = tail.then(fn); tail = job.catch(() => {}); return job; }
+  function save(key, doc, done) {
+    if (doc == null && !copies.has(key)) return;
+    if (doc != null) copies.add(key);
+    const job = { doc: doc == null ? null : JSON.parse(JSON.stringify(doc)), done };
+    if (pending.has(key)) { pending.set(key, job); return; }
+    pending.set(key, job);
+    enqueue(() => {
+      const next = pending.get(key); pending.delete(key);
+      return transaction(key, next.doc == null ? 'delete' : 'put', { doc: next.doc, at: Date.now() })
+        .then(() => { if (next.doc == null && !pending.has(key)) copies.delete(key); next.done(true); }, () => next.done(false));
+    });
+  }
+  return { read: key => enqueue(() => transaction(key, 'get').then(copy => { if (copy) copies.add(key); return copy; })), save };
+};
