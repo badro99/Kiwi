@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // New commercial/production components only. Synthetic records, production
 // JS/CSS, real Chromium; not a merchant session or full dashboard acceptance.
+import { hotelTestSource } from './hotel-test-source.mjs';
 import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ const { default: puppeteer } = await import(pathToFileURL(require.resolve('puppe
 const bin = [process.env.KIWI_CHROMIUM_BIN, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => p && fs.existsSync(p));
 assert.ok(bin, 'Chromium is required for hotel commercial layout verification');
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-commercial-layout-'));
-const source = fs.readFileSync(path.join(root, 'assets/hotel.js'), 'utf8').replace(/\}\)\(\);\s*$/, `window.__commercialLayout = { cuCommercialState, cuCommercialBody, cuProductionState, cuProductionBody,cuBillingBody,cuDraftInput,cuOpenDossier,cuStayEditor,cuState };})();`);
+const source = hotelTestSource().replace(/\}\)\(\);\s*$/, `window.__commercialLayout = { cuCommercialState, cuCommercialBody, cuProductionState, cuProductionBody,cuBillingBody,cuDraftInput,cuOpenDossier,cuStayEditor,cuState };})();`);
 const booking={id:'booking-synthetic',code:'H-TEST',status:'confirmed',resourceId:'room:101',partySize:2,customer:{name:'Voyageur de démonstration'},hotel:{checkIn:'2027-07-01',checkOut:'2027-07-03',total:1600.25,roomTypeName:'Chambre supérieure'}};
 const billingSource=draftSource([booking,{...booking,id:'booking-second',resourceId:'room:102',customer:{name:'ضيف تجريبي'},hotel:{...booking.hotel,total:300.15,dayUse:true,checkOut:'2027-07-01',arrivalTime:'09:00',departureTime:'14:00'}}],[{id:'company-synthetic',kind:'company',name:'Société de démonstration',legalName:'Société de démonstration',address:'Adresse de test'}]);
 const billing={source:billingSource,preview:buildDraft(billingSource,{extras:[],allocations:[]}),stale:false,saved:null,sourceDigest:'synthetic-digest',directoryRev:1,rev:0};

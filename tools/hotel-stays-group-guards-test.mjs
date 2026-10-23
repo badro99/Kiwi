@@ -8,13 +8,14 @@
  * The behaviour itself is proven in tools/hotel-stays-group-browser-test.mjs
  * against the real modal, real API handlers and a real database.
  */
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const hotelJs = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const hotelJs = hotelTestSource();
 
 let controls = 0;
 function ok(value, label) { assert.ok(value, label); controls++; }

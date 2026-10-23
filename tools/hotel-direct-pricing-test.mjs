@@ -7,6 +7,7 @@
  * identity with reason, snapshots persisted, legacy room-only untouched.
  * Pure helpers (priceDirectStay/directKey) are exercised directly too.
  */
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -472,7 +473,7 @@ console.log('\n■ 5. Pure helpers: roles, bounds, key stability');
 
 console.log('\n■ 6. Client pricer matches the server cent for cent');
 {
-  const hotelJs = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+  const hotelJs = hotelTestSource();
   const window = {
     addEventListener() {},
     KiwiI18n: { getLang: () => 'fr' },

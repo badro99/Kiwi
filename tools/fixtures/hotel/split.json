@@ -1,0 +1,8 @@
+{
+  "sha256": "3bd34a62f84d5c9b979aa01eb33d6bc31128cc750b805ddef6de34dbb52a949e",
+  "start": 2304,
+  "end": 167871,
+  "prefix": "/* Hotel · localisation isolée, sans initialisation avant le cœur.\n * Contrat privé : une seule propriété globale, forme figée. La fabrique\n * conserve les dictionnaires et fonctions dans leur propre fermeture. */\n(() => {\n  'use strict';\n  window.__kiwiHotelInternal = Object.freeze({\n    language: function () {\n",
+  "suffix": "      return { hxLang, hxLocale, tx, txk, HX_N, txn, ltr, hxTo, hxColon, HX_T };\n    },\n  });\n})();\n",
+  "replacement": "  const { hxLang, hxLocale, tx, txk, HX_N, txn, ltr, hxTo, hxColon, HX_T } = window.__kiwiHotelInternal.language();\n\n"
+}

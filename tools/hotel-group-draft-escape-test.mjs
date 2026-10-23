@@ -23,6 +23,7 @@
  * enregistré côté serveur ne dépend d'eux. C'est ce qui rend leur effacement
  * sûr — et cette suite le vérifie aussi.
  * ─────────────────────────────────────────────────────────────────────────── */
+import { hotelTestSource } from './hotel-test-source.mjs';
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
@@ -30,7 +31,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const HOTEL = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const HOTEL = hotelTestSource();
 
 let passed = 0;
 const failures = [];

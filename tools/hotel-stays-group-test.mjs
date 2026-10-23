@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,7 +11,7 @@ import { onRequestPost as saveStay, onRequestGet as getStays } from '../function
 import { stayOptions } from '../functions/api/hotel/_stay-options.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const hotelJs = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const hotelJs = hotelTestSource();
 const teamJs = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
 const interactiveJs = fs.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 
-const source = fs.readFileSync(new URL('../assets/hotel.js', import.meta.url), 'utf8');
+const source = hotelTestSource();
 const styles = fs.readFileSync(new URL('../assets/hotel.css', import.meta.url), 'utf8');
 // Execute the complete production module, including register(). Only expose
 // references at its final IIFE boundary; never extract/reimplement its functions.

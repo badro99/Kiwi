@@ -15,6 +15,7 @@
  *      français sous EN et AR, l'arabe isole montants et numéros, et un
  *      changement de langue réécrit la page ouverte sans la rouvrir.
  */
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -27,7 +28,7 @@ const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(im
 const require = createRequire(path.join(ROOT, 'app', 'package.json'));
 const ts = require('typescript');
 const puppeteer = require('puppeteer-core');
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const SRC = hotelTestSource();
 
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
@@ -170,7 +171,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewp
     { id: 'bk-opt', resourceId: 'room:107', status: 'requested', partySize: 2, updatedAt: 2003, customer: { name: 'Sam Dock' }, hotel: { checkIn: plus(3), checkOut: plus(5) } },
   ] }) };
   window.Kiwi = { handlers: {}, toast: () => {} };
-</script><script src="/assets/interactive.js"></script><script src="/assets/hotel.js"></script></body></html>`;
+</script><script src="/assets/interactive.js"></script><script src="/assets/hotel-language.js"></script><script src="/assets/hotel.js"></script></body></html>`;
 
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');

@@ -16,6 +16,7 @@
  *        no-show forçait un `save` complet — donc, faute de chemin, un séjour
  *        jamais commencé finissait facturé au tarif plein.
  * ─────────────────────────────────────────────────────────────────────────── */
+import { hotelTestSource } from './hotel-test-source.mjs';
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
@@ -25,7 +26,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const STAYS = fs.readFileSync(path.join(ROOT, 'functions/api/hotel/stays.js'), 'utf8');
 const CHARGES = fs.readFileSync(path.join(ROOT, 'functions/api/hotel/room-charges.js'), 'utf8');
-const UI = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const UI = hotelTestSource();
 
 let passed = 0;
 const failures = [];

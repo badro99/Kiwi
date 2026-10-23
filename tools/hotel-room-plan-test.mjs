@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { hotelTestSource } from './hotel-test-source.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const source = hotelTestSource();
 const styles = fs.readFileSync(path.join(ROOT, 'assets/hotel.css'), 'utf8');
 
 let failures = 0;
