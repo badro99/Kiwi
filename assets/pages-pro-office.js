@@ -282,10 +282,10 @@ handlers['nav-transactions'] = () => {
 
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
         ${FILTERS.map(c => `
-          <button class="chip ${activeFilter === c ? 'ok' : 'neutral'}" data-action="tx-filter" data-arg="${c}" style="padding:6px 12px; font-size:12px; cursor:pointer; border:0;">${c}</button>
+          <button data-activation=write class="chip ${activeFilter === c ? 'ok' : 'neutral'}" data-action="tx-filter" data-arg="${c}" style="padding:6px 12px; font-size:12px; cursor:pointer; border:0;">${c}</button>
         `).join('')}
         <span style="flex:1;"></span>
-        <button class="kb ghost" data-action="tx-daterange" style="padding:6px 12px; font-size:12px; gap:6px;">${RANGE_LABEL[activeRange]} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button data-activation=write class="kb ghost" data-action="tx-daterange" style="padding:6px 12px; font-size:12px; gap:6px;">${RANGE_LABEL[activeRange]} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
       </div>
 
       ${filtered ? `
@@ -373,7 +373,7 @@ handlers['nav-transactions'] = () => {
       <div class="tx-detail-hero"><div class="amt">${fmt2(sale.amount)} MAD</div></div>
       <dl class="tx-detail-grid"><dt>${L.payment}</dt><dd>${esc(row.n)}</dd><dt>${L.time}</dt><dd>${esc(new Date(sale.ts).toLocaleString(lang==='en'?'en-GB':lang==='ar'?'ar-MA':'fr-FR',{timeZone:(globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), sale.ts) || window.KiwiDayReport?.timezone?.())}))}</dd><dt>${L.table}</dt><dd>${esc(sale.table)}</dd><dt>${L.staff}</dt><dd>${esc(sale.staff)}</dd></dl>
       <h4>${L.items}</h4>${sale.lines.map(line=>`<p>${line.qty} × ${esc(line.name)} <b>${fmt2(line.total)} MAD</b></p>`).join('')}
-      <p role="status" data-tx-detail-status></p>`,foot:`<button type="button" class="kb ghost" data-tx-refund>${L.refund}</button><button type="button" class="kb atlas" data-tx-print>${L.print}</button>`});
+      <p role="status" data-tx-detail-status></p>`,foot:`<button data-activation=money type="button" class="kb ghost" data-tx-refund>${L.refund}</button><button data-activation=write type="button" class="kb atlas" data-tx-print>${L.print}</button>`});
     sheet.el.classList.add('kiwi-native-order-sheet');
     const status=sheet.el.querySelector('[data-tx-detail-status]');
     sheet.el.querySelector('[data-tx-refund]').onclick=()=>{status.textContent=L.refundInfo;};
@@ -704,7 +704,7 @@ handlers['nav-terminaux'] = () => {
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase;">${T.deployedDevices}</div>
-        <button class="kb ghost" data-action="term-add" style="padding:6px 12px; font-size:12px; gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.add}</button>
+        <button data-activation=write class="kb ghost" data-action="term-add" style="padding:6px 12px; font-size:12px; gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.add}</button>
       </div>
 
       ${fleet.map((t) => {
@@ -756,7 +756,7 @@ handlers['nav-terminaux'] = () => {
       <div style="padding:18px; margin-top:6px; background:var(--paper-soft); border-radius:14px; border:1px dashed var(--n-300); text-align:center;">
         <div style="font-weight:600; margin-bottom:4px; font-size:14.5px;">${T.orderNewTerminal}</div>
         <div style="font-size:12.5px; color:var(--n-500); margin-bottom:12px;">${T.orderNewTerminalDesc}</div>
-        <button class="kb atlas" data-action="add-terminal" style="padding:9px 18px;">${T.requestTerminal}</button>
+        <button data-activation=write class="kb atlas" data-action="add-terminal" style="padding:9px 18px;">${T.requestTerminal}</button>
       </div>
     `;
   }
@@ -808,7 +808,7 @@ handlers['nav-terminaux'] = () => {
             <button id="term-mtest" class="kb ghost" style="flex:1; justify-content:center; padding:8px 10px; font-size:12px;">${T.testTx}</button>
             <button id="term-mdiag" class="kb ghost" style="flex:1; justify-content:center; padding:8px 10px; font-size:12px;">${T.diagnose}</button>
           </div>
-          <button id="term-mtoggle" class="kb ${disabled ? 'atlas' : 'ghost'}" style="width:100%; justify-content:center; margin-top:8px; padding:9px 12px; font-size:12.5px;">${disabled ? T.reactivate : T.deactivate}</button>
+          <button data-activation=write id="term-mtoggle" class="kb ${disabled ? 'atlas' : 'ghost'}" style="width:100%; justify-content:center; margin-top:8px; padding:9px 12px; font-size:12.5px;">${disabled ? T.reactivate : T.deactivate}</button>
         </div>
 
         <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--n-200);">
@@ -818,7 +818,7 @@ handlers['nav-terminaux'] = () => {
       `,
       foot: `
         <button id="term-mcancel" class="kb ghost" style="padding:9px 16px;">${T.cancel}</button>
-        <button id="term-msave" class="kb atlas" style="padding:9px 16px;">${T.save}</button>
+        <button data-activation=write id="term-msave" class="kb atlas" style="padding:9px 16px;">${T.save}</button>
       `,
     });
     const q = (s) => m.el.querySelector(s);
@@ -909,7 +909,7 @@ handlers['nav-terminaux'] = () => {
       `,
       foot: `
         <button id="term-acancel" class="kb ghost" style="padding:9px 16px;">${T.cancel}</button>
-        <button id="term-asave" class="kb atlas" style="padding:9px 16px;">${T.addCta}</button>
+        <button data-activation=write id="term-asave" class="kb atlas" style="padding:9px 16px;">${T.addCta}</button>
       `,
     });
     const q = (s) => m.el.querySelector(s);
@@ -1087,7 +1087,7 @@ handlers['terminal-catalog'] = () => {
               <h4 style="margin:0 0 4px; font-size:${p.featured ? '20' : '15.5'}px; letter-spacing:-0.015em;">${p.name}</h4>
               <div style="font-family:var(--mono); font-size:${p.featured ? '11' : '10.5'}px; color:var(--atlas); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:10px;">${p.tag}</div>
               <p style="margin:0 0 14px; font-size:${p.featured ? '13.5' : '12.5'}px; color:var(--n-600); line-height:1.55; flex:1;">${p.desc}</p>
-              <button class="kb ${p.featured ? 'atlas' : 'ghost'}" data-action="catalog-order" data-arg="${p.sku}" style="width:100%; justify-content:center; padding:${p.featured ? '10px 16px' : '8px 12px'}; font-size:${p.featured ? '13' : '12.5'}px;">
+              <button data-activation=write class="kb ${p.featured ? 'atlas' : 'ghost'}" data-action="catalog-order" data-arg="${p.sku}" style="width:100%; justify-content:center; padding:${p.featured ? '10px 16px' : '8px 12px'}; font-size:${p.featured ? '13' : '12.5'}px;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18l-2 13H5L3 3z"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>
                 ${T.order} · ${p.price}
               </button>
@@ -1345,7 +1345,7 @@ handlers['nav-reglements'] = () => {
       <div class="p-card" style="background:var(--surface); padding:16px; margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div style="font-size:13px; font-weight:600;">Comptes bancaires liés</div>
-          <button class="kb ghost" data-action="add-iban" style="padding:5px 10px; font-size:11.5px;">+ IBAN</button>
+          <button data-activation=write class="kb ghost" data-action="add-iban" style="padding:5px 10px; font-size:11.5px;">+ IBAN</button>
         </div>
         ${[
           ['Bank of Africa', '••3291', 'Compte principal · 100 % du flux', 'ok', 'Rapproché'],
@@ -1389,9 +1389,9 @@ handlers['nav-reglements'] = () => {
       </div>
 
       <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="kb ghost" data-action="export-pdf" style="flex:1; justify-content:center; padding:10px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Export PDF</button>
-        <button class="kb ghost" data-action="export-csv" style="flex:1; justify-content:center; padding:10px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export CSV</button>
-        <button class="kb atlas" data-action="export-comptable" style="flex:1; justify-content:center; padding:10px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>Pack comptable</button>
+        <button data-activation=money class="kb ghost" data-action="export-pdf" style="flex:1; justify-content:center; padding:10px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Export PDF</button>
+        <button data-activation=money class="kb ghost" data-action="export-csv" style="flex:1; justify-content:center; padding:10px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export CSV</button>
+        <button data-activation=money class="kb atlas" data-action="export-comptable" style="flex:1; justify-content:center; padding:10px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>Pack comptable</button>
       </div>
     `,
   });
@@ -1600,7 +1600,7 @@ handlers['nav-conformite'] = () => {
           <div class="v">${T.score}</div>
           <div class="d">${T.scoreDesc}</div>
         </div>
-        <button class="kb" data-action="download-kit" style="background:var(--mint); color:var(--riad); padding:9px 14px; font-size:12.5px; align-self:center;">
+        <button data-activation=money class="kb" data-action="download-kit" style="background:var(--mint); color:var(--riad); padding:9px 14px; font-size:12.5px; align-self:center;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>${T.reportPdf}
         </button>
       </div>
@@ -1646,7 +1646,7 @@ handlers['nav-conformite'] = () => {
         <div class="sh-section" style="margin-bottom:12px;">
           <div class="sh-section-head" style="margin-bottom:10px;">
             <div><h4>${T.declarationsCalendar}</h4><div class="sub">${T.declarationsCalendarSub}</div></div>
-            <button class="kb ghost" data-action="cal-export" style="padding:6px 10px; font-size:11px;">.ics</button>
+            <button data-activation=money class="kb ghost" data-action="cal-export" style="padding:6px 10px; font-size:11px;">.ics</button>
           </div>
           ${[
             ['5 mai', 'Quittance TVA Q1 2026', 'DGI · télédéclaration', 'pend'],
@@ -1666,7 +1666,7 @@ handlers['nav-conformite'] = () => {
       <div class="sh-section" style="margin-bottom:12px;">
         <div class="sh-section-head" style="margin-bottom:10px;">
           <div><h4>${T.auditLog}</h4><div class="sub">${T.auditLogSub}</div></div>
-          <button class="kb ghost" data-action="audit-export" style="padding:6px 10px; font-size:11px;">${T.exportSignedCsv}</button>
+          <button data-activation=money class="kb ghost" data-action="audit-export" style="padding:6px 10px; font-size:11px;">${T.exportSignedCsv}</button>
         </div>
         ${audit.map(([t, ev, who, st]) => `
           <div style="display:grid; grid-template-columns:90px 1fr 1fr auto; gap:12px; align-items:center; padding:9px 0; border-top:1px solid var(--n-200); font-size:12.5px;">
@@ -1959,7 +1959,7 @@ handlers['nav-equipe'] = () => {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
               Message équipe
             </button>
-            <button class="kb primary" data-action="add-member" style="padding:7px 12px; font-size:12.5px;">
+            <button data-activation=write class="kb primary" data-action="add-member" style="padding:7px 12px; font-size:12.5px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
               Ajouter un membre
             </button>
@@ -2089,7 +2089,7 @@ handlers['nav-equipe'] = () => {
             <h4 style="margin:0; font-size:14.5px; letter-spacing:-0.01em;">Matrice de permissions</h4>
             <div style="font-size:11.5px; color:var(--n-500); margin-top:3px;">5 rôles · 6 capacités · modifiable par le propriétaire</div>
           </div>
-          <button class="kb ghost" data-action="edit-perms" style="padding:6px 11px; font-size:11.5px;">Modifier les rôles</button>
+          <button data-activation=write class="kb ghost" data-action="edit-perms" style="padding:6px 11px; font-size:11.5px;">Modifier les rôles</button>
         </div>
         <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
           ${PERMS.map(r => {
@@ -2212,7 +2212,7 @@ handlers['nav-equipe'] = () => {
           <div style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px;">
               <div class="eq-section-label">PIN Caisse</div>
-              <button type="button" data-action="eq-regen-pin" style="background: none; border: 0; padding: 4px 8px; margin: -4px -8px; color: var(--atlas); font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: var(--sans); border-radius: 5px;">
+              <button data-activation=write type="button" data-action="eq-regen-pin" style="background: none; border: 0; padding: 4px 8px; margin: -4px -8px; color: var(--atlas); font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: var(--sans); border-radius: 5px;">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.64A9 9 0 0020.49 15"/></svg>
                 Régénérer
               </button>
@@ -2239,7 +2239,7 @@ handlers['nav-equipe'] = () => {
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Annuler</button>
-        <button class="kb atlas" data-action="eq-submit-member" style="gap: 7px; padding: 9px 16px; font-weight: 600;">
+        <button data-activation=write class="kb atlas" data-action="eq-submit-member" style="gap: 7px; padding: 9px 16px; font-weight: 600;">
           Ajouter &amp; inviter
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
@@ -2324,7 +2324,7 @@ handlers['nav-equipe'] = () => {
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Annuler</button>
-        <button class="kb atlas" data-action="eq-send-broadcast">Envoyer à 8 appareils</button>
+        <button data-activation=write class="kb atlas" data-action="eq-send-broadcast">Envoyer à 8 appareils</button>
       `,
     });
     handlers['eq-send-broadcast'] = () => {
@@ -2384,7 +2384,7 @@ handlers['nav-payroll'] = () => {
       <div class="sh-section">
         <div class="sh-section-head">
           <div><h4>Planning hebdomadaire · 21 → 27 avril</h4><div class="sub">Glissez une cellule pour modifier</div></div>
-          <button class="kb ghost" data-action="edit-shifts" style="padding:8px 12px; font-size:12.5px;">Modifier</button>
+          <button data-activation=write class="kb ghost" data-action="edit-shifts" style="padding:8px 12px; font-size:12.5px;">Modifier</button>
         </div>
         <div class="sh-week">
           <div></div>
@@ -2409,7 +2409,7 @@ handlers['nav-payroll'] = () => {
           </div>
           <div class="sh-tip-cfg">
             <div><b>Pool ${v.name}</b><div class="m">60 % salle · 25 % bar · 15 % cuisine · pondéré aux heures travaillées</div></div>
-            <button class="kb ghost" data-action="edit-tip-rule">Modifier</button>
+            <button data-activation=write class="kb ghost" data-action="edit-tip-rule">Modifier</button>
           </div>
           ${[
             ['a', 'FK', 'Fatima', 'salle · 6h25', 35, 654],
@@ -2483,8 +2483,8 @@ handlers['nav-payroll'] = () => {
             </div>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-            <button class="kb ghost" data-action="generate-payslips" style="justify-content:center;">Générer 5 bulletins</button>
-            <button class="kb atlas" data-action="export-dgi" style="justify-content:center;">Export DGI · CSV</button>
+            <button data-activation=write class="kb ghost" data-action="generate-payslips" style="justify-content:center;">Générer 5 bulletins</button>
+            <button data-activation=money class="kb atlas" data-action="export-dgi" style="justify-content:center;">Export DGI · CSV</button>
           </div>
         </div>
 
@@ -2512,7 +2512,7 @@ handlers['nav-payroll'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Fermer</button>
-      <button class="kb primary" data-action="export-payroll">Exporter la paie du mois</button>
+      <button data-activation=money class="kb primary" data-action="export-payroll">Exporter la paie du mois</button>
     `,
   });
 };
@@ -2739,7 +2739,7 @@ handlers['nav-reservations'] = () => {
       <div class="sh-section">
         <div class="sh-section-head">
           <div><h4>${T.bookTitle(todayShort, bookings.length)}</h4><div class="sub">${T.bookSub}</div></div>
-          <button class="kb primary" data-action="add-reservation" style="padding:8px 12px; font-size:12.5px;">${T.newBtn}</button>
+          <button data-activation=write class="kb primary" data-action="add-reservation" style="padding:8px 12px; font-size:12.5px;">${T.newBtn}</button>
         </div>
         <table class="p-table" style="font-size:12.5px;">
           <thead><tr><th>${T.th[0]}</th><th>${T.th[1]}</th><th class="right">${T.th[2]}</th><th>${T.th[3]}</th><th>${T.th[4]}</th><th>${T.th[5]}</th></tr></thead>
@@ -2834,7 +2834,7 @@ handlers['nav-reservations'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>${T.close}</button>
-      <button class="kb primary" data-action="add-reservation">${T.addBtn}</button>
+      <button data-activation=write class="kb primary" data-action="add-reservation">${T.addBtn}</button>
     `,
   });
 };

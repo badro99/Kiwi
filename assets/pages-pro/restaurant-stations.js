@@ -225,7 +225,7 @@
 
     /* ── rail · category cards ───────────────────────────────────────────── */
     const renderRail = () => `
-      <button class="kw-cat-add" data-action="menu-cat-add">
+      <button data-activation=write class="kw-cat-add" data-action="menu-cat-add">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
         Ajouter une catégorie
       </button>
@@ -233,7 +233,7 @@
         const alerts = catAlerts(c.key);
         const total = catItems(c.key).length;
         return `
-          <button class="kw-cat-card ${c.key === activeCat ? 'on' : ''}" data-cat="${c.key}">
+          <button data-activation=write class="kw-cat-card ${c.key === activeCat ? 'on' : ''}" data-cat="${c.key}">
             <div class="body">
               <div class="nm">${c.label}</div>
               <div class="ct">${total} produit${total > 1 ? 's' : ''}</div>
@@ -256,7 +256,7 @@
           <div class="body">
             <div class="nm">${it.n} ${stockChip(is86 ? 'out' : it.st)}</div>
             <div class="desc">${it.d}</div>
-            <button class="view-opt" data-row-act="edit" data-id="${it.id}">
+            <button data-activation=write class="view-opt" data-row-act="edit" data-id="${it.id}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 8v4l3 2"/></svg>
               Voir les options
             </button>
@@ -282,7 +282,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4z"/></svg>
               </span>
             </h3>
-            <button class="add-prod" data-action="menu-add">
+            <button data-activation=write class="add-prod" data-action="menu-add">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
               Ajouter un produit
             </button>
@@ -323,7 +323,7 @@
             <h3>Groupes d'options</h3>
             <div class="sub">${OPTION_GROUPS.length} groupes · attachez-les à un produit depuis l'éditeur d'item.</div>
           </div>
-          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);">
+          <button data-activation=write class="kw-menu-action" data-action="menu-opt-add" style="background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
             Créer un groupe
           </button>
@@ -347,7 +347,7 @@
             </div>
             <div class="row-actions">
               ${s.custom
-                ? `<button class="kw-menu-action" data-st-delete-id="${s.id}" style="padding:6px 12px; font-size:11.5px;">Supprimer</button>`
+                ? `<button data-activation=write class="kw-menu-action" data-st-delete-id="${s.id}" style="padding:6px 12px; font-size:11.5px;">Supprimer</button>`
                 : `<span class="badge-sys">SYSTÈME</span>`}
               ${s.custom ? `<span class="badge-cust">CUSTOM</span>` : ''}
             </div>
@@ -361,7 +361,7 @@
             <h3>Stations de préparation</h3>
             <div class="sub">${STATIONS.length} stations actives · chaque produit est routé vers 1+ station${STATIONS.length > 1 ? 's' : ''}. Les tickets KDS apparaissent simultanément.</div>
           </div>
-          <button class="kw-menu-action" data-action="menu-station-create" style="background:var(--atlas); color:var(--paper); border-color:var(--atlas);">
+          <button data-activation=write class="kw-menu-action" data-action="menu-station-create" style="background:var(--atlas); color:var(--paper); border-color:var(--atlas);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
             Créer une station
           </button>
@@ -411,13 +411,13 @@
         </div>
 
         <div class="kw-menu-tabs" id="kw-menu-tabs">
-          <button class="kw-menu-tab ${activeTab === 'products' ? 'on' : ''}" data-tab="products">
+          <button data-activation=write class="kw-menu-tab ${activeTab === 'products' ? 'on' : ''}" data-tab="products">
             Produits <span class="ct">${tabCounts.products}</span>
           </button>
-          <button class="kw-menu-tab ${activeTab === 'options' ? 'on' : ''}" data-tab="options">
+          <button data-activation=write class="kw-menu-tab ${activeTab === 'options' ? 'on' : ''}" data-tab="options">
             Options <span class="ct">${tabCounts.options}</span>
           </button>
-          <button class="kw-menu-tab ${activeTab === 'stations' ? 'on' : ''}" data-tab="stations">
+          <button data-activation=write class="kw-menu-tab ${activeTab === 'stations' ? 'on' : ''}" data-tab="stations">
             Stations <span class="ct">${tabCounts.stations}</span>
           </button>
         </div>
@@ -431,7 +431,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
             Filtres
           </button>
-          <button class="kw-menu-action icon" title="Plus" data-action="menu-publish">
+          <button data-activation=write class="kw-menu-action icon" title="Plus" data-action="menu-publish">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
           </button>
         </div>
@@ -443,7 +443,7 @@
           <span style="font-family:var(--mono); font-size:11px; color:var(--n-500); letter-spacing:0.06em;">SYNC POS · 100 % · ROUTAGE STATIONS LIVE</span>
           <div style="display:flex; gap:8px;">
             <button class="kb ghost" data-dismiss>Fermer</button>
-            <button class="kb primary" data-action="menu-publish">Publier la carte</button>
+            <button data-activation=write class="kb primary" data-action="menu-publish">Publier la carte</button>
           </div>
         </div>
       `,
@@ -669,8 +669,8 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Annuler</button>
-        <button class="kb danger" data-st-delete>Supprimer</button>
-        <button class="kb atlas" data-st-save>Enregistrer</button>
+        <button data-activation=write class="kb danger" data-st-delete>Supprimer</button>
+        <button data-activation=write class="kb atlas" data-st-save>Enregistrer</button>
       `,
     });
     wireDismiss(editM);
@@ -729,7 +729,7 @@
           <div class="nm">${s.name}<div class="m">${stationKindLabel(s.kind)}${s.custom ? ' · personnalisée' : ''}</div></div>
           <span class="ct">${stats.items} item${stats.items > 1 ? 's' : ''} · ${stats.sold} vendus</span>
           ${s.custom
-            ? `<button class="kb ghost xs" data-st-delete-id="${s.id}">Supprimer</button>`
+            ? `<button data-activation=write class="kb ghost xs" data-st-delete-id="${s.id}">Supprimer</button>`
             : `<span class="chip neutral mono" style="font-size:11px; padding:3px 8px;">SYSTÈME</span>`}
         </div>`;
     }).join('');
@@ -740,7 +740,7 @@
       desc: 'Chaque item de la carte est routé vers 1 ou plusieurs stations. Les stations système ne peuvent pas être supprimées.',
       width: 620,
       body: `
-        <button class="kb atlas" style="width:100%; justify-content:center; margin-bottom:14px;" data-st-create>+ Créer une station personnalisée</button>
+        <button data-activation=write class="kb atlas" style="width:100%; justify-content:center; margin-bottom:14px;" data-st-create>+ Créer une station personnalisée</button>
         <div id="st-mgr-list" style="background:var(--surface); border:1px solid var(--n-200); border-radius:12px; padding:4px 16px;">${renderList()}</div>
         <div style="margin-top:12px; padding:12px 14px; background:var(--paper-soft); border-radius:10px; font-size:12.5px; color:var(--n-600); line-height:1.5;">
           <b>Astuce :</b> ajoutez une station "Pizza four" ou "Bar à jus" si votre établissement a une zone dédiée. Le KDS basculera automatiquement vers la nouvelle station.
@@ -821,7 +821,7 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Annuler</button>
-        <button class="kb atlas" data-st-create-go>Créer la station</button>
+        <button data-activation=write class="kb atlas" data-st-create-go>Créer la station</button>
       `,
     });
     wireDismiss(m);
@@ -927,7 +927,7 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Annuler</button>
-        <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'}); window.Kiwi.confetti();">Créer & publier</button>
+        <button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'}); window.Kiwi.confetti();">Créer & publier</button>
       `,
     });
     wireDismiss(m);
@@ -951,7 +951,7 @@
         <div class="p-card" style="margin:0 0 10px;"><div class="head"><h4 style="font-size:14px;">Méchoui</h4><span class="chip pend">soir 19h–23h</span></div><div style="font-size:12.5px; color:var(--n-500);">Service du soir uniquement.</div></div>
         <div class="p-card" style="margin:0;"><div class="head"><h4 style="font-size:14px;">Petit-déj.</h4><span class="chip neutral">8h–11h tous les jours</span></div><div style="font-size:12.5px; color:var(--n-500);">Msemen, harira, café, thé.</div></div>
       `,
-      foot: `<button class="kb ghost" data-dismiss>Fermer</button><button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Programmation enregistrée',{type:'success'})">+ Ajouter une plage</button>`,
+      foot: `<button class="kb ghost" data-dismiss>Fermer</button><button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Programmation enregistrée',{type:'success'})">+ Ajouter une plage</button>`,
     });
     wireDismiss(m);
   };
@@ -973,7 +973,7 @@
           </ul>
         </div>
       `,
-      foot: `<button class="kb ghost" data-dismiss>Garder en brouillon</button><button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée',{type:'success',desc:'Caisse et QR menu à jour.'}); window.Kiwi.confetti();">Publier maintenant</button>`,
+      foot: `<button class="kb ghost" data-dismiss>Garder en brouillon</button><button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée',{type:'success',desc:'Caisse et QR menu à jour.'}); window.Kiwi.confetti();">Publier maintenant</button>`,
     });
     wireDismiss(m);
   };
@@ -1334,7 +1334,7 @@
     const stationBar = () => {
       const btn = (id, dot, label) => {
         const count = orders.filter((o) => o.status !== 'ready' && matchesStation(o, id)).length;
-        return `<button class="kit-station ${activeStation === id ? 'on' : ''}" data-kit-st="${id}"><i style="background:${dot};"></i><span>${esc(label)}</span><span class="kit-station-ct">${count}</span></button>`;
+        return `<button data-activation=write class="kit-station ${activeStation === id ? 'on' : ''}" data-kit-st="${id}"><i style="background:${dot};"></i><span>${esc(label)}</span><span class="kit-station-ct">${count}</span></button>`;
       };
       return btn('all', 'var(--ink)', T.allStations) + STATIONS.map((s) => btn(s.id, s.raw, s.name)).join('');
     };

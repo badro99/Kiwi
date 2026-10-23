@@ -113,7 +113,7 @@
         <input name="amount" inputmode="decimal" autocomplete="off" value="${esc(String((+d.dueCents || 0) / 100).replace('.', ','))}"></label>
       <p class="kdc-err" role="alert" hidden></p>
       <div class="kdc-actions"><button type="button" class="kdc-cancel">Annuler</button>
-        <button type="submit" class="kdc-ok">Enregistrer</button></div>`;
+        <button data-activation=write type="submit" class="kdc-ok">Enregistrer</button></div>`;
     card.appendChild(form);
     const go = card.querySelector('.kdc-go');
     if (go) go.hidden = true;

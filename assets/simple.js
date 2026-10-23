@@ -132,13 +132,13 @@
         </div>
       </div>
 
-      <button class="simple-btn atlas" data-simple-action="new-sale">
+      <button data-activation=money class="simple-btn atlas" data-simple-action="new-sale">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
         Encaisser un paiement
       </button>
 
       <div class="mini-tiles">
-        <button class="mini-tile" data-simple-action="refund">
+        <button data-activation=money class="mini-tile" data-simple-action="refund">
           <div class="mini-ic">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4"/></svg>
           </div>
@@ -270,7 +270,7 @@
           </div>`}
         </div>
 
-        <button class="simple-btn outline" data-simple-action="share-comptable" style="margin-top: 22px;">
+        <button data-activation=write class="simple-btn outline" data-simple-action="share-comptable" style="margin-top: 22px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"/></svg>
           Envoyer le rapport au comptable
         </button>
@@ -326,15 +326,15 @@
   function renderTabBar() {
     return `
       <nav class="simple-tabs">
-        <button class="simple-tab ${currentTab === 'lyoum' ? 'active' : ''}" data-simple-tab="lyoum">
+        <button data-activation=write class="simple-tab ${currentTab === 'lyoum' ? 'active' : ''}" data-simple-tab="lyoum">
           ${mi(MI_TODAY, 26)}
           <span class="label">Aujourd'hui</span>
         </button>
-        <button class="simple-tab ${currentTab === 'flousi' ? 'active' : ''}" data-simple-tab="flousi">
+        <button data-activation=write class="simple-tab ${currentTab === 'flousi' ? 'active' : ''}" data-simple-tab="flousi">
           ${mi(MI_WALLET, 26)}
           <span class="label">Mon argent</span>
         </button>
-        <button class="simple-tab ${currentTab === '3awn' ? 'active' : ''}" data-simple-tab="3awn">
+        <button data-activation=write class="simple-tab ${currentTab === '3awn' ? 'active' : ''}" data-simple-tab="3awn">
           ${mi(MI_HELP, 26)}
           <span class="label">Aide</span>
         </button>

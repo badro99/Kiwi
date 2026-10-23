@@ -265,7 +265,7 @@
       <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Z"/></svg>
       Ouvrir la caisse
     </a>
-    <a class="kiwi-lock-switch" href="/auth/logout" data-i18n="dash.lock.switch" aria-label="Se déconnecter et changer de compte" data-i18n-attr="aria-label:dash.lock.switchAria">
+    <a data-activation=write class="kiwi-lock-switch" href="/auth/logout" data-i18n="dash.lock.switch" aria-label="Se déconnecter et changer de compte" data-i18n-attr="aria-label:dash.lock.switchAria">
       <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
       Changer de compte
     </a>
@@ -305,7 +305,7 @@
     </div>
 
     <nav>
-      <a href="#" class="active" data-nav="accueil">
+      <a data-activation=write href="#" class="active" data-nav="accueil">
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z"/></svg>
         <span data-i18n="dash.sidebar.home">Accueil</span>
       </a>
@@ -397,7 +397,7 @@
         <span class="merchant-chevron" aria-hidden="true"></span>
       </div>
     </div>
-    <!-- Merchant escape hatch: plain <a> so it works even if the app JS
+    <!-- Merchant escape hatch: plain <a data-activation=write> so it works even if the app JS
          breaks or the server has revoked the session. Server-side /auth/logout
          clears the kiwi_sess cookie and lands the user on the login screen. -->
     <a class="merchant-logout" href="/auth/logout" data-i18n="dash.sidebar.logout">Se déconnecter</a>
@@ -467,7 +467,7 @@
           <h1 class="greeting"><span class="greet-text" data-i18n="dash.hello">Bonjour Rachid,</span> <em data-i18n="dash.day">bonne journée.</em></h1>
         </div>
         <div class="quick-acts">
-          <button class="btn-slim" data-action="export">
+          <button data-activation=money class="btn-slim" data-action="export">
             <svg viewBox="0 -960 960 960" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
             <span data-i18n="dash.export">Exporter</span>
           </button>
@@ -602,7 +602,7 @@
             </div>
             <form class="hai-input" onsubmit="event.preventDefault();">
               <input type="text" data-hai-input data-i18n-attr="placeholder:dash.hero.ai.input.placeholder" placeholder="Posez votre question sur votre restaurant..." />
-              <button type="submit" class="hai-send" aria-label="Envoyer" data-i18n-attr="aria-label:dash.aria.send">
+              <button data-activation=write type="submit" class="hai-send" aria-label="Envoyer" data-i18n-attr="aria-label:dash.aria.send">
                 <svg viewBox="0 -960 960 960" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg>
               </button>
             </form>
@@ -814,7 +814,7 @@
               <span style="color: var(--n-500);" data-i18n="dash.stock.total">Total commande suggérée</span>
               <b style="color: var(--ink); font-family: var(--mono); font-weight: 600; font-size: 14px;">3 324 MAD</b>
             </div>
-            <button data-action="stock-reorder" class="stock-reorder-cta" style="margin-top: 12px; width: 100%; color: var(--paper); border: 0; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-family: var(--sans); transition: background 150ms;">
+            <button data-activation=write data-action="stock-reorder" class="stock-reorder-cta" style="margin-top: 12px; width: 100%; color: var(--paper); border: 0; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-family: var(--sans); transition: background 150ms;">
               <svg viewBox="0 -960 960 960" fill="currentColor" width="13" height="13" aria-hidden="true"><path d="M223.5-103.5Q200-127 200-160t23.5-56.5Q247-240 280-240t56.5 23.5Q360-193 360-160t-23.5 56.5Q313-80 280-80t-56.5-23.5Zm400 0Q600-127 600-160t23.5-56.5Q647-240 680-240t56.5 23.5Q760-193 760-160t-23.5 56.5Q713-80 680-80t-56.5-23.5ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z"/></svg>
               <span data-i18n="dash.stock.orderAll">Commander en 1 clic chez tous les fournisseurs</span>
             </button>
@@ -925,7 +925,7 @@
           </div>
           <div class="bench-comp" data-bench-comp></div>
           <div style="margin-top: 14px; padding: 12px 14px; background: var(--paper-soft); border-radius: 10px; font-size: 12.5px; color: var(--n-700); line-height: 1.45;">
-            <span data-i18n="dash.bench.summary">Vous surperformez <b>4 cafés sur 5</b> sur Casablanca. Le seul levier faible : le <b>pourboire</b>.</span> <a href="#" data-action="tip-prompt" style="color: var(--atlas); font-weight: 500;" data-i18n="dash.bench.autoPrompt">Activer prompt auto →</a>
+            <span data-i18n="dash.bench.summary">Vous surperformez <b>4 cafés sur 5</b> sur Casablanca. Le seul levier faible : le <b>pourboire</b>.</span> <a data-activation=write href="#" data-action="tip-prompt" style="color: var(--atlas); font-weight: 500;" data-i18n="dash.bench.autoPrompt">Activer prompt auto →</a>
           </div>
         </div>
 
@@ -979,7 +979,7 @@
               <div class="fs-ai-insights" data-fs-ai-insights></div>
               <div class="fs-ai-chat">
                 <input type="text" class="fs-ai-chat-input" placeholder="Demandez à Kiwi AI · « Pourquoi le spa baisse ? »"/>
-                <button class="fs-ai-chat-send" aria-label="Envoyer" data-i18n-attr="aria-label:dash.aria.send">→</button>
+                <button data-activation=write class="fs-ai-chat-send" aria-label="Envoyer" data-i18n-attr="aria-label:dash.aria.send">→</button>
               </div>
             </div>
           </div>

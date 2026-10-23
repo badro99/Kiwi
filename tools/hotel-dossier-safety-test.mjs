@@ -89,7 +89,7 @@ console.log('■ Hôtel · dossier partagé, statuts et charges chambre');
     'la non-présentation aussi');
   ok(/data-action="hx-stay-undo-checkin"/.test(UI) && /data-action="hx-stay-noshow"/.test(UI),
     'les deux boutons sont réellement dessinés dans le journal de réception');
-  ok(/b\.status === 'checked_in' \? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin"/.test(UI),
+  ok(/b\.status === 'checked_in' \? `<button (?:data-activation=\w+ )?class="hx-btn ghost" data-action="hx-stay-undo-checkin"/.test(UI),
     'annuler l\'arrivée n\'apparaît que sur un séjour effectivement enregistré comme arrivé');
   ok(/\(b\.status === 'confirmed' \|\| b\.status === 'requested'\) && b\.hotel\.checkIn <= today \? `<button class="hx-btn ghost" data-action="hx-stay-noshow"/.test(UI),
     'la non-présentation n\'apparaît que sur un séjour attendu');

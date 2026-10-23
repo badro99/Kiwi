@@ -606,8 +606,8 @@
       '<div id="kbl-choose">' +
         '<h3>' + (n > 1 ? n + ' étiquettes prêtes' : 'Étiquette prête') + '</h3>' +
         '<p>Comment souhaitez-vous l’obtenir ?</p>' +
-        '<button class="kbl-cbtn print" type="button" data-k="print">Imprimer</button>' +
-        '<button class="kbl-cbtn pdf" type="button" data-k="pdf">Enregistrer en PDF</button>' +
+        '<button data-activation=write class="kbl-cbtn print" type="button" data-k="print">Imprimer</button>' +
+        '<button data-activation=write class="kbl-cbtn pdf" type="button" data-k="pdf">Enregistrer en PDF</button>' +
         '<button class="kbl-cbtn cancel" type="button" data-k="cancel">Annuler</button>' +
         '<p class="kbl-chint">Pas d’imprimante ? Enregistrez en PDF pour imprimer plus tard.</p>' +
       '</div>';

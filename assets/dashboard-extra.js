@@ -360,7 +360,7 @@
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase;">${str.productDetail}</div>
-          <button class="kb ghost xs" data-action="margin-export">${str.exportCsv}</button>
+          <button data-activation=money class="kb ghost xs" data-action="margin-export">${str.exportCsv}</button>
         </div>
         <table class="p-table">
           <thead><tr>

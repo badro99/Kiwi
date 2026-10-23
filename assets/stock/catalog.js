@@ -93,7 +93,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
               <div class="v">${c.defaultPrice != null ? `${esc(fmtMad(c.defaultPrice))} / ${esc(sub?.unit || it.unit || 'unité')}` : '·'}</div>
             </div>`).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">${esc(t('mItNoSuppliers'))}</div>`}
         </div>
-        <button class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
+        <button data-activation=write class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
           ${svg('plus', 12)}<span>${esc(t('mItAddBackupSup'))}</span>
         </button>
       </div>
@@ -186,7 +186,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
           <div>${esc(t('addBackupSupHelp'))}</div>
         </div>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()]?.btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-backup-save>${esc(t('addBackupSupConfirm'))}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()]?.btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" data-stock-backup-save>${esc(t('addBackupSupConfirm'))}</button>`,
     });
 
     const scope = m?.el || topBackdrop();
@@ -322,7 +322,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
         <div class="st-mb-field"><label class="st-mb-label">Référence / note</label><input class="st-mb-input" data-stock-move-note placeholder="Motif, document ou responsable" /></div>
         <div class="st-mb-field" data-stock-move-dlc-wrap><label class="st-mb-label">DLC / DDM (optionnel)</label><input class="st-mb-input mono" data-stock-move-dlc type="date" /></div>
         <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button data-activation=write class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
     });
     const scope = m?.el || topBackdrop();
     const reason = scope?.querySelector('[data-stock-move-reason]');
@@ -421,10 +421,10 @@ window.KiwiStockInternal.install('catalog', (S) => {
       foot: `
         <button class="st-btn" data-stock-mark-86 data-item-name="${esc(it.name)}">${esc(t('mItMark'))}</button>
         ${stShowReal() ? `<button class="st-btn" data-stock-detail-move data-item-id="${esc(it.id)}">${svg('swap', 12)}<span>Mouvement</span></button>` : ''}
-        <button class="st-btn" data-stock-detail-edit data-item-id="${esc(it.id)}">${svg('edit', 12)}<span>${esc(t('mItEdit'))}</span></button>
-        <button class="st-btn" data-stock-detail-delete data-item-id="${esc(it.id)}" style="color:#9a1f1f; border-color:rgba(154,31,31,0.35);">${esc(t('mItDelete'))}</button>
+        <button data-activation=write class="st-btn" data-stock-detail-edit data-item-id="${esc(it.id)}">${svg('edit', 12)}<span>${esc(t('mItEdit'))}</span></button>
+        <button data-activation=write class="st-btn" data-stock-detail-delete data-item-id="${esc(it.id)}" style="color:#9a1f1f; border-color:rgba(154,31,31,0.35);">${esc(t('mItDelete'))}</button>
         <button class="st-btn" data-dismiss-modal>${esc(t('mItClose'))}</button>
-        <button class="st-btn primary" data-stock-reorder data-item-id="${esc(it.id)}">${esc(t('mItOrder'))}</button>
+        <button data-activation=write class="st-btn primary" data-stock-reorder data-item-id="${esc(it.id)}">${esc(t('mItOrder'))}</button>
       `,
     });
     const scope = m?.el || topBackdrop();
@@ -865,7 +865,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
                 </select>
                 <div class="st-if-newcat" data-stock-newcat-wrap hidden>
                   <input class="st-if-in" type="text" placeholder="${esc(t('addCatName'))}" data-stock-newcat-name aria-describedby="st-if-e-newcat" />
-                  <button class="st-if-btn" type="button" data-stock-newcat-confirm>${esc(t('addCatInline'))}</button>
+                  <button data-activation=write class="st-if-btn" type="button" data-stock-newcat-confirm>${esc(t('addCatInline'))}</button>
                 </div>
                 <span class="st-if-err" id="st-if-e-newcat" data-st-if-err="newcat" hidden>${esc(t('itemNewCatErr'))}</span>
               </div>
@@ -897,7 +897,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
                 <span class="st-if-l">${esc(t('addItemReorder'))}${opt}</span>
                 ${num('reorder', stItemVal(existing?.reorderLevel))}
                 <span class="st-if-hint" data-st-if-reorder-hint></span>
-                ${reorderSugg ? `<span class="st-if-hint" data-st-if-reorder-measured>${esc(t('itemReorderMeasured', fmtUnit(Math.round(reorderSugg.perDay * 10) / 10, existing.unit), stItemVal(reorderSugg.gap), reorderSugg.deliveries, fmtUnit(reorderSugg.qty, existing.unit)))}</span><button type="button" class="st-if-use" data-st-if-reorder-use="${esc(stItemVal(reorderSugg.qty))}">${esc(t('itemReorderUse', fmtUnit(reorderSugg.qty, existing.unit)))}</button>` : ''}
+                ${reorderSugg ? `<span class="st-if-hint" data-st-if-reorder-measured>${esc(t('itemReorderMeasured', fmtUnit(Math.round(reorderSugg.perDay * 10) / 10, existing.unit), stItemVal(reorderSugg.gap), reorderSugg.deliveries, fmtUnit(reorderSugg.qty, existing.unit)))}</span><button data-activation=write type="button" class="st-if-use" data-st-if-reorder-use="${esc(stItemVal(reorderSugg.qty))}">${esc(t('itemReorderUse', fmtUnit(reorderSugg.qty, existing.unit)))}</button>` : ''}
               </label>
             </div>
           </section>
@@ -911,7 +911,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
           ${nutrientSection(existing)}
         </div>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-add-confirm>${esc(cta)}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" data-stock-add-confirm>${esc(cta)}</button>`,
     });
     const scope = m?.el || topBackdrop();
     scope?.classList.add('st-if-modal');
@@ -1083,7 +1083,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
       title: t('deleteItemTitle'),
       width: 480,
       body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(t('deleteItemBody', it.name) + stDemoNote())}</p>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-delete-confirm>${esc(t('deleteItemBtn'))}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-delete-confirm>${esc(t('deleteItemBtn'))}</button>`,
     });
     const scope = m?.el || topBackdrop();
     wireDismiss(scope);
@@ -1117,7 +1117,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
           <input class="st-mb-input" type="text" placeholder="Ex. Surgelés" data-stock-cat-name />
         </div>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-cat-confirm>${esc(t('addCatBtn'))}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" data-stock-cat-confirm>${esc(t('addCatBtn'))}</button>`,
     });
     const scope = m?.el || topBackdrop();
     wireDismiss(scope);
@@ -1164,7 +1164,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
             ? `<select class="st-mb-input" data-stock-cat-replacement>${alternatives.map(c => `<option value="${esc(c.id)}"${c.id === replacement ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
             : `<div class="st-notice warn">${esc(t('deleteCatBlocked'))}</div>`}
         </div>` : ''}
-        <button class="st-btn" type="button" data-stock-cat-delete-confirm ${assigned.length && !alternatives.length ? 'disabled' : ''} style="color:#9a1f1f;border-color:rgba(154,31,31,.35);width:100%;">${esc(t('deleteCatBtn'))}</button>
+        <button data-activation=write class="st-btn" type="button" data-stock-cat-delete-confirm ${assigned.length && !alternatives.length ? 'disabled' : ''} style="color:#9a1f1f;border-color:rgba(154,31,31,.35);width:100%;">${esc(t('deleteCatBtn'))}</button>
       `,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
     });

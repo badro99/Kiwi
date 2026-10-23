@@ -33,11 +33,11 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
       ${paid > 0 ? `<div class="hx-fol-meta"><span>${tx('Dont déjà réglé')}</span><span style="font-family:var(--mono);">${MAD(paid)}</span></div>` : ''}
       ${commission}
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;">
-        <button class="hx-btn ghost" data-action="hx-add-charge" data-arg="${room}">${tx('+ Ajouter une charge')}</button>
+        <button data-activation=write class="hx-btn ghost" data-action="hx-add-charge" data-arg="${room}">${tx('+ Ajouter une charge')}</button>
         ${isCustomHotel() && total - paid > 0
           ? `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|cash">${tx('Espèces · {amount}', { amount: MAD(total - paid) })}</button>
              <button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|card">${tx('Carte · {amount}', { amount: MAD(total - paid) })}</button>`
-          : `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>`}
+          : `<button data-activation=money class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>`}
       </div>`;
   }
 
@@ -112,7 +112,7 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
         <div class="hx-kpi"><div class="l">Déclaration</div><div class="v" style="font-size:15px;">avant le 10 juil.</div><div class="d up">mai : 24 600 MAD déclarés ✓</div></div>
       </div>
       <div class="hx-h"><span class="t">Notes clients en cours</span><span class="s">un séjour = une note · le restaurant et le hammam postent dessus en direct</span>
-        <button class="hx-btn ghost" data-action="hx-taxe-export">Exporter le registre taxe (CSV)</button>
+        <button data-activation=money class="hx-btn ghost" data-action="hx-taxe-export">Exporter le registre taxe (CSV)</button>
       </div>
       <div class="block" style="padding:6px 14px;">${rows}</div>
       <div class="block" style="padding:16px;background:var(--mint-soft);border-color:var(--atlas);">
@@ -134,7 +134,7 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
   }
 
   function cuDossierRooms(data) {
-    return `<div class="hx-dossier-rooms">${(data.source.rooms || []).map(r=>`<article><b>${esc(r.name || tx('Séjour'))}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(cuDay(r.checkIn))}${hxTo()}${esc(cuDay(r.checkOut))}${r.dayUse?' · '+tx('Day-use')+' '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">${tx('Modifier cette chambre')}</button></article>`).join('')}</div>`;
+    return `<div class="hx-dossier-rooms">${(data.source.rooms || []).map(r=>`<article><b>${esc(r.name || tx('Séjour'))}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(cuDay(r.checkIn))}${hxTo()}${esc(cuDay(r.checkOut))}${r.dayUse?' · '+tx('Day-use')+' '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button data-activation=write type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">${tx('Modifier cette chambre')}</button></article>`).join('')}</div>`;
   }
 
   function cuBillingBlocked(code) {
@@ -163,10 +163,10 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
       ${data.stale?`<div class="hx-billing-notice" role="alert"><b>${tx('Le dossier a changé depuis la dernière préfacture.')}</b><p>${tx('Le nouveau prix est affiché. Les répartitions et suppléments de l’ancien brouillon ne seront pas repris automatiquement.')}</p><button type="button" class="hx-btn ghost" data-hx-reset-draft>${tx('Repartir des séjours actuels et remplacer le brouillon')}</button></div>`:''}
       ${savedWarn}
       <form data-hx-billing-form><fieldset ${data.stale?'disabled':''}><legend>${tx('Prestations et répartition')}</legend><div data-hx-billing-lines>${draft.lines.map(l=>cuBillingLine(l,data.source.payers)).join('')}</div>
-        <details class="hx-commercial-stay"><summary>${tx('Ajouter un supplément proposé')}</summary><div class="hx-room-form hx-type-form"><label><span>${tx('Date de prestation')}</span><input type="date" name="extraDate" value="${esc(data.source.rooms[0]?.checkIn || '')}"></label><label><span>${tx('Libellé')}</span><input name="extraLabel" maxlength="160" placeholder="${tx('Repas, parking, service…')}"></label><label><span>${tx('Quantité')}</span><input name="extraQuantity" type="number" min="1" max="10000" value="1"></label><label><span>${tx('Prix unitaire proposé · MAD')}</span><input name="extraPrice" inputmode="decimal" dir="ltr" placeholder="0,00"></label></div><button class="hx-btn ghost" type="button" data-hx-add-extra>${tx('Ajouter au brouillon')}</button></details>
+        <details class="hx-commercial-stay"><summary>${tx('Ajouter un supplément proposé')}</summary><div class="hx-room-form hx-type-form"><label><span>${tx('Date de prestation')}</span><input type="date" name="extraDate" value="${esc(data.source.rooms[0]?.checkIn || '')}"></label><label><span>${tx('Libellé')}</span><input name="extraLabel" maxlength="160" placeholder="${tx('Repas, parking, service…')}"></label><label><span>${tx('Quantité')}</span><input name="extraQuantity" type="number" min="1" max="10000" value="1"></label><label><span>${tx('Prix unitaire proposé · MAD')}</span><input name="extraPrice" inputmode="decimal" dir="ltr" placeholder="0,00"></label></div><button data-activation=write class="hx-btn ghost" type="button" data-hx-add-extra>${tx('Ajouter au brouillon')}</button></details>
         <label class="hx-billing-note"><span>${tx('Observations de préfacturation')}</span><textarea name="billingNote" maxlength="1000" rows="2">${esc(draft.note || '')}</textarea></label>
         <div class="hx-billing-summary" data-hx-billing-summary>${draft.payers.map(p=>`<span>${esc(p.name)} <b>${ltr(cuDraftMoney(p.amountCents) + ' MAD')}</b></span>`).join('')}</div>
-        <p role="status" data-hx-billing-error></p><div class="hx-room-form-actions"><button type="button" class="hx-btn ghost" data-hx-print-draft ${!saved || data.stale?'disabled':''}>${tx('Imprimer la version enregistrée')}</button><button type="submit" class="hx-btn atlas">${tx('Enregistrer la préfacture')}</button></div></fieldset></form></section>`;
+        <p role="status" data-hx-billing-error></p><div class="hx-room-form-actions"><button data-activation=write type="button" class="hx-btn ghost" data-hx-print-draft ${!saved || data.stale?'disabled':''}>${tx('Imprimer la version enregistrée')}</button><button data-activation=write type="submit" class="hx-btn atlas">${tx('Enregistrer la préfacture')}</button></div></fieldset></form></section>`;
   }
 
   function cuDraftInput(form, extras) {

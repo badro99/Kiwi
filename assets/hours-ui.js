@@ -247,7 +247,7 @@
       title: L.title, desc: esc(opts.title || '') || L.sub, width: 700,
       body: '<div class="kh-wrap" id="kh-body"></div>',
       foot: '<button class="kb ghost" id="kh-cancel">' + esc(L.cancel) + '</button>' +
-            '<button class="kb primary" id="kh-save">' + esc(L.save) + '</button>',
+            '<button data-activation=write class="kb primary" id="kh-save">' + esc(L.save) + '</button>',
     });
     var body = m.el.querySelector('#kh-body');
 
@@ -278,7 +278,7 @@
           h += '</span>';
         });
         if (day.periods.length < 2) {
-          h += '<button class="kh-add" data-act="add">' + esc(L.addPeriod) + '</button>';
+          h += '<button data-activation=write class="kh-add" data-act="add">' + esc(L.addPeriod) + '</button>';
         }
         h += '<button class="kh-add" data-act="copy">' + esc(L.copy) + '</button>';
         h += '</div>';
@@ -327,7 +327,7 @@
       h += (doc.exceptions || []).length
         ? doc.exceptions.slice().sort(function (a, b) { return a.from < b.from ? -1 : 1; }).map(exRow).join('')
         : '<div class="kh-empty">' + esc(L.exNone) + '</div>';
-      h += '<button class="kh-chip" data-act="ex-add" style="margin-top:4px;">' + esc(L.exAdd) + '</button>';
+      h += '<button data-activation=write class="kh-chip" data-act="ex-add" style="margin-top:4px;">' + esc(L.exAdd) + '</button>';
       h += '<div class="kh-note">' + esc(L.exReturn) + '</div>';
       h += '<div class="kh-err" id="kh-err"></div>';
       body.innerHTML = h;

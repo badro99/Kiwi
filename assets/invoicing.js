@@ -808,7 +808,7 @@
     const t = T(), parts = [];
     const legacy = legacyDocs();
     if (legacy.length) {
-      parts.push(`<div class="inv-banner" data-inv-legacy><div class="inv-banner-copy"><strong>${esc(legacy.length === 1 ? t.legacyOne : tpl(t.legacyBanner, {n: legacy.length}))}</strong><span>${esc(t.legacyHint)}</span></div><button class="inv-btn small primary" type="button" data-inv-act="import-legacy">${esc(t.legacyImport)}</button></div>`);
+      parts.push(`<div class="inv-banner" data-inv-legacy><div class="inv-banner-copy"><strong>${esc(legacy.length === 1 ? t.legacyOne : tpl(t.legacyBanner, {n: legacy.length}))}</strong><span>${esc(t.legacyHint)}</span></div><button data-activation=write class="inv-btn small primary" type="button" data-inv-act="import-legacy">${esc(t.legacyImport)}</button></div>`);
     }
     if (authBlocked) parts.push(`<div class="inv-banner warn" role="status" data-inv-auth>${esc(t.authError)}</div>`);
     else if (offline) parts.push(`<div class="inv-banner warn" role="status" data-inv-offline>${esc(t.offline)}</div>`);
@@ -891,7 +891,7 @@
 
   function renderList() {
     const t = T();
-    overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button class="inv-btn" type="button" data-inv-act="export">${ICON.export}${esc(t.export)}</button><button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}<span data-new-label>${esc(newLabel())}</span></button></div></div>
+    overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button data-activation=money class="inv-btn" type="button" data-inv-act="export">${ICON.export}${esc(t.export)}</button><button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}<span data-new-label>${esc(newLabel())}</span></button></div></div>
       <div data-inv-notices></div>
       <div class="inv-stats" data-inv-stats></div>
       <section class="inv-register"><div class="inv-tabs" role="tablist" data-lens-demo>${tabsHtml()}</div><div class="inv-register-head"><div class="inv-filters" data-inv-filters></div><input class="inv-search" type="search" value="${esc(query)}" data-inv-search placeholder="${esc(t.search)}" aria-label="${esc(t.search)}"></div><div data-inv-table></div></section>
@@ -1006,7 +1006,7 @@
                <div class="inv-field" data-due-wrap><label for="inv-f-due">${esc(t.due)}</label><input id="inv-f-due" data-f="due" type="date" value="${esc(st.due)}"></div>`}
           ${isQuote ? '' : `<div class="inv-field"><label for="inv-f-method">${esc(t.method)}</label><select id="inv-f-method" data-f="method"><option value=""></option>${METHODS.map(m => `<option value="${m}"${st.method === m ? ' selected' : ''}>${esc(t[m])}</option>`).join('')}</select></div>`}
         </div></section>
-        <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.lines)}</h4><div data-inv-lines></div><button class="inv-add-line" type="button" data-inv-act="add-line">${esc(t.addLine)}</button></section>
+        <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.lines)}</h4><div data-inv-lines></div><button data-activation=write class="inv-add-line" type="button" data-inv-act="add-line">${esc(t.addLine)}</button></section>
         <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.noteBlock)}</h4><div class="inv-fields">
           <div class="inv-field wide"><label for="inv-f-note">${esc(t.note)}</label><textarea id="inv-f-note" data-f="note" placeholder="${esc(t.notePh)}">${esc(st.note)}</textarea></div>
           <div class="inv-field wide" data-exempt-wrap hidden><label for="inv-f-exempt">${esc(t.exemptionMention)}</label><input id="inv-f-exempt" data-f="exempt" value="${esc(st.exempt)}" placeholder="${esc(t.exemptionPh)}"><p class="inv-field-msg warn">${esc(t.exemptionNeed)}</p></div>
@@ -1014,7 +1014,7 @@
       </div><aside class="inv-summary-card"><div class="inv-summary-brand"><div class="inv-summary-logo">${renderSellerLogo(seller, 28)}</div><span class="inv-summary-no">${esc(cmp.number || t.draftNo)}</span></div>
         <div class="inv-summary-body"><div class="inv-summary-row"><span>${esc(t.totalHT)}</span><strong data-sum="ht">0,00 MAD</strong></div><div data-sum-rates></div><div class="inv-summary-row total"><span>${esc(t.totalTTC)}</span><strong data-sum="ttc">0,00 MAD</strong></div></div>
         <p class="inv-assurance">${esc(t.previewNote)}</p></aside></div>
-      <div class="inv-form-actions"><button class="inv-btn" type="button" data-inv-act="save-draft">${esc(cmp.id && cmp.status !== 'draft' ? t.save : t.saveDraft)}</button>${showIssue ? `<button class="inv-btn primary" type="button" data-inv-act="issue-composer">${ICON.check}${esc(issueLabel)}</button>` : ''}</div>`;
+      <div class="inv-form-actions"><button data-activation=write class="inv-btn" type="button" data-inv-act="save-draft">${esc(cmp.id && cmp.status !== 'draft' ? t.save : t.saveDraft)}</button>${showIssue ? `<button class="inv-btn primary" type="button" data-inv-act="issue-composer">${ICON.check}${esc(issueLabel)}</button>` : ''}</div>`;
     paintLines(st.lines);
     if (restored) toast(t.restored);
     show('compose'); updateComposer(); checkIce();
@@ -1201,7 +1201,7 @@
     const dateMeta = type === 'quote'
       ? `${esc(t.issuedOn)} · ${esc(fmtDate(doc.issueDate))}<br>${esc(t.validOn)} · ${esc(fmtDate(doc.validUntil))}`
       : type === 'credit_note' ? `${esc(t.issuedOn)} · ${esc(fmtDate(doc.issueDate))}` : `${esc(t.issuedOn)} · ${esc(fmtDate(doc.issueDate))}<br>${esc(t.dueOn)} · ${esc(fmtDate(doc.dueDate))}`;
-    const paymentsHtml = type === 'invoice' && issued ? `<section class="inv-detail-card" data-payments><h4 class="inv-section-title">${esc(t.paymentsTitle)}</h4>${d.payments.length ? `<ul class="inv-pay-list">${d.payments.map(p => `<li><div><strong>${money(pick(p, 'amountCents', 'amount_cents'))} MAD</strong><span>${esc(fmtDate(p.date))} · ${esc(t[p.method] || p.method || '')}${p.reference ? ' · ' + esc(p.reference) : ''}</span></div><button class="inv-line-remove" type="button" data-inv-act="delete-payment" data-pid="${esc(p.id)}" aria-label="${esc(t.deletePayment)}">${ICON.trash}</button></li>`).join('')}</ul>` : `<p class="inv-foot-note">${esc(t.noPayments)}</p>`}<div class="inv-summary-row"><span>${esc(t.balance)}</span><strong data-balance>${money(d.balanceCents)} MAD</strong></div></section>` : '';
+    const paymentsHtml = type === 'invoice' && issued ? `<section class="inv-detail-card" data-payments><h4 class="inv-section-title">${esc(t.paymentsTitle)}</h4>${d.payments.length ? `<ul class="inv-pay-list">${d.payments.map(p => `<li><div><strong>${money(pick(p, 'amountCents', 'amount_cents'))} MAD</strong><span>${esc(fmtDate(p.date))} · ${esc(t[p.method] || p.method || '')}${p.reference ? ' · ' + esc(p.reference) : ''}</span></div><button data-activation=write class="inv-line-remove" type="button" data-inv-act="delete-payment" data-pid="${esc(p.id)}" aria-label="${esc(t.deletePayment)}">${ICON.trash}</button></li>`).join('')}</ul>` : `<p class="inv-foot-note">${esc(t.noPayments)}</p>`}<div class="inv-summary-row"><span>${esc(t.balance)}</span><strong data-balance>${money(d.balanceCents)} MAD</strong></div></section>` : '';
     const creditsHtml = type === 'invoice' && d.creditNotes.length ? `<section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.creditNotesTitle)}</h4><ul class="inv-pay-list">${d.creditNotes.map(c => `<li><div><strong>${esc(c.number)}</strong><span>${esc(fmtDate(c.issueDate))} · ${money(pick(c, 'ttcCents', 'ttc_cents'))} MAD</span></div><button class="inv-btn small" type="button" data-inv-act="open-doc" data-id="${esc(c.id)}">${esc(t.view)}</button></li>`).join('')}</ul></section>` : '';
     const paidBlock = type === 'invoice' && issued ? `<div class="inv-summary-row"><span>${esc(t.paid)}</span><strong>${money(Math.max(0, (doc.totals?.ttcCents || 0) - d.balanceCents))} MAD</strong></div><div class="inv-summary-row"><span>${esc(t.balance)}</span><strong>${money(d.balanceCents)} MAD</strong></div>` : '';
     const timeline = `${doc.createdTs ? `<div class="inv-time"><strong>${esc(t.createdOn)}</strong>${esc(fmtDate(dayIn(doc.createdTs)))}</div>` : ''}${doc.sentTs ? `<div class="inv-time"><strong>${esc(t.sentOn)}</strong>${esc(fmtDate(dayIn(doc.sentTs)))}</div>` : ''}${doc.legacyRef ? `<div class="inv-time"><strong>${esc(tpl(t.legacyRef, {ref: doc.legacyRef}))}</strong></div>` : ''}`;
@@ -1216,7 +1216,7 @@
         ${doc.note ? `<div class="inv-preview-note"><strong>${esc(t.message)}</strong><br>${esc(doc.note)}</div>` : ''}
         ${draft ? `<div class="inv-preview-note">${esc(t.draftBadge)}</div>` : ''}
       </article><aside class="inv-detail-side"><section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.detail)}</h4><div class="inv-detail-actions">${out.join('')}</div></section>${paymentsHtml}${creditsHtml}
-        ${issued ? `<section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.internalNote)}</h4><div class="inv-field"><textarea data-f="internal" aria-label="${esc(t.internalNote)}" placeholder="${esc(t.internalNotePh)}">${esc(doc.internalNote)}</textarea></div><button class="inv-btn small" type="button" data-inv-act="save-internal">${esc(t.saveInternal)}</button></section>` : ''}
+        ${issued ? `<section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.internalNote)}</h4><div class="inv-field"><textarea data-f="internal" aria-label="${esc(t.internalNote)}" placeholder="${esc(t.internalNotePh)}">${esc(doc.internalNote)}</textarea></div><button data-activation=write class="inv-btn small" type="button" data-inv-act="save-internal">${esc(t.saveInternal)}</button></section>` : ''}
         <section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.timeline)}</h4><div class="inv-timeline">${timeline}</div></section>
         ${issued && type !== 'quote' ? `<div class="inv-note" data-locked-note>${esc(t.lockedNote)}</div>` : ''}</aside></div>`;
     show('detail');

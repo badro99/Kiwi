@@ -38,7 +38,7 @@ window.__kiwiHotelInternal.define('channels', (scope) => {
             <div class="hx-bleed-row"><div>1 séjour direct de 3 nuits<div class="nt">au lieu de Booking</div></div><span class="am" style="color:var(--mint);">+484 MAD</span></div>
             <div class="hx-bleed-row"><div>22 clients fidèles encore sur OTA<div class="nt">relance « revenez en direct −10 % »</div></div><span class="am" style="color:var(--mint);">+4 100 MAD / mois</span></div>
           </div>
-          <button class="hx-btn" style="margin-top:14px;background:var(--mint);color:var(--riad);width:100%;" data-action="hx-direct-push">Activer la relance directe WhatsApp</button>
+          <button data-activation=write class="hx-btn" style="margin-top:14px;background:var(--mint);color:var(--riad);width:100%;" data-action="hx-direct-push">Activer la relance directe WhatsApp</button>
         </div>
       </div>
       <div class="hx-row r-2">
@@ -90,10 +90,10 @@ window.__kiwiHotelInternal.define('channels', (scope) => {
     const connected = cuChannelState.rows.map((c) => `<div class="hx-arr">
       <span class="tm ${c.lastError ? 'red' : ''}">${({ airbnb: 'AIRBNB', expedia: 'EXPEDIA', agoda: 'AGODA' })[c.channel] || 'BOOKING'}</span>
       <div class="who"><b>${esc(c.label)}</b><div class="sub">${esc(cuChannelRoomLabel(c.roomId))} · ${c.lastError ? tx('erreur : {reason}', { reason: esc(c.lastError) }) : c.lastSyncAt ? tx('actualisé {when}', { when: new Date(c.lastSyncAt).toLocaleString(hxLocale()) }) : tx('première synchronisation en attente')}</div></div>
-      <button class="hx-btn ghost" data-action="hx-channel-status" data-arg="${esc(c.id)}:${c.status === 'paused' ? 'active' : 'paused'}">${c.status === 'paused' ? tx('Réactiver') : tx('Pause')}</button>
-      <button class="hx-btn ghost" data-action="hx-channel-delete" data-arg="${esc(c.id)}">${tx('Retirer')}</button>
+      <button data-activation=write class="hx-btn ghost" data-action="hx-channel-status" data-arg="${esc(c.id)}:${c.status === 'paused' ? 'active' : 'paused'}">${c.status === 'paused' ? tx('Réactiver') : tx('Pause')}</button>
+      <button data-activation=write class="hx-btn ghost" data-action="hx-channel-delete" data-arg="${esc(c.id)}">${tx('Retirer')}</button>
     </div>`).join('');
-    const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'},{id:'expedia',name:'Expedia'},{id:'agoda',name:'Agoda'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">${tx('Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal')}</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">${tx('Importer un calendrier')}</button></div>`).join('');
+    const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'},{id:'expedia',name:'Expedia'},{id:'agoda',name:'Agoda'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">${tx('Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal')}</div></div><button data-activation=write class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">${tx('Importer un calendrier')}</button></div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
         <div class="hx-kpi"><div class="l">${tx('Réservation directe')}</div><div class="v">${cuDirectOpen() ? tx('En ligne') : '·'}</div><div class="d">${cuDirectOpen() ? tx('lien de réservation ouvert · les arrivées apparaissent dans la Réception') : tx('lien de réservation fermé · à ouvrir dans Réservations &amp; RDV')}</div></div>

@@ -75,7 +75,7 @@ window.KiwiStockInternal.install('loss', (S) => {
             <button class="st-btn primary" type="button" data-action="stock-open-declare-waste" style="background:#b91c1c;border-color:#991b1b;color:#fff;display:flex;align-items:center;gap:6px;">
               ${svg('trash2', 14)}<span>${esc(ct('declareBtn'))}</span>
             </button>
-            <button class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
+            <button data-activation=money class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
               ${svg('download', 14)}<span>${esc(ct('exportCsv'))}</span>
             </button>
           </div>
@@ -242,7 +242,7 @@ window.KiwiStockInternal.install('loss', (S) => {
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
           <button class="st-btn secondary" type="button" data-action="stock-modal-close">${esc(ct('cancel'))}</button>
-          <button class="st-btn primary" type="submit" style="background:#b91c1c;border-color:#991b1b;color:#fff;">
+          <button data-activation=write class="st-btn primary" type="submit" style="background:#b91c1c;border-color:#991b1b;color:#fff;">
             ${svg('trash2', 14)}<span style="margin-left:4px;">${esc(ct('declareSave'))}</span>
           </button>
         </div>

@@ -679,7 +679,7 @@
         <div style="margin-top:8px;">${feed}</div>
       </div>
       <div class="ac-acts">
-        <button class="ac-btn primary" data-ac-act="export-livre">${t('actExportLivre')}</button>
+        <button data-activation=money class="ac-btn primary" data-ac-act="export-livre">${t('actExportLivre')}</button>
         <button class="ac-btn" data-ac-act="reconcile">${t('actReconcile')}</button>
       </div>
     `;
@@ -727,7 +727,7 @@
       </div>
       <div class="ac-acts">
         <button class="ac-btn primary" data-ac-act="cloture">${t('actCloture')}</button>
-        <button class="ac-btn" data-ac-act="export-etats">${t('actExportEtats')}</button>
+        <button data-activation=money class="ac-btn" data-ac-act="export-etats">${t('actExportEtats')}</button>
       </div>
     `;
   }
@@ -772,7 +772,7 @@
       <div class="ac-insight">${I.spark}<div><b style="color:var(--mint);">${t('aiPrefix')}</b> ${t('tvaInsight', { p: period })}</div></div>
       <div class="ac-acts">
         <button class="ac-btn primary" data-ac-act="prep-tva">${t('actPrepTva')}</button>
-        <button class="ac-btn" data-ac-act="export-tva">${t('actExportTva')}</button>
+        <button data-activation=money class="ac-btn" data-ac-act="export-tva">${t('actExportTva')}</button>
       </div>
     `;
   }

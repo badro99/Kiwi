@@ -214,7 +214,7 @@
           <div class="oq-actions">
             <button class="oq-btn" data-oq-copy>${esc(t.copy)}</button>
             <button class="oq-btn" data-oq-dl>${esc(t.dl)}</button>
-            <button class="oq-btn primary" data-oq-print-venue>${esc(t.print)}</button>
+            <button data-activation=write class="oq-btn primary" data-oq-print-venue>${esc(t.print)}</button>
           </div>
         </div>
       </div>
@@ -225,7 +225,7 @@
         <div class="oq-gen">
           <div class="oq-field"><label>${esc(t.count)}</label><input type="number" min="1" max="200" value="12" data-oq-count></div>
           <button class="oq-btn" data-oq-gen>${esc(t.gen)}</button>
-          <button class="oq-btn" data-oq-print-tables hidden>${esc(t.printSheet)}</button>
+          <button data-activation=write class="oq-btn" data-oq-print-tables hidden>${esc(t.printSheet)}</button>
         </div>
         <div class="oq-tiles" data-oq-tiles></div>
       </div>

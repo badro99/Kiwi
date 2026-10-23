@@ -1085,16 +1085,16 @@
       return `
         <div class="mx-filter-pair ${isOn ? 'on' : ''}">
           <button class="mx-filter-pill" data-action="mx-cat-pick" data-arg="${c.id}">${esc(c.name)}<span class="mx-filter-count">${count}</span></button>
-          <button class="mx-filter-edit" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}" aria-label="${esc(tr(T.rename))} · ${esc(c.name)}">${EDIT}</button>
+          <button data-activation=write class="mx-filter-edit" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}" aria-label="${esc(tr(T.rename))} · ${esc(c.name)}">${EDIT}</button>
         </div>`;
     }).join('');
 
     const shown = cat ? itemsIn(d, cat.id, activeSub) : items.slice();
     const subfilters = cat ? `
       <div class="mx-subfilters">
-        <button class="mx-subfilter ${activeSub == null ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::">${esc(tr(T.allItems))}</button>
-        ${(cat.sub || []).map((s) => `<button class="mx-subfilter ${activeSub === s.id ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::${s.id}">${esc(s.name)} · ${itemsIn(d, cat.id, s.id).length}</button>`).join('')}
-        <button class="mx-subfilter" data-action="mx-sub-add" data-arg="${cat.id}">${PLUS} ${esc(tr(T.addSub))}</button>
+        <button data-activation=write class="mx-subfilter ${activeSub == null ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::">${esc(tr(T.allItems))}</button>
+        ${(cat.sub || []).map((s) => `<button data-activation=write class="mx-subfilter ${activeSub === s.id ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::${s.id}">${esc(s.name)} · ${itemsIn(d, cat.id, s.id).length}</button>`).join('')}
+        <button data-activation=write class="mx-subfilter" data-action="mx-sub-add" data-arg="${cat.id}">${PLUS} ${esc(tr(T.addSub))}</button>
       </div>` : '';
 
     /* Le carnet des coûts et la base TVA sont lus UNE FOIS pour toute la liste.
@@ -1137,7 +1137,7 @@
             <span class="meta">${esc(footer || tr(it.avail === false ? T.unavail : T.avail))}</span>
             <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
             <div class="act">
-              <button data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
+              <button data-activation=write data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
               <button class="del" data-action="mx-item-del" data-arg="${it.id}" title="${esc(tr(T.del))}">${TRASH}</button>
             </div>
           </div>
@@ -1150,8 +1150,8 @@
           <button class="mx-menu-tab on" type="button">${LIST}<span>${esc(tr(T.title))}</span></button>
           <button class="mx-menu-tab" type="button" data-action="mx-stations-manage">${BELL}<span>${esc(tr(T.stations))}</span></button>
           <button class="mx-menu-tab" type="button" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
-          ${orderProOn() ? `<button class="mx-menu-tab" type="button" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
-          ${orderProOn() ? `<button class="mx-menu-tab" type="button" data-action="orderpro-guestpage"><span>${esc(tr(T.guestPage))}</span></button>` : ''}
+          ${orderProOn() ? `<button data-activation=write class="mx-menu-tab" type="button" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+          ${orderProOn() ? `<button data-activation=write class="mx-menu-tab" type="button" data-action="orderpro-guestpage"><span>${esc(tr(T.guestPage))}</span></button>` : ''}
         </div>
         <div class="mx-catalog">
           <div class="mx-catalog-tools">
@@ -1163,9 +1163,9 @@
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
               ${cat ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.catStationL))}</span></button>` : ''}
-              <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
-              <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
-              <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
+              <button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
+              <button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
+              <button data-activation=write class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
             </div>
           </div>
           ${subfilters}
@@ -1204,8 +1204,8 @@
             <h3>${esc(tr(T.emptyH))}</h3>
             <p>${esc(tr(T.emptyP))}</p>
             <div class="row">
-              <button class="mx-pane-add" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
-              <button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
+              <button data-activation=write class="mx-pane-add" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
+              <button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
               <button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-load-example">${SPARK ? '' : ''}<span>${esc(tr(T.loadEx))}</span></button>
               ${/* Order Pro est une option PAYANTE : quand elle est allumée, ses
                     tags sont la seule chose que le commerçant vient chercher, et
@@ -1214,7 +1214,7 @@
                     donc un établissement neuf, ou un magasin dont la carte
                     n'était pas encore redescendue du serveur, n'avait aucun
                     moyen d'atteindre ses liens. */''}
-              ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+              ${orderProOn() ? `<button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
             </div>
           </div>
         </div>`,
@@ -1231,7 +1231,7 @@
       width: 420,
       body: `<div class="mx-field"><input data-p-in type="text" value="${esc(opts.value || '')}" placeholder="${esc(opts.placeholder || '')}"/></div>`,
       foot: `<button class="kb ghost" type="button" data-p-cancel style="flex:1;justify-content:center;">${esc(tr(T.cancel))}</button>
-             <button class="kb atlas" type="button" data-p-ok style="flex:1.3;justify-content:center;">${esc(opts.ok || tr(T.save))}</button>`,
+             <button data-activation=write class="kb atlas" type="button" data-p-ok style="flex:1.3;justify-content:center;">${esc(opts.ok || tr(T.save))}</button>`,
     });
     const input = m.el.querySelector('[data-p-in]');
     const done = () => { const v = (input.value || '').trim(); m.close(); cb(v || null); };
@@ -1292,7 +1292,7 @@
       body.innerHTML = `
         <div class="mx-st-hint">${esc(tr(list.length ? T.stationsHi : T.stationsEm))}</div>
         ${list.length ? `<div class="mx-st-list">${rows}</div>` : `<div class="mx-st-empty">${esc(tr(T.stationNone))}</div>`}
-        <button class="mx-cat-add" type="button" data-st-add>${PLUS}<span>${esc(tr(T.stationAdd))}</span></button>`;
+        <button data-activation=write class="mx-cat-add" type="button" data-st-add>${PLUS}<span>${esc(tr(T.stationAdd))}</span></button>`;
       if (focusId) {
         const inp = body.querySelector(`[data-st-name="${focusId}"]`);
         if (inp) { try { inp.focus(); inp.select(); } catch (_) {} }
@@ -1404,7 +1404,7 @@
         </button>`).join('')}</div>
         <div class="mx-st-new">
           <input type="text" data-cst-name placeholder="${esc(tr(T.stationEx))}" aria-label="${esc(tr(T.stationNm))}" />
-          <button class="kb" type="button" data-cst-add>${esc(tr(T.stationAdd))}</button>
+          <button data-activation=write class="kb" type="button" data-cst-add>${esc(tr(T.stationAdd))}</button>
         </div>`;
     }
 
@@ -1498,13 +1498,13 @@
             <div class="mx-og-visual-hint">${esc(tr(T.optEmojiHi))}</div>
             ${choices || `<div class="mx-og-empty">${esc(tr(T.optChEm))}</div>`}
           </div>
-          <button class="mx-sub-add" type="button" data-oc-add="${esc(g.id)}">${PLUS}<span>${esc(tr(T.optChAdd))}</span></button>
+          <button data-activation=write class="mx-sub-add" type="button" data-oc-add="${esc(g.id)}">${PLUS}<span>${esc(tr(T.optChAdd))}</span></button>
         </div>`;
       }).join('');
       body.innerHTML = `
         <div class="mx-st-hint">${esc(tr(list.length ? T.optsHi : T.optsEm))}</div>
         ${cards}
-        <button class="mx-cat-add" type="button" data-og-add>${PLUS}<span>${esc(tr(T.optAdd))}</span></button>`;
+        <button data-activation=write class="mx-cat-add" type="button" data-og-add>${PLUS}<span>${esc(tr(T.optAdd))}</span></button>`;
       if (focusSel) {
         const inp = body.querySelector(focusSel);
         if (inp) { try { inp.focus(); inp.select(); } catch (_) {} }
@@ -1652,7 +1652,7 @@
           <div class="mx-formula-hint">${esc(tr(T.formulaHint))}</div>
           <div class="mx-formula-wrap" data-f-formula-wrap ${formulaSlots.length ? '' : 'hidden'}>
             <div data-f-slots-container></div>
-            <button type="button" class="mx-formula-add-slot-btn" data-f-add-slot>${PLUS}<span>${esc(tr(T.formulaAddSlot))}</span></button>
+            <button data-activation=write type="button" class="mx-formula-add-slot-btn" data-f-add-slot>${PLUS}<span>${esc(tr(T.formulaAddSlot))}</span></button>
           </div>
         </div>
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
@@ -1670,7 +1670,7 @@
           <input type="file" data-f-video-input accept="video/*" hidden />
         </div>`,
       foot: `<button class="kb ghost" type="button" data-f-cancel style="flex:1;justify-content:center;">${esc(tr(T.cancel))}</button>
-             <button class="kb atlas" type="button" data-f-save style="flex:1.3;justify-content:center;">${esc(tr(T.save))}</button>`,
+             <button data-activation=write class="kb atlas" type="button" data-f-save style="flex:1.3;justify-content:center;">${esc(tr(T.save))}</button>`,
     });
     const q = (s) => m.el.querySelector(s);
     q('[data-f-cat]').addEventListener('change', (e) => { q('[data-f-sub]').innerHTML = subOptsHtml(e.target.value, null); });
@@ -1725,7 +1725,7 @@
           addChBarHtml = `
             <div class="mx-slot-empty-notice" style="background:var(--n-50,#f8f9fa);border:1px dashed var(--n-300,#d0d5dd);border-radius:6px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--n-700,#344054);">
               <div>${esc(tr(T.formulaNoItems))}</div>
-              <button type="button" class="kb ghost sm" data-f-save-and-create style="margin-top:8px;font-size:11.5px;font-weight:600;">${esc(tr(T.formulaSaveAndCreate))}</button>
+              <button data-activation=write type="button" class="kb ghost sm" data-f-save-and-create style="margin-top:8px;font-size:11.5px;font-weight:600;">${esc(tr(T.formulaSaveAndCreate))}</button>
             </div>`;
         } else if (availableToAdd.length === 0) {
           addChBarHtml = `
@@ -1735,7 +1735,7 @@
         } else {
           addChBarHtml = `
             <div class="mx-slot-add-ch-bar">
-              <button type="button" class="mx-formula-picker-trigger" data-f-picker-toggle="${si}" aria-haspopup="listbox" aria-expanded="false"><span class="mx-formula-picker-icon">${PICKER_SEARCH}</span><span class="mx-formula-picker-copy"><strong>${esc(tr(T.formulaAddCh))}</strong><small>${esc(tr(T.formulaBrowse))}</small></span><span class="mx-formula-picker-chevron">${PICKER_CHEVRON}</span></button>
+              <button data-activation=write type="button" class="mx-formula-picker-trigger" data-f-picker-toggle="${si}" aria-haspopup="listbox" aria-expanded="false"><span class="mx-formula-picker-icon">${PICKER_SEARCH}</span><span class="mx-formula-picker-copy"><strong>${esc(tr(T.formulaAddCh))}</strong><small>${esc(tr(T.formulaBrowse))}</small></span><span class="mx-formula-picker-chevron">${PICKER_CHEVRON}</span></button>
               <div class="mx-formula-picker" data-f-picker-panel="${si}" role="listbox" aria-label="${esc(tr(T.formulaPickIt))}" hidden>
                 <div class="mx-formula-picker-search"><label>${PICKER_SEARCH}<input type="search" data-f-picker-search="${si}" placeholder="${esc(tr(T.formulaSearch))}" autocomplete="off" /></label></div>
                 <div class="mx-formula-picker-results">${pickerGroupsHtml}<div class="mx-formula-picker-empty" data-picker-empty hidden>${esc(tr(T.formulaNoMatch))}</div></div>
@@ -1952,7 +1952,7 @@
       box.innerHTML = `
         ${preview}
         <div class="mx-media-actions">
-          <button class="kb ghost mx-media-btn" type="button" data-f-pick-photo>${esc(tr(T.mediaAdd))}</button>
+          <button data-activation=write class="kb ghost mx-media-btn" type="button" data-f-pick-photo>${esc(tr(T.mediaAdd))}</button>
           <button class="kb ghost mx-media-btn" type="button" data-f-pick-video>${esc(tr(T.mediaVid))}</button>
           ${del}
         </div>`;

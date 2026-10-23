@@ -45,7 +45,13 @@
         '<p class="k-foot k-ink2 k-ob__step">' + esc(t('ob.step', { n: n, total: TOTAL })) + '</p></div>' +
       '<div class="k-ob__bar" aria-hidden="true"><i style="width:' + (n / TOTAL * 100) + '%"></i></div>' +
       '<div class="k-ob__body" data-step="' + STEPS[at] + '">' + body + '</div>' +
+      '<p class="k-foot k-ink2" data-draft-warning role="status"></p>' +
       (primary ? '<div class="k-ob__foot"><k-banner live tone="danger"></k-banner>' + primary + '</div>' : '');
+  }
+  function save() { api.save(); showDraftWarning(); }
+  function showDraftWarning() {
+    var warning = $('[data-draft-warning]');
+    if (warning) { warning.textContent = api.draftWarning(); warning.hidden = api.draftSaved(); }
   }
   function primary(label, enabled) {
     return '<k-button variant="primary" size="L" full data-do="next" label="' + esc(label) + '"' + (enabled ? '' : ' disabled') + '></k-button>';
@@ -68,6 +74,7 @@
         ? '<k-field search data-f="kind-q" aria-label="' + esc(t('ob.other_kinds')) + '" placeholder="' + esc(t('ob.other_kinds')) + '"></k-field><k-list data-l="kinds" selectable label="' + esc(t('ob.kind')) + '"></k-list>'
         : '<button type="button" class="k-ob__plain k-body" data-others>' + esc(t('ob.other_kinds')) + '</button>'),
       primary(t('action.continue'), !!S().typeId));
+    showDraftWarning();
     if (others) listKinds('');
   }
   function listKinds(q) {
@@ -79,7 +86,7 @@
   }
   function pickKind(id) {
     S().typeId = id;
-    api.save();
+    save();
     Array.prototype.forEach.call(box.querySelectorAll('[data-kind]'), function (b) {
       var on = b.getAttribute('data-kind') === id;
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
@@ -159,6 +166,7 @@
     else if (STEPS[at] === 'goals') goals();
     else if (STEPS[at] === 'code') code();
     else deviceStep();
+    showDraftWarning();
     var h = box.querySelector('.k-ob__h, k-pin-pad');
     if (h && h.focus) { try { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } catch (_) {} }
   }
@@ -174,7 +182,7 @@
       S().dailyGoal = String(f.value || '').trim();
       f.removeAttribute('error');
       if (api.dailyGoal() === null) { f.setAttribute('error', t('ob.err.goal')); return; }
-      api.save();
+      save();
     }
     if (step === 'device') { if (device) start(); return; }
     go(1);

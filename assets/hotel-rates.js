@@ -50,7 +50,7 @@ window.__kiwiHotelInternal.define('rates', (scope) => {
     const st = cuState();
     const typeCards = cuTypes().map((t) => {
       const roomCount = Object.values(st.rooms).filter((r) => r.typeId === t.id).length;
-      return `<button class="hx-type-card" data-action="hx-room-type-edit" data-arg="${esc(t.id)}">
+      return `<button data-activation=write class="hx-type-card" data-action="hx-room-type-edit" data-arg="${esc(t.id)}">
         <span class="hx-type-icon">${esc(t.name.slice(0, 1).toUpperCase())}</span>
         <span class="hx-type-copy"><b>${esc(t.name)}</b><small>${txn(roomCount, 'chambre')}</small></span>
         <span class="hx-type-rate">${t.rate == null ? (st.baseRate == null ? tx('À définir') : MAD(st.baseRate)) : MAD(t.rate)}<small>${t.rate == null ? tx('tarif général') : tx('par nuit')}</small></span>
@@ -65,7 +65,7 @@ window.__kiwiHotelInternal.define('rates', (scope) => {
         <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${st.baseRate == null ? '·' : fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">${tx('MAD / nuit')}</span></div>
         <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="50">+50</button>
       </div>
-      <div class="hx-h" style="margin-top:18px;"><span class="t">${tx('Tarifs par type')}</span><span class="s">${tx('un changement met à jour toutes les chambres concernées')}</span><button class="hx-btn atlas" data-action="hx-room-type-new">+ ${tx('Nouveau type')}</button></div>
+      <div class="hx-h" style="margin-top:18px;"><span class="t">${tx('Tarifs par type')}</span><span class="s">${tx('un changement met à jour toutes les chambres concernées')}</span><button data-activation=write class="hx-btn atlas" data-action="hx-room-type-new">+ ${tx('Nouveau type')}</button></div>
       <div class="hx-type-list">${typeCards}</div>
       <div style="margin-top:18px;">${cuPerformanceBlock()}</div>
     </div>`;

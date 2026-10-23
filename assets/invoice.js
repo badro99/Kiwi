@@ -643,7 +643,7 @@
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
             <button type="button" data-inv-cust-skip class="st-btn" style="padding:7px 12px;border:1px solid #cbd5e1;border-radius:6px;background:transparent;cursor:pointer;font-size:12.5px;">${esc(L('skip', 'Passer'))}</button>
-            <button type="button" data-inv-cust-confirm class="st-btn primary" style="padding:7px 14px;border:none;border-radius:6px;background:#087653;color:#fff;font-weight:600;cursor:pointer;font-size:12.5px;">${esc(L('create', 'Créer la facture'))}</button>
+            <button data-activation=write type="button" data-inv-cust-confirm class="st-btn primary" style="padding:7px 14px;border:none;border-radius:6px;background:#087653;color:#fff;font-weight:600;cursor:pointer;font-size:12.5px;">${esc(L('create', 'Créer la facture'))}</button>
           </div>
         </div>`;
 

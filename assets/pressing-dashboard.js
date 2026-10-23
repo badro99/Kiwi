@@ -252,7 +252,7 @@
     var active = sortedActive(s);
     host.innerHTML = '<div class="pxd-shell">' +
       '<header class="pxd-hero"><div><div class="pxd-eyebrow">' + L('Pilotage pressing', 'Dry-cleaning control', 'إدارة المصبنة') + '</div><h1>' + L('Votre atelier, sans angle mort.', 'Your workshop, no blind spots.', 'ورشتك بلا نقاط عمياء.') + '</h1><p>' + esc(v.fullDisplay || v.name || L('Pressing', 'Dry cleaner', 'المصبنة')) + ' · ' + L('du dépôt à la remise, pièce par pièce', 'from drop-off to hand-over, garment by garment', 'من الإيداع إلى التسليم، قطعة بقطعة') + '</p></div>' +
-      '<div class="pxd-hero-actions"><button class="pxd-btn" type="button" data-pxd-open="retrait">' + icon('scan') + L('Retrait express', 'Quick pick-up', 'استلام سريع') + '</button><button class="pxd-btn primary" type="button" data-pxd-open="comptoir">' + icon('play') + L('Nouveau dépôt', 'New drop-off', 'إيداع جديد') + '</button></div></header>' +
+      '<div class="pxd-hero-actions"><button class="pxd-btn" type="button" data-pxd-open="retrait">' + icon('scan') + L('Retrait express', 'Quick pick-up', 'استلام سريع') + '</button><button data-activation=write class="pxd-btn primary" type="button" data-pxd-open="comptoir">' + icon('play') + L('Nouveau dépôt', 'New drop-off', 'إيداع جديد') + '</button></div></header>' +
       kpisBand(s) +
       '<div class="pxd-grid"><div class="pxd-stack">' +
         '<section class="pxd-card">' + cardHead('workflow', L('Flux atelier', 'Workshop flow', 'سير الورشة'), L('La charge réelle à chaque étape', 'The real load at each stage', 'الحمل الفعلي في كل مرحلة'), L('Ouvrir l’atelier', 'Open the workshop', 'فتح الورشة'), 'pressing-workshop') + flow(s) + '</section>' +

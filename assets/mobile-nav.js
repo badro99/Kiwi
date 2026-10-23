@@ -208,7 +208,7 @@
         <button class="kw-tab" data-kw-tab="commandes" type="button">
           ${I.orders}<span class="kw-tab-badge" data-kw-badge hidden></span><span class="kw-tab-l" data-i18n="dash.sidebar.orders">Commandes</span>
         </button>
-        <button class="kw-tab kw-tab-ai kw-tab-sell" data-kw-tab="vente" type="button" aria-label="Nouvelle vente">
+        <button data-activation=write class="kw-tab kw-tab-ai kw-tab-sell" data-kw-tab="vente" type="button" aria-label="Nouvelle vente">
           <span class="kw-tab-ico">${I.sale}</span>
           <span class="kw-tab-l" data-i18n="dash.mobilenav.sale">Vente</span>
         </button>

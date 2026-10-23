@@ -25,7 +25,7 @@ ok(/out\.onboarded = true;/.test(meSrc), '/api/me rend déjà le verdict d’ins
 ok(!/onboardingState|onboarding:/.test(cfgSrc),
   '/api/config n’en écrit pas un second : une seule vérité pour une seule question');
 
-/* ── 3 · Les deux listes de gestes, extraites d’entitlements-v2.js ───────── */
+/* ── 3 · Les deux gardes de gestes, extraits d’entitlements-v2.js ───────── */
 const entSrc = fs.readFileSync(path.join(ROOT, 'assets/entitlements-v2.js'), 'utf8');
 const blockedMatch = entSrc.match(/function blockedWord\(el\)\{[\s\S]*?\n  \}/);
 const moneyMatch = entSrc.match(/function moneyWord\(el\)\{[\s\S]*?\n  \}/);
@@ -37,29 +37,38 @@ else {
     blockedWord = new Function(blockedMatch[0] + '; return blockedWord;')();
     moneyWord = new Function(moneyMatch[0] + '; return moneyWord;')();
     ok(typeof blockedWord === 'function' && typeof moneyWord === 'function',
-      'les deux listes de gestes construites depuis la source livrée');
+      'les deux gardes de gestes construits depuis la source livrée');
   } catch (e) { ok(false, 'construction impossible : ' + e.message); }
 }
 
-const el = (label) => ({
+const el = (label, activation) => ({
   closest: () => null,
   hasAttribute: () => false,
-  getAttribute: (k) => (k === 'aria-label' ? label : ''),
+  getAttribute: (k) => k === 'data-activation' ? activation : '',
   textContent: label,
 });
+if (blockedWord && moneyWord) {
+  for (const label of ['Ajouter un plat', 'Add a dish', 'إضافة طبق', 'A completely renamed control']) {
+    ok(blockedWord(el(label, 'write')), `${label}: marked write held after setup`);
+    ok(!moneyWord(el(label, 'write')), `${label}: marked write allowed during setup`);
+  }
+  for (const label of ['Encaisser', 'Take payment', 'تحصيل', 'Renamed']) {
+    ok(blockedWord(el(label, 'money')), `${label}: marked money held after setup`);
+    ok(moneyWord(el(label, 'money')), `${label}: marked money held during setup`);
+  }
+  ok(!blockedWord(el('Ajouter un plat', '')), 'visible words alone never gate a control');
+}
 
-if (!blockedWord || !moneyWord) ok(false, 'section 3 interrompue');
-else {
-  /* Les gestes de l’installation : retenus AVANT, libres MAINTENANT. */
-  for (const verb of ['Ajouter un plat', 'Créer une catégorie', 'Enregistrer', 'Modifier la salle', 'Publier la carte']) {
-    ok(blockedWord(el(verb)) === true, `« ${verb} » reste tenu une fois installé`);
-    ok(moneyWord(el(verb)) === false, `« ${verb} » passe pendant l’installation`);
-  }
-  /* Les gestes d’argent : tenus dans les deux cas. */
-  for (const verb of ['Encaisser', 'Rembourser le client', 'Exporter en CSV']) {
-    ok(moneyWord(el(verb)) === true, `« ${verb} » reste tenu pendant l’installation`);
-    ok(blockedWord(el(verb)) === true, `« ${verb} » reste tenu une fois installé`);
-  }
+/* Les vrais gabarits portent le contrat, pas seulement les doubles du test. */
+for (const [file, attribute, marker] of [
+  ['dashboard.html', 'data-action="export"', 'money'],
+  ['assets/interactive.js', 'data-refund', 'money'],
+  ['assets/interactive.js', 'data-ob-create', 'write'],
+  ['assets/onboarding.js', 'data-pin-add', 'write'],
+]) {
+  const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const tags = source.match(/<(?:button|a)\b[^>]*>/g) || [];
+  ok(tags.some(tag => tag.includes(attribute) && tag.includes('data-activation=' + marker)), `${file}: ${attribute} porte le marqueur stable ${marker}`);
 }
 
 /* ── 4 · Le panneau ne s’ouvre pas tant que l’installation n’est pas finie ── */
@@ -136,7 +145,7 @@ ok(!/Abonnement Kiwi requis/.test(entSrc), 'plus de « Abonnement requis » comm
 ok(/Tout est en place/.test(entSrc), 'le panneau parle du travail accompli, pas d’un accès manquant');
 ok(!/Mode découverte/.test(entSrc), 'la pastille ne classe plus le commerçant en « mode découverte »');
 
-const EXPECTED = 42;
+const EXPECTED = 47;
 ok(passed === EXPECTED, `compte de contrôles épinglé (${passed}/${EXPECTED})`);
 console.log(`\n✓ ${passed} contrôles verts (${failures.length} échec(s))`);
 if (failures.length) process.exit(1);

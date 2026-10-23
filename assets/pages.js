@@ -1251,7 +1251,7 @@
             ${T.transactionsSearch}
           </div>
           <button class="kb ghost" data-action="filter-tx"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>${T.transactionsFilter}</button>
-          <button class="kb ghost" data-action="export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>${T.transactionsExport}</button>
+          <button data-activation=money class="kb ghost" data-action="export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>${T.transactionsExport}</button>
           <button class="kb primary" data-action="new-sale"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.transactionsNewSale}</button>
         </div>
         <table class="p-table">
@@ -1289,7 +1289,7 @@
           <div class="sub">${T.terminalsHeroSub(71, 94.2)}</div>
         </div>
 
-        <button class="kb" data-action="printer-connect" style="width:100%; margin:14px 0 4px; justify-content:center; display:flex; align-items:center; gap:8px;">
+        <button data-activation=write class="kb" data-action="printer-connect" style="width:100%; margin:14px 0 4px; justify-content:center; display:flex; align-items:center; gap:8px;">
           Connecter une imprimante thermique
         </button>
 
@@ -1347,7 +1347,7 @@
           <div style="margin-bottom:10px;"><i data-lucide="monitor" width="32" height="32" aria-hidden="true"></i></div>
           <div style="font-weight: 600; margin-bottom: 6px;">${T.terminalOrderTitle}</div>
           <div style="font-size: 13px; color: var(--n-500); margin-bottom: 14px;">${T.terminalOrderDesc}</div>
-          <button class="kb atlas">${T.terminalOrderCta}</button>
+          <button data-activation=write class="kb atlas">${T.terminalOrderCta}</button>
         </div>
       `,
     });
@@ -1472,7 +1472,7 @@
         <div style="margin-top: 24px; padding: 18px; background: var(--paper-soft); border-radius: 12px; display: flex; gap: 14px; align-items: flex-start;">
           <i data-lucide="file-text" width="20" height="20" aria-hidden="true" style="flex-shrink:0;margin-top:2px;color:var(--atlas);"></i>
           <div style="flex: 1;"><div style="font-weight: 600; margin-bottom: 4px;">${T.complianceReportButton}</div><div style="font-size: 12.5px; color: var(--n-500); line-height: 1.4;">${T.complianceReportDesc}</div></div>
-          <button class="kb atlas" data-action="download-kit">${T.complianceDownload}</button>
+          <button data-activation=money class="kb atlas" data-action="download-kit">${T.complianceDownload}</button>
         </div>
       `,
     });
@@ -1520,7 +1520,7 @@
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px;">
-          <button class="kb ghost" style="padding: 14px; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.teamAddMember}</button>
+          <button data-activation=write class="kb ghost" style="padding: 14px; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.teamAddMember}</button>
           <button class="kb ghost" style="padding: 14px; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${T.teamWeeklyPlan}</button>
         </div>
       `,
@@ -1615,7 +1615,7 @@
       body: `
         <div class="p-toolbar">
           <div class="p-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>${T.menuSearch}</div>
-          <button class="kb primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.menuAdd}</button>
+          <button data-activation=write class="kb primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.menuAdd}</button>
         </div>
 
         <div class="menu-cat">
@@ -1774,14 +1774,14 @@
           <div><div class="name">Feuilles de brick</div><div class="sup">Fournisseur · Feuilletier Derb Omar</div></div>
           <div class="bar out"><div style="width:0%;"></div></div>
           <div class="qty" style="color: var(--danger);">0 / 80</div>
-          <button class="kb atlas" style="padding:6px 10px; font-size:11px;">${T.stockOrder}</button>
+          <button data-activation=write class="kb atlas" style="padding:6px 10px; font-size:11px;">${T.stockOrder}</button>
         </div>
         <div class="stock-row">
           <div class="icn">🫐</div>
           <div><div class="name">Pruneaux</div><div class="sup">Fournisseur · Épicerie Chaouen</div></div>
           <div class="bar out"><div style="width:0%;"></div></div>
           <div class="qty" style="color: var(--danger);">0 kg / 3 kg</div>
-          <button class="kb atlas" style="padding:6px 10px; font-size:11px;">${T.stockOrder}</button>
+          <button data-activation=write class="kb atlas" style="padding:6px 10px; font-size:11px;">${T.stockOrder}</button>
         </div>
 
         <div style="font-size: 11px; color: var(--warning); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase; margin: 20px 0 10px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-inline-end:7px;vertical-align:baseline;"></span>${T.stockAlertLowStock}</div>
@@ -1839,7 +1839,7 @@
       `,
       foot: `
         <button class="kb ghost" style="flex:1; justify-content:center;">${T.stockHistory}</button>
-        <button class="kb atlas" style="flex:1; justify-content:center;">${T.stockOrderAll}</button>
+        <button data-activation=write class="kb atlas" style="flex:1; justify-content:center;">${T.stockOrderAll}</button>
       `
     });
   };
@@ -1880,7 +1880,7 @@
           <div class="resv-section">
             <div class="resv-section-head">
               <h4>${T.reservationsToday}</h4>
-              <button class="kb ghost" data-action="add-reservation">${T.reservationsAdd}</button>
+              <button data-activation=write class="kb ghost" data-action="add-reservation">${T.reservationsAdd}</button>
             </div>
             <div class="resv-line">
               <div class="t">12:30</div>
@@ -2090,7 +2090,7 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>${T.tablesCloseButton}</button>
-        <button class="kb primary" data-action="add-reservation">+ ${T.reservationsAdd}</button>
+        <button data-activation=write class="kb primary" data-action="add-reservation">+ ${T.reservationsAdd}</button>
       `,
     });
     r.el.querySelector('.kiwi-drawer').classList.add('page-xl');
@@ -2189,7 +2189,7 @@
               <h4>${T.payrollWeeklyPlan('21 au 27 avril')}</h4>
               <div class="sub">${T.payrollWeeklyPlanSub}</div>
             </div>
-            <button class="kb ghost" data-action="edit-shifts">${T.payrollEditPlan}</button>
+            <button data-activation=write class="kb ghost" data-action="edit-shifts">${T.payrollEditPlan}</button>
           </div>
           <div class="sh-week">
             <div></div>
@@ -2255,7 +2255,7 @@
                 <b>${T.payrollPoolRule}</b>
                 <div class="m">${T.payrollPoolRuleDesc}</div>
               </div>
-              <button class="kb ghost" data-action="edit-tip-rule">${T.payrollEditRule}</button>
+              <button data-activation=write class="kb ghost" data-action="edit-tip-rule">${T.payrollEditRule}</button>
             </div>
             <div class="sh-tip-pool">
               <div class="av a">FK</div>
@@ -2326,7 +2326,7 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>${T.tablesCloseButton}</button>
-        <button class="kb primary" data-action="export-payroll">${T.payrollExport}</button>
+        <button data-activation=money class="kb primary" data-action="export-payroll">${T.payrollExport}</button>
       `,
     });
     r.el.querySelector('.kiwi-drawer').classList.add('page-xl');

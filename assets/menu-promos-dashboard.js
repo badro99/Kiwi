@@ -158,7 +158,7 @@
     return `<div class="mi-group-card mp-card" data-mp-id="${esc(p.id)}">
       <div class="mi-group-card-head"><span class="mi-group-card-name">${esc(p.name)}</span><span class="mi-group-card-pill mode">${esc(valueLabel(p))}</span><span class="mi-group-card-pill ${pill}" data-mp-status="${st}">${esc(tr(st))}</span></div>
       <div class="mi-group-card-scope">${esc(scopeLabel(p))}<br>${esc(windowLabel(p))}</div>
-      <div class="mi-group-card-acts"><button type="button" class="btn-slim" data-mp-act="edit">${esc(tr('edit'))}</button><button type="button" class="btn-slim" data-mp-act="pause">${esc(tr(p.paused ? 'resume' : 'pause'))}</button><button type="button" class="btn-slim danger" data-mp-act="delete">${esc(tr('del'))}</button></div>
+      <div class="mi-group-card-acts"><button data-activation=write type="button" class="btn-slim" data-mp-act="edit">${esc(tr('edit'))}</button><button type="button" class="btn-slim" data-mp-act="pause">${esc(tr(p.paused ? 'resume' : 'pause'))}</button><button data-activation=write type="button" class="btn-slim danger" data-mp-act="delete">${esc(tr('del'))}</button></div>
     </div>`;
   }
 
@@ -217,7 +217,7 @@
       <p class="mp-note">${esc(tr('formulaNote'))}</p>
       <p class="mp-err" data-mp-err hidden></p>
     </div>`;
-    const m = K.modal({ title: existing ? tr('editTitle') : tr('newTitle'), width: 520, body, foot: `<button class="kb ghost" data-mp-cancel>${esc(tr('cancel'))}</button><button class="eq-cta-gradient" data-mp-save>${esc(tr('save'))}</button>` });
+    const m = K.modal({ title: existing ? tr('editTitle') : tr('newTitle'), width: 520, body, foot: `<button class="kb ghost" data-mp-cancel>${esc(tr('cancel'))}</button><button data-activation=write class="eq-cta-gradient" data-mp-save>${esc(tr('save'))}</button>` });
     if (!m || !m.el) return;
     const q = (s) => m.el.querySelector(s);
     q('[data-mp-field="kind"]').addEventListener('change', (e) => {

@@ -267,7 +267,7 @@
       escHtml(opts.hint || 'Composez-la dans le tableau de bord, rubrique Menu. En attendant, saisissez l’article et son prix.') + '</p>' +
       '<div class="vc-free-row"><input type="text" data-vc-free-name maxlength="60" placeholder="' + escHtml(opts.namePh || 'Article') + '" aria-label="Article">' +
       '<input type="number" data-vc-free-price min="0" step="0.5" inputmode="decimal" placeholder="Prix MAD" aria-label="Prix en MAD">' +
-      '<button type="button" data-vc-free-add>' + escHtml(opts.cta || 'Ajouter') + '</button></div></div>';
+      '<button data-activation=write type="button" data-vc-free-add>' + escHtml(opts.cta || 'Ajouter') + '</button></div></div>';
   }
   function freePriceBind(host, onAdd) {
     if (!host || host.__vcFree) return;
@@ -307,7 +307,7 @@
         (opts.sub ? '<span>' + escHtml(opts.sub) + '</span>' : '') + '</div><i data-vc-total>' + carteMoney(unit()) + '</i></div>' +
         optionsHtml(groups, picks) +
         '<div class="vc-err" data-vc-err hidden></div>' +
-        '<div class="vc-sheet-f"><button type="button" class="vc-b2" data-vc-cancel>Annuler</button><button type="button" class="vc-b1" data-vc-ok>' +
+        '<div class="vc-sheet-f"><button type="button" class="vc-b2" data-vc-cancel>Annuler</button><button data-activation=write type="button" class="vc-b1" data-vc-ok>' +
         escHtml(opts.cta || 'Ajouter') + ' · ' + carteMoney(unit()) + '</button></div></div>';
       if (top) veil.querySelector('.vc-sheet').scrollTop = top;
     }

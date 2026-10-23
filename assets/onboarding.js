@@ -544,7 +544,7 @@
           <div class="kob-access">
             ${S.pins.map((p, i) => accessRow(i)).join('')}
           </div>
-          <button type="button" class="kob-acc-add" data-pin-add>${tr({ fr: '+ Ajouter un membre', en: '+ Add a member', ar: '+ إضافة عضو' })}</button>
+          <button data-activation=write type="button" class="kob-acc-add" data-pin-add>${tr({ fr: '+ Ajouter un membre', en: '+ Add a member', ar: '+ إضافة عضو' })}</button>
           <div class="kob-err" data-acc-err></div>
         </div>`,
       foot: footNav({ nextLabel: tr({ fr: 'Presque fini →', en: 'Almost done →', ar: 'اقتربنا →' }) }),
@@ -573,7 +573,7 @@
         </div>`,
       foot: `
         <button class="kob-back" data-go="back">&lsaquo; ${tr({ fr: 'Retour', en: 'Back', ar: 'رجوع' })}</button>
-        <button class="kob-btn primary" data-finish>${tr({ fr: 'Créer mon espace', en: 'Create my space', ar: 'إنشاء مساحتي' })}</button>`,
+        <button data-activation=write class="kob-btn primary" data-finish>${tr({ fr: 'Créer mon espace', en: 'Create my space', ar: 'إنشاء مساحتي' })}</button>`,
     };
   }
 
@@ -1118,6 +1118,7 @@
     codeProblem: kitCodeProblem,
     save: saveDraft,              // vrai si le brouillon a pris sur cet appareil
     draftSaved: () => draftKept,
+    draftWarning: () => (draftKept ? '' : tr(DRAFT_NOTE)),
     finish: () => finish({ kit: true }),
     enter: () => enterApp(),
     done: () => { opened = false; },

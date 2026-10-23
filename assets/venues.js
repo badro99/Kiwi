@@ -1976,7 +1976,7 @@
       const v = VENUES[id];
       const isActive = !inFusion && id === currentVenue;
       return `
-        <button type="button" class="venue-row${isActive ? ' active' : ''}" data-action="venue-pick" data-venue="${escD(id)}">
+        <button data-activation=write type="button" class="venue-row${isActive ? ' active' : ''}" data-action="venue-pick" data-venue="${escD(id)}">
           <div class="venue-row-icon">${typeIconOf(v)}</div>
           <div class="venue-row-body">
             <div class="venue-row-name">${escD(v.name)}${v.location ? ' · ' + escD(v.location) : ''}</div>
@@ -2229,7 +2229,7 @@
       }).join('')}
     `;
 
-    /* These <a> are brand new nodes, so the operator's hides have to be replayed
+    /* These <a data-activation=write> are brand new nodes, so the operator's hides have to be replayed
      * over them — merchant-config.js applied them to the markup that was here a
      * moment ago. Cheap (a querySelectorAll per disabled key) and a no-op when
      * there is no backend or nothing is switched off. */

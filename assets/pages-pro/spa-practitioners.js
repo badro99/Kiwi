@@ -148,7 +148,7 @@
 
         <div class="pr-actions">
           <button class="kb ghost" data-action="prac-agenda" data-prac="${p.id}">Agenda</button>
-          <button class="kb ghost" data-action="prac-edit" data-prac="${p.id}">Modifier</button>
+          <button data-activation=write class="kb ghost" data-action="prac-edit" data-prac="${p.id}">Modifier</button>
           <button class="kb atlas" data-action="prac-commission" data-prac="${p.id}">Commission</button>
         </div>
       </div>
@@ -176,7 +176,7 @@
         <div class="p-toolbar">
           <div class="p-search">Rechercher par nom, certification, spécialité…</div>
           <button class="kb ghost" data-action="prac-tracker">Certifications (${expiring}/${totalCerts} à suivre)</button>
-          <button class="kb primary" data-action="prac-add">Ajouter une praticienne</button>
+          <button data-activation=write class="kb primary" data-action="prac-add">Ajouter une praticienne</button>
         </div>
 
         <div class="pr-grid">
@@ -230,7 +230,7 @@
             <div class="resv-line"><div class="t">${t}</div><div class="info"><div class="n">${n}</div><div class="m">${m}</div></div><div><span class="chip ok">confirmé</span></div></div>
           `).join('')}
         </div>
-        <button class="kb ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="window.Kiwi.toast('Export ICS envoyé', { desc: 'Agenda 7 jours synchronisé sur Google Calendar.', type: 'success' })">Exporter en .ics</button>
+        <button data-activation=money class="kb ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="window.Kiwi.toast('Export ICS envoyé', { desc: 'Agenda 7 jours synchronisé sur Google Calendar.', type: 'success' })">Exporter en .ics</button>
       `,
     });
   }
@@ -253,10 +253,10 @@
         <div class="kf-help">Les changements de commission s'appliquent au prochain cycle de paie (T+1 du mois).</div>
       `,
       foot: `
-        <button class="kb ghost" data-action="prac-remove" data-prac="${p.id}">Désactiver le profil</button>
+        <button data-activation=write class="kb ghost" data-action="prac-remove" data-prac="${p.id}">Désactiver le profil</button>
         <div style="flex:1;"></div>
         <button class="kb ghost" onclick="this.closest('.kiwi-backdrop').classList.remove('in'); setTimeout(()=>this.closest('.kiwi-backdrop')?.remove(), 280)">Annuler</button>
-        <button class="kb primary" onclick="window.Kiwi.toast('Profil mis à jour', { desc: '${p.name} · changements actifs sur le planning T+1.', type: 'success' }); this.closest('.kiwi-backdrop').classList.remove('in'); setTimeout(()=>this.closest('.kiwi-backdrop')?.remove(), 280)">Enregistrer</button>
+        <button data-activation=write class="kb primary" onclick="window.Kiwi.toast('Profil mis à jour', { desc: '${p.name} · changements actifs sur le planning T+1.', type: 'success' }); this.closest('.kiwi-backdrop').classList.remove('in'); setTimeout(()=>this.closest('.kiwi-backdrop')?.remove(), 280)">Enregistrer</button>
       `,
     });
   }
@@ -275,7 +275,7 @@
       `,
       foot: `
         <button class="kb ghost" onclick="this.closest('.kiwi-backdrop').classList.remove('in'); setTimeout(()=>this.closest('.kiwi-backdrop')?.remove(), 280)">Annuler</button>
-        <button class="kb danger" onclick="window.Kiwi.toast('Profil désactivé', { desc: '${p.name} · 12 RDV en attente de réassignation.', type: 'warn' }); document.querySelectorAll('.kiwi-backdrop').forEach(b=>{b.classList.remove('in'); setTimeout(()=>b.remove(), 280)})">Désactiver</button>
+        <button data-activation=write class="kb danger" onclick="window.Kiwi.toast('Profil désactivé', { desc: '${p.name} · 12 RDV en attente de réassignation.', type: 'warn' }); document.querySelectorAll('.kiwi-backdrop').forEach(b=>{b.classList.remove('in'); setTimeout(()=>b.remove(), 280)})">Désactiver</button>
       `,
     });
   }
@@ -309,7 +309,7 @@
       `,
       foot: `
         <button class="kb ghost" onclick="this.closest('.kiwi-backdrop').classList.remove('in'); setTimeout(()=>this.closest('.kiwi-backdrop')?.remove(), 280)">Fermer</button>
-        <button class="kb primary" id="pr-calc-export">Exporter fiche paie</button>
+        <button data-activation=money class="kb primary" id="pr-calc-export">Exporter fiche paie</button>
       `,
     });
 
@@ -363,7 +363,7 @@
             `).join('')}
           </div>
         `).join('')}
-        <button class="kb atlas" style="width:100%; justify-content:center; margin-top:10px;" onclick="window.Kiwi.toast('Export RH · bientôt', { desc: 'La synthèse RH sera exportable quand la paie sera branchée sur vos heures réelles.', type: 'pend' })">Exporter le tableau de bord RH</button>
+        <button data-activation=money class="kb atlas" style="width:100%; justify-content:center; margin-top:10px;" onclick="window.Kiwi.toast('Export RH · bientôt', { desc: 'La synthèse RH sera exportable quand la paie sera branchée sur vos heures réelles.', type: 'pend' })">Exporter le tableau de bord RH</button>
       `,
     });
   }
@@ -401,7 +401,7 @@
           <div class="kf-group"><label class="kf-label">Date d'obtention</label><input class="kf-input" type="date"/></div>
           <div class="kf-group"><label class="kf-label">Date de renouvellement</label><input class="kf-input" type="date"/></div>
         </div>
-        <button class="kb ghost" style="font-size:12px; padding:8px 14px;">+ Ajouter une certification</button>
+        <button data-activation=write class="kb ghost" style="font-size:12px; padding:8px 14px;">+ Ajouter une certification</button>
       `,
       4: `
         <div class="kf-row">
@@ -430,7 +430,7 @@
       foot: `
         ${step > 1 ? `<button class="kb ghost" id="wiz-back">Retour</button>` : `<button class="kb ghost" onclick="this.closest('.kiwi-backdrop').classList.remove('in'); setTimeout(()=>this.closest('.kiwi-backdrop')?.remove(), 280)">Annuler</button>`}
         <div style="flex:1;"></div>
-        <button class="kb primary" id="wiz-next">${step === total ? 'Activer le profil' : 'Continuer'}</button>
+        <button data-activation=write class="kb primary" id="wiz-next">${step === total ? 'Activer le profil' : 'Continuer'}</button>
       `,
     });
     setTimeout(() => {

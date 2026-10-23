@@ -186,8 +186,8 @@
         <div class="p-toolbar" style="margin: 4px 0 14px;">
           <div class="p-search">${SVG('search')}Rechercher cliente ou téléphone…</div>
           <button class="kb ghost" data-action="appt-filter">${SVG('list-filter',13)}Filtrer</button>
-          <button class="kb ghost" data-action="appt-export">${SVG('arrow-down-to-line',13)}Exporter</button>
-          <button class="kb atlas" data-action="appt-new">${ICN.plus}Nouveau RDV</button>
+          <button data-activation=money class="kb ghost" data-action="appt-export">${SVG('arrow-down-to-line',13)}Exporter</button>
+          <button data-activation=write class="kb atlas" data-action="appt-new">${ICN.plus}Nouveau RDV</button>
         </div>
 
         <!-- Practitioner legend -->
@@ -223,7 +223,7 @@
           <div class="p-card">
             <div class="head">
               <h4>Liste d'attente</h4>
-              <button class="kb ghost" data-action="appt-wait-add" style="padding:6px 12px; font-size:12px;">+ Ajouter</button>
+              <button data-activation=write class="kb ghost" data-action="appt-wait-add" style="padding:6px 12px; font-size:12px;">+ Ajouter</button>
             </div>
             <div class="s-auto-toggle">
               <label class="s-switch"><input type="checkbox" data-action="appt-auto-toggle" checked><span class="s-slider"></span></label>
@@ -264,7 +264,7 @@
         </div>
       `,
       foot: `
-        <button class="kb atlas" data-action="appt-new">${ICN.plus}Nouveau rendez-vous</button>
+        <button data-activation=write class="kb atlas" data-action="appt-new">${ICN.plus}Nouveau rendez-vous</button>
       `,
     });
 
@@ -529,7 +529,7 @@
             <p class="s-pkg-desc">${p.desc}</p>
             <div class="s-pkg-foot">
               <span class="meta">${p.sales} ventes / 30 j</span>
-              <button class="kb ghost" style="padding:5px 10px; font-size:11.5px;" data-action="svc-pkg-edit" data-arg="${i}">${ICN.edit}Modifier</button>
+              <button data-activation=write class="kb ghost" style="padding:5px 10px; font-size:11.5px;" data-action="svc-pkg-edit" data-arg="${i}">${ICN.edit}Modifier</button>
             </div>
           </div>
         `).join('');
@@ -543,7 +543,7 @@
             <p class="s-pkg-desc">${c.desc}</p>
             <div class="s-pkg-foot">
               <span class="meta">${c.sales} cures actives</span>
-              <button class="kb ghost" style="padding:5px 10px; font-size:11.5px;">${ICN.edit}Modifier</button>
+              <button data-activation=write class="kb ghost" style="padding:5px 10px; font-size:11.5px;">${ICN.edit}Modifier</button>
             </div>
           </div>
         `).join('');
@@ -565,7 +565,7 @@
                 <td><span class="s-skill ${s.skill}">${s.skill}</span></td>
                 <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color: var(--n-500);">·</span>'}</td>
                 <td class="mono right"><b>#${s.sales + 1}</b></td>
-                <td><button class="kb ghost" style="padding:4px 8px; font-size:11px;" data-action="svc-edit" data-arg="${SERVICES.indexOf(s)}">${ICN.edit}</button></td>
+                <td><button data-activation=write class="kb ghost" style="padding:4px 8px; font-size:11px;" data-action="svc-edit" data-arg="${SERVICES.indexOf(s)}">${ICN.edit}</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -590,15 +590,15 @@
             <div class="s-ai-title">Forfait Argan en hausse de 24 % MoM</div>
             <div class="s-ai-desc">Vos clientes touristes le préfèrent à la carte 2× sur 3. Considérez un upsell « Argan Deluxe » à +250 MAD avec massage 60 min.</div>
           </div>
-          <button class="kb ghost" style="padding:7px 12px; font-size:12px;" data-action="svc-ai-action">Créer Argan Deluxe</button>
+          <button data-activation=write class="kb ghost" style="padding:7px 12px; font-size:12px;" data-action="svc-ai-action">Créer Argan Deluxe</button>
         </div>
 
         <!-- Toolbar -->
         <div class="p-toolbar" style="margin: 4px 0 14px;">
           <div class="p-search">${SVG('search')}Rechercher un service…</div>
           <button class="kb ghost" data-action="svc-season">${ICN.cal}Programmation saisonnière</button>
-          <button class="kb ghost" data-action="svc-export">${SVG('arrow-down-to-line',13)}Exporter</button>
-          <button class="kb atlas" data-action="svc-new">${ICN.plus}Nouveau service</button>
+          <button data-activation=money class="kb ghost" data-action="svc-export">${SVG('arrow-down-to-line',13)}Exporter</button>
+          <button data-activation=write class="kb atlas" data-action="svc-new">${ICN.plus}Nouveau service</button>
         </div>
 
         <!-- Tabs -->
@@ -644,18 +644,18 @@
             <div class="s-season">
               <div class="s-season-h"><b>Menu Ramadan</b><span class="chip ok">Actif jusqu'au 9 mai</span></div>
               <p class="s-season-d">Soins plus calmes après ftour · gommage rhassoul + massage 30 min en duo · horaires 21h–01h.</p>
-              <button class="kb ghost" style="padding:6px 12px; font-size:12px;" data-action="svc-season-edit">${ICN.edit}Modifier</button>
+              <button data-activation=write class="kb ghost" style="padding:6px 12px; font-size:12px;" data-action="svc-season-edit">${ICN.edit}Modifier</button>
             </div>
             <div class="s-season">
               <div class="s-season-h"><b>Menu Été · gommage corps boost</b><span class="chip neutral">Programmé · 1 juin</span></div>
               <p class="s-season-d">Promotion gommage corps + enveloppement boue · −15 % avant 12h · push WhatsApp à 9h.</p>
-              <button class="kb ghost" style="padding:6px 12px; font-size:12px;" data-action="svc-season-edit">${ICN.edit}Modifier</button>
+              <button data-activation=write class="kb ghost" style="padding:6px 12px; font-size:12px;" data-action="svc-season-edit">${ICN.edit}Modifier</button>
             </div>
           </div>
         </div>
       `,
       foot: `
-        <button class="kb atlas" data-action="svc-new">${ICN.plus}Ajouter un service</button>
+        <button data-activation=write class="kb atlas" data-action="svc-new">${ICN.plus}Ajouter un service</button>
       `,
     });
 
@@ -734,9 +734,9 @@
           </div>
         `,
         foot: `
-          ${isEdit ? '<button class="kb danger" data-action="sv-delete">Supprimer</button>' : ''}
+          ${isEdit ? '<button data-activation=write class="kb danger" data-action="sv-delete">Supprimer</button>' : ''}
           <button class="kb ghost" data-dismiss>Annuler</button>
-          <button class="kb atlas" data-action="sv-save">${isEdit ? 'Enregistrer' : 'Publier le service'}</button>
+          <button data-activation=write class="kb atlas" data-action="sv-save">${isEdit ? 'Enregistrer' : 'Publier le service'}</button>
         `,
         width: 600,
       });
@@ -761,7 +761,7 @@
             modal({
               title: 'Supprimer ce service ?',
               desc: 'Les RDV déjà confirmés sont conservés. Le service sera retiré du catalogue public.',
-              foot: `<button class="kb ghost" data-dismiss>Garder</button><button class="kb danger" data-action="sv-delete-confirm">Supprimer</button>`,
+              foot: `<button class="kb ghost" data-dismiss>Garder</button><button data-activation=write class="kb danger" data-action="sv-delete-confirm">Supprimer</button>`,
               width: 460,
             });
           }
@@ -787,7 +787,7 @@
           <div class="s-rec-line"><span>Ventes 30 j</span><b>${pkg.sales}</b></div>
           <div class="s-rec-line"><span>Annulation</span><b>72h avant · sans frais</b></div>
         `,
-        foot: `<button class="kb ghost" data-dismiss>Fermer</button><button class="kb atlas" data-action="pkg-edit-go">${ICN.edit}Modifier le contenu</button>`,
+        foot: `<button class="kb ghost" data-dismiss>Fermer</button><button data-activation=write class="kb atlas" data-action="pkg-edit-go">${ICN.edit}Modifier le contenu</button>`,
         width: 540,
       });
     }

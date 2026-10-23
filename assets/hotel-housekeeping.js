@@ -68,7 +68,7 @@ window.__kiwiHotelInternal.define('housekeeping', (scope) => {
         <button role="tab" aria-selected="false" data-action="nav-tarifs"><span>${tx('Tarifs')}</span><small>${tx('par catégorie')}</small></button>
       </div>
       <div class="hx-room-kpis hx-hk-kpis">
-        <button><span>${tx('À nettoyer')}</span><b>${dirty.length}</b><small>${tx('file active')}</small></button>
+        <button data-activation=write><span>${tx('À nettoyer')}</span><b>${dirty.length}</b><small>${tx('file active')}</small></button>
         <button class="ready"><span>${tx('Prêtes')}</span><b>${clean}</b><small>${tx('à vendre')}</small></button>
         <button class="occupied"><span>${tx('Occupées')}</span><b>${occupied}</b><small>${tx('en maison')}</small></button>
         <button class="offline"><span>${tx('Hors-service')}</span><b>${offline}</b><small>${tx('maintenance')}</small></button>

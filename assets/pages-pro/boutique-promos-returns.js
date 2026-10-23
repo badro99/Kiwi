@@ -191,7 +191,7 @@
                 <td class="mono right" style="color: var(--n-500);">${p.aov}</td>
                 <td><span class="chip ${p.expiry === 'Permanent' ? 'neutral' : p.scheduled ? 'pend' : 'ok'}" style="font-family: var(--mono); font-size: 11px;">${p.expiry}</span></td>
                 <td style="text-align: right;">
-                  <button class="kb ghost" style="padding: 5px 10px; font-size: 11.5px;" data-action="${p.scheduled ? 'promo-edit' : 'promo-pause'}" data-arg="${p.id}" data-bubble="stop">
+                  <button data-activation=write class="kb ghost" style="padding: 5px 10px; font-size: 11.5px;" data-action="${p.scheduled ? 'promo-edit' : 'promo-pause'}" data-arg="${p.id}" data-bubble="stop">
                     ${p.scheduled ? SVG.edit : SVG.pause}
                     ${p.scheduled ? 'Modifier' : 'Pauser'}
                   </button>
@@ -585,7 +585,7 @@
       tag: _rL('AUTORISATION PROPRIÉTAIRE', 'OWNER AUTHORISATION', 'تفويض المالك'), title: _rL(`Corriger ${code}`, `Correct ${code}`, `تصحيح ${code}`),
       desc: _rL('La correction est ajoutée au journal permanent avec votre motif.', 'The correction is added to the permanent log with your reason.', 'يُضاف التصحيح إلى السجل الدائم مع سببك.'), width: 500,
       body: `<div class="kf-group"><label class="kf-label">${_rL('Variation du solde (MAD)', 'Balance change (MAD)', 'تغيّر الرصيد (MAD)')}</label><input class="kf-input" type="number" step="0.01" data-credit-delta placeholder="${_rL('Ex. -50 ou 50', 'E.g. -50 or 50', 'مثال: -50 أو 50')}" /></div><div class="kf-group"><label class="kf-label">${_rL('Motif obligatoire', 'Reason (required)', 'السبب (إلزامي)')}</label><input class="kf-input" maxlength="500" data-credit-reason placeholder="${_rL('Pourquoi ce solde doit être corrigé', 'Why this balance needs correcting', 'سبب تصحيح هذا الرصيد')}" /></div>`,
-      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb atlas" data-action="credit-adjust-confirm" data-code="${esc(code)}">${_rL('Confirmer la correction', 'Confirm correction', 'تأكيد التصحيح')}</button>`,
+      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button><button data-activation=write class="kb atlas" data-action="credit-adjust-confirm" data-code="${esc(code)}">${_rL('Confirmer la correction', 'Confirm correction', 'تأكيد التصحيح')}</button>`,
     });
     m.el.querySelector('[data-cancel]')?.addEventListener('click', () => m.el.querySelector('.kiwi-modal-close')?.click());
   };
@@ -685,8 +685,8 @@
         <span class="rx-who">${esc(issued.actor || credit.issuedBy || _rL('Caisse', 'Till', 'الصندوق'))}<small>${_rL('expire le', 'expires', 'تنتهي في')} ${creditLastDay(credit.expiresAt).toLocaleDateString('fr-FR')}</small></span>
         <span class="rx-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<small>${_rL('sur', 'of', 'من')} ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></span>
         <span class="rx-state">${tag}
-          ${credit.status !== 'cancelled' ? `<button class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">${_rL('Corriger', 'Correct', 'تصحيح')}</button>` : ''}
-          ${credit.status === 'active' ? `<button class="rx-mini txt danger" data-action="credit-cancel" data-code="${esc(credit.code)}">${_rL('Annuler', 'Cancel', 'إلغاء')}</button>` : ''}</span>
+          ${credit.status !== 'cancelled' ? `<button data-activation=write class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">${_rL('Corriger', 'Correct', 'تصحيح')}</button>` : ''}
+          ${credit.status === 'active' ? `<button data-activation=write class="rx-mini txt danger" data-action="credit-cancel" data-code="${esc(credit.code)}">${_rL('Annuler', 'Cancel', 'إلغاء')}</button>` : ''}</span>
       </div>`;
     };
 
@@ -711,7 +711,7 @@
             <div><h3>${real ? _rL('Articles retournés', 'Items returned', 'المنتجات المرتجعة') : _rL('Demandes de retour', 'Return requests', 'طلبات الإرجاع')}</h3><p>${real ? _rL('Article, motif, client et employé, tels qu’enregistrés à la caisse.', 'Item, reason, customer and employee, as recorded at the till.', 'المنتج والسبب والزبون والموظف كما سُجّلت في الصندوق.') : _rL('Approuvez, refusez ou échangez. Touchez une ligne pour l’historique client.', 'Approve, refuse or exchange. Tap a row for the customer history.', 'وافق أو ارفض أو استبدل. المس سطرًا لعرض سجل الزبون.')}</p></div>
             <div class="rx-tools">
               ${pending.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-search" placeholder="' + _rL('Article, client, motif…', 'Item, customer, reason…', 'المنتج أو الزبون أو السبب…') + '" aria-label="' + _rL('Rechercher un retour', 'Search returns', 'البحث في المرتجعات') + '" /></label>' : ''}
-              ${pending.length ? `<button class="kb ghost" data-action="ret-export">${SVG.download || ''}${_rL('Exporter', 'Export', 'تصدير')}</button>` : ''}
+              ${pending.length ? `<button data-activation=money class="kb ghost" data-action="ret-export">${SVG.download || ''}${_rL('Exporter', 'Export', 'تصدير')}</button>` : ''}
               ${real ? '' : `<button class="kb ghost" data-action="ret-policy-jump">${SVG.edit} ${_rL('Politique', 'Policy', 'السياسة')}</button>`}
             </div>
           </header>
@@ -762,7 +762,7 @@
                 _rL('Bijoux : sceau anti-fraude non rompu', 'Jewellery: anti-tamper seal unbroken', 'المجوهرات: ختم مكافحة التلاعب سليم'),
               ].map(rule => `<li style="display: flex; align-items: flex-start; gap: 9px; padding: 4px 0;"><span style="color: var(--atlas); flex-shrink: 0; margin-top: 4px;">${SVG.check}</span><span>${rule}</span></li>`).join('')}
             </ul>
-            <button class="kb atlas" style="width: 100%; justify-content: center; margin-top: 12px;" data-action="ret-policy-save">${_rL('Enregistrer la politique', 'Save policy', 'حفظ السياسة')}</button>
+            <button data-activation=write class="kb atlas" style="width: 100%; justify-content: center; margin-top: 12px;" data-action="ret-policy-save">${_rL('Enregistrer la politique', 'Save policy', 'حفظ السياسة')}</button>
           </div>
 
           <div class="p-card" style="margin-bottom: 0;">
@@ -798,21 +798,21 @@
           </div>
           <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">${_rL('Choisissez le canal, la commande d\'origine sera automatiquement liée pour la conformité.', 'Choose the channel. The original order is linked automatically for compliance.', 'اختر القناة، وسيُربط الطلب الأصلي تلقائيًا لأغراض الامتثال.')}</div>
           <div class="p-grid-3">
-            <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-original">
+            <button data-activation=money class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-original">
               ${SVG.card}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">${_rL('Carte d\'origine', 'Original card', 'البطاقة الأصلية')}</div>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Visa / Mastercard · ${_rL('1-3 jours', '1-3 days', '1-3 أيام')}</div>
               </div>
             </button>
-            <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-credit">
+            <button data-activation=write class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-credit">
               ${SVG.voucher}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">${_rL('Crédit boutique', 'Store credit', 'رصيد المتجر')}</div>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">${_rL('Bon valable 12 mois', 'Voucher valid for 12 months', 'قسيمة صالحة 12 شهرًا')}</div>
               </div>
             </button>
-            <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-whatsapp">
+            <button data-activation=money class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-whatsapp">
               ${SVG.wa}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">${_rL('Notifier WhatsApp', 'Notify on WhatsApp', 'إشعار عبر واتساب')}</div>
@@ -888,9 +888,9 @@
       `,
       foot: `
         <button class="kb ghost" data-action="ret-refuse" data-arg="${id || ''}" data-bubble="stop" style="color: var(--danger);">${SVG.x} ${_rL('Refuser', 'Refuse', 'رفض')}</button>
-        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.voucherSm} ${_rL('Crédit boutique', 'Store credit', 'رصيد المتجر')}</button>
+        <button data-activation=write class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.voucherSm} ${_rL('Crédit boutique', 'Store credit', 'رصيد المتجر')}</button>
         <button class="kb ghost" data-action="ret-exchange" data-arg="${id || ''}" data-bubble="stop">${SVG.swap} ${_rL('Échanger', 'Exchange', 'استبدال')}</button>
-        <button class="kb atlas" data-action="ret-approve" data-arg="${id || ''}" data-bubble="stop">${SVG.check} ${_rL('Approuver remboursement', 'Approve refund', 'الموافقة على استرداد المبلغ')}</button>
+        <button data-activation=money class="kb atlas" data-action="ret-approve" data-arg="${id || ''}" data-bubble="stop">${SVG.check} ${_rL('Approuver remboursement', 'Approve refund', 'الموافقة على استرداد المبلغ')}</button>
       `,
     });
   };

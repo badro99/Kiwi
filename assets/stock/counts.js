@@ -122,7 +122,7 @@ window.KiwiStockInternal.install('counts', (S) => {
             ${tabBtn('rollup', ct('tabRollup'))}
           </div>
           <div style="display:flex;gap:8px;">
-            <button class="st-btn secondary" type="button" data-action="stock-export-counts-csv" style="display:flex;align-items:center;gap:6px;">
+            <button data-activation=money class="st-btn secondary" type="button" data-action="stock-export-counts-csv" style="display:flex;align-items:center;gap:6px;">
               ${svg('download', 14)}<span>${esc(ct('exportCsv'))}</span>
             </button>
             <button class="st-btn primary" type="button" data-action="stock-physical-count">
@@ -726,7 +726,7 @@ window.KiwiStockInternal.install('counts', (S) => {
         </label>
         <p style="font-size:12px;color:var(--n-600);margin:10px 2px 0;">${esc(t('mSheetCount', n))}</p>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-sheet-print>${esc(t('mSheetPrint'))}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button data-activation=write class="st-btn primary" data-stock-sheet-print>${esc(t('mSheetPrint'))}</button>`,
     });
     requestAnimationFrame(() => {
       const scope = m?.el || topBackdrop();
@@ -844,7 +844,7 @@ window.KiwiStockInternal.install('counts', (S) => {
           <span class="st-pc-prog-l" data-pc-prog-l>${esc(t('mCountProg', 0, items.length))}</span>
         </div>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mCountSave'))}</button><button class="st-btn primary" data-stock-pc-validate disabled>${esc(t('mCountValidate'))}</button>`,
+      foot: `<button data-activation=write class="st-btn" data-dismiss-modal>${esc(t('mCountSave'))}</button><button data-activation=write class="st-btn primary" data-stock-pc-validate disabled>${esc(t('mCountValidate'))}</button>`,
     });
     requestAnimationFrame(() => { wireDismiss(m?.el || topBackdrop()); wirePhysicalCount(items); });
   }

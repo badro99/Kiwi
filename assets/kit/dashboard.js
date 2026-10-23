@@ -82,7 +82,7 @@
           var label = '<span class="k-foot k-ink2 lb">' + esc(tl.label) + '</span>';
           if (st === 'na') {
             body = label + '<span class="k-foot k-ink2 na">' + esc(tl.note || t('kpi.margin_needs_costs')) + '</span>' +
-              '<button type="button" class="k-foot-s plain" data-do="add-costs">' + esc(tl.action || t('kpi.add_costs')) + '</button>';
+              '<button data-activation=write type="button" class="k-foot-s plain" data-do="add-costs">' + esc(tl.action || t('kpi.add_costs')) + '</button>';
           } else if (st === 'error') {
             body = label + '<span class="k-foot k-danger-ink na">' + th('state.load_failed') + '</span>' +
               '<button type="button" class="k-foot-s plain" data-do="retry">' + th('action.try_again') + '</button>';

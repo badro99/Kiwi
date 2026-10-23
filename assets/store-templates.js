@@ -282,7 +282,7 @@
       width: 640,
       body,
       foot: `<button class="kb ghost" data-kst-skip>${esc(tr({ fr: 'Plus tard', en: 'Later', ar: 'لاحقاً' }))}</button>`
-        + `<button class="kb atlas" data-kst-go disabled>${esc(tr({ fr: 'Ajouter à mon catalogue', en: 'Add to my catalogue', ar: 'أضف إلى كتالوجي' }))}</button>`,
+        + `<button data-activation=write class="kb atlas" data-kst-go disabled>${esc(tr({ fr: 'Ajouter à mon catalogue', en: 'Add to my catalogue', ar: 'أضف إلى كتالوجي' }))}</button>`,
     });
 
     const root = m.el;

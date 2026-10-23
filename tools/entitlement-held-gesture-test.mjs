@@ -31,9 +31,9 @@ const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/C
 assert.ok(bin, 'Chromium required for the entitlement gestures');
 
 const page = (lang, onboarded) => `<!doctype html><html lang="${lang}"${lang === 'ar' ? ' dir="rtl"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/entitlements.css"></head><body style="margin:0;padding:24px;background:#F7F5F0">
-<button id="add">Ajouter un produit</button>
+<button id="add" data-activation="write">Ajouter un produit</button>
 <button id="ok">OK</button>
-<button id="pay">Encaisser 10 MAD</button>
+<button id="pay" data-activation="money">Encaisser 10 MAD</button>
 <input id="field" type="text" name="note" style="display:block;margin-top:12px">
 <button id="out" type="button">Se déconnecter</button>
 <div data-kiwi-lock id="lock" style="margin-top:12px;padding:12px;border:1px solid #ccc">

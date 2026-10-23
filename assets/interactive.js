@@ -2271,7 +2271,7 @@ ar: {
           ar: 'يشمل الطلب حسابك المتصل وجميع مؤسساته، وليس الشاشة الحالية فقط. صدّر بياناتك قبل التأكيد. يعالج فريقنا الحذف خلال 30 يوماً ويؤكده بالبريد. قد تُحتفظ بالسجلات المطلوبة قانونياً وسنوضح لك ما هي.',
         }),
         body: `<p data-delete-identity></p><label data-delete-form hidden>${copy.password}<input type="password" autocomplete="current-password" data-delete-password style="display:block;width:100%;min-height:44px;font-size:16px;margin-top:8px" /></label><p data-delete-status role="status" aria-live="polite">${copy.loading}</p>`,
-        foot: `<button class="kb ghost" type="button" data-close>${tr({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' })}</button><button class="kb danger" type="button" data-delete-submit disabled>${copy.send}</button>`,
+        foot: `<button class="kb ghost" type="button" data-close>${tr({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' })}</button><button data-activation=write class="kb danger" type="button" data-delete-submit disabled>${copy.send}</button>`,
         width: 480,
       });
       const status = m.el.querySelector('[data-delete-status]'), button = m.el.querySelector('[data-delete-submit]');
@@ -2361,7 +2361,7 @@ ar: {
         body: `<div data-acc-form>
             <label style="display:block;font-size:13px;margin-bottom:10px;">${c.name}<input type="text" maxlength="80" autocomplete="off" data-acc-name style="${field}"></label>
             <label style="display:block;font-size:13px;margin-bottom:12px;">${c.email}<input type="email" maxlength="254" autocomplete="off" dir="ltr" data-acc-email style="${field}"></label>
-            <button class="kb atlas" type="button" data-acc-create>${c.invite}</button>
+            <button data-activation=write class="kb atlas" type="button" data-acc-create>${c.invite}</button>
           </div>
           <p data-acc-status role="status" style="font-size:13px;color:var(--danger);margin:10px 0 0;min-height:18px;"></p>
           <div data-acc-link hidden style="margin-top:6px;padding:14px;border:1px solid var(--n-200);border-radius:12px;background:var(--paper);">
@@ -2585,7 +2585,7 @@ ar: {
         `<input class="ks-field" data-f="${f.k}" ${f.type === 'number' ? 'type="number" inputmode="numeric" min="0"' : `maxlength="${f.max}"`} style="${fld}"/>`
       ).join('') + (cfg.hint ? `<div style="font-size:12px;color:var(--n-500);margin-top:14px;line-height:1.5;">${cfg.hint}</div>` : '');
       const m = modal({ tag: cfg.tag, title: cfg.title, width: 460, body,
-        foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${tr({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' })}</button>` });
+        foot: `<button data-activation=write class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${tr({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' })}</button>` });
       cfg.fields.forEach((f) => {
         const cur = get(f.k, f.def);
         m.el.querySelector(`[data-f="${f.k}"]`).value = f.type === 'number' ? String(cur).replace(/[^\d]/g, '') : cur;
@@ -2721,11 +2721,11 @@ ar: {
                 <label class="dp-num"><input data-discount-input type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="12" aria-label="Autre pourcentage, de 1 à 100" /><span>%</span></label>
                 <button type="button" class="dp-step" data-discount-step="1" aria-label="Augmenter">${plus}</button>
               </div>
-              <button type="button" class="dp-addbtn" data-discount-add>Ajouter</button>
+              <button data-activation=write type="button" class="dp-addbtn" data-discount-add>Ajouter</button>
             </section>
             <p class="dp-note"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Z"/></svg>Les ventes déjà enregistrées ne changent pas. Une remise hors réglage reste encaissée et vous est signalée.</p>
           </div>`,
-        foot: '<button type="button" class="kb" data-discount-cancel>Annuler</button><button type="button" class="kb atlas" data-discount-save>Enregistrer</button>' });
+        foot: '<button type="button" class="kb" data-discount-cancel>Annuler</button><button data-activation=write type="button" class="kb atlas" data-discount-save>Enregistrer</button>' });
       const $ = sel => m.el.querySelector(sel);
       let shown = SAMPLE, raf = 0;
       const tween = to => {
@@ -2826,7 +2826,7 @@ ar: {
       const rowS = 'display:flex;align-items:center;gap:11px;padding:12px 4px;border-bottom:1px solid var(--n-200);cursor:pointer;font-size:14px;color:var(--ink);';
       const m = modal({ tag: tr({ fr: 'PAIEMENTS', en: 'PAYMENTS', ar: 'المدفوعات' }), title: tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'طرق الدفع المقبولة' }), width: 420,
         body: OPTS.map((o) => `<label style="${rowS}"><input type="checkbox" data-mth="${escape(o)}" ${on(o) ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--atlas);flex-shrink:0;"/>${escape(o)}</label>`).join(''),
-        foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${tr({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' })}</button>` });
+        foot: `<button data-activation=write class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${tr({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' })}</button>` });
       m.el.addEventListener('click', (e) => {
         if (!e.target.closest('[data-save]')) return;
         const sel = [...m.el.querySelectorAll('[data-mth]:checked')].map((c) => c.getAttribute('data-mth'));
@@ -2943,7 +2943,7 @@ ar: {
           <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· MAD</span></label>
           <input class="ev-field" data-ev-goal type="number" inputmode="numeric" style="${fld}" min="0"/>
         `,
-        foot: `<button class="kb atlas" data-ev-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">Enregistrer</button>`,
+        foot: `<button data-activation=write class="kb atlas" data-ev-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">Enregistrer</button>`,
       });
       m.el.querySelector('[data-ev-name]').value = vd.name || '';
       m.el.querySelector('[data-ev-city]').value = vd.location || '';
@@ -3038,7 +3038,7 @@ ar: {
           <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· optionnel</span></label>
           <input class="ob-field" data-ob-goal type="number" inputmode="numeric" placeholder="Ex. 5000 MAD" style="${fld}" min="0"/>
         `,
-        foot: `<button class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">Créer mon tableau de bord →</button>`,
+        foot: `<button data-activation=write class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">Créer mon tableau de bord →</button>`,
       });
       const nameInput = m.el.querySelector('[data-ob-name]');
       setTimeout(() => nameInput && nameInput.focus(), 320);
@@ -3156,7 +3156,7 @@ ar: {
             ${[1,2,3,4,5,6,7,8,9,',',0,'⌫'].map(n => `<button class="kb ghost" style="padding:18px; font-size:19px; font-weight:500; justify-content:center;" data-key="${n}">${n}</button>`).join('')}
           </div>
           <div style="margin-top:18px; display:flex; flex-direction:column; gap:8px;">
-            <button class="kb atlas" style="padding:14px; justify-content:center; font-size:15px;" data-method="card">Encaisser par carte · Tap ou dip</button>
+            <button data-activation=money class="kb atlas" style="padding:14px; justify-content:center; font-size:15px;" data-method="card">Encaisser par carte · Tap ou dip</button>
             <button class="kb ghost" style="padding:14px; justify-content:center; font-size:15px;" data-method="qr">Afficher QR Kiwi Wallet</button>
           </div>
         `
@@ -3319,8 +3319,8 @@ ar: {
           </div>
         `,
         foot: `
-          <button class="kb ghost" data-refund>Rembourser partiellement</button>
-          <button class="kb ghost" data-print>Renvoyer le reçu</button>
+          <button data-activation=money class="kb ghost" data-refund>Rembourser partiellement</button>
+          <button data-activation=write class="kb ghost" data-print>Renvoyer le reçu</button>
           <button class="kb primary" data-dismiss>Fermer</button>
         `
       });
@@ -3467,8 +3467,8 @@ ar: {
         `,
         foot: `
           ${cancelFoot}
-          <button class="kb ghost" data-ord-receipt>${L.sendReceipt}</button>
-          ${realSale ? '' : `<button class="kb ghost" data-ord-refund>${L.refund}</button>`}
+          <button data-activation=write class="kb ghost" data-ord-receipt>${L.sendReceipt}</button>
+          ${realSale ? '' : `<button data-activation=money class="kb ghost" data-ord-refund>${L.refund}</button>`}
           <button class="kb primary" data-dismiss>${L.close}</button>
         `,
       });
@@ -3698,7 +3698,7 @@ ar: {
             <div class="kf-label">Ou recevez le lien par SMS</div>
             <div style="display:flex; gap:8px;">
               <input class="kf-input" placeholder="+212 6 xx xx xx xx" style="flex:1;" />
-              <button class="kb atlas" data-sms>Envoyer</button>
+              <button data-activation=write class="kb atlas" data-sms>Envoyer</button>
             </div>
           </div>
         `

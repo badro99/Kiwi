@@ -1019,10 +1019,10 @@ function _renderInventory() {
   const k = _bqxStockKPI(st);
   const t = _bqxInvT();
   const more = [
-    `<button type="button" data-action="bqx-import">${_ICN.download}${_esc(t.import)}</button>`,
-    `<button type="button" data-action="bqx-export">${_ICN.upload}${_esc(t.export)}</button>`,
+    `<button data-activation=write type="button" data-action="bqx-import">${_ICN.download}${_esc(t.import)}</button>`,
+    `<button data-activation=money type="button" data-action="bqx-export">${_ICN.upload}${_esc(t.export)}</button>`,
     _bqxTemplatesOn() ? `<button type="button" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}${_esc(t.templates)}</button>` : '',
-    _orderProOn() ? `<button type="button" data-action="orderpro-tags">${_esc(t.nfc)}</button>` : '',
+    _orderProOn() ? `<button data-activation=write type="button" data-action="orderpro-tags">${_esc(t.nfc)}</button>` : '',
     (window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button type="button" data-action="nav-stock-movements">${_esc(t.moves)}</button>` : '',
   ].join('');
   window.Kiwi.appPage('inventory', {
@@ -1642,7 +1642,7 @@ function _variantRow(v, kind) {
     ? `<span class="bqx-vr-bc">${BC().svg(primary.code, { height: 22, module: 1, showText: false })}<span class="bqx-bc-code">${_esc(primary.code)}</span><span class="bqx-badge ${primary.type === 'imported' ? 'imp' : 'gen'}">${_esc(primary.type === 'imported' ? t.bcImported : t.bcGenerated)}</span></span>`
     : `<span class="bqx-nocode">${_esc(t.bcNone)}</span>`;
   const first = primary
-    ? `<button type="button" class="bqx-vr-act" data-action="bqx-var-print" data-arg="${id}">${_bqxIc('print')}<span>${_esc(t.actLabel)}</span></button>`
+    ? `<button data-activation=write type="button" class="bqx-vr-act" data-action="bqx-var-print" data-arg="${id}">${_bqxIc('print')}<span>${_esc(t.actLabel)}</span></button>`
     : `<button type="button" class="bqx-vr-act" data-action="bqx-var-gen" data-arg="${id}">${_bqxIc('add')}<span>${_esc(t.actGen)}</span></button>`;
   const of = _esc(_bqxPfFill(t.stockOf, { v: label }));
   return `<li class="bqx-vr${stock ? '' : ' is-out'}" data-vid="${id}">
@@ -1736,12 +1736,12 @@ function _bqxProductBody(pid) {
     <div class="bqx-sh-sec">
       <div class="bqx-sh-head">
         <h4>${_esc(t.variantsTitle)} <span>${n}</span></h4>
-        <button type="button" class="kb atlas" data-action="bqx-var-add" data-arg="${_esc(pid)}">${_bqxIc('add')}${_esc(t.addVariant)}</button>
+        <button data-activation=write type="button" class="kb atlas" data-action="bqx-var-add" data-arg="${_esc(pid)}">${_bqxIc('add')}${_esc(t.addVariant)}</button>
       </div>
       ${list}
       ${n ? `<div class="bqx-sh-foot">
         ${missing ? `<button type="button" class="bqx-vr-act" data-action="bqx-var-gen-all" data-arg="${_esc(pid)}">${_bqxIc('add')}<span>${_esc(t.genMissing(missing))}</span></button>` : ''}
-        <button type="button" class="bqx-vr-act" data-action="bqx-prod-print" data-arg="${_esc(pid)}"${coded ? '' : ' disabled'}>${_bqxIc('print')}<span>${_esc(coded ? t.printAll(coded) : t.printNone)}</span></button>
+        <button data-activation=write type="button" class="bqx-vr-act" data-action="bqx-prod-print" data-arg="${_esc(pid)}"${coded ? '' : ' disabled'}>${_bqxIc('print')}<span>${_esc(coded ? t.printAll(coded) : t.printNone)}</span></button>
       </div>` : ''}
     </div>
     ${_bqxHistoryHtml(pid)}
@@ -1769,7 +1769,7 @@ function _bqxOpenProduct(pid) {
     foot: `
       <button class="kb ghost" data-dismiss>${_esc(t.close)}</button>
       <button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button>
-      <button class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`,
+      <button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`,
   });
   _bqxMountDrawer(pid);
   /* re-render the grid behind once the drawer is dismissed */
@@ -1937,8 +1937,8 @@ function _mzRenderPage() {
       <div class="p-toolbar" style="margin-top:4px;">
         <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
           <input data-mz-search placeholder="Produit, catégorie, type, référence…" value="${_esc(_mzFilter.q)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
-        <button class="kb ghost" data-action="mz-export">${_ICN.upload}Exporter CSV</button>
-        <button class="kb primary" data-action="mz-new">${_ICN.plus}Nouveau mouvement</button>
+        <button data-activation=money class="kb ghost" data-action="mz-export">${_ICN.upload}Exporter CSV</button>
+        <button data-activation=write class="kb primary" data-action="mz-new">${_ICN.plus}Nouveau mouvement</button>
       </div>
 
       <div class="mzs-filters">
@@ -2184,7 +2184,7 @@ function _mzManualModal(preset) {
           <p class="bqx-pf-err" data-mzm="msg" role="alert" hidden></p>
         </div>
       </div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb primary" data-mzm="save"${products.length ? '' : ' disabled'}>${_esc(t.save)}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb primary" data-mzm="save"${products.length ? '' : ' disabled'}>${_esc(t.save)}</button>`,
   });
   const root = m && m.el ? m.el : document;
   if (m && m.el) m.el.classList.add('bqx-pf-modal');
@@ -2432,7 +2432,7 @@ function _bqxAskCopies(cb, note, count) {
         <div class="bqx-pf-err" data-bqx-copies-err role="alert" hidden></div>
       </div>
       <div class="bqx-pf-hint">${_esc(t.printHint)}</div></div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-print-go">${_bqxIc('print')}${_esc(t.print)}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb atlas" data-action="bqx-print-go">${_bqxIc('print')}${_esc(t.print)}</button>`,
   });
   _bqxPrintCb = cb;
   const b = _bqxModal && _bqxModal.el;
@@ -2485,7 +2485,7 @@ handlers['bqx-var-reg'] = (_el, arg) => {
         <div class="bqx-pf-err" data-bqx-reg-err role="alert" hidden></div>
         <div class="bqx-pf-hint">${_esc(t.regHint)}</div>
       </div></div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-var-reg-save" data-arg="${_esc(arg)}" data-bqx-reg-go>${_esc(t.regSave)}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb atlas" data-action="bqx-var-reg-save" data-arg="${_esc(arg)}" data-bqx-reg-go>${_esc(t.regSave)}</button>`,
   });
   const b = _bqxModal && _bqxModal.el;
   if (!b) return;
@@ -2597,7 +2597,7 @@ handlers['bqx-var-add'] = (_el, arg) => {
       </section>
       <div class="bqx-sh-preview" data-bqx-va-preview aria-live="polite"></div>
     </div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-var-add-save" data-arg="${_esc(arg)}" data-bqx-va-go>${_esc(t.addOk)}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb atlas" data-action="bqx-var-add-save" data-arg="${_esc(arg)}" data-bqx-va-go>${_esc(t.addOk)}</button>`,
   });
   const b = _bqxModal && _bqxModal.el;
   if (!b) return;
@@ -2735,7 +2735,7 @@ handlers['bqx-var-color'] = (_el, arg) => {
         </section>
         <div class="bqx-color-safe">${_bqxIc('verified_user', 15)}<span>${_esc(t.colorSafe)}</span></div>
       </div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${_esc(arg)}">${_esc(t.colorSave)}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb atlas" data-action="bqx-var-color-save" data-arg="${_esc(arg)}">${_esc(t.colorSave)}</button>`,
   });
   const b = (_bqxModal && _bqxModal.el) || document.querySelector('.kiwi-backdrop');
   const modalPanel = b && b.querySelector('.kiwi-modal');
@@ -3387,8 +3387,8 @@ function _bqxPfOpen(p) {
     width: 820,
     body: _bqxPfBody(p, catSel),
     foot: p
-      ? `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${_esc(p.id)}">${_esc(t.save)}</button>`
-      : `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-new-save">${_esc(t.create)}</button>`,
+      ? `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${_esc(p.id)}">${_esc(t.save)}</button>`
+      : `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button data-activation=write class="kb atlas" data-action="bqx-new-save">${_esc(t.create)}</button>`,
   });
   const b = _bqxModal && _bqxModal.el;
   if (!b) return;
@@ -3525,7 +3525,7 @@ function _renderCategories() {
 
       <div class="p-toolbar" style="margin-top:4px;">
         <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span><span style="margin-left:6px;color:var(--n-500,#77807b);">${_catL('Organisez vos rayons, couleur, renommage, suppression', 'Organise your sections: colour, rename, delete', 'نظّم أقسامك: اللون وإعادة التسمية والحذف')}</span></div>
-        <button class="kb primary" data-action="bqx-cat-new">${_ICN.plus}${_catL('Ajouter une catégorie', 'Add a category', 'إضافة فئة')}</button>
+        <button data-activation=write class="kb primary" data-action="bqx-cat-new">${_ICN.plus}${_catL('Ajouter une catégorie', 'Add a category', 'إضافة فئة')}</button>
       </div>
 
       <div style="margin-top:12px;">
@@ -3538,7 +3538,7 @@ function _renderCategories() {
             <div class="bqx-cat-sw">${_TAGS.map((t) => `<button class="${t.id === c.color ? 'on' : ''}" style="background:${t.hex};" title="${_catTone(t)}" data-action="bqx-cat-color" data-arg="${c.id}::${t.id}"></button>`).join('')}</div>
             <div class="kx-tree-actions">
               <button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}" aria-label="${_catL('Renommer', 'Rename', 'إعادة تسمية')} ${_esc(c.name)}" title="${_catL('Renommer', 'Rename', 'إعادة تسمية')}">${_ICN.edit}</button>
-              <button class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}" aria-label="${_catL('Supprimer', 'Delete', 'حذف')} ${_esc(c.name)}" title="${_catL('Supprimer', 'Delete', 'حذف')}">${_ICN.trash}</button>
+              <button data-activation=write class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}" aria-label="${_catL('Supprimer', 'Delete', 'حذف')} ${_esc(c.name)}" title="${_catL('Supprimer', 'Delete', 'حذف')}">${_ICN.trash}</button>
             </div>
           </div>`;
         }).join('') : `<div class="kx-foot-hint"><div class="lh">${_catL('Aucune catégorie', 'No categories', 'لا توجد فئات')}</div><div class="rh">${_catL('Ajoutez votre premier rayon.', 'Add your first section.', 'أضف أول قسم لك.')}</div></div>`}
@@ -3564,7 +3564,7 @@ handlers['bqx-cat-new'] = () => {
       <div class="kf-group"><label class="kf-label">${_catL('Nom de la catégorie', 'Category name', 'اسم الفئة')}</label><input class="kf-input" placeholder="${_esc(_bqxCopy().catPlaceholder)}" data-bqx-cname /></div>
       <div class="kf-group"><label class="kf-label">${_catL('Couleur', 'Colour', 'اللون')}</label>
         <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};width:24px;height:24px;" title="${_catTone(t)}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb atlas" data-action="bqx-cat-new-save">${_catL('Créer la catégorie', 'Create category', 'إنشاء الفئة')}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button data-activation=write class="kb atlas" data-action="bqx-cat-new-save">${_catL('Créer la catégorie', 'Create category', 'إنشاء الفئة')}</button>`,
   });
   setTimeout(() => {
     const sw = document.querySelector('.kiwi-backdrop [data-bqx-cnewsw]');
@@ -3595,7 +3595,7 @@ handlers['bqx-cat-rename'] = (_el, arg) => {
   _bqxModal = modal({
     title: _catL('Renommer la catégorie', 'Rename category', 'إعادة تسمية الفئة'), width: 440,
     body: `<div class="kf-group"><label class="kf-label">${_catL('Nom', 'Name', 'الاسم')}</label><input class="kf-input" value="${_esc(c.name)}" data-bqx-crename /></div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb atlas" data-action="bqx-cat-rename-save" data-arg="${arg}">${_catL('Enregistrer', 'Save', 'حفظ')}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button data-activation=write class="kb atlas" data-action="bqx-cat-rename-save" data-arg="${arg}">${_catL('Enregistrer', 'Save', 'حفظ')}</button>`,
   });
 };
 handlers['bqx-cat-rename-save'] = (_el, arg) => {
@@ -3617,7 +3617,7 @@ handlers['bqx-cat-del'] = (_el, arg) => {
     body: `<div class="kf-group"><label class="kf-label">${_catL('Déplacer les produits vers', 'Move the products to', 'نقل المنتجات إلى')}</label>
       <select class="kf-input" data-bqx-reassign><option value="">${_catL('Sans catégorie', 'Uncategorised', 'بدون فئة')}</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
       <div class="kx-warn-box danger"><div class="hd">${_catL('Suppression', 'Deletion', 'الحذف')}</div><ul><li>${_catL('La catégorie disparaît de la caisse et du dashboard.', 'The category disappears from the till and the dashboard.', 'تختفي الفئة من الصندوق ولوحة التحكم.')}</li><li>${_catL('Les produits sont conservés et déplacés, jamais supprimés.', 'Products are kept and moved, never deleted.', 'تُحفظ المنتجات وتُنقل ولا تُحذف أبدًا.')}</li></ul></div>`,
-    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}${_catL('Supprimer', 'Delete', 'حذف')}</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button data-activation=write class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}${_catL('Supprimer', 'Delete', 'حذف')}</button>`,
   });
 };
 handlers['bqx-cat-del-ok'] = (_el, arg) => {

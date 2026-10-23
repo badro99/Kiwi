@@ -1282,7 +1282,7 @@
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
           ${liveStatus.key === 'libre' ? `<button class="hx-btn atlas" data-action="hx-walkin-room" data-arg="${n}">${tx('Vendre ce soir · walk-in')}</button>` : ''}
-          ${liveRoom && liveRoom.kind !== 'arrivee' ? `<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(liveRoom.stay.id)}">${tx('Ouvrir le dossier')}</button>` : ''}
+          ${liveRoom && liveRoom.kind !== 'arrivee' ? `<button data-activation=write class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(liveRoom.stay.id)}">${tx('Ouvrir le dossier')}</button>` : ''}
           ${liveStatus.key === 'sale' ? (isCustomHotel()
             ? `<button class="hx-btn atlas" data-action="hx-hk-done" data-arg="${n}">${tx('Marquer propre · relouable')}</button>`
             : `<button class="hx-btn atlas" data-action="hx-hk-open">Ouvrir la file ménage</button>`) : ''}
@@ -1695,7 +1695,7 @@
       <div class="hx-daily-list">${rows.map((b) => {
         const room = rooms.find((r) => r.id === b.resourceId);
         const who = b.customer?.name || tx('client');
-        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? tx('Ch. {n}', { n: esc(room.n) }) : tx('Non attribuée')}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || tx('Client'))}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || tx('Autre'))} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(cuDay(b.hotel.checkIn))}${hxTo()}${esc(cuDay(b.hotel.checkOut))} · ${esc(txn(b.partySize || 1, 'personne'))} · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc(tx('Enregistrer l’arrivée de {name}', { name: who }))}">${tx('Check-in')}</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc(tx('Enregistrer le départ de {name}', { name: who }))}">${tx('Check-out')}</button>` : ''}${b.status === 'completed' ? `<button class="hx-btn ghost" data-action="hx-stay-reopen" data-arg="${esc(b.id)}" aria-label="${esc(tx('Rouvrir le dossier de {name} pour corriger sa facturation', { name: who }))}">${tx('Rouvrir le dossier')}</button>` : ''}${b.status === 'checked_in' ? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc(tx('Annuler l’arrivée enregistrée pour {name}', { name: who }))}">${tx('Annuler l’arrivée')}</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc(tx('Marquer {name} comme non présenté', { name: who }))}">${tx('Non présenté')}</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc(tx('Ouvrir le dossier {ref}', { ref: b.code || b.customer?.name || tx('client') }))}">${tx('Ouvrir le dossier')}</button></article>`;
+        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? tx('Ch. {n}', { n: esc(room.n) }) : tx('Non attribuée')}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || tx('Client'))}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || tx('Autre'))} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(cuDay(b.hotel.checkIn))}${hxTo()}${esc(cuDay(b.hotel.checkOut))} · ${esc(txn(b.partySize || 1, 'personne'))} · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button data-activation=write class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc(tx('Enregistrer l’arrivée de {name}', { name: who }))}">${tx('Check-in')}</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button data-activation=write class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc(tx('Enregistrer le départ de {name}', { name: who }))}">${tx('Check-out')}</button>` : ''}${b.status === 'completed' ? `<button class="hx-btn ghost" data-action="hx-stay-reopen" data-arg="${esc(b.id)}" aria-label="${esc(tx('Rouvrir le dossier de {name} pour corriger sa facturation', { name: who }))}">${tx('Rouvrir le dossier')}</button>` : ''}${b.status === 'checked_in' ? `<button data-activation=write class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc(tx('Annuler l’arrivée enregistrée pour {name}', { name: who }))}">${tx('Annuler l’arrivée')}</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc(tx('Marquer {name} comme non présenté', { name: who }))}">${tx('Non présenté')}</button>` : ''}<button data-activation=write class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc(tx('Ouvrir le dossier {ref}', { ref: b.code || b.customer?.name || tx('client') }))}">${tx('Ouvrir le dossier')}</button></article>`;
       }).join('') || `<p class="hx-empty">${tx('Aucun dossier dans cette vue. Vérifiez la date, les filtres et l’état de l’actualisation.')}</p>`}</div>
       <p class="hx-daily-note">${tx('Les walk-ins encaissés séparément restent accessibles dans le plan des chambres et les folios. Cette liste présente les dossiers de réservation.')}</p>
     </section>`;
@@ -1756,7 +1756,7 @@
             <div class="hx-exc-meta"><b>${esc(roomLabel)}</b> · ${esc(b.customer?.name || tx('Client'))} <span>(${cuDay(b.hotel.checkIn)}${hxTo()}${cuDay(b.hotel.checkOut)})</span></div>
             <div class="hx-exc-badges">${badgesHtml}</div>
           </div>
-          <button class="hx-btn ghost hx-btn-sm" data-action="hx-stay-edit" data-arg="${esc(b.id)}">${tx('Compléter la fiche')}</button>
+          <button data-activation=write class="hx-btn ghost hx-btn-sm" data-action="hx-stay-edit" data-arg="${esc(b.id)}">${tx('Compléter la fiche')}</button>
         </div>`;
       }).join('');
 
@@ -1835,7 +1835,7 @@
         </div>
         <div class="hx-batch-foot">
           <button class="hx-link-btn" type="button" data-action="hx-room-types">${tx('Gérer les types et tarifs')}</button>
-          <button class="hx-btn atlas" type="button" data-action="hx-room-batch-save">${tx('Ajouter les chambres')}</button>
+          <button data-activation=write class="hx-btn atlas" type="button" data-action="hx-room-batch-save">${tx('Ajouter les chambres')}</button>
         </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-batch-modal');
@@ -1890,8 +1890,8 @@
         </div>
       </div>
       <div class="hx-room-form-actions">
-        <button class="hx-btn warn" data-action="hx-room-delete-open" data-arg="${room.n}">${tx('Supprimer')}</button>
-        <button class="hx-btn atlas" data-action="hx-room-save" data-arg="${room.n}">${tx('Enregistrer')}</button>
+        <button data-activation=write class="hx-btn warn" data-action="hx-room-delete-open" data-arg="${room.n}">${tx('Supprimer')}</button>
+        <button data-activation=write class="hx-btn atlas" data-action="hx-room-save" data-arg="${room.n}">${tx('Enregistrer')}</button>
       </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
@@ -1901,7 +1901,7 @@
     const st = cuState();
     const rows = cuTypes().map((t) => {
       const count = Object.values(st.rooms).filter((r) => r.typeId === t.id).length;
-      return `<button class="hx-type-card" type="button" data-action="hx-room-type-edit" data-arg="${esc(t.id)}">
+      return `<button data-activation=write class="hx-type-card" type="button" data-action="hx-room-type-edit" data-arg="${esc(t.id)}">
         <span class="hx-type-icon">${esc(t.name.slice(0, 1).toUpperCase())}</span>
         <span class="hx-type-copy"><b>${esc(t.name)}</b><small>${txn(count, 'chambre')}</small></span>
         <span class="hx-type-rate">${t.rate == null ? tx('Tarif général') : MAD(t.rate)}<small>${tx('par nuit')}</small></span>
@@ -1913,7 +1913,7 @@
       desc: tx('Vos noms et tarifs maison. Toute modification s’applique aux chambres de ce type.'), width: 620,
       body: `<div class="hx-type-summary"><span>${cuTypes().length}</span><div><b>${tx('Catégories actives')}</b><small>${tx('Un seul réglage met à jour toutes les chambres concernées.')}</small></div></div>
         <div class="hx-type-list">${rows}</div>
-        <button class="hx-type-add" type="button" data-action="hx-room-type-new">+ ${tx('Créer un type de chambre')}</button>`,
+        <button data-activation=write class="hx-type-add" type="button" data-action="hx-room-type-new">+ ${tx('Créer un type de chambre')}</button>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-types-modal');
     openModal = { el: m.el, close: m.close };
@@ -1987,12 +1987,12 @@
         <label><span>${tx('Surface')} <small>· m²</small></span><input data-hx-type-size type="number" inputmode="numeric" min="1" max="999" value="${type?.sizeM2 || ''}" placeholder="24"></label>
         <label><span>${tx('Vue')}</span><input data-hx-type-view maxlength="80" value="${esc(type?.view || '')}" placeholder="${tx('Patio, médina, montagne…')}"></label>
         <label class="hx-room-form-wide"><span>${tx('Équipements')} <small>· ${tx('séparés par des virgules')}</small></span><input data-hx-type-amenities maxlength="500" value="${esc(amenities)}" placeholder="${tx('Wi-Fi, climatisation, petit-déjeuner')}"></label>
-        <section class="hx-type-photos hx-room-form-wide"><div class="hx-type-photos-head"><div><b>${tx('Galerie publique')}</b><span>${tx('8 photos maximum · la première devient la couverture')}</span></div><button class="hx-btn ghost" type="button" data-action="hx-type-photo-pick">+ ${tx('Ajouter des photos')}</button><input data-hx-type-photo-input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple hidden></div><div class="hx-type-photo-grid" data-hx-type-photos></div><p data-hx-type-photo-status></p></section>
+        <section class="hx-type-photos hx-room-form-wide"><div class="hx-type-photos-head"><div><b>${tx('Galerie publique')}</b><span>${tx('8 photos maximum · la première devient la couverture')}</span></div><button data-activation=write class="hx-btn ghost" type="button" data-action="hx-type-photo-pick">+ ${tx('Ajouter des photos')}</button><input data-hx-type-photo-input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple hidden></div><div class="hx-type-photo-grid" data-hx-type-photos></div><p data-hx-type-photo-status></p></section>
         <label class="hx-room-form-wide"><span><input data-hx-type-public type="checkbox" ${type?.public === false ? '' : 'checked'}> ${tx('Visible sur le lien de réservation')}</span></label>
       </div>
       <div class="hx-room-form-actions">
-        ${type ? `<button class="hx-btn warn" data-action="hx-room-type-delete" data-arg="${esc(type.id)}">${tx('Supprimer')}</button>` : '<span></span>'}
-        <button class="hx-btn atlas" data-action="hx-room-type-save" data-arg="${esc(type?.id || 'new')}">${tx('Enregistrer')}</button>
+        ${type ? `<button data-activation=write class="hx-btn warn" data-action="hx-room-type-delete" data-arg="${esc(type.id)}">${tx('Supprimer')}</button>` : '<span></span>'}
+        <button data-activation=write class="hx-btn atlas" data-action="hx-room-type-save" data-arg="${esc(type?.id || 'new')}">${tx('Enregistrer')}</button>
       </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
@@ -2016,7 +2016,7 @@
           <button data-action="hx-floor-move" data-arg="${esc(f.id)}:-1" ${index === 0 ? 'disabled' : ''} aria-label="${tx('Monter')}">↑</button>
           <button data-action="hx-floor-move" data-arg="${esc(f.id)}:1" ${index === list.length - 1 ? 'disabled' : ''} aria-label="${tx('Descendre')}">↓</button>
         </span>
-        <button class="hx-floor-manager-edit" data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Modifier')}</button>
+        <button data-activation=write class="hx-floor-manager-edit" data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Modifier')}</button>
       </div>`;
     }).join('');
     const m = K().modal({
@@ -2024,7 +2024,7 @@
       desc: tx('Renommez, réordonnez ou supprimez vos sections sans perdre les chambres.'), width: 620,
       body: `<div class="hx-floor-manager-list">${rows || `<p>${tx('Aucune section.')}</p>`}</div>
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
-          <button class="hx-type-add" type="button" data-action="hx-floor-new">+ ${trL({ fr: 'Créer une section', en: 'Create section', ar: 'إنشاء قسم' })}</button>
+          <button data-activation=write class="hx-type-add" type="button" data-action="hx-floor-new">+ ${trL({ fr: 'Créer une section', en: 'Create section', ar: 'إنشاء قسم' })}</button>
         </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-floors-modal');
@@ -2055,12 +2055,12 @@
             ${views.map((v) => `
               <span class="hx-view-config-chip">
                 <span>${trL({ fr: 'Vue', en: 'View', ar: 'إطلالة' })} ${esc(cuViewLabel(v))}</span>
-                <button type="button" data-action="hx-view-remove" data-arg="${esc(v)}" aria-label="${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}">×</button>
+                <button data-activation=write type="button" data-action="hx-view-remove" data-arg="${esc(v)}" aria-label="${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}">×</button>
               </span>`).join('')}
           </div>
           <div class="hx-attribute-add">
             <label><span>${trL({ fr: 'Nouvelle vue', en: 'New view', ar: 'إطلالة جديدة' })}</span><input data-hx-view-input type="text" maxlength="40" placeholder="${trL({ fr: 'Ex. Piscine intérieure, Montagne…', en: 'e.g. Mountain, Courtyard…', ar: 'مثال: جبل، فناء…' })}"></label>
-            <button class="hx-btn atlas" type="button" data-action="hx-view-add">${trL({ fr: '+ Ajouter une vue', en: '+ Add view', ar: '+ إضافة إطلالة' })}</button>
+            <button data-activation=write class="hx-btn atlas" type="button" data-action="hx-view-add">${trL({ fr: '+ Ajouter une vue', en: '+ Add view', ar: '+ إضافة إطلالة' })}</button>
           </div>
         </div>
         <div class="hx-attribute-panel" role="group" aria-label="${trL({ fr: 'Équipements personnalisés', en: 'Custom amenities', ar: 'تجهيزات مخصصة' })}">
@@ -2073,12 +2073,12 @@
             ${customs.length ? customs.map((c) => `
               <div class="hx-config-char-row">
                 <span><b>${esc(cuCharLabel(c))}</b></span>
-                <button type="button" data-action="hx-char-remove" data-arg="${esc(c.id)}">${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}</button>
+                <button data-activation=write type="button" data-action="hx-char-remove" data-arg="${esc(c.id)}">${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}</button>
               </div>`).join('') : `<div class="hx-attribute-empty">${trL({ fr: 'Aucun équipement personnalisé. Les 8 équipements standards restent disponibles.', en: 'No custom amenities. The 8 standard amenities remain available.', ar: 'لا توجد تجهيزات مخصصة. التجهيزات الأساسية الثمانية تبقى متوفرة.' })}</div>`}
           </div>
           <div class="hx-attribute-add">
             <label><span>${trL({ fr: 'Nouvel équipement', en: 'New amenity', ar: 'تجهيز جديد' })}</span><input data-hx-char-input type="text" maxlength="50" placeholder="${trL({ fr: 'Ex. Jacuzzi privatif, Machine Nespresso…', en: 'e.g. Private hot tub, Espresso machine…', ar: 'مثال: جاكوزي خاص، آلة قهوة…' })}"></label>
-            <button class="hx-btn atlas" type="button" data-action="hx-char-add">${trL({ fr: '+ Ajouter un équipement', en: '+ Add amenity', ar: '+ إضافة ميزة' })}</button>
+            <button data-activation=write class="hx-btn atlas" type="button" data-action="hx-char-add">${trL({ fr: '+ Ajouter un équipement', en: '+ Add amenity', ar: '+ إضافة ميزة' })}</button>
           </div>
         </div>
       </div>
@@ -2103,7 +2103,7 @@
           <button data-action="hx-floor-move" data-arg="${esc(f.id)}:-1" ${index === 0 ? 'disabled' : ''} aria-label="${tx('Monter')}">↑</button>
           <button data-action="hx-floor-move" data-arg="${esc(f.id)}:1" ${index === list.length - 1 ? 'disabled' : ''} aria-label="${tx('Descendre')}">↓</button>
         </span>
-        <button class="hx-floor-manager-edit" data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Modifier')}</button>
+        <button data-activation=write class="hx-floor-manager-edit" data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Modifier')}</button>
       </div>`;
     }).join('');
     listEl.innerHTML = rows || `<p>${tx('Aucune section.')}</p>`;
@@ -2133,8 +2133,8 @@
         <p class="hx-floor-error" data-hx-floor-error style="color:var(--danger,#b91c1c);font-size:12px;margin:8px 0 0;" hidden></p>
         ${floor && count && others.length ? `<label class="hx-floor-delete-target"><span>${tx('En cas de suppression, déplacer les chambres vers')}</span><select data-hx-floor-target>${others.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></label>` : ''}
         <div class="hx-room-form-actions">
-          ${floor ? `<button class="hx-btn warn" data-action="hx-floor-delete" data-arg="${esc(floor.id)}" ${count && !others.length ? `disabled title="${tx('Créez une autre section avant de supprimer celle-ci')}"` : ''}>${tx('Supprimer')}</button>` : '<span></span>'}
-          <button class="hx-btn atlas" data-action="hx-floor-save" data-arg="${esc(floor?.id || 'new')}">${tx('Enregistrer')}</button>
+          ${floor ? `<button data-activation=write class="hx-btn warn" data-action="hx-floor-delete" data-arg="${esc(floor.id)}" ${count && !others.length ? `disabled title="${tx('Créez une autre section avant de supprimer celle-ci')}"` : ''}>${tx('Supprimer')}</button>` : '<span></span>'}
+          <button data-activation=write class="hx-btn atlas" data-action="hx-floor-save" data-arg="${esc(floor?.id || 'new')}">${tx('Enregistrer')}</button>
         </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
@@ -2585,8 +2585,8 @@
           <div class="hx-floor-head">
             <div><b>${esc(f.lbl)}</b><span>${tx('0 chambre')}</span></div>
             <div class="hx-floor-head-actions">
-              <button data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Gérer')}</button>
-              <button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ ${tx('Ajouter des chambres')}</button>
+              <button data-activation=write data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Gérer')}</button>
+              <button data-activation=write data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ ${tx('Ajouter des chambres')}</button>
             </div>
           </div>
           <div class="hx-room-empty-section-hint">${tx('Cette section ne contient encore aucune chambre.')}</div>
@@ -2600,8 +2600,8 @@
             <div class="hx-floor-head">
               <div><b>${esc(f.lbl)}</b><span>${tx('0 affichée')}</span></div>
               <div class="hx-floor-head-actions">
-                <button data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Gérer')}</button>
-                <button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ ${tx('Ajouter ici')}</button>
+                <button data-activation=write data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Gérer')}</button>
+                <button data-activation=write data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ ${tx('Ajouter ici')}</button>
               </div>
             </div>
             <div class="hx-room-empty-section-hint">${tx('Aucune chambre ne correspond aux filtres dans cette section.')}</div>
@@ -2627,7 +2627,7 @@
 
         return `<div class="hx-room st-${status.key} ${isSelected ? 'selected' : ''} ${cuSelectionMode ? 'selection-mode' : ''}" role="button" tabindex="0" aria-label="${tx('Chambre {n}', { n: r.n })}" data-action="hx-room" data-arg="${r.n}" data-hx-room-card>
           ${selectCb}
-          ${cuSelectionMode ? '' : `<button class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${r.n}" aria-label="${tx('Modifier la chambre {n}', { n: r.n })}" title="${tx('Modifier')}">✎</button>`}
+          ${cuSelectionMode ? '' : `<button data-activation=write class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${r.n}" aria-label="${tx('Modifier la chambre {n}', { n: r.n })}" title="${tx('Modifier')}">✎</button>`}
           <div class="hx-room-top"><span class="no">${r.n}</span><span class="hx-room-state ${status.key}">${esc(status.label)}</span>${exChip}${connBadge}</div>
           <div class="ty" style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span>${esc(type.name)}</span>${viewBadge}</div>
           <div class="hx-room-bottom"><span class="gu">${esc(roomStay?.customer?.name || (status.key === 'sale' ? tx('Remise à blanc à faire') : r.guest || (status.key === 'libre' ? tx('Prête à vendre') : tx(r.meta) || status.label)))}</span><span class="hx-room-price">${type.base == null ? '·' : ltr(fmt(type.base) + '<small> MAD</small>')}</span></div>
@@ -2638,8 +2638,8 @@
         <div class="hx-floor-head">
           <div><b>${esc(f.lbl)}</b><span>${tx(matchedRooms.length === 1 ? '{n} affichée' : '{n} affichées', { n: matchedRooms.length })}</span></div>
           <div class="hx-floor-head-actions">
-            <button data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Gérer')}</button>
-            <button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ ${tx('Ajouter ici')}</button>
+            <button data-activation=write data-action="hx-floor-edit" data-arg="${esc(f.id)}">${tx('Gérer')}</button>
+            <button data-activation=write data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ ${tx('Ajouter ici')}</button>
           </div>
         </div>
         <div class="hx-rack">${roomCards}</div>
@@ -2653,7 +2653,7 @@
         <div class="hx-room-empty-art"><span>101</span><span>102</span><span>103</span></div>
         <div class="hx-room-empty-copy"><span class="hx-eyebrow">${tx('CONFIGURATION EN 2 MINUTES')}</span><h3>${tx('Construisez votre hôtel par étage.')}</h3>
           <p>${tx('Créez vos types une fois, puis ajoutez 10, 50 ou 100 chambres avec les mêmes réglages.')}</p>
-          <div class="hx-room-empty-actions"><button class="hx-btn atlas" data-action="hx-room-add">${tx('Ajouter plusieurs chambres')}</button><button class="hx-btn ghost" data-action="hx-room-types">${tx('Configurer les types')}</button></div>
+          <div class="hx-room-empty-actions"><button data-activation=write class="hx-btn atlas" data-action="hx-room-add">${tx('Ajouter plusieurs chambres')}</button><button class="hx-btn ghost" data-action="hx-room-types">${tx('Configurer les types')}</button></div>
           <div class="hx-room-empty-notes"><span>✓ ${tx('Numéros par plage')}</span><span>✓ ${tx('Tarifs par type')}</span><span>✓ ${tx('Connecté au ménage')}</span></div>
         </div>
       </div>
@@ -2684,7 +2684,7 @@
         <div class="hx-room-bulk-actions">
           <button class="hx-btn ghost" data-action="hx-room-select-filtered">${tx('Sélectionner les résultats filtrés')}</button>
           <button class="hx-btn ghost" data-action="hx-room-select-none" ${selectedList.length === 0 ? 'disabled' : ''}>${tx('Tout désélectionner')}</button>
-          <button class="hx-btn atlas" data-action="hx-room-bulk-edit-open" ${selectedList.length === 0 ? 'disabled' : ''}>${tx('Modifier')}</button>
+          <button data-activation=write class="hx-btn atlas" data-action="hx-room-bulk-edit-open" ${selectedList.length === 0 ? 'disabled' : ''}>${tx('Modifier')}</button>
           <button class="hx-btn ghost" data-action="hx-room-select-cancel">${tx('Annuler')}</button>
         </div>
       </div>`;
@@ -2705,7 +2705,7 @@
           <button class="hx-btn ghost" data-action="hx-floors">${tx('Gérer les sections')}</button>
           <button class="hx-btn ghost" data-action="hx-views-manage-open">${tx('Gérer les vues & caractéristiques')}</button>
           <button class="hx-btn ghost" data-action="hx-room-types">${tx('Gérer les catégories')}</button>
-          <button class="hx-btn atlas" data-action="hx-room-add">+ ${tx('Ajouter des chambres')}</button>
+          <button data-activation=write class="hx-btn atlas" data-action="hx-room-add">+ ${tx('Ajouter des chambres')}</button>
         </div>
       </div>
       ${chipsHtml}
@@ -3000,7 +3000,7 @@
       const channel = channels[b.hotel.channel] ? b.hotel.channel : (b.source === 'public' ? 'direct' : 'other');
       const left = from / 14 * 100, width = Math.max(.1, (to - from) / 14 * 100);
       const caption=(b.hotel.dayUse?tx('Day-use')+' · '+b.hotel.arrivalTime+'–'+b.hotel.departureTime:channels[channel]);
-      return `<button class="hx-cu-stay src-${channel} status-${esc(b.status)} ${b.hotel.conflict ? 'has-conflict' : ''}" style="left:${left}%;width:calc(${width}% - 1px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.hotel.conflict ? tx('CONFLIT À RÉSOUDRE') + ' · ' : '') + (b.customer?.name || '') + ' · ' + caption + ' · ' + cuDay(b.hotel.checkIn) + hxTo() + cuDay(b.hotel.checkOut))}"><b>${esc(b.customer?.name || tx('Séjour'))}</b><span>${b.hotel.conflict ? '⚠ ' + tx('CONFLIT') : esc(caption)}</span></button>`;
+      return `<button data-activation=write class="hx-cu-stay src-${channel} status-${esc(b.status)} ${b.hotel.conflict ? 'has-conflict' : ''}" style="left:${left}%;width:calc(${width}% - 1px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.hotel.conflict ? tx('CONFLIT À RÉSOUDRE') + ' · ' : '') + (b.customer?.name || '') + ' · ' + caption + ' · ' + cuDay(b.hotel.checkIn) + hxTo() + cuDay(b.hotel.checkOut))}"><b>${esc(b.customer?.name || tx('Séjour'))}</b><span>${b.hotel.conflict ? '⚠ ' + tx('CONFLIT') : esc(caption)}</span></button>`;
     }).join('');
     const dateHead = dates.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<div class="${d === today ? 'today' : ''}"><b>${HX_WEEKDAYS[hxLang()][dt.getUTCDay()].replace('.', '')}</b><span>${dt.getUTCDate()}</span></div>`; }).join('');
     const rows = rooms.map((room) => `<div class="hx-cu-tape-row"><div class="hx-cu-room"><b>${room.n}</b><span>${esc(roomTypeOf(room.n).name)}</span></div><div class="hx-cu-days">${dates.map((d) => `<i class="${d === today ? 'today' : ''}"></i>`).join('')}${barsFor(room)}</div></div>`).join('');
@@ -3014,7 +3014,7 @@
       <div class="hx-cu-tape block">
         <div class="hx-cu-tape-head"><div><span class="hx-kicker">${tx('DISPONIBILITÉ UNIFIÉE')}</span><h3>${tx('Chambres × 14 jours')}</h3><p>${tx('Direct, saisie manuelle et OTA bloquent tous la même chambre.')}</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="${tx('14 jours précédents')}">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">${tx('Aujourd’hui')}</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="${tx('14 jours suivants')}">→</button><button type="button" class="hx-btn ghost" data-action="hx-dispo">${tx('Disponibilités')}</button>${cuHasGroupRecovery() ? `<button type="button" class="hx-btn ghost" data-action="hx-group-resume">${tx('Reprendre le dossier groupe')}</button>` : ''}<button type="button" class="hx-btn ghost" data-action="hx-group-new">+ ${tx('Réservation de groupe')}</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ ${tx('Réservation')}</button></div></div>
         <div class="hx-cu-legend">${Object.keys(channels).map((c) => `<span class="src-${c}"><i></i>${channels[c]}</span>`).join('')}</div>
-        ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>${tx('CHAMBRE')}</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>${tx('Occupation')}</b><span>${tx('vendues')}</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>${tx('Ajoutez d’abord vos chambres')}</b><p>${tx('Le tape chart attribue chaque séjour à une chambre réelle.')}</p><button class="hx-btn atlas" data-action="hx-room-add">${tx('Configurer les chambres')}</button></div>`}
+        ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>${tx('CHAMBRE')}</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>${tx('Occupation')}</b><span>${tx('vendues')}</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>${tx('Ajoutez d’abord vos chambres')}</b><p>${tx('Le tape chart attribue chaque séjour à une chambre réelle.')}</p><button data-activation=write class="hx-btn atlas" data-action="hx-room-add">${tx('Configurer les chambres')}</button></div>`}
       </div>
     </div>`;
   }
@@ -3723,14 +3723,14 @@
           <div class="hx-room-form-wide hx-guest-block">
             <div class="hx-guest-block-head">
               <b>${tx('Fiche voyageurs · identité et séjour')}</b>
-              <button type="button" class="hx-link-btn hx-guest-add" data-action="hx-add-guest-row">+ ${tx('Ajouter un voyageur')}</button>
+              <button data-activation=write type="button" class="hx-link-btn hx-guest-add" data-action="hx-add-guest-row">+ ${tx('Ajouter un voyageur')}</button>
             </div>
             <div data-hx-guests-container>
               ${existingGuests.map(guestRowHtml).join('')}
             </div>
           </div>
           <label class="hx-room-form-wide"><span>${tx('Note interne')}</span><textarea name="note" maxlength="600" rows="3">${esc(booking?.note || '')}</textarea></label>
-        </div><p class="hx-stay-error" data-hx-stay-error role="status"></p><div class="hx-room-form-actions">${booking && ['requested', 'confirmed'].includes(booking.status) ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">${tx('Annuler le séjour')}</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? tx('Enregistrer les modifications') : (booking?.status === 'requested' ? tx('Poser une option (bloquer la chambre)') : tx('Confirmer la réservation'))}</button></div>
+        </div><p class="hx-stay-error" data-hx-stay-error role="status"></p><div class="hx-room-form-actions">${booking && ['requested', 'confirmed'].includes(booking.status) ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">${tx('Annuler le séjour')}</button>` : '<span></span>'}<button data-activation=write class="hx-btn atlas" type="submit">${booking ? tx('Enregistrer les modifications') : (booking?.status === 'requested' ? tx('Poser une option (bloquer la chambre)') : tx('Confirmer la réservation'))}</button></div>
       </form>` });
     const form = m.el.querySelector('[data-hx-stay-form]');
     form.__hxStayScope = cuStayScope();
@@ -3840,7 +3840,7 @@
     const scope=cuStayScope(),merchant=cuChannelMerchant(),id=booking.hotel.dossierId||booking.id;
     openModal?.close?.();
     const m=K().modal({tag:booking.code || tx('DOSSIER'),title:tx('Chambres & préfacture'),desc:tx('Les chambres restent modifiables et annulables séparément.'),width:1080,
-      body:`<div class="hx-room-form-actions"><button type="button" class="hx-btn ghost" data-hx-linked-room>${tx('Ajouter une chambre au dossier')}</button></div><div data-hx-dossier-body role="status">${tx('Chargement du dossier serveur…')}</div>`});
+      body:`<div class="hx-room-form-actions"><button data-activation=write type="button" class="hx-btn ghost" data-hx-linked-room>${tx('Ajouter une chambre au dossier')}</button></div><div data-hx-dossier-body role="status">${tx('Chargement du dossier serveur…')}</div>`});
     openModal={el:m.el,close:m.close};
     const host=m.el.querySelector('[data-hx-dossier-body]');
     m.el.querySelector('[data-hx-linked-room]').onclick=()=>{m.close();if(scope===cuStayScope())cuStayEditor(null,booking);};
@@ -4155,7 +4155,7 @@
                 <b>${tx('Tentative précédente reprise')}</b>${hxColon()}${tx('aucune chambre enregistrée, et les informations sont verrouillées pour protéger l’envoi en cours.')}
                 <br>${tx('Finalisez l’envoi, ou repartez d’un dossier vierge.')}
                 <div style="margin-top:6px;display:flex;gap:8px;">
-                  <button type="button" class="hx-link-btn" data-action="hx-discard-staged">${tx('Abandonner et nouveau dossier vierge')}</button>
+                  <button data-activation=write type="button" class="hx-link-btn" data-action="hx-discard-staged">${tx('Abandonner et nouveau dossier vierge')}</button>
                 </div>
               </div>
             ` : ''}
@@ -4164,7 +4164,7 @@
                 <b>${tx('Brouillon repris')}</b>${hxColon()}${tx('ce formulaire a été prérempli avec une saisie précédente')}${staged && staged.dossierId ? ` (${tx('dossier {code}', { code: `<code>${esc(staged.dossierId)}</code>` })})` : ''}.
                 <br>${tx('Aucune chambre n’a été enregistrée. Vous pouvez continuer, ou repartir d’un dossier vierge.')}
                 <div style="margin-top:6px;display:flex;gap:8px;">
-                  <button type="button" class="hx-link-btn" data-action="hx-discard-staged">${tx('Abandonner et nouveau dossier vierge')}</button>
+                  <button data-activation=write type="button" class="hx-link-btn" data-action="hx-discard-staged">${tx('Abandonner et nouveau dossier vierge')}</button>
                 </div>
               </div>
             ` : ''}
@@ -4263,7 +4263,7 @@
                 <div style="margin-top:8px;">
                   <textarea class="hx-group-paste-area" data-hx-group-paste placeholder="${tx('Collez les voyageurs (un voyageur par ligne : “Nom, Prénom”, Nationalité, Document)…')}"></textarea>
                   <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
-                    <button type="button" class="hx-btn ghost" data-action="hx-preview-paste">${tx('Prévisualiser l’import')}</button>
+                    <button data-activation=write type="button" class="hx-btn ghost" data-action="hx-preview-paste">${tx('Prévisualiser l’import')}</button>
                   </div>
                   <div data-hx-import-preview-area style="margin-top:8px;"></div>
                 </div>
@@ -4273,7 +4273,7 @@
             <div class="hx-group-travelers-sec" style="margin-top:10px;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:12px;font-weight:600;color:var(--ink);" data-hx-travelers-count>${tx('{n} voyageur(s)', { n: travelers.length, c: txn(travelers.length, 'voyageur') })}</span>
-                <button type="button" class="hx-btn ghost" data-action="hx-add-group-traveler">+ ${tx('Ajouter un voyageur')}</button>
+                <button data-activation=write type="button" class="hx-btn ghost" data-action="hx-add-group-traveler">+ ${tx('Ajouter un voyageur')}</button>
               </div>
               <div data-hx-group-travelers-container></div>
               <div data-hx-capacity-alerts style="margin-top:8px;"></div>
@@ -4296,7 +4296,7 @@
 
           <div class="hx-room-form-actions">
             <button type="button" class="hx-btn ghost" data-action="hx-group-cancel">${tx('Fermer')}</button>
-            <button type="submit" class="hx-btn atlas" data-hx-group-submit>${hasSavedRooms ? tx('Reprendre la confirmation ({n} enregistrée(s))', { n: Object.keys(savedRooms).length }) : tx('Confirmer la réservation du groupe')}</button>
+            <button data-activation=write type="submit" class="hx-btn atlas" data-hx-group-submit>${hasSavedRooms ? tx('Reprendre la confirmation ({n} enregistrée(s))', { n: Object.keys(savedRooms).length }) : tx('Confirmer la réservation du groupe')}</button>
           </div>
         </form>
       `
@@ -5010,8 +5010,8 @@
             </table>
           </div>
           <div style="display:flex;gap:8px;margin-top:6px;">
-            <button type="button" class="hx-btn atlas" data-action="hx-confirm-import" style="font-size:11.5px;padding:4px 10px;">${tx('Confirmer l’import ({n} voyageurs)', { n: parsed.length, c: txn(parsed.length, 'voyageur') })}</button>
-            <button type="button" class="hx-btn ghost" data-action="hx-cancel-import" style="font-size:11.5px;padding:4px 10px;">${tx('Annuler')}</button>
+            <button data-activation=write type="button" class="hx-btn atlas" data-action="hx-confirm-import" style="font-size:11.5px;padding:4px 10px;">${tx('Confirmer l’import ({n} voyageurs)', { n: parsed.length, c: txn(parsed.length, 'voyageur') })}</button>
+            <button data-activation=write type="button" class="hx-btn ghost" data-action="hx-cancel-import" style="font-size:11.5px;padding:4px 10px;">${tx('Annuler')}</button>
           </div>
         `;
       } else if (e.target.closest('[data-action="hx-confirm-import"]')) {
@@ -6056,14 +6056,14 @@
     const accountIds = new Set(accounts.map(a => a.id));
     const contracts = st.contracts.filter(r => accountIds.has(r.accountId));
     const active = st.accounts.filter(a => !a.archived);
-    return `<div class="hx-page hx-commercial"><div class="hx-commercial-head"><div><span class="hx-kicker">${tx('RELATIONS HÔTELIÈRES')}</span><h3>${tx('Chaque relation,<br>ses accords.')}</h3><p>${tx('Clients, agences & sociétés. Le voyageur reste distinct du réservant et du compte à facturer. Les tarifs acceptés sont conservés dans chaque séjour.')}</p></div><div class="hx-commercial-tools"><button class="hx-btn atlas" data-action="hx-account-new">${tx('+ Nouveau compte')}</button><button class="hx-btn ghost" data-action="clients-directory">${tx('Cardex voyageurs')}</button></div></div>
+    return `<div class="hx-page hx-commercial"><div class="hx-commercial-head"><div><span class="hx-kicker">${tx('RELATIONS HÔTELIÈRES')}</span><h3>${tx('Chaque relation,<br>ses accords.')}</h3><p>${tx('Clients, agences & sociétés. Le voyageur reste distinct du réservant et du compte à facturer. Les tarifs acceptés sont conservés dans chaque séjour.')}</p></div><div class="hx-commercial-tools"><button data-activation=write class="hx-btn atlas" data-action="hx-account-new">${tx('+ Nouveau compte')}</button><button class="hx-btn ghost" data-action="clients-directory">${tx('Cardex voyageurs')}</button></div></div>
       <div class="hx-commercial-summary" aria-label="${tx('Comptes actifs')}">${Object.entries(cuKinds).map(([kind, label]) => `<div><span>${label}</span><strong>${st.loaded ? active.filter(a => a.kind === kind).length : '…'}</strong><small>${tx('comptes actifs')}</small></div>`).join('')}<div><span>${tx('Tarifs contractuels')}</span><strong>${st.loaded ? st.contracts.filter(r => !r.archived).length : '…'}</strong><small>${tx('périodes définies')}</small></div></div>
       <div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-contract-new">${tx('+ Tarif contractuel')}</button><button class="hx-btn ghost" data-action="hx-production">${tx('Production mensuelle')}</button><button class="hx-btn ghost" data-action="hx-commercial-refresh" ${st.loading ? 'disabled' : ''}>${tx('Actualiser')}</button></div>
       <form class="hx-commercial-filter" data-hx-commercial-filter><label>${tx('Type')}<select name="kind"><option value="">${tx('Tous les comptes')}</option>${Object.entries(cuKinds).map(([v,l]) => `<option value="${v}" ${st.kind === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label>${tx('Recherche')}<input name="search" type="search" value="${esc(st.search)}" placeholder="${tx('Nom, contact, ICE')}"></label><button class="hx-btn ghost" type="submit">${tx('Filtrer')}</button></form>
       <p class="hx-commercial-feedback" role="status">${esc(st.error || (st.loading ? tx('Chargement du répertoire…') : tx('{a} compte(s) · {b} tarif(s) actif(s) dans cette sélection', { a: accounts.length, b: contracts.filter(r => !r.archived).length })))}</p>
-      <div class="hx-commercial-grid">${accounts.map(a => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${cuKinds[a.kind]}${a.archived ? ' · ' + tx('ARCHIVÉ') : ''}</span><h3>${esc(a.name)}</h3><p>${esc(a.legalName || a.contact || tx('Identité de facturation à compléter'))}</p><small>${esc([a.city, a.ice ? 'ICE ' + a.ice : '', tx('Échéance {n} j', { n: a.paymentDays })].filter(Boolean).join(' · '))}</small></div><div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-account-edit" data-arg="${esc(a.id)}">${tx('Modifier')} <span class="sr-only">${esc(a.name)}</span></button><button class="hx-btn ghost" data-action="hx-account-stays" data-arg="${esc(a.id)}">${tx('Voir les séjours')} <span class="sr-only">${esc(a.name)}</span></button></div></article>`).join('') || `<p>${tx('Aucun compte dans cette sélection. Créez une agence, une société ou un particulier.')}</p>`}</div>
+      <div class="hx-commercial-grid">${accounts.map(a => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${cuKinds[a.kind]}${a.archived ? ' · ' + tx('ARCHIVÉ') : ''}</span><h3>${esc(a.name)}</h3><p>${esc(a.legalName || a.contact || tx('Identité de facturation à compléter'))}</p><small>${esc([a.city, a.ice ? 'ICE ' + a.ice : '', tx('Échéance {n} j', { n: a.paymentDays })].filter(Boolean).join(' · '))}</small></div><div class="hx-commercial-tools"><button data-activation=write class="hx-btn ghost" data-action="hx-account-edit" data-arg="${esc(a.id)}">${tx('Modifier')} <span class="sr-only">${esc(a.name)}</span></button><button class="hx-btn ghost" data-action="hx-account-stays" data-arg="${esc(a.id)}">${tx('Voir les séjours')} <span class="sr-only">${esc(a.name)}</span></button></div></article>`).join('') || `<p>${tx('Aucun compte dans cette sélection. Créez une agence, une société ou un particulier.')}</p>`}</div>
       <div class="hx-h"><span class="t">${tx('Grille contractuelle')}</span><span class="s">${tx('Bornes inclusives · MAD · aucun tarif implicite hors période')}</span></div>
-      <div class="hx-commercial-grid">${contracts.map(r => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(st.accounts.find(a => a.id === r.accountId)?.name || tx('Compte indisponible'))}${r.archived ? ' · ' + tx('ARCHIVÉ') : ''}</span><h3>${esc(r.name)}</h3><p>${esc(cuTypes().find(t => t.id === r.roomTypeId)?.name || r.roomTypeId)} · ${['', 'Single', 'Double', 'Triple'][r.occupancy]} · ${cuBoards[r.board]}</p><small>${ltr(`${esc(r.from)} → ${esc(r.to)}`)}</small><p class="hx-commercial-price">${ltr(cuDraftMoney(r.amountCents))} <small>${tx(r.unit === 'person' ? 'MAD / personne / nuit' : 'MAD / chambre / nuit')} · ${r.taxBasis === 'inclusive' ? tx('TTC') : tx('HT')}</small></p></div><button class="hx-btn ghost" data-action="hx-contract-edit" data-arg="${esc(r.id)}">${tx('Modifier')} <span class="sr-only">${esc(r.name)}</span></button></article>`).join('') || `<p class="hx-commercial-empty">${tx('Aucun tarif dans cette sélection. Ajoutez une période négociée avec ses dates exactes. Septembre à décembre doit être défini explicitement.')}</p>`}</div></div>`;
+      <div class="hx-commercial-grid">${contracts.map(r => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(st.accounts.find(a => a.id === r.accountId)?.name || tx('Compte indisponible'))}${r.archived ? ' · ' + tx('ARCHIVÉ') : ''}</span><h3>${esc(r.name)}</h3><p>${esc(cuTypes().find(t => t.id === r.roomTypeId)?.name || r.roomTypeId)} · ${['', 'Single', 'Double', 'Triple'][r.occupancy]} · ${cuBoards[r.board]}</p><small>${ltr(`${esc(r.from)} → ${esc(r.to)}`)}</small><p class="hx-commercial-price">${ltr(cuDraftMoney(r.amountCents))} <small>${tx(r.unit === 'person' ? 'MAD / personne / nuit' : 'MAD / chambre / nuit')} · ${r.taxBasis === 'inclusive' ? tx('TTC') : tx('HT')}</small></p></div><button data-activation=write class="hx-btn ghost" data-action="hx-contract-edit" data-arg="${esc(r.id)}">${tx('Modifier')} <span class="sr-only">${esc(r.name)}</span></button></article>`).join('') || `<p class="hx-commercial-empty">${tx('Aucun tarif dans cette sélection. Ajoutez une période négociée avec ses dates exactes. Septembre à décembre doit être défini explicitement.')}</p>`}</div></div>`;
   }
   const cuProductionByScope = new Map();
   function cuProductionState() {
@@ -6128,7 +6128,7 @@
     const contractFields = () => select('accountId', tx('Compte contractant'), Object.fromEntries(st.accounts.filter(a => !a.archived || a.id === item.accountId).map(a => [a.id, a.name]))) + field('name', tx('Libellé du tarif'), 'text', 'required maxlength="160"') + select('roomTypeId', tx('Catégorie'), Object.fromEntries(cuTypes().map(t => [t.id,t.name]))) + select('occupancy', tx('Occupation totale'), { 1: tx('Single · 1 personne'), 2: tx('Double · 2 personnes'), 3: tx('Triple · 3 personnes') }) + select('board', tx('Formule incluse'), cuBoards) + select('unit', tx('Prix par'), { room: tx('Chambre / nuit'), person: tx('Personne / nuit') }) + field('from', tx('À partir du (inclus)'), 'date', 'required') + field('to', tx('Jusqu’au (inclus)'), 'date', 'required') + `<label><span>${tx('Montant MAD')}</span><input name="amount" dir="ltr" type="number" required min="0" max="1000000" step="0.01" value="${item.amountCents == null ? '' : (item.amountCents / 100).toFixed(2)}"></label>` + select('taxBasis', tx('Base du prix'), { inclusive: tx('TTC'), exclusive: tx('HT · simulation seulement') });
     const m = K().modal({ tag: kind === 'account' ? tx('COMPTE HÔTEL') : tx('TARIF CONTRACTUEL'), title: old ? tx('Modifier la fiche') : tx('Créer une fiche'), width: 720,
       desc: kind === 'account' ? tx('Les modifications ne remplacent pas l’identité de facturation déjà acceptée dans un séjour.') : tx('Prix de la formule par nuit. Aucune taxe locale ou réduction enfant n’est ajoutée automatiquement. Faites valider le traitement fiscal avant facturation.'),
-      body: `<form data-hx-commercial-editor><div class="hx-room-form hx-type-form">${kind === 'account' ? accountFields() : contractFields()}<label><span>${tx('État')}</span><select name="archived"><option value="false">${tx('Actif')}</option><option value="true" ${item.archived ? 'selected' : ''}>${tx('Archivé')}</option></select></label></div><p role="status" data-hx-commercial-error></p><div class="hx-room-form-actions"><button class="hx-btn atlas" type="submit">${tx('Enregistrer')}</button></div></form>` });
+      body: `<form data-hx-commercial-editor><div class="hx-room-form hx-type-form">${kind === 'account' ? accountFields() : contractFields()}<label><span>${tx('État')}</span><select name="archived"><option value="false">${tx('Actif')}</option><option value="true" ${item.archived ? 'selected' : ''}>${tx('Archivé')}</option></select></label></div><p role="status" data-hx-commercial-error></p><div class="hx-room-form-actions"><button data-activation=write class="hx-btn atlas" type="submit">${tx('Enregistrer')}</button></div></form>` });
     const form = m.el.querySelector('form'), revision = st.rev, merchant = cuChannelMerchant();
     form.addEventListener('submit', async e => {
       e.preventDefault(); if (form.__busy) return;
@@ -6173,7 +6173,7 @@
         <label><span>${tx('Chambre Kiwi')}</span><select data-hx-channel-room>${rooms.map((r)=>`<option value="${esc(r.id)}">${tx('Chambre {n}', { n: r.n })} · ${esc(r.typeName || '')}</option>`).join('')}</select></label>
         <label class="hx-room-form-wide"><span>${tx('Lien calendrier iCal (.ics)')}</span><input data-hx-channel-url dir="ltr" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…/calendar.ics"></label>
         <p class="hx-room-form-wide" data-hx-channel-status>${tx('Une connexion par chambre. Ajoutez les autres chambres ensuite.')}</p>
-      </div><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-channel-close">${tx('Annuler')}</button><button class="hx-btn atlas" data-action="hx-channel-save" data-arg="${provider}">${tx('Connecter et vérifier')}</button></div>` });
+      </div><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-channel-close">${tx('Annuler')}</button><button data-activation=write class="hx-btn atlas" data-action="hx-channel-save" data-arg="${provider}">${tx('Connecter et vérifier')}</button></div>` });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal'); openModal={el:m.el,close:m.close};
   }
   /* Ticket #0009 · where each extranet hides its iCal export. Generic on
@@ -6303,10 +6303,10 @@
       <select data-hx-econ-terminal-unit><option value="">${tx('Choisir le point de vente')}</option>${outlets.map((unit) => `<option value="${esc(unit.id)}" ${row.unitId === unit.id ? 'selected' : ''}>${esc(unit.name)}</option>`).join('')}</select>
       <button data-action="hx-econ-remove-terminal" data-arg="${index}" aria-label="${tx('Retirer')}">×</button>
     </div>`).join('');
-    return `<div class="hx-econ-section"><div class="hx-h"><span class="t">${tx('Unités et caisses')}</span><span class="s">${tx('un seul enregistrement atomique')}</span></div><div class="hx-econ-units">${unitRows}</div><div class="hx-econ-add"><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="outlet">${tx('+ Point de vente')}</button><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="department">${tx('+ Département')}</button></div>
-        <div class="hx-econ-terminal-head"><b>${tx('Assignation des caisses')}</b><span>${tx('Copiez l’identifiant depuis chaque caisse physique.')}</span><button class="hx-btn ghost" data-action="hx-econ-add-terminal">${tx('+ Caisse')}</button></div><div>${terminalRows || `<div class="hx-econ-empty">${tx('Aucune caisse assignée. Le premier registre ne peut pas être activé ainsi.')}</div>`}</div>
+    return `<div class="hx-econ-section"><div class="hx-h"><span class="t">${tx('Unités et caisses')}</span><span class="s">${tx('un seul enregistrement atomique')}</span></div><div class="hx-econ-units">${unitRows}</div><div class="hx-econ-add"><button data-activation=write class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="outlet">${tx('+ Point de vente')}</button><button data-activation=write class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="department">${tx('+ Département')}</button></div>
+        <div class="hx-econ-terminal-head"><b>${tx('Assignation des caisses')}</b><span>${tx('Copiez l’identifiant depuis chaque caisse physique.')}</span><button data-activation=write class="hx-btn ghost" data-action="hx-econ-add-terminal">${tx('+ Caisse')}</button></div><div>${terminalRows || `<div class="hx-econ-empty">${tx('Aucune caisse assignée. Le premier registre ne peut pas être activé ainsi.')}</div>`}</div>
         <label class="hx-econ-confirm"><input type="checkbox" data-hx-econ-confirm> ${tx('J’ai relevé toutes les caisses physiques et vérifié leur point de vente.')}</label>
-        <div class="hx-econ-save"><span>${allOutletsMapped ? tx('Chaque point de vente actif a au moins une caisse.') : tx('Chaque point de vente actif doit avoir une caisse.')}</span><button class="hx-btn atlas" data-action="hx-econ-save" ${cuEconomatState.saving ? 'disabled' : ''}>${cuEconomatState.saving ? tx('Enregistrement…') : tx('Enregistrer unités + caisses')}</button></div>
+        <div class="hx-econ-save"><span>${allOutletsMapped ? tx('Chaque point de vente actif a au moins une caisse.') : tx('Chaque point de vente actif doit avoir une caisse.')}</span><button data-activation=write class="hx-btn atlas" data-action="hx-econ-save" ${cuEconomatState.saving ? 'disabled' : ''}>${cuEconomatState.saving ? tx('Enregistrement…') : tx('Enregistrer unités + caisses')}</button></div>
       </div>`;
   }
   /* Points de vente: the outlet-facing host for the same shared draft.
@@ -6537,7 +6537,7 @@
         <label style="${lbl}">${trL({fr:'Objectif de chiffre d\'affaires par jour', en:'Daily revenue goal', ar:'هدف رقم المعاملات اليومي'})} <span style="color: var(--n-500);font-weight:400;">· ${trL({fr:'optionnel', en:'optional', ar:'اختياري'})}</span></label>
         <input class="ob-field" data-ob-goal type="number" dir="ltr" inputmode="numeric" placeholder="${trL({fr:'Ex. 5000 MAD', en:'e.g. 5000 MAD', ar:'مثال: 5000 MAD'})}" style="${fld}" min="0"/>
       `,
-      foot: `<button class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">${trL({fr:'Créer mon tableau de bord →', en:'Create my dashboard →', ar:'أنشئ لوحة التحكم ←'})}</button>`,
+      foot: `<button data-activation=write class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">${trL({fr:'Créer mon tableau de bord →', en:'Create my dashboard →', ar:'أنشئ لوحة التحكم ←'})}</button>`,
     });
     const nameInput = m.el.querySelector('[data-ob-name]');
     setTimeout(() => nameInput && nameInput.focus(), 320);
@@ -6751,7 +6751,7 @@
       const host = m.el.querySelector('[data-hx-outlet-menu]');
       // One catalogue for the whole hotel: editing a price here changes what
       // every till sells. Linked, never duplicated.
-      const foot = `<p class="hx-outlet-shared">${tx('Prix partagés par tout l’hôtel : le catalogue est commun à tous les points de vente. Modifier un prix change ce que toutes les caisses vendent.')}</p><button type="button" class="hx-btn ghost" data-action="hx-outlet-edit-menu">${tx('Modifier dans le catalogue')}</button>`;
+      const foot = `<p class="hx-outlet-shared">${tx('Prix partagés par tout l’hôtel : le catalogue est commun à tous les points de vente. Modifier un prix change ce que toutes les caisses vendent.')}</p><button data-activation=write type="button" class="hx-btn ghost" data-action="hx-outlet-edit-menu">${tx('Modifier dans le catalogue')}</button>`;
       try {
         const res = await fetch('/api/catalog?merchant=' + encodeURIComponent(cuMerchantSlug()), { credentials: 'same-origin' });
         const body = await res.json().catch(() => ({}));
@@ -6953,7 +6953,7 @@
             </div>`;
           } else {
             actionBlock = `<div class="hx-close-actions">
-              <button class="hx-btn atlas hx-close-finalize">${tx('Valider le contrôle du mois (Réservé Direction)')}</button>
+              <button data-activation=write class="hx-btn atlas hx-close-finalize">${tx('Valider le contrôle du mois (Réservé Direction)')}</button>
             </div>`;
           }
         } else {
@@ -7876,7 +7876,7 @@
         tag: tx('SUPPRIMER UNE CHAMBRE'), title: tx('Supprimer la chambre {n} ?', { n }),
         desc: tx('Elle disparaîtra du plan, des disponibilités et du ménage.'), width: 440,
         body: `<p style="font-size:13px;line-height:1.55;color:var(--n-600);margin:0;">${tx('Cette action supprime {room}. Les ventes historiques restent intactes.', { room: `<b>${tx('Ch. {n}', { n })} · ${esc(room.typeName)}</b>` })}</p>
-          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button class="hx-btn warn" data-action="hx-room-delete" data-arg="${n}">${tx('Confirmer la suppression')}</button></div>`,
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button data-activation=write class="hx-btn warn" data-action="hx-room-delete" data-arg="${n}">${tx('Confirmer la suppression')}</button></div>`,
       });
       openModal = { el: m.el, close: m.close };
     };
@@ -8161,7 +8161,7 @@
             <button class="hx-btn ghost" data-action="hx-rate-step" data-arg="${ty}|${di}|50">+50</button>
           </div>
           <div style="text-align:center;font-size:11.5px;color:var(--n-500);">${r.ai[+di] ? 'Suggestion IA : ' + fmt(r.ai[+di]) + ' MAD' : 'Pas de suggestion IA ce jour'}</div>
-          <div style="display:flex;justify-content:flex-end;margin-top:16px;"><button class="hx-btn atlas" data-action="hx-rate-save" data-arg="${ty}|${di}">Enregistrer</button></div>`,
+          <div style="display:flex;justify-content:flex-end;margin-top:16px;"><button data-activation=write class="hx-btn atlas" data-action="hx-rate-save" data-arg="${ty}|${di}">Enregistrer</button></div>`,
       });
       openModal = { el: m.el, close: m.close };
     };

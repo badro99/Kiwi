@@ -561,7 +561,7 @@
           <div class="cf-hyg-cadence-h">${esc(cadenceLabels.monthly)}</div>
           ${sectionHtml('monthly')}
           <div class="cf-hyg-foot">
-            <button class="cf-btn primary" data-action="cf-hyg-export">${esc(t('hygAuditExport'))}</button>
+            <button data-activation=money class="cf-btn primary" data-action="cf-hyg-export">${esc(t('hygAuditExport'))}</button>
           </div>
         </div>
 
@@ -673,7 +673,7 @@
             ${rows}
           </div>
           <div class="cf-eq-foot">
-            <button class="cf-btn primary" data-action="cf-eq-add">${esc(t('eqAddIntervention'))}</button>
+            <button data-activation=write class="cf-btn primary" data-action="cf-eq-add">${esc(t('eqAddIntervention'))}</button>
           </div>
         </div>
       </div>`;

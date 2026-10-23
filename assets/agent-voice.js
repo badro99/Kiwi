@@ -486,7 +486,7 @@
       '<div class="kv-attach-chip">' +
         (isImg ? '<img class="kv-attach-thumb" src="' + esc(dataUrl) + '" alt="Aperçu">' : '<span class="kv-attach-badge">PDF</span>') +
         '<span class="kv-attach-name">' + esc(name || 'Fichier joint') + '</span>' +
-        '<button type="button" class="kv-attach-del" title="Supprimer" aria-label="Supprimer">' + SVG_CLOSE + '</button>' +
+        '<button data-activation=write type="button" class="kv-attach-del" title="Supprimer" aria-label="Supprimer">' + SVG_CLOSE + '</button>' +
       '</div>';
 
     state.previewEl.querySelector('.kv-attach-del').addEventListener('click', function (e) {

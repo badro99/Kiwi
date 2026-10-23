@@ -127,9 +127,9 @@
           <div class="eq-pill-row">${periodPills}</div>
           <div class="kt-hbar-right">
             <button class="btn-slim" type="button" data-action="kt-quick-entry">${svgIcon(IC.plus, 13)}<span>${esc(T.hQuickEntry)}</span></button>
-            <button class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.hExport)}</span></button>
-            <button class="btn-slim" type="button" data-action="kt-import-csv">${svgIcon(IC.upload, 13)}<span>${esc(T.hImport)}</span></button>
-            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="${locked ? 'kt-unlock-period' : 'kt-validate-period'}">
+            <button data-activation=money class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.hExport)}</span></button>
+            <button data-activation=write class="btn-slim" type="button" data-action="kt-import-csv">${svgIcon(IC.upload, 13)}<span>${esc(T.hImport)}</span></button>
+            <button data-activation=write class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="${locked ? 'kt-unlock-period' : 'kt-validate-period'}">
               ${locked ? svgIcon(IC.unlock, 13) : svgIcon(IC.check, 13)}<span>${esc(locked ? T.hUnlock : T.hValidate)}</span>
             </button>
           </div>
@@ -353,9 +353,9 @@
   }
   handlers['kt-plan-coverage'] = () => {
     const ctx=planningContext(), copy=planningCopy(), rules=(ctx.planning.coverageRules||[]).filter((rule)=>rule&&rule.active!==false);
-    const rulesHtml=rules.length?`<div class="kt-coverage-list">${rules.map((rule)=>`<div class="kt-coverage-rule"><div><strong>${esc(rule.label||rule.role||copy.coverage)}</strong><span>${esc(rule.start)}–${esc(rule.end)} · ${esc(rule.role||copy.allRoles)} · ${esc(copy.minimum)} ${Number(rule.minimum)||1}</span></div><button class="kb ghost" data-action="kt-plan-coverage-delete" data-rule-id="${esc(rule.id)}">${esc(copy.delete)}</button></div>`).join('')}</div>`:'';
+    const rulesHtml=rules.length?`<div class="kt-coverage-list">${rules.map((rule)=>`<div class="kt-coverage-rule"><div><strong>${esc(rule.label||rule.role||copy.coverage)}</strong><span>${esc(rule.start)}–${esc(rule.end)} · ${esc(rule.role||copy.allRoles)} · ${esc(copy.minimum)} ${Number(rule.minimum)||1}</span></div><button data-activation=write class="kb ghost" data-action="kt-plan-coverage-delete" data-rule-id="${esc(rule.id)}">${esc(copy.delete)}</button></div>`).join('')}</div>`:'';
     const body=`${rulesHtml}<div class="kt-plan-form-grid"><div class="kt-plan-modal-field wide"><label>${esc(copy.label)}</label><input data-kt-coverage-label maxlength="80" placeholder="${esc(copy.labelHint)}"></div><div class="kt-plan-modal-field"><label>${esc(copy.role)}</label><select data-kt-coverage-role>${planningRoleOptions(ctx,'')}</select></div><div class="kt-plan-modal-field"><label>${esc(copy.minimum)}</label><input data-kt-coverage-min type="number" min="1" max="99" value="1"></div><div class="kt-plan-modal-field"><label>${esc(copy.start)}</label><input data-kt-coverage-start type="time" value="11:30"></div><div class="kt-plan-modal-field"><label>${esc(copy.end)}</label><input data-kt-coverage-end type="time" value="14:30"></div><div class="kt-plan-modal-field wide"><label>${esc(copy.weekdays)}</label>${planningDaysInput()}</div></div>`;
-    const mdl=modal({title:copy.coverage,width:680,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-coverage-save">${esc(copy.addRule)}</button>`});
+    const mdl=modal({title:copy.coverage,width:680,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button data-activation=write class="kb atlas" data-action="kt-plan-coverage-save">${esc(copy.addRule)}</button>`});
     mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningCoverage=mdl;
   };
   handlers['kt-plan-coverage-save'] = () => {
@@ -375,7 +375,7 @@
     const ctx=planningContext(),copy=planningCopy(),day=visibleDays()[0]||toISO(new Date());
     const today=toISO(new Date());
     const body=`<div class="kt-plan-form-grid"><div class="kt-plan-modal-field"><label>${esc(copy.date)}</label><input data-kt-open-day type="date" min="${esc(today)}" value="${esc(day<today?today:day)}"></div><div class="kt-plan-modal-field"><label>${esc(copy.role)}</label><select data-kt-open-role>${planningRoleOptions(ctx,'')}</select></div><div class="kt-plan-modal-field"><label>${esc(copy.start)}</label><input data-kt-open-start type="time" value="09:00"></div><div class="kt-plan-modal-field"><label>${esc(copy.end)}</label><input data-kt-open-end type="time" value="17:00"></div><div class="kt-plan-modal-field wide"><label>${esc(copy.label)}</label><input data-kt-open-note maxlength="160"></div></div>`;
-    const mdl=modal({title:copy.openShift,width:620,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-open-save">${esc(copy.openShift)}</button>`});mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOpen=mdl;
+    const mdl=modal({title:copy.openShift,width:620,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button data-activation=write class="kb atlas" data-action="kt-plan-open-save">${esc(copy.openShift)}</button>`});mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOpen=mdl;
   };
   handlers['kt-plan-open-save'] = () => {
     const mdl=window.__kiwiPlanningOpen,ctx=planningContext(),P=window.KiwiPlanningCore,copy=planningCopy();if(!mdl?.el||!P)return;
@@ -621,7 +621,7 @@
       <div class="kt-shpop-foot">
         <button class="kt-shpop-b" type="button" data-sh-rest>${esc(T.plRest)}</button>
         <button class="kt-shpop-b" type="button" data-sh-clear>${esc(T.plClearCell)}</button>
-        <button class="kt-shpop-b primary" type="button" data-sh-save>${esc(T.plSave)}</button>
+        <button data-activation=write class="kt-shpop-b primary" type="button" data-sh-save>${esc(T.plSave)}</button>
       </div>`;
     document.body.appendChild(el);
     shiftPop = { el, anchor, mid, day };
@@ -862,7 +862,7 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>${esc(T.cancel)}</button>
-        <button class="kb atlas" data-action="kt-qe-save">${svgIcon(IC.check, 13)}${esc(T.qeSave)}</button>
+        <button data-activation=write class="kb atlas" data-action="kt-qe-save">${svgIcon(IC.check, 13)}${esc(T.qeSave)}</button>
       `,
     });
     qe.el.addEventListener('click', (e) => { if (e.target.closest('[data-dismiss]')) qe.close(); });
@@ -1075,7 +1075,7 @@
           title: C.title, width: 480,
           body: `<div class="kt-opt-summary"><strong>${esc(C.summary(plan.changes.length, membersTouched, daysTouched))}</strong><p>${esc(C.replace)}</p>
             ${plan.skipped ? `<p>${esc(C.skipped(plan.skipped))}</p>` : ''}${plan.lockedDays ? `<p>${esc(C.lockedDays(plan.lockedDays))}</p>` : ''}</div>`,
-          foot: `<button class="kb ghost" data-dismiss>${esc(C.cancel)}</button><button class="kb atlas" data-action="kt-import-csv-apply">${esc(C.apply)}</button>`,
+          foot: `<button class="kb ghost" data-dismiss>${esc(C.cancel)}</button><button data-activation=write class="kb atlas" data-action="kt-import-csv-apply">${esc(C.apply)}</button>`,
         });
       }).catch(() => Kiwi.toast(C.bad, { type: 'warning', desc: C.badDesc }));
     });
@@ -1176,7 +1176,7 @@
     const title = shiftCellTitle(T, cur, d);
     return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}${dayMeta?.closed?' is-closed':''}${dayMeta?.holiday?' is-holiday':''}"
       data-kt-cell="${esc(m.id)}|${esc(d)}">
-      <button class="kt-sh" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}"
+      <button data-activation=write class="kt-sh" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}"
         ${locked ? 'disabled' : ''}${title ? ` title="${esc(title)}"` : ''}>${shiftCellInner(T, cur, locked)}</button>
     </td>`;
   }
@@ -1234,7 +1234,7 @@
         const cur = (shifts[m.id] || {})[d];
         const s = normShift(cur);
         return `<li data-kt-cell="${esc(m.id)}|${esc(d)}">
-          <button class="kt-pd-row${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''}>
+          <button data-activation=write class="kt-pd-row${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''}>
             <span class="eq-av sm" style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
             <span class="kt-pd-who"><b>${esc(memberFullName(m))}</b><small>${esc(jobName(m.function))}</small></span>
             <span class="kt-pd-when">${planDayRowInner(T, cur)}</span>
@@ -1427,7 +1427,7 @@
             <button class="btn-slim kt-plan-fair-action" type="button" data-action="kt-plan-fair">${esc(fairCopy.action)}</button>
             <div class="kt-plan-action-group is-publish">
               ${pending.length+opportunityClaims ? `<button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)} · ${pending.length+opportunityClaims}</button>` : ''}
-              <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
+              <button data-activation=write class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
             </div>
           </div>
           <details class="kt-plan-tools">
@@ -1435,7 +1435,7 @@
             <div class="kt-plan-tools-panel">
               <section><div><strong>${esc(fairCopy.coverageGroup)}</strong><p>${esc(fairCopy.coverageDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button><button class="btn-slim" type="button" data-action="kt-plan-optimize">${esc(fairCopy.fromRules)}</button></div></section>
               <section><div><strong>${esc(fairCopy.openGroup)}</strong><p>${esc(fairCopy.openDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button></div></section>
-              <section><div><strong>${esc(fairCopy.templateGroup)}</strong><p>${esc(fairCopy.templateDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button><select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select><button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.templateGroup)}</strong><p>${esc(fairCopy.templateDesc)}</p></div><div class="kt-plan-action-group"><button data-activation=write class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button><select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select><button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button></div></section>
               <section><div><strong>${esc(fairCopy.maintenance)}</strong><p>${esc(fairCopy.maintenanceDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-clear" ${locked?'disabled':''}>${esc(T.plClear)}</button><button class="btn-slim" type="button" data-action="kt-plan-apply" ${locked?'disabled':''}>${svgIcon(IC.check,13)}<span>${esc(T.plApply)}</span></button></div></section>
             </div>
           </details>
@@ -1502,7 +1502,7 @@
             </div>
             <h3 style="margin:0 0 6px; font-family:var(--sans); font-size:18px; font-weight:600; letter-spacing:-0.015em; color:var(--ink);">${esc(T.payEmptyH)}</h3>
             <p style="margin:0 auto 18px; max-width:44ch; color:var(--n-500); line-height:1.55; font-size:13px;">${esc(T.payEmptyP)}</p>
-            <button class="kb atlas" type="button" data-action="nav-equipe">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
+            <button data-activation=write class="kb atlas" type="button" data-action="nav-equipe">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
           </div>
         </div>`;
     }

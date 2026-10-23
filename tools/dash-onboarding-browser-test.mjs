@@ -124,6 +124,24 @@ try {
     await ctx.close();
   }
 
+  {
+  const { ctx, page } = await open();
+  await page.evaluate(() => {
+    window.__storageSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === 'kiwiOnboardingDraft:v1') throw new DOMException('full', 'QuotaExceededError');
+      return window.__storageSet.call(this, k, v);
+    };
+    document.querySelector('#kit-onboarding [data-kind]').click();
+  });
+  check(await page.$eval('#kit-onboarding [data-draft-warning]', e => !e.hidden && e.textContent === 'Draft not saved on this device'), 'storage refusal shows the non-blocking translated warning');
+  await page.evaluate(() => {
+    Storage.prototype.setItem = window.__storageSet;
+    document.querySelector('#kit-onboarding [data-kind]').click();
+  });
+  check(await page.$eval('#kit-onboarding [data-draft-warning]', e => e.hidden && !e.textContent), 'next successful save clears the warning');
+  await ctx.close();
+  }
   const { ctx, page, errors } = await open();
   let v = await read(page);
   check(v && v.step === 'Step 2 of 5' && v.which === 'kind', `the kit page opens at step 2 of 5, the type (${v && v.step})`);

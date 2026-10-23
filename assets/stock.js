@@ -1985,7 +1985,7 @@
           <div class="st-sub">${esc(subText)}</div>
         </div>
         <div class="st-head-acts">
-          <button class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus',13)}<span>${esc(t('btnAdd'))}</span></button>
+          <button data-activation=write class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus',13)}<span>${esc(t('btnAdd'))}</span></button>
           <button class="catalog-more" type="button" data-action="stock-workspace-actions" aria-label="${esc(catalogText('stockActions','Outils du stock'))}">${catalogIcon('tune')}</button>
         </div>
       </div>
@@ -2374,7 +2374,7 @@
             </div>
           </div>
           <div class="st-alert-acts">
-            <button class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(L.order)}</button>
+            <button data-activation=write class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(L.order)}</button>
           </div>
         </div>
       `;
@@ -2416,9 +2416,9 @@
         </div>
         <div class="st-alert-acts">
           ${isOut
-            ? `<button class="st-btn primary" type="button" data-action="stock-urgent-order" data-item-id="${esc(it.id)}">${esc(t('btnUrgentOrder'))}</button>
+            ? `<button data-activation=write class="st-btn primary" type="button" data-action="stock-urgent-order" data-item-id="${esc(it.id)}">${esc(t('btnUrgentOrder'))}</button>
                <button class="st-btn" type="button" data-action="stock-mark-86" data-item-name="${esc(it.name)}">${esc(t('btnMark86'))}</button>`
-            : `<button class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(t('btnReorder'))}</button>
+            : `<button data-activation=write class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(t('btnReorder'))}</button>
                <button class="st-btn" type="button" data-action="stock-ignore-24h" data-item-name="${esc(it.name)}">${esc(t('btnIgnore'))}</button>`}
         </div>
       </div>
@@ -2938,7 +2938,7 @@
           ${cats.map(c => catPill(c.id, c.label)).join('')}
           ${stCatFilter !== 'all' && cats.some(c => c.id === stCatFilter)
             ? `<button class="st-cat-pill" type="button" data-action="stock-manage-cat" data-cat="${esc(stCatFilter)}" title="${esc(t('manageCatTitle'))}" aria-label="${esc(t('manageCatTitle'))}">${svg('edit', 12)}<span>${esc(t('manageCatTitle'))}</span></button>` : ''}
-          <button class="st-cat-pill" type="button" data-action="stock-add-cat" title="${esc(t('addCatPillTitle'))}" aria-label="${esc(t('addCatPillTitle'))}" style="font-weight:700;">+</button>
+          <button data-activation=write class="st-cat-pill" type="button" data-action="stock-add-cat" title="${esc(t('addCatPillTitle'))}" aria-label="${esc(t('addCatPillTitle'))}" style="font-weight:700;">+</button>
         </div>
         <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%;">
           ${statPill('all', t('statAll'))}
@@ -3070,9 +3070,9 @@
         <td class="r">
           <div class="st-actions">
             <button class="st-icon-btn" type="button" data-action="stock-item-detail" data-item-id="${esc(it.id)}" title="${esc(t('btnDetail'))}" aria-label="${esc(t('btnDetail'))}">${svg('eye', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}" title="${esc(t('btnReorder'))}" aria-label="${esc(t('btnReorder'))}">${svg('plus', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-edit-item" data-item-id="${esc(it.id)}" title="${esc(t('mItEdit'))}" aria-label="${esc(t('mItEdit'))}">${svg('edit', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-delete-item" data-item-id="${esc(it.id)}" title="${esc(t('titleDelete'))}" aria-label="${esc(t('titleDelete'))}" style="color:#9a1f1f;">${svg('x', 14)}</button>
+            <button data-activation=write class="st-icon-btn" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}" title="${esc(t('btnReorder'))}" aria-label="${esc(t('btnReorder'))}">${svg('plus', 14)}</button>
+            <button data-activation=write class="st-icon-btn" type="button" data-action="stock-edit-item" data-item-id="${esc(it.id)}" title="${esc(t('mItEdit'))}" aria-label="${esc(t('mItEdit'))}">${svg('edit', 14)}</button>
+            <button data-activation=write class="st-icon-btn" type="button" data-action="stock-delete-item" data-item-id="${esc(it.id)}" title="${esc(t('titleDelete'))}" aria-label="${esc(t('titleDelete'))}" style="color:#9a1f1f;">${svg('x', 14)}</button>
           </div>
         </td>
       </tr>
@@ -3211,7 +3211,7 @@
           <div class="t">${esc(name)} · rupture prévue ${esc(when)}</div>
           <div class="s">commander ${esc(qty)} avant ${esc(byWhen)}</div>
         </div>
-        <button class="st-btn primary" type="button" data-action="stock-program-shortfall" data-item-name="${esc(name)}">${esc(t('btnScheduleOrder'))}</button>
+        <button data-activation=write class="st-btn primary" type="button" data-action="stock-program-shortfall" data-item-name="${esc(name)}">${esc(t('btnScheduleOrder'))}</button>
       </div>
     `;
   }

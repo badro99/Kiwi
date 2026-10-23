@@ -693,7 +693,7 @@
               <div class="acc-biz-meta">${esc(b.type)} · ${esc(b.city)}${b.address ? ' · ' + esc(b.address) : ''}</div>
               ${b.slogan ? `<div class="acc-biz-meta">${esc(b.slogan)}</div>` : ''}
             </div>
-            <button class="acc-cta ghost" data-action="account-edit-business" data-arg="${esc(b.id)}">${esc(T.edit)}</button>
+            <button data-activation=write class="acc-cta ghost" data-action="account-edit-business" data-arg="${esc(b.id)}">${esc(T.edit)}</button>
           </div>
           ${b.revenue != null ? `<div class="acc-stat-row">
             <div class="acc-stat"><div class="v">${fmtMAD(b.revenue)} <span style="font-size:11px;opacity:.6;">MAD</span></div><div class="l">${esc(T.caMonth)}</div></div>
@@ -736,11 +736,11 @@
         <div class="acc-hero">
           <div class="acc-avatar">${esc(initialsOf(ownerName()))}</div>
           <div style="flex:1; min-width:0;"><div class="acc-hero-name">${esc(ownerName())}</div><div class="acc-hero-role">${esc(isReal() ? pick({ fr: 'Propriétaire · admin', en: 'Owner · admin', ar: 'مالك · مشرف' }) : T.role)}</div></div>
-          <button class="acc-cta light" data-action="account-edit-profile">${esc(T.edit)}</button>
+          <button data-activation=write class="acc-cta light" data-action="account-edit-profile">${esc(T.edit)}</button>
         </div>
         <div class="acc-grid">
           <div class="acc-card">
-            <div class="acc-eyebrow" style="display:flex; justify-content:space-between; align-items:center;">${esc(T.personal)}<a data-action="account-edit-profile" style="color:var(--atlas); cursor:pointer; letter-spacing:0;">${esc(T.edit)}</a></div>
+            <div class="acc-eyebrow" style="display:flex; justify-content:space-between; align-items:center;">${esc(T.personal)}<a data-activation=write data-action="account-edit-profile" style="color:var(--atlas); cursor:pointer; letter-spacing:0;">${esc(T.edit)}</a></div>
             ${row(T.name, esc(ownerName()))}
             ${row(T.email, esc(ownerEmail()))}
             ${row(T.phone, esc(ownerPhone() || '·'))}
@@ -757,7 +757,7 @@
         </div>
         <div class="acc-section-head"><h3>${esc(T.myBiz)}</h3><span class="ct">${biz.length}</span></div>
         ${biz.map(bizCard).join('')}
-        <button class="acc-add-biz" data-action="account-add-business">${esc(T.addBiz)}</button>
+        <button data-activation=write class="acc-add-biz" data-action="account-add-business">${esc(T.addBiz)}</button>
         <div class="acc-section-head"><h3>${esc(T.subscription)}</h3></div>
         ${subscriptionBlock}`,
     });
@@ -871,7 +871,7 @@
     const m = Kiwi.modal({
       tag: pick({ fr: 'ÉTABLISSEMENT', en: 'BUSINESS', ar: 'مؤسسة' }), title: b.name, width: 560,
       body: bizForm(b),
-      foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' }))}</button>`,
+      foot: `<button data-activation=write class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' }))}</button>`,
     });
     wireLogoPicker(m.el);
     m.el.addEventListener('click', (e) => {
@@ -919,7 +919,7 @@
         en: 'It gets its own opening hours, its own receipt, its own catalogue and its own till.',
         ar: 'ستكون له ساعاته ووصله وكتالوجه وصندوقه.' }) : '',
       body: bizForm(null),
-      foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: "Créer l'établissement", en: 'Create business', ar: 'إنشاء المؤسسة' }))}</button>`,
+      foot: `<button data-activation=write class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: "Créer l'établissement", en: 'Create business', ar: 'إنشاء المؤسسة' }))}</button>`,
     });
     wireLogoPicker(m.el);
     setTimeout(() => { const a = m.el.querySelector('.acc-f'); if (a) a.focus(); }, 320);
@@ -1402,7 +1402,7 @@
       width: 460,
       body: '<style>.acc-f:focus{border-color:var(--atlas)!important;}</style>' + fields.map((f, i) =>
         `<label style="${lbl}${i === 0 ? 'margin-top:2px;' : ''}">${esc(f.label)}</label><input class="acc-f" data-f="${f.k}" maxlength="60" style="${fld}"/>`).join(''),
-      foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(L({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' }))}</button>`,
+      foot: `<button data-activation=write class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(L({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' }))}</button>`,
     });
     fields.forEach((f) => { m.el.querySelector(`[data-f="${f.k}"]`).value = f.cur; });
     setTimeout(() => { const a = m.el.querySelector('.acc-f'); if (a) a.focus(); }, 320);

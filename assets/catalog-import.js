@@ -718,7 +718,7 @@
         tx('le séparateur virgule ou point-virgule, et les accents dans les deux encodages qu\'Excel produit.<br>',
           'with a comma or semicolon separator, and accents in both encodings Excel produces.<br>',
           'مع الفاصلة أو الفاصلة المنقوطة كفاصل، والأحرف المعلّمة في كلا الترميزين اللذين ينتجهما Excel.<br>'),
-        '<button class="kci-link" data-kci-tpl type="button">' + tx('Télécharger un modèle CSV', 'Download a CSV template', 'تنزيل نموذج CSV') + '</button></p>',
+        '<button data-activation=money class="kci-link" data-kci-tpl type="button">' + tx('Télécharger un modèle CSV', 'Download a CSV template', 'تنزيل نموذج CSV') + '</button></p>',
       ].join('');
       go.disabled = true; go.style.opacity = '.5'; go.textContent = tx('Choisir un fichier', 'Choose a file', 'اختيار ملف');
     }

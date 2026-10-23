@@ -1515,22 +1515,22 @@
             : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
           : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
-          (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + (inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
-          (context.onSavePdf ? '<button class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">Enregistrer en PDF</button>' : '') +
+          (context.onBrowserPrint ? '<button data-activation=write class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + (inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
+          (context.onSavePdf ? '<button data-activation=write class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">Enregistrer en PDF</button>' : '') +
         '</div>' : '') +
         (showBt ? '<div class="kpr-bt">' +
           '<h3>Imprimante Bluetooth</h3>' +
           '<p>Sans installation. Kiwi imprime le reçu directement.</p>' +
           '<div class="kpr-status ' + (btLive ? 'on' : 'off') + '" id="kpr-bt-status"><span class="kpr-d"></span><span id="kpr-bt-status-t">' + (btLive ? esc('Connectée · ' + bt.name) : 'Aucune imprimante connectée.') + '</span></div>' +
-          '<button class="kpr-btc" type="button" id="kpr-bt-connect">' + (btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
-          '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
+          '<button data-activation=write class="kpr-btc" type="button" id="kpr-bt-connect">' + (btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
+          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' : '') +
         (usbSupported() ? '<div class="kpr-bt">' +
           '<h3>Imprimante USB</h3>' +
           '<p>Branchée en USB sur la caisse. Sans installation, sans adresse IP.</p>' +
           '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc('Connectée · ' + usb.name) : 'Aucune imprimante USB connectée.') + '</span></div>' +
-          '<button class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
-          '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
+          '<button data-activation=write class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
+          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' : '') +
         (window.KiwiKitchenPrint ? '<div class="kpr-bt" id="kpr-kitchen">' +
           '<h3>Tickets de production automatiques</h3>' +
@@ -1544,8 +1544,8 @@
           '<div class="kpr-status ' + (cfg.osPrinter ? 'on' : 'off') + '" id="kpr-os-status"><span class="kpr-d"></span><span id="kpr-os-status-t">' + (cfg.osPrinter ? esc('Choisie · ' + cfg.osPrinter) : 'Aucune imprimante choisie.') + '</span></div>' +
           '<div class="kpr-field"><label for="kpr-os-sel">Imprimante</label><select id="kpr-os-sel"></select></div>' +
           '<div class="kpr-actions">' +
-            '<button class="kpr-btn kpr-test" type="button" id="kpr-os-test">Imprimer un ticket test</button>' +
-            '<button class="kpr-btn kpr-save" type="button" id="kpr-os-save">Utiliser cette imprimante</button>' +
+            '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-os-test">Imprimer un ticket test</button>' +
+            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-os-save">Utiliser cette imprimante</button>' +
           '</div>' +
         '</div>' +
         '<div class="kpr-bt" id="kpr-stations-box">' +
@@ -1554,7 +1554,7 @@
               '<h3>Imprimantes par poste</h3>' +
               '<p class="kpr-st-sub">Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.</p>' +
             '</div>' +
-            '<button type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">+ Nouvelle imprimante</button>' +
+            '<button data-activation=write type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">+ Nouvelle imprimante</button>' +
           '</div>' +
           '<div id="kpr-profile-form" class="kpr-profile-card" style="display:none;">' +
             '<h4 id="kpr-prof-form-title">Ajouter une imprimante</h4>' +
@@ -1577,14 +1577,14 @@
             '</div>' +
             '<div class="kpr-actions" style="margin-top:12px;">' +
               '<button class="kpr-btn kpr-test" type="button" id="kpr-prof-test-btn">Tester</button>' +
-              '<button class="kpr-btn kpr-save" type="button" id="kpr-prof-save-btn">Enregistrer</button>' +
+              '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-prof-save-btn">Enregistrer</button>' +
               '<button class="kpr-btn" type="button" id="kpr-prof-cancel-btn" style="background:#e5e7eb;color:#1f2937;">Annuler</button>' +
             '</div>' +
           '</div>' +
           '<div id="kpr-profiles-list" class="kpr-profiles-chip-row"></div>' +
           '<div id="kpr-station-tbody" class="kpr-st-cards"></div>' +
           '<div class="kpr-actions" style="margin-top:12px;">' +
-            '<button class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
+            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
           '</div>' +
         '</div>' +
         '<div class="kpr-bt" id="kpr-relay">' +
@@ -1603,9 +1603,9 @@
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">' + (socket ? 'Impression directe disponible dans l’app Kiwi.' : 'Vérification du pont…') + '</span></div>' +
           '<p class="kpr-note" id="kpr-target"></p>' +
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
-          '<button class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
+          '<button data-activation=write class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
           '<div id="kpr-scan-out" class="kpr-note" style="display:none;"></div>' +
-          '<button class="kpr-btc" type="button" id="kpr-diagnostics">Exporter le diagnostic d’impression</button>' +
+          '<button data-activation=money class="kpr-btc" type="button" id="kpr-diagnostics">Exporter le diagnostic d’impression</button>' +
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
             '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
@@ -1615,13 +1615,13 @@
             '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p>' +
             '<p class="kpr-note" id="kpr-model-driver" style="margin-top:6px;' + (modelDriver(cfg.model) ? '' : 'display:none;') + '">' +
               'Pilote Windows (utile seulement pour les étiquettes ou si l\'USB est refusé) : ' +
-              '<a id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
+              '<a data-activation=money id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
             '</p></div>' +
           '<div class="kpr-actions">' +
-            '<button class="kpr-btn kpr-test" type="button" id="kpr-test"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Tester' : 'Imprimer un ticket test') + '</button>' +
-            '<button class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
+            '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-test"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Tester' : 'Imprimer un ticket test') + '</button>' +
+            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
           '</div>' +
-          '<p class="kpr-note">Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a></p>' +
+          '<p class="kpr-note">Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale. <a data-activation=money href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a></p>' +
         '</details>' +
       '</div>';
     document.body.appendChild(ov);
@@ -1710,7 +1710,7 @@
         var desc = p.type === 'ip' ? (p.ip + ':' + (p.port || 9100)) : p.type === 'os' ? p.osPrinter : p.type.toUpperCase();
         return '<span class="kpr-prof-chip" data-prof-id="' + esc(p.id) + '">' +
           '<b>' + esc(p.name) + '</b> <small>(' + esc(desc) + ')</small>' +
-          '<button type="button" class="kpr-prof-del" data-del-prof="' + esc(p.id) + '" aria-label="Supprimer">×</button>' +
+          '<button data-activation=write type="button" class="kpr-prof-del" data-del-prof="' + esc(p.id) + '" aria-label="Supprimer">×</button>' +
           '</span>';
       }).join('');
 
@@ -1974,7 +1974,7 @@
         }
         var box = $('#kpr-os'); if (box) box.style.display = 'none';
         st.className = 'kpr-status off';
-        t.innerHTML = 'Kiwi Printer Bridge non détecté sur cet appareil. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
+        t.innerHTML = 'Kiwi Printer Bridge non détecté sur cet appareil. <a data-activation=money href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
         var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
         test.disabled = true;
         /* Pas de pont ici (iPad, tablette, PC sans pont) : un pont EN LIGNE via

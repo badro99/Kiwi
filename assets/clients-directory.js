@@ -364,7 +364,7 @@
       '<div class="cd-bar">' +
         '<div class="cd-actions">' +
           '<label class="cd-field">' + ico('search') + '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '" aria-label="' + esc(T.search) + '"></label>' +
-          '<button type="button" class="cd-exp" id="cd-exp" title="' + esc(T.export) + '">' + ico('download') + '<span>' + T.export + '</span></button>' +
+          '<button data-activation=money type="button" class="cd-exp" id="cd-exp" title="' + esc(T.export) + '">' + ico('download') + '<span>' + T.export + '</span></button>' +
           '<button type="button" class="cd-exp" id="cd-loyalty" data-feature="loyalty" title="' + esc(T.program) + '">' + ico('redeem') + '<span>' + T.loyalty + '</span></button>' +
           (Kiwi.handlers['customer-retention'] ? '<button type="button" class="cd-exp" id="cd-retention" data-feature="crm">' + ico('group') + '<span>' + esc(T.retention) + '</span></button>' : '') +
           (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
@@ -464,7 +464,7 @@
         '</div><p class="cd-consent-hint" id="cdn-consent-hint">' + esc(F.consentHint) + '</p>' +
         '<label class="cd-f-check"><input type="checkbox" id="cdn-consent" aria-describedby="cdn-consent-hint"><span>' + esc(T.consentWa) + '</span></label>' +
         '<label class="cd-f-check"><input type="checkbox" id="cdn-consent-email" aria-describedby="cdn-consent-hint"><span>' + esc(T.consentEmail) + '</span></label>' +
-        '<div class="cd-f-actions"><button class="cd-exp" data-close>' + esc(F.cancel) + '</button><button class="cd-exp cd-new" data-save>' + esc(F.save) + '</button></div>' });
+        '<div class="cd-f-actions"><button class="cd-exp" data-close>' + esc(F.cancel) + '</button><button data-activation=write class="cd-exp cd-new" data-save>' + esc(F.save) + '</button></div>' });
       var val = function (sel) { var n = m.el.querySelector(sel); return n ? String(n.value || '').trim() : ''; };
       m.el.addEventListener('click', function (e) {
         if (e.target.closest('[data-close]')) { m.close(); return; }

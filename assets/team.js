@@ -2022,8 +2022,8 @@
         </div>
         <div class="eq-head-acts">
           ${showEmployeeApp ? `<button class="btn-slim" type="button" data-action="kt-employee-app">${svgIcon(IC.users, 13)}<span>${esc(employeeAppLabel)}</span></button>` : ''}
-          <button class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
-          <button class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
+          <button data-activation=money class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
+          <button data-activation=write class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
         </div>
       </div>
     `;
@@ -2034,8 +2034,8 @@
     return `
       <div class="eq-filters">
         <div class="eq-pill-row">
-          <button class="eq-pill${activeTab === 'profiles' ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="profiles">${esc(T.tabProfiles)}</button>
-          <button class="eq-pill${activeTab === 'hours'    ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="hours">${esc(T.tabHours)}</button>
+          <button data-activation=write class="eq-pill${activeTab === 'profiles' ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="profiles">${esc(T.tabProfiles)}</button>
+          <button data-activation=write class="eq-pill${activeTab === 'hours'    ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="hours">${esc(T.tabHours)}</button>
         </div>
       </div>
     `;
@@ -2084,10 +2084,10 @@
     `;
 
     /* Filter pill rows */
-    const deptList = ['<button class="eq-pill' + (!activeFilters.dept ? ' on' : '') + '" type="button" data-action="kt-filter-dept" data-arg="">' + esc(T.filterAllDept) + '</button>',
-      ...cat.departments.map(d => `<button class="eq-pill${activeFilters.dept === d ? ' on' : ''}" type="button" data-action="kt-filter-dept" data-arg="${esc(d)}">${esc(jobName(d, 'dept'))}</button>`)].join('');
-    const ctList = ['<button class="eq-pill' + (!activeFilters.contract ? ' on' : '') + '" type="button" data-action="kt-filter-contract" data-arg="">' + esc(T.filterAllContract) + '</button>',
-      ...CONTRACT_TYPES.map(c => `<button class="eq-pill${activeFilters.contract === c ? ' on' : ''}" type="button" data-action="kt-filter-contract" data-arg="${esc(c)}">${esc(contractLabel(T, c))}</button>`)].join('');
+    const deptList = ['<button data-activation=write class="eq-pill' + (!activeFilters.dept ? ' on' : '') + '" type="button" data-action="kt-filter-dept" data-arg="">' + esc(T.filterAllDept) + '</button>',
+      ...cat.departments.map(d => `<button data-activation=write class="eq-pill${activeFilters.dept === d ? ' on' : ''}" type="button" data-action="kt-filter-dept" data-arg="${esc(d)}">${esc(jobName(d, 'dept'))}</button>`)].join('');
+    const ctList = ['<button data-activation=write class="eq-pill' + (!activeFilters.contract ? ' on' : '') + '" type="button" data-action="kt-filter-contract" data-arg="">' + esc(T.filterAllContract) + '</button>',
+      ...CONTRACT_TYPES.map(c => `<button data-activation=write class="eq-pill${activeFilters.contract === c ? ' on' : ''}" type="button" data-action="kt-filter-contract" data-arg="${esc(c)}">${esc(contractLabel(T, c))}</button>`)].join('');
 
     const visible = members.filter(memberMatchesFilters);
 
@@ -2118,7 +2118,7 @@
                 </div>
                 <div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(members.length ? T.noMatch : T.noMembersYet)}</div>
                 ${members.length ? '' : `<div style="max-width:44ch;line-height:1.45;">${esc(T.noMembersHint)}</div>`}
-                <button class="kb atlas" type="button" data-action="kt-add-member" style="margin-top:12px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
+                <button data-activation=write class="kb atlas" type="button" data-action="kt-add-member" style="margin-top:12px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
               </div>`
             : renderMembersTable(T, visible, venueType)}
         </div>
@@ -2165,8 +2165,8 @@
           <td>
             <div class="eq-actions">
               <button class="eq-icon-btn" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}" title="${esc(T.viewProfile)}">${svgIcon(IC.eye, 14)}</button>
-              <button class="eq-icon-btn" type="button" data-action="kt-edit-member"  data-arg="${esc(m.id)}" aria-label="${esc(T.editBtn)}" title="${esc(T.editBtn)}">${svgIcon(IC.edit, 14)}</button>
-              <button class="eq-icon-btn" type="button" data-action="kt-delete-member" data-arg="${esc(m.id)}" aria-label="${esc(T.deleteBtn)}" title="${esc(T.deleteBtn)}" style="color:var(--n-500);">${svgIcon(IC.trash, 14)}</button>
+              <button data-activation=write class="eq-icon-btn" type="button" data-action="kt-edit-member"  data-arg="${esc(m.id)}" aria-label="${esc(T.editBtn)}" title="${esc(T.editBtn)}">${svgIcon(IC.edit, 14)}</button>
+              <button data-activation=write class="eq-icon-btn" type="button" data-action="kt-delete-member" data-arg="${esc(m.id)}" aria-label="${esc(T.deleteBtn)}" title="${esc(T.deleteBtn)}" style="color:var(--n-500);">${svgIcon(IC.trash, 14)}</button>
             </div>
           </td>
         </tr>
@@ -2533,7 +2533,7 @@
                 <span class="kt-ed-err" data-err-for="password" hidden></span>
               </label>
               <div class="kt-ed-code-acts">
-                <button type="button" class="kt-ed-btn" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 16)}<span>${esc(T.generate)}</span></button>
+                <button data-activation=write type="button" class="kt-ed-btn" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 16)}<span>${esc(T.generate)}</span></button>
                 <button type="button" class="kt-ed-btn" data-action="kt-pwd-copy">${svgIcon(IC.copy, 16)}<span>${esc(T.copy)}</span></button>
               </div>
               <p class="kt-ed-hint">${esc(T.edCodeHint)}</p>
@@ -2543,7 +2543,7 @@
       `,
       foot: `
         <button class="kb ghost" data-dismiss>${esc(T.cancel)}</button>
-        <button class="kb atlas" data-action="kt-submit-member">${svgIcon(IC.check, 13)}${esc(editing ? T.submitEdit : T.submitAdd)}</button>
+        <button data-activation=write class="kb atlas" data-action="kt-submit-member">${svgIcon(IC.check, 13)}${esc(editing ? T.submitEdit : T.submitAdd)}</button>
       `,
     });
     mdl.el.classList.add('kt-ed-modal');
@@ -2843,8 +2843,8 @@
         </div>
       `,
       foot: `
-        <button class="kb ghost" data-action="kt-delete-member" data-arg="${esc(m.id)}" style="color:var(--danger);">${svgIcon(IC.trash, 13)}${esc(T.deleteBtn)}</button>
-        <button class="kb atlas" data-action="kt-edit-member" data-arg="${esc(m.id)}">${svgIcon(IC.edit, 13)}${esc(T.editBtn)}</button>
+        <button data-activation=write class="kb ghost" data-action="kt-delete-member" data-arg="${esc(m.id)}" style="color:var(--danger);">${svgIcon(IC.trash, 13)}${esc(T.deleteBtn)}</button>
+        <button data-activation=write class="kb atlas" data-action="kt-edit-member" data-arg="${esc(m.id)}">${svgIcon(IC.edit, 13)}${esc(T.editBtn)}</button>
       `,
     });
     profileM.el.classList.add('kt-ed-modal');
@@ -2901,7 +2901,7 @@
         </div>`,
       foot: `
         <button class="kb ghost" data-dismiss>${esc(T.cancel)}</button>
-        <button class="kb" data-action="kt-confirm-delete" data-arg="${esc(id)}" style="background:var(--danger); color:#fff;">${svgIcon(IC.trash, 13)}${esc(T.delConfirm)}</button>
+        <button data-activation=write class="kb" data-action="kt-confirm-delete" data-arg="${esc(id)}" style="background:var(--danger); color:#fff;">${svgIcon(IC.trash, 13)}${esc(T.delConfirm)}</button>
       `,
     });
     confirmM.el.addEventListener('click', (e) => { if (e.target.closest('[data-dismiss]')) confirmM.close(); });

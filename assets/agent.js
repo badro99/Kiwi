@@ -5251,7 +5251,7 @@
                 <textarea class="fa-input" data-fa-input rows="1"
                   aria-label="${escAttr(u.placeholder)}"
                   placeholder="${escAttr(window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? u.placeholder.split(/[,،]/)[0] + '…' : u.placeholder)}"></textarea>
-                <button class="fa-send" data-fa-send type="button" title="${escAttr(u.send)}" aria-label="${escAttr(u.send)}">${ICON.send}</button>
+                <button data-activation=write class="fa-send" data-fa-send type="button" title="${escAttr(u.send)}" aria-label="${escAttr(u.send)}">${ICON.send}</button>
               </div>
               <div class="fa-toolbar">
                 <button class="fa-tool" data-fa-keypad-toggle type="button">${ICON.keypad}<span>${u.calc}</span></button>
@@ -5436,7 +5436,7 @@
       pushAgent(
         `<div>${m.cloudLead}</div>
          <div class="fa-note" style="font-style:normal;">${m.cloudPrivacy}</div>
-         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-cloud>${m.cloudActivate}</button>`
+         <div class="fa-follow"><button data-activation=write type="button" class="fa-llm-btn" data-fa-cloud>${m.cloudActivate}</button>`
         + `<button type="button" class="fa-llm-btn" data-fa-cloud-no>${m.cloudDecline}</button></div>`);
     }
 

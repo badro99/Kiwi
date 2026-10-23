@@ -223,7 +223,7 @@
             <div class="crm-kpi"><div class="v" data-crm-reach2>${fmt(segData(sel).reach)}</div><div class="l">${T.reach}</div></div>
             <div class="crm-kpi"><div class="v" data-crm-lift>≈ ${fmt(segData(sel).lift)}</div><div class="l">${RD ? RDC.lift : T.lift} (MAD)</div></div>
           </div>
-          <button class="kb atlas crm-send" data-crm-send>${RD ? RDC.send : T.send}</button>
+          <button data-activation=write class="kb atlas crm-send" data-crm-send>${RD ? RDC.send : T.send}</button>
         </div>
       </div>
       <div class="crm-foot"><button class="kb ghost" data-crm-loyalty data-feature="loyalty">${T.program}</button><button class="kb ghost" data-dismiss>${T.close}</button></div>

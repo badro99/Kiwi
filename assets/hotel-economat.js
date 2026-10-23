@@ -198,7 +198,7 @@
     modalRef = Kiwi.modal({
       tag:T.receiptTag, title:T.receiptTitle, width:580,
       body:'<div class="hx-eco-form"><label class="wide">' + esc(T.item) + '<input id="eco-item" list="eco-items" autocomplete="off"><datalist id="eco-items">' + itemOptions(rows, '') + '</datalist></label><label>' + esc(T.qty) + '<input id="eco-qty" type="number" min="0.001" step="0.001" inputmode="decimal"></label><label>' + esc(T.cost) + '<input id="eco-cost" type="number" min="0.01" step="0.01" inputmode="decimal"></label><label>' + esc(T.supplier) + '<input id="eco-supplier" autocomplete="organization"></label><label>' + esc(T.reference) + '<input id="eco-ref" autocomplete="off"></label></div>',
-      foot:'<button class="kb ghost" data-dismiss>' + esc(T.cancel) + '</button><button class="kb atlas" data-action="eco-receive-save">' + esc(T.confirm) + '</button>'
+      foot:'<button class="kb ghost" data-dismiss>' + esc(T.cancel) + '</button><button data-activation=write class="kb atlas" data-action="eco-receive-save">' + esc(T.confirm) + '</button>'
     });
     setTimeout(function () { document.getElementById('eco-item')?.focus(); }, 30);
   };

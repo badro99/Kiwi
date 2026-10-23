@@ -490,7 +490,7 @@
         '<div class="kcb-top"><div><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Clients') + '</h2>' +
           '<span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
           '<button class="kcb-x kcb-back" id="kcb-back" type="button" aria-label="Fermer le carnet clients">' + ICON.close + '</button>' +
-          '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
+          '<button data-activation=write class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
         '<div class="kcb-strip" id="kcb-strip"></div>' +
         '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
           '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
@@ -596,7 +596,7 @@
       var qTrim = (state.q || '').trim();
       var isDigits = qTrim.replace(/\D/g, '').length > qTrim.replace(/\d/g, '').trim().length;
       var addBtn = qTrim
-        ? '<button type="button" class="kcb-add" id="kcb-empty-add" style="margin-top:16px;">' + ICON.userplus + '<span>Nouveau client · « ' + esc(qTrim) + ' »</span></button>'
+        ? '<button data-activation=write type="button" class="kcb-add" id="kcb-empty-add" style="margin-top:16px;">' + ICON.userplus + '<span>Nouveau client · « ' + esc(qTrim) + ' »</span></button>'
         : '';
       host.innerHTML = '<div class="kcb-empty"><span class="ico">' + ICON.users + '</span>' +
         (all.length ? '<b>Aucun résultat pour « ' + esc(qTrim) + ' »</b><div>Essayez un autre nom, un autre numéro ou un autre segment.</div>' + addBtn
@@ -733,9 +733,9 @@
            reconstruisait « Accepts marketing emails marketing ». */
         '<span>Accepte les <b>emails marketing</b>.</span></label>' +
       '<div class="kcb-actions">' +
-        (editing ? '<button class="kcb-btn danger" id="kcb-f-del" aria-label="Supprimer">' + ICON.trash + '</button>' : '') +
+        (editing ? '<button data-activation=write class="kcb-btn danger" id="kcb-f-del" aria-label="Supprimer">' + ICON.trash + '</button>' : '') +
         '<button class="kcb-btn ghost" id="kcb-f-cancel">Annuler</button>' +
-        '<button class="kcb-btn primary" id="kcb-f-save">' + (editing ? 'Enregistrer' : 'Ajouter') + '</button></div>'
+        '<button data-activation=write class="kcb-btn primary" id="kcb-f-save">' + (editing ? 'Enregistrer' : 'Ajouter') + '</button></div>'
     );
     var sh = document.getElementById('kcb-sheet');
     sh.querySelector('#kcb-f-cancel').onclick = closeSheet;
@@ -784,7 +784,7 @@
       progTxt = fmt(c.points) + ' / ' + (cfg.amount.threshold || 100) + ' pts · récompense ' + esc(cfg.amount.reward || '');
       recordBlock = '<div class="kcb-record"><div class="rl">Enregistrer un achat</div><div class="kcb-recrow">' +
         '<input id="kcb-amt" inputmode="numeric" placeholder="Montant en MAD" >' +
-        '<button class="kcb-big" id="kcb-rec">' + ICON.plus + 'Valider</button></div></div>';
+        '<button data-activation=write class="kcb-big" id="kcb-rec">' + ICON.plus + 'Valider</button></div></div>';
     } else {
       var target = cfg.model === 'product' ? cfg.product.target : cfg.visit.target;
       var unit = cfg.model === 'product' ? (cfg.product.item || 'achat') : 'visite';
@@ -870,7 +870,7 @@
       attachBlock +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="display:block;width:100%;margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
-      '<div class="kcb-actions"><button class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +
+      '<div class="kcb-actions"><button data-activation=write class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +
         '<button class="kcb-btn ghost" id="kcb-d-back">Retour</button></div>'
     );
     var sh = document.getElementById('kcb-sheet');

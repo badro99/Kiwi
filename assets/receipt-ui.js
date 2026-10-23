@@ -255,11 +255,11 @@
               '<div class="kr-tabs" id="kru-paper"><button class="kr-tab" data-p="80" type="button">80 mm</button>' +
               '<button class="kr-tab" data-p="58" type="button">58 mm</button></div></div>' +
               '<div class="kr-stage" id="kru-stage"></div>' +
-              '<button class="kr-btn" id="kru-test" type="button" style="width:100%;margin-top:11px;">' + esc(L.testPrint) + '</button>' +
+              '<button data-activation=write class="kr-btn" id="kru-test" type="button" style="width:100%;margin-top:11px;">' + esc(L.testPrint) + '</button>' +
               '<p class="kr-note">' + esc(L.testNote) + '</p>' +
             '</div></div>',
       foot: '<button class="kb ghost" id="kru-cancel" type="button">' + esc(L.cancel) + '</button>' +
-            '<button class="kb primary" id="kru-save" type="button">' + esc(L.save) + '</button>',
+            '<button data-activation=write class="kb primary" id="kru-save" type="button">' + esc(L.save) + '</button>',
     });
     var form = m.el.querySelector('#kru-form');
     var stage = m.el.querySelector('#kru-stage');
@@ -299,7 +299,7 @@
         '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px;">' +
           '<div><div style="font-size:15px;font-weight:600;">' + esc(b.name || opts.title || '') + '</div>' +
           '<div class="kr-note" style="margin-top:2px;">' + esc(L.sourceNote) + '</div></div>' +
-          '<button class="kr-btn" id="kru-editbiz" type="button" style="flex-shrink:0;">' + esc(L.editBiz) + '</button>' +
+          '<button data-activation=write class="kr-btn" id="kru-editbiz" type="button" style="flex-shrink:0;">' + esc(L.editBiz) + '</button>' +
         '</div>' +
         '<div class="kr-legal">' + rows + '</div>';
       if (miss.length) {
@@ -320,7 +320,7 @@
       h += '<div class="kr-g"><div class="kr-g-h">' + esc(L.gLook) + '</div><div class="kr-card">' +
         '<div class="kr-f"><span class="kr-l">' + esc(L.logo) + '</span><div class="kr-logo-box">' +
           '<div class="kr-logo-prev">' + (cfg.look.logo ? '<img alt="" src="' + esc(cfg.look.logo) + '"/>' : '<span style="font-size:10px;color:var(--n-500);">·</span>') + '</div>' +
-          '<div><button class="kr-btn" id="kru-logo-add" type="button">' + esc(L.logoAdd) + '</button>' +
+          '<div><button data-activation=write class="kr-btn" id="kru-logo-add" type="button">' + esc(L.logoAdd) + '</button>' +
           (cfg.look.logo ? ' <button class="kr-btn" id="kru-logo-del" type="button">' + esc(L.logoDel) + '</button>' : '') +
           '<p class="kr-note">' + esc(L.logoHint) + '</p></div>' +
           '<input type="file" id="kru-logo-file" accept="image/png,image/jpeg" hidden/>' +

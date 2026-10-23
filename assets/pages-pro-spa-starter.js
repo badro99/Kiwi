@@ -267,7 +267,7 @@
         </div>
 
         <div class="p-card">
-          <div class="head"><h4>Recommandations à domicile</h4><button class="kb ghost" data-action="spa-cli-note" data-arg="${c.id}" style="padding:5px 10px; font-size:11.5px;">Modifier</button></div>
+          <div class="head"><h4>Recommandations à domicile</h4><button data-activation=write class="kb ghost" data-action="spa-cli-note" data-arg="${c.id}" style="padding:5px 10px; font-size:11.5px;">Modifier</button></div>
           <div style="font-size:13px; color:var(--n-700); line-height:1.55; padding:8px 0;">
             ${c.tier === 'platine' || c.tier === 'or' ? 'Application matin : sérum hyaluronique. Soir : crème argan + 3 gouttes huile de figue de Barbarie. Hammam maison 2× / semaine.' : 'Hydratation quotidienne, exfoliation hebdomadaire au gommage Beldi. Suivi dans 4 semaines.'}
           </div>
@@ -305,7 +305,7 @@
         </div>
         <div class="kf-group"><label class="kf-label">Allergies / contre-indications</label><textarea class="kf-input" rows="3" placeholder="Ex : peau sensible, hypertension, allergie aux huiles d'agrumes…"></textarea></div>
       `,
-      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button class="kb primary" data-action="spa-cli-add-confirm">Créer la fiche</button>`,
+      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button data-activation=write class="kb primary" data-action="spa-cli-add-confirm">Créer la fiche</button>`,
     });
   };
   handlers['spa-cli-add-confirm'] = () => {
@@ -330,7 +330,7 @@
         </div>
         <textarea class="kf-input" rows="3">Bonjour ${c.fn}, c'est Bahia Spa Hivernage. Votre praticienne ${c.fav} a un créneau libre demain à 15h pour votre soin habituel.</textarea>
       `,
-      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button class="kb atlas" data-action="spa-cli-wa-send" data-arg="${c.id}">Envoyer via WhatsApp Business</button>`,
+      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button data-activation=write class="kb atlas" data-action="spa-cli-wa-send" data-arg="${c.id}">Envoyer via WhatsApp Business</button>`,
     });
   };
   handlers['spa-cli-wa-send'] = (el) => {
@@ -353,7 +353,7 @@
           </div>
         </div>
       `,
-      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button class="kb atlas" data-action="spa-cli-bday-send" data-arg="${c.id}">Envoyer les vœux</button>`,
+      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button data-activation=write class="kb atlas" data-action="spa-cli-bday-send" data-arg="${c.id}">Envoyer les vœux</button>`,
     });
   };
   handlers['spa-cli-bday-send'] = (el) => {
@@ -377,7 +377,7 @@
           <div class="sc-wa-bubble">Joyeux anniversaire {Prénom} ! L'équipe Bahia Spa vous offre <b>15% de réduction</b> sur votre prochaine séance, code BAHIA-{XXX}15.<div class="sc-wa-time">15:08 ✓✓</div></div>
         </div>
       `,
-      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button class="kb atlas" data-action="spa-cli-bday-batch-send">Envoyer aux 3 clientes</button>`,
+      foot: `<button class="kb ghost" data-action="dismiss-modal">Annuler</button><button data-activation=write class="kb atlas" data-action="spa-cli-bday-batch-send">Envoyer aux 3 clientes</button>`,
     });
   };
   handlers['spa-cli-bday-batch-send'] = () => {
@@ -478,7 +478,7 @@
             <div class="t">${bdayList.length} anniversaires ce mois</div>
             <div class="d">${bdayList.map((c) => `${c.fn} ${c.ln}`).join(' · ')}, campagne WhatsApp + 15% prête à partir.</div>
           </div>
-          <button class="kb atlas" data-action="spa-cli-bday-batch">Envoyer les vœux groupés</button>
+          <button data-activation=write class="kb atlas" data-action="spa-cli-bday-batch">Envoyer les vœux groupés</button>
         </div>
 
         <div class="p-toolbar">
@@ -486,12 +486,12 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
             Rechercher par nom, téléphone, email…
           </div>
-          <button class="kb primary" data-action="spa-cli-add"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nouveau client</button>
+          <button data-activation=write class="kb primary" data-action="spa-cli-add"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nouveau client</button>
         </div>
 
         <div class="sc-pills">
           <button class="sc-pill on" data-spa-pill="all" data-action="spa-cli-filter" data-arg="all">Tous <span class="ct">${counts.all}</span></button>
-          <button class="sc-pill" data-spa-pill="new" data-action="spa-cli-filter" data-arg="new">Nouveaux <span class="ct">${counts.new}</span></button>
+          <button data-activation=write class="sc-pill" data-spa-pill="new" data-action="spa-cli-filter" data-arg="new">Nouveaux <span class="ct">${counts.new}</span></button>
           <button class="sc-pill" data-spa-pill="fid" data-action="spa-cli-filter" data-arg="fid">Fidèles <span class="ct">${counts.fid}</span></button>
           <button class="sc-pill" data-spa-pill="vip" data-action="spa-cli-filter" data-arg="vip">VIP <span class="ct">${counts.vip}</span></button>
           <button class="sc-pill" data-spa-pill="bday" data-action="spa-cli-filter" data-arg="bday">Anniv. ce mois <span class="ct">${counts.bday}</span></button>
@@ -766,8 +766,8 @@
       width: 460,
       body: `<input data-add-input type="text" placeholder="${escS(T(cfg.ph))}" style="width:100%;box-sizing:border-box;padding:13px 14px;border:1.5px solid var(--n-200);border-radius:12px;font-family:var(--sans);font-size:15px;color:var(--ink);background:var(--surface);outline:none;"/>
              <div class="gp-add-list" data-add-list></div>`,
-      foot: `<button class="kb ghost" type="button" data-add-more style="flex:1;justify-content:center;">${T(UI.addMore)}</button>
-             <button class="kb atlas" type="button" data-add-done style="flex:1.3;justify-content:center;">${T(UI.done)}</button>`,
+      foot: `<button data-activation=write class="kb ghost" type="button" data-add-more style="flex:1;justify-content:center;">${T(UI.addMore)}</button>
+             <button data-activation=write class="kb atlas" type="button" data-add-done style="flex:1.3;justify-content:center;">${T(UI.done)}</button>`,
     });
     const input = m.el.querySelector('[data-add-input]');
     const list = m.el.querySelector('[data-add-list]');
@@ -1119,7 +1119,7 @@
     };
     const methodButtons = ['all', 'cash', 'card', 'delivery'].map((method) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
-      return `<button class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
+      return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
     }).join('');
     const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(Number(s.amount || 0) * 100)), 0) / 100;
     const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(Number(s.amount || 0) * 100)), 0) / 100;
@@ -1162,7 +1162,7 @@
           <button class="rtx-act-btn" type="button" data-action="sale-invoice-pdf" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Facture PDF"'} aria-label="Facture PDF">
             <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M360-460h40v-80h40q17 0 28.5-11.5T480-580v-40q0-17-11.5-28.5T440-660h-80v200Zm40-120v-40h40v40h-40Zm120 120h80q17 0 28.5-11.5T640-500v-120q0-17-11.5-28.5T600-660h-80v200Zm40-40v-120h40v120h-40Zm120 40h40v-80h40v-40h-40v-40h40v-40h-80v200ZM320-240q-33 0-56.5-23.5T240-320v-480q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H320Zm0-80h480v-480H320v480ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Zm160-720v480-480Z"/></svg>
           </button>
-          <button class="rtx-act-btn" type="button" data-action="sale-invoice-print" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Imprimer A4"'} aria-label="Imprimer A4">
+          <button data-activation=write class="rtx-act-btn" type="button" data-action="sale-invoice-print" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Imprimer A4"'} aria-label="Imprimer A4">
             <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z"/></svg>
           </button>
         </div>`;
@@ -1219,7 +1219,7 @@
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Activité', en: 'Activity', ar: 'النشاط' }))}">${kindButtons}</div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
           ${cancelAuditLoading ? `<p class="rtx-notice" role="status">${escS(T({ fr: 'Chargement du journal…', en: 'Loading activity…', ar: 'جارٍ تحميل السجل…' }))}</p>` : ''}
-          ${cancelAuditError ? `<p class="rtx-notice" role="alert">${escS(T({ fr: 'Journal indisponible. Les remboursements et annulations peuvent être incomplets.', en: 'Activity unavailable. Refunds and cancellations may be incomplete.', ar: 'السجل غير متاح. قد تكون المبالغ المستردة والإلغاءات غير مكتملة.' }))} <button type="button" class="rtx-method" data-action="sales-activity-retry">${escS(T({ fr: 'Réessayer', en: 'Retry', ar: 'إعادة المحاولة' }))}</button></p>` : ''}
+          ${cancelAuditError ? `<p class="rtx-notice" role="alert">${escS(T({ fr: 'Journal indisponible. Les remboursements et annulations peuvent être incomplets.', en: 'Activity unavailable. Refunds and cancellations may be incomplete.', ar: 'السجل غير متاح. قد تكون المبالغ المستردة والإلغاءات غير مكتملة.' }))} <button data-activation=write type="button" class="rtx-method" data-action="sales-activity-retry">${escS(T({ fr: 'Réessayer', en: 'Retry', ar: 'إعادة المحاولة' }))}</button></p>` : ''}
           <div class="rtx-list">${rows || (voids.length && ['all', 'cancel', 'handover'].includes(selectedKind)) || cancelAuditLoading || cancelAuditError ? rows : `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
             fr: 'Aucune activité pour ces filtres.',
             en: 'No activity for these filters.',
@@ -1277,7 +1277,7 @@
       : `<button class="kb ${cfg ? 'ghost' : 'atlas'}" type="button" data-action="new-sale">${escS(T(UI.firstSale))}</button>`;
     const actions = cfg
       ? `<div class="gp-starter-actions">
-           <button class="kb atlas" type="button" data-action="starter-add" data-arg="${nav}">${escS(T(cfg.title))}</button>
+           <button data-activation=write class="kb atlas" type="button" data-action="starter-add" data-arg="${nav}">${escS(T(cfg.title))}</button>
            ${saleBtn}
          </div>`
       : nav === 'kds'

@@ -212,7 +212,7 @@
       ${rich.derived?.late?`<div class="tw-alert">${esc(pick(L('Échéance dépassée','Overdue','تجاوز الموعد')))}</div>`:''}${rich.derived?.expired?`<div class="tw-alert">${esc(pick(L('Expiré','Expired','منتهي')))}</div>`:''}${rich.derived?.expiring?`<div class="tw-alert">${esc(pick(L('Expire bientôt','Expiring soon','ينتهي قريباً')))}</div>`:''}${rich.derived?.belowThreshold?`<div class="tw-alert">${esc(pick(L('Sous le seuil','Below threshold','تحت الحد')))}</div>`:''}
       ${r.note ? `<p>${esc(r.note)}</p>` : ''}
       <div class="tw-meta">${meta}</div>
-      <div class="tw-card-actions">${done?'':`<button class="tw-action primary" type="button" data-tw-next="${esc(r.id)}">${esc(pick(UI.advance))}</button>`}<button class="tw-action" type="button" data-tw-edit="${esc(r.id)}">${esc(pick(UI.edit))}</button><button class="tw-action danger" type="button" data-tw-delete="${esc(r.id)}">${esc(pick(UI.remove))}</button></div>
+      <div class="tw-card-actions">${done?'':`<button class="tw-action primary" type="button" data-tw-next="${esc(r.id)}">${esc(pick(UI.advance))}</button>`}<button data-activation=write class="tw-action" type="button" data-tw-edit="${esc(r.id)}">${esc(pick(UI.edit))}</button><button data-activation=write class="tw-action danger" type="button" data-tw-delete="${esc(r.id)}">${esc(pick(UI.remove))}</button></div>
     </article>`;
   }
   /* ── Ce que la caisse a déjà enregistré ──────────────────────────────────────
@@ -343,10 +343,10 @@
     const tc=tillCards(cfg),owedCards=tc.filter((c)=>+c.owed>0);
     if(owedCards.length){sum.active+=owedCards.length;sum.alerts+=owedCards.filter((c)=>c.alert).length;sum.balance=(+sum.balance||0)+owedCards.reduce((n,c)=>n+c.owed,0);}
     const till=tillSection(cfg,tc);
-    const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : till ? '' : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
+    const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : till ? '' : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button data-activation=write class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
     const body=`<section class="tw-shell" data-tw-page="${esc(nav)}">
       <div class="tw-summary"><div class="tw-stat"><span>${esc(pick(UI.active))}</span><strong>${sum.active}</strong></div><div class="tw-stat"><span>${esc(pick(UI.alerts))}</span><strong>${sum.alerts}</strong></div><div class="tw-stat"><span>${sum.balance?esc(pick(UI.balance)):esc(pick(UI.sales))}</span><strong>${sum.balance?money(sum.balance)+' '+esc(pick(UI.currency)):sales.length+' · '+money(revenue)+' '+esc(pick(UI.currency))}</strong></div></div>
-      <div class="tw-toolbar"><div class="tw-toolbar-copy"><strong>${esc(pick(cfg.title))}</strong><span>${esc(pick(cfg.subtitle))}</span></div><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div>
+      <div class="tw-toolbar"><div class="tw-toolbar-copy"><strong>${esc(pick(cfg.title))}</strong><span>${esc(pick(cfg.subtitle))}</span></div><button data-activation=write class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div>
       <div class="tw-board">${till}${board}</div></section>`;
     const out=window.Kiwi.appPage(nav,{title:pick(cfg.title),subtitle:(venue().name||'')+' · '+pick(cfg.subtitle),body});
     wire(out?.el || document.querySelector('[data-tw-page]'),cfg); return true;

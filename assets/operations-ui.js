@@ -868,7 +868,7 @@
           '<label><span class="l">' + c.fDate + '</span><input type="date" value="' + today + '" data-av-date></label>' +
           '<label><span class="l">' + c.cAmount + '</span><input type="number" min="0.01" step="0.01" data-av-amount></label>' +
           '</div>' + confirmBox +
-          '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-acct-run="credit">' + esc(c.cIssue) + '</button>' +
+          '<button data-activation=write class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-acct-run="credit">' + esc(c.cIssue) + '</button>' +
           '<div class="ops-acct-out" data-acct-out="credit"></div>') +
         acctPane('period', tab === 'period',
           '<p class="ops-acct-hint">' + esc(c.pHint) + '</p><div class="kf-grid">' +
@@ -1040,9 +1040,9 @@
             '<label><span class="l">' + esc(c.due) + '</span><input type="date" data-po-date></label>' +
           '</div>' +
           '<div style="margin-top:16px" data-po-lines>' + procLineRow(0) + '</div>' +
-          '<button class="kb ghost xs" type="button" data-pl-add>' + esc(c.pAddLine) + '</button>' +
+          '<button data-activation=write class="kb ghost xs" type="button" data-pl-add>' + esc(c.pAddLine) + '</button>' +
           '<div class="ops-proc-total"><span class="k">' + esc(c.pTotal) + '</span><span class="v" data-po-total>' + esc(money(0)) + '</span></div>' +
-          '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-po-create>' + esc(c.pCreate) + '</button>' +
+          '<button data-activation=write class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-po-create>' + esc(c.pCreate) + '</button>' +
           '<div class="ops-proc-out" data-po-out></div>' +
         '</section>' +
         '<section class="ops-proc-pane' + (tab === 'orders' ? ' on' : '') + '" data-po-pane="orders">' +
@@ -1269,7 +1269,7 @@
             '<label><span class="l">' + esc(c.payPeriod) + '</span><input type="month" data-py-period value="' + esc(month) + '"></label>' +
           '</div>' +
           '<div style="margin-top:16px" data-py-lines>' + payLineRow(0) + '</div>' +
-          '<button class="kb ghost xs" type="button" data-py-add>' + esc(c.payAddRow) + '</button> ' +
+          '<button data-activation=write class="kb ghost xs" type="button" data-py-add>' + esc(c.payAddRow) + '</button> ' +
           '<button class="kb ghost xs" type="button" data-py-team>' + esc(c.payTeam) + '</button>' +
           '<div class="ops-pay-total"><span class="k">' + esc(c.payGross) + '</span><span class="v" data-py-total>' + esc(money(0)) + '</span></div>' +
           '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-py-run>' + esc(c.payRun) + '</button>' +
@@ -1332,7 +1332,7 @@
           '<div class="ops-pay-act">' +
             '<p class="ops-pay-actTitle">' + esc(c.payPost) + '</p>' +
             '<p class="ops-pay-hint">' + esc(c.payPostHint) + '</p>' +
-            '<button class="kb atlas xs" type="button" data-py-run-book="export-payroll">' + esc(c.payPost) + '</button>' +
+            '<button data-activation=money class="kb atlas xs" type="button" data-py-run-book="export-payroll">' + esc(c.payPost) + '</button>' +
           '</div>' +
           '<div class="ops-pay-act" data-py-act>' +
             '<p class="ops-pay-actTitle">' + esc(c.payDeclare) + '</p>' +
@@ -1516,7 +1516,7 @@
             '<label><span class="l">' + esc(c.customer) + '</span><input maxlength="160" data-lk-customer></label>' +
             '<label style="grid-column:1/-1"><span class="l">' + esc(c.desc) + '</span><input maxlength="240" data-lk-desc></label>' +
           '</div>' +
-          '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-lk-create>' + esc(c.create) + '</button>' +
+          '<button data-activation=write class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-lk-create>' + esc(c.create) + '</button>' +
           '<div class="ops-lk-out" data-lk-out></div>' +
         '</section>' +
         '<section class="ops-lk-pane' + (tab === 'links' ? ' on' : '') + '" data-lk-pane="links">' +
@@ -1581,7 +1581,7 @@
             '<p class="ops-lk-hint">' + esc(c.ntSendHint) + '</p>' +
             '<div class="ops-nt-send">' +
               '<label><span class="l">' + esc(c.ntTo) + '</span><input maxlength="160" data-nt-to></label>' +
-              '<button class="kb ghost xs" type="button" data-nt-send data-nt-url="' + esc(l.url) + '">' + esc(c.ntSend) + '</button>' +
+              '<button data-activation=write class="kb ghost xs" type="button" data-nt-send data-nt-url="' + esc(l.url) + '">' + esc(c.ntSend) + '</button>' +
             '</div>' +
           '</div>' : '') +
           '<div class="ops-lk-act">' +
@@ -1601,7 +1601,7 @@
             '<div class="ops-lk-refund">' +
               '<label><span class="l">' + esc(c.lkRefundAmount) + '</span><input type="number" min="0" step="0.01" data-lk-refund-amount></label>' +
               '<label><span class="l">' + esc(c.lkRefundReason) + '</span><input maxlength="240" data-lk-refund-reason></label>' +
-              '<button class="kb atlas xs" type="button" data-lk-run="refund-link">' + esc(c.lkRefund) + '</button>' +
+              '<button data-activation=money class="kb atlas xs" type="button" data-lk-run="refund-link">' + esc(c.lkRefund) + '</button>' +
             '</div>' +
             '<label class="ops-lk-confirm"><input type="checkbox" data-lk-confirm="refund-link"><span>' + esc(c.confirmLabel) + '</span></label>' +
           '</div>' : '') +
@@ -1662,7 +1662,7 @@
           ntChips(pref.kind, configured) +
           (canSetNotify ? '<div class="ops-lk-btns" style="margin-top:10px">' +
             '<label class="ops-lk-confirm"><input type="checkbox" data-nt-enabled' + (pref.enabled ? ' checked' : '') + '> ' + esc(c.ntEnabled) + '</label>' +
-            '<button class="kb ghost xs" type="button" data-nt-save="' + esc(pref.kind) + '">' + esc(c.ntSave) + '</button>' +
+            '<button data-activation=write class="kb ghost xs" type="button" data-nt-save="' + esc(pref.kind) + '">' + esc(c.ntSave) + '</button>' +
           '</div>' : '') +
         '</div>';
       }
@@ -1946,7 +1946,7 @@
           '</div>' +
           '<div class="ops-dv-rename" data-dv-rename-form hidden>' +
             '<input type="text" maxlength="80" aria-label="' + esc(c.dvRenameField) + '" placeholder="' + esc(c.dvRenameField) + '" data-dv-rename-input>' +
-            '<button class="kb atlas xs" type="button" data-dv-rename-save>' + esc(c.dvRenameSave) + '</button>' +
+            '<button data-activation=write class="kb atlas xs" type="button" data-dv-rename-save>' + esc(c.dvRenameSave) + '</button>' +
             '<button class="kb ghost xs" type="button" data-dv-rename-cancel>' + esc(c.dvRenameCancel) + '</button>' +
             '<p class="ops-dv-hint" style="flex-basis:100%;margin:0">' + esc(c.dvRenameHint) + '</p>' +
           '</div>' +
@@ -2162,7 +2162,7 @@
           (needsConfirm ? '<label class="ops-cm-confirm"><input type="checkbox" data-cm-ok><span>' + esc(c.cmConfirm) + '</span></label>' : '') +
           (offered.length
             ? '<div class="ops-cm-btns">' + offered.map(function (m) {
-                return '<button class="kb ghost xs" type="button" data-cm-move="' + m + '"' + (refundReconcile ? ' data-cm-refund-verify' : '') + '>' + esc(refundReconcile ? c.lkVerifyRefund : ((c.cmT && c.cmT[m]) || m)) + '</button>';
+                return '<button data-activation=money class="kb ghost xs" type="button" data-cm-move="' + m + '"' + (refundReconcile ? ' data-cm-refund-verify' : '') + '>' + esc(refundReconcile ? c.lkVerifyRefund : ((c.cmT && c.cmT[m]) || m)) + '</button>';
               }).join('') + '</div>'
             : '') +
           '<div data-cm-row-out></div>' +

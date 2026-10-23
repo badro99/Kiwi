@@ -960,7 +960,7 @@ window.KiwiStockInternal.install('intake', (S) => {
       const archived = !!d.hasObject && !!id;
       const acts = archived
         ? `<a class="st-btn small" href="${esc(stArchiveUrl(id, false))}" target="_blank" rel="noopener">${esc(t('mScanArcView'))}</a>`
-          + `<a class="st-btn small" href="${esc(stArchiveUrl(id, true))}" download>${esc(t('mScanArcDownload'))}</a>`
+          + `<a data-activation=money class="st-btn small" href="${esc(stArchiveUrl(id, true))}" download>${esc(t('mScanArcDownload'))}</a>`
         : `<span style="font-size:11.5px;color:var(--n-500,#6b7280);">${esc(t('mScanArcPending'))}</span>`;
       return `
         <div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--n-200,#e5e7eb);">
@@ -1169,12 +1169,12 @@ window.KiwiStockInternal.install('intake', (S) => {
         </table>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-        <button class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
+        <button data-activation=write class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
         <div class="st-inv-foot" style="margin:0;padding:0;border:none;"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
         <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
-        <button class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
+        <button data-activation=write class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
       </div>`;
   }
 

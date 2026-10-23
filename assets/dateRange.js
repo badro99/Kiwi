@@ -3829,7 +3829,7 @@
       width: 520,
       body,
       foot: `<button class="kb ghost" data-kc-reset type="button">${kc.reset}</button>
-             <button class="kb atlas" data-kc-save type="button" style="flex:1; justify-content:center;">${kc.save}</button>`,
+             <button data-activation=write class="kb atlas" data-kc-save type="button" style="flex:1; justify-content:center;">${kc.save}</button>`,
     });
     const root = res.el;
 
@@ -5552,7 +5552,7 @@
         `<div class="block-head"><div>` +
         `<div class="t">${INTEG_TITLE[lang] || INTEG_TITLE.fr}</div>` +
         `<div class="s">${INTEG_SUB[lang] || INTEG_SUB.fr}</div></div>` +
-        `<a href="#" data-action="add-integration" style="font-size:13px;color:var(--atlas);font-weight:500;">${addLbl}</a>` +
+        `<a data-activation=write href="#" data-action="add-integration" style="font-size:13px;color:var(--atlas);font-weight:500;">${addLbl}</a>` +
         `</div><div class="integ-grid">${cards}</div>`;
     } else if (_integOrig != null && card['inner' + 'HTML'] !== _integOrig) {
       card['inner' + 'HTML'] = _integOrig;

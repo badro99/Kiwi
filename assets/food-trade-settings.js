@@ -137,7 +137,7 @@
     var zones = Array.isArray(st.zones) ? st.zones : [];
     return '<div class="fts-sec"><h3 class="fts-h">' + esc(t('pzZones')) + '</h3><p class="fts-hint">' + esc(t('pzZonesHint')) + '</p>' +
       '<div data-fts-list="zones">' + (zones.length ? zones.map(zoneRow).join('') : '<p class="fts-none">' + esc(t('none')) + '</p>') + '</div>' +
-      '<button type="button" class="fts-add" data-fts-add="zones">+ ' + esc(t('add')) + '</button></div>' +
+      '<button data-activation=write type="button" class="fts-add" data-fts-add="zones">+ ' + esc(t('add')) + '</button></div>' +
       '<div class="fts-sec fts-two">' +
       field(t('pzHalf'), inp('type="number" min="0" step="0.5" inputmode="decimal" data-fts="halfFee"', st.halfFee == null ? '' : st.halfFee) + '<span class="fts-hint" style="margin:4px 0 0">' + esc(t('pzHalfHint')) + '</span>') +
       field(t('pzBake'), inp('type="number" min="1" max="60" step="1" inputmode="numeric" data-fts="bakeMin"', st.bakeMin == null ? '' : st.bakeMin) + '<span class="fts-hint" style="margin:4px 0 0">' + esc(t('pzBakeHint')) + '</span>') +
@@ -181,7 +181,7 @@
       '</div></div>' +
       '<div class="fts-sec"><h3 class="fts-h">' + esc(t('trExtras')) + '</h3><p class="fts-hint">' + esc(t('trExtrasHint')) + '</p>' +
       '<div data-fts-list="extras">' + (ex.length ? ex.map(extraRow).join('') : '<p class="fts-none">' + esc(t('none')) + '</p>') + '</div>' +
-      '<button type="button" class="fts-add" data-fts-add="extras">+ ' + esc(t('add')) + '</button></div>';
+      '<button data-activation=write type="button" class="fts-add" data-fts-add="extras">+ ' + esc(t('add')) + '</button></div>';
   }
   function extraRow(x) {
     x = x || {};
@@ -220,7 +220,7 @@
     var parts = Array.isArray(st.cakeParts) ? st.cakeParts : [], parf = Array.isArray(st.parfums) ? st.parfums : [];
     return '<div class="fts-sec"><h3 class="fts-h">' + esc(t('blParts')) + '</h3><p class="fts-hint">' + esc(t('blPartsHint')) + '</p>' +
       '<div data-fts-list="parts">' + (parts.length ? parts.map(partRow).join('') : '<p class="fts-none">' + esc(t('none')) + '</p>') + '</div>' +
-      '<button type="button" class="fts-add" data-fts-add="parts">+ ' + esc(t('add')) + '</button></div>' +
+      '<button data-activation=write type="button" class="fts-add" data-fts-add="parts">+ ' + esc(t('add')) + '</button></div>' +
       '<div class="fts-sec fts-two">' +
       field(t('blParfums'), '<textarea data-fts="parfums" maxlength="600">' + esc(parf.join('\n')) + '</textarea><span class="fts-hint" style="margin:4px 0 0">' + esc(t('blParfumsHint')) + '</span>') +
       field(t('blLh'), inp('type="number" min="1" max="90" step="1" inputmode="numeric" data-fts="lh"', st.lastHourPct == null ? 50 : st.lastHourPct) + '<span class="fts-hint" style="margin:4px 0 0">' + esc(t('blLhHint')) + '</span>') +
@@ -266,7 +266,7 @@
     var spec = TRADES[trade];
     var st = window.KiwiVerticalSettings.get(trade) || {};
     host.innerHTML = '<div class="fts" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '">' + spec.html(st) +
-      '<div class="fts-bar"><button type="button" class="fts-save" data-fts-save>' + esc(t('save')) + '</button><span class="fts-msg" data-fts-msg role="status"></span></div></div>';
+      '<div class="fts-bar"><button data-activation=write type="button" class="fts-save" data-fts-save>' + esc(t('save')) + '</button><span class="fts-msg" data-fts-msg role="status"></span></div></div>';
     var msg = host.querySelector('[data-fts-msg]');
     host.addEventListener('click', function (e) {
       var add = e.target.closest && e.target.closest('[data-fts-add]');

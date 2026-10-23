@@ -649,7 +649,7 @@
         <h4>${esc(c.fixedT)}</h4>
         <div class="kf-help">${esc(c.fixedHelp)}</div>
         <div data-lines>${rows.length ? rows.map(lineHtml).join('') : `<div class="kf-help" data-nolines>${esc(c.noLines)}</div>`}</div>
-        <div class="chg-chips" role="group" aria-label="${esc(c.add)}">${CATS.map((k) => `<button type="button" class="chg-chip" data-chg="add" data-cat="${k}">${icon('add', 15)}${esc(c.cat[k])}</button>`).join('')}</div>
+        <div class="chg-chips" role="group" aria-label="${esc(c.add)}">${CATS.map((k) => `<button data-activation=write type="button" class="chg-chip" data-chg="add" data-cat="${k}">${icon('add', 15)}${esc(c.cat[k])}</button>`).join('')}</div>
         ${stopped ? `<div class="kf-help" style="margin-top:10px;">${esc(c.stoppedN(stopped))}</div>` : ''}
       </div>
       <div class="chg-sec">
@@ -670,7 +670,7 @@
         <div class="chg-err" data-err-rates hidden></div>
       </div>
     </div>`;
-    const foot = `<button class="kb ghost" type="button" data-dismiss>${esc(c.cancel)}</button><button class="kb atlas" type="button" data-chg="save">${esc(c.save)}</button>`;
+    const foot = `<button class="kb ghost" type="button" data-dismiss>${esc(c.cancel)}</button><button data-activation=write class="kb atlas" type="button" data-chg="save">${esc(c.save)}</button>`;
     const dr = window.Kiwi.drawer({ title: c.drawerT, subtitle: c.drawerS, body, foot, width: 520 });
     const root = dr.el;
     const host = root.querySelector('[data-lines]');

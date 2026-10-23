@@ -110,7 +110,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
             <h3>${esc(t('supTitle'))}</h3>
             <span class="st-section-sub">${esc(t('supSub', sup.length))}</span>
           </div>
-          <button class="st-btn primary" type="button" data-action="stock-add-supplier">${svg('plus', 13)}<span>${esc(t('addSupCta'))}</span></button>
+          <button data-activation=write class="st-btn primary" type="button" data-action="stock-add-supplier">${svg('plus', 13)}<span>${esc(t('addSupCta'))}</span></button>
         </div>
         <div class="st-sup-stats">
           <div class="st-sup-stat"><div class="l">${esc(t('supStatActive'))}</div><div class="v">${sup.length}</div></div>
@@ -161,7 +161,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
   function renderSupplierCard(s){
     const last=supplierHistory(s)[0];
     const sub=[catLabel(s.category),s.location].filter(Boolean).map(esc).join(' · ');
-    return `<article class="st-supplier-card"><button class="st-supplier-open" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" aria-label="${esc(t('btnDetail'))} · ${esc(s.name)}">
+    return `<article class="st-supplier-card"><button data-activation=write class="st-supplier-open" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" aria-label="${esc(t('btnDetail'))} · ${esc(s.name)}">
       <span class="st-supplier-card-head"><span class="st-sup-name">${esc(s.name)}</span><small class="st-sup-loc">${sub}</small></span>
       <span class="st-supplier-card-meta"><span><span>${esc(t('colSupSpend'))}</span><b>${esc(fmtMad(s.monthlySpend))}</b></span><span><span>${catalogLabel('lastDelivery','Dernière livraison')}</span><b>${last?esc(supplierDate(last.at)):catalogLabel('notRecorded','Non enregistrée')}</b></span></span></button>
       <button class="st-supplier-call" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}"${s.contact?'':' disabled'} aria-label="${esc(t('mSupCall'))} · ${esc(s.name)}">${svg('phone',16)}</button></article>`;
@@ -197,9 +197,9 @@ window.KiwiStockInternal.install('purchasing', (S) => {
             <button class="st-icon-btn" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupCall'))}" aria-label="${esc(t('mSupCall'))}">${svg('phone', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupWa'))}" aria-label="${esc(t('mSupWa'))}">${svg('messageCircle', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" title="${esc(t('btnDetail'))}" aria-label="${esc(t('btnDetail'))}">${svg('eye', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-edit-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleEdit'))}" aria-label="${esc(t('titleEdit'))}">${svg('edit', 14)}</button>
+            <button data-activation=write class="st-icon-btn" type="button" data-action="stock-edit-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleEdit'))}" aria-label="${esc(t('titleEdit'))}">${svg('edit', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-new-po" data-supplier-id="${esc(s.id)}" title="${esc(t('mSupOrd'))}" aria-label="${esc(t('mSupOrd'))}">${svg('plus', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-delete-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleDelete'))}" aria-label="${esc(t('titleDelete'))}" style="color:#9a1f1f;">${svg('x', 14)}</button>
+            <button data-activation=write class="st-icon-btn" type="button" data-action="stock-delete-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleDelete'))}" aria-label="${esc(t('titleDelete'))}" style="color:#9a1f1f;">${svg('x', 14)}</button>
           </div>
         </td>
       </tr>
@@ -227,7 +227,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
           <div style="display:flex; align-items:center; gap:10px;">
             <h3>${esc(t('ordTitle'))}</h3>
           </div>
-          <button class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
+          <button data-activation=write class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
         </div>
         ${active.length ? `<div class="st-ord-list">${active.map((o) => `
           <div class="st-ord-card">
@@ -253,7 +253,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
             <h3>${esc(t('ordTitle'))}</h3>
             <span class="st-count-badge">4</span>
           </div>
-          <button class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
+          <button data-activation=write class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
         </div>
         <div class="st-ord-stats">
           <div class="st-sup-stat"><div class="l">${esc(t('ordStatActive'))}</div><div class="v">4</div></div>
@@ -321,7 +321,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
             <div class="st-ord-total">${esc(fmtMad(o.total))}</div>
           </div>
           <div class="st-ord-acts">
-            ${o.acts.map(a => `<button class="st-btn${a[2] ? ' ' + a[2] : ''}" type="button" data-action="${a[1]}" data-order-id="${esc(o.id)}">${esc(t(a[0]))}</button>`).join('')}
+            ${o.acts.map(a => `<button data-activation=write class="st-btn${a[2] ? ' ' + a[2] : ''}" type="button" data-action="${a[1]}" data-order-id="${esc(o.id)}">${esc(t(a[0]))}</button>`).join('')}
           </div>
         </div>
       `;
@@ -405,8 +405,8 @@ window.KiwiStockInternal.install('purchasing', (S) => {
             <span class="st-suggest-save">${esc(t('autoOrderSave'))}</span>
           </div>
           <div class="st-suggest-acts">
-            <button class="st-btn" type="button" data-action="stock-edit-suggested">${esc(t('btnEditFirst'))}</button>
-            <button class="st-btn primary" type="button" data-action="stock-send-suggested">${esc(t('btnSendSuggested'))}</button>
+            <button data-activation=write class="st-btn" type="button" data-action="stock-edit-suggested">${esc(t('btnEditFirst'))}</button>
+            <button data-activation=write class="st-btn primary" type="button" data-action="stock-send-suggested">${esc(t('btnSendSuggested'))}</button>
           </div>
         </div>
       </div>
@@ -455,7 +455,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
         </div>
         <p class="st-qo-how" data-stock-qo-how style="margin:12px 0 0; font-size:12px; color:var(--n-500); line-height:1.5;"></p>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-qo-send></button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" data-stock-qo-send></button>`,
     });
     requestAnimationFrame(() => {
       wireDismiss(m?.el || topBackdrop());
@@ -541,7 +541,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
       body:`<div class="st-md-stats"><div class="st-md-stat"><div class="l">${esc(t('colSupSpend'))}</div><div class="v">${esc(fmtMad(s.monthlySpend))}</div></div><div class="st-md-stat"><div class="l">${catalogLabel('recordedDeliveries','Livraisons enregistrées')}</div><div class="v">${history.length}</div></div><div class="st-md-stat"><div class="l">${esc(t('colSupPrice'))}</div><div class="v">${esc(fmtPct(pcl,1))}</div></div></div>
       <div class="st-md-section"><div class="st-md-section-t">${esc(t('colSupDeliv'))}</div><p>${esc(s.deliverySchedule||'')} · ${esc(s.paymentTerms||'')}</p></div>
       <div class="st-md-section"><div class="st-md-section-t">${esc(t('mSupHistory'))}</div><div class="st-md-list">${history.length?history.map(h=>`<div class="st-md-list-row"><div><span class="d">${esc(supplierDate(h.at))}</span><span class="n">${esc(h.reference)}</span></div><div class="v">${esc(fmtMad(h.total))}</div></div>`).join(''):`<div class="rmw-empty">${catalogLabel('noDeliveries','Aucune livraison enregistrée pour ce fournisseur.')}</div>`}</div></div>`,
-      foot:`<div class="catalog-supplier-actions"><button class="st-btn" data-catalog-profile="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone',14)}${esc(t('mSupCall'))}</button><button class="st-btn" data-catalog-profile="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${esc(t('mSupWa'))}</button><button class="st-btn" data-catalog-profile="stock-edit-supplier" data-supplier-id="${esc(s.id)}">${esc(t('titleEdit'))}</button><button class="st-btn primary" data-catalog-profile="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button></div>`});
+      foot:`<div class="catalog-supplier-actions"><button class="st-btn" data-catalog-profile="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone',14)}${esc(t('mSupCall'))}</button><button class="st-btn" data-catalog-profile="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${esc(t('mSupWa'))}</button><button data-activation=write class="st-btn" data-catalog-profile="stock-edit-supplier" data-supplier-id="${esc(s.id)}">${esc(t('titleEdit'))}</button><button class="st-btn primary" data-catalog-profile="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button></div>`});
     m.el.querySelectorAll('[data-catalog-profile]').forEach(button=>button.onclick=()=>{m.close();window.Kiwi.handlers[button.dataset.catalogProfile]?.(button);});
     requestAnimationFrame(()=>wireDismiss(m?.el||topBackdrop()));
   }
@@ -704,7 +704,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
       title: t('deleteSupTitle'),
       width: 480,
       body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(t('deleteSupBody', s.name))}</p>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-sup-delete-confirm>${esc(t('deleteSupBtn'))}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-sup-delete-confirm>${esc(t('deleteSupBtn'))}</button>`,
     });
     const scope = m?.el || topBackdrop();
     wireDismiss(scope);

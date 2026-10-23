@@ -466,7 +466,7 @@
         </div>
         <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
           <button class="kb ghost" data-close>${T.cancel}</button>
-          <button class="kb atlas" data-gen>${T.generate}</button>
+          <button data-activation=write class="kb atlas" data-gen>${T.generate}</button>
         </div>
       `;
     }
@@ -763,7 +763,7 @@
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
           <button class="kb ghost" data-close>${T.cancel}</button>
-          <button class="kb atlas" data-save>${T.save}</button>
+          <button data-activation=write class="kb atlas" data-save>${T.save}</button>
         </div>
       `;
     }
@@ -984,7 +984,7 @@
         <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-family:var(--mono); margin-bottom:10px;">${T.quickActions}</div>
         <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom: 18px;">
           <button class="kb ghost" style="justify-content:flex-start; padding:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>${T.transfer}</button>
-          <button class="kb ghost" style="justify-content:flex-start; padding:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.addCard}</button>
+          <button data-activation=write class="kb ghost" style="justify-content:flex-start; padding:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${T.addCard}</button>
           <button class="kb ghost" style="justify-content:flex-start; padding:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>${T.freezeCard}</button>
           <button class="kb ghost" style="justify-content:flex-start; padding:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>${T.payCnss}</button>
         </div>
@@ -1284,7 +1284,7 @@
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:22px;">
           <button class="kb ghost" data-close>${T.cancel}</button>
-          <button class="kb atlas" data-send>${T.send(from.toLocaleString(numLocale))}</button>
+          <button data-activation=write class="kb atlas" data-send>${T.send(from.toLocaleString(numLocale))}</button>
         </div>
       `;
     }
@@ -1459,7 +1459,7 @@
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:22px;">
           <button class="kb ghost" data-close>${T.close}</button>
-          <button class="kb atlas" data-activate>${C.save || T.activate}</button>
+          <button data-activation=write class="kb atlas" data-activate>${C.save || T.activate}</button>
         </div>
       `
     });
@@ -1648,7 +1648,7 @@
             <div class="n">${T.tipTitle}</div>
             <div class="d">${T.tipDesc}</div>
             <div class="t">${T.tipTime}</div>
-            <div class="acts"><button class="approve" data-agent-approve>${T.activate}</button><button class="dismiss" data-agent-dismiss>${T.ignore}</button></div>
+            <div class="acts"><button data-activation=write class="approve" data-agent-approve>${T.activate}</button><button class="dismiss" data-agent-dismiss>${T.ignore}</button></div>
           </div>
         </div>
         <div class="agent-action">
@@ -1657,7 +1657,7 @@
             <div class="n">${T.orderTitle}</div>
             <div class="d">${T.orderDesc}</div>
             <div class="t">${T.orderTime}</div>
-            <div class="acts"><button class="approve" data-agent-approve>${T.confirmOrder}</button><button class="dismiss" data-agent-dismiss>${T.chooseSupplier}</button></div>
+            <div class="acts"><button data-activation=write class="approve" data-agent-approve>${T.confirmOrder}</button><button class="dismiss" data-agent-dismiss>${T.chooseSupplier}</button></div>
           </div>
         </div>
         <div class="agent-action">
@@ -1666,7 +1666,7 @@
             <div class="n">${T.reviewsTitle}</div>
             <div class="d">${T.reviewsDesc}</div>
             <div class="t">${T.reviewsTime}</div>
-            <div class="acts"><button class="approve" data-agent-approve>${T.reviewAndSend}</button><button class="dismiss" data-agent-dismiss>${T.doItMyself}</button></div>
+            <div class="acts"><button data-activation=write class="approve" data-agent-approve>${T.reviewAndSend}</button><button class="dismiss" data-agent-dismiss>${T.doItMyself}</button></div>
           </div>
         </div>
       `,

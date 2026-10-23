@@ -520,7 +520,7 @@
             field(T.f.budget, input(p('budget'), o.budget))) +
           '</div></div>';
       }).join('') + '</div>';
-      return thresholds + offers + '<div class="cr-row"><span class="cr-note">' + esc(T.estimated) + '</span><button type="button" class="cr-btn primary" data-cr-save>' + esc(T.save) + '</button></div>';
+      return thresholds + offers + '<div class="cr-row"><span class="cr-note">' + esc(T.estimated) + '</span><button data-activation=write type="button" class="cr-btn primary" data-cr-save>' + esc(T.save) + '</button></div>';
     }
 
     function readForm(root) {
@@ -581,7 +581,7 @@
           '<div class="cr-row">' + (reason ? '<span class="cr-note">' + esc(reason) + '</span>' : '<span></span>') +
             '<div class="cr-row" style="justify-content:flex-end">' +
               '<button type="button" class="cr-btn" data-cr-ai>' + esc(T.draftAi) + '</button>' +
-              '<button type="button" class="cr-btn primary" data-cr-send' + (reason ? ' disabled' : '') + '>' + esc(T.approve) + '</button></div></div>' +
+              '<button data-activation=write type="button" class="cr-btn primary" data-cr-send' + (reason ? ' disabled' : '') + '>' + esc(T.approve) + '</button></div></div>' +
         '</div>';
       }).join('');
     }
@@ -616,7 +616,7 @@
 
     function offHtml() {
       return '<div class="cr-empty"><span class="cr-empty-ic">' + ico('retention') + '</span><b>' + esc(T.off) + '</b><p>' + esc(T.offText) + '</p>' +
-        '<button type="button" class="cr-btn primary" data-cr-enable>' + esc(T.enable) + '</button></div>';
+        '<button data-activation=write type="button" class="cr-btn primary" data-cr-enable>' + esc(T.enable) + '</button></div>';
     }
 
     function bodyHtml() {
@@ -624,7 +624,7 @@
       var panel = state.tab === 'groups' ? groupsHtml() : state.tab === 'suggest' ? suggestHtml() : state.tab === 'results' ? resultsHtml() : activityHtml();
       return '<div class="cr-row"><div class="cr-tabs" data-lens-demo role="group" aria-label="' + esc(T.title) + '">' + tabsHtml() + '</div>' +
         '<span class="cr-row" style="gap:8px">' + (data.real ? '' : '<span class="cr-badge">' + esc(T.demo) + '</span>') +
-        '<button type="button" class="cr-btn" data-cr-disable>' + esc(T.disable) + '</button></span></div>' +
+        '<button data-activation=write type="button" class="cr-btn" data-cr-disable>' + esc(T.disable) + '</button></span></div>' +
         '<div data-cr-panel>' + panel + '</div>';
     }
 

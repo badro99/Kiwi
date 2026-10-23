@@ -177,8 +177,7 @@
   function blockedWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill,.kiwi-held-toast'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
-    var s=((el.getAttribute('data-action')||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.textContent||'')).toLowerCase();
-    return /(ajout|nouve|cré|creer|enregistr|sauveg|export|télécharg|telecharg|imprim|génér|gener|import|supprim|modifi|publi|activ|désactiv|desactiv|encaiss|rembours|envoyer|valider|connecter|commander)/.test(s);
+    return /^(write|money)$/.test(el.getAttribute('data-activation')||'');
   }
   /* Les gestes d'ARGENT : les seuls retenus pendant l'installation. Encaisser,
      rembourser, exporter — tout ce qui engage une recette ou sort des données.
@@ -186,8 +185,7 @@
   function moneyWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill,.kiwi-held-toast'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
-    var s2=((el.getAttribute('data-action')||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.textContent||'')).toLowerCase();
-    return /(encaiss|rembours|export|télécharg|telecharg)/.test(s2);
+    return el.getAttribute('data-activation')==='money';
   }
   /* Un geste retenu doit DIRE pourquoi. Pendant l'installation le panneau
      d'activation ne s'ouvre pas — c'est tout l'objet du changement — donc un

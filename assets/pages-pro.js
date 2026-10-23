@@ -2536,19 +2536,19 @@ function pdsRenderBody(state, T) {
 
     <div class="pds-toolbar">
       <div class="pds-modes" role="tablist" data-pds-modes>
-        <button class="pds-mode ${state.mode==='layout'?'active':''}" role="tab" aria-selected="${state.mode==='layout'}" data-pds-mode="layout">${T.modeLayout}</button>
-        <button class="pds-mode ${state.mode==='assign'?'active':''}" role="tab" aria-selected="${state.mode==='assign'}" data-pds-mode="assign">${T.modeAssign}</button>
-        <button class="pds-mode ${state.mode==='rotate'?'active':''}" role="tab" aria-selected="${state.mode==='rotate'}" data-pds-mode="rotate">${T.modeRotate}</button>
+        <button data-activation=write class="pds-mode ${state.mode==='layout'?'active':''}" role="tab" aria-selected="${state.mode==='layout'}" data-pds-mode="layout">${T.modeLayout}</button>
+        <button data-activation=write class="pds-mode ${state.mode==='assign'?'active':''}" role="tab" aria-selected="${state.mode==='assign'}" data-pds-mode="assign">${T.modeAssign}</button>
+        <button data-activation=write class="pds-mode ${state.mode==='rotate'?'active':''}" role="tab" aria-selected="${state.mode==='rotate'}" data-pds-mode="rotate">${T.modeRotate}</button>
       </div>
       <div class="pds-zone-tabs" data-pds-zones>
         ${state.zones.map(z => `
-          <button class="pds-zone ${z.id===state.activeZone?'active':''}" data-pds-zone="${pdsEsc(z.id)}"${z.color ? ` style="--zone:${pdsEsc(z.color)};"` : ''}>
+          <button data-activation=write class="pds-zone ${z.id===state.activeZone?'active':''}" data-pds-zone="${pdsEsc(z.id)}"${z.color ? ` style="--zone:${pdsEsc(z.color)};"` : ''}>
             ${z.color ? '<i class="pds-zone-dot" aria-hidden="true"></i>' : ''}
             <span>${pdsEsc(pdsZoneName(z))}</span>
             <em>${state.tables.filter(t => t.zone === z.id).length}</em>
           </button>
         `).join('')}
-        <button class="pds-zone pds-zone-add" data-pds-action="add-zone" title="${pdsEsc(T.addZone)}" aria-label="${pdsEsc(T.addZone)}">+</button>
+        <button data-activation=write class="pds-zone pds-zone-add" data-pds-action="add-zone" title="${pdsEsc(T.addZone)}" aria-label="${pdsEsc(T.addZone)}">+</button>
       </div>
       <span class="pds-toolbar-gap" aria-hidden="true"></span>
       ${pdsLiveBadge(T)}
@@ -3116,8 +3116,8 @@ function pdsRenderEmpty(state, T) {
       <p>${T.emptyDesc}</p>
       <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
         <button class="kb atlas" data-pds-action="scan-salle">${T.scanSalle}</button>
-        <button class="kb atlas" data-pds-action="open-wizard">${T.wizGenerate}</button>
-        <button class="kb ghost" data-pds-action="add-table-default">${T.emptyBlank}</button>
+        <button data-activation=write class="kb atlas" data-pds-action="open-wizard">${T.wizGenerate}</button>
+        <button data-activation=write class="kb ghost" data-pds-action="add-table-default">${T.emptyBlank}</button>
       </div>
     </div>
   `;
@@ -3204,7 +3204,7 @@ function pdsRenderLayoutRail(state, T) {
           const t = PDS_TABLE_TYPES[pdsTypeFor(sh, PDS_PAL_SEATS)];
           const label = T['shape' + sh.charAt(0).toUpperCase() + sh.slice(1)];
           return `
-            <button class="pds-pal-item" data-pds-action="add-shape" data-pds-shape="${sh}" title="${pdsEsc(label)} · ${pdsPalSeats(sh)} ${pdsEsc(T.seats)}">
+            <button data-activation=write class="pds-pal-item" data-pds-action="add-shape" data-pds-shape="${sh}" title="${pdsEsc(label)} · ${pdsPalSeats(sh)} ${pdsEsc(T.seats)}">
               <span class="pds-pal-shape pds-pal-${t.shape}" style="width:${Math.min(t.w/2, 30)}px; height:${Math.min(t.h/2, 26)}px;"></span>
               <span class="pds-pal-label">${pdsEsc(label)}</span>
             </button>`;
@@ -3221,7 +3221,7 @@ function pdsRenderLayoutRail(state, T) {
           <summary class="pds-rail-sub">${pdsEsc(grpName(grp))}<em>${items.length}</em></summary>
           <div class="pds-palette pds-palette-el">
             ${items.map(([k, v]) => `
-              <button class="pds-pal-item pds-pal-el" data-pds-action="add-el" data-pds-eltype="${k}" title="${T['fix' + k] || k}">
+              <button data-activation=write class="pds-pal-item pds-pal-el" data-pds-action="add-el" data-pds-eltype="${k}" title="${T['fix' + k] || k}">
                 <span class="pds-pal-mini">${pdsFixMini(k, v)}</span>
                 <span class="pds-pal-label">${T['fix' + k] || k}</span>
               </button>`).join('')}
@@ -3243,10 +3243,10 @@ function pdsRenderLayoutRail(state, T) {
       </div>
       <div class="pds-rail-sub">${pdsEsc(T.zoneColor)}</div>
       <div class="pds-sw-row">
-        <button class="pds-sw pds-sw-none ${zone && zone.color ? '' : 'active'}" data-pds-action="zone-color" data-pds-val="" title="${pdsEsc(T.backdropNone)}" aria-label="${pdsEsc(T.backdropNone)}"></button>
-        ${PDS_ZONE_COLORS.map(c => `<button class="pds-sw ${zone && zone.color === c ? 'active' : ''}" data-pds-action="zone-color" data-pds-val="${c}" style="background:${c};" aria-label="${c}"></button>`).join('')}
+        <button data-activation=write class="pds-sw pds-sw-none ${zone && zone.color ? '' : 'active'}" data-pds-action="zone-color" data-pds-val="" title="${pdsEsc(T.backdropNone)}" aria-label="${pdsEsc(T.backdropNone)}"></button>
+        ${PDS_ZONE_COLORS.map(c => `<button data-activation=write class="pds-sw ${zone && zone.color === c ? 'active' : ''}" data-pds-action="zone-color" data-pds-val="${c}" style="background:${c};" aria-label="${c}"></button>`).join('')}
       </div>
-      <button class="pds-link pds-link-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
+      <button data-activation=write class="pds-link pds-link-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
     </section>
     ${pdsRenderRoomCard(state, T)}
   `;
@@ -3303,7 +3303,7 @@ function pdsRenderRoomCard(state, T) {
   const r = pdsRoom(zone);
   const P = pdsPlane(zone);
   const sw = (val, field) => PDS_MAT.map(m => `
-    <button class="pds-sw ${m.c.toLowerCase() === String(val).toLowerCase() ? 'active' : ''}"
+    <button data-activation=write class="pds-sw ${m.c.toLowerCase() === String(val).toLowerCase() ? 'active' : ''}"
             data-pds-room-field="${field}" data-pds-val="${m.c}"
             style="background:${m.c};" title="${T['mat' + m.id] || m.id}"
             aria-label="${T['mat' + m.id] || m.id}"></button>`).join('');
@@ -3329,7 +3329,7 @@ function pdsRenderRoomCard(state, T) {
       <div class="pds-amb-row">
         ${Object.keys(PDS_AMBIANCE).map(k => {
           const A = PDS_AMBIANCE[k];
-          return `<button class="pds-amb ${zone && zone.ambiance === k ? 'active' : ''}"
+          return `<button data-activation=write class="pds-amb ${zone && zone.ambiance === k ? 'active' : ''}"
                           data-pds-action="ambiance" data-pds-amb="${k}" title="${T['amb'+k]}">
             <span class="pds-amb-chips" aria-hidden="true">
               <i style="background:${A.room.floor}"></i><i style="background:${A.room.wall}"></i>
@@ -3343,7 +3343,7 @@ function pdsRenderRoomCard(state, T) {
       <div class="pds-sw-row">${sw(r.floor, 'floor')}${custom(r.floor, 'floor')}</div>
       <label class="pds-mini-label">${T.roomBackdrop}</label>
       <div class="pds-sw-row">
-        <button class="pds-sw pds-sw-none ${r.backdrop ? '' : 'active'}"
+        <button data-activation=write class="pds-sw pds-sw-none ${r.backdrop ? '' : 'active'}"
                 data-pds-room-field="backdrop" data-pds-val=""
                 title="${T.backdropNone}" aria-label="${T.backdropNone}"></button>
         ${sw(r.backdrop, 'backdrop')}${custom(r.backdrop || '#F7F5F0', 'backdrop')}
@@ -3385,7 +3385,7 @@ function pdsRenderAssignRail(state, T) {
           `;
         }).join('') : `<div class="pds-roster-empty">${T.rosterEmpty}</div>`}
       </div>
-      <button class="kb ghost pds-rail-cta" data-pds-action="add-server">${T.rosterAdd}</button>
+      <button data-activation=write class="kb ghost pds-rail-cta" data-pds-action="add-server">${T.rosterAdd}</button>
     </div>
     <div class="pds-rail-card">
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="clear-assign">${T.clearAssign}</button>
@@ -3511,7 +3511,7 @@ function pdsRenderInspector(state, T, obj) {
   const title = isT ? T.inspectorTitle(obj.num)
                     : (T['fix' + obj.type] || obj.type);
   const swatches = PDS_MAT.map(m => `
-    <button class="pds-sw ${m.c.toLowerCase() === String(c).toLowerCase() ? 'active' : ''}"
+    <button data-activation=write class="pds-sw ${m.c.toLowerCase() === String(c).toLowerCase() ? 'active' : ''}"
             data-pds-field="color" data-pds-val="${m.c}" style="background:${m.c};"
             title="${T['mat' + m.id] || m.id}" aria-label="${T['mat' + m.id] || m.id}"></button>`).join('')
     /* Free picker per object. Choosing one sets colorLock, so a later
@@ -3644,7 +3644,7 @@ function pdsRenderInspector(state, T, obj) {
         ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="table-group" data-pds-id="${obj.id}">${T.groupTables}</button>` : ''}
         ${isT && obj.group ? `<button class="kb ghost" data-pds-action="table-ungroup" data-pds-id="${obj.id}">${T.ungroupTables}</button>` : ''}
         <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${obj.id}">${T.inspectorDuplicate}</button>
-        <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
+        <button data-activation=write class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
       </div>
     </div>
   `;
@@ -3681,7 +3681,7 @@ function pdsRenderStatusRow(state, T, obj) {
     <label>${pdsEsc(pdsIsRealStore() ? T.holdLabel : T.inspectorStatus)}</label>
     <div class="pds-status-pills" data-pds-status-row>
       ${choices.map(st => `
-        <button class="pds-status-pill pds-pill-${st} ${manual === st ? 'active' : ''}" data-pds-status="${st}" aria-pressed="${manual === st}">
+        <button data-activation=write class="pds-status-pill pds-pill-${st} ${manual === st ? 'active' : ''}" data-pds-status="${st}" aria-pressed="${manual === st}">
           ${pdsEsc(st === 'free' && pdsIsRealStore() ? T.holdNone : pdsStatusLabel(st, T))}
         </button>`).join('')}
     </div>
@@ -3720,7 +3720,7 @@ function pdsRenderBulkInspector(state, T, selectedIds) {
       <div class="pds-inspect-actions">
         <button class="kb ghost" data-pds-action="bulk-group">${T.bulkGroup}</button>
         <button class="kb ghost" data-pds-action="bulk-clear">${T.bulkClear}</button>
-        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete" style="grid-column:1 / -1;">${T.bulkDelete}</button>
+        <button data-activation=write class="kb ghost pds-rail-danger" data-pds-action="bulk-delete" style="grid-column:1 / -1;">${T.bulkDelete}</button>
       </div>
     </div>
   `;
@@ -4416,7 +4416,7 @@ function pdsRenderActions(state, T) {
         <button role="menuitem" class="is-danger" data-pds-action="reset">${pdsEsc(T.reset)}</button>
       </div>
     </details>
-    <button class="kb primary pds-act" data-pds-action="export">${pdsEsc(T.export)}</button>`;
+    <button data-activation=money class="kb primary pds-act" data-pds-action="export">${pdsEsc(T.export)}</button>`;
 }
 
 /* The page head's context line, split on « · » into the same dotted spans
@@ -5696,14 +5696,14 @@ function pdsOpenVersions(state, T, refresh, selection) {
       <div class="pds-versions">
         <div class="pds-version-new">
           <input class="kf-input pds-input" maxlength="60" data-pds-ver-name placeholder="${pdsEsc(T.versionNamePh)}" aria-label="${pdsEsc(T.versionName)}"/>
-          <button class="kb atlas" data-pds-ver-save>${pdsEsc(T.versionSave)}</button>
+          <button data-activation=write class="kb atlas" data-pds-ver-save>${pdsEsc(T.versionSave)}</button>
         </div>
         ${list.length ? list.map(v => {
           const covers = (v.tables || []).reduce((n, t) => n + pdsGeom(t).seats, 0);
           return `<div class="pds-version" data-pds-ver="${pdsEsc(v.id)}">
             <div><b>${pdsEsc(v.name)}</b><em>${pdsEsc(fmt(v.at))} · ${pdsEsc(T.versionMeta((v.tables || []).length, covers))}</em></div>
             <button class="kb ghost" data-pds-ver-apply>${pdsEsc(T.versionApply)}</button>
-            <button class="kb ghost pds-rail-danger" data-pds-ver-del>${pdsEsc(T.versionDelete)}</button>
+            <button data-activation=write class="kb ghost pds-rail-danger" data-pds-ver-del>${pdsEsc(T.versionDelete)}</button>
           </div>`;
         }).join('') : `<p class="pds-rail-hint">${pdsEsc(T.versionEmpty)}</p>`}
       </div>`;
@@ -5935,11 +5935,11 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         width: 520,
         body: `
           <div class="pds-export-opts">
-            <button class="pds-export-opt" data-pds-export="print">
+            <button data-activation=money class="pds-export-opt" data-pds-export="print">
               <span class="pds-export-ico">${pdsIcon('print')}</span>
               <b>${pdsEsc(T.exportPrint)}</b><em>${pdsEsc(T.exportPrintDesc)}</em>
             </button>
-            <button class="pds-export-opt" data-pds-export="png">
+            <button data-activation=money class="pds-export-opt" data-pds-export="png">
               <span class="pds-export-ico">${pdsIcon('image')}</span>
               <b>${pdsEsc(T.exportPng)}</b><em>${pdsEsc(T.exportPngDesc(zone ? pdsZoneName(zone) : ''))}</em>
             </button>
@@ -6070,7 +6070,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         width: 520,
         body: `
           <div class="pds-strat-cards">
-            <button class="pds-strat-card active" data-pds-renum="flat"><b>${pdsEsc(T.renumberFlat)}</b><em>${pdsEsc(T.renumberFlatDesc)}</em></button>
+            <button data-activation=write class="pds-strat-card active" data-pds-renum="flat"><b>${pdsEsc(T.renumberFlat)}</b><em>${pdsEsc(T.renumberFlatDesc)}</em></button>
             <button class="pds-strat-card" data-pds-renum="prefix"><b>${pdsEsc(T.renumberPrefix)}</b><em>${pdsEsc(T.renumberPrefixDesc)}</em></button>
           </div>`,
         foot: `<button class="kb ghost" data-dismiss>${T.cancel}</button>
@@ -6105,7 +6105,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         `,
         foot: `
           <button class="kb ghost" data-dismiss>${T.cancel}</button>
-          <button class="kb atlas" data-pds-zone-confirm>${T.zoneAdd}</button>
+          <button data-activation=write class="kb atlas" data-pds-zone-confirm>${T.zoneAdd}</button>
         `,
       });
       wireDismiss(m);
@@ -6142,7 +6142,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         `,
         foot: `
           <button class="kb ghost" data-dismiss>${T.cancel}</button>
-          <button class="kb atlas" data-pds-zone-rename-confirm>${T.save2}</button>
+          <button data-activation=write class="kb atlas" data-pds-zone-rename-confirm>${T.save2}</button>
         `,
       });
       wireDismiss(m);
@@ -6177,7 +6177,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         body: '',
         foot: `
           <button class="kb ghost" data-dismiss>${T.cancel}</button>
-          <button class="kb atlas pds-rail-danger" data-pds-zone-del-confirm>${T.deleteZoneOk}</button>
+          <button data-activation=write class="kb atlas pds-rail-danger" data-pds-zone-del-confirm>${T.deleteZoneOk}</button>
         `,
       });
       wireDismiss(m);
@@ -6246,17 +6246,17 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         <div class="pds-wiz">
           <label class="pds-wiz-q">${T.wizVenue}</label>
           <div class="pds-wiz-opts">
-            ${VENUES.map(v => `<button class="pds-wiz-opt ${A.venue===v?'active':''}" data-wiz-venue="${v}">${T['venue'+v]}</button>`).join('')}
+            ${VENUES.map(v => `<button data-activation=write class="pds-wiz-opt ${A.venue===v?'active':''}" data-wiz-venue="${v}">${T['venue'+v]}</button>`).join('')}
           </div>
 
           <label class="pds-wiz-q">${T.wizFloors}</label>
           <div class="pds-wiz-opts">
-            ${[1,2,3,4].map(n => `<button class="pds-wiz-opt ${A.floors.length===n?'active':''}" data-wiz-floors="${n}">${n}</button>`).join('')}
+            ${[1,2,3,4].map(n => `<button data-activation=write class="pds-wiz-opt ${A.floors.length===n?'active':''}" data-wiz-floors="${n}">${n}</button>`).join('')}
           </div>
 
           <label class="pds-wiz-q">${T.wizExtras}</label>
           <div class="pds-wiz-opts">
-            ${EXTRAS.map(e => `<button class="pds-wiz-opt ${A.extras.includes(e)?'active':''}" data-wiz-extra="${e}">${T['extra'+e]}</button>`).join('')}
+            ${EXTRAS.map(e => `<button data-activation=write class="pds-wiz-opt ${A.extras.includes(e)?'active':''}" data-wiz-extra="${e}">${T['extra'+e]}</button>`).join('')}
           </div>
 
           <label class="pds-wiz-q">${T.wizDims}</label>
@@ -6274,24 +6274,24 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
 
           <label class="pds-wiz-q">${T.wizKitchen}</label>
           <div class="pds-wiz-opts">
-            ${WALLS.map(w => `<button class="pds-wiz-opt ${A.kitchenWall===w?'active':''}" data-wiz-kw="${w}">${T['wall'+w]}</button>`).join('')}
+            ${WALLS.map(w => `<button data-activation=write class="pds-wiz-opt ${A.kitchenWall===w?'active':''}" data-wiz-kw="${w}">${T['wall'+w]}</button>`).join('')}
           </div>
 
           <label class="pds-wiz-q">${T.wizEntrance}</label>
           <div class="pds-wiz-opts">
-            ${WALLS.map(w => `<button class="pds-wiz-opt ${A.entranceWall===w?'active':''}" data-wiz-ew="${w}">${T['wall'+w]}</button>`).join('')}
+            ${WALLS.map(w => `<button data-activation=write class="pds-wiz-opt ${A.entranceWall===w?'active':''}" data-wiz-ew="${w}">${T['wall'+w]}</button>`).join('')}
           </div>
 
           <label class="pds-wiz-q">${T.wizAlso}</label>
           <div class="pds-wiz-opts">
-            <button class="pds-wiz-opt ${A.wc?'active':''}" data-wiz-wc>${T.fixwc}</button>
+            <button data-activation=write class="pds-wiz-opt ${A.wc?'active':''}" data-wiz-wc>${T.fixwc}</button>
           </div>
         </div>`;
 
       const cardBody = () => `
         <div class="pds-wiz-cards">
           ${plans.map((p, i) => `
-            <button class="pds-wiz-card ${chosen===i?'active':''}" data-wiz-pick="${i}">
+            <button data-activation=write class="pds-wiz-card ${chosen===i?'active':''}" data-wiz-pick="${i}">
               <span class="pds-wiz-thumb">${pdsPlanThumb(p)}</span>
               <span class="pds-wiz-card-name">${T['var'+p.variant]}</span>
               <span class="pds-wiz-card-nums">
@@ -6307,7 +6307,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         title: T.wizTitle, subtitle: T.wizDesc, width: 620,
         body: qBody(),
         foot: `<button class="kb ghost" data-dismiss>${T.close}</button>
-               <button class="kb atlas" data-wiz-go>${T.wizGenerate}</button>`,
+               <button data-activation=write class="kb atlas" data-wiz-go>${T.wizGenerate}</button>`,
       });
       wireDismiss(m);
       if (!m || !m.el) break;
@@ -6336,7 +6336,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         if (step === 1) {
           if (b) b.innerHTML = qBody();
           if (f) f.innerHTML = `<button class="kb ghost" data-dismiss>${T.close}</button>
-                                <button class="kb atlas" data-wiz-go>${T.wizGenerate}</button>`;
+                                <button data-activation=write class="kb atlas" data-wiz-go>${T.wizGenerate}</button>`;
         } else {
           if (b) b.innerHTML = cardBody();
           if (f) f.innerHTML = `<button class="kb ghost" data-wiz-back>${T.wizBack}</button>
@@ -6511,7 +6511,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         `,
         foot: `
           <button class="kb ghost" data-dismiss>${T.cancel}</button>
-          <button class="kb atlas" data-pds-new-server-ok>${T.rosterAddOk}</button>
+          <button data-activation=write class="kb atlas" data-pds-new-server-ok>${T.rosterAddOk}</button>
         `,
       });
       wireDismiss(m);
@@ -6559,7 +6559,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
               <select class="kf-input pds-input" data-pds-pair-b>${staffOpts(p[1])}</select>
               <button class="pds-chip-x" type="button" data-pds-pair-del aria-label="${pdsEsc(T.versionDelete)}">×</button>
             </div>`).join('')}
-          <button class="kb ghost" type="button" data-pds-pair-add>${pdsEsc(T.rotPairsAdd)}</button>
+          <button data-activation=write class="kb ghost" type="button" data-pds-pair-add>${pdsEsc(T.rotPairsAdd)}</button>
         </div>`;
       const m = modal({
         tag: T.tagPdS,
@@ -6576,7 +6576,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
               <label class="kf-label">${T.rotatePeriod}</label>
               <div class="pds-pillrow" data-pds-period>
                 ${[['shift', T.rotateShift], ['daily', T.rotateDaily], ['weekly', T.rotateWeekly]].map(([k, l]) => `
-                  <button class="pds-cfg-pill ${chosenP === k ? 'active' : ''}" data-pds-p="${k}">${pdsEsc(l)}</button>
+                  <button data-activation=write class="pds-cfg-pill ${chosenP === k ? 'active' : ''}" data-pds-p="${k}">${pdsEsc(l)}</button>
                 `).join('')}
               </div>
             </div>
@@ -6584,7 +6584,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
               <label class="kf-label">${T.rotateStrategy}</label>
               <div class="pds-strat-cards" data-pds-strat>
                 ${[['zones', T.rotZones, T.rotZonesDesc], ['tables', T.rotTables, T.rotTablesDesc], ['pairs', T.rotPairs, T.rotPairsDesc]].map(([k, l, d]) => `
-                  <button class="pds-strat-card ${chosenS === k ? 'active' : ''}" data-pds-s="${k}">
+                  <button data-activation=write class="pds-strat-card ${chosenS === k ? 'active' : ''}" data-pds-s="${k}">
                     <b>${pdsEsc(l)}</b>
                     <em>${pdsEsc(d)}</em>
                   </button>
@@ -8668,11 +8668,11 @@ handlers['nav-menu'] = () => {
         </div>
         <button class="kb ghost" data-action="menu-schedule">⏱ Plages horaires</button>
         <button class="kb ghost" data-action="menu-mass">Édition groupée</button>
-        <button class="kb atlas" data-action="menu-add">+ Ajouter un item</button>
+        <button data-activation=write class="kb atlas" data-action="menu-add">+ Ajouter un item</button>
       </div>
 
       <div class="menu-pill-cats" id="menu-cats">
-        ${CATS.map(c => `<button class="menu-pill-cat ${c.key === activeCat ? 'on' : ''}" data-cat="${c.key}">${c.label}<span class="ct">${c.count}</span></button>`).join('')}
+        ${CATS.map(c => `<button data-activation=write class="menu-pill-cat ${c.key === activeCat ? 'on' : ''}" data-cat="${c.key}">${c.label}<span class="ct">${c.count}</span></button>`).join('')}
       </div>
 
       <div class="p-pane" id="menu-pane">
@@ -8712,7 +8712,7 @@ handlers['nav-menu'] = () => {
         <span style="font-family:var(--mono); font-size:11px; color:var(--n-500); letter-spacing:0.06em;">SYNC POS · 100 % · DERNIÈRE MAJ 12:42</span>
         <div style="display:flex; gap:8px;">
           <button class="kb ghost" data-dismiss>Fermer</button>
-          <button class="kb primary" data-action="menu-publish">Publier la carte</button>
+          <button data-activation=write class="kb primary" data-action="menu-publish">Publier la carte</button>
         </div>
       </div>
     `,
@@ -8830,8 +8830,8 @@ function openItemEdit(it) {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Annuler</button>
-      <button class="kb danger" data-dismiss onclick="window.Kiwi.toast('${name} supprimé de la carte',{type:'warn',desc:'Item retiré · les commandes ouvertes restent valides.'})">Supprimer</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('${name} mis à jour',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'})">Enregistrer</button>
+      <button data-activation=write class="kb danger" data-dismiss onclick="window.Kiwi.toast('${name} supprimé de la carte',{type:'warn',desc:'Item retiré · les commandes ouvertes restent valides.'})">Supprimer</button>
+      <button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('${name} mis à jour',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'})">Enregistrer</button>
     `
   });
   if (typeof wireDismiss === 'function') wireDismiss(editM);
@@ -8869,7 +8869,7 @@ handlers['menu-add'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Annuler</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'}); window.Kiwi.confetti();">Créer & publier</button>
+      <button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'}); window.Kiwi.confetti();">Créer & publier</button>
     `
   }));
 };
@@ -8933,7 +8933,7 @@ handlers['menu-schedule'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Fermer</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Programmation enregistrée',{type:'success',desc:'4 plages actives · sync POS et agrégateurs.'})">+ Ajouter une plage</button>
+      <button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Programmation enregistrée',{type:'success',desc:'4 plages actives · sync POS et agrégateurs.'})">+ Ajouter une plage</button>
     `
   }));
 };
@@ -8984,7 +8984,7 @@ handlers['menu-publish'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Garder en brouillon</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée',{type:'success',desc:'Caisse et QR menu à jour.'}); window.Kiwi.confetti();">Publier maintenant</button>
+      <button data-activation=write class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée',{type:'success',desc:'Caisse et QR menu à jour.'}); window.Kiwi.confetti();">Publier maintenant</button>
     `
   }));
 };
@@ -9135,7 +9135,7 @@ handlers['menu-publish'] = () => {
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Fermer</button>
-        <button class="kb ghost" data-action="kds-print-summary">Imprimer récap service</button>
+        <button data-activation=write class="kb ghost" data-action="kds-print-summary">Imprimer récap service</button>
         <button class="kb atlas" data-action="kds-fullscreen">Basculer iPad mural</button>
       `,
     });
