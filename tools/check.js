@@ -2754,6 +2754,8 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-frame-browser-test.mjs', 'dash-frame-browser-test'],
     ['dash-desktop-browser-test.mjs', 'dash-desktop-browser-test'],
     ['dash-phone-browser-test.mjs', 'dash-phone-browser-test'],
+    /* Les finitions : pas de barre téléphone en large, l'unité espacée, les segments centrés ou défilants, Conformité au kit, la période depuis l'accueil, درهم sur Commandes. */
+    ['dash-polish-browser-test.mjs', 'dash-polish-browser-test'],
     /* Chaque page du tableau de bord et ses sous-onglets, à 390 de large : rien ne dépasse l'écran (FR, AR, kit 2027 AR). */
     ['dash-phone-pages-browser-test.mjs', 'dash-phone-pages-browser-test'],
     ['dash-phone-pages-ar-browser-test.mjs', 'dash-phone-pages-ar-browser-test'],

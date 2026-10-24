@@ -30,6 +30,9 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
    width; only the phone form draws it, so an iPad turned to landscape or a
    window widened past 900 never shows it unstyled beside the desktop bar. */
 html[data-skin-2027="dashboard"]:not([data-k-phone]) .topbar .k-pnav { display: none; }
+/* The shipped reading-progress hairline (ux.js) at the window's top edge:
+   the kit's pages carry their position in the scroll itself (§10.18). */
+html[data-skin-2027="dashboard"] body .scroll-progress { display: none; }
 
 @media (min-width: 900px) {
 
@@ -579,6 +582,9 @@ html[data-skin-2027="dashboard"]:not([data-k-phone]) .topbar .k-pnav { display: 
       "clip  clip";
   }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { --k-kpi-cols: 2; }
+  /* The customer search wide enough for its whole placeholder (FR needs
+     some 340 of text beside its glyph and its clear button). */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers { grid-template-columns: minmax(0, 456px) minmax(0, 1fr); }
   /* The tiles span the figure and its chart: the chart is set so the two
      columns meet near the tiles' own height (three rows of about 111), not
      the shipped 430, which stretched each tile by some 70 px of nothing. */
@@ -820,3 +826,14 @@ html[data-skin-2027="dashboard"] .k-ob__nav {
 }
 html[data-skin-2027="dashboard"] .k-ob__step { text-align: center; }
 html[data-skin-2027="dashboard"] .k-ob__bar { width: calc(100% - 32px); max-width: 528px; margin: 4px auto 0; }
+
+/* ── 15 · The status line on a phone ─────────────────────────────────────
+   On the page's own ground (it was a paler band with a rule), in Footnote,
+   and clear of the floating tab capsule, which covered it at the end of a
+   long page. */
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .status-bar {
+  background: var(--k-bg); border: 0; box-shadow: none; color: var(--k-ink-2); font-family: var(--k-font);
+  padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 96px);
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+}
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .status-bar a { color: var(--k-accent-ink); }

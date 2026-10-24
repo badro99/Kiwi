@@ -221,7 +221,38 @@
       var r = g.shadowRoot;
       if (!r || !r.adoptedStyleSheets || r.adoptedStyleSheets.indexOf(segSheet) >= 0) return;
       r.adoptedStyleSheets = r.adoptedStyleSheets.concat([segSheet]);
+      watchFit(g);
     });
+  }
+  /* §10.6: "when the labels plus padding are measured not to fit, the
+     control becomes the scrolling track". The kit scrolls only past five
+     options, so five that do not fit (Orders' filter in French on a phone,
+     "Remboursements" pressed against the track's edge) were squeezed under
+     their labels. Each label is measured as set (a Range, which the squeeze
+     does not change), plus the segment's 24 and the track's 8. */
+  function fits(g) {
+    var r = g.shadowRoot, need = 8, w = g.clientWidth;
+    if (!r || !w) return true;
+    [].forEach.call(r.querySelectorAll('.sg'), function (b) {
+      var rg = doc.createRange();
+      rg.selectNodeContents(b);
+      need += Math.max(44, Math.ceil(rg.getBoundingClientRect().width) + 24);
+    });
+    return need <= w;
+  }
+  function refit(g) {
+    if (!g.isConnected || (g.options && g.options.length > 5)) return;
+    var want = !fits(g);
+    if (want !== g.hasAttribute('scroll')) g.toggleAttribute('scroll', want);
+  }
+  function watchFit(g) {
+    var q = false;
+    function soon() { if (q) return; q = true; (root.requestAnimationFrame || setTimeout)(function () { q = false; refit(g); }); }
+    if (root.ResizeObserver) { try { new ResizeObserver(soon).observe(g); } catch (_) {} }
+    try { new MutationObserver(soon).observe(g.shadowRoot, { childList: true, subtree: true, characterData: true }); } catch (_) {}
+    var fonts = doc.fonts;
+    if (fonts && fonts.ready) fonts.ready.then(soon);
+    soon();
   }
   function adoptTiles() {
     adoptSide();

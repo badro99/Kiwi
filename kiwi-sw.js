@@ -332,7 +332,7 @@ var SHELL = [
   '/assets/icons/material/sprite.till.svg?v=7',
   '/assets/kit/tokens-2027.css?v=2',
   '/assets/kit/kit.css?v=43',
-  '/assets/kit/dash-desktop.css?v=8',
+  '/assets/kit/dash-desktop.css?v=9',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -360,7 +360,7 @@ var SHELL = [
   '/assets/kit/dash-customers.js?v=1',
   '/assets/kit/dash-retention.js?v=1',
   '/assets/kit/dash-compliance.js?v=1',
-  '/assets/kit/dash-desktop.js?v=7',
+  '/assets/kit/dash-desktop.js?v=8',
   '/assets/kit/dash-ai.js?v=3',
   '/assets/kit/dash-onboarding.js?v=2',
   /* and forgot and reset password, behind kiwiSkin2027:access. */
