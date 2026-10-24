@@ -2050,7 +2050,14 @@
     function tillKitBill() {
       const empty = { title: '', meta: '', lines: [], total: 0 };
       if ($('#rp-active').hidden) return empty;
-      const title = $('#rp-table').textContent || '', meta = $('#rp-substatus').textContent || '';
+      /* Le volet livré se traduit un instant APRÈS ce rendu (caisse-lang
+         observe le DOM) : l'addition du kit restait « À emporter » en arabe.
+         On passe donc le texte au traducteur ici. Le total, que l'addition
+         montre déjà en bas, au format du kit, n'est pas répété dans l'en-tête
+         (« 1 article · 45 MAD » sous « Total 45,00 MAD »). */
+      const lang = window.KiwiCaisseLang, tr = (x) => (lang && lang.tr ? lang.tr(x) : x);
+      const title = tr($('#rp-table').textContent || '');
+      const meta = tr($('#rp-substatus').textContent || '').replace(/\s*·\s*[^·]*MAD[^·]*$/, '');
       if (mode === 'vrap') {
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         const disc = vrapDiscountAmount(gross);
@@ -2135,7 +2142,8 @@
       if (!(currentTotal() > 0)) { toast('Addition vide'); return; }
       if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
       resetPayTip();
-      window.KiwiTillFrame.openPay({ bill: $('#rp-table').textContent || '', due: currentTotal(), method: null, tipPct: 0 });
+      const lang = window.KiwiCaisseLang, billName = $('#rp-table').textContent || '';
+      window.KiwiTillFrame.openPay({ bill: lang && lang.tr ? lang.tr(billName) : billName, due: currentTotal(), method: null, tipPct: 0 });
     }
     function tillKitTip(pct) {
       const p = Math.max(0, Math.min(100, Number(pct) || 0));

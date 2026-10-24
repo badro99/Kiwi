@@ -52,7 +52,7 @@ let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
 /* The demo till, unlocked, in the takeaway builder. */
-async function till(tr, { flag }) {
+async function till(tr, { flag, lang }) {
   const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
   const page = tr.watch(await ctx.newPage());
   const errors = [], fetched = [];
@@ -66,10 +66,11 @@ async function till(tr, { flag }) {
     if (u.startsWith(base + '/api/')) return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
     return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
   });
-  await page.evaluateOnNewDocument((on) => {
+  await page.evaluateOnNewDocument((on, lg) => {
     if (on) localStorage.setItem('kiwiSkin2027:till', '1');
+    if (lg) localStorage.setItem('kiwiCaisseLang', lg);
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
-  }, flag);
+  }, flag, lang || '');
   // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof doOpenService === 'function', { timeout: 30000 });
@@ -482,6 +483,20 @@ try {
     });
     check(!cur.open && cur.id && cur.id !== 'more', `closed by Escape, More gives the lens back to the mode (${cur.id})`);
     check(errors.length === 0, 'rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
+  /* L'en-tête de l'addition restait en français sur la caisse arabe : le
+     volet livré se traduit après que le kit l'a lu (propriétaire, 2026-10-24).
+     Et le total n'y est pas répété : l'addition le montre en bas. */
+  await S.run('flag on · Arabic: the bill header is in Arabic, without the total again', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true, lang: 'ar' });
+    const plain = (await tiles(page)).find((t) => !t.opts && !t.out);
+    await tapTile(page, plain.id);
+    await sleep(300);
+    const head = await page.evaluate(() => ({ title: document.querySelector('k-bill').bill.title, meta: document.querySelector('k-bill').bill.meta }));
+    check(head.title && !/[A-Za-zÀ-ÿ]{3,}/.test(head.title), `the bill's title is translated (${head.title})`);
+    check(!/MAD/.test(head.meta), `the header does not repeat the total (${head.meta})`);
+    check(errors.length === 0, 'arabic header: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 
   /* Cuisine s'ouvre à côté du rail, comme Salle, À emporter et Attente
