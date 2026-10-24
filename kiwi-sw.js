@@ -54,7 +54,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=4',
+  '/assets/caisse-shell.css?v=5',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
@@ -346,7 +346,7 @@ var SHELL = [
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=3',
-  '/assets/kit/till-pin.js?v=3',
+  '/assets/kit/till-pin.js?v=4',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=9',
   '/assets/kit/dash-pin.js?v=1',
@@ -448,7 +448,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=13',
   '/assets/pos-maison.js?v=95',
-  '/assets/caisse-pairing.js?v=37',
+  '/assets/caisse-pairing.js?v=38',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

@@ -43,7 +43,7 @@ const STAFF = {
 const VENUE = { merchant: 'kiwi-test-till', name: 'Café Banc', slug: 'kiwi-test-till' };
 const PAIR = '482913';   /* a test pairing code for the test store */
 
-async function till(tr, { flag = true, lang = 'fr' } = {}) {
+async function till(tr, { flag = true, lang = 'fr', configDelay = 0, record = false } = {}) {
   const ctx = await kb.browser.createBrowserContext();
   tr.defer(() => ctx.close());
   const page = tr.watch(await ctx.newPage());
@@ -55,6 +55,7 @@ async function till(tr, { flag = true, lang = 'fr' } = {}) {
     if (!u.pathname.startsWith('/api/') && !u.pathname.startsWith('/auth/')) return r.continue();
     if (net.offline) return r.abort('internetdisconnected');
     const json = (status, body) => r.respond({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (u.pathname === '/api/config' && configDelay) { setTimeout(() => json(200, { pins: Object.values(STAFF).map((s) => ({ name: s.name, role: s.role })), pinGateConfigured: true, timezone: 'Africa/Casablanca' }), configDelay); return; }
     if (u.pathname === '/api/config') return json(200, { pins: Object.values(STAFF).map((s) => ({ name: s.name, role: s.role })), pinGateConfigured: true, timezone: 'Africa/Casablanca' });
     if (u.pathname === '/api/pin/verify') {
       const b = JSON.parse(r.postData() || '{}');
@@ -83,6 +84,22 @@ async function till(tr, { flag = true, lang = 'fr' } = {}) {
       if (flag) localStorage.setItem('kiwiSkin2027:till', '1'); else localStorage.removeItem('kiwiSkin2027:till');
     } catch (_) {}
   }, flag, VENUE, lang);
+  /* Every painted frame of the load: is the body shown, what is on top at the
+     centre and on the left edge, and is the demo pad up. */
+  if (record) await page.evaluateOnNewDocument(() => {
+    window.__frames = [];
+    const top = (x, y) => { const e = document.elementFromPoint(x, y); if (!e) return '-'; if (e.closest('#cp-pin-screen')) return 'lock'; if (e.closest('#pin-screen')) return 'demo-pad'; if (e.closest('#cp-screen')) return 'pair'; return e === document.documentElement || e === document.body ? 'ground' : 'till:' + e.tagName.toLowerCase(); };
+    const tick = () => {
+      if (document.body) {
+        const cs = getComputedStyle(document.body);
+        const shown = cs.visibility !== 'hidden' && +cs.opacity > 0;
+        const W = innerWidth, H = innerHeight;
+        window.__frames.push({ t: Math.round(performance.now()), shown, at: [top(W / 2, H / 2), top(40, H / 2), top(W - 80, 120)] });
+      }
+      if (performance.now() < 6000) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   // coverage: surface=caisse-entry locale=fr viewport=desktop
   await page.goto(kb.base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => { const s = document.getElementById('cp-pin-screen'); return s && s.style.display !== 'none' && s.getBoundingClientRect().width > 0; }, { timeout: 20000 });
@@ -116,6 +133,24 @@ await S.run('flag off: the shipped pad, no kit file fetched', async (tr) => {
   }));
   check(st.legacy && !st.kit && !st.skin, 'the shipped staff pad shows, and the page is not marked 2027');
   check(st.fetched.length === 0, 'no kit file was fetched (' + st.fetched.length + ')');
+});
+
+/* 24 octobre : à chaque chargement, la caisse entière (carte, rail, addition)
+ * se peignait ~360 ms avant que le pavé ne la couvre, le temps de demander la
+ * liste des codes au serveur ; et sur un verrouillage, le pavé démo (« Bonjour,
+ * Caissier », codes de démo) passait avant le 2027. Le serveur répond ici en
+ * 900 ms : aucune image peinte ne doit montrer la caisse ni le pavé démo. */
+await S.run('flag on: the lock is up from the first painted frame, the till never shows', async (tr) => {
+  const { page } = await till(tr, { configDelay: 900, record: true });
+  await settle(page, 1200);
+  const frames = await page.evaluate(() => window.__frames);
+  const shown = frames.filter((f) => f.shown);
+  const leak = shown.filter((f) => f.at.some((a) => a.startsWith('till:') || a === 'demo-pad'));
+  check(shown.length > 5, 'frames were recorded while the page showed (' + shown.length + ')');
+  check(leak.length === 0, 'no painted frame shows the till or the demo pad' + (leak.length ? ': ' + JSON.stringify(leak.slice(0, 3)) : ''));
+  check(shown[0].at.every((a) => a === 'lock'), 'the first painted frame is the lock (' + shown[0].at.join(', ') + ')');
+  const mounts = await page.evaluate(() => document.querySelectorAll('#cp-pin-screen k-pin-pad').length);
+  check(mounts === 1, 'one pad, not mounted twice when the roster answers');
 });
 
 /* 23 octobre : le bouton « Clients » flottait sur l'écran de code et ouvrait le

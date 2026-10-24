@@ -147,6 +147,8 @@
       try { on = document.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:till') === '1'; } catch (_) { on = false; }
       if (!on) return;
       document.documentElement.setAttribute('data-skin-2027', 'till');
+      /* A paired till never shows the demo pad (#pin-screen): its door is the 2027 lock. */
+      try { if (localStorage.getItem('kiwiPaired') === '1') document.documentElement.setAttribute('data-till-paired', ''); } catch (_) {}
       /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,
          two frames after DOMContentLoaded (every kit script is deferred, so it has run by then), at most 8 s. */
       (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{visibility:hidden;opacity:0}'; d.head.appendChild(s);
@@ -174,7 +176,7 @@
         js("assets/kit/overlays.js?v=2") +
         js("assets/kit/pin.js?v=3") +
         js("assets/kit/pin-flow.js?v=3") +
-        js("assets/kit/till-pin.js?v=3") +
+        js("assets/kit/till-pin.js?v=4") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/controls/chip.js?v=1") +
         js("assets/kit/controls/keypad.js?v=1") +
@@ -214,7 +216,7 @@
        are inherited from here. -->
   <link rel="stylesheet" href="assets/tokens.css?v=2053" />
 
-  <link rel="stylesheet" href="assets/caisse-shell.css?v=4" />
+  <link rel="stylesheet" href="assets/caisse-shell.css?v=5" />
   <link rel="stylesheet" href="assets/caisse-skin.css?v=3" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
@@ -318,7 +320,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=37" defer></script>
+  <script src="assets/caisse-pairing.js?v=38" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une

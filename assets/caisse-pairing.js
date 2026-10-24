@@ -232,6 +232,8 @@
   function bootVertical(v) {
     hidePad();
     hideNativePin();
+    var lockScr = document.getElementById('cp-pin-screen');
+    if (lockScr) lockScr.style.display = 'none';
     var route = routeFor(v);
     if (route.kind === 'vertical' && window.KiwiPosDispatch && window.KiwiPosDispatch.unlockById) {
       /* Ticket #0022 · the boutique venue key must not outlive a boutique
@@ -768,6 +770,11 @@
   // routes through so the hosted caisse always asks who is opening the till.
   function askStaff(venue, onNoPins) {
     var merchant = (venue && venue.merchant) || '';
+    /* Design 2027: the lock is up from the first frame. The till used to paint
+       for the length of the roster fetch before the pad covered it (owner saw
+       it flash, 2026-10-24). The pad checks codes on the server, so it needs
+       no roster; a store with no codes just sees the door open. */
+    if (merchant && window.KiwiTillPin && typeof window.KiwiTillPin.lock === 'function') showPinPad(venue);
     if (!merchant) {
       if (onNoPins) onNoPins();
       else bootVertical(venue);
@@ -840,6 +847,7 @@
   function renderPinDots() { var d = document.getElementById('cp-pin-dots'); if (d) d.innerHTML = pinDotsHtml(); }
   function showPinPad(venue) {
     injectCss(); hidePad(); hideNativePin();
+    try { document.documentElement.setAttribute('data-till-paired', ''); } catch (_) {}
     /* Design 2027 (kiwiSkin2027:till): the same door on the kit's pad, through
        assets/kit/till-pin.js. Loaded only with the flag; otherwise absent. */
     if (window.KiwiTillPin && typeof window.KiwiTillPin.lock === 'function') {

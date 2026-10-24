@@ -144,8 +144,8 @@
     "sha": "2e173ea6dbb3aefb"
   },
   "assets/caisse-pairing.js": {
-    "v": "37",
-    "sha": "97b764bcea52574f"
+    "v": "38",
+    "sha": "172d03cf68a2e62a"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -160,8 +160,8 @@
     "sha": "217d4da2a265be9a"
   },
   "assets/caisse-shell.css": {
-    "v": "4",
-    "sha": "a95d7662e8ff7453"
+    "v": "5",
+    "sha": "a794ecf04ad9c177"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -804,8 +804,8 @@
     "sha": "72e0c148f4aafc5d"
   },
   "assets/kit/till-pin.js": {
-    "v": "3",
-    "sha": "a4db4977ded7fd32"
+    "v": "4",
+    "sha": "43c2346afa91f593"
   },
   "assets/kit/till-z.js": {
     "v": "1",

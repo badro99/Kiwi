@@ -135,7 +135,12 @@
       scr.setAttribute('aria-modal', 'true');
       doc.body.appendChild(scr);
     }
+    /* Already up for this store: keep it. The boot shows it first and the
+       roster check asks again; a second mount would blink the pad. */
+    var name = (venue && venue.name) || '';
+    if (lockFlow && scr.className === 'k-till-lock' && scr.style.display !== 'none' && scr.__kVenue === name && scr.querySelector('k-pin-pad')) return true;
     scr.className = 'k-till-lock';
+    scr.__kVenue = name;
     scr.setAttribute('aria-label', t('pin.title'));
     scr.style.display = '';
     if (lockFlow) { try { lockFlow.destroy(); } catch (_) {} }
