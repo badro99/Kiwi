@@ -2556,7 +2556,11 @@ section('Kiwi 2027 · cuisine sur les couloirs du kit');
  *                                       les nouveaux QR impriment /order?s=&t=
  *   order-basic-test                    la page de base (§4.1) : la carte publique en
  *                                       liste, ordering.basic mot pour mot, sans script,
- *                                       publique, et seulement drapeau allumé */
+ *                                       publique, et seulement drapeau allumé
+ *   orderpro-2027-polish-browser-test   les détails de la peau 2027 sur téléphone et iPad :
+ *                                       chiffres sans mono, cibles de 44, noms au début
+ *                                       en arabe, lignes du panier, toast, feuille
+ *                                       d'options, écran de table, numéro à emporter */
 section('Kiwi 2027 · une seule app de commande client');
 {
   const { spawnSync } = require('child_process');
@@ -2564,6 +2568,7 @@ section('Kiwi 2027 · une seule app de commande client');
     ['orderpro-parity-browser-test.mjs', 'orderpro-parity-browser-test'],
     ['guest-redirect-test.mjs', 'guest-redirect-test'],
     ['order-basic-test.mjs', 'order-basic-test'],
+    ['orderpro-2027-polish-browser-test.mjs', 'orderpro-2027-polish-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
