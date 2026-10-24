@@ -1,6 +1,8 @@
+import { ticketActor, forbidden } from './_access.js';
 import { json, purgeExpired, schemaError, sweepOrphanMedia } from './_lib.js';
 
-export async function onRequestPost({ env }) {
+export async function onRequestPost({ request, env }) {
+  if (!(await ticketActor(request, env))) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     const deleted = await purgeExpired(env);

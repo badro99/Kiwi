@@ -6,6 +6,7 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { operatorContext } from './ticket-test-auth.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const lib = await import(pathToFileURL(resolve(root, 'functions/api/tickets/_lib.js')));
 const idApi = await import(pathToFileURL(resolve(root, 'functions/api/tickets/[id].js')));
@@ -29,6 +30,7 @@ function makeEnv() {
     },
     async run() {
       let changes = 0;
+      if (/INSERT INTO account_audit/.test(sql)) return {meta:{changes:1}};
       if (/DELETE FROM kiwi_ticket_images WHERE ticket_id IN/.test(sql) || /DELETE FROM kiwi_ticket_images WHERE ticket_id = \?/.test(sql)) {
         for (let i = images.length - 1; i >= 0; i--) if (args.includes(images[i].ticket_id)) { images.splice(i, 1); changes++; }
       } else if (/DELETE FROM kiwi_ticket_followups/.test(sql)) {
@@ -64,7 +66,7 @@ await w.env.MEDIA.put('kiwi-tickets/9/orphan-old.png', '', { uploaded: now - 3 *
 await w.env.MEDIA.put('kiwi-tickets/9/in-flight.png', '', { uploaded: now - 60 * 1000 });
 
 const req = new Request('https://x/api/tickets/1', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'tested' }) });
-const res = await idApi.onRequestPatch({ request: req, env: w.env, params: { id: '1' } });
+const res = await idApi.onRequestPatch(await operatorContext({ request: req, env: w.env, params: { id: '1' } }));
 const body = await res.json();
 check('"Tested" answers done and reports both screenshots deleted', body.status === 'done' && body.imagesDeleted === 2);
 check('"Tested" removes the original and the follow-up screenshot from R2', !w.bucket.has('kiwi-tickets/1/a.png') && !w.bucket.has('kiwi-tickets/1/followups/b.png'));

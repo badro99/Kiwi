@@ -888,6 +888,23 @@
     return locked ? { ok: false, reason: 'tenant-mismatch' } : null;
   }
 
+  // Check real writes before the counter takes money. Availability flags alone
+  // do not prove storage works in private mode or after quota exhaustion.
+  async function moneyStorageReady() {
+    var key = 'kiwi:money-storage-probe';
+    try {
+      localStorage.setItem(key, '1');
+      if (localStorage.getItem(key) === '1') {
+        if (localStorage.removeItem) localStorage.removeItem(key);
+        return true;
+      }
+    } catch (_) {}
+    try {
+      var offline = window.KiwiOffline;
+      return !!(offline && offline.putMeta && await offline.putMeta(key, { checkedAt: Date.now() }));
+    } catch (_) { return false; }
+  }
+
   function postSale(entry) {
     if (!on() || !entry) return;
     var rawAmt = entry.amountCents != null
@@ -1623,7 +1640,7 @@
       var amt = s.amountCents != null
         ? Math.round(Number(s.amountCents)) / 100
         : (Math.round((Number(s.amount || 0) + Number.EPSILON) * 100) / 100);
-      if (!(amt > 0)) return;
+      if (!(amt >= 0)) return;
       var amtCents = s.amountCents != null
         ? Math.round(Number(s.amountCents))
         : Math.round(amt * 100);
@@ -1657,7 +1674,7 @@
         if (!row || row.tenant !== tenant) return false;
         var cents = row.s && row.s.amountCents != null
           ? Number(row.s.amountCents) : Number(row.s && row.s.amount || 0) * 100;
-        return cents > 0;
+        return cents >= 0;
       })
         .map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
       try { window.KiwiSales.retainCursors(vid, allowed); } catch (_) {}
@@ -1695,7 +1712,7 @@
     var expected = feedSales.filter(function (row) { return row.tenant === tenant; }).map(function (row) { return row.s; });
     function cents(s) { return s.amountCents != null ? Number(s.amountCents) : Math.round(Number(s.amount) * 100); }
     function matches(rows, sign) {
-      var want = expected.filter(function (s) { return cents(s) * sign > 0; });
+      var want = expected.filter(function (s) { return sign === 1 ? cents(s) >= 0 : cents(s) < 0; });
       if (!Array.isArray(rows) || rows.length !== want.length) return false;
       var byCursor = {};
       rows.forEach(function (s) { byCursor[s.cursor] = s; });
@@ -1961,7 +1978,7 @@
   else startBoot();
 
   window.KiwiLive = {
-    isOn: on, merchant: merchant, postSale: postSale, postRefund: postRefund,
+    isOn: on, merchant: merchant, moneyStorageReady: moneyStorageReady, postSale: postSale, postRefund: postRefund,
     snapshotStatus: function () { return operatorSnapshot ? Object.assign({}, operatorSnapshot) : null; },
     moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
     flush: flushQueue, retrySale: retrySale, retryBlockedSales: retryBlockedSales,

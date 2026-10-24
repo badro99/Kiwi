@@ -3625,12 +3625,14 @@
       function kgSnapshot() {
         kgTallySync();
         const durMin = shiftStart ? Math.max(0, Math.floor((Date.now() - shiftStart.getTime()) / 60000)) : 0;
+        const cloudPayments = !SV_DEMO && liveEmployeeState && liveEmployeeState.shiftPayments;
+        const revenue = cloudPayments ? Number(cloudPayments.amountCents) / 100 : kgShiftRevenue;
         const paid = tablesPaid;
         const occupied = Object.values(tables).filter(t =>
           t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'ka-tkhdam'
         ).length;
         const speed = paid > 0 ? Math.round(kgShiftTurnMin / paid) : null;
-        const shiftXP = Math.round(paid * 10 + kgShiftRevenue * 0.01);
+        const shiftXP = Math.round(paid * 10 + revenue * 0.01);
         const totalXP = kgState.lifetimeXP + shiftXP;
         const rankIdx = kgRankIdxFor(totalXP);
         const rank = rankIdx >= 0 ? KG_RANKS[rankIdx] : null;
@@ -3641,7 +3643,7 @@
           durMin: durMin, paid: paid, served: paid + occupied, occupied: occupied,
           speed: speed, shiftXP: shiftXP, totalXP: totalXP,
           rankIdx: rankIdx, rank: rank, next: next, progress: progress,
-          revenue: kgShiftRevenue, ticket: paid > 0 ? kgShiftRevenue / paid : 0,
+          revenue: revenue, ticket: paid > 0 ? revenue / paid : 0,
         };
       }
       function kgDefiProgress() {

@@ -5880,7 +5880,7 @@
        ferait douter la réception de ce qu'elle vient de faire. */
     const WORDING = {
       checked_in: { fail: tx('Arrivée non enregistrée'), done: tx('Client arrivé'), desc: tx('La chambre apparaît occupée dans le plan.') },
-      completed: { fail: tx('Départ non enregistré'), done: tx('Départ enregistré'), desc: tx('La chambre passe à nettoyer dans le plan et la file ménage.') },
+      completed: { fail: tx('Départ non enregistré'), done: tx('Départ enregistré'), desc: tx('La chambre passe à nettoyer. Les nuits réservées restent dues, même en cas de départ anticipé. Aucun frais d’annulation supplémentaire.') },
       confirmed: { fail: tx('Arrivée non annulée'), done: tx('Arrivée annulée'), desc: tx('Le séjour repart de « confirmé » et la chambre est rendue. Le geste est tracé au journal.') },
       no_show: { fail: tx('Non-présentation non enregistrée'), done: tx('Client non présenté'), desc: tx('Le séjour est clos sans facturation de séjour. La chambre est libérée.') },
     };

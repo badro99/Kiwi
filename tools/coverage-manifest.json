@@ -1610,6 +1610,134 @@
         "phone"
       ],
       "state": "/order/basic scriptless guest menu fallback"
+    },
+    {
+      "id": "boutique-checkout",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "boutique / cash checkout"
+    },
+    {
+      "id": "boutique-returns",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "boutique / return, issued credit and credit redemption"
+    },
+    {
+      "id": "boutique-exchange",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "boutique / exchange replacement selection"
+    },
+    {
+      "id": "boutique-return-refusal",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "paired boutique / refused manager return approval and recovery"
+    },
+    {
+      "id": "shopify-recovery",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "Shopify / mapping, sync error, retry recovery and replay"
+    },
+    {
+      "id": "dashboard-analysis",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "Finance performance analysis, historical unknown costs; food-cost editor only when available"
+    },
+    {
+      "id": "dashboard-promotion-editor",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "Promotions create, scope, schedule, preview and zero-discount validation"
+    },
+    {
+      "id": "dashboard-product-editor",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "Catalogue create validation, size and colour variant editor"
     }
   ],
   "excludedHtml": [

@@ -157,19 +157,25 @@ try {
   const links2 = new Map([['gid://shopify/ProductVariant/801', 'v-zero'], ['gid://shopify/ProductVariant/802', 'v-one']]);
   const cat2 = () => ({ variants: [{ id: 'v-zero', base: 0, baseAt: 0, stock: 0 }, { id: 'v-one', base: 1, baseAt: 0, stock: 1 }], moves: [] });
   const zero = planReplay(cat2(), links2, [mk(6001, 9101, 801, 1, T0 + 1000)]);
-  ok('une variante déjà à 0 chez Kiwi n\'est pas retirée encore, la pièce est dite déjà sortie',
-    zero.apply.length === 0 && zero.pieces === 0 && zero.short === 1 && zero.shortLines === 1, JSON.stringify(zero));
+  ok('une variante à zéro conserve toute la sortie dans le journal',
+    zero.apply.length === 1 && zero.apply[0].qty === 1 && zero.pieces === 1 && zero.short === 1 && zero.shortLines === 1, JSON.stringify(zero));
   const partial = planReplay(cat2(), links2, [mk(6002, 9102, 802, 3, T0 + 1000)]);
-  ok('une commande de 3 sur un stock de 1 n\'en retire qu\'une',
-    partial.apply.length === 1 && partial.apply[0].qty === 1 && partial.pieces === 1 && partial.short === 2, JSON.stringify(partial));
+  ok('une commande de 3 sur un stock de 1 inscrit les trois sorties',
+    partial.apply.length === 1 && partial.apply[0].qty === 3 && partial.pieces === 3 && partial.short === 2, JSON.stringify(partial));
   const seq = planReplay(cat2(), links2, [mk(6003, 9103, 802, 1, T0 + 1000), mk(6004, 9104, 802, 1, T0 + 2000)]);
-  ok('deux commandes sur la dernière pièce : la plus ancienne la retire, la seconde est déjà sortie',
-    seq.apply.length === 1 && seq.apply[0].order === '#6003' && seq.short === 1, JSON.stringify(seq));
+  ok('deux commandes sur la dernière pièce gardent les deux sorties et le déficit',
+    seq.apply.length === 2 && seq.apply[0].order === '#6003' && seq.short === 1, JSON.stringify(seq));
   const neg = cat2(); neg.moves.push({ id: 'x', vid: 'v-one', d: -1, at: T0, why: 'vente' });
   catalogMaterialize(neg);
   const afterSale = planReplay(neg, links2, [mk(6005, 9105, 802, 1, T0 + 1000)]);
   ok('le stock lu est celui que Kiwi montre après ses ventes, pas la base de l\'inventaire',
-    afterSale.apply.length === 0 && afterSale.short === 1, JSON.stringify(afterSale));
+    afterSale.apply.length === 1 && afterSale.apply[0].qty === 1 && afterSale.short === 1, JSON.stringify(afterSale));
+  const deficit = cat2();
+  deficit.moves = partial.apply.map(x => ({id:x.moveId,vid:x.vid,d:-x.qty,at:x.at,why:'vente'}));
+  deficit.moves.push({id:'restock',vid:'v-one',d:1,at:T0+2000,why:'achat'});
+  catalogMaterialize(deficit);
+  ok('un réassort rembourse le déficit avant de devenir vendable', deficit.variants.find(v=>v.id==='v-one').stock === 0);
+  ok('un rejeu ne répète pas la sortie déficitaire', planReplay(deficit,links2,[mk(6002,9102,802,3,T0+1000)]).already === 1);
 } finally {
   globalThis.fetch = realFetch;
 }

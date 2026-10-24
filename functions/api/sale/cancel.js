@@ -9,6 +9,7 @@ import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSessi
 import { businessDate, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
 import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents } from '../_store-credit-ledger.js';
+import { ensureCollectionSchema } from '../receivables.js';
 import { voidSaleLoyalty } from '../clients.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
@@ -165,6 +166,7 @@ async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, acto
          (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
          AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks})
            AND id <> ? AND mode = 'table' AND status = 'open')
+         AND NOT EXISTS (SELECT 1 FROM delivery_collections dc WHERE dc.merchant = sales.merchant AND dc.sale_id = sales.id)
          AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')
          ${reopenCreditGuard}`
   ).bind(ts, reason, actor, actorId, id, merchant, newVisitId, merchant,
@@ -329,6 +331,10 @@ export async function onRequestPost({ request, env }) {
     }
   }
   if (!sale) return json({ error: 'sale-not-found' }, 404);
+  await ensureCollectionSchema(env.DB);
+  const collected = await env.DB.prepare('SELECT 1 FROM delivery_collections WHERE merchant = ? AND sale_id = ? LIMIT 1').bind(merchant, id).first();
+  if (collected) return json({ error: 'sale-has-collections' }, 409);
+
   if (sale.void_ts && !body.reopen) return json({ error: 'already-cancelled' }, 409);
 
   // The reprint screen only offers today's sales. Keep a second server-side
@@ -386,8 +392,10 @@ export async function onRequestPost({ request, env }) {
     const update = env.DB.prepare(
       `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
         WHERE id = ? AND merchant = ? AND void_ts IS NULL
-          AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')
-          ${creditGuard}`
+          AND NOT EXISTS (SELECT 1 FROM delivery_collections dc WHERE dc.merchant = sales.merchant AND dc.sale_id = sales.id)
+         AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')
+          ${creditGuard}
+          AND NOT EXISTS (SELECT 1 FROM delivery_collections WHERE merchant = sales.merchant AND sale_id = sales.id)`
     ).bind(ts, reason, actor, actorId, id, merchant, merchant, id, ...creditArgs);
     const auditWithCents = env.DB.prepare(
       `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,

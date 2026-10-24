@@ -433,7 +433,7 @@
     };
     rec.history = [detail].concat(rec.history.filter(function (row) {
       return !(detail.ref && row && row.ref === detail.ref);
-    })).slice(0, 50);
+    }));
 
     var rewardReady = false;
     var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
@@ -727,7 +727,7 @@
   function refusedRedemptions(book) {
     try {
       var a = JSON.parse(ls('kiwi:clients-refused-redemptions:v1:' + (book || bookId())) || '[]');
-      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId && e.error; }).slice(-50) : [];
+      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId && e.error; }) : [];
     } catch (_) { return []; }
   }
   function redemptionRefuse(book, event, error) {
@@ -737,7 +737,7 @@
     }
     // Keep the pending event if the refusal could not be persisted.
     try {
-      localStorage.setItem('kiwi:clients-refused-redemptions:v1:' + book, JSON.stringify(refused.slice(-50)));
+      localStorage.setItem('kiwi:clients-refused-redemptions:v1:' + book, JSON.stringify(refused));
     } catch (_) { return; }
     redemptionDrop(book, event.ref);
     /* Le refus arrive sur la caisse qui a donné la remise : c'est là qu'il faut

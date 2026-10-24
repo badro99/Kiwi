@@ -95,7 +95,7 @@
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=11" />
 <link rel="stylesheet" href="assets/trade-workspaces.css?v=6" />
-<link rel="stylesheet" href="assets/reservations.css?v=9" />
+<link rel="stylesheet" href="assets/reservations.css?v=10" />
 <!-- Home edge lighting · writes the cursor position that Layer G's glow
      follows. Deferred: it is decorative, and the CSS falls back to a top-edge
      glow if this never loads. -->
@@ -1119,7 +1119,7 @@
 <script src="assets/trades.js?v=7" defer></script>
 <script src="assets/material-icons.js?v=4" defer></script>
 <script src="assets/plan-catalog.js?v=1" defer></script>
-<script src="assets/interactive.js?v=67" defer></script>
+<script src="assets/interactive.js?v=68" defer></script>
 <script src="assets/view-link.js?v=1" defer></script>
 <script src="assets/features.js?v=16" defer></script>
 <script src="assets/invoice.js?v=20" defer></script>
@@ -1137,7 +1137,7 @@
 <script src="assets/growth-crm.js?v=7" defer></script>
 <script src="assets/dark-fixes.js?v=5" defer></script>
 <script src="assets/polish.js?v=4" defer></script>
-<script src="assets/channel-link.js?v=202608272307" defer></script>
+<script src="assets/channel-link.js?v=202608272308" defer></script>
 <link rel="preload" href="assets/report.js?v=10" as="script">
 <script src="assets/dashboard-extra.js?v=19" defer></script>
 <script src="assets/simple.js?v=12" defer></script>
@@ -1153,12 +1153,12 @@
 <script src="assets/venues.js?v=65" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
-<script src="assets/pressing-ops.js?v=11" defer></script>
+<script src="assets/pressing-ops.js?v=12" defer></script>
 <script src="assets/pressing-catalog.js?v=10" defer></script>
-<script src="assets/pressing-dashboard.js?v=20" defer></script>
+<script src="assets/pressing-dashboard.js?v=21" defer></script>
 <script src="assets/demoClock.js?v=5" defer></script>
-<script src="assets/sales-history.js?v=5" defer></script>
-<script src="assets/dateRange.js?v=98" defer></script>
+<script src="assets/sales-history.js?v=6" defer></script>
+<script src="assets/dateRange.js?v=99" defer></script>
 <script src="assets/mobile-nav.js?v=9" defer></script>
 <script defer src="assets/pwa-update.js?v=366"></script>
 <script defer src="assets/dashboard-pwa.js?v=603"></script>
@@ -1175,8 +1175,8 @@
 <script defer src="assets/tenant-purge.js?v=6"></script>
 <script defer src="assets/dashboard-pin-vault.js?v=4"></script>
 <script defer src="assets/identity.js?v=12"></script>
-<script defer src="assets/live-link.js?v=75"></script>
-<script defer src="assets/channel-sales.js?v=5"></script>
+<script defer src="assets/live-link.js?v=76"></script>
+<script defer src="assets/channel-sales.js?v=6"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
 <script defer src="assets/merchant-config.js?v=282"></script>
@@ -1288,9 +1288,9 @@
 <script src="assets/inventory-consumption.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=4" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/clients-store.js?v=18" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
-<script src="assets/clients-directory.js?v=25" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=26" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=33" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
@@ -1333,7 +1333,7 @@
      l'appli Serveur et priceOrder) et son éditeur, l'onglet « Promotions ». -->
 <script src="assets/menu-promos.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/menu-promos-dashboard.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/restaurant-menu-workspace.js?v=119" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=120" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=20" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
@@ -1355,7 +1355,7 @@
 <script src="assets/cancellation-history.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/cash-sessions.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/weather.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/briefing.js?v=24" defer fetchpriority="low"></script>
+<script src="assets/briefing.js?v=25" defer fetchpriority="low"></script>
 <script src="assets/simple-food-cost.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/finance.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/conformite.js?v=7" defer fetchpriority="low"></script>
@@ -1377,13 +1377,13 @@
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
-<script src="assets/hotel-language.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/hotel-language.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/hotel-rates.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/hotel-housekeeping.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/hotel-folio.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/hotel-channels.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/hotel.js?v=84" defer fetchpriority="low"></script>
-<script src="assets/hotel-economat.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/hotel.js?v=85" defer fetchpriority="low"></script>
+<script src="assets/hotel-economat.js?v=11" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
 <script src="assets/trade-workspace-schema.js?v=9" defer fetchpriority="low"></script>
@@ -1391,7 +1391,7 @@
 <script src="assets/delivery-receivables.js?v=2" defer fetchpriority="low"></script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
-<script src="assets/reservations.js?v=32" defer fetchpriority="low"></script>
+<script src="assets/reservations.js?v=33" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=16" defer fetchpriority="low"></script>

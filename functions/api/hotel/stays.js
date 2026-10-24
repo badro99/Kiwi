@@ -562,7 +562,7 @@ export async function onRequestPost({ request, env }) {
         if (checkout.linked && checkout.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...checkout }, 409);
       }
       const previous = { ...old, hotel: { ...old.hotel } };
-      if (checkout) old.checkout = { ...checkout, forced: checkout.linked && checkout.owedCents > 0, actor, at: now };
+      if (checkout) old.checkout = { ...checkout, forced: checkout.linked && checkout.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
       old.status = next; old.updatedAt = now;
       const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
       if (indexInDoc >= 0) doc.bookings[indexInDoc] = old;
@@ -895,7 +895,7 @@ export async function onRequestPost({ request, env }) {
       try { balance = await checkoutBalance(env, merchant, rec, rows.rooms?.data, hasResTable); }
       catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
       if (balance.linked && balance.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...balance }, 409);
-      rec.checkout = { ...balance, forced: balance.linked && balance.owedCents > 0, actor, at: now };
+      rec.checkout = { ...balance, forced: balance.linked && balance.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
     }
     rec.hotel.dossierId ||= rec.id;
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;

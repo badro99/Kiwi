@@ -88,12 +88,16 @@ export async function onRequestPost(context) {
     return json({ error: 'order-already-collected' }, 409);
   }
 
+  const refundDueCents = Math.round(Number(order.pay?.paid || 0) * 100);
+  if (!Number.isSafeInteger(refundDueCents) || refundDueCents < 0) return json({ error: 'invalid-payment' }, 409);
   const cancelledAt = new Date().toISOString();
+  const refundDue = refundDueCents / 100;
+  const refundEntry = { id: 'cancel:' + orderId, kind: 'refund-due', amountCents: refundDueCents, at: cancelledAt, actor };
   doc.orders = doc.orders.map((row) => row && row.id === orderId
-    ? { ...row, cancelledAt, cancelledBy: actor, rack: null, updatedAt: Date.parse(cancelledAt) }
+    ? { ...row, refundDue, refundEntry, cancelledAt, cancelledBy: actor, rack: null, updatedAt: Date.parse(cancelledAt) }
     : row);
   const cancellations = Array.isArray(doc.cancellations) ? doc.cancellations.filter((row) => row && row.id !== orderId) : [];
-  cancellations.push({ id: orderId, cancelledAt, cancelledBy: actor });
+  cancellations.push({ id: orderId, refundDue, refundEntry, cancelledAt, cancelledBy: actor });
   doc.cancellations = cancellations;
   doc.updatedAt = Date.now();
   const text = JSON.stringify(doc);

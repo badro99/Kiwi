@@ -209,7 +209,7 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
       if (!['pickup', 'delivery'].includes(method)) return { ok: false, error: 'bad-fulfilment-method', status: 422 };
       request.fulfilmentMethod = method;
     }
-    if (payload.handover && request.fulfilmentMethod === 'delivery' && !request.deliveryStartedTs) {
+    if (payload.handover && !request.deliveryStartedTs) {
       request.deliveryStartedTs = Number(payload.now) || Date.now();
     }
   } else if (action === 'confirm') {
@@ -231,6 +231,9 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
     if (!['open', 'closed'].includes(request.state)) return { ok: false, error: 'not-disputable', status: 409 };
     request.disputed = true;
   } else if (action === 'cancel') {
+    if (lines.some(line => Number(line.qtyPrepared) > Number(line.qtyReceived))) {
+      return { ok: false, error: 'handover-reconciliation-required', status: 409 };
+    }
     request.cancelled = true;
     request.state = 'closed';
     request.closedTs = Number(payload.now) || Date.now();

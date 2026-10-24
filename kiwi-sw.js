@@ -32,8 +32,8 @@ var SHELL = [
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=3',
-  '/assets/serveur/service.js?v=1',
-  '/assets/serveur-app.js?v=14',
+  '/assets/serveur/service.js?v=2',
+  '/assets/serveur-app.js?v=15',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -68,15 +68,15 @@ var SHELL = [
   '/assets/pressing-catalog.css?v=4',
   '/assets/pressing-dashboard.css?v=11',
   '/assets/trade-workspaces.css?v=6',
-  '/assets/reservations.css?v=9',
+  '/assets/reservations.css?v=10',
   '/assets/hotel.css?v=47',
-  '/assets/hotel-language.js?v=1',
+  '/assets/hotel-language.js?v=2',
   '/assets/hotel-rates.js?v=1',
   '/assets/hotel-housekeeping.js?v=1',
   '/assets/hotel-folio.js?v=1',
   '/assets/hotel-channels.js?v=1',
-  '/assets/hotel.js?v=84',
-  '/assets/hotel-economat.js?v=10',
+  '/assets/hotel.js?v=85',
+  '/assets/hotel-economat.js?v=11',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
   '/assets/sold-insights.js?v=14',
@@ -92,7 +92,7 @@ var SHELL = [
   '/assets/agent-action-center.js?v=4',
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
-  '/assets/briefing.js?v=24',
+  '/assets/briefing.js?v=25',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
@@ -107,7 +107,7 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=7',
   '/assets/plan-catalog.js?v=1',
-  '/assets/interactive.js?v=67',
+  '/assets/interactive.js?v=68',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=16',
   '/assets/invoicing.css?v=10',
@@ -123,10 +123,10 @@ var SHELL = [
   '/assets/trade-workspace-schema.js?v=9',
   '/assets/trade-workspaces.js?v=12',
   '/assets/delivery-receivables.js?v=2',
-  '/assets/reservations.js?v=32',
-  '/assets/pressing-ops.js?v=11',
+  '/assets/reservations.js?v=33',
+  '/assets/pressing-ops.js?v=12',
   '/assets/pressing-catalog.js?v=10',
-  '/assets/pressing-dashboard.js?v=20',
+  '/assets/pressing-dashboard.js?v=21',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
@@ -156,8 +156,8 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
-  '/assets/sales-history.js?v=5',
-  '/assets/dateRange.js?v=98',
+  '/assets/sales-history.js?v=6',
+  '/assets/dateRange.js?v=99',
   '/assets/mobile-nav.js?v=9',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -189,8 +189,8 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
   '/assets/operations-ui.js?v=26',
-  '/assets/live-link.js?v=75',
-  '/assets/channel-sales.js?v=5',
+  '/assets/live-link.js?v=76',
+  '/assets/channel-sales.js?v=6',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
@@ -235,7 +235,7 @@ var SHELL = [
   '/assets/caisse-link.js?v=21',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
-  '/assets/serveur-lang.js?v=2',
+  '/assets/serveur-lang.js?v=3',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=6',
   '/assets/live-socket.js?v=4',
@@ -255,12 +255,12 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=20',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=63',
+  '/assets/caisse-lang.js?v=64',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
   '/assets/retail-balances.js?v=4',
-  '/assets/retail-sale-hold.js?v=3',
+  '/assets/retail-sale-hold.js?v=4',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
@@ -282,9 +282,9 @@ var SHELL = [
   '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
-  '/assets/clients-store.js?v=17',
+  '/assets/clients-store.js?v=18',
   '/assets/clients-book.js?v=34',
-  '/assets/clients-directory.js?v=25',
+  '/assets/clients-directory.js?v=26',
   '/assets/customer-retention.js?v=11',
   '/assets/menu-catalog.js?v=33',
   '/assets/stock-identity.js?v=2',
@@ -300,7 +300,7 @@ var SHELL = [
   '/assets/team/profile-ui.js?v=1',
   '/assets/team-hours.js?v=6',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=119',
+  '/assets/restaurant-menu-workspace.js?v=120',
   '/assets/menu-promos-dashboard.js?v=3',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=12',
@@ -319,10 +319,10 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=18',
+  '/assets/kitchen-print-queue.js?v=19',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=165',
+  '/assets/pos-dispatch.js?v=166',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -454,9 +454,9 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=12',
-  '/assets/pressing-caisse.js?v=60',
-  '/assets/pressing-caisse.css?v=60',
+  '/assets/pos-reprint.js?v=13',
+  '/assets/pressing-caisse.js?v=61',
+  '/assets/pressing-caisse.css?v=61',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

@@ -160,7 +160,7 @@
 
   /* Demandes des services : assets/hotel-economat-requests.js (+ .css),
    * chargé à la première visite de l'Économat plutôt que par la coquille. */
-  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=1';
+  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=2';
   var REQUESTS_CSS = 'assets/hotel-economat-requests.css?v=1';
   var requestsLoading = null;
   function loadRequests() {

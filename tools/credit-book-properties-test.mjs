@@ -30,9 +30,13 @@ const ok=r=>{assert.equal(r.status,200,JSON.stringify(r.body));return r.body;};
 const blank=()=>({verticals:{epicerie:{schema:1,device:'fixture',updatedAt:1,data:{v:2,carnet:[{id:'client',name:'TEST KIWI',hist:[]}],day:{}}}},commands:[],seq:0});
 const hist=d=>d.verticals.epicerie.data.carnet[0].hist;
 function append(d,id,type,cents){hist(d).push({id,type,amt:cents/100,label:'TEST KIWI',at:new Date(1792404000000+Number(id.replace(/\D/g,''))*1000).toISOString()});d.verticals.epicerie.updatedAt++;}
-function reset(){f.sql.exec('DELETE FROM store_docs; DELETE FROM doc_history;');}
+function reset(){f.sql.exec("DELETE FROM store_docs; DELETE FROM doc_history; DELETE FROM sales WHERE channel='credit-book'; DELETE FROM sale_audit WHERE action='credit-book-refund';");}
 async function sync(d,role){for(let i=0;i<10;i++){const r=await call(role,{data:d.doc,baseRev:d.rev});if(r.status===409){assert.equal(r.body.error,'stale');d.doc=merge(clone(d.doc),r.body.data);d.rev=r.body.rev;continue;}const b=ok(r);d.rev=b.rev;d.doc=b.data||d.doc;return;}assert.fail('sync did not converge');}
 async function pull(d,role){const b=ok(await call(role));if(b.data)d.doc=merge(clone(d.doc),b.data);d.rev=b.rev;}
+async function creditRefund(role,id,amount,extra={}) {
+ const r=await onRequestPost({env:f.env,request:new Request('https://kiwi.test/api/store',{method:'POST',headers:{Cookie:cookies[role]||'','Content-Type':'application/json'},body:JSON.stringify({merchant:f.merchant,feature:'verticalops',action:'credit-book-refund',clientId:'client',id,amountCents:amount,method:'transfer',...extra})})});
+ return {status:r.status,body:await r.json()};
+}
 const money=fc.integer({min:1,max:100000}),step=fc.record({device:fc.nat(2),kind:fc.constantFrom('debt','payment','advance','refund'),cents:money,online:fc.boolean(),retry:fc.boolean(),order:fc.nat(5)});
 try{
 await strict('two or three offline/online tills converge to the centime ledger sum; retries count each id once',fc.asyncProperty(fc.integer({min:2,max:3}),fc.array(step,{minLength:1,maxLength:35}),async(n,steps)=>{
@@ -56,7 +60,20 @@ await strict('racing first pushes return a conflict; merging and retrying retain
 await strict('independent full payments become an explicit advance; other customer debt stays intact',fc.property(money,money,(paid,owed)=>{const a=blank(),b=blank();append(a,'e0','debt',paid);append(a,'e1','pay',paid);append(b,'e0','debt',paid);append(b,'e2','pay',paid);const c=merge(a,b).verticals.epicerie.data.carnet[0];assert.equal(C(ep.balanceOf(c)),-paid);assert.match(ep.balTxt(ep.balanceOf(c)),/^Avance /);ep.CARNET.length=0;ep.CARNET.push(c,{hist:[{type:'debt',amt:owed/100}]});assert.equal(C(ep.totalCredit()),owed);}));
 await strict('foreign owner, foreign paired till, anonymous and forged credentials cannot read or write this merchant',fc.asyncProperty(money,fc.constantFrom('foreignOwner','foreignTill','none','forged'),async(cents,role)=>{reset();const d=blank();append(d,'e0','debt',cents);ok(await call('owner',{data:d}));const before=f.sql.prepare('SELECT * FROM store_docs').all();const get=await call(role);assert.ok(get.status===401||get.body.merchant!==f.merchant);assert.ok(!JSON.stringify(get.body).includes('e0'));const post=await call(role,{data:blank(),baseRev:1});assert.ok([401,403].includes(post.status));assert.deepEqual(f.sql.prepare('SELECT * FROM store_docs').all(),before);}));
 await strict('owner and each of three paired devices can write and read their own credit book',fc.asyncProperty(money,fc.constantFrom('owner',0,1,2),async(cents,role)=>{reset();const d=blank();append(d,'e0','debt',cents);ok(await call(role,{data:d}));assert.equal(C(ep.balanceOf(ok(await call(role)).data.verticals.epicerie.data.carnet[0])),cents);}));
-await knownIssue('CRB-1','two offline devices can refund the same advance twice via debt counter-entries; no authenticated refund operation bounds total returned',fc.asyncProperty(money,async paid=>{reset();const d=blank();append(d,'e0','pay',paid);ok(await call(0,{data:d}));const ds=[{doc:clone(d),rev:1},{doc:clone(d),rev:1}];for(let i=0;i<2;i++){append(ds[i].doc,'e'+(i+1),'debt',paid);hist(ds[i].doc).at(-1).label='TEST KIWI refund';await sync(ds[i],i);}const returned=hist(ok(await call('owner')).data).filter(h=>h.label==='TEST KIWI refund').reduce((n,h)=>n+C(h.amt),0);return returned<=paid;}),[[1]]);
-await knownIssue('CRB-2','operator without owner session or paired till may write the credit book through the shared tenant policy',fc.asyncProperty(money,async cents=>{reset();const d=blank();append(d,'e0','debt',cents);const r=await call('operator',{data:d});return r.status===401||r.status===403;}),[[1]]);
+await strict('CRB-1 · legacy offline refund counterentries are refused; real owner refunds cap the advance and replay once',fc.asyncProperty(money,async paid=>{reset();const d=blank();append(d,'e0','pay',paid);ok(await call(0,{data:d}));const ds=[{doc:clone(d),rev:1},{doc:clone(d),rev:1}];for(let i=0;i<2;i++){append(ds[i].doc,'e'+(i+1),'debt',paid);hist(ds[i].doc).at(-1).label='TEST KIWI refund';assert.equal((await call(i,{data:ds[i].doc,baseRev:1})).status,409);}const refund=async id=>{const r=await onRequestPost({env:f.env,request:new Request('https://kiwi.test/api/store',{method:'POST',headers:{Cookie:cookies.owner,'Content-Type':'application/json'},body:JSON.stringify({merchant:f.merchant,feature:'verticalops',action:'credit-book-refund',clientId:'client',id,amountCents:paid,method:'transfer'})})});return {status:r.status,body:await r.json()};};const rs=await Promise.all([refund('refund-device-a'),refund('refund-device-b')]);assert.equal(rs.filter(r=>r.status===200).length,1);const id=rs[0].status===200?'refund-device-a':'refund-device-b';ok(await refund(id));const hs=hist(ok(await call('owner')).data);assert.equal(hs.filter(h=>h.kind==='advance-refund').reduce((n,h)=>n+C(h.amt),0),paid);assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM sales WHERE channel='credit-book'").get().n,1);}),[[1]]);
+await strict('advance refunds require the owner, exact available cents and immutable history',fc.asyncProperty(money,async paid=>{
+ reset();const d=blank();append(d,'e0','pay',paid);ok(await call(0,{data:d}));
+ for(const role of ['operator',0,'foreignOwner','none'])assert.ok([401,403].includes((await creditRefund(role,'auth-refund',paid)).status));
+ assert.equal((await creditRefund('owner','too-much-refund',paid+1)).status,409);
+ assert.equal((await creditRefund('owner','fraction-refund',paid+.5)).status,400);
+ ok(await creditRefund('owner','owner-refund',paid));
+ assert.equal((await creditRefund('owner','owner-refund',paid+1)).status,409);
+ const b=ok(await call('owner')),erase=clone(b.data);hist(erase).splice(0,1);
+ assert.equal((await call('owner',{data:erase,baseRev:b.rev})).status,409);
+ const tamper=clone(b.data);hist(tamper).at(-1).amt=0;
+ assert.equal((await call(0,{data:tamper,baseRev:b.rev})).status,409);
+ assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM sale_audit WHERE action='credit-book-refund'").get().n,1);
+}));
+await strict('CRB-2 · operator without owner session or paired till may write the credit book through the shared tenant policy',fc.asyncProperty(money,async cents=>{reset();const d=blank();append(d,'e0','debt',cents);const r=await call('operator',{data:d});return r.status===401||r.status===403;}),[[1]]);
 }finally{f.close();}
 console.log(`credit-book-properties · ${passed} passed, ${failed} failed, ${known} known; seed=${SEED}; runs=${RUNS}`);if(failed)process.exit(1);

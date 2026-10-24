@@ -174,6 +174,7 @@ async function requestFlow(t, cell, locale, viewport) {
   const handed = db.one('SELECT fulfilment_method, delivery_started_ts FROM hotel_internal_requests WHERE merchant = ? AND id = ?', merchant, id);
   assert.equal(handed.fulfilment_method, 'delivery');
   assert.ok(Number(handed.delivery_started_ts) > 0);
+  assert.deepEqual(holds(), [{ item_id:'matrix-linen-king', qty_milli:2000 }, { item_id:'matrix-towels', qty_milli:6000 }], 'handed-over stock stays reserved until receipt');
   assert.equal(balance('matrix-towels', 'loc-housekeeping'), 0, 'custody stays with the storeroom until receipt');
 
   t.step('housekeeping counts what arrived and confirms receipt');

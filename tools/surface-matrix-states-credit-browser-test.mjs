@@ -14,6 +14,18 @@ try {
       // coverage: surface=caisse-boutique locale=fr viewport=tablet
       // coverage: surface=caisse-boutique locale=en viewport=tablet
       // coverage: surface=caisse-boutique locale=ar viewport=tablet
+      // coverage: surface=boutique-checkout locale=fr viewport=phone
+      // coverage: surface=boutique-checkout locale=fr viewport=tablet
+      // coverage: surface=boutique-checkout locale=en viewport=phone
+      // coverage: surface=boutique-checkout locale=en viewport=tablet
+      // coverage: surface=boutique-checkout locale=ar viewport=phone
+      // coverage: surface=boutique-checkout locale=ar viewport=tablet
+      // coverage: surface=boutique-returns locale=fr viewport=phone
+      // coverage: surface=boutique-returns locale=fr viewport=tablet
+      // coverage: surface=boutique-returns locale=en viewport=phone
+      // coverage: surface=boutique-returns locale=en viewport=tablet
+      // coverage: surface=boutique-returns locale=ar viewport=phone
+      // coverage: surface=boutique-returns locale=ar viewport=tablet
       const { page } = await tills.open(t, locale, viewport);
       t.step('add an item, choose cash, confirm checkout');
       await cash(page);

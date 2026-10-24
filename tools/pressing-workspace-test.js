@@ -150,7 +150,7 @@ context.KiwiPressingOps.replace(orders, {
   total: (o) => o.id === 'P-1' ? 100 : o.id === 'P-2' ? 80 : 50,
 });
 const s = context.KiwiPressingOps.summary();
-ok(s.pieces === 3 && s.treating === 1 && s.ready === 2, 'summary derives auto-ready and preserves future treating');
+ok(s.pieces === 3 && s.treating === 2 && s.ready === 1, 'summary retains overdue treatment and only counts explicit readiness');
 ok(s.late === 1, 'late uncollected count is derived from promised date');
 ok(s.due === 200, 'outstanding balance is derived from totals and payments');
 ok(s.racks === 1 && s.unnotified === 1, 'rack and notification queues stay in sync');

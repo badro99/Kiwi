@@ -1,9 +1,11 @@
+import { ticketActor } from '../tickets/_access.js';
 const notFound = () => new Response('Not found', {
   status: 404,
   headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' },
 });
 
-export async function onRequestGet({ params, env }) {
+export async function onRequestGet({ request, params, env }) {
+  if (!(await ticketActor(request, env))) return notFound();
   if (!env.MEDIA) return notFound();
   const raw = Array.isArray(params.key) ? params.key.join('/') : String(params.key || '');
   let key;

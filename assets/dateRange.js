@@ -2139,7 +2139,7 @@
     const topTender = topKey(byTender);
     return {
       from, to, count: rows.length, revenue, gross, refunds, collected, receivable,
-      basket: rows.length ? gross / rows.length : 0,
+      basket: rows.length ? revenue / rows.length : 0,
       peakHour: peakHour == null ? null : +peakHour,
       peakRevenue: peakHour == null ? 0 : byHour[peakHour],
       activeHours: Object.keys(byHour).length,

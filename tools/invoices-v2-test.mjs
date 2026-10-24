@@ -451,7 +451,7 @@ console.log('■ Série F · caisse et saisie ne se croisent jamais');
   };
   // Un magasin qui a déjà trois factures de caisse et AUCUNE ligne dans invoice_series.
   const old = db.prepare('INSERT INTO sale_invoices (merchant, seq, number, sale_id, customer, snapshot, created_ts) VALUES (?,?,?,?,?,?,?)');
-  for (let i = 1; i <= 3; i++) old.run(SHOP, i, `F-2025-000${i}`, `old-${i}`, null, '{}', now);
+  for (let i = 1; i <= 3; i++) old.run(SHOP, i, `F-${YEAR}-000${i}`, `old-${i}`, null, '{}', now);
   ok('point de départ : invoice_series est vide', db.prepare('SELECT COUNT(*) n FROM invoice_series').get().n === 0);
   const m1 = await manual();
   ok('l’historique de caisse est respecté : la première facture saisie est F-…-0004', m1.number === num('F', 4) && m1.seq === 4, m1.number);

@@ -127,13 +127,11 @@ async function writeCursor(env, merchant, since, after) {
 export function planReplay(data, links, orders) {
   const existing = new Set((data.moves || []).map((m) => String(m.id)));
   const byId = new Map((data.variants || []).map((v) => [v.id, v]));
-  /* Le stock que Kiwi montre aujourd'hui (data matérialisé), consommé ligne
-     après ligne, de la plus ancienne commande à la plus récente. Vu sur Maison 121
-     le 21 octobre : 16 variantes à 0 chez Kiwi avaient une commande en ligne,
-     la pièce était donc déjà sortie de Kiwi (passée en caisse, ou corrigée à la
-     main). La retirer encore aurait mis le stock sous zéro et fait disparaître
-     le prochain réassort. On ne retire que ce que Kiwi a encore ; le reste est
-     compté dans `short` et dit à l'écran. */
+  /* Every external piece is an explicit negative ledger movement. Sellable
+     stock stays floored at zero by catalog.materialize, while the signed base
+     and movements retain the deficit through restocks and compaction. Only a
+     later physical count resolves it. Stable order-line IDs prevent retries
+     from deducting twice; a shortage is never evidence of a prior sale. */
   const left = new Map((data.variants || []).map((v) => [v.id, Math.max(0, Math.round(Number(v.stock) || 0))]));
   const plan = { orders: 0, skippedOrders: 0, apply: [], settle: [], counted: [], already: 0, unmatched: 0, pieces: 0, short: 0, shortLines: 0 };
   for (const o of orders || []) {
@@ -155,18 +153,9 @@ export function planReplay(data, links, orders) {
       const have = left.get(kiwiVariantId) || 0;
       const take = Math.min(qty, have);
       if (take < qty) { plan.short += qty - take; plan.shortLines++; }
-      if (!take) {
-        /* Rien à retirer : la ligne est « réglée » quand même. Un mouvement à zéro
-           garde sa trace dans le journal, pour qu'un rattrapage fait après un
-           réassort ne consomme pas la nouvelle marchandise pour cette vieille commande. */
-        plan.settle.push({ ...row, qty: 0 });
-        existing.add(moveId);
-        continue;
-      }
       left.set(kiwiVariantId, have - take);
-      row.qty = take;
       plan.apply.push(row);
-      plan.pieces += take;
+      plan.pieces += qty;
       existing.add(moveId);
     }
   }

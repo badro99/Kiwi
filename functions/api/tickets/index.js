@@ -1,3 +1,4 @@
+import { ticketActor, forbidden, ticketInsert } from './_access.js';
 import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
   json, purgeExpired, schemaError, sweepOrphanMedia, ticketNumber,
@@ -29,7 +30,8 @@ async function readTicketRows(env) {
   }
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
+  if (!(await ticketActor(request, env))) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     await purgeExpired(env);
@@ -142,6 +144,8 @@ function replayed(row) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const actor = await ticketActor(request, env);
+  if (!actor) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const declared = Number(request.headers.get('Content-Length') || 0);
   if (declared && declared > MAX_TOTAL_IMAGE_BYTES + 1024 * 1024) {
@@ -196,11 +200,11 @@ export async function onRequestPost({ request, env }) {
     ];
     if (clientKey) {
       try {
-        inserted = await env.DB.prepare(
+        inserted = await ticketInsert(env, env.DB.prepare(
           `INSERT INTO kiwi_tickets
            (body, status, created_ts, updated_ts, kind, area, subkind, money_at_risk, client_key)
            VALUES (?, 'problem', ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(...values, clientKey).run();
+        ).bind(...values, clientKey), actor);
       } catch (error) {
         /* Deux envois simultanés : le second perd l'index unique et rend le premier. */
         if (/UNIQUE constraint failed.*client_key/i.test(String((error && error.message) || ''))) {
@@ -213,18 +217,18 @@ export async function onRequestPost({ request, env }) {
     }
     if (!inserted) {
       try {
-        inserted = await env.DB.prepare(
+        inserted = await ticketInsert(env, env.DB.prepare(
           `INSERT INTO kiwi_tickets
            (body, status, created_ts, updated_ts, kind, area, subkind, money_at_risk)
            VALUES (?, 'problem', ?, ?, ?, ?, ?, ?)`
-        ).bind(...values).run();
+        ).bind(...values), actor);
       } catch (error) {
         if (!schemaError(error)) throw error;
         classificationStored = false;
-        inserted = await env.DB.prepare(
+        inserted = await ticketInsert(env, env.DB.prepare(
           `INSERT INTO kiwi_tickets (body, status, created_ts, updated_ts)
            VALUES (?, 'problem', ?, ?)`
-        ).bind(body, now, now).run();
+        ).bind(body, now, now), actor);
       }
     }
     ticketId = Number(inserted.meta && inserted.meta.last_row_id);

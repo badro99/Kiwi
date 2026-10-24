@@ -517,6 +517,7 @@
        d'un verdict qui ne viendra plus. Personne d'autre que l'humain devant
        l'imprimante ne peut décider qu'il manque vraiment du papier. */
     q.forEach(function (job) {
+      if (job.uncertain) record('staff-reprint-confirmed', job, { error: job.lastError || '' });
       job.nextAt = 0; job.uncertain = false; job.relayId = ''; job.awaitingUntil = 0;
     });
     writeQueue(q);
@@ -654,9 +655,9 @@
   window.addEventListener('kiwi:printer-relay-status', function (e) {
     try { relayVerdict((e && e.detail) || {}); } catch (_) {}
   });
-  window.addEventListener('online', retryNow);
-  window.addEventListener('kiwi:printer-config', retryNow);
-  window.addEventListener('kiwi:station-printers-config', retryNow);
+  window.addEventListener('online', flush);
+  window.addEventListener('kiwi:printer-config', flush);
+  window.addEventListener('kiwi:station-printers-config', flush);
   window.addEventListener('storage', function (e) {
     if (e.key === HUB_KEY || (e.key && e.key.indexOf(QUEUE_PREFIX) === 0)) { emit(); flush(); }
   });

@@ -123,6 +123,12 @@ try {
         // coverage: surface=dashboard locale=fr viewport=tablet
         // coverage: surface=dashboard locale=en viewport=tablet
         // coverage: surface=dashboard locale=ar viewport=tablet
+        // coverage: surface=shopify-recovery locale=fr viewport=phone
+        // coverage: surface=shopify-recovery locale=fr viewport=tablet
+        // coverage: surface=shopify-recovery locale=en viewport=phone
+        // coverage: surface=shopify-recovery locale=en viewport=tablet
+        // coverage: surface=shopify-recovery locale=ar viewport=phone
+        // coverage: surface=shopify-recovery locale=ar viewport=tablet
         const cell = await connector.open(t, locale, viewport);
         const { page, calls, s } = cell;
         t.step('inspect location setup and exact SKU mapping');

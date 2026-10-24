@@ -109,8 +109,11 @@ async function staffBooking(t, locale, viewport) {
   await page.type('[data-service-row] [name=name]', 'Matrix service');
   await tap(page, '[data-kr-add-resource]');
   await page.type('[data-resource-row] [name=name]', 'Matrix resource');
+  await page.waitForSelector('[data-service-row] [name=serviceCapacity]', wait);
+  await page.$eval('[data-service-row] [name=serviceCapacity]', e => e.value='3');
   await tap(page, '[data-kr-settings] [type=submit]');
   await state(t, page, '.kr-list', locale, 'dashboard-reservations: configured empty list');
+  assert.equal(await page.evaluate(() => window.KiwiReservations.get().services[0].capacity),3);
   const before = await page.evaluate(() => window.KiwiReservations.get().bookings.length);
   await tap(page, '[data-kr-new]');
   await state(t, page, '[data-kr-form]', locale, 'dashboard-reservations: new staff booking');

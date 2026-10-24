@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "approvalContract": "A change needs a named reviewer, date, meaning and approved FR/EN/AR wording in the same change. Review role and money semantics before literal parity. Owner or manager resolves disputed terminology. Approval covers only the listed terms, never the entire interface. A booking is not a payment; fixed is not tested; departure is not settlement. Do not claim native-speaker certification without that review.",
+  "terms": [
+    {
+      "id": "hotel:Séjour",
+      "surface": "hotel",
+      "key": "Séjour",
+      "fr": "Séjour",
+      "en": "Stay",
+      "ar": "إقامة",
+      "meaning": "One continuous guest stay, not a payment or reservation request.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "hotel:Réservation",
+      "surface": "hotel",
+      "key": "Réservation",
+      "fr": "Réservation",
+      "en": "Booking",
+      "ar": "حجز",
+      "meaning": "A booking, not proof of payment or money received.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "hotel:Taxe de séjour",
+      "surface": "hotel",
+      "key": "Taxe de séjour",
+      "fr": "Taxe de séjour",
+      "en": "Tourist tax",
+      "ar": "ضريبة الإقامة",
+      "meaning": "The tourist tax charged for accommodation, not room revenue.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "hotel:Arrivées",
+      "surface": "hotel",
+      "key": "Arrivées",
+      "fr": "Arrivées",
+      "en": "Arrivals",
+      "ar": "الوصول",
+      "meaning": "Expected or recorded arrivals; not evidence that payment was received.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "hotel:Départs",
+      "surface": "hotel",
+      "key": "Départs",
+      "fr": "Départs",
+      "en": "Departures",
+      "ar": "المغادرة",
+      "meaning": "Guest departures; not automatic settlement of the guest account.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "tickets:action.fixed",
+      "surface": "tickets",
+      "key": "action.fixed",
+      "fr": "Corrigé",
+      "en": "Fixed",
+      "ar": "تم الإصلاح",
+      "meaning": "Implementation is ready for testing; this does not mean the incident is verified or closed.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "tickets:action.tested",
+      "surface": "tickets",
+      "key": "action.tested",
+      "fr": "Testé",
+      "en": "Tested",
+      "ar": "تم الاختبار",
+      "meaning": "An authorized operator confirms the retest succeeded and closes the incident.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "tickets:action.failed",
+      "surface": "tickets",
+      "key": "action.failed",
+      "fr": "Test échoué",
+      "en": "Test failed",
+      "ar": "فشل الاختبار",
+      "meaning": "A retest failed; preserve the followup and reopen the incident.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "tickets:money.label",
+      "surface": "tickets",
+      "key": "money.label",
+      "fr": "Argent en jeu",
+      "en": "Money at risk",
+      "ar": "المال في خطر",
+      "meaning": "Money may be at risk; this is a warning, not proof of a monetary loss.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    },
+    {
+      "id": "tickets:common.retry",
+      "surface": "tickets",
+      "key": "common.retry",
+      "fr": "Réessayer",
+      "en": "Try again",
+      "ar": "أعد المحاولة",
+      "meaning": "Retry the operation without silently creating another real change.",
+      "review": {
+        "by": "GPT (Codex), Wave D platform",
+        "date": "2026-10-24",
+        "status": "approved",
+        "scope": "Technical semantic review of these terms, not a native-speaker certification of every operational sentence."
+      }
+    }
+  ]
+}

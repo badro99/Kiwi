@@ -75,7 +75,7 @@ const cases = [
     f.sale({ cents: 4321 }); f.sale({ cents: 8888, voidTs: evening + 1 });
     f.sale({ cents: -7777, voidTs: evening + 1 }); f.sale({ cents: 0 });
     const { data } = await f.get();
-    assert.equal(total(data), 4321); assert.equal(data.days[0].count, 1); assert.equal(data.days[0].refundCount, 0);
+    assert.equal(total(data), 4321); assert.equal(data.days[0].count, 2); assert.equal(data.days[0].refundCount, 0);
     assert.deepEqual(data.days[0].whole, { cash: 4321 }); assert.deepEqual(data.days[0].hours, { 20: 4321 });
   }],
   ['Authoritative and legacy centimes', async (f) => {

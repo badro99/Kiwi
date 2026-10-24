@@ -59,8 +59,8 @@ const storage = new Map([[key, JSON.stringify(Array.from({ length: 60 }, (_, i) 
 const { clients } = sandbox(() => ({ ok: false, status: 409, json: async () => ({ error: 'reward-not-ready' }) }), storage);
 for (let i = 0; i < 4; i++) { clients.sync(); await settle(); }
 assert.equal(JSON.parse(storage.get(key)).length, 0);
-assert.equal(clients.refusedRedemptions(book).length, 50, 'bounded history');
-assert.equal(new Set(clients.refusedRedemptions(book).map(e => e.ref)).size, 50, 'no duplicate refusals');
+assert.equal(clients.refusedRedemptions(book).length, 60, 'all refusal records remain available');
+assert.equal(new Set(clients.refusedRedemptions(book).map(e => e.ref)).size, 60, 'no duplicate refusals');
 /* The till that gave the discount is told at once. */
 {
   const toasts = [];
@@ -114,4 +114,4 @@ assert.equal(new Set(clients.refusedRedemptions(book).map(e => e.ref)).size, 50,
   assert.equal(clients.refusedRedemptions(book).length, 0);
   checks++;
 }
-console.log(`PASS: ${checks} response scenarios, persistence, book isolation and 50-entry cap`);
+console.log(`PASS: ${checks} response scenarios, persistence, book isolation and complete local refusal history`);

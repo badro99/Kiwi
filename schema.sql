@@ -1510,7 +1510,7 @@ CREATE TABLE IF NOT EXISTS sale_invoices (
   snapshot   TEXT NOT NULL,
   created_ts INTEGER NOT NULL,
   PRIMARY KEY (merchant, sale_id),
-  UNIQUE (merchant, seq)
+  UNIQUE (merchant, number)
 );
 CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq);
 
@@ -1528,7 +1528,7 @@ CREATE TABLE IF NOT EXISTS invoice_series (
   number     TEXT NOT NULL,
   doc_ref    TEXT,
   created_ts INTEGER NOT NULL,
-  PRIMARY KEY (merchant, prefix, seq)
+  PRIMARY KEY (merchant, prefix, number)
 );
 CREATE TABLE IF NOT EXISTS invoice_docs (
   id                TEXT PRIMARY KEY,
@@ -2233,3 +2233,10 @@ CREATE TABLE IF NOT EXISTS game_scores (
   updated_ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_game_scores_month ON game_scores (merchant, month);
+
+-- Durable reward refusals, independent of each device cache.
+CREATE TABLE IF NOT EXISTS client_reward_refusals (
+  merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
+  error TEXT NOT NULL, created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, ref)
+);

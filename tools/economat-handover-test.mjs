@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createHotelRequestHarness, MERCHANT } from './fixtures/hotel-request-db.mjs';
 
-const EXPECTED = 4;
+const EXPECTED = 6;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) { await fn(); checks += 1; process.stdout.write(`  ok ${checks} - ${name}\n`); }
@@ -29,5 +29,25 @@ await check('the first delivery handover timestamp and method are projected with
 await check('preparation and handover leave central stock untouched', () => assert.equal(h.rows("SELECT * FROM inventory_movements WHERE merchant = ?", MERCHANT).length, before));
 const regression = await h.post({ action: 'prepare', merchant: MERCHANT, id: 'handover', revision: 6, idempotencyKey: 'handover:regress', data: { fulfilmentMethod: 'delivery', handover: true, lines: [{ itemId: 'cola', qtyPrepared: 5 }] } }, await h.employeeCookie('econ-a'));
 await check('a lower cumulative handover quantity is refused', () => assert.equal(regression.status, 422));
-assert.equal(checks, EXPECTED, `expected ${EXPECTED} executed checks, got ${checks}`);
 
+
+
+await check('device loss and legacy pickup without a timestamp cannot release held stock through cancellation', async () => {
+  h.raw.prepare("UPDATE hotel_internal_requests SET fulfilment_method='pickup', delivery_started_ts=NULL WHERE id='handover'").run();
+  const r = await h.post({action:'cancel',merchant:MERCHANT,id:'handover',revision:6,idempotencyKey:'lost-device:cancel'});
+  assert.equal(r.status,409); assert.equal((await r.json()).error,'handover-reconciliation-required');
+  const recovered = await (await h.get('handover')).json();
+  assert.equal(recovered.lines[0].qtyPrepared,6);
+  assert.equal(recovered.lines[0].qtyReceived,0);
+});
+
+await check('another device confirms the recovered count and a lost-response retry moves stock once', async () => {
+  const input={action:'confirm',merchant:MERCHANT,id:'handover',revision:6,idempotencyKey:'lost-device:confirm',data:{lines:[{itemId:'cola',qtyReceived:6}]}};
+  const first=await h.post(input); assert.equal(first.status,200);
+  const count=h.rows("SELECT * FROM inventory_movements WHERE merchant = ?",MERCHANT).length;
+  const retry=await h.post(input);assert.equal(retry.status,200);
+  assert.equal(h.rows("SELECT * FROM inventory_movements WHERE merchant = ?",MERCHANT).length,count);
+  assert.equal(h.balance('cola','u-bar-rooftop'),6);
+  assert.equal(h.one('SELECT COUNT(*) n FROM inventory_request_reservations').n,0);
+});
+assert.equal(checks, EXPECTED);

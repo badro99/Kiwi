@@ -154,7 +154,6 @@ export async function runMorningPush(env, now = Date.now()) {
     let totals;
     try { totals = await yesterdayTotals(env, merchant, now); } catch (_) { skip('sales-unavailable'); continue; }
     if (!totals.count && !totals.cents) { skip('no-sales'); continue; }
-    if (totals.cents <= 0) { skip('no-positive-total'); continue; }
     let done;
     try {
       done = await env.DB.prepare('SELECT 1 AS x FROM push_morning_sent WHERE merchant = ? AND day = ?').bind(merchant, totals.day).first();

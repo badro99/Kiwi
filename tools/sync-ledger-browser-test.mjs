@@ -630,7 +630,8 @@ await scenario('restaurant · cash, card, split, refund, void and an offline sal
   const dash = owners.resto.page;
   await openDashboard(t, dash, RESTO);
   const home = await dashHome(dash, want.tx);
-  compare('dashboard home', { tx: home.tx, basket: home.basket, net: home.net }, want);
+  // Wave D DM-1: home uses net per sale; till and day-report keep their own metrics.
+  compare('dashboard home', { tx: home.tx, basket: home.basket, net: home.net }, { ...want, basket: want.tx ? Math.round(want.net / want.tx) : 0 });
   eqCents(home.hero, want.net, 'dashboard home · revenue hero');
   eqCents(home.mix, want.net, 'dashboard home · payment ring (MAD encaissé)');
   { const leaks = await demoLeaks(dash); check(!leaks.length, 'dashboard home · no demo figure on a real store', leaks.join(', ')); }

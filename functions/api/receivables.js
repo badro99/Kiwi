@@ -44,8 +44,8 @@ export async function ensureCollectionSchema(db) {
     merchant TEXT NOT NULL, collection_sale_id TEXT NOT NULL, sale_id TEXT NOT NULL,
     method TEXT NOT NULL, amount_cents INTEGER NOT NULL, ts INTEGER NOT NULL,
     collected_by_id TEXT, collected_by_name TEXT,
-    PRIMARY KEY (merchant, collection_sale_id))`).run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS delivery_collections_sale ON delivery_collections (merchant, sale_id)').run();
+    PRIMARY KEY (merchant, collection_sale_id))`).bind().run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS delivery_collections_sale ON delivery_collections (merchant, sale_id)').bind().run();
 }
 
 /* Ce que la vente devait en livraison : ses parts « delivery » quand le ticket
@@ -65,7 +65,9 @@ export function owedCents(row) {
 export const dueCents = owedCents;
 
 async function readDeliveries(db, merchant, saleId) {
-  const sql = (withParts, withReceipts) => `SELECT s.id, s.amount, s.amount_cents, s.method, s.label, s.ref, s.ts
+  const sql = (withParts, withReceipts) => `SELECT s.id, s.amount, s.amount_cents, s.method, s.label, s.ref, s.ts,
+      EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'delivery-writeoff') AS delivery_written_off,
+      EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund') AS delivery_returned
       ${withParts ? ', s.payment_parts' : ''}${withReceipts ? ', r.gross_ticket_cents' : ''}
     FROM sales s ${withReceipts ? 'LEFT JOIN sale_receipts r ON r.merchant = s.merchant AND r.sale_id = s.id' : ''}
     WHERE s.merchant = ? AND s.void_ts IS NULL ${saleId ? 'AND s.id = ?' : ''}
@@ -99,12 +101,12 @@ async function readCollections(db, merchant) {
 }
 
 function view(row, collections) {
-  const owed = owedCents(row);
+  const owed = row.delivery_written_off ? 0 : owedCents(row);
   const got = (collections || []).reduce((n, c) => n + c.amountCents, 0);
   const last = collections && collections[collections.length - 1];
   return {
     saleId: String(row.id), ref: String(row.ref || ''), label: String(row.label || ''), ts: Number(row.ts) || 0,
-    owedCents: owed, dueCents: Math.max(0, owed - got),
+    owedCents: owed, dueCents: Math.max(0, owed - got), needsReview: !!row.delivery_returned && !row.delivery_written_off,
     collections: collections || [],
     collected: last ? { method: last.method, amountCents: got, ts: last.ts } : null,
   };
@@ -130,7 +132,7 @@ async function remainingFor(db, merchant, saleId) {
   if (!row) return 0;
   const got = await db.prepare('SELECT COALESCE(SUM(amount_cents), 0) AS c FROM delivery_collections WHERE merchant = ? AND sale_id = ?')
     .bind(merchant, saleId).first();
-  return Math.max(0, owedCents(row) - Number(got && got.c || 0));
+  return row.delivery_written_off ? 0 : Math.max(0, owedCents(row) - Number(got && got.c || 0));
 }
 
 function saleBody(row) {
@@ -172,7 +174,8 @@ export async function onRequestPost({ request, env }) {
 
   const row = (await readDeliveries(env.DB, merchant, saleId))[0];
   if (!row) return json({ error: 'not-a-delivery' }, 404);
-  const owed = owedCents(row);
+  if (row.delivery_returned && !row.delivery_written_off) return json({ error: 'not-a-delivery', needsReview: true }, 409);
+  const owed = row.delivery_written_off ? 0 : owedCents(row);
   const before = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents), 0) AS c FROM delivery_collections WHERE merchant = ? AND sale_id = ?')
     .bind(merchant, saleId).first();
   const remaining = owed - Number(before && before.c || 0);
@@ -206,7 +209,8 @@ export async function onRequestPost({ request, env }) {
           (merchant, collection_sale_id, sale_id, method, amount_cents, ts, collected_by_id, collected_by_name)
         SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE ? <= ? - COALESCE((SELECT SUM(amount_cents) FROM delivery_collections
           WHERE merchant = ? AND sale_id = ?), 0)
-          AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL)
+          AND EXISTS (SELECT 1 FROM sales s WHERE merchant = ? AND id = ? AND void_ts IS NULL
+            AND NOT EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action IN ('refund', 'delivery-writeoff')))
         ON CONFLICT DO NOTHING`)
         .bind(merchant, collectionId, saleId, method, amount, now, byId || null, byName || null, amount, owed, merchant, saleId, merchant, saleId),
       /* INSERT simple, jamais OR IGNORE : sales.id est unique pour TOUS les

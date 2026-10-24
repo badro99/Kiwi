@@ -174,7 +174,7 @@ textarea::placeholder { color: var(--n-500); }
 .composer-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--ticket-line); }
 .cancel-button { min-height: 44px; padding: 0 18px; border: 1px solid var(--n-300); border-radius: 999px; font-weight: 500; }
 .publish-button { min-width: 152px; }
-.failed-submit { min-width: 220px; background: var(--danger); }
+.failed-submit { min-width: 220px; background: color-mix(in srgb, var(--danger) 90%, var(--ink)); }
 .failed-submit:hover { background: color-mix(in srgb, var(--danger) 88%, black); }
 
 .image-copy-panel { text-align: center; }

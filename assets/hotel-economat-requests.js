@@ -33,12 +33,12 @@
       resApproved:'Accorder', resReduced:'Réduire', resRefused:'Refuser', resSubstituted:'Substituer', substitute:'Article de remplacement', substituteUnit:'Unité', reason:'Motif', reasonPh:'Rupture, format indisponible…',
       review:'Valider et réserver le stock', reviewHint:'La validation réserve le stock à l’économat : une autre demande ne peut plus le prendre.', reviewed:'Demande validée, stock réservé', insufficient:'Stock insuffisant à l’économat : rien n’a été réservé. Réduisez ou substituez.', badSubstitute:'Choisissez l’article, l’unité et le motif de la substitution.', badReduce:'Une quantité réduite doit rester entre zéro et la quantité demandée.',
       accept:'Accepter les changements', acceptHint:'L’économat a modifié la demande. Le service accepte avant la préparation.', accepted:'Changements acceptés',
-      method:'Remise', pickup:'Retrait à l’économat', delivery:'Livraison au service', handover:'Remettre au service', prepareHint:'Indiquez ce qui part réellement. La garde reste à l’économat jusqu’à la réception.', handedOver:'Remise enregistrée, en attente de réception',
+      method:'Remise', pickup:'Retrait à l’économat', delivery:'Livraison au service', handover:'Remettre au service', prepareHint:'Indiquez ce qui part réellement. La garde reste à l’économat jusqu’à la réception.', handedOver:'Remise enregistrée. Après une perte de connexion, rouvrez cette demande pour compter et confirmer la réception. En cas d’écart, avertissez le responsable.',
       confirm:'Confirmer la réception', confirmHint:'Comptez ce qui est arrivé. La confirmation transfère la garde au service.', confirmed:'Réception confirmée, garde transférée', badReceived:'Quantité reçue invalide.',
       dispute:'Signaler un écart', disputed:'Écart signalé', cancelReq:'Annuler la demande', cancelled:'Demande annulée', submit:'Envoyer à l’économat', submitted:'Demande envoyée',
       custody:'Garde', custodyEco:'À l’économat', custodyService:'Au service', trail:'Historique', stale:'La demande a changé entre-temps : elle est rechargée.', failed:'Action refusée', forbidden:'Votre rôle ne permet pas cette étape.', sideConfirm:'La réception est confirmée par l’économat dans cet hôtel.',
       lines:'{n} article(s)', by:'par', ref:'N° {r}', decision:'Décision', replaced:'Remplacé par',
-      label:{ draft:'Brouillon', submitted:'Envoyée', 'under-review':'En validation', 'changes-proposed':'Changements proposés', approved:'Validée', preparing:'En préparation', ready:'Prête à remettre', 'out-for-delivery':'En livraison', 'partially-received':'Reçue en partie', received:'Reçue', rejected:'Refusée', cancelled:'Annulée', disputed:'Écart signalé' },
+      label:{ draft:'Brouillon', submitted:'Envoyée', 'under-review':'En validation', 'changes-proposed':'Changements proposés', approved:'Validée', preparing:'En préparation', ready:'Prête à remettre', 'out-for-delivery':'Remise, réception attendue', 'partially-received':'Reçue en partie', received:'Reçue', rejected:'Refusée', cancelled:'Annulée', disputed:'Écart signalé' },
       event:{ created:'Créée', submit:'Envoyée', review:'Validée, stock réservé', accept:'Changements acceptés', prepare:'Préparée et remise', confirm:'Réception confirmée, garde transférée', dispute:'Écart signalé', cancel:'Annulée' }
     },
     en: {
@@ -52,12 +52,12 @@
       resApproved:'Approve', resReduced:'Reduce', resRefused:'Refuse', resSubstituted:'Substitute', substitute:'Replacement item', substituteUnit:'Unit', reason:'Reason', reasonPh:'Out of stock, size unavailable…',
       review:'Approve and reserve stock', reviewHint:'Approval reserves the stock in the storeroom: no other request can take it.', reviewed:'Request approved, stock reserved', insufficient:'Not enough stock in the storeroom: nothing was reserved. Reduce or substitute.', badSubstitute:'Choose the replacement item, unit and reason.', badReduce:'A reduced quantity must stay between zero and the requested quantity.',
       accept:'Accept the changes', acceptHint:'The storeroom changed this request. The department accepts before preparation.', accepted:'Changes accepted',
-      method:'Handover', pickup:'Collected at the storeroom', delivery:'Delivered to the department', handover:'Hand over to the department', prepareHint:'Enter what actually leaves. Custody stays with the storeroom until receipt.', handedOver:'Handover recorded, awaiting receipt',
+      method:'Handover', pickup:'Collected at the storeroom', delivery:'Delivered to the department', handover:'Hand over to the department', prepareHint:'Enter what actually leaves. Custody stays with the storeroom until receipt.', handedOver:'Handover recorded. After losing connection, reopen this request to count and confirm receipt. Report discrepancies to the manager.',
       confirm:'Confirm receipt', confirmHint:'Count what arrived. Confirming transfers custody to the department.', confirmed:'Receipt confirmed, custody transferred', badReceived:'Invalid received quantity.',
       dispute:'Report a discrepancy', disputed:'Discrepancy reported', cancelReq:'Cancel request', cancelled:'Request cancelled', submit:'Send to the storeroom', submitted:'Request sent',
       custody:'Custody', custodyEco:'With the storeroom', custodyService:'With the department', trail:'History', stale:'The request changed meanwhile: it has been reloaded.', failed:'Action refused', forbidden:'Your role does not allow this step.', sideConfirm:'In this hotel, the storeroom confirms receipt.',
       lines:'{n} item(s)', by:'by', ref:'No. {r}', decision:'Decision', replaced:'Replaced by',
-      label:{ draft:'Draft', submitted:'Sent', 'under-review':'Under review', 'changes-proposed':'Changes proposed', approved:'Approved', preparing:'Preparing', ready:'Ready for handover', 'out-for-delivery':'Out for delivery', 'partially-received':'Partly received', received:'Received', rejected:'Refused', cancelled:'Cancelled', disputed:'Discrepancy' },
+      label:{ draft:'Draft', submitted:'Sent', 'under-review':'Under review', 'changes-proposed':'Changes proposed', approved:'Approved', preparing:'Preparing', ready:'Ready for handover', 'out-for-delivery':'Handed over, awaiting receipt', 'partially-received':'Partly received', received:'Received', rejected:'Refused', cancelled:'Cancelled', disputed:'Discrepancy' },
       event:{ created:'Created', submit:'Sent', review:'Approved, stock reserved', accept:'Changes accepted', prepare:'Prepared and handed over', confirm:'Receipt confirmed, custody transferred', dispute:'Discrepancy reported', cancel:'Cancelled' }
     },
     ar: {
@@ -71,12 +71,12 @@
       resApproved:'قبول', resReduced:'تخفيض', resRefused:'رفض', resSubstituted:'استبدال', substitute:'مادة بديلة', substituteUnit:'الوحدة', reason:'السبب', reasonPh:'نفاد، مقاس غير متوفر…',
       review:'المصادقة وحجز المخزون', reviewHint:'المصادقة تحجز المخزون في المخزن: لا يمكن لطلب آخر أخذه.', reviewed:'تمت المصادقة وحُجز المخزون', insufficient:'المخزون غير كافٍ في المخزن: لم يُحجز شيء. خفّض أو استبدل.', badSubstitute:'اختر المادة البديلة والوحدة والسبب.', badReduce:'يجب أن تبقى الكمية المخفّضة بين الصفر والكمية المطلوبة.',
       accept:'قبول التغييرات', acceptHint:'عدّل المخزن هذا الطلب. يقبل القسم قبل التحضير.', accepted:'تم قبول التغييرات',
-      method:'التسليم', pickup:'استلام من المخزن', delivery:'توصيل إلى القسم', handover:'التسليم إلى القسم', prepareHint:'أدخل ما يخرج فعلًا. تبقى العهدة لدى المخزن حتى الاستلام.', handedOver:'سُجّل التسليم، في انتظار الاستلام',
+      method:'التسليم', pickup:'استلام من المخزن', delivery:'توصيل إلى القسم', handover:'التسليم إلى القسم', prepareHint:'أدخل ما يخرج فعلًا. تبقى العهدة لدى المخزن حتى الاستلام.', handedOver:'سُجّل التسليم. بعد انقطاع الاتصال، افتح هذا الطلب لعد المواد وتأكيد الاستلام. أبلغ المسؤول بأي فرق.',
       confirm:'تأكيد الاستلام', confirmHint:'عدّ ما وصل. التأكيد ينقل العهدة إلى القسم.', confirmed:'تم تأكيد الاستلام ونُقلت العهدة', badReceived:'كمية مستلمة غير صالحة.',
       dispute:'الإبلاغ عن فرق', disputed:'تم الإبلاغ عن فرق', cancelReq:'إلغاء الطلب', cancelled:'تم إلغاء الطلب', submit:'إرسال إلى المخزن', submitted:'تم إرسال الطلب',
       custody:'العهدة', custodyEco:'لدى المخزن', custodyService:'لدى القسم', trail:'السجل', stale:'تغيّر الطلب في الأثناء: أُعيد تحميله.', failed:'رُفض الإجراء', forbidden:'دورك لا يسمح بهذه المرحلة.', sideConfirm:'في هذا الفندق، يؤكد المخزن الاستلام.',
       lines:'{n} مادة', by:'بواسطة', ref:'رقم {r}', decision:'القرار', replaced:'استُبدل بـ',
-      label:{ draft:'مسودة', submitted:'مُرسل', 'under-review':'قيد المصادقة', 'changes-proposed':'تغييرات مقترحة', approved:'مُصادق', preparing:'قيد التحضير', ready:'جاهز للتسليم', 'out-for-delivery':'قيد التوصيل', 'partially-received':'مستلم جزئيًا', received:'مستلم', rejected:'مرفوض', cancelled:'ملغى', disputed:'فرق مُبلغ عنه' },
+      label:{ draft:'مسودة', submitted:'مُرسل', 'under-review':'قيد المصادقة', 'changes-proposed':'تغييرات مقترحة', approved:'مُصادق', preparing:'قيد التحضير', ready:'جاهز للتسليم', 'out-for-delivery':'سُلّم، في انتظار الاستلام', 'partially-received':'مستلم جزئيًا', received:'مستلم', rejected:'مرفوض', cancelled:'ملغى', disputed:'فرق مُبلغ عنه' },
       event:{ created:'أُنشئ', submit:'أُرسل', review:'صودق عليه وحُجز المخزون', accept:'قُبلت التغييرات', prepare:'حُضّر وسُلّم', confirm:'أُكّد الاستلام ونُقلت العهدة', dispute:'أُبلغ عن فرق', cancel:'أُلغي' }
     }
   };
@@ -361,6 +361,7 @@
   function key(r, action) { return 'ui:' + r.request.id + ':' + action + ':r' + r.request.revision; }
   function errorText(e) {
     var t = T(), code = String(e && e.message || '');
+    if (code === 'handover-reconciliation-required') return t.handedOver;
     if (code === 'insufficient-stock' || code.indexOf('source-shortage') === 0) return t.insufficient;
     if (code === 'forbidden-action' || code === 'confirmation-side-forbidden') return code === 'confirmation-side-forbidden' ? t.sideConfirm : t.forbidden;
     if (code.indexOf('bad-substitut') === 0) return t.badSubstitute;

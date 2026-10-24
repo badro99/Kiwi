@@ -199,6 +199,16 @@ export async function onRequestPost(context) {
     address: str(c.address, 240),
     note: str(c.note, 240),
   };
+  // External totals include provider fees/discounts absent from dish lines.
+  // Keep the signed difference explicitly, with a warning for acceptance.
+  const lineTotalCents = lines.reduce((sum, line) => sum + Math.round(line.unitPrice * 100) * line.qty, 0);
+  customer.channelAdjustmentCents = Math.round(total * 100) - lineTotalCents;
+  if (customer.channelAdjustmentCents) {
+    const labels = {fr:'Ajustement canal',en:'Channel adjustment',ar:'تسوية القناة'};
+    const lang = String(b.lang || 'fr').toLowerCase().split('-')[0];
+    const warning = (labels[lang] || labels.fr) + ': ' + (customer.channelAdjustmentCents / 100).toFixed(2) + ' MAD';
+    customer.note = [customer.note, warning].filter(Boolean).join(' · ');
+  }
   const ref = str(b && b.ref, 48);
   // 'delivery' est un troisième mode à côté de table/takeout : la cuisine
   // n'emballe pas de la même façon, et l'écran doit pouvoir le dire.

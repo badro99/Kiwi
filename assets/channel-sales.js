@@ -116,12 +116,12 @@
       amounts[channel] -= take;
       classified -= take;
     });
-    /* Un net négatif ne se dessine pas en anneau : le total s'arrête à 0, et le
-     * net signé reste celui du bandeau. Un remboursement sans vente prouvée
-     * dans un canal ne s'impute à aucun : les parts classées peuvent alors
-     * dépasser le total, et l'anneau prend leur somme pour base. */
+    // A ring cannot represent debt. If unmatched refunds exceed the net,
+    // do not invent a channel allocation: show the remaining net as unknown.
+    // The revenue headline continues to carry the complete signed amount.
     total = Math.max(0, total);
     classified = Math.max(0, classified);
+    if (classified > total) { amounts = Object.create(null); classified = 0; }
     var out = Object.create(null);
     Object.keys(amounts).forEach(function (k) { out[k] = amounts[k] / 100; });
     return { amounts: out, total: total / 100, classified: classified / 100, unknown: Math.max(0, total - classified) / 100 };

@@ -2722,7 +2722,6 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     pins.forEach(function(p){
       wrap.appendChild(h('div', { class:'pin' },
         h('b', null, '••••'),
-        h('button', {class:'mini', onClick:function(e){ var label=e.currentTarget.parentNode.querySelector('b'); var show=label.textContent==='••••'; label.textContent=show?p.pin:'••••'; e.currentTarget.textContent=show?'Masquer':'Afficher'; }}, 'Afficher'),
         h('span', { class:'role' }, roleLabel(p.role)),
         p.name ? h('span', { class:'nm' }, p.name) : null,
         h('span', { class:'spacer' }),

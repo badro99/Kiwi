@@ -55,6 +55,19 @@ check('numérotation contiguë depuis 0001, sans doublon',
   `trouvé : ${numbers.map((n) => String(n).padStart(4, '0')).join(', ')}`);
 check('au moins la baseline et la migration d\'écart', files.length >= 2, `${files.length} fichier(s)`);
 
+// The annual constraint rebuild also preserves already issued manual/till numbers.
+{
+  const db = freshDb();
+  for (const file of files.filter(n => n < '0011_')) db.exec(read(file));
+  db.exec("INSERT INTO invoice_series VALUES ('synth-annual','F',7,'F-2025-0007','doc-old',1)");
+  const before = JSON.stringify(db.prepare('SELECT * FROM invoice_series').all());
+  db.exec(read('0011_annual_invoice_series.sql'));
+  check('annual rebuild preserves historical series rows byte for byte', JSON.stringify(db.prepare('SELECT * FROM invoice_series').all()) === before);
+  db.exec("INSERT INTO invoice_series VALUES ('synth-annual','F',1,'F-2026-0001','doc-new',2)");
+  check('annual series accepts January sequence 1 after prior-year sequence 7', db.prepare('SELECT COUNT(*) n FROM invoice_series').get().n === 2);
+  db.close();
+}
+
 console.log('\n■ Contenu : ce que D1 accepte, ce qui touche aux données');
 for (const name of files) {
   const sql = stripComments(read(name));
@@ -111,6 +124,9 @@ const SEED = {
     { id: 'sale-synth-1', merchant: 'synth-shop-a', amount: 120, method: 'cash', label: 'Synth', ref: 'R-1', ts: 1760000010000, lines: '[{"id":"p1","qty":2,"price":60}]', amount_cents: 12000, gross_amount_cents: 12000, discount_amount_cents: 0, payment_parts: '[{"method":"cash","amount_cents":12000}]', tip_cents: 0, seller_id: 'sel-1', seller_name: 'Vendeuse' },
     { id: 'sale-synth-2', merchant: 'synth-shop-a', amount: 99, method: 'split', ts: 1760000020000, amount_cents: 9950, gross_amount_cents: 10000, discount_amount_cents: 50, discount_reason: 'synth', payment_parts: '[{"method":"cash","amount_cents":5000},{"method":"card","amount_cents":4950}]', tip_cents: 200 },
     { id: 'sale-synth-3', merchant: 'synth-shop-b', amount: 10, method: 'card', ts: 1760000030000, amount_cents: 1000, void_ts: 1760000040000, void_reason: 'synth', void_actor_id: 'sel-9', channel: 'till' },
+  ],
+  sale_invoices: [
+    {merchant:'synth-shop-a',seq:7,number:'F-2025-0007',sale_id:'sale-synth-1',snapshot:'{"totals":{"ttc":120}}',created_ts:1760000010000},
   ],
   sale_receipts: [
     { merchant: 'synth-shop-a', sale_id: 'sale-synth-1', gross_ticket_cents: 12000, consigned_cents: 0, created_ts: 1760000011000 },

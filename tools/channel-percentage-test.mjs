@@ -93,8 +93,8 @@ assert.equal(refunded.unknown, 0);
 const outside = truth.breakdown([{ ts: 110, amount: 100, saleId: 's-3', channel: 'dining' }], ids, 100, 200, restaurant, 'restaurant',
   [{ ts: 250, amount: 100, saleId: 's-3' }, { ts: 150, amount: 40, saleId: 'gone' }]);
 assert.equal(outside.total, 60, 'a refund paid after the window stays out; one whose sale is unknown still leaves the total');
-assert.equal(outside.amounts.dining, 100, 'an unmatched refund is never charged to a channel it cannot prove');
-assert.equal(outside.unknown, 0, 'unknown never goes below zero');
+assert.equal(outside.classified, 0, 'an unmatched refund makes the remaining net unclassified rather than inventing an allocation');
+assert.equal(outside.unknown, 60, 'the whole remaining net is visible as unknown');
 assert.match(layout, /var shareBase = Math\.max\(total, classifiedTotal\);/, 'an unmatched refund leaves classified above the net: rings divide by the larger, never past 100 %');
 assert.match(layout, /amount \/ shareBase/, 'each ring reads its share of shareBase');
 const over = truth.breakdown([{ ts: 110, amount: 30, saleId: 's-4', channel: 'dining' }], ids, 100, 200, restaurant, 'restaurant',

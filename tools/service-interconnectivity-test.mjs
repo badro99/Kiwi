@@ -105,13 +105,13 @@ ok(/^tsx-[A-Za-z0-9]{22}$/.test(String(result.body.session || ''))
   'le bon employé est rattaché à une visite de table unique');
 const saraOrderId = result.body.id;
 let request, response;
-request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}`, { headers: { Cookie: saraCookie } });
+request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}&q=0612345678`, { headers: { Cookie: saraCookie } });
 response = await gate({ request, env, next: () => new Response('next') });
 ok(response.status === 200 && await response.text() === 'next', 'la porte edge laisse le serveur pointé atteindre le carnet clients');
-request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}`, { headers: { Cookie: saraCookie } });
+request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}&q=0612345678`, { headers: { Cookie: saraCookie } });
 response = await employeeClientsGet({ request, env }); let clientBook = await json(response);
 ok(response.status === 200 && clientBook.clients.length === 1 && clientBook.clients[0].name === 'Amina Client',
-  'le serveur pointé voit le carnet fidélité de ce magasin seulement');
+  'le serveur pointé retrouve le client par téléphone dans ce magasin seulement');
 request = new Request('https://kiwi.test/api/employee-clients', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, clientId: 'c1', amount: 80, ref: 'employee-payment:1:test',
 }) });

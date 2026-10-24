@@ -2,13 +2,9 @@
 //
 // Un fichier préfixé `_` n'est pas routé : il est seulement importé.
 //
-// Une série par (établissement, préfixe) : F (factures), AV (avoirs), D (devis).
-// `seq` est global au commerçant, jamais remis à zéro à l'année (l'année du
-// numéro est celle de l'émission). Pour F, la série est PARTAGÉE avec les
-// factures de caisse (`sale_invoices`) : le prochain numéro est
-// `max(invoice_series, sale_invoices) + 1`, si bien que l'historique d'un
-// commerçant qui n'a jamais saisi de facture est respecté, et que la caisse et
-// la saisie ne distribuent jamais le même numéro.
+// Une série annuelle par (établissement, préfixe, année du numéro).
+// Les numéros historiques restent intacts. La caisse et la saisie partagent F.
+// Le maximum ne considère que l'année demandée, puis repart de 1 en janvier.
 //
 // La réservation (`invoice_series`) et ce qui la justifie (la ligne
 // `sale_invoices`, l'UPDATE du document) partent dans le MÊME `DB.batch` : D1 le
@@ -33,12 +29,12 @@ const DDL = [
   `CREATE TABLE IF NOT EXISTS sale_invoices (
     merchant TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL,
     sale_id TEXT NOT NULL, customer TEXT, snapshot TEXT NOT NULL, created_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, sale_id), UNIQUE (merchant, seq))`,
+    PRIMARY KEY (merchant, sale_id), UNIQUE (merchant, number))`,
   'CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq)',
   `CREATE TABLE IF NOT EXISTS invoice_series (
     merchant TEXT NOT NULL, prefix TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL,
     doc_ref TEXT, created_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, prefix, seq))`,
+    PRIMARY KEY (merchant, prefix, number))`,
   `CREATE TABLE IF NOT EXISTS invoice_docs (
     id TEXT PRIMARY KEY, merchant TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL,
     number TEXT, seq INTEGER, issue_date TEXT, due_date TEXT, terms_days INTEGER, valid_until TEXT,
@@ -82,16 +78,16 @@ export async function withSchema(env, fn) {
 export function isNumberCollision(err) {
   const m = messageOf(err);
   if (!/UNIQUE constraint failed|constraint/i.test(m)) return false;
-  return /invoice_series\./.test(m) || /sale_invoices\.seq/.test(m) || /invoice_docs\.number/.test(m);
+  return /invoice_series\./.test(m) || /sale_invoices\.(?:seq|number)/.test(m) || /invoice_docs\.number/.test(m);
 }
 
-export async function nextSeq(db, merchant, prefix) {
-  const a = await db.prepare('SELECT COALESCE(MAX(seq), 0) AS m FROM invoice_series WHERE merchant = ? AND prefix = ?')
-    .bind(merchant, prefix).first();
+export async function nextSeq(db, merchant, prefix, year = new Date().getFullYear()) {
+  const a = await db.prepare('SELECT COALESCE(MAX(seq), 0) AS m FROM invoice_series WHERE merchant = ? AND prefix = ? AND number LIKE ?')
+    .bind(merchant, prefix, `${prefix}-${year}-%`).first();
   let max = Number(a && a.m) || 0;
   if (prefix === 'F') {
-    const b = await db.prepare('SELECT COALESCE(MAX(seq), 0) AS m FROM sale_invoices WHERE merchant = ?')
-      .bind(merchant).first();
+    const b = await db.prepare('SELECT COALESCE(MAX(seq), 0) AS m FROM sale_invoices WHERE merchant = ? AND number LIKE ?')
+      .bind(merchant, `F-${year}-%`).first();
     max = Math.max(max, Number(b && b.m) || 0);
   }
   return max + 1;
@@ -115,7 +111,7 @@ export async function allocateNumber(env, merchant, prefix, year, opts = {}) {
   if (!env || !env.DB) throw new Error('no-db');
   const docRef = opts.docRef == null ? null : String(opts.docRef);
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const seq = await withSchema(env, () => nextSeq(env.DB, merchant, prefix));
+    const seq = await withSchema(env, () => nextSeq(env.DB, merchant, prefix, year));
     const number = formatNumber(prefix, year, seq);
     const now = Date.now();
     const reserve = opts.guard

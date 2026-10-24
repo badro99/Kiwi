@@ -13,6 +13,7 @@ assert.deepEqual(ratchet(['a'], ['a', 'b']), ['a', 'b']);
 assert.throws(() => ratchet(['a'], ['b']), /cannot remove/);
 const read = (file) => JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', file), 'utf8'));
 const manifest = read('coverage-manifest.json');
+for (const id of ['dashboard-analysis','dashboard-promotion-editor','dashboard-product-editor']) assert(manifest.surfaces.some(s=>s.id===id), 'missing dedicated restaurant workflow: '+id);
 const declared = new Set(), ids = new Set(), shells = new Set();
 for (const s of manifest.surfaces) {
   assert(!ids.has(s.id), `duplicate surface ${s.id}`); ids.add(s.id);
@@ -39,6 +40,7 @@ function walk(dir, prefix = '') {
   }
 }
 walk(ROOT);
+for (const id of ['boutique-checkout', 'boutique-returns', 'boutique-exchange', 'boutique-return-refusal', 'shopify-recovery']) assert(ids.has(id), 'dedicated money state missing: ' + id);
 const suites = scan(), covered = new Set();
 for (const suite of suites) for (const c of suite.cells) {
   const key = cellKey(c);

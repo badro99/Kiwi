@@ -80,10 +80,10 @@ export async function mergeClients(env, merchant, raw, helpers) {
         .bind(...columns.map(k => set[k]), now, merchant, merchant, to, ...guardArgs),
     ];
     if (duplicates.length) statements.push(prepare(`UPDATE client_purchase_events SET visits = 0 WHERE merchant = ? AND ref IN (SELECT value FROM json_each(?)) AND ${guard}`).bind(merchant, JSON.stringify(duplicates), ...guardArgs));
-    for (const table of ['client_purchase_events','client_reward_events','employee_loyalty_events']) {
+    for (const table of ['client_purchase_events','client_reward_events','employee_loyalty_events','client_reward_refusals']) {
       const exists = await prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").bind(table).first();
       if (exists) {
-        const sync = table !== 'employee_loyalty_events';
+        const sync = ['client_purchase_events','client_reward_events'].includes(table);
         statements.push(prepare(`UPDATE ${table} SET client_id = ?${sync ? ', srv_ts = ' + cursor : ''} WHERE merchant = ? AND client_id IN (?, ?) AND ${guard}`)
           .bind(to, ...(sync ? [merchant] : []), merchant, from, to, ...guardArgs));
       }

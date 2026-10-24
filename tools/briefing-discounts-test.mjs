@@ -51,7 +51,7 @@ ok(!/gross_amount_cents INTEGER NOT NULL|discount_amount_cents INTEGER NOT NULL|
 ok(/discountAmountCents > grossAmountCents/.test(sale), 'server rejects discount greater than gross');
 ok(/DISCOUNT_REASONS\.has\(discountReason\)/.test(sale), 'server validates reason enum');
 ok(/\^\\d\{4\}\$/.test(sale) && /bad-discount-actor/.test(sale), 'server refuses a four-digit actor code');
-ok(/grossAmountCents - discountAmountCents\) - amountCents/.test(sale), 'server validates gross minus discount against net');
+ok(/grossAmountCents - discountAmountCents !== amountCents/.test(sale), 'server validates gross minus discount against net');
 ok(/gross_amount_cents\|discount_amount_cents\|discount_reason\|discount_actor_id/.test(sale), 'server falls back when optional columns lag');
 ok(/body\.grossAmountCents/.test(live) && /body\.discountAmountCents/.test(live) && /body\.actorId/.test(live), 'durable outbox forwards all facts');
 ok(/sale\.grossAmountCents/.test(venues) && /!\/\^\\d\{4\}\$\//.test(venues), 'dashboard ledger preserves validated facts and rejects codes');

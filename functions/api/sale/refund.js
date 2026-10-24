@@ -1,3 +1,4 @@
+import { ensureCollectionSchema } from '../receivables.js';
 // POST /api/sale/refund — append one manager-approved refund to the same
 // financial stream as sales. The stored amount is negative, so every reader
 // can reconcile the day's net without deleting or mutating the original sale.
@@ -85,6 +86,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
      outbox and cannot create an unattributed negative entry. */
   if (!original) return json({ error: 'sale-not-found' }, 404);
 
+  await ensureCollectionSchema(env.DB);
   await ensureCreditEvents(env);
   // Only persisted redemptions identify the voucher to restore. Client tender
   // labels are never authority to create a customer liability.
@@ -210,6 +212,28 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
              refundRef, Number(original.ts) || 0, impact, ts,
              merchant, refundId, -moneyOut, merchant, refundId),
     ];
+    // A return ends the remaining delivery obligation. Record the write-off
+    // separately from refunded cash, inside the very same transaction.
+    statements.push(env.DB.prepare(`INSERT INTO sale_audit
+      (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
+      SELECT ?, ?, 'delivery-writeoff', ?, ?, ?, ?, 0,
+        MAX(0, COALESCE((SELECT SUM(CAST(json_extract(value, '$.amountCents') AS INTEGER))
+          FROM sales s, json_each(COALESCE(s.payment_parts, '[]'))
+          WHERE s.merchant = ? AND s.id = ? AND json_extract(value, '$.method') = 'delivery'),
+          (SELECT r.gross_ticket_cents - COALESCE(s.amount_cents, s.amount * 100)
+           FROM sales s JOIN sale_receipts r ON r.merchant = s.merchant AND r.sale_id = s.id
+           WHERE s.merchant = ? AND s.id = ? AND s.method = 'delivery'), 0)
+          - COALESCE((SELECT SUM(amount_cents) FROM delivery_collections WHERE merchant = ? AND sale_id = ?), 0)),
+        'delivery', ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND note = ? AND action = 'refund')
+        AND NOT EXISTS (SELECT 1 FROM sale_audit
+        WHERE merchant = ? AND sale_id = ? AND action = 'delivery-writeoff')
+        AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND
+          (method = 'delivery' OR payment_parts LIKE '%"delivery"%'))`)
+      .bind(merchant, originalSaleId, reason, refundId, actor, actorId,
+        merchant, originalSaleId, merchant, originalSaleId, merchant, originalSaleId,
+        refundRef, Number(original.ts) || 0, JSON.stringify({ refundId, policy: 'return-closes-delivery' }), ts,
+        merchant, originalSaleId, refundId, merchant, originalSaleId, merchant, originalSaleId));
     for (const part of actual.filter(p => p.method === 'credit')) {
       const eventId = `refund:${merchant}:${refundId}:${part.creditId}`;
       statements.push(env.DB.prepare(

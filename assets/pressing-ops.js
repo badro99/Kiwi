@@ -68,8 +68,6 @@
     if (!p) return 'recu';
     if (p.status === 'livre') return 'livre';
     if (p.status === 'pret') return 'pret';
-    var rTs = readyAt instanceof Date ? readyAt.getTime() : (readyAt ? new Date(readyAt).getTime() : 0);
-    if (rTs && rTs <= (now || Date.now())) return 'pret';
     return p.status || 'recu';
   }
 
@@ -100,6 +98,7 @@
       customer: { name: text(customer && customer.name, 100), phone: text(customer && customer.phone, 40), b2b: !!(customer && customer.b2b) },
       droppedAt: iso(o.droppedAt), readyAt: iso(o.readyAt), collectedAt: iso(o.collectedAt),
       status: o.cancelledAt ? 'annule' : orderStatus(pieces, o.readyAt), pieces: pieces, rack: text(o.rack, 20),
+      refundDue: Math.max(0, Number(o.refundDue) || 0), refundEntry: o.refundEntry || null,
       cancelledAt: iso(o.cancelledAt), cancelledBy: o.cancelledBy ? {
         id: text(o.cancelledBy.id, 80), name: text(o.cancelledBy.name, 100), role: text(o.cancelledBy.role, 40)
       } : null,

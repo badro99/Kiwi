@@ -170,6 +170,12 @@ try {
         // coverage: surface=dashboard-finance locale=fr viewport=tablet
         // coverage: surface=dashboard-finance locale=en viewport=tablet
         // coverage: surface=dashboard-finance locale=ar viewport=tablet
+        // coverage: surface=dashboard-analysis locale=fr viewport=phone
+        // coverage: surface=dashboard-analysis locale=fr viewport=tablet
+        // coverage: surface=dashboard-analysis locale=en viewport=phone
+        // coverage: surface=dashboard-analysis locale=en viewport=tablet
+        // coverage: surface=dashboard-analysis locale=ar viewport=phone
+        // coverage: surface=dashboard-analysis locale=ar viewport=tablet
         const cell = await open(t, 'foodcost', locale, viewport);
         if (!cell) return;
         await check(t, cell, 'foodcost', locale, viewport);

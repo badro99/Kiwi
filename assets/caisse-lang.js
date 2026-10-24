@@ -48,6 +48,8 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.': 'Payment paused. Storage unavailable. Do not take money. Restore storage and try again.',
+      'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.': 'This delivery already has collections. Refund the relevant receipts before asking the manager to correct it.',
       "Déplacement impossible : {x}": "Cannot move: {x}",
       "Fusion impossible : {x}": "Cannot merge: {x}",
       "visite à actualiser": "Visit needs refreshing",
@@ -452,6 +454,8 @@
     },
 
     ar: {
+      'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.': 'تم تعليق الدفع. التخزين غير متاح. لا تستلم المال. أصلح التخزين ثم حاول مجدداً.',
+      'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.': 'لهذا التوصيل تحصيلات مسجلة. أعد مبالغ الإيصالات المعنية ثم اطلب من المدير تصحيحها.',
       "Déplacement impossible : {x}": "تعذر النقل: {x}",
       "Fusion impossible : {x}": "تعذر الدمج: {x}",
       "visite à actualiser": "يلزم تحديث الزيارة",

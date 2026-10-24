@@ -9,7 +9,8 @@
 
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
-  var MAX_DAYS = 45;
+  // One year plus five days for month-end review. Financial books live in their own ledgers.
+  var MAX_DAYS = 370;
   var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
   var doc = { days: [] };
   /* The venue `doc` was loaded for. slug() follows the venue on screen the

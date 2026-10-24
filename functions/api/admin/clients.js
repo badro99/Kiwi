@@ -227,8 +227,8 @@ export async function onRequestPatch(context) {
       const [, r] = await env.DB.batch([
         env.DB.prepare(`${AUDIT_INSERT}
           SELECT '', merchant, 'store-status', COALESCE(status, ''), ?, '', ?, ?, ?, ?
-            FROM merchant_config WHERE merchant = ?`
-        ).bind(status, actor.label, actor.id, detail, ts, merchant),
+            FROM merchant_config WHERE merchant = ? AND COALESCE(status, 'active') != ?`
+        ).bind(status, actor.label, actor.id, detail, ts, merchant, status),
         env.DB.prepare('UPDATE merchant_config SET status = ?, updated_ts = ? WHERE merchant = ?').bind(status, ts, merchant),
       ]);
       if (!((r.meta && r.meta.changes) || 0)) return json({ error: 'not-found' }, 404);
@@ -247,8 +247,8 @@ export async function onRequestPatch(context) {
   try {
     const [, r] = await env.DB.batch([
       env.DB.prepare(`${AUDIT_INSERT}
-        SELECT id, '', 'account-status', COALESCE(status, ''), ?, '', ?, ?, ?, ? FROM accounts WHERE email = ?`
-      ).bind(status, actor.label, actor.id, detail, ts, email),
+        SELECT id, '', 'account-status', COALESCE(status, ''), ?, '', ?, ?, ?, ? FROM accounts WHERE email = ? AND COALESCE(status, 'active') != ?`
+      ).bind(status, actor.label, actor.id, detail, ts, email, status),
       env.DB.prepare('UPDATE accounts SET status = ? WHERE email = ?').bind(status, email),
     ]);
     if (!((r.meta && r.meta.changes) || 0)) return json({ error: 'not-found' }, 404);
