@@ -2267,7 +2267,7 @@
       const itemLabel = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(item.name, employeeLanguage) : item.name;
       $('#opt-modal-body').innerHTML = `
         <h3 class="modal-title">${esc(itemLabel)}</h3>
-        <p class="modal-subtle"><span>${fmtMAD(item.price)}${extra ? ` · +${fmtMAD(extra)}` : ''}</span> · <span>${esc(employeeTranslation("Personnalisez avant d'ajouter à la commande"))}</span></p>
+        <p class="modal-subtle"><span>${fmtMAD(item.price)}${extra ? ` · +${fmtMAD(extra)}` : ''}</span> · <span>${esc(employeeTranslation("personnalisez avant d'ajouter à la commande"))}</span></p>
         ${groupsHTML}
         <div class="opt-foot">
           <button class="td-btn ghost" id="opt-cancel">${employeeLanguage === 'ar' ? 'إلغاء' : (employeeLanguage === 'en' ? 'Cancel' : 'Annuler')}</button>

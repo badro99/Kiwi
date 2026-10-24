@@ -4130,8 +4130,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        phone the brand steps aside too (§18.10 starts at the identity line),
        so the pad and Change e-mail fit without scrolling. */
     html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .pin-foot { display: none; }
+    html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .k-team-signin { margin-bottom: auto; }
     @media (max-height: 900px) {
       html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .pin-top { display: none; }
+      html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .k-team-signin { margin-top: auto; }
     }
     /* Arabic is never tracked or set in capitals: spacing pulls its letters
        apart. The brand line and the note get a size Arabic can be read at. */
