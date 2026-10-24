@@ -24,7 +24,7 @@ var SHELL = [
   '/assets/caisse-accounting.js?v=5',
   '/assets/caisse-floor.js?v=2',
   '/assets/caisse-kitchen.js?v=1',
-  '/assets/caisse-app.js?v=15',
+  '/assets/caisse-app.js?v=16',
   '/assets/caisse-refresh.js?v=6',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -180,7 +180,7 @@ var SHELL = [
   '/assets/pwa-update.js?v=366',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
-  '/assets/caisse-motion.js?v=5',
+  '/assets/caisse-motion.js?v=6',
   '/assets/caisse-pwa.js?v=620',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=11',

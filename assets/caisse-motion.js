@@ -47,7 +47,8 @@
     if (!el) return;
     var txt = el.textContent || '';
     var peek = document.getElementById('rp-peek-total');
-    if (peek) peek.textContent = txt;
+    // The 2027 till writes the peek itself, in the kit's money format.
+    if (peek && document.documentElement.getAttribute('data-skin-2027') !== 'till') peek.textContent = txt;
     if (reduce || !el.animate || txt === lastTotalText) { lastTotalText = txt; return; }
     lastTotalText = txt;
     el.animate(

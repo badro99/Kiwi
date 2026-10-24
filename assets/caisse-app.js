@@ -2665,6 +2665,10 @@
         if (!tillKitSplitStarted()) window.KiwiTillFrame.closePane('split');
       }
       window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill(), rail: tillKitRail() });
+      /* La barre d'addition du téléphone dit le total comme l'addition du kit
+         (« 35,00 MAD »), pas comme le volet livré (« 35 MAD »). */
+      const peek = document.getElementById('rp-peek-total');
+      if (peek && window.KiwiKit && window.KiwiKit.money) peek.textContent = window.KiwiKit.money(currentTotal(), 2);
     }
     /* Peint tout de suite, puis une fois encore à l'image suivante : le
        volet livré se montre souvent JUSTE APRÈS sa fonction de rendu (une
