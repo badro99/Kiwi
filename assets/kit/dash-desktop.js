@@ -144,7 +144,11 @@
       return;
     }
     var w = Math.max(0, Math.min(100, (g.ratio || 0) * 100)).toFixed(1);
-    goal.innerHTML = '<p class="k-foot k-ink2">' + esc(g.label || '') + '</p>' +
+    /* The shipped label writes the goal ungrouped ("31500 MAD"); every other
+       amount on the page is grouped ("31 500 MAD"). */
+    var F = root.KiwiFormat;
+    var label = String(g.label || '').replace(/\d{4,}/g, function (n) { return F && F.num ? F.num(Number(n), 0) : n; });
+    goal.innerHTML = '<p class="k-foot k-ink2">' + esc(label) + '</p>' +
       '<p class="k-dd-goal__v"><bdi dir="ltr" class="k-title k-num">' + esc(String(g.pct)) + '</bdi><span class="k-heading k-ink2"> %</span></p>' +
       '<span class="k-dd-goal__bar" aria-hidden="true"><i style="width:' + w + '%"></i></span>';
   }
@@ -244,6 +248,8 @@
     '.dash-standard .hh-ai-eyebrow', '.dash-standard .settle > .lbl'];
   var CAPS_HOSTS = ['[data-upsell]'];
   function sentence(el) {
+    /* Text only: a label holding other nodes is never flattened. */
+    if (el.children.length) return;
     var s = el.textContent;
     if (!/[A-ZÀ-Ý]{2}/.test(s) || s !== s.toUpperCase()) return;
     var low = s.toLowerCase();

@@ -298,6 +298,20 @@ html[data-skin-2027="dashboard"]:not([data-k-phone]) .topbar .k-pnav { display: 
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-segmented { grid-area: seg; justify-self: start; width: 100%; max-width: 480px; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig { grid-area: fig; position: relative; padding: 24px 24px 0; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__goal { display: none; }
+  /* The period on the card's top edge, opposite its label: the four presets
+     are the segmented control, and this opens the shipped picker for any
+     other period, which the desktop otherwise had no way to reach (the
+     shipped range bar is not drawn under the kit's Home). */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__date {
+    display: flex; position: absolute; top: 12px; inset-inline-end: 16px; margin: 0;
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick {
+    display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding-inline: 8px; margin: 0;
+    border: 0; border-radius: var(--k-r-1); background: none; color: inherit; font: inherit; cursor: pointer;
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick:hover { background: var(--k-surface-2); }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick .k-ic { width: 16px; height: 16px; fill: currentColor; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { grid-area: tiles; align-self: stretch; --k-kpi-cols: 3; --k-kpi-gap: var(--k-space-4); }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__lh { grid-area: list; align-self: start; position: relative; padding: 20px 24px 0; color: var(--k-ink-1);
     font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
@@ -794,3 +808,15 @@ html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .kw-toast span { 
   html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-page:has(> #kit-compliance) { grid-template-columns: minmax(0, 1fr); }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite #kit-compliance { position: static; }
 }
+
+/* ── 14 · Onboarding (dash-onboarding.js) ────────────────────────────────
+   The step, Back and the progress bar share the column the step's body and
+   its Continue use, rather than running to the window's edges on an iPad
+   or a desktop; the step reads as the bar's title, centred between Back and
+   an equal space, so it sits in the same place on every step. */
+html[data-skin-2027="dashboard"] .k-ob__nav {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px;
+  width: 100%; max-width: 560px; margin-inline: auto; padding-inline: 8px;
+}
+html[data-skin-2027="dashboard"] .k-ob__step { text-align: center; }
+html[data-skin-2027="dashboard"] .k-ob__bar { width: calc(100% - 32px); max-width: 528px; margin: 4px auto 0; }

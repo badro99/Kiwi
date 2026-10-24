@@ -233,6 +233,22 @@
     var b = e.target.closest && e.target.closest('[data-k="pick"]');
     if (!b) return;
     clickShipped('.dr-control:not(.dr-day-control) .dr-pill-custom:not([data-dr-day-custom])');
+    /* Wider than a phone the shipped picker is a popover drawn inside the
+       shipped range bar, which the kit's Home does not draw: the popover
+       would open inside a hidden box. It is portalled to the page and set
+       under the date, as dateRange.js itself does for a drawer's picker (its
+       outside tap reads the popover, not where it sits). */
+    var pop = doc.querySelector('.dash-date-range .dr-popover:not(.dr-sheet)');
+    if (!pop) return;
+    doc.body.appendChild(pop);
+    var r = b.getBoundingClientRect(), W = root.innerWidth, H = root.innerHeight;
+    var rtl = doc.documentElement.dir === 'rtl' || pop.getAttribute('dir') === 'rtl';
+    pop.style.position = 'fixed';
+    pop.style.insetInlineEnd = 'auto';
+    var w = pop.offsetWidth, h = pop.offsetHeight;
+    var x = rtl ? r.left : r.right - w;
+    pop.style.left = Math.max(8, Math.min(x, W - w - 8)) + 'px';
+    pop.style.top = Math.max(8, Math.min(r.bottom + 8, H - h - 8)) + 'px';
   }
 
   function onAction(e) {
