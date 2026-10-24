@@ -167,6 +167,8 @@ try {
         aiH: ai.getBoundingClientRect().height,
         title: getComputedStyle(q('.dash-conformite .cf-title')).fontSize, heading: tok('--k-fs-heading'),
         shadow: card.boxShadow, cardBg: card.backgroundImage, eyebrows, broken,
+        /* A page's head sits 28 below its page's top (24, then the head's 4). */
+        headAt: q('.dash-conformite .cf-title').getBoundingClientRect().top - q('.dash-conformite').getBoundingClientRect().top,
       };
     });
     check(v.search >= 160 && v.ph >= 80, `the search keeps its words beside the icons (${Math.round(v.search)} wide, text ${Math.round(v.ph)})`);
@@ -174,6 +176,7 @@ try {
     check(v.aiH <= 48, `Kiwi AI stays on one line (${Math.round(v.aiH)} tall)`);
     check(v.sw <= v.w, `Compliance never scrolls sideways (${v.sw} ≤ ${v.w})`);
     check(v.title === v.heading, `Compliance's title is at the Heading size, as every page's (${v.title}, Heading ${v.heading})`);
+    check(Math.abs(v.headAt - 28) <= 1, `its title sits where every page's title sits (${Math.round(v.headAt)} below the page's top, 28 elsewhere)`);
     check(v.shadow === 'none' && v.cardBg === 'none', `its cards are the kit's flat card (${v.shadow.slice(0, 30)}, ${v.cardBg.slice(0, 30)})`);
     check(v.eyebrows === 0, `its eyebrows are in sentence case (${v.eyebrows} in capitals)`);
     check(!v.broken.length, 'its figures stay on one line with their unit' + (v.broken.length ? ' · ' + v.broken.join(' | ') : ''));

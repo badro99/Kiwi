@@ -531,6 +531,8 @@ html[data-skin-2027="dashboard"] body .scroll-progress { display: none; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .k { display: none; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big { flex: 1 1 200px; min-width: 120px; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn { flex: none; white-space: nowrap; }
+  /* The round buttons keep their 44 rather than giving width to the search. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar :is(.icon-btn, .view-link-btn) { flex: none; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .ph { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (min-width: 900px) and (max-width: 1279px) {
@@ -765,6 +767,8 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-title {
   font-family: var(--k-font); color: var(--k-ink-1);
   font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading);
 }
+/* The head where every other page's head sits (4 down, 8 before the body). */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-head { margin: 0 0 8px; padding-top: 4px; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-sub {
   font-family: var(--k-font); color: var(--k-ink-2); margin-top: 4px;
   font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); letter-spacing: var(--k-track-footnote);
@@ -790,6 +794,12 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-z-coun
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-counter { gap: 12px; }
+/* The cash count is typed on the counter's iPad: each field a 44 target. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-denom-input {
+  min-height: 44px; border-radius: var(--k-r-2); text-align: center; font-variant-numeric: tabular-nums;
+  font-size: var(--k-fs-callout); font-family: var(--k-font);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .view-link-btn { width: 44px; height: 44px; border-radius: 50%; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-counter-l { min-width: 0; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-body { min-width: 0; }
 @media (max-width: 1439px) {
