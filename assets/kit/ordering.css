@@ -374,7 +374,7 @@ html[data-skin-2027="ordering"] .cart-row .qty button {
   border-color: var(--k-line);
   font-size: 18px;
 }
-html[data-skin-2027="ordering"] .cart-row .qty button::after { content: ""; position: absolute; inset: -4px; border-radius: 999px; }
+html[data-skin-2027="ordering"] .cart-row .qty button::after { content: ""; position: absolute; inset: -5px; border-radius: 999px; }
 html[data-skin-2027="ordering"] .cart-row .qty span { min-width: 28px; font-size: var(--k-fs-callout); font-weight: 600; }
 html[data-skin-2027="ordering"] .cart-totals .grand { font-size: var(--k-fs-heading); font-weight: 600; }
 html[data-skin-2027="ordering"] .cart-note { font-size: var(--k-fs-footnote); color: var(--k-ink-2); }

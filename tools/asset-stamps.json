@@ -688,8 +688,8 @@
     "sha": "8d57b75679d6fd5d"
   },
   "assets/kit/ordering.css": {
-    "v": "2",
-    "sha": "2a35b66fc3cbdae5"
+    "v": "3",
+    "sha": "847ebaf7ff63d20d"
   },
   "assets/kit/overlays.js": {
     "v": "2",
@@ -1028,8 +1028,8 @@
     "sha": "d8a57db5f122fde6"
   },
   "assets/orderpro-page.js": {
-    "v": "3",
-    "sha": "6ba15e458bb661ac"
+    "v": "4",
+    "sha": "1aa175ccba2979c6"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
