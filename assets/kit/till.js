@@ -117,8 +117,9 @@
               (it.soldOut ? ' aria-disabled="true"' : '') + ' aria-label="' + esc(name) + '">' +
               '<span class="nm k-body-s">' + esc(it.name) + '</span>' +
               '<span class="pr k-callout k-num">' + esc(it.soldOut ? t('menu.sold_out') : price) + '</span>' +
-              (it.options ? icon('tune', 20, 'op') : '') +
-              (it.qty ? '<span class="q k-foot-s k-num" aria-hidden="true">' + esc(it.qty) + '</span>' : '') + '</button>';
+              /* The count takes the options mark's corner once the dish is on
+                 the bill: the name keeps its whole width (owner, 2026-10-24). */
+              (it.qty ? '<span class="q k-foot-s k-num" aria-hidden="true">' + esc(it.qty) + '</span>' : it.options ? icon('tune', 20, 'op') : '') + '</button>';
           }).join('') + '</div></section>';
       }).join('');
     },
@@ -143,13 +144,12 @@
       '.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-height:112px;padding:16px;border-radius:var(--k-r-3);' +
       'background-color:var(--k-surface-1);color:var(--k-ink-1);text-align:start;transition:transform var(--k-dur-4) var(--k-spring)}' +
       '.tile:active:not([aria-disabled="true"]){transform:scale(.97);transition-duration:var(--k-dur-1);transition-timing-function:var(--k-glide)}' +
-      /* clear of the 28 px qty badge with 8 to spare: it sits 8 in from the
-         corner (8 to 36), the tile pads 16, so the name stops 28 further in.
-         At 20 the name ran into the badge (owner, 2026-10-24). Always, so a
-         tap never re-wraps the name. */
-      '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong);padding-inline-end:28px}' +
-      '.pr{color:var(--k-ink-2)}.op{position:absolute;inset-inline-end:16px;bottom:16px;color:var(--k-ink-2)}' +
-      '.q{position:absolute;inset-inline-end:8px;top:8px;min-width:28px;height:28px;padding-inline:6px;border-radius:14px;display:flex;align-items:center;justify-content:center;' +
+      /* The qty badge sits in the bottom corner, beside the price, so the name
+         has the tile's whole width: in the top corner it ran into the name
+         (owner, 2026-10-24). */
+      '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong)}' +
+      '.pr{color:var(--k-ink-2)}.tile:has(.q) .pr{padding-inline-end:36px}.op{position:absolute;inset-inline-end:16px;bottom:16px;color:var(--k-ink-2)}' +
+      '.q{position:absolute;inset-inline-end:12px;bottom:12px;min-width:28px;height:28px;padding-inline:6px;border-radius:14px;display:flex;align-items:center;justify-content:center;' +
       'background-color:var(--k-accent);color:var(--k-on-accent)}' +
       '.out .nm,.out .pr{color:var(--k-ink-3)}' +
       '@media (prefers-reduced-motion:reduce){.tile,.tile:active{transition:none;transform:none}}'
