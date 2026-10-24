@@ -50,7 +50,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.kds.svg?v=2">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=43">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=44">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -62,7 +62,7 @@
         js("assets/kit/core.js?v=2") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/overlays.js?v=2") +
-        js("assets/kit/kds.js?v=5") +
+        js("assets/kit/kds.js?v=6") +
         js("assets/kit/kds-board.js?v=2")
       );
     })();
@@ -767,6 +767,66 @@
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
       }
+    }
+    /* ── Design 2027 (kiwiSkin2027:kds) · the chrome around the kit's lanes ──
+       The lanes are the kit's; the bar above them was still the shipped one:
+       a serif wordmark, bordered 12 px lane heads in tracked capitals, and an
+       empty station strip drawn even with no station. Here the chrome takes
+       the 2027 tokens (§5, §6) and the wall's own steps (§18.7): heads in
+       Callout strong ink-2, the clock in Title, tools as plain 56 discs, a
+       station row in the kit chip's selected look. Only under the flag. */
+    html[data-skin-2027="kds"] body { background-color: var(--k-bg); }
+    html[data-skin-2027="kds"] .top { gap: 16px; padding: 16px 24px; background-color: var(--k-bg); border-bottom: 1px solid var(--k-line); }
+    html[data-skin-2027="kds"] .brand { align-items: baseline; gap: 12px; min-width: 0; }
+    html[data-skin-2027="kds"] .brand b { font-family: inherit; font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); color: var(--k-ink-1); }
+    html[data-skin-2027="kds"] .brand .store { font-size: var(--k-fs-footnote); color: var(--k-ink-2); }
+    html[data-skin-2027="kds"] .link { gap: 8px; font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); color: var(--k-ink-2); }
+    html[data-skin-2027="kds"] .link i { width: 12px; height: 12px; }
+    html[data-skin-2027="kds"] .link.ok i { background-color: var(--k-accent); }
+    html[data-skin-2027="kds"] .link.down i { background-color: var(--k-danger); }
+    html[data-skin-2027="kds"] .clock { font-family: inherit; font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--k-ink-1); }
+    html[data-skin-2027="kds"] .tool { border: 0; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-1); }
+    html[data-skin-2027="kds"] .tool:active { background-color: var(--k-surface-3); }
+    html[data-skin-2027="kds"] .tool.off { color: var(--k-ink-3); }
+    html[data-skin-2027="kds"] .tool--lang { font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong); letter-spacing: 0; }
+    html[data-skin-2027="kds"] .tool:focus-visible,
+    html[data-skin-2027="kds"] .st:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+    html[data-skin-2027="kds"] .sync-pending { font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong); color: var(--k-ink-1); background-color: var(--k-warning-tint); }
+    html[data-skin-2027="kds"] .stale { padding: 12px 24px; font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); color: var(--k-ink-1); background-color: var(--k-warning-tint); border-bottom: 1px solid var(--k-line); }
+    /* No station, no strip: the bar used to paint its padding and hairline empty. */
+    html[data-skin-2027="kds"] .bar:empty { display: none; }
+    html[data-skin-2027="kds"] .bar { gap: 8px; padding: 12px 24px; background-color: var(--k-bg); border-bottom: 1px solid var(--k-line); }
+    html[data-skin-2027="kds"] .st { gap: 8px; padding-inline: 20px; border: 0; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-1); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); }
+    html[data-skin-2027="kds"] .st.on { background-color: var(--k-select); box-shadow: inset 0 0 0 var(--k-select-edge-w) var(--k-line-strong); color: var(--k-ink-1); font-weight: var(--k-fw-callout-strong); }
+    html[data-skin-2027="kds"] .st .ct,
+    html[data-skin-2027="kds"] .st.on .ct { padding: 0; font-family: inherit; font-size: inherit; font-weight: var(--k-fw-callout-strong); font-variant-numeric: tabular-nums; background: none; color: var(--k-ink-2); }
+    /* The lanes sit on the ground, split by a hairline. */
+    html[data-skin-2027="kds"] .cols { background-color: var(--k-line); }
+    html[data-skin-2027="kds"] .col { background-color: var(--k-bg); }
+    /* A lane head starts where its lane's cards start (the stack's 16, 12 for
+       Ready): head, empty well and tickets share one edge (§18.7 lane heads). */
+    html[data-skin-2027="kds"] .col-head { gap: 8px; padding: 12px 16px; font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong); letter-spacing: 0; text-transform: none; color: var(--k-ink-2); }
+    html[data-skin-2027="kds"] .col-head .n { padding: 0; border: 0; background: none; font-family: inherit; font-size: inherit; letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--k-ink-3); }
+    html[data-skin-2027="kds"] .kds-notice { background-color: var(--k-surface-1); color: var(--k-ink-1); border-color: var(--k-danger); border-radius: var(--k-r-3); font-size: var(--k-fs-callout); }
+    @media (min-width: 901px) {
+      html[data-skin-2027="kds"] .col--pass .col-head { padding-inline: 12px; }
+    }
+    @media (max-width: 900px) {
+      /* One lane at a time: the tabs read as one segmented track (§10.6). */
+      html[data-skin-2027="kds"] .coltabs { gap: 4px; margin: 12px 16px 0; padding: 4px; border: 0; border-radius: 999px; background-color: var(--k-surface-2); }
+      html[data-skin-2027="kds"] .coltabs .st { background-color: transparent; font-size: var(--k-fs-footnote); }
+      html[data-skin-2027="kds"] .coltabs .st.on { background-color: var(--k-select); }
+      html[data-skin-2027="kds"] .clock { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); }
+      html[data-skin-2027="kds"] .cols .stack { padding-top: 16px; }
+    }
+    @media (max-width: 620px) {
+      html[data-skin-2027="kds"] .top { gap: 8px; padding: 12px 16px; }
+      html[data-skin-2027="kds"] .coltabs .st { padding-inline: 8px; font-size: 15px; }
+    }
+    /* A phone keeps every tool at 56 (see .tool above): the wordmark gives way
+       instead, so the clock and the four tools fit without the bar scrolling. */
+    @media (max-width: 520px) {
+      html[data-skin-2027="kds"] .brand { display: none; }
     }
   </style>
 </head>

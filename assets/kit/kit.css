@@ -143,6 +143,66 @@ k-figure .k-fig__sr {
    each column body is one lane at the till's root; the screen scrolls. */
 .kit-lane-box { display: block; min-width: 0; }
 .kit-lane-box > k-lane { width: 100%; }
+/* The till's Cuisine page in the 2027 till (html[data-k-till]): its chrome
+   was the shipped one, a black band over the light till, tracked mono lane
+   heads, bordered 38 px station pills beside a 42 px Historique. It now reads
+   like its rail neighbours (Salle, À emporter, En attente): a light title
+   line, the kit chip's look for the stations (44, selected = --k-select),
+   heads in Callout strong ink-2 that start on the lanes' own edge, and every
+   head 44 tall so the Ready head's close button does not push it down. */
+html[data-k-till] #kds-screen { background-color: var(--k-bg); }
+html[data-k-till] #kds-screen .kds-head { padding: 18px 24px 14px; background-color: transparent; color: var(--k-ink-1); }
+html[data-k-till] #kds-screen .kds-head-l { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 6px; min-width: 0; }
+html[data-k-till] #kds-screen .kds-head-l h2 { font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong); letter-spacing: 0; color: var(--k-ink-1); }
+html[data-k-till] #kds-screen .kds-head-l .sub { font-size: var(--k-fs-callout); color: var(--k-ink-3); }
+html[data-k-till] #kds-screen .kds-head-l .sub::before { content: "\00B7\00A0"; }
+html[data-k-till] #kds-screen .kds-close { min-height: 44px; padding-inline: 16px; border: 0; background-color: var(--k-surface-2); color: var(--k-ink-1); }
+html[data-k-till] #kds-screen .kds-close:hover { background-color: var(--k-surface-3); }
+html[data-k-till] #kds-screen .kds-body { padding: 0 24px 24px; }
+html[data-k-till] #kds-screen .kit-screen { gap: 16px; }
+html[data-k-till] #kds-screen .kit-topbar { align-items: center; gap: 8px; }
+html[data-k-till] #kds-screen .kit-stationbar { gap: 8px; padding-inline-end: 32px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+html[data-k-till][dir="rtl"] #kds-screen .kit-stationbar {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); }
+html[data-k-till] #kds-screen .kit-station,
+html[data-k-till] #kds-screen .kit-history-toggle { min-height: 44px; gap: 8px; padding: 0 16px; border: 0; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-1);
+  font-family: inherit; font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); letter-spacing: 0; }
+html[data-k-till] #kds-screen .kit-station:hover,
+html[data-k-till] #kds-screen .kit-history-toggle:hover { color: var(--k-ink-1); }
+html[data-k-till] #kds-screen .kit-station:active,
+html[data-k-till] #kds-screen .kit-history-toggle:active { background-color: var(--k-surface-3); }
+html[data-k-till] #kds-screen .kit-station.on,
+html[data-k-till] #kds-screen .kit-history-toggle.on { background-color: var(--k-select); box-shadow: inset 0 0 0 var(--k-select-edge-w) var(--k-line-strong); color: var(--k-ink-1); font-weight: var(--k-fw-callout-strong); }
+html[data-k-till] #kds-screen .kit-station-ct,
+html[data-k-till] #kds-screen .kit-htg-ct,
+html[data-k-till] #kds-screen .kit-station.on .kit-station-ct,
+html[data-k-till] #kds-screen .kit-history-toggle.on .kit-htg-ct { padding: 0; background: none; font-family: inherit; font-size: inherit; font-weight: var(--k-fw-callout-strong); font-variant-numeric: tabular-nums; color: var(--k-ink-2); }
+html[data-k-till] #kds-screen .kit-station:focus-visible,
+html[data-k-till] #kds-screen .kit-history-toggle:focus-visible,
+html[data-k-till] #kds-screen .kit-history-x:focus-visible,
+html[data-k-till] #kds-screen .kds-close:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+html[data-k-till] #kds-screen .kit-col { gap: 8px; }
+html[data-k-till] #kds-screen .kit-col-head { min-height: 44px; gap: 8px; padding: 0; font-family: inherit; font-size: var(--k-fs-callout); line-height: var(--k-lh-callout);
+  font-weight: var(--k-fw-callout-strong); letter-spacing: 0; text-transform: none; color: var(--k-ink-2); }
+html[data-k-till] #kds-screen .kit-col-ct { font-weight: var(--k-fw-callout-strong); font-variant-numeric: tabular-nums; color: var(--k-ink-3); }
+html[data-k-till] #kds-screen .kit-history-x { width: 44px; height: 44px; margin-inline-start: auto; border: 0; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-2); }
+html[data-k-till] #kds-screen .kit-history-x svg { width: 16px; height: 16px; }
+html[data-k-till] #kds-screen .kit-history-inner { gap: 8px; padding: 0; padding-inline-start: 16px; }
+/* Narrow (a phone, a split iPad): the fixed 300 New lane left Preparing a
+   34 px sliver. The lanes stack, each the window's width. */
+@media (max-width: 640px) {
+  html[data-k-till] #kds-screen .kds-head { padding: 14px 16px 12px; }
+  html[data-k-till] #kds-screen .kds-body { padding: 0 16px 24px; }
+  /* The subtitle would wrap under the title, its middle dot leading a line. */
+  html[data-k-till] #kds-screen .kds-head-l .sub { display: none; }
+  html[data-k-till] #kds-screen .kit-history:not(.open) { display: none; }
+  html[data-k-till] #kds-screen .kit-cols { flex-direction: column; align-items: stretch; gap: 24px; }
+  html[data-k-till] #kds-screen .kit-col-new,
+  html[data-k-till] #kds-screen .kit-history.open,
+  html[data-k-till] #kds-screen .kit-history-inner { width: auto; }
+  html[data-k-till] #kds-screen .kit-history-inner { padding-inline-start: 0; }
+}
 /* The till's menu and bill on the kit (kiwi-caisse.html, stage 4 (1)).
    html[data-k-till] is set only once till-frame.js has mounted, so a kit that
    failed to load leaves the shipped grid and panel in place. */

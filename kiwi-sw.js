@@ -331,7 +331,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=7',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=43',
+  '/assets/kit/kit.css?v=44',
   '/assets/kit/dash-desktop.css?v=6',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
@@ -382,7 +382,7 @@ var SHELL = [
   '/assets/kit/strings/kds.en.js?v=3',
   '/assets/kit/strings/kds.ar.js?v=3',
   '/assets/kit/controls/button.js?v=1',
-  '/assets/kit/kds.js?v=5',
+  '/assets/kit/kds.js?v=6',
   '/assets/kit/kds-board.js?v=2',
   /* and the till's menu and bill on the kit, behind kiwiSkin2027:till (stage 4). */
   '/assets/kit/controls/chip.js?v=1',
