@@ -254,6 +254,25 @@ html[data-k-till] .main-head .main-title { padding-inline-start: 0; }
 /* In portrait the shipped header stacks; the waiting list's one button
    stayed a full-width green bar (owner, 2026-10-24). It keeps its size. */
 html[data-k-till] .main-head .wl-add-btn { align-self: flex-start; }
+
+/* The menu's category chips are chips (§10.7): at rest one step off the
+   ground (surface-2), the chosen one in the lens paint with a strong ink-1
+   label, Callout. They were the shipped pills: the chosen one a dark-green
+   slab, the others already in the lens's white (owner, 2026-10-24). */
+html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) > .cat-pill {
+  min-height: 44px; padding-inline: 16px; border: 0; box-shadow: none;
+  background-color: var(--k-surface-2); color: var(--k-ink-2);
+  font-family: var(--k-font); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout);
+}
+html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) > .cat-pill:active { background-color: var(--k-surface-3); }
+html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) > .cat-pill.is-active {
+  background-color: var(--k-select); color: var(--k-ink-1); font-weight: var(--k-fw-callout-strong);
+  box-shadow: inset 0 0 0 var(--k-select-edge-w) var(--k-line-strong);
+}
+html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) .cat-pill .count {
+  background: none; color: var(--k-ink-3); opacity: 1; padding: 0;
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); font-variant-numeric: tabular-nums;
+}
 /* Cuisine on the rail opens in the till's own place, beside the rail, like
    Salle, À emporter and Attente (owner, 2026-10-22): the kitchen used to cover
    the whole window, rail included. It sits under Plus's panel (949) and its

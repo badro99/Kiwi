@@ -21,7 +21,11 @@
   var esc = K.esc, t = K.t, th = K.th, numHtml = K.numHtml, icon = K.icon;
 
   function lensApi() { return root.KiwiLens && typeof root.KiwiLens.attach === 'function' ? root.KiwiLens : null; }
-  var LENS_PAINT = 'background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-line-strong),var(--k-shadow-1)';
+  /* Fill and 1 px edge, as §10.7 and the chip draw it. It also carried
+     var(--k-shadow-1), which is `none` in dark: `inset …, none` is not a valid
+     shadow, so the browser dropped the whole declaration and the dark lens
+     lost its edge (3.69:1 in the spec, nothing on screen; 2026-10-24). */
+  var LENS_PAINT = 'background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-line-strong)';
 
   /* ── <k-segmented size value label scroll> + .options ─────────────────────
      The host is the full hit height (44 compact and default, 56 kitchen) and
