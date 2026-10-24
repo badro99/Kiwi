@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=107';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=13';
-import { offerRegister } from './inventory.js?v=13';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=109';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=15';
+import { offerRegister } from './inventory.js?v=15';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -381,7 +381,7 @@ import { offerRegister } from './inventory.js?v=13';
     const sub = [esc(c.phone) || '·', c.points + ' pts', c.taille ? 'taille ' + esc(c.taille) : ''].filter(Boolean).join(' · ');
     /* #105 · l'avoir de la cliente reste sous les yeux tant qu'elle est sur le
        ticket, pas seulement dans un toast qui s'efface au bout de deux secondes. */
-    const av = clAvoirOf(c);
+    const av = clAvoirTotal(c);
     return `<button class="bq-tk-row is-set" id="bq-tk-client"><i data-lucide="user-check"></i>
       <span class="l"><b>${esc(c.name)}</b><span>${sub}</span>${av ? `<span class="bq-tk-av" data-bq-tk-av>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
       ${c.vip ? '<span class="bq-vip-chip">VIP</span>' : ''}
@@ -828,6 +828,13 @@ import { offerRegister } from './inventory.js?v=13';
   function clAvoirOf(c) {
     return activeAvoirs().find((a) => a.holderId === c.id) || null;
   }
+  /* Ce que la cliente peut dépenser en avoirs : la somme de ses bons actifs.
+     Le ticket n'affichait que le premier bon trouvé (25 MAD) alors qu'elle en
+     portait deux (125 MAD). La fiche, elle, garde un bon nommé par son code. */
+  function clAvoirTotal(c) {
+    const mine = activeAvoirs().filter((a) => a.holderId === c.id);
+    return mine.length ? { balance: mine.reduce((t, a) => t + (Number(a.balance) || 0), 0), count: mine.length } : null;
+  }
 
   function openClientModal() {
     const el = $('#bq-clientm', root);
@@ -860,7 +867,7 @@ import { offerRegister } from './inventory.js?v=13';
         ${mode === 'search' ? `
           <div class="bq-cl-results">
             ${hits.map((c) => {
-              const av = clAvoirOf(c);
+              const av = clAvoirTotal(c);
               return `<button class="bq-cl-row" data-bq-cl="${c.id}">
                 <span class="bq-cl-ava">${esc(initials(c.name))}</span>
                 <span class="bq-cl-mid">
@@ -949,7 +956,7 @@ import { offerRegister } from './inventory.js?v=13';
         <div class="bq-cl-scroll">
           <div class="bq-cl-grid">
             ${hits.map((c) => {
-              const av = clAvoirOf(c);
+              const av = clAvoirTotal(c);
               return `<button class="bq-clcard" data-bq-fiche="${c.id}">
                 <span class="bq-clcard-top">
                   <span class="bq-cl-ava">${esc(initials(c.name))}</span>

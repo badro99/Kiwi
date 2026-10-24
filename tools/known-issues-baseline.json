@@ -33,12 +33,6 @@
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-2",
-      "kind": "decision",
-      "severity": "data"
-    },
-    {
-      "suite": "clients-properties-test.mjs",
       "label": "CL-4",
       "kind": "decision",
       "severity": "security"
@@ -96,12 +90,6 @@
       "label": "policy: month totals include original sales without a closed Z",
       "kind": "decision",
       "severity": "display"
-    },
-    {
-      "suite": "dayreport-properties-test.mjs",
-      "label": "retention policy: node trimming may discard previous month closed days; archival/overflow rule needed",
-      "kind": "decision",
-      "severity": "data"
     },
     {
       "suite": "hotel-properties-test.mjs",

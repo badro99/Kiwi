@@ -27,7 +27,7 @@ for (const s of manifest.surfaces) {
   }
 }
 for (const e of manifest.excludedHtml) {
-  assert(e.reason && /^(tools|docs|content|app)\//.test(e.path), `invalid shell exclusion ${e.path}`);
+  assert(e.reason && /^(tools|docs|content|app|bridge\/rust\/src)\//.test(e.path), `invalid shell exclusion ${e.path}`);
   assert(!shells.has(e.path), `duplicate shell classification ${e.path}`); shells.add(e.path);
 }
 function walk(dir, prefix = '') {

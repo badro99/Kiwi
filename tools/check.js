@@ -1886,6 +1886,7 @@ section('Whole-project regressions');
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur
        /api/print/jobs et le pont du comptoir vient le chercher. */
     'print-relay-test.mjs',
+    'bridge-rust-parity-test.mjs',
     'android-print-bridge-test.mjs',
     'printer-page-test.mjs',
     /* beaucoup de comptoirs tournent encore sur Windows 7 : le binaire du pont
@@ -2300,9 +2301,11 @@ section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
 for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs',
   'surface-matrix-till-desktop-browser-test.mjs', 'surface-matrix-till-tablet-browser-test.mjs', 'surface-matrix-till-phone-browser-test.mjs',
   'surface-matrix-apps-browser-test.mjs', 'keyboard-floor-booking-browser-test.mjs',
-  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs', 'surface-matrix-states-real-browser-test.mjs',
-  'surface-matrix-states-intake-browser-test.mjs', 'surface-matrix-states-pressing-browser-test.mjs',
-  'surface-matrix-states-promos-catalogue-browser-test.mjs', 'surface-matrix-states-shopify-browser-test.mjs']) {
+  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-credit-browser-test.mjs', 'surface-matrix-states-credit-real-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs', 'surface-matrix-states-real-browser-test.mjs',
+  'surface-matrix-states-booking-floor-browser-test.mjs', 'surface-matrix-states-intake-browser-test.mjs', 'surface-matrix-states-pressing-browser-test.mjs',
+  'surface-matrix-states-loyalty-till-browser-test.mjs', 'surface-matrix-states-agent-doc-browser-test.mjs',
+  'surface-matrix-states-promos-catalogue-browser-test.mjs', 'surface-matrix-states-shopify-browser-test.mjs', 'surface-matrix-states-economat-browser-test.mjs',
+  'surface-matrix-states-console-browser-test.mjs']) {
   section(`Surface matrix (tools/${file})`);
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

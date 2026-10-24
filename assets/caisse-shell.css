@@ -5380,7 +5380,7 @@
   }
   html:not([data-caisse-theme="dark"]) .plan-empty-ico { background: rgba(11,110,79,0.10); color: #0B6E4F; }
   html:not([data-caisse-theme="dark"]) .plan-empty-title { color: rgba(10,15,13,0.86); }
-  html:not([data-caisse-theme="dark"]) .plan-empty-sub { color: rgba(10,15,13,0.52); }
+  html:not([data-caisse-theme="dark"]) .plan-empty-sub { color: rgba(10,15,13,0.64); } /* 5.7:1 sur le papier, 0.52 restait sous 4.5:1 */
   html:not([data-caisse-theme="dark"]) .plan-empty-sub b { color: #0B6E4F; }
   html:not([data-caisse-theme="dark"]) .plan-real-zone-h { color: rgba(10,15,13,0.55); }
   html:not([data-caisse-theme="dark"]) .plan-real-zone-h em { color: var(--ink-3); }

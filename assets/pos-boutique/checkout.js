@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=107';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=13';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=13';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=109';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=15';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=15';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -996,7 +996,10 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       icons(); closeBtns();
       $('#bq-av-back', el).onclick = stepMethods;
       const applyCode = async (rawCode) => {
-        const code = String(rawCode || '').trim().toUpperCase();
+        /* En arabe le code s'affiche isolé de gauche à droite (U+2066…U+2069) :
+           ces marques invisibles suivent un copier-coller du bon ou d'un message
+           et le code n'était plus trouvé. On les retire avant de chercher. */
+        const code = String(rawCode || '').replace(/[‎‏‪-‮⁦-⁩]/g, '').trim().toUpperCase();
         if (!code) return;
         const errEl = $('#bq-av-err', el);
         if (errEl) { errEl.hidden = true; errEl.textContent = ''; }

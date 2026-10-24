@@ -162,8 +162,10 @@ ok(/requireManager\(`Avoir \$\{fmtMAD\(amount\)\} · ticket \$\{ticketRef \|\| o
   'boutique : l\'accord du responsable nomme le numéro du ticket');
 ok(/saleId: \(opts\.sale && opts\.sale\.id\) \|\| opts\.ref \|\| ''/.test(boutique),
   'boutique : la consommation d\'un avoir porte le numéro du ticket qui la fait');
-ok(/const av = clAvoirOf\(c\);[\s\S]{0,400}data-bq-tk-av>Avoir \$\{fmtMAD\(av\.balance\)\}/.test(slice(boutique, 'function clientRow(', 'function renderTicket')),
+ok(/const av = clAvoirTotal\(c\);[\s\S]{0,400}data-bq-tk-av>Avoir \$\{fmtMAD\(av\.balance\)\}/.test(slice(boutique, 'function clientRow(', 'function renderTicket')),
   'boutique : l\'avoir de la cliente reste affiché sur le ticket');
+ok(/function clAvoirTotal\(c\) \{[\s\S]{0,200}activeAvoirs\(\)\.filter\(\(a\) => a\.holderId === c\.id\)[\s\S]{0,200}mine\.reduce\(/.test(boutique),
+  'boutique : le ticket additionne tous les avoirs actifs de la cliente, pas le premier trouvé');
 
 /* 2026-10-19 · un retour contre avoir sort de la dépense et des points de la
    cliente (KiwiClients.recordRefund, clé = code de l'avoir) ; et le toast de

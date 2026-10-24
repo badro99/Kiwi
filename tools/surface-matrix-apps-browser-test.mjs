@@ -4,6 +4,7 @@
 // Fixtures mirror booking-lens, kds-cards, a11y and access-gate browser tests.
 import { randomInt } from 'node:crypto';
 import { harness, demoPage, verify } from './surface-matrix-lib.mjs';
+import { tradingHourMs } from './demo-clock.mjs';
 import { secretFromEnv, fillSecret } from './browser-trace.mjs';
 import { TICKET_TAXONOMY } from '../functions/api/tickets/_taxonomy.js';
 
@@ -20,6 +21,7 @@ for (const [name, digits] of [['login', 4], ['attendance', 6]]) {
 }
 
 async function open(t, surface, locale, viewport) {
+  const pinnedAt = Date.now(); // demoPage pins the page clock to 15:00 from here
   const { ctx, page } = await demoPage(h, locale, viewport, {
     'kiwi-employee-language:demo': locale,
     kiwiCuisineLang: locale, orderProLang: locale, kiwiBookingLang: locale,
@@ -40,10 +42,13 @@ async function open(t, surface, locale, viewport) {
         ...(date ? { slots: [{ startAt: Date.parse(date + 'T10:00:00Z') }] } : {}) });
     }
     if (u.origin === h.base && u.pathname === '/api/order/queue') {
-      return reply({ ok: true, now: Date.now(), ordersAvailable: true, orders: [{
+      // The page clock is pinned to 15:00 (demo-clock.mjs): stamp the order on
+      // that clock, or after midnight it reads as 12 hours old and is dropped.
+      const pageNow = tradingHourMs() + (Date.now() - pinnedAt);
+      return reply({ ok: true, now: pageNow, ordersAvailable: true, orders: [{
         id: 'matrix-demo-order', number: 101, mode: 'table', table_no: '5',
         status: 'accepted', channel: 'caisse', total: 50,
-        created_ts: Date.now() - 120000, updated_ts: Date.now(),
+        created_ts: pageNow - 120000, updated_ts: pageNow,
         lines: [{ id: 'matrix-demo-dish', name: 'Harira', qty: 1, unitPrice: 50, station: '' }],
       }] });
     }

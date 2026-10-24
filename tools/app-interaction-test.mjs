@@ -36,6 +36,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from './build-app-www.mjs';
+import { verify } from './surface-matrix-lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -1964,6 +1965,94 @@ for (const locale of ['fr', 'en', 'ar']) {
       : bad(`Dynamic Type 320px Step 5 failed in ${locale}: ${JSON.stringify(s5)}`);
 
     await p320.closeCtx();
+  }
+}
+
+// Missing matrix cells: exercise the built native launch/setup and an actual
+// demo till under the same Capacitor bridge, including the shipping picker.
+// Empty axe budgets are deliberate: no new accessibility debt is accepted.
+{
+  const req = createRequire(path.join(ROOT, 'app/package.json'));
+  const axeSource = fs.readFileSync(req.resolve('axe-core/axe.min.js'), 'utf8');
+  for (const [locale, viewport, size] of [['en', 'ipadPortrait', 'tablet'], ['ar', 'desktop1280', 'desktop']]) {
+    const p = await openShell({ locale, viewport, plugin: 'controlled' });
+    try {
+      const audit = async (region, state, lang = locale) => {
+        const key = `native-shell-${state}-${locale}-${size}`;
+        await verify({ axeSource, baseline: { [key]: {} } }, { step() {} }, { page:p, region }, key, lang);
+      };
+      await p.waitForFunction(() => typeof window.__releaseSecureGet === 'function');
+      await audit('#boot', 'launch');
+      await p.evaluate(() => window.__releaseSecureGet({ value: '' }));
+      await waitShell(p);
+      await settleAccount(p);
+      await audit('#shell', 'setup');
+      await p.evaluate(() => document.documentElement.style.setProperty('--type-scale', '1.35'));
+      await audit('#shell', 'setup-enlarged');
+      // The till is a bundled demo, not the synthetic account used by setup.
+      await p.evaluate((lang) => {
+        localStorage.setItem('kiwiDemos', '1');
+        localStorage.setItem('kiwiNativeLocale', lang);
+        localStorage.setItem('kiwiCaisseLang', lang);
+        localStorage.setItem('kiwiAppRole', 'caisse');
+      }, locale);
+      // coverage: surface=native-shell locale=en viewport=tablet
+      // coverage: surface=native-shell locale=ar viewport=desktop
+      await p.goto(`${BASE}/kiwi-caisse.html`, { waitUntil:'load' });
+      await p.waitForSelector('.ci-float-chip[data-float="300"]', { visible:true, timeout:30000 });
+      // The opening screen is still sliding in when the chip first appears; a
+      // locator click waits for it to settle, so the tap is not lost.
+      // The chips draw before the till wires them; tap again until the chip
+      // takes the choice, as a cashier would, for up to 15 s.
+      for (let i = 0; i < 50; i++) {
+        await p.locator('.ci-float-chip[data-float="300"]').setTimeout(15000).click();
+        if (await p.waitForFunction(() => !document.getElementById('clockin-btn').disabled, { timeout:300 }).then(() => true, () => false)) break;
+      }
+      await p.waitForFunction(() => !document.getElementById('clockin-btn').disabled, { timeout:1000 });
+      await p.locator('#clockin-btn').setTimeout(15000).click();
+      await p.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout:20000 });
+      await p.waitForSelector('.view.is-active', { visible:true });
+      // The clock-in screen fades out after unlock; axe would read its text
+      // half transparent. Wait for every finite animation to end.
+      const settled = () => p.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity), { timeout:8000 }).catch(() => {});
+      await settled();
+      await audit('.view.is-active', 'till');
+      const other = locale === 'en' ? 'ar' : 'en';
+      // On a portrait tablet the rail holding the language toggle is off
+      // canvas: open the menu first, as a cashier would, then close it.
+      const tapLang = async (lang) => {
+        const onScreen = (l) => { const b = document.querySelector(`[data-kcl="${l}"]`); const r = b && b.getBoundingClientRect(); return !!r && r.width > 0 && r.left >= 0 && r.right <= innerWidth; };
+        const opened = !(await p.evaluate(onScreen, lang));
+        if (opened) {
+          // The native till swaps the web hamburger for its own menu button
+          // in the page header.
+          const burger = await p.evaluateHandle(() => [...document.querySelectorAll('.kiwi-native-burger, .kw-hamburger')].find((b) => b.getClientRects().length && getComputedStyle(b).visibility !== 'hidden'));
+          if (!burger.asElement()) throw new Error('no visible menu button to reach the language toggle');
+          await burger.asElement().click();
+          await p.waitForFunction(onScreen, { timeout:5000 }, lang);
+          await settled();
+        }
+        await p.locator(`[data-kcl="${lang}"]`).setTimeout(15000).click();
+        if (opened && await p.evaluate(() => document.body.classList.contains('nav-open'))) {
+          // Tap the dimmed area beside the tools drawer to close it.
+          const spot = await p.evaluate(() => { const r = document.querySelector('.sidebar').getBoundingClientRect(); return document.documentElement.dir === 'rtl' ? { x: Math.round(r.left / 2), y: Math.round(innerHeight / 2) } : { x: Math.round((r.right + innerWidth) / 2), y: Math.round(innerHeight / 2) }; });
+          await p.mouse.click(spot.x, spot.y);
+          await p.waitForFunction(() => !document.body.classList.contains('nav-open'), { timeout:5000 });
+          await settled();
+        }
+      };
+      await tapLang(other);
+      await p.waitForFunction((lang) => document.documentElement.lang === lang, {}, other);
+      await settled();
+      await audit('.view.is-active', 'language-switch', other);
+      await tapLang(locale);
+      await p.waitForFunction((lang) => document.documentElement.lang === lang, {}, locale);
+      await p.evaluate(() => document.documentElement.style.setProperty('--type-scale', '1.35'));
+      await settled();
+      await audit('.view.is-active', 'till-enlarged');
+      ok(`native-shell ${locale}/${size}: launch, setup, till, language switch and enlarged text pass verify()`);
+    } catch (error) { bad(`native-shell ${locale}/${size}: ${error.message}`); }
+    finally { await p.closeCtx(); }
   }
 }
 

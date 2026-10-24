@@ -699,7 +699,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
 <link rel="stylesheet" href="assets/admin-workspace.css?v=4" />
 <script src="assets/kit/haptics.js?v=7"></script>
 <script src="assets/admin-policy.js?v=5"></script>
-<script src="assets/admin-workspace.js?v=21" defer></script>
+<script src="assets/admin-workspace.js?v=23" defer></script>
 </head>
 <body class="operator-workspace" data-workspace="today">
   <aside class="op-sidebar" aria-label="Espace opérateur">
@@ -2595,6 +2595,22 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     });
     renderDanger();
     renderClients();   // retire le surlignage et rend « Gérer » à la ligne
+    // Le focus revient à la recherche. Fermer un dossier remet l'adresse sur
+    // #clients, mais la liste ne réapparaît qu'au hashchange qui suit : tant
+    // qu'elle est masquée, focus() ne prend pas, on réessaie après ce
+    // hashchange (une seconde au plus).
+    function focusSearch(){
+      var q=document.getElementById('cli-q');
+      if(location.hash!=='#clients'||!q)return true;
+      if(!q.getClientRects().length)return false;
+      q.focus();return true;
+    }
+    requestAnimationFrame(function(){
+      if(focusSearch())return;
+      var once=function(){window.removeEventListener('hashchange',once);requestAnimationFrame(focusSearch);};
+      window.addEventListener('hashchange',once);
+      setTimeout(function(){window.removeEventListener('hashchange',once);},1000);
+    });
   }
 
   // Le même geste ouvre et referme : recliquer la boutique déjà ouverte la ferme.

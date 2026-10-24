@@ -53,7 +53,7 @@ export async function harness(name) {
 
 /* A demo page in a fresh context, API answering offline, the service worker
    kept out, the clock pinned to a trading hour. */
-export async function demoPage(h, locale, viewport, extraStorage = {}) {
+export async function demoPage(h, locale, viewport, extraStorage = {}, routes = {}) {
   const ctx = await h.browser.createBrowserContext();
   const page = await ctx.newPage();
   await pinTradingHour(page);
@@ -61,8 +61,14 @@ export async function demoPage(h, locale, viewport, extraStorage = {}) {
   await page.setBypassServiceWorker(true);
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   await page.setRequestInterception(true);
-  page.on('request', (r) => {
+  page.on('request', async (r) => {
     const u = r.url();
+    const key = r.method() + ' ' + new URL(u).pathname;
+    if (u.startsWith(h.base + '/api/') && Object.hasOwn(routes, key)) {
+      const route = routes[key];
+      const result = typeof route === 'function' ? await route(r) : { body: route };
+      return r.respond({ status: result.status ?? 200, contentType: 'application/json', body: JSON.stringify(result.body) });
+    }
     if (u.startsWith(h.base + '/api/')) return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
     return u.startsWith(h.base + '/') || u.startsWith('data:') ? r.continue() : r.abort();
   });
@@ -79,7 +85,8 @@ export async function demoPage(h, locale, viewport, extraStorage = {}) {
 
 /* Isolated synthetic real session. Route keys match method + pathname (query
    parameters remain available on the Puppeteer request passed to a handler).
-   Plain values are JSON bodies; handlers return { status, body }. */
+   Plain values are JSON bodies; handlers return { status, body } or
+   { abort: 'internetdisconnected' } for an actual transport failure. */
 export async function realPage(h, locale, viewport, routes, extraStorage = {}) {
   const ctx = await h.browser.createBrowserContext();
   const page = await ctx.newPage();
@@ -96,6 +103,7 @@ export async function realPage(h, locale, viewport, routes, extraStorage = {}) {
       const result = typeof route === 'function' ? await route(req)
         : route === undefined ? { status: 503, body: { error: 'offline' } }
           : { status: 200, body: route };
+      if (result.abort) return req.abort(result.abort);
       return req.respond({ status: result.status ?? 200, contentType: 'application/json', body: JSON.stringify(result.body) });
     }
     return url.origin === h.base || url.protocol === 'data:' ? req.continue() : req.abort();

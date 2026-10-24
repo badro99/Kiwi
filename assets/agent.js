@@ -5231,7 +5231,7 @@
     const body = `
       <div class="fa">
         <div class="fa-main">
-          <div class="fa-thread">
+          <div class="fa-thread" tabindex="0">
             <div class="fa-thread-in" data-fa-thread></div>
           </div>
           <div class="fa-dock">

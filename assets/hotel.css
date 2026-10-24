@@ -942,6 +942,8 @@
 .hx-eco-item small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px; color:var(--n-500); font:9.5px var(--mono); }
 .hx-eco-qty { text-align:right; color:var(--ink); font:650 13px var(--mono); font-variant-numeric:tabular-nums; }
 .hx-eco-state { justify-self:end; }
+.hx-eco-state.late { color:var(--ink); }
+.hx-eco .hx-strip:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
 .hx-eco-side { display:flex; flex-direction:column; gap:14px; }
 .hx-eco-activity { display:flex; flex-direction:column; margin-top:6px; }
 .hx-eco-event { display:grid; grid-template-columns:9px minmax(0,1fr) auto; align-items:center; gap:10px; min-height:48px; border-bottom:1px solid var(--n-100); }

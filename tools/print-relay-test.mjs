@@ -23,7 +23,8 @@ import path from 'node:path';
 import http from 'node:http';
 import net from 'node:net';
 import vm from 'node:vm';
-import { spawn } from 'node:child_process';
+import { randomInt } from 'node:crypto';
+import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,7 +32,11 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 // La version du pont est LUE dans server.js, jamais recopiée ici : un test qui
 // épingle un littéral force une édition de test à chaque correctif et finit par
 // être « réparé » en le rabaissant. On vérifie l'accord des sources, pas un chiffre.
-const BRIDGE_VERSION = (read('bridge/server.js').match(/const VERSION = '([^']+)'/) || [])[1] || '';
+const NODE_BRIDGE_VERSION = (read('bridge/server.js').match(/const VERSION = '([^']+)'/) || [])[1] || '';
+const BRIDGE_BIN = process.env.KIWI_BRIDGE_BIN;
+const BRIDGE_VERSION = BRIDGE_BIN ? execFileSync(BRIDGE_BIN, ['--version'], { encoding: 'utf8' }).trim() : NODE_BRIDGE_VERSION;
+const fakeCode = String(randomInt(100000, 999999));
+const wrongCode = String((Number(fakeCode) + 1) % 1000000).padStart(6, '0');
 
 let pass = 0;
 function ok(v, msg) { if (!v) { console.error('  ✗ ' + msg); process.exitCode = 1; return false; } pass++; return true; }
@@ -120,7 +125,7 @@ if (DatabaseSync) {
     const r = await call(bridgesRoute, 'POST', '/api/print/bridges?merchant=browse', { body: { action: 'pair-code' }, cookie: till }, env);
     ok(r.status === 200 && r.j.ok && /^\d{6}$/.test(r.j.code), 'A2 · la caisse de Browse obtient un code à 6 chiffres');
     code = r.j.code;
-    const bad = await call(bridgesRoute, 'POST', '/api/print/bridges', { body: { action: 'redeem', code: '000000' }, ip: '1.2.3.4' }, env);
+    const bad = await call(bridgesRoute, 'POST', '/api/print/bridges', { body: { action: 'redeem', code: wrongCode }, ip: '1.2.3.4' }, env);
     ok(bad.status === 422 && bad.j.error === 'invalid_or_expired', 'A2 · un mauvais code → 422 invalid_or_expired');
     // le nouveau code révoque l'ancien
     const r2 = await call(bridgesRoute, 'POST', '/api/print/bridges?merchant=browse', { body: { action: 'pair-code' }, cookie: till }, env);
@@ -279,7 +284,7 @@ if (DatabaseSync) {
     if (rq.method === 'POST' && rq.url === '/api/print/bridges') {
       const j = JSON.parse(body || '{}');
       seen.redeem = j;
-      if (j.action === 'redeem' && j.code === '424242') return send(200, { ok: true, token: TOKEN, bridgeId: 'pb_0123456789abcdef', merchant: 'browse', name: j.name });
+      if (j.action === 'redeem' && j.code === fakeCode) return send(200, { ok: true, token: TOKEN, bridgeId: 'pb_0123456789abcdef', merchant: 'browse', name: j.name });
       return send(422, { ok: false, error: 'invalid_or_expired' });
     }
     if (rq.url === '/api/print/jobs' && auth !== 'Bearer ' + TOKEN) return send(401, { ok: false, error: 'unauthorized' });
@@ -297,7 +302,7 @@ if (DatabaseSync) {
   const cfgPath = path.join(os.tmpdir(), 'kiwi-bridge-test-' + process.pid + '.json');
   try { fs.unlinkSync(cfgPath); } catch (_) {}
   const BPORT = 9190 + (process.pid % 7);
-  const child = spawn(process.execPath, [path.join(root, 'bridge/server.js')], {
+  const child = spawn(BRIDGE_BIN || process.execPath, BRIDGE_BIN ? [] : [path.join(root, 'bridge/server.js')], {
     env: Object.assign({}, process.env, { KIWI_BRIDGE_PORT: String(BPORT), KIWI_BRIDGE_CONFIG: cfgPath, KIWI_RELAY_URL: 'http://127.0.0.1:' + fakePort }),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -322,10 +327,10 @@ if (DatabaseSync) {
     ok(ping.j.version === BRIDGE_VERSION && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v' + BRIDGE_VERSION + ' annonce relay.paired=false');
     const page = await bget('/');
     ok(page.status === 200 && /Kiwi Printer Bridge/.test(page.text) && /Associer ce pont/.test(page.text), 'B1 · la page locale du pont se sert sur /');
-    const bad = await bpost('/kiwi/relay/pair', { code: '111111' });
+    const bad = await bpost('/kiwi/relay/pair', { code: wrongCode });
     ok(bad.status === 422 && bad.j.ok === false, 'B2 · un mauvais code est refusé par le faux serveur et remonté tel quel');
-    const good = await bpost('/kiwi/relay/pair', { code: '424242' });
-    ok(good.status === 200 && good.j.ok && good.j.merchant === 'browse', 'B2 · le pont s’appaire avec 424242 → browse');
+    const good = await bpost('/kiwi/relay/pair', { code: fakeCode });
+    ok(good.status === 200 && good.j.ok && good.j.merchant === 'browse', 'B2 · le pont s’appaire avec le code éphémère → browse');
     ok(seen.redeem && seen.redeem.version === BRIDGE_VERSION && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     ok(cfg.relay && cfg.relay.token === TOKEN && cfg.relay.merchant === 'browse', 'B2 · le jeton est écrit dans le fichier de config du pont');
@@ -394,7 +399,7 @@ if (DatabaseSync) {
   const jobs = read('functions/api/print/jobs.js');
   ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /CLAIM_LEASE_MS = 30000/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais diffère les claims ambigus et reprend seulement les échecs connus');
   const srv = read('bridge/server.js');
-  ok(BRIDGE_VERSION !== '' && read('bridge/package.json').includes('"version": "' + BRIDGE_VERSION + '"'), 'C5 · bridge ' + BRIDGE_VERSION + ' (server.js et package.json d’accord)');
+  ok(NODE_BRIDGE_VERSION !== '' && read('bridge/package.json').includes('"version": "' + NODE_BRIDGE_VERSION + '"'), 'C5 · bridge ' + NODE_BRIDGE_VERSION + ' (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');
 
   const lin = read('bridge/install-linux.sh');

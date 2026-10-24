@@ -1614,6 +1614,10 @@
   ],
   "excludedHtml": [
     {
+      "path": "bridge/rust/src/local-page.html",
+      "reason": "page compiled into the Rust printer bridge; byte-identical to LOCAL_PAGE in bridge/server.js, checked by bridge-rust-parity-test.mjs; not a deployed product shell"
+    },
+    {
       "path": "content/guides/pages/breakEven/ar.html",
       "reason": "fixture, source template, documentation or app build input; not a deployed product shell"
     },

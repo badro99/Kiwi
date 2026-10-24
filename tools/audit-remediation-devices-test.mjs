@@ -15,6 +15,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
+import { randomInt } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -40,7 +41,7 @@ async function bridgeBoundaryTest() {
   const cfgPath = path.join(os.tmpdir(), 'kiwi-audit-device-' + process.pid + '.json');
   try { fs.unlinkSync(cfgPath); } catch (_) {}
   const bridgePort = 9300 + (process.pid % 100);
-  const child = spawn(process.execPath, [path.join(ROOT, 'bridge/server.js')], {
+  const child = spawn(process.env.KIWI_BRIDGE_BIN || process.execPath, process.env.KIWI_BRIDGE_BIN ? [] : [path.join(ROOT, 'bridge/server.js')], {
     env: { ...process.env, KIWI_BRIDGE_PORT: String(bridgePort), KIWI_BRIDGE_CONFIG: cfgPath, KIWI_RELAY_URL: 'http://127.0.0.1:1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -151,14 +152,14 @@ async function bridgeRolloutTest() {
   check((await old.api.printBytesToTarget(bytes, target)).ok, 'rollout: published legacy bridge still prints through the actual client');
   check(!old.state.calls.some(c => c.path === '/kiwi/targets' || c.headers['X-Kiwi-Bridge-Capability']), 'rollout: old bridge is not sent unsupported enrollment or capability headers');
   check((await old.api.wake(target)).ok, 'rollout: legacy printer wake still works');
-  check((await old.api.relayPairLocal('000000')).ok, 'rollout: legacy local relay pairing keeps its protocol');
+  check((await old.api.relayPairLocal(String(randomInt(100000, 999999)))).ok, 'rollout: legacy local relay pairing keeps its protocol');
   old.state.protocol = secure;
   old.state.calls.length = 0;
   check((await old.api.printBytesToTarget(bytes, target)).ok, 'rollout: next print automatically adopts an upgraded bridge without refresh');
   const secureCommands = old.state.calls.filter(c => c.path !== '/kiwi/ping');
   check(secureCommands[0].path === '/kiwi/targets' && secureCommands[1].path === '/kiwi/print'
     && secureCommands.every(c => c.headers['X-Kiwi-Bridge-Capability'] === secure.capability), 'rollout: upgraded bridge enrolls then prints with the selected capability');
-  check((await old.api.relayPairLocal('000000')).ok && old.state.calls.at(-1).headers['X-Kiwi-Bridge-Capability'] === secure.capability, 'rollout: local pairing sends the new command capability');
+  check((await old.api.relayPairLocal(String(randomInt(100000, 999999)))).ok && old.state.calls.at(-1).headers['X-Kiwi-Bridge-Capability'] === secure.capability, 'rollout: local pairing sends the new command capability');
   old.state.deny = true;
   old.state.calls.length = 0;
   check(!(await old.api.printBytesToTarget(bytes, target)).ok && !old.state.calls.some(c => c.path === '/kiwi/print'), 'rollout: secure enrollment denial never retries through legacy printing');
@@ -178,7 +179,7 @@ async function bridgeRolloutTest() {
   ]) {
     const h = harness(protocol);
     check(!(await h.api.printBytesToTarget(bytes, target)).ok && !h.state.calls.some(c => c.path === '/kiwi/print'), 'rollout: absent/invalid modern credentials or unknown service cannot become legacy');
-    check(!(await h.api.relayPairLocal('000000')).ok && !h.state.calls.some(c => c.path === '/kiwi/relay/pair'), 'rollout: local pairing cannot bypass missing modern credentials');
+    check(!(await h.api.relayPairLocal(String(randomInt(100000, 999999)))).ok && !h.state.calls.some(c => c.path === '/kiwi/relay/pair'), 'rollout: local pairing cannot bypass missing modern credentials');
   }
 }
 

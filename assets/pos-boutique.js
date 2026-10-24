@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=13';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=13';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=13';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=15';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=15';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
 
   'use strict';
 
@@ -1514,6 +1514,12 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=13';
       }, 60000);
     }
 
+    /* Le cache local ne connaît que les bons émis ici : sans relecture, un bon
+       émis par l'autre caisse (ou avant un cache vidé) n'apparaissait jamais
+       dans la liste, seul son code tapé le retrouvait. On relit le registre à
+       l'ouverture de la caisse, et à chaque ouverture d'Échanges & avoirs. */
+    if (!IS_DEMO) void refreshRemoteAvoirs();
+
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
     bqMaybeOpenScreen();
@@ -1574,7 +1580,10 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=13';
     if (view === 'vente') { renderTicket(); renderGrid(); renderExchNote(); }
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
-    if (view === 'echanges') renderEchanges();
+    if (view === 'echanges') {
+      renderEchanges();
+      if (!IS_DEMO) void refreshRemoteAvoirs().then(() => { if (state.view === 'echanges') renderEchanges(); });
+    }
     if (view === 'vendus') {
       const panel = $('[data-bq-panel="vendus"]', root);
       if (window.KiwiSoldInsights) window.KiwiSoldInsights.renderTill(panel);
