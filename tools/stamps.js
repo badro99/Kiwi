@@ -223,6 +223,12 @@ function scan() {
       note(m[1], m[2], { file: 'assets/stock.js', kind: 'lazy', stamp: m[2] });
   }
 
+  // Demandes des services de l'économat, chargées à la première visite.
+  if (exists('assets/hotel-economat.js')) {
+    for (const m of read('assets/hotel-economat.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/hotel-economat.js', kind: 'lazy', stamp: m[2] });
+  }
+
   // Le rapport différé partage l'URL estampillée du preload.
   if (exists('assets/dashboard-extra.js')) {
     for (const m of read('assets/dashboard-extra.js').matchAll(SHELL_RE()))
@@ -270,6 +276,7 @@ function referenceFiles(asset) {
   if (exists('assets/stock.js') && read('assets/stock.js').includes(asset + '?v=')) files.push('assets/stock.js');
   if (exists('assets/printer-bridge.js') && read('assets/printer-bridge.js').includes(asset + '?v=')) files.push('assets/printer-bridge.js');
   if (exists('assets/onboarding.js') && read('assets/onboarding.js').includes(asset + '?v=')) files.push('assets/onboarding.js');
+  if (exists('assets/hotel-economat.js') && read('assets/hotel-economat.js').includes(asset + '?v=')) files.push('assets/hotel-economat.js');
   if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
   return files;
 }

@@ -155,8 +155,37 @@
         '<div data-eco-requests-host></div>' +
       '</div>'
     });
-    /* Demandes des services : assets/hotel-economat-requests.js. */
-    if (window.KiwiEconomatRequests) window.KiwiEconomatRequests.mount(document.querySelector('[data-eco-requests-host]'));
+    mountRequests();
+  }
+
+  /* Demandes des services : assets/hotel-economat-requests.js (+ .css),
+   * chargé à la première visite de l'Économat plutôt que par la coquille. */
+  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=1';
+  var REQUESTS_CSS = 'assets/hotel-economat-requests.css?v=1';
+  var requestsLoading = null;
+  function loadRequests() {
+    if (window.KiwiEconomatRequests) return Promise.resolve();
+    if (requestsLoading) return requestsLoading;
+    requestsLoading = new Promise(function (resolve, reject) {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet'; link.href = REQUESTS_CSS;
+      document.head.appendChild(link);
+      var script = document.createElement('script');
+      script.src = REQUESTS_JS; script.async = true;
+      script.onload = function () { resolve(); };
+      script.onerror = function () { requestsLoading = null; script.remove(); reject(new Error('requests-unavailable')); };
+      document.head.appendChild(script);
+    });
+    return requestsLoading;
+  }
+  function mountRequests() {
+    var host = document.querySelector('[data-eco-requests-host]');
+    if (!host) return;
+    if (window.KiwiEconomatRequests) { window.KiwiEconomatRequests.mount(host); return; }
+    loadRequests().then(function () {
+      var live = document.querySelector('[data-eco-requests-host]');
+      if (live && Kiwi.activePage === 'economat' && window.KiwiEconomatRequests) window.KiwiEconomatRequests.mount(live);
+    }).catch(function () {});
   }
   /* Le stock lu ici aide la validation d'une demande (quantité en stock). */
   window.KiwiEconomatStock = { rows: inventoryRows };
