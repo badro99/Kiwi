@@ -126,7 +126,7 @@ html[data-skin-2027="ordering"] .lang-btn:focus-visible { outline: var(--k-focus
     padding-bottom: var(--k-space-6);
     transform: translateY(24px) scale(0.98);
     opacity: 0;
-    transition: transform var(--k-dur-5) var(--k-glide), opacity var(--k-dur-3) ease;
+    transition: transform var(--k-dur-5) var(--k-glide), opacity var(--k-dur-3) var(--k-glide);
     box-shadow: var(--k-shadow-2);
   }
   html[data-skin-2027="ordering"] .custom-sheet.is-open .custom-sheet-panel { transform: none; opacity: 1; }
@@ -227,6 +227,11 @@ html[data-skin-2027="ordering"] .dish-name {
   letter-spacing: 0;
   overflow-wrap: anywhere;
 }
+/* A Latin name on an Arabic menu keeps its own direction, so its two-line
+   cut ends with the ellipsis after the words ("…itrons confits" read
+   backwards before), and it still lines up on the right with its neighbours. */
+html[data-skin-2027="ordering"] .dish-name { unicode-bidi: plaintext; }
+html[data-skin-2027="ordering"][dir="rtl"] .dish-name { text-align: right; }
 html[data-skin-2027="ordering"] .dish-price {
   font-size: var(--k-fs-footnote);
   font-weight: var(--k-fw-footnote);
@@ -249,8 +254,8 @@ html[data-skin-2027="ordering"] .dish-add::after { content: ""; position: absolu
 html[data-skin-2027="ordering"] .dish-tag {
   top: var(--k-space-2);
   inset-inline-start: var(--k-space-2);
-  padding: 3px var(--k-space-2);
-  font-size: 0.75rem;
+  padding: 2px var(--k-space-2);
+  font-size: var(--k-fs-footnote);
   letter-spacing: 0.01em;
   text-transform: none;
   color: var(--k-accent-ink);
@@ -369,10 +374,11 @@ html[data-skin-2027="ordering"] .cart-item-opts { font-size: var(--k-fs-footnote
 html[data-skin-2027="ordering"] .cart-row .qty button {
   position: relative;
   width: 36px;
-  height: 36px;
+  height: auto;
+  min-height: 36px;
   background: var(--k-surface-1);
   border-color: var(--k-line);
-  font-size: 18px;
+  font-size: var(--k-fs-body);
 }
 html[data-skin-2027="ordering"] .cart-row .qty button::after { content: ""; position: absolute; inset: -5px; border-radius: 999px; }
 html[data-skin-2027="ordering"] .cart-row .qty span { min-width: 28px; font-size: var(--k-fs-callout); font-weight: 600; }
@@ -412,14 +418,6 @@ html[data-skin-2027="ordering"] .continue-btn { background: var(--k-surface-3); 
 html[data-skin-2027="ordering"] .continue-btn.is-ready,
 html[data-skin-2027="ordering"] .cashier-confirm-btn { background: var(--k-accent); color: var(--k-on-accent); }
 
-/* ── The takeaway number stays one word at every width ("#OPD-42" broke in
-   two on a 375 phone). ──────────────────────────────────────────────────── */
-html[data-skin-2027="ordering"] .cashier-number {
-  white-space: nowrap;
-  font-size: clamp(56px, 17vw, 96px);
-  max-width: 100%;
-}
-html[data-skin-2027="ordering"] .cashier-number .hash { font-size: 0.58em; }
 
 @media (min-width: 768px) {
   /* The toast speaks for the menu, so it stays over the menu, not the pane. */
