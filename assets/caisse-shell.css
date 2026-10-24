@@ -2984,7 +2984,7 @@
       background-color: var(--k-bg); background-image: none; color: var(--k-ink-1);
       font-family: var(--k-font);
     }
-    html[data-skin-2027="till"]:not([data-theme="dark"]) .clockin-brand img { content: url("kiwi-newlogo.svg"); }
+    html[data-skin-2027="till"]:not([data-theme="dark"]):not([data-caisse-theme="dark"]) .clockin-brand img { content: url("kiwi-newlogo.svg"); }
     html[data-skin-2027="till"] .clockin-brand img { height: 32px; }
     html[data-skin-2027="till"] .clockin-tagline,
     html[data-skin-2027="till"] .clockin-role,

@@ -2459,6 +2459,10 @@
     function tillKitRailSelect(id) {
       if (id === 'more') { tillKitToggleMore(); return; }
       tillKitSetMore(false);
+      /* Another destination leaves the payment, as its back button does: the
+         payment layer floated over the kitchen and the clients book while the
+         rail said Cuisine (owner, 2026-10-24). The bill is kept. */
+      if (window.KiwiTillFrame.paying()) tillKitAct('pay.leave');
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
       if (id === 'clients') {
         if (kdsOpen) closeKds();

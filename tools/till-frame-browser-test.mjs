@@ -501,8 +501,19 @@ try {
         closeShown: getComputedStyle(document.getElementById('kds-close-btn')).display !== 'none',
         modal: kds.getAttribute('aria-modal'), role: kds.getAttribute('role') };
     });
+    /* Mid-payment, Cuisine left the payment floating over the kitchen while
+       the rail said Cuisine (owner, 2026-10-24): another page leaves it, the
+       bill stays. */
+    const plain = (await tiles(page)).find((t) => !t.opts && !t.out);
+    await tapTile(page, plain.id);
+    await sleep(200);
+    await page.evaluate(() => document.querySelector('k-bill').shadowRoot.querySelector('[data-w="pay"]').click());
+    await sleep(450);
+    check(await page.evaluate(() => window.KiwiTillFrame.paying()), 'set-up: the payment is out');
     await tapRail('kitchen');
     await sleep(400);
+    check(await page.evaluate(() => !window.KiwiTillFrame.paying() && cart.length === 1),
+      'Cuisine during a payment leaves the payment and keeps the bill');
     const v = await view();
     check(v.open && v.value === 'kitchen', `Cuisine on the rail opens the kitchen, and the rail says so (${v.value})`);
     check(v.x === v.railRight && v.right === v.width, `the kitchen fills the page beside the rail, not the window (${v.x}..${v.right}, rail ends at ${v.railRight})`);
