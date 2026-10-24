@@ -550,6 +550,28 @@ try {
     await sleep(400);
     const back = await view();
     check(!back.open && back.value === 'floor' && await page.evaluate(() => mode === 'salle'), 'Salle on the rail leaves the kitchen for the floor plan');
+
+    /* An iPad in portrait is not a phone: Cuisine and Clients covered the
+       rail there, grew a close button, and the bill's bar sat over their
+       foot (owner, 2026-10-24). */
+    await page.setViewport({ width: 820, height: 1180 });
+    await sleep(500);
+    await tapRail('takeaway');
+    await sleep(400);
+    await tapRail('kitchen');
+    await sleep(500);
+    const port = await view();
+    const sheetShown = () => page.evaluate(() => { const r = document.querySelector('.rightpanel'); return !!r && getComputedStyle(r).display !== 'none' && r.getBoundingClientRect().height > 0; });
+    check(port.open && port.x === port.railRight && !port.closeShown, `iPad portrait: the kitchen opens beside the rail, without Fermer (${port.x}, rail ends at ${port.railRight})`);
+    check(!(await sheetShown()), 'iPad portrait: no bill bar over the kitchen');
+    await tapRail('clients');
+    await sleep(700);
+    const book = await page.evaluate(() => { const r = document.getElementById('kcb-root'); const b = document.getElementById('kcb-back'); return { left: Math.round(r.getBoundingClientRect().left), back: getComputedStyle(b).display }; });
+    check(book.left === port.railRight && book.back === 'none', `iPad portrait: the customer book opens beside the rail, without a cross (${book.left}, ${book.back})`);
+    check(!(await sheetShown()), 'iPad portrait: no bill bar under the customer book');
+    await tapRail('takeaway');
+    await sleep(600);
+    check(await sheetShown(), 'iPad portrait: back on À emporter, the bill bar is back');
     check(errors.length === 0, 'kitchen beside the rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
   /* Le carnet clients sur le rail, et plus de pastille « Clients » posée sur

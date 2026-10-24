@@ -277,11 +277,19 @@ html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) .cat-pill .coun
    Salle, À emporter and Attente (owner, 2026-10-22): the kitchen used to cover
    the whole window, rail included. It sits under Plus's panel (949) and its
    scrim (948), so Plus still opens over it. The phone keeps its full screen,
-   and a kitchen-only device (body.is-kitchen) keeps its own. */
-@media (min-width: 1025px), (min-width: 901px) and (min-height: 601px) {
+   and a kitchen-only device (body.is-kitchen) keeps its own. An iPad in
+   portrait (744 to 834 wide) is not a phone: it covered the rail there and
+   grew a Fermer (owner, 2026-10-24). clients-book.js uses the same line. */
+@media (min-width: 1025px), (min-width: 744px) and (min-height: 601px) {
   html[data-k-till] body:not(.is-kitchen) .kds-screen { inset-inline-start: 88px; z-index: 39; }
   /* No Fermer: like the other pages, the rail is the way out. */
   html[data-k-till] body:not(.is-kitchen) #kds-close-btn { display: none; }
+  /* In portrait the bill is a sheet fixed over the page's foot; on Cuisine
+     and Clients there is no bill to show, and its bar sat over the last
+     tickets and peeked under the rail (2026-10-24). It comes back with the
+     till's pages. */
+  html[data-k-till] body:not(.is-kitchen):has(.kds-screen.is-open) .rightpanel,
+  html[data-k-till][data-kcb-open] .rightpanel { display: none; }
 }
 /* Plus REPLACES the rail with the shipped sidebar (owner, 2026-10-16): not a
    second bar beside it, which only made the screen tighter. The black bar

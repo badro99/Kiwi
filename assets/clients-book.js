@@ -201,6 +201,13 @@
         '#kcb-root .kcb-back{display:grid;grid-column:2;grid-row:1;}',
         '#kcb-root .kcb-add{grid-column:1 / -1;grid-row:2;justify-content:center;}',
       '}',
+      /* Beside the 2027 till's rail the book is a page at every width: no
+         cross, the title row of the wide layout. */
+      '#kcb-root[data-rail] .kcb-back{display:none;}',
+      '#kcb-root[data-rail] .kcb-top{display:flex;}',
+      '#kcb-root[data-rail] .kcb-add{justify-content:normal;}',
+      /* 2027 type: figures' labels in sentence case, not tracked capitals. */
+      'html[data-k-till] #kcb-root .kcb-strip .l{text-transform:none;letter-spacing:0;font-size:13px;}',
       /* sheet (add/edit/detail) */
       '#kcb-sheet{position:fixed;inset:0;z-index:945;background:rgba(5,20,14,.42);display:flex;align-items:flex-end;justify-content:center;animation:kcb-fade .18s ease;}',
       '@media (min-width:640px){#kcb-sheet{align-items:center;}}',
@@ -481,9 +488,22 @@
    * control of the register with no way back (ticket #0137). */
   var PHONE_Q = '(max-width: 860px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
   function isPhone() { try { return !!(window.matchMedia && window.matchMedia(PHONE_Q).matches); } catch (_) { return false; } }
+  /* La caisse 2027 garde son rail à l'écran à toutes les largeurs : le carnet
+     s'ouvre alors à côté, comme Cuisine, même sur un iPad en portrait, qui
+     passait sous la règle téléphone, couvrait le rail et prenait une croix. */
+  function railed() {
+    try {
+      var r = document.getElementById('kit-rail');
+      if (!document.documentElement.hasAttribute('data-k-till') || !r || r.offsetParent === null) return false;
+      // The phone keeps its full-screen page, as Cuisine does (kit.css, same line).
+      return window.matchMedia('(min-width: 1025px), (min-width: 744px) and (min-height: 601px)').matches;
+    } catch (_) { return false; }
+  }
   function positionRoot(root) {
     if (!root) return;
-    var b = isPhone() ? { left: 0, top: 0, right: 0, bottom: 0 } : panelInset();
+    var beside = railed();
+    if (beside) root.setAttribute('data-rail', ''); else root.removeAttribute('data-rail');
+    var b = isPhone() && !beside ? { left: 0, top: 0, right: 0, bottom: 0 } : panelInset();
     root.style.left = b.left + 'px'; root.style.top = b.top + 'px';
     root.style.right = b.right + 'px'; root.style.bottom = b.bottom + 'px';
   }
@@ -519,13 +539,15 @@
     root.querySelector('#kcb-back').onclick = close;
     var q = root.querySelector('#kcb-q');
     q.oninput = function () { state.q = q.value; renderList(); };
-    // A phone keyboard that rises the moment the page opens hides the list
-    // the merchant came to read.
-    if (!isPhone()) q.focus();
+    // A touch keyboard that rises the moment the page opens hides the list
+    // the merchant came to read: a phone, and an iPad too. Only a mouse or
+    // trackpad gets the field focused.
+    var fine = false; try { fine = window.matchMedia('(pointer: fine)').matches; } catch (_) {}
+    if (!isPhone() && fine) q.focus();
     announce(true);
   }
   /* Le rail de la caisse 2027 allume son entrée tant que le carnet est ouvert. */
-  function announce(on) { try { document.dispatchEvent(new CustomEvent('kiwi:clientsbook', { detail: { open: on } })); } catch (_) {} }
+  function announce(on) { try { document.documentElement.toggleAttribute('data-kcb-open', !!on); } catch (_) {} try { document.dispatchEvent(new CustomEvent('kiwi:clientsbook', { detail: { open: on } })); } catch (_) {} }
   function close() {
     // La fiche cliente part avec le carnet : ouverte par-dessus, elle restait
     // sinon posée seule au milieu de l'écran de vente.

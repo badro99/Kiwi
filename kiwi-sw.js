@@ -283,7 +283,7 @@ var SHELL = [
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=17',
-  '/assets/clients-book.js?v=34',
+  '/assets/clients-book.js?v=35',
   '/assets/clients-directory.js?v=25',
   '/assets/customer-retention.js?v=11',
   '/assets/menu-catalog.js?v=33',
@@ -331,7 +331,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=8',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=48',
+  '/assets/kit/kit.css?v=49',
   '/assets/kit/dash-desktop.css?v=6',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
