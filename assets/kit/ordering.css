@@ -131,8 +131,6 @@ html[data-skin-2027="ordering"] .lang-btn:focus-visible { outline: var(--k-focus
   }
   html[data-skin-2027="ordering"] .custom-sheet.is-open .custom-sheet-panel { transform: none; opacity: 1; }
   html[data-skin-2027="ordering"] .custom-sheet-panel .cart-handle { display: none; }
-  /* The toast speaks for the menu, so it stays over the menu, not the pane. */
-  html[data-skin-2027="ordering"] .toast { inset-inline-end: calc(340px + var(--k-space-4)); }
 }
 
 /* ── Desktop (≥ 1000): a centred column of 1000, the menu in 3 columns ──── */
@@ -215,7 +213,11 @@ html[data-skin-2027="ordering"] .option-chip:focus-visible { outline: var(--k-fo
 
 /* ── The feed: names start where the reader starts (they were set left in
    Arabic), figures in the Latin face, the add button 44 to the finger. ──── */
-html[data-skin-2027="ordering"] .menu-list.is-feed { padding-inline: 16px; }
+html[data-skin-2027="ordering"] .menu-list.is-feed { padding-inline: 16px; align-items: stretch; }
+/* Cards in a row share one height, their prices on one line: a name on two
+   lines no longer drops its card's price below its neighbour's. */
+html[data-skin-2027="ordering"] .dish-meta { flex: 1; }
+html[data-skin-2027="ordering"] .dish-foot { margin-top: auto; }
 html[data-skin-2027="ordering"] .dish-card { text-align: start; position: relative; }
 html[data-skin-2027="ordering"] .dish-meta { padding: var(--k-space-3); gap: var(--k-space-2); }
 html[data-skin-2027="ordering"] .dish-name {
@@ -247,8 +249,6 @@ html[data-skin-2027="ordering"] .dish-add::after { content: ""; position: absolu
 html[data-skin-2027="ordering"] .dish-tag {
   top: var(--k-space-2);
   inset-inline-start: var(--k-space-2);
-  left: auto;
-  right: auto;
   padding: 3px var(--k-space-2);
   font-size: 0.75rem;
   letter-spacing: 0.01em;
@@ -401,7 +401,7 @@ html[data-skin-2027="ordering"] .back-affordance { left: auto; inset-inline-star
 html[data-skin-2027="ordering"] .screen-table .table-top { padding-inline-start: 44px; min-height: 44px; justify-content: center; }
 html[data-skin-2027="ordering"] .screen-table { justify-content: space-between; padding-bottom: calc(var(--safe-bottom) + var(--k-space-2)); }
 html[data-skin-2027="ordering"] .numpad { direction: ltr; }
-html[data-skin-2027="ordering"] .num-key { box-shadow: none; border-color: var(--k-line); background: var(--k-surface-1); }
+html[data-skin-2027="ordering"] .num-key:not(.key-empty) { box-shadow: none; border-color: var(--k-line); background: var(--k-surface-1); }
 html[data-skin-2027="ordering"] .continue-btn,
 html[data-skin-2027="ordering"] .cashier-confirm-btn {
   min-height: 56px;
@@ -420,3 +420,28 @@ html[data-skin-2027="ordering"] .cashier-number {
   max-width: 100%;
 }
 html[data-skin-2027="ordering"] .cashier-number .hash { font-size: 0.58em; }
+
+@media (min-width: 768px) {
+  /* The toast speaks for the menu, so it stays over the menu, not the pane. */
+  html[data-skin-2027="ordering"] #screen-menu.is-active ~ .toast { inset-inline-end: calc(340px + 16px); }
+}
+
+/* ── A phone on its side: nothing under the notch (the screens and sheets
+   keep clear of the side safe areas; both are 0 in portrait). ──────────── */
+html[data-skin-2027="ordering"] .screen {
+  left: env(safe-area-inset-left, 0px);
+  right: env(safe-area-inset-right, 0px);
+}
+html[data-skin-2027="ordering"] .cart-sheet-panel,
+html[data-skin-2027="ordering"] .custom-sheet-panel {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ── A phone on its side (≥ 768 wide, under 500 tall): the pane's title no
+   longer waits 56 below the top for a globe that sits over the menu, so the
+   lines get the height. ────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-height: 500px) {
+  html[data-skin-2027="ordering"] #screen-menu.is-active ~ .cart-sheet .cart-sheet-panel { padding-top: calc(var(--safe-top) + var(--k-space-2)); padding-bottom: calc(var(--k-space-3) + var(--safe-bottom)); }
+  html[data-skin-2027="ordering"] .cart-subtitle { margin-bottom: var(--k-space-2); }
+}
