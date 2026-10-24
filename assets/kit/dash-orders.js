@@ -35,6 +35,11 @@
     try { return P && P.model ? P.model() : null; } catch (_) { return null; }
   }
 
+  /* The currency in the reader's language (MAD, درهم), as Report and the
+     customer rows write it: the shipped texts carry the code "MAD". */
+  function cur(u) { var f = u === 'MAD' && K.fmt && K.fmt(); return (f && f.unit('0').slice(2)) || u; }
+  function curText(s) { var c = cur('MAD'); return c === 'MAD' ? String(s) : String(s).replace(/\bMAD\b/g, c); }
+
   function groups(rows) {
     var out = [], at = {};
     rows.forEach(function (r) {
@@ -55,8 +60,8 @@
     range.setAttribute('value', m.range || '');
     filter.setAttribute('value', m.filter || 'all');
     box.querySelector('.k-do__fig').innerHTML =
-      '<p class="k-do__kf" data-key-figure><bdi dir="ltr" class="k-title k-num">' + esc(m.sumText) + '</bdi> <span class="k-body k-ink2">' + esc(m.unit) + '</span></p>' +
-      '<p class="k-foot k-ink2 k-do__sum">' + esc(t('orders.summary', { n: m.count, amount: m.avgText })) + '</p>';
+      '<p class="k-do__kf" data-key-figure><bdi dir="ltr" class="k-title k-num">' + esc(m.sumText) + '</bdi> <span class="k-body k-ink2">' + esc(cur(m.unit)) + '</span></p>' +
+      '<p class="k-foot k-ink2 k-do__sum">' + esc(t('orders.summary', { n: m.count, amount: curText(m.avgText) })) + '</p>';
 
     var body = box.querySelector('.k-do__rows');
     body.textContent = '';
@@ -74,7 +79,7 @@
           title: [r.ref ? '#' + r.ref : '', r.table != null && r.table !== '' ? 'T' + r.table : ''].filter(Boolean).join(' · '),
           /* Each part kept whole, so a narrow row breaks between parts. */
           subtitle: [r.method, r.time, r.staff].filter(Boolean).map(function (x) { return String(x).replace(/ /g, '\u00a0'); }).join(' · '),
-          value: r.amountText, trailing: 'chevron'
+          value: curText(r.amountText), trailing: 'chevron'
         };
       });
       body.appendChild(h);

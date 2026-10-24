@@ -144,7 +144,11 @@
       return;
     }
     var w = Math.max(0, Math.min(100, (g.ratio || 0) * 100)).toFixed(1);
-    goal.innerHTML = '<p class="k-foot k-ink2">' + esc(g.label || '') + '</p>' +
+    /* The shipped label writes the goal ungrouped ("31500 MAD"); every other
+       amount on the page is grouped ("31 500 MAD"). */
+    var F = root.KiwiFormat;
+    var label = String(g.label || '').replace(/\d{4,}/g, function (n) { return F && F.num ? F.num(Number(n), 0) : n; });
+    goal.innerHTML = '<p class="k-foot k-ink2">' + esc(label) + '</p>' +
       '<p class="k-dd-goal__v"><bdi dir="ltr" class="k-title k-num">' + esc(String(g.pct)) + '</bdi><span class="k-heading k-ink2"> %</span></p>' +
       '<span class="k-dd-goal__bar" aria-hidden="true"><i style="width:' + w + '%"></i></span>';
   }
@@ -203,8 +207,56 @@
     }
     if (sideSheet && r.adoptedStyleSheets.indexOf(sideSheet) < 0) r.adoptedStyleSheets = r.adoptedStyleSheets.concat([sideSheet]);
   }
+  /* A segment's label sits in the middle of its segment (§10.6): the kit's
+     button reset inherits text-align, so a segment wider than its label
+     (spare width is shared) read flush to its start. */
+  var segSheet = null;
+  function adoptSegs() {
+    if (segSheet === null) {
+      segSheet = false;
+      try { segSheet = new CSSStyleSheet(); segSheet.replaceSync('.sg{text-align:center}'); } catch (_) { segSheet = false; }
+    }
+    if (!segSheet) return;
+    doc.querySelectorAll('#kw-main k-segmented').forEach(function (g) {
+      var r = g.shadowRoot;
+      if (!r || !r.adoptedStyleSheets || r.adoptedStyleSheets.indexOf(segSheet) >= 0) return;
+      r.adoptedStyleSheets = r.adoptedStyleSheets.concat([segSheet]);
+      watchFit(g);
+    });
+  }
+  /* §10.6: "when the labels plus padding are measured not to fit, the
+     control becomes the scrolling track". The kit scrolls only past five
+     options, so five that do not fit (Orders' filter in French on a phone,
+     "Remboursements" pressed against the track's edge) were squeezed under
+     their labels. Each label is measured as set (a Range, which the squeeze
+     does not change), plus the segment's 24 and the track's 8. */
+  function fits(g) {
+    var r = g.shadowRoot, need = 8, w = g.clientWidth;
+    if (!r || !w) return true;
+    [].forEach.call(r.querySelectorAll('.sg'), function (b) {
+      var rg = doc.createRange();
+      rg.selectNodeContents(b);
+      need += Math.max(44, Math.ceil(rg.getBoundingClientRect().width) + 24);
+    });
+    return need <= w;
+  }
+  function refit(g) {
+    if (!g.isConnected || (g.options && g.options.length > 5)) return;
+    var want = !fits(g);
+    if (want !== g.hasAttribute('scroll')) g.toggleAttribute('scroll', want);
+  }
+  function watchFit(g) {
+    var q = false;
+    function soon() { if (q) return; q = true; (root.requestAnimationFrame || setTimeout)(function () { q = false; refit(g); }); }
+    if (root.ResizeObserver) { try { new ResizeObserver(soon).observe(g); } catch (_) {} }
+    try { new MutationObserver(soon).observe(g.shadowRoot, { childList: true, subtree: true, characterData: true }); } catch (_) {}
+    var fonts = doc.fonts;
+    if (fonts && fonts.ready) fonts.ready.then(soon);
+    soon();
+  }
   function adoptTiles() {
     adoptSide();
+    adoptSegs();
     var s = tileCss();
     if (!s) return;
     doc.querySelectorAll('#kit-home k-kpi-grid, #kit-retention k-kpi-grid').forEach(function (g) {
@@ -220,28 +272,35 @@
      at every width, the brand keeping its capital; each is rewritten again if
      i18n puts the capitals back, and the app card, which redraws whole, is
      watched as a card. Only an all-caps text is touched, so this never loops. */
-  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]', '[data-upsell] .kiwi-install-head > .t'];
+  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]', '[data-upsell] .kiwi-install-head > .t',
+    /* Home's shipped sections below the kit's figures: "POUR VOUS", "HEURES
+       DE POINTE", "KIWI INSIGHTS · MESURÉ", "SERVICE DU SOIR · CE SOIR". */
+    '.dash-standard .oppo-eyebrow', '.dash-standard .block-head .t', '.dash-standard .hai-eyebrow',
+    '.dash-standard .hh-ai-eyebrow', '.dash-standard .settle > .lbl'];
   var CAPS_HOSTS = ['[data-upsell]'];
   function sentence(el) {
+    /* Text only: a label holding other nodes is never flattened. */
+    if (el.children.length) return;
     var s = el.textContent;
     if (!/[A-ZÀ-Ý]{2}/.test(s) || s !== s.toUpperCase()) return;
     var low = s.toLowerCase();
     el.textContent = (low.charAt(0).toUpperCase() + low.slice(1)).replace(/\bkiwi\b/g, 'Kiwi');
   }
-  var capsSeen = [];
+  /* Seen nodes, held weakly: Home's sections redraw under the poller. */
+  var capsSeen = root.WeakSet ? new root.WeakSet() : { list: [], has: function (x) { return this.list.indexOf(x) >= 0; }, add: function (x) { this.list.push(x); } };
   function caps() {
     CAPS_HOSTS.forEach(function (sel) {
       doc.querySelectorAll(sel).forEach(function (host) {
-        if (capsSeen.indexOf(host) >= 0) return;
-        capsSeen.push(host);
+        if (capsSeen.has(host)) return;
+        capsSeen.add(host);
         try { new MutationObserver(caps).observe(host, { childList: true }); } catch (_) {}
       });
     });
     CAPS.forEach(function (sel) {
       doc.querySelectorAll(sel).forEach(function (el) {
         sentence(el);
-        if (capsSeen.indexOf(el) >= 0) return;
-        capsSeen.push(el);
+        if (capsSeen.has(el)) return;
+        capsSeen.add(el);
         try { new MutationObserver(function () { sentence(el); }).observe(el, { childList: true, characterData: true, subtree: true }); } catch (_) {}
       });
     });
@@ -258,9 +317,12 @@
   function watch() {
     var main = doc.getElementById('kw-main') || doc.body;
     try {
+      var capsQueued = false;
       new MutationObserver(function () {
         if (!doc.getElementById('kit-side') || !doc.getElementById('kit-dd-goal')) boot();
         adoptTiles();
+        /* A shipped section redrawn whole comes back in capitals. */
+        if (!capsQueued) { capsQueued = true; (root.requestAnimationFrame || setTimeout)(function () { capsQueued = false; caps(); }); }
       }).observe(main, { childList: true, subtree: true });
     } catch (_) {}
   }

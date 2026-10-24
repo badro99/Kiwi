@@ -85,7 +85,8 @@
     var kids = c.children;
     for (var i = 0; i < kids.length; i++) {
       if (!shown(kids[i])) continue;
-      var h = kids[i].querySelector('.genpage-head h1, h1, h2');
+      /* Compliance names itself in its own head (.cf-title), not a heading. */
+      var h = kids[i].querySelector('.genpage-head h1, h1, h2, .cf-head .cf-title');
       if (h) return h.textContent.replace(/\s+/g, ' ').trim();
     }
     return '';
@@ -124,7 +125,7 @@
       bar.setAttribute('data-mode', 'home');
       bar.innerHTML = '<span class="k-pnav__logo" aria-hidden="true"></span>' +
         '<button type="button" class="k-pnav__venue k-body-s" data-k="venue" aria-label="' + esc(t('nav.venue', { venue: venue })) + '">' +
-        '<span class="k-pnav__vn">' + esc(venue) + '</span>' + icon('expand_more', 20) + '</button>' +
+        '<span class="k-pnav__vn" dir="auto">' + esc(venue) + '</span>' + icon('expand_more', 20) + '</button>' +
         '<button type="button" class="k-pnav__ai k-callout-s" data-k="ai">' + icon('auto_awesome', 24) + '<span>' + esc(t('nav.ai')) + '</span></button>' + bell;
       var logo = bar.querySelector('.k-pnav__logo');
       [].forEach.call(doc.querySelectorAll('.sidebar .brand img'), function (img) {

@@ -26,6 +26,13 @@
 html[data-skin-2027="dashboard"] #kit-side,
 html[data-skin-2027="dashboard"] #kit-dd-goal,
 html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
+/* The phone's nav bar (dash-phone.js) sits in the shipped top bar at every
+   width; only the phone form draws it, so an iPad turned to landscape or a
+   window widened past 900 never shows it unstyled beside the desktop bar. */
+html[data-skin-2027="dashboard"]:not([data-k-phone]) .topbar .k-pnav { display: none; }
+/* The shipped reading-progress hairline (ux.js) at the window's top edge:
+   the kit's pages carry their position in the scroll itself (§10.18). */
+html[data-skin-2027="dashboard"] body .scroll-progress { display: none; }
 
 @media (min-width: 900px) {
 
@@ -175,6 +182,9 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
     background: var(--k-surface-2) !important; box-shadow: none;
     color: var(--k-ink-2);
   }
+  /* The magnifier took the dark theme's pale ink on the light ground and
+     vanished; it is the field's ink-2, at the kit's 16. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big > svg { flex: none; width: 16px; height: 16px; color: var(--k-ink-2); fill: currentColor; opacity: 1; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .ph {
     color: var(--k-ink-2); font-family: var(--k-font);
     font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout); letter-spacing: var(--k-track-callout);
@@ -291,6 +301,20 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-segmented { grid-area: seg; justify-self: start; width: 100%; max-width: 480px; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig { grid-area: fig; position: relative; padding: 24px 24px 0; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__goal { display: none; }
+  /* The period on the card's top edge, opposite its label: the four presets
+     are the segmented control, and this opens the shipped picker for any
+     other period, which the desktop otherwise had no way to reach (the
+     shipped range bar is not drawn under the kit's Home). */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__date {
+    display: flex; position: absolute; top: 12px; inset-inline-end: 16px; margin: 0;
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick {
+    display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding-inline: 8px; margin: 0;
+    border: 0; border-radius: var(--k-r-1); background: none; color: inherit; font: inherit; cursor: pointer;
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick:hover { background: var(--k-surface-2); }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__pick .k-ic { width: 16px; height: 16px; fill: currentColor; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { grid-area: tiles; align-self: stretch; --k-kpi-cols: 3; --k-kpi-gap: var(--k-space-4); }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__lh { grid-area: list; align-self: start; position: relative; padding: 20px 24px 0; color: var(--k-ink-1);
     font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
@@ -498,7 +522,23 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
 }
 
 /* ── 8 · 900 to 1279: the lower sections one above the other ──────────── */
+/* The top bar on an iPad in landscape and a small laptop: the account keeps
+   its avatar (its name stays its accessible name), the search keeps its
+   words rather than shrinking to "R…", and ⌘K, a keyboard hint, goes. */
+@media (min-width: 900px) and (max-width: 1365px) {
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant :is(.m-info, .m-caret) { display: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant { display: inline-flex; flex: none; width: auto; min-width: 0; padding: 2px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .k { display: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big { flex: 1 1 200px; min-width: 120px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn { flex: none; white-space: nowrap; }
+  /* The round buttons keep their 44 rather than giving width to the search. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar :is(.icon-btn, .view-link-btn) { flex: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .ph { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 @media (min-width: 900px) and (max-width: 1279px) {
+  /* The key figure's chart at the height it has beside the tiles, not the
+     shipped 430 that left a band of empty plot under a short line. */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today { height: 288px !important; min-height: 0; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols { grid-template-columns: minmax(0, 1fr) !important; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols > .dash-col:last-child {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--k-space-6); align-items: start;
@@ -544,6 +584,9 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
       "clip  clip";
   }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { --k-kpi-cols: 2; }
+  /* The customer search wide enough for its whole placeholder (FR needs
+     some 340 of text beside its glyph and its clear button). */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers { grid-template-columns: minmax(0, 456px) minmax(0, 1fr); }
   /* The tiles span the figure and its chart: the chart is set so the two
      columns meet near the tiles' own height (three rows of about 111), not
      the shipped 430, which stretched each tile by some 70 px of nothing. */
@@ -709,3 +752,108 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover .drp-btn-go { backg
 
 /* Home's shipped AI card eyebrow ("Kiwi Insights"): the kit sets no capitals. */
 html[data-skin-2027="dashboard"] body:not(#k-dd) .hh-ai-eyebrow { text-transform: none; letter-spacing: var(--k-track-footnote) !important; }
+
+/* ── 11 · Every width: the key figure and its unit ───────────────────────
+   The figure and its unit sit in a flex line, which drops the space between
+   them ("14 836,96MAD"); the gap puts it back, as §6.3 spaces a unit. */
+html[data-skin-2027="dashboard"] :is(.k-dh__kf, .k-do__kf, .k-dr__kf) { column-gap: 0.3em; }
+
+/* ── 12 · Compliance (assets/conformite.js) under the kit's list ─────────
+   The page's head at the size every other page's title has (Heading), its
+   cards the kit's card, its eyebrows in sentence case (§9.4), its figures
+   never broken from their unit; the till's counting cards one above the
+   other while the split view leaves them less than two good columns. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-title {
+  font-family: var(--k-font); color: var(--k-ink-1);
+  font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading);
+}
+/* The head where every other page's head sits (4 down, 8 before the body). */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-head { margin: 0 0 8px; padding-top: 4px; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-sub {
+  font-family: var(--k-font); color: var(--k-ink-2); margin-top: 4px;
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); letter-spacing: var(--k-track-footnote);
+}
+/* The shipped skins paint these with !important (design-2026, design-vexel). */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-card, .cf-z-history) {
+  border: 0 !important; border-radius: var(--k-r-3) !important; background: var(--k-surface-1) !important; box-shadow: none !important;
+  -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--k-ink-1); font-family: var(--k-font);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-card, .cf-z-history)::before,
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-card, .cf-z-history)::after { content: none; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-eyebrow, .cf-eyebrow-sub, .cf-z-expected-l, .cf-z-hhead, .cf-hyg-cadence-h, .cf-eq-head, .cf-eq-type, .cf-doc-cat) {
+  text-transform: none; letter-spacing: var(--k-track-footnote); font-family: var(--k-font);
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-eyebrow, .cf-z-hhead, .cf-hyg-cadence-h, .cf-eq-head, .cf-doc-cat) { color: var(--k-ink-2); font-weight: var(--k-fw-footnote-strong); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-eyebrow-sub { color: var(--k-ink-2); font-weight: var(--k-fw-footnote); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-expected {
+  border: 0; border-radius: var(--k-r-2); background: var(--k-accent-tint); box-shadow: none;
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-z-expected-l, .cf-z-expected-v) { color: var(--k-accent-ink); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-z-counter-v, .cf-z-expected-v, .cf-z-summary-v, .cf-z-denom-sub, .cf-z-denom-val, .cf-z-htotal) {
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+/* The count's verdict in the kit's status tones, each legible on its tint
+   (the shipped 10 % reds left the gap and its note under 4.5:1). */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-row { border-radius: var(--k-r-2); font-family: var(--k-font); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-ok { background: var(--k-accent-tint); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-ok :is(.cf-z-summary-l, .cf-z-summary-v) { color: var(--k-accent-ink); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-warn { background: var(--k-warning-tint); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-warn :is(.cf-z-summary-l, .cf-z-summary-v) { color: var(--k-warning); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-bad { background: var(--k-danger-tint); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-bad :is(.cf-z-summary-l, .cf-z-summary-v) { color: var(--k-danger); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-v small { opacity: 1; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-counter { gap: 12px; }
+/* The cash count is typed on the counter's iPad: each field a 44 target. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-denom-input {
+  min-height: 44px; border-radius: var(--k-r-2); text-align: center; font-variant-numeric: tabular-nums;
+  font-size: var(--k-fs-callout); font-family: var(--k-font);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .view-link-btn { width: 44px; height: 44px; border-radius: 50%; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-counter-l { min-width: 0; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-body { min-width: 0; }
+@media (max-width: 1439px) {
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-page:has(> #kit-compliance) .cf-z { grid-template-columns: minmax(0, 1fr); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-page:has(> #kit-compliance) .cf-z-denoms { grid-template-columns: minmax(0, 1fr); }
+}
+/* On a phone the page's title is in the nav bar (§10.18), as on every page. */
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .dash-conformite .cf-head { display: none; }
+
+/* ── 13 · The demo's "new sale" toast on a phone (dashboard-native.js) ────
+   Under the nav bar, not over the page's title, on the kit's popover. */
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .kw-toast {
+  margin-top: calc(env(safe-area-inset-top, 0px) + 60px);
+  border-radius: var(--k-r-3); background: var(--k-popover); color: var(--k-ink-1);
+  box-shadow: var(--k-shadow-2); font-family: var(--k-font);
+}
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .kw-toast strong { color: var(--k-accent-ink); font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong); }
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .kw-toast span { color: var(--k-ink-2); opacity: 1; font-size: var(--k-fs-footnote); }
+/* Below 1100 the split view would leave the obligation's screen some 200 px:
+   the list goes above it instead. */
+@media (min-width: 900px) and (max-width: 1099px) {
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-page:has(> #kit-compliance) { grid-template-columns: minmax(0, 1fr); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite #kit-compliance { position: static; }
+}
+
+/* ── 14 · Onboarding (dash-onboarding.js) ────────────────────────────────
+   The step, Back and the progress bar share the column the step's body and
+   its Continue use, rather than running to the window's edges on an iPad
+   or a desktop; the step reads as the bar's title, centred between Back and
+   an equal space, so it sits in the same place on every step. */
+html[data-skin-2027="dashboard"] .k-ob__nav {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px;
+  width: 100%; max-width: 560px; margin-inline: auto; padding-inline: 8px;
+}
+html[data-skin-2027="dashboard"] .k-ob__step { text-align: center; }
+html[data-skin-2027="dashboard"] .k-ob__bar { width: calc(100% - 32px); max-width: 528px; margin: 4px auto 0; }
+
+/* ── 15 · The status line on a phone ─────────────────────────────────────
+   On the page's own ground (it was a paler band with a rule), in Footnote,
+   and clear of the floating tab capsule, which covered it at the end of a
+   long page. */
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .status-bar {
+  background: var(--k-bg); border: 0; box-shadow: none; color: var(--k-ink-2); font-family: var(--k-font);
+  padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 96px);
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+}
+html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .status-bar a { color: var(--k-accent-ink); }
