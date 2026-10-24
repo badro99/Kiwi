@@ -328,6 +328,48 @@ try {
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 
+  await S.run('flag on · empty lanes: each well sits square under its head', async (tr) => {
+    clearOrders();
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=fr viewport=desktop
+    const page = await open(tr, ctx, { width: 1440, height: 900 });
+    await page.waitForFunction(() => ['s-new', 's-cook', 's-pass'].every((id) => { const l = document.querySelector('#' + id + ' k-lane'); return l && l.shadowRoot && l.shadowRoot.querySelector('.em') && !/…|\.\.\./.test(document.getElementById('n-new').textContent); }), { timeout: 20000 });
+    const geo = await page.evaluate(() => ['s-new', 's-cook', 's-pass'].map((id) => {
+      const stack = document.getElementById(id), head = stack.parentElement.querySelector('.col-head');
+      const em = stack.querySelector('k-lane').shadowRoot.querySelector('.em');
+      const h = head.getBoundingClientRect(), e = em.getBoundingClientRect(), l = stack.querySelector('k-lane').getBoundingClientRect();
+      const cs = getComputedStyle(head);
+      return { id, textStart: Math.round(h.left + parseFloat(cs.paddingLeft)), em: [Math.round(e.left), Math.round(e.width)], lane: [Math.round(l.left), Math.round(l.width)], caps: cs.textTransform, empty: !document.querySelector('#bar').children.length && getComputedStyle(document.querySelector('#bar')).display };
+    }));
+    for (const g of geo) {
+      check(Math.abs(g.textStart - g.em[0]) <= 1 && Math.abs(g.em[0] - g.lane[0]) <= 1 && Math.abs(g.em[1] - g.lane[1]) <= 1, `${g.id}: the head's text, the empty well and the lane share one edge (${JSON.stringify(g)})`);
+      check(g.caps === 'none', `${g.id}: the lane head is in sentence case`);
+    }
+    check(geo[0].empty === 'none', 'no station: no empty station strip');
+    check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
+  });
+
+  await S.run('flag on · an oldest ticket taller than the lane keeps its action and the newer card', async (tr) => {
+    clearOrders();
+    addOrder({ id: 'ord-board-tall', table: '4', ageMs: 6 * 60000, lines: Array.from({ length: 12 }, (_, i) => line('Plat numero ' + (i + 1))) });
+    addOrder({ id: 'ord-board-t2', table: '5', ageMs: 4 * 60000, lines: [line('Harira')] });
+    addOrder({ id: 'ord-board-t3', table: '6', ageMs: 2 * 60000, lines: [line('Msemen')] });
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen locale=fr viewport=desktop
+    const page = await open(tr, ctx, { width: 1180, height: 820 });
+    await waitIn(page, 'new', 'ord-board-tall', 20000);
+    await sleep(300);
+    const g = await page.evaluate(() => {
+      const l = document.querySelector('#s-new k-lane'), r = l.getBoundingClientRect();
+      const tk = l.shadowRoot.querySelector('[data-t="ord-board-tall"]'), st = tk.querySelector('[data-w="start"]'), nw = l.shadowRoot.querySelector('[data-w="newer"]');
+      return { held: tk.classList.contains('cl'), laneBottom: r.bottom, start: st.getBoundingClientRect().bottom, newer: nw ? nw.getBoundingClientRect().bottom : null, scrolls: tk.querySelector('.its').scrollHeight > tk.querySelector('.its').clientHeight };
+    });
+    check(g.held && g.scrolls, 'the oldest ticket is held to the lane, its lines scroll inside it');
+    check(g.start <= g.laneBottom + 1, `its Start stays on the wall (${Math.round(g.start)} ≤ ${Math.round(g.laneBottom)})`);
+    check(g.newer !== null && g.newer <= g.laneBottom + 1, `the newer card stays on the wall under it (${g.newer && Math.round(g.newer)})`);
+    check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
+  });
+
   await S.run('flag on · Arabic', async (tr) => {
     clearOrders();
     addOrder({ id: 'ord-board-ar', table: '5', ageMs: 2 * 60000, lines: [line('Harira')] });
@@ -381,6 +423,15 @@ try {
     await sleep(600);   /* the screen opens; the lanes take their width once */
     check(await page.evaluate(() => !document.querySelector('#kit-new .kit-order') && !!document.querySelector('#kit-cook k-lane') && !!document.querySelector('#kit-history-inner k-lane')), 'the till board draws three lanes and no shipped card');
     check(await page.evaluate(() => !document.documentElement.hasAttribute('data-k-surface') && getComputedStyle(document.documentElement).fontSize === '16px'), 'it keeps the till root, 16 px (§6.2)');
+    const tg = await page.evaluate(() => {
+      const box = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; };
+      const lanes = ['#kit-new', '#kit-cook'].map((sel) => { const c = document.querySelector(sel); const l = c.querySelector('k-lane'); const em = l.shadowRoot.querySelector('.em'); return { head: box(c.querySelector('.kit-col-head')), lane: box(l), em: em ? box(em) : null }; });
+      const pills = [...document.querySelectorAll('#kit-bar .kit-station')].map(box), hist = box(document.getElementById('kit-history-toggle'));
+      return { lanes, pills, hist, band: getComputedStyle(document.querySelector('#kds-screen .kds-head')).backgroundColor, caps: getComputedStyle(document.querySelector('#kit-new .kit-col-head')).textTransform };
+    });
+    check(tg.lanes.every((x) => x.head[0] === x.lane[0] && x.head[3] === 44 && (!x.em || (x.em[0] === x.lane[0] && x.em[2] === x.lane[2]))), `the till's lane heads, lanes and empty wells share one edge, heads 44 tall (${JSON.stringify(tg.lanes)})`);
+    check(tg.pills.every((p) => p[3] >= 44 && p[3] === tg.hist[3] && p[1] === tg.hist[1]), `stations and Historique are one 44 row (${JSON.stringify(tg.pills.slice(0, 2))} ${JSON.stringify(tg.hist)})`);
+    check(tg.caps === 'none' && tg.band === 'rgba(0, 0, 0, 0)', `no black band over the till's Cuisine page, heads in sentence case (${tg.band}, ${tg.caps})`);
     const t1 = await page.evaluate((n) => { const a = document.querySelector('#kit-new k-lane').shadowRoot.querySelector('[data-t="' + n + '"]'); return { text: a.textContent.replace(/\s+/g, ' '), recipe: !!a.querySelector('[data-w="recipe"]') }; }, String(num));
     check(/Table 6/.test(t1.text) && /sans raisins/.test(t1.text) && t1.recipe, 'the ticket names its table, its note, and links the recipe');
 
