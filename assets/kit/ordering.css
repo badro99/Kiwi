@@ -114,11 +114,25 @@ html[data-skin-2027="ordering"] .lang-btn:focus-visible { outline: var(--k-focus
   /* The globe sits over the menu, not over the pane. */
   html[data-skin-2027="ordering"] .lang-picker { right: calc(340px + 14px); }
   html[data-skin-2027="ordering"][dir="rtl"] .lang-picker { right: auto; left: calc(340px + 14px); }
-  /* A dish's options open in the middle, never as a stretched phone sheet. */
+  /* A dish's options open as a form sheet in the middle (§10.3, iPad and
+     desktop: 540 wide, centred, radius 28), never as a stretched phone sheet. */
   html[data-skin-2027="ordering"] .custom-sheet-panel {
-    inset-inline: max(0px, calc(50% - 280px));
-    border-radius: var(--k-r-3) var(--k-r-3) 0 0;
+    inset: 0;
+    margin: auto;
+    width: min(540px, calc(100% - 48px));
+    height: fit-content;
+    max-height: min(calc(100dvh - 48px), 820px);
+    border-radius: var(--k-r-4);
+    padding-bottom: var(--k-space-6);
+    transform: translateY(24px) scale(0.98);
+    opacity: 0;
+    transition: transform var(--k-dur-5) var(--k-glide), opacity var(--k-dur-3) ease;
+    box-shadow: var(--k-shadow-2);
   }
+  html[data-skin-2027="ordering"] .custom-sheet.is-open .custom-sheet-panel { transform: none; opacity: 1; }
+  html[data-skin-2027="ordering"] .custom-sheet-panel .cart-handle { display: none; }
+  /* The toast speaks for the menu, so it stays over the menu, not the pane. */
+  html[data-skin-2027="ordering"] .toast { inset-inline-end: calc(340px + var(--k-space-4)); }
 }
 
 /* ── Desktop (≥ 1000): a centred column of 1000, the menu in 3 columns ──── */
@@ -130,3 +144,279 @@ html[data-skin-2027="ordering"] .lang-btn:focus-visible { outline: var(--k-focus
   }
   html[data-skin-2027="ordering"] .menu-list.is-feed { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Polish pass (2026-10-24): the details a guest sees on their own phone.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Figures in the Latin face, tabular (§6.1: the mono face is retired; mono
+   prices read as terminal output, and Arabic set in it fell apart into
+   isolated letters, "د ر هـ" for درهم). ─────────────────────────────────── */
+html[data-skin-2027="ordering"] { --mono: var(--k-font); }
+html[data-skin-2027="ordering"] body { font-variant-numeric: tabular-nums; }
+
+/* ── Menu header: the store name on the globe's centre line ───────────────── */
+html[data-skin-2027="ordering"] .menu-top {
+  min-height: 60px;
+  padding: var(--k-space-2) 16px var(--k-space-2);
+  padding-inline-end: calc(44px + 14px + var(--k-space-3));
+  align-items: center;
+}
+html[data-skin-2027="ordering"] .menu-cafe .name {
+  font-size: var(--k-fs-heading);
+  line-height: var(--k-lh-heading);
+  font-weight: var(--k-fw-heading);
+  letter-spacing: -0.01em;
+}
+html[data-skin-2027="ordering"] .menu-cafe .ctx:empty { display: none; }
+
+/* ── Service pills and category tabs are chips (§10.7): 44 tall, one step
+   from their ground, the selected one in the lens paint. ─────────────────── */
+html[data-skin-2027="ordering"] .service-bar,
+html[data-skin-2027="ordering"] .menu-tabs,
+html[data-skin-2027="ordering"] .menu-subtabs { padding-inline: 16px; gap: var(--k-space-2); }
+html[data-skin-2027="ordering"] .service-bar { padding-bottom: var(--k-space-2); }
+html[data-skin-2027="ordering"] .menu-tabs,
+html[data-skin-2027="ordering"] .menu-subtabs { padding-bottom: var(--k-space-3); }
+html[data-skin-2027="ordering"] .service-pill,
+html[data-skin-2027="ordering"] .table-badge,
+html[data-skin-2027="ordering"] .menu-tab {
+  min-height: 44px;
+  padding-block: 0;
+  padding-inline: var(--k-space-4);
+  border-radius: 999px;
+  font-size: var(--k-fs-callout);
+  font-weight: var(--k-fw-callout);
+  box-shadow: none;
+}
+html[data-skin-2027="ordering"] .service-pill,
+html[data-skin-2027="ordering"] .table-badge { padding-inline: var(--k-space-3) var(--k-space-4); gap: var(--k-space-2); }
+html[data-skin-2027="ordering"] .service-pill,
+html[data-skin-2027="ordering"] .menu-tab {
+  background: var(--k-surface-2);
+  border: 1px solid transparent;
+  color: var(--k-ink-1);
+}
+html[data-skin-2027="ordering"] .service-pill svg,
+html[data-skin-2027="ordering"] .table-badge svg { width: 18px; height: 18px; }
+html[data-skin-2027="ordering"] .table-badge { background: var(--k-accent-tint); border-color: transparent; color: var(--k-accent-ink); font-weight: var(--k-fw-callout-strong); }
+html[data-skin-2027="ordering"] .menu-tab.is-active,
+html[data-skin-2027="ordering"] .service-pill.is-pulled {
+  background: var(--k-select);
+  border-color: var(--k-line-strong);
+  color: var(--k-ink-1);
+  font-weight: var(--k-fw-callout-strong);
+  box-shadow: var(--k-shadow-1);
+}
+html[data-skin-2027="ordering"] .menu-tab:focus-visible,
+html[data-skin-2027="ordering"] .service-pill:focus-visible,
+html[data-skin-2027="ordering"] .dish-add:focus-visible,
+html[data-skin-2027="ordering"] .option-chip:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+
+/* ── The feed: names start where the reader starts (they were set left in
+   Arabic), figures in the Latin face, the add button 44 to the finger. ──── */
+html[data-skin-2027="ordering"] .menu-list.is-feed { padding-inline: 16px; }
+html[data-skin-2027="ordering"] .dish-card { text-align: start; position: relative; }
+html[data-skin-2027="ordering"] .dish-meta { padding: var(--k-space-3); gap: var(--k-space-2); }
+html[data-skin-2027="ordering"] .dish-name {
+  font-size: var(--k-fs-callout);
+  line-height: var(--k-lh-callout);
+  font-weight: var(--k-fw-callout-strong);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+html[data-skin-2027="ordering"] .dish-price {
+  font-size: var(--k-fs-footnote);
+  font-weight: var(--k-fw-footnote);
+  color: var(--k-ink-2);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+html[data-skin-2027="ordering"] .dish-add {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  background: var(--k-accent);
+  color: var(--k-on-accent);
+  box-shadow: none;
+  margin-inline-start: auto;
+}
+html[data-skin-2027="ordering"] .dish-add::after { content: ""; position: absolute; inset: -6px; border-radius: 999px; }
+/* NEW and FORMULA tags: a quiet label, not a shouting pill. The formula tag
+   sits in the card's text, not floating over the screen. */
+html[data-skin-2027="ordering"] .dish-tag {
+  top: var(--k-space-2);
+  inset-inline-start: var(--k-space-2);
+  left: auto;
+  right: auto;
+  padding: 3px var(--k-space-2);
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--k-accent-ink);
+  background: var(--k-surface-1);
+  box-shadow: var(--k-shadow-1);
+}
+html[data-skin-2027="ordering"] .dish-meta > .dish-tag {
+  position: static;
+  align-self: flex-start;
+  background: var(--k-accent-tint);
+  box-shadow: none;
+}
+/* A dish with neither photo nor film: its icon, calm, on the card's own
+   second surface (the four brown, gold, green and teal gradients read as
+   missing photos). */
+html[data-skin-2027="ordering"] .dish-media.is-plain,
+html[data-skin-2027="ordering"] .custom-img:not(:has(img, video)) {
+  background: var(--k-surface-2);
+  color: var(--k-ink-3);
+}
+html[data-skin-2027="ordering"] .dish-media.is-plain svg { width: 26%; height: 26%; opacity: 1; }
+html[data-skin-2027="ordering"] .custom-img { border-radius: var(--k-r-2); }
+
+/* ── Sheets (§10.3): radius 28, grabber 36 × 5, a close button on the
+   trailing edge of the options sheet. ───────────────────────────────────── */
+html[data-skin-2027="ordering"] .cart-sheet-panel,
+html[data-skin-2027="ordering"] .custom-sheet-panel { border-top-left-radius: var(--k-r-4); border-top-right-radius: var(--k-r-4); }
+html[data-skin-2027="ordering"] .custom-sheet-panel { padding-inline: 16px; }
+html[data-skin-2027="ordering"] .cart-sheet-panel { padding-inline: 16px; }
+html[data-skin-2027="ordering"] .cart-handle {
+  width: 36px;
+  height: 5px;
+  margin-top: -4px;
+  background: color-mix(in srgb, var(--k-ink-3) 40%, transparent);
+}
+html[data-skin-2027="ordering"] .sheet-x {
+  position: absolute;
+  top: var(--k-space-2);
+  inset-inline-end: var(--k-space-2);
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--k-ink-2);
+}
+html[data-skin-2027="ordering"] .sheet-x::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background: var(--k-surface-2);
+}
+html[data-skin-2027="ordering"] .sheet-x svg { position: relative; width: 20px; height: 20px; }
+html[data-skin-2027="ordering"] .sheet-x:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: -2px; }
+html[data-skin-2027="ordering"] .custom-header { padding-inline-end: 40px; align-items: start; }
+html[data-skin-2027="ordering"] .custom-name {
+  font-size: var(--k-fs-heading);
+  line-height: var(--k-lh-heading);
+  overflow-wrap: anywhere;
+}
+html[data-skin-2027="ordering"] .custom-desc { font-size: var(--k-fs-footnote); color: var(--k-ink-2); line-height: var(--k-lh-footnote); }
+html[data-skin-2027="ordering"] .custom-base { font-size: var(--k-fs-footnote); color: var(--k-ink-2); }
+
+/* Option chips: 44 tall (§10.7), the delta in the label's own size. */
+html[data-skin-2027="ordering"] .option-chips { gap: var(--k-space-2); }
+html[data-skin-2027="ordering"] .option-chip {
+  min-height: 44px;
+  padding: var(--k-space-2) var(--k-space-4);
+  border-radius: 22px;
+  font-size: var(--k-fs-callout);
+  background: var(--k-surface-2);
+  color: var(--k-ink-1);
+  overflow-wrap: anywhere;
+}
+html[data-skin-2027="ordering"] .option-chip.is-active {
+  background: var(--k-accent-tint);
+  border-color: var(--k-accent);
+  color: var(--k-accent-ink);
+  font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="ordering"] .option-chip .delta { font-size: var(--k-fs-footnote); color: var(--k-ink-2); }
+html[data-skin-2027="ordering"] .option-chip.is-active .delta { color: var(--k-accent-ink); }
+
+/* Primaries (§10.1): accent, flat, 52 at least. */
+html[data-skin-2027="ordering"] .custom-add-btn,
+html[data-skin-2027="ordering"] .send-btn {
+  min-height: 52px;
+  background: var(--k-accent);
+  color: var(--k-on-accent);
+  border-radius: 999px;
+  font-size: var(--k-fs-body);
+}
+html[data-skin-2027="ordering"] .custom-add-btn { padding-inline: var(--k-space-6); margin-inline-start: auto; margin-left: 0; }
+html[data-skin-2027="ordering"] .custom-add-btn:disabled,
+html[data-skin-2027="ordering"] .send-btn:disabled { background: var(--k-surface-3); color: var(--k-ink-3); opacity: 1; }
+html[data-skin-2027="ordering"] .custom-price-value { font-size: var(--k-fs-heading); font-weight: 600; }
+
+/* ── The cart: a name never squeezes into a column a word wide. The name
+   and its options take the row; the stepper and the price sit under it. ── */
+html[data-skin-2027="ordering"] .cart-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "info info" "qty price";
+  row-gap: var(--k-space-2);
+  column-gap: var(--k-space-3);
+  padding: var(--k-space-3) var(--k-space-4);
+  background: var(--k-surface-2);
+}
+html[data-skin-2027="ordering"] .cart-row .info { grid-area: info; }
+html[data-skin-2027="ordering"] .cart-row .qty { grid-area: qty; justify-self: start; gap: var(--k-space-1); }
+html[data-skin-2027="ordering"] .cart-row .row-price { grid-area: price; align-self: center; font-size: var(--k-fs-callout); font-weight: 600; color: var(--k-ink-1); min-width: 0; }
+html[data-skin-2027="ordering"] .cart-row .label { font-size: var(--k-fs-callout); font-weight: 600; overflow-wrap: anywhere; }
+html[data-skin-2027="ordering"] .cart-item-opts { font-size: var(--k-fs-footnote); color: var(--k-ink-2); overflow-wrap: anywhere; }
+html[data-skin-2027="ordering"] .cart-row .qty button {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  background: var(--k-surface-1);
+  border-color: var(--k-line);
+  font-size: 18px;
+}
+html[data-skin-2027="ordering"] .cart-row .qty button::after { content: ""; position: absolute; inset: -4px; border-radius: 999px; }
+html[data-skin-2027="ordering"] .cart-row .qty span { min-width: 28px; font-size: var(--k-fs-callout); font-weight: 600; }
+html[data-skin-2027="ordering"] .cart-totals .grand { font-size: var(--k-fs-heading); font-weight: 600; }
+html[data-skin-2027="ordering"] .cart-note { font-size: var(--k-fs-footnote); color: var(--k-ink-2); }
+
+/* ── The toast takes the top for its two seconds: the globe used to peek out
+   from behind it. ─────────────────────────────────────────────────────── */
+html[data-skin-2027="ordering"] .toast {
+  left: auto;
+  right: auto;
+  inset-inline: 16px;
+  min-height: 44px;
+  border-radius: var(--k-r-2);
+  font-size: var(--k-fs-footnote);
+  background: var(--k-inverse);
+  color: var(--k-on-inverse);
+}
+html[data-skin-2027="ordering"] .toast svg { color: var(--k-inverse-accent); flex: 0 0 auto; }
+html[data-skin-2027="ordering"] .app:has(.toast.is-visible) .lang-picker { opacity: 0; pointer-events: none; }
+
+/* ── Table number: the back button no longer sits on the store's name, the
+   keypad keeps 1 2 3 in Arabic as every phone keypad does, and Continue is
+   the layer's primary. ────────────────────────────────────────────────── */
+html[data-skin-2027="ordering"] .back-affordance { left: auto; inset-inline-start: 12px; }
+html[data-skin-2027="ordering"] .screen-table .table-top { padding-inline-start: 44px; min-height: 44px; justify-content: center; }
+html[data-skin-2027="ordering"] .screen-table { justify-content: space-between; padding-bottom: calc(var(--safe-bottom) + var(--k-space-2)); }
+html[data-skin-2027="ordering"] .numpad { direction: ltr; }
+html[data-skin-2027="ordering"] .num-key { box-shadow: none; border-color: var(--k-line); background: var(--k-surface-1); }
+html[data-skin-2027="ordering"] .continue-btn,
+html[data-skin-2027="ordering"] .cashier-confirm-btn {
+  min-height: 56px;
+  border-radius: 999px;
+  font-size: var(--k-fs-body);
+}
+html[data-skin-2027="ordering"] .continue-btn { background: var(--k-surface-3); color: var(--k-ink-3); opacity: 1; }
+html[data-skin-2027="ordering"] .continue-btn.is-ready,
+html[data-skin-2027="ordering"] .cashier-confirm-btn { background: var(--k-accent); color: var(--k-on-accent); }
+
+/* ── The takeaway number stays one word at every width ("#OPD-42" broke in
+   two on a 375 phone). ──────────────────────────────────────────────────── */
+html[data-skin-2027="ordering"] .cashier-number {
+  white-space: nowrap;
+  font-size: clamp(56px, 17vw, 96px);
+  max-width: 100%;
+}
+html[data-skin-2027="ordering"] .cashier-number .hash { font-size: 0.58em; }

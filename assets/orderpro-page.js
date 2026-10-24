@@ -115,6 +115,7 @@
         tab_savory: "Salé",
         tab_drink: "Boissons",
         tag_new: "Nouveau",
+        tag_formula: "Formule",
         service_call: "Appeler l’équipe",
         service_bill: "Addition",
         cart_pill: "Voir ma commande",
@@ -307,6 +308,7 @@
         tab_savory: "Savory",
         tab_drink: "Drinks",
         tag_new: "New",
+        tag_formula: "Set menu",
         service_call: "Call the team",
         service_bill: "Bill",
         cart_pill: "View my order",
@@ -496,6 +498,7 @@
         tab_savory: "ساندويتش",
         tab_drink: "مشروبات",
         tag_new: "جديد",
+        tag_formula: "منيو كامل",
         service_call: "نادي على الطاقم",
         service_bill: "الحساب",
         cart_pill: "شوف الطلب ديالي",
@@ -713,6 +716,9 @@
       });
       $$('[data-i18n-placeholder]').forEach(el => {
         el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
+      });
+      $$('[data-i18n-aria]').forEach(el => {
+        el.setAttribute('aria-label', t(el.dataset.i18nAria));
       });
     }
     function applyLang(lang) {
@@ -1074,7 +1080,7 @@
         <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-card="${escapeHtml(m.id)}"`}>
           ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
           <div class="dish-meta">
-            ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
+            ${m.formula ? `<div class="dish-tag">${escapeHtml(t('tag_formula'))}</div>` : ''}
             <div class="dish-name">${escapeHtml(i.name)}</div>
             <div class="dish-foot">
               <span class="dish-price">${money(m.price)}</span>
