@@ -253,7 +253,7 @@
       '.em{display:flex;align-items:center;justify-content:center;min-height:5rem;margin:0;padding:16px;box-sizing:border-box;border-radius:var(--k-r-3);background-color:var(--k-surface-2);text-align:center;text-wrap:balance}' +
       /* A held ticket (see fit): header and action fixed, the lines scroll,
          a soft edge says there is more below. */
-      '.tk.cl{display:flex;flex-direction:column}.tk.cl>*{flex:none}.tk.cl>.its{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 24px),transparent)}' +
+      '.tk.cl{display:flex;flex-direction:column}.tk.cl>*{flex:none}.tk.cl>.its{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,var(--k-ink-1) calc(100% - 24px),transparent);mask-image:linear-gradient(to bottom,var(--k-ink-1) calc(100% - 24px),transparent)}' +
       '.rcp{display:inline-flex;align-items:flex-start;gap:6px;min-height:44px;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}.rcp .k-ic{flex:none;margin-block-start:4px;color:var(--k-ink-2)}'
   });
 })(typeof window !== 'undefined' ? window : globalThis);

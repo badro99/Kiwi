@@ -162,9 +162,9 @@ html[data-k-till] #kds-screen .kds-body { padding: 0 24px 24px; }
 html[data-k-till] #kds-screen .kit-screen { gap: 16px; }
 html[data-k-till] #kds-screen .kit-topbar { align-items: center; gap: 8px; }
 html[data-k-till] #kds-screen .kit-stationbar { gap: 8px; padding-inline-end: 32px;
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+  -webkit-mask-image: linear-gradient(to right, var(--k-ink-1) calc(100% - 32px), transparent); mask-image: linear-gradient(to right, var(--k-ink-1) calc(100% - 32px), transparent); }
 html[data-k-till][dir="rtl"] #kds-screen .kit-stationbar {
-  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); }
+  -webkit-mask-image: linear-gradient(to left, var(--k-ink-1) calc(100% - 32px), transparent); mask-image: linear-gradient(to left, var(--k-ink-1) calc(100% - 32px), transparent); }
 html[data-k-till] #kds-screen .kit-station,
 html[data-k-till] #kds-screen .kit-history-toggle { min-height: 44px; gap: 8px; padding: 0 16px; border: 0; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-1);
   font-family: inherit; font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); letter-spacing: 0; }
