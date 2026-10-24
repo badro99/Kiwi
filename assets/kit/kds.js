@@ -50,6 +50,9 @@
     return 16 * px;
   }
 
+  /* Holds a ticket to a height (fit's oldest-ticket rule, .cl in the css). */
+  function clamp(el, h) { el.classList.add('cl'); el.style.maxHeight = Math.max(0, h) + 'px'; }
+
   var KLane = K.make({
     setup: function () {
       var self = this;
@@ -132,7 +135,7 @@
     render: function () {
       var list = this.tickets || [];
       var empty = this.str('empty') || t(EMPTY[this.str('lane', 'new')] || 'kds.no_new');
-      this.shadowRoot.innerHTML = list.length ? '<div class="cols"></div>' : '<p class="k-callout k-ink3 em">' + esc(empty) + '</p>';
+      this.shadowRoot.innerHTML = list.length ? '<div class="cols"></div>' : '<p class="k-callout k-ink2 em" role="status">' + esc(empty) + '</p>';
       this.fit();
     },
     columnCount: function () {
@@ -170,7 +173,11 @@
         var node = tmp.firstChild;
         col.appendChild(node);
         var h = node.offsetHeight + (used ? GAP : 0);
-        if (used + h <= H || (k === 0 && c === 0)) { used += h; shown++; continue; }   /* the oldest is always full */
+        if (used + h <= H) { used += h; shown++; continue; }
+        /* The oldest is always drawn full. Taller than the lane, it is held to
+           the lane's height and its lines scroll inside it: its timer and its
+           action stay on the wall, never cut off under the lane's edge. */
+        if (k === 0 && c === 0) { clamp(node, H); used = H; shown++; continue; }
         col.removeChild(node);
         if (c < n - 1) { c++; used = 0; k--; continue; }
         /* last column: try compressed, then the newer card */
@@ -187,6 +194,9 @@
         /* The spoken name starts with what the button shows (WCAG 2.5.3): a
            voice-control user says "+2 newer" (axe on the 2027 kitchen, 2026-10-23). */
         colEls[c].insertAdjacentHTML('beforeend', '<div class="nw">' + C.button.render({ variant: 'secondary', size: 'K', full: true, label: t('kds.newer', { n: rest }), ariaLabel: t('kds.newer', { n: rest }) + ', ' + t('kds.newer_open'), id: 'nw', attrs: ' data-w="newer"' }) + '</div>');
+        /* A held oldest ticket makes room for the newer card under it. */
+        var held = colEls[c].querySelector('.tk.cl'), nwEl = colEls[c].querySelector('.nw');
+        if (held && nwEl) clamp(held, H - nwEl.offsetHeight - GAP);
       }
       self.setAttribute('data-shown', String(shown));
     },
@@ -236,7 +246,14 @@
       '.va{margin:0 12px 8px;padding:0 0 8px;border-radius:var(--k-r-2);box-shadow:inset 0 0 0 2px var(--k-danger-solid)}.va .vt{margin:0 0 8px;background-color:var(--k-danger-tint)}.vb{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 8px}' +
       '.us{display:flex;align-items:center;gap:6px;margin:8px 12px 0;color:var(--k-ink-2)}' +
       '.cmp{margin:0;padding:4px 12px}.tf{display:flex;flex-direction:column;gap:4px;padding:12px}.tf>.k-btnw:not(.k-btnw--full){align-self:center}.er{margin:0 0 8px;color:var(--k-danger)}' +
-      '.rd .th{box-shadow:none}.em{margin:0;padding:24px;text-align:center}' +
+      '.rd .th{box-shadow:none}' +
+      /* The empty lane is a quiet well the lane's full width, its line centred
+         in it: the well's edges are the lane's, so it sits square under the
+         lane's head in every column, wide or narrow. */
+      '.em{display:flex;align-items:center;justify-content:center;min-height:5rem;margin:0;padding:16px;box-sizing:border-box;border-radius:var(--k-r-3);background-color:var(--k-surface-2);text-align:center;text-wrap:balance}' +
+      /* A held ticket (see fit): header and action fixed, the lines scroll,
+         a soft edge says there is more below. */
+      '.tk.cl{display:flex;flex-direction:column}.tk.cl>*{flex:none}.tk.cl>.its{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,var(--k-ink-1) calc(100% - 24px),transparent);mask-image:linear-gradient(to bottom,var(--k-ink-1) calc(100% - 24px),transparent)}' +
       '.rcp{display:inline-flex;align-items:flex-start;gap:6px;min-height:44px;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}.rcp .k-ic{flex:none;margin-block-start:4px;color:var(--k-ink-2)}'
   });
 })(typeof window !== 'undefined' ? window : globalThis);
