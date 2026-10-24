@@ -69,6 +69,7 @@
   "pay.exact_a11y": "Exact amount, {amount}",
   "pay.cash.confirm": "Confirm cash payment",
   "pay.cash.short": "Enter at least {amount}.",
+  "pay.pick": "Choose how the customer pays.",
   "pay.card.body": "Take {amount} on your card terminal. When it shows Approved, confirm here.",
   "pay.card.confirm": "Confirm card payment",
   "pay.preauth": "Pre-authorisation needs a connected terminal. Not available yet.",

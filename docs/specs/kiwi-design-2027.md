@@ -1528,6 +1528,7 @@ Keys are grouped by bundle (§9.3). `{…}` are ICU arguments; amounts, percenta
 | `pay.exact_a11y` | Exact amount, {amount} | Montant exact, {amount} | المبلغ بالضبط، {amount} |
 | `pay.cash.confirm` | Confirm cash payment | Valider en espèces | أكّد الدفع نقدًا |
 | `pay.cash.short` | Enter at least {amount}. | Saisissez au moins {amount}. | أدخل {amount} على الأقل. |
+| `pay.pick` | Choose how the customer pays. | Choisissez comment le client règle. | اختر طريقة دفع الزبون. |
 | `pay.card.body` | Take {amount} on your card terminal. When it shows Approved, confirm here. | Encaissez {amount} sur votre terminal. Quand il affiche Accepté, validez ici. | حصّل {amount} على جهاز البطاقات. عندما يظهر «مقبول»، أكّد هنا. |
 | `pay.card.confirm` (revision 6: verb first) | Confirm card payment | Valider le paiement carte | أكّد الدفع بالبطاقة |
 | `pay.preauth` | Pre-authorisation needs a connected terminal. Not available yet. | La pré-autorisation nécessite un terminal connecté. Pas encore disponible. | التفويض المسبق يتطلب جهاز دفع متصلًا. غير متاح بعد. |
@@ -2475,7 +2476,7 @@ No haptic, ever (§15). The shipped `kiwi:toast` haptic hook is removed at stage
 **Desktop:** the same sidebar at 248, collapsible to a 72 rail with tooltips. Cmd/Ctrl-K opens search.
 
 **Till rail:**
-- 88 wide on a surface-2 ground. Items min-height 72: icon 24 over a Footnote label, lens paint 56 tall with radius 12 (`--k-r-2`), **as wide as the larger of 64 and the label plus 8**, centred. Measured (§6.6), the widest label is FR "À emporter" at 68.3, so the lens is at most 76.3 inside the 88 rail.
+- 88 wide on a surface-2 ground. Items min-height 72: icon 24 over a Footnote label, lens paint 56 tall with radius 12 (`--k-r-2`), **as wide as the larger of 64 and the label plus 16, at most 84**, centred. The label has one weight whether current or not (the current item is the lens, the accent icon and ink-1), and wraps balanced past 68 (a larger type size). Measured (§6.6), the widest label is FR "À emporter" at about 66 in the regular weight, so the lens is at most 82 inside the 88 rail. Revision of 2026-10-24: with plus 8 and a bold current label the lens hugged it with 4 to spare (owner).
 - Bottom slot: the cashier avatar 44 and name, which opens a popover with `till.lock` and `till.switch_cashier`.
 
 **States:** badge (§10.13); disabled is never used (an unavailable destination is not shown); focus is an inset ring.

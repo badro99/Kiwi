@@ -258,7 +258,7 @@
   /* ── <k-rail value> + .items, .footer (§10.20 till rail) ───────────────────
      88 wide on surface-2; items 72 tall, icon 24 over a Footnote label; the
      lens is 56 tall, radius 12, as wide as the larger of 64 and the label
-     plus 8, centred. Bottom slot: the sync indicator and the cashier. */
+     plus 16 (at most 84), centred. Bottom slot: the sync indicator and the cashier. */
   var KRail = K.make({
     setup: function () {
       var self = this;
@@ -291,9 +291,13 @@
       '.trk{position:relative;display:flex;flex-direction:column}' +
       '.lens{border-radius:var(--k-r-2);' + LENS_PAINT + ';opacity:0}' +
       '.it{position:relative;z-index:1;min-height:72px;display:flex;align-items:center;justify-content:center;color:var(--k-ink-2)}' +
-      '.pill{position:relative;min-width:64px;min-height:56px;padding-inline:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:var(--k-r-2)}' +
-      '.it[aria-current="page"]{color:var(--k-ink-1)}.it[aria-current="page"] .ic{color:var(--k-accent-ink)}.it[aria-current="page"] .lb{font-weight:var(--k-fw-footnote-strong)}' +
-      '.lb{white-space:nowrap;text-align:center}.bdw{position:absolute;top:2px;inset-inline-end:2px}' +
+      '.pill{position:relative;min-width:64px;max-width:84px;min-height:56px;padding-inline:8px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:var(--k-r-2)}' +
+      /* The label keeps one weight: bold on the current item made the lens hug
+         « À emporter » with 4 px to spare and every label jump when chosen
+         (owner, 2026-10-24). The lens, the accent icon and ink-1 carry it. A
+         label too long for the rail (a larger type size) wraps, balanced. */
+      '.it[aria-current="page"]{color:var(--k-ink-1)}.it[aria-current="page"] .ic{color:var(--k-accent-ink)}' +
+      '.lb{max-width:68px;text-align:center;text-wrap:balance;line-height:1.15}.bdw{position:absolute;top:2px;inset-inline-end:2px}' +
       '.it:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}' +
       '.foot{display:flex;flex-direction:column;align-items:center;gap:8px}' +
       '.sy{position:relative;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;color:var(--k-ink-2);border-radius:50%}' +

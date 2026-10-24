@@ -208,7 +208,9 @@ html[data-k-till][data-k-till-more] .sidebar {
   inset-inline-end: auto;
   width: 260px;
   max-width: 100vw;
-  z-index: 42;
+  /* Above the customer book (940) and the kitchen: Plus opened from Clients
+     was cut off behind the page (owner, 2026-10-24). */
+  z-index: 949;
   transform: none;
   box-shadow: var(--k-shadow-2);
 }
@@ -226,7 +228,7 @@ html:not([data-k-till-more]) .sidebar > k-sidebar { display: none; }
 #kit-more-scrim {
   position: fixed;
   inset: 0;
-  z-index: 41;
+  z-index: 948;
   background-color: var(--k-scrim);
   opacity: 0;
   pointer-events: none;

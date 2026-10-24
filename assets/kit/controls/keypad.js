@@ -27,7 +27,7 @@
     '.k-kp--flush .k-kp__k{height:64px;border-radius:0;background-color:transparent;box-shadow:inset -1px -1px 0 var(--k-line)}',
     '.k-kp--flush .k-kp__k:nth-child(3n){box-shadow:inset 0 -1px 0 var(--k-line)}',
     '.k-kp--short .k-kp__k{height:56px}',
-    '.k-kp__next{display:inline-flex;align-items:center;gap:4px}'
+    '.k-kp__next{display:inline-flex;align-items:center;gap:4px;color:var(--k-accent-ink);font-weight:var(--k-fw-body-strong)}'
   ].join('\n');
 
   function decimalMark() {

@@ -143,8 +143,11 @@
       '.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-height:112px;padding:16px;border-radius:var(--k-r-3);' +
       'background-color:var(--k-surface-1);color:var(--k-ink-1);text-align:start;transition:transform var(--k-dur-4) var(--k-spring)}' +
       '.tile:active:not([aria-disabled="true"]){transform:scale(.97);transition-duration:var(--k-dur-1);transition-timing-function:var(--k-glide)}' +
-      /* clear of the 28 px qty badge (8 px in from the corner, the tile pads 16) */
-      '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong);padding-inline-end:20px}' +
+      /* clear of the 28 px qty badge with 8 to spare: it sits 8 in from the
+         corner (8 to 36), the tile pads 16, so the name stops 28 further in.
+         At 20 the name ran into the badge (owner, 2026-10-24). Always, so a
+         tap never re-wraps the name. */
+      '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong);padding-inline-end:28px}' +
       '.pr{color:var(--k-ink-2)}.op{position:absolute;inset-inline-end:16px;bottom:16px;color:var(--k-ink-2)}' +
       '.q{position:absolute;inset-inline-end:8px;top:8px;min-width:28px;height:28px;padding-inline:6px;border-radius:14px;display:flex;align-items:center;justify-content:center;' +
       'background-color:var(--k-accent);color:var(--k-on-accent)}' +
@@ -444,6 +447,10 @@
           C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cf', attrs: ' data-w="confirm"', label: t(p.method === 'card' ? 'pay.card.confirm' : 'pay.cash.confirm'),
             error: st === 'not-recorded' ? t('pay.not_recorded') : '' }) +
           C.button.render({ label: t('action.back'), full: true, id: 'bk', attrs: ' data-w="back"' }) + '</div>';
+      } else if (cmp) {
+        /* Compact, no method yet: the keys column said nothing at all, half the
+           screen blank (owner, 2026-10-24). It says what comes next. */
+        lower = '<div class="pick">' + icon('payments', 32) + '<p class="k-callout k-ink2">' + th('pay.pick') + '</p></div>';
       }
       var summary =
         '<div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"', disabled: st === 'paid' }) +
@@ -478,6 +485,7 @@
       '.cmp .sum .row,.cmp .sum .mt{background-color:var(--k-bg)}' +
       '.cmp .keys{display:flex;flex-direction:column;min-height:0;padding:24px 24px 52px;background-color:var(--k-surface-1);border-inline-start:1px solid var(--k-line)}' +
       '.cmp .card{flex:1}' +
+      '.pick{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding-inline:24px}.pick p{margin:0;max-width:240px}.pick svg{color:var(--k-ink-3)}' +
       '.kf{display:flex;flex-direction:column}.brk{min-height:18px}' +
       '.row,.mt{display:flex;align-items:center;gap:12px;min-height:64px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);color:var(--k-ink-1);text-align:start}' +
       '.row span:first-child{flex:1}.ms{display:flex;flex-direction:column;gap:8px}' +
@@ -591,7 +599,7 @@
         var n = self.__n[d] || 0, sub = fromCents(Math.round(d * 100) * n), lab = money(d);
         var on = String(d) === self.__sel;
         return '<li class="dr' + (on ? ' on' : '') + '"><span class="k-body dl">' + th('count.denom', { value: lab }) + '</span>' +
-          '<button type="button" class="cnt k-body k-num" data-denom="' + d + '" aria-pressed="' + on + '" aria-label="' + esc(t('count.row_a11y', { denomination: lab, n: n, subtotal: money(sub) })) + '">' + n + '</button>' +
+          '<button type="button" class="cnt k-body k-num' + (n ? '' : ' z') + '" data-denom="' + d + '" aria-pressed="' + on + '" aria-label="' + esc(t('count.row_a11y', { denomination: lab, n: n, subtotal: money(sub) })) + '">' + n + '</button>' +
           '<span class="k-body k-num sb">' + numHtml(f ? f.num(sub, 2) : sub) + '</span></li>';
       };
       var fig, figLabel, tone = 'neutral';
@@ -672,7 +680,9 @@
       '.fig[data-tone="warning"] .k-display{color:var(--k-warning)}.fig[data-tone="danger"] .k-display{color:var(--k-danger)}' +
       '.sh{margin:12px 0 4px;font-weight:var(--k-fw-footnote-strong)}.dl{list-style:none;margin:0;padding:0}' +
       '.dr{display:flex;align-items:center;gap:8px;min-height:56px;padding-inline:16px;box-shadow:inset 0 -1px 0 var(--k-line)}' +
-      '.dr .dl{flex:1;min-width:0}.cnt{width:72px;min-height:44px;border-radius:var(--k-r-1);background-color:var(--k-surface-2);font-weight:var(--k-fw-body-strong)}' +
+      '.dr .dl{flex:1;min-width:0}.cnt{width:72px;min-height:44px;border-radius:var(--k-r-1);background-color:var(--k-surface-2);font-weight:var(--k-fw-body-strong);text-align:center}' +
+      /* An uncounted row reads as empty, not as a typed bold 0 (owner, 2026-10-24). */
+      '.cnt.z{color:var(--k-ink-3);font-weight:var(--k-fw-body)}' +
       '.dr.on .cnt{background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-accent)}' +
       '.sb{width:96px;text-align:end}' +
       '.sum{position:sticky;bottom:0;padding-block:12px;background-color:var(--k-surface-1);box-shadow:inset 0 1px 0 var(--k-line)}' +

@@ -69,6 +69,7 @@
   "pay.exact_a11y": "Montant exact, {amount}",
   "pay.cash.confirm": "Valider en espèces",
   "pay.cash.short": "Saisissez au moins {amount}.",
+  "pay.pick": "Choisissez comment le client règle.",
   "pay.card.body": "Encaissez {amount} sur votre terminal. Quand il affiche Accepté, validez ici.",
   "pay.card.confirm": "Valider le paiement carte",
   "pay.preauth": "La pré-autorisation nécessite un terminal connecté. Pas encore disponible.",

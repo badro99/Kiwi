@@ -2974,7 +2974,38 @@
        claire, et le fondu se lisait comme un éclair blanc (propriétaire,
        2026-10-23). Tant qu'il est là, la page sous lui prend son fond. */
     html[data-skin-2027="till"]:has(#clockin-screen.is-visible:not(.is-leaving)),
-    html[data-skin-2027="till"]:has(#clockin-screen.is-visible:not(.is-leaving)) body { background-color: #04120D; }
+    html[data-skin-2027="till"]:has(#clockin-screen.is-visible:not(.is-leaving)) body { background-color: var(--k-bg); }
+    /* Design 2027 : l'ouverture se lisait clair, sombre, clair (le verrou, puis
+       l'écran d'ouverture vert nuit, puis la caisse). Elle est maintenant sur le
+       même papier que le verrou et la caisse, avec l'encre et l'accent du kit,
+       et l'heure en Inter Tight à chiffres tabulaires : le mono est réservé aux
+       codes (propriétaire, 2026-10-24). Les jetons suivent le mode sombre. */
+    html[data-skin-2027="till"] .clockin-screen {
+      background-color: var(--k-bg); background-image: none; color: var(--k-ink-1);
+      font-family: var(--k-font);
+    }
+    html[data-skin-2027="till"]:not([data-theme="dark"]) .clockin-brand img { content: url("kiwi-newlogo.svg"); }
+    html[data-skin-2027="till"] .clockin-brand img { height: 32px; }
+    html[data-skin-2027="till"] .clockin-tagline,
+    html[data-skin-2027="till"] .clockin-role,
+    html[data-skin-2027="till"] .clockin-date { color: var(--k-ink-3); font-family: var(--k-font); }
+    html[data-skin-2027="till"] .clockin-greet { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+    html[data-skin-2027="till"] .clockin-greet em { font-family: var(--k-font); font-weight: 600; color: var(--k-accent-ink); }
+    html[data-skin-2027="till"] .clockin-clock {
+      font-family: var(--k-font); font-weight: 600; letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums; color: var(--k-ink-1);
+    }
+    html[data-skin-2027="till"] #operator-service-notice { color: var(--k-accent-ink); }
+    html[data-skin-2027="till"] .ci-float-err { color: var(--k-ink-2); }
+    html[data-skin-2027="till"] .clockin-btn {
+      height: 56px; border-radius: var(--k-r-2);
+      background: var(--k-accent); color: var(--k-on-accent);
+      box-shadow: var(--k-shadow-1); font-family: var(--k-font);
+    }
+    html[data-skin-2027="till"] .clockin-btn:hover { background: var(--k-accent-pressed); transform: none; }
+    html[data-skin-2027="till"] .clockin-btn:focus-visible { outline: 3px solid var(--k-focus); outline-offset: 3px; }
+    html[data-skin-2027="till"] .clockin-btn.is-confirmed { background: var(--k-accent-pressed); }
+    html[data-skin-2027="till"] .clockin-foot { color: var(--k-ink-3); }
     /* Design 2027, paired till: the demo pad (#pin-screen, demo codes in its
        foot) is never a door here. caisse-app and the boutique lock still show
        it inline on a reset; the 2027 lock covers that moment (owner, 2026-10-24). */
@@ -3970,6 +4001,18 @@
       0%, 55%   { opacity: 1; }
       56%, 100% { opacity: 0; }
     }
+    /* Once typed, the word keeps its whole width: it was measured before the
+       face had loaded, and its last letter stayed cut (owner, 2026-10-24). */
+    .kiwi-greet h1 .em-clip.is-revealed:not(.is-typing) { max-width: none; }
+    /* Design 2027: the greeting sits on the till's own paper, in the kit's
+       face; the mono stays for codes. */
+    html[data-skin-2027="till"] .kiwi-greet { background: var(--k-bg); }
+    html[data-skin-2027="till"] .kiwi-greet::before { display: none; }
+    html[data-skin-2027="till"] .kiwi-greet h1 { color: var(--k-ink-1); text-shadow: none; font-family: var(--k-font); }
+    html[data-skin-2027="till"] .kiwi-greet h1 em { font-family: var(--k-font); font-weight: 600; color: var(--k-accent-ink); }
+    html[data-skin-2027="till"] .kiwi-greet h1 .em-clip.is-typing::after { background: var(--k-accent); }
+    html[data-skin-2027="till"] .kiwi-greet-sub { font-family: var(--k-font); font-size: 13px; letter-spacing: 0.08em; color: var(--k-ink-3); }
+    html[data-skin-2027="till"] .kiwi-greet-sub em { font-family: var(--k-font); color: var(--k-accent-ink); }
     .kiwi-greet-sub {
       font-family: var(--mono); font-size: 11.5px;
       letter-spacing: 0.16em; text-transform: uppercase;

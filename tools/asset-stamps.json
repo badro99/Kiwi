@@ -160,8 +160,8 @@
     "sha": "217d4da2a265be9a"
   },
   "assets/caisse-shell.css": {
-    "v": "5",
-    "sha": "a794ecf04ad9c177"
+    "v": "6",
+    "sha": "92c60bec0ad48a19"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -508,8 +508,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "7",
-    "sha": "a549ad4d7a77eb92"
+    "v": "8",
+    "sha": "7dc0248743e95929"
   },
   "assets/identity.js": {
     "v": "12",
@@ -572,8 +572,8 @@
     "sha": "fa40e74fbdd7dcf6"
   },
   "assets/kit/controls/keypad.js": {
-    "v": "1",
-    "sha": "9e6b9270a063b7ed"
+    "v": "2",
+    "sha": "d1f03ddaafb4257c"
   },
   "assets/kit/controls/stepper.js": {
     "v": "1",
@@ -664,8 +664,8 @@
     "sha": "43cf4f0f15cf5740"
   },
   "assets/kit/kit.css": {
-    "v": "43",
-    "sha": "535af454b16bdc96"
+    "v": "44",
+    "sha": "3ff5923d5aba1745"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -684,8 +684,8 @@
     "sha": "950320329471314e"
   },
   "assets/kit/nav.js": {
-    "v": "3",
-    "sha": "8d57b75679d6fd5d"
+    "v": "4",
+    "sha": "16c204ceef25246c"
   },
   "assets/kit/ordering.css": {
     "v": "2",
@@ -772,16 +772,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "8",
-    "sha": "1920fa577c59e6de"
+    "v": "9",
+    "sha": "f0185dabb5ac4257"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "8",
-    "sha": "1697c5d54029080f"
+    "v": "9",
+    "sha": "09e7cd5aea57f0f7"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "8",
-    "sha": "1835e17cf7950cec"
+    "v": "9",
+    "sha": "359864366ea011f8"
   },
   "assets/kit/team-pin.js": {
     "v": "1",
@@ -812,8 +812,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "12",
-    "sha": "4ba6a8b7657b2d48"
+    "v": "13",
+    "sha": "0f2829c68728236d"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",
