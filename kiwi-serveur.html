@@ -118,14 +118,14 @@
         js("assets/kit/core.js?v=2") +
         js("assets/kit/pin.js?v=3") +
         js("assets/kit/pin-flow.js?v=3") +
-        js("assets/kit/team-pin.js?v=1") +
+        js("assets/kit/team-pin.js?v=2") +
         /* Stage 6 (§13.4): the split view on iPad and wider. */
         js("assets/kit/team-split.js?v=1")
       );
     })();
   </script>
 
-  <link rel="stylesheet" href="assets/serveur-shell.css?v=3">
+  <link rel="stylesheet" href="assets/serveur-shell.css?v=4">
 </head>
 
 <body>
@@ -548,7 +548,7 @@
           <div class="modal-handle"></div>
           <div class="split-badge">Nouvelle table</div>
           <h3 class="modal-title">Ouvrir <span id="nt-table-id">T3</span></h3>
-          <p class="modal-subtle">Combien de couverts?</p>
+          <p class="modal-subtle">Combien de couverts ?</p>
           <div class="nt-chips" id="nt-covers-chips"></div>
           <div class="nt-actions">
             <button class="td-btn ghost" id="nt-cancel">Annuler</button>
@@ -803,7 +803,7 @@
           <div class="modal-handle"></div>
 
           <div id="split-setup">
-            <div class="split-badge">Split bill</div>
+            <div class="split-badge">Partager l'addition</div>
             <h3 class="modal-title">Diviser · <span id="split-table-label">T2</span></h3>
             <p class="modal-subtle">Choisissez un mode de partage.</p>
 
@@ -871,7 +871,7 @@
             </div>
 
             <button class="split-launch" id="split-launch">Lancer le split</button>
-            <a class="split-cancel-link" id="split-cancel">Annuler</a>
+            <button type="button" class="split-cancel-link" id="split-cancel">Annuler</button>
           </div>
 
           <div id="split-flow" hidden>
@@ -955,9 +955,9 @@
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js?v=2" defer></script>
-  <script src="assets/serveur-lang.js?v=2"></script>
+  <script src="assets/serveur-lang.js?v=3"></script>
 
-  <script src="assets/serveur/service.js?v=1"></script>
+  <script src="assets/serveur/service.js?v=2"></script>
   <script src="assets/serveur-app.js?v=14"></script>
   <script src="assets/employee-pwa.js?v=2" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>

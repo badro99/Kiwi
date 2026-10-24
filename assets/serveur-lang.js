@@ -306,10 +306,24 @@
       ,"Modifier":"Edit"
       ,"Sélectionnez une table d'abord":"Select a table first"
       ,"Carte approuvée":"Card approved"
-      ,"Lancer la commande":"Start the order"
+      ,"Lancer la commande":"Send the order"
       ,"Ajouter":"Add"
       ,"Table réglée":"Table paid"
       ,"Sélectionnez une table d'abord pour ajouter des articles. Vous pouvez parcourir le menu pour information.":"Select a table first to add items. You can still browse the menu."
+      ,"Sous-total":"Subtotal"
+      ,"Service (compris)":"Service (included)"
+      ,"Total":"Total"
+      ,"Ajouter encore":"Add more"
+      ,"Imprimer":"Print"
+      ,"inclus":"included"
+      ,"Formule":"Set menu"
+      ,"Options":"Options"
+      ,"autre":"other"
+      ,"Option indisponible":"Option unavailable"
+      ,"Oui":"Yes"
+      ,"Personnalisez avant d'ajouter à la commande":"Customise before adding to the order"
+      ,"Diviser ·":"Split ·"
+      ,"Combien de couverts ?":"How many guests?"
       ,"Même chose pour tous":"Same for everyone"
       ,"Aucun client trouvé.":"No customer found."
       ,"Note cuisine, ex. bien chaud, sans oignon":"Kitchen note, e.g. extra hot, no onion"
@@ -611,10 +625,24 @@
       ,"Modifier":"تعديل"
       ,"Sélectionnez une table d'abord":"اختر طاولة أولاً"
       ,"Carte approuvée":"البطاقة مقبولة"
-      ,"Lancer la commande":"بدء الطلب"
+      ,"Lancer la commande":"إرسال الطلب"
       ,"Ajouter":"إضافة"
       ,"Table réglée":"الطاولة مدفوعة"
       ,"Sélectionnez une table d'abord pour ajouter des articles. Vous pouvez parcourir le menu pour information.":"اختر طاولة أولاً لإضافة أصناف. يمكنك تصفح القائمة للاطلاع."
+      ,"Sous-total":"المجموع الفرعي"
+      ,"Service (compris)":"الخدمة (مشمولة)"
+      ,"Total":"المجموع"
+      ,"Ajouter encore":"إضافة المزيد"
+      ,"Imprimer":"طباعة"
+      ,"inclus":"مشمول"
+      ,"Formule":"وجبة"
+      ,"Options":"خيارات"
+      ,"autre":"آخر"
+      ,"Option indisponible":"خيار غير متاح"
+      ,"Oui":"نعم"
+      ,"Personnalisez avant d'ajouter à la commande":"خصّص الصنف قبل إضافته إلى الطلب"
+      ,"Diviser ·":"تقسيم ·"
+      ,"Combien de couverts ?":"كم عدد الضيوف؟"
       ,"Même chose pour tous":"نفس الشيء للجميع"
       ,"Aucun client trouvé.":"لم يُعثر على زبون."
       ,"Note cuisine, ex. bien chaud, sans oignon":"ملاحظة للمطبخ، مثلاً ساخن جداً، بدون بصل"
@@ -686,6 +714,14 @@
     [/^(.+?) installé · menus à apporter$/, "$1 seated · bring the menus", "$1 جالس · أحضر القوائم"],
     [/^(.+?) · 1 couvert$/, "$1 · 1 guest", "$1 · ضيف واحد"],
     [/^(.+?) · (\d+) couverts?$/, "$1 · $2 guests", "$1 · $2 ضيوف"],
+    [/^En service · (\d+)h (\d{2})$/, 'On shift · $1h $2', 'في الوردية · $1:$2'],
+    [/^1 choix$/, '1 choice', 'اختيار واحد'],
+    [/^(\d+) choix$/, '$1 choices', '$1 اختيارات'],
+    [/^Encaisser (\d[\d\s\u202f]*(?:,\d+)? MAD)$/, 'Take payment $1', 'تحصيل $1'],
+    [/^Table (.+?) · commande envoyée · notes transmises$/, 'Table $1 · order sent · notes passed on', 'الطاولة $1 · أُرسل الطلب · نُقلت الملاحظات'],
+    [/^Table (.+?) · commande envoyée · (.+) · notes transmises$/, 'Table $1 · order sent · $2 · notes passed on', 'الطاولة $1 · أُرسل الطلب · $2 · نُقلت الملاحظات'],
+    [/^Table (.+?) · commande envoyée · (.+)$/, 'Table $1 · order sent · $2', 'الطاولة $1 · أُرسل الطلب · $2'],
+    [/^Table (.+?) · commande envoyée$/, 'Table $1 · order sent', 'الطاولة $1 · أُرسل الطلب'],
     [/^Serveur · (.+)$/, 'Server · $1', 'مقدّم خدمة · $1'],
     [/^Caissier · (.+)$/, 'Cashier · $1', 'أمين الصندوق · $1'],
     [/^Cuisinier · (.+)$/, 'Kitchen · $1', 'طاقم المطبخ · $1'],
