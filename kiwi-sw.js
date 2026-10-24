@@ -346,7 +346,7 @@ var SHELL = [
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=3',
-  '/assets/kit/till-pin.js?v=4',
+  '/assets/kit/till-pin.js?v=5',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=9',
   '/assets/kit/dash-pin.js?v=1',

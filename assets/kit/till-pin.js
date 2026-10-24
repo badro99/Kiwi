@@ -267,6 +267,9 @@
     var dark = false;
     try { dark = root.KiwiCaisseTheme ? root.KiwiCaisseTheme.current() === 'dark' : doc.documentElement.getAttribute('data-caisse-theme') === 'dark'; } catch (_) {}
     if (doc.body) doc.body.setAttribute('data-vexel-mode', dark ? 'dark' : 'light');
+    /* The browser bar (and an installed app's title bar) takes the ground the till paints. */
+    var bar = doc.querySelector('meta[name="theme-color"]');
+    if (bar && doc.body) { var bg = getComputedStyle(doc.body).getPropertyValue('--k-bg').trim(); if (bg) bar.setAttribute('content', bg); }
   }
   if (doc.body) syncTheme(); else doc.addEventListener('DOMContentLoaded', syncTheme);
   doc.addEventListener('kiwi:caisse-theme', syncTheme);
