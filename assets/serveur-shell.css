@@ -3946,7 +3946,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     .scope-btn .scope-count {
       font-size: 10.5px;
-      opacity: 0.6;
+      /* No dimming: ink-3 at 60 % fell to 3.81:1 on the dark switch (axe,
+         surface-matrix-apps). The smaller size sets the count apart. */
+      opacity: 1;
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
     }

@@ -31,7 +31,7 @@ var SHELL = [
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
-  '/assets/serveur-shell.css?v=4',
+  '/assets/serveur-shell.css?v=5',
   '/assets/serveur/service.js?v=1',
   '/assets/serveur-app.js?v=14',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
