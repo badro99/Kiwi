@@ -793,6 +793,16 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-z-expe
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite :is(.cf-z-counter-v, .cf-z-expected-v, .cf-z-summary-v, .cf-z-denom-sub, .cf-z-denom-val, .cf-z-htotal) {
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
+/* The count's verdict in the kit's status tones, each legible on its tint
+   (the shipped 10 % reds left the gap and its note under 4.5:1). */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-row { border-radius: var(--k-r-2); font-family: var(--k-font); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-ok { background: var(--k-accent-tint); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-ok :is(.cf-z-summary-l, .cf-z-summary-v) { color: var(--k-accent-ink); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-warn { background: var(--k-warning-tint); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-warn :is(.cf-z-summary-l, .cf-z-summary-v) { color: var(--k-warning); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-bad { background: var(--k-danger-tint); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-bad :is(.cf-z-summary-l, .cf-z-summary-v) { color: var(--k-danger); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-summary-v small { opacity: 1; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-counter { gap: 12px; }
 /* The cash count is typed on the counter's iPad: each field a 44 target. */
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-conformite .cf-z-denom-input {
