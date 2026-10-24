@@ -42,6 +42,7 @@
 
 const http = require('http');
 const net = require('net');
+const dns = require('dns');
 const crypto = require('crypto');
 const os = require('os');
 const fs = require('fs');
@@ -134,15 +135,41 @@ function rejectRequest(res, status, error, origin) {
   sendJson(res, status, { ok: false, error }, origin);
 }
 
+// Plain decimal octets only. Windows and glibc read "010" as octal and accept
+// hex, so a lenient parse let "010.0.0.1" pass as 10.0.0.1 and then connect
+// to 8.0.0.1.
+function privateV4Octets(ip) {
+  const parts = String(ip).split('.');
+  if (parts.length !== 4 || !parts.every((s) => /^(?:0|[1-9][0-9]{0,2})$/.test(s))) return null;
+  const p = parts.map(Number);
+  return p.every((n) => n <= 255) ? p : null;
+}
+
+function isPrivateResolvedV4(ip) {
+  const p = privateV4Octets(ip);
+  return !!p && (p[0] === 10 || p[0] === 127 || (p[0] === 169 && p[1] === 254)
+    || (p[0] === 172 && p[1] >= 16 && p[1] <= 31)
+    || (p[0] === 192 && p[1] === 168));
+}
+
 function isPrivatePrinterHost(host) {
   const h = String(host || '').trim().toLowerCase();
-  const p = h.split('.').map(Number);
-  if (p.length === 4 && p.every((n) => Number.isInteger(n) && n >= 0 && n <= 255)) {
-    return p[0] === 10 || p[0] === 127 || (p[0] === 169 && p[1] === 254)
-      || (p[0] === 172 && p[1] >= 16 && p[1] <= 31)
-      || (p[0] === 192 && p[1] === 168);
-  }
-  return /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:local|lan)$/i.test(h);
+  // A plain private IPv4, or a .local/.lan name (checked again once resolved).
+  return isPrivateResolvedV4(h) || /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:local|lan)$/i.test(h);
+}
+
+// A .local/.lan name must also resolve to a private address before we connect.
+function privatePrinterLookup(hostname, options, callback) {
+  const opts = typeof options === 'object' && options ? options : { family: options };
+  dns.lookup(hostname, Object.assign({}, opts, { family: 4 }), (err, address, family) => {
+    if (err) return callback(err);
+    const refuse = () => callback(Object.assign(new Error('printer address is not on the local network'), { code: 'EKIWIPUBLIC' }));
+    if (Array.isArray(address)) {
+      const ok = address.filter((a) => isPrivateResolvedV4(a.address));
+      return ok.length ? callback(null, ok) : refuse();
+    }
+    return isPrivateResolvedV4(address) ? callback(null, address, family) : refuse();
+  });
 }
 
 function cleanBridgeTarget(input) {
@@ -644,7 +671,7 @@ function openPrinterChannel(printerIp, port) {
     socket.setTimeout(PRINT_TIMEOUT_MS);
     socket.once('timeout', () => fail(new Error('printer timeout')));
     socket.once('error', fail);
-    socket.connect(port, printerIp, () => {
+    socket.connect({ port, host: printerIp, lookup: privatePrinterLookup }, () => {
       if (settled) return;
       settled = true;
       channel.lastConnectMs = Date.now() - t0;

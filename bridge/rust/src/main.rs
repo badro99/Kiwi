@@ -91,18 +91,36 @@ fn port(v: &Value) -> f64 {
     let n = num(v);
     if n == 0. || n.is_nan() { 9100. } else { n }
 }
+fn plain_v4(h: &str) -> Option<std::net::Ipv4Addr> {
+    let parts: Vec<&str> = h.split('.').collect();
+    if parts.len() != 4
+        || !parts.iter().all(|s| {
+            !s.is_empty()
+                && s.len() <= 3
+                && s.bytes().all(|b| b.is_ascii_digit())
+                && (s.len() == 1 || !s.starts_with('0'))
+        })
+    {
+        return None;
+    }
+    h.parse().ok()
+}
+
+fn private_v4(ip: std::net::Ipv4Addr) -> bool {
+    let o = ip.octets();
+    o[0] == 10
+        || o[0] == 127
+        || (o[0] == 169 && o[1] == 254)
+        || (o[0] == 172 && (16..=31).contains(&o[1]))
+        || (o[0] == 192 && o[1] == 168)
+}
+
 fn private_host(h: &str) -> bool {
     let h = h.trim().to_lowercase();
-    let p: Vec<_> = h.split('.').map(|s| num(&json!(s))).collect();
-    if p.len() == 4
-        && p.iter()
-            .all(|n| n.is_finite() && n.fract() == 0. && *n >= 0. && *n <= 255.)
-    {
-        return p[0] == 10.
-            || p[0] == 127.
-            || (p[0] == 169. && p[1] == 254.)
-            || (p[0] == 172. && (16. ..=31.).contains(&p[1]))
-            || (p[0] == 192. && p[1] == 168.);
+    // A plain private IPv4, or a .local/.lan name (checked again once resolved).
+    // Octets are plain decimal only: Windows and glibc read "010" as octal.
+    if let Some(ip) = plain_v4(&h) {
+        return private_v4(ip);
     }
     let labels: Vec<_> = h.split('.').collect();
     labels.len() > 1
@@ -356,8 +374,8 @@ impl App {
         let addr = (string(&t["ip"]), t["port"].as_u64().unwrap_or(9100) as u16)
             .to_socket_addrs()
             .map_err(|e| e.to_string())?
-            .next()
-            .ok_or("printer connection closed")?;
+            .find(|a| matches!(a.ip(), std::net::IpAddr::V4(v4) if private_v4(v4)))
+            .ok_or("printer address is not on the local network")?;
         let s = TcpStream::connect_timeout(&addr, ms(8000))
             .map_err(|e| tcp_error(e, &addr.to_string()))?;
         let _ = s.set_write_timeout(Some(ms(8000)));
@@ -1446,6 +1464,13 @@ mod tests {
             "printer.com",
             "localhost",
             "bad-.local",
+            "010.0.0.1",
+            "0x0a.0.0.1",
+            "10.0.0.1e0",
+            "1e1.0.0.1",
+            "10.0.0.01",
+            "10.0.0.+1",
+            "256.1.1.1",
         ] {
             assert!(!private_host(h), "{h}")
         }

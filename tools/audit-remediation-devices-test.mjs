@@ -100,6 +100,14 @@ async function bridgeBoundaryTest() {
       body: { action: 'save', target: { ip: '127.0.0.1', port: printerPort } },
     });
     check(saved.status === 200 && saved.json.ok, 'D01 explicit target enrollment succeeds for a local printer');
+    // Windows and glibc read a leading zero as octal and accept hex, so
+    // "010.0.0.1" passed the check as 10.0.0.1 and connected to 8.0.0.1.
+    const odd = [];
+    for (const ip of ['010.0.0.1', '0x0a.0.0.1', '10.0.0.1e0', '192.168.010.1', '10.0.0.01', '1e1.0.0.1', '10.0.0.+1']) {
+      const r = await call('POST', '/kiwi/targets', { origin: 'https://kiwi-os.com', capability, body: { action: 'save', target: { ip, port: printerPort } } });
+      if (r.status !== 422) odd.push(ip + ' → ' + r.status);
+    }
+    check(!odd.length, 'D01 only plain decimal private addresses are accepted' + (odd.length ? ': ' + odd.join(', ') : ''));
     const printed = await call('POST', '/kiwi/print', {
       origin: 'https://kiwi-os.com', capability,
       body: { printerIp: '127.0.0.1', port: printerPort, dataB64: 'S0lXSA==' },
