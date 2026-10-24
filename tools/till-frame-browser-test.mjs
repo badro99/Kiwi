@@ -469,6 +469,18 @@ try {
       setTimeout(() => resolve(false), 1500);
     }));
     check(fired, 'a More row fires its shipped control (Cash in or out)');
+    /* 24 octobre : fermée par Échap, la feuille laissait la lentille du rail
+       sur Plus. Plus n'est pas une destination. */
+    await page.evaluate(() => [...document.querySelectorAll('k-sheet[open]')].forEach((s) => s.removeAttribute('open')));
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    await sleep(300);
+    await page.keyboard.press('Escape');
+    await sleep(400);
+    const cur = await page.evaluate(() => {
+      const it = document.querySelector('k-rail').shadowRoot.querySelector('[aria-current="page"]');
+      return { id: it && it.getAttribute('data-id'), open: !!document.querySelector('k-sheet[open] k-list') };
+    });
+    check(!cur.open && cur.id && cur.id !== 'more', `closed by Escape, More gives the lens back to the mode (${cur.id})`);
     check(errors.length === 0, 'rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 

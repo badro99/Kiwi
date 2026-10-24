@@ -45,7 +45,7 @@
   if (!K || !CE || !CE.get('k-menu-grid') || !CE.get('k-bill') || !CE.get('k-pay')) return;
   var doc = root.document;
 
-  var api = null, grid = null, bill = null, pay = null, rail = null, more = null;
+  var api = null, grid = null, bill = null, pay = null, rail = null, more = null, railValue = '';
   var railSig = '';
   /* The panes that push over the bill (§18.3, §10.30, §10.31): one at a time. */
   var panes = {};
@@ -137,6 +137,7 @@
         rail.footer = Object.assign({}, view.rail.footer || {});
         rail.setAttribute('value', view.rail.value || '');
       }
+      railValue = view.rail.value || '';
     }
     if (Array.isArray(view.sections)) paintMenu(view.sections);
     if (view.bill) {
@@ -213,6 +214,13 @@
         if (api && typeof api.act === 'function') api.act('more.select', d.id == null ? null : String(d.id), {});
       });
       doc.body.appendChild(more);
+      /* More is not a destination: however the sheet closes (a row, the close
+         button, Escape, the scrim), the rail's lens goes back to the mode it
+         left. It stayed on More after Escape (owner, 2026-10-24). */
+      new MutationObserver(function () {
+        if (more.hasAttribute('open') || !rail) return;
+        rail.setAttribute('value', railValue);
+      }).observe(more, { attributes: true, attributeFilter: ['open'] });
     }
     more.setAttribute('heading', heading || '');
     more.textContent = '';
