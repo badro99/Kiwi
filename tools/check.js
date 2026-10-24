@@ -1734,6 +1734,7 @@ section('Whole-project regressions');
   'economat-request-fields-test.mjs',
   'economat-review-test.mjs',
   'economat-handover-test.mjs',
+  'economat-request-list-test.mjs',
   'hotel-transfer-test.mjs',
   'economat-real-d1-transfer-test.mjs',
   'room-charge-test.mjs',

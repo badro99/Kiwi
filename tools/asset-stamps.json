@@ -439,9 +439,17 @@
     "v": "1",
     "sha": "bc47b4fdeff010e7"
   },
+  "assets/hotel-economat-requests.css": {
+    "v": "1",
+    "sha": "7aea8df2c4937578"
+  },
+  "assets/hotel-economat-requests.js": {
+    "v": "1",
+    "sha": "78a35101d98d7c5a"
+  },
   "assets/hotel-economat.js": {
-    "v": "8",
-    "sha": "e63753db3d9f02ce"
+    "v": "9",
+    "sha": "fd943325f7c410b8"
   },
   "assets/hotel-folio.js": {
     "v": "1",

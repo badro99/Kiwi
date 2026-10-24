@@ -763,12 +763,67 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
   return json({ ok: true, ...stored });
 }
 
+/* Liste des demandes récentes (sans `id`) : la page Économat n'a pas d'autre
+ * moyen de retrouver une demande qu'elle n'a pas créée elle-même. Même règle
+ * de lecture qu'une demande seule : le service destinataire ou l'économat.
+ * Chaque demande porte sa piste d'événements (qui, quoi, quand) : c'est la
+ * garde enregistrée que l'écran montre à la remise et à la réception. */
+async function listRequests(request, env, merchant, url) {
+  const actor = await resolveHotelActor(request, env, merchant);
+  if (!actor) return json({ error: 'employee-required' }, 403);
+  let registry;
+  try { registry = await readDoc(env, merchant, 'hotel-units', { units: [] }); }
+  catch (_) { return json({ error: 'unmigrated' }, 503); }
+  const units = Array.isArray(registry.units) ? registry.units : [];
+  const economat = units.find((entry) => entry && entry.kind === 'economat' && entry.active !== false) || null;
+  const readsEconomat = !!(economat && actor.canReadUnit(economat));
+  const readable = new Set(units.filter((unit) => unit && (readsEconomat || actor.canReadUnit(unit))).map((unit) => unit.id));
+  const unitFilter = requestToken(url.searchParams.get('unitId'), 80);
+  const limit = Math.min(60, Math.max(1, Number(url.searchParams.get('limit')) || 40));
+  let rows;
+  try {
+    rows = await env.DB.prepare(
+      `SELECT * FROM ${REQUEST_TABLE} WHERE merchant = ? ORDER BY updated_ts DESC, id LIMIT ?`
+    ).bind(merchant, 400).all();
+  } catch (_) { return json({ error: 'db' }, 503); }
+  const picked = ((rows && rows.results) || [])
+    .filter((row) => readable.has(row.unit_id) && (!unitFilter || row.unit_id === unitFilter))
+    .slice(0, limit);
+  const requests = [];
+  try {
+    for (const row of picked) {
+      const lineRows = await env.DB.prepare(
+        `SELECT * FROM ${LINE_TABLE} WHERE merchant = ? AND request_id = ? ORDER BY line_no`
+      ).bind(merchant, row.id).all();
+      const eventRows = await env.DB.prepare(
+        `SELECT event, revision, actor_name, ts FROM ${EVENT_TABLE}
+          WHERE merchant = ? AND request_id = ? ORDER BY revision, ts LIMIT 40`
+      ).bind(merchant, row.id).all();
+      const value = rowRequest(row);
+      const lines = ((lineRows && lineRows.results) || []).map(rowLine);
+      requests.push({
+        request: value, lines, label: deriveRequestLabel(value, lines),
+        events: ((eventRows && eventRows.results) || []).map((event) => ({
+          event: event.event, revision: Number(event.revision) || 0,
+          actorName: event.actor_name || '', ts: Number(event.ts) || 0,
+        })),
+      });
+    }
+  } catch (_) { return json({ error: 'db' }, 503); }
+  return json({
+    merchant, requests,
+    confirmationSide: confirmationSide(registry),
+    actor: { id: actor.id, name: actor.name, kind: actor.kind },
+  });
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
   const url = new URL(request.url);
   const merchant = requestToken(url.searchParams.get('merchant'), 80);
   const id = requestToken(url.searchParams.get('id'), 80);
+  if (merchant && !url.searchParams.has('id')) return listRequests(request, env, merchant, url);
   if (!merchant || !id) return json({ error: 'bad-request' }, 400);
   let stored;
   try { stored = await loadRequest(env, merchant, id); }

@@ -349,6 +349,19 @@ Storage: a `store_docs` feature, per unit. It follows the existing FEATURES regi
 
 The paper *bon de commande* becomes a digital internal stock request.
 
+**Staff screen (2026-10-24).** The "Department requests" card on the Économat page,
+`assets/hotel-economat-requests.js` (+ `.css`), is the client for
+`/api/inventory/internal-requests`: a department creates and sends a request from its
+own catalogue, the économat approves, reduces, refuses or substitutes per line (approval
+reserves stock; a shortage is refused with nothing held), the department accepts the
+proposed changes, the économat prepares and hands over (pickup or delivery), and the
+receiving side confirms receipt, which writes the transfer. Each command carries the
+revision it read and an idempotency key derived from it. The list comes from
+`GET /api/inventory/internal-requests?merchant=…` without `id`, which returns the
+readable requests with their event trail (`tools/economat-request-list-test.mjs`).
+`tools/surface-matrix-states-economat-browser-test.mjs` drives the whole flow in
+FR/EN/AR on phone and tablet against the shipping handlers.
+
 ### 5.1 Quantities, not statuses · the main structural fix
 
 1.0 asks for fourteen statuses: Draft, Submitted, Under review, Changes proposed,

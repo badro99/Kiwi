@@ -8,6 +8,7 @@ import {
 
 export const SECRET = 'hotel-request-suite-secret-32b';
 export const MERCHANT = 'hotel-atlas-suite';
+const DEFAULT_MERCHANT = MERCHANT;
 
 class Statement {
   constructor(db, sql) { this.db = db; this.sql = String(sql); this.args = []; }
@@ -60,7 +61,7 @@ const members = [
   { id: 'roof-manager', firstName: 'Rania', role: 'Manager', unitId: 'rooftop' },
 ];
 
-function setup(db) {
+function setup(db, { merchant = MERCHANT, units: registry = units, catalogue: central = catalogue, departments = { rooftop: department }, members: staff = members, seed = null } = {}) {
   db.exec(`
     CREATE TABLE accounts (
       id TEXT PRIMARY KEY,
@@ -82,22 +83,23 @@ function setup(db) {
     );
     CREATE TABLE inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL);
   `);
-  db.prepare('INSERT INTO accounts (id, business) VALUES (?, ?)').run('owner-1', MERCHANT);
-  db.prepare('INSERT INTO merchant_config (merchant, account_id, type) VALUES (?, ?, ?)').run(MERCHANT, 'owner-1', 'hotel');
+  db.prepare('INSERT INTO accounts (id, business) VALUES (?, ?)').run('owner-1', merchant);
+  db.prepare('INSERT INTO merchant_config (merchant, account_id, type) VALUES (?, ?, ?)').run(merchant, 'owner-1', 'hotel');
   const putDoc = db.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, 1)');
-  putDoc.run(MERCHANT, 'hotel-units', JSON.stringify(units));
-  putDoc.run(MERCHANT, 'economat-catalogue', JSON.stringify(catalogue));
-  putDoc.run(MERCHANT, 'hotel-dept:rooftop', JSON.stringify(department));
-  putDoc.run(MERCHANT, 'employee-access', JSON.stringify({ members }));
-  putDoc.run(MERCHANT, 'team', JSON.stringify({ members }));
-  db.prepare('INSERT INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, ?)').run(MERCHANT, 1000);
+  putDoc.run(merchant, 'hotel-units', JSON.stringify(registry));
+  putDoc.run(merchant, 'economat-catalogue', JSON.stringify(central));
+  for (const [unitId, doc] of Object.entries(departments)) putDoc.run(merchant, 'hotel-dept:' + unitId, JSON.stringify(doc));
+  putDoc.run(merchant, 'employee-access', JSON.stringify({ members: staff }));
+  putDoc.run(merchant, 'team', JSON.stringify({ members: staff }));
+  db.prepare('INSERT INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, ?)').run(merchant, 1000);
   const movement = db.prepare(`INSERT INTO inventory_movements
     (id, merchant, item_id, location_id, qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, meta, created_ts)
-    VALUES (?, ?, ?, 'u-economat', ?, 'opening', ?, ?, ?, ?, ?)`);
-  movement.run('seed-whisky-a', MERCHANT, 'whisky', 6000, 12000, 10, 10, JSON.stringify({ expiresAt: 1000 }), 10);
-  movement.run('seed-whisky-b', MERCHANT, 'whisky', 6000, 15000, 11, 11, JSON.stringify({ expiresAt: 2000 }), 11);
-  movement.run('seed-cola', MERCHANT, 'cola', 24000, 400, 12, 12, '{}', 12);
-  movement.run('seed-verrerie', MERCHANT, 'verrerie', 40000, null, 13, 13, '{}', 13);
+    VALUES (?, ?, ?, ?, ?, 'opening', ?, ?, ?, ?, ?)`);
+  if (seed) { seed((id, itemId, locationId, qtyMilli, cents, ts, meta = '{}') => movement.run(id, merchant, itemId, locationId, qtyMilli, cents, ts, ts, meta, ts)); return; }
+  movement.run('seed-whisky-a', merchant, 'whisky', 'u-economat', 6000, 12000, 10, 10, JSON.stringify({ expiresAt: 1000 }), 10);
+  movement.run('seed-whisky-b', merchant, 'whisky', 'u-economat', 6000, 15000, 11, 11, JSON.stringify({ expiresAt: 2000 }), 11);
+  movement.run('seed-cola', merchant, 'cola', 'u-economat', 24000, 400, 12, 12, '{}', 12);
+  movement.run('seed-verrerie', merchant, 'verrerie', 'u-economat', 40000, null, 13, 13, '{}', 13);
 }
 
 /* Keep this shared SQLite fixture usable while the auth/session migration is
@@ -111,9 +113,13 @@ function ensureAccountColumn(db, name, definition) {
   }
 }
 
-export async function createHotelRequestHarness() {
+/* Options (all optional) describe another synthetic hotel: merchant, units,
+ * catalogue, departments ({ unitId: doc }), members and a seed(add) callback
+ * for opening stock. Without options the historical Atlas fixture is built. */
+export async function createHotelRequestHarness(options = {}) {
+  const MERCHANT = options.merchant || DEFAULT_MERCHANT;
   const raw = new DatabaseSync(':memory:');
-  setup(raw);
+  setup(raw, { ...options, merchant: MERCHANT });
   ensureAccountColumn(raw, 'status', "TEXT NOT NULL DEFAULT 'active'");
   ensureAccountColumn(raw, 'session_epoch', 'INTEGER NOT NULL DEFAULT 0');
   const DB = new D1Sqlite(raw);
@@ -168,5 +174,5 @@ export async function createHotelRequestHarness() {
     'SELECT COALESCE(SUM(qty_milli), 0) AS qty FROM inventory_movements WHERE merchant = ? AND item_id = ? AND location_id = ?',
     MERCHANT, itemId, locationId,
   ).qty) / 1000;
-  return { raw, DB, env, ownerCookie, employeeCookie, post, get, rows, one, addMovement, createSubmitted, ready, balance };
+  return { merchant: MERCHANT, raw, DB, env, ownerCookie, employeeCookie, post, get, rows, one, addMovement, createSubmitted, ready, balance };
 }

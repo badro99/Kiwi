@@ -152,9 +152,14 @@
         '<section class="hx-eco-hero"><div><div class="eyebrow">' + esc(T.eyebrow) + '</div><h2>' + esc(T.title) + '</h2><p>' + esc(T.intro) + '</p></div><div class="hx-eco-actions"><button class="hx-btn ghost" data-action="nav-points-vente">' + esc(T.outlets) + '</button><button class="hx-btn ghost" data-action="eco-sync"' + (busy ? ' disabled aria-busy="true"' : '') + '>' + esc(T.sync) + '</button><button class="hx-btn atlas" data-action="eco-receive">' + esc(T.receive) + '</button></div></section>' +
         '<div class="hx-strip" tabindex="0" role="region" aria-label="' + esc(T.title) + '"><div class="hx-kpi"><div class="l">' + esc(T.products) + '</div><div class="v">' + s.rows.length + '</div><div class="d">' + esc(T.stock) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.low) + '</div><div class="v">' + s.low + '</div><div class="d ' + (s.low ? 'warn' : 'up') + '">' + esc(s.low ? T.lowState : T.healthy) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.queued) + '</div><div class="v">' + s.queued + '</div><div class="d">' + esc(T.sync) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.orders) + '</div><div class="v">' + s.openOrders + '</div><div class="d">' + esc(T.activity) + '</div></div></div>' +
         '<div class="hx-eco-grid"><section class="hx-eco-card"><div class="hx-eco-card-head"><div><b>' + esc(T.stock) + '</b><span>' + esc(T.stockSub) + '</span></div><span class="hx-pill ' + (s.queued ? 'pend' : 'ok') + '">' + esc(s.queued ? T.pending : T.healthy) + '</span></div>' + stockHtml(s,T) + '</section><aside class="hx-eco-side"><section class="hx-eco-card"><div class="hx-eco-card-head"><div><b>' + esc(T.activity) + '</b><span>' + esc(T.activitySub) + '</span></div></div>' + activityHtml(s,T) + '</section></aside></div>' +
+        '<div data-eco-requests-host></div>' +
       '</div>'
     });
+    /* Demandes des services : assets/hotel-economat-requests.js. */
+    if (window.KiwiEconomatRequests) window.KiwiEconomatRequests.mount(document.querySelector('[data-eco-requests-host]'));
   }
+  /* Le stock lu ici aide la validation d'une demande (quantité en stock). */
+  window.KiwiEconomatStock = { rows: inventoryRows };
 
   /* Suggestions du bon de réception : les DISPLAY_LIMIT premières, puis, dès
    * qu'on tape, celles qui correspondent parmi TOUS les articles. */
@@ -180,6 +185,7 @@
   handlers['nav-economat'] = function () {
     if (!isHotel()) { Kiwi.toast(text().unavailable, { type:'warning' }); return; }
     query = '';
+    if (window.KiwiEconomatRequests) window.KiwiEconomatRequests.reset();
     if (unsubscribe) { try { unsubscribe(); } catch (_) {} unsubscribe = null; }
     if (window.KiwiInventory && window.KiwiInventory.subscribe) unsubscribe = window.KiwiInventory.subscribe(function () { if (Kiwi.activePage === 'economat') render(); });
     render();
