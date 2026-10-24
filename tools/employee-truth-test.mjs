@@ -53,6 +53,7 @@ const now = Date.now();
 
 const db = new DatabaseSync(':memory:');
 db.exec(`
+CREATE TABLE sales (merchant TEXT, seller_id TEXT, ts INTEGER, void_ts INTEGER, amount_cents INTEGER, amount INTEGER);
 CREATE TABLE accounts (id TEXT PRIMARY KEY, email TEXT, business TEXT, salt TEXT, hash TEXT, created_ts INTEGER, status TEXT, session_epoch INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, features TEXT, plan TEXT, type TEXT, account_id TEXT, name TEXT, status TEXT, till_epoch INTEGER NOT NULL DEFAULT 0, updated_ts INTEGER);
 CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, rev INTEGER, updated_ts INTEGER, PRIMARY KEY (merchant, feature));

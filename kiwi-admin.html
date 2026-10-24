@@ -700,6 +700,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
 <script src="assets/kit/haptics.js?v=7"></script>
 <script src="assets/admin-policy.js?v=5"></script>
 <script src="assets/admin-workspace.js?v=23" defer></script>
+  <link rel="stylesheet" href="/assets/origin-move.css">
 </head>
 <body class="operator-workspace" data-workspace="today">
   <aside class="op-sidebar" aria-label="Espace opérateur">
@@ -2722,7 +2723,6 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     pins.forEach(function(p){
       wrap.appendChild(h('div', { class:'pin' },
         h('b', null, '••••'),
-        h('button', {class:'mini', onClick:function(e){ var label=e.currentTarget.parentNode.querySelector('b'); var show=label.textContent==='••••'; label.textContent=show?p.pin:'••••'; e.currentTarget.textContent=show?'Masquer':'Afficher'; }}, 'Afficher'),
         h('span', { class:'role' }, roleLabel(p.role)),
         p.name ? h('span', { class:'nm' }, p.name) : null,
         h('span', { class:'spacer' }),
@@ -3801,5 +3801,6 @@ document.querySelectorAll('a[data-op-window]').forEach(function(a){
   });
 });
 </script>
+  <script src="/assets/admin-origin-devices.js" defer></script>
 </body>
 </html>

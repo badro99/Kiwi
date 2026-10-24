@@ -58,7 +58,12 @@ function load({ rejectUpdate = false } = {}) {
   t.advance(10 * 60000); t.fire(t.listeners.document, 'visibilitychange');
   ok(t.updates() === 2, 'leaving the tab asks nothing');
   t.fire(t.listeners.window, 'online');
-  ok(t.updates() === 3, 'the network coming back asks once');
+  ok(t.updates() === 2, 'network recovery while hidden stays paused');
+  poll.fn();
+  ok(t.updates() === 2, 'periodic update while hidden stays paused');
+  t.doc.visibilityState = 'visible';
+  t.fire(t.listeners.document, 'visibilitychange');
+  ok(t.updates() === 3, 'returning to the tab checks immediately');
   t.api.watch(t.reg);
   ok(t.intervals.filter(i => i.ms === 30 * 60000).length === 1, 'a second watch() does not double the checks');
   ok(t.api.readySince() === 0, 'no update announced yet: readySince is 0');

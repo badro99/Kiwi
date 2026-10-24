@@ -18,7 +18,7 @@
  *      retried — idempotently — until D1 confirms it;
  *   2. a LOCAL PING (BroadcastChannel + a localStorage key) so a dashboard open
  *      in the same browser polls the instant a sale is rung, instead of waiting;
- *   3. an ATTENTION-AWARE POLL — 2.5 s on screen, 20 s hidden, and an immediate
+ *   3. an adaptive poll, 2.5..60 s on screen, paused hidden, and an immediate
  *      poll on every wake-up (tab focus, bfcache restore, network back, ping).
  *
  * Same-origin fetch carries the passcode-gate cookie, so it works behind the
@@ -201,6 +201,13 @@
   var PING_KEY = 'kiwiSalePing';
   var chan = null;
   try { if (window.BroadcastChannel) chan = new BroadcastChannel('kiwi-live'); } catch (_) {}
+  function requestWake() {
+    try { document.dispatchEvent(new CustomEvent('kiwi:request-wake')); } catch (_) {}
+  }
+  try {
+    if (chan) chan.addEventListener('message', requestWake);
+    window.addEventListener('storage', function (e) { if (e && e.key === PING_KEY) requestWake(); });
+  } catch (_) {}
   function pingLocal() {
     try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) {}
     try { if (chan) chan.postMessage('sale'); } catch (_) {}
@@ -888,6 +895,23 @@
     return locked ? { ok: false, reason: 'tenant-mismatch' } : null;
   }
 
+  // Check real writes before the counter takes money. Availability flags alone
+  // do not prove storage works in private mode or after quota exhaustion.
+  async function moneyStorageReady() {
+    var key = 'kiwi:money-storage-probe';
+    try {
+      localStorage.setItem(key, '1');
+      if (localStorage.getItem(key) === '1') {
+        if (localStorage.removeItem) localStorage.removeItem(key);
+        return true;
+      }
+    } catch (_) {}
+    try {
+      var offline = window.KiwiOffline;
+      return !!(offline && offline.putMeta && await offline.putMeta(key, { checkedAt: Date.now() }));
+    } catch (_) { return false; }
+  }
+
   function postSale(entry) {
     if (!on() || !entry) return;
     var rawAmt = entry.amountCents != null
@@ -1096,16 +1120,13 @@
 
   /* ─── dashboard ← server (poll) ───
    * Two things turn this from "reload to see your sale" into live:
-   *  • the interval follows attention — 2.5 s while the dashboard is on screen,
-   *    20 s once it is hidden. A hidden tab is throttled by the browser anyway
-   *    (Chrome clamps background timer chains hard, down to about once a minute
-   *    after a few minutes hidden), so the old fixed 3.5 s chain simply stalled
-   *    while the owner was ringing the sale on the till tab — and the sale only
-   *    turned up on the next manual reload. That was the bug.
+   *  • idle reads back off from 2.5 s to 60 s, within the till-presence
+   *    freshness window. Hidden tabs stop their read timer; sale outboxes
+   *    retain their independent recovery path.
    *  • every wake-up polls AT ONCE: returning to the tab, refocusing the window,
    *    a bfcache restore, the network coming back, or a ping from a till in this
    *    same browser. Whatever happened while we were away lands immediately. */
-  var FAST_MS = 2500, SLOW_MS = 20000;
+  var FAST_MS = 2500, SLOW_MS = 60000;
   var operatorSnapshot = null;
   var lastFeedError = '';
   // A hung GET (including its JSON body) must not hold the live pump forever.
@@ -1171,7 +1192,7 @@
     if (!on()) return function () {};
     var oneShot = !!(options && options.oneShot);
     var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
-    var drainBackfill = false;
+    var drainBackfill = false, idleDelay = intervalMs || FAST_MS, lastPollSignature = null;
     var lastTenant = null, covered = null, coveredKey = null;
     var changeSeen = null;                 // dernier repère de modification lu (journal du flux), par commerce
     var bound = [];
@@ -1184,12 +1205,13 @@
     }
     if (oneShot) { feedComplete[state.merchant] = false; report(); }
     function delay() {
-      if (intervalMs) return intervalMs;
-      try { return document.hidden ? SLOW_MS : FAST_MS; } catch (_) { return FAST_MS; }
+      var gate = document.querySelector && document.querySelector('[data-kiwi-lock]');
+      if (gate && gate.isConnected && gate.style.display !== 'none') return 300000;
+      return Math.max(intervalMs || FAST_MS, idleDelay);
     }
     function arm(ms) {
       if (timer) { clearTimeout(timer); timer = null; }
-      if (!stopped) timer = setTimeout(tick, ms == null ? delay() : ms);
+      if (!stopped && (oneShot || !document.hidden)) timer = setTimeout(tick, window.KiwiPoll?.delay(ms == null ? delay() : ms) ?? (ms == null ? delay() : ms));
     }
     /* Le curseur rowid ne repasse jamais sur une vente déjà servie : un pourboire
        posé après coup (dépôt repris avec son pourboire) ne l'atteindrait jamais.
@@ -1225,7 +1247,7 @@
       return page(changeSeen).catch(function () { /* au prochain sondage : le repère n'a pas bougé */ });
     }
     function tick() {
-      if (stopped) return;
+      if (stopped || (!oneShot && document.hidden)) return;
       if (busy) { again = true; return; }      // coalesce: one poll in flight at a time
       busy = true; again = false;
       drainBackfill = false;
@@ -1256,6 +1278,11 @@
       request
         .then(function (data) {
           if (stopped) return;
+          var signature = JSON.stringify(data && data.covered
+            ? [tenant, data.covered.result.cursor, data.covered.result.fence, data.covered.result.changeFence]
+            : [tenant, data && data.cursor, data && data.changeFence, data && data.voided]);
+          idleDelay = signature === lastPollSignature ? Math.min(SLOW_MS, idleDelay * 2) : (intervalMs || FAST_MS);
+          lastPollSignature = signature;
           if (data && data.covered) {
             var replay = data.covered, proof = replay.result;
             if (merchant() !== tenant || !snapshotVenue(tenant)) throw new Error('scope');
@@ -1353,6 +1380,7 @@
             feedComplete[tenant] = false;
             if (err && err.status === 400 && covered) covered.reset();
           }
+          idleDelay = Math.min(SLOW_MS, idleDelay * 2);
           lastFeedError = String(err && err.message || 'network-json');
           drainBackfill = false;
           if (!oneShot) return;
@@ -1373,7 +1401,7 @@
           else arm();
         });
     }
-    function poke() { if (stopped) return; if (busy) { again = true; return; } arm(0); }
+    function poke() { idleDelay = FAST_MS; if (stopped || document.hidden) return; if (busy) { again = true; return; } arm(0); }
     function listen(target, type, fn) {
       try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) {}
     }
@@ -1382,6 +1410,7 @@
         try { if (document.hidden) { arm(); return; } } catch (_) {}
         poke();
       });
+      listen(document, 'kiwi:request-wake', poke);
       listen(window, 'focus', poke);
       listen(window, 'pageshow', poke);
       listen(window, 'online', function () { flushQueue(); poke(); });
@@ -1623,7 +1652,7 @@
       var amt = s.amountCents != null
         ? Math.round(Number(s.amountCents)) / 100
         : (Math.round((Number(s.amount || 0) + Number.EPSILON) * 100) / 100);
-      if (!(amt > 0)) return;
+      if (!(amt >= 0)) return;
       var amtCents = s.amountCents != null
         ? Math.round(Number(s.amountCents))
         : Math.round(amt * 100);
@@ -1657,7 +1686,7 @@
         if (!row || row.tenant !== tenant) return false;
         var cents = row.s && row.s.amountCents != null
           ? Number(row.s.amountCents) : Number(row.s && row.s.amount || 0) * 100;
-        return cents > 0;
+        return cents >= 0;
       })
         .map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
       try { window.KiwiSales.retainCursors(vid, allowed); } catch (_) {}
@@ -1695,7 +1724,7 @@
     var expected = feedSales.filter(function (row) { return row.tenant === tenant; }).map(function (row) { return row.s; });
     function cents(s) { return s.amountCents != null ? Number(s.amountCents) : Math.round(Number(s.amount) * 100); }
     function matches(rows, sign) {
-      var want = expected.filter(function (s) { return cents(s) * sign > 0; });
+      var want = expected.filter(function (s) { return sign === 1 ? cents(s) >= 0 : cents(s) < 0; });
       if (!Array.isArray(rows) || rows.length !== want.length) return false;
       var byCursor = {};
       rows.forEach(function (s) { byCursor[s.cursor] = s; });
@@ -1850,19 +1879,39 @@
   var VOID_MS = 15000;
   function watchVoids() {
     if (!on()) return;
-    var timer = null;
+    var timer = null, busy = false, wait = VOID_MS, signature = null;
+    function arm() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      if (!document.hidden) timer = setTimeout(tick, window.KiwiPoll?.delay(wait) ?? wait);
+    }
     function tick() {
+      if (document.hidden || busy) return;
       var m = merchant();
-      if (!m) { timer = setTimeout(tick, VOID_MS); return; }
+      if (!m) { arm(); return; }
+      busy = true;
       fetch('/api/feed?voids=1&merchant=' + encodeURIComponent(m), { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
-        .then(function (d) { if (d && Array.isArray(d.voided)) applyVoids(d.voided, m); })
-        .catch(function () {})
-        .then(function () { timer = setTimeout(tick, VOID_MS); });
+        .then(function (d) {
+          if (merchant() !== m) return;
+          if (d && Array.isArray(d.voided)) {
+            var next = JSON.stringify([m, d.voided]);
+            wait = next === signature ? Math.min(120000, wait * 2) : VOID_MS;
+            signature = next;
+            applyVoids(d.voided, m);
+          } else wait = Math.min(120000, wait * 2);
+        })
+        .catch(function () { wait = Math.min(120000, wait * 2); })
+        .then(function () { busy = false; arm(); });
     }
-    function poke() { if (timer) clearTimeout(timer); timer = setTimeout(tick, 0); }
+    function poke() {
+      if (timer) clearTimeout(timer);
+      timer = null; wait = VOID_MS;
+      if (!document.hidden) tick();
+    }
     try {
-      document.addEventListener('visibilitychange', function () { if (!document.hidden) poke(); });
+      document.addEventListener('visibilitychange', poke);
+      document.addEventListener('kiwi:request-wake', poke);
       window.addEventListener('focus', poke);
       window.addEventListener('online', poke);
     } catch (_) {}
@@ -1961,7 +2010,7 @@
   else startBoot();
 
   window.KiwiLive = {
-    isOn: on, merchant: merchant, postSale: postSale, postRefund: postRefund,
+    isOn: on, merchant: merchant, moneyStorageReady: moneyStorageReady, postSale: postSale, postRefund: postRefund,
     snapshotStatus: function () { return operatorSnapshot ? Object.assign({}, operatorSnapshot) : null; },
     moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
     flush: flushQueue, retrySale: retrySale, retryBlockedSales: retryBlockedSales,

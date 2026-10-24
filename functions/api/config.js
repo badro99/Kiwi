@@ -1,3 +1,4 @@
+import { pollMode } from './_poll-mode.js';
 // GET /api/config?merchant=slug — the client apps' own config read.
 //
 // Returns { features, pins } for one merchant so the caisse/serveur/dashboard can
@@ -331,7 +332,7 @@ export async function onRequestGet(context) {
    * the ledger counts on, resolved by the same rule as merchantZone() and
    * merchantCutoff() in _business-day.js: a store with no row gets 5 and
    * Africa/Casablanca, flagged as defaults. Additive: no existing field moves. */
-  return json({ features, pins, pinGateConfigured, type, plan, planExplicit, suspended, timezone, businessCutoff,
+  return json({ features, pins, pinGateConfigured, type, plan, pollMode: mayReadPins ? await pollMode(env, merchant) : "live", planExplicit, suspended, timezone, businessCutoff,
     businessDay: {
       cutoff: businessCutoff === null ? DEFAULT_CUTOFF : businessCutoff,
       zone: timezone || DEFAULT_ZONE,

@@ -90,11 +90,11 @@ check('piece is not ready 1s before readyAt', effectiveStatus(orderTrait, orderT
 check('order is trait 1ms before readyAt', orderStatus(orderTrait, T - 1) === 'trait');
 check('order is recu 1s before readyAt when status is recu', orderStatus(orderRecu, T - 1000) === 'recu');
 
-check('piece becomes pret exactly at readyAt', effectiveStatus(orderTrait, orderTrait.pieces[0], T) === 'pret');
-check('order becomes pret exactly at readyAt', orderStatus(orderTrait, T) === 'pret');
+check('piece stays trait exactly at readyAt', effectiveStatus(orderTrait, orderTrait.pieces[0], T) === 'trait');
+check('order stays trait exactly at readyAt', orderStatus(orderTrait, T) === 'trait');
 
-check('piece remains pret after readyAt', effectiveStatus(orderTrait, orderTrait.pieces[0], T + 5000) === 'pret');
-check('order remains pret after readyAt', orderStatus(orderTrait, T + 5000) === 'pret');
+check('piece remains trait after readyAt', effectiveStatus(orderTrait, orderTrait.pieces[0], T + 5000) === 'trait');
+check('order remains trait after readyAt', orderStatus(orderTrait, T + 5000) === 'trait');
 
 // 2. livre and manual pret both survive the derivation
 const orderManualPretFuture = {
@@ -115,11 +115,11 @@ const orderPartiallyDelivered = {
   readyAt: new Date(T - 10000), // past
   pieces: [{ pid: '1', status: 'livre' }, { pid: '2', status: 'recu' }],
 };
-check('partial delivery: piece 1 is livre, piece 2 auto-readies to pret in past',
+check('partial delivery: piece 1 is livre, piece 2 remains received in past',
   effectiveStatus(orderPartiallyDelivered, orderPartiallyDelivered.pieces[0], T) === 'livre' &&
-  effectiveStatus(orderPartiallyDelivered, orderPartiallyDelivered.pieces[1], T) === 'pret');
-check('partial delivery with remaining auto-ready piece derives to pret orderStatus',
-  orderStatus(orderPartiallyDelivered, T) === 'pret');
+  effectiveStatus(orderPartiallyDelivered, orderPartiallyDelivered.pieces[1], T) === 'recu');
+check('partial delivery with remaining received piece stays received orderStatus',
+  orderStatus(orderPartiallyDelivered, T) === 'recu');
 
 // 3. isLate redefinition (promised time passed and not yet collected)
 check('isLate is false when readyAt is in future', !isLate(orderTrait, T - 1000));
@@ -149,9 +149,9 @@ Date.now = () => T;
 try {
   const summary = opsCtx.KiwiPressingOps.summary();
   check('dashboard summary counts 3 active orders', summary.active === 3);
-  check('dashboard summary auto-derives past trait order into ready count', summary.ready === 2); // O-PAST-TRAIT + O-FUTURE-PRET
+  check('dashboard summary counts only explicitly ready orders', summary.ready === 1); // O-PAST-TRAIT + O-FUTURE-PRET
   check('dashboard summary keeps future recu order in received count', summary.received === 1);
-  check('dashboard summary records 0 treating when past order has flipped', summary.treating === 0);
+  check('dashboard summary retains overdue treating order', summary.treating === 1);
   check('dashboard summary counts 1 delivered order', summary.delivered === 1);
   check('dashboard summary counts 1 uncollected late order', summary.late === 1); // O-PAST-TRAIT
   check('dashboard summary counts due balance only on active orders', summary.due === 100); // 50 + 50
@@ -200,8 +200,8 @@ try {
 const frozen = staleCtx.KiwiPressingOps.summary().orders.find((o) => o.id === 'O-CROSSES');
 check('snapshot freezes status at sync time (record of a moment, not a live value)',
   frozen && frozen.status === 'trait');
-check('exported orderStatus derives pret once readyAt has passed',
-  staleCtx.KiwiPressingOps.orderStatus(frozen.pieces, frozen.readyAt, T + 1) === 'pret');
+check('exported orderStatus retains trait once readyAt has passed',
+  staleCtx.KiwiPressingOps.orderStatus(frozen.pieces, frozen.readyAt, T + 1) === 'trait');
 
 /* Run the dashboard's own effStatus against the real ops module rather than
    asserting on source text — a source match cannot prove the helper works. */
@@ -214,8 +214,8 @@ if (effSrc) {
   const nowReal7 = Date.now;
   Date.now = () => T + 1;
   try {
-    check('dashboard effStatus reads pret from a snapshot frozen at trait',
-      effCtx.__eff(frozen) === 'pret');
+    check('dashboard effStatus retains trait after the promise time',
+      effCtx.__eff(frozen) === 'trait');
   } finally { Date.now = nowReal7; }
   const nowReal8 = Date.now;
   Date.now = () => T - 1;

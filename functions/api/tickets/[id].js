@@ -1,3 +1,4 @@
+import { ticketActor, forbidden, ticketAudit, ticketUpdate } from './_access.js';
 import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
   json, RETENTION_MS, schemaError, ticketNumber,
@@ -5,6 +6,8 @@ import {
 import { validateTicketClassification } from './_taxonomy.js';
 
 export async function onRequestPatch({ request, env, params }) {
+  const actor = await ticketActor(request, env);
+  if (!actor) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const id = Number(params.id);
   if (!Number.isInteger(id) || id < 1) return json({ error: 'bad-ticket' }, 400);
@@ -69,21 +72,22 @@ export async function onRequestPatch({ request, env, params }) {
     const now = Date.now();
     if (action === 'classify') {
       try {
-        const result = await env.DB.prepare(
+        const changed = { sql: "(COALESCE(kind, 'unsorted') != ? OR COALESCE(area, '') != ? OR COALESCE(subkind, '') != ? OR money_at_risk != ?)", values: [classification.value.kind, classification.value.area || '', classification.value.subkind || '', classification.value.money_at_risk ? 1 : 0] };
+        const result = await ticketUpdate(env, env.DB.prepare(
           `UPDATE kiwi_tickets
            SET kind = ?, area = ?, subkind = ?, money_at_risk = ?, updated_ts = ?
-           WHERE id = ?`
+           WHERE id = ? AND ${changed.sql}`
         ).bind(
           classification.value.kind, classification.value.area, classification.value.subkind,
-          classification.value.money_at_risk ? 1 : 0, now, id,
-        ).run();
-        if (!result.meta || result.meta.changes !== 1) return json({ error: 'changed-elsewhere' }, 409);
+          classification.value.money_at_risk ? 1 : 0, now, id, ...changed.values,
+        ), actor, action, id, null, changed);
         return json({
           ok: true,
           id,
           number: ticketNumber(id),
           status: ticket.status,
           classificationStored: true,
+          replayed: !result.meta?.changes,
           classification: classification.value,
         });
       } catch (error) {
@@ -101,10 +105,10 @@ export async function onRequestPatch({ request, env, params }) {
 
     if (action === 'fixed') {
       if (ticket.status !== 'problem') return json({ error: 'wrong-status', status: ticket.status }, 409);
-      const result = await env.DB.prepare(
+      const result = await ticketUpdate(env, env.DB.prepare(
         `UPDATE kiwi_tickets SET status = 'testing', updated_ts = ?
          WHERE id = ? AND status = 'problem'`
-      ).bind(now, id).run();
+      ).bind(now, id), actor, action, id, 'problem');
       if (!result.meta || result.meta.changes !== 1) return json({ error: 'changed-elsewhere' }, 409);
       return json({ ok: true, id, number: ticketNumber(id), status: 'testing' });
     }
@@ -113,7 +117,7 @@ export async function onRequestPatch({ request, env, params }) {
       if (ticket.status !== 'testing') return json({ error: 'wrong-status', status: ticket.status }, 409);
       const followupId = 'followup-' + crypto.randomUUID();
       const storedKeys = [];
-      const statements = [env.DB.prepare(
+      const statements = [ticketAudit(env, actor, action, id, 'testing'), env.DB.prepare(
         `INSERT INTO kiwi_ticket_followups (id, ticket_id, body, created_ts)
          VALUES (?, ?, ?, ?)`
       ).bind(followupId, id, note, now)];
@@ -175,6 +179,7 @@ export async function onRequestPatch({ request, env, params }) {
 
     const expires = now + RETENTION_MS;
     const result = await env.DB.batch([
+      ticketAudit(env, actor, action, id, 'testing'),
       env.DB.prepare('DELETE FROM kiwi_ticket_images WHERE ticket_id = ?').bind(id),
       env.DB.prepare(
         `UPDATE kiwi_tickets
@@ -182,7 +187,7 @@ export async function onRequestPatch({ request, env, params }) {
          WHERE id = ? AND status = 'testing'`
       ).bind(now, now, expires, id),
     ]);
-    const update = result[1];
+    const update = result[2];
     if (!update || !update.meta || update.meta.changes !== 1) return json({ error: 'changed-elsewhere' }, 409);
     return json({ ok: true, id, number: ticketNumber(id), status: 'done', expiresAt: expires, imagesDeleted: keys.length });
   } catch (error) {

@@ -85,7 +85,6 @@ export function summarize(rows, from, to, cutoff, zone) {
       bucket.refunds[method] = (bucket.refunds[method] || 0) + -cents;
       continue;
     }
-    if (cents === 0) continue;                 // the dashboard never stores a 0 sale
     bucket.count++; bucket.cents += cents;
     const m = bucket.methods[method] || (bucket.methods[method] = { count: 0, cents: 0 });
     m.count++; m.cents += cents;

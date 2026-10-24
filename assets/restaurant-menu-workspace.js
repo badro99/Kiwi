@@ -38,6 +38,7 @@
       translateMenu: 'Translations',
       tabI18n: 'Translations',
       i18nTitle: 'The menu in everyone’s language',
+      i18nReview: 'Review every language before sharing the menu, especially allergens and ingredients. Automatic translations are suggestions. Edit a cell to confirm your wording, and review it again after changing the original.',
       i18nHint: 'Kiwi AI translates only new or changed entries in the languages selected for this menu; the original text is never modified. Edit a cell to correct it: a correction is never overwritten.',
       i18nFill: 'Translate what’s missing',
       i18nRedo: 'Retranslate everything',
@@ -572,6 +573,7 @@
       translateMenu: 'الترجمات',
       tabI18n: 'الترجمات',
       i18nTitle: 'القائمة بلغة كل واحد',
+      i18nReview: 'راجع كل لغة قبل مشاركة القائمة، وخاصة مسببات الحساسية والمكونات. الترجمات الآلية اقتراحات. عدّل الخانة لاعتماد صياغتك وراجعها مجددا بعد تغيير النص الأصلي.',
       i18nHint: 'يترجم Kiwi AI فقط المدخلات الجديدة أو المعدلة باللغات المختارة لهذه القائمة؛ النص الأصلي لا يتغير أبدا. عدّل خانة لتصحيحها: التصحيح لا يُستبدل أبدا.',
       i18nFill: 'ترجمة ما ينقص',
       i18nRedo: 'إعادة ترجمة الكل',
@@ -1103,6 +1105,7 @@
       translateMenu: 'Traductions',
       tabI18n: 'Traductions',
       i18nTitle: 'La carte dans la langue de chacun',
+      i18nReview: 'Relisez chaque langue avant de partager la carte, surtout les allergènes et les ingrédients. Les traductions automatiques sont des suggestions. Corrigez une cellule pour valider votre formulation, puis relisez-la après toute modification du texte source.',
       i18nHint: 'Kiwi AI traduit uniquement les nouveautés et les modifications dans les langues choisies pour cette carte ; le texte d’origine n’est jamais modifié. Corrigez une cellule pour la reprendre : une correction n’est plus jamais écrasée.',
       i18nFill: 'Traduire ce qui manque',
       i18nRedo: 'Tout retraduire',
@@ -2765,7 +2768,7 @@ html[data-theme="dark"] .rmw-emoji-pop{background:#151C18!important;border-color
     const L=menuLangFeature()?M.langs(d):M.LANGS,sum=M.summary(d,L);
     const available=M.EXTRA.filter(l=>!L.includes(l));
     const picker=menuLangFeature()?`<div class="rmw-lang-select"><button type="button" class="rmw-lang-trigger" data-action="rmw-i18n-toggle" aria-expanded="${i18nChooserOpen?'true':'false'}"${available.length?'':' disabled'}><span class="rmw-lang-trigger-plus">+</span><span><b>${esc(ui('i18nAddLang'))}</b><small>${esc(ui('i18nAvailable',{n:available.length}))}</small></span></button>${i18nChooserOpen&&available.length?`<section class="rmw-lang-popover"><div class="rmw-lang-popover-head"><div><b>${esc(ui('i18nChooseLang'))}</b><span>${esc(ui('i18nChooseHint'))}</span></div><button type="button" data-action="rmw-i18n-toggle">${esc(ui('i18nClosePicker'))}</button></div><div class="rmw-lang-grid">${available.map(l=>`<button data-activation=write type="button" data-action="rmw-i18n-add" data-arg="${l}"><span class="rmw-lang-code">${esc(l)}</span><span class="rmw-lang-copy"><b>${esc(menuLangLabel(l))}</b><small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])}</small></span><span class="rmw-lang-add">+</span></button>`).join('')}</div></section>`:''}</div>`:'';
-    const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>${picker}`;
+    const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>${picker}<p class="rmw-i18n-hint" role="note">${esc(ui('i18nReview'))}</p>`;
     const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l],extra=M.EXTRA.includes(l),label=extra?menuLangLabel(l):(M.NAMES[l]||l),native=extra&&M.NAMES[l]!==label?M.NAMES[l]:'';return `<div class="rmw-i18n-stat"><span class="rmw-i18n-stat-name"><b>${esc(label)}</b>${native?`<small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(native)}</small>`:''}</span><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}${extra?`<button type="button" data-action="rmw-i18n-remove" data-arg="${l}" title="${esc(ui('i18nRemoveLang'))}" aria-label="${esc(ui('i18nRemoveLang'))} ${esc(label)}">×</button>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
     const stLabel=(st)=>ui('i18nStatus'+st.charAt(0).toUpperCase()+st.slice(1));
     const cell=(kind,id,sub,e,l,field)=>{

@@ -84,6 +84,12 @@ try {
       // coverage: surface=caisse-boutique locale=fr viewport=tablet
       // coverage: surface=caisse-boutique locale=en viewport=tablet
       // coverage: surface=caisse-boutique locale=ar viewport=tablet
+      // coverage: surface=boutique-return-refusal locale=fr viewport=phone
+      // coverage: surface=boutique-return-refusal locale=fr viewport=tablet
+      // coverage: surface=boutique-return-refusal locale=en viewport=phone
+      // coverage: surface=boutique-return-refusal locale=en viewport=tablet
+      // coverage: surface=boutique-return-refusal locale=ar viewport=phone
+      // coverage: surface=boutique-return-refusal locale=ar viewport=tablet
       await page.goto(h.base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
       await page.waitForSelector('#cp-pin-screen k-pin-pad', { visible: true });
       await fillSecret(page, '#cp-pin-screen k-pin-pad >>> [data-key="del"]', accepted);

@@ -716,3 +716,22 @@ Unchanged from 1.0, and worth keeping verbatim in spirit:
 
 The result should feel simple to hotel employees while remaining strict enough that
 stock cannot disappear between departments.
+
+### Wave D · device loss after physical handover
+
+Confirmation-only custody remains the rule. Preparation with `handover:true` records
+the first handover timestamp for pickup as well as delivery (`delivery_started_ts` is
+the legacy storage name). The persisted request, quantities and actor events survive
+device loss. Reopen that same request on another authorised device, count the goods
+and confirm the cumulative received quantity. Retrying a lost response uses the same
+command key and records one movement pair. Never create a replacement request for
+goods already handed over.
+
+A prepared quantity not yet received cannot be cancelled, including legacy pickup
+records without a handover timestamp: cancellation would
+release its stock reservation while the physical goods are away. The API returns
+`handover-reconciliation-required`. The recipient or hotel manager must count and
+confirm, and report a discrepancy with the audited `dispute` command if needed.
+Unresolved quantities keep their reservations; missing goods are not silently
+received or written off. The manager investigates and records any subsequent
+return or correction as a separate stock operation.

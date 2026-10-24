@@ -52,7 +52,8 @@ for (const lang of ['fr', 'en', 'ar']) {
   assert.ok(Object.isFrozen(after.context.Kiwi.__teamProfileCore));
   assert.deepEqual(Object.keys(after.context.KiwiTeam).sort(), Object.keys(before.context.KiwiTeam).sort());
   assert.deepEqual(Object.keys(after.context.Kiwi.handlers).sort(), Object.keys(before.context.Kiwi.handlers).sort());
-  assert.deepEqual(after.events, before.events);
+  assert.deepEqual(after.events.filter(name => name !== 'kiwi:request-wake'), before.events);
+  assert.equal(after.events.filter(name => name === 'kiwi:request-wake').length, 1, 'one push wake listener added by request pacing');
   for (const r of [before, after]) r.context.Kiwi.handlers['nav-equipe']();
   assert.equal(hash(after.root.innerHTML), hash(before.root.innerHTML), 'roster markup ' + lang);
   const id = after.context.__kiwiTeamV2.byVenue.boutique[0].id;

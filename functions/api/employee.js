@@ -254,9 +254,16 @@ async function payloadFor(request, env) {
     const open = attendanceView(attendanceRow.data, auth.pin.id).open;
     colleagues.unshift({ ...me, status: open ? (open.pauseTs ? 'on-pause' : 'on-duty') : 'off-duty' });
   }
+  // Only authenticated attribution is included. Historical unassigned receipts
+  // cannot be reconstructed from a device tally or table ownership.
+  const shiftOpen = attendanceView(attendanceRow.data, auth.pin.id).open;
+  const shiftPayments = shiftOpen ? await env.DB.prepare(
+    'SELECT COALESCE(SUM(COALESCE(amount_cents,amount*100)),0) AS amountCents, COUNT(*) AS receipts FROM sales WHERE merchant=? AND seller_id=? AND ts>=? AND ts<=? AND void_ts IS NULL'
+  ).bind(merchant, String(auth.session.staffId), Number(shiftOpen.inTs), Date.now()).first() : {amountCents:0,receipts:0};
   return {
     ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || ''), timezone: zone },
     employee: me,
+    shiftPayments,
     schedule: planning.schedule,
     planning: {
       publishingEnabled:planning.publishingEnabled,

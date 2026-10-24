@@ -18,6 +18,9 @@
   'use strict';
   const EMPLOYEE_TRANSLATIONS = {
     en: {
+      'Téléphone complet': 'Full phone number',
+      'Saisissez le numéro de téléphone complet.': 'Enter the full phone number.',
+      'Carnet indisponible.': 'Customer book unavailable.',
       "Annulation déjà en attente de la cuisine": "Cancellation already waiting for the kitchen",
       "Annulation en cours · attendez la réponse du serveur": "Cancelling · waiting for the server",
       "Article non vendable individuellement": "This item cannot be sold on its own",
@@ -337,6 +340,9 @@
       ,"Réglé · Espèces":"Paid · Cash"
     },
     ar: {
+      'Téléphone complet': 'رقم الهاتف الكامل',
+      'Saisissez le numéro de téléphone complet.': 'أدخل رقم الهاتف الكامل.',
+      'Carnet indisponible.': 'دفتر العملاء غير متاح.',
       "Annulation déjà en attente de la cuisine": "الإلغاء بانتظار المطبخ",
       "Annulation en cours · attendez la réponse du serveur": "جارٍ الإلغاء · بانتظار الخادم",
       "Article non vendable individuellement": "لا يمكن بيع هذا الصنف منفرداً",

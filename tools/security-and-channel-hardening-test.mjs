@@ -188,7 +188,9 @@ const searchWildcardReq = new Request(`https://kiwi-os.com/api/employee-clients?
 });
 const searchRes = await employeeClients.onRequestGet({ request: searchWildcardReq, env });
 const searchData = await searchRes.json();
-check('Employee client search escapes % and finds exact match', searchRes.status === 200 && searchData.clients.some(c => c.id === 'c-100'));
+check('Employee client search refuses wildcard enumeration', searchRes.status === 200 && searchData.clients.length === 0);
+const exactRes = await employeeClients.onRequestGet({request:new Request(`https://kiwi-os.com/api/employee-clients?merchant=${MERCHANT}&q=0600112233`,{headers:{Cookie:cookie1}}),env});
+check('Employee full phone lookup finds the intended customer',exactRes.status===200&&(await exactRes.json()).clients.some(c=>c.id==='c-100'));
 
 // 4. Signup Rate Limiting
 import * as signup from '../functions/auth/signup.js';

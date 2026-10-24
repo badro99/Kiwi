@@ -4,10 +4,12 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
-import { onRequestGet, onRequestPost } from '../functions/api/tickets/index.js';
-import { onRequestPatch } from '../functions/api/tickets/[id].js';
+import { onRequestGet as rawGet, onRequestPost as rawPost } from '../functions/api/tickets/index.js';
+import { onRequestPatch as rawPatch } from '../functions/api/tickets/[id].js';
 import { TICKET_TAXONOMY, validateTicketClassification } from '../functions/api/tickets/_taxonomy.js';
 
+import { asOperator } from './ticket-test-auth.mjs';
+const onRequestGet = asOperator(rawGet), onRequestPost = asOperator(rawPost), onRequestPatch = asOperator(rawPatch);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFile(resolve(root, path), 'utf8');
 
@@ -99,6 +101,7 @@ legacy.exec(`
   );
   INSERT INTO kiwi_tickets (body,status,created_ts,updated_ts) VALUES ('Legacy ticket','problem',1,1);
 `);
+legacy.exec((await read('schema.sql')).match(/CREATE TABLE IF NOT EXISTS account_audit[\s\S]*?\n\);/)[0]);
 const legacyDB = d1(legacy);
 response = await onRequestGet({ env: { DB: legacyDB } });
 const legacyList = await response.json();

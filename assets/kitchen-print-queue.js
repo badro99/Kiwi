@@ -117,7 +117,8 @@
   }
   function isHub() {
     if (remoteDenies() || !chosenHere()) return false;
-    if (Number(hubConfig().expiresAt || 0) <= Date.now()) resumeHub();
+    if (Number(hubConfig().expiresAt || 0) <= Date.now()
+        && (!(window.KiwiPoll && window.KiwiPoll.mode() !== 'live') && !document.hidden || readQueue().length)) resumeHub();
     return !remoteDenies();
   }
   function hubQS() { var m = merchant(); return '?feature=' + HUB_FEATURE + (m ? '&merchant=' + encodeURIComponent(m) : ''); }
@@ -198,6 +199,7 @@
     return isHub();
   }
   function renewHub() {
+    if ((document.hidden || (window.KiwiPoll && window.KiwiPoll.mode() !== 'live')) && !readQueue().length) return;
     if (!isHub()) return;
     var c = hubConfig();
     if (!c.activatedAt) c.activatedAt = Number(c.updatedAt || 0) || Date.now();
@@ -517,6 +519,7 @@
        d'un verdict qui ne viendra plus. Personne d'autre que l'humain devant
        l'imprimante ne peut décider qu'il manque vraiment du papier. */
     q.forEach(function (job) {
+      if (job.uncertain) record('staff-reprint-confirmed', job, { error: job.lastError || '' });
       job.nextAt = 0; job.uncertain = false; job.relayId = ''; job.awaitingUntil = 0;
     });
     writeQueue(q);
@@ -654,9 +657,9 @@
   window.addEventListener('kiwi:printer-relay-status', function (e) {
     try { relayVerdict((e && e.detail) || {}); } catch (_) {}
   });
-  window.addEventListener('online', retryNow);
-  window.addEventListener('kiwi:printer-config', retryNow);
-  window.addEventListener('kiwi:station-printers-config', retryNow);
+  window.addEventListener('online', flush);
+  window.addEventListener('kiwi:printer-config', flush);
+  window.addEventListener('kiwi:station-printers-config', flush);
   window.addEventListener('storage', function (e) {
     if (e.key === HUB_KEY || (e.key && e.key.indexOf(QUEUE_PREFIX) === 0)) { emit(); flush(); }
   });

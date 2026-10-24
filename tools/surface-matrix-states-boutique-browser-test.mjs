@@ -89,11 +89,17 @@ try {
             // coverage: surface=caisse-boutique locale=fr viewport=phone
             // coverage: surface=caisse-boutique locale=en viewport=phone
             // coverage: surface=caisse-boutique locale=ar viewport=phone
+            // coverage: surface=boutique-exchange locale=fr viewport=phone
+            // coverage: surface=boutique-exchange locale=en viewport=phone
+            // coverage: surface=boutique-exchange locale=ar viewport=phone
             cell = await tills.open(t, locale, 'phone');
           } else {
             // coverage: surface=caisse-boutique locale=fr viewport=tablet
             // coverage: surface=caisse-boutique locale=en viewport=tablet
             // coverage: surface=caisse-boutique locale=ar viewport=tablet
+            // coverage: surface=boutique-exchange locale=fr viewport=tablet
+            // coverage: surface=boutique-exchange locale=en viewport=tablet
+            // coverage: surface=boutique-exchange locale=ar viewport=tablet
             cell = await tills.open(t, locale, 'tablet');
           }
           const { page } = cell;

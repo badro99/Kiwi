@@ -124,6 +124,18 @@ try {
         // coverage: surface=dashboard locale=fr viewport=tablet
         // coverage: surface=dashboard locale=en viewport=tablet
         // coverage: surface=dashboard locale=ar viewport=tablet
+        // coverage: surface=dashboard-promotion-editor locale=fr viewport=phone
+        // coverage: surface=dashboard-promotion-editor locale=fr viewport=tablet
+        // coverage: surface=dashboard-promotion-editor locale=en viewport=phone
+        // coverage: surface=dashboard-promotion-editor locale=en viewport=tablet
+        // coverage: surface=dashboard-promotion-editor locale=ar viewport=phone
+        // coverage: surface=dashboard-promotion-editor locale=ar viewport=tablet
+        // coverage: surface=dashboard-product-editor locale=fr viewport=phone
+        // coverage: surface=dashboard-product-editor locale=fr viewport=tablet
+        // coverage: surface=dashboard-product-editor locale=en viewport=phone
+        // coverage: surface=dashboard-product-editor locale=en viewport=tablet
+        // coverage: surface=dashboard-product-editor locale=ar viewport=phone
+        // coverage: surface=dashboard-product-editor locale=ar viewport=tablet
         const { page } = await dashboards.open(t, 'dashboard-transactions', locale, viewport);
         t.watch(page);
         t.step('switch to the demo Maison Mansour boutique');

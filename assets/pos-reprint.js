@@ -583,6 +583,7 @@
           : err && err.code === 'sale-not-current-business-day' ? 'Seules les ventes du jour peuvent rouvrir une note.'
           : err && err.code === 'sale-too-old' ? 'Cette vente est trop ancienne pour être annulée en caisse.'
           : err && err.code === 'already-cancelled' ? 'Cette vente est déjà annulée.'
+          : err && err.code === 'sale-has-collections' ? 'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.'
           : err && err.code === 'sale-has-refunds' ? 'Cette vente a déjà été remboursée ou transformée en avoir : l’annuler retirerait cet argent deux fois.'
           : 'Annulation impossible. Vérifiez la connexion et réessayez.';
       });

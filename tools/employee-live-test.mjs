@@ -708,8 +708,9 @@ ok(/assets\/caisse-refresh\.js\?v=\d+/.test(caisseSource)
  * de l'écran ou que l'onglet passe en arrière-plan. */
 ok(teamSource.includes('data.pointedHours')
   && teamSource.includes('LIVE_TEAM_FAST_MS = 1000')
-  && teamSource.includes('(pageActive && !hidden) ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS')
-  && teamSource.includes("document.addEventListener('visibilitychange', scheduleLiveTeam)")
+  && teamSource.includes('Math.max(pageActive ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS, liveTeamDelay)')
+  && teamSource.includes('if (hidden) return;')
+  && teamSource.includes("document.addEventListener('visibilitychange', wakeTeam)")
   && !teamSource.includes('setInterval(pollLiveTeam, 1000)'),
   'Équipe et Paie & planning reçoivent les heures de pointage du cloud sans rechargement');
 ok(serviceSource.includes('serviceStateVersion.has(id)')

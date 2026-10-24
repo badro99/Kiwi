@@ -1,3 +1,5 @@
+import { creditRefundEdit, refundCreditBook } from './_credit-book-refund.js';
+import { serviceCapacityConflict } from './_booking-capacity.js';
 // /api/store — les documents PRIVÉS d'un établissement, synchronisés entre
 // appareils. Le même filet que /api/catalog, généralisé.
 //
@@ -35,7 +37,7 @@
 
 import { cleanGuestDoc } from './order/_guest.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
-import { json, entitledMerchant } from '../auth/_lib.js';
+import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
@@ -340,7 +342,10 @@ function preservePressingCancellations(current, incoming) {
   const cancellations = Array.isArray(incoming.cancellations) ? incoming.cancellations.slice() : [];
   const byId = new Map(cancellations.filter((c) => c && c.id).map((c) => [String(c.id), c]));
   oldCancellations.forEach((c) => {
-    if (c && c.id && !byId.has(String(c.id))) { byId.set(String(c.id), c); cancellations.push(c); }
+    if (!c || !c.id) return;
+    const existing = byId.get(String(c.id));
+    if (existing) Object.assign(existing, c);
+    else { byId.set(String(c.id), c); cancellations.push(c); }
   });
   oldOrders.filter((o) => o && o.id && o.cancelledAt).forEach((o) => {
     const id = String(o.id);
@@ -359,6 +364,7 @@ function preservePressingCancellations(current, incoming) {
     else Object.assign(row, {
       cancelledAt: old.cancelledAt,
       cancelledBy: old.cancelledBy || null,
+      refundDue: old.refundDue || 0, refundEntry: old.refundEntry || null,
       rack: null,
       updatedAt: Math.max(Number(row.updatedAt) || 0, Number(old.updatedAt) || 0),
     });
@@ -914,6 +920,8 @@ export async function onRequestPost(context) {
     return json({ error: 'hotel-only' }, 403);
   }
 
+  if (feature === 'verticalops' && body.action === 'credit-book-refund') return refundCreditBook(request, env, merchant, body);
+
   const raw = (body && body.data) || null;
 
   // Garde-fou de forme. Un document qui n'est pas celui qu'on croit écraserait
@@ -954,6 +962,14 @@ export async function onRequestPost(context) {
   const serverRev = (current && current.rev) || 0;
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
+  if (feature === 'verticalops' && JSON.stringify(mine?.verticals?.epicerie?.data?.carnet || []) !== JSON.stringify(clean.value?.verticals?.epicerie?.data?.carnet || [])) {
+    const session = await activeAccountSession(request, env);
+    const owner = session && await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    if (!(session && owner?.account_id === session.aid) && !(await isTillFor(request, env, merchant))) {
+      return json({ error: 'forbidden-credit-book' }, 403);
+    }
+  }
+
 
   if (feature === 'monthreport') {
     const validation = validateMonthReportPolicy(clean.value, mine);
@@ -977,6 +993,8 @@ export async function onRequestPost(context) {
   if (serverRev && baseRev !== serverRev) {
     return json({ error: 'stale', feature, rev: serverRev, data: view(mine) }, 409);
   }
+
+  if (feature === 'verticalops' && creditRefundEdit(mine, clean.value)) return json({ error: 'credit-refund-use-operation' }, 409);
 
   if (partial) {
     clean.value = partial.keep(mine, clean.value);
@@ -1014,6 +1032,15 @@ export async function onRequestPost(context) {
        tableau de bord qui remontait son document pendant qu'une cliente
        réservait en ligne franchissait la garde de révision, la fusion réunissait
        les deux lignes actives, et la même chambre partait deux fois. */
+    const originalBookings = new Map((mine?.bookings || []).map(row => [row.id, row]));
+    for (const row of clean.value.bookings || []) {
+      const expectation = originalBookings.get(row.id)?.depositExpectation;
+      if (expectation) row.depositExpectation = expectation;
+      else delete row.depositExpectation;
+    }
+    text = JSON.stringify(clean.value);
+    const capacity = serviceCapacityConflict(clean.value);
+    if (capacity) return json({ error: 'slot-unavailable', feature, serviceId: capacity }, 409);
     const doubled = reservationOverlapConflict(mine, clean.value);
     if (doubled) return json({ error: 'resource-double-booked', feature, ...doubled }, 409);
   }

@@ -1,3 +1,4 @@
+import { serviceCapacityAvailable } from './_booking-capacity.js';
 import { DateTimeFormat } from './_zone-law.js';
 import { merchantZone } from './_business-day.js';
 import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
@@ -51,7 +52,9 @@ function safeDoc(raw) {
   const originals = new Map((Array.isArray(d.bookings) ? d.bookings : []).map(x => [x?.id, x]));
   out.bookings.forEach(x => {
     const original = originals.get(x.id);
+    if (original?.depositExpectation) x.depositExpectation = { amountCents:num(original.depositExpectation.amountCents,0,100000000,0),status:'not-collected',policy:'arrange-with-venue' };
     x.commercial = commercialSnapshot(original?.commercial);
+    if (original?.checkout) x.checkout = original.checkout;
     if (!x.hotel) return;
     Object.assign(x.hotel, stayOptions(original?.hotel));
     if (x.hotel.dayUse) x.hotel.nights = 0;
@@ -142,7 +145,7 @@ function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(n
     for (const p of periodsFor(date, r, hours)) {
       for (const startAt of openingSlots(date, p.from, p.to, step, svc.duration, zone)) {
         const endAt = startAt + svc.duration * 60000;
-        if (startAt < earliest || startAt > last || !free(doc, r.id, startAt, endAt) || !staffAllows(doc,team,startAt,endAt,zone)) continue;
+        if (startAt < earliest || startAt > last || !free(doc, r.id, startAt, endAt) || !serviceCapacityAvailable(doc, svc, startAt, endAt) || !staffAllows(doc,team,startAt,endAt,zone)) continue;
         const old = out.get(startAt); if (!old) out.set(startAt, { startAt, endAt, resourceIds:[r.id] }); else if (!old.resourceIds.includes(r.id)) old.resourceIds.push(r.id);
       }
     }
@@ -213,6 +216,7 @@ function publicBooking(rec) {
   return {
     id: rec.id, code: rec.code, status: rec.status, startAt: rec.startAt, endAt: rec.endAt,
     partySize: rec.partySize, note: rec.note,
+    depositExpectation: rec.depositExpectation || null,
     customer: { name: rec.customer.name },
     hotel: rec.hotel ? {
       roomTypeName: rec.hotel.roomTypeName, checkIn: rec.hotel.checkIn,
@@ -489,7 +493,7 @@ export async function onRequestPost({ request, env }) {
     if(!validSlot)return json({error:'slot-unavailable'},409);
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');
-    const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:sid,resourceId:rid,startAt,endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,createdAt:now,updatedAt:now};
+    const rec={depositExpectation:{amountCents:Math.round(svc.deposit*100),status:'not-collected',policy:'arrange-with-venue'},id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:sid,resourceId:rid,startAt,endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,createdAt:now,updatedAt:now};
     doc.bookings.push(rec);const text=JSON.stringify(doc),next=rev+1;
     try{
       let result;

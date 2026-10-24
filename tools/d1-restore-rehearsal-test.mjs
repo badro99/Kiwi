@@ -224,7 +224,7 @@ try {
       try { probe.exec(read(name)); } catch (error) { replayError = error; }
       if (replayError) {
         // Known historical ALTERs are documented, never silently ignored.
-        assert.match(replayError.message, /duplicate column name/);
+        assert.match(replayError.message, /^(0011|0014)_/.test(name) ? /already exists|already another table|no such table|UNIQUE constraint failed/ : /duplicate column name/);
         unsafe.add(name);
       } else {
         const control = controlFor(f);
@@ -237,7 +237,7 @@ try {
     }
     console.log(`${unsafe.has(name) ? '! NOT safe to replay after partial apply' : '✓ safe to replay every prefix'}: ${name}`);
   }
-  assert.deepEqual([...unsafe], files.filter(n => /^(0002|0007|0008|0009|0010)_/.test(n)), 'review replay classification when migrations change');
+  assert.deepEqual([...unsafe], files.filter(n => /^(0002|0007|0008|0009|0010|0011|0013|0014)_/.test(n)), 'review replay classification when migrations change');
   console.log('✓ every interrupted prefix recovers from SQL backup, reaches schema.sql, and preserves every original row');
 } catch (error) {
   // Assertions may hold credential-shaped synthetic fields: never dump rows.

@@ -42,6 +42,8 @@ function loadResolver() {
   vm.runInContext(read('assets/menu-i18n.js'), vm.createContext(w), { filename: 'menu-i18n.js' });
   return w.KiwiMenuI18n;
 }
+const workspace = read('assets/restaurant-menu-workspace.js');
+assert((workspace.match(/i18nReview:/g)||[]).length===3 && workspace.includes("esc(ui('i18nReview'))"), 'merchant review contract is visible in FR/EN/AR, including empty translation state');
 const M = loadResolver();
 assert(M && typeof M.name === 'function' && typeof M.needs === 'function' && typeof M.apply === 'function', 'KiwiMenuI18n expose name/desc/t/index/needs/apply/setManual/clear/summary');
 assert(M.LANGS.join(',') === 'fr,ar,en' && M.EXTRA.length === 20, 'langues : le noyau reste fr/ar/en et la liste client porte 20 langues');

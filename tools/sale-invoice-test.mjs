@@ -1,3 +1,4 @@
+import { businessDate, merchantZone } from '../functions/api/_business-day.js';
 // tools/sale-invoice-test.mjs — suite de tests pour la facturation des ventes (A4/PDF & D1).
 //
 // Valide :
@@ -193,7 +194,7 @@ if (custValMatch && fmtNumMatch && schemaMatch && getOrCreateMatch) {
   /* validateCustomer lit la règle ICE partagée (functions/api/_ice.js). */
   /* …et l'allocateur de numéros commun à la caisse et à la saisie
    * (functions/api/_invoice-series.js). */
-  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', 'allocateNumber', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL, SERIES.allocateNumber);
+  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', 'allocateNumber', 'businessDate', 'merchantZone', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL, SERIES.allocateNumber, businessDate, merchantZone);
   validateCustomer = helpers.validateCustomer;
   formatInvoiceNumber = helpers.formatInvoiceNumber;
   getOrCreateSaleInvoice = helpers.getOrCreateSaleInvoice;

@@ -50,7 +50,7 @@
       if (tender === 'cash') cash -= amt;
       if (tender === 'card' || tender === 'tap') card -= amt;
     });
-    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0, card, cash };
+    return { revenue, gross, refunds, collected, receivable, count, basket: count ? revenue / count : 0, card, cash };
   }
   // A summary bucket must be wholly inside or outside the requested window.
   function windowDays(days, from, to) {
@@ -72,7 +72,7 @@
     });
     const result = statsFromSales(sales, refunds, from, to);
     result.count = count;
-    result.basket = count ? result.gross / count : 0;
+    result.basket = count ? result.revenue / count : 0;
     // Whole-sale attribution excludes split rows, which need proportional parts.
     const whole = selected.flatMap(day => Object.entries(day.whole).map(([method, cents]) => ({ ts: day.from, method, amount: cents / 100 })));
     const splitRows = splits.filter(row => selected.some(day => row.ts >= day.from && row.ts < day.to))
@@ -212,7 +212,7 @@
       const old = M.statsFromSummary(summary.days, summary.splits, from, end);
       const recent = M.statsFromSales(sales, refunds, Math.max(from, boundary), to);
       Object.keys(old).forEach(k => { if (k !== 'basket') recent[k] += old[k]; });
-      recent.basket = recent.count ? recent.gross / recent.count : 0;
+      recent.basket = recent.count ? recent.revenue / recent.count : 0;
       return recent;
     } catch (_) { return fallback(); } // Partial-day windows cannot use daily totals.
   }
@@ -329,7 +329,7 @@
   }
   function reconcile(rows, raw, proof, sign, make) {
     const debt = new Set(proof.pendingIds || []);
-    const wanted = raw.filter(row => cents(row) * sign > 0);
+    const wanted = raw.filter(row => sign === 1 ? cents(row) >= 0 : cents(row) < 0);
     const ids = new Set(raw.map(id)), cursors = new Set(raw.map(row => row.cursor));
     // The proved interval may remove stale server rows, never manual/upload debt.
     const kept = rows.filter(row => pending(row, debt) ||
@@ -348,7 +348,7 @@
     function matches(rows, sign) {
       count += rows.filter(row => pending(row, debt)).length;
       const actual = rows.filter(row => !pending(row, debt) && inside(row, proof));
-      const expected = raw.filter(row => inside(row, proof) && cents(row) * sign > 0 && !debt.has(id(row)));
+      const expected = raw.filter(row => inside(row, proof) && (sign === 1 ? cents(row) >= 0 : cents(row) < 0) && !debt.has(id(row)));
       const saved = new Map(actual.map(row => [row.cursor, row]));
       return saved.size === actual.length && actual.length === expected.length && expected.every(row => {
         const entry = saved.get(row.cursor);
@@ -679,7 +679,7 @@
       while (cache.size > 4) cache.delete(cache.keys().next().value);
     }
     if (!hit.rows) return { partial: true, amounts: {}, total: 0, classified: 0, unknown: 0 };
-    const oldSales = hit.rows.filter(r => Number(r.amountCents ?? r.amount * 100) > 0).map(r => ({ ...r,
+    const oldSales = hit.rows.filter(r => Number(r.amountCents ?? r.amount * 100) >= 0).map(r => ({ ...r,
       amount: Number(r.amountCents ?? r.amount * 100) / 100, saleId: r.id }));
     const oldRefunds = hit.rows.filter(r => Number(r.amountCents ?? r.amount * 100) < 0).map(r => ({
       ts: r.ts, amount: Math.abs(Number(r.amountCents ?? r.amount * 100)) / 100, method: r.method, saleId: r.id }));

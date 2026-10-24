@@ -78,8 +78,17 @@ try{
   assert.ok(intercepted);assert.ok([404,409].includes(r.status),JSON.stringify(r));assert.equal(f.net(),0);assert.equal(scalar('SELECT COUNT(*) FROM delivery_collections'),0);
  }),[[50]]);
  await strict('collection refunds are capped by collected money and do not automatically reopen courier debt',fc.asyncProperty(positive,async(total)=>{await f.reset();await delivery(total);ok(await collect('refund-collection',total));ok(await f.refund('refund-receipt','refund-collection',total));assert.equal(f.net(),0);assert.equal((await f.call('receivables',{},'owner')).body.collected[0].dueCents,0);assert.equal((await f.refund('refund-excess','refund-collection',1)).status,409);}));
- await knownIssue('policy: cancelling a collected original leaves collections booked; choose linked reversal or refuse cancellation',fc.asyncProperty(positive,async(total)=>{await f.reset();await delivery(total);ok(await collect('before-cancel',total));ok(await voidSale('delivery-original'));return f.net()===0;}),[[50]]);
- await knownIssue('policy: refunding original deposit leaves unpaid delivery collectible; define debt reduction on returns',fc.asyncProperty(positive,positive,async(deposit,owed)=>{await f.reset();await delivery(deposit+owed,deposit);ok(await f.refund('deposit-refund','delivery-original',deposit));const r=await collect('after-refund',owed);return r.status===409;}),[[50,50]]);
+ await strict('collected originals refuse cancellation and preserve collection money',fc.asyncProperty(positive,async(total)=>{await f.reset();await delivery(total);ok(await collect('before-cancel',total));assert.equal((await voidSale('delivery-original')).status,409);return f.net()===total;}),[[50]]);
+ await strict('deposit return writes off unpaid delivery once and refuses later collection',fc.asyncProperty(positive,positive,async(deposit,owed)=>{await f.reset();await delivery(deposit+owed,deposit);ok(await f.refund('deposit-refund','delivery-original',deposit));ok(await f.refund('deposit-refund','delivery-original',deposit));const writeoffs=sql.prepare("SELECT amount_cents FROM sale_audit WHERE action='delivery-writeoff'").all();assert.deepEqual(writeoffs.map(r=>r.amount_cents),[owed]);assert.equal(f.net(),0);const r=await collect('after-refund',owed);return r.status===409;}),[[50,50]]);
+ await strict('legacy returned deposits refuse collection until replay records their debt writeoff',fc.asyncProperty(positive,positive,async(deposit,owed)=>{
+  await f.reset();await delivery(deposit+owed,deposit);ok(await f.refund('legacy-refund','delivery-original',deposit));
+  sql.prepare("DELETE FROM sale_audit WHERE action='delivery-writeoff'").run();
+  assert.equal((await collect('legacy-after-return',owed)).status,409);
+  assert.equal((await f.call('receivables',{},'owner')).body.open[0].needsReview,true);
+  ok(await f.refund('legacy-refund','delivery-original',deposit));
+  assert.equal(sql.prepare("SELECT amount_cents FROM sale_audit WHERE action='delivery-writeoff'").get().amount_cents,owed);
+  assert.equal(f.net(),0);
+ }));
  await strict('collection receiving timestamp follows Morocco UTC+0 and the 05:00 boundary, never the delivery day',fc.asyncProperty(positive,fc.constantFrom('2026-10-22T04:59:59.999Z','2026-10-22T05:00:00.000Z'),async(total,instant)=>{
   await f.reset();Date.now=()=>Date.parse('2026-10-19T12:00Z');await delivery(total);const ts=Date.parse(instant);Date.now=()=>ts;ok(await collect('dated-receipt',total));const rows=await feed(),r=rows.find(r=>r.id==='dated-receipt'),day=instant.includes('04:59')?'2026-10-21':'2026-10-22';assert.equal(r.ts,ts);assert.equal(businessDate(ts),day);assert.equal(D.businessDay(ts),day);assert.equal(C(D.build({day,store:{slug:f.merchant,type:'boutique'},sales:rows}).net),total);
  }));

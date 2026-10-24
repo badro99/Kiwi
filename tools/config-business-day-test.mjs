@@ -78,7 +78,7 @@ const LEGACY = ['features', 'pins', 'pinGateConfigured', 'type', 'plan', 'planEx
   ok(a.timezone === '' && a.businessCutoff === null, "a store with no row: `timezone` is still '' and `businessCutoff` still null (the silence current callers read)");
   ok(a.businessDay && a.businessDay.cutoff === 5 && a.businessDay.zone === 'Africa/Casablanca' && a.businessDay.cutoffIsDefault === true && a.businessDay.zoneIsDefault === true,
     'and `businessDay` carries the resolved 5 and Africa/Casablanca, flagged as defaults');
-  ok(Object.keys(a).sort().join() === [...LEGACY, 'businessDay'].sort().join(), 'the answer holds exactly the existing fields plus `businessDay`');
+  ok(Object.keys(a).sort().join() === [...LEGACY, 'businessDay', 'pollMode'].sort().join(), 'the answer holds exactly the existing fields plus `businessDay` and `pollMode`');
   ok(a.features && typeof a.features === 'object' && Array.isArray(a.pins) && a.pinGateConfigured === false && a.type === '' && a.suspended === false
     && a.subscription.state === 'active' && a.subscription.active === true, 'the other fields keep the values they had');
 }

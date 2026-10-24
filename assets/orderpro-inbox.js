@@ -198,6 +198,10 @@
         warnDegraded(j.degraded);
         verifyCloses();
         paint();
+        if (!polling && !document.hidden && state.timer) {
+          clearTimeout(state.timer);
+          state.timer = setTimeout(pollInbox, POLL_MS);
+        }
         return fresh;
       })
       .catch(function () { return -1; });   /* no backend / offline → keep the last picture */
@@ -895,13 +899,40 @@
     if (root) root.style.display = 'none';
   }
 
-  /* ── start ────────────────────────────────────────────────────────────── */
-  function start() {
-    if (state.timer) clearInterval(state.timer);
-    chip();
-    pull();
-    state.timer = setInterval(pull, POLL_MS);
+  /* Request pacing: pending kitchen work keeps its fast fallback. */
+  var pollDelay = POLL_MS, pollSignature = null, polling = false, pollAgain = false;
+  function pollInbox() {
+    if (state.timer) clearTimeout(state.timer);
+    state.timer = null;
+    if (document.hidden) return;
+    if (polling) { pollAgain = true; return; }
+    polling = true;
+    Promise.resolve(pull()).then(function () {
+      var next = JSON.stringify([merchant(), state.orders, state.sessions, state.closedSessions, state.expired]);
+      var pending = Object.keys(state.orders).some(function (id) {
+        return /^(pending|accepted|cooking|preparing|ready)$/.test(state.orders[id].status);
+      });
+      pollDelay = pending || next !== pollSignature ? POLL_MS : Math.min(120000, pollDelay * 2);
+      var gate = document.getElementById('pin-screen');
+      var closed = document.getElementById('clockin-screen');
+      var locked = function (el) { return el && el.style.display !== 'none'; };
+      if (!pending && (locked(gate) || locked(closed))) pollDelay = 300000;
+      pollSignature = next;
+    }).catch(function () { pollDelay = Math.min(120000, pollDelay * 2); }).then(function () {
+      polling = false;
+      if (!document.hidden) state.timer = setTimeout(pollInbox, window.KiwiPoll?.delay(pollAgain ? 0 : pollDelay) ?? (pollAgain ? 0 : pollDelay));
+      pollAgain = false;
+    });
   }
+  function wakeInbox() { pollDelay = POLL_MS; pollInbox(); }
+  function start() {
+    chip();
+    wakeInbox();
+  }
+  document.addEventListener('visibilitychange', wakeInbox);
+  document.addEventListener('kiwi:request-wake', wakeInbox);
+  window.addEventListener('focus', wakeInbox);
+  window.addEventListener('online', wakeInbox);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
@@ -910,12 +941,12 @@
     /* Changement d'établissement : le curseur d'AVANT ne veut plus rien dire,
        et le garder ferait manquer tout l'historique du nouveau commerce. On
        repart de zéro — même resynchronisation volontaire que ci-dessus. */
-    if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant') { state.since = 0; chip(); pull(); }
+    if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant') { state.since = 0; chip(); wakeInbox(); }
   });
   // La config arrive après le premier passage : c'est elle qui décide si cette
   // caisse a Order Pro, donc on repeint dès qu'elle est là (allumage immédiat,
   // sans attendre le prochain tour de poll).
-  document.addEventListener('kiwi-config', function () { chip(); pull(); });
+  document.addEventListener('kiwi-config', function () { chip(); wakeInbox(); });
 
   /* L'addition réglée coupe le téléphone. L'évènement vient de markPaid() dans
    * kiwi-caisse.html — le seul point de passage commun à la carte, aux espèces

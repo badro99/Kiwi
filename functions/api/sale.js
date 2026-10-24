@@ -222,7 +222,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     if (!Number.isFinite(grossAmountCents) || !Number.isFinite(discountAmountCents)
       || grossAmountCents <= 0 || grossAmountCents > MAX_AMOUNT_CENTS
       || discountAmountCents <= 0 || discountAmountCents > grossAmountCents
-      || Math.abs((grossAmountCents - discountAmountCents) - amountCents) > 1) return json({ error: 'bad-discount-amount' }, 400);
+      || grossAmountCents - discountAmountCents !== amountCents) return json({ error: 'bad-discount-amount' }, 400);
     if (!DISCOUNT_REASONS.has(discountReason)) return json({ error: 'bad-discount-reason' }, 400);
     if (!/^[A-Za-z0-9:_-]{1,96}$/.test(discountActorId) || /^\d{4}$/.test(discountActorId)) return json({ error: 'bad-discount-actor' }, 400);
   }
@@ -762,14 +762,16 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   const signed = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
   // Seul un id de visite que le serveur a réellement remplacé perd l'auteur qui certifie ;
   // une vente envoyée sans id reste à l'appareil qui l'a écrite (sinon une caisse se soustrairait au Z).
+  const sellerId = employee ? String(employee.session.staffId) : null;
   const author = signed && signed.startsWith('till:') && isLegacyVisitId && id !== requestedId ? signed + '#rekeyed' : signed;
   if (hasDiscount) {
     try {
       await env.DB.prepare(
-        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 16 : 14) + (author ? 1 : 0)).fill('?').join(', ')})`
+        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id${sellerId ? ', seller_id' : ''}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 16 : 14) + (sellerId ? 1 : 0) + (author ? 1 : 0)).fill('?').join(', ')})`
       ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
              ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
              grossAmountCents, discountAmountCents, discountReason, discountActorId,
+             ...(sellerId ? [sellerId] : []),
              ...(author ? [author] : [])]).run();
       stored = true;
     } catch (discountError) {
@@ -781,9 +783,10 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   }
   if (!stored) try {
     await env.DB.prepare(
-      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 12 : 10) + (author ? 1 : 0)).fill('?').join(', ')})`
+      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}${sellerId ? ', seller_id' : ''}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 12 : 10) + (sellerId ? 1 : 0) + (author ? 1 : 0)).fill('?').join(', ')})`
     ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
       ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
+      ...(sellerId ? [sellerId] : []),
       ...(author ? [author] : [])]).run();
   } catch (e) {
     const missing = String((e && e.message) || e);

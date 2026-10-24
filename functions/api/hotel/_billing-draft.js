@@ -162,10 +162,9 @@ export function buildDraft(source, input) {
   const totals=new Map();
   for(const l of lines) for(const p of l.parts)totals.set(p.payer,(totals.get(p.payer)||0)+p.amountCents);
   const taxes=taxIssues(lines);
-  // finalizable stays false: issuing a numbered invoice from a stay waits on
-  // owner decisions (who may finalize, whether an unpaid or account stay may
-  // be invoiced), not only on these two checks.
-  return {v:1,kind:'preinvoice',currency:'MAD',lines,totalCents,
+  // Draft-only policy: this route never issues a fiscal invoice or allocates
+  // an invoice number. Missing tax facts and unlinked payments stay explicit.
+  return {v:1,kind:'preinvoice',issuancePolicy:'draft-only',currency:'MAD',lines,totalCents,
     payers:[...totals].map(([id,amountCents])=>({...payers.get(id),amountCents})),
     note:text(input.note,1000),taxStatus:taxes.length?'unverified':'verified',taxIssues:taxes,
     ...paymentState(source.payments,totalCents),finalizable:false};

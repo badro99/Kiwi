@@ -4,7 +4,7 @@
 /*
  * Kiwi Tickets — local stdio MCP server.
  *
- * A thin, zero-dependency wrapper over the public ticket board API deployed at
+ * A thin, zero-dependency wrapper over the internal ticket board API deployed at
  * kiwi-os.com (functions/api/tickets/*). It exists so coding agents — Claude
  * Code, Codex, Gemini — can read the shared problem board, file new problems,
  * hand solved ones to testing, and LOOK at screenshots without burning tokens:
@@ -21,9 +21,8 @@
  *   KIWI_TICKETS_BASE   Origin to talk to. Default https://kiwi-os.com
  *   KIWI_TICKETS_MAXPX  Default longest-edge px for downscaled images. Default 1024
  *
- * The board is deliberately public and unauthenticated (see functions/
- * _middleware.js), so this server carries no credentials. Screenshots are
- * internal POS captures — treat anything visible in them as sensitive.
+ * KIWI_TICKETS_COOKIE supplies an authorized named operator session locally.
+ * Never print or persist this credential. Screenshots contain sensitive data.
  */
 
 const os = require('os');
@@ -34,6 +33,10 @@ const { validateUiProof } = require('./ui-proof.js');
 
 const BASE = String(process.env.KIWI_TICKETS_BASE || 'https://kiwi-os.com').replace(/\/+$/, '');
 const DEFAULT_MAXPX = clampInt(process.env.KIWI_TICKETS_MAXPX, 1024, 256, 4096);
+function authHeaders(target = BASE) {
+  if (new URL(target).origin !== new URL(BASE).origin) throw new Error('Ticket image origin is not authorized');
+  return process.env.KIWI_TICKETS_COOKIE ? { Cookie: process.env.KIWI_TICKETS_COOKIE } : {};
+}
 const SERVER_NAME = 'kiwi-tickets';
 const SERVER_VERSION = '1.1.0';
 const DEFAULT_PROTOCOL = '2024-11-05';
@@ -220,7 +223,7 @@ function errText(t) { return { content: [{ type: 'text', text: t }], isError: tr
 /* ── Tool implementations ────────────────────────────────────────────────── */
 
 async function fetchTickets() {
-  const res = await fetch(BASE + '/api/tickets', { headers: { Accept: 'application/json' } });
+  const res = await fetch(BASE + '/api/tickets', { redirect: 'error', headers: { ...authHeaders(), Accept: 'application/json' } });
   if (!res.ok) throw new Error(`GET /api/tickets → HTTP ${res.status}`);
   const data = await res.json();
   return data && Array.isArray(data.tickets) ? data : { tickets: [], retentionDays: 20 };
@@ -299,7 +302,7 @@ async function viewTicketImage(args) {
   const content = [];
   for (const { im, i } of chosen) {
     const url = im.url.startsWith('http') ? im.url : BASE + im.url;
-    const res = await fetch(url);
+    const res = await fetch(url, { redirect: 'error', headers: authHeaders(url) });
     if (!res.ok) { content.push({ type: 'text', text: `[${i}] ${im.filename}: HTTP ${res.status}` }); continue; }
     let mime = String(res.headers.get('content-type') || 'image/png').split(';')[0].trim();
     let buf = Buffer.from(await res.arrayBuffer());
@@ -335,7 +338,7 @@ async function createTicket(args) {
     form.append('images', new Blob([bytes], { type: mime }), path.basename(abs));
   }
 
-  const res = await fetch(BASE + '/api/tickets', { method: 'POST', body: form });
+  const res = await fetch(BASE + '/api/tickets', { method: 'POST', redirect: 'error', headers: authHeaders(), body: form });
   const data = await safeJson(res);
   if (!res.ok) throw new Error(`create failed (HTTP ${res.status}): ${data.error || 'unknown'}`);
   return `Filed ${data.number || '#' + data.id} on ${BASE}/tickets${paths.length ? ` with ${paths.length} screenshot(s)` : ''}.`;
@@ -347,7 +350,8 @@ async function classifyTicket(args) {
   validateClassification(taxonomy, args, true);
   const res = await fetch(`${BASE}/api/tickets/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    redirect: 'error',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
       action: 'classify',
       kind: args.kind,
@@ -379,7 +383,8 @@ async function submitForTesting(args) {
   }
   const res = await fetch(`${BASE}/api/tickets/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    redirect: 'error',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'fixed' }),
   });
   const data = await safeJson(res);

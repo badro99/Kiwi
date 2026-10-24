@@ -93,6 +93,8 @@
 
   function report(errObj) {
     try {
+      if (win.KiwiPoll && (win.KiwiPoll.mode() !== 'live'
+        || (win.document && win.document.hidden) || win.KiwiPoll.retryAfter?.() > 0)) return;
       var rawMsg = (errObj && (errObj.message || errObj.reason || errObj.name)) || 'Unknown error';
       var msg = redact(String(rawMsg).slice(0, 300));
       var file = cleanFile(errObj && (errObj.filename || errObj.source || ''));

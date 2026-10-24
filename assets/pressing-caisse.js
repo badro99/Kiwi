@@ -639,8 +639,6 @@
     if (!p) return 'recu';
     if (p.status === 'livre') return 'livre';
     if (p.status === 'pret') return 'pret';
-    const rTs = o && o.readyAt instanceof Date ? o.readyAt.getTime() : (o && o.readyAt ? new Date(o.readyAt).getTime() : 0);
-    if (rTs && rTs <= (now || Date.now())) return 'pret';
     return p.status || 'recu';
   }
   function orderStatus(o, now) {

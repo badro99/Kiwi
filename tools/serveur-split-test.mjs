@@ -63,7 +63,7 @@ for (const [name, bodies] of beforeBodies) {
 const html = read('kiwi-serveur.html');
 const tags = html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g);
 const at = tags.findIndex(tag => tag.includes('assets/serveur-app.js?'));
-assert.deepEqual(tags.slice(at - map.parts.length, at).map(tag => tag.match(/src="([^"]+)"/)[1]), map.parts.map(file => file + '?v=1'));
+assert.deepEqual(tags.slice(at - map.parts.length, at).map(tag => tag.match(/src="([^"]+)"/)[1]), map.parts.map(file => file + '?v=' + JSON.parse(read('tools/asset-stamps.json'))[file].v));
 for (const tag of tags.slice(at - map.parts.length, at + 1)) assert.ok(!/\b(?:async|defer|type)\s*(?:=|>)/.test(tag), 'scripts classiques synchrones');
 assert.equal(tags.length, 27, 'une balise ajoutée');
 console.log(`✓ serveur-split-test : ${map.moved.length} fonctions identiques, reconstruction, noms et ordre classiques conservés`);

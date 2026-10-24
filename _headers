@@ -34,24 +34,26 @@
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
 
-# 3. The app's own assets.
-#
-#    Sans règle, Cloudflare Pages sert `/assets/*` en
-#    `max-age=14400, must-revalidate`. Passé quatre heures, `must-revalidate`
-#    interdit au navigateur de réutiliser un fichier sans avoir redemandé au
-#    serveur — soit ~130 allers-retours bloquants avant que le tableau de bord
-#    démarre, plusieurs fois par jour, pour des octets qui n'ont pas bougé.
-#
-#    Pas d'`immutable` ici, contrairement à `_next/static` : 63 des fichiers
-#    que charge `dashboard.html` n'ont PAS d'estampille `?v=` (`auth-guard.js`,
-#    `kiwi-env.js`, `theme.css`…). Les figer un an, c'est se priver du moyen de
-#    corriger un bug d'authentification chez un client déjà venu.
-#
-#    `stale-while-revalidate` donne les deux : la copie en cache part
-#    immédiatement, sans attendre le réseau, et la mise à jour se fait derrière.
-#    Une estampille qui bouge reste servie tout de suite, puisque l'URL change.
+# 3. Mutable assets must stay revalidated. Pages matches paths, not query
+# strings: /assets/*?v=* cannot distinguish stamped and unstamped requests.
+# The SW owns cache-first for exact stamped URLs. Do not freeze /assets/*:
+# some of these same files are still loaded without stamps.
 /assets/*
   Cache-Control: public, max-age=3600, stale-while-revalidate=604800
+
+# Vendored fonts and icons do not carry merchant data. Detach the inherited
+# Cache-Control before assigning a new value (Pages joins duplicate headers).
+/assets/fonts/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000
+/assets/icons/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000
+
+# HTML keeps Pages default max-age=0, must-revalidate.
+# The worker script must discover new deployments.
+/kiwi-sw.js
+  Cache-Control: public, max-age=0, must-revalidate
 
 # 4. Link-only internal ticket board.
 #

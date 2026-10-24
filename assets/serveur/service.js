@@ -2728,25 +2728,28 @@
     }
 
     function renderServiceClients() {
-      const q = String($('#service-client-search').value || '').trim().toLowerCase();
-      const rows = serviceClientRows.filter((c) => !q || String(c.name || '').toLowerCase().includes(q) || String(c.phone || '').includes(q));
-      $('#service-client-list').innerHTML = rows.length ? rows.map((c) => `
-        <button class="td-btn ghost sm" type="button" data-service-client="${esc(c.id)}" style="text-align:left;justify-content:space-between;">
-          <span><strong>${esc(c.name || 'Client')}</strong><br><small>${esc(c.phone || '')}</small></span>
-          <span class="mono">${Number(c.points) || 0} pts</span>
-        </button>`).join('') : '<p class="modal-subtle">Aucun client trouvé.</p>';
+      const q = String($('#service-client-search').value || '').trim();
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+      serviceClientRows = [];
+      $('#service-client-list').textContent = employeeTranslation('Saisissez le numéro de téléphone complet.');
+      if (q.replace(/\D/g, '').length < 10) return;
+      fetch('/api/employee-clients?merchant=' + encodeURIComponent(merchant) + '&q=' + encodeURIComponent(q), {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((r) => { if (!r.ok) throw new Error('lookup'); return r.json(); }).then((data) => {
+        if ($('#service-client-search').value.trim() !== q) return;
+        serviceClientRows = Array.isArray(data.clients) ? data.clients : [];
+        $('#service-client-list').innerHTML = serviceClientRows.length ? serviceClientRows.map((c) => `
+          <button class="td-btn ghost sm" type="button" data-service-client="${esc(c.id)}" style="text-align:left;justify-content:space-between;">
+            <span><strong>${esc(c.name || 'Client')}</strong><br><small>${esc(c.phone || '')}</small></span>
+            <span class="mono">${Number(c.points) || 0} pts</span>
+          </button>`).join('') : '<p class="modal-subtle">' + employeeTranslation('Aucun client trouvé.') + '</p>';
+      }).catch(() => { $('#service-client-list').textContent = employeeTranslation('Carnet indisponible.'); });
     }
 
     function openServiceClients() {
-      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       $('#service-client-modal').classList.add('is-open');
-      $('#service-client-list').innerHTML = '<p class="modal-subtle">Chargement…</p>';
-      fetch('/api/employee-clients?merchant=' + encodeURIComponent(merchant), {
-        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-      }).then((r) => r.ok ? r.json() : null).then((data) => {
-        serviceClientRows = data && Array.isArray(data.clients) ? data.clients : [];
-        renderServiceClients();
-      }).catch(() => { $('#service-client-list').innerHTML = '<p class="modal-subtle">Carnet indisponible.</p>'; });
+      $('#service-client-search').value = '';
+      renderServiceClients();
     }
 
     function openPayChoice(tableId) {

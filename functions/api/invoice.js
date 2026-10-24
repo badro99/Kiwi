@@ -11,6 +11,7 @@
 import { tenantFor } from './_private.js';
 import { json } from '../auth/_lib.js';
 import { iceCompact, iceProblem, ICE_DETAIL } from './_ice.js';
+import { businessDate, merchantZone } from './_business-day.js';
 import { allocateNumber } from './_invoice-series.js';
 
 export function validateCustomer(raw) {
@@ -108,20 +109,18 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
 
   const snap = clientSnapshot && typeof clientSnapshot === 'object' ? { ...clientSnapshot } : {};
 
-  /* L'exercice d'une facture est celui de la VENTE, jamais celui que le client
-   * annonce : `seq` étant global au commerçant et non annuel, un issuedTs choisi
-   * laissait sortir F-2024-0087 après F-2026-0086 sans violer la moindre
-   * contrainte. On borne l'horodatage entre la vente et maintenant. */
+  // Keep the sale's civil calendar year in its merchant's timezone. Invoice
+  // numbering uses midnight, independently of the till's 05:00 business day.
   const saleTs = Number(saleRow.ts) || now;
   const askedTs = Number(snap.issuedTs);
   const issuedTs = Number.isFinite(askedTs)
     ? Math.min(Math.max(askedTs, saleTs), now)
     : now;
-  const year = new Date(saleTs).getFullYear();
+  const year = Number(businessDate(saleTs, 0, await merchantZone(env, merchant)).slice(0, 4));
 
   /* Le total imprimé doit être celui encaissé. `totals.ttc` est en dirhams
    * (assets/invoice.js le construit depuis amountCents/100), la colonne en
-   * centimes fait foi. On tolère le centime d'arrondi et on REFUSE au-delà
+   * centimes fait foi. On refuse tout écart, même un centime,
    * plutôt que de réécrire le champ : corriger le seul TTC laisserait un
    * document dont HT + TVA ne retombent plus dessus. Les lignes d'avant la
    * migration n'ont qu'un montant en dirhams entiers : rien à confronter. */
@@ -129,7 +128,7 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
     const saleCents = Number(saleRow.amount_cents);
     const askedTtc = snap.totals && Number(snap.totals.ttc);
     if (Number.isFinite(saleCents) && Number.isFinite(askedTtc)
-        && Math.abs(Math.round(askedTtc * 100) - saleCents) > 1) {
+        && Math.round(askedTtc * 100) !== saleCents) {
       const err = new Error('total-mismatch');
       err.status = 409;
       throw err;
@@ -280,7 +279,7 @@ export async function onRequestGet({ request, env }) {
   // Liste des factures pour ce merchant
   try {
     const { results } = await env.DB.prepare(
-      'SELECT merchant, seq, number, sale_id, customer, snapshot, created_ts FROM sale_invoices WHERE merchant = ? ORDER BY seq DESC LIMIT 200'
+      'SELECT merchant, seq, number, sale_id, customer, snapshot, created_ts FROM sale_invoices WHERE merchant = ? ORDER BY created_ts DESC, number DESC LIMIT 200'
     ).bind(merchant).all();
 
     const list = (results || []).map((row) => {

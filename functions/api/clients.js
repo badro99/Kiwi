@@ -40,6 +40,7 @@
 
 import { json, activeEmployee } from '../auth/_lib.js';
 import { tenantFor, storeOperationalState } from './_private.js';
+import { clientAudit, refuseReward, mayRecordReward } from './_client-audit.js';
 import { phoneKey } from './_phone.js';
 import { mayMergeClients, mergeClients, purchaseKey, purchaseKeySql } from './_client-merge.js';
 
@@ -235,7 +236,11 @@ export async function onRequestGet(context) {
   // Pas de backend (hébergement statique, préview sans secrets) → neutre.
   if (!env.DB) return json({ merchant: '', clients: [], cursor: 0 });
 
-  const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
+  let merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
+  if (!merchant && url.searchParams.has('auditClient')) {
+    const employee = await activeEmployee(request, env, url.searchParams.get('merchant'));
+    if (employee) merchant = employee.merchant;
+  }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
@@ -243,6 +248,7 @@ export async function onRequestGet(context) {
   try {
     await ensurePurchaseEvents(env);
     await ensureRewardEvents(env);
+    if (url.searchParams.has('auditClient')) return await clientAudit(request, env, merchant, await resolveClientId(env, merchant, str(url.searchParams.get('auditClient'), 64)));
     const readPage = (tags) => env.DB.prepare(
       `SELECT id, name, phone, email, birthday, gender, city, address, notes, hospitality,${tags ? ' tags,' : ''}
               points, stamps, visits, spend, consent, consent_email, source,
@@ -740,7 +746,8 @@ async function applyRedemption(env, merchant, raw) {
   const redemption = raw && typeof raw === 'object' ? raw : {};
   // Un id fusionné dans une autre fiche (CL-5) écrit sur celle-ci.
   const clientId = await resolveClientId(env, merchant, str(redemption.clientId || redemption.client_id, 64));
-  const ref = str(redemption.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
+  const ref = String(redemption.ref || '');
+  if (!/^[A-Za-z0-9:_-]{1,96}$/.test(ref)) return json({ error: 'invalid-refusal' }, 400);
   if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
   await ensureRewardEvents(env);
   const previous = await env.DB.prepare(
@@ -753,13 +760,13 @@ async function applyRedemption(env, merchant, raw) {
   const client = await env.DB.prepare(
     'SELECT points, stamps FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
-  if (!client) return json({ error: 'client-not-found' }, 404);
+  if (!client) return refuseReward(env, merchant, clientId, ref, 'client-not-found', 404);
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
   const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
   /* Sans programme ouvert, il n'y a rien à remettre : la caisse le refusait
    * déjà, l'API acceptait encore 100 points comme si un seuil existait. */
-  if (!loyaltyOn(cfg)) return json({ error: 'loyalty-off' }, 409);
+  if (!loyaltyOn(cfg)) return refuseReward(env, merchant, clientId, ref, 'loyalty-off');
   let pointsDelta = 0;
   let stampsDelta = 0;
   if (cfg.model === 'amount') {
@@ -770,7 +777,7 @@ async function applyRedemption(env, merchant, raw) {
     ) || 10));
   }
   if (Number(client.points || 0) < pointsDelta || Number(client.stamps || 0) < stampsDelta) {
-    return json({ error: 'reward-not-ready' }, 409);
+    return refuseReward(env, merchant, clientId, ref, 'reward-not-ready');
   }
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
@@ -795,7 +802,7 @@ async function applyRedemption(env, merchant, raw) {
     if (replay && replay.client_id === clientId) {
       return json({ ok: true, replayed: true, pointsDelta: Number(replay.points_delta || 0), stampsDelta: Number(replay.stamps_delta || 0) });
     }
-    return json({ error: 'reward-not-ready' }, 409);
+    return refuseReward(env, merchant, clientId, ref, 'reward-not-ready');
   }
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) {
     return json({ error: 'reward-write-failed' }, 503);
@@ -956,6 +963,7 @@ export async function onRequestPost(context) {
   }
 
   if (body && body.redemption) {
+    if (!await mayRecordReward(request, env, merchant)) return json({ error: 'owner-or-till-required' }, 403);
     if (!operational) return json({ error: 'unauthorized' }, 401);
     try { return await applyRedemption(env, merchant, body.redemption); }
     catch (_) { return json({ error: 'reward-write-failed' }, 503); }

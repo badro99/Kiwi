@@ -1,4 +1,5 @@
 import { json, activeServiceEmployee } from '../auth/_lib.js';
+import { phoneKey } from './_phone.js';
 import { nextSrvTs, resolveClientId } from './clients.js';
 
 /* Un encaissement de salle ne dépasse pas ces bornes. Elles ne remplacent pas le
@@ -32,15 +33,17 @@ export async function onRequestGet({ request, env }) {
   const asked = text(url.searchParams.get('merchant'), 64).toLowerCase();
   const employee = await activeServiceEmployee(request, env, asked);
   if (!employee) return json({ error: 'on-shift-service-required' }, 403);
-  const rawQ = text(url.searchParams.get('q'), 80).toLowerCase();
-  const escapedQ = rawQ.replace(/[%_\\]/g, '\\$&');
-  const q = '%' + escapedQ + '%';
+  // Service staff may look up one customer supplied by the guest, never
+  // browse or export the merchant book. Management uses /api/clients.
+  if (url.searchParams.has('export')) return json({ error: 'manager-required' }, 403);
+  const rawQ = text(url.searchParams.get('q'), 80);
+  const phone = phoneKey(rawQ);
+  if (!phone || !/^(?:212[5-7]\d{8}|\d{10,15})$/.test(phone)) return json({ ok: true, clients: [] });
   try {
     const rows = await env.DB.prepare(`SELECT id, name, phone, points, stamps, visits, spend
-      FROM clients WHERE merchant = ? AND deleted = 0
-        AND (LOWER(name) LIKE ? ESCAPE '\\' OR phone LIKE ? ESCAPE '\\')
-      ORDER BY last_seen DESC, name LIMIT 100`).bind(employee.merchant, q, q).all();
-    return json({ ok: true, clients: rows.results || [] });
+      FROM clients WHERE merchant = ? AND deleted = 0 AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '.', ''), '-', ''), '(', ''), ')', '') LIKE ?
+      ORDER BY last_seen DESC, id LIMIT 50`).bind(employee.merchant, '%' + phone.slice(-8)).all();
+    return json({ ok: true, clients: (rows.results || []).filter(row => phoneKey(row.phone) === phone).slice(0, 1) });
   } catch (_) { return json({ ok: true, clients: [], unmigrated: true }); }
 }
 

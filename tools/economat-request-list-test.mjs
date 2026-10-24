@@ -25,7 +25,7 @@ await check('the owner lists every request, newest first, with labels', async ()
   const { status, body } = await list();
   assert.equal(status, 200);
   assert.deepEqual(body.requests.map((r) => r.request.id), ['req-list-b', 'req-list-a']);
-  assert.equal(body.requests[0].label, 'ready');
+  assert.equal(body.requests[0].label, 'out-for-delivery'); // Prepared stock has been handed over, not received.
   assert.equal(body.requests[1].label, 'submitted');
   assert.equal(body.confirmationSide, 'recipient');
   assert.equal(body.actor.kind, 'hotel-manager');

@@ -48,6 +48,8 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.': 'Payment paused. Storage unavailable. Do not take money. Restore storage and try again.',
+      'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.': 'This delivery already has collections. Refund the relevant receipts before asking the manager to correct it.',
       "Déplacement impossible : {x}": "Cannot move: {x}",
       "Fusion impossible : {x}": "Cannot merge: {x}",
       "visite à actualiser": "Visit needs refreshing",
@@ -452,6 +454,8 @@
     },
 
     ar: {
+      'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.': 'تم تعليق الدفع. التخزين غير متاح. لا تستلم المال. أصلح التخزين ثم حاول مجدداً.',
+      'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.': 'لهذا التوصيل تحصيلات مسجلة. أعد مبالغ الإيصالات المعنية ثم اطلب من المدير تصحيحها.',
       "Déplacement impossible : {x}": "تعذر النقل: {x}",
       "Fusion impossible : {x}": "تعذر الدمج: {x}",
       "visite à actualiser": "يلزم تحديث الزيارة",
@@ -3522,16 +3526,14 @@
      passage : sinon chaque traduction déclencherait une nouvelle observation,
      et on tournerait en rond au lieu de vendre. */
   var obs = null, pending = false;
-  /* Un `setTimeout`, pas un `requestAnimationFrame`. Un onglet en arrière-plan
-     ne reçoit AUCUNE image d'animation : la caisse posée sur une tablette qu'on
-     réveille, ou l'onglet passé au second plan pendant qu'un autre écran sert,
-     se serait rouvert en français au premier rendu — la traduction n'aurait
-     jamais été rejouée. Le balayage ne dessine rien, il n'a rien à
-     synchroniser avec l'écran ; il doit juste avoir lieu. */
+  /* Coalesce mutations within the current task, before another click or paint
+     can observe untranslated amounts. A timer allowed the same voucher to be
+     read once with bidi isolation and once without it after reopening. Promise
+     jobs also run in background tabs, where animation frames are suspended. */
   function schedule() {
     if (pending || cur === 'fr') return;
     pending = true;
-    setTimeout(function () { pending = false; run(document.body); }, 0);
+    Promise.resolve().then(function () { pending = false; run(document.body); });
   }
   function run(root) {
     if (obs) obs.disconnect();

@@ -221,20 +221,42 @@ try { (function () {
   }
 
   window.KiwiCaisseRefresh = { run: run, mount: mount, message: message, reload: reloadPage };
-  var lastAutoRefresh = 0;
-  function autoRefresh() {
-    if (navigator.onLine === false || document.hidden || Date.now() - lastAutoRefresh < 10000) return;
-    // Do not turn a support inspection into service activity.
-    if (new URLSearchParams(location.search).get('op') === '1' && !window.KiwiTillServiceReady) return;
-    lastAutoRefresh = Date.now();
-    run(); // Reconcile in place: never reload a cashier's open basket.
+  var autoTimer = null, autoDelay = 30000;
+  function scheduleAutoRefresh() {
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = null;
+    if (!document.hidden) {
+      autoTimer = setTimeout(autoRefresh, window.KiwiPoll?.delay(autoDelay) ?? autoDelay);
+      if (autoTimer && autoTimer.unref) autoTimer.unref();
+    }
   }
-  window.addEventListener('online', autoRefresh);
-  window.addEventListener('focus', autoRefresh);
-  document.addEventListener('visibilitychange', autoRefresh);
-  document.addEventListener('kiwi-paired', autoRefresh);
-  document.addEventListener('kiwi:caisse-service-ready', autoRefresh);
-  window.setInterval(autoRefresh, 30000);
+  function autoRefresh() {
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = null;
+    if (document.hidden) return;
+    if (navigator.onLine === false || (new URLSearchParams(location.search).get('op') === '1' && !window.KiwiTillServiceReady)) {
+      scheduleAutoRefresh(); return;
+    }
+    Promise.resolve(run()).then(function (out) {
+      autoDelay = out && ((out.changed || []).length || out.orders > 0) ? 30000 : Math.min(120000, autoDelay * 2);
+      var locked = ['pin-screen', 'clockin-screen'].some(function (id) {
+        var el = document.getElementById(id);
+        return el && el.style.display !== 'none';
+      });
+      if (locked || window.KiwiTillServiceReady === false) autoDelay = 300000;
+    }).catch(function () { autoDelay = Math.min(120000, autoDelay * 2); }).then(scheduleAutoRefresh);
+  }
+  function wakeAutoRefresh() {
+    autoDelay = 30000;
+    autoRefresh();
+  }
+  window.addEventListener('online', wakeAutoRefresh);
+  window.addEventListener('focus', wakeAutoRefresh);
+  document.addEventListener('visibilitychange', wakeAutoRefresh);
+  document.addEventListener('kiwi-paired', wakeAutoRefresh);
+  document.addEventListener('kiwi:caisse-service-ready', wakeAutoRefresh);
+  document.addEventListener('kiwi:request-wake', wakeAutoRefresh);
+  scheduleAutoRefresh();
 })(); } catch (e) { setTimeout(function () { throw e; }); }
 /* Kiwi · shared attendance-code generator for every specialist caisse. */
 (function () {

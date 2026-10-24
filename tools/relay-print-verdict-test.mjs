@@ -121,7 +121,7 @@ const ticket = (station) => ({
 
 /* ── 3 · L'incertain. Ni réimprimer d'office, ni abandonner. ────────────── */
 {
-  const { api, relayed, verdict } = boot();
+  const { ctx, api, relayed, verdict } = boot();
   api.enqueue([ticket('cuisson')], { remote: false });
   await wait();
   verdict({ ok: false, uncertain: true, id: relayed[0].id, reason: 'output-unknown-ack-timeout' });
@@ -132,11 +132,17 @@ const ticket = (station) => ({
   ok('il ne se réimprime PAS tout seul · un plat doublé est aussi une faute',
     relayed.length === 1);
 
+  for (const event of ['online','kiwi:printer-config','kiwi:station-printers-config']) {
+    ctx.dispatchEvent(new ctx.CustomEvent(event));
+    await wait();
+    ok(event+' keeps uncertain paper awaiting a human', api.status().uncertain===1 && relayed.length===1);
+  }
   /* La décision humaine · le bouton qui existait déjà. */
   api.retryNow();
   await wait();
   ok('le comptoir peut trancher et le renvoyer', relayed.length === 2);
   ok('et l’incertitude est levée', api.status().uncertain === 0);
+  ok('la décision humaine de réimprimer est tracée une seule fois', JSON.parse(api.exportDiagnostics()).transitions.filter(r=>r.state==='staff-reprint-confirmed').length===1);
 }
 
 /* ── 4 · Le silence. Le pont cesse de sonder à douze secondes alors que le

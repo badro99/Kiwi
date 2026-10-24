@@ -1,11 +1,10 @@
 // /api/admin/pins — staff PIN management per merchant. Operator-gated.
 //
-//   GET    ?merchant=slug            → { pins: [{id,pin,name,role}] }
+//   GET    ?merchant=slug            → { pins: [{id,name,role}] }
 //   POST   {merchant,pin,name,role}  → add (4-digit, unique per merchant)
 //   DELETE ?id=pin-…  (or {id})      → remove one
 //
-// PINs are role selectors the caisse/serveur pad resolves — not secrets. A
-// merchant with no rows here ⇒ the app keeps its hardcoded defaults.
+// Staff codes are credentials. Operators manage replacements without reading codes.
 
 import { isOperator, isSeniorOperator, json, operatorActor } from '../../auth/_lib.js';
 
@@ -34,7 +33,7 @@ export async function onRequestGet(context) {
   const merchant = (url.searchParams.get('merchant') || '').trim();
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   const rows = await context.env.DB.prepare(
-    `SELECT id, pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
+    `SELECT id, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
   ).bind(merchant).all();
   return json({ pins: rows.results || [] });
 }
@@ -66,7 +65,7 @@ export async function onRequestPost(context) {
         .bind(merchant, name, actor.label, actor.id, JSON.stringify({ id, role }), ts),
     ]);
   } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
-  return json({ ok: true, pin: { id, pin, name, role } });
+  return json({ ok: true, pin: { id, name, role } });
 }
 
 export async function onRequestDelete(context) {

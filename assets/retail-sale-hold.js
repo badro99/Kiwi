@@ -87,6 +87,13 @@
   'use strict';
   function create(ctx) {
     async function confirm() {
+      const liveStorage = window.KiwiLive;
+      if (!ctx.isDemo && liveStorage && liveStorage.moneyStorageReady && !(await liveStorage.moneyStorageReady())) {
+        const message = 'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.';
+        const lang = window.KiwiCaisseLang;
+        if (window.KiwiCaisseToast) window.KiwiCaisseToast(lang && lang.t ? lang.t(message) : message, 10000, 'warn');
+        return false;
+      }
       const t = ctx.ticket, c = ctx.client, reward = t && t.reward;
       const clients = window.KiwiClients, live = window.KiwiLive;
       if (ctx.isDemo || !reward || !c || reward.clientId !== c.id || !clients) return true;

@@ -868,7 +868,7 @@
     "La chambre apparaît occupée dans le plan.": { en: "The room now shows as occupied on the plan.", ar: "تظهر الغرفة مشغولة في المخطط." },
     "Départ non enregistré": { en: "Check-out not saved", ar: "لم تُسجَّل المغادرة" },
     "Départ enregistré": { en: "Check-out saved", ar: "سُجّلت المغادرة" },
-    "La chambre passe à nettoyer dans le plan et la file ménage.": { en: "The room moves to “to clean” on the plan and in the housekeeping queue.", ar: "تنتقل الغرفة إلى «للتنظيف» في المخطط وفي قائمة التنظيف." },
+    "La chambre passe à nettoyer. Les nuits réservées restent dues, même en cas de départ anticipé. Aucun frais d’annulation supplémentaire.": { en: "The room moves to cleaning. Booked nights remain due, including early departures. No additional cancellation fee.", ar: "تنتقل الغرفة للتنظيف. تبقى الليالي المحجوزة مستحقة حتى عند المغادرة المبكرة. لا رسوم إلغاء إضافية." },
     "Arrivée non annulée": { en: "Check-in not reversed", ar: "لم يُلغَ الوصول" },
     "Arrivée annulée": { en: "Check-in reversed", ar: "أُلغي الوصول" },
     "Le séjour repart de « confirmé » et la chambre est rendue. Le geste est tracé au journal.": { en: "The stay goes back to “confirmed” and the room is released. The action is logged.", ar: "تعود الإقامة إلى «مؤكدة» وتُحرَّر الغرفة. يُسجَّل الإجراء في السجل." },

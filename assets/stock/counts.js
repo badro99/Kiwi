@@ -4,6 +4,8 @@ window.KiwiStockInternal.install('counts', (S) => {
   const { allCategories, closeTopModal, countStock, ct, ctMad, ctNum, ctReviewNote, ctRole, ctStore, ctUnit, ctWhen, ctWho, currentStockFor, esc, fmtMad, fmtNum, fmtUnit, getInv, lang, moveStock, render, rerenderTabBody, stCountDate, stCountHistKey, stSaveOverlay, stShowReal, stockLocationId, svg, t, theoreticalUsageFor, topBackdrop, wireDismiss } = S;
 
   async function fetchServerCounts() {
+    // Pace attempts too: a paused/offline read must not render and retry forever.
+    S.stCountsLastFetched = Date.now();
     try {
       const resp = await fetch('/api/inventory/counts');
       const data = await resp.json();

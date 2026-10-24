@@ -34,7 +34,7 @@
       tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '·', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
       ago: function (d) { return d == null ? '·' : d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
       detail: 'Fiche client', call: 'Appeler', whatsapp: 'WhatsApp', mail: 'E-mail', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis',
-      history: 'Historique des achats', noHistory: 'Aucun détail d’achat enregistré.', noHistorySub: 'Les prochains tickets attachés à ce client apparaîtront ici.', ticket: 'Ticket', unknownDate: 'Date inconnue', unknownPayment: 'Mode non renseigné', purchase: 'Achat enregistré',
+      audit: 'Télécharger le journal complet', auditError: 'Journal indisponible. Réessayez.', history: 'Historique des achats', noHistory: 'Aucun détail d’achat enregistré.', noHistorySub: 'Les prochains tickets attachés à ce client apparaîtront ici.', ticket: 'Ticket', unknownDate: 'Date inconnue', unknownPayment: 'Mode non renseigné', purchase: 'Achat enregistré',
       newShort: 'Nouveau client', loyalty: 'Fidélité', emptyTitle: 'Votre carnet est encore vide', emptyText: 'Ajoutez une fiche ici, ou enregistrez un client sur la caisse : il apparaîtra automatiquement.', noMatch: 'Aucun client ne correspond', noMatchText: 'Essayez un autre nom, numéro ou segment.', clear: 'Tout afficher', noneYet: 'Aucun pour l’instant', ofBook: 'du carnet', shared: 'Partagé avec la caisse', currency: 'MAD',
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
@@ -46,7 +46,7 @@
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
       detail: 'Customer', call: 'Call', whatsapp: 'WhatsApp', mail: 'Email', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since',
-      history: 'Purchase history', noHistory: 'No purchase details recorded.', noHistorySub: 'Future tickets attached to this customer will appear here.', ticket: 'Ticket', unknownDate: 'Unknown date', unknownPayment: 'Payment method unavailable', purchase: 'Recorded purchase',
+      audit: 'Download complete audit history', auditError: 'History unavailable. Please retry.', history: 'Purchase history', noHistory: 'No purchase details recorded.', noHistorySub: 'Future tickets attached to this customer will appear here.', ticket: 'Ticket', unknownDate: 'Unknown date', unknownPayment: 'Payment method unavailable', purchase: 'Recorded purchase',
       newShort: 'New customer', loyalty: 'Loyalty', emptyTitle: 'Your book is still empty', emptyText: 'Add a record here, or save a customer on the till: it shows up here automatically.', noMatch: 'No customer matches', noMatchText: 'Try another name, number or segment.', clear: 'Show all', noneYet: 'None yet', ofBook: 'of the book', shared: 'Shared with the till', currency: 'MAD',
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
@@ -58,7 +58,7 @@
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
       detail: 'بطاقة العميل', call: 'اتصال', whatsapp: 'واتساب', mail: 'بريد', birthday: 'الميلاد', gender: 'الجنس', address: 'العنوان', notes: 'ملاحظات', consent: 'الموافقة', consentWa: 'واتساب / SMS', consentEmail: 'بريد', firstSeen: 'عميل منذ',
-      history: 'سجل المشتريات', noHistory: 'لا توجد تفاصيل مشتريات مسجلة.', noHistorySub: 'ستظهر هنا التذاكر القادمة المرتبطة بهذا العميل.', ticket: 'التذكرة', unknownDate: 'تاريخ غير معروف', unknownPayment: 'طريقة الدفع غير مسجلة', purchase: 'عملية شراء مسجلة',
+      audit: 'تنزيل السجل الكامل', auditError: 'السجل غير متاح. حاول مجدداً.', history: 'سجل المشتريات', noHistory: 'لا توجد تفاصيل مشتريات مسجلة.', noHistorySub: 'ستظهر هنا التذاكر القادمة المرتبطة بهذا العميل.', ticket: 'التذكرة', unknownDate: 'تاريخ غير معروف', unknownPayment: 'طريقة الدفع غير مسجلة', purchase: 'عملية شراء مسجلة',
       newShort: 'عميل جديد', loyalty: 'الوفاء', emptyTitle: 'دفترك ما زال فارغاً', emptyText: 'أضف بطاقة هنا، أو سجّل عميلاً على الصندوق وسيظهر هنا تلقائياً.', noMatch: 'لا يوجد عميل مطابق', noMatchText: 'جرّب اسماً أو رقماً أو فئة أخرى.', clear: 'عرض الكل', noneYet: 'لا أحد بعد', ofBook: 'من الدفتر', shared: 'مشترك مع الصندوق', currency: 'درهم',
       form: { title: 'عميل جديد', sub: 'ينضم الملف إلى الدفتر المشترك، بالصندوق أو بدونه.', save: 'إضافة', cancel: 'إلغاء',
         needNameOrPhone: 'أدخل الاسم أو رقم الهاتف على الأقل.', badPhone: 'رقم غير صالح · للخارج أضف + ورمز البلد.',
@@ -546,6 +546,24 @@
     });
   }
 
+  async function downloadAudit(c, T) {
+    try {
+      var book = window.KiwiClients && KiwiClients.bookId(), events = [], next = null;
+      do {
+        var url = '/api/clients?merchant=' + encodeURIComponent(book) + '&auditClient=' + encodeURIComponent(c.id);
+        if (next) url += '&auditBefore=' + encodeURIComponent(next);
+        var response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+        if (!response.ok) throw new Error('audit-unavailable');
+        var page = await response.json();
+        events = events.concat(page.events); next = page.next;
+      } while (next);
+      var blob = new Blob([JSON.stringify({ clientId: c.id, events: events }, null, 2)], { type: 'application/json' });
+      var href = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = href; a.download = 'client-audit-' + c.id + '.json'; a.click();
+      setTimeout(function () { URL.revokeObjectURL(href); }, 1500);
+    } catch (_) { window.Kiwi.toast?.(T.auditError, { type: 'error' }); }
+  }
+
   function openDetail(c, T) {
     if (!c || !window.Kiwi.modal) return;
     function row(k, v) { return v ? '<div class="cd-drow"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>' : ''; }
@@ -587,6 +605,7 @@
     var intl = /^00/.test(digits) ? digits.slice(2) : /^0\d{9}$/.test(digits) ? '212' + digits.slice(1) : digits;
     var link = function (href, label, cls) { return '<a class="cd-act' + (cls ? ' ' + cls : '') + '" href="' + esc(href) + '"' + (/^https:/.test(href) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(label) + '</a>'; };
     var actions = [
+      isRealTenant() ? '<button type="button" class="cd-act" data-client-audit>' + esc(T.audit) + '</button>' : '',
       isRealTenant() && window.KiwiClients ? '<button type="button" class="cd-act" data-client-merge>' + esc(T.merge) + '</button>' : '',
       digits ? link('tel:' + (String(c.phone).trim().charAt(0) === '+' ? '+' : '') + digits, T.call || 'Call') : '',
       intl && c.consent ? link('https://wa.me/' + intl, T.whatsapp || 'WhatsApp') : '',
@@ -622,6 +641,6 @@
       var card = m.el.querySelector('.kiwi-modal');
       if (card && !card.querySelector('.cd-grabber')) { var grab = document.createElement('div'); grab.className = 'cd-grabber'; grab.setAttribute('aria-hidden', 'true'); card.insertBefore(grab, card.firstChild); }
     }
-    m.el.addEventListener('click', function (e) { if (e.target.closest('[data-client-merge]')) { m.close(); openMerge(c, T); return; } if (e.target.closest('[data-close]')) m.close(); });
+    m.el.addEventListener('click', function (e) { if (e.target.closest('[data-client-audit]')) { downloadAudit(c, T); return; } if (e.target.closest('[data-client-merge]')) { m.close(); openMerge(c, T); return; } if (e.target.closest('[data-close]')) m.close(); });
   }
 })();
