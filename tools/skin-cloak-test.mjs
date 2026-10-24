@@ -56,9 +56,15 @@ check(/hasAttribute\('data-vexel-mode'\)\) return localStorage\.getItem\('kiwiDa
 
 const shell = read('assets/caisse-shell.css');
 const own = shell.slice(shell.indexOf('.clockin-screen {'));
-check(/html\[data-skin-2027="till"\]:has\(#clockin-screen\.is-visible:not\(\.is-leaving\)\) body \{ background-color: #04120D; \}/.test(shell),
+/* Since 2026-10-24 the 2027 till opens on the kit's paper (owner: light,
+   dark, light read as a flash), so the page under the clock-in takes the
+   kit's ground, and the 2027 clock-in screen paints that same ground. The
+   shipped till keeps its night-green clock-in. */
+check(/html\[data-skin-2027="till"\]:has\(#clockin-screen\.is-visible:not\(\.is-leaving\)\) body \{ background-color: var\(--k-bg\); \}/.test(shell),
   'the 2027 till paints the clock-in ground under the clock-in screen');
+check(/html\[data-skin-2027="till"\] \.clockin-screen \{\s*background-color: var\(--k-bg\);/.test(shell),
+  'which is the 2027 clock-in screen\'s own ground');
 check(/^\s*background-color: #04120D;/m.test(own.slice(0, own.indexOf('}'))),
-  'which is the clock-in screen\'s own ground');
+  'the shipped clock-in keeps its own night-green ground');
 
 console.log(`✓ skin-cloak-test · ${checks} checks`);
