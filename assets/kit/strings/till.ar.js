@@ -176,6 +176,7 @@
   "takeaway.untrack": "أزِل من المتابعة",
   "takeaway.reject": "ارفض",
   "till.nav.takeaway_a11y": "للأخذ، {n} للقبول",
+  "till.nav.more_a11y": "المزيد، {status}",
   "online.section": "الطلبات الإلكترونية",
   "online.to_accept": "للقبول · {n}",
   "online.in_kitchen": "في المطبخ · {n}",

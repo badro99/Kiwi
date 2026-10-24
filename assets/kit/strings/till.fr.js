@@ -176,6 +176,7 @@
   "takeaway.untrack": "Retirer du suivi",
   "takeaway.reject": "Refuser",
   "till.nav.takeaway_a11y": "À emporter, {n} à accepter",
+  "till.nav.more_a11y": "Plus, {status}",
   "online.section": "Commandes en ligne",
   "online.to_accept": "À accepter · {n}",
   "online.in_kitchen": "En cuisine · {n}",

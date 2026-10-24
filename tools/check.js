@@ -2656,7 +2656,15 @@ section('Kiwi 2027 · une seule app de commande client');
  *                                       clôture est dans cash-count-browser-test
  *   till-autre-frame-test               le métier « autre » sur le cadre partagé (§18.3) :
  *                                       rail, grille, addition simple, encaissement
- *                                       sans pourboire par KiwiPosSale.record */
+ *                                       sans pourboire par KiwiPosSale.record
+ *   till-phone-tabs-browser-test        la caisse sur téléphone (§10.20, §13.2) : à 390,
+ *                                       la capsule d'onglets à la place du rail, chaque
+ *                                       onglet mène à sa page par de vrais touchers, la
+ *                                       barre de l'addition 8 au-dessus, l'encaissement
+ *                                       dans la feuille, icônes seules quand les libellés
+ *                                       ne tiennent pas (et la bulle), le point de
+ *                                       synchronisation sur Plus, l'arabe en miroir ; à
+ *                                       1180 rien ne change */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2673,6 +2681,7 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['online-inbox-test.mjs', 'online-inbox-test'],
     ['opening-float-test.mjs', 'opening-float-test'],
     ['till-autre-frame-test.mjs', 'till-autre-frame-test'],
+    ['till-phone-tabs-browser-test.mjs', 'till-phone-tabs-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

@@ -273,6 +273,53 @@ html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) .cat-pill .coun
   background: none; color: var(--k-ink-3); opacity: 1; padding: 0;
   font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); font-variant-numeric: tabular-nums;
 }
+/* The phone (below 768, §13.3, §10.20): the tab capsule takes the rail's
+   place, floating at the bottom with the grid's side margin; the bill bar
+   (the shipped #rp-peek, the sheet's top) rests 8 above it, and opening the
+   bill brings the sheet over the capsule. html[data-k-tabs] is set by
+   till-frame.js only while the capsule is the navigation. */
+#kit-tabbar { display: none; }
+html[data-k-tabs] {
+  --k-tab-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  --k-tab-zone: calc(62px + 8px + var(--k-tab-bottom));
+  --k-peek-h: 64px;
+  --k-toast-bottom: calc(62px + 8px + 64px + 8px + 16px);
+}
+html[data-k-tabs] #kit-rail { display: none; }
+/* A trade's own screen (pos-dispatch, body.is-pos) brings its own navigation. */
+html[data-k-tabs] body.is-unlocked:not(.is-pos) #kit-tabbar {
+  display: block;
+  position: fixed;
+  inset-inline: var(--k-grid-margin, 16px);
+  bottom: var(--k-tab-bottom);
+  z-index: 101;
+}
+html[data-k-tabs] #kit-tabbar > k-tabbar { display: block; }
+/* Hidden in full-screen flows (§10.20): the compact payment's layer. */
+html[data-k-tabs][data-k-pay] #kit-tabbar { display: none; }
+/* The phone form starts below 768, inside the band where the kitchen opens
+   beside the rail (744 × 601 and up, below): with no rail on screen it keeps
+   the full width, under the capsule. */
+html[data-k-tabs] body:not(.is-kitchen) .kds-screen { inset-inline-start: 0; }
+html[data-k-tabs] .rightpanel {
+  --rp-peek-h: var(--k-peek-h);
+  transform: translateY(calc(100% - var(--rp-peek-h) - var(--k-tab-zone)));
+  transition: transform var(--k-dur-5) var(--k-glide);
+}
+/* Closed, the sheet's ground runs on under the capsule as its chrome; what it
+   holds below the bar is not drawn, so nothing peeks around the capsule. */
+html[data-k-tabs] body:not(.ticket-open) .rightpanel > :not(#rp-peek) { visibility: hidden; }
+html[data-k-tabs] body.ticket-open .rightpanel {
+  transform: translateY(0);
+  z-index: 102;
+}
+html[data-k-tabs] .rp-peek { min-height: var(--rp-peek-h); padding: 12px 20px; }
+html[data-k-tabs] .main { padding-bottom: calc(var(--k-peek-h) + var(--k-tab-zone) + 16px); }
+/* The kitchen keeps the phone's full screen, under the capsule (101 > 100). */
+html[data-k-tabs] .kds-body { padding-bottom: calc(18px + var(--k-tab-zone)); }
+@media (prefers-reduced-motion: reduce) {
+  html[data-k-tabs] .rightpanel { transition: none; }
+}
 /* Cuisine on the rail opens in the till's own place, beside the rail, like
    Salle, À emporter and Attente (owner, 2026-10-22): the kitchen used to cover
    the whole window, rail included. It sits under Plus's panel (949) and its

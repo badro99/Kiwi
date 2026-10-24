@@ -32,6 +32,14 @@
  *                               rail.select | rail.cashier | rail.sync
  *   KiwiTillFrame.openMore(sections, heading)   the More sheet; a row reaches
  *                               api.act as more.select with its id
+ *   api.tabbar (mount)          the phone's <k-tabbar> (§10.20, §13.3): below
+ *                               768 wide it takes the rail's place, painted
+ *                               from the same view.rail items, and its taps
+ *                               reach api.act as rail.select, so the host
+ *                               keeps every decision. html[data-k-tabs] is set
+ *                               while it shows; the sync state rides on More as
+ *                               a dot (view.rail.footer.sync, §10.26 item 3)
+ *   KiwiTillFrame.capsule()     true while the tab bar is the navigation
  *
  * The host keeps every decision: the cart, the table orders, the kitchen
  * send, the payment and its record. This file only draws what the host
@@ -45,17 +53,18 @@
   if (!K || !CE || !CE.get('k-menu-grid') || !CE.get('k-bill') || !CE.get('k-pay')) return;
   var doc = root.document;
 
-  var api = null, grid = null, bill = null, pay = null, rail = null, more = null, railValue = '';
-  var railSig = '';
+  var api = null, grid = null, bill = null, pay = null, rail = null, more = null, tabs = null, railValue = '';
+  var railSig = '', tabsSig = '';
   /* The panes that push over the bill (§18.3, §10.30, §10.31): one at a time. */
   var panes = {};
   var menuSig = '', billSig = '', qtys = {};
 
   function onAction(e) {
     var d = e.detail || {};
-    var m = /^k\.(menu-grid|bill|pay|split|discount|rail)\.(.+)$/.exec(d.action || '');
+    var m = /^k\.(menu-grid|bill|pay|split|discount|rail|tabbar)\.(.+)$/.exec(d.action || '');
     if (!m || !api || typeof api.act !== 'function') return;
-    var pre = (m[1] === 'menu-grid' || m[1] === 'bill') ? '' : m[1] + '.';
+    /* The tab bar is the rail on a phone: the same verbs, the same host path. */
+    var pre = (m[1] === 'menu-grid' || m[1] === 'bill') ? '' : m[1] === 'tabbar' ? 'rail.' : m[1] + '.';
     api.act(pre + m[2], d.id == null ? null : String(d.id), d.value || {});
   }
 
@@ -74,6 +83,13 @@
     /* The rail (§10.20, §18.3), when the host gives it a box. */
     if (api.rail && !rail && CE.get('k-rail')) { rail = doc.createElement('k-rail'); rail.addEventListener('kiwi:action', onAction); }
     if (rail) api.rail.appendChild(rail);
+    /* The phone's tab bar (§10.20, §13.3), when the host gives it a box. */
+    /* A trade that mounts the frame with its own boxes (pos-dispatch) and no
+       tab-bar box keeps its own navigation: the capsule is not its. */
+    if (api.tabbar && !tabs && CE.get('k-tabbar')) { tabs = doc.createElement('k-tabbar'); tabs.addEventListener('kiwi:action', onAction); }
+    tabsHost = !!(tabs && api.tabbar);
+    if (tabsHost) api.tabbar.appendChild(tabs);
+    if (tabs) watchCapsule();
     api.menu.appendChild(grid);
     api.bill.appendChild(bill);
     Object.keys(panes).forEach(function (k) { api.bill.appendChild(panes[k]); });
@@ -126,8 +142,49 @@
     qtys = next;
   }
 
+  /* Below 768 the navigation is the tab capsule (§13.3, layout.js
+     tillLayout): a matchMedia listener, no layout read. */
+  var capsuleMq = null, tabsHost = false, setCapsule = null;
+  function capsuleOn() { return !!(tabs && tabsHost && capsuleMq && capsuleMq.matches); }
+  function watchCapsule() {
+    if (setCapsule) { setCapsule(); return; }
+    if (!root.matchMedia) return;
+    var md = root.KiwiLayout && root.KiwiLayout.BREAKS ? root.KiwiLayout.BREAKS.md : 768;
+    capsuleMq = root.matchMedia('(max-width:' + (md - 0.02) + 'px)');
+    var set = setCapsule = function () {
+      if (capsuleOn()) doc.documentElement.setAttribute('data-k-tabs', ''); else doc.documentElement.removeAttribute('data-k-tabs');
+    };
+    set();
+    if (capsuleMq.addEventListener) capsuleMq.addEventListener('change', set); else if (capsuleMq.addListener) capsuleMq.addListener(set);
+  }
+
+  /* The tab bar carries the rail's items as they are (badges, accessible
+     names); the rail's footer has no room there, so the sync state becomes a
+     dot on More, its words in More's accessible name (§10.26 item 3). The
+     cashier lives in More on a phone. */
+  function paintTabs(r) {
+    var sync = (r.footer || {}).sync;
+    var items = (r.items || []).map(function (it) {
+      var o = Object.assign({}, it);
+      if (o.id === 'more' && sync) {
+        o.dot = sync.tone === 'danger' || sync.tone === 'warning' ? sync.tone : 'neutral';
+        if (sync.a11y) o.a11y = sync.a11y;
+      }
+      return o;
+    });
+    var sig = JSON.stringify([r.value, r.label, items]);
+    /* A tap moves the bar's own value before the host answers; More is not a
+       destination, so the lens goes back to the page the host says is open. */
+    if (sig === tabsSig) { if (tabs.getAttribute('value') !== (r.value || '')) tabs.setAttribute('value', r.value || ''); return; }
+    tabsSig = sig;
+    if (r.label) tabs.setAttribute('label', r.label);
+    tabs.items = items;
+    tabs.setAttribute('value', r.value || '');
+  }
+
   function paint(view) {
     if (!grid || !bill || !view) return;
+    if (view.rail && tabs) paintTabs(view.rail);
     if (view.rail && rail) {
       var rs = JSON.stringify(view.rail);
       if (rs !== railSig) {
@@ -136,7 +193,7 @@
         rail.items = view.rail.items.map(function (it) { return Object.assign({}, it); });
         rail.footer = Object.assign({}, view.rail.footer || {});
         rail.setAttribute('value', view.rail.value || '');
-      }
+      } else if (rail.getAttribute('value') !== (view.rail.value || '')) rail.setAttribute('value', view.rail.value || '');
       railValue = view.rail.value || '';
     }
     if (Array.isArray(view.sections)) paintMenu(view.sections);
@@ -175,7 +232,9 @@
   var layer = null, html = doc.documentElement;
   function place() {
     var L = root.KiwiLayout;
-    var f = (pay && !pay.hidden && L && L.paymentForm) ? L.paymentForm(root.innerHeight) : { form: 'regular' };
+    /* The phone (§13.2): the bill is a sheet, not a side pane, so the payment
+       stays in it, under its own header, and the sheet scrolls if it must. */
+    var f = (pay && !pay.hidden && !capsuleOn() && L && L.paymentForm) ? L.paymentForm(root.innerHeight) : { form: 'regular' };
     if (f.form === 'regular') {
       if (pay && pay.parentNode !== api.bill) api.bill.appendChild(pay);
       if (pay) pay.removeAttribute('layout');
@@ -231,8 +290,14 @@
       h.style.cssText = 'margin:16px 0 4px;font-weight:var(--k-fw-footnote-strong)';
       h.textContent = sec.title || '';
       var list = doc.createElement('k-list');
-      list.rows = sec.rows.map(function (r) { return { id: r.id, title: r.title, trailing: 'chevron' }; });
-      more.appendChild(h);
+      list.rows = sec.rows.map(function (r) {
+        var row = { id: r.id, title: r.title, trailing: 'chevron' };
+        if (r.icon) row.icon = r.icon;
+        if (r.subtitle) row.subtitle = r.subtitle;
+        return row;
+      });
+      /* A section without a title (the phone's sync row) draws no heading. */
+      if (sec.title) more.appendChild(h);
       more.appendChild(list);
     });
     more.setAttribute('open', '');
@@ -242,6 +307,8 @@
   root.KiwiTillFrame = {
     openMore: openMore,
     rail: function () { return rail; },
+    tabs: function () { return tabs; },
+    capsule: capsuleOn,
     mount: mount, paint: paint, openPay: openPay, closePay: closePay, openPane: openPane, closePane: closePane,
     paying: function () { return !!(pay && !pay.hidden); },
     /* any pane out over the bill: the menu and the bill take no gesture */

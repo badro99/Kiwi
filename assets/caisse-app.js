@@ -1969,7 +1969,13 @@
       railBox.id = 'kit-rail';
       const shell = $('.shell'), side = $('.sidebar');
       if (shell && side) shell.insertBefore(railBox, side);
-      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, rail: railBox, menuPane: $('.main'), act: tillKitAct });
+      /* Le téléphone (sous 768, §13.3) : la capsule d'onglets du kit en bas,
+         à la place du rail, peinte des mêmes éléments et routée par le même
+         rail.select ; la barre de l'addition (#rp-peek) passe au-dessus. */
+      const tabBox = document.createElement('div');
+      tabBox.id = 'kit-tabbar';
+      document.body.appendChild(tabBox);
+      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, rail: railBox, tabbar: tabBox, menuPane: $('.main'), act: tillKitAct });
       if (tillKit) {
         document.documentElement.setAttribute('data-k-till', '');
         tillKitMoreScrim();
@@ -2382,7 +2388,9 @@
       const who = (typeof currentCashier !== 'undefined' && currentCashier && currentCashier.name) || '';
       const footer = who ? { cashier: who } : {};
       const sync = tillKitLocked() ? null : tillKitSyncFooter(tillKitSyncRows());
-      if (sync) footer.sync = sync;
+      /* Sur le téléphone, l'état de la synchronisation est un point sur Plus
+         (§10.26, point 3) ; ses mots vont dans le nom accessible de Plus. */
+      if (sync) { sync.a11y = kkt('till.nav.more_a11y', { status: sync.label }); footer.sync = sync; }
       /* La tête du panneau porte exactement les mêmes éléments que le rail. */
       const nav = tillKitMoreNavEl();
       if (nav) { nav.sections = [{ items: items.map((it) => Object.assign({}, it)) }]; nav.setAttribute('value', value || ''); }
@@ -2455,17 +2463,30 @@
           id, title: id === 'fullscreen' && document.fullscreenElement ? kkt('till.more.exit_fullscreen') : kkt(key),
         })),
       }));
+      /* Le téléphone n'a pas le pied du rail : la synchronisation y est une
+         ligne en tête de Plus (§10.26, point 3), qui ouvre le même détail. */
+      const sync = window.KiwiTillFrame.capsule && window.KiwiTillFrame.capsule() && !tillKitLocked()
+        ? tillKitSyncRows().filter((r) => r.n <= 7 || r.n === 9) : [];
+      if (sync.length) {
+        sections.unshift({ title: '', rows: [{ id: 'sync', icon: sync[0].icon, title: sync[0].text,
+          subtitle: sync.slice(1).map((r) => r.text).join(' · ') }] });
+      }
       window.KiwiTillFrame.openMore(sections, kkt('till.nav.more'));
     }
     function tillKitMore(id) {
       if (id === 'reload') { location.reload(); return; }
+      if (id === 'sync') {
+        const tabs = window.KiwiTillFrame.tabs && window.KiwiTillFrame.tabs();
+        tillKitOpenSync(tabs && tabs.shadowRoot ? tabs.shadowRoot.querySelector('[data-id="more"]') : null);
+        return;
+      }
       for (const [, rows] of TILL_KIT_MORE) {
         const row = rows.find((r) => r[0] === id);
         if (row) { const el = tillKitLive(row[2]); if (el) el.click(); return; }
       }
     }
     function tillKitRailSelect(id) {
-      if (id === 'more') { tillKitToggleMore(); return; }
+      if (id === 'more') { tillKitToggleMore(); window.KiwiTillFrame.paint({ rail: tillKitRail() }); return; }
       tillKitSetMore(false);
       /* Another destination leaves the payment, as its back button does: the
          payment layer floated over the kitchen and the clients book while the

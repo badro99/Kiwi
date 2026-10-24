@@ -135,7 +135,9 @@ ok('the client carnet takes the whole screen on a phone', () => {
   assert.match(cb, /PHONE_Q = '\(max-width: 860px\), \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)'/);
   // The 2027 till keeps its rail on an iPad, so the carnet opens beside it there;
   // a phone (no rail at that width) still gets the whole screen.
-  assert.match(cb, /var b = isPhone\(\) && !beside \? \{ left: 0, top: 0, right: 0, bottom: 0 \} : panelInset\(\)/);
+  assert.match(cb, /var b = isPhone\(\) && !beside \? \{ left: 0, top: 0, right: 0, bottom: phoneTabInset\(\) \} : panelInset\(\)/);
+  /* bottom is 0 unless the 2027 till's tab capsule is on screen (till-phone-tabs-browser-test) */
+  assert.match(cb, /if \(!document\.documentElement\.hasAttribute\('data-k-tabs'\)\) return 0;/);
   assert.match(cb, /var beside = railed\(\)/);
   assert.match(cb, /function railed\(\)[\s\S]{0,400}\(min-width: 1025px\), \(min-width: 744px\) and \(min-height: 601px\)/);
 });

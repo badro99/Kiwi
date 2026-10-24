@@ -195,6 +195,8 @@
 
   function navBind(el) {
     K.tap(el.shadowRoot, '.it', function (a, e, gid) {
+      /* The press that showed the label HUD is not also a tap. */
+      if (el.__hudShown) { el.__hudShown = false; e.preventDefault(); return; }
       var id = a.getAttribute('data-id');
       if (id === el.value) { if (a.tagName === 'A') e.preventDefault(); return; }
       K.haptic('Choose', gid, { trigger: 'tap' });
@@ -224,12 +226,67 @@
   function navItem(it, cur, inner) {
     var tag = it.href ? 'a' : 'button';
     return '<' + tag + (it.href ? ' href="' + esc(it.href) + '"' : ' type="button"') + ' class="it k-in" data-id="' + esc(it.id) + '"' +
-      (cur ? ' aria-current="page"' : '') + (it.badge ? ' aria-label="' + esc(navLabelFor(it)) + '"' : '') + '>' + inner + '</' + tag + '>';
+      (cur ? ' aria-current="page"' : '') + (it.badge || it.a11y ? ' aria-label="' + esc(navLabelFor(it)) + '"' : '') + '>' + inner + '</' + tag + '>';
   }
 
-  /* ── <k-tabbar value links> + .items (§10.20) ───────────────────────────── */
+  /* ── <k-tabbar value links> + .items (§10.20) ─────────────────────────────
+     An item may carry a dot instead of a count (it.dot = danger | warning |
+     neutral): the phone till's sync state on More (§10.26 item 3). Its words
+     go in it.a11y, which becomes the item's accessible name. */
+  /* Labels when they fit, else icon only (§6.4, §10.20): every item needs
+     max(44, label + 16), measured with every label at the selected weight so
+     the layout never changes with the selection; when the sum is wider than
+     the track, every item is icon only at once, its label kept for screen
+     readers, and a 500 ms still press (§14.7) shows the label HUD. */
+  var HUD_MS = 500;
   var KTabbar = K.make({
-    setup: function () { navBind(this); },
+    setup: function () {
+      var self = this, timer = 0, at = null;
+      navBind(this);
+      function stop() { clearTimeout(timer); timer = 0; at = null; var h = self.$('.hud'); if (h) h.removeAttribute('data-shown'); }
+      this.shadowRoot.addEventListener('pointerdown', function (e) {
+        stop();
+        var a = self.flag('data-icons') && e.target.closest ? e.target.closest('.it') : null;
+        if (!a) return;
+        at = { x: e.clientX, y: e.clientY };
+        timer = setTimeout(function () { timer = 0; self.hud(a); }, HUD_MS);
+      });
+      this.shadowRoot.addEventListener('pointermove', function (e) {
+        if (at && timer && (Math.abs(e.clientX - at.x) > 10 || Math.abs(e.clientY - at.y) > 10)) stop();
+      });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { self.shadowRoot.addEventListener(n, stop); });
+      /* A long press on touch opens no context menu over the HUD. */
+      this.shadowRoot.addEventListener('contextmenu', function (e) { if (self.flag('data-icons')) e.preventDefault(); });
+    },
+    connected: function () {
+      var self = this;
+      if (!this.__ro && root.ResizeObserver) { this.__ro = new root.ResizeObserver(function () { self.fit(); }); this.__ro.observe(this); }
+      if (root.document.fonts && root.document.fonts.ready) root.document.fonts.ready.then(function () { self.fit(); });
+    },
+    disconnected: function () { if (this.__ro) { this.__ro.disconnect(); this.__ro = null; } },
+    hud: function (a) {
+      var h = this.$('.hud'), cap = this.$('.cap');
+      if (!h || !cap) return;
+      var lb = a.querySelector('.lb'), ic = a.getAttribute('data-icon') || '';
+      h.innerHTML = icon(ic, 40) + '<span class="k-heading">' + esc(lb ? lb.textContent : '') + '</span>';
+      var r = a.getBoundingClientRect(), c = cap.getBoundingClientRect();
+      h.style.setProperty('--x', Math.round(r.left + r.width / 2 - c.left) + 'px');
+      h.setAttribute('data-shown', '');
+      this.__hudShown = true;
+    },
+    fit: function () {
+      var trk = this.$('.trk');
+      if (!trk || !trk.clientWidth) return;
+      this.removeAttribute('data-icons');
+      this.setAttribute('data-k-measure', '');
+      var need = 0;
+      this.$$('.it .lb').forEach(function (lb) { need += Math.max(44, Math.ceil(lb.getBoundingClientRect().width) + 16); });
+      this.removeAttribute('data-k-measure');
+      if (need > trk.clientWidth) this.setAttribute('data-icons', '');
+      var L = lensApi(), list = this.$$('.it'), idx = -1;
+      list.forEach(function (x, i) { if (x.getAttribute('aria-current') === 'page') idx = i; });
+      if (L) L.move(trk, idx, { phase: 'instant' });
+    },
     get value() { return this.str('value'); },
     attr: function () { this.render(); },
     render: function () {
@@ -238,9 +295,12 @@
         '<span class="lens" aria-hidden="true"></span>' +
         (this.items || []).map(function (it) {
           var cur = it.id === v;
-          return navItem(it, cur, '<span class="pill">' + icon(it.icon, 24, 'ic') + badgeHtml(it.badge, it.badgeTone) + '</span><span class="k-foot lb">' + esc(it.label) + '</span>');
-        }).join('') + '</div></nav>';
+          var dot = it.dot && !it.badge ? '<span class="dt dt--' + esc(it.dot) + '" data-dot aria-hidden="true"></span>' : '';
+          return navItem(it, cur, '<span class="pill">' + icon(it.icon, 24, 'ic') + badgeHtml(it.badge, it.badgeTone) + dot + '</span><span class="k-foot lb">' + esc(it.label) + '</span>')
+            .replace(' class="it k-in"', ' class="it k-in" data-icon="' + esc(it.icon) + '"');
+        }).join('') + '</div><div class="hud" aria-hidden="true"></div></nav>';
       navAttach(this, 'x', '.it');
+      this.fit();
     }
   });
   K.define('k-tabbar', KTabbar, {
@@ -255,7 +315,16 @@
       '.it[aria-current="page"]{color:var(--k-ink-1)}.it[aria-current="page"] .ic{color:var(--k-accent-ink)}' +
       '.it[aria-current="page"] .lb{font-weight:var(--k-fw-footnote-strong)}' +
       '.pill{position:relative;display:inline-flex}.bd{position:absolute;top:-6px;inset-inline-start:14px}' +
+      '.dt{position:absolute;top:-2px;inset-inline-start:18px;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px var(--k-surface-1);background-color:var(--k-ink-2)}' +
+      '.dt--danger{background-color:var(--k-danger-solid)}.dt--warning{background-color:var(--k-warning-solid)}' +
       '.lb{white-space:nowrap}' +
+      ':host([data-k-measure]) .lb{font-weight:var(--k-fw-footnote-strong)}' +
+      ':host([data-icons]) .lb{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}' +
+      ':host([data-icons]) .it{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}' +
+      '.cap{position:relative}' +
+      '.hud{position:absolute;bottom:calc(100% + 8px);left:var(--x,50%);transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:4px;' +
+      'min-width:96px;padding:12px 16px;border-radius:var(--k-r-3);background-color:var(--k-inverse);color:var(--k-on-inverse);box-shadow:var(--k-shadow-2);pointer-events:none;white-space:nowrap}' +
+      '.hud[data-shown]{display:flex}' +
       '.it:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}'
   });
 

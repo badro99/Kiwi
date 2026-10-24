@@ -488,6 +488,17 @@
    * control of the register with no way back (ticket #0137). */
   var PHONE_Q = '(max-width: 860px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
   function isPhone() { try { return !!(window.matchMedia && window.matchMedia(PHONE_Q).matches); } catch (_) { return false; } }
+  /* La caisse 2027 sur téléphone a une capsule d'onglets en bas (#kit-tabbar,
+     html[data-k-tabs]) : le carnet s'arrête au-dessus, sinon on ne pourrait
+     plus le quitter par un autre onglet. */
+  function phoneTabInset() {
+    try {
+      if (!document.documentElement.hasAttribute('data-k-tabs')) return 0;
+      var bar = document.getElementById('kit-tabbar');
+      if (!bar || getComputedStyle(bar).display === 'none') return 0;  // fixe : offsetParent est toujours null
+      return Math.max(0, Math.round(window.innerHeight - bar.getBoundingClientRect().top + 8));
+    } catch (_) { return 0; }
+  }
   /* La caisse 2027 garde son rail à l'écran à toutes les largeurs : le carnet
      s'ouvre alors à côté, comme Cuisine, même sur un iPad en portrait, qui
      passait sous la règle téléphone, couvrait le rail et prenait une croix. */
@@ -503,7 +514,7 @@
     if (!root) return;
     var beside = railed();
     if (beside) root.setAttribute('data-rail', ''); else root.removeAttribute('data-rail');
-    var b = isPhone() && !beside ? { left: 0, top: 0, right: 0, bottom: 0 } : panelInset();
+    var b = isPhone() && !beside ? { left: 0, top: 0, right: 0, bottom: phoneTabInset() } : panelInset();
     root.style.left = b.left + 'px'; root.style.top = b.top + 'px';
     root.style.right = b.right + 'px'; root.style.bottom = b.bottom + 'px';
   }
