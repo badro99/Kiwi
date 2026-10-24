@@ -742,7 +742,7 @@
           const tod = (typeof timeOfDay === 'function') ? timeOfDay() : 'ce soir';
           const paused = Object.entries(servers).filter(([id, s]) => id !== currentUser && s.status === 'on-pause');
           let sub = `${employeeTableCount(myCount)} ${tod} · ${employeeShiftWish()}`;
-          if (paused.length > 0) sub = `${employeeTableCount(myCount)} ${tod} · \u2068${paused[0][1].name.split(' ')[0]}\u2069 ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}`;
+          if (paused.length > 0) sub = `${employeeTableCount(myCount)} ${tod} · ${paused[0][1].name.split(' ')[0]} ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}`;
           subEl.textContent = sub;
         }
       }
@@ -800,7 +800,7 @@
       const tod = timeOfDay();
       let line2 = `${employeeTableCount(myCount)} ${tod} · ${employeeShiftWish()}`;
       if (paused.length > 0) {
-        line2 = `${employeeTableCount(myCount)} ${tod} · \u2068${paused[0][1].name.split(' ')[0]}\u2069 ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}`;
+        line2 = `${employeeTableCount(myCount)} ${tod} · ${paused[0][1].name.split(' ')[0]} ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}`;
       }
       $('#wb-line2').textContent = line2;
     }
@@ -1089,7 +1089,7 @@
             <div class="colleague-alert" data-go-all="${id}">
               <div class="colleague-alert-icon"><i data-lucide="coffee"></i></div>
               <div class="colleague-alert-text">
-                <div class="colleague-alert-title"><bdi>${esc(s.name)}</bdi> ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}</div>
+                <div class="colleague-alert-title">${esc(s.name)} ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}</div>
                 <div class="colleague-alert-sub">${employeeLanguage === 'ar' ? `${employeeTableCount(n)} للتغطية · اضغط للعرض` : employeeLanguage === 'en' ? `${employeeTableCount(n)} to cover · tap to view` : `${employeeTableCount(n)} à couvrir · tapez pour voir`}</div>
               </div>
               <i data-lucide="chevron-right" class="colleague-alert-chev"></i>
@@ -2267,7 +2267,7 @@
       const itemLabel = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(item.name, employeeLanguage) : item.name;
       $('#opt-modal-body').innerHTML = `
         <h3 class="modal-title">${esc(itemLabel)}</h3>
-        <p class="modal-subtle"><span>${fmtMAD(item.price)}${extra ? ` · +${fmtMAD(extra)}` : ''}</span> · <span>${esc(employeeTranslation("personnalisez avant d'ajouter à la commande"))}</span></p>
+        <p class="modal-subtle">${item.price} MAD${extra ? ` · +${extra} MAD d'options` : ''} · personnalisez avant d'ajouter à la commande</p>
         ${groupsHTML}
         <div class="opt-foot">
           <button class="td-btn ghost" id="opt-cancel">${employeeLanguage === 'ar' ? 'إلغاء' : (employeeLanguage === 'en' ? 'Cancel' : 'Annuler')}</button>
@@ -2320,17 +2320,8 @@
         && (uIdx == null || !fmlChildMissing(slots, uSlots, uIdx));
     }
 
-    /* Les choix d'une formule se lisent dans la carte complète (svFormulaItems,
-       y compris les articles réservés aux formules). La vitrine n'en charge
-       pas : sans repli sur la carte affichée, chaque choix de la formule de
-       démonstration s'affichait « Option indisponible » et la formule ne
-       pouvait pas être ajoutée. */
-    function svFormulaPool() {
-      return (typeof svFormulaItems !== 'undefined' && svFormulaItems.length) ? svFormulaItems : menuItems;
-    }
-
     function fmlChildGroups(chosenId) {
-      const pool = svFormulaPool();
+      const pool = typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems;
       const it = pool.find(x => x.id === chosenId);
       const groups = typeof optionGroups !== 'undefined' ? optionGroups : {};
       const ids = it && Array.isArray(it.opts) && it.opts.length ? it.opts
@@ -2352,7 +2343,7 @@
     }
 
     function fmlChildOptsHTML(slot, sel, uIdx, showMissing) {
-      const pool = svFormulaPool();
+      const pool = typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems;
       return Array.from(sel || []).map(itemId => {
         const groups = fmlChildGroups(itemId);
         if (!groups.length) return '';
@@ -2400,7 +2391,7 @@
           const sel = new Set();
           if (s.choices && s.choices.length === 1) {
             const ch = s.choices[0];
-            const chItem = svFormulaPool().find(x => x.id === ch.itemId);
+            const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
             if (chItem && chItem.avail !== false) {
               sel.add(ch.itemId);
             }
@@ -2476,7 +2467,7 @@
 
         if (isCollapsed) {
           const ch = s.choices[0];
-          const chItem = svFormulaPool().find(x => x.id === ch.itemId);
+          const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
           const chName = chItem ? chItem.name : 'Option indisponible';
           const extraTxt = ch.extra ? `+${ch.extra} MAD` : 'inclus';
           return `
@@ -2493,7 +2484,7 @@
         }
 
         const chips = (s.choices || []).map(ch => {
-          const chItem = svFormulaPool().find(x => x.id === ch.itemId);
+          const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
           const chName = chItem ? chItem.name : 'Option indisponible';
           const avail = chItem ? (chItem.avail !== false) : false;
           const on = sel.has(ch.itemId);
@@ -2602,7 +2593,7 @@
           const sel = uSlots[s.id];
           if (!sel) return;
           sel.forEach(chosenId => {
-            const chItem = svFormulaPool().find(x => x.id === chosenId);
+            const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === chosenId);
             const chName = chItem ? chItem.name : chosenId;
             const chStation = (chItem && chItem.station) || '';
             const chosen = fmlChildSel(uIdx, s.id, chosenId);

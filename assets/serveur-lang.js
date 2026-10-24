@@ -321,9 +321,9 @@
       ,"autre":"other"
       ,"Option indisponible":"Option unavailable"
       ,"Oui":"Yes"
-      ,"personnalisez avant d'ajouter à la commande":"customise before adding to the order"
       ,"Diviser ·":"Split ·"
       ,"Combien de couverts ?":"How many guests?"
+      ,"Combien de couverts ?":"How many guests?"
       ,"Même chose pour tous":"Same for everyone"
       ,"Aucun client trouvé.":"No customer found."
       ,"Note cuisine, ex. bien chaud, sans oignon":"Kitchen note, e.g. extra hot, no onion"
@@ -640,9 +640,9 @@
       ,"autre":"آخر"
       ,"Option indisponible":"خيار غير متاح"
       ,"Oui":"نعم"
-      ,"personnalisez avant d'ajouter à la commande":"خصّص الصنف قبل إضافته إلى الطلب"
       ,"Diviser ·":"تقسيم ·"
       ,"Combien de couverts ?":"كم عدد الضيوف؟"
+      ,"Combien de couverts ?":"كم عدد الضيوف؟"
       ,"Même chose pour tous":"نفس الشيء للجميع"
       ,"Aucun client trouvé.":"لم يُعثر على زبون."
       ,"Note cuisine, ex. bien chaud, sans oignon":"ملاحظة للمطبخ، مثلاً ساخن جداً، بدون بصل"
@@ -715,6 +715,8 @@
     [/^(.+?) · 1 couvert$/, "$1 · 1 guest", "$1 · ضيف واحد"],
     [/^(.+?) · (\d+) couverts?$/, "$1 · $2 guests", "$1 · $2 ضيوف"],
     [/^En service · (\d+)h (\d{2})$/, 'On shift · $1h $2', 'في الوردية · $1:$2'],
+    [/^(\d+) MAD · \+(\d+) MAD d'options · personnalisez avant d'ajouter à la commande$/, "$1 MAD · +$2 MAD of options · customise before adding to the order", "$1 MAD · +$2 MAD خيارات · خصّص الصنف قبل إضافته إلى الطلب"],
+    [/^(\d+) MAD · personnalisez avant d'ajouter à la commande$/, "$1 MAD · customise before adding to the order", "$1 MAD · خصّص الصنف قبل إضافته إلى الطلب"],
     [/^1 choix$/, '1 choice', 'اختيار واحد'],
     [/^(\d+) choix$/, '$1 choices', '$1 اختيارات'],
     [/^Encaisser (\d[\d\s\u202f]*(?:,\d+)? MAD)$/, 'Take payment $1', 'تحصيل $1'],

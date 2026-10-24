@@ -2803,10 +2803,10 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
  *                                       choisie, le verrou rendu en changeant de table,
  *                                       miroir en arabe, la pile livrée sur téléphone
  *   team-polish-browser-test            l'app équipe, finitions 2027 : le pavé tient sur
- *                                       un 375 × 667, la formule démo a ses choix, 44 de
- *                                       haut pour chaque puce, la barre de commande hors
- *                                       du rail, la feuille centrée sur iPad, l'arabe
- *                                       (drapeau, compteur, total, nom latin)
+ *                                       un 375 × 667, 44 de haut pour chaque puce, la
+ *                                       barre de commande hors du rail, la feuille
+ *                                       centrée sur iPad, l'arabe (drapeau, compteur,
+ *                                       total, options, nom latin)
  *   dash-onboarding-browser-test        l'accueil après le compte (§18.8, étapes 2 à 5) :
  *                                       le type, les objectifs, le code deux fois sur le
  *                                       pavé, cet appareil ; finish() livré crée le

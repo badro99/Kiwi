@@ -32,7 +32,7 @@ var SHELL = [
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=4',
-  '/assets/serveur/service.js?v=2',
+  '/assets/serveur/service.js?v=1',
   '/assets/serveur-app.js?v=14',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,

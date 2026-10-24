@@ -1445,15 +1445,15 @@
   },
   "assets/serveur-lang.js": {
     "v": "3",
-    "sha": "56534b8db3ec5987"
+    "sha": "9eb70e29ef28655c"
   },
   "assets/serveur-shell.css": {
     "v": "4",
     "sha": "5bd3c3ce6743d563"
   },
   "assets/serveur/service.js": {
-    "v": "2",
-    "sha": "f342e085816ece7e"
+    "v": "1",
+    "sha": "cafd57448889a388"
   },
   "assets/service-requests.js": {
     "v": "2",

@@ -8,15 +8,14 @@
  *   · phone 375 × 667, the live sign-in's code step: the pad and Change
  *     e-mail fit on the screen with nothing scrolled, and the button of
  *     step 1 does not move when the address becomes valid;
- *   · the demo set menu offers its choices (they all read "Option
- *     indisponible" and the set menu could not be added);
  *   · the menu's chips, the split and cash chips and the split's Cancel are
  *     at least 44 tall; the cash field draws no spinner;
  *   · iPad landscape: the order bar floats clear of the 88 rail;
  *   · iPad portrait: a sheet is a centred card at most 560 wide;
  *   · Arabic: a menu card's Options flag does not cover its category, the
  *     count of a chip sits after its label with a gap, the table summary
- *     is in Arabic, and a Latin name keeps its full stop at its end;
+ *     and the options sheet are in Arabic, and a Latin name keeps its full
+ *     stop at its end;
  *   · no page error. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -106,11 +105,7 @@ try {
     await toMenu(page);
     await sleep(500);
     check(await minH(page, '.cat-pill') >= 44, 'the menu chips are 44 tall, like the tables chips');
-    await page.evaluate(() => document.querySelector('.menu-item[data-menu-id="m-fml-brunch"]').click());
-    await sleep(500);
-    const fml = await page.evaluate(() => ({ off: [...document.querySelectorAll('#formula-modal .fml-chip')].filter((c) => c.disabled).length, n: document.querySelectorAll('#formula-modal .fml-chip').length, txt: document.getElementById('formula-modal').textContent }));
-    check(fml.n > 0 && fml.off === 0 && !/Option indisponible/.test(fml.txt), `the demo set menu offers its ${fml.n} choices, none unavailable`);
-    await page.evaluate(() => { closeFormulaSheet(); returnToFloor(); openSplitModal('T2'); });
+    await page.evaluate(() => { returnToFloor(); openSplitModal('T2'); });
     await sleep(500);
     check(await minH(page, '#split-modal .split-chip') >= 44 && (await rect(page, '#split-cancel')).h >= 44, 'the split sheet: every chip and Cancel are at least 44 tall');
     await page.evaluate(() => { closeSplitModal(); openCashModal(); });
@@ -154,7 +149,13 @@ try {
     await sleep(400);
     const sum = await page.evaluate(() => document.querySelector('#td-body .td-summary').textContent);
     check(!/Sous-total|Service \(compris\)/.test(sum) && /المجموع/.test(sum), 'Arabic: the table summary is in Arabic');
-    await page.evaluate(() => { returnToFloor(); setTab('menu'); });
+    await page.evaluate(() => { document.querySelector('#td-footer [data-action="take-order"]').click(); });
+    await sleep(300);
+    await page.evaluate(() => document.querySelector('.menu-item[data-menu-id="m-007"]').click());
+    await sleep(400);
+    const sub = await page.evaluate(() => document.querySelector('#opt-modal .modal-subtle').textContent);
+    check(!/personnalisez/.test(sub), `Arabic: the options sheet says what to do in Arabic (${sub.trim()})`);
+    await page.evaluate(() => { closeOptionsSheet(); setTab('menu'); });
     await sleep(400);
     const lap = await page.evaluate(() => [...document.querySelectorAll('.menu-item')].filter((m) => m.querySelector('.menu-item-optflag')).map((m) => {
       const a = m.querySelector('.menu-item-optflag').getBoundingClientRect(), b = m.querySelector('.menu-item-cat'), r = document.createRange();
