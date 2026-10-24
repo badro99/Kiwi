@@ -688,8 +688,8 @@
     "sha": "73eccb8e3aa1e5ab"
   },
   "assets/kit/ordering.css": {
-    "v": "2",
-    "sha": "2a35b66fc3cbdae5"
+    "v": "4",
+    "sha": "8867653bc2962df1"
   },
   "assets/kit/overlays.js": {
     "v": "2",
@@ -1024,12 +1024,12 @@
     "sha": "97b2b65a84876794"
   },
   "assets/orderpro-page.css": {
-    "v": "2",
-    "sha": "d8a57db5f122fde6"
+    "v": "3",
+    "sha": "7d926d7892ddb13d"
   },
   "assets/orderpro-page.js": {
-    "v": "3",
-    "sha": "6ba15e458bb661ac"
+    "v": "4",
+    "sha": "1aa175ccba2979c6"
   },
   "assets/orderpro-panel.js": {
     "v": "5",

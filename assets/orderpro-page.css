@@ -1214,8 +1214,11 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex;
       align-items: baseline;
     }
+    /* The number stays one word at every width: "#OPD-42" at 96 broke in two
+       on a 375 phone (the hyphen let it wrap). */
+    .cashier-number { white-space: nowrap; max-width: 100%; font-size: clamp(56px, 17vw, 96px); }
     .cashier-number .hash {
-      font-size: 56px;
+      font-size: 0.58em;
       color: var(--forest);
       opacity: 0.4;
       margin-right: 2px;
