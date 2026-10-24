@@ -203,8 +203,25 @@
     }
     if (sideSheet && r.adoptedStyleSheets.indexOf(sideSheet) < 0) r.adoptedStyleSheets = r.adoptedStyleSheets.concat([sideSheet]);
   }
+  /* A segment's label sits in the middle of its segment (§10.6): the kit's
+     button reset inherits text-align, so a segment wider than its label
+     (spare width is shared) read flush to its start. */
+  var segSheet = null;
+  function adoptSegs() {
+    if (segSheet === null) {
+      segSheet = false;
+      try { segSheet = new CSSStyleSheet(); segSheet.replaceSync('.sg{text-align:center}'); } catch (_) { segSheet = false; }
+    }
+    if (!segSheet) return;
+    doc.querySelectorAll('#kw-main k-segmented').forEach(function (g) {
+      var r = g.shadowRoot;
+      if (!r || !r.adoptedStyleSheets || r.adoptedStyleSheets.indexOf(segSheet) >= 0) return;
+      r.adoptedStyleSheets = r.adoptedStyleSheets.concat([segSheet]);
+    });
+  }
   function adoptTiles() {
     adoptSide();
+    adoptSegs();
     var s = tileCss();
     if (!s) return;
     doc.querySelectorAll('#kit-home k-kpi-grid, #kit-retention k-kpi-grid').forEach(function (g) {
@@ -220,7 +237,11 @@
      at every width, the brand keeping its capital; each is rewritten again if
      i18n puts the capitals back, and the app card, which redraws whole, is
      watched as a card. Only an all-caps text is touched, so this never loops. */
-  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]', '[data-upsell] .kiwi-install-head > .t'];
+  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]', '[data-upsell] .kiwi-install-head > .t',
+    /* Home's shipped sections below the kit's figures: "POUR VOUS", "HEURES
+       DE POINTE", "KIWI INSIGHTS · MESURÉ", "SERVICE DU SOIR · CE SOIR". */
+    '.dash-standard .oppo-eyebrow', '.dash-standard .block-head .t', '.dash-standard .hai-eyebrow',
+    '.dash-standard .hh-ai-eyebrow', '.dash-standard .settle > .lbl'];
   var CAPS_HOSTS = ['[data-upsell]'];
   function sentence(el) {
     var s = el.textContent;
@@ -228,20 +249,21 @@
     var low = s.toLowerCase();
     el.textContent = (low.charAt(0).toUpperCase() + low.slice(1)).replace(/\bkiwi\b/g, 'Kiwi');
   }
-  var capsSeen = [];
+  /* Seen nodes, held weakly: Home's sections redraw under the poller. */
+  var capsSeen = root.WeakSet ? new root.WeakSet() : { list: [], has: function (x) { return this.list.indexOf(x) >= 0; }, add: function (x) { this.list.push(x); } };
   function caps() {
     CAPS_HOSTS.forEach(function (sel) {
       doc.querySelectorAll(sel).forEach(function (host) {
-        if (capsSeen.indexOf(host) >= 0) return;
-        capsSeen.push(host);
+        if (capsSeen.has(host)) return;
+        capsSeen.add(host);
         try { new MutationObserver(caps).observe(host, { childList: true }); } catch (_) {}
       });
     });
     CAPS.forEach(function (sel) {
       doc.querySelectorAll(sel).forEach(function (el) {
         sentence(el);
-        if (capsSeen.indexOf(el) >= 0) return;
-        capsSeen.push(el);
+        if (capsSeen.has(el)) return;
+        capsSeen.add(el);
         try { new MutationObserver(function () { sentence(el); }).observe(el, { childList: true, characterData: true, subtree: true }); } catch (_) {}
       });
     });
@@ -258,9 +280,12 @@
   function watch() {
     var main = doc.getElementById('kw-main') || doc.body;
     try {
+      var capsQueued = false;
       new MutationObserver(function () {
         if (!doc.getElementById('kit-side') || !doc.getElementById('kit-dd-goal')) boot();
         adoptTiles();
+        /* A shipped section redrawn whole comes back in capitals. */
+        if (!capsQueued) { capsQueued = true; (root.requestAnimationFrame || setTimeout)(function () { capsQueued = false; caps(); }); }
       }).observe(main, { childList: true, subtree: true });
     } catch (_) {}
   }

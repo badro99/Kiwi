@@ -76,6 +76,8 @@
     if (unit) out = out.split(String(unit).toLowerCase()).join(unit);
     return first ? out.charAt(0).toUpperCase() + out.slice(1) : out;
   }
+  /* The currency in the reader's language (MAD, درهم), as Report writes it. */
+  function cur(u) { var f = u === 'MAD' && K.fmt && K.fmt(); return (f && f.unit('0').slice(2)) || u; }
   function shippedText(sel) {
     var el = doc.querySelector(sel);
     return el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
@@ -204,7 +206,7 @@
       return {
         id: r.key, title: [r.primary, where].filter(Boolean).join(' · '),
         subtitle: [r.time, r.who].filter(Boolean).join(' · '),
-        value: r.amount + ' ' + (feed.unit || ''), trailing: 'chevron'
+        value: r.amount + ' ' + cur(feed.unit || ''), trailing: 'chevron'
       };
     });
     if (ph && rows.length) {

@@ -600,28 +600,28 @@
     "sha": "9e0574e4df6e1a34"
   },
   "assets/kit/dash-desktop.css": {
-    "v": "6",
-    "sha": "c0f1b136babe694a"
+    "v": "7",
+    "sha": "7812bdbb8a178a7d"
   },
   "assets/kit/dash-desktop.js": {
-    "v": "5",
-    "sha": "6560ee7c2fe79c11"
+    "v": "6",
+    "sha": "5d90499c6cbfe355"
   },
   "assets/kit/dash-home.js": {
-    "v": "4",
-    "sha": "e6a3ec51f7408cba"
+    "v": "5",
+    "sha": "6be4d1cb532b31de"
   },
   "assets/kit/dash-onboarding.js": {
     "v": "2",
     "sha": "c58bc7bafbf4f97c"
   },
   "assets/kit/dash-orders.js": {
-    "v": "2",
-    "sha": "7a6b8ccfb88d1ca7"
+    "v": "3",
+    "sha": "c5f9041dbdc5cea8"
   },
   "assets/kit/dash-phone.js": {
-    "v": "2",
-    "sha": "380ec69050507cc0"
+    "v": "3",
+    "sha": "9122f28596238ba3"
   },
   "assets/kit/dash-pin.js": {
     "v": "1",
