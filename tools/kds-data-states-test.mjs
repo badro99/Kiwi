@@ -413,7 +413,7 @@ function painter() {
 const loop = slice('  function nextPollDelay(fails) {', '  /* ── Démarrage');
 ok('la boucle est un setTimeout réarmé, sans setInterval de sondage',
   /timer = setTimeout\(tick, ms\)/.test(loop) && !/setInterval\(\s*(pull|tick)\s*[,)]/.test(cuisine));
-ok('le prochain tour suit les échecs', /scheduleTick\(nextPollDelay\(S\.fails\)\)/.test(loop));
+ok('le prochain tour suit les échecs', /scheduleTick\(S\.fails \? nextPollDelay\(S\.fails\)/.test(loop));
 ok('écran caché : aucun tour', /function tick\(\) \{\s*cancelTick\(\);\s*if \(document\.hidden \|\| !paired\(\)\) return;/.test(loop));
 ok('retour à l’écran : file et interrupteur KDS tout de suite, et arrêt quand caché',
   /visibilityState === 'visible'\) \{[\s\S]{0,120}S\.cfgAt = 0;\s*tick\(\);\s*\} else \{\s*cancelTick\(\);/.test(cuisine));

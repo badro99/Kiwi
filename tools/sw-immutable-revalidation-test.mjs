@@ -97,6 +97,24 @@ for (const [p, cached, wantNetwork, why] of CASES) {
   if (!hitNetwork) failures.push('« ?nav=1 » pris pour une estampille · le motif doit exiger ? ou & devant v=');
 }
 
+// A cold load must populate the exact URL; two later page loads stay offline-capable.
+{
+  const { handlers, sandbox } = loadWorker();
+  const stored = new Map(); let requests = 0;
+  sandbox.caches.open = async () => ({ put(req, res) { stored.set(req.url, res); } });
+  sandbox.caches.match = async req => stored.get(req.url);
+  sandbox.fetch = async () => { requests++; return new sandbox.Response(); };
+  async function load(stamp) {
+    let response;
+    handlers.fetch[0]({ request: { method: 'GET', mode: 'no-cors', url: ORIGIN + '/assets/test.js?v=' + stamp }, respondWith(p) { response = p; } });
+    await response; await new Promise(r => setImmediate(r));
+  }
+  await load(42); await load(42); await load(42);
+  if (requests !== 1) failures.push('cold load + two reloads must fetch a stamped asset once');
+  await load(43);
+  if (requests !== 2) failures.push('a new stamp must fetch new bytes');
+}
+
 if (failures.length) {
   console.error(`✗ Service worker · revalidation des URL estampillées (${failures.length})`);
   for (const f of failures) console.error(`  ${f}`);

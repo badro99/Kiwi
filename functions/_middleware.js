@@ -30,6 +30,8 @@ import {
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 
+import { visitorRedirect, recordOldOrigin } from './_origin-move.js';
+
 const GATE_COOKIE = 'kiwi_gate';
 const UNLOCK_PATH = '/__unlock';
 const OPERATOR_PATH = '/__operator';
@@ -55,7 +57,7 @@ const CANONICAL_HOST = 'kiwi-os.com';
  * la porte ne lui donne aucun droit de plus. tools/till-gate-test.mjs tient la
  * liste : une route ajoutée ici dont le handler ignore les caisses fait échouer
  * le contrôle. */
-const TILL_PAGES = new Set(['/kiwi-caisse', '/kiwi-caisse.html']);
+const TILL_PAGES = new Set(['/kiwi-caisse', '/kiwi-caisse.html', '/kiwi-cuisine', '/kiwi-cuisine.html']);
 export const TILL_PATHS = new Set([
   '/api/config', '/api/store', '/api/menu/availability', '/api/catalog', '/api/clients',
   '/api/operations', '/api/order/queue', '/api/feed', '/api/service/events', '/api/team/live',
@@ -249,6 +251,8 @@ async function routeRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
   const path = url.pathname;
+  const movingVisitor = visitorRedirect(request);
+  if (movingVisitor) return movingVisitor;
   const canonicalRedirect = canonicalSiteRedirect(request);
   if (canonicalRedirect) return canonicalRedirect;
   const authSecret = env.AUTH_SECRET;
@@ -296,6 +300,8 @@ async function routeRequest(context) {
   // never matched this list — and met the staff login screen. Allow-listing the
   // clean URL adds no surface: it is the same document, GET/HEAD only.
   const method = request.method;
+  if (method === 'POST' && path === '/api/origin-move') return next();
+  if ((method === 'GET' || method === 'HEAD') && (path === '/origin-move.html' || path === '/origin-move')) return next();
   const isRead = method === 'GET' || method === 'HEAD';
 
   // Search engines reach these files without a merchant session. The landing
@@ -923,6 +929,9 @@ async function withStaffSkin(context, response) {
 }
 
 export async function onRequest(context) {
+  const record = recordOldOrigin(context.request, context.env);
+  if (context.waitUntil) context.waitUntil(record);
+  else await record;
   const response = await withStaffSkin(context, secureResponse(await routeRequest(context)));
   const lang = landingDocumentLanguage(context.request);
   const nativeAppOrigin = appOrigin(context.request);
@@ -1036,6 +1045,7 @@ function authPage(opts) {
   return `<!doctype html>
 <html lang="${lang}" dir="${dir}">
 <head>
+<script src="/assets/origin-move.js"></script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />

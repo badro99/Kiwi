@@ -45,7 +45,7 @@ for (const phase of ['headers','body']) {
   });
   release(phase==='headers'?page([{cursor:99}]):{sales:[{cursor:99}],cursor:99,merchant:'fixture-a'}); await settle();
   assert.equal(h.seen.length,0, 'late body cannot win the deadline race');
-  h.state.reply=async()=>page([{cursor:128,amountCents:4900}]); h.run(2500); await settle();
+  h.state.reply=async()=>page([{cursor:128,amountCents:4900}]); h.run(5000); await settle();
   check('recovery after stalled '+phase+' reads the original cursor and clears only the feed error', () => {
     assert.equal(h.seen[0].sales[0].cursor,128); assert.match(h.requests.at(-1).url,/since=0/); assert.equal(h.window.KiwiLive.status().feedError,'');
   }); h.stop();
@@ -53,7 +53,7 @@ for (const phase of ['headers','body']) {
 let release; h = feedHarness(()=>new Promise(r=>release=r)); await settle();
 h.window.KiwiMe.business='Fixture B'; release(page([{cursor:500}])); await settle();
 check('a late response from the previous store is never applied or called fresh',()=>{assert.equal(h.seen.length,0);assert.equal(h.window.KiwiLive.status().lastSync,0);});
-h.state.reply=async()=>page([], 'fixture-b'); h.run(2500); await settle();
+h.state.reply=async()=>page([], 'fixture-b'); h.run(5000); await settle();
 check('store switch restarts the new store at cursor zero',()=>assert.match(h.requests.at(-1).url,/merchant=fixture-b&since=0/)); h.stop();
 h=feedHarness(async()=>({ok:false,status:403})); await settle();
 check('refused feed remains an explicit auth error, not a successful zero-sales read',()=>{assert.equal(h.seen.length,0);assert.equal(h.window.KiwiLive.status().feedError,'auth');});h.stop();

@@ -25,6 +25,7 @@
   var timer = 0;
   var last = null;
   var inflight = false;
+  var idleDelay = POLL_MS, signature = null;
 
   /* The till's vocabulary → the plan's. Same five states the caisse paints. */
   var FROM_TILL = {
@@ -71,6 +72,7 @@
     if (!s || !isReal()) {
       last = { ok: false, live: false, reason: 'demo', tables: {}, stats: {}, at: Date.now() };
       emit();
+      schedule();
       return;
     }
     inflight = true;
@@ -80,6 +82,9 @@
         if (!d || !d.ok) throw new Error('bad-body');
         /* The plan may have switched store while the request was in flight. */
         if (s !== slug()) return;
+        var next = JSON.stringify([s, d.tables || {}, d.stats || {}, d.partial || {}, d.dayStart]);
+        idleDelay = next === signature ? Math.min(60000, idleDelay * 2) : POLL_MS;
+        signature = next;
         last = { ok: true, live: true, stale: false, tables: d.tables || {}, stats: d.stats || {},
                  dayStart: Number(d.dayStart) || 0, partial: d.partial || {},
                  /* Last authenticated poll from a paired till (server clock).
@@ -90,24 +95,30 @@
         emit();
       })
       .catch(function () {
+        idleDelay = Math.min(60000, idleDelay * 2);
         /* Keep the last room, flagged. A blank room would be a lie too. */
         last = last && last.live
           ? Object.assign({}, last, { stale: true })
           : { ok: false, live: false, reason: 'offline', tables: {}, stats: {}, at: Date.now() };
         emit();
       })
-      .then(function () { inflight = false; });
+      .then(function () { inflight = false; schedule(); });
   }
 
-  function start() {
-    if (timer) return;
-    poll();
-    timer = setInterval(poll, POLL_MS);
+  function schedule() {
+    stop();
+    if (subs.length && !document.hidden) timer = setTimeout(poll, window.KiwiPoll?.delay(idleDelay) ?? idleDelay);
   }
-  function stop() { if (timer) { clearInterval(timer); timer = 0; } }
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && subs.length) poll();
-  });
+  function start() { if (!timer && !inflight) poll(); }
+  function stop() { if (timer) { clearTimeout(timer); timer = 0; } }
+  function wake() {
+    stop(); idleDelay = POLL_MS;
+    if (!document.hidden && subs.length) poll();
+  }
+  document.addEventListener('visibilitychange', wake);
+  document.addEventListener('kiwi:request-wake', wake);
+  window.addEventListener('focus', wake);
+  window.addEventListener('online', wake);
 
   function watch(fn) {
     if (typeof fn !== 'function') return function () {};

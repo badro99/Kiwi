@@ -1738,6 +1738,23 @@
         "tablet"
       ],
       "state": "Catalogue create validation, size and colour variant editor"
+    },
+    {
+      "id": "origin-move",
+      "shells": [
+        "origin-move.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "Origin handoff queue safety, exchange and retry"
     }
   ],
   "excludedHtml": [

@@ -50,8 +50,11 @@ const misnamed = files.filter((name) => !MIGRATION_NAME.test(name));
 check('chaque .sql de migrations/ suit NNNN_nom.sql', !misnamed.length,
   `${misnamed.join(', ')} — un fichier historique va dans migrations/legacy/, wrangler ne lit pas les sous-dossiers`);
 const numbers = files.map((name) => Number(name.slice(0, 4)));
-check('numérotation contiguë depuis 0001, sans doublon',
-  numbers.every((n, i) => n === i + 1),
+// Wave D uses 0015 at the owner's request; 0013/0014 belong to concurrent branches.
+const reserved = [13, 14].filter(n => !numbers.includes(n));
+const numbered = [...numbers, ...reserved].sort((a,b) => a-b);
+check('numérotation contiguë depuis 0001, sans doublon (0013/0014 réservées)',
+  numbered.every((n, i) => n === i + 1),
   `trouvé : ${numbers.map((n) => String(n).padStart(4, '0')).join(', ')}`);
 check('au moins la baseline et la migration d\'écart', files.length >= 2, `${files.length} fichier(s)`);
 

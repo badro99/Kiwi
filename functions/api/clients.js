@@ -40,7 +40,7 @@
 
 import { json, activeEmployee } from '../auth/_lib.js';
 import { tenantFor, storeOperationalState } from './_private.js';
-import { clientAudit, refuseReward } from './_client-audit.js';
+import { clientAudit, refuseReward, mayRecordReward } from './_client-audit.js';
 import { phoneKey } from './_phone.js';
 import { mayMergeClients, mergeClients, purchaseKey, purchaseKeySql } from './_client-merge.js';
 
@@ -746,7 +746,8 @@ async function applyRedemption(env, merchant, raw) {
   const redemption = raw && typeof raw === 'object' ? raw : {};
   // Un id fusionné dans une autre fiche (CL-5) écrit sur celle-ci.
   const clientId = await resolveClientId(env, merchant, str(redemption.clientId || redemption.client_id, 64));
-  const ref = str(redemption.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
+  const ref = String(redemption.ref || '');
+  if (!/^[A-Za-z0-9:_-]{1,96}$/.test(ref)) return json({ error: 'invalid-refusal' }, 400);
   if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
   await ensureRewardEvents(env);
   const previous = await env.DB.prepare(
@@ -962,6 +963,7 @@ export async function onRequestPost(context) {
   }
 
   if (body && body.redemption) {
+    if (!await mayRecordReward(request, env, merchant)) return json({ error: 'owner-or-till-required' }, 403);
     if (!operational) return json({ error: 'unauthorized' }, 401);
     try { return await applyRedemption(env, merchant, body.redemption); }
     catch (_) { return json({ error: 'reward-write-failed' }, 503); }

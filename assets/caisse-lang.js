@@ -3526,16 +3526,14 @@
      passage : sinon chaque traduction déclencherait une nouvelle observation,
      et on tournerait en rond au lieu de vendre. */
   var obs = null, pending = false;
-  /* Un `setTimeout`, pas un `requestAnimationFrame`. Un onglet en arrière-plan
-     ne reçoit AUCUNE image d'animation : la caisse posée sur une tablette qu'on
-     réveille, ou l'onglet passé au second plan pendant qu'un autre écran sert,
-     se serait rouvert en français au premier rendu — la traduction n'aurait
-     jamais été rejouée. Le balayage ne dessine rien, il n'a rien à
-     synchroniser avec l'écran ; il doit juste avoir lieu. */
+  /* Coalesce mutations within the current task, before another click or paint
+     can observe untranslated amounts. A timer allowed the same voucher to be
+     read once with bidi isolation and once without it after reopening. Promise
+     jobs also run in background tabs, where animation frames are suspended. */
   function schedule() {
     if (pending || cur === 'fr') return;
     pending = true;
-    setTimeout(function () { pending = false; run(document.body); }, 0);
+    Promise.resolve().then(function () { pending = false; run(document.body); });
   }
   function run(root) {
     if (obs) obs.disconnect();

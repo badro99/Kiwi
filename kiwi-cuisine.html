@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="fr">
 <head>
+  <script>(function(){if(location.hostname!=='kiwi-maroc.pages.dev')return;var s=document.createElement('script');s.src='/assets/origin-move.js';s.async=false;try{s.dataset.hadState=String(Object.keys(localStorage).some(function(k){return /^kiwi/i.test(k);}));}catch(_){}document.head.appendChild(s);})();</script>
 <script src="assets/kit/haptics.js?v=7"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -839,6 +840,7 @@
      protocole. La cuisine LIT et fait avancer ; la caisse ÉCRIT. -->
 <!-- Le rapporteur d’erreurs (même fichier que la caisse et le serveur) : sans lui,
      un écran de cuisine qui plante au passe ne laissait aucune trace. -->
+<script src="assets/kiwi-env.js?v=8"></script>
 <script src="assets/err-reporter.js?v=1"></script>
 <script src="assets/menu-i18n.js?v=5" defer></script>
 <script src="assets/kitchen-relay.js?v=14" defer></script>
@@ -2364,6 +2366,7 @@
      le verrou d'écran, la file ET l'interrupteur KDS tout de suite. */
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {
+      idlePolls = 0;
       keepAwake();
       if (!paired()) return;
       S.cfgAt = 0;
@@ -2410,6 +2413,7 @@
     return Math.min(POLL_MAX_MS, POLL_MS * Math.pow(2, n));
   }
   var timer = null;
+  var idlePolls = 0, pollSignature = null;
   function cancelTick() {
     if (timer) clearTimeout(timer);
     timer = null;
@@ -2417,6 +2421,7 @@
   function scheduleTick(ms) {
     cancelTick();
     if (document.hidden || !paired()) return;
+    ms = window.KiwiPoll?.delay(ms) ?? ms;
     timer = setTimeout(tick, ms);
   }
   function tick() {
@@ -2428,8 +2433,28 @@
     /* Le filet : même si ce relevé ne revenait jamais, la boucle repart et
        pull() le déclarera mort. */
     scheduleTick(PULL_STALL_MS + 1000);
-    Promise.resolve(pull() || S.pulling).then(function () { scheduleTick(nextPollDelay(S.fails)); });
+    Promise.resolve(pull() || S.pulling).then(function () {
+      var next = boardSig();
+      var pending = Object.keys(S.orders).some(function (id) { return /^(pending|accepted|cooking|preparing|ready)$/.test(S.orders[id].status); });
+      idlePolls = pending || next !== pollSignature ? 0 : Math.min(5, idlePolls + 1);
+      pollSignature = next;
+      scheduleTick(S.fails ? nextPollDelay(S.fails) : Math.min(120000, POLL_MS * Math.pow(2, idlePolls)));
+    });
   }
+
+  function wakePoll() {
+    idlePolls = 0;
+    if (!document.hidden && paired()) tick();
+  }
+  window.addEventListener('focus', wakePoll);
+  document.addEventListener('kiwi:request-wake', wakePoll);
+  try {
+    if (window.BroadcastChannel) {
+      var wakeChannel = new BroadcastChannel('kiwi-live');
+      wakeChannel.addEventListener('message', wakePoll);
+    }
+    window.addEventListener('storage', function (e) { if (e && e.key === 'kiwiSalePing') wakePoll(); });
+  } catch (_) {}
 
   /* ── Démarrage ───────────────────────────────────────────────────────────── */
   function resetBoardState() {

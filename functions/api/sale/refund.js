@@ -212,8 +212,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
              refundRef, Number(original.ts) || 0, impact, ts,
              merchant, refundId, -moneyOut, merchant, refundId),
     ];
-    // A return ends the remaining delivery obligation. Record the write-off
-    // separately from refunded cash, inside the very same transaction.
+    // Only a full return ends delivery. Partial returns stay open for owner review.
     statements.push(env.DB.prepare(`INSERT INTO sale_audit
       (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
       SELECT ?, ?, 'delivery-writeoff', ?, ?, ?, ?, 0,
@@ -225,7 +224,8 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
            WHERE s.merchant = ? AND s.id = ? AND s.method = 'delivery'), 0)
           - COALESCE((SELECT SUM(amount_cents) FROM delivery_collections WHERE merchant = ? AND sale_id = ?), 0)),
         'delivery', ?, ?, ?, ?
-      WHERE EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND note = ? AND action = 'refund')
+      WHERE ? <= (SELECT COALESCE(SUM(amount_cents), 0) FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')
+        AND EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND note = ? AND action = 'refund')
         AND NOT EXISTS (SELECT 1 FROM sale_audit
         WHERE merchant = ? AND sale_id = ? AND action = 'delivery-writeoff')
         AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND
@@ -233,7 +233,15 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       .bind(merchant, originalSaleId, reason, refundId, actor, actorId,
         merchant, originalSaleId, merchant, originalSaleId, merchant, originalSaleId,
         refundRef, Number(original.ts) || 0, JSON.stringify({ refundId, policy: 'return-closes-delivery' }), ts,
-        merchant, originalSaleId, refundId, merchant, originalSaleId, merchant, originalSaleId));
+        originalCents, merchant, originalSaleId, merchant, originalSaleId, refundId, merchant, originalSaleId, merchant, originalSaleId));
+    statements.push(env.DB.prepare(`INSERT INTO sale_audit
+      (merchant, sale_id, action, reason, note, actor_id, amount, amount_cents, impact, ts)
+      SELECT ?, ?, 'delivery-review', 'partial-refund', ?, ?, 0, 0, '{"needsReview":true}', ?
+      WHERE EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund' AND note = ?)
+        AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action IN ('delivery-review', 'delivery-writeoff'))
+        AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND (method = 'delivery' OR payment_parts LIKE '%"delivery"%'))`)
+      .bind(merchant, originalSaleId, refundId, actorId, ts, merchant, originalSaleId, refundId,
+        merchant, originalSaleId, merchant, originalSaleId));
     for (const part of actual.filter(p => p.method === 'credit')) {
       const eventId = `refund:${merchant}:${refundId}:${part.creditId}`;
       statements.push(env.DB.prepare(

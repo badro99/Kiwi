@@ -1,6 +1,7 @@
 // GET  /api/receivables?merchant=<slug>  — livraisons pas encore (entièrement) payées.
 // POST /api/receivables  — le transporteur a payé, tout ou partie.
 //   { merchant, saleId, method, amount?, id?, collectedBy? }
+//   { merchant, saleId, action: "writeoff" } requires this merchant owner session.
 //
 // Une vente partie en livraison est enregistrée à 0 MAD (sale.js ·
 // settlementKind 'receivable') : aucun dirham n'est entré ce jour-là. Le total
@@ -29,7 +30,7 @@
 // la vente écrite. Sans `id`, le premier encaissement d'une livraison prend
 // 'dlv-<saleId>'. Rejouer le même `id` rend la même vente, 200, même corps :
 // une reprise hors ligne ne compte jamais deux fois.
-import { entitledMerchant, isTillFor } from '../auth/_lib.js';
+import { entitledMerchant, isTillFor, activeAccountSession } from '../auth/_lib.js';
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -155,6 +156,22 @@ export async function onRequestPost({ request, env }) {
   const saleId = String(b && b.saleId || '').slice(0, 128);
   const method = String(b && b.method || '');
   if (!saleId) return json({ error: 'bad-sale' }, 400);
+  if (b.action === 'writeoff') {
+    const session = await activeAccountSession(request, env);
+    const config = session && await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    if (!session || config?.account_id !== session.aid) return json({ error: 'owner-required' }, 403);
+    await ensureCollectionSchema(env.DB);
+    const row = (await readDeliveries(env.DB, merchant, saleId))[0];
+    if (!row) return json({ error: 'not-a-delivery' }, 404);
+    await env.DB.prepare(`INSERT INTO sale_audit
+      (merchant, sale_id, action, reason, actor_id, amount, amount_cents, method, sale_ts, impact, ts)
+      SELECT ?, ?, 'delivery-writeoff', 'owner-review', ?, 0,
+        MAX(0, ? - COALESCE((SELECT SUM(amount_cents) FROM delivery_collections WHERE merchant = ? AND sale_id = ?), 0)),
+        'delivery', ?, '{}', ? WHERE NOT EXISTS
+        (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-writeoff')`)
+      .bind(merchant, saleId, session.aid, owedCents(row), merchant, saleId, row.ts, Date.now(), merchant, saleId).run();
+    return json({ ok: true, dueCents: 0 });
+  }
   const allowed = till ? TILL_METHODS : OWNER_METHODS;
   if (!allowed.has(method)) return json({ error: method === 'cash' ? 'cash-at-till-only' : 'bad-method', allowed: [...allowed] }, 400);
   const clientId = b && b.id != null ? String(b.id) : '';

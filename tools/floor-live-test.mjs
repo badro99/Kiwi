@@ -148,7 +148,7 @@ const SRC = fs.readFileSync(path.join(ROOT, 'functions/api/floor/live.js'), 'utf
 ok(!/\bINSERT\b|\bUPDATE\b|\bDELETE\b/.test(SRC.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '')), 'the route source contains no write statement');
 
 /* ── The dashboard side: assets/floorplan-live.js ───────────────────────── */
-const win = { KiwiEnv: { isReal: () => false } };
+const win = { addEventListener() {}, KiwiEnv: { isReal: () => false } };
 const ctx = vm.createContext({ window: win, document: { visibilityState: 'visible', addEventListener() {} }, setInterval, clearInterval, fetch: async () => ({ ok: false }) });
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/floorplan-live.js'), 'utf8'), ctx);
 const FL = win.KiwiFloorLive;

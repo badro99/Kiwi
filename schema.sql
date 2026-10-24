@@ -313,6 +313,9 @@ CREATE INDEX IF NOT EXISTS idx_pins_merchant ON staff_pins (merchant);
 -- seeded. Those keep working exactly as before; the first sync from the matching
 -- account adopts them.
 CREATE TABLE IF NOT EXISTS merchant_config (
+  test_account INTEGER NOT NULL DEFAULT 0 CHECK (test_account IN (0, 1)),
+  poll_checked_ts INTEGER,
+  poll_mode TEXT,
   merchant   TEXT PRIMARY KEY,       -- slugMerchant(store name)
   features   TEXT NOT NULL,          -- JSON: {"stock":false,"reservations":false,…}
   plan       TEXT,                   -- basic | pro | ultra | ultimate (optional)
@@ -2238,5 +2241,31 @@ CREATE INDEX IF NOT EXISTS idx_game_scores_month ON game_scores (merchant, month
 CREATE TABLE IF NOT EXISTS client_reward_refusals (
   merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
   error TEXT NOT NULL, created_ts INTEGER NOT NULL,
-  PRIMARY KEY (merchant, ref)
+  PRIMARY KEY (merchant, client_id, ref)
 );
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_activity ON hotel_reservations (merchant, updated_ts);
+
+CREATE INDEX IF NOT EXISTS client_reward_refusals_day ON client_reward_refusals (merchant, created_ts);
+-- Short-lived origin handoffs. Only SHA-256 digests, never bearer values.
+CREATE TABLE IF NOT EXISTS origin_handoffs (
+  token_hash TEXT PRIMARY KEY,
+  preferences TEXT NOT NULL DEFAULT '{}',
+  merchant TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('till', 'kitchen', 'employee', 'waiter')),
+  device_id TEXT NOT NULL,
+  staff_id TEXT,
+  auth_version INTEGER NOT NULL,
+  expires_ts INTEGER NOT NULL,
+  used_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_origin_handoffs_expiry ON origin_handoffs(expires_ts);
+
+-- Hashed device identity, never a cookie or pairing credential.
+CREATE TABLE IF NOT EXISTS origin_devices (
+  merchant TEXT NOT NULL,
+  device_hash TEXT NOT NULL,
+  role TEXT NOT NULL,
+  last_seen INTEGER NOT NULL,
+  PRIMARY KEY (merchant, device_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_origin_devices_seen ON origin_devices(last_seen);

@@ -126,7 +126,16 @@
      de réussir ou d'échouer) ne doit pas partager la clé de la tranche de cinq
      minutes — le serveur le prendrait pour un doublon du battement du
      chargement et garderait l'ancien état de l'imprimante. */
+  var lastBeat = new Map();
   function beat(force) {
+    var poll = window.KiwiPoll;
+    var mode = poll ? poll.mode() : 'live';
+    var tenant = K.tenant(), now = Date.now();
+    if (mode === 'off' || (poll && poll.retryAfter && poll.retryAfter() > 0) || (force !== true && (document.hidden
+        || (mode === 'quiet' && lastBeat.has(tenant) && now - lastBeat.get(tenant) < 600000)))) {
+      return Promise.resolve({ ok: true, skipped: 'poll-policy' });
+    }
+    lastBeat.set(tenant, now);
     var printer = printerState();
     var sync = null, stock = null;
     if (appName() === 'caisse') {

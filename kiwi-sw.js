@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v663';
+var CACHE = 'kiwi-app-v665';
 var SHELL = [
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=5',
@@ -48,7 +48,7 @@ var SHELL = [
   '/assets/booking.css?v=15',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
-  '/assets/kiwi-env.js?v=2',
+  '/assets/kiwi-env.js?v=8',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
   '/cuisine.webmanifest',
@@ -175,13 +175,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=603',
+  '/assets/dashboard-pwa.js?v=605',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=366',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=5',
-  '/assets/caisse-pwa.js?v=620',
+  '/assets/caisse-pwa.js?v=622',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=11',
   '/assets/platform-kernel.js?v=6',
@@ -189,7 +189,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
   '/assets/operations-ui.js?v=26',
-  '/assets/live-link.js?v=76',
+  '/assets/live-link.js?v=77',
   '/assets/channel-sales.js?v=6',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -255,7 +255,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=20',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=64',
+  '/assets/caisse-lang.js?v=65',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -269,9 +269,9 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=11',
-  '/assets/stock.js?v=82',
+  '/assets/stock.js?v=83',
   '/assets/stock/loss.js?v=1',
-  '/assets/stock/counts.js?v=1',
+  '/assets/stock/counts.js?v=2',
   '/assets/stock/purchasing.js?v=1',
   '/assets/stock/intake.js?v=4',
   '/assets/stock/catalog.js?v=1',
@@ -290,7 +290,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=606',
+  '/assets/employee-live.js?v=608',
   '/assets/employee-planning.js?v=17',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=6',

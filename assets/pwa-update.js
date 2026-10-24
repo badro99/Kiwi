@@ -215,7 +215,9 @@
   var polling = false;
   var lastCheck = Date.now();
   function check() {
-    if (!reg || shown) return;
+      if (window.KiwiPoll && (window.KiwiPoll.mode() === 'off'
+      || (window.KiwiPoll.mode() === 'quiet' && Date.now() - lastCheck < 600000))) return;
+    if (!reg || shown || document.visibilityState === 'hidden') return;
     lastCheck = Date.now();
     try {
       var p = reg.update();

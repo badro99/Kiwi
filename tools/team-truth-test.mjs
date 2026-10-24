@@ -105,7 +105,7 @@ ok('« En service » ne se dit plus « estimation » : en direct, ou heures du j
 ok('le sondage de l’équipe en direct redessine quand quelque chose a changé', () => {
   const i = SRC.indexOf('function pollLiveTeam(');
   const body = SRC.slice(i, SRC.indexOf('\n  }\n', i));
-  assert.ok(/if \(signature === liveTeamSignature\) return;\s*liveTeamSignature = signature;/.test(body), 'early return on identical reply');
+  assert.ok(/if \(signature === liveTeamSignature\) \{ liveTeamDelay = Math.min\(120000, liveTeamDelay \* 2\); return; \}\s*liveTeamDelay = LIVE_TEAM_FAST_MS;\s*liveTeamSignature = signature;/.test(body), 'early return on identical reply');
   assert.ok(!/if \(signature !== liveTeamSignature\)/.test(body), 'dead comparison gone');
   assert.ok(/\n\s*applyLiveTeam\(\);\s*\n\s*\}\)\.catch/.test(body), 'renders after a change');
 });

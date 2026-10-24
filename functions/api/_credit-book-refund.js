@@ -9,16 +9,24 @@ export function creditRefundEdit(oldDoc, newDoc) {
   if (next.size !== pairs.length) return true;
   for (const [id, h] of old) {
     const n = next.get(id);
-    if (!n || n.type !== h.type || cents(n) !== cents(h)) return true;
-    if (h.kind === 'advance-refund' && JSON.stringify(n) !== JSON.stringify(h)) return true;
+    if (!n || JSON.stringify(n) !== JSON.stringify(h)) return true;
   }
+  const balances = new Map(creditBook(oldDoc).map(c => [c.id, (c.hist || []).reduce((n,h) => n + (h.type === 'debt' ? 1 : -1) * cents(h), 0)]));
   for (const [id, h] of next) {
     if (old.has(id)) continue;
     if (!['debt','pay'].includes(h.type) || !Number.isSafeInteger(cents(h)) || cents(h) < 1
       || Math.abs(Number(h.amt) * 100 - cents(h)) > 1e-6) return true;
-    // A debt is an amount owed, never authority to return money. Legacy
-    // offline refund counterentries must use the authenticated operation.
-    if (h.kind === 'advance-refund' || (h.type === 'debt' && /refund|rembours|استرداد|إرجاع.*مبلغ/i.test(String(h.label || '')))) return true;
+    // The authenticated refund marker cannot be supplied by document edits.
+    if (h.kind === 'advance-refund') return true;
+  }
+  for (const c of creditBook(newDoc)) {
+    let balance = balances.get(c.id) || 0;
+    for (const h of c.hist || []) {
+      const id = c.id + ':' + (h.id || JSON.stringify([h.type,h.amt,h.at,h.label]));
+      if (old.has(id)) continue;
+      if (h.type === 'debt' && balance < 0) return true;
+      balance += (h.type === 'debt' ? 1 : -1) * cents(h);
+    }
   }
   return false;
 }

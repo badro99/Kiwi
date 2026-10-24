@@ -421,6 +421,14 @@ section('Auth input bounds (tools/auth-input-test.mjs)');
   }
 }
 
+section('Origin migration safety (tools/origin-move-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'origin-move-test.mjs')], { encoding: 'utf8' });
+  if (r.status === 0) ok('Origin redirects, handoffs, queues and operator projection');
+  else fail('origin-move-test.mjs: ' + ((r.stdout || '') + (r.stderr || '')).trim());
+}
+
 /* ── 4d · live sale resilience ──────────────────────────────────────────────
  * A Wi-Fi outage may delay a sale but must never erase or duplicate it. */
 section('Live sale resilience (tools/live-link-test.js)');
@@ -536,7 +544,7 @@ for (const test of [
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs', 'pos-sale-hold-test.mjs', 'store-credits-test.mjs',
   'caisse-opening-gate-test.mjs',
   'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-direct-pricing-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
-  'sw-immutable-revalidation-test.mjs', 'load-test-suite-test.mjs',
+  'sw-immutable-revalidation-test.mjs', 'request-headers-test.mjs', 'request-pollers-test.mjs', 'quiet-mode-test.mjs', 'quiet-demo-browser-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding:'utf8' });
@@ -1416,6 +1424,7 @@ section('Whole-project regressions');
     'caisse-offline-pin-test.mjs',
     'caisse-repair-pin-venue-test.mjs',
     'audit-remediation-money-test.mjs',
+    'wave-d-security-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
     'loyalty-truth-test.mjs',
     'loyalty-refused-redemption-test.mjs',

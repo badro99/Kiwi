@@ -30,8 +30,8 @@
    * immédiate. On évite donc la boucle courte sans condamner un poste ouvert
    * pendant un déploiement ou une coupure Wi-Fi à rester dégradé jusqu'au prochain
    * rechargement. */
-  var MAX_COLD_FAILURES = 3;
-  var COLD_RETRY_MS = 60000;
+  var MAX_COLD_FAILURES = 1;
+  var COLD_RETRY_MS = 30 * 60000;
 
   /* Reconnexion — seulement après une socket qui avait bien vécu. */
   var BACKOFF = [2000, 5000, 15000, 30000];
@@ -52,6 +52,7 @@
 
   function notify() {
     coalesceTimer = null;
+    try { document.dispatchEvent(new CustomEvent('kiwi:request-wake')); } catch (_) {}
     for (var i = 0; i < subs.length; i++) {
       try { subs[i](); } catch (_) { /* un abonné qui casse n'en bloque pas d'autres */ }
     }
@@ -76,7 +77,8 @@
   }
 
   function open() {
-    if (sock || !cfg) return;
+    if (window.KiwiPoll && window.KiwiPoll.mode() !== 'live') return;
+    if (sock || !cfg || document.hidden) return;
     if (typeof WebSocket === 'undefined') return;
 
     var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -129,10 +131,18 @@
     attempt = 0;
     open();
   }
-  try { window.addEventListener('online', wake); } catch (_) {}
+  function pauseSocket() {
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (sock) { sock.onclose = null; try { sock.close(1000); } catch (_) {} }
+    cleanup();
+  }
+  document.addEventListener('kiwi:poll-mode', function () {
+    if (window.KiwiPoll && window.KiwiPoll.mode() !== 'live') pauseSocket(); else wake();
+  });
+  try { window.addEventListener('online', wake); document.addEventListener('kiwi:request-wake', wake); } catch (_) {}
   try {
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') wake();
+      if (document.visibilityState === 'visible') wake(); else pauseSocket();
     });
   } catch (_) {}
 

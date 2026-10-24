@@ -37,16 +37,15 @@ async function creditRefund(role,id,amount,extra={}) {
  const r=await onRequestPost({env:f.env,request:new Request('https://kiwi.test/api/store',{method:'POST',headers:{Cookie:cookies[role]||'','Content-Type':'application/json'},body:JSON.stringify({merchant:f.merchant,feature:'verticalops',action:'credit-book-refund',clientId:'client',id,amountCents:amount,method:'transfer',...extra})})});
  return {status:r.status,body:await r.json()};
 }
-const money=fc.integer({min:1,max:100000}),step=fc.record({device:fc.nat(2),kind:fc.constantFrom('debt','payment','advance','refund'),cents:money,online:fc.boolean(),retry:fc.boolean(),order:fc.nat(5)});
+const money=fc.integer({min:1,max:100000}),step=fc.record({device:fc.nat(2),kind:fc.constantFrom('debt','payment','advance'),cents:money,online:fc.boolean(),retry:fc.boolean(),order:fc.nat(5)});
 try{
-await strict('two or three offline/online tills converge to the centime ledger sum; retries count each id once',fc.asyncProperty(fc.integer({min:2,max:3}),fc.array(step,{minLength:1,maxLength:35}),async(n,steps)=>{
- reset();const ds=Array.from({length:n},()=>({doc:blank(),rev:0})),expected=new Map();let paid=0,refunded=0;
+await strict('two or three tills converge ordinary debts and repayments; retries count each id once',fc.asyncProperty(fc.integer({min:2,max:3}),fc.array(step,{minLength:1,maxLength:35}),async(n,steps)=>{
+ // Seed enough real debt for every repayment. Reducing an advance requires
+ // the authenticated refund operation, covered separately below.
+ reset();const seed=blank(),capacity=steps.reduce((sum,s)=>sum+s.cents,1);append(seed,'e99999','debt',capacity);ok(await call('owner',{data:seed}));
+ const ds=Array.from({length:n},()=>({doc:clone(seed),rev:1})),expected=new Map([['e99999',capacity]]);
  for(const[i,s]of steps.entries()){
   const k=s.device%n,d=ds[k];let amount=s.cents,type=s.kind==='debt'?'debt':'pay';
-  // Avance = versement pay. Le carnet n'a pas de commande de remboursement :
-  // une restitution se représente ici par une contre-écriture debt, identifiée.
-  // Le plafond absent de l'API est testé séparément, sans le présupposer acquis.
-  if(s.kind==='refund'){amount=Math.min(amount,paid-refunded);type='debt';refunded+=amount;}else if(type==='pay')paid+=amount;
   if(amount){const id='e'+i;append(d.doc,id,type,amount);expected.set(id,type==='debt'?amount:-amount);}
   if(s.online){await sync(d,k);if(s.retry)await sync(d,k);await pull(ds[s.order%n],s.order%n);for(const x of ds){const hs=hist(x.doc);assert.equal(new Set(hs.map(h=>h.id)).size,hs.length);assert.equal(C(ep.balanceOf(x.doc.verticals.epicerie.data.carnet[0])),hs.reduce((sum,h)=>sum+expected.get(h.id),0));}}
  }
@@ -56,7 +55,7 @@ await strict('two or three offline/online tills converge to the centime ledger s
  const server=ok(await call('owner')).data,ids=[...expected.keys()].sort(),sum=[...expected.values()].reduce((a,b)=>a+b,0);
  for(const d of [server,...ds.map(x=>x.doc)]){assert.deepEqual(hist(d).map(h=>h.id).sort(),ids);assert.equal(C(ep.balanceOf(d.verticals.epicerie.data.carnet[0])),sum);}
 }));
-await strict('racing first pushes return a conflict; merging and retrying retains both devices',fc.asyncProperty(money,money,async(a,b)=>{reset();const ds=[{doc:blank(),rev:0},{doc:blank(),rev:0}];append(ds[0].doc,'e0','debt',a);append(ds[1].doc,'e1','pay',b);const rs=await Promise.all(ds.map((d,i)=>call(i,{data:d.doc})));assert.equal(rs.filter(r=>r.status===200).length,1);assert.equal(rs.filter(r=>r.status===409&&r.body.error==='stale').length,1);for(let i=0;i<2;i++)await sync(ds[i],i);for(let i=0;i<2;i++){await pull(ds[i],i);assert.equal(C(ep.balanceOf(ds[i].doc.verticals.epicerie.data.carnet[0])),a-b);assert.equal(hist(ds[i].doc).length,2);}}));
+await strict('racing first pushes return a conflict; merging and retrying retains both devices',fc.asyncProperty(money,money,async(a,b)=>{reset();const seed=blank();append(seed,'e99999','debt',b);ok(await call('owner',{data:seed}));const ds=[{doc:clone(seed),rev:1},{doc:clone(seed),rev:1}];append(ds[0].doc,'e0','debt',a);append(ds[1].doc,'e1','pay',b);const rs=await Promise.all(ds.map((d,i)=>call(i,{data:d.doc,baseRev:1})));assert.equal(rs.filter(r=>r.status===200).length,1);assert.equal(rs.filter(r=>r.status===409&&r.body.error==='stale').length,1);for(let i=0;i<2;i++)await sync(ds[i],i);for(let i=0;i<2;i++){await pull(ds[i],i);assert.equal(C(ep.balanceOf(ds[i].doc.verticals.epicerie.data.carnet[0])),a);assert.equal(hist(ds[i].doc).length,3);}}));
 await strict('independent full payments become an explicit advance; other customer debt stays intact',fc.property(money,money,(paid,owed)=>{const a=blank(),b=blank();append(a,'e0','debt',paid);append(a,'e1','pay',paid);append(b,'e0','debt',paid);append(b,'e2','pay',paid);const c=merge(a,b).verticals.epicerie.data.carnet[0];assert.equal(C(ep.balanceOf(c)),-paid);assert.match(ep.balTxt(ep.balanceOf(c)),/^Avance /);ep.CARNET.length=0;ep.CARNET.push(c,{hist:[{type:'debt',amt:owed/100}]});assert.equal(C(ep.totalCredit()),owed);}));
 await strict('foreign owner, foreign paired till, anonymous and forged credentials cannot read or write this merchant',fc.asyncProperty(money,fc.constantFrom('foreignOwner','foreignTill','none','forged'),async(cents,role)=>{reset();const d=blank();append(d,'e0','debt',cents);ok(await call('owner',{data:d}));const before=f.sql.prepare('SELECT * FROM store_docs').all();const get=await call(role);assert.ok(get.status===401||get.body.merchant!==f.merchant);assert.ok(!JSON.stringify(get.body).includes('e0'));const post=await call(role,{data:blank(),baseRev:1});assert.ok([401,403].includes(post.status));assert.deepEqual(f.sql.prepare('SELECT * FROM store_docs').all(),before);}));
 await strict('owner and each of three paired devices can write and read their own credit book',fc.asyncProperty(money,fc.constantFrom('owner',0,1,2),async(cents,role)=>{reset();const d=blank();append(d,'e0','debt',cents);ok(await call(role,{data:d}));assert.equal(C(ep.balanceOf(ok(await call(role)).data.verticals.epicerie.data.carnet[0])),cents);}));

@@ -117,7 +117,8 @@
   }
   function isHub() {
     if (remoteDenies() || !chosenHere()) return false;
-    if (Number(hubConfig().expiresAt || 0) <= Date.now()) resumeHub();
+    if (Number(hubConfig().expiresAt || 0) <= Date.now()
+        && (!(window.KiwiPoll && window.KiwiPoll.mode() !== 'live') && !document.hidden || readQueue().length)) resumeHub();
     return !remoteDenies();
   }
   function hubQS() { var m = merchant(); return '?feature=' + HUB_FEATURE + (m ? '&merchant=' + encodeURIComponent(m) : ''); }
@@ -198,6 +199,7 @@
     return isHub();
   }
   function renewHub() {
+    if ((document.hidden || (window.KiwiPoll && window.KiwiPoll.mode() !== 'live')) && !readQueue().length) return;
     if (!isHub()) return;
     var c = hubConfig();
     if (!c.activatedAt) c.activatedAt = Number(c.updatedAt || 0) || Date.now();

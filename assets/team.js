@@ -1060,20 +1060,21 @@
     try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
   }
   function pollLiveTeam() {
-    if (liveTeamBusy || !isCustomVenue()) return;
+    if (document.hidden || liveTeamBusy || !isCustomVenue()) return;
     const merchant = teamSlug();
     if (!merchant) return;
     liveTeamBusy = true;
-    fetch('/api/team/live?merchant=' + encodeURIComponent(merchant), {
+    return fetch('/api/team/live?merchant=' + encodeURIComponent(merchant), {
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then((response) => response.ok ? response.json() : null).then((data) => {
-      if (!data || !data.ok || data.merchant !== merchant) return;
+      if (!data || !data.ok || data.merchant !== merchant) { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); return; }
       const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}, data.pendingCorrections || []]);
       /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
          La fusion des heures pointées se faisait à CHAQUE réponse, donc
          persistTeams() réécrivait 70 ko de localStorage toutes les secondes
          pour reposer exactement les mêmes octets. */
-      if (signature === liveTeamSignature) return;
+      if (signature === liveTeamSignature) { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); return; }
+      liveTeamDelay = LIVE_TEAM_FAST_MS;
       liveTeamSignature = signature;
       liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] }; noteProfileState();
       const venueKey = teamVenueKey();
@@ -1103,9 +1104,9 @@
          pointage à la caisse n'arrivait jamais à l'écran tant que rien
          d'autre ne redessinait la page. Arrivé ici, quelque chose a changé. */
       applyLiveTeam();
-    }).catch(() => {}).finally(() => { liveTeamBusy = false; });
+    }).catch(() => { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); }).finally(() => { liveTeamBusy = false; });
   }
-  /* Le pointage doit battre à la seconde QUAND on le regarde. Ailleurs — c'est
+  /* Le pointage reprend à la seconde quand les données changent. Ailleurs — c'est
      à dire sur chacune des autres pages du tableau de bord, où ce module n'a
      rien à l'écran — la même seconde faisait une requête réseau et un tour de
      JSON.stringify sur toute l'équipe, pour personne. Et le premier chargement
@@ -1113,17 +1114,30 @@
      arrivent. On garde la seconde sur Équipe/Paie, on lève le pied partout
      ailleurs, et on s'arrête net quand l'onglet passe en arrière-plan. */
   const LIVE_TEAM_FAST_MS = 1000, LIVE_TEAM_IDLE_MS = 20000;
-  let liveTeamTimer = null;
+  let liveTeamTimer = null, liveTeamDelay = LIVE_TEAM_FAST_MS;
   function scheduleLiveTeam() {
     if (liveTeamTimer) { clearTimeout(liveTeamTimer); liveTeamTimer = null; }
     let hidden = false;
     try { hidden = !!document.hidden; } catch (_) {}
-    const wait = (pageActive && !hidden) ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS;
-    liveTeamTimer = setTimeout(() => { try { pollLiveTeam(); } catch (_) {} scheduleLiveTeam(); }, wait);
+    if (hidden) return;
+    const gate = document.querySelector('[data-kiwi-lock]');
+    const locked = gate && gate.isConnected && gate.style.display !== 'none';
+    const wait = locked ? 300000 : Math.max(pageActive ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS, liveTeamDelay);
+    liveTeamTimer = setTimeout(() => { Promise.resolve(pollLiveTeam()).finally(scheduleLiveTeam); }, window.KiwiPoll?.delay(wait) ?? wait);
   }
   function startLiveTeamPolling() {
     scheduleLiveTeam();
-    try { document.addEventListener('visibilitychange', scheduleLiveTeam); } catch (_) {}
+    function wakeTeam() {
+      if (liveTeamTimer) clearTimeout(liveTeamTimer);
+      liveTeamDelay = LIVE_TEAM_FAST_MS;
+      if (document.hidden) { liveTeamTimer = null; return; }
+      Promise.resolve(pollLiveTeam()).finally(scheduleLiveTeam);
+    }
+    try {
+      document.addEventListener('visibilitychange', wakeTeam);
+      document.addEventListener('kiwi:request-wake', wakeTeam);
+      window.addEventListener('focus', wakeTeam);
+    } catch (_) {}
   }
   if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startLiveTeamPolling);
   else startLiveTeamPolling();

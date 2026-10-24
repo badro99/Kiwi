@@ -217,9 +217,18 @@ session and every GPT job):**
 - **`npm run check:fast`** skips every browser suite (about 190 of ~900; a
   suite that reaches Chromium through a local harness such as
   `surface-matrix-lib.mjs` counts as one).
-- **Before every push: the full gate**, `npm test` / `npm run check:full`.
-  A green changed or fast run is **not** the gate, and each says so in its
-  last line.
+- **Before a push, scale the check to the risk** (owner, 2026-10-24, replaces
+  "full gate before every push"):
+  - **Full gate** (`npm test` / `npm run check:full`) for merges of several
+    branches, and for anything touching money, auth, the database schema or
+    the service worker / offline cache.
+  - **`npm run check:changed -- --browsers`** for one small, contained fix
+    (one file or one feature, like a bridge or copy fix) or docs: the tests
+    the change can affect, browser suites included.
+  - **Nothing** for text-only or scorecard-only changes outside the app.
+  Bundle merges so one full gate covers several branches. On 24 October the
+  full gate caught four failures (two of them browser-only) after GPT's own
+  targeted checks had passed, so do not skip it for merges.
 
 A suite counts as slow (browser) by reading its source and the local files it
 imports (puppeteer, browser-trace, Chromium, Playwright, Chrome), not its
