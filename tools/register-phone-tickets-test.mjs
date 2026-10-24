@@ -133,12 +133,18 @@ ok('an open ticket sheet folds on a tap outside it, and says it is a control', (
 });
 ok('the client carnet takes the whole screen on a phone', () => {
   assert.match(cb, /PHONE_Q = '\(max-width: 860px\), \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)'/);
-  assert.match(cb, /var b = isPhone\(\) \? \{ left: 0, top: 0, right: 0, bottom: 0 \} : panelInset\(\)/);
+  // The 2027 till keeps its rail on an iPad, so the carnet opens beside it there;
+  // a phone (no rail at that width) still gets the whole screen.
+  assert.match(cb, /var b = isPhone\(\) && !beside \? \{ left: 0, top: 0, right: 0, bottom: 0 \} : panelInset\(\)/);
+  assert.match(cb, /var beside = railed\(\)/);
+  assert.match(cb, /function railed\(\)[\s\S]{0,400}\(min-width: 1025px\), \(min-width: 744px\) and \(min-height: 601px\)/);
 });
 ok('the carnet has a close control on a phone, and no autofocus keyboard', () => {
   assert.match(cb, /id="kcb-back"/);
   assert.match(cb, /#kcb-back'\)\.onclick = close/);
-  assert.match(cb, /if \(!isPhone\(\)\) q\.focus\(\)/);
+  // No keyboard on any touch screen (phone or iPad); only a mouse or trackpad focuses.
+  assert.match(cb, /if \(!isPhone\(\) && fine\) q\.focus\(\)/);
+  assert.match(cb, /fine = window\.matchMedia\('\(pointer: fine\)'\)\.matches/);
   assert.match(cb, /#kcb-root \.kcb-back\{display:none;\}/);
 });
 ok('toolbars and KPI strips wrap instead of forcing a sideways scroll', () => {
