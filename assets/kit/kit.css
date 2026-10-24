@@ -191,6 +191,9 @@ html[data-k-till] .kw-hamburger,
 html[data-k-till] .kw-scrim { display: none; }
 /* …and the page title stops clearing it. */
 html[data-k-till] .main-head .main-title { padding-inline-start: 0; }
+/* In portrait the shipped header stacks; the waiting list's one button
+   stayed a full-width green bar (owner, 2026-10-24). It keeps its size. */
+html[data-k-till] .main-head .wl-add-btn { align-self: flex-start; }
 /* Cuisine on the rail opens in the till's own place, beside the rail, like
    Salle, À emporter and Attente (owner, 2026-10-22): the kitchen used to cover
    the whole window, rail included. It sits under Plus's panel (949) and its

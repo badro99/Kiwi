@@ -331,7 +331,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=8',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=45',
+  '/assets/kit/kit.css?v=46',
   '/assets/kit/dash-desktop.css?v=6',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
