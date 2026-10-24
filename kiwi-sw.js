@@ -31,7 +31,7 @@ var SHELL = [
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
-  '/assets/serveur-shell.css?v=3',
+  '/assets/serveur-shell.css?v=4',
   '/assets/serveur/service.js?v=1',
   '/assets/serveur-app.js?v=14',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
@@ -235,7 +235,7 @@ var SHELL = [
   '/assets/caisse-link.js?v=21',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
-  '/assets/serveur-lang.js?v=2',
+  '/assets/serveur-lang.js?v=3',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=6',
   '/assets/live-socket.js?v=4',
@@ -374,7 +374,7 @@ var SHELL = [
   '/assets/kit/strings/team.fr.js?v=1',
   '/assets/kit/strings/team.en.js?v=1',
   '/assets/kit/strings/team.ar.js?v=1',
-  '/assets/kit/team-pin.js?v=1',
+  '/assets/kit/team-pin.js?v=2',
   '/assets/kit/team-split.js?v=1',
   /* and the kitchen board's lanes, behind kiwiSkin2027:kds. */
   '/assets/icons/material/sprite.kds.svg?v=2',

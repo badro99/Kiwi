@@ -83,14 +83,18 @@
     var ok = EMAIL.test(String(S.input.value || '').trim());
     S.next.setAttribute('aria-disabled', ok ? 'false' : 'true');
     S.next.classList.toggle('is-off', !ok);
+    /* The reason keeps its line when it is not needed, so the button does not
+       jump up under the finger as the address becomes valid. */
     var r = S.box.querySelector('.k-team-reason');
-    if (r) r.hidden = ok;
+    if (r) { r.hidden = false; r.style.visibility = ok ? 'hidden' : ''; r.setAttribute('aria-hidden', ok ? 'true' : 'false'); }
+    if (ok) S.next.removeAttribute('aria-describedby'); else S.next.setAttribute('aria-describedby', 'k-team-reason');
   }
   function toEmail() {
     if (S.flow) { try { S.flow.destroy(); } catch (_) {} S.flow = null; }
     S.step2.textContent = '';
     S.step2.hidden = true;
     S.step1.hidden = false;
+    if (S.screen) S.screen.removeAttribute('data-k-team-step');
     syncNext();
     setTimeout(function () { try { S.input.focus({ preventScroll: true }); } catch (_) {} }, 0);
   }
@@ -99,6 +103,9 @@
     if (!EMAIL.test(email)) { syncNext(); return; }
     S.step1.hidden = true;
     S.step2.hidden = false;
+    /* The page drops the brand on a short screen for this step (§18.10 has
+       none above the identity line), so the pad never scrolls. */
+    if (S.screen) S.screen.setAttribute('data-k-team-step', 'code');
     S.step2.textContent = '';
     var pad = S.pad = doc.createElement('k-pin-pad');
     pad.setAttribute('identity', email);

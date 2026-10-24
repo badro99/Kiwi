@@ -4100,3 +4100,127 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       outline: 2px solid var(--forest);
       outline-offset: 2px;
     }
+
+    /* ===========================================================
+       Design 2027 · finishing pass (kiwiSkin2027:team only)
+       Every rule below is scoped to html[data-skin-2027="team"], so the
+       shipped app (flag off) is byte-for-byte what it was.
+       =========================================================== */
+    /* The sign-in and the demo pad: centred while they fit, scrollable from
+       the top when they do not (a centred flex column that overflows cuts its
+       top off, out of reach). Clear the notch and the home bar. */
+    html[data-skin-2027="team"] #screen-pin {
+      justify-content: flex-start;
+      overflow-y: auto;
+      padding-top: max(24px, calc(env(safe-area-inset-top) + 12px));
+      padding-bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px));
+    }
+    html[data-skin-2027="team"] #screen-pin > .pin-top { margin-top: auto; }
+    html[data-skin-2027="team"] #screen-pin > .pin-foot { margin-bottom: auto; }
+    html[data-skin-2027="team"] :is(.screen-pin, .screen-clockin) > .app-reload { right: auto; inset-inline-end: 18px; }
+    /* The note under the form: a sentence, set as one (no capitals, no
+       tracking, no orphan word). */
+    html[data-skin-2027="team"] .pin-foot {
+      font-family: inherit; font-size: 13px; line-height: 1.4;
+      letter-spacing: 0; text-transform: none;
+      max-width: 30ch; text-wrap: balance;
+    }
+    html[data-skin-2027="team"] .k-team-reason { text-wrap: pretty; }
+    /* The code step: the note about accounts has done its job, and on a
+       phone the brand steps aside too (§18.10 starts at the identity line),
+       so the pad and Change e-mail fit without scrolling. */
+    html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .pin-foot { display: none; }
+    html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .k-team-signin { margin-bottom: auto; }
+    @media (max-height: 900px) {
+      html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .pin-top { display: none; }
+      html[data-skin-2027="team"] #screen-pin[data-k-team-step="code"] > .k-team-signin { margin-top: auto; }
+    }
+    /* Arabic is never tracked or set in capitals: spacing pulls its letters
+       apart. The brand line and the note get a size Arabic can be read at. */
+    html[data-skin-2027="team"]:lang(ar) body * { letter-spacing: 0; }
+    html[data-skin-2027="team"]:lang(ar) :is(.pin-tagline, .pin-foot) { font-family: inherit; font-size: 13px; }
+    /* A Latin name inside Arabic keeps its full stop at its end. */
+    html[data-skin-2027="team"] :is(.tb-name, .profil-name) { unicode-bidi: plaintext; }
+    html[data-skin-2027="team"][dir="rtl"] :is(.tb-name, .profil-name) { text-align: right; }
+    /* Cards that were set flush left read from the start in Arabic too (the
+       menu card's category sat under its Options flag). No change in LTR. */
+    html[data-skin-2027="team"] :is(.table-card, .void-reason-chip, .menu-item, .notification-card, .split-tab, .split-pool-item) { text-align: start; }
+
+    /* Focus: the kit's ring, which reads on the dark floor as well as the
+       light one (forest on the night green was close to invisible). */
+    html[data-skin-2027="team"] :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+      outline: var(--k-focus-w, 2px) solid var(--k-focus);
+    }
+
+    /* Chips: one anatomy in both tabs. The menu's category chips were 34
+       tall beside the tables' 44, and grew on selection inside a row that
+       clips them. The count sits after the label in both directions. */
+    html[data-skin-2027="team"] .cat-pill {
+      min-height: 44px; display: inline-flex; align-items: center;
+      padding-block: 7px;
+    }
+    html[data-skin-2027="team"] .cat-pill.is-active { transform: none; }
+    html[data-skin-2027="team"] :is(.cat-pill, .filter-chip) .count { margin-left: 0; margin-inline-start: 5px; }
+    html[data-skin-2027="team"] .menu-context-close { position: relative; }
+    html[data-skin-2027="team"] .menu-context-close::after { content: ""; position: absolute; inset: -8px; }
+    html[data-skin-2027="team"] .step-btn::after { inset: -10px; }
+    html[data-skin-2027="team"] :is(.opt-pill, .split-chip, .cash-preset) {
+      min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    }
+    html[data-skin-2027="team"] .split-chip { min-width: 44px; }
+    html[data-skin-2027="team"] .split-cancel-link {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; min-height: 44px; margin-top: 4px;
+      font-size: 15px; font-weight: 500; color: var(--ink-2);
+    }
+
+    /* Menu cards: the flag and the category are read, not deciphered (8 and
+       9.5 px were below every caption on the floor), and the flag sits at
+       the leading-end corner in both directions. */
+    html[data-skin-2027="team"] .menu-item-cat { font-size: 10.5px; }
+    html[data-skin-2027="team"] .menu-item-optflag { font-size: 10px; right: auto; inset-inline-end: 9px; }
+    html[data-skin-2027="team"] .menu-grid { padding-bottom: 88px; }
+
+    /* A table's second line never wraps under its amount: it ends in an
+       ellipsis (the 360 list beside an open table was the tight case). */
+    html[data-skin-2027="team"] .tc-line2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* The cash field is a number, not a spinner. */
+    html[data-skin-2027="team"] .cash-input { -moz-appearance: textfield; appearance: textfield; }
+    html[data-skin-2027="team"] .cash-input::-webkit-inner-spin-button,
+    html[data-skin-2027="team"] .cash-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* Sheets: the home bar never sits on a button, and the pinned footer of
+       the options and set-menu sheets is the sheet's own colour (in the dark
+       it drew a lighter band above Add). */
+    html[data-skin-2027="team"] .modal { padding-bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px)); }
+    html[data-skin-2027="team"] :is(.opt-foot, .fml-foot) { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    html[data-skin-2027="team"][data-theme="dark"] :is(.opt-foot, .fml-foot) { background: #0E1E17; }
+
+    /* The table's actions on a short phone (iPhone SE): the same buttons,
+       44 tall, so the order above them keeps room to be read. */
+    @media (max-height: 700px) {
+      html[data-skin-2027="team"] .td-footer { gap: 6px; padding-top: 10px; }
+      html[data-skin-2027="team"] .td-footer .td-btn { height: 44px; }
+    }
+
+    /* iPad and wider. The menu takes as many columns as fit; the order bar
+       floats over the menu, clear of the rail, not under it; a sheet is a
+       centred card at its phone width instead of a 1 440 wide strip. */
+    @media (min-width: 600px) {
+      html[data-skin-2027="team"] .menu-grid { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+    }
+    @media (min-width: 768px) {
+      html[data-k-team-split] body .menu-cart-bar {
+        inset-inline: 104px 16px;
+        bottom: max(16px, env(safe-area-inset-bottom));
+        max-width: 560px; margin-inline: auto;
+      }
+      html[data-skin-2027="team"] .modal-veil { padding: 24px; }
+      html[data-skin-2027="team"] .modal {
+        max-width: 560px; max-height: calc(100% - 48px);
+        border-radius: var(--r-2xl, 32px);
+        border: 1px solid var(--line);
+      }
+      html[data-skin-2027="team"][data-theme="dark"] .modal { border-color: rgba(255, 255, 255, 0.12); }
+    }

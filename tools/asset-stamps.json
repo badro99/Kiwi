@@ -784,8 +784,8 @@
     "sha": "359864366ea011f8"
   },
   "assets/kit/team-pin.js": {
-    "v": "1",
-    "sha": "407e46a04316201c"
+    "v": "2",
+    "sha": "ee432bd814e2c54f"
   },
   "assets/kit/team-split.js": {
     "v": "1",
@@ -1444,12 +1444,12 @@
     "sha": "38a263ce74fcc15f"
   },
   "assets/serveur-lang.js": {
-    "v": "2",
-    "sha": "202aa842881fc803"
+    "v": "3",
+    "sha": "9eb70e29ef28655c"
   },
   "assets/serveur-shell.css": {
-    "v": "3",
-    "sha": "6123529badc8a58c"
+    "v": "4",
+    "sha": "5bd3c3ce6743d563"
   },
   "assets/serveur/service.js": {
     "v": "1",
