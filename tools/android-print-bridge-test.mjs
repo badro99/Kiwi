@@ -28,8 +28,14 @@ check(mainAct.includes('ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS') && mainAct
 check(relay.includes('/api/print/bridges') && relay.includes('/api/print/jobs'), 'APK reuses the existing Kiwi pairing and job relay');
 check(relay.includes('new InetSocketAddress(ip, port)') && relay.includes('8000'), 'LAN printing has a bounded raw TCP connection');
 check(service.includes('RelayClient.ack') && service.includes('BridgeStore.clearPair'), 'jobs are acknowledged and revoked credentials are cleared');
-check(build.includes('versionCode 5') && build.includes("versionName '1.0.4'"), 'Android bridge build is bumped to v1.0.4 (code 5)');
-check(relay.includes('VERSION = "1.0.4"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.4 with 10s keepalive interval');
+check(build.includes('versionCode 6') && build.includes("versionName '1.0.5'"), 'Android bridge build is bumped to v1.0.5 (code 6)');
+check(relay.includes('VERSION = "1.0.5"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.5 with 10s keepalive interval');
+// The server paces every bridge (functions/api/print/jobs.js: 1 s in service, 5 s idle).
+// Up to 1.0.4 the APK slept a fixed second and ignored it: 86 400 polls a tablet a day.
+check(/sleep\(count > 0 \? 250 : RelayClient\.nextPollMs\(response\)\)/.test(service) && !/sleep\(count > 0 \? 250 : 1000\)/.test(service),
+  'an idle bridge waits as long as the server says (poll), not a fixed second');
+check(/optInt\("poll", 0\)/.test(relay) && /Math\.max\(200, Math\.min\(5000, poll\)\)/.test(relay) && /: 1000;/.test(relay),
+  'the poll hint is bounded 200 ms to 5 s like the Node bridge, 1 s when the server gives none');
 check(relay.includes('7 * 24 * 60 * 60 * 1000') && server.includes('7 * 24 * 60 * 60 * 1000'), 'printer warm window is 7 days across Android and Node bridges — it survives a weekly closing day');
 check(relay.includes('PRINTER_WARM_BACKOFF_MAX_MS') && relay.includes('warmBackoffMs') && server.includes('PRINTER_WARM_BACKOFF_MAX_MS'), 'a printer that stops answering is probed less often, not every 10s for a week');
 check(/printerWarmMisses = warmPrinter\([^)]*\) \? 0 : printerWarmMisses \+ 1/.test(relay), 'the Android backoff resets the moment the printer answers again');

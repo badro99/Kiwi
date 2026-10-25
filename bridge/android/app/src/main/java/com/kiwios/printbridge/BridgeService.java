@@ -95,7 +95,7 @@ public final class BridgeService extends Service {
                     catch (Exception ignored) { /* le serveur conserve le claim ; ne jamais réimprimer à l'aveugle */ }
                     publish(ok ? "Imprimé · " + BridgeStore.merchant(this) : "Échec d’impression · " + error);
                 }
-                sleep(count > 0 ? 250 : 1000);
+                sleep(count > 0 ? 250 : RelayClient.nextPollMs(response));
             } catch (Exception e) {
                 publish("Hors ligne · " + readable(e));
                 // Stay conservative while offline, but do not leave a newly

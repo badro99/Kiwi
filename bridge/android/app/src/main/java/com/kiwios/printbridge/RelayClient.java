@@ -13,7 +13,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 final class RelayClient {
-    static final String VERSION = "1.0.4";
+    static final String VERSION = "1.0.5";
     private static final long PRINTER_KEEPALIVE_MS = 10000;
     // Une journée couvrait la fermeture de nuit mais pas le jour de fermeture
     // hebdomadaire ni un week-end prolongé : au retour, le premier ticket
@@ -224,4 +224,14 @@ final class RelayClient {
     }
 
     static JSONArray jobs(JSONObject response) { return response.optJSONArray("jobs"); }
+
+    /* Le serveur dit quand revenir (`poll`) : 1 s pendant le service, 5 s au
+       repos. Jusqu'à la 1.0.4 l'appli l'ignorait et demandait chaque seconde,
+       jour et nuit : 86 400 appels par tablette et par jour, le premier poste
+       de requêtes de kiwi-os.com (owner, 2026-10-24). Mêmes bornes que le pont
+       Node (bridge/server.js) : 200 ms à 5 s, 1 s si le serveur ne dit rien. */
+    static long nextPollMs(JSONObject response) {
+        int poll = response == null ? 0 : response.optInt("poll", 0);
+        return poll > 0 ? Math.max(200, Math.min(5000, poll)) : 1000;
+    }
 }

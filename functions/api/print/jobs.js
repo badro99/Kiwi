@@ -106,8 +106,9 @@ export async function onRequestGet(context) {
       }));
       /* Every bridge calls here around the clock, so its idle rate is most
        * of the relay's cost. Stay at 1 s while the counter is printing (a job
-       * in the last two minutes), then ease to 5 s. The installed bridges
-       * already honour `poll` (200–5000 ms), so no bridge update is needed. */
+       * in the last two minutes), then ease to 5 s. The Node and Rust bridges
+       * honour `poll` (200–5000 ms); the Android app only from 1.0.5 (up to
+       * 1.0.4 it polled every second regardless). */
       let poll = 250;
       if (!jobs.length) {
         const recent = await env.DB.prepare(

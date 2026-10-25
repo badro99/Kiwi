@@ -85,14 +85,15 @@ git pull
 app/android/gradlew -p bridge/android assembleRelease
 cp bridge/android/app/build/outputs/apk/release/app-release.apk downloads/kiwi-print-bridge.apk
 git add downloads/kiwi-print-bridge.apk
-git commit -m "printer · publier le pont Android v1.0.4"
+git commit -m "printer · publier le pont Android v1.0.5"
 git push https://github.com/zaka33333-hash/Kiwi.git main
 git push https://github.com/badro99/Kiwi.git main
 ```
 
 Sur la tablette : télécharger l'APK depuis kiwi-os.com, **installer par-dessus**
 (sauf ce passage unique de 1.0.0 à 1.0.4), accepter « Ignorer les optimisations de batterie »,
-vérifier que l'application affiche **1.0.4**.
+vérifier que l'application affiche **1.0.5** (depuis la 1.0.5, une tablette au repos ne
+interroge plus kiwi-os.com qu'une fois toutes les 5 s, comme le pont de bureau).
 
 ---
 
