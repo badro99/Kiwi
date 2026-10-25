@@ -260,7 +260,20 @@
       '.wn{display:flex;align-items:center;gap:6px;margin:0 24px 8px;padding:8px 12px;border-radius:var(--k-r-1);background-color:var(--k-warning-tint);color:var(--k-ink-1)}' +
       '.ft{display:flex;flex-direction:column;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:inset 0 1px 0 var(--k-line);background-color:var(--k-surface-1)}' +
       '.pt,.tot{display:flex;justify-content:space-between;align-items:baseline;gap:12px}' +
-      '.sec2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sec2 .k-btn{width:100%}'
+      '.sec2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sec2 .k-btn{width:100%}' +
+      /* A phone on its side has ~390px of height for the whole sheet: the
+         roomy header and stacked footer left one bill line visible. There the
+         header tightens, split / discount sit in the pay button's row, and the
+         Total row goes: the sheet's own bar and the pay button both carry it. */
+      '@media (orientation:landscape) and (max-width:1024px) and (max-height:600px){' +
+        '.hd{padding:12px 24px 4px;align-items:center}.ti{font-size:var(--k-fs-heading,20px);line-height:1.2}' +
+        '.gh{margin-block-start:8px}' +
+        '.ft{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:12px;row-gap:4px;padding-block:8px calc(8px + env(safe-area-inset-bottom,0px))}' +
+        '.ft>.pt{grid-column:1/-1}' +
+        '.ft>.tot{display:none}' +
+        '.ft>.k-btnw{grid-column:2}' +
+        '.ft:not(:has(>.sec2))>.k-btnw{grid-column:1/-1}' +
+      '}'
   });
 
   /* ── <k-options> .item {name, price, groups:[{id, label, required, max,

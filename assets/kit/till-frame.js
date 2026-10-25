@@ -143,14 +143,17 @@
   }
 
   /* Below 768 the navigation is the tab capsule (§13.3, layout.js
-     tillLayout): a matchMedia listener, no layout read. */
+     tillLayout): a matchMedia listener, no layout read. A phone held sideways
+     is still a phone: 844 x 390 kept the rail, which showed four of its six
+     places above the bill bar (2026-10-25). The landscape line is the one the
+     rest of the till calls a phone (clients-book.js PHONE_Q, pos-mobile.css). */
   var capsuleMq = null, tabsHost = false, setCapsule = null;
   function capsuleOn() { return !!(tabs && tabsHost && capsuleMq && capsuleMq.matches); }
   function watchCapsule() {
     if (setCapsule) { setCapsule(); return; }
     if (!root.matchMedia) return;
     var md = root.KiwiLayout && root.KiwiLayout.BREAKS ? root.KiwiLayout.BREAKS.md : 768;
-    capsuleMq = root.matchMedia('(max-width:' + (md - 0.02) + 'px)');
+    capsuleMq = root.matchMedia('(max-width:' + (md - 0.02) + 'px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px)');
     var set = setCapsule = function () {
       if (capsuleOn()) doc.documentElement.setAttribute('data-k-tabs', ''); else doc.documentElement.removeAttribute('data-k-tabs');
     };

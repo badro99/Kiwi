@@ -542,6 +542,73 @@ try {
     check(errors.length === 0, 'sheet payment: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 
+  /* Un téléphone, debout et couché. Couché (844 x 390, 667 x 375), le rail de
+     88 restait et la capsule d'onglets n'y était pas ; une longue addition
+     poussait Encaisser hors de l'écran, debout comme couché, parce que la
+     feuille n'avait qu'un plafond et pas de hauteur ; et couché, le menu
+     n'offrait qu'une fenêtre de 149 px (2026-10-25). Douze plats, au toucher. */
+  await S.run('flag on · a long bill on a phone, upright and on its side', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const plain = (await tiles(page)).filter((t) => !t.opts && !t.out).slice(0, 12);
+    check(plain.length === 12, 'phone: twelve plain dishes to ring up');
+    const centre = (host, sel) => page.evaluate((h, q) => {
+      const root = h ? document.querySelector(h).shadowRoot : document;
+      const el = root.querySelector(q); if (!el) return null;
+      el.scrollIntoView({ block: 'nearest' });
+      const r = el.getBoundingClientRect();
+      return r.width ? { x: r.x + r.width / 2, y: r.y + r.height / 2, inView: r.top >= 0 && r.bottom <= innerHeight } : null;
+    }, host, sel);
+    const touch = async (host, sel) => { const c = await centre(host, sel); if (!c) return null; await page.mouse.click(c.x, c.y); await sleep(450); return c; };
+    for (const [w, h] of [[390, 844], [844, 390], [667, 375]]) {
+      const tag = `${w}x${h}`, side = w > h;
+      await page.setViewport({ width: w, height: h, hasTouch: true });
+      await sleep(500);
+      if (await page.evaluate(() => document.querySelector('#vrap-builder').hidden)) {
+        check(await touch(null, '#vrap-new-order'), `${tag}: a new takeaway order is started`);
+        await page.waitForFunction(() => !document.querySelector('#vrap-builder').hidden, { timeout: 10000 });
+        await sleep(300);
+      }
+      const nav = await page.evaluate(() => {
+        const rail = document.getElementById('kit-rail'), bar = document.querySelector('k-tabbar');
+        const items = bar ? [...bar.shadowRoot.querySelectorAll('[data-id]')].map((b) => b.getBoundingClientRect()) : [];
+        return {
+          tabs: document.documentElement.hasAttribute('data-k-tabs'),
+          rail: rail ? rail.getBoundingClientRect().width : 0,
+          shown: items.filter((r) => r.width > 0 && r.left >= 0 && r.right <= innerWidth + 0.5 && r.bottom <= innerHeight).length,
+          count: items.length,
+        };
+      });
+      check(nav.tabs && nav.rail === 0, `${tag}: the tab capsule is the navigation, no rail (${JSON.stringify(nav)})`);
+      check(nav.count >= 6 && nav.shown === nav.count, `${tag}: every tab is on screen (${nav.shown}/${nav.count})`);
+      if (side) {
+        const menu = await page.evaluate(() => {
+          const v = document.querySelector('.view.is-active');
+          const hs = [...document.querySelector('k-menu-grid').shadowRoot.querySelectorAll('[data-item]')].map((t) => t.getBoundingClientRect().height);
+          return { window: v.clientHeight, tile: Math.round(Math.max(0, ...hs)) };
+        });
+        check(menu.tile > 0 && menu.window >= menu.tile + 60, `${tag}: the menu shows a whole row of dishes (${JSON.stringify(menu)})`);
+      }
+      for (const t of plain) { await tapTile(page, t.id); await sleep(60); }
+      await sleep(300);
+      check(await touch(null, '#rp-peek'), `${tag}: the bill bar opens the sheet`);
+      const bill = await page.evaluate(() => {
+        const b = document.querySelector('k-bill').shadowRoot, bd = b.querySelector('.bd'), line = b.querySelector('.ln');
+        return { lines: bd.clientHeight, line: line ? Math.round(line.getBoundingClientRect().height) : 0 };
+      });
+      check(bill.lines >= 2 * bill.line, `${tag}: the open bill shows at least two lines (${JSON.stringify(bill)})`);
+      check((await touch('k-bill', '[data-w="pay"]') || {}).inView, `${tag}: Charge is on screen under twelve lines and takes the tap`);
+      check(await touch('k-pay', '[data-method="cash"]'), `${tag}: Cash is tapped`);
+      check(await touch('k-pay', '[data-chip]'), `${tag}: Exact is tapped`);
+      check((await touch('k-pay', '[data-w="confirm"]') || {}).inView, `${tag}: the confirm is on screen`);
+      await sleep(1600);
+      check(await page.evaluate(() => cart.length === 0 && document.querySelector('k-pay').hidden), `${tag}: the bill is paid`);
+      await page.evaluate(() => document.body.classList.remove('ticket-open'));
+      await sleep(400);
+    }
+    await page.setViewport({ width: 1366, height: 1024 });
+    check(errors.length === 0, 'phone bill: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
   /* Cuisine s'ouvre à côté du rail, comme Salle, À emporter et Attente
      (propriétaire, 2026-10-22) : elle couvrait toute la fenêtre, rail compris. */
   await S.run('flag on · Cuisine opens beside the rail, like the other pages', async (tr) => {

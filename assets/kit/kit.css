@@ -317,6 +317,27 @@ html[data-k-tabs] .rp-peek { min-height: var(--rp-peek-h); padding: 12px 20px; }
 html[data-k-tabs] .main { padding-bottom: calc(var(--k-peek-h) + var(--k-tab-zone) + 16px); }
 /* The kitchen keeps the phone's full screen, under the capsule (101 > 100). */
 html[data-k-tabs] .kds-body { padding-bottom: calc(18px + var(--k-tab-zone)); }
+/* Wherever the bill is a sheet (caisse-skin.css: up to 900 wide, or a short
+   landscape screen), it gets a definite height, not only a cap: the bill
+   (k-bill, height 100%) scrolls its lines between its header and its foot
+   only inside a box that has one. With a cap alone, a long bill grew past
+   it and pushed Charge off the screen: twelve lines on a phone put it at
+   y 1124 on an 844 screen (2026-10-25). */
+@media (max-width: 900px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  html[data-k-till] .rightpanel { height: 82dvh; }
+}
+/* A phone held sideways (390 tall): at 82 % Charge sat under the total and
+   Split/Discount, past the screen's edge. There the sheet takes the height. */
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  html[data-k-till] .rightpanel { height: calc(100dvh - env(safe-area-inset-top, 0px)); max-height: none; }
+  /* …and the dishes get the room: the bill bar is one line, and the
+     takeaway title shares its line with the counts instead of stacking
+     above them. The menu showed one row of tiles in 149 px (2026-10-25). */
+  html[data-k-tabs] { --k-peek-h: 48px; }
+  html[data-k-tabs] .rp-peek { padding-block: 8px; }
+  html[data-k-till] .main-head[data-mode-section="vrap"] { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+  html[data-k-till] .main-head[data-mode-section="vrap"] .main-title { min-height: 36px; }
+}
 @media (prefers-reduced-motion: reduce) {
   html[data-k-tabs] .rightpanel { transition: none; }
 }
