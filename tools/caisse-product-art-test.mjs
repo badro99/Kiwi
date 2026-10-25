@@ -29,7 +29,7 @@ ok(/apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/.test(caisse), 'the iPhone 
 ok(!/kiwi-employee-k-/.test(manifest), 'the caisse manifest cannot reuse a legacy letter-k icon');
 ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest), 'the manifest icons are the current mark');
 
-ok(/menuArt\(m\.id, m\.cat, m\.name\)/.test(catalogue), 'the renderer passes the real product name to the picture resolver');
+ok(/menuArt\(m\.id, m\.cat, m\.name, m\.subLabel\)/.test(catalogue), 'the renderer passes the real product name and subcategory to the picture resolver');
 ok(!/<svg class="menu-art/.test(catalogue) && !/const _bowl|const _tajine|MENU_LIVE_ART|MENU_LIBRARY_ART/.test(app + catalogue),
   'no hand-drawn dish path is left: the pictures are the photographs');
 
@@ -89,6 +89,21 @@ const traps = [
   ['شاي', 'mint-tea'], ['طاجين دجاج', 'tajine-poulet'], ['طاجين', 'tajine-legumes']
 ];
 for (const [name, want] of traps) eq(key('it_x', 'x', name), want, `« ${name} » shows ${want}`);
+
+// What the published menus (25 October 2026) taught: the subcategory speaks
+// when the name only names a flavour, and a drink shelf beats a food name.
+const shelved = [
+  ['Brownie & Chocolate', 'Milkshake', 'milkshake'], ['Caramel cookie', 'B Frappé', 'milkshake'],
+  ['Mocca Cake', 'Black tea', 'the-noir'], ['Chocolat Banane', 'B Frappé', 'milkshake'],
+  ['Coconut Kiss', 'Smoothies', 'smoothie'], ['Le Nordique', 'All Day Brunch', 'petit-dejeuner'],
+  ['Smash Bacon', 'Smash Burgers', 'burger'], ['Rosa Pomodoro', 'Sauce', 'pasta'],
+  ['Tiramisu latte', 'Signatures', 'cafe-au-lait'], ['Kinder Bueno Crêpe', 'Crêpes', 'crepe'],
+  ['Brownie Mini Pancakes', 'Mini Pancakes', 'pancakes'], ['Tacos Cordon Bleu', '', 'tacos'],
+  ['Œufs bénédicte', '', 'oeufs'], ['Spaghetti Fruits de Mer', '', 'pasta'],
+  ['Crispy Fried Chicken Burger', 'Burger', 'chicken-burger'], ['Salmon Bagel', 'Sandwich', 'bagel'],
+  ['Tiramisu', 'Desserts', 'tiramisu'], ['Cheese burger', 'Menu Enfants', 'cheeseburger']
+];
+for (const [name, sub, want] of shelved) eq(key('it_x', 'x', name, sub), want, `« ${name} » under « ${sub} » shows ${want}`);
 
 // A broad sample of what Moroccan cafés, snacks and restaurants actually
 // sell: every one finds a photo of its own, none falls back to the cloche.

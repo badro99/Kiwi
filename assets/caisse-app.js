@@ -624,7 +624,7 @@
       [/pate|pasta/, 'pasta'],
       [/viennois|boulanger/, 'croissant'],
       [/patisser/, 'patisserie'],
-      [/dessert|sucre|douceur/, 'flan'],
+      [/dessert|sucre|douceur|sweet/, 'flan'],
       [/chaud|cafe|hot drink/, 'espresso'],
       [/boisson|soda|jus|drink|frais/, 'juice'],
       [/petit dej|breakfast|matin/, 'petit-dejeuner'],
