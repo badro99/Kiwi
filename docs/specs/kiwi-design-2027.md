@@ -1466,6 +1466,9 @@ Keys are grouped by bundle (§9.3). `{…}` are ICU arguments; amounts, percenta
 | `menu.sold_out` | Sold out | Épuisé | نفد |
 | `menu.tile_label` | {name}, {price} | {name}, {price} | {name}، {price} |
 | `menu.tile_label_options` | {name}, {price}, has options | {name}, {price}, avec options | {name}، {price}، بخيارات |
+| `menu.on_bill` | {n} on the bill | {n} sur l'addition | {n} في الفاتورة |
+| `menu.has_options` | has options | avec options | بخيارات |
+| `menu.label_sep` | `, ` | `, ` | `، ` |
 | `options.required` | Required · choose {n} | Obligatoire · choisissez {n} | إلزامي · اختر {n} |
 | `options.optional` | Optional · up to {n} | Facultatif · jusqu'à {n} | اختياري · حتى {n} |
 | `options.add` | Add to bill · {amount} | Ajouter · {amount} | أضف إلى الحساب · {amount} |
@@ -1485,7 +1488,7 @@ Keys are grouped by bundle (§9.3). `{…}` are ICU arguments; amounts, percenta
 | `bill.discount` | Discount | Remise | خصم |
 | `bill.print` | Print bill | Imprimer l'addition | اطبع الحساب |
 | `bill.view` (label; the count is the badge on the icon and the amount is a separate trailing part, §10.32) | View bill | Voir l'addition | اعرض الحساب |
-| `bill.view_a11y` (plural; AR six forms: §9.2, item, nominative) | View bill, {n} items, {amount} | Voir l'addition, {n} articles, {amount} | اعرض الحساب، {n} صنف، {amount} |
+| `bill.view_a11y` (plural; AR six forms: §9.2, item, nominative) | View bill, {amount}, {n} items | Voir l'addition, {amount}, {n} articles | اعرض الحساب، {amount}، {n} صنف |
 | `bill.recent` | Recent changes | Modifications récentes | التغييرات الأخيرة |
 | `bill.removed_toast` | {item} removed | {item} retiré | أُزيل {item} |
 | `split.title` | Split the bill · {amount} | Diviser l'addition · {amount} | تقسيم الحساب · {amount} |
@@ -1658,7 +1661,7 @@ Keys are grouped by bundle (§9.3). `{…}` are ICU arguments; amounts, percenta
 | `count.close` | Close the till | Clôturer la caisse | أغلق الصندوق |
 | `count.close_hint` | Count the drawer to close the till. | Comptez le tiroir pour clôturer la caisse. | عُدّ الدرج لإغلاق الصندوق. |
 | `count.same_as_last` (chip; accessible name `count.same_as_last_a11y`) | Last float · {amount} | Dernier fond · {amount} | آخر رصيد · {amount} |
-| `count.same_as_last_a11y` | Use the same opening float as last time, {amount} | Reprendre le fond de la dernière ouverture, {amount} | استعمل رصيد الافتتاح السابق نفسه، {amount} |
+| `count.same_as_last_a11y` | Last float · {amount}, use the same opening float as last time | Dernier fond · {amount}, reprendre le fond de la dernière ouverture | آخر رصيد · {amount}، استعمل رصيد الافتتاح السابق نفسه |
 | `count.open` | Open the till | Ouvrir la caisse | افتح الصندوق |
 | `count.reason` | Why is the count different? | Pourquoi le comptage diffère-t-il ? | لماذا يختلف العدّ؟ |
 | `count.reason.counting` | Counting error | Erreur de comptage | خطأ في العدّ |
@@ -2573,7 +2576,7 @@ No haptic, ever (§15). The shipped `kiwi:toast` haptic hook is removed at stage
 The overflow holds `bill.recent` (undo history), `bill.transfer`, `bill.merge`, `bill.clear` (§11) and `bill.cancel_table` (§11).
 
 ### 10.24 Options sheet (modifiers)
-- Opens on a **tap** for any item that has required options. Items with options show a `tune` 20 marker on the tile, and the tile's accessible name ends in ", has options" (`menu.tile_label_options`). No draft ARIA attribute carries it.
+- Opens on a **tap** for any item that has required options. Items with options show a `tune` 20 marker on the tile, and the tile's accessible name ends in ", has options" (`menu.has_options`). The name follows what the tile shows, in order (dish, price or Sold out, the count once on the bill, then has options), joined by `menu.label_sep`, so that it contains the visible text (WCAG 2.5.3, Label in Name). No draft ARIA attribute carries it.
 - **Anatomy:**
   - Title (Heading) with the price.
   - Groups: a header in Footnote strong, `options.required` or `options.optional`.

@@ -296,7 +296,10 @@
         (this.items || []).map(function (it) {
           var cur = it.id === v;
           var dot = it.dot && !it.badge ? '<span class="dt dt--' + esc(it.dot) + '" data-dot aria-hidden="true"></span>' : '';
-          return navItem(it, cur, '<span class="pill">' + icon(it.icon, 24, 'ic') + badgeHtml(it.badge, it.badgeTone) + dot + '</span><span class="k-foot lb">' + esc(it.label) + '</span>')
+          /* The label comes first in the markup and the icon is drawn above
+             it (order -1): read in order, the item says "Orders 3", which its
+             name "Orders, 3 new" contains (WCAG 2.5.3, 2026-10-25). */
+          return navItem(it, cur, '<span class="k-foot lb">' + esc(it.label) + '</span> <span class="pill">' + icon(it.icon, 24, 'ic') + badgeHtml(it.badge, it.badgeTone) + dot + '</span>')
             .replace(' class="it k-in"', ' class="it k-in" data-icon="' + esc(it.icon) + '"');
         }).join('') + '</div><div class="hud" aria-hidden="true"></div></nav>';
       navAttach(this, 'x', '.it');
@@ -314,7 +317,7 @@
       'padding-inline:8px;color:var(--k-ink-2);border-radius:27px}' +
       '.it[aria-current="page"]{color:var(--k-ink-1)}.it[aria-current="page"] .ic{color:var(--k-accent-ink)}' +
       '.it[aria-current="page"] .lb{font-weight:var(--k-fw-footnote-strong)}' +
-      '.pill{position:relative;display:inline-flex}.bd{position:absolute;top:-6px;inset-inline-start:14px}' +
+      '.pill{position:relative;display:inline-flex;order:-1}.bd{position:absolute;top:-6px;inset-inline-start:14px}' +
       '.dt{position:absolute;top:-2px;inset-inline-start:18px;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px var(--k-surface-1);background-color:var(--k-ink-2)}' +
       '.dt--danger{background-color:var(--k-danger-solid)}.dt--warning{background-color:var(--k-warning-solid)}' +
       '.lb{white-space:nowrap}' +
@@ -346,13 +349,15 @@
       var v = this.value, f = this.footer || {};
       var sync = f.sync ? '<button type="button" class="sy k-in" data-r="sync" aria-label="' + esc(f.sync.label || '') + '">' +
         icon(f.sync.icon || 'wifi_off', 24, f.sync.tone ? 'tn-' + f.sync.tone : '') + badgeHtml(f.sync.badge, f.sync.badgeTone) + '</button>' : '';
-      var cashier = f.cashier ? '<button type="button" class="ca k-in" data-r="cashier" aria-label="' + esc(f.cashier) + '">' +
+      /* Named by its text: an aria-label repeating the name made a reader
+         that joins the visible text ("KA Karim Alaoui") find it missing. */
+      var cashier = f.cashier ? '<button type="button" class="ca k-in" data-r="cashier">' +
         '<span class="av k-foot-s" aria-hidden="true">' + esc(String(f.cashier).trim().split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join('').toUpperCase()) + '</span>' +
         '<span class="k-foot cn">' + esc(f.cashier) + '</span></button>' : '';
       this.shadowRoot.innerHTML = '<nav class="rail"' + (this.str('label') ? ' aria-label="' + esc(this.str('label')) + '"' : '') + '><div class="trk">' +
         '<span class="lens" aria-hidden="true"></span>' +
         (this.items || []).map(function (it) {
-          return navItem(it, it.id === v, '<span class="pill">' + icon(it.icon, 24, 'ic') + '<span class="k-foot lb">' + esc(it.label) + '</span>' + (it.badge ? '<span class="bdw">' + badgeHtml(it.badge, it.badgeTone) + '</span>' : '') + '</span>');
+          return navItem(it, it.id === v, '<span class="pill">' + icon(it.icon, 24, 'ic') + '<span class="k-foot lb">' + esc(it.label) + '</span>' + (it.badge ? ' <span class="bdw">' + badgeHtml(it.badge, it.badgeTone) + '</span>' : '') + '</span>');
         }).join('') + '</div><div class="foot">' + sync + cashier + '</div></nav>';
       navAttach(this, 'y', '.pill');
     }
@@ -395,7 +400,7 @@
         (this.sections || []).map(function (s) {
           return (s.label && !col ? '<h2 class="k-foot-s k-ink2 sec">' + esc(s.label) + '</h2>' : '') +
             (s.items || []).map(function (it) {
-              return navItem(it, it.id === v, icon(it.icon, 24, 'ic') + '<span class="k-body lb' + (col ? ' k-vh' : '') + '">' + esc(it.label) + '</span>' + badgeHtml(it.badge, it.badgeTone));
+              return navItem(it, it.id === v, icon(it.icon, 24, 'ic') + '<span class="k-body lb' + (col ? ' k-vh' : '') + '">' + esc(it.label) + '</span>' + (it.badge ? ' ' + badgeHtml(it.badge, it.badgeTone) : ''));
             }).join('');
         }).join('') + '</div></nav>';
       navAttach(this, 'y', '.it');

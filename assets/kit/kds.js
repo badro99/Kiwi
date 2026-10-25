@@ -51,7 +51,12 @@
   }
 
   /* Holds a ticket to a height (fit's oldest-ticket rule, .cl in the css). */
-  function clamp(el, h) { el.classList.add('cl'); el.style.maxHeight = Math.max(0, h) + 'px'; }
+  function clamp(el, h) {
+    el.classList.add('cl'); el.style.maxHeight = Math.max(0, h) + 'px';
+    /* A held ticket scrolls its lines: the keyboard can reach and scroll
+       them too (scrollable-region-focusable, WCAG 2.1.1, 2026-10-25). */
+    var its = el.querySelector('.its'); if (its) its.tabIndex = 0;
+  }
 
   var KLane = K.make({
     setup: function () {
@@ -235,7 +240,7 @@
       '.late{box-shadow:inset 0 0 0 3px var(--k-danger-solid)}.late .th{background-color:var(--k-danger-solid);color:var(--k-on-danger)}' +
       '.sw{display:inline-flex;align-items:center;gap:6px;font-weight:var(--k-fw-callout-strong)}' +
       '.rc{box-shadow:inset 0 0 0 2px var(--k-accent)}' +
-      '.its{list-style:none;margin:0;padding:8px 12px}.it{display:flex;gap:12px;min-height:56px;align-items:flex-start;padding-block:4px}' +
+      '.its{list-style:none;margin:0;padding:8px 12px}.its:focus-visible{outline:none;box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus);border-radius:var(--k-r-1)}.it{display:flex;gap:12px;min-height:56px;align-items:flex-start;padding-block:4px}' +
       '.q{flex:none;width:48px;height:48px;border-radius:var(--k-r-1);background-color:var(--k-surface-3);display:flex;align-items:center;justify-content:center}' +
       '.nm{display:flex;flex-direction:column;min-width:0}.n{font-weight:var(--k-fw-body-strong);overflow-wrap:anywhere}' +
       '.ln{font-weight:var(--k-fw-callout-strong);color:var(--k-ink-1)}.tg{font-weight:var(--k-fw-callout-strong)}' +

@@ -129,9 +129,12 @@
       var n = this.int('count', 0);
       var shown = n > 99 ? '99+' : String(n);
       var lab = this.str('label');
-      if (lab) this.setAttribute('aria-label', t('badge.new', { label: lab, n: n })); else this.removeAttribute('aria-label');
-      this.setAttribute('role', 'img');
-      this.shadowRoot.innerHTML = '<span class="b b--' + esc(this.str('tone', 'danger')) + ' k-foot-s k-num" aria-hidden="true">' + esc(shown) + '</span>';
+      /* With a label it is one image named "Orders, 3 new"; without one, an
+         image with no name said nothing (role-img-alt): the count is then
+         read as the text it is. */
+      if (lab) { this.setAttribute('aria-label', t('badge.new', { label: lab, n: n })); this.setAttribute('role', 'img'); }
+      else { this.removeAttribute('aria-label'); this.removeAttribute('role'); }
+      this.shadowRoot.innerHTML = '<span class="b b--' + esc(this.str('tone', 'danger')) + ' k-foot-s k-num"' + (lab ? ' aria-hidden="true"' : '') + '>' + esc(shown) + '</span>';
     }
   });
   K.define('k-badge', KBadge, {
@@ -497,7 +500,10 @@
       var sel = this.flag('selectable');
       var role = r.radio ? ' role="radio" aria-checked="' + (r.selected ? 'true' : 'false') + '"' : (sel ? ' role="option" aria-selected="' + (r.selected ? 'true' : 'false') + '"' : '');
       var mainTag = r.trailing === 'switch' || r.trailing === 'button' || r.error ? 'div' : 'button';
-      return '<li class="li' + (i === n - 1 ? ' last' : '') + '" data-id="' + esc(r.id) + '"' + (r.radio || sel ? ' role="none"' : '') + '>' + swipe +
+      /* Under a radiogroup or a listbox every row's li steps aside (role none),
+         not only the radio ones: an li left in a radiogroup broke the list
+         (axe listitem, 2026-10-25). */
+      return '<li class="li' + (i === n - 1 ? ' last' : '') + '" data-id="' + esc(r.id) + '"' + (this.__roled || r.radio || sel ? ' role="none"' : '') + '>' + swipe +
         '<' + mainTag + (mainTag === 'button' ? ' type="button" data-row' : '') + ' class="r k-in' + (two ? ' two' : '') + (r.avatar ? ' avr' : '') + (r.selected && !r.radio ? ' sel' : '') + (r.disabled ? ' dis' : '') + '"' +
         (mainTag === 'button' ? role + (r.disabled ? ' aria-disabled="true"' : '') : '') + '>' +
         /* The spaces between title, subtitle and value are not painted (every
@@ -513,6 +519,7 @@
       var self = this;
       var radio = rows.some(function (r) { return r.radio; });
       var role = radio ? ' role="radiogroup"' : (this.flag('selectable') ? ' role="listbox"' : '');
+      this.__roled = !!role;
       this.shadowRoot.innerHTML = '<ul class="g' + (this.str('ground') === 's1' ? ' on-s1' : '') + '"' + role + (this.str('label') ? ' aria-label="' + esc(this.str('label')) + '"' : '') + '>' +
         rows.map(function (r, i) { return self.row(r, i, rows.length); }).join('') + '</ul>';
     },

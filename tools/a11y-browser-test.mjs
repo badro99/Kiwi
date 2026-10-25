@@ -553,6 +553,63 @@ await S.run('coût simple · fr, en, ar', async (t) => {
   compareThenFocus('foodcost', union(...states));
 });
 
+/* 25 octobre : la caisse 2027 (kiwiSkin2027:till) n'était pas auditée, seule
+   l'ancienne caisse l'était. Elle portait 184 noms qui ne contenaient pas leur
+   texte (les tuiles lues « Harira25,00 MAD », les onglets « 3 Commandes »), un
+   compteur à 4,03:1 en arabe sombre et un écran de pointage transparent dont
+   les boutons prenaient Tab. Menu, addition et encaissement, au bureau, sur
+   un téléphone en arabe sombre et sur un téléphone couché. */
+async function till2027(t, lang, width, height) {
+  const page = await open(t, '/kiwi-caisse.html', { 'kiwiSkin2027:till': '1', kiwiCaisseLang: lang, ...(lang === 'ar' ? { kiwiCaisseTheme: 'dark' } : {}) }, { width, height, mobile: width < 500, pin: false });
+  const states = [await audit(t, page)];
+  t.step('open the service');
+  await page.waitForFunction(() => typeof doOpenService === 'function', { timeout: 30000 });
+  await page.evaluate(() => doOpenService());
+  await page.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout: 20000 });
+  await sleep(800);
+  t.step('takeaway, three dishes');
+  await page.evaluate(() => { for (const tag of ['k-rail', 'k-tabbar']) { const r = document.querySelector(tag); const b = r && r.shadowRoot && r.shadowRoot.querySelector('[data-id="takeaway"]'); if (b && b.getBoundingClientRect().width) { b.click(); return; } } });
+  await sleep(400);
+  await page.evaluate(() => { const b = document.querySelector('#vrap-new-order'); if (b) b.click(); });
+  await page.waitForFunction(() => !!document.querySelector('k-menu-grid') && document.querySelector('k-menu-grid').shadowRoot.querySelector('[data-item]'), { timeout: 20000 });
+  await page.evaluate(() => { const g = document.querySelector('k-menu-grid'); [...g.shadowRoot.querySelectorAll('[data-item]')].filter((x) => !x.hasAttribute('data-opts') && x.getAttribute('aria-disabled') !== 'true').slice(0, 3).forEach((b) => b.click()); });
+  await sleep(500);
+  states.push(await audit(t, page));
+  t.step('the bill, then cash');
+  await page.evaluate(() => { const rp = document.querySelector('.rightpanel'); if (rp && getComputedStyle(rp).position === 'fixed') document.body.classList.add('ticket-open'); });
+  await sleep(500);
+  states.push(await audit(t, page));
+  await page.evaluate(() => document.querySelector('k-bill').shadowRoot.querySelector('[data-w="pay"]').click());
+  await sleep(600);
+  await page.evaluate(() => { const b = document.querySelector('k-pay').shadowRoot.querySelector('[data-method="cash"]'); if (b) b.click(); });
+  await sleep(500);
+  states.push(await audit(t, page));
+  return union(...states);
+}
+await S.run('caisse 2027 · bureau', async (t) => {
+  // coverage: surface=caisse-2027 locale=fr viewport=desktop
+  compare('caisse-2027', await till2027(t, 'fr', 1366, 1024));
+});
+await S.run('caisse 2027 · téléphone, arabe sombre', async (t) => {
+  // coverage: surface=caisse-2027 locale=ar viewport=phone
+  compare('caisse-2027-phone-ar', await till2027(t, 'ar', 390, 844));
+});
+await S.run('caisse 2027 · téléphone couché', async (t) => {
+  // coverage: surface=caisse-2027 locale=fr viewport=phone
+  compare('caisse-2027-landscape', await till2027(t, 'fr', 844, 390));
+});
+/* La galerie du kit montre chaque composant 2027 avec ses états : un défaut
+   d'un composant partagé (la pastille sans nom, la liste d'un groupe radio,
+   la colonne de cuisine qui défile sans le clavier) s'y voit avant d'arriver
+   sur une page. */
+await S.run('galerie du kit 2027', async (t) => {
+  // coverage: surface=kit-gallery locale=en viewport=desktop
+  const desk = await open(t, '/kit.html', {}, { width: 1440, height: 900, pin: false });
+  const a = await audit(t, desk);
+  const phone = await open(t, '/kit.html', {}, { width: 390, height: 844, mobile: true, pin: false });
+  compare('kit-gallery', union(a, await audit(t, phone)));
+});
+
 if (UPDATE) fs.writeFileSync(BASELINE_FILE, JSON.stringify(measured, null, 2) + '\n');
 await browser.close();
 server.close();

@@ -224,8 +224,8 @@
     "sha": "fd6b660eb1e7a179"
   },
   "assets/caisse/shift.js": {
-    "v": "1",
-    "sha": "44bc7f937197d581"
+    "v": "2",
+    "sha": "9385505a9b5b3e7a"
   },
   "assets/caisse/split-tender.js": {
     "v": "1",
@@ -728,8 +728,8 @@
     "sha": "b4d788c7452ec0e1"
   },
   "assets/kit/elements.js": {
-    "v": "3",
-    "sha": "33ffb0d7c8906d57"
+    "v": "4",
+    "sha": "abe1d32fee937a33"
   },
   "assets/kit/format.js": {
     "v": "3",
@@ -748,12 +748,12 @@
     "sha": "ea6043cb8cb287db"
   },
   "assets/kit/kds.js": {
-    "v": "8",
-    "sha": "2f24690c37c6196e"
+    "v": "9",
+    "sha": "91fba1b73e21ba8a"
   },
   "assets/kit/kit.css": {
-    "v": "53",
-    "sha": "dbdb6bada94c2197"
+    "v": "54",
+    "sha": "6f34c9e59a8c7de0"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -772,8 +772,8 @@
     "sha": "950320329471314e"
   },
   "assets/kit/nav.js": {
-    "v": "7",
-    "sha": "ed238196783bf3f4"
+    "v": "8",
+    "sha": "f78124849fbc66ba"
   },
   "assets/kit/ordering.css": {
     "v": "5",
@@ -860,16 +860,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "11",
-    "sha": "6f5707ae9966e3be"
+    "v": "12",
+    "sha": "3da341b31d542daf"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "11",
-    "sha": "8c0cbb10927d359b"
+    "v": "12",
+    "sha": "2404d9cd0484950c"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "11",
-    "sha": "ebb5891f213aa60f"
+    "v": "12",
+    "sha": "d372b8827374eba4"
   },
   "assets/kit/team-pin.js": {
     "v": "3",
@@ -900,8 +900,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "18",
-    "sha": "e519bf3f900180dc"
+    "v": "19",
+    "sha": "84a665a5561671c2"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

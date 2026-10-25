@@ -273,6 +273,10 @@ html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) .cat-pill .coun
   background: none; color: var(--k-ink-3); opacity: 1; padding: 0;
   font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); font-variant-numeric: tabular-nums;
 }
+/* On the chosen chip (the select paint, s3's value in dark) ink-3 fell to
+   4.03:1, which §5.3 allows only for a disabled label: the count steps up
+   with its label (axe color-contrast, Arabic dark, 2026-10-25). */
+html[data-k-till][data-skin-2027] :is(#cat-pills, #subcat-pills) .cat-pill.is-active .count { color: var(--k-ink-2); }
 /* The phone (below 768, §13.3, §10.20): the tab capsule takes the rail's
    place, floating at the bottom with the grid's side margin; the bill bar
    (the shipped #rp-peek, the sheet's top) rests 8 above it, and opening the

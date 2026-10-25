@@ -82,6 +82,15 @@
 
   /* ── <k-menu-grid> .sections [{id, title, items:[{id, name, price,
      options, soldOut, qty}]}] ─────────────────────────────────────────────── */
+  /* A tile's name says what it shows, in the same order: the dish, its price
+     (or Sold out in its place), the count once it is on the bill, then that it
+     has options. A voice user says what they read; a reader hears the count. */
+  function tileLabel(it, qty) {
+    var parts = [it.name, it.soldOut ? t('menu.sold_out') : money(it.price)];
+    if (qty) parts.push(t('menu.on_bill', { n: qty }));
+    if (it.options) parts.push(t('menu.has_options'));
+    return parts.join(t('menu.label_sep'));
+  }
   var KMenuGrid = K.make({
     setup: function () {
       var self = this, R = this.shadowRoot, lp = 0, lpEl = null, fired = false;
@@ -105,18 +114,20 @@
       });
     },
     render: function () {
-      var secs = this.sections || [];
+      var secs = this.sections || [], byId = this.__byId = {};
+      secs.forEach(function (s) { (s.items || []).forEach(function (it) { byId[it.id] = it; }); });
       this.shadowRoot.innerHTML = secs.map(function (s) {
         return '<section class="sec" data-sec="' + esc(s.id) + '" aria-labelledby="h-' + esc(s.id) + '">' +
           '<h3 class="k-heading hd" id="h-' + esc(s.id) + '">' + esc(s.title) + '</h3><div class="grid">' +
           (s.items || []).map(function (it) {
-            var price = money(it.price);
-            var name = t(it.options ? 'menu.tile_label_options' : 'menu.tile_label', { name: it.name, price: price });
-            if (it.soldOut) name += ', ' + t('menu.sold_out');
+            var price = money(it.price), name = tileLabel(it, it.qty);
             return '<button type="button" class="tile' + (it.soldOut ? ' out' : '') + '" data-item="' + esc(it.id) + '"' + (it.options ? ' data-opts' : '') +
               (it.soldOut ? ' aria-disabled="true"' : '') + ' aria-label="' + esc(name) + '">' +
-              '<span class="nm k-body-s">' + esc(it.name) + '</span>' +
-              '<span class="pr k-callout k-num">' + esc(it.soldOut ? t('menu.sold_out') : price) + '</span>' +
+              /* The spaces between the parts are what a reader joins them
+                 with: without them a speech user's "Harira" did not match
+                 "Harira25,00 MAD" (Label in Name, WCAG 2.5.3, 2026-10-25). */
+              '<span class="nm k-body-s">' + esc(it.name) + '</span> ' +
+              '<span class="pr k-callout k-num">' + esc(it.soldOut ? t('menu.sold_out') : price) + '</span> ' +
               /* The count takes the options mark's corner once the dish is on
                  the bill: the name keeps its whole width (owner, 2026-10-24). */
               (it.qty ? '<span class="q k-foot-s k-num" aria-hidden="true">' + esc(it.qty) + '</span>' : it.options ? icon('tune', 20, 'op') : '') + '</button>';
@@ -127,7 +138,8 @@
     setQty: function (id, n) {
       var el = this.$('[data-item="' + (root.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
       if (!el) return;
-      var q = el.querySelector('.q');
+      var q = el.querySelector('.q'), it = this.__byId && this.__byId[id];
+      if (it) el.setAttribute('aria-label', tileLabel(it, n));
       if (!n) { if (q) q.remove(); return; }
       if (!q) { q = doc.createElement('span'); q.className = 'q k-foot-s k-num'; q.setAttribute('aria-hidden', 'true'); el.appendChild(q); }
       q.textContent = n;
@@ -769,7 +781,7 @@
       while (paid.indexOf(this.__pick + 1) >= 0 && this.__pick < sh.length - 1) this.__pick++;
       var shares = '<ul class="sh" role="radiogroup" aria-label="' + esc(t('split.title', { amount: money(b.total || 0) })) + '">' + sh.map(function (c, i) {
         var done = paid.indexOf(i + 1) >= 0, on = i === self.__pick;
-        return '<li><button type="button" class="srow k-body" role="radio" aria-checked="' + on + '" data-share="' + i + '"' + (done ? ' aria-disabled="true"' : '') + '>' +
+        return '<li role="none"><button type="button" class="srow k-body" role="radio" aria-checked="' + on + '" data-share="' + i + '"' + (done ? ' aria-disabled="true"' : '') + '>' +
           '<span>' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + numHtml(money(fromCents(c))) + '</span></span>' + (done ? icon('task_alt', 20, 'k-accent-ink') : '') + '</button></li>';
       }).join('') + '</ul>';
       var mid = this.__mode === 'equal'
@@ -869,7 +881,7 @@
       var prev = this.$('.amt');
       var amount = money(Number(total) || 0);
       if (prev) {
-        var badge = this.$('.n'); if (badge) badge.textContent = n;
+        var badge = this.$('.n'); if (badge) badge.setAttribute('data-n', n);
         if (prev.textContent !== amount) { prev.textContent = amount; fade(prev); }
         var b = this.$('.bar');
         b.setAttribute('aria-label', t('bill.view_a11y', { n: n, amount: amount }));
@@ -877,8 +889,11 @@
         return;
       }
       this.shadowRoot.innerHTML = '<button type="button" class="bar k-body-s" aria-label="' + esc(t('bill.view_a11y', { n: n, amount: amount })) + '"' + (this.flag('disabled') ? ' aria-disabled="true"' : '') + '>' +
-        '<span class="ic">' + icon('receipt_long', 20) + '<span class="n k-foot-s k-num">' + n + '</span></span>' +
-        '<span class="lb">' + th('bill.view') + '</span><span class="amt k-num">' + esc(amount) + '</span></button>';
+        /* The count on the icon is drawn from data-n: it is already in the
+           name, which follows what the bar reads, "View bill 230 MAD"
+           (WCAG 2.5.3, 2026-10-25). */
+        '<span class="ic">' + icon('receipt_long', 20) + '<span class="n k-foot-s k-num" data-n="' + n + '"></span></span>' +
+        '<span class="lb">' + th('bill.view') + '</span> <span class="amt k-num">' + esc(amount) + '</span></button>';
     }
   });
   K.define('k-bill-bar', KBillBar, {
@@ -888,7 +903,7 @@
       'font-weight:var(--k-fw-body-strong);transition:transform var(--k-dur-4) var(--k-spring)}' +
       '.bar:active:not([aria-disabled="true"]){transform:scale(.97);background-color:var(--k-accent-pressed);transition-duration:var(--k-dur-1);transition-timing-function:var(--k-glide)}' +
       '.bar[aria-disabled="true"]{opacity:.5}' +
-      '.ic{position:relative;display:inline-flex;width:28px}.n{position:absolute;top:-8px;inset-inline-end:-6px;min-width:18px;height:18px;border-radius:9px;padding-inline:4px;' +
+      '.ic{position:relative;display:inline-flex;width:28px}.n::after{content:attr(data-n)}.n{position:absolute;top:-8px;inset-inline-end:-6px;min-width:18px;height:18px;border-radius:9px;padding-inline:4px;' +
       'display:flex;align-items:center;justify-content:center;background-color:var(--k-on-accent);color:var(--k-accent)}' +
       '.lb{flex:1;text-align:start}'
   });
