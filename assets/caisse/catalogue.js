@@ -488,7 +488,7 @@
       'flan': 'flan|bonet|creme caramel|panna cotta|panacotta|pana cotta',
       'pizza': 'pizza|margherita|margarita|بيتزا',
       'water': 'eau|water|eau minerale|sidi ali|ain saiss|sidi harazem|ماء',
-      'soda': 'coca|coca cola|cola|fanta|sprite|soda|pepsi|schweppes|hawaii|poms|7up|orangina|canette|boisson gazeuse',
+      'soda': 'coca|coca cola|cola|fanta|sprite|soda|pepsi|schweppes|hawaii|hawai|poms|7up|orangina|canette|boisson gazeuse',
       'juice': 'jus|juice|limonade|citronnade|~citron|jus de citron|عصير|lemonade|home lemonade|~lemon|~ginger|ginger lemon|jus maison|jus tropical|tropical|juice',
       'orange-juice': 'jus d orange|jus orange|orange pressee|~orange|jus d agrumes|orange juice',
       'avocado-juice': 'jus d avocat|~avocat|~avocado|jus avocat',
@@ -755,6 +755,24 @@
       return best;
     };
     const dishKeyFor = (name) => { const m = dishMatch(name); return m ? m.key : null; };
+    /* Une canette prend la couleur de sa marque (owner, 25 octobre 2026) :
+       Fanta en orange, Sprite en vert… sans logo ni texte, le nom est sous
+       la photo. Lu une fois le soda trouvé, donc « Pommes » au rayon
+       Soda+Eau est la canette de Poms, et ailleurs reste une pomme. Dans
+       l'ordre : zéro et light d'abord, puis la marque, puis le parfum. */
+    const SODA_CANS = [
+      ['soda-zero', 'zero|max'], ['soda-light', 'light|diet'],
+      ['soda-orange', 'fanta|orangina|mirinda'], ['soda-citron', 'sprite|7up|seven up|schweppes citron'],
+      ['soda-pomme', 'poms|pom s'], ['soda-bleu', 'pepsi'], ['soda-tonic', 'schweppes|tonic'],
+      ['soda-tropical', 'hawai|hawaii|tropical|ananas|mangue|passion'],
+      ['soda-orange', 'orange'], ['soda-citron', 'citron|lemon|limon|lime'], ['soda-pomme', 'pomme|apple'],
+      ['soda-cola', 'coca|cola|coke'],
+    ].map(([key, words]) => [key, words.split('|').map(dishTokens)]);
+    const sodaCan = (name) => {
+      const toks = dishTokens(normalizeMenuArtName(name));
+      const hit = SODA_CANS.find(([, words]) => words.some(w => w.length && w.every(t => toks.includes(t))));
+      return hit ? hit[0] : 'soda';
+    };
 
     /* La clé d'une photo de plat : le nom publié d'abord, puis la
        sous-catégorie (« Smoothies », « Smash Burgers »), puis l'id de la démo,
@@ -762,6 +780,10 @@
        ne nomme qu'un ingrédient (« Chocolat banane »), ou qui nomme un plat
        sous une sous-catégorie de boissons, cède à sa sous-catégorie. */
     const menuArtKey = (id, cat, name, sub) => {
+      const key = dishPhotoKey(id, cat, name, sub);
+      return key === 'soda' ? sodaCan(name) : key;
+    };
+    const dishPhotoKey = (id, cat, name, sub) => {
       const named = dishMatch(name);
       const fromSub = dishMatch(sub);
       if (named && fromSub && fromSub.tier > 0 && DISH_DRINKS.has(fromSub.key) && !DISH_DRINKS.has(named.key)) return fromSub.key;
@@ -777,7 +799,7 @@
     };
     /* Bumped when a photo is redrawn (tools/caisse-product-art-test.mjs checks
        every key has its file): the photos sit outside the stamped shell. */
-    const DISH_PHOTOS_V = 1;
+    const DISH_PHOTOS_V = 2;
     const menuArt = (id, cat, name, sub) =>
       `<img class="menu-photo" src="assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
 

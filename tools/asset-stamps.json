@@ -104,8 +104,8 @@
     "sha": "8eb3fe5595e9eba4"
   },
   "assets/caisse-app.js": {
-    "v": "23",
-    "sha": "87a35b70b6a261bb"
+    "v": "24",
+    "sha": "8d45fd9e937cb73b"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -164,8 +164,8 @@
     "sha": "ada0dad729a81f5f"
   },
   "assets/caisse-shell.css": {
-    "v": "10",
-    "sha": "89eed4c0bee3cb26"
+    "v": "11",
+    "sha": "17b87fdc57451557"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -176,8 +176,8 @@
     "sha": "d4ce3014e68334fc"
   },
   "assets/caisse/catalogue.js": {
-    "v": "5",
-    "sha": "04f09803ffc578d5"
+    "v": "6",
+    "sha": "0bcda5e301d9ce56"
   },
   "assets/caisse/closing.js": {
     "v": "1",

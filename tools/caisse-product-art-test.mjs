@@ -38,8 +38,8 @@ const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* 
 const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
 ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey') && resolver.includes('DISH_WORDS'), 'the picture tables and resolver are extractable');
 ok(!/MENU_ART_RULES/.test(app + catalogue), 'the old hand-ordered regex list is gone: the dictionary decides');
-const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES } = new Function('catLabels',
-  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES };`)({
+const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS } = new Function('catLabels',
+  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS };`)({
     pasta: 'Choisissez vos Pâtes', signatures: 'Signatures', desserts: 'Desserts',
     drinks: 'Boissons', soda: 'Soda+eau', tajines: 'Tajines'
   });
@@ -56,7 +56,7 @@ eq(key('it_x', 'pasta', 'Spécial maison'), 'pasta', 'the pasta category shows p
 eq(key('it_x', 'signatures', 'Spécial maison'), 'plate', 'an unknown signature gets the neutral cloche, not a misleading dish');
 ne(key('it_x', 'desserts', 'Spécial maison'), key('it_x', 'drinks', 'Spécial maison'), 'unknown products follow their category');
 eq(key('it_x', 'drinks', 'Jus de kiwi et pommes'), 'jus-pomme', 'apple in a juice name is an apple juice, not a can');
-eq(key('it_x', 'soda', 'Hawaii'), key('it_x', 'soda', 'Coca-Cola'), 'the published Hawaii soda is a can');
+ok(/^soda/.test(key('it_x', 'soda', 'Hawaii')) && key('it_x', 'soda', 'Hawaii') !== key('it_x', 'soda', 'Coca-Cola'), 'the published Hawaii soda is a can, in its own colours');
 eq(key('it_x', 'signatures', 'Supplément Fromage'), 'cheese', 'cheese supplements have their own picture');
 eq(key('it_x', 'desserts', 'Panacotta'), key('it_x', 'desserts', 'Bonet'), 'panna cotta renders as a moulded dessert');
 eq(key('m-008', 'tajines', 'Tajine poulet citron'), 'tajine-poulet', 'a lemon chicken tajine is a tajine, not a juice glass');
@@ -65,7 +65,7 @@ eq(key('it_x', 'x', 'Couscous tfaya'), 'couscous-tfaya', 'couscous tfaya is told
 eq(key('it_x', 'x', 'Pastilla fruits de mer'), 'pastilla-seafood', 'a seafood pastilla is not the chicken one');
 eq(key('it_x', 'x', 'Crème brûlée'), 'creme-brulee', 'crème brûlée is not taken by the coffee rule');
 eq(key('it_x', 'x', 'Sandwich thon'), 'sandwich-thon', 'a tuna sandwich is its own picture');
-eq(key('m-030', 'boissons', 'Spécial'), 'soda', 'a demo id still finds its picture when the name says nothing');
+eq(key('m-030', 'boissons', 'Spécial'), 'soda-cola', 'a demo id still finds its picture when the name says nothing');
 
 // The ranking: more words first, then the word that comes first in the name,
 // and an ingredient or flavour only when nothing else speaks.
@@ -132,8 +132,17 @@ const src = html('it_x', 'signatures', 'Lasagna');
 ok(/^<img class="menu-photo" src="assets\/dishes\/lasagna\.webp\?v=\d+" alt=""[^>]* width="64" height="64"[^>]* loading="lazy"/.test(src),
   'a card draws the photo as a decorative, lazily loaded 64 px image: ' + src);
 
+// A can takes its brand's colour (owner, 25 October 2026), on the shelf and by name.
+for (const [name, want] of [['Coca-Cola', 'soda-cola'], ['Fanta Orange', 'soda-orange'], ['Sprite', 'soda-citron'],
+  ['Pommes', 'soda-pomme'], ['Poms', 'soda-pomme'], ['Coca-Cola Zero', 'soda-zero'], ['Coca light', 'soda-light'],
+  ['Pepsi', 'soda-bleu'], ['Schweppes Tonic', 'soda-tonic'], ['Hawai tropical', 'soda-tropical'], ['Canette', 'soda']])
+  eq(key('it_x', 'soda', name, 'Soda+Eau'), want, `${name} on the Soda+Eau shelf shows ${want}`);
+eq(key('it_x', 'drinks', 'Fanta'), 'soda-orange', 'a brand name alone finds its can');
+ne(key('it_x', 'desserts', 'Tarte aux pommes'), 'soda-pomme', 'an apple tart is not an apple soda');
+ne(key('it_x', 'signatures', 'Pommes frites'), 'soda-pomme', 'fries are not an apple soda');
+
 // Every key the tables can return has its file, and every file is reachable.
-const keys = new Set(['plate', ...Object.values(MENU_ART), ...Object.keys(DISH_WORDS), ...CAT_GLYPH_RULES.map((r) => r[1])]);
+const keys = new Set(['plate', ...Object.values(MENU_ART), ...Object.keys(DISH_WORDS), ...CAT_GLYPH_RULES.map((r) => r[1]), ...SODA_CANS.map((r) => r[0])]);
 ok(Object.keys(DISH_WORDS).length >= 200, `the dictionary covers ${Object.keys(DISH_WORDS).length} dishes`);
 const files = new Set(fs.readdirSync(new URL('../assets/dishes/', import.meta.url)).filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)));
 const missing = [...keys].filter((k) => !files.has(k));

@@ -1176,11 +1176,13 @@
     .menu-item:active { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
     .menu-item:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
     /* The dish photo (assets/dishes, one generated series, 25 October 2026):
-       a cut-out on the card itself, no tinted plate behind it. */
+       a cut-out on the card itself, no tinted plate behind it, centred in the
+       card (owner, 25 October 2026) while the text below stays aligned left. */
     .menu-item-art {
       width: 64px; height: 64px;
       display: block;
-      margin: -4px 0 6px -4px;
+      align-self: center;
+      margin: -4px auto 6px;
     }
     .menu-photo { width: 64px; height: 64px; display: block; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
     /* Formule leads the category line instead of floating above the photo,

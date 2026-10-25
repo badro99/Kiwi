@@ -974,5 +974,43 @@
    "jus-banane",
    "a banana milkshake"
   ]
+ ],
+ "s27": [
+  [
+   "soda-cola",
+   "a standard 33 cl aluminium soda can standing upright, glossy red with a thin white ribbon wave, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-orange",
+   "a standard 33 cl aluminium soda can standing upright, bright orange with a deep blue ribbon wave, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-citron",
+   "a standard 33 cl aluminium soda can standing upright, green with lime-yellow and white splash accents, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-pomme",
+   "a standard 33 cl aluminium soda can standing upright, apple green with a red apple-skin accent band, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-zero",
+   "a standard 33 cl aluminium soda can standing upright, matte black with a red ribbon wave, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-light",
+   "a standard 33 cl aluminium soda can standing upright, brushed silver with a red ribbon wave, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-bleu",
+   "a standard 33 cl aluminium soda can standing upright, royal blue with a red and white circular band, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-tonic",
+   "a standard 33 cl aluminium soda can standing upright, pale lemon yellow with a thin black band, no logo, no text, no letters, condensation droplets"
+  ],
+  [
+   "soda-tropical",
+   "a standard 33 cl aluminium soda can standing upright, sunny yellow with orange and pink tropical fruit stripes, no logo, no text, no letters, condensation droplets"
+  ]
  ]
 }

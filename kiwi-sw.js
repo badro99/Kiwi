@@ -39,7 +39,7 @@ var SHELL = [
   '/assets/caisse/receipts.js?v=1',
   '/assets/caisse/closing.js?v=1',
   '/assets/caisse/workflows-loader.js?v=3',
-  '/assets/caisse/catalogue.js?v=5',
+  '/assets/caisse/catalogue.js?v=6',
   '/assets/caisse/till-frame.js?v=3',
   '/assets/caisse/orders.js?v=1',
   '/assets/caisse/payment.js?v=1',
@@ -52,7 +52,7 @@ var SHELL = [
   '/assets/caisse/handover.js?v=1',
   '/assets/caisse/inventory.js?v=1',
   '/assets/caisse/offline.js?v=1',
-  '/assets/caisse-app.js?v=23',
+  '/assets/caisse-app.js?v=24',
   '/assets/caisse-refresh.js?v=8',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -82,7 +82,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=10',
+  '/assets/caisse-shell.css?v=11',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',

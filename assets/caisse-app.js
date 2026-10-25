@@ -615,7 +615,7 @@
       'm-018': 'sandwich-kefta', 'm-019': 'sandwich-poulet', 'm-020': 'sandwich-thon',
       'm-021': 'bocadillo', 'm-022': 'wrap', 'm-023': 'mint-tea', 'm-024': 'espresso',
       'm-025': 'cafe-au-lait', 'm-026': 'cappuccino', 'm-027': 'orange-juice', 'm-028': 'avocado-juice',
-      'm-029': 'water', 'm-030': 'soda', 'm-031': 'creme-brulee', 'm-032': 'cornes-gazelle',
+      'm-029': 'water', 'm-030': 'soda-cola', 'm-031': 'creme-brulee', 'm-032': 'cornes-gazelle',
       'm-033': 'patisserie', 'm-034': 'fruit', 'm-035': 'glace',
     };
     /* Un article entièrement nouveau conserve un repli cohérent avec sa
