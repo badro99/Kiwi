@@ -23,9 +23,9 @@ const liveSource = () => LIVE.map(read).join('\n');
    fragments no longer line up by length. Rather than give up (every legacy
    test would then read the live files in load order and miss its markers),
    diff each live file against the text the fixture sealed for it, and replay
-   each changed run of lines at the same spot of the frozen original. An edit
-   that straddles two fragments cannot be placed: null, and the split must be
-   proven again. */
+   each changed run at the same spot of the frozen original. A run that
+   straddles fragments loses its part of each and lands in the last one; one
+   that cannot be placed at all gives null, and the split must be proven again. */
 function lineHunks(a, b) {
   if (a === b) return [];
   const A = a.split(/(?<=\n)/), B = b.split(/(?<=\n)/);
@@ -83,10 +83,24 @@ function carryEdits(original, fragments, bodies) {
   }
   const patches = [];
   for (const [file, body] of bodies) {
-    const hunks = lineHunks(sealed.get(file) || '', body);
+    const was = sealed.get(file) || '';
+    const hunks = lineHunks(was, body);
     if (hunks === null) return null;
     const own = pieces.filter(q => q.file === file);
-    for (const h of hunks) {
+    for (const line of hunks) {
+      // Narrow each run to the characters that differ: a split joins two
+      // fragments mid-line, and a run that only shares that line with the
+      // fragment before must not carry its new text across the moved code.
+      // A change that still spans fragments puts its new text in the last
+      // one, next to the kept end (a statement often runs on into the next
+      // line), so the kept start is cut back to a whole line in the first.
+      const old = was.slice(line.a0, line.a1);
+      let p = 0, s = 0;
+      while (p < old.length && p < line.text.length && old[p] === line.text[p]) p++;
+      while (s < old.length - p && s < line.text.length - p && old[old.length - 1 - s] === line.text[line.text.length - 1 - s]) s++;
+      if (p === old.length && p === line.text.length) continue;
+      if (own.filter(q => q.to > line.a0 + p && q.from < line.a1 - s).length > 1) while (p > 0 && was[line.a0 + p - 1] !== '\n') p--;
+      const h = { a0: line.a0 + p, a1: line.a1 - s, text: line.text.slice(p, line.text.length - s) };
       if (h.a0 === h.a1) {
         // An insertion at a fragment boundary belongs to the fragment it follows.
         const q = own.find(q => h.a0 > q.from && h.a0 <= q.to) || own.find(q => h.a0 === q.from);
@@ -95,11 +109,11 @@ function carryEdits(original, fragments, bodies) {
         continue;
       }
       // A change across fragments: each loses its own part, the new text goes
-      // in the first, and what the split moved out in between stays where it was.
+      // in the last, and what the split moved out in between stays where it was.
       const span = own.filter(q => q.to > h.a0 && q.from < h.a1);
       if (!span.length || span[0].from > h.a0 || span[span.length - 1].to < h.a1) return null;
       span.forEach((q, i) => patches.push({
-        from: q.at + Math.max(h.a0, q.from) - q.from, to: q.at + Math.min(h.a1, q.to) - q.from, text: i ? '' : h.text,
+        from: q.at + Math.max(h.a0, q.from) - q.from, to: q.at + Math.min(h.a1, q.to) - q.from, text: i === span.length - 1 ? h.text : '',
       }));
     }
   }

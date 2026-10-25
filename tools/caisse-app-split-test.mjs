@@ -247,9 +247,19 @@ console.log('PASS drawer lazy loader: no startup requests, independent owners, s
   assert.equal(carryEdits(original, fragments, new Map([['a', 'A1\nA4\n'], ['b', sealedB]])), 'A1\nB1\nB2\nA4\n', 'a deletion across fragments keeps what was moved out in between');
   assert.equal(carryEdits(original, fragments, new Map([['a', sealedA], ['b', 'B1\nnew\nB2\n']])), 'A1\nA2\nB1\nnew\nA3\nB2\nA4\n', 'an insertion follows its fragment');
   assert.deepEqual(lineHunks('x\ny\nz\n', 'x\nY\nz\n').map(h => [h.a0, h.a1, h.text]), [[2, 4, 'Y\n']], 'a changed line is one hunk');
-  // The live files: whatever was edited since, the legacy source is rebuilt.
-  assert.notEqual(caisseTestSource.appBeforeWorkflows(), null, 'the workflow split carries every edit made since (an edit across a moved run needs a new proof)');
-  assert.notEqual(caisseTestSource.appBeforeSecondSplit(), null, 'the second split finds its anchors');
+  // A split can join two fragments mid-line (« X; » then « Y = { » after the moved « B »):
+  // an edit that only shares that line with the fragment before stays after the moved run.
+  assert.equal(carryEdits('X;B\nY = {\nold\n};\n', [{ file: 'a', start: 0, end: 2 }, { file: 'b', start: 2, end: 4 }, { file: 'a', start: 4, end: 17 }],
+    new Map([['a', 'X;/*c*/Y = {\nnew\n};\n'], ['b', 'B\n']])), 'X;B\n/*c*/Y = {\nnew\n};\n', 'a mid-line join keeps an edit on its own side of the moved run');
+  // A rewrite across fragments goes next to what it runs on into (« .tail » continues the new line).
+  assert.equal(carryEdits('old1\nB\nold2\n  .tail\n', [{ file: 'a', start: 0, end: 5 }, { file: 'b', start: 5, end: 7 }, { file: 'a', start: 7, end: 20 }],
+    new Map([['a', 'new(\n  .tail\n'], ['b', 'B\n']])), 'B\nnew(\n  .tail\n', 'a rewrite across fragments lands in the last one, before the line it continues into');
+  // The live files: whatever was edited since, the legacy source is rebuilt, and it still parses
+  // (the fourteen legacy suites only cut functions out by name and would not notice a broken join).
+  for (const [name, source] of [['workflow split', caisseTestSource.appBeforeWorkflows()], ['second split', caisseTestSource.appBeforeSecondSplit()], ['first split', originalOrder()]]) {
+    assert.notEqual(source, null, `the ${name} carries every edit made since (an edit that cannot be placed needs a new proof)`);
+    assert.doesNotThrow(() => new vm.Script(source), `the ${name} rebuild parses`);
+  }
   assert.ok(originalOrder().includes('    /* On load · if a recent shift was saved, resume straight into the shell */'), 'the first split rebuilds the pre-split order');
 }
 console.log('PASS split edits: later edits replayed in each frozen original, never a silent fall back to load order');

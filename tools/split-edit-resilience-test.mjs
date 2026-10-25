@@ -54,10 +54,11 @@ try {
     }
     const caisse=require('./tools/caisse-test-source.cjs');
     const actual=caisse(fs.readFileSync('kiwi-caisse.html','utf8'));
-    // Anchors intact: the second split's runs go back in place; otherwise the live files in load order.
-    const app=caisse.appBeforeSecondSplit();
-    const joined=app===null?caisse.FILES.map(f=>fs.readFileSync(f,'utf8')).join('\\n'):fs.readFileSync('assets/caisse-accounting.js','utf8')+'\\n'+app;
-    assert.ok(actual.includes('<script>'+joined+'</script>'));new vm.Script(joined);
+    // Edited since every split: the edits are replayed in the frozen originals, the
+    // result still parses, and both edits (core and accounting prelude) survive.
+    const order=caisse.originalOrder();
+    assert.ok(actual.includes('<script>'+order+'</script>'));new vm.Script(order);
+    assert.equal(order.split('// Edited after the split.').length-1,2);
     assert.ok(caisse.declarations('payTipAmount').includes('function payTipAmount('));
   `],{cwd:temp,encoding:'utf8',timeout:30000});
   assert.equal(result.status,0,result.stdout+result.stderr);
