@@ -226,3 +226,30 @@ if (workflowPristine) console.log('PASS workflow split: exact reconstruction, de
   assert.equal(await review, 14);
 }
 console.log('PASS drawer lazy loader: no startup requests, independent owners, single flight, retry, arguments and captured listeners');
+
+/* Edits after a split (25 October 2026). The legacy suites read the till as it
+   was before each split; once a live file is edited, its fragments no longer
+   line up by length. caisse-test-source replays each edit at the same spot of
+   the frozen original instead of giving up: before that, the first edit to the
+   till after the big split dropped fourteen legacy suites to the live load
+   order, where their markers are not. */
+{
+  const { lineHunks, carryEdits, originalOrder } = caisseTestSource;
+  // Two files cut into interleaved fragments of one frozen original.
+  const original = 'A1\nA2\nB1\nA3\nB2\nA4\n';
+  const fragments = [
+    { file: 'a', start: 0, end: 6 }, { file: 'b', start: 6, end: 9 },
+    { file: 'a', start: 9, end: 12 }, { file: 'b', start: 12, end: 15 }, { file: 'a', start: 15, end: 18 },
+  ];
+  const sealedA = 'A1\nA2\nA3\nA4\n', sealedB = 'B1\nB2\n';
+  assert.equal(carryEdits(original, fragments, new Map([['a', sealedA], ['b', sealedB]])), original, 'unchanged bodies give the frozen original back');
+  assert.equal(carryEdits(original, fragments, new Map([['a', 'A1\nA2 edited\nA3\nA4\n'], ['b', sealedB]])), 'A1\nA2 edited\nB1\nA3\nB2\nA4\n', 'an edit lands where its line was');
+  assert.equal(carryEdits(original, fragments, new Map([['a', 'A1\nA4\n'], ['b', sealedB]])), 'A1\nB1\nB2\nA4\n', 'a deletion across fragments keeps what was moved out in between');
+  assert.equal(carryEdits(original, fragments, new Map([['a', sealedA], ['b', 'B1\nnew\nB2\n']])), 'A1\nA2\nB1\nnew\nA3\nB2\nA4\n', 'an insertion follows its fragment');
+  assert.deepEqual(lineHunks('x\ny\nz\n', 'x\nY\nz\n').map(h => [h.a0, h.a1, h.text]), [[2, 4, 'Y\n']], 'a changed line is one hunk');
+  // The live files: whatever was edited since, the legacy source is rebuilt.
+  assert.notEqual(caisseTestSource.appBeforeWorkflows(), null, 'the workflow split carries every edit made since (an edit across a moved run needs a new proof)');
+  assert.notEqual(caisseTestSource.appBeforeSecondSplit(), null, 'the second split finds its anchors');
+  assert.ok(originalOrder().includes('    /* On load · if a recent shift was saved, resume straight into the shell */'), 'the first split rebuilds the pre-split order');
+}
+console.log('PASS split edits: later edits replayed in each frozen original, never a silent fall back to load order');
