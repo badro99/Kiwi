@@ -230,11 +230,21 @@
      keys in the bill pane's width. Below 514 the page keeps min-height 514
      and the window scrolls as a whole, the keypad column never. */
   var layer = null, html = doc.documentElement;
+  /* The compact layer sizes its keys column to the bill PANE beside the menu.
+     Up to 900 wide (and on a short landscape screen) the shipped skin keeps
+     the bill a full-width sheet instead, so the keys took the whole width and
+     the summary column (amount, tip, methods) shrank to nothing: a blank
+     payment on an iPad held upright in Safari, 768 x 954 (2026-10-25). While
+     the bill is a sheet, the payment stays in it, as on the phone. */
+  function billIsSheet() {
+    var panel = api.bill && api.bill.closest ? api.bill.closest('.rightpanel') : null;
+    return !!panel && root.getComputedStyle(panel).position === 'fixed';
+  }
   function place() {
     var L = root.KiwiLayout;
     /* The phone (§13.2): the bill is a sheet, not a side pane, so the payment
        stays in it, under its own header, and the sheet scrolls if it must. */
-    var f = (pay && !pay.hidden && !capsuleOn() && L && L.paymentForm) ? L.paymentForm(root.innerHeight) : { form: 'regular' };
+    var f = (pay && !pay.hidden && !capsuleOn() && !billIsSheet() && L && L.paymentForm) ? L.paymentForm(root.innerHeight) : { form: 'regular' };
     if (f.form === 'regular') {
       if (pay && pay.parentNode !== api.bill) api.bill.appendChild(pay);
       if (pay) pay.removeAttribute('layout');

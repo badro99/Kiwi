@@ -479,6 +479,20 @@
       '.pay{display:flex;flex-direction:column;gap:12px;min-height:100%}.ti{margin:0}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}' +
       /* the primary pinned to the column's foot, as the bill's is (§18.3) */
       '.cash{flex:1}.pri{margin-block-start:auto}' +
+      /* When the column scrolls (the bill as a sheet: a phone, an iPad held
+         upright), the confirm stays in view at its foot instead of waiting
+         below the keypad (2026-10-25). Where it all fits, nothing moves. */
+      /* Sticky cannot leave its parent: inside .cash it stayed under the
+         methods until the cash block itself was scrolled up. Here .cash only
+         groups, so the column is the parent and the confirm rests at its foot
+         from the first frame. */
+      '.pay:not(.cmp) .cash{display:contents}' +
+      /* Its ground runs down over the pane's own bottom padding (kit.css
+         --k-pane-pad-end), so no key shows through under the hint line. */
+      '.pay:not(.cmp) .pri:not(:empty){position:sticky;bottom:calc(-1 * var(--k-pane-pad-end,0px));z-index:1;padding-block:12px var(--k-pane-pad-end,0px);background-color:var(--k-bg)}' +
+      /* and what scrolls into view (a focused key, a chip) stops above it:
+         the button, its hint line and the pane's 24 below (2026-10-25) */
+      ':host(:not([layout])){scroll-padding-block-end:calc(96px + var(--k-pane-pad-end,0px))}' +
       '.cmp{display:grid;grid-template-columns:minmax(0,1fr) var(--k-pay-keys,432px);gap:0;height:100%;min-height:0}' +
       '.cmp .sum{justify-self:end;align-self:start;box-sizing:content-box;width:384px;max-width:calc(100% - 96px);margin:24px;padding:12px 24px 24px;display:flex;flex-direction:column;gap:12px;' +
       'background-color:var(--k-surface-1);border-radius:var(--k-r-3)}' +

@@ -499,6 +499,49 @@ try {
     check(errors.length === 0, 'arabic header: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 
+  /* De 768 à 900 de large (un iPad debout dans Safari, 768 x 954), l'addition
+     est une feuille, pas un volet : le paiement compact y prenait toute la
+     largeur pour ses touches et la colonne du montant tombait à rien, écran
+     vide (2026-10-25). Le paiement reste dans la feuille, et Valider reste
+     à l'écran. Tout au toucher réel, aux coordonnées. */
+  await S.run('flag on · a bill paid in the sheet on an upright iPad and at 900 wide', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const plain = (await tiles(page)).find((t) => !t.opts && !t.out);
+    const centre = (host, sel) => page.evaluate((h, q) => {
+      const root = h ? document.querySelector(h).shadowRoot : document;
+      const el = root.querySelector(q); if (!el) return null;
+      el.scrollIntoView({ block: 'nearest' });
+      const r = el.getBoundingClientRect();
+      return r.width ? { x: r.x + r.width / 2, y: r.y + r.height / 2, inView: r.top >= 0 && r.bottom <= innerHeight } : null;
+    }, host, sel);
+    const touch = async (host, sel) => { const c = await centre(host, sel); if (!c) return null; await page.mouse.click(c.x, c.y); await sleep(450); return c; };
+    for (const [w, h] of [[768, 954], [900, 700]]) {
+      await page.setViewport({ width: w, height: h });
+      await sleep(400);
+      await tapTile(page, plain.id);
+      await sleep(300);
+      check(await touch(null, '#rp-peek'), `${w}x${h}: the bill bar opens the sheet`);
+      check((await touch('k-bill', '[data-w="pay"]') || {}).inView, `${w}x${h}: Charge is on screen and takes the tap`);
+      const pane = await page.evaluate(() => {
+        const k = document.querySelector('k-pay'), fig = k.shadowRoot.querySelector('[data-key-figure]').getBoundingClientRect();
+        return { compact: document.documentElement.hasAttribute('data-k-pay'), inSheet: !!k.closest('.rightpanel'), width: Math.round(k.getBoundingClientRect().width), fig: fig.width > 0 && fig.top >= 0 && fig.bottom <= innerHeight };
+      });
+      check(!pane.compact && pane.inSheet && pane.width > w * 0.8, `${w}x${h}: the payment stays in the sheet, full width (${JSON.stringify(pane)})`);
+      check(pane.fig, `${w}x${h}: the amount due is on screen`);
+      check(await touch('k-pay', '[data-method="cash"]'), `${w}x${h}: Cash is tapped`);
+      const confirm = await page.evaluate(() => { const r = document.querySelector('k-pay').shadowRoot.querySelector('[data-w="confirm"]').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
+      check(confirm, `${w}x${h}: the confirm rests on screen, before any scroll`);
+      check(await touch('k-pay', '[data-chip]'), `${w}x${h}: Exact is tapped`);
+      await touch('k-pay', '[data-w="confirm"]');
+      await sleep(1600);
+      check(await page.evaluate(() => cart.length === 0 && document.querySelector('k-pay').hidden), `${w}x${h}: the bill is paid`);
+      await page.evaluate(() => document.body.classList.remove('ticket-open'));
+      await sleep(400);
+    }
+    await page.setViewport({ width: 1366, height: 1024 });
+    check(errors.length === 0, 'sheet payment: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
   /* Cuisine s'ouvre à côté du rail, comme Salle, À emporter et Attente
      (propriétaire, 2026-10-22) : elle couvrait toute la fenêtre, rail compris. */
   await S.run('flag on · Cuisine opens beside the rail, like the other pages', async (tr) => {
