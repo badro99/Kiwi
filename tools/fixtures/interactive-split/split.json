@@ -1,6 +1,6 @@
 {
   "file": "assets/interactive.js",
-  "sha256": "b76cc77d8ac532894d10276f4bbfcb6c6e12166194a6ecb4812d010580aca6cf",
+  "sha256": "761c836a27978088ddcc52a01e15aa6153a803fcb75b5dd860104464eb152c06",
   "parts": [
     "assets/interactive/handlers.js",
     "assets/interactive/helpers.js"

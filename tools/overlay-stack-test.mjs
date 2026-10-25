@@ -151,6 +151,17 @@ try {
     await p.evaluate(() => { Kiwi.modal({title: 'Sans champ désigné', body: '<input id="plain">', foot: ''}); });
     await pause(200);
     check(await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('kiwi-modal-close')), 'without [data-autofocus] the first control still takes focus');
+    await p.keyboard.press('Escape');
+    await settle();
+
+    /* Le champ touché avant l'image suivante garde le focus : sur un appareil
+       chargé, le focus repartait sur la croix au milieu du nom, et l'espace
+       suivant fermait la fenêtre (native-qa-six-fixes, 25 octobre 2026). */
+    await p.evaluate(() => { const m = Kiwi.modal({title: 'Nouveau client', body: '<input id="early">', foot: ''}); m.el.querySelector('#early').focus(); });
+    await pause(200);
+    check(await p.evaluate(() => document.activeElement && document.activeElement.id === 'early'), 'a field focused before the first frame keeps focus');
+    await p.keyboard.type('Local QA');
+    check(await p.$eval('#early', (e) => e.value) === 'Local QA', 'typing into it is not sent to the close button');
     await p.close();
   }
 
