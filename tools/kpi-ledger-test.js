@@ -24,11 +24,13 @@
  * exactement la régression qu'on craint.
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
+const coreTestSource = require('./core-test-source.cjs');
+
 
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+const SRC = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 
 let pass = 0; const fails = [];
 const ok = (label, cond, detail) => { if (cond) pass++; else fails.push(label + (detail ? ' — ' + detail : '')); };
@@ -178,7 +180,7 @@ ok('« tauxRetour » sans vente sur la période : un point médian, pas un zéro
   const ctx = vm.createContext({ window: {}, Math, String, activeMerchantSlug: () => 'test-store', getCurrentVenue: () => 'test-venue', realSalesList: () => sales, realRefundList: () => refunds,
     /* Livraisons dues (assets/delivery-receivables.js) : 450 MAD vendus à 0 MAD dans la fenêtre. */
     deliveryDue: (f, t) => (f <= 120 && 120 < t ? 450 : 0) });
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/sales-history.js'), 'utf8'), ctx);
+  vm.runInContext(coreTestSource.readFileSync(path.join(ROOT, 'assets/sales-history.js'), 'utf8'), ctx);
   vm.runInContext(SRC.slice(wFrom, wTo), ctx);
   const w = ctx.realWindowStats(100, 500);
   ok('la fenêtre compte les remboursements faits dans la période, et seulement eux',
@@ -269,8 +271,8 @@ ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
  * uniquement pour pouvoir fixer l'heure qu'il est — l'arithmétique de la
  * bascule elle-même est contrôlée ailleurs, pas ici. */
 {
-  const POS = fs.readFileSync(path.join(ROOT, 'assets/pos-sale.js'), 'utf8');
-  const AGT = fs.readFileSync(path.join(ROOT, 'assets/agent-data.js'), 'utf8');
+  const POS = coreTestSource.readFileSync(path.join(ROOT, 'assets/pos-sale.js'), 'utf8');
+  const AGT = coreTestSource.readFileSync(path.join(ROOT, 'assets/agent-data.js'), 'utf8');
 
   const cut = (src, a, b, label) => {
     const i = src.indexOf(a), j = src.indexOf(b);

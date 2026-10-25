@@ -19,7 +19,8 @@
  *   node tools/specialty-retail-truth-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import coreTestSource from './core-test-source.cjs';
+const { readFileSync } = coreTestSource;
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';

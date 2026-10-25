@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Real Pages handlers on transactional local SQLite, no network or browser.
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -160,7 +161,7 @@ await strict('dashboard checkout displays cents and sends force only after confi
     confirm:message=>{prompts.push(message);return approved;},toast:()=>{},rerender:()=>{},window:{},
     fetch:async(url,init)=>{const p=JSON.parse(init.body);requests.push(p);return {status:p.force?200:409,ok:!!p.force,json:async()=>p.force?{booking:{id:'ui-stay'}}:{error:'stay-unpaid',owedCents:owed}};}
   });
-  const src=fs.readFileSync(path.join(ROOT,'assets/hotel.js'),'utf8');
+  const src=hotelTestSource();
   vm.runInContext(declaration(src.slice(src.indexOf('async function cuMoveStayStatus(')),'cuMoveStayStatus'),ui);
   await ui.cuMoveStayStatus('ui-stay','completed',button);
   assert.equal(prompts.length,1);assert.ok(prompts[0].includes((owed/100).toFixed(2)));

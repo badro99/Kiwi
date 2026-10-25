@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/_next/*",
+    "/images/*",
+    "/model/*",
+    "/draco/*",
+    "/icon.svg",
+    "/favicon.ico",
+    "/apple-icon.png",
+    "/kiwi-sw.js",
+    "/dashboard.webmanifest",
+    "/manifest.webmanifest",
+    "/cuisine.webmanifest",
+    "/serveur.webmanifest",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/downloads/kiwi-print-bridge.apk"
+  ]
+}

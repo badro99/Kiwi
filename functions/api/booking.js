@@ -1,5 +1,5 @@
 import { serviceCapacityAvailable } from './_booking-capacity.js';
-import { DateTimeFormat } from './_zone-law.js';
+import { DateTimeFormat } from './_cached-clock.js';
 import { merchantZone } from './_business-day.js';
 import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
 // Public Kiwi booking surface. It exposes availability, never another client's details.

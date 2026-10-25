@@ -31,13 +31,15 @@
  * et `null` remonte jusqu'à l'écran.
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
+const coreTestSource = require('./core-test-source.cjs');
+
 const stockTestSource = require('./stock-test-source.cjs');
 
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
-const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const R = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
 
 let pass = 0; const fails = [];
 const ok = (label, cond, detail) => { if (cond) pass++; else fails.push(label + (detail ? ' — ' + detail : '')); };

@@ -1,9 +1,10 @@
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
-const dateSource = fs.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
+const source = coreTestSource.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
+const dateSource = coreTestSource.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
 const tenant = 'santos-store', ts = Date.now();
 const sale = (cursor, amount = 10) => ({ cursor, amount, ts });
 const full = () => Array.from({ length: 50 }, (_, i) => sale(i + 1));

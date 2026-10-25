@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* QA08: the financial assistant must use the real bounded sales contract.
  * This loads the shipped agent and day-report modules, then gives them a
  * ledger containing July history, September sales, and a September refund. */
@@ -75,7 +76,7 @@ const context = { window, document, localStorage, Date: FixedDate, console, navi
 context.globalThis = context;
 vm.createContext(context);
 
-vm.runInContext(fs.readFileSync('assets/day-report.js', 'utf8'), context, { filename: 'assets/day-report.js' });
+vm.runInContext(coreTestSource.readFileSync('assets/day-report.js', 'utf8'), context, { filename: 'assets/day-report.js' });
 const dayReport = window.KiwiDayReport;
 assert.equal(dayReport.storeSlug(), 'merchant-sept', 'canonical report helper resolves merchant slug, not custom venue id');
 const dateKeys = [];
@@ -91,7 +92,7 @@ dayReport.timezone = (key) => { dateKeys.push(key); return originalTimezone(key)
 dayReport.cutoff = (key) => { dateKeys.push(key); return originalCutoff(key); };
 
 for (const file of ['assets/agent-data.js', 'assets/agent-features.js', 'assets/agent-truth.js', 'assets/agent.js']) {
-  vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+  vm.runInContext(coreTestSource.readFileSync(file, 'utf8'), context, { filename: file });
 }
 
 const profile = window.KiwiAgentProfile();

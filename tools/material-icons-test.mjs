@@ -7,6 +7,8 @@
 // `data-lucide` call sites. Static reads only: no browser, no network.
 import assert from 'node:assert/strict';
 import serveurSource from './serveur-source.cjs';
+import caisseWorkflowSource from './caisse-test-source.cjs';
+import coreTestSource from './core-test-source.cjs';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
@@ -174,9 +176,13 @@ const grew = [];
 const shrank = [];
 let total = 0;
 // Count moved waiter call sites at their original path; the split proof checks every byte.
+// Preserve the same icon ceiling across the caisse's byte-exact move.
+const caisseParts = new Set(JSON.parse(read('tools/fixtures/caisse-app/workflows.json')).files);
 const serveurParts = new Set(serveurSource.fragments().map(m => m.file));
-for (const f of files.filter(file => !serveurParts.has(file))) {
-  const n = countDataLucide(f === 'assets/serveur-app.js' ? serveurSource() : read(f));
+// Count extracted caisse and core code at its original owner.
+const coreParts = new Set(['assets/daterange/renderers.js', 'assets/agent/ui.js']);
+for (const f of files.filter(file => !serveurParts.has(file) && !caisseParts.has(file) && !coreParts.has(file))) {
+  const n = countDataLucide(f === 'assets/serveur-app.js' ? serveurSource() : f === 'assets/caisse-app.js' ? caisseWorkflowSource.appSource() : coreTestSource.readFileSync(path.join(ROOT, f), 'utf8'));
   total += n;
   const was = baseline[f] || 0;
   if (n > was) grew.push(`${f} ${was} → ${n}`);

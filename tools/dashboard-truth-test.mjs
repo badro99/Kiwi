@@ -22,7 +22,8 @@ import caisseTestSource from './caisse-test-source.cjs';
  *   node tools/dashboard-truth-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import coreTestSource from './core-test-source.cjs';
+const { readFileSync } = coreTestSource;
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

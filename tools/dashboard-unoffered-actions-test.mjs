@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 // Ticket #99: no dashboard entry point may promise an unavailable payment rail
 // or advertise mock integrations. The actual Settings integration route stays.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
-const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const read = file => coreTestSource.readFileSync(path.join(root, file), 'utf8');
 const checks = [
   ['dashboard header payment link', !read('dashboard.html').includes('data-action="payment-link"')],
   ['dashboard mock integrations', !read('dashboard.html').includes('data-integ-card')],

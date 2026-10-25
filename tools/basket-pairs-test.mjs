@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* « Souvent pris ensemble » : des paires que les tickets réels réunissent,
  * jamais un hasard présenté comme une règle.
  *
@@ -12,8 +13,8 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
-const DASH = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const SRC = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+const DASH = coreTestSource.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
 let failures = 0, passed = 0;
 const check = (label, ok, detail) => { if (ok) { passed++; console.log('  ✓ ' + label); } else { failures++; console.log('  ✗ ' + label + (detail ? '\n      ' + detail : '')); } };
 

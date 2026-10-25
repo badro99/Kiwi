@@ -1,5 +1,6 @@
 // Real client modules; storage transactions, clock and transport are controlled edges.
 import fs from 'node:fs';
+import caisseWorkflowSource from './caisse-test-source.cjs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {declaration as scan} from './js-declarations.cjs';
@@ -62,7 +63,7 @@ export async function harness(f){
   run(source,c,{filename:'assets/live-link.js'});installStore(c);
   run(read('assets/retail-sale-hold.js'),c);run(once('pos-sale',()=>read('assets/pos-sale.js').replace('  window.KiwiPosSale = {','  window.__posHold={heldRead,heldWrite}; window.KiwiPosSale = {')),c);
   c.HELD_SALES_PREFIX='kiwi-caisse-held-sales:';c.heldSalesCache=null;c.journal=[];c.shiftOpenedAt=new Clock();c.shiftMerchant=s.active;c.currentMerchantSlug=()=>s.active;c.paintHeldSales=()=>{};c.persistShift=()=>localStorage.setItem('test:journal',JSON.stringify(c.journal));
-  run(once('restaurant',()=>{const restaurant=['assets/caisse-accounting.js','assets/caisse-floor.js','assets/caisse-kitchen.js','assets/caisse-app.js'].map(read).join('\n');
+  run(once('restaurant',()=>{const restaurant=caisseWorkflowSource.FILES.map(read).join('\n');
    return '(function(){'+['money','reviveJournalEntry','heldSalesKey','heldSaleRows','saveHeldSales','holdSaleLocally','releaseHeldSale','retryHeldSales'].map(n=>named(restaurant,n)).join('\n')+'\nwindow.__restaurant={hold:holdSaleLocally,replay:retryHeldSales,rows:heldSaleRows};})();';}),c);
   browser={c,window,api:window.KiwiLive,q:window.__queue};if(indexed)await browser.q.initOutbox();await drain();return browser;
  }

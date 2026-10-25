@@ -1,3 +1,4 @@
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -18,7 +19,7 @@ for (let d = 0; d < 200; d++) {
     refunds.push(entry); rows.push({ ...entry, amount: -2, amount_cents: -200 });
   }
 }
-const source = name => fs.readFileSync(new URL('../assets/' + name, import.meta.url), 'utf8');
+const source = name => coreTestSource.readFileSync(new URL('../assets/' + name, import.meta.url), 'utf8');
 function setup({ fail = false, status = 200, storage = new Map() } = {}) {
   let tenant = 'alpha', calls = 0;
   const R = { businessDay: ts => businessDate(ts, cutoff, zone), today: () => businessDate(boundary(200), cutoff, zone),

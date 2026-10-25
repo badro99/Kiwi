@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import stockTestSource from './stock-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
@@ -10,7 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { readNativeRuntime } from './native-runtime-source.mjs';
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => coreTestSource.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 

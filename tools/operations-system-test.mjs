@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -9,15 +10,15 @@ import { DatabaseSync } from 'node:sqlite';
 import { onRequestGet, onRequestPost } from '../functions/api/operations.js';
 import { makeSession, tillToken, employeeToken, slugMerchant } from '../functions/auth/_lib.js';
 
-const browserSource = fs.readFileSync(new URL('../assets/operations.js', import.meta.url), 'utf8');
-const uiSource = fs.readFileSync(new URL('../assets/operations-ui.js', import.meta.url), 'utf8');
-const apiSource = fs.readFileSync(new URL('../functions/api/operations.js', import.meta.url), 'utf8');
+const browserSource = coreTestSource.readFileSync(new URL('../assets/operations.js', import.meta.url), 'utf8');
+const uiSource = coreTestSource.readFileSync(new URL('../assets/operations-ui.js', import.meta.url), 'utf8');
+const apiSource = coreTestSource.readFileSync(new URL('../functions/api/operations.js', import.meta.url), 'utf8');
 const teamSource = teamTestSource();
-const agentSource = fs.readFileSync(new URL('../assets/agent.js', import.meta.url), 'utf8');
-const dashboardExtraSource = fs.readFileSync(new URL('../assets/dashboard-extra.js', import.meta.url), 'utf8');
-const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
+const agentSource = coreTestSource.readFileSync(new URL('../assets/agent.js', import.meta.url), 'utf8');
+const dashboardExtraSource = coreTestSource.readFileSync(new URL('../assets/dashboard-extra.js', import.meta.url), 'utf8');
+const sw = coreTestSource.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const pages = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']
-  .map((name) => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8'));
+  .map((name) => coreTestSource.readFileSync(new URL('../' + name, import.meta.url), 'utf8'));
 
 let n = 0;
 function ok(condition, label) { assert.ok(condition, label); n++; console.log('  ✓ ' + label); }

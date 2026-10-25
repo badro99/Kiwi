@@ -333,6 +333,24 @@ await S.run('the pairing pad and the store lock on the kit pad', async (tr) => {
   check(true, 'Back closes the pad');
 });
 
+await S.run('workflow loading preserves startup and defers inventory until first use', async (tr) => {
+  const { page } = await till(tr);
+  const inventoryLoads = () => page.evaluate(() => performance.getEntriesByType('resource').filter(e => /assets\/caisse\/inventory\.js/.test(e.name)).length);
+  check(await page.evaluate(() => !performance.getEntriesByType('resource').some(e => /assets\/caisse\/orders\.js/.test(e.name))), 'order review declarations are absent from first paint');
+  check(await inventoryLoads() === 0, 'inventory declarations are absent from first paint');
+  check(await page.evaluate(() => typeof rollupLedger === 'function' && typeof recordSale === 'function' && typeof persistShift === 'function'), 'financial and recovery functions are synchronous at startup');
+  await press(page, LOCK, Object.keys(STAFF)[0]);
+  await page.waitForFunction(() => document.getElementById('cp-pin-screen').style.display === 'none', { timeout: 5000 });
+  await page.evaluate(() => openOrderReviewModal());
+  check(await page.evaluate(() => performance.getEntriesByType('resource').filter(e => /assets\/caisse\/orders\.js/.test(e.name)).length === 1), 'order review loads at its first entry');
+  await page.evaluate(() => closeOrderReviewModal());
+  await page.evaluate(() => Promise.all([openStock(), openStock()]));
+  check(await page.evaluate(() => document.querySelector('#stock-screen').classList.contains('is-open')), 'first stock opening executes the shipped inventory workflow');
+  check(await inventoryLoads() === 1, 'concurrent first openings share one inventory request');
+  await page.evaluate(() => { closeStock(); openStock(); });
+  check(await inventoryLoads() === 1, 'later openings reuse the loaded inventory');
+});
+
 await kb.close();
 console.log(`✓ till-pin-browser-test · ${checks} checks`);
 await S.finish();

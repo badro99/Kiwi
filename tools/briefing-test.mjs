@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import coreTestSource from './core-test-source.cjs';
+const { readFileSync } = coreTestSource;
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';

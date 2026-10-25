@@ -1,8 +1,9 @@
+const coreTestSource=require('./core-test-source.cjs');
 // Real named declarations plus complete namespace initialization for private caches.
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {declaration}=require('./js-declarations.cjs');
 const ROOT=process.env.KIWI_ROOT||path.resolve(__dirname,'..'),texts=new Map();
-function read(file){if(!texts.has(file))texts.set(file,fs.readFileSync(path.join(ROOT,file),'utf8'));return texts.get(file);}
+function read(file){if(!texts.has(file))texts.set(file,coreTestSource.readFileSync(path.join(ROOT,file),'utf8'));return texts.get(file);}
 function body(file,index=0){const sections=read(file).split(/^(?:\(function \(\) \{|\(\(\) => \{)/m);if(sections.length===1)throw Error('Missing wrapper '+file);const part=sections[index+1];return part.slice(0,part.lastIndexOf('})();'));}
 function load(c,file,names,index=0){const s=body(file,index);vm.runInContext(names.map(n=>declaration(s,n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c,{filename:file});}
 const formatters=new Map();function CachedFormat(locales,options){const key=JSON.stringify([locales,options]);if(!formatters.has(key))formatters.set(key,new Intl.DateTimeFormat(locales,options));return formatters.get(key);}

@@ -6,7 +6,8 @@
 // caisse-app.js with the state and everything that runs at load.
 const fs = require('node:fs');
 const path = require('node:path');
-const LIVE = ['assets/caisse-accounting.js', 'assets/caisse-floor.js', 'assets/caisse-kitchen.js', 'assets/caisse-app.js'];
+const workflows = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/caisse-app/workflows.json'), 'utf8'));
+const LIVE = ['assets/caisse-accounting.js', 'assets/caisse-floor.js', 'assets/caisse-kitchen.js', ...workflows.files, 'assets/caisse-app.js'];
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const liveSource = () => LIVE.map(read).join('\n');
@@ -16,9 +17,25 @@ const liveSource = () => LIVE.map(read).join('\n');
    read caisse-app.js as it was. Runs and anchors are found by text, not by
    offset: an edit elsewhere keeps working. null when an anchor or a run start
    is gone or ambiguous, or when a prelude gained code ahead of its first run. */
+function appBeforeWorkflows() {
+  const crypto = require('node:crypto');
+  // Changed bodies fall back to current live scripts, never frozen code.
+  if (!Object.entries(workflows.splitFiles).every(([file, hash]) =>
+    crypto.createHash('sha256').update(read(file)).digest('hex') === hash)) return null;
+  let core = read(workflows.core);
+  for (const edit of [...workflows.coreWhitespace].reverse()) core = core.slice(0, edit.at) + edit.text + core.slice(edit.at);
+  const bodies = new Map([[workflows.core, core], ...workflows.files.map(file => [file, read(file).slice(workflows.headers[file].length, -1)])]);
+  const offsets = new Map();
+  return workflows.fragments.map(fragment => {
+    const at = offsets.get(fragment.file) || 0, length = fragment.end - fragment.start;
+    offsets.set(fragment.file, at + length);
+    return bodies.get(fragment.file).slice(at, at + length);
+  }).join('');
+}
 function appBeforeSecondSplit() {
   const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/caisse-app/split-2.json'), 'utf8'));
-  const core = read('assets/caisse-app.js');
+  const core = appBeforeWorkflows();
+  if (core === null) return null;
   const texts = new Map();
   for (const file of new Set(map.runs.map(run => run.file))) {
     const body = read(file).replace(/\n$/, '');
@@ -56,7 +73,9 @@ function originalOrder() {
   return parts.join('');
 }
 module.exports = function caisseTestSource(html) {
-  return html.replace(/<script src="assets\/caisse-(?:accounting|floor|kitchen)\.js(?:\?v=\d+)?"><\/script>\s*/g, '')
+  return html.replace(/  <link[^>]+data-caisse-(?:script|lazy)[^>]*>\n/g, '')
+    .replace(/<script src="assets\/caisse\/workflows-loader\.js(?:\?v=\d+)?"><\/script>\s*/g, '')
+    .replace(/<script src="assets\/caisse-(?:accounting|floor|kitchen)\.js(?:\?v=\d+)?"><\/script>\s*/g, '')
     .replace(/<script src="assets\/caisse-app\.js(?:\?v=\d+)?"><\/script>/,
       () => '<script>' + originalOrder() + '</script>');
 };
@@ -70,3 +89,6 @@ module.exports.declarations = function declarations(...names) {
 module.exports.FILES = LIVE;
 module.exports.liveSource = liveSource;
 module.exports.appBeforeSecondSplit = appBeforeSecondSplit;
+
+module.exports.appBeforeWorkflows = appBeforeWorkflows;
+module.exports.appSource = () => appBeforeWorkflows() || [...workflows.files.map(read), read(workflows.core)].join("\n");

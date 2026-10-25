@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · L'heure d'une vente est celle du COMMERCE, pas celle de l'appareil
  *
@@ -15,7 +16,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const read = (rel) => fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+const read = (rel) => coreTestSource.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
 const src = read('assets/day-report.js');
 
 function boot(zone) {

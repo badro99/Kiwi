@@ -1,0 +1,449 @@
+{
+  "originalSha": "e2e387f3cd91ea6856645a71f26c70c7f3770c0ceadf4ac94dfbe187a605e50f",
+  "begin": 1384,
+  "end": 473379,
+  "pre": "/* ═══ Section 2 rest A · tables / menu ═══ */\n(function() {\n  \"use strict\";\n  if (!window.Kiwi || !window.Kiwi.handlers) return;\n  const Kiwi = window.Kiwi;\n  const handlers = Kiwi.handlers;\n  const drawer = Kiwi.drawer;\n  const fullpage = Kiwi.fullpage;\n  const modal = Kiwi.modal;\n  const toast = Kiwi.toast;\n  const menu = Kiwi.menu;\n  const confetti = Kiwi.confetti;\n  /* Locale helper — every i18n lookup in this IIFE reads through trLang(). */\n  const trLang = () => (window.KiwiI18n?.getLang?.() || 'fr');\n/* ═══════════════════════════════════════════════════════════════════════════\n * Kiwi · Section 2a — restaurant vertical handlers\n * Replaces (or supplements) the existing `nav-tables` and `nav-menu`\n * handlers in /Users/badrosonair/Documents/kiwi/assets/pages.js.\n *\n * APPLY:\n *   1. Append the contents of /tmp/kiwi-s2-rest-css.css to the CSS template\n *      literal at the top of pages.js (just before `</style>`).\n *   2. Replace the bodies of `handlers['nav-tables']` and `handlers['nav-menu']`\n *      in pages.js with the bodies below. Auxiliary handlers\n *      (`tables-merge`, `tables-split`, `tables-move`, `tables-new`,\n *      `menu-add`, `menu-86`, `menu-edit`, `menu-mass`, `menu-schedule`)\n *      can sit alongside in the same `handlers = { ... }` block.\n *\n * DEPENDENCIES (already on window.Kiwi):\n *   toast, modal, drawer, handlers, confetti\n * ─────────────────────────────────────────────────────────────────────────── */\n\n/* ─── helper: wire `data-dismiss` buttons on a modal/drawer to close ─── */\nfunction wireDismiss(m) {\n  if (!m || !m.el) return;\n  m.el.addEventListener('click', (e) => {\n    if (e.target.closest('[data-dismiss]')) m.close();\n  });\n}\n\n",
+  "prefix": "/* Owner: restaurant table workflow. Exposes nav-tables; needs Kiwi, floorplan core/live, table data and drawing factory. Loaded at first table open. */\n/* ═══ Section 2 rest A · tables / menu ═══ */\n(function() {\n  \"use strict\";\n  if (!window.Kiwi || !window.Kiwi.handlers) return;\n  const Kiwi = window.Kiwi;\n  const handlers = Kiwi.handlers;\n  const drawer = Kiwi.drawer;\n  const fullpage = Kiwi.fullpage;\n  const modal = Kiwi.modal;\n  const toast = Kiwi.toast;\n  const menu = Kiwi.menu;\n  const confetti = Kiwi.confetti;\n  /* Locale helper — every i18n lookup in this IIFE reads through trLang(). */\n  const trLang = () => (window.KiwiI18n?.getLang?.() || 'fr');\n/* ═══════════════════════════════════════════════════════════════════════════\n * Kiwi · Section 2a — restaurant vertical handlers\n * Replaces (or supplements) the existing `nav-tables` and `nav-menu`\n * handlers in /Users/badrosonair/Documents/kiwi/assets/pages.js.\n *\n * APPLY:\n *   1. Append the contents of /tmp/kiwi-s2-rest-css.css to the CSS template\n *      literal at the top of pages.js (just before `</style>`).\n *   2. Replace the bodies of `handlers['nav-tables']` and `handlers['nav-menu']`\n *      in pages.js with the bodies below. Auxiliary handlers\n *      (`tables-merge`, `tables-split`, `tables-move`, `tables-new`,\n *      `menu-add`, `menu-86`, `menu-edit`, `menu-mass`, `menu-schedule`)\n *      can sit alongside in the same `handlers = { ... }` block.\n *\n * DEPENDENCIES (already on window.Kiwi):\n *   toast, modal, drawer, handlers, confetti\n * ─────────────────────────────────────────────────────────────────────────── */\n\n/* ─── helper: wire `data-dismiss` buttons on a modal/drawer to close ─── */\nfunction wireDismiss(m) {\n  if (!m || !m.el) return;\n  m.el.addEventListener('click', (e) => {\n    if (e.target.closest('[data-dismiss]')) m.close();\n  });\n}\n\n",
+  "suffix": "\n})();\n",
+  "binding": "\nlet data;\nfunction tableData() { return data || (data = window.__kiwiPagesTables.createData({ PDS_CANVAS_W, PDS_CANVAS_H })); }\n\nlet drawing;\nfunction tableDrawing() {\n  return drawing || (drawing = window.__kiwiPagesTables.drawing({\n    get Kiwi() { return Kiwi; },\n    get trLang() { return trLang; },\n    get PDS_CANVAS_H() { return PDS_CANVAS_H; },\n    get PDS_CANVAS_W() { return PDS_CANVAS_W; },\n    get PDS_DEFAULT_STAFF() { return PDS_DEFAULT_STAFF; },\n    get PDS_EL_RENAME() { return PDS_EL_RENAME; },\n    get PDS_GRID() { return PDS_GRID; },\n    get PDS_ICONS() { return PDS_ICONS; },\n    get PDS_INLINE_CSS() { return PDS_INLINE_CSS; },\n    get PDS_LS_KEY() { return PDS_LS_KEY; },\n    get PDS_MAX_TABLE_SERVERS() { return PDS_MAX_TABLE_SERVERS; },\n    get PDS_SCENE_MIGRATION() { return PDS_SCENE_MIGRATION; },\n    get PDS_SEED_ZONES() { return PDS_SEED_ZONES; },\n    get PDS_SERVICE_STATUSES() { return PDS_SERVICE_STATUSES; },\n    get PDS_STAFF_COLORS() { return PDS_STAFF_COLORS; },\n    get PDS_TRANSIENT_IDS() { return PDS_TRANSIENT_IDS; },\n    get PDS_UNDO() { return PDS_UNDO; },\n    get pdsAttachDrag() { return pdsAttachDrag; },\n    get pdsAttachElDrag() { return pdsAttachElDrag; },\n    get pdsCloud() { return pdsCloud; },\n    get pdsEff() { return pdsEff; },\n    get pdsK() { return pdsK; },\n    get pdsKpis() { return pdsKpis; },\n    get pdsLiveBadge() { return pdsLiveBadge; },\n    get pdsPhoneLive() { return pdsPhoneLive; },\n    get pdsRenderActions() { return pdsRenderActions; },\n    get pdsRenderElement() { return pdsRenderElement; },\n    get pdsRenderStage() { return pdsRenderStage; },\n    get pdsRenderTable() { return pdsRenderTable; },\n  }));\n}\n",
+  "fragments": [
+    {
+      "start": 26090,
+      "end": 87982,
+      "replacement": "const PDS_STR = tableData().PDS_STR;\n\n",
+      "file": "assets/pages/tables-data.js",
+      "length": 61892
+    },
+    {
+      "start": 362448,
+      "end": 470293,
+      "replacement": "const PDS_INLINE_CSS = tableData().PDS_INLINE_CSS;",
+      "file": "assets/pages/tables-data.js",
+      "length": 107845
+    },
+    {
+      "start": 1047,
+      "end": 1488,
+      "replacement": "function pdsTenant() { return tableDrawing().pdsTenant.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 441
+    },
+    {
+      "start": 1804,
+      "end": 2191,
+      "replacement": "function pdsKey() { return tableDrawing().pdsKey.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 387
+    },
+    {
+      "start": 3422,
+      "end": 3517,
+      "replacement": "function pdsNoir() { return tableDrawing().pdsNoir.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 95
+    },
+    {
+      "start": 3518,
+      "end": 3733,
+      "replacement": "function pdsSetNoir() { return tableDrawing().pdsSetNoir.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 215
+    },
+    {
+      "start": 4023,
+      "end": 4493,
+      "replacement": "function pdsNoirC() { return tableDrawing().pdsNoirC.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 470
+    },
+    {
+      "start": 7084,
+      "end": 7545,
+      "replacement": "function pdsJourC() { return tableDrawing().pdsJourC.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 461
+    },
+    {
+      "start": 12481,
+      "end": 12833,
+      "replacement": "function pdsNoirTick() { return tableDrawing().pdsNoirTick.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 352
+    },
+    {
+      "start": 12834,
+      "end": 13915,
+      "replacement": "function pdsNoirChairs() { return tableDrawing().pdsNoirChairs.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 1081
+    },
+    {
+      "start": 14502,
+      "end": 16604,
+      "replacement": "function pdsNoirTableBody() { return tableDrawing().pdsNoirTableBody.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 2102
+    },
+    {
+      "start": 16896,
+      "end": 23592,
+      "replacement": "function pdsNoirFixture() { return tableDrawing().pdsNoirFixture.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 6696
+    },
+    {
+      "start": 23950,
+      "end": 24900,
+      "replacement": "function pdsRoomShellNoir() { return tableDrawing().pdsRoomShellNoir.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 950
+    },
+    {
+      "start": 25362,
+      "end": 26006,
+      "replacement": "function pdsRoomShellJour() { return tableDrawing().pdsRoomShellJour.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 644
+    },
+    {
+      "start": 89265,
+      "end": 89473,
+      "replacement": "function pdsStaffColor() { return tableDrawing().pdsStaffColor.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 208
+    },
+    {
+      "start": 89507,
+      "end": 89736,
+      "replacement": "function pdsServerIds() { return tableDrawing().pdsServerIds.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 229
+    },
+    {
+      "start": 89737,
+      "end": 90120,
+      "replacement": "function pdsSetServerIds() { return tableDrawing().pdsSetServerIds.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 383
+    },
+    {
+      "start": 90121,
+      "end": 90214,
+      "replacement": "function pdsHasServer() { return tableDrawing().pdsHasServer.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 93
+    },
+    {
+      "start": 90215,
+      "end": 90564,
+      "replacement": "function pdsIsFloorRole() { return tableDrawing().pdsIsFloorRole.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 349
+    },
+    {
+      "start": 90565,
+      "end": 91011,
+      "replacement": "function pdsTeamStaff() { return tableDrawing().pdsTeamStaff.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 446
+    },
+    {
+      "start": 91165,
+      "end": 91423,
+      "replacement": "function pdsIsRealStore() { return tableDrawing().pdsIsRealStore.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 258
+    },
+    {
+      "start": 91793,
+      "end": 92633,
+      "replacement": "function pdsSyncStaff() { return tableDrawing().pdsSyncStaff.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 840
+    },
+    {
+      "start": 95576,
+      "end": 95835,
+      "replacement": "function pdsBusinessDayStart() { return tableDrawing().pdsBusinessDayStart.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 259
+    },
+    {
+      "start": 95837,
+      "end": 98694,
+      "replacement": "function pdsNormalize() { return tableDrawing().pdsNormalize.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 2857
+    },
+    {
+      "start": 98696,
+      "end": 99069,
+      "replacement": "function pdsLoad() { return tableDrawing().pdsLoad.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 373
+    },
+    {
+      "start": 99307,
+      "end": 99454,
+      "replacement": "function pdsSerialize() { return tableDrawing().pdsSerialize.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 147
+    },
+    {
+      "start": 99455,
+      "end": 101042,
+      "replacement": "function pdsWriteLocal() { return tableDrawing().pdsWriteLocal.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 1587
+    },
+    {
+      "start": 101043,
+      "end": 101135,
+      "replacement": "function pdsSave() { return tableDrawing().pdsSave.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 92
+    },
+    {
+      "start": 102995,
+      "end": 103301,
+      "replacement": "function pdsRawState() { return tableDrawing().pdsRawState.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 306
+    },
+    {
+      "start": 104167,
+      "end": 105103,
+      "replacement": "function pdsMerge() { return tableDrawing().pdsMerge.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 936
+    },
+    {
+      "start": 105487,
+      "end": 106090,
+      "replacement": "function pdsCarryForward() { return tableDrawing().pdsCarryForward.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 603
+    },
+    {
+      "start": 108215,
+      "end": 108430,
+      "replacement": "function pdsZoneName() { return tableDrawing().pdsZoneName.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 215
+    },
+    {
+      "start": 108673,
+      "end": 108986,
+      "replacement": "function pdsFixLabel() { return tableDrawing().pdsFixLabel.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 313
+    },
+    {
+      "start": 108987,
+      "end": 111741,
+      "replacement": "function pdsDefaultState() { return tableDrawing().pdsDefaultState.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 2754
+    },
+    {
+      "start": 111821,
+      "end": 116141,
+      "replacement": "function pdsTemplate() { return tableDrawing().pdsTemplate.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 4320
+    },
+    {
+      "start": 116793,
+      "end": 117001,
+      "replacement": "function pdsEnsureCss() { return tableDrawing().pdsEnsureCss.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 208
+    },
+    {
+      "start": 120098,
+      "end": 120239,
+      "replacement": "function pdsPhoneWanted() { return tableDrawing().pdsPhoneWanted.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 141
+    },
+    {
+      "start": 120240,
+      "end": 120384,
+      "replacement": "function pdsInitials() { return tableDrawing().pdsInitials.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 144
+    },
+    {
+      "start": 120385,
+      "end": 120484,
+      "replacement": "function pdsTableNum() { return tableDrawing().pdsTableNum.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 99
+    },
+    {
+      "start": 121971,
+      "end": 124833,
+      "replacement": "function pdsPhoneBody() { return tableDrawing().pdsPhoneBody.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 2862
+    },
+    {
+      "start": 134149,
+      "end": 134464,
+      "replacement": "function pdsSubtitle() { return tableDrawing().pdsSubtitle.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 315
+    },
+    {
+      "start": 135163,
+      "end": 135496,
+      "replacement": "function pdsOnShift() { return tableDrawing().pdsOnShift.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 333
+    },
+    {
+      "start": 138819,
+      "end": 140493,
+      "replacement": "function pdsRenderBody() { return tableDrawing().pdsRenderBody.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 1674
+    },
+    {
+      "start": 140969,
+      "end": 141194,
+      "replacement": "function pdsFind() { return tableDrawing().pdsFind.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 225
+    },
+    {
+      "start": 141195,
+      "end": 141354,
+      "replacement": "function pdsPlane() { return tableDrawing().pdsPlane.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 159
+    },
+    {
+      "start": 141506,
+      "end": 141623,
+      "replacement": "function pdsPlaneOf() { return tableDrawing().pdsPlaneOf.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 117
+    },
+    {
+      "start": 141970,
+      "end": 142138,
+      "replacement": "function pdsSnap() { return tableDrawing().pdsSnap.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 168
+    },
+    {
+      "start": 142139,
+      "end": 142634,
+      "replacement": "function pdsApplySnap() { return tableDrawing().pdsApplySnap.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 495
+    },
+    {
+      "start": 142635,
+      "end": 142787,
+      "replacement": "function pdsPush() { return tableDrawing().pdsPush.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 152
+    },
+    {
+      "start": 143061,
+      "end": 143142,
+      "replacement": "function pdsUndoKey() { return tableDrawing().pdsUndoKey.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 81
+    },
+    {
+      "start": 143829,
+      "end": 143998,
+      "replacement": "function pdsUndo() { return tableDrawing().pdsUndo.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 169
+    },
+    {
+      "start": 143999,
+      "end": 144167,
+      "replacement": "function pdsRedo() { return tableDrawing().pdsRedo.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 168
+    },
+    {
+      "start": 144377,
+      "end": 146412,
+      "replacement": "function pdsFreeSpot() { return tableDrawing().pdsFreeSpot.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 2035
+    },
+    {
+      "start": 147410,
+      "end": 147528,
+      "replacement": "function pdsMagnet() { return tableDrawing().pdsMagnet.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 118
+    },
+    {
+      "start": 147867,
+      "end": 148587,
+      "replacement": "function pdsRepaintCell() { return tableDrawing().pdsRepaintCell.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 720
+    },
+    {
+      "start": 148738,
+      "end": 149353,
+      "replacement": "function pdsSyncInspector() { return tableDrawing().pdsSyncInspector.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 615
+    },
+    {
+      "start": 149355,
+      "end": 149479,
+      "replacement": "function pdsAttachResize() { return tableDrawing().pdsAttachResize.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 124
+    },
+    {
+      "start": 149481,
+      "end": 159398,
+      "replacement": "function pdsBindHandles() { return tableDrawing().pdsBindHandles.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 9917
+    },
+    {
+      "start": 167549,
+      "end": 167740,
+      "replacement": "function pdsIcon() { return tableDrawing().pdsIcon.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 191
+    },
+    {
+      "start": 168214,
+      "end": 168424,
+      "replacement": "function pdsFloorCount() { return tableDrawing().pdsFloorCount.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 210
+    },
+    {
+      "start": 170236,
+      "end": 170796,
+      "replacement": "function pdsRenderEmpty() { return tableDrawing().pdsRenderEmpty.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 560
+    },
+    {
+      "start": 171742,
+      "end": 172143,
+      "replacement": "function pdsTypeFor() { return tableDrawing().pdsTypeFor.apply(this, arguments); }",
+      "file": "assets/pages/tables-drawing.js",
+      "length": 401
+    }
+  ],
+  "dataPrefix": "/* Owner: table labels and scoped CSS. Exposes private table data factory; needs canvas dimensions from the table owner. */\nwindow.__kiwiPagesTables = { createData: (scope) => {\n'use strict';\nconst { PDS_CANVAS_W, PDS_CANVAS_H } = scope;\n",
+  "dataSuffix": "\nreturn { PDS_STR, PDS_INLINE_CSS };\n}, drawing: null };\n",
+  "drawingPrefix": "/* Owner: table drawing and normalization helpers. Exposes private drawing factory; needs the live table owner scope. */\nwindow.__kiwiPagesTables.drawing = (scope) => {\n'use strict';\nconst { Kiwi, trLang, PDS_CANVAS_H, PDS_CANVAS_W, PDS_DEFAULT_STAFF, PDS_EL_RENAME, PDS_GRID, PDS_ICONS, PDS_INLINE_CSS, PDS_LS_KEY, PDS_MAX_TABLE_SERVERS, PDS_SCENE_MIGRATION, PDS_SEED_ZONES, PDS_SERVICE_STATUSES, PDS_STAFF_COLORS, PDS_TRANSIENT_IDS, PDS_UNDO, pdsAttachDrag, pdsAttachElDrag, pdsCloud, pdsEff, pdsK, pdsKpis, pdsLiveBadge, pdsPhoneLive, pdsRenderActions, pdsRenderElement, pdsRenderStage, pdsRenderTable } = scope;\n",
+  "drawingSuffix": "\nreturn { pdsTenant, pdsKey, pdsNoir, pdsSetNoir, pdsNoirC, pdsJourC, pdsNoirTick, pdsNoirChairs, pdsNoirTableBody, pdsNoirFixture, pdsRoomShellNoir, pdsRoomShellJour, pdsStaffColor, pdsServerIds, pdsSetServerIds, pdsHasServer, pdsIsFloorRole, pdsTeamStaff, pdsIsRealStore, pdsSyncStaff, pdsBusinessDayStart, pdsNormalize, pdsLoad, pdsSerialize, pdsWriteLocal, pdsSave, pdsRawState, pdsMerge, pdsCarryForward, pdsZoneName, pdsFixLabel, pdsDefaultState, pdsTemplate, pdsEnsureCss, pdsPhoneWanted, pdsInitials, pdsTableNum, pdsPhoneBody, pdsSubtitle, pdsOnShift, pdsRenderBody, pdsFind, pdsPlane, pdsPlaneOf, pdsSnap, pdsApplySnap, pdsPush, pdsUndoKey, pdsUndo, pdsRedo, pdsFreeSpot, pdsMagnet, pdsRepaintCell, pdsSyncInspector, pdsAttachResize, pdsBindHandles, pdsIcon, pdsFloorCount, pdsRenderEmpty, pdsTypeFor };\n};\n"
+}

@@ -9,6 +9,8 @@
  *   · Kiwi IQ cite ces chiffres en FR/EN/AR, et sans historique garde son
  *     « je n'invente pas de prévision » en donnant la date du prochain. */
 'use strict';
+const coreTestSource = require('./core-test-source.cjs');
+
 
 const fs = require('fs');
 const path = require('path');
@@ -89,7 +91,7 @@ function agent(sales, lang) {
   const ctx = { window: w, document, localStorage, console, setTimeout: () => 0, clearTimeout: noop, setInterval: () => 0, clearInterval: noop, navigator: { language: 'fr-FR', userAgent: 'node' }, location: { href: 'https://kiwi-maroc.pages.dev/dashboard.html', search: '' }, fetch: () => Promise.reject(new Error('offline')) };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  for (const f of ['agent-data.js', 'agent-features.js', 'agent-truth.js', 'ramadan.js', 'agent.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets', f), 'utf8'), ctx, { filename: f });
+  for (const f of ['agent-data.js', 'agent-features.js', 'agent-truth.js', 'ramadan.js', 'agent.js']) vm.runInContext(coreTestSource.readFileSync(path.join(ROOT, 'assets', f), 'utf8'), ctx, { filename: f });
   return w;
 }
 const strip = (s) => String(s == null ? '' : s).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/[  ]/g, ' ');

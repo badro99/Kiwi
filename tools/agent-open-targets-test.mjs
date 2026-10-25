@@ -1,3 +1,4 @@
+import coreTestSource from './core-test-source.cjs';
 /* Les boutons « Ouvrir … » de l'assistant appellent Kiwi.handlers[nom].
    Chaque nom doit exister, et le carnet clients doit ouvrir le carnet réel
    (clients-directory.js, qui lit KiwiClients), pas nav-clients : sur un compte
@@ -7,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
-const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+const read = (f) => coreTestSource.readFileSync(path.join(root, f), 'utf8');
 const agentData = read('assets/agent-data.js');
 const agent = read('assets/agent.js');
 const shell = read('dashboard.html');

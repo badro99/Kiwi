@@ -1,0 +1,1763 @@
+{
+  "file": "assets/agent.js",
+  "part": "assets/agent/ui.js",
+  "sha256": "7a2693f61f01f895c2cb158b3c747dd9200e03c00c61ff46f12c919a2017a934",
+  "bridge": "\n  /* Private split bridge: live bindings, not a second copy of range/profile state. */\n  const partState = Object.seal(Object.defineProperties({}, {\n    ACTION_COPY: { get: () => ACTION_COPY },\n    B: { get: () => B, set: value => { B = value; } },\n    FACTS_LEAD: { get: () => FACTS_LEAD },\n    GUARD: { get: () => GUARD },\n    HL: { get: () => HL },\n    ICON: { get: () => ICON },\n    INTEGRITY_RULE: { get: () => INTEGRITY_RULE },\n    L: { get: () => L, set: value => { L = value; } },\n    LLM: { get: () => LLM },\n    LLM_TOOLS: { get: () => LLM_TOOLS },\n    SP_DIR: { get: () => SP_DIR },\n    TOOLS_RULE: { get: () => TOOLS_RULE },\n    TURN_EVIDENCE: { get: () => TURN_EVIDENCE },\n    accessTier: { get: () => accessTier },\n    assistantUiCopy: { get: () => assistantUiCopy },\n    autoActOn: { get: () => autoActOn },\n    buildSystemPrompt: { get: () => buildSystemPrompt },\n    clearTurnFacts: { get: () => clearTurnFacts },\n    cloudAccepted: { get: () => cloudAccepted },\n    cloudDeclined: { get: () => cloudDeclined },\n    detectQLang: { get: () => detectQLang },\n    draftFacts: { get: () => draftFacts },\n    escAttr: { get: () => escAttr },\n    escHtml: { get: () => escHtml },\n    evalMath: { get: () => evalMath },\n    fmt: { get: () => fmt },\n    fmt1: { get: () => fmt1 },\n    fmtMad: { get: () => fmtMad },\n    getLang: { get: () => getLang },\n    injectCss: { get: () => injectCss },\n    kitAsk: { get: () => kitAsk, set: value => { kitAsk = value; } },\n    lastRouteKind: { get: () => lastRouteKind, set: value => { lastRouteKind = value; } },\n    liveActivityContextLines: { get: () => liveActivityContextLines },\n    llmChunkText: { get: () => llmChunkText },\n    llmHistory: { get: () => llmHistory },\n    menuContextLines: { get: () => menuContextLines },\n    noteTurnEvidence: { get: () => noteTurnEvidence },\n    noteTurnFacts: { get: () => noteTurnFacts },\n    nv: { get: () => nv },\n    opCopy: { get: () => opCopy },\n    opWhy: { get: () => opWhy },\n    redactUnsupported: { get: () => redactUnsupported },\n    renderHero: { get: () => renderHero },\n    replyHtml: { get: () => replyHtml },\n    respond: { get: () => respond },\n    runTool: { get: () => runTool },\n    salesWindowEvidence: { get: () => salesWindowEvidence },\n    seesBooks: { get: () => seesBooks },\n    setAutoAct: { get: () => setAutoAct },\n    setCloud: { get: () => setCloud },\n    stripThink: { get: () => stripThink },\n    syncProfile: { get: () => syncProfile },\n    toolResultText: { get: () => toolResultText },\n    tr: { get: () => tr },\n  }));\n  let partFunctions = null, partLoading = null;\n  const partUrl = 'assets/agent/ui.js?v=1';\n  function installPart() {\n    if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);\n    return partFunctions;\n  }\n  function loadPart() {\n    if (installPart()) return Promise.resolve(partFunctions);\n    if (partLoading) return partLoading;\n    partLoading = new Promise((resolve, reject) => {\n      const script = document.createElement('script');\n      script.src = partUrl;\n      script.onload = () => {\n        if (installPart()) resolve(partFunctions);\n        else { partLoading = null; script.remove(); reject(new Error(partUrl)); }\n      };\n      script.onerror = () => { partLoading = null; script.remove(); reject(new Error(partUrl)); };\n      document.head.appendChild(script);\n    });\n    return partLoading;\n  }\n  function callPart(name, self, args) {\n    const functions = installPart();\n    if (functions) return functions[name].apply(self, args);\n    return loadPart().then(functions => functions[name].apply(self, args), () => {\n      // Leave the loader retryable on the next render/open after a network error.\n    });\n  }\n",
+  "anchor": "  'use strict';",
+  "attach": "  Object.defineProperty(window.KiwiAgent, '__internal', { value: partState });\n",
+  "apiEnd": "  window.__kiwiAgentOpen = open;",
+  "entries": [
+    {
+      "name": "menuContextLines",
+      "start": 320001,
+      "end": 320384,
+      "partStart": 284,
+      "partEnd": 691,
+      "changes": [
+        {
+          "start": 258,
+          "end": 261,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 294,
+          "end": 297,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 332,
+          "end": 335,
+          "before": "fmt",
+          "after": "__state.fmt"
+        }
+      ]
+    },
+    {
+      "name": "liveActivityContextLines",
+      "start": 320772,
+      "end": 323482,
+      "partStart": 692,
+      "partEnd": 3434,
+      "changes": [
+        {
+          "start": 649,
+          "end": 652,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 714,
+          "end": 717,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 786,
+          "end": 789,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 863,
+          "end": 866,
+          "before": "fmt",
+          "after": "__state.fmt"
+        }
+      ]
+    },
+    {
+      "name": "buildSystemPrompt",
+      "start": 341197,
+      "end": 349575,
+      "partStart": 3435,
+      "partEnd": 12301,
+      "changes": [
+        {
+          "start": 51,
+          "end": 57,
+          "before": "SP_DIR",
+          "after": "__state.SP_DIR"
+        },
+        {
+          "start": 67,
+          "end": 73,
+          "before": "SP_DIR",
+          "after": "__state.SP_DIR"
+        },
+        {
+          "start": 280,
+          "end": 281,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 495,
+          "end": 505,
+          "before": "accessTier",
+          "after": "__state.accessTier"
+        },
+        {
+          "start": 1128,
+          "end": 1137,
+          "before": "seesBooks",
+          "after": "__state.seesBooks"
+        },
+        {
+          "start": 1163,
+          "end": 1179,
+          "before": "menuContextLines",
+          "after": "__state.menuContextLines"
+        },
+        {
+          "start": 1203,
+          "end": 1227,
+          "before": "liveActivityContextLines",
+          "after": "__state.liveActivityContextLines"
+        },
+        {
+          "start": 1302,
+          "end": 1303,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1439,
+          "end": 1442,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 1443,
+          "end": 1444,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1465,
+          "end": 1468,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 1469,
+          "end": 1470,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1513,
+          "end": 1516,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 1517,
+          "end": 1518,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1845,
+          "end": 1846,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1861,
+          "end": 1862,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3183,
+          "end": 3197,
+          "before": "INTEGRITY_RULE",
+          "after": "__state.INTEGRITY_RULE"
+        },
+        {
+          "start": 3276,
+          "end": 3277,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3379,
+          "end": 3380,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3479,
+          "end": 3480,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3495,
+          "end": 3496,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3534,
+          "end": 3553,
+          "before": "salesWindowEvidence",
+          "after": "__state.salesWindowEvidence"
+        },
+        {
+          "start": 3554,
+          "end": 3555,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3566,
+          "end": 3567,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3632,
+          "end": 3635,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 3636,
+          "end": 3637,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3668,
+          "end": 3671,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 3672,
+          "end": 3673,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3716,
+          "end": 3719,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 3720,
+          "end": 3721,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5264,
+          "end": 5278,
+          "before": "INTEGRITY_RULE",
+          "after": "__state.INTEGRITY_RULE"
+        },
+        {
+          "start": 5372,
+          "end": 5373,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5397,
+          "end": 5413,
+          "before": "menuContextLines",
+          "after": "__state.menuContextLines"
+        },
+        {
+          "start": 5434,
+          "end": 5458,
+          "before": "liveActivityContextLines",
+          "after": "__state.liveActivityContextLines"
+        },
+        {
+          "start": 5765,
+          "end": 5768,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 5769,
+          "end": 5770,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5813,
+          "end": 5816,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 5817,
+          "end": 5818,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5833,
+          "end": 5837,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 5844,
+          "end": 5845,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5896,
+          "end": 5899,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 5900,
+          "end": 5901,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5923,
+          "end": 5927,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 5928,
+          "end": 5929,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5976,
+          "end": 5979,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 5980,
+          "end": 5981,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 6022,
+          "end": 6025,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6048,
+          "end": 6051,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6072,
+          "end": 6075,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6119,
+          "end": 6122,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6123,
+          "end": 6124,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 6156,
+          "end": 6160,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 6161,
+          "end": 6162,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 6215,
+          "end": 6218,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6219,
+          "end": 6220,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 6266,
+          "end": 6269,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6270,
+          "end": 6271,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 6292,
+          "end": 6295,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 6296,
+          "end": 6297,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 6331,
+          "end": 6332,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 8303,
+          "end": 8317,
+          "before": "INTEGRITY_RULE",
+          "after": "__state.INTEGRITY_RULE"
+        }
+      ]
+    },
+    {
+      "name": "injectCss",
+      "start": 349980,
+      "end": 372835,
+      "partStart": 12302,
+      "partEnd": 35157,
+      "changes": []
+    },
+    {
+      "name": "replyHtml",
+      "start": 372890,
+      "end": 374514,
+      "partStart": 35158,
+      "partEnd": 36838,
+      "changes": [
+        {
+          "start": 558,
+          "end": 565,
+          "before": "escHtml",
+          "after": "__state.escHtml"
+        },
+        {
+          "start": 723,
+          "end": 730,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 923,
+          "end": 930,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 1378,
+          "end": 1385,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 1433,
+          "end": 1440,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 1480,
+          "end": 1487,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 1533,
+          "end": 1540,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        }
+      ]
+    },
+    {
+      "name": "open",
+      "start": 374518,
+      "end": 412359,
+      "partStart": 36839,
+      "partEnd": 76344,
+      "changes": [
+        {
+          "start": 82,
+          "end": 83,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 86,
+          "end": 93,
+          "before": "getLang",
+          "after": "__state.getLang"
+        },
+        {
+          "start": 101,
+          "end": 110,
+          "before": "injectCss",
+          "after": "__state.injectCss"
+        },
+        {
+          "start": 118,
+          "end": 129,
+          "before": "syncProfile",
+          "after": "__state.syncProfile"
+        },
+        {
+          "start": 198,
+          "end": 200,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 229,
+          "end": 244,
+          "before": "assistantUiCopy",
+          "after": "__state.assistantUiCopy"
+        },
+        {
+          "start": 415,
+          "end": 422,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 919,
+          "end": 920,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 948,
+          "end": 950,
+          "before": "nv",
+          "after": "__state.nv"
+        },
+        {
+          "start": 973,
+          "end": 974,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1011,
+          "end": 1017,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 1018,
+          "end": 1019,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1044,
+          "end": 1047,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 1048,
+          "end": 1049,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1084,
+          "end": 1090,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 1091,
+          "end": 1092,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1235,
+          "end": 1242,
+          "before": "escHtml",
+          "after": "__state.escHtml"
+        },
+        {
+          "start": 1243,
+          "end": 1244,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1469,
+          "end": 1476,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 1604,
+          "end": 1623,
+          "before": "salesWindowEvidence",
+          "after": "__state.salesWindowEvidence"
+        },
+        {
+          "start": 1624,
+          "end": 1625,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1735,
+          "end": 1742,
+          "before": "escHtml",
+          "after": "__state.escHtml"
+        },
+        {
+          "start": 1743,
+          "end": 1762,
+          "before": "salesWindowEvidence",
+          "after": "__state.salesWindowEvidence"
+        },
+        {
+          "start": 1763,
+          "end": 1764,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 1970,
+          "end": 1974,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 2203,
+          "end": 2205,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 2254,
+          "end": 2255,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2316,
+          "end": 2318,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 2335,
+          "end": 2341,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2424,
+          "end": 2430,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2431,
+          "end": 2432,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2468,
+          "end": 2474,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2475,
+          "end": 2476,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2513,
+          "end": 2519,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2520,
+          "end": 2521,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2539,
+          "end": 2540,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2589,
+          "end": 2592,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 2593,
+          "end": 2594,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2637,
+          "end": 2640,
+          "before": "fmt",
+          "after": "__state.fmt"
+        },
+        {
+          "start": 2641,
+          "end": 2642,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2680,
+          "end": 2686,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2687,
+          "end": 2688,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2774,
+          "end": 2780,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2781,
+          "end": 2782,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2801,
+          "end": 2805,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 2806,
+          "end": 2807,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2849,
+          "end": 2855,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2856,
+          "end": 2857,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2869,
+          "end": 2873,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 2880,
+          "end": 2881,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2930,
+          "end": 2936,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2937,
+          "end": 2938,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 2981,
+          "end": 2987,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 2988,
+          "end": 2989,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3076,
+          "end": 3082,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3083,
+          "end": 3084,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3167,
+          "end": 3173,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3174,
+          "end": 3175,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3226,
+          "end": 3227,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3296,
+          "end": 3302,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3303,
+          "end": 3304,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3337,
+          "end": 3341,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 3342,
+          "end": 3343,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3458,
+          "end": 3464,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3465,
+          "end": 3466,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3502,
+          "end": 3508,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3509,
+          "end": 3510,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3555,
+          "end": 3561,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3562,
+          "end": 3563,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3610,
+          "end": 3616,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3617,
+          "end": 3618,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3637,
+          "end": 3641,
+          "before": "fmt1",
+          "after": "__state.fmt1"
+        },
+        {
+          "start": 3642,
+          "end": 3643,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3694,
+          "end": 3700,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3701,
+          "end": 3702,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3771,
+          "end": 3777,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3778,
+          "end": 3779,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3820,
+          "end": 3826,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 3827,
+          "end": 3828,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 3891,
+          "end": 3892,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 4071,
+          "end": 4073,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 4139,
+          "end": 4141,
+          "before": "HL",
+          "after": "__state.HL"
+        },
+        {
+          "start": 4338,
+          "end": 4345,
+          "before": "escHtml",
+          "after": "__state.escHtml"
+        },
+        {
+          "start": 4346,
+          "end": 4347,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 4552,
+          "end": 4559,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 4775,
+          "end": 4781,
+          "before": "fmtMad",
+          "after": "__state.fmtMad"
+        },
+        {
+          "start": 4782,
+          "end": 4783,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 4898,
+          "end": 4899,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 5212,
+          "end": 5214,
+          "before": "HL",
+          "after": "__state.HL"
+        },
+        {
+          "start": 5364,
+          "end": 5368,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 6643,
+          "end": 6650,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 6701,
+          "end": 6708,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 6945,
+          "end": 6952,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 6977,
+          "end": 6984,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 6997,
+          "end": 7001,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 7155,
+          "end": 7159,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 7652,
+          "end": 7653,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 7655,
+          "end": 7656,
+          "before": "B",
+          "after": "__state.B"
+        },
+        {
+          "start": 8712,
+          "end": 8716,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 9026,
+          "end": 9030,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 9583,
+          "end": 9589,
+          "before": "opCopy",
+          "after": "__state.opCopy"
+        },
+        {
+          "start": 9952,
+          "end": 9961,
+          "before": "replyHtml",
+          "after": "__state.replyHtml"
+        },
+        {
+          "start": 10792,
+          "end": 10797,
+          "before": "opWhy",
+          "after": "__state.opWhy"
+        },
+        {
+          "start": 11105,
+          "end": 11110,
+          "before": "opWhy",
+          "after": "__state.opWhy"
+        },
+        {
+          "start": 11402,
+          "end": 11409,
+          "before": "respond",
+          "after": "__state.respond"
+        },
+        {
+          "start": 11703,
+          "end": 11716,
+          "before": "lastRouteKind",
+          "after": "__state.lastRouteKind"
+        },
+        {
+          "start": 11785,
+          "end": 11798,
+          "before": "lastRouteKind",
+          "after": "__state.lastRouteKind"
+        },
+        {
+          "start": 12809,
+          "end": 12822,
+          "before": "cloudAccepted",
+          "after": "__state.cloudAccepted"
+        },
+        {
+          "start": 12958,
+          "end": 12967,
+          "before": "replyHtml",
+          "after": "__state.replyHtml"
+        },
+        {
+          "start": 13136,
+          "end": 13145,
+          "before": "replyHtml",
+          "after": "__state.replyHtml"
+        },
+        {
+          "start": 13376,
+          "end": 13386,
+          "before": "accessTier",
+          "after": "__state.accessTier"
+        },
+        {
+          "start": 13396,
+          "end": 13397,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 13558,
+          "end": 13573,
+          "before": "assistantUiCopy",
+          "after": "__state.assistantUiCopy"
+        },
+        {
+          "start": 13802,
+          "end": 13813,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 13814,
+          "end": 13815,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 13820,
+          "end": 13831,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 13922,
+          "end": 13931,
+          "before": "autoActOn",
+          "after": "__state.autoActOn"
+        },
+        {
+          "start": 14052,
+          "end": 14061,
+          "before": "autoActOn",
+          "after": "__state.autoActOn"
+        },
+        {
+          "start": 14228,
+          "end": 14238,
+          "before": "accessTier",
+          "after": "__state.accessTier"
+        },
+        {
+          "start": 14257,
+          "end": 14270,
+          "before": "cloudAccepted",
+          "after": "__state.cloudAccepted"
+        },
+        {
+          "start": 14302,
+          "end": 14313,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 14314,
+          "end": 14315,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 14320,
+          "end": 14331,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 14391,
+          "end": 14395,
+          "before": "ICON",
+          "after": "__state.ICON"
+        },
+        {
+          "start": 14427,
+          "end": 14436,
+          "before": "autoActOn",
+          "after": "__state.autoActOn"
+        },
+        {
+          "start": 14554,
+          "end": 14563,
+          "before": "autoActOn",
+          "after": "__state.autoActOn"
+        },
+        {
+          "start": 14808,
+          "end": 14810,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 14990,
+          "end": 14999,
+          "before": "replyHtml",
+          "after": "__state.replyHtml"
+        },
+        {
+          "start": 15059,
+          "end": 15061,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 15079,
+          "end": 15081,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 15329,
+          "end": 15331,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 15345,
+          "end": 15348,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 15797,
+          "end": 15805,
+          "before": "setCloud",
+          "after": "__state.setCloud"
+        },
+        {
+          "start": 15860,
+          "end": 15863,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 15887,
+          "end": 15890,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 16001,
+          "end": 16009,
+          "before": "setCloud",
+          "after": "__state.setCloud"
+        },
+        {
+          "start": 16050,
+          "end": 16053,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 16323,
+          "end": 16326,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 16701,
+          "end": 16714,
+          "before": "cloudDeclined",
+          "after": "__state.cloudDeclined"
+        },
+        {
+          "start": 16770,
+          "end": 16783,
+          "before": "cloudAccepted",
+          "after": "__state.cloudAccepted"
+        },
+        {
+          "start": 17567,
+          "end": 17576,
+          "before": "LLM_TOOLS",
+          "after": "__state.LLM_TOOLS"
+        },
+        {
+          "start": 18256,
+          "end": 18265,
+          "before": "LLM_TOOLS",
+          "after": "__state.LLM_TOOLS"
+        },
+        {
+          "start": 19664,
+          "end": 19676,
+          "before": "llmChunkText",
+          "after": "__state.llmChunkText"
+        },
+        {
+          "start": 20186,
+          "end": 20198,
+          "before": "llmChunkText",
+          "after": "__state.llmChunkText"
+        },
+        {
+          "start": 21220,
+          "end": 21227,
+          "before": "runTool",
+          "after": "__state.runTool"
+        },
+        {
+          "start": 21265,
+          "end": 21278,
+          "before": "noteTurnFacts",
+          "after": "__state.noteTurnFacts"
+        },
+        {
+          "start": 21293,
+          "end": 21309,
+          "before": "noteTurnEvidence",
+          "after": "__state.noteTurnEvidence"
+        },
+        {
+          "start": 21428,
+          "end": 21442,
+          "before": "toolResultText",
+          "after": "__state.toolResultText"
+        },
+        {
+          "start": 22142,
+          "end": 22156,
+          "before": "clearTurnFacts",
+          "after": "__state.clearTurnFacts"
+        },
+        {
+          "start": 22166,
+          "end": 22176,
+          "before": "llmHistory",
+          "after": "__state.llmHistory"
+        },
+        {
+          "start": 22463,
+          "end": 22480,
+          "before": "buildSystemPrompt",
+          "after": "__state.buildSystemPrompt"
+        },
+        {
+          "start": 22481,
+          "end": 22492,
+          "before": "detectQLang",
+          "after": "__state.detectQLang"
+        },
+        {
+          "start": 22536,
+          "end": 22546,
+          "before": "draftFacts",
+          "after": "__state.draftFacts"
+        },
+        {
+          "start": 22583,
+          "end": 22596,
+          "before": "noteTurnFacts",
+          "after": "__state.noteTurnFacts"
+        },
+        {
+          "start": 22611,
+          "end": 22614,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 22716,
+          "end": 22726,
+          "before": "TOOLS_RULE",
+          "after": "__state.TOOLS_RULE"
+        },
+        {
+          "start": 22782,
+          "end": 22792,
+          "before": "FACTS_LEAD",
+          "after": "__state.FACTS_LEAD"
+        },
+        {
+          "start": 22826,
+          "end": 22836,
+          "before": "llmHistory",
+          "after": "__state.llmHistory"
+        },
+        {
+          "start": 22994,
+          "end": 22997,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 23604,
+          "end": 23606,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 24320,
+          "end": 24323,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 24386,
+          "end": 24396,
+          "before": "stripThink",
+          "after": "__state.stripThink"
+        },
+        {
+          "start": 24580,
+          "end": 24597,
+          "before": "redactUnsupported",
+          "after": "__state.redactUnsupported"
+        },
+        {
+          "start": 24607,
+          "end": 24608,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 24806,
+          "end": 24816,
+          "before": "stripThink",
+          "after": "__state.stripThink"
+        },
+        {
+          "start": 25072,
+          "end": 25089,
+          "before": "redactUnsupported",
+          "after": "__state.redactUnsupported"
+        },
+        {
+          "start": 25097,
+          "end": 25098,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 25282,
+          "end": 25284,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 25484,
+          "end": 25489,
+          "before": "GUARD",
+          "after": "__state.GUARD"
+        },
+        {
+          "start": 25490,
+          "end": 25491,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 25496,
+          "end": 25501,
+          "before": "GUARD",
+          "after": "__state.GUARD"
+        },
+        {
+          "start": 26363,
+          "end": 26366,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 26408,
+          "end": 26419,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 26420,
+          "end": 26421,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 26426,
+          "end": 26437,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 26452,
+          "end": 26455,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 26671,
+          "end": 26678,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 26719,
+          "end": 26726,
+          "before": "escHtml",
+          "after": "__state.escHtml"
+        },
+        {
+          "start": 26848,
+          "end": 26855,
+          "before": "escAttr",
+          "after": "__state.escAttr"
+        },
+        {
+          "start": 26961,
+          "end": 26964,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 27013,
+          "end": 27026,
+          "before": "TURN_EVIDENCE",
+          "after": "__state.TURN_EVIDENCE"
+        },
+        {
+          "start": 27151,
+          "end": 27164,
+          "before": "TURN_EVIDENCE",
+          "after": "__state.TURN_EVIDENCE"
+        },
+        {
+          "start": 28705,
+          "end": 28715,
+          "before": "llmHistory",
+          "after": "__state.llmHistory"
+        },
+        {
+          "start": 29017,
+          "end": 29027,
+          "before": "llmHistory",
+          "after": "__state.llmHistory"
+        },
+        {
+          "start": 29063,
+          "end": 29073,
+          "before": "draftFacts",
+          "after": "__state.draftFacts"
+        },
+        {
+          "start": 29693,
+          "end": 29696,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 29769,
+          "end": 29778,
+          "before": "replyHtml",
+          "after": "__state.replyHtml"
+        },
+        {
+          "start": 29787,
+          "end": 29789,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 30071,
+          "end": 30080,
+          "before": "replyHtml",
+          "after": "__state.replyHtml"
+        },
+        {
+          "start": 30089,
+          "end": 30091,
+          "before": "tr",
+          "after": "__state.tr"
+        },
+        {
+          "start": 30264,
+          "end": 30274,
+          "before": "renderHero",
+          "after": "__state.renderHero"
+        },
+        {
+          "start": 30283,
+          "end": 30289,
+          "before": "kitAsk",
+          "after": "__state.kitAsk"
+        },
+        {
+          "start": 33452,
+          "end": 33460,
+          "before": "setCloud",
+          "after": "__state.setCloud"
+        },
+        {
+          "start": 33462,
+          "end": 33475,
+          "before": "cloudAccepted",
+          "after": "__state.cloudAccepted"
+        },
+        {
+          "start": 33569,
+          "end": 33579,
+          "before": "accessTier",
+          "after": "__state.accessTier"
+        },
+        {
+          "start": 33595,
+          "end": 33605,
+          "before": "setAutoAct",
+          "after": "__state.setAutoAct"
+        },
+        {
+          "start": 33607,
+          "end": 33616,
+          "before": "autoActOn",
+          "after": "__state.autoActOn"
+        },
+        {
+          "start": 33903,
+          "end": 33914,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 33915,
+          "end": 33916,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 33921,
+          "end": 33932,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 34963,
+          "end": 34974,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 34975,
+          "end": 34976,
+          "before": "L",
+          "after": "__state.L"
+        },
+        {
+          "start": 34981,
+          "end": 34992,
+          "before": "ACTION_COPY",
+          "after": "__state.ACTION_COPY"
+        },
+        {
+          "start": 35487,
+          "end": 35490,
+          "before": "LLM",
+          "after": "__state.LLM"
+        },
+        {
+          "start": 35762,
+          "end": 35764,
+          "before": "HL",
+          "after": "__state.HL"
+        },
+        {
+          "start": 35774,
+          "end": 35776,
+          "before": "HL",
+          "after": "__state.HL"
+        },
+        {
+          "start": 36758,
+          "end": 36766,
+          "before": "evalMath",
+          "after": "__state.evalMath"
+        },
+        {
+          "start": 36915,
+          "end": 36917,
+          "before": "tr",
+          "after": "__state.tr"
+        }
+      ]
+    }
+  ],
+  "partHash": "9e4c2327aedc91ef947d2e5c35ab4153965f51f3f319cfc311223c810370eb5f"
+}

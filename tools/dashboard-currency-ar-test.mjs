@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Tableau de bord · l'accueil écrit sa devise comme le reste du tableau de bord.
  *
  * 2026-10-12. Sous l'arabe, l'inventaire, la fiche produit, les insights et la
@@ -15,7 +16,7 @@ import vm from 'node:vm';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const src = fs.readFileSync(path.join(root, 'assets/dateRange.js'), 'utf8');
+const src = coreTestSource.readFileSync(path.join(root, 'assets/dateRange.js'), 'utf8');
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 

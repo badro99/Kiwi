@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* The assistant's month-to-date runs on the store's business days (05:00,
  * Casablanca), like the dashboard and the Z. At 02:00 on 1 October a sale
  * made at 01:30 still belongs to September: the old device-calendar month
@@ -67,7 +68,7 @@ const context = { window, document, localStorage, Date: FixedDate, console, navi
 context.globalThis = context;
 vm.createContext(context);
 for (const file of ['assets/day-report.js', 'assets/agent-data.js', 'assets/agent-features.js', 'assets/agent-truth.js', 'assets/agent.js']) {
-  vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+  vm.runInContext(coreTestSource.readFileSync(file, 'utf8'), context, { filename: file });
 }
 assert.equal(window.KiwiDayReport.today(), '2026-09-30', 'at 02:00 on 1 Oct the business day is 30 Sept');
 const profile = window.KiwiAgentProfile();

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Kiwi · hôtel : la bande du tableau de bord dit ce que le registre contient.
  *
  * Avant : « Taux d'occupation 0,0 % · ADR 0 MAD · RevPAR 0 MAD · 0 / 0 » écrits
@@ -110,7 +111,7 @@ test('hotelPerformance · une ligne illisible est un échec, pas un total partie
 
 async function fixture() {
   const sql = new DatabaseSync(':memory:');
-  sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  sql.exec(coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const DB = { prepare(q) { let args = []; return {
     bind(...v) { args = v; return this; },
     async first() { return sql.prepare(q).get(...args) || null; },
@@ -193,7 +194,7 @@ test('GET /api/hotel/performance · un registre illisible répond 503, jamais un
 
 /* ── Tableau de bord : la fonction pure qui fabrique les tuiles ────────────── */
 function loadTiles() {
-  const src = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+  const src = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
   const a = src.indexOf('const hotelDelta =');
   const b = src.indexOf('function hotelBandTiles(');
   assert.ok(a > 0 && b > a, 'hotelDelta + hotelTilesFrom sont dans dateRange.js');
@@ -230,7 +231,7 @@ test('dateRange · inconnu = « · », en attente = « … », jamais 0', () => 
 });
 
 test('dateRange · plus aucun zéro écrit à la main pour un hôtel réel', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+  const src = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
   assert.match(src, /hotelBandTiles\(rng\)/);
   assert.doesNotMatch(src, /occupation:\s*\{\s*value:\s*0[,\s]/, 'occupation 0 codé en dur');
   assert.doesNotMatch(src, /arrdep:\s*\{\s*text:\s*'0 \/ 0'/, 'arrivées/départs 0 / 0 codé en dur');

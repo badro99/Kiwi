@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 // #100/#97: daily report and restaurant orders must mount the same day picker
 // from dateRange.js, not independent native-date controls or calendar skins.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
-const read = name => fs.readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+const read = name => coreTestSource.readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const range = read('assets/dateRange.js');
 const report = read('assets/day-report-dash.js');
 const orders = read('assets/pages.js');

@@ -1,4 +1,5 @@
-import { DateTimeFormat, ZONE_LAWS, effectiveZone } from '../_zone-law.js';
+import { ZONE_LAWS, effectiveZone } from '../_zone-law.js';
+import { DateTimeFormat } from '../_cached-clock.js';
 // functions/api/order/_lib.js — ce que les trois moitiés du relais partagent.
 //
 // Le relais OrderPro a trois portes : /api/order (le téléphone dépose),

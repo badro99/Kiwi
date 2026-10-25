@@ -1,3 +1,4 @@
+import { hmacKey } from '../auth/_crypto.js';
 // GET /api/feed?merchant=<id>&since=<cursor> — real sales after a cursor.
 //
 // The dashboard polls this every few seconds; `since` is the last rowid it saw,
@@ -67,7 +68,7 @@ const encode64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-'
 const decode64 = raw => Uint8Array.from(atob(raw.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 async function cursorKey(env) {
   if (!env.AUTH_SECRET) throw new Error('cursor-config');
-  return crypto.subtle.importKey('raw', new TextEncoder().encode(env.AUTH_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+  return hmacKey(env.AUTH_SECRET);
 }
 async function signCursor(env, data) {
   const body = encode64(new TextEncoder().encode(JSON.stringify(data)));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* « Temps moyen à table » : une mesure, plus un tiret.
  *
  * La tuile affichait « · » chez un vrai restaurant, faute de source. La
@@ -50,7 +51,7 @@ console.log('\n■ The real /api/table-time handler');
 const SECRET = 'table-time-secret';
 const M = 'table-time-bistro', OTHER = 'table-time-ailleurs';
 const sql = new DatabaseSync(':memory:');
-sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+sql.exec(coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 const DB = {
   prepare(query) {
     let args = [];
@@ -104,7 +105,7 @@ const get = async (q, c = cookie, e = env) => {
 }
 
 console.log('\n■ The dashboard tile (extracted from assets/dateRange.js)');
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+const SRC = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 const from = SRC.indexOf('  const TABLE_TIME_TTL');
 const to = SRC.indexOf('  function renderKpiBand() {', from);
 check('the table-time block is extractable', from > 0 && to > from);

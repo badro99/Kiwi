@@ -1,0 +1,1116 @@
+{
+  "prefix": "/* Owner: table rendering, drag operations and drawer actions. Exposes a private factory; requires immutable owner bindings and callable live-state helpers. Loaded with Tables on first open. */\nwindow.__kiwiPagesTables.operations = (scope) => {\n'use strict';\nconst { Kiwi, PDS_FOLD, PDS_GRID, PDS_MAX_TABLE_SERVERS, PDS_MAX_VERSIONS, PDS_SERVICE_STATUSES, handlers, pdsApplyAssignment, pdsApplyVersion, pdsBusinessDayStart, pdsClearReservation, pdsClock, pdsDefaultState, pdsDuplicateNums, pdsFind, pdsFixLabel, pdsFreeSpot, pdsHandleAction, pdsHasServer, pdsHomeZones, pdsIcon, pdsInitials, pdsK, pdsManualStatuses, pdsNewZoneId, pdsNextNum, pdsNoir, pdsNoirFixture, pdsNormalize, pdsNumKey, pdsOnShift, pdsPalSeats, pdsPeriodLabel, pdsPlane, pdsPlaneOf, pdsPush, pdsReadingOrder, pdsRecordRotation, pdsRedo, pdsRenderStatusRow, pdsRestoreTableSnapshot, pdsRotationPreview, pdsSave, pdsServerIds, pdsSetNoir, pdsSetServerIds, pdsSetStatus, pdsStaffColor, pdsStatusLabel, pdsSweepGroups, pdsTableNum, pdsTableSnapshot, pdsTablesInOrder, pdsTodayKey, pdsTypeFor, pdsUndo, pdsVersions, pdsZoneName, pdsZoomBy, toast, trLang, wireDismiss } = scope;\n",
+  "suffix": "return { pdsFixMini, pdsPlanThumb, pdsRenderRoomCard, pdsRenderAssignRail, pdsRenderAssignSummary, pdsRenderInspector, pdsRenderBulkInspector, pdsSyncGroupService, pdsExpireReservations, pdsOfferTableUndo, pdsRenderGroups, pdsRotationKey, pdsRotateStep, pdsFairness, pdsRenderRotateStage, pdsRenderActions, pdsAttachDrag, pdsAttachElDrag, pdsAttachChipDrag, pdsRenumber, pdsSaveVersion, pdsOpenVersions, pdsPlaceBooking, pdsExportSvg, pdsExportPrint, pdsExportPng, tableAction26, tableAction27, tableAction28, tableAction29, tableAction30, tableAction31, tableAction32, tableAction33, tableAction34, tableAction35, tableAction36, tableAction37, tableAction38, tableAction39, tableAction40, tableAction41, tableAction42, tableAction43, tableAction44, tableAction45, tableAction46, tableAction47, tableAction48, tableAction49, tableAction50, tableAction51, tableAction52, tableAction53, tableAction54, tableAction55, tableAction56, tableAction57, tableAction58, tableAction59, tableAction60, tableAction61, tableAction62, tableAction63, tableAction64, tableAction65, tableAction66, tableAction67, tableAction68 };\n};\n",
+  "bind": "\nlet operations;\nfunction tableOperations() { return operations || (operations = window.__kiwiPagesTables.operations({ Kiwi, PDS_FOLD, PDS_GRID, PDS_MAX_TABLE_SERVERS, PDS_MAX_VERSIONS, PDS_SERVICE_STATUSES, handlers, pdsApplyAssignment, pdsApplyVersion, pdsBusinessDayStart, pdsClearReservation, pdsClock, pdsDefaultState, pdsDuplicateNums, pdsFind, pdsFixLabel, pdsFreeSpot, pdsHandleAction, pdsHasServer, pdsHomeZones, pdsIcon, pdsInitials, pdsK, pdsManualStatuses, pdsNewZoneId, pdsNextNum, pdsNoir, pdsNoirFixture, pdsNormalize, pdsNumKey, pdsOnShift, pdsPalSeats, pdsPeriodLabel, pdsPlane, pdsPlaneOf, pdsPush, pdsReadingOrder, pdsRecordRotation, pdsRedo, pdsRenderStatusRow, pdsRestoreTableSnapshot, pdsRotationPreview, pdsSave, pdsServerIds, pdsSetNoir, pdsSetServerIds, pdsSetStatus, pdsStaffColor, pdsStatusLabel, pdsSweepGroups, pdsTableNum, pdsTableSnapshot, pdsTablesInOrder, pdsTodayKey, pdsTypeFor, pdsUndo, pdsVersions, pdsZoneName, pdsZoomBy, toast, trLang, wireDismiss })); }\n",
+  "anchor": "let drawing;",
+  "fragments": [
+    {
+      "name": "pdsFixMini",
+      "start": 71283,
+      "end": 72025,
+      "deps": [
+        "pdsNoir",
+        "pdsNoirFixture"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 1146,
+      "replacement": "function pdsFixMini() { return tableOperations().pdsFixMini.apply(this, arguments); }",
+      "length": 742,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsPlanThumb",
+      "start": 72308,
+      "end": 73212,
+      "deps": [],
+      "bad": false,
+      "kind": "function",
+      "offset": 1890,
+      "replacement": "function pdsPlanThumb() { return tableOperations().pdsPlanThumb.apply(this, arguments); }",
+      "length": 904,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderRoomCard",
+      "start": 73419,
+      "end": 76941,
+      "deps": [
+        "pdsPlane",
+        "pdsNoir",
+        "PDS_FOLD"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 2796,
+      "replacement": "function pdsRenderRoomCard() { return tableOperations().pdsRenderRoomCard.apply(this, arguments); }",
+      "length": 3522,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderAssignRail",
+      "start": 76986,
+      "end": 79028,
+      "deps": [
+        "pdsOnShift",
+        "pdsHasServer"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 6320,
+      "replacement": "function pdsRenderAssignRail() { return tableOperations().pdsRenderAssignRail.apply(this, arguments); }",
+      "length": 2042,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderAssignSummary",
+      "start": 84110,
+      "end": 85065,
+      "deps": [
+        "pdsHasServer",
+        "pdsServerIds"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 8364,
+      "replacement": "function pdsRenderAssignSummary() { return tableOperations().pdsRenderAssignSummary.apply(this, arguments); }",
+      "length": 955,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderInspector",
+      "start": 85379,
+      "end": 94308,
+      "deps": [
+        "pdsFind",
+        "pdsNumKey",
+        "pdsFixLabel",
+        "pdsNoir",
+        "pdsRenderStatusRow",
+        "PDS_MAX_TABLE_SERVERS",
+        "pdsServerIds"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 9321,
+      "replacement": "function pdsRenderInspector() { return tableOperations().pdsRenderInspector.apply(this, arguments); }",
+      "length": 8929,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderBulkInspector",
+      "start": 96544,
+      "end": 98382,
+      "deps": [
+        "pdsManualStatuses",
+        "pdsStatusLabel"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 18252,
+      "replacement": "function pdsRenderBulkInspector() { return tableOperations().pdsRenderBulkInspector.apply(this, arguments); }",
+      "length": 1838,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsSyncGroupService",
+      "start": 102673,
+      "end": 103486,
+      "deps": [
+        "pdsClearReservation"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 20092,
+      "replacement": "function pdsSyncGroupService() { return tableOperations().pdsSyncGroupService.apply(this, arguments); }",
+      "length": 813,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsExpireReservations",
+      "start": 103795,
+      "end": 104725,
+      "deps": [
+        "pdsTodayKey",
+        "pdsClearReservation"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 20907,
+      "replacement": "function pdsExpireReservations() { return tableOperations().pdsExpireReservations.apply(this, arguments); }",
+      "length": 930,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsOfferTableUndo",
+      "start": 105771,
+      "end": 106479,
+      "deps": [
+        "Kiwi",
+        "pdsPush",
+        "pdsRestoreTableSnapshot"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 21839,
+      "replacement": "function pdsOfferTableUndo() { return tableOperations().pdsOfferTableUndo.apply(this, arguments); }",
+      "length": 708,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderGroups",
+      "start": 106481,
+      "end": 107679,
+      "deps": [],
+      "bad": false,
+      "kind": "function",
+      "offset": 22549,
+      "replacement": "function pdsRenderGroups() { return tableOperations().pdsRenderGroups.apply(this, arguments); }",
+      "length": 1198,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRotationKey",
+      "start": 118891,
+      "end": 119657,
+      "deps": [
+        "pdsBusinessDayStart"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 23749,
+      "replacement": "function pdsRotationKey() { return tableOperations().pdsRotationKey.apply(this, arguments); }",
+      "length": 766,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRotateStep",
+      "start": 120457,
+      "end": 124151,
+      "deps": [
+        "pdsTablesInOrder",
+        "pdsServerIds",
+        "pdsHomeZones"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 24517,
+      "replacement": "function pdsRotateStep() { return tableOperations().pdsRotateStep.apply(this, arguments); }",
+      "length": 3694,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsFairness",
+      "start": 126004,
+      "end": 127010,
+      "deps": [],
+      "bad": false,
+      "kind": "function",
+      "offset": 28213,
+      "replacement": "function pdsFairness() { return tableOperations().pdsFairness.apply(this, arguments); }",
+      "length": 1006,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderRotateStage",
+      "start": 127150,
+      "end": 132720,
+      "deps": [
+        "pdsRotationPreview",
+        "pdsFairness",
+        "trLang",
+        "pdsClock",
+        "pdsPeriodLabel"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 29221,
+      "replacement": "function pdsRenderRotateStage() { return tableOperations().pdsRenderRotateStage.apply(this, arguments); }",
+      "length": 5570,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenderActions",
+      "start": 132943,
+      "end": 134056,
+      "deps": [
+        "pdsVersions",
+        "pdsDuplicateNums"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 34793,
+      "replacement": "function pdsRenderActions() { return tableOperations().pdsRenderActions.apply(this, arguments); }",
+      "length": 1113,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsAttachDrag",
+      "start": 175441,
+      "end": 185246,
+      "deps": [
+        "toast",
+        "pdsPush",
+        "pdsSyncGroupService",
+        "pdsK",
+        "PDS_GRID",
+        "pdsPlaneOf",
+        "Kiwi"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 35908,
+      "replacement": "function pdsAttachDrag() { return tableOperations().pdsAttachDrag.apply(this, arguments); }",
+      "length": 9805,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsAttachElDrag",
+      "start": 185248,
+      "end": 188753,
+      "deps": [
+        "pdsPush",
+        "pdsK",
+        "PDS_GRID",
+        "pdsPlaneOf",
+        "Kiwi"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 45715,
+      "replacement": "function pdsAttachElDrag() { return tableOperations().pdsAttachElDrag.apply(this, arguments); }",
+      "length": 3505,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsAttachChipDrag",
+      "start": 188810,
+      "end": 192652,
+      "deps": [
+        "pdsServerIds",
+        "PDS_MAX_TABLE_SERVERS",
+        "Kiwi",
+        "pdsPush",
+        "pdsSetServerIds"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 49222,
+      "replacement": "function pdsAttachChipDrag() { return tableOperations().pdsAttachChipDrag.apply(this, arguments); }",
+      "length": 3842,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsRenumber",
+      "start": 193697,
+      "end": 194438,
+      "deps": [
+        "pdsReadingOrder"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 53066,
+      "replacement": "function pdsRenumber() { return tableOperations().pdsRenumber.apply(this, arguments); }",
+      "length": 741,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsSaveVersion",
+      "start": 194961,
+      "end": 195743,
+      "deps": [
+        "PDS_SERVICE_STATUSES",
+        "pdsVersions",
+        "PDS_MAX_VERSIONS"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 53809,
+      "replacement": "function pdsSaveVersion() { return tableOperations().pdsSaveVersion.apply(this, arguments); }",
+      "length": 782,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsOpenVersions",
+      "start": 196531,
+      "end": 199383,
+      "deps": [
+        "trLang",
+        "pdsVersions",
+        "Kiwi",
+        "wireDismiss",
+        "pdsSaveVersion",
+        "pdsPush",
+        "pdsApplyVersion"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 54593,
+      "replacement": "function pdsOpenVersions() { return tableOperations().pdsOpenVersions.apply(this, arguments); }",
+      "length": 2852,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsPlaceBooking",
+      "start": 199663,
+      "end": 200768,
+      "deps": [
+        "pdsTableNum"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 57447,
+      "replacement": "function pdsPlaceBooking() { return tableOperations().pdsPlaceBooking.apply(this, arguments); }",
+      "length": 1105,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsExportSvg",
+      "start": 201108,
+      "end": 203717,
+      "deps": [
+        "pdsPlane",
+        "pdsServerIds",
+        "pdsInitials",
+        "pdsTableNum",
+        "pdsZoneName"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 58554,
+      "replacement": "function pdsExportSvg() { return tableOperations().pdsExportSvg.apply(this, arguments); }",
+      "length": 2609,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsExportPrint",
+      "start": 203718,
+      "end": 206242,
+      "deps": [
+        "trLang",
+        "pdsServerIds",
+        "pdsTableNum",
+        "pdsExportSvg",
+        "Kiwi"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 61165,
+      "replacement": "function pdsExportPrint() { return tableOperations().pdsExportPrint.apply(this, arguments); }",
+      "length": 2524,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "pdsExportPng",
+      "start": 206243,
+      "end": 207480,
+      "deps": [
+        "pdsExportSvg",
+        "pdsPlane",
+        "Kiwi"
+      ],
+      "bad": false,
+      "kind": "function",
+      "offset": 63691,
+      "replacement": "function pdsExportPng() { return tableOperations().pdsExportPng.apply(this, arguments); }",
+      "length": 1237,
+      "bodyPrefix": "",
+      "bodySuffix": ""
+    },
+    {
+      "name": "tableAction26",
+      "start": 207895,
+      "end": 208042,
+      "deps": [
+        "pdsSetNoir",
+        "pdsNoir"
+      ],
+      "kind": "case",
+      "offset": 64930,
+      "replacement": "case 'toggle-view': { tableOperations().tableAction26(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 483,
+      "bodyPrefix": "function tableAction26(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction27",
+      "start": 208047,
+      "end": 209877,
+      "deps": [
+        "pdsNormalize",
+        "pdsDefaultState",
+        "wireDismiss",
+        "pdsPush",
+        "pdsSaveVersion",
+        "trLang",
+        "pdsUndo"
+      ],
+      "kind": "case",
+      "offset": 65415,
+      "replacement": "case 'reset': { tableOperations().tableAction27(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 2166,
+      "bodyPrefix": "function tableAction27(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction28",
+      "start": 209882,
+      "end": 211152,
+      "deps": [
+        "pdsIcon",
+        "pdsZoneName",
+        "wireDismiss",
+        "pdsExportPrint",
+        "pdsExportPng"
+      ],
+      "kind": "case",
+      "offset": 67583,
+      "replacement": "case 'export': { tableOperations().tableAction28(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1606,
+      "bodyPrefix": "function tableAction28(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction29",
+      "start": 211157,
+      "end": 211247,
+      "deps": [
+        "pdsOpenVersions"
+      ],
+      "kind": "case",
+      "offset": 69191,
+      "replacement": "case 'versions': { tableOperations().tableAction29(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 426,
+      "bodyPrefix": "function tableAction29(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction30",
+      "start": 211838,
+      "end": 211977,
+      "deps": [
+        "pdsZoomBy"
+      ],
+      "kind": "case",
+      "offset": 69619,
+      "replacement": "case 'zoom-in':\n    case 'zoom-out': { tableOperations().tableAction30(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 475,
+      "bodyPrefix": "function tableAction30(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction31",
+      "start": 212452,
+      "end": 213616,
+      "deps": [
+        "pdsPalSeats",
+        "pdsTypeFor",
+        "pdsPush",
+        "pdsPlaneOf",
+        "pdsFreeSpot",
+        "pdsNextNum"
+      ],
+      "kind": "case",
+      "offset": 70096,
+      "replacement": "case 'add-shape': { tableOperations().tableAction31(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1500,
+      "bodyPrefix": "function tableAction31(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction32",
+      "start": 213621,
+      "end": 213973,
+      "deps": [
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 71598,
+      "replacement": "case 'zone-move': { tableOperations().tableAction32(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 688,
+      "bodyPrefix": "function tableAction32(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction33",
+      "start": 213978,
+      "end": 214242,
+      "deps": [
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 72288,
+      "replacement": "case 'zone-color': { tableOperations().tableAction33(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 600,
+      "bodyPrefix": "function tableAction33(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction34",
+      "start": 214247,
+      "end": 215460,
+      "deps": [
+        "pdsPush",
+        "pdsNewZoneId",
+        "pdsZoneName",
+        "pdsSetStatus",
+        "pdsSetServerIds"
+      ],
+      "kind": "case",
+      "offset": 72890,
+      "replacement": "case 'zone-duplicate': { tableOperations().tableAction34(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1549,
+      "bodyPrefix": "function tableAction34(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction35",
+      "start": 215465,
+      "end": 216765,
+      "deps": [
+        "wireDismiss",
+        "pdsPush",
+        "pdsRenumber"
+      ],
+      "kind": "case",
+      "offset": 74441,
+      "replacement": "case 'renumber': { tableOperations().tableAction35(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1636,
+      "bodyPrefix": "function tableAction35(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction36",
+      "start": 216770,
+      "end": 218121,
+      "deps": [
+        "wireDismiss",
+        "pdsNewZoneId",
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 76079,
+      "replacement": "case 'add-zone': { tableOperations().tableAction36(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1687,
+      "bodyPrefix": "function tableAction36(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction37",
+      "start": 218126,
+      "end": 219481,
+      "deps": [
+        "pdsZoneName",
+        "wireDismiss",
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 77768,
+      "replacement": "case 'rename-zone': { tableOperations().tableAction37(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1691,
+      "bodyPrefix": "function tableAction37(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction38",
+      "start": 219486,
+      "end": 221114,
+      "deps": [
+        "pdsZoneName",
+        "wireDismiss",
+        "pdsPush",
+        "pdsUndo"
+      ],
+      "kind": "case",
+      "offset": 79461,
+      "replacement": "case 'delete-zone': { tableOperations().tableAction38(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1964,
+      "bodyPrefix": "function tableAction38(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction39",
+      "start": 221939,
+      "end": 222817,
+      "deps": [
+        "pdsHandleAction"
+      ],
+      "kind": "case",
+      "offset": 81427,
+      "replacement": "case 'scan-salle': { tableOperations().tableAction39(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1214,
+      "bodyPrefix": "function tableAction39(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction40",
+      "start": 222822,
+      "end": 232153,
+      "deps": [
+        "pdsPlanThumb",
+        "wireDismiss",
+        "pdsPush",
+        "pdsSave",
+        "handlers"
+      ],
+      "kind": "case",
+      "offset": 82643,
+      "replacement": "case 'open-templates':\n    case 'open-wizard': { tableOperations().tableAction40(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 9667,
+      "bodyPrefix": "function tableAction40(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction41",
+      "start": 232158,
+      "end": 233611,
+      "deps": [
+        "pdsPush",
+        "pdsPlaneOf",
+        "pdsFreeSpot"
+      ],
+      "kind": "case",
+      "offset": 92312,
+      "replacement": "case 'add-table':\n    case 'add-table-default': { tableOperations().tableAction41(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1789,
+      "bodyPrefix": "function tableAction41(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction42",
+      "start": 233616,
+      "end": 234581,
+      "deps": [
+        "pdsPlaneOf",
+        "pdsPush",
+        "pdsFreeSpot"
+      ],
+      "kind": "case",
+      "offset": 94103,
+      "replacement": "case 'add-el': { tableOperations().tableAction42(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1301,
+      "bodyPrefix": "function tableAction42(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction43",
+      "start": 234586,
+      "end": 235345,
+      "deps": [
+        "wireDismiss",
+        "pdsPush",
+        "pdsSetServerIds"
+      ],
+      "kind": "case",
+      "offset": 95406,
+      "replacement": "case 'clear-assign': { tableOperations().tableAction43(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1095,
+      "bodyPrefix": "function tableAction43(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction44",
+      "start": 235350,
+      "end": 236770,
+      "deps": [
+        "wireDismiss",
+        "pdsPush",
+        "pdsStaffColor"
+      ],
+      "kind": "case",
+      "offset": 96503,
+      "replacement": "case 'add-server': { tableOperations().tableAction44(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1756,
+      "bodyPrefix": "function tableAction44(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction45",
+      "start": 236775,
+      "end": 237338,
+      "deps": [
+        "pdsPush",
+        "pdsHasServer",
+        "pdsSetServerIds",
+        "pdsServerIds"
+      ],
+      "kind": "case",
+      "offset": 98261,
+      "replacement": "case 'del-server': { tableOperations().tableAction45(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 899,
+      "bodyPrefix": "function tableAction45(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction46",
+      "start": 237343,
+      "end": 243548,
+      "deps": [
+        "wireDismiss",
+        "pdsPush",
+        "pdsRotationKey"
+      ],
+      "kind": "case",
+      "offset": 99162,
+      "replacement": "case 'rotate-configure': { tableOperations().tableAction46(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 6541,
+      "bodyPrefix": "function tableAction46(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction47",
+      "start": 243553,
+      "end": 244165,
+      "deps": [
+        "pdsPush",
+        "pdsApplyAssignment",
+        "pdsRotateStep",
+        "pdsRecordRotation",
+        "pdsUndo"
+      ],
+      "kind": "case",
+      "offset": 105705,
+      "replacement": "case 'rotate-now': { tableOperations().tableAction47(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 948,
+      "bodyPrefix": "function tableAction47(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction48",
+      "start": 244764,
+      "end": 245134,
+      "deps": [
+        "pdsFind",
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 106655,
+      "replacement": "case 'table-rotate':\n    case 'rot-90': { tableOperations().tableAction48(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 706,
+      "bodyPrefix": "function tableAction48(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction49",
+      "start": 245139,
+      "end": 245430,
+      "deps": [
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 107363,
+      "replacement": "case 'ambiance': { tableOperations().tableAction49(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 627,
+      "bodyPrefix": "function tableAction49(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction50",
+      "start": 245435,
+      "end": 246556,
+      "deps": [
+        "pdsFind",
+        "pdsPush",
+        "pdsNextNum",
+        "pdsSetStatus"
+      ],
+      "kind": "case",
+      "offset": 107992,
+      "replacement": "case 'table-duplicate': { tableOperations().tableAction50(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1457,
+      "bodyPrefix": "function tableAction50(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction51",
+      "start": 246561,
+      "end": 247610,
+      "deps": [
+        "pdsFind",
+        "pdsPush",
+        "pdsTableSnapshot",
+        "pdsSweepGroups",
+        "pdsOfferTableUndo"
+      ],
+      "kind": "case",
+      "offset": 109451,
+      "replacement": "case 'table-delete': { tableOperations().tableAction51(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1385,
+      "bodyPrefix": "function tableAction51(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction52",
+      "start": 247615,
+      "end": 247987,
+      "deps": [],
+      "kind": "case",
+      "offset": 110838,
+      "replacement": "case 'table-group': { tableOperations().tableAction52(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 708,
+      "bodyPrefix": "function tableAction52(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction53",
+      "start": 247992,
+      "end": 248505,
+      "deps": [
+        "pdsFind",
+        "pdsPush",
+        "pdsTableSnapshot",
+        "pdsOfferTableUndo"
+      ],
+      "kind": "case",
+      "offset": 111548,
+      "replacement": "case 'table-ungroup': { tableOperations().tableAction53(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 849,
+      "bodyPrefix": "function tableAction53(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction54",
+      "start": 248510,
+      "end": 248778,
+      "deps": [
+        "pdsFind",
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 112399,
+      "replacement": "case 'obj-lock': { tableOperations().tableAction54(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 604,
+      "bodyPrefix": "function tableAction54(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction55",
+      "start": 248783,
+      "end": 249165,
+      "deps": [
+        "pdsFind",
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 113005,
+      "replacement": "case 'seats-up':\n    case 'seats-down': { tableOperations().tableAction55(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 718,
+      "bodyPrefix": "function tableAction55(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction56",
+      "start": 249170,
+      "end": 249579,
+      "deps": [
+        "pdsFind",
+        "pdsPush"
+      ],
+      "kind": "case",
+      "offset": 113725,
+      "replacement": "case 'layer-back':\n    case 'layer-front': { tableOperations().tableAction56(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 745,
+      "bodyPrefix": "function tableAction56(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction57",
+      "start": 249584,
+      "end": 249753,
+      "deps": [
+        "pdsUndo"
+      ],
+      "kind": "case",
+      "offset": 114472,
+      "replacement": "case 'undo': { tableOperations().tableAction57(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 505,
+      "bodyPrefix": "function tableAction57(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction58",
+      "start": 249758,
+      "end": 249927,
+      "deps": [
+        "pdsRedo"
+      ],
+      "kind": "case",
+      "offset": 114979,
+      "replacement": "case 'redo': { tableOperations().tableAction58(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 505,
+      "bodyPrefix": "function tableAction58(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction59",
+      "start": 250003,
+      "end": 250503,
+      "deps": [
+        "pdsPush",
+        "PDS_GRID"
+      ],
+      "kind": "case",
+      "offset": 115486,
+      "replacement": "case 'bulk-align-h': { tableOperations().tableAction59(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 836,
+      "bodyPrefix": "function tableAction59(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction60",
+      "start": 250508,
+      "end": 251008,
+      "deps": [
+        "pdsPush",
+        "PDS_GRID"
+      ],
+      "kind": "case",
+      "offset": 116324,
+      "replacement": "case 'bulk-align-v': { tableOperations().tableAction60(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 836,
+      "bodyPrefix": "function tableAction60(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction61",
+      "start": 251013,
+      "end": 251591,
+      "deps": [
+        "pdsPush",
+        "PDS_GRID"
+      ],
+      "kind": "case",
+      "offset": 117162,
+      "replacement": "case 'bulk-dist-h': { tableOperations().tableAction61(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 914,
+      "bodyPrefix": "function tableAction61(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction62",
+      "start": 251596,
+      "end": 252174,
+      "deps": [
+        "pdsPush",
+        "PDS_GRID"
+      ],
+      "kind": "case",
+      "offset": 118078,
+      "replacement": "case 'bulk-dist-v': { tableOperations().tableAction62(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 914,
+      "bodyPrefix": "function tableAction62(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction63",
+      "start": 252179,
+      "end": 253056,
+      "deps": [
+        "pdsTableSnapshot",
+        "pdsPush",
+        "pdsSweepGroups",
+        "pdsOfferTableUndo"
+      ],
+      "kind": "case",
+      "offset": 118994,
+      "replacement": "case 'bulk-delete': { tableOperations().tableAction63(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1213,
+      "bodyPrefix": "function tableAction63(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction64",
+      "start": 253061,
+      "end": 253779,
+      "deps": [
+        "pdsPush",
+        "pdsSyncGroupService"
+      ],
+      "kind": "case",
+      "offset": 120209,
+      "replacement": "case 'bulk-group': { tableOperations().tableAction64(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1054,
+      "bodyPrefix": "function tableAction64(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction65",
+      "start": 253784,
+      "end": 253990,
+      "deps": [],
+      "kind": "case",
+      "offset": 121265,
+      "replacement": "case 'bulk-clear': { tableOperations().tableAction65(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 542,
+      "bodyPrefix": "function tableAction65(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction66",
+      "start": 253995,
+      "end": 254686,
+      "deps": [
+        "pdsPush",
+        "pdsSetStatus",
+        "pdsStatusLabel"
+      ],
+      "kind": "case",
+      "offset": 121809,
+      "replacement": "case 'bulk-status': { tableOperations().tableAction66(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 1027,
+      "bodyPrefix": "function tableAction66(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction67",
+      "start": 254825,
+      "end": 255164,
+      "deps": [],
+      "kind": "case",
+      "offset": 122838,
+      "replacement": "case 'deselect': { tableOperations().tableAction67(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 675,
+      "bodyPrefix": "function tableAction67(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    },
+    {
+      "name": "tableAction68",
+      "start": 255169,
+      "end": 255268,
+      "deps": [
+        "Kiwi"
+      ],
+      "kind": "case",
+      "offset": 123515,
+      "replacement": "default: { tableOperations().tableAction68(action, btn, state, T, root, dr, refresh, selection); break; }",
+      "length": 435,
+      "bodyPrefix": "function tableAction68(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
+      "bodySuffix": "\n  }\n}"
+    }
+  ]
+}

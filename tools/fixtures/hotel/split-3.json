@@ -1,0 +1,2149 @@
+{
+  "parts": [
+    {
+      "name": "model",
+      "file": "assets/hotel/model.js",
+      "prefix": "/* Owner: hotel model. Exposes a private factory; immutable dependencies are explicit, mutable owner state is accessed through live scope getters/setters. */\n(window.__kiwiHotelSections ||= {}).model = (scope) => {\n'use strict';\nconst { DEFAULT_VIEWS, cuAllStays, cuDefaultTypes, cuFloorId, cuInHouseSnapshots, cuRoomLive, cuSafePhoto, cuStamp, cuStayCache, cuStayLoads, cuStayScope, cuToday, cuTypeId, cuVenueId, isCustomHotel, tx, txk } = scope;\n",
+      "suffix": "return Object.freeze({ cuActiveActor, cuFetchStaysForWindow, cuSeed, cuHydrate, cuDocument, cuMerge, cuFetchInHouseStays, cuRoomOccupancy, cuRoomStatus });\n};\n",
+      "deps": [
+        "DEFAULT_VIEWS",
+        "cuAllStays",
+        "cuDefaultTypes",
+        "cuFloorId",
+        "cuInHouseSnapshots",
+        "cuRoomLive",
+        "cuSafePhoto",
+        "cuStamp",
+        "cuStayCache",
+        "cuStayLoads",
+        "cuStayScope",
+        "cuToday",
+        "cuTypeId",
+        "cuVenueId",
+        "isCustomHotel",
+        "tx",
+        "txk"
+      ],
+      "mutable": [
+        "cuOccupancyMemo"
+      ],
+      "fragments": [
+        {
+          "name": "cuActiveActor",
+          "start": 30708,
+          "end": 31738,
+          "deps": [],
+          "mutations": [],
+          "async": false,
+          "offset": 448,
+          "length": 1030,
+          "replacement": "function cuActiveActor() { return hotelSection('model').cuActiveActor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFetchStaysForWindow",
+          "start": 33600,
+          "end": 34938,
+          "deps": [
+            "cuVenueId",
+            "cuStayLoads",
+            "cuStayScope",
+            "txk",
+            "cuStayCache"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 1480,
+          "length": 1338,
+          "replacement": "async function cuFetchStaysForWindow() { return hotelSection('model').cuFetchStaysForWindow.apply(this, arguments); }"
+        },
+        {
+          "name": "cuSeed",
+          "start": 37209,
+          "end": 38749,
+          "deps": [
+            "cuStamp",
+            "cuDefaultTypes",
+            "tx",
+            "txk",
+            "cuFloorId",
+            "DEFAULT_VIEWS"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 2820,
+          "length": 1540,
+          "replacement": "function cuSeed() { return hotelSection('model').cuSeed.apply(this, arguments); }"
+        },
+        {
+          "name": "cuHydrate",
+          "start": 38752,
+          "end": 45868,
+          "deps": [
+            "cuTypeId",
+            "cuStamp",
+            "cuDefaultTypes",
+            "cuSafePhoto",
+            "cuFloorId",
+            "txk",
+            "DEFAULT_VIEWS"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 4362,
+          "length": 7116,
+          "replacement": "function cuHydrate() { return hotelSection('model').cuHydrate.apply(this, arguments); }"
+        },
+        {
+          "name": "cuDocument",
+          "start": 45871,
+          "end": 47211,
+          "deps": [
+            "DEFAULT_VIEWS"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 11480,
+          "length": 1340,
+          "replacement": "function cuDocument() { return hotelSection('model').cuDocument.apply(this, arguments); }"
+        },
+        {
+          "name": "cuMerge",
+          "start": 47655,
+          "end": 54074,
+          "deps": [
+            "cuTypeId",
+            "cuFloorId",
+            "DEFAULT_VIEWS"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 12822,
+          "length": 6419,
+          "replacement": "function cuMerge() { return hotelSection('model').cuMerge.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFetchInHouseStays",
+          "start": 106544,
+          "end": 107679,
+          "deps": [
+            "cuVenueId",
+            "cuStayScope",
+            "cuStayCache",
+            "cuInHouseSnapshots",
+            "cuStayLoads",
+            "txk"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 19243,
+          "length": 1135,
+          "replacement": "async function cuFetchInHouseStays() { return hotelSection('model').cuFetchInHouseStays.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRoomOccupancy",
+          "start": 141060,
+          "end": 142544,
+          "deps": [
+            "cuAllStays",
+            "cuStayScope",
+            "cuOccupancyMemo",
+            "cuToday"
+          ],
+          "mutations": [
+            {
+              "start": 404,
+              "end": 419,
+              "original": "cuOccupancyMemo",
+              "replacement": "scope.cuOccupancyMemo"
+            },
+            {
+              "start": 423,
+              "end": 438,
+              "original": "cuOccupancyMemo",
+              "replacement": "scope.cuOccupancyMemo"
+            },
+            {
+              "start": 471,
+              "end": 486,
+              "original": "cuOccupancyMemo",
+              "replacement": "scope.cuOccupancyMemo"
+            },
+            {
+              "start": 1416,
+              "end": 1431,
+              "original": "cuOccupancyMemo",
+              "replacement": "scope.cuOccupancyMemo"
+            }
+          ],
+          "async": false,
+          "offset": 20380,
+          "length": 1508,
+          "replacement": "function cuRoomOccupancy() { return hotelSection('model').cuRoomOccupancy.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRoomStatus",
+          "start": 142794,
+          "end": 144169,
+          "deps": [
+            "tx",
+            "cuRoomLive",
+            "isCustomHotel",
+            "cuOccupancyMemo"
+          ],
+          "mutations": [
+            {
+              "start": 728,
+              "end": 743,
+              "original": "cuOccupancyMemo",
+              "replacement": "scope.cuOccupancyMemo"
+            }
+          ],
+          "async": false,
+          "offset": 21890,
+          "length": 1381,
+          "replacement": "function cuRoomStatus() { return hotelSection('model').cuRoomStatus.apply(this, arguments); }"
+        }
+      ]
+    },
+    {
+      "name": "views",
+      "file": "assets/hotel/views.js",
+      "prefix": "/* Owner: hotel views. Exposes a private factory; immutable dependencies are explicit, mutable owner state is accessed through live scope getters/setters. */\n(window.__kiwiHotelSections ||= {}).views = (scope) => {\n'use strict';\nconst { ARRIVALS, DEPARTURES, FLOORS, FORECAST, GUESTS, HK_QUEUE, HX_PDV_KINDS, K, MAD, NATIONALITIES, NOSHOW_RISK, R, ROOMS, STAYS, TAPE_DAYS, TODAY_IDX, TYPES, cuAllStays, cuBoards, cuCaptureEconomatDraft, cuChannelMerchant, cuCharLabel, cuCommercialState, cuDay, cuDraftMoney, cuDraftStatus, cuEconomatDraft, cuEconomatState, cuFloorRows, cuHasActiveFilters, cuInHouseSnapshots, cuKinds, cuLang, cuLoadCommercial, cuMerchantSlug, cuMoney, cuNationalities, cuNationalityLabel, cuNormalizeText, cuOutletsMapped, cuQty, cuRackFilter, cuReceptionBuckets, cuReceptionSelection, cuRenderPhotoEditor, cuRoomLive, cuRoomStatus, cuSafePhoto, cuShrinkHotelPhoto, cuStamp, cuState, cuStayCache, cuStayLoads, cuStayScope, cuStaysChanged, cuStrip, cuToday, cuTonight, cuTypes, cuVenueId, cuViewLabel, donutCss, esc, hxLang, hxLocale, hxTo, isCustomHotel, ltr, occupancyByDay, rerender, roomTypeOf, srcPill, toast, tx, txk, txn, typeOf } = scope;\n",
+      "suffix": "return Object.freeze({ counts, receptionBody, rackBody, cuConnectingAvail, tapeBody, hotesBody, forecastSvg, intelBody, cuEvaluateStayExceptions, cuReceptionJournal, cuReceptionBody, cuParseRoomNumbers, cuUploadTypePhotos, cuUpdateFloorsManagerModal, cuRegisterWalkin, cuUnlinkConnectingRooms, cuSetConnectingRooms, cuRoomMatchesFilter, cuFilterChipsMarkup, cuMatchNationality, cuNationalitySelectorHtml, cuWireNationalitySelectors, cuParseDelimitedLine, cuHasGroupRecovery, cuMoveStayStatus, cuBirthIso, cuCommercialError, cuCommercialBody, cuCommercialEditor, cuEconomatBody, cuUnitsEditorHtml, cuPdvBody, cuLoadEconomat, cuSaveEconomat });\n};\n",
+      "deps": [
+        "ARRIVALS",
+        "DEPARTURES",
+        "FLOORS",
+        "FORECAST",
+        "GUESTS",
+        "HK_QUEUE",
+        "HX_PDV_KINDS",
+        "K",
+        "MAD",
+        "NATIONALITIES",
+        "NOSHOW_RISK",
+        "R",
+        "ROOMS",
+        "STAYS",
+        "TAPE_DAYS",
+        "TODAY_IDX",
+        "TYPES",
+        "cuAllStays",
+        "cuBoards",
+        "cuCaptureEconomatDraft",
+        "cuChannelMerchant",
+        "cuCharLabel",
+        "cuCommercialState",
+        "cuDay",
+        "cuDraftMoney",
+        "cuDraftStatus",
+        "cuEconomatDraft",
+        "cuEconomatState",
+        "cuFloorRows",
+        "cuHasActiveFilters",
+        "cuInHouseSnapshots",
+        "cuKinds",
+        "cuLang",
+        "cuLoadCommercial",
+        "cuMerchantSlug",
+        "cuMoney",
+        "cuNationalities",
+        "cuNationalityLabel",
+        "cuNormalizeText",
+        "cuOutletsMapped",
+        "cuQty",
+        "cuRackFilter",
+        "cuReceptionBuckets",
+        "cuReceptionSelection",
+        "cuRenderPhotoEditor",
+        "cuRoomLive",
+        "cuRoomStatus",
+        "cuSafePhoto",
+        "cuShrinkHotelPhoto",
+        "cuStamp",
+        "cuState",
+        "cuStayCache",
+        "cuStayLoads",
+        "cuStayScope",
+        "cuStaysChanged",
+        "cuStrip",
+        "cuToday",
+        "cuTonight",
+        "cuTypes",
+        "cuVenueId",
+        "cuViewLabel",
+        "donutCss",
+        "esc",
+        "hxLang",
+        "hxLocale",
+        "hxTo",
+        "isCustomHotel",
+        "ltr",
+        "occupancyByDay",
+        "rerender",
+        "roomTypeOf",
+        "srcPill",
+        "toast",
+        "tx",
+        "txk",
+        "txn",
+        "typeOf"
+      ],
+      "mutable": [],
+      "fragments": [
+        {
+          "name": "counts",
+          "start": 62768,
+          "end": 63455,
+          "deps": [
+            "isCustomHotel",
+            "R",
+            "cuTonight",
+            "cuRoomStatus",
+            "ROOMS",
+            "HK_QUEUE",
+            "ARRIVALS",
+            "DEPARTURES"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 1165,
+          "length": 687,
+          "replacement": "function counts() { return hotelSection('views').counts.apply(this, arguments); }"
+        },
+        {
+          "name": "receptionBody",
+          "start": 63458,
+          "end": 67538,
+          "deps": [
+            "counts",
+            "ARRIVALS",
+            "srcPill",
+            "DEPARTURES",
+            "MAD",
+            "ROOMS"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 1854,
+          "length": 4080,
+          "replacement": "function receptionBody() { return hotelSection('views').receptionBody.apply(this, arguments); }"
+        },
+        {
+          "name": "rackBody",
+          "start": 67607,
+          "end": 69535,
+          "deps": [
+            "FLOORS",
+            "ROOMS",
+            "TYPES"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 5936,
+          "length": 1928,
+          "replacement": "function rackBody() { return hotelSection('views').rackBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuConnectingAvail",
+          "start": 69538,
+          "end": 70668,
+          "deps": [
+            "cuRoomStatus",
+            "tx"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 7866,
+          "length": 1130,
+          "replacement": "function cuConnectingAvail() { return hotelSection('views').cuConnectingAvail.apply(this, arguments); }"
+        },
+        {
+          "name": "tapeBody",
+          "start": 75496,
+          "end": 77718,
+          "deps": [
+            "occupancyByDay",
+            "TAPE_DAYS",
+            "TODAY_IDX",
+            "FLOORS",
+            "STAYS",
+            "TYPES",
+            "typeOf",
+            "ROOMS"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 8998,
+          "length": 2222,
+          "replacement": "function tapeBody() { return hotelSection('views').tapeBody.apply(this, arguments); }"
+        },
+        {
+          "name": "hotesBody",
+          "start": 82131,
+          "end": 84897,
+          "deps": [
+            "GUESTS",
+            "MAD",
+            "donutCss",
+            "NATIONALITIES"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 11222,
+          "length": 2766,
+          "replacement": "function hotesBody() { return hotelSection('views').hotesBody.apply(this, arguments); }"
+        },
+        {
+          "name": "forecastSvg",
+          "start": 87500,
+          "end": 89562,
+          "deps": [
+            "FORECAST"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 13990,
+          "length": 2062,
+          "replacement": "function forecastSvg() { return hotelSection('views').forecastSvg.apply(this, arguments); }"
+        },
+        {
+          "name": "intelBody",
+          "start": 89565,
+          "end": 93028,
+          "deps": [
+            "NOSHOW_RISK",
+            "forecastSvg",
+            "MAD"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 16054,
+          "length": 3463,
+          "replacement": "function intelBody() { return hotelSection('views').intelBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuEvaluateStayExceptions",
+          "start": 96244,
+          "end": 98564,
+          "deps": [
+            "tx"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 19519,
+          "length": 2320,
+          "replacement": "function cuEvaluateStayExceptions() { return hotelSection('views').cuEvaluateStayExceptions.apply(this, arguments); }"
+        },
+        {
+          "name": "cuReceptionJournal",
+          "start": 99502,
+          "end": 105878,
+          "deps": [
+            "cuReceptionSelection",
+            "cuReceptionBuckets",
+            "cuInHouseSnapshots",
+            "cuStayScope",
+            "tx",
+            "R",
+            "cuStayLoads",
+            "cuHasGroupRecovery",
+            "esc",
+            "cuDay",
+            "hxTo",
+            "txn"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 21841,
+          "length": 6376,
+          "replacement": "function cuReceptionJournal() { return hotelSection('views').cuReceptionJournal.apply(this, arguments); }"
+        },
+        {
+          "name": "cuReceptionBody",
+          "start": 107682,
+          "end": 111093,
+          "deps": [
+            "cuAllStays",
+            "cuEvaluateStayExceptions",
+            "R",
+            "tx",
+            "esc",
+            "cuDay",
+            "hxTo",
+            "txn",
+            "cuStrip",
+            "cuReceptionJournal"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 28219,
+          "length": 3411,
+          "replacement": "function cuReceptionBody() { return hotelSection('views').cuReceptionBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuParseRoomNumbers",
+          "start": 111449,
+          "end": 112048,
+          "deps": [],
+          "mutations": [],
+          "async": false,
+          "offset": 31632,
+          "length": 599,
+          "replacement": "function cuParseRoomNumbers() { return hotelSection('views').cuParseRoomNumbers.apply(this, arguments); }"
+        },
+        {
+          "name": "cuUploadTypePhotos",
+          "start": 122156,
+          "end": 124169,
+          "deps": [
+            "tx",
+            "cuShrinkHotelPhoto",
+            "cuVenueId",
+            "cuSafePhoto",
+            "cuStamp",
+            "cuRenderPhotoEditor",
+            "txn"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 32233,
+          "length": 2013,
+          "replacement": "async function cuUploadTypePhotos() { return hotelSection('views').cuUploadTypePhotos.apply(this, arguments); }"
+        },
+        {
+          "name": "cuUpdateFloorsManagerModal",
+          "start": 135679,
+          "end": 136908,
+          "deps": [
+            "cuState",
+            "cuFloorRows",
+            "esc",
+            "txn",
+            "tx"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 34248,
+          "length": 1229,
+          "replacement": "function cuUpdateFloorsManagerModal() { return hotelSection('views').cuUpdateFloorsManagerModal.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRegisterWalkin",
+          "start": 145463,
+          "end": 146788,
+          "deps": [
+            "cuMerchantSlug",
+            "R",
+            "cuToday",
+            "cuStayCache",
+            "cuStaysChanged"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 35479,
+          "length": 1325,
+          "replacement": "async function cuRegisterWalkin() { return hotelSection('views').cuRegisterWalkin.apply(this, arguments); }"
+        },
+        {
+          "name": "cuUnlinkConnectingRooms",
+          "start": 152071,
+          "end": 152790,
+          "deps": [
+            "cuStamp"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 36806,
+          "length": 719,
+          "replacement": "function cuUnlinkConnectingRooms() { return hotelSection('views').cuUnlinkConnectingRooms.apply(this, arguments); }"
+        },
+        {
+          "name": "cuSetConnectingRooms",
+          "start": 152793,
+          "end": 154574,
+          "deps": [
+            "cuStamp"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 37527,
+          "length": 1781,
+          "replacement": "function cuSetConnectingRooms() { return hotelSection('views').cuSetConnectingRooms.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRoomMatchesFilter",
+          "start": 155899,
+          "end": 157825,
+          "deps": [
+            "cuRackFilter",
+            "cuRoomStatus",
+            "roomTypeOf",
+            "cuCharLabel",
+            "cuRoomLive",
+            "cuViewLabel"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 39310,
+          "length": 1926,
+          "replacement": "function cuRoomMatchesFilter() { return hotelSection('views').cuRoomMatchesFilter.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFilterChipsMarkup",
+          "start": 157828,
+          "end": 161728,
+          "deps": [
+            "cuHasActiveFilters",
+            "cuState",
+            "cuRackFilter",
+            "tx",
+            "esc",
+            "cuViewLabel",
+            "cuCharLabel",
+            "txn",
+            "hxLang"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 41238,
+          "length": 3900,
+          "replacement": "function cuFilterChipsMarkup() { return hotelSection('views').cuFilterChipsMarkup.apply(this, arguments); }"
+        },
+        {
+          "name": "cuMatchNationality",
+          "start": 247189,
+          "end": 248835,
+          "deps": [
+            "cuNationalities",
+            "cuNormalizeText"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 45140,
+          "length": 1646,
+          "replacement": "function cuMatchNationality() { return hotelSection('views').cuMatchNationality.apply(this, arguments); }"
+        },
+        {
+          "name": "cuNationalitySelectorHtml",
+          "start": 249168,
+          "end": 250967,
+          "deps": [
+            "cuMatchNationality",
+            "cuNationalityLabel",
+            "esc",
+            "tx"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 46788,
+          "length": 1799,
+          "replacement": "function cuNationalitySelectorHtml() { return hotelSection('views').cuNationalitySelectorHtml.apply(this, arguments); }"
+        },
+        {
+          "name": "cuWireNationalitySelectors",
+          "start": 250971,
+          "end": 259106,
+          "deps": [
+            "tx",
+            "cuLang",
+            "esc",
+            "cuNormalizeText",
+            "cuNationalities",
+            "cuNationalityLabel",
+            "cuMatchNationality"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 48589,
+          "length": 8135,
+          "replacement": "function cuWireNationalitySelectors() { return hotelSection('views').cuWireNationalitySelectors.apply(this, arguments); }"
+        },
+        {
+          "name": "cuParseDelimitedLine",
+          "start": 282800,
+          "end": 283685,
+          "deps": [],
+          "mutations": [],
+          "async": false,
+          "offset": 56726,
+          "length": 885,
+          "replacement": "function cuParseDelimitedLine() { return hotelSection('views').cuParseDelimitedLine.apply(this, arguments); }"
+        },
+        {
+          "name": "cuHasGroupRecovery",
+          "start": 283689,
+          "end": 284348,
+          "deps": [
+            "cuMerchantSlug"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 57613,
+          "length": 659,
+          "replacement": "function cuHasGroupRecovery() { return hotelSection('views').cuHasGroupRecovery.apply(this, arguments); }"
+        },
+        {
+          "name": "cuMoveStayStatus",
+          "start": 394382,
+          "end": 398163,
+          "deps": [
+            "cuMerchantSlug",
+            "cuStayScope",
+            "cuStayCache",
+            "tx",
+            "cuDraftMoney",
+            "toast",
+            "cuDraftStatus",
+            "cuStaysChanged",
+            "rerender"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 58274,
+          "length": 3781,
+          "replacement": "async function cuMoveStayStatus() { return hotelSection('views').cuMoveStayStatus.apply(this, arguments); }"
+        },
+        {
+          "name": "cuBirthIso",
+          "start": 399822,
+          "end": 400619,
+          "deps": [],
+          "mutations": [],
+          "async": false,
+          "offset": 62057,
+          "length": 797,
+          "replacement": "function cuBirthIso() { return hotelSection('views').cuBirthIso.apply(this, arguments); }"
+        },
+        {
+          "name": "cuCommercialError",
+          "start": 403324,
+          "end": 406951,
+          "deps": [
+            "tx",
+            "txk"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 62856,
+          "length": 3627,
+          "replacement": "function cuCommercialError() { return hotelSection('views').cuCommercialError.apply(this, arguments); }"
+        },
+        {
+          "name": "cuCommercialBody",
+          "start": 407729,
+          "end": 412682,
+          "deps": [
+            "cuCommercialState",
+            "tx",
+            "cuKinds",
+            "esc",
+            "cuTypes",
+            "cuBoards",
+            "ltr",
+            "cuDraftMoney"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 66485,
+          "length": 4953,
+          "replacement": "function cuCommercialBody() { return hotelSection('views').cuCommercialBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuCommercialEditor",
+          "start": 419443,
+          "end": 425225,
+          "deps": [
+            "cuStayScope",
+            "cuLoadCommercial",
+            "cuCommercialState",
+            "toast",
+            "tx",
+            "esc",
+            "cuKinds",
+            "cuTypes",
+            "cuBoards",
+            "K",
+            "cuChannelMerchant",
+            "cuCommercialError",
+            "rerender"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 71440,
+          "length": 5782,
+          "replacement": "async function cuCommercialEditor() { return hotelSection('views').cuCommercialEditor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuEconomatBody",
+          "start": 433137,
+          "end": 437359,
+          "deps": [
+            "cuEconomatState",
+            "tx",
+            "cuEconomatDraft",
+            "cuOutletsMapped",
+            "cuQty",
+            "esc",
+            "hxLocale",
+            "cuMoney",
+            "cuUnitsEditorHtml"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 77224,
+          "length": 4222,
+          "replacement": "function cuEconomatBody() { return hotelSection('views').cuEconomatBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuUnitsEditorHtml",
+          "start": 438190,
+          "end": 441824,
+          "deps": [
+            "cuOutletsMapped",
+            "esc",
+            "tx",
+            "HX_PDV_KINDS",
+            "cuEconomatState"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 81448,
+          "length": 3634,
+          "replacement": "function cuUnitsEditorHtml() { return hotelSection('views').cuUnitsEditorHtml.apply(this, arguments); }"
+        },
+        {
+          "name": "cuPdvBody",
+          "start": 442215,
+          "end": 444571,
+          "deps": [
+            "cuEconomatState",
+            "tx",
+            "cuEconomatDraft",
+            "esc",
+            "HX_PDV_KINDS",
+            "cuUnitsEditorHtml"
+          ],
+          "mutations": [],
+          "async": false,
+          "offset": 85084,
+          "length": 2356,
+          "replacement": "function cuPdvBody() { return hotelSection('views').cuPdvBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuLoadEconomat",
+          "start": 444574,
+          "end": 446897,
+          "deps": [
+            "isCustomHotel",
+            "cuEconomatState",
+            "cuMerchantSlug",
+            "txk",
+            "rerender",
+            "cuEconomatDraft",
+            "tx"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 87442,
+          "length": 2323,
+          "replacement": "async function cuLoadEconomat() { return hotelSection('views').cuLoadEconomat.apply(this, arguments); }"
+        },
+        {
+          "name": "cuSaveEconomat",
+          "start": 447579,
+          "end": 450329,
+          "deps": [
+            "cuEconomatState",
+            "cuCaptureEconomatDraft",
+            "toast",
+            "tx",
+            "cuMerchantSlug",
+            "rerender",
+            "cuEconomatDraft",
+            "cuLoadEconomat"
+          ],
+          "mutations": [],
+          "async": true,
+          "offset": 89767,
+          "length": 2750,
+          "replacement": "async function cuSaveEconomat() { return hotelSection('views').cuSaveEconomat.apply(this, arguments); }"
+        }
+      ]
+    },
+    {
+      "name": "groups",
+      "file": "assets/hotel/groups.js",
+      "prefix": "/* Owner: hotel groups. Exposes a private factory; immutable dependencies are explicit, mutable owner state is accessed through live scope getters/setters. */\n(window.__kiwiHotelSections ||= {}).groups = (scope) => {\n'use strict';\nconst { DEFAULT_VIEWS, K, MAD, cuBoards, cuCommercialError, cuCommercialState, cuDay, cuDirectQuote, cuDraftMoney, cuDraftStatus, cuKinds, cuLoadCommercial, cuMatchNationality, cuMerchantSlug, cuNationalityLabel, cuNationalitySelectorHtml, cuNormalizeText, cuParseDelimitedLine, cuState, cuStayCache, cuStayScope, cuStaysChanged, cuTypes, cuViewLabel, cuWireNationalitySelectors, esc, hxColon, hxTo, ltr, rerender, roomTypeOf, toast, tx, txn } = scope;\n",
+      "suffix": "return Object.freeze({ cuGroupReservationModal });\n};\n",
+      "deps": [
+        "DEFAULT_VIEWS",
+        "K",
+        "MAD",
+        "cuBoards",
+        "cuCommercialError",
+        "cuCommercialState",
+        "cuDay",
+        "cuDirectQuote",
+        "cuDraftMoney",
+        "cuDraftStatus",
+        "cuKinds",
+        "cuLoadCommercial",
+        "cuMatchNationality",
+        "cuMerchantSlug",
+        "cuNationalityLabel",
+        "cuNationalitySelectorHtml",
+        "cuNormalizeText",
+        "cuParseDelimitedLine",
+        "cuState",
+        "cuStayCache",
+        "cuStayScope",
+        "cuStaysChanged",
+        "cuTypes",
+        "cuViewLabel",
+        "cuWireNationalitySelectors",
+        "esc",
+        "hxColon",
+        "hxTo",
+        "ltr",
+        "rerender",
+        "roomTypeOf",
+        "toast",
+        "tx",
+        "txn"
+      ],
+      "mutable": [
+        "openModal"
+      ],
+      "fragments": [
+        {
+          "name": "cuGroupReservationModal",
+          "start": 284352,
+          "end": 378296,
+          "deps": [
+            "cuStayScope",
+            "cuMerchantSlug",
+            "cuStayCache",
+            "cuState",
+            "cuTypes",
+            "toast",
+            "tx",
+            "cuLoadCommercial",
+            "cuCommercialState",
+            "K",
+            "hxColon",
+            "esc",
+            "cuKinds",
+            "cuBoards",
+            "DEFAULT_VIEWS",
+            "cuViewLabel",
+            "txn",
+            "openModal",
+            "roomTypeOf",
+            "MAD",
+            "cuDraftMoney",
+            "ltr",
+            "cuDirectQuote",
+            "cuCommercialError",
+            "cuDay",
+            "hxTo",
+            "cuNationalitySelectorHtml",
+            "cuWireNationalitySelectors",
+            "cuNormalizeText",
+            "cuParseDelimitedLine",
+            "cuMatchNationality",
+            "cuNationalityLabel",
+            "cuDraftStatus",
+            "cuStaysChanged",
+            "rerender"
+          ],
+          "mutations": [
+            {
+              "start": 22084,
+              "end": 22093,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 42597,
+              "end": 42606,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 64438,
+              "end": 64447,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 83101,
+              "end": 83110,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 85648,
+              "end": 85657,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 89047,
+              "end": 89056,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 91761,
+              "end": 91770,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 92538,
+              "end": 92547,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 92942,
+              "end": 92951,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": true,
+          "offset": 684,
+          "length": 93998,
+          "replacement": "async function cuGroupReservationModal() { return hotelSection('groups').cuGroupReservationModal.apply(this, arguments); }"
+        }
+      ]
+    },
+    {
+      "name": "editors",
+      "file": "assets/hotel/editors.js",
+      "prefix": "/* Owner: hotel editors. Exposes a private factory; immutable dependencies are explicit, mutable owner state is accessed through live scope getters/setters. */\n(window.__kiwiHotelSections ||= {}).editors = (scope) => {\n'use strict';\nconst { F, GUESTS, HK_QUEUE, HX_WEEKDAYS, K, MAD, R, RATES, RATE_DAYS, TYPES, counts, cuActiveFilterCount, cuAllCharacteristics, cuAllStays, cuAllViews, cuBillingBlocked, cuBillingBody, cuBillingLine, cuBirthDisplay, cuBirthIso, cuBoards, cuChannelMerchant, cuChannelState, cuCharLabel, cuCommercialError, cuConnectingAvail, cuDay, cuDirectQuote, cuDraftInput, cuDraftMoney, cuEconomatBody, cuEconomatState, cuEnsureFilterVenue, cuEvaluateStayExceptions, cuFilterChipsMarkup, cuFloorKey, cuFloorMatchesFilter, cuFloorRows, cuFloors, cuHasGroupRecovery, cuMerchantSlug, cuNationalitySelectorHtml, cuPendingBulk, cuPerfState, cuPerfWindows, cuPrintDraft, cuProductionState, cuRackFilter, cuRenderPhotoEditor, cuRoomLive, cuRoomMatchesFilter, cuRoomStatus, cuSejoursAvailabilityBody, cuSelectedNumbers, cuSelectedRooms, cuStarter, cuState, cuStayCache, cuStayLoads, cuStayQuoteSignature, cuStayScope, cuStaysChanged, cuStaysKnown, cuToday, cuTonight, cuTypeOptions, cuTypes, cuUploadTypePhotos, cuViewLabel, cuWarmStays, cuWireNationalitySelectors, cuWireStayCommercial, esc, fmt, folioTotal, hxLang, hxLocale, hxTo, isCustomHotel, ltr, openFolio, roomCountLabel, roomTypeOf, toast, totalRooms, trL, tx, txk, txn } = scope;\n",
+      "suffix": "return Object.freeze({ rerender, roomModal, tarifsBody, guestModal, cuStrip, cuRoomBatchEditor, cuRoomEditor, cuTypesManager, cuTypeEditor, cuFloorsManager, cuViewsAndCharsManager, cuFloorEditor, cuRackBody, cuFiltersModal, cuBulkEditModal, cuBulkReviewModal, cuLoadPerformance, cuFoliosBody, cuSejoursBody, cuDispoBody, cuStayEditor, cuOpenDossier, cuSubmitStay, cuCancelStay, cuAwaitTariffAck, cuLoadProduction, cuChannelGuide, cuCaptureEconomatDraft, cuIntelBody });\n};\n",
+      "deps": [
+        "F",
+        "GUESTS",
+        "HK_QUEUE",
+        "HX_WEEKDAYS",
+        "K",
+        "MAD",
+        "R",
+        "RATES",
+        "RATE_DAYS",
+        "TYPES",
+        "counts",
+        "cuActiveFilterCount",
+        "cuAllCharacteristics",
+        "cuAllStays",
+        "cuAllViews",
+        "cuBillingBlocked",
+        "cuBillingBody",
+        "cuBillingLine",
+        "cuBirthDisplay",
+        "cuBirthIso",
+        "cuBoards",
+        "cuChannelMerchant",
+        "cuChannelState",
+        "cuCharLabel",
+        "cuCommercialError",
+        "cuConnectingAvail",
+        "cuDay",
+        "cuDirectQuote",
+        "cuDraftInput",
+        "cuDraftMoney",
+        "cuEconomatBody",
+        "cuEconomatState",
+        "cuEnsureFilterVenue",
+        "cuEvaluateStayExceptions",
+        "cuFilterChipsMarkup",
+        "cuFloorKey",
+        "cuFloorMatchesFilter",
+        "cuFloorRows",
+        "cuFloors",
+        "cuHasGroupRecovery",
+        "cuMerchantSlug",
+        "cuNationalitySelectorHtml",
+        "cuPendingBulk",
+        "cuPerfState",
+        "cuPerfWindows",
+        "cuPrintDraft",
+        "cuProductionState",
+        "cuRackFilter",
+        "cuRenderPhotoEditor",
+        "cuRoomLive",
+        "cuRoomMatchesFilter",
+        "cuRoomStatus",
+        "cuSejoursAvailabilityBody",
+        "cuSelectedNumbers",
+        "cuSelectedRooms",
+        "cuStarter",
+        "cuState",
+        "cuStayCache",
+        "cuStayLoads",
+        "cuStayQuoteSignature",
+        "cuStayScope",
+        "cuStaysChanged",
+        "cuStaysKnown",
+        "cuToday",
+        "cuTonight",
+        "cuTypeOptions",
+        "cuTypes",
+        "cuUploadTypePhotos",
+        "cuViewLabel",
+        "cuWarmStays",
+        "cuWireNationalitySelectors",
+        "cuWireStayCommercial",
+        "esc",
+        "fmt",
+        "folioTotal",
+        "hxLang",
+        "hxLocale",
+        "hxTo",
+        "isCustomHotel",
+        "ltr",
+        "openFolio",
+        "roomCountLabel",
+        "roomTypeOf",
+        "toast",
+        "totalRooms",
+        "trL",
+        "tx",
+        "txk",
+        "txn"
+      ],
+      "mutable": [
+        "aiApplied",
+        "cuBulkPlan",
+        "cuBulkStaged",
+        "cuDispoCat",
+        "cuOccupancyMemo",
+        "cuSelectionMode",
+        "cuStayView",
+        "cuStripUnknown",
+        "cuTapeOffset",
+        "hotelCloud",
+        "openDrawer",
+        "openModal"
+      ],
+      "fragments": [
+        {
+          "name": "rerender",
+          "start": 59755,
+          "end": 60808,
+          "deps": [
+            "cuOccupancyMemo",
+            "openDrawer",
+            "isCustomHotel",
+            "roomCountLabel"
+          ],
+          "mutations": [
+            {
+              "start": 90,
+              "end": 105,
+              "original": "cuOccupancyMemo",
+              "replacement": "scope.cuOccupancyMemo"
+            },
+            {
+              "start": 123,
+              "end": 133,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 160,
+              "end": 170,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 208,
+              "end": 218,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 616,
+              "end": 626,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 863,
+              "end": 873,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 936,
+              "end": 946,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            }
+          ],
+          "async": false,
+          "offset": 1454,
+          "length": 1095,
+          "replacement": "function rerender() { return hotelSection('editors').rerender.apply(this, arguments); }"
+        },
+        {
+          "name": "roomModal",
+          "start": 70671,
+          "end": 75232,
+          "deps": [
+            "R",
+            "F",
+            "openFolio",
+            "cuRoomLive",
+            "cuRoomStatus",
+            "tx",
+            "K",
+            "roomTypeOf",
+            "esc",
+            "cuDay",
+            "hxTo",
+            "MAD",
+            "cuViewLabel",
+            "cuCharLabel",
+            "cuConnectingAvail",
+            "isCustomHotel",
+            "HK_QUEUE",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 4516,
+              "end": 4525,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 2551,
+          "length": 4567,
+          "replacement": "function roomModal() { return hotelSection('editors').roomModal.apply(this, arguments); }"
+        },
+        {
+          "name": "tarifsBody",
+          "start": 77962,
+          "end": 81835,
+          "deps": [
+            "aiApplied",
+            "RATE_DAYS",
+            "RATES",
+            "TYPES",
+            "fmt"
+          ],
+          "mutations": [
+            {
+              "start": 138,
+              "end": 147,
+              "original": "aiApplied",
+              "replacement": "scope.aiApplied"
+            },
+            {
+              "start": 505,
+              "end": 514,
+              "original": "aiApplied",
+              "replacement": "scope.aiApplied"
+            },
+            {
+              "start": 656,
+              "end": 665,
+              "original": "aiApplied",
+              "replacement": "scope.aiApplied"
+            },
+            {
+              "start": 728,
+              "end": 737,
+              "original": "aiApplied",
+              "replacement": "scope.aiApplied"
+            },
+            {
+              "start": 1811,
+              "end": 1820,
+              "original": "aiApplied",
+              "replacement": "scope.aiApplied"
+            }
+          ],
+          "async": false,
+          "offset": 7120,
+          "length": 3903,
+          "replacement": "function tarifsBody() { return hotelSection('editors').tarifsBody.apply(this, arguments); }"
+        },
+        {
+          "name": "guestModal",
+          "start": 84900,
+          "end": 87095,
+          "deps": [
+            "GUESTS",
+            "K",
+            "esc",
+            "MAD",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 2150,
+              "end": 2159,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 11025,
+          "length": 2201,
+          "replacement": "function guestModal() { return hotelSection('editors').guestModal.apply(this, arguments); }"
+        },
+        {
+          "name": "cuStrip",
+          "start": 94505,
+          "end": 96211,
+          "deps": [
+            "cuWarmStays",
+            "counts",
+            "totalRooms",
+            "R",
+            "cuRoomStatus",
+            "cuStripUnknown",
+            "tx",
+            "ltr",
+            "cuToday",
+            "cuState",
+            "fmt"
+          ],
+          "mutations": [
+            {
+              "start": 595,
+              "end": 609,
+              "original": "cuStripUnknown",
+              "replacement": "scope.cuStripUnknown"
+            }
+          ],
+          "async": false,
+          "offset": 13228,
+          "length": 1712,
+          "replacement": "function cuStrip() { return hotelSection('editors').cuStrip.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRoomBatchEditor",
+          "start": 112051,
+          "end": 114127,
+          "deps": [
+            "cuTypes",
+            "cuFloorRows",
+            "K",
+            "tx",
+            "cuTypeOptions",
+            "esc",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 2031,
+              "end": 2040,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 14942,
+          "length": 2082,
+          "replacement": "function cuRoomBatchEditor() { return hotelSection('editors').cuRoomBatchEditor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRoomEditor",
+          "start": 114130,
+          "end": 118317,
+          "deps": [
+            "cuState",
+            "cuRoomStatus",
+            "cuFloorKey",
+            "esc",
+            "tx",
+            "roomTypeOf",
+            "K",
+            "cuTypeOptions",
+            "cuFloorRows",
+            "cuAllViews",
+            "cuViewLabel",
+            "cuAllCharacteristics",
+            "cuCharLabel",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 4142,
+              "end": 4151,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 17026,
+          "length": 4193,
+          "replacement": "function cuRoomEditor() { return hotelSection('editors').cuRoomEditor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuTypesManager",
+          "start": 118320,
+          "end": 119782,
+          "deps": [
+            "cuState",
+            "cuTypes",
+            "esc",
+            "txn",
+            "tx",
+            "MAD",
+            "K",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 1417,
+              "end": 1426,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 21221,
+          "length": 1468,
+          "replacement": "function cuTypesManager() { return hotelSection('editors').cuTypesManager.apply(this, arguments); }"
+        },
+        {
+          "name": "cuTypeEditor",
+          "start": 124172,
+          "end": 129189,
+          "deps": [
+            "cuState",
+            "K",
+            "tx",
+            "esc",
+            "cuRenderPhotoEditor",
+            "cuUploadTypePhotos",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 4972,
+              "end": 4981,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 22691,
+          "length": 5023,
+          "replacement": "function cuTypeEditor() { return hotelSection('editors').cuTypeEditor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFloorsManager",
+          "start": 129361,
+          "end": 131050,
+          "deps": [
+            "cuState",
+            "cuFloorRows",
+            "esc",
+            "txn",
+            "tx",
+            "K",
+            "trL",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 1644,
+              "end": 1653,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 27716,
+          "length": 1695,
+          "replacement": "function cuFloorsManager() { return hotelSection('editors').cuFloorsManager.apply(this, arguments); }"
+        },
+        {
+          "name": "cuViewsAndCharsManager",
+          "start": 131053,
+          "end": 135676,
+          "deps": [
+            "cuState",
+            "cuAllViews",
+            "K",
+            "tx",
+            "trL",
+            "esc",
+            "cuViewLabel",
+            "cuCharLabel",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 4578,
+              "end": 4587,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 29413,
+          "length": 4629,
+          "replacement": "function cuViewsAndCharsManager() { return hotelSection('editors').cuViewsAndCharsManager.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFloorEditor",
+          "start": 137640,
+          "end": 139505,
+          "deps": [
+            "cuState",
+            "cuFloorRows",
+            "K",
+            "tx",
+            "esc",
+            "txn",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 1820,
+              "end": 1829,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 34044,
+          "length": 1871,
+          "replacement": "function cuFloorEditor() { return hotelSection('editors').cuFloorEditor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuRackBody",
+          "start": 161731,
+          "end": 174211,
+          "deps": [
+            "cuEnsureFilterVenue",
+            "cuPendingBulk",
+            "R",
+            "cuRoomStatus",
+            "cuFloors",
+            "cuRackFilter",
+            "tx",
+            "esc",
+            "cuFloorMatchesFilter",
+            "cuRoomMatchesFilter",
+            "roomTypeOf",
+            "cuRoomLive",
+            "cuEvaluateStayExceptions",
+            "cuSelectedRooms",
+            "cuViewLabel",
+            "cuSelectionMode",
+            "ltr",
+            "fmt",
+            "totalRooms",
+            "cuActiveFilterCount",
+            "cuFilterChipsMarkup",
+            "cuSelectedNumbers",
+            "txn",
+            "trL"
+          ],
+          "mutations": [
+            {
+              "start": 4159,
+              "end": 4174,
+              "original": "cuSelectionMode",
+              "replacement": "scope.cuSelectionMode"
+            },
+            {
+              "start": 4477,
+              "end": 4492,
+              "original": "cuSelectionMode",
+              "replacement": "scope.cuSelectionMode"
+            },
+            {
+              "start": 4685,
+              "end": 4700,
+              "original": "cuSelectionMode",
+              "replacement": "scope.cuSelectionMode"
+            },
+            {
+              "start": 8445,
+              "end": 8460,
+              "original": "cuSelectionMode",
+              "replacement": "scope.cuSelectionMode"
+            },
+            {
+              "start": 11291,
+              "end": 11306,
+              "original": "cuSelectionMode",
+              "replacement": "scope.cuSelectionMode"
+            },
+            {
+              "start": 11367,
+              "end": 11382,
+              "original": "cuSelectionMode",
+              "replacement": "scope.cuSelectionMode"
+            }
+          ],
+          "async": false,
+          "offset": 35917,
+          "length": 12516,
+          "replacement": "function cuRackBody() { return hotelSection('editors').cuRackBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFiltersModal",
+          "start": 174214,
+          "end": 177781,
+          "deps": [
+            "cuState",
+            "cuFloorRows",
+            "cuTypes",
+            "cuAllViews",
+            "K",
+            "tx",
+            "trL",
+            "esc",
+            "cuRackFilter",
+            "cuViewLabel",
+            "cuAllCharacteristics",
+            "cuCharLabel",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 3522,
+              "end": 3531,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 48435,
+          "length": 3573,
+          "replacement": "function cuFiltersModal() { return hotelSection('editors').cuFiltersModal.apply(this, arguments); }"
+        },
+        {
+          "name": "cuBulkEditModal",
+          "start": 177811,
+          "end": 181687,
+          "deps": [
+            "cuSelectedNumbers",
+            "toast",
+            "trL",
+            "K",
+            "tx",
+            "cuBulkStaged",
+            "cuState",
+            "cuFloorRows",
+            "cuTypes",
+            "cuAllViews",
+            "cuAllCharacteristics",
+            "txn",
+            "esc",
+            "cuViewLabel",
+            "cuCharLabel",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 474,
+              "end": 486,
+              "original": "cuBulkStaged",
+              "replacement": "scope.cuBulkStaged"
+            },
+            {
+              "start": 3831,
+              "end": 3840,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 52010,
+          "length": 3888,
+          "replacement": "function cuBulkEditModal() { return hotelSection('editors').cuBulkEditModal.apply(this, arguments); }"
+        },
+        {
+          "name": "cuBulkReviewModal",
+          "start": 181690,
+          "end": 184968,
+          "deps": [
+            "cuBulkPlan",
+            "cuSelectedNumbers",
+            "cuBulkStaged",
+            "cuState",
+            "tx",
+            "esc",
+            "cuViewLabel",
+            "cuCharLabel",
+            "K",
+            "txn",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 54,
+              "end": 64,
+              "original": "cuBulkPlan",
+              "replacement": "scope.cuBulkPlan"
+            },
+            {
+              "start": 232,
+              "end": 244,
+              "original": "cuBulkStaged",
+              "replacement": "scope.cuBulkStaged"
+            },
+            {
+              "start": 3233,
+              "end": 3242,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 55900,
+          "length": 3296,
+          "replacement": "function cuBulkReviewModal() { return hotelSection('editors').cuBulkReviewModal.apply(this, arguments); }"
+        },
+        {
+          "name": "cuLoadPerformance",
+          "start": 186113,
+          "end": 186986,
+          "deps": [
+            "cuMerchantSlug",
+            "cuPerfState",
+            "cuPerfWindows",
+            "openDrawer",
+            "rerender"
+          ],
+          "mutations": [
+            {
+              "start": 821,
+              "end": 831,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            }
+          ],
+          "async": true,
+          "offset": 59198,
+          "length": 879,
+          "replacement": "async function cuLoadPerformance() { return hotelSection('editors').cuLoadPerformance.apply(this, arguments); }"
+        },
+        {
+          "name": "cuFoliosBody",
+          "start": 187231,
+          "end": 191179,
+          "deps": [
+            "cuWarmStays",
+            "F",
+            "R",
+            "cuAllStays",
+            "tx",
+            "esc",
+            "cuDay",
+            "hxTo",
+            "txn",
+            "MAD",
+            "folioTotal",
+            "cuStaysKnown",
+            "cuStripUnknown",
+            "cuStarter"
+          ],
+          "mutations": [
+            {
+              "start": 2290,
+              "end": 2304,
+              "original": "cuStripUnknown",
+              "replacement": "scope.cuStripUnknown"
+            }
+          ],
+          "async": false,
+          "offset": 60079,
+          "length": 3954,
+          "replacement": "function cuFoliosBody() { return hotelSection('editors').cuFoliosBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuSejoursBody",
+          "start": 191182,
+          "end": 197654,
+          "deps": [
+            "cuStayView",
+            "cuSejoursAvailabilityBody",
+            "cuState",
+            "cuAllStays",
+            "tx",
+            "cuTapeOffset",
+            "roomTypeOf",
+            "esc",
+            "cuDay",
+            "hxTo",
+            "HX_WEEKDAYS",
+            "hxLang",
+            "cuStrip",
+            "cuHasGroupRecovery"
+          ],
+          "mutations": [
+            {
+              "start": 35,
+              "end": 45,
+              "original": "cuStayView",
+              "replacement": "scope.cuStayView"
+            },
+            {
+              "start": 954,
+              "end": 966,
+              "original": "cuTapeOffset",
+              "replacement": "scope.cuTapeOffset"
+            }
+          ],
+          "async": false,
+          "offset": 64035,
+          "length": 6484,
+          "replacement": "function cuSejoursBody() { return hotelSection('editors').cuSejoursBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuDispoBody",
+          "start": 199862,
+          "end": 204745,
+          "deps": [
+            "cuState",
+            "roomTypeOf",
+            "cuDispoCat",
+            "cuAllStays",
+            "hxLocale",
+            "esc",
+            "tx",
+            "cuStayLoads",
+            "cuStayScope",
+            "hxLang",
+            "txn"
+          ],
+          "mutations": [
+            {
+              "start": 719,
+              "end": 729,
+              "original": "cuDispoCat",
+              "replacement": "scope.cuDispoCat"
+            },
+            {
+              "start": 754,
+              "end": 764,
+              "original": "cuDispoCat",
+              "replacement": "scope.cuDispoCat"
+            },
+            {
+              "start": 3676,
+              "end": 3686,
+              "original": "cuDispoCat",
+              "replacement": "scope.cuDispoCat"
+            }
+          ],
+          "async": false,
+          "offset": 70521,
+          "length": 4901,
+          "replacement": "function cuDispoBody() { return hotelSection('editors').cuDispoBody.apply(this, arguments); }"
+        },
+        {
+          "name": "cuStayEditor",
+          "start": 259110,
+          "end": 274407,
+          "deps": [
+            "cuState",
+            "cuTypes",
+            "toast",
+            "tx",
+            "esc",
+            "cuNationalitySelectorHtml",
+            "cuBirthDisplay",
+            "K",
+            "roomTypeOf",
+            "cuStayScope",
+            "txn",
+            "cuWireNationalitySelectors",
+            "cuSubmitStay",
+            "cuWireStayCommercial",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 15252,
+              "end": 15261,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 75424,
+          "length": 15303,
+          "replacement": "function cuStayEditor() { return hotelSection('editors').cuStayEditor.apply(this, arguments); }"
+        },
+        {
+          "name": "cuOpenDossier",
+          "start": 275945,
+          "end": 282796,
+          "deps": [
+            "cuStayScope",
+            "cuChannelMerchant",
+            "openModal",
+            "K",
+            "tx",
+            "cuStayEditor",
+            "cuBillingBody",
+            "cuStayCache",
+            "cuDraftInput",
+            "esc",
+            "ltr",
+            "cuDraftMoney",
+            "cuBillingLine",
+            "cuPrintDraft",
+            "cuBillingBlocked"
+          ],
+          "mutations": [
+            {
+              "start": 143,
+              "end": 152,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 617,
+              "end": 626,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": true,
+          "offset": 90729,
+          "length": 6863,
+          "replacement": "async function cuOpenDossier() { return hotelSection('editors').cuOpenDossier.apply(this, arguments); }"
+        },
+        {
+          "name": "cuSubmitStay",
+          "start": 378300,
+          "end": 392515,
+          "deps": [
+            "cuStayScope",
+            "tx",
+            "cuMerchantSlug",
+            "cuBirthIso",
+            "cuTypes",
+            "txn",
+            "cuDirectQuote",
+            "cuState",
+            "cuBoards",
+            "cuStayQuoteSignature",
+            "cuStayCache",
+            "cuStaysChanged",
+            "cuCommercialError",
+            "openModal",
+            "toast",
+            "cuDay",
+            "hxTo",
+            "rerender"
+          ],
+          "mutations": [
+            {
+              "start": 13510,
+              "end": 13519,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 13539,
+              "end": 13548,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": true,
+          "offset": 97594,
+          "length": 14227,
+          "replacement": "async function cuSubmitStay() { return hotelSection('editors').cuSubmitStay.apply(this, arguments); }"
+        },
+        {
+          "name": "cuCancelStay",
+          "start": 392519,
+          "end": 394019,
+          "deps": [
+            "cuMerchantSlug",
+            "cuStayScope",
+            "cuStayCache",
+            "toast",
+            "tx",
+            "cuStaysChanged",
+            "openModal",
+            "rerender"
+          ],
+          "mutations": [
+            {
+              "start": 1046,
+              "end": 1055,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            },
+            {
+              "start": 1075,
+              "end": 1084,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": true,
+          "offset": 111823,
+          "length": 1512,
+          "replacement": "async function cuCancelStay() { return hotelSection('editors').cuCancelStay.apply(this, arguments); }"
+        },
+        {
+          "name": "cuAwaitTariffAck",
+          "start": 401588,
+          "end": 402384,
+          "deps": [
+            "hotelCloud"
+          ],
+          "mutations": [
+            {
+              "start": 404,
+              "end": 414,
+              "original": "hotelCloud",
+              "replacement": "scope.hotelCloud"
+            }
+          ],
+          "async": true,
+          "offset": 113337,
+          "length": 802,
+          "replacement": "async function cuAwaitTariffAck() { return hotelSection('editors').cuAwaitTariffAck.apply(this, arguments); }"
+        },
+        {
+          "name": "cuLoadProduction",
+          "start": 413172,
+          "end": 414282,
+          "deps": [
+            "cuStayScope",
+            "cuProductionState",
+            "openDrawer",
+            "rerender",
+            "cuChannelMerchant",
+            "txk"
+          ],
+          "mutations": [
+            {
+              "start": 202,
+              "end": 212,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 1054,
+              "end": 1064,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            }
+          ],
+          "async": true,
+          "offset": 114141,
+          "length": 1122,
+          "replacement": "async function cuLoadProduction() { return hotelSection('editors').cuLoadProduction.apply(this, arguments); }"
+        },
+        {
+          "name": "cuChannelGuide",
+          "start": 428278,
+          "end": 429732,
+          "deps": [
+            "tx",
+            "K",
+            "esc",
+            "openModal"
+          ],
+          "mutations": [
+            {
+              "start": 1409,
+              "end": 1418,
+              "original": "openModal",
+              "replacement": "scope.openModal"
+            }
+          ],
+          "async": false,
+          "offset": 115265,
+          "length": 1460,
+          "replacement": "function cuChannelGuide() { return hotelSection('editors').cuChannelGuide.apply(this, arguments); }"
+        },
+        {
+          "name": "cuCaptureEconomatDraft",
+          "start": 432109,
+          "end": 433134,
+          "deps": [
+            "openDrawer",
+            "cuEconomatState"
+          ],
+          "mutations": [
+            {
+              "start": 45,
+              "end": 55,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 100,
+              "end": 110,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            },
+            {
+              "start": 169,
+              "end": 179,
+              "original": "openDrawer",
+              "replacement": "scope.openDrawer"
+            }
+          ],
+          "async": false,
+          "offset": 116727,
+          "length": 1043,
+          "replacement": "function cuCaptureEconomatDraft() { return hotelSection('editors').cuCaptureEconomatDraft.apply(this, arguments); }"
+        },
+        {
+          "name": "cuIntelBody",
+          "start": 450332,
+          "end": 456206,
+          "deps": [
+            "cuWarmStays",
+            "cuState",
+            "cuTonight",
+            "cuToday",
+            "cuAllStays",
+            "cuRoomStatus",
+            "cuStripUnknown",
+            "folioTotal",
+            "cuTypes",
+            "cuChannelState",
+            "tx",
+            "txn",
+            "ltr",
+            "MAD",
+            "fmt",
+            "esc",
+            "cuEconomatBody"
+          ],
+          "mutations": [
+            {
+              "start": 1155,
+              "end": 1169,
+              "original": "cuStripUnknown",
+              "replacement": "scope.cuStripUnknown"
+            }
+          ],
+          "async": false,
+          "offset": 117772,
+          "length": 5880,
+          "replacement": "function cuIntelBody() { return hotelSection('editors').cuIntelBody.apply(this, arguments); }"
+        }
+      ]
+    }
+  ],
+  "bind": "\n  const hotelSections = Object.create(null);\n  function hotelSection(name) {\n    return hotelSections[name] || (hotelSections[name] = window.__kiwiHotelSections[name]({\n      get ARRIVALS() { return ARRIVALS; },\n      get DEFAULT_VIEWS() { return DEFAULT_VIEWS; },\n      get DEPARTURES() { return DEPARTURES; },\n      get F() { return F; },\n      get FLOORS() { return FLOORS; },\n      get FORECAST() { return FORECAST; },\n      get GUESTS() { return GUESTS; },\n      get HK_QUEUE() { return HK_QUEUE; },\n      get HX_PDV_KINDS() { return HX_PDV_KINDS; },\n      get HX_WEEKDAYS() { return HX_WEEKDAYS; },\n      get K() { return K; },\n      get MAD() { return MAD; },\n      get NATIONALITIES() { return NATIONALITIES; },\n      get NOSHOW_RISK() { return NOSHOW_RISK; },\n      get R() { return R; },\n      get RATES() { return RATES; },\n      get RATE_DAYS() { return RATE_DAYS; },\n      get ROOMS() { return ROOMS; },\n      get STAYS() { return STAYS; },\n      get TAPE_DAYS() { return TAPE_DAYS; },\n      get TODAY_IDX() { return TODAY_IDX; },\n      get TYPES() { return TYPES; },\n      get aiApplied() { return aiApplied; },\n      set aiApplied(value) { aiApplied = value; },\n      get counts() { return counts; },\n      get cuActiveFilterCount() { return cuActiveFilterCount; },\n      get cuAllCharacteristics() { return cuAllCharacteristics; },\n      get cuAllStays() { return cuAllStays; },\n      get cuAllViews() { return cuAllViews; },\n      get cuBillingBlocked() { return cuBillingBlocked; },\n      get cuBillingBody() { return cuBillingBody; },\n      get cuBillingLine() { return cuBillingLine; },\n      get cuBirthDisplay() { return cuBirthDisplay; },\n      get cuBirthIso() { return cuBirthIso; },\n      get cuBoards() { return cuBoards; },\n      get cuBulkPlan() { return cuBulkPlan; },\n      set cuBulkPlan(value) { cuBulkPlan = value; },\n      get cuBulkStaged() { return cuBulkStaged; },\n      set cuBulkStaged(value) { cuBulkStaged = value; },\n      get cuCaptureEconomatDraft() { return cuCaptureEconomatDraft; },\n      get cuChannelMerchant() { return cuChannelMerchant; },\n      get cuChannelState() { return cuChannelState; },\n      get cuCharLabel() { return cuCharLabel; },\n      get cuCommercialError() { return cuCommercialError; },\n      get cuCommercialState() { return cuCommercialState; },\n      get cuConnectingAvail() { return cuConnectingAvail; },\n      get cuDay() { return cuDay; },\n      get cuDefaultTypes() { return cuDefaultTypes; },\n      get cuDirectQuote() { return cuDirectQuote; },\n      get cuDispoCat() { return cuDispoCat; },\n      set cuDispoCat(value) { cuDispoCat = value; },\n      get cuDraftInput() { return cuDraftInput; },\n      get cuDraftMoney() { return cuDraftMoney; },\n      get cuDraftStatus() { return cuDraftStatus; },\n      get cuEconomatBody() { return cuEconomatBody; },\n      get cuEconomatDraft() { return cuEconomatDraft; },\n      get cuEconomatState() { return cuEconomatState; },\n      get cuEnsureFilterVenue() { return cuEnsureFilterVenue; },\n      get cuEvaluateStayExceptions() { return cuEvaluateStayExceptions; },\n      get cuFilterChipsMarkup() { return cuFilterChipsMarkup; },\n      get cuFloorId() { return cuFloorId; },\n      get cuFloorKey() { return cuFloorKey; },\n      get cuFloorMatchesFilter() { return cuFloorMatchesFilter; },\n      get cuFloorRows() { return cuFloorRows; },\n      get cuFloors() { return cuFloors; },\n      get cuHasActiveFilters() { return cuHasActiveFilters; },\n      get cuHasGroupRecovery() { return cuHasGroupRecovery; },\n      get cuInHouseSnapshots() { return cuInHouseSnapshots; },\n      get cuKinds() { return cuKinds; },\n      get cuLang() { return cuLang; },\n      get cuLoadCommercial() { return cuLoadCommercial; },\n      get cuMatchNationality() { return cuMatchNationality; },\n      get cuMerchantSlug() { return cuMerchantSlug; },\n      get cuMoney() { return cuMoney; },\n      get cuNationalities() { return cuNationalities; },\n      get cuNationalityLabel() { return cuNationalityLabel; },\n      get cuNationalitySelectorHtml() { return cuNationalitySelectorHtml; },\n      get cuNormalizeText() { return cuNormalizeText; },\n      get cuOccupancyMemo() { return cuOccupancyMemo; },\n      set cuOccupancyMemo(value) { cuOccupancyMemo = value; },\n      get cuOutletsMapped() { return cuOutletsMapped; },\n      get cuParseDelimitedLine() { return cuParseDelimitedLine; },\n      get cuPendingBulk() { return cuPendingBulk; },\n      get cuPerfState() { return cuPerfState; },\n      get cuPerfWindows() { return cuPerfWindows; },\n      get cuPrintDraft() { return cuPrintDraft; },\n      get cuProductionState() { return cuProductionState; },\n      get cuQty() { return cuQty; },\n      get cuRackFilter() { return cuRackFilter; },\n      get cuReceptionBuckets() { return cuReceptionBuckets; },\n      get cuReceptionSelection() { return cuReceptionSelection; },\n      get cuRenderPhotoEditor() { return cuRenderPhotoEditor; },\n      get cuRoomLive() { return cuRoomLive; },\n      get cuRoomMatchesFilter() { return cuRoomMatchesFilter; },\n      get cuRoomStatus() { return cuRoomStatus; },\n      get cuSafePhoto() { return cuSafePhoto; },\n      get cuSejoursAvailabilityBody() { return cuSejoursAvailabilityBody; },\n      get cuSelectedNumbers() { return cuSelectedNumbers; },\n      get cuSelectedRooms() { return cuSelectedRooms; },\n      get cuSelectionMode() { return cuSelectionMode; },\n      set cuSelectionMode(value) { cuSelectionMode = value; },\n      get cuShrinkHotelPhoto() { return cuShrinkHotelPhoto; },\n      get cuStamp() { return cuStamp; },\n      get cuStarter() { return cuStarter; },\n      get cuState() { return cuState; },\n      get cuStayCache() { return cuStayCache; },\n      get cuStayLoads() { return cuStayLoads; },\n      get cuStayQuoteSignature() { return cuStayQuoteSignature; },\n      get cuStayScope() { return cuStayScope; },\n      get cuStayView() { return cuStayView; },\n      set cuStayView(value) { cuStayView = value; },\n      get cuStaysChanged() { return cuStaysChanged; },\n      get cuStaysKnown() { return cuStaysKnown; },\n      get cuStrip() { return cuStrip; },\n      get cuStripUnknown() { return cuStripUnknown; },\n      set cuStripUnknown(value) { cuStripUnknown = value; },\n      get cuTapeOffset() { return cuTapeOffset; },\n      set cuTapeOffset(value) { cuTapeOffset = value; },\n      get cuToday() { return cuToday; },\n      get cuTonight() { return cuTonight; },\n      get cuTypeId() { return cuTypeId; },\n      get cuTypeOptions() { return cuTypeOptions; },\n      get cuTypes() { return cuTypes; },\n      get cuUploadTypePhotos() { return cuUploadTypePhotos; },\n      get cuVenueId() { return cuVenueId; },\n      get cuViewLabel() { return cuViewLabel; },\n      get cuWarmStays() { return cuWarmStays; },\n      get cuWireNationalitySelectors() { return cuWireNationalitySelectors; },\n      get cuWireStayCommercial() { return cuWireStayCommercial; },\n      get donutCss() { return donutCss; },\n      get esc() { return esc; },\n      get fmt() { return fmt; },\n      get folioTotal() { return folioTotal; },\n      get hotelCloud() { return hotelCloud; },\n      set hotelCloud(value) { hotelCloud = value; },\n      get hxColon() { return hxColon; },\n      get hxLang() { return hxLang; },\n      get hxLocale() { return hxLocale; },\n      get hxTo() { return hxTo; },\n      get isCustomHotel() { return isCustomHotel; },\n      get ltr() { return ltr; },\n      get occupancyByDay() { return occupancyByDay; },\n      get openDrawer() { return openDrawer; },\n      set openDrawer(value) { openDrawer = value; },\n      get openFolio() { return openFolio; },\n      get openModal() { return openModal; },\n      set openModal(value) { openModal = value; },\n      get rerender() { return rerender; },\n      get roomCountLabel() { return roomCountLabel; },\n      get roomTypeOf() { return roomTypeOf; },\n      get srcPill() { return srcPill; },\n      get toast() { return toast; },\n      get totalRooms() { return totalRooms; },\n      get trL() { return trL; },\n      get tx() { return tx; },\n      get txk() { return txk; },\n      get txn() { return txn; },\n      get typeOf() { return typeOf; },\n    }));\n  }\n",
+  "anchor": "  'use strict';\n"
+}

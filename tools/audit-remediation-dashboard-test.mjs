@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Focused R01-R04 regression.  The browser modules are evaluated as shipped;
    SQLite supplies the fixture rows so the assertions do not exercise a toy
    copy of the dashboard arithmetic. */
@@ -11,7 +12,7 @@ import { DatabaseSync } from 'node:sqlite';
 import * as calendar from '../functions/api/_business-day.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(root, p), 'utf8');
 const memory = new Map();
 const localStorage = {
   getItem: (k) => memory.has(k) ? memory.get(k) : null,
@@ -135,7 +136,7 @@ const feedWindow = {
   KiwiDateRange: undefined,
   window: null,
 };
-const feedSource = read('assets/dateRange.js').replace(
+const feedSource = coreTestSource.live(path.join(root, 'assets/dateRange.js')).replace(
   '  window.KiwiDateRange = {',
   '  window.__auditDashboard = { renderFeed, buildCustomFeed, rangeBounds, realSalesTotals, realInsightSummary };\n  window.KiwiDateRange = {'
 );

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Livraisons à recevoir (functions/api/receivables.js), sur le vrai schéma.
  *
  * Une vente partie en livraison est à 0 MAD : le tableau de bord ne la voyait
@@ -17,7 +18,7 @@ const MERCHANT = 'boutique-delivery-test';
 const OTHER = 'boutique-other-test';
 const SECRET = 'receivables-test-secret';
 const sqlite = new DatabaseSync(':memory:');
-sqlite.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
+sqlite.exec(coreTestSource.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
 const DB = {
   prepare(sql) {
     let args = [];
@@ -172,7 +173,7 @@ ok(dueCents({ method: 'card', payment_parts: null, gross_ticket_cents: 5000, amo
 console.log('■ Tableau de bord · KiwiDeliveries');
 {
   const vm = await import('node:vm');
-  const src = fs.readFileSync(new URL('../assets/delivery-receivables.js', import.meta.url), 'utf8');
+  const src = coreTestSource.readFileSync(new URL('../assets/delivery-receivables.js', import.meta.url), 'utf8');
   const events = [];
   const listeners = {};
   let isReal = true, currentSlug = MERCHANT;
@@ -217,11 +218,11 @@ console.log('■ Tableau de bord · KiwiDeliveries');
   ok(D.dueIn(0, Infinity) === 0, 'demo: nothing owed, never invented');
 }
 {
-  const DR = fs.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
+  const DR = coreTestSource.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
   ok((DR.match(/receivable \+= deliveryDue\(from, to\);/g) || []).length === 2 && /const \{ card, cash, \.\.\.totals \} = realWindowStats\(from, to\)/.test(DR), 'dashboard totals add open deliveries once, with realSalesTotals delegating');
   ok(/layout\.includes\('receivable'\)[\s\S]{0,200}deriveTile\('receivable'\)/.test(DR), 'a default band shows Créances while money is owed');
   ok(/addEventListener\('kiwi:deliveries', \(\) => \{ renderKpiBand\(\); renderHero\(\); \}\)/.test(DR), 'the band redraws when deliveries change');
-  const HTML = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+  const HTML = coreTestSource.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
   ok(/assets\/delivery-receivables\.js\?v=\d+/.test(HTML), 'dashboard.html loads the module');
 }
 console.log(`\n✓ receivables-test · ${controls} controls`);

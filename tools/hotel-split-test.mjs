@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import mergedPart from './merged-source.cjs';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { hotelTestSource, hotelFiles, hotelParts } from './hotel-test-source.mjs';
+import { hotelTestSource, hotelFiles, hotelParts, hotelCoreSource, hotelSections } from './hotel-test-source.mjs';
 const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/hotel/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/hotel/split.json'));
@@ -25,7 +25,19 @@ for (const part of hotelParts.parts) {
   assert.equal(read(part.file), expected + part.suffix, part.file + ': every function byte unchanged');
 }
 expectedCore = expectedCore.replace("  'use strict';\n\n", "  'use strict';\n\n" + hotelParts.bind);
-assert.equal(read('assets/hotel.js'), expectedCore);
+assert.equal(hotelCoreSource(), expectedCore);
+for (const part of hotelSections.parts) {
+  let expected = part.prefix;
+  for (const f of part.fragments) {
+    let body = expectedCore.slice(f.start, f.end);
+    for (const m of [...f.mutations].sort((a,b) => b.start-a.start)) {
+      assert.equal(body.slice(m.start,m.end),m.original);
+      body = body.slice(0,m.start) + m.replacement + body.slice(m.end);
+    }
+    expected += body + '\n\n';
+  }
+  assert.equal(read(part.file), expected + part.suffix, part.file + ': only explicit live state access changes');
+}
 const mergedOriginals = JSON.parse(gunzipSync(fs.readFileSync('tools/fixtures/hotel/merged-originals.json.gz')));
 for (const [parent, children] of [
   ['assets/month-report.js', ['assets/month-report-tools.js', 'assets/month-report-pdf.js', 'assets/month-report-ui.js']],
@@ -45,13 +57,20 @@ const html = read('dashboard.html');
 // unrelated tags (the shell total is pinned by file-size-ratchet-test), so compare only the tags this split knew.
 const splitTags = (html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g) || []);
 const removed = ['agent-vision.js', 'agent-skin.js', 'month-report-tools.js', 'month-report-pdf.js', 'month-report-ui.js'];
+const lazyLoader = read('assets/pages/dashboard-loader.js');
+const isLazy = tag => { const file = tag.match(/src="([^?]+)/)?.[1]; return file && lazyLoader.includes("'" + file + '?v='); };
 const expectedTags = hotelParts.scriptsBefore.filter(tag => !removed.some(file => tag.includes('/' + file + '?v=')));
 const hotelAt = expectedTags.findIndex(tag => tag.includes('assets/hotel.js?'));
 expectedTags.splice(hotelAt, 0, ...hotelParts.parts.map(p => '<script src="' + p.file + '?v=1" defer fetchpriority="low"></script>'));
 const unstamped = tags => tags.map(tag => tag.replace(/\?v=\d+/, '?v=N'));
 const known = new Set(unstamped(expectedTags));
-assert.deepEqual(unstamped(splitTags).filter(tag => known.has(tag)), unstamped(expectedTags), 'all surviving shell tags retain their exact order and attributes (stamps move freely; tags added later are ignored)');
-const tags = hotelFiles.map(file => '<script src="' + file + '?v=');
+assert.deepEqual(unstamped(splitTags).filter(tag => known.has(tag)), unstamped(expectedTags.filter(tag => !isLazy(tag))), 'all surviving shell tags retain their exact order and attributes (stamps move freely; tags added later are ignored)');
+for (const file of hotelFiles.filter(file => lazyLoader.includes("'" + file + '?v='))) {
+  assert.ok(!html.includes('<script src="' + file + '?v='), file + ': first-use only');
+  assert.ok(requireLazySite(file), file + ': explicit loader ownership');
+}
+function requireLazySite(file) { return lazyLoader.includes("'" + file + '?v='); }
+const tags = hotelFiles.filter(file => !requireLazySite(file)).map(file => '<script src="' + file + '?v=');
 let last = -1;
 for (let i = 0; i < tags.length; i++) {
   const at = html.indexOf(tags[i]);
@@ -99,10 +118,13 @@ function run(parts, lang) {
 for (const lang of ['fr', 'en', 'ar']) {
   const before = run([original], lang);
   const after = run(hotelFiles.map(read), lang);
+  const firstPaint = run(hotelFiles.filter(file => !requireLazySite(file)).map(read), lang);
+  assert.equal(firstPaint.state, before.state, 'room model available before UI loading');
+  assert.deepEqual(JSON.stringify(firstPaint.window.KiwiHotelRooms.housekeeping()), JSON.stringify(before.window.KiwiHotelRooms.housekeeping()), 'housekeeping KPI available before UI loading');
   assert.equal(after.state, before.state);
   assert.equal(after.effects, before.effects);
   assert.deepEqual(after.functions, before.functions);
-  assert.deepEqual(Object.keys(after.window).filter(k => k !== '__kiwiHotelInternal'), Object.keys(before.window));
+  assert.deepEqual(Object.keys(after.window).filter(k => k !== '__kiwiHotelInternal' && k !== '__kiwiHotelSections'), Object.keys(before.window));
   assert.ok(Object.isFrozen(after.window.__kiwiHotelInternal));
   assert.deepEqual(Object.keys(after.window.__kiwiHotelInternal), ['define', 'bind', 'part', 'language']);
   for (const part of hotelParts.parts) {
@@ -127,3 +149,30 @@ for (const suite of ['hotel-rooms', 'hotel-room-plan', 'hotel-stays-group', 'hot
   });
 }
 console.log('✓ hotel-split: exact reconstruction, ordered deferred loading, stamp discovery, startup/state/handlers and FR/EN/AR parity');
+
+// Execute the real first-use loader: no startup requests, one ordered chain for concurrent opens.
+{
+  const requests = [], calls = [];
+  const H = { 'nav-reception': function (...args) { calls.push([this, args]); return 'opened'; }, 'hx-group-new': () => 'group' };
+  const doc = { baseURI:'https://kiwi.test/dashboard.html', currentScript:null, createElement:() => ({ remove() {} }), head:{appendChild:node => requests.push(node)} };
+  const win = { Kiwi:{handlers:H} };
+  vm.runInNewContext(lazyLoader, { window:win, document:doc, URL, Map, Promise });
+  assert.equal(requests.length,0,'hotel UI does not load at first paint');
+  const self = {}, args = ['one'];
+  const first = H['nav-reception'].apply(self,args), second = H['nav-reception'].apply(self,args);
+  for (let i=0;i<5;i++) {
+    for(let spin=0;spin<40 && requests.length<=i;spin++) await Promise.resolve();
+    assert.equal(requests.length,i+1,'one dependency at a time, shared by concurrent opens');
+    requests[i].onload();
+  }
+  assert.equal(await first,'opened'); assert.equal(await second,'opened');
+  assert.equal(calls.length,2); assert.equal(calls[0][0],self); assert.deepEqual(calls[0][1],args);
+  const group=H['hx-group-new']();
+  for(let spin=0;spin<40 && requests.length<6;spin++) await Promise.resolve();
+  assert.match(requests[5].src,/hotel\/groups.js/);
+  requests[5].onerror(); await assert.rejects(group);
+  const retry=H['hx-group-new']();
+  for(let spin=0;spin<40 && requests.length<7;spin++) await Promise.resolve();
+  requests[6].onload(); assert.equal(await retry,'group');
+  console.log('✓ hotel lazy loader: first use, ordered dependencies, concurrency, live handler context and retry');
+}

@@ -1,10 +1,9 @@
 // Kiwi — full-site account gate (Cloudflare Pages Function).
 //
-// Real, server-side protection: until the visitor is authenticated, NOTHING is
-// served — no page, no CSS, no image. This runs on every request at the edge, so
-// it is not bypassable via view-source the way a client-side overlay would be. It
-// runs only on Cloudflare Pages (inert on the local static server and on GitHub
-// Pages), and it is free on the CF Pages tier.
+// Server-side protection for private pages and APIs, with explicit public
+// surfaces below. Public static resources bypass Functions through _routes.json.
+// The account gate runs only on Cloudflare Pages (inert on the local static
+// server and on GitHub Pages), before private content is served.
 //
 // Two ways in, checked in this order:
 //   1. Account session — a merchant who signed up / logged in (email + password).
@@ -21,7 +20,7 @@
 // Changing a variable requires a fresh deployment (not "Retry") to take effect.
 
 import {
-  readSession, readCookie, SESS_COOKIE, clearSessionCookie,
+  readSession, readCookie, SESS_COOKIE, clearSessionCookie, staffToken,
   makeSession, sessionCookie, sessionNeedsRefresh, sessionRevocation,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
@@ -178,13 +177,7 @@ function languageCookie(lang) {
 // Staff cookie value = HMAC-SHA256("kiwi-gate-v1", passcode). Unforgeable without
 // the passcode, so a stolen/guessed cookie cannot be constructed.
 async function expectedToken(password) {
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw', enc.encode(password),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode('kiwi-gate-v1'));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return staffToken(password);
 }
 
 // Is this account still allowed in? The session token is stateless (signature +

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,7 +15,7 @@ import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en qua
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
-sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+sqlite.exec(coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 
 let batchQueue = Promise.resolve();
 const DB = {
@@ -160,7 +161,7 @@ ok('the normal merchant feed returns refund counter-entries with signed centimes
 
 /* Execute the shipped browser module: the original sale must enter the same
    queue before its refund, and the PIN itself must never appear in either body. */
-const source = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+const source = coreTestSource.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
 const queued = [];
 const storage = { kiwiLive: '1', kiwiPairedVenue: JSON.stringify({ merchant }) };
 const window = {
@@ -233,10 +234,10 @@ ok('feed bridge keeps refunds out of product sales and in the refund ledger',
   bridgedSales.length === 1 && bridgedSales[0].amount === 90
   && bridgedRefunds.length === 1 && bridgedRefunds[0].amount === 35);
 
-const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
-const offlineDb = fs.readFileSync(path.join(ROOT, 'assets/offline-db.js'), 'utf8');
-const dashboard = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
-const report = fs.readFileSync(path.join(ROOT, 'assets/report.js'), 'utf8');
+const caisse = caisseTestSource(coreTestSource.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
+const offlineDb = coreTestSource.readFileSync(path.join(ROOT, 'assets/offline-db.js'), 'utf8');
+const dashboard = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+const report = coreTestSource.readFileSync(path.join(ROOT, 'assets/report.js'), 'utf8');
 const transactions = pagesProSource();
 ok('provisional heartbeat heals sales skipped before merchant resolution', /reconcileJournalSales\(true\)/.test(caisse));
 ok('refund approval persists signed manager proof for crash-safe replay',

@@ -200,9 +200,14 @@ function scan() {
 
   // Literal first-use URLs in pages-pro's lazy registry (also cascade-bumped).
   if (exists('assets/pages-pro.js')) {
-    for (const m of read('assets/pages-pro.js').matchAll(/url:\s*'(assets\/pages-pro\/[^']+\.js)\?v=([0-9]+)'/g)) {
+    for (const m of read('assets/pages-pro.js').matchAll(/'(assets\/(?:pages-pro|pages)\/[^']+\.js)\?v=([0-9]+)'/g)) {
       note(m[1], m[2], { file: 'assets/pages-pro.js', kind: 'lazy', stamp: m[2] });
     }
+  }
+
+  if (exists('assets/pages/dashboard-loader.js')) {
+    for (const m of read('assets/pages/dashboard-loader.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/pages/dashboard-loader.js', kind: 'lazy', stamp: m[2] });
   }
 
   // Interface imprimante, chargée à la demande et préchauffée au repos.
@@ -271,6 +276,7 @@ function referenceFiles(asset) {
       if (read(doc).includes(asset)) files.push(doc);
     }
   }
+  if (exists('assets/pages/dashboard-loader.js') && read('assets/pages/dashboard-loader.js').includes(asset + '?v=')) files.push('assets/pages/dashboard-loader.js');
   if (exists('assets/pages-pro.js') && read('assets/pages-pro.js').includes(asset + '?v=')) files.push('assets/pages-pro.js');
   if (exists('assets/dashboard-extra.js') && read('assets/dashboard-extra.js').includes(asset + '?v=')) files.push('assets/dashboard-extra.js');
   if (exists('assets/stock.js') && read('assets/stock.js').includes(asset + '?v=')) files.push('assets/stock.js');

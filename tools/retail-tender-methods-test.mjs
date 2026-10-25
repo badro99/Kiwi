@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -9,7 +10,7 @@ import { onRequestPost as refundPost } from '../functions/api/sale/refund.js';
 import { onRequestGet } from '../functions/api/feed.js';
 import { validateRetailTenders, retailTenderMethod } from '../functions/api/_retail-tenders.js';
 
-const read = name => fs.readFileSync(new URL('../assets/' + name, import.meta.url), 'utf8');
+const read = name => coreTestSource.readFileSync(new URL('../assets/' + name, import.meta.url), 'utf8');
 const memory = new Map();
 const storage = {
   getItem: key => memory.get(key) ?? null,
@@ -63,7 +64,7 @@ assert.equal(validateRetailTenders([{ method: 'cheque', amountCents: 1000 }], 10
   'cheque', 'the server keeps cheque distinct from wallet');
 
 const sqlite = new DatabaseSync(':memory:');
-sqlite.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
+sqlite.exec(coreTestSource.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
 const DB = { prepare(sql) { let args = []; return {
   bind(...values) { args = values.map(value => value === undefined ? null : value); return this; },
   first() { return sqlite.prepare(sql).get(...args) || null; },

@@ -7,7 +7,8 @@
  * au démarrage du tableau de bord en sombre, environ 1 s de fil principal
  * pour dark-fixes et 0,9 s de plus facturées à dateRange.js. */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import coreTestSource from './core-test-source.cjs';
+const { readFileSync } = coreTestSource;
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

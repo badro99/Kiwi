@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Kiwi · pressing truth — what a pressing merchant reads on the dashboard is
  * what the till wrote, in the merchant's own time and language.
  *
@@ -33,7 +34,7 @@ import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestPost as cancelRoute } from '../functions/api/pressing/cancel.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
 let pass = 0; const fails = [];
 const ok = (cond, label) => { if (cond) pass++; else fails.push(label); };
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 
 import cryptoNode from 'node:crypto';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ import { __test as cronTest } from '../functions/api/shopify/cron.js';
 import retryWorker, { __test as retryTest } from './shopify-sync-worker/src/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
 let pass = 0; const failures = [];
 const ok = (label, condition, detail = '') => condition ? pass++ : failures.push(`${label}${detail ? ` — ${detail}` : ''}`);
 

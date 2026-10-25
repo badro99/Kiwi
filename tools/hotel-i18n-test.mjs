@@ -171,7 +171,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewp
     { id: 'bk-opt', resourceId: 'room:107', status: 'requested', partySize: 2, updatedAt: 2003, customer: { name: 'Sam Dock' }, hotel: { checkIn: plus(3), checkOut: plus(5) } },
   ] }) };
   window.Kiwi = { handlers: {}, toast: () => {} };
-</script><script src="/assets/interactive.js"></script><script src="/assets/hotel-language.js"></script><script src="/assets/hotel-rates.js"></script><script src="/assets/hotel-housekeeping.js"></script><script src="/assets/hotel-folio.js"></script><script src="/assets/hotel-channels.js"></script><script src="/assets/hotel.js"></script></body></html>`;
+</script><script src="/assets/interactive.js"></script><script src="/assets/hotel-language.js"></script><script src="/assets/hotel-rates.js"></script><script src="/assets/hotel-housekeeping.js"></script><script src="/assets/hotel-folio.js"></script><script src="/assets/hotel-channels.js"></script><script src="/assets/hotel/model.js"></script><script src="/assets/hotel/views.js"></script><script src="/assets/hotel/groups.js"></script><script src="/assets/hotel/editors.js"></script><script src="/assets/hotel.js"></script></body></html>`;
 
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');

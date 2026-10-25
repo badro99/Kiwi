@@ -1,3 +1,4 @@
+import { hmacKey } from './_crypto.js';
 // Kiwi — shared auth helpers for the account gate (Cloudflare Pages Functions).
 //
 // Runs on the Workers runtime and uses only Web Crypto + platform globals
@@ -127,9 +128,7 @@ export function passwordProblem(password, ctx = {}) {
 }
 
 async function hmacHex(secret, message) {
-  const key = await crypto.subtle.importKey(
-    'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
+  const key = await hmacKey(secret);
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
   return toHex(sig);
 }

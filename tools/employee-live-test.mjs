@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseWorkflowSource from './caisse-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
@@ -1055,7 +1056,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     && teamSourceNow.includes('data.deferredPunches || {}, data.pendingCorrections || []]);'),
   'le tableau de bord range les pointages envoyés plus tard du magasin pour la grille des heures');
   const caisseRefresh = fs.readFileSync(path.join(ROOT, 'assets/caisse-refresh.js'), 'utf8');
-  const caisseApp = fs.readFileSync(path.join(ROOT, 'assets/caisse-app.js'), 'utf8');
+  const caisseApp = caisseWorkflowSource.appSource();
   ok(caisseRefresh.includes('deferredNote(entry)') && caisseRefresh.includes('Envoyé plus tard depuis le téléphone')
     && caisseApp.includes('data-attendance-deferred') && caisseApp.includes('Sent later from the phone'),
   'les derniers pointages de la caisse disent quand un pointage a été envoyé plus tard depuis le téléphone');

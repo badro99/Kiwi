@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 // Pass 7: guards for measured iPhone launch, locale and layout regressions.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { readNativeRuntime } from './native-runtime-source.mjs';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
-const read = p => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = p => coreTestSource.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 const runtime = readNativeRuntime();

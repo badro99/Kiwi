@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Garde : le démarrage du tableau de bord en sombre (2026-10-22).
  *
  * Les compteurs animés (animateNumber, assets/dateRange.js) réécrivaient leur
@@ -104,7 +105,7 @@ await S.run('animated counters end on the same values as without animation', asy
 });
 
 await S.run('paintNumber never leaves a stale figure', async (t) => {
-  const src = fs.readFileSync(path.join(root, 'assets/dateRange.js'), 'utf8');
+  const src = coreTestSource.readFileSync(path.join(root, 'assets/dateRange.js'), 'utf8');
   const a = src.indexOf('  const numberShape = ');
   const b = src.indexOf('  function animateNumber(el, from, to');
   if (a < 0 || b < 0) throw new Error('paintNumber not found in assets/dateRange.js');

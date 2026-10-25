@@ -20,6 +20,9 @@ try {
   // The restaurant core gained two preludes after its frozen split (22 October 2026).
   for (const file of require('./caisse-test-source.cjs').FILES) files.add(file);
   files.add('tools/fixtures/caisse-app/split-2.json');
+  files.add('tools/fixtures/caisse-app/workflows.json');
+  files.add('tools/fixtures/caisse-app/before-workflows.js.gz');
+  files.add('assets/caisse/workflows-loader.js');
   // Les modules découpés peuvent importer un voisin partagé (import '../refund-split.js?v=N') : on le copie aussi.
   for (const file of [...files].filter(f=>f.endsWith('.js'))) {
     for (const m of fs.readFileSync(path.join(root,file),'utf8').matchAll(/(?:from|import)\s+'(\.\.?\/[^'?]+\.js)(?:\?v=[0-9]+)?'/g))

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* « Clients réguliers », « Taux de fidélité », « Nouveaux clients » : lus au
  * carnet clients, plus jamais devinés.
  *
@@ -16,7 +17,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+const SRC = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 let failures = 0, passed = 0;
 const check = (label, ok, detail) => { if (ok) { passed++; console.log('  ✓ ' + label); } else { failures++; console.log('  ✗ ' + label + (detail ? '\n      ' + detail : '')); } };
 
@@ -89,7 +90,7 @@ check('regulars shows « n / clients who came », compared with the previous per
 check('and keeps « · » when nobody identified came', /: \{ \.\.\.data\.regulars, text: '·', value: 0, unit: '', delta: null \}\) : data\.regulars/.test(SRC));
 check('the band repaints when the client book changes',
   /KiwiClients\?\.subscribe\)\s*\{\s*window\.KiwiClients\.subscribe\(\(\) => \{ try \{ renderKpiBand\(\)/.test(SRC));
-const IX = fs.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
+const IX = coreTestSource.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
 check('no tooltip still calls them estimated or divides by sales',
   !/Premières visites estimées|Estimated first visits|الزيارات الأولى المقدرة|Estimation du nombre de premières|parmi vos ventes|among your sales|share of your sales made/.test(IX));
 

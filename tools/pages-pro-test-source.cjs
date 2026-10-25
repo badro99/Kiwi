@@ -15,6 +15,6 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const FILES = ['assets/pages-pro-office.js', 'assets/pages-pro.js', 'assets/pages-pro-boutique.js', 'assets/pages-pro-spa-starter.js'];
 module.exports = function pagesProSource(base = root) {
-  return FILES.map((rel) => fs.readFileSync(path.join(base, rel), 'utf8')).join('\n');
+  return FILES.map((rel) => rel === 'assets/pages-pro.js' ? require('./pages-tables-test-source.cjs')(base) : fs.readFileSync(path.join(base, rel), 'utf8')).join('\n');
 };
 module.exports.FILES = FILES;

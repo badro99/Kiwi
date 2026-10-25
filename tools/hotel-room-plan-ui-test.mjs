@@ -82,7 +82,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
   <link rel="stylesheet" href="/assets/simple.css"><link rel="stylesheet" href="/assets/ux.css">
   <link rel="stylesheet" href="/assets/pages-pro.css"><link rel="stylesheet" href="/assets/polish-dashboard.css">
   <link rel="stylesheet" href="/assets/hotel.css"><link rel="stylesheet" href="/assets/genpage.css">
-</head><body><button data-action="nav-chambres" type="button">Open room plan</button><main class="container"></main>${bootstrap}<script src="/assets/interactive.js"></script><script src="/assets/hotel-language.js"></script><script src="/assets/hotel-rates.js"></script><script src="/assets/hotel-housekeeping.js"></script><script src="/assets/hotel-folio.js"></script><script src="/assets/hotel-channels.js"></script><script src="/assets/hotel.js"></script></body></html>`;
+</head><body><button data-action="nav-chambres" type="button">Open room plan</button><main class="container"></main>${bootstrap}<script src="/assets/interactive.js"></script><script src="/assets/hotel-language.js"></script><script src="/assets/hotel-rates.js"></script><script src="/assets/hotel-housekeeping.js"></script><script src="/assets/hotel-folio.js"></script><script src="/assets/hotel-channels.js"></script><script src="/assets/hotel/model.js"></script><script src="/assets/hotel/views.js"></script><script src="/assets/hotel/groups.js"></script><script src="/assets/hotel/editors.js"></script><script src="/assets/hotel.js"></script></body></html>`;
 const server = http.createServer((req, res) => {
   if (req.url === '/' || req.url === '/index.html') { res.writeHead(200, { 'content-type': 'text/html' }); res.end(html); return; }
   if (req.url === '/favicon.ico') { res.writeHead(204); res.end(); return; }
@@ -98,7 +98,7 @@ const server = http.createServer((req, res) => {
     }); return;
   }
   const rel = req.url.replace(/^\//, '').split('?')[0];
-  if (rel === 'assets/hotel-rates.js' || rel === 'assets/hotel-housekeeping.js' || rel === 'assets/hotel-folio.js' || rel === 'assets/hotel-channels.js' || rel === 'assets/hotel-language.js' || rel === 'assets/hotel.js' || rel === 'assets/interactive.js' || rel.endsWith('.css')) {
+  if (rel.startsWith('assets/hotel/') || rel === 'assets/hotel-rates.js' || rel === 'assets/hotel-housekeeping.js' || rel === 'assets/hotel-folio.js' || rel === 'assets/hotel-channels.js' || rel === 'assets/hotel-language.js' || rel === 'assets/hotel.js' || rel === 'assets/interactive.js' || rel.endsWith('.css')) {
     res.writeHead(200, { 'content-type': rel.endsWith('.css') ? 'text/css' : 'text/javascript' }); res.end(fs.readFileSync(path.join(ROOT, rel))); return;
   }
   res.writeHead(404); res.end('not found');

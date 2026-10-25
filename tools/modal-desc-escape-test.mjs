@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { hotelTestSource } from './hotel-test-source.mjs';
 import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Les noms saisis par le commerçant n'entrent pas en HTML brut
@@ -41,7 +42,7 @@ has(stock, 'desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`
 has(stock, 'desc: `${esc(catLabel(it.category))} · ${st ===', 'stock : catégorie échappée (fiche article)');
 hasNot(stock, 'desc: `${it.name} · ${catLabel(it.category)}`', 'plus d\'article brut dans la description');
 
-const hotel = read('assets/hotel.js');
+const hotel = hotelTestSource();
 has(hotel, "desc: esc(booking.customer.name) + ' · ' + esc(cuDay(", 'hôtel : nom du client échappé dans « Libérer cette chambre »');
 has(hotel, 'dernier : ${esc(g.last)}', 'hôtel : fiche client échappée');
 

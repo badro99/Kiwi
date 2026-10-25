@@ -22,6 +22,8 @@
  * Zero dependencies. Exit 0 = green, 1 = at least one failure.
  * ─────────────────────────────────────────────────────────────────────────── */
 'use strict';
+const coreTestSource = require('./core-test-source.cjs');
+
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
@@ -92,11 +94,11 @@ function load(opts) {
    * page loads it (it would cost a merchant a download for nothing), so the
    * gate is the only place it ever runs. runEval() picks it up off the window
    * automatically when it is there. */
-  if (fs.existsSync(CORPUS)) vm.runInContext(fs.readFileSync(CORPUS, 'utf8'), ctx, { filename: 'agent-corpus.js' });
-  vm.runInContext(fs.readFileSync(DATA, 'utf8'), ctx, { filename: 'agent-data.js' });
-  vm.runInContext(fs.readFileSync(FEATURES, 'utf8'), ctx, { filename: 'agent-features.js' });
-  vm.runInContext(fs.readFileSync(TRUTH, 'utf8'), ctx, { filename: 'agent-truth.js' });
-  vm.runInContext(fs.readFileSync(AGENT, 'utf8'), ctx, { filename: 'agent.js' });
+  if (fs.existsSync(CORPUS)) vm.runInContext(coreTestSource.readFileSync(CORPUS, 'utf8'), ctx, { filename: 'agent-corpus.js' });
+  vm.runInContext(coreTestSource.readFileSync(DATA, 'utf8'), ctx, { filename: 'agent-data.js' });
+  vm.runInContext(coreTestSource.readFileSync(FEATURES, 'utf8'), ctx, { filename: 'agent-features.js' });
+  vm.runInContext(coreTestSource.readFileSync(TRUTH, 'utf8'), ctx, { filename: 'agent-truth.js' });
+  vm.runInContext(coreTestSource.live(AGENT), ctx, { filename: 'agent.js' });
   return ctx.window;
 }
 
@@ -351,7 +353,7 @@ section('Demo isolation (real merchant sees only their own figures)');
  * gets a gate of its own. */
 section('The demo clock does not run on a real session');
 {
-  const clockSrc = fs.readFileSync(path.join(ROOT, 'assets', 'demoClock.js'), 'utf8');
+  const clockSrc = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'demoClock.js'), 'utf8');
   const runClock = (env, venueId, isCustom) => {
     const ctx = makeCtx({ lang: 'fr' });
     ctx.window.KiwiEnv = env;
@@ -377,7 +379,7 @@ section('The demo clock does not run on a real session');
    * demo venue id with Café Atlas's carte, so a real session on a non-custom
    * venue got a perfectly computed insight about somebody else's restaurant.
    * Real arithmetic on the wrong menu is still the wrong answer. */
-  const insightsSrc = fs.readFileSync(path.join(ROOT, 'assets', 'insights.js'), 'utf8');
+  const insightsSrc = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'insights.js'), 'utf8');
   const MENU = [
     { name: 'Tajine', price: 75, cost: 26, unitsThisMonth: 412 },
     { name: 'Thé', price: 15, cost: 3, unitsThisMonth: 1890 },
@@ -546,7 +548,7 @@ section('Production acceptance (re-audit, July 2026)');
     /* The dashboard half. Every card in dateRange.js used to ask isCustom()
      * on its own; they now go through ownData(), which is isCustom() OR a real
      * session. One bare call site coming back is the whole bug coming back. */
-    const dr = fs.readFileSync(path.join(ROOT, 'assets', 'dateRange.js'), 'utf8');
+    const dr = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'dateRange.js'), 'utf8');
     const bare = (dr.match(/KiwiVenue\s*\?\.\s*isCustom\s*\?\./g) || []).length;
     t('no dashboard card decides "is this my data" on isCustom() alone',
       bare === 0, `${bare} bare call site(s) left in dateRange.js`);
@@ -780,7 +782,7 @@ section('Supplier-invoice reader from the copilot');
 
   /* Hero card: same gate as the intent. Run the real supplierInvoiceOn() from
    * agent.js, and pin that the card markup is guarded by it. */
-  const src = fs.readFileSync(AGENT, 'utf8');
+  const src = coreTestSource.readFileSync(AGENT, 'utf8');
   const fnm = src.match(/function supplierInvoiceOn\(\) \{[\s\S]*?\n  \}/);
   t('supplierInvoiceOn() exists in agent.js', !!fnm);
   const gate = (w) => new Function('window', fnm[0] + '\nreturn supplierInvoiceOn();')(w);
@@ -801,8 +803,8 @@ section('Supplier-invoice reader from the copilot');
  * only) if the merchant declined. No 1,2 Go download may ever be offered. */
 section('Server-model fallback, no in-browser download');
 {
-  const src = fs.readFileSync(AGENT, 'utf8');
-  const truthSrc = fs.readFileSync(TRUTH, 'utf8');
+  const src = coreTestSource.readFileSync(AGENT, 'utf8');
+  const truthSrc = coreTestSource.readFileSync(TRUTH, 'utf8');
   /* static guards — code, not comments: strip block + line comments first */
   const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   t('no WebLLM engine / CDN / WebGPU capability code remains in agent.js',
@@ -844,7 +846,7 @@ section('Server-model fallback, no in-browser download');
  * neither the draft nor a tool result supports is redacted. */
 section('Collaboration · draft + tools + corroboration');
 {
-  const src = fs.readFileSync(AGENT, 'utf8');
+  const src = coreTestSource.readFileSync(AGENT, 'utf8');
   const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   /* flow */
   t('ask(): a deterministic reply renders first, then runLlm(t, { reply, bubble }) refines it in place',

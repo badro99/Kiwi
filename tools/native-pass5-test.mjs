@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import stockTestSource from './stock-test-source.cjs';
 // iPhone pass 5 (tickets #0107 to #0114): one source-level guard per fix, so a
 // later edit that quietly undoes one of them goes red here instead of on the
@@ -10,7 +11,7 @@ import vm from 'node:vm';
 import { readNativeRuntime } from './native-runtime-source.mjs';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => coreTestSource.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 
@@ -59,7 +60,7 @@ ok(!/<section class="pdsp-srv/.test(pagesPro), 'server rows are not <section>, w
 
 // #0114 · menu rows and opaque editors
 ok(/ui\('stepCount'/.test(menu) && /ui\('availableOpt'\)/.test(menu), 'menu card footers are localised');
-ok(fs.readFileSync('assets/catalog-workspace.css','utf8').includes('grid-template-columns:repeat(2,minmax(0,1fr))!important') && !/\.mi-grid\{grid-template-columns:minmax\(0,1fr\)/.test(css), 'ticket 0151 supersedes phone rows with shared two-column menu cards');
+ok(coreTestSource.readFileSync('assets/catalog-workspace.css','utf8').includes('grid-template-columns:repeat(2,minmax(0,1fr))!important') && !/\.mi-grid\{grid-template-columns:minmax\(0,1fr\)/.test(css), 'ticket 0151 supersedes phone rows with shared two-column menu cards');
 ok(/\.kiwi-backdrop:not\(\.kiwi-native-order-sheet\) \.kiwi-modal\{[^}]*backdrop-filter:none/.test(css), 'create and edit sheets are opaque on a phone');
 
 // #0115 · the roster retains desktop detail but becomes a phone-first person list.

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* ═════════════════════════════════════════════════════════════════
  * Kiwi · le libellé d'une vente et la réf d'un remboursement ne sont pas du HTML.
  *
@@ -21,7 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const read = (f) => coreTestSource.readFileSync(path.join(ROOT, f), 'utf8');
 const DR = read('assets/dateRange.js');
 const IA = read('assets/interactive.js');
 const FE = read('assets/features.js');

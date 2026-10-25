@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* « Pourboires » sur le tableau de bord : ce que la caisse a déclaré, jamais
  * une estimation.
  *
@@ -17,7 +18,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+const SRC = coreTestSource.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 let failures = 0, passed = 0;
 const check = (label, ok, detail) => { if (ok) { passed++; console.log('  ✓ ' + label); } else { failures++; console.log('  ✗ ' + label + (detail ? '\n      ' + detail : '')); } };
 
@@ -104,10 +105,10 @@ check('7 days: closed days as declared, never added to what was entered (200,40 
 const quiet = run({ real: true, book: [], range: 'aujourdhui', sales: [{ ts: ts(TODAY), amount: 90 }] });
 check('an open day with sales but no tip entered stays « · », not an invented 0', quiet && quiet.text === '·', JSON.stringify(quiet));
 
-const LL = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
-const SALE = fs.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
-const FEED = fs.readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
-const VEN = fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
+const LL = coreTestSource.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+const SALE = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
+const FEED = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
+const VEN = coreTestSource.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
 check('the till sends the tip beside the amount, the server keeps it, the feed returns it, the store holds it',
   /if \(\+entry\.tip > 0\) body\.tipCents = Math\.round\(\+entry\.tip \* 100\);/.test(LL)
   && /UPDATE sales SET tip_cents = \? WHERE merchant = \? AND id = \? AND tip_cents IS NULL/.test(SALE)
@@ -118,7 +119,7 @@ check('a tip that cannot be written never undoes the sale', /catch \(_\) \{ \/\*
 const demo = run({ real: false, book, range: 'septJours', revenue: 10000 });
 check('the demo keeps its illustration (revenue × rate)', demo && demo.value === 720 && demo.delta === 3.2, JSON.stringify(demo));
 
-const IX = fs.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
+const IX = coreTestSource.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
 check('no tooltip still calls them estimated', !/Pourboires estimés|Estimated tips|الإكراميات المقدرة|Estimation des pourboires|calculée à partir de votre volume de ventes/.test(IX));
 check('the tooltips say where they come from, in three languages',
   /déclarés à la clôture/.test(IX) && /declared when (it closed )?each day/.test(IX) && /عند إغلاق كل يوم/.test(IX)

@@ -7,6 +7,7 @@
  * source and running it means this suite tests what the dashboard runs. If the
  * signature moves, extraction fails loudly instead of silently testing a copy.
  */
+import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
-const hotelJs = read('assets/hotel.js');
+const hotelJs = hotelTestSource();
 const hotelCss = read('assets/hotel.css');
 
 let controls = 0;

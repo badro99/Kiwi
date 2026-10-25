@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* A refused first write must not create a usable local venue. */
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
+const read = (name) => coreTestSource.readFileSync(path.join(root, name), 'utf8');
 let count = 0;
 function ok(value, label) { if (!value) throw new Error(label); count++; }
 const cache = new Map();

@@ -1,7 +1,8 @@
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const read = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+const read = file => coreTestSource.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const live = read('assets/live-link.js'), history = read('assets/sales-history.js');
 const operator = read('tools/operator-snapshot-test.mjs');
 const harnessBody = operator.slice(operator.indexOf('function harness('), operator.indexOf('// Execute the actual renderers'))

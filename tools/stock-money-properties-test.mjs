@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 // Domain properties against the shipped ledger, allocator and real D1 routes.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -17,7 +18,7 @@ const RUNS=+process.env.KIWI_PROPERTY_RUNS||100,SEED=+process.env.KIWI_PROPERTY_
 let passed=0,failed=0,known=0;
 async function strict(name,p,examples=[]){if(process.env.KIWI_PROPERTY_ONLY&&!new RegExp(process.env.KIWI_PROPERTY_ONLY).test(name))return;const r=await fc.check(p,{numRuns:RUNS,seed:SEED,examples});if(r.failed){failed++;console.error('✗ '+name,fc.stringify(r.counterexample),r.errorInstance);}else{passed++;console.log('✓ '+name);}}
 async function knownIssue(id,name,p,examples=[]){if(process.env.KIWI_PROPERTY_ONLY)return;const r=await fc.check(p,{numRuns:RUNS,seed:SEED,examples});if(!r.failed){failed++;console.error('✗ promote '+id);}else if(r.errorInstance?.message!=='Property failed by returning false'){failed++;console.error('✗ unexpected '+id,r.errorInstance);}else{known++;console.log('◦ '+id+' '+name+'; shrunk '+fc.stringify(r.counterexample)+'; path='+r.counterexamplePath);}}
-const read=p=>fs.readFileSync(ROOT+p,'utf8'),ledger=read('assets/inventory-ledger.js'),consumption=read('assets/inventory-consumption.js');
+const read=p=>coreTestSource.readFileSync(ROOT+p,'utf8'),ledger=read('assets/inventory-ledger.js'),consumption=read('assets/inventory-consumption.js');
 function world(){const memory=new Map(),localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)},window={localStorage,KiwiEnv:{isReal:()=>true},KiwiCloudDoc:{currentSlug:()=>f.merchant},addEventListener(){}};window.window=window;const ctx=vm.createContext({window,localStorage,navigator:{onLine:false},fetch:(...args)=>net(...args),crypto:globalThis.crypto,console,Date,Math,JSON,Map,Set,Promise,setTimeout:()=>0,setInterval:()=>0,clearTimeout(){}});vm.runInContext(ledger,ctx);vm.runInContext(consumption,ctx);return{I:window.KiwiInventory,C:window.KiwiInventoryConsumption,window,ctx,memory};}
 const f=await fixture(ROOT);
 // Reuse compiled SQLite statements, not handler results or bound arguments.

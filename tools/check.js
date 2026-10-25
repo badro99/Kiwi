@@ -622,6 +622,7 @@ for (const test of [
   'd1-schema-test.mjs',
   /* migrations/ (wrangler d1 migrations) appliquées en mémoire = schema.sql, à la colonne près. */
   'd1-migrations-test.mjs',
+  'worker-cpu-test.mjs',
   'd1-restore-rehearsal-test.mjs',
   /* D1 refuse plus de 100 paramètres liés par requête : la file de stock (200 mouvements) et la purge des tickets. */
   'd1-variable-limit-test.mjs',
@@ -700,7 +701,11 @@ for (const test of [
   'typecheck-ratchet-test.mjs',
   /* One owner per window.Kiwi* global, no new dangling read, the large files' coupling pinned. */
   'global-ownership-test.mjs',
+  /* Explicit cross-file read allowances and eager shell order, with no coupling slack. */
+  'ownership-test.mjs',
   'pages-pro-lazy-registry-test.mjs',
+  'pages-workflow-split-test.mjs',
+  'pages-tables-browser-test.mjs',
   'pages-pro-lazy-test.mjs',
   'team-added-toast-test.mjs',
   'team-removal-shift-test.mjs',
@@ -1662,6 +1667,7 @@ section('Whole-project regressions');
     'pos-maison-split-test.mjs',
     'pos-boutique-split-test.mjs',
     'caisse-app-split-test.mjs',
+    'core-split-test.mjs',
     'serveur-split-test.mjs',
     'stock-split-test.mjs',
     'hotel-split-test.mjs',

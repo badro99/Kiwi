@@ -1,8 +1,9 @@
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
+const source = coreTestSource.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
 const now = Date.now();
 let sales = [];
 let stock = [];
@@ -23,8 +24,8 @@ const context = {
   Date, Map, Set, Intl, Math, Number, String, Array, Object, Infinity,
   requestAnimationFrame() {}, setTimeout() {}, clearTimeout() {}, console,
 };
-vm.runInNewContext(fs.readFileSync(new URL('../assets/sales-history.js', import.meta.url), 'utf8'), context);
-vm.runInNewContext(source, context, { filename: 'assets/dateRange.js' });
+vm.runInNewContext(coreTestSource.readFileSync(new URL('../assets/sales-history.js', import.meta.url), 'utf8'), context);
+vm.runInNewContext(coreTestSource.live(new URL('../assets/dateRange.js', import.meta.url)), context, { filename: 'assets/dateRange.js' });
 const truth = window.KiwiDateRange._truth;
 
 assert.equal(truth.tenderBucket('cash'), 'cash');
@@ -94,7 +95,7 @@ assert.doesNotMatch(source, /mode inconnu → carte/, 'unknown tenders are no lo
 assert.match(source, /renderHeroAi\(\);[\s\S]*renderHeatmapAi\(\);[\s\S]*renderMix\(\)/, 'sales repaint every sales-derived insight');
 assert.match(source, /kiwi-day-report-ready/, 'business-day cutoff repaints time-windowed cards');
 
-const venueSource = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+const venueSource = coreTestSource.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
 assert.doesNotMatch(venueSource, /function miCustomHeroRec/, 'the obsolete all-time insight calculator is removed');
 assert.doesNotMatch(venueSource, /function miCustomHeatmapRec/, 'the duplicate calendar-midnight heatmap is removed');
 
