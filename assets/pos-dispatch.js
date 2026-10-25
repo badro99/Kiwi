@@ -61,7 +61,7 @@
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '15', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '12', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '7', label: 'Pizzeria · La Marsa' },
-    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '11', label: 'Traiteur · Dar Zellij' },
+    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '13', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '9', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '22', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '9', label: 'Pharmacie · Ibn Batouta' },

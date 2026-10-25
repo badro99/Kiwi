@@ -116,6 +116,12 @@
 .tr-offline-note[hidden] { display: none; }
 .tr-view { display: none; flex: 1; min-height: 0; flex-direction: column; }
 .tr-view.is-on { display: flex; }
+/* The devis is the dishes with the quote beside them: the quote is a right-hand
+ * column (left border, fixed width). In the column above, its 330 px basis
+ * became a height and the whole quote, form and total, sat squeezed in a
+ * 330 px box under the dishes (2026-10-25). On a phone pos-mobile lifts the
+ * quote into the bottom sheet, so the row leaves the dishes the full width. */
+.tr-view[data-tr-panel="devis"] { flex-direction: row; }
 
 .tr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; padding: 22px 22px 0; }
 .tr-head h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }

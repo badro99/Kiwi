@@ -375,7 +375,7 @@
     });
     COURSES.splice(0, COURSES.length, ...cats);
     DISHES.splice(0, DISHES.length, ...items.map((it) => DISH[it.id]));
-    if (root && $('[data-tr-panel="devis"] #tr-build-scroll', root)) { try { renderDevis(); icons(); lens(); } catch (_) {} }
+    if (root && $('[data-tr-panel="devis"] #tr-build-scroll', root)) { try { refreshDishes(); } catch (_) {} }
   }
   function applySettings() {
     if (!pvReal() || !settingsApi) return;
@@ -531,12 +531,20 @@
   const closeVeil = (v) => { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); };
 
   /* ═══════════════════════ NAV ═══════════════════════ */
-  function switchView(view) {
+  /* A repaint (the till's 30 s background refresh, a re-unlock, a payment)
+   * keeps the quote form: only the dishes and totals are redrawn, so the
+   * client name or phone being typed keeps its field. Opening the view from
+   * the rail still builds it fresh. */
+  function devisRepaint() {
+    if ($('[data-tr-panel="devis"] #tr-build-scroll', root)) refreshDishes(); else renderDevis();
+  }
+
+  function switchView(view, repaint) {
     state.view = view;
     $$('.tr-nav-it', root).forEach((b) => b.classList.toggle('on', b.dataset.trView === view));
     $$('.tr-view', root).forEach((p) => p.classList.toggle('is-on', p.dataset.trPanel === view));
     if (view === 'events') renderEvents();
-    if (view === 'devis') renderDevis();
+    if (view === 'devis') (repaint ? devisRepaint : renderDevis)();
     if (view === 'acomptes') renderAcomptes();
     if (view === 'jourj') renderJourJ();
     icons();
@@ -562,7 +570,7 @@
   function refreshAll() {
     renderBadges();
     if (state.view === 'events') renderEvents();
-    if (state.view === 'devis') renderDevis();
+    if (state.view === 'devis') devisRepaint();
     if (state.view === 'acomptes') renderAcomptes();
     if (state.view === 'jourj') renderJourJ();
     icons();
@@ -571,7 +579,7 @@
   function renderAll() {
     renderBadges();
     renderNet();
-    switchView(state.view);
+    switchView(state.view, true);
   }
 
   /* ═══════════════════════ shared fragments ═══════════════════════ */
@@ -806,15 +814,12 @@
   }
 
   /* ═══════════════════════ DEVIS — le builder ═══════════════════════ */
-  function renderDevis() {
-    const panel = $('[data-tr-panel="devis"]', root);
-    panel.innerHTML = `
-      <div class="tr-build">
-        <header class="tr-head">
-          <div><h1>Nouveau devis</h1><div class="tr-head-sub">Composez le menu par personne, le total suit le nombre d’invités</div></div>
-          <div class="tr-head-sub" style="padding-bottom:2px;">Touchez un plat pour l’ajouter au menu</div>
-        </header>
-        <div class="tr-build-scroll" id="tr-build-scroll">
+  /* The dish list on its own: a carte refresh (a dashboard edit, a translation
+   * landing) redraws only this and the totals. It used to rebuild the whole
+   * devis, form included, every 2.5 s poll that saw a change, so a client name
+   * or phone number being typed lost its field mid-word (2026-10-25). */
+  function buildScrollHtml() {
+    return `
           ${pvReal() && !DISHES.length ? '<div id="tr-free-dish"></div>' : ''}
           ${COURSES.map((c) => `
             <div class="tr-course-head">${esc(c.label)} <span class="pp">· prix par personne</span></div>
@@ -831,7 +836,19 @@
             </div>`).join('')}
           <div class="tr-course-head">Extras <span class="pp">· calculés sur ${`<span id="tr-extras-g">${draft.guests}</span>`} invités</span></div>
           <div class="tr-extras" id="tr-extras"></div>
-          ${pvReal() && carteSkipped ? `<p class="vc-note">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : ''}
+          ${pvReal() && carteSkipped ? `<p class="vc-note">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : ''}`;
+  }
+
+  function renderDevis() {
+    const panel = $('[data-tr-panel="devis"]', root);
+    panel.innerHTML = `
+      <div class="tr-build">
+        <header class="tr-head">
+          <div><h1>Nouveau devis</h1><div class="tr-head-sub">Composez le menu par personne, le total suit le nombre d’invités</div></div>
+          <div class="tr-head-sub" style="padding-bottom:2px;">Touchez un plat pour l’ajouter au menu</div>
+        </header>
+        <div class="tr-build-scroll" id="tr-build-scroll">
+          ${buildScrollHtml()}
         </div>
       </div>
       <aside class="tr-quote">
@@ -939,6 +956,48 @@
     $('#tr-q-gminus', panel).onclick = () => { if (draft.guests > 10) { draft.guests = Math.max(10, draft.guests - 10); guestsChanged(panel); } };
     $('#tr-q-gplus', panel).onclick = () => { draft.guests = Math.min(2000, draft.guests + 10); guestsChanged(panel); };
 
+    bindFreeDish(panel);
+    renderExtras();
+    renderQuote();
+    icons();
+    lens();
+  }
+
+  /* A carte change redraws the dishes and the totals, never the form beside
+   * them: the field being typed in keeps its focus, caret and value. */
+  function refreshDishes() {
+    const panel = $('[data-tr-panel="devis"]', root);
+    const scroll = panel && $('#tr-build-scroll', panel);
+    if (!scroll) return;
+    const top = scroll.scrollTop;
+    scroll.innerHTML = buildScrollHtml();
+    scroll.scrollTop = top;
+    bindFreeDish(panel);
+    syncForm(panel);
+    renderExtras(); renderQuote(); icons(); lens();
+  }
+
+  /* A sync can hand back another copy of the draft (restore). The form now
+   * outlives a repaint, so it follows the draft field by field, except the
+   * one being typed in: what the merchant is typing wins. */
+  function syncForm(panel) {
+    const active = document.activeElement;
+    [['#tr-q-client', 'client'], ['#tr-q-phone', 'phone'], ['#tr-q-date', 'date'], ['#tr-q-lieu', 'lieu']].forEach(([sel, key]) => {
+      const el = $(sel, panel);
+      if (!el) return;
+      if (el === active) draft[key] = el.value;
+      else if (el.value !== (draft[key] || '')) el.value = draft[key] || '';
+    });
+    const g = $('#tr-q-gval', panel);
+    if (g) g.innerHTML = `${draft.guests}<small>pers</small>`;
+    const eg = $('#tr-extras-g', panel);
+    if (eg) eg.textContent = draft.guests;
+    $$('[data-tr-type]', panel).forEach((x) => x.classList.toggle('on', x.dataset.trType === draft.type));
+    const num = $('.tr-q-num', panel);
+    if (num) num.textContent = `· DV-${dvSeq}`;
+  }
+
+  function bindFreeDish(panel) {
     const fd = $('#tr-free-dish', panel);
     if (fd && carteApi) {
       fd.innerHTML = carteApi.freePriceHtml({ title: 'Aucun plat dans la carte', hint: 'Composez la carte dans le tableau de bord, rubrique Menu (le prix est celui d’une personne). En attendant, saisissez le plat et son prix par personne.', namePh: 'Plat ou formule', cta: 'Ajouter au menu' });
@@ -951,10 +1010,6 @@
         toast(`${f.name} ajouté au menu`);
       });
     }
-    renderExtras();
-    renderQuote();
-    icons();
-    lens();
   }
 
   function guestsChanged(panel) {

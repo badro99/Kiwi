@@ -305,6 +305,11 @@
   min-height: 0;
   align-self: stretch;
 }
+/* The same leak on every other trade register: each screen (.tr-view, .pz-view,
+ * .ph-view …) is a <section>, so the caterer's quote, the pharmacy, the gym and
+ * the rest all opened with a 96 px blank band above and below the work
+ * (2026-10-25). Every one of them, once, here. */
+.kiwi-dna > .kiwi-dna-main > section { padding-block: 0; }
 .kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-rail { left: auto; right: 0; }
 .kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-main {
   inset: 0 var(--kiwi-dna-rail-w) 0 0;

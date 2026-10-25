@@ -670,6 +670,21 @@ RING.traiteurDeposit = async function (t, page, sale, m) {
   }
   const client = await page.waitForSelector('#tr-q-client', { visible: true });
   await client.click({ clickCount: 3 }); await client.type('TEST KIWI Client');
+  /* The quote is a column beside the dishes, not a 330 px box under them, and
+   * the till's background repaint (every 30 s, on wake, after a payment)
+   * leaves the field being typed in alone: it used to rebuild the whole form. */
+  const held = await page.evaluate(() => {
+    const q = document.querySelector('.tr-quote').getBoundingClientRect();
+    const b = document.querySelector('.tr-build').getBoundingClientRect();
+    const field = document.querySelector('#tr-q-client');
+    field.focus();
+    window.KiwiPosDispatch.repaint();
+    const after = document.querySelector('#tr-q-client');
+    return { beside: q.left >= b.right - 1 && q.height > 600, same: after === field, focused: document.activeElement === field, value: after.value,
+      q: [Math.round(q.left), Math.round(q.width), Math.round(q.height)], b: Math.round(b.right) };
+  });
+  if (!held.beside) throw new Error(`${m.label}: the quote is not a column beside the dishes (${JSON.stringify(held)})`);
+  if (!held.same || !held.focused || held.value !== 'TEST KIWI Client') throw new Error(`${m.label}: a repaint rebuilt the quote form under the cursor (${JSON.stringify(held)})`);
   const phone = await page.waitForSelector('#tr-q-phone', { visible: true });
   await phone.click({ clickCount: 3 }); await phone.type('0611223344');
   await clickSel(page, '#tr-q-send'); await sleep(700);

@@ -104,8 +104,8 @@
     "sha": "cff5bca1c99e2bba"
   },
   "assets/caisse-dna.css": {
-    "v": "7",
-    "sha": "43531da8b521b1c6"
+    "v": "8",
+    "sha": "05d349eb6e937a0b"
   },
   "assets/caisse-dna.js": {
     "v": "3",
@@ -1160,8 +1160,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "166",
-    "sha": "c5f4b46571f7de17"
+    "v": "167",
+    "sha": "89f79eaf5c32b4a7"
   },
   "assets/pos-epicerie.css": {
     "v": "22",
@@ -1284,12 +1284,12 @@
     "sha": "498e173a487c57ad"
   },
   "assets/pos-traiteur.css": {
-    "v": "11",
-    "sha": "51743f41937335bc"
+    "v": "13",
+    "sha": "f8b00dadb5e5a7c0"
   },
   "assets/pos-traiteur.js": {
-    "v": "11",
-    "sha": "5c1c07153da2d1ea"
+    "v": "13",
+    "sha": "b5b81c10af934690"
   },
   "assets/pos-workspaces.css": {
     "v": "5",
