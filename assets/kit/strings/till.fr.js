@@ -9,7 +9,7 @@
   "menu.tile_label_options": "{name}, {price}, avec options",
   "menu.on_bill": "{n} sur l'addition",
   "menu.has_options": "avec options",
-  "menu.label_sep": ", ",
+  "menu.label_sep": ",",
   "options.required": "Obligatoire · choisissez {n}",
   "options.optional": "Facultatif · jusqu'à {n}",
   "options.add": "Ajouter · {amount}",

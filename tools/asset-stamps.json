@@ -164,8 +164,8 @@
     "sha": "ada0dad729a81f5f"
   },
   "assets/caisse-shell.css": {
-    "v": "9",
-    "sha": "1c341f16bcebc6ad"
+    "v": "10",
+    "sha": "89eed4c0bee3cb26"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -224,8 +224,8 @@
     "sha": "fd6b660eb1e7a179"
   },
   "assets/caisse/shift.js": {
-    "v": "2",
-    "sha": "9385505a9b5b3e7a"
+    "v": "3",
+    "sha": "44bc7f937197d581"
   },
   "assets/caisse/split-tender.js": {
     "v": "1",
@@ -860,16 +860,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "12",
-    "sha": "3da341b31d542daf"
+    "v": "13",
+    "sha": "1382b66a6a6fd75b"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "12",
-    "sha": "2404d9cd0484950c"
+    "v": "13",
+    "sha": "2fd653e9d0ae9cbb"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "12",
-    "sha": "d372b8827374eba4"
+    "v": "13",
+    "sha": "fb5251708f8b9ce1"
   },
   "assets/kit/team-pin.js": {
     "v": "3",
@@ -900,8 +900,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "19",
-    "sha": "84a665a5561671c2"
+    "v": "20",
+    "sha": "ce833a5b5c8cdc9d"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

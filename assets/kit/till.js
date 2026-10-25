@@ -89,7 +89,7 @@
     var parts = [it.name, it.soldOut ? t('menu.sold_out') : money(it.price)];
     if (qty) parts.push(t('menu.on_bill', { n: qty }));
     if (it.options) parts.push(t('menu.has_options'));
-    return parts.join(t('menu.label_sep'));
+    return parts.join(t('menu.label_sep') + ' ');
   }
   var KMenuGrid = K.make({
     setup: function () {

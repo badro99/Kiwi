@@ -82,9 +82,6 @@
         if (clockinEl) {
           clockinEl.classList.add('is-visible');
           clockinEl.setAttribute('aria-hidden', 'false');
-          /* Until now the screen was transparent but its buttons took Tab
-             (inert in the page): it is only reachable once it shows. */
-          clockinEl.removeAttribute('inert');
         }
       }, 460);
 

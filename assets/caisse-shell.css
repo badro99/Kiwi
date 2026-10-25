@@ -2953,7 +2953,12 @@
       padding: 48px 24px;
       color: #fff;
       opacity: 0; pointer-events: none;
+      /* Hidden, it is out of the Tab order and the accessibility tree: opacity
+         alone left its buttons reachable behind the till (2027 audit). Not
+         inert, which the PIN lock sets and clears on the body's children. */
+      visibility: hidden;
     }
+    .clockin-screen.is-visible, .clockin-screen.is-leaving { visibility: visible; }
     .clockin-screen.is-visible {
       opacity: 1; pointer-events: auto;
       animation: clockin-in 460ms cubic-bezier(0.16, 1, 0.3, 1);

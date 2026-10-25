@@ -559,8 +559,9 @@ await S.run('coût simple · fr, en, ar', async (t) => {
    compteur à 4,03:1 en arabe sombre et un écran de pointage transparent dont
    les boutons prenaient Tab. Menu, addition et encaissement, au bureau, sur
    un téléphone en arabe sombre et sur un téléphone couché. */
-async function till2027(t, lang, width, height) {
-  const page = await open(t, '/kiwi-caisse.html', { 'kiwiSkin2027:till': '1', kiwiCaisseLang: lang, ...(lang === 'ar' ? { kiwiCaisseTheme: 'dark' } : {}) }, { width, height, mobile: width < 500, pin: false });
+const till2027Storage = (lang) => ({ 'kiwiSkin2027:till': '1', kiwiCaisseLang: lang, ...(lang === 'ar' ? { kiwiCaisseTheme: 'dark' } : {}) });
+const till2027Size = (width, height) => ({ width, height, mobile: width < 500, pin: false });
+async function till2027(t, page) {
   const states = [await audit(t, page)];
   t.step('open the service');
   await page.waitForFunction(() => typeof doOpenService === 'function', { timeout: 30000 });
@@ -588,22 +589,25 @@ async function till2027(t, lang, width, height) {
 }
 await S.run('caisse 2027 · bureau', async (t) => {
   // coverage: surface=caisse-2027 locale=fr viewport=desktop
-  compare('caisse-2027', await till2027(t, 'fr', 1366, 1024));
+  const page = await open(t, '/kiwi-caisse.html', till2027Storage('fr'), till2027Size(1366, 1024));
+  compare('caisse-2027', await till2027(t, page));
 });
 await S.run('caisse 2027 · téléphone, arabe sombre', async (t) => {
   // coverage: surface=caisse-2027 locale=ar viewport=phone
-  compare('caisse-2027-phone-ar', await till2027(t, 'ar', 390, 844));
+  const page = await open(t, '/kiwi-caisse.html', till2027Storage('ar'), till2027Size(390, 844));
+  compare('caisse-2027-phone-ar', await till2027(t, page));
 });
 await S.run('caisse 2027 · téléphone couché', async (t) => {
   // coverage: surface=caisse-2027 locale=fr viewport=phone
-  compare('caisse-2027-landscape', await till2027(t, 'fr', 844, 390));
+  const page = await open(t, '/kiwi-caisse.html', till2027Storage('fr'), till2027Size(844, 390));
+  compare('caisse-2027-landscape', await till2027(t, page));
 });
 /* La galerie du kit montre chaque composant 2027 avec ses états : un défaut
    d'un composant partagé (la pastille sans nom, la liste d'un groupe radio,
    la colonne de cuisine qui défile sans le clavier) s'y voit avant d'arriver
    sur une page. */
 await S.run('galerie du kit 2027', async (t) => {
-  // coverage: surface=kit-gallery locale=en viewport=desktop
+  // coverage: surface=shell-kit locale=en viewport=desktop
   const desk = await open(t, '/kit.html', {}, { width: 1440, height: 900, pin: false });
   const a = await audit(t, desk);
   const phone = await open(t, '/kit.html', {}, { width: 390, height: 844, mobile: true, pin: false });

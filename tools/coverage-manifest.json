@@ -221,6 +221,23 @@
       "state": "restaurant unlocked"
     },
     {
+      "id": "caisse-2027",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "restaurant till under the Design 2027 skin (kiwiSkin2027:till): menu, bill, cash payment"
+    },
+    {
       "id": "caisse-boutique",
       "shells": [
         "kiwi-caisse.html"
