@@ -4,12 +4,13 @@
  * replaced 45 hand-drawn line drawings with uneven strokes.
  *
  * What this holds: the shell icons; that a dish is matched by its published
- * NAME first (a published menu's ids, it_1…, are not the demo's m-001…), then
- * by its demo id, then by its category, then a neutral cloche; that the real
- * Pasta Corner menu does not collapse onto a few pictures; the traps already
- * met (a lemon chicken tajine is not a juice, Hawaii is a soda, apple in a
- * juice name is not a can); and that every key has its file and every file a
- * key. */
+ * NAME first, through the keyword dictionary (a published menu's ids, it_1…,
+ * are not the demo's m-001…), then by its demo id, then by its category, then
+ * a neutral cloche; that the real Pasta Corner menu does not collapse onto a
+ * few pictures; the traps already met (a lemon chicken tajine is not a juice,
+ * Hawaii is a soda, a strawberry ice cream is an ice cream); that a broad
+ * sample of real menu names finds a photo instead of the cloche; and that
+ * every key has its file and every file a key. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -35,9 +36,10 @@ ok(!/<svg class="menu-art/.test(catalogue) && !/const _bowl|const _tajine|MENU_L
 // Run the resolver the cards run, not a text search.
 const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* The language module loads deferred'));
 const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
-ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey'), 'the picture tables and resolver are extractable');
-const { key, html, MENU_ART, MENU_ART_RULES, CAT_GLYPH_RULES } = new Function('catLabels',
-  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, MENU_ART_RULES, CAT_GLYPH_RULES };`)({
+ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey') && resolver.includes('DISH_WORDS'), 'the picture tables and resolver are extractable');
+ok(!/MENU_ART_RULES/.test(app + catalogue), 'the old hand-ordered regex list is gone: the dictionary decides');
+const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES } = new Function('catLabels',
+  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES };`)({
     pasta: 'Choisissez vos Pâtes', signatures: 'Signatures', desserts: 'Desserts',
     drinks: 'Boissons', soda: 'Soda+eau', tajines: 'Tajines'
   });
@@ -53,7 +55,7 @@ eq(new Set(live).size, liveCards.length, 'published pasta, desserts and drinks k
 eq(key('it_x', 'pasta', 'Spécial maison'), 'pasta', 'the pasta category shows pasta for an unnamed dish');
 eq(key('it_x', 'signatures', 'Spécial maison'), 'plate', 'an unknown signature gets the neutral cloche, not a misleading dish');
 ne(key('it_x', 'desserts', 'Spécial maison'), key('it_x', 'drinks', 'Spécial maison'), 'unknown products follow their category');
-eq(key('it_x', 'drinks', 'Jus de kiwi et pommes'), key('it_x', 'drinks', 'Jus citron'), 'apple in a juice name is not a can');
+eq(key('it_x', 'drinks', 'Jus de kiwi et pommes'), 'jus-pomme', 'apple in a juice name is an apple juice, not a can');
 eq(key('it_x', 'soda', 'Hawaii'), key('it_x', 'soda', 'Coca-Cola'), 'the published Hawaii soda is a can');
 eq(key('it_x', 'signatures', 'Supplément Fromage'), 'cheese', 'cheese supplements have their own picture');
 eq(key('it_x', 'desserts', 'Panacotta'), key('it_x', 'desserts', 'Bonet'), 'panna cotta renders as a moulded dessert');
@@ -65,6 +67,47 @@ eq(key('it_x', 'x', 'Crème brûlée'), 'creme-brulee', 'crème brûlée is not 
 eq(key('it_x', 'x', 'Sandwich thon'), 'sandwich-thon', 'a tuna sandwich is its own picture');
 eq(key('m-030', 'boissons', 'Spécial'), 'soda', 'a demo id still finds its picture when the name says nothing');
 
+// The ranking: more words first, then the word that comes first in the name,
+// and an ingredient or flavour only when nothing else speaks.
+const traps = [
+  ['Glace fraise', 'glace'], ['Jus de fraise', 'jus-fraise'], ['Soupe de poisson', 'soup'],
+  ['Poisson du jour', 'poisson-grille'], ['Pizza poulet', 'pizza'], ['Tacos poulet', 'tacos'],
+  ['Burger poulet', 'chicken-burger'], ['Brochettes de poulet', 'brochettes-poulet'],
+  ['The Classic Burger', 'burger'], ['Thé', 'mint-tea'], ['Thé à la menthe', 'mint-tea'],
+  ['Thé glacé', 'ice-tea'], ['Café crème', 'cafe-au-lait'], ['Café glacé', 'cafe-glace'],
+  ['Pain au chocolat', 'pain-chocolat'], ['Chocolat chaud', 'chocolat-chaud'],
+  ['Mousse au chocolat', 'mousse-chocolat'], ['Pizza 4 fromages', 'pizza-4-fromages'],
+  ['Plateau de fruits de mer', 'fruits-de-mer'], ['Salade de fruits', 'salade-fruits'],
+  ['Tarte au citron', 'tarte-citron'], ['Gâteaux marocains', 'patisserie'],
+  ['Menu enfant', 'menu-enfant'], ['Menu burger', 'burger'], ['Couscous aux sept légumes', 'couscous-legumes'],
+  ['Tajine aux pruneaux', 'tajine-agneau'], ['Poulet aux olives', 'tajine-poulet'],
+  ['Briouates au miel', 'briouates-miel'], ['Pâtes sauce tomate', 'pasta'], ['Supplément sauce', 'sauce'],
+  ['Eau gazeuse', 'eau-gazeuse'], ['Nous nous', 'nous-nous'], ['Crème glacée vanille', 'glace'],
+  ['Spaghetti carbonara', 'carbonara'], ['Penne au pesto', 'pesto'], ['Tagliatelle saumon', 'alfredo'],
+  ['Spaghetti', 'pasta'], ['Penne poulet', 'pasta'], ['Sandwich falafel', 'falafel'], ['Sandwich shawarma', 'shawarma'],
+  ['Soupe harira', 'harira'], ['Salade quinoa', 'quinoa'], ['Salade verte', 'salad'],
+  ['شاي', 'mint-tea'], ['طاجين دجاج', 'tajine-poulet'], ['طاجين', 'tajine-legumes']
+];
+for (const [name, want] of traps) eq(key('it_x', 'x', name), want, `« ${name} » shows ${want}`);
+
+// A broad sample of what Moroccan cafés, snacks and restaurants actually
+// sell: every one finds a photo of its own, none falls back to the cloche.
+const sample = ['Msemen au miel', 'Harcha fromage', 'Bissara', 'Rfissa poulet', 'Tanjia marrakchia',
+  'Mechoui', 'Seffa medfouna', 'Sardines grillées', 'Calamars frits', 'Crevettes pil pil', 'Paella',
+  'Entrecôte grillée', 'Poulet rôti', 'Nuggets x6', 'Frites', 'Cheeseburger', 'Hot dog', 'Tacos mixte',
+  'Panini thon', 'Club sandwich', 'Croque monsieur', 'Shawarma poulet', 'Falafel', 'Houmous', 'Taboulé',
+  'Quesadilla', 'Poke bowl saumon', 'Sushi mix', 'Ramen', 'Nems', 'Riz cantonais', 'Curry de poulet',
+  'Spaghetti bolognaise', 'Penne arrabbiata', 'Gnocchi', 'Risotto aux champignons', 'Burrata',
+  'Salade César', 'Salade niçoise', 'Croissant', 'Pain aux raisins', 'Cookie', 'Muffin', 'Brownie',
+  'Cheesecake', 'Éclair au café', 'Mille-feuille', 'Macarons', 'Riz au lait', 'Yaourt', 'Lben',
+  'Smoothie mangue', 'Milkshake vanille', 'Mojito', 'Red Bull', 'Américano', 'Café turc', 'Matcha latte',
+  'Verveine', 'Chebakia', 'Ghriba', 'Fekkas', 'Baklava', 'Kunafa', 'Basboussa', 'Sellou', 'Omelette',
+  'Oeufs au plat', 'Pancakes', 'Gaufre', 'Petit déjeuner marocain', 'Amlou', 'Sfenj', 'Dattes'];
+const cloche = sample.filter((name) => key('it_x', 'x', name) === 'plate');
+eq(cloche.length, 0, 'every sample dish finds its photo: cloche for ' + cloche.join(', '));
+eq(new Set(sample.map((name) => key('it_x', 'x', name))).size, sample.length, 'the sample dishes do not collapse onto shared photos');
+eq(key('it_x', 'cafe', 'Spécial'), 'espresso', 'an unknown hot drink falls back to a coffee');
+
 // Every demo dish, by its own name, reaches the photo drawn for it.
 const demo = [...app.matchAll(/\{ id: '(m-\d{3})', cat: '([a-z]+)',\s*name: (?:'([^']*)'|"([^"]*)")/g)].map((m) => [m[1], m[2], m[3] || m[4]]);
 ok(demo.length >= 30, `the demo menu is read (${demo.length} dishes)`);
@@ -75,7 +118,8 @@ ok(/^<img class="menu-photo" src="assets\/dishes\/lasagna\.webp\?v=\d+" alt=""[^
   'a card draws the photo as a decorative, lazily loaded 64 px image: ' + src);
 
 // Every key the tables can return has its file, and every file is reachable.
-const keys = new Set(['plate', ...Object.values(MENU_ART), ...MENU_ART_RULES.map((r) => r[1]), ...CAT_GLYPH_RULES.map((r) => r[1])]);
+const keys = new Set(['plate', ...Object.values(MENU_ART), ...Object.keys(DISH_WORDS), ...CAT_GLYPH_RULES.map((r) => r[1])]);
+ok(Object.keys(DISH_WORDS).length >= 200, `the dictionary covers ${Object.keys(DISH_WORDS).length} dishes`);
 const files = new Set(fs.readdirSync(new URL('../assets/dishes/', import.meta.url)).filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)));
 const missing = [...keys].filter((k) => !files.has(k));
 eq(missing.length, 0, 'every picture key has its photo: missing ' + missing.join(', '));

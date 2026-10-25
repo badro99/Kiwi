@@ -461,19 +461,297 @@
 
     const normalizeMenuArtName = (value) => String(value || '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, ' ').trim();
-    
+
+    /* Les mots qui choisissent la photo d'un plat (assets/dishes/<clé>.webp).
+       Un mot-clé gagne quand tous ses mots sont dans le nom, dans n'importe
+       quel ordre ; « de », « au », les accents et le pluriel ne comptent pas.
+       Le plus de mots l'emporte (« tajine poulet » avant « tajine ») ; à
+       égalité, le mot qui vient le premier, car un menu français nomme le plat
+       d'abord (« Glace fraise » est une glace, « Soupe de poisson » une soupe).
+       « ~ » marque un mot faible, un ingrédient ou un parfum : il ne compte que
+       si rien d'autre ne parle (« Pizza poulet » reste une pizza). « ^ » marque
+       une base, une forme de pâtes, un sandwich, une salade, une soupe : elle
+       bat un ingrédient mais cède à tout vrai plat, où qu'il soit dans le nom
+       (« Spaghetti carbonara » est une carbonara). Un plat
+       nouveau : une ligne ici et sa photo (tools/dish-photos). */
+    const DISH_WORDS = {
+      'agnolotti': 'agnolotti|agnolotti del plin|agnollotti|agnolotti del pin',
+      'ravioli': 'ravioli|tortellini|tortelloni',
+      'lasagna': 'lasagne|lasagna|lasagnes',
+      'pasta': '^pates|^pasta|^pappardelle|^tagliatelle|^spaghetti|^linguine|^penne|^rigatoni|^fusilli|^fettuccine|^farfalle|^macaroni|^معكرونة',
+      'parmigiana': 'parmigiana|melanzane|aubergine parmesan|~aubergine',
+      'cheese': '~fromage|~cheese|mozzarella|caprese|plateau de fromages|~jben',
+      'tiramisu': 'tiramisu',
+      'flan': 'flan|bonet|creme caramel|panna cotta|panacotta|pana cotta',
+      'pizza': 'pizza|margherita|margarita|بيتزا',
+      'water': 'eau|water|eau minerale|sidi ali|ain saiss|sidi harazem|ماء',
+      'soda': 'coca|coca cola|cola|fanta|sprite|soda|pepsi|schweppes|hawaii|poms|7up|orangina|canette|boisson gazeuse',
+      'juice': 'jus|juice|limonade|citronnade|~citron|jus de citron|عصير',
+      'orange-juice': 'jus d orange|jus orange|orange pressee|~orange|jus d agrumes',
+      'avocado-juice': 'jus d avocat|~avocat|~avocado|jus avocat',
+      'mint-tea': '~the|the a la menthe|the menthe|atay|attay|tea|mint tea|شاي|اتاي',
+      'espresso': 'cafe|espresso|expresso|cafe noir|ristretto|قهوة',
+      'cafe-au-lait': 'cafe au lait|cafe creme|latte|~creme|cafe latte|lait chaud',
+      'cappuccino': 'cappuccino|capuccino',
+      'salade-marocaine': 'salade marocaine|salade mechouia',
+      'briouates': 'briouate|briouat|briwat|bstila mini',
+      'harira': 'harira|حريرة',
+      'zaalouk': 'zaalouk|zaalouk d aubergine',
+      'taktouka': 'taktouka|tektouka',
+      'soup': '^soupe|^soup|^potage|soupe du jour|chorba|شوربة',
+      'msemen': 'msemen|msemmen|rghaif|meloui|mlawi|مسمن',
+      'brochettes': 'brochette|brochettes|grillade|grillades|skewer|قطبان',
+      'salad': '^salade|^salad|salade verte|^سلطة',
+      'tajine-kefta': 'tajine kefta|tajine de kefta|kefta aux oeufs|tajine oeuf|طاجين كفتة',
+      'tajine-poulet': 'tajine poulet|tajine de poulet|tajine poulet citron|poulet citron olives|poulet aux olives|طاجين دجاج',
+      'tajine-agneau': 'tajine agneau|tajine viande|tajine boeuf|tajine pruneaux|lham lahlou|tajine d agneau|tajine de viande|طاجين لحم',
+      'tajine-legumes': 'tajine|tagine|tajine legumes|tajine aux legumes|طاجين',
+      'tajine-poisson': 'tajine poisson|tajine de poisson|tajine sardines|tajine kefta de poisson|طاجين حوت|طاجين سمك',
+      'couscous-royal': 'couscous|couscous royal|couscous viande|couscous poulet|كسكس',
+      'couscous-tfaya': 'couscous tfaya|tfaya',
+      'couscous-legumes': 'couscous legumes|couscous aux legumes|couscous vegetarien|couscous 7 legumes|couscous sept legumes|كسكس خضر',
+      'plate': 'plat du jour|~plat|~assiette|cloche',
+      'pastilla-poulet': 'pastilla|bastilla|pastilla poulet|pastilla au poulet|بسطيلة',
+      'pastilla-seafood': 'pastilla fruits de mer|pastilla poisson|pastilla seafood|pastilla aux fruits de mer',
+      'pastilla-pigeon': 'pastilla pigeon|pastilla au pigeon',
+      'sandwich-kefta': '^sandwich|sandwich kefta|sandwich viande hachee|^كاسكروط',
+      'sandwich-poulet': 'sandwich poulet|sandwich au poulet|sandwich chicken',
+      'sandwich-thon': 'sandwich thon|sandwich au thon|sandwich tuna',
+      'bocadillo': 'bocadillo|merguez|sandwich merguez',
+      'wrap': 'wrap|wraps|roule',
+      'burger': 'burger|hamburger|برغر',
+      'creme-brulee': 'creme brulee|creme brule',
+      'cornes-gazelle': 'cornes de gazelle|corne de gazelle|kaab el ghazal|kaab ghzal',
+      'patisserie': 'patisserie|patisseries|patisserie marocaine|gateaux marocains|halwa|حلويات',
+      'fruit': 'fruit|fruits|fruit de saison|corbeille de fruits|فواكه',
+      'glace': 'glace|glaces|creme glacee|ice cream|sorbet|gelato|boule de glace|بوظة',
+      'gateau': 'gateau|cake|fondant|fondant chocolat|forêt noire|foret noire|layer cake',
+      'crepe': 'crepe|crepes|crepe sucree|galette',
+      'baghrir': 'baghrir|beghrir|bghrir|crepe mille trous|بغرير',
+      'chebakia': 'chebakia|chbakia|griouech|شباكية',
+      'petit-dejeuner': 'petit dejeuner|petit dej|ftour|breakfast|petit dejeuner marocain|فطور',
+      'omelette': 'omelette|omelet|omelette fromage',
+      'oeufs': 'oeufs|oeuf|oeuf au plat|oeufs au plat|eggs|بيض',
+      'khlii': 'khlii|khlia|oeufs khlii|oeufs au khlii',
+      'harcha': 'harcha|حرشة',
+      'batbout': 'batbout|matlou|matlouh|بطبوط',
+      'croissant': 'croissant|croissants',
+      'pain-chocolat': 'pain au chocolat|chocolatine|pains au chocolat',
+      'tartine': 'tartine|tartines|pain beurre|pain confiture|toast|toasts',
+      'avocado-toast': 'avocado toast|toast avocat|toast a l avocat|tartine avocat',
+      'pancakes': 'pancake|pancakes',
+      'gaufre': 'gaufre|gaufres|waffle|waffles',
+      'granola': 'granola|bowl granola|yaourt granola|muesli',
+      'acai': 'acai|acai bowl',
+      'amlou': 'amlou|amlo|أملو',
+      'sfenj': 'sfenj|beignet|beignets|سفنج',
+      'bissara': 'bissara|bessara|bsara|بيصارة',
+      'loubia': 'loubia|haricots blancs|lobia|لوبيا',
+      'adass': 'adass|lentilles|3dess|عدس',
+      'rfissa': 'rfissa|trid|tride|رفيسة',
+      'tanjia': 'tanjia|tangia|طنجية',
+      'mechoui': 'mechoui|mechwi|agneau roti|مشوي',
+      'seffa': 'seffa|seffa medfouna|سفة',
+      'kefta': 'kefta|kofta|viande hachee|كفتة',
+      'mrouzia': 'mrouzia|مروزية',
+      'maakouda': 'maakouda|makouda|maaqouda|معقودة',
+      'chakchouka': 'chakchouka|shakshuka|chakchouka aux oeufs',
+      'babbouche': 'babbouche|ghlala|escargots|escargot|ببوش',
+      'mais-grille': 'mais grille|mais|corn|epi de mais|ذرة',
+      'sellou': 'sellou|slilou|zmita|سلو',
+      'ghriba': 'ghriba|ghoriba|ghribas|غريبة',
+      'fekkas': 'fekkas|feqqas|fakkas|فقاص',
+      'briouates-miel': 'briouates au miel|briouate au miel|briouates amandes|briouat aux amandes',
+      'baklava': 'baklava|baklawa|بقلاوة',
+      'kunafa': 'kunafa|knafeh|kunefe|konafa|كنافة',
+      'basboussa': 'basboussa|basbousa|harissa sucree|بسبوسة',
+      'sardines': 'sardine|sardines|sardines grillees|سردين',
+      'friture': 'friture|poisson frit|fritto misto|friture de poisson',
+      'calamars': 'calamar|calamars|calamari|calmar|كلمار',
+      'crevettes': 'crevette|crevettes|gambas|shrimp|prawns|crevettes pil pil|pil pil|قمرون',
+      'paella': 'paella|paella fruits de mer|بايلا',
+      'fruits-de-mer': 'plateau fruits de mer|plateau de fruits de mer|~fruits de mer|~seafood|moules|moules frites|huitres',
+      'saumon': 'saumon|salmon|pave de saumon',
+      'poisson-grille': 'poisson grille|dorade|loup|daurade|~bar|~poisson|~fish|سمك',
+      'steak': 'steak|entrecote|~boeuf|bavette|filet de boeuf|tournedos|faux filet|ستيك',
+      'poulet-roti': '~poulet|poulet roti|poulet braise|poulet entier|demi poulet|poulet mhammer|mhammer|~chicken|~دجاج',
+      'poulet-frit': 'poulet frit|fried chicken|tenders|crispy|chicken crispy|poulet pane|escalope panee',
+      'nuggets': 'nuggets|nugget|chicken nuggets',
+      'wings': 'wings|ailes|ailes de poulet|chicken wings|ailerons',
+      'frites': 'frites|fries|french fries|frite|بطاطس مقلية',
+      'potatoes': 'potatoes|wedges|pommes de terre|pomme de terre|patates|potatoes wedges',
+      'riz': 'riz|rice|riz blanc|رز',
+      'puree': 'puree|puree de pommes de terre|mashed potatoes',
+      'legumes': 'legumes|legumes sautes|legumes grilles|vegetables|خضر',
+      'cheeseburger': 'cheeseburger|cheese burger|burger cheese|burger fromage',
+      'chicken-burger': 'chicken burger|burger poulet|burger au poulet|crispy burger|zinger',
+      'double-burger': 'double burger|double cheese|big burger|burger double|maxi burger',
+      'hot-dog': 'hot dog|hotdog|hot dogs',
+      'tacos': 'tacos|french tacos|tacos poulet|tacos viande|تاكوس',
+      'panini': 'panini|paninis|sandwich grille',
+      'club-sandwich': 'club sandwich|club|sandwich club',
+      'croque': 'croque|croque monsieur|croque madame',
+      'shawarma': 'shawarma|chawarma|shwarma|شاورما',
+      'doner': 'kebab|doner|durum|doner kebab|assiette kebab',
+      'falafel': 'falafel|falafels|فلافل',
+      'houmous': 'houmous|hummus|humus|حمص',
+      'taboule': 'taboule|tabbouleh|tabouleh',
+      'fattoush': 'fattoush|fattouch',
+      'quesadilla': 'quesadilla|quesadillas',
+      'burrito': 'burrito|burritos',
+      'nachos': 'nachos|guacamole|tortilla chips',
+      'poke': 'poke|poke bowl|bowl|buddha bowl',
+      'sushi': 'sushi|sushis|maki|makis|sashimi|nigiri|سوشي',
+      'california': 'california|california roll|rolls|uramaki',
+      'ramen': 'ramen|ramens',
+      'nouilles': 'nouilles|noodles|wok|pad thai|nouilles sautees|yakisoba',
+      'riz-cantonais': 'riz cantonais|fried rice|riz saute|riz frit',
+      'nems': 'nems|nem|spring roll|spring rolls|rouleaux de printemps|rouleau de printemps',
+      'curry': 'curry|tikka|tikka masala|butter chicken|poulet curry|كاري',
+      'pepperoni': 'pepperoni|pizza pepperoni|diavola|pizza diavola',
+      'pizza-4-fromages': '4 fromages|quatre fromages|pizza 4 fromages|quattro formaggi',
+      'calzone': 'calzone|pizza calzone',
+      'bolognaise': 'bolognaise|bolognese|spaghetti bolognaise|ragu',
+      'carbonara': 'carbonara|pates carbonara',
+      'arrabbiata': 'arrabbiata|arrabiata|pesto rosso',
+      'pesto': 'pesto|pates au pesto|basilico',
+      'alfredo': 'alfredo|fettuccine alfredo|pates saumon|tagliatelle saumon|penne saumon|creme champignons|pates creme|~champignons',
+      'gnocchi': 'gnocchi|gnocchis',
+      'risotto': 'risotto|risotto champignons',
+      'mac-cheese': 'mac and cheese|mac n cheese|macaroni cheese|gratin de pates',
+      'bruschetta': 'bruschetta|bruschette',
+      'garlic-bread': 'pain a l ail|garlic bread|pain ail',
+      'focaccia': 'focaccia',
+      'burrata': 'burrata',
+      'carpaccio': 'carpaccio',
+      'antipasti': 'antipasti|antipasto|planche|planche mixte|charcuterie|planche charcuterie',
+      'cesar': 'cesar|caesar|salade cesar|caesar salad',
+      'nicoise': 'nicoise|salade nicoise',
+      'chevre-chaud': 'chevre|chevre chaud|salade de chevre|chevre miel',
+      'quinoa': 'quinoa|salade quinoa',
+      'grecque': 'grecque|greek|salade grecque|feta',
+      'soupe-oignon': 'soupe a l oignon|soupe oignon|gratinee',
+      'veloute': 'veloute|creme de legumes|soupe potiron|potiron',
+      'pain': 'pain|baguette|bread|corbeille de pain|خبز',
+      'khobz': 'khobz|pain marocain|pain rond',
+      'pain-raisins': 'pain aux raisins',
+      'chausson': 'chausson|chausson aux pommes|apple turnover',
+      'brioche': 'brioche|brioches',
+      'cookie': 'cookie|cookies',
+      'muffin': 'muffin|muffins',
+      'brownie': 'brownie|brownies',
+      'donut': 'donut|donuts|doughnut',
+      'cheesecake': 'cheesecake|cheese cake',
+      'tarte': 'tarte|tartelette|tarte aux fruits|tarte aux pommes|tartelettes',
+      'eclair': 'eclair|eclairs|eclair chocolat',
+      'mille-feuille': 'mille feuille|mille feuilles|millefeuille',
+      'macarons': 'macaron|macarons',
+      'cupcake': 'cupcake|cupcakes',
+      'cinnamon-roll': 'cinnamon roll|roule cannelle|roule a la cannelle|cinnamon',
+      'mousse-chocolat': 'mousse|mousse au chocolat|mousse chocolat',
+      'profiteroles': 'profiterole|profiteroles',
+      'yaourt': 'yaourt|yogurt|yoghurt|raib|rayeb|رايب',
+      'riz-au-lait': 'riz au lait|rice pudding|roz bel hlib',
+      'coupe-glacee': 'coupe glacee|sundae|coupe|banana split|dame blanche',
+      'lait': '~lait|milk|verre de lait|حليب',
+      'lben': 'lben|leben|lait fermente|لبن',
+      'jus-fraise': 'jus de fraise|jus fraise|~fraise|~strawberry',
+      'jus-pomme': 'jus de pomme|jus pomme|apple juice',
+      'jus-mangue': 'jus de mangue|jus mangue|~mangue|~mango',
+      'panache': 'panache|jus panache|cocktail de fruits|cocktail|jus mixte|jus de fruits',
+      'smoothie': 'smoothie|smoothies',
+      'milkshake': 'milkshake|milk shake|shake|~frappe',
+      'ice-tea': 'ice tea|iced tea|the glace|thé glace',
+      'mojito': 'mojito|virgin mojito|mojito fraise',
+      'eau-gazeuse': 'eau gazeuse|sparkling|oulmes|perrier|san pellegrino|pellegrino',
+      'energy': 'red bull|energy|energy drink|monster|boisson energisante',
+      'jus-carotte': 'jus de carotte|jus carotte|~carotte',
+      'chocolat-chaud': 'chocolat chaud|hot chocolate|~chocolat|~cacao',
+      'americano': 'americano|cafe allonge|allonge|cafe long',
+      'macchiato': 'macchiato|latte macchiato|caramel macchiato',
+      'nous-nous': 'nous nous|nousnous|noss noss|nos nos|نص نص',
+      'cafe-glace': 'cafe glace|iced coffee|ice coffee|frappuccino|iced latte|cold brew|cafe frappe',
+      'matcha': 'matcha|matcha latte',
+      'infusion': 'infusion|verveine|camomille|tisane|louiza|herbal tea|the vert|green tea',
+      'the-noir': 'the noir|black tea|earl grey|the anglais',
+      'menu-enfant': 'menu enfant|menu kids|kids menu|menu junior|enfant',
+      'combo': '~formule|~menu|combo|~formule midi|meal',
+      'sauce': '~sauce|~sauces|supplement sauce|mayonnaise|ketchup|harissa',
+      'olives': 'olive|olives|زيتون',
+      'frites-fromage': 'frites fromage|cheese fries|frites cheddar|poutine',
+      'brochettes-poulet': 'brochettes poulet|brochette poulet|brochettes de poulet|chich taouk|shish taouk|taouk',
+      'brochettes-viande': 'brochettes viande|brochette viande|brochettes kefta|brochettes de viande|brochettes boeuf',
+      'cote-agneau': 'cotelettes|cotes d agneau|cote d agneau|lamb chops|cotelette',
+      'escalope': 'escalope|escalope de poulet|cordon bleu|schnitzel',
+      'gratin': 'gratin|gratin dauphinois|gratin de legumes|moussaka',
+      'tortilla': 'tortilla|tortilla espagnole',
+      'empanadas': 'empanada|empanadas',
+      'samosa': 'samosa|samoussa|samosas|samoussas',
+      'feuilletes': 'feuillete|feuilletes|mini pizza|bouchees|bouchee|amuse bouche',
+      'quiche': 'quiche|quiche lorraine',
+      'bagel': 'bagel|bagels',
+      'jus-detox': 'detox|jus detox|jus vert|green juice',
+      'granite': 'granite|granita|slush|slushie',
+      'cafe-turc': 'cafe turc|turkish coffee|cafe arabe',
+      'chocolat-viennois': 'chocolat viennois|cafe viennois|viennois',
+      'affogato': 'affogato',
+      'panna-cotta-fruits': 'panna cotta fruits rouges|panna cotta coulis',
+      'fraisier': 'fraisier|gateau fraise|tarte aux fraises',
+      'opera': 'opera|gateau opera',
+      'tarte-citron': 'tarte citron meringuee|tarte au citron|lemon tart',
+      'crumble': 'crumble|apple crumble',
+      'fondant-coulant': 'coulant|moelleux|fondant coulant|lava cake|moelleux chocolat',
+      'salade-fruits': 'salade de fruits|fruit salad|macedoine',
+      'dattes': 'dattes|datte|dates|tmar|تمر',
+      'amandes': 'amandes|fruits secs|nuts|noix|cacahuetes',
+      'lait-amandes': 'lait d amande|jus d amande|amandes lait|milkshake amande',
+      'jus-banane': 'jus de banane|jus banane|~banane|~banana',
+    };
+    const DISH_STOP = new Set('de du des la le les au aux a l d et en with and of e di del della alla avec sur'.split(' '));
+    const dishTokens = (value) => normalizeMenuArtName(value).replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim()
+      .split(' ').filter(w => w && !DISH_STOP.has(w)).map(w => (w.length > 3 && /[sx]$/.test(w) ? w.slice(0, -1) : w));
+    let dishIndex = null;
+    /* A dish word before a base before an ingredient, more words, earlier in the name, longer keyword. */
+    const dishRankAbove = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
+    const dishEntries = () => dishIndex || (dishIndex = Object.entries(DISH_WORDS).flatMap(([key, list]) => list.split('|').map((word) => {
+      const tier = word[0] === '~' ? 0 : word[0] === '^' ? 1 : 2;
+      const text = tier < 2 ? word.slice(1) : word;
+      const arabic = /[\u0600-\u06ff]/.test(text);
+      return { key, tier, arabic, text: normalizeMenuArtName(text), toks: arabic ? [] : dishTokens(text) };
+    })).filter(e => e.arabic || e.toks.length));
+    /* La clé d'un nom, ou null si aucun mot ne parle. */
+    const dishKeyFor = (name) => {
+      const raw = normalizeMenuArtName(name);
+      if (!raw) return null;
+      const toks = dishTokens(raw);
+      let best = null;
+      for (const e of dishEntries()) {
+        let pos;
+        if (e.arabic) { if (!raw.includes(e.text)) continue; pos = 0; }
+        else {
+          pos = Infinity;
+          if (!e.toks.every(t => { const i = toks.indexOf(t); if (i < 0) return false; pos = Math.min(pos, i); return true; })) continue;
+        }
+        const rank = [e.tier, e.toks.length || 1, -pos, e.text.length];
+        if (!best || dishRankAbove(rank, best.rank)) best = { key: e.key, rank };
+      }
+      return best && best.key;
+    };
+
     /* La clé d'une photo de plat : le nom publié d'abord, puis l'id de la démo,
-       puis la catégorie, puis la cloche (un plat qu'on ne reconnaît pas). */
+       puis la catégorie (ses mots, puis ses règles), puis la cloche. */
     const menuArtKey = (id, cat, name) => {
-      const semantic = MENU_ART_RULES.find(rule => rule[0].test(normalizeMenuArtName(name)));
-      if (semantic) return semantic[1];
+      const named = dishKeyFor(name);
+      if (named) return named;
       if (MENU_ART[id]) return MENU_ART[id];
-      const category = normalizeMenuArtName(catLabels[cat] || cat);
-      const fallback = CAT_GLYPH_RULES.find(rule => rule[0].test(category));
+      const label = catLabels[cat] || cat;
+      const fromLabel = dishKeyFor(label);
+      if (fromLabel) return fromLabel;
+      const fallback = CAT_GLYPH_RULES.find(rule => rule[0].test(normalizeMenuArtName(label)));
       return fallback ? fallback[1] : 'plate';
     };
-    /* Bumped with the set (tools/dish-photos-test.mjs checks every key has
-       its file): the photos sit outside the stamped shell. */
+    /* Bumped when a photo is redrawn (tools/caisse-product-art-test.mjs checks
+       every key has its file): the photos sit outside the stamped shell. */
     const DISH_PHOTOS_V = 1;
     const menuArt = (id, cat, name) =>
       `<img class="menu-photo" src="assets/dishes/${menuArtKey(id, cat, name)}.webp?v=${DISH_PHOTOS_V}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;

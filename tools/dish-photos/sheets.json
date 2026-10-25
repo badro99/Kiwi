@@ -1,8 +1,978 @@
 {
- "s1": [["agnolotti","agnolotti del plin pasta in a shallow bowl"],["ravioli","three square ricotta and spinach ravioli"],["lasagna","a slice of lasagna"],["pasta","tagliatelle twirled on a fork"],["parmigiana","a slice of eggplant parmigiana"],["cheese","fresh mozzarella with tomato and basil"],["tiramisu","a square of tiramisu dusted with cocoa"],["flan","a chocolate bonet flan with caramel"],["pizza","a slice of margherita pizza"]],
- "s2": [["water","a clear glass bottle of still water, no label"],["soda","a plain red soda can, no logo, no text"],["juice","a glass of lemonade with a lemon slice"],["orange-juice","a glass of fresh orange juice"],["avocado-juice","a tall glass of Moroccan avocado smoothie"],["mint-tea","a Moroccan mint tea glass with fresh mint"],["espresso","an espresso in a small white cup and saucer"],["cafe-au-lait","a cafe au lait in a glass"],["cappuccino","a cappuccino with foam in a white cup"]],
- "s3": [["salade-marocaine","Moroccan salad of diced tomato, cucumber and onion in a small bowl"],["briouates","three golden triangular briouates"],["harira","a bowl of Moroccan harira soup with chickpeas"],["zaalouk","a small dish of zaalouk smoky eggplant dip"],["taktouka","a small dish of taktouka roasted pepper and tomato salad"],["soup","a bowl of vegetable soup"],["msemen","a folded square msemen flatbread"],["brochettes","three grilled meat skewers"],["salad","a green salad in a bowl"]],
- "s4": [["tajine-kefta","an open tajine of kefta meatballs with eggs"],["tajine-poulet","an open tajine of chicken with preserved lemon and olives"],["tajine-agneau","an open tajine of lamb with prunes and almonds"],["tajine-legumes","an open tajine of vegetables"],["tajine-poisson","an open tajine of fish with tomatoes and peppers"],["couscous-royal","a couscous royal with meat and vegetables"],["couscous-tfaya","couscous topped with caramelised onions and raisins"],["couscous-legumes","a vegetable couscous"],["plate","a closed silver restaurant cloche on a plate"]],
- "s5": [["pastilla-poulet","a round chicken pastilla dusted with sugar and cinnamon"],["pastilla-seafood","a round seafood pastilla topped with shrimps"],["pastilla-pigeon","a round golden pigeon pastilla with almonds"],["sandwich-kefta","a kefta sandwich in a baguette"],["sandwich-poulet","a grilled chicken sandwich in a baguette"],["sandwich-thon","a tuna sandwich in a baguette"],["bocadillo","a merguez sausage bocadillo"],["wrap","a vegetable wrap cut in half"],["burger","a burger"]],
- "s6": [["creme-brulee","a creme brulee in a ramekin"],["cornes-gazelle","three cornes de gazelle pastries"],["patisserie","an assortment of Moroccan pastries"],["fruit","a small bowl of seasonal fruit"],["glace","two scoops of ice cream in a cup"],["gateau","a slice of chocolate cake"],["crepe","a folded sweet crepe"],["baghrir","a stack of baghrir pancakes with honey"],["chebakia","a few chebakia sesame honey cookies"]]
+ "s1": [
+  [
+   "agnolotti",
+   "agnolotti del plin pasta in a shallow bowl"
+  ],
+  [
+   "ravioli",
+   "three square ricotta and spinach ravioli"
+  ],
+  [
+   "lasagna",
+   "a slice of lasagna"
+  ],
+  [
+   "pasta",
+   "tagliatelle twirled on a fork"
+  ],
+  [
+   "parmigiana",
+   "a slice of eggplant parmigiana"
+  ],
+  [
+   "cheese",
+   "fresh mozzarella with tomato and basil"
+  ],
+  [
+   "tiramisu",
+   "a square of tiramisu dusted with cocoa"
+  ],
+  [
+   "flan",
+   "a chocolate bonet flan with caramel"
+  ],
+  [
+   "pizza",
+   "a slice of margherita pizza"
+  ]
+ ],
+ "s2": [
+  [
+   "water",
+   "a clear glass bottle of still water, no label"
+  ],
+  [
+   "soda",
+   "a plain red soda can, no logo, no text"
+  ],
+  [
+   "juice",
+   "a glass of lemonade with a lemon slice"
+  ],
+  [
+   "orange-juice",
+   "a glass of fresh orange juice"
+  ],
+  [
+   "avocado-juice",
+   "a tall glass of Moroccan avocado smoothie"
+  ],
+  [
+   "mint-tea",
+   "a Moroccan mint tea glass with fresh mint"
+  ],
+  [
+   "espresso",
+   "an espresso in a small white cup and saucer"
+  ],
+  [
+   "cafe-au-lait",
+   "a cafe au lait in a glass"
+  ],
+  [
+   "cappuccino",
+   "a cappuccino with foam in a white cup"
+  ]
+ ],
+ "s3": [
+  [
+   "salade-marocaine",
+   "Moroccan salad of diced tomato, cucumber and onion in a small bowl"
+  ],
+  [
+   "briouates",
+   "three golden triangular briouates"
+  ],
+  [
+   "harira",
+   "a bowl of Moroccan harira soup with chickpeas"
+  ],
+  [
+   "zaalouk",
+   "a small dish of zaalouk smoky eggplant dip"
+  ],
+  [
+   "taktouka",
+   "a small dish of taktouka roasted pepper and tomato salad"
+  ],
+  [
+   "soup",
+   "a bowl of vegetable soup"
+  ],
+  [
+   "msemen",
+   "a folded square msemen flatbread"
+  ],
+  [
+   "brochettes",
+   "three grilled meat skewers"
+  ],
+  [
+   "salad",
+   "a green salad in a bowl"
+  ]
+ ],
+ "s4": [
+  [
+   "tajine-kefta",
+   "an open tajine of kefta meatballs with eggs"
+  ],
+  [
+   "tajine-poulet",
+   "an open tajine of chicken with preserved lemon and olives"
+  ],
+  [
+   "tajine-agneau",
+   "an open tajine of lamb with prunes and almonds"
+  ],
+  [
+   "tajine-legumes",
+   "an open tajine of vegetables"
+  ],
+  [
+   "tajine-poisson",
+   "an open tajine of fish with tomatoes and peppers"
+  ],
+  [
+   "couscous-royal",
+   "a couscous royal with meat and vegetables"
+  ],
+  [
+   "couscous-tfaya",
+   "couscous topped with caramelised onions and raisins"
+  ],
+  [
+   "couscous-legumes",
+   "a vegetable couscous"
+  ],
+  [
+   "plate",
+   "a closed silver restaurant cloche on a plate"
+  ]
+ ],
+ "s5": [
+  [
+   "pastilla-poulet",
+   "a round chicken pastilla dusted with sugar and cinnamon"
+  ],
+  [
+   "pastilla-seafood",
+   "a round seafood pastilla topped with shrimps"
+  ],
+  [
+   "pastilla-pigeon",
+   "a round golden pigeon pastilla with almonds"
+  ],
+  [
+   "sandwich-kefta",
+   "a kefta sandwich in a baguette"
+  ],
+  [
+   "sandwich-poulet",
+   "a grilled chicken sandwich in a baguette"
+  ],
+  [
+   "sandwich-thon",
+   "a tuna sandwich in a baguette"
+  ],
+  [
+   "bocadillo",
+   "a merguez sausage bocadillo"
+  ],
+  [
+   "wrap",
+   "a vegetable wrap cut in half"
+  ],
+  [
+   "burger",
+   "a burger"
+  ]
+ ],
+ "s6": [
+  [
+   "creme-brulee",
+   "a creme brulee in a ramekin"
+  ],
+  [
+   "cornes-gazelle",
+   "three cornes de gazelle pastries"
+  ],
+  [
+   "patisserie",
+   "an assortment of Moroccan pastries"
+  ],
+  [
+   "fruit",
+   "a small bowl of seasonal fruit"
+  ],
+  [
+   "glace",
+   "two scoops of ice cream in a cup"
+  ],
+  [
+   "gateau",
+   "a slice of chocolate cake"
+  ],
+  [
+   "crepe",
+   "a folded sweet crepe"
+  ],
+  [
+   "baghrir",
+   "a stack of baghrir pancakes with honey"
+  ],
+  [
+   "chebakia",
+   "a few chebakia sesame honey cookies"
+  ]
+ ],
+ "s7": [
+  [
+   "petit-dejeuner",
+   "a Moroccan breakfast tray with msemen, olive oil, honey, olives and a glass of mint tea"
+  ],
+  [
+   "omelette",
+   "a folded omelette with herbs on a plate"
+  ],
+  [
+   "oeufs",
+   "two fried eggs sunny side up on a plate"
+  ],
+  [
+   "khlii",
+   "fried eggs with khlii preserved meat in a small clay pan"
+  ],
+  [
+   "harcha",
+   "three round golden harcha semolina breads"
+  ],
+  [
+   "batbout",
+   "a stack of round batbout pita breads, one opened"
+  ],
+  [
+   "croissant",
+   "a golden butter croissant"
+  ],
+  [
+   "pain-chocolat",
+   "a pain au chocolat pastry"
+  ],
+  [
+   "tartine",
+   "a slice of toasted bread with butter and jam"
+  ]
+ ],
+ "s8": [
+  [
+   "avocado-toast",
+   "an avocado toast with a poached egg"
+  ],
+  [
+   "pancakes",
+   "a stack of American pancakes with syrup and berries"
+  ],
+  [
+   "gaufre",
+   "a Belgian waffle with powdered sugar"
+  ],
+  [
+   "granola",
+   "a bowl of yogurt with granola and fresh berries"
+  ],
+  [
+   "acai",
+   "an acai bowl topped with banana and berries"
+  ],
+  [
+   "amlou",
+   "a small bowl of amlou almond and argan spread with bread"
+  ],
+  [
+   "sfenj",
+   "three ring-shaped sfenj Moroccan doughnuts"
+  ],
+  [
+   "bissara",
+   "a bowl of bissara fava bean soup with olive oil and cumin"
+  ],
+  [
+   "loubia",
+   "a bowl of loubia white bean stew in tomato sauce"
+  ]
+ ],
+ "s9": [
+  [
+   "adass",
+   "a bowl of adass Moroccan lentil stew"
+  ],
+  [
+   "rfissa",
+   "a plate of rfissa chicken with shredded msemen and lentils"
+  ],
+  [
+   "tanjia",
+   "a tanjia clay urn with slow-cooked beef"
+  ],
+  [
+   "mechoui",
+   "roasted mechoui lamb shoulder on a platter"
+  ],
+  [
+   "seffa",
+   "a dome of seffa sweet vermicelli with cinnamon and almonds"
+  ],
+  [
+   "kefta",
+   "grilled kefta minced meat with tomato and onion on a plate"
+  ],
+  [
+   "mrouzia",
+   "mrouzia lamb with honey, raisins and almonds"
+  ],
+  [
+   "maakouda",
+   "golden maakouda potato fritters"
+  ],
+  [
+   "chakchouka",
+   "shakshuka eggs in tomato and pepper sauce in a pan"
+  ]
+ ],
+ "s10": [
+  [
+   "babbouche",
+   "a small bowl of babbouche snail soup"
+  ],
+  [
+   "mais-grille",
+   "grilled corn on the cob"
+  ],
+  [
+   "sellou",
+   "a mound of sellou sesame and almond powder sweet"
+  ],
+  [
+   "ghriba",
+   "cracked ghriba Moroccan cookies"
+  ],
+  [
+   "fekkas",
+   "sliced fekkas almond biscotti"
+  ],
+  [
+   "briouates-miel",
+   "honey-glazed sweet briouates with sesame"
+  ],
+  [
+   "baklava",
+   "a few pieces of pistachio baklava"
+  ],
+  [
+   "kunafa",
+   "a slice of kunafa with pistachios"
+  ],
+  [
+   "basboussa",
+   "squares of basboussa semolina cake with almonds"
+  ]
+ ],
+ "s11": [
+  [
+   "sardines",
+   "grilled sardines with lemon on a plate"
+  ],
+  [
+   "friture",
+   "a plate of fried fish and calamari"
+  ],
+  [
+   "calamars",
+   "fried calamari rings with lemon"
+  ],
+  [
+   "crevettes",
+   "grilled king prawns with garlic"
+  ],
+  [
+   "paella",
+   "a pan of seafood paella"
+  ],
+  [
+   "fruits-de-mer",
+   "a seafood platter with prawns, mussels and clams"
+  ],
+  [
+   "saumon",
+   "a grilled salmon fillet with vegetables"
+  ],
+  [
+   "poisson-grille",
+   "a whole grilled sea bream with lemon"
+  ],
+  [
+   "steak",
+   "a sliced grilled beef steak"
+  ]
+ ],
+ "s12": [
+  [
+   "poulet-roti",
+   "a golden roast chicken"
+  ],
+  [
+   "poulet-frit",
+   "crispy fried chicken pieces"
+  ],
+  [
+   "nuggets",
+   "a few chicken nuggets with a dip"
+  ],
+  [
+   "wings",
+   "glazed chicken wings"
+  ],
+  [
+   "frites",
+   "a cone of golden french fries"
+  ],
+  [
+   "potatoes",
+   "seasoned potato wedges"
+  ],
+  [
+   "riz",
+   "a bowl of white rice"
+  ],
+  [
+   "puree",
+   "a bowl of mashed potatoes"
+  ],
+  [
+   "legumes",
+   "a plate of sauteed vegetables"
+  ]
+ ],
+ "s13": [
+  [
+   "cheeseburger",
+   "a cheeseburger with melted cheddar"
+  ],
+  [
+   "chicken-burger",
+   "a crispy chicken burger"
+  ],
+  [
+   "double-burger",
+   "a tall double beef burger"
+  ],
+  [
+   "hot-dog",
+   "a hot dog with mustard"
+  ],
+  [
+   "tacos",
+   "a French tacos grilled wrap cut in half showing fries and meat"
+  ],
+  [
+   "panini",
+   "a grilled panini cut in half"
+  ],
+  [
+   "club-sandwich",
+   "a triangle club sandwich with toothpicks"
+  ],
+  [
+   "croque",
+   "a croque monsieur"
+  ],
+  [
+   "shawarma",
+   "a shawarma wrap"
+  ]
+ ],
+ "s14": [
+  [
+   "doner",
+   "a doner kebab plate with sliced meat"
+  ],
+  [
+   "falafel",
+   "falafel balls with tahini"
+  ],
+  [
+   "houmous",
+   "a bowl of hummus with olive oil"
+  ],
+  [
+   "taboule",
+   "a bowl of tabbouleh"
+  ],
+  [
+   "fattoush",
+   "a fattoush salad"
+  ],
+  [
+   "quesadilla",
+   "a quesadilla cut in wedges"
+  ],
+  [
+   "burrito",
+   "a burrito cut in half"
+  ],
+  [
+   "nachos",
+   "nachos with cheese and guacamole"
+  ],
+  [
+   "poke",
+   "a poke bowl with salmon and avocado"
+  ]
+ ],
+ "s15": [
+  [
+   "sushi",
+   "an assortment of sushi and maki"
+  ],
+  [
+   "california",
+   "california rolls"
+  ],
+  [
+   "ramen",
+   "a bowl of ramen with egg"
+  ],
+  [
+   "nouilles",
+   "stir-fried noodles in a bowl"
+  ],
+  [
+   "riz-cantonais",
+   "a bowl of fried rice"
+  ],
+  [
+   "nems",
+   "crispy spring rolls"
+  ],
+  [
+   "curry",
+   "a chicken curry with rice"
+  ],
+  [
+   "pepperoni",
+   "a slice of pepperoni pizza"
+  ],
+  [
+   "pizza-4-fromages",
+   "a slice of four cheese pizza"
+  ]
+ ],
+ "s16": [
+  [
+   "calzone",
+   "a calzone"
+  ],
+  [
+   "bolognaise",
+   "spaghetti bolognese"
+  ],
+  [
+   "carbonara",
+   "spaghetti carbonara"
+  ],
+  [
+   "arrabbiata",
+   "penne arrabbiata"
+  ],
+  [
+   "pesto",
+   "pasta with green pesto"
+  ],
+  [
+   "alfredo",
+   "fettuccine alfredo"
+  ],
+  [
+   "gnocchi",
+   "a plate of gnocchi"
+  ],
+  [
+   "risotto",
+   "a creamy risotto"
+  ],
+  [
+   "mac-cheese",
+   "mac and cheese"
+  ]
+ ],
+ "s17": [
+  [
+   "bruschetta",
+   "tomato bruschetta"
+  ],
+  [
+   "garlic-bread",
+   "garlic bread"
+  ],
+  [
+   "focaccia",
+   "a piece of focaccia"
+  ],
+  [
+   "burrata",
+   "a burrata with tomatoes"
+  ],
+  [
+   "carpaccio",
+   "beef carpaccio with parmesan"
+  ],
+  [
+   "antipasti",
+   "an antipasti board"
+  ],
+  [
+   "cesar",
+   "a caesar salad"
+  ],
+  [
+   "nicoise",
+   "a salade nicoise"
+  ],
+  [
+   "chevre-chaud",
+   "a goat cheese salad on toast"
+  ]
+ ],
+ "s18": [
+  [
+   "quinoa",
+   "a quinoa salad bowl"
+  ],
+  [
+   "grecque",
+   "a greek salad with feta"
+  ],
+  [
+   "soupe-oignon",
+   "a French onion soup"
+  ],
+  [
+   "veloute",
+   "a creamy pumpkin veloute"
+  ],
+  [
+   "pain",
+   "a basket of bread"
+  ],
+  [
+   "khobz",
+   "a round Moroccan khobz bread"
+  ],
+  [
+   "pain-raisins",
+   "a pain aux raisins"
+  ],
+  [
+   "chausson",
+   "a chausson aux pommes"
+  ],
+  [
+   "brioche",
+   "a brioche"
+  ]
+ ],
+ "s19": [
+  [
+   "cookie",
+   "two chocolate chip cookies"
+  ],
+  [
+   "muffin",
+   "a blueberry muffin"
+  ],
+  [
+   "brownie",
+   "a chocolate brownie square"
+  ],
+  [
+   "donut",
+   "a glazed donut"
+  ],
+  [
+   "cheesecake",
+   "a slice of cheesecake with berries"
+  ],
+  [
+   "tarte",
+   "a fruit tart"
+  ],
+  [
+   "eclair",
+   "a chocolate eclair"
+  ],
+  [
+   "mille-feuille",
+   "a mille-feuille"
+  ],
+  [
+   "macarons",
+   "colorful macarons"
+  ]
+ ],
+ "s20": [
+  [
+   "cupcake",
+   "a cupcake with frosting"
+  ],
+  [
+   "cinnamon-roll",
+   "a cinnamon roll"
+  ],
+  [
+   "mousse-chocolat",
+   "a chocolate mousse in a glass"
+  ],
+  [
+   "profiteroles",
+   "profiteroles with chocolate sauce"
+  ],
+  [
+   "yaourt",
+   "a glass pot of yogurt"
+  ],
+  [
+   "riz-au-lait",
+   "a bowl of rice pudding with cinnamon"
+  ],
+  [
+   "coupe-glacee",
+   "an ice cream sundae in a glass"
+  ],
+  [
+   "lait",
+   "a glass of milk"
+  ],
+  [
+   "lben",
+   "a glass of lben buttermilk"
+  ]
+ ],
+ "s21": [
+  [
+   "jus-fraise",
+   "a glass of strawberry juice"
+  ],
+  [
+   "jus-pomme",
+   "a glass of apple juice"
+  ],
+  [
+   "jus-mangue",
+   "a glass of mango juice"
+  ],
+  [
+   "panache",
+   "a layered Moroccan panache mixed fruit juice"
+  ],
+  [
+   "smoothie",
+   "a berry smoothie"
+  ],
+  [
+   "milkshake",
+   "a chocolate milkshake with whipped cream"
+  ],
+  [
+   "ice-tea",
+   "a glass of iced tea with lemon"
+  ],
+  [
+   "mojito",
+   "a virgin mojito with lime and mint"
+  ],
+  [
+   "eau-gazeuse",
+   "a bottle of sparkling water"
+  ]
+ ],
+ "s22": [
+  [
+   "energy",
+   "an energy drink can without logo"
+  ],
+  [
+   "jus-carotte",
+   "a glass of carrot juice"
+  ],
+  [
+   "chocolat-chaud",
+   "a hot chocolate"
+  ],
+  [
+   "americano",
+   "an americano coffee in a mug"
+  ],
+  [
+   "macchiato",
+   "a latte macchiato in a tall glass"
+  ],
+  [
+   "nous-nous",
+   "a nous nous half coffee half milk in a small glass"
+  ],
+  [
+   "cafe-glace",
+   "an iced coffee with cream"
+  ],
+  [
+   "matcha",
+   "a matcha latte"
+  ],
+  [
+   "infusion",
+   "a cup of herbal tea"
+  ]
+ ],
+ "s23": [
+  [
+   "the-noir",
+   "a cup of black tea"
+  ],
+  [
+   "menu-enfant",
+   "a kids meal box with a small burger, fries and juice"
+  ],
+  [
+   "combo",
+   "a meal combo with a burger, fries and a soda"
+  ],
+  [
+   "sauce",
+   "a small dish of sauce"
+  ],
+  [
+   "olives",
+   "a small bowl of olives"
+  ],
+  [
+   "frites-fromage",
+   "fries topped with melted cheese"
+  ],
+  [
+   "brochettes-poulet",
+   "chicken skewers"
+  ],
+  [
+   "brochettes-viande",
+   "beef kefta skewers on a plate"
+  ],
+  [
+   "cote-agneau",
+   "grilled lamb chops"
+  ]
+ ],
+ "s24": [
+  [
+   "escalope",
+   "a breaded chicken escalope with lemon"
+  ],
+  [
+   "gratin",
+   "a vegetable gratin"
+  ],
+  [
+   "tortilla",
+   "a slice of spanish tortilla"
+  ],
+  [
+   "empanadas",
+   "golden empanadas"
+  ],
+  [
+   "samosa",
+   "crispy samosas"
+  ],
+  [
+   "feuilletes",
+   "mini savory puff pastries"
+  ],
+  [
+   "quiche",
+   "a slice of quiche"
+  ],
+  [
+   "bagel",
+   "a bagel with salmon and cream cheese"
+  ],
+  [
+   "jus-detox",
+   "a green detox juice"
+  ]
+ ],
+ "s25": [
+  [
+   "granite",
+   "a granita slush in a cup"
+  ],
+  [
+   "cafe-turc",
+   "a Turkish coffee in a small cup"
+  ],
+  [
+   "chocolat-viennois",
+   "a viennese hot chocolate with whipped cream"
+  ],
+  [
+   "affogato",
+   "an affogato"
+  ],
+  [
+   "panna-cotta-fruits",
+   "a panna cotta with red berries"
+  ],
+  [
+   "fraisier",
+   "a slice of strawberry cake"
+  ],
+  [
+   "opera",
+   "a slice of opera cake"
+  ],
+  [
+   "tarte-citron",
+   "a lemon meringue tart"
+  ],
+  [
+   "crumble",
+   "an apple crumble"
+  ]
+ ],
+ "s26": [
+  [
+   "fondant-coulant",
+   "a molten chocolate lava cake"
+  ],
+  [
+   "salade-fruits",
+   "a bowl of fresh fruit salad"
+  ],
+  [
+   "dattes",
+   "a small dish of dates"
+  ],
+  [
+   "amandes",
+   "a small dish of roasted almonds and nuts"
+  ],
+  [
+   "lait-amandes",
+   "a glass of almond milk shake"
+  ],
+  [
+   "jus-banane",
+   "a banana milkshake"
+  ]
+ ]
 }

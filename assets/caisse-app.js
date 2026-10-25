@@ -603,8 +603,9 @@
        Des photos détourées, générées en une seule série pour garder une même
        lumière et une même échelle (25 octobre 2026). Elles remplacent 45
        dessins faits main, aux traits inégaux, que la règle des icônes (Material
-       Symbols seulement) n'avait jamais admis. Le nom publié décide d'abord :
-       les identifiants d'une carte publiée (it_1…) ne sont pas ceux de la démo. */
+       Symbols seulement) n'avait jamais admis. Le nom publié décide d'abord,
+       par ses mots (DISH_WORDS, assets/caisse/catalogue.js) : les identifiants
+       d'une carte publiée (it_1…) ne sont pas ceux de la démo. */
     const MENU_ART = {
       'm-001': 'salade-marocaine', 'm-002': 'briouates', 'm-003': 'harira', 'm-004': 'zaalouk',
       'm-005': 'taktouka', 'm-006': 'soup', 'm-007': 'tajine-kefta', 'm-008': 'tajine-poulet',
@@ -617,73 +618,23 @@
       'm-029': 'water', 'm-030': 'soda', 'm-031': 'creme-brulee', 'm-032': 'cornes-gazelle',
       'm-033': 'patisserie', 'm-034': 'fruit', 'm-035': 'glace',
     };
-    const MENU_ART_RULES = [
-      [/agnol+otti/, 'agnolotti'],
-      [/ravioli|tortellini/, 'ravioli'],
-      [/lasagn/, 'lasagna'],
-      [/pappardelle|tagliatelle|spaghetti|linguine|penne|rigatoni|fusilli|pates?\b|pasta\b/, 'pasta'],
-      [/parmigiana|melanzane|aubergine/, 'parmigiana'],
-      [/pizza/, 'pizza'],
-      /* « Briouates au fromage » est un briouate avant d'être du fromage. */
-      [/briouat/, 'briouates'],
-      [/fromage|cheese|mozzarella/, 'cheese'],
-      [/tiramisu/, 'tiramisu'],
-      [/bonet|flan|creme caramel|pana\s*cotta/, 'flan'],
-      [/creme brulee/, 'creme-brulee'],
-      /* Un plat d'abord : « Tajine poulet citron » contient « citron » et
-         prenait le verre de jus de la règle des boissons. */
-      [/tajine.*(?:poulet|citron)/, 'tajine-poulet'],
-      [/tajine.*(?:kefta|oeuf)/, 'tajine-kefta'],
-      [/tajine.*(?:agneau|pruneau|viande)/, 'tajine-agneau'],
-      [/tajine.*(?:poisson|fish)/, 'tajine-poisson'],
-      [/tajine/, 'tajine-legumes'],
-      [/couscous.*tfaya/, 'couscous-tfaya'],
-      [/couscous.*(?:legume|vege)/, 'couscous-legumes'],
-      [/couscous/, 'couscous-royal'],
-      [/pastilla.*(?:fruits? de mer|seafood|poisson)/, 'pastilla-seafood'],
-      [/pastilla.*pigeon/, 'pastilla-pigeon'],
-      [/pastilla/, 'pastilla-poulet'],
-      [/\b(eau|water)\b/, 'water'],
-      [/\b(coca|cola|fanta|sprite|soda|pepsi|schweppes|hawaii)\b/, 'soda'],
-      [/avocat|avocado/, 'avocado-juice'],
-      [/orange|jus.*agrume/, 'orange-juice'],
-      [/\bjus\b|juice|limonade|citron/, 'juice'],
-      [/^pommes?$/, 'soda'],
-      [/salade marocaine/, 'salade-marocaine'],
-      [/salade/, 'salad'],
-      [/harira/, 'harira'],
-      [/soupe/, 'soup'],
-      [/zaalouk/, 'zaalouk'],
-      [/taktouka/, 'taktouka'],
-      [/brochette|grillade|kebab/, 'brochettes'],
-      [/(?:the|atay).*(?:menthe)?/, 'mint-tea'],
-      [/cappuccino/, 'cappuccino'],
-      [/cafe au lait|latte|creme\b/, 'cafe-au-lait'],
-      [/cafe|espresso|americano/, 'espresso'],
-      [/msemen/, 'msemen'],
-      [/baghrir/, 'baghrir'],
-      [/chebakia/, 'chebakia'],
-      [/crepe/, 'crepe'],
-      [/sandwich.*(?:thon|tuna)/, 'sandwich-thon'],
-      [/sandwich.*(?:poulet|chicken)/, 'sandwich-poulet'],
-      [/sandwich|panini/, 'sandwich-kefta'],
-      [/bocadillo|merguez/, 'bocadillo'],
-      [/wrap/, 'wrap'],
-      [/burger/, 'burger'],
-      [/corne/, 'cornes-gazelle'],
-      [/patisserie|gateau marocain/, 'patisserie'],
-      [/gateau|cake|fondant/, 'gateau'],
-      [/glace|ice cream|sorbet/, 'glace'],
-      [/fruit/, 'fruit'],
-    ];
     /* Un article entièrement nouveau conserve un repli cohérent avec sa
        catégorie, mais tout produit reconnu reçoit d'abord sa photo. */
     const CAT_GLYPH_RULES = [
       [/pate|pasta/, 'pasta'],
-      [/dessert|sucre/, 'flan'],
-      [/boisson|soda|jus/, 'juice'],
-      [/entree|salade/, 'salad'],
+      [/viennois|boulanger/, 'croissant'],
+      [/patisser/, 'patisserie'],
+      [/dessert|sucre|douceur/, 'flan'],
+      [/chaud|cafe|hot drink/, 'espresso'],
+      [/boisson|soda|jus|drink|frais/, 'juice'],
+      [/petit dej|breakfast|matin/, 'petit-dejeuner'],
+      [/grill|braise/, 'brochettes'],
+      [/\bmer\b|poisson|fish|seafood/, 'poisson-grille'],
+      [/entree|salade|starter/, 'salad'],
       [/sandwich|pain/, 'sandwich-kefta'],
+      [/snack|fast/, 'burger'],
+      [/enfant|kids/, 'menu-enfant'],
+      [/menu|formule/, 'combo'],
     ];/* The language module loads deferred, after this script: subscribe once it exists. */
     (function subscribeCarteLang() {
       const hook = () => {
