@@ -502,7 +502,7 @@
       '.pay:not(.cmp) .cash{display:contents}' +
       /* Its ground runs down over the pane's own bottom padding (kit.css
          --k-pane-pad-end), so no key shows through under the hint line. */
-      '.pay:not(.cmp) .pri:not(:empty){position:sticky;bottom:calc(-1 * var(--k-pane-pad-end,0px));z-index:1;padding-block:12px var(--k-pane-pad-end,0px);background-color:var(--k-bg)}' +
+      '.pay:not(.cmp) .pri:not(:empty){position:sticky;bottom:calc(-1 * var(--k-pane-pad-end,0px));z-index:1;margin-block:-12px calc(-1 * var(--k-pane-pad-end,0px));padding-block:12px var(--k-pane-pad-end,0px);background-color:var(--k-bg)}' +
       /* and what scrolls into view (a focused key, a chip) stops above it:
          the button, its hint line and the pane's 24 below (2026-10-25) */
       ':host(:not([layout])){scroll-padding-block-end:calc(96px + var(--k-pane-pad-end,0px))}' +
