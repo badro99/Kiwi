@@ -20,13 +20,6 @@
 .menu-item:hover { box-shadow: var(--elev-2); }
 .menu-item.is-in-cart { box-shadow: var(--elev-2); }
 
-/* Lit icon plate on menu tiles (mint → paper wash + inset highlight) */
-.menu-item-art {
-  background: linear-gradient(160deg,
-              color-mix(in srgb, var(--mint) 40%, var(--paper-elev)) 0%,
-              var(--paper-elev) 70%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
-}
 
 /* ---- Category tabs: cooperate with the liquid-lens pill ----
  * The lens paints the moving selection pill behind the active tab, so each pill

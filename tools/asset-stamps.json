@@ -104,8 +104,8 @@
     "sha": "8eb3fe5595e9eba4"
   },
   "assets/caisse-app.js": {
-    "v": "20",
-    "sha": "7c7cd320b4d94b5b"
+    "v": "21",
+    "sha": "218470b42e2ef305"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -164,20 +164,20 @@
     "sha": "ada0dad729a81f5f"
   },
   "assets/caisse-shell.css": {
-    "v": "8",
-    "sha": "a9c36efcfbb1cb92"
+    "v": "9",
+    "sha": "1c341f16bcebc6ad"
   },
   "assets/caisse-skin.css": {
-    "v": "3",
-    "sha": "509b94e540471caf"
+    "v": "4",
+    "sha": "e39425c2ca331b31"
   },
   "assets/caisse-stock-sync.js": {
     "v": "10",
     "sha": "d4ce3014e68334fc"
   },
   "assets/caisse/catalogue.js": {
-    "v": "2",
-    "sha": "0d98e6c5817524c9"
+    "v": "3",
+    "sha": "823171366ce02640"
   },
   "assets/caisse/closing.js": {
     "v": "1",

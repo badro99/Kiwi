@@ -599,127 +599,91 @@
       { id:'2838', supplier:'Marché Central · Port', items:[{name:'Tomates fraîches',qty:20,unit:'kg'},{name:'Oignons',qty:15,unit:'kg'}], total:270, status:'recue', when:'Reçue hier' },
     ];
     let skSharedStockUnsub = null;if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindSharedStock);
-    else bindSharedStock();const MENU_ART = {
-      // Entrées
-      'm-001': _bowl(`<path class="thin" d="M25 30l2 2-2 2-2-2zM33 28l2 2-2 2-2-2zM40 30l2 2-2 2-2-2z"/>`),
-      'm-002': `<path class="fill" d="M32 13l17 32H15z"/><path d="M32 13l17 32H15z"/><path class="thin" d="M32 14v30M22 39h20"/><circle class="fill" cx="32" cy="28" r="1.6"/>`,
-      'm-003': _bowl(`<path class="thin" d="M27 27c0-3 3-3 3-6M35 27c0-3 3-3 3-6"/>`),
-      'm-004': _dish(`<path class="thin" d="M24 37c4 2 12 2 16-1"/><path class="fill" d="M30 28c-3 0-5 2-5 5s3 4 6 3 4-5 1-7z"/><path d="M31 27l2-3"/>`),
-      'm-005': _dish(`<path class="thin" d="M23 36c4-2 9-2 13 0M27 39c3-1 8-1 11 0"/><circle class="fill" cx="32" cy="33" r="1.6"/>`),
-      'm-006': _bowl(`<path class="thin" d="M29 27c0-3 3-3 3-6"/><ellipse class="fill" cx="45" cy="25" rx="3.2" ry="4.6" transform="rotate(28 45 25)"/><ellipse cx="45" cy="25" rx="3.2" ry="4.6" transform="rotate(28 45 25)"/><path d="M47 28l4 7"/>`),
-      // Tajines · cône partagé, garniture sur l'assiette
-      'm-007': _tajine(`<circle class="fill" cx="26" cy="50" r="2.6"/><circle cx="26" cy="50" r="2.6"/><circle class="fill" cx="32" cy="51" r="2.6"/><circle cx="32" cy="51" r="2.6"/><circle class="fill" cx="38" cy="50" r="2.6"/><circle cx="38" cy="50" r="2.6"/>`),
-      'm-008': _tajine(`<circle class="fill" cx="40" cy="49" r="3.4"/><circle cx="40" cy="49" r="3.4"/><path class="thin" d="M40 45.6v6.8M36.6 49h6.8"/><circle class="fill" cx="25" cy="50" r="2"/><circle cx="25" cy="50" r="2"/>`),
-      'm-009': _tajine(`<ellipse class="fill" cx="26" cy="50" rx="2.4" ry="3.1"/><ellipse cx="26" cy="50" rx="2.4" ry="3.1"/><ellipse class="fill" cx="32" cy="51" rx="2.4" ry="3.1"/><ellipse cx="32" cy="51" rx="2.4" ry="3.1"/><ellipse class="fill" cx="38" cy="50" rx="2.4" ry="3.1"/><ellipse cx="38" cy="50" rx="2.4" ry="3.1"/>`),
-      'm-010': _tajine(`<path class="thin" d="M24 51l3-5M29 52l1.5-5.5M35 52l-1.5-5.5M40 51l-3-5"/><circle class="fill" cx="24" cy="51" r="1.3"/><circle class="fill" cx="40" cy="51" r="1.3"/>`),
-      'm-011': _tajine(`<path class="fill" d="M23 50c3-3 8-3 11 0-3 3-8 3-11 0z"/><path d="M23 50c3-3 8-3 11 0-3 3-8 3-11 0z"/><path d="M23 50l-3-2v4z"/><circle cx="31" cy="49.4" r="0.8"/>`),
-      // Couscous · dôme partagé, garniture sur le dessus
-      'm-012': _dome(`<rect class="fill" x="28" y="30" width="8" height="6" rx="3"/><rect x="28" y="30" width="8" height="6" rx="3"/><path class="thin" d="M24 35l-2-5M40 35l2-5"/><circle class="fill" cx="26" cy="41" r="1.4"/><circle class="fill" cx="38" cy="41" r="1.4"/>`),
-      'm-013': _dome(`<path class="thin" d="M22 42c6 3 14 3 20 0"/><circle class="fill" cx="27" cy="38" r="1.5"/><circle class="fill" cx="32" cy="36" r="1.5"/><circle class="fill" cx="37" cy="38" r="1.5"/>`),
-      'm-014': _dome(`<path class="thin" d="M32 31v9M26 34l3 6M38 34l-3 6"/><circle class="fill" cx="32" cy="31" r="1.4"/><circle class="fill" cx="26" cy="34" r="1.4"/><circle class="fill" cx="38" cy="34" r="1.4"/>`),
-      // Pastillas · sucre/cannelle partagé, badge discret
-      'm-015': _pie(`<ellipse class="fill" cx="32" cy="34" rx="1.7" ry="2.6"/><ellipse cx="32" cy="34" rx="1.7" ry="2.6"/>`),
-      'm-016': _pie(`<path class="thin" d="M27 32c2-2 4 0 5-1M37 31c-2 2-4 0-5 1"/>`),
-      'm-017': _pie(`<circle class="fill" cx="28" cy="33" r="1.3"/><circle class="fill" cx="36" cy="33" r="1.3"/><circle class="fill" cx="32" cy="30" r="1.3"/>`),
-      // Sandwiches · baguette partagée, garniture; wrap roulé distinct
-      'm-018': _bag(`<circle class="fill" cx="24" cy="39" r="1.8"/><circle class="fill" cx="34" cy="39" r="1.8"/>`),
-      'm-019': _bag(``),
-      'm-020': _bag(`<path class="thin" d="M21 42.5h3M28 42.5h3M35 42.5h3"/>`),
-      'm-021': _bag(`<ellipse class="fill" cx="26" cy="39" rx="2.6" ry="1.7"/><ellipse cx="26" cy="39" rx="2.6" ry="1.7"/><ellipse class="fill" cx="35" cy="39" rx="2.6" ry="1.7"/><ellipse cx="35" cy="39" rx="2.6" ry="1.7"/>`),
-      'm-022': `<path class="fill" d="M22 25h20l-3 27a7 7 0 0 1-14 0z"/><path d="M22 25h20l-3 27a7 7 0 0 1-14 0z"/><ellipse class="fill" cx="32" cy="25" rx="10" ry="3.5"/><ellipse cx="32" cy="25" rx="10" ry="3.5"/><path class="thin" d="M27 24.5c1.5-2 6-2 8 0"/><path class="thin" d="M25 35h12M26 43h10"/>`,
-      // Boissons
-      'm-023': `<path class="fill" d="M21 35c0-7 5-11 11-11s11 4 11 11c0 6-5 10-11 10s-11-4-11-10z"/><path d="M21 35c0-7 5-11 11-11s11 4 11 11c0 6-5 10-11 10s-11-4-11-10z"/><path d="M25 28a8 4 0 0 1 14 0z"/><circle cx="32" cy="21.5" r="2.4"/><path d="M21 37c-5 1-8 4-10 9M22 41c-3 1-5 2-7 5"/><path d="M43 33c5 0 6 9 0 10"/><path class="thin" d="M39 19c0-3 3-3 3-6"/>`,
-      'm-024': `<path class="fill" d="M23 31h16v6a8 8 0 0 1-16 0z"/><path d="M23 31h16v6a8 8 0 0 1-16 0z"/><path d="M39 33c5 0 5 7 0 7"/><ellipse cx="31" cy="46" rx="14" ry="3"/><path class="thin" d="M28 26c0-3 3-3 3-5M34 26c0-3 3-3 3-5"/>`,
-      'm-025': `<path class="fill" d="M23 26h17v18a4 4 0 0 1-4 4H27a4 4 0 0 1-4-4z"/><path d="M23 26h17v18a4 4 0 0 1-4 4H27a4 4 0 0 1-4-4z"/><path d="M40 30c6 0 6 9 0 9"/><path class="thin" d="M24 33h15"/><path class="thin" d="M29 22c0-3 3-3 3-5M35 22c0-3 3-3 3-5"/>`,
-      'm-026': `<path class="fill" d="M22 30h18v7a9 9 0 0 1-18 0z"/><path d="M22 30h18v7a9 9 0 0 1-18 0z"/><path d="M40 32c5.5 0 5.5 8 0 8"/><ellipse cx="31" cy="47" rx="15" ry="3"/><path d="M31 28c-1.5-2-4.5-.5-3 1.5l3 3 3-3c1.5-2-1.5-3.5-3-1.5z"/>`,
-      'm-027': `<path class="fill" d="M23 23h17l-2.5 29h-12z"/><path d="M23 23h17l-2.5 29h-12z"/><path class="thin" d="M24 30h15"/><circle class="fill" cx="40" cy="20" r="5"/><circle cx="40" cy="20" r="5"/><path class="thin" d="M40 15v10M35 20h10"/><path d="M35 23l5-9"/>`,
-      'm-028': `<path class="fill" d="M24 30h16v20a3 3 0 0 1-3 3H27a3 3 0 0 1-3-3z"/><path d="M24 20h16v30a3 3 0 0 1-3 3H27a3 3 0 0 1-3-3z"/><ellipse class="fill" cx="38" cy="18" rx="4.5" ry="3.6"/><ellipse cx="38" cy="18" rx="4.5" ry="3.6"/><circle class="fill" cx="38" cy="18" r="1.6"/><path d="M30 20v-7"/>`,
-      'm-029': `<path d="M28 17h8v3l2 4v26a3 3 0 0 1-3 3H29a3 3 0 0 1-3-3V24l2-4z"/><rect class="fill" x="28" y="12" width="8" height="5" rx="1"/><rect x="28" y="12" width="8" height="5" rx="1"/><rect class="fill" x="26" y="33" width="12" height="9" rx="1.5"/><rect x="26" y="33" width="12" height="9" rx="1.5"/><path class="thin" d="M29 36.5h6M29 39h6"/><path class="thin" d="M28 28c3-2 5 2 8 0"/>`,
-      'm-030': `<path class="fill" d="M23 23h17l-2.5 29h-12z"/><path d="M23 23h17l-2.5 29h-12z"/><path class="thin" d="M24 30h15"/><rect x="27" y="32" width="5" height="5" rx="1"/><rect x="32" y="35" width="5" height="5" rx="1"/><circle class="fill" cx="29" cy="44" r="1.3"/><circle class="fill" cx="34" cy="46" r="1.1"/><path d="M37 22l4-8"/>`,
-      // Desserts
-      'm-031': `<path class="fill" d="M17 36h30v5a5 5 0 0 1-5 5H22a5 5 0 0 1-5-5z"/><path d="M17 36h30v5a5 5 0 0 1-5 5H22a5 5 0 0 1-5-5z"/><ellipse class="fill" cx="32" cy="36" rx="15" ry="3.5"/><ellipse cx="32" cy="36" rx="15" ry="3.5"/><path class="thin" d="M23 35.5h18"/><circle class="fill" cx="32" cy="31" r="2.4"/><circle cx="32" cy="31" r="2.4"/><path class="thin" d="M35 30c2-1 3-3 2-4"/>`,
-      'm-032': `<path class="fill" d="M18 46c-4-13 5-25 18-25 3 0 6 .6 9 2-9 0-17 7-19 16-1 3-1 6 0 9-3-1-6-1-8-2z"/><path d="M18 46c-4-13 5-25 18-25 3 0 6 .6 9 2-9 0-17 7-19 16-1 3-1 6 0 9-3-1-6-1-8-2z"/><path class="thin" d="M22 42c-2-9 4-17 13-19"/><circle class="fill" cx="24" cy="34" r="1"/><circle class="fill" cx="28" cy="30" r="1"/>`,
-      'm-033': `<path class="fill" d="M23 36h18l-2 12a3 3 0 0 1-3 2H28a3 3 0 0 1-3-2z"/><path d="M23 36h18l-2 12a3 3 0 0 1-3 2H28a3 3 0 0 1-3-2z"/><path class="thin" d="M28 37l-.6 12M32 37v13M36 37l.6 12"/><path class="fill" d="M22 36c0-7 5-11 10-11s10 4 10 11z"/><path d="M22 36c0-7 5-11 10-11s10 4 10 11"/><path class="thin" d="M25 34c4-3 10-3 14 0"/><circle class="fill" cx="32" cy="22" r="2.4"/><circle cx="32" cy="22" r="2.4"/>`,
-      'm-034': `<path class="fill" d="M32 25c-3-3-9-3-11 2-2 4-1 11 3 16 2 3 4 4 8 4s6-1 8-4c4-5 5-12 3-16-2-5-8-5-11-2z"/><path d="M32 25c-3-3-9-3-11 2-2 4-1 11 3 16 2 3 4 4 8 4s6-1 8-4c4-5 5-12 3-16-2-5-8-5-11-2z"/><path d="M32 25v-5"/><path class="fill" d="M32 21c2-4 6-5 9-4-1 4-5 6-9 4z"/><path d="M32 21c2-4 6-5 9-4-1 4-5 6-9 4"/><path class="thin" d="M25 31c-1 3-1 6 1 9"/>`,
-      'm-035': `<circle class="fill" cx="28" cy="26" r="6"/><circle class="fill" cx="37" cy="26" r="6"/><path class="fill" d="M24 31h16l-8 22z"/><path d="M24 31h16l-8 22z"/><path class="thin" d="M27 36h10M29 41h6M28 33l3 6M34 33l-3 6"/><circle cx="28" cy="26" r="6"/><circle cx="37" cy="26" r="6"/><circle class="fill" cx="32.5" cy="18" r="2"/><circle cx="32.5" cy="18" r="2"/>`,
-    };
-    /* Les identifiants de la carte publiée (it_1, it_2…) ne sont pas ceux de la
-       démo (m-001…). Un dessin résolu uniquement par id transformait donc toute
-       une rubrique en neuf bols identiques. Les règles ci-dessous partent du
-       NOM réellement publié : elles restent valables après import CSV, copie
-       d'une carte ou recréation d'un article. */
-    const _keftaEgg = _tajine(`<circle class="fill" cx="25" cy="50" r="2.5"/><circle cx="25" cy="50" r="2.5"/><circle class="fill" cx="39" cy="50" r="2.5"/><circle cx="39" cy="50" r="2.5"/><circle class="fill" cx="32" cy="49" r="4"/><circle cx="32" cy="49" r="4"/><circle cx="32" cy="49" r="1.4"/>`);
-    /* Kiwi originals based on the real objects, not generic category marks.
-       The chunky food shapes and garnished glass survive the caisse's 28px
-       product-card size while remaining monochrome and theme-safe. */
-    const _brochettes = `<path d="M12 56L47 9M27 58L57 18"/><path class="fill" d="M17 43l6-7 7 5-6 7zM26 31l6-7 7 5-6 7zM35 19l6-7 7 5-6 7zM33 45l6-7 7 5-6 7zM41 34l6-7 7 5-6 7zM48 24l5-6 6 4-5 7z"/><path d="M17 43l6-7 7 5-6 7zM26 31l6-7 7 5-6 7zM35 19l6-7 7 5-6 7zM33 45l6-7 7 5-6 7zM41 34l6-7 7 5-6 7zM48 24l5-6 6 4-5 7z"/><path class="thin" d="M14 53c-5 0-5 7 1 7M29 55c-5 0-5 7 1 7"/>`;
-    const _orangeJuice = `<path class="fill" d="M17 24h27l-3 32H21z"/><path d="M17 24h27l-3 32H21z"/><path class="thin" d="M20 33h22M26 37v15M32 37v15M38 37v15"/><path d="M34 28l7-17h9"/><circle class="fill" cx="46" cy="24" r="9"/><circle cx="46" cy="24" r="9"/><path class="thin" d="M46 15v9l6.4 6.4M46 24l-6.4 6.4M37 24h9"/>`;
-    const _msemen = `<path class="fill" d="M17 23h31v25H17z"/><path d="M17 23h31v25H17z"/><path class="thin" d="M20 27l25 17M44 27L20 44M23 20h27v22M20 17h27v4"/><path d="M32 31l6 5-6 5-6-5z"/>`;
-    /* Published restaurant menus have their own item IDs. These are deliberately
-       different silhouettes at card size, not four category bowls repeated down
-       a merchant's real menu. Keep product names as the source of truth. */
-    const MENU_LIVE_ART = {
-      agnolotti: `<path class="fill" d="M11 30c3-11 17-16 27-10 3 2 5 5 6 8-7 11-20 17-33 2z"/><path d="M11 30c3-11 17-16 27-10 3 2 5 5 6 8-7 11-20 17-33 2zM16 28c6-7 16-10 22-5"/><path class="thin" d="M13 33l-3 4M18 37l-2 5M25 39l-1 5M33 37l2 5M40 33l4 3"/><path class="fill" d="M34 45c3-7 11-10 18-6 2 1 4 3 5 5-5 7-13 10-23 1z"/><path d="M34 45c3-7 11-10 18-6 2 1 4 3 5 5-5 7-13 10-23 1zM39 44c4-4 9-5 13-3"/>`,
-      ravioli: `<path class="fill" d="M14 19l19-7 8 21-19 7z"/><path d="M14 19l19-7 8 21-19 7zM19 20l12-4 6 15-12 4z"/><path class="thin" d="M16 15l-3 2M22 13l-2 3M29 10l-2 3M39 15l3-1M42 22l3-1M45 29l3-1M37 36l2 3M30 39l2 3M23 42l2 3M16 36l-3 2M13 29l-3 2"/><path class="fill" d="M36 40l14-5 5 14-14 5z"/><path d="M36 40l14-5 5 14-14 5zM39 42l9-3 4 8-9 3z"/>`,
-      pasta: `<path d="M17 12v16a9 9 0 0 0 9 9h4M23 12v13M29 12v13M17 25h12M28 37c5-11 21-9 21 2 0 7-9 11-16 7-5-3-3-10 3-11 4-1 8 2 7 6"/><path class="thin" d="M26 46c-2 4-5 6-9 7M34 47c-1 4-3 7-7 9M44 46c2 3 5 5 8 6"/>`,
-      lasagna: `<path class="fill" d="M12 38l31-17 9 7-30 18z"/><path d="M12 38l31-17 9 7-30 18zM12 38v9l10 7 30-18v-8M22 46v8M12 43l10 7 30-18M15 40l8 5 27-16"/><path class="thin" d="M27 33l5-3M35 29l5-3M24 47l26-15M25 52l25-15"/>`,
-      eggplant: `<path class="fill" d="M24 26c-7 3-10 13-7 21 3 8 13 11 23 5 8-4 12-13 8-20-4-8-13-10-24-6z"/><path d="M24 26c-7 3-10 13-7 21 3 8 13 11 23 5 8-4 12-13 8-20-4-8-13-10-24-6zM22 27l-4-9 8 3 7-8 1 11 8 4-11 2zM31 21l-2-10"/><path class="thin" d="M24 42c1 5 5 8 10 7"/>`,
-      cheese: `<path class="fill" d="M13 36l30-20 9 33-39 5z"/><path d="M13 36l30-20 9 33-39 5zM13 36l39 13M13 36v18M26 31c4-2 7 0 7 4s-3 6-7 5M43 16l-3 20"/><circle class="fill" cx="37" cy="44" r="3"/><circle cx="37" cy="44" r="3"/>`,
-      tiramisu: `<path class="fill" d="M14 29l29-7 8 9-29 8z"/><path d="M14 29l29-7 8 9-29 8zM14 29v18l8 9 29-8V31M22 39v17M14 38l8 9 29-8M14 43l8 9 29-8"/><path class="thin" d="M20 27l3-1M27 25l3-1M34 24l3-1M26 31l3-1M33 29l3-1M40 27l3-1"/>`,
-      flan: `<path d="M11 49c7 4 35 4 42 0M15 46c5 3 29 3 34 0"/><path class="fill" d="M17 42l5-19c7-4 13-4 20 0l5 19c-7 5-23 6-30 0z"/><path d="M17 42l5-19c7-4 13-4 20 0l5 19c-7 5-23 6-30 0zM22 23c5 3 15 3 20 0"/><path class="thin" d="M23 33l-2 8M40 33l2 8"/>`,
-      soda: `<path class="fill" d="M22 17h20l-2 35H24z"/><path d="M22 17h20l-2 35H24zM22 17l2-5h16l2 5M24 22h16M24 47h16"/><path class="thin" d="M29 30c3-3 7-3 10 0M27 35c3-2 5-2 7 0M35 39c2-2 4-2 6 0"/>`,
-      water: `<path class="fill" d="M19 18h26l-4 35H23z"/><path d="M19 18h26l-4 35H23zM22 29c5-4 9 4 14 0 3-2 5-2 7-1M25 48h14"/><path class="thin" d="M29 35c-2 2-2 5 0 6M36 37c-2 2-2 4 0 5"/>`,
-      juice: `<path class="fill" d="M19 20h26l-4 33H23z"/><path d="M19 20h26l-4 33H23zM22 28h20M34 27l7-17h8M27 35h10M26 48h12"/><path class="thin" d="M28 39l3 3 4-4"/>`,
-      plate: `<circle class="fill" cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="13"/><path class="thin" d="M23 33c5-6 13-7 18-1M27 39c4 2 8 2 12 0"/>`,
-    };/* Tabler Icons (MIT) · deliberately selected product silhouettes, not a
-       blanket icon-font dependency. Moroccan dishes stay Kiwi originals. */
-    const MENU_LIBRARY_ART = {
-      salad: '<path d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5-2.517 5.573-4 6.5v1a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-1c-1.687-1.054-4-5-4-6.5V12a1 1 0 0 1 1-1"/><path d="M18.5 11c.351-1.017.426-2.236.5-3.714V6h-2.256c-2.83 0-4.616.804-5.64 2.076M5.255 11.008A12.2 12.2 0 0 1 5 9V8h1.755c.98 0 1.801.124 2.479.35M8 8l1-4 4 2.5M13 11v-.5a2.5 2.5 0 1 0-5 0v.5"/>',
-      soup: '<path d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5-2.517 5.573-4 6.5v1a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-1c-1.687-1.054-4-5-4-6.5V12a1 1 0 0 1 1-1"/><path d="M8 4a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2M12 4a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2M16 4a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2"/>',
-      teapot: '<path d="M10.29 3h3.42a2 2 0 0 1 1.988 1.78l1.555 14A2 2 0 0 1 15.265 21h-6.53a2 2 0 0 1-1.988-2.22l1.555-14A2 2 0 0 1 10.29 3"/><path d="M7.47 12.5 3.213 7.481A.899.899 0 0 1 3.903 6h13.09A3 3 0 0 1 20 9v3c0 1.657-1.346 3-3.007 3M7 17h10"/>',
-      coffee: '<path d="M3 14c.83.642 2.077 1.017 3.5 1 1.423.017 2.67-.358 3.5-1 .83-.642 2.077-1.017 3.5-1 1.423-.017 2.67.358 3.5 1M8 3a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2M12 3a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2"/><path d="M3 10h14v5a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6zM16.746 16.726a3 3 0 1 0 .252-5.555"/>',
-      pancake: '<path d="M5 10c0-2 3.134-3 7-3s7 1 7 3-3.134 3-7 3-7-1-7-3zM5 10v4c0 2 3.134 3 7 3s7-1 7-3v-4M7 17v1c0 1.657 2.239 3 5 3s5-1.343 5-3v-1"/><path d="m10 9 2-1 2 1-2 1z"/>',
+    else bindSharedStock();/* ── Les photos des plats (assets/dishes/<clé>.webp) ───────────────────
+       Des photos détourées, générées en une seule série pour garder une même
+       lumière et une même échelle (25 octobre 2026). Elles remplacent 45
+       dessins faits main, aux traits inégaux, que la règle des icônes (Material
+       Symbols seulement) n'avait jamais admis. Le nom publié décide d'abord :
+       les identifiants d'une carte publiée (it_1…) ne sont pas ceux de la démo. */
+    const MENU_ART = {
+      'm-001': 'salade-marocaine', 'm-002': 'briouates', 'm-003': 'harira', 'm-004': 'zaalouk',
+      'm-005': 'taktouka', 'm-006': 'soup', 'm-007': 'tajine-kefta', 'm-008': 'tajine-poulet',
+      'm-009': 'tajine-agneau', 'm-010': 'tajine-legumes', 'm-011': 'tajine-poisson',
+      'm-012': 'couscous-royal', 'm-013': 'couscous-tfaya', 'm-014': 'couscous-legumes',
+      'm-015': 'pastilla-poulet', 'm-016': 'pastilla-seafood', 'm-017': 'pastilla-pigeon',
+      'm-018': 'sandwich-kefta', 'm-019': 'sandwich-poulet', 'm-020': 'sandwich-thon',
+      'm-021': 'bocadillo', 'm-022': 'wrap', 'm-023': 'mint-tea', 'm-024': 'espresso',
+      'm-025': 'cafe-au-lait', 'm-026': 'cappuccino', 'm-027': 'orange-juice', 'm-028': 'avocado-juice',
+      'm-029': 'water', 'm-030': 'soda', 'm-031': 'creme-brulee', 'm-032': 'cornes-gazelle',
+      'm-033': 'patisserie', 'm-034': 'fruit', 'm-035': 'glace',
     };
     const MENU_ART_RULES = [
-      [/agnol+otti/, MENU_LIVE_ART.agnolotti],
-      [/ravioli|tortellini/, MENU_LIVE_ART.ravioli],
-      [/lasagn/, MENU_LIVE_ART.lasagna],
-      [/pappardelle|tagliatelle|spaghetti|linguine|penne|rigatoni|fusilli|pates?\b|pasta\b/, MENU_LIVE_ART.pasta],
-      [/parmigiana|melanzane|aubergine/, MENU_LIVE_ART.eggplant],
-      [/fromage|cheese|mozzarella/, MENU_LIVE_ART.cheese],
-      [/tiramisu/, MENU_LIVE_ART.tiramisu],
-      [/bonet|flan|creme caramel|pana\s*cotta/, MENU_LIVE_ART.flan],
+      [/agnol+otti/, 'agnolotti'],
+      [/ravioli|tortellini/, 'ravioli'],
+      [/lasagn/, 'lasagna'],
+      [/pappardelle|tagliatelle|spaghetti|linguine|penne|rigatoni|fusilli|pates?\b|pasta\b/, 'pasta'],
+      [/parmigiana|melanzane|aubergine/, 'parmigiana'],
+      [/pizza/, 'pizza'],
+      /* « Briouates au fromage » est un briouate avant d'être du fromage. */
+      [/briouat/, 'briouates'],
+      [/fromage|cheese|mozzarella/, 'cheese'],
+      [/tiramisu/, 'tiramisu'],
+      [/bonet|flan|creme caramel|pana\s*cotta/, 'flan'],
+      [/creme brulee/, 'creme-brulee'],
       /* Un plat d'abord : « Tajine poulet citron » contient « citron » et
          prenait le verre de jus de la règle des boissons. */
-      [/tajine.*(?:poulet|citron)/, MENU_ART['m-008']],
-      [/tajine.*(?:kefta|oeuf)/, _keftaEgg],
-      [/tajine/, MENU_ART['m-010']],
-      [/\b(eau|water)\b/, MENU_LIVE_ART.water],
-      [/\b(coca|cola|fanta|sprite|soda|pepsi|schweppes|hawaii)\b/, MENU_LIVE_ART.soda],
-      [/orange|jus.*agrume/, _orangeJuice],
-      [/\bjus\b|juice|limonade|citron/, MENU_LIVE_ART.juice],
-      [/^pommes?$/, MENU_LIVE_ART.soda],
-      [/salade/, MENU_LIBRARY_ART.salad, '24'],
-      [/harira|soupe/, MENU_LIBRARY_ART.soup, '24'],
-      [/brochette|grillade|kebab/, _brochettes],
-      [/(?:the|atay).*(?:menthe)?/, MENU_LIBRARY_ART.teapot, '24'],
-      [/cafe|espresso|americano/, MENU_LIBRARY_ART.coffee, '24'],
-      [/msemen|crepe/, MENU_LIBRARY_ART.pancake, '24'],
-      [/couscous/, MENU_ART['m-012']],
-      [/pastilla/, MENU_ART['m-015']],
-      [/sandwich|bocadillo/, MENU_ART['m-018']],
-      [/wrap/, MENU_ART['m-022']],
-      [/glace/, MENU_ART['m-035']],
-      [/fruit/, MENU_ART['m-034']],
+      [/tajine.*(?:poulet|citron)/, 'tajine-poulet'],
+      [/tajine.*(?:kefta|oeuf)/, 'tajine-kefta'],
+      [/tajine.*(?:agneau|pruneau|viande)/, 'tajine-agneau'],
+      [/tajine.*(?:poisson|fish)/, 'tajine-poisson'],
+      [/tajine/, 'tajine-legumes'],
+      [/couscous.*tfaya/, 'couscous-tfaya'],
+      [/couscous.*(?:legume|vege)/, 'couscous-legumes'],
+      [/couscous/, 'couscous-royal'],
+      [/pastilla.*(?:fruits? de mer|seafood|poisson)/, 'pastilla-seafood'],
+      [/pastilla.*pigeon/, 'pastilla-pigeon'],
+      [/pastilla/, 'pastilla-poulet'],
+      [/\b(eau|water)\b/, 'water'],
+      [/\b(coca|cola|fanta|sprite|soda|pepsi|schweppes|hawaii)\b/, 'soda'],
+      [/avocat|avocado/, 'avocado-juice'],
+      [/orange|jus.*agrume/, 'orange-juice'],
+      [/\bjus\b|juice|limonade|citron/, 'juice'],
+      [/^pommes?$/, 'soda'],
+      [/salade marocaine/, 'salade-marocaine'],
+      [/salade/, 'salad'],
+      [/harira/, 'harira'],
+      [/soupe/, 'soup'],
+      [/zaalouk/, 'zaalouk'],
+      [/taktouka/, 'taktouka'],
+      [/brochette|grillade|kebab/, 'brochettes'],
+      [/(?:the|atay).*(?:menthe)?/, 'mint-tea'],
+      [/cappuccino/, 'cappuccino'],
+      [/cafe au lait|latte|creme\b/, 'cafe-au-lait'],
+      [/cafe|espresso|americano/, 'espresso'],
+      [/msemen/, 'msemen'],
+      [/baghrir/, 'baghrir'],
+      [/chebakia/, 'chebakia'],
+      [/crepe/, 'crepe'],
+      [/sandwich.*(?:thon|tuna)/, 'sandwich-thon'],
+      [/sandwich.*(?:poulet|chicken)/, 'sandwich-poulet'],
+      [/sandwich|panini/, 'sandwich-kefta'],
+      [/bocadillo|merguez/, 'bocadillo'],
+      [/wrap/, 'wrap'],
+      [/burger/, 'burger'],
+      [/corne/, 'cornes-gazelle'],
+      [/patisserie|gateau marocain/, 'patisserie'],
+      [/gateau|cake|fondant/, 'gateau'],
+      [/glace|ice cream|sorbet/, 'glace'],
+      [/fruit/, 'fruit'],
     ];
     /* Un article entièrement nouveau conserve un repli cohérent avec sa
-       catégorie, mais tout produit reconnu reçoit d'abord sa silhouette. */
+       catégorie, mais tout produit reconnu reçoit d'abord sa photo. */
     const CAT_GLYPH_RULES = [
-      [/pate|pasta/, MENU_LIVE_ART.pasta],
-      [/dessert|sucre/, MENU_LIVE_ART.flan],
-      [/boisson|soda|jus/, MENU_LIVE_ART.juice],
-      [/entree|salade/, MENU_LIBRARY_ART.salad, '24'],
-      [/sandwich|pain/, MENU_ART['m-018']],
+      [/pate|pasta/, 'pasta'],
+      [/dessert|sucre/, 'flan'],
+      [/boisson|soda|jus/, 'juice'],
+      [/entree|salade/, 'salad'],
+      [/sandwich|pain/, 'sandwich-kefta'],
     ];/* The language module loads deferred, after this script: subscribe once it exists. */
     (function subscribeCarteLang() {
       const hook = () => {

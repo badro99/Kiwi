@@ -459,38 +459,24 @@
       $('#vrap-cat-count').textContent = `${cats.length - 1} ${cats.length - 1 > 1 ? 'catégories' : 'catégorie'}`;
     }
 
-    /* ---------- Menu line-art · forest strokes, mint-tint fills, 64×64.
-       Shared silhouettes (bowl, cône tajine, dôme couscous, pastilla, baguette)
-       keep the 35 cohesive; per-plat garnish tells them apart. ---------- */
-    const _bowl = (x) => `<ellipse class="fill" cx="32" cy="35" rx="18" ry="5"/><path d="M14 35a18 15 0 0 0 36 0"/><ellipse cx="32" cy="35" rx="18" ry="5"/>${x}`;
-    const _dish = (x) => `<ellipse class="fill" cx="32" cy="38" rx="19" ry="5"/><path d="M16 38a16 9 0 0 0 32 0"/><ellipse cx="32" cy="38" rx="19" ry="5"/>${x}`;
-    /* Tajine marocain · an original Kiwi silhouette informed by traditional
-       ceramic cookware: crown, conical lid, zellige band and serving base.
-       Each part stays legible at the 28px optical size used by product cards. */
-    const _tajine = (g) => `<path class="fill" d="M29 18c0-3 1.3-5 3-5s3 2 3 5z"/><path d="M29 18c0-3 1.3-5 3-5s3 2 3 5z"/><path class="fill" d="M16 43c8-7 13-16 14-25h4c1 9 6 18 14 25z"/><path d="M16 43c8-7 13-16 14-25h4c1 9 6 18 14 25z"/><path class="thin" d="M21 38h22M22 38l3-3 4 3 3-3 3 3 4-3 3 3"/><path d="M14 44h36"/><path class="fill" d="M13 47h38l-2 5c-1 3-4 5-8 5H23c-4 0-7-2-8-5z"/><path d="M13 47h38l-2 5c-1 3-4 5-8 5H23c-4 0-7-2-8-5z"/><path d="M13 49H9c-2 0-3 1-3 3s1 3 4 3h7M51 49h4c2 0 3 1 3 3s-1 3-4 3h-7"/>${g}`;
-    const _dome = (t) => `<ellipse class="fill" cx="32" cy="49" rx="21" ry="4.5"/><path class="fill" d="M14 49a18 17 0 0 1 36 0z"/><ellipse cx="32" cy="49" rx="21" ry="4.5"/><path d="M14 49a18 17 0 0 1 36 0"/><path class="thin" d="M20 45c8-3 16-3 24 0"/>${t}`;
-    const _pie = (b) => `<ellipse class="fill" cx="32" cy="50" rx="20" ry="4"/><path class="fill" d="M14 44a18 11 0 0 1 36 0z"/><ellipse cx="32" cy="50" rx="20" ry="4"/><path d="M14 44a18 11 0 0 1 36 0"/><path d="M14 44h36"/><path class="thin" d="M21 41h22M24 36l16 8M40 36L24 44M32 33v11"/>${b}`;
-    const _bag = (f) => `<rect class="fill" x="12" y="30" width="40" height="17" rx="8.5"/><rect x="12" y="30" width="40" height="17" rx="8.5"/><path class="thin" d="M20 31c1.5-2.5 5-2.5 6.5 0M32 31c1.5-2.5 5-2.5 6.5 0"/><path class="thin" d="M14 39l4-2.5 4 2.5 4-2.5 4 2.5 4-2.5 4 2.5 4-2.5 4 2.5"/>${f}`;
-
-    
     const normalizeMenuArtName = (value) => String(value || '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, ' ').trim();
     
-    const menuArt = (id, cat, name) => {
-      const normalized = normalizeMenuArtName(name);
-      const semantic = MENU_ART_RULES.find(rule => rule[0].test(normalized));
-      let art = semantic && semantic[1];
-      let viewBox = '0 0 64 64';
-      if (semantic && semantic[2] === '24') viewBox = '0 0 24 24';
-      if (!art) art = MENU_ART[id];
-      if (!art) {
-        const category = normalizeMenuArtName(catLabels[cat] || cat);
-        const fallback = CAT_GLYPH_RULES.find(rule => rule[0].test(category));
-        art = fallback ? fallback[1] : MENU_LIVE_ART.plate;
-        if (fallback && fallback[2] === '24') viewBox = '0 0 24 24';
-      }
-      return `<svg class="menu-art${viewBox === '0 0 24 24' ? ' menu-art--library' : ''}" viewBox="${viewBox}" aria-hidden="true">${art}</svg>`;
+    /* La clé d'une photo de plat : le nom publié d'abord, puis l'id de la démo,
+       puis la catégorie, puis la cloche (un plat qu'on ne reconnaît pas). */
+    const menuArtKey = (id, cat, name) => {
+      const semantic = MENU_ART_RULES.find(rule => rule[0].test(normalizeMenuArtName(name)));
+      if (semantic) return semantic[1];
+      if (MENU_ART[id]) return MENU_ART[id];
+      const category = normalizeMenuArtName(catLabels[cat] || cat);
+      const fallback = CAT_GLYPH_RULES.find(rule => rule[0].test(category));
+      return fallback ? fallback[1] : 'plate';
     };
+    /* Bumped with the set (tools/dish-photos-test.mjs checks every key has
+       its file): the photos sit outside the stamped shell. */
+    const DISH_PHOTOS_V = 1;
+    const menuArt = (id, cat, name) =>
+      `<img class="menu-photo" src="assets/dishes/${menuArtKey(id, cat, name)}.webp?v=${DISH_PHOTOS_V}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
 
     /* Une carte vide n'est pas une panne : c'est un patron qui n'a pas encore
        composé la sienne. On le dit, et on dit où la composer · même geste que
@@ -577,10 +563,9 @@
           : `<span class="menu-item-add" aria-hidden="true">+</span>`;
         return `
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="0">
-            ${m.formula ? '<span class="menu-item-optflag">Formule</span>' : ''}
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
             <span class="menu-item-art">${menuArt(m.id, m.cat, m.name)}</span>
-            <span class="menu-item-cat">${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
+            <span class="menu-item-cat">${m.formula ? '<span class="menu-item-optflag">Formule</span> · ' : ''}${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
             <span class="menu-item-name">${escTeam(menuName(m))}</span>
             <span class="menu-item-foot">
               <span class="menu-item-price mono">${fmtMAD(m.price)}</span>

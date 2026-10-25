@@ -1175,24 +1175,17 @@
     }
     .menu-item:active { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
     .menu-item:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+    /* The dish photo (assets/dishes, one generated series, 25 October 2026):
+       a cut-out on the card itself, no tinted plate behind it. */
     .menu-item-art {
-      width: 56px; height: 56px;
-      border-radius: 16px;
-      background: color-mix(in srgb, var(--cat, var(--forest)) 18%, var(--surface));
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 8px;
-      transition: background 150ms ease;
+      width: 64px; height: 64px;
+      display: block;
+      margin: -4px 0 6px -4px;
     }
-    .menu-item-art svg { width: 48px; height: 48px; }
-    .menu-item.is-in-cart .menu-item-art { background: color-mix(in srgb, var(--cat, var(--forest)) 22%, var(--surface)); }
-    /* la carte EST visuelle · one voice with the pressing & fast-food line-art */
-    .menu-art { fill: none; stroke: var(--forest); stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
-    .menu-art .fill { fill: var(--mint-tint); stroke: none; }
-    .menu-art .thin { stroke-width: 2; opacity: 0.82; }
-    /* Open-source food silhouettes use Tabler's 24px optical grid. Keeping
-       them on their native viewBox avoids the tiny, same-looking bowl effect
-       produced when generic 64px category glyphs were scaled down. */
-    .menu-art--library { stroke-width: 1.65; }
+    .menu-photo { width: 64px; height: 64px; display: block; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+    /* Formule leads the category line instead of floating above the photo,
+       where it had no style at all and sat as loose text (owner, 2026-10-25). */
+    .menu-item-optflag { color: var(--forest); font-weight: 700; }
     .menu-item-cat {
       /* The category hue, pulled toward ink: amber or mint at 10 px on paper
          read at 2.7:1, the mix keeps the hue and clears 4.5:1. */
@@ -5523,11 +5516,6 @@
     /* ── Nuit : corrections que le remap de jetons ne couvre pas ─────────── */
     /* Le voile des modales s'assombrit comme sur le dashboard nuit. */
     html[data-caisse-theme="dark"] .modal-veil { background: rgba(8,11,10,0.92); }
-    /* Le liseré lumineux « papier éclairé » de caisse-skin devient un fil
-       discret : un highlight blanc à 85 % éblouit sur charbon. */
-    html[data-caisse-theme="dark"] .menu-item-art {
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-    }
     html[data-caisse-theme="dark"] .rightpanel { box-shadow: var(--elev-1); }
     /* L'accueil plein écran garde son papier chaud en jour ; la nuit il
        s'éteint sur charbon · l'encre remappée (claire) redevient lisible. */

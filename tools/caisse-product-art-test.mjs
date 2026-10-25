@@ -1,103 +1,89 @@
-import caisseTestSource from './caisse-test-source.cjs';
+/* The till's dish pictures. Since 25 October 2026 they are photographs,
+ * cut out on transparency and generated in one series so every dish shares
+ * the same light, angle and scale (assets/dishes/<key>.webp, 128 px). They
+ * replaced 45 hand-drawn line drawings with uneven strokes.
+ *
+ * What this holds: the shell icons; that a dish is matched by its published
+ * NAME first (a published menu's ids, it_1…, are not the demo's m-001…), then
+ * by its demo id, then by its category, then a neutral cloche; that the real
+ * Pasta Corner menu does not collapse onto a few pictures; the traps already
+ * met (a lemon chicken tajine is not a juice, Hawaii is a soda, apple in a
+ * juice name is not a can); and that every key has its file and every file a
+ * key. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
-const manifest = fs.readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8');
-const tablerLicense = fs.readFileSync(new URL('../assets/icons/tabler/LICENSE.txt', import.meta.url), 'utf8');
+const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const caisse = read('kiwi-caisse.html');
+const manifest = read('manifest.webmanifest');
+const app = read('assets/caisse-app.js');
+const catalogue = read('assets/caisse/catalogue.js');
+let n = 0;
+const ok = (v, m) => { assert.ok(v, m); n++; };
+const eq = (a, b, m) => { assert.equal(a, b, m); n++; };
+const ne = (a, b, m) => { assert.notEqual(a, b, m); n++; };
 
-assert.match(caisse, /rel="icon" href="assets\/kiwi-favicon-new\.svg\?v=3"/,
-  'the caisse browser tab declares the current Kiwi favicon');
-assert.match(caisse, /apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/,
-  'the iPhone home-screen icon uses the current Kiwi mark');
-assert.doesNotMatch(manifest, /kiwi-employee-k-/,
-  'the caisse manifest cannot reuse a legacy letter-k icon');
-assert.match(manifest, /kiwi-employee-192\.png\?v=2/);
-assert.match(manifest, /kiwi-employee-512\.png\?v=2/);
+ok(/rel="icon" href="assets\/kiwi-favicon-new\.svg\?v=3"/.test(caisse), 'the caisse browser tab declares the current Kiwi favicon');
+ok(/apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/.test(caisse), 'the iPhone home-screen icon uses the current Kiwi mark');
+ok(!/kiwi-employee-k-/.test(manifest), 'the caisse manifest cannot reuse a legacy letter-k icon');
+ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest), 'the manifest icons are the current mark');
 
-assert.match(caisse, /const normalizeMenuArtName/,
-  'published menu artwork is resolved from stable product names, not only demo ids');
-for (const term of ['salade', 'harira', 'tajine', 'brochette', 'menthe', 'cafe', 'orange', 'msemen']) {
-  assert.match(caisse, new RegExp(term), `the live restaurant menu recognizes ${term}`);
-}
-assert.match(caisse, /menuArt\(m\.id, m\.cat, m\.name\)/,
-  'the renderer passes the real product name to the artwork resolver');
-assert.match(caisse, /const semantic = MENU_ART_RULES\.find/,
-  'semantic artwork takes precedence before the category fallback');
-assert.match(caisse, /let art = semantic && semantic\[1\];[\s\S]*if \(!art\) art = MENU_ART\[id\]/,
-  'semantic artwork also supersedes legacy demo-id artwork');
-assert.match(caisse, /MENU_LIBRARY_ART = \{[\s\S]*salad:[\s\S]*soup:[\s\S]*teapot:[\s\S]*coffee:[\s\S]*pancake:/,
-  'the menu includes distinct, recognizable food and drink silhouettes');
-assert.match(caisse, /const _tajine = \(g\) => `[\s\S]*M29 18c0-3[\s\S]*M16 43c8-7[\s\S]*M22 38l3-3[\s\S]*M13 47h38[\s\S]*M13 49H9[\s\S]*M51 49h4/,
-  'the original Moroccan tajine keeps a crown, conical lid, zellige band, ceramic base and handles');
-assert.match(caisse, /const _brochettes = `[\s\S]*M12 56L47 9[\s\S]*M17 43l6-7[\s\S]*M48 24l5-6/,
-  'brochettes use two readable skewers with six distinct food pieces');
-assert.match(caisse, /const _orangeJuice = `[\s\S]*M17 24h27[\s\S]*M34 28l7-17[\s\S]*cx="46" cy="24" r="9"/,
-  'orange juice uses a filled glass, bent straw and segmented citrus garnish');
-assert.match(caisse, /\/brochette\|grillade\|kebab\/, _brochettes/,
-  'published brochettes resolve to the Kiwi skewer artwork');
-assert.match(caisse, /\/orange\|jus\.\*agrume\/, _orangeJuice/,
-  'published orange drinks resolve to the Kiwi orange-juice artwork');
-assert.match(caisse, /viewBox = '0 0 24 24'/,
-  'library artwork keeps its native optical grid instead of being distorted');
-assert.match(caisse, /menu-art--library/,
-  'open-source silhouettes receive an optical-size treatment');
-assert.match(tablerLicense, /MIT License[\s\S]*Paweł Kuna/,
-  'the bundled Tabler-derived silhouettes retain their license notice');
+ok(/menuArt\(m\.id, m\.cat, m\.name\)/.test(catalogue), 'the renderer passes the real product name to the picture resolver');
+ok(!/<svg class="menu-art/.test(catalogue) && !/const _bowl|const _tajine|MENU_LIVE_ART|MENU_LIBRARY_ART/.test(app + catalogue),
+  'no hand-drawn dish path is left: the pictures are the photographs');
 
-// Exercise the same resolver that renders merchant cards, rather than merely
-// checking that artwork names appear somewhere in the HTML source.
-const artStart = caisse.indexOf('    const _bowl = (x) =>');
-const artEnd = caisse.indexOf('    /* Une carte vide', artStart);
-assert.ok(artStart > 0 && artEnd > artStart, 'the card-art resolver is extractable');
-const resolveArt = new Function('catOrder', 'catLabels',
-  `${caisse.slice(artStart, artEnd)}; return menuArt;`)([], {
+// Run the resolver the cards run, not a text search.
+const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* The language module loads deferred'));
+const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
+ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey'), 'the picture tables and resolver are extractable');
+const { key, html, MENU_ART, MENU_ART_RULES, CAT_GLYPH_RULES } = new Function('catLabels',
+  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, MENU_ART_RULES, CAT_GLYPH_RULES };`)({
     pasta: 'Choisissez vos Pâtes', signatures: 'Signatures', desserts: 'Desserts',
-    drinks: 'Boissons', soda: 'Soda+eau'
+    drinks: 'Boissons', soda: 'Soda+eau', tajines: 'Tajines'
   });
+
 const liveCards = [
-  ['Agnollotti del Pin', 'signatures'],
-  ['Ravioli Ricotta e Spinaci', 'signatures'],
-  ['Pappardelle aux champignons', 'signatures'],
-  ['Lasagna', 'signatures'],
-  ['Parmigiana Di Melanzane', 'signatures'],
-  ['Tiramisù', 'desserts'],
-  ['Bonet', 'desserts'],
-  ['Eau', 'soda'],
-  ['Coca-Cola', 'soda'],
-  ["Jus D'orange", 'drinks'],
-  ['Jus citron', 'drinks']
+  ['Agnollotti del Pin', 'signatures'], ['Ravioli Ricotta e Spinaci', 'signatures'],
+  ['Pappardelle aux champignons', 'signatures'], ['Lasagna', 'signatures'],
+  ['Parmigiana Di Melanzane', 'signatures'], ['Tiramisù', 'desserts'], ['Bonet', 'desserts'],
+  ['Eau', 'soda'], ['Coca-Cola', 'soda'], ["Jus D'orange", 'drinks'], ['Jus citron', 'drinks']
 ];
-const liveArt = liveCards.map(([name, cat]) => resolveArt(`it_${name.length}`, cat, name));
-assert.equal(new Set(liveArt).size, liveCards.length,
-  'published pasta, desserts and drinks must not collapse to the same generic pictogram');
-assert.notEqual(resolveArt('it_x', 'desserts', 'Spécial maison'),
-  resolveArt('it_x', 'drinks', 'Spécial maison'),
-  'unknown products use a category-relevant silhouette, not category index modulo four');
-assert.match(resolveArt('it_x', 'pasta', 'Spécial maison'), /M17 12v16/,
-  'the pasta category uses a pasta silhouette for unnamed dishes');
-assert.match(resolveArt('it_x', 'signatures', 'Spécial maison'), /<circle[^>]+r="20"/,
-  'an unknown signature has a neutral plate rather than a misleading bowl or drink');
-assert.equal(resolveArt('it_x', 'drinks', 'Jus de kiwi et pommes'),
-  resolveArt('it_x', 'drinks', 'Jus citron'),
-  'apple in a juice name cannot be misclassified as a canned soda');
-assert.equal(resolveArt('it_x', 'soda', 'Hawaii'),
-  resolveArt('it_x', 'soda', 'Coca-Cola'),
-  'the published Hawaii soda uses a can, not a generic juice glass');
-assert.notEqual(resolveArt('it_x', 'signatures', 'Supplément Fromage'),
-  resolveArt('it_x', 'signatures', 'Spécial maison'),
-  'cheese supplements have their own silhouette');
-assert.equal(resolveArt('it_x', 'desserts', 'Panacotta'),
-  resolveArt('it_x', 'desserts', 'Bonet'),
-  'the published panacotta renders as a moulded dessert');
+const live = liveCards.map(([name, cat]) => key(`it_${name.length}`, cat, name));
+eq(new Set(live).size, liveCards.length, 'published pasta, desserts and drinks keep a picture each: ' + live.join(', '));
+eq(key('it_x', 'pasta', 'Spécial maison'), 'pasta', 'the pasta category shows pasta for an unnamed dish');
+eq(key('it_x', 'signatures', 'Spécial maison'), 'plate', 'an unknown signature gets the neutral cloche, not a misleading dish');
+ne(key('it_x', 'desserts', 'Spécial maison'), key('it_x', 'drinks', 'Spécial maison'), 'unknown products follow their category');
+eq(key('it_x', 'drinks', 'Jus de kiwi et pommes'), key('it_x', 'drinks', 'Jus citron'), 'apple in a juice name is not a can');
+eq(key('it_x', 'soda', 'Hawaii'), key('it_x', 'soda', 'Coca-Cola'), 'the published Hawaii soda is a can');
+eq(key('it_x', 'signatures', 'Supplément Fromage'), 'cheese', 'cheese supplements have their own picture');
+eq(key('it_x', 'desserts', 'Panacotta'), key('it_x', 'desserts', 'Bonet'), 'panna cotta renders as a moulded dessert');
+eq(key('m-008', 'tajines', 'Tajine poulet citron'), 'tajine-poulet', 'a lemon chicken tajine is a tajine, not a juice glass');
+eq(key('it_x', 'tajines', 'Tajine agneau pruneaux'), 'tajine-agneau', 'a lamb and prune tajine has its own picture');
+eq(key('it_x', 'x', 'Couscous tfaya'), 'couscous-tfaya', 'couscous tfaya is told from the royal');
+eq(key('it_x', 'x', 'Pastilla fruits de mer'), 'pastilla-seafood', 'a seafood pastilla is not the chicken one');
+eq(key('it_x', 'x', 'Crème brûlée'), 'creme-brulee', 'crème brûlée is not taken by the coffee rule');
+eq(key('it_x', 'x', 'Sandwich thon'), 'sandwich-thon', 'a tuna sandwich is its own picture');
+eq(key('m-030', 'boissons', 'Spécial'), 'soda', 'a demo id still finds its picture when the name says nothing');
 
-// A dish named after its garnish is still a dish: « citron » once handed the
-// lemon chicken tajine the juice glass, on the till's busiest category.
-assert.equal(resolveArt('m-008', 'tajines', 'Tajine poulet citron'),
-  resolveArt('it_x', 'tajines', 'Tajine poulet'),
-  'a lemon chicken tajine renders as a tajine, not a juice glass');
-assert.notEqual(resolveArt('m-008', 'tajines', 'Tajine poulet citron'),
-  resolveArt('it_x', 'drinks', 'Jus citron'),
-  'the drink rule cannot claim a tajine through its garnish');
+// Every demo dish, by its own name, reaches the photo drawn for it.
+const demo = [...app.matchAll(/\{ id: '(m-\d{3})', cat: '([a-z]+)',\s*name: (?:'([^']*)'|"([^"]*)")/g)].map((m) => [m[1], m[2], m[3] || m[4]]);
+ok(demo.length >= 30, `the demo menu is read (${demo.length} dishes)`);
+for (const [id, cat, name] of demo) eq(key(id, cat, name), MENU_ART[id], `${name} shows its own photo`);
 
-console.log('caisse-product-art-test: 37 controls passed');
+const src = html('it_x', 'signatures', 'Lasagna');
+ok(/^<img class="menu-photo" src="assets\/dishes\/lasagna\.webp\?v=\d+" alt=""[^>]* width="64" height="64"[^>]* loading="lazy"/.test(src),
+  'a card draws the photo as a decorative, lazily loaded 64 px image: ' + src);
+
+// Every key the tables can return has its file, and every file is reachable.
+const keys = new Set(['plate', ...Object.values(MENU_ART), ...MENU_ART_RULES.map((r) => r[1]), ...CAT_GLYPH_RULES.map((r) => r[1])]);
+const files = new Set(fs.readdirSync(new URL('../assets/dishes/', import.meta.url)).filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)));
+const missing = [...keys].filter((k) => !files.has(k));
+eq(missing.length, 0, 'every picture key has its photo: missing ' + missing.join(', '));
+const orphan = [...files].filter((f) => !keys.has(f));
+eq(orphan.length, 0, 'every photo is reachable from a rule: unused ' + orphan.join(', '));
+for (const f of files) {
+  const b = fs.readFileSync(new URL(`../assets/dishes/${f}.webp`, import.meta.url));
+  ok(b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP' && b.length < 24000, `${f}.webp is a small WebP (${b.length} B)`);
+}
+
+console.log(`caisse-product-art-test: ${n} controls passed`);
