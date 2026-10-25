@@ -607,15 +607,17 @@ try {
   });
 
   /* 3b · Un appareil à l’est du magasin, la nuit ──────────────────────────
-     À 22 h 30 UTC, Paris (UTC+2) est déjà le lendemain, Casablanca (UTC+0 ou
-     UTC+1 selon la base de fuseaux) pas encore. Le serveur juge « futur » dans
-     le fuseau du magasin : chaque date proposée par défaut doit être la sienne. */
-  await S.run('fuseau · à Paris à 22 h 30 UTC, les dates par défaut sont celles du magasin', async (tr) => {
+     À 22 h 30 UTC, Dubaï (UTC+4, sans heure d'été) est déjà le lendemain,
+     Casablanca (UTC+0 ou UTC+1 selon la base de fuseaux) pas encore. Le serveur
+     juge « futur » dans le fuseau du magasin : chaque date proposée par défaut
+     doit être la sienne. Paris ne convenait pas : il n'est à UTC+2 que l'été,
+     et le 25 octobre, à l'heure d'hiver, 22 h 30 UTC y restait le même jour. */
+  await S.run('fuseau · à Dubaï à 22 h 30 UTC, les dates par défaut sont celles du magasin', async (tr) => {
     const day = new Date().toISOString().slice(0, 10);
     const at = Date.parse(day + 'T22:30:00Z');
     const next = new Date(at + 864e5).toISOString().slice(0, 10);
-    const { page } = await dashboard(tr, { tz: 'Europe/Paris', at });
-    eq(await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())), next, 'l’appareil, lui, est déjà au lendemain');
+    const { page } = await dashboard(tr, { tz: 'Asia/Dubai', at });
+    eq(await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())), next, 'l’appareil, lui, est déjà au lendemain');
     await openInvoicing(page);
     await click(page, '[data-inv-act="new"]');
     await page.waitForSelector('[data-f="issue"]', { visible: true });

@@ -310,6 +310,15 @@
  * the rest all opened with a 96 px blank band above and below the work
  * (2026-10-25). Every one of them, once, here. */
 .kiwi-dna > .kiwi-dna-main > section { padding-block: 0; }
+/* …except under the floating « Scan continu » launcher (assets/retail-scan.css:
+ * fixed, 24 px from the corner, 54 px tall), mounted on the épicerie, pharmacie,
+ * librairie, fleuriste and comptoir tills. The 96 px band was what kept their
+ * last action clear of it: without it the launcher sat on « Valider la vente »
+ * and a tap there opened the scanner instead of the sale (2026-10-25). Those
+ * five keep just the launcher's height below the work, the others none. Maison
+ * is left out: retail-scan.css parks its launcher beside the checkout column,
+ * clear of « Encaisser », so its panel keeps no band (maison-caisse test). */
+.kiwi-dna:not(#pos-maison):has(.krs-launch) > .kiwi-dna-main > section { padding-bottom: calc(24px + 54px + 12px); }
 .kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-rail { left: auto; right: 0; }
 .kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-main {
   inset: 0 var(--kiwi-dna-rail-w) 0 0;
