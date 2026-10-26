@@ -384,8 +384,10 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     /* Depuis la vague Q, `amount` ne contient plus le pourboire (salon, spa) :
        un pourboire plus grand qu'une petite prestation est réel, et le refuser
        laissait la vente bloquée sur la caisse. Plafond : le montant de la vente
-       ou 1 000 MAD, le plus grand des deux ; au-delà, c'est une saisie fausse. */
-    if (!Number.isSafeInteger(tipRaw) || tipRaw < 0 || tipRaw > Math.max(amountCents, 100000)) return json({ error: 'bad-tip' }, 400);
+       plus 200 MAD. Un pourboire hors de proportion avec une vente minuscule
+       (1 MAD de vente, 1 000 de pourboire) ne passe pas : le pourboire ne
+       compte pas en chiffre d'affaires, il serait donc moins visible. */
+    if (!Number.isSafeInteger(tipRaw) || tipRaw < 0 || tipRaw > amountCents + 20000) return json({ error: 'bad-tip' }, 400);
     tipCents = tipRaw;
   }
   const label = String((b && b.label) || 'Vente').slice(0, 80);

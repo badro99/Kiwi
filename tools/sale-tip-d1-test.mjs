@@ -62,10 +62,12 @@ ok('rejouer la même vente avec un autre pourboire ne réécrit pas le premier',
 /* §10.26 (étape 4) : un pourboire hors de 0 au montant de la vente est
    refusé, la vente avec ; il n'est plus avalé en silence. */
 const neg = await post('tip-neg', 3000, -500);
-const over = await post('tip-over', 3000, 100001);
+const over = await post('tip-over', 3000, 23001);
 // A 30 MAD haircut with a 50 MAD tip is a real sale: the tip sits beside the amount (wave Q).
 const generous = await post('tip-generous', 3000, 5000);
-ok('un pourboire plus grand que la prestation, sous 1 000 MAD, est accepté', () => assert.equal(generous.status, 200, JSON.stringify(generous)));
+ok('un pourboire plus grand que la prestation, jusqu\'à la vente + 200 MAD, est accepté', () => assert.equal(generous.status, 200, JSON.stringify(generous)));
+const outsized = await post('tip-outsized', 100, 100000);
+ok('1 MAD de vente et 1 000 MAD de pourboire : refusé (bad-tip)', () => { assert.equal(outsized.status, 400); assert.equal(outsized.body.error, 'bad-tip'); });
 const junk = await post('tip-junk', 3000, 'beaucoup');
 ok('un pourboire négatif, supérieur à la vente ou illisible est refusé (bad-tip), rien n\'est écrit', () => {
   for (const r of [neg, over, junk]) { assert.equal(r.status, 400, JSON.stringify(r)); assert.equal(r.body.error, 'bad-tip'); }
