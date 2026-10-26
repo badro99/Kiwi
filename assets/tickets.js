@@ -834,8 +834,8 @@
   async function loadTickets(options) {
     if (!options || !options.quiet) renderLoading();
     try {
-      const response = await fetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-      const data = await response.json().catch(() => ({}));
+      const response = await (await import('./request-deadline.mjs')).deadlineFetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const data = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(data.error || 'read-failed'), { code: data.error });
       if (!data.taxonomy || !Array.isArray(data.taxonomy.kinds) || !Array.isArray(data.taxonomy.areas)) {
         throw Object.assign(new Error('taxonomy-missing'), { code: 'taxonomy-missing' });
@@ -1053,8 +1053,8 @@
     }
     data.append('idempotency_key', state.publishAttempt.key);
     try {
-      const response = await fetch(API, { method: 'POST', body: data });
-      const result = await response.json().catch(() => ({}));
+      const response = await (await import('./request-deadline.mjs')).deadlineFetch(API, { method: 'POST', body: data }, 60000);
+      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
       composer.close();
       resetComposer();
@@ -1097,12 +1097,12 @@
     data.append('note', note);
     state.followupFiles.forEach((file) => data.append('images', file, file.name));
     try {
-      const response = await fetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs')).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { Accept: 'application/json' },
         body: data,
-      });
-      const result = await response.json().catch(() => ({}));
+      }, 60000);
+      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
       followupComposer.close();
       resetFollowup();
@@ -1194,12 +1194,12 @@
     const original = button.innerHTML;
     button.textContent = t(action === 'fixed' ? 'busy.moving' : 'busy.deletingImages');
     try {
-      const response = await fetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs')).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ action }),
       });
-      const result = await response.json().catch(() => ({}));
+      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
       showToast(t(action === 'fixed' ? 'toast.readyToTest' : 'toast.completed', { number: ticket.number }));
       await loadTickets({ quiet: true });
@@ -1238,7 +1238,7 @@
     const oldLabel = button.textContent;
     button.textContent = t('busy.saving');
     try {
-      const response = await fetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs')).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
@@ -1249,7 +1249,7 @@
           money_at_risk: data.get('money_at_risk') === 'on',
         }),
       });
-      const result = await response.json().catch(() => ({}));
+      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
       if (result.classificationStored === false) {
         showToast(t('toast.classPending'), true);

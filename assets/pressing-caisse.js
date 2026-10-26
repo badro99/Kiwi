@@ -2830,7 +2830,7 @@
       let cancellation = null;
       try {
         const merchant = pressingScope();
-        const response = merchant ? await fetch('/api/pressing/cancel', {
+        const response = merchant ? await (await import('./request-deadline.mjs')).deadlineFetch('/api/pressing/cancel', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ merchant, orderId: String(o.id), pin }),
         }) : null;

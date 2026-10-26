@@ -1,3 +1,4 @@
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import assert from 'node:assert/strict';
 import nativeFs from 'node:fs';
 import queueCoreSource from './core-test-source.cjs';
@@ -14,7 +15,7 @@ function harness(extra = {}) {
   });
   const document = Object.assign(target('d'), { hidden: false, visibilityState: 'visible', querySelector: () => null, getElementById: () => null });
   const window = target('w');
-  const ctx = vm.createContext({ window, document, console, URL, Date, Promise, CustomEvent: class { constructor(type) { this.type = type; } },
+  const ctx = vm.createContext({ window, document, console, URL, Date, Promise, AbortController, CustomEvent: class { constructor(type) { this.type = type; } },
     setTimeout(fn, ms) { timers.set(++id, { fn, at: now + ms }); return id; }, clearTimeout(i) { timers.delete(i); },
     ...extra });
   const settle = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
@@ -56,7 +57,7 @@ async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 6
   const h = harness();
   Object.assign(h.window, { KiwiCloudDoc: { currentSlug: () => 'test' }, KiwiEnv: { isReal: () => true } });
   h.ctx.fetch = async () => { h.hit(); return { ok: true, json: async () => ({ ok: true, tables: {}, stats: {}, now: Date.now() }) }; };
-  h.run(read('assets/floorplan-live.js'));
+  h.run(deadlineVmSource(read('assets/floorplan-live.js')));
   await pacing('floor live', h, () => h.window.KiwiFloorLive.watch(() => {}), { cap: 15000, quietCap: 15000 });
 }
 {

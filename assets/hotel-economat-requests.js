@@ -118,14 +118,14 @@
   }
 
   async function getJson(url) {
-    var r = await fetch(url, { credentials:'same-origin', cache:'no-store' });
-    var body = {}; try { body = await r.json(); } catch (_) {}
+    var r = await (await import('./request-deadline.mjs')).deadlineFetch(url, { credentials:'same-origin', cache:'no-store' });
+    var body = {}; try { body = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; }
     if (!r.ok) { var e = new Error(body.error || ('http-' + r.status)); e.status = r.status; e.body = body; throw e; }
     return body;
   }
   async function post(body) {
-    var r = await fetch('/api/inventory/internal-requests', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ merchant:merchant() }, body)) });
-    var out = {}; try { out = await r.json(); } catch (_) {}
+    var r = await (await import('./request-deadline.mjs')).deadlineFetch('/api/inventory/internal-requests', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ merchant:merchant() }, body)) });
+    var out = {}; try { out = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; }
     if (!r.ok) { var e = new Error(out.error || ('http-' + r.status)); e.status = r.status; e.body = out; throw e; }
     return out;
   }
@@ -361,6 +361,7 @@
   function key(r, action) { return 'ui:' + r.request.id + ':' + action + ':r' + r.request.revision; }
   function errorText(e) {
     var t = T(), code = String(e && e.message || '');
+    if (code === 'request-timeout') return t.offline + ' · ' + t.retry;
     if (code === 'handover-reconciliation-required') return t.handedOver;
     if (code === 'insufficient-stock' || code.indexOf('source-shortage') === 0) return t.insufficient;
     if (code === 'forbidden-action' || code === 'confirmation-side-forbidden') return code === 'confirmation-side-forbidden' ? t.sideConfirm : t.forbidden;
