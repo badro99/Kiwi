@@ -818,18 +818,14 @@ async function phoneTwins(env, merchant, phone, exceptId) {
   ).bind(merchant, exceptId, '%' + key.slice(-8)).all();
   return ((res && res.results) || []).filter((r) => phoneKey(r.phone) === key);
 }
-/* A merge keeps both profiles' notes and tags, so a merged row may hold more
- * than one profile's input limit. It still has a ceiling: the automatic twin
- * merge runs on every device sync, and without one a phone number shared by
- * two tills would grow the row forever. Existing text is kept first. */
-const MERGED_NOTES_MAX = 8000, MERGED_TAGS_MAX = 100;
+/* Merged profiles preserve every note and tag, including overflow. */
 function mergedText(current, incoming) {
   const a = String(current || ''), b = String(incoming || '');
-  if (!b || a === b || a.includes(b)) return a.slice(0, MERGED_NOTES_MAX);
-  return (a ? a + '\n' + b : b).slice(0, MERGED_NOTES_MAX);
+  if (!b || a === b || a.includes(b)) return a;
+  return (a ? a + '\n' + b : b);
 }
 function mergedTags(current, incoming) {
-  return JSON.stringify([...new Set([...tagsList(current), ...tagsList(incoming)])].slice(0, MERGED_TAGS_MAX));
+  return JSON.stringify([...new Set([...tagsList(current), ...tagsList(incoming)])]);
 }
 function mergedHospitality(current, incoming) {
   const parse = (v) => { try { return JSON.parse(v || '{}') || {}; } catch (_) { return {}; } };

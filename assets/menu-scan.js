@@ -32,6 +32,7 @@
     "drop": "Photo, PDF ou capture de votre carte",
     "hint": "Déposez jusqu'à {n} fichiers, ou cliquez pour les choisir",
     "pick": "Choisir des fichiers",
+    "overflow": "Trop de fichiers. Choisissez 6 fichiers au maximum ; aucune page importée.",
     "camera": "Prendre une photo",
     "orLink": "ou un lien",
     "urlPlaceholder": "https://le-menu-en-ligne-du-restaurant…",
@@ -73,6 +74,7 @@
     "drop": "Photo, PDF or screenshot of your menu",
     "hint": "Drop up to {n} files, or click to choose them",
     "pick": "Choose files",
+    "overflow": "Too many files. Choose at most 6 files; no pages were imported.",
     "camera": "Take a photo",
     "orLink": "or a link",
     "urlPlaceholder": "https://restaurant-menu-online…",
@@ -114,6 +116,7 @@
     "drop": "صورة أو PDF أو لقطة شاشة لقائمة الطعام",
     "hint": "أضف حتى {n} ملفات، أو اضغط لاختيارها",
     "pick": "اختيار ملفات",
+    "overflow": "عدد الملفات كبير. اختر 6 ملفات كحد أقصى. لم يتم استيراد أي صفحة.",
     "camera": "التقاط صورة",
     "orLink": "أو رابط",
     "urlPlaceholder": "https://رابط-قائمة-المطعم…",
@@ -308,7 +311,10 @@
 
     async function runFiles(files) {
       if (busy) return;
-      const list = [...files].slice(0, MAX_FILES);
+      if (files.length > MAX_FILES) {
+        toast(ui('overflow'), { type: 'error' }); return;
+      }
+      const list = [...files];
       if (!list.length) return;
       busy = true;
       const signal = (operation = new AbortController()).signal;

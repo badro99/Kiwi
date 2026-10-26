@@ -551,6 +551,7 @@
         image: dataUrl,
         filename: filename,
         prompt: promptText,
+        locale: document.documentElement.lang || localStorage.getItem('kiwiLang') || 'fr',
         merchant: merchant,
       }),
     })

@@ -972,7 +972,7 @@ import {} from './live-link/queue-store.js?v=1';
           source: 'live-link'
         },
       }));
-    } catch (_) {}
+    } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'document', 'void-event', tenant); }).catch(function () { /* next feed retries */ }); }
     if (!list.length) return;
     if (cursors.length) {
       var kill = {};
@@ -983,14 +983,17 @@ import {} from './live-link/queue-store.js?v=1';
       try {
         if (window.KiwiSales && window.KiwiSales.remove) {
           var vid = null;
-          try { vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || null; } catch (_) {}
+          try { vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || null; } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiVenue', 'getVenue', tenant); }).catch(function () { /* next feed retries */ }); }
           window.KiwiSales.remove(vid, cursors);
-          if (window.KiwiRefunds && window.KiwiRefunds.remove) window.KiwiRefunds.remove(vid, cursors);
+
         }
-      } catch (_) {}
+      } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'remove', tenant); }).catch(function () { /* next feed retries */ }); }
+    }
+    if (cursors.length && window.KiwiRefunds && window.KiwiRefunds.remove) {
+      try { window.KiwiRefunds.remove(vid, cursors); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiRefunds', 'remove', tenant); }); }
     }
     if (refs.length) {
-      try { if (window.KiwiPosSale && window.KiwiPosSale.dropRefs) window.KiwiPosSale.dropRefs(refs); } catch (_) {}
+      try { if (window.KiwiPosSale && window.KiwiPosSale.dropRefs) window.KiwiPosSale.dropRefs(refs); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiPosSale', 'dropRefs', tenant); }).catch(function () { /* next feed retries */ }); }
     }
   }
   function accumulateFeed(sales, tenant) {
@@ -1022,9 +1025,9 @@ import {} from './live-link/queue-store.js?v=1';
     var tenant = merchant();
     if (!tenant) return;                            // identity unresolved → bridge nothing
     var have = {};
-    try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = e; }); } catch (_) {}
+    try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = e; }); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'list', tenant); }).catch(function () { /* next feed retries */ }); }
     var haveRefund = {};
-    try { (window.KiwiRefunds.list(vid) || []).forEach(function (e) { if (e && e.cursor) haveRefund[e.cursor] = e; }); } catch (_) {}
+    try { (window.KiwiRefunds && window.KiwiRefunds.list ? window.KiwiRefunds.list(vid) || [] : []).forEach(function (e) { if (e && e.cursor) haveRefund[e.cursor] = e; }); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiRefunds', 'list', tenant); }).catch(function () { /* next feed retries */ }); }
     /* New sales are stored in one batch after the loop: one write, one redraw
        (KiwiSales.addMany). One add() per sale redrew the dashboard per sale. */
     var fresh = [];
@@ -1044,7 +1047,7 @@ import {} from './live-link/queue-store.js?v=1';
             label: s.label || 'Remboursement', ref: s.orderRef || s.ref || '', saleId: s.id || '',
           });
           haveRefund[cur] = 1;
-        } catch (_) {}
+        } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiRefunds', 'add', tenant); }).catch(function () { /* next feed retries */ }); }
         return;
       }
       if (have[cur]) {
@@ -1087,12 +1090,12 @@ import {} from './live-link/queue-store.js?v=1';
       have[cur] = 1;
     });
     if (fresh.length) {
-      if (window.KiwiSales.addMany) { try { window.KiwiSales.addMany(vid, fresh); } catch (_) {} }
-      else fresh.forEach(function (sale) { try { window.KiwiSales.add(vid, sale); } catch (_) {} });
+      if (window.KiwiSales.addMany) { try { window.KiwiSales.addMany(vid, fresh); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'addMany', tenant); }).catch(function () { /* next feed retries */ }); } }
+      else fresh.forEach(function (sale) { try { window.KiwiSales.add(vid, sale); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'add', tenant); }).catch(function () { /* next feed retries */ }); } });
     }
     if (annotations.length) {
-      if (window.KiwiSales.annotateMany) { try { window.KiwiSales.annotateMany(vid, annotations); } catch (_) {} }
-      else if (window.KiwiSales.annotate) annotations.forEach(function (a) { try { window.KiwiSales.annotate(vid, a.cursor, a.meta); } catch (_) {} });
+      if (window.KiwiSales.annotateMany) { try { window.KiwiSales.annotateMany(vid, annotations); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'annotateMany', tenant); }).catch(function () { /* next feed retries */ }); } }
+      else if (window.KiwiSales.annotate) annotations.forEach(function (a) { try { window.KiwiSales.annotate(vid, a.cursor, a.meta); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'annotate', tenant); }).catch(function () { /* next feed retries */ }); } });
     }
     /* Fail closed once the full entitled history is known. Any server-backed
        local row absent from it is foreign (or voided), including rows copied by
@@ -1105,7 +1108,7 @@ import {} from './live-link/queue-store.js?v=1';
         return cents >= 0;
       })
         .map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
-      try { window.KiwiSales.retainCursors(vid, allowed); } catch (_) {}
+      try { window.KiwiSales.retainCursors(vid, allowed); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiSales', 'retainCursors', tenant); }).catch(function () { /* next feed retries */ }); }
       if (window.KiwiRefunds && window.KiwiRefunds.retainCursors) {
         var refundAllowed = feedSales.filter(function (row) {
           if (!row || row.tenant !== tenant) return false;
@@ -1113,7 +1116,7 @@ import {} from './live-link/queue-store.js?v=1';
             ? Number(row.s.amountCents) : Number(row.s && row.s.amount || 0) * 100;
           return cents < 0;
         }).map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
-        try { window.KiwiRefunds.retainCursors(vid, refundAllowed); } catch (_) {}
+        try { window.KiwiRefunds.retainCursors(vid, refundAllowed); } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiRefunds', 'retainCursors', tenant); }).catch(function () { /* next feed retries */ }); }
       }
     }
   }
