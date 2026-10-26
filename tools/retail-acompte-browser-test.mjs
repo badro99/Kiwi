@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Chromium runs through the UI QA subprocess; excluded from the fast tier.
 // #94b: click the rendered Boutique and Maison controls, never call a handler.
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Chromium runs through the UI QA subprocess; excluded from the fast tier.
 // Real rendered Boutique and Maison payment sheets on loopback-only fixtures.
 // Click the product's checkout and confirmation; never invoke a handler/API.
 import { fileURLToPath } from 'node:url';
