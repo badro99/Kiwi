@@ -180,13 +180,18 @@ export async function verify(h, t, { page, region }, key, locale) {
     const el = [...document.querySelectorAll(selector)].find((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }) || document.querySelector(selector);
     const r = el.getBoundingClientRect(), style = getComputedStyle(el);
     return { lang: document.documentElement.lang, dir: document.documentElement.dir,
-      width: document.documentElement.scrollWidth, viewport: innerWidth,
+      width: document.documentElement.scrollWidth, viewport: innerWidth, screen: Math.round(visualViewport.width * visualViewport.scale),
       visible: r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight && style.visibility !== 'hidden' && Number(style.opacity) > 0 };
   }, region);
   const failures = [];
   if (state.lang !== locale) failures.push(`html lang=${state.lang}, expected ${locale}`);
   if (state.dir !== (locale === 'ar' ? 'rtl' : 'ltr')) failures.push(`html dir=${state.dir}, expected ${locale === 'ar' ? 'rtl' : 'ltr'}`);
   if (state.width > state.viewport + 1) failures.push(`horizontal overflow: ${state.width} > ${state.viewport} + 1`);
+  /* On a phone or tablet an overflow widens the layout viewport itself, so
+     scrollWidth and innerWidth grow together and the check above stays green
+     while the page pans sideways under the finger. Compare with the screen. */
+  const screen = (await page.viewport()).width;
+  if (state.viewport > screen + 1) failures.push(`layout wider than the screen: ${state.viewport} > ${screen} + 1`);
   if (!state.visible) failures.push(`surface region not visible: ${region}`);
   t.step('run axe-core against the whole document');
   if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(h.axeSource);
