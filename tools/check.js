@@ -1789,6 +1789,7 @@ section('Whole-project regressions');
   'room-charge-test.mjs',
   'hotel-reports-test.mjs',
   'hotel-economat-ui-test.mjs',
+  'economat-pagination-test.mjs',
   'economat-transfer-provenance-test.mjs',
   'economat-procurement-location-test.mjs',
   'economat-custody-contract-test.mjs',
@@ -2100,6 +2101,8 @@ section('Whole-project regressions');
     'lock-caisse-link-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
+    'check-verdict-test.mjs',
+    'wave-l-style-test.mjs',
     'pass-cache-test.mjs',
     /* Direction 2027, étape 1 · mouvement, mise en page, segmentation.
        motion.js (§14) : jetons, ressort de geste (1400 / 74,8 / 1/120 s et le
@@ -2960,6 +2963,11 @@ section('Suite CPU time (tools/suite-cpu-baseline.json)');
 }
 
 console.log('\n' + '─'.repeat(60));
+if (guard.tier() === 'full') {
+  const verdict = require('./check-verdict.cjs')({ failures, warnings });
+  console.log(verdict.line);
+  process.exit(verdict.code);
+}
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
 if (guard.tier() === 'changed') {
   const n = guard.selection().picked.size;

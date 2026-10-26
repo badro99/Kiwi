@@ -3,7 +3,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { replayShopifyOrders } from './_replay-orders.js';
+import { replayShopifyOrders, readReplayProgress } from './_replay-orders.js';
 import {
   buildExactVariantMapping, connectionFor, enqueueStockChanges,
   flushShopifyOutbox, listLocations, listShopifyVariants,
@@ -44,7 +44,13 @@ async function health(env, merchant) {
     ).bind(merchant).first();
     legacy = n(old && old.n);
   } catch (_) {}
-  return { connection: shapeConnection(connection), mapping, queue, legacyWebhookLinks: legacy };
+  const progress = await readReplayProgress(env, merchant);
+  const replay = progress ? {
+    since: n(progress.since), done: n(progress.done),
+    remaining: progress.remaining == null ? null : n(progress.remaining), more: !!progress.more,
+    lastError: String(progress.lastError || ''), exceptions: progress.exceptions || [], updatedTs: n(progress.updatedTs),
+  } : null;
+  return { connection: shapeConnection(connection), mapping, queue, legacyWebhookLinks: legacy, replay };
 }
 
 async function catalogue(env, merchant) {

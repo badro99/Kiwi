@@ -35,7 +35,7 @@ import { shopifyGraphQL } from './_lib.js';
  * page après page avant qu'elle n'entre dans le lot. */
 const MAX_ORDERS = 1000;
 const MAX_CALLS = 30;            // appels GraphQL Shopify par passage
-const MAX_LINE_PAGES = 50;       // 5 000 lignes : au-delà, on refuse plutôt que d'en oublier
+const MAX_LINE_PAGES = 50;       // 5 000 lignes : exception explicite, aucun retrait partiel
 const CURSOR_DOC = 'shopify-replay';   // store_docs, côté serveur seulement (absent de FEATURES)
 const tail = (gid) => String(gid || '').split('/').pop();
 
@@ -62,65 +62,59 @@ const LINES_QUERY = `query KiwiOrderLines($id: ID!, $after: String) {
  * reste, `next` est le curseur de la dernière commande rendue, d'où repartir. */
 export async function listShopifyOrdersSince(env, merchant, sinceTs, { after = null, maxOrders = MAX_ORDERS, maxCalls = MAX_CALLS } = {}) {
   const since = new Date(Math.max(0, Number(sinceTs) || 0)).toISOString();
-  const out = [];
+  const out = [], exceptions = [];
   let page = after || null;
   let next = after || null;
   let calls = 0;
   for (;;) {
-    if (out.length >= maxOrders || calls >= maxCalls) return { orders: out, next, more: true };
+    if (out.length + exceptions.length >= maxOrders || calls >= maxCalls) return { orders: out, exceptions, next, more: true };
     calls++;
     const res = await shopifyGraphQL(env, merchant, ORDERS_QUERY, { q: `created_at:>='${since}'`, after: page });
     const conn = (res.data && res.data.orders) || {};
     for (const edge of conn.edges || []) {
       const o = edge && edge.node;
       if (!o) continue;
-      if (out.length >= maxOrders) return { orders: out, next, more: true };
+      if (out.length + exceptions.length >= maxOrders) return { orders: out, exceptions, next, more: true };
       const li = o.lineItems || {};
       const nodes = (li.nodes || []).slice();
       let info = li.pageInfo || {};
-      let pages = 0;
+      let pages = 1;
+      let oversized = false;
       while (info.hasNextPage) {
         /* Plus d'appels : cette commande attend le passage suivant, entière. La
            première commande d'un passage est toujours finie, sinon on n'avancerait jamais. */
-        if (calls >= maxCalls && out.length) return { orders: out, next, more: true };
-        if (++pages > MAX_LINE_PAGES) throw new Error('shopify-order-too-many-lines');
+        if (calls >= maxCalls && (out.length || exceptions.length)) return { orders: out, exceptions, next, more: true };
+        if (++pages > MAX_LINE_PAGES) {
+          exceptions.push({ orderId: String(o.id || '').slice(0, 160), code: 'shopify-order-too-many-lines' });
+          oversized = true;
+          break;
+        }
         calls++;
         const more = await shopifyGraphQL(env, merchant, LINES_QUERY, { id: o.id, after: info.endCursor || null });
         const lines = (more.data && more.data.order && more.data.order.lineItems) || {};
         for (const n of lines.nodes || []) nodes.push(n);
         info = lines.pageInfo || {};
       }
-      out.push({ ...o, lineItems: { nodes } });
+      if (!oversized) out.push({ ...o, lineItems: { nodes } });
       next = edge.cursor || next;
     }
     const info = conn.pageInfo || {};
-    if (!info.hasNextPage) return { orders: out, next: null, more: false };
+    if (!info.hasNextPage) return { orders: out, exceptions, next: null, more: false };
     page = info.endCursor || next;
   }
 }
 
-/* La position gardée n'a de sens que pour la même date de départ. */
-async function readCursor(env, merchant, since) {
+/* Même document privé pour la reprise et le bilan consultable par le propriétaire.
+ * remaining=null signifie que Shopify annonce encore une page sans total exact. */
+export async function readReplayProgress(env, merchant) {
   const row = await env.DB.prepare('SELECT data FROM store_docs WHERE merchant = ? AND feature = ?').bind(merchant, CURSOR_DOC).first();
-  try {
-    const d = row && JSON.parse(row.data);
-    if (d && Number(d.since) === since && typeof d.after === 'string' && d.after) return d.after.slice(0, 1024);
-  } catch { /* document illisible : on repart du début, c'est sans danger */ }
-  return null;
+  try { return row ? JSON.parse(row.data) : null; } catch { return null; }
 }
-
-/* Écrite APRÈS le catalogue : si elle échoue, le passage suivant relit un lot déjà
- * appliqué, et les identifiants de mouvement (so-<commande>-<ligne>) le rendent
- * sans effet. Un parcours fini efface la position : le prochain repart du début. */
-async function writeCursor(env, merchant, since, after) {
-  if (!after) {
-    await env.DB.prepare('DELETE FROM store_docs WHERE merchant = ? AND feature = ?').bind(merchant, CURSOR_DOC).run();
-    return;
-  }
+async function writeProgress(env, merchant, progress) {
   await env.DB.prepare(
     `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)
      ON CONFLICT (merchant, feature) DO UPDATE SET data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
-  ).bind(merchant, CURSOR_DOC, JSON.stringify({ since, after }), Date.now()).run();
+  ).bind(merchant, CURSOR_DOC, JSON.stringify(progress), Date.now()).run();
 }
 
 /* Le cœur, sans réseau : des commandes déjà lues, le catalogue, les liens. */
@@ -167,7 +161,22 @@ export function planReplay(data, links, orders) {
  * @param {string} merchant
  * @param {{sinceTs?: number, dryRun?: boolean}} [options]
  */
-export async function replayShopifyOrders(env, merchant, { sinceTs, dryRun } = {}) {
+export async function replayShopifyOrders(env, merchant, options = {}) {
+  try { return await replayBatch(env, merchant, options); }
+  catch (error) {
+    if (!options.dryRun) {
+      const since = Math.max(0, Number(options.sinceTs) || 0);
+      const saved = await readReplayProgress(env, merchant);
+      const previous = saved && saved.since === since ? saved : { since, after: null, done: 0, remaining: null, more: true, exceptions: [] };
+      // Do not persist arbitrary remote error text (it may carry credentials).
+      const code = String(error && error.message || '');
+      const lastError = /^(catalog-(missing|busy|journal-too-long)|no-linked-variants)$/.test(code) ? code : 'shopify-replay-failed';
+      await writeProgress(env, merchant, { ...previous, lastError, updatedTs: Date.now() });
+    }
+    throw error;
+  }
+}
+async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
   const rs = await env.DB.prepare(
     `SELECT kiwi_variant_id, shopify_variant_id FROM shopify_variant_links
       WHERE merchant = ? AND status IN ('active','drift')`
@@ -175,10 +184,20 @@ export async function replayShopifyOrders(env, merchant, { sinceTs, dryRun } = {
   const links = new Map((rs.results || []).map((r) => [String(r.shopify_variant_id), String(r.kiwi_variant_id)]));
   if (!links.size) throw new Error('no-linked-variants');
   const since = Math.max(0, Number(sinceTs) || 0);
-  const after = await readCursor(env, merchant, since);
+  const saved = await readReplayProgress(env, merchant);
+  const previous = saved && saved.since === since && saved.after ? saved : null;
+  const after = previous && typeof previous.after === 'string' ? previous.after.slice(0, 1024) : null;
   const listed = await listShopifyOrdersSince(env, merchant, since, { after });
   const orders = listed.orders;
-  const keepCursor = () => writeCursor(env, merchant, since, listed.more ? listed.next : null);
+  const exceptions = [...(previous && previous.exceptions || []), ...listed.exceptions];
+  const progress = {
+    since, after: listed.more ? listed.next : null,
+    done: Number(previous && previous.done || 0) + orders.length,
+    remaining: listed.more ? null : 0, more: listed.more,
+    exceptions, lastError: '', updatedTs: Date.now(),
+  };
+  // Written after the catalogue CAS: retries remain idempotent if this write fails.
+  const keepCursor = () => writeProgress(env, merchant, progress);
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
@@ -194,6 +213,7 @@ export async function replayShopifyOrders(env, merchant, { sinceTs, dryRun } = {
       already: plan.already, unmatched: plan.unmatched, short: plan.short, shortLines: plan.shortLines,
       sample: plan.apply.slice(0, 20).map((x) => ({ order: x.order, variant: x.vid, qty: x.qty, at: x.at })),
       /* `more` : d'autres commandes suivent ; le prochain passage reprend à `cursor`. */
+      done: progress.done, remaining: progress.remaining, exceptions,
       resumed: !!after, more: listed.more, cursor: listed.more ? listed.next : null,
     };
     if (dryRun) return { ...summary, applied: 0, dryRun: true };
