@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { reconstructEconomat } from './economat-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,7 +17,7 @@ async function check(name, fn) {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const spec = fs.readFileSync(path.join(root, 'docs/specs/HOTEL_ECONOMAT.md'), 'utf8');
 const plan = fs.readFileSync(path.join(root, 'docs/specs/HOTEL_ECONOMAT_PLAN.md'), 'utf8');
-const runtime = fs.readFileSync(path.join(root, 'functions/api/inventory/internal-requests.js'), 'utf8');
+const runtime = reconstructEconomat();
 
 await check('current V1 custody remains confirmation-only', () => {
   assert.match(spec, /Économat holds the\s+goods until the department confirms receipt/);

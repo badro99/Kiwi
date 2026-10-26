@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { reconstructEconomat } from './economat-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,7 +23,7 @@ await check('dispute reaches the label branch and all three projection columns a
   const disputed = applyRequestCommand(state, 'dispute', { now: 300 }).value;
   assert.equal(deriveRequestLabel(disputed.request, disputed.lines), 'disputed');
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const source = fs.readFileSync(path.join(root, 'functions/api/inventory/internal-requests.js'), 'utf8');
+  const source = reconstructEconomat();
   assert.match(source, /fulfilment_method = \?/);
   assert.match(source, /delivery_started_ts = \?/);
   assert.match(source, /disputed = \?/);

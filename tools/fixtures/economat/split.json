@@ -1,0 +1,47 @@
+{
+  "sha256": "c5864ff2edc0563e23199118d60bc73fe193fdf57b8cdff2fedf9fe6453dbbbf",
+  "prefix": "import { approvedBaseMilli, buildReviewAtpGuard } from './internal-requests/_review.js';\nexport { buildReviewAtpGuard } from './internal-requests/_review.js';\nimport { createHandover } from './internal-requests/_handover.js';\nimport { substitution } from './internal-requests/_substitution.js';\nimport { releaseReservations } from './internal-requests/_cancellation.js';\nimport { reserveReview } from './internal-requests/_reservation.js';\n",
+  "insertion": "\nconst confirmCommand = createHandover({ mayConfirm, json, nowFor, applyRequestCommand, approvedBaseMilli, fulfilmentItemId, sourceRows, allocateTransferAllocation, reserveCursors, inventoryHasColumn, transferMovementId, REQUEST_TABLE, LINE_TABLE, EVENT_TABLE, replayFor, loadRequest });\n",
+  "segments": [
+    {
+      "file": "functions/api/inventory/internal-requests/_review.js",
+      "start": 15268,
+      "end": 16893,
+      "header": "export const reservationContract = Object.freeze({\n  insert: Object.freeze([]),\n  update: Object.freeze([]),\n  delete: false,\n});\nimport { quantityToBase } from '../_economat-catalogue.js';\nimport { fulfilmentConversionSnapshot, fulfilmentItemId } from '../_internal-request.js';\n// Contrat : conversions et garde ATP en lecture seule ; aucune écriture de réservation.\n\n",
+      "footer": "export { approvedBaseMilli };\n",
+      "marker": ""
+    },
+    {
+      "file": "functions/api/inventory/internal-requests/_handover.js",
+      "start": 19444,
+      "end": 31321,
+      "header": "export const reservationContract = Object.freeze({\n  insert: Object.freeze([\"merchant\", \"request_id\", \"line_no\", \"item_id\", \"location_id\", \"qty_milli\", \"review_revision\", \"created_ts\"]),\n  update: Object.freeze([\"qty_milli\", \"review_revision\", \"created_ts\"]),\n  delete: true,\n});\n// Contrat : contexte autorisé et révision vérifiée ; Response inchangée.\n// Réservations : adoption historique INSERT, décrément qty_milli, review_revision et created_ts, suppression des lignes épuisées. Même batch CAS que les mouvements.\nexport function createHandover({ mayConfirm, json, nowFor, applyRequestCommand, approvedBaseMilli, fulfilmentItemId, sourceRows, allocateTransferAllocation, reserveCursors, inventoryHasColumn, transferMovementId, REQUEST_TABLE, LINE_TABLE, EVENT_TABLE, replayFor, loadRequest }) {\n",
+      "footer": "return confirmCommand;\n}\n",
+      "marker": ""
+    },
+    {
+      "file": "functions/api/inventory/internal-requests/_substitution.js",
+      "start": 32352,
+      "end": 33616,
+      "header": "export const reservationContract = Object.freeze({\n  insert: Object.freeze([]),\n  update: Object.freeze([]),\n  delete: false,\n});\n// Contrat : catalogue serveur vers commandData ou Response d'erreur ; aucune écriture de réservation.\nexport async function substitution({ action, commandData, readDoc, env, merchant, ECONOMAT_CATALOGUE_FEATURE, json, requestToken, catalogueItem, snapshotForUnit }) {\n",
+      "footer": "  return commandData;\n}\n",
+      "marker": "  const substituted = await substitution({ action, commandData, readDoc, env, merchant, ECONOMAT_CATALOGUE_FEATURE, json, requestToken, catalogueItem, snapshotForUnit });\n  if (substituted instanceof Response) return substituted;\n  commandData = substituted;\n"
+    },
+    {
+      "file": "functions/api/inventory/internal-requests/_cancellation.js",
+      "start": 35724,
+      "end": 36206,
+      "header": "export const reservationContract = Object.freeze({\n  insert: Object.freeze([]),\n  update: Object.freeze([]),\n  delete: true,\n});\n// Contrat : libère uniquement les lignes du merchant/request_id dont le CAS a gagné ; DELETE sans mise à jour de champ. Utilisé aussi avant remplacement à la revue.\nexport function releaseReservations({ statements, env, merchant, id, idempotencyKey, REQUEST_TABLE }) {\n",
+      "footer": "}\n",
+      "marker": "    releaseReservations({ statements, env, merchant, id, idempotencyKey, REQUEST_TABLE });\n"
+    },
+    {
+      "file": "functions/api/inventory/internal-requests/_reservation.js",
+      "start": 36206,
+      "end": 37137,
+      "header": "export const reservationContract = Object.freeze({\n  insert: Object.freeze([\"merchant\", \"request_id\", \"line_no\", \"item_id\", \"location_id\", \"qty_milli\", \"review_revision\", \"created_ts\"]),\n  update: Object.freeze([]),\n  delete: false,\n});\n// Contrat : ajoute au batch les réservations de revue après libération ; INSERT des huit champs déclarés, sans exécuter le batch.\nexport function reserveReview({ action, context, next, approvedBaseMilli, fulfilmentItemId, statements, env, merchant, id, idempotencyKey, now, REQUEST_TABLE }) {\n",
+      "footer": "\n}\n",
+      "marker": "    reserveReview({ action, context, next, approvedBaseMilli, fulfilmentItemId, statements, env, merchant, id, idempotencyKey, now, REQUEST_TABLE });"
+    }
+  ]
+}

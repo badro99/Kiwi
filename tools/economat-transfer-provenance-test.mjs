@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { reconstructEconomat } from './economat-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -99,7 +100,7 @@ await check('partial return and spoilage conserve destination quantity and value
   assert.equal(Math.round(lots[0].remainingQty * lots[0].unitCost * 100) / 100, 6);
 });
 await check('both transfer directions persist the immutable allocation breakdown', () => {
-  const route = fs.readFileSync(path.join(root, 'functions/api/inventory/internal-requests.js'), 'utf8');
+  const route = reconstructEconomat();
   assert.match(route, /SELECT id, qty_milli/);
   assert.match(route, /allocationBreakdown: slice\.allocations/);
   assert.match(route, /expiresAt: sliceExpiry\(slice\)/);  // each lot carries its own expiry
