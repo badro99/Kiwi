@@ -58,6 +58,7 @@ function realm(source, real) {
     KiwiI18n: { getLang: () => 'fr' }, KiwiInventory: { history: () => [], subscribe: () => calls.push(['inventory-subscribe']) },
   });
   context.window = context;
+  vm.runInContext(read('assets/stock/strings.js'), context);   // second stage: string pack loads first
   vm.runInContext(source, context);
   listeners.get('DOMContentLoaded')();
   return { context, calls, scripts, storage };

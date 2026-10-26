@@ -1673,6 +1673,7 @@ section('Whole-project regressions');
     'dashboard-first-use-test.mjs',
     'serveur-split-test.mjs',
     'stock-split-test.mjs',
+    'stock-strings-split-test.mjs',
     'hotel-split-test.mjs',
     'interactive-split-test.mjs',
     'venues-split-test.mjs',
