@@ -1,31 +1,4 @@
-/* ═══ Section 2 boutique B · promos / returns ═══ */
-/* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · Boutique vertical — sidebar handlers (set B)
- * ─────────────────────────────────────────────────────────────────────────── *
- *
- * Two production-grade sidebar handlers wired to the merchant dashboard click
- * delegation router (`Kiwi.handlers[name]`). Designed for the Maison Mansour
- * Gueliz boutique persona.
- *
- *   · `nav-promos`   · Promotions & offres (drawer width 1040)
- *   · `nav-returns`  · Retours & échanges  (drawer width  980)
- *
- * Plus a handful of auxiliary action handlers wired through `data-action`:
- *   · `promo-pause`           · `promo-end`         · `promo-edit`
- *   · `promo-segment`         · `promo-schedule`    · `promo-archive-detail`
- *   · `ret-detail`            · `ret-approve`       · `ret-refuse`
- *   · `ret-exchange`          · `ret-block`         · `ret-policy-save`
- *   · `ret-refund-original`   · `ret-refund-credit` · `ret-refund-whatsapp`
- *
- * Paired CSS lives in `/tmp/kiwi-s2-boutique-spa-css.css` (`.b-promo-*`,
- * `.b-ret-*`, `.kx-toggle`, `.p-grid-*`).
- *
- * Conventions
- *  · Brand only: var(--atlas) / --riad / --mint / --paper-soft.
- *  · French numbers ("1 245,50 MAD"), JetBrains Mono for tabular numerals.
- *  · No emojis in titles or CTAs (per CLAUDE.md §3).
- *  · No new accents — semantic states reuse --success / --warning / --danger.
- * ─────────────────────────────────────────────────────────────────────────── */
+/* Boutique promos / returns. */
 (() => {
   'use strict';
   if (!window.Kiwi) return;
@@ -508,6 +481,8 @@
     document.head.appendChild(st);
   }
   let liveReturnsCloud = null;
+  let liveReturnsCache = [];
+  let returnsState = '', returnsLoading = false, returnsServer = false;
   let liveReturnsSlug = '';
   let liveCredits = [];
   let liveCreditsLoadedSlug = '';
@@ -521,20 +496,55 @@
   function bindLiveReturns() {
     if (!realReturnsStore() || !window.KiwiCloudDoc) return;
     const slug = window.KiwiCloudDoc.currentSlug();
-    if (slug !== liveReturnsSlug) { liveReturnsSlug = slug; liveReturns = []; }
+    if (slug !== liveReturnsSlug) {
+      liveReturnsSlug = slug; liveReturns = []; liveReturnsCache = []; returnsState = ''; returnsServer = false;
+      try {
+        const cache = JSON.parse(localStorage.getItem('kiwi:bqReturns') || 'null');
+        if (cache?.m === slug && Array.isArray(cache.list)) liveReturns = liveReturnsCache = cache.list.slice(0, 500);
+      } catch (_) {}
+    }
     if (!liveReturnsCloud) {
       liveReturnsCloud = window.KiwiCloudDoc.attach({
         feature: 'returns', slug: () => window.KiwiCloudDoc.currentSlug(),
-        read: () => ({ list: liveReturns }),
+        read: () => ({ list: liveReturnsCache }),
         write: (doc) => {
-          liveReturns = Array.isArray(doc && doc.list) ? doc.list : [];
+          liveReturnsCache = Array.isArray(doc && doc.list) ? doc.list.slice(0, 500) : [];
+          if (returnsServer) return;
+          liveReturns = liveReturnsCache;
           if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
         },
         isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
       });
     }
     liveReturnsCloud.bind();
+    loadReturnsLedger(slug);
   }
+  const loadReturnsLedger = async (slug) => {
+    if (!slug || returnsLoading || returnsState) return;
+    returnsLoading = true;
+    try {
+      const { deadlineFetch } = await import('../request-deadline.mjs').catch(() => ({ deadlineFetch: (url, options) => fetch(url, options) }));
+      const list = [];
+      let offset = 0;
+      do {
+        const response = await deadlineFetch('/api/sale/refund?merchant=' + encodeURIComponent(slug) + '&offset=' + offset, { credentials: 'same-origin', cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.ok || !Array.isArray(data.list)) throw new Error('returns-read');
+        list.push(...data.list);
+        if (data.next !== null && (!Number.isSafeInteger(data.next) || data.next <= offset)) throw new Error('returns-page');
+        offset = data.next;
+      } while (offset !== null);
+      if (slug !== liveReturnsSlug) return;
+      liveReturns = list;
+      returnsServer = true;
+      returnsState = 'ready';
+    } catch (_) { if (slug === liveReturnsSlug) returnsState = 'failed'; }
+    finally {
+      returnsLoading = false;
+      if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+    }
+  }
+
   function loadLiveCredits() {
     if (!realReturnsStore() || typeof fetch !== 'function') return;
     const currentSlug = () => window.KiwiCloudDoc?.currentSlug?.() || window.KiwiVenue?.getCurrentVenueData?.()?.slug || '';
@@ -639,20 +649,21 @@
       { id: 'R-7826', d: '21/04', name: 'Bracelet argent berbère',       amt: 1200,  reason: 'Taille',                client: 'Karima O. (MA)',   status: 'neutral', emoji: 'BR' },
     ];
     const pending = real ? liveReturns.flatMap((ret) => {
-      const items = Array.isArray(ret && ret.items) ? ret.items : [];
+      const items = Array.isArray(ret && ret.items) ? ret.items : [{ name: _rL('Retour', 'Return', 'مرتجع'), qty: 1, amount: ret.amount }];
       return items.map((item, i) => ({
         id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
-        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(_rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { day: '2-digit', month: '2-digit' }),
-        name: `${Number(item.qty) || 1} × ${item.name || _rL('Article', 'Item', 'منتج')}${item.size ? ' · ' + item.size : ''}`,
+        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(_rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        ts: Number(ret.ts) || 0,
+        name: `${ret.saleRef ? ret.saleRef + ' · ' : ''}${Number(item.qty) || 1} × ${item.name || _rL('Article', 'Item', 'منتج')}${item.size ? ' · ' + item.size : ''}`,
         amt: Number(item.amount) || Number(ret.amount) || 0,
-        reason: ret.reason || (ret.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Avoir', 'Store credit', 'رصيد المتجر')),
+        reason: ret.reason || (ret.kind === 'refund' ? _rL('Motif non renseigné', 'Reason not recorded', 'السبب غير مسجل') : ret.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Avoir', 'Store credit', 'رصيد المتجر')),
         /* Le type de retour est une donnée, pas une chaîne d'affichage. La
            pastille se lisait sur le motif : un échange dont le motif n'était pas
            littéralement « Echange » s'affichait « Retourné ». On garde le kind. */
         kind: ret.kind || 'avoir',
         client: ret.client || _rL('Cliente de passage', 'Walk-in customer', 'زبون عابر'), status: 'ok', emoji: '', actor: ret.actor || _rL('Caisse', 'Till', 'الصندوق'),
       }));
-    }).sort((a, b) => String(b.id).localeCompare(String(a.id))) : demoPending;
+    }).sort((a, b) => b.ts - a.ts) : demoPending;
 
     const flagged = real ? [] : [
       { name: 'Diana K. (US)',  reason: _rL('4 retours en 28 j · 2 sur articles soldés', '4 returns in 28 days · 2 on sale items', '4 مرتجعات في 28 يومًا · 2 منها على أصناف مخفّضة'), amt: '4 280 MAD', risk: _rL('Élevé', 'High', 'مرتفعة') },
@@ -732,6 +743,7 @@
               ${real ? '' : `<button class="kb ghost" data-action="ret-policy-jump">${SVG.edit} ${_rL('Politique', 'Policy', 'السياسة')}</button>`}
             </div>
           </header>
+          ${real && returnsState !== 'ready' ? `<p role="status" class="rx-empty">${returnsState === 'failed' ? _rL('Historique serveur indisponible. Cache local uniquement, historique incomplet.', 'Server history unavailable. Local cache only, history is incomplete.', 'سجل الخادم غير متاح. ذاكرة محلية فقط، السجل غير مكتمل.') : _rL('Chargement de l’historique serveur…', 'Loading server history…', 'جارٍ تحميل سجل الخادم…')}</p>` : ''}
           ${pending.length ? `<div class="rx-table">
             <div class="rx-row rx-th" aria-hidden="true"><span>${_rL('Date', 'Date', 'التاريخ')}</span><span>${_rL('Article', 'Item', 'المنتج')}</span><span>${_rL('Client', 'Customer', 'الزبون')}</span><span class="r">${_rL('Montant', 'Amount', 'المبلغ')}</span><span class="r">${_rL('Statut', 'Status', 'الحالة')}</span></div>
             ${pending.map(retRow).join('')}

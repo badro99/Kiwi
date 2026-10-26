@@ -15,7 +15,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost as cancelPost } from '../functions/api/sale/cancel.js';
-import { onRequestPost as refundPost } from '../functions/api/sale/refund.js';
+import * as refundRoute from '../functions/api/sale/refund.js';
+const refundPost = refundRoute.onRequestPost;
 import { onRequestPost as creditPost } from '../functions/api/store-credits.js';
 import { makeSession, managerRefundProof, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 
@@ -151,5 +152,27 @@ ok(r.status === 403, 'l\'accord d\'un simple caissier ne suffit pas');
 r = await avoir('sale-F', 2000, 'ok', till, await proofFor());
 ok(r.status === 200 && r.body.ok, 'avec l\'accord signé d\'un responsable, la caisse émet l\'avoir');
 
+// Wave S: a long-running register reads every authoritative event, not a cache.
+assert.equal(typeof refundRoute.onRequestGet, 'function');
+for (let i = 0; i < 600; i++) sqlite.prepare(`INSERT INTO sale_audit
+  (merchant, sale_id, action, reason, note, amount_cents, ts)
+  VALUES (?, 'sale-A', 'refund', 'Taille', ?, 1250, ?)`)
+  .run(MERCHANT, 'history-' + i, now + i);
+const register = async (offset = 0) => refundRoute.onRequestGet({ env, request: new Request(
+  `https://kiwi.test/api/sale/refund?merchant=${MERCHANT}&offset=${offset}`, { headers: { cookie: owner } }) });
+let page = await register();
+assert.equal(page.status, 200);
+let data = await page.json(), events = [...data.list];
+assert.equal(data.next, 500);
+while (data.next !== null) { data = await (await register(data.next)).json(); events.push(...data.list); }
+const historical = events.filter(e => e.id.startsWith('refund:history-'));
+assert.equal(historical.length, 600);
+assert.equal(historical[0].amount, 12.5); assert.equal(historical[0].reason, 'Taille');
+assert.ok(historical[0].saleRef); assert.ok(historical[0].ts);
+assert.ok(events.some(e => e.kind === 'avoir'), 'return-funded credits are included');
+const failedRead = await refundRoute.onRequestGet({ env: { ...env, DB: { prepare(sql) { if (sql.includes('UNION ALL')) throw new Error('offline'); return DB.prepare(sql); } } },
+  request: new Request(`https://kiwi.test/api/sale/refund?merchant=${MERCHANT}`, { headers: { cookie: owner } }) });
+assert.equal(failedRead.status, 503);
+console.log('✓ Wave S: authoritative register paginates 600 refunds, credits and read failure');
 sqlite.close();
 console.log(`\n✓ ${controls} contrôles : une vente ne se rend qu'une fois.`);

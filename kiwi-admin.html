@@ -1048,7 +1048,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=1"></script>
+  <script src="assets/admin-legacy.js?v=2"></script>
   <script src="assets/staff-roles.js?v=2"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -2169,7 +2169,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
                     // that differs between them, which is the shop itself.
                     (!inGroup && c.name) ? h('div', { class:'nm', style:'color:var(--muted);font-size:.78rem' }, c.name + (c.email ? ' · ' + c.email : '')) : null),
       h('td', null, h('code', { style:'font-family:var(--mono);font-size:.82rem;color:var(--muted)' }, c.merchant)),
-      h('td', null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '·')),
+      h('td', null, c.requested_plan ? h('div', null, 'Offre demandée', ' · ', c.requested_plan, c.requested_period ? ' · ' : '', c.requested_period === 'annual' ? 'Annuel' : c.requested_period === 'monthly' ? 'Mensuel' : '', ' · ', 'À confirmer') : null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '·')),
       h('td', { class:'num' }, fmt(c.today_amount) + ' MAD'),
       h('td', { class:'num' }, String(c.today_count || 0)),
       h('td', null, h('span', { class:'online' + (live?' live':'') }, h('span', { class:'d' }), ago(c.last_ts))),
@@ -2873,6 +2873,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     state.textContent = (b.city
       ? (b.city + (b.mrr != null ? ' · ' + window.KiwiAdminI18n.text(fmt(b.mrr) + ' MAD/mois') : ''))
       : window.KiwiAdminI18n.text('ville non renseignée')) + vText;
+    if (selected.requested_plan) state.textContent += ' · ' + window.KiwiAdminI18n.text('Offre demandée') + ' : ' + selected.requested_plan + (selected.requested_period ? ' · ' + window.KiwiAdminI18n.text(selected.requested_period === 'annual' ? 'Annuel' : 'Mensuel') : '') + ' · ' + window.KiwiAdminI18n.text('À confirmer');
 
     if (noColumn || (b.columns && b.columns.lifecycle === false)){
       hint.textContent = 'La fiche commerciale n’est pas encore disponible sur cet environnement. Une mise à niveau technique est nécessaire ; aucune donnée client n’a été modifiée.';

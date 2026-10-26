@@ -2,6 +2,10 @@
 (function () {
   'use strict';
   var copy = {
+    "Offre demandée": ["Requested plan", "الخطة المطلوبة"],
+    "À confirmer": ["To confirm", "بانتظار التأكيد"],
+    "Mensuel": ["Monthly", "شهري"],
+    "Annuel": ["Annual", "سنوي"],
     "Chargement…": ["Loading…", "جار التحميل…"],
     "Aucun détail de panier enregistré pour cette vente.": ["No basket details recorded for this sale.", "لا توجد تفاصيل سلة مسجلة لهذه العملية."],
     "code opérateur": ["operator code", "رمز المشغّل"],

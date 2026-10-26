@@ -1,6 +1,28 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { applyPricing, pricingCopy, pricingFlight } from './landing-pricing.mjs';
+
+// Keep the hydrated CTA in sync with the generated HTML and selected period.
+const oldPricingChunk = fs.readdirSync('_next/static/chunks').find(name => /^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name));
+let pricingChunk = '_next/static/chunks/' + oldPricingChunk;
+fs.writeFileSync(pricingChunk, fs.readFileSync(pricingChunk, 'utf8').replace(
+  'href:r.DEMO_HREF+(tier.name==="Plus"?"?text=plus":"")',
+  'href:tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly"):r.DEMO_HREF'
+));
+
+const pricingCode = fs.readFileSync(pricingChunk);
+const pricingName = '2c2tj5hx4r2-w-' + createHash('sha256').update(pricingCode).digest('hex').slice(0, 8) + '.js';
+if (pricingName !== oldPricingChunk) {
+  fs.renameSync(pricingChunk, '_next/static/chunks/' + pricingName);
+  pricingChunk = '_next/static/chunks/' + pricingName;
+  for (const locale of ['en', 'fr', 'ar']) {
+    for (const name of fs.readdirSync(locale).filter(name => /\.(html|txt)$/.test(name))) {
+      const file = locale + '/' + name;
+      fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replaceAll(oldPricingChunk, pricingName));
+    }
+  }
+}
 
 for (const locale of ['en', 'fr', 'ar']) {
   const page = `${locale}/index.html`;
@@ -147,7 +169,7 @@ const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').rep
 // Clone only the landing's client components. Translate their exact string
 // literals too: static HTML alone disagrees with React on its first render.
 // Content-addressed URLs keep these locale-specific exports cache-safe.
-const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w-d7bac407.js'];
+const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/' + pricingChunk];
 const scriptPaths = new Map();
 fs.mkdirSync('es/chunks', { recursive: true });
 for (const clientPath of clientPaths) {

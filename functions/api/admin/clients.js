@@ -131,6 +131,10 @@ export async function onRequestGet(context) {
 
     // Accounts → contact + ensure a row exists even with zero sales.
     const accts = await env.DB.prepare(`SELECT id, email, name, business, status FROM accounts`).all();
+    const requests = await env.DB.prepare("SELECT merchant, data FROM store_docs WHERE feature = 'signup-plan'").all();
+    const requestedById = new Map((requests.results || []).map(r => {
+      try { return [r.merchant, JSON.parse(r.data)]; } catch (_) { return [r.merchant, {}]; }
+    }));
     const byId = new Map();
     for (const a of (accts.results || [])) {
       byId.set(a.id, a);
@@ -159,6 +163,11 @@ export async function onRequestGet(context) {
       const a = byId.get(aid);
       if (!a) continue;                              // account deleted, store orphaned
       const r = row(m);
+      const requested = requestedById.get(aid);
+      if (requested && ['basic', 'plus', 'pro', 'ultra', 'ultimate'].includes(requested.plan)) {
+        r.requested_plan = requested.plan;
+        r.requested_period = ['monthly', 'annual'].includes(requested.period) ? requested.period : null;
+      }
       r.owner = a.email || '';
       r.owner_name = a.name || '';
       r.owner_business = a.business || '';

@@ -1551,6 +1551,8 @@ function authPage(opts) {
   tLogin.addEventListener('click', function(){ setMode('login'); });
   tSignup.addEventListener('click', function(){ setMode('signup'); });
 
+  var requested = new URLSearchParams(location.search);
+  if (['basic','plus','pro','ultra','ultimate'].indexOf(requested.get('plan')) >= 0) setMode('signup');
   var MSG = ${JSON.stringify(t.errors)};
   function fail(code){ return MSG[code] || MSG.fallback; }
   function val(id){ var el = document.getElementById(id); return el ? el.value : ''; }
@@ -1588,7 +1590,7 @@ function authPage(opts) {
   });
   fSignup.addEventListener('submit', function(e){
     e.preventDefault();
-    post('/auth/signup', { name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
+    post('/auth/signup', { plan: requested.get('plan'), period: requested.get('period'), name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
          document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1&lang=${lang}');
   });
 

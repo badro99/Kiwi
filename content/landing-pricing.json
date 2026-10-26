@@ -31,7 +31,8 @@
           "Rapport journalier",
           "Caisse utilisable hors ligne",
           "Un établissement"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -45,7 +46,8 @@
           "Fiches clients",
           "Suivi des ventes et des marges",
           "Un établissement"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -64,7 +66,8 @@
           "Kiwi IQ avancé",
           "Support prioritaire sur WhatsApp",
           "Un établissement"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -76,7 +79,8 @@
           "Gestion multi-pays",
           "API entreprise",
           "Account manager dédié"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {
@@ -125,7 +129,8 @@
           "Daily report",
           "Offline till",
           "One location"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -139,7 +144,8 @@
           "Customer records",
           "Sales and margin tracking",
           "One location"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -158,7 +164,8 @@
           "Advanced Kiwi IQ",
           "Priority support on WhatsApp",
           "One location"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -170,7 +177,8 @@
           "Multi-country management",
           "Enterprise API",
           "Dedicated account manager"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {
@@ -219,7 +227,8 @@
           "تقرير يومي",
           "كاشير يعمل دون اتصال بالإنترنت",
           "منشأة واحدة"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -229,11 +238,12 @@
           "كتالوج حسب المقاسات والألوان",
           "المرتجعات والاستبدال والإشعارات الدائنة",
           "العروض والتخفيضات",
-          "Loyalty+\u200e",
+          "Loyalty+‎",
           "ملفات العملاء",
           "تتبع المبيعات وهوامش الربح",
           "منشأة واحدة"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -252,7 +262,8 @@
           "Kiwi IQ المتقدم",
           "دعم ذو أولوية عبر WhatsApp",
           "منشأة واحدة"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -264,7 +275,8 @@
           "إدارة في بلدان متعددة",
           "واجهة API للمؤسسات",
           "مدير حساب مخصص"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {
@@ -313,7 +325,8 @@
           "Tagesbericht",
           "Offline nutzbare Kasse",
           "Ein Standort"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -327,7 +340,8 @@
           "Kundenprofile",
           "Umsatz- und Margenverfolgung",
           "Ein Standort"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -346,7 +360,8 @@
           "Erweitertes Kiwi IQ",
           "Bevorzugter Support über WhatsApp",
           "Ein Standort"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -358,7 +373,8 @@
           "Länderübergreifende Verwaltung",
           "Unternehmens-API",
           "Persönlicher Account Manager"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {
@@ -407,7 +423,8 @@
           "Informe diario",
           "TPV sin conexión",
           "Un establecimiento"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -421,7 +438,8 @@
           "Fichas de clientes",
           "Seguimiento de ventas y márgenes",
           "Un establecimiento"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -440,7 +458,8 @@
           "Kiwi IQ avanzado",
           "Soporte prioritario por WhatsApp",
           "Un establecimiento"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -452,7 +471,8 @@
           "Gestión en varios países",
           "API empresarial",
           "Gestor de cuenta exclusivo"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {
@@ -501,7 +521,8 @@
           "Rapporto giornaliero",
           "Cassa utilizzabile offline",
           "Una sede"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -515,7 +536,8 @@
           "Schede clienti",
           "Monitoraggio delle vendite e dei margini",
           "Una sede"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -534,7 +556,8 @@
           "Kiwi IQ avanzato",
           "Assistenza prioritaria su WhatsApp",
           "Una sede"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -546,7 +569,8 @@
           "Gestione in più paesi",
           "API aziendale",
           "Account manager dedicato"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {
@@ -595,7 +619,8 @@
           "Dagrapport",
           "Kassa die offline werkt",
           "Eén vestiging"
-        ]
+        ],
+        "signupPlan": "basic"
       },
       {
         "name": "Plus",
@@ -609,7 +634,8 @@
           "Klantprofielen",
           "Verkoop en marges bijhouden",
           "Eén vestiging"
-        ]
+        ],
+        "signupPlan": "plus"
       },
       {
         "name": "Pro",
@@ -628,7 +654,8 @@
           "Geavanceerde Kiwi IQ",
           "Voorrang bij ondersteuning via WhatsApp",
           "Eén vestiging"
-        ]
+        ],
+        "signupPlan": "pro"
       },
       {
         "name": "Ultra",
@@ -640,7 +667,8 @@
           "Beheer in meerdere landen",
           "Bedrijfs-API",
           "Vaste accountmanager"
-        ]
+        ],
+        "signupPlan": "ultra"
       }
     ],
     "ultimate": {

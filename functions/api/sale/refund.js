@@ -290,3 +290,30 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   const done = actual.map((p) => (p.method === 'credit' ? { ...p, code: codeOf[p.creditId] || '' } : p));
   return json({ ok: true, id: refundId, originalSaleId, amountCents, ref: refundRef, ts, allocations: done });
 }
+
+// Dashboard register: both money refunds and return-funded credit issuance.
+export async function onRequestGet({ request, env }) {
+  if (!env?.DB) return json({ error: 'no-db' }, 503);
+  const params = new URL(request.url).searchParams;
+  const merchant = await entitledMerchant(request, env, params.get('merchant') || '');
+  if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  const offset = Number(params.get('offset') || 0);
+  if (!Number.isSafeInteger(offset) || offset < 0) return json({ error: 'bad-offset' }, 400);
+  try {
+    const rows = (await env.DB.prepare(`
+      SELECT * FROM (
+        SELECT 'refund:' || a.note AS id, a.ts, COALESCE(a.amount_cents, a.amount * 100) / 100.0 AS amount,
+               a.reason, COALESCE(NULLIF(s.ref, ''), a.sale_id) AS saleRef, a.actor, 'refund' AS kind
+          FROM sale_audit a JOIN sales s ON s.merchant = a.merchant AND s.id = a.sale_id
+         WHERE a.merchant = ? AND a.action = 'refund' AND s.void_ts IS NULL
+        UNION ALL
+        SELECT 'credit:' || e.id, e.ts, e.amount_cents / 100.0, c.reason,
+               COALESCE(NULLIF(s.ref, ''), e.ref_id), e.actor, 'avoir'
+          FROM store_credit_events e JOIN sales s ON s.merchant = e.merchant AND s.id = e.ref_id
+          JOIN store_credits c ON c.merchant = e.merchant AND c.id = e.credit_id
+         WHERE e.merchant = ? AND e.action = 'issue' AND s.void_ts IS NULL
+      ) ORDER BY ts DESC, id DESC LIMIT 501 OFFSET ?
+    `).bind(merchant, merchant, offset).all()).results || [];
+    return json({ ok: true, list: rows.slice(0, 500), next: rows.length > 500 ? offset + 500 : null });
+  } catch (_) { return json({ error: 'returns-read-failed' }, 503); }
+}

@@ -46,7 +46,7 @@ await test('planning#0 · correction failure re-enables retry and keeps pending 
 });
 await test('employee#0 · hung punch releases flush chain, preserves opId and retries',async()=>{
  const queue=[{opId:'one',kind:'clock-in'},{opId:'two',kind:'clock-out'}], retries=[];
- const f=fixture('employee-live',{queueOwner:'shop',readQueue:()=>queue,loadQueue:async()=>{},bodyFor:x=>x,dropItem:async(_,id)=>{assert.equal(queue[0].opId,id);queue.shift();},outcomes:{},lastBlock:null,retryDelay:0,schedule:ms=>retries.push(ms),notify(){},remember(){},window:{},document:{}});
+ const f=fixture('employee-live',{queueOwner:'shop',readQueue:()=>queue,loadQueue:async()=>{},bodyFor:x=>x,dropItem:async(_,id)=>{assert.equal(queue[0].opId,id);queue.shift();},outcomes:{},lastBlock:null,retryDelay:0,schedule:ms=>retries.push(ms),notify(){},remember(){},renderCorrections(){},window:{},document:{}});
  vm.runInContext(between(f.source,'  function transient(', '  function notify('),f.c);
  vm.runInContext(between(f.source,'  function call(', '\n  function newOpId()')+'\nvar flushing=Promise.resolve();\n'+between(f.source,'  function runOnce()', '\n  function flush()')+'\n'+between(f.source,'  function flush()', '\n  }')+'\n  }',f.c);
  const p=f.c.flush();await ended(p,f);assert.equal(queue.length,2);assert.equal(f.c.lastBlock.code,'timeout');assert.deepEqual(retries,[15000]);

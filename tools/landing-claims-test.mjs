@@ -118,7 +118,7 @@ for (const chunk of pricingChunks) {
   ok(JSON.stringify(JSON.parse(rows || 'null')) === JSON.stringify(prices), `${chunk} explicit monthly, annual equivalent and annual total rows`);
   ok(code.includes('annual=m&&!price?.fixed'), `${chunk} gives Ultra no annual price`);
   ok(code.includes('l.billedYearly.replace("{total}",f(price.total))'), `${chunk} uses exact annual payments, preserving Pro 4,200`);
-  ok(code.includes('tier.name==="Plus"?"?text=plus":""'), `${chunk} Plus uses the existing contact flow with its plan identifier`);
+  ok(code.includes('tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly")'), `${chunk} plan CTA carries the requested offer and displayed billing period to signup`);
   const name = path.basename(chunk, '.js');
   const sha = crypto.createHash('sha256').update(code).digest('hex');
   const hashed = chunk.startsWith('es/') ? name.split('-').pop() === sha.slice(0, 16) : name.split('-').pop() === sha.slice(0, 8);

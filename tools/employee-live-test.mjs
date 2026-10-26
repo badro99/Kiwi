@@ -920,7 +920,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     "la file d'un autre employé reste rangée sous son nom et n'est jamais envoyée sous cette session");
   storage.delete(NKEY);
 
-  // 5. Refus définitifs : un code faux, un geste de plus de 24 h. Retirés, signalés, rien d'écrit.
+  // 5. Un geste périmé reste sur le téléphone, sans requête ni correction serveur automatique.
   const before = JSON.stringify(attendanceDoc());
   net.offline = true;
   await B.live.clockOut(null, '000000').catch(() => {});
@@ -929,12 +929,9 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   if (two[1]) { two[1].at = Date.now() - 25 * 3600000; storage.set(QKEY, JSON.stringify(two)); }
   net.offline = false;
   await flushAll(B.live);
-  const rejected = B.queueEvents().filter((d) => d.rejected && d.rejected.length).flatMap((d) => d.rejected).map((r) => r.error);
-  ok(two.length === 2 && !storage.has(QKEY) && JSON.stringify(attendanceDoc()) === before
-    && rejected.includes('attendance-code-invalid')
-    && B.queueEvents().some(d => d.approvals === 1) && B.toasts.includes('Punch kept for manager approval')
-    && JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance-corrections'").get('amira-cafe').data).items.some(item => item.status === 'pending'),
-  "un pointage périmé est gardé pour approbation, un code faux est refusé, sans modifier les heures");
+  ok(two.length === 2 && queued().length === 1 && queued()[0].opId === two[1].opId
+    && !net.posts.some(p => p.opId === two[1].opId) && JSON.stringify(attendanceDoc()) === before,
+    'le pointage périmé reste local sans envoi automatique');
 
   // 6. Hors ligne avec un départ en attente, la déconnexion garde la session qui l'enverra.
   net.offline = true;
@@ -945,8 +942,59 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   net.offline = false;
   B.fire('online');
   await B.tick();
-  ok(!storage.has(QKEY) && attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara' && !e.outTs).length === 0,
+  ok(queued().length === 1 && attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara' && !e.outTs).length === 0,
     'au retour du réseau, le départ en attente part et ferme le service');
+}
+
+/* Wave S : vrai client, DOM minimal, stockage conservé entre ouvertures. */
+{
+  const source = fs.readFileSync(path.join(ROOT, 'assets/employee-live.js'), 'utf8');
+  const key = 'kiwiEmployeePunchQueue:wave-s:employee';
+  const oldAt = Date.now() - 13 * 3600000;
+  const local = new Map([[key, JSON.stringify([
+    { kind: 'clock-in', opId: 'expired', at: oldAt },
+    { kind: 'clock-out', opId: 'recent', at: Date.now() - 2 * 3600000 },
+  ])]]);
+  const posts = [];
+  function boot(lang) {
+    class Element {
+      constructor() { this.children = []; this.style = {}; this.textContent = ''; }
+      appendChild(child) { this.children.push(child); }
+      prepend(child) { this.children.unshift(child); }
+      setAttribute() {}
+      addEventListener(type, fn) { this[type] = fn; }
+      remove() { body.children = body.children.filter(c => c !== this); }
+    }
+    const body = new Element();
+    const document = { body, documentElement: { lang }, createElement: () => new Element(),
+      getElementById: id => body.children.find(c => c.id === id), addEventListener() {}, dispatchEvent() {} };
+    const window = { addEventListener() {}, localStorage: {
+      getItem: k => local.get(k), setItem: (k,v) => local.set(k,v), removeItem: k => local.delete(k),
+    } };
+    vm.runInNewContext(source, { window, document, navigator: {}, location: { protocol: 'file:' },
+      setTimeout: () => 1, clearTimeout() {}, fetch: async (_, opts) => {
+        if (opts.method === 'POST') posts.push(JSON.parse(opts.body));
+        return { ok: true, json: async () => ({ merchant: 'wave-s', employee: { id: 'employee' } }) };
+      } });
+    return { live: window.KiwiEmployeeLive, body };
+  }
+  const text = node => node.textContent + node.children.map(text).join(' ');
+  for (const [lang, title] of [['fr', 'Pointage à corriger par un responsable'], ['en', 'Punch to be corrected by a manager'], ['ar', 'تسجيل حضور يحتاج إلى تصحيح من المسؤول']]) {
+    const app = boot(lang); await app.live.refresh(); await app.live.flushPunches();
+    const panel = app.body.children[0];
+    const date = new Date(oldAt).toLocaleString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR',
+      { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    ok(panel && text(panel).includes(title) && text(panel).includes(date),
+      'Wave S ' + lang + ' : après réouverture, pointage de 13 h listé avec jour et heure');
+    ok(posts.filter(p => p.opId === 'expired').length === 0 && posts.filter(p => p.opId === 'recent').length === 1,
+      'Wave S : aucun envoi du geste de 13 h, un envoi du geste de 2 h');
+    if (lang === 'ar' && panel) {
+      panel.children[1].children[1].click();
+      await new Promise(resolve => setImmediate(resolve));
+      const reopened = boot(lang); await reopened.live.refresh(); await reopened.live.flushPunches();
+      ok(reopened.body.children.length === 0, 'Wave S : masquage explicite conservé après réouverture');
+    }
+  }
 }
 
 /* Deux magasins durables simulés, conservés entre deux ouvertures du client. */

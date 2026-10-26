@@ -1,4 +1,4 @@
 {
-  "description": "SHA-256 of returns appPage options rendered by the unsplit Boutique promos/returns section (pages-pro.js before the split), demo Maison Mansour, default French locale.",
-  "sha": "cc9220320580ab19c479902267f578d391a778f28cba1a23a0e0c9344680812d"
+  "description": "SHA-256 of returns appPage options rendered by the unsplit Boutique promos/returns section (pages-pro.js before the split), demo Maison Mansour, default French locale. Resealed 26 October 2026 (wave S): the register now reads the server's refund and credit events, the local log is a fallback cache.",
+  "sha": "482b11dfa5f102d8f7e619b4ceb49be12e1f9d4ee330a212d33206a609a73687"
 }

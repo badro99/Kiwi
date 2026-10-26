@@ -100,9 +100,17 @@ export async function onRequestPost(context) {
    * écriture échoue et reçoit la même réponse « nom pris ». */
   const reservedSlug = business && wantedSlug ? wantedSlug : null;
   try {
-    await env.DB.prepare(
+    const accountInsert = env.DB.prepare(
       'INSERT INTO accounts (id, email, name, business, salt, hash, created_ts, business_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, email, name, business, salt, hash, ts, reservedSlug).run();
+    ).bind(id, email, name, business, salt, hash, ts, reservedSlug);
+    const requestedPlan = ['basic', 'plus', 'pro', 'ultra', 'ultimate'].includes(body.plan) ? body.plan : null;
+    if (requestedPlan) {
+      const period = ['monthly', 'annual'].includes(body.period) ? body.period : null;
+      // Account-scoped, operator-only metadata. Never changes entitlements or billing.
+      await env.DB.batch([accountInsert, env.DB.prepare(
+        "INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'signup-plan', ?, 1, ?)"
+      ).bind(id, JSON.stringify({ plan: requestedPlan, period }), ts)]);
+    } else await accountInsert.run();
   } catch (e) {
     const msg = String((e && e.message) || e);
     if (!/UNIQUE constraint failed/i.test(msg)) return json({ error: 'signup-unavailable' }, 503);

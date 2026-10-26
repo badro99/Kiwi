@@ -69,7 +69,7 @@
      par magasin et par employé, avec l'heure réelle du geste et son identité
      (opId), puis envoyé dans l'ordre. Réseau coupé ou serveur indisponible :
      il reste sur le téléphone et repart au retour du réseau ou à la
-     réouverture de l'app. Le serveur reconnaît l'opId : un pointage renvoyé
+     réouverture de l'app, seulement pendant la fenêtre de 12 h. Le serveur reconnaît l'opId : un pointage renvoyé
      n'en fait jamais deux. */
   var QUEUE_PREFIX = 'kiwiEmployeePunchQueue:';
   var outcomes = {};
@@ -123,17 +123,50 @@
     try { history = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner + ':outcomes')) || '[]'); } catch (_) {}
     return merge(merge(local, history), copies[owner] || []);
   }
-  function readQueue(owner) { return records(owner).filter(function (i) { return !i.done; }); }
+  function needsCorrection(i) { return !i.done && Date.now() - Number(i.at) > 12 * 3600000; }
+  function readQueue(owner) { return records(owner).filter(function (i) { return !i.done && !needsCorrection(i); }); }
+  // Même couche de langue que le planning employé : document.documentElement.lang.
+  function correctionWords(lang) {
+    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف' };
+    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone' };
+    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone' };
+  }
+  function renderCorrections() {
+    if (!document.createElement || !document.body) return;
+    var panel = document.getElementById('employee-punch-corrections');
+    if (panel) panel.remove();
+    var items = queueOwner ? records(queueOwner).filter(needsCorrection) : [];
+    if (!items.length) return;
+    var lang = document.documentElement.lang, words = correctionWords(lang);
+    panel = document.createElement('section');
+    panel.id = 'employee-punch-corrections';
+    panel.setAttribute('aria-label', words.title);
+    panel.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    panel.style.cssText = 'position:relative;z-index:10000;background:var(--paper);color:var(--ink);padding:16px;border:2px solid var(--atlas);font:inherit;font-style:normal';
+    var title = document.createElement('h2'); title.textContent = words.title; panel.appendChild(title);
+    items.forEach(function (item) {
+      var row = document.createElement('div'), label = document.createElement('p');
+      label.textContent = [item.kind === 'clock-in' ? words.in : words.out, new Date(Number(item.at)).toLocaleString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })].join(' · ');
+      row.appendChild(label);
+      var button = document.createElement('button'); button.type = 'button'; button.textContent = words.dismiss;
+      button.addEventListener('click', function () {
+        var owner = queueOwner;
+        saveTask(function () { return dropItem(owner, item.opId, { result: 'correction-dismissed' }); }).then(renderCorrections);
+      });
+      row.appendChild(button); panel.appendChild(row);
+    });
+    document.body.prepend(panel);
+  }
   function loadQueue(owner) {
     return idb(owner).then(function (items) { copies[owner] = merge(records(owner), items || []); });
   }
   function writeQueue(owner, items) {
     var saved = false;
     // Les accusés empêchent une ancienne copie de ressusciter un geste déjà envoyé.
-    items = merge(items, records(owner).filter(function (i) { return i.done; }));
+    items = merge(items, records(owner).filter(function (i) { return i.done || needsCorrection(i); }));
     // Un accusé de plus de 24 h ne protège plus rien (le serveur refuse au-delà de 12 h).
     var horizon = Date.now() - 86400000;
-    items = items.filter(function (i) { return !i.done || Number(i.at) > horizon; });
+    items = items.filter(function (i) { return !i.done || Number(i.at) > horizon || (i.outcome && i.outcome.result === 'correction-dismissed'); });
     var pending = items.filter(function (i) { return !i.done; });
     try {
       var history = items.filter(function (i) { return i.done; });
@@ -188,7 +221,7 @@
         });
       }, function (err) {
         if (keeps(err)) { lastBlock = err; return; }
-        // Refus définitif (code faux, pointage trop ancien) : retiré et signalé.
+        // Refus définitif du serveur : retiré et signalé.
         return dropItem(owner, item.opId, { result: 'rejected', status: err.status, reason: ['attendance-code-invalid', 'attendance-capture-overlaps', 'attendance-shift-too-long'].indexOf(err.code) >= 0 ? err.code : 'employee-request-failed' }).then(function () {
           outcomes[item.opId] = { error: err };
           rejected.push({ action: item.kind, error: err.code || 'employee-request-failed', at: item.at });
@@ -197,6 +230,8 @@
       });
     }
     return loadQueue(owner).then(step).then(function () {
+      // The correction panel is display only: it must never stop a retry.
+      try { renderCorrections(); } catch (_) {}
       var pending = readQueue(owner).length;
       if (pending && lastBlock && lastBlock.status !== 401) {
         retryDelay = Math.min(300000, retryDelay ? retryDelay * 2 : 15000);
@@ -245,9 +280,12 @@
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && queueOwner && readQueue(queueOwner).length) schedule(0); });
   } catch (_) {}
 
+  if (typeof MutationObserver === 'function') new MutationObserver(renderCorrections).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+
   window.KiwiEmployeeLive = {
     login: function (email, pin) {
       queueOwner = '';
+      renderCorrections();
       return call('POST', { action: 'login', email: email, pin: pin }).then(function () { return call('GET'); }).then(remember);
     },
     refresh: function () { return call('GET').then(remember); },
@@ -270,7 +308,7 @@
       var owner = queueOwner;
       return flush().then(function () {
         return call('POST', { action: 'logout' }).then(function (r) {
-          if (queueOwner === owner) queueOwner = '';
+          if (queueOwner === owner) { queueOwner = ''; renderCorrections(); }
           return r;
         }, function (err) {
           var pending = owner ? readQueue(owner).length : 0;

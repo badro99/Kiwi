@@ -62,3 +62,71 @@ if (failed.length) {
   process.exit(1);
 }
 console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, dates, retours partagés, dashboard réel)`);
+
+// Wave S: exercise the real asynchronous reader, including page two and failure.
+(async () => {
+  const assert = require('node:assert/strict'), vm = require('node:vm');
+  const start = dash.indexOf('  const loadReturnsLedger =');
+  assert.ok(start >= 0, 'server ledger reader exists');
+  const reader = dash.slice(start, dash.indexOf('  function loadLiveCredits', start));
+  async function run(fail) {
+    const cache = [{ id: 'cached', items: [] }];
+    const context = vm.createContext({ liveReturns: cache, liveReturnsSlug: 'shop', returnsLoading: false,
+      returnsState: '', returnsServer: false, encodeURIComponent, Number, Error,
+      document: { querySelector: () => null }, calls: [],
+      fetch: async (url, options) => {
+        context.calls.push(url); assert.equal(options.credentials, 'same-origin');
+        const offset = Number(new URL(url, 'https://kiwi.test').searchParams.get('offset'));
+        if (fail === true || (fail === 'second' && offset)) throw new Error('offline');
+        return { ok: true, json: async () => ({ ok: true,
+          list: Array.from({ length: offset ? 100 : 500 }, (_, i) => ({ id: 'server-' + (i + offset), ts: 1, amount: 2, reason: 'size', saleRef: 'ticket-' + i })),
+          next: offset ? null : 500 }) };
+      } });
+    vm.runInContext(reader + ';this.readLedger = loadReturnsLedger;', context);
+    await context.readLedger('shop');
+    return context;
+  }
+  const full = await run(false);
+  assert.equal(full.liveReturns.length, 600); assert.equal(full.calls.length, 2);
+  assert.equal(full.liveReturns[599].id, 'server-599'); assert.equal(full.returnsState, 'ready');
+  const partial = await run('second');
+  assert.equal(partial.liveReturns[0].id, 'cached', 'a failed second page never exposes a partial history as complete');
+  const offline = await run(true);
+  assert.equal(offline.liveReturns[0].id, 'cached'); assert.equal(offline.returnsState, 'failed');
+  assert.match(dash, /role="status"[\s\S]*historique incomplet/);
+  const binding = dash.slice(dash.indexOf('  function bindLiveReturns()'), dash.indexOf('  const loadReturnsLedger ='));
+  const cachedContext = vm.createContext({ window: { KiwiCloudDoc: { currentSlug: () => 'shop', attach: () => ({ bind() {} }) } },
+    realReturnsStore: () => true, liveReturnsSlug: '', liveReturns: [], liveReturnsCloud: null,
+    returnsState: '', returnsServer: false, liveReturnsCache: [], loadReturnsLedger() {},
+    localStorage: { getItem: () => JSON.stringify({ m: 'shop', list: [{ id: 'disk-cache' }] }) } });
+  vm.runInContext(binding + ';bindLiveReturns();', cachedContext);
+  assert.equal(cachedContext.liveReturns[0].id, 'disk-cache', 'failure fallback loads the till cache');
+  cachedContext.liveReturnsSlug = ''; cachedContext.localStorage.getItem = () => JSON.stringify({ m: 'other', list: [{ id: 'wrong-shop' }] });
+  vm.runInContext('bindLiveReturns()', cachedContext);
+  assert.equal(cachedContext.liveReturns.length, 0, 'another merchant cache never appears');
+  const node = () => ({ dataset: {}, style: {}, classList: { add() {}, remove() {}, toggle() {} },
+    querySelector: () => node(), querySelectorAll: () => [], addEventListener() {}, setAttribute() {} });
+  function render(rows, state, lang = 'fr') {
+    let body;
+    const handlers = {};
+    const source = dash.replace('let liveReturns = [];', 'let liveReturns = ' + JSON.stringify(rows) + ';')
+      .replace("let liveReturnsSlug = '';", "let liveReturnsSlug = 'shop';")
+      .replace("let returnsState = ''", 'let returnsState = ' + JSON.stringify(state));
+    vm.runInNewContext(source, { window: { Kiwi: { handlers, appPage: (_, options) => { body = options.body; return { el: node() }; } },
+      KiwiEnv: { isReal: () => true }, KiwiI18n: { getLang: () => lang },
+      KiwiCloudDoc: { currentSlug: () => 'shop', attach: () => ({ bind() {} }) } },
+      document: { getElementById: () => null, createElement: () => node(), head: { appendChild() {} }, querySelector: () => null },
+      setTimeout() {}, clearTimeout() {} });
+    handlers['nav-returns']();
+    return body;
+  }
+  const html = render(full.liveReturns, 'ready');
+  assert.equal((html.match(/data-ret-row /g) || []).length, 600, 'register renders all 600 server events');
+  assert.ok(html.includes('ticket-99')); assert.ok(html.includes('size'));
+  for (const [lang, notice] of [['fr', 'historique incomplet'], ['en', 'history is incomplete'], ['ar', 'السجل غير مكتمل']]) {
+    const fallback = render([{ id: 'cached', ts: 1, amount: 2, saleRef: 'cached-ticket' }], 'failed', lang);
+    assert.ok(fallback.includes(notice)); assert.ok(fallback.includes('cached-ticket'));
+  }
+
+  console.log('  ✓ Wave S: 600 server returns and explicit incomplete-cache fallback');
+})().catch(error => { console.error(error); process.exitCode = 1; });

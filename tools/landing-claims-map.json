@@ -737,6 +737,46 @@
           "assertion": "Ultra with 3 stores -> 4th store allowed"
         }
       ]
+    },
+    "tiers.0.signupPlan": {
+      "fr": "basic",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/signup-plan-test.mjs",
+          "assertion": "assert.deepEqual(JSON.parse(doc?.data || '{}'), {plan, period:period==='invalid'?null:period})"
+        }
+      ]
+    },
+    "tiers.1.signupPlan": {
+      "fr": "plus",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/signup-plan-test.mjs",
+          "assertion": "assert.deepEqual(JSON.parse(doc?.data || '{}'), {plan, period:period==='invalid'?null:period})"
+        }
+      ]
+    },
+    "tiers.2.signupPlan": {
+      "fr": "pro",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/signup-plan-test.mjs",
+          "assertion": "assert.deepEqual(JSON.parse(doc?.data || '{}'), {plan, period:period==='invalid'?null:period})"
+        }
+      ]
+    },
+    "tiers.3.signupPlan": {
+      "fr": "ultra",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/signup-plan-test.mjs",
+          "assertion": "assert.deepEqual(JSON.parse(doc?.data || '{}'), {plan, period:period==='invalid'?null:period})"
+        }
+      ]
     }
   }
 }
