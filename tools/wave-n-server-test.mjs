@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import * as triage from '../functions/api/_support-triage.js';
-import { planReplay, writeUnresolved } from '../functions/api/shopify/_replay-orders.js';
+import * as replay from '../functions/api/shopify/_replay-orders.js';
+const { planReplay, writeUnresolved } = replay;
 const read = p => fs.readFileSync(new URL('../'+p, import.meta.url), 'utf8');
 const cases = {
  async lease() {
@@ -45,8 +47,14 @@ const cases = {
  },
  async health() {
   const s=read('assets/admin-workspace.js');
-  assert.ok(s.includes('Queues non observées'));
-  assert.ok(s.includes("add('unobserved'"));
+  const fn=s.slice(s.indexOf('  function allSignals(){'),s.indexOf('  function queue('));
+  const now=Date.now(), merchant='merchant';
+  for (const [reports,expected] of [[[],true],[[{updated_ts:now-86400001,sync:{},stock:{}}],true],[[{updated_ts:now,sync:{}}],true],[[{updated_ts:now,sync:{},stock:{}}],false]]) {
+   const c={merchant};
+   const context={P:{signals:()=>[]},state:{clients:[c],data:{now}},client:()=>c,rows:k=>k==='caisseSync'?reports.map(r=>({...r,merchant,app:'caisse',deviceId:'device'})):[],Date,Set};
+   const signals=vm.runInNewContext(fn+';allSignals()',context);
+   assert.equal(signals.some(s=>s.signal_key==='unobserved:queues'),expected,JSON.stringify(reports));
+  }
  },
  async sizes() {
   const base=JSON.parse(read('tools/file-size-baseline.json'));
