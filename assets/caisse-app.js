@@ -1,3 +1,7 @@
+    function hasTables() {
+      if (isFeatureOff('salle') || isFeatureOff('tables')) return false;
+      return typeof tables === 'object' && tables !== null && Object.keys(tables).length > 1;
+    }
 /* ---------- DAfr days ---------- */
     const dafrDays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const monthsEn = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];tickClock();
@@ -118,6 +122,7 @@
     } : {};
     // Live per-table orders built by the cashier (format: {id,name,price,qty}[])
     const tableOrders = {};
+    tableSettlement();
     /* For other occupied tables, generate plausible orders (deterministic per table id) */
     const menu = IS_DEMO ? [
       { name: 'Salade marocaine',     unit: 45 },
@@ -814,7 +819,7 @@
            never be asked to open a second visit over the guest's order. */
         if (t.status === 'khawya' && ((tableOrders[id] || []).length
             || phoneSeats.has(tableKey(id)) || phonePending.has(tableKey(id)))) {
-          t.status = 'ka-yaklo';
+          tableSettlement().project(t, { status: 'ka-yaklo' });
           refreshTableNode(id);
         }
         if (wlSeating) {  // choosing a table for a waitlist party
@@ -1424,7 +1429,7 @@
     /* ---------- Khlass-fade for T7 (preset) ---------- */
     setTimeout(() => {
       if (tables.T7 && tables.T7.status === 'khlass') {
-        tables.T7.status = 'khawya';
+        tableSettlement().project(tables.T7, { status: 'khawya' });
         refreshTableNode('T7');
       }
     }, 5000);
@@ -1523,11 +1528,11 @@
       order.provisionalNumber = false;
       if (order.table && detail.session && tables[order.table]) {
         order.session = String(detail.session);
-        tables[order.table].timerSession = order.session;
+        tableSettlement().project(tables[order.table], { timerSession: order.session });
       }
       reconcileReceiptOrderNumber(order);
       if (order.table && tables[order.table] && String(tables[order.table].orderNo) === was) {
-        tables[order.table].orderNo = ticketNo(order);
+        tableSettlement().project(tables[order.table], { orderNo: ticketNo(order) });
       }
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -2431,7 +2436,7 @@
         const t = tables[reassignTableId];
         const oldSid = t.server;
         if (newSid === oldSid) { closeReassignModal(); return; }
-        t.server = newSid;
+        tableSettlement().project(t, { server: newSid });
         refreshTableNode(reassignTableId);
         if (selectedId === reassignTableId) renderRightPanel(reassignTableId);
         toast(`Table ${reassignTableId} → ${servers[newSid].name}`);
@@ -2451,7 +2456,7 @@
       saveSplitFlow();
       const t = tables[splitState.tableId];
       if (t && t.status !== 'khlass') {
-        t.status = 'bgha-ykhlass';  // backgrounded split → mesa shows Addition
+        tableSettlement().project(t, { status: 'bgha-ykhlass' });  // backgrounded split → mesa shows Addition
         refreshTableNode(splitState.tableId);
       }
       $('#split-modal').classList.remove('is-open');
@@ -2518,13 +2523,25 @@
           row.id === saleId || row.serverSaleId === saleId
           || window.KiwiLive?.saleIdFor?.(row, currentMerchantSlug()) === saleId));
         if (voided) { voided.voided = true; voided.voidConfirmed = true; voided.voidAuthority = 'sale-cancel'; }
-        table.status = 'bgha-ykhlass';
-        table.covers = Math.max(1, Number(snap.covers) || 1);
-        table.orderNo = String(snap.orderNo || '').trim();
-        table.reopenRef = String(result.ref || snap.ref || '').trim();
-        table.timerSession = String(result.sessionId);
-        delete table.reopenSessionId;
-        table.reopenedBill = saleId;
+        const reopenedAmount = voided ? Math.max(0, Math.round(Number(voided.amount || 0) * 100))
+          : Math.max(0, Math.round(Number(receipt.total || 0) * 100));
+        const billCents = snap.split ? Math.round(Number(snap.split.total || 0) * 100)
+          : reopenedAmount;
+        tableSettlement().reopen(target, { id: 'reopen:' + saleId, paymentId: voided?.id || saleId,
+          session: String(result.sessionId), totalCents: billCents, lines: snap.lines,
+          payments: snap.split ? journal.filter(row => row && !row.voided && row.split
+            && String(row.split.flowId || '') === String(snap.split.id || result.splitFlowId || '')).map(row => ({
+              id: row.id, amountCents: Math.max(0, Math.round(Number(row.amount || 0) * 100)),
+              tipCents: Math.max(0, Math.round(Number(row.tip || 0) * 100)), method: row.method,
+            })) : [],
+          payment: { amountCents: reopenedAmount, tipCents: Math.max(0, Math.round(Number(voided?.tip || 0) * 100)) } });
+        tableSettlement().project(table, { status: 'bgha-ykhlass' });
+        tableSettlement().project(table, { covers: Math.max(1, Number(snap.covers) || 1) });
+        tableSettlement().project(table, { orderNo: String(snap.orderNo || '').trim() });
+        tableSettlement().project(table, { reopenRef: String(result.ref || snap.ref || '').trim() });
+        tableSettlement().project(table, { timerSession: String(result.sessionId) });
+        tableSettlement().project(table, {}, ['reopenSessionId']);
+        tableSettlement().project(table, { reopenedBill: saleId });
         delete tableClosedAt[tableKey(target)];
         delete orders[target];
         tableOrders[target] = snap.lines.slice(0, 40).map((line, index) => {
@@ -2561,7 +2578,7 @@
         saveSplitFlow();
         const t = tables[splitState.tableId];
         if (t && t.status !== 'khlass') {
-          t.status = 'bgha-ykhlass';  // backgrounded split → mesa shows Addition
+          tableSettlement().project(t, { status: 'bgha-ykhlass' });  // backgrounded split → mesa shows Addition
           refreshTableNode(splitState.tableId);
         }
         $('#split-modal').classList.remove('is-open');
@@ -2844,7 +2861,7 @@
         }
       } else if (name === 'remove-table-discount' && selectedId && tables[selectedId]) {
         e.stopPropagation();
-        delete tables[selectedId].discount;
+        tableSettlement().project(tables[selectedId], {}, ['discount']);
         renderRightPanel(selectedId);
         refreshTableNode(selectedId);
         toast('Remise supprimée');
@@ -2868,7 +2885,7 @@
         tableSplits.delete(selectedId);
         const t = tables[selectedId];
         if (t && t.status !== 'khlass') {
-          t.status = 'bgha-ykhlass';  // split cancelled → mesa stays Addition
+          tableSettlement().project(t, { status: 'bgha-ykhlass' });  // split cancelled → mesa stays Addition
           refreshTableNode(selectedId);
         }
         renderRightPanel(selectedId);
@@ -3406,7 +3423,7 @@
               // floor poll supplies a seat. Once this visit is pruned, that
               // fallback must not resurrect it after phoneSeats is rebuilt.
               if (localId && tables[localId] && String(tables[localId].timerSession || '') === String(s.id)) {
-                delete tables[localId].timerSession;
+                tableSettlement().project(tables[localId], {}, ['timerSession']);
               }
               // Clore activement la session zombie côté serveur dans D1
               document.dispatchEvent(new CustomEvent('kiwi-table-released', {
@@ -3421,7 +3438,7 @@
              table et surtout pas recommencer par le nombre de couverts. */
           const id = caisseTableId(s.table);
           if (id && tables[id] && tables[id].status === 'khawya') {
-            tables[id].status = 'ka-yaklo';
+            tableSettlement().project(tables[id], { status: 'ka-yaklo' });
             resetTableTimer(tables[id]);
             touched = true;
           }
@@ -3441,13 +3458,13 @@
           if (current && String(current.session) !== String(closed.id)) return;
           if (mode === 'order' && selectedId === id) return;
           if (billBelongsToOtherVisit(id, closed.id)) return;
-          tables[id].status = 'khawya';
-          tables[id].covers = 0;
+          tableSettlement().project(tables[id], { status: 'khawya' });
+          tableSettlement().project(tables[id], { covers: 0 });
           resetTableTimer(tables[id]);
           delete orders[id];
           delete tableOrders[id];
-          delete tables[id].discount;
-          delete tables[id].orderNo;
+          tableSettlement().project(tables[id], {}, ['discount']);
+          tableSettlement().project(tables[id], {}, ['orderNo']);
           if (selectedId === id) closeRightPanel();
           refreshTableNode(id);
           touched = true;

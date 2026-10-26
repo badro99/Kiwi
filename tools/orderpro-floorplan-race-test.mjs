@@ -44,7 +44,7 @@ const context = vm.createContext({
   servers: { S1: { name: 'Sara' } },
   renderRealGrid() {}, emptyPlanHTML: () => '', window: {},
 });
-vm.runInContext(`${extractFunction('setupRealSalle')}\nsetupRealSalle();`, context);
+vm.runInContext(caisseTestSource.withSettlement(`${extractFunction('setupRealSalle')}\nsetupRealSalle();`), context);
 
 assert.ok(viewClasses.has('has-real-plan'), 'real plan hides the unused demo counter row');
 assert.equal(tables['10'].status, 'ka-yaklo', 'cloud plan refresh cannot mark an active OrderPro table empty');

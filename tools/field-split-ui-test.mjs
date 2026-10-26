@@ -18,6 +18,8 @@ const html = between('  <div class="modal-veil" id="split-modal"', '  <!-- =====
 assert.ok(html.includes('id="split-launch"') && html.includes('id="split-all-done"'));
 const css = Array.from(source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g), m => m[1]).join('\n');
 const js = `
+${fs.readFileSync(new URL('../assets/caisse/table-settlement.js', import.meta.url), 'utf8')}
+const tables = { T7: { status: 'ka-yaklo' } }, tableOrders = {};
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const money = v => Math.round(Number(v)*100)/100, minor = v => Math.round(v*100), major = v => v/100;
 const fmtMAD = v => v+' MAD', fmtMADcents = fmtMAD, lineCat = () => 'meal', phoneSessionOf = () => 'visit';

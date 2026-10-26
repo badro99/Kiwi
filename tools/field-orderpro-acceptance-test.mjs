@@ -121,7 +121,7 @@ function phone(table, storage = new Map()) {
     nameOf: id => menu.items.find(item => item.id === id)?.name || '',
     totals: () => ({ total: 50 }), describeOptionChoices: () => [], describeOptionVisuals: () => [], groupLabel: key => key,
   });
-  vm.runInContext(sentSource + sessionSource + closedSource + sendSource + '\nglobalThis.production = { SESSION, sendOrder };', context);
+  vm.runInContext(caisseTestSource.withSettlement(sentSource + sessionSource + closedSource + sendSource + '\nglobalThis.production = { SESSION, sendOrder };'), context);
   return { context, storage, screens, requests, toasts, ...context.production,
     loseResponse() { loseNextResponse = true; },
     add(id = 'dish', options = {}, qty = 1) { context.cart.set(id, { id, options, qty, note: '', unitPrice: 50 }); },
@@ -140,7 +140,7 @@ function till(table, session) {
     refreshTableNode() {}, renderRightPanel() {}, persistShift() {},
     document: { querySelector() { return null; }, addEventListener() {} }, setInterval: callback => { tick = callback; },
   });
-  vm.runInContext(tableSaleLabelSource + phoneSessionSource + settledSource + attachSource + timerSource + '\nglobalThis.attach = attachOrderProTable;', context);
+  vm.runInContext(caisseTestSource.withSettlement(tableSaleLabelSource + phoneSessionSource + settledSource + attachSource + timerSource + '\nglobalThis.attach = attachOrderProTable;'), context);
   return { context, attach: context.attach, tick: () => tick() };
 }
 
@@ -446,7 +446,7 @@ await check('#3: actual markPaid clears the anchor before a reused table receive
   const t = till('paid', 'visit');
   Object.assign(t.context, { releasePhoneTable() {}, shift: { tablesPaid: 0 }, renderShiftStats() {},
     tableSplits: new Map(), setTimeout() {} });
-  vm.runInContext(slice(caisseSource, '    function markPaid(id)', '    /* ===========================================================\n       Vente rapida'), t.context);
+  vm.runInContext(caisseTestSource.withSettlement(slice(caisseSource, '    function markPaid(id)', '    /* ===========================================================\n       Vente rapida')), t.context);
   const o = { id: 'paid-order', session: 'visit', mode: 'table', table: 'paid', status: 'pending', created_ts: now,
     lines: [{ id: 'dish', qty: 1, unitPrice: 50 }] };
   t.attach(o); assert.ok(t.context.tables.paid.orderStartedAt);
@@ -455,7 +455,7 @@ await check('#3: actual markPaid clears the anchor before a reused table receive
   assert.equal(t.context.tables.paid.elapsed, 0);
   assert.equal(t.context.tableOrders.paid.length, 0);
   t.context.Date = class extends Date { static now() { return now + 30 * 60000; } };
-  t.context.tables.paid.status = 'ka-yaklo';
+  t.context.tableSettlement().project(t.context.tables.paid, { status: 'ka-yaklo' });
   t.context.phoneSeats.set('paid', { session: 'next-visit', since: now + 30 * 60000 });
   t.attach({ ...o, id: 'next-order', session: 'next-visit', created_ts: now + 30 * 60000 });
   assert.equal(t.context.tables.paid.elapsed, 0);
@@ -477,8 +477,8 @@ await check('#3: actual transfer migration carries the anchor and clears the sou
     kdsOrders: [{ num: 41, type: 'dineIn', table: 'source', paid: false }],
     confirmCaisseTransfer() {}, publishServiceFloor() {},
   });
-  vm.runInContext(slice(caisseSource, '    function applyCaisseMovedVisit(', '    function openCaisseTransferModal('), t.context);
-  vm.runInContext('const from="source",to="target",fromT=tables[from],toT=tables[to];\n' + migration, t.context);
+  vm.runInContext(caisseTestSource.withSettlement(slice(caisseSource, '    function applyCaisseMovedVisit(', '    function openCaisseTransferModal(')), t.context);
+  vm.runInContext(caisseTestSource.withSettlement('const from="source",to="target",fromT=tables[from],toT=tables[to];\n' + migration), t.context);
   assert.equal(t.context.tables.target.orderStartedAt, now);
   assert.equal(t.context.tables.target.elapsed, 20);
   assert.equal(t.context.tables.source.orderStartedAt, undefined);

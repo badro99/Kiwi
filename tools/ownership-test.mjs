@@ -10,7 +10,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { analyse, inspect } from './ownership-lib.mjs';
-const tracked = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', ...['caisse-app', 'pages-pro', 'hotel', 'dateRange', 'agent', 'venues', 'interactive', 'serveur-app', 'stock'].map(n => `assets/${n}.js`)];
+const tracked = ['assets/caisse/table-settlement.js', 'dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', ...['caisse-app', 'pages-pro', 'hotel', 'dateRange', 'agent', 'venues', 'interactive', 'serveur-app', 'stock'].map(n => `assets/${n}.js`)];
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.join(root, 'tools/ownership-manifest.json');
 export function inventory(root) {

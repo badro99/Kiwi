@@ -61,7 +61,7 @@ assert.ok(journalListSource.includes('function renderJournalList'));
     $: () => body, window: {}, rpEsc: (value) => value, escTeam: (value) => String(value), fmtMAD: (value) => `${value} MAD`,
     String, Math,
   });
-  vm.runInContext(journalListSource, screen);
+  vm.runInContext(caisseTestSource.withSettlement(journalListSource), screen);
   screen.renderJournalList();
   ok(body.innerHTML.includes('Offerte · Table 1') && body.innerHTML.includes('data-lucide="gift"')
     && !body.innerHTML.includes('Carte · Table 1'), 'complimentary journal sale is not presented as a card payment');
@@ -90,7 +90,7 @@ assert.ok(shiftStatsSource.includes('function renderShiftStats'));
     },
     shift: { tablesPaid: 1 }, shiftOpenedAt: null, fmtMAD: (value) => `${value} MAD`, Math, String,
   });
-  vm.runInContext(shiftStatsSource, screen);
+  vm.runInContext(caisseTestSource.withSettlement(shiftStatsSource), screen);
   screen.renderShiftStats();
   ok(fields.get('#stat-txns-delta').textContent === 'Aucun encaissement',
     'a complimentary-only shift does not falsely show 100% cash');
@@ -121,7 +121,7 @@ assert.ok(launchSplitSource.includes('function launchSplitFlow'));
     $: () => modal,
     Array, Object,
   });
-  vm.runInContext(launchSplitSource, zero);
+  vm.runInContext(caisseTestSource.withSettlement(launchSplitSource), zero);
   zero.launchSplitFlow();
   ok(recorded && recorded[0] === 0 && recorded[1] === 'complimentary' && paid === 'T4',
     'a manager-approved 100% discount writes an audited complimentary receipt before closing the table');
@@ -153,12 +153,12 @@ const screen = vm.createContext({
   postCaisseCancellation: async (body) => { requested = body; return { ok: true, ordersCancelled: 1 }; },
   fetch: async (_url, options) => { requested = JSON.parse(options.body); return { ok: true, json: async () => ({ ok: true, ordersCancelled: 1 }) }; },
   caisseTableId: (v) => v, renderRightPanel() {}, refreshTableNode() {},
-  resetTableTimer: (table) => { delete table.timerSession; },
+  resetTableTimer: (table) => { screen.tableSettlement().project(table, {}, ['timerSession']); },
   releasePhoneTable() {}, persistShift() {}, publishServiceFloor() {},
   updateKdsCount() {}, kdsEl: { classList: { contains: () => false } }, kdsPaint() {},
   backToSalle() {}, toast() {}, clearCart() {}, setVrapView() {},
 });
-vm.runInContext(retireSource + cancelSource, screen);
+vm.runInContext(caisseTestSource.withSettlement(retireSource + cancelSource), screen);
 await screen.cancelSentTable('T13', { actorProof: 'test-operator' });
 ok(requested.cancelTable.expectedSession === 'ses-table-13' && screen.tables.T13.status === 'khawya',
   'cashier clears the exact cancelled visit only after canonical acknowledgement');

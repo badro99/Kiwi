@@ -708,7 +708,7 @@
         /* Carry the designed geometry through · the owner's layout is the
            point of the mirror, so shape/position/size come from the plan
            rather than being flattened to a round table at 0,0. */
-        const rebuilt = tables[id] = {
+        const rebuilt = {
           designed: true, floor: 0, zone: tb.zone || 'z1', zoneName: zone,
           shape: tb.shape || 'round', covers: designedCovers(tb),
           status: hasLiveVisit
@@ -721,10 +721,12 @@
         };
         if (hasLiveVisit && previous) {
           if (+previous.covers > 0) rebuilt.covers = +previous.covers;
-          ['orderStartedAt', 'timerSession', 'orderNo', 'discount'].forEach((field) => {
+          ['orderStartedAt', 'timerSession', 'orderNo', 'discount', 'reopenRef', 'reopenSessionId', 'reopenedBill', 'settlement'].forEach((field) => {
             if (previous[field] != null) rebuilt[field] = previous[field];
           });
         }
+        tables[id] = {};
+        tableSettlement().project(tables[id], rebuilt);
       });
       renderRealGrid();
     }
@@ -783,10 +785,7 @@
       }
     }
 
-    function hasTables() {
-      if (isFeatureOff('salle') || isFeatureOff('tables')) return false;
-      return typeof tables === 'object' && tables !== null && Object.keys(tables).length > 1;
-    }
+
 
     function setMode(newMode) {
       if (isFeatureOff(newMode)) {
@@ -1186,16 +1185,16 @@
             && String(order.session || '') === visit) order.paid = true;
         });
       }
-      t.status = 'khlass';
-      delete t.discount; // clear remise immédiatement à l'encaissement
+      tableSettlement().settle(t);
+      tableSettlement().project(t, {}, ['discount']); // clear remise immédiatement à l'encaissement
       /* The final tender ends this bill's split. A stale completed flow must
          never make the next party's fresh order look already paid. The paid
          receipt keeps its own immutable snapshot for an audited reopen. */
       tableSplits.delete(id);
-      delete t.reopenedBill;
-      delete t.reopenRef;
-      delete t.reopenSessionId;
-      delete t.orderNo;
+      tableSettlement().project(t, {}, ['reopenedBill']);
+      tableSettlement().project(t, {}, ['reopenRef']);
+      tableSettlement().project(t, {}, ['reopenSessionId']);
+      tableSettlement().project(t, {}, ['orderNo']);
       tableOrders[id] = [];
       delete orders[id];
       /* L'addition est réglée : le téléphone posé sur cette table cesse d'être
@@ -1214,11 +1213,11 @@
       // Fade to khawya after 3s
       setTimeout(() => {
         if (tables[id] && tables[id].status === 'khlass') {
-          tables[id].status = 'khawya';
+          tableSettlement().project(tables[id], { status: 'khawya' });
           delete orders[id]; // clear order
           delete tableOrders[id]; // clear cashier-built order
-          delete tables[id].discount; // clear remise · table reset
-          delete tables[id].orderNo; // next party gets its own order number
+          tableSettlement().project(tables[id], {}, ['discount']); // clear remise · table reset
+          tableSettlement().project(tables[id], {}, ['orderNo']); // next party gets its own order number
           refreshTableNode(id);
           try { persistShift(); } catch (_) {}
         }
@@ -1269,11 +1268,11 @@
       if (!newTableId) return;
       $('#new-table-modal').classList.remove('is-open');
       const t = tables[newTableId];
-      t.covers  = newTableCovers;
+      tableSettlement().project(t, { covers: newTableCovers });
       t.size    = newTableCovers >= 5 ? 6 : (newTableCovers <= 2 ? 2 : 4);
-      t.status  = 'ka-yaklo';
+      tableSettlement().project(t, { status: 'ka-yaklo' });
       resetTableTimer(t);
-      delete t.discount; // Toute nouvelle table démarre sans remise
+      tableSettlement().project(t, {}, ['discount']); // Toute nouvelle table démarre sans remise
       /* A former party's split can survive an older till snapshot. Starting a
          genuinely new table invalidates it even if the old close was missed. */
       tableSplits.delete(newTableId);
@@ -1391,8 +1390,8 @@
       const idx = waitlist.findIndex(w => w.id === e.id);
       const t = tables[tableId];
       if (t && t.status === 'khawya') {  // occupy the chosen table on the floor
-        t.status  = 'a-commander';    // seated · server still needs to take the order
-        t.covers  = e.size;
+        tableSettlement().project(t, { status: 'a-commander' });    // seated · server still needs to take the order
+        tableSettlement().project(t, { covers: e.size });
         resetTableTimer(t);
         delete orders[tableId];       // drop any cached/fabricated order
         tableOrders[tableId] = [];    // fresh table, ready to take their order
@@ -1494,7 +1493,7 @@
           }
         });
       } catch (_) {}
-      if (tables[to]) tables[to].timerSession = session;
+      if (tables[to]) tableSettlement().project(tables[to], { timerSession: session });
     }
 
     function openCaisseTransferModal(tableId) {
@@ -1577,15 +1576,7 @@
 
       // Local state migration
       if ((tableOrders[from] || orders[from] || []).length) startTableTimer(from);
-      toT.status = fromT.status;
-      toT.covers = fromT.covers;
-      toT.elapsed = fromT.elapsed;
-      toT.orderStartedAt = fromT.orderStartedAt;
-      toT.timerSession = fromT.timerSession;
-      toT.server = fromT.server;
-      toT.orderNo = fromT.orderNo;
-      toT.discount = fromT.discount;
-      tableOrders[to] = tableOrders[from] || [];
+      tableSettlement().transfer(from, to, { id: transferIntent?.operationId || ('local-transfer:' + from + ':' + to + ':' + (fromT.timerSession || fromT.orderStartedAt || Date.now())) });
       if (Array.isArray(orders[from]) && orders[from].length) orders[to] = orders[from];
       else delete orders[to];
       applyCaisseMovedVisit(from, to, transferData, transferIntent, false);
@@ -1598,14 +1589,6 @@
         if (order && order.type === 'dineIn' && String(order.table) === String(from) && !order.paid) order.table = to;
       });
 
-      // Clear source table
-      fromT.status = 'khawya';
-      fromT.covers = 0;
-      resetTableTimer(fromT);
-      delete fromT.orderNo;
-      delete fromT.server;
-      delete fromT.discount;
-      delete tableOrders[from];
       delete orders[from];
 
       try { persistShift(); publishServiceFloor(); } catch (_) {}
@@ -1724,11 +1707,11 @@
       if (sourceLines.length || (orders[source] || []).length) timerAnchors.push(startTableTimer(source));
       if (targetLines.length || (orders[target] || []).length) timerAnchors.push(startTableTimer(target));
       if (timerAnchors.length) {
-        targetT.orderStartedAt = Math.min(...timerAnchors);
-        delete targetT.timerSession;
+        tableSettlement().project(targetT, { orderStartedAt: Math.min(...timerAnchors) });
+        tableSettlement().project(targetT, {}, ['timerSession']);
         startTableTimer(target);
       }
-      tableOrders[target] = targetLines.concat(sourceLines);
+      tableSettlement().merge(source, target, { id: mergeIntent?.operationId || ('local-merge:' + source + ':' + target + ':' + (sourceT.timerSession || sourceT.orderStartedAt || Date.now())) });
       // Cached rendered bills must include both sides, or yield to the live lines.
       if ((orders[source] || []).length || (orders[target] || []).length) {
         orders[target] = [
@@ -1738,7 +1721,6 @@
       } else delete orders[target];
       applyCaisseMovedVisit(source, target, mergeData, mergeIntent, true);
       delete confirmCaisseMerge.pendingIntent;
-      targetT.covers = (targetT.covers || 0) + (sourceT.covers || 0);
       if (typeof tableSplits !== 'undefined') {
         tableSplits.delete(source);
         tableSplits.delete(target);
@@ -1747,14 +1729,6 @@
         if (order && order.type === 'dineIn' && String(order.table) === String(source) && !order.paid) order.table = target;
       });
 
-      // Clear source table
-      sourceT.status = 'khawya';
-      sourceT.covers = 0;
-      resetTableTimer(sourceT);
-      delete sourceT.orderNo;
-      delete sourceT.server;
-      delete sourceT.discount;
-      delete tableOrders[source];
       delete orders[source];
 
       try { persistShift(); publishServiceFloor(); } catch (_) {}
@@ -1923,7 +1897,7 @@
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
       // First item taken → order started, table is now being served (eating)
       if (tables[tableId] && tables[tableId].status === 'a-commander') {
-        tables[tableId].status = 'ka-yaklo';
+        tableSettlement().project(tables[tableId], { status: 'ka-yaklo' });
         refreshTableNode(tableId);
       }
       const sig = optSig(opts);
@@ -2115,7 +2089,7 @@
       const n = tableFreshQty(tableId);
       const held = tableHeldQty(tableId);
 
-      t.status  = 'ka-yaklo';
+      tableSettlement().project(t, { status: 'ka-yaklo' });
       if ((tableOrders[tableId] || []).length) startTableTimer(tableId);
       refreshTableNode(tableId);
 

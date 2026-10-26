@@ -77,11 +77,11 @@ function context() {
     'staleQueuedServerTicket', 'kdsPaint', 'openVrapOrder', 'vrapFinancialItems',
     'savedTakeawaySplitFor', 'vrapSplitKey', 'currentVrapSplit', 'liveTableSplit', 'splitPaidCount', 'splitRemainingTotal', 'loadSplitFlow', 'openSplitModal',
     'vrapHandoverTimestamp', 'vrapHandoverTime', 'ticketNo', 'orderServerInitials'];
-  vm.runInContext(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource, c);
+  vm.runInContext(caisseTestSource.withSettlement(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource), c);
   const moneySource = source.match(/^    const money = .*;$/m);
   const splitResume = source.match(/^    const _origOpenSplit = openSplitModal;\n    openSplitModal = function\(tableId\) \{[^]*?^    };/m);
   assert.ok(moneySource && splitResume, 'production money helper and saved-split reopening wrapper exist');
-  vm.runInContext(moneySource[0] + '\n' + splitResume[0], c);
+  vm.runInContext(caisseTestSource.withSettlement(moneySource[0] + '\n' + splitResume[0]), c);
   return c;
 }
 const row = (id = 'ord-field-one', extra = {}) => ({
@@ -175,14 +175,14 @@ function snapshotContext(ctx) {
 snapshotContext(c);
 let savedShift;
 c.localStorage = { setItem: (_key, value) => { savedShift = JSON.parse(value); } };
-vm.runInContext(fn('persistShift'), c);
+vm.runInContext(caisseTestSource.withSettlement(fn('persistShift')), c);
 c.persistShift();
 assert.ok(savedShift && savedShift.tables['2']);
 assert.equal(savedShift.tableClosedAt['2'], now - 60000);
 assert.equal(savedShift.phoneMovedVisits.length, 1);
 const reloaded = context(); snapshotContext(reloaded);
 reloaded.tables = { '1': occupied(), '2': occupied() };
-vm.runInContext(fn('reviveJournalEntry') + '\n' + fn('restoreShift'), reloaded);
+vm.runInContext(caisseTestSource.withSettlement(fn('reviveJournalEntry') + '\n' + fn('restoreShift')), reloaded);
 reloaded.restoreShift(savedShift);
 reloaded.selectedId = '2';
 reloaded.KiwiCaisseKitchen.ingest([row('ord-field-one', { table: '2' })], [row('ord-field-one', { table: '2' })],
@@ -194,7 +194,7 @@ evidence('actual persist/restore reload recovers moved 40 MAD visit and its clos
 
 const paidReload = context(); snapshotContext(paidReload);
 paidReload.tables = { '1': occupied() };
-vm.runInContext(fn('reviveJournalEntry') + '\n' + fn('restoreShift'), paidReload);
+vm.runInContext(caisseTestSource.withSettlement(fn('reviveJournalEntry') + '\n' + fn('restoreShift')), paidReload);
 paidReload.restoreShift({ ...savedShift,
   journal: [{ id: 'visit-ses-paid-emp', table: '1', session: 'ses-paid',
     ref: 'Table 1 #17', label: 'Table 1 #17', amount: 40,
@@ -348,12 +348,12 @@ evidence('partial existing marker does not prevent all-only recovery of the comp
 
 // Both server closure objects and local legacy string IDs hide closed visits.
 const filter = vm.createContext({ state: { orders: { x: tableOrder }, closedSessions: [{ id: tableOrder.session, mode: 'table', table: '1' }] } });
-vm.runInContext(fn('list', inbox, 2), filter);
-assert.equal(vm.runInContext("list('accepted').length", filter), 0);
+vm.runInContext(caisseTestSource.withSettlement(fn('list', inbox, 2)), filter);
+assert.equal(vm.runInContext(caisseTestSource.withSettlement("list('accepted').length"), filter), 0);
 filter.state.closedSessions = [tableOrder.session];
-assert.equal(vm.runInContext("list('accepted').length", filter), 0);
+assert.equal(vm.runInContext(caisseTestSource.withSettlement("list('accepted').length"), filter), 0);
 filter.state.closedSessions = [{ id: 'ses-another' }];
-assert.equal(vm.runInContext("list('accepted').length", filter), 1);
+assert.equal(vm.runInContext(caisseTestSource.withSettlement("list('accepted').length"), filter), 1);
 evidence('closure object/string filtering hides only the matching visit');
 
 for (const retainCurrent of [false, true]) {

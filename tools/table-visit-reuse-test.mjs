@@ -98,13 +98,13 @@ async function setup() {
   c.window = c; c.addEventListener = noop; c.setTimeout = setTimeout;
   c.KiwiOrderInbox = { orders: () => ({}) };
   vm.createContext(c);
-  vm.runInContext(relaySource, c);
+  vm.runInContext(caisseTestSource.withSettlement(relaySource), c);
   const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'locallySettledVisit', 'settledVisitsFor', 'billBelongsToOtherVisit',
     'locallySettledOrder', 'paidReceiptForCurrentTable', 'tableSaleLabel', 'releasePhoneTable', 'resetTableTimer',
     'startTableTimer', 'tableSentCount', 'attachOrderProTable', 'opRepairFormulaParents', 'opIngest',
     'canRecoverCaisseTable', 'sameMap', 'staleQueuedServerTicket', 'ticketNo', 'orderServerInitials',
     'kitchenItemsFromLines', 'relayLinesFromCaisse', 'relayToKitchen', 'lineHeld', 'sendTableToKitchen'];
-  vm.runInContext(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource, c);
+  vm.runInContext(caisseTestSource.withSettlement(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource), c);
 
   /* Same mapping as assets/orderpro-inbox.js pull() + bridge(). */
   const inbox = { orders: {} };

@@ -25,6 +25,7 @@ function harness(overrides = {}) {
   const calls = { toast: [], render: 0 };
   const context = vm.createContext({
     window: { crypto: { randomUUID: () => 'fixture-split-flow' } },
+    tables: { T7: { status: 'ka-yaklo' } }, tableOrders: {},
     splitState: state, money, minor: v => Math.round(v * 100), major: v => v / 100,
     effectiveTipPct: () => overrides.tipPct || 0, phoneSessionOf: () => 'existing-visit',
     activeSaleDiscount: () => null, recordSale: () => null, markPaid() {}, selectedId: 'T7',
@@ -34,7 +35,7 @@ function harness(overrides = {}) {
     renderConvivesChips() {}, renderConvivesTabs() {}, renderPool() {}, renderConviveCart() {},
     serviceVisitCredit: new Map(),
   });
-  for (const name of ['remainingQty', 'assignUnit', 'unassignUnit', 'splitArticleAllocation', 'renderArticleMode', 'shareMoney', 'shareWeighted', 'launchSplitFlow']) vm.runInContext(fn(name), context);
+  for (const name of ['remainingQty', 'assignUnit', 'unassignUnit', 'splitArticleAllocation', 'renderArticleMode', 'shareMoney', 'shareWeighted', 'launchSplitFlow']) vm.runInContext(caisseTestSource.withSettlement(fn(name)), context);
   return { context, state, calls, elements };
 }
 check('Unassigned items block actual payment-flow creation, no implicit fractions', () => {
@@ -85,7 +86,7 @@ check('Zero-value and sub-centime equal splits cannot enter payment flow', () =>
 check('Employee split also blocks unassigned dishes and preserves whole-item payment', () => {
   const employee = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
   const h = harness({ perConvive: { 1: { Water: 1 }, 2: { Water: 1 } } });
-  for (const name of ['splitArticleAllocation', 'renderArticleMode', 'launchSplitFlow']) vm.runInContext(fn(name, employee), h.context);
+  for (const name of ['splitArticleAllocation', 'renderArticleMode', 'launchSplitFlow']) vm.runInContext(caisseTestSource.withSettlement(fn(name, employee)), h.context);
   h.context.renderArticleMode(); assert.equal(h.elements.get('#split-launch').disabled, true);
   h.context.launchSplitFlow(); assert.equal(h.state.flow, null);
   h.context.assignUnit('Pasta'); h.context.renderArticleMode(); assert.equal(h.elements.get('#split-launch').disabled, false);
@@ -95,7 +96,7 @@ check('Employee split also blocks unassigned dishes and preserves whole-item pay
 check('Employee whole-item split is refused once a deposit is already paid on the visit (no dish paid twice)', () => {
   const employee = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
   const h = harness({ perConvive: { 1: { Pasta: 1, Water: 1 }, 2: { Water: 1 } } });
-  for (const name of ['splitArticleAllocation', 'renderArticleMode', 'launchSplitFlow']) vm.runInContext(fn(name, employee), h.context);
+  for (const name of ['splitArticleAllocation', 'renderArticleMode', 'launchSplitFlow']) vm.runInContext(caisseTestSource.withSettlement(fn(name, employee)), h.context);
   h.context.serviceVisitCredit.set('T7', 2000);
   h.context.launchSplitFlow(); assert.equal(h.state.flow, null); assert.match(h.calls.toast.at(-1), /parts égales/);
   h.context.serviceVisitCredit.delete('T7');

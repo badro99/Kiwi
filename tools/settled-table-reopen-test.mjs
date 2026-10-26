@@ -49,7 +49,7 @@ function bench({ closedAt, seatSince, journal = [] }) {
     locallySettledOrder: (id, number) => journal.some(entry => entry.table === String(id)
       && entry.ref === `Table ${id} #${number}` && !entry.voided && !entry.split),
   });
-  vm.runInContext(fn, ctx);
+  vm.runInContext(caisseTestSource.withSettlement(fn), ctx);
   return { ctx, tables, tableOrders };
 }
 
@@ -161,7 +161,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
     updateKdsCount() {}, kdsEl: { classList: { contains: () => false } },
     persistShift() {}, mode: 'salle', vrapView: '',
   });
-  vm.runInContext(source.slice(start, end), ctx);
+  vm.runInContext(caisseTestSource.withSettlement(source.slice(start, end)), ctx);
   const order = { type: 'dineIn', table: '13', num: 154, relayLines: [{ id: 'salad', name: 'Salade Maison', qty: 1 }] };
   await ctx.relayToKitchen(order);
   ok('cashier-origin queue response retains the canonical visit before the next poll',
@@ -174,15 +174,15 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   assert.ok(functionStart >= 0 && functionEnd > functionStart && paidStart >= 0 && paidEnd > paidStart);
   const events = [];
   const receipt = { id: 'visit-ses-13-154-emp', table: '13', session: 'ses-13-154', amount: 60 };
-  const payCtx = vm.createContext({ tables, tableOrders: { 13: [{ id: 'salad', qty: 1 }] }, orders: {}, tableSplits: new Map(),
+  const payCtx = vm.createContext({ tables: JSON.parse(JSON.stringify(tables)), tableOrders: { 13: [{ id: 'salad', qty: 1 }] }, orders: {}, tableSplits: new Map(),
     journal: [receipt], kdsOrders: [order], phoneSeats: new Map(), phonePending: new Map(),
     tableClosedAt: Object.create(null), tableKey: String,
     document: { dispatchEvent: event => events.push(event.detail) },
     CustomEvent: class { constructor(_, options) { this.detail = options.detail; } },
-    resetTableTimer: table => { delete table.timerSession; }, refreshTableNode() {},
+    resetTableTimer: table => { payCtx.tableSettlement().project(table, {}, ['timerSession']); }, refreshTableNode() {},
     persistShift() {}, renderShiftStats() {}, shift: { tablesPaid: 0 }, setTimeout() {}, Date,
   });
-  vm.runInContext(source.slice(functionStart, functionEnd) + '\n' + source.slice(paidStart, paidEnd), payCtx);
+  vm.runInContext(caisseTestSource.withSettlement(source.slice(functionStart, functionEnd) + '\n' + source.slice(paidStart, paidEnd)), payCtx);
   payCtx.markPaid('13');
   ok('cashier payment closes by the exact visit even before a phone-seat poll',
     events.length === 1 && events[0].session === 'ses-13-154' && events[0].why === 'settle');
@@ -213,14 +213,14 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   const saleCtx = vm.createContext({ journal, tables: { 13: { zone: 'salle' } }, mode: 'salle',
     selectedId: '13', currentCashier: { name: 'Hafid' }, window: {},
     splitState: { flow: null }, generateOrder: () => [], settledOrderRef: () => '154',
-    money: Number, activeSaleDiscount: () => null, accountActiveDiscount: () => { discountCalls++; },
+    money: Number, minor: value => Math.round(Number(value) * 100), activeSaleDiscount: () => null, accountActiveDiscount: () => { discountCalls++; },
     paidReceiptForCurrentTable: () => firstReceipt,
     phoneSessionOf: () => 'ses-13-154', settledOrderLabel: () => 'Table 13 #154',
     genRef: () => '154', attachReceipt() {}, persistShift() {}, creditSaleToClient() {},
     renderShiftStats() {}, refreshOpenReconciliationModals() {},
     $: () => ({ classList: { contains: () => false } }), Date,
   });
-  vm.runInContext(caisseTestSource.declarations('recordSale'), saleCtx);
+  vm.runInContext(caisseTestSource.withSettlement(caisseTestSource.declarations('recordSale')), saleCtx);
   const first = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
     [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
   firstReceipt = first;
@@ -229,6 +229,8 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   ok('a repeated cashier confirmation keeps one journal row for order #154',
     first === replay && journal.length === 1 && first.id.startsWith('sale-'));
   ok('a repeated confirmation does not account its discount twice', discountCalls === 1);
+  saleCtx.tableSettlement().settle('13');
+  saleCtx.tableSettlement().open('13', { id: 'nouvelle-visite', totalCents: 60 });
   journal.length = 0;
   firstReceipt = null;
   saleCtx.creditSaleToClient = () => { throw Error('loyalty unavailable'); };
@@ -259,7 +261,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
     attachReceipt() {}, persistShift() {}, creditSaleToClient() {}, renderShiftStats() {},
     refreshOpenReconciliationModals() {}, $: () => ({ classList: { contains: () => false } }), Date,
   });
-  vm.runInContext(source.slice(helperStart, helperEnd) + '\n' + caisseTestSource.declarations('recordSale'), ctx);
+  vm.runInContext(caisseTestSource.withSettlement(source.slice(helperStart, helperEnd) + '\n' + caisseTestSource.declarations('recordSale')), ctx);
   const replay = ctx.recordSale(60, 'cash', 'Table 13 #154', 0, [], '13');
   ok('a sessionless repeat of #154 reuses its first receipt', replay === journal[0] && journal.length === 1);
   tables[13].orderNo = '155';

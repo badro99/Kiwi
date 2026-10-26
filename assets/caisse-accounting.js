@@ -445,6 +445,7 @@
       if (!d || d.accounted !== false || !(cut > 0)) return;
       d.amount = money(cut);
       d.accounted = true;
+      if (mode !== 'vrap' && tId && tables[tId]) tableSettlement().project(tables[tId], { discount: d });
       shift.discounts = money(shift.discounts + cut);
       shift.discountsCount++;
     }
@@ -772,6 +773,18 @@
         });
       }
       window.KiwiTillTenant?.stamp(entry);
+      if (settlementTable && tables[settlementTable]) {
+        const billLines = split && splitState.sourceLines?.length ? splitState.sourceLines : generateOrder(settlementTable, tables[settlementTable]);
+        const totalCents = !split ? minor(amount) : splitState.flow
+          ? minor(splitState.flow.parts.reduce((sum, part) => sum + Number(part.base ?? (part.amount - (part.tip || 0))), 0))
+          : Math.max(0, minor(billLines.reduce((sum, line) => sum + Number(line.total || 0), 0)) - Number(discount?.discountAmountCents || 0));
+        tableSettlement().bill(settlementTable, { totalCents, lines: entry.reopenSnapshot?.lines || [],
+          payments: split && splitState.flow ? splitState.flow.parts.flatMap((part, index) => part.paid ? [{
+            id: part.saleId || ('legacy:' + splitState.flow.id + ':' + index),
+            amountCents: minor(part.base ?? (part.amount - (part.tip || 0))), tipCents: minor(part.tip || 0), method: part.payMethod,
+          }] : []) : [] });
+        tableSettlement().addPayment(settlementTable, { id: entry.id, amountCents: minor(amount), tipCents: minor(tip || 0), method });
+      }
       journal.push(entry);
       lastSaleId = entry.id;
       /* Do not leave a five-second loss window between taking money and the

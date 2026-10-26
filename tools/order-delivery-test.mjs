@@ -231,7 +231,7 @@ async function main() {
   for (const name of ['locallySettledVisit', 'canRecoverCaisseTable', 'attachOrderProTable']) {
     const match = caisseSource.match(new RegExp(`^    function ${name}\\([^]*?^    }`, 'm'));
     if (!match) throw new Error(`Missing production function: ${name}`);
-    vm.runInContext(match[0], context);
+    vm.runInContext(caisseTestSource.withSettlement(match[0]), context);
   }
   const attachProduction = world.attachOrderProTable;
   world.attachOrderProTable = o => {

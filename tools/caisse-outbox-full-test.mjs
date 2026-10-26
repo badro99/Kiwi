@@ -159,10 +159,10 @@ async function fixture(t, opts = {}) {
     };
     vm.createContext(context);
     vm.runInContext(live, context, { filename: 'assets/live-link.js' });
-    vm.runInContext(['tableSaleLabel', 'settledOrderLabel', 'settledOrderRef', 'paidReceiptForCurrentTable',
+    vm.runInContext(caisseTestSource.withSettlement(['tableSaleLabel', 'settledOrderLabel', 'settledOrderRef', 'paidReceiptForCurrentTable',
       'activeSaleDiscount', 'recordSale', 'persistShift', 'reviveJournalEntry', 'restoreShift',
       'reconcileJournalSales', 'saveProvisional', 'nativeHapticSuccess', 'markSplitPartPaid'].map(extract).join('\n')
-      + '\n' + asyncExtract('finalizeTender') + '\n' + heldBlock, context, { filename: 'kiwi-caisse-outbox-functions.js' });
+      + '\n' + asyncExtract('finalizeTender') + '\n' + heldBlock), context, { filename: 'kiwi-caisse-outbox-functions.js' });
     const ack = page.match(/window\.addEventListener\('kiwi:money-sync',[\s\S]*?\n    \}\);/);
     assert.ok(ack, 'caisse listens for money-sync on window');
     vm.runInContext(ack[0], context, { filename: 'kiwi-caisse-money-sync.js' });

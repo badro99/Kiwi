@@ -32,7 +32,7 @@ function check(ok, description) {
     $: () => ({ classList: { remove() {} } }), resetTableTimer() {},
     tableKey: value => value, refreshTableNode() {}, setMode() {}, Date, Math,
   });
-  vm.runInContext(section('    function confirmNewTable() {', "    document.getElementById('new-table-modal')"), context);
+  vm.runInContext(caisseTestSource.withSettlement(section('    function confirmNewTable() {', "    document.getElementById('new-table-modal')")), context);
   context.confirmNewTable();
   check(context.tables['1'].status === 'ka-yaklo' && !splits.has('1'),
     'a new party cannot inherit an old fully paid split');
@@ -48,7 +48,7 @@ function check(ok, description) {
     shift: { tablesPaid: 0 }, renderShiftStats() {}, persistShift() {},
     setTimeout() {},
   });
-  vm.runInContext(section('    function markPaid(id) {', '    /* ===========================================================\n       Vente rapida'), context);
+  vm.runInContext(caisseTestSource.withSettlement(section('    function markPaid(id) {', '    /* ===========================================================\n       Vente rapida')), context);
   context.markPaid('1');
   check(context.tables['1'].status === 'khlass' && !splits.has('1'),
     'settling the final split part clears its active table flow');
@@ -68,7 +68,7 @@ if (source.includes('    function liveTableSplit(id) {')) {
     splitPaidCount: saved => saved.parts.filter(part => part.paid).length,
     persistShift() { persists++; }, String, Array,
   });
-  vm.runInContext(section('    function liveTableSplit(id) {', '    function splitRemainingTotal(saved) {'), context);
+  vm.runInContext(caisseTestSource.withSettlement(section('    function liveTableSplit(id) {', '    function splitRemainingTotal(saved) {')), context);
   check(context.liveTableSplit('1') === null && !splits.has('1') && persists === 1,
     'an old completed split is rejected when a waiter or phone opens a new visit');
   splits.set('1', { session: 'new-visit', parts: [{ paid: true }, { paid: false }] });

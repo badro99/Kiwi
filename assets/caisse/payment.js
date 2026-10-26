@@ -184,7 +184,7 @@
       });
       if (order) {
         const label = ticketNo(order);
-        if (t) t.orderNo = label;
+        if (t) tableSettlement().project(t, { orderNo: label });
         return label;
       }
       return tableId || 'Commande';
@@ -345,9 +345,9 @@
     /* ---------- Live elapsed minutes ---------- */
     function resetTableTimer(t) {
       if (!t) return;
-      t.elapsed = 0;
-      delete t.orderStartedAt;
-      delete t.timerSession;
+      tableSettlement().project(t, { elapsed: 0 });
+      tableSettlement().project(t, {}, ['orderStartedAt']);
+      tableSettlement().project(t, {}, ['timerSession']);
     }
     function startTableTimer(id, createdAt = 0) {
       const t = tables[id];
@@ -357,14 +357,14 @@
         const created = Number(createdAt);
         // Old shift snapshots have only elapsed minutes. Preserve that age;
         // canonical orders supply their timestamp when a till reconnects.
-        t.orderStartedAt = created > 0 ? Math.min(now, created)
-          : now - Math.max(0, Number(t.elapsed) || 0) * 60000;
+        tableSettlement().project(t, { orderStartedAt: created > 0 ? Math.min(now, created)
+          : now - Math.max(0, Number(t.elapsed) || 0) * 60000 });
       } else if (Number(createdAt) > 0) {
         // A reconnect can deliver the newest ticket first. Earlier tickets
         // move the anchor back; additional orders never restart the clock.
-        t.orderStartedAt = Math.min(t.orderStartedAt, Number(createdAt), now);
+        tableSettlement().project(t, { orderStartedAt: Math.min(t.orderStartedAt, Number(createdAt), now) });
       }
-      t.elapsed = Math.max(0, Math.floor((now - t.orderStartedAt) / 60000));
+      tableSettlement().project(t, { elapsed: Math.max(0, Math.floor((now - t.orderStartedAt) / 60000)) });
       return t.orderStartedAt;
     }
     function updateTableTimers() {

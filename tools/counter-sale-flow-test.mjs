@@ -163,7 +163,7 @@ await check('the raw ticket number stays the stored value, and the label stays a
   /* Pourquoi cela compte : `t.orderNo` est COMPARÉ à `order.num` et TRANSFÉRÉ
    * tel quel d'une table à l'autre. Y coller le nom de la table ferait voyager
    * l'ancienne table avec le ticket lors d'un changement de table. */
-  assert.match(caisse, /if \(t\) t\.orderNo = label;/);
+  assert.match(caisse, /if \(t\) tableSettlement\(\)\.project\(t, \{ orderNo: label \}\);/);
   assert.match(caisse, /String\(tables\[order\.table\]\.orderNo\) === String\(order\.num\)/);
   const ref = caisse.slice(caisse.indexOf('function settledOrderRef(tableId) {'));
   assert.ok(!/Table \$\{/.test(ref.slice(0, ref.indexOf('function closeCardModal'))),
@@ -198,7 +198,7 @@ await check('the composed label renders as the counter reads it', async () => {
   const start = caisse.indexOf('    function tableSaleLabel(tableId, ref) {');
   const end = caisse.indexOf('    function settledOrderLabel(tableId) {');
   const context = vm.createContext({});
-  vm.runInContext(caisse.slice(start, end), context);
+  vm.runInContext(caisseTestSource.withSettlement(caisse.slice(start, end)), context);
   const label = context.tableSaleLabel;
   assert.equal(label('5', '56'), 'Table 5 #56');
   assert.equal(label('T2', 'OP-14'), 'Table T2 #OP-14');   // OrderPro garde sa provenance
