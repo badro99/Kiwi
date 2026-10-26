@@ -22,7 +22,7 @@
   var outboxInitPromise = null, outboxSubscribed = false;
 /* <</queue:state:4>> */
 /* <<queue:state:5>> */
-  var flushing = false, queueStorageError = false;
+  var flushing = false, queueStorageError = false, queueRecoveryError = false, queueBlocked = false;
 /* <</queue:state:5>> */
 /* <<queue:state:6>> */
   var flushStartedAt = 0;
@@ -38,8 +38,33 @@
 /* <</queue:state:9>> */
 /* <<queue:qRead>> */
 function qRead() {
-    try { var a = JSON.parse(localStorage.getItem(Q_KEY) || '[]'); return Array.isArray(a) ? a : []; }
-    catch (_) { return []; }
+    var raw;
+    try { raw = localStorage.getItem(Q_KEY); } catch (_) { return []; }   // unreadable storage: writes report it
+    if (raw === null) return [];
+    try {
+      var a = JSON.parse(raw);
+      if (!Array.isArray(a)) throw new Error('queue-shape');
+      return a;
+    } catch (_) {
+      /* Corrupt bytes may hold unsent money: they are moved aside, never
+         overwritten, and the till keeps queuing new sales. The quarantine key
+         keeps « recovery required » visible until support has read it. */
+      try {
+        localStorage.setItem(Q_KEY + ':quarantine:' + Date.now(), raw);
+        localStorage.removeItem(Q_KEY);
+        queueRecoveryError = true;
+        return [];
+      } catch (_) {
+        // No room to move them: leave them in place and refuse to overwrite.
+        queueRecoveryError = true;
+        queueBlocked = true;
+        return [];
+      }
+    }
+  }
+  function quarantined() {
+    try { for (var i = 0; i < localStorage.length; i++) { if (String(localStorage.key(i)).indexOf(Q_KEY + ':quarantine:') === 0) return true; } } catch (_) {}
+    return false;
   }
 /* <</queue:qRead>> */
 /* <<queue:queueSignal>> */
@@ -49,6 +74,8 @@ function queueSignal() {
 /* <</queue:queueSignal>> */
 /* <<queue:qWrite>> */
 function qWrite(a) {
+    qRead();
+    if (queueBlocked) { queueSignal(); return false; }
     try {
       localStorage.setItem(Q_KEY, JSON.stringify(a));
       queueStorageError = false;
@@ -116,10 +143,10 @@ function queueStatus() {
         sending: outboxStatus.sending,
         foreign: fallback.length - localDebt.length,
         total: (outboxStatus.total || 0) + localDebt.length,
-        storageError: !!(outboxStatus.storageError || queueStorageError),
+        storageError: !!(outboxStatus.storageError || queueStorageError || queueRecoveryError || quarantined()),
         engine: 'indexeddb',
         lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
-        lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
+        lastError: (queueRecoveryError || quarantined()) ? 'queue-recovery-required' : queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
         lastAttemptAt: outboxStatus.lastAttemptAt || 0,
         oldestPendingAt: oldest === Infinity ? 0 : oldest,
         lastAcknowledgedAt: ackAt,
@@ -135,10 +162,10 @@ function queueStatus() {
       held: current.filter(function (x) { return x && x._blocked && x._serverHeld; }).length,
       foreign: q.length - current.length,
       total: current.length,
-      storageError: !!queueStorageError,
+      storageError: !!(queueStorageError || queueRecoveryError || quarantined()),
       engine: 'localstorage',
       lastStatus: lastSyncStatus || 0,
-      lastError: lastSyncError || '',
+      lastError: (queueRecoveryError || quarantined()) ? 'queue-recovery-required' : (lastSyncError || ''),
       lastAttemptAt: current.reduce(function (latest, row) { return Math.max(latest, +(row && row._lastAttemptAt) || 0); }, 0),
       oldestPendingAt: (function () {
         var oldest = current.reduce(function (at, row) { return Math.min(at, Number(row && row.ts) || Infinity); }, Infinity);
@@ -163,6 +190,8 @@ function refreshOutboxStatus() {
 /* <</queue:refreshOutboxStatus>> */
 /* <<queue:initOutbox>> */
 function initOutbox() {
+    qRead();
+    if (queueBlocked) return Promise.resolve(false);
     if (outboxUsing) return Promise.resolve(true);
     if (outboxInitPromise) return outboxInitPromise;
     var O = window.KiwiOffline;

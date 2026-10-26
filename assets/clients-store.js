@@ -769,7 +769,11 @@
     } catch (_) { purchaseFailure(book, event.ref, 'offline'); }
   }
   function flushPurchases(book) {
-    purchaseRead(book).slice(0, 25).forEach(function (event) { purchasePush(book, event); });
+    var events = purchaseRead(book), batch = events.slice(0, 25);
+    // Rotate before sending: refusals and transient failures retain their full
+    // audit event without monopolising the next tick's bounded batch.
+    purchaseWrite(book, events.slice(batch.length).concat(batch));
+    batch.forEach(function (event) { purchasePush(book, event); });
   }
 
   function redemptionKey(book) { return 'kiwi:clients-redemptions:v1:' + book; }
@@ -853,7 +857,11 @@
     }).catch(function () { return 'retry'; });
   }
   function flushRedemptions(book) {
-    redemptionRead(book).slice(0, 25).forEach(function (event) { redemptionPush(book, event); });
+    var events = redemptionRead(book), batch = events.slice(0, 25);
+    // Rotate before sending: refusals and transient failures retain their full
+    // audit event without monopolising the next tick's bounded batch.
+    redemptionWrite(book, events.slice(batch.length).concat(batch));
+    batch.forEach(function (event) { redemptionPush(book, event); });
   }
 
   // Persist the last observed profile with the record, including while offline.

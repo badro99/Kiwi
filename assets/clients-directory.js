@@ -34,7 +34,7 @@
       tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '·', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
       ago: function (d) { return d == null ? '·' : d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
       detail: 'Fiche client', call: 'Appeler', whatsapp: 'WhatsApp', mail: 'E-mail', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis',
-      audit: 'Télécharger le journal complet', auditError: 'Journal indisponible. Réessayez.', history: 'Historique des achats', noHistory: 'Aucun détail d’achat enregistré.', noHistorySub: 'Les prochains tickets attachés à ce client apparaîtront ici.', ticket: 'Ticket', unknownDate: 'Date inconnue', unknownPayment: 'Mode non renseigné', purchase: 'Achat enregistré',
+      previousPage: 'Page précédente', nextPage: 'Page suivante', audit: 'Télécharger le journal complet', auditError: 'Journal indisponible. Réessayez.', history: 'Historique des achats', noHistory: 'Aucun détail d’achat enregistré.', noHistorySub: 'Les prochains tickets attachés à ce client apparaîtront ici.', ticket: 'Ticket', unknownDate: 'Date inconnue', unknownPayment: 'Mode non renseigné', purchase: 'Achat enregistré',
       newShort: 'Nouveau client', loyalty: 'Fidélité', emptyTitle: 'Votre carnet est encore vide', emptyText: 'Ajoutez une fiche ici, ou enregistrez un client sur la caisse : il apparaîtra automatiquement.', noMatch: 'Aucun client ne correspond', noMatchText: 'Essayez un autre nom, numéro ou segment.', clear: 'Tout afficher', noneYet: 'Aucun pour l’instant', ofBook: 'du carnet', shared: 'Partagé avec la caisse', currency: 'MAD',
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
@@ -46,7 +46,7 @@
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
       detail: 'Customer', call: 'Call', whatsapp: 'WhatsApp', mail: 'Email', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since',
-      audit: 'Download complete audit history', auditError: 'History unavailable. Please retry.', history: 'Purchase history', noHistory: 'No purchase details recorded.', noHistorySub: 'Future tickets attached to this customer will appear here.', ticket: 'Ticket', unknownDate: 'Unknown date', unknownPayment: 'Payment method unavailable', purchase: 'Recorded purchase',
+      previousPage: 'Previous page', nextPage: 'Next page', audit: 'Download complete audit history', auditError: 'History unavailable. Please retry.', history: 'Purchase history', noHistory: 'No purchase details recorded.', noHistorySub: 'Future tickets attached to this customer will appear here.', ticket: 'Ticket', unknownDate: 'Unknown date', unknownPayment: 'Payment method unavailable', purchase: 'Recorded purchase',
       newShort: 'New customer', loyalty: 'Loyalty', emptyTitle: 'Your book is still empty', emptyText: 'Add a record here, or save a customer on the till: it shows up here automatically.', noMatch: 'No customer matches', noMatchText: 'Try another name, number or segment.', clear: 'Show all', noneYet: 'None yet', ofBook: 'of the book', shared: 'Shared with the till', currency: 'MAD',
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
@@ -58,7 +58,7 @@
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
       detail: 'بطاقة العميل', call: 'اتصال', whatsapp: 'واتساب', mail: 'بريد', birthday: 'الميلاد', gender: 'الجنس', address: 'العنوان', notes: 'ملاحظات', consent: 'الموافقة', consentWa: 'واتساب / SMS', consentEmail: 'بريد', firstSeen: 'عميل منذ',
-      audit: 'تنزيل السجل الكامل', auditError: 'السجل غير متاح. حاول مجدداً.', history: 'سجل المشتريات', noHistory: 'لا توجد تفاصيل مشتريات مسجلة.', noHistorySub: 'ستظهر هنا التذاكر القادمة المرتبطة بهذا العميل.', ticket: 'التذكرة', unknownDate: 'تاريخ غير معروف', unknownPayment: 'طريقة الدفع غير مسجلة', purchase: 'عملية شراء مسجلة',
+      previousPage: 'الصفحة السابقة', nextPage: 'الصفحة التالية', audit: 'تنزيل السجل الكامل', auditError: 'السجل غير متاح. حاول مجدداً.', history: 'سجل المشتريات', noHistory: 'لا توجد تفاصيل مشتريات مسجلة.', noHistorySub: 'ستظهر هنا التذاكر القادمة المرتبطة بهذا العميل.', ticket: 'التذكرة', unknownDate: 'تاريخ غير معروف', unknownPayment: 'طريقة الدفع غير مسجلة', purchase: 'عملية شراء مسجلة',
       newShort: 'عميل جديد', loyalty: 'الوفاء', emptyTitle: 'دفترك ما زال فارغاً', emptyText: 'أضف بطاقة هنا، أو سجّل عميلاً على الصندوق وسيظهر هنا تلقائياً.', noMatch: 'لا يوجد عميل مطابق', noMatchText: 'جرّب اسماً أو رقماً أو فئة أخرى.', clear: 'عرض الكل', noneYet: 'لا أحد بعد', ofBook: 'من الدفتر', shared: 'مشترك مع الصندوق', currency: 'درهم',
       form: { title: 'عميل جديد', sub: 'ينضم الملف إلى الدفتر المشترك، بالصندوق أو بدونه.', save: 'إضافة', cancel: 'إلغاء',
         needNameOrPhone: 'أدخل الاسم أو رقم الهاتف على الأقل.', badPhone: 'رقم غير صالح · للخارج أضف + ورمز البلد.',
@@ -130,7 +130,7 @@
         return { id: c.id, name: c.name, phone: c.phone, email: c.email, city: c.city, address: c.address,
           birthday: c.birthday, gender: c.gender, notes: c.notes, hospitality: c.hospitality || {}, visits: c.visits, spend: c.spend,
           points: c.points, stamps: c.stamps || 0, lastSeen: c.lastSeen || 0, consent: c.consent, consentEmail: c.consentEmail, seg: KCl.segment(c),
-          history: Array.isArray(c.history) ? c.history.slice(0, 50) : [],
+          history: Array.isArray(c.history) ? c.history.slice() : [],
           /* Jamais vu en caisse : pas de dernière visite. 0 se lisait « aujourd'hui »
              sur une fiche qu'on venait seulement de créer. */
           last: daysSince(c.lastSeen) === Infinity ? null : daysSince(c.lastSeen), firstSeen: daysSince(c.firstSeen) };
@@ -587,8 +587,10 @@
     };
     var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice().sort(function (a, b) {
       return Number((b && (b.ts || b.createdAt)) || 0) - Number((a && (a.ts || a.createdAt)) || 0);
-    }).slice(0, 50);
-    var historyBody = purchaseHistory.length ? purchaseHistory.map(function (entry) {
+    });
+    function renderHistory(page) {
+    var total = purchaseHistory.length, start = page * 50;
+    var historyBody = purchaseHistory.length ? purchaseHistory.slice(start, start + 50).map(function (entry) {
       entry = entry || {};
       var stamp = Number(entry.ts || entry.createdAt || 0);
       var when = stamp ? new Date(stamp).toLocaleString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : T.unknownDate;
@@ -599,6 +601,9 @@
         '<span class="cd-history-items">' + esc(items) + (entry.ref ? '<span class="cd-history-meta">' + esc(T.ticket + ' ' + entry.ref) + '</span>' : '') + '</span>' +
         '<span class="cd-history-amount">' + fmt(entry.amount || entry.amt || 0) + ' MAD</span></div>';
     }).join('') : '<div class="cd-history-empty"><b>' + esc(T.noHistory) + '</b>' + esc(T.noHistorySub) + '</div>';
+    return historyBody + (total > 50 ? '<div><button type="button" class="cd-act" data-history-page="' + (page - 1) + '"' + (page === 0 ? ' disabled' : '') + '>' + esc(T.previousPage) + '</button> <span aria-live="polite">' + (start + 1) + '–' + Math.min(start + 50, total) + ' / ' + total + '</span> <button type="button" class="cd-act" data-history-page="' + (page + 1) + '"' + (start + 50 >= total ? ' disabled' : '') + '>' + esc(T.nextPage) + '</button></div>' : '');
+    }
+    var historyBody = renderHistory(0);
     /* Contact straight from the card: the number dials, WhatsApp and email
        open their apps. A Moroccan 06/07 number becomes +212 for wa.me. */
     var digits = String(c.phone || '').replace(/\D/g, '');
@@ -636,6 +641,10 @@
        the extra Close button only stays on the desktop dialog. */
     var sheet = document.documentElement.classList.contains('kiwi-native');
     var m = window.Kiwi.modal({ tag: T.detail, title: c.name || T.none, width: 460, body: body + (sheet ? '' : '<div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="kb ghost" data-close>' + T.close + '</button></div>') });
+    m.el.addEventListener('click', function (e) {
+      var button = e.target.closest('[data-history-page]');
+      if (button && !button.disabled) m.el.querySelector('.cd-history-list').innerHTML = renderHistory(Number(button.dataset.historyPage));
+    });
     if (sheet) {
       m.el.classList.add('kiwi-native-order-sheet', 'kiwi-native-client-sheet');
       var card = m.el.querySelector('.kiwi-modal');
