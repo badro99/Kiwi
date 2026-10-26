@@ -5,17 +5,39 @@ import { declaration } from './js-declarations.cjs';
 const read = file => fs.readFileSync(file, 'utf8');
 const only = process.argv[2];
 if (!only || only === 'corruption') {
-  for (const raw of ['{broken', '{}', 'null', '']) {
-    const disk = new Map([['kiwiSaleQueue', raw]]);
+  const storage = (disk, { full = false } = {}) => ({
+    getItem: k => disk.get(k) ?? null,
+    setItem: (k, v) => { if (full && k !== 'kiwiSaleQueue') throw new Error('QuotaExceededError'); disk.set(k, String(v)); },
+    removeItem: k => disk.delete(k),
+    key: i => [...disk.keys()][i] ?? null,
+    get length() { return disk.size; },
+  });
+  const boot = (disk, opts) => {
     const window = { dispatchEvent() {} };
-    const ctx = vm.createContext({ window, localStorage: { getItem: k => disk.get(k) ?? null, setItem: (k,v) => disk.set(k,v) }, CustomEvent: class {}, navigator: { onLine: false } });
+    const ctx = vm.createContext({ window, localStorage: storage(disk, opts), CustomEvent: class {}, navigator: { onLine: false } });
     vm.runInContext(read('assets/live-link/queue-store.js'), ctx);
-    const queue = window.KiwiSaleQueueStore.create({ merchant: () => 'fixture' });
+    const noop = () => {};
+    return window.KiwiSaleQueueStore.create({ merchant: () => 'fixture', pingLocal: noop, flushQueue: noop, moneySignal: noop, scheduleRecovery: noop, on: noop, stableId: (x) => x && x.id });
+  };
+  for (const raw of ['{broken', '{}', 'null', '']) {
+    // 1 · room to spare: the corrupt bytes move aside intact, the till keeps selling.
+    const disk = new Map([['kiwiSaleQueue', raw]]);
+    let queue = boot(disk);
     assert.equal(queue.status().lastError, 'queue-recovery-required');
     assert.equal(queue.status().storageError, true);
+    const kept = [...disk].filter(([k]) => k.startsWith('kiwiSaleQueue:quarantine:'));
+    assert.equal(kept.length, 1, 'corrupt bytes are quarantined once');
+    assert.equal(kept[0][1], raw, 'quarantine keeps the exact corrupt bytes');
     await queue.enqueueCommand({ id: 'new', merchant: 'fixture' }, 'fixture');
-    assert.equal(disk.get('kiwiSaleQueue'), raw, 'enqueue preserves exact corrupt bytes');
-    assert.equal(await queue.migrateLegacy(), false);
+    assert.ok(JSON.parse(disk.get('kiwiSaleQueue')).some(r => r && r.id === 'new'), 'a new sale is still queued after corruption');
+    queue = boot(disk);
+    assert.equal(queue.status().lastError, 'queue-recovery-required', 'recovery stays visible after a reload');
+    // 2 · no room to move them: the bytes stay where they are, never overwritten.
+    const full = new Map([['kiwiSaleQueue', raw]]);
+    const blocked = boot(full, { full: true });
+    assert.equal(blocked.status().lastError, 'queue-recovery-required');
+    try { await blocked.enqueueCommand({ id: 'new', merchant: 'fixture' }, 'fixture'); } catch (_) {}
+    assert.equal(full.get('kiwiSaleQueue'), raw, 'without room, the corrupt bytes are never overwritten');
   }
 }
 if (!only || only.startsWith('fairness')) {
