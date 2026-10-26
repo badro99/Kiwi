@@ -10,6 +10,31 @@
  * est parti : il prépare ces envois et laisse la confirmation au propriétaire. */
 (() => {
   'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
 
   /* ── constantes métier ─────────────────────────────────────────────────── */
   const VAT_RATES = [20, 14, 10, 7, 0];          // 0 = exonéré
@@ -395,9 +420,9 @@
     let res;
     try {
       if (method === 'GET') {
-        res = await fetch('/api/invoices?' + new URLSearchParams(Object.assign({merchant}, payload || {})).toString(), {credentials: 'same-origin'});
+        res = await fetchDeadline('/api/invoices?' + new URLSearchParams(Object.assign({merchant}, payload || {})).toString(), {credentials: 'same-origin'});
       } else {
-        res = await fetch('/api/invoices', {method: 'POST', credentials: 'same-origin', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign({merchant}, payload || {}))});
+        res = await fetchDeadline('/api/invoices', {method: 'POST', credentials: 'same-origin', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign({merchant}, payload || {}))});
       }
     } catch (_) { throw apiError('offline'); }
     let data = null;

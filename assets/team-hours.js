@@ -19,6 +19,31 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
   const core = window.Kiwi && window.Kiwi.__teamCore;
   if (!core || !core.hours) return;
   const {
@@ -75,7 +100,7 @@
     const merchant = Kiwi.__teamProfileCore.teamSlug(), correctionId = el.dataset.rid, decision = el.dataset.decision;
     el.disabled = true;
     try {
-      const response = await fetch('/api/team/live', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,action:'attendance-correction-decision',correctionId,decision})});
+      const response = await fetchDeadline('/api/team/live', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,action:'attendance-correction-decision',correctionId,decision})}, false);
       if (!response.ok) throw new Error('decision-failed');
       const root = window.__kiwiTeamV2;
       Object.keys(root.correctionsByVenue || {}).forEach(key => {root.correctionsByVenue[key] = root.correctionsByVenue[key].filter(item => item.id !== correctionId);});

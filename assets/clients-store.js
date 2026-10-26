@@ -25,6 +25,31 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
 
   // Shared by the till book and dashboard directory. Arabic keeps this
   // surface's Latin digits, including when the dashboard i18n is unavailable.
@@ -1035,6 +1060,7 @@
    * reste des pages, sinon il s'arrête à la première et croit avoir tout lu.
    * Le garde-fou de profondeur évite qu'une réponse incohérente ne fasse
    * tourner la boucle sans fin. */
+  var clientPulls = Object.create(null);
   function pull(book, cb, depth) {
     // Tolerate pull(cb): the till modals call KiwiClients.pull(callback).
     // Without this the callback (a function) becomes the merchant key and the
@@ -1042,9 +1068,17 @@
     if (typeof book === 'function') { depth = cb; cb = book; book = null; }
     book = book || bookId();
     if (!syncable(book)) { if (cb) cb(false); return; }
+    if (!(depth > 0)) {
+      if (clientPulls[book]) { if (cb) clientPulls[book].push(cb); return; }
+      var callbacks = clientPulls[book] = cb ? [cb] : [];
+      cb = function (changed, error) {
+        delete clientPulls[book];
+        callbacks.forEach(function (fn) { try { fn(changed, error); } catch (_) {} });
+      };
+    }
     var since = getCursor(book);
     try {
-      fetch('/api/clients?merchant=' + encodeURIComponent(book) + '&since=' + since, { headers: { Accept: 'application/json' } })
+      fetchDeadline('/api/clients?merchant=' + encodeURIComponent(book) + '&since=' + since, { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (data) {
           if (!data || !Array.isArray(data.clients)) { if (cb) cb(false); return; }
@@ -1053,12 +1087,12 @@
           // incohérente, mieux vaut relire deux fois que sauter des fiches.
           if (data.cursor > since) setCursor(book, data.cursor);
           if (data.more && data.cursor > since && (depth || 0) < 20) {
-            pull(book, function (more) { if (cb) cb(changed || more); }, (depth || 0) + 1);
+            pull(book, function (more, error) { if (cb) cb(changed || more, error); }, (depth || 0) + 1);
             return;
           }
           if (cb) cb(changed);
-        }).catch(function () { if (cb) cb(false); });
-    } catch (_) { if (cb) cb(false); }
+        }).catch(function (error) { if (cb) cb(false, error); });
+    } catch (error) { if (cb) cb(false, error); }
   }
   var pollTimer = null;
   function tick() {

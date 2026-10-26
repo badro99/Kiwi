@@ -1,6 +1,31 @@
 /* Kiwi Employee/Service app — small same-origin client for /api/employee. */
 (function () {
   'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
   var lastData = null;
   /* Employé dont le cookie de session porte les envois de la file. Vidé dès
      qu'une autre connexion commence : la file d'un employé ne part jamais
@@ -21,7 +46,7 @@
     return data;
   }
   function call(method, body) {
-    return fetch('/api/employee', {
+    return fetchDeadline('/api/employee', {
       method: method,
       credentials: 'same-origin',
       cache: 'no-store',

@@ -27,6 +27,31 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
   if (!window.Kiwi || !window.Kiwi.handlers) return;
   const Kiwi = window.Kiwi;
   const { handlers, modal, toast } = Kiwi;
@@ -716,7 +741,8 @@
       isEmpty: (d) => !d || !((d.members && d.members.length) || (d.removed && d.removed.length)),
       // Le roster vient d'arriver du serveur : la page ouverte doit le montrer,
       // sinon le commerçant regarde une équipe vide qui n'existe plus.
-      onPulled: () => { if (pageActive) { try { render(); } catch (_) {} } },
+      onPullError: teamReadTimedOut,
+      onPulled: () => { teamReadFailed = false; if (pageActive) { try { render(); } catch (_) {} } },
     });
     return teamCloud;
   }
@@ -727,15 +753,22 @@
    * rendrait jamais un code que la copie locale n'a plus. Une panne ne change
    * rien : les salariés restent « non résolus », et RIEN ne part (canPush /
    * publishPins), donc le serveur ne perd rien. */
+  let teamReadFailed = false;
+  function teamReadTimedOut(error) {
+    if (!error || error.code !== 'timeout' || !pageActive || teamReadFailed) return;
+    teamReadFailed = true;
+    toast(trLang() === 'ar' ? 'الشبكة لا تستجيب. حاول مرة أخرى.' : trLang() === 'en' ? 'The network is not responding. Please retry.' : 'Le réseau ne répond pas. Réessayez.', {type: 'pend'});
+  }
   function hydrateCodes() {
     const c = teamCloudInit();
     const slug = teamSlug();
     const k = teamVenueKey();
     if (!c || !slug || !k || !c.enabled()) return Promise.resolve(false);
-    return fetch('/api/store?feature=team&merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
+    return fetchDeadline('/api/store?feature=team&merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
       .then((r) => (r && r.ok ? r.json() : null))
       .then((res) => {
         if (!res || slug !== teamSlug() || k !== teamVenueKey()) return false;
+        teamReadFailed = false;
         const root = window.__kiwiTeamV2;
         const applied = applyServerCodes(root.byVenue[k] || [], res.data && res.data.members, serverCodes);
         Object.assign(serverCodes, applied.serverCodes);
@@ -745,7 +778,7 @@
         if (pageActive) { try { render(); } catch (_) {} }
         return true;
       })
-      .catch(() => false);
+      .catch((error) => { teamReadTimedOut(error); return false; });
   }
   function teamCloudBind() {
     const c = teamCloudInit();
@@ -908,10 +941,11 @@
     const merchant = teamSlug();
     if (!merchant) return;
     liveTeamBusy = true;
-    return fetch('/api/team/live?merchant=' + encodeURIComponent(merchant), {
+    return fetchDeadline('/api/team/live?merchant=' + encodeURIComponent(merchant), {
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then((response) => response.ok ? response.json() : null).then((data) => {
       if (!data || !data.ok || data.merchant !== merchant) { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); return; }
+      teamReadFailed = false;
       const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}, data.pendingCorrections || []]);
       /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
          La fusion des heures pointées se faisait à CHAQUE réponse, donc
@@ -948,7 +982,7 @@
          pointage à la caisse n'arrivait jamais à l'écran tant que rien
          d'autre ne redessinait la page. Arrivé ici, quelque chose a changé. */
       applyLiveTeam();
-    }).catch(() => { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); }).finally(() => { liveTeamBusy = false; });
+    }).catch((error) => { teamReadTimedOut(error); liveTeamDelay = Math.min(120000, liveTeamDelay * 2); }).finally(() => { liveTeamBusy = false; });
   }
   /* Le pointage reprend à la seconde quand les données changent. Ailleurs — c'est
      à dire sur chacune des autres pages du tableau de bord, où ce module n'a

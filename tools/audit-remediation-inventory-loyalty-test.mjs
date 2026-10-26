@@ -379,7 +379,7 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   let vmFetchMode = 'offline';
   let vmEnv;
   let lostRedemptionWrite;
-  const context = { window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage,
+  const context = { setTimeout, clearTimeout, window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage,
     console, Math, Date, JSON, setInterval: () => 1, clearInterval: () => {},
     fetch: async (url, options = {}) => {
       requests.push({ url, options });
@@ -609,7 +609,7 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   let online = false;
   const sent = [];
   const inflight = [];
-  const context = { window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage,
+  const context = { setTimeout, clearTimeout, window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage,
     console, Math, Date, JSON, setInterval: () => 1, clearInterval: () => {},
     fetch: (url, options = {}) => {
       const method = String(options.method || 'GET').toUpperCase();

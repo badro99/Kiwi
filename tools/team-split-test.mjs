@@ -85,7 +85,8 @@ for (const lang of ['fr', 'en', 'ar']) {
     }) });
     r.context.Kiwi.handlers['nav-equipe']();
   }
-  for (let i = 0; i < 8; i++) await Promise.resolve();
+  // Let both complete transport chains drain before comparing rendered state.
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(hash(after.root.innerHTML), hash(before.root.innerHTML), 'live roster markup ' + lang);
   assert.equal(observed.at(-1)[1].merchant, 'split-test', 'poll pushes replacement live roster');
   after.context.Kiwi.handlers['kt-delete-member'](null, 'absent');
