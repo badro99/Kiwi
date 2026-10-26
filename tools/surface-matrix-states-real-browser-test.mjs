@@ -4,6 +4,7 @@
 // Loyalty starts with a durable pending redemption, as after an offline sale.
 // The application sync loop must obtain and persist the server refusal itself.
 import assert from 'node:assert/strict';
+import { LOCALES } from './test-locales.mjs';
 import { randomInt } from 'node:crypto';
 import { harness, realPage, sleep, verify } from './surface-matrix-lib.mjs';
 
@@ -25,8 +26,13 @@ async function check(t, cell, state, locale, viewport) {
   const key = `matrix-state-real-${state}-${locale}-${viewport}`;
   const strict = { ...h, baseline: { ...h.baseline, [key]: {} } };
   await cell.page.waitForSelector(cell.region, { visible: true, timeout: 15000 });
-  await cell.page.evaluate(() => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1000))]));
-  await sleep(350);
+  await cell.page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(document.getAnimations().filter((a) =>
+      a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming().endTime)
+    ).map((a) => a.finished.catch(() => {})));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
   await verify(strict, t, cell, key, locale);
 }
 async function visibleText(page, selector, text) {
@@ -49,7 +55,6 @@ async function nav(page, selector) {
   // Off screen behind the menu (phone): same entry as dashboardWalker, the
   // sidebar link clicked in script. Every later step is a real click.
   await page.evaluate((sel) => document.querySelector(sel).click(), selector);
-  await sleep(600);
 }
 /* The real dashboard opens on its owner lock. As in dash-pin-browser-test,
    the stubbed server knows one value made up for this run only; it is never
@@ -64,10 +69,28 @@ async function unlock(page) {
     await sleep(40);
   }
   await page.waitForFunction(() => { const l = document.querySelector('[data-kiwi-lock]'); return !l || l.classList.contains('is-unlocking') || getComputedStyle(l).display === 'none' || l.hidden; }, { timeout: 15000 });
-  await sleep(2600); // the greeting that follows an unlock
+  await page.waitForFunction(() => !document.documentElement.classList.contains('kiwi-gate-up'), { timeout: 15000 });
 }
+async function edit(page, locale) {
+  await click(page, '[data-sfc="new"]');
+  await visibleText(page, '[data-sfc-root] label', words[locale].editor);
+  await click(page, '[data-sfc-field="sheet.name"]');
+  await page.keyboard.press('Backspace');
+  await page.type('[data-sfc-field="sheet.name"]', 'Matrix soup');
+  assert.ok(await page.$eval('[data-sfc-field="sheet.name"]', (el) => !el.disabled && el.value.includes('Matrix soup')));
+}
+const emptySessions = new Map();
 const sessions = {
   async open(t, state, locale, viewport) {
+    const key = locale + '|' + viewport;
+    if (state === 'editor' && emptySessions.has(key)) {
+      const cell = emptySessions.get(key);
+      t.watch(cell.page);
+      t.step('reprendre la liste vide authentifiée, puis ouvrir son éditeur');
+      await visibleText(cell.page, '[data-sfc-state="empty"]', words[locale].empty);
+      await edit(cell.page, locale);
+      return { page: cell.page, region: '[data-sfc-root]' };
+    }
     let refusals = 0;
     const routes = {
       'GET /api/me': { authenticated: true, onboarded: true, name: 'Mira Test', business: 'Matrix Kitchen', type: 'restaurant',
@@ -94,7 +117,8 @@ const sessions = {
       ['kiwi:clients-redemptions:v1:' + merchant]: JSON.stringify([{ ref: 'matrix-redemption', clientId: 'matrix-client', points: 100, stamps: 0, created: 1 }]),
     } : {};
     const { ctx, page } = await realPage(h, locale, viewport, routes, storage);
-    t.defer(() => ctx.close());
+    // Les listes vides restent ouvertes pour le scénario éditeur ; h.close ferme tout.
+    if (state !== 'empty') t.defer(() => ctx.close());
     t.watch(page);
     t.step('load a synthetic authenticated restaurant with demos disabled');
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
@@ -122,16 +146,12 @@ const sessions = {
     await click(page, '[data-fin-tab="cost"]');
     if (state === 'editor') {
       await visibleText(page, '[data-sfc-state="empty"]', words[locale].empty);
-      await click(page, '[data-sfc="new"]');
-      await visibleText(page, '[data-sfc-root] label', words[locale].editor);
-      await click(page, '[data-sfc-field="sheet.name"]');
-      await page.keyboard.press('Backspace');
-      await page.type('[data-sfc-field="sheet.name"]', 'Matrix soup');
-      assert.ok(await page.$eval('[data-sfc-field="sheet.name"]', (el) => !el.disabled && el.value.includes('Matrix soup')));
+      await edit(page, locale);
       return { page, region: '[data-sfc-root]' };
     }
     const region = `[data-sfc-state="${state}"]`;
     await visibleText(page, region, words[locale][state]);
+    if (state === 'empty') emptySessions.set(key, { ctx, page });
     return { page, region };
   },
 };
@@ -140,122 +160,122 @@ try {
   // Store-credit issue is deliberately skipped: issueAvoir awaits avoirApproval,
   // which always opens requireManager's credential pad before POST store-credits.
   // This task forbids codes. No application bypass or invented approval is used.
-  await h.S.run('loyalty-refused · fr · phone', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('loyalty-refused · fr · phone', async (t) => {
     // coverage: surface=dashboard locale=fr viewport=phone
     const cell = await sessions.open(t, 'loyalty-refused', 'fr', 'phone');
     await check(t, cell, 'loyalty-refused', 'fr', 'phone');
   });
-  await h.S.run('loyalty-refused · fr · tablet', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('loyalty-refused · fr · tablet', async (t) => {
     // coverage: surface=dashboard locale=fr viewport=tablet
     const cell = await sessions.open(t, 'loyalty-refused', 'fr', 'tablet');
     await check(t, cell, 'loyalty-refused', 'fr', 'tablet');
   });
-  await h.S.run('loyalty-refused · en · phone', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('loyalty-refused · en · phone', async (t) => {
     // coverage: surface=dashboard locale=en viewport=phone
     const cell = await sessions.open(t, 'loyalty-refused', 'en', 'phone');
     await check(t, cell, 'loyalty-refused', 'en', 'phone');
   });
-  await h.S.run('loyalty-refused · en · tablet', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('loyalty-refused · en · tablet', async (t) => {
     // coverage: surface=dashboard locale=en viewport=tablet
     const cell = await sessions.open(t, 'loyalty-refused', 'en', 'tablet');
     await check(t, cell, 'loyalty-refused', 'en', 'tablet');
   });
-  await h.S.run('loyalty-refused · ar · phone', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('loyalty-refused · ar · phone', async (t) => {
     // coverage: surface=dashboard locale=ar viewport=phone
     const cell = await sessions.open(t, 'loyalty-refused', 'ar', 'phone');
     await check(t, cell, 'loyalty-refused', 'ar', 'phone');
   });
-  await h.S.run('loyalty-refused · ar · tablet', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('loyalty-refused · ar · tablet', async (t) => {
     // coverage: surface=dashboard locale=ar viewport=tablet
     const cell = await sessions.open(t, 'loyalty-refused', 'ar', 'tablet');
     await check(t, cell, 'loyalty-refused', 'ar', 'tablet');
   });
-  await h.S.run('empty · fr · phone', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('empty · fr · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=fr viewport=phone
     const cell = await sessions.open(t, 'empty', 'fr', 'phone');
     await check(t, cell, 'empty', 'fr', 'phone');
   });
-  await h.S.run('empty · fr · tablet', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('empty · fr · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=fr viewport=tablet
     const cell = await sessions.open(t, 'empty', 'fr', 'tablet');
     await check(t, cell, 'empty', 'fr', 'tablet');
   });
-  await h.S.run('empty · en · phone', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('empty · en · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=en viewport=phone
     const cell = await sessions.open(t, 'empty', 'en', 'phone');
     await check(t, cell, 'empty', 'en', 'phone');
   });
-  await h.S.run('empty · en · tablet', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('empty · en · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=en viewport=tablet
     const cell = await sessions.open(t, 'empty', 'en', 'tablet');
     await check(t, cell, 'empty', 'en', 'tablet');
   });
-  await h.S.run('empty · ar · phone', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('empty · ar · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=ar viewport=phone
     const cell = await sessions.open(t, 'empty', 'ar', 'phone');
     await check(t, cell, 'empty', 'ar', 'phone');
   });
-  await h.S.run('empty · ar · tablet', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('empty · ar · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=ar viewport=tablet
     const cell = await sessions.open(t, 'empty', 'ar', 'tablet');
     await check(t, cell, 'empty', 'ar', 'tablet');
   });
-  await h.S.run('error · fr · phone', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('error · fr · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=fr viewport=phone
     const cell = await sessions.open(t, 'error', 'fr', 'phone');
     await check(t, cell, 'error', 'fr', 'phone');
   });
-  await h.S.run('error · fr · tablet', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('error · fr · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=fr viewport=tablet
     const cell = await sessions.open(t, 'error', 'fr', 'tablet');
     await check(t, cell, 'error', 'fr', 'tablet');
   });
-  await h.S.run('error · en · phone', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('error · en · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=en viewport=phone
     const cell = await sessions.open(t, 'error', 'en', 'phone');
     await check(t, cell, 'error', 'en', 'phone');
   });
-  await h.S.run('error · en · tablet', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('error · en · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=en viewport=tablet
     const cell = await sessions.open(t, 'error', 'en', 'tablet');
     await check(t, cell, 'error', 'en', 'tablet');
   });
-  await h.S.run('error · ar · phone', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('error · ar · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=ar viewport=phone
     const cell = await sessions.open(t, 'error', 'ar', 'phone');
     await check(t, cell, 'error', 'ar', 'phone');
   });
-  await h.S.run('error · ar · tablet', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('error · ar · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=ar viewport=tablet
     const cell = await sessions.open(t, 'error', 'ar', 'tablet');
     await check(t, cell, 'error', 'ar', 'tablet');
   });
-  await h.S.run('editor · fr · phone', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('editor · fr · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=fr viewport=phone
     const cell = await sessions.open(t, 'editor', 'fr', 'phone');
     await check(t, cell, 'editor', 'fr', 'phone');
   });
-  await h.S.run('editor · fr · tablet', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('editor · fr · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=fr viewport=tablet
     const cell = await sessions.open(t, 'editor', 'fr', 'tablet');
     await check(t, cell, 'editor', 'fr', 'tablet');
   });
-  await h.S.run('editor · en · phone', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('editor · en · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=en viewport=phone
     const cell = await sessions.open(t, 'editor', 'en', 'phone');
     await check(t, cell, 'editor', 'en', 'phone');
   });
-  await h.S.run('editor · en · tablet', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('editor · en · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=en viewport=tablet
     const cell = await sessions.open(t, 'editor', 'en', 'tablet');
     await check(t, cell, 'editor', 'en', 'tablet');
   });
-  await h.S.run('editor · ar · phone', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('editor · ar · phone', async (t) => {
     // coverage: surface=dashboard-finance locale=ar viewport=phone
     const cell = await sessions.open(t, 'editor', 'ar', 'phone');
     await check(t, cell, 'editor', 'ar', 'phone');
   });
-  await h.S.run('editor · ar · tablet', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('editor · ar · tablet', async (t) => {
     // coverage: surface=dashboard-finance locale=ar viewport=tablet
     const cell = await sessions.open(t, 'editor', 'ar', 'tablet');
     await check(t, cell, 'editor', 'ar', 'tablet');

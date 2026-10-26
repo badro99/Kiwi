@@ -209,12 +209,16 @@ async function api(page, method, url, body) {
 }
 async function signIn(page, m) {
   // coverage: surface=dashboard locale=fr viewport=desktop
-  if (!/^http/.test(page.url())) await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  if (!/^http/.test(page.url())) await page.goto(base + '/mentions-legales.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/login', { email: m.email, password: m.password });
   if (r.status !== 200) throw new Error(`sign-in ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
 }
 async function clickSel(page, sel, opts = {}) {
   for (let i = 0; ; i++) {
+    await page.waitForFunction((selector) => {
+      const el = document.querySelector(selector);
+      return el && !el.disabled && el.getBoundingClientRect().width > 0;
+    }, { timeout: opts.timeout || 20000 }, sel);
     const el = await page.waitForSelector(sel, { visible: true, timeout: opts.timeout || 20000 });
     try { await el.click(); return; } catch (e) {
       if (i >= 4 || !/detached|not clickable|not an Element|no longer|Node is either/i.test(e.message)) throw e;
@@ -263,7 +267,7 @@ async function createMerchant(t, ctx, m) {
   const page = await preparePage(t, await ctx.newPage());
   t.step(`${m.label}: sign up`);
   // coverage: surface=dashboard locale=fr viewport=desktop
-  await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(base + '/mentions-legales.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/signup', { email: m.email, password: m.password, name: 'Test ' + m.label, business: m.business });
   if (r.status !== 200) throw new Error(`signup ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
   t.step(`${m.label}: onboarding wizard, card « ${m.type} »`);
@@ -275,9 +279,9 @@ async function createMerchant(t, ctx, m) {
   if (!shown) await clickSel(page, '[data-more]');
   await clickSel(page, `[data-type="${m.type}"]`);
   await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // business
-  await sleep(250); await clickSel(page, '.kob-btn.primary[data-go="next"]'); // how many stores
-  await sleep(250); await clickSel(page, '.kob-btn.primary[data-go="next"]'); // team size
-  await sleep(250); await clickSel(page, '.kob-btn.primary[data-go="next"]'); // priorities
+  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // how many stores
+  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // team size
+  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // priorities
   await sleep(250);
   const pin = await page.waitForSelector('[data-pin-code="0"]', { visible: true });
   await pin.click(); await pin.type(m._pin);
@@ -291,6 +295,12 @@ async function createMerchant(t, ctx, m) {
   }, { timeout: 15000 }, m.slug);
   const n = stack.db.prepare("UPDATE merchant_config SET status = 'active', plan = 'pro' WHERE merchant = ?").run(m.slug).changes;
   if (!n) throw new Error(`${m.label}: store ${m.slug} was not created`);
+  // Le wizard a pu lancer une lecture avant la création du commerce.
+  // Recharger ce contexte authentifié conserve le garde réel et son serveur.
+  if (await page.evaluate(() => window.KiwiPoll?.retryAfter() > 0)) {
+    t.step('recharger la session créée après les lectures initiales anonymes');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+  }
   log(m.label, 'store', m.slug);
   return page;
 }
@@ -353,7 +363,7 @@ async function unlockTill(t, page, m, vertical) {
   }
   const on = await until(page, (v) => ({ ok: !!document.querySelector(`#pos-${v}.is-on`), body: document.body.className }), vertical, 30000);
   if (!on.ok) throw new Error(`${m.label}: the paired till did not open the ${vertical} module (body: ${on.body})`);
-  await sleep(2500);    // the greeting veil
+  await page.waitForFunction(() => !document.querySelector('.kiwi-greet.is-visible'), { timeout: 10000 });
 }
 
 /* ── money ────────────────────────────────────────────────────────────── */
@@ -398,7 +408,8 @@ async function openDashboard(t, page, m) {
 }
 async function dashNav(page, nav) {
   await clickSel(page, `[data-nav="${nav}"]`);
-  await sleep(1800);
+  await page.waitForFunction((id) => window.Kiwi?.activePage === id, {}, nav);
+  await page.waitForSelector(nav === 'accueil' ? '[data-kpi="tx"]' : '.dash-genpage', { visible: true });
 }
 async function dashHome(page, expectTx) {
   await dashNav(page, 'accueil');
@@ -546,12 +557,12 @@ const RING = {
       if (vc && await vc.isVisible()) { await clickSel(page, '[data-vc-ok]'); await sleep(400); }
     }
     await clickSel(page, '#pz-validate'); await sleep(700);
-    if (sale.tender === 'cash') { await clickSel(page, '#pz-paym [data-m="especes"]'); await sleep(500); await clickSel(page, '#pz-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '#pz-paym [data-m="especes"]'); await clickSel(page, '#pz-cash-ok'); }
     else { await clickSel(page, '#pz-paym [data-m="carte"]'); await cardConfirm(page); }
   },
   async boulangerie(page, sale) {
     await tapItems(page, '[data-bl-prod]', sale.items);
-    if (sale.tender === 'cash') { await clickSel(page, '#bl-pay-cash'); await sleep(500); await clickSel(page, '[data-bl-exact]'); await clickSel(page, '#bl-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '#bl-pay-cash'); await clickSel(page, '[data-bl-exact]'); await clickSel(page, '#bl-cash-ok'); }
     else { await clickSel(page, '#bl-pay-card'); await cardConfirm(page); }
   },
   async fastfood(page, sale) {
@@ -564,57 +575,48 @@ const RING = {
   },
   async foodtruck(page, sale) {
     await tapItems(page, '[data-ft-item]', sale.items);
-    if (sale.tender === 'cash') { await clickSel(page, '#ft-pay-cash'); await sleep(500); await clickSel(page, '#ft-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '#ft-pay-cash'); await clickSel(page, '#ft-cash-ok'); }
     else { await clickSel(page, '#ft-pay-card'); await cardConfirm(page); }
   },
   async epicerie(page, sale) {
     await tapItems(page, '[data-ep-item]', sale.items);
     await clickSel(page, '#ep-pay'); await sleep(500);
-    if (sale.tender === 'cash') { await clickSel(page, '[data-ep-m="especes"]'); await sleep(400); await clickSel(page, '#ep-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '[data-ep-m="especes"]'); await clickSel(page, '#ep-cash-ok'); }
     else { await clickSel(page, '[data-ep-m="carte"]'); await cardConfirm(page); }
   },
   async pharmacie(page, sale) {
     for (const name of sale.items) {
-      await clickText(page, '[data-ph-item]', new RegExp(reEsc(name))); await sleep(400);
-      await clickSel(page, '#ph-sheet-add'); await sleep(400);
+      await clickText(page, '[data-ph-item]', new RegExp(reEsc(name))); await clickSel(page, '#ph-sheet-add'); await sleep(400);
     }
-    await clickSel(page, '#ph-validate'); await sleep(600);
-    await clickSel(page, '#ph-rc-pay'); await sleep(500);
-    if (sale.tender === 'cash') { await clickSel(page, '[data-ph-m="especes"]'); await sleep(400); await clickSel(page, '#ph-cash-ok'); }
+    await clickSel(page, '#ph-validate'); await clickSel(page, '#ph-rc-pay'); await sleep(500);
+    if (sale.tender === 'cash') { await clickSel(page, '[data-ph-m="especes"]'); await clickSel(page, '#ph-cash-ok'); }
     else { await clickSel(page, '[data-ph-m="carte"]'); await cardConfirm(page); }
   },
   async librairie(page, sale) {
     for (const name of sale.items) {
-      await clickText(page, '[data-lb-item]', new RegExp(reEsc(name))); await sleep(400);
-      await clickSel(page, '#lb-sheet-add'); await sleep(400);
+      await clickText(page, '[data-lb-item]', new RegExp(reEsc(name))); await clickSel(page, '#lb-sheet-add'); await sleep(400);
     }
-    await clickSel(page, '#lb-validate'); await sleep(600);
-    await clickSel(page, '#lb-rec-pay'); await sleep(500);
-    if (sale.tender === 'cash') { await clickSel(page, '#lb-paym [data-m="especes"]'); await sleep(400); await clickSel(page, '#lb-cash-ok'); }
+    await clickSel(page, '#lb-validate'); await clickSel(page, '#lb-rec-pay'); await sleep(500);
+    if (sale.tender === 'cash') { await clickSel(page, '#lb-paym [data-m="especes"]'); await clickSel(page, '#lb-cash-ok'); }
     else { await clickSel(page, '#lb-paym [data-m="carte"]'); await cardConfirm(page); }
   },
   async fleuriste(page, sale) {
     for (const name of sale.items) {
-      await clickText(page, '[data-fl-stem]', new RegExp(reEsc(name))); await sleep(400);
-      await clickSel(page, '#fl-sheet-set'); await sleep(400);
+      await clickText(page, '[data-fl-stem]', new RegExp(reEsc(name))); await clickSel(page, '#fl-sheet-set'); await sleep(400);
     }
     await clickSel(page, '#fl-validate'); await sleep(600);
     const guest = await page.$('#fl-cl-guest');
-    if (guest && await guest.isVisible()) { await guest.click(); await sleep(500); await clickSel(page, '#fl-validate'); await sleep(600); }
-    await clickSel(page, '#fl-recap-pay'); await sleep(500);
-    await clickSel(page, '[data-fl-paymode="now"]'); await sleep(500);
-    if (sale.tender === 'cash') { await clickSel(page, '[data-m="especes"]'); await sleep(400); await clickSel(page, '#fl-cash-ok'); }
+    if (guest && await guest.isVisible()) { await guest.click(); await clickSel(page, '#fl-validate'); await sleep(600); }
+    await clickSel(page, '#fl-recap-pay'); await clickSel(page, '[data-fl-paymode="now"]'); await sleep(500);
+    if (sale.tender === 'cash') { await clickSel(page, '[data-m="especes"]'); await clickSel(page, '#fl-cash-ok'); }
     else { await clickSel(page, '[data-m="carte"]'); await cardConfirm(page); }
   },
   async coiffure(page, sale) {
     await clickSel(page, '[data-cf-view="presta"]'); await sleep(500);
     for (const name of sale.items) {
-      await clickText(page, '[data-cf-item]', new RegExp(reEsc(name))); await sleep(500);
-      await clickSel(page, '#cf-sheet-add'); await sleep(400);
+      await clickText(page, '[data-cf-item]', new RegExp(reEsc(name))); await clickSel(page, '#cf-sheet-add'); await sleep(400);
     }
-    await clickSel(page, '#cf-tk-client'); await sleep(500);
-    await clickSel(page, '#cf-cl-guest'); await sleep(500);
-    await clickSel(page, '#cf-validate'); await sleep(900);
+    await clickSel(page, '#cf-tk-client'); await clickSel(page, '#cf-cl-guest'); await clickSel(page, '#cf-validate'); await sleep(900);
     /* The client walks through the salon: waiting, basin, chair, then pay. */
     for (let i = 0; i < 4; i++) {
       const pay = await page.$('[data-cf-method="especes"]');
@@ -623,23 +625,22 @@ const RING = {
       if (!ids.length) break;
       await clickSel(page, `[data-cf-pass="${ids[ids.length - 1]}"]`); await sleep(700);
     }
-    if (sale.tender === 'cash') { await clickSel(page, '[data-cf-method="especes"]'); await sleep(400); await clickSel(page, '#cf-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '[data-cf-method="especes"]'); await clickSel(page, '#cf-cash-ok'); }
     else { await clickSel(page, '[data-cf-method="carte"]'); await cardConfirm(page); }
   },
   async spa(page, sale) {
     await clickSel(page, '[data-sp-view="encaisser"]'); await sleep(500);
     for (const name of sale.items) {
-      await clickText(page, '[data-sp-svc]', new RegExp(reEsc(name))); await sleep(500);
-      await clickSel(page, '#sp-svc-add'); await sleep(400);
+      await clickText(page, '[data-sp-svc]', new RegExp(reEsc(name))); await clickSel(page, '#sp-svc-add'); await sleep(400);
     }
     await clickSel(page, '#sp-validate'); await sleep(600);
-    if (sale.tender === 'cash') { await clickSel(page, '[data-sp-m="especes"]'); await sleep(400); await clickSel(page, '#sp-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '[data-sp-m="especes"]'); await clickSel(page, '#sp-cash-ok'); }
     else { await clickSel(page, '[data-sp-m="carte"]'); await cardConfirm(page); }
   },
   async gym(page, sale) {
     await clickSel(page, '#gy-ci-pass'); await sleep(600);
     await clickText(page, '[data-gy-pass]', new RegExp(reEsc(sale.items[0]))); await sleep(600);
-    if (sale.tender === 'cash') { await clickSel(page, '[data-m="especes"]'); await sleep(400); await clickSel(page, '#gy-cash-ok'); }
+    if (sale.tender === 'cash') { await clickSel(page, '[data-m="especes"]'); await clickSel(page, '#gy-cash-ok'); }
     else { await clickSel(page, '[data-m="carte"]'); await cardConfirm(page); }
   },
 };
@@ -687,15 +688,11 @@ RING.traiteurDeposit = async function (t, page, sale, m) {
   if (!held.same || !held.focused || held.value !== 'TEST KIWI Client') throw new Error(`${m.label}: a repaint rebuilt the quote form under the cursor (${JSON.stringify(held)})`);
   const phone = await page.waitForSelector('#tr-q-phone', { visible: true });
   await phone.click({ clickCount: 3 }); await phone.type('0611223344');
-  await clickSel(page, '#tr-q-send'); await sleep(700);
-  await clickSel(page, '#tr-wa-send'); await sleep(900);
+  await clickSel(page, '#tr-q-send'); await clickSel(page, '#tr-wa-send'); await sleep(900);
   t.step(`${m.label}: the event, confirmed, then its first deposit`);
   await clickSel(page, '[data-tr-view="events"]').catch(() => {});
-  await sleep(600);
-  await clickSel(page, '[data-tr-ev]'); await sleep(600);
-  await clickSel(page, '#tr-dt-confirm'); await sleep(700);
-  await clickSel(page, '#tr-dt-pay'); await sleep(600);
-  if (sale.tender === 'cash') { await clickSel(page, '[data-tr-m="especes"]'); await sleep(400); await clickSel(page, '#tr-cash-ok'); }
+  await clickSel(page, '[data-tr-ev]'); await clickSel(page, '#tr-dt-confirm'); await clickSel(page, '#tr-dt-pay'); await sleep(600);
+  if (sale.tender === 'cash') { await clickSel(page, '[data-tr-m="especes"]'); await clickSel(page, '#tr-cash-ok'); }
   else { await clickSel(page, '[data-tr-m="carte"]'); await cardConfirm(page); }
 };
 

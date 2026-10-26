@@ -137,7 +137,7 @@ async function api(page, method, url, body) {
 }
 async function signIn(page, m) {
   // coverage: surface=dashboard locale=fr viewport=desktop
-  if (!/^http/.test(page.url())) await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  if (!/^http/.test(page.url())) await page.goto(base + '/mentions-legales.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/login', { email: m.email, password: m.password });
   if (r.status !== 200) throw new Error(`sign-in ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
 }
@@ -145,6 +145,10 @@ async function signIn(page, m) {
  * replaced before the tap lands. Find it again, as a finger would. */
 async function clickSel(page, sel) {
   for (let i = 0; ; i++) {
+    await page.waitForFunction((selector) => {
+      const el = document.querySelector(selector);
+      return el && !el.disabled && el.getBoundingClientRect().width > 0;
+    }, {}, sel);
     const el = await page.waitForSelector(sel, { visible: true });
     try { await el.click(); return; } catch (e) {
       if (i >= 4 || !/detached|not clickable|not an Element|no longer|Node is either/i.test(e.message)) throw e;
@@ -163,7 +167,7 @@ async function createMerchant(t, ctx, m) {
   const page = await preparePage(t, await ctx.newPage());
   t.step(`${m.label}: sign up`);
   // coverage: surface=dashboard locale=fr viewport=desktop
-  await page.goto(base + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(base + '/mentions-legales.html', { waitUntil: 'domcontentloaded' });
   const r = await api(page, 'POST', '/auth/signup', { email: m.email, password: m.password, name: 'Test ' + m.label, business: m.business });
   if (r.status !== 200) throw new Error(`signup ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
   t.step(`${m.label}: onboarding wizard`);
@@ -172,9 +176,9 @@ async function createMerchant(t, ctx, m) {
   await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // Commencer
   await clickSel(page, `[data-type="${m.type}"]`);
   await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // business
-  await sleep(250); await clickSel(page, '.kob-btn.primary[data-go="next"]'); // how many stores
-  await sleep(250); await clickSel(page, '.kob-btn.primary[data-go="next"]'); // team size
-  await sleep(250); await clickSel(page, '.kob-btn.primary[data-go="next"]'); // priorities
+  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // how many stores
+  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // team size
+  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // priorities
   await sleep(250);
   const pin = await page.waitForSelector('[data-pin-code="0"]', { visible: true });
   await pin.click(); await pin.type(m._pin);
@@ -188,6 +192,12 @@ async function createMerchant(t, ctx, m) {
   }, { timeout: 15000 }, m.slug);
   const n = stack.db.prepare("UPDATE merchant_config SET status = 'active', plan = 'pro' WHERE merchant = ?").run(m.slug).changes;
   if (!n) throw new Error(`${m.label}: store ${m.slug} was not created`);
+  // Le wizard a pu lancer une lecture avant la création du commerce.
+  // Recharger ce contexte authentifié conserve le garde réel et son serveur.
+  if (await page.evaluate(() => window.KiwiPoll?.retryAfter() > 0)) {
+    t.step('recharger la session créée après les lectures initiales anonymes');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+  }
   log(m.label, 'store', m.slug);
   return page;
 }
@@ -370,7 +380,7 @@ async function casaHHMM(page, ms) {
 /* ── the restaurant till ──────────────────────────────────────────────── */
 async function restoGreetGone(page) {
   await page.waitForFunction(() => !!document.querySelector('[data-mode="vrap"]') && document.querySelector('[data-mode="vrap"]').offsetWidth > 0, { timeout: 30000 });
-  await sleep(2500);    // « Bonsoir … » greeting veil
+  await page.waitForFunction(() => !document.querySelector('[data-kiwi-greet].is-visible'), { timeout: 10000 });
 }
 async function restoTakeaway(page) {
   await clickSel(page, '[data-mode="vrap"]');
@@ -479,7 +489,8 @@ async function openDashboard(t, page, m) {
 }
 async function dashNav(page, nav) {
   await clickSel(page, `[data-nav="${nav}"]`);
-  await sleep(1800);
+  await page.waitForFunction((id) => window.Kiwi?.activePage === id, {}, nav);
+  await page.waitForSelector(nav === 'accueil' ? '[data-kpi="tx"]' : '.dash-genpage', { visible: true });
 }
 /* Home: the KPI band, the revenue hero and the payment ring, once they stop
  * animating and show `expectTx` sales (the feed polls every few seconds). */
@@ -734,7 +745,6 @@ async function bqSale(t, page, names, tender) {
   const n0 = (await bqHead(page)).tx;
   for (const name of names) {
     await clickText(page, '[data-bq-item]', new RegExp(reEsc(name)));
-    await sleep(500);
     await clickSel(page, '#bq-sheet-add');
     await sleep(500);
   }
@@ -743,15 +753,12 @@ async function bqSale(t, page, names, tender) {
   if (parts.length > 1) { await clickSel(page, '[data-bq-share="0.5"]'); await sleep(400); }
   for (const p of parts) {
     await clickSel(page, p === 'card' ? '[data-bq-m="carte"]' : '[data-bq-m="especes"]');
-    await sleep(600);
     await clickSel(page, p === 'card' ? '#bq-card-ok' : '#bq-cash-ok');
     await sleep(1000);
   }
   /* The receipt screen either waits for « Nouvelle vente » or has already
    * closed itself; the head count below is the proof the sale was booked. */
-  const done = await page.waitForSelector('#bq-pay-done', { visible: true, timeout: 4000 }).catch(() => null);
-  if (done) { try { await done.click(); } catch (_) {} }
-  await sleep(600);
+  await bqFinishReceipt(page);
   const head = await until(page, (n) => {
     const m = /(\d+)\s+ventes?/.exec(document.querySelector('#bq-today')?.textContent || '');
     return { ok: !!m && Number(m[1]) === n, n: m && Number(m[1]) };
@@ -867,7 +874,6 @@ async function bqAttachClient(t, page, client, create) {
 async function bqCart(page, names) {
   for (const name of names) {
     await clickText(page, '[data-bq-item]', new RegExp(reEsc(name)));
-    await sleep(500);
     await clickSel(page, '#bq-sheet-add');
     await sleep(500);
   }
@@ -880,9 +886,14 @@ async function bqWaitCount(page, n) {
   if (!head.ok) throw new Error(`boutique till did not count the sale (${head.n} instead of ${n})`);
 }
 async function bqFinishReceipt(page) {
-  const done = await page.waitForSelector('#bq-pay-done', { visible: true, timeout: 4000 }).catch(() => null);
-  if (done) { try { await done.click(); } catch (_) {} }
-  await sleep(600);
+  await page.waitForFunction(() => {
+    const done = document.querySelector('#bq-pay-done');
+    const veil = document.querySelector('#bq-pay-veil');
+    return (done && done.getBoundingClientRect().width > 0) || !veil?.classList.contains('is-open');
+  });
+  const done = await page.$('#bq-pay-done');
+  if (done && await done.isVisible()) await done.click();
+  await page.waitForSelector('#bq-pay-veil.is-open', { hidden: true });
 }
 
 await scenario('boutique · a return for store credit, then the credit spent', async (t) => {
@@ -893,11 +904,8 @@ await scenario('boutique · a return for store credit, then the credit spent', a
   await bqCart(bq, ['TEST Foulard']);
   await bqAttachClient(t, bq, client, true);
   await clickSel(bq, '#bq-validate');
-  await sleep(900);
   await clickSel(bq, '[data-bq-m="especes"]');
-  await sleep(600);
   await clickSel(bq, '#bq-cash-ok');
-  await sleep(1000);
   await bqFinishReceipt(bq);
   await bqWaitCount(bq, n0 + 1);
   bqRows.push({ kind: 'sale', method: 'cash', cents: BQ['TEST Foulard'] });
@@ -910,9 +918,7 @@ await scenario('boutique · a return for store credit, then the credit spent', a
   await rq.type(client.phone);
   await sleep(900);
   await clickText(bq, '[data-bq-pick]', /TEST Foulard/);
-  await sleep(500);
   await clickSel(bq, '[data-bq-motif="Taille"]');
-  await sleep(400);
   await clickSel(bq, '[data-bq-do-avoir]');
   await managerCode(bq, BOUT);
   const issued = await until(bq, () => {
@@ -927,24 +933,20 @@ await scenario('boutique · a return for store credit, then the credit spent', a
   t.step('boutique: sale B, TEST Chemise lin, the credit then cash');
   /* The credit voucher stays on screen until the cashier closes it. */
   await clickSel(bq, '#bq-avoir-veil [data-bq-close]');
-  await sleep(600);
   await clickSel(bq, '[data-bq-view="vente"]');
   await sleep(800);
   await bqCart(bq, ['TEST Chemise lin']);
   await bqAttachClient(t, bq, client, false);
   await clickSel(bq, '#bq-validate');
-  await sleep(900);
   await clickSel(bq, '[data-bq-m="avoir"]');
   await sleep(700);
   if (issued.code) await clickSel(bq, `[data-bq-av-use="${issued.code}"]`);
   else await clickSel(bq, '[data-bq-av-use]');
-  await sleep(1200);
   await clickSel(bq, '[data-bq-m="especes"]');
   await sleep(600);
   const due = await bq.$eval('#bq-cash-in', (e) => e.value).catch(() => '');
   eqCents(cents(due), BQ['TEST Chemise lin'] - BQ['TEST Foulard'], 'boutique till · cash due after the credit');
   await clickSel(bq, '#bq-cash-ok');
-  await sleep(1000);
   await bqFinishReceipt(bq);
   await bqWaitCount(bq, n0 + 2);
   bqRows.push({ kind: 'sale', method: 'cash', cents: BQ['TEST Chemise lin'] - BQ['TEST Foulard'] });
@@ -1033,7 +1035,6 @@ await scenario('boutique · the close reaches the cash register ledger', async (
   await clickSel(bq, '#bq-close-day');
   await bq.waitForSelector('#bqclo-count', { visible: true, timeout: 15000 });
   await bq.type('#bqclo-count', '100');
-  await sleep(400);
   await clickSel(bq, '#bqclo-close');
   await sleep(2500);
   let rows = [];
@@ -1128,7 +1129,6 @@ async function qrOrderCashedAtTill(t, tableNo, want, opts = {}) {
   }
   await tablet.waitForSelector('[data-kop-pay]', { visible: true, timeout: 20000 });
   await clickSel(tablet, '[data-kop-pay]');
-  await sleep(1500);
   await clickSel(tablet, '#pay-charge');
   await clickSel(tablet, '[data-set="exact"]');
   await clickSel(tablet, '#cash-confirm');
@@ -1280,7 +1280,6 @@ await scenario('restaurant · two QR orders on one off-plan visit, cashed one at
     const tx = await txCount(tablet);
     await tablet.waitForSelector(`[data-kop-pay="${id}"]`, { visible: true, timeout: 20000 });
     await clickSel(tablet, `[data-kop-pay="${id}"]`);
-    await sleep(1500);
     await clickSel(tablet, '#pay-charge');
     await clickSel(tablet, '[data-set="exact"]');
     await clickSel(tablet, '#cash-confirm');
@@ -1412,7 +1411,6 @@ await scenario('restaurant · a QR takeaway order, paid at the counter, ready, h
   t.step('till: cash the order from the inbox');
   const tx = await txCount(tablet);
   await inboxTap('data-kop-pay');
-  await sleep(1500);
   await clickSel(tablet, '#pay-charge');
   await clickSel(tablet, '[data-set="exact"]');
   await clickSel(tablet, '#cash-confirm');

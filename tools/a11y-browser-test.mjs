@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { forLocales } from './test-locales.mjs';
+import { forLocales, LOCALES } from './test-locales.mjs';
 /* L'accessibilité des surfaces principales, mesurée par axe-core dans Chromium.
  *   node tools/a11y-browser-test.mjs
  *   KIWI_UPDATE_A11Y_BASELINE=1 node tools/a11y-browser-test.mjs   (réécrit la base)
@@ -83,14 +83,33 @@ async function open(t, url, storage, { width = 1440, height = 900, mobile = fals
   }, storage);
   t.step('open ' + url);
   await page.goto(base + url, { waitUntil: 'load' });
-  await sleep(1500);
+  if (url.startsWith('/dashboard.html')) {
+    await page.waitForFunction(() => !!window.Kiwi &&
+      (!!document.querySelector('[data-kiwi-lock] k-pin-pad, #kit-onboarding, .kob-root, [data-kpi-band] .kpi-m')));
+  } else if (url.startsWith('/kiwi-caisse.html')) {
+    await page.waitForFunction(() => !!window.KiwiPosDispatch && !!document.getElementById('clockin-btn'));
+  }
+  await settled(page);
   return page;
 }
 
+async function settled(page) {
+  await page.waitForFunction(() => [...document.querySelectorAll('k-pin-pad, k-clock-in, k-menu-grid, k-bill, k-pay')]
+    .every((el) => customElements.get(el.localName) && el.shadowRoot?.childElementCount > 0));
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(document.getAnimations().filter((a) =>
+      a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming().endTime)
+    ).map((a) => a.finished.catch(() => {})));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+
 /* Les violations sérieuses de la page, ramenées à { règle: nœuds }. `within`
-   borne l'audit à une partie de la page (l'éditeur posé dans le tableau de
-   bord démo, déjà audité ailleurs) ; les cibles restent celles du document. */
+  borne l'audit à une partie de la page (l'éditeur posé dans le tableau de
+  bord démo, déjà audité ailleurs) ; les cibles restent celles du document. */
 async function audit(t, page, within) {
+  await settled(page);
   t.step('run axe-core' + (within ? ' on ' + within : ''));
   if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(axeSource);
   const found = await page.evaluate(async (sel) => {
@@ -173,7 +192,7 @@ await S.run('page d’accueil, téléphone', async (t) => {
   compare('landing-phone', await audit(t, page));
   await keyboardWalk(t, page);
 });
-await S.run('page d’accueil, arabe', async (t) => {
+if (LOCALES.includes('ar')) await S.run('page d’accueil, arabe', async (t) => {
   // coverage: surface=landing locale=ar viewport=desktop
   const page = await open(t, '/ar/index.html', { kiwiLang: 'ar' });
   if (await page.evaluate(() => document.documentElement.dir) !== 'rtl') throw new Error('la page arabe ne se lit pas de droite à gauche');
@@ -214,7 +233,6 @@ await S.run('tableau de bord démo', async (t) => {
   await sleep(800);
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !!document.querySelector('[data-kpi-band] .kpi-m'), { timeout: 20000 });
-  await sleep(900);
   compare('dashboard', await audit(t, page));
 });
 await S.run('assistant d’installation', async (t) => {
@@ -222,13 +240,12 @@ await S.run('assistant d’installation', async (t) => {
   const page = await open(t, '/dashboard.html?onboarding=1', { 'kiwiSkin2027:dashboard': '1', kiwiLang: 'fr' }, { width: 430, height: 900 });
   t.step('wait for the wizard');
   await page.waitForFunction(() => !!(document.getElementById('kit-onboarding') || document.querySelector('.kob-root')), { timeout: 20000 });
-  await sleep(800);
   compare('onboarding', await audit(t, page));
 });
 await S.run('caisse démo', async (t) => {
   // coverage: surface=caisse-entry locale=fr viewport=desktop
   const page = await open(t, '/kiwi-caisse.html', { kiwiLang: 'fr' }, { width: 1180, height: 820 });
-  await sleep(1200);
+  await page.waitForSelector('#clockin-btn', { visible: true });
   compare('caisse', await audit(t, page));
 });
 
@@ -241,7 +258,6 @@ await S.run('tableau de bord démo, mode sombre', async (t) => {
   await sleep(800);
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !!document.querySelector('[data-kpi-band] .kpi-m'), { timeout: 20000 });
-  await sleep(900);
   compare('dashboard-dark', await audit(t, page));
 });
 for (const [id, label] of [['pressing', 'caisse pressing'], ['hotel', 'caisse hôtel']]) {
@@ -250,10 +266,11 @@ for (const [id, label] of [['pressing', 'caisse pressing'], ['hotel', 'caisse h�
     // coverage: surface=caisse-pressing locale=fr viewport=desktop
     // coverage: surface=caisse-hotel locale=fr viewport=desktop
     const page = await open(t, '/kiwi-caisse.html', { kiwiLang: 'fr' }, { width: 1180, height: 820 });
-    await sleep(1200);
+    await page.waitForFunction(() => !!window.KiwiPosDispatch);
     t.step('open the ' + id + ' till');
     await page.evaluate((v) => window.KiwiPosDispatch.unlockById(v), id);
-    await sleep(1800);
+    await page.waitForSelector('#pos-' + id + '.is-on', { visible: true });
+    await page.waitForFunction(() => !document.querySelector('.kiwi-greet.is-visible'));
     compare('caisse-' + id, await audit(t, page));
   });
 }
@@ -270,12 +287,10 @@ await S.run('commande QR, démo', async (t) => {
   await page.waitForSelector('#screen-mode.is-active', { timeout: 15000 });
   await page.tap('.mode-card[data-mode="takeout"]');
   await page.waitForSelector('#screen-menu.is-active [data-add="cappuccino"]', { timeout: 8000 });
-  await sleep(900);
   const menu = await audit(t, page);
   t.step('the dish sheet');
   await page.tap('[data-add="cappuccino"]');
   await page.waitForSelector('#custom-sheet.is-open', { timeout: 5000 });
-  await sleep(700);
   const sheet = await audit(t, page);
   t.step('add it, then open the basket');
   await page.tap('#custom-add-btn');
@@ -285,7 +300,6 @@ await S.run('commande QR, démo', async (t) => {
   await page.waitForFunction(() => document.getElementById('cart-count').textContent === '2', { timeout: 5000 });
   await page.tap('#cart-pill');
   await page.waitForSelector('#cart-sheet.is-open', { timeout: 5000 });
-  await sleep(700);
   const cart = await audit(t, page);
   compare('orderpro', union(menu, sheet, cart));
 });
@@ -347,7 +361,6 @@ await S.run('écran de cuisine', async (t) => {
   const page = await open(t, '/kiwi-cuisine.html', { kiwiLiveMerchant: MERCHANT, kiwiPaired: '1', kiwiCuisineLang: 'fr' }, { width: 1280, height: 800, api, pin: false });   // l'âge des bons se lit sur la vraie horloge, celle du serveur
   t.step('wait for the bons');
   await page.waitForFunction(() => document.querySelectorAll('.tk .tk-act').length >= 4, { timeout: 20000 });
-  await sleep(800);
   compare('kds', await audit(t, page));
   /* 23 octobre : la même cuisine sur le design 2027 (kiwiSkin2027:kds), que
      les commerces passés en 2027 voient. Ses bons vivent dans les racines
@@ -356,7 +369,6 @@ await S.run('écran de cuisine', async (t) => {
   const kit = await open(t, '/kiwi-cuisine.html', { kiwiLiveMerchant: MERCHANT, kiwiPaired: '1', kiwiCuisineLang: 'fr', 'kiwiSkin2027:kds': '1' }, { width: 1280, height: 800, api, pin: false });
   t.step('wait for the kit board');
   await kit.waitForFunction(() => { let n = 0; const w = (r) => r.querySelectorAll('*').forEach((e) => { if (e.classList && e.classList.contains('tk')) n++; if (e.shadowRoot) w(e.shadowRoot); }); w(document); return n >= 2; }, { timeout: 20000 });   // a lane shows its first bons, the rest behind « +N plus récentes »
-  await sleep(800);
   compare('kds-2027', await audit(t, kit));
 });
 
@@ -368,6 +380,10 @@ await S.run('écran de cuisine', async (t) => {
  * d'écran ou un clavier qui reste derrière le voile ne sait pas qu'elle existe. */
 const focusMisses = [];
 async function focusInside(page, sel, what) {
+  await page.waitForFunction((s) => {
+    const box = document.querySelector(s);
+    return box && document.activeElement && box.contains(document.activeElement);
+  }, { timeout: 1000 }, sel).catch(() => {});
   const inside = await page.evaluate((s) => { const box = document.querySelector(s); return !!(box && document.activeElement && box.contains(document.activeElement)); }, sel);
   if (!inside) { focusMisses.push(`${what} : le focus reste hors de la feuille ouverte (${sel})`); console.log('  ✗ ' + focusMisses[focusMisses.length - 1]); }
 }
@@ -388,12 +404,10 @@ await S.run('console opérateur, tablette, suppression', async (t) => {
   const page = await open(t, '/kiwi-admin.html', {}, { width: 768, height: 1024, mobile: true, pin: false });
   t.step('wait for the roster');
   await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Supprimer'), { timeout: 20000 });
-  await sleep(600);
   const list = await audit(t, page);
   t.step('open the delete dialog');
   await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Supprimer').click());
   await page.waitForSelector('.md-back .md-card', { timeout: 5000 });
-  await sleep(400);
   await focusInside(page, '.md-card', 'console · suppression');
   const dialog = await audit(t, page);
   t.step('Escape closes it');
@@ -440,7 +454,6 @@ for (const lang of forLocales(['fr', 'en', 'ar'])) {
       const app = await open(t, url, storage, { width: 390, height: 844, mobile: true, api });
       t.step(`the clock-in screen (${theme})`);
       await app.waitForSelector('#screen-clockin.is-active', { timeout: 20000 });
-      await sleep(600);
       states.push(await audit(t, app));
       t.step(`browse without clocking in, the profile, then leave (${theme})`);
       await app.click('#ci-browse-link');
@@ -449,7 +462,6 @@ for (const lang of forLocales(['fr', 'en', 'ar'])) {
       await app.waitForSelector('#kep-card [data-kep="leave"]', { timeout: 10000 });
       await app.evaluate(() => document.querySelector('#kep-card [data-kep="leave"]').click());
       await app.waitForSelector('.kep-overlay .kep-sheet', { timeout: 5000 });
-      await sleep(500);
       await focusInside(app, '.kep-sheet', `app équipe · congé (${theme})`);
       states.push(await audit(t, app));
       await app.keyboard.press('Escape');
@@ -473,19 +485,17 @@ for (const lang of forLocales(['fr', 'ar'])) {
     // coverage: surface=credit-book locale=fr viewport=desktop
     // coverage: surface=credit-book locale=ar viewport=desktop
     const page = await open(t, '/kiwi-caisse.html', { kiwiLang: lang, kiwiCaisseLang: lang, kiwiCaisseTheme: lang === 'ar' ? 'dark' : 'light' }, { width: 1180, height: 820 });
-    await sleep(1200);
+    await page.waitForFunction(() => !!window.KiwiPosDispatch);
     t.step('open the épicerie till, the credit book');
     await page.evaluate(() => window.KiwiPosDispatch.unlockById('epicerie'));
     await page.waitForSelector('[data-ep-view="carnet"]', { timeout: 15000 });
     await page.evaluate(() => document.querySelector('[data-ep-view="carnet"]').click());
     await page.waitForSelector('[data-ep-ard="k1"]', { timeout: 5000 });
-    await sleep(500);
     const states = [await audit(t, page)];
     const sheet = async (label, sel, act) => {
       t.step(label);
       await page.evaluate(act);
       await page.waitForSelector(sel + '.is-open', { timeout: 5000 });
-      await sleep(350);
       await focusInside(page, sel + ' .modal', 'carnet · ' + label);
       states.push(await audit(t, page));
     };
@@ -537,13 +547,11 @@ await S.run('coût simple · fr, en, ar', async (t) => {
   await page.waitForSelector('[data-sfc-root] [data-sfc="open"]', { timeout: 10000 });
   await page.evaluate(() => document.querySelector('[data-sfc-root] [data-sfc="open"]').click());
   await page.waitForSelector('[data-sfc-root] [data-sfc-line="2"]', { timeout: 5000 });
-  await sleep(400);
   const states = [];
   for (const lang of forLocales(['fr', 'en', 'ar'])) {
     t.step('editor in ' + lang);
     await page.evaluate((l) => window.KiwiI18n.setLang(l), lang);
     await page.waitForFunction((l) => document.documentElement.lang === l && !!document.querySelector('[data-sfc-root] [data-sfc-line="2"]'), { timeout: 5000 }, lang);
-    await sleep(400);
     /* Chaque champ d'une ligne dit l'ingrédient ET le champ : « Poulet · Prix du lot ». */
     const unnamed = await page.evaluate(() => [...document.querySelectorAll('[data-sfc-root] [data-sfc-line] [data-sfc-field]')]
       .filter((el) => { const row = el.closest('[data-sfc-line]'); const who = row.querySelector('[data-sfc-field="name"]').value; const n = el.getAttribute('aria-label') || ''; return !who || !n.includes(who) || n.trim() === who; })
@@ -575,16 +583,13 @@ async function till2027(t, page) {
   await page.evaluate(() => { const b = document.querySelector('#vrap-new-order'); if (b) b.click(); });
   await page.waitForFunction(() => !!document.querySelector('k-menu-grid') && document.querySelector('k-menu-grid').shadowRoot.querySelector('[data-item]'), { timeout: 20000 });
   await page.evaluate(() => { const g = document.querySelector('k-menu-grid'); [...g.shadowRoot.querySelectorAll('[data-item]')].filter((x) => !x.hasAttribute('data-opts') && x.getAttribute('aria-disabled') !== 'true').slice(0, 3).forEach((b) => b.click()); });
-  await sleep(500);
   states.push(await audit(t, page));
   t.step('the bill, then cash');
   await page.evaluate(() => { const rp = document.querySelector('.rightpanel'); if (rp && getComputedStyle(rp).position === 'fixed') document.body.classList.add('ticket-open'); });
-  await sleep(500);
   states.push(await audit(t, page));
   await page.evaluate(() => document.querySelector('k-bill').shadowRoot.querySelector('[data-w="pay"]').click());
-  await sleep(600);
+  await page.waitForFunction(() => !!document.querySelector('k-pay')?.shadowRoot?.querySelector('[data-method="cash"]'));
   await page.evaluate(() => { const b = document.querySelector('k-pay').shadowRoot.querySelector('[data-method="cash"]'); if (b) b.click(); });
-  await sleep(500);
   states.push(await audit(t, page));
   return union(...states);
 }
@@ -593,7 +598,7 @@ await S.run('caisse 2027 · bureau', async (t) => {
   const page = await open(t, '/kiwi-caisse.html', till2027Storage('fr'), till2027Size(1366, 1024));
   compare('caisse-2027', await till2027(t, page));
 });
-await S.run('caisse 2027 · téléphone, arabe sombre', async (t) => {
+if (LOCALES.includes('ar')) await S.run('caisse 2027 · téléphone, arabe sombre', async (t) => {
   // coverage: surface=caisse-2027 locale=ar viewport=phone
   const page = await open(t, '/kiwi-caisse.html', till2027Storage('ar'), till2027Size(390, 844));
   compare('caisse-2027-phone-ar', await till2027(t, page));
