@@ -212,57 +212,12 @@
 
   /* Une photo de carte en 4000×3000 n'apprend rien de plus au modèle qu'en
    * 1600 px de grand côté — mais coûte dix fois plus à envoyer. */
-  function downscaleImage(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const scale = Math.min(1, MAX_IMG_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
-          const w = Math.max(1, Math.round(img.naturalWidth * scale));
-          const h = Math.max(1, Math.round(img.naturalHeight * scale));
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        } catch (e) { URL.revokeObjectURL(url); reject(e); }
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
-      img.src = url;
-    });
-  }
+  function downscaleImage(file) { return window.KiwiAiImageImport.downscaleImage(file); }
 
   async function callApi(payload, signal) {
-    const controller = new AbortController();
-    let timer, cancel;
-    const stopped = new Promise((_, reject) => {
-      cancel = () => { controller.abort(); reject(new Error('cancelled')); };
-      if (signal) signal.addEventListener('abort', cancel, { once: true });
-      timer = setTimeout(() => { controller.abort(); reject(new Error('timeout')); }, 45000);
-    });
-    try {
-      if (signal && signal.aborted) { cancel(); return await stopped; }
-      return await Promise.race([stopped, (async () => {
-        const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
-        const lang = language();
-        const res = await fetch('/api/ai/menu-import', {
-          method: 'POST', signal: controller.signal,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(Object.assign({ merchant: venue, targetLang: lang }, payload)),
-        });
-        let data = null;
-        try { data = await res.json(); } catch (_) {}
-        if (res.status === 401) throw new Error('auth');
-        if (res.status === 429) throw new Error('quota');
-        if (!res.ok) throw new Error('server');
-        if (!data || !data.ok) throw new Error((data && (data.reason || data.error)) || 'unparsed');
-        return data.items || [];
-      })()]);
-    } finally {
-      clearTimeout(timer);
-      if (signal) signal.removeEventListener('abort', cancel);
-    }
+    const data = await window.KiwiAiImageImport.callApi('/api/ai/menu-import',
+      Object.assign({ targetLang: language() }, payload), signal);
+    return data.items || [];
   }
 
   const FAIL_KEYS = {
@@ -285,9 +240,7 @@
     document.head.appendChild(s);
   }
 
-  function busyHtml(title, sub) {
-    return '<div class="kms-busy"><div class="sp"></div><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></div>';
-  }
+  function busyHtml(title, sub) { return window.KiwiAiImageImport.busyHtml('kms', title, sub); }
 
   function stage1Html() {
     return [

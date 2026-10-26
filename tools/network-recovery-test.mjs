@@ -16,6 +16,7 @@ for (const name of ['salle', 'menu']) await test(name + ' timeout, retry and can
     fetch: async (url, opts) => { signal = opts.signal; return response ? { ok: true, status: 200, json: async () => ({ ok: true, items: [{ name: 'Fixture' }], tables: [] }) } : new Promise(() => {}); }
   });
   // Expose the actual private entry point, retaining the whole shipped closure.
+  vm.runInContext(fs.readFileSync('assets/ai-image-import.js', 'utf8'), c);
   vm.runInContext(fs.readFileSync('assets/' + name + '-scan.js', 'utf8').replace(/\}\)\(\);\s*$/, 'window.request = callApi; })();'), c);
   let result = 'pending';
   const p = window.request(name === 'salle' ? 'image' : { kind: 'text', text: 'fixture' }).catch(e => { result = e.message; });
@@ -95,6 +96,7 @@ for (const name of ['salle', 'menu']) await test(name + ' modal timeout message,
     fetch: async (_, opts) => { signal = opts.signal; return success ? { ok: true, status: 200,
       json: async () => ({ ok: true, items: [{ name: 'Fixture' }], tables: [{ shape: 'round', seats: 2, count: 1 }] }) } : new Promise(() => {}); }
   };
+  vm.runInNewContext(fs.readFileSync('assets/ai-image-import.js', 'utf8'), c);
   vm.runInNewContext(fs.readFileSync('assets/' + name + '-scan.js', 'utf8'), c);
   const api = window[name === 'salle' ? 'KiwiSalleScan' : 'KiwiMenuScan'];
   const click = selector => events.click({ target: { closest: q => q === selector ? {} : null } });

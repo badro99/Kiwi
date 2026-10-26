@@ -115,7 +115,7 @@ ok(/\^data:image\\\/\(jpeg\|png\|webp\);base64,/.test(routeSrc) && /MAX_IMAGE_DA
 ok(/reason: fetched\.error/.test(routeSrc) && /'js-only'/.test(routeSrc), 'une page JavaScript-only répond js-only (le client propose la photo)');
 
 // ── 7. Client : un seul chemin d'écriture, repli propre ─────────────────────
-ok(/fetch\('\/api\/ai\/menu-import'/.test(scanSrc), 'le client appelle /api/ai/menu-import');
+ok(/callApi\('\/api\/ai\/menu-import'/.test(scanSrc), 'le client appelle /api/ai/menu-import');
 ok(/kind: 'text'/.test(scanSrc) && /kind: 'url'/.test(scanSrc) && /kind: 'image'/.test(scanSrc), 'les trois formes (texte, lien, image) sont envoyées');
 ok(/toDataURL\('image\/jpeg', 0\.85\)/.test(scanSrc) && /MAX_IMG_EDGE/.test(scanSrc), 'les photos sont réduites côté client avant envoi');
 ok(/KiwiCatalogImport\.openMenuWithCsv\(toCsvText\(items\)/.test(scanSrc), 'le résultat AI entre dans la revue d\'import — rien n\'est écrit avant confirmation');
