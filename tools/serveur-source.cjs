@@ -9,7 +9,7 @@ function fragments() {
 }
 function source() {
   let core = read('assets/serveur-app.js');
-  for (const m of fragments()) core = core.slice(0, m.start) + m.body + core.slice(m.start);
+  for (const m of fragments()) core = core.slice(0, m.start) + m.body + core.slice(m.start + (m.replacement || '').length);
   return core;
 }
 module.exports = source;

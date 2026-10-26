@@ -15,7 +15,7 @@ const hash = text => createHash('sha256').update(text).digest('hex');
 assert.equal(hash(original), map.sha256);
 assert.equal(source(), original, 'reconstruction exacte depuis les sources livrées');
 let expectedCore = original;
-for (const m of [...map.moved].reverse()) expectedCore = expectedCore.slice(0, m.start) + expectedCore.slice(m.end);
+for (const m of [...map.moved].reverse()) expectedCore = expectedCore.slice(0, m.start) + (m.replacement || '') + expectedCore.slice(m.end);
 const core = read('assets/serveur-app.js');
 assert.equal(core, expectedCore, 'seules les déclarations déplacées quittent le noyau');
 assert.ok(core.split('\n').length < 4000);
@@ -25,7 +25,7 @@ for (const file of map.parts) {
     const body = original.slice(m.start, m.end);
     assert.equal(hash(body), m.sha256, m.name);
     assert.ok(!core.includes(body), m.name + ' absent du noyau');
-    expected += body + '\n\n';
+    expected += (m.prefix || '') + body + (m.suffix || '') + '\n\n';
   }
   assert.equal(read(file), expected, file + ' : octets inchangés');
   new vm.Script(read(file), { filename: file });
@@ -44,7 +44,7 @@ function names(text) {
 }
 const runtime = [...map.parts.map(read), core].join('\n');
 new vm.Script(runtime); // Parse together: lexical redeclarations are errors.
-assert.deepEqual(names(runtime), names(original), 'mêmes déclarations globales, doublons compris');
+assert.deepEqual(names(runtime), names(original).concat(map.moved.filter(m => m.replacement).map(m => m.name)).sort(), 'mêmes déclarations globales, doublons compris');
 // Duplicate function declarations must preserve their last-definition-wins order.
 function functionBodies(text) {
   const ast = ts.createSourceFile('source.js', text, ts.ScriptTarget.Latest, true);
@@ -63,7 +63,8 @@ for (const [name, bodies] of beforeBodies) {
 const html = read('kiwi-serveur.html');
 const tags = html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g);
 const at = tags.findIndex(tag => tag.includes('assets/serveur-app.js?'));
-assert.deepEqual(tags.slice(at - map.parts.length, at).map(tag => tag.match(/src="([^"]+)"/)[1]), map.parts.map(file => file + '?v=' + JSON.parse(read('tools/asset-stamps.json'))[file].v));
-for (const tag of tags.slice(at - map.parts.length, at + 1)) assert.ok(!/\b(?:async|defer|type)\s*(?:=|>)/.test(tag), 'scripts classiques synchrones');
-assert.equal(tags.length, 27, 'une balise ajoutée');
-console.log(`✓ serveur-split-test : ${map.moved.length} fonctions identiques, reconstruction, noms et ordre classiques conservés`);
+assert.equal(read(map.bundle), map.parts.map(read).join(''), 'bundle livré identique aux trois parties');
+assert.equal(tags[at - 1].match(/src="([^"]+)"/)[1], map.bundle + '?v=' + JSON.parse(read('tools/asset-stamps.json'))[map.bundle].v);
+for (const tag of tags.slice(at - 1, at + 1)) assert.ok(!/\b(?:async|defer|type)\s*(?:=|>)/.test(tag), 'scripts classiques synchrones');
+assert.equal(tags.length, 27, 'nombre de scripts inchangé');
+console.log(`✓ serveur-split-test : ${map.moved.length} fragments identiques, reconstruction, noms et ordre classiques conservés`);

@@ -64,7 +64,8 @@ async function open(lang) {
   page.on('request', (r) => {
     const u = r.url();
     if (r.method() !== 'GET' && /\/api\/(sale|order\/queue|service\/events)/.test(u)) writes.push(r.method() + ' ' + u);
-    if (u.startsWith(base)) r.continue(); else r.abort();
+    if (r.method() === 'POST' && new URL(u).pathname === '/api/sale') r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, id: 'paiement-local' }) });
+    else if (u.startsWith(base)) r.continue(); else r.abort();
   });
   await page.evaluateOnNewDocument((l) => {
     try { localStorage.setItem('kiwi-employee-language:demo', l); } catch (_) {}
@@ -179,6 +180,24 @@ try {
   check(!back.browse && !back.anyInert, 'exitBrowseMode rend onglets, panier et modales');
   await out.page.evaluate(() => { setTab('tables'); });
   check(await out.page.evaluate(() => currentTab === 'tables'), 'hors consultation, setTab("tables") fonctionne comme avant');
+  /* Règlement réel dans le navigateur, API locale synthétique. */
+  await out.page.evaluate(() => {
+    showScreen('screen-main');
+    tableOrders['9'] = [{ uid: 'paiement-test', id: 'i1', name: 'Tajine', price: 80, qty: 1, sentQty: 1 }];
+    liveEmployeeState = { merchant: 'serveur-test-local' };
+    serviceTableSessions.set('9', 'visite-test-locale');
+    dirtyOrders.delete('9');
+    openPayChoice('9');
+  });
+  await out.page.locator('#pay-choice-modal [data-pay="cash"]').click();
+  await out.page.waitForSelector('#cash-modal.is-open #cash-received', { visible: true, timeout: 10000 });
+  await out.page.locator('#cash-received').fill('100');
+  await out.page.locator('#cash-confirm').click();
+  await out.page.waitForFunction(() => tables['9'].status === 'khawya', { timeout: 10000 });
+  check(await out.page.evaluate(() => tables['9'].status === 'khawya'), 'le paiement espèces solde la table après la sortie de consultation');
+  check(out.writes.filter(url => url.includes('/api/sale')).length === 1, 'un seul paiement confirmé est envoyé à l’API synthétique');
+  const rapport = await out.page.evaluate(() => kgSnapshot());
+  check(rapport.revenue === 80 && rapport.paid === 1, 'le rapport de service compte exactement 80 MAD et une table payée');
   /* Quitter l'écran principal quitte aussi la consultation (session expirée). */
   await out.page.evaluate(() => { enterBrowseMode(); showScreen('screen-pin'); });
   check(await out.page.evaluate(() => !document.body.classList.contains('is-browse-mode') && !document.querySelector('#screen-main .tab').inert),

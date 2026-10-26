@@ -61,6 +61,7 @@ var SHELL = [
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=6',
+  /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/service.js?v=2',
   '/assets/serveur-app.js?v=15',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
