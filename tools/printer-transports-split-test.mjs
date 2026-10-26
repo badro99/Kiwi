@@ -51,11 +51,11 @@ for (const file of fs.readdirSync('.').filter(f => f.endsWith('.html'))) {
   if (!/<script[^>]+src=["'][^"']*assets\/printer-bridge\.js/.test(html)) continue;
   const tags = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/g)];
   const index = tags.findIndex(t => /assets\/printer-bridge\.js/.test(t[1]));
-  assert.match(tags[index - 1][1], /^assets\/printer\/transports\.js\?v=1$/);
+  assert.match(tags[index - 1][1], /^assets\/printer\/transports\.js\?v=\d+$/);
   assert.ok(!/\basync\b/.test(tags[index - 1][0]));
   assert.equal(/\bdefer\b/.test(tags[index - 1][0]), /\bdefer\b/.test(tags[index][0]));
 }
-assert.ok(read('kiwi-sw.js').includes("'/assets/printer/transports.js?v=1'"));
+assert.match(read('kiwi-sw.js'), /'\/assets\/printer\/transports\.js\?v=\d+'/);   // any stamp: bump-stamp moves it
 for (const file of ['printer-station-unicode-test.mjs', 'station-printer-routing-test.mjs', 'escpos-unsupported-test.mjs', 'print-slow-bridge-test.mjs', 'print-relay-idempotency-test.mjs', 'relay-print-verdict-test.mjs']) {
   const result = spawnSync(process.execPath, ['tools/' + file], { encoding: 'utf8', env: { ...process.env, KIWI_PRINTER_RUNTIME: '1' } });
   assert.equal(result.status, 0, file + '\n' + result.stdout + result.stderr);
