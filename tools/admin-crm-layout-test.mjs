@@ -18,7 +18,7 @@ check('new Kiwi favicon is used', html.includes('assets/kiwi-favicon-new.svg'));
 check('new inverse Kiwi mark is used', html.includes('assets/kiwi-newlogo-inverse.svg'));
 check('operational cockpit is discoverable', html.includes('id="op-workspace"') && html.includes('href="#today"'));
 check('lifecycle uses shared access and commercial policy', workspace.includes('P.commercial(c,Date.now())') && workspace.includes('Parcours client'));
-check('priority queue is not a five-item preview', workspace.includes('Votre file de travail') && workspace.includes('q.map(function(t)') && !workspace.includes('.slice(0,5)'));
+check('priority queue is not a five-item preview', workspace.includes('Votre file de travail') && /q\.map\(function\(t(?:,i)?\)/.test(workspace) && !workspace.includes('.slice(0,5)'));
 check('CRM metrics are derived from real roster', html.includes('renderCrmHub(CRM_CLIENTS)'));
 check('filters cover operational states', ['data-filter="active"','data-filter="pending"','data-filter="suspended"'].every(x => html.includes(x)));
 check('sorting supports recency revenue and name', ['value="recent"','value="revenue"','value="name"'].every(x => html.includes(x)));
