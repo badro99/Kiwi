@@ -1,7 +1,7 @@
 import { json, readSession, readCookie, SESS_COOKIE, sendMail } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { ensureSupport, cleanText, classify, SUPPORT_WHATSAPP_PHONE } from '../_support.js';
-import { triageSupportTicket } from '../_support-triage.js';
+import { triageAndRecord } from '../_support-triage.js';
 
 async function diagnostics(env, merchant, client) {
   const out = { captured_ts: Date.now(), client: client || {} };
@@ -72,7 +72,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
      courriel de confirmation, et jamais attendu pour répondre. Sans liaison AI, quota
      épuisé ou erreur du modèle, la demande reste exactement comme avant, non triée.
      Rien du tri n'est renvoyé au commerçant. */
-  const triage = triageSupportTicket(env, { id, reference, merchant, summary, storeType: cleanText(cfg.type || body.store_type || '', 40) })
+  const triage = triageAndRecord(env, { id, reference, merchant, summary, storeType: cleanText(cfg.type || body.store_type || '', 40) })
     .catch(() => null);
   if (typeof waitUntil === 'function') waitUntil(triage);
 

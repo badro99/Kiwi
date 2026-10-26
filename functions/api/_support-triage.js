@@ -251,7 +251,8 @@ export async function triageSupportTicket(env, ticket, opts = {}) {
   try {
     if (!env || !env.DB || !env.AI || typeof env.AI.run !== 'function') return { status: 'skipped', reason: 'no-ai' };
     if (!ticket || !ticket.id || !ticket.merchant || !ticket.summary) return { status: 'skipped', reason: 'no-ticket' };
-    if (!(await quotaOk(env, ticket.merchant, 'supporttriage', DAILY_CAPS.supporttriage))) return { status: 'skipped', reason: 'quota' };
+    /* Une relance par un opérateur est un geste délibéré et rare : elle ne bute pas sur le quota du commerçant. */
+    if (!opts.operator && !(await quotaOk(env, ticket.merchant, 'supporttriage', DAILY_CAPS.supporttriage))) return { status: 'skipped', reason: 'quota' };
 
     const images = Array.isArray(opts.images) ? opts.images : [];
     const request = buildTriageRequest({ summary: ticket.summary, storeType: ticket.storeType, images });
@@ -291,6 +292,59 @@ export async function triageSupportTicket(env, ticket, opts = {}) {
   }
 }
 
+/* Ce que l'équipe doit savoir quand le tri n'a pas abouti, écrit dans le fil
+ * interne de la demande : sans cette trace, un tri en échec ou une alerte non
+ * partie ne se voyaient nulle part, et personne ne relançait. */
+const UNDONE = {
+  'no-ai': 'le modèle n’est pas disponible',
+  quota: 'le quota quotidien du commerçant est atteint',
+  'ai-error': 'le modèle n’a pas répondu à temps',
+  'bad-response': 'la réponse du modèle était illisible',
+  'store-failed': 'le tri n’a pas pu être enregistré',
+  unexpected: 'une erreur inattendue',
+};
+export function triageOutcomeNote(result) {
+  if (!result) return 'Tri automatique non fait : une erreur inattendue. Relancez le tri depuis cette demande.';
+  if (result.status !== 'triaged') {
+    const why = UNDONE[result.reason];
+    return why ? 'Tri automatique non fait : ' + why + '. Relancez le tri depuis cette demande.' : null;
+  }
+  const alert = result.triage && result.triage.alert;
+  if (alert && alert.state === 'failed') return 'Demande jugée urgente, mais l’e-mail d’alerte n’est pas parti. Relancez le tri pour le renvoyer.';
+  if (alert && alert.state === 'unconfigured') return 'Demande jugée urgente, mais aucune alerte n’est configurée (SUPPORT_ALERT_EMAIL ou MAIL_WEBHOOK). Elle n’est signalée que dans cette console.';
+  return null;
+}
+
+/* Trie puis consigne l'issue dans le fil interne quand il y a quelque chose à faire. Ne lève jamais. */
+export async function triageAndRecord(env, ticket, opts = {}) {
+  let result = null;
+  try { result = await triageSupportTicket(env, ticket, opts); } catch (_) { result = null; }
+  const note = triageOutcomeNote(result);
+  if (note && env && env.DB && ticket && ticket.id) {
+    try {
+      await env.DB.prepare('INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)')
+        .bind('msg-' + crypto.randomUUID(), ticket.id, 'triage', 'internal', 'kiwi', note, '', Date.now()).run();
+    } catch (_) { /* la console affiche déjà « non triée » sans tri enregistré */ }
+  }
+  return result || { status: 'failed', reason: 'unexpected' };
+}
+
+/* Relance demandée par un opérateur. Une alerte en échec, non configurée, ou
+ * restée « non confirmée » plus de deux minutes (le worker est mort entre la
+ * réservation et l'envoi) est libérée pour pouvoir repartir ; une alerte
+ * envoyée ne repart jamais. */
+export const STALE_ALERT_MS = 2 * 60 * 1000;
+export async function retriageTicket(env, row, now = Date.now()) {
+  if (!env || !env.DB || !row || !row.id) return { status: 'failed', reason: 'unexpected' };
+  try {
+    await env.DB.prepare(`UPDATE support_tickets SET triage_alert = NULL WHERE id = ? AND triage_alert IS NOT NULL
+      AND (json_extract(triage_alert, '$.state') IN ('failed', 'unconfigured')
+        OR (json_extract(triage_alert, '$.state') = 'unconfirmed' AND COALESCE(json_extract(triage_alert, '$.ts'), 0) < ?))`)
+      .bind(row.id, now - STALE_ALERT_MS).run();
+  } catch (_) { /* sans libération, l'alerte existante reste telle quelle */ }
+  return triageAndRecord(env, { id: row.id, reference: row.reference, merchant: row.merchant, summary: row.summary, storeType: row.store_type || '' }, { operator: true });
+}
+
 function toBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -321,11 +375,14 @@ export function publicTriage(row) {
 }
 
 /* Rang d'affichage dans la console : 0 = alerte IA, 1 = urgence par mots-clés ou
- * « à vérifier », 2 = le reste. Seules les demandes encore ouvertes montent. */
+ * « à vérifier », 1.5 = ouverte jamais triée, 2 = le reste. Seules les demandes encore ouvertes montent. */
 export function consoleRank(row) {
   const open = row.status === 'open' || row.status === 'waiting-client';
   const verdict = open && row.triage ? row.triage.verdict : '';
   if (verdict === 'urgent') return 0;
   if (row.priority === 'urgent' || verdict === 'watch') return 1;
+  /* Ouverte et jamais triée : aucun modèle ne l'a lue. Elle passe après les
+     urgences et les « à vérifier », avant les demandes triées sans urgence. */
+  if (open && !row.triage) return 1.5;
   return 2;
 }

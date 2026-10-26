@@ -53,7 +53,7 @@
 
   function triagePill(t) {
     var g = t.triage;
-    if (!g) return '';
+    if (!g) return t.status === 'open' || t.status === 'waiting-client' ? '<span class="ks-pill stale">Non triée</span>' : '';
     if (g.verdict === 'urgent')
       return '<span class="ks-pill urgent">Urgente · ' +
         pc(Math.max(g.blocked, g.urgency.now)) +
@@ -82,10 +82,12 @@
     }[a.state] || '';
   }
 
+  var RETRY = '<div class="ks-actions"><button class="ks-btn" data-ks-action="retriage">Relancer le tri</button></div>';
+
   function triageBox(t) {
     var g = t.triage;
     if (!g)
-      return '<details class="ks-diag"><summary>Tri automatique</summary><p>Non triée : aucun tri enregistré (modèle indisponible, quota atteint, ou demande antérieure au tri). Lisez le message.</p></details>';
+      return '<details class="ks-diag" open><summary>Tri automatique</summary><p>Non triée : aucun tri enregistré (modèle indisponible, quota atteint, ou demande antérieure au tri). Lisez le message.</p>' + RETRY + '</details>';
     var cat =
         g.category.top >= CONFIDENT
           ? esc(CATS[g.category.id] || g.category.id) + ' · ' + pc(g.category.top)
@@ -115,7 +117,9 @@
       (g.images ? ' · capture analysée' : ' · texte seul') +
       ' · ' +
       dt(g.ts) +
-      '</small></p></details>';
+      '</small></p>' +
+      (g.alert && ['failed', 'unconfigured', 'unconfirmed'].indexOf(g.alert.state) >= 0 ? RETRY : '') +
+      '</details>';
   }
 
   // Rendering the ticket list badge.
@@ -451,7 +455,7 @@
           ? (j.delivery && j.delivery.ok
             ? 'Réponse envoyée'
             : 'Réponse enregistrée · transfert manuel requis'
-          ): 'Demande mise à jour'
+          ): action === 'retriage' ? 'Tri relancé · voir le fil interne' : 'Demande mise à jour'
       );
     } catch (e) {
       tell('Action refusée · ' + e.message);

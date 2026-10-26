@@ -1,6 +1,6 @@
 import { json, isOperator, isSeniorOperator, sendMail } from '../../auth/_lib.js';
 import { ensureSupport, cleanText, parseJson, supportActor } from '../_support.js';
-import { publicTriage, consoleRank } from '../_support-triage.js';
+import { publicTriage, consoleRank, retriageTicket } from '../_support-triage.js';
 
 async function guard(request,env,write){
   const ok=write?await isSeniorOperator(request,env):await isOperator(request,env);
@@ -65,6 +65,11 @@ export async function onRequestPatch({request,env}){
     // A manual WhatsApp handoff or failed email has not reached the customer.
     await env.DB.prepare(`UPDATE support_tickets SET status=?,updated_ts=? WHERE id=?`).bind(delivery.ok?'waiting-client':'open',now,id).run();
     return json({ok:true,delivery,whatsapp:ticket.channel==='whatsapp'?{contact:ticket.contact,text:`${ticket.reference} · ${body}`} : null});
+  }else if(action==='retriage'){
+    /* Relance du tri par un opérateur senior : l'issue (réussie ou non) est consignée dans le fil interne. */
+    const result=await retriageTicket(env,ticket,now);
+    if(result.status==='triaged')await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'triage','internal',actor,'Tri relancé : '+(result.triage.verdict||'normal')+(result.triage.alert?' · alerte '+result.triage.alert.state:''),'',now).run();
+    await env.DB.prepare(`UPDATE support_tickets SET updated_ts=? WHERE id=?`).bind(now,id).run();
   }else return json({error:'bad-action'},400);
   return json({ok:true,ticket:await hydrate(env,await env.DB.prepare(`SELECT * FROM support_tickets WHERE id=?`).bind(id).first())});
 }

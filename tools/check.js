@@ -2083,6 +2083,7 @@ section('Whole-project regressions');
     'hotel-i18n-test.mjs',
     'pressing-truth-test.mjs',
     'support-triage-test.mjs',
+    'support-triage-retry-test.mjs',
     'menu-analysis-test.mjs',
     'ai-vision-models-test.mjs',
     'menu-ledger-test.mjs',
