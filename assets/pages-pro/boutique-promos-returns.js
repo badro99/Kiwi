@@ -513,6 +513,8 @@
   let liveCreditsLoadedSlug = '';
   let liveCreditsOwnerSlug = '';   // le commerce à qui appartient la liste en mémoire
   let liveCreditsLoading = false;
+  let liveCreditsTimer = null;
+  let liveCreditsChanged = false, liveCreditsShown = false;   // re-render only on a real change
   function realReturnsStore() {
     try { return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
   }
@@ -541,20 +543,32 @@
        boutique le vide tout de suite (les avoirs d'une autre ne s'affichent pas
        le temps de la réponse), et une réponse qui arrive après un nouveau
        changement est jetée. */
-    if (slug && liveCreditsOwnerSlug && liveCreditsOwnerSlug !== slug) { liveCredits = []; liveCreditsLoadedSlug = ''; }
-    if (slug) liveCreditsOwnerSlug = slug;
+    if (liveCreditsOwnerSlug !== slug) { liveCredits = []; liveCreditsLoadedSlug = ''; liveCreditsShown = false; }
+    liveCreditsOwnerSlug = slug;
     if (liveCreditsLoading) return;
     if (!slug || liveCreditsLoadedSlug === slug) return;
     liveCreditsLoading = true;
     fetch('/api/store-credits?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
-      .then((response) => response && response.ok ? response.json() : null)
+      .then((response) => { if (!response?.ok) throw new Error('credits-http'); return response.json(); })
       .then((data) => {
         if (currentSlug() !== slug) return;
-        liveCredits = data && Array.isArray(data.credits) ? data.credits : [];
+        if (!data || !Array.isArray(data.credits)) throw new Error('credits-shape');
+        /* Une relecture qui ne change rien ne reconstruit pas la page sous le
+           doigt du commerçant (un rendu pendant un clic l'avale). */
+        const before = JSON.stringify(liveCredits), first = liveCreditsLoadedSlug !== slug && !liveCreditsShown;
+        liveCredits = data.credits;
         liveCreditsLoadedSlug = slug;
+        liveCreditsChanged = first || JSON.stringify(liveCredits) !== before;
+        liveCreditsShown = true;
       }).catch(() => {}).finally(() => {
         liveCreditsLoading = false;
-        if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+        clearTimeout(liveCreditsTimer);
+        liveCreditsTimer = setTimeout(() => {
+          liveCreditsLoadedSlug = '';
+          if (document.querySelector('[data-live-returns]')) loadLiveCredits();
+        }, 30000);
+        if (liveCreditsChanged && liveCreditsLoadedSlug === slug && document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+        liveCreditsChanged = false;
       });
   }
   async function mutateLiveCredit(payload) {
