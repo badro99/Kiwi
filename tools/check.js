@@ -1916,6 +1916,7 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
     'invoicing-print-test.mjs',
+    'invoicing-pdf-pages-browser-test.mjs',
     'invoicing-v2-browser-test.mjs',
     'invoicing-v2-real-server-browser-test.mjs',
     'day-report-print-format-test.mjs',
