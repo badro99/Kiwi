@@ -189,12 +189,14 @@ const probes = {
     custom.click(); assert.equal(picker.mode,'day'); assert.equal(picker.maxDay,'2026-10-26'); picker.onApply('2026-10-20'); assert.equal(changes[1],'2026-10-20');
   },
   'team-member-editor'() {
-    const attrs = {}, err = {hidden:true}, toggles = [];
-    const input = {setAttribute:(k,v)=>attrs[k]=v,removeAttribute:k=>delete attrs[k],closest:()=>({classList:{toggle:(k,v)=>toggles.push(v)}})};
+    const attrs = {'aria-describedby':'hint-email'}, err = {hidden:true,setAttribute(){}}, toggles = [];
+    const input = {getAttribute:k=>attrs[k]??null,setAttribute:(k,v)=>attrs[k]=v,removeAttribute:k=>delete attrs[k],closest:()=>({classList:{toggle:(k,v)=>toggles.push(v)},querySelector:()=>null})};
     const root = {querySelector:s=>s.startsWith('[name=')?input:err};
     const error = load('assets/team/profile-ui.js','edError');
     error(root,'email','Required'); assert.equal(attrs['aria-invalid'],'true'); assert.equal(err.textContent,'Required'); assert.equal(err.hidden,false);
+    assert.equal(attrs['aria-describedby'],'hint-email '+err.id,'the message is the field description, next to its hint');
     error(root,'email',''); assert.equal(attrs['aria-invalid'],undefined); assert.equal(err.textContent,''); assert.equal(err.hidden,true); assert.deepEqual(toggles,[true,false]);
+    assert.equal(attrs['aria-describedby'],'hint-email','clearing the error keeps the hint description');
   },
 };
 exports.run = name => { assert.ok(probes[name], name); const result = probes[name](); const done = () => console.log('✓ runtime · ' + name); if (result?.then) return result.then(done); done(); };

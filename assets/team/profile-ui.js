@@ -958,12 +958,26 @@
   function edError(root, name, msg) {
     const input = root.querySelector(`[name="${name}"]`);
     const err = root.querySelector(`[data-err-for="${name}"]`);
+    /* The message is the field's accessible DESCRIPTION, so a screen reader
+       reads it with the field; inside the label it only lengthened the name. */
+    if (err && !err.id) err.id = 'kt-ed-err-' + name;
+    const describe = (el) => {
+      if (!el || !err) return;
+      const ids = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter((x) => x && x !== err.id);
+      if (msg) ids.push(err.id);
+      if (ids.length) el.setAttribute('aria-describedby', ids.join(' ')); else el.removeAttribute('aria-describedby');
+    };
     if (input) {
       if (msg) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+      describe(input);
       const wrap = input.closest('.kiwi-select');
-      if (wrap) wrap.classList.toggle('is-invalid', !!msg);
+      if (wrap) {
+        wrap.classList.toggle('is-invalid', !!msg);
+        const trigger = wrap.querySelector('.kiwi-select-trigger');
+        if (trigger) { if (msg) trigger.setAttribute('aria-invalid', 'true'); else trigger.removeAttribute('aria-invalid'); describe(trigger); }
+      }
     }
-    if (err) { err.textContent = msg || ''; err.hidden = !msg; }
+    if (err) { err.textContent = msg || ''; err.hidden = !msg; err.setAttribute('aria-hidden', 'true'); }
   }
   function edPreview(root) {
     const T = t();
@@ -1453,6 +1467,15 @@
     mdl.close();
     window.__kiwiTeamModal = null;
     if (pageActive) render();
+    /* The re-render removed the button that opened the form, so keyboard focus
+       fell to <body>: put it back on the member just saved (or the add button). */
+    requestAnimationFrame(() => {
+      const lost = !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected;
+      if (!lost) return;
+      const id = (window.CSS && CSS.escape) ? CSS.escape(member.id) : member.id;
+      const next = document.querySelector(`[data-action="kt-edit-member"][data-arg="${id}"]`) || document.querySelector('[data-action="kt-add-member"]');
+      try { if (next) next.focus({ preventScroll: false }); } catch (_) {}
+    });
   };
 
   /* ═══════════════ VIEW PROFILE MODAL ═══════════════ */

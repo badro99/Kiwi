@@ -2034,6 +2034,7 @@ section('Whole-project regressions');
     'dashboard-truth-test.mjs',
     'team-truth-test.mjs',
     'team-member-editor-test.mjs',
+    'team-editor-keyboard-browser-test.mjs',
     'menu-option-group-editor-test.mjs',
     'legacy-venue-modals-test.mjs',
     'pin-lockout-truth-test.mjs',
