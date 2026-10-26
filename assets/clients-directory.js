@@ -15,8 +15,8 @@
   'use strict';
   if (!window.Kiwi) { console.warn('clients-directory.js loaded before interactive.js'); return; }
   var Kiwi = window.Kiwi;
-  var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
-  var fmt = function (n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})).replace(/[\u202F\u00A0\s]/g, '\u00A0'); } catch (_) { return String(Math.round(n) || 0); } };
+  var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || document.documentElement.lang || 'fr'; } catch (_) { return 'fr'; } };
+  var fmt = function (n) { return window.KiwiClientNumbers.money(n, lang()); };
   var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
   var ICON = { search: 'M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z', download: 'M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z', redeem: 'M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l84 114-64 46-136-184-136 184-64-46 82-114H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z', personAdd: 'M720-400v-120H600v-80h120v-120h80v120h120v80H800v120h-80ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm80-80h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-640Zm0 400Z', group: 'M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47Zm466 0q-47 47-113 47-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113q0 66-47 113ZM120-240h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-240Zm0-400Z', campaign: 'M720-440v-80h160v80H720Zm48 280-128-96 48-64 128 96-48 64Zm-80-480-48-64 128-96 48 64-128 96ZM200-200v-160h-40q-33 0-56.5-23.5T80-440v-80q0-33 23.5-56.5T160-600h160l200-120v480L320-360h-40v160h-80Zm240-182v-196l-98 58H160v80h182l98 58Zm120 36v-268q27 24 43.5 58.5T620-480q0 41-16.5 75.5T560-346ZM300-480Z' };
   var ico = function (k) { return '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="' + ICON[k] + '"/></svg>'; };
@@ -237,7 +237,7 @@
   function csvExport(rows, T) {
     var head = [T.th.name, T.th.phone, T.th.email, T.th.city, T.birthday, T.th.visits, T.th.spend, T.th.points, T.th.seg, T.consentWa, T.consentEmail];
     var body = rows.map(function (c) {
-      return [c.name || '', c.phone || '', c.email || '', c.city || '', c.birthday || '', c.visits || 0, c.spend || 0, c.points || 0, SEG_LBL(T, c.seg), c.consent ? 'oui' : 'non', c.consentEmail ? 'oui' : 'non'];
+      return [c.name || '', c.phone || '', c.email || '', c.city || '', c.birthday || '', c.visits || 0, window.KiwiClientNumbers.csv(c.spend), c.points || 0, SEG_LBL(T, c.seg), c.consent ? 'oui' : 'non', c.consentEmail ? 'oui' : 'non'];
     });
     if (hospitalityMode()) {
       var H = HOTEL[lang()] || HOTEL.fr;
@@ -593,7 +593,7 @@
       var stamp = Number(entry.ts || entry.createdAt || 0);
       var when = stamp ? new Date(stamp).toLocaleString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : T.unknownDate;
       var items = Array.isArray(entry.items) && entry.items.length ? entry.items.map(function (item) {
-        return (item.qty || 1) + '× ' + (item.name || T.purchase);
+        return window.KiwiClientNumbers.quantity(item.qty ?? 1, lang()) + '× ' + (item.name || T.purchase);
       }).join(' · ') : T.purchase;
       return '<div class="cd-history-row"><span class="cd-history-date">' + esc(when) + '<span class="cd-history-method">' + esc(payment(entry.method)) + '</span></span>' +
         '<span class="cd-history-items">' + esc(items) + (entry.ref ? '<span class="cd-history-meta">' + esc(T.ticket + ' ' + entry.ref) + '</span>' : '') + '</span>' +
