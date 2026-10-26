@@ -37,6 +37,7 @@ const MAX_ORDERS = 1000;
 const MAX_CALLS = 30;            // appels GraphQL Shopify par passage
 const MAX_LINE_PAGES = 50;       // 5 000 lignes : exception explicite, aucun retrait partiel
 const CURSOR_DOC = 'shopify-replay';   // store_docs, côté serveur seulement (absent de FEATURES)
+const UNRESOLVED_DOC = 'shopify-replay-unresolved';
 const tail = (gid) => String(gid || '').split('/').pop();
 
 const ORDERS_QUERY = `query KiwiMissedOrders($q: String!, $after: String) {
@@ -108,13 +109,28 @@ export async function listShopifyOrdersSince(env, merchant, sinceTs, { after = n
  * remaining=null signifie que Shopify annonce encore une page sans total exact. */
 export async function readReplayProgress(env, merchant) {
   const row = await env.DB.prepare('SELECT data FROM store_docs WHERE merchant = ? AND feature = ?').bind(merchant, CURSOR_DOC).first();
-  try { return row ? JSON.parse(row.data) : null; } catch { return null; }
+  try { return row ? { ...JSON.parse(row.data), unresolved: await readUnresolved(env, merchant) } : null; } catch { return null; }
 }
 async function writeProgress(env, merchant, progress) {
   await env.DB.prepare(
     `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)
      ON CONFLICT (merchant, feature) DO UPDATE SET data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
   ).bind(merchant, CURSOR_DOC, JSON.stringify(progress), Date.now()).run();
+}
+
+/* Separate from the bounded recent history and from the replay cursor. Entries
+ * survive completed runs and changes to the requested replay window. */
+async function readUnresolved(env, merchant) {
+  const row = await env.DB.prepare('SELECT data FROM store_docs WHERE merchant = ? AND feature = ?').bind(merchant, UNRESOLVED_DOC).first();
+  return row ? JSON.parse(row.data) : [];
+}
+export async function writeUnresolved(env, merchant, orders, exceptions) {
+  const completed = new Set(orders.map(o => String(o.id || '').slice(0, 160)));
+  const kept = (await readUnresolved(env, merchant)).filter(e => !completed.has(e.orderId));
+  const entries = new Map([...kept, ...exceptions].map(e => [e.orderId + ':' + (e.lineId || '') + ':' + e.code, e]));
+  await env.DB.prepare(`INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)
+    ON CONFLICT (merchant, feature) DO UPDATE SET data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`)
+    .bind(merchant, UNRESOLVED_DOC, JSON.stringify([...entries.values()]), Date.now()).run();
 }
 
 /* Le cœur, sans réseau : des commandes déjà lues, le catalogue, les liens. */
@@ -127,7 +143,7 @@ export function planReplay(data, links, orders) {
      later physical count resolves it. Stable order-line IDs prevent retries
      from deducting twice; a shortage is never evidence of a prior sale. */
   const left = new Map((data.variants || []).map((v) => [v.id, Math.max(0, Math.round(Number(v.stock) || 0))]));
-  const plan = { orders: 0, skippedOrders: 0, apply: [], settle: [], counted: [], already: 0, unmatched: 0, pieces: 0, short: 0, shortLines: 0 };
+  const plan = { orders: 0, skippedOrders: 0, apply: [], settle: [], counted: [], already: 0, unmatched: 0, pieces: 0, short: 0, shortLines: 0, exceptions: [] };
   for (const o of orders || []) {
     if (!o || o.cancelledAt || o.test) { plan.skippedOrders++; continue; }
     const at = Date.parse(o.createdAt);
@@ -139,7 +155,7 @@ export function planReplay(data, links, orders) {
       if (!qty) continue;
       const kiwiVariantId = links.get(String(line.variant && line.variant.id || ''));
       const variant = kiwiVariantId && byId.get(kiwiVariantId);
-      if (!variant) { plan.unmatched++; continue; }
+      if (!variant) { plan.unmatched++; plan.exceptions.push({ orderId: String(o.id || '').slice(0, 160), lineId: String(line.id || '').slice(0, 160), code: 'shopify-unmapped-line' }); continue; }
       const moveId = `so-${ref.slice(-24)}-${tail(line.id).slice(-24)}`.slice(0, 64);
       if (existing.has(moveId)) { plan.already++; continue; }
       const row = { moveId, vid: kiwiVariantId, qty, at, order: String(o.name || ref).slice(0, 40), ref };
@@ -199,7 +215,10 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
     exceptions, lastError: '', updatedTs: Date.now(),
   };
   // Written after the catalogue CAS: retries remain idempotent if this write fails.
-  const keepCursor = () => writeProgress(env, merchant, progress);
+  const keepCursor = async (plan) => {
+    await writeUnresolved(env, merchant, orders, [...listed.exceptions, ...plan.exceptions]);
+    await writeProgress(env, merchant, progress);
+  };
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
@@ -219,7 +238,7 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
       resumed: !!after, more: listed.more, cursor: listed.more ? listed.next : null,
     };
     if (dryRun) return { ...summary, applied: 0, dryRun: true };
-    if (!(plan.apply.length || plan.settle.length)) { await keepCursor(); return { ...summary, applied: 0, dryRun: false }; }
+    if (!(plan.apply.length || plan.settle.length)) { await keepCursor(plan); return { ...summary, applied: 0, dryRun: false }; }
     for (const x of plan.apply) {
       data.moves.push({ id: x.moveId, vid: x.vid, d: -x.qty, at: x.at, why: 'vente', ref: `shopify:${x.ref}`.slice(0, 64) });
     }
@@ -232,7 +251,7 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
       `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
     ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run();
     if (write && write.meta && Number(write.meta.changes) === 1) {
-      await keepCursor();
+      await keepCursor(plan);
       return { ...summary, applied: plan.apply.length, dryRun: false };
     }
   }

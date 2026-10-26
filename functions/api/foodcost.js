@@ -23,8 +23,8 @@
  *   · foodcost_snapshots  — chaque version, telle qu'enregistrée, qui et quand.
  *     Jamais modifiée ni supprimée : c'est l'historique des coûts figés.
  *
- * Tables créées à la première utilisation (même modèle que store-credits.js) :
- * la base de production n'a pas besoin d'une migration manuelle.
+ * Tables créées par les migrations, avant le déploiement des routes :
+ * appliquer avec wrangler d1 migrations, jamais à la première requête.
  *
  *   GET  ?merchant=slug                       → { enabled, canEdit, sheets }
  *   GET  ?merchant=slug&id=ID                 → { sheet, history }
