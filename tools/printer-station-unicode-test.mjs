@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* Kiwi · un profil d'imprimante au nom arabe ne capte pas toutes les stations.
  *
  * resolveStationTarget() comparait des clés réduites à [a-z0-9]. Un nom arabe
@@ -10,7 +11,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const bridgeSource = fs.readFileSync(new URL('../assets/printer-bridge.js', import.meta.url), 'utf8');
+const bridgeSource = printerTestSource();
 let passed = 0;
 const ok = (c, l) => { assert.ok(c, l); passed++; };
 

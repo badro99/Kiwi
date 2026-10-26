@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* Focused regression coverage for audit findings D01-D03.
  *
  * D01 uses the shipped Node bridge as a real HTTP process and a real TCP sink.
@@ -153,7 +154,7 @@ async function bridgeRolloutTest() {
       },
     };
     context.window = context;
-    vm.runInNewContext(read('assets/printer-bridge.js'), context);
+    vm.runInNewContext(printerTestSource(), context);
     return { state, api: context.KiwiPrinter, memory };
   }
   const old = harness();

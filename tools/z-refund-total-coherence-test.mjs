@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* #0070 · « il me manque 330 dirhams ».
  *
@@ -85,7 +86,7 @@ ok('avec une créance, le net encaissé part du total corrigé',
 
 /* Le second encodeur — impression navigateur / imprimante système — imprime
  * le MÊME Z. Deux mises en page d'un même tableau finissent par diverger. */
-const bridge = read('assets/printer-bridge.js');
+const bridge = printerTestSource();
 ok('l’encodeur navigateur applique la même correction',
   bridge.includes("R('Ventes brutes', money(r.gross));")
   && bridge.includes("R(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(collected), 'kpr-b');")

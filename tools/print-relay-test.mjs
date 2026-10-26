@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · RELAIS D'IMPRESSION — l'iPad imprime par le pont du comptoir
@@ -376,7 +377,7 @@ if (DatabaseSync) {
   ok(/method === 'POST' && path === '\/api\/print\/bridges'\) return next\(\);/.test(mw), 'C1 · POST /api/print/bridges est ouvert (le handler exige un code vivant)');
   ok(!/startsWith\('\/api\/print/.test(mw), 'C1 · aucun préfixe /api/print ouvert');
 
-  const pb = read('assets/printer-bridge.js') + '\n' + read('assets/printer/pairing-ui.js');
+  const pb = printerTestSource() + '\n' + read('assets/printer/pairing-ui.js');
   ok(/nativeFailureCount < 3/.test(pb) && /printQueueIdle\(\)/.test(pb), 'C2 · la redécouverte native attend trois échecs et une file au repos');
   ok(/plugin\.probe\([^]*plugin\.scan\(/.test(pb), 'C2 · la dernière IP est sondée avant tout scan du sous-réseau');
   ok(/hosts\.length === 1[^]*setConfig\(\{ ip: hosts\[0\]\.host/.test(pb) && /multiple-printers/.test(pb), 'C2 · une seule imprimante est reprise automatiquement, plusieurs exigent un choix');
@@ -470,7 +471,7 @@ if (DatabaseSync) {
     },
   };
   context.window = context;
-  vm.runInNewContext(read('assets/printer-bridge.js'), context, { filename: 'assets/printer-bridge.js' });
+  vm.runInNewContext(printerTestSource(), context, { filename: 'assets/printer-bridge.js' });
   const relayEnqueue = context.KiwiPrinter.relayEnqueue;
   context.KiwiPrinter.printKitchen = () => relayEnqueue(new Uint8Array([1, 2, 3]), { ip: '192.168.1.50', port: 9100 }, 'kitchen');
   vm.runInNewContext(read('assets/kitchen-print-queue.js'), context, { filename: 'assets/kitchen-print-queue.js' });

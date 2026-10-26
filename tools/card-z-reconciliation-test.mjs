@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* End-of-day card reconciliation has two independent facts:
  *   1. Kiwi's card ledger for the whole commercial day.
@@ -15,7 +16,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const daySrc = fs.readFileSync(path.join(ROOT, 'assets/day-report.js'), 'utf8');
 const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const escpos = fs.readFileSync(path.join(ROOT, 'assets/escpos.js'), 'utf8');
-const bridge = fs.readFileSync(path.join(ROOT, 'assets/printer-bridge.js'), 'utf8');
+const bridge = printerTestSource();
 let passed = 0;
 function ok(value, label) { assert.ok(value, label); passed++; }
 

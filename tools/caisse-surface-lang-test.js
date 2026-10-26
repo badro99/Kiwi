@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const printerTestSource = require('./printer-test-source.cjs');
 'use strict';
 
 const caisseTestSource = require('./caisse-test-source.cjs');
@@ -215,7 +216,7 @@ function audit(label, lits) {
 }
 
 /* ── 1 · le dialogue d'imprimante ───────────────────────────────────────── */
-const pbCore = read('assets/printer-bridge.js');
+const pbCore = printerTestSource();
 const pbUi = read('assets/printer/pairing-ui.js');
 const pb = pbCore + '\n' + pbUi;
 const setup = between(pbUi, 'function openSetup(context)', 'core.install(', 'printer-bridge.js · openSetup');

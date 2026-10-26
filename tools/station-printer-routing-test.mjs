@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* Kiwi · station-based printer routing test suite
  * Verifies that client receipts and staff production tickets are cleanly routed
  * to physical printers based on prep stations, with tenant-scoped persistence,
@@ -9,7 +10,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const bridgeSource = fs.readFileSync(path.join(ROOT, 'assets/printer-bridge.js'), 'utf8');
+const bridgeSource = printerTestSource();
 const queueSource = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
 const foodPrintSource = fs.readFileSync(path.join(ROOT, 'assets/food-production-print.js'), 'utf8');
 const receiptSource = fs.readFileSync(path.join(ROOT, 'assets/receipt.js'), 'utf8');
