@@ -696,6 +696,7 @@ for (const test of [
      tout changement de codes, et le client (native-runtime.js) lit ce verdict. */
   'face-unlock-test.mjs',
   'config-pin-projection-test.mjs',
+  'staff-publication-split-test.mjs',
   'team-doc-redaction-test.mjs',
   'team-roster-cap-test.mjs',
   'team-properties-test.mjs',

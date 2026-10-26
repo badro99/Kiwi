@@ -31,6 +31,9 @@ console.log('■ PIN dashboard test (tools/pin-dashboard-test.mjs)');
 
 const lib = fs.readFileSync(path.join(ROOT, 'functions/auth/_lib.js'), 'utf8');
 const cfg = fs.readFileSync(path.join(ROOT, 'functions/api/config.js'), 'utf8');
+/* Staff code publication left the route for functions/api/_staff-publication.js
+   (POST /api/config calls it); the owner-role helper and the pins block live there. */
+const staffPub = fs.readFileSync(path.join(ROOT, 'functions/api/_staff-publication.js'), 'utf8');
 const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
 
 /* Extraction d'une fonction fermant par `\n}` en colonne 0 (module) ou `\n  }`
@@ -58,12 +61,12 @@ ok(/LIMIT 10/.test(vapSrc) && !/LIMIT 1`/.test(vapSrc), 'lecture des CANDIDATS (
 ok(/limitFail\(request, env, 'pin:account', identity\)/.test(vapSrc), 'le limiteur de force brute est toujours en place');
 
 // ── 3. POST /api/config pins — le roster d'équipe ne tue pas le patron ───────
-const ownerRoleSrc = extract(cfg, /function accountOwnerRole\(value\) \{[\s\S]*?\n\}/, 'accountOwnerRole');
+const ownerRoleSrc = extract(staffPub, /function accountOwnerRole\(value\) \{[\s\S]*?\n\}/, 'accountOwnerRole');
 const ownerRole = new Function(ownerRoleSrc + '; return accountOwnerRole;')();
 ok(ownerRole('Propriétaire') === true && ownerRole('owner') === true && ownerRole('direction') === true, 'accountOwnerRole reconnaît les orthographes du patron (accents compris)');
 ok(ownerRole('manager') === false && ownerRole('Caissier') === false, 'manager et caissier ne sont pas le patron — leurs lignes suivent le roster d\'équipe');
 
-const pinsBlock = cfg.slice(cfg.indexOf('if (Array.isArray(body && body.pins))'), cfg.indexOf('// ── Business type'));
+const pinsBlock = staffPub.slice(staffPub.indexOf('export async function publishStaffCredentials('));
 ok(pinsBlock.includes('const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role))'), 'la liste entrante est inspectée : porte-t-elle un propriétaire ?');
 ok(/DELETE FROM staff_pins WHERE merchant = \? AND id NOT IN \(/.test(pinsBlock), 'sans propriétaire entrant, les lignes propriétaire existantes sont PRÉSERVÉES');
 ok(/AND EXISTS \(SELECT 1 FROM staff_pins k WHERE k\.id IN/.test(pinsBlock), 'le code conservé du patron gagne sur un doublon d\'équipe — comparaison en SQL, jamais en JS');

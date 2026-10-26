@@ -450,7 +450,8 @@ ok(/edInput\('email', 'email', m\.email, T\.ph\.email, 'required /.test(teamSour
 ok(teamSource.includes('`scoped:${String(venue.slug)}`')
   && teamSource.includes('slug: () => teamSlug()'),
   "Équipe synchronise aussi le bon magasin depuis un dashboard ouvert en God Mode");
-const configSource = fs.readFileSync(path.join(ROOT, 'functions/api/config.js'), 'utf8');
+const configSource = fs.readFileSync(path.join(ROOT, 'functions/api/config.js'), 'utf8')
+  + fs.readFileSync(path.join(ROOT, 'functions/api/_staff-publication.js'), 'utf8');   // POST /api/config publishes staff codes through it
 ok(configSource.includes("'employee-access'") && configSource.includes('memberId'),
   'la synchronisation des PIN publie aussi les identifiants employés');
 ok(configSource.includes('pinGateConfigured') && configSource.includes('employeeRoleOpensTill'),
