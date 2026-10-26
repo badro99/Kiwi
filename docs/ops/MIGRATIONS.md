@@ -172,3 +172,12 @@ destructive migration and needs the owner's go-ahead.
 Still there, but use migrations instead. A column it adds is not recorded in
 `d1_migrations`, so the next migration that adds the same column fails on
 `duplicate column name`.
+
+## Minimum de l’application, 26 octobre 2026
+
+La table `d1_migrations` de production, lue le 26 octobre 2026, s’arrête à
+`0016_cpu_polling_indexes.sql`, et la colonne `accounts.business_slug`, son index
+unique et `merchant_config` y sont présents. `functions/_schema-version.js` fixe
+ce minimum à 16 pour les contrôles locaux, sans sonde au démarrage ni par
+requête. Voir `SCHEMA-FALLBACKS.md` pour les tables de routes encore hors
+migrations et les retraits restant à faire.

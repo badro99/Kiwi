@@ -74,14 +74,14 @@ export async function onRequestPost(context) {
         'SELECT account_id FROM merchant_config WHERE merchant = ? LIMIT 1'
       ).bind(wantedSlug).first();
       if (claimed && claimed.account_id) taken = true;
-    } catch (_) { /* registre absent (base non migrée) → on s'en remet au balayage */ }
+    } catch (_) { return json({ error: 'signup-unavailable' }, 503); }
     if (!taken) {
       try {
         const rs = await env.DB.prepare(
           "SELECT business FROM accounts WHERE business IS NOT NULL AND business <> ''"
         ).all();
         taken = (rs.results || []).some((r) => slugMerchant(r.business) === wantedSlug);
-      } catch (_) { /* illisible → ne bloque pas une inscription légitime */ }
+      } catch (_) { return json({ error: 'signup-unavailable' }, 503); }
     }
     if (taken) {
       if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
@@ -105,22 +105,11 @@ export async function onRequestPost(context) {
     ).bind(id, email, name, business, salt, hash, ts, reservedSlug).run();
   } catch (e) {
     const msg = String((e && e.message) || e);
-    let fallbackOk = false;
-    if (/business_slug/i.test(msg) && /no column|no such column/i.test(msg)) {
-      /* Base pas encore migrée (0007) : l'INSERT d'avant, sans réservation. */
-      try {
-        await env.DB.prepare(
-          'INSERT INTO accounts (id, email, name, business, salt, hash, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, email, name, business, salt, hash, ts).run();
-        fallbackOk = true;
-      } catch (_) { /* course sur l'e-mail → « exists » ci-dessous */ }
-    }
-    if (!fallbackOk) {
-      if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
-      // Course perdue sur le slug → nom pris ; sur l'e-mail → compte existant.
-      if (/business_slug/i.test(msg) && /UNIQUE/i.test(msg)) return json({ error: 'business-taken' }, 409);
-      return json({ error: 'exists' }, 409);
-    }
+    if (!/UNIQUE constraint failed/i.test(msg)) return json({ error: 'signup-unavailable' }, 503);
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    // Course perdue sur le slug : nom pris ; sur l'e-mail : compte existant.
+    if (/business_slug/i.test(msg)) return json({ error: 'business-taken' }, 409);
+    return json({ error: 'exists' }, 409);
   }
 
   /* Effacer le compteur à chaque succès rendait la création de comptes
