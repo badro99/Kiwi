@@ -1,6 +1,7 @@
 // Real client modules; storage transactions, clock and transport are controlled edges.
 import fs from 'node:fs';
 import caisseWorkflowSource from './caisse-test-source.cjs';
+import coreTestSource from './core-test-source.cjs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {declaration as scan} from './js-declarations.cjs';
@@ -10,7 +11,7 @@ export const ROOT=process.env.KIWI_ROOT||path.resolve(import.meta.dirname,'..');
 const cache=new Map();
 export function named(text,name){let m=cache.get(text);if(!m)cache.set(text,m=new Map());if(m.has(name))return m.get(name);const re=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+name+'\\s*\\(|(?:const|let|var)\\s+'+name+'\\s*=)');const found=re.exec(text);if(!found)throw Error('Missing declaration '+name);const out=scan(text.slice(found.index).trimStart(),name);m.set(name,out);return out;}
 const files=new Map(),scripts=new Map();
-export const read=file=>{if(!files.has(file))files.set(file,fs.readFileSync(path.join(ROOT,file),'utf8'));return files.get(file);};
+export const read=file=>{if(!files.has(file))files.set(file,coreTestSource.readFileSync(path.join(ROOT,file),'utf8'))/* venues.js and other split cores come back whole */;return files.get(file);};
 /* Built once per process: a fresh string per boot missed both caches above, so
  * every boot recompiled live-link.js and re-scanned the restaurant files. */
 const derived=new Map();const once=(key,make)=>{if(!derived.has(key))derived.set(key,make());return derived.get(key);};
