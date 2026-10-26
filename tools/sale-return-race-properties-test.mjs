@@ -287,4 +287,44 @@ try {
 
   console.log(`${failed ? '✗' : '✓'} sale-return-race-properties-test · ${passed} held, ${failed} failed`);
 } finally { f.close(); }
-process.exit(failed ? 1 : 0);
+process.exitCode = failed ? 1 : 0;
+
+// UI cache: execute the shipped loader, with a controlled network and clock.
+{
+  const { default: vm } = await import('node:vm');
+  const source = fs.readFileSync('assets/pages-pro/boutique-promos-returns.js', 'utf8');
+  const block = source.slice(source.indexOf('  let liveCredits ='), source.indexOf('  async function mutateLiveCredit'));
+  let slug = 'fixture-a', reply, calls = 0, timer;
+  const context = { window: { KiwiEnv: { isReal: () => true }, KiwiCloudDoc: { currentSlug: () => slug } },
+    document: { querySelector: () => true }, handlers: { 'nav-returns': () => {} },
+    fetch: async () => { calls++; return reply; }, setTimeout: fn => { timer = fn; return 1; }, clearTimeout() {}, console };
+  vm.createContext(context);
+  vm.runInContext(block + '\nthis.load = loadLiveCredits; this.rows = () => liveCredits; this.invalidate = () => { liveCreditsLoadedSlug = ""; };', context);
+  const flush = async () => { for (let i=0;i<12;i++) await Promise.resolve(); };
+  reply = { ok: true, json: async () => ({ credits: [{ code: 'fixture', balance: 12.25 }] }) };
+  context.load(); await flush();
+  assert.equal(context.rows()[0].balance, 12.25);
+  reply = { ok: false }; context.invalidate(); context.load(); await flush();
+  assert.equal(context.rows()[0]?.balance, 12.25, 'HTTP failure retains confirmed credits');
+  assert.equal(typeof timer, 'function', 'open register schedules cross-device refresh');
+  reply = { ok: false }; timer(); await flush();
+  assert.equal(context.rows()[0].balance, 12.25, 'HTTP failure retains confirmed credits');
+  reply = { ok: true, json: async () => ({ credits: [{ code: 'fixture', balance: 3.25 }] }) };
+  timer(); await flush();
+  assert.equal(context.rows()[0].balance, 3.25, 'another till spend reaches open register after retry');
+  slug = 'fixture-b'; reply = { ok: false }; context.load(); await flush();
+  assert.equal(context.rows().length, 0, 'tenant switch clears prior tenant even on HTTP failure');
+  reply = { ok: true, json: async () => ({ credits: [] }) }; timer(); await flush();
+  assert.equal(context.rows().length, 0, 'confirmed empty response accepted');
+  let release;
+  slug = 'fixture-c'; reply = { ok: true, json: () => new Promise(resolve => { release = resolve; }) };
+  context.load(); await flush(); slug = 'fixture-d'; context.load();
+  release({ credits: [{ code: 'foreign', balance: 99 }] }); await flush();
+  assert.equal(context.rows().length, 0, 'late response cannot expose a departed tenant');
+  reply = { ok: true, json: async () => ({ credits: [{ code: 'fixture-d', balance: 7 }] }) }; timer(); await flush();
+  assert.equal(context.rows()[0].code, 'fixture-d', 'new tenant recovers after overlapping request');
+  reply = { ok: true, json: async () => ({ error: 'invalid' }) }; timer(); await flush();
+  assert.equal(context.rows()[0].balance, 7, 'malformed success retains confirmed credits');
+  assert.ok(calls >= 5);
+  console.log('✓ credit UI HTTP failure, retry, cross-device freshness and tenant isolation');
+}

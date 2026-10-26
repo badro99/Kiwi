@@ -166,3 +166,24 @@ try {
   console.log(`${failures ? '✗' : '✓'} promotions endpoint/engine contract: ${checks - failures}/${checks} checks; ${failures} failures; actual source`);
   process.exitCode = failures ? 1 : 0;
 } finally { sql.close(); }
+
+// Actual UI formatting helpers must be independent of the viewer's timezone.
+{
+  const source = fs.readFileSync('assets/boutique-promos-dashboard.js', 'utf8');
+  const helpers = source.slice(source.indexOf('  var money ='), source.indexOf('  var icons ='));
+  const previous = process.env.TZ;
+  try {
+    for (const zone of ['Pacific/Honolulu', 'Asia/Tokyo', 'Africa/Casablanca']) {
+      process.env.TZ = zone;
+      const ui = vm.runInNewContext(helpers + '\n({money,fmtDay,fmtHM,toInput,startOfDay,endOfDay})', { loc: () => 'en-GB' });
+      const date = new Date('2026-07-01T23:30:00Z');
+      check(zone + ' keeps promotion centimes', ui.money(12.25) === '12.25 MAD');
+      check(zone + ' date input uses store date', ui.toInput(+date) === '2026-07-02');
+      check(zone + ' summary uses store day', ui.fmtDay(date) === '2 Jul 2026');
+      check(zone + ' summary uses store hour', ui.fmtHM(date) === '00:30');
+      check(zone + ' store midnight boundary', ui.startOfDay(date) === Date.parse('2026-07-01T23:00:00Z'));
+      check(zone + ' store end boundary', ui.endOfDay(date) === Date.parse('2026-07-02T22:59:59.999Z'));
+    }
+  } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
+  process.exitCode = failures ? 1 : 0;
+}
