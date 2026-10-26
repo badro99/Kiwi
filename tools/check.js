@@ -638,6 +638,10 @@ for (const test of [
   'runtime-ddl-routes-test.mjs',
   'schema-minimum-test.mjs',
   'worker-cpu-test.mjs',
+  /* Routes statiques appelées directement par le middleware racine (sans le routeur Pages) : table à jour, appel identique, repli. */
+  'fast-routes-test.mjs',
+  /* GET /api/store : 304 pour un document inchangé et identique pour tous ; jamais pour un document expurgé. */
+  'store-revalidation-test.mjs',
   'd1-restore-rehearsal-test.mjs',
   /* D1 refuse plus de 100 paramètres liés par requête : la file de stock (200 mouvements) et la purge des tickets. */
   'd1-variable-limit-test.mjs',

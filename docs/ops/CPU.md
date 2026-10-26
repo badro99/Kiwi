@@ -90,7 +90,9 @@ to Functions responses. Deploy the root `_routes.json` with the static output.
   `/api/store` uses its `(merchant,feature)` primary key. It still parses and
   serializes documents for redaction, briefing scoping and malformed-data
   handling. Skipping these operations or caching across requests could expose
-  credentials or stale data. No such shortcut was introduced.
+  credentials or stale data. No such shortcut was introduced. (Since
+  2026-10-26 an unchanged document that reads the same for every caller
+  answers 304 instead: see "Store revalidation".)
 - `/api/me` normally uses indexed account/merchant lookups. Its legacy operator
   fallback still reads the account roster when no registry mapping exists;
   removing that compatibility path needs a separate data migration.
@@ -98,6 +100,70 @@ to Functions responses. Deploy the root `_routes.json` with the static output.
   regexes inspected in feed/config/store/me/auth are literals; none constructed
   a dynamic `RegExp` per poll. Credential work remains confined to writes or
   explicit sign-ins/code verification.
+
+## Route dispatch (2026-10-26)
+
+The router Pages generates from `functions/` (wrangler's
+`pages-template-worker`) compiles a path-to-regexp pattern for every route it
+walks, on every request, and never caches them. With about 250 routes that was
+the largest single cost per call: profiled on the real bundle, GET /api/menu
+spent 1.16 ms of CPU against 0.31 ms in its own handler, and production runs
+roughly 7 times slower than a laptop. The router is a lazy generator: it stops
+after yielding the root middleware and only walks the rest of the table when
+that middleware calls `next()`. Requests the middleware answers itself (a 401,
+a redirect) never paid it; every request that reached a handler did.
+
+`functions/_fast-next.js` replaces `next()` for the root middleware. When the
+path is an exact static route listed in `functions/_fast-routes.js`, it runs
+the nested `/api` middleware and the handler itself, with the same context
+Pages builds (a fresh copy of the request per step, `params`, shared `data`,
+`env`, `waitUntil`, `passThroughOnException`, `functionPath`), the same
+response copy and the same "must return a Response" error. Anything else goes
+to the Pages router unchanged: a path not in the table (dynamic routes and
+anything they could claim, a trailing slash, other casing), a method the file
+does not export, `next()` called with arguments, or a request body already
+read. A missing entry is only slower, never wrong.
+
+Measured on the wrangler-built bundle (same responses, byte for byte, across
+62 request cases including signed-in till polling and writes):
+
+| Request | Before | After |
+|---|---|---|
+| GET /api/feed (till) | 0.92 ms | 0.30 ms |
+| GET /api/store (till) | 0.84 ms | 0.18 ms |
+| GET /api/config (till) | 0.77 ms | 0.18 ms |
+| GET /api/pair/state (till) | 0.67 ms | 0.20 ms |
+| GET /api/menu (public) | 1.16 ms | 0.44 ms |
+
+The table is generated: run `node tools/build-fast-routes.mjs` after adding,
+moving or removing a route file. It imports every listed file, so a deleted
+route left in it fails the Pages build. `tools/fast-routes-test.mjs` (gate)
+and the pre-commit hook both refuse a stale table. The fast path only switches
+on inside the Pages runtime (its context carries `functionPath`); middleware
+tests that stub `next()` keep their stub and never load the table.
+
+## Store revalidation (2026-10-26)
+
+Receipt and business documents carry the logo as base64 (up to 248 KB in
+production), and dayreports holds the whole history (up to 210 KB). Every
+till poll used to read, parse and re-encode them, about 0.6 ms more than a
+small document on a laptop.
+
+GET /api/store now gives a weak ETag to a document whose answer does not
+depend on the caller: `W/"s1.<store>.<feature>.<rev>.<updated_ts>.<length>"`,
+with `Cache-Control: private, no-cache`. The browser keeps the answer and
+sends the tag back on the next poll by itself (assets/cloud-doc.js reads with
+the default cache mode, so no client change). When rev, time and length all
+still match, the row comes back without its data and the answer is a 304.
+
+What does not change: authorisation runs first, so a tag never opens a
+document to someone who may not read it. Documents in `REDACT` or `PARTIAL`
+(team roster, briefing, retention, charges, recipes, agent actions,
+workspaces) depend on who asks, so they get no tag and stay `no-store`: an
+owner signing in on a till must not keep a redacted copy and write it back.
+A tag naming another store or document, a list of tags, or `*` gets a full
+answer. Writes stay `no-store`. `tools/store-revalidation-test.mjs` holds
+these rules.
 
 ## Expected effect and rollout
 
