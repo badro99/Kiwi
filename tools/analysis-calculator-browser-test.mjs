@@ -9,14 +9,24 @@ const merchant = 'matrix-real';
 async function click(page, selector) {
   await page.waitForSelector(selector, { visible: true, timeout: 15000 });
   await page.$eval(selector, el => el.scrollIntoView({ block: 'center', inline: 'center' }));
-  const reachable = await page.$eval(selector, el => {
+  // Attendre que la cible ne bouge plus (entrée animée des cartes, défilement
+  // en cours) : un clic pendant le mouvement tombe à côté et rend le focus au corps.
+  await page.waitForFunction(s => new Promise(done => {
+    const el = document.querySelector(s); const a = el.getBoundingClientRect();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const b = el.getBoundingClientRect(); done(Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5);
+    }));
+  }), { timeout: 5000, polling: 50 }, selector);
+  const point = await page.$eval(selector, el => {
     const r = el.getBoundingClientRect();
     const x = r.x + r.width / 2, y = r.y + r.height / 2;
     const hit = document.elementFromPoint(x, y);
-    return r.width > 0 && r.height > 0 && x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && (hit === el || el.contains(hit));
+    const ok = r.width > 0 && r.height > 0 && x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && (hit === el || el.contains(hit));
+    return ok ? { x, y } : null;
   });
-  assert.equal(reachable, true, 'commande atteignable : ' + selector);
-  await page.click(selector);
+  assert.ok(point, 'commande atteignable : ' + selector);
+  // Clic réel au point vérifié : page.click refait son propre défilement.
+  await page.mouse.click(point.x, point.y);
 }
 async function visibleText(page, selector, text) {
   await page.waitForFunction((s, txt) => [...document.querySelectorAll(s)].some((el) => {
@@ -58,8 +68,13 @@ async function unlock(page) {
 async function fill(page, field, value) {
   const selector = `[data-sfc-field="${field}"]`;
   await click(page, selector);
-  await page.keyboard.down('Meta'); await page.keyboard.press('KeyA'); await page.keyboard.up('Meta');
-  await page.keyboard.press('Backspace'); await page.type(selector, value);
+  // Effacement au clavier, caractère par caractère : Meta+A n'existe pas hors
+  // Mac et le triple clic ne sélectionne rien sous émulation tactile.
+  const length = await page.$eval(selector, el => String(el.value).length);
+  await page.keyboard.press('End');
+  for (let i = 0; i < length; i++) await page.keyboard.press('Backspace');
+  assert.equal(await page.$eval(selector, el => el.value), '', 'champ vidé avant la saisie');
+  await page.type(selector, value);
   assert.equal(await page.$eval(selector, el => document.activeElement === el), true, 'focus conservé');
 }
 async function open(page) {
@@ -102,6 +117,8 @@ try {
       // coverage: surface=dashboard-analysis-calculator locale=fr viewport=tablet
       // coverage: surface=dashboard-analysis-calculator locale=fr viewport=desktop
       await open(page);
+      // Sur tablette, la page entière ne doit pas devenir plus large que l'écran.
+      assert.equal(await page.evaluate(() => innerWidth === visualViewport.width && document.documentElement.scrollWidth <= innerWidth), true, 'la fiche ne déborde pas de l\'écran');
       const portion = () => page.$eval('[data-sfc-summary] > div:nth-child(4) b', el => el.textContent);
       assert.match(await portion(), /2,50 MAD/);
       t.step('modifier une ligne et enregistrer le coût à 2,51 MAD');

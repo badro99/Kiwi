@@ -712,6 +712,9 @@
 .sfc input[type=checkbox]{width:auto}
 .sfc input:disabled,.sfc select:disabled{opacity:.7}
 .sfc-lines td{vertical-align:top}
+/* Le select natif caché est en position absolue : sans bloc conteneur ici il
+   échappe au défilement du tableau et élargit toute la page sur tablette. */
+.sfc .mi-list-wrap{position:relative}
 .sfc-lines{min-width:1120px}
 .sfc-lines td:nth-child(1){min-width:150px}
 .sfc-lines td:nth-child(2){min-width:104px;white-space:nowrap}

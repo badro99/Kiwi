@@ -89,9 +89,11 @@ ok('le reçu imprime le même numéro que la caisse et la cuisine',
     dispatchHeldTakeaway: (...args) => calls.push(args),
     dispatchTableUnsentToKitchen: (...args) => { calls.push(args); return 'table-dispatched'; } });
   vm.runInContext(caisseTestSource.declarations('dispatchUnsentKitchenBeforePayment'), ctx);
+  const sentCart = ctx.cart;
   strict.equal(ctx.dispatchUnsentKitchenBeforePayment()?.num, 9);
   strict.equal(ctx.vrapEditingNum, 9, 'run: payment retains the exact dispatched ticket');
-  strict.equal(calls[0], ctx.cart);
+  strict.equal(calls[0], sentCart, 'run: the kitchen receives the cart being paid');
+  strict.deepEqual(JSON.parse(JSON.stringify(ctx.cart)), [{ qty: 2 }], 'run: the cart survives the dispatch');
   calls.length = 0; ctx.vrapEditingNum = 8;
   strict.equal(ctx.dispatchUnsentKitchenBeforePayment(), existing);
   strict.deepEqual(calls[0], [existing, true, true], 'run: paid held order uses paid dispatch');

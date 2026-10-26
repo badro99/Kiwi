@@ -1192,8 +1192,8 @@
     "sha": "5032ef2889120144"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "9",
-    "sha": "51a5230c2d8457e9"
+    "v": "10",
+    "sha": "39bb1b880c068d13"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1616,8 +1616,8 @@
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "11",
-    "sha": "7edd9c9ac8cff8fa"
+    "v": "12",
+    "sha": "e6b087e47bc0fda2"
   },
   "assets/simple.js": {
     "v": "12",

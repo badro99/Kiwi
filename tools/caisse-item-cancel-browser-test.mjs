@@ -63,10 +63,19 @@ const server = http.createServer(async (req, res) => {
       const renderCart = () => $('#bill').textContent = JSON.stringify(cart);
       const renderRightPanel = id => $('#bill').textContent = JSON.stringify(tableOrders[id]);
       const renderOrderPanel = renderRightPanel;
+      ${caisseTestSource.orderDeclarations()}
       ${groups}
       ${handlers}
-      window.seed = (lines, table) => { pickedTable = table; picked = lines[0]; cart = table ? [] : lines; tableOrders = table ? { [table]: lines } : {}; renderCart(); if (table) renderRightPanel(table); };
-      window.bill = () => pickedTable ? tableOrders[pickedTable] : cart;
+      // Comme la caisse : le panier et les tables sont les vues du propriétaire de la commande.
+      window.seed = (lines, table) => {
+        currentOrder.owner = null; cart = []; tableOrders = {};
+        const order = currentOrder(); tableOrders = order.tables; cart = order.cart;
+        if (table) order.replaceTable(table, lines); else order.replaceCart(lines);
+        pickedTable = table; picked = (table ? tableOrders[table] : cart)[0];
+        renderCart(); if (table) renderRightPanel(table);
+      };
+      window.billView = () => pickedTable ? tableOrders[pickedTable] : cart;
+      window.bill = () => JSON.parse(JSON.stringify(window.billView()));
       $('#open').onclick = () => cancelCaisseLineImmediately(pickedTable, picked, pickedTable ? undefined : { orderId: picked.canonicalOrderId, cart: true });
     </script></body></html>`);
 });
@@ -100,7 +109,7 @@ try {
     await page.click('#open');
     await page.click('#open');
     // Simulate the canonical poll applying the same revision during the request.
-    await page.evaluate(() => { window.bill()[0].qty = 2; });
+    await page.evaluate(() => { currentOrder().patchLine(window.billView()[0], { qty: 2 }); });
     release();
     await page.waitForFunction(() => window.lastToast?.includes('annulé en cuisine'));
     const bill = await page.evaluate(() => window.bill());

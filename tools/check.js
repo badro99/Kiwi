@@ -133,7 +133,7 @@ section('Syntax (vm.Script compile)');
   for (const f of JS_FILES) {
     try {
       const source = read(f);
-      if (/^import .* from /m.test(source)) require('child_process').execFileSync(process.execPath, ['--check', '--input-type=module'], { input: source, stdio: 'pipe' });
+      if (/^import .* from /m.test(source) || /^export\s/m.test(source)) require('child_process').execFileSync(process.execPath, ['--check', '--input-type=module'], { input: source, stdio: 'pipe' });
       else new vm.Script(source, { filename: f });
     }
     catch (e) { bad++; fail(path.relative(ROOT, f) + ' — ' + e.message); }

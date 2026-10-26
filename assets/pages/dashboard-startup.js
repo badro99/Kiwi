@@ -40,7 +40,7 @@
     'assets/cash-sessions.js?v=8',
     'assets/weather.js?v=1',
     'assets/briefing.js?v=25',
-    'assets/simple-food-cost.js?v=11',
+    'assets/simple-food-cost.js?v=12',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=7',
     'assets/production-action-guard.js?v=4',

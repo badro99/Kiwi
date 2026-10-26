@@ -20,6 +20,7 @@ const css = Array.from(source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g), m =>
 const js = `
 ${fs.readFileSync(new URL('../assets/caisse/table-settlement.js', import.meta.url), 'utf8')}
 const tables = { T7: { status: 'ka-yaklo' } }, tableOrders = {};
+${caisseTestSource.orderDeclarations()}
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const money = v => Math.round(Number(v)*100)/100, minor = v => Math.round(v*100), major = v => v/100;
 const fmtMAD = v => v+' MAD', fmtMADcents = fmtMAD, lineCat = () => 'meal', phoneSessionOf = () => 'visit';
