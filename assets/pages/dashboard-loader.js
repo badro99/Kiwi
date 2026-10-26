@@ -11,8 +11,8 @@
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=12',
-      'assets/menu-scan.js?v=3',
-      'assets/salle-scan.js?v=3',
+      'assets/menu-scan.js?v=4',
+      'assets/salle-scan.js?v=4',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel-rates.js?v=1',
