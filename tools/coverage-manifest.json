@@ -1872,6 +1872,36 @@
         "phone"
       ],
       "state": "data-nav=reception · chambres, séjours, réception et folio"
+    },
+    {
+      "id": "dashboard-analysis-calculator",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "Éditeur du coût simple, calcul au centime et persistance"
+    },
+    {
+      "id": "dashboard-analysis-calculator-error",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "Refus serveur, saisie conservée et reprise"
     }
   ],
   "excludedHtml": [
