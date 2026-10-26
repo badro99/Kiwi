@@ -26,7 +26,10 @@ function functions(base = root) {
 }
 function stockSource(base = root) {
   let core = fs.readFileSync(path.join(base, 'assets/stock.js'), 'utf8');
-  core = core.replace(map.glue + '\n', '').replace(map.handlerGlue, '');
+  /* The loader block names each part with its ?v= stamp; a stamp bump must not
+     break the reconstruction, so match the block with any stamp numbers. */
+  const loose = (text) => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\?v=\d+/g, '\\?v=\\d+'));
+  core = core.replace(loose(map.glue + '\n'), '').replace(loose(map.handlerGlue), '');
   for (const m of functions(base)) {
     const stub = `function ${m.name}(...args) { return stockParts.${m.group}.${m.name}.apply(this, args); }`;
     if (!core.includes(stub)) throw new Error('Relais stock absent : ' + m.name);
