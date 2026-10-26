@@ -889,6 +889,13 @@ ar: {
        dans la croix de fermeture. Un setTimeout côté appelant perdait la
        course contre cette image sur un appareil lent. */
     requestAnimationFrame(() => {
+      /* Déjà dans la fenêtre (on a touché un champ et on tape) : on ne bouge
+         pas. Sur un appareil chargé cette image arrivait après les premières
+         lettres, renvoyait le focus sur la croix, et la suite du nom partait
+         dans les raccourcis du tableau de bord (un rapport ouvert, d'autres
+         fenêtres) au lieu du champ. */
+      const at = document.activeElement;
+      if (at && at !== panel && panel.contains(at)) return;
       const want = panel.querySelector('[data-autofocus]');
       if (want && !want.disabled) { want.focus(); if (want.select && want.hasAttribute('data-autofocus-select')) want.select(); return; }
       (focusables()[0] || panel).focus();
