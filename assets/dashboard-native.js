@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · native-app polish layer. Self-contained, defer-loaded. Every behavior
  * is gated to the phone breakpoint and/or standalone, and no-ops under
- * prefers-reduced-motion. FR-only injected UI; no data-action / data-i18n.
+ * prefers-reduced-motion. Injected labels use the dashboard dictionary.
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
@@ -110,7 +110,9 @@
       var t = document.createElement('button');
       t.type = 'button';
       t.className = 'kw-toast';
-      var strong = document.createElement('strong'); strong.textContent = 'Nouvelle vente';
+      var strong = document.createElement('strong'); strong.setAttribute('data-i18n', 'home.newSale');
+      var i18n = window.KiwiI18n;
+      strong.textContent = i18n.T[i18n.getLang()]['home.newSale'] || i18n.T.fr['home.newSale'];
       var span = document.createElement('span');
       span.textContent = ITEMS[Math.floor(Math.random() * ITEMS.length)] + ' · ' + amount();
       t.appendChild(strong); t.appendChild(span);

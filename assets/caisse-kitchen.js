@@ -207,8 +207,8 @@
           /* #0064 · voir tooLongForKitchen. */
           if (r && r.error === 'too-many-lines') tooLongForKitchen(r);
           // #0163 · queue only in memory (disk full): a reload would lose it.
-          if (r && r.full) toast('Cuisine injoignable et file pleine · annoncez ce bon à la cuisine', 'danger');
-          else if (r && r.queued === false) toast('Bon en attente du réseau · ne rechargez pas la caisse', 'danger');
+          if (r && r.full) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cuisine injoignable et file pleine · annoncez ce bon à la cuisine'), 'danger');
+          else if (r && r.queued === false) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Bon en attente du réseau · ne rechargez pas la caisse'), 'danger');
           /* Le numéro du serveur devient le numéro affiché. C'est le SEUL que
              les deux écrans puissent connaître : la cuisine ne voit pas le
              compteur local de ce comptoir. Sans ça, un cuisinier annonçant
@@ -289,7 +289,7 @@
         el.classList.toggle('is-active', m === 'salle');
       });
       const cancelLabel = $('[data-cancel-label]');
-      if (cancelLabel) cancelLabel.textContent = 'Annuler la table';
+      if (cancelLabel) cancelLabel.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Annuler la table');
       showPayButtons(false);
       if (keepId && tables[keepId]) {
         selectedId = keepId;
@@ -468,7 +468,7 @@
         selectedId = null;
       }
       backToSalle();
-      toast('Commande annulée · table remise à zéro');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Commande annulée · table remise à zéro'));
     }
 
     /* ═══════ ROUVRIR LA COMMANDE D'UNE MESA INSTALLÉE ═══════════════════════
@@ -490,8 +490,8 @@
       const t = tables[id];
       /* La table a disparu du plan pendant le service · le patron l'a retirée
          depuis son téléphone. On ne relance pas une commande sur un fantôme. */
-      if (!t) { backToSalle(); toast('Cette table n\'existe plus sur le plan'); return; }
-      if (t.status === 'khlass') { toast('Table déjà encaissée'); return; }
+      if (!t) { backToSalle(); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cette table n\'existe plus sur le plan')); return; }
+      if (t.status === 'khlass') { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Table déjà encaissée')); return; }
       if (!tableOrders[id]) currentOrder().replaceTable(id, []);
       selectedId = id;
       markSelectedTable(id);
@@ -537,8 +537,8 @@
       const line1El  = document.getElementById('greet-line1');
       const emEl     = document.getElementById('greet-em');
       const subEl    = document.getElementById('greet-sub');
-      if (line1El) line1El.textContent = 'L-cuisine,';
-      if (emEl)    emEl.textContent    = 'service bda.';
+      if (line1El) line1El.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('L-cuisine,');
+      if (emEl)    emEl.textContent    = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('service bda.');
       if (subEl)   subEl.innerHTML     = `${escTeam(storeName())} <em>·</em> file de préparation`;
 
       // Wrap <em> in .em-clip and measure natural width (same as cashier path).
@@ -575,7 +575,7 @@
         }
         openKds();
         const labelEl = document.getElementById('kds-close-label');
-        if (labelEl) labelEl.textContent = 'Verrouiller';
+        if (labelEl) labelEl.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Verrouiller');
       }, 2400);
 
       // t=3200: greeting element removed.
@@ -587,7 +587,7 @@
       closeKds();
       document.body.classList.remove('is-kitchen', 'is-unlocked');
       const labelEl = document.getElementById('kds-close-label');
-      if (labelEl) labelEl.textContent = 'Fermer';
+      if (labelEl) labelEl.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer');
       window.__kiwiPinReset();
     }
     function kdsStations() {
@@ -966,7 +966,7 @@
       // rien à rafraîchir : c'est tout l'intérêt d'avoir posé la commande là.
       opPush(o, 'ready', station ? { station } : {});
       toast(station && o.status !== 'ready'
-        ? `${kdsStations().find(s => s.id === station)?.name || 'Poste'} · ${ticketNo(o)} prêt`
+        ? `${kdsStations().find(s => s.id === station)?.name || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Poste')} · ${ticketNo(o)} prêt`
         : `Commande ${ticketNo(o)} prête`);
     }
 
@@ -1127,7 +1127,7 @@
 
     function openKds() {
       if (isKdsOff()) {
-        toast('Écran cuisine désactivé pour cet établissement');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Écran cuisine désactivé pour cet établissement'));
         return;
       }
       kdsPaint();
@@ -1306,7 +1306,7 @@
         }
         if (!KP || !KP.printKitchen || (KP.isConnected && !KP.isConnected())) return;
         return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload, { station: job.station || fallback })).then((result) => {
-          if (!result || !result.ok) toast('Ticket cuisine non imprimé', 5200, 'warn', 'Vérifiez l’imprimante puis réimprimez le bon.');
+          if (!result || !result.ok) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket cuisine non imprimé'), 5200, 'warn', (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vérifiez l’imprimante puis réimprimez le bon.'));
         })), Promise.resolve());
       } catch (_) {}
     }
@@ -1356,17 +1356,17 @@
         const count = sent.remote + (sent.local ? 1 : 0);
         if (suite && sent.local) toast(`Suite envoyée en cuisine · table ${selectedId} · ${held} article${held > 1 ? 's' : ''}`);
         else if (count) toast(`${count} commande${count > 1 ? 's' : ''} envoyée${count > 1 ? 's' : ''} en cuisine`);
-        else toast('Rien de neuf à envoyer');
+        else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rien de neuf à envoyer'));
         renderRightPanel(selectedId);
         return;
       }
       if (mode === 'order' && !selectedId) {
         backToSalle();
-        toast('Aucune table en cours');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune table en cours'));
         return;
       }
       const list = (cart && cart.length) ? cart : [];
-      if (!list.length) { toast('Ajoute des articles d\'abord'); return; }
+      if (!list.length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajoute des articles d\'abord')); return; }
 
       if (vrapEditingNum != null) {
         const o = kdsOrders.find(x => x.num === vrapEditingNum);
@@ -1564,7 +1564,7 @@
        second tap recharge le même panier — jamais un doublon en cuisine. */
     function reprendreExpired(id) {
       const e = (expiredOrders || []).find(x => x && String(x.id) === String(id));
-      if (!e || !(e.lines || []).length) { toast('Expirée introuvable'); return; }
+      if (!e || !(e.lines || []).length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Expirée introuvable')); return; }
       if (mode !== 'vrap') setMode('vrap');
       vrapResumedExpiredId = String(id);
       dismissExpired(id);
@@ -1582,7 +1582,7 @@
           kind: '', formulaUid: '', formulaChoices: [],
         };
       }).filter(c => c.name));
-      if (!cart.length) { toast('Expirée vide · rien à reprendre'); return; }
+      if (!cart.length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Expirée vide · rien à reprendre')); return; }
       setVrapView('builder');
       renderMenu();
       renderCart();
@@ -1608,7 +1608,7 @@
       const cntEl = $('#vrap-board-count');
       if (cntEl) cntEl.textContent = active.length
         ? `${active.length} commande${active.length > 1 ? 's' : ''} en cours · ${done.length} servie${done.length > 1 ? 's' : ''}`
-        : 'Aucune commande en cours';
+        : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune commande en cours');
 
       let html = `<div class="vrap-section"><div class="vrap-section-label">En cours</div>`;
       html += active.length
@@ -1702,7 +1702,7 @@
           const by = who && who.name ? ` · ${who.name}` : '';
           toast(`Commande ${label} annulée${by}`);
         }).catch((error) => {
-          toast(`Commande ${label} conservée · ${error.message || 'annulation non transmise'}`);
+          toast(`Commande ${label} conservée · ${error.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('annulation non transmise')}`);
         });
       };
       if (authorizedWho) { proceed(authorizedWho); return true; }
@@ -1846,7 +1846,7 @@
         return;
       }
       const list = (cart && cart.length) ? cart : [];
-      if (!list.length) { toast('Ajoute des articles d\'abord'); return; }
+      if (!list.length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajoute des articles d\'abord')); return; }
       const gross = list.reduce((s, l) => s + l.price * l.qty, 0);
       remiseState.target  = 'vrap';
       remiseState.tableId = null;

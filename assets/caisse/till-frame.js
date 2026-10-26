@@ -196,7 +196,7 @@
     }
     
     function tillKitOpenPay() {
-      if (!(currentTotal() > 0)) { toast('Addition vide'); return; }
+      if (!(currentTotal() > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition vide')); return; }
       if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
       resetPayTip();
       const lang = window.KiwiCaisseLang, billName = $('#rp-table').textContent || '';
@@ -228,7 +228,7 @@
       tenderInFlight = true;
       let settled;
       try { settled = await finalizeTender(method); }
-      catch (_) { tenderInFlight = false; pay.notRecorded(); toast('Encaissement à vérifier dans le journal avant de réessayer'); return; }
+      catch (_) { tenderInFlight = false; pay.notRecorded(); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Encaissement à vérifier dans le journal avant de réessayer')); return; }
       tenderInFlight = false;
       if (share && !share.paid) { pay.notRecorded(); return; }   // markSplitPartPaid a dit pourquoi
       const sale = settled === 'split' ? null : lastSaleEntry();
@@ -270,7 +270,7 @@
       return !!(splitState.flow && splitState.flow.paidCount > 0 && splitState.flow.paidCount < splitState.flow.parts.length);
     }
     function tillKitOpenSplit() {
-      if (!(currentTotal() > 0)) { toast('Addition vide'); return; }
+      if (!(currentTotal() > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition vide')); return; }
       const source = mode === 'vrap' ? null : selectedId;
       const resume = tillKitSplitStarted() && (mode === 'vrap' ? splitState.isVrap : splitState.tableId === source);
       if (!resume) {
@@ -347,8 +347,8 @@
     }
     function tillKitOpenDiscount() {
       const tg = tillKitDiscountTarget();
-      if (!tg || !(tg.gross > 0)) { toast('Addition vide'); return; }
-      if (tg.tableId && typeof tableSplits !== 'undefined' && tableSplits.has(tg.tableId)) { toast("Termine le split d'abord"); return; }
+      if (!tg || !(tg.gross > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition vide')); return; }
+      if (tg.tableId && typeof tableSplits !== 'undefined' && tableSplits.has(tg.tableId)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Termine le split d'abord")); return; }
       const P = window.KiwiDiscountPolicy;
       try { if (P && P.refresh) P.refresh(true); } catch (_) {}
       window.KiwiTillFrame.openPane('discount', { bill: { total: money(tg.gross) }, policy: {

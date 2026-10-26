@@ -1287,10 +1287,11 @@
   const dateLocale = () => (trLang() === 'en' ? 'en-US' : trLang() === 'ar' ? 'ar-MA' : 'fr-FR');
 
   function showPayroll() {
+    const dt = (key, fr) => window.KiwiI18n?.T?.[window.KiwiI18n.getLang()]?.[key] ?? fr;
     if (!window.Kiwi || !window.Kiwi.appPage) return;
     const access = payrollAccess();
     if (access === 'none') {
-      window.Kiwi.toast?.('Accès réservé au gérant ou au propriétaire', { type: 'info' });
+      window.Kiwi.toast?.(dt("team.payrollAccess", "Accès réservé au gérant ou au propriétaire"), { type: 'info' });
       return;
     }
     const T = t();

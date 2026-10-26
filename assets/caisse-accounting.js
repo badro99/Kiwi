@@ -602,11 +602,11 @@
        IndexedDB n'ont pris la vente et que la file l'a refusée, elle ne vit
        qu'en mémoire : dire « enregistrée » serait faux (rechargement = perdue). */
     function warnSaleHeld(durable) {
-      const recorded = () => toast('Vente enregistrée sur cette caisse · envoi en attente, ne pas encaisser à nouveau', 6000, 'warn');
+      const recorded = () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente enregistrée sur cette caisse · envoi en attente, ne pas encaisser à nouveau'), 6000, 'warn');
       if (durable === true || durable === undefined) { recorded(); return; }
       Promise.resolve(durable).then((saved) => {
         if (saved) recorded();
-        else toast('Vente NON sauvegardée : stockage de la caisse plein et serveur injoignable. Ne rechargez pas la page ni ne fermez la caisse, notez le ticket. Ne pas encaisser à nouveau.', 15000, 'warn');
+        else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente NON sauvegardée : stockage de la caisse plein et serveur injoignable. Ne rechargez pas la page ni ne fermez la caisse, notez le ticket. Ne pas encaisser à nouveau.'), 15000, 'warn');
       }, recorded);
     }
 
@@ -1140,7 +1140,7 @@
         if (x) x.hidden = false;
       } else {
         btn.classList.remove('is-on');
-        if (lab) lab.textContent = 'Client & fidélité';
+        if (lab) lab.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Client & fidélité');
         if (x) x.hidden = true;
       }
     }
@@ -1195,7 +1195,7 @@
       const nw = $('#cl-new'); if (nw) nw.hidden = !clNewMode;
       const ls = $('#cl-list'); if (ls) ls.hidden = clNewMode;
       const sr = $('#cl-search'); if (sr) sr.hidden = clNewMode;
-      const cl = $('#cl-confirm-label'); if (cl) cl.textContent = clNewMode ? 'Enregistrer' : 'Nouveau client';
+      const cl = $('#cl-confirm-label'); if (cl) cl.textContent = clNewMode ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Enregistrer') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Nouveau client');
     }
     function openClientModal() {
       if (!clientsOn()) return;
@@ -1359,21 +1359,21 @@
       try { return journal.find(en => en.id === lastSaleId) || null; } catch (_) { return null; }
     }
     function printSaleTicket(entry, opts) {
-      if (!entry) { toast('Aucun ticket à imprimer'); return; }
+      if (!entry) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun ticket à imprimer')); return; }
       const doc = receiptDocFor(entry, opts);
-      if (!doc) { toast('Impression indisponible sur cet appareil'); return; }
+      if (!doc) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return; }
       const queue = window.KiwiKitchenPrint;
       if (queue && typeof queue.enqueueReceipt === 'function') {
         const queued = queue.enqueueReceipt(entry.id, doc, opts && opts.copy ? 'manual-reprint' : 'original');
-        if (queued && queued.accepted) toast('Ticket ajouté à la file d’impression');
-        else if (queued && queued.pending) toast('Ticket déjà en attente d’impression');
-        else toast('Ticket déjà imprimé');
+        if (queued && queued.accepted) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket ajouté à la file d’impression'));
+        else if (queued && queued.pending) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket déjà en attente d’impression'));
+        else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket déjà imprimé'));
         return;
       }
-      toast('Impression du ticket…');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression du ticket…'));
       Promise.resolve(window.KiwiReceipt.print(doc)).then(
-        (r) => toast(r && r.ok ? ticketPrintedWord(r) : 'Impression échouée · vérifiez l\'imprimante'),
-        () => toast('Impression échouée · vérifiez l\'imprimante')
+        (r) => toast(r && r.ok ? ticketPrintedWord(r) : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée · vérifiez l\'imprimante')),
+        () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée · vérifiez l\'imprimante'))
       );
     }
     /* Dire PAR OÙ c'est sorti. Un caissier qui voit « Ticket imprimé » alors que
@@ -1401,7 +1401,7 @@
        On ouvre un vrai brouillon WhatsApp, que le caissier valide · même geste
        que la boutique. Sans numéro connu, wa.me ouvre le sélecteur de contact. */
     function sendSaleTicket(entry) {
-      if (!entry) { toast('Aucun ticket à envoyer'); return; }
+      if (!entry) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun ticket à envoyer')); return; }
       const doc = receiptDocFor(entry, {});
       let txt = '';
       try { txt = (doc && window.KiwiReceipt && window.KiwiReceipt.text) ? window.KiwiReceipt.text(doc) : ''; } catch (_) {}
@@ -1411,8 +1411,8 @@
       }
       try {
         window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
-        toast('Brouillon WhatsApp ouvert');
-      } catch (_) { toast('Envoi indisponible sur cet appareil'); }
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Brouillon WhatsApp ouvert'));
+      } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Envoi indisponible sur cet appareil')); }
     }
 
     /* Patch the static header labels (top bar, clock-in card, floor-plan) so a real
@@ -1458,7 +1458,7 @@
       const wb = document.getElementById('wb-line1');    if (wb) wb.textContent = 'Bonjour ' + first;
       const cn = document.querySelector('.cashier-name'); if (cn) cn.textContent = cashName;
       const setGreet = (sel, tag) => document.querySelectorAll(sel).forEach((el) => {
-        el.textContent = 'Bonjour' + (tag ? ' ' : ', ');
+        el.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Bonjour') + (tag ? ' ' : ', ');
         const m = document.createElement(tag || 'b'); m.textContent = first; el.appendChild(m);
       });
       setGreet('.pin-greet', ''); setGreet('.clockin-greet', 'em');
@@ -1468,9 +1468,9 @@
       // Welcome-screen demo stats (static "53 transactions", "11 tables ka-yaklo")
       // → a real store opens empty. Recompute from the (empty) ledger + blank the
       // mid-service subtitle. The demo path never reaches here (storeIsReal false).
-      const wb2 = document.getElementById('wb-line2'); if (wb2) wb2.textContent = 'Ouverture de service';
+      const wb2 = document.getElementById('wb-line2'); if (wb2) wb2.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ouverture de service');
       const tx = document.getElementById('stat-txns'); if (tx) tx.textContent = '0';
-      const txd = document.getElementById('stat-txns-delta'); if (txd) txd.textContent = 'Carte 0% · Cash 0%';
+      const txd = document.getElementById('stat-txns-delta'); if (txd) txd.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Carte 0% · Cash 0%');
       /* Les remises d'amorçage (95 MAD, 2 remises) sont du décor de démo. Sur un
          vrai commerce elles se retrouvaient dans le Z et dans le rapport du
          patron comme si quelqu'un les avait vraiment accordées.
@@ -1484,10 +1484,10 @@
       // Static demo defaults inside modals (server-row, message-target, and the
       // clôture card "Café Atlas · Othmane N.") · shown before their render fns
       // run. Neutralize to the real store / generic staff.
-      const rpsn = document.getElementById('rp-server-name'); if (rpsn) rpsn.textContent = 'Serveur';
-      const mtn  = document.getElementById('msg-target-name'); if (mtn) mtn.textContent = 'Serveur';
+      const rpsn = document.getElementById('rp-server-name'); if (rpsn) rpsn.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Serveur');
+      const mtn  = document.getElementById('msg-target-name'); if (mtn) mtn.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Serveur');
       const clo  = document.getElementById('clo-meta');
-      if (clo) clo.textContent = (storeName() || '') + ' · ' + (currentCashier && currentCashier.name || 'Caissier');
+      if (clo) clo.textContent = (storeName() || '') + ' · ' + (currentCashier && currentCashier.name || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Caissier'));
     }
 
     /* Render a journal entry as a printed thermal ticket.
@@ -1611,7 +1611,7 @@
       if (window.lucide) lucide.createIcons();
     }
     function openReceipt(entry) {
-      if (!entry) { toast('Ticket introuvable'); return; }
+      if (!entry) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket introuvable')); return; }
       receiptEntry = entry;
       renderReceipt(entry);
       $('#receipt-modal').classList.add('is-open');
@@ -1633,7 +1633,7 @@
       const scope = $('#stat-service-scope');
       if (scope) scope.textContent = shiftOpenedAt
         ? 'Service depuis ' + shiftOpenedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-        : 'Aucun service ouvert';
+        : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun service ouvert');
     }
 
     function fmtDur(min) {
@@ -1773,7 +1773,7 @@
       const greetWord = hour < 17 ? 'Bonjour' : 'Bonsoir';
       const line1El = document.getElementById('greet-line1');
       const subEl   = document.getElementById('greet-sub');
-      if (line1El) line1El.textContent = `${greetWord} ${String(currentCashier.name || '').trim().split(/\s+/)[0] || 'Caissier'},`;
+      if (line1El) line1El.textContent = `${greetWord} ${String(currentCashier.name || '').trim().split(/\s+/)[0] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Caissier')},`;
       if (subEl)   subEl.innerHTML = `${onCount} serveur${onCount > 1 ? 's' : ''} en service <em>·</em> ${eatCount} table${eatCount > 1 ? 's' : ''} en cours`;
 
       // --- Wrap <em> in .em-clip and measure its natural width ---
@@ -1843,11 +1843,11 @@
       if (!line || !out) return;
       line.classList.remove('is-ok', 'is-off');
       const raw = inp ? String(inp.value || '').trim() : '';
-      if (!raw) { out.textContent = 'À saisir'; return; }
+      if (!raw) { out.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('À saisir'); return; }
       const terminal = Number(raw);
       if (!Number.isFinite(terminal) || terminal < 0 ||
           Math.abs(terminal * 100 - Math.round(terminal * 100)) > 0.000001) {
-        out.textContent = 'Montant invalide';
+        out.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Montant invalide');
         line.classList.add('is-off');
         return;
       }
@@ -2184,7 +2184,7 @@
              itself still excludes them via buildDayReport(). */
           window.KiwiZReconciliation.queueSnapshot(r, journal)
             .then((result) => {
-              if (!result?.ok) toast('Rapprochement des ventes en attente · conservez cette caisse');
+              if (!result?.ok) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapprochement des ventes en attente · conservez cette caisse'));
               else if (result.unqueuedCount || result.unqueuedCents)
                 toast('Écart caisse détecté · ' + result.unqueuedCount + ' reçu(s) hors file · conservez cette caisse');
             });
@@ -2227,14 +2227,14 @@
        que le Z sortait alors qu'il n'existait pas. */
     function doPrintDayReport(report, copyLabel) {
       if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) {
-        toast('Imprimante indisponible'); return Promise.resolve({ ok: false });
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Imprimante indisponible')); return Promise.resolve({ ok: false });
       }
       return window.KiwiPrinter.printDayReport(dayReportPrintOpts(report, copyLabel))
         .then((res) => {
-          if (res && res.ok) toast(res.via === 'pdf' ? 'Rapport prêt · imprimer ou partager le PDF' : res.via === 'browser' ? 'Rapport ouvert dans l\'impression système' : 'Rapport imprimé');
-          else toast("Impression impossible · le rapport reste dans le tableau de bord");
+          if (res && res.ok) toast(res.via === 'pdf' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport prêt · imprimer ou partager le PDF') : res.via === 'browser' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport ouvert dans l\'impression système') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport imprimé'));
+          else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Impression impossible · le rapport reste dans le tableau de bord"));
           return res || { ok: false };
-        }, () => { toast("Impression impossible · le rapport reste dans le tableau de bord"); return { ok: false }; });
+        }, () => { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Impression impossible · le rapport reste dans le tableau de bord")); return { ok: false }; });
     }
     /* kiwiSkin2027:till · le rapport Z sur le kit (étape 4 (14), §18.9). Son
        numéro : les clôtures du classeur de ce commerce (closedCount, partagé
@@ -2298,7 +2298,7 @@
         if (!btn) return;
         btn.disabled = !!on;
         const label = btn.querySelector && btn.querySelector('span');
-        if (label) label.textContent = on ? 'Clôture en cours…' : 'Fermer la caisse';
+        if (label) label.textContent = on ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Clôture en cours…') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer la caisse');
       } catch (_) {}
     }
     async function closeRegister() {
@@ -2309,7 +2309,7 @@
       const counted = countedRaw === '' ? NaN : Number(countedRaw);
       if (!Number.isFinite(counted) || counted < 0 ||
           Math.abs(counted * 100 - Math.round(counted * 100)) > 0.000001) {
-        toast('Saisissez les espèces comptées (0 si le tiroir est vide)');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Saisissez les espèces comptées (0 si le tiroir est vide)'));
         countInput?.focus();
         return;
       }
@@ -2318,7 +2318,7 @@
       const cardZ = cardRaw === '' ? NaN : Number(cardRaw);
       if (!Number.isFinite(cardZ) || cardZ < 0 ||
           Math.abs(cardZ * 100 - Math.round(cardZ * 100)) > 0.000001) {
-        toast('Saisissez le total carte du Z terminal (0 si aucune carte)');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Saisissez le total carte du Z terminal (0 si aucune carte)'));
         cardInput?.focus();
         return;
       }
@@ -2345,7 +2345,7 @@
         registerClosing = false;
         setCloseBusy(false);
         $('#cloture-modal').classList.add('is-open');
-        toast('Clôture interrompue · poste conservé. Réessayez.');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Clôture interrompue · poste conservé. Réessayez.'));
       }
     }
     async function closeRegisterSteps(counted) {
@@ -2389,7 +2389,7 @@
         registerClosing = false;
         setCloseBusy(false);
         $('#cloture-modal').classList.add('is-open');
-        toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.'));
         return;
       }
       /* IndexedDB can stall on iPad after the app was backgrounded. A stalled
@@ -2401,7 +2401,7 @@
         registerClosing = false;
         setCloseBusy(false);
         $('#cloture-modal').classList.add('is-open');
-        toast('Rapprochement Z non protégé · poste conservé. Vérifiez le stockage puis réessayez.');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapprochement Z non protégé · poste conservé. Vérifiez le stockage puis réessayez.'));
         return;
       }
       if (zQueued.unqueuedCount || zQueued.unqueuedCents)
@@ -2634,7 +2634,7 @@
       if (searchEl) searchEl.hidden = (rpTab === 'resume');
       if (filtEl) filtEl.hidden = (rpTab !== 'journal');
       if (input) input.placeholder = (rpTab === 'items')
-        ? 'Rechercher un article' : 'Rechercher, table, montant, réf';
+        ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rechercher un article') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rechercher, table, montant, réf');
 
       let r = null;
       if (rpTab !== 'journal') r = rpReport();
@@ -2643,7 +2643,7 @@
         if (rpTab === 'items' && r) {
           const V = rpVocab() || { items: 'articles' };
           const n = (r.categories || []).reduce((s, c) => s + (+c.qty || 0), 0);
-          sumEl.textContent = `${n} ${V.items} · ${(r.categories || []).length} ${(r.categories || []).length > 1 ? (V.cats || 'catégories') : (V.cat || 'catégorie')}`;
+          sumEl.textContent = `${n} ${V.items} · ${(r.categories || []).length} ${(r.categories || []).length > 1 ? (V.cats || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('catégories')) : (V.cat || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('catégorie'))}`;
         } else {
           sumEl.textContent = `${tot.txns} transaction${tot.txns > 1 ? 's' : ''} · ${fmtMAD(tot.revenue)} encaissés`;
         }
@@ -2681,22 +2681,22 @@
        ticket daté d'une clôture qui n'a pas eu lieu est un faux. */
     function printItemSales() {
       const r = rpReport();
-      if (!r) { toast('Rapport indisponible'); return; }
-      if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) { toast('Imprimante indisponible'); return; }
+      if (!r) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
+      if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Imprimante indisponible')); return; }
       const V = rpVocab() || { items: 'articles' };
       const opts = dayReportPrintOpts(r, registerClosing ? '' : 'EN COURS');
       opts.itemsOnly = true;
       opts.title = 'VENTES PAR ' + String(V.item || 'article').toUpperCase();
       opts.closedLabel = '';
       opts.noItemsWord = 'Aucun article détaillé';
-      toast('Impression…');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression…'));
       Promise.resolve(window.KiwiPrinter.printDayReport(opts)).then(
-        (res) => toast(res && res.ok ? 'Ventes par article imprimées' : 'Impression impossible'),
-        () => toast('Impression impossible'));
+        (res) => toast(res && res.ok ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ventes par article imprimées') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible')),
+        () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible')));
     }
     function printLiveReport() {
       const r = rpReport();
-      if (!r) { toast('Rapport indisponible'); return; }
+      if (!r) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
       doPrintDayReport(r, registerClosing ? '' : 'EN COURS');
     }
     /* Le rouleau bourre sur la dernière vente : c'est le geste de panne le plus
@@ -2704,7 +2704,7 @@
        liste. Les ventes sorties des livres ne comptent pas. */
     function reprintLastTicket() {
       const last = journal.slice().reverse().find(e => e && !e.voided && e.kind !== 'refund');
-      if (!last) { toast('Aucun ticket à réimprimer'); return; }
+      if (!last) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun ticket à réimprimer')); return; }
       printSaleTicket(last, { copy: true });
     }
 
@@ -2719,7 +2719,7 @@
       const dayEl = $('#rp-day');
       if (dayEl) {
         const d = String(currentBusinessDay() || '').split('-');
-        dayEl.textContent = d.length === 3 ? `· ${d[2]}/${d[1]}` : '· ce service';
+        dayEl.textContent = d.length === 3 ? `· ${d[2]}/${d[1]}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('· ce service');
       }
       renderJournal();
       $('#journal-drawer').classList.add('is-open');
@@ -2755,11 +2755,11 @@
         wrap.removeAttribute('hidden');
         const isOut = (cmType === 'out');
         label.textContent = isOut
-          ? 'Précisez le motif de la sortie (obligatoire)'
-          : "Précisez le motif de l'entrée (obligatoire)";
+          ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Précisez le motif de la sortie (obligatoire)')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Précisez le motif de l'entrée (obligatoire)");
         input.placeholder = isOut
-          ? 'Ex. Pain, taxi, courses, réparation...'
-          : "Ex. Fond d'appoint, remboursement...";
+          ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ex. Pain, taxi, courses, réparation...')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Ex. Fond d'appoint, remboursement...");
         setTimeout(() => input.focus(), 50);
       } else {
         wrap.setAttribute('hidden', '');
@@ -2799,7 +2799,7 @@
     }
     function openCashMove() {
       if (isFeatureOff('cash-move') || isFeatureOff('cashMove')) {
-        toast('Mouvements de caisse désactivés pour cet établissement');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Mouvements de caisse désactivés pour cet établissement'));
         return;
       }
       cmType = 'out';
@@ -2826,11 +2826,11 @@
          le fond de caisse dérivait d'un demi-dirham par mouvement, en silence,
          et l'écart de passation en fin de service accusait le compteur. */
       const amount = money(parseFloat($('#cm-amount').value) || 0);
-      if (amount <= 0) { toast('Saisis un montant'); return; }
+      if (amount <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Saisis un montant')); return; }
       const customInput = $('#cm-custom-input');
       const customVal = (customInput && customInput.value ? customInput.value.trim() : '');
       if (cmReason === 'Autre' && !customVal) {
-        toast(cmType === 'in' ? "Précisez le motif de l'entrée" : "Précisez le motif de la sortie");
+        toast(cmType === 'in' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Précisez le motif de l'entrée") : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Précisez le motif de la sortie"));
         if (customInput) customInput.focus();
         return;
       }
@@ -2852,7 +2852,7 @@
           actorId: actorId, openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
         });
         refreshOpenReconciliationModals();
-        toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)} (${actorName})`);
+        toast(`${cmType === 'in' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Entrée') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Sortie')} de caisse · ${fmtMAD(amount)} (${actorName})`);
         closeCashMove();
       });
     }
@@ -2865,7 +2865,7 @@
      * rapport journalier montrent qui a fait sonner le tiroir et quand. */
     function openDrawerNoSale() {
       if (isFeatureOff('open-drawer') || isFeatureOff('openDrawer')) {
-        toast('Ouverture manuelle du tiroir désactivée pour cet établissement');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ouverture manuelle du tiroir désactivée pour cet établissement'));
         return;
       }
       window.KiwiAuthAct?.({ kind: 'open_drawer', key: 'act.open_drawer' });
@@ -2883,9 +2883,9 @@
         const H = window.KiwiHardware;
         const p = (H && H.openDrawer) ? Promise.resolve(H.openDrawer()) : Promise.resolve({ ok: false });
         p.then((res) => {
-          if (res && res.ok) toast(res.mock ? 'Tiroir ouvert (démo)' : 'Tiroir ouvert');
-          else toast('Tiroir injoignable · vérifiez l\'imprimante du comptoir');
-        }, () => toast('Tiroir injoignable · vérifiez l\'imprimante du comptoir'));
+          if (res && res.ok) toast(res.mock ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Tiroir ouvert (démo)') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Tiroir ouvert'));
+          else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Tiroir injoignable · vérifiez l\'imprimante du comptoir'));
+        }, () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Tiroir injoignable · vérifiez l\'imprimante du comptoir')));
       });
     }
 
@@ -2975,7 +2975,7 @@
         }
         pinRoutePending = false;
         if (verticalDemoPins.has(code)) {
-          toast('Module métier indisponible · rechargez la caisse');
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Module métier indisponible · rechargez la caisse'));
           pinBuffer = '';
           renderPinDots();
           return;

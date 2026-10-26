@@ -46,7 +46,7 @@
       const cut = remiseCutPreview();
       if (cut <= 0) {
         pv.classList.add('is-empty');
-        pv.textContent = "Choisis une remise pour voir l'aperçu.";
+        pv.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Choisis une remise pour voir l'aperçu.");
         return;
       }
       pv.classList.remove('is-empty');
@@ -67,7 +67,7 @@
       window.KiwiDiscountPolicy?.refresh?.(true); // the owner may have changed the allowed percentages
       // A split in progress locks the addition · finish it first.
       if (typeof tableSplits !== 'undefined' && tableSplits.has(id)) {
-        toast("Termine le split d'abord");
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Termine le split d'abord"));
         return;
       }
       const lines = generateOrder(id, tables[id]);
@@ -112,10 +112,10 @@
       const targetValue = remiseState.value;
       const targetReason = remiseState.reason;
       if (targetKind === 'pct' && window.KiwiDiscountPolicy?.configured() && !window.KiwiDiscountPolicy.allowed(targetValue)) {
-        toast('Pourcentage non autorisé · rechargez la remise'); return;
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Pourcentage non autorisé · rechargez la remise')); return;
       }
       const cut = remiseCutPreview();
-      if (cut <= 0) { toast('Choisis une remise'); return; }
+      if (cut <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Choisis une remise')); return; }
 
       window.KiwiAuthAct?.(targetKind === 'pct' ? { kind: 'discount', key: 'act.discount.pct', args: { pct: `${targetValue}\u202f%` } } : { kind: 'discount', key: 'act.discount.amount', args: { amount: fmtMAD(cut) } });
       requireManager("Remise sur l'addition", () => {
@@ -125,7 +125,7 @@
             ? money(gross * (targetValue || 0) / 100)
             : money(targetValue || 0);
           amount = money(Math.max(0, Math.min(amount, money(gross))));
-          if (amount <= 0) { toast('Remise sans effet'); return; }
+          if (amount <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remise sans effet')); return; }
           currentOrder().setDiscount({
             kind:   targetKind,
             value:  targetValue,
@@ -150,7 +150,7 @@
           ? money(gross * (targetValue || 0) / 100)
           : money(targetValue || 0);
         amount = money(Math.max(0, Math.min(amount, money(gross))));
-        if (amount <= 0) { toast('Remise sans effet'); return; }
+        if (amount <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remise sans effet')); return; }
         tableSettlement().project(t, { discount: {
           kind:   targetKind,
           value:  targetValue,
@@ -173,7 +173,7 @@
         currentOrder().setDiscount(null);
         closeRemiseModal();
         renderCart();
-        toast('Remise supprimée');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remise supprimée'));
         return;
       }
       const id = targetTableId;
@@ -182,7 +182,7 @@
         closeRemiseModal();
         if (selectedId === id) renderRightPanel(id);
         refreshTableNode(id);
-        toast('Remise supprimée');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remise supprimée'));
       } else {
         closeRemiseModal();
       }

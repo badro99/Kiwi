@@ -83,7 +83,7 @@
       cardPaymentCommitted = false;
       cardTenderMethod = 'card';
       // Reset to pulsing state
-      $('#card-modal-title').textContent = 'Payer par carte';
+      $('#card-modal-title').textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Payer par carte');
       reader.disc.classList.remove('is-success', 'flash');
       reader.disc.classList.add('is-pulsing');
       reader.disc.innerHTML = '<i data-lucide="credit-card"></i>';
@@ -101,8 +101,8 @@
       if (reader.confirm) reader.confirm.hidden = !externalTerminal;
       if (externalTerminal) {
         reader.disc.classList.remove('is-pulsing');
-        reader.status.textContent = 'Faites payer sur votre terminal, puis confirmez';
-        reader.method.textContent = 'Terminal de paiement externe';
+        reader.status.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Faites payer sur votre terminal, puis confirmez');
+        reader.method.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Terminal de paiement externe');
         reader.foot.classList.add('is-visible');
       }
       // Reset the tip so the figure opens on the base addition.
@@ -117,7 +117,7 @@
         const hw = window.KiwiHardware;
         if (!hw || !hw.authorizeCard) {
           reader.disc.classList.remove('is-pulsing', 'is-success');
-          reader.status.textContent = 'Paiement non confirmé · lecteur indisponible';
+          reader.status.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Paiement non confirmé · lecteur indisponible');
           reader.foot.classList.add('is-visible');
           return;
         }
@@ -135,7 +135,7 @@
       tenderInFlight = true;
       let settled;
       try { settled = await finalizeTender(cardTenderMethod); }
-      catch (_) { tenderInFlight = false; toast('Encaissement à vérifier dans le journal avant de réessayer'); return; }
+      catch (_) { tenderInFlight = false; toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Encaissement à vérifier dans le journal avant de réessayer')); return; }
       tenderInFlight = false;
       if (settled === 'split') { closeCardModal(); return; }
       const sale = lastSaleEntry();

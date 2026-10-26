@@ -21,21 +21,21 @@
         /* browserReceipt() et non printReceipt() : la première peint le ticket
            et le donne au pilote du système, la seconde pousse de l'ESC/POS et
            échoue exactement là où on en est. Même objet en entrée. */
-        if (!KP || !KP.browserReceipt) { toast('Impression indisponible sur cet appareil'); return; }
+        if (!KP || !KP.browserReceipt) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return; }
         try {
           Promise.resolve(KP.browserReceipt({
             shop: ticket && ticket.title, lines: (ticket && ticket.lines) || [],
             total: ticket && ticket.total, method: ticket && ticket.method,
           })).then(
-            (r) => toast(r && r.ok ? (r.via === 'pdf' ? 'Addition prête · imprimer ou partager le PDF' : 'Addition ouverte dans l\'impression système') : 'Impression échouée'),
-            () => toast('Impression échouée')
+            (r) => toast(r && r.ok ? (r.via === 'pdf' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition prête · imprimer ou partager le PDF') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition ouverte dans l\'impression système')) : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée')),
+            () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée'))
           );
-        } catch (_) { toast('Impression échouée'); }
+        } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée')); }
       };
       if (!window.KiwiHardware) { viaSystem(); return; }
       Promise.resolve(window.KiwiHardware.print(ticket)).then(function (res) {
-        if (res && res.printed) toast('Addition imprimée');
-        else if (res && res.mock) toast('Aperçu de démonstration, aucun ticket physique imprimé');
+        if (res && res.printed) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition imprimée'));
+        else if (res && res.mock) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aperçu de démonstration, aucun ticket physique imprimé'));
         else viaSystem();
       }, viaSystem);
     }

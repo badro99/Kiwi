@@ -160,7 +160,7 @@
     const items = managedItems().filter((it) => it && !it.archived && (!query || String(it.name || '').toLowerCase().includes(query)) && (category === 'all' || String(it.catId || '') === category));
     document.getElementById('km-cats').innerHTML = '<button class="km-cat ' + (category === 'all' ? 'on' : '') + '" data-km-cat="all">Tout</button>' + cats.map((c) => '<button class="km-cat ' + (category === String(c.id) ? 'on' : '') + '" data-km-cat="' + esc(c.id) + '">' + esc(c.name) + '</button>').join('');
     const unavailable = managedItems().filter((it) => it && it.avail === false).length;
-    document.getElementById('km-summary').textContent = unavailable ? unavailable + ' indisponible' + (unavailable > 1 ? 's' : '') : 'Tout est disponible';
+    document.getElementById('km-summary').textContent = unavailable ? unavailable + ' indisponible' + (unavailable > 1 ? 's' : '') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Tout est disponible');
     document.getElementById('km-body').innerHTML = items.length ? '<div class="km-grid">' + items.map((it) => '<article class="km-card"><div class="km-info"><div class="km-name">' + esc(it.name) + '</div><div class="km-meta">' + esc(catName.get(String(it.catId || '')) || 'Sans catégorie') + ' · ' + Math.round(Number(it.price) || 0) + ' MAD' + (it.avail === false && it.availUntil > Date.now() ? ' · <span class="km-back">' + esc(returnLabel(it.availUntil, Date.now())) + '</span>' : '') + '</div></div><button type="button" class="km-switch ' + (it.avail === false ? '' : 'on') + '" data-km-toggle="' + esc(it.id) + '" aria-label="' + (it.avail === false ? 'Rendre disponible ' : 'Masquer ') + esc(it.name) + '" aria-pressed="' + (it.avail === false ? 'false' : 'true') + '" ' + (busy.has(String(it.id)) ? 'disabled' : '') + '></button></article>').join('') + '</div>' : '<div class="km-empty">Aucun article trouvé.</div>';
     updateBadge();
   }
@@ -186,7 +186,7 @@
       document.dispatchEvent(new CustomEvent('kiwi-menu-availability', { detail: { itemId: id, available, until: until || null } }));
       if (window.Kiwi?.toast) window.Kiwi.toast(available ? item.name + ' est de nouveau disponible' : item.name + ' masqué sur OrderPro et l’app équipe' + (until ? ' · ' + returnLabel(until, Date.now()).toLowerCase() : ''));
     } catch (_) {
-      if (window.Kiwi?.toast) window.Kiwi.toast('Modification non enregistrée · vérifiez la connexion', { type: 'warning' });
+      if (window.Kiwi?.toast) window.Kiwi.toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Modification non enregistrée · vérifiez la connexion'), { type: 'warning' });
       try { await fetchMenu(); } catch (_) {}
     } finally { busy.delete(id); render(); }
   }

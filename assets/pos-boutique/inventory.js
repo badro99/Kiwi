@@ -897,7 +897,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       /* Le code scanné remplit le champ, et RIEN d'autre ne se produit. */
       const judgeInto = (raw) => {
         const j = intakeJudge(raw);
-        if (j.kind === 'invalide') { codeHint.textContent = INVALID_MSG[j.reason] || 'Code illisible.'; codeHint.className = 'bqi-help is-bad'; return j; }
+        if (j.kind === 'invalide') { codeHint.textContent = INVALID_MSG[j.reason] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code illisible.'); codeHint.className = 'bqi-help is-bad'; return j; }
         if (j.kind === 'connu') {
           codeHint.innerHTML = `Ce code est déjà porté par <b>${esc(j.hit.product.name)} · ${esc(j.hit.variant.colorLabel)} ${esc(j.hit.variant.size)}</b>. Un code ne peut désigner qu'un seul article.`;
           codeHint.className = 'bqi-help is-bad'; return j;
@@ -916,13 +916,13 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
 
       const save = () => {
         const name = $('#bqi-n-name', el).value.trim();
-        if (!name) { toast('Nom requis'); $('#bqi-n-name', el).focus(); return; }
+        if (!name) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Nom requis')); $('#bqi-n-name', el).focus(); return; }
         const raw = codeIn.value.trim();
         if (mode === 'existing') {
-          if (!raw) { toast('Scannez le code existant, ou choisissez « Générer » / « Plus tard »'); codeIn.focus(); return; }
+          if (!raw) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Scannez le code existant, ou choisissez « Générer » / « Plus tard »')); codeIn.focus(); return; }
           const j = judgeInto(raw);
           if (j.kind !== 'nouveau') {
-            toast(j.kind === 'connu' ? `Code déjà utilisé par ${j.hit.product.name}` : (INVALID_MSG[j.reason] || 'Code illisible'));
+            toast(j.kind === 'connu' ? `Code déjà utilisé par ${j.hit.product.name}` : (INVALID_MSG[j.reason] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code illisible')));
             return;
           }
         }
@@ -951,7 +951,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         if (mode === 'existing') {
           if (!res || !res.ok) {
             restoreSave();
-            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé', 3600, 'danger');
+            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code refusé, rien n\'a été créé'), 3600, 'danger');
             return;
           }
           toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code fournisseur conservé`);
@@ -997,7 +997,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       $('#bqi-e-save', el).addEventListener('click', () => {
         cat.updateProduct(pid, { name: $('#bqi-e-name', el).value.trim() || undefined, categoryId: $('#bqi-e-cat', el).value || null, kind: $('#bqi-e-kind', el).value, art: icon, priceMAD: bqMoney($('#bqi-e-price', el).value), cost: bqMoney($('#bqi-e-cost', el).value) });
-        toast('Produit mis à jour');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Produit mis à jour'));
         openInvProduct(pid);
       });
     });
@@ -1013,7 +1013,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Annuler</button><button class="bq-btn danger" id="bqi-del-ok"><i data-lucide="trash-2"></i>Supprimer définitivement</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
-      $('#bqi-del-ok', el).addEventListener('click', () => { cat.deleteProduct(pid); toast('Produit supprimé'); closeVeil('#bq-inv-veil'); renderInventaire(); });
+      $('#bqi-del-ok', el).addEventListener('click', () => { cat.deleteProduct(pid); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Produit supprimé')); closeVeil('#bq-inv-veil'); renderInventaire(); });
     });
   }
 
@@ -1038,7 +1038,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Annuler</button><button class="bq-btn danger" id="bqi-vdel-ok"><i data-lucide="trash-2"></i>Supprimer la variante</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
-      $('#bqi-vdel-ok', el).addEventListener('click', () => { cat.deleteVariant(vid); toast('Variante supprimée'); openInvProduct(pid); });
+      $('#bqi-vdel-ok', el).addEventListener('click', () => { cat.deleteVariant(vid); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Variante supprimée')); openInvProduct(pid); });
     });
   }
 
@@ -1078,7 +1078,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           colorId: colorId || undefined,
           note: $('#bqi-vc-note', el).value.trim(),
         });
-        toast('Couleur mise à jour');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Couleur mise à jour'));
         openInvProduct(pid);
       });
     });
@@ -1109,7 +1109,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const stock = parseInt($('#bqi-av-stock', el).value, 10) || 0;
         const v = cat.addVariant({ productId: pid, colorId, size, stock });
         if (v && $('#bqi-av-bc', el).value === 'gen') cat.generateBarcode(v.id);
-        toast('Variante ajoutée');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Variante ajoutée'));
         openInvProduct(pid);
       });
     });
@@ -1129,11 +1129,11 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       const inp = $('#bqi-reg-code', el);
       const save = () => {
-        const raw = inp.value.trim(); if (!raw) { toast('Code vide'); return; }
+        const raw = inp.value.trim(); if (!raw) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code vide')); return; }
         const res = catDB().attachBarcode(vid, raw);
-        if (res.ok) { toast(res.already ? 'Code déjà rattaché' : `Code ${raw} enregistré`); openInvProduct(pid); }
+        if (res.ok) { toast(res.already ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code déjà rattaché') : `Code ${raw} enregistré`); openInvProduct(pid); }
         else if (res.reason === 'doublon') toast(`Déjà utilisé par ${res.owner.product.name} (${res.owner.variant.colorLabel} ${res.owner.variant.size})`);
-        else toast('Enregistrement impossible');
+        else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Enregistrement impossible'));
       };
       inp.onkeydown = (e) => { if (e.key === 'Enter') save(); };
       $('#bqi-reg-save', el).addEventListener('click', save);
@@ -1166,11 +1166,11 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       if (prodSel) prodSel.addEventListener('change', () => { varSel.innerHTML = varOptions(prodSel.value); });
       $('#bqi-or-save', el).addEventListener('click', () => {
         const vid = varSel && varSel.value;
-        if (!vid) { toast('Choisissez une variante (ajoutez-en une d\'abord)'); return; }
+        if (!vid) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Choisissez une variante (ajoutez-en une d\'abord)')); return; }
         const res = cat.attachBarcode(vid, code);
         if (res.ok) { toast(`Code ${code} enregistré`); openInvProduct(prodSel.value); }
         else if (res.reason === 'doublon') toast(`Déjà utilisé par ${res.owner.product.name}`);
-        else toast('Enregistrement impossible');
+        else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Enregistrement impossible'));
       });
     });
   }
@@ -1242,7 +1242,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
 
   /* ─── l'écran ─── */
   function openIntake() {
-    if (!catDB()) { toast('Base d\'inventaire indisponible'); return; }
+    if (!catDB()) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Base d\'inventaire indisponible')); return; }
     if (state.view !== 'inventaire') switchView('inventaire');
     intake.open = true;
     intakeReset();
@@ -1353,7 +1353,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     if (j.kind === 'invalide') {
       intakeNote('erreur', `Lecture refusée · ${INVALID_MSG[j.reason] ? j.reason : 'illisible'}`);
       intakeHint(INVALID_MSG[j.reason] || 'Code illisible, rescannez.', 'bad');
-      toast('Scan incomplet, rien n\'a été enregistré');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Scan incomplet, rien n\'a été enregistré'));
       paintIntake();
       return;
     }
@@ -1437,7 +1437,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
 
       const save = () => {
         const name = $('#bqx-name', el).value.trim();
-        if (!name) { toast('Le nom du produit est requis'); $('#bqx-name', el).focus(); return; }
+        if (!name) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Le nom du produit est requis')); $('#bqx-name', el).focus(); return; }
         const size = $('#bqx-size', el).value.trim() || 'TU';
         const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
         let catId = $('#bqx-cat', el).value || null;
@@ -1460,7 +1460,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           /* Course rarissime : le code a été pris entre le scan et l'enregistrement
              (l'autre caisse, ou l'autre appareil). L'article vient d'être défait
              dans le batch ci-dessus, rien d'orphelin ne reste. */
-          toast(res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé');
+          toast(res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code refusé, rien n\'a été créé'));
           paintIntake();
           return;
         }
@@ -1537,11 +1537,11 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
              remise à la quantité du carton. */
           if (qty > 0) cat.receiveStock(ev.variant.id, qty);
         });
-        if (!ev || !ev.variant) { toast('Déclinaison impossible'); return; }
+        if (!ev || !ev.variant) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Déclinaison impossible')); return; }
         const existed = !ev.created;
         if (!res || !res.ok) {
           if (res && res.reason === 'doublon') toast(`Ce code est déjà sur ${res.owner.product.name} · ${res.owner.variant.colorLabel} ${res.owner.variant.size}`);
-          else toast('Code refusé');
+          else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code refusé'));
           return;
         }
         intake.count++; intake.pieces += qty;
@@ -1610,7 +1610,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           const vid = b.getAttribute('data-link-v'), pid = b.getAttribute('data-link-p');
           const r = cat.attachBarcode(vid, j.code);
           if (!r.ok) {
-            toast(r.reason === 'doublon' ? `Ce code vient d'être attribué à ${r.owner.product.name}` : 'Rattachement impossible');
+            toast(r.reason === 'doublon' ? `Ce code vient d'être attribué à ${r.owner.product.name}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rattachement impossible'));
             return;
           }
           const d = cat.getProduct(pid);
@@ -1699,7 +1699,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       const receive = () => {
         const n = parseInt(qty.value, 10) || 0;
         const res = cat.receiveStock(v.id, n);
-        if (!res.ok) { toast(res.reason === 'quantite' ? 'Indiquez une quantité d\'au moins 1' : 'Réception impossible'); return; }
+        if (!res.ok) { toast(res.reason === 'quantite' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Indiquez une quantité d\'au moins 1') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Réception impossible')); return; }
         /* Un réassort compte comme un article repris : sans ce `count++`, une
            session passée entièrement à remettre du stock sur des tailles déjà
            connues affichait « 0 article · 12 pièces » — un compteur qui se
@@ -1764,7 +1764,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const jj = intakeJudge(raw);
         const hint = $('#bqx-vhint', el);
         if (!hint) return jj;
-        if (jj.kind === 'invalide') { hint.textContent = INVALID_MSG[jj.reason] || 'Code illisible.'; hint.className = 'bqi-help is-bad'; }
+        if (jj.kind === 'invalide') { hint.textContent = INVALID_MSG[jj.reason] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code illisible.'); hint.className = 'bqi-help is-bad'; }
         else if (jj.kind === 'connu') { hint.textContent = `Déjà utilisé par ${jj.hit.product.name} · ${jj.hit.variant.colorLabel} ${jj.hit.variant.size}. Un code ne peut désigner qu'un seul article.`; hint.className = 'bqi-help is-bad'; }
         else { hint.textContent = `Code lu · ${(window.KiwiBarcode && window.KiwiBarcode.symLabel) ? window.KiwiBarcode.symLabel(jj.sym) : ''}${jj.check === 'bad' ? ' (clé de contrôle inhabituelle, accepté tel quel)' : ''}`; hint.className = 'bqi-help is-good'; }
         return jj;
@@ -1780,7 +1780,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const raw = codeIn.value.trim();
         if (raw) {
           const jj = judgeV(raw);   // refuse ET explique, sous le champ concerné
-          if (jj.kind === 'invalide') { toast(INVALID_MSG[jj.reason] || 'Code illisible'); return; }
+          if (jj.kind === 'invalide') { toast(INVALID_MSG[jj.reason] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code illisible')); return; }
           if (jj.kind === 'connu') { toast(`Code déjà porté par ${jj.hit.product.name} · ${jj.hit.variant.size}`); return; }
         }
         let ev = null, res = null;
@@ -1793,9 +1793,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           }
           if (qty > 0) cat.receiveStock(ev.variant.id, qty);
         });
-        if (!ev || !ev.variant) { toast('Déclinaison impossible'); return; }
+        if (!ev || !ev.variant) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Déclinaison impossible')); return; }
         if (res && !res.ok) {
-          toast(res.reason === 'doublon' ? `Code déjà utilisé par ${res.owner.product.name}` : 'Code refusé');
+          toast(res.reason === 'doublon' ? `Code déjà utilisé par ${res.owner.product.name}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code refusé'));
           return;
         }
         intake.count++; intake.pieces += qty;
@@ -1843,7 +1843,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       $('#bqx-back', el).onclick = () => paintIntake();
       $('#bqx-fsave', el).onclick = () => {
         const name = $('#bqx-fname', el).value.trim();
-        if (!name) { toast('Le nom est requis'); return; }
+        if (!name) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Le nom est requis')); return; }
         const patch = {
           name, categoryId: $('#bqx-fcat', el).value || null, kind: $('#bqx-fkind', el).value,
           priceMAD: bqMoney($('#bqx-fprice', el).value), cost: bqMoney($('#bqx-fcost', el).value),
@@ -1851,7 +1851,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const apply = () => {
           cat.updateProduct(pid, patch);
           intakeNote('recu', `${name} · fiche corrigée`);
-          toast('Fiche corrigée');
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fiche corrigée'));
           paintIntake();
         };
         /* Changer le prix change ce que la caisse encaissera, et l'ancien prix
@@ -1916,7 +1916,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     for (const p of cat.listProducts({ includeArchived: true })) { const found = cat.listVariants(p.id).find((x) => x.id === vid); if (found) { pid = p.id; v = found; break; } }
     if (!v) return;
     const label = labelForVariant(pid, v);
-    if (!label) { toast('Générez d\'abord un EAN-13'); return; }
+    if (!label) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Générez d\'abord un EAN-13')); return; }
     labelToast(window.KiwiBarcode.printLabels([label], { copies: 1 }), 'Étiquette');
   }
   function printProductLabels(pid) {
@@ -1928,7 +1928,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       const stock = Math.max(0, Math.floor(Number(v.stock) || 0));
       for (let i = 0; i < stock; i++) labels.push(label);
     });
-    if (!labels.length) { toast('Aucune unité en stock avec un code-barres à imprimer'); return; }
+    if (!labels.length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune unité en stock avec un code-barres à imprimer')); return; }
     labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`);
   }
   // Toast the true outcome of a print (thermal / browser / connect-a-printer),

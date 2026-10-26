@@ -219,7 +219,7 @@ function renderStock(){
     function skCatOptions(sel){ return Object.entries(SK_CATS).map(([v,l])=>`<option value="${v}" ${v===sel?'selected':''}>${l}</option>`).join(''); }
 
     function openEditItem(id){
-      toast('Les articles et prix se gèrent dans le tableau de bord.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Les articles et prix se gèrent dans le tableau de bord.'));
       return;
       const it = stockItems.find(i=>i.id===id); if (!it) return;
       openSkModal(`<div class="split-badge">Article</div><h3 class="modal-title" style="margin-bottom:12px;">${kdsEsc(it.name)}</h3>
@@ -234,7 +234,7 @@ function renderStock(){
         <div class="nt-actions"><button class="ma-btn secondary" data-sk-cancel style="flex:1;">Annuler</button><button class="ma-btn primary" data-sk-save-item="${it.id}" style="flex:2;"><i data-lucide="check"></i>Enregistrer</button></div>`);
     }
     function saveEditItem(id){
-      toast('Les articles et prix se gèrent dans le tableau de bord.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Les articles et prix se gèrent dans le tableau de bord.'));
       return;
       const it = stockItems.find(i=>i.id===id); if (!it) return;
       const patch = {
@@ -249,7 +249,7 @@ function renderStock(){
       closeSkModal(); renderStock(); toast(`${it.name} mis à jour`);
     }
     function openAddItem(){
-      toast('Ajoutez les articles et prix depuis le tableau de bord.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajoutez les articles et prix depuis le tableau de bord.'));
       return;
       openSkModal(`<div class="split-badge">Nouvel article</div><h3 class="modal-title" style="margin-bottom:12px;">Ajouter un article</h3>
         <div class="sk-field"><label>Nom</label><input class="sk-input" id="sk-f-name" placeholder="ex. Citrons confits" autocomplete="off"></div>
@@ -266,10 +266,10 @@ function renderStock(){
         <div class="nt-actions"><button class="ma-btn secondary" data-sk-cancel style="flex:1;">Annuler</button><button class="ma-btn primary" data-sk-add-save style="flex:2;"><i data-lucide="plus"></i>Ajouter</button></div>`);
     }
     function saveNewItem(){
-      toast('Ajoutez les articles et prix depuis le tableau de bord.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajoutez les articles et prix depuis le tableau de bord.'));
       return;
       const name = ($('#sk-f-name').value || '').trim();
-      if (!name){ $('#sk-f-name').focus(); toast("Donne un nom à l'article"); return; }
+      if (!name){ $('#sk-f-name').focus(); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Donne un nom à l'article")); return; }
       const par = Math.max(0, parseInt($('#sk-f-par').value) || 0);
       const item = { id:'usr-'+Date.now().toString(36), name, cat:$('#sk-f-cat').value, unit:($('#sk-f-unit').value||'unité').trim(),
         supplier:$('#sk-f-supplier').value, stock:Math.max(0, parseInt($('#sk-f-stock').value)||0),
@@ -302,7 +302,7 @@ function renderStock(){
         const qty = parseInt(inp.value) || 0;
         if (qty > 0){ const it = stockItems.find(i => i.id === inp.dataset.skOline); if (it){ lines.push({ name:it.name, qty, unit:it.unit }); total += qty * it.cost; } }
       });
-      if (!lines.length){ toast('Ajoute au moins une quantité'); return; }
+      if (!lines.length){ toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajoute au moins une quantité')); return; }
       supplyOrders.unshift({ id:String(++skOrderSeq), supplier, items:lines, total:Math.round(total), status:'en-attente', when:'À planifier' });
       closeSkModal(); stockTab = 'appro'; renderStock(); toast(`Commande #${skOrderSeq} créée · ${supplier}`);
     }
@@ -336,7 +336,7 @@ function renderStock(){
         else it.stock += li.qty;
         added++;
       } });
-      if (failed) { toast(added ? 'Réception partielle · relance la même réception pour reprendre les lignes acceptées' : 'Réception refusée · vérifie la référence et la quantité'); return; }
+      if (failed) { toast(added ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Réception partielle · relance la même réception pour reprendre les lignes acceptées') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Réception refusée · vérifie la référence et la quantité')); return; }
       o.status = 'recue'; o.when = 'Reçue';
       syncSharedStock(false);
       renderStock(); toast(`Commande #${id} reçue · ${added} article${added>1?'s':''} réapprovisionné${added>1?'s':''}`);
@@ -411,14 +411,14 @@ function renderStock(){
     function refreshReceptModal(){ $('#sk-modal-box').innerHTML = renderReceptModal(); if (window.lucide) lucide.createIcons(); }
     function rerenderReceptBody(){ const b = $('#sk-recept-body'); if (b){ b.innerHTML = skReceptBodyHTML(); if (window.lucide) lucide.createIcons(); } }
     async function skScan(){
-      if (!window.KiwiImageProof){ toast('Appareil photo indisponible'); return; }
+      if (!window.KiwiImageProof){ toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Appareil photo indisponible')); return; }
       try {
         const photo = await KiwiImageProof.pick({ maxDimension: 960, quality: 0.72 });
         if (!photo) return;
         skReceptPhoto = photo;
         skReceptLines = [{ name:'', qty:'', cost:'' }];
         skReceptState = 'done'; rerenderReceptBody();
-      } catch (_){ toast('Photo non jointe · vérifie l’accès à l’appareil'); }
+      } catch (_){ toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Photo non jointe · vérifie l’accès à l’appareil')); }
     }
     function commitRecept(){
       const supInput = $('#sk-recept-sup');
@@ -427,7 +427,7 @@ function renderStock(){
       const externalRef = (refInput ? refInput.value : skReceptRef || '').trim();
 
       if (!supplier) {
-        toast('Indique le fournisseur pour enregistrer la réception');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Indique le fournisseur pour enregistrer la réception'));
         if (supInput) supInput.focus();
         return;
       }
@@ -489,11 +489,11 @@ function renderStock(){
         else unknown++;
       });
       if (failed){
-        toast(added ? 'Réception partielle · relance la même réception pour reprendre les lignes acceptées' : 'Réception refusée · vérifie la référence et la quantité');
+        toast(added ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Réception partielle · relance la même réception pour reprendre les lignes acceptées') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Réception refusée · vérifie la référence et la quantité'));
         return;
       }
       if (!added){
-        toast(unknown ? 'Article inconnu · créez-le dans le tableau de bord avant la réception.' : 'Aucune ligne valide');
+        toast(unknown ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Article inconnu · créez-le dans le tableau de bord avant la réception.') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune ligne valide'));
         return;
       }
       syncSharedStock(false); closeSkModal(); stockTab = 'articles'; renderStock();
@@ -590,9 +590,9 @@ function renderStock(){
       const itemSel = $('#sk-w-item');
       const itId = itemSel ? itemSel.value : '';
       const it = stockItems.find(i => i.id === itId);
-      if (!it) { toast('Sélectionne un article'); return; }
+      if (!it) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Sélectionne un article')); return; }
       const qty = parseFloat($('#sk-w-qty').value) || 0;
-      if (qty <= 0) { toast('Indique une quantité valide'); return; }
+      if (qty <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Indique une quantité valide')); return; }
       if (qty > it.stock) {
         if (!confirm(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`)) {
           return;

@@ -31,9 +31,9 @@
 
       // Badges & Titles
       const badge = $('#or-modal-badge');
-      if (badge) badge.textContent = isVrap ? (editing ? `Vente #${vrapEditingNum}` : 'À emporter') : `Table ${selectedId}`;
+      if (badge) badge.textContent = isVrap ? (editing ? `Vente #${vrapEditingNum}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('À emporter')) : `Table ${selectedId}`;
       const title = $('#or-modal-title');
-      if (title) title.textContent = isVrap ? (editing ? `Commande #${vrapEditingNum}` : 'Vente à emporter') : (t ? `Table ${selectedId} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}` : 'Commande');
+      if (title) title.textContent = isVrap ? (editing ? `Commande #${vrapEditingNum}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente à emporter')) : (t ? `Table ${selectedId} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Commande'));
       const sub = $('#or-modal-sub');
       if (sub) sub.textContent = `${itemCount} article${itemCount > 1 ? 's' : ''} · ${fmtMAD(net)}`;
 
@@ -114,7 +114,7 @@
           const discValEl = $('#or-discount-val');
           if (discValEl) discValEl.textContent = `−${fmtMAD(discAmt)}`;
           const discLblEl = $('#or-discount-lbl');
-          if (discLblEl) discLblEl.textContent = vrapDiscount && vrapDiscount.kind === 'pct' ? `Remise ${vrapDiscount.value} %` : 'Remise';
+          if (discLblEl) discLblEl.textContent = vrapDiscount && vrapDiscount.kind === 'pct' ? `Remise ${vrapDiscount.value} %` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remise');
         }
       }
       const totalEl = $('#or-total');

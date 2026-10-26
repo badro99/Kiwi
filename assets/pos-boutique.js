@@ -474,7 +474,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   let bqHoldKit = null;
   const bqHold = () => bqHoldKit || (bqHoldKit = window.KiwiRetailSaleHold
     ? window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => persistDay(), isDemo: IS_DEMO, slug: () => merchantSlug(),
-      onLost: () => toast('Vente NON sauvegardée : stockage de la tablette plein et serveur injoignable. Ne rechargez pas la page, notez le ticket.', 15000, 'warn') })
+      onLost: () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente NON sauvegardée : stockage de la tablette plein et serveur injoignable. Ne rechargez pas la page, notez le ticket.'), 15000, 'warn') })
     : null);
   function bqReplayHeld() { const h = bqHold(); return h ? h.replay() : 0; }
   function bqPost(sale, payload) {
@@ -1083,7 +1083,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     ticketOwner.clear(state, ticket);
     if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {
       if (state.ticket !== ticket) return;
-      toast('Numéro de ticket indisponible', state.ticketStorageError
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Numéro de ticket indisponible'), state.ticketStorageError
         ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
         : 'Reconnectez cette caisse pour réserver sa prochaine série.');
     });
@@ -1231,9 +1231,9 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     // UA `[hidden]{display:none}` — on force donc le display en inline (spécificité max).
     if (en) en.style.display = on ? 'none' : '';
     if (ex) ex.style.display = on ? '' : 'none';
-    const lb = b.querySelector('span'); if (lb) lb.textContent = on ? 'Quitter le plein écran' : 'Plein écran';
+    const lb = b.querySelector('span'); if (lb) lb.textContent = on ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Quitter le plein écran') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Plein écran');
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.title = on ? 'Quitter le plein écran' : 'Plein écran';
+    b.title = on ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Quitter le plein écran') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Plein écran');
   }
   function setupFullscreenBtn() {
     const b = $('#bq-fs', root); if (!b) return;
@@ -1457,14 +1457,14 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
         const d = (e && e.detail) || {};
         if (d.store !== 'catalog') return;
         if (d.durable) {
-          if (lastWarn) { lastWarn = 0; toast('Stock de nouveau enregistré sur cette caisse', 3200, 'success'); }
+          if (lastWarn) { lastWarn = 0; toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Stock de nouveau enregistré sur cette caisse'), 3200, 'success'); }
           return;
         }
         const now = Date.now();
         if (lastWarn && now - lastWarn < 30000) return;
         lastWarn = now;
         toast('Stock non enregistré sur cette caisse', 9000, 'warn',
-          'La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.');
+          (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.'));
       });
     }
     installWedgeScanner();
@@ -1666,7 +1666,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     const t = state.ticket;
     if (!t.lines.length || state.checkoutBusy) return;
     if (state.syncStorageError || state.ticketStorageError) {
-      toast('Vente suspendue', 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente suspendue'), 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
       return;
     }
     /* Le ticket tient une réservation LOCALE, tandis que le catalogue peut être
@@ -1684,7 +1684,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     }
     if (!t.num) {
       assignTicketNumber(t).then(() => { if (state.ticket === t) checkout(); })
-        .catch(() => toast('Numéro de ticket indisponible', state.ticketStorageError
+        .catch(() => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Numéro de ticket indisponible'), state.ticketStorageError
           ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
           : 'Reconnectez cette caisse pour réserver sa prochaine série.'));
       return;
@@ -1753,7 +1753,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
         const isAcompte = !!(paymentContext && paymentContext.partial);
         const receivedNow = isAcompte ? paymentContext.paidNow : total;
         if (isAcompte && (!c || !c.id || !window.KiwiRetailBalances)) {
-          toast('Attachez une cliente avant de prendre un acompte'); return { error: 'customer-required' };
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Attachez une cliente avant de prendre un acompte')); return { error: 'customer-required' };
         }
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
@@ -1793,7 +1793,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
               method: bqPaymentMethod(parts), ts: +sale.at,
             },
           });
-          if (!savedBalance) { toast('Acompte non conservé : stockage local indisponible'); return { error: 'balance-storage-failed' }; }
+          if (!savedBalance) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Acompte non conservé : stockage local indisponible')); return { error: 'balance-storage-failed' }; }
           bqOutstandingCents = window.KiwiRetailBalances.read(merchantSlug())
             .reduce((sum, row) => sum + window.KiwiRetailBalances.due(row), 0);
         }
@@ -1931,9 +1931,9 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   }
   function payExistingBalance(row) {
     const R = window.KiwiRetailBalances;
-    if (!R || row.pendingCents > 0) { toast('Synchronisation de l’acompte en attente'); return; }
+    if (!R || row.pendingCents > 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Synchronisation de l’acompte en attente')); return; }
     const remaining = R.due(row) / 100;
-    if (!(remaining > 0)) { toast('Cette note est déjà réglée'); renderAcomptes(); return; }
+    if (!(remaining > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cette note est déjà réglée')); renderAcomptes(); return; }
     const client = clById(row.customerId);
     openPay({
       amount: remaining, balanceExisting: true, balanceTotal: row.totalCents / 100,
@@ -1958,7 +1958,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
           totalCents: row.totalCents, basePaidCents: row.paidCents,
           receipt: { id: syncId, amountCents: Math.round(amount * 100), method, ts: +at },
         });
-        if (!saved) { toast('Règlement non conservé : stockage local indisponible'); return { error: 'balance-storage-failed' }; }
+        if (!saved) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Règlement non conservé : stockage local indisponible')); return { error: 'balance-storage-failed' }; }
         bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0);
         SALES.unshift(sale); persistDay(); bqSaveProvisional(true);
         try { if (window.KiwiLive && window.KiwiLive.isOn()) bqPost(sale, {
@@ -2330,7 +2330,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   function bqPrintReport(report, copyLabel) {
     if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) {
-      toast('Imprimante indisponible'); return Promise.resolve({ ok: false });
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Imprimante indisponible')); return Promise.resolve({ ok: false });
     }
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', item: 'article', cat: 'rayon' };
@@ -2357,10 +2357,10 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       methodLabels: { cash: 'Espèces', card: 'Carte', transfer: 'Virement / Versement', cheque: 'Chèque', wallet: 'Wallet', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
       fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
     }).then((res) => {
-      if (res && res.ok) toast(res.via === 'pdf' ? 'Rapport prêt · imprimer ou partager le PDF' : res.via === 'browser' ? 'Rapport ouvert dans l\'impression système' : 'Rapport imprimé');
-      else toast('Impression impossible · le rapport reste dans le tableau de bord');
+      if (res && res.ok) toast(res.via === 'pdf' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport prêt · imprimer ou partager le PDF') : res.via === 'browser' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport ouvert dans l\'impression système') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport imprimé'));
+      else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible · le rapport reste dans le tableau de bord'));
       return res || { ok: false };
-    }, () => { toast('Impression impossible · le rapport reste dans le tableau de bord'); return { ok: false }; });
+    }, () => { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible · le rapport reste dans le tableau de bord')); return { ok: false }; });
   }
 
   /* ── l'écran d'ouverture (fond de caisse) ──
@@ -2651,7 +2651,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     v.querySelector('#bqclo-print').onclick = () => {
       const raw = v.querySelector('#bqclo-count').value;
       const r = bqBuildReport(raw === '' || raw == null ? null : parseFloat(raw), 0);
-      if (!r) { toast('Rapport indisponible'); return; }
+      if (!r) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
       bqPrintReport(r, 'AVANT CLÔTURE');
     };
     v.querySelector('#bqclo-close').onclick = bqCloseRegister;
@@ -2681,7 +2681,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     } catch (_) {}
     if (!report || !reportSaved) {
       if (v) v.classList.add('is-open');
-      toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.'));
       return;
     }
     /* Émis AVANT d'effacer le poste : l'événement porte openedAt et sessionId.
@@ -2700,7 +2700,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   function bqFinishClose() {
     const z = document.getElementById('bq-zsheet');
     if (z) z.classList.remove('is-open');
-    toast('Caisse fermée · à bientôt');
+    toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Caisse fermée · à bientôt'));
     setTimeout(() => location.reload(), 640);
   }
   /* L'écran d'après-clôture : une décision, la trace papier. */

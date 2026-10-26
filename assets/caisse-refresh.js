@@ -184,7 +184,7 @@ try { (function () {
     var b = document.createElement('button');
     b.type = 'button';
     b.className = (className ? className + ' ' : '') + 'kx-refresh';
-    b.title = 'Recharger la caisse · dépannage uniquement, synchronisation automatique';
+    b.title = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Recharger la caisse · dépannage uniquement, synchronisation automatique');
     /* Pas d'aria-label : le nom est le mot affiché (« Rafraîchir », traduit),
        le title en donne le détail. Un nom qui ne contient pas le mot visible
        trompe la commande vocale (axe, label-content-name-mismatch). */
@@ -310,7 +310,7 @@ try { (function () {
     var label = veil && veil.querySelector('[data-kx-attendance-expiry]');
     if (!label) return;
     var remaining = Math.max(0, expiresTs - Date.now());
-    if (!remaining) { label.textContent = 'Code expiré · générez-en un nouveau'; return; }
+    if (!remaining) { label.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code expiré · générez-en un nouveau'); return; }
     var seconds = Math.ceil(remaining / 1000);
     label.textContent = 'Valide encore ' + Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
   }
@@ -341,8 +341,8 @@ try { (function () {
         timer = setInterval(renderExpiry, 1000);
       });
     }).catch(function () {
-      value.textContent = 'Erreur';
-      veil.querySelector('[data-kx-attendance-expiry]').textContent = 'Code non généré · vérifiez la connexion';
+      value.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Erreur');
+      veil.querySelector('[data-kx-attendance-expiry]').textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code non généré · vérifiez la connexion');
     }).then(function () { button.disabled = false; });
   }
   function close() {
