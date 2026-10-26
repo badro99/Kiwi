@@ -1180,8 +1180,8 @@
     "sha": "5032ef2889120144"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "4",
-    "sha": "acb1c3e85eaff036"
+    "v": "5",
+    "sha": "7bd75f500f28d54b"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1604,16 +1604,16 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "83",
-    "sha": "6ea443429c5d6632"
+    "v": "84",
+    "sha": "bfba89fa4363825d"
   },
   "assets/stock/catalog.js": {
     "v": "1",
     "sha": "43526c0e6dbfba96"
   },
   "assets/stock/counts.js": {
-    "v": "2",
-    "sha": "f91aacbf92744eeb"
+    "v": "3",
+    "sha": "f1e2b851f3e51a61"
   },
   "assets/stock/intake.js": {
     "v": "4",
@@ -1624,8 +1624,8 @@
     "sha": "da7bb80f48cd2f4f"
   },
   "assets/stock/purchasing.js": {
-    "v": "1",
-    "sha": "c5a6590ff812782a"
+    "v": "2",
+    "sha": "84576ba18ce670d9"
   },
   "assets/store-templates.js": {
     "v": "4",

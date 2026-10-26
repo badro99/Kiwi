@@ -4,6 +4,7 @@
 // Loyalty starts with a durable pending redemption, as after an offline sale.
 // The application sync loop must obtain and persist the server refusal itself.
 import assert from 'node:assert/strict';
+import { LOCALES } from './test-locales.mjs';
 import { randomInt } from 'node:crypto';
 import { harness, realPage, sleep, verify } from './surface-matrix-lib.mjs';
 
@@ -19,6 +20,7 @@ const words = {
 };
 async function click(page, selector) {
   await page.waitForSelector(selector, { visible: true, timeout: 15000 });
+  await page.$eval(selector, el => el.scrollIntoView({ block: 'center', inline: 'center' }));
   await page.click(selector);
 }
 async function check(t, cell, state, locale, viewport) {
@@ -68,7 +70,13 @@ async function unlock(page) {
 }
 const sessions = {
   async open(t, state, locale, viewport) {
-    let refusals = 0;
+    let refusals = 0, foodReads = 0, reviews = 0;
+    let purchase = null, receiptAttempts = 0;
+    const count = { id: 'matrix-count', engine: state === 'count-boutique' ? 'boutique' : 'ledger', status: 'submitted', submittedAt: Date.now(),
+      storeName: 'Matrix Kitchen', employeeName: 'TEST KIWI', totalLines: 1, totalDiff: -2,
+      totalVarianceCostMAD: -20, absVarianceCostMAD: 20,
+      lines: [{ itemId: 'matrix-flour', productName: 'TEST KIWI farine', systemQty: 10,
+        countedQty: 8, diff: -2, unitCost: 10, varianceCost: -20, unit: 'kg' }] };
     const routes = {
       'GET /api/me': { authenticated: true, onboarded: true, name: 'Mira Test', business: 'Matrix Kitchen', type: 'restaurant',
         stores: [{ merchant, name: 'Matrix Kitchen', type: 'restaurant' }] },
@@ -78,9 +86,44 @@ const sessions = {
         let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (_) {}
         return body.pin === OWNER ? { status: 200, body: { ok: true, staff: { id: 'st_owner', name: 'Mira Test', role: 'owner' }, merchant } } : { status: 401, body: { error: 'bad-pin' } };
       },
-      'GET /api/foodcost': () => state === 'error'
+      'GET /api/foodcost': () => state === 'error' && ++foodReads === 1
         ? { status: 500, body: { error: 'synthetic-unavailable' } }
         : { status: 200, body: { enabled: true, canEdit: true, sheets: [] } },
+      'GET /api/operations': (req) => {
+        const view = new URL(req.url()).searchParams.get('view');
+        return { status: 200, body: view === 'whoami' ? { merchant, kind: 'owner', role: 'owner' } : { orders: purchase ? [purchase] : [] } };
+      },
+      'POST /api/operations': (req) => {
+        const cmd = JSON.parse(req.postData());
+        if (cmd.domain !== 'procurement') return { status: 200, body: { ok: true, command: { status: 'completed', result: {} } } };
+        const input = cmd.payload;
+        let result;
+        if (cmd.action === 'create-po') {
+          assert.equal(input.lines[0].qty, 2); assert.equal(input.lines[0].unitPrice, 40);
+          purchase = { number: 'BC-MATRIX', status: 'draft', supplier: input.supplier, totalCents: 8000,
+            lines: input.lines.map(l => ({ ...l, receivedQty: 0, returnedQty: 0 })) };
+          result = { ...purchase, lines: 1, units: 2 };
+        } else if (cmd.action === 'submit-po') {
+          assert.equal(input.po, purchase.number); assert.equal(cmd.confirmed, true);
+          purchase.status = 'submitted'; result = purchase;
+        } else if (cmd.action === 'receive-po') {
+          receiptAttempts++;
+          assert.deepEqual(input.lines, [{ sku: 'matrix-flour', qty: 2 }]);
+          if (receiptAttempts === 1) return { status: 409, body: { error: 'receipt-conflict' } };
+          purchase.lines[0].receivedQty = 2; purchase.status = 'received'; result = purchase;
+        } else throw new Error('unexpected purchase command');
+        return { status: 200, body: { ok: true, command: { status: cmd.action === 'create-po' ? 'draft' : 'completed', result } } };
+      },
+      'GET /api/inventory/counts': { counts: [count] },
+      'POST /api/inventory/counts': (req) => {
+        const body = JSON.parse(req.postData());
+        assert.equal(body.id, count.id);
+        assert.equal(body.decision, 'approved');
+        reviews++;
+        if (reviews === 1) return { status: 409, body: { error: 'catalog-conflict' } };
+        count.status = 'applied'; count.reviewDecision = 'approved';
+        return { status: 200, body: { success: true, count } };
+      },
       'GET /api/clients': { clients: [{ id: 'matrix-client', name: 'Nora Test', points: 0, stamps: 0, updated_ts: 1 }], cursor: 1, more: false },
       'POST /api/clients': (req) => {
         const data = JSON.parse(req.postData() || '{}');
@@ -117,6 +160,34 @@ const sessions = {
       assert.ok(refusals > 0, 'server refusal must actually have been requested');
       return { page, region };
     }
+    if (state.startsWith('count')) {
+      t.step('review the frozen count, refuse a stale approval, then approve');
+      await page.evaluate(() => document.querySelector('[data-nav="stock"]').click());
+      await click(page, '[data-action="stock-tab"][data-tab="items"]');
+      await click(page, '[data-action="stock-subview"][data-subview="counts"]');
+      await click(page, '[data-action="stock-count-detail"][data-count-id="matrix-count"]');
+      const region = '.kiwi-backdrop .kiwi-modal';
+      assert.match(await page.$eval(region, el => el.textContent), /TEST KIWI farine/);
+      const cells = await page.$$eval(region + ' tbody tr td', els => els.map(el => el.textContent.trim()));
+      assert.match(cells[1], /10/); assert.match(cells[2], /8/);
+      assert.match(cells[3], /-2/); assert.match(cells[4], /20/);
+      await click(page, '#st-cnt-approve-btn');
+      await page.waitForFunction(() => !document.getElementById('st-cnt-approve-btn')?.disabled);
+      assert.equal(reviews, 1);
+      assert.equal(count.status, 'submitted', 'conflict leaves the count pending');
+      assert.ok(await page.$('#st-cnt-approve-btn'), 'conflict keeps the review open');
+      await click(page, '#st-cnt-approve-btn');
+      await page.waitForSelector('#st-cnt-approve-btn', { hidden: true });
+      assert.equal(reviews, 2); assert.equal(count.status, 'applied');
+      await click(page, '[data-action="stock-count-detail"][data-count-id="matrix-count"]');
+      assert.equal(await page.$('#st-cnt-approve-btn'), null, 'applied count cannot be approved again');
+      await page.keyboard.press('Escape');
+      await purchaseJourney(t, page);
+      assert.equal(receiptAttempts, 2);
+      assert.equal(purchase.status, 'received');
+      assert.equal(purchase.lines[0].receivedQty, 2);
+      return { page, region: '[data-po-card="BC-MATRIX"]' };
+    }
     t.step('open menu analysis and Simple cost through the navigation');
     await nav(page, '[data-nav="finance"]');
     await click(page, '[data-fin-tab="cost"]');
@@ -136,130 +207,106 @@ const sessions = {
   },
 };
 
+async function purchaseJourney(t, page) {
+  t.step('create an 80 MAD purchase order, submit it and recover a failed receipt');
+  await click(page, '[data-action="stock-tab"][data-tab="orders"]');
+  await click(page, '[data-action="supplier-new-po"]');
+  for (const [selector, value] of [
+    ['[data-po-supplier]', 'TEST KIWI fournisseur'], ['[data-pl-sku]', 'matrix-flour'],
+    ['[data-pl-label]', 'TEST KIWI farine'], ['[data-pl-unit]', 'kg'],
+    ['[data-pl-qty]', '2'], ['[data-pl-price]', '40'],
+  ]) await page.locator(selector).fill(value);
+  assert.match(await page.$eval('[data-po-total]', el => el.textContent), /80/);
+  await click(page, '[data-po-create]');
+  await page.waitForFunction(() => document.querySelector('[data-po-out]')?.textContent.includes('BC-MATRIX'));
+  assert.match(await page.$eval('[data-po-out]', el => el.textContent), /80/);
+  await click(page, '[data-po-tab="orders"]');
+  await click(page, '[data-po-card="BC-MATRIX"] [data-acct-confirm]');
+  await click(page, '[data-po-run="submit-po"]');
+  await page.waitForSelector('[data-po-run="receive-po"]', { visible: true });
+  await page.locator('[data-po-qty="matrix-flour"]').fill('2');
+  await click(page, '[data-po-run="receive-po"]');
+  await page.waitForFunction(() => document.querySelector('[data-po-out-card]')?.textContent.trim());
+  assert.equal(await page.$eval('[data-po-qty="matrix-flour"]', el => el.value), '2', 'failed receipt retains entered quantity');
+  await click(page, '[data-po-run="receive-po"]');
+  await page.waitForSelector('[data-po-run="receive-po"]', { hidden: true });
+  const row = await page.$$eval('[data-po-card="BC-MATRIX"] tbody td', els => els.map(el => el.textContent.trim()));
+  assert.deepEqual(row.slice(2), ['2', '2', '0', '0'], 'ordered 2, received 2, returned 0, remaining 0');
+}
+
+async function fill(page, field, value) {
+  const selector = `[data-sfc-field="${field}"]`;
+  await page.locator(selector).fill(value);
+  assert.equal(await page.$eval(selector, el => el.value), value, 'input value ' + field);
+}
+async function calculator(t, page) {
+  t.step('calculate 250 g from a 40 MAD kilogram, divided into two portions');
+  await fill(page, 'sheet.portions', '2');
+  await click(page, '[data-sfc="add-food"]');
+  await fill(page, 'name', 'TEST KIWI farine');
+  await fill(page, 'packPrice', '40');
+  await fill(page, 'useQty', '250');
+  const amounts = () => page.$$eval('[data-sfc-summary] > div b', els => els.map(el => Number(el.textContent.replace(/[^0-9.,-]/g, '').replace(',', '.'))));
+  assert.deepEqual((await amounts()).slice(0, 4), [10, 0, 10, 5], 'batch 10 MAD, portion 5 MAD');
+  t.step('zero pack size makes the cost unknown, then correction restores it');
+  await fill(page, 'packQty', '0');
+  assert.equal(await page.$eval('[data-sfc-summary]', el => el.dataset.sfcStatus), 'incomplete');
+  assert.ok(await page.$('[data-sfc-linecost="0"] .sfc-unknown'));
+  await fill(page, 'packQty', '1');
+  assert.equal((await amounts())[3], 5, 'corrected portion cost');
+}
+
 try {
-  // Store-credit issue is deliberately skipped: issueAvoir awaits avoirApproval,
-  // which always opens requireManager's credential pad before POST store-credits.
-  // This task forbids codes. No application bypass or invented approval is used.
-  await h.S.run('loyalty-refused · fr · phone', async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=phone
-    const cell = await sessions.open(t, 'loyalty-refused', 'fr', 'phone');
-    await check(t, cell, 'loyalty-refused', 'fr', 'phone');
-  });
-  await h.S.run('loyalty-refused · fr · tablet', async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=tablet
-    const cell = await sessions.open(t, 'loyalty-refused', 'fr', 'tablet');
-    await check(t, cell, 'loyalty-refused', 'fr', 'tablet');
-  });
-  await h.S.run('loyalty-refused · en · phone', async (t) => {
-    // coverage: surface=dashboard locale=en viewport=phone
-    const cell = await sessions.open(t, 'loyalty-refused', 'en', 'phone');
-    await check(t, cell, 'loyalty-refused', 'en', 'phone');
-  });
-  await h.S.run('loyalty-refused · en · tablet', async (t) => {
-    // coverage: surface=dashboard locale=en viewport=tablet
-    const cell = await sessions.open(t, 'loyalty-refused', 'en', 'tablet');
-    await check(t, cell, 'loyalty-refused', 'en', 'tablet');
-  });
-  await h.S.run('loyalty-refused · ar · phone', async (t) => {
-    // coverage: surface=dashboard locale=ar viewport=phone
-    const cell = await sessions.open(t, 'loyalty-refused', 'ar', 'phone');
-    await check(t, cell, 'loyalty-refused', 'ar', 'phone');
-  });
-  await h.S.run('loyalty-refused · ar · tablet', async (t) => {
-    // coverage: surface=dashboard locale=ar viewport=tablet
-    const cell = await sessions.open(t, 'loyalty-refused', 'ar', 'tablet');
-    await check(t, cell, 'loyalty-refused', 'ar', 'tablet');
-  });
-  await h.S.run('empty · fr · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=fr viewport=phone
-    const cell = await sessions.open(t, 'empty', 'fr', 'phone');
-    await check(t, cell, 'empty', 'fr', 'phone');
-  });
-  await h.S.run('empty · fr · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=fr viewport=tablet
-    const cell = await sessions.open(t, 'empty', 'fr', 'tablet');
-    await check(t, cell, 'empty', 'fr', 'tablet');
-  });
-  await h.S.run('empty · en · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=en viewport=phone
-    const cell = await sessions.open(t, 'empty', 'en', 'phone');
-    await check(t, cell, 'empty', 'en', 'phone');
-  });
-  await h.S.run('empty · en · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=en viewport=tablet
-    const cell = await sessions.open(t, 'empty', 'en', 'tablet');
-    await check(t, cell, 'empty', 'en', 'tablet');
-  });
-  await h.S.run('empty · ar · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=ar viewport=phone
-    const cell = await sessions.open(t, 'empty', 'ar', 'phone');
-    await check(t, cell, 'empty', 'ar', 'phone');
-  });
-  await h.S.run('empty · ar · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=ar viewport=tablet
-    const cell = await sessions.open(t, 'empty', 'ar', 'tablet');
-    await check(t, cell, 'empty', 'ar', 'tablet');
-  });
-  await h.S.run('error · fr · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=fr viewport=phone
-    const cell = await sessions.open(t, 'error', 'fr', 'phone');
-    await check(t, cell, 'error', 'fr', 'phone');
-  });
-  await h.S.run('error · fr · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=fr viewport=tablet
-    const cell = await sessions.open(t, 'error', 'fr', 'tablet');
-    await check(t, cell, 'error', 'fr', 'tablet');
-  });
-  await h.S.run('error · en · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=en viewport=phone
-    const cell = await sessions.open(t, 'error', 'en', 'phone');
-    await check(t, cell, 'error', 'en', 'phone');
-  });
-  await h.S.run('error · en · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=en viewport=tablet
-    const cell = await sessions.open(t, 'error', 'en', 'tablet');
-    await check(t, cell, 'error', 'en', 'tablet');
-  });
-  await h.S.run('error · ar · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=ar viewport=phone
-    const cell = await sessions.open(t, 'error', 'ar', 'phone');
-    await check(t, cell, 'error', 'ar', 'phone');
-  });
-  await h.S.run('error · ar · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=ar viewport=tablet
-    const cell = await sessions.open(t, 'error', 'ar', 'tablet');
-    await check(t, cell, 'error', 'ar', 'tablet');
-  });
-  await h.S.run('editor · fr · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=fr viewport=phone
-    const cell = await sessions.open(t, 'editor', 'fr', 'phone');
-    await check(t, cell, 'editor', 'fr', 'phone');
-  });
-  await h.S.run('editor · fr · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=fr viewport=tablet
-    const cell = await sessions.open(t, 'editor', 'fr', 'tablet');
-    await check(t, cell, 'editor', 'fr', 'tablet');
-  });
-  await h.S.run('editor · en · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=en viewport=phone
-    const cell = await sessions.open(t, 'editor', 'en', 'phone');
-    await check(t, cell, 'editor', 'en', 'phone');
-  });
-  await h.S.run('editor · en · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=en viewport=tablet
-    const cell = await sessions.open(t, 'editor', 'en', 'tablet');
-    await check(t, cell, 'editor', 'en', 'tablet');
-  });
-  await h.S.run('editor · ar · phone', async (t) => {
-    // coverage: surface=dashboard-finance locale=ar viewport=phone
-    const cell = await sessions.open(t, 'editor', 'ar', 'phone');
-    await check(t, cell, 'editor', 'ar', 'phone');
-  });
-  await h.S.run('editor · ar · tablet', async (t) => {
-    // coverage: surface=dashboard-finance locale=ar viewport=tablet
-    const cell = await sessions.open(t, 'editor', 'ar', 'tablet');
-    await check(t, cell, 'editor', 'ar', 'tablet');
-  });
+  for (const locale of LOCALES) for (const viewport of ['tablet', 'desktop']) for (const engine of ['ledger', 'boutique']) {
+    await h.S.run(`count approval conflict · ${engine} · ${locale} · ${viewport}`, async (t) => {
+      // coverage: surface=dashboard-count-review locale=fr viewport=tablet
+      // coverage: surface=dashboard-count-review locale=fr viewport=desktop
+      // coverage: surface=dashboard-count-review locale=en viewport=tablet
+      // coverage: surface=dashboard-count-review locale=en viewport=desktop
+      // coverage: surface=dashboard-count-review locale=ar viewport=tablet
+      // coverage: surface=dashboard-count-review locale=ar viewport=desktop
+      // coverage: surface=dashboard-stock locale=fr viewport=tablet
+      // coverage: surface=dashboard-stock locale=fr viewport=desktop
+      // coverage: surface=dashboard-stock locale=en viewport=tablet
+      // coverage: surface=dashboard-stock locale=en viewport=desktop
+      // coverage: surface=dashboard-stock locale=ar viewport=tablet
+      // coverage: surface=dashboard-stock locale=ar viewport=desktop
+      const cell = await sessions.open(t, engine === 'boutique' ? 'count-boutique' : 'count', locale, viewport);
+      await check(t, cell, 'count', locale, viewport);
+    });
+  }
+  for (const locale of LOCALES) for (const viewport of ['phone', 'tablet']) {
+    for (const state of ['empty', 'error', 'editor', 'loyalty-refused']) {
+      await h.S.run(`${state} · ${locale} · ${viewport}`, async (t) => {
+        // coverage: surface=dashboard-finance locale=fr viewport=phone
+        // coverage: surface=dashboard-finance locale=fr viewport=tablet
+        // coverage: surface=dashboard-finance locale=en viewport=phone
+        // coverage: surface=dashboard-finance locale=en viewport=tablet
+        // coverage: surface=dashboard-finance locale=ar viewport=phone
+        // coverage: surface=dashboard-finance locale=ar viewport=tablet
+        // coverage: surface=dashboard locale=fr viewport=phone
+        // coverage: surface=dashboard locale=fr viewport=tablet
+        // coverage: surface=dashboard locale=en viewport=phone
+        // coverage: surface=dashboard locale=en viewport=tablet
+        // coverage: surface=dashboard locale=ar viewport=phone
+        // coverage: surface=dashboard locale=ar viewport=tablet
+        // coverage: surface=dashboard-analysis locale=fr viewport=phone
+        // coverage: surface=dashboard-analysis locale=fr viewport=tablet
+        // coverage: surface=dashboard-analysis locale=en viewport=phone
+        // coverage: surface=dashboard-analysis locale=en viewport=tablet
+        // coverage: surface=dashboard-analysis locale=ar viewport=phone
+        // coverage: surface=dashboard-analysis locale=ar viewport=tablet
+        const cell = await sessions.open(t, state, locale, viewport);
+        await check(t, cell, state, locale, viewport);
+        if (state === 'error') {
+          t.step('retry the failed read and recover the empty list');
+          await click(cell.page, '[data-sfc="retry"]');
+          await visibleText(cell.page, '[data-sfc-state="empty"]', words[locale].empty);
+        }
+        if (state === 'editor') await calculator(t, cell.page);
+      });
+    }
+  }
 } finally {
   await h.close();
   await h.S.finish();

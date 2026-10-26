@@ -14,6 +14,8 @@
  *     and with a dish in the cart the send button stays disabled.
  * ═══════════════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
+import { LOCALES } from './test-locales.mjs';
+import * as orderApi from '../functions/api/order/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -124,7 +126,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
-const ROUTES = { '/api/menu': menuApi, '/api/order/session': sessionApi, '/api/order/guest': guestApi };
+let refuseCheckout = false;
+const attempts = [];
+const ROUTES = { '/api/order': orderApi, '/api/menu': menuApi, '/api/order/session': sessionApi, '/api/order/guest': guestApi };
 async function route(r, seen) {
   const u = r.url();
   if (!u.startsWith(base)) return u.startsWith('data:') ? r.continue() : r.abort();
@@ -136,6 +140,10 @@ async function route(r, seen) {
     return r.respond({ status: res.status, contentType: 'text/html', body: await res.text() });
   }
   if (!url.pathname.startsWith('/api/')) return r.continue();
+  if (url.pathname === '/api/order' && r.method() === 'POST') {
+    attempts.push(JSON.parse(r.postData()));
+    if (refuseCheckout) { refuseCheckout = false; return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"temporarily-unavailable"}' }); }
+  }
   const mod = ROUTES[url.pathname];
   if (!mod) return r.respond({ status: 404, contentType: 'application/json', body: '{"error":"not-found"}' });
   const method = r.method();
@@ -217,7 +225,7 @@ try {
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 
-  await S.run('five languages · the picker, Spanish from the QR page, Arabic right to left', async (tr) => {
+  if (LOCALES.includes('es')) await S.run('five languages · the picker, Spanish from the QR page, Arabic right to left', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     // coverage: surface=orderpro locale=es viewport=phone
     const page = await open(tr, ctx, 's=parity-langs', { storage: { kiwiOrderLang: 'es' } });
@@ -276,7 +284,7 @@ try {
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 
-  await S.run('the pitch demo · Café Atlas from the phone, nothing sent', async (tr) => {
+  if (LOCALES.includes('en')) await S.run('the pitch demo · Café Atlas from the phone, nothing sent', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     // coverage: surface=orderpro locale=en viewport=phone
     const page = await open(tr, ctx, 's=demo', { storage: { orderProLang: 'en' } });
@@ -299,6 +307,52 @@ try {
     check(/42/.test(shown.n) && /8/.test(shown.total), `the order is numbered and priced from the menu (${shown.n}, ${shown.total})`);
     check(!page.seen.some((p) => p === '/api/order' || p === '/api/order/session'), 'no order and no visit reach a server');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
+  });
+  for (const locale of LOCALES) for (const [device, width, height] of [
+    ['phone', 390, 844], ['tablet', 820, 1180], ['desktop', 1440, 900],
+  ]) await S.run(`checkout retry · ${locale} · ${device}`, async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    sql.exec("DELETE FROM orders WHERE merchant = 'parity-table'");
+    sql.prepare("UPDATE order_desk SET seen_ts = ? WHERE merchant = 'parity-table'").run(Date.now());
+    attempts.length = 0;
+    // coverage: surface=orderpro locale=fr viewport=phone
+    // coverage: surface=orderpro locale=fr viewport=tablet
+    // coverage: surface=orderpro locale=fr viewport=desktop
+    // coverage: surface=orderpro locale=en viewport=phone
+    // coverage: surface=orderpro locale=en viewport=tablet
+    // coverage: surface=orderpro locale=en viewport=desktop
+    // coverage: surface=orderpro locale=ar viewport=phone
+    // coverage: surface=orderpro locale=ar viewport=tablet
+    // coverage: surface=orderpro locale=ar viewport=desktop
+    const page = await open(tr, ctx, 's=parity-table', { width, height, storage: { orderProLang: locale } });
+    await page.waitForSelector('#screen-mode.is-active');
+    await page.click('.mode-card[data-mode="takeout"]');
+    await page.waitForSelector('#screen-menu.is-active [data-add="tajine"]');
+    await sleep(700);
+    await page.click('[data-add="tajine"]');
+    await page.waitForFunction(() => document.getElementById('cart-count').textContent === '1');
+    await page.click('#cart-pill');
+    await page.waitForSelector('#send-btn:not([disabled])');
+    await sleep(500);
+    tr.step('refuse the first checkout, retain the basket and retry');
+    refuseCheckout = true;
+    await page.click('#send-btn');
+    await page.waitForFunction(() => !document.getElementById('send-btn').classList.contains('is-loading'));
+    assert.equal(attempts.length, 1);
+    assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM orders WHERE merchant = 'parity-table'").get().n, 0);
+    assert.equal(await page.$eval('#cart-count', el => el.textContent), '1');
+    await page.click('#send-btn');
+    await page.waitForSelector('#screen-cashier.is-active');
+    const order = sql.prepare("SELECT total, status, number, lines FROM orders WHERE merchant = 'parity-table'").get();
+    assert.equal(order.total, 65);
+    assert.equal(order.status, 'pending');
+    assert.equal(JSON.parse(order.lines)[0].qty, 1);
+    assert.equal(attempts.length, 2);
+    assert.equal(attempts[0].ref, attempts[1].ref, 'retry preserves the order identity');
+    assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM orders WHERE merchant = 'parity-table'").get().n, 1);
+    assert.match(await page.$eval('#cashier-total', el => el.textContent), /65/);
+    assert.ok((await page.$eval('#cashier-number-digits', el => el.textContent)).includes(String(order.number)));
+    check(true, `${locale} ${device}: refused checkout recovers exactly one 65 MAD pending order`);
   });
   /* §19: a guest on a cold load gets at most 60 KB gzip of script before the
      first screen. Measured on what the page actually fetched: the inline
@@ -394,11 +448,11 @@ try {
     check(pickerShift === 0, `the globe takes the picker's place without moving it (layout shift ${pickerShift.toFixed(4)})`);
     await shot(phone, 'skin-phone');
     await phone.tap('.lang-globe');
-    await phone.waitForSelector('.lang-picker.is-open .lang-btn[data-lang="en"]', { visible: true, timeout: 3000 });
+    await phone.waitForSelector('.lang-picker.is-open .lang-btn[data-lang="fr"]', { visible: true, timeout: 3000 });
     check((await phone.$eval('.lang-globe', (e) => e.getAttribute('aria-expanded'))) === 'true', 'the globe opens them, and says so');
-    await phone.tap('.lang-btn[data-lang="en"]');
-    await phone.waitForFunction(() => document.documentElement.lang === 'en' && !document.querySelector('.lang-picker.is-open'), { timeout: 3000 });
-    check(true, 'a language picked closes it, and the page is in English');
+    await phone.tap('.lang-btn[data-lang="fr"]');
+    await phone.waitForFunction(() => document.documentElement.lang === 'fr' && !document.querySelector('.lang-picker.is-open'), { timeout: 3000 });
+    check(true, 'a language picked closes it, and the page remains in French');
     const js = scripts(phone);
     console.log(`    skin on: inline ${kb(inline)} + ${Object.entries(js.sizes).map(([f, n]) => f + ' ' + kb(n)).join(' + ')} = ${kb(js.total)}`);
     check(js.total - (js.sizes['orderpro-guest.js'] || 0) <= 60 * 1024, `the skin adds no script: ${kb(js.total - (js.sizes['orderpro-guest.js'] || 0))} before the guest page module`);

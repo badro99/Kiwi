@@ -227,7 +227,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
           <div style="display:flex; align-items:center; gap:10px;">
             <h3>${esc(t('ordTitle'))}</h3>
           </div>
-          <button data-activation=write class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
+          <button data-activation=write class="st-btn primary" type="button" data-action="${isRetailStock() ? 'stock-new-order' : 'supplier-new-po'}">${esc(t('ordNew'))}</button>
         </div>
         ${active.length ? `<div class="st-ord-list">${active.map((o) => `
           <div class="st-ord-card">

@@ -29,6 +29,7 @@
  *     history with recall and no served, and recall back;
  *   · no page error anywhere. */
 import assert from 'node:assert/strict';
+import { LOCALES } from './test-locales.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -103,6 +104,7 @@ const S = suite('kds-board', { browser });
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
+let disconnected = false, stationFixture = false, failedBumps = 0;
 async function route(r, kitFetched) {
   const u = r.url();
   if (!u.startsWith(base)) return u.startsWith('data:') ? r.continue() : r.abort();
@@ -112,6 +114,11 @@ async function route(r, kitFetched) {
   if (/^\/assets\/kit\//.test(url.pathname) && !/\/haptics\.js$/.test(url.pathname)) kitFetched.push(url.pathname);
   if (url.pathname === '/kiwi-sw.js') return r.respond({ status: 404, contentType: 'text/javascript', body: '' });
   if (!url.pathname.startsWith('/api/')) return r.continue();
+  if (stationFixture && url.pathname === '/api/menu') return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ name: 'TEST KIWI', menu: { stations: [{ id: 'bar', name: 'Bar' }, { id: 'cuisine', name: 'Cuisine' }] } }) });
+  if (disconnected && url.pathname === '/api/order/queue') {
+    if (r.method() === 'POST') failedBumps++;
+    return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+  }
   if (url.pathname !== '/api/order/queue') return r.respond({ status: 404, contentType: 'application/json', body: '{"error":"not-found"}' });
   const method = r.method();
   const body = method === 'POST' ? r.postData() : undefined;
@@ -128,7 +135,7 @@ async function route(r, kitFetched) {
   }
 }
 
-async function open(tr, ctx, { flag = true, lang = 'fr', width = 1920, height = 1080 } = {}) {
+async function open(tr, ctx, { flag = true, lang = 'fr', width = 1920, height = 1080, isPaired = true } = {}) {
   const page = tr.watch(await ctx.newPage());
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -137,12 +144,13 @@ async function open(tr, ctx, { flag = true, lang = 'fr', width = 1920, height = 
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);
   page.on('request', (r) => { route(r, kitFetched); });
-  await page.evaluateOnNewDocument((m, flag, lang) => {
+  await page.evaluateOnNewDocument((m, flag, lang, isPaired) => {
     localStorage.setItem('kiwiLiveMerchant', m);
-    localStorage.setItem('kiwiPaired', '1');
+    if (isPaired) localStorage.setItem('kiwiPaired', '1');
+    else localStorage.removeItem('kiwiPaired');
     localStorage.setItem('kiwiCuisineLang', lang);
     if (flag) localStorage.setItem('kiwiSkin2027:kds', '1');
-  }, MERCHANT, flag, lang);
+  }, MERCHANT, flag, lang, isPaired);
   // coverage: surface=kitchen locale=fr viewport=desktop
   // coverage: surface=kitchen locale=ar viewport=desktop
   await page.goto(base + '/kiwi-cuisine.html', { waitUntil: 'load' });
@@ -181,20 +189,119 @@ async function ticket(page, col, id) {
   }, COL[col], id);
 }
 async function tap(page, col, id, w) {
-  const h = await page.evaluateHandle((sid, id, w) => {
-    const l = document.querySelector('#' + sid + ' k-lane');
-    return l && l.shadowRoot.querySelector('[data-t="' + id + '"] [data-w="' + w + '"]');
-  }, COL[col], id, w);
-  const el = h.asElement();
-  assert.ok(el, `button ${w} on ${id} in ${col}`);
-  await el.click();
+  await page.locator(`#${COL[col]} k-lane >>> [data-t="${id}"] [data-w="${w}"]`).click();
 }
+
 async function until(fn, ms = 5000) {
   for (let i = 0; i < ms / 100; i++) { if (fn()) return true; await sleep(100); }
   return fn();
 }
 
+async function printRecovery(tr, locale, width, height) {
+  const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+  const page = tr.watch(await ctx.newPage());
+  await page.setViewport({ width, height });
+  await page.setBypassServiceWorker(true);
+  await page.setRequestInterception(true);
+  page.on('request', req => {
+    if (req.url().startsWith(base + '/api/')) return req.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+    return req.url().startsWith(base) || req.url().startsWith('data:') ? req.continue() : req.abort();
+  });
+  await page.evaluateOnNewDocument(lang => {
+    localStorage.setItem('kiwiLang', lang); localStorage.setItem('kiwiCaisseLang', lang);
+    localStorage.setItem('kiwiKitchenPrintQueueV1:unpaired', JSON.stringify([{
+      id: 'matrix-print', type: 'kitchen', station: 'cuisine', createdAt: Date.now(), remote: false,
+      payload: { order: '#TEST KIWI', items: [{ q: 2, n: 'TEST KIWI soupe' }] }, attempts: 0, nextAt: 0,
+    }]));
+    try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}) }); } catch (_) {}
+  }, locale);
+  await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.KiwiKitchenPrint);
+  await page.waitForSelector('.ci-float-chip[data-float="300"]', { visible: true });
+  await page.locator('.ci-float-chip[data-float="300"]').click();
+  await page.waitForFunction(() => !document.getElementById('clockin-btn').disabled);
+  await page.locator('#clockin-btn').click();
+  await page.waitForFunction(() => document.body.classList.contains('is-unlocked'));
+  tr.step('a persisted print job fails with paper-out, remains pending, then automatically recovers');
+  await page.evaluate(() => {
+    window.__matrixPrints = []; window.__matrixPaperReady = false; window.__matrixPrintSuccesses = 0;
+    // Only the physical driver is synthetic; the shipped queue owns retries.
+    window.KiwiPrinter.isConnected = () => true;
+    window.KiwiPrinter.printKitchen = async payload => {
+      window.__matrixPrints.push(payload);
+      if (window.__matrixPaperReady) { window.__matrixPrintSuccesses++; return { ok: true }; }
+      return { ok: false, reason: 'paper-out' };
+    };
+    dispatchEvent(new Event('kiwi:printer-config'));
+  });
+  await page.waitForFunction(() => window.__matrixPrints.length >= 1 && !KiwiKitchenPrint.status().running);
+  assert.equal(await page.evaluate(() => KiwiKitchenPrint.status().pending), 1);
+  assert.equal(await page.$eval('#kitchen-print-count', el => el.textContent), '1');
+  // The printer entry lives in the folded side navigation on compact tills.
+  await page.evaluate(() => document.getElementById('open-kitchen-print').click());
+  await page.waitForSelector('#kpr-hub-status', { visible: true });
+  assert.match(await page.$eval('#kpr-hub-status', el => el.textContent), /1 ticket.*en attente/);
+  await page.evaluate(() => { window.__matrixPaperReady = true; });
+  await page.waitForFunction(() => window.__matrixPrintSuccesses === 1 && KiwiKitchenPrint.status().pending === 0, { timeout: 15000 });
+  assert.ok(await page.evaluate(() => window.__matrixPrints.length >= 2 && window.__matrixPrints.every(p => p.items[0].q === 2)));
+  await page.locator('#kpr-close').click();
+  await page.evaluate(() => document.getElementById('open-kitchen-print').click());
+  await page.waitForSelector('#kpr-hub-status', { visible: true });
+  assert.ok(!/ticket.*en attente/.test(await page.$eval('#kpr-hub-status', el => el.textContent)), 'reopened diagnostics confirm no pending print');
+  assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('kiwiKitchenPrintDoneV1:unpaired') || '[]').filter(job => job.id === 'matrix-print').length === 1), 'successful job is recorded once');
+}
+
 try {
+  for (const locale of LOCALES) for (const [device, width, height] of [
+    ['phone', 390, 844], ['tablet', 820, 1180], ['desktop', 1440, 900],
+  ]) await S.run(`station disconnect recovery · ${locale} · ${device}`, async (tr) => {
+    clearOrders(); disconnected = false; stationFixture = true; failedBumps = 0;
+    const id = 'ord-station-recovery';
+    addOrder({ id, table: '5', ageMs: 60000, lines: [line('TEST KIWI soupe', { station: 'cuisine' }), line('TEST KIWI thé', { station: 'bar' })] });
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=kitchen-entry locale=fr viewport=phone
+    // coverage: surface=kitchen-entry locale=fr viewport=tablet
+    // coverage: surface=kitchen-entry locale=fr viewport=desktop
+    // coverage: surface=kitchen-entry locale=en viewport=phone
+    // coverage: surface=kitchen-entry locale=en viewport=tablet
+    // coverage: surface=kitchen-entry locale=en viewport=desktop
+    // coverage: surface=kitchen-entry locale=ar viewport=phone
+    // coverage: surface=kitchen-entry locale=ar viewport=tablet
+    // coverage: surface=kitchen-entry locale=ar viewport=desktop
+    const entry = await open(tr, ctx, { lang: locale, width, height, isPaired: false });
+    await entry.waitForSelector('#pair.on', { visible: true });
+    assert.equal(await entry.$eval('#screen', el => el.hidden), true, 'unpaired device cannot read kitchen orders');
+    assert.equal(await entry.evaluate(() => document.documentElement.lang), locale);
+    await entry.close();
+    // coverage: surface=kitchen locale=fr viewport=phone
+    // coverage: surface=kitchen locale=fr viewport=tablet
+    // coverage: surface=kitchen locale=fr viewport=desktop
+    // coverage: surface=kitchen locale=en viewport=phone
+    // coverage: surface=kitchen locale=en viewport=tablet
+    // coverage: surface=kitchen locale=en viewport=desktop
+    // coverage: surface=kitchen locale=ar viewport=phone
+    // coverage: surface=kitchen locale=ar viewport=tablet
+    // coverage: surface=kitchen locale=ar viewport=desktop
+    const page = await open(tr, ctx, { lang: locale, width, height });
+    await waitIn(page, 'new', id);
+    await page.waitForSelector('[data-st="bar"]');
+    await page.click('[data-st="bar"]');
+    assert.deepEqual((await ticket(page, 'new', id)).off, ['TEST KIWI soupe']);
+    tr.step('disconnect while starting the selected station; recover the pending bump');
+    disconnected = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await tap(page, 'new', id, 'start');
+    assert.ok(await until(() => failedBumps > 0), 'the station write actually failed');
+    assert.ok(!JSON.parse(row(id).lines).some(l => l.stationAccepted), 'offline must not acknowledge a server write');
+    disconnected = false;
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await page.waitForFunction(() => !document.querySelector('.link.down'), { timeout: 20000 });
+    assert.ok(await until(() => JSON.parse(row(id).lines).find(l => l.station === 'bar').stationAccepted === true), 'reconnection applies pending bar start');
+    assert.ok(!JSON.parse(row(id).lines).find(l => l.station === 'cuisine').stationAccepted, 'other station remains untouched');
+    await printRecovery(tr, locale, width, height);
+    check(true, `${locale} ${device}: station selection, disconnect and print recovery`);
+  });
+  stationFixture = false;
   await S.run('flag off · the shipped cards, no kit file fetched', async (tr) => {
     clearOrders();
     addOrder({ id: 'ord-board-off', table: '3', ageMs: 2 * 60000, lines: [line('Harira')] });
@@ -370,7 +477,7 @@ try {
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 
-  await S.run('flag on · Arabic', async (tr) => {
+  if (LOCALES.includes('ar')) await S.run('flag on · Arabic', async (tr) => {
     clearOrders();
     addOrder({ id: 'ord-board-ar', table: '5', ageMs: 2 * 60000, lines: [line('Harira')] });
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());

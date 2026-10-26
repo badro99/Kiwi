@@ -25,7 +25,7 @@
     'assets/month-report.js?v=16',
     'assets/day-report-export.js?v=13',
     'assets/day-report-dash.js?v=36',
-    'assets/stock.js?v=83',
+    'assets/stock.js?v=84',
     'assets/catalog-workspace.js?v=5',
     'assets/planning-core.js?v=8',
     'assets/team.js?v=318',
