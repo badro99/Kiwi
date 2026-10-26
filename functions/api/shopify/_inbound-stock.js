@@ -1,13 +1,7 @@
 // Inbound stock retries are separate from the outbound Shopify stock outbox.
 // No customer/address data is necessary to replay an inventory movement.
 async function ensure(db) {
-  await db.prepare(`CREATE TABLE IF NOT EXISTS shopify_inbound_stock (
-    merchant TEXT NOT NULL, order_ref TEXT NOT NULL, payload TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
-    next_ts INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
-    created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, order_ref)
-  )`).run();
+  // Schema owned by migrations 0001–0010.
 }
 
 export async function enqueueInboundStock(env, merchant, order) {

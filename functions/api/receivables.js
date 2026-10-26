@@ -41,12 +41,7 @@ const OPEN_LIMIT = 500;
 const ID_RE = /^[A-Za-z0-9_:.-]{6,128}$/;
 
 export async function ensureCollectionSchema(db) {
-  await db.prepare(`CREATE TABLE IF NOT EXISTS delivery_collections (
-    merchant TEXT NOT NULL, collection_sale_id TEXT NOT NULL, sale_id TEXT NOT NULL,
-    method TEXT NOT NULL, amount_cents INTEGER NOT NULL, ts INTEGER NOT NULL,
-    collected_by_id TEXT, collected_by_name TEXT,
-    PRIMARY KEY (merchant, collection_sale_id))`).bind().run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS delivery_collections_sale ON delivery_collections (merchant, sale_id)').bind().run();
+  // Schema owned by migrations 0001–0010.
 }
 
 /* Ce que la vente devait en livraison : ses parts « delivery » quand le ticket

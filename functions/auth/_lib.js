@@ -332,13 +332,10 @@ export async function tillDeviceToken(authSecret, merchant, epoch, deviceId) {
   const sig = await hmacHex(authSecret, 'kiwi-till-v3:' + String(merchant || '') + ':' + n + ':' + d);
   return n + '.' + d + '.' + sig;
 }
-const TILL_DEVICES_DDL = `CREATE TABLE IF NOT EXISTS till_devices (
-  merchant TEXT NOT NULL, device_id TEXT NOT NULL, label TEXT,
-  paired_ts INTEGER, last_seen_ts INTEGER, revoked_ts INTEGER,
-  PRIMARY KEY (merchant, device_id))`;
+
 export async function ensureTillDevices(env) {
   if (!env || !env.DB) return false;
-  try { await env.DB.prepare(TILL_DEVICES_DDL).run(); return true; } catch (_) { return false; }
+  return true;
 }
 /* L'appairage (ou sa réparation) inscrit l'appareil et lève une ancienne
  * révocation : le propriétaire a volontairement donné un nouveau code. */

@@ -82,11 +82,6 @@ async function hasWrittenBy(env) {
 }
 async function recordSaleConflict(env, merchant, id, amountCents, method) {
   try {
-    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS sale_sync_conflicts (
-      merchant TEXT NOT NULL, sale_id TEXT NOT NULL, amount_cents INTEGER NOT NULL,
-      method TEXT NOT NULL, first_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
-      PRIMARY KEY (merchant, sale_id)
-    )`).run();
     const at = Date.now();
     await env.DB.prepare(`INSERT INTO sale_sync_conflicts
       (merchant,sale_id,amount_cents,method,first_ts,updated_ts) VALUES(?,?,?,?,?,?)
@@ -95,12 +90,6 @@ async function recordSaleConflict(env, merchant, id, amountCents, method) {
   } catch (_) { /* The rejected receipt remains in the device outbox. */ }
 }
 async function claimRestaurantBill(env, merchant, sessionId, number, day, id) {
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS sale_settlement_keys (
-    merchant TEXT NOT NULL, session_id TEXT NOT NULL, order_number TEXT NOT NULL,
-    business_day TEXT NOT NULL,
-    sale_id TEXT NOT NULL, created_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, session_id, order_number, business_day)
-  )`).run();
   await env.DB.prepare(`INSERT OR IGNORE INTO sale_settlement_keys
     (merchant,session_id,order_number,business_day,sale_id,created_ts) VALUES(?,?,?,?,?,?)`)
     .bind(merchant, sessionId, number, day, id, Date.now()).run();
@@ -117,11 +106,7 @@ const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
 const DISCOUNT_REASONS = new Set(['commercial', 'loyal-customer', 'kitchen-error', 'other']);
 
 async function ensureReceiptSchema(env) {
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS sale_receipts (
-    merchant TEXT NOT NULL, sale_id TEXT NOT NULL,
-    gross_ticket_cents INTEGER NOT NULL, consigned_cents INTEGER NOT NULL DEFAULT 0,
-    created_ts INTEGER NOT NULL, PRIMARY KEY (merchant, sale_id)
-  )`).run();
+  // Schema owned by migrations 0001–0010.
 }
 
 function json(obj, status) {

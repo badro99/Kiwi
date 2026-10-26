@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { missingMigratedTables, migrated } from './fixtures/migrated-tables.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +15,7 @@ import { onRequestPost as action } from '../functions/api/agent/action.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const sql=new DatabaseSync(':memory:');
-sql.exec(fs.readFileSync(path.join(root,'schema.sql'),'utf8'));
+migrated(sql);
 const now=Date.now(), secret='agent-test-secret-012345678901234567890', aid='acc-agent-owner', other='acc-other-owner';
 sql.prepare('INSERT INTO accounts (id,email,salt,hash,created_ts) VALUES (?,?,?,?,?)').run(aid,'owner@agent.test','s','h',now);
 sql.prepare('INSERT INTO accounts (id,email,salt,hash,created_ts) VALUES (?,?,?,?,?)').run(other,'other@agent.test','s','h',now);
@@ -263,7 +264,8 @@ check(fs.readFileSync(path.join(root,'functions/_middleware.js'),'utf8').include
 sql.exec('DROP TABLE agent_audit; DROP TABLE agent_keys');
 check((await runQuery({tool:'merchant_overview'},token)).status===403,'missing key table fails closed');
 sql.prepare('UPDATE merchant_config SET account_id=? WHERE merchant=?').run(aid,'agent-shop');
+missingMigratedTables(sql);
 const healed=await ownerKey({action:'create',merchant:'agent-shop',label:'Newly migrated',
   scopes:['overview:read'],expiresInDays:1});
-check(healed.status===201,'owner provisioning self-heals missing tables');
+check(healed.status===201,'owner provisioning works after migration tables are restored');
 console.log('kiwi-agent-access-test: '+n+' controls green');
