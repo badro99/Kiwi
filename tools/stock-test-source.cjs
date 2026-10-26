@@ -26,6 +26,14 @@ function functions(base = root) {
 }
 function stockSource(base = root) {
   let core = fs.readFileSync(path.join(base, 'assets/stock.js'), 'utf8');
+  /* Second stage: the FR/EN/AR string pack lives in assets/stock/strings.js. */
+  const stage2 = require('./fixtures/stock-strings/split.json');
+  for (const seg of stage2.segments) {
+    const part = fs.readFileSync(path.join(base, seg.file), 'utf8');
+    const a = '  /* stock-part:' + seg.name + ' */\n', b = '  /* /stock-part:' + seg.name + ' */';
+    if (!core.includes(seg.relay)) throw new Error('Relais stock absent : ' + seg.name);
+    core = core.replace(seg.relay, () => part.slice(part.indexOf(a) + a.length, part.indexOf(b)));
+  }
   /* The loader block names each part with its ?v= stamp; a stamp bump must not
      break the reconstruction, so match the block with any stamp numbers. */
   const loose = (text) => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\?v=\d+/g, '\\?v=\\d+'));

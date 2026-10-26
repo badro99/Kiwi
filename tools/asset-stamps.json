@@ -1180,8 +1180,8 @@
     "sha": "5032ef2889120144"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "5",
-    "sha": "d1fa7e11079cd2aa"
+    "v": "6",
+    "sha": "3aa0c9045ae661b8"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1604,8 +1604,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "84",
-    "sha": "bfba89fa4363825d"
+    "v": "85",
+    "sha": "45231d56a47b23c4"
   },
   "assets/stock/catalog.js": {
     "v": "1",
@@ -1626,6 +1626,10 @@
   "assets/stock/purchasing.js": {
     "v": "2",
     "sha": "84576ba18ce670d9"
+  },
+  "assets/stock/strings.js": {
+    "v": "2",
+    "sha": "c0ba64b86990de43"
   },
   "assets/store-templates.js": {
     "v": "4",

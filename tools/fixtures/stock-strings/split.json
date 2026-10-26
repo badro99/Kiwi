@@ -1,0 +1,13 @@
+{
+  "sha256": "bfba89fa4363825df00440413d4a157fc2a9a8dc8104e86e5db043594e693ee5",
+  "segments": [
+    {
+      "name": "strings",
+      "file": "assets/stock/strings.js",
+      "start": 1525,
+      "end": 69041,
+      "sha256": "5f1660d26a59f0978fb87dffed2caad093a024e112da2e024ab6dfc75d832835",
+      "relay": "  /* stock-part:strings */\n  const STR = window.KiwiStockStrings;\n  /* /stock-part:strings */\n"
+    }
+  ]
+}

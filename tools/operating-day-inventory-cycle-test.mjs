@@ -96,6 +96,7 @@ vm.createContext(context);
 for (const file of [
   'assets/restaurant-units.js',
   'assets/inventory-ledger.js',
+  'assets/stock/strings.js',
   'assets/stock.js',
   'assets/caisse-stock-sync.js',
   'assets/restaurant-recipes.js',
