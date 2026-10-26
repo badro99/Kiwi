@@ -1,0 +1,68 @@
+{
+  "sha256": "f8d99035b1420f091f25801a3b2fce5b1679b509bb463d3a3bc4833d523e6a2c",
+  "prefix": "import { ensureInvoicingSchema } from './_invoice-series.js';\nimport { fail, failResponse, str, parseJson, validDay, DOC_TYPES, MAX_LIST, MAX_BODY, DAY_RE } from './invoices/_shared.js';\nimport { getRow, todayFor, presentFull, displayStatus, balanceOf } from './invoices/_documents.js';\nimport { save, issue, markSent } from './invoices/_lifecycle.js';\nimport { payment, deletePayment } from './invoices/_payments.js';\nimport { creditNote, quoteStatus, convertQuote, duplicate, deleteDraft } from './invoices/_adjustments.js';\nimport { importLegacy } from './invoices/_legacy.js';\nexport { VAT_RATES, PAYMENT_METHODS, DOC_TYPES } from './invoices/_shared.js';\nexport { computeTotals } from './invoices/_tax.js';\n",
+  "removed": [
+    "import { DateTimeFormat } from './_zone-law.js';\n",
+    "import { merchantZone } from './_business-day.js';\n",
+    "import { iceCompact, iceProblem, ICE_DETAIL } from './_ice.js';\n",
+    "import { PREFIXES, allocateNumber, ensureInvoicingSchema } from './_invoice-series.js';\n"
+  ],
+  "segments": [
+    {
+      "file": "functions/api/invoices/_shared.js",
+      "start": 1788,
+      "end": 4457,
+      "header": "import { DateTimeFormat } from '../_zone-law.js';\nimport { json } from '../../auth/_lib.js';\n// Contrat interne : aucune donnée de requête ; constantes, erreurs et utilitaires purs exportés. Les erreurs restent de la même classe pour la route et les actions.\n\n",
+      "footer": "\nexport { MAX_LINES, MAX_LIST, MAX_IMPORT, MAX_BODY, MAX_DOC_CENTS, MAX_UNIT_CENTS, MAX_QTY, QUOTE_VALID_DAYS, CHUNK, DAY_RE, Fail, fail, failResponse, str, parseJson, validDay, addDays, todayIn, newId, changesOf };\n",
+      "marker": "/* Extraction privée : shared */\n\n"
+    },
+    {
+      "file": "functions/api/invoices/_tax.js",
+      "start": 4457,
+      "end": 8361,
+      "header": "import { iceCompact } from '../_ice.js';\nimport { fail, str, validDay, VAT_RATES, PAYMENT_METHODS, MAX_LINES, MAX_QTY, MAX_UNIT_CENTS, MAX_DOC_CENTS } from './_shared.js';\n// Contrat interne : lit uniquement les valeurs à normaliser ; retourne les champs bornés et totaux en centimes, ou lève Fail. Aucun accès DB ni authentification.\n\n",
+      "footer": "\nexport { normCustomer, normLines, normDay, normTerms, normMethod };\n",
+      "marker": "/* Extraction privée : tax */\n\n"
+    },
+    {
+      "file": "functions/api/invoices/_documents.js",
+      "start": 9308,
+      "end": 18295,
+      "header": "import { merchantZone } from '../_business-day.js';\nimport { iceCompact, iceProblem } from '../_ice.js';\nimport { fail, str, parseJson, todayIn, newId } from './_shared.js';\n// Contrat interne : reçoit ctx authentifié { env, db, merchant, actor, today? } ; retourne lignes, projections ou statements D1. todayFor mémorise le jour dans ctx ; aucun accès à la requête HTTP.\n\n",
+      "footer": "\nexport { todayFor, getRow, sumsFor, balanceOf, displayStatus, presentFull, insertStatement, draftRow, CREDITED_SQL, remainingCredit, loadIssuedInvoice, sellerSnapshot };\n",
+      "marker": "/* Extraction privée : documents */\n\n"
+    },
+    {
+      "file": "functions/api/invoices/_lifecycle.js",
+      "start": 26239,
+      "end": 38934,
+      "header": "import { json } from '../../auth/_lib.js';\nimport { iceProblem, ICE_DETAIL } from '../_ice.js';\nimport { PREFIXES, allocateNumber } from '../_invoice-series.js';\nimport { fail, str, parseJson, validDay, addDays, changesOf, DOC_TYPES, QUOTE_VALID_DAYS } from './_shared.js';\nimport { computeTotals, normCustomer, normLines, normDay, normTerms, normMethod } from './_tax.js';\nimport { todayFor, getRow, sumsFor, balanceOf, displayStatus, presentFull, insertStatement, draftRow, CREDITED_SQL, remainingCredit, loadIssuedInvoice, sellerSnapshot } from './_documents.js';\n// Contrat interne : reçoit ctx authentifié et body déjà parsé ; valide et écrit les brouillons et émissions, retourne la Response existante ou lève Fail. Ne lit pas la requête et ne décide pas des droits.\n\n",
+      "footer": "\nexport { save, issue, markSent };\n",
+      "marker": "/* Extraction privée : lifecycle */\n\n"
+    },
+    {
+      "file": "functions/api/invoices/_payments.js",
+      "start": 38934,
+      "end": 42781,
+      "header": "import { json } from '../../auth/_lib.js';\nimport { fail, str, newId, changesOf, addDays, MAX_DOC_CENTS, PAYMENT_METHODS } from './_shared.js';\nimport { normDay } from './_tax.js';\nimport { getRow, todayFor, sumsFor, balanceOf, CREDITED_SQL, presentFull } from './_documents.js';\n// Contrat interne : reçoit ctx authentifié et body parsé ; retourne la Response des règlements avec les mêmes gardes SQL et bornes, ou lève Fail.\n\n",
+      "footer": "\nexport { payment, deletePayment };\n",
+      "marker": "/* Extraction privée : payments */\n\n"
+    },
+    {
+      "file": "functions/api/invoices/_adjustments.js",
+      "start": 42781,
+      "end": 48417,
+      "header": "import { json } from '../../auth/_lib.js';\nimport { fail, str, parseJson, addDays, changesOf, QUOTE_VALID_DAYS } from './_shared.js';\nimport { normLines, computeTotals } from './_tax.js';\nimport { todayFor, getRow, sumsFor, balanceOf, displayStatus, presentFull, insertStatement, draftRow, CREDITED_SQL, remainingCredit, loadIssuedInvoice, sellerSnapshot } from './_documents.js';\n// Contrat interne : reçoit ctx authentifié et body parsé ; retourne les Responses des avoirs, devis, duplications et suppressions, ou lève Fail. Transactions et ordre des écritures conservés.\n\n",
+      "footer": "\nexport { creditNote, quoteStatus, convertQuote, duplicate, deleteDraft };\n",
+      "marker": "/* Extraction privée : adjustments */\n\n"
+    },
+    {
+      "file": "functions/api/invoices/_legacy.js",
+      "start": 48417,
+      "end": 52571,
+      "header": "import { json } from '../../auth/_lib.js';\nimport { fail, str, validDay, addDays, changesOf, VAT_RATES, MAX_LINES, MAX_UNIT_CENTS, MAX_QTY, MAX_IMPORT, CHUNK } from './_shared.js';\nimport { computeTotals } from './_tax.js';\nimport { todayFor, draftRow, insertStatement } from './_documents.js';\n// Contrat interne : reçoit ctx authentifié et body parsé ; normalise les documents historiques et retourne la Response du bilan importé/ignoré. Aucun changement de numérotation ni de transaction.\n\n",
+      "footer": "\nexport { importLegacy };\n",
+      "marker": "/* Extraction privée : legacy */\n\n"
+    }
+  ]
+}
