@@ -309,6 +309,7 @@
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   transition: opacity .16s ease;
+  pointer-events: none;
 }
 
 html[data-theme="dark"] .kiwi-select-popover,
@@ -326,6 +327,7 @@ body.design-vexel .kiwi-select-popover {
 
   .kiwi-select-backdrop.is-open {
     opacity: 1;
+    pointer-events: auto;
   }
 
   .kiwi-select-popover {

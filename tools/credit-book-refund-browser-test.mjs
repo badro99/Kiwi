@@ -132,10 +132,10 @@ await S.run('avance plafonnée, remboursement distinct et actualisation',async(t
  check(await page.$eval('[data-refund-available]',el=>/12[,.]50/.test(el.textContent)),'le reste remboursable vient du journal actualisé');
  check(await page.$eval('.tw-till',el=>el.textContent.includes('Remboursements enregistrés')&&/7[,.]50/.test(el.textContent)),'le remboursement a sa propre entrée affichée');
 });
-// coverage: surface=credit-book locale=fr viewport=phone
-// coverage: surface=credit-book locale=fr viewport=tablet
 for (const width of [390, 820]) await S.run(`FR · ${width} px · avance, refus serveur et reprise`, async t => {
  book=JSON.parse(JSON.stringify(CARNET));writes=0;
+ // coverage: surface=credit-book locale=fr viewport=phone
+ // coverage: surface=credit-book locale=fr viewport=tablet
  const page=await open(t,{width,lang:'fr'});
  const click=async selector=>{await page.waitForSelector(selector,{visible:true});await page.click(selector);};
  const amount=async value=>{await page.click('#tw-refund-amount',{clickCount:3});await page.keyboard.type(value);};

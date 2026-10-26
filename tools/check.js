@@ -562,6 +562,14 @@ for (const test of [
  * annulation externe, devis mixte) contre les vrais handlers et une vraie
  * base. Sans Chromium ni puppeteer-core la suite se déclare SKIPPÉE (vert
  * explicite) plutôt que de mentir. */
+section('Hôtel · parcours réception multi-écran');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'hotel-journey-browser-test.mjs')], { encoding: 'utf8', timeout: 180000 });
+  if (r.status !== 0) fail('hotel-journey-browser-test.mjs: ' + r.stdout + r.stderr);
+  else ok('Parcours hôtel FR');
+}
+
 section('Groupe hôtel · workflow navigateur (tools/hotel-stays-group-browser-test.mjs)');
 {
   const { spawnSync } = require('child_process');
