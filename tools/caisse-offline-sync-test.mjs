@@ -157,7 +157,8 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
     !/function moneyRequest[\s\S]*?keepalive:\s*true[\s\S]*?function flushLegacyQueue/.test(liveSrc));
   ok('live-link queueStatus exposes lastStatus and lastError',
     liveSrc.includes('lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0') &&
-    liveSrc.includes("lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || '')"));
+    liveSrc.includes("queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || '')") &&
+    liveSrc.includes("lastError: (queueRecoveryError || quarantined()) ? 'queue-recovery-required'"));
   ok('live-link keeps the server error code instead of flattening every 403',
     liveSrc.includes("error: String((data && data.error) || ('HTTP ' + response.status)).slice(0, 96)"));
   ok('live-link flushQueue returns promise chain',

@@ -66,8 +66,10 @@ async function publicBooking(t, locale, viewport) {
   await tap(page, '[data-service]');
   await page.waitForSelector('[data-slot]', wait);
   await state(t, page, '.bk-date-row', locale, 'booking: available calendar/date state');
-  assert.equal(await page.$$eval('[data-date]', es => es.length), 14);
-  t.notice('UNREACHABLE booking month view: public booking implements a 14-day date strip, no month-view control.');
+  /* Today through the booking window inclusive (server default 60 days when
+     the config does not say), so the last bookable day is offered too. */
+  assert.equal(await page.$$eval('[data-date]', es => es.length), 61);
+  t.notice('UNREACHABLE booking month view: public booking implements a date strip over the whole booking window, no month-view control.');
   await tap(page, '[data-slot]');
   await state(t, page, '[data-form]', locale, 'booking: chosen slot and deposit before confirmation');
   assert.equal(await page.$eval('[data-deposit] span', e => e.textContent), copy[locale].deposit);

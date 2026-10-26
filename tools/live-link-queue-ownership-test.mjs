@@ -85,5 +85,5 @@ for (const shell of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 
   const html = fs.readFileSync(path.join(ROOT, shell), 'utf8');
   assert(html.indexOf(OWNER) >= 0 && html.indexOf(OWNER) < html.indexOf('assets/live-link.js'), shell);
 }
-assert(fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8').includes("'/" + OWNER + "?v=1'"));
+assert(new RegExp("'/" + OWNER.replace(/[.\/]/g, '\\$&') + "\\?v=\\d+'").test(fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8')), 'queue owner is precached under its stamp');
 console.log('✓ propriétaire exclusif, fabrique inerte, API, shells et précache ; six mutations rouges puis vertes');

@@ -2,6 +2,7 @@
   "version": 1,
   "required": [
     {"surface": "dashboard-hotel", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Réception hôtel, installation, folio et départ persistants."},
+    {"surface": "dashboard-team-editor", "locale": "fr", "viewports": ["desktop"], "reason": "Fiche d'un membre de l'équipe au clavier seul, erreurs et retour du focus."},
     {"surface": "dashboard", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-conformite", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-count-review", "locale": "fr", "viewports": ["desktop", "tablet"], "reason": "Revue propriétaire des comptages de stock : quantités gelées, approbation et refus."},

@@ -1744,6 +1744,19 @@
       "state": "Promotions create, scope, schedule, preview and zero-discount validation"
     },
     {
+      "id": "dashboard-team-editor",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop"
+      ],
+      "state": "Team member editor by keyboard only: open, focus trap, successive field errors as accessible descriptions, post picker, save returns focus, Escape"
+    },
+    {
       "id": "dashboard-product-editor",
       "shells": [
         "dashboard.html"

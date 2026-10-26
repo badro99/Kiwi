@@ -75,7 +75,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=32',
+  '/assets/booking.js?v=33',
   '/assets/booking.css?v=15',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=2',
