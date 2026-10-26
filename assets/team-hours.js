@@ -162,6 +162,7 @@
         </div>
         ${periodNavigatorHtml(T, period)}
 
+        <p class="kt-plan-hint">${esc(T.precisionHint)}</p>
         <div class="kt-h-tablewrap" tabindex="0" role="region" aria-label="${esc(T.tabHours)}">
           <table class="kt-h-table">
             <thead>

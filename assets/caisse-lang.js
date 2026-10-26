@@ -48,6 +48,10 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      "Accès hors ligne sur cet appareil": "Offline access on this device",
+      "Aucun employé vérifié": "No verified staff",
+      "Validité maximale : 7 jours. Les autres employés doivent se connecter.": "Valid for up to 7 days. Other staff need a connection.",
+
       // Explicit merchant-facing till messages.
       "Article non vendable individuellement": "Item cannot be sold individually",
       "Cette formule n’est plus disponible sur la carte": "This set menu is no longer available",
@@ -692,6 +696,10 @@
     },
 
     ar: {
+      "Accès hors ligne sur cet appareil": "الدخول دون اتصال على هذا الجهاز",
+      "Aucun employé vérifié": "لا يوجد موظفون تم التحقق منهم",
+      "Validité maximale : 7 jours. Les autres employés doivent se connecter.": "صالحة لمدة 7 أيام كحد أقصى. يحتاج الموظفون الآخرون إلى الاتصال.",
+
       // Explicit merchant-facing till messages.
       "Article non vendable individuellement": "لا يمكن بيع الصنف منفردًا",
       "Cette formule n’est plus disponible sur la carte": "هذه الوجبة المركبة لم تعد متاحة في القائمة",

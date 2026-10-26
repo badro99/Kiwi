@@ -1,0 +1,263 @@
+{
+  "version": "2026-07",
+  "reviewed": "2026-10-26",
+  "reviewBy": "2027-01-01",
+  "provenance": "Documentation-shaped, anonymised examples, not captured live merchant responses.",
+  "sources": [
+    "https://shopify.dev/docs/api/admin-graphql/2026-07/mutations/inventorySetQuantities",
+    "https://shopify.dev/docs/api/admin-graphql/2026-07"
+  ],
+  "cases": [
+    {
+      "id": "accepted-adjustment",
+      "status": 200,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "data": {
+          "inventorySetQuantities": {
+            "inventoryAdjustmentGroup": {
+              "changes": [
+                {
+                  "name": "available",
+                  "delta": -1,
+                  "quantityAfterChange": 10
+                }
+              ]
+            },
+            "userErrors": []
+          }
+        },
+        "extensions": {
+          "cost": {
+            "requestedQueryCost": 10,
+            "actualQueryCost": 10,
+            "throttleStatus": {
+              "maximumAvailable": 1000,
+              "currentlyAvailable": 990,
+              "restoreRate": 50
+            }
+          }
+        }
+      },
+      "processed": 1,
+      "failed": 0,
+      "queue": "deleted",
+      "link": "active"
+    },
+    {
+      "id": "compare-and-swap-conflict",
+      "status": 200,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "data": {
+          "inventorySetQuantities": {
+            "inventoryAdjustmentGroup": null,
+            "userErrors": [
+              {
+                "code": "CHANGE_FROM_QUANTITY_STALE",
+                "field": [
+                  "input",
+                  "quantities",
+                  "0",
+                  "changeFromQuantity"
+                ],
+                "message": "The change from quantity is stale."
+              }
+            ]
+          }
+        },
+        "extensions": {
+          "cost": {
+            "requestedQueryCost": 10,
+            "actualQueryCost": 10,
+            "throttleStatus": {
+              "maximumAvailable": 1000,
+              "currentlyAvailable": 990,
+              "restoreRate": 50
+            }
+          }
+        }
+      },
+      "processed": 0,
+      "failed": 1,
+      "queue": "drift",
+      "link": "drift"
+    },
+    {
+      "id": "inventory-item-missing",
+      "status": 200,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "data": {
+          "inventorySetQuantities": {
+            "inventoryAdjustmentGroup": null,
+            "userErrors": [
+              {
+                "code": "INVALID_INVENTORY_ITEM",
+                "field": [
+                  "input",
+                  "quantities",
+                  "0",
+                  "inventoryItemId"
+                ],
+                "message": "The inventory item could not be found."
+              }
+            ]
+          }
+        },
+        "extensions": {
+          "cost": {
+            "requestedQueryCost": 10,
+            "actualQueryCost": 10,
+            "throttleStatus": {
+              "maximumAvailable": 1000,
+              "currentlyAvailable": 990,
+              "restoreRate": 50
+            }
+          }
+        }
+      },
+      "processed": 0,
+      "failed": 1,
+      "queue": "cancelled",
+      "link": "missing"
+    },
+    {
+      "id": "scope-denied-partial-data",
+      "status": 200,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "data": {
+          "inventorySetQuantities": null
+        },
+        "errors": [
+          {
+            "message": "Access denied for inventorySetQuantities field. Required access: write_inventory access scope.",
+            "locations": [
+              {
+                "line": 2,
+                "column": 7
+              }
+            ],
+            "path": [
+              "inventorySetQuantities"
+            ],
+            "extensions": {
+              "code": "ACCESS_DENIED",
+              "documentation": "https://shopify.dev/api/usage/access-scopes",
+              "requiredAccess": "write_inventory"
+            }
+          }
+        ]
+      },
+      "processed": 0,
+      "failed": 1,
+      "queue": "failed",
+      "link": "active"
+    },
+    {
+      "id": "graphql-throttled-http-200",
+      "status": 200,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "errors": [
+          {
+            "message": "Throttled",
+            "extensions": {
+              "code": "THROTTLED"
+            }
+          }
+        ],
+        "extensions": {
+          "cost": {
+            "requestedQueryCost": 10,
+            "actualQueryCost": null,
+            "throttleStatus": {
+              "maximumAvailable": 1000,
+              "currentlyAvailable": 0,
+              "restoreRate": 50
+            }
+          }
+        }
+      },
+      "processed": 0,
+      "failed": 1,
+      "queue": "failed",
+      "link": "active"
+    },
+    {
+      "id": "http-429",
+      "status": 429,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "errors": "Too Many Requests"
+      },
+      "processed": 0,
+      "failed": 1,
+      "queue": "failed",
+      "link": "active"
+    },
+    {
+      "id": "schema-variable-error",
+      "status": 200,
+      "headers": {
+        "X-Shopify-API-Version": "2026-07",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "errors": [
+          {
+            "message": "Variable $input of type InventorySetQuantitiesInput! was provided invalid value for quantities.0.quantity",
+            "locations": [
+              {
+                "line": 1,
+                "column": 27
+              }
+            ],
+            "extensions": {
+              "value": {
+                "quantities": [
+                  {
+                    "quantity": 10
+                  }
+                ]
+              },
+              "problems": [
+                {
+                  "path": [
+                    "quantities",
+                    0,
+                    "changeFromQuantity"
+                  ],
+                  "explanation": "Could not coerce value to Int"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "processed": 0,
+      "failed": 1,
+      "queue": "failed",
+      "link": "active"
+    }
+  ]
+}
