@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { join } from 'node:path';
 import { scan } from './runtime-ddl-parser.cjs';
-import { ROOT, MIGRATIONS_DIR, freshDb, applySchema, shapeOf, listMigrations } from './d1-migrations.mjs';
+import { ROOT, MIGRATIONS_DIR, freshDb, applySchema, applyMigrations, shapeOf, listMigrations } from './d1-migrations.mjs';
 const canonical = applySchema(freshDb()), expected = shapeOf(canonical);
 const applied = freshDb();
 for (const file of listMigrations().filter(f => Number(f.slice(0, 4)) <= 10)) applied.exec(fs.readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));
@@ -55,4 +55,27 @@ for (const sql of [
 console.log(`${count} declarations checked; retained: ${[...retained].sort().join(', ')}`);
 for (const error of problems) console.error(error);
 assert.equal(problems.length, 0, 'runtime DDL must match schema.sql and respect migration ownership');
+// Execute the allocation route helper against migrations, rejecting every DDL
+// attempt before SQLite can hide it behind IF NOT EXISTS.
+const { nextOrderNumber } = await import('../functions/api/order/_guest-clock.js');
+const db = applyMigrations(freshDb());
+const initial = shapeOf(db);
+const DB = { prepare(sql) {
+  assert.doesNotMatch(sql, /^\s*(CREATE|ALTER)\b/i);
+  let args = [];
+  return {
+    bind(...values) { args = values; return this; },
+    async first() { return db.prepare(sql).get(...args) || null; },
+    async run() { return { meta: db.prepare(sql).run(...args) }; },
+  };
+} };
+try {
+  const now = Date.UTC(2026, 9, 26, 12);
+  for (const merchant of ['ddl-proof-a', 'ddl-proof-b']) {
+    for (let number = 1; number <= 3; number++) {
+      assert.equal(await nextOrderNumber({ DB }, merchant, now), number);
+    }
+  }
+  assert.deepEqual(shapeOf(db), initial, 'allocation must preserve the migrated schema');
+} finally { db.close(); }
 canonical.close(); applied.close();

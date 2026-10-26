@@ -8,8 +8,8 @@
  * que cette logique tient sur la base que la production exécute vraiment.
  *
  * Trois choses ne se vérifient que là, et pas dans une fixture :
- *   1. le schéma vient de `migrations/`, pas d'une copie. Une colonne ajoutée
- *      demain à une migration sans que la fixture suive fait rougir CE test ;
+ *   1. le schéma vient de `schema.sql`, dont d1-migrations-test prouve
+ *      l'équivalence avec les migrations, sans DDL recopié dans la fixture ;
  *   2. `env.DB.batch()` est l'atomicité de D1, pas celle qu'on s'est écrite.
  *      Un lot qui échoue à mi-course doit tout rendre — mouvement déjà inséré,
  *      état de la demande, événement de confirmation ;
@@ -143,49 +143,13 @@ async function stop(child) {
 }
 
 const supportSchema = `
-CREATE TABLE accounts (
-  id TEXT PRIMARY KEY,
-  business TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active',
-  session_epoch INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE store_docs (
-  merchant TEXT NOT NULL,
-  feature TEXT NOT NULL,
-  data TEXT NOT NULL,
-  updated_ts INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (merchant, feature)
-);
-CREATE TABLE inventory_movements (
-  id TEXT PRIMARY KEY,
-  merchant TEXT NOT NULL,
-  item_id TEXT NOT NULL,
-  variant_id TEXT NOT NULL DEFAULT '',
-  location_id TEXT NOT NULL DEFAULT 'principal',
-  qty_milli INTEGER NOT NULL,
-  reason TEXT NOT NULL,
-  unit_cost_cents INTEGER,
-  currency TEXT NOT NULL DEFAULT 'MAD',
-  ref_type TEXT NOT NULL DEFAULT '',
-  ref_id TEXT NOT NULL DEFAULT '',
-  note TEXT NOT NULL DEFAULT '',
-  actor TEXT NOT NULL DEFAULT '',
-  occurred_ts INTEGER NOT NULL,
-  srv_ts INTEGER NOT NULL,
-  reversal_of TEXT NOT NULL DEFAULT '',
-  meta TEXT NOT NULL DEFAULT '{}',
-  created_ts INTEGER NOT NULL
-);
-CREATE TABLE inventory_sync_sequences (
-  merchant TEXT PRIMARY KEY,
-  last_ts INTEGER NOT NULL
-);
-INSERT INTO accounts (id, business) VALUES ('owner-1', 'Hotel Atlas Suite');
-INSERT INTO store_docs (merchant, feature, data, updated_ts) VALUES (
+INSERT INTO accounts (id, email, salt, hash, created_ts, business)
+VALUES ('owner-1', 'owner@example.test', 'fixture-salt', 'fixture-hash', 1, 'Hotel Atlas Suite');
+INSERT INTO store_docs (merchant, feature, data, updated_ts, rev) VALUES (
   '${MERCHANT}',
   'hotel-units',
   '{"confirmationSide":"recipient","units":[{"id":"economat","name":"Economat","kind":"economat","storeType":"economat","locationId":"u-economat","active":true},{"id":"rooftop","name":"Rooftop","kind":"outlet","storeType":"bar","locationId":"u-bar-rooftop","active":true}]}',
-  1
+  1, 1
 );
 INSERT INTO inventory_sync_sequences (merchant, last_ts) VALUES ('${MERCHANT}', 100);
 INSERT INTO inventory_movements
@@ -239,9 +203,8 @@ async function main() {
     'd1', 'execute', 'kiwi-economat-proof', '--local', '--persist-to', persist,
     '--config', config, '--file', file,
   ]);
+  execute(path.join(ROOT, 'schema.sql'));
   execute(support);
-  execute(path.join(ROOT, 'migrations/legacy/2026-09-01-hotel-internal-requests.sql'));
-  execute(path.join(ROOT, 'migrations/legacy/2026-09-01-hotel-request-substitutions.sql'));
   execute(requests);
 
   let stdout = '';
