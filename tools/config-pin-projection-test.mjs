@@ -35,7 +35,9 @@ console.log('\n\x1b[1mProjection des codes personnel — /api/config\x1b[0m');
  * On regarde les SELECT visant staff_pins dans le seul fichier qui sert cette
  * réponse. La liste des colonnes est comparée telle qu'elle est écrite : c'est
  * la seule forme qui compte, puisque D1 rend exactement ce qu'on lui demande. */
-const config = read('functions/api/config.js');
+/* POST /api/config publishes staff codes through functions/api/_staff-publication.js:
+   the guards below read both, so a code SELECT cannot hide in the module. */
+const config = read('functions/api/config.js') + '\n' + read('functions/api/_staff-publication.js');
 /* Le groupe de colonnes ne peut traverser ni un autre SELECT ni un autre FROM,
    sinon un SELECT d'une table voisine avale la moitié du fichier. */
 const COLS = /SELECT\s+((?:(?!\bSELECT\b|\bFROM\b)[\s\S])*?)\s+FROM\s+staff_pins/gi;
