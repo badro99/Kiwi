@@ -462,6 +462,7 @@
       "owner": "serveur",
       "reads": [
         "KiwiEmployeeLive",
+        "KiwiEnv",
         "KiwiLiveSocket",
         "KiwiMenuI18n",
         "KiwiMenuPromos",
