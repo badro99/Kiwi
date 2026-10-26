@@ -1,8 +1,7 @@
 /* Kiwi AI - le point du matin.
  *
- * This module owns the durable, deterministic briefing envelope. Rules are
- * intentionally absent in Phase 1b: a real merchant gets a calm empty state,
- * never demo recommendations or placeholders for data Kiwi cannot yet read.
+ * Durable, deterministic briefing rules with bounded merchant thresholds.
+ * Missing measured data stays calm; settings share the briefing store doc.
  */
 (function () {
   'use strict';
@@ -12,6 +11,56 @@
   // One year plus five days for month-end review. Financial books live in their own ledgers.
   var MAX_DAYS = 370;
   var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
+  var LIMITS = {
+    "salesDrop": [20, 1, 100, "Baisse des ventes (%)", "Sales drop (%)", "انخفاض المبيعات (%)"],
+    "stockFactor": [1, 0.1, 10, "Multiplicateur du seuil stock", "Stock threshold multiplier", "مضاعف عتبة المخزون"],
+    "marginDrop": [5, 0.1, 100, "Baisse de marge (points)", "Margin drop (points)", "انخفاض الهامش (نقاط)"],
+    "coverage": [80, 1, 100, "Couverture minimale (%)", "Minimum coverage (%)", "الحد الأدنى للتغطية (%)"],
+    "coverageGap": [10, 0, 100, "Écart de couverture (%)", "Coverage gap (%)", "فرق التغطية (%)"],
+    "samples": [3, 1, 28, "Échantillons minimum", "Minimum samples", "الحد الأدنى للعينات"],
+    "events": [2, 1, 100, "Événements minimum", "Minimum events", "الحد الأدنى للأحداث"],
+    "share": [5, 0.1, 100, "Part minimale (%)", "Minimum share (%)", "الحد الأدنى للنسبة (%)"],
+    "multiple": [2, 1, 10, "Multiple de référence", "Baseline multiple", "مضاعف المرجع"],
+    "cashCents": [10000, 1, 10000000, "Écart caisse (centimes)", "Cash gap (centimes)", "فرق الصندوق (سنتيم)"],
+    "weatherEffect": [8, 1, 100, "Effet météo (%)", "Weather effect (%)", "تأثير الطقس (%)"],
+    "lateMultiple": [1.5, 1, 10, "Multiple du délai", "Timing multiple", "مضاعف المدة"],
+    "lateMinutes": [5, 1, 240, "Retard (minutes)", "Delay (minutes)", "التأخير (دقائق)"],
+    "lateSamples": [5, 1, 100, "Historique délais minimum", "Minimum timing history", "الحد الأدنى لسجل المدد"],
+    "planningMinutes": [1, 1, 1440, "Absence de couverture (minutes)", "Uncovered period (minutes)", "فترة بدون تغطية (دقائق)"],
+    "rainMm": [1, 0.1, 500, "Pluie prévue (mm)", "Forecast rain (mm)", "المطر المتوقع (مم)"],
+    "weatherDays": [5, 1, 100, "Jours météo minimum", "Minimum weather days", "الحد الأدنى لأيام الطقس"]
+  };
+  function validSettings(value) {
+    var out = {};
+    Object.keys(LIMITS).forEach(function (key) {
+      var n = value && value[key], spec = LIMITS[key];
+      if (typeof n === 'number' && Number.isFinite(n) && n >= spec[1] && n <= spec[2] && (!/^(samples|events|cashCents|lateSamples|planningMinutes|weatherDays)$/.test(key) || Number.isInteger(n))) out[key] = n;
+    });
+    return out;
+  }
+  function limit(key) { var v = own().settings; return v && v[key] != null ? v[key] : LIMITS[key][0]; }
+  function setSettings(value) {
+    if (!isReal() || !slug() || !/^(owner|manager)$/.test(tier()) || !value || typeof value !== 'object') return false;
+    var clean = validSettings(value);
+    if (Object.keys(value).some(function (k) { return !Object.prototype.hasOwnProperty.call(clean, k); })) return false;
+    own(); doc.settings = Object.assign({}, doc.settings, clean); doc.settingsAt = Date.now();
+    compute(); return true;
+  }
+  function settingsHtml() {
+    if (!/^(owner|manager)$/.test(tier())) return '';
+    var L = lang(), idx = L === 'ar' ? 5 : L === 'en' ? 4 : 3;
+    var title = { fr: 'Réglages des seuils', en: 'Threshold settings', ar: 'إعدادات العتبات' }[L];
+    return '<details><summary>' + title + '</summary>' + Object.keys(LIMITS).map(function (key) {
+      var spec = LIMITS[key];
+      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + spec[1] + '" max="' + spec[2] + '" step="any" value="' + limit(key) + '"></label>';
+    }).join('') + '</details>';
+  }
+  function thresholdEvidence(line) {
+    var keys = { 'sales-drop': ['salesDrop','samples'], 'low-stock': ['stockFactor'], 'margin-erosion': ['marginDrop','coverage','coverageGap'], 'cancellation-rate': ['share','multiple','events','samples'], 'discount-share': ['share','multiple','events','samples'], 'cash-gap': ['cashCents'], weather: ['weatherEffect','rainMm','weatherDays'], 'planning-gap': ['planningMinutes'], 'late-orders': ['lateMultiple','lateMinutes','samples','lateSamples'] };
+    var used = keys[line.kind] || (/^late-orders-/.test(line.kind) ? keys['late-orders'] : []);
+    line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + used.map(function (k) { var spec = LIMITS[k]; return spec[lang() === 'ar' ? 5 : lang() === 'en' ? 4 : 3] + ' ' + limit(k); }).join(', ');
+    return line;
+  }
   var doc = { days: [] };
   /* The venue `doc` was loaded for. slug() follows the venue on screen the
    * moment it changes, while `doc` stayed whatever was last loaded: a compute()
@@ -125,7 +174,7 @@
       return left < right ? -1 : left > right ? 1 : 0;
     });
     var seen = Object.create(null);
-    return { days: days.filter(function (row) {
+    return { settings: validSettings(value.settings), settingsAt: Number(value.settingsAt) || 0, days: days.filter(function (row) {
       if (seen[row.day]) return false;
       seen[row.day] = true; return true;
     }).slice(0, MAX_DAYS) };
@@ -175,7 +224,9 @@
     return note + (localKept ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>');
   }
   function mergeDocs(a, b) {
-    return safeDoc({ days: safeDoc(a).days.concat(safeDoc(b).days) });
+    var left = safeDoc(a), right = safeDoc(b);
+    var chosen = left.settingsAt > right.settingsAt ? left : left.settingsAt < right.settingsAt ? right : stableJSON(left.settings) > stableJSON(right.settings) ? left : right;
+    return safeDoc({ days: left.days.concat(right.days), settings: chosen.settings, settingsAt: chosen.settingsAt });
   }
 
   function normalizeEvidence(value) {
@@ -295,10 +346,10 @@
     }
     var sameWeekday = [7, 14, 21, 28].map(sample).filter(function (x) { return x.count > 0; });
     var trailing = [1, 2, 3, 4, 5, 6, 7].map(sample).filter(function (x) { return x.count > 0; });
-    if (sameWeekday.length < 3 || trailing.length < 3) return null;
+    if (sameWeekday.length < limit('samples') || trailing.length < limit('samples')) return null;
     var weekdayMedian = median(sameWeekday.map(function (x) { return x.revenue; }));
     var trailingMedian = median(trailing.map(function (x) { return x.revenue; }));
-    var threshold = 0.20;
+    var threshold = limit('salesDrop') / 100;
     if (!(weekdayMedian > 0) || !(trailingMedian > 0)) return null;
     if (current.revenue > weekdayMedian * (1 - threshold) || current.revenue > trailingMedian * (1 - threshold)) return null;
     var weekdayDrop = 100 * (1 - current.revenue / weekdayMedian);
@@ -315,9 +366,9 @@
     return {
       id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],
       copy: {
-        fr: 'Ventes en baisse de ' + drop + ' % : ' + cur + ' MAD à ' + time + ', contre ' + wd + ' MAD les mêmes jours et ' + tr7 + ' MAD sur les 7 derniers jours. Seuil : -20 %.',
-        en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -20%.',
-        ar: 'انخفضت المبيعات بنسبة ' + drop + '٪: ' + cur + ' درهم حتى ' + time + '، مقابل ' + wd + ' درهم في الأيام المماثلة و' + tr7 + ' درهم خلال آخر 7 أيام. العتبة: -20٪.'
+        fr: 'Ventes en baisse de ' + drop + ' % : ' + cur + ' MAD à ' + time + ', contre ' + wd + ' MAD les mêmes jours et ' + tr7 + ' MAD sur les 7 derniers jours. Seuil : -' + limit('salesDrop') + ' %.',
+        en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -' + limit('salesDrop') + '%.',
+        ar: 'انخفضت المبيعات بنسبة ' + drop + '٪: ' + cur + ' درهم حتى ' + time + '، مقابل ' + wd + ' درهم في الأيام المماثلة و' + tr7 + ' درهم خلال آخر 7 أيام. العتبة: -' + limit('salesDrop') + '٪.'
       },
       evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet' }
     };
@@ -354,19 +405,19 @@
     var baselineMargin = +(baseline && baseline.marginPct);
     if (!(current && baseline) || !(current.revenueCosted > 0) || !(baseline.revenueCosted > 0)
       || !isFinite(currentCoverage) || !isFinite(baselineCoverage)
-      || currentCoverage < 80 || baselineCoverage < 80
-      || Math.abs(currentCoverage - baselineCoverage) > 10
+      || currentCoverage < limit('coverage') || baselineCoverage < limit('coverage')
+      || Math.abs(currentCoverage - baselineCoverage) > limit('coverageGap')
       || !isFinite(currentMargin) || !isFinite(baselineMargin)) return null;
     var erosion = baselineMargin - currentMargin;
-    if (erosion < 5) return null;
+    if (erosion < limit('marginDrop')) return null;
     var pct = function (n) { return Math.round(n * 10) / 10; };
     return {
       id: 'margin-erosion:' + String(currentDay || 'period'),
       kind: 'margin-erosion', roles: ['owner'],
       copy: {
-        fr: 'La marge brute baisse de ' + pct(erosion) + ' points (alerte dès 5 points). Couverture des coûts : ' + pct(currentCoverage) + ' % contre ' + pct(baselineCoverage) + ' %.',
-        en: 'Gross margin fell by ' + pct(erosion) + ' points (alert from 5 points). Cost coverage: ' + pct(currentCoverage) + '% vs ' + pct(baselineCoverage) + '%.',
-        ar: 'انخفض الهامش الإجمالي بمقدار ' + pct(erosion) + ' نقاط (التنبيه من 5 نقاط). تغطية التكلفة: ' + pct(currentCoverage) + '% مقابل ' + pct(baselineCoverage) + '٪.'
+        fr: 'La marge brute baisse de ' + pct(erosion) + ' points (alerte dès ' + limit('marginDrop') + ' points). Couverture des coûts : ' + pct(currentCoverage) + ' % contre ' + pct(baselineCoverage) + ' %.',
+        en: 'Gross margin fell by ' + pct(erosion) + ' points (alert from ' + limit('marginDrop') + ' points). Cost coverage: ' + pct(currentCoverage) + '% vs ' + pct(baselineCoverage) + '%.',
+        ar: 'انخفض الهامش الإجمالي بمقدار ' + pct(erosion) + ' نقاط (التنبيه من ' + limit('marginDrop') + ' نقاط). تغطية التكلفة: ' + pct(currentCoverage) + '% مقابل ' + pct(baselineCoverage) + '٪.'
       },
       evidence: {
         count: 2,
@@ -383,7 +434,7 @@
     var tracked = items.filter(function (item) {
       return item && item.tracked === true && Number.isFinite(+item.balance) && Number.isFinite(+item.threshold) && +item.threshold > 0;
     });
-    var low = tracked.filter(function (item) { return +item.balance < +item.threshold; }).sort(function (a, b) {
+    var low = tracked.filter(function (item) { return +item.balance < +item.threshold * (typeof limit === 'function' ? limit('stockFactor') : 1); }).sort(function (a, b) {
       return (+a.balance / +a.threshold) - (+b.balance / +b.threshold);
     });
     if (!low.length) return null;
@@ -395,7 +446,10 @@
     var first = low.find(function (item) { return String(item.supplier || '').trim(); });
     var action = null;
     if (first) {
-      var qty = Number(((Number(first.par) > Number(first.balance) ? Number(first.par) : Number(first.threshold)) - Number(first.balance)).toPrecision(15));
+      var factor = typeof limit === 'function' ? limit('stockFactor') : 1;
+      var target = Number(first.par) > Number(first.balance) ? Number(first.par) : Number(first.threshold);
+      if (factor !== 1) target = Math.max(target, Number(first.threshold) * factor);
+      var qty = Number((target - Number(first.balance)).toPrecision(15));
       action = { name: 'create-po', args: { supplierName: String(first.supplier), lines: [{ itemId: String(first.id), name: String(first.name || first.id), qty: qty, unit: String(first.unit || '') }], note: 'Proposition du point du matin · stock sous seuil' } };
     }
     return {
@@ -448,10 +502,10 @@
       var coveredTo = opening[0];
       for (var i = 0; i < shifts.length && coveredTo < opening[1]; i++) {
         if (shifts[i].to <= coveredTo) continue;
-        if (shifts[i].from > coveredTo) return true;
-        coveredTo = shifts[i].to;
+        if (Math.min(shifts[i].from, opening[1]) - coveredTo >= limit('planningMinutes')) return true;
+        coveredTo = Math.max(coveredTo, shifts[i].to);
       }
-      return coveredTo < opening[1];
+      return opening[1] - coveredTo >= limit('planningMinutes');
     });
     if (!gap) return null;
     return {
@@ -492,10 +546,10 @@
         if (comparable.total > 0) baselineRates.push((comparable.cancellations / comparable.total) * 100);
       }
     }
-    if (!current || baselineRates.length < 3 || !(current.total > 0) || current.cancellations < 2) return null;
+    if (!current || baselineRates.length < limit('samples') || !(current.total > 0) || current.cancellations < limit('events')) return null;
     var currentRate = (current.cancellations / current.total) * 100;
     var baseline = median(baselineRates);
-    if (!Number.isFinite(baseline) || currentRate < 5 || currentRate < Math.max(5, baseline * 2)) return null;
+    if (!Number.isFinite(baseline) || currentRate < Math.max(limit('share'), baseline * limit('multiple'))) return null;
     var reasonRows = Object.keys(current.reasons || {}).map(function (key) { return { key: key, count: +current.reasons[key] || 0 }; }).sort(function (a, b) { return b.count - a.count; });
     var top = reasonRows[0] || { key: 'non-renseigne', count: current.cancellations };
     var rate = Math.round(currentRate * 10) / 10, base = Math.round(baseline * 10) / 10;
@@ -549,9 +603,9 @@
         if (comparable.gross > 0) baselineShares.push((comparable.discount / comparable.gross) * 100);
       }
     }
-    if (!current || baselineShares.length < 3 || !(current.gross > 0) || current.discountedCount < 2 || !(current.discount > 0)) return null;
+    if (!current || baselineShares.length < limit('samples') || !(current.gross > 0) || current.discountedCount < limit('events') || !(current.discount > 0)) return null;
     var share = (current.discount / current.gross) * 100, baseline = median(baselineShares);
-    if (!Number.isFinite(baseline) || share < 5 || share < Math.max(5, baseline * 2)) return null;
+    if (!Number.isFinite(baseline) || share < Math.max(limit('share'), baseline * limit('multiple'))) return null;
     var actorRows = Object.keys(current.actors || {}).map(function (id) { return { id: id, amount: +current.actors[id] || 0 }; }).sort(function (a, b) { return b.amount - a.amount; });
     var actor = actorName(actorRows[0] ? actorRows[0].id : '', input.roster);
     var pct = Math.round(share * 10) / 10, base = Math.round(baseline * 10) / 10;
@@ -575,7 +629,7 @@
     var rows = Array.isArray(input.events) ? input.events : (C && C.list ? C.list() : []);
     var wantedMerchant = String(input.merchant == null ? slug() : input.merchant);
     var day = String(input.day || businessDay(Date.now() - 86400000));
-    var threshold = Number(input.thresholdCents == null ? 10000 : input.thresholdCents);
+    var threshold = Number(input.thresholdCents == null ? limit('cashCents') : input.thresholdCents);
     var dayOf = typeof input.businessDay === 'function' ? input.businessDay : businessDay;
     var reconciliations = rows.filter(function (row) {
       if (!row || (wantedMerchant && String(row.merchant || '') !== wantedMerchant)) return false;
@@ -616,10 +670,10 @@
     var data = input.weather !== undefined ? input.weather : (W && W.cached ? W.cached() : null);
     if (!data || !data.ok || !Array.isArray(data.days) || !data.log) return null;
     var today = input.today || businessDay(input.now);
-    var target = data.days.find(function (d) { return d && d.day >= today && W && W.isRain(d); });
+    var target = data.days.find(function (d) { return d && d.day >= today && W && (limit('rainMm') === 1 ? W.isRain(d) : (Number(d.precip) || 0) >= limit('rainMm') || d.kind === 'storm'); });
     if (!target) return null;
-    var effect = W.rainEffect(Array.isArray(input.rows) ? input.rows : salesRows(), data.log, { today: today });
-    if (!effect || Math.abs(effect.change) < 0.08) return null;
+    var effect = W.rainEffect(Array.isArray(input.rows) ? input.rows : salesRows(), data.log, { today: today, minDays: limit('weatherDays') });
+    if (!effect || Math.abs(effect.change) < limit('weatherEffect') / 100) return null;
     var pct = Math.round(Math.abs(effect.change) * 100), down = effect.change < 0;
     var tomorrow = target.day > today, mm = String(target.precip).replace('.', ',');
     var mmEn = String(target.precip);
@@ -679,9 +733,9 @@
     function stage(key, labelFr, labelEn, labelAr) {
       var nowRows = current.map(function (d) { return d[key]; }).filter(Number.isFinite);
       var baseRows = baseline.map(function (d) { return d[key]; }).filter(Number.isFinite);
-      if (nowRows.length < 3 || baseRows.length < 5) return null;
+      if (nowRows.length < limit('samples') || baseRows.length < limit('lateSamples')) return null;
       var nowMedian = median(nowRows), baseMedian = median(baseRows);
-      if (!(baseMedian > 0) || nowMedian < baseMedian * 1.5 || nowMedian - baseMedian < 300000) return null;
+      if (!(baseMedian > 0) || nowMedian < baseMedian * limit('lateMultiple') || nowMedian - baseMedian < limit('lateMinutes') * 60000) return null;
       var nowMin = Math.round(nowMedian / 60000), baseMin = Math.round(baseMedian / 60000);
       return {
         id: 'late-orders:' + key + ':' + day, kind: 'late-orders-' + key, tone: 'warn', roles: ['owner', 'manager'],
@@ -734,7 +788,7 @@
         var result = typeof rule === 'function' ? rule() : null;
         (Array.isArray(result) ? result : [result]).forEach(function (candidate) {
           var line = normalizeLine(candidate);
-          if (line) lines.push(line);
+          if (line) lines.push(thresholdEvidence(line));
         });
       } catch (_) {}
     });
@@ -878,7 +932,7 @@
         esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
     var day = dayLabel();
-    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body + unsavedNote(t);
+    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body + settingsHtml() + unsavedNote(t);
     try { if (el.querySelector('[data-icon]') && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
     statusBadge(el, t, lines.length);
   }
@@ -903,7 +957,7 @@
     cloud = window.KiwiCloudDoc.attach({
       feature: FEATURE, slug: slug, localKey: localKey,
       read: function () { return safeDoc(own()); }, write: writeLocal, merge: mergeDocs,
-      isEmpty: function (x) { return !x || !Array.isArray(x.days) || !x.days.length; },
+      isEmpty: function (x) { return !x || (!(x.days || []).length && !Object.keys(x.settings || {}).length); },
       onPulled: function () { compute(); }
     });
   }
@@ -937,7 +991,17 @@
     if (dismissed) setState(dismissed.getAttribute('data-briefing-dismiss'), 'dismissed');
   });
 
+  document.addEventListener('change', function (event) {
+    var input = event.target;
+    if (!input.getAttribute || !input.getAttribute('data-briefing-limit')) return;
+    var value = {}, key = input.getAttribute('data-briefing-limit');
+    value[key] = input.value.trim() === '' ? NaN : Number(input.value);
+    var ok = setSettings(value);
+    input.setAttribute('aria-invalid', String(!ok));
+    if (!ok) input.value = limit(key);
+  });
   window.KiwiBriefing = {
+    setSettings: setSettings, settings: function () { return clone(own().settings || {}); },
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
     durable: function () { return localKept; },

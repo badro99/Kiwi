@@ -422,6 +422,8 @@
         var x = Object.assign({}, c); x[histKey] = Array.isArray(c[histKey]) ? c[histKey].slice() : [];
         byId.set(c.id, x); out.push(x); return;
       }
+      var alerts = new Map((have.creditAlerts || []).concat(c.creditAlerts || []).map(function (a) { return [a.id, a]; }));
+      if (alerts.size) have.creditAlerts = Array.from(alerts.values());
       var seen = new Set(have[histKey].map(ledgerKey));
       (Array.isArray(c[histKey]) ? c[histKey] : []).forEach(function (h) {
         var k = ledgerKey(h); if (k && !seen.has(k)) { seen.add(k); have[histKey].push(h); }

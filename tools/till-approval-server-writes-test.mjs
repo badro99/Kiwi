@@ -334,7 +334,7 @@ await S.run('actes serveur · le repli hors ligne n\'approuve pas un acte serveu
     const k = Object.keys(localStorage).find((x) => x.startsWith('kiwi:caisse:offline-pins:v1:'));
     return k ? JSON.parse(localStorage.getItem(k)).map((r) => Object.keys(r).sort().join(',')) : [];
   });
-  check(rowKeys.length === 1 && rowKeys[0] === 'expiresAt,hash,it,kdf,salt,staff,v', 'la ligne salée ne porte ni code ni champ de code');
+  check(rowKeys.length === 1 && rowKeys[0] === 'expiresAt,hash,it,kdf,provenAt,salt,staff,v', 'la ligne salée ne porte ni code ni champ de code');
 
   t.step('serveur muet, navigateur « en ligne » : un acte LOCAL passe encore par le repli');
   verifyMode = 'down';

@@ -524,7 +524,7 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function saleLines(t, tip) {
+  function saleLines(t) {
     const lines = t.lines.map((l) => {
       const isService = l.type === 'svc';
       const item = isService ? PRESTA[l.refId] : PROD[l.refId];
@@ -534,12 +534,11 @@
         kind: isService ? 'service' : 'product', total: l.price * l.qty,
       };
     });
-    if (tip > 0) lines.push({ itemId: 'pourboire', name: 'Pourboire', category: 'pourboire', qty: 1, unit: 'service', kind: 'tip', total: tip });
     return lines;
   }
-  function postDay(total, method, label, ref, lines) {
+  function postDay(total, method, label, ref, lines, tip = 0) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref, lines });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref, lines, tipCents: Math.round(tip * 100) });
     } catch (_) {}
   }
   /* Le numéro de ticket repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -1512,9 +1511,9 @@
       t.lines.forEach((l) => { if (l.type === 'prod' && stockKnown(PROD[l.refId])) PROD[l.refId].stock = Math.max(0, PROD[l.refId].stock - l.qty); });
       if (t.clientId) { const c = CL[t.clientId]; c.visits++; c.lastDays = 0; }
       const parts = tipSplit(tip, t.lines);
-      /* Prestations ET pourboire : c'est le montant que la cliente a réellement
-         laissé au comptoir, le même que celui annoncé dans le toast. */
-      postDay(base + tip, method, tkLabel(t), t.num, saleLines(t, tip));
+      /* Prestations seules en recette, pourboire séparé du chiffre d’affaires.
+         Le toast garde le montant total laissé au comptoir. */
+      postDay(base, method, tkLabel(t), t.num, saleLines(t), tip);
       queueIfOffline('Encaissement');
       toast(`${t.num} encaissé, ${fmtMAD(base + tip)} en ${method}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (tip > 0) toast(`Pourboire ${fmtMAD(tip)} réparti, ${parts.map((p) => `${PR[p.id].short} ${p.amount}`).join(' · ')}`, 2800);

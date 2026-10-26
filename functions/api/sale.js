@@ -381,7 +381,11 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   let tipCents = 0;
   if (b && b.tipCents != null) {
     const tipRaw = Number(b.tipCents);
-    if (!Number.isSafeInteger(tipRaw) || tipRaw < 0 || tipRaw > amountCents) return json({ error: 'bad-tip' }, 400);
+    /* Depuis la vague Q, `amount` ne contient plus le pourboire (salon, spa) :
+       un pourboire plus grand qu'une petite prestation est réel, et le refuser
+       laissait la vente bloquée sur la caisse. Plafond : le montant de la vente
+       ou 1 000 MAD, le plus grand des deux ; au-delà, c'est une saisie fausse. */
+    if (!Number.isSafeInteger(tipRaw) || tipRaw < 0 || tipRaw > Math.max(amountCents, 100000)) return json({ error: 'bad-tip' }, 400);
     tipCents = tipRaw;
   }
   const label = String((b && b.label) || 'Vente').slice(0, 80);

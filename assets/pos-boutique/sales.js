@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=113';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=19';
-import { offerRegister } from './inventory.js?v=19';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=114';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=20';
+import { offerRegister } from './inventory.js?v=20';
 import { ticketOwner } from './ticket-owner.js?v=1';
 
 
@@ -10,13 +10,10 @@ import { ticketOwner } from './ticket-owner.js?v=1';
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Math.round(Number(Math.abs(n).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(n) + ' MAD';
-  /* La caisse boutique compte en dirhams entiers, et n'encaisse JAMAIS plus que
-     le prix affiché (décision propriétaire, 2026-10-19). Un prix de catalogue à
-     249,90, une promotion ou une remise qui tombe sur 220,50 s'arrondissent
-     donc vers le bas, partout : grille, fiche, ticket, échange et reçu disent le
-     même chiffre. Arrondir au plus proche encaissait 250 pour 249,90. Le petit
-     epsilon absorbe 0,1 + 0,2 et ses cousins, jamais un vrai centime. */
-  const shelf = (n) => Math.max(0, Math.floor((+n || 0) + 1e-6));
+  /* Décision propriétaire, 2026-10-26 : préserver le prix catalogue au centime.
+     Les remises descendent au centime, jamais au-dessus du prix configuré.
+     Le petit epsilon absorbe les erreurs binaires, jamais un vrai centime. */
+  const shelf = (n) => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];

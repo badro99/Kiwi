@@ -1,12 +1,9 @@
 // /api/ai/salle-import — lecture d'une photo de salle pour préparer le plan de salle.
 //
 // Le restaurateur photographie sa salle (ou un croquis dessiné à la main) et le
-// modèle vision en extrait les FAITS : combien de tables, quelles formes,
-// combien de places, intérieur ou terrasse, comptoir visible. Jamais de
-// coordonnées — un modèle vision compte bien mais place mal. C'est le
-// générateur de plans existant (assets/floorplan-core.js › pdsGeneratePlan)
-// qui transforme ces faits en trois plans propres, allées garanties, que le
-// commerçant compare et confirme. RIEN n'est écrit dans le plan avant cela.
+// modèle vision suggère les tables et leur ordre approximatif, de gauche à
+// droite et de l’avant vers le fond. Aucune mesure n’est reconstruite. Le
+// commerçant vérifie les positions et confirme avant toute écriture du plan.
 //
 // Même modèle de sécurité que /api/ai/menu-import :
 // - tenantFor() obligatoire (session gérant, caisse appairée, ou opérateur)
@@ -61,7 +58,7 @@ export function validateSalle(raw) {
   const rows = Array.isArray(raw.tables) ? raw.tables : [];
   const tables = [];
   let total = 0;
-  for (let i = 0; i < Math.min(rows.length, 24); i++) {
+  for (let i = 0; i < Math.min(rows.length, 120); i++) {
     const r = rows[i];
     if (!r || typeof r !== 'object') continue;
     const shape = String(r.shape || '').toLowerCase().trim();
@@ -75,7 +72,12 @@ export function validateSalle(raw) {
     if (total + count > 120) count = 120 - total;
     if (count < 1) break;
     total += count;
-    tables.push({ shape, seats, count });
+    const placement = {};
+    for (const key of ['row', 'column']) {
+      if (Number.isInteger(r[key]) && r[key] >= 0 && r[key] <= 119) placement[key] = r[key];
+    }
+    if (['front', 'middle', 'back'].includes(r.zone)) placement.zone = r.zone;
+    tables.push({ shape, seats, count, ...placement });
   }
   if (!tables.length) return null;
   const venueRaw = String(raw.venue || '').toLowerCase().trim();
@@ -104,13 +106,13 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni comm
   "venue": "restaurant",
   "outdoor": false,
   "counter": false,
-  "tables": [ { "shape": "round", "seats": 4, "count": 3 } ]
+  "tables": [ { "shape": "round", "seats": 4, "count": 1, "row": 0, "column": 0, "zone": "front" } ]
 }
 Règles :
 - "venue" : "restaurant", "cafe", "snack", "patisserie" ou "rooftop" · le type d'établissement le plus probable.
 - "outdoor" : true si l'espace est en extérieur (terrasse, patio, toit).
 - "counter" : true si un comptoir ou un bar de service est visible.
-- "tables" regroupe les tables par forme et nombre de places : "count" = combien de tables identiques.
+- "tables" suit l’ordre visible, de gauche à droite et de l’avant vers le fond. Une entrée par table si possible (count: 1). Indique row et column (entiers de 0 à 119) ou zone (front, middle, back) pour conserver le placement approximatif. Ne fournis aucune mesure ni reconstruction métrique. Ce sera un plan suggéré à vérifier dans la salle.
 - "shape" : "round" (ronde), "square" (carrée), "rect" (rectangulaire), "bar" (place assise au comptoir), "high" (mange-debout / table haute).
 - "seats" = places assises par table, chaises visibles comprises ; estime si une table est partiellement visible.
 - Compte TOUTES les tables visibles, même partiellement ou en arrière-plan.

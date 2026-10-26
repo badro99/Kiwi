@@ -48,10 +48,17 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.': 'The boutique uses whole units. For weighted goods, use the Grocery or Stock module.',
+      "Non imprimé": "Not printed",
+      "Réimprimer": "Reprint",
+      "Soldé deux fois hors ligne": "Settled twice offline",
+      "en avance": "advance",
+      "Rembourser l’avance": "Refund advance",
+      "Accès hors ligne jusqu’au": "Offline access ends",
       "Accès hors ligne sur cet appareil": "Offline access on this device",
       "Accès hors ligne indisponible sur ce navigateur. Une connexion est nécessaire pour déverrouiller.": "Offline access is unavailable in this browser. A connection is required to unlock.",
       "Aucun employé vérifié": "No verified staff",
-      "Validité maximale : 7 jours. Les autres employés doivent déverrouiller une fois avec une connexion.": "Valid for up to 7 days. Other staff must unlock once with a connection.",
+      "Validité maximale : 72 heures. Les autres employés doivent déverrouiller une fois avec une connexion.": "Valid for up to 72 hours. Other staff must unlock once with a connection.",
 
       // Explicit merchant-facing till messages.
       "Article non vendable individuellement": "Item cannot be sold individually",
@@ -697,10 +704,17 @@
     },
 
     ar: {
+      'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.': 'تستخدم البوتيك وحدات كاملة. للمنتجات الموزونة، استخدم وحدة البقالة أو المخزون.',
+      "Non imprimé": "لم تتم الطباعة",
+      "Réimprimer": "إعادة الطباعة",
+      "Soldé deux fois hors ligne": "تم السداد مرتين دون اتصال",
+      "en avance": "كتسبيق",
+      "Rembourser l’avance": "رد التسبيق",
+      "Accès hors ligne jusqu’au": "ينتهي الوصول دون اتصال في",
       "Accès hors ligne sur cet appareil": "الدخول دون اتصال على هذا الجهاز",
       "Accès hors ligne indisponible sur ce navigateur. Une connexion est nécessaire pour déverrouiller.": "الدخول دون اتصال غير متاح في هذا المتصفح. يلزم الاتصال لفتح القفل.",
       "Aucun employé vérifié": "لا يوجد موظفون تم التحقق منهم",
-      "Validité maximale : 7 jours. Les autres employés doivent déverrouiller une fois avec une connexion.": "صالحة لمدة 7 أيام كحد أقصى. يجب على الموظفين الآخرين فتح القفل مرة واحدة مع الاتصال.",
+      "Validité maximale : 72 heures. Les autres employés doivent déverrouiller une fois avec une connexion.": "صالحة لمدة 72 ساعة كحد أقصى. يجب على الموظفين الآخرين فتح القفل مرة واحدة مع الاتصال.",
 
       // Explicit merchant-facing till messages.
       "Article non vendable individuellement": "لا يمكن بيع الصنف منفردًا",
@@ -2109,6 +2123,15 @@
      données morceau par morceau, comme la signature du rail. */
   (function () {
     var R = {
+      "Par SMS": ["By SMS", "برسالة نصية"],
+      "Par WhatsApp": ["By WhatsApp", "عبر واتساب"],
+      "Marquer prévenu": ["Mark notified", "تحديد تم الإبلاغ"],
+      "Marqué prévenu": ["Marked notified", "تم وضع علامة تم الإبلاغ"],
+      "Client marqué prévenu": ["Customer marked notified", "تم وضع علامة تم الإبلاغ للزبون"],
+      "{x}, marqué prévenu": ["{x}, marked notified", "{x}، تم وضع علامة تم الإبلاغ"],
+      "Kiwi n’envoie aucun message.": ["Kiwi sends no messages.", "لا يرسل Kiwi أي رسائل."],
+      "Appel": ["Call", "مكالمة"],
+      "En personne": ["In person", "شخصيًا"],
       'Aucun encaissement': ['No payments yet', 'لا مدفوعات بعد'],
       'Client & fidélité': ['Customer & loyalty', 'الزبون والولاء'],
       'Menu': ['Menu', 'القائمة'],

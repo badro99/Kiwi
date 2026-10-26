@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=19';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=19';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=19';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=20';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=20';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=20';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -1140,16 +1140,15 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
   const lineUnit  = (ln) => shelf(lineBase(ln) * (100 - ln.remise) / 100);
-  const lineTotal = (ln) => lineUnit(ln) * ln.qty;
+  const lineTotal = (ln) => Math.round(lineUnit(ln) * 100) * ln.qty / 100;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
      de s'appliquer d'elle-même, sans avoir à la retirer partout à la main. */
   function rewardDiscount(t, base) {
     const r = t.reward;
     if (!r || r.clientId !== t.client) return 0;
-    /* la remise est ce qui reste quand le total est arrondi vers le bas :
-       arrondir la remise au plus proche refaisait payer jusqu'à 0,50 de trop */
-    if (r.kind === 'percent') return base - shelf(base * (100 - (r.value || 0)) / 100);
+    /* Le total fidélité est arrondi vers le bas au centime. */
+    if (r.kind === 'percent') return base - shelf(base * (100 - Math.min(100, Math.max(0, r.value || 0))) / 100);
     if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
     return 0;
   }

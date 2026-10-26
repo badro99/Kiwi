@@ -5,7 +5,7 @@
   var HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
   function toMin(s) { var m = HHMM.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
   function money(v) { var n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0; }
-  function down(n) { return Math.max(0, Math.floor(n + 1e-6)); }
+  function down(n) { return Math.max(0, Math.floor(n * 100 + 1e-6) / 100); }
   var fmt = null, fmtZone = null;
   function clock() {
     var report = root.KiwiDayReport;
@@ -37,8 +37,7 @@
 
   function normalize(p, surface) {
     var kind = ['percent', 'amount', 'fixed'].indexOf(p.kind) >= 0 ? p.kind : 'percent';
-    var n = Number(p.value);
-    var value = surface === 'boutique' ? Math.max(0, Math.round(Number.isFinite(n) ? n : 0)) : money(p.value);
+    var value = money(p.value);
     if (kind === 'percent') value = Math.min(100, Math.round(value));
     var days = (Array.isArray(p.days) ? p.days : []).map(Number).filter(function (d, i, a) {
       return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i;
@@ -65,16 +64,14 @@
     return inWindow(p, b || businessMoment(now)) ? 'active' : 'waiting';
   }
   function price(p, unit, surface) {
-    var boutique = surface === 'boutique';
-    var n = Number(unit);
-    var base = boutique ? down(Number.isFinite(n) ? n : 0) : money(unit);
+    var base = money(unit);
     var out = base;
-    if (p.kind === 'percent') out = boutique ? base * (100 - p.value) / 100
-      : Math.round(Math.round(base * 100) * (100 - p.value) / 100 + 1e-9) / 100;
+    if (p.kind === 'percent') out = Math.round(Math.round(base * 100) * (100 - p.value) / 100 + 1e-9) / 100;
     else if (p.kind === 'amount') out = base - p.value;
     else out = p.value;
-    return Math.min(base, boutique ? down(out) : money(out));
+    return Math.min(base, money(out));
   }
+
   root.KiwiPromoRules = Object.freeze({ normalize: normalize, businessMoment: businessMoment,
     inWindow: inWindow, status: status, price: price, money: money, down: down, toMin: toMin });
 })(/** @type {any} */ (globalThis).window || globalThis);

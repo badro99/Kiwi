@@ -96,3 +96,24 @@ ok(/function commitEan\(raw\) \{\s*if \(state\.checkoutBusy/.test(pos),
   'le champ douchette lui-même refuse un scan derrière le paiement');
 
 if (!process.exitCode) console.log(`✓ stock boutique par déclinaison : ${passed} contrôles`);
+
+const beforeFraction = C.listVariants(product.id).find(v => v.id === whiteS.id).stock;
+eq(C.receiveStock(whiteS.id, 1.5).ok, false, 'fractional receipt refused');
+eq(C.listVariants(product.id).find(v => v.id === whiteS.id).stock, beforeFraction, 'fractional receipt preserves stock');
+eq(C.adjustVariantStock(product.id, 'S', 'blanc', -1.5), false, 'fractional sale refused');
+eq(C.listVariants(product.id).find(v => v.id === whiteS.id).stock, beforeFraction, 'fractional sale preserves stock');
+
+for (const lang of ['fr', 'en', 'ar']) {
+  let visible = '';
+  win.KiwiI18n = { getLang: () => lang, T: { [lang]: { 'catalog.wholeUnits': 'translated-' + lang } } };
+  win.alert = text => { visible = text; };
+  eq(C.setStock(whiteS.id, 2.5), null, 'fractional inventory refused');
+  eq(visible, 'translated-' + lang, 'visible message uses dashboard language');
+  win.KiwiCaisseLang = { tr: () => 'till-' + lang };
+  eq(C.adjustStock(whiteS.id, .5), null, 'fractional adjustment refused');
+  eq(visible, 'till-' + lang, 'visible message uses till language');
+  delete win.KiwiCaisseLang;
+  eq(C.addVariant({ productId: product.id, colorId: 'test', size: 'F', stock: 1.5 }), null, 'fractional creation refused');
+  eq(C.updateVariant(whiteS.id, { stock: 1.5 }), null, 'fractional update refused');
+  eq(C.ensureVariant({ productId: product.id, colorId: 'test', size: 'F', stock: 1.5 }).variant, null, 'fractional ensure refused');
+}

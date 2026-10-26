@@ -1972,6 +1972,7 @@ section('Whole-project regressions');
     'agent-vision-test.mjs',
     'wave-o-truth-test.mjs',
     'briefing-test.mjs',
+    'wave-q-scope-test.mjs',
     'briefing-tenant-test.mjs',
     'register-phone-tickets-test.mjs',
     'order-queue-tenant-test.mjs',

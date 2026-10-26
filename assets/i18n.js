@@ -14,6 +14,9 @@
   /* ─── TRANSLATIONS ─── */
   const T = {
     fr: {
+      "catalog.wholeUnits": 'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.',
+      "print.notPrinted": "Non imprimé",
+      "print.reprint": "Réimprimer",
       "stock.noPhone": "Pas de numéro · modifiez le fournisseur",
       "stock.editSuggested": "Édition de la commande suggérée",
       "team.payrollAccess": "Accès réservé au gérant ou au propriétaire",
@@ -56,6 +59,9 @@
   "quarantine.processing": "Validation en cours, réessayez pour terminer."
 },
     en: {
+      "catalog.wholeUnits": 'The boutique uses whole units. For weighted goods, use the Grocery or Stock module.',
+      "print.notPrinted": "Not printed",
+      "print.reprint": "Reprint",
       "stock.noPhone": "No phone number · edit the supplier",
       "stock.editSuggested": "Edit suggested order",
       "team.payrollAccess": "Only the manager or owner can access this",
@@ -97,6 +103,7 @@
       "quarantine.heldDetail": "Waiting to send to the owner · local copy preserved",
       "quarantine.processing": "Approval in progress, retry to finish.",
       'dash.profile.open': 'My profile',
+      'salleScan.suggested': 'Suggested plan from your photo, check positions in the room.',
       'salleScan.title': "Scan my floor",
       'salleScan.cancel': "Cancel",
       'salleScan.timeoutT': "Scan timed out",
@@ -810,6 +817,9 @@
     },
 
     ar: {
+      "catalog.wholeUnits": 'تستخدم البوتيك وحدات كاملة. للمنتجات الموزونة، استخدم وحدة البقالة أو المخزون.',
+      "print.notPrinted": "لم تتم الطباعة",
+      "print.reprint": "إعادة الطباعة",
       "stock.noPhone": "لا يوجد رقم هاتف · عدّل المورد",
       "stock.editSuggested": "تعديل الطلب المقترح",
       "team.payrollAccess": "الوصول متاح للمسؤول أو المالك فقط",
@@ -851,6 +861,7 @@
       "quarantine.heldDetail": "في انتظار الإرسال إلى المالك · النسخة المحلية محفوظة",
       "quarantine.processing": "الموافقة قيد التنفيذ، أعد المحاولة لإكمالها.",
       'dash.profile.open': 'ملفي الشخصي',
+      'salleScan.suggested': 'مخطط مقترح من صورتك، تحقق من المواضع في القاعة.',
       'salleScan.title': "مسح قاعتي",
       'salleScan.cancel': "إلغاء",
       'salleScan.timeoutT': "انتهت مهلة المسح",

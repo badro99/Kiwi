@@ -97,7 +97,7 @@
         if (!protectedTill()) return demoReply();
         return typeof P().verifyReply === 'function' ? P().verifyReply(code, act.server) : Promise.resolve({ kind: 'network' });
       },
-      offline: { verify: function (code) { return typeof P().offlineRow === 'function' ? P().offlineRow(code) : Promise.resolve(null); } },
+      offline: { verify: function (code) { return typeof P().offlineRow === 'function' ? P().offlineRow(code, { manager: level === 'manager' }) : Promise.resolve(null); } },
       isOffline: function () {
         try { if (root.navigator && root.navigator.onLine === false) return true; } catch (_) {}
         return !!(P().lastRequestFailed && P().lastRequestFailed());

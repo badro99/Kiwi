@@ -30,6 +30,8 @@
     printBytesToTarget = core.printBytesToTarget,
     printQueueIdle = core.printQueueIdle,
     reconnectUsb = core.reconnectUsb,
+    relayFetch = core.relayFetch,
+    relayMerchantQS = core.relayMerchantQS,
     relayPairCode = core.relayPairCode,
     relayProbe = core.relayProbe,
     relayRevoke = core.relayRevoke,
@@ -658,6 +660,22 @@
         }).join('');
         list.querySelectorAll('[data-relay-revoke]').forEach(function (b) {
           b.addEventListener('click', function () { askRevoke(this); });
+        });
+        relayFetch('/jobs' + relayMerchantQS()).then(function (r) {
+          if (!ov.isConnected || !r.j || !r.j.ok) return;
+          (r.j.jobs || []).forEach(function (job) {
+            var row = document.createElement('div'); row.className = 'kpr-relay-row';
+            var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
+            var words = dict ? [dict['print.notPrinted'], dict['print.reprint']] : [say('Non imprimé'), say('Réimprimer')];
+            row.innerHTML = '<span>' + esc(words[0] + ' · ' + job.kind + ' · ' + new Date(job.created_ts).toLocaleString()) + '</span><button type="button">' + words[1] + '</button>';
+            row.querySelector('button').onclick = function () {
+              var btn = this; btn.disabled = true;
+              relayFetch('/jobs' + relayMerchantQS(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reprint-expired', id: job.id }) }).then(function (answer) {
+                if (answer.j && answer.j.ok) row.remove(); else btn.disabled = false;
+              });
+            };
+            list.appendChild(row);
+          });
         });
         // Le pont local n'est pas encore relais : on peut l'associer d'un clic, sans code à taper.
         if (local) local.style.display = (localPing && localPing.relay && !localPing.relay.paired) ? '' : 'none';

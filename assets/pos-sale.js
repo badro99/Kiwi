@@ -329,6 +329,7 @@
     var entry = {
       ts: at.getTime(),
       total: total,
+      tipCents: Math.max(0, Math.round(Number(sale.tipCents) || 0)),
       m: who,                                    /* le locataire, voir tenant() */
       method: normMethod(sale.method),
       raw: sale.method == null ? '' : String(sale.method),   /* le mot du métier, pour le journal local */
@@ -370,7 +371,7 @@
       if (window.KiwiLive && window.KiwiLive.isOn && window.KiwiLive.isOn()) {
         replayHeld();
         var payload = {
-          amount: total, method: entry.method, label: entry.label,
+          amount: total, tip: entry.tipCents / 100, method: entry.method, label: entry.label,
           ref: entry.ref, time: at, channel: entry.channel || '', idDay: entry.idDay,
           /* Le détail du panier suit la vente. Il était construit juste
              au-dessus et restait sur ce terminal : le serveur ne recevait que
@@ -648,6 +649,7 @@
   function fromServer(s, who) {
     if (!s || !(+s.amount > 0)) return null;
     var row = {
+      tipCents: Math.max(0, Math.round(Number(s.tipCents) || 0)),
       ts: Number(s.ts) || Date.now(), total: Math.round(+s.amount * 100) / 100,
       m: who, method: normMethod(s.method), raw: String(s.method || ''),
       label: String(s.label || 'Vente').slice(0, 80),

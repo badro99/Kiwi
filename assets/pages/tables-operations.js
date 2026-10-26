@@ -1725,6 +1725,7 @@ case 'scan-salle': {
           if (facts.venue) A.venue = facts.venue;
           if (facts.tables) A.tables = Math.min(60, Math.max(2, facts.tables));
           if (facts.mix && facts.mix.length) A.mix = facts.mix;
+          A.placement = facts.placement || [];
           if (facts.terrasse && !A.extras.includes('terrasse')) A.extras = A.extras.concat('terrasse');
           pdsHandleAction('open-wizard', btn, state, T, root, dr, refresh, selection);
         },

@@ -764,7 +764,7 @@
   function cartRemise(c) {
     if (!c.client || c.client.type !== 'known') return 0;
     const cu = CUST[c.client.id];
-    return cu && fidTier(cu.points) ? Math.round(cartSub(c) * FID_RATE) : 0;
+    return cu && fidTier(cu.points) ? Math.round(cartSub(c) * FID_RATE * 100 + 1e-9) / 100 : 0;
   }
   function cartTotal(c) { return cartSub(c) - cartRemise(c); }
   function addToCart(itemId, qty) {

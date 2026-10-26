@@ -98,8 +98,8 @@ ok(caisseJs.includes("receiptHTML(order, 'DUPLICATA · ATELIER')") && caisseJs.i
 ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('nom du client, commande, pièce, article et service') && caisseJs.includes('<div class="px-tag-client" data-nolang>${dataText(customer.name)}</div>') && caisseJs.includes('hideBarcode: true'), 'garment labels prioritize order number while retaining operational references');
 ok(caisseCss.includes('--kiwi-dna-rail-w: 272px') && caisseJs.includes('id="px-theme"') && caisseJs.includes('KiwiCaisseTheme.toggle()') && caisseJs.includes('id="px-fullscreen"'), 'pressing uses a full-width rail with theme and fullscreen terminal controls');
 const whatsappDraftOpen = caisseJs.indexOf("window.open('', '_blank')");
-const whatsappConfirmedAfterOpen = caisseJs.indexOf('o.notified = true', whatsappDraftOpen);
-ok(caisseJs.includes('J’ai envoyé le message') && whatsappDraftOpen >= 0 && whatsappConfirmedAfterOpen > whatsappDraftOpen, 'WhatsApp notification is confirmed only after opening the draft');
+const whatsappConfirmedAfterOpen = caisseJs.indexOf("KiwiPressingOps.markNotified", whatsappDraftOpen);
+ok(caisseJs.includes('Marquer prévenu') && whatsappDraftOpen >= 0 && whatsappConfirmedAfterOpen > whatsappDraftOpen, 'WhatsApp notification is confirmed only after opening the draft');
 ok(!caisseJs.includes("jusqu'à 20h00") && !caisseJs.includes('merci envoyé sur WhatsApp'), 'customer messages and handover confirmations make no false claims');
 ok(!caisseJs.includes('Date promise') && !caisseJs.includes('date promise'), 'withdrawal copy is idiomatic French');
 ok(caisseJs.includes('openClient({ onSelected: chooseReady })') && caisseJs.includes('openDate({ onSelected: finalizeTicket })') && caisseJs.includes('function finalizeTicket()'), 'validation guides the cashier through customer and pickup date before printing');

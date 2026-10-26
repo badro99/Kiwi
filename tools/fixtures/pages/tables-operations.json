@@ -663,7 +663,7 @@
       "kind": "case",
       "offset": 81427,
       "replacement": "case 'scan-salle': { tableOperations().tableAction39(action, btn, state, T, root, dr, refresh, selection); break; }",
-      "length": 1214,
+      "length": 1261,
       "bodyPrefix": "function tableAction39(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
       "bodySuffix": "\n  }\n}"
     },
@@ -679,7 +679,7 @@
         "handlers"
       ],
       "kind": "case",
-      "offset": 82643,
+      "offset": 82690,
       "replacement": "case 'open-templates':\n    case 'open-wizard': { tableOperations().tableAction40(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 9667,
       "bodyPrefix": "function tableAction40(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -695,7 +695,7 @@
         "pdsFreeSpot"
       ],
       "kind": "case",
-      "offset": 92312,
+      "offset": 92359,
       "replacement": "case 'add-table':\n    case 'add-table-default': { tableOperations().tableAction41(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1789,
       "bodyPrefix": "function tableAction41(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -711,7 +711,7 @@
         "pdsFreeSpot"
       ],
       "kind": "case",
-      "offset": 94103,
+      "offset": 94150,
       "replacement": "case 'add-el': { tableOperations().tableAction42(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1301,
       "bodyPrefix": "function tableAction42(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -727,7 +727,7 @@
         "pdsSetServerIds"
       ],
       "kind": "case",
-      "offset": 95406,
+      "offset": 95453,
       "replacement": "case 'clear-assign': { tableOperations().tableAction43(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1095,
       "bodyPrefix": "function tableAction43(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -743,7 +743,7 @@
         "pdsStaffColor"
       ],
       "kind": "case",
-      "offset": 96503,
+      "offset": 96550,
       "replacement": "case 'add-server': { tableOperations().tableAction44(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1756,
       "bodyPrefix": "function tableAction44(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -760,7 +760,7 @@
         "pdsServerIds"
       ],
       "kind": "case",
-      "offset": 98261,
+      "offset": 98308,
       "replacement": "case 'del-server': { tableOperations().tableAction45(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 899,
       "bodyPrefix": "function tableAction45(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -776,7 +776,7 @@
         "pdsRotationKey"
       ],
       "kind": "case",
-      "offset": 99162,
+      "offset": 99209,
       "replacement": "case 'rotate-configure': { tableOperations().tableAction46(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 6541,
       "bodyPrefix": "function tableAction46(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -794,7 +794,7 @@
         "pdsUndo"
       ],
       "kind": "case",
-      "offset": 105705,
+      "offset": 105752,
       "replacement": "case 'rotate-now': { tableOperations().tableAction47(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 948,
       "bodyPrefix": "function tableAction47(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -809,7 +809,7 @@
         "pdsPush"
       ],
       "kind": "case",
-      "offset": 106655,
+      "offset": 106702,
       "replacement": "case 'table-rotate':\n    case 'rot-90': { tableOperations().tableAction48(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 706,
       "bodyPrefix": "function tableAction48(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -823,7 +823,7 @@
         "pdsPush"
       ],
       "kind": "case",
-      "offset": 107363,
+      "offset": 107410,
       "replacement": "case 'ambiance': { tableOperations().tableAction49(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 627,
       "bodyPrefix": "function tableAction49(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -840,7 +840,7 @@
         "pdsSetStatus"
       ],
       "kind": "case",
-      "offset": 107992,
+      "offset": 108039,
       "replacement": "case 'table-duplicate': { tableOperations().tableAction50(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1457,
       "bodyPrefix": "function tableAction50(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -858,7 +858,7 @@
         "pdsOfferTableUndo"
       ],
       "kind": "case",
-      "offset": 109451,
+      "offset": 109498,
       "replacement": "case 'table-delete': { tableOperations().tableAction51(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1385,
       "bodyPrefix": "function tableAction51(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -870,7 +870,7 @@
       "end": 247987,
       "deps": [],
       "kind": "case",
-      "offset": 110838,
+      "offset": 110885,
       "replacement": "case 'table-group': { tableOperations().tableAction52(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 708,
       "bodyPrefix": "function tableAction52(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -887,7 +887,7 @@
         "pdsOfferTableUndo"
       ],
       "kind": "case",
-      "offset": 111548,
+      "offset": 111595,
       "replacement": "case 'table-ungroup': { tableOperations().tableAction53(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 849,
       "bodyPrefix": "function tableAction53(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -902,7 +902,7 @@
         "pdsPush"
       ],
       "kind": "case",
-      "offset": 112399,
+      "offset": 112446,
       "replacement": "case 'obj-lock': { tableOperations().tableAction54(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 604,
       "bodyPrefix": "function tableAction54(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -917,7 +917,7 @@
         "pdsPush"
       ],
       "kind": "case",
-      "offset": 113005,
+      "offset": 113052,
       "replacement": "case 'seats-up':\n    case 'seats-down': { tableOperations().tableAction55(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 718,
       "bodyPrefix": "function tableAction55(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -932,7 +932,7 @@
         "pdsPush"
       ],
       "kind": "case",
-      "offset": 113725,
+      "offset": 113772,
       "replacement": "case 'layer-back':\n    case 'layer-front': { tableOperations().tableAction56(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 745,
       "bodyPrefix": "function tableAction56(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -946,7 +946,7 @@
         "pdsUndo"
       ],
       "kind": "case",
-      "offset": 114472,
+      "offset": 114519,
       "replacement": "case 'undo': { tableOperations().tableAction57(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 505,
       "bodyPrefix": "function tableAction57(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -960,7 +960,7 @@
         "pdsRedo"
       ],
       "kind": "case",
-      "offset": 114979,
+      "offset": 115026,
       "replacement": "case 'redo': { tableOperations().tableAction58(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 505,
       "bodyPrefix": "function tableAction58(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -975,7 +975,7 @@
         "PDS_GRID"
       ],
       "kind": "case",
-      "offset": 115486,
+      "offset": 115533,
       "replacement": "case 'bulk-align-h': { tableOperations().tableAction59(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 836,
       "bodyPrefix": "function tableAction59(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -990,7 +990,7 @@
         "PDS_GRID"
       ],
       "kind": "case",
-      "offset": 116324,
+      "offset": 116371,
       "replacement": "case 'bulk-align-v': { tableOperations().tableAction60(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 836,
       "bodyPrefix": "function tableAction60(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1005,7 +1005,7 @@
         "PDS_GRID"
       ],
       "kind": "case",
-      "offset": 117162,
+      "offset": 117209,
       "replacement": "case 'bulk-dist-h': { tableOperations().tableAction61(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 914,
       "bodyPrefix": "function tableAction61(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1020,7 +1020,7 @@
         "PDS_GRID"
       ],
       "kind": "case",
-      "offset": 118078,
+      "offset": 118125,
       "replacement": "case 'bulk-dist-v': { tableOperations().tableAction62(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 914,
       "bodyPrefix": "function tableAction62(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1037,7 +1037,7 @@
         "pdsOfferTableUndo"
       ],
       "kind": "case",
-      "offset": 118994,
+      "offset": 119041,
       "replacement": "case 'bulk-delete': { tableOperations().tableAction63(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1213,
       "bodyPrefix": "function tableAction63(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1052,7 +1052,7 @@
         "pdsSyncGroupService"
       ],
       "kind": "case",
-      "offset": 120209,
+      "offset": 120256,
       "replacement": "case 'bulk-group': { tableOperations().tableAction64(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1054,
       "bodyPrefix": "function tableAction64(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1064,7 +1064,7 @@
       "end": 253990,
       "deps": [],
       "kind": "case",
-      "offset": 121265,
+      "offset": 121312,
       "replacement": "case 'bulk-clear': { tableOperations().tableAction65(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 542,
       "bodyPrefix": "function tableAction65(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1080,7 +1080,7 @@
         "pdsStatusLabel"
       ],
       "kind": "case",
-      "offset": 121809,
+      "offset": 121856,
       "replacement": "case 'bulk-status': { tableOperations().tableAction66(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 1027,
       "bodyPrefix": "function tableAction66(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1092,7 +1092,7 @@
       "end": 255164,
       "deps": [],
       "kind": "case",
-      "offset": 122838,
+      "offset": 122885,
       "replacement": "case 'deselect': { tableOperations().tableAction67(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 675,
       "bodyPrefix": "function tableAction67(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",
@@ -1106,7 +1106,7 @@
         "Kiwi"
       ],
       "kind": "case",
-      "offset": 123515,
+      "offset": 123562,
       "replacement": "default: { tableOperations().tableAction68(action, btn, state, T, root, dr, refresh, selection); break; }",
       "length": 435,
       "bodyPrefix": "function tableAction68(action, btn, state, T, root, dr, refresh, selection) {\n  const toast = Kiwi.toast;\n  const modal = Kiwi.modal;\n  const drawer = Kiwi.drawer;\n  const newTableId = () => 'tbl' + Math.random().toString(36).slice(2, 8);\n  const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);\n  switch (action) {\n",

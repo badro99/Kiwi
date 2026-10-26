@@ -117,14 +117,11 @@ await strict('une remise plus forte ne fait jamais payer plus',
     const totals = [0, 5, 10, 15, 20].map((r) => { const { api, ln } = lineFor(s, p, r, q); return api.lineTotal(ln); });
     return totals.every((t, i) => i === 0 || t <= totals[i - 1]);
   }));
-/* Décision propriétaire (2026-10-19) : arrondir vers le bas, jamais encaisser
-   au-dessus du prix en rayon. Avant, 249,90 s'encaissait 250, et 1,00 à −20 % 1. */
-await strict('l’arrondi au dirham descend toujours, de moins d’un dirham',
-  fc.property(shelfCents, promoCents, remise, qty, (s, p, r, q) => {
-    const { api, ln } = lineFor(s, p, r, q);
-    const exact = api.lineBase(ln) * (100 - r) / 100;
-    return api.lineUnit(ln) <= exact + 1e-9 && exact - api.lineUnit(ln) < 1;
-  }));
+await strict('le prix catalogue est conservé au centime et les lignes restent en centimes',
+  fc.property(shelfCents, qty, (s, q) => {
+    const { api, ln } = lineFor(s, null, 0, q);
+    return Math.abs(api.lineUnit(ln) * 100 - s) < 1e-6 && Math.abs(api.lineTotal(ln) * 100 - s * q) < 1e-6;
+  }), { examples: [[1250, 3], [1200, 2]] });
 await strict('une ligne n’est jamais encaissée plus cher que son prix affiché, promotion et remise comprises',
   fc.property(shelfCents, promoCents, remise, qty, (s, p, r, q) => {
     const { api, ln } = lineFor(s, p, r, q);
@@ -141,6 +138,12 @@ console.log('■ Moteur de promotions');
   vm.runInNewContext(maisonSource((fs.readFileSync(path.join(ROOT, 'assets/promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'))),
     { window, localStorage, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl }, { filename: 'promos.js' });
   const PR = window.KiwiPromos;
+  await strict('promotion fixe de 12,50 conservée sur chaque surface', fc.property(fc.constant(12.5), value =>
+    ['boutique', 'menu'].every(surface => {
+      const rule = window.KiwiPromoRules.normalize({ kind: 'fixed', value }, surface);
+      return rule.value === value && window.KiwiPromoRules.price(rule, 20, surface) === value;
+    })));
+
   const promo = fc.oneof(
     fc.record({ kind: fc.constant('percent'), value: fc.integer({ min: 1, max: 90 }) }),
     fc.record({ kind: fc.constant('amount'), value: fc.integer({ min: 1, max: 2000 }) }),
@@ -151,7 +154,7 @@ console.log('■ Moteur de promotions');
       const shown = cents / 100;
       const out = PR.applyTo(p, shown);
       const rule = p.kind === 'percent' ? shown * (100 - p.value) / 100 : p.kind === 'amount' ? shown - p.value : p.value;
-      return out >= 0 && out <= shown + 1e-9 && out <= Math.max(0, rule) + 1e-9 && Number.isInteger(out);
+      return out >= 0 && out <= shown + 1e-9 && out <= Math.round(Math.max(0, rule) * 100 + 1e-9) / 100 + 1e-9 && Math.abs(out * 100 - Math.round(out * 100)) < 1e-6;
     }));
 }
 

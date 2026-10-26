@@ -105,12 +105,12 @@ function hits(p, item) {
   return stock > 0 && stock <= s.max;
 }
 function priced(p, was) {
-  const v = Math.round(p.value), pct = Math.min(100, v);
-  const out = p.kind === 'percent' ? Math.floor(was * (100 - pct) / 100 + 1e-6) : p.kind === 'amount' ? was - v : v;
-  return Math.max(0, Math.min(was, Math.floor(out + 1e-6)));
+  const v = Math.round(p.value * 100) / 100, pct = Math.min(100, Math.round(v));
+  const out = p.kind === 'percent' ? Math.round(Math.round(was * 100) * (100 - pct) / 100 + 1e-9) / 100 : p.kind === 'amount' ? was - v : v;
+  return Math.max(0, Math.min(was, Math.round(out * 100) / 100));
 }
 function model(rules, item, now) {
-  const was = Math.floor(item.price + 1e-6);
+  const was = Math.round(item.price * 100) / 100;
   let best = null;
   for (const p of rules) {
     if (!running(p, now) || !hits(p, item)) continue;

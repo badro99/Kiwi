@@ -1129,3 +1129,17 @@ window.__kiwiBoutiqueCatalogParts.well = function () {
   }
   return { read: key => enqueue(() => transaction(key, 'get').then(copy => { if (copy) copies.add(key); return copy; })), save };
 };
+
+window.__kiwiBoutiqueCatalogParts.wholeQuantity = function (value) {
+  if (Number.isInteger(Number(value))) return true;
+  const fr = 'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.';
+  const layer = window.KiwiI18n;
+  // The till translates the French itself; the dashboard reads its key, French last.
+  const text = window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(fr)
+    : layer && (layer.T[layer.getLang()]?.['catalog.wholeUnits'] || layer.T.fr['catalog.wholeUnits']);
+  if (!text) return false;
+  if (window.Kiwi?.toast) window.Kiwi.toast(text, { type: 'error' });
+  else if (window.toast) window.toast(text);
+  else if (window.alert) window.alert(text);
+  return false;
+};

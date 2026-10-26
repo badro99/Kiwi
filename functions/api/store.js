@@ -1,4 +1,4 @@
-import { creditRefundEdit, refundCreditBook } from './_credit-book-refund.js';
+import { creditSettlementAlerts, creditRefundEdit, refundCreditBook } from './_credit-book-refund.js';
 import { serviceCapacityConflict } from './_booking-capacity.js';
 // /api/store — les documents PRIVÉS d'un établissement, synchronisés entre
 // appareils. Le même filet que /api/catalog, généralisé.
@@ -1018,9 +1018,12 @@ export async function onRequestPost(context) {
   if (partial) {
     clean.value = partial.keep(mine, clean.value);
     text = JSON.stringify(clean.value);
-    if (text.length > FEATURES[feature].max) {
-      return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
-    }
+  }
+  /* After the merge, not before: two offline tills each send only their own
+     settlement, and only the combined book shows the same debt paid twice. */
+  if (feature === 'verticalops') { creditSettlementAlerts(clean.value); text = JSON.stringify(clean.value); }
+  if (partial && text.length > FEATURES[feature].max) {
+    return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
   }
 
   if (feature === 'pressing-orders') {

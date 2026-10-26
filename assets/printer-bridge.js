@@ -860,6 +860,7 @@
     reconnectUsb: reconnectUsb,
     relayPairCode: relayPairCode,
     relayProbe: relayProbe,
+    relayFetch: relayFetch, relayMerchantQS: relayMerchantQS,
     relayRevoke: relayRevoke,
     saveBridgeTarget: saveBridgeTarget,
     say: say,
@@ -878,7 +879,7 @@
     if (pairingLoad) return pairingLoad;
     pairingLoad = new Promise(function (resolve, reject) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-ui.js?v=1';
+      script.src = '/assets/printer/pairing-ui.js?v=3';
       function failed() {
         pairingLoad = null;
         script.remove();

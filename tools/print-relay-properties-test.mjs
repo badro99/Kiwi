@@ -229,6 +229,21 @@ try {
     assert.equal((await poll(BRIDGES[0])).jobs.length + (await poll(BRIDGES[1])).jobs.length, 0);
   }));
 
+  await strict('Q expired jobs remain visible 24h and two explicit reprints deposit one fresh job', fc.asyncProperty(fc.integer({min:0,max:20}), async k => {
+    reset(); const original = (await deposit(k)).body.id;
+    clock += 10 * 60000;
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 0);
+    const listing = async (cookie = till) => { const r = await jobs.onRequestGet({env, request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{headers:{Cookie:cookie}})}); return {status:r.status,body:await r.json()}; };
+    assert.equal((await listing()).body.jobs[0].id, original);
+    const reprint = async () => { const r = await jobs.onRequestPost({env,request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{method:'POST',headers:{Cookie:till,'Content-Type':'application/json'},body:JSON.stringify({action:'reprint-expired',id:original})})}); assert.equal(r.status,200);return r.json(); };
+    const copies = await Promise.all([reprint(),reprint()]);
+    assert.equal(copies[0].id,copies[1].id); assert.notEqual(copies[0].id,original);
+    assert.equal(rows().length,2); assert.equal((await poll(BRIDGES[0])).jobs.length,1);
+    assert.notEqual((await listing(otherTill)).status,200);
+    clock += 24 * 3600000;
+    assert.ok(!(await listing()).body.jobs.some(j=>j.id===original));
+  }));
+
   console.log(`${failed ? '✗' : '✓'} print-relay-properties-test · ${passed} held, ${known} known, ${failed} failed`);
 } finally { f.close(); }
 process.exit(failed ? 1 : 0);

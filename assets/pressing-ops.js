@@ -81,6 +81,31 @@
     return 'recu';
   }
 
+  function notification(o) {
+    var n = o && o.notification;
+    if (!n) return o && o.notified ? { marked: true, at: '', by: null, channel: '' } : null;
+    return { marked: true, at: iso(n.at), by: n.by ? { id: text(n.by.id, 80), name: text(n.by.name, 100) } : null,
+      channel: ['call', 'sms', 'whatsapp', 'in-person'].indexOf(n.channel) >= 0 ? n.channel : '' };
+  }
+  function markNotified(o, actor, channel, at) {
+    if (!o || !actor || !(actor.id || actor.name) || ['call', 'sms', 'whatsapp', 'in-person'].indexOf(channel) < 0) return false;
+    o.notification = notification({ notification: { by: actor, channel: channel, at: at || new Date() } });
+    o.notified = true; o.notifiedAt = o.notification.at; o.updatedAt = Date.parse(o.notification.at);
+    return true;
+  }
+  function openNotification(o, host, actor, done) {
+    var tr = function (s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; };
+    host.replaceChildren();
+    var title = document.createElement('h3'); title.textContent = tr('Marquer prévenu'); host.appendChild(title);
+    var note = document.createElement('p'); note.textContent = tr('Kiwi n’envoie aucun message.'); host.appendChild(note);
+    [['call','Appel'],['sms','Par SMS'],['whatsapp','Par WhatsApp'],['in-person','En personne']].forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button'; b.classList.add('px-btn', 'secondary'); b.textContent = tr(c[1]);
+      b.onclick = function () { if (markNotified(o, actor, c[0])) done(); }; host.appendChild(b);
+    });
+    var close = document.createElement('button'); close.type = 'button'; close.classList.add('px-btn', 'ghost'); close.textContent = tr('Fermer');
+    close.onclick = function () { host.closest('.modal-veil').classList.remove('is-open'); }; host.appendChild(close);
+    host.closest('.modal-veil').classList.add('is-open');
+  }
   function sanitizeOrder(o, customer, total) {
     var pieces = (o.pieces || []).map(function (p) {
       return {
@@ -102,7 +127,7 @@
       cancelledAt: iso(o.cancelledAt), cancelledBy: o.cancelledBy ? {
         id: text(o.cancelledBy.id, 80), name: text(o.cancelledBy.name, 100), role: text(o.cancelledBy.role, 40)
       } : null,
-      notified: !!o.notified, total: amount, paid: Math.min(amount, paid),
+      notified: !!o.notified, notification: notification(o), total: amount, paid: Math.min(amount, paid),
       due: o.pay && o.pay.mode === 'compte' ? 0 : Math.max(0, amount - paid),
       channel: text(o.channel || 'counter', 24)
     };
@@ -406,7 +431,7 @@
   /* `orderStatus` is exported so the owner dashboard derives readiness the same
      way `summary()` does. The snapshot's stored `status` is frozen at sync time;
      anything reading it after an order crosses `readyAt` gets a stale answer. */
-  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
+  window.KiwiPressingOps = { openNotification: openNotification, notification: notification, markNotified: markNotified, read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
 })();
 
 /* ── Garment product art (formerly assets/pressing-garment-icons.js) ──────────

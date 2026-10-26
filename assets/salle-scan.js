@@ -4,8 +4,8 @@
  * « Scanner ma salle » : le restaurateur photographie sa salle (ou un croquis
  * dessiné à la main) et Kiwi AI (Workers AI, hébergé Cloudflare) en extrait
  * les FAITS : combien de tables, quelles formes, combien de places, terrasse
- * ou intérieur, comptoir. Jamais de coordonnées — un modèle vision compte
- * bien mais place mal.
+ * ou intérieur, comptoir et ordre approximatif. Les positions sont des
+ * suggestions à vérifier dans la salle, jamais des mesures.
  *
  * Ce module n'écrit RIEN dans le plan. Il réduit les photos côté client,
  * appelle POST /api/ai/salle-import (une photo = un espace), agrège les faits
@@ -75,9 +75,9 @@
 
   /* Réponses serveur (une par photo) → faits agrégés pour le questionnaire. */
   function aggregate(results) {
-    const hist = {};
+    const hist = {}, placement = [];
     let total = 0, outdoor = false, counter = false, venue = '';
-    results.forEach((r) => {
+    results.forEach((r, photo) => {
       if (!r) return;
       if (r.outdoor) outdoor = true;
       if (r.counter) counter = true;
@@ -85,11 +85,12 @@
       (r.tables || []).forEach((t) => {
         const type = typeFor(t.shape, t.seats);
         hist[type] = (hist[type] || 0) + t.count;
+        for (let i = 0; i < t.count; i++) placement.push({ type, photo, row: t.row, column: t.column == null ? undefined : t.column + i, zone: t.zone });
         total += t.count;
       });
     });
     if (!total) return null;
-    return { venue: venue || 'restaurant', tables: total, mix: mixFrom(hist), terrasse: outdoor, counter };
+    return { venue: venue || 'restaurant', tables: total, mix: mixFrom(hist), placement, terrasse: outdoor, counter };
   }
 
   /* Une photo de salle en 4000×3000 n'apprend rien de plus au modèle qu'en
@@ -141,6 +142,7 @@
       '  <li>' + esc(L('tip1', 'Placez-vous dans un angle de la salle, pour voir un maximum de tables.')) + '</li>',
       '  <li>' + esc(L('tip2', 'Kiwi AI compte les tables, les formes et les places · vous ajustez ensuite.')) + '</li>',
       '</ul>',
+      '<div class="kss-note">' + esc(L('suggested', 'Plan suggéré à partir de votre photo, vérifiez les positions dans la salle.')) + '</div>',
       '<div class="kss-note">' + esc(L('note', 'Analyse par Kiwi AI (hébergée Cloudflare). Trois plans vous seront proposés · rien n\'est remplacé sans votre confirmation.')) + '</div>',
     ].join('');
   }

@@ -318,6 +318,20 @@ const load = (w, orders) => w.sb.KiwiPressingOps.replace(orders, { customer: (o)
   ok(/dropoffStats: dropoffStats/.test(ops) && /LIVE_MS = 20000/.test(ops), 'ops exposes dropoffStats and refreshes while the page is open');
 }
 
+{
+ const storage=new Map();const ctx={window:null,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},Set,Date,console,setInterval(){},CustomEvent:class{},};ctx.window=ctx;ctx.addEventListener=()=>{};ctx.dispatchEvent=()=>{};
+ vm.runInNewContext(read('assets/pressing-ops.js'),ctx);
+ const ops=ctx.KiwiPressingOps;
+ ok(typeof ops.markNotified==='function','Q staff notification marker exists');
+ if(ops.markNotified)for(const channel of ['call','sms','whatsapp','in-person']){
+  const o={id:'q-order',pieces:[]};const at='2026-10-26T12:00:00.000Z';
+  ok(ops.markNotified(o,{id:'q-staff',name:'Fixture'},channel,at),'Q accepts staff channel '+channel);
+  ops.replace([o],{},'q-shop');const n=ops.read('q-shop')[0].notification;
+  ok(n.by.id==='q-staff'&&n.at===at&&n.channel===channel,'Q persists who when channel '+channel);
+ }
+ if(ops.notification)ok(ops.notification({notified:true}).channel==='','Q old boolean is marked with unknown channel');
+}
+
 console.log(`pressing truth: ${pass} checks`);
 if (fails.length) {
   console.error('\nFAILED:\n - ' + fails.join('\n - '));

@@ -170,9 +170,28 @@
     return !!(id && TILL_SET[id]);
   }
 
+  /* Does the roster the till just read still vouch for a cached offline
+   * identity? The roster's row id changes whenever the team is published again
+   * (each publication writes fresh rows), so an id match proves the very code
+   * that was verified is still the current one. The role must match too: a
+   * demoted manager keeps no manager verifier. Older servers send no id; then
+   * the name must be unique on the roster and match with its role. Pure: the
+   * caisse (caisse-pairing.js) owns the storage. */
+  function rosterHolds(pins, staff) {
+    if (!staff) return false;
+    var key = function (n) { return String(n || '').trim().toLowerCase(); };
+    var role = key(staff.role), id = String(staff.id || '');
+    var rows = (Array.isArray(pins) ? pins : []).filter(Boolean);
+    if (rows.some(function (p) { return p.id; })) {
+      return !!id && rows.some(function (p) { return String(p.id) === id && key(p.role) === role; });
+    }
+    var named = rows.filter(function (p) { return key(p.name) === key(staff.name); });
+    return !!key(staff.name) && named.length === 1 && key(named[0].role) === role;
+  }
+
   window.KiwiRoles = {
     LABELS: LABELS, BY_TYPE: BY_TYPE, UNIVERSAL: UNIVERSAL, SERVICE: SERVICE, TILL: TILL,
     forType: forType, label: label, isService: isService, opensTill: opensTill,
-    idOf: idOf, norm: norm,
+    idOf: idOf, norm: norm, rosterHolds: rosterHolds,
   };
 })();

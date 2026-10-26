@@ -33,7 +33,7 @@
 
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
   var OFFLINE_PIN_KEY = 'kiwi:caisse:offline-pins:v1:';
-  var OFFLINE_PIN_TTL = 7 * 24 * 60 * 60 * 1000;
+  var OFFLINE_PIN_TTL = 72 * 60 * 60 * 1000;
   function terminalId() {
     var current = '';
     try { current = localStorage.getItem(TERMINAL_KEY) || ''; } catch (_) {}
@@ -53,18 +53,26 @@
 
   /* A real till must keep authorizations usable during a network outage, but
    * never bank the four-digit code itself. After the server proves a code, keep
-   * a tenant-scoped PBKDF2-SHA-256 verifier plus the proven identity for seven
-   * days. A candidate typed offline is hashed again and compared locally. The
+   * a tenant-scoped PBKDF2-SHA-256 verifier plus the proven identity for 72
+   * hours. A candidate typed offline is hashed again and compared locally. The
    * short TTL limits a revoked code's offline lifetime; the next successful
    * online verification refreshes it. */
   function offlinePinKey(merchant) { return OFFLINE_PIN_KEY + encodeURIComponent(String(merchant || '')); }
-  function offlinePinRows(merchant) {
+  /* `keep`, when given, drops the rows it refuses as well (a roster that no
+     longer holds them, a code the server just refused); any such drop also
+     cancels verifiers being written in flight. */
+  function offlinePinRows(merchant, keep) {
     try {
       var rows = JSON.parse(ls(offlinePinKey(merchant)) || '[]');
       var at = Date.now();
       var kept = Array.isArray(rows) ? rows.filter(function (row) {
-        return row && (row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at;
+        return row && (row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at && at - Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)) < OFFLINE_PIN_TTL;
       }) : [];
+      if (keep) {
+        var held = kept.filter(function (row) { try { return !!keep(row); } catch (_) { return false; } });
+        if (held.length !== kept.length) offlinePinEpoch++;
+        kept = held;
+      }
       if (JSON.stringify(kept) !== JSON.stringify(rows)) set(offlinePinKey(merchant), JSON.stringify(kept));
       return kept;
     } catch (_) { return []; }
@@ -94,7 +102,9 @@
     for (var i = 0; i < 64; i += 2) diff |= parseInt(a.slice(i, i + 2), 16) ^ parseInt(b.slice(i, i + 2), 16);
     return diff === 0;
   }
+  var offlinePinEpoch = 0;
   function rememberOfflinePin(merchant, code, staff, expiresAt) {
+    var epoch = offlinePinEpoch, provenAt = Date.now();
     if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
     // In an insecure context subtle is absent: retain the existing behaviour
     // (no local verification or new cache entry), never a JS PBKDF2 fallback.
@@ -109,12 +119,12 @@
            moved to another store meanwhile, this store's verifier must not
            come back after its purge. */
         var still = activeVenue();
-        if (!still || String(still.merchant || '') !== String(merchant)) return staff;
+        if (epoch !== offlinePinEpoch || !still || String(still.merchant || '') !== String(merchant)) return staff;
         var rows = offlinePinRows(merchant).filter(function (row) {
           return String(row.staff && row.staff.id || '') !== String(staff.id || '');
         });
         rows.push({ v: 2, kdf: 'pbkdf2-sha256', it: PIN_ITERATIONS, salt: salt, hash: hash,
-          expiresAt: expiresAt || Date.now() + OFFLINE_PIN_TTL,
+          provenAt: provenAt, expiresAt: expiresAt || provenAt + OFFLINE_PIN_TTL,
           staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80) } });
         set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12))); // Bounded: each cached verifier is one more offline guess target.
@@ -123,6 +133,7 @@
     }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
   function verifyOfflinePin(merchant, code) {
+    var epoch = offlinePinEpoch;
     if (!hasSubtle()) return Promise.resolve(null);
     var rows = offlinePinRows(merchant);
     /* One derivation per (salt, rounds) pair, not per row. */
@@ -136,8 +147,9 @@
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
-        if (!sameDigest(digest, row.hash)) return null;
-        var who = Object.assign({}, row.staff, { provenAt: Number(row.expiresAt || 0) - OFFLINE_PIN_TTL });
+        if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || Date.now() >= row.expiresAt ||
+            Date.now() - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
+        var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });
     })).then(function (matches) { return matches.find(Boolean) || null; });
@@ -740,7 +752,8 @@
     var s = null;
     if (p) {
       var name = String(p.name || '').trim() || 'Caissier';
-      s = { name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
+      s = { id: String(p.id || '').slice(0, 80), name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
+      if (p.offline) s.offline = true;   // proven against a cached verifier, not the server
     }
     window.KiwiStaff = s;
     try {
@@ -763,6 +776,14 @@
       })
       .then(function (d) {
         if (!d || !Array.isArray(d.pins)) throw new Error('pin-config-invalid');
+        /* The roster replaces cached identities: a verifier whose person left
+           the roster is dropped now. Wiping them all here left an outage with
+           only the last cashier able to unlock; a changed code stays bounded
+           by the 72-hour verifier lifetime. */
+        offlinePinRows(merchant, function (row) {
+          var R = window.KiwiRoles;
+          return !!(R && R.rosterHolds && R.rosterHolds(d.pins, row.staff));   // no role module: fail closed
+        });
         return { pins: d.pins, required: !!d.pinGateConfigured };
       });
   }
@@ -851,9 +872,11 @@
     import('./offline-pin-coverage.js').then(function (coverage) {
       var current = activeVenue();
       if (!current || current.merchant !== venue.merchant) return;
+      var rows = hasSubtle() ? offlinePinRows(venue.merchant) : [];
+      var end = rows.length ? Math.min.apply(null, rows.map(function (r) { return Math.min(r.expiresAt, Number(r.provenAt || (r.expiresAt - 7 * 86400000)) + OFFLINE_PIN_TTL); })) : null;
       coverage.showCoverage(document.getElementById('cp-pin-screen'),
         (hasSubtle() ? offlinePinRows(venue.merchant) : []).map(function (row) { return row.staff && row.staff.name || ''; }).filter(Boolean),
-        function (text) { return (window.KiwiCaisseLang || {tr:function (s) {return s;}}).tr(text); }, hasSubtle());
+        function (text) { return (window.KiwiCaisseLang || {tr:function (s) {return s;}}).tr(text); }, hasSubtle(), end);
     }).catch(function () {});
     try { document.documentElement.setAttribute('data-till-paired', ''); } catch (_) {}
     /* Design 2027 (kiwiSkin2027:till): the same door on the kit's pad, through
@@ -1124,6 +1147,12 @@
             return null;
           });
         }
+        /* A code the server has just refused is revoked or changed: its offline
+           verifier goes now. A mistyped code matches no verifier, drops nothing. */
+        if (r && (r.status === 401 || r.status === 403)) return verifyOfflinePin(merchant, code).then(function (gone) {
+          if (gone) offlinePinRows(merchant, function (row) { return String(row.staff && row.staff.id || '') !== String(gone.id || ''); });
+          return null;
+        }, function () { return null; });
         return r && r.ok ? r.json() : null;
       })
       .then(function (d) {
@@ -1161,6 +1190,10 @@
         var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
+      if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code).then(function (gone) {
+        if (gone) offlinePinRows(merchant, function (row) { return String(row.staff && row.staff.id || '') !== String(gone.id || ''); });
+        return reply;
+      }, function () { return reply; });
       return reply;
     });
   }
@@ -1176,13 +1209,14 @@
 
   window.KiwiCaissePairing = {
     verifyReply: verifyReply, noteApproval: noteApproval,
-    offlineRow: function (code) { var v = activeVenue(); return v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null); },
+    offlineRow: function (code, opts) { var v = activeVenue(); return (v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null)).then(function (who) { return who && opts && opts.manager && Date.now() - who.provenAt >= 24 * 3600000 ? null : who; }); },
     lastRequestFailed: function () { return lastFailed; },
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
     repair: repair, recoverFromTerminal: recoverFromTerminal, terminalId: terminalId,
     repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
+    refreshRoster: pinsFor,
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,
     /* ── Autoriser une opération protégée (remise, annulation, retrait) ──────
      * Ces deux fonctions comparaient le code frappé à `pinList`, ce qui n'était
@@ -1202,6 +1236,7 @@
     },
     authorizeManager: function (code, action) {
       return verifyCode(code, action).then(function (who) {
+        if (who && who.offline && Date.now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
         var role = String((who && who.role) || '').toLowerCase();
         if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
@@ -1222,6 +1257,21 @@
     lastVerifyState: function () { return { status: lastVerify.status, wait: lastVerify.wait, offline: !!lastVerify.offline }; },
   };
 
+  /* Back online. A cashier unlocked against a cached verifier proves the code
+     to the server once more, whatever the roster says. A cashier the server
+     already proved keeps working mid-sale unless the fresh roster no longer
+     holds them. */
+  if (window.addEventListener) window.addEventListener('online', function () {
+    var venue = activeVenue();
+    if (!venue || !venue.merchant) return;
+    var who = window.KiwiStaff;
+    if (who && who.offline) { setStaff(null); askStaff(venue); return; }
+    pinsFor(venue.merchant).then(function (gate) {
+      who = window.KiwiStaff;
+      var R = window.KiwiRoles;
+      if (who && gate && gate.pins && gate.pins.length && !(R && R.rosterHolds && R.rosterHolds(gate.pins, who))) { setStaff(null); askStaff(venue); }
+    }).catch(function () {});
+  });
   if (pairedVenue()) offlinePinRows(pairedVenue().merchant); // Purge obsolete verifiers before any unlock.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

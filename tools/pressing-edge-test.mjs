@@ -165,6 +165,7 @@ const tillContext = {
 tillContext.KiwiCloudDoc = tillWindow.KiwiCloudDoc;   /* dans un navigateur, window est l'objet global */
 tillWindow.window = tillWindow; tillWindow.localStorage = tillContext.localStorage; tillWindow.navigator = tillContext.navigator; tillWindow.document = context.document;
 vm.createContext(tillContext);
+vm.runInContext(fs.readFileSync(new URL('../assets/pressing-ops.js', import.meta.url), 'utf8'), tillContext, { filename: 'pressing-ops.js' });
 vm.runInContext(phoneSource, tillContext, { filename: 'phone.js' });
 vm.runInContext(source, tillContext, { filename: 'pressing-caisse.js' });
 const till = tillWindow.KiwiPressing.rules;

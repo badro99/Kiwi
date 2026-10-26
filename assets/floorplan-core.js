@@ -1015,10 +1015,40 @@ function pdsGeneratePlan(a, variant) {
     elements.push(...g.elements);
   });
 
+  // Photo order is a suggestion, never measured room geometry. Keep each
+  // photo in its own zone; ordinal rows/columns map to the merchant's room.
+  if (Array.isArray(a.placement) && a.placement.length) {
+    tables.length = 0;
+    const photos = [...new Set(a.placement.map(p => p.photo))];
+    photos.forEach((photo, photoIndex) => {
+      let zone = zones[photoIndex];
+      if (!zone) {
+        const dim = a.dims_default || { w: 880, h: 540 };
+        zone = { id: 'z' + (zones.length + 1), name: String(photoIndex + 1), room: { w: dim.w, h: dim.h } };
+        zones.push(zone);
+      }
+      const observed = a.placement.filter(p => p.photo === photo);
+      const rowOf = p => Number.isInteger(p.row) ? p.row : ({ front: 0, middle: 1, back: 2 }[p.zone] ?? 0);
+      const rows = [...new Set(observed.map(rowOf))].sort((x, y) => x - y);
+      rows.forEach((row, rowIndex) => {
+        const group = observed.filter(p => rowOf(p) === row).sort((x, y) => (x.column ?? observed.indexOf(x)) - (y.column ?? observed.indexOf(y)));
+        group.forEach((p, columnIndex) => {
+          const d = PDS_TABLE_TYPES[p.type];
+          if (!d) return;
+          tables.push({ id: pdsId('t'), zone: zone.id, type: p.type,
+            x: Math.round((columnIndex + 1) * zone.room.w / (group.length + 1) - d.w / 2),
+            y: Math.round((rowIndex + 1) * zone.room.h / (rows.length + 1) - d.h / 2),
+            w: d.w, h: d.h, seats: d.seats, shape: d.shape, rot: 0,
+            num: String(tables.length + 1), status: 'free', server: null });
+        });
+      });
+    });
+    shortfall = Math.max(0, a.placement.length - tables.length);
+  }
   const covers = tables.reduce((s, t) => s + (t.seats || 0), 0);
   const area = zones.reduce((s, z) => s + (z.room.w * z.room.h), 0) / 10000;  /* cm² → m² */
   return {
-    zones, tables, elements, variant,
+    zones, tables, elements, variant, suggested: !!(a.placement && a.placement.length),
     covers, tableCount: tables.length,
     m2PerCover: covers ? +(area / covers).toFixed(2) : 0,
     aisle: (PDS_VARIANTS[variant] || PDS_VARIANTS.dense).aisle,

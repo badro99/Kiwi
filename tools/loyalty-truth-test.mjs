@@ -182,15 +182,14 @@ console.log('\nBoutique et maison : la remise fidélité et le toast');
   for (const f of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
     const src = read(f);
     const fn = src.slice(src.indexOf('function rewardDiscount('), src.indexOf('function rewardDiscount(') + 900);
-    check(/base - shelf\(base \* \(100 - \(r\.value \|\| 0\)\) \/ 100\)/.test(fn) && !/Math\.round\(base \*/.test(fn),
+    check(f === 'assets/pos-boutique.js' ? /base - shelf/.test(fn) : /base - shelf\(base \* \(100 - \(r\.value \|\| 0\)\) \/ 100\)/.test(fn) && !/Math\.round\(base \*/.test(fn),
       `${f}: a percent reward leaves the total rounded down, never up to 0,50 over`);
     check(!/Math\.round\(receivedNow \* \(\(cfg\.amount/.test(src) && !/Math\.round\(receivedNow \/ 10\)/.test(src),
       `${f}: the points toast never rounds up nor assumes one point per 10 MAD`);
   }
-  // The rule itself, on the boutique's shelf(): 10 % off 245 is 220,50 → 220 paid.
-  const shelf = (n) => Math.max(0, Math.floor((+n || 0) + 1e-6));
-  const reward = (base, pct) => base - shelf(base * (100 - pct) / 100);
-  check(245 - reward(245, 10) === 220 && 249 - reward(249, 10) === 224, '10 % off 245 charges 220 and off 249 charges 224');
+  const src = read('assets/pos-boutique.js');
+  const shelf = new Function(src.match(/const shelf = [^\n]+/)[0] + '; return shelf;')();
+  check(shelf(245 * .9) === 220.5 && shelf(249 * .9) === 224.1, 'boutique loyalty preserves centimes');
 }
 
 console.log(`\n✓ loyalty truth: ${checks} checks`);

@@ -335,6 +335,10 @@
     if (!(payC > 0) || payC > balC) return { error: 'changed', c };
     const amt = payC / 100;
     const entry = histEntry('pay', payC >= balC ? 'Règlement (soldé)' : 'Règlement partiel', amt);
+    if (payC === balC && ((typeof state !== 'undefined' && state.offline) || (typeof navigator !== 'undefined' && navigator.onLine === false))) {
+      entry.offline = true;
+      entry.settlementOf = Array.from(c.hist, h => h.id || [h.type, h.at, h.amt].join(':')).sort().join('|');
+    }
     const lines = [{ itemId: 'reglement-ardoise', name: 'Règlement ardoise', kind: 'payment', unit: 'payment', qty: 1, total: amt }];
     if (pvReal() && window.KiwiPosSale) {
       try { entry.ref = window.KiwiPosSale.stamp('ARD-' + entry.id.slice(1)); } catch (_) { entry.ref = 'ARD-' + entry.id.slice(1); }
@@ -1483,6 +1487,7 @@
           <span class="lbl">${bal > 0 ? `dû ${oldest ? 'depuis ' + sinceLabel(oldest) : ''}` : bal < 0 ? 'payé en trop, à rendre ou à déduire de la prochaine dette' : 'à jour'}</span>
         </span>
       </div>
+      ${(c.creditAlerts || []).map(a => `<div role="alert"><span>${esc(window.KiwiCaisseLang?.tr('Soldé deux fois hors ligne') || 'Soldé deux fois hors ligne')} · ${fmtMAD(a.advanceCents / 100)} ${esc(window.KiwiCaisseLang?.tr('en avance') || 'en avance')}</span><a href="dashboard.html#/credit">${esc(window.KiwiCaisseLang?.tr('Rembourser l’avance') || 'Rembourser l’avance')}</a></div>`).join('')}
       <div class="ep-dt-hist" tabindex="0" role="region" aria-label="Historique du carnet">
         <div class="ep-dt-hist-head">Historique du carnet</div>
         <div class="ep-htl">

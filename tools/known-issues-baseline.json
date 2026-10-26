@@ -1,23 +1,4 @@
 {
   "version": 1,
-  "issues": [
-    {
-      "suite": "customer-balance-properties-test.mjs",
-      "label": "CB-6",
-      "kind": "decision",
-      "severity": "money"
-    },
-    {
-      "suite": "trades-money-properties-test.mjs",
-      "label": "TM-P1",
-      "kind": "decision",
-      "severity": "money"
-    },
-    {
-      "suite": "trades-money-properties-test.mjs",
-      "label": "TM-P2",
-      "kind": "decision",
-      "severity": "money"
-    }
-  ]
+  "issues": []
 }

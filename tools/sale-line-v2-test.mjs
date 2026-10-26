@@ -170,7 +170,7 @@ const verticals = [
 verticals.forEach((vertical) => {
   const source = read(`assets/pos-${vertical}.js`);
   ok(`${vertical} forwards line truth to the journal`,
-    new RegExp(`KiwiPosSale\\.record\\('${vertical}', \\{ total, method, label, ref, lines(?:, channel, received, change)? \\}\\)`).test(source));
+    new RegExp(`KiwiPosSale\\.record\\('${vertical}', \\{ total, method, label, ref, lines(?:, channel, received, change|, tipCents: Math[.]round\\(tip \\* 100\\))? \\}\\)`).test(source));
 });
 ok('boutique basket keeps stable identity and variants',
   /itemId: ln\.pid/.test(read('assets/pos-boutique.js')) && /variantId: \[ln\.pid, ln\.size/.test(read('assets/pos-boutique.js')));

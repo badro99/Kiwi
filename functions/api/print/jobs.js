@@ -20,7 +20,7 @@
 
 import { tenantFor } from '../_private.js';
 import {
-  BRIDGE_ONLINE_MS, JOB_TTL_MS, MAX_DATA_B64, CLAIM_BATCH, randomHex,
+  BRIDGE_ONLINE_MS, JOB_TTL_MS, EXPIRED_RETENTION_MS, MAX_DATA_B64, CLAIM_BATCH, randomHex,
   bridgeFromRequest, dbDown, relayJson, isMissingTable, safeJsonParse, now,
 } from './_relay.js';
 
@@ -128,8 +128,12 @@ export async function onRequestGet(context) {
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant') || '');
   if (!merchant) return relayJson({ error: 'unauthorized' }, 401, request);
   const id = String(url.searchParams.get('id') || '').slice(0, 40);
-  if (!id) return relayJson({ ok: false, error: 'id-required' }, 400, request);
   try {
+    await env.DB.prepare("UPDATE print_jobs SET status = 'expired', done_ts = expires_ts WHERE merchant = ? AND status = 'queued' AND expires_ts <= ?").bind(merchant, t).run();
+    if (!id) {
+      const rows = await env.DB.prepare("SELECT id, kind, status, created_ts, expires_ts FROM print_jobs WHERE merchant = ? AND status = 'expired' AND expires_ts > ? ORDER BY created_ts DESC").bind(merchant, t - EXPIRED_RETENTION_MS).all();
+      return relayJson({ ok: true, jobs: rows.results || [] }, 200, request);
+    }
     const j = await env.DB.prepare(
       'SELECT id, status, error, bytes, done_ts, claimed_ts FROM print_jobs WHERE id = ? AND merchant = ?'
     ).bind(id, merchant).first();
@@ -240,6 +244,22 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, asked, { strict: true });
   if (!merchant) return relayJson({ error: 'unauthorized' }, 401, request);
 
+  if (body.action === 'reprint-expired') {
+    const sourceId = String(body.id || '').slice(0, 40);
+    try {
+      const source = await env.DB.prepare("SELECT * FROM print_jobs WHERE id = ? AND merchant = ? AND status IN ('queued', 'expired') AND expires_ts <= ? AND expires_ts > ?").bind(sourceId, merchant, t, t - EXPIRED_RETENTION_MS).first();
+      if (!source) return relayJson({ ok: false, error: 'not-found' }, 404, request);
+      const id = 'pj_' + await refDigest(merchant, 'reprint:' + sourceId);
+      const target = safeJsonParse(source.target, {});
+      delete target._refused;
+      await env.DB.batch([
+        env.DB.prepare("UPDATE print_jobs SET status = 'expired', done_ts = expires_ts WHERE id = ? AND merchant = ? AND status = 'queued'").bind(sourceId, merchant),
+        env.DB.prepare("INSERT OR IGNORE INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)").bind(id, merchant, target._pin || null, source.kind, JSON.stringify(target), source.data_b64, t, t + JOB_TTL_MS)
+      ]);
+      return relayJson({ ok: true, id }, 200, request);
+    } catch (e) { return dbDown(request); }
+  }
+
   if (String(body.action || '') === 'requeue-uncertain') {
     const id = String(body.id || '').slice(0, 40);
     if (!id) return relayJson({ ok: false, error: 'id-required' }, 400, request);
@@ -293,8 +313,8 @@ export async function onRequestPost(context) {
         `INSERT OR IGNORE INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts)
          VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`
       ).bind(id, merchant, bridgeId, kind, JSON.stringify(bridgeId ? { ...target, _pin: bridgeId } : target), dataB64, t, t + ttl),
-      // Ménage opportuniste : les tickets de plus de 24 h ne servent plus à personne.
-      env.DB.prepare('DELETE FROM print_jobs WHERE merchant = ? AND created_ts < ?').bind(merchant, t - 86400000),
+      // Conserver la preuve non imprimée pendant 24 h après son expiration.
+      env.DB.prepare('DELETE FROM print_jobs WHERE merchant = ? AND expires_ts < ?').bind(merchant, t - EXPIRED_RETENTION_MS),
     ]);
     const created = Number(written && written[0] && written[0].meta && written[0].meta.changes) > 0;
     if (!created) {

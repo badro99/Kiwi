@@ -385,6 +385,13 @@ ok('un règlement au-delà du solde du moment (encaissé ailleurs entre-temps) e
   assert.equal(t.journal().length, 0);
   assert.equal(t.CRED.k1.hist.length, 2);
 });
+ok('Q un solde complet hors ligne porte le même instantané de dette sur deux caisses', () => {
+  const a = till(new Map()), b = till(new Map());
+  a.ctx.navigator = b.ctx.navigator = { onLine: false };
+  const one = a.commitRepayment('k1', 80.5).entry, two = b.commitRepayment('k1', 80.5).entry;
+  assert.equal(one.offline, true); assert.equal(two.offline, true);
+  assert.equal(one.settlementOf, two.settlementOf); assert.notEqual(one.id, two.id);
+});
 ok('stockage plein ou miroir en panne : ni ligne ni recette', () => {
   for (const [failKey, recordMode] of [['kiwi:epicerieRepay:epicerie-test', 'ok'], ['', 'null'], ['', 'throw']]) {
     const disk = new Map(); const t = till(disk); const f = till(disk, { failKey, recordMode });

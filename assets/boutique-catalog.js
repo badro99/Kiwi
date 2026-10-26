@@ -656,7 +656,8 @@
      couleur n'existe plus est signalé à rapprocher, jamais crédité sur une autre. */
   function adjustVariantStock(pid, size, color, delta, opts) {
     opts = opts || {};
-    delta = Math.trunc(+delta || 0);
+    if (!wholeQuantity(delta)) return false;
+    delta = Number(delta);
     if (!delta) return true;
     const sameSize = variantsOf(pid).filter((v) => String(v.size) === String(size));
     const matched = sameSize.filter((v) => String(v.colorId) === String(color) || String(famOf(v)) === String(color));
@@ -890,6 +891,7 @@
   /* ───────────────── variants ───────────────── */
   function addVariant(data) {
     data = data || {};
+    if (!wholeQuantity(data.stock ?? 0)) return null;
     if (!prodById(data.productId)) return null;
     // De-dupe on the RAW colour id, never on the family: a store that already has
     // a "navy" variant must still be able to keep a distinct "blue" one, with its
@@ -909,6 +911,7 @@
     commit(); return v;
   }
   function updateVariant(id, patch) {
+    if (patch.stock != null && !wholeQuantity(patch.stock)) return null;
     const v = varById(id); if (!v) return null;
     if (patch.stock != null) setAbsolute(v, patch.stock);   // un champ de formulaire est un état, pas un delta
     if (patch.size != null) v.size = String(patch.size);
@@ -965,8 +968,9 @@
      écrit un mouvement, et c'est ce qui permet à deux ventes simultanées de
      s'additionner au lieu de s'écraser. La distinction n'est pas cosmétique —
      c'est toute la différence entre « il y en a 8 » et « il en est parti 2 ». */
-  function setStock(id, n, why) { const v = varById(id); if (v) { setAbsolute(v, n, why); commit(); } return v; }
-  function adjustStock(id, d, why, extra) { const v = varById(id); if (v) { move(v, d, why || 'ajust', extra); commit(); } return v; }
+  const wholeQuantity = PARTS.wholeQuantity;
+  function setStock(id, n, why) { if (!wholeQuantity(n)) return null; const v = varById(id); if (v) { setAbsolute(v, n, why); commit(); } return v; }
+  function adjustStock(id, d, why, extra) { if (!wholeQuantity(d)) return null; const v = varById(id); if (v) { move(v, d, why || 'ajust', extra); commit(); } return v; }
   function deleteVariant(id) {
     db.variants = db.variants.filter((v) => v.id !== id);
     if (Array.isArray(db.moves)) db.moves = db.moves.filter((m) => !m || m.vid !== id);
@@ -992,6 +996,7 @@
   // « déclinaison déjà présente » au lieu de mentir dans les deux sens.
   function ensureVariant(data) {
     data = data || {};
+    if (!wholeQuantity(data.stock ?? 0)) return { variant: null, created: false, reason: 'quantite' };
     if (!prodById(data.productId)) return { variant: null, created: false, reason: 'produit-introuvable' };
     // Même dédoublonnage que addVariant : sur l'id de couleur BRUT, jamais sur la
     // famille — deux nuances distinctes gardent chacune son stock et son code.
@@ -1014,7 +1019,8 @@
   function receiveStock(variantId, qty) {
     const v = varById(variantId);
     if (!v) return { ok: false, reason: 'variant-introuvable' };
-    const n = Math.floor(Number(qty));
+    if (!wholeQuantity(qty)) return { ok: false, reason: 'quantite' };
+    const n = Number(qty);
     if (!Number.isFinite(n) || n <= 0) return { ok: false, reason: 'quantite' };
     const before = v.stock || 0;
     move(v, n, 'reception');   // une réception est un événement : elle s'additionne

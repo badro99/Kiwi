@@ -720,7 +720,7 @@ handlers['menu-publish'] = () => {
   if (!window.Kiwi?.handlers) return;
   const H = window.Kiwi.handlers;
   const LAZY_SECTIONS = [
-    { url: 'assets/pages/tables.js?v=2', dependencies: ['assets/pages/tables-data.js?v=1', 'assets/pages/tables-drawing.js?v=1', 'assets/pages/tables-operations.js?v=1'], handlers: ["nav-tables"] },
+    { url: 'assets/pages/tables.js?v=2', dependencies: ['assets/pages/tables-data.js?v=1', 'assets/pages/tables-drawing.js?v=1', 'assets/pages/tables-operations.js?v=2'], handlers: ["nav-tables"] },
     { url: 'assets/pages-pro/spa-appointments.js?v=2', handlers: ["nav-appointments", "appt-filter", "appt-export", "appt-wait-add", "appt-auto-toggle", "appt-wait-detail", "appt-cancel-confirm", "appt-new", "nav-services", "svc-export", "svc-season", "svc-season-edit", "svc-ai-action", "pkg-edit-go"] },
     { url: 'assets/pages-pro/spa-practitioners.js?v=2', handlers: ["nav-practitioners", "practitioner-add", "practitioner-commission", "practitioner-edit", "practitioner-tracker"] },
     { url: 'assets/pages-pro/boutique-promos-returns.js?v=6', handlers: ["nav-promos", "nav-returns", "credit-adjust", "credit-adjust-confirm", "credit-cancel", "promo-archive-detail", "promo-edit", "promo-end", "promo-pause", "promo-schedule", "promo-segment", "ret-approve", "ret-block", "ret-detail", "ret-exchange", "ret-export", "ret-policy-jump", "ret-policy-save", "ret-refund-credit", "ret-refund-original", "ret-refund-whatsapp", "ret-refuse"] },

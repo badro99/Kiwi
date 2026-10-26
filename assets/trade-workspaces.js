@@ -355,7 +355,7 @@
         const pays = c.hist.filter((h) => h && h.type === 'pay').sort((a, b) => new Date(a.at) - new Date(b.at));
         const lp = pays[pays.length - 1];
         const stale = !!(since && new Date(since).getTime() < Date.now() - 30 * 864e5);
-        out.push({ title:c.name || c.id, refundClient:c.id, refundable:refundAvailable(c), refunds:c.hist.filter((h)=>h.kind==='advance-refund'), status:pick(owed<0?REFUND.available:owed>0?TILL.owed:REFUND.history), alert:stale ? pick(TILL.stale) : '', owed,
+        out.push({ title:c.name || c.id, refundClient:c.id, refundable:refundAvailable(c), refunds:c.hist.filter((h)=>h.kind==='advance-refund'), status:pick(owed<0?REFUND.available:owed>0?TILL.owed:REFUND.history), alert:(c.creditAlerts || []).map(a => pick(L('Soldé deux fois hors ligne', 'Settled twice offline', 'تم السداد مرتين دون اتصال')) + ' · ' + mad(a.advanceCents / 100) + ' ' + pick(L('en avance', 'advance', 'كتسبيق'))).join(' · ') || (stale ? pick(TILL.stale) : ''), owed,
           meta:[[TILL.balance, mad(Math.abs(owed))],[TILL.since, when(since)],[TILL.lastPay, lp ? when(lp.at) + ' · ' + mad(lp.amt) : ''],[TILL.phone, c.phone]] });
       });
     } else if (cfg.trade === 'bakery') {

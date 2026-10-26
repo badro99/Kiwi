@@ -13,7 +13,7 @@
       'assets/catalog-import.js?v=12',
       'assets/ai-image-import.js?v=1',
       'assets/menu-scan.js?v=7',
-      'assets/salle-scan.js?v=6',
+      'assets/salle-scan.js?v=7',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel-rates.js?v=1',

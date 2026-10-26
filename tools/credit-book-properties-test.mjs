@@ -74,5 +74,14 @@ await strict('advance refunds require the owner, exact available cents and immut
  assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM sale_audit WHERE action='credit-book-refund'").get().n,1);
 }));
 await strict('CRB-2 · operator without owner session or paired till may write the credit book through the shared tenant policy',fc.asyncProperty(money,async cents=>{reset();const d=blank();append(d,'e0','debt',cents);const r=await call('operator',{data:d});return r.status===401||r.status===403;}),[[1]]);
+await strict('Q two offline tills settling one debt sync one alert and the exact advance',fc.asyncProperty(money,async paid=>{
+ reset(); const seed=blank();append(seed,'e0','debt',paid);ok(await call('owner',{data:seed}));
+ const ds=[{doc:clone(seed),rev:1},{doc:clone(seed),rev:1}];
+ for(let i=0;i<2;i++){append(ds[i].doc,'e'+(i+1),'pay',paid);Object.assign(hist(ds[i].doc).at(-1),{offline:true,settlementOf:'e0'});}
+ for(let i=0;i<2;i++)await sync(ds[i],i);
+ await sync(ds[0],0);await pull(ds[0],0);
+ const c=ok(await call('owner')).data.verticals.epicerie.data.carnet[0];
+ assert.equal(C(ep.balanceOf(c)),-paid);assert.equal(c.creditAlerts.length,1);assert.equal(c.creditAlerts[0].advanceCents,paid);
+}));
 }finally{f.close();}
 console.log(`credit-book-properties · ${passed} passed, ${failed} failed, ${known} known; seed=${SEED}; runs=${RUNS}`);if(failed)process.exit(1);

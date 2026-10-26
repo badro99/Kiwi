@@ -213,7 +213,7 @@ export async function onRequestGet(context) {
       // preserves the former single-store behaviour until migrations land.
       try {
         const result = await env.DB.prepare(
-          'SELECT name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts'
+          'SELECT id, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts'
         ).bind(sessionMerchant).all();
         rows = result.results || [];
       } catch (_) {}
@@ -301,7 +301,7 @@ export async function onRequestGet(context) {
 
     if (mayReadPins) {
       const rows = await env.DB.prepare(
-        `SELECT name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
+        `SELECT id, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
       ).bind(merchant).all();
       // Older databases may still contain waiter/kitchen rows. Never send them
       // to a till: employee login remains available through the separate

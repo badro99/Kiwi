@@ -1,8 +1,8 @@
 {
-  "sha256": "2026de3260da662b4ead092aef1f0b4f47df9ba063738184874e0b000118d221",
+  "sha256": "cf1ad34ffdd7cb6efdf63c08228527cb6cfd6186a07f0d32e18250d85bbfc6e0",
   "start": 73590,
-  "end": 133304,
-  "prefix": "/* Pairing UI, loaded on demand by assets/printer-bridge.js. The core hands\n * over its helpers on one private object; the two values bridge discovery\n * changes later (mode, capability) arrive through onBridgeState. Moved\n * function bodies are byte-identical to the original (tools/printer-split-test.mjs). */\n(function (core) {\n  'use strict';\n  var BRIDGE_DOWNLOAD = core.BRIDGE_DOWNLOAD,\n    MODELS = core.MODELS,\n    bridgeBase = core.bridgeBase,\n    bridgeHeaders = core.bridgeHeaders,\n    bridgePrintBytes = core.bridgePrintBytes,\n    bt = core.bt,\n    btConnected = core.btConnected,\n    connectBluetooth = core.connectBluetooth,\n    connectUsb = core.connectUsb,\n    esc = core.esc,\n    fallbackNotice = core.fallbackNotice,\n    getConfig = core.getConfig,\n    getPrepStations = core.getPrepStations,\n    getStationConfig = core.getStationConfig,\n    labelOptions = core.labelOptions,\n    modelDriver = core.modelDriver,\n    modelNote = core.modelNote,\n    nativeSocket = core.nativeSocket,\n    nativeSocketSend = core.nativeSocketSend,\n    pairLocalBridge = core.pairLocalBridge,\n    paperOptions = core.paperOptions,\n    ping = core.ping,\n    printBytes = core.printBytes,\n    printBytesToTarget = core.printBytesToTarget,\n    printQueueIdle = core.printQueueIdle,\n    reconnectUsb = core.reconnectUsb,\n    relayPairCode = core.relayPairCode,\n    relayProbe = core.relayProbe,\n    relayRevoke = core.relayRevoke,\n    saveBridgeTarget = core.saveBridgeTarget,\n    say = core.say,\n    setConfig = core.setConfig,\n    setStationConfig = core.setStationConfig,\n    usb = core.usb,\n    usbConnected = core.usbConnected,\n    usbSupported = core.usbSupported,\n    withTimeout = core.withTimeout;\n  var initial = core.bridgeState();\n  var bridgeMode = initial.mode, bridgeCapability = initial.capability;\n  core.onBridgeState(function (mode, capability) { bridgeMode = mode; bridgeCapability = capability; });\n\n",
+  "end": 134463,
+  "prefix": "/* Pairing UI, loaded on demand by assets/printer-bridge.js. The core hands\n * over its helpers on one private object; the two values bridge discovery\n * changes later (mode, capability) arrive through onBridgeState. Moved\n * function bodies are byte-identical to the original (tools/printer-split-test.mjs). */\n(function (core) {\n  'use strict';\n  var BRIDGE_DOWNLOAD = core.BRIDGE_DOWNLOAD,\n    MODELS = core.MODELS,\n    bridgeBase = core.bridgeBase,\n    bridgeHeaders = core.bridgeHeaders,\n    bridgePrintBytes = core.bridgePrintBytes,\n    bt = core.bt,\n    btConnected = core.btConnected,\n    connectBluetooth = core.connectBluetooth,\n    connectUsb = core.connectUsb,\n    esc = core.esc,\n    fallbackNotice = core.fallbackNotice,\n    getConfig = core.getConfig,\n    getPrepStations = core.getPrepStations,\n    getStationConfig = core.getStationConfig,\n    labelOptions = core.labelOptions,\n    modelDriver = core.modelDriver,\n    modelNote = core.modelNote,\n    nativeSocket = core.nativeSocket,\n    nativeSocketSend = core.nativeSocketSend,\n    pairLocalBridge = core.pairLocalBridge,\n    paperOptions = core.paperOptions,\n    ping = core.ping,\n    printBytes = core.printBytes,\n    printBytesToTarget = core.printBytesToTarget,\n    printQueueIdle = core.printQueueIdle,\n    reconnectUsb = core.reconnectUsb,\n    relayFetch = core.relayFetch,\n    relayMerchantQS = core.relayMerchantQS,\n    relayPairCode = core.relayPairCode,\n    relayProbe = core.relayProbe,\n    relayRevoke = core.relayRevoke,\n    saveBridgeTarget = core.saveBridgeTarget,\n    say = core.say,\n    setConfig = core.setConfig,\n    setStationConfig = core.setStationConfig,\n    usb = core.usb,\n    usbConnected = core.usbConnected,\n    usbSupported = core.usbSupported,\n    withTimeout = core.withTimeout;\n  var initial = core.bridgeState();\n  var bridgeMode = initial.mode, bridgeCapability = initial.capability;\n  core.onBridgeState(function (mode, capability) { bridgeMode = mode; bridgeCapability = capability; });\n\n",
   "suffix": "  core.install({ openSetup: openSetup });\n})(window.KiwiPrinter.__core);\n",
   "moved": [
     {
@@ -14,8 +14,8 @@
     {
       "name": "openSetup",
       "start": 82192,
-      "end": 133302,
-      "sha256": "64af91fa50a98a81ab06f4cd8c4a258c40e723160aaea7102d2d0417c714d79b"
+      "end": 134461,
+      "sha256": "6fa33588741bc2e8f8c0391a826dc2b14325d5be1dbcb45f13ddc4fa3f84b20b"
     },
     {
       "name": "readForm",
@@ -98,25 +98,25 @@
     {
       "name": "paintRelay",
       "start": 115521,
-      "end": 117396,
-      "sha256": "65674fb36a7126ae9f2d3d7253079ee1bcc0fc15b956e8c245ba85cbfde6595e"
+      "end": 118555,
+      "sha256": "d8de5436056f95c2d4039d3db29384b360c06eee55b8e3e3879d13111dcad11d"
     },
     {
       "name": "askRevoke",
-      "start": 117966,
-      "end": 119695,
+      "start": 119125,
+      "end": 120854,
       "sha256": "367f60230c9d7800c41c23952f327b50b7894f79a3a3bdd0b595fe2278d0a22f"
     },
     {
       "name": "end",
-      "start": 118932,
-      "end": 119111,
+      "start": 120091,
+      "end": 120270,
       "sha256": "491d36e12d146facd7208d411bdd74c2b57b52b59739db666ecf792a9a1e5bc4"
     },
     {
       "name": "showPairCode",
-      "start": 119700,
-      "end": 120177,
+      "start": 120859,
+      "end": 121336,
       "sha256": "e614038383e336da00d2fa708395e494ee764ee9f4237f3bc53ac8c5412b4c65"
     }
   ]

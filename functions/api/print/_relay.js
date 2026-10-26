@@ -20,6 +20,7 @@
 import { json } from '../../auth/_lib.js';
 
 export const BRIDGE_ONLINE_MS = 45 * 1000;   // un pont vu depuis moins de 45 s est « en ligne »
+export const EXPIRED_RETENTION_MS = 24 * 60 * 60 * 1000;
 export const JOB_TTL_MS = 10 * 60 * 1000;    // un ticket non imprimé en 10 min est périmé
 export const CODE_TTL_MS = 15 * 60 * 1000;   // un code d'appairage vit 15 min
 export const MAX_DATA_B64 = 700 * 1024;       // ~512 Ko d'ESC/POS — un logo bitmap tient largement

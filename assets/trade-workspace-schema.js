@@ -254,7 +254,13 @@
       /* Jours calendaires : un lot périmé le 10 reste valable toute la journée du 10 (0 jour) et
          est périmé dès le 11 (−1). L'ancien calcul sur 23:59:59 laissait « bientôt périmé » un
          lot déjà périmé pendant 24 h, et comptait 1 jour le jour même. */
-      out.daysToExpiry = dayDiff(dateKey(clock), String(v[schema.expiry]).slice(0, 10));
+      const p = zoneParts(clock);
+      let today = dateKey(clock);
+      // Une cure reste valable jusqu’à 05:00 après son dernier jour commercial.
+      if (schema.trade === 'spa' && schema.nav === 'packages' && +p.hour < 5) {
+        today = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - 1)).toISOString().slice(0, 10);
+      }
+      out.daysToExpiry = dayDiff(today, String(v[schema.expiry]).slice(0, 10));
       /* Un lot sorti (épuisé, rendu, détruit) n'est plus à surveiller. */
       out.expired = !final && out.daysToExpiry < 0;
       out.expiring = !final && out.daysToExpiry >= 0 && out.daysToExpiry <= (schema.expiryDays || 30);

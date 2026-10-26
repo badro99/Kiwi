@@ -567,9 +567,9 @@
     if (svc.length > room) svc = svc.slice(0, room - 1) + '…';
     return svc + cust + who;
   }
-  function postDay(total, method, label, ref, lines) {
+  function postDay(total, method, label, ref, lines, tip = 0) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref, lines });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref, lines, tipCents: Math.round(tip * 100) });
     } catch (_) {}
   }
 
@@ -1735,9 +1735,7 @@
         c.hist = c.hist || [];
         c.hist.unshift({ when: new Date(), svc: p.lines.map((l) => ITEMS[l.itemId].label).join(' + '), by: p.lines[0].staffId || p.staffId, amt: total });
       }
-      /* Journal partagé : prestations ET pourboire, c'est ce que la cliente a
-         réellement payé au comptoir. Sans ça la recette du salon vivait dans
-         DONE_TODAY et disparaissait au premier rechargement. */
+      /* Journal partagé : prestations en recette, pourboire séparé. */
       const saleLines = p.lines.map((ln) => {
         const item = ITEMS[ln.itemId];
         const amount = priceOf(item, ln.variantId) + (ln.addons || []).reduce((s, a) => s + ADDON[a].price, 0);
@@ -1747,8 +1745,7 @@
           options: (ln.addons || []).map((id) => ({ id, qty: 1 })),
         };
       });
-      if (tt > 0) saleLines.push({ itemId: 'pourboire', name: 'Pourboire', kind: 'tip', unit: 'payment', qty: 1, total: tt });
-      postDay(total + tt, method, saleLabel(p), p.num || `S-${p.id}`, saleLines);
+      postDay(total, method, saleLabel(p), p.num || `S-${p.id}`, saleLines, tt);
       closeVeil('#cf-pay-veil');
       queueIfOffline('Encaissement');
       toast(`${passCustName(p)}, ${fmtMAD(total + tt)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${tt ? ` · pourboire ${fmtMAD(tt)}` : ''}`);

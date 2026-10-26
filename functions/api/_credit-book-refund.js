@@ -66,3 +66,20 @@ export async function refundCreditBook(request, env, merchant, body) {
   }
   return json({error:'credit-book-busy'},409);
 }
+
+// One durable alert per debt snapshot settled independently by offline tills.
+export function creditSettlementAlerts(doc) {
+  for (const c of creditBook(doc)) {
+    const groups = new Map();
+    for (const h of c.hist || []) {
+      if (h.type !== 'pay' || !h.offline || !h.settlementOf) continue;
+      const g = groups.get(h.settlementOf) || new Map();
+      g.set(h.id, h); groups.set(h.settlementOf, g);
+    }
+    c.creditAlerts = [...groups].filter(([, g]) => g.size > 1).map(([key, g]) => ({
+      id: 'offline-double:' + key, kind: 'offline-double-settlement',
+      advanceCents: [...g.values()].reduce((n, h) => n + cents(h), 0) - Math.max(...[...g.values()].map(cents))
+    }));
+  }
+  return doc;
+}

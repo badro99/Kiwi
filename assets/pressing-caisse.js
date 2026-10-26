@@ -869,7 +869,7 @@
       pay: o.pay ? { mode: o.pay.mode || 'pickup', method: o.pay.method || null, paid: Math.max(0, +o.pay.paid || 0) } : { mode: 'pickup', method: null, paid: 0 },
       rack: o.rack || null,
       total: orderTotals(o).total,
-      notified: !!o.notified,
+      notified: !!o.notified, notification: window.KiwiPressingOps.notification(o),
       collectedAt: o.collectedAt instanceof Date ? o.collectedAt.toISOString() : (o.collectedAt || null),
       cancelledAt: o.cancelledAt instanceof Date ? o.cancelledAt.toISOString() : (o.cancelledAt || null),
       cancelledBy: o.cancelledBy ? {
@@ -942,7 +942,7 @@
         guest: raw.guest && { name: String(raw.guest.name || 'Client de passage').slice(0, 100), phone: String(raw.guest.phone || '').slice(0, 40) },
         b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
         pay: raw.pay && { mode: raw.pay.mode, method: raw.pay.method || null, paid: Math.max(0, +raw.pay.paid || 0) },
-        rack: raw.rack ? String(raw.rack).slice(0, 20) : null, notified: !!raw.notified,
+        rack: raw.rack ? String(raw.rack).slice(0, 20) : null, notified: !!raw.notified, notification: window.KiwiPressingOps.notification(raw),
         collectedAt: raw.collectedAt ? new Date(raw.collectedAt) : null,
         cancelledAt: raw.cancelledAt ? new Date(raw.cancelledAt) : null,
         cancelledBy: raw.cancelledBy && { id: String(raw.cancelledBy.id || '').slice(0, 80), name: String(raw.cancelledBy.name || '').slice(0, 100), role: String(raw.cancelledBy.role || '').slice(0, 40) },
@@ -2752,8 +2752,8 @@
           ${st === 'recu' ? '<button class="px-btn ghost" data-px-all="trait"><i data-lucide="loader"></i>Noter en cours</button>' : ''}`}
         <button class="px-btn secondary" id="px-dt-tags"><i data-lucide="printer"></i>Étiquettes</button>
         ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${fmtMAD(due)}</button>` : ''}
-        ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Re-notifier' : 'WhatsApp « c’est prêt »'}</button>` : ''}
-        ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer l’envoi</button>' : ''}
+        ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Marqué prévenu' : 'Marquer prévenu'}</button>` : ''}
+        ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Marquer prévenu</button>' : ''}
         ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
         ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${fmtMAD(due)}` : 'Passer au retrait'}</button>` : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
@@ -2791,13 +2791,12 @@
       openPay(o, { settle: true, onSettled: () => { openDetail(o.id); refreshOps(); } });
     };
     const waB = $('#px-dt-wa', el);
-    if (waB) waB.onclick = () => openWa(o);
+    if (waB) waB.onclick = () => window.KiwiPressingOps.openNotification(o, $('#px-wam', root), window.KiwiCaissePairing?.staff?.() || window.KiwiStaff, () => { syncOwnerOps(); queueIfOffline('Client marqué prévenu'); closeVeil('#px-wa-veil'); openDetail(o.id); refreshOps(); });
     const waConfirm = $('#px-dt-wa-confirm', el);
     if (waConfirm) waConfirm.onclick = () => {
-      o.notified = true;
-      o.notifiedAt = new Date();
+      if (!window.KiwiPressingOps.markNotified(o, window.KiwiCaissePairing?.staff?.() || window.KiwiStaff, 'whatsapp')) return;
       queueIfOffline('Notification client confirmée');
-      toast(`${publicOrderNo(o)}, notification confirmée`);
+      toast(`${publicOrderNo(o)}, marqué prévenu`);
       openDetail(o.id); refreshOps();
     };
     const rackB = $('#px-dt-rack', el);
@@ -2968,12 +2967,11 @@
       const foot = $('.px-sheet-foot', el);
       foot.innerHTML = `
         <button class="px-btn ghost" data-px-close>Pas encore envoyé</button>
-        <button class="px-btn primary" id="px-wa-confirm"><i data-lucide="check"></i>J’ai envoyé le message</button>`;
+        <button class="px-btn primary" id="px-wa-confirm"><i data-lucide="check"></i>Marquer prévenu</button>`;
       icons();
       $('[data-px-close]', foot).onclick = () => closeVeil('#px-wa-veil');
       $('#px-wa-confirm', foot).onclick = () => {
-        o.notified = true;
-        syncOwnerOps();
+        if (!window.KiwiPressingOps.markNotified(o, window.KiwiCaissePairing?.staff?.() || window.KiwiStaff, 'whatsapp')) return;
         queueIfOffline('Notification WhatsApp confirmée');
         closeVeil('#px-wa-veil');
         toast(`${c.name} marqué comme prévenu`);
@@ -3034,9 +3032,9 @@
       b.onclick = () => {
         const o = findOrder(b.dataset.pxRtWaConfirm);
         if (!o) return;
-        o.notified = true; o.notifiedAt = new Date();
+        if (!window.KiwiPressingOps.markNotified(o, window.KiwiCaissePairing?.staff?.() || window.KiwiStaff, 'whatsapp')) return;
         queueIfOffline('Notification client confirmée');
-        renderRetrait(); toast(`${publicOrderNo(o)}, notification confirmée`);
+        renderRetrait(); toast(`${publicOrderNo(o)}, marqué prévenu`);
       };
     });
     icons();
@@ -3067,7 +3065,7 @@
         ${due > 0 ? `<button class="px-btn secondary" style="flex:1;" data-px-rt-pay="${o.id}"><i data-lucide="banknote"></i>Encaisser ${fmtMAD(due)}</button>` : ''}
         <button class="px-btn primary" style="flex:1;" data-px-rt-give="${o.id}" ${due > 0 ? 'disabled title="Encaissez le solde d’abord"' : ''}><i data-lucide="check"></i>Remettre au client</button>
         ${!early && !o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-lucide="message-circle"></i></button>` : ''}
-        ${!early && o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Confirmer envoi</button>` : ''}
+        ${!early && o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Marquer prévenu</button>` : ''}
       </div>
     </div>`;
   }

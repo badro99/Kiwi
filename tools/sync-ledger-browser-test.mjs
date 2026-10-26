@@ -803,9 +803,10 @@ await scenario('boutique · cash, card, split and an offline sale', async (t) =>
   bqRows.push({ kind: 'sale', method: 'cash', cents: BQ['TEST Chemise lin'] });
   await bqSale(t, bq, ['TEST Foulard'], 'card');
   bqRows.push({ kind: 'sale', method: 'card', cents: BQ['TEST Foulard'] });
-  /* 50 % of 339 in whole dirhams: 169 on the card, the 170 left in cash. */
+  /* 50 % of 339 to the centime since wave Q (boutique money keeps its
+     centimes): 169,50 on the card, the 169,50 left in cash. */
   await bqSale(t, bq, ['TEST Chemise lin', 'TEST Foulard'], ['card', 'cash']);
-  bqRows.push({ kind: 'sale', method: 'card', cents: 16900 }, { kind: 'sale', method: 'cash', cents: 17000 });
+  bqRows.push({ kind: 'sale', method: 'card', cents: 16950 }, { kind: 'sale', method: 'cash', cents: 16950 });
   t.step('boutique: offline sale');
   await bq.setOfflineMode(true);
   await bqSale(t, bq, ['TEST Ceinture'], 'card');

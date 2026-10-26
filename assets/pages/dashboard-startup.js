@@ -5,7 +5,7 @@
   'use strict';
   const scripts = [
     'assets/pages-pro-office.js?v=2',
-    'assets/pages-pro.js?v=2184',
+    'assets/pages-pro.js?v=2185',
     'assets/pages-pro-boutique.js?v=4',
     'assets/pages-pro-spa-starter.js?v=2',
     'assets/restaurant-units.js?v=1',
@@ -39,12 +39,12 @@
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=8',
     'assets/weather.js?v=1',
-    'assets/briefing.js?v=27',
+    'assets/briefing.js?v=28',
     'assets/simple-food-cost.js?v=13',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=7',
     'assets/production-action-guard.js?v=4',
-    'assets/staff-roles.js?v=1',
+    'assets/staff-roles.js?v=2',
     'assets/help-centre.js?v=7',
     'assets/account.js?v=33',
     'assets/design-2026.js?v=2',
