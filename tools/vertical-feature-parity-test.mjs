@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import teamSource from './team-test-source.cjs';
 
-const team = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
+const team = teamSource();   // team.js with its split parts back in place (role catalogue included)
 const trades = fs.readFileSync(new URL('../assets/trades.js', import.meta.url), 'utf8');
 const sale = fs.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');
 const dispatch = fs.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');

@@ -11,6 +11,8 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/team/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/team/split.json'));
 const core = read('assets/team.js'), part = read('assets/team/profile-ui.js'), hours = read('assets/team-hours.js');
+/* Second stage moved the role catalogue out of core; it loads first (team-catalog-split-test). */
+const catalog = read('assets/team/catalog.js');
 assert.equal(hash(original), map.sha256);
 for (const segment of [...map.segments, ...map.moved]) {
   const body = original.slice(segment.start, segment.end);
@@ -19,15 +21,15 @@ for (const segment of [...map.segments, ...map.moved]) {
   assert.ok(!core.includes(body), segment.name + ': removed from core');
   assert.ok(teamSource().includes(body), segment.name + ': source tests inspect current bodies');
 }
-assert.ok(core.split('\n').length < 2200);
+assert.ok(core.split('\n').length < 2000, 'core shrank with the catalogue split');
 assert.doesNotMatch(part, /\bwith\s*\(|\bnew Proxy\b/);
 const graph = dashboardDependencies(read('dashboard.html'));
 const coreAt = graph.indexOf('src="assets/team.js?');
 const profileAt = graph.indexOf('src="assets/team/profile-ui.js?');
 const hoursAt = graph.indexOf('src="assets/team-hours.js?');
 assert.ok(coreAt >= 0 && profileAt > coreAt && hoursAt > profileAt, 'team model precedes first-use profile and hours owners');
-for (const src of [core, part, hours]) new vm.Script(src);
-vm.runInNewContext(core + '\n' + part, { window: {} });
+for (const src of [catalog, core, part, hours]) new vm.Script(src);
+vm.runInNewContext(catalog + '\n' + core + '\n' + part, { window: {} });
 function realm(source, lang) {
   const modals = [], notices = [], events = [], nodes = new Map();
   const classList = { add() {}, remove() {}, contains() { return false; }, toggle() {} };
@@ -53,7 +55,7 @@ function realm(source, lang) {
 }
 for (const lang of ['fr', 'en', 'ar']) {
   const before = realm(original + '\n' + hours, lang);
-  const after = realm(core + '\n' + part + '\n' + hours, lang);
+  const after = realm(catalog + '\n' + core + '\n' + part + '\n' + hours, lang);
   assert.ok(Object.isFrozen(after.context.Kiwi.__teamProfileCore));
   assert.deepEqual(Object.keys(after.context.KiwiTeam).sort(), Object.keys(before.context.KiwiTeam).sort());
   assert.deepEqual(Object.keys(after.context.Kiwi.handlers).sort(), Object.keys(before.context.Kiwi.handlers).sort());

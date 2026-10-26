@@ -695,6 +695,7 @@ for (const test of [
   'team-roster-cap-test.mjs',
   'team-properties-test.mjs',
   'team-split-test.mjs',
+  'team-catalog-split-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
   /* TypeScript reads functions/ as plain JS (checkJs): type errors per file pinned, only ever down. */
