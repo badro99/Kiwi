@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import vm from 'node:vm';
 const feedSource = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 const invoiceSource = fs.readFileSync(new URL('../assets/invoice.js', import.meta.url), 'utf8');

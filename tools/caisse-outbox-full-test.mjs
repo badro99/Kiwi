@@ -22,7 +22,9 @@ import caisseTestSource from './caisse-test-source.cjs';
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import vm from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequest as gate } from '../functions/_middleware.js';

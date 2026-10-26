@@ -17,7 +17,9 @@ import maisonSource from './pos-maison-test-source.cjs';
  * The browser half (sync-ledger-boutique-browser-test) proves the row ends
  * up « matched » against a real server. */
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import vm from 'node:vm';
 
 const read = (p) => maisonSource(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));

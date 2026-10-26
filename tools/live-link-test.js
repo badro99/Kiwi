@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const fs = require('fs');
+const fs = require('./core-test-source.cjs');
 const vm = require('vm');
 const path = require('path');
 

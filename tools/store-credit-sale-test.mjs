@@ -20,7 +20,9 @@ import maisonSource from './pos-maison-test-source.cjs';
  *     marchandise est bien sortie du magasin, et personne ne pouvait dire
  *     laquelle. La vente passe maintenant si elle DIT ce qui l'a réglée.
  * ─────────────────────────────────────────────────────────────────────────── */
-import fs from 'fs';
+import nativeFs from 'fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import path from 'path';
 import vm from 'vm';
 import { fileURLToPath } from 'url';

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import vm from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost as post, onRequestGet as get } from '../functions/api/quarantine.js';

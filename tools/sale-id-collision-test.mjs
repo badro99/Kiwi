@@ -10,7 +10,9 @@
  * Ce test exécute les VRAIS modules : l'identifiant doit différer d'un jour à
  * l'autre, rester le même à chaque nouvel essai de la même vente, et ne pas
  * bouger pour tout ce qui est déjà stocké ou en file (sans `idDay`). */
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 

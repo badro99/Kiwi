@@ -14,6 +14,7 @@ const allowed = new Map([
   ['/test', new URL('./live-link-outbox-browser-test.html', import.meta.url)],
   ['/assets/vendor/dexie.min.js', new URL('../assets/vendor/dexie.min.js', import.meta.url)],
   ['/assets/offline-db.js', new URL('../assets/offline-db.js', import.meta.url)],
+  ['/assets/live-link/queue-store.js', new URL('../assets/live-link/queue-store.js', import.meta.url)],
   ['/assets/live-link.js', new URL('../assets/live-link.js', import.meta.url)],
 ]);
 const server = http.createServer((req, res) => {

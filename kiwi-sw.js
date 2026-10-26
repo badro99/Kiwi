@@ -243,6 +243,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=17',
   '/assets/operations-ui.js?v=26',
+  '/assets/live-link/queue-store.js?v=1',
   '/assets/live-link.js?v=77',
   '/assets/channel-sales.js?v=6',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne

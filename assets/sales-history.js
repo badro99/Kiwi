@@ -460,7 +460,7 @@
       const offline = window.KiwiOffline;
       // Do not reconcile away rows when the device cannot inspect its upload debt.
       if (!offline?.list) throw new Error('pending-proof');
-      const debt = await offline.list('sale', merchant); check();
+      const debt = await window.KiwiSaleQueueStore.peek(merchant); check();
       if (!Array.isArray(debt)) throw new Error('pending-proof');
       next.pendingIds = debt.map(row => String(row.saleId || row.id || row.payload?.id || ''));
       if (next.pendingIds.some(key => !key)) throw new Error('pending-proof');
@@ -597,7 +597,7 @@
         if (page?.merchant !== merchant || !Array.isArray(page.days) || !Array.isArray(page.splits)) throw Error('summary-unavailable');
         summary.days.push(...page.days); summary.splits.push(...page.splits); start = end;
       }
-      const debt = await window.KiwiOffline.list('sale', merchant);
+      const debt = await window.KiwiSaleQueueStore.peek(merchant);
       if (!Array.isArray(debt) || debt.length) return skip('upload-debt');
       if (!active()) return skip('scope-changed');
       // No await below: fresh read, validation, marker, batched writes, readback.

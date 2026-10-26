@@ -932,7 +932,8 @@
   <script src="assets/platform-kernel.js?v=6" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=17" defer></script>
-<script src="assets/live-link.js?v=77" defer></script>
+<link rel="modulepreload" href="assets/live-link/queue-store.js?v=1">
+<script type="module" src="assets/live-link.js?v=77" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=282" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
