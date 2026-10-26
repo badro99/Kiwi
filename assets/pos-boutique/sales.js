@@ -9,7 +9,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Math.round(Number(Math.abs(n).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(n) + ' MAD';
   /* La caisse boutique compte en dirhams entiers, et n'encaisse JAMAIS plus que
      le prix affiché (décision propriétaire, 2026-10-19). Un prix de catalogue à
      249,90, une promotion ou une remise qui tombe sur 220,50 s'arrondissent

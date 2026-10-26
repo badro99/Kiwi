@@ -309,6 +309,12 @@ strict('a peer record stamped years ahead or non-finite is merged, and an honest
     }
   }));
 
+strict('fractional purchase cost triggers below-cost preview warning', fc.property(fc.integer({min:1,max:49}), cents => {
+  const preview = PR.preview({kind:'fixed',value:10,scope:{type:'tout'}}, [{id:'fractional-cost',name:'Article',price:20,cost:10+cents/100}]);
+  assert.equal(preview.under, 1);
+  assert.equal(preview.sample[0].under, true);
+}));
+
 /* The same clock properties on tablets set to other time zones. */
 if (!CHILD) {
   const { spawnSync } = await import('node:child_process');

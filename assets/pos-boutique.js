@@ -888,14 +888,14 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       const qty = quantities && quantities.has(i) ? Number(quantities.get(i)) || 1 : 1;
       return {
         name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', size: ln.size || '',
-        qty, amount: Math.round((Number(ln.unit) || 0) * qty),
+        qty, amount: Math.sign((Number(ln.unit) || 0) * qty) * Math.round(Number(Math.abs((Number(ln.unit) || 0) * qty).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,
       };
     }).filter(Boolean);
     const now = Date.now();
     const client = saleClient(sale);
     RETURN_LOG.unshift({
       id: `RET-${sale.id}-${now}`, ts: now, saleRef: sale.id, kind: kind || 'avoir',
-      reason: reason || '', amount: Math.round(Number(amount) || 0), reference: reference || '',
+      reason: reason || '', amount: Math.sign(Number(amount) || 0) * Math.round(Number(Math.abs(Number(amount) || 0).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100, reference: reference || '',
       actor: (STAFF.caissiere && STAFF.caissiere.name) || 'Caisse',
       client: (client && client.name) || 'Cliente de passage', items,
     });

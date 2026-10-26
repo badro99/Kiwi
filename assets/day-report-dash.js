@@ -77,7 +77,7 @@
   /* Le format machine, pour le CSV : point décimal, pas d'espace insécable.
      Un tableur ne sait pas lire « 4 200,5 ». */
   function raw2(n) { return String(Math.round((+n || 0) * 100) / 100); }
-  function qty(n) { var v = Math.round((+n || 0) * 100) / 100; return String(v); }
+  function qty(n) { return String(+n || 0); }
   function pad2(n) { return String(n).padStart(2, '0'); }
   function hm(ms) {
     if (!ms) return '';
