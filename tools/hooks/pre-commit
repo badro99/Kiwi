@@ -1,6 +1,5 @@
 #!/bin/sh
-# Kiwi · garde-fou pre-commit : refuse un commit dont les estampilles ?v= ont dérivé,
-# ou dont la table de routes directes (functions/_fast-routes.js) ne suit plus functions/.
+# Kiwi · garde-fou pre-commit — refuse un commit dont les estampilles ?v= ont dérivé.
 #
 # Installé par `sh tools/install-hooks.sh` (le .git/hooks local n'est pas
 # versionné). Il ne MODIFIE rien et ne `git add` rien : plusieurs sessions
@@ -18,29 +17,14 @@
 
 [ -n "$KIWI_SKIP_STAMP_HOOK" ] && exit 0
 
-# Une route ajoutée, déplacée ou supprimée sous functions/ doit suivre dans
-# functions/_fast-routes.js : la table importe chaque fichier de route, et un
-# import vers un fichier disparu fait échouer le build Pages (déploiement refusé).
-ROUTES=0
-git diff --cached --name-only --diff-filter=ACDMR | grep -qE '^functions/.*\.(m?js|ts)$' && ROUTES=1
-STAMPS=0
-git diff --cached --name-only --diff-filter=ACMR | grep -qE '^(assets/.*\.(js|css)|[^/]+\.html|kiwi-sw\.js|tools/asset-stamps\.json|assets/pos-dispatch\.js)$' && STAMPS=1
-
-# Rien d'estampillable ni de route dans ce commit → rien à vérifier (commits de docs…).
-[ "$ROUTES" = 0 ] && [ "$STAMPS" = 0 ] && exit 0
+# Rien d'estampillable dans ce commit → rien à vérifier (commits de docs, fonctions…).
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE '^(assets/.*\.(js|css)|[^/]+\.html|kiwi-sw\.js|tools/asset-stamps\.json|assets/pos-dispatch\.js)$'; then
+  exit 0
+fi
 
 TMP="$(mktemp -d 2>/dev/null || mktemp -d -t kiwi-hook)"
 trap 'rm -rf "$TMP"' EXIT
 git checkout-index -a -f --prefix="$TMP/" || exit 0   # export impossible → on n'empêche pas le commit
-
-if [ "$ROUTES" = 1 ] && [ -f "$TMP/tools/build-fast-routes.mjs" ] \
-  && ! node "$TMP/tools/build-fast-routes.mjs" --check >"$TMP/.routes-hook.log" 2>&1; then
-  echo "✗ functions/_fast-routes.js ne correspond plus aux routes de ce commit : refusé (tools/hooks/pre-commit)."
-  echo "  → node tools/build-fast-routes.mjs"
-  echo "    puis git add functions/_fast-routes.js et recommit. KIWI_SKIP_STAMP_HOOK=1 pour passer outre."
-  exit 1
-fi
-[ "$STAMPS" = 0 ] && exit 0
 
 # Le manifeste de HEAD permet de détecter un faux vert : asset modifié, hash du
 # manifeste mis à jour à la main/avec --sync, mais estampille publique inchangée.

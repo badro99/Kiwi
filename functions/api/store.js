@@ -38,7 +38,6 @@ import { serviceCapacityConflict } from './_booking-capacity.js';
 import { cleanGuestDoc } from './order/_guest.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
-import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
@@ -843,34 +842,16 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const redact = REDACT[feature] || (PARTIAL[feature] && PARTIAL[feature].hide);
-    /* Revalidation (docs/ops/CPU.md, "Store revalidation"). A document whose
-     * answer is the same for every caller allowed to read it gets an ETag
-     * built from what the database says about it. The browser sends it back
-     * by itself on the next poll; when nothing moved, the row comes back
-     * without its data and the answer is a 304, so a 250 KB receipt logo is
-     * neither read, parsed nor re-encoded. Redacted and partial documents
-     * depend on who asks, so they keep a full answer every time. */
-    const cacheable = !redact;
-    const known = cacheable ? storeTag(request.headers.get('If-None-Match')) : null;
-    const row = known && known.merchant === merchant && known.feature === feature
-      ? await env.DB.prepare(
-        'SELECT rev, updated_ts, length(data) AS bytes, CASE WHEN rev = ? AND updated_ts = ? AND length(data) = ? THEN NULL ELSE data END AS data FROM store_docs WHERE merchant = ? AND feature = ?'
-      ).bind(known.rev, known.updated, known.bytes, merchant, feature).first()
-      : await env.DB.prepare(
-        'SELECT data, rev, updated_ts, length(data) AS bytes FROM store_docs WHERE merchant = ? AND feature = ?'
-      ).bind(merchant, feature).first();
+    const row = await env.DB.prepare(
+      'SELECT data, rev, updated_ts FROM store_docs WHERE merchant = ? AND feature = ?'
+    ).bind(merchant, feature).first();
     if (!row) return json({ feature, merchant, data: null, rev: 0 });
-    const tag = cacheable ? storeEtag(merchant, feature, row) : null;
-    const cacheHeaders = tag ? { 'Cache-Control': 'private, no-cache', ETag: tag } : undefined;
-    if (tag && row.data == null && known && known.rev === Number(row.rev) && known.updated === Number(row.updated_ts) && known.bytes === Number(row.bytes)) {
-      return new Response(null, { status: 304, headers: cacheHeaders });
-    }
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
     if (feature === 'briefing') data = ownBriefingDays(data, merchant);
+    const redact = REDACT[feature] || (PARTIAL[feature] && PARTIAL[feature].hide);
     const safe = (redact && !(await editsRoster(request, env, merchant))) ? redact(data) : data;
-    return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 }, 200, cacheHeaders);
+    return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
   } catch (_) {
     // Table absente (migration pas encore passée) → neutre, surtout pas une
     // erreur : le client doit continuer à fonctionner en local.
