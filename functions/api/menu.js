@@ -27,6 +27,7 @@
 //     (GitHub Pages, local) are unaffected.
 
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, accountSlug, isOperator } from '../auth/_lib.js';
+import { sanitizeFormula } from './_menu-formula.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 /* The menu promotions rule (happy hour…), shared with the till and the waiter
  * app: a classic script that registers globalThis.KiwiMenuPromos. */
@@ -115,35 +116,6 @@ function sanitizeHours(raw) {
     .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.from) && /^\d{4}-\d{2}-\d{2}$/.test(e.to)
       && (e.kind === 'closed' || e.periods.length));
   return { v: 1, week, exceptions };
-}
-
-/* La formule suit EXACTEMENT les règles de cleanFormula dans
- * assets/menu-catalog.js, qui l'écrit au tableau de bord : même identifiant
- * d'étape, même libellé rogné, mêmes bornes, supplément au centime, et un choix
- * ne survit que s'il désigne un article présent et non archivé de la carte. Le
- * serveur gardait les choix « fantômes » (article supprimé) que le tableau de
- * bord retirait déjà, et le tableau de bord ne ramenait pas le supplément au
- * centime : les deux projections divergeaient. tools/menu-properties-test.mjs
- * les compare sur des cartes générées. */
-function sanitizeFormula(raw, allowedIds) {
-  if (!raw || typeof raw !== 'object') return null;
-  const rawSlots = Array.isArray(raw.slots) ? raw.slots.slice(0, 10) : [];
-  const slots = rawSlots.map((s, idx) => {
-    if (!s || typeof s !== 'object') return null;
-    const id = str(s.id, 40) || ('sl_' + (idx + 1));
-    const label = str(s.label, 400).trim().slice(0, 60);
-    let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
-    let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
-    if (min > max) min = max;
-    const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
-    const choices = rawChoices.map((c) => ({
-      itemId: str(c && c.itemId, 40),
-      extra: menuAmount(c && c.extra, 1e5),
-    })).filter((c) => c.itemId && allowedIds.has(c.itemId));
-    return { id, label, min, max, choices };
-  }).filter((s) => s && s.id && s.choices.length);
-  if (!slots.length) return null;
-  return { slots };
 }
 
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their

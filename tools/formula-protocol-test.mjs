@@ -135,7 +135,7 @@ if (!sanitizeMenuFn) {
 }
 
 // ── 2. assets/menu-catalog.js: cleanFormula & load-side ghost drop ───────────
-const cleanFormulaMatch = menuCatalogSource.match(/function cleanFormula\([\s\S]*?\n  \}/);
+const cleanFormulaMatch = menuCatalogSource.match(/  \/\* GENERATED MENU FORMULA BEGIN \*\/[\s\S]*?  \/\* GENERATED MENU FORMULA END \*\//);
 let cleanFormulaFn = null;
 if (!cleanFormulaMatch) {
   ok(false, 'cleanFormula function missing in menu-catalog.js');
@@ -1021,7 +1021,7 @@ if (!rmwCardMatch) {
 
 // B. Test menu-catalog.js addItem, updateItem, and ghost item cascade deletion
 const nidMatch = menuCatalogSource.match(/function nid\(d, prefix\) \{[\s\S]*?\}/);
-const cleanFormulaCatalogMatch = menuCatalogSource.match(/function cleanFormula\(formula, items\) \{[\s\S]*?\n  \}/);
+const cleanFormulaCatalogMatch = menuCatalogSource.match(/  \/\* GENERATED MENU FORMULA BEGIN \*\/[\s\S]*?  \/\* GENERATED MENU FORMULA END \*\//);
 const addItemMatch = menuCatalogSource.match(/function addItem\(data\) \{[\s\S]*?\n  \}/);
 const updateItemMatch = menuCatalogSource.match(/function updateItem\(id, patch\) \{[\s\S]*?\n  \}/);
 const deleteItemMatch = menuCatalogSource.match(/function deleteItem\(id\) \{[\s\S]*?\n  \}/);

@@ -85,10 +85,10 @@ await strict('availability, slug and sequential IDs preserve their explicit rule
   assert.equal(d.seq, seq);
   assert.deepEqual(rules.nextId(healed.seq, 'it'), { seq: seq + 2, id: 'it_' + (seq + 2) });
 }));
-await strict('formula labels truncated at 60 characters keep no trailing space, so normalising twice changes nothing', fc.property(fc.integer({ min: 1, max: 59 }), n => {
+await strict('formula labels preserve server truncation, including boundary whitespace', fc.property(fc.integer({ min: 1, max: 59 }), n => {
   const formula = { slots: [{ label: 'x'.repeat(n) + ' '.repeat(60 - n) + 'suffix', choices: [{ itemId: 'i' }] }] };
   const once = rules.cleanFormula(formula, context.items);
-  return JSON.stringify(rules.cleanFormula(once, context.items)) === JSON.stringify(once);
+  return once.slots[0].label === formula.slots[0].label.slice(0, 60);
 }));
 console.log(`${passed} menu rules properties passed; ${known} known; ${failed} failed (seed ${SEED}, ${RUNS} runs)`);
 process.exitCode = failed ? 1 : 0;
