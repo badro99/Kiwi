@@ -72,11 +72,19 @@ function methodParts(row, amountCents) {
   return null;
 }
 function addTo(map, key, value) { map[key] = (map[key] || 0) + value; }
+/* The approved discount on a sale, in centimes: the recorded gross minus what
+   was collected, else the recorded discount, else none (older rows). */
+function discountOf(row, amountCents) {
+  const gross = row.gross_amount_cents == null ? NaN : Math.round(Number(row.gross_amount_cents));
+  if (Number.isFinite(gross) && gross >= amountCents) return gross - amountCents;
+  const discount = row.discount_amount_cents == null ? NaN : Math.round(Number(row.discount_amount_cents));
+  return Number.isFinite(discount) && discount > 0 ? discount : 0;
+}
 const knownAdd = (a, b) => a == null || b == null ? null : a + b;
 
 async function readSales(db, merchant, fromTs, toTs, cutoff, zone) {
   const cols = await columnsOf(db, 'sales');
-  const pick = ['id', 'amount', 'amount_cents', 'method', 'ref', 'ts', 'channel', 'payment_parts', 'tip_cents', 'void_ts', 'void_reason']
+  const pick = ['id', 'amount', 'amount_cents', 'gross_amount_cents', 'discount_amount_cents', 'method', 'ref', 'ts', 'channel', 'payment_parts', 'tip_cents', 'void_ts', 'void_reason']
     .filter((c) => cols.has(c));
   const res = await db.prepare(
     `SELECT ${pick.join(', ')} FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? ORDER BY ts, id LIMIT ${SALES_CAP + 1}`
@@ -88,9 +96,9 @@ async function readSales(db, merchant, fromTs, toTs, cutoff, zone) {
   const clock = localClock(zone);
   const journal = [], refunds = [], voids = [];
   const days = new Map();
-  const summary = { grossCents: 0, refundsCents: 0, netCents: 0, count: 0, refundCount: 0, voidCount: 0, voidCents: 0, tipsCents: 0, byMethod: {} };
+  const summary = { grossCents: 0, discountsCents: 0, refundsCents: 0, netCents: 0, count: 0, refundCount: 0, voidCount: 0, voidCents: 0, tipsCents: 0, byMethod: {} };
   const dayOf = (d) => {
-    if (!days.has(d)) days.set(d, { day: d, count: 0, grossCents: 0, refundsCents: 0, netCents: 0, byMethod: {} });
+    if (!days.has(d)) days.set(d, { day: d, count: 0, grossCents: 0, discountsCents: 0, refundsCents: 0, netCents: 0, byMethod: {} });
     return days.get(d);
   };
 
@@ -122,8 +130,13 @@ async function readSales(db, merchant, fromTs, toTs, cutoff, zone) {
       summary.refundCount++;
       refunds.push({ day, time, ref: entry.ref, method, amountCents });
     } else {
+      /* Brut = before discounts, as in the monthly report ("Brut avant remises
+         et remboursements"): gross - discounts - refunds = net, one meaning of
+         the word across the accountant's books and the owner's report. */
+      const discount = discountOf(row, amountCents);
       d.count++; summary.count++;
-      d.grossCents += amountCents; summary.grossCents += amountCents;
+      d.grossCents += amountCents + discount; summary.grossCents += amountCents + discount;
+      d.discountsCents += discount; summary.discountsCents += discount;
       summary.tipsCents += tip;
     }
     if (parts) parts.forEach((p) => { addTo(d.byMethod, p.method, p.cents); addTo(summary.byMethod, p.method, p.cents); });
@@ -364,7 +377,7 @@ export async function onRequest({ request, env }) {
   if (sales.status === 'ok') {
     for (let i = 0; i < dayCount; i++) {
       const d = addBusinessDays(from, i);
-      dayList.push(sales.days.get(d) || { day: d, count: 0, grossCents: 0, refundsCents: 0, netCents: 0, byMethod: {} });
+      dayList.push(sales.days.get(d) || { day: d, count: 0, grossCents: 0, discountsCents: 0, refundsCents: 0, netCents: 0, byMethod: {} });
     }
   }
 
