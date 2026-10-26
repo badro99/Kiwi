@@ -294,9 +294,9 @@ process.exitCode = failed ? 1 : 0;
   const { default: vm } = await import('node:vm');
   const source = fs.readFileSync('assets/pages-pro/boutique-promos-returns.js', 'utf8');
   const block = source.slice(source.indexOf('  let liveCredits ='), source.indexOf('  async function mutateLiveCredit'));
-  let slug = 'fixture-a', reply, calls = 0, timer;
+  let slug = 'fixture-a', reply, calls = 0, timer, renders = 0;
   const context = { window: { KiwiEnv: { isReal: () => true }, KiwiCloudDoc: { currentSlug: () => slug } },
-    document: { querySelector: () => true }, handlers: { 'nav-returns': () => {} },
+    document: { querySelector: () => true }, handlers: { 'nav-returns': () => { renders++; } },
     fetch: async () => { calls++; return reply; }, setTimeout: fn => { timer = fn; return 1; }, clearTimeout() {}, console };
   vm.createContext(context);
   vm.runInContext(block + '\nthis.load = loadLiveCredits; this.rows = () => liveCredits; this.invalidate = () => { liveCreditsLoadedSlug = ""; };', context);
@@ -312,6 +312,11 @@ process.exitCode = failed ? 1 : 0;
   reply = { ok: true, json: async () => ({ credits: [{ code: 'fixture', balance: 3.25 }] }) };
   timer(); await flush();
   assert.equal(context.rows()[0].balance, 3.25, 'another till spend reaches open register after retry');
+  const shown = renders; timer(); await flush();
+  assert.equal(context.rows()[0].balance, 3.25);
+  assert.equal(renders, shown, 'an unchanged refresh does not rebuild the page under the cursor');
+  reply = { ok: true, json: async () => ({ credits: [{ code: 'fixture', balance: 1.5 }] }) }; timer(); await flush();
+  assert.equal(renders, shown + 1, 'a changed refresh repaints once');
   slug = 'fixture-b'; reply = { ok: false }; context.load(); await flush();
   assert.equal(context.rows().length, 0, 'tenant switch clears prior tenant even on HTTP failure');
   reply = { ok: true, json: async () => ({ credits: [] }) }; timer(); await flush();
