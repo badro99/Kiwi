@@ -13,7 +13,7 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'promos.js'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '..', 'assets', 'promos.js'), 'utf8');
 const data = new Map();
 const localStorage = {
   getItem: (k) => (data.has(k) ? data.get(k) : null),

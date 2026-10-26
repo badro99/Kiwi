@@ -138,7 +138,7 @@ console.log('■ Moteur de promotions');
   const store = new Map();
   const localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
   const window = { localStorage };
-  vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8')),
+  vm.runInNewContext(maisonSource((fs.readFileSync(path.join(ROOT, 'assets/promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'))),
     { window, localStorage, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl }, { filename: 'promos.js' });
   const PR = window.KiwiPromos;
   const promo = fc.oneof(

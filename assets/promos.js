@@ -144,7 +144,7 @@
      restaurée d'une version antérieure — repasse par ici. Une promotion mal
      formée ne doit pas pouvoir fausser un prix : à la moindre valeur illisible
      on retombe sur quelque chose d'inoffensif (0 %, aucune cible). */
-  var KINDS = ['percent', 'amount', 'fixed'];
+  var rules = window.KiwiPromoRules;
   var SCOPES = ['tout', 'rayon', 'produits', 'avant', 'stock'];
   var seq = 0;
 
@@ -158,41 +158,18 @@
   /* ───────────────────────── l'horloge de la caisse ─────────────────────────
      Heure de Casablanca, jamais celle de l'appareil : une tablette réglée sur
      Paris ouvrirait le « midi » à 11:00. La journée commence à 05:00. */
-  var TZ = 'Africa/Casablanca';
-  var BUSINESS_DAY_START_MIN = 5 * 60;
-  var HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  function toMin(v) { var m = HHMM.exec(v || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; }
-  var wallFmt = null;
+  var BUSINESS_DAY_START_MIN = 300;
+  var toMin = rules.toMin;
   function businessMoment(now) {
-    if (!wallFmt) {
-      wallFmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: TZ, hourCycle: 'h23',
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-    }
-    var parts = {};
-    wallFmt.formatToParts(new Date(now)).forEach(function (x) { parts[x.type] = x.value; });
-    var min = (+parts.hour) * 60 + (+parts.minute);
-    var date = new Date(Date.UTC(+parts.year, +parts.month - 1, +parts.day));
-    if (min < BUSINESS_DAY_START_MIN) date = new Date(date.getTime() - 86400000);
-    return { weekday: date.getUTCDay(), min: min };
-  }
-  /* Le créneau du jour, sans les dates : jours de la semaine, puis heures.
-     Une fenêtre qui finit avant de commencer (22:00–01:00) passe minuit. */
-  function inWindow(p, now) {
-    if (!hasWindow(p)) return true;         /* pas de créneau : l'horloge n'a rien à dire */
-    var b = businessMoment(now);
-    if (p.days && p.days.length && p.days.indexOf(b.weekday) < 0) return false;
-    var a = toMin(p.start), z = toMin(p.end);
-    if (a == null || z == null) return true;
-    if (a < z) return b.min >= a && b.min < z;
-    return b.min >= a || b.min < z;
+    var b = rules.businessMoment(now);
+    return { weekday: b.weekday, min: b.min };
   }
   function hasWindow(p) { return !!((p.days && p.days.length) || (p.start && p.end)); }
 
   function normalize(p) {
     p = p || {};
-    var kind = KINDS.indexOf(p.kind) >= 0 ? p.kind : 'percent';
-    var value = Math.max(0, Math.round(num(p.value, 0)));
-    if (kind === 'percent') value = Math.min(100, value);
+    var common = rules.normalize(p, 'boutique');
+    var kind = common.kind, value = common.value;
     var sc = (p.scope && typeof p.scope === 'object') ? p.scope : {};
     var type = SCOPES.indexOf(sc.type) >= 0 ? sc.type : 'tout';
     var scope = { type: type };
@@ -203,14 +180,7 @@
        se lit comme le magasin entier, c'est le magasin bradé par accident. */
     if (type === 'avant') scope.before = num(sc.before, 0);
     if (type === 'stock') scope.max = Math.max(0, Math.round(num(sc.max, 0)));
-    var days = (Array.isArray(p.days) ? p.days : []).map(Number)
-      .filter(function (d, i, a) { return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i; })
-      .sort(function (a, b) { return a - b; });
-    var start = HHMM.test(p.start || '') ? p.start : '';
-    var end = HHMM.test(p.end || '') ? p.end : '';
-    /* Une heure sans l'autre, ou deux heures égales, ne disent rien : on n'en
-       garde aucune plutôt que d'inventer une fenêtre. */
-    if (!start || !end || start === end) { start = ''; end = ''; }
+    var days = common.days, start = common.start, end = common.end;
     return {
       id: str(p.id) || newId(),
       name: str(p.name).slice(0, 80) || 'Promotion',
@@ -241,11 +211,7 @@
      Jamais stocké : un état rangé en base est un état qui ment dès le
      lendemain matin. On le recalcule à chaque lecture, à partir des dates. */
   function status(p, now) {
-    now = now || Date.now();
-    if (p.paused) return 'paused';
-    if (p.to && now > p.to) return 'ended';
-    if (p.from && now < p.from) return 'scheduled';
-    return inWindow(p, now) ? 'active' : 'waiting';
+    return rules.status(p, now || Date.now(), 'boutique');
   }
 
   /* Le prochain créneau d'une promotion en attente, dit comme on le dirait au
@@ -404,15 +370,8 @@
      encaissait parfois plus que le prix affiché (décision propriétaire,
      2026-10-19 : jamais au-dessus du prix en rayon). L'epsilon absorbe les
      erreurs de virgule flottante, jamais un vrai centime. */
-  function down(n) { return Math.max(0, Math.floor(n + 1e-6)); }
-  function applyTo(p, price) {
-    var base = down(num(price, 0));
-    var out = base;
-    if (p.kind === 'percent') out = base * (100 - p.value) / 100;
-    else if (p.kind === 'amount') out = base - p.value;
-    else out = p.value;                       /* prix fixe */
-    return Math.min(base, down(out));         /* jamais négatif, jamais plus cher */
-  }
+  var down = rules.down;
+  function applyTo(p, price) { return rules.price(p, price, 'boutique'); }
 
   /* Le prix effectif d'un article, et la promotion qui l'explique.
      Rend null quand rien ne s'applique — l'appelant garde alors son prix

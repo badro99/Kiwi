@@ -13,6 +13,7 @@ const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(im
    on this node's own time zone data. */
 const law = await import(pathToFileURL(path.join(root, 'functions/api/_zone-law.js')).href);
 globalThis.KiwiZoneLaw = { ZONE_LAWS: law.ZONE_LAWS, effectiveZone: law.effectiveZone, DateTimeFormat: law.DateTimeFormat };
+await import(pathToFileURL(path.join(root, 'assets/promo-rules.js')).href);
 await import(pathToFileURL(path.join(root, 'assets/menu-promos.js')).href);
 const P = globalThis.KiwiMenuPromos;
 

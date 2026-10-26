@@ -37,7 +37,7 @@ const window = { localStorage };
 const ctx = vm.createContext({ window, localStorage, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl });
 vm.runInContext('globalThis.window = window;', ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/kit/haptics.js'), 'utf8'), ctx, { filename: 'haptics.js' });
-vm.runInContext(fs.readFileSync(PROMOS_SRC, 'utf8'), ctx, { filename: 'promos.js' });
+vm.runInContext((fs.readFileSync(path.join(ROOT, 'assets/promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(PROMOS_SRC, 'utf8')), ctx, { filename: 'promos.js' });
 const PR = window.KiwiPromos;
 assert.ok(PR && ctx.KiwiZoneLaw, 'module or zone law missing');
 
@@ -250,7 +250,7 @@ function device(clock, offset) {
   const c = vm.createContext({ window: win, localStorage: ls, console, Set, Map, Math, Date: SkewDate, JSON, Number, Object, Array, String, Intl });
   vm.runInContext('globalThis.window = window;', c);
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/kit/haptics.js'), 'utf8'), c, { filename: 'haptics.js' });
-  vm.runInContext(fs.readFileSync(PROMOS_SRC, 'utf8'), c, { filename: 'promos.js' });
+  vm.runInContext((fs.readFileSync(path.join(ROOT, 'assets/promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(PROMOS_SRC, 'utf8')), c, { filename: 'promos.js' });
   const P = win.KiwiPromos; P.cloud();
   return { P, pull: (other) => hooks.write(hooks.merge(JSON.parse(JSON.stringify(hooks.read())), JSON.parse(JSON.stringify(other.hooks().read())))), hooks: () => hooks };
 }

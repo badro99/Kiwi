@@ -30,6 +30,7 @@ import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, accountSlug, 
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 /* The menu promotions rule (happy hour…), shared with the till and the waiter
  * app: a classic script that registers globalThis.KiwiMenuPromos. */
+import '../../assets/promo-rules.js';
 import '../../assets/menu-promos.js';
 const MenuPromos = () => globalThis.KiwiMenuPromos;
 import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';

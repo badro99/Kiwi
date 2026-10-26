@@ -64,7 +64,7 @@ try {
     class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [clock])); } static now() { return clock; } }
     const window = { KiwiCloudDoc: { currentSlug: () => SHOP, attach(options) { attached = options; return { push() { pushes++; } }; } } };
     const localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) };
-    vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'), { window, localStorage, Date: ClockDate, Math, console });
+    vm.runInNewContext((fs.readFileSync(path.join(ROOT, 'assets/promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8')), { window, localStorage, Date: ClockDate, Math, console });
     const api = window.KiwiPromos;
     api.use('fixture-boutique'); api.cloud(() => SHOP);
     return { api, doc: attached, read: () => plain(attached.read()), write: data => attached.write(plain(data)), tick() { clock += 1000; }, pushes: () => pushes, storage };

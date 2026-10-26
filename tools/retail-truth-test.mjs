@@ -38,7 +38,7 @@ const rd = (f) => readFileSync(path.join(ROOT, f), 'utf8');
 /* La section promos / retours se charge à part (assets/pages-pro/boutique-promos-returns.js). */
 const PAGES = pagesProSource() + '\n' + rd('assets/pages-pro/boutique-promos-returns.js');
 const CATALOG = rd('assets/boutique-catalog.js');
-const PROMOS = rd('assets/promos.js');
+const PROMOS = rd('assets/promo-rules.js') + '\n' + rd('assets/promos.js');
 const BPD = rd('assets/boutique-promos-dashboard.js');
 const DR = rd('assets/dateRange.js');
 const EXTRA = rd('assets/dashboard-extra.js');

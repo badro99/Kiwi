@@ -41,39 +41,16 @@
 (function (root) {
   'use strict';
 
+  var rules = root.KiwiPromoRules;
   var TZ = 'Africa/Casablanca';
   var BUSINESS_DAY_START_MIN = 5 * 60;      /* the till's 05:00 boundary */
   var KINDS = ['percent', 'amount', 'fixed'];
   var MAX_PROMOS = 40;
 
   var str = function (v, max) { return String(v == null ? '' : v).trim().slice(0, max); };
-  var money = function (v) { var n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0; };
-  var HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  var money = rules.money;
   var DAY = /^\d{4}-\d{2}-\d{2}$/;
-  var toMin = function (s) { var m = HHMM.exec(s || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
-
-  /* Wall-clock parts in Casablanca. Intl is in every browser, in node and in
-     the Workers runtime; the till must not use the device's own time zone. */
-  var fmt = null;
-  function wall(now) {
-    if (!fmt) {
-      fmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: TZ, hourCycle: 'h23',
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-    }
-    var p = {};
-    fmt.formatToParts(new Date(now)).forEach(function (x) { p[x.type] = x.value; });
-    return { y: +p.year, mo: +p.month, d: +p.day, min: (+p.hour) * 60 + (+p.minute) };
-  }
-
-  /* The business day a moment belongs to: before 05:00 it is still the day
-     before. Returns its date (YYYY-MM-DD), weekday (0 = Sunday) and the wall
-     minutes of the moment. */
-  function businessMoment(now) {
-    var w = wall(now == null ? Date.now() : now);
-    var date = new Date(Date.UTC(w.y, w.mo - 1, w.d));
-    if (w.min < BUSINESS_DAY_START_MIN) date = new Date(date.getTime() - 86400000);
-    return { date: date.toISOString().slice(0, 10), weekday: date.getUTCDay(), min: w.min };
-  }
+  var businessMoment = rules.businessMoment;
 
   /* Bounded and typed, the same on every writer. Unknown categories and items
      are dropped; a promotion that targets nothing is dropped. */
@@ -90,9 +67,8 @@
       var name = str(p.name, 60);
       if (!id || !name || seen.has(id)) return null;
       seen.add(id);
-      var kind = KINDS.indexOf(p.kind) >= 0 ? p.kind : 'percent';
-      var value = money(p.value);
-      if (kind === 'percent') value = Math.min(100, Math.round(value));
+      var common = rules.normalize(p, 'menu');
+      var kind = common.kind, value = common.value;
       if (!(value > 0) && kind !== 'fixed') return null;
       var all = p.all === true;
       var cats = (Array.isArray(p.cats) ? p.cats.slice(0, 60) : []).map(function (x) { return str(x, 40); })
@@ -100,11 +76,7 @@
       var items = (Array.isArray(p.items) ? p.items.slice(0, 400) : []).map(function (x) { return str(x, 40); })
         .filter(function (x) { return x && (!itemIds || itemIds.has(x)); });
       if (!all && !cats.length && !items.length) return null;
-      var days = (Array.isArray(p.days) ? p.days : []).map(Number)
-        .filter(function (d, i, a) { return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i; }).sort();
-      var start = HHMM.test(p.start || '') ? p.start : '';
-      var end = HHMM.test(p.end || '') ? p.end : '';
-      if (!start || !end || start === end) { start = ''; end = ''; }
+      var days = common.days, start = common.start, end = common.end;
       return {
         id: id, name: name, kind: kind, value: value,
         all: all, cats: all ? [] : cats, items: all ? [] : items,
@@ -119,28 +91,8 @@
   }
 
   /* Is the promotion running at `now`? */
-  function isActive(p, now) {
-    if (!p || p.paused) return false;
-    var b = businessMoment(now);
-    if (p.from && b.date < p.from) return false;
-    if (p.to && b.date > p.to) return false;
-    if (p.days && p.days.length && p.days.indexOf(b.weekday) < 0) return false;
-    var s = toMin(p.start), e = toMin(p.end);
-    if (s != null && e != null) {
-      if (s < e) { if (b.min < s || b.min >= e) return false; }
-      else if (b.min < s && b.min >= e) return false;          /* overnight window */
-    }
-    return true;
-  }
-
-  function status(p, now) {
-    if (!p) return 'ended';
-    if (p.paused) return 'paused';
-    var b = businessMoment(now);
-    if (p.to && b.date > p.to) return 'ended';
-    if (p.from && b.date < p.from) return 'scheduled';
-    return isActive(p, now) ? 'active' : 'waiting';            /* outside its hours or days */
-  }
+  function isActive(p, now) { return rules.status(p, now, 'menu') === 'active'; }
+  function status(p, now) { return rules.status(p, now, 'menu'); }
 
   function badge(p) {
     if (!p) return '';
@@ -156,14 +108,7 @@
     return !!line.catId && p.cats.indexOf(String(line.catId)) >= 0;
   }
 
-  function priceWith(p, unit) {
-    var base = money(unit), out = base;
-    // Arrondir le prix net en centimes, sans perdre les demi-centimes binaires.
-    if (p.kind === 'percent') out = Math.round(Math.round(base * 100) * (100 - p.value) / 100 + 1e-9) / 100;
-    else if (p.kind === 'amount') out = base - p.value;
-    else out = Math.min(base, p.value);
-    return Math.min(base, money(out));
-  }
+  function priceWith(p, unit) { return rules.price(p, unit, 'menu'); }
 
   /* The price of one unit of `line` ({ itemId, catId, kind }) whose regular
      unit price is `unit`, at `now`. Null when no running promotion lowers it.
