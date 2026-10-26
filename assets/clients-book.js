@@ -24,7 +24,10 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   // Libellés de la caisse : passent par son dictionnaire quand il est chargé.
   function tr(s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; }
-  function fmt(n) { return window.KiwiClientNumbers.money(n); }
+  function fmt(n) {
+    var v = Math.round((Number(n) || 0) * 100) / 100, d = Number.isInteger(v) ? 0 : 2;
+    return window.KiwiNumber?.format ? window.KiwiNumber.format(v, { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/[\u202f\u00a0]/g, '\u00a0') : window.KiwiClientNumbers.money(v);
+  }
   /* Dernière journée commerciale où un avoir reste utilisable : le serveur le
      fait expirer à la bascule (05:00) qui clôt cette journée, dont la date civile
      serait le lendemain. Même lecture que la caisse (pos-boutique et pos-maison, sales.js). */

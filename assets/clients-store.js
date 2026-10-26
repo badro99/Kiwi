@@ -37,6 +37,10 @@
     var lang = language || document.documentElement.lang || 'fr';
     var locale = lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR';
     var digits = quantity ? 0 : (Number.isInteger(n) ? 0 : 2);
+    // The dashboard's shared formatter wins where it is loaded, so these
+    // figures read like every other amount on the page.
+    var shared = window.KiwiNumber && window.KiwiNumber.format;
+    if (shared) return shared(n, { minimumFractionDigits: digits, maximumFractionDigits: quantity ? 3 : digits }).replace(/[\u202f\u00a0]/g, '\u00a0');
     var key = locale + ':' + quantity + ':' + digits;
     var formatter = numberFormats[key] || (numberFormats[key] = new Intl.NumberFormat(locale, {
       minimumFractionDigits: digits, maximumFractionDigits: quantity ? 3 : digits

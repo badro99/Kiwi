@@ -26,10 +26,12 @@ const parse = (s,lang) => Number(s.replace(/[\s\u061c\u200e\u200f]/g,'').replace
 for (const lang of ['fr','en','ar']) {
   document.documentElement.lang = lang;
   for (let i=0;i<1000;i++) {
-    window.KiwiNumber = i % 2 ? { format: n => String(Math.round(n)) } : undefined;
+    // Half the runs with the dashboard's shared formatter (same body as i18n.js formatNumber), half without it.
+    const shared = lang === 'en' ? 'en-GB' : 'fr-FR';
+    window.KiwiNumber = i % 2 ? { format: (n, o = {}) => new Intl.NumberFormat(shared, o).format(n) } : undefined;
     const edges = [50, 0, 1200, 1250, 1, 99999999];
     const cents = i < edges.length ? edges[i] : random(100000000);
-    const locale = lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR';
+    const locale = window.KiwiNumber ? shared : lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR';
     for (const fmt of [window.bookFmt,window.directoryFmt]) {
       const shown = fmt(cents/100);
       assert.equal(Math.round(parse(shown,lang)*100),cents,`${lang}: ${shown}`);
@@ -38,6 +40,8 @@ for (const lang of ['fr','en','ar']) {
     }
   }
 }
+// Quantities with an explicit language: the till, where the dashboard formatter is absent.
+window.KiwiNumber = undefined;
 const client = window.KiwiClients.upsert({ name: 'Display fixture' },'display-fixture');
 for (let i=0;i<200;i++) {
   const qty = i === 0 ? 0.5 : random(100000)/1000;
