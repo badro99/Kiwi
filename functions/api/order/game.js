@@ -38,12 +38,7 @@ const BOARD_SIZE = 10;
 let tableReady = false;
 export async function ensureScoresTable(env) {
   if (tableReady) return;
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_scores (
-    id TEXT PRIMARY KEY, merchant TEXT NOT NULL, month TEXT NOT NULL, session_id TEXT NOT NULL,
-    table_no TEXT, quiz_id TEXT NOT NULL, round_id TEXT NOT NULL DEFAULT '', nickname TEXT NOT NULL,
-    nick_key TEXT NOT NULL, score INTEGER NOT NULL, correct INTEGER NOT NULL, total INTEGER NOT NULL,
-    created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL)`).run();
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_game_scores_month ON game_scores (merchant, month)').run();
+
   tableReady = true;
 }
 

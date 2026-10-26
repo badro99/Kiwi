@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { missingMigratedTables } from './fixtures/migrated-tables.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * TERMINAUX · CE QUE LE PARC AFFIRME
  *
@@ -76,6 +77,7 @@ db.exec(`
   CREATE TABLE operators (id TEXT PRIMARY KEY);
   CREATE TABLE employee_auth_versions (merchant TEXT, member_id TEXT, auth_version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(merchant, member_id));
 `);
+  missingMigratedTables(db);
 const SECRET = 'terminaux-suite-secret';
 const BUSINESS = 'Café Test';
 const MERCHANT = slugMerchant(BUSINESS);
@@ -112,20 +114,11 @@ const fleet = async () => {
 };
 const hours = (n) => n * 3600 * 1000;
 
-/* Une base créée AVANT le renommage : sa table n'a pas `custom_label`. Elle doit
-   être complétée au premier accès, pas casser la page. */
-db.exec(`CREATE TABLE device_health (
-  merchant TEXT NOT NULL, device_id TEXT NOT NULL, app TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '',
-  online INTEGER NOT NULL DEFAULT 1, standalone INTEGER NOT NULL DEFAULT 0,
-  printer_configured INTEGER NOT NULL DEFAULT 0, printer_connected INTEGER NOT NULL DEFAULT 0,
-  alert TEXT NOT NULL DEFAULT '', alert_since_ts INTEGER NOT NULL DEFAULT 0,
-  acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT '',
-  beats INTEGER NOT NULL DEFAULT 0, first_seen_ts INTEGER NOT NULL, last_seen_ts INTEGER NOT NULL,
-  PRIMARY KEY (merchant, device_id))`);
+// Historical rows are read using the schema installed by migrations.
 db.prepare(`INSERT INTO device_health (merchant, device_id, app, label, printer_configured, printer_connected, beats, first_seen_ts, last_seen_ts)
   VALUES (?, 'dev:legacy-till', 'caisse', 'Caisse comptoir', 1, 1, 7, ?, ?)`).run(MERCHANT, Date.now() - 1000, Date.now() - 1000);
 
-await ok('une base créée avant le renommage est complétée au premier accès (la page ne casse pas)', async () => {
+await ok('une ligne historique reste lisible sur une base migrée', async () => {
   const f = await fleet();
   assert.equal(f.status, 200);
   const legacy = f.byId.get('dev:legacy-till');

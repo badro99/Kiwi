@@ -25,7 +25,7 @@ async function strict(label, p) { if (process.env.KIWI_PROPERTY_ONLY && !new Reg
 
 const f = await fixture(ROOT), { sql, merchant, env } = f, OTHER = 'server-other-shop';
 const YEAR = new Date().getUTCFullYear();
-const reset = () => sql.exec("DELETE FROM sales; DROP TABLE IF EXISTS ticket_sequences");
+const reset = () => sql.exec("DELETE FROM sales; DELETE FROM ticket_sequences");
 const counter = (m) => { try { const r = sql.prepare('SELECT next_value FROM ticket_sequences WHERE merchant = ? AND period = ?').get(m, YEAR); return r ? r.next_value : null; } catch { return null; } };
 const reserve = (m, req) => reserveTicketRange(env, m, req.size, req.floor, req.period).then((r) => ({ ok: true, ...r }), (e) => ({ ok: false, error: e.message }));
 

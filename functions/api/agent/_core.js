@@ -38,23 +38,7 @@ export async function body(request) {
   } catch (_) { return null; }
 }
 export async function ensureTables(env) {
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS agent_keys (
-    id TEXT PRIMARY KEY, merchant TEXT NOT NULL, account_id TEXT NOT NULL,
-    account_epoch INTEGER NOT NULL, label TEXT NOT NULL, token_hash TEXT NOT NULL,
-    scopes TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
-    created_ts INTEGER NOT NULL, expires_ts INTEGER NOT NULL, last_used_ts INTEGER NOT NULL DEFAULT 0
-  )`).run();
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_agent_keys_owner ON agent_keys (account_id, merchant)').run();
-  // Older D1 databases predate operator-issued keys. The column already exists
-  // on a fresh schema, so the ALTER fails there and that failure is expected.
-  try { await env.DB.prepare("ALTER TABLE agent_keys ADD COLUMN issuer TEXT NOT NULL DEFAULT 'owner'").run(); } catch (_) {}
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS agent_audit (
-    id TEXT PRIMARY KEY, key_id TEXT NOT NULL, merchant TEXT NOT NULL,
-    action TEXT NOT NULL, target_id TEXT NOT NULL, request_id TEXT NOT NULL,
-    input_hash TEXT NOT NULL DEFAULT '',
-    created_ts INTEGER NOT NULL, UNIQUE (key_id, request_id)
-  )`).run();
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_agent_audit_merchant ON agent_audit (merchant, created_ts)').run();
+  // Schema owned by migrations 0001–0010.
 }
 export async function owner(request, env, merchant) {
   if (!env?.DB || !env?.AUTH_SECRET || !merchant) return null;

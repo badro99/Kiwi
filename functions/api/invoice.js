@@ -42,17 +42,7 @@ export function formatInvoiceNumber(year, seq) {
 }
 
 export async function ensureInvoiceSchema(db) {
-  try {
-    await db.prepare(
-      'CREATE TABLE IF NOT EXISTS sale_invoices (' +
-      'merchant TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL, ' +
-      'sale_id TEXT NOT NULL, customer TEXT, snapshot TEXT NOT NULL, created_ts INTEGER NOT NULL, ' +
-      'PRIMARY KEY (merchant, sale_id), UNIQUE (merchant, seq))'
-    ).run();
-    await db.prepare(
-      'CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq)'
-    ).run();
-  } catch (_) {}
+  // Schema owned by migrations 0001–0010.
 }
 
 export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData, clientSnapshot) {

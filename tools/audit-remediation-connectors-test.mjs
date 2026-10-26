@@ -1,3 +1,4 @@
+import { missingMigratedTables } from './fixtures/migrated-tables.cjs';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { createHmac } from 'node:crypto';
@@ -24,6 +25,7 @@ db.exec(`CREATE TABLE accounts(id TEXT PRIMARY KEY,business TEXT,session_epoch I
   CREATE TABLE operators(id TEXT PRIMARY KEY);
   INSERT INTO accounts(id,business) VALUES('audit-owner','Audit');
   INSERT INTO merchant_config VALUES('audit','audit-owner','active');`);
+  missingMigratedTables(db);
 const env = { DB: adapter(db), AUTH_SECRET: 'synthetic-secret', PAYMENT_LINK_WEBHOOK: 'https://synthetic.invalid/no-network' };
 const cookie = 'kiwi_sess=' + await makeSession('audit-owner', env.AUTH_SECRET);
 const originalFetch = globalThis.fetch;
@@ -112,6 +114,7 @@ stock.exec(`CREATE TABLE channel_links(id TEXT,merchant TEXT,channel TEXT,config
  CREATE TABLE catalogs(merchant TEXT,data TEXT,rev INTEGER,updated_ts INTEGER);
  CREATE TABLE shopify_connections(merchant TEXT,last_error TEXT,updated_ts INTEGER);
  INSERT INTO shopify_variant_links VALUES('audit','kv-1','gid://shopify/ProductVariant/901','active');`);
+  missingMigratedTables(stock);
 stock.prepare('INSERT INTO channel_links VALUES(?,?,?,?,?,NULL,NULL)').run('link-audit', 'audit', 'shopify', JSON.stringify({ shop: 'audit.myshopify.com', shopifySecret: 'synthetic' }), 'active');
 stock.prepare('INSERT INTO catalogs VALUES(?,?,1,1)').run('audit', JSON.stringify({
   products: [{ id: 'kp-1', name: 'synthetic', priceMAD: 12.35, createdAt: 1 }],

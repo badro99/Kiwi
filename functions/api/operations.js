@@ -84,53 +84,7 @@ const safeJson = (value, limit = 24000) => {
 const parseJson = (value) => { try { return value ? JSON.parse(value) : null; } catch (_) { return null; } };
 
 async function ensureSchema(env) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS operational_commands (
-      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, domain TEXT NOT NULL,
-      action TEXT NOT NULL, status TEXT NOT NULL, provider TEXT NOT NULL DEFAULT '',
-      idempotency_key TEXT NOT NULL, payload TEXT NOT NULL, result TEXT,
-      requested_by TEXT NOT NULL DEFAULT '', attempt_count INTEGER NOT NULL DEFAULT 0,
-      last_error TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL,
-      updated_ts INTEGER NOT NULL
-    )`
-  ).run();
-  await env.DB.prepare(
-    'CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency ON operational_commands (merchant, idempotency_key)'
-  ).run();
-  await env.DB.prepare(
-    'CREATE INDEX IF NOT EXISTS idx_ops_merchant_domain_time ON operational_commands (merchant, domain, updated_ts DESC)'
-  ).run();
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS operational_events (
-      id TEXT PRIMARY KEY, command_id TEXT NOT NULL, merchant TEXT NOT NULL,
-      event TEXT NOT NULL, status TEXT NOT NULL, detail TEXT,
-      created_ts INTEGER NOT NULL,
-      seq INTEGER NOT NULL DEFAULT 0,
-      prev_hash TEXT NOT NULL DEFAULT '', hash TEXT NOT NULL DEFAULT ''
-    )`
-  ).run();
-  await env.DB.prepare(
-    'CREATE INDEX IF NOT EXISTS idx_ops_events_command ON operational_events (merchant, command_id, created_ts)'
-  ).run();
-  /* Les deux colonnes de la chaîne sont arrivées après la table : une base déjà
-     en production ne les a pas, et `CREATE TABLE IF NOT EXISTS` ne les ajoutera
-     jamais.  L'ALTER échoue bruyamment la deuxième fois — c'est le seul cas où
-     avaler l'erreur est la bonne réponse. */
-  for (const column of ['prev_hash', 'hash']) {
-    try {
-      await env.DB.prepare(`ALTER TABLE operational_events ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`).run();
-    } catch (_) { /* déjà présente */ }
-  }
-  try {
-    await env.DB.prepare('ALTER TABLE operational_events ADD COLUMN seq INTEGER NOT NULL DEFAULT 0').run();
-  } catch (_) { /* déjà présente */ }
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS operational_rate (
-      merchant TEXT NOT NULL, bucket TEXT NOT NULL, window_ts INTEGER NOT NULL,
-      hits INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (merchant, bucket, window_ts)
-    )`
-  ).run();
+  // Schema owned by migrations 0001–0010.
 }
 
 /* Compte d'abord, refuse ensuite : la tentative refusée est elle-même comptée,
@@ -875,53 +829,11 @@ async function accounting(env, row, payload) {
 const PO_MAX_LINES = 60;
 
 async function ensurePurchase(env) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS purchase_orders (
-      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, seq INTEGER NOT NULL,
-      number TEXT NOT NULL, supplier TEXT NOT NULL, status TEXT NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'MAD', expected_date TEXT NOT NULL DEFAULT '',
-      total_cents INTEGER NOT NULL DEFAULT 0, invoiced_cents INTEGER NOT NULL DEFAULT 0,
-      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL,
-      updated_ts INTEGER NOT NULL
-    )`
-  ).run();
-  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_number ON purchase_orders (merchant, number)').run();
-  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq ON purchase_orders (merchant, seq)').run();
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders (merchant, status, updated_ts DESC)').run();
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS purchase_order_lines (
-      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, number TEXT NOT NULL,
-      line_no INTEGER NOT NULL, sku TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
-      item_id TEXT NOT NULL DEFAULT '', variant_id TEXT NOT NULL DEFAULT '',
-      location_id TEXT NOT NULL DEFAULT 'principal',
-      unit TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL, unit_cents INTEGER NOT NULL,
-      received_qty INTEGER NOT NULL DEFAULT 0, returned_qty INTEGER NOT NULL DEFAULT 0,
-      created_ts INTEGER NOT NULL
-    )`
-  ).run();
-  for (const column of [
-    "item_id TEXT NOT NULL DEFAULT ''",
-    "variant_id TEXT NOT NULL DEFAULT ''",
-    "location_id TEXT NOT NULL DEFAULT 'principal'",
-  ]) {
-    try { await env.DB.prepare(`ALTER TABLE purchase_order_lines ADD COLUMN ${column}`).run(); } catch (_) {}
-  }
-  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_line_sku ON purchase_order_lines (merchant, number, sku)').run();
+  // Schema owned by migrations 0001–0010.
 }
 
 async function ensurePurchaseStock(env) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS inventory_movements (
-      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, item_id TEXT NOT NULL,
-      variant_id TEXT NOT NULL DEFAULT '', location_id TEXT NOT NULL DEFAULT 'principal',
-      qty_milli INTEGER NOT NULL, reason TEXT NOT NULL, unit_cost_cents INTEGER,
-      unit_cost_rate INTEGER, currency TEXT NOT NULL DEFAULT 'MAD', ref_type TEXT NOT NULL DEFAULT '',
-      ref_id TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', actor TEXT NOT NULL DEFAULT '',
-      occurred_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL, reversal_of TEXT NOT NULL DEFAULT '',
-      meta TEXT, payload_hash TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL
-    )`
-  ).run();
-  await env.DB.prepare('CREATE TABLE IF NOT EXISTS inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)').run();
+  // Schema owned by migrations 0001–0010.
 }
 
 async function purchaseStockCursor(env, merchant) {
@@ -1522,12 +1434,7 @@ async function ensurePayments(env) {
   ).run();
   await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_pay_refund_number ON payment_refunds (merchant, number)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_pay_refund_ref ON payment_refunds (merchant, reference, created_ts)').run();
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS payment_refund_reservations (
-    merchant TEXT NOT NULL, command_id TEXT NOT NULL, reference TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL CHECK(amount_cents > 0), status TEXT NOT NULL,
-    provider_ref TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, command_id)
-  )`).run();
+
 }
 
 async function reserveRefund(env, merchant, reference, commandId, amountCents) {
@@ -1852,39 +1759,9 @@ const DEVICE_STALE_MS = 30 * 24 * 3600 * 1000;   /* un appareil oublié sort du 
    nouvel identifiant), pas un appareil du parc. Les caisses et les téléphones de
    salle gardent, eux, les trente jours. */
 const CONSOLE_STALE_MS = DEVICE_OFFLINE_MS;
-let customLabelReady = false;
 
 async function ensureDevices(env) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS device_health (
-      merchant TEXT NOT NULL, device_id TEXT NOT NULL,
-      app TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '',
-      custom_label TEXT NOT NULL DEFAULT '',
-      online INTEGER NOT NULL DEFAULT 1, standalone INTEGER NOT NULL DEFAULT 0,
-      printer_configured INTEGER NOT NULL DEFAULT 0, printer_connected INTEGER NOT NULL DEFAULT 0,
-      alert TEXT NOT NULL DEFAULT '', alert_since_ts INTEGER NOT NULL DEFAULT 0,
-      acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT '',
-      beats INTEGER NOT NULL DEFAULT 0,
-      first_seen_ts INTEGER NOT NULL, last_seen_ts INTEGER NOT NULL,
-      PRIMARY KEY (merchant, device_id)
-    )`
-  ).run();
-  /* Les bases créées avant le renommage n'ont pas la colonne : on l'ajoute une
-     fois par isolat, et « déjà présente » n'est pas une erreur. */
-  if (!customLabelReady) {
-    try { await env.DB.prepare("ALTER TABLE device_health ADD COLUMN custom_label TEXT NOT NULL DEFAULT ''").run(); }
-    catch (_) { /* colonne déjà là */ }
-    customLabelReady = true;
-  }
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_seen ON device_health (merchant, last_seen_ts)').run();
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS device_alerts (
-      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, device_id TEXT NOT NULL,
-      code TEXT NOT NULL, opened_ts INTEGER NOT NULL, closed_ts INTEGER NOT NULL DEFAULT 0,
-      acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT ''
-    )`
-  ).run();
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_alert_open ON device_alerts (merchant, device_id, closed_ts)').run();
+  // Schema owned by migrations 0001–0010.
 }
 
 /* Fonction pure, appelée à l'écriture ET à la lecture.  Une seule alarme à la
