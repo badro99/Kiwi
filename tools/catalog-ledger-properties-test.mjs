@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 // Propriété inter-surfaces : vrais handlers D1/SQLite et scripts navigateur livrés.
+// Les deux livres sont distincts par conception : la boutique et la maison
+// tiennent leur stock dans le catalogue (produit × déclinaison), les autres
+// métiers dans le registre de mouvements ; la page Stock lit le catalogue pour
+// un article de boutique (stock.js, ledgerOpeningFor). La propriété vérifie donc
+// que chaque livre converge, sur deux appareils et le serveur, vers le stock
+// attendu à l'unité, qu'un rejeu ne compte jamais deux fois, et qu'un geste
+// dans un livre ne déplace jamais l'autre.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -48,6 +55,7 @@ function browser() {
       const route = url.pathname.endsWith('/catalog') ? 'catalog' : 'movements';
       const method = options.method || 'GET';
       const body = method === 'POST' ? JSON.parse(options.body) : Object.fromEntries(url.searchParams);
+      if (route === 'movements' && method === 'POST') w.__sent.push(...(body.movements || []));
       return call(route, method, body, true);
     },
   };
@@ -57,6 +65,7 @@ function browser() {
     pending.then(() => requests.delete(pending), () => requests.delete(pending));
     return pending;
   };
+  w.__sent = [];
   w.window = w; w.self = w;
   vm.createContext(w);
   for (const file of ['color-palette', 'boutique-catalog-parts', 'boutique-catalog', 'inventory-ledger']) {
@@ -103,12 +112,14 @@ async function play(ops) {
       assert.equal(synced, true, 'synchronisation registre ' + JSON.stringify(device.I.status()));
     }
   }
+  const want = { catalog: [20, 20], ledger: [20, 20] };
   async function agree(label) {
     const remote = await call('movements', 'GET', { summary: 1 });
     for (const device of devices) for (let i = 0; i < 2; i++) {
       const ledger = remote.balances.filter(row => row.itemId === 'p' + i).reduce((sum, row) => sum + row.qty, 0);
-      assert.equal(device.I.balance('p' + i), ledger, label + ' : registre navigateur');
-      assert.equal(device.C.productStock('p' + i), ledger, label + ' : catalogue p' + i);
+      assert.equal(ledger, want.ledger[i], label + ' : registre serveur p' + i);
+      assert.equal(device.I.balance('p' + i), want.ledger[i], label + ' : registre navigateur p' + i);
+      assert.equal(device.C.productStock('p' + i), want.catalog[i], label + ' : catalogue p' + i);
     }
   }
   await sync(); await agree('état initial');
@@ -116,12 +127,13 @@ async function play(ops) {
   for (const [index, op] of ops.entries()) {
     const device = op.surface === 'catalog' ? a : b;
     const pid = 'p' + op.product, vid = 'v' + op.product;
-    const available = Math.min(a.C.productStock(pid), b.I.balance(pid));
+    const available = want[op.surface][op.product];
     const qty = Math.min(op.qty, Math.max(0, available));
     if (op.kind === 'count') {
       const id = 'count-' + index;
       await call('counts', 'POST', { action: 'submit', id, engine: op.surface === 'catalog' ? 'boutique' : 'ledger', lines: [{ itemId: pid, variantId: vid, countedQty: op.qty }] });
       await call('counts', 'POST', { action: 'review', id, decision: 'approved' });
+      want[op.surface][op.product] = op.qty;
     } else if (op.kind === 'delete-restore') {
       // Le produit propose la restauration d'une archive ; la suppression
       // définitive porte un tombstone et n'a pas de geste « restaurer ».
@@ -135,11 +147,18 @@ async function play(ops) {
         const server = await call('catalog', 'GET');
         await call('catalog', 'POST', { data: device.C._merge(clone(server.data), last.doc), baseRev: server.rev });
       } else {
-        await call('movements', 'POST', { movements: [last.row] });
+        // Rejeu de la ligne telle que l'appareil l'a envoyée (même identifiant).
+        const sent = devices.flatMap(d => d.w.__sent).filter(r => r.id === last.row.id).pop();
+        assert.ok(sent, 'mouvement envoyé retrouvé');
+        await call('movements', 'POST', { movements: [sent] });
       }
     } else if (op.kind !== 'replay') {
       const delta = op.kind === 'sale' ? -qty : op.kind === 'manual' ? op.qty - 2 : op.qty;
       if (delta) {
+        // Le catalogue ne descend pas sous zéro (règle boutique) ; le registre,
+        // lui, garde un solde négatif plutôt que de perdre un mouvement.
+        want[op.surface][op.product] = op.surface === 'catalog'
+          ? Math.max(0, want.catalog[op.product] + delta) : want.ledger[op.product] + delta;
         device.w.navigator.onLine = false;
         if (op.surface === 'catalog') {
           device.C.adjustStock(vid, delta, { sale: 'vente', return: 'retour', manual: 'ajust', receipt: 'reception' }[op.kind]);
@@ -156,8 +175,8 @@ async function play(ops) {
 }
 let failed = 0;
 try {
-  // Contre-exemple fixe : stock initial 20, vente catalogue d'une unité,
-  // deux tours de synchronisation, catalogue 19 mais registre 20.
+  // Exemple fixe : stock initial 20, vente catalogue d'une unité, deux tours
+  // de synchronisation : catalogue 19, registre 20 inchangé (livres séparés).
   for (const [kind, surface] of [['history', null], ...kinds.flatMap(kind => ['catalog', 'ledger'].map(surface => [kind, surface]))]) {
     const history = op => kind === 'replay'
       ? [{ ...op, surface, kind: 'sale' }, { ...op, surface, kind: 'replay' }]
@@ -166,7 +185,10 @@ try {
       ? fc.array(operation, { minLength: 1, maxLength: 30 })
       : operation.map(history);
     const examples = kind === 'history'
-      ? [[[{ kind: 'sale', surface: 'catalog', product: 0, qty: 1 }]]]
+      ? [[[{ kind: 'sale', surface: 'catalog', product: 0, qty: 1 }]],
+        // Défaut trouvé le 26 octobre : deux comptages successifs à 1 laissaient
+        // 0, le second lisant le cache `stock` que l'approbation n'avait pas bougé.
+        [[{ kind: 'count', surface: 'catalog', product: 1, qty: 1 }, { kind: 'count', surface: 'catalog', product: 1, qty: 1 }]]]
       : [[history({ surface, product: 0, qty: 1 })]];
     const result = await fc.check(fc.asyncProperty(arbitrary, play), { numRuns: runs, seed, examples });
     if (result.failed) {

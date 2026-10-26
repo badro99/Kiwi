@@ -636,9 +636,23 @@ export async function onRequestPost({ request, env }) {
       const catRow = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
       if (catRow && catRow.data) {
         const cat = JSON.parse(catRow.data);
+        /* Le stock d'une déclinaison se dérive comme dans le catalogue
+         * (boutique-catalog-parts.js, materialize) : socle + mouvements
+         * postérieurs au socle. Le champ `stock` n'est qu'un cache écrit par le
+         * dernier appareil : une approbation n'ajoute qu'un mouvement, et un
+         * deuxième comptage lu sur ce cache retranchait le même écart deux fois. */
+        const derived = new Map();
         (cat.variants || []).forEach(v => {
-          if (v && v.id) boutiqueStockMap.set(v.id, num(v.stock != null ? v.stock : v.base));
+          if (!v || !v.id) return;
+          const base = v.base != null ? (num(v.base) || 0) : Math.max(0, num(v.stock) || 0);
+          derived.set(v.id, { n: base, at: num(v.baseAt || v.stockAt) || 0 });
         });
+        (Array.isArray(cat.moves) ? cat.moves : []).forEach(m => {
+          const slot = m && derived.get(m.vid);
+          if (!slot || (num(m.at) || 0) <= slot.at) return;
+          slot.n += num(m.d) || 0;
+        });
+        derived.forEach((slot, id) => boutiqueStockMap.set(id, Math.max(0, Math.round(slot.n))));
       }
     } catch (_) {}
   }
