@@ -56,7 +56,9 @@
     {"surface": "dashboard-product-editor", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-intake-photo", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-intake-document", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
-    {"surface": "dashboard-intake-assistant", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."}
+    {"surface": "dashboard-intake-assistant", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
+    {"surface": "dashboard-analysis-calculator", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Calcul au centime, enregistrement et reprise après erreur sur chaque appareil."},
+    {"surface": "dashboard-analysis-calculator-error", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Calcul au centime, enregistrement et reprise après erreur sur chaque appareil."}
   ],
   "blocked": []
 }

@@ -2356,7 +2356,7 @@ section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
 for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs',
   'surface-matrix-till-desktop-browser-test.mjs', 'surface-matrix-till-tablet-browser-test.mjs', 'surface-matrix-till-phone-browser-test.mjs',
   'surface-matrix-apps-browser-test.mjs', 'keyboard-floor-booking-browser-test.mjs',
-  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-credit-browser-test.mjs', 'surface-matrix-states-credit-real-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs', 'surface-matrix-states-real-browser-test.mjs',
+  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-credit-browser-test.mjs', 'surface-matrix-states-credit-real-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs', 'surface-matrix-states-real-browser-test.mjs', 'analysis-calculator-browser-test.mjs',
   'surface-matrix-states-booking-floor-browser-test.mjs', 'surface-matrix-states-intake-browser-test.mjs', 'surface-matrix-states-pressing-browser-test.mjs',
   'surface-matrix-states-loyalty-till-browser-test.mjs', 'surface-matrix-states-agent-doc-browser-test.mjs',
   'surface-matrix-states-promos-catalogue-browser-test.mjs', 'surface-matrix-states-shopify-browser-test.mjs', 'surface-matrix-states-economat-browser-test.mjs',
