@@ -3,18 +3,9 @@
        Single-file. No build, no framework.
        ========================================================= */
 
-    /* Real venue identity for the waiter app. Serveur has no env/identity layer,
-       so derive from the 6-digit pairing (kiwiPairedVenue) or, on a hosted domain,
-       the pinned merchant slug. A real venue shows ITS name — never the demo
-       "Café Atlas · Maarif". Local demo (unpaired localhost) is unchanged. */
+    /* Shared identity boundary, loaded synchronously by the serveur shell. */
     function svPaired() {
-      try {
-        if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function') {
-          var pv = window.KiwiPlatform.pairedVenue();
-          if (pv) return pv;
-        }
-      } catch (_) {}
-      try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; }
+      return window.KiwiPlatform.pairedVenue();
     }
     function svMerchant() {
       try {
@@ -25,8 +16,8 @@
       if (p && p.merchant) return String(p.merchant).toLowerCase();
       try { return String(localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant') || '').toLowerCase(); } catch (_) { return ''; }
     }
-    function svHosted() { try { var h = (location.hostname || '').toLowerCase(); return !(h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '' || /\.local$/.test(h)); } catch (_) { return false; } }
-    function svReal()   { return !!svMerchant() || svHosted(); }
+    function svHosted() { return window.KiwiEnv.hosted; }
+    function svReal() { return window.KiwiEnv.isReal(); }
     /* « Souvent avec… » (assets/caisse-pairs.js) lit les paires de CE
        commerce ; l'app de démo n'en a pas. */
     window.KiwiPairsMerchant = function () { return svReal() ? svMerchant() : ''; };
