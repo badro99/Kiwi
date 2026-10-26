@@ -14,6 +14,7 @@
   /* ─── TRANSLATIONS ─── */
   const T = {
     fr: {
+      "home.newSale": "Nouvelle vente",
       "quarantine.receipt": "Reçu",
       "quarantine.original": "Vente d’origine",
   "quarantine.title": "Opérations à valider",
@@ -46,6 +47,7 @@
   "quarantine.processing": "Validation en cours, réessayez pour terminer."
 },
     en: {
+      "home.newSale": "New sale",
       "quarantine.receipt": "Receipt",
       "quarantine.original": "Original sale",
       "quarantine.title": "Operations to review",
@@ -786,6 +788,7 @@
     },
 
     ar: {
+      "home.newSale": "عملية بيع جديدة",
       "quarantine.receipt": "الإيصال",
       "quarantine.original": "البيع الأصلي",
       "quarantine.title": "عمليات تحتاج إلى موافقة",

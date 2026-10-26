@@ -6,6 +6,7 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
+  function tr(message) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(message) : message; }
   var hasSerial = 'serial' in navigator;
   var hasUSB = 'usb' in navigator;
   var hasBT = 'bluetooth' in navigator;
@@ -55,7 +56,7 @@
   function cashierConfirms(amount, disc, status) {
     if (disc && disc.classList) disc.classList.remove('is-pulsing');
     var label = 'Le client a payé ' + mmk(amount) + ' sur le terminal';
-    if (status) status.textContent = 'Faites payer sur votre terminal, puis confirmez';
+    if (status) status.textContent = tr('Faites payer sur votre terminal, puis confirmez');
     var canMount = !!(status && status.parentNode && typeof status.parentNode.insertBefore === 'function'
       && typeof document !== 'undefined' && document.createElement);
     if (!canMount) {
@@ -110,23 +111,23 @@
         if (disc && disc.classList) disc.classList.add('is-success');
         if (status) {
           status.textContent = result.recordOnly
-            ? 'Paiement carte enregistré · terminal externe'
-            : 'Paiement confirmé sur le lecteur';
+            ? tr('Paiement carte enregistré · terminal externe')
+            : tr('Paiement confirmé sur le lecteur');
           status.classList && status.classList.add('is-success');
         }
       } else {
         if (disc && disc.classList) disc.classList.remove('is-success');
         if (status) {
           status.textContent = result && result.reason === 'cashier-not-confirmed'
-            ? 'Paiement non confirmé · rien n\'a été enregistré'
-            : 'Paiement non confirmé · lecteur indisponible';
+            ? tr('Paiement non confirmé · rien n\'a été enregistré')
+            : tr('Paiement non confirmé · lecteur indisponible');
           status.classList && status.classList.remove('is-success');
         }
       }
       return result;
     }, function () {
       if (disc && disc.classList) disc.classList.remove('is-pulsing', 'is-success');
-      if (status) { status.textContent = 'Paiement non confirmé · erreur lecteur'; status.classList && status.classList.remove('is-success'); }
+      if (status) { status.textContent = tr('Paiement non confirmé · erreur lecteur'); status.classList && status.classList.remove('is-success'); }
       return { approved: false, ok: false, amount: amount, reason: 'payment-terminal-error' };
     });
   }

@@ -48,6 +48,12 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      "Faites payer sur votre terminal, puis confirmez": "Take payment on your terminal, then confirm",
+      "Paiement carte enregistré · terminal externe": "Card payment recorded · external terminal",
+      "Paiement confirmé sur le lecteur": "Payment confirmed by the reader",
+      "Paiement non confirmé · rien n'a été enregistré": "Payment not confirmed · nothing was recorded",
+      "Paiement non confirmé · lecteur indisponible": "Payment not confirmed · reader unavailable",
+      "Paiement non confirmé · erreur lecteur": "Payment not confirmed · reader error",
       'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.': 'Payment paused. Storage unavailable. Do not take money. Restore storage and try again.',
       'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.': 'This delivery already has collections. Refund the relevant receipts before asking the manager to correct it.',
       "Déplacement impossible : {x}": "Cannot move: {x}",
@@ -454,6 +460,12 @@
     },
 
     ar: {
+      "Faites payer sur votre terminal, puis confirmez": "حصّل الدفع على جهازك ثم أكّد",
+      "Paiement carte enregistré · terminal externe": "تم تسجيل الدفع بالبطاقة · جهاز خارجي",
+      "Paiement confirmé sur le lecteur": "تم تأكيد الدفع على القارئ",
+      "Paiement non confirmé · rien n'a été enregistré": "لم يتم تأكيد الدفع · لم يتم تسجيل أي شيء",
+      "Paiement non confirmé · lecteur indisponible": "لم يتم تأكيد الدفع · القارئ غير متاح",
+      "Paiement non confirmé · erreur lecteur": "لم يتم تأكيد الدفع · خطأ في القارئ",
       'Paiement suspendu. Stockage indisponible. Ne prenez pas d’argent. Rétablissez le stockage puis réessayez.': 'تم تعليق الدفع. التخزين غير متاح. لا تستلم المال. أصلح التخزين ثم حاول مجدداً.',
       'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.': 'لهذا التوصيل تحصيلات مسجلة. أعد مبالغ الإيصالات المعنية ثم اطلب من المدير تصحيحها.',
       "Déplacement impossible : {x}": "تعذر النقل: {x}",
