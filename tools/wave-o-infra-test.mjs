@@ -20,8 +20,11 @@ await run('schema', async () => {
  assert.equal(await onRequest({env:{DB:good},next:()=> 'route reached'}),'route reached');
  const originalNow=Date.now;
  try { version=16; Date.now=()=>originalNow()+61000; assert.equal(await schemaCompatibility(db),null); assert.equal(reads,2); } finally {Date.now=originalNow;}
- const broken={prepare(){throw Error('unavailable');}};
- assert.equal((await schemaCompatibility(broken)).status,503);
+ /* A failed read is not proof of an old schema: a D1 blip lets sales through and is read again soon. */
+ let brokenReads=0; const broken={prepare(){brokenReads++; throw Error('unavailable');}};
+ assert.equal(await schemaCompatibility(broken),null,'a failed read does not refuse requests');
+ assert.equal(await schemaCompatibility(broken),null); assert.equal(brokenReads,1,'not re-read on every request');
+ try { Date.now=()=>originalNow()+6000; assert.equal(await schemaCompatibility(broken),null); assert.equal(brokenReads,2,'read again after a few seconds'); } finally {Date.now=originalNow;}
 });
 await run('promos', () => {
  const w={KiwiDayReport:{timezone:()=> 'America/New_York',cutoff:()=>8}};
