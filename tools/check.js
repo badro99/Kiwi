@@ -1997,6 +1997,7 @@ section('Whole-project regressions');
     /* Promotions de la carte : la règle (assets/menu-promos.js), le serveur
        qui l'applique dans priceOrder, puis la caisse, Serveur et l'onglet
        « Promotions » du tableau de bord, en vrais clics sur la démo. */
+    'promo-rules-properties-test.mjs',
     'menu-promos-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',

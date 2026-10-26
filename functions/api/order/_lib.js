@@ -19,6 +19,7 @@ import { DateTimeFormat } from '../_cached-clock.js';
 
 /* Menu promotions (happy hour…): the same rule the till and the waiter app
  * show, applied here with the server's clock. A device never sets a price. */
+import '../../../assets/promo-rules.js';
 import '../../../assets/menu-promos.js';
 import { merchantZone, businessDate, businessBoundary, addBusinessDays, DEFAULT_ZONE } from '../_business-day.js';
 const MenuPromos = () => globalThis.KiwiMenuPromos;

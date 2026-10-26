@@ -41,7 +41,7 @@ const window = {};
 const ctx = vm.createContext({ window, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl });
 vm.runInContext('globalThis.window = window;', ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/kit/haptics.js'), 'utf8'), ctx, { filename: 'haptics.js' });
-vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/menu-promos.js'), 'utf8'), ctx, { filename: 'menu-promos.js' });
+vm.runInContext((fs.readFileSync(path.join(ROOT, 'assets/promo-rules.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'assets/menu-promos.js'), 'utf8')), ctx, { filename: 'menu-promos.js' });
 const TILL = window.KiwiMenuPromos;
 assert.ok(TILL && ctx.KiwiZoneLaw, 'browser rule or zone law missing');
 
