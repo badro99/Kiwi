@@ -2182,6 +2182,7 @@ section('Whole-project regressions');
     'menu-i18n-test.mjs',
     'order-langs-test.mjs',
     'salle-scan-test.mjs',
+    'network-recovery-test.mjs',
     /* Le plan de salle du patron lit la salle que la caisse publie : statut,
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */
     'floor-live-test.mjs',

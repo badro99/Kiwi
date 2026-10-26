@@ -115,24 +115,40 @@
     });
   }
 
-  async function callApi(image) {
-    const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
-    const res = await fetch('/api/ai/salle-import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: venue, image }),
+  async function callApi(image, signal) {
+    const controller = new AbortController();
+    let timer, cancel;
+    const stopped = new Promise((_, reject) => {
+      cancel = () => { controller.abort(); reject(new Error('cancelled')); };
+      if (signal) signal.addEventListener('abort', cancel, { once: true });
+      timer = setTimeout(() => { controller.abort(); reject(new Error('timeout')); }, 45000);
     });
-    let data = null;
-    try { data = await res.json(); } catch (_) {}
-    if (res.status === 401) throw new Error('auth');
-    if (res.status === 429) throw new Error('quota');
-    if (!res.ok) throw new Error('server');
-    if (!data || !data.ok) throw new Error((data && (data.reason || data.error)) || 'unparsed');
-    return data;
+    try {
+      if (signal && signal.aborted) { cancel(); return await stopped; }
+      return await Promise.race([stopped, (async () => {
+        const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
+        const res = await fetch('/api/ai/salle-import', {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ merchant: venue, image }),
+        });
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+        if (res.status === 401) throw new Error('auth');
+        if (res.status === 429) throw new Error('quota');
+        if (!res.ok) throw new Error('server');
+        if (!data || !data.ok) throw new Error((data && (data.reason || data.error)) || 'unparsed');
+        return data;
+      })()]);
+    } finally {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', cancel);
+    }
   }
 
   /* Lus à l'affichage, pas au chargement : la langue peut changer entre-temps. */
   const FAIL_MSGS = {
+    timeout: () => [L('timeoutT', 'Délai dépassé'), L('timeoutD', 'Le scan a pris trop de temps. Choisissez à nouveau vos photos pour réessayer.')],
     auth: () => [L('authT', 'Compte Kiwi requis'), L('authD', 'Le scan AI fonctionne avec un compte connecté. Le questionnaire reste disponible.')],
     quota: () => [L('quotaT', 'Limite du jour atteinte'), L('quotaD', 'Réessayez demain, ou passez par le questionnaire.')],
     'not-a-room': () => [L('roomT', 'Ce n\'est pas une salle'), L('roomD', 'La photo ne montre pas un espace de restauration. Photographiez la salle, ou un croquis du plan.')],
@@ -194,6 +210,9 @@
     m.el.setAttribute('dir', lg === 'ar' ? 'rtl' : 'ltr');
     const stage = m.el.querySelector('[data-kss-stage]');
     let busy = false;
+    let operation = null;
+    const closeModal = m.close.bind(m);
+    m.close = () => { if (operation) operation.abort(); closeModal(); };
 
     function render() { stage.innerHTML = stage1Html(); }
 
@@ -202,6 +221,7 @@
       const list = [...files].slice(0, MAX_FILES);
       if (!list.length) return;
       busy = true;
+      const signal = (operation = new AbortController()).signal;
       try {
         const results = [];
         for (let i = 0; i < list.length; i++) {
@@ -209,7 +229,7 @@
             list.length > 1 ? L('readingN', 'Lecture {i} / {total}', { i: i + 1, total: list.length }) : L('reading1', 'Lecture de la photo…'),
             L('readingSub', 'Kiwi AI compte les tables et les places.')
           );
-          results.push(await callApi(await downscaleImage(list[i])));
+          results.push(await callApi(await downscaleImage(list[i]), signal));
         }
         const facts = aggregate(results);
         if (!facts) { failToast(new Error('unparsed')); render(); busy = false; return; }
@@ -221,7 +241,7 @@
           desc: L('foundD', 'Vérifiez les réponses pré-remplies, puis générez le plan.'),
         });
         if (opts.onFacts) opts.onFacts(facts);
-      } catch (err) { failToast(err); render(); }
+      } catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
 

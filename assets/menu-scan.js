@@ -24,6 +24,8 @@
 
   const COPY = {
   "fr": {
+    "timeoutTitle": "Délai dépassé",
+    "timeoutDesc": "Le scan a pris trop de temps. Relancez le lien, le texte ou les fichiers pour réessayer.",
     "title": "Scanner un menu",
     "cancel": "Annuler",
     "close": "Fermer",
@@ -63,6 +65,8 @@
     "failedDesc": "Réessayez, ou passez par l'import CSV."
   },
   "en": {
+    "timeoutTitle": "Scan timed out",
+    "timeoutDesc": "The scan took too long. Submit the link, text or files again to retry.",
     "title": "Scan a menu",
     "cancel": "Cancel",
     "close": "Close",
@@ -102,6 +106,8 @@
     "failedDesc": "Try again, or import a CSV file."
   },
   "ar": {
+    "timeoutTitle": "انتهت مهلة المسح",
+    "timeoutDesc": "استغرق المسح وقتا طويلا. أرسل الرابط أو النص أو الملفات من جديد لإعادة المحاولة.",
     "title": "مسح قائمة الطعام",
     "cancel": "إلغاء",
     "close": "إغلاق",
@@ -227,24 +233,40 @@
     });
   }
 
-  async function callApi(payload) {
-    const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
-    const lang = language();
-    const res = await fetch('/api/ai/menu-import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ merchant: venue, targetLang: lang }, payload)),
+  async function callApi(payload, signal) {
+    const controller = new AbortController();
+    let timer, cancel;
+    const stopped = new Promise((_, reject) => {
+      cancel = () => { controller.abort(); reject(new Error('cancelled')); };
+      if (signal) signal.addEventListener('abort', cancel, { once: true });
+      timer = setTimeout(() => { controller.abort(); reject(new Error('timeout')); }, 45000);
     });
-    let data = null;
-    try { data = await res.json(); } catch (_) {}
-    if (res.status === 401) throw new Error('auth');
-    if (res.status === 429) throw new Error('quota');
-    if (!res.ok) throw new Error('server');
-    if (!data || !data.ok) throw new Error((data && (data.reason || data.error)) || 'unparsed');
-    return data.items || [];
+    try {
+      if (signal && signal.aborted) { cancel(); return await stopped; }
+      return await Promise.race([stopped, (async () => {
+        const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
+        const lang = language();
+        const res = await fetch('/api/ai/menu-import', {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ merchant: venue, targetLang: lang }, payload)),
+        });
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+        if (res.status === 401) throw new Error('auth');
+        if (res.status === 429) throw new Error('quota');
+        if (!res.ok) throw new Error('server');
+        if (!data || !data.ok) throw new Error((data && (data.reason || data.error)) || 'unparsed');
+        return data.items || [];
+      })()]);
+    } finally {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', cancel);
+    }
   }
 
   const FAIL_KEYS = {
+    timeout: ['timeoutTitle', 'timeoutDesc'],
     auth: ['authTitle', 'authDesc'], quota: ['quotaTitle', 'quotaDesc'],
     'js-only': ['jsTitle', 'jsDesc'], 'url-fetch': ['urlTitle', 'urlDesc'],
     'url-status': ['urlTitle', 'statusDesc'], unparsed: ['unparsedTitle', 'unparsedDesc'],
@@ -317,6 +339,9 @@
     if (close) close.setAttribute('aria-label', ui('close'));
     const stage = m.el.querySelector('[data-kms-stage]');
     let busy = false;
+    let operation = null;
+    const closeModal = m.close.bind(m);
+    m.close = () => { if (operation) operation.abort(); closeModal(); };
 
     function render() { stage.innerHTML = stage1Html(); }
 
@@ -333,6 +358,7 @@
       const list = [...files].slice(0, MAX_FILES);
       if (!list.length) return;
       busy = true;
+      const signal = (operation = new AbortController()).signal;
       try {
         const collected = [];
         for (let i = 0; i < list.length; i++) {
@@ -346,32 +372,34 @@
             const text = await extractPdfText(f);
             /* Un PDF scanné (image pure) n'a pas de couche texte : on le rend
              * en image et on passe par le modèle vision plutôt que d'échouer. */
-            if (text && text.length > 60) collected.push(...await callApi({ kind: 'text', text }));
-            else collected.push(...await callApi({ kind: 'image', image: await pdfPageToImage(f) }));
+            if (text && text.length > 60) collected.push(...await callApi({ kind: 'text', text }, signal));
+            else collected.push(...await callApi({ kind: 'image', image: await pdfPageToImage(f) }, signal));
           } else {
-            collected.push(...await callApi({ kind: 'image', image: await downscaleImage(f) }));
+            collected.push(...await callApi({ kind: 'image', image: await downscaleImage(f) }, signal));
           }
         }
         review(dedupe(collected));
-      } catch (err) { failToast(err); render(); }
+      } catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
 
     async function runUrl(url) {
       if (busy || !url) return;
       busy = true;
+      const signal = (operation = new AbortController()).signal;
       stage.innerHTML = busyHtml(ui('link'), ui('extract'));
-      try { review(dedupe(await callApi({ kind: 'url', url }))); }
-      catch (err) { failToast(err); render(); }
+      try { review(dedupe(await callApi({ kind: 'url', url }, signal))); }
+      catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
 
     async function runText(text) {
       if (busy || !text) return;
       busy = true;
+      const signal = (operation = new AbortController()).signal;
       stage.innerHTML = busyHtml(ui('text'), ui('extract'));
-      try { review(dedupe(await callApi({ kind: 'text', text }))); }
-      catch (err) { failToast(err); render(); }
+      try { review(dedupe(await callApi({ kind: 'text', text }, signal))); }
+      catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
 
