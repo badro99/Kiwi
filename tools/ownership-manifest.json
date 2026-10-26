@@ -2479,6 +2479,10 @@
     "kiwi-serveur.html:assets/serveur-app.js:KiwiPlatform:assets/platform-kernel.js"
   ],
   "units": {
+    "venues": {
+      "parent": "assets/venues.js",
+      "parts": "assets/venues/"
+    },
     "caisse": {
       "parent": "assets/caisse-app.js",
       "parts": "assets/caisse/"

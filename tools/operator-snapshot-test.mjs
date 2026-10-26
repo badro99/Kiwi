@@ -83,7 +83,7 @@ function harness(pages, { identity = { operator: true }, store = true, brokenSto
   vm.runInContext(source, context, { filename: 'assets/live-link.js' });
   if (realStore) {
     // Execute the actual persistent store, including any retention/list limits.
-    const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+    const venues = coreTestSource.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
     const start = venues.indexOf('  const salesSubs = new Set();');
     const end = venues.indexOf('  function salesTotals(', start);
     assert.ok(start >= 0 && end > start);

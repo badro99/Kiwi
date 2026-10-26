@@ -1,12 +1,13 @@
+import coreTestSource from './core-test-source.cjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import teamSource from './team-test-source.cjs';
 
 const team = teamSource();   // team.js with its split parts back in place (role catalogue included)
-const trades = fs.readFileSync(new URL('../assets/trades.js', import.meta.url), 'utf8');
-const sale = fs.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');
-const dispatch = fs.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
-const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+const trades = coreTestSource.readFileSync(new URL('../assets/trades.js', import.meta.url), 'utf8');
+const sale = coreTestSource.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');
+const dispatch = coreTestSource.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
+const venues = coreTestSource.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
 
 const catalog = team.slice(team.indexOf('const CATALOG = {'), team.indexOf('function unionCatalog()'));
 const tradeIds = [...trades.matchAll(/\{ id: '([^']+)', base: '(?:restaurant|boutique|spa|hotel)'/g)].map((m) => m[1]);
@@ -33,11 +34,11 @@ const specialistFiles = [
   'pos-coiffure.js', 'pos-gym.js', 'pos-autre.js',
 ];
 for (const file of specialistFiles) {
-  const body = fs.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
+  const body = coreTestSource.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
   assert.match(body, /KiwiPosSale(?:\?\.)?\.record|KiwiPosSale\?\.record/, `${file} posts settled sales to the shared ledger`);
 }
 for (const file of ['pos-fastfood.js', 'pos-boulangerie.js', 'pos-foodtruck.js', 'pos-epicerie.js']) {
-  const body = fs.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
+  const body = coreTestSource.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
   assert.match(body, /onSalesSync\(\)/, `${file} reconciles its native today counters`);
 }
 assert.match(sale, /\/api\/feed\?merchant=/, 'specialist tills read the tenant-bound server day');

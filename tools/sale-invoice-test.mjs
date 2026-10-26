@@ -1,3 +1,4 @@
+import coreTestSource from './core-test-source.cjs';
 import { businessDate, merchantZone } from '../functions/api/_business-day.js';
 // tools/sale-invoice-test.mjs — suite de tests pour la facturation des ventes (A4/PDF & D1).
 //
@@ -39,7 +40,7 @@ function ok(cond, message) {
 console.log('■ Sale Invoice (A4 / PDF & D1 Numbering)');
 
 // ── 1. Client Module (assets/invoice.js) ─────────────────────────────────────
-const invoiceSource = fs.readFileSync(path.join(ROOT, 'assets/invoice.js'), 'utf8');
+const invoiceSource = coreTestSource.readFileSync(path.join(ROOT, 'assets/invoice.js'), 'utf8');
 
 // Extraction de KiwiInvoice dans un contexte isolé
 let KiwiInvoice;
@@ -169,7 +170,7 @@ const mockWindowOpener = {
 }
 
 // ── 2. Server Module (functions/api/invoice.js) ──────────────────────────────
-const serverSource = fs.readFileSync(path.join(ROOT, 'functions/api/invoice.js'), 'utf8');
+const serverSource = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/invoice.js'), 'utf8');
 
 // Extraction des validateurs et fonctions pures serveur
 const custValMatch = serverSource.match(/export function validateCustomer\([\s\S]*?\n\}/);
@@ -235,7 +236,7 @@ if (formatInvoiceNumber) {
 // avec la lecture de la table `sales` et l'allocateur de numéros commun.
 if (getOrCreateSaleInvoice) {
   const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  sqlite.exec(coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const insSale = sqlite.prepare('INSERT INTO sales (id, merchant, amount, amount_cents, method, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)');
   insSale.run('sale-A', 'shop-casa', 150, 15000, 'cash', 'R-A', 1771488000000);
   insSale.run('sale-B', 'shop-casa', 200, 20000, 'cash', 'R-B', 1771488000000);
@@ -293,8 +294,8 @@ if (getOrCreateSaleInvoice) {
 }
 
 // ── 3. Correction & Traçabilité de l'ID D1 (Tableau de bord vs Caisse) ─────────
-const liveLinkSource = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
-const venuesSource = fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
+const liveLinkSource = coreTestSource.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+const venuesSource = coreTestSource.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
 
 ok(liveLinkSource.includes('saleId: s.id || s.saleId || \'\''), 'assets/live-link.js passes saleId: s.id on feed ingestion');
 
@@ -376,7 +377,7 @@ ok(pagesProSource.includes('disabled aria-disabled="true"'), 'pages-pro.js rende
 ok(pagesProSource.includes('Facture disponible après synchronisation de la vente'), 'pages-pro.js sets correct tooltip when saleId is missing');
 
 // ── 5. Invoicing module delegation (assets/invoicing.js) ─────────────────────
-const invoicingSource = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
+const invoicingSource = coreTestSource.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
 /* Plus de délégation : le gabarit des ventes de comptoir est acquitté et TTC, celui d'une
  * facture saisie est en HT avec échéance (916be864). tools/invoicing-print-test.mjs l'exécute. */
 ok(!/KiwiInvoice\??\.html\(/.test(invoicingSource), 'invoicing.js prints with its own template, never KiwiInvoice.html (a till receipt is paid, prices incl. VAT)');
@@ -385,7 +386,7 @@ ok(invoicingSource.includes('data-inv-sale-open'), 'invoicing.js handles data-in
 ok(invoicingSource.includes("['sales',t.sales]") || invoicingSource.includes("['sales', t.sales]"), 'invoicing.js contains sales filter tab');
 
 // ── 6. Caisse reprint invoice action (assets/pos-reprint.js) ─────────────────
-const posReprintSource = fs.readFileSync(path.join(ROOT, 'assets/pos-reprint.js'), 'utf8');
+const posReprintSource = coreTestSource.readFileSync(path.join(ROOT, 'assets/pos-reprint.js'), 'utf8');
 ok(posReprintSource.includes('data-kx-rp-invoice'), 'pos-reprint.js contains data-kx-rp-invoice action button');
 ok(posReprintSource.includes('KiwiInvoice.generate'), 'pos-reprint.js invokes KiwiInvoice.generate on invoice button click');
 
@@ -432,7 +433,7 @@ ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/$
 // encore vide (un commerçant qui n'a jamais saisi de facture).
 {
   const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  sqlite.exec(coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const env = { DB: {
     prepare(q) {
       const st = sqlite.prepare(q);

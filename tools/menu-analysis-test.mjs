@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* « Analyse du menu » · phase 1 : la page restaurant « Marges » devient
  * « Analyse du menu », et Performance + Heures de pointe y déménagent depuis
  * Menu & modificateurs sans changer de données ni de comportement.
@@ -20,7 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const R = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const R = (f) => coreTestSource.readFileSync(path.join(ROOT, f), 'utf8');
 let pass = 0, fail = 0;
 const ok = (cond, label, extra) => {
   if (cond) { pass++; console.log('  ✓ ' + label); }

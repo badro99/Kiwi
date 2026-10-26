@@ -29,7 +29,23 @@ function interactiveSource(file) {
   const escape = block[0].slice(block[0].indexOf('*/\n') + 3, block[0].indexOf('  const { '));
   return core.replace(block[0], () => handlers + helpers[0] + escape + helpers[1]);
 }
+function isVenues(file) {
+  return path.resolve(file instanceof URL ? fileURLToPath(file) : String(file)) === path.join(root, 'assets/venues.js');
+}
+function venuesSource(file) {
+  const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/venues-split/split.json'), 'utf8'));
+  let core = fs.readFileSync(file, 'utf8');
+  for (const e of map.entries) {
+    const text = fs.readFileSync(path.join(root, 'assets/venues', e.part + '.js'), 'utf8');
+    const open = '/* <<split:' + e.tag + '>> */';
+    const start = text.indexOf(open), end = text.indexOf('\n/* <</split:' + e.tag + '>> */');
+    if (start < 0 || end <= start || !core.includes(e.bridge)) throw new Error('Missing venues split marker: ' + e.tag);
+    core = core.replace(e.bridge, () => text.slice(start + open.length, end));
+  }
+  return core;
+}
 function source(file) {
+  if (isVenues(file)) return venuesSource(file);
   if (isInteractive(file)) return interactiveSource(file);
   const map = metadata(file);
   let core = fs.readFileSync(file, 'utf8');
@@ -71,11 +87,12 @@ function source(file) {
   return core;
 }
 function readFileSync(file, options) {
-  if (!isInteractive(file) && !metadata(file)) return fs.readFileSync(file, options);
+  if (!isVenues(file) && !isInteractive(file) && !metadata(file)) return fs.readFileSync(file, options);
   const text = source(file);
   return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
 }
 function live(file) {
+  if (isVenues(file)) return ['data', 'helpers'].map(name => fs.readFileSync(path.join(root, 'assets/venues', name + '.js'), 'utf8')).join('\n') + '\n' + fs.readFileSync(file, 'utf8');
   const map = metadata(file);
   return (map ? fs.readFileSync(path.join(root, map.part), 'utf8') + '\n' : '') + fs.readFileSync(file, 'utf8');
 }

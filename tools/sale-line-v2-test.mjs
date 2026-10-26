@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import retailSource from './pos-retail-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => retailSource(fs.readFileSync(path.join(root, p), 'utf8'));
+const read = (p) => retailSource(coreTestSource.readFileSync(path.join(root, p), 'utf8'));
 let pass = 0;
 function ok(name, value) {
   if (!value) { console.error('  ✗ ' + name); process.exitCode = 1; return; }

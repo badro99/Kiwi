@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi Pro · audit natif du 2026-10-12, ce qui a été corrigé et doit le rester.
  *
@@ -17,7 +18,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { readNativeRuntime } from './native-runtime-source.mjs';
 
-const read = (rel) => fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+const read = (rel) => coreTestSource.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
 let controls = 0;
 function check(label, value) { assert.ok(value, label); controls++; console.log('  ✓ ' + label); }
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* The sales and refunds ledgers are parsed once per change of the stored
    text, not once per read. Before, a dashboard redraw parsed Santos Store's
    1.2 MB ledger about fifty times (~5 ms each). The real store code from
@@ -7,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+const venues = coreTestSource.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
 const start = venues.indexOf('  const salesSubs = new Set();');
 const end = venues.indexOf('  function salesTotals(', start);
 assert.ok(start >= 0 && end > start, 'store slice found');

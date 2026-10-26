@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+const coreTestSource = require('./core-test-source.cjs');
 'use strict';
 
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'production-action-guard.js'), 'utf8');
+const source = coreTestSource.readFileSync(path.join(__dirname, '..', 'assets', 'production-action-guard.js'), 'utf8');
 let calls = 0;
 const toasts = [];
 const handlers = {
@@ -54,7 +55,7 @@ const bundle = fs.readdirSync(assetsDir)
   /* sans le garde lui-même : sa propre liste ferait correspondre n'importe
    * quelle faute de frappe à elle-même, et le contrôle ne dirait plus rien. */
   .filter((f) => f.endsWith('.js') && f !== 'production-action-guard.js')
-  .map((f) => fs.readFileSync(path.join(assetsDir, f), 'utf8'))
+  .map((f) => coreTestSource.readFileSync(path.join(assetsDir, f), 'utf8'))
   .join('\n');
 const orphans = guarded.filter((k) => !bundle.includes(`'${k}'`) && !bundle.includes(`"${k}"`));
 check(orphans.length === 0, `aucune clé gardée orpheline${orphans.length ? ' — ' + orphans.join(', ') : ''}`);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Hospitality+ consolidation: one shared guest profile, dashboard ↔ caisse. */
 
 import fs from 'node:fs';
@@ -9,7 +10,7 @@ import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestGet, onRequestPost } from '../functions/api/clients.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
 let passed = 0;
 const failed = [];
 function ok(label, value) {

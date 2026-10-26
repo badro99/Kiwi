@@ -1704,8 +1704,16 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "65",
-    "sha": "70874d412dd78233"
+    "v": "66",
+    "sha": "843a5d684e1e228c"
+  },
+  "assets/venues/data.js": {
+    "v": "2",
+    "sha": "46ea2f30e161b887"
+  },
+  "assets/venues/helpers.js": {
+    "v": "2",
+    "sha": "ee3cd621db0915dd"
   },
   "assets/vertical-state.js": {
     "v": "6",

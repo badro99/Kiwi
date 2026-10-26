@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Barre latérale et durées · écrites dans la langue de l'écran.
  *
  * 2026-10-12. Sous l'arabe, trois restes :
@@ -18,7 +19,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+const read = (f) => coreTestSource.readFileSync(path.join(root, f), 'utf8');
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
