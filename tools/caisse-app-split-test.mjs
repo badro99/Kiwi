@@ -71,7 +71,7 @@ const orderedHTML = LIVE.map(file => effectiveHTML.match(new RegExp('<script src
 const pair = orderedHTML.match(new RegExp(LIVE.map(f => '<script src="' + f.replace(/[./]/g, '\\$&') + '(?:\\?v=\\d+)?"></script>').join('\\s*')));
 assert.ok(pair, 'adjacent blocking classic scripts, declarations before initializers');
 assert.ok(!/\b(?:async|defer|type=)/.test(pair[0]));
-for (const [, url] of pair[0].matchAll(/src="([^"]+)"/g)) precached(new URL(url, 'https://kiwi.test/'), { allowUnstamped: url === 'assets/caisse/table-settlement.js' });
+for (const [, url] of pair[0].matchAll(/src="([^"]+)"/g)) precached(new URL(url, 'https://kiwi.test/'));
 /* Second split: runs of declarations moved to caisse-floor.js and caisse-kitchen.js,
    anchored by text in tools/fixtures/caisse-app/split-2.json. */
 const map2 = JSON.parse(read('tools/fixtures/caisse-app/split-2.json'));

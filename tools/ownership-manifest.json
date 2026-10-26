@@ -564,6 +564,7 @@
         "KiwiCatalogUI",
         "KiwiCloudDoc",
         "KiwiConfig",
+        "KiwiCost",
         "KiwiDayReport",
         "KiwiDemoClock",
         "KiwiEnv",
@@ -580,7 +581,7 @@
         "KiwiVenue",
         "fetch"
       ],
-      "coupling": 21
+      "coupling": 22
     },
     "assets/caisse/table-settlement.js": {
       "owner": "table-settlement",
@@ -2521,6 +2522,10 @@
     "table-settlement": {
       "parent": "assets/caisse/table-settlement.js",
       "parts": "assets/caisse/table-settlement/"
+    },
+    "stock": {
+      "parent": "assets/stock.js",
+      "parts": "assets/stock/"
     }
   }
 }

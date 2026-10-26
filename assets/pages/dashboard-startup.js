@@ -20,7 +20,7 @@
     'assets/restaurant-menu/strings.js?v=1',
     'assets/restaurant-menu/recipes.js?v=1',
     'assets/restaurant-menu/styles.js?v=1',
-    'assets/restaurant-menu-workspace.js?v=121',
+    'assets/restaurant-menu-workspace.js?v=122',
     'assets/sold-insights.js?v=14',
     'assets/boutique-promos-dashboard.js?v=20',
     'assets/day-report.js?v=32',
