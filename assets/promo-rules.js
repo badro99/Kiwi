@@ -70,4 +70,4 @@
   }
   root.KiwiPromoRules = Object.freeze({ normalize: normalize, businessMoment: businessMoment,
     inWindow: inWindow, status: status, price: price, money: money, down: down, toMin: toMin });
-})(typeof window !== 'undefined' ? window : globalThis);
+})(globalThis);

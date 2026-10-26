@@ -248,7 +248,7 @@ for (const [fr, pair] of Object.entries(i18n.copy)) {
 for (const label of ['Chargement…','Aucun détail de panier enregistré pour cette vente.','code opérateur','Lecture seule.','Établissement supprimé.','Tables purgées : {value}','Ce commerce tient un carnet de {value} clients.']) check('message historique complet : '+label,Object.hasOwn(i18n.copy,label));
 check('clavier et alertes récupérables', /requestSubmit/.test(legacy) && /Escape/.test(legacy) && /role.*alert/.test(legacy));
 const legacyHtml = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
-check('module historique chargé par la console', /<script src="assets\/admin-legacy\.js"><\/script>/.test(legacyHtml));
+check('module historique chargé par la console', /<script src="assets\/admin-legacy\.js(\?v=\d+)?"><\/script>/.test(legacyHtml));
 check('focus visible et champs RTL isolés', /#op-config-panel :focus-visible/.test(legacyHtml) && /html\[dir="rtl"\] #operators/.test(legacyHtml));
 
 

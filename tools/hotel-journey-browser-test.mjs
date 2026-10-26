@@ -309,12 +309,19 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
         await page.waitForFunction(() => document.body.classList.contains('kw-menu-open'));
         await new Promise(r => setTimeout(r, 500));
       }
-      let el = await page.waitForSelector(selector, { visible: true });
-      await el.evaluate(e => e.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
-      if (!await el.evaluate(e => e.isConnected)) el = await page.waitForSelector(selector, { visible: true });
-      const box = await el.boundingBox();
+      // A view that is still settling (a closing dialog, a body rebuilt once on
+      // open) can hold a stale copy of the same command: look it up again until
+      // the one found is the one on top, then click it.
+      let el, box, hit;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        el = await page.waitForSelector(selector, { visible: true });
+        await el.evaluate(e => e.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })).catch(() => {});
+        box = await el.boundingBox().catch(() => null);
+        hit = await el.evaluate((e, sel) => { if (!e.isConnected) return { ok: false, obstacle: 'detached' }; const r=e.getBoundingClientRect(), target=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2); return { ok: e === target || e.contains(target), same: !!(target && target.closest && target.closest(sel)), obstacle: (target?.className || target?.tagName) + ' ' + (target?.getAttribute?.('data-action') || '') + ' « ' + (target?.textContent || '').trim().slice(0, 40) + ' » at ' + JSON.stringify({x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}) }; }, selector).catch(() => ({ ok: false, obstacle: 'detached' }));
+        if (hit.ok || (!hit.same && hit.obstacle !== 'detached')) break;
+        await new Promise(r => setTimeout(r, 150));
+      }
       assert(box && box.x >= 0 && box.x + box.width <= width + 1, `Commande accessible : ${selector} ${JSON.stringify(box)}`);
-      const hit = await el.evaluate(e => { const r=e.getBoundingClientRect(), target=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2); return { ok: e === target || e.contains(target), obstacle: target?.className || target?.tagName }; });
       assert(hit.ok, 'Commande masquée : ' + selector + ' · ' + hit.obstacle);
       await el.click();
       if (selector.startsWith('[data-nav=') && width <= 860) await page.waitForFunction(() => !document.body.classList.contains('kw-menu-open'));
