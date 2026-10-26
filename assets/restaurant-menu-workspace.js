@@ -36,11 +36,11 @@
     return text;
   }
   const t=(str)=>window.KiwiMenuI18n?window.KiwiMenuI18n.t(str,lang()):str;
-  const icons={caisse:'calculator',menu:'menu',languages:'languages',station:'cooking-pot',book:'book-open',leaf:'leaf',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',promo:'badge-percent',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
+  const icons={caisse:'calculate',menu:'menu',languages:'translate',station:'skillet',book:'menu_book',leaf:'eco',chart:'bar_chart',clock:'schedule',alert:'warning',tag:'sell',promo:'percent',plus:'add',edit:'edit',trash:'delete',archive:'archive',restore:'settings_backup_restore',more:'more_vert'};
   const catalogText=(key,fr)=>window.KiwiCatalogUI?.text(key,fr)||fr;
   const catalogLabel=(key,fr)=>window.KiwiCatalogUI?.label(key,fr)||esc(fr);
   const catalogIcon=(name)=>`<img class="catalog-icon" draggable="false" src="assets/icons/material/${name}.svg" alt="" aria-hidden="true"/>`;
-  const ic=(n)=>`<i data-lucide="${icons[n]||icons.menu}" style="width:14px;height:14px" aria-hidden="true"></i>`;
+  const ic=(n)=>`<i data-icon="${icons[n]||icons.menu}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   const pickerSearchIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
   const pickerChevronIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-360 280-560l56-56 144 144 144-144 56 56-200 200Z"/></svg>';
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});

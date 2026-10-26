@@ -46,7 +46,7 @@
     var fn = window.KiwiPosDispatch && window.KiwiPosDispatch.toast;
     if (typeof fn === 'function') fn(msg);
   }
-  function icons() { try { if (window.lucide) window.lucide.createIcons(); } catch (_) {} }
+  function icons() { try { if (window.KiwiIcon) window.KiwiIcon.render(document); } catch (_) {} }
 
   function paired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
   function venueKey(vertical) {
@@ -370,7 +370,7 @@
     }
     var h = state.lookup;
     if (!h) {
-      out.innerHTML = '<div class="krs-empty"><div><i data-lucide="scan-barcode"></i><b>Scannez sans interrompre la vente</b><br><span>Le prix, le stock et la promotion apparaissent ici.</span></div></div>';
+      out.innerHTML = '<div class="krs-empty"><div><i data-icon="barcode_scanner"></i><b>Scannez sans interrompre la vente</b><br><span>Le prix, le stock et la promotion apparaissent ici.</span></div></div>';
       icons(); return;
     }
     var cls = h.stock <= 0 ? ' is-out' : h.stock <= 3 ? ' is-low' : '';
@@ -422,7 +422,7 @@
       return '<div class="krs-line"><div><div class="krs-line-name">' + esc(l.name) + '</div><div class="krs-line-meta">' + esc(fmt(l.unitPrice)) + (l.promo ? ' · ' + esc(l.promo) : '') + ' · stock ' + esc(String(l.maxStock)) + '</div>' +
         '<div class="krs-stepper"><button data-krs-minus="' + i + '" aria-label="Retirer">−</button><b>' + l.qty + '</b><button data-krs-plus="' + i + '" aria-label="Ajouter">+</button></div></div>' +
         '<div class="krs-line-total">' + esc(fmt(l.unitPrice * l.qty)) + '</div></div>';
-    }).join('') : '<div class="krs-cart-empty"><div><i data-lucide="shopping-basket"></i><br>Le prochain scan arrive ici.</div></div>';
+    }).join('') : '<div class="krs-cart-empty"><div><i data-icon="shopping_basket"></i><br>Le prochain scan arrive ici.</div></div>';
     foot.innerHTML = '<div class="krs-total"><span>Total à encaisser</span><b>' + esc(fmt(cartTotal())) + '</b></div><button class="krs-checkout" data-krs-checkout ' + (state.cart.length ? '' : 'disabled') + '>Encaisser</button>';
     paintLaunches(); icons();
   }
@@ -435,13 +435,13 @@
     if (state.lastReceipt) {
       pay.innerHTML = '<div class="krs-pay-card"><h2>Vente enregistrée</h2><p class="krs-pay-sub">Le stock, le journal et le dashboard ont reçu la même vente.</p>' +
         '<div class="krs-due"><span>Total</span><b>' + esc(fmt(state.lastReceipt.total)) + '</b></div><div class="krs-pay-status" id="krs-pay-status"></div>' +
-        '<div class="krs-pay-actions"><button data-krs-print><i data-lucide="printer"></i> Imprimer</button><button data-krs-pay-close>Continuer</button></div></div>';
+        '<div class="krs-pay-actions"><button data-krs-print><i data-icon="print"></i> Imprimer</button><button data-krs-pay-close>Continuer</button></div></div>';
       icons(); return;
     }
     var cs = clients();
     pay.innerHTML = '<div class="krs-pay-card"><h2>Encaissement</h2><p class="krs-pay-sub">Ajoutez une ou plusieurs parts. La vente n’est validée qu’une seule fois quand le solde atteint zéro.</p>' +
       '<div class="krs-due"><span>Reste à régler</span><b>' + esc(fmt(due())) + '</b></div>' +
-      '<div class="krs-methods">' + ['cash', 'card', 'credit'].map(function (m) { return '<button class="krs-method ' + (state.method === m ? 'is-on' : '') + '" data-krs-method="' + m + '"><i data-lucide="' + (m === 'cash' ? 'banknote' : m === 'card' ? 'credit-card' : 'notebook-tabs') + '"></i>' + methodLabel(m) + '</button>'; }).join('') + '</div>' +
+      '<div class="krs-methods">' + ['cash', 'card', 'credit'].map(function (m) { return '<button class="krs-method ' + (state.method === m ? 'is-on' : '') + '" data-krs-method="' + m + '"><i data-icon="' + (m === 'cash' ? 'payments' : m === 'card' ? 'credit_card' : 'menu_book') + '"></i>' + methodLabel(m) + '</button>'; }).join('') + '</div>' +
       (state.method === 'credit' ? '<div class="krs-customer"><select id="krs-client"><option value="">Choisir un client…</option>' + cs.map(function (c) { return '<option value="' + esc(c.id) + '" ' + (state.clientId === c.id ? 'selected' : '') + '>' + esc(c.name || c.phone || 'Client') + (c.phone ? ' · ' + esc(c.phone) : '') + '</option>'; }).join('') + '</select></div>' : '') +
       '<div class="krs-part"><input id="krs-part-amount" type="number" min="0.01" max="' + due() + '" step="0.01" inputmode="decimal" value="' + due().toFixed(2) + '" aria-label="Montant de la part" /><button data-krs-add-part>Ajouter la part</button></div>' +
       '<div class="krs-parts">' + state.parts.map(function (p) { return '<div class="krs-part-row"><span>' + esc(methodLabel(p.method)) + (p.clientName ? ' · ' + esc(p.clientName) : '') + '</span><b>' + esc(fmt(p.amount)) + '</b></div>'; }).join('') + '</div>' +
@@ -534,8 +534,8 @@
   function buildOverlay() {
     if (overlay) return;
     overlay = document.createElement('div'); overlay.className = 'krs-overlay'; overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-label', 'Scan continu et encaissement');
-    overlay.innerHTML = '<div class="krs-shell"><header class="krs-head"><span class="krs-head-mark"><i data-lucide="scan-barcode"></i></span><div class="krs-head-copy"><b>Scan continu</b><span>Catalogue, stock, promotions et encaissement dans un seul geste</span></div><span class="krs-net"></span><button class="krs-close" data-krs-close aria-label="Fermer"><i data-lucide="x"></i></button></header>' +
-      '<div class="krs-main"><section class="krs-work"><div class="krs-camera"><video class="krs-video is-idle" autoplay playsinline webkit-playsinline muted></video><div class="krs-frame"></div><div class="krs-manual"><input id="krs-manual" autocomplete="off" inputmode="text" placeholder="Scanner ou saisir un code…" /><button data-krs-manual aria-label="Lire le code"><i data-lucide="arrow-right"></i></button></div><div class="krs-camera-bar"><div class="krs-camera-status"><b>Préparation de la caméra…</b></div><button class="krs-cam-act krs-torch" hidden>Lampe</button><button class="krs-cam-act" data-krs-restart>Relancer</button></div></div><div class="krs-result"></div></section>' +
+    overlay.innerHTML = '<div class="krs-shell"><header class="krs-head"><span class="krs-head-mark"><i data-icon="barcode_scanner"></i></span><div class="krs-head-copy"><b>Scan continu</b><span>Catalogue, stock, promotions et encaissement dans un seul geste</span></div><span class="krs-net"></span><button class="krs-close" data-krs-close aria-label="Fermer"><i data-icon="close"></i></button></header>' +
+      '<div class="krs-main"><section class="krs-work"><div class="krs-camera"><video class="krs-video is-idle" autoplay playsinline webkit-playsinline muted></video><div class="krs-frame"></div><div class="krs-manual"><input id="krs-manual" autocomplete="off" inputmode="text" placeholder="Scanner ou saisir un code…" /><button data-krs-manual aria-label="Lire le code"><i data-icon="arrow_forward"></i></button></div><div class="krs-camera-bar"><div class="krs-camera-status"><b>Préparation de la caméra…</b></div><button class="krs-cam-act krs-torch" hidden>Lampe</button><button class="krs-cam-act" data-krs-restart>Relancer</button></div></div><div class="krs-result"></div></section>' +
       '<aside class="krs-cart"><div class="krs-cart-head"></div><div class="krs-lines"></div><div class="krs-cart-foot"></div></aside></div></div><div class="krs-pay"></div>';
     document.body.appendChild(overlay); video = $('.krs-video', overlay);
     overlay.addEventListener('click', function (e) {
@@ -609,7 +609,7 @@
     if (!root || !ELIGIBLE[vertical] || OWN_SCAN_ENTRY[vertical]) return false;
     if (mounted[vertical] && mounted[vertical].isConnected) return true;
     var b = document.createElement('button'); b.type = 'button'; b.className = 'krs-launch'; b.setAttribute('aria-label', 'Ouvrir le scan continu');
-    b.innerHTML = '<i data-lucide="scan-barcode"></i><span>Scan continu</span><b class="krs-launch-count" hidden>0</b>';
+    b.innerHTML = '<i data-icon="barcode_scanner"></i><span>Scan continu</span><b class="krs-launch-count" hidden>0</b>';
     b.addEventListener('click', function () { open(vertical, root); }); root.appendChild(b); mounted[vertical] = b; paintLaunches(); icons(); return true;
   }
 
