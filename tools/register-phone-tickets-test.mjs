@@ -145,7 +145,7 @@ ok('the carnet has a close control on a phone, and no autofocus keyboard', () =>
   assert.match(cb, /id="kcb-back"/);
   assert.match(cb, /#kcb-back'\)\.onclick = close/);
   // No keyboard on any touch screen (phone or iPad); only a mouse or trackpad focuses.
-  assert.match(cb, /if \(!isPhone\(\) && fine\) q\.focus\(\)/);
+  assert.match(cb, /if \(!isPhone\(\) && fine && !railed\(\)\) q\.focus\(\)/);
   assert.match(cb, /fine = window\.matchMedia\('\(pointer: fine\)'\)\.matches/);
   assert.match(cb, /#kcb-root \.kcb-back\{display:none;\}/);
 });

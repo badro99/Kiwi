@@ -5402,14 +5402,14 @@
     background: #FCFBF8;
     box-shadow: 0 24px 52px -42px rgba(10,15,13,0.30);
   }
-  html:not([data-caisse-theme="dark"]) .plan-room-label { color: rgba(10,15,13,0.62); }
+  html:not([data-caisse-theme="dark"]) .plan-room-label { color: rgba(10,15,13,0.85); }
   html:not([data-caisse-theme="dark"]) .plan-room-label em { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .plan-zone-terrasse {
     border-color: rgba(11,110,79,0.32);
     background: #FCFBF8;
     box-shadow: 0 20px 44px -38px rgba(10,15,13,0.28);
   }
-  html:not([data-caisse-theme="dark"]) .terrasse-label { color: rgba(11,110,79,0.78); }
+  html:not([data-caisse-theme="dark"]) .terrasse-label { color: rgb(11,110,79); }
   html:not([data-caisse-theme="dark"]) .terrasse-label em { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .cplan-room {
     border-color: rgba(10,15,13,0.11);
@@ -5459,7 +5459,7 @@
   html:not([data-caisse-theme="dark"]) .tbl-cell:focus-visible { outline-color: rgba(11,110,79,0.55); }
   html:not([data-caisse-theme="dark"]) .tbl { box-shadow: 0 12px 26px -22px rgba(10,15,13,0.35); }
   /* Le numéro-étiquette et la puce de durée. */
-  html:not([data-caisse-theme="dark"]) .cplan-num { color: rgba(10,15,13,0.45); }
+  html:not([data-caisse-theme="dark"]) .cplan-num { color: rgba(10,15,13,0.85); }
   html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="a-commander"]  .cplan-num { color: rgba(160,113,33,0.90); }
   html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="ka-yaklo"]     .cplan-num { color: rgba(11,110,79,0.95); }
   html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="bgha-ykhlass"] .cplan-num { color: rgba(194,69,111,0.95); }
