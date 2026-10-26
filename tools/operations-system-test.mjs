@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { missingMigratedTables } from './fixtures/migrated-tables.cjs';
 import coreTestSource from './core-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import fs from 'node:fs';
@@ -68,7 +67,6 @@ db.exec(`
   CREATE TABLE operators (id TEXT PRIMARY KEY);
   CREATE TABLE employee_auth_versions (merchant TEXT, member_id TEXT, auth_version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(merchant, member_id));
 `);
-  missingMigratedTables(db);
 
 const SECRET = 'operations-suite-secret';
 const BUSINESS = 'Amira Café';
@@ -478,7 +476,7 @@ ok(numbers.join(',') === 'AV-2026-000001,FA-2026-000001,FA-2026-000002', 'every 
 /* Source invariants that no request can demonstrate: a schema constraint and the
    shape of the tenant call itself. */
 ok(apiSource.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_seq'), 'the database refuses two documents on the same number');
-ok(db.prepare("SELECT [unique] FROM pragma_index_list('operational_commands') WHERE name='idx_ops_merchant_idempotency'").get()?.unique === 1, 'the database enforces one command per merchant idempotency key');
+ok(apiSource.includes('UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency'), 'the database enforces one command per merchant idempotency key');
 ok(apiSource.includes("tenantFor(request, env, body && body.merchant, { strict: true })"), 'writes resolve the tenant in strict mode');
 
 /* ── Achats : le bon de commande, de l'engagement à la réception ────────────── */
@@ -531,7 +529,7 @@ const unconfirmedCancel = await post(ownerCookie, proc('op:po-cancel-no', 'cance
 ok(unconfirmedCancel.status === 409 && poRow(cancelNumber).status === 'draft', 'purchase-order cancellation requires explicit confirmation');
 const cancelledPo = await post(ownerCookie, confirmed(proc('op:po-cancel-ok', 'cancel-po', { po: cancelNumber })));
 ok(cancelledPo.data.command.result.status === 'cancelled' && poRow(cancelNumber).status === 'cancelled', 'a confirmed unreceived order enters a durable cancelled state');
-ok(db.prepare('SELECT COUNT(*) AS n FROM inventory_movements').get().n === 0,
+ok(!db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'inventory_movements'").get(),
   'creating, submitting or cancelling a purchase order does not change stock');
 
 const resubmit = await post(ownerCookie, confirmed(proc('op:po-submit-02', 'submit-po', { po: 'BC-2026-000002' })));
@@ -584,7 +582,7 @@ ok(doubleReturn.data.command.status === 'failed' && doubleReturn.data.command.la
 const tillOrders = await post(tillCookie, proc('op:po-till-001', 'create-po', COPAG));
 ok(tillOrders.status === 403 && tillOrders.data.error === 'permission-denied', 'a paired till cannot engage the business with a supplier');
 
-ok(db.prepare("SELECT [unique] FROM pragma_index_list('purchase_orders') WHERE name='idx_po_seq'").get()?.unique === 1, 'the database refuses two purchase orders on the same rank');
+ok(apiSource.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq'), 'the database refuses two purchase orders on the same rank');
 
 /* Un domaine qui ne sait qu'écrire ne peut pas porter d'écran de réception : le
    commerçant taperait le numéro et la référence de mémoire.  Le livre des achats
@@ -868,7 +866,6 @@ ok(aiUnknownAction.status === 400 && aiUnknownAction.data.error === 'unsupported
 /* La table des commandes appartient au module de la salle, pas au schéma des
    opérations : une base qui n'a jamais pris de commande n'est pas une base en
    panne, et l'assistant doit le dire ainsi plutôt que de prétendre au succès. */
-db.exec('DROP TABLE orders');
 const aiNoTable = await post(ownerCookie, ai('op:ai-ord-00', 'update-order-status', { said: 'valide la 12', orderId: 'ord-260814-0001', status: 'accepted' }));
 ok(aiNoTable.data.command.status === 'failed' && aiNoTable.data.command.lastError === 'orders-unavailable',
   'a merchant whose orders table was never created gets a named refusal, not a false confirmation');
@@ -884,7 +881,6 @@ db.exec(`
     status TEXT NOT NULL, created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL
   );
 `);
-  missingMigratedTables(db);
 const seedOrder = (id, number, table, status, total, ts) => db.prepare(
   'INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts) VALUES (?,?,?,?,?,?,?,?,?,?)'
 ).run(id, MERCHANT, number, table ? 'table' : 'takeout', table || '', total, '[]', status, ts, ts);
@@ -1031,7 +1027,6 @@ function freshEnv(extra) {
     CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, updated_ts INTEGER);
     CREATE TABLE operators (id TEXT PRIMARY KEY);
   `);
-  missingMigratedTables(other);
   other.prepare('INSERT INTO accounts (id, business) VALUES (?, ?)').run('acc-owner', BUSINESS);
   other.prepare('INSERT INTO merchant_config (merchant, account_id, status) VALUES (?, ?, ?)').run(MERCHANT, 'acc-owner', 'active');
   return Object.assign({ DB: D1(other), AUTH_SECRET: SECRET, RAW: other }, extra || {});

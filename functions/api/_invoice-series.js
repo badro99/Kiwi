@@ -21,8 +21,38 @@ export function formatNumber(prefix, year, seq) {
   return `${prefix}-${y}-${String(s).padStart(4, '0')}`;
 }
 
-// Compatibility export; migrations now own the invoicing schema.
-const DDL = [];
+/* La production a toujours du retard sur schema.sql : les tables se créent au
+ * premier besoin, quand une requête répond « no such table » (et pas avant :
+ * aucun DDL ne part à chaque requête). Ce DDL doit dire la même chose que
+ * schema.sql ; tools/invoices-v2-test.mjs le vérifie colonne par colonne. */
+const DDL = [
+  `CREATE TABLE IF NOT EXISTS sale_invoices (
+    merchant TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL,
+    sale_id TEXT NOT NULL, customer TEXT, snapshot TEXT NOT NULL, created_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, sale_id), UNIQUE (merchant, number))`,
+  'CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq)',
+  `CREATE TABLE IF NOT EXISTS invoice_series (
+    merchant TEXT NOT NULL, prefix TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL,
+    doc_ref TEXT, created_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, prefix, number))`,
+  `CREATE TABLE IF NOT EXISTS invoice_docs (
+    id TEXT PRIMARY KEY, merchant TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL,
+    number TEXT, seq INTEGER, issue_date TEXT, due_date TEXT, terms_days INTEGER, valid_until TEXT,
+    customer TEXT NOT NULL, seller TEXT, lines TEXT NOT NULL, totals TEXT NOT NULL,
+    ttc_cents INTEGER NOT NULL DEFAULT 0, payment_method TEXT, note TEXT, exemption_mention TEXT,
+    internal_note TEXT, original_id TEXT, source_quote_id TEXT, reason TEXT,
+    created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, issued_ts INTEGER, sent_ts INTEGER,
+    cancelled_ts INTEGER, created_by TEXT, legacy_ref TEXT)`,
+  'CREATE INDEX IF NOT EXISTS idx_invoice_docs_merchant ON invoice_docs (merchant, type, issue_date)',
+  'CREATE INDEX IF NOT EXISTS idx_invoice_docs_original ON invoice_docs (merchant, original_id)',
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_docs_number ON invoice_docs (merchant, number) WHERE number IS NOT NULL',
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_docs_legacy ON invoice_docs (merchant, legacy_ref) WHERE legacy_ref IS NOT NULL',
+  `CREATE TABLE IF NOT EXISTS invoice_payments (
+    id TEXT PRIMARY KEY, merchant TEXT NOT NULL, doc_id TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0), date TEXT, method TEXT, reference TEXT,
+    created_ts INTEGER NOT NULL, created_by TEXT)`,
+  'CREATE INDEX IF NOT EXISTS idx_invoice_payments_doc ON invoice_payments (merchant, doc_id)',
+];
 
 export const INVOICING_DDL = DDL;
 

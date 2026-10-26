@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { migrated } from './fixtures/migrated-tables.cjs';
 /* Ticket #0004: a pending hospitality store may prepare guest profiles, while
  * suspended stores and every pending financial loyalty mutation stay closed. */
 import assert from 'node:assert/strict';
@@ -12,7 +11,7 @@ import { onRequestGet, onRequestPost } from '../functions/api/clients.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
-migrated(sqlite);
+sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 
 const DB = {
   prepare(sql) {

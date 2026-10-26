@@ -301,7 +301,10 @@ async function suiteAlreadySent(env, merchant, table, id, now) {
   } catch (_) { return false; }
 }
 async function ensureFollowingTable(env) {
-  // Schema owned by migrations 0001–0010.
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS order_following (order_id TEXT PRIMARY KEY, merchant TEXT NOT NULL, ' +
+    'table_no TEXT, items TEXT NOT NULL, created_ts INTEGER NOT NULL, cleared_ts INTEGER)'
+  ).run();
 }
 
 export async function createTicket(context, env, merchant, c, now) {

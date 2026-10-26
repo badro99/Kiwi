@@ -34,7 +34,40 @@ const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const finite = (v) => Number.isFinite(Number(v)) ? Number(v) : null;
 
 async function ensureSchema(env) {
-  // Schema owned by migrations 0001–0010.
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS inventory_movements (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, item_id TEXT NOT NULL,
+      variant_id TEXT NOT NULL DEFAULT '', location_id TEXT NOT NULL DEFAULT 'principal',
+      qty_milli INTEGER NOT NULL, reason TEXT NOT NULL, unit_cost_cents INTEGER,
+      unit_cost_rate INTEGER,
+      currency TEXT NOT NULL DEFAULT 'MAD', ref_type TEXT NOT NULL DEFAULT '',
+      ref_id TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', actor TEXT NOT NULL DEFAULT '',
+      occurred_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL, reversal_of TEXT NOT NULL DEFAULT '',
+      meta TEXT, payload_hash TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  /* Prod D1 lags schema.sql : CREATE TABLE IF NOT EXISTS n'ajoute pas la
+   * colonne aux tables existantes. Le ALTER est donc systématique et
+   * l'erreur « colonne déjà là » est l'état stable attendu, pas une panne. */
+  try {
+    await env.DB.prepare(
+      'ALTER TABLE inventory_movements ADD COLUMN unit_cost_rate INTEGER'
+    ).run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare(
+      "ALTER TABLE inventory_movements ADD COLUMN payload_hash TEXT NOT NULL DEFAULT ''"
+    ).run();
+  } catch (_) {}
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_cursor ON inventory_movements (merchant, srv_ts)'
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_item ON inventory_movements (merchant, item_id, occurred_ts)'
+  ).run();
 }
 
 async function nextCursor(env, merchant) {

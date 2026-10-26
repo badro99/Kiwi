@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { migrated } from './fixtures/migrated-tables.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* « Le point du matin » : push d'ouverture avec le total d'hier.
  *
@@ -43,8 +42,9 @@ const iso = (s) => Date.parse(s);
 
 function database({ legacyTokens = false } = {}) {
   const db = new DatabaseSync(':memory:');
-  migrated(db);
+  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   if (legacyTokens) db.exec('ALTER TABLE push_tokens DROP COLUMN lang');
+  db.exec('DROP TABLE IF EXISTS push_morning_sent'); // créée à la volée, comme en production
   const env = {
     AUTH_SECRET,
     DB: {
@@ -141,7 +141,7 @@ try {
     ok('fetch jamais appelé', calls.length === 0);
     const partial = await morning.runMorningPush({ ...env, APNS_KEY_ID: 'K', APNS_TEAM_ID: 'T' }, NOW);
     ok('une clé APNs incomplète vaut non configuré', partial.sent === 0 && calls.length === 0);
-    ok('aucun marqueur posé', db.prepare('SELECT COUNT(*) AS n FROM push_morning_sent').get().n === 0);
+    ok('aucun marqueur posé', db.prepare("SELECT name FROM sqlite_master WHERE name = 'push_morning_sent'").get() === undefined);
   }
 
   console.log('■ Le point du matin · journée commerciale, annulations, jours sans vente');

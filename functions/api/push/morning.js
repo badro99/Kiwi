@@ -69,7 +69,12 @@ export function morningMessage(lang, cents, count) {
 }
 
 async function ensureSentTable(env) {
-  // Schema owned by migrations 0001–0010.
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_morning_sent (
+    merchant TEXT NOT NULL,
+    day      TEXT NOT NULL,
+    sent_ts  INTEGER NOT NULL,
+    PRIMARY KEY (merchant, day)
+  )`).run();
 }
 
 /* Empreinte du jeton (SHA-256, 24 caractères hexadécimaux) : le jeton

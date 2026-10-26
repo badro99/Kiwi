@@ -1,4 +1,3 @@
-import { missingMigratedTables } from './fixtures/migrated-tables.cjs';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -122,7 +121,6 @@ sqlite.exec(`
     till_epoch INTEGER NOT NULL DEFAULT 0
   );
 `);
-  missingMigratedTables(sqlite);
 sqlite.prepare(`
   INSERT INTO merchant_config (merchant, features, account_id, name, updated_ts)
   VALUES ('cafe-atlas', '{}', 'acc-1', 'Café Atlas', ?),

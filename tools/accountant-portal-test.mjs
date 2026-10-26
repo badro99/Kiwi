@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { migrated } from './fixtures/migrated-tables.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* Espace comptable : l'expert-comptable lit les livres d'UN magasin, sans rien
  * pouvoir écrire, et son cookie n'ouvre rien d'autre.
@@ -50,7 +49,7 @@ const iso = (s) => Date.parse(s);
 
 function database({ dropZ = false } = {}) {
   const db = new DatabaseSync(':memory:');
-  migrated(db);
+  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const acc = db.prepare(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES (?,?,?,'s','h',?,'active')`);
   acc.run('acc-a', 'a@compta.test', 'Compta Shop', now);
   acc.run('acc-b', 'b@other.test', 'Other Shop', now);
@@ -346,9 +345,10 @@ console.log('■ Aucun secret dans les réponses');
 console.log('■ Production en retard sur schema.sql');
 {
   const lag = database({ dropZ: true });
+  lag.db.exec('DROP TABLE accountant_access');
   const owner = lib.sessionCookie(await lib.makeSession('acc-a', SECRET)).split(';')[0];
   const c = await call(access.onRequest, req('/api/comptable/access', { cookie: owner, method: 'POST', body: { merchant: SHOP } }), lag.env);
-  ok('les accès fonctionnent sur les migrations seules', c.status === 201 && !!lag.db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'accountant_access'").get());
+  ok('la table des accès se crée au premier usage', c.status === 201 && !!lag.db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'accountant_access'").get());
   const ex = await call(session.onRequest, req('/api/comptable/session', { method: 'POST', body: { token: c.json.url.split('#')[1] } }), lag.env);
   const r = await call(books.onRequest, req('/api/comptable/books?month=2026-10', { cookie: cookieOf(ex.res) }), lag.env);
   ok('une table Z absente se dit « non enregistrée » plutôt que vide', r.status === 200 && r.json.z.status === 'not-recorded' && r.json.sales.status === 'ok', r.text.slice(0, 200));

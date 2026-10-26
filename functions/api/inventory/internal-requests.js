@@ -19,6 +19,7 @@ const LINE_TABLE = 'hotel_internal_request_lines';
 const EVENT_TABLE = 'hotel_internal_request_events';
 const confirmCommand = createHandover({ mayConfirm, json, nowFor, applyRequestCommand, approvedBaseMilli, fulfilmentItemId, sourceRows, allocateTransferAllocation, reserveCursors, inventoryHasColumn, transferMovementId, REQUEST_TABLE, LINE_TABLE, EVENT_TABLE, replayFor, loadRequest });
 
+
 function nowFor(env) {
   return env && typeof env.NOW === 'function' ? Number(env.NOW()) || Date.now() : Date.now();
 }
@@ -126,7 +127,57 @@ export function allocateTransferCost(rowsValue, requestedMilli) {
 }
 
 async function ensureSchema(env) {
-  // Schema owned by migrations 0001–0010.
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS ${REQUEST_TABLE} (
+      merchant TEXT NOT NULL, id TEXT NOT NULL, unit_id TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'draft', cancelled INTEGER NOT NULL DEFAULT 0,
+      revision INTEGER NOT NULL DEFAULT 1, create_key TEXT NOT NULL,
+      last_command_key TEXT NOT NULL DEFAULT '', requester_id TEXT NOT NULL DEFAULT '',
+      requester_name TEXT NOT NULL DEFAULT '', review_revision INTEGER NOT NULL DEFAULT 0,
+      accepted_revision INTEGER NOT NULL DEFAULT 0, fulfilment_method TEXT NOT NULL DEFAULT 'pickup',
+      delivery_started_ts INTEGER, disputed INTEGER NOT NULL DEFAULT 0,
+      created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, submitted_ts INTEGER, closed_ts INTEGER,
+      PRIMARY KEY (merchant, id), UNIQUE (merchant, create_key)
+    )`
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS ${LINE_TABLE} (
+      merchant TEXT NOT NULL, request_id TEXT NOT NULL, line_no INTEGER NOT NULL,
+      item_id TEXT NOT NULL, unit TEXT NOT NULL, conversion_snapshot TEXT NOT NULL,
+      qty_requested_base_milli INTEGER NOT NULL, qty_requested REAL NOT NULL,
+      qty_approved REAL NOT NULL DEFAULT 0, qty_prepared REAL NOT NULL DEFAULT 0,
+      qty_received REAL NOT NULL DEFAULT 0, resolution TEXT NOT NULL DEFAULT 'pending',
+      substitute_for TEXT NOT NULL DEFAULT '', substitute_unit TEXT NOT NULL DEFAULT '',
+      substitute_conversion_snapshot TEXT NOT NULL DEFAULT '{}',
+      substitute_reason TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (merchant, request_id, line_no)
+    )`
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS ${EVENT_TABLE} (
+      merchant TEXT NOT NULL, id TEXT NOT NULL, request_id TEXT NOT NULL,
+      revision INTEGER NOT NULL, event TEXT NOT NULL, idempotency_key TEXT NOT NULL,
+      actor_id TEXT NOT NULL DEFAULT '', actor_name TEXT NOT NULL DEFAULT '',
+      payload TEXT NOT NULL DEFAULT '{}', ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, id), UNIQUE (merchant, idempotency_key)
+    )`
+  ).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hotel_requests_unit ON ${REQUEST_TABLE} (merchant, unit_id, updated_ts)`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hotel_request_events ON ${EVENT_TABLE} (merchant, request_id, revision)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS inventory_request_reservations (
+    merchant TEXT NOT NULL,
+    request_id TEXT NOT NULL,
+    line_no INTEGER NOT NULL,
+    item_id TEXT NOT NULL,
+    location_id TEXT NOT NULL,
+    qty_milli INTEGER NOT NULL,
+    review_revision INTEGER NOT NULL,
+    created_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, request_id, line_no)
+  )`).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_inventory_request_reservations_stock ON inventory_request_reservations (merchant, item_id, location_id)'
+  ).run();
 }
 
 function parse(raw, fallback) {

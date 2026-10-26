@@ -52,13 +52,46 @@ const money = (v, max = 1e9) => {
   return Math.max(0, Math.min(max, Math.round(n * 100) / 100));
 };
 const PAGE = 500;
+const purchaseSchemaReady = new WeakSet();
+const rewardSchemaReady = new WeakSet();
 
 async function ensurePurchaseEvents(env) {
-  // Schema owned by migrations 0001–0010.
+  if (purchaseSchemaReady.has(env.DB)) return;
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS client_purchase_events (
+    merchant TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 0,
+    points INTEGER NOT NULL DEFAULT 0,
+    stamps INTEGER NOT NULL DEFAULT 0,
+    visits INTEGER NOT NULL DEFAULT 1,
+    created_ts INTEGER NOT NULL,
+    srv_ts INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (merchant, ref)
+  )`).run();
+  try { await env.DB.prepare('ALTER TABLE client_purchase_events ADD COLUMN srv_ts INTEGER NOT NULL DEFAULT 0').run(); }
+  catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE client_purchase_events ADD COLUMN method TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE client_purchase_events ADD COLUMN items TEXT NOT NULL DEFAULT '[]'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE client_purchase_events ADD COLUMN sale_ref TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
+  purchaseSchemaReady.add(env.DB);
 }
 
 async function ensureRewardEvents(env) {
-  // Schema owned by migrations 0001–0010.
+  if (rewardSchemaReady.has(env.DB)) return;
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS client_reward_events (
+    merchant TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    points_delta INTEGER NOT NULL DEFAULT 0,
+    stamps_delta INTEGER NOT NULL DEFAULT 0,
+    created_ts INTEGER NOT NULL,
+    srv_ts INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (merchant, ref)
+  )`).run();
+  try { await env.DB.prepare('ALTER TABLE client_reward_events ADD COLUMN srv_ts INTEGER NOT NULL DEFAULT 0').run(); }
+  catch (_) {}
+  rewardSchemaReady.add(env.DB);
 }
 
 function hospitalityJson(value) {
@@ -140,8 +173,12 @@ export async function nextSrvTs(env, merchant) {
   try {
     await ensurePurchaseEvents(env);
     await ensureRewardEvents(env);
-    // The sequence table is installed by migrations. The UPDATE below remains
-    // the serialized write, so concurrent tills receive different cursors.
+    // Kept here as well as schema.sql so an existing deployment heals before
+    // its next explicit migration. The UPDATE is the serialized write: unlike
+    // SELECT MAX() + Date.now(), concurrent tills cannot receive the same value.
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS client_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
+    ).run();
     const row = await env.DB.prepare('SELECT MAX(srv_ts) AS m FROM clients WHERE merchant = ?')
       .bind(merchant).first();
     const last = (row && row.m) || 0;
@@ -160,7 +197,9 @@ export async function nextSrvTs(env, merchant) {
 }
 
 async function ensureClientSyncSequence(env) {
-  // Schema owned by migrations 0001–0010.
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS client_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
+  ).run();
 }
 
 /* Event writes must allocate the cursor INSIDE their balance/event batch. A

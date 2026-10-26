@@ -27,7 +27,14 @@ export async function reserveTicketRange(env, merchant, requestedSize, requested
   const periodEnd = Date.UTC(period + 1, 0, 1);
   const now = Date.now();
 
-  // ticket_sequences is installed by migrations.
+  /* Self-healing for databases deployed before schema.sql is applied. The
+   * statement is idempotent and keeps a code deploy from bricking checkout
+   * while the D1 migration is rolling out. */
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS ticket_sequences (' +
+    'merchant TEXT NOT NULL, period INTEGER NOT NULL, next_value INTEGER NOT NULL, ' +
+    'updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, period))'
+  ).run();
 
   /* Bootstrap above every numeric reference already present in the old sales
    * ledger. The exact digit predicate matters: SQLite's `[0-9]*` only means

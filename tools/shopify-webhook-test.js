@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { missingMigratedTables } from './fixtures/migrated-tables.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · la réception native des commandes Shopify.
  *
@@ -40,7 +39,7 @@ const ok = (l, c, d) => { if (c) pass++; else fails.push(l + (d ? ' — ' + d : 
 
 /* ── D1 de poche ─────────────────────────────────────────────────────────── */
 function makeDB() {
-  const retryDB = missingMigratedTables(new DatabaseSync(':memory:'));
+  const retryDB = new DatabaseSync(':memory:');
   const T = { channel_links: [], orders: [], merchant_config: [], accounts: {}, catalogs: [], shopify_variant_links: [], hideDuplicateOnce: false };
   T.accounts[ACC_A] = { business: 'Atlas Casa' };
   T.accounts[ACC_B] = { business: 'Chez Rival' };

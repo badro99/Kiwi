@@ -110,13 +110,3 @@ After the owner applies it (`npx wrangler d1 migrations apply kiwi-sales --remot
 1. move `MINIMUM_SCHEMA_VERSION` to 17 (and the assertion in `tools/schema-minimum-test.mjs`);
 2. run `KIWI_UPDATE_SCHEMA_BASELINE=1 node tools/schema-minimum-test.mjs`: measured, the pin goes from 174 to 129 and 45 more queries are checked;
 3. remove `ensureNotify`, `ensureLedger`, `ensurePayroll`, `ensurePayments` and the hotel `tableExists` guard, then lower the pin again.
-
-## Wave M · schema · 26 octobre 2026
-
-Le retrait des CREATE des objets couverts avant 0011 est réalisé hors modules
-`ai` et `helpcentre` gelés. Le pin passe de 174 à 108 diagnostics, sans hausse.
-Les tables introduites après 0010 restent créées par leurs helpers. L'inventaire
-historique ci-dessus reste un repérage de l'état initial, pas l'état des lignes
-actuelles. Voir [la preuve Wave M](2026-10-26-wave-m-schema.md) pour les exceptions,
-les comparaisons avant/après et les suites. Les autres replis (sondes, ALTER hors
-helpers retirés, projections et captures d'erreurs) restent hors de ce retrait.

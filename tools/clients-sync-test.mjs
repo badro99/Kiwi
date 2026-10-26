@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { migrated } from './fixtures/migrated-tables.cjs';
 /* Kiwi · client-book cursor allocation and tombstone ordering. */
 
 import fs from 'node:fs';
@@ -10,7 +9,7 @@ import { nextSrvTs } from '../functions/api/clients.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
-migrated(sqlite);
+sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 function makeDB() {
   return {
     prepare(sql) {

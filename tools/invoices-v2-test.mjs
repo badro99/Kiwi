@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { migrated } from './fixtures/migrated-tables.cjs';
 /* Facturation v2 · le serveur (functions/api/invoices.js + _invoice-series.js).
  *
  * Ce banc passe par les vraies routes (invoices, invoice, comptable/books) et la
@@ -50,7 +49,7 @@ const num = (prefix, seq) => `${prefix}-${YEAR}-${String(seq).padStart(4, '0')}`
 
 function database() {
   const db = new DatabaseSync(':memory:');
-  migrated(db);
+  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const acc = db.prepare(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES (?,?,?,'s','h',?,'active')`);
   acc.run('acc-a', 'a@facture.test', 'Facture Shop', now);
   acc.run('acc-b', 'b@autre.test', 'Autre Shop', now);
@@ -616,18 +615,35 @@ console.log('■ Livres · seulement du émis');
   ok('table absente en production : « non enregistrée », pas vide, pas de plantage', lres.status === 200 && lj.invoiceDocs.status === 'not-recorded' && lj.sales.status === 'ok');
 }
 
-// Routes require migrated tables; they never repair a missing production schema.
-console.log('■ Schéma · migrations seules');
+/* ───────────────────────────── 10. production en retard sur schema.sql ───────────────────────────── */
+console.log('■ Schéma · tables créées au premier usage, DDL fidèle à schema.sql');
 {
-  const fresh = database();
-  const c = client(fresh.env);
-  const r = await c.get('');
-  ok('lecture sur une base migrée', r.status === 200);
-  ok('aucun DDL de repli exporté', series.INVOICING_DDL.length === 0);
-  await series.ensureInvoicingSchema({ prepare() { throw new Error('runtime DDL forbidden'); } });
-  ok('le helper de compatibilité ne prépare aucune requête', true);
-}
+  const lag = database();
+  lag.db.exec('DROP TABLE invoice_docs; DROP TABLE invoice_payments; DROP TABLE invoice_series; DROP TABLE sale_invoices;');
+  const c = client(lag.env);
+  let r = await c.get('');
+  ok('lecture sans tables : liste vide, tables créées', r.status === 200 && r.json.docs.length === 0 && !!lag.db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'invoice_docs'").get());
+  const lag2 = database();
+  lag2.db.exec('DROP TABLE invoice_docs; DROP TABLE invoice_payments; DROP TABLE invoice_series; DROP TABLE sale_invoices;');
+  const c2 = client(lag2.env);
+  r = await c2.post({ action: 'save', type: 'invoice', customer: CUST, lines: [L('p', 1, 100)] });
+  ok('écriture sans tables : le brouillon est créé', r.status === 200 && r.json.doc.status === 'draft');
+  r = await c2.post({ action: 'issue', id: r.json.doc.id });
+  ok('…et l’émission aussi (F-0001), tables de série comprises', r.status === 200 && r.json.doc.number === num('F', 1));
 
+  const fresh = new DatabaseSync(':memory:');
+  fresh.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  const viaCode = new DatabaseSync(':memory:');
+  for (const sql of series.INVOICING_DDL) viaCode.exec(sql);
+  const shape = (d, t) => JSON.stringify(d.prepare(`PRAGMA table_info(${t})`).all().map((x) => [x.name, x.type, x.notnull, x.pk, x.dflt_value]));
+  for (const t of ['invoice_series', 'invoice_docs', 'invoice_payments', 'sale_invoices']) {
+    ok(`${t} : mêmes colonnes dans le DDL de repli et dans schema.sql`, shape(fresh, t) === shape(viaCode, t));
+  }
+  const idx = (d, tbl) => JSON.stringify(d.prepare(`SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`).all(tbl).map((x) => [x.name, String(x.sql).replace(/\s+/g, ' ')]));
+  for (const t of ['invoice_docs', 'invoice_payments', 'sale_invoices']) {
+    ok(`${t} : mêmes index`, idx(fresh, t) === idx(viaCode, t), idx(fresh, t) + '\n' + idx(viaCode, t));
+  }
+}
 
 /* ───────────────────────────── 11. liste par pages (curseur) ───────────────────────────── */
 console.log('■ Liste · au-delà de 500 documents, un curseur mène à tous');

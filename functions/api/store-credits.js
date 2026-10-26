@@ -27,7 +27,37 @@ const signedAmount = (value) => {
 const now = () => Date.now();
 
 async function ensureSchema(env) {
-  // Schema owned by migrations 0001–0010.
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS sale_receipts (
+      merchant TEXT NOT NULL, sale_id TEXT NOT NULL,
+      gross_ticket_cents INTEGER NOT NULL, consigned_cents INTEGER NOT NULL DEFAULT 0,
+      created_ts INTEGER NOT NULL, PRIMARY KEY (merchant, sale_id)
+    )`
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS store_credits (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, code TEXT NOT NULL,
+      customer_id TEXT NOT NULL DEFAULT '', customer_name TEXT NOT NULL DEFAULT '',
+      original_sale_id TEXT NOT NULL DEFAULT '', original_ref TEXT NOT NULL DEFAULT '',
+      amount_cents INTEGER NOT NULL, balance_cents INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active', expires_ts INTEGER NOT NULL,
+      reason TEXT NOT NULL DEFAULT '', issued_by TEXT NOT NULL DEFAULT '',
+      last_event_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_store_credit_code ON store_credits (merchant, code)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_store_credit_customer ON store_credits (merchant, customer_id, updated_ts DESC)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_store_credit_sale ON store_credits (merchant, original_sale_id)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS store_credit_events (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, credit_id TEXT NOT NULL,
+      code TEXT NOT NULL, action TEXT NOT NULL, amount_cents INTEGER NOT NULL,
+      balance_after_cents INTEGER NOT NULL, ref_id TEXT NOT NULL DEFAULT '',
+      actor TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_store_credit_events_credit ON store_credit_events (merchant, credit_id, ts)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_store_credit_events_sale ON store_credit_events (merchant, ref_id, action)').run();
 }
 
 async function actorName(request, env, merchant) {
