@@ -49,6 +49,11 @@ export function definitions(source) {
     const merge = new RegExp('^(?:Object\\.assign\\()?\\(?\\s*[A-Za-z_$][\\w$]*\\.' + m[2] + '\\s*(?:\\|\\||\\?\\?|,)').test(rhs);
     add(m[2], merge ? 'merge' : 'own');
   }
+  // X ||= {} and X ??= {} are the same namespace merge, written shorter.
+  for (const m of source.matchAll(/(?:^|[^\w.$])([A-Za-z_$][\w$]*)\.(Kiwi[A-Z]\w*)\s*(?:\|\||\?\?)=/gm)) {
+    if (m[1] === 'this' || /^Kiwi/.test(m[1])) continue;
+    add(m[2], 'merge');
+  }
   for (const m of source.matchAll(/\[\s*['"](Kiwi[A-Z]\w*)['"]\s*\]\s*=(?!=)/g)) add(m[1], 'own');
   for (const m of source.matchAll(/Object\.defineProperty\(\s*(?:window|globalThis)\s*,\s*['"](Kiwi[A-Z]\w*)['"]/g)) add(m[1], 'own');
   // Top-level declarations in a classic script are globals too.
@@ -101,8 +106,8 @@ export function inventory(root = ROOT) {
 
 /* ── self-test: the parser sees what it must, and the rules bite ───────── */
 {
-  const d = definitions("window.KiwiA = {};\nwindow.KiwiB = window.KiwiB || {};\nvar KiwiC = 1;\nif (window.KiwiD == null) x();\n  w.KiwiE = { a: 1 };\nroot.KiwiF = Object.assign(root.KiwiF || {}, { b: 2 });\nKiwiG.KiwiH = 1;\n");
-  assert.deepEqual([...d], [['KiwiA', 'own'], ['KiwiB', 'merge'], ['KiwiE', 'own'], ['KiwiF', 'merge'], ['KiwiC', 'own']]);
+  const d = definitions("window.KiwiA = {};\nwindow.KiwiB = window.KiwiB || {};\nvar KiwiC = 1;\nif (window.KiwiD == null) x();\n  w.KiwiE = { a: 1 };\nroot.KiwiF = Object.assign(root.KiwiF || {}, { b: 2 });\nKiwiG.KiwiH = 1;\nconst p = window.KiwiI ||= {};\nroot.KiwiJ ??= {};\n");
+  assert.deepEqual([...d], [['KiwiA', 'own'], ['KiwiB', 'merge'], ['KiwiE', 'own'], ['KiwiF', 'merge'], ['KiwiI', 'merge'], ['KiwiJ', 'merge'], ['KiwiC', 'own']]);
   assert.deepEqual([...reads('window.KiwiA = 1; KiwiZ.go(); window.KiwiY && 1;')].sort(), ['KiwiY', 'KiwiZ']);
 }
 
