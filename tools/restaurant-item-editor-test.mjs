@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : saveItem() retourne avant validation et enregistrement.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('restaurant-item-editor');
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* L'éditeur d'article de la carte restaurant (owner, 2026-10-11 : « u gotta ace it »).

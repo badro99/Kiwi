@@ -1,3 +1,7 @@
+// Mutation vérifiée : parsedDailyGoal() retourne null pour un montant valide.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('critical-flow');
 import coreTestSource from './core-test-source.cjs';
 import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';

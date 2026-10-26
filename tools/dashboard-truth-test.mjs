@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : inversion de ownData dans renderHealth, à longueur constante.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('dashboard-truth');
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * TABLEAU DE BORD · CE QUE LES CARTES AFFIRMENT

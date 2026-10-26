@@ -1,3 +1,7 @@
+// Mutation vérifiée : speechCtor() retourne null même dans le navigateur compatible.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+await text2Require(import.meta.url)('./text2-runtime.cjs').run('agent-voice');
 // agent-voice-test — la dictée vocale de l'assistant tient ses trois murs :
 // l'endpoint est fermé (session, quota, binding nommé), le client sait
 // retomber sur le navigateur, et le câblage HTML/SW porte le nouveau fichier.

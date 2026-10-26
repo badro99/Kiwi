@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Mutation vérifiée : itemOptGroups() retourne [] pour un groupe existant.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+require('node:module').createRequire(__filename)('./text2-runtime.cjs').run('menu-ordering-surfaces');
 const orderProTestSource = require('./orderpro-test-source.cjs');
 const serveurTestSource = require('./serveur-test-source.cjs');
 'use strict';

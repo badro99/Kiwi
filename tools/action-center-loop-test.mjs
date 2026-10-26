@@ -1,3 +1,7 @@
+// Mutation vérifiée : refresh() retourne avant toute mise à jour DOM.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('action-center-loop');
 /* Centre d'actions · garde contre la boucle MutationObserver → refresh → mutation.
  * Le 2026-08-21, ouvrir Kiwi AI gelait l'onglet sur toutes les machines :
  * injectButton() finissait TOUJOURS par refresh(), qui réécrivait textContent

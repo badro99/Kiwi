@@ -1,3 +1,7 @@
+// Mutation vérifiée : renderVerticalSection() retourne avant le rendu de navigation.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('dashboard-kds-nav');
 import coreTestSource from './core-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
