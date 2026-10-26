@@ -251,7 +251,7 @@ if (sourceError) {
     assert.ok(list.includes('درهم'), 'currency reads درهم');
     assert.ok(list.includes('المتجر الرئيسي') && list.includes('المالك'), 'stored placeholders read in Arabic');
     assert.ok(readable(parts.modals).includes('أرسله المالك في'), 'review window says who submitted, in Arabic');
-    assert.ok(readable(parts.list).includes('+1 235 درهم'), 'amounts keep the KiwiNumber separators and read درهم');
+    assert.ok(readable(parts.list).includes('+1 234,50 درهم'), 'amounts keep the KiwiNumber separators and read درهم');
   });
 
   await ok('French: every label reads as it did before', async () => {
