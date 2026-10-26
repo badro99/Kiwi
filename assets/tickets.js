@@ -975,11 +975,11 @@
         error = file.name ? t('file.tooLarge', { name: file.name }) : t('error.image-too-large');
         continue;
       }
-      if (!state.files.some((current) => fileKey(current) === fileKey(file))) accepted.push(file);
+      if (!state.files.concat(accepted).some((current) => fileKey(current) === fileKey(file))) accepted.push(file);
     }
     const before = state.files.length;
     state.files = state.files.concat(accepted).slice(0, MAX_IMAGES);
-    if (incoming.length + before > MAX_IMAGES) error = t('error.too-many-images');
+    if (accepted.length + before > MAX_IMAGES) error = t('error.too-many-images');
     $('formError').textContent = error;
     fileInput.value = '';
     renderSelectedImages();
@@ -1022,11 +1022,11 @@
         error = file.name ? t('file.tooLarge', { name: file.name }) : t('error.image-too-large');
         continue;
       }
-      if (!state.followupFiles.some((current) => fileKey(current) === fileKey(file))) accepted.push(file);
+      if (!state.followupFiles.concat(accepted).some((current) => fileKey(current) === fileKey(file))) accepted.push(file);
     }
     const before = state.followupFiles.length;
     state.followupFiles = state.followupFiles.concat(accepted).slice(0, MAX_IMAGES);
-    if (incoming.length + before > MAX_IMAGES) error = t('error.too-many-images');
+    if (accepted.length + before > MAX_IMAGES) error = t('error.too-many-images');
     $('followupError').textContent = error;
     followupFileInput.value = '';
     renderFollowupImages();

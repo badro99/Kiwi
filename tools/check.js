@@ -1576,6 +1576,7 @@ section('Whole-project regressions');
     'table-time-test.mjs',
     'print-relay-idempotency-test.mjs',
     'print-relay-properties-test.mjs',
+    'print-pairing-recovery-test.mjs',
     'order-pricing-properties-test.mjs',
     'menu-properties-test.mjs',
     'menu-formula-properties-test.mjs',
@@ -1973,6 +1974,7 @@ section('Whole-project regressions');
     'wave-o-truth-test.mjs',
     'briefing-test.mjs',
     'wave-q-scope-test.mjs',
+    'wave-r-errother-test.mjs',
     'briefing-tenant-test.mjs',
     'register-phone-tickets-test.mjs',
     'order-queue-tenant-test.mjs',
@@ -2122,6 +2124,7 @@ section('Whole-project regressions');
     'menu-sales-test.mjs',
     'foodcost-api-test.mjs',
     'simple-food-cost-test.mjs',
+    'wave-r-errdash-test.mjs',
     'menu-insights-test.mjs',
     'restaurant-recipe-layout-test.mjs',
     'restaurant-item-editor-test.mjs',
@@ -2984,6 +2987,13 @@ for (const test of ['wave-p-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'strings-co
 }
 
 /* ── Suite time ratchet (tools/check-guard.js cpuRatchet) ───────────────── */
+section('Wave R locale and accessibility');
+{
+  const r = require('child_process').spawnSync(process.execPath, [require('path').join(__dirname, 'wave-r-i18n-test.mjs')], { encoding: 'utf8' });
+  if (r.status !== 0) fail('wave-r-i18n-test: ' + (r.stdout || '') + (r.stderr || ''));
+  else ok('Wave R locale and accessibility regressions');
+}
+
 section('Suite CPU time (tools/suite-cpu-baseline.json)');
 {
   guard.takeSkip();   // a skip flag left by the last child test is not this section's
@@ -3005,6 +3015,7 @@ if (guard.tier() === 'full') {
   process.exit(verdict.code);
 }
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
+
 if (guard.tier() === 'changed') {
   const n = guard.selection().picked.size;
   console.log(`✓ changed tier passed (${warnings} warning(s)) · ${n} affected test(s) run, ${guard.skipped.length} left out, so this is not the gate: run \`npm run check:full\` before pushing`);

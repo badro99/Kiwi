@@ -107,7 +107,7 @@
     if (dataLoad) return dataLoad;
     dataLoad = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/onboarding-data.js?v=3';
+      script.src = '/assets/onboarding-data.js?v=4';
       const failed = () => { dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
       script.onload = () => window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed();
       script.onerror = failed;
@@ -515,16 +515,23 @@
     finishing = true;
     const finishButton = root ? root.querySelector('[data-finish]') : null;
     if (finishButton) finishButton.disabled = true;
-    let vid = null;
+    let vid = null, submitError = null;
     try {
       const data = await loadData();
       vid = await data.submit({ S, t: TYPES.find((x) => x.id === S.typeId) || TYPES[0],
         goal: parsedDailyGoal(), tr, storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });
-    } catch (_) {}
+    } catch (error) { submitError = error; }
     if (!vid) {
       finishing = false;
       if (finishButton) finishButton.disabled = false;
-      const failed = tr({ fr: "Impossible d'enregistrer l'établissement. Vérifiez la connexion et réessayez.", en: 'Could not create the business. Check your connection and try again.', ar: 'تعذر إنشاء المؤسسة. تحقق من الاتصال وأعد المحاولة.' });
+      const reason = submitError && (submitError.status === 409 ? 'conflict' : submitError.status === 401 || submitError.status === 403 ? 'auth' : submitError.status === 400 || submitError.status === 422 ? 'validation' : /quota|storage/i.test(submitError.code || submitError.name || '') ? 'storage' : '');
+      const reasons = {
+        conflict: { fr: 'Cet établissement existe déjà. Vérifiez vos établissements avant de réessayer.', en: 'This business already exists. Check your businesses before retrying.', ar: 'هذه المؤسسة موجودة بالفعل. تحقق من مؤسساتك قبل إعادة المحاولة.' },
+        auth: { fr: 'Reconnectez-vous avec un compte autorisé à créer cet établissement.', en: 'Sign in again with an account allowed to create this business.', ar: 'سجّل الدخول مجدداً بحساب مخوّل لإنشاء هذه المؤسسة.' },
+        validation: { fr: 'Vérifiez les informations saisies pour cet établissement.', en: 'Check the information entered for this business.', ar: 'تحقق من المعلومات المدخلة لهذه المؤسسة.' },
+        storage: { fr: 'Le stockage est indisponible. Libérez de l’espace ou autorisez le stockage puis réessayez.', en: 'Storage is unavailable. Free space or allow storage, then retry.', ar: 'التخزين غير متاح. حرّر مساحة أو اسمح بالتخزين ثم أعد المحاولة.' },
+      };
+      const failed = reason ? tr(reasons[reason]) : tr({ fr: "Impossible d'enregistrer l'établissement. Vérifiez la connexion et réessayez.", en: 'Could not create the business. Check your connection and try again.', ar: 'تعذر إنشاء المؤسسة. تحقق من الاتصال وأعد المحاولة.' });
       if (kit) return { error: failed };
       flashErr(failed);
       return;
@@ -545,7 +552,7 @@
     root.querySelector('.kob-card').innerHTML = `
       <div class="kob-top"><span class="kob-brand">${brandMark()}</span></div>
       <div class="kob-body"><div class="kob-celebrate">
-        <div class="kob-hero-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7DF2B0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="kob-hero-mark" style="color:var(--mint)">${mi('M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z')}</div>
         <h1 class="kob-h" style="text-align:center;">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>
         <p class="kob-sub" style="margin:0 auto;text-align:center;">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
       </div></div>

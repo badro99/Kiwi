@@ -193,7 +193,9 @@ export async function onRequestPost(context) {
         });
         parsed = parseModelResponse(r2.result);
         validated = parsed ? validateSalle(parsed) : null;
-      } catch (_) { /* le « illisible » ci-dessous reste le repli */ }
+      } catch (_) {
+        return json({ ok: false, reason: 'model', stage: 'interpretation', detail: 'interpretation-service-failed' }, 200, { 'x-kiwi-ai-model': usedModel });
+      }
     }
   }
 

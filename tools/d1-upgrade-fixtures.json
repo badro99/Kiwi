@@ -1,0 +1,122 @@
+{
+  "accountant_access": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "label": "fixture-label-1", "email": "fixture-email-1", "token_hash": "fixture-token_hash-1", "created_ts": 137, "created_by": "fixture-created_by-1", "last_seen_ts": 137, "revoked_ts": 137, "expires_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "label": "fixture-label-2", "email": "fixture-email-2", "token_hash": "fixture-token_hash-2", "created_ts": 274, "created_by": "fixture-created_by-2", "last_seen_ts": 274, "revoked_ts": 274, "expires_ts": 274}
+  ],
+  "hotel_reservations": [
+    {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "code": "fixture-code-1", "room_id": "fixture-room_id-1", "room_type_id": "fixture-room_type_id-1", "start_at": 137, "end_at": 137, "check_in": "fixture-check_in-1", "check_out": "fixture-check_out-1", "status": "fixture-status-1", "channel": "fixture-channel-1", "external_ref": "fixture-external_ref-1", "customer_name": "fixture-customer_name-1", "customer_phone": "fixture-customer_phone-1", "customer_email": "fixture-customer_email-1", "party_size": 137, "rate": 137, "total": 137, "raw_json": "fixture-raw_json-1", "created_ts": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "code": "fixture-code-2", "room_id": "fixture-room_id-2", "room_type_id": "fixture-room_type_id-2", "start_at": 274, "end_at": 274, "check_in": "fixture-check_in-2", "check_out": "fixture-check_out-2", "status": "fixture-status-2", "channel": "fixture-channel-2", "external_ref": "fixture-external_ref-2", "customer_name": "fixture-customer_name-2", "customer_phone": "fixture-customer_phone-2", "customer_email": "fixture-customer_email-2", "party_size": 274, "rate": 274, "total": 274, "raw_json": "fixture-raw_json-2", "created_ts": 274, "updated_ts": 274}
+  ],
+  "invoice_series": [
+    {"merchant": "upgrade-synth-1", "prefix": "fixture-prefix-1", "seq": 137, "number": "fixture-number-1", "doc_ref": "fixture-doc_ref-1", "created_ts": 137},
+    {"merchant": "upgrade-synth-2", "prefix": "fixture-prefix-2", "seq": 274, "number": "fixture-number-2", "doc_ref": "fixture-doc_ref-2", "created_ts": 274}
+  ],
+  "invoice_docs": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "type": "fixture-type-1", "status": "fixture-status-1", "number": "fixture-number-1", "seq": 137, "issue_date": "fixture-issue_date-1", "due_date": "fixture-due_date-1", "terms_days": 137, "valid_until": "fixture-valid_until-1", "customer": "fixture-customer-1", "seller": "fixture-seller-1", "lines": "fixture-lines-1", "totals": "fixture-totals-1", "ttc_cents": 137, "payment_method": "fixture-payment_method-1", "note": "fixture-note-1", "exemption_mention": "fixture-exemption_mention-1", "internal_note": "fixture-internal_note-1", "original_id": "fixture-original_id-1", "source_quote_id": "fixture-source_quote_id-1", "reason": "fixture-reason-1", "created_ts": 137, "updated_ts": 137, "issued_ts": 137, "sent_ts": 137, "cancelled_ts": 137, "created_by": "fixture-created_by-1", "legacy_ref": "fixture-legacy_ref-1"},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "type": "fixture-type-2", "status": "fixture-status-2", "number": "fixture-number-2", "seq": 274, "issue_date": "fixture-issue_date-2", "due_date": "fixture-due_date-2", "terms_days": 274, "valid_until": "fixture-valid_until-2", "customer": "fixture-customer-2", "seller": "fixture-seller-2", "lines": "fixture-lines-2", "totals": "fixture-totals-2", "ttc_cents": 274, "payment_method": "fixture-payment_method-2", "note": "fixture-note-2", "exemption_mention": "fixture-exemption_mention-2", "internal_note": "fixture-internal_note-2", "original_id": "fixture-original_id-2", "source_quote_id": "fixture-source_quote_id-2", "reason": "fixture-reason-2", "created_ts": 274, "updated_ts": 274, "issued_ts": 274, "sent_ts": 274, "cancelled_ts": 274, "created_by": "fixture-created_by-2", "legacy_ref": "fixture-legacy_ref-2"}
+  ],
+  "invoice_payments": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "doc_id": "fixture-doc_id-1", "amount_cents": 137, "date": "fixture-date-1", "method": "fixture-method-1", "reference": "fixture-reference-1", "created_ts": 137, "created_by": "fixture-created_by-1"},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "doc_id": "fixture-doc_id-2", "amount_cents": 274, "date": "fixture-date-2", "method": "fixture-method-2", "reference": "fixture-reference-2", "created_ts": 274, "created_by": "fixture-created_by-2"}
+  ],
+  "order_following": [
+    {"order_id": "fixture-order_id-1", "merchant": "upgrade-synth-1", "table_no": "fixture-table_no-1", "items": "fixture-items-1", "created_ts": 137, "cleared_ts": 137},
+    {"order_id": "fixture-order_id-2", "merchant": "upgrade-synth-2", "table_no": "fixture-table_no-2", "items": "fixture-items-2", "created_ts": 274, "cleared_ts": 274}
+  ],
+  "purchase_orders": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "seq": 137, "number": "fixture-number-1", "supplier": "fixture-supplier-1", "status": "fixture-status-1", "currency": "fixture-currency-1", "expected_date": "fixture-expected_date-1", "total_cents": 137, "invoiced_cents": 137, "command_id": "fixture-command_id-1", "created_ts": 137, "updated_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "seq": 274, "number": "fixture-number-2", "supplier": "fixture-supplier-2", "status": "fixture-status-2", "currency": "fixture-currency-2", "expected_date": "fixture-expected_date-2", "total_cents": 274, "invoiced_cents": 274, "command_id": "fixture-command_id-2", "created_ts": 274, "updated_ts": 274}
+  ],
+  "purchase_order_lines": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "number": "fixture-number-1", "line_no": 137, "sku": "fixture-sku-1", "label": "fixture-label-1", "item_id": "fixture-item_id-1", "variant_id": "fixture-variant_id-1", "location_id": "fixture-location_id-1", "unit": "fixture-unit-1", "qty": 137, "unit_cents": 137, "received_qty": 137, "returned_qty": 137, "created_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "number": "fixture-number-2", "line_no": 274, "sku": "fixture-sku-2", "label": "fixture-label-2", "item_id": "fixture-item_id-2", "variant_id": "fixture-variant_id-2", "location_id": "fixture-location_id-2", "unit": "fixture-unit-2", "qty": 274, "unit_cents": 274, "received_qty": 274, "returned_qty": 274, "created_ts": 274}
+  ],
+  "push_morning_sent": [
+    {"merchant": "upgrade-synth-1", "day": "fixture-day-1", "sent_ts": 137},
+    {"merchant": "upgrade-synth-2", "day": "fixture-day-2", "sent_ts": 274}
+  ],
+  "intake_docs": [
+    {"merchant": "upgrade-synth-1", "doc_id": "fixture-doc_id-1", "mime": "fixture-mime-1", "size": 137, "r2_key": "fixture-r2_key-1", "has_object": 137, "status": "fixture-status-1", "doc_type": "fixture-doc_type-1", "source": "fixture-source-1", "posting_hash": "fixture-posting_hash-1", "posting_count": 137, "created_ts": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "doc_id": "fixture-doc_id-2", "mime": "fixture-mime-2", "size": 274, "r2_key": "fixture-r2_key-2", "has_object": 274, "status": "fixture-status-2", "doc_type": "fixture-doc_type-2", "source": "fixture-source-2", "posting_hash": "fixture-posting_hash-2", "posting_count": 274, "created_ts": 274, "updated_ts": 274}
+  ],
+  "agent_oauth_clients": [
+    {"client_id": "fixture-client_id-1", "name": "fixture-name-1", "redirect_uris": "fixture-redirect_uris-1", "created_ts": 137, "last_used_ts": 137},
+    {"client_id": "fixture-client_id-2", "name": "fixture-name-2", "redirect_uris": "fixture-redirect_uris-2", "created_ts": 274, "last_used_ts": 274}
+  ],
+  "agent_oauth_codes": [
+    {"code_hash": "fixture-code_hash-1", "client_id": "fixture-client_id-1", "redirect_uri": "fixture-redirect_uri-1", "merchant": "upgrade-synth-1", "account_id": "fixture-account_id-1", "account_epoch": 137, "scopes": "fixture-scopes-1", "challenge": "fixture-challenge-1", "created_ts": 137, "expires_ts": 137, "used_ts": 137},
+    {"code_hash": "fixture-code_hash-2", "client_id": "fixture-client_id-2", "redirect_uri": "fixture-redirect_uri-2", "merchant": "upgrade-synth-2", "account_id": "fixture-account_id-2", "account_epoch": 274, "scopes": "fixture-scopes-2", "challenge": "fixture-challenge-2", "created_ts": 274, "expires_ts": 274, "used_ts": 274}
+  ],
+  "foodcost_sheets": [
+    {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "name": "fixture-name-1", "kind": "fixture-kind-1", "data": "fixture-data-1", "version": 137, "archived": 137, "created_ts": 137, "updated_ts": 137, "updated_by": "fixture-updated_by-1"},
+    {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "name": "fixture-name-2", "kind": "fixture-kind-2", "data": "fixture-data-2", "version": 274, "archived": 274, "created_ts": 274, "updated_ts": 274, "updated_by": "fixture-updated_by-2"}
+  ],
+  "foodcost_snapshots": [
+    {"merchant": "upgrade-synth-1", "sheet_id": "fixture-sheet_id-1", "version": 137, "name": "fixture-name-1", "data": "fixture-data-1", "actor": "fixture-actor-1", "actor_kind": "fixture-actor_kind-1", "ts": 137},
+    {"merchant": "upgrade-synth-2", "sheet_id": "fixture-sheet_id-2", "version": 274, "name": "fixture-name-2", "data": "fixture-data-2", "actor": "fixture-actor-2", "actor_kind": "fixture-actor_kind-2", "ts": 274}
+  ],
+  "delivery_collections": [
+    {"merchant": "upgrade-synth-1", "collection_sale_id": "fixture-collection_sale_id-1", "sale_id": "fixture-sale_id-1", "method": "fixture-method-1", "amount_cents": 137, "ts": 137, "collected_by_id": "fixture-collected_by_id-1", "collected_by_name": "fixture-collected_by_name-1"},
+    {"merchant": "upgrade-synth-2", "collection_sale_id": "fixture-collection_sale_id-2", "sale_id": "fixture-sale_id-2", "method": "fixture-method-2", "amount_cents": 274, "ts": 274, "collected_by_id": "fixture-collected_by_id-2", "collected_by_name": "fixture-collected_by_name-2"}
+  ],
+  "sale_changes": [
+    {"seq": 137, "merchant": "upgrade-synth-1", "sale_rowid": 137, "sale_id": "fixture-sale_id-1"},
+    {"seq": 274, "merchant": "upgrade-synth-2", "sale_rowid": 274, "sale_id": "fixture-sale_id-2"}
+  ],
+  "session_revocations": [
+    {"sid": "fixture-sid-1", "account_id": "fixture-account_id-1", "expires_ts": 137},
+    {"sid": "fixture-sid-2", "account_id": "fixture-account_id-2", "expires_ts": 274}
+  ],
+  "client_reward_refusals": [
+    {"merchant": "upgrade-synth-1", "ref": "fixture-ref-1", "client_id": "fixture-client_id-1", "error": "fixture-error-1", "created_ts": 137},
+    {"merchant": "upgrade-synth-2", "ref": "fixture-ref-2", "client_id": "fixture-client_id-2", "error": "fixture-error-2", "created_ts": 274}
+  ],
+  "origin_handoffs": [
+    {"token_hash": "fixture-token_hash-1", "preferences": "fixture-preferences-1", "merchant": "upgrade-synth-1", "role": "till", "device_id": "fixture-device_id-1", "staff_id": "fixture-staff_id-1", "auth_version": 137, "expires_ts": 137, "used_ts": 137},
+    {"token_hash": "fixture-token_hash-2", "preferences": "fixture-preferences-2", "merchant": "upgrade-synth-2", "role": "till", "device_id": "fixture-device_id-2", "staff_id": "fixture-staff_id-2", "auth_version": 274, "expires_ts": 274, "used_ts": 274}
+  ],
+  "origin_devices": [
+    {"merchant": "upgrade-synth-1", "device_hash": "fixture-device_hash-1", "role": "till", "last_seen": 137},
+    {"merchant": "upgrade-synth-2", "device_hash": "fixture-device_hash-2", "role": "till", "last_seen": 274}
+  ],
+  "notification_prefs": [
+    {"merchant": "upgrade-synth-1", "kind": "fixture-kind-1", "channels": "fixture-channels-1", "enabled": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "kind": "fixture-kind-2", "channels": "fixture-channels-2", "enabled": 274, "updated_ts": 274}
+  ],
+  "notification_deliveries": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "command_id": "fixture-command_id-1", "dedupe_key": "fixture-dedupe_key-1", "kind": "fixture-kind-1", "channel": "fixture-channel-1", "recipient": "fixture-recipient-1", "status": "fixture-status-1", "reason": "fixture-reason-1", "created_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "command_id": "fixture-command_id-2", "dedupe_key": "fixture-dedupe_key-2", "kind": "fixture-kind-2", "channel": "fixture-channel-2", "recipient": "fixture-recipient-2", "status": "fixture-status-2", "reason": "fixture-reason-2", "created_ts": 274}
+  ],
+  "accounting_documents": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "kind": "fixture-kind-1", "series": "fixture-series-1", "seq": 137, "number": "fixture-number-1", "doc_date": "fixture-doc_date-1", "currency": "fixture-currency-1", "total_cents": 137, "tax_cents": 137, "customer": "fixture-customer-1", "parent_number": "fixture-parent_number-1", "command_id": "fixture-command_id-1", "created_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "kind": "fixture-kind-2", "series": "fixture-series-2", "seq": 274, "number": "fixture-number-2", "doc_date": "fixture-doc_date-2", "currency": "fixture-currency-2", "total_cents": 274, "tax_cents": 274, "customer": "fixture-customer-2", "parent_number": "fixture-parent_number-2", "command_id": "fixture-command_id-2", "created_ts": 274}
+  ],
+  "accounting_entries": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "document_id": "fixture-document_id-1", "number": "fixture-number-1", "doc_date": "fixture-doc_date-1", "account": "fixture-account-1", "label": "fixture-label-1", "debit_cents": 137, "credit_cents": 137, "created_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "document_id": "fixture-document_id-2", "number": "fixture-number-2", "doc_date": "fixture-doc_date-2", "account": "fixture-account-2", "label": "fixture-label-2", "debit_cents": 274, "credit_cents": 274, "created_ts": 274}
+  ],
+  "accounting_periods": [
+    {"merchant": "upgrade-synth-1", "period": "fixture-period-1", "locked_ts": 137, "locked_by": "fixture-locked_by-1", "command_id": "fixture-command_id-1"},
+    {"merchant": "upgrade-synth-2", "period": "fixture-period-2", "locked_ts": 274, "locked_by": "fixture-locked_by-2", "command_id": "fixture-command_id-2"}
+  ],
+  "payslips": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "period": "fixture-period-1", "member_id": "fixture-member_id-1", "member_name": "fixture-member_name-1", "role": "till", "rate_set": "fixture-rate_set-1", "base_cents": 137, "overtime_cents": 137, "bonus_cents": 137, "advance_cents": 137, "gross_cents": 137, "capped_cents": 137, "cnss_cents": 137, "amo_cents": 137, "igr_cents": 137, "employer_cents": 137, "net_cents": 137, "dependents": 137, "command_id": "fixture-command_id-1", "created_ts": 137, "updated_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "period": "fixture-period-2", "member_id": "fixture-member_id-2", "member_name": "fixture-member_name-2", "role": "till", "rate_set": "fixture-rate_set-2", "base_cents": 274, "overtime_cents": 274, "bonus_cents": 274, "advance_cents": 274, "gross_cents": 274, "capped_cents": 274, "cnss_cents": 274, "amo_cents": 274, "igr_cents": 274, "employer_cents": 274, "net_cents": 274, "dependents": 274, "command_id": "fixture-command_id-2", "created_ts": 274, "updated_ts": 274}
+  ],
+  "payroll_periods": [
+    {"merchant": "upgrade-synth-1", "period": "fixture-period-1", "status": "fixture-status-1", "employees": 137, "gross_cents": 137, "net_cents": 137, "employer_cents": 137, "journal_number": "fixture-journal_number-1", "declaration": "fixture-declaration-1", "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "period": "fixture-period-2", "status": "fixture-status-2", "employees": 274, "gross_cents": 274, "net_cents": 274, "employer_cents": 274, "journal_number": "fixture-journal_number-2", "declaration": "fixture-declaration-2", "updated_ts": 274}
+  ],
+  "payment_links": [
+    {"merchant": "upgrade-synth-1", "reference": "fixture-reference-1", "seq": 137, "command_id": "fixture-command_id-1", "provider_ref": "fixture-provider_ref-1", "url": "fixture-url-1", "amount_cents": 137, "paid_cents": 137, "currency": "fixture-currency-1", "description": "fixture-description-1", "customer": "fixture-customer-1", "status": "fixture-status-1", "created_ts": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "reference": "fixture-reference-2", "seq": 274, "command_id": "fixture-command_id-2", "provider_ref": "fixture-provider_ref-2", "url": "fixture-url-2", "amount_cents": 274, "paid_cents": 274, "currency": "fixture-currency-2", "description": "fixture-description-2", "customer": "fixture-customer-2", "status": "fixture-status-2", "created_ts": 274, "updated_ts": 274}
+  ],
+  "payment_refunds": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "reference": "fixture-reference-1", "number": "fixture-number-1", "amount_cents": 137, "reason": "fixture-reason-1", "command_id": "fixture-command_id-1", "provider_ref": "fixture-provider_ref-1", "created_ts": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "reference": "fixture-reference-2", "number": "fixture-number-2", "amount_cents": 274, "reason": "fixture-reason-2", "command_id": "fixture-command_id-2", "provider_ref": "fixture-provider_ref-2", "created_ts": 274}
+  ],
+  "hotel_monthly_declarations": [
+    {"merchant": "upgrade-synth-1", "month": "fixture-month-1", "revision": 137, "state": "fixture-state-1", "source_cursor": 137, "idempotency_key": "fixture-idempotency_key-1", "canonical_hash": "fixture-canonical_hash-1", "previous_hash": "fixture-previous_hash-1", "payload_json": "fixture-payload_json-1", "lineage_json": "fixture-lineage_json-1", "closed_at": 137, "closed_by_user_id": "fixture-closed_by_user_id-1", "closed_by_name": "fixture-closed_by_name-1", "rectification_reason": "fixture-rectification_reason-1", "created_at": 137},
+    {"merchant": "upgrade-synth-2", "month": "fixture-month-2", "revision": 274, "state": "fixture-state-2", "source_cursor": 274, "idempotency_key": "fixture-idempotency_key-2", "canonical_hash": "fixture-canonical_hash-2", "previous_hash": "fixture-previous_hash-2", "payload_json": "fixture-payload_json-2", "lineage_json": "fixture-lineage_json-2", "closed_at": 274, "closed_by_user_id": "fixture-closed_by_user_id-2", "closed_by_name": "fixture-closed_by_name-2", "rectification_reason": "fixture-rectification_reason-2", "created_at": 274}
+  ]
+}

@@ -27,6 +27,10 @@
     }
   };
 
+  STR.fr.requestsFail = 'Chargement des demandes impossible.'; STR.fr.retry = 'Réessayer';
+  STR.en.requestsFail = 'Could not load requests.'; STR.en.retry = 'Retry';
+  STR.ar.requestsFail = 'تعذر تحميل الطلبات.'; STR.ar.retry = 'إعادة المحاولة';
+
   function lang() { return window.KiwiI18n && window.KiwiI18n.getLang ? window.KiwiI18n.getLang() : 'fr'; }
   function text() { return STR[lang()] || STR.fr; }
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]; }); }
@@ -185,10 +189,15 @@
     if (!host) return;
     if (window.KiwiEconomatRequests) { window.KiwiEconomatRequests.mount(host); return; }
     loadRequests().then(function () {
+      if (!window.KiwiEconomatRequests) { requestsLoading = null; throw new Error('requests-unavailable'); }
       var live = document.querySelector('[data-eco-requests-host]');
       if (live && Kiwi.activePage === 'economat' && window.KiwiEconomatRequests) window.KiwiEconomatRequests.mount(live);
-    }).catch(function () {});
+    }).catch(function () {
+      if (document.querySelector('[data-eco-requests-host]') !== host || Kiwi.activePage !== 'economat') return;
+      host.innerHTML = '<p role="alert">' + esc(text().requestsFail) + '</p><button type="button" class="hx-btn" data-action="eco-requests-retry">' + esc(text().retry) + '</button>';
+    });
   }
+  handlers['eco-requests-retry'] = function () { mountRequests(); };
   /* Le stock lu ici aide la validation d'une demande (quantité en stock). */
   window.KiwiEconomatStock = { rows: inventoryRows };
 

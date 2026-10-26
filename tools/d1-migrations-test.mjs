@@ -202,9 +202,12 @@ function snapshot(db, seed) {
 }
 
 /* Met à niveau une base remplie avec `laterSqls` (dans l'ordre) et rend les écarts. */
-function upgradeProblems(baselineSql, laterSqls, seed = SEED) {
+const upgradeFixtures = JSON.parse(readFileSync(join(ROOT, 'tools/d1-upgrade-fixtures.json'), 'utf8'));
+function upgradeProblems(baselineSql, laterSqls, seed) {
   const db = freshDb();
   db.exec(baselineSql);
+  seed ||= { ...SEED, ...Object.fromEntries(Object.entries(upgradeFixtures).filter(([table]) =>
+    db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))) };
   insertAll(db, seed);
   const before = snapshot(db, seed);
   const colsBefore = new Map([...before.keys()].map((t) => [t, new Set(columnsOf(db, t).map((c) => c.name))]));
@@ -292,6 +295,38 @@ if (baseline) {
       .some((p) => p.startsWith('print_jobs :')));
 }
 
+// Every post-baseline table is populated at its introduction, before ALL later
+// migrations. An explicit fixture inventory makes a new unseeded ledger fail.
+{
+  const fixtures = upgradeFixtures;
+  const db = freshDb(), introduced = new Set();
+  let prefix = '';
+  for (const [i, file] of files.entries()) {
+    const old = new Set(shapeOf(db).tables.keys());
+    const sql = read(file);
+    db.exec(sql); prefix += '\n' + sql;
+    if (i === 0) continue;
+    for (const table of shapeOf(db).tables.keys()) {
+      if (old.has(table)) continue;
+      introduced.add(table);
+      check(`${table}: explicit populated upgrade fixture`, fixtures[table]?.length >= 2);
+      if (!fixtures[table]?.length) continue;
+      const remaining = files.slice(i + 1).map(read);
+      const upgraded = upgradeProblems(prefix, remaining);
+      check(`${table}: all later migrations preserve every historical value`, !upgraded.problems.length, upgraded.problems.join(' | '));
+      upgraded.db.close();
+      // A rebuild with identical columns but zero rows must be rejected, even
+      // for the last migration's tables (the next migration has not shipped).
+      const mutation = `PRAGMA legacy_alter_table=ON; CREATE TABLE upgrade_probe AS SELECT * FROM "${table}" WHERE 0; DROP TABLE "${table}"; ALTER TABLE upgrade_probe RENAME TO "${table}"`;
+      const broken = upgradeProblems(prefix, [...remaining, mutation]);
+      check(`${table}: destructive later rebuild is detected`, broken.problems.some(p => p.startsWith(table + ' :')));
+      broken.db.close();
+    }
+  }
+  check('no stale post-baseline fixtures', Object.keys(fixtures).every(t => introduced.has(t)));
+  db.close();
+}
+
 console.log('\n■ Le comparateur voit un écart');
 {
   const want = shapeOf(applySchema(freshDb()));
@@ -305,6 +340,29 @@ console.log('\n■ Le comparateur voit un écart');
   drifted.exec('CREATE TRIGGER sales_change_log AFTER UPDATE ON sales BEGIN SELECT 1; END;');
   check('un trigger modifié est signalé', compareShapes(want, shapeOf(drifted)).some(g => g.includes('trigger sales_change_log') && g.includes('différente')));
   check('un index manquant est signalé', gaps.some((g) => g.includes('idx_sales_merchant')), gaps.join(' | '));
+}
+
+// Integrity semantics must survive independently of columns and indexes.
+{
+  const shape = sql => { const db = freshDb(); try { db.exec(sql); return shapeOf(db); } finally { db.close(); } };
+  const differs = (a, b) => compareShapes(shape(a), shape(b)).length > 0;
+  for (const [label, a, b] of [
+    ['CHECK expression', 'CREATE TABLE probe(x INTEGER CHECK(x > 0))', 'CREATE TABLE probe(x INTEGER CHECK(x >= 0))'],
+    ['nested CHECK and quoted punctuation', "CREATE TABLE probe(x TEXT CHECK(instr(x, ') CHECK(') > 0))", "CREATE TABLE probe(x TEXT CHECK(instr(x, ') CHECK(') >= 0))"],
+    ['column collation', 'CREATE TABLE probe(x TEXT COLLATE NOCASE)', 'CREATE TABLE probe(x TEXT COLLATE BINARY)'],
+    ['collation assigned to another column', 'CREATE TABLE probe(x TEXT COLLATE NOCASE, y TEXT)', 'CREATE TABLE probe(x TEXT, y TEXT COLLATE NOCASE)'],
+    ['implicit UNIQUE collation', 'CREATE TABLE probe(x TEXT, UNIQUE(x COLLATE NOCASE))', 'CREATE TABLE probe(x TEXT, UNIQUE(x COLLATE BINARY))'],
+    ['STRICT', 'CREATE TABLE probe(x INTEGER) STRICT', 'CREATE TABLE probe(x INTEGER)'],
+    ['WITHOUT ROWID', 'CREATE TABLE probe(x TEXT PRIMARY KEY) WITHOUT ROWID', 'CREATE TABLE probe(x TEXT PRIMARY KEY)'],
+    ['FK ON UPDATE', 'CREATE TABLE probe(x REFERENCES parent(id) ON UPDATE CASCADE)', 'CREATE TABLE probe(x REFERENCES parent(id) ON UPDATE RESTRICT)'],
+    ['FK MATCH declaration', 'CREATE TABLE probe(x REFERENCES parent(id) MATCH FULL)', 'CREATE TABLE probe(x REFERENCES parent(id) MATCH SIMPLE)'],
+    ['composite FK grouping', 'CREATE TABLE probe(x,y, FOREIGN KEY(x,y) REFERENCES parent(a,b))', 'CREATE TABLE probe(x,y, FOREIGN KEY(x) REFERENCES parent(a), FOREIGN KEY(y) REFERENCES parent(b))'],
+  ]) check(`${label} drift is detected`, differs(a, b));
+  check('CHECK formatting and column order do not cause drift', !differs(
+    "CREATE TABLE probe(x INTEGER CHECK (x > 0), y TEXT DEFAULT 'CHECK(foo)')",
+    "CREATE TABLE probe(y TEXT DEFAULT 'CHECK(foo)', x INTEGER /* CHECK(no) */ CHECK(x>0))"));
+  check('quoted CHECK literals retain whitespace and case', differs(
+    "CREATE TABLE probe(x TEXT CHECK(x != 'A B'))", "CREATE TABLE probe(x TEXT CHECK(x != 'a  b'))"));
 }
 
 console.log('\n■ wrangler sait où appliquer');

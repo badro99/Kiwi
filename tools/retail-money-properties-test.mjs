@@ -22,6 +22,17 @@ const amount=fc.integer({min:0,max:5_000_000}),positive=fc.integer({min:1,max:5_
 const partsArb=fc.array(fc.record({cents:fc.integer({min:1,max:400000}),method:fc.constantFrom('cash','card','virement','cheque','livraison')}),{minLength:1,maxLength:12});
 const basket=fc.array(fc.record({price:fc.integer({min:1,max:16666}),promo:fc.integer({min:0,max:100}),remise:fc.integer({min:0,max:100}),qty:fc.integer({min:1,max:5})}),{minLength:1,maxLength:60});
 function ticket(w,rows,reward){w.c.P={};const lines=rows.map((r,i)=>{w.c.P['p'+i]={price:r.price/100};return{pid:'p'+i,qty:r.qty,remise:r.remise,promoPrice:Math.floor(r.price*(100-r.promo)/100)/100};});return{client:'customer',reward:{clientId:'customer',kind:'percent',value:reward},lines};}
+// The shared conversion is exercised through the production return journal writer.
+{
+ const c=vm.createContext({IS_DEMO:false,P:{p:{name:'Article'}},STAFF:{},RETURN_LOG:[],saleClient:()=>null,persistReturnLog(){},ensureReturnCloud:()=>null});
+ load(c,'assets/pos-boutique.js',['bqMoney','recordReturn']);
+ for(const amount of [1.005,-1.005,2.675,0,19.995]) {
+   c.recordReturn({id:'sale',lines:[{pid:'p',unit:amount}]},[0],amount,'','avoir','');
+   const expected=amount===0?0:Math.sign(amount)*({1.005:101,2.675:268,19.995:2000}[Math.abs(amount)])/100;
+   assert.equal(c.bqMoney(amount,true),expected,'one signed money helper matches the journal conversion');
+   assert.equal(c.RETURN_LOG[0].amount,expected);assert.equal(c.RETURN_LOG[0].items[0].amount,expected);
+ }
+}
 for(const vertical of ['boutique','maison']){
  const w=world(vertical),c=w.c,p=w.prefix;
  await strict(vertical+' split checkout and server payment parts conserve cents; final tap books once',fc.property(partsArb,parts=>{
@@ -42,6 +53,10 @@ for(const vertical of ['boutique','maison']){
    const input=w.$(`#${p}-cash-in`);input.value=String(given/100);input.oninput({target:input});
    const change=Number(w.$(`#${p}-cash-rendu`).textContent);assert.equal(C(change),Math.max(0,given-due));assert.ok(change>=0&&C(change)<=given);
    assert.equal(w.$(`#${p}-cash-ok`).disabled,given<due);w.click(`#${p}-cash-ok`);assert.equal(w.receipts.length,given<due?0:1);
+ }));
+ if(vertical==='boutique') await strict('boutique subtotal and promotion aggregates use exact centime values',fc.property(fc.constant(null),()=>{
+   const t=ticket(w,[{price:10,promo:0,remise:0,qty:1},{price:20,promo:0,remise:0,qty:1}],0);
+   const tot=c.ticketTotals(t);assert.equal(tot.sub,0.3);assert.equal(tot.total,0.3);assert.equal(tot.promo,0);assert.equal(tot.remise,0);
  }));
  await strict(vertical+' positive discounted basket payload lines equal ticket, including folded 41..60-line baskets',fc.property(basket,fc.integer({min:0,max:99}),(rows,reward)=>{
    const t=ticket(w,rows,reward),tot=c.ticketTotals(t);if(!tot.total)return;

@@ -642,7 +642,7 @@
       const items = Array.isArray(ret && ret.items) ? ret.items : [];
       return items.map((item, i) => ({
         id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
-        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(_rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { day: '2-digit', month: '2-digit' }),
         name: `${Number(item.qty) || 1} × ${item.name || _rL('Article', 'Item', 'منتج')}${item.size ? ' · ' + item.size : ''}`,
         amt: Number(item.amount) || Number(ret.amount) || 0,
         reason: ret.reason || (ret.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Avoir', 'Store credit', 'رصيد المتجر')),
@@ -697,9 +697,9 @@
       const tag = credit.status === 'active' ? `<span class="rx-tag">${_rL('Actif', 'Active', 'نشط')}</span>` : credit.status === 'consumed' ? `<span class="rx-tag muted">${_rL('Utilisé', 'Used', 'مستخدم')}</span>`
         : credit.status === 'cancelled' ? `<span class="rx-tag out">${_rL('Annulé', 'Cancelled', 'ملغى')}</span>` : `<span class="rx-tag muted">${esc(credit.status)}</span>`;
       return `<div class="rx-row rx-credit" data-credit-row data-credit-search="${esc(search)}">
-        <span class="rx-when"><b>${esc(credit.code)}</b><small>${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
+        <span class="rx-when"><b>${esc(credit.code)}</b><small>${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString(_rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'))}</small></span>
         <span class="rx-what"><b>${esc(credit.customerName || _rL('Porteur du bon', 'Voucher holder', 'حامل القسيمة'))}</b><small>${_rL('Vente', 'Sale', 'عملية البيع')} ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</small></span>
-        <span class="rx-who">${esc(issued.actor || credit.issuedBy || _rL('Caisse', 'Till', 'الصندوق'))}<small>${_rL('expire le', 'expires', 'تنتهي في')} ${creditLastDay(credit.expiresAt).toLocaleDateString('fr-FR')}</small></span>
+        <span class="rx-who">${esc(issued.actor || credit.issuedBy || _rL('Caisse', 'Till', 'الصندوق'))}<small>${_rL('expire le', 'expires', 'تنتهي في')} ${creditLastDay(credit.expiresAt).toLocaleDateString(_rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'))}</small></span>
         <span class="rx-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<small>${_rL('sur', 'of', 'من')} ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></span>
         <span class="rx-state">${tag}
           ${credit.status !== 'cancelled' ? `<button data-activation=write class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">${_rL('Corriger', 'Correct', 'تصحيح')}</button>` : ''}

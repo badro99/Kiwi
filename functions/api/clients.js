@@ -325,8 +325,8 @@ const pointsFor = (amount, cfg) => Math.max(0,
  * chaque passage. Le nom est saisi en clair par le commerçant (« Café ») ; il
  * vaut pour toute ligne qui le contient comme mot, accents et casse ignorés
  * (« Café noir », « CAFE CREME » oui ; « Décaféiné » non). */
-const foldName = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  .replace(/[^a-z0-9]+/g, ' ').trim();
+const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+  .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 export function qualifyingQty(cfg, items) {
   const want = foldName(cfg && cfg.product && cfg.product.item);
   if (!want) return 0;

@@ -82,6 +82,49 @@ function normalizeIndexSql(sql) {
     .trim();
 }
 
+/* Tokenize rather than regex-match SQL: CHECKs can nest and quoted values
+ * can contain parentheses, comment markers and keywords. Preserve string bytes.
+ * Column order and constraint names are deliberately not part of the shape. */
+function normalizeIdentifier(token) {
+  const name = token.slice(1, -1).replace(/""/g, '"').replace(/``/g, '`').toLowerCase();
+  return /^[a-z_][\w$]*$/.test(name) ? name : JSON.stringify(name);
+}
+
+function tableIntegrity(sql) {
+  const tokens = (sql.match(/'(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\[[^\]]*\]|--[^\n]*|\/\*[\s\S]*?\*\/|[a-zA-Z_][\w$]*|[0-9]+|[^\s]/g) || [])
+    .filter(t => !t.startsWith('--') && !t.startsWith('/*'))
+    .map(t => t.startsWith("'") ? t : /^["`\[]/.test(t) ? normalizeIdentifier(t) : t.toLowerCase());
+  const start = tokens.indexOf('('), segments = [];
+  let depth = 0, from = start + 1;
+  for (let i = start + 1; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === ')' && depth === 0) { segments.push(tokens.slice(from, i)); break; }
+    if (t === ',' && depth === 0) { segments.push(tokens.slice(from, i)); from = i + 1; }
+    if (t === '(') depth++;
+    if (t === ')') depth--;
+  }
+  const checks = [], collations = [], matches = [];
+  for (const segment of segments) {
+    const column = ['constraint', 'primary', 'unique', 'check', 'foreign'].includes(segment[0]) ? '' : segment[0];
+    for (let i = 0; i < segment.length; i++) {
+      if (segment[i] === 'check' && segment[i + 1] === '(') {
+        let end = i + 2, level = 1;
+        for (; end < segment.length && level; end++) {
+          if (segment[end] === '(') level++;
+          if (segment[end] === ')') level--;
+        }
+        checks.push(JSON.stringify(segment.slice(i + 2, end - 1)));
+        i = end - 1;
+      } else if (segment[i] === 'collate') collations.push(JSON.stringify([column, segment[i + 1]]));
+    }
+    const ref = segment.indexOf('references'), match = segment.indexOf('match');
+    // SQLite reports MATCH NONE even for MATCH FULL/SIMPLE. Keep the declaration
+    // too, so a future engine's enforcement cannot silently change the contract.
+    if (ref >= 0 && match >= 0) matches.push(JSON.stringify([column, segment.slice(ref, match), segment[match + 1]]));
+  }
+  return { checks: checks.sort(), collations: collations.sort(), matches: matches.sort() };
+}
+
 export function shapeOf(db) {
   const tables = new Map();
   const indexes = new Map();
@@ -94,20 +137,27 @@ export function shapeOf(db) {
   const tableInfo = db.prepare('SELECT * FROM pragma_table_info(?)');
   const foreignKeyList = db.prepare('SELECT * FROM pragma_foreign_key_list(?)');
   const indexList = db.prepare('SELECT * FROM pragma_index_list(?)');
-  const indexInfo = db.prepare('SELECT name FROM pragma_index_info(?)');
+  const indexInfo = db.prepare('SELECT name, coll, desc FROM pragma_index_xinfo(?) WHERE key = 1');
+  const tableSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?");
+  const options = new Map(db.prepare('SELECT name, wr, strict FROM pragma_table_list').all().map(r => [r.name, [r.wr, r.strict]]));
   const indexSql = db.prepare('SELECT sql FROM sqlite_master WHERE name = ?');
   for (const table of names) {
     const columns = new Map();
     for (const c of tableInfo.all(table)) {
       columns.set(c.name, `${String(c.type).toUpperCase()} · notnull=${c.notnull} · default=${c.dflt_value} · pk=${c.pk}`);
     }
-    const foreignKeys = foreignKeyList.all(table)
-      .map((fk) => `${fk.from}→${fk.table}.${fk.to} on delete ${fk.on_delete}`)
-      .sort();
-    tables.set(table, { columns, foreignKeys });
+    const groups = new Map();
+    for (const fk of foreignKeyList.all(table)) {
+      if (!groups.has(fk.id)) groups.set(fk.id, []);
+      groups.get(fk.id).push(fk);
+    }
+    const foreignKeys = [...groups.values()].map(rows => JSON.stringify(rows.sort((a, b) => a.seq - b.seq)
+      .map(fk => [fk.from, fk.table, fk.to, fk.on_delete, fk.on_update, fk.match]))).sort();
+    const integrity = { ...tableIntegrity(tableSql.get(table).sql), options: options.get(table) };
+    tables.set(table, { columns, foreignKeys, integrity });
 
     for (const index of indexList.all(table)) {
-      const cols = indexInfo.all(index.name).map((r) => r.name).join(',');
+      const cols = indexInfo.all(index.name).map(r => `${r.name} COLLATE ${r.coll} ${r.desc ? 'DESC' : 'ASC'}`).join(',');
       if (index.origin === 'c') {
         const { sql } = indexSql.get(index.name);
         indexes.set(index.name, { table, describe: normalizeIndexSql(sql) });
@@ -140,6 +190,9 @@ export function compareShapes(want, got) {
     }
     for (const column of g.columns.keys()) {
       if (!w.columns.has(column)) out.push(`colonne ${table}.${column} : créée par les migrations, absente de schema.sql`);
+    }
+    if (JSON.stringify(w.integrity) !== JSON.stringify(g.integrity)) {
+      out.push(`intégrité de ${table} : CHECK, COLLATE, MATCH ou options de table différents`);
     }
     if (w.foreignKeys.join('|') !== g.foreignKeys.join('|')) {
       out.push(`clés étrangères de ${table} : schema.sql [${w.foreignKeys}] ≠ migrations [${g.foreignKeys}]`);

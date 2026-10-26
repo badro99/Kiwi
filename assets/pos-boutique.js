@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=20';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=20';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=20';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=21';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=21';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=21';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -17,9 +17,10 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
    * est un `type=number` sans `step`, donc il ACCEPTE les décimales : seule la
    * lecture les jetait. On accepte aussi la virgule, que tape un clavier
    * français, et on arrête aux centimes — l'unité réelle du dirham. */
-  function bqMoney(v) {
+  function bqMoney(v, signed = false) {
     const n = parseFloat(String(v == null ? '' : v).replace(',', '.'));
-    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+    if (!Number.isFinite(n) || (!signed && n <= 0)) return 0;
+    return Math.sign(n) * Math.round(Number(Math.abs(n).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100;
   }
   function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   // Product sheet and promotion composer are siblings of mount(), not children.
@@ -888,14 +889,14 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       const qty = quantities && quantities.has(i) ? Number(quantities.get(i)) || 1 : 1;
       return {
         name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', size: ln.size || '',
-        qty, amount: Math.sign((Number(ln.unit) || 0) * qty) * Math.round(Number(Math.abs((Number(ln.unit) || 0) * qty).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,
+        qty, amount: bqMoney((Number(ln.unit) || 0) * qty, true),
       };
     }).filter(Boolean);
     const now = Date.now();
     const client = saleClient(sale);
     RETURN_LOG.unshift({
       id: `RET-${sale.id}-${now}`, ts: now, saleRef: sale.id, kind: kind || 'avoir',
-      reason: reason || '', amount: Math.sign(Number(amount) || 0) * Math.round(Number(Math.abs(Number(amount) || 0).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100, reference: reference || '',
+      reason: reason || '', amount: bqMoney(Number(amount) || 0, true), reference: reference || '',
       actor: (STAFF.caissiere && STAFF.caissiere.name) || 'Caisse',
       client: (client && client.name) || 'Cliente de passage', items,
     });
@@ -1157,12 +1158,13 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
      la récompense un dû de la cliente. Les confondre au total, c'est rendre le
      rapport de clôture incapable de dire ce que les promotions ont coûté. */
   function ticketTotals(t) {
-    const sub = t.lines.reduce((s, ln) => s + shelf(P[ln.pid].price) * ln.qty, 0);
-    const afterPromo = t.lines.reduce((s, ln) => s + lineBase(ln) * ln.qty, 0);
-    const afterLines = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
-    const reward = rewardDiscount(t, afterLines);
+    const cents = v => Math.round(v * 100);
+    const sub = t.lines.reduce((s, ln) => s + cents(shelf(P[ln.pid].price)) * ln.qty, 0);
+    const afterPromo = t.lines.reduce((s, ln) => s + cents(lineBase(ln)) * ln.qty, 0);
+    const afterLines = t.lines.reduce((s, ln) => s + cents(lineTotal(ln)), 0);
+    const reward = cents(rewardDiscount(t, afterLines / 100));
     const total = Math.max(0, afterLines - reward);
-    return { sub, promo: sub - afterPromo, remise: afterPromo - afterLines, reward, total };
+    return { sub: sub / 100, promo: (sub - afterPromo) / 100, remise: (afterPromo - afterLines) / 100, reward: reward / 100, total: total / 100 };
   }
   /* Le nom à écrire sur le reçu. Une seule promotion en jeu → son nom ; deux ou
      plus → le mot générique, parce qu'en nommer une seule laisserait croire que
@@ -1728,7 +1730,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
          ce qu'on lui a retiré, et à quel nom la fidélité est comptée. Sans ça le
          reçu affiche un total qui ne correspond pas à l'addition des lignes et
          personne ne peut vérifier sa remise. */
-      subtotal: frozen.lines.reduce((s, ln) => s + ln.price * ln.qty, 0),
+      subtotal: tot.sub,
       /* Trois baisses, deux lignes distinctes sur le reçu. `promo` porte son
          NOM quand une seule promotion a joué — la cliente retrouve l'affiche
          qu'elle a lue en vitrine. Quand plusieurs se croisent sur le même
@@ -1764,14 +1766,14 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
              de la clôture exact quand un ticket est réglé moitié carte moitié
              espèces (voir bqMoneyParts). La remise suit pour le rapport Z. */
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
-          discount: Math.sign((tot.remise + tot.reward)) * Math.round(Number(Math.abs((tot.remise + tot.reward)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,
+          discount: bqMoney((tot.remise + tot.reward), true),
           /* L'accord responsable suit la vente, pas seulement l'écran : qui a
              autorisé, quand, quel pourcentage, et ce que la remise a coûté au
              magasin. C'est la seule chose relisible le jour d'un contrôle. */
           remiseAuth: frozen.remiseAuth
-            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, amount: Math.sign((tot.remise)) * Math.round(Number(Math.abs((tot.remise)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100 }
+            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, amount: bqMoney((tot.remise), true) }
             : null,
-          promoOff: Math.sign((tot.promo)) * Math.round(Number(Math.abs((tot.promo)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,        // ce que les promotions ont coûté, pour la clôture
+          promoOff: bqMoney((tot.promo), true),        // ce que les promotions ont coûté, pour la clôture
           /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
              `unit` (le prix réellement payé), mais un échange ou une réclamation
              trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —
@@ -2705,14 +2707,15 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   /* L'écran d'après-clôture : une décision, la trace papier. */
   function bqShowPostClose(report) {
     bqClosedReport = report;
+    const L = window.KiwiCaisseLang || { t: s => s };
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
     const nCat = (report.categories || []).length;
     const nItems = (report.categories || []).reduce((s, c) => s + (c.qty || 0), 0);
-    const bits = [`${report.txns} transaction${report.txns > 1 ? 's' : ''}`];
+    const bits = [L.t(report.txns > 1 ? '{n} transactions' : '{n} transaction').replace('{n}', report.txns)];
     if (nCat) bits.push(`${nItems} ${V.items} · ${nCat} ${nCat > 1 ? V.cats : V.cat}`);
     if (report.cash && report.cash.ecart != null && Math.abs(report.cash.ecart) > 0.5) {
-      bits.push(`écart ${(report.cash.ecart > 0 ? '+ ' : '− ')}${fmtMAD(Math.abs(report.cash.ecart))}`);
+      bits.push(L.t(report.cash.ecart > 0 ? 'écart + {n} MAD' : 'écart − {n} MAD').replace('{n}', fmtMAD(Math.abs(report.cash.ecart)).replace(/\s*MAD$/, '')));
     }
     const z = document.createElement('div');
     z.className = 'cloture-veil is-open';
@@ -2721,16 +2724,16 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     z.setAttribute('aria-modal', 'true');
     z.innerHTML = `
       <div class="cloture-card zs-card">
-        <div class="clo-eyebrow">Journée clôturée</div>
-        <div class="clo-title">Rapport journalier</div>
+        <div class="clo-eyebrow">${esc(L.t('Journée clôturée'))}</div>
+        <div class="clo-title">${esc(L.t('Rapport journalier'))}</div>
         <div class="zs-total mono">${fmtMAD(report.net)}</div>
-        <div class="clo-meta">${bits.join(' · ')}</div>
+        <div class="clo-meta">${bits.map(bit => esc(bit)).join(' · ')}</div>
         <div class="clo-actions">
-          <button class="clo-btn primary" id="bqzs-print"><i data-lucide="printer"></i><span>Imprimer le rapport</span></button>
-          <button class="clo-btn secondary" id="bqzs-reprint" hidden><i data-lucide="copy"></i><span>Réimprimer</span></button>
+          <button class="clo-btn primary" id="bqzs-print"><img src="assets/icons/material/print.svg" width="20" height="20" alt=""><span>${esc(L.t('Imprimer le rapport'))}</span></button>
+          <button class="clo-btn secondary" id="bqzs-reprint" hidden><img src="assets/icons/material/content_copy.svg" width="20" height="20" alt=""><span>${esc(L.t('Réimprimer'))}</span></button>
         </div>
-        <div class="clo-foot"><button id="bqzs-skip">Continuer sans imprimer</button></div>
-        <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.</div>
+        <div class="clo-foot"><button id="bqzs-skip">${esc(L.t('Continuer sans imprimer'))}</button></div>
+        <div class="zs-note">${esc(L.t('Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.'))}</div>
       </div>`;
     document.body.appendChild(z);
     icons();

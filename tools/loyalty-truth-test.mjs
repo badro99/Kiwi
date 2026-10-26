@@ -20,6 +20,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { world, load } from './retail-money-harness.cjs';
+import mergedPart from './merged-source.cjs';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
@@ -98,6 +100,15 @@ console.log('\nCarte produit : un tampon par article choisi, pas par passage');
   check(Number(s.row().stamps) === 1, 'a replayed return applies once');
 }
 
+{
+  const s = store({ model: 'product', product: { item: 'قهوة', target: 10, reward: '1 offert' } });
+  const r = await s.post({ purchase: { clientId: 'c1', ref: 'arabic:1', amount: 36, saleRef: 'AR1',
+    items: [{ name: 'قهوة سوداء', qty: 2, total: 24 }, { name: 'قهوة', qty: 1, total: 12 }, { name: 'قهوية', qty: 4, total: 0 }] } });
+  check(r.status === 200 && Number(s.row().stamps) === 3, 'Arabic product earns stamps by whole word through the purchase handler');
+  await s.post({ refund: { clientId: 'c1', ref: 'refund:arabic:return', amount: 12, saleRef: 'AR1', items: [{ name: 'قهوة سوداء', qty: 1, total: 12 }] } });
+  check(Number(s.row().stamps) === 2, 'Arabic product return reverses the qualifying stamp');
+}
+
 console.log('\nCarte passages : un retour complet reprend le tampon du passage');
 {
   const s = store({ model: 'visit', visit: { target: 10, reward: '1 offert' } });
@@ -170,16 +181,20 @@ console.log('\nCaisse : la même règle avant la réponse du serveur');
   check(Number(KC.get(c.id, MERCHANT).stamps) === 3, 'the till counts 3 stamps for a tajine then three coffees, as the server will');
   KC.recordRefund(c.id, { amount: 12, saleRef: 'T2', eventRef: 'R1', items: [{ name: 'Café noir', qty: 1, total: 12 }] }, MERCHANT);
   check(Number(KC.get(c.id, MERCHANT).stamps) === 2, 'the till takes a stamp back when a coffee is returned');
+  KC.setConfig({ model: 'product', product: { item: 'قهوة', target: 10, reward: '1 offert' } }, MERCHANT);
+  const stamps = Number(KC.get(c.id, MERCHANT).stamps);
+  KC.recordPurchase(c.id, { amount: 24, saleRef: 'AR2', eventRef: 'AR2', items: [{ name: 'قهوة سوداء', qty: 2, total: 24 }] }, MERCHANT);
+  check(Number(KC.get(c.id, MERCHANT).stamps) === stamps + 2, 'offline client book also earns Arabic product stamps');
   KC.setConfig({ model: 'amount', amount: { perMad: 1, threshold: 100 } }, MERCHANT);
   const before = Number(KC.get(c.id, MERCHANT).points) || 0;
   KC.recordPurchase(c.id, { amount: 99.5, saleRef: 'A1', eventRef: 'A1' }, MERCHANT);
   check(Number(KC.get(c.id, MERCHANT).points) - before === 99, 'the till credits 99 points for 99,50 MAD');
 }
 
-console.log('\nBoutique et maison : la remise fidélité et le toast');
+console.log('\nMaison : la remise fidélité et le toast');
 {
   const read = (f) => maisonSource(fs.readFileSync(path.join(ROOT, f), 'utf8'));
-  for (const f of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
+  for (const f of ['assets/pos-maison.js']) {
     const src = read(f);
     const fn = src.slice(src.indexOf('function rewardDiscount('), src.indexOf('function rewardDiscount(') + 900);
     check(f === 'assets/pos-boutique.js' ? /base - shelf/.test(fn) : /base - shelf\(base \* \(100 - \(r\.value \|\| 0\)\) \/ 100\)/.test(fn) && !/Math\.round\(base \*/.test(fn),
@@ -187,9 +202,56 @@ console.log('\nBoutique et maison : la remise fidélité et le toast');
     check(!/Math\.round\(receivedNow \* \(\(cfg\.amount/.test(src) && !/Math\.round\(receivedNow \/ 10\)/.test(src),
       `${f}: the points toast never rounds up nor assumes one point per 10 MAD`);
   }
-  const src = read('assets/pos-boutique.js');
-  const shelf = new Function(src.match(/const shelf = [^\n]+/)[0] + '; return shelf;')();
-  check(shelf(245 * .9) === 220.5 && shelf(249 * .9) === 224.1, 'boutique loyalty preserves centimes');
+}
+
+// Full boutique reward confirmation -> checkout commit -> immutable receipt.
+for (const accepted of [true, false]) {
+  const w = world('boutique'), c = w.c;
+  w.storage.set('kiwiLive','1'); w.storage.set('kiwiLiveMerchant',MERCHANT);
+  const cfg = { model: 'amount', amount: { perMad: 1, threshold: 100, reward: '−10 %' } };
+  const server = store(cfg);
+  server.raw.prepare('UPDATE clients SET points=100 WHERE merchant=? AND id=?').run(MERCHANT,'c1');
+  const docs = { clients: { list: [{ id:'c1', name:'Client', points:100, achats:0 }], seq:2 }, fidelity:cfg };
+  Object.assign(c, { IS_DEMO:false, addEventListener(){}, dispatchEvent(){}, setInterval(){},
+    document:{readyState:'loading',addEventListener(){}},
+    KiwiStore:{currentVenue:()=>MERCHANT,define:(name,opts)=>({get:()=>docs[name] || opts.blank?.(),set:v=>{docs[name]=v;},subscribe(){}})},
+    KiwiLive:{isOn:()=>true,merchant:()=>MERCHANT},
+    fetch:async (_url,opts)=>{
+      const body=JSON.parse(opts?.body || '{}');
+      if (!body.redemption && !body.purchase) return {ok:true,json:async()=>({clients:[]})};
+      const r=body.redemption && !accepted ? {status:409,body:{error:'reward-not-ready'}} : await server.post(body);
+      return {ok:r.status===200,status:r.status,json:async()=>r.body};
+    },
+  });
+  c.navigator.onLine=true;
+  vm.runInContext(fs.readFileSync('assets/clients-store.js','utf8'),c);
+  vm.runInContext(mergedPart('assets/retail-sale-hold.js','assets/loyalty-reserve.js'),c);
+  vm.runInContext(fs.readFileSync('assets/receipt.js','utf8'),c);
+  c.ticketOwner=vm.runInNewContext(fs.readFileSync('assets/pos-boutique/ticket-owner.js','utf8').replace('export { ticketOwner };','ticketOwner;'));
+  const customer=c.KiwiClients.get('c1',MERCHANT);
+  c.P={p:{name:'Article',price:24.95}};
+  const ticket={num:'AR-1',syncId:'loyalty-full-sale',period:'2026',client:'c1',lines:[{pid:'p',qty:1,remise:0,promoPrice:24.95}],reward:{clientId:'c1',kind:'percent',value:10,label:'−10 %'}};
+  Object.assign(c,{state:{ticket,checkoutBusy:false},ticketPeriod:()=> '2026',ticketClient:()=>customer,ticketStockIssue:()=>null,
+    showStockIssue(){},renderTicket(){},renderGrid(){},renderBadges(){},persistStock(){},freshTicket(){},headSubVente:()=>'',
+    firstName:n=>n,useKiwiCl:()=>true,queueIfOffline(){},
+    root:{dispatchEvent(){}},KiwiPrinter:{printReceipt:async()=>({ok:true})},
+  });
+  load(c,'assets/pos-boutique.js',['bqMoney','linePromo','promoLabelForTicket','checkout']);
+  load(c,'assets/pos-boutique/checkout.js',['printReceiptNow']);
+  c.$=(selector,...args)=>selector==='#bq-today'?{textContent:''}:w.$(selector,...args);
+  c.checkout();
+  w.$$('[data-bq-m]').find(n=>n.dataset.bqM==='especes').onclick();
+  w.$('#bq-cash-in').value='22.45';w.$('#bq-cash-in').oninput({target:w.$('#bq-cash-in')});
+  w.click('#bq-cash-ok');
+  for(let i=0;i<30;i++) await new Promise(setImmediate);
+  if(accepted){
+    check(c.SALES.length===1 && c.SALES[0].total===22.45 && c.SALES[0].discount===2.5,'accepted reward commits the actual discounted checkout once');
+    check(c.SALES[0].rc?.totals.total===22.45 && c.SALES[0].rc.totals.discount===2.5 && c.SALES[0].rc.totals.subtotal===24.95 && c.SALES[0].rc.pay[0].amount===22.45,'actual receipt freezes subtotal, reward, paid total and tender');
+    check(Number(server.row().points)<100,'actual reservation spends server points');
+  } else {
+    check(c.SALES.length===0 && ticket.reward===undefined,'refused reservation stops the actual checkout before sale and receipt');
+  }
+  server.raw.close();
 }
 
 console.log(`\n✓ loyalty truth: ${checks} checks`);

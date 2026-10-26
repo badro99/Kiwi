@@ -130,16 +130,16 @@
       name: p.name || (p.role === 'owner' ? (S.ownerName || tr({ fr: 'Propriétaire', en: 'Owner', ar: 'المالك' })) : ''),
     }));
     let vid = null;
-    try {
+    {
       vid = venueApi && venueApi.createVenue && await venueApi.createVenue({
-        type: t.base, subtype: t.id,
+        type: t.base, subtype: t.id, throwOnError: true,
         name: S.bizName.trim() || tr({ fr: 'Mon activité', en: 'My business', ar: 'نشاطي' }),
         location: S.city.trim(), pins: validPins,
         goal: goal || 0,
         staffCount: S.teamGiven ? S.teamSize : 0,
         profile: { goals: S.goals, venueCount: S.venueCount, owner: S.ownerName.trim() },
       });
-    } catch (_) {}
+    }
     if (!vid) return null;
     storage.set('kiwiOwnerName', S.ownerName.trim());
     storage.set('kiwiBizName', S.bizName.trim());

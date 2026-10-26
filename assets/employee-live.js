@@ -119,7 +119,9 @@
   function records(owner) {
     var local = [];
     try { local = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner)) || '[]'); } catch (_) {}
-    return merge(local, copies[owner] || []);
+    var history = [];
+    try { history = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner + ':outcomes')) || '[]'); } catch (_) {}
+    return merge(merge(local, history), copies[owner] || []);
   }
   function readQueue(owner) { return records(owner).filter(function (i) { return !i.done; }); }
   function loadQueue(owner) {
@@ -134,6 +136,9 @@
     items = items.filter(function (i) { return !i.done || Number(i.at) > horizon; });
     var pending = items.filter(function (i) { return !i.done; });
     try {
+      var history = items.filter(function (i) { return i.done; });
+      if (history.length) store().setItem(QUEUE_PREFIX + owner + ':outcomes', JSON.stringify(history));
+      else store().removeItem(QUEUE_PREFIX + owner + ':outcomes');
       if (pending.length) store().setItem(QUEUE_PREFIX + owner, JSON.stringify(pending));
       else store().removeItem(QUEUE_PREFIX + owner);
       saved = true;
@@ -143,8 +148,8 @@
       return saved || !!stored;
     });
   }
-  function dropItem(owner, opId) {
-    var items = records(owner).map(function (i) { return i.opId === opId ? { opId: opId, at: i.at, done: true } : i; });
+  function dropItem(owner, opId, outcome) {
+    var items = records(owner).map(function (i) { return i.opId === opId ? { opId: opId, at: i.at, kind: i.kind, done: true, outcome: outcome || null } : i; });
     return writeQueue(owner, items).then(function () { copies[owner] = items; });
   }
   function bodyFor(item) {
@@ -175,7 +180,7 @@
       var item = readQueue(owner)[0];
       if (!item) { lastBlock = null; return Promise.resolve(); }
       return call('POST', bodyFor(item)).then(function (data) {
-        return dropItem(owner, item.opId).then(function () {
+        return dropItem(owner, item.opId, { result: data.pendingApproval ? 'approval' : 'sent' }).then(function () {
           outcomes[item.opId] = { data: data };
           if (data.pendingApproval) approvals++;
           sent++;
@@ -184,7 +189,7 @@
       }, function (err) {
         if (keeps(err)) { lastBlock = err; return; }
         // Refus définitif (code faux, pointage trop ancien) : retiré et signalé.
-        return dropItem(owner, item.opId).then(function () {
+        return dropItem(owner, item.opId, { result: 'rejected', status: err.status, reason: ['attendance-code-invalid', 'attendance-capture-overlaps', 'attendance-shift-too-long'].indexOf(err.code) >= 0 ? err.code : 'employee-request-failed' }).then(function () {
           outcomes[item.opId] = { error: err };
           rejected.push({ action: item.kind, error: err.code || 'employee-request-failed', at: item.at });
           return step();
@@ -227,7 +232,7 @@
         if (out) return remember(out.data);
         var err = lastBlock;
         // Session perdue ou essais épuisés : ce geste-ci est refusé à l'écran, comme avant.
-        if (err && !transient(err)) return dropItem(owner, item.opId).then(function () { throw err; });
+        if (err && !transient(err)) return dropItem(owner, item.opId, { result: 'rejected', status: err.status, reason: err.status === 401 ? 'session-required' : 'rate-limited' }).then(function () { throw err; });
         notify({ pending: readQueue(owner).length, queued: kind });
         var open = lastData && lastData.attendance && lastData.attendance.open;
         return { ok: true, queued: true, action: kind,
@@ -249,6 +254,7 @@
     // Un geste, une identité : une arrivée ou un départ rejoué en retard ne compte jamais deux fois.
     clockIn: function (attendanceCode, opId) { return punch('clock-in', attendanceCode, null, opId); },
     clockOut: function (progress, attendanceCode, opId) { return punch('clock-out', attendanceCode, progress, opId); },
+    punchOutcomes: function () { return queueOwner ? records(queueOwner).filter(function (i) { return i.done && i.outcome; }).map(function (i) { return { opId: i.opId, at: i.at, action: i.kind, outcome: Object.assign({}, i.outcome) }; }) : []; },
     pendingPunches: function () { return queueOwner ? readQueue(queueOwner).length : 0; },
     flushPunches: function () { return flush(); },
     requestPlanning: function (request) { return call('POST', Object.assign({ action: 'planning-request' }, request || {})); },

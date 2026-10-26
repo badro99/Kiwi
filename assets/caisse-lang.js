@@ -48,9 +48,15 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      "Avoirs · solde": "Store credit · balance",
+      "Aucun avoir": "No store credit",
+      "Les crédits boutique émis à ce client apparaîtront ici.": "Store credits issued to this customer will appear here.",
+      "Solde des avoirs indisponible. La lecture du serveur a échoué.": "Store credit balance unavailable. The server read failed.",
+      "Chargement des avoirs…": "Loading store credits…",
       'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.': 'The boutique uses whole units. For weighted goods, use the Grocery or Stock module.',
       "Non imprimé": "Not printed",
       "Réimprimer": "Reprint",
+      "Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.": "Reprint not confirmed. Check the connection and bridge, then retry.",
       "Soldé deux fois hors ligne": "Settled twice offline",
       "en avance": "advance",
       "Rembourser l’avance": "Refund advance",
@@ -704,9 +710,15 @@
     },
 
     ar: {
+      "Avoirs · solde": "الرصيد الدائن · الرصيد",
+      "Aucun avoir": "لا يوجد رصيد دائن",
+      "Les crédits boutique émis à ce client apparaîtront ici.": "ستظهر هنا الأرصدة الدائنة الصادرة لهذا العميل.",
+      "Solde des avoirs indisponible. La lecture du serveur a échoué.": "رصيد الائتمان غير متاح. تعذرت القراءة من الخادم.",
+      "Chargement des avoirs…": "جار تحميل الأرصدة الدائنة…",
       'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.': 'تستخدم البوتيك وحدات كاملة. للمنتجات الموزونة، استخدم وحدة البقالة أو المخزون.',
       "Non imprimé": "لم تتم الطباعة",
       "Réimprimer": "إعادة الطباعة",
+      "Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.": "لم يتم تأكيد إعادة الطباعة. تحقق من الاتصال والجسر، ثم أعد المحاولة.",
       "Soldé deux fois hors ligne": "تم السداد مرتين دون اتصال",
       "en avance": "كتسبيق",
       "Rembourser l’avance": "رد التسبيق",
@@ -2863,6 +2875,8 @@
      caissière de Casablanca ne lit pas « تموز ». Et ces jetons vivent à part du
      dictionnaire : « mai » est aussi un mot, et une robe appelée « Mai » ne doit
      pas devenir un mois parce qu'elle passe dans le même balayage. */
+
+  (function () { var creditCopy = {"Avoirs · solde": ["Store credits · balance", "الأرصدة الدائنة · الرصيد"], "Aucun avoir": ["No store credits", "لا توجد أرصدة دائنة"], "Les crédits boutique émis à ce client apparaîtront ici.": ["Store credits issued to this customer will appear here.", "ستظهر هنا الأرصدة الدائنة الصادرة لهذا الزبون."], "Date inconnue": ["Unknown date", "تاريخ غير معروف"], "sans échéance": ["no expiry", "دون انتهاء"], "reste": ["remaining", "المتبقي"], "expire": ["expires", "تنتهي"], "Vente": ["Sale", "بيع"], "solde": ["balance", "الرصيد"], "annulé": ["cancelled", "ملغى"], "utilisé": ["used", "مستعمل"]}; Object.keys(creditCopy).forEach(function(k){DICT.en[k]=creditCopy[k][0];DICT.ar[k]=creditCopy[k][1];}); })();
   var DATES = {
     en: {
       'lun.': 'Mon', 'mar.': 'Tue', 'mer.': 'Wed', 'jeu.': 'Thu',

@@ -31,7 +31,7 @@ const otherTill = auth.TILL_COOKIE + '=' + await auth.tillToken(env.AUTH_SECRET,
 const BRIDGES = ['a', 'b', 'x'].map((k, i) => ({ key: k, id: 'pb_' + String(i + 1).repeat(16), token: 'kpb_' + String(i + 1).repeat(64), merchant: k === 'x' ? 'server-other-shop' : merchant }));
 
 async function deposit(k, cookie = till, bridgeId) {
-  const res = await jobs.onRequestPost({ env, request: new Request('https://kiwi.test/api/print/jobs?merchant=' + merchant, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, target: { ip: '192.168.1.50', port: 9100 }, dataB64: 'S2l3aSB0aWNrZXQ=', kind: 'receipt', clientRef: 'ticket-' + String(k).padStart(4, '0'), ...(bridgeId ? { bridgeId } : {}) }) }) });
+  const res = await jobs.onRequestPost({ env, request: new Request('https://kiwi.test/api/print/jobs?merchant=' + merchant, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, target: { ip: '192.168.1.50', port: 9100 }, dataB64: 'S2l3aSB0aWNrZXQ=', kind: k % 2 ? 'kitchen' : 'receipt', clientRef: 'ticket-' + String(k).padStart(4, '0'), ...(bridgeId ? { bridgeId } : {}) }) }) });
   return { status: res.status, body: await res.json() };
 }
 async function poll(b) {
@@ -238,7 +238,15 @@ try {
     const reprint = async () => { const r = await jobs.onRequestPost({env,request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{method:'POST',headers:{Cookie:till,'Content-Type':'application/json'},body:JSON.stringify({action:'reprint-expired',id:original})})}); assert.equal(r.status,200);return r.json(); };
     const copies = await Promise.all([reprint(),reprint()]);
     assert.equal(copies[0].id,copies[1].id); assert.notEqual(copies[0].id,original);
-    assert.equal(rows().length,2); assert.equal((await poll(BRIDGES[0])).jobs.length,1);
+    assert.equal(rows().length,2);
+    assert.ok(!(await listing()).body.jobs.some(j=>j.id===original), 'reopened panel offers source again');
+    const replacement = (await poll(BRIDGES[0])).jobs[0];
+    assert.equal(replacement.id, copies[0].id);
+    assert.equal((await ack(BRIDGES[0], replacement.id, 'printed')).updated, true);
+    assert.ok(!(await listing()).body.jobs.some(j=>j.id===original), 'printed recovery still offered');
+    assert.equal((await reprint()).id, replacement.id);
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 0);
+    assert.equal(rows().length, 2);
     assert.notEqual((await listing(otherTill)).status,200);
     clock += 24 * 3600000;
     assert.ok(!(await listing()).body.jobs.some(j=>j.id===original));

@@ -302,9 +302,10 @@
         } catch (_) {}
       }
       var ok = !!(r && r.ok);
+      if (!ok && opts.throwOnError) throw Object.assign(new Error('store-create-failed'), { status: r && r.status || 0 });
       if (ok && slug) freshDrop(slug);
       return ok;
-    }).catch(function () { return false; });
+    }).catch(function (error) { if (opts.throwOnError) throw error; return false; });
   }
 
   /* Push this store's business type (onboarding kiwiBizType) up to the server so

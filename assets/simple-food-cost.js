@@ -48,7 +48,7 @@
       lines: 'Lignes', addFood: 'Ajouter un ingrédient', addPack: 'Ajouter un emballage',
       lName: 'Produit', lType: 'Type', food: 'Matière', packaging: 'Emballage', lPackPrice: 'Prix du lot', lPackQty: 'Qté du lot', lPackUnit: 'Unité du lot',
       lUseQty: 'Qté utilisée', lUseUnit: 'Unité', lYield: 'Rendement %', lDate: 'Date du prix', lCost: 'Coût', remove: 'Retirer',
-      rPrice: 'prix manquant', rPackQty: 'quantité du lot manquante', rUseQty: 'quantité utilisée manquante', rUnit: 'unités incompatibles',
+      rYield: 'rendement requis entre 0 exclu et 100 %', readError: 'Lecture de l’historique impossible.', retryRead: 'Réessayer', rPrice: 'prix manquant', rPackQty: 'quantité du lot manquante', rUseQty: 'quantité utilisée manquante', rUnit: 'unités incompatibles',
       oldPrice: 'prix de {days} j', undated: 'non daté',
       sumFood: 'Matière (lot)', sumPack: 'Emballages (lot)', sumTotal: 'Total du lot', sumPortion: 'Par portion', sumPriceHT: 'Prix de vente HT',
       sumPct: 'Coût matière', sumContribution: 'Contribution par portion', sumSuggested: 'Prix pour l’objectif',
@@ -89,7 +89,7 @@
       lines: 'Lines', addFood: 'Add an ingredient', addPack: 'Add packaging',
       lName: 'Product', lType: 'Type', food: 'Food', packaging: 'Packaging', lPackPrice: 'Pack price', lPackQty: 'Pack qty', lPackUnit: 'Pack unit',
       lUseQty: 'Qty used', lUseUnit: 'Unit', lYield: 'Yield %', lDate: 'Price date', lCost: 'Cost', remove: 'Remove',
-      rPrice: 'missing price', rPackQty: 'missing pack quantity', rUseQty: 'missing quantity used', rUnit: 'incompatible units',
+      rYield: 'yield must be above 0 and at most 100%', readError: 'Could not read version history.', retryRead: 'Retry', rPrice: 'missing price', rPackQty: 'missing pack quantity', rUseQty: 'missing quantity used', rUnit: 'incompatible units',
       oldPrice: '{days}-day-old price', undated: 'undated',
       sumFood: 'Food (batch)', sumPack: 'Packaging (batch)', sumTotal: 'Batch total', sumPortion: 'Per portion', sumPriceHT: 'Selling price excl. VAT',
       sumPct: 'Food cost', sumContribution: 'Contribution per portion', sumSuggested: 'Price for the target',
@@ -130,7 +130,7 @@
       lines: 'السطور', addFood: 'إضافة مكوّن', addPack: 'إضافة تغليف',
       lName: 'المنتج', lType: 'النوع', food: 'مادة', packaging: 'تغليف', lPackPrice: 'سعر الدفعة', lPackQty: 'كمية الدفعة', lPackUnit: 'وحدة الدفعة',
       lUseQty: 'الكمية المستعملة', lUseUnit: 'الوحدة', lYield: 'المردود %', lDate: 'تاريخ السعر', lCost: 'التكلفة', remove: 'حذف',
-      rPrice: 'السعر ناقص', rPackQty: 'كمية الدفعة ناقصة', rUseQty: 'الكمية المستعملة ناقصة', rUnit: 'وحدات غير متوافقة',
+      rYield: 'يجب أن يكون المردود أكبر من 0 وحتى 100٪', readError: 'تعذرت قراءة سجل النسخ.', retryRead: 'أعد المحاولة', rPrice: 'السعر ناقص', rPackQty: 'كمية الدفعة ناقصة', rUseQty: 'الكمية المستعملة ناقصة', rUnit: 'وحدات غير متوافقة',
       oldPrice: 'سعر عمره {days} يوماً', undated: 'بدون تاريخ',
       sumFood: 'المواد (الدفعة)', sumPack: 'التغليف (الدفعة)', sumTotal: 'مجموع الدفعة', sumPortion: 'لكل حصة', sumPriceHT: 'سعر البيع دون ضريبة',
       sumPct: 'تكلفة المواد', sumContribution: 'المساهمة لكل حصة', sumSuggested: 'السعر المناسب للهدف',
@@ -185,6 +185,7 @@
       if (!isNum(l.packPrice)) r.reason = 'price';
       else if (!isNum(l.packQty) || +l.packQty <= 0) r.reason = 'packQty';
       else if (!isNum(l.useQty)) r.reason = 'useQty';
+      else if (l.yieldPct != null && (!isNum(l.yieldPct) || +l.yieldPct <= 0 || +l.yieldPct > 100)) r.reason = 'yield';
       else {
         const q = convert(+l.useQty, l.useUnit || l.packUnit, l.packUnit);
         if (q == null) r.reason = 'unit';
@@ -429,17 +430,21 @@
   }
   async function loadHistory() {
     if (!S.openId) return;
+    S.historyError = false; S.snapshotError = null;
     try {
       const r = await api('GET', 'merchant=' + encodeURIComponent(S.merchant) + '&id=' + encodeURIComponent(S.openId));
-      S.history = r.status === 200 ? (r.data.history || []) : [];
-    } catch (_) { S.history = []; }
+      if (r.status !== 200 || !Array.isArray(r.data.history)) throw new Error('history-read');
+      S.history = r.data.history;
+    } catch (_) { S.history = []; S.historyError = true; }
     paint();
   }
   async function loadSnapshot(v) {
+    S.snapshot = null; S.snapshotError = null;
     try {
       const r = await api('GET', 'merchant=' + encodeURIComponent(S.merchant) + '&id=' + encodeURIComponent(S.openId) + '&version=' + v);
-      S.snapshot = r.status === 200 ? r.data.snapshot : null;
-    } catch (_) { S.snapshot = null; }
+      if (r.status !== 200 || !r.data.snapshot) throw new Error('snapshot-read');
+      S.snapshot = r.data.snapshot;
+    } catch (_) { S.snapshotError = v; }
     paint();
   }
 
@@ -516,7 +521,7 @@
   const numIn = (field, value, extra) => inp(field, value, ` type="number" inputmode="decimal" step="any" min="0"${extra || ''}`);
   function lineCostCell(r) {
     if (r.cost != null) return `${money(r.cost)}${r.stale ? `<small class="warn">${esc(tr('oldPrice', { days: r.age }))}</small>` : r.undated ? `<small>${esc(tr('undated'))}</small>` : ''}`;
-    return `<span class="sfc-unknown">${esc(tr('unknown'))}</span><small>${esc(tr({ price: 'rPrice', packQty: 'rPackQty', useQty: 'rUseQty', unit: 'rUnit' }[r.reason] || 'rPrice'))}</small>`;
+    return `<span class="sfc-unknown">${esc(tr('unknown'))}</span><small>${esc(tr({ price: 'rPrice', packQty: 'rPackQty', useQty: 'rUseQty', unit: 'rUnit', yield: 'rYield' }[r.reason] || 'rPrice'))}</small>`;
   }
   function summary(c, d) {
     const notes = [];
@@ -536,7 +541,7 @@
     const msg = S.message ? `<p class="sfc-note ${S.messageKind === 'ok' ? 'ok' : 'warn'}" role="status">${esc(S.message)}</p>` : '';
     const lines = (d.lines || []).map((l, i) => `<tr data-sfc-line="${i}"><td>${inp('name', l.name, ` maxlength="120"${named(l, i, 'lName')}`)}</td><td data-sfc-linecost="${i}">${lineCostCell(c.lines[i])}</td><td><select data-sfc-field="type"${named(l, i, 'lType')}${editable() ? '' : ' disabled'}><option value="food"${l.type !== 'packaging' ? ' selected' : ''}>${esc(tr('food'))}</option><option value="packaging"${l.type === 'packaging' ? ' selected' : ''}>${esc(tr('packaging'))}</option></select></td><td>${numIn('packPrice', l.packPrice, named(l, i, 'lPackPrice'))}</td><td>${numIn('packQty', l.packQty, named(l, i, 'lPackQty'))}</td><td><select data-sfc-field="packUnit"${named(l, i, 'lPackUnit')}${editable() ? '' : ' disabled'}>${unitOptions(l.packUnit)}</select></td><td>${numIn('useQty', l.useQty, named(l, i, 'lUseQty'))}</td><td><select data-sfc-field="useUnit"${named(l, i, 'lUseUnit')}${editable() ? '' : ' disabled'}>${unitOptions(l.useUnit || l.packUnit)}</select></td><td>${numIn('yieldPct', l.yieldPct == null ? 100 : l.yieldPct, ' max="100"' + named(l, i, 'lYield'))}</td><td>${inp('priceDate', l.priceDate, ' type="date"' + named(l, i, 'lDate'))}</td><td>${editable() ? `<button type="button" class="sfc-btn ghost" data-sfc="remove-line" data-i="${i}" data-sfc-label="remove" aria-label="${esc(lineLabel(l, i, 'remove'))}">${esc(tr('remove'))}</button>` : ''}</td></tr>`).join('');
     const lbl = ['lName', 'lCost', 'lType', 'lPackPrice', 'lPackQty', 'lPackUnit', 'lUseQty', 'lUseUnit', 'lYield', 'lDate'].map((k, i) => `--l${i + 1}:${JSON.stringify(tr(k))}`).join(';');
-    const history = S.history ? `<div class="sfc-history" data-sfc-history><div class="sfc-history-h"><b>${esc(tr('historyTitle'))}</b><button type="button" class="sfc-btn ghost" data-sfc="close-history">${esc(tr('close'))}</button></div>${S.history.map((h) => `<div class="sfc-hrow"><span>${esc(tr('version', { v: h.version }))} · ${esc(when(h.ts))} · ${esc(h.actor || '')}</span><button type="button" class="sfc-btn ghost" data-sfc="view-version" data-v="${h.version}">${esc(tr('view'))}</button></div>`).join('')}${S.snapshot ? snapshotView(S.snapshot) : ''}</div>` : '';
+    const history = S.history ? `<div class="sfc-history" data-sfc-history><div class="sfc-history-h"><b>${esc(tr('historyTitle'))}</b><button type="button" class="sfc-btn ghost" data-sfc="close-history">${esc(tr('close'))}</button></div>${S.historyError || S.snapshotError != null ? `<div role="alert">${esc(tr('readError'))}<button type="button" data-sfc="${S.historyError ? 'history' : 'view-version'}" data-v="${S.snapshotError || ''}">${esc(tr('retryRead'))}</button></div>` : ''}${S.history.map((h) => `<div class="sfc-hrow"><span>${esc(tr('version', { v: h.version }))} · ${esc(when(h.ts))} · ${esc(h.actor || '')}</span><button type="button" class="sfc-btn ghost" data-sfc="view-version" data-v="${h.version}">${esc(tr('view'))}</button></div>`).join('')}${S.snapshot ? snapshotView(S.snapshot) : ''}</div>` : '';
     const actions = `<div class="sfc-actions">${editable() ? `<button data-activation=write type="button" class="sfc-btn primary" data-sfc="save"${S.saving ? ' disabled' : ''}>${esc(tr(S.saving ? 'saving' : 'save'))}</button>` : ''}${sheet && editable() ? `<button type="button" class="sfc-btn" data-sfc="duplicate">${esc(tr('duplicate'))}</button><button data-activation=write type="button" class="sfc-btn" data-sfc="save-template">${esc(tr('saveTemplate'))}</button><button type="button" class="sfc-btn" data-sfc="archive">${esc(tr(sheet.archived ? 'unarchive' : 'archive'))}</button>` : ''}${d.kind !== 'template' && it && recipeBridge() ? `<button type="button" class="sfc-btn" data-sfc="to-recipe">${esc(tr('toRecipe'))}</button>` : ''}${sheet ? `<button type="button" class="sfc-btn" data-sfc="history">${esc(tr('history'))}</button>` : ''}<button data-activation=money type="button" class="sfc-btn" data-sfc="export-sheet">${esc(tr('exportSheet'))}</button></div>`;
     return `<div class="sfc-toolbar"><button type="button" class="sfc-btn ghost" data-sfc="back">${esc(tr('back'))}</button>${d.kind === 'template' ? `<span class="sfc-st tpl">${esc(tr('kindTemplate'))}</span>` : ''}${sheet ? `<small class="sfc-hint">${esc(tr('version', { v: sheet.version }))} · ${esc(when(sheet.updatedTs))} · ${esc(sheet.updatedBy || '')}</small>` : ''}</div>${conflict}${msg}
       <div class="sfc-form">

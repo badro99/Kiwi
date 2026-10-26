@@ -250,7 +250,7 @@
     GLOVO_TOAST: { get: () => GLOVO_TOAST },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=3';
+  const partUrl = 'assets/daterange/renderers.js?v=5';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;

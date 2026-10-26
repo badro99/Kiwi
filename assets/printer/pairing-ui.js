@@ -666,13 +666,19 @@
           (r.j.jobs || []).forEach(function (job) {
             var row = document.createElement('div'); row.className = 'kpr-relay-row';
             var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
-            var words = dict ? [dict['print.notPrinted'], dict['print.reprint']] : [say('Non imprimé'), say('Réimprimer')];
+            var words = dict ? [dict['print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say('Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
             row.innerHTML = '<span>' + esc(words[0] + ' · ' + job.kind + ' · ' + new Date(job.created_ts).toLocaleString()) + '</span><button type="button">' + words[1] + '</button>';
             row.querySelector('button').onclick = function () {
               var btn = this; btn.disabled = true;
+              function failed() {
+                btn.disabled = false;
+                var error = row.querySelector('[role="alert"]');
+                if (!error) { error = document.createElement('small'); error.setAttribute('role', 'alert'); row.appendChild(error); }
+                error.textContent = words[2];
+              }
               relayFetch('/jobs' + relayMerchantQS(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reprint-expired', id: job.id }) }).then(function (answer) {
-                if (answer.j && answer.j.ok) row.remove(); else btn.disabled = false;
-              });
+                if (answer.j && answer.j.ok) row.remove(); else failed();
+              }).catch(failed);
             };
             list.appendChild(row);
           });

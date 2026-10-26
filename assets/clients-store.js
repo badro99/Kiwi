@@ -438,8 +438,8 @@
     return Math.max(0, Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
   }
   function foldName(v) {
-    return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ').trim();
+    return String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   }
   function qualifyingQty(cfg, items) {
     var want = foldName(cfg && cfg.product && cfg.product.item);

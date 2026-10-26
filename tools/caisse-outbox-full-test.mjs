@@ -55,7 +55,7 @@ const drain = async () => { for (let i = 0; i < 60; i++) await new Promise(r => 
 const merchant = 'outbox-full-fixture';
 const shiftKey = 'kiwi-caisse-shift:' + merchant;
 
-async function fixture(t, opts = {}) {
+export async function fixture(t, opts = {}) {
   const db = new DatabaseSync(':memory:');
   t.after(() => db.close());
   db.exec(read('schema.sql'));
@@ -362,4 +362,28 @@ test('table · localStorage full AND the IndexedDB shelf refuses: the till says 
   f.state.full = false; f.state.idbEnqueue = 'ok'; f.state.metaFail = false;
   await f.tick(); await drain();
   assert.equal(f.count(), 1);
+});
+
+// till#2 (wave R): a full boot between the tender and the server's acknowledgement keeps principal and tip exactly once, through to SQLite.
+test('till#2 reload after tender confirmation before server acknowledgement preserves principal and tip exactly once', async t => {
+  const f = await fixture(t);
+  f.ctx.navigator.onLine = false;
+  f.ctx.amount = 21.35;
+  f.ctx.payTipAmount = () => 2.14;
+  assert.equal(await f.ctx.finalizeTender('cash'), 'complete');
+  assert.equal(f.ctx.journal.length, 1);
+  const id = f.ctx.journal[0].id;
+  assert.equal(f.count(), 0, 'server has not acknowledged the confirmed tender');
+  await f.reload();
+  await f.tick();
+  assert.equal(f.ctx.journal.length, 1);
+  assert.equal(f.ctx.journal[0].id, id);
+  assert.equal(f.ctx.journal[0].amount, 21.35);
+  assert.equal(f.ctx.journal[0].tip, 2.14);
+  assert.equal(f.count(), 1, 'fresh boot uploads exactly one durable sale');
+  const row = f.db.prepare('SELECT amount_cents, tip_cents FROM sales').get();
+  assert.equal(row.amount_cents, 2135);
+  assert.equal(row.tip_cents, 214);
+  await f.reload(); await f.tick();
+  assert.equal(f.count(), 1, 'another full boot cannot duplicate the sale');
 });

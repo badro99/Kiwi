@@ -95,16 +95,19 @@
   }
   function openNotification(o, host, actor, done) {
     var tr = function (s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; };
+    var previous = document.activeElement, veil = host.closest('.modal-veil');
+    function restore() { if (previous && previous.isConnected) previous.focus(); }
     host.replaceChildren();
     var title = document.createElement('h3'); title.textContent = tr('Marquer prévenu'); host.appendChild(title);
     var note = document.createElement('p'); note.textContent = tr('Kiwi n’envoie aucun message.'); host.appendChild(note);
     [['call','Appel'],['sms','Par SMS'],['whatsapp','Par WhatsApp'],['in-person','En personne']].forEach(function (c) {
       var b = document.createElement('button'); b.type = 'button'; b.classList.add('px-btn', 'secondary'); b.textContent = tr(c[1]);
-      b.onclick = function () { if (markNotified(o, actor, c[0])) done(); }; host.appendChild(b);
+      b.onclick = function () { if (markNotified(o, actor, c[0])) { done(); restore(); } }; host.appendChild(b);
     });
     var close = document.createElement('button'); close.type = 'button'; close.classList.add('px-btn', 'ghost'); close.textContent = tr('Fermer');
-    close.onclick = function () { host.closest('.modal-veil').classList.remove('is-open'); }; host.appendChild(close);
-    host.closest('.modal-veil').classList.add('is-open');
+    close.onclick = function () { veil.classList.remove('is-open'); restore(); };
+    veil.classList.add('is-open');
+    host.querySelector('button').focus();
   }
   function sanitizeOrder(o, customer, total) {
     var pieces = (o.pieces || []).map(function (p) {

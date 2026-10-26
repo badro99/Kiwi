@@ -2707,6 +2707,9 @@
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     const st = orderStatus(o);
     const delivered = st === 'livre';
+    const notification = window.KiwiPressingOps.notification(o);
+    const notifyTr = s => window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s;
+    const notificationDetail = notification ? [notifyTr('Marqué prévenu'), notification.by && notification.by.name, notification.at && new Date(notification.at).toLocaleString(document.documentElement.lang === 'ar' ? 'ar-MA-u-nu-latn' : document.documentElement.lang === 'en' ? 'en-GB' : 'fr-FR'), notifyTr(({call:'Appel',sms:'Par SMS',whatsapp:'Par WhatsApp','in-person':'En personne'})[notification.channel] || '')].filter(Boolean).map(esc).join(' · ') : '';
     const carePieces = o.pieces.map((p) => ({ p, care: [...(p.notes || []), p.freeNote].filter(Boolean) })).filter((x) => x.care.length);
 
     el.innerHTML = `
@@ -2724,6 +2727,7 @@
           <div class="px-dt-sub" style="margin-top:5px;"><span>Déposé ${fmtDT(o.droppedAt)}</span> · <span>promis ${fmtDT(o.readyAt)}</span>${o.collectedAt ? ` · <span>retiré ${fmtDT(o.collectedAt)}</span>` : ''}</div>
         </div>
       </div>
+      ${notificationDetail ? `<p class="px-dt-notification">${notificationDetail}</p>` : ''}
       ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' · ')}</span></div></div>` : ''}
       ${st === 'recu' || st === 'trait' ? `<div class="px-next-step"><div><b>Action habituelle</b><span>Quand tout est fini, marquez directement la commande prête. « En cours » reste facultatif.</span></div><button class="px-btn primary" id="px-dt-ready"><i data-lucide="check-check"></i>Commande prête</button></div>` : ''}
       <details class="px-piece-exceptions" ${carePieces.length ? 'open' : ''}>

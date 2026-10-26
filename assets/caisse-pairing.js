@@ -769,12 +769,17 @@
   function keyP(n) { return '<button class="pin-key" data-cpp="' + n + '">' + n + '</button>'; }
   function pinsFor(merchant) {
     if (!merchant) return Promise.reject(new Error('merchant-missing'));
-    return fetch('/api/config?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
+    var controller = new AbortController(), timer;
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () { reject(new Error('pin-config-timeout')); controller.abort(); }, 12000);
+    });
+    var loading = fetch('/api/config?merchant=' + encodeURIComponent(merchant), { signal: controller.signal, headers: { Accept: 'application/json' } })
       .then(function (r) {
         if (!r || !r.ok) throw new Error('pin-config-unavailable');
         return r.json();
       })
       .then(function (d) {
+        if (controller.signal.aborted) throw new Error('pin-config-timeout');
         if (!d || !Array.isArray(d.pins)) throw new Error('pin-config-invalid');
         /* The roster replaces cached identities: a verifier whose person left
            the roster is dropped now. Wiping them all here left an outage with
@@ -786,6 +791,7 @@
         });
         return { pins: d.pins, required: !!d.pinGateConfigured };
       });
+    return Promise.race([loading, deadline]).finally(function () { clearTimeout(timer); });
   }
   // Gate a fresh register entry behind a staff PIN, then bootVertical. The single
   // choke point every entry path (redeem, ?pair=1, resume, already-paired boot)
@@ -1269,7 +1275,7 @@
     pinsFor(venue.merchant).then(function (gate) {
       who = window.KiwiStaff;
       var R = window.KiwiRoles;
-      if (who && gate && gate.pins && gate.pins.length && !(R && R.rosterHolds && R.rosterHolds(gate.pins, who))) { setStaff(null); askStaff(venue); }
+      if (who && gate && gate.pins && !(R && R.rosterHolds && R.rosterHolds(gate.pins, who))) { setStaff(null); askStaff(venue); }
     }).catch(function () {});
   });
   if (pairedVenue()) offlinePinRows(pairedVenue().merchant); // Purge obsolete verifiers before any unlock.

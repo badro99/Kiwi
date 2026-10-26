@@ -82,7 +82,7 @@
       serverNote: 'Les numéros sont attribués par le serveur, sans trou ni doublon.',
       /* composer */
       editDraft: 'Modifier le brouillon', editQuote: 'Modifier le devis', newCredit: 'Avoir sur facture {n}',
-      autosave: 'Brouillon conservé sur cet appareil pendant la saisie', restored: 'Saisie non enregistrée restaurée',
+      autosaveError: 'Brouillon non conservé : stockage plein ou bloqué. Réessayez en modifiant un champ ou en enregistrant le brouillon.', autosave: 'Brouillon conservé sur cet appareil pendant la saisie', restored: 'Saisie non enregistrée restaurée',
       customerBlock: 'Client', pickClient: 'Choisir dans le carnet clients', pickNone: 'Saisie libre',
       kind: 'Type de client', kindPerson: 'Particulier', kindBusiness: 'Entreprise',
       clientName: 'Nom ou raison sociale', address: 'Adresse', ice: 'ICE', iceRequired: 'ICE (obligatoire pour une entreprise)', iceOk: 'ICE valide',
@@ -159,7 +159,7 @@
       demoNote: 'Demo data, saved on this device only.',
       serverNote: 'Numbers are assigned by the server, with no gaps or duplicates.',
       editDraft: 'Edit draft', editQuote: 'Edit quote', newCredit: 'Credit note on invoice {n}',
-      autosave: 'Draft kept on this device while you type', restored: 'Unsaved entry restored',
+      autosaveError: 'Draft not kept: storage full or blocked. Retry by editing a field or saving the draft.', autosave: 'Draft kept on this device while you type', restored: 'Unsaved entry restored',
       customerBlock: 'Customer', pickClient: 'Pick from the customer book', pickNone: 'Free entry',
       kind: 'Customer type', kindPerson: 'Individual', kindBusiness: 'Business',
       clientName: 'Name or company name', address: 'Address', ice: 'ICE', iceRequired: 'ICE (required for a business)', iceOk: 'Valid ICE',
@@ -233,7 +233,7 @@
       demoNote: 'بيانات تجريبية محفوظة على هذا الجهاز فقط.',
       serverNote: 'يمنح الخادم الأرقام دون ثغرات أو تكرار.',
       editDraft: 'تعديل المسودة', editQuote: 'تعديل عرض السعر', newCredit: 'إشعار دائن على الفاتورة {n}',
-      autosave: 'تُحفظ المسودة على هذا الجهاز أثناء الكتابة', restored: 'تمت استعادة ما كُتب دون حفظ',
+      autosaveError: 'لم تحفظ المسودة: التخزين ممتلئ أو محظور. أعد المحاولة بتعديل حقل أو حفظ المسودة.', autosave: 'تُحفظ المسودة على هذا الجهاز أثناء الكتابة', restored: 'تمت استعادة ما كُتب دون حفظ',
       customerBlock: 'العميل', pickClient: 'اختر من دفتر العملاء', pickNone: 'إدخال حر',
       kind: 'نوع العميل', kindPerson: 'فرد', kindBusiness: 'مقاولة',
       clientName: 'الاسم أو اسم المقاولة', address: 'العنوان', ice: 'ICE', iceRequired: 'ICE (إلزامي للمقاولة)', iceOk: 'ICE صحيح',
@@ -330,7 +330,7 @@
     try { return window.KiwiMe?.business || window.KiwiVenue?.getCurrentVenueData?.()?.name || localStorage.getItem('kiwiBizName') || 'Kiwi Commerce'; } catch (_) { return 'Kiwi Commerce'; }
   }
   const lsGet = (k) => { try { const value = localStorage.getItem(k); if (value !== null) return value; const id = venueId(), legacy = id.replace(/[^a-z0-9_-]/gi, '').slice(0, 32); const previous = localStorage.getItem(k.replace(':' + id, ':' + legacy)); return id === legacy || !ownData() ? previous : null; } catch (_) { return null; } };
-  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } };
   const lsDel = (k) => { try { localStorage.removeItem(k); } catch (_) {} };
 
   /* ── ICE : mêmes règles que le serveur (15 chiffres, multiple de 97) ───── */
@@ -1009,12 +1009,12 @@
     const issueLabel = type === 'quote' ? t.sendQuote : type === 'credit_note' ? t.issueCredit : t.issueInvoice;
     const showIssue = !(isQuote && cmp.number);
     const dis = locked ? ' disabled' : '';
-    overlay.querySelector('[data-inv-compose]').innerHTML = `<div class="inv-composer-head"><div><button class="inv-btn small" type="button" data-inv-act="back">${ICON.back}${esc(t.back)}</button></div><div class="inv-step">${esc(cmp.number || t.draftNo)} · ${esc(t.autosave)}</div></div>
+    overlay.querySelector('[data-inv-compose]').innerHTML = `<div class="inv-composer-head"><div><button class="inv-btn small" type="button" data-inv-act="back">${ICON.back}${esc(t.back)}</button></div><div class="inv-step">${esc(cmp.number || t.draftNo)} · <span data-inv-autosave role="status">${esc(t.autosave)}</span></div></div>
       <h3 class="inv-compose-title" data-compose-title>${esc(title)}</h3>
       ${locked && cmp.reason ? `<p class="inv-foot-note">${esc(t.reason)} : ${esc(cmp.reason)}</p>` : ''}
       <div class="inv-form-grid"><div>
         <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.customerBlock)}</h4>
-          ${book.length && !locked ? `<div class="inv-field wide inv-pick"><label for="inv-f-pick">${esc(t.pickClient)}</label><select id="inv-f-pick" data-f="pick"><option value="">${esc(t.pickNone)}</option>${book.slice(0, 400).map((c, i) => `<option value="${i}">${esc(c.name)}${c.phone ? ' · ' + esc(c.phone) : ''}</option>`).join('')}</select></div>` : ''}
+          ${book.length && !locked ? `<div class="inv-field wide inv-pick"><label for="inv-f-pick">${esc(t.pickClient)}</label><select id="inv-f-pick" data-f="pick"><option value="">${esc(t.pickNone)}</option>${book.map((c, i) => `<option value="${i}">${esc(c.name)}${c.phone ? ' · ' + esc(c.phone) : ''}</option>`).join('')}</select></div>` : ''}
           <div class="inv-fields">
             <div class="inv-field"><label for="inv-f-name">${esc(t.clientName)}</label><input id="inv-f-name" data-f="name" autocomplete="organization" value="${esc(st.name)}"${dis}></div>
             <div class="inv-field"><label for="inv-f-kind">${esc(t.kind)}</label><select id="inv-f-kind" data-f="kind"${dis}><option value="person"${st.kind === 'person' ? ' selected' : ''}>${esc(t.kindPerson)}</option><option value="business"${st.kind === 'business' ? ' selected' : ''}>${esc(t.kindBusiness)}</option></select></div>
@@ -1069,7 +1069,7 @@
   }
   function scheduleAutosave() {
     clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => { if (overlay && cmp && currentView === 'compose') lsSet(draftKey(), JSON.stringify({savedAt: Date.now(), state: formSnapshot()})); }, 500);
+    autosaveTimer = setTimeout(() => { if (overlay && cmp && currentView === 'compose') { const kept = lsSet(draftKey(), JSON.stringify({savedAt: Date.now(), state: formSnapshot()})); const note = overlay.querySelector('[data-inv-autosave]'); if (note) { note.textContent = kept ? T().autosave : T().autosaveError; note.setAttribute('role', kept ? 'status' : 'alert'); } } }, 500);
   }
   function checkIce() {
     const el = F('ice'), msg = overlay?.querySelector('[data-ice-msg]'); if (!el || !msg) return null;

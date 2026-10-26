@@ -41,7 +41,7 @@ test('tables reopening preserves quantity and total', () => {
 });
 for (const file of ['pos-boutique.js', 'pos-maison.js']) test(file + ' return history keeps centimes', () => {
   const ctx = { IS_DEMO:false, P:{}, STAFF:{}, RETURN_LOG:[], saleClient:()=>null, persistReturnLog(){}, ensureReturnCloud:()=>null };
-  vm.runInNewContext(declaration(read(file), 'recordReturn') + '\nglobalThis.record = recordReturn;', ctx);
+  vm.runInNewContext((file === 'pos-boutique.js' ? declaration(read(file), 'bqMoney') + '\n' : '') + declaration(read(file), 'recordReturn') + '\nglobalThis.record = recordReturn;', ctx);
   for (const [unit, qty, expected] of [[10.25,1,10.25],[1.005,1,1.01],[2.01,0.5,1.01],[-1.005,1,-1.01],[0.01,0.000001,0]]) {
     ctx.record({id:'test',lines:[{name:'Dish',unit}]}, [0], unit * qty, '', 'refund', '', new Map([[0,qty]]));
     assert.equal(ctx.RETURN_LOG[0].amount, expected); assert.equal(ctx.RETURN_LOG[0].items[0].amount, expected);

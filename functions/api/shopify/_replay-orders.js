@@ -213,8 +213,8 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
   const after = previous && typeof previous.after === 'string' ? previous.after.slice(0, 1024) : null;
   const listed = await listShopifyOrdersSince(env, merchant, since, { after });
   const orders = listed.orders;
-  // Bornée : le document de reprise reste petit même si un catalogue entier déborde.
-  const exceptions = [...(previous && previous.exceptions || []), ...listed.exceptions].slice(-50);
+  // Conserver toutes les exceptions pour diagnostiquer chaque commande de la reprise.
+  const exceptions = [...(previous && previous.exceptions || []), ...listed.exceptions];
   const progress = {
     since, after: listed.more ? listed.next : null,
     done: Number(previous && previous.done || 0) + orders.length,

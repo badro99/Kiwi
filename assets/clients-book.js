@@ -385,6 +385,12 @@
     var local = clientLocalCredits(clientId);
     function paint(remote) {
       if (!host.isConnected) return;
+      /* A failed server read is said, with a retry, above the avoirs this
+         device holds locally: never a silent zero, never a hidden register. */
+      var failed = remote === null;
+      var pageLang = typeof document !== 'undefined' && document.documentElement ? document.documentElement.lang : '';
+      var dateLocale = pageLang === 'ar' ? 'ar-MA-u-nu-latn' : pageLang === 'en' ? 'en-GB' : 'fr-FR';
+      if (failed) remote = [];
       var seen = {};
       var credits = (remote || []).concat(local).filter(function (credit) {
         if (!credit || !credit.code || seen[credit.code]) return false;
@@ -393,34 +399,36 @@
       var active = credits.reduce(function (sum, credit) {
         return sum + (credit.status === 'active' ? Number(credit.balanceCents || 0) : 0);
       }, 0) / 100;
-      host.innerHTML = '<div class="kcb-section">Avoirs · solde ' + fmt(active) + ' MAD</div>' + (credits.length
+      host.innerHTML = (failed ? '<div role="alert">' + esc(tr('Solde des avoirs indisponible. La lecture du serveur a échoué.')) + '</div><button type="button" data-credit-retry>' + esc(tr('Réessayer')) + '</button>' : '') + '<div class="kcb-section">' + esc(tr('Avoirs · solde')) + ' ' + fmt(active) + ' MAD</div>' + (credits.length
         ? '<div class="kcb-info">' + credits.map(function (credit) {
             var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
             var products = Array.isArray(issued.lines) && issued.lines.length
               ? issued.lines.map(function (line) { return window.KiwiClientNumbers.quantity(line.qty ?? 1) + '× ' + (line.name || 'Article'); }).join(' · ')
               : (credit.reason || 'Retour');
             var movements = (credit.events || []).filter(function (event) { return event.action !== 'issue'; }).map(function (event) {
-              return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : event.action)
+              return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? tr('Utilisé') : event.action === 'cancel' ? tr('Annulé') : event.action)
                 + ' · ' + fmt(Number(event.amountCents || 0) / 100) + ' MAD · ' + esc(event.actor || 'Caisse')
-                + ' · solde ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
+                + ' · ' + esc(tr('solde')) + ' ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
             }).join('');
-            var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
-            var expiry = credit.expiresAt ? creditLastDay(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
-            var used = credit.status === 'active' ? '' : ' · ' + (credit.status === 'cancelled' ? 'annulé' : 'utilisé');
-            return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · expire ' + esc(expiry) + '</small></span>'
-              + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · reste ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD' + esc(used) + '</b>'
-              + '<small style="display:block;margin-top:3px">Vente ' + esc(credit.originalRef || credit.originalSaleId || '·') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
+            var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString(dateLocale, { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : tr('Date inconnue');
+            var expiry = credit.expiresAt ? creditLastDay(credit.expiresAt).toLocaleDateString(dateLocale) : tr('sans échéance');
+            var used = credit.status === 'active' ? '' : ' · ' + (credit.status === 'cancelled' ? tr('annulé') : tr('utilisé'));
+            return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · ' + esc(tr('expire')) + ' ' + esc(expiry) + '</small></span>'
+              + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · ' + esc(tr('reste')) + ' ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD' + esc(used) + '</b>'
+              + '<small style="display:block;margin-top:3px">' + esc(tr('Vente')) + ' ' + esc(credit.originalRef || credit.originalSaleId || '·') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
           }).join('') + '</div>'
-        : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
+        : '<div class="kcb-empty" style="min-height:70px"><b>' + esc(tr('Aucun avoir')) + '</b><div>' + esc(tr('Les crédits boutique émis à ce client apparaîtront ici.')) + '</div></div>');
+      var retry = failed && host.querySelector('[data-credit-retry]');
+      if (retry) retry.onclick = function () { loadClientCredits(clientId, host); };
     }
-    paint([]);
     var merchant = creditMerchant();
-    if (!merchant || typeof fetch !== 'function') return;
+    if (!merchant || typeof fetch !== 'function') { paint(null); return; }
+    host.innerHTML = '<div role="status">' + esc(tr('Chargement des avoirs…')) + '</div>';
     fetch('/api/store-credits?merchant=' + encodeURIComponent(merchant) + '&customerId=' + encodeURIComponent(clientId),
       { headers: { Accept: 'application/json' } })
-      .then(function (response) { return response && response.ok ? response.json() : null; })
-      .then(function (data) { paint(data && Array.isArray(data.credits) ? data.credits : []); })
-      .catch(function () { /* le registre local reste affiché */ });
+      .then(function (response) { if (!response || !response.ok) throw new Error('credit-read'); return response.json(); })
+      .then(function (data) { if (!data || !Array.isArray(data.credits)) throw new Error('credit-read'); paint(data.credits); })
+      .catch(function () { paint(null); });
   }
 
   /* ── launcher chip ─────────────────────────────────────────────────────── */
@@ -929,7 +937,7 @@
     var total = purchaseHistory.length, start = page * 50;
     var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
       ? '<div class="kcb-info">' + purchaseHistory.slice(start, start + 50).map(function (row) {
-          var when = row.ts ? new Date(row.ts).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
+          var when = row.ts ? new Date(row.ts).toLocaleString((function (l) { return l === 'ar' ? 'ar-MA-u-nu-latn' : l === 'en' ? 'en-GB' : 'fr-FR'; })(typeof document !== 'undefined' && document.documentElement ? document.documentElement.lang : ''), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : tr('Date inconnue');
           var rets = row.ref ? returns.filter(function (r) { return String(r.saleRef) === String(row.ref); }) : [];
           var back = {};
           rets.forEach(function (r) { (r.items || []).forEach(function (it) { back[it.name] = (back[it.name] || 0) + (Number(it.qty) || 1); }); });

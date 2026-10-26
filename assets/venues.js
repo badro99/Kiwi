@@ -136,6 +136,7 @@
       if (window.Kiwi && window.Kiwi.toast) {
         window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
       }
+      if (cfg.throwOnError) throw Object.assign(new Error('plan-limit-exceeded'), { status: 403 });
       return null;
     }
     const type = ['restaurant', 'boutique', 'spa', 'hotel'].includes(cfg.type) ? cfg.type : 'restaurant';
@@ -168,8 +169,8 @@
     if (!isRealMerchant()) return commit();
     if (!window.KiwiConfig?.newStore) return Promise.resolve(null);
     return Promise.resolve(window.KiwiConfig.newStore({
-      name, type: cfg.subtype || type, city: location, pins: cfg.pins,
-    })).then((ok) => ok ? commit() : null).catch(() => null);
+      name, type: cfg.subtype || type, city: location, pins: cfg.pins, throwOnError: cfg.throwOnError,
+    })).then((ok) => ok ? commit() : null).catch((error) => { if (cfg.throwOnError) throw error; return null; });
   }
 
   /* Patch an existing custom venue (name / location / trade / methods / goal)

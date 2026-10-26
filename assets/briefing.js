@@ -30,11 +30,12 @@
     "rainMm": [1, 0.1, 500, "Pluie prévue (mm)", "Forecast rain (mm)", "المطر المتوقع (مم)"],
     "weatherDays": [5, 1, 100, "Jours météo minimum", "Minimum weather days", "الحد الأدنى لأيام الطقس"]
   };
+  function integerLimit(key) { return /^(samples|events|cashCents|lateSamples|planningMinutes|weatherDays)$/.test(key); }
   function validSettings(value) {
     var out = {};
     Object.keys(LIMITS).forEach(function (key) {
       var n = value && value[key], spec = LIMITS[key];
-      if (typeof n === 'number' && Number.isFinite(n) && n >= spec[1] && n <= spec[2] && (!/^(samples|events|cashCents|lateSamples|planningMinutes|weatherDays)$/.test(key) || Number.isInteger(n))) out[key] = n;
+      if (typeof n === 'number' && Number.isFinite(n) && n >= spec[1] && n <= spec[2] && (!integerLimit(key) || Number.isInteger(n))) out[key] = n;
     });
     return out;
   }
@@ -44,6 +45,8 @@
     var clean = validSettings(value);
     if (Object.keys(value).some(function (k) { return !Object.prototype.hasOwnProperty.call(clean, k); })) return false;
     own(); doc.settings = Object.assign({}, doc.settings, clean); doc.settingsAt = Date.now();
+    doc.settingsFieldsAt = doc.settingsFieldsAt || {};
+    Object.keys(clean).forEach(function (key) { doc.settingsFieldsAt[key] = doc.settingsAt; });
     compute(); return true;
   }
   function settingsHtml() {
@@ -52,7 +55,7 @@
     var title = { fr: 'Réglages des seuils', en: 'Threshold settings', ar: 'إعدادات العتبات' }[L];
     return '<details><summary>' + title + '</summary>' + Object.keys(LIMITS).map(function (key) {
       var spec = LIMITS[key];
-      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + spec[1] + '" max="' + spec[2] + '" step="any" value="' + limit(key) + '"></label>';
+      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + spec[1] + '" max="' + spec[2] + '" step="' + (integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-error-' + key + '" value="' + limit(key) + '"><span id="briefing-error-' + key + '" role="status"></span></label>';
     }).join('') + '</details>';
   }
   function thresholdEvidence(line) {
@@ -73,7 +76,7 @@
 
   var COPY = {
     fr: {
-      eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
+      ruleNames: ["Ventes", "Stock", "Marge", "Planning", "Annulations", "Remises", "Caisse", "Délais de service", "Météo"], analysisFailed: 'Analyse indisponible', retryAnalysis: 'Réessayer', invalidLimit: 'Saisissez une valeur entre {min} et {max}.', integerOnly: 'Un nombre entier est requis.', eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
       emptyNote: 'Kiwi surveille uniquement les données mesurées de cet établissement.', ask: 'Voir le point du matin',
       coverage: 'Je surveille les signaux déjà mesurables, sans inventer les données manquantes.',
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
@@ -86,7 +89,7 @@
       wKinds: { clear: 'beau temps', cloudy: 'nuageux', rain: 'pluie', storm: 'orage', snow: 'neige', fog: 'brouillard' }
     },
     en: {
-      eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
+      ruleNames: ["Sales", "Stock", "Margin", "Staffing", "Cancellations", "Discounts", "Cash", "Service timing", "Weather"], analysisFailed: 'Analysis unavailable', retryAnalysis: 'Retry', invalidLimit: 'Enter a value between {min} and {max}.', integerOnly: 'A whole number is required.', eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
       emptyNote: 'Kiwi monitors only measured data from this venue.', ask: 'Open morning briefing',
       coverage: 'I monitor the signals that are already measurable, without inventing missing data.',
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
@@ -99,7 +102,7 @@
       wKinds: { clear: 'fair', cloudy: 'cloudy', rain: 'rain', storm: 'thunderstorm', snow: 'snow', fog: 'fog' }
     },
     ar: {
-      eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
+      ruleNames: ["المبيعات", "المخزون", "الهامش", "جدول العمل", "الإلغاءات", "التخفيضات", "الصندوق", "مدة الخدمة", "الطقس"], analysisFailed: 'التحليل غير متاح', retryAnalysis: 'أعد المحاولة', invalidLimit: 'أدخل قيمة بين {min} و{max}.', integerOnly: 'يجب إدخال عدد صحيح.', eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
       emptyNote: 'يراقب Kiwi فقط البيانات المقاسة لهذا المحل.', ask: 'عرض ملخص الصباح',
       coverage: 'أراقب الإشارات القابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
@@ -174,7 +177,12 @@
       return left < right ? -1 : left > right ? 1 : 0;
     });
     var seen = Object.create(null);
-    return { settings: validSettings(value.settings), settingsAt: Number(value.settingsAt) || 0, days: days.filter(function (row) {
+    var settings = validSettings(value.settings), clocks = {};
+    Object.keys(settings).forEach(function (key) {
+      var at = value.settingsFieldsAt && value.settingsFieldsAt[key];
+      clocks[key] = typeof at === 'number' && Number.isFinite(at) ? at : Number(value.settingsAt) || 0;
+    });
+    return { settings: settings, settingsAt: Number(value.settingsAt) || 0, settingsFieldsAt: clocks, days: days.filter(function (row) {
       if (seen[row.day]) return false;
       seen[row.day] = true; return true;
     }).slice(0, MAX_DAYS) };
@@ -225,8 +233,13 @@
   }
   function mergeDocs(a, b) {
     var left = safeDoc(a), right = safeDoc(b);
-    var chosen = left.settingsAt > right.settingsAt ? left : left.settingsAt < right.settingsAt ? right : stableJSON(left.settings) > stableJSON(right.settings) ? left : right;
-    return safeDoc({ days: left.days.concat(right.days), settings: chosen.settings, settingsAt: chosen.settingsAt });
+    var settings = {}, clocks = {};
+    Object.keys(LIMITS).forEach(function (key) {
+      var la = left.settingsFieldsAt[key], ra = right.settingsFieldsAt[key];
+      var chosen = la == null ? right : ra == null ? left : la > ra ? left : la < ra ? right : stableJSON(left.settings[key]) > stableJSON(right.settings[key]) ? left : right;
+      if (chosen.settings[key] != null) { settings[key] = chosen.settings[key]; clocks[key] = chosen.settingsFieldsAt[key]; }
+    });
+    return safeDoc({ days: left.days.concat(right.days), settings: settings, settingsFieldsAt: clocks, settingsAt: Math.max(left.settingsAt, right.settingsAt) });
   }
 
   function normalizeEvidence(value) {
@@ -782,20 +795,20 @@
   }
   function compute(rules) {
     if (!isReal() || !slug()) return null;
-    var lines = [];
-    (rules || RULES).forEach(function (rule) {
+    var lines = [], unavailable = [];
+    (rules || RULES).forEach(function (rule, index) {
       try {
         var result = typeof rule === 'function' ? rule() : null;
         (Array.isArray(result) ? result : [result]).forEach(function (candidate) {
           var line = normalizeLine(candidate);
           if (line) lines.push(thresholdEvidence(line));
         });
-      } catch (_) {}
+      } catch (_) { unavailable.push(rule.name || 'rule-' + (index + 1)); }
     });
     var now = Date.now(), id = scopeKey(now), old = current();
     var row = {
       id: id, accountId: accountId(), venue: slug(), day: businessDay(now), generatedAt: now,
-      updatedAt: now, lines: lines, dismissed: clone(old && old.dismissed) || {}, handled: clone(old && old.handled) || {}
+      updatedAt: now, lines: lines, unavailable: unavailable, dismissed: clone(old && old.dismissed) || {}, handled: clone(old && old.handled) || {}
     };
     doc.days = [row].concat(own().days.filter(function (x) { return x.id !== id; }));
     save();
@@ -914,7 +927,7 @@
     var host = el.closest && el.closest('.hero-right'); if (!host) return;
     var b = host.querySelector('[data-briefing-status]');
     if (!b) { b = document.createElement('span'); b.className = 'briefing-status'; b.setAttribute('data-briefing-status', ''); host.appendChild(b); }
-    var label = n ? (n === 1 ? t.signalOne : t.signalMany.replace('{n}', String(n))) : t.calm;
+    var label = current() && current().unavailable && current().unavailable.length ? t.analysisFailed : n ? (n === 1 ? t.signalOne : t.signalMany.replace('{n}', String(n))) : t.calm;
     if (b.textContent !== label) b.textContent = label;
     b.classList.toggle('is-alert', n > 0);
   }
@@ -931,6 +944,11 @@
       return '<article class="briefing-line"><div class="hai-rec-title">' + esc(lineText(line)) + '</div><div class="briefing-evidence">' +
         esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
+    var failed = current() && current().unavailable || [];
+    if (failed.length) {
+      var warning = '<div role="alert">' + esc(t.analysisFailed) + ' · ' + esc(failed.map(function (name) { var index = RULES.findIndex(function (rule) { return rule.name === name; }); return t.ruleNames[index] || t.analysisFailed; }).join(', ')) + ' <button type="button" data-briefing-analysis-retry>' + esc(t.retryAnalysis) + '</button></div>';
+      body = warning + (lines.length ? body : '');
+    }
     var day = dayLabel();
     el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body + settingsHtml() + unsavedNote(t);
     try { if (el.querySelector('[data-icon]') && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
@@ -949,6 +967,8 @@
     if (!isReal()) return { text: t.demo };
     if (wanted === 'coverage') return { text: t.coverage, stats: [{ l: t.coveredLabel, v: t.covered, h: '' }, { l: t.waitingLabel, v: t.waiting, h: '' }] };
     var lines = activeLines((opts && opts.role) || tier());
+    var failed = current() && current().unavailable || [];
+    if (failed.length) return { text: t.analysisFailed + ' · ' + failed.map(function (name) { var index = RULES.findIndex(function (rule) { return rule.name === name; }); return t.ruleNames[index] || t.analysisFailed; }).join(', ') };
     if (!lines.length) return { text: '<b>' + t.empty + '</b> ' + t.emptyNote };
     return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source }; }) };
   }
@@ -983,6 +1003,7 @@
     });
   }
   document.addEventListener('click', function (event) {
+    if (event.target.closest && event.target.closest('[data-briefing-analysis-retry]')) compute();
     var handled = event.target.closest && event.target.closest('[data-briefing-handled]');
     var dismissed = event.target.closest && event.target.closest('[data-briefing-dismiss]');
     var proposed = event.target.closest && event.target.closest('[data-briefing-propose]');
@@ -998,7 +1019,8 @@
     value[key] = input.value.trim() === '' ? NaN : Number(input.value);
     var ok = setSettings(value);
     input.setAttribute('aria-invalid', String(!ok));
-    if (!ok) input.value = limit(key);
+    var message = document.getElementById('briefing-error-' + key);
+    if (message) message.textContent = ok ? '' : [tr().invalidLimit.replace('{min}', LIMITS[key][1]).replace('{max}', LIMITS[key][2]), integerLimit(key) ? tr().integerOnly : ''].filter(Boolean).join(' ');
   });
   window.KiwiBriefing = {
     setSettings: setSettings, settings: function () { return clone(own().settings || {}); },

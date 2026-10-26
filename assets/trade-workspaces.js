@@ -280,7 +280,7 @@
     if (!c || !Number.isSafeInteger(amountCents) || amountCents<1 || amountCents>refundAvailable(c)) throw new Error('refund-exceeds-advance');
     const response=await fetch('/api/store',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,feature:'verticalops',action:'credit-book-refund',clientId,id,amountCents,method:'transfer'})});
     const result=await response.json();
-    await window.KiwiCloudDoc.pullAll();
+    try { await window.KiwiCloudDoc.pullAll(); } catch (_) { /* Refresh cannot change the committed money result. */ }
     if (!response.ok) throw Object.assign(new Error(result.error || 'refund-failed'),{availableCents:result.availableCents});
     return result;
   }

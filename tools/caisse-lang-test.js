@@ -316,5 +316,21 @@ for (const [fr, en] of [
   ['mer. 21 oct., 06:03', 'Wed 21 Oct, 06:03'],
   ['Saisie à l\'aveugle des quantités réelles. La transmission sera soumise à la validation du propriétaire.', 'Blind entry of the real quantities. The owner approves the submission.'],
 ]) check(L.tr(fr) === en, `boutique : « ${fr} » → « ${L.tr(fr)} »`);
+// Render the actual boutique closing overlay before any DOM translation observer runs.
+{
+  const { declaration } = require('./js-declarations.cjs');
+  let rendered;
+  const savedCreate = document.createElement;
+  document.createElement = () => (rendered = Object.assign(el(), { querySelector: () => ({}) }));
+  const ctx = { window, document, esc: s => String(s), fmtMAD: n => String(n), icons() {}, bqFinishClose() {}, bqPrintReport() {} };
+  vm.createContext(ctx);
+  vm.runInContext(declaration(fs.readFileSync('assets/pos-boutique.js', 'utf8').replace(/^(?:import .*;\n)+/, ''), 'bqShowPostClose'), ctx);
+  for (const [lang, title, skip] of [['fr','Journée clôturée','Continuer sans imprimer'], ['en','Day closed','Continue without printing'], ['ar','تم إغلاق اليوم','المتابعة دون طباعة']]) {
+    L.set(lang);
+    ctx.bqShowPostClose({ net: 1, txns: 2, categories: [] });
+    check(rendered.innerHTML.includes(title) && rendered.innerHTML.includes(skip), `boutique closing renders ${lang} explicitly before observer`);
+  }
+  document.createElement = savedCreate;
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

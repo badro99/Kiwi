@@ -132,7 +132,14 @@ export async function onRequestGet(context) {
     await env.DB.prepare("UPDATE print_jobs SET status = 'expired', done_ts = expires_ts WHERE merchant = ? AND status = 'queued' AND expires_ts <= ?").bind(merchant, t).run();
     if (!id) {
       const rows = await env.DB.prepare("SELECT id, kind, status, created_ts, expires_ts FROM print_jobs WHERE merchant = ? AND status = 'expired' AND expires_ts > ? ORDER BY created_ts DESC").bind(merchant, t - EXPIRED_RETENTION_MS).all();
-      return relayJson({ ok: true, jobs: rows.results || [] }, 200, request);
+      // A recovery owns its own lifecycle. Hide its source even for recoveries
+      // created before this filter existed; an expired replacement remains recoverable.
+      const pending = await Promise.all((rows.results || []).map(async (job) => {
+        const replacement = 'pj_' + await refDigest(merchant, 'reprint:' + job.id);
+        const recovered = await env.DB.prepare('SELECT id FROM print_jobs WHERE merchant = ? AND id = ?').bind(merchant, replacement).first();
+        return recovered ? null : job;
+      }));
+      return relayJson({ ok: true, jobs: pending.filter(Boolean) }, 200, request);
     }
     const j = await env.DB.prepare(
       'SELECT id, status, error, bytes, done_ts, claimed_ts FROM print_jobs WHERE id = ? AND merchant = ?'

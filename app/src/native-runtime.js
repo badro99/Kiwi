@@ -38,11 +38,26 @@
     });
   });
 
+  function callResult(plugin, method, args) {
+    if (!plugin || typeof plugin[method] !== 'function') return Promise.resolve({ ok: false, reason: 'unsupported' });
+    /* The plugin is called synchronously, as before: a terminal Back must
+       reach the native layer in the same tick. Only its answer is awaited. */
+    var pending;
+    try { pending = Promise.resolve(plugin[method](args || {})); } catch (error) { pending = Promise.reject(error); }
+    return pending.then(function (value) {
+      return { ok: true, value: value };
+    }, function (error) {
+      var code = String(error && error.code || '');
+      return { ok: false, reason: /cancel/i.test(code) || error && error.name === 'AbortError' ? 'cancelled' : /unimplemented|unavailable|unsupported/i.test(code) ? 'unsupported' : 'failure' };
+    });
+  }
   function call(plugin, method, args) {
-    try {
-      if (!plugin || typeof plugin[method] !== 'function') return Promise.resolve(null);
-      return Promise.resolve(plugin[method](args || {})).catch(function () { return null; });
-    } catch (_) { return Promise.resolve(null); }
+    return callResult(plugin, method, args).then(function (result) {
+      if (!result.ok) {
+        try { window.dispatchEvent(new CustomEvent('kiwi:native-call-error', { detail: { method: method, reason: result.reason } })); } catch (_) {}
+      }
+      return result.ok ? result.value : null;
+    });
   }
   /* Native sheet (KiwiNativeShell.swift › presentNativeSheet). The host
      announces it with window.__kiwiHostCaps before any page script runs; a
@@ -105,7 +120,7 @@
   /* Partagé avec les morceaux suivants du runtime natif. */
   N.cap = cap; N.root = root; N.plugins = plugins; N.socket = socket; N.app = app;
   N.network = network; N.splashScreen = splashScreen; N.statusBar = statusBar;
-  N.keepAwake = keepAwake; N.appearance = appearance; N.call = call;
+  N.keepAwake = keepAwake; N.appearance = appearance; N.call = call; N.callResult = callResult;
   N.nativeSheetAvailable = nativeSheetAvailable; N.nativeSheet = nativeSheet; N.khPlay = khPlay;
   N.hapticLight = hapticLight; N.hapticFailed = hapticFailed;
   Object.defineProperty(N, 'lastPressAt', { get: function () { return lastPressAt; } });
