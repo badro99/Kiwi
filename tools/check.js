@@ -698,6 +698,7 @@ for (const test of [
   'staff-skin-test.mjs',
   'skin-cloak-test.mjs',
   'employee-timezone-test.mjs',
+  'wave-n-caps-test.mjs',
   'employee-timezone-browser-test.mjs',
   'table-visit-reuse-test.mjs',
   'recipe-heal-test.js',

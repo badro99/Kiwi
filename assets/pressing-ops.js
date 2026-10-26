@@ -112,7 +112,7 @@
     var k = key(explicit);
     if (!k) return false;
     helpers = helpers || {};
-    var safe = (orders || []).slice(0, 500).map(function (o) {
+    var safe = (orders || []).map(function (o) {
       var customer = helpers.customer ? helpers.customer(o) : (o.customer || o.guest || {});
       var total = helpers.total ? helpers.total(o) : o.total;
       return sanitizeOrder(o, customer, total);
