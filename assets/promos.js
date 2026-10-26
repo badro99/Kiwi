@@ -413,7 +413,7 @@
       out.count++;
       out.from += was;
       out.to += price;
-      var cost = Math.round(num(item.cost, 0));
+      var cost = num(item.cost, 0);
       if (cost > 0 && price < cost) out.under++;
       if (out.sample.length < 8) out.sample.push({ id: item.id, name: item.name, was: was, price: price, under: cost > 0 && price < cost });
     });

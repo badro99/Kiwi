@@ -78,7 +78,7 @@
   }
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
-  function fmt(v) { try { return (window.KiwiNumber?.format(Math.round(Number(v) || 0), {}) ?? Math.round(Number(v) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(Number(v) || 0)); } }
+  function fmt(v) { var n = Number(v) || 0, cents = Math.round(Number(Math.abs(n).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))), opts = { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }; n = Math.sign(n) * cents / 100; try { return window.KiwiNumber?.format(n, opts) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', opts); } catch (_) { return String(n); } }
   function slug() {
     try {
       if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
@@ -125,7 +125,7 @@
     var ts = Number(raw && (raw.ts || raw.at)) || new Date(raw && raw.at || 0).getTime() || 0;
     var lines = Array.isArray(raw && raw.lines) ? raw.lines.map(function (l) {
       var p = productById(l && (l.pid || l.ref), cat) || productFor(l && l.name, cat);
-      var qty = Math.max(1, Math.round(Number(l && l.qty) || 1));
+      var qty = (Number.isFinite(Number(l && l.qty)) && Number(l && l.qty) > 0 ? Number(l.qty) : 1);
       var total = Number(l && l.total);
       if (!Number.isFinite(total)) total = (Number(l && (l.unit || l.unitPrice)) || 0) * qty;
       var cid = String((l && (l.cat || l.category || l.categoryId)) || (p && p.categoryId) || '');

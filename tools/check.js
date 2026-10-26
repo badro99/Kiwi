@@ -1497,6 +1497,7 @@ section('Whole-project regressions');
     /* Promotions boutique : la meilleure seule s'applique, jamais au-dessus du
        rayon, sur la journée d'exploitation ; deux appareils convergent. */
     'promos-properties-test.mjs',
+    'cents-precision-test.mjs',
     'sale-return-race-properties-test.mjs',
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',

@@ -2545,7 +2545,7 @@
         delete tableClosedAt[tableKey(target)];
         delete orders[target];
         currentOrder().replaceTable(target, snap.lines.slice(0, 40).map((line, index) => {
-          const qty = Math.max(1, Number(line.qty) || 1);
+          const qty = Number.isFinite(Number(line.qty)) && Number(line.qty) > 0 ? Number(line.qty) : 1;
           return { id: 'reopen-' + index, name: String(line.name || 'Article'), qty,
             price: Number(line.total || 0) / qty, sent: true, reopenedBill: true };
         }));
