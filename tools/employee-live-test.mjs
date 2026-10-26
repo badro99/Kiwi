@@ -1073,8 +1073,10 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     const handlers={},requests=[],notices=[];
     const root={correctionsByVenue:{synthetic:[{id:'pending-one',name:'<synthetic>',action:'clock-out',claimedTs:1,capturedTs:2,receivedTs:3,deviceId:'test-device'}]}};
     const Kiwi={__teamProfileCore:{teamSlug:()=> 'synthetic-shop'}};
-    const context={handlers,Kiwi,window:{__kiwiTeamV2:root},trLang:()=>lang,esc:value=>String(value).replaceAll('<','&lt;'),dateLocale:()=> 'en-GB',toast:message=>notices.push(message),render(){},fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true};}};
-    vm.createContext(context);vm.runInContext(block,context);
+    const context={setTimeout,clearTimeout,handlers,Kiwi,window:{__kiwiTeamV2:root},trLang:()=>lang,esc:value=>String(value).replaceAll('<','&lt;'),dateLocale:()=> 'en-GB',toast:message=>notices.push(message),render(){},fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true};}};
+    vm.createContext(context);
+    vm.runInContext(src.slice(src.indexOf('  function fetchDeadline('),src.indexOf('\n  }',src.indexOf('  function fetchDeadline(')))+'\n  }',context);
+    vm.runInContext(block,context);
     const html=vm.runInContext("correctionsHtml('synthetic')",context);
     ok(html.includes('&lt;synthetic>') && html.includes('test-device') && html.includes('data-decision="approved"') && html.includes('data-decision="rejected"'), 'corrections '+lang+' : identité échappée, appareil et deux décisions visibles');
     await handlers['kt-attendance-decision']({dataset:{rid:'pending-one',decision:'approved'}});

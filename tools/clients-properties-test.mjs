@@ -39,7 +39,7 @@ function syncDevice(skew) {
  const define=(name,opts)=>stores[name]={data:{},get(k){return this.data[k]||(opts.blank?opts.blank():null);},set(v,k){this.data[k]=JSON.parse(JSON.stringify(v));},subscribe(){return()=>{};}};
  class DeviceDate extends Date {static now(){return Date.now()+skew;}}
  const window={KiwiStore:{define,currentVenue:()=>f.merchant},KiwiEnv:{isReal:()=>true},KiwiPhone:phone,addEventListener(){}};
- const context=vm.createContext({window,KiwiStore:window.KiwiStore,KiwiEnv:window.KiwiEnv,Date:DeviceDate,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},console,setInterval:()=>1,clearInterval(){},fetch:(url,opts)=>{
+ const context=vm.createContext({setTimeout,clearTimeout,window,KiwiStore:window.KiwiStore,KiwiEnv:window.KiwiEnv,Date:DeviceDate,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},console,setInterval:()=>1,clearInterval(){},fetch:(url,opts)=>{
   if(!opts||!opts.method)return f.request({},true);
   return new Promise(resolve=>queue.push(async()=>{const result=await f.request(JSON.parse(opts.body));resolve(result);await new Promise(done=>setImmediate(done));}));
  }});

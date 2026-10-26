@@ -101,6 +101,8 @@ async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 6
     liveTeamSignature: JSON.stringify(['test', [], {}, {}, []]), pageActive: true, applyLiveTeam() {} });
   h.ctx.fetch = async () => { h.hit(); return { ok: true, json: async () => ({ ok: true, merchant: 'test' }) }; };
   const src = read('assets/team.js');
+  h.run(src.slice(src.indexOf('  function fetchDeadline('),src.indexOf('\n  }',src.indexOf('  function fetchDeadline(')))+'\n  }');
+  h.run(src.slice(src.indexOf('  let teamReadFailed'),src.indexOf('  function hydrateCodes()')));
   h.run(src.slice(src.indexOf('  function pollLiveTeam()'), src.indexOf('  /* ═══════════════ HELPERS')));
   await pacing('team live', h, () => {}, { first: false });
 }

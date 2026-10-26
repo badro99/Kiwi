@@ -53,6 +53,31 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
 
   var REV_PREFIX = 'kiwiDocRev:v1:';
   var STORE_PREFIX = 'kiwi:';          // le préfixe de venue-store.js
@@ -545,7 +570,8 @@
     function pull(first) {
       var slug = slugOf();
       if (!on()) return Promise.resolve(false);
-      return fetch('/api/store?feature=' + encodeURIComponent(feature)
+      var readFetch = feature === 'team' ? fetchDeadline : fetch;
+      return readFetch('/api/store?feature=' + encodeURIComponent(feature)
                    + '&merchant=' + encodeURIComponent(slug),
                    { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
@@ -592,7 +618,7 @@
           if (!adopt && !identical(next, theirs)) push(0);
           return true;
         })
-        .catch(function () { return false; });   // hors ligne → le local fait foi
+        .catch(function (error) { if (opts.onPullError) opts.onPullError(error); return false; });   // hors ligne → le local fait foi
     }
 
     function push(delay, alreadyDirty) {
