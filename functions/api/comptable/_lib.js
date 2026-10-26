@@ -25,31 +25,9 @@ const SEEN_EVERY_MS = 5 * 60 * 1000;
 
 const encoder = new TextEncoder();
 
-const ACCESS_DDL = `CREATE TABLE IF NOT EXISTS accountant_access (
-  id           TEXT PRIMARY KEY,
-  merchant     TEXT NOT NULL,
-  label        TEXT,
-  email        TEXT,
-  token_hash   TEXT NOT NULL UNIQUE,
-  created_ts   INTEGER NOT NULL,
-  created_by   TEXT NOT NULL,
-  last_seen_ts INTEGER,
-  revoked_ts   INTEGER,
-  expires_ts   INTEGER NOT NULL)`;
-const ACCESS_INDEX = 'CREATE INDEX IF NOT EXISTS idx_accountant_access_merchant ON accountant_access (merchant, created_ts)';
-
-/* La production a toujours du retard sur schema.sql : la table se crée au
- * premier usage (même démarche que ensureTillDevices). */
-const ensured = new WeakSet();
+// Compatibility helper: migrations own accountant_access.
 export async function ensureAccountantAccess(env) {
-  if (!env || !env.DB) return false;
-  if (ensured.has(env.DB)) return true;
-  try {
-    await env.DB.prepare(ACCESS_DDL).run();
-    await env.DB.prepare(ACCESS_INDEX).run();
-    ensured.add(env.DB);
-    return true;
-  } catch (_) { return false; }
+  return !!(env && env.DB);
 }
 
 function b64url(bytes) {

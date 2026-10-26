@@ -1,3 +1,4 @@
+import { missingMigratedTables } from './migrated-tables.cjs';
 import { DatabaseSync } from 'node:sqlite';
 import {
   EMPLOYEE_COOKIE, SESS_COOKIE, employeeToken, makeSession,
@@ -83,6 +84,7 @@ function setup(db, { merchant = MERCHANT, units: registry = units, catalogue: ce
     );
     CREATE TABLE inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL);
   `);
+  missingMigratedTables(db);
   db.prepare('INSERT INTO accounts (id, business) VALUES (?, ?)').run('owner-1', merchant);
   db.prepare('INSERT INTO merchant_config (merchant, account_id, type) VALUES (?, ?, ?)').run(merchant, 'owner-1', 'hotel');
   const putDoc = db.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, 1)');

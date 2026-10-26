@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { migrated } from './fixtures/migrated-tables.cjs';
 /* Retirer UNE caisse sans dépairer tout le magasin (feature-truth · item 19).
  *
  * Le jeton de caisse ne disait pas de quel appareil il venait : la seule
@@ -28,7 +29,7 @@ const SHOP = 'device-shop';
 const now = Date.now();
 function database(withDevices = true) {
   const db = new DatabaseSync(':memory:');
-  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  migrated(db);
   if (!withDevices) db.exec('DROP TABLE till_devices');
   db.prepare(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES ('acc-d','o@device.test','Device Shop','s','h',?,'active')`).run(now);
   db.prepare(`INSERT INTO merchant_config (merchant,features,type,account_id,name,status,till_epoch,updated_ts) VALUES (?,'{}','boutique','acc-d','Device Shop','active',0,?)`).run(SHOP, now);
@@ -150,7 +151,7 @@ console.log('■ Production en retard sur le schéma');
   const tokA = await lib.tillDeviceToken(SECRET, SHOP, 0, A);
   const v = await lib.tillVerification(req('https://k/', `kiwi_till=${tokA}`), env, SHOP);
   ok('table absente : aucun retrait n’a pu être écrit, la caisse encaisse', v.ok);
-  ok('l’appairage crée la table au premier usage', await lib.recordTillDevice(env, SHOP, A, { paired: true }));
+  ok('l’appairage ne crée plus une table absente', !(await lib.recordTillDevice(env, SHOP, A, { paired: true })));
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

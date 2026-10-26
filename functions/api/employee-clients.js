@@ -21,10 +21,7 @@ function text(value, max) { return String(value == null ? '' : value).trim().sli
 function parse(raw) { try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; } }
 
 export async function ensureEmployeeLoyaltyEvents(env) {
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS employee_loyalty_events (
-    merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
-    amount INTEGER NOT NULL DEFAULT 0, created_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, ref))`).run();
+  // Schema owned by migrations 0001–0010.
 }
 
 export async function onRequestGet({ request, env }) {

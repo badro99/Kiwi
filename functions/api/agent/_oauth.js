@@ -65,16 +65,7 @@ export function metadataResponse(body) {
 
 export async function ensureOAuthTables(env) {
   await ensureTables(env);
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS agent_oauth_clients (
-    client_id TEXT PRIMARY KEY, name TEXT NOT NULL, redirect_uris TEXT NOT NULL,
-    created_ts INTEGER NOT NULL, last_used_ts INTEGER NOT NULL DEFAULT 0
-  )`).run();
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS agent_oauth_codes (
-    code_hash TEXT PRIMARY KEY, client_id TEXT NOT NULL, redirect_uri TEXT NOT NULL,
-    merchant TEXT NOT NULL, account_id TEXT NOT NULL, account_epoch INTEGER NOT NULL,
-    scopes TEXT NOT NULL, challenge TEXT NOT NULL, created_ts INTEGER NOT NULL,
-    expires_ts INTEGER NOT NULL, used_ts INTEGER
-  )`).run();
+
 }
 
 /* A redirect URI a client may register: https anywhere, or http on the

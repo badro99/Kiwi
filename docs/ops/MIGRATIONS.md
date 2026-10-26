@@ -158,12 +158,14 @@ destructive migration and needs the owner's go-ahead.
 ## What the test does not see
 
 - **CHECK constraints.** SQLite has no pragma for them, so they are not compared.
-- **Tables created by route code.** Several routes run their own `CREATE TABLE IF
-  NOT EXISTS` at request time (`functions/api/operations.js`,
-  `functions/api/foodcost.js`, `functions/api/agent/_oauth.js`, …). When such a
-  route runs before a migration, production gets the route's version of the
-  table and the migration's `IF NOT EXISTS` leaves it alone. Step 5 above
-  (`node tools/d1-schema.mjs`) is how you notice.
+- **Runtime declarations are now checked.** `tools/runtime-ddl-test.mjs` parses
+  JavaScript strings, concatenations and static template substitutions throughout
+  `functions/`, then compares SQLite columns, types, defaults, keys and indexes
+  against `schema.sql`. Unresolved dynamic declarations fail the test. It also
+  forbids runtime CREATE for objects owned by migrations through 0010, except
+  the explicitly frozen AI and support modules. Newer tables retain their
+  fallback until production application is confirmed. See
+  [Wave M schema evidence](2026-10-26-wave-m-schema.md) for the retained inventory.
 - **Production itself.** The test proves migrations equal `schema.sql`. Only
   `d1-schema.mjs` and `wrangler d1 migrations list --remote` look at production.
 

@@ -28,11 +28,7 @@ export function startOfWeek(now, zone = DEFAULT_ZONE) {
 export async function nextOrderNumber(env, merchant, now) {
   const period = startOfWeek(now, await merchantZone(env, merchant));
   const stamp = Date.now();
-  await env.DB.prepare(
-    'CREATE TABLE IF NOT EXISTS order_sequences (' +
-    'merchant TEXT NOT NULL, period INTEGER NOT NULL, next_value INTEGER NOT NULL, ' +
-    'updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, period))'
-  ).run();
+
   const old = await env.DB.prepare(
     'SELECT COALESCE(MAX(number), 0) + 1 AS n FROM orders WHERE merchant = ? AND created_ts >= ?'
   ).bind(merchant, period).first();

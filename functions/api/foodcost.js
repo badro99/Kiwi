@@ -43,25 +43,7 @@ const MAX_BYTES = 32 * 1024;
 const HISTORY_LIMIT = 50;
 
 async function ensureSchema(env) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS foodcost_sheets (
-      merchant TEXT NOT NULL, id TEXT NOT NULL, name TEXT NOT NULL,
-      kind TEXT NOT NULL DEFAULT 'sheet', data TEXT NOT NULL,
-      version INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0,
-      created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
-      updated_by TEXT NOT NULL DEFAULT '',
-      PRIMARY KEY (merchant, id)
-    )`
-  ).run();
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS foodcost_snapshots (
-      merchant TEXT NOT NULL, sheet_id TEXT NOT NULL, version INTEGER NOT NULL,
-      name TEXT NOT NULL, data TEXT NOT NULL, actor TEXT NOT NULL DEFAULT '',
-      actor_kind TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
-      PRIMARY KEY (merchant, sheet_id, version)
-    )`
-  ).run();
-  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_foodcost_sheets_upd ON foodcost_sheets (merchant, updated_ts DESC)').run();
+  // Schema owned by migrations 0001–0010.
 }
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);

@@ -9,20 +9,7 @@ function json(value, status = 200) {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
 async function schema(DB) {
-  await DB.prepare(`CREATE TABLE IF NOT EXISTS z_reconciliations (
-    merchant TEXT NOT NULL, business_day TEXT NOT NULL, terminal_id TEXT NOT NULL,
-    reported_count INTEGER NOT NULL, reported_cents INTEGER NOT NULL,
-    server_count INTEGER NOT NULL, server_cents INTEGER NOT NULL,
-    missing_count INTEGER NOT NULL, missing_cents INTEGER NOT NULL,
-    mismatch_count INTEGER NOT NULL, extra_count INTEGER NOT NULL,
-    status TEXT NOT NULL, result_json TEXT NOT NULL, updated_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, business_day, terminal_id)
-  )`).run();
-  await DB.prepare(`CREATE TABLE IF NOT EXISTS sale_sync_conflicts (
-    merchant TEXT NOT NULL, sale_id TEXT NOT NULL, amount_cents INTEGER NOT NULL,
-    method TEXT NOT NULL, first_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, sale_id)
-  )`).run();
+  // Schema owned by migrations 0001–0010.
 }
 function validDay(day) {
   if (!/^20\d\d-\d\d-\d\d$/.test(day)) return false;

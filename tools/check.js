@@ -631,6 +631,8 @@ for (const test of [
   'd1-schema-test.mjs',
   /* migrations/ (wrangler d1 migrations) appliquées en mémoire = schema.sql, à la colonne près. */
   'd1-migrations-test.mjs',
+  'runtime-ddl-test.mjs',
+  'runtime-ddl-routes-test.mjs',
   'schema-minimum-test.mjs',
   'worker-cpu-test.mjs',
   'd1-restore-rehearsal-test.mjs',

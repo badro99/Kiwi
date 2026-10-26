@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { missingMigratedTables } from './fixtures/migrated-tables.cjs';
 /*
  * Kiwi · BEHAVIOURAL TEST: payment-refund crash/recovery races
  *
@@ -61,6 +62,7 @@ async function harness(hooks = {}) {
     );
     CREATE TABLE operators (id TEXT PRIMARY KEY);
   `);
+  missingMigratedTables(db);
   db.prepare('INSERT INTO accounts (id, business, status, session_epoch) VALUES (?, ?, ?, 0)')
     .run(ACCOUNT, 'Audit Recovery', 'active');
   db.prepare('INSERT INTO merchant_config (merchant, account_id, status) VALUES (?, ?, ?)')
@@ -297,7 +299,7 @@ async function runQueuedPendingGuard() {
     const reference = 'PAY-QUEUED';
     await h.getAudit();
     h.db.exec(`
-      CREATE TABLE payment_links (
+      CREATE TABLE IF NOT EXISTS payment_links (
         merchant TEXT NOT NULL, reference TEXT NOT NULL, seq INTEGER NOT NULL,
         command_id TEXT NOT NULL DEFAULT '', provider_ref TEXT NOT NULL DEFAULT '',
         url TEXT NOT NULL DEFAULT '', amount_cents INTEGER NOT NULL,
@@ -310,6 +312,7 @@ async function runQueuedPendingGuard() {
         (merchant, reference, seq, amount_cents, paid_cents, currency, status, created_ts, updated_ts)
       VALUES ('${MERCHANT}', '${reference}', 1, 10000, 10000, 'MAD', 'paid', 1, 1);
     `);
+  missingMigratedTables(h.db);
     const createdAt = Date.now();
     h.db.prepare(`
       INSERT INTO operational_commands
@@ -375,7 +378,7 @@ async function runStaleQueuedRace() {
     const reference = 'PAY-STALE';
     await h.getAudit();
     h.db.exec(`
-      CREATE TABLE payment_links (
+      CREATE TABLE IF NOT EXISTS payment_links (
         merchant TEXT NOT NULL, reference TEXT NOT NULL, seq INTEGER NOT NULL,
         command_id TEXT NOT NULL DEFAULT '', provider_ref TEXT NOT NULL DEFAULT '',
         url TEXT NOT NULL DEFAULT '', amount_cents INTEGER NOT NULL,
@@ -388,6 +391,7 @@ async function runStaleQueuedRace() {
         (merchant, reference, seq, amount_cents, paid_cents, currency, status, created_ts, updated_ts)
       VALUES ('${MERCHANT}', '${reference}', 1, 10000, 10000, 'MAD', 'paid', 1, 1);
     `);
+  missingMigratedTables(h.db);
     const staleAt = Date.now() - 60001;
     h.db.prepare(`
       INSERT INTO operational_commands

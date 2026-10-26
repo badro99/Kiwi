@@ -7,42 +7,15 @@ import { DateTimeFormat } from './_zone-law.js';
  * envoyée n'arrivait nulle part. Désormais la demande est enregistrée ici, dans
  * D1, dès que le visiteur valide ; WhatsApp n'est plus qu'une suite possible.
  *
- * La table se crée d'elle-même au premier usage, comme le support
- * (functions/api/_support.js) : la base de production retarde toujours sur
- * schema.sql, et une demande de démo ne doit pas se perdre pour ça. */
+ * La table est installée par les migrations. */
 
 export const DEMO_STATUSES = ['new', 'contacted', 'scheduled', 'done', 'lost', 'spam'];
 export const DEMO_DAYS = ['today', 'tomorrow', 'week', 'later'];
 export const DEMO_PARTS = ['morning', 'afternoon', 'evening', 'any'];
 
-const TABLE = `CREATE TABLE IF NOT EXISTS demo_requests (
-  id          TEXT PRIMARY KEY,
-  reference   TEXT NOT NULL UNIQUE,
-  created_ts  INTEGER NOT NULL,
-  first_name  TEXT NOT NULL,
-  business    TEXT NOT NULL,
-  trade       TEXT NOT NULL DEFAULT '',
-  phone       TEXT NOT NULL,
-  email       TEXT NOT NULL DEFAULT '',
-  slot_day    TEXT NOT NULL DEFAULT '',
-  slot_part   TEXT NOT NULL DEFAULT '',
-  note        TEXT NOT NULL DEFAULT '',
-  lang        TEXT NOT NULL DEFAULT '',
-  page        TEXT NOT NULL DEFAULT '',
-  status      TEXT NOT NULL DEFAULT 'new',
-  handled_by  TEXT NOT NULL DEFAULT '',
-  notified    TEXT NOT NULL DEFAULT '',
-  updated_ts  INTEGER NOT NULL DEFAULT 0
-)`;
-const INDEX = 'CREATE INDEX IF NOT EXISTS idx_demo_requests_created ON demo_requests(created_ts)';
-
-const ready = new WeakSet();
 export async function ensureDemoRequests(env) {
   if (!env || !env.DB) throw new Error('no-db');
-  if (ready.has(env.DB)) return;
-  await env.DB.prepare(TABLE).run();
-  await env.DB.prepare(INDEX).run();
-  ready.add(env.DB);
+
 }
 
 const text = (v, max) => String(v == null ? '' : v)
