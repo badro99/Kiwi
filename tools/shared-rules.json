@@ -1,0 +1,4 @@
+{
+  "about": "One business rule, one source. Each entry is a pure ES module under functions/ that the server imports directly; tools/build-shared-rules.mjs copies it into each browser target between GENERATED SHARED markers, so a page needs no extra script tag. tools/shared-rules-test.mjs fails the gate when a copy is stale or a source is not pure.",
+  "rules": []
+}

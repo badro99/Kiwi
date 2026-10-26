@@ -1577,6 +1577,7 @@ section('Whole-project regressions');
     'print-relay-idempotency-test.mjs',
     'print-relay-properties-test.mjs',
     'print-pairing-recovery-test.mjs',
+    'shared-rules-test.mjs',
     'order-pricing-properties-test.mjs',
     'menu-properties-test.mjs',
     'menu-formula-properties-test.mjs',
