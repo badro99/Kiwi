@@ -52,7 +52,15 @@
   function save() { api.save(); showDraftWarning(); }
   function showDraftWarning() {
     var warning = $('[data-draft-warning]');
-    if (warning) { warning.textContent = api.draftWarning(); warning.hidden = api.draftSaved(); }
+    if (warning) {
+      warning.textContent = api.draftWarning(); warning.hidden = api.draftSaved();
+      if (!api.recovery) return;
+      var recovery = $('[data-draft-recovery]');
+      if (!recovery) { recovery = doc.createElement('div'); recovery.setAttribute('data-draft-recovery', ''); warning.after(recovery); }
+      recovery.textContent = '';
+      if (api.recovery) api.recovery(recovery, function (restored) { if (restored) { at = 0; kind(); } else showDraftWarning(); }, at === 0);
+      api.refreshDraft = showDraftWarning;
+    }
   }
   function primary(label, enabled) {
     return '<k-button variant="primary" size="L" full data-do="next" label="' + esc(label) + '"' + (enabled ? '' : ' disabled') + '></k-button>';
@@ -217,7 +225,7 @@
     if (box && box.parentNode) box.parentNode.removeChild(box);
     box = null;
     doc.documentElement.style.overflow = '';
-    if (api) api.done();
+    if (api) { api.refreshDraft = null; api.done(); }
   }
 
   function open(kit) {

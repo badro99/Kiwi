@@ -39,3 +39,91 @@ assert.equal(values.get('kiwiOnboarded'), '1');
 assert.equal(values.has('kiwiOnboardingDraft:v1'), false);
 assert.equal(values.has('kiwiPins'), false);
 console.log('✓ onboarding-data: 100 round trips, refused storage, translated warning, corrupt draft, submission ACK');
+
+// Run the shipped draft implementation, including Blob download, inside node:vm.
+const { readFileSync } = await import('node:fs');
+const vm = await import('node:vm');
+const source = readFileSync(process.env.KIWI_DRAFT_SOURCE || 'assets/onboarding-data.js', 'utf8');
+const sandbox = vm.createContext({}); vm.runInContext(source, sandbox);
+const real = sandbox.KiwiOnboardingData;
+const blocked = { get() { throw Error('blocked'); }, set() { throw Error('full'); }, del() {} };
+const recovery = real.createDraft(blocked, ['boutique'], ['sales']);
+const original = { step: 2, ownerName: 'Test', bizName: 'Commerce', typeId: 'boutique', venueCount: 2, city: 'Rabat', teamSize: 2, teamGiven: true, goals: ['sales'], dailyGoal: '12.50', device: 'till', pins: [{ role: 'owner', name: 'Test', code: '' }] };
+assert.equal(recovery.save(original), false);
+if (process.env.KIWI_DRAFT_CASE !== 'server') {
+  let blob, clicked = false, revoked = false;
+  const browser = { Blob, URL: { createObjectURL(file) { blob = file; return 'blob:test'; }, revokeObjectURL() { revoked = true; } },
+    setTimeout(fn) { fn(); }, document: { body: { appendChild() {} }, createElement() { return { click() { clicked = true; assert.equal(this.download, 'kiwi-onboarding.json'); }, remove() {} }; } } };
+  recovery.exportFile(original, browser);
+  assert.ok(clicked && revoked); assert.equal(blob.type, 'application/json');
+  assert.equal(recovery.saved(), true);
+  const file = await blob.text();
+  const imported = real.createDraft(blocked, ['boutique'], ['sales']), restored = {};
+  imported.importFile(file, restored);
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)), original);
+  assert.equal(imported.saved(), true);
+  imported.save({ ...restored, city: 'Fes' }); assert.equal(imported.saved(), false, 'a changed draft needs a fresh home');
+  assert.throws(() => imported.importFile('[]', {}));
+  console.log('✓ Blob export/import identical, changed draft warns again');
+}
+if (process.env.KIWI_DRAFT_CASE !== 'export') {
+  // Execute the production account route with an authenticated-session boundary
+  // and a D1-shaped document store. Body/query identities cannot select an account.
+  const docs = new Map(); let aid = 'account-a';
+  const routeContext = vm.createContext({
+    activeAccountSession: async () => aid ? { aid } : null,
+    json: (value, status = 200) => new Response(JSON.stringify(value), { status }), URL, Date,
+  });
+  const routeSource = readFileSync('functions/api/account/onboarding-draft.js', 'utf8').replace(/^import .*;$/m, '').replace('export async function', 'async function');
+  vm.runInContext(routeSource, routeContext);
+  const env = { AUTH_SECRET: 'test-only', DB: { prepare(sql) { return { bind(...args) { return {
+    async first() { const value = docs.get(args[0] + '/' + args[1]); return value ? { data: value } : null; },
+    async run() { const key = args[0] + '/' + args[1]; if (sql.startsWith('DELETE')) docs.delete(key); else docs.set(key, args[2]); },
+  }; } }; } } };
+  const transport = async (value) => {
+    const request = new Request('https://kiwi.test/api/account/onboarding-draft?account=account-a', value === undefined ? {} : { method: 'POST', headers: { 'X-Kiwi-Draft-Account': aid }, body: JSON.stringify(value) });
+    const response = await routeContext.onRequest({ request, env }); assert.equal(response.status, 200);
+    return (await response.json()).draft;
+  };
+  recovery.transport = transport;
+  await recovery.sync(); assert.equal(recovery.saved(), true);
+  const nextVisit = real.createDraft(blocked, ['boutique'], ['sales']); nextVisit.transport = transport;
+  const restored = {}; await nextVisit.restore(restored);
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)), original);
+  aid = 'account-b'; assert.equal(await transport(), null);
+  const switched = await routeContext.onRequest({ request: new Request('https://kiwi.test/api/account/onboarding-draft', { method: 'POST', headers: { 'X-Kiwi-Draft-Account': 'account-a' }, body: JSON.stringify(original) }), env });
+  assert.equal(switched.status, 409, 'a queued write from another session cannot cross accounts');
+  await transport({ ...original, bizName: 'Other', account: 'account-a' });
+  aid = 'account-a'; assert.equal((await transport()).bizName, 'Commerce');
+  nextVisit.clear(); await nextVisit.sync(); await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(await transport(), null);
+  aid = null;
+  assert.equal((await routeContext.onRequest({ request: new Request('https://kiwi.test/api/account/onboarding-draft'), env })).status, 401);
+  console.log('✓ server round trip, account isolation, clear, unauthenticated refusal');
+}
+// Existing local projection stays byte-for-byte equivalent on generated inputs.
+if (process.env.KIWI_DRAFT_PREVIOUS) {
+  const old = vm.createContext({}); vm.runInContext(readFileSync(process.env.KIWI_DRAFT_PREVIOUS, 'utf8'), old);
+  for (let n = 0; n < 100; n++) {
+    const input = { ...original, step: n % 9, city: 'City ' + n, teamSize: n + 1 };
+    const bytes = [];
+    for (const api of [old.KiwiOnboardingData, real]) {
+      let value; const d = api.createDraft({ set(k, v) { value = v; return true; }, get() { return value; } }, ['boutique'], ['sales']);
+      d.save(input); const out = {}; d.load(out); bytes.push([value, JSON.stringify(out)]);
+    }
+    assert.deepEqual(bytes[0], bytes[1]);
+  }
+  console.log('✓ old/new local save/load equivalence: 100 generated inputs');
+}
+for (const lang of ['fr', 'en', 'ar']) {
+  const d = real.createDraft(blocked, ['boutique'], ['sales']); d.save(original);
+  const makeNode = (tag) => ({ tag, children: [], textContent: '', appendChild(n) { this.children.push(n); }, setAttribute() {} });
+  const container = makeNode('div');
+  real.mountRecovery(container, d, original, lang, { document: { createElement: makeNode } }, () => {}, true);
+  assert.equal(container.children[0].tag, 'button');
+  assert.equal(container.children[1].children[0].type, 'file');
+  assert.ok(container.children.every(n => n.textContent));
+}
+assert.match(readFileSync('assets/onboarding.js', 'utf8'), /recovery:.*mountRecovery/);
+assert.match(readFileSync('assets/kit/dash-onboarding.js', 'utf8'), /api\.recovery\(recovery/);
+console.log('✓ shared FR/EN/AR export and first-step import controls');

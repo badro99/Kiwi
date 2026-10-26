@@ -129,13 +129,16 @@
       try { window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'onboarding', key: 'kiwiOnboardingDraft:v1', durable: ok } })); } catch (_) {}
     }
     paintDraftNote();
+    draft.sync().then(() => { paintDraftNote(); if (typeof KIT !== 'undefined' && KIT.refreshDraft) KIT.refreshDraft(); });
     return ok;
   }
   function paintDraftNote() {
     const card = root && root.querySelector && root.querySelector('.kob-card');
     if (!card) return;
     let note = card.querySelector('[data-draft-note]');
-    if (draft.saved()) { if (note) note.remove(); return; }
+    if (note) note.remove();
+    if (draft.saved() && S.step > (namePrefilled ? 2 : 1)) return;
+    note = null;
     if (!note) {
       note = document.createElement('p');
       note.className = 'kob-err';
@@ -144,6 +147,7 @@
       card.insertBefore(note, card.querySelector('.kob-foot'));
     }
     note.textContent = draft.warning(lang());
+    if (window.KiwiOnboardingData) window.KiwiOnboardingData.mountRecovery(note, draft, S, lang(), window, (restored) => restored ? render() : paintDraftNote(), S.step <= (namePrefilled ? 2 : 1));
   }
   const TOTAL = 6; // counted steps (welcome + finish are bookends)
   let root = null, opened = false;
@@ -714,6 +718,25 @@
       if (!draft) {
         draft = data.createDraft(LS, TYPES.map((t) => t.id), GOALS.map((g) => g.id));
         draft.load(S);
+        if (window.KiwiMe && window.KiwiMe.email && !window.KiwiMe.operator) {
+          let draftAccount = null;
+          draft.transport = async function (value) {
+            if (value !== undefined && !draftAccount) throw Error('draft-account');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 4000);
+            let response;
+            try { response = await fetch('/api/account/onboarding-draft', {
+              signal: controller.signal,
+              credentials: 'same-origin', cache: 'no-store',
+              ...(value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kiwi-Draft-Account': draftAccount }, body: JSON.stringify(value) }),
+            }); } finally { clearTimeout(timeout); }
+            if (!response.ok) throw Error('draft-server');
+            const result = await response.json();
+            if (value === undefined) draftAccount = result.account;
+            return result.draft;
+          };
+          await draft.restore(S);
+        }
       }
     } catch (_) { dataFailure(); return; }
     opts = opts || {};
@@ -915,6 +938,7 @@
     save: saveDraft,              // vrai si le brouillon a pris sur cet appareil
     draftSaved: () => !draft || draft.saved(),
     draftWarning: () => draft ? draft.warning(lang()) : '',
+    recovery: (container, refresh, first) => window.KiwiOnboardingData.mountRecovery(container, draft, S, lang(), window, refresh, first),
     finish: () => finish({ kit: true }),
     enter: () => enterApp(),
     done: () => { opened = false; },
