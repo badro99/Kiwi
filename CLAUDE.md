@@ -7,8 +7,9 @@ things that already cost someone a session.
 current-state brief (what's true right now, recent work, gotchas, the two dev tracks, the
 Design 2026 skin); Part 2 is the full project context (history, architecture, brand system,
 roadmap). All other documents live under `docs/` — `audits/`, `roadmaps/`, `specs/`, `ops/`
-(runbooks: deploy, auth, admin, Live Link, kiosk) — see `docs/README.md`. Only `README.md`,
-`AGENTS.md` and this file stay at the repo root.
+(runbooks: deploy, auth, admin, Live Link, kiosk) — see `docs/README.md`. Only `README.md`
+and this file stay at the repo root (`AGENTS.md` is a gitignored file the claude-mem
+plugin writes; it holds no project rules).
 
 ---
 
@@ -85,9 +86,10 @@ still placeholder data, that's tech debt to replace, not the intended end state.
   the commit.
 
   **What "best" means here, in practice.** The existing surfaces (`dashboard.html`,
-  `kiwi-caisse.html`, `kiwi-serveur.html` and ~186 files in `assets/`) are shipped,
-  load-bearing, and carry live merchant data. `dashboard.html` alone pulls 89
-  `<script src>` tags into the global namespace; `kiwi-caisse.html` pulls 53.
+  `kiwi-caisse.html`, `kiwi-serveur.html` and the files in `assets/`) are shipped,
+  load-bearing, and carry live merchant data. Each shell pulls dozens of
+  `<script src>` tags into the global namespace (the size ratchet in §3 pins the
+  counts).
   Rewriting a working surface is not automatically an improvement — it's a
   migration, with its own risk, and it needs a reason beyond taste. So:
   - **New, self-contained surfaces** — build them however is genuinely best.
@@ -98,17 +100,16 @@ still placeholder data, that's tech debt to replace, not the intended end state.
     the old path until the new one is verified against real data, and never do it as
     a side effect of another task.
 
-  **`package.json` exists** (added 2026-08-30 in `dd8d6a39`) and declares **no
-  dependencies** — there is no `node_modules`, no lockfile, and nothing to install.
-  It is a script index, not a build: `npm test` / `npm run check` run
-  `tools/check.js`, `npm run stamp` fronts `tools/bump-stamp.js`, `npm run dev` is
-  `wrangler pages dev .`, and the `load:*` scripts drive the k6 suites in
-  `tests/load/`. It sets no `"type"`, which is why running an ES-module file under
+  **The root `package.json` declares no dependencies** — no root `node_modules`,
+  no root lockfile. It is a script index, not a build (`npm test`, `check:*`,
+  `stamp`, `dev`, `db:*`, `load:*`; read its `scripts` for the list). Test-only
+  dev dependencies (puppeteer-core, fast-check, axe-core) live in `app/`, with
+  their own lockfile — see "Property and accessibility suites" in §3. It sets no `"type"`, which is why running an ES-module file under
   `functions/` prints a `MODULE_TYPELESS_PACKAGE_JSON` warning — noise, not a
   failure; do not "fix" it by adding `"type": "module"` without checking every
   CommonJS caller first.
 
-  So the zero-dependency property still holds, and it is worth keeping. If you
+  So the root stays dependency-free, and it is worth keeping. If you
   introduce tooling that genuinely needs packages, that's the step that changes
   this — add a lockfile, and keep the deploy producing static-hostable output for
   Cloudflare Pages + GitHub Pages (artefacts committed or built in CI). Both
@@ -141,8 +142,9 @@ pairing and printer bridge both follow this pattern.
 
 ## 3. The rituals that fail silently
 
-These four are the repo's most expensive class of bug: the page returns 200, the
-console stays empty, and your fix simply doesn't appear.
+Stamps, the service-worker generation and the gate below are the repo's most
+expensive class of bug: the page returns 200, the console stays empty, and your fix
+simply doesn't appear.
 
 **Asset version stamps.** `dashboard.html` and `kiwi-caisse.html` pin assets as
 `assets/foo.js?v=NNNN` (CSS too). Editing a file without bumping its stamp means
@@ -192,9 +194,9 @@ else `KIWI_SKIP_STAMP_HOOK=1` for that one commit.
 
 **The gate is `node tools/check.js`.** It parses every `assets/*.js`, checks that
 every `data-action` in HTML is handled, that every `data-i18n` key exists in EN + AR,
-bans `background:var(--ink)` and secret-shaped strings — then runs several dozen
-named suites (i18n, live-link, agent, stock, orderpro, KPI ledger, RTL numbers, PWA
-shell, D1 schema, …). **A test file on disk that `check.js` doesn't name guards
+bans `background:var(--ink)` and secret-shaped strings — then runs every test file
+it names (about 900: i18n, live-link, agent, stock, orderpro, KPI ledger, RTL
+numbers, PWA shell, D1 schema, …). **A test file on disk that `check.js` doesn't name guards
 nothing.** If you add a suite, wire it in. And a red run isn't automatically yours —
 prove a failure is pre-existing by running it in a detached worktree at the untouched
 base before you chase it.
@@ -204,7 +206,7 @@ session and every GPT job):**
 - **Between edits: `npm run check:changed`** (`node tools/check.js --changed`).
   It runs only the child tests your working tree can affect, plus every
   in-process check (syntax, data-action, i18n keys, secrets): seconds to a
-  couple of minutes instead of thirteen. A test is selected when it is a
+  couple of minutes instead of a full run. A test is selected when it is a
   changed file, when it touched a changed file the last time it passed (the
   parallel pool records every import and fs read through `tools/dep-trace.cjs`
   into `kiwi-test-deps.json` in the temp dir), or when its source names the
@@ -306,8 +308,8 @@ baseline (`KIWI_UPDATE_A11Y_BASELINE=1`) when a fix brings a count down, never
 raise it to make a red go away.
 
 **The very large files stop growing** (2026-10-21). `tools/file-size-ratchet-test.mjs`
-pins every file over 5 000 lines (pages-pro.js, kiwi-caisse.html, kiwi-serveur.html,
-hotel.js, …) at its size in `tools/file-size-baseline.json`, plus 200 lines of slack,
+pins each file listed in `tools/file-size-baseline.json` at its size there, plus 200
+lines of slack,
 and the three shells' `<script src>` counts plus 3. A bug fix fits; a new feature goes
 in its own file. The same suite pins each stylesheet's `!important` count (+10, a new
 stylesheet 25): they went from 573 to 1 182 in two months, every skin winning by force
@@ -349,14 +351,12 @@ surface paint and an accent ink — if you need a brighter accent, add a new tok
 collisions: a reused custom-property name fails silently as `inherit`, never as an
 error.
 
-**Type is roman. Never italic.** Instrument Serif is the editorial voice, and the
-accent word inside a heading is set in it — but upright. `font-style: italic` on a
+**Type is roman. Never italic.** `font-style: italic` on a
 heading, a display numeral, or a UI label is the single fastest-read "generated by
 an AI" tell there is, and at 11–14px in Inter Tight it renders as sheared sans, not
 as emphasis. `em`/`i`/`cite`/`dfn`/`var` are normalised to roman in
 `assets/tokens.css` and `assets/landing/base.css`, so bare `<em>` can't fall back to
-the browser default. Carry emphasis with the serif face, `--atlas`/`--mint`, or
-weight. The only italics left in the repo *depict* something real — icing piped on
+the browser default. Carry emphasis with `--atlas`/`--mint` or weight. The only italics left in the repo *depict* something real — icing piped on
 a cake (`.bl-script`), an imitated masthead (`.plogo.telquel`), a pilot's own
 wordmark (`kandisky`) — and they set `font-style` on their own class so they outrank
 the reset. Anything else is drift.
@@ -407,12 +407,12 @@ and let CSS drive `color`. Never convert one to a stroke, and never edit a vendo
 - `assets/venues.js` · venue/tenant identity, slugs, and the transient ids (`own`,
   `scoped`) used by operator view.
 - `assets/live-link.js` · Live Link sales feed → `KiwiSales` → dashboard KPIs.
-- `assets/pos-dispatch.js` · lazy REGISTRY for the fourteen `pos-*` verticals.
+- `assets/pos-dispatch.js` · lazy REGISTRY for the `pos-*` verticals.
 - `assets/features.js` · feature handlers (Zakat, Sadaqa, Kiwi Compte, Capital,
   Diaspora, Loyalty, Agent Mode, Payment Links).
 - `assets/pages.js` / `assets/pages-pro.js` · sidebar destination drawers
   (Transactions, Terminaux, Règlements, Conformité, Équipe, Tables, Menu, KDS, Stock,
-  Payroll, Reservations). `pages-pro.js` is 13 768 lines — see §8 before opening it.
+  Payroll, Reservations).
 
 **Two clocks.** The till groups on a **5 h business day**, not midnight. Anything
 that says "today" must use the same boundary or the numbers won't agree between the
@@ -526,14 +526,13 @@ A knowledge graph is built **locally** into `graphify-out/`. It is **gitignored,
 checked in**, so a fresh clone or another machine has none — run `graphify update .`
 to build it.
 
-**Why this rule exists, in numbers.** The files here are enormous:
-`assets/pages-pro.js` is 13 768 lines, roughly **178 k tokens** — larger than most
-context windows. `assets/venues.js` is ~108 k, `assets/agent.js` ~64 k. One
-speculative "let me just read it and see" on any of those burns a session. The graph
-answers *where does this live and what touches it* for a few hundred tokens.
+**Why this rule exists.** Several files here still run to thousands of lines
+(`tools/file-size-baseline.json` lists them; `assets/venues.js` is the largest). One
+speculative "let me just read it and see" on those burns context. The graph answers
+*where does this live and what touches it* for a few hundred tokens.
 
 **Use it for:** where a feature lives, what calls what, blast radius of a change,
-which of the fourteen `pos-*` verticals share code, how two modules connect.
+which `pos-*` verticals share code, how two modules connect.
 
 ```bash
 graphify query "how does the caisse reach the dashboard"
@@ -563,27 +562,10 @@ merchant PINs, so rotate those before running any doc pass.
 
 ## 9. This checkout's environment
 
-- **Work in `/Users/zaka/Developer/kiwi`. It is the healthy checkout.** (2026-08-26)
-  The old copy at `/Users/zaka/Desktop/kiwi` sits on the iCloud-synced Desktop and
-  is progressively rotting: macOS evicts files it then cannot re-download, and a
-  `read()` on an evicted file **blocks forever at 0% CPU** instead of erroring.
-  Measured that day: 1 unreadable ref in the morning, 33 by the evening (including
-  the local branches `feat/inventory-complete` and `codex/menu-nutrition-20260823`,
-  the tag `bridge-v1.4.0`, and most of `refs/remotes/`), plus 2 897 dataless files
-  under `.git/`. Freeing 12 GB did not bring them back.
-
-  Nothing was lost — the nutrition branch is merged into `main`,
-  `feat/inventory-complete` is on both mirrors, and the repo pushes no tags — but
-  do not run git there. The symptom does not look like a disk problem: `git push`
-  prints nothing, burns no CPU, and never returns, because `get_local_heads`
-  enumerates local refs and blocks on the evicted one. `ls` and `find` will NOT
-  reveal it; metadata survives eviction, only a read blocks. Diagnose with
-  `sample <pid> 3`, and detect with `find .git -type f -flags +dataless`.
-
-  The Developer clone is off iCloud, has 0 blocked refs and 0 dataless files, and
-  is 150 MB against the Desktop copy's 948 MB. If a git command hangs, check which
-  checkout you are in before theorising — and check for a stale zero-byte
-  `.git/index.lock` too, the older failure mode.
+- **Work in `/Users/zaka/Developer/kiwi`.** Keep code off iCloud-synced folders: an
+  evicted file makes `read()` block forever at 0% CPU, so `git push` hangs silently.
+  If a git command hangs, check which checkout you are in (`find .git -type f -flags
+  +dataless`, `sample <pid> 3`) and look for a stale zero-byte `.git/index.lock`.
 - **Multiple Claude/Codex sessions share this working tree**, plus a stack of
   `/private/tmp/kiwi-*` worktrees. Leave files you didn't change alone, stage by
   path, and don't stash to clear someone else's work.
