@@ -171,7 +171,7 @@
          qu'on appuie sur l'avis : la console repère la caisse restée sur une
          ancienne version (Santos Store, 21 octobre). */
       loadedAt: pageLoadedAt(), updateReadyAt: updateReadyAt(),
-    }, { idempotencyKey: 'heartbeat:' + (force === true ? 'now-' + Date.now() : Math.floor(Date.now() / 300000)) + ':' + deviceId() });
+    }, { ephemeral: true, idempotencyKey: 'heartbeat:' + (force === true ? 'now-' + Date.now() : Math.floor(Date.now() / 300000)) + ':' + deviceId() });
   }
   function pageLoadedAt() {
     try { var t = Math.round(performance.timeOrigin || 0); return t > 0 ? t : 0; } catch (_) { return 0; }
@@ -263,11 +263,16 @@
       confirmed: opts.confirmed === true, requestedBy: clean(opts.requestedBy || subject().id || subject().role, 100),
       createdAt: Date.now(),
     };
-    if (navigator.onLine === false) return enqueue(command);
+    /* Un battement ne vaut que pour l'instant où il part : mis en file hors
+       ligne, il arrivait périmé et restait parfois coincé sur l'appareil, où
+       il bloquait le déménagement vers kiwi-os.com (Santos Store, 26 octobre).
+       Le battement suivant le remplace ; on n'en garde aucun. */
+    var ephemeral = opts.ephemeral === true;
+    if (navigator.onLine === false) return ephemeral ? { ok: false, offline: true, queued: false } : enqueue(command);
     try {
       var result = await send(command); signal({ type: 'result', result: result }); return result;
     } catch (error) {
-      if (!error.status || error.status >= 500) return enqueue(command);
+      if (!error.status || error.status >= 500) return ephemeral ? { ok: false, offline: true, queued: false } : enqueue(command);
       throw error;
     }
   }

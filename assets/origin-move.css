@@ -7,7 +7,7 @@
   font-style: normal;
 }
 .origin-move strong { font-weight: 600; }
-.origin-move .material-symbols-outlined { color: var(--atlas, #0B6E4F); margin-inline-end: .5rem; vertical-align: middle; }
+.origin-move-icon { display: inline-flex; color: var(--atlas, #0B6E4F); margin-inline-end: .5rem; vertical-align: middle; }
 .origin-move p { margin-block: .5rem; }
 .origin-move button {
   border: 0; border-radius: .5rem; padding: .6rem 1rem; font: inherit;

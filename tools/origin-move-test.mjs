@@ -245,6 +245,24 @@ c = client({}, [{ name: 'kiwi-runtime-v1' }], outbox([{ tenant: 'foreign', chann
 queue = await c.api.queues(); assert.equal(queue.sales, 1); assert.equal(queue.other, 1);
 c.run(); await new Promise(resolve => setTimeout(resolve, 0)); assert.ok(!c.location.replaced);
 await c.button().handlers.click(); assert.ok(!c.posts.some(body => body.action === 'issue'));
+// Santos Store, 26 Oct: fifteen stale heartbeats and server-refused operations held the button shut.
+const heartbeat = state => ({ tenant: 'move-a', channel: 'operations', state, payload: { domain: 'device', action: 'heartbeat' } });
+c = client({ kiwiLang: 'en' }, [{ name: 'kiwi-runtime-v1' }], outbox([...Array.from({ length: 15 }, (_, i) => heartbeat(i % 2 ? 'blocked' : 'pending')),
+  { tenant: 'move-a', channel: 'operations', state: 'blocked', payload: { domain: 'device', action: 'rename' } }]));
+queue = await c.api.queues(); assert.equal(queue.other, 0); assert.equal(queue.refused, 1); assert.ok(c.api.empty(queue));
+c.run(); await new Promise(resolve => setTimeout(resolve, 0));
+assert.ok(!c.button().disabled);
+assert.match(c.context.document.body.children[0].children[2].textContent, /1 operations the server already refused stay on this device/);
+await c.button().handlers.click(); assert.ok(c.location.assigned.startsWith(target + '/origin-move#kiwi-move='));
+// A refused sale and a pending operation still block: only telemetry and refusals step aside.
+for (const row of [{ tenant: 'move-a', channel: 'sale', state: 'blocked', payload: {} }, { tenant: 'move-a', channel: 'operations', state: 'pending', payload: { domain: 'device', action: 'rename' } }]) {
+  c = client({}, [{ name: 'kiwi-runtime-v1' }], outbox([row]));
+  assert.equal(c.api.empty(await c.api.queues()), false);
+  c.run(); await new Promise(resolve => setTimeout(resolve, 0)); assert.ok(c.button().disabled);
+}
+const iconHtml = source.slice(source.indexOf("icon.innerHTML"), source.indexOf("var title"));
+assert.ok(!/move_up|material-symbols/.test(source) && /<svg viewBox="0 -960 960 960"/.test(iconHtml), 'the banner icon is an inline SVG, never icon-font text');
+console.log('✓ Device heartbeats and server-refused operations never hold the Move button; sales and pending work still do');
 c = client({ kiwiLang: 'en' }); c.run(); await new Promise(resolve => setTimeout(resolve, 0));
 await c.button().handlers.click(); assert.ok(c.location.assigned.startsWith(target + '/origin-move#kiwi-move='));
 c = client({}, [], {}, { receiving: true, hash: '#kiwi-move=' + 'a'.repeat(64) });

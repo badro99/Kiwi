@@ -9,9 +9,9 @@
   try { initialState = document.currentScript && document.currentScript.dataset.hadState !== undefined
     ? document.currentScript.dataset.hadState === 'true' : Object.keys(localStorage).some(function (k) { return /^kiwi/i.test(k); }); } catch (_) {}
   var COPY = {
-    fr: { title: 'Kiwi déménage vers kiwi-os.com', move: 'Déplacer cet appareil', login: 'Se reconnecter', ready: 'Les files sont vides. Vous pouvez déplacer cet appareil.', waiting: 'En attente : {s} ventes, {p} impressions, {o} autres opérations.', unknown: 'Impossible de vérifier toutes les files. Réessayez avant de déplacer cet appareil.', error: 'Déplacement impossible. Réessayez sur cet appareil, ou reconnectez-vous sur kiwi-os.com.', owner: 'Votre compte propriétaire doit se reconnecter sur kiwi-os.com.', go: 'Ouvrir Kiwi', retry: 'Réessayer' },
-    en: { title: 'Kiwi moves to kiwi-os.com', move: 'Move this device', login: 'Log in again', ready: 'The queues are empty. You can move this device.', waiting: 'Waiting: {s} sales, {p} print jobs, {o} other operations.', unknown: 'Unable to check every queue. Retry before moving this device.', error: 'Unable to move. Retry on this device, or log in again on kiwi-os.com.', owner: 'Your owner account needs to log in again on kiwi-os.com.', go: 'Open Kiwi', retry: 'Retry' },
-    ar: { title: 'ينتقل Kiwi إلى kiwi-os.com', move: 'نقل هذا الجهاز', login: 'تسجيل الدخول مجدداً', ready: 'قوائم الانتظار فارغة. يمكنك نقل هذا الجهاز.', waiting: 'قيد الانتظار: {s} مبيعات، {p} مهام طباعة، {o} عمليات أخرى.', unknown: 'تعذّر التحقق من جميع القوائم. أعد المحاولة قبل نقل الجهاز.', error: 'تعذّر النقل. أعد المحاولة على هذا الجهاز أو سجل الدخول على kiwi-os.com.', owner: 'يجب تسجيل دخول حساب المالك مجدداً على kiwi-os.com.', go: 'فتح Kiwi', retry: 'إعادة المحاولة' }
+    fr: { title: 'Kiwi déménage vers kiwi-os.com', move: 'Déplacer cet appareil', login: 'Se reconnecter', ready: 'Les files sont vides. Vous pouvez déplacer cet appareil.', waiting: 'En attente : {s} ventes, {p} impressions, {o} autres opérations.', unknown: 'Impossible de vérifier toutes les files. Réessayez avant de déplacer cet appareil.', error: 'Déplacement impossible. Réessayez sur cet appareil, ou reconnectez-vous sur kiwi-os.com.', owner: 'Votre compte propriétaire doit se reconnecter sur kiwi-os.com.', go: 'Ouvrir Kiwi', retry: 'Réessayer', refused: '{r} opérations déjà refusées par le serveur restent sur cet appareil. Elles ne bloquent pas le déplacement.' },
+    en: { title: 'Kiwi moves to kiwi-os.com', move: 'Move this device', login: 'Log in again', ready: 'The queues are empty. You can move this device.', waiting: 'Waiting: {s} sales, {p} print jobs, {o} other operations.', unknown: 'Unable to check every queue. Retry before moving this device.', error: 'Unable to move. Retry on this device, or log in again on kiwi-os.com.', owner: 'Your owner account needs to log in again on kiwi-os.com.', go: 'Open Kiwi', retry: 'Retry', refused: '{r} operations the server already refused stay on this device. They do not block the move.' },
+    ar: { title: 'ينتقل Kiwi إلى kiwi-os.com', move: 'نقل هذا الجهاز', login: 'تسجيل الدخول مجدداً', ready: 'قوائم الانتظار فارغة. يمكنك نقل هذا الجهاز.', waiting: 'قيد الانتظار: {s} مبيعات، {p} مهام طباعة، {o} عمليات أخرى.', unknown: 'تعذّر التحقق من جميع القوائم. أعد المحاولة قبل نقل الجهاز.', error: 'تعذّر النقل. أعد المحاولة على هذا الجهاز أو سجل الدخول على kiwi-os.com.', owner: 'يجب تسجيل دخول حساب المالك مجدداً على kiwi-os.com.', go: 'فتح Kiwi', retry: 'إعادة المحاولة', refused: '{r} عمليات رفضها الخادم مسبقاً تبقى على هذا الجهاز. لا تمنع النقل.' }
   };
   function copy() {
     var lang = document.documentElement.lang || 'fr';
@@ -20,7 +20,8 @@
   }
   function empty(q) { return !!q && ['sales', 'prints', 'other', 'unknown'].every(function (k) { return q[k] === 0; }); }
   function localQueues() {
-    var q = { sales: 0, prints: 0, other: 0, unknown: 0 };
+    // refused: rows the server turned down for good; they never leave any origin.
+    var q = { sales: 0, prints: 0, other: 0, unknown: 0, refused: 0 };
     try {
       Object.keys(localStorage).forEach(function (key) {
         if (!/^kiwi/i.test(key) || !/queue/i.test(key)) return;
@@ -64,7 +65,16 @@
           cursor.onsuccess = function () {
             var c = cursor.result;
             if (!c) return;
-            if (store === 'outbox') q[c.value.channel === 'sale' ? 'sales' : 'other']++;
+            if (store === 'outbox') {
+              var row = c.value || {}, command = row.payload || {};
+              // A sale always blocks, whatever its state: money must reach the ledger first.
+              if (row.channel === 'sale') q.sales++;
+              // A device heartbeat is telemetry for one moment; the new origin sends its own.
+              else if (command.domain === 'device' && command.action === 'heartbeat') {}
+              // Refused for good by the server: no origin will ever send it, so it cannot wait.
+              else if (row.state === 'blocked') q.refused++;
+              else q.other++;
+            }
             else if (Array.isArray(c.value)) q.other += c.value.length;
             else q.unknown++;
             c.continue();
@@ -96,8 +106,9 @@
     if (failure) return c.error;
     if (q.unknown) return c.unknown;
     var p = Math.max(q.prints, serverPrints);
-    if (q.sales || p || q.other) return c.waiting.replace('{s}', q.sales).replace('{p}', p).replace('{o}', q.other);
-    return owner ? c.owner : c.ready;
+    var note = q.refused ? ' ' + c.refused.replace('{r}', q.refused) : '';
+    if (q.sales || p || q.other) return c.waiting.replace('{s}', q.sales).replace('{p}', p).replace('{o}', q.other) + note;
+    return (owner ? c.owner : c.ready) + note;
   }
   async function refresh() {
     var q = await queues();
@@ -166,7 +177,9 @@
   function mount() {
     var sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/assets/origin-move.css'; document.head.appendChild(sheet);
     panel = document.createElement('aside'); panel.className = 'origin-move'; panel.setAttribute('aria-label', copy().title);
-    var icon = document.createElement('span'); icon.className = 'material-symbols-outlined'; icon.textContent = 'move_up'; icon.setAttribute('aria-hidden', 'true');
+    // No icon font on these pages: the vendored Material path, drawn inline (open_in_new).
+    var icon = document.createElement('span'); icon.className = 'origin-move-icon'; icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<svg viewBox="0 -960 960 960" width="20" height="20" fill="currentColor"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H560v-80h280v280h-80v-144L388-332Z"/></svg>';
     var title = document.createElement('strong'); title.textContent = copy().title;
     status = document.createElement('p'); status.setAttribute('role', 'status');
     button = document.createElement('button'); button.type = 'button'; button.disabled = true; button.textContent = copy().move;
