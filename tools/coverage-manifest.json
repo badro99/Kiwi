@@ -1823,6 +1823,38 @@
         "tablet"
       ],
       "state": "synthetic assistant inspection, canonical stock receipt review, correction and confirmation; no model call"
+    },
+    {
+      "id": "boutique-count-review",
+      "shells": [
+        "kiwi-caisse.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "Blind count review, failed submission and retry retaining frozen quantities"
+    },
+    {
+      "id": "dashboard-count-review",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "tablet",
+        "desktop"
+      ],
+      "state": "Frozen count quantities and value, refused approval, retry and applied read-only state"
     }
   ],
   "excludedHtml": [

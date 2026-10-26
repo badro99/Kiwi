@@ -360,7 +360,7 @@ window.KiwiStockInternal.install('counts', (S) => {
           </div>
         ` : ''}
 
-        <div class="st-tbl-wrap" style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
+        <div class="st-tbl-wrap" tabindex="0" role="region" aria-label="${esc(ct('thItemVariant'))}" style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
           <table class="st-tbl" style="font-size:12.5px;">
             <thead>
               <tr>

@@ -63,6 +63,18 @@ async function returns(page, t, check) {
 }
 
 async function countReview(page, t, check) {
+  let attempts = 0, submitted;
+  page.removeAllListeners('request');
+  page.on('request', req => {
+    const url = new URL(req.url());
+    if (url.pathname === '/api/inventory/counts' && req.method() === 'POST') {
+      attempts++; submitted = JSON.parse(req.postData());
+      return req.respond({ status: attempts === 1 ? 503 : 200, contentType: 'application/json',
+        body: JSON.stringify(attempts === 1 ? { error: 'offline' } : { success: true, count: { id: 'matrix-boutique-count', status: 'submitted' } }) });
+    }
+    if (url.pathname.startsWith('/api/')) return req.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+    return url.origin === new URL(page.url()).origin || url.protocol === 'data:' ? req.continue() : req.abort();
+  });
   t.step('count one demo variant, then review before transmission');
   await view(page, 'inventaire');
   await click(page, '#bqi-count');
@@ -76,6 +88,18 @@ async function countReview(page, t, check) {
   await page.waitForSelector('#sk-modal [data-cnt-note]', wait);
   await sleep(400);
   await check('#sk-modal.is-open #sk-modal-box');
+  t.step('failed transmission keeps the frozen review, retry records a pending count');
+  await click(page, '#pos-cnt-submit-btn');
+  await page.waitForFunction(() => document.querySelector('#sk-modal')?.textContent.includes('Envoi impossible'));
+  assert.equal(attempts, 1);
+  assert.equal(submitted.lines.length, 1);
+  assert.equal(submitted.lines[0].countedQty, 1);
+  const frozen = JSON.stringify(submitted.lines);
+  await click(page, '#pos-cnt-submit-btn');
+  await page.waitForSelector('#pos-cnt-finish-btn', wait);
+  assert.equal(attempts, 2);
+  assert.equal(JSON.stringify(submitted.lines), frozen, 'retry preserves the reviewed quantities');
+  assert.match(await page.$eval('#sk-modal', el => el.textContent), /matrix-boutique-count/);
 }
 
 try {
@@ -93,6 +117,9 @@ try {
             // coverage: surface=boutique-exchange locale=fr viewport=phone
             // coverage: surface=boutique-exchange locale=en viewport=phone
             // coverage: surface=boutique-exchange locale=ar viewport=phone
+            // coverage: surface=boutique-count-review locale=fr viewport=phone
+            // coverage: surface=boutique-count-review locale=en viewport=phone
+            // coverage: surface=boutique-count-review locale=ar viewport=phone
             cell = await tills.open(t, locale, 'phone');
           } else {
             // coverage: surface=caisse-boutique locale=fr viewport=tablet
@@ -101,6 +128,9 @@ try {
             // coverage: surface=boutique-exchange locale=fr viewport=tablet
             // coverage: surface=boutique-exchange locale=en viewport=tablet
             // coverage: surface=boutique-exchange locale=ar viewport=tablet
+            // coverage: surface=boutique-count-review locale=fr viewport=tablet
+            // coverage: surface=boutique-count-review locale=en viewport=tablet
+            // coverage: surface=boutique-count-review locale=ar viewport=tablet
             cell = await tills.open(t, locale, 'tablet');
           }
           const { page } = cell;
