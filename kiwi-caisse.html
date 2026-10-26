@@ -165,7 +165,7 @@
         '<meta name="theme-color" content="#F7F5F0">' +
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=9">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=59">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=60">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -191,8 +191,8 @@
         js("assets/kit/elements.js?v=4") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=8") +
-        js("assets/kit/till.js?v=20") +
-        js("assets/kit/till-frame.js?v=10") +
+        js("assets/kit/till.js?v=24") +
+        js("assets/kit/till-frame.js?v=13") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=2") +
         js("assets/kit/till-z.js?v=1") +
@@ -204,7 +204,7 @@
   <script src="assets/retail-scan.js?v=11" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=66" defer></script>
+  <script src="assets/caisse-lang.js?v=67" defer></script>
   <script src="assets/menu-i18n.js?v=6" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -222,7 +222,7 @@
        are inherited from here. -->
   <link rel="stylesheet" href="assets/tokens.css?v=2053" />
 
-  <link rel="stylesheet" href="assets/caisse-shell.css?v=14" />
+  <link rel="stylesheet" href="assets/caisse-shell.css?v=15" />
   <link rel="stylesheet" href="assets/caisse-skin.css?v=4" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
@@ -380,8 +380,8 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=17" defer></script>
-  <script src="assets/clients-store.js?v=19" defer></script>
-  <script src="assets/clients-book.js?v=41" defer></script>
+  <script src="assets/clients-store.js?v=21" defer></script>
+  <script src="assets/clients-book.js?v=43" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -395,7 +395,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=39" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>
-  <script src="assets/caisse-menu-availability.js?v=10" defer></script>
+  <script src="assets/caisse-menu-availability.js?v=11" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -1980,11 +1980,11 @@
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
   <link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=8" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=6" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=8" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=4" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=9" data-caisse-script>
   <link href="assets/caisse/orders.js?v=2" data-caisse-lazy="orders">
   <link rel="preload" as="script" href="assets/caisse/payment.js?v=3" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=3" data-caisse-script>

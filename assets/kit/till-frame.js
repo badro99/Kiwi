@@ -53,6 +53,22 @@
   if (!K || !CE || !CE.get('k-menu-grid') || !CE.get('k-bill') || !CE.get('k-pay')) return;
   var doc = root.document;
 
+  /* Which hand moves focus in the till: a tap or click sets "pointer", a
+     navigation key (Tab, arrows, Home, End, Page) sets "key", and kit.css
+     draws the focus ring only for the keyboard. Chrome lights :focus-visible
+     on a clicked tile at the next key of any kind, so Shift, a Cmd shortcut,
+     a screenshot or a scanner's Enter ringed the last dish tapped (owner,
+     26 Oct 2026). Before the first input nothing is set and rings draw. */
+  (function () {
+    var NAV = /^(Tab|Arrow(Up|Down|Left|Right)|Home|End|PageUp|PageDown)$/;
+    function set(v) { if (doc.documentElement.getAttribute('data-k-nav') !== v) doc.documentElement.setAttribute('data-k-nav', v); }
+    doc.addEventListener('pointerdown', function () { set('pointer'); }, true);
+    doc.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey || !NAV.test(e.key)) return;
+      set('key');
+    }, true);
+  })();
+
   var api = null, grid = null, bill = null, pay = null, rail = null, more = null, tabs = null, railValue = '';
   var railSig = '', tabsSig = '';
   /* The panes that push over the bill (§18.3, §10.30, §10.31): one at a time. */

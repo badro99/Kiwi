@@ -79,6 +79,12 @@
       }
       return tillKit;
     }
+    /* The dish's photo on its kit tile, the same one the shipped grid shows
+       (catalogue.js menuArtKey: the dish words, then its sub-category, then
+       the brand can for a soda). The 2027 tiles had none (owner, 26 Oct 2026). */
+    function tillKitPhoto(m) {
+      try { return 'assets/dishes/' + menuArtKey(m.id, m.cat, m.name, m.subLabel) + '.webp?v=' + DISH_PHOTOS_V; } catch (_) { return ''; }
+    }
     function tillKitSections() {
       const inView = (m) => activeCat === 'all' || (m.cat === activeCat && (!activeSub || m.subId === activeSub));
       const source = (mode !== 'vrap' && selectedId) ? (tableOrders[selectedId] || []) : cart;
@@ -88,7 +94,7 @@
         const cat = String(m.cat || '');
         if (!byCat[cat]) { byCat[cat] = { id: cat || 'menu', title: catLabelL(m.cat) || '', items: [] }; secs.push(byCat[cat]); }
         byCat[cat].items.push({
-          id: String(m.id), name: menuName(m), price: m.price, soldOut: out,
+          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: tillKitPhoto(m),
           options: !out && !!((m.formula && Array.isArray(m.formula.slots) && m.formula.slots.length) || itemOptGroups(m).length),
           qty: out ? 0 : source.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0),
         });
@@ -119,7 +125,12 @@
          (« 1 article · 45 MAD » sous « Total 45,00 MAD »). */
       const lang = window.KiwiCaisseLang, tr = (x) => (lang && lang.tr ? lang.tr(x) : x);
       const title = tr($('#rp-table').textContent || '');
-      const meta = tr($('#rp-substatus').textContent || '').replace(/\s*·\s*[^·]*MAD[^·]*$/, '');
+      let meta = tr($('#rp-substatus').textContent || '').replace(/\s*·\s*[^·]*MAD[^·]*$/, '');
+      /* Le client attaché à cette note (depuis sa fiche ou le sélecteur) :
+         le volet livré l'affiche sur son bouton, l'addition du kit dans son
+         en-tête. */
+      const note = mode === 'vrap' ? 'vrap:' + (vrapEditingNum == null ? 'new' : vrapEditingNum) : 'table:' + (selectedId || '');
+      if (saleClient && saleClient.ctx === note) meta = meta ? meta + ' · ' + saleClient.name : saleClient.name;
       if (mode === 'vrap') {
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         const disc = vrapDiscountAmount(gross);

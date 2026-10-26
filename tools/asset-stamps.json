@@ -104,8 +104,8 @@
     "sha": "542467648bec195c"
   },
   "assets/caisse-accounting.js": {
-    "v": "8",
-    "sha": "82f098eb983cbc34"
+    "v": "10",
+    "sha": "b73b3bd8159c11ea"
   },
   "assets/caisse-app.js": {
     "v": "26",
@@ -136,16 +136,16 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "66",
-    "sha": "5410a8157cf648cb"
+    "v": "67",
+    "sha": "b66c2e9903d42686"
   },
   "assets/caisse-link.js": {
     "v": "21",
     "sha": "662c68f00351f801"
   },
   "assets/caisse-menu-availability.js": {
-    "v": "10",
-    "sha": "dcd1810d1b93852c"
+    "v": "11",
+    "sha": "18b0d6fedbf71be7"
   },
   "assets/caisse-motion.js": {
     "v": "8",
@@ -168,8 +168,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "14",
-    "sha": "3d4dcbfb41eeb8ab"
+    "v": "15",
+    "sha": "ae53b0c9e4c53031"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -240,8 +240,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "4",
-    "sha": "049479b2862002be"
+    "v": "9",
+    "sha": "8bf98630967f3042"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -284,16 +284,16 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "41",
-    "sha": "b509569d5debfae1"
+    "v": "43",
+    "sha": "4ce3c41097facf1d"
   },
   "assets/clients-directory.js": {
     "v": "26",
     "sha": "bfc75b6e171840e7"
   },
   "assets/clients-store.js": {
-    "v": "19",
-    "sha": "ee4ad7ae1b1c49a7"
+    "v": "21",
+    "sha": "7b99f71171df0e6c"
   },
   "assets/cloud-doc.js": {
     "v": "11",
@@ -768,8 +768,8 @@
     "sha": "91fba1b73e21ba8a"
   },
   "assets/kit/kit.css": {
-    "v": "59",
-    "sha": "2e91a08f4f647638"
+    "v": "60",
+    "sha": "fbc5bfa93c15faef"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -900,8 +900,8 @@
     "sha": "b7e1f27be387dc47"
   },
   "assets/kit/till-frame.js": {
-    "v": "10",
-    "sha": "cbcc70f3db3cb8ec"
+    "v": "13",
+    "sha": "cbe5a44927f39955"
   },
   "assets/kit/till-online.js": {
     "v": "2",
@@ -916,8 +916,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "20",
-    "sha": "ce833a5b5c8cdc9d"
+    "v": "24",
+    "sha": "4dfeae70d4b8b214"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

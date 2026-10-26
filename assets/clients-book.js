@@ -22,6 +22,8 @@
   var redemptionRequests = {};
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  // Libellés de la caisse : passent par son dictionnaire quand il est chargé.
+  function tr(s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; }
   function fmt(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
   /* Dernière journée commerciale où un avoir reste utilisable : le serveur le
      fait expirer à la bascule (05:00) qui clôt cette journée, dont la date civile
@@ -261,6 +263,12 @@
       '.kcb-record{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:16px 18px;margin-bottom:8px;}',
       '.kcb-record .rl{font-size:.78rem;font-weight:600;color:rgba(10,15,13,.6);margin-bottom:10px;}',
       '.kcb-recrow{display:flex;gap:10px;align-items:center;}',
+      '.kcb-note{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:12px 16px 14px;margin-bottom:14px;}',
+      '.kcb-note .rl{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.78rem;font-weight:600;color:rgba(10,15,13,.64);margin-bottom:4px;}',
+      '.kcb-note .txt{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.95rem;line-height:1.4;}.kcb-note .txt.muted{color:rgba(10,15,13,.64);}',
+      '.kcb-note textarea{display:block;width:100%;box-sizing:border-box;min-height:84px;margin-top:6px;padding:12px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font:inherit;font-size:.95rem;background:var(--surface);color:inherit;resize:vertical;}',
+      '.kcb-note .acts{display:flex;gap:8px;margin-top:10px;}.kcb-note .acts .kcb-btn{flex:1;}',
+      '.kcb-link{border:0;background:none;padding:0 2px;min-height:32px;font:inherit;font-size:.82rem;font-weight:600;color:var(--atlas,#0B6E4F);cursor:pointer;}',
       '.kcb-recrow input{flex:1;min-width:0;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1.05rem;background:var(--surface);font-variant-numeric:tabular-nums;}',
       '.kcb-big{flex:none;background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-family:inherit;font-size:1rem;font-weight:600;line-height:1;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}',
       '.kcb-big svg{width:18px;height:18px;}',
@@ -271,6 +279,8 @@
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) .kcb-stat,',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) .kcb-kpi,',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) .kcb-record,',
+      ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) .kcb-note,',
+      ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) .kcb-note textarea,',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) .kcb-field input,',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) #kcb-root .kcb-search{background:#141d19;border-color:#26302b;color:#eafff3;}',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) #kcb-root .kcb-strip,',
@@ -712,6 +722,30 @@
     try { return !!(window.KiwiPosSale && KiwiPosSale.attachClient && KiwiPosSale.isReal() && POS_ATTACH.test(document.body.className)); }
     catch (_) { return false; }
   }
+  /* Where a client card can put its client: { current() id or null,
+     attach(c), detach(), on/off labels, pos }. The POS verticals credit the
+     next paid sale (KiwiPosSale); the restaurant till puts the client on the
+     note in progress, À emporter or an open table (KiwiCaisseSaleClient in
+     caisse-accounting.js). Null when there is no sale to put them on. */
+  function saleTarget() {
+    try {
+      if (posAttachOn()) return {
+        pos: true, on: tr('Attacher à la vente en cours'), off: tr('Détacher de la vente'),
+        current: function () { var a = KiwiPosSale.attachedClient && KiwiPosSale.attachedClient(); return a ? a.id : null; },
+        attach: function (c) { KiwiPosSale.attachClient(c); }, detach: function () { KiwiPosSale.attachClient(null); }
+      };
+      var S = window.KiwiCaisseSaleClient;
+      if (S && S.available && S.available()) {
+        var note = S.note();
+        return {
+          pos: false, on: tr('Ajouter à la note') + (note ? ' · ' + tr(note) : ''), off: tr('Retirer de la note') + (note ? ' · ' + tr(note) : ''),
+          current: function () { return S.current(); },
+          attach: function (c) { return S.attach(c); }, detach: function () { S.detach(); }
+        };
+      }
+    } catch (_) {}
+    return null;
+  }
   function renderSalePill(c) {
     var pill = document.getElementById('kcb-salepill');
     if (!c || !POS_ATTACH.test(document.body.className)) { if (pill) pill.remove(); return; }
@@ -867,19 +901,25 @@
     if (hotel && h.foodPreferences) infoRows.push(['Préférences repas', h.foodPreferences]);
     if (hotel && h.allergies) infoRows.push(['Allergies', h.allergies]);
     if (hotel && h.accessibilityNeeds) infoRows.push(['Besoins particuliers', h.accessibilityNeeds]);
-    if (c.notes) infoRows.push(['Notes', c.notes]);
     var consentTxt = [c.consent ? 'WhatsApp/SMS' : '', c.consentEmail ? 'Email' : ''].filter(Boolean).join(' · ');
     infoRows.push(['Consentement', consentTxt || 'Aucun']);
     var infoBlock = '<div class="kcb-info">' + infoRows.map(function (r) {
       return '<div class="kcb-inforow"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>';
     }).join('') + '</div>';
-    var attachOn = posAttachOn();
-    var attachedNow = attachOn && KiwiPosSale.attachedClient && KiwiPosSale.attachedClient();
-    var isAttached = !!(attachedNow && attachedNow.id === c.id);
-    var attachBlock = attachOn
-      ? '<button class="kcb-btn ' + (isAttached ? 'ghost' : 'primary') + '" id="kcb-attach" style="display:block;width:100%;margin:14px 0 10px">' +
-          (isAttached ? 'Détacher de la vente' : 'Attacher à la vente en cours') + '</button>'
+    /* The sale this client can go on, at the top of the card where Shopify
+       and Loyverse put it (owner, 26 Oct 2026): the POS verticals' next sale,
+       or the restaurant till's note in progress. */
+    var target = saleTarget();
+    var isAttached = !!(target && target.current() === c.id);
+    var attachBlock = target
+      ? '<button class="kcb-btn ' + (isAttached ? 'ghost' : 'primary') + '" id="kcb-attach" style="display:block;width:100%;margin:0 0 14px">' +
+          esc(isAttached ? target.off : target.on) + '</button>'
       : '';
+    /* The note the team should read before serving: under the name, not in
+       the list of details at the bottom, and written from here. */
+    var noteBlock = '<div class="kcb-note" id="kcb-note"><div class="rl"><span>' + tr('Note pour l’équipe') + '</span>' +
+        '<button type="button" class="kcb-link" id="kcb-note-edit">' + tr(c.notes ? 'Modifier' : 'Ajouter') + '</button></div>' +
+      (c.notes ? '<div class="txt">' + esc(c.notes) + '</div>' : '<div class="txt muted">' + tr('Allergies, préférences, table habituelle…') + '</div>') + '</div>';
     var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice(0, 50);
     var returns = localReturns();
     var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
@@ -914,6 +954,8 @@
       /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
          du commerçant, elle doit traverser telle quelle. */
       (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
+      attachBlock +
+      noteBlock +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
       '<div class="kcb-kpis">' +
@@ -925,7 +967,6 @@
       infoBlock +
       historyBlock +
       '<div id="kcb-credit-history"><div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Chargement du registre…</div></div>' +
-      attachBlock +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="display:block;width:100%;margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
       '<div class="kcb-actions"><button data-activation=write class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +
@@ -938,10 +979,28 @@
     sh.querySelector('#kcb-edit').onclick = function () { openForm(c); };
     var attachBtn = sh.querySelector('#kcb-attach');
     if (attachBtn) attachBtn.onclick = function () {
-      if (isAttached) { KiwiPosSale.attachClient(null); openDetail(c.id); toast('Client détaché de la vente'); return; }
-      KiwiPosSale.attachClient(c);
+      if (isAttached) { target.detach(); openDetail(c.id); toast(tr(target.pos ? 'Client détaché de la vente' : 'Client retiré de la note')); return; }
+      if (target.attach(c) === false) { toast(tr('Aucune note en cours')); return; }
       closeSheet(); close();
-      toast('Client attaché', 'Sa prochaine vente s’enregistre sur sa fiche.');
+      /* The till's own attach already says « X attaché à la note ». */
+      if (target.pos) toast(tr('Client attaché'), tr('Sa prochaine vente s’enregistre sur sa fiche.'));
+    };
+    sh.querySelector('#kcb-note-edit').onclick = function () {
+      var box = sh.querySelector('#kcb-note');
+      box.innerHTML = '<div class="rl"><label for="kcb-note-in">' + tr('Note pour l’équipe') + '</label></div>' +
+        '<textarea id="kcb-note-in" maxlength="1000" placeholder="' + esc(tr('Allergies, préférences, table habituelle…')) + '">' + esc(c.notes || '') + '</textarea>' +
+        '<div class="acts"><button type="button" class="kcb-btn primary" id="kcb-note-save">' + tr('Enregistrer') + '</button>' +
+        '<button type="button" class="kcb-btn ghost" id="kcb-note-cancel">' + tr('Annuler') + '</button></div>';
+      var ta = box.querySelector('#kcb-note-in');
+      ta.focus();
+      box.querySelector('#kcb-note-cancel').onclick = function () { openDetail(c.id); };
+      box.querySelector('#kcb-note-save').onclick = function () {
+        var v = ta.value.trim();
+        if (v === String(c.notes || '').trim()) { openDetail(c.id); return; }
+        KC.upsert({ id: c.id, notes: v });
+        renderList(); openDetail(c.id);
+        toast(tr(v ? 'Note enregistrée' : 'Note effacée'));
+      };
     };
     sh.querySelector('#kcb-rec').onclick = function () {
       var amt = 0;
