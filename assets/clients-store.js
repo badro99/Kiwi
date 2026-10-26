@@ -609,11 +609,34 @@
    * périmé par-dessus un plus récent. Une suppression est mise en file sous
    * '-<id>' : elle doit être rejouée elle aussi, ou le client supprimé revient
    * depuis l'autre appareil. */
-  function outKey(book) { return 'kiwi:clients-out:v1:' + book; }
-  function outRead(book) {
-    try { var a = JSON.parse(ls(outKey(book)) || '[]'); return Array.isArray(a) ? a : []; }
+  /* ── UN SEUL PROPRIÉTAIRE POUR LES QUATRE FILES ──────────────────────────
+   * Fiches, achats et retours, récompenses données, récompenses refusées :
+   * chaque file lisait et écrivait localStorage pour son compte et avalait une
+   * écriture refusée (stockage plein, navigation privée). Si la caisse était en
+   * plus hors ligne à ce moment-là, l'événement était perdu : les points
+   * n'arrivaient jamais au serveur (et disparaissaient au tirage suivant), une
+   * récompense donnée pouvait l'être encore sur une autre caisse, et un ticket
+   * rejoué comptait deux fois. Seules outboxRead et outboxWrite touchent
+   * désormais ces clés : une écriture refusée est gardée en mémoire, la file
+   * part quand même pendant cette session, et la copie gardée est écrite dès
+   * que le stockage l'accepte (outboxPersistHeld, au début de chaque tour).
+   * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
+  var heldQueues = {};
+  function outboxRead(key) {
+    if (heldQueues[key]) return heldQueues[key].slice();
+    try { var a = JSON.parse(ls(key) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
   }
+  function outboxWrite(key, list) {
+    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; return true; }
+    catch (_) { heldQueues[key] = list.slice(); return false; }
+  }
+  function outboxPersistHeld() {
+    Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, heldQueues[key]); });
+  }
+
+  function outKey(book) { return 'kiwi:clients-out:v1:' + book; }
+  function outRead(book) { return outboxRead(outKey(book)); }
   function outWrite(book, a) {
     // Pas de plafond. La file est déjà regroupée par fiche (un jeton par client,
     // '-<id>' pour une suppression, outAdd ne double jamais) : dix modifications
@@ -623,7 +646,7 @@
     // 500 sortait les plus anciens jetons en silence : une fiche modifiée hors
     // ligne, ou une suppression, n'était plus jamais rejouée tant que le client
     // ne repassait pas en caisse, et l'autre appareil ne l'apprenait pas.
-    try { localStorage.setItem(outKey(book), JSON.stringify(a)); } catch (_) {}
+    outboxWrite(outKey(book), a);
   }
   function outAdd(book, token) {
     if (!syncable(book) || !token) return;
@@ -638,16 +661,13 @@
 
   function purchaseKey(book) { return 'kiwi:clients-purchases:v1:' + book; }
   function purchaseRead(book) {
-    try {
-      var a = JSON.parse(ls(purchaseKey(book)) || '[]');
-      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId; }) : [];
-    } catch (_) { return []; }
+    return outboxRead(purchaseKey(book)).filter(function (e) { return e && e.ref && e.clientId; });
   }
   function purchaseWrite(book, events) {
     // Never evict unacknowledged purchases. The server event table is the
     // durable acknowledgement boundary; trimming here would silently lose
     // sales after a long offline period.
-    try { localStorage.setItem(purchaseKey(book), JSON.stringify(events)); } catch (_) {}
+    outboxWrite(purchaseKey(book), events);
   }
   function purchaseAdd(book, event) {
     if (!syncable(book) || !event || !event.ref) return;
@@ -706,13 +726,10 @@
 
   function redemptionKey(book) { return 'kiwi:clients-redemptions:v1:' + book; }
   function redemptionRead(book) {
-    try {
-      var a = JSON.parse(ls(redemptionKey(book)) || '[]');
-      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId; }) : [];
-    } catch (_) { return []; }
+    return outboxRead(redemptionKey(book)).filter(function (e) { return e && e.ref && e.clientId; });
   }
   function redemptionWrite(book, events) {
-    try { localStorage.setItem(redemptionKey(book), JSON.stringify(events)); } catch (_) {}
+    outboxWrite(redemptionKey(book), events);
   }
   function redemptionAdd(book, event) {
     if (!syncable(book) || !event || !event.ref) return;
@@ -724,11 +741,9 @@
   function redemptionDrop(book, ref) {
     redemptionWrite(book, redemptionRead(book).filter(function (e) { return e.ref !== ref; }));
   }
+  function refusedKey(book) { return 'kiwi:clients-refused-redemptions:v1:' + book; }
   function refusedRedemptions(book) {
-    try {
-      var a = JSON.parse(ls('kiwi:clients-refused-redemptions:v1:' + (book || bookId())) || '[]');
-      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId && e.error; }) : [];
-    } catch (_) { return []; }
+    return outboxRead(refusedKey(book || bookId())).filter(function (e) { return e && e.ref && e.clientId && e.error; });
   }
   function redemptionRefuse(book, event, error) {
     var refused = refusedRedemptions(book);
@@ -736,9 +751,7 @@
       refused.push({ ref: event.ref, clientId: event.clientId, error: error, at: now() });
     }
     // Keep the pending event if the refusal could not be persisted.
-    try {
-      localStorage.setItem('kiwi:clients-refused-redemptions:v1:' + book, JSON.stringify(refused));
-    } catch (_) { return; }
+    if (!outboxWrite(refusedKey(book), refused)) return;
     redemptionDrop(book, event.ref);
     /* Le refus arrive sur la caisse qui a donné la remise : c'est là qu'il faut
        le dire. La fiche du tableau de bord ne le lit que sur cet appareil. */
@@ -995,6 +1008,7 @@
   function tick() {
     var b = bookId();
     if (!syncable(b)) return;
+    outboxPersistHeld();   // une file gardée en mémoire retourne sur le disque dès qu'il l'accepte
     flushOutbox(b);   // d'abord ce qui n'est jamais parti d'ici…
     flushPurchases(b);
     flushRedemptions(b);

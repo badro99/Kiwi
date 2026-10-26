@@ -1698,6 +1698,7 @@ section('Whole-project regressions');
     'customer-balance-properties-test.mjs',
     'credit-book-properties-test.mjs',
     'clients-properties-test.mjs',
+    'clients-outbox-owner-test.mjs',
     'books-money-properties-test.mjs',
     'serveur-money-properties-test.mjs',
     'pressing-money-properties-test.mjs',
