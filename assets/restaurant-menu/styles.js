@@ -258,6 +258,7 @@ textarea.rmw-rx-in{height:auto;min-height:92px;padding:10px 11px;line-height:1.5
 .rmw-st-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
 .rmw-it input.rmw-st-title{grid-column:1;width:100%;height:30px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--ink);font:650 16px var(--sans)}
 .rmw-it input.rmw-st-title:focus{outline:0;box-shadow:0 1px 0 var(--atlas)!important}
+.rmw-st-err{grid-column:1/-1;margin:2px 0 0}
 .rmw-st-rule{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--n-600)}
 .rmw-it input.rmw-st-num{width:44px;height:30px;padding:0!important;border:1px solid var(--n-200)!important;border-radius:8px!important;background:var(--rx-field)!important;color:var(--ink);font:600 13px var(--sans);font-variant-numeric:tabular-nums;text-align:center;-moz-appearance:textfield}
 .rmw-it input.rmw-st-num:focus{outline:0;border-color:var(--atlas)!important}
