@@ -721,6 +721,8 @@ for (const test of [
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
   'source-assertion-ratchet-test.mjs',
+  'wave-o-infra-test.mjs',
+  'assertion-provenance-test.mjs',
   /* TypeScript reads functions/ as plain JS (checkJs): type errors per file pinned, only ever down. */
   'typecheck-ratchet-test.mjs',
   /* One owner per window.Kiwi* global, no new dangling read, the large files' coupling pinned. */

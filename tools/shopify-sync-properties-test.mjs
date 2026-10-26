@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Local SQLite D1, shipped handlers, and a closed Shopify transport simulator.
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {createHmac} from 'node:crypto';
 import {fixture} from './server-money-fixture.mjs';
@@ -23,7 +24,7 @@ let gate=null;
 f.env.DB={prepare(q){const s=f.DB.prepare(q);const wrap={bind(...a){s.bind(...a);return wrap;},async run(){return s.run();},async all(){return s.all();},async first(){const row=s.first();if(gate&&q==='SELECT data, rev FROM catalogs WHERE merchant = ?'){const g=gate;g.rows++;if(g.rows===2){gate=null;g.release();}await g.ready;}return row;}};return wrap;},batch:ss=>f.DB.batch(ss)};
 let orders=[],calls=[],provider=new Map(),lose=false,gone=false;
 const realFetch=globalThis.fetch;
-globalThis.fetch=async(url,opts)=>{
+const propertyFetch=async(url,opts)=>{
  assert.match(String(url),/^https:\/\/properties\.myshopify\.com\/admin\/api\//);
  const body=JSON.parse(opts.body);
  // Pages réelles de Shopify : 50 commandes par page (curseur par commande), 100 lignes
@@ -38,6 +39,7 @@ globalThis.fetch=async(url,opts)=>{
  if(lose){lose=false;throw Error('fixture response lost after provider commit');}
  return Response.json({data:{inventorySetQuantities:{userErrors:[]}}});
 };
+globalThis.fetch=propertyFetch;
 function reset(stock=10){
  f.sql.exec('DELETE FROM orders; DELETE FROM catalogs; DELETE FROM channel_links; DELETE FROM shopify_connections; DELETE FROM shopify_variant_links; DELETE FROM shopify_sync_outbox; DELETE FROM shopify_inbound_stock; DELETE FROM shopify_webhook_events;');
  for(const m of [merchant,other]){
@@ -62,6 +64,36 @@ async function hook(o,signature='valid',shop='properties.myshopify.com',topic='o
 async function race(work){let release;const ready=new Promise(r=>release=r);gate={ready,release,rows:0};let timer;try{return await Promise.race([work(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('catalog read barrier not reached')),3000);})]);}finally{clearTimeout(timer);gate=null;release();}}
 const qty=fc.integer({min:1,max:40}),stock=fc.integer({min:0,max:40});
 try{
+// The provider corpus is replayed through the shipped outbox, not a mirror of
+// the sync algorithm. No HTTP request can escape this closed transport.
+const corpus=JSON.parse(readFileSync(new URL('./fixtures/shopify/2026-07.json',import.meta.url),'utf8'));
+assert.equal(corpus.version,'2026-07');
+assert.ok(Date.now()<Date.parse(corpus.reviewBy),'Provider corpus review overdue: recheck pinned documentation and review every replay case.');
+assert.ok(corpus.cases.length>=6);
+for(const c of corpus.cases){
+ reset(11);
+ await enqueueStockChanges(f.env,merchant,doc(),{variants:[{id:'v',stock:10}]},2);
+ let seen=0;
+ globalThis.fetch=async(url,opts)=>{
+  seen++;assert.match(String(url),/\/admin\/api\/2026-07\/graphql.json$/);
+  const req=JSON.parse(opts.body),input=req.variables.input;
+  assert.match(req.query,/@idempotent\(key: \$key\)/);
+  assert.equal(input.quantities[0].changeFromQuantity,11);
+  assert.equal(input.quantities[0].quantity,10);
+  assert.ok(req.variables.key);
+  return Response.json(c.body,{status:c.status,headers:c.headers});
+ };
+ const result=await flushShopifyOutbox(f.env,merchant);
+ assert.equal(seen,1,c.id);
+ assert.equal(result.processed,c.processed,c.id);
+ assert.equal(result.failed,c.failed,c.id);
+ const row=f.sql.prepare('SELECT status,attempts,next_attempt_ts FROM shopify_sync_outbox').get();
+ assert.equal(row?.status||'deleted',c.queue,c.id);
+ if(c.queue==='failed'){assert.equal(row.attempts,1);assert.ok(row.next_attempt_ts>Date.now());}
+ assert.equal(f.sql.prepare("SELECT status FROM shopify_variant_links WHERE merchant=? AND kiwi_variant_id='v'").get(merchant).status,c.link,c.id);
+ console.log('✓ provider corpus '+c.id);
+}
+globalThis.fetch=propertyFetch;
 await strict('duplicate signed webhook and catch-up decrement once with journal and tenant isolation',fc.asyncProperty(qty,fc.boolean(),async(q,first)=>{reset(q+3);const o=order(q),b=doc(other);orders=[replayOrder(o)];if(first)await replayShopifyOrders(f.env,merchant);assert.equal((await hook(o)).status,200);assert.equal((await hook(o)).status,200);await replayShopifyOrders(f.env,merchant);assert.equal(doc().variants[0].stock,3);assert.equal(doc().moves.length,1);assert.equal(doc().moves[0].d,-q);assert.equal(doc().moves[0].at,T);assert.deepEqual(doc(other),b);assert.equal(f.sql.prepare('SELECT COUNT(*) n FROM orders').get().n,1);assert.equal(f.sql.prepare('SELECT COUNT(*) n FROM shopify_sync_outbox').get().n,0);}));
 await strict('webhook and catch-up race at the same catalog revision decrement once',fc.asyncProperty(qty,async(q)=>{reset(q+1);const o=order(q);orders=[replayOrder(o)];const [h,r]=await race(()=>Promise.all([hook(o),replayShopifyOrders(f.env,merchant)]));assert.equal(h.status,200);assert.ok(r.applied===0||r.applied===1);assert.equal(doc().variants[0].stock,1);assert.equal(doc().moves.length,1);}));
 await strict('webhook caps all lines to available stock and journals every applied piece',fc.asyncProperty(stock,qty,qty,async(have,a,b)=>{reset(have);const o=order(a);o.line_items.push({...o.line_items[0],id:902,quantity:b});assert.equal((await hook(o)).status,200);const d=doc(),taken=Math.min(have,a+b);assert.equal(d.variants[0].stock,have-taken);assert.equal(d.moves.reduce((n,m)=>n-m.d,0),taken);assert.ok(d.moves.every(m=>m.d<0&&m.why==='vente'));}),[[0,1,1],[1,2,1]]);

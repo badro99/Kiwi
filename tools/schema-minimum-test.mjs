@@ -9,6 +9,8 @@ const require = createRequire(import.meta.url);
 const ts = require('../app/node_modules/typescript');
 const files = readdirSync(join(ROOT, 'functions'), { recursive: true }).filter(f => f.endsWith('.js')).sort();
 const db = freshDb();
+// Wrangler owns this deployment ledger, outside schema.sql.
+db.exec('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY, name TEXT, applied_at TEXT)');
 const versionSource = readFileSync(join(ROOT, 'functions/_schema-version.js'), 'utf8');
 const minimum = Number(/MINIMUM_SCHEMA_VERSION\s*=\s*(\d+)/.exec(versionSource)?.[1]);
 assert.equal(minimum, 16, 'Le minimum de production est 0016 (d1_migrations lu en production le 26 octobre 2026).');

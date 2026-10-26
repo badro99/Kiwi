@@ -115,7 +115,7 @@
           expiresAt: expiresAt || Date.now() + OFFLINE_PIN_TTL,
           staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80) } });
-        set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12)));
+        set(offlinePinKey(merchant), JSON.stringify(rows));
         return staff;
       });
     }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.
@@ -847,6 +847,13 @@
   function renderPinDots() { var d = document.getElementById('cp-pin-dots'); if (d) d.innerHTML = pinDotsHtml(); }
   function showPinPad(venue) {
     injectCss(); hidePad(); hideNativePin();
+    import('./offline-pin-coverage.js').then(function (coverage) {
+      var current = activeVenue();
+      if (!current || current.merchant !== venue.merchant) return;
+      coverage.showCoverage(document.getElementById('cp-pin-screen'),
+        offlinePinRows(venue.merchant).map(function (row) { return row.staff && row.staff.name || ''; }).filter(Boolean),
+        function (text) { return (window.KiwiCaisseLang || {tr:function (s) {return s;}}).tr(text); });
+    }).catch(function () {});
     try { document.documentElement.setAttribute('data-till-paired', ''); } catch (_) {}
     /* Design 2027 (kiwiSkin2027:till): the same door on the kit's pad, through
        assets/kit/till-pin.js. Loaded only with the flag; otherwise absent. */

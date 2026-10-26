@@ -6,10 +6,16 @@
   function toMin(s) { var m = HHMM.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
   function money(v) { var n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0; }
   function down(n) { return Math.max(0, Math.floor(n + 1e-6)); }
-  var fmt = null;
-  function wall(now) {
-    if (!fmt) {
-      fmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: TZ, hourCycle: 'h23',
+  var fmt = null, fmtZone = null;
+  function clock() {
+    var report = root.KiwiDayReport;
+    return { zone: report && report.timezone ? report.timezone() : TZ,
+      cutoff: report && report.cutoff ? report.cutoff() * 60 : BUSINESS_DAY_START_MIN };
+  }
+  function wall(now, zone) {
+    if (!fmt || fmtZone !== zone) {
+      fmtZone = zone;
+      fmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: zone, hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
     var p = {};
@@ -21,9 +27,10 @@
      before. Returns its date (YYYY-MM-DD), weekday (0 = Sunday) and the wall
      minutes of the moment. */
   function businessMoment(now) {
-    var w = wall(now == null ? Date.now() : now);
+    var config = clock();
+    var w = wall(now == null ? Date.now() : now, config.zone);
     var date = new Date(Date.UTC(w.y, w.mo - 1, w.d));
-    if (w.min < BUSINESS_DAY_START_MIN) date = new Date(date.getTime() - 86400000);
+    if (w.min < config.cutoff) date = new Date(date.getTime() - 86400000);
     return { date: date.toISOString().slice(0, 10), weekday: date.getUTCDay(), min: w.min };
   }
 

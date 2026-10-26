@@ -20,5 +20,5 @@ assert.match(boutique, /KiwiDiscountPolicy.*percentages/, 'Boutique till reads o
 assert.match(maison, /KiwiDiscountPolicy.*percentages/, 'Maison till reads owner percentages');
 assert.match(restaurant, /KiwiDiscountPolicy.*percentages/, 'restaurant till reads owner percentages');
 assert.match(store, /discountpolicy:\s*\{/, 'store API allows the discount document');
-assert.match(sale, /discount-not-allowed/, 'server refuses an unapproved percentage');
-console.log('✓ discount policy: eight end-to-end guards');
+assert.match(sale, /discount-not-allowed/, 'server records an unapproved percentage for audit');
+console.log('✓ discount policy: seven wiring guards and one audit guard with exact-target provenance');

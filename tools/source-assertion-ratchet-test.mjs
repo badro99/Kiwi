@@ -22,14 +22,15 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = path.join(ROOT, 'tools/source-assertion-manifest.json');
-const RUNS = /vm\.(runIn|createContext|Script)|node:vm|new Function|\beval\(|await import\(|import\s+[\w{}*,\s]+from\s+['"]\.\.\/(functions|assets|app)|puppeteer|browser-trace|surface-matrix-lib|onRequest|require\(['"]\.\.\/(assets|functions)|spawn|execFile|createRequire/;
-export const sourceOnly = (text) => /readFileSync\(/.test(text) && !RUNS.test(text);
+import classifier from './source-assertion-classifier.cjs';
+export const sourceOnly = classifier.sourceOnly;
 
 /* The classifier itself. */
 assert.equal(sourceOnly("const s = fs.readFileSync('assets/a.js','utf8'); assert.match(s, /x/);"), true);
-assert.equal(sourceOnly("import vm from 'node:vm'; fs.readFileSync('a')"), false);
-assert.equal(sourceOnly("import { onRequestPost } from '../functions/api/sale.js'; fs.readFileSync('schema.sql')"), false);
-assert.equal(sourceOnly("const p = await puppeteer.launch(); fs.readFileSync('x')"), false);
+assert.equal(sourceOnly("import vm from 'node:vm'; fs.readFileSync('a')"), true);
+assert.equal(sourceOnly("import { onRequestPost } from '../functions/api/sale.js'; fs.readFileSync('schema.sql')"), true);
+assert.equal(sourceOnly("import { onRequestPost } from '../functions/api/sale.js'; fs.readFileSync('schema.sql'); await onRequestPost(context)"), false);
+assert.equal(sourceOnly("vm.runInNewContext(source); fs.readFileSync('x')"), false);
 assert.equal(sourceOnly("console.log('no reads')"), false);
 
 const check = fs.readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
@@ -52,6 +53,18 @@ for (const [f, kind] of declared) {
 for (const [f, twin] of Object.entries(m.twin || {})) {
   if (!named.includes(twin)) problems.push(`${f}: its twin ${twin} is not named in check.js`);
   else if (textOnly.has(twin)) problems.push(`${f}: its twin ${twin} only reads text too`);
+}
+// A whole-file twin cannot silently stand for unrelated money/security assertions.
+for (const [f, twin] of Object.entries(m.twin || {})) {
+  const proof = m.provenance && m.provenance[f];
+  const assertions = classifier.assertions(text[f]);
+  if (!proof || proof.suite !== twin || !Array.isArray(proof.assertions)
+      || JSON.stringify(proof.assertions.map(a => a.assertion)) !== JSON.stringify(assertions)
+      || proof.assertions.some(a => !['structure','behavioral'].includes(a.kind)
+        || (a.kind === 'structure' ? !a.reason : !a.observation || !text[twin]?.includes(a.witness)))
+      || !text[twin]?.includes(proof.target.slice('functions/'.length))
+      || !proof.from || !proof.to || !named.includes('assertion-provenance-test.mjs'))
+    problems.push(`${f}: missing assertion-level scope or exact-target mutation provenance`);
 }
 const unbacked = (m.unbacked || []).length;
 if (unbacked > m.pin) problems.push(`${unbacked} unbacked text-only suites, pinned at ${m.pin}: a new one must run the code instead`);

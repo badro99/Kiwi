@@ -1,5 +1,5 @@
 {
-  "note": "Gate suites that read source text and never run it. Text can stay green after the behaviour it describes breaks, so each one is declared: structure (the repository's own shape), style (layout, contrast, copy), twin (a named suite that runs the same behaviour), or unbacked. Unbacked only goes down: make the suite run the code, then KIWI_UPDATE_SOURCE_BASELINE=1. Checked by tools/source-assertion-ratchet-test.mjs.",
+  "note": "Gate suites that read source text and never run it. Text can stay green after the behaviour it describes breaks, so each one is declared: structure (the repository's own shape), style (layout, contrast, copy), twin (a named suite that runs the same behaviour), or unbacked. Unbacked only goes down: make the suite run the code, then KIWI_UPDATE_SOURCE_BASELINE=1. Checked by tools/source-assertion-ratchet-test.mjs. Classification is suite-level, never proof that every assertion is behavioral. Twins must declare individual structural/behavioral scope and an exact-target mutation witness.",
   "structure": {
     "app-release-test.mjs": "native release configuration (plist, project)",
     "asset-stamp-coverage-test.mjs": "every shipped asset carries a stamp",
@@ -31,7 +31,16 @@
     "strings-coverage-test.mjs": "string-key coverage ratchet",
     "surface-parity-test.mjs": "shells share the same tokens and chrome",
     "type-policy-test.js": "typography ban over shipped files",
-    "vertical-feature-parity-test.mjs": "each vertical declares the same features"
+    "vertical-feature-parity-test.mjs": "each vertical declares the same features",
+    "schema-minimum-test.mjs": "SQL preparation against the repository migration floor, not a runtime schema health proof",
+    "table-settlement-source-test.mjs": "AST ownership ban on settlement fields, not proof of settlement behavior",
+    "current-order-source-test.mjs": "AST ownership ban on current order writes",
+    "icon-vendored-test.mjs": "vendored icon paths, licences and identifiers",
+    "article-template-test.mjs": "article markup, content metadata and JavaScript syntax only",
+    "serveur-split-test.mjs": "byte-exact split reconstruction and syntax only",
+    "bundle-manifest-test.mjs": "bundle dependency and manifest shape",
+    "dynamic-i18n-test.mjs": "AST translation completeness and literal copy rules",
+    "hotel-stays-group-guards-test.mjs": "Source ownership and recovery wiring guards only. Browser behavior is separately tested; no per-assertion execution proof is claimed here."
   },
   "style": {
     "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",
@@ -63,9 +72,60 @@
     "vexel-startup-test.mjs": "layout, contrast or copy in CSS/markup"
   },
   "twin": {
-    "discount-policy-test.mjs": "discount-policy-api-test.mjs",
-    "hotel-stays-group-guards-test.mjs": "hotel-stays-group-browser-test.mjs"
+    "discount-policy-test.mjs": "discount-policy-api-test.mjs"
   },
   "unbacked": [],
-  "pin": 0
+  "pin": 0,
+  "provenance": {
+    "discount-policy-test.mjs": {
+      "target": "functions/api/sale.js",
+      "suite": "discount-policy-api-test.mjs",
+      "from": "discount-not-allowed",
+      "to": "provenance-mutant-audit-reason",
+      "witness": "20% retail receipt flagged for the operator",
+      "assertions": [
+        {
+          "assertion": "assert.match(policy, /KiwiStore\\.define\\('discountpolicy'/, 'policy is a private, cloud-mirrored merchant document')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(policy, /save\\s*[:(]/, 'owner setting can be saved')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(dashboard, /settings-discounts/, 'dashboard exposes a discount settings control')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(boutique, /KiwiDiscountPolicy.*percentages/, 'Boutique till reads owner percentages')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(maison, /KiwiDiscountPolicy.*percentages/, 'Maison till reads owner percentages')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(restaurant, /KiwiDiscountPolicy.*percentages/, 'restaurant till reads owner percentages')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(store, /discountpolicy:\\s*\\{/, 'store API allows the discount document')",
+          "kind": "structure",
+          "reason": "Repository wiring declaration, no runtime behavior claimed."
+        },
+        {
+          "assertion": "assert.match(sale, /discount-not-allowed/, 'server records an unapproved percentage for audit')",
+          "kind": "behavioral",
+          "observation": "sale_audit.reason after the paid sale handler executes",
+          "witness": "20% retail receipt flagged for the operator"
+        }
+      ]
+    }
+  }
 }
