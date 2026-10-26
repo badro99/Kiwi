@@ -1855,6 +1855,23 @@
         "desktop"
       ],
       "state": "Frozen count quantities and value, refused approval, retry and applied read-only state"
+    },
+    {
+      "id": "dashboard-hotel",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "data-nav=reception · chambres, séjours, réception et folio"
     }
   ],
   "excludedHtml": [

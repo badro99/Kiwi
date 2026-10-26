@@ -82,6 +82,8 @@ try {
       tr.step('open the demo épicerie');
       // coverage: surface=caisse-entry locale=fr viewport=phone
       // coverage: surface=caisse-entry locale=ar viewport=phone
+      // coverage: surface=credit-book locale=fr viewport=phone
+      // coverage: surface=credit-book locale=fr viewport=tablet
       await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => window.KiwiPosDispatch, { timeout: 30000 });
       await page.evaluate(() => window.KiwiPosDispatch.unlockById('epicerie'));
@@ -101,8 +103,6 @@ try {
       await page.evaluate(() => { const c = [...document.querySelectorAll('.ep-card')].find((b) => b.querySelector('.ep-card-flag.weigh, .ep-card-flag') && /kg/.test(b.textContent)); if (c) c.click(); }); await sleep(700); await look('weighing'); await close();
       if (await click('#ep-search-open')) { await look('search'); await close(); }
       tr.step('FR · dette saisie au clavier sur le carnet, solde et historique vérifiés');
-      // coverage: surface=credit-book locale=fr viewport=phone
-      // coverage: surface=credit-book locale=fr viewport=tablet
       const menu=await page.$('#pos-epicerie > .vx-burger');
       if(menu && await menu.isVisible()) {await menu.click();await sleep(350);}
       const carnetLinks=await page.$$('[data-ep-view="carnet"]');
