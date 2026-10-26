@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/onboarding-data.js?v=1',
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',

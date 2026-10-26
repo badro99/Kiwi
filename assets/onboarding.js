@@ -385,12 +385,14 @@
           <h1 class="kob-h">${S.ownerName ? esc(S.ownerName) + ', ' : ''}<span class="k-sans">${tr({ fr: 'tout est prêt.', en: "you're all set.", ar: 'كل شيء جاهز.' })}</span></h1>
           <p class="kob-sub">${tr({ fr: 'Vérifiez, puis créez votre espace. Vous pourrez tout ajuster ensuite dans les Réglages.', en: 'Have a look, then create your space. You can adjust anything later in Settings.', ar: 'راجع ثم أنشئ مساحتك. يمكنك تعديل كل شيء لاحقاً.' })}</p>
           <div class="kob-recap">
+            ${typeof window !== 'undefined' && window.KiwiOnboardingData ? setupPresentation() : `
             ${row(tr({ fr: 'Établissement', en: 'Business', ar: 'النشاط' }), S.bizName || '·')}
             ${row(tr({ fr: 'Activité', en: 'Type', ar: 'النوع' }), tr(t.label))}
             ${row(tr({ fr: 'Points de vente', en: 'Locations', ar: 'نقاط البيع' }), String(S.venueCount) + (S.city ? ' · ' + S.city : ''))}
             ${row(tr({ fr: 'Équipe', en: 'Team', ar: 'الفريق' }), S.teamGiven ? String(S.teamSize) + ' ' + unitFor('teamSize') : tr({ fr: 'Non renseignée', en: 'Not given', ar: 'غير محدد' }))}
             ${goalNames.length ? row(tr({ fr: 'Priorités', en: 'Priorities', ar: 'الأولويات' }), goalNames.slice(0, 2).join(', ') + (goalNames.length > 2 ? ' +' + (goalNames.length - 2) : '')) : ''}
             ${row(tr({ fr: "Codes d'accès", en: 'Access codes', ar: 'رموز الدخول' }), tr({ fr: codes + ' actif' + (codes > 1 ? 's' : ''), en: codes + ' active', ar: codes + ' نشط' }))}
+            `}
           </div>
         </div>`,
       foot: `
@@ -898,8 +900,14 @@
     if (parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
     return kitCodeProblem(S.pins[0] && S.pins[0].code);
   }
+  function setupPresentation() {
+    const data = window.KiwiOnboardingData;
+    return data.presentation(data.viewModel(S, TYPES), esc);
+  }
   const KIT = {
     state: S,
+    viewModel: () => window.KiwiOnboardingData.viewModel(S, TYPES),
+    presentation: setupPresentation,
     types: () => TYPES.map((t) => ({ id: t.id, primary: !!t.primary, label: tr(t.label), icon: t.icon })),
     goals: () => GOALS.map((g) => ({ id: g.id, icon: g.icon })),
     dailyGoal: () => parsedDailyGoal(),
