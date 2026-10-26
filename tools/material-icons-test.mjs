@@ -156,6 +156,38 @@ ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (th
   ok(lack.replaced && lack.replaced.getAttribute('data-material-symbol') === absent && ctx.KiwiIcon.missing.includes(absent), 'offline, it falls back to the ? glyph and says so');
 }
 
+// Wave L: execute the shipped template/helper with the real Material runtime.
+{
+  const vm = await import('node:vm');
+  const ctx = {
+    console, queueMicrotask() {}, MutationObserver: class { observe() {} },
+    document: { readyState: 'loading', addEventListener() {}, querySelectorAll() { return []; } }
+  };
+  ctx.window = ctx;
+  vm.runInNewContext(read(RUNTIME), ctx);
+  const menu = read('assets/restaurant-menu-workspace.js');
+  vm.runInNewContext(menu.split('\n').filter(l => /^  const (icons=|ic=)/.test(l)).join('\n') +
+    ';globalThis.menuIcons = Object.keys(icons).concat("unknown").map(ic);', ctx);
+  for (const markup of ctx.menuIcons) {
+    ok(!/data-lucide/.test(markup) && /data-(icon|material-symbol)=/.test(markup), 'menu ic() emits Material markup');
+    ok(/(?:width="14"|width:14px)/.test(markup), 'menu ic() retains its 14px size');
+  }
+  let renders = 0, legacyCalls = 0;
+  const render = ctx.KiwiIcon.render;
+  ctx.KiwiIcon = { render(root) { renders++; render(root); } };
+  ctx.lucide = { createIcons() { legacyCalls++; } };
+  const retail = read('assets/retail-scan.js');
+  vm.runInNewContext(retail, ctx);
+  const button = { setAttribute() {}, addEventListener() {}, querySelector() { return null; } };
+  ctx.document.createElement = () => button;
+  ctx.KiwiRetailScan.mount({ appendChild() {} }, 'epicerie');
+  ok(renders === 1 && legacyCalls === 0, 'retail icons() calls the Material renderer');
+  ok(/data-icon="barcode_scanner"/.test(button.innerHTML) && !/data-lucide/.test(button.innerHTML), 'retail launch renders a Material barcode placeholder');
+  for (const file of ['assets/restaurant-menu-workspace.js', 'assets/retail-scan.js']) {
+    ok(!/\blucide\b/.test(read(file)), file + ' contains no legacy icon attribute or call');
+  }
+}
+
 // 5 · the pages load the Outlined runtime, nobody loads the Rounded shim
 ok(!existsSync(path.join(ROOT, 'assets/lucide.min.js')), 'assets/lucide.min.js (the Rounded shim) is gone');
 const stillLucide = files.filter((f) => /lucide\.min\.js/.test(read(f)) && !f.startsWith('functions/'));
