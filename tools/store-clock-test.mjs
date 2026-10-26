@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* store-clock-test · no shipped code assumes Morocco is UTC+1.
  *
  * Morocco moved from UTC+1 to permanent UTC+0 in 2026 (owner, 2026-10-13).
@@ -60,7 +61,7 @@ for (const iso of ['2026-10-25T23:30:00Z', '2026-07-31T23:30:00Z', '2027-01-01T0
 /* 3 · A week whose Monday boundary moved keeps its counter. */
 {
   const db = new DatabaseSync(':memory:');
-  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  db.exec(coreTestSource.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const prepare = (q) => { let a = []; const st = {
     bind(...x) { a = x.map((v) => (v === undefined ? null : v)); return st; },
     first() { const r = db.prepare(q).get(...a); return r === undefined ? null : r; },
@@ -81,7 +82,7 @@ for (const iso of ['2026-10-25T23:30:00Z', '2026-07-31T23:30:00Z', '2027-01-01T0
 }
 
 /* 4 · No fixed Morocco offset left in the code, no "GMT+1" in the UI. */
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
 const code = (p) => read(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 ok(!/\+\s*3600000|-\s*3600000/.test(code('functions/api/order/_lib.js').replace(/3 \* 3600000/g, '')), 'order/_lib.js has no fixed ±1 h day arithmetic');
 ok(!/3600000/.test(code('functions/api/_demo-requests.js')), '_demo-requests.js has no fixed +1 h');

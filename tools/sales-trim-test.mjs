@@ -1,9 +1,10 @@
+import coreTestSource from './core-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { summarize } from '../functions/api/sales-summary.js';
 import { businessBoundary, businessDate, addBusinessDays } from '../functions/api/_business-day.js';
-const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+const read = f => coreTestSource.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const history = read('assets/sales-history.js'), venues = read('assets/venues.js');
 const zone = 'Africa/Casablanca', merchant = 'trim-fixture', scope = 'scoped@' + merchant;
 const boundary = n => businessBoundary(addBusinessDays('2026-01-01', n), 5, zone), now = boundary(200) + 3600000;

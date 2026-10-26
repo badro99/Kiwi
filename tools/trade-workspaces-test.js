@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const coreTestSource = require('./core-test-source.cjs');
 'use strict';
 
 const caisseTestSource = require('./caisse-test-source.cjs');
@@ -7,7 +8,7 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(root, p), 'utf8');
 let n = 0;
 function ok(value, label) { if (!value) throw new Error('FAIL · ' + label); n++; console.log('  ✓ ' + label); }
 

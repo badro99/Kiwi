@@ -65,6 +65,6 @@ for (const [core, part] of [['dateRange', 'daterange/renderers'], ['agent', 'age
   assert.ok(fs.readFileSync('assets/' + core + '.js', 'utf8').split('\n').length <= 3000, core + ' stays below 3000 lines');
   assert.ok(html.indexOf('assets/' + part + '.js') < html.indexOf('<script src="assets/' + core + '.js'), 'factory available before synchronous public APIs');
 }
-// The interactive split adds exactly two tags: helpers.js and handlers.js.
-assert.equal([...html.matchAll(/<script\b[^>]*\bsrc=/g)].length, 114, 'dashboard script count after merged splits');
-console.log('PASS core split: both originals reconstructed byte for byte; factories are inert; parts precached; 114 shell scripts');
+// Les découpages interactive et venues ajoutent chacun deux parties.
+assert.equal([...html.matchAll(/<script\b[^>]*\bsrc=/g)].length, 116, 'dashboard script count after merged splits');
+console.log('PASS core split: both originals reconstructed byte for byte; factories are inert; parts precached; 116 shell scripts');

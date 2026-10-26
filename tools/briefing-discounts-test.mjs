@@ -1,17 +1,18 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const briefing = fs.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
-const sale = fs.readFileSync(new URL('../functions/api/sale.js', import.meta.url), 'utf8');
-const feed = fs.readFileSync(new URL('../functions/api/feed.js', import.meta.url), 'utf8');
-const live = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
-const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
-const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
-const pairing = fs.readFileSync(new URL('../assets/caisse-pairing.js', import.meta.url), 'utf8');
-const schema = fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
-const audit = fs.readFileSync(new URL('../docs/audits/AUDIT_AI.md', import.meta.url), 'utf8');
+const briefing = coreTestSource.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
+const sale = coreTestSource.readFileSync(new URL('../functions/api/sale.js', import.meta.url), 'utf8');
+const feed = coreTestSource.readFileSync(new URL('../functions/api/feed.js', import.meta.url), 'utf8');
+const live = coreTestSource.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
+const venues = coreTestSource.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+const caisse = caisseTestSource(coreTestSource.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
+const pairing = coreTestSource.readFileSync(new URL('../assets/caisse-pairing.js', import.meta.url), 'utf8');
+const schema = coreTestSource.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
+const audit = coreTestSource.readFileSync(new URL('../docs/audits/AUDIT_AI.md', import.meta.url), 'utf8');
 let checks = 0;
 function ok(condition, message) { if (!condition) throw new Error(message); checks += 1; }
 function boot() {

@@ -1673,6 +1673,8 @@ section('Whole-project regressions');
     'stock-split-test.mjs',
     'hotel-split-test.mjs',
     'interactive-split-test.mjs',
+    'venues-split-test.mjs',
+    'venues-split-browser-test.mjs',
     'caisse-money-properties-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',

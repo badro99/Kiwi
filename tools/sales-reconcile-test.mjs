@@ -10,8 +10,8 @@ const harnessBody = operator.slice(operator.indexOf('function harness('), operat
 const merchant = 'santos-store', ts = 1800000000000, coverage = ts - 86400000;
 const settle = () => new Promise(resolve => setImmediate(resolve));
 function make(pages, { marker = false, source = live, cached = [], realStore = marker } = {}) {
-  const harness = new Function('source', 'dateSource', 'tenant', 'ts', 'settle', 'vm', 'assert', 'fs', harnessBody + '\nreturn harness;')(
-    source, read('assets/dateRange.js'), merchant, ts, settle, vm, assert, fs);
+  const harness = new Function('source', 'dateSource', 'tenant', 'ts', 'settle', 'vm', 'assert', 'fs', 'coreTestSource', harnessBody + '\nreturn harness;')(
+    source, read('assets/dateRange.js'), merchant, ts, settle, vm, assert, fs, coreTestSource);
   const h = harness(pages, { realStore, cached });
   const storage = h.context.localStorage;
   if (marker) {

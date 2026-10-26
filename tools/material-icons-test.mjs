@@ -180,7 +180,8 @@ let total = 0;
 const caisseParts = new Set(JSON.parse(read('tools/fixtures/caisse-app/workflows.json')).files);
 const serveurParts = new Set(serveurSource.fragments().map(m => m.file));
 // Count extracted caisse and core code at its original owner.
-const coreParts = new Set(['assets/daterange/renderers.js', 'assets/agent/ui.js']);
+const coreParts = new Set(['assets/daterange/renderers.js', 'assets/agent/ui.js',
+  ...JSON.parse(read('tools/fixtures/venues-split/split.json')).parts]);
 for (const f of files.filter(file => !serveurParts.has(file) && !caisseParts.has(file) && !coreParts.has(file))) {
   const n = countDataLucide(f === 'assets/serveur-app.js' ? serveurSource() : f === 'assets/caisse-app.js' ? caisseWorkflowSource.appSource() : coreTestSource.readFileSync(path.join(ROOT, f), 'utf8'));
   total += n;

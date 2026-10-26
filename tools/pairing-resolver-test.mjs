@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(root, 'assets/platform-kernel.js'), 'utf8');
+const src = coreTestSource.readFileSync(path.join(root, 'assets/platform-kernel.js'), 'utf8');
 
 let pass = 0;
 function ok(v, msg) {
@@ -137,7 +138,7 @@ ok(K2.isPaired() === true, 'helper isPaired() is true for live Santos Store fixt
 // Case I: Direct Module Execution on Actual Files (Both With and Without KiwiPlatform)
 // Rather than testing only the helper, load each actual migrated money/transaction module
 // in a sandboxed VM and verify it resolves the correct merchant under both runtime states.
-const readAsset = (rel) => serveurTestSource(caisseTestSource(fs.readFileSync(path.join(root, rel), 'utf8')));
+const readAsset = (rel) => serveurTestSource(caisseTestSource(coreTestSource.readFileSync(path.join(root, rel), 'utf8')));
 
 // 1. assets/inventory-ledger.js (window.KiwiInventory.merchant())
 function testInventoryLedger(withPlatform) {
@@ -837,7 +838,7 @@ function auditPairingKeyUsage() {
 
   for (const rel of scanFiles) {
     const full = path.join(root, rel);
-    const content = fs.readFileSync(full, 'utf8');
+    const content = coreTestSource.readFileSync(full, 'utf8');
     const regex = /['"]kiwiPairedVenue['"]/g;
     let match;
 

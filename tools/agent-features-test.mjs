@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Kiwi AI · merchant feature truth gate.
  * Verifies that product explanations follow the active vertical, that setup is
  * question-led, and that navigation uses the real merchant page handlers. */
@@ -8,7 +9,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE = fs.readFileSync(path.join(ROOT, 'assets', 'agent-features.js'), 'utf8');
+const SOURCE = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'agent-features.js'), 'utf8');
 let failures = 0;
 let controls = 0;
 function check(name, value, detail = '') {
@@ -135,7 +136,7 @@ console.log('\n■ All shipped merchant types');
   const real = { window: live, document: doc, localStorage: storage, console, setTimeout: noop, clearTimeout: noop, requestAnimationFrame: noop, CustomEvent: function () {} };
   vm.createContext(real);
   for (const f of ['assets/trades.js', 'assets/venues.js', 'assets/agent-features.js']) {
-    vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), real, { filename: f });
+    vm.runInContext(coreTestSource.readFileSync(path.join(ROOT, f), 'utf8'), real, { filename: f });
   }
   const all = live.KiwiTrades.LIST.map((x) => x.id);
   check('canonical registry contains all 19 supported merchant types', all.length === 19, all.join(', '));

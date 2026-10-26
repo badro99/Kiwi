@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* skin-cloak-test · no flash of the shipped screens before the 2027 skin
  * (owner, 2026-10-23: "it flashes the old design and then it gives you the
  * new design").
@@ -23,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+const read = (f) => coreTestSource.readFileSync(path.join(root, f), 'utf8');
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 console.log('skin-cloak-test');

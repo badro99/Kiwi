@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const coreTestSource = require('./core-test-source.cjs');
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · GARDE-FOU du plan de salle qui traverse les appareils
  * ---------------------------------------------------------------------------
@@ -32,10 +33,10 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..');
-const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
+const CAISSE = caisseTestSource(coreTestSource.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const PAGES = require('./pages-pro-test-source.cjs')();
-const VENUES = fs.readFileSync(path.join(ROOT, 'assets', 'venues.js'), 'utf8');
-const STORE = fs.readFileSync(path.join(ROOT, 'functions', 'api', 'store.js'), 'utf8');
+const VENUES = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'venues.js'), 'utf8');
+const STORE = coreTestSource.readFileSync(path.join(ROOT, 'functions', 'api', 'store.js'), 'utf8');
 
 let pass = 0;
 const fails = [];
@@ -225,7 +226,7 @@ function run(opts) {
     && /table\.servers = clean;[\s\S]{0,160}table\.server = clean\[0\] \|\| null/.test(PAGES));
   ok("l'API employé résout les identifiants du plan vers les vrais comptes Équipe",
     /function normalizedFloorStaff\(raw, members\)/.test(
-      fs.readFileSync(path.join(ROOT, 'functions', 'api', 'employee.js'), 'utf8')));
+      coreTestSource.readFileSync(path.join(ROOT, 'functions', 'api', 'employee.js'), 'utf8')));
   /* Trois emplacements au plus, mais plus jamais trois menus « Aucun · · »
      sur une équipe vide : un emplacement libre après les remplis, et un
      serveur déjà posé n'est pas proposé une seconde fois. */
@@ -447,7 +448,7 @@ function run(opts) {
  * remplace l'autre copie EN BLOC — c'est le mécanisme de réparation. On exécute
  * le VRAI pdsMerge de pages-pro.js contre le VRAI mergeDefault de cloud-doc.js. */
 {
-  const CLOUD = fs.readFileSync(path.join(ROOT, 'assets', 'cloud-doc.js'), 'utf8');
+  const CLOUD = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'cloud-doc.js'), 'utf8');
   function extractFn(src, name) {
     const at = src.indexOf('function ' + name + '(');
     if (at < 0) throw new Error('introuvable : ' + name);
@@ -493,7 +494,7 @@ function run(opts) {
    * La fusion partagée : à époque égale, un identifiant enterré d'un côté
    * disparaît des deux ; l'époque continue de gagner en bloc ; une tombale
    * expirée est compactée sans résurrection ; les deux surfaces passent par elle. */
-  const CORE = fs.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
+  const CORE = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
   const Core = new Function(
     'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
     + CORE.match(/let PDS_HLC = [^;]+;/)[0] + '\n' + CORE.match(/const PDS_CLOCK_AHEAD = [^;]+;/)[0] + '\n'

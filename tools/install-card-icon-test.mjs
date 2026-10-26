@@ -1,9 +1,10 @@
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
-const pwa = fs.readFileSync(new URL('../assets/dashboard-pwa.js', import.meta.url), 'utf8');
-const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+const dashboard = coreTestSource.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + coreTestSource.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
+const pwa = coreTestSource.readFileSync(new URL('../assets/dashboard-pwa.js', import.meta.url), 'utf8');
+const venues = coreTestSource.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
 
 for (const [name, source] of [['initial PWA renderer', pwa], ['venue-switch renderer', venues]]) {
   assert.match(source, /<img src=["`]assets\/kiwi-favicon-new\.svg["`]/, `${name} must use the canonical Kiwi favicon`);
