@@ -48,6 +48,37 @@ for (const suite of suites) for (const c of suite.cells) {
   assert(declared.has(key), `${suite.suite}:${c.line}: undeclared cell ${key}`);
   covered.add(key);
 }
+const required = read('coverage-required.json');
+assert.equal(required.version, 1);
+assert(Array.isArray(required.required) && Array.isArray(required.blocked));
+const requiredCells = new Set();
+for (const row of required.required) {
+  const surface = manifest.surfaces.find(s => s.id === row.surface);
+  assert(surface && row.reason?.trim(), 'surface requise inconnue ou sans raison');
+  assert.equal(row.locale, 'fr', 'seul le français est obligatoire');
+  assert.deepEqual([...row.viewports].sort(), [...surface.viewports].sort(), 'tous les appareils vendus sont requis');
+  for (const viewport of row.viewports) {
+    const key = cellKey({ surface: row.surface, locale: row.locale, viewport });
+    assert(declared.has(key) && !requiredCells.has(key), 'cellule requise invalide ou dupliquée : ' + key);
+    requiredCells.add(key);
+  }
+}
+// Le sous-ensemble suit les surfaces opérationnelles, pas les visites disponibles.
+const operational = manifest.surfaces.filter(s => /^(caisse-|dashboard|boutique-)/.test(s.id) ||
+  ['waiter', 'employee', 'team-entry', 'kitchen', 'kitchen-entry', 'console', 'booking', 'credit-book', 'shopify-recovery'].includes(s.id));
+assert.deepEqual([...new Set(required.required.map(row => row.surface))].sort(),
+  operational.map(s => s.id).sort(), 'une surface opérationnelle ne peut pas sortir du contrôle obligatoire');
+const blocked = new Map();
+for (const row of required.blocked) {
+  assert(requiredCells.has(row.cell) && row.reason?.trim() && !blocked.has(row.cell), 'blocage invalide');
+  assert(!covered.has(row.cell), 'blocage résolu à supprimer : ' + row.cell);
+  blocked.set(row.cell, row.reason);
+  console.log('BLOQUÉ ' + row.cell + ' : ' + row.reason);
+}
+const missing = [...requiredCells].filter(key => !covered.has(key));
+console.log(`Couverture obligatoire FR : ${requiredCells.size} cellules, ${missing.length} manquantes, ${blocked.size} bloquées.`);
+assert.equal(missing.filter(key => !blocked.has(key)).length, 0,
+  'Parcours FR obligatoires sans vérification : ' + missing.filter(key => !blocked.has(key)).join(', '));
 const baselinePath = path.join(ROOT, 'tools/coverage-baseline.json');
 for (const origin of ['photo', 'document', 'assistant']) {
   for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['phone', 'tablet']) {
@@ -68,6 +99,6 @@ for (const s of manifest.surfaces) for (const locale of s.locales) {
   console.log(`${s.id} | ${locale} | ${['desktop', 'tablet', 'phone'].map((viewport) => !s.viewports.includes(viewport) ? '-' : !forLocales([locale]).length ? 'not run by default' : covered.has(cellKey({ surface: s.id, locale, viewport })) ? '✓' : '·').join(' ')}`);
 }
 console.log(`Static annotated coverage: ${covered.size} / ${declared.size} declared cells; ${suites.length} browser suites scanned; ${suites.filter((s) => !s.cells.length).length} without reviewed annotations.`);
-console.log('TODO: verify/annotate or add rendered visits for these cells:');
-for (const key of declared) if (!covered.has(key)) console.log(`  TODO ${key}`);
-console.log('✓ coverage manifest: HTML inventory and additive baseline hold');
+console.log('Couverture EN/AR informative, parcours à lancer à la demande avec KIWI_LOCALES :');
+for (const key of declared) if (!covered.has(key) && /\|(en|ar)\|/.test(key)) console.log(`  TODO ${key}`);
+console.log('✓ manifeste : inventaire HTML, historique additif et couverture obligatoire FR valides');
