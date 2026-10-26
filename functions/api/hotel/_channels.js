@@ -83,7 +83,8 @@ function dateValue(v) {
 export function parseIcal(text) {
   const source = String(text || '').replace(/\r?\n[ \t]/g, '').replace(/\r\n/g, '\n');
   const chunks = source.split(/BEGIN:VEVENT\s*\n/i).slice(1), out = [];
-  for (const chunk of chunks.slice(0, 1000)) {
+  if (chunks.length > 1000) throw new Error('feed-too-many-events');
+  for (const chunk of chunks) {
     const block = chunk.split(/END:VEVENT/i)[0] || '', fields = Object.create(null);
     for (const line of block.split('\n')) {
       const at = line.indexOf(':'); if (at < 1) continue;

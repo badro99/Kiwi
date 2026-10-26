@@ -60,7 +60,8 @@ const day = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : ''
  * serveur garde les saisies, bornées, pour que chaque version reste relisible. */
 export function cleanSheet(input) {
   const s = input && typeof input === 'object' ? input : {};
-  const lines = (Array.isArray(s.lines) ? s.lines : []).slice(0, MAX_LINES).map((l, i) => {
+  if (Array.isArray(s.lines) && s.lines.length > MAX_LINES) throw new RangeError('too-many-lines');
+  const lines = (Array.isArray(s.lines) ? s.lines : []).map((l, i) => {
     const line = l && typeof l === 'object' ? l : {};
     const yieldPct = num(line.yieldPct, 1, 100);
     return {
@@ -259,6 +260,7 @@ export async function onRequestPost(context) {
     }
     return json({ error: 'bad-action' }, 400, noStore);
   } catch (_) {
+    if (_ instanceof RangeError && _.message === 'too-many-lines') return json({ error: 'too-many-lines', maxLines: MAX_LINES }, 400, noStore);
     return json({ error: 'storage' }, 503, noStore);
   }
 }

@@ -105,8 +105,11 @@ ok('liste : option allumée, modifiable, une fiche', r.status === 200 && r.body.
 const data = r.body.sheets[0].data;
 ok('un prix vide reste inconnu (null), jamais 0', data.lines[2].packPrice === null && data.lines[0].packPrice === 60);
 ok('rendement par défaut 100 %, type et unités conservés', data.lines[1].yieldPct === 100 && data.lines[1].type === 'packaging' && data.lines[0].yieldPct === 80);
-const c = cleanSheet({ name: 'x'.repeat(500), portions: 0, targetPct: 400, lines: Array.from({ length: 200 }, () => ({ packQty: -3, yieldPct: 0 })) });
+const c = cleanSheet({ name: 'x'.repeat(500), portions: 0, targetPct: 400, lines: Array.from({ length: 80 }, () => ({ packQty: -3, yieldPct: 0 })) });
 ok('bornes : nom 120, portions ≥ 1, objectif ≤ 100 ou inconnu, 80 lignes, quantité négative ⇒ inconnue', c.name.length === 120 && c.portions === 1 && c.targetPct === null && c.lines.length === 80 && c.lines[0].packQty === null && c.lines[0].yieldPct === 100);
+
+r = await post({ merchant: SHOP, action: 'save', sheet: { ...SHEET, lines: Array.from({ length: 81 }, () => ({})) } }, owner);
+ok('81 lignes refusées explicitement sans écriture', r.status === 400 && r.body.error === 'too-many-lines' && r.body.maxLines === 80);
 
 /* ── 3 · conflit ── */
 r = await post({ merchant: SHOP, action: 'save', sheet: { ...SHEET, id, name: 'Tajine poulet v2' }, baseVersion: 1 }, owner);
