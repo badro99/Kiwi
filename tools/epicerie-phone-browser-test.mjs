@@ -36,7 +36,7 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 const server = http.createServer((req, res) => {
   const p = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://local').pathname));
   if (!p.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }
-  fs.readFile(p, (err, data) => { res.writeHead(err ? 404 : 200, { 'Content-Type': mime[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(err ? '' : data); });
+  fs.readFile(p, (err, data) => { if (!err && process.env.KIWI_CREDIT_DEBT_FAULT && p.endsWith('/assets/pos-epicerie.js')) data = Buffer.from(data.toString().replace("c.hist.push(histEntry('debt', 'Achat à crédit', r2(amt)));", 'void 0;')); res.writeHead(err ? 404 : 200, { 'Content-Type': mime[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(err ? '' : data); });
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -68,13 +68,13 @@ const spills = (page) => page.evaluate(() => {
 });
 
 try {
-  for (const lang of forLocales(['fr', 'ar'])) {
-    await S.run(lang === 'fr' ? 'French' : 'Arabic', async (tr) => {
+  for (const lang of forLocales(['fr', 'ar'])) for (const width of [390, 820]) {
+    await S.run(`${lang} · ${width} px`, async (tr) => {
       const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
       const page = tr.watch(await ctx.newPage());
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
-      await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+      await page.setViewport({ width, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
       await page.setBypassServiceWorker(true);
       await page.setRequestInterception(true);
       page.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
@@ -100,6 +100,21 @@ try {
       if (await click('#ep-pay')) { await click('[data-ep-m="ardoise"]'); await look('tab picker'); if (await click('#ep-cp-new')) await look('new neighbour'); await close(); await close(); await close(); }
       await page.evaluate(() => { const c = [...document.querySelectorAll('.ep-card')].find((b) => b.querySelector('.ep-card-flag.weigh, .ep-card-flag') && /kg/.test(b.textContent)); if (c) c.click(); }); await sleep(700); await look('weighing'); await close();
       if (await click('#ep-search-open')) { await look('search'); await close(); }
+      tr.step('FR · dette saisie au clavier sur le carnet, solde et historique vérifiés');
+      // coverage: surface=credit-book locale=fr viewport=phone
+      // coverage: surface=credit-book locale=fr viewport=tablet
+      const menu=await page.$('#pos-epicerie > .vx-burger');
+      if(menu && await menu.isVisible()) {await menu.click();await sleep(350);}
+      const carnetLinks=await page.$$('[data-ep-view="carnet"]');
+      const carnetLink=await (async()=>{for(const link of carnetLinks)if(await link.isVisible())return link;})();
+      assert.ok(carnetLink,'navigation du carnet visible');await carnetLink.click();await sleep(300);
+      await page.click('[data-ep-ard="k6"]'); await sleep(300);
+      await page.click('#ep-ard-add'); await sleep(300);
+      await page.click('#ep-qd-in',{clickCount:3}); await page.keyboard.type('12.5');
+      await page.click('#ep-qd-ok'); await sleep(300);
+      check(await page.$eval('#ep-ardm .ep-dt-bal .amt',e=>/12[,.]50/.test(e.textContent)), `${lang} ${width}: dette de 12,50 MAD réellement ajoutée`);
+      check(await page.$eval('#ep-ardm .ep-dt-hist',e=>e.textContent.includes('Achat à crédit')), `${lang} ${width}: nouvelle ligne dans l’historique`);
+      await close();
       let head = null;
       for (const v of ['carnet', 'stock', 'journee']) {
         await click(`[data-ep-view="${v}"]`); await look(v);
