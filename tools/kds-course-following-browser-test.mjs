@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* « À suivre » et « Envoyer la suite » sur l'écran cuisine DISTANT.
  *
  * La caisse retenait des plats « à suivre » et les lançait ensuite d'un geste,
@@ -213,7 +214,7 @@ try {
   check(await page.$(`#s-new ${card1} .tk-following`) === null, 'the first card stops announcing it, without a reload');
 
   /* L'arabe et l'anglais ont leurs propres mots. */
-  for (const [lang, suite] of [['en', 'Next course'], ['ar', 'الطبق التالي']]) {
+  for (const [lang, suite] of forLocales([['en', 'Next course'], ['ar', 'الطبق التالي']])) {
     await page.evaluate((l) => { localStorage.setItem('kiwiCuisineLang', l); }, lang);
     await page.reload({ waitUntil: 'load' });
     await page.waitForSelector(`${card2} .chip.suite`, { timeout: 20000 });

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Kiwi · strings-bidi-test · chaque interpolation est isolée (§9.6, « Every
  * interpolation is isolated », révision 15, P6).
  *
@@ -156,7 +157,7 @@ if (!puppeteer || !bin) {
     await page.goto(base + '/__bidi.html', { waitUntil: 'load' });
     const plan = withArgs.map((w) => ({ key: w.key, args: w.args.map((a) => ({ name: a, kind: kindOf(a), sample: FORMATTED_SAMPLE[a] || null })) }));
     t.step('render every key with an argument in three languages');
-    const result = await page.evaluate((plan, LATIN, ARABIC) => {
+    const result = await page.evaluate((plan, LATIN, ARABIC, locales) => {
       const K = window.KiwiStrings;
       const out = { rendered: 0, problems: [] };
       /* Le contrôle négatif : la même vérification doit voir un argument hors <bdi>. */
@@ -171,7 +172,7 @@ if (!puppeteer || !bin) {
       const naked = document.createDocumentFragment();
       naked.appendChild(document.createTextNode('Bonjour ' + ARABIC + ' !'));
       if (!outside(naked, [ARABIC])) out.problems.push('contrôle négatif : un nom hors <bdi> n\'est pas vu');
-      for (const lang of ['en', 'fr', 'ar']) {
+      for (const lang of locales) {
         K.setLocale(lang);
         for (const { key, args } of plan) {
           for (const count of [1, 2, 5, 12, 100]) {
@@ -215,10 +216,10 @@ if (!puppeteer || !bin) {
       const b = f.querySelector('bdi');
       if (!b || b.getAttribute('dir') !== 'ltr' || b.textContent !== '20,00 درهم') out.problems.push('act.discount.amount (ar) : l\'argument n\'est pas dans son <bdi dir="ltr">');
       return out;
-    }, plan, LATIN, ARABIC);
+    }, plan, LATIN, ARABIC, forLocales(['en', 'fr', 'ar']));
     for (const p of result.problems.slice(0, 15)) bad(p);
     assert.equal(result.problems.length, 0, `${result.problems.length} problème(s) de <bdi>`);
-    ok(`${result.rendered} rendus DOM (3 langues × 5 nombres) : un <bdi> par argument, dir="ltr" pour les nombres, aucun nom hors <bdi>, contrôle négatif vu`);
+    ok(`${result.rendered} rendus DOM (${forLocales(LANGS).length} langues × 5 nombres) : un <bdi> par argument, dir="ltr" pour les nombres, aucun nom hors <bdi>, contrôle négatif vu`);
   });
   await browser.close();
   server.close();

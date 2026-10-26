@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 import assert from 'node:assert/strict';
 import { harness, openTill } from './surface-matrix-lib.mjs';
 import { click, view, cash, add, pickReturn, voucher } from './surface-matrix-credit-lib.mjs';
 const h = await harness('surface-matrix-states-credit');
 const tills = { open: (t, locale, viewport) => openTill(h, t, 'caisse-boutique', locale, viewport) };
 try {
-  for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['phone', 'tablet']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) for (const viewport of ['phone', 'tablet']) {
     await h.S.run(`checkout and store credit · ${locale} · ${viewport}`, async t => {
       t.notice('UNREACHABLE demo manager refusal/recovery: shipped demo bypasses manager approval; no coverage claimed here.');
       // coverage: surface=caisse-boutique locale=fr viewport=phone

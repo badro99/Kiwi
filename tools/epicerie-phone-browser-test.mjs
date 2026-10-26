@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* epicerie-phone-browser-test · the épicerie till (Kiwi Basic) on a phone.
  *
  *   node tools/epicerie-phone-browser-test.mjs
@@ -67,7 +68,7 @@ const spills = (page) => page.evaluate(() => {
 });
 
 try {
-  for (const lang of ['fr', 'ar']) {
+  for (const lang of forLocales(['fr', 'ar'])) {
     await S.run(lang === 'fr' ? 'French' : 'Arabic', async (tr) => {
       const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
       const page = tr.watch(await ctx.newPage());

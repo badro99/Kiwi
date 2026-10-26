@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Browser-trace state coverage complements keyboard-floor-booking-browser-test.mjs; no repeated tab walks.
 // Public shareModal links to /booking?merchant=… (static harness uses booking.html).
 // Fixtures follow publicConfig/onRequestPost in functions/api/booking.js; all APIs are isolated.
@@ -176,7 +177,7 @@ async function floor(t, locale, viewport) {
   assert.ok(restored.x > restored.width / 2 && restored.physicalRight, 'table remains physically on the right');
 }
 try {
-  for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['phone', 'tablet']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) for (const viewport of ['phone', 'tablet']) {
     await h.S.run(`booking · ${locale} · ${viewport}`, t => publicBooking(t, locale, viewport));
     await h.S.run(`dashboard-reservations · ${locale} · ${viewport}`, t => staffBooking(t, locale, viewport));
     await h.S.run(`dashboard-tables · ${locale} · ${viewport}`, t => floor(t, locale, viewport));

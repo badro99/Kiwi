@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Team app (kiwi-serveur.html) : « Consulter sans pointer » est en lecture seule.
  *
  * Le commentaire du CSS promettait une vue verrouillée, mais le mode n'était
@@ -153,7 +154,7 @@ try {
   await context.close();
 
   /* Traductions */
-  for (const lang of ['en', 'ar']) {
+  for (const lang of forLocales(['en', 'ar'])) {
     // coverage: surface=team-entry locale=en viewport=phone
     // coverage: surface=team-entry locale=ar viewport=phone
     const t = await open(lang);

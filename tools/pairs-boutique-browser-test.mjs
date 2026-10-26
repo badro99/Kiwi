@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* « Souvent avec… » sur une vraie caisse boutique appairée, au vrai clic.
  *
  * Le catalogue est fabriqué par le vrai assets/boutique-catalog.js (son
@@ -209,10 +210,10 @@ try {
     check(errors.length === 0, 'no script error on the till' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await ctx.close();
   }
-  for (const [lang, txt, why, add] of [
+  for (const [lang, txt, why, add] of forLocales([
     ['en', /^Often with Foulard soie · Broche perles$/, /^86% of tickets with Foulard soie · last 28 days$/, 'Add Broche perles'],
     ['ar', /^غالباً مع Foulard soie · Broche perles$/, /^86% من التذاكر مع Foulard soie · آخر 28 يوماً$/, 'أضف Broche perles'],
-  ]) {
+  ])) {
     console.log(`■ The same suggestion in ${lang.toUpperCase()}`);
     const { ctx, page, errors } = await openTill(lang);
     await addFromGrid(page, ID.foulard);

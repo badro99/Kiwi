@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* trade-tickets-phone-browser-test · the trades whose ticket has its own name.
  *
  *   node tools/trade-tickets-phone-browser-test.mjs
@@ -110,7 +111,7 @@ async function open(tr, lang, trade, ready, vp = { width: 390, height: 844 }) {
 const tap = async (page, sel) => { const ok = await page.evaluate((s) => { const b = [...document.querySelectorAll(s)].find((x) => x.getClientRects().length); if (!b) return false; b.click(); return true; }, sel); await sleep(700); return ok; };
 
 try {
-  for (const lang of ['fr', 'ar']) {
+  for (const lang of forLocales(['fr', 'ar'])) {
     await S.run(`librairie · ${lang}`, async (tr) => {
       // coverage: surface=caisse-librairie locale=fr viewport=phone
       // coverage: surface=caisse-librairie locale=ar viewport=phone

@@ -230,6 +230,11 @@ session and every GPT job):**
   full gate caught four failures (two of them browser-only) after GPT's own
   targeted checks had passed, so do not skip it for merges.
 
+**Browser locales (owner decision, 26 Oct 2026).** Browser suites run French only
+by default. Set `KIWI_LOCALES=fr,en,ar` for a full multilingual pass before
+shipping changes to Arabic/RTL layout or translations. Static translation and
+language completeness checks still cover every language.
+
 A suite counts as slow (browser) by reading its source and the local files it
 imports (puppeteer, browser-trace, Chromium, Playwright, Chrome), not its
 filename (`tools/check-guard.js`).

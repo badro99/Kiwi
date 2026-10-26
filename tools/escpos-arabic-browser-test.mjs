@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* L'arabe sur le papier (assets/escpos.js), dans un vrai navigateur.
  *
  * CP1252 n'a pas l'arabe : un reçu réglé en arabe, un plat « طاجين » ou un
@@ -160,7 +161,7 @@ const save = async (name, im) => { if (!shots) return; const d = await page.eval
   });
   check(r.length === 1 && r[0].w === 384 && r[0].last < 384 && r[0].first >= 0, '58 mm: 384 dots, and a line too long is squeezed to fit, never cut');
 }
-for (const [lang, minImgs, what] of [['fr', 4, 'a French receipt with Arabic dish, cashier and client names'], ['ar', 12, 'a receipt set to Arabic']]) {
+for (const [lang, minImgs, what] of forLocales([['fr', 4, 'a French receipt with Arabic dish, cashier and client names'], ['ar', 12, 'a receipt set to Arabic']])) {
   const r = await page.evaluate((lang) => {
     window.KiwiCaisseLang = { get: () => lang };
     const R = window.KiwiReceipt;

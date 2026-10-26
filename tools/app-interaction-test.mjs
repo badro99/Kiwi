@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* tools/app-interaction-test.mjs — the native setup shell, driven for real.
  *
  * Wired in tools/check.js (an unnamed test guards nothing). Unlike the
@@ -1075,7 +1076,7 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
 }
 
 /* ── 8 · keyboard traversal, activation, and focus management ───────────── */
-for (const locale of ['fr', 'ar']) {
+for (const locale of forLocales(['fr', 'ar'])) {
   // 8.1: Account / Login step keyboard interactions
   {
     const p = await openShell({ locale, me: 'login' });
@@ -1411,7 +1412,7 @@ for (const locale of ['fr', 'ar']) {
 }
 
 /* ── 9 · honest WCAG 1.4.10 reflow (320 CSS-pixel reflow equivalent) ─────── */
-for (const locale of ['fr', 'en', 'ar']) {
+for (const locale of forLocales(['fr', 'en', 'ar'])) {
   // Baseline at 1280px desktop width, followed by 320 CSS-pixel equivalent (400% zoom)
   const p = await openShell({ locale, viewport: 'small320', me: 'multi', plugin: { scan: 'hosts' } });
   await settleAccount(p);
@@ -1502,7 +1503,7 @@ for (const locale of ['fr', 'en', 'ar']) {
 }
 
 /* ── 10 · genuine 200% text scaling across all elements (WCAG 1.4.4) ────── */
-for (const locale of ['fr', 'en', 'ar']) {
+for (const locale of forLocales(['fr', 'en', 'ar'])) {
   const p = await openShell({ locale, viewport: 'iphone', me: 'multi', plugin: { scan: 'hosts' } });
   await settleAccount(p);
 
@@ -1898,7 +1899,7 @@ for (const locale of ['fr', 'en', 'ar']) {
     : bad(`Dynamic Type decoupling check failed: ${JSON.stringify(decoupleResult)}`);
 
   // 12.7: Layout survival at 320 CSS px under maximum 1.35x ceiling across all 5 steps (FR, EN, AR)
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     const p320 = await openShell({ locale, viewport: 'iphone', me: 'multi', plugin: { dynamicType: 1.35, scan: 'hosts' } });
     await p320.setViewport({ width: 320, height: 568, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await settleAccount(p320);
@@ -1974,7 +1975,7 @@ for (const locale of ['fr', 'en', 'ar']) {
 {
   const req = createRequire(path.join(ROOT, 'app/package.json'));
   const axeSource = fs.readFileSync(req.resolve('axe-core/axe.min.js'), 'utf8');
-  for (const [locale, viewport, size] of [['en', 'ipadPortrait', 'tablet'], ['ar', 'desktop1280', 'desktop']]) {
+  for (const [locale, viewport, size] of forLocales([['en', 'ipadPortrait', 'tablet'], ['ar', 'desktop1280', 'desktop']])) {
     const p = await openShell({ locale, viewport, plugin: 'controlled' });
     try {
       const audit = async (region, state, lang = locale) => {
@@ -2058,7 +2059,7 @@ for (const locale of ['fr', 'en', 'ar']) {
 
 // Exercise the shipped host bridge, not hidden web buttons: native setup makes
 // the web shell inert, so DOM-only onboarding tests cannot prove this journey.
-for (const locale of ['fr', 'en', 'ar']) {
+for (const locale of forLocales(['fr', 'en', 'ar'])) {
   const p = await openShell({ locale, me: 'multi', plugin: { hosted: true } });
   const action = (payload) => p.evaluate((value) => window.KiwiNativeHostAction(value), payload);
   const step = (kind) => p.waitForFunction((value) => window.__nativeSetupState?.kind === value, { timeout: 9000 }, kind);

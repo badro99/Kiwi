@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Local bundled demos plus script-free, already-open Team/Kitchen fixtures.
 // No credentials, digit entry, gate bypass or merchant network requests.
 import { fileURLToPath } from 'node:url';
@@ -78,7 +79,7 @@ try {
     check(privacyKeys.every(key=>content.includes(key)),file+': all five privacy purposes present');
   }
   // Invalid/empty native login uses only an empty password, never credentials.
-  for (const lang of ['fr','en','ar']) {
+  for (const lang of forLocales(['fr','en','ar'])) {
     const {page,context,authRequests} = await phone(lang,false,true);
     // coverage: surface=native-shell locale=fr viewport=phone
     // coverage: surface=native-shell locale=en viewport=phone
@@ -96,7 +97,7 @@ try {
     await context.close();
   }
   // Local onboarding only: synthetic names, no code, no final account creation.
-  for (const lang of ['fr','ar']) {
+  for (const lang of forLocales(['fr','ar'])) {
     const {page,context,verificationRequests}=await phone(lang);
     // coverage: surface=dashboard locale=fr viewport=phone
     // coverage: surface=dashboard locale=ar viewport=phone
@@ -135,7 +136,7 @@ try {
     check(verificationRequests()===0,'onboarding layout check does not verify any code');
     await context.close();
   }
-  for (const lang of ['fr','en','ar']) for (const dark of [false,true]) {
+  for (const lang of forLocales(['fr','en','ar'])) for (const dark of [false,true]) {
     const {page,context,verificationRequests} = await phone(lang,dark);
     // coverage: surface=dashboard locale=fr viewport=phone
     // coverage: surface=dashboard locale=en viewport=phone
@@ -223,7 +224,7 @@ try {
 
     await context.close();
   }
-  for (const lang of ['en','ar']) {
+  for (const lang of forLocales(['en','ar'])) {
     const {page,context}=await phone(lang);
     // coverage: surface=team-entry locale=en viewport=phone
     // coverage: surface=team-entry locale=ar viewport=phone
@@ -234,7 +235,7 @@ try {
   // Isolated production-layout fixtures: application scripts are NOT run.
   // These are not authenticated sessions and cannot read or write a merchant.
   for (const [file,role,screen] of [['kiwi-serveur.html','Team','screen-main'],['kiwi-cuisine.html','Kitchen','screen']]) {
-    for (const [lang,dark] of [['fr',false],['en',true],['ar',true]]) {
+    for (const [lang,dark] of forLocales([['fr',false],['en',true],['ar',true]])) {
       const {page,context}=await phone(lang,dark);
       // coverage: surface=native-shell locale=fr viewport=phone
       // coverage: surface=native-shell locale=en viewport=phone

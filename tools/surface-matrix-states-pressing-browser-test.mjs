@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Synthetic demo intake (dépôt), tag preview and pickup. Never print or pay.
 import assert from 'node:assert/strict';
 import { harness, openTill, sleep, verify } from './surface-matrix-lib.mjs';
@@ -112,7 +113,7 @@ async function pickup(t, page, locale, viewport) {
 }
 
 try {
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     for (const viewport of ['phone', 'tablet']) {
       for (const state of ['intake', 'pickup']) {
         await h.S.run(`${state} · ${locale} · ${viewport}`, async (t) => {

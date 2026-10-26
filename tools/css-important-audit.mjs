@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · tools/css-important-audit.mjs · quels `!important` des trois couches du
  * tableau de bord ne servent à rien, prouvé dans un vrai Chromium.
@@ -362,7 +363,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* Mode produit × drapeau du kit × thème × écran × langue. */
 const CONFIGS = [];
-for (const theme of ['light', 'dark']) for (const vp of ['desktop', 'phone']) for (const lang of ['fr', 'ar']) for (const ultra of [false, true]) for (const flag of [false, true])
+for (const theme of ['light', 'dark']) for (const vp of ['desktop', 'phone']) for (const lang of forLocales(['fr', 'ar'])) for (const ultra of [false, true]) for (const flag of [false, true])
   CONFIGS.push({ id: `${ultra ? 'ultra-' : ''}${flag ? 'kit' : 'std'}-${theme}-${vp}-${lang}`, ultra, flag, theme, vp, lang });
 const KEY_PAGES = ['accueil', 'transactions', 'equipe', 'stock', 'menu', 'settings'];
 

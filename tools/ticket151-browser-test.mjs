@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Ticket #0151: isolated bundled demo, real input, geometry and visual matrix.
 // No credentials, digit entry, gate bypass or merchant network requests.
 import { fileURLToPath } from 'node:url';
@@ -64,8 +65,8 @@ async function phone(lang, dark=false, signedOut=false) {
 try {
   const measurements=[];
   const matrix=phase==='before'||process.env.KIWI_151_MATRIX==='1';
-  const cases=matrix?[375,402].flatMap(width=>['fr','en','ar'].filter(lang=>!process.env.KIWI_151_LANGS||process.env.KIWI_151_LANGS.split(',').includes(lang)).flatMap(lang=>['light','dark'].map(theme=>({width,lang,theme})))):[{width:375,lang:'ar',theme:'dark'},{width:402,lang:'en',theme:'light'}];
-  for(const {width,lang,theme} of cases) {
+  const cases=matrix?[375,402].flatMap(width=>forLocales(['fr','en','ar']).filter(lang=>!process.env.KIWI_151_LANGS||process.env.KIWI_151_LANGS.split(',').includes(lang)).flatMap(lang=>['light','dark'].map(theme=>({width,lang,theme})))):[{width:375,lang:'ar',theme:'dark'},{width:402,lang:'en',theme:'light'}];
+  for(const {width,lang,theme} of cases.filter(c => forLocales([c.lang]).length)) {
     const {page,context}=await phone(lang,theme==='dark');
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.setViewport({width,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});
@@ -180,7 +181,7 @@ try {
           await page.waitForFunction(()=>document.querySelectorAll('.kiwi-backdrop').length===1,{timeout:3000});check((await page.$$('.kiwi-backdrop')).length===1,action+': supplier handoff is a single sheet');await close();
         }
         check(await page.evaluate(()=>!document.documentElement.classList.contains('kiwi-locked')&&!window.__kiwiScrollLocks),'all sheet closes release background scroll lock');
-        for(const target of ['ar','fr','en']){await page.evaluate(l=>KiwiI18n.setLang(l),target);await sleep(200);check(await page.$eval('[data-action="stock-workspace-actions"]',e=>e.getAttribute('aria-label'))===({ar:'أدوات المخزون',fr:'Outils du stock',en:'Stock tools'})[target],'in-place language switch: '+target);}
+        for(const target of forLocales(['ar','fr','en'])){await page.evaluate(l=>KiwiI18n.setLang(l),target);await sleep(200);check(await page.$eval('[data-action="stock-workspace-actions"]',e=>e.getAttribute('aria-label'))===({ar:'أدوات المخزون',fr:'Outils du stock',en:'Stock tools'})[target],'in-place language switch: '+target);}
         for(const wide of [768,1440]){
           const wideGo=async nav=>{await page.setViewport({width:402,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});await page.evaluate(()=>document.documentElement.classList.add('kiwi-native'));await go(nav);await page.setViewport({width:wide,height:960,deviceScaleFactor:1,isMobile:true,hasTouch:true});await page.evaluate(()=>document.documentElement.classList.remove('kiwi-native'));await sleep(300);};
           await wideGo('menu');await click('[data-action="rmw-cat-filter"][data-cat="all"]');await sleep(200);await snap('wide-'+wide+'-menu');

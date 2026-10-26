@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Rendered evidence is annotated only after a successful browser run.
 // Rendered synthetic operator board, attachments and retest on touch screens.
 import assert from 'node:assert/strict';
@@ -14,7 +15,7 @@ const dir = await mkdtemp(path.join(os.tmpdir(), 'kiwi-ticket-workflow-'));
 const file = path.join(dir, 'synthetic.png');
 await writeFile(file, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aT1sAAAAASUVORK5CYII=', 'base64'));
 try {
-  for (const locale of ['fr','en','ar']) for (const viewport of ['phone','tablet']) await h.S.run(`${locale} · ${viewport} · attachment and retest`, async t => {
+  for (const locale of forLocales(['fr','en','ar'])) for (const viewport of ['phone','tablet']) await h.S.run(`${locale} · ${viewport} · attachment and retest`, async t => {
     const row = { id: 1, number: '#1', body: 'Synthetic report', status: 'testing', createdAt: Date.now(), updatedAt: Date.now(), kind: 'bug', area: 'sync', images: [], followups: [] };
     const actions = [];
     const routes = {

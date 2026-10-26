@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* « Souvent avec… » dans l'app des serveurs, au vrai clic.
  *
  * Un serveur pointé d'un commerce de test (base SQLite en mémoire bâtie
@@ -183,10 +184,10 @@ try {
     check(errors.length === 0, 'no script error in the waiter app' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await ctx.close();
   }
-  for (const [lang, table, lead, why, add] of [
+  for (const [lang, table, lead, why, add] of forLocales([
     ['en', 'T5', /Often with Msemen miel · Thé à la menthe/, /^86% of tickets with Msemen miel · last 28 days$/, /^Add /],
     ['ar', 'T6', /غالباً مع .+ · .+/, /^86% من التذاكر مع .+ · آخر 28 يوماً$/, /^أضف /],
-  ]) {
+  ])) {
     console.log(`■ The same suggestion in ${lang.toUpperCase()}`);
     const { ctx, page, errors } = await openApp(lang, table);
     await page.click('.menu-item[data-menu-id="it_msemen"]');

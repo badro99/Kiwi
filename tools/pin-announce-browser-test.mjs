@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* pin-announce-browser-test · §10.2 Rules, the message row (stage 3a).
  *
  * The real <k-pin-pad>, wired by KiwiPinFlow, real clicks on its keys:
@@ -117,7 +118,7 @@ await S.run('automatic retries write nothing; a changed cause writes once', asyn
 });
 
 await S.run('Arabic and French copy, the same regions', async (tr) => {
-  for (const lang of ['fr', 'ar']) {
+  for (const lang of forLocales(['fr', 'ar'])) {
     const page = tr.watch(await h.open({ lang }));
     await mount(page, 'till', { replies: [{ status: 401, body: { error: 'bad-pin' } }] });
     await type(page, '1234'); await settle(page, 900);

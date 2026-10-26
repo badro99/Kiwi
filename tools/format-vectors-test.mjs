@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* format-vectors-test · KiwiFormat (assets/kit/format.js), direction 2027 §6.3.
  *
  * Two halves, one table (tools/format-vectors.json):
@@ -257,29 +258,29 @@ try {
     ok(info.zone === 'Pacific/Auckland' && info.f === 'object' && info.b === 'object', `the page's device zone is ${info.zone}, KiwiFormat and KiwiBusinessDay are on window (${info.ua})`);
 
     t.step('run every vector in the page');
-    const bad = await page.evaluate(async (DEFAULT_ZONE) => {
+    const bad = await page.evaluate(async (DEFAULT_ZONE, locales) => {
       const table = await (await fetch('/tools/format-vectors.json')).json();
       const out = [];
-      for (const v of table.vectors) for (const l of ['en', 'fr', 'ar']) {
+      for (const v of table.vectors) for (const l of locales) {
         KiwiFormat.configure({ zone: v.zone || DEFAULT_ZONE });
         let got;
         try { got = KiwiFormat.for(l)[v.call](...v.args); } catch (e) { got = 'THROW ' + e.message; }
         if (got !== v[l]) out.push({ id: v.id, lang: l, got, want: v[l] });
       }
       return out;
-    }, DEFAULT_ZONE);
-    ok(bad.length === 0, `${VECTORS.length} vectors x 3 languages in Chromium` + (bad.length ? ': ' + bad.slice(0, 3).map((b) => `${b.id}/${b.lang} got ${hex(b.got)} want ${hex(b.want)}`).join(' | ') : ''));
+    }, DEFAULT_ZONE, forLocales(LANGS));
+    ok(bad.length === 0, `${VECTORS.length} vectors x ${forLocales(LANGS).length} languages in Chromium` + (bad.length ? ': ' + bad.slice(0, 3).map((b) => `${b.id}/${b.lang} got ${hex(b.got)} want ${hex(b.want)}`).join(' | ') : ''));
 
     t.step('language comes from the page');
-    const langs = await page.evaluate(() => {
+    const langs = await page.evaluate((locales) => {
       const seen = {};
       KiwiFormat.configure({ lang: '' });
-      for (const l of ['fr', 'en', 'ar']) { document.documentElement.setAttribute('lang', l); seen[l] = KiwiFormat.num(19174.5, 2) + '|' + KiwiFormat.lang(); }
+      for (const l of locales) { document.documentElement.setAttribute('lang', l); seen[l] = KiwiFormat.num(19174.5, 2) + '|' + KiwiFormat.lang(); }
       document.documentElement.removeAttribute('lang');
       seen.none = KiwiFormat.lang();
       return seen;
-    });
-    ok(langs.fr === '19\u00A0174,50|fr' && langs.en === '19,174.50|en' && langs.ar === '19\u00A0174,50|ar' && langs.none === 'fr',
+    }, forLocales(LANGS));
+    ok(forLocales(LANGS).every(l => langs[l] === ({ fr: '19\u00A0174,50|fr', en: '19,174.50|en', ar: '19\u00A0174,50|ar' })[l]) && langs.none === 'fr',
       'with no explicit language the page decides (html lang), and French is the last resort like the rest of the app');
 
     t.step('the assertion in a page');

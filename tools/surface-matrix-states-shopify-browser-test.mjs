@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Synthetic Shopify API only. All post-load navigation uses actual UI input.
 // Gap: a merchant must understand the failure and be able to recover from it.
 import assert from 'node:assert/strict';
@@ -114,7 +115,7 @@ const connector = {
 };
 
 try {
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     for (const viewport of ['phone', 'tablet']) {
       await h.S.run(`Shopify setup, sync error and recovery · ${locale} · ${viewport}`, async (t) => {
         // coverage: surface=dashboard locale=fr viewport=phone

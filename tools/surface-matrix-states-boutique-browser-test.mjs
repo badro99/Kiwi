@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Boutique state visits, demo only. No render helpers or merchant credentials.
 // Deliberately unreachable in the shipped till:
 // - product-editor: inventory.js openNewProduct/openEditProduct immediately
@@ -79,7 +80,7 @@ async function countReview(page, t, check) {
 
 try {
   console.log('! Unreachable in boutique till: product-editor, promo-editor and refused demo credit; see source comments.');
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     for (const state of ['returns', 'count-review']) {
       for (const viewport of ['phone', 'tablet']) {
         await h.S.run(`${state} · ${locale} · ${viewport}`, async (t) => {

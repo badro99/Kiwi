@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Uses browser-trace through the shared harness (Chromium; run serially).
 // Refused till operations reach the owner as a card on the real dashboard:
 // each one says what it was and why it was refused, the owner approves or
@@ -116,7 +117,7 @@ async function unreachable(t) {
 
 try {
   await h.S.run('unreachable review endpoint stays quiet · fr · phone', (t) => unreachable(t));
-  for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['desktop', 'phone']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) for (const viewport of ['desktop', 'phone']) {
     await h.S.run(`owner settles refused operations · ${locale} · ${viewport}`, (t) => scenario(t, locale, viewport));
   }
 } finally {

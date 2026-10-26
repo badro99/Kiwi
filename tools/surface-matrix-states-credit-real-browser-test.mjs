@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // No merchant services: realPage fails closed for every unlisted API/host.
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
@@ -16,7 +17,7 @@ const catalog = { v: 1, categories: [{ id: 'clothes', name: 'Clothes' }],
   products: [{ id: 'matrix-shirt', name: 'Matrix Shirt', categoryId: 'clothes', kind: 'tu', art: 'foulard', price: 100, priceMAD: 100, active: true }],
   variants: [{ id: 'matrix-variant', productId: 'matrix-shirt', size: 'TU', colorId: 'black', colorLabel: 'Noir', colorHex: '#111111', stock: 10, base: 10, baseAt: 1, barcodes: [] }] };
 try {
-  for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['phone', 'tablet']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) for (const viewport of ['phone', 'tablet']) {
     await h.S.run(`real credit refusal and recovery · ${locale} · ${viewport}`, async t => {
       let issues = 0, failures = 0, approvals = 0;
       const credits = [{ id: 'existing-credit', code: 'AV-BEFORE', amountCents: 2500, balanceCents: 2500, customerId: 'matrix-client', customerName: 'Matrix Customer', createdAt: Date.now(), expiresAt: Date.now() + 365 * 86400000, status: 'active' }];

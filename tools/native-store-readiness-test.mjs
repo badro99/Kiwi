@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Local fixtures only. No credentials, pairing, merchant writes or production requests.
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
@@ -29,7 +30,7 @@ const executablePath=process.env.KIWI_CHROMIUM_BIN||['/Applications/Google Chrom
 const browser=await puppeteer.launch({executablePath,headless:true,args:['--no-sandbox']});
 let n=0;function check(v,msg){assert.ok(v,msg);n++;console.log('  ✓ '+msg);}
 try {
-  for(const lang of ['fr','en','ar']) {
+  for(const lang of forLocales(['fr','en','ar'])) {
     const context=await browser.createBrowserContext();const page=await context.newPage();
     await page.setViewport({width:402,height:874,isMobile:true,hasTouch:true});
     await page.setRequestInterception(true);

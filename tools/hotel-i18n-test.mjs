@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Hôtel · ce qu'un vrai hôtel voit se lit dans la langue de l'écran.
  *
  * 2026-10-12. Sous EN et AR, assets/hotel.js parlait encore français presque
@@ -236,7 +237,7 @@ const closeModals = async (page) => {
 };
 
 try {
-  for (const lang of ['en', 'ar']) {
+  for (const lang of forLocales(['en', 'ar'])) {
     console.log(`\n■ B · ${lang.toUpperCase()} · surfaces of a real hotel`);
     const { ctx, page, errors } = await open(lang);
     for (const [handler, en, ar] of SURFACES) {

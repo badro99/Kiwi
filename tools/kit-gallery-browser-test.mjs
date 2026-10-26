@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Kiwi · kit-gallery-browser-test · the gallery baseline (spec §21.1, stage 2).
  *
  * kit.html in light and dark, English and Arabic, at a phone width (390) and
@@ -44,7 +45,7 @@ const inspect = (page) => page.evaluate(() => {
   return { names: [...names], undefinedEls, sideways: document.scrollingElement.scrollWidth - vw, wide, dir: document.documentElement.dir || 'ltr', billDir };
 });
 
-for (const theme of ['light', 'dark']) for (const lang of ['en', 'ar']) for (const width of [390, 1280]) {
+for (const theme of ['light', 'dark']) for (const lang of forLocales(['en', 'ar'])) for (const width of [390, 1280]) {
   const label = `${theme} · ${lang} · ${width}`;
   await s.run(label, async (t) => {
     // coverage: surface=shell-kit locale=en viewport=phone

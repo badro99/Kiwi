@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Santé Kiwi · la tuile de la rangée « Pour vous », dans le vrai dashboard.html.
  *
  * La route est prouvée sur une vraie base par merchant-health-test.mjs ; ici
@@ -201,7 +202,7 @@ try {
   }
 
   /* 2 · English and Arabic, dark */
-  for (const [lang, theme, needle] of [['en', 'dark', `${BODY.used} of ${BODY.measured} tools fully in use`], ['ar', 'dark', `${BODY.used} من أصل ${BODY.measured} أدوات مستعملة بالكامل`]]) {
+  for (const [lang, theme, needle] of forLocales([['en', 'dark', `${BODY.used} of ${BODY.measured} tools fully in use`], ['ar', 'dark', `${BODY.used} من أصل ${BODY.measured} أدوات مستعملة بالكامل`]])) {
     // coverage: surface=dashboard locale=en viewport=desktop
     // coverage: surface=dashboard locale=ar viewport=desktop
     const { ctx, page, problems } = await open({ lang, theme });

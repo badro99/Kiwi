@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Synthetic, offline dashboard edits only. No credentials or internal handlers.
 import assert from 'node:assert/strict';
 import { harness, dashboardWalker, sleep, verify } from './surface-matrix-lib.mjs';
@@ -115,7 +116,7 @@ async function catalogue(t, page, locale, viewport) {
   await page.keyboard.press('Escape');
 }
 try {
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     for (const viewport of ['phone', 'tablet']) {
       await h.S.run(`promos and catalogue · ${locale} · ${viewport}`, async (t) => {
         // coverage: surface=dashboard locale=fr viewport=phone

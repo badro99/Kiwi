@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from '../test-locales.mjs';
 /* tools/design-capture/capture.mjs — screenshot matrix for the design audit.
  *
  * Drives DEMO surfaces only, through a real Chrome (puppeteer-core from
@@ -572,7 +573,7 @@ function planFrames(catalog, opts) {
   for (const s of surfaces) {
     if (s.status === 'blocked') continue;
     const devices = (wantDevices || s.devices || ['iphone', 'ipad', 'desktop']).filter((d) => DEVICES[d] && (!s.devices || s.devices.includes(d)));
-    const langs = (wantLangs || s.langs || LANGS_DEFAULT).filter((l) => !s.langs || s.langs.includes(l));
+    const langs = forLocales((wantLangs || s.langs || LANGS_DEFAULT).filter((l) => !s.langs || s.langs.includes(l)));
     const themes = s.themeFixed ? [s.themeFixed] : wantThemes;
     for (const d of devices) for (const t of themes) for (const l of langs) frames.push({ s, d, t, l });
   }

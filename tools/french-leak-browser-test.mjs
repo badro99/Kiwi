@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Kiwi · French left on screen under English and Arabic (tools/french-leak-browser-test.mjs)
  *
  * Opens the demo dashboard, switches to EN
@@ -37,7 +38,8 @@ let puppeteer;
 try { puppeteer = require('puppeteer-core'); } catch (_) { console.log('  · puppeteer-core absent (npm --prefix app ci), sweep skipped'); process.exit(0); }
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 if (!bin) { console.log('  · no Chromium, sweep skipped'); process.exit(0); }
-const LANGS = (process.env.KIWI_SWEEP_LANGS || 'en,ar').split(',').map((s) => s.trim()).filter(Boolean);
+const LANGS = forLocales((process.env.KIWI_SWEEP_LANGS || 'en,ar').split(',').map((s) => s.trim()).filter(Boolean));
+if (!LANGS.length) { console.log('○ French leak sweep: en/ar not run by default (KIWI_LOCALES=fr,en,ar to include them)'); process.exit(0); }
 
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg' };
 const server = http.createServer((req, res) => {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Operations states reached through public demo UI only. Run serially.
 // Source limits: no demo hotel ships (dashboard.html); simple-food-cost's
 // available() rejects demo mode; the local operator console currently is FR.
@@ -9,7 +10,7 @@ import { harness, demoPage, dashboardWalker, sleep, verify } from './surface-mat
 
 const h = await harness('surface-matrix-states-ops');
 const dashboards = dashboardWalker(h);
-const locales = ['fr', 'en', 'ar'];
+const locales = forLocales(['fr', 'en', 'ar']);
 
 async function settled(page, region) {
   await page.waitForSelector(region, { visible: true, timeout: 8000 });

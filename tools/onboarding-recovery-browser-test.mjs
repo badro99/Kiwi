@@ -1,3 +1,4 @@
+import { forLocales } from './test-locales.mjs';
 import { suite } from './browser-trace.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -60,7 +61,7 @@ const next = async page => { await page.click('.kob-foot .primary[data-go="next"
 const fill = async (page, field, value) => {
   await page.$eval(`[data-f="${field}"]`, (el, value) => { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); }, value);
 };
-for (const lang of ['fr', 'en', 'ar']) {
+for (const lang of forLocales(['fr', 'en', 'ar'])) {
   for (const [device, viewport] of Object.entries({ phone: { width: 390, height: 844, isMobile: true }, tablet: { width: 820, height: 1180 } })) {
     await tests.run(`${lang}-${device}-recovery`, async t => {
       // coverage: surface=onboarding locale=fr viewport=phone

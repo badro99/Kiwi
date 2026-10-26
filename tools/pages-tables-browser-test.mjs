@@ -1,3 +1,4 @@
+import { forLocales } from './test-locales.mjs';
 /* Verify first-use table loading through the real dashboard and its existing guards. */
 import assert from 'node:assert/strict';
 import { harness, dashboardWalker } from './surface-matrix-lib.mjs';
@@ -6,7 +7,7 @@ const nav = dashboardWalker(h);
 const resources = page => page.evaluate(() => [...document.scripts].filter(script => script.src)
   .map(script => new URL(script.src).pathname).filter(path => path.startsWith('/assets/pages/tables')));
 try {
-  for (const locale of ['fr','en','ar']) {
+  for (const locale of forLocales(['fr','en','ar'])) {
     await h.S.run('table first use and reopen · ' + locale, async t => {
       const { page } = await nav.open(t,'dashboard-transactions',locale,'desktop');
       assert.deepEqual(await resources(page),[],'table owner and prerequisites absent at boot');

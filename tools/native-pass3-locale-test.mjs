@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Local bundled demos plus script-free, already-open Team/Kitchen fixtures.
 // No credentials, digit entry, gate bypass or merchant network requests.
 import { fileURLToPath } from 'node:url';
@@ -58,7 +59,7 @@ async function phone(lang, dark=false, signedOut=false) {
   return {page,context,verificationRequests:()=>verificationRequests,authRequests:()=>authRequests};
 }
 try {
-  for(const lang of ['fr','en','ar']) {
+  for(const lang of forLocales(['fr','en','ar'])) {
     const {page,context}=await phone(lang);
     // coverage: surface=team-entry locale=fr viewport=phone
     // coverage: surface=team-entry locale=en viewport=phone

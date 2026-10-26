@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* label-fit-test · design 2027 §6.6, measured fits.
  *
  * Every label that §10 and §18 draw on one line is measured in a browser, in the
@@ -312,7 +313,7 @@ async function figuresFor(m, strs, rows = ROWS, extraJobs = []) {
   for (const row of rows) {
     const missing = missingKeys(row, strs);
     if (missing.length) { skipped.push({ row, missing }); continue; }
-    for (const lang of langsOf(row)) {
+    for (const lang of forLocales(langsOf(row))) {
       const pieces = piecesOf(row, lang, strs);
       const from = jobs.length;
       for (const p of pieces) if (p.text != null) jobs.push({ text: p.text, lang, ...styleOf(p.step, p.weight, lang, row.scale || 1) });
@@ -338,7 +339,8 @@ try {
     const m = await openMeasurer(t);
 
     /* the reference labels, exactly as the spec words them */
-    const refJobs = REFERENCES.map((r) => {
+    const activeReferences = REFERENCES.filter(r => forLocales([r.lang]).length);
+    const refJobs = activeReferences.map((r) => {
       const text = r.lang === 'en' ? 'Send 2 to kitchen' : strings.render('bill.send', 'ar', { n: '2' });
       return { text, lang: r.lang, ...styleOf('body', 'strong', r.lang) };
     });
@@ -360,12 +362,12 @@ try {
 
     /* 3 · the reference labels */
     const bad = [];
-    REFERENCES.forEach((r, i) => {
+    activeReferences.forEach((r, i) => {
       console.log(`  reference "${r.id}" at Body strong: ${r1(refW[i])} (§6.6 prints ${r.want})`);
       if (Math.abs(refW[i] - r.want) > TOL) bad.push(`reference "${r.id}": ${r1(refW[i])}, not ${r.want} (off by ${r1(Math.abs(refW[i] - r.want))}): a face that is not the shipped one (a fallback?) measured it`);
     });
     if (bad.length) throw new Error(bad.join('\n'));
-    ok(true, `both reference labels are within ${TOL} px of §6.6: the shipped faces measured them`);
+    ok(true, `${activeReferences.length} active reference labels are within ${TOL} px of §6.6: the shipped faces measured them`);
 
     /* 4 · no glyph from a system face */
     const system = [];
@@ -413,7 +415,7 @@ try {
     /* a sentence that may wrap (not a one-line label) never needs more lines than §6.6 says */
     const wraps = table.rows.filter((r) => r.wrapAt && !missingKeys(r, strings).length);
     for (const row of wraps) {
-      for (const lang of langsOf(row)) {
+      for (const lang of forLocales(langsOf(row))) {
         const text = piecesOf(row, lang, strings).filter((p) => p.text != null).map((p) => p.text).join(' ');
         const st = styleOf(row.step, row.weight, lang, row.scale || 1);
         const lines = await m.page.evaluate((text, lang, st, width, lh) => {
@@ -459,11 +461,11 @@ try {
     /* the lock: title and body, 40-character store name, 744, in all three languages */
     const STORE = 'Cafés Atlas Marrakech Guéliz Médina 2026'; // 40 characters
     assert.equal([...STORE].length, 40);
-    const lockText = Object.fromEntries(LANGS.map((l) => [l, { title: strings.render('lock.store.title', l, {}), body: strings.render('lock.store.body', l, { store: STORE }) }]));
+    const lockText = Object.fromEntries(forLocales(LANGS).map((l) => [l, { title: strings.render('lock.store.title', l, {}), body: strings.render('lock.store.body', l, { store: STORE }) }]));
     const lock = await m.page.evaluate(async (texts) => {
       document.body.textContent = '';
       const out = [];
-      for (const lang of ['en', 'fr', 'ar']) {
+      for (const lang of Object.keys(texts)) {
         const box = document.createElement('section');
         box.lang = lang; box.dir = lang === 'ar' ? 'rtl' : 'ltr';
         box.style.cssText = 'width:744px;box-sizing:border-box;padding:32px;font-family:var(--k-font)';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // The tills at tablet size, in French, English and Arabic: restaurant, boutique,
 // pressing, hotel and the épicerie's credit book, each opened in a fresh
 // Chromium demo page through its real entry (browser-trace records a failing
@@ -8,7 +9,7 @@ import { harness, openTill, verify } from './surface-matrix-lib.mjs';
 const h = await harness('surface-matrix-till-tablet');
 const tills = { open: (t, surface, locale, viewport) => openTill(h, t, surface, locale, viewport) };
 try {
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`caisse-restaurant · ${locale} · tablet`, async (t) => {
       // coverage: surface=caisse-restaurant locale=fr viewport=tablet
       // coverage: surface=caisse-restaurant locale=en viewport=tablet

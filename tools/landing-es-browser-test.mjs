@@ -1,3 +1,4 @@
+import { forLocales } from './test-locales.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -103,7 +104,7 @@ function measureLayout() {
   return{scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,clipped,outside,overlaps,svgOverflow,splitHeadingWords};
 }
 try {
-  for(const [locale,width]of [...[360,390,768,1024,1440,1920].map(w=>['es',w]),['en',390],['en',1440],['fr',390],['fr',1440]]){
+  for(const [locale,width]of forLocales([...[360,390,768,1024,1440,1920].map(w=>['es',w]),['en',390],['en',1440],['fr',390],['fr',1440]])){
     // coverage: surface=landing locale=es viewport=phone
     // coverage: surface=landing locale=es viewport=tablet
     // coverage: surface=landing locale=es viewport=desktop
@@ -139,7 +140,7 @@ try {
     if(evidence&&locale==='es')await page.screenshot({path:path.join(out,`es-${width}-menu.png`)});
     await page.close();
   }
-  for(const locale of ['fr','en','ar','de','it','nl','es']){
+  for(const locale of forLocales(['fr','en','ar','de','it','nl','es'])){
     // coverage: surface=landing locale=es viewport=desktop
     const {page}=await open('es');await delay(250);await page.click('.kw-locale-trigger');await delay(200);
     const options=await page.$$eval('.kw-locale-option',nodes=>nodes.map(e=>({locale:e.hreflang,current:e.getAttribute('aria-current'),selected:e.getAttribute('aria-selected'),text:e.innerText})));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Real localized followup administration, synthetic network only.
 import assert from 'node:assert/strict';
 import { harness, realPage, verify } from './surface-matrix-lib.mjs';
@@ -11,7 +12,7 @@ async function tabTo(page, selector) {
   assert.fail('Keyboard cannot reach ' + selector);
 }
 try {
-  for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['phone', 'tablet', 'desktop']) await h.S.run(`${locale} · ${viewport}`, async t => {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) for (const viewport of ['phone', 'tablet', 'desktop']) await h.S.run(`${locale} · ${viewport}`, async t => {
     const merchant = 'synthetic-followups';
     const task = { id: 'task-synthetic', merchant, title: 'Synthetic next step', version: 1, status: 'open', outcome: '' };
     const patches = [], notes = []; let refuse = true, noteRefusal = true;

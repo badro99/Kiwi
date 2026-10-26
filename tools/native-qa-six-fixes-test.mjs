@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Local bundled demos plus script-free, already-open Team/Kitchen fixtures.
 // No credentials, digit entry, gate bypass or merchant network requests.
 import { fileURLToPath } from 'node:url';
@@ -68,7 +69,7 @@ try {
   await page.click('.kob-root [data-explore]');await sleep(1200);
   await page.click('[data-kiwi-skip]');await sleep(1800);
   const go=async id=>{const close=await page.$('.kiwi-drawer-backdrop .kiwi-drawer-close');if(close){await close.click();await sleep(450);}await page.evaluate(id=>KiwiNativeHostAction({action:'navigate',id}),id);await sleep(500);await page.waitForFunction(id=>Kiwi.activePage===(id==='clients'?'crm':id),{},id);};
-  for(const lang of ['en','fr','ar']) {
+  for(const lang of forLocales(['en','fr','ar'])) {
     await page.evaluate(lang=>KiwiI18n.setLang(lang),lang);await sleep(300);
     await go('clients');await page.click('#cd-new,[data-cd-new]');
     let form=await page.evaluate(()=>({wa:document.querySelector('#cdn-consent').checked,email:document.querySelector('#cdn-consent-email').checked,hint:document.querySelector('#cdn-consent-hint').textContent}));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Every dashboard destination at phone size, in French, English and Arabic: a real
 // Chromium demo session walks the sidebar the way a merchant does, and each
 // destination must declare its language and direction, paint, not scroll
@@ -8,7 +9,7 @@ import { harness, dashboardWalker, verify } from './surface-matrix-lib.mjs';
 const h = await harness('surface-matrix-dash-phone');
 const nav = dashboardWalker(h);
 try {
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`dashboard-transactions · ${locale} · phone`, async (t) => {
       // coverage: surface=dashboard-transactions locale=fr viewport=phone
       // coverage: surface=dashboard-transactions locale=en viewport=phone

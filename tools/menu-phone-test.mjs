@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* Tickets #0149 + #0150 · Menu & modifiers tab bar and phone panels, measured.
  *
  * #0149: tapping a tab rebuilt the whole page and the bar jumped back to the
@@ -171,7 +172,7 @@ async function spill(page, boxSel, opts = {}) {
 }
 const said = (list) => (list.length ? ' · ' + list.slice(0, 4).join(' · ') : '');
 
-for (const lang of ['en', 'ar']) {
+for (const lang of forLocales(['en', 'ar'])) {
   for (const width of [390, 820]) {
     const phone = width < 768;
     const tag = `${lang} ${width}`;

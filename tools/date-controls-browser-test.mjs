@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // #143/#144: shipped calendar, skins and lens, real wheel/touch input. No merchant APIs.
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
@@ -24,7 +25,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));let checks=0;
 const check=(yes,msg)=>{assert.ok(yes,msg);checks++;console.log(' ✓ '+msg)};
 async function swipe(page,x,y,dx,dy){const c=await page.createCDPSession();await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});for(let i=1;i<=10;i++){await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx*i/10,y:y+dy*i/10}]});await pause(20)}await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await c.detach();await pause(400)}
 try{
-for(const [width,height] of [[375,667],[402,874]]) for(const lang of ['fr','en','ar']) for(const theme of ['light','dark']){
+for(const [width,height] of [[375,667],[402,874]]) for(const lang of forLocales(['fr','en','ar'])) for(const theme of ['light','dark']){
  if(process.env.KIWI_DATE_FILTER && process.env.KIWI_DATE_FILTER!==`${width}-${lang}-${theme}`)continue;
  const p=await browser.newPage();await p.setViewport({width,height,isMobile:true,hasTouch:true,deviceScaleFactor:1});await p.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);await p.setRequestInterception(true);p.on('request',r=>r.url().startsWith(base)||r.url().startsWith('data:')?r.continue():r.abort());await p.goto(base+'/fixture.html');await p.evaluate(()=>document.fonts.ready);
  await p.evaluate(({lang,theme})=>{document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';document.documentElement.dataset.theme=theme;document.body.dataset.vexelMode=theme;document.documentElement.style.setProperty('--kiwi-host-safe-bottom','34px');mount();document.querySelector('#dates').scrollIntoView({block:'center',behavior:'instant'})},{lang,theme});await pause(200);

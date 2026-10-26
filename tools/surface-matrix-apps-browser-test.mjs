@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Session-free apps in a real Chromium demo session: waiter, kitchen, OrderPro,
 // booking, printer settings, the landing at tablet width, onboarding, tickets.
 // Fixtures mirror booking-lens, kds-cards, a11y and access-gate browser tests.
@@ -102,7 +103,7 @@ async function open(t, surface, locale, viewport) {
 }
 
 try {
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`waiter · ${locale} · desktop`, async (t) => {
       // coverage: surface=waiter locale=fr viewport=desktop
       // coverage: surface=waiter locale=en viewport=desktop
@@ -125,7 +126,7 @@ try {
       await verify(h, t, cell, `matrix-waiter-${locale}-phone`, locale);
     });
   }
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`kitchen · ${locale} · desktop`, async (t) => {
       // coverage: surface=kitchen locale=fr viewport=desktop
       // coverage: surface=kitchen locale=en viewport=desktop
@@ -148,7 +149,7 @@ try {
       await verify(h, t, cell, `matrix-kitchen-${locale}-phone`, locale);
     });
   }
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`orderpro · ${locale} · desktop`, async (t) => {
       // coverage: surface=orderpro locale=fr viewport=desktop
       // coverage: surface=orderpro locale=en viewport=desktop
@@ -171,7 +172,7 @@ try {
       await verify(h, t, cell, `matrix-orderpro-${locale}-phone`, locale);
     });
   }
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`booking · ${locale} · desktop`, async (t) => {
       // coverage: surface=booking locale=fr viewport=desktop
       // coverage: surface=booking locale=en viewport=desktop
@@ -194,7 +195,7 @@ try {
       await verify(h, t, cell, `matrix-booking-${locale}-phone`, locale);
     });
   }
-  for (const locale of ['fr', 'en', 'ar']) {
+  for (const locale of forLocales(['fr', 'en', 'ar'])) {
     await h.S.run(`printer · ${locale} · desktop`, async (t) => {
       // coverage: surface=printer locale=fr viewport=desktop
       // coverage: surface=printer locale=en viewport=desktop
@@ -218,7 +219,7 @@ try {
     });
   }
   // Every published landing locale at tablet width, the size no other suite opens.
-  for (const locale of ['fr', 'en', 'ar', 'es', 'de', 'it', 'nl']) {
+  for (const locale of forLocales(['fr', 'en', 'ar', 'es', 'de', 'it', 'nl'])) {
     await h.S.run(`landing · ${locale} · tablet`, async (t) => {
       // coverage: surface=landing locale=fr viewport=tablet
       // coverage: surface=landing locale=en viewport=tablet
@@ -231,7 +232,7 @@ try {
       await verify(h, t, cell, `matrix-landing-${locale}-tablet`, locale);
     });
   }
-  for (const locale of ['en', 'ar']) {
+  for (const locale of forLocales(['en', 'ar'])) {
     await h.S.run(`onboarding · ${locale} · desktop`, async (t) => {
       // coverage: surface=onboarding locale=en viewport=desktop
       // coverage: surface=onboarding locale=ar viewport=desktop
@@ -239,7 +240,7 @@ try {
       await verify(h, t, cell, `matrix-onboarding-${locale}-desktop`, locale);
     });
   }
-  for (const locale of ['fr']) {
+  for (const locale of forLocales(['fr'])) {
     await h.S.run(`shell-tickets · ${locale} · desktop`, async (t) => {
       // coverage: surface=shell-tickets locale=fr viewport=desktop
       const cell = await open(t, 'shell-tickets', locale, 'desktop');

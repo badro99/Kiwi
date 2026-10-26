@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Keyboard-only interactions after entry, isolated offline demo data, no submissions.
 import assert from 'node:assert/strict';
 import { harness, dashboardWalker, demoPage, sleep } from './surface-matrix-lib.mjs';
@@ -46,7 +47,7 @@ async function reach(t, page, selector, key = 'Tab') {
 }
 
 try {
-  for (const locale of ['fr', 'ar']) {
+  for (const locale of forLocales(['fr', 'ar'])) {
     await h.S.run(`floor keyboard · ${locale} · desktop`, async t => {
       const { page } = await nav.open(t, 'dashboard-tables', locale, 'desktop');
       t.watch(page);

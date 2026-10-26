@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* La page publique de réservation (booking.html), dans un vrai navigateur.
  *
  * Une note à l'aveugle (23 octobre) relevait deux écarts : les boutons de
@@ -78,7 +79,7 @@ async function open(t, lang) {
   return page;
 }
 
-for (const lang of ['fr', 'en', 'ar']) {
+for (const lang of forLocales(['fr', 'en', 'ar'])) {
   await tests.run(`${lang}-phone-language-and-dates`, async t => {
     // coverage: surface=booking locale=fr viewport=phone
     // coverage: surface=booking locale=en viewport=phone

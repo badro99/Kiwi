@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* L'accessibilité des surfaces principales, mesurée par axe-core dans Chromium.
  *   node tools/a11y-browser-test.mjs
  *   KIWI_UPDATE_A11Y_BASELINE=1 node tools/a11y-browser-test.mjs   (réécrit la base)
@@ -185,7 +186,7 @@ await S.run('page d’accueil, arabe', async (t) => {
 /* Les cinq autres langues publiées, bureau et téléphone, avec le même passage
  * au clavier : une page traduite ne doit pas perdre un nom, un contraste ou un
  * ordre de Tab que le français a. */
-for (const lang of ['en', 'es', 'de', 'it', 'nl']) {
+for (const lang of forLocales(['en', 'es', 'de', 'it', 'nl'])) {
   await S.run('page d’accueil · ' + lang, async (t) => {
     // coverage: surface=landing locale=en viewport=desktop
     // coverage: surface=landing locale=es viewport=desktop
@@ -406,7 +407,7 @@ await S.run('console opérateur, tablette, suppression', async (t) => {
  * congé, en français, anglais et arabe. /api/employee est simulé ici, avec une
  * employée fabriquée (example.com) ; la session est ouverte côté « serveur »
  * du test, aucun code n'est tapé. « Consulter sans pointer » mène à l'app. */
-for (const lang of ['fr', 'en', 'ar']) {
+for (const lang of forLocales(['fr', 'en', 'ar'])) {
   await S.run('app équipe · ' + lang, async (t) => {
     const MERCHANT = 'a11y-equipe';
     const st = { session: false };
@@ -464,7 +465,7 @@ for (const lang of ['fr', 'en', 'ar']) {
  * ardoise à jour, le règlement (total puis partiel), une dette ajoutée à la
  * main, et le choix d'une ardoise pour un panier. En français (clair) et en
  * arabe (sombre). Échap ferme la feuille ouverte. */
-for (const lang of ['fr', 'ar']) {
+for (const lang of forLocales(['fr', 'ar'])) {
   await S.run('carnet de crédit · ' + lang + (lang === 'ar' ? ', sombre' : ''), async (t) => {
     /* le français en clair, l'arabe en sombre : les deux thèmes de la caisse */
     // coverage: surface=caisse-epicerie locale=fr viewport=desktop
@@ -538,7 +539,7 @@ await S.run('coût simple · fr, en, ar', async (t) => {
   await page.waitForSelector('[data-sfc-root] [data-sfc-line="2"]', { timeout: 5000 });
   await sleep(400);
   const states = [];
-  for (const lang of ['fr', 'en', 'ar']) {
+  for (const lang of forLocales(['fr', 'en', 'ar'])) {
     t.step('editor in ' + lang);
     await page.evaluate((l) => window.KiwiI18n.setLang(l), lang);
     await page.waitForFunction((l) => document.documentElement.lang === l && !!document.querySelector('[data-sfc-root] [data-sfc-line="2"]'), { timeout: 5000 }, lang);

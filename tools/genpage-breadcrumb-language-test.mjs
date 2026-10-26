@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 import coreTestSource from './core-test-source.cjs';
 /* Fil d'Ariane des pages Kiwi.appPage() · écrit dans la langue de l'écran.
  *
@@ -65,7 +66,7 @@ const setLang = (p, l) => p.evaluate((x) => KiwiI18n.setLang(x), l);
 
 try {
   /* 1 · Ouvert dans chaque langue : le mot d'accueil est celui de la langue. */
-  for (const [lang, home] of [['fr', 'Accueil'], ['en', 'Home'], ['ar', 'الرئيسية']]) {
+  for (const [lang, home] of forLocales([['fr', 'Accueil'], ['en', 'Home'], ['ar', 'الرئيسية']])) {
     const {p, errors} = await fresh(lang);
     await open(p, 'Chambres');
     const c = await crumb(p);

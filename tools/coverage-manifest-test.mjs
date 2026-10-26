@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 // Non-browser ratchet. It measures static, reviewed coverage declarations;
 // browser success remains the responsibility of the corresponding gate suites.
 import fs from 'node:fs';
@@ -61,11 +62,12 @@ const nextBaseline = ratchet(baseline.covered, covered);
 if (process.env.KIWI_UPDATE_COVERAGE_BASELINE === '1') {
   fs.writeFileSync(baselinePath, JSON.stringify({ version: 1, covered: nextBaseline }, null, 2) + '\n');
 } else assert(fs.existsSync(baselinePath), 'initialize baseline with KIWI_UPDATE_COVERAGE_BASELINE=1');
+console.log('Browser locales: ' + forLocales(manifest.surfaces.flatMap(s => s.locales)).filter((l, i, a) => a.indexOf(l) === i).join(', ') + '; other locales not run by default. Annotations are static declarations, not execution evidence.');
 console.log('Surface | locale | desktop tablet phone (✓ reviewed visit, · unclassified)');
 for (const s of manifest.surfaces) for (const locale of s.locales) {
-  console.log(`${s.id} | ${locale} | ${['desktop', 'tablet', 'phone'].map((viewport) => !s.viewports.includes(viewport) ? '-' : covered.has(cellKey({ surface: s.id, locale, viewport })) ? '✓' : '·').join(' ')}`);
+  console.log(`${s.id} | ${locale} | ${['desktop', 'tablet', 'phone'].map((viewport) => !s.viewports.includes(viewport) ? '-' : !forLocales([locale]).length ? 'not run by default' : covered.has(cellKey({ surface: s.id, locale, viewport })) ? '✓' : '·').join(' ')}`);
 }
-console.log(`Coverage: ${covered.size} / ${declared.size} declared cells; ${suites.length} browser suites scanned; ${suites.filter((s) => !s.cells.length).length} without reviewed annotations.`);
+console.log(`Static annotated coverage: ${covered.size} / ${declared.size} declared cells; ${suites.length} browser suites scanned; ${suites.filter((s) => !s.cells.length).length} without reviewed annotations.`);
 console.log('TODO: verify/annotate or add rendered visits for these cells:');
 for (const key of declared) if (!covered.has(key)) console.log(`  TODO ${key}`);
 console.log('✓ coverage manifest: HTML inventory and additive baseline hold');

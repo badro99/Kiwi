@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { forLocales } from './test-locales.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * orderpro-2027-polish-browser-test · the details of the guest app in the
  * 2027 skin (assets/kit/ordering.css, polish pass of 2026-10-24), on the
@@ -186,7 +187,7 @@ try {
 
   await S.run('phone · table number, takeaway number', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
-    for (const lang of ['fr', 'ar']) {
+    for (const lang of forLocales(['fr', 'ar'])) {
       // coverage: surface=orderpro locale=fr viewport=phone
       // coverage: surface=orderpro locale=ar viewport=phone
       const page = await open(tr, ctx, 's=demo', { lang });
