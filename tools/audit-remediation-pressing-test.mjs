@@ -240,7 +240,7 @@ async function runRouteTest() {
 
 function runRackTest() {
   const source = read('assets/pressing-caisse.js');
-  check(source.includes("fetch('/api/pressing/cancel'"), 'A10 caisse sends cancellation to the server authorization boundary');
+  check(source.includes("deadlineFetch('/api/pressing/cancel'"), 'A10 caisse sends cancellation to the server authorization boundary');
   const cancelStart = source.indexOf("const cancelB = $('#px-dt-cancel'");
   const cancelEnd = source.indexOf('\n    };', cancelStart);
   check(cancelStart >= 0 && cancelEnd > cancelStart && !source.slice(cancelStart, cancelEnd).includes('ORDERS.splice'), 'A10 cancellation does not delete the only durable order copy');

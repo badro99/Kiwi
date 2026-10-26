@@ -610,6 +610,7 @@ section('Hôtel voyageur ordinaire · workflow navigateur (tools/hotel-direct-bo
  * D1 serait passée sans un mot. */
 section('Réservations, planning, livraison, encaissement, schéma');
 for (const test of [
+  'fetch-b-deadline-test.mjs',
   'booking-api-test.mjs',
   'booking-properties-test.mjs',
   'booking-read-order-test.mjs',

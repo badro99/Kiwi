@@ -1,3 +1,4 @@
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -36,7 +37,7 @@ await test('visible floor polls within 15 seconds and wakes immediately', async 
   const document = { hidden: false, visibilityState: 'visible', addEventListener: (k,f) => listeners[k] = f };
   const window = { KiwiEnv: { isReal: () => true }, KiwiCloudDoc: { currentSlug: () => 'fixture' },
     addEventListener: (k,f) => listeners[k] = f };
-  vm.runInNewContext(fs.readFileSync('assets/floorplan-live.js', 'utf8'), { window, document,
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/floorplan-live.js', 'utf8')), { window, document, AbortController,
     setTimeout(fn, ms) { timers.set(++id, { fn, ms }); return id; }, clearTimeout(i) { timers.delete(i); },
     fetch: async () => { calls++; return { ok: true, json: async () => ({ ok: true, tables: {} }) }; } });
   window.KiwiFloorLive.watch(() => {}); await settle();

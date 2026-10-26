@@ -14,6 +14,7 @@
  *     les sigles et la marque.
  */
 
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -138,11 +139,11 @@ function boot({ lang, fetchImpl }) {
   };
   const navigator = { language: 'en-US', languages: ['en-US'], clipboard: { writeText: async () => {} } };
   const context = vm.createContext({
-    window, document, navigator, fetch: fetchImpl, FormData, URLSearchParams, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} },
+    window, document, navigator, AbortController, setTimeout, clearTimeout, fetch: fetchImpl, FormData, URLSearchParams, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} },
     Intl, Date, Math, Number, String, Object, Array, JSON, Promise, Error, Set, Map, Boolean, crypto: globalThis.crypto, console,
   });
   window.document = document;
-  vm.runInContext(client, context, { filename: 'assets/tickets.js' });
+  vm.runInContext(deadlineVmSource(client), context, { filename: 'assets/tickets.js' });
   return { window, document, byId: (id) => document.getElementById(id) };
 }
 
