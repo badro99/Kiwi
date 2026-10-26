@@ -22,7 +22,7 @@
   var outboxInitPromise = null, outboxSubscribed = false;
 /* <</queue:state:4>> */
 /* <<queue:state:5>> */
-  var flushing = false, queueStorageError = false;
+  var flushing = false, queueStorageError = false, queueRecoveryError = false;
 /* <</queue:state:5>> */
 /* <<queue:state:6>> */
   var flushStartedAt = 0;
@@ -38,8 +38,17 @@
 /* <</queue:state:9>> */
 /* <<queue:qRead>> */
 function qRead() {
-    try { var a = JSON.parse(localStorage.getItem(Q_KEY) || '[]'); return Array.isArray(a) ? a : []; }
-    catch (_) { return []; }
+    try {
+      var raw = localStorage.getItem(Q_KEY);
+      var a = raw === null ? [] : JSON.parse(raw);
+      if (!Array.isArray(a)) throw new Error('queue-shape');
+      queueRecoveryError = false;
+      return a;
+    } catch (_) {
+      // Leave the original bytes in place, including when storage is unreadable.
+      queueRecoveryError = true;
+      return [];
+    }
   }
 /* <</queue:qRead>> */
 /* <<queue:queueSignal>> */
@@ -49,6 +58,8 @@ function queueSignal() {
 /* <</queue:queueSignal>> */
 /* <<queue:qWrite>> */
 function qWrite(a) {
+    qRead();
+    if (queueRecoveryError) { queueSignal(); return false; }
     try {
       localStorage.setItem(Q_KEY, JSON.stringify(a));
       queueStorageError = false;
@@ -116,10 +127,10 @@ function queueStatus() {
         sending: outboxStatus.sending,
         foreign: fallback.length - localDebt.length,
         total: (outboxStatus.total || 0) + localDebt.length,
-        storageError: !!(outboxStatus.storageError || queueStorageError),
+        storageError: !!(outboxStatus.storageError || queueStorageError || queueRecoveryError),
         engine: 'indexeddb',
         lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
-        lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
+        lastError: queueRecoveryError ? 'queue-recovery-required' : queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
         lastAttemptAt: outboxStatus.lastAttemptAt || 0,
         oldestPendingAt: oldest === Infinity ? 0 : oldest,
         lastAcknowledgedAt: ackAt,
@@ -135,10 +146,10 @@ function queueStatus() {
       held: current.filter(function (x) { return x && x._blocked && x._serverHeld; }).length,
       foreign: q.length - current.length,
       total: current.length,
-      storageError: !!queueStorageError,
+      storageError: !!(queueStorageError || queueRecoveryError),
       engine: 'localstorage',
       lastStatus: lastSyncStatus || 0,
-      lastError: lastSyncError || '',
+      lastError: queueRecoveryError ? 'queue-recovery-required' : (lastSyncError || ''),
       lastAttemptAt: current.reduce(function (latest, row) { return Math.max(latest, +(row && row._lastAttemptAt) || 0); }, 0),
       oldestPendingAt: (function () {
         var oldest = current.reduce(function (at, row) { return Math.min(at, Number(row && row.ts) || Infinity); }, Infinity);
@@ -163,6 +174,8 @@ function refreshOutboxStatus() {
 /* <</queue:refreshOutboxStatus>> */
 /* <<queue:initOutbox>> */
 function initOutbox() {
+    qRead();
+    if (queueRecoveryError) return Promise.resolve(false);
     if (outboxUsing) return Promise.resolve(true);
     if (outboxInitPromise) return outboxInitPromise;
     var O = window.KiwiOffline;

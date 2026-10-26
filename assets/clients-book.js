@@ -923,10 +923,12 @@
     var noteBlock = '<div class="kcb-note" id="kcb-note"><div class="rl"><span>' + tr('Note pour l’équipe') + '</span>' +
         '<button type="button" class="kcb-link" id="kcb-note-edit">' + tr(c.notes ? 'Modifier' : 'Ajouter') + '</button></div>' +
       (c.notes ? '<div class="txt">' + esc(c.notes) + '</div>' : '<div class="txt muted">' + tr('Allergies, préférences, table habituelle…') + '</div>') + '</div>';
-    var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice(0, 50);
+    var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice();
     var returns = localReturns();
+    function renderHistory(page) {
+    var total = purchaseHistory.length, start = page * 50;
     var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
-      ? '<div class="kcb-info">' + purchaseHistory.map(function (row) {
+      ? '<div class="kcb-info">' + purchaseHistory.slice(start, start + 50).map(function (row) {
           var when = row.ts ? new Date(row.ts).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
           var rets = row.ref ? returns.filter(function (r) { return String(r.saleRef) === String(row.ref); }) : [];
           var back = {};
@@ -949,6 +951,9 @@
           return '<div class="kcb-inforow"><span class="k">' + esc(when) + '<small style="display:block;margin-top:3px">' + esc(row.method || 'Mode non renseigné') + '</small></span><span class="v"><b>' + items + '</b><small style="display:block;margin-top:3px">' + esc(row.ref ? 'Ticket ' + row.ref + ' · ' : '') + fmt(row.amount || 0) + ' MAD</small>' + retLine + '</span></div>';
         }).join('') + '</div>'
       : '<div class="kcb-empty" style="min-height:90px"><b>Aucun détail d’achat enregistré</b><div>Les prochains tickets attachés à ce client apparaîtront ici.</div></div>');
+    return historyBlock + (total > 50 ? '<div><button type="button" class="kcb-btn ghost" data-history-page="' + (page - 1) + '"' + (page === 0 ? ' disabled' : '') + '>' + esc(tr('Page précédente')) + '</button> <span aria-live="polite">' + (start + 1) + '–' + Math.min(start + 50, total) + ' / ' + total + '</span> <button type="button" class="kcb-btn ghost" data-history-page="' + (page + 1) + '"' + (start + 50 >= total ? ' disabled' : '') + '>' + esc(tr('Page suivante')) + '</button></div>' : '');
+    }
+    var historyBlock = '<div id="kcb-purchase-history">' + renderHistory(0) + '</div>';
     sheet(
       '<div class="kcb-dhead"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
         '<div style="flex:1"><h3 style="margin:0">' + esc(c.name || 'Sans nom') + '</h3>' +
@@ -976,6 +981,10 @@
         '<button class="kcb-btn ghost" id="kcb-d-back">Retour</button></div>'
     );
     var sh = document.getElementById('kcb-sheet');
+    sh.querySelector('#kcb-purchase-history').onclick = function (e) {
+      var button = e.target.closest('[data-history-page]');
+      if (button && !button.disabled) this.innerHTML = renderHistory(Number(button.dataset.historyPage));
+    };
     loadClientCredits(c.id, sh.querySelector('#kcb-credit-history'));
     sh.querySelector('#kcb-d-close').onclick = closeSheet;
     sh.querySelector('#kcb-d-back').onclick = closeSheet;
