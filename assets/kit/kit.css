@@ -143,6 +143,13 @@ k-figure .k-fig__sr {
    each column body is one lane at the till's root; the screen scrolls. */
 .kit-lane-box { display: block; min-width: 0; }
 .kit-lane-box > k-lane { width: 100%; }
+/* The till's focus ring is for the keyboard: after a tap or click
+   (data-k-nav="pointer", set by kit/till-frame.js) every kit ring goes
+   transparent, inside the components too, since the colour is inherited.
+   Tab or an arrow key brings it back. body is named because the light and
+   dark modes set --k-focus on body, and the inverse ground on its own. */
+html[data-k-till][data-k-nav="pointer"] body,
+html[data-k-till][data-k-nav="pointer"] [data-k-ground="inverse"] { --k-focus: transparent; }
 /* The till's Cuisine page in the 2027 till (html[data-k-till]): its chrome
    was the shipped one, a black band over the light till, tracked mono lane
    heads, bordered 38 px station pills beside a 42 px Historique. It now reads

@@ -126,6 +126,9 @@
               /* The spaces between the parts are what a reader joins them
                  with: without them a speech user's "Harira" did not match
                  "Harira25,00 MAD" (Label in Name, WCAG 2.5.3, 2026-10-25). */
+              /* The dish's photo, centred above its name; decorative, the
+                 name says what it is (owner, 26 Oct 2026). */
+              (it.img ? '<img class="ph" src="' + esc(it.img) + '" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">' : '') +
               '<span class="nm k-body-s">' + esc(it.name) + '</span> ' +
               '<span class="pr k-callout k-num">' + esc(it.soldOut ? t('menu.sold_out') : price) + '</span> ' +
               /* The count takes the options mark's corner once the dish is on
@@ -160,6 +163,10 @@
          has the tile's whole width: in the top corner it ran into the name
          (owner, 2026-10-24). */
       '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong)}' +
+      '.ph{display:block;width:64px;height:64px;align-self:center;object-fit:contain;pointer-events:none;-webkit-user-drag:none}.out .ph{opacity:.45}' +
+      /* A phone on its side has room for one row of tiles, not one row of
+         photos: below 500 tall the tile keeps its name and price only. */
+      '@media (max-height:500px){.ph{display:none}}' +
       '.pr{color:var(--k-ink-2)}.tile:has(.q) .pr{padding-inline-end:36px}.op{position:absolute;inset-inline-end:16px;bottom:16px;color:var(--k-ink-2)}' +
       '.q{position:absolute;inset-inline-end:12px;bottom:12px;min-width:28px;height:28px;padding-inline:6px;border-radius:14px;display:flex;align-items:center;justify-content:center;' +
       'background-color:var(--k-accent);color:var(--k-on-accent)}' +

@@ -346,6 +346,10 @@
       ['name', 'email', 'birthday', 'gender', 'city', 'address', 'notes'].forEach(function (k) {
         if (input[k] != null && input[k] !== '') rec[k] = input[k];
       });
+      /* A note is cleared only by an edit of this very record (its card or
+         its form). A blank from a create that landed on the same phone
+         keeps the note the team already wrote. */
+      if (input.notes === '' && input.id && input.id === rec.id) rec.notes = '';
       if (input.phone != null && normPhone(input.phone)) rec.phone = normPhone(input.phone);
       if (typeof input.consent === 'boolean') rec.consent = input.consent;
       if (typeof input.consentEmail === 'boolean') rec.consentEmail = input.consentEmail;

@@ -104,8 +104,8 @@
     "sha": "542467648bec195c"
   },
   "assets/caisse-accounting.js": {
-    "v": "6",
-    "sha": "793b7af7ed2a04f8"
+    "v": "9",
+    "sha": "ca260efdb556d526"
   },
   "assets/caisse-app.js": {
     "v": "25",
@@ -144,8 +144,8 @@
     "sha": "662c68f00351f801"
   },
   "assets/caisse-menu-availability.js": {
-    "v": "9",
-    "sha": "23d4bc7d40eb8c43"
+    "v": "10",
+    "sha": "2e3500e340b2d802"
   },
   "assets/caisse-motion.js": {
     "v": "8",
@@ -168,8 +168,8 @@
     "sha": "ada0dad729a81f5f"
   },
   "assets/caisse-shell.css": {
-    "v": "13",
-    "sha": "3d4dcbfb41eeb8ab"
+    "v": "14",
+    "sha": "ae53b0c9e4c53031"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -240,8 +240,8 @@
     "sha": "4cf7b2eebdb66d35"
   },
   "assets/caisse/till-frame.js": {
-    "v": "3",
-    "sha": "7c61d5e5d8fa0f21"
+    "v": "8",
+    "sha": "ff72087b9d747374"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -284,16 +284,16 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "40",
-    "sha": "b509569d5debfae1"
+    "v": "41",
+    "sha": "3877b2b671463924"
   },
   "assets/clients-directory.js": {
     "v": "26",
     "sha": "bfc75b6e171840e7"
   },
   "assets/clients-store.js": {
-    "v": "19",
-    "sha": "ee4ad7ae1b1c49a7"
+    "v": "20",
+    "sha": "7b99f71171df0e6c"
   },
   "assets/cloud-doc.js": {
     "v": "11",
@@ -768,8 +768,8 @@
     "sha": "91fba1b73e21ba8a"
   },
   "assets/kit/kit.css": {
-    "v": "58",
-    "sha": "2e91a08f4f647638"
+    "v": "59",
+    "sha": "fbc5bfa93c15faef"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -900,8 +900,8 @@
     "sha": "b7e1f27be387dc47"
   },
   "assets/kit/till-frame.js": {
-    "v": "10",
-    "sha": "cbcc70f3db3cb8ec"
+    "v": "12",
+    "sha": "cbe5a44927f39955"
   },
   "assets/kit/till-online.js": {
     "v": "2",
@@ -916,8 +916,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "20",
-    "sha": "ce833a5b5c8cdc9d"
+    "v": "23",
+    "sha": "4dfeae70d4b8b214"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

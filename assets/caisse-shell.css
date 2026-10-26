@@ -1094,7 +1094,7 @@
       display: flex; align-items: center; gap: 8px;
       font-feature-settings: "tnum" 1;
     }
-    .vrap-meta .dot-sep { color: var(--ink-4); opacity: .6; }
+    .vrap-meta .dot-sep { color: var(--ink-4); }
 
     .view-vrap { padding-top: 10px; }
 

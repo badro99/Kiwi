@@ -1216,6 +1216,28 @@
       closeClientModal();
       toast(`${saleClient.name} attaché à la note`);
     }
+    /* The Clients page (assets/clients-book.js) puts a client on the note in
+       progress from their card, as Shopify and Loyverse do: the same attach as
+       the picker above, the same one-note-one-visit rule, and the 2027 bill
+       repaints so its header shows who the note is for (owner, 26 Oct 2026). */
+    window.KiwiCaisseSaleClient = {
+      /* A note to put the client on: À emporter always has one, the floor
+         only once a table is open. */
+      available() { try { return clientsOn() && (mode === 'vrap' || !!selectedId); } catch (_) { return false; } },
+      current() { return saleClient && saleClient.ctx === saleContextKey() ? saleClient.id : null; },
+      note() { try { return ($('#rp-table').textContent || '').trim(); } catch (_) { return ''; } },
+      attach(rec) {
+        if (!rec || !this.available()) return false;
+        attachClient(rec);
+        try { if (typeof tillKitPaint === 'function') tillKitPaint(); } catch (_) {}
+        return true;
+      },
+      detach() {
+        saleClient = null;
+        renderSaleClient();
+        try { if (typeof tillKitPaint === 'function') tillKitPaint(); } catch (_) {}
+      },
+    };
     /* Ce script s'exécute pendant l'analyse de la page ; clients-store.js est
        `defer` et n'existe pas encore. Le test d'ici ne s'abonnait donc jamais,
        et le bouton « Client & fidélité », masqué au démarrage, ne revenait
