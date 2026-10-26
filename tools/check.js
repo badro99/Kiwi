@@ -620,6 +620,7 @@ for (const test of [
   'shopify-sync-properties-test.mjs',
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',
+  'locale-booking-wave-n-test.mjs',
   'booking-hotel-beyond-window-test.mjs',
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',

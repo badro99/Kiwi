@@ -1594,19 +1594,29 @@
     if (el && el.dataset && el.dataset.i18n) paintKey(el, getLang());
   }
 
+  // Persistence is optional in restricted setup/pairing sessions.
+  let activeLang, activeTheme;
+  function readPreference(key, fallback) {
+    try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
+  }
+  function writePreference(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) {}
+  }
+
   /* ─── setLang ─── */
   function setLang(lang) {
     if (!['fr','en','ar'].includes(lang)) lang = 'fr';
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    localStorage.setItem('kiwiLang', lang);
+    activeLang = lang;
+    writePreference('kiwiLang', lang);
     if (window.KiwiNativeLocale) window.KiwiNativeLocale.set(lang);
     /* Keep the edge-rendered account gate in the same language as the app.
        localStorage is invisible to Cloudflare's middleware, so the cookie is
        the server-readable half of the locale handoff. */
-    document.cookie = 'kiwi_lang=' + lang
+    try { document.cookie = 'kiwi_lang=' + lang
       + '; Path=/; Max-Age=2592000; SameSite=Lax'
-      + (location.protocol === 'https:' ? '; Secure' : '');
+      + (location.protocol === 'https:' ? '; Secure' : ''); } catch (_) {}
 
     document.querySelectorAll('[data-i18n]').forEach(el => paintKey(el, lang));
 
@@ -1646,11 +1656,12 @@
   function setTheme(theme) {
     if (!['dark','light'].includes(theme)) theme = 'light';
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('kiwiTheme', theme);
+    activeTheme = theme;
+    writePreference('kiwiTheme', theme);
   }
 
-  function getLang() { return localStorage.getItem('kiwiLang') || 'fr'; }
-  function getTheme() { return localStorage.getItem('kiwiTheme') || 'light'; }
+  function getLang() { return activeLang || readPreference('kiwiLang', 'fr'); }
+  function getTheme() { return activeTheme || readPreference('kiwiTheme', 'light'); }
 
   /* One merchant-facing number rule. EN uses 15,765.38; FR and AR use
    * 15 765,38 with Latin digits. Receipts keep their own fiscal formatter. */
@@ -1695,7 +1706,7 @@
         // a11y — make each language a real, keyboard-operable control
         s.setAttribute('role', 'button');
         if (!s.hasAttribute('tabindex')) s.setAttribute('tabindex', '0');
-        const pick = (e) => { e.preventDefault(); e.stopPropagation(); if (document.documentElement.classList.contains('kiwi-native')) localStorage.setItem('kiwiNativeLocale', l); setLang(l); };
+        const pick = (e) => { e.preventDefault(); e.stopPropagation(); if (document.documentElement.classList.contains('kiwi-native')) writePreference('kiwiNativeLocale', l); setLang(l); };
         s.addEventListener('click', pick);
         s.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') pick(e); });
       });
