@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Un pont lent n'imprime pas deux fois
  *
@@ -15,7 +16,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/printer-bridge.js', import.meta.url), 'utf8');
+const source = printerTestSource();
 const queueSource = fs.readFileSync(new URL('../assets/kitchen-print-queue.js', import.meta.url), 'utf8');
 const CAP = 'kbc_' + 'a'.repeat(64);
 

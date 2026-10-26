@@ -1,3 +1,4 @@
+import printerTestSource from './printer-test-source.cjs';
 /* Byte-exact UI extraction, public API and the real lazy-loader lifecycle. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -9,7 +10,7 @@ const read = file => fs.readFileSync(file, 'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const map = JSON.parse(read('tools/fixtures/printer/split.json'));
 const original = gunzipSync(fs.readFileSync('tools/fixtures/printer/original.js.gz')).toString();
-const core = read('assets/printer-bridge.js'), ui = read('assets/printer/pairing-ui.js');
+const core = printerTestSource(), ui = read('assets/printer/pairing-ui.js');
 assert.equal(hash(original), map.sha256);
 assert.equal(ui, map.prefix + original.slice(map.start, map.end) + map.suffix, 'entire moved section is byte-identical');
 for (const fn of map.moved) {

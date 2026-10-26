@@ -1452,12 +1452,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "30",
-    "sha": "39d15abcf20de929"
+    "v": "31",
+    "sha": "a65473f1a77dc0ff"
   },
   "assets/printer/pairing-ui.js": {
     "v": "1",
     "sha": "2a3d12991e645a9f"
+  },
+  "assets/printer/transports.js": {
+    "v": "2",
+    "sha": "fb5cc76075131316"
   },
   "assets/procurement.js": {
     "v": "4",

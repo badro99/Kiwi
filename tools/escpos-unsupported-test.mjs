@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* Un ticket arabe que l'appareil ne sait pas dessiner ne sort pas en « ? ».
  *
  * assets/escpos.js dessine l'arabe sur un canvas. Sans canvas (WebView bridée,
@@ -48,7 +49,7 @@ check(E.unsupportedLines(latin) === 0, 'a ticket without Arabic reports no lost 
 check(E.unsupportedLines(arabic) === 2, 'without a canvas every Arabic line is counted as lost (2 lines)');
 check(Array.from(arabic).includes(0x3F), 'the encoder still answers with bytes, it never throws');
 
-vm.runInContext(read('assets/printer-bridge.js'), ctx, { filename: 'printer-bridge.js' });
+vm.runInContext(printerTestSource(), ctx, { filename: 'printer-bridge.js' });
 const P = window.KiwiPrinter;
 check(P && typeof P.printBytes === 'function' && typeof P.printKitchen === 'function', 'the real printer bridge loads');
 

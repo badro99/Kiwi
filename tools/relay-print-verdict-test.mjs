@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* #0062 · « accepté par le relais » était traité comme « sorti sur le papier ».
  *
  * `relayEnqueue` rend `{ok:true, queued:true, id}` dès que le SERVEUR a pris le
@@ -22,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
-const bridge = fs.readFileSync(path.join(ROOT, 'assets/printer-bridge.js'), 'utf8');
+const bridge = printerTestSource();
 
 let passed = 0;
 const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log(`  ✓ ${label}`); };

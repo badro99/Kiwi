@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import printerTestSource from './printer-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Le ticket sort une fois, et il sort vraiment        (ticket #0066)
  *
@@ -24,7 +25,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const QUEUE = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
-const BRIDGE = fs.readFileSync(path.join(ROOT, 'assets/printer-bridge.js'), 'utf8');
+const BRIDGE = printerTestSource();
 const JOBS = fs.readFileSync(path.join(ROOT, 'functions/api/print/jobs.js'), 'utf8');
 
 let passed = 0;
