@@ -1697,6 +1697,7 @@ section('Whole-project regressions');
     'operator-followups-browser-test.mjs',
     'auth-properties-test.mjs',
     'employee-properties-test.mjs',
+    'employee-split-test.mjs',
     'orderpro-properties-test.mjs',
     'channel-properties-test.mjs',
     'known-issues-test.mjs',
@@ -2070,6 +2071,7 @@ section('Whole-project regressions');
     'lock-caisse-link-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
+    'pass-cache-test.mjs',
     /* Direction 2027, étape 1 · mouvement, mise en page, segmentation.
        motion.js (§14) : jetons, ressort de geste (1400 / 74,8 / 1/120 s et le
        tableau des temps de pose), seuils de geste, puis dans un vrai Chromium
@@ -2222,7 +2224,8 @@ section('Whole-project regressions');
     'takeout-confirmation-test.js',
     'trade-workspaces-test.js',
     'vertical-state-test.mjs',
-    'credit-book-test.mjs',
+    'credit-book-refund-browser-test.mjs',
+    'credit-book-refund-ui-test.mjs', 'credit-book-test.mjs',
     'credit-book-dashboard-browser-test.mjs',
     'receivables-test.mjs',
     'vexel-insights-card-dna-test.mjs',

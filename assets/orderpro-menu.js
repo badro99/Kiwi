@@ -285,9 +285,10 @@
     var chips = allergens.length ? allergens.map(function (k) {
       return '<span class="custom-allergen-chip">' + (k === 'gluten' ? '<i class="custom-allergen-icon" aria-hidden="true"></i>' : '') + esc(t('allergen_' + k)) + '</span>';
     }).join('') : '<span class="custom-allergen-chip">' + esc(t('nutrition_none')) + '</span>';
+    var source = '<p lang="fr" dir="ltr">' + esc(STR.fr.nutrition_allergens + ' : ' + (allergens.length ? allergens.map(function (k) { return STR.fr['allergen_' + k] || k; }).join(' · ') : STR.fr.nutrition_none)) + '</p>';
     return '<section class="custom-nutrition" aria-label="' + esc(t('nutrition_title')) + '"><div class="custom-nutrition-title">' + esc(t('nutrition_title')) +
       '</div><div class="custom-nutrition-grid">' + cells + '</div><div class="custom-allergens"><div class="custom-allergens-label">' + esc(t('nutrition_allergens')) +
-      '</div><div class="custom-allergen-list">' + chips + '</div></div><p class="custom-nutrition-note">' + esc(t('nutrition_indicative')) + '</p></section>';
+      '</div><div class="custom-allergen-list">' + chips + '</div>' + source + '</div><p class="custom-nutrition-note">' + esc(t('nutrition_indicative')) + '</p></section>';
   }
 
   root.KiwiOrderMenu = {

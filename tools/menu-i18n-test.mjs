@@ -285,5 +285,28 @@ assert(ws.includes('nutritionCardPill(x)') && ws.includes('catalog-item-meta') &
   }
 }
 
+// Contrat de revue, sans navigateur ni appel de traduction.
+{
+  const dish = { id: 'review', name: 'Crème', desc: 'Vanille', allergens: ['lait'] };
+  const doc = { items: [dish] };
+  M.apply(doc, 'en', { items: [{ id: 'review', name: 'Cream', desc: 'Vanilla' }] });
+  assert(M.status(dish, 'en') === 'unreviewed', 'machine : à vérifier dès la génération');
+  M.setManual(dish, 'en', dish.i18n.en.name, dish.i18n.en.desc);
+  assert(M.status(dish, 'en') === 'manual', 'approbation sans modification acceptée');
+  const saved = JSON.parse(JSON.stringify(dish));
+  const clean = mw.sanitizeMenu({ items: [{ ...saved, price: 1, nutritionComplete: true, nutrition: { kcal: 1, protein: 0, carbs: 0, fat: 0, sugars: 0, salt: 0 } }] }).items[0];
+  assert(clean.i18n.en.r && M.status(clean, 'en') === 'manual', 'approbation conservée après JSON et assainissement serveur');
+  for (const patch of [{ name: 'Crème XL' }, { desc: 'Chocolat' }, { allergens: ['lait', 'oeufs'] }]) {
+    const changed = { ...saved, ...patch };
+    assert(M.status(changed, 'en') === 'unreviewed', 'source ou allergènes modifiés : validation invalidée');
+  }
+  assert(dish.name === 'Crème' && dish.desc === 'Vanille', 'revue : source française conservée');
+  const guest = vm.createContext({});
+  vm.runInContext(read('assets/orderpro-menu.js'), guest);
+  const html = guest.KiwiOrderMenu.nutritionDetail({ nutrition: {}, allergens: ['lait'] }, k => k === 'allergen_lait' ? 'Milk' : k);
+  assert(/lang="fr"/.test(html) && html.includes('Lait') && html.includes('Milk'), 'client : allergène non validé accompagné de la ligne française');
+  assert(ws.includes('rmw-i18n-approve') && ws.includes("i18nStatusUnreviewed:"), 'éditeur : statut à vérifier et action approuver');
+}
+
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);

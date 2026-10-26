@@ -18,6 +18,32 @@ let checks = 0;
 const failures = [];
 const ok = (condition, message) => { checks++; if (!condition) failures.push(message); };
 
+// Every French source string has an explicit, reviewable classification. Locale
+// paths must match, so a new translated bullet cannot escape the inventory.
+const leaves = (value, prefix = '') => typeof value === 'string' ? [[prefix, value]] : Object.entries(value).flatMap(([key, child]) => leaves(child, prefix ? prefix + '.' + key : key));
+const sourceClaims = leaves(pricingCopy.fr);
+const mapPath = 'tools/landing-claims-map.json';
+ok(fs.existsSync(path.join(ROOT, mapPath)), 'bounded landing claims inventory exists');
+const inventory = fs.existsSync(path.join(ROOT, mapPath)) ? JSON.parse(read(mapPath)) : { claims: {} };
+const gate = read('tools/check.js');
+for (const [key, text] of sourceClaims) {
+  const claim = inventory.claims[key];
+  ok(claim?.fr === text, `${key}: exact French claim mapped`);
+  if (!claim) continue;
+  if (claim.kind === 'copy-only') ok(typeof claim.reason === 'string' && claim.reason.length > 20, `${key}: non-functional wording explained`);
+  else {
+    ok(claim.kind === 'contract' && claim.contracts?.length > 0, `${key}: operational claim has contracts`);
+    for (const contract of claim.contracts || []) {
+      const exists = /^tools\/[\w.-]+test[\w.-]*\.(?:mjs|js)$/.test(contract.file) && fs.existsSync(path.join(ROOT, contract.file));
+      ok(exists, `${key}: contract file exists`);
+      ok(gate.includes("'" + path.basename(contract.file) + "'") || gate.includes("'" + contract.file + "'"), `${key}: contract named in gate`);
+      ok(exists && typeof contract.assertion === 'string' && contract.assertion.length > 15 && read(contract.file).includes(contract.assertion), `${key}: exact assertion anchor exists`);
+    }
+  }
+}
+ok(Object.keys(inventory.claims).length === sourceClaims.length, 'no stale inventory entries');
+for (const [locale, copy] of Object.entries(pricingCopy)) ok(JSON.stringify(leaves(copy).map(([key]) => key).sort()) === JSON.stringify(sourceClaims.map(([key]) => key).sort()), `${locale}: every localized claim has a French inventory path`);
+
 const pages = { 'index.html': 'fr', 'fr/index.html': 'fr', 'en/index.html': 'en', 'ar/index.html': 'ar', 'de/index.html': 'de', 'it/index.html': 'it', 'nl/index.html': 'nl', 'es/index.html': 'es' };
 const flightFiles = ['fr', 'en', 'ar'].flatMap(locale => {
   const out = [];

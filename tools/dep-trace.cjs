@@ -25,22 +25,24 @@ try { if (ROOT) REAL = fs.realpathSync(ROOT) + path.sep; } catch (_) {}
 if (OUT && ROOT) {
   const seen = new Set();
   const SKIP = /(^|\/)(node_modules|\.git|\.kiwi|graphify-out)\//;
-  const note = (p) => {
+  const relOf = (p) => {
     try {
-      if (p == null) return;
+      if (p == null) return null;
       let file = p;
       if (typeof file === 'object') file = file instanceof URL ? fileURLToPath(file) : (Buffer.isBuffer(file) ? file.toString() : null);
-      else if (typeof file === 'number') return;
-      if (!file) return;
+      else if (typeof file === 'number') return null;
+      if (!file) return null;
       if (file.startsWith('file:')) file = fileURLToPath(file);
-      else if (/^[a-z][a-z0-9+.-]+:/i.test(file)) return;   // node:, data:, http:
+      else if (/^[a-z][a-z0-9+.-]+:/i.test(file)) return null;   // node:, data:, http:
       file = path.resolve(file);
+      if (file + path.sep === ROOT || file + path.sep === REAL) return '.';
       const base = file.startsWith(ROOT) ? ROOT : (file.startsWith(REAL) ? REAL : '');
-      if (!base) return;
+      if (!base) return null;
       const rel = file.slice(base.length).split(path.sep).join('/');
-      if (rel && !SKIP.test(rel)) seen.add(rel);
-    } catch (_) {}
+      return rel && !SKIP.test(rel) ? rel : null;
+    } catch (_) { return null; }
   };
+  const note = (p) => { const rel = relOf(p); if (rel && rel !== '.') seen.add(rel); };
 
   const wrap = (obj, name) => {
     const real = obj[name];
@@ -49,8 +51,22 @@ if (OUT && ROOT) {
     traced.kiwiTraced = true;
     obj[name] = traced;
   };
-  for (const n of ['readFileSync', 'readFile', 'createReadStream', 'openSync', 'open']) wrap(fs, n);
-  if (fs.promises) for (const n of ['readFile', 'open']) wrap(fs.promises, n);
+  for (const n of ['readFileSync', 'readFile', 'createReadStream', 'openSync', 'open', 'copyFileSync', 'copyFile']) wrap(fs, n);
+  if (fs.promises) for (const n of ['readFile', 'open', 'copyFile']) wrap(fs.promises, n);
+  /* Probes and listings count too: a test that checks a file is absent, or that
+     globs a folder, depends on that answer (the pass cache in check-pool.js
+     hashes a listing as `dir:<folder>` and a missing file as absent). */
+  for (const n of ['existsSync', 'statSync', 'lstatSync', 'accessSync', 'stat', 'lstat', 'access']) wrap(fs, n);
+  if (fs.promises) for (const n of ['stat', 'lstat', 'access']) wrap(fs.promises, n);
+  const wrapDir = (obj, name) => {
+    const real = obj[name];
+    if (typeof real !== 'function' || real.kiwiTraced) return;
+    const traced = function (p) { const rel = relOf(p); if (rel) seen.add('dir:' + rel); return real.apply(this, arguments); };
+    traced.kiwiTraced = true;
+    obj[name] = traced;
+  };
+  for (const n of ['readdirSync', 'readdir', 'opendirSync', 'opendir']) wrapDir(fs, n);
+  if (fs.promises) for (const n of ['readdir', 'opendir']) wrapDir(fs.promises, n);
   /* `import { readFileSync } from 'node:fs'` binds the original unless told. */
   try { require('module').syncBuiltinESMExports(); } catch (_) {}
 

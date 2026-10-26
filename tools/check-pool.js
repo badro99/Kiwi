@@ -82,6 +82,79 @@ const results = {};
 let running = 0, runningSlow = 0, done = 0;
 const t0 = Date.now();
 
+/* Pass cache. A test that passed reads the same bytes again → it passes again.
+ * After a pass we keep, in the temp dir (never the repo), a key made of the
+ * content of the test file and of every repo file it read, listed or probed
+ * (tools/dep-trace.cjs), plus Node, the app/ lockfile, Chromium and the KIWI_*
+ * settings. A later run with the same key reuses that pass and its output
+ * instead of running the test. Never reused: a pass older than 24 h (date and
+ * time dependent tests still run daily), a test that calls git (it reads the
+ * history, not files), a test whose trace is missing. KIWI_PASS_CACHE=0 runs
+ * everything. Keys are content hashes, so worktrees share the cache safely. */
+const crypto = require('crypto');
+const CACHE = path.join(os.tmpdir(), 'kiwi-pass-cache.json');
+const cacheOn = tracing && process.env.KIWI_PASS_CACHE !== '0';
+const MAX_AGE_MS = 24 * 3600 * 1000;
+let passCache = {};
+if (cacheOn) { try { passCache = JSON.parse(fs.readFileSync(CACHE, 'utf8')) || {}; } catch (_) { passCache = {}; } }
+const sha = (x) => crypto.createHash('sha1').update(x).digest('hex');
+const hashMemo = new Map();
+function contentHash(rel) {
+  if (hashMemo.has(rel)) return hashMemo.get(rel);
+  let h = '∅';
+  try {
+    if (rel.startsWith('dir:')) h = sha(fs.readdirSync(path.join(ROOT, rel.slice(4))).sort().join('\n'));
+    else {
+      const abs = path.join(ROOT, rel);
+      h = fs.statSync(abs).isDirectory() ? 'd' : sha(fs.readFileSync(abs));
+    }
+  } catch (_) { h = '∅'; }
+  hashMemo.set(rel, h);
+  return h;
+}
+const SALT = sha(JSON.stringify([
+  new Date().toDateString(), process.version, contentHash('app/package-lock.json'), contentHash('tools/dep-trace.cjs'), process.env.KIWI_CHROMIUM_BIN || '',
+  Object.keys(process.env).filter((k) => /^KIWI_/.test(k) && !/^KIWI_(DEP_|CHECK_|PASS_CACHE)/.test(k)).sort().map((k) => k + '=' + process.env[k]),
+]));
+/* A program other than node reads files the tracer cannot see (git reads the
+   history, sqlite3 or a shell read whatever they like): a test that starts one,
+   directly or through a tools/ helper, is never reused. */
+const FOREIGN = /(?:\b(?:spawn|execFile|spawnSync|execSync|execFileSync)|\b(?:cp|child_process|childProcess)\.exec)\(\s*(?:['"`](?!node['"`\s])[\w./-]+|[A-Za-z_$][\w$]*\s*,)/;
+const NODE_ONLY = /(?:\b(?:spawn|execFile|spawnSync|execFileSync|fork)|\b(?:cp|child_process|childProcess)\.exec)\(\s*process\.execPath\b/g;
+const foreignMemo = new Map();
+const startsForeign = (r) => {
+  if (foreignMemo.has(r)) return foreignMemo.get(r);
+  let hit = false;
+  try { const src = fs.readFileSync(path.join(ROOT, r), 'utf8'); hit = /child_process/.test(src) && FOREIGN.test(src.replace(NODE_ONLY, '')); } catch (_) {}
+  foreignMemo.set(r, hit);
+  return hit;
+};
+const callsGit = (rels) => rels.some((r, i) => /\.(m?js|cjs)$/.test(r) && (i === 0 || r.startsWith("tools/")) && startsForeign(r));
+function passKey(task, own, list) {
+  return sha([SALT, JSON.stringify(task.args.map((a) => String(a).startsWith(ROOT) ? relOf(a) : String(a))),
+    own + ':' + contentHash(own), ...list.map((r) => r + ':' + contentHash(r))].join('\n'));
+}
+let reused = 0;
+if (cacheOn) {
+  for (let i = tasks.length - 1; i >= 0; i--) {
+    const task = tasks[i], own = relOf(task.args[task.args.length - 1]), hit = passCache[own];
+    if (!hit || Date.now() - hit.at > MAX_AGE_MS || !Array.isArray(hit.deps)) continue;
+    if (passKey(task, own, hit.deps) !== hit.key) continue;
+    results[task.key] = { status: 0, signal: null, stdout: hit.stdout || '', stderr: hit.stderr || '', cpuMs: null, wallMs: 0, cached: true };
+    tasks.splice(i, 1); reused++;
+  }
+}
+function remember(task, own, list, stdout, stderr) {
+  if (!cacheOn) return;
+  const all = [own, ...list];
+  if (callsGit(all) || stdout.length + stderr.length > 512 * 1024) { delete passCache[own]; return; }
+  passCache[own] = { key: passKey(task, own, list), deps: list, at: Date.now(), stdout, stderr };
+}
+function savePassCache() {
+  if (!cacheOn) return;
+  try { fs.writeFileSync(CACHE, JSON.stringify(passCache)); } catch (_) {}
+}
+
 function next() {
   if (!tasks.length) return null;
   const i = tasks.findIndex((t) => !t.slow || runningSlow < browserJobs);
@@ -110,6 +183,7 @@ function start(task) {
           const list = new Set(lines.filter((l) => !l.startsWith('#')));
           list.delete(own);
           deps[own] = [...list].sort();
+          remember(task, own, deps[own], stdout, stderr);
         }
       } catch (_) {}
     }
@@ -117,6 +191,7 @@ function start(task) {
     done++;
     results[task.key] = { status, signal, stdout, stderr, cpuMs, wallMs: Date.now() - began };
     if (status !== 0) {
+      if (cacheOn) delete passCache[relOf(task.args[task.args.length - 1])];
       const name = String(task.args[task.args.length - 1]).replace(/^.*\//, '');
       console.log(`  … ${name} did not pass in parallel (exit ${status === null ? signal : status}), it will run again alone`);
     }
@@ -134,6 +209,8 @@ function pump() {
     fs.writeFileSync(resultsFile, JSON.stringify(results));
     try { fs.writeFileSync(TIMES, JSON.stringify(times)); } catch (_) {}
     saveDeps();
+    savePassCache();
+    if (reused) console.log(`  ✓ ${reused} test files reused from the pass cache (same inputs as their last pass, under 24 h; KIWI_PASS_CACHE=0 runs them)`);
     console.log(`  ✓ ${done} test files run in parallel in ${Math.round((Date.now() - t0) / 1000)}s (${jobs} at a time, ${browserJobs} browsers)`);
   }
 }

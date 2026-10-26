@@ -256,6 +256,57 @@
      ancienne dette encore ouverte se lit en appliquant les règlements aux dettes
      dans l'ordre (premier noté, premier réglé), comme sur la caisse. */
   const owedOf = (c) => (c.hist || []).reduce((n, h) => n + (h && h.type === 'debt' ? (+h.amt || 0) : h && h.type === 'pay' ? -(+h.amt || 0) : 0), 0);
+  const REFUND = {
+    note:L('Enregistrez le virement effectué au client.','Record the bank transfer made to the customer.','سجل التحويل البنكي المنفذ للعميل.'),
+    action:L("Rembourser l'avance",'Refund advance','رد التسبيق'),
+    available:L('Avance remboursable','Refundable advance','التسبيق القابل للاسترداد'),
+    amount:L('Montant à rembourser par virement (MAD)','Amount to refund by bank transfer (MAD)','المبلغ المسترد بتحويل بنكي (درهم)'),
+    cap:L('Le montant dépasse l’avance restante.','The amount exceeds the remaining advance.','المبلغ يتجاوز التسبيق المتبقي.'),
+    error:L('Remboursement impossible. Vérifiez votre accès propriétaire et la connexion, puis réessayez.','Refund unavailable. Check owner access and connection, then retry.','تعذر الاسترداد. تحقق من صلاحية المالك والاتصال ثم أعد المحاولة.'),
+    done:L('Remboursement enregistré par virement.','Bank transfer refund recorded.','تم تسجيل الاسترداد بتحويل بنكي.'),
+    hint:L('Journal de caisse, remboursements enregistrés par virement.','Till ledger, refunds recorded by bank transfer.','سجل الصندوق، المبالغ المستردة مسجلة بتحويل بنكي.'),
+    history:L('Remboursements enregistrés','Recorded refunds','المبالغ المستردة المسجلة'),
+    confirm:L('Confirmer le remboursement par virement','Confirm bank transfer refund','تأكيد الاسترداد بتحويل بنكي'),
+  };
+  const refundAvailable = (c) => Math.max(0, -(c?.hist || []).reduce((n,h) => n + (h.type === 'debt' ? 1 : h.type === 'pay' ? -1 : 0) * Math.round(Number(h.amt) * 100),0));
+  function refundAllowed() {
+    const me=window.KiwiIdentity?.state, slug=window.KiwiCloudDoc?.currentSlug?.();
+    return !!(window.KiwiEnv?.isReal?.() && me?.authenticated && !me.operator && !me.scoped && slug && me.stores?.some((s)=>s.merchant===slug));
+  }
+  async function refundAdvance(clientId, amountCents, id) {
+    if (!refundAllowed()) throw new Error('owner-required');
+    const merchant=window.KiwiCloudDoc.currentSlug();
+    const c=(tillDoc('epicerie')?.carnet || []).find((c)=>c.id===clientId);
+    if (!c || !Number.isSafeInteger(amountCents) || amountCents<1 || amountCents>refundAvailable(c)) throw new Error('refund-exceeds-advance');
+    const response=await fetch('/api/store',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,feature:'verticalops',action:'credit-book-refund',clientId,id,amountCents,method:'transfer'})});
+    const result=await response.json();
+    await window.KiwiCloudDoc.pullAll();
+    if (!response.ok) throw Object.assign(new Error(result.error || 'refund-failed'),{availableCents:result.availableCents});
+    return result;
+  }
+  function refundModal(clientId) {
+    if (!refundAllowed() || !window.Kiwi?.modal) return;
+    const c=(tillDoc('epicerie')?.carnet || []).find((c)=>c.id===clientId);
+    if (!c) return;
+    let available=refundAvailable(c), pending=false;
+    // Keep the operation id across network retries; a lost reply must not pay twice.
+    const id='credit-refund-'+crypto.randomUUID();
+    const m=window.Kiwi.modal({title:pick(REFUND.action),width:450,body:`<form data-tw-refund-form class="tw-form"><p>${esc(c.name || c.id)}</p><p>${esc(pick(REFUND.note))}</p><p data-refund-available>${esc(pick(REFUND.available))} : ${esc(mad(available/100))}</p><div class="tw-field full"><label for="tw-refund-amount">${esc(pick(REFUND.amount))}</label><input id="tw-refund-amount" type="number" min="0.01" step="0.01" max="${available/100}" required value="${available/100}"></div><p role="alert" data-refund-error></p><div class="tw-modal-actions"><button type="button" class="tw-cancel" data-refund-cancel>${esc(pick(UI.cancel))}</button><button type="submit" class="tw-save">${esc(pick(REFUND.confirm))}</button></div></form>`});
+    const form=m.el.querySelector('form'),input=form.querySelector('input'),button=form.querySelector('[type=submit]'),error=form.querySelector('[role=alert]');
+    form.noValidate=true;
+    form.querySelector('[data-refund-cancel]').onclick=()=>{if(!pending)m.close();};
+    form.onsubmit=async(e)=>{
+      e.preventDefault();if(pending)return;
+      const raw=Number(input.value)*100, amount=Math.round(raw);
+      if(!Number.isSafeInteger(amount)||amount<1||Math.abs(raw-amount)>1e-6||amount>available){error.textContent=pick(REFUND.cap);return;}
+      pending=true;button.disabled=true;input.disabled=true;error.textContent='';
+      try {await refundAdvance(clientId,amount,id);m.close();render('credit');window.Kiwi.toast?.(pick(REFUND.done),{type:'success'});}
+      catch(err){
+        if(Number.isSafeInteger(err.availableCents)){available=err.availableCents;input.max=available/100;form.querySelector('[data-refund-available]').textContent=pick(REFUND.available)+' : '+mad(available/100);}
+        error.textContent=pick(err.message==='refund-exceeds-advance'?REFUND.cap:REFUND.error);
+      } finally {pending=false;button.disabled=false;input.disabled=false;}
+    };
+  }
   function oldestOpenDebt(c) {
     let cover = (c.hist || []).filter((h) => h && h.type === 'pay').reduce((n, h) => n + (+h.amt || 0), 0);
     const debts = (c.hist || []).filter((h) => h && h.type === 'debt').slice().sort((a, b) => new Date(a.at) - new Date(b.at));
@@ -299,13 +350,13 @@
       }
     } else if (cfg.trade === 'epicerie' && cfg.nav === 'credit') {
       const book = (tillDoc('epicerie')?.carnet || []).filter((c) => c && c.id && Array.isArray(c.hist));
-      book.map((c) => ({ c, owed: Math.round(owedOf(c) * 100) / 100 })).filter((x) => x.owed > 0.004).sort((a, b) => b.owed - a.owed).forEach(({ c, owed }) => {
+      book.map((c) => ({ c, owed: Math.round(owedOf(c) * 100) / 100 })).filter((x) => Math.abs(x.owed) > 0.004 || x.c.hist.some((h)=>h.kind==='advance-refund')).sort((a, b) => b.owed - a.owed).forEach(({ c, owed }) => {
         const since = oldestOpenDebt(c);
         const pays = c.hist.filter((h) => h && h.type === 'pay').sort((a, b) => new Date(a.at) - new Date(b.at));
         const lp = pays[pays.length - 1];
         const stale = !!(since && new Date(since).getTime() < Date.now() - 30 * 864e5);
-        out.push({ title:c.name || c.id, status:pick(TILL.owed), alert:stale ? pick(TILL.stale) : '', owed,
-          meta:[[TILL.balance, mad(owed)],[TILL.since, when(since)],[TILL.lastPay, lp ? when(lp.at) + ' · ' + mad(lp.amt) : ''],[TILL.phone, c.phone]] });
+        out.push({ title:c.name || c.id, refundClient:c.id, refundable:refundAvailable(c), refunds:c.hist.filter((h)=>h.kind==='advance-refund'), status:pick(owed<0?REFUND.available:owed>0?TILL.owed:REFUND.history), alert:stale ? pick(TILL.stale) : '', owed,
+          meta:[[TILL.balance, mad(Math.abs(owed))],[TILL.since, when(since)],[TILL.lastPay, lp ? when(lp.at) + ' · ' + mad(lp.amt) : ''],[TILL.phone, c.phone]] });
       });
     } else if (cfg.trade === 'bakery') {
       const d = tillDoc('boulangerie');
@@ -324,9 +375,10 @@
   function tillSection(cfg, cards) {
     cards = cards || tillCards(cfg);
     if (!cards.length) return '';
-    const owed = cards.reduce((n, c) => n + (+c.owed || 0), 0);
-    const hint = owed ? cards.length + ' · ' + mad(owed) + ' ' + pick(TILL.owedTotal) + ' · ' + pick(TILL.hint) : pick(TILL.hint);
-    return `<section class="tw-till" aria-label="${esc(pick(TILL.title))}"><div class="tw-till-h"><strong>${esc(pick(TILL.title))}</strong><span>${esc(hint)}</span></div><div class="tw-grid">${cards.map((c) => `<article class="tw-card tw-card-till${c.alert ? ' has-alert' : ''}"><div class="tw-card-head"><h3>${esc(c.title)}</h3><span class="tw-pill">${esc(c.status)}</span></div>${c.alert ? `<div class="tw-alert">${esc(c.alert)}</div>` : ''}<div class="tw-meta">${c.meta.filter((m) => m[1] !== '' && m[1] != null).map((m) => `<span><b>${esc(pick(m[0]))}</b>${esc(m[1])}</span>`).join('')}</div></article>`).join('')}</div></section>`;
+    const owed = cards.reduce((n, c) => n + Math.max(0, +c.owed || 0), 0);
+    const note=cfg.nav==='credit'?REFUND.hint:TILL.hint;
+    const hint = owed ? cards.filter((c)=>c.owed>0).length + ' · ' + mad(owed) + ' ' + pick(TILL.owedTotal) + ' · ' + pick(note) : pick(note);
+    return `<section class="tw-till" aria-label="${esc(pick(TILL.title))}"><div class="tw-till-h"><strong>${esc(pick(TILL.title))}</strong><span>${esc(hint)}</span></div><div class="tw-grid">${cards.map((c) => `<article class="tw-card tw-card-till${c.alert ? ' has-alert' : ''}"><div class="tw-card-head"><h3>${esc(c.title)}</h3><span class="tw-pill">${esc(c.status)}</span></div>${c.alert ? `<div class="tw-alert">${esc(c.alert)}</div>` : ''}<div class="tw-meta">${c.meta.filter((m) => m[1] !== '' && m[1] != null).map((m) => `<span><b>${esc(pick(m[0]))}</b>${esc(m[1])}</span>`).join('')}</div>${c.refunds?.length ? `<div class="tw-meta"><b>${esc(pick(REFUND.history))}</b>${c.refunds.map((h)=>`<span>${esc(when(h.at,true))} · ${esc(mad(h.amt))}</span>`).join('')}</div>` : ''}${c.refundable>0 && refundAllowed() ? `<button type="button" class="tw-action" data-tw-refund="${esc(c.refundClient)}">${esc(pick(REFUND.action))}</button>` : ''}</article>`).join('')}</div></section>`;
   }
   function render(nav) {
     const cfg=config(nav); if (!cfg || !window.Kiwi?.appPage) return false;
@@ -382,7 +434,7 @@
     m.el.querySelector('[data-tw-cancel]').onclick=()=>m.close();m.el.querySelector('[data-tw-confirm]').onclick=()=>{saveRecord(cfg,{...r,deletedAt:Date.now(),updatedAt:Date.now()});m.close();window.Kiwi.toast?.(pick(UI.deleted),{type:'success'});};
   }
   function wire(host,cfg) {
-    if(!host||host.__twWired)return;host.__twWired=true;host.addEventListener('click',(e)=>{const add=e.target.closest('[data-tw-add]');if(add)return modalForm(cfg);const edit=e.target.closest('[data-tw-edit]');if(edit){const r=rows(cfg.nav).find((x)=>x.id===edit.dataset.twEdit);if(r)modalForm(cfg,r);return;}const del=e.target.closest('[data-tw-delete]');if(del){const r=rows(cfg.nav).find((x)=>x.id===del.dataset.twDelete);if(r)confirmDelete(cfg,r);return;}const next=e.target.closest('[data-tw-next]');if(next){const r=rows(cfg.nav).find((x)=>x.id===next.dataset.twNext);if(r){const max=statusList(cfg).length-1;saveRecord(cfg,{...r,status:Math.min(max,(+r.status||0)+1),updatedAt:Date.now()});}return;}});
+    if(!host||host.__twWired)return;host.__twWired=true;host.addEventListener('click',(e)=>{const refund=e.target.closest('[data-tw-refund]');if(refund)return refundModal(refund.dataset.twRefund);const add=e.target.closest('[data-tw-add]');if(add)return modalForm(cfg);const edit=e.target.closest('[data-tw-edit]');if(edit){const r=rows(cfg.nav).find((x)=>x.id===edit.dataset.twEdit);if(r)modalForm(cfg,r);return;}const del=e.target.closest('[data-tw-delete]');if(del){const r=rows(cfg.nav).find((x)=>x.id===del.dataset.twDelete);if(r)confirmDelete(cfg,r);return;}const next=e.target.closest('[data-tw-next]');if(next){const r=rows(cfg.nav).find((x)=>x.id===next.dataset.twNext);if(r){const max=statusList(cfg).length-1;saveRecord(cfg,{...r,status:Math.min(max,(+r.status||0)+1),updatedAt:Date.now()});}return;}});
   }
   function install() {
     const H=window.Kiwi?.handlers;if(!H)return;
@@ -392,5 +444,5 @@
   window.addEventListener('load',()=>{setTimeout(()=>{bindCloud();install();},280);window.KiwiVenue?.subscribe?.(()=>{openPage=null;bindCloud();setTimeout(install,0);});window.KiwiSales?.subscribe?.(()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});window.addEventListener('kiwi:langchange',()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});});
   /* La caisse écrit son état dans `verticalops` : la planche ouverte se met à jour toute seule. */
   window.addEventListener('load',()=>{try{window.KiwiVerticalState?.store?.subscribe?.(()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});}catch(_){}});
-  window.KiwiTradeWorkspaces={pages,config,read,write,merge,render,rows};
+  window.KiwiTradeWorkspaces={pages,config,read,write,merge,render,rows,refundAvailable,refundAllowed,refundAdvance};
 })();

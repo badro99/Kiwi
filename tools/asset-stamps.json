@@ -156,8 +156,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "630",
-    "sha": "5018e3e4a10c0ba6"
+    "v": "631",
+    "sha": "96edba8a879f9511"
   },
   "assets/caisse-refresh.js": {
     "v": "8",
@@ -324,8 +324,8 @@
     "sha": "f2b4d7294e6f0c1a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "613",
-    "sha": "fe3e66adcbb632b7"
+    "v": "614",
+    "sha": "eb1de027cb38b570"
   },
   "assets/dashboard-shell.css": {
     "v": "6",
@@ -400,8 +400,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "616",
-    "sha": "59b14d0bfd3a9ec8"
+    "v": "617",
+    "sha": "c14256f27844e4ce"
   },
   "assets/employee-planning.js": {
     "v": "17",
@@ -1016,8 +1016,8 @@
     "sha": "1db43f9510e0031e"
   },
   "assets/menu-i18n.js": {
-    "v": "5",
-    "sha": "47c6977184784d8a"
+    "v": "6",
+    "sha": "a213d6ff245df87d"
   },
   "assets/menu-nutrition.js": {
     "v": "4",
@@ -1116,8 +1116,8 @@
     "sha": "e02250206df06b57"
   },
   "assets/orderpro-menu.js": {
-    "v": "7",
-    "sha": "97b2b65a84876794"
+    "v": "8",
+    "sha": "60b267fc3046f355"
   },
   "assets/orderpro-page.css": {
     "v": "4",
@@ -1180,8 +1180,8 @@
     "sha": "5032ef2889120144"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "3",
-    "sha": "a95a7d4b58aa6817"
+    "v": "4",
+    "sha": "acb1c3e85eaff036"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1512,8 +1512,8 @@
     "sha": "29e05b6e1670751b"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "120",
-    "sha": "a0d09cb397c3dd11"
+    "v": "121",
+    "sha": "3705a17d850a0208"
   },
   "assets/restaurant-recipes.js": {
     "v": "10",
@@ -1676,8 +1676,8 @@
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "12",
-    "sha": "764dc10bbba5c598"
+    "v": "13",
+    "sha": "3a5e60dba41bdaa5"
   },
   "assets/trades.js": {
     "v": "7",

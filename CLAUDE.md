@@ -262,6 +262,21 @@ usual place, so a red still means red. `KIWI_CHECK_JOBS=1` is the old serial
 run, `KIWI_CHECK_JOBS` / `KIWI_CHECK_BROWSER_JOBS` tune it. A new suite only has
 to be named in check.js to be prefetched, like before.
 
+**A pass is reused when nothing it read changed** (2026-10-26). After a test
+passes in the pool, `tools/check-pool.js` keeps a key in the temp dir
+(`kiwi-pass-cache.json`): the content of the test and of every repo file it
+read, copied, listed or probed (`tools/dep-trace.cjs`), plus Node, the `app/`
+lockfile, the tracer and every `KIWI_*` setting. A later run with the same key
+replays that pass and its output instead of running the test, and prints
+`N test files reused`. Never reused: a pass from another day or over 24 h old,
+a test that starts a program other than node (git, sqlite3, a shell: their
+reads are invisible to the tracer), a test that just failed.
+`KIWI_PASS_CACHE=0` runs everything. A reused pass has no CPU time, so the CPU
+ratchet only measures what ran. If a test reads something the tracer cannot
+see (a non-repo file, the network) and a stale pass is replayed, run with
+`KIWI_PASS_CACHE=0` and teach the tracer, don't add exceptions in the test.
+`tools/pass-cache-test.mjs` holds the rules.
+
 **New browser suites use `tools/browser-trace.mjs`.** Run each scenario through
 `suite(name).run()` and `t.watch(page)`: a failure then writes
 `.kiwi/results/<suite>/<test>/trace.md` (steps, every page load and the script

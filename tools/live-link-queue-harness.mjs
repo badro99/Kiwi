@@ -67,7 +67,7 @@ export async function harness(f){
    return '(function(){'+['money','reviveJournalEntry','heldSalesKey','heldSaleRows','saveHeldSales','holdSaleLocally','releaseHeldSale','retryHeldSales'].map(n=>named(restaurant,n)).join('\n')+'\nwindow.__restaurant={hold:holdSaleLocally,replay:retryHeldSales,rows:heldSaleRows};})();';}),c);
   browser={c,window,api:window.KiwiLive,q:window.__queue};if(indexed)await browser.q.initOutbox();await drain();return browser;
  }
- async function until(test,label){const deadline=Date.now()+5000;while(!test()){if(Date.now()>deadline)throw Error(label);await new Promise(r=>setImmediate(r));}}
+ async function until(test,label){const deadline=Date.now()+5000;let spins=0;while(!test()){if(Date.now()>deadline)throw Error(label);await new Promise(r=>spins++<64?setImmediate(r):setTimeout(r,1));}}/* back off after 64 turns: a busy machine otherwise burns the whole wait as CPU */
  async function idle(){await drain();await until(()=>!s.inflight.size,'network failed to settle');await drain();}
  async function flush(force=false){const result=browser.api.flush(force);await result;await idle();}
  async function recover(){s.online=true;emit('window','online');for(let i=0;i<30;i++){s.now+=301000;await flush(true);await browser.api.refreshQueue();const q=browser.api.queueStatus();if(!q.pending&&!q.sending)return;}throw Error('recovery did not drain');}

@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v673';
+var CACHE = 'kiwi-app-v674';
 var SHELL = [
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
@@ -111,7 +111,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=3',
+  '/assets/pages/dashboard-startup.js?v=4',
   '/assets/pages/dashboard-loader.js?v=8',
   '/assets/hotel/model.js?v=2',
   '/assets/hotel/views.js?v=2',
@@ -165,7 +165,7 @@ var SHELL = [
   '/assets/venues.js?v=65',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=9',
-  '/assets/trade-workspaces.js?v=12',
+  '/assets/trade-workspaces.js?v=13',
   '/assets/delivery-receivables.js?v=2',
   '/assets/reservations.js?v=33',
   '/assets/pressing-ops.js?v=12',
@@ -225,13 +225,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=613',
+  '/assets/dashboard-pwa.js?v=614',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=368',
   '/assets/caisse-skin.css?v=4',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=8',
-  '/assets/caisse-pwa.js?v=630',
+  '/assets/caisse-pwa.js?v=631',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=11',
   '/assets/platform-kernel.js?v=6',
@@ -340,7 +340,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=616',
+  '/assets/employee-live.js?v=617',
   '/assets/employee-planning.js?v=17',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=6',
@@ -349,8 +349,8 @@ var SHELL = [
   '/assets/team.js?v=318',
   '/assets/team/profile-ui.js?v=1',
   '/assets/team-hours.js?v=6',
-  '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=120',
+  '/assets/menu-i18n.js?v=6',
+  '/assets/restaurant-menu-workspace.js?v=121',
   '/assets/menu-promos-dashboard.js?v=3',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=12',

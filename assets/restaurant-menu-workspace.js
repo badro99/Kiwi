@@ -57,7 +57,9 @@
       i18nItems: 'Items',
       i18nOptions: 'Options',
       i18nDesc: 'description',
-      i18nStatusOk: 'translated',
+      i18nStatusOk: 'approved',
+      i18nStatusUnreviewed: 'to review',
+      i18nApprove: 'Approve wording and allergens',
       i18nStatusStale: 'outdated',
       i18nStatusMissing: 'missing',
       i18nStatusManual: 'corrected by hand',
@@ -592,7 +594,9 @@
       i18nItems: 'الأصناف',
       i18nOptions: 'الخيارات',
       i18nDesc: 'الوصف',
-      i18nStatusOk: 'مترجم',
+      i18nStatusOk: 'معتمد',
+      i18nStatusUnreviewed: 'للمراجعة',
+      i18nApprove: 'اعتماد النص ومسببات الحساسية',
       i18nStatusStale: 'للمراجعة',
       i18nStatusMissing: 'ناقص',
       i18nStatusManual: 'مصحح يدويا',
@@ -1124,7 +1128,9 @@
       i18nItems: 'Articles',
       i18nOptions: 'Options',
       i18nDesc: 'description',
-      i18nStatusOk: 'traduits',
+      i18nStatusOk: 'validés',
+      i18nStatusUnreviewed: 'à vérifier',
+      i18nApprove: 'Valider le texte et les allergènes',
       i18nStatusStale: 'à revoir',
       i18nStatusMissing: 'manquants',
       i18nStatusManual: 'corrigé à la main',
@@ -2769,19 +2775,19 @@ html[data-theme="dark"] .rmw-emoji-pop{background:#151C18!important;border-color
     const available=M.EXTRA.filter(l=>!L.includes(l));
     const picker=menuLangFeature()?`<div class="rmw-lang-select"><button type="button" class="rmw-lang-trigger" data-action="rmw-i18n-toggle" aria-expanded="${i18nChooserOpen?'true':'false'}"${available.length?'':' disabled'}><span class="rmw-lang-trigger-plus">+</span><span><b>${esc(ui('i18nAddLang'))}</b><small>${esc(ui('i18nAvailable',{n:available.length}))}</small></span></button>${i18nChooserOpen&&available.length?`<section class="rmw-lang-popover"><div class="rmw-lang-popover-head"><div><b>${esc(ui('i18nChooseLang'))}</b><span>${esc(ui('i18nChooseHint'))}</span></div><button type="button" data-action="rmw-i18n-toggle">${esc(ui('i18nClosePicker'))}</button></div><div class="rmw-lang-grid">${available.map(l=>`<button data-activation=write type="button" data-action="rmw-i18n-add" data-arg="${l}"><span class="rmw-lang-code">${esc(l)}</span><span class="rmw-lang-copy"><b>${esc(menuLangLabel(l))}</b><small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])}</small></span><span class="rmw-lang-add">+</span></button>`).join('')}</div></section>`:''}</div>`:'';
     const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>${picker}<p class="rmw-i18n-hint" role="note">${esc(ui('i18nReview'))}</p>`;
-    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l],extra=M.EXTRA.includes(l),label=extra?menuLangLabel(l):(M.NAMES[l]||l),native=extra&&M.NAMES[l]!==label?M.NAMES[l]:'';return `<div class="rmw-i18n-stat"><span class="rmw-i18n-stat-name"><b>${esc(label)}</b>${native?`<small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(native)}</small>`:''}</span><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}${extra?`<button type="button" data-action="rmw-i18n-remove" data-arg="${l}" title="${esc(ui('i18nRemoveLang'))}" aria-label="${esc(ui('i18nRemoveLang'))} ${esc(label)}">×</button>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
+    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l],extra=M.EXTRA.includes(l),label=extra?menuLangLabel(l):(M.NAMES[l]||l),native=extra&&M.NAMES[l]!==label?M.NAMES[l]:'';return `<div class="rmw-i18n-stat"><span class="rmw-i18n-stat-name"><b>${esc(label)}</b>${native?`<small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(native)}</small>`:''}</span><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.unreviewed?`<span class="is-stale">${s.unreviewed} ${esc(ui('i18nStatusUnreviewed'))}</span>`:''}${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}${extra?`<button type="button" data-action="rmw-i18n-remove" data-arg="${l}" title="${esc(ui('i18nRemoveLang'))}" aria-label="${esc(ui('i18nRemoveLang'))} ${esc(label)}">×</button>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
     const stLabel=(st)=>ui('i18nStatus'+st.charAt(0).toUpperCase()+st.slice(1));
     const cell=(kind,id,sub,e,l,field)=>{
       const x=e.i18n&&e.i18n[l];const st=M.status(e,l);
       const val=x?(field==='desc'?(x.desc||''):(x.name||'')):'';
-      return `<td class="st-${st}"><input type="text" data-rmw-i18n data-kind="${kind}" data-id="${esc(id)}" data-sub="${esc(sub||'')}" data-lang="${l}" data-field="${field}" value="${esc(val)}" placeholder="${st==='stale'?esc(stLabel('stale')):''}" title="${esc(stLabel(st))}" dir="${M.rtl(l)?'rtl':'ltr'}" /></td>`;
+      return `<td class="st-${st}"><input type="text" data-rmw-i18n data-kind="${kind}" data-id="${esc(id)}" data-sub="${esc(sub||'')}" data-lang="${l}" data-field="${field}" value="${esc(val)}" placeholder="${st==='stale'?esc(stLabel('stale')):''}" title="${esc(stLabel(st))}" dir="${M.rtl(l)?'rtl':'ltr'}" />${st==='unreviewed'||st==='stale'?`<span>${esc(stLabel(st))}</span><button type="button" data-action="rmw-i18n-approve" data-kind="${kind}" data-id="${esc(id)}" data-sub="${esc(sub||'')}" data-lang="${l}">${esc(ui('i18nApprove'))}</button>`:''}</td>`;
     };
     const row=(kind,id,sub,e,mark,field)=>`<tr><td class="rmw-i18n-src">${mark?`<span class="rmw-i18n-kind">${esc(mark)}</span>`:''}${esc(field==='desc'?(e.desc||''):e.name)}</td>${L.map(l=>cell(kind,id,sub,e,l,field||'name')).join('')}</tr>`;
     const rows=[];
     const section=(t)=>rows.push(`<tr class="rmw-i18n-section"><td colspan="${1+L.length}">${esc(t)}</td></tr>`);
     if(d.cats.length){section(ui('i18nSections'));d.cats.forEach(c=>{rows.push(row('cat',c.id,'',c,''));(c.sub||[]).forEach(s=>rows.push(row('sub',c.id,s.id,s,'↳')));});}
     const items=d.items.filter(x=>!x.archived);
-    if(items.length){section(ui('i18nItems'));items.forEach(it=>{rows.push(row('item',it.id,'',it,''));if(it.desc)rows.push(row('item',it.id,'',it,ui('i18nDesc'),'desc'));});}
+    if(items.length){section(ui('i18nItems'));items.forEach(it=>{rows.push(row('item',it.id,'',it,''));if(it.desc)rows.push(row('item',it.id,'',it,ui('i18nDesc'),'desc'));if(it.allergens?.length)rows.push(`<tr><td>${esc(it.allergens.map(k=>UI_I18N.fr['allergen_'+k]||k).join(' · '))}</td>${L.map(l=>`<td>${esc(it.allergens.map(k=>(UI_I18N[l]||UI_I18N.en)['allergen_'+k]||k).join(' · '))}</td>`).join('')}</tr>`);});}
     if((d.opts||[]).length){section(ui('i18nOptions'));d.opts.forEach(g=>{rows.push(row('opt',g.id,'',g,''));(g.choices||[]).forEach(c=>rows.push(row('choice',g.id,c.id,c,'↳')));});}
     if(!rows.length)return head+`<div class="rmw-empty"><p>${esc(ui('i18nEmpty'))}</p></div>`;
     return head+stats+`<div class="rmw-i18n-wrap" tabindex="0" role="region" aria-label="${esc(ui('i18nTitle'))}"><table class="rmw-i18n"><thead><tr><th>${esc(ui('i18nOriginal'))}</th>${L.map(l=>`<th>${esc(M.NAMES[l]||l)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
@@ -2881,6 +2887,7 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-reactivate']=(_e,id)=>{S().updateItem(id,{avail:true});render();};
     H['rmw-menu-scan']=()=>{if(window.KiwiMenuScan?.open)window.KiwiMenuScan.open({onDone:()=>render()});else window.Kiwi?.toast?.(ui('scanUnavailable'),{type:'warn',desc:ui('reloadPage')});};
     H['rmw-menu-translate']=()=>{setTab('i18n');render();};
+    H['rmw-i18n-approve']=(el)=>{const k=el.dataset;S().setI18nEntry(k.kind,k.id,k.sub||null,k.lang,{});i18nRefreshPanel();};
     H['rmw-i18n-fill']=()=>ensureTranslations({silent:false});
     H['rmw-i18n-redo']=()=>confirm(ui('i18nRedoConfirm'),()=>{S().clearI18n(null,true);ensureTranslations({silent:false,force:true});},ui('i18nRedoDesc'));
     H['rmw-i18n-toggle']=()=>{i18nChooserOpen=!i18nChooserOpen;i18nRefreshPanel();};

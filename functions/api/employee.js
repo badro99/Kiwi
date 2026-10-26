@@ -14,23 +14,16 @@ import {
 } from '../auth/_lib.js';
 import { storeOperationalState } from './_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from './_business-day.js';
-import { retainCorrection } from './_attendance-corrections.js';
+import { handleAttendance, ACTION_ROLES as ATTENDANCE_ACTION_ROLES } from './employee/_attendance.js';
+import { handleLeave, ACTION_ROLES as LEAVE_ACTION_ROLES } from './employee/_leave.js';
 import { hoursByDay } from './_worked-hours.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
-const ATTENDANCE_CODE_FEATURE = 'attendance-code';
 const TEAM_FEATURE = 'team';
 const FLOOR_FEATURE = 'floorplan';
 const MESSAGES_FEATURE = 'team-messages';
 const MESSAGE_WINDOW_MS = 24 * 3600000;
 const PROGRESS_FEATURE = 'employee-progress';
-const MAX_ATTENDANCE = 5000;
-// Automatic replay is limited to 12 h; older punches await an audited decision.
-const CAPTURE_MAX_AGE_MS = 12 * 3600000;
-// Même plafond par défaut que le planning (planning-core.js, settings.maxDailyHours).
-const DEFAULT_MAX_DAILY_HOURS = 12;
-// Délai d'acheminement toléré après la fin de vie du code, pour un pointage différé seulement.
-const CAPTURE_CODE_GRACE_MS = 10 * 1000;
 
 function parse(raw, fallback) {
   try { const v = JSON.parse(raw || ''); return v && typeof v === 'object' ? v : fallback; }
@@ -391,265 +384,15 @@ export async function onRequestPost({ request, env }) {
   if (!storeState.ok) return json({ error: 'auth-verification-unavailable' }, 503);
   if (storeState.suspended) return json({ error: 'store-suspended' }, 403);
   if (storeState.pending) return json({ error: 'subscription-required' }, 402);
-  if (action === 'planning-request' || action === 'planning-request-cancel') {
-    const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} });
-    const member = memberFor(teamRow.data, auth.pin);
-    const memberId = String((member && member.id) || auth.pin.id);
-    let requestId = '';
-    const now = new Date().toISOString();
-    if (action === 'planning-request') {
-      const type = String(body.type || '');
-      if (type !== 'leave' && type !== 'availability') return json({ error:'planning-request-type-invalid' }, 400);
-      const reason = String(body.reason || '').trim().slice(0, 240);
-      const request = { id:crypto.randomUUID(), memberId, type, reason, status:'pending', createdAt:now, updatedAt:now };
-      if (type === 'leave') {
-        const startDate = String(body.startDate || ''), endDate = String(body.endDate || '');
-        if (!validISODate(startDate) || !validISODate(endDate) || startDate > endDate) return json({ error:'planning-date-invalid' }, 400);
-        const length = Math.round((Date.parse(endDate + 'T12:00:00Z') - Date.parse(startDate + 'T12:00:00Z')) / 86400000);
-        if (length > 366) return json({ error:'planning-date-range-too-long' }, 400);
-        request.startDate = startDate; request.endDate = endDate;
-      } else {
-        const weekdays = Array.from(new Set((Array.isArray(body.weekdays) ? body.weekdays : []).map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort();
-        const available = body.available !== false;
-        const start = String(body.start || ''), end = String(body.end || '');
-        if (!weekdays.length || (available && (!validTime(start) || !validTime(end) || start === end))) return json({ error:'planning-availability-invalid' }, 400);
-        request.weekdays = weekdays; request.available = available; request.start = available ? start : ''; request.end = available ? end : '';
-      }
-      requestId = request.id;
-      const updated = await mutateDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} }, (doc) => {
-        doc.planning = doc.planning && typeof doc.planning === 'object' ? doc.planning : {};
-        doc.planning.requests = Array.isArray(doc.planning.requests) ? doc.planning.requests : [];
-        const duplicate = doc.planning.requests.some((item) => item && item.memberId === memberId && item.type === request.type && item.status === 'pending' && (request.type === 'leave' ? item.startDate === request.startDate && item.endDate === request.endDate : JSON.stringify(item.weekdays || []) === JSON.stringify(request.weekdays || [])));
-        if (!duplicate) doc.planning.requests.push(request);
-        return doc;
-      });
-      if (!updated) return json({ error:'planning-write-failed' }, 503);
-    } else {
-      requestId = String(body.requestId || '');
-      if (!requestId) return json({ error:'planning-request-id-required' }, 400);
-      const updated = await mutateDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} }, (doc) => {
-        doc.planning = doc.planning && typeof doc.planning === 'object' ? doc.planning : {};
-        doc.planning.requests = Array.isArray(doc.planning.requests) ? doc.planning.requests : [];
-        const request = doc.planning.requests.find((item) => item && item.id === requestId && item.memberId === memberId && item.status === 'pending');
-        if (request) { request.status = 'cancelled'; request.updatedAt = now; }
-        return doc;
-      });
-      if (!updated) return json({ error:'planning-write-failed' }, 503);
-    }
-    return json({ ok:true, action, requestId });
+  const actor = { role: 'employee', identity: auth };
+  const store = { env, merchant, zone, cutoff, readDoc, mutateDoc, memberFor,
+    completedHours: (changedEntry, memberId) => pointedHours({ entries: [changedEntry] }, memberId, auth.pin.id, zone, cutoff),
+    safeProgress, planningDay, roleKey, validISODate, validTime };
+  if (Object.hasOwn(LEAVE_ACTION_ROLES, action)) {
+    return handleLeave({ actor, store, request, action, body });
   }
-  if (['planning-open-shift-claim', 'planning-swap-request', 'planning-swap-claim', 'planning-opportunity-cancel'].includes(action)) {
-    const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} });
-    const member = memberFor(teamRow.data, auth.pin);
-    const memberId = String((member && member.id) || auth.pin.id);
-    const memberRole = roleKey((member && (member.function || member.department)) || auth.pin.role);
-    const now = new Date().toISOString();
-    let resultId = '';
-    let operationError = '';
-    const updated = await mutateDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} }, (doc) => {
-      doc.planning = doc.planning && typeof doc.planning === 'object' ? doc.planning : {};
-      const planning = doc.planning;
-      planning.openShifts = Array.isArray(planning.openShifts) ? planning.openShifts : [];
-      planning.swapRequests = Array.isArray(planning.swapRequests) ? planning.swapRequests : [];
-      planning.publishedShifts = planning.publishedShifts && typeof planning.publishedShifts === 'object' ? planning.publishedShifts : {};
-      if (action === 'planning-open-shift-claim') {
-        resultId = String(body.shiftId || '');
-        const shift = planning.openShifts.find((item) => item && item.id === resultId);
-        if (!shift || shift.status !== 'open') { operationError = 'open-shift-unavailable'; return doc; }
-        if (!validISODate(shift.day) || !validTime(shift.start) || !validTime(shift.end) || shift.start === shift.end) { operationError = 'open-shift-invalid'; return doc; }
-        if (shift.day < planningDay(Date.now(), zone)) { operationError = 'open-shift-past'; return doc; }
-        if (shift.role && memberRole && roleKey(shift.role) !== memberRole) { operationError = 'open-shift-role-mismatch'; return doc; }
-        if (planning.publishedShifts[memberId] && planning.publishedShifts[memberId][shift.day]) { operationError = 'open-shift-schedule-conflict'; return doc; }
-        const activeClaims = planning.openShifts.filter((item) => item && item.claimantId === memberId && item.status === 'claimed').length;
-        if (activeClaims >= 20) { operationError = 'planning-opportunity-limit'; return doc; }
-        shift.status = 'claimed'; shift.claimantId = memberId; shift.updatedAt = now;
-      } else if (action === 'planning-swap-request') {
-        const day = String(body.day || '');
-        const ownShift = planning.publishedShifts[memberId] && planning.publishedShifts[memberId][day];
-        if (!validISODate(day) || !ownShift || !validTime(ownShift.start) || !validTime(ownShift.end)) { operationError = 'swap-shift-invalid'; return doc; }
-        if (day < planningDay(Date.now(), zone)) { operationError = 'swap-shift-past'; return doc; }
-        const activeMine = planning.swapRequests.filter((item) => item && item.memberId === memberId && ['open','claimed'].includes(item.status)).length;
-        if (activeMine >= 20) { operationError = 'planning-opportunity-limit'; return doc; }
-        if (planning.swapRequests.some((item) => item && item.memberId === memberId && item.day === day && ['open','claimed'].includes(item.status))) { operationError = 'swap-already-open'; return doc; }
-        resultId = crypto.randomUUID();
-        planning.swapRequests.push({ id:resultId, memberId, day, shift:{ start:String(ownShift.start), end:String(ownShift.end) }, status:'open', claimantId:'', offeredDay:'', createdAt:now, updatedAt:now });
-      } else if (action === 'planning-swap-claim') {
-        resultId = String(body.requestId || '');
-        const offeredDay = String(body.offeredDay || '');
-        const request = planning.swapRequests.find((item) => item && item.id === resultId);
-        const offeredShift = planning.publishedShifts[memberId] && planning.publishedShifts[memberId][offeredDay];
-        if (!request || request.status !== 'open' || request.memberId === memberId) { operationError = 'swap-unavailable'; return doc; }
-        if (!validISODate(offeredDay) || !offeredShift || !validTime(offeredShift.start) || !validTime(offeredShift.end)) { operationError = 'swap-offer-invalid'; return doc; }
-        if (request.day < planningDay(Date.now(), zone) || offeredDay < planningDay(Date.now(), zone)) { operationError = 'swap-shift-past'; return doc; }
-        const owner = (Array.isArray(doc.members) ? doc.members : []).find((item) => item && String(item.id || '') === String(request.memberId || ''));
-        const ownerRole = roleKey(owner && (owner.function || owner.department || owner.role));
-        if (ownerRole && memberRole && ownerRole !== memberRole) { operationError = 'swap-role-mismatch'; return doc; }
-        request.status = 'claimed'; request.claimantId = memberId; request.offeredDay = offeredDay;
-        request.offeredShift = { start:String(offeredShift.start), end:String(offeredShift.end) }; request.updatedAt = now;
-      } else {
-        resultId = String(body.requestId || body.shiftId || '');
-        const open = planning.openShifts.find((item) => item && item.id === resultId && item.status === 'claimed' && item.claimantId === memberId);
-        const swap = planning.swapRequests.find((item) => item && item.id === resultId);
-        if (open) { open.status = 'open'; open.claimantId = ''; open.updatedAt = now; }
-        else if (swap && swap.memberId === memberId && ['open','claimed'].includes(swap.status)) { swap.status = 'cancelled'; swap.updatedAt = now; }
-        else if (swap && swap.claimantId === memberId && swap.status === 'claimed') { swap.status = 'open'; swap.claimantId = ''; swap.offeredDay = ''; delete swap.offeredShift; swap.updatedAt = now; }
-        else operationError = 'planning-opportunity-not-cancellable';
-      }
-      return doc;
-    });
-    if (!updated) return json({ error:'planning-write-failed' }, 503);
-    if (operationError) return json({ error:operationError }, 409);
-    return json({ ok:true, action, id:resultId });
+  if (Object.hasOwn(ATTENDANCE_ACTION_ROLES, action)) {
+    return handleAttendance({ actor, store, request, action, body });
   }
-  if (action === 'pause' || action === 'resume') return json({ error: 'pause-managed-by-caisse' }, 403);
-  if (!['clock-in', 'clock-out'].includes(action)) return json({ error: 'bad-action' }, 400);
-  /* Heure réelle du geste. Un pointage gardé sur le téléphone pendant une
-   * coupure arrive en retard : il dit depuis combien de temps il attend
-   * (capturedAgoMs, mesuré par l'horloge du téléphone entre la saisie et
-   * l'envoi, donc indifférent à une horloge réglée de travers). Bornes : jamais
-   * dans le futur, jamais plus de 12 h automatiquement, jamais avant le pointage précédent.
-   * Cette heure ne sert qu'à dater le pointage et à choisir le code de
-   * présence qui valait à cet instant ; rien d'autre ne s'y fie. */
-  const capturedAgo = Math.floor(Number(body.capturedAgoMs) || 0);
-  const deferred = capturedAgo > 0;
-  if (capturedAgo > CAPTURE_MAX_AGE_MS) {
-    const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [] });
-    const member = memberFor(teamRow.data, auth.pin);
-    return retainCorrection(env, merchant, { ...auth.pin, memberId: String(member?.id || auth.pin.id) }, body);
-  }
-  // Credentials prove who is pointing. The short-lived code generated by the
-  // paired caisse proves the employee is physically present at this store.
-  const attendanceCode = String(body.attendanceCode || '').replace(/\D/g, '').slice(0, 6);
-  const codeRow = await readDoc(env, merchant, ATTENDANCE_CODE_FEATURE, {});
-  const codeData = codeRow.data || {};
-  const nowTs = Date.now();
-  const capturedTs = nowTs - Math.max(0, capturedAgo);
-  /* En direct, la règle d'avant : le code courant, pas encore expiré. Différé,
-   * le code qui valait à l'instant du geste, courant compris : le courant ou un
-   * code remplacé dans les 24 h (gardé par /api/team/live), chacun sur sa
-   * propre fenêtre. Le code lu à 11 h ne date donc pas une arrivée de 9 h. */
-  const presenceCode = attendanceCode.length !== 6 ? null
-    : !deferred
-      ? (attendanceCode === String(codeData.code || '') && nowTs <= Number(codeData.expiresTs || 0) ? codeData : null)
-      : [codeData, ...(Array.isArray(codeData.recent) ? codeData.recent : [])].find((c) => c
-        && attendanceCode === String(c.code || '')
-        && capturedTs >= Number(c.createdTs || 0)
-        && capturedTs <= Number(c.endTs || c.expiresTs || 0) + CAPTURE_CODE_GRACE_MS) || null;
-  /* Le code de présence n'avait AUCUN plafond d'essais : un employé connecté,
-   * chez lui, pouvait en tester un million par scripts pendant les cinq minutes
-   * de validité et « pointer » sans être au comptoir. Même compteur que la
-   * connexion, rattaché à l'employé (pas à son adresse, qui change). */
-  const codeTarget = await targetKey(env.AUTH_SECRET, 'attcode', merchant + ':' + auth.pin.id);
-  const codeLimited = codeTarget ? await limitCheck(request, env, 'attcode', codeTarget) : null;
-  if (codeLimited) return codeLimited;
-  if (!presenceCode) {
-    if (codeTarget && !await limitFail(request, env, 'attcode', codeTarget)) return rateLimitUnavailable();
-    return json({ error: 'attendance-code-invalid' }, 403);
-  }
-  if (codeTarget) await limitClear(request, env, 'attcode', codeTarget);
-  const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} });
-  const member = memberFor(teamRow.data, auth.pin);
-  const memberId = String((member && member.id) || auth.pin.id);
-  const now = Date.now();
-  /* Identité du geste : l'application en tire une par pointage (arrivée et
-   * départ) et la garde pour ses nouvelles tentatives. Une arrivée rejouée en
-   * retard, après le départ, retrouve le service qu'elle a déjà ouvert ; un
-   * départ rejoué retrouve le service qu'il a déjà fermé, sans fermer le
-   * suivant ni créditer deux fois les heures. Sans identité (ancien client),
-   * la règle d'avant s'applique. */
-  const opId = String(body.opId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
-  const opField = action === 'clock-in' ? 'clockInOpId' : 'clockOutOpId';
-  const codeTs = Number(presenceCode.createdTs) || now;
-  // En direct, l'heure du serveur, exactement comme avant ; différé, l'heure du geste.
-  const at = deferred ? capturedTs : now;
-  /* Un pointage différé n'est cru que dans ses bornes : il AJOUTE un pointage,
-   * il ne déplace jamais un pointage déjà enregistré, ne passe pas avant le
-   * précédent et ne fait pas un service plus long que le plafond quotidien du
-   * planning. Il porte la mention `deferred` et le délai déclaré, que le
-   * gérant voit dans les heures et les derniers pointages. */
-  const settings = (teamRow.data && teamRow.data.planning && teamRow.data.planning.settings) || {};
-  const maxShiftMs = (settings.maxDailyHours == null ? DEFAULT_MAX_DAILY_HOURS : Math.max(0, Number(settings.maxDailyHours) || 0)) * 3600000;
-  let refusal = '';
-  /** @type {{inTs: number, outTs: number} | null} Populated by the awaited document mutation. */
-  let changedEntry = null;
-  let replay = false;
-  const attendance = await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
-    // Un essai CAS perdu ne doit pas créditer les heures du gagnant une seconde fois.
-    changedEntry = null;
-    replay = false;
-    refusal = '';
-    const entries = Array.isArray(doc.entries) ? doc.entries.slice() : [];
-    const mine = entries.filter((e) => e && e.staffId === auth.pin.id);
-    const open = mine.slice().reverse().find((e) => !e.outTs);
-    const replayed = opId ? mine.find((e) => e[opField] === opId) : null;
-    // Jamais avant le pointage précédent de cet employé.
-    const lastOut = mine.reduce((max, e) => Math.max(max, Number(e.outTs) || 0), 0);
-    if (replayed) {
-      replay = true;
-      changedEntry = { ...replayed };
-    } else if (action === 'clock-in') {
-      if (deferred && !open && at < lastOut) { refusal = 'attendance-capture-overlaps'; return null; }
-      const inTs = Math.min(now, Math.max(at, lastOut));
-      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
-      if (!open) entries.push(changedEntry);
-    } else if (action === 'clock-out' && open) {
-      const floor = Math.max(Number(open.inTs) || 0, Number(open.pauseTs) || 0,
-        ...(Array.isArray(open.breaks) ? open.breaks : []).map((b) => Number(b && b.outTs) || 0));
-      if (deferred && at < floor) { refusal = 'attendance-capture-overlaps'; return null; }
-      if (deferred && maxShiftMs && at - (Number(open.inTs) || at) > maxShiftMs) { refusal = 'attendance-shift-too-long'; return null; }
-      const outTs = Math.min(now, Math.max(at, floor)) || now;
-      if (open.pauseTs) {
-        open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
-        open.breaks.push({ inTs: Number(open.pauseTs) || outTs, outTs });
-        open.pauseTs = 0;
-      }
-      open.outTs = Math.max(outTs, Number(open.inTs) || outTs);
-      open.clockOutCodeTs = codeTs;
-      if (opId) open.clockOutOpId = opId;
-      if (deferred) { open.deferred = true; open.outDeferredMs = capturedAgo; }
-      changedEntry = { ...open };
-    }
-    return { entries: entries.slice(-MAX_ATTENDANCE) };
-  });
-  if (refusal) return json({ error: refusal }, 409);
-  if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
-  if (action === 'clock-out' && !replay && changedEntry && changedEntry.outTs > changedEntry.inTs) {
-    /* Le service se crédite par le calcul même de la paie (_worked-hours.js),
-     * à la seconde : arrondir chaque pointage au centième d'heure avant de les
-     * additionner faisait dériver les heures, donc le salaire. */
-    const credited = pointedHours({ entries: [changedEntry] }, memberId, auth.pin.id, zone, cutoff);
-    await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
-      doc.members = Array.isArray(doc.members) ? doc.members : [];
-      doc.hours = doc.hours && typeof doc.hours === 'object' ? doc.hours : {};
-      doc.shifts = doc.shifts && typeof doc.shifts === 'object' ? doc.shifts : {};
-      if (!doc.hours[memberId]) doc.hours[memberId] = {};
-      Object.keys(credited).forEach((day) => {
-        doc.hours[memberId][day] = (Number(doc.hours[memberId][day]) || 0) + credited[day];
-      });
-      return doc;
-    });
-    const rawProgress = body.progress && typeof body.progress === 'object' ? body.progress : {};
-    const paid = Math.min(200, Math.max(0, Math.floor(Number(rawProgress.paid) || 0)));
-    const revenue = Math.min(1000000, Math.max(0, Number(rawProgress.revenue) || 0));
-    const turnMinutes = Math.min(100000, Math.max(0, Number(rawProgress.turnMinutes) || 0));
-    const speed = paid > 0 && turnMinutes > 0 ? Math.round(turnMinutes / paid) : null;
-    const earnedXP = Math.round(paid * 10 + revenue * 0.01);
-    await mutateDoc(env, merchant, PROGRESS_FEATURE, { members: {} }, (doc) => {
-      doc.members = doc.members && typeof doc.members === 'object' ? doc.members : {};
-      const previous = safeProgress(doc.members[memberId]);
-      doc.members[memberId] = {
-        lifetimeXP: previous.lifetimeXP + earnedXP,
-        records: {
-          bestNight: Math.max(previous.records.bestNight, paid),
-          streak: paid >= 8 ? previous.records.streak + 1 : (paid > 0 ? 1 : previous.records.streak),
-          bestSpeed: speed == null ? previous.records.bestSpeed
-            : (previous.records.bestSpeed == null ? speed : Math.min(previous.records.bestSpeed, speed)),
-        },
-        shifts: previous.shifts + 1,
-        updatedTs: now,
-      };
-      return doc;
-    });
-  }
-  return json({ ok: true, action, entry: changedEntry });
+  return json({ error: 'bad-action' }, 400);
 }

@@ -162,6 +162,7 @@ function sanitizeI18n(raw, nameMax, descMax) {
     const e = { name, h: str(x.h, 16) };
     if (descMax && x.desc != null) e.desc = str(x.desc, descMax);
     if (x.m) e.m = 1;
+    if (x.r) e.r = str(x.r, 16);
     out[lang] = e;
   }
   return Object.keys(out).length ? out : null;

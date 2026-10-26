@@ -1,0 +1,742 @@
+{
+  "version": 1,
+  "scope": "Tous les textes du tarif FR, chemins partagés par les sept langues. Les contrats prouvent les capacités, pas une attribution exhaustive des droits par plan. Les prestations humaines restent contractuelles.",
+  "claims": {
+    "title": {
+      "fr": "Un abonnement. Pas une commission.",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "body": {
+      "fr": "Kiwi facture son logiciel et ne prend jamais une part de vos ventes. 15 jours d’essai gratuit, sans engagement.",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "billingLabel": {
+      "fr": "Périodicité de facturation",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "periods.0.value": {
+      "fr": "mensuel",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "periods.0.label": {
+      "fr": "Mensuel",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "periods.1.value": {
+      "fr": "annuel",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "periods.1.label": {
+      "fr": "Annuel",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "monthlySuffix": {
+      "fr": "/mois",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "currency": {
+      "fr": "MAD",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "quote": {
+      "fr": "Sur devis",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "quoteDetail": {
+      "fr": "Tarif défini ensemble.",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "billedMonthly": {
+      "fr": "15 jours gratuits, puis facturé chaque mois.",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "billedYearly": {
+      "fr": "15 jours offerts, puis {total} MAD par an, en un seul paiement.",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.0.name": {
+      "fr": "Basic",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.0.cta": {
+      "fr": "Obtenir mon Kiwi",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.0.features.0": {
+      "fr": "Caisse avec scan de codes-barres",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/boutique-existing-barcode-test.mjs",
+          "assertion": "le code existant scanne"
+        },
+        {
+          "file": "tools/retail-scan-test.mjs",
+          "assertion": "scanner terminator is stripped without losing leading zero"
+        }
+      ]
+    },
+    "tiers.0.features.1": {
+      "fr": "Suivi du stock",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        }
+      ]
+    },
+    "tiers.0.features.2": {
+      "fr": "Tickets de caisse",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/caisse-auto-receipt-test.mjs",
+          "assertion": "cash confirmation queues exactly one receipt"
+        }
+      ]
+    },
+    "tiers.0.features.3": {
+      "fr": "Carnet de crédit client",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/credit-book-properties-test.mjs",
+          "assertion": "advance refunds require the owner, exact available cents and immutable history"
+        },
+        {
+          "file": "tools/credit-book-test.mjs",
+          "assertion": "fusionner deux fois ne double aucune ligne"
+        }
+      ]
+    },
+    "tiers.0.features.4": {
+      "fr": "Rapport journalier",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/dayreport-properties-test.mjs",
+          "assertion": "revenue and net payment methods conserve integer centimes including refunds and repeated decimals"
+        }
+      ]
+    },
+    "tiers.0.features.5": {
+      "fr": "Caisse utilisable hors ligne",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/offline-foundation-test.mjs",
+          "assertion": "live sales use the durable outbox lifecycle"
+        }
+      ]
+    },
+    "tiers.0.features.6": {
+      "fr": "Un établissement",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        }
+      ]
+    },
+    "tiers.1.name": {
+      "fr": "Plus",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.1.cta": {
+      "fr": "Obtenir mon Kiwi",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.1.features.0": {
+      "fr": "Tout Basic",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/boutique-existing-barcode-test.mjs",
+          "assertion": "le code existant scanne"
+        },
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        },
+        {
+          "file": "tools/caisse-auto-receipt-test.mjs",
+          "assertion": "cash confirmation queues exactly one receipt"
+        },
+        {
+          "file": "tools/credit-book-properties-test.mjs",
+          "assertion": "advance refunds require the owner, exact available cents and immutable history"
+        },
+        {
+          "file": "tools/dayreport-properties-test.mjs",
+          "assertion": "revenue and net payment methods conserve integer centimes including refunds and repeated decimals"
+        },
+        {
+          "file": "tools/offline-foundation-test.mjs",
+          "assertion": "live sales use the durable outbox lifecycle"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        }
+      ]
+    },
+    "tiers.1.features.1": {
+      "fr": "Catalogue par tailles et couleurs",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/boutique-variant-stock-test.mjs",
+          "assertion": "availableStock(pid, cfg.size, cfg.color, state.ticket)"
+        },
+        {
+          "file": "tools/boutique-variant-stock-test.mjs",
+          "assertion": "la déclinaison blanche reste intacte après la vente noire"
+        }
+      ]
+    },
+    "tiers.1.features.2": {
+      "fr": "Retours, échanges et avoirs",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un remboursement partiel est accepté"
+        },
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un avoir partiel est accepté (session propriétaire)"
+        },
+        {
+          "file": "tools/returns-sales-sync-test.js",
+          "assertion": "les échanges sont eux aussi journalisés"
+        }
+      ]
+    },
+    "tiers.1.features.3": {
+      "fr": "Promotions et offres",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/promotions-store-contract-test.mjs",
+          "assertion": "actual engine cloud feature matches endpoint feature"
+        }
+      ]
+    },
+    "tiers.1.features.4": {
+      "fr": "Loyalty+",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/loyalty-truth-test.mjs",
+          "assertion": "two « Café noir » and one « CAFE CREME » earn 3 stamps (accents and case ignored)"
+        }
+      ]
+    },
+    "tiers.1.features.5": {
+      "fr": "Fiches clients",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/clients-properties-test.mjs",
+          "assertion": "browser upsert deduplicates equivalent phones while retaining distinct people"
+        }
+      ]
+    },
+    "tiers.1.features.6": {
+      "fr": "Suivi des ventes et des marges",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/cost-margin-test.js",
+          "assertion": "4 pains : marge 60 %"
+        }
+      ]
+    },
+    "tiers.1.features.7": {
+      "fr": "Un établissement",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Plus 1 store -> 2nd store blocked with 403"
+        }
+      ]
+    },
+    "tiers.2.name": {
+      "fr": "Pro",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.2.cta": {
+      "fr": "Obtenir mon Kiwi",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.2.features.0": {
+      "fr": "Tout Plus",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/boutique-variant-stock-test.mjs",
+          "assertion": "availableStock(pid, cfg.size, cfg.color, state.ticket)"
+        },
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un remboursement partiel est accepté"
+        },
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un avoir partiel est accepté (session propriétaire)"
+        },
+        {
+          "file": "tools/promotions-store-contract-test.mjs",
+          "assertion": "actual engine cloud feature matches endpoint feature"
+        },
+        {
+          "file": "tools/loyalty-truth-test.mjs",
+          "assertion": "two « Café noir » and one « CAFE CREME » earn 3 stamps (accents and case ignored)"
+        },
+        {
+          "file": "tools/clients-properties-test.mjs",
+          "assertion": "browser upsert deduplicates equivalent phones while retaining distinct people"
+        },
+        {
+          "file": "tools/cost-margin-test.js",
+          "assertion": "4 pains : marge 60 %"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Plus 1 store -> 2nd store blocked with 403"
+        },
+        {
+          "file": "tools/boutique-existing-barcode-test.mjs",
+          "assertion": "le code existant scanne"
+        },
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        },
+        {
+          "file": "tools/caisse-auto-receipt-test.mjs",
+          "assertion": "cash confirmation queues exactly one receipt"
+        },
+        {
+          "file": "tools/credit-book-properties-test.mjs",
+          "assertion": "advance refunds require the owner, exact available cents and immutable history"
+        },
+        {
+          "file": "tools/dayreport-properties-test.mjs",
+          "assertion": "revenue and net payment methods conserve integer centimes including refunds and repeated decimals"
+        },
+        {
+          "file": "tools/offline-foundation-test.mjs",
+          "assertion": "live sales use the durable outbox lifecycle"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        }
+      ]
+    },
+    "tiers.2.features.1": {
+      "fr": "Plan de salle interactif",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/floorplan-sync-test.js",
+          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+        }
+      ]
+    },
+    "tiers.2.features.2": {
+      "fr": "Prise de commande par les serveurs",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/serveur-kitchen-truth-test.mjs",
+          "assertion": "hors ligne : le geste est écrit dans le stockage"
+        }
+      ]
+    },
+    "tiers.2.features.3": {
+      "fr": "Écran cuisine",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/kitchen-properties-test.mjs",
+          "assertion": "queue state machine: retries, progress, recall, quantity voids, payment, transfer and merge preserve one ticket"
+        }
+      ]
+    },
+    "tiers.2.features.4": {
+      "fr": "OrderPro Restaurant",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/orderpro-panel-plan-test.mjs",
+          "assertion": "chaque tag dit le nom du plan:"
+        }
+      ]
+    },
+    "tiers.2.features.5": {
+      "fr": "Carte multilingue",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/menu-properties-test.mjs",
+          "assertion": "language additions, aliases and removals never move ids, options or prices"
+        }
+      ]
+    },
+    "tiers.2.features.6": {
+      "fr": "Lien de réservation",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/booking-api-test.mjs",
+          "assertion": "availability is calculated from real resources and hours"
+        },
+        {
+          "file": "tools/booking-api-test.mjs",
+          "assertion": "international public booking is committed"
+        }
+      ]
+    },
+    "tiers.2.features.7": {
+      "fr": "Recettes, ingrédients et coût matière",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/foodcost-api-test.mjs",
+          "assertion": "le propriétaire crée une fiche (201, version 1)"
+        }
+      ]
+    },
+    "tiers.2.features.8": {
+      "fr": "Accès employés avec permissions",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/team-doc-redaction-test.mjs",
+          "assertion": "une caisse appairée lit l’équipe SANS les codes"
+        },
+        {
+          "file": "tools/employee-properties-test.mjs",
+          "assertion": "employee cookie cannot read or overwrite owner documents through store API"
+        }
+      ]
+    },
+    "tiers.2.features.9": {
+      "fr": "Planning, pointage et paie",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/payroll-properties-test.mjs",
+          "assertion": "concurrent clock-out and retries credit one closed punch to payroll once"
+        },
+        {
+          "file": "tools/planning-core-test.mjs",
+          "assertion": "assert.equal(P.publish(leave, shifts, days, members).ok, false);"
+        }
+      ]
+    },
+    "tiers.2.features.10": {
+      "fr": "Kiwi IQ avancé",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/agent-test.js",
+          "assertion": "an invented MAD figure does not survive"
+        }
+      ]
+    },
+    "tiers.2.features.11": {
+      "fr": "Support prioritaire sur WhatsApp",
+      "kind": "copy-only",
+      "reason": "Prestation humaine de support ou accompagnement, à vérifier contractuellement hors des tests du logiciel."
+    },
+    "tiers.2.features.12": {
+      "fr": "Un établissement",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Pro 1 store -> 2nd store blocked with 403"
+        }
+      ]
+    },
+    "tiers.3.name": {
+      "fr": "Ultra",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.3.cta": {
+      "fr": "Contactez-nous",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "tiers.3.features.0": {
+      "fr": "Tout Pro",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/floorplan-sync-test.js",
+          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+        },
+        {
+          "file": "tools/serveur-kitchen-truth-test.mjs",
+          "assertion": "hors ligne : le geste est écrit dans le stockage"
+        },
+        {
+          "file": "tools/kitchen-properties-test.mjs",
+          "assertion": "queue state machine: retries, progress, recall, quantity voids, payment, transfer and merge preserve one ticket"
+        },
+        {
+          "file": "tools/orderpro-panel-plan-test.mjs",
+          "assertion": "chaque tag dit le nom du plan:"
+        },
+        {
+          "file": "tools/menu-properties-test.mjs",
+          "assertion": "language additions, aliases and removals never move ids, options or prices"
+        },
+        {
+          "file": "tools/booking-api-test.mjs",
+          "assertion": "availability is calculated from real resources and hours"
+        },
+        {
+          "file": "tools/foodcost-api-test.mjs",
+          "assertion": "le propriétaire crée une fiche (201, version 1)"
+        },
+        {
+          "file": "tools/team-doc-redaction-test.mjs",
+          "assertion": "une caisse appairée lit l’équipe SANS les codes"
+        },
+        {
+          "file": "tools/payroll-properties-test.mjs",
+          "assertion": "concurrent clock-out and retries credit one closed punch to payroll once"
+        },
+        {
+          "file": "tools/planning-core-test.mjs",
+          "assertion": "assert.equal(P.publish(leave, shifts, days, members).ok, false);"
+        },
+        {
+          "file": "tools/agent-test.js",
+          "assertion": "an invented MAD figure does not survive"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Pro 1 store -> 2nd store blocked with 403"
+        },
+        {
+          "file": "tools/boutique-variant-stock-test.mjs",
+          "assertion": "availableStock(pid, cfg.size, cfg.color, state.ticket)"
+        },
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un remboursement partiel est accepté"
+        },
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un avoir partiel est accepté (session propriétaire)"
+        },
+        {
+          "file": "tools/promotions-store-contract-test.mjs",
+          "assertion": "actual engine cloud feature matches endpoint feature"
+        },
+        {
+          "file": "tools/loyalty-truth-test.mjs",
+          "assertion": "two « Café noir » and one « CAFE CREME » earn 3 stamps (accents and case ignored)"
+        },
+        {
+          "file": "tools/clients-properties-test.mjs",
+          "assertion": "browser upsert deduplicates equivalent phones while retaining distinct people"
+        },
+        {
+          "file": "tools/cost-margin-test.js",
+          "assertion": "4 pains : marge 60 %"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Plus 1 store -> 2nd store blocked with 403"
+        },
+        {
+          "file": "tools/boutique-existing-barcode-test.mjs",
+          "assertion": "le code existant scanne"
+        },
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        },
+        {
+          "file": "tools/caisse-auto-receipt-test.mjs",
+          "assertion": "cash confirmation queues exactly one receipt"
+        },
+        {
+          "file": "tools/credit-book-properties-test.mjs",
+          "assertion": "advance refunds require the owner, exact available cents and immutable history"
+        },
+        {
+          "file": "tools/dayreport-properties-test.mjs",
+          "assertion": "revenue and net payment methods conserve integer centimes including refunds and repeated decimals"
+        },
+        {
+          "file": "tools/offline-foundation-test.mjs",
+          "assertion": "live sales use the durable outbox lifecycle"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        }
+      ]
+    },
+    "tiers.3.features.1": {
+      "fr": "Établissements illimités",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Ultra with 3 stores -> 4th store allowed"
+        }
+      ]
+    },
+    "tiers.3.features.2": {
+      "fr": "Pilotage multi-établissements",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Ultra with 3 stores -> 4th store allowed"
+        }
+      ]
+    },
+    "tiers.3.features.3": {
+      "fr": "Gestion multi-pays",
+      "kind": "copy-only",
+      "reason": "Offre Ultra fixée par le propriétaire (16 octobre 2026) : livrée dans le cadre du contrat du client, pas une fonction libre-service du logiciel actuel. À relier à un contrat exécutable quand elle sera construite."
+    },
+    "tiers.3.features.4": {
+      "fr": "API entreprise",
+      "kind": "copy-only",
+      "reason": "Offre Ultra fixée par le propriétaire (16 octobre 2026) : périmètre défini dans le contrat du client, pas une API publique documentée aujourd'hui. À relier à un contrat exécutable quand elle sera construite."
+    },
+    "tiers.3.features.5": {
+      "fr": "Account manager dédié",
+      "kind": "copy-only",
+      "reason": "Prestation humaine de support ou accompagnement, à vérifier contractuellement hors des tests du logiciel."
+    },
+    "ultimate.name": {
+      "fr": "Ultimate",
+      "kind": "copy-only",
+      "reason": "Périmètre commercial à convenir sur devis, sans promesse de fonctionnalité disponible dans le logiciel actuel."
+    },
+    "ultimate.description": {
+      "fr": "Un périmètre sur mesure, pour un besoin qu’aucun palier ne couvre.",
+      "kind": "copy-only",
+      "reason": "Périmètre commercial à convenir sur devis, sans promesse de fonctionnalité disponible dans le logiciel actuel."
+    },
+    "ultimate.cta": {
+      "fr": "Contactez-nous",
+      "kind": "copy-only",
+      "reason": "Périmètre commercial à convenir sur devis, sans promesse de fonctionnalité disponible dans le logiciel actuel."
+    },
+    "ultimate.features.0": {
+      "fr": "Périmètre défini avec vous",
+      "kind": "copy-only",
+      "reason": "Périmètre commercial à convenir sur devis, sans promesse de fonctionnalité disponible dans le logiciel actuel."
+    },
+    "ultimate.features.1": {
+      "fr": "Nombre d’appareils et de caissiers convenu ensemble",
+      "kind": "copy-only",
+      "reason": "Périmètre commercial à convenir sur devis, sans promesse de fonctionnalité disponible dans le logiciel actuel."
+    },
+    "ultimate.features.2": {
+      "fr": "Fonctionnalités développées pour vous",
+      "kind": "copy-only",
+      "reason": "Périmètre commercial à convenir sur devis, sans promesse de fonctionnalité disponible dans le logiciel actuel."
+    },
+    "numberLocale": {
+      "fr": "fr-FR",
+      "kind": "copy-only",
+      "reason": "Libellé de navigation, de présentation ou condition commerciale, sans comportement logiciel autonome."
+    },
+    "metadataDescription": {
+      "fr": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, ou 99 par mois en annuel. 15 jours d’essai gratuit, sans engagement.",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        },
+        {
+          "file": "tools/floorplan-sync-test.js",
+          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+        },
+        {
+          "file": "tools/kitchen-properties-test.mjs",
+          "assertion": "queue state machine: retries, progress, recall, quantity voids, payment, transfer and merge preserve one ticket"
+        },
+        {
+          "file": "tools/payroll-properties-test.mjs",
+          "assertion": "concurrent clock-out and retries credit one closed punch to payroll once"
+        },
+        {
+          "file": "tools/planning-core-test.mjs",
+          "assertion": "assert.equal(P.publish(leave, shifts, days, members).ok, false);"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Ultra with 3 stores -> 4th store allowed"
+        }
+      ]
+    },
+    "hero": {
+      "fr": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, 15 jours d’essai gratuit, sans engagement.",
+      "kind": "contract",
+      "contracts": [
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        },
+        {
+          "file": "tools/floorplan-sync-test.js",
+          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+        },
+        {
+          "file": "tools/kitchen-properties-test.mjs",
+          "assertion": "queue state machine: retries, progress, recall, quantity voids, payment, transfer and merge preserve one ticket"
+        },
+        {
+          "file": "tools/payroll-properties-test.mjs",
+          "assertion": "concurrent clock-out and retries credit one closed punch to payroll once"
+        },
+        {
+          "file": "tools/planning-core-test.mjs",
+          "assertion": "assert.equal(P.publish(leave, shifts, days, members).ok, false);"
+        },
+        {
+          "file": "tools/plan-tier-test.mjs",
+          "assertion": "Ultra with 3 stores -> 4th store allowed"
+        }
+      ]
+    }
+  }
+}

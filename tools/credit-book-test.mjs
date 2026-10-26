@@ -190,6 +190,8 @@ const twCode = `
   let DOCS = {}; const tillDoc = (v) => DOCS[v] || null;
   const money = (n) => String(Math.round((+n || 0) * 100) / 100);
   ${grab(TW, 'const TILL = {')};
+  ${grab(TW, 'const REFUND = {')};
+  ${TW.match(/  const refundAvailable = .*;/)[0]}
   ${grab(TW, 'function when(v, withTime)')}
   const mad = (n) => money(n) + ' ' + pick(UI.currency);
   ${TW.match(/  const owedOf = .*;/)[0]}

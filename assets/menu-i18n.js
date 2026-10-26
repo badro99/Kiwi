@@ -8,13 +8,16 @@
  * article, groupe d'options, choix) garde son libellé CANONIQUE dans `name` /
  * `desc` — ce que le commerçant a écrit — et porte en plus :
  *
- *   i18n: { fr: {name, desc?, h, m?}, ar: {…}, en: {…} }
+ *   i18n: { fr: {name, desc?, h, m?, r?}, ar: {…}, en: {…} }
  *
  *   h = empreinte du texte source au moment de la traduction (hash()) ;
  *       si le patron renomme l'article, h ne correspond plus → la traduction est
  *       PÉRIMÉE et on affiche le canonique jusqu'à la prochaine traduction ;
  *   m = 1 quand le patron a corrigé la traduction à la main → jamais écrasée
  *       par la machine (seul « Tout retraduire » la remplace, sur demande).
+ *
+ *   r = empreinte de validation du texte source et des allergènes. Absente ou
+ *       différente : à vérifier, même pour une ancienne correction manuelle.
  *
  * Les traductions sont produites UNE FOIS par Kiwi AI (/api/ai/menu-translate),
  * pour les entrées manquantes ou périmées seulement (needs() → apply()), depuis
@@ -329,11 +332,17 @@
     if (x.m) return true;
     return x.h === hash(e.name, e.desc);
   }
+  // Validation liée à la source et à la liste canonique des allergènes.
+  // L'absence de r (anciennes cartes comprises) signifie « à vérifier ».
+  function reviewHash(e) {
+    return hash(hash(e.name, e.desc), JSON.stringify((e.allergens || []).slice().sort()));
+  }
   function status(e, lang) {
     const x = entry(e, lang);
     if (!x) return 'missing';
-    if (x.m) return 'manual';
-    return x.h === hash(e.name, e.desc) ? 'ok' : 'stale';
+    if (!x.m && x.h !== hash(e.name, e.desc)) return 'stale';
+    if (x.r !== reviewHash(e)) return 'unreviewed';
+    return x.m ? 'manual' : 'ok';
   }
 
   /* Index libellé canonique → entité, pour t(str). */
@@ -462,7 +471,7 @@
     if (!e.i18n || typeof e.i18n !== 'object') e.i18n = {};
     const x = { name: n, h: hash(e.name, e.desc) };
     if (desc_ != null && e.desc !== undefined) x.desc = String(desc_).trim().slice(0, 400);
-    if (o.manual) x.m = 1;
+    if (o.manual) { x.m = 1; x.r = reviewHash(e); }
     e.i18n[lang] = x;
     return true;
   }
@@ -510,7 +519,7 @@
   function summary(d, requested) {
     const out = {};
     const targets = Array.isArray(requested) ? requested.map(asLang).filter(Boolean) : langs(d);
-    targets.forEach((l) => { out[l] = { ok: 0, stale: 0, missing: 0, manual: 0, total: 0 }; });
+    targets.forEach((l) => { out[l] = { ok: 0, stale: 0, missing: 0, manual: 0, unreviewed: 0, total: 0 }; });
     const each = (e) => { if (!e || !e.name) return; targets.forEach((l) => { const s = status(e, l); out[l][s]++; out[l].total++; }); };
     ((d && d.cats) || []).forEach((c) => { each(c); (c.sub || []).forEach(each); });
     ((d && d.items) || []).filter((it) => it && !it.archived).forEach(each);
