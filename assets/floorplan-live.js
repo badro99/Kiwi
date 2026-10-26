@@ -23,7 +23,8 @@
   var POLL_MS = 8000;
   var subs = [];
   var timer = 0;
-  var last = null;
+  var last = null, lastSlug = '';
+  function currentRoom() { return lastSlug === slug() ? last : null; }
   var inflight = false;
   var idleDelay = POLL_MS, signature = null;
 
@@ -70,6 +71,7 @@
     if (document.visibilityState === 'hidden') return;
     var s = slug();
     if (!s || !isReal()) {
+      lastSlug = s;
       last = { ok: false, live: false, reason: 'demo', tables: {}, stats: {}, at: Date.now() };
       emit();
       schedule();
@@ -85,6 +87,7 @@
         var next = JSON.stringify([s, d.tables || {}, d.stats || {}, d.partial || {}, d.dayStart]);
         idleDelay = next === signature ? Math.min(60000, idleDelay * 2) : POLL_MS;
         signature = next;
+        lastSlug = s;
         last = { ok: true, live: true, stale: false, tables: d.tables || {}, stats: d.stats || {},
                  dayStart: Number(d.dayStart) || 0, partial: d.partial || {},
                  /* Last authenticated poll from a paired till (server clock).
@@ -95,11 +98,13 @@
         emit();
       })
       .catch(function () {
+        if (s !== slug()) return;
         idleDelay = Math.min(60000, idleDelay * 2);
         /* Keep the last room, flagged. A blank room would be a lie too. */
-        last = last && last.live
+        last = currentRoom() && last.live
           ? Object.assign({}, last, { stale: true })
           : { ok: false, live: false, reason: 'offline', tables: {}, stats: {}, at: Date.now() };
+        lastSlug = s;
         emit();
       })
       .then(function () { inflight = false; schedule(); });
@@ -123,7 +128,7 @@
   function watch(fn) {
     if (typeof fn !== 'function') return function () {};
     subs.push(fn);
-    if (last) { try { fn(last); } catch (_) {} }
+    if (currentRoom()) { try { fn(currentRoom()); } catch (_) {} }
     start();
     return function () {
       subs = subs.filter(function (x) { return x !== fn; });
@@ -240,7 +245,7 @@
   }
 
   window.KiwiFloorLive = {
-    watch: watch, last: function () { return last; }, refresh: poll,
+    watch: watch, last: currentRoom, refresh: poll,
     resolve: resolve, since: since, bookings: bookings, suggestTable: suggestTable,
     tableKey: tableKey, normalizeStatus: normalizeStatus, resourceTableId: resourceTableId,
     FROM_TILL: FROM_TILL, STATUSES: STATUSES, CHECK_AFTER: CHECK_AFTER,

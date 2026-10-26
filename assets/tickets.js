@@ -831,11 +831,11 @@
     syncComposerSubkinds('');
   }
 
-  async function loadTickets(options) {
+  async function loadTickets(options) { const seq = loadTickets.seq = (loadTickets.seq || 0) + 1;
     if (!options || !options.quiet) renderLoading();
     try {
       const response = await fetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch(() => ({})); if (seq !== loadTickets.seq) return;
       if (!response.ok) throw Object.assign(new Error(data.error || 'read-failed'), { code: data.error });
       if (!data.taxonomy || !Array.isArray(data.taxonomy.kinds) || !Array.isArray(data.taxonomy.areas)) {
         throw Object.assign(new Error('taxonomy-missing'), { code: 'taxonomy-missing' });
@@ -855,7 +855,7 @@
       state.loading = false;
       render();
     } catch (error) {
-      state.loading = false;
+      if (seq !== loadTickets.seq) return; state.loading = false;
       if (options && options.quiet) return;
       Object.values(lists).forEach((list) => {
         const failed = make('div', 'error-state');
