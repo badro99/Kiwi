@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderQueueTestSource from './order-queue-test-source.cjs';
 /* #0065 · « une panne de base ressemble à une cuisine vide et en bonne santé ».
  *
  * Quand toutes les lectures de la table `orders` échouent, l'API répond HTTP
@@ -18,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cuisine = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
-const queue = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const queue = orderQueueTestSource('functions/api/order/queue.js');
 const inbox = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
 
 let passed = 0;

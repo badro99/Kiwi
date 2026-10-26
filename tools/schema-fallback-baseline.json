@@ -37,7 +37,7 @@
   "api/operations.js : no such table: payroll_periods": 6,
   "api/operations.js : no such table: payslips": 4,
   "api/operations.js : repli de schéma": 23,
-  "api/order/_lib.js : repli de schéma": 1,
+  "api/order/_guest-clock.js : repli de schéma": 1,
   "api/order/_queue-create.js : repli de schéma": 1,
   "api/order/_queue-tables.js : repli de schéma": 1,
   "api/order/game.js : repli de schéma": 1,

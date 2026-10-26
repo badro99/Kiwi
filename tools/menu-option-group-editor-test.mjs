@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
+import orderQueueTestSource from './order-queue-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Menu · the option group editor says what the order screens will do, and
  * never swallows a click.
@@ -22,7 +23,7 @@ const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(im
 const src = menuWorkspaceSource();
 const lens = readFileSync(path.join(ROOT, 'assets/liquid-lens.js'), 'utf8');
 const caisse = caisseTestSource(readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
-const orderLib = readFileSync(path.join(ROOT, 'functions/api/order/_lib.js'), 'utf8');
+const orderLib = orderQueueTestSource('functions/api/order/_lib.js');
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderQueueTestSource from './order-queue-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -55,7 +56,7 @@ assert.equal(doc.lines.reduce((sum, line) => sum + line.total, 0), 52,
 assert.equal(doc.totals.total, 52, 'the settled total remains authoritative');
 
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
-const orderLib = read('functions/api/order/_lib.js');
+const orderLib = orderQueueTestSource('functions/api/order/_lib.js');
 const liveLink = read('assets/live-link.js');
 const saleApi = read('functions/api/sale.js');
 const feedApi = read('functions/api/feed.js');

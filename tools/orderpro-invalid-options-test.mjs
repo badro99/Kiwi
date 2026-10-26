@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderQueueTestSource from './order-queue-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import queueTestSource from './queue-test-source.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const orderProSource = orderProTestSource(ROOT);
-const orderLibSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/_lib.js'), 'utf8');
+const orderLibSource = orderQueueTestSource('functions/api/order/_lib.js');
 const indexSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/index.js'), 'utf8');
 const queueSource = queueTestSource();
 
