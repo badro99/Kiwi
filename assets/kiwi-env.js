@@ -46,6 +46,27 @@
       && !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null')?.merchant; } catch (_) { return false; }
   }
 
+  // Employee entry links select a real sign-in flow even on a demo origin.
+  // Evaluate lazily: the shared pairing runtime loads after this early gate.
+  function employeeEntry() {
+    if (!/\/kiwi-serveur\.html$/.test(location.pathname || '')) return false;
+    try {
+      var q = new URLSearchParams(location.search).get('merchant');
+      if (q && /^[a-z0-9][a-z0-9-]{0,63}$/i.test(q)) return true;
+    } catch (_) {}
+    var p;
+    try { p = window.KiwiPlatform?.pairedVenue(); } catch (_) {}
+    try {
+      if (!p) p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      if (p && p.merchant) return true;
+    } catch (_) {}
+    try {
+      if (localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant')) return true;
+    } catch (_) {}
+    // Preserve the employee app's historical real entry on this dev bind host.
+    return h === '0.0.0.0';
+  }
+
   window.KiwiEnv = {
     local: local,
     demosAllowed: demosAllowed,
@@ -59,7 +80,7 @@
      * Every surface that renders identity/legal/named demo data should gate on
      * window.KiwiEnv.isReal() so the demo is preserved locally and never leaks. */
     isReal: function () {
-      try { return !demosAllowed || !!window.KiwiMe || paired()
+      try { return !demosAllowed || !!window.KiwiMe || paired() || employeeEntry()
         || (native && !!localStorage.getItem('kiwiAccountKey')); } catch (_) { return !demosAllowed; }
     },
   };

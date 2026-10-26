@@ -10,19 +10,19 @@ const platform = read('assets/platform-kernel.js');
 const html = read('kiwi-serveur.html');
 assert.match(html, /<script src="assets\/platform-kernel.js\?v=\d+"><\/script>/, 'shared pairing must run before synchronous serveur');
 let count = 0, differences = 0;
-const failures = new Set();
+
 for (const hostname of ['localhost', '127.0.0.1', '0.0.0.0', 'shop.example'])
 for (const forced of [null, '0', '1'])
 for (const paired of [null, '0', '1'])
 for (const pairing of [null, '{bad', JSON.stringify({merchant:'shop-a',name:'A'}), JSON.stringify({name:'Stale'})])
 for (const leftover of [null, 'shop-b'])
-for (const search of ['', '?merchant=shop-c'])
+for (const search of ['', '?merchant=team-test', '?merchant=SHOP-C', '?merchant=bad_slug', '?merchant='])
 for (const employee of [null, 'shop-d'])
 for (const session of [false, true])
 for (const native of [false, true])
 for (const account of [null, 'account-a']) {
   const entries = {kiwiEmployeeMerchant:employee, kiwiDemos:forced, kiwiPaired:paired, kiwiPairedVenue:pairing, kiwiLiveMerchant:leftover, kiwiAccountKey:account};
-  const context = vm.createContext({location:{hostname,protocol:'https:',search}, URLSearchParams,
+  const context = vm.createContext({location:{hostname,protocol:'https:',search,pathname:'/kiwi-serveur.html'}, URLSearchParams,
     localStorage:{getItem:k=>entries[k] ?? null}, console:{warn(){},error(){}},
     document:{addEventListener(){},querySelectorAll(){return [];}}, addEventListener(){},
     KiwiMe:session ? {} : null, KiwiApiBase:{native}});
@@ -32,28 +32,21 @@ for (const account of [null, 'account-a']) {
   vm.runInContext(old, context);
   const before = {real:context.svReal(), merchant:context.svMerchant(), pairing:JSON.stringify(context.svPaired())};
   vm.runInContext(current, context);
-  if (context.svReal() !== context.KiwiEnv.isReal()) {
-    if (forced === '0') failures.add('forced-real');
-    if (session) failures.add('signed-in');
-    if (native && account) failures.add('native-account');
-    if (hostname === '0.0.0.0') failures.add('local-origin');
-    if (pairing?.includes('"merchant"') && paired !== '1') failures.add('stale-pairing');
-    if (leftover || employee || search) failures.add('routing-without-session');
-  }
   assert.equal(context.svMerchant(), before.merchant, 'merchant routing preserved');
   assert.equal(JSON.stringify(context.svPaired()), before.pairing, 'pairing projection preserved');
-  if (before.real !== context.svReal()) {
-    differences++;
-    // Exhaustive, named exceptions: shared local-origin semantics, real sessions,
-    // forced real mode, native account, or stale routing keys lacking a real gate.
-    const local = hostname !== 'shop.example';
-    const validPair = paired === '1' && pairing?.includes('"merchant"');
-    const expected = !local || forced === '0' || session || validPair || (native && !!account);
-    assert.equal(context.svReal(), !!expected);
-    assert.ok(hostname === '0.0.0.0' || forced === '0' || session || validPair || (native && account) || leftover || employee || search || pairing?.includes('"merchant"'));
-  }
+  const sharedReal = hostname === 'shop.example' || forced === '0' || session
+    || (paired === '1' && pairing?.includes('"merchant"')) || (native && !!account);
+  assert.equal(context.svReal(), !!(before.real || sharedReal),
+    'legacy employee entry must stay real, alongside shared session safety');
+  if (before.real !== context.svReal()) differences++;
+  // Employee routing must not switch other local surfaces into real mode.
+  context.location.pathname = '/dashboard.html';
+  assert.equal(context.KiwiEnv.isReal(), !!sharedReal, 'entry hints stay employee-scoped');
+  context.location.pathname = '/kiwi-serveur.html';
+  context.KiwiMe = {};
+  assert.equal(context.svReal(), true, 'late authenticated session stays real');
   count++;
 }
-assert.equal([...failures].sort().join(','), '', 'serveur follows shared gate in every gap category');
+
 assert.ok(differences > 0);
-console.log(`✓ serveur identity: ${count} generated states, ${differences} documented gate corrections; merchant/pairing equivalent`);
+console.log(`✓ serveur identity: ${count} generated states, ${differences} shared safety additions; legacy entries and merchant/pairing equivalent`);
