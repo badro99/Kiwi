@@ -1729,6 +1729,7 @@ section('Whole-project regressions');
     'tickets-mcp-auth-test.mjs',
     'tickets-workflow-browser-test.mjs',
     'operator-followups-browser-test.mjs',
+    'console-dossier-keyboard-browser-test.mjs',
     'auth-properties-test.mjs',
     'employee-properties-test.mjs',
     'employee-split-test.mjs',
