@@ -7,6 +7,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 function eager(html) {
+  // Les preuves historiques comparent le calendrier différé, pas le mode ESM.
+  // L'import statique du propriétaire de file précède désormais ce même corps.
+  html = html.replace(/<script type="module" defer src="assets\/live-link\.js(\?v=\d+)"><\/script>/,
+    '<script defer src="assets/live-link.js$1"></script>');
   const source = read('assets/pages/dashboard-startup.js');
   let tags = '';
   vm.runInNewContext(source, { document: { readyState: 'loading', write(value) { tags += value; } } });

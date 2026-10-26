@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 const source = fs.readFileSync(new URL('../_headers', import.meta.url), 'utf8');
 const rules = []; let rule;
 for (const line of source.split('\n')) {

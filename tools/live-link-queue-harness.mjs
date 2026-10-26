@@ -60,7 +60,7 @@ export async function harness(f){
   Object.assign(c,{console,window,document,localStorage,location:{search:'',hostname:'kiwi.test'},navigator:{get onLine(){return s.online;}},Date:Clock,URLSearchParams,URL,AbortController,Uint8Array,crypto:window.crypto,structuredClone,CustomEvent:function(type,init){this.type=type;this.detail=init?.detail;},setTimeout:(fn,ms=0)=>{const id=++s.id;s.timers.set(id,{fn,ms,at:s.now+ms,epoch});return id;},clearTimeout:id=>s.timers.delete(id),setInterval:()=>0,clearInterval(){},fetch:request});
   window.window=window;
   if(indexed){window.Dexie=Dexie;run(read('assets/offline-db.js'),c);}
-  const source=once('live-link',()=>read('assets/live-link.js').replace('  window.KiwiLiveLink = window.KiwiLive;','  window.KiwiLiveLink = window.KiwiLive; window.__queue={initOutbox,qRead,qWrite,accumulateFeed,bridgeToStore,applyVoids};'));
+  const source=once('live-link',()=>coreTestSource.live(path.join(ROOT,'assets/live-link.js')).replace('  window.KiwiLiveLink = window.KiwiLive;','  window.KiwiLiveLink = window.KiwiLive; window.__queue={initOutbox,accumulateFeed,bridgeToStore,applyVoids};'));
   run(source,c,{filename:'assets/live-link.js'});installStore(c);
   run(read('assets/retail-sale-hold.js'),c);run(once('pos-sale',()=>read('assets/pos-sale.js').replace('  window.KiwiPosSale = {','  window.__posHold={heldRead,heldWrite}; window.KiwiPosSale = {')),c);
   c.HELD_SALES_PREFIX='kiwi-caisse-held-sales:';c.heldSalesCache=null;c.journal=[];c.shiftOpenedAt=new Clock();c.shiftMerchant=s.active;c.currentMerchantSlug=()=>s.active;c.paintHeldSales=()=>{};c.persistShift=()=>localStorage.setItem('test:journal',JSON.stringify(c.journal));

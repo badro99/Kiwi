@@ -62,6 +62,7 @@ function setup(options = {}) {
   const start = venues.indexOf('  const salesSubs = new Set();'), end = venues.indexOf('  function salesTotals(', start);
   vm.runInContext("const TRANSIENT_IDS = ['scoped']; const currentVenue = 'scoped'; const slugOf = () => 'trim-fixture';\n" + venues.slice(start, end) +
     "\nwindow.KiwiSales = { scope: id => SALES_KEY(id).replace(/^kiwiSales:/, ''), list: salesList, trimWrite(id,s,r) { if (!salesWrite(id,s) || !refundsWrite(id,r)) throw Error('write'); } }; window.KiwiRefunds = { list: refundsList };", c);
+  vm.runInContext(read('assets/live-link/queue-store.js'), c);
   vm.runInContext(history, c);
   const trimBody = venues.match(/    trimWrite\(id, sales, refunds, scope\) \{([\s\S]*?)\n    \},/)[1];
   vm.runInContext('window.KiwiSales.trimWrite = function(id,sales,refunds,scope) {' + trimBody + '\n}', c);

@@ -3,7 +3,9 @@
  * transaction/lease/replay behavior is exercised by the two browser fixtures;
  * this gate prevents a later HTML or service-worker edit from silently
  * disconnecting that tested engine from one of Kiwi's three operational apps. */
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

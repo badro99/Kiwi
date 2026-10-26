@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import { storeSubscriptionPending, tenantFor } from '../functions/api/_private.js';
 import { makeSession } from '../functions/auth/_lib.js';
 

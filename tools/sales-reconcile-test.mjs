@@ -19,6 +19,7 @@ function make(pages, { marker = false, source = live, cached = [], realStore = m
     storage.setItem('kiwiSalesCoverage:custom-santos', String(coverage));
     h.window.KiwiOffline.list = async () => [];
   }
+  vm.runInContext(read('assets/live-link/queue-store.js'), h.context);
   vm.runInContext(history, h.context);
   return h;
 }
@@ -178,6 +179,7 @@ delete noMarkerPages[0].limit; delete noMarkerPages[1].limit;
   const start = venues.indexOf('  const salesSubs = new Set();'), end = venues.indexOf('  function salesTotals(', start);
   vm.runInContext("const TRANSIENT_IDS = ['scoped']; const currentVenue = 'scoped'; let slug = 'santos-store'; const slugOf = () => slug;\n" +
     venues.slice(start, end) + "\nwindow.KiwiSales = { scope: id => SALES_KEY(id).replace(/^kiwiSales:/, '') };", c);
+  vm.runInContext(read('assets/live-link/queue-store.js'), c);
   vm.runInContext(history, c);
   values.set('kiwiSalesCoverage:scoped', '111');
   assert.equal(c.window.KiwiSalesSummary.coverageStart('scoped'), null);

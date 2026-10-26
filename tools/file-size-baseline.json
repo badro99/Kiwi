@@ -17,7 +17,8 @@
     "kiwi-serveur.html": 960,
     "assets/caisse-app.js": 3954,
     "assets/serveur-app.js": 3951,
-    "assets/restaurant-menu-workspace.js": 1354
+    "assets/restaurant-menu-workspace.js": 1354,
+    "assets/live-link.js": 1519
   },
   "scripts": {
     "dashboard.html": 122,

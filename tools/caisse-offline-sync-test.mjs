@@ -13,7 +13,9 @@
  * 6. assets/live-link.js flush(true) returns a Promise, clears stuck flushing lock, and queueStatus() has lastStatus/lastError.
  * 7. assets/caisse-pwa.js provides visual feedback during sync and toasts on outcome.
  */
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';

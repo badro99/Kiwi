@@ -26,6 +26,9 @@
   'use strict';
   function create(ctx) {
     const live = () => window.KiwiLive;
+    // Même propriétaire que Live Link, après sa validation habituelle du ticket.
+    const enqueue = payload => window.KiwiSaleQueue
+      ? window.KiwiSaleQueue.enqueue(payload) : live().postSale(payload);
     const sales = () => (ctx && typeof ctx.sales === 'function' ? ctx.sales() : []) || [];
     /* Faux seulement si l'écriture du journal a ÉCHOUÉ (persist() renvoie
        false ou lève) : un persist() sans valeur de retour reste un succès. */
@@ -63,7 +66,7 @@
         if (!s || !s.pendingPost) return;
         if (s.voided) { delete s.pendingPost; changed = true; return; }
         let res = null;
-        try { res = Live.postSale(Object.assign({}, s.pendingPost, { time: new Date(s.pendingPost.time || s.at) })); } catch (_) {}
+        try { res = enqueue(Object.assign({}, s.pendingPost, { time: new Date(s.pendingPost.time || s.at) })); } catch (_) {}
         if (res && res.ok === true && res.queued === true) { delete s.pendingPost; sent++; changed = true; }
       });
       if (changed) persist();
@@ -72,7 +75,7 @@
     function post(sale, payload) {
       replay();
       let res = null;
-      try { res = live().postSale(payload); } catch (_) { res = { ok: false, reason: 'post-threw' }; }
+      try { res = enqueue(payload); } catch (_) { res = { ok: false, reason: 'post-threw' }; }
       hold(sale, payload, res);
       return res;
     }

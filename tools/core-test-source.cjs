@@ -44,7 +44,11 @@ function venuesSource(file) {
   }
   return core;
 }
+function isLiveLink(file) {
+  return path.resolve(file instanceof URL ? fileURLToPath(file) : String(file)) === path.join(root, 'assets/live-link.js');
+}
 function source(file) {
+  if (isLiveLink(file)) return require('./live-link-queue-source.cjs').source(file);
   if (isVenues(file)) return venuesSource(file);
   if (isInteractive(file)) return interactiveSource(file);
   const map = metadata(file);
@@ -87,11 +91,12 @@ function source(file) {
   return core;
 }
 function readFileSync(file, options) {
-  if (!isVenues(file) && !isInteractive(file) && !metadata(file)) return fs.readFileSync(file, options);
+  if (!isLiveLink(file) && !isVenues(file) && !isInteractive(file) && !metadata(file)) return fs.readFileSync(file, options);
   const text = source(file);
   return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
 }
 function live(file) {
+  if (isLiveLink(file)) return fs.readFileSync(path.join(root, 'assets/live-link/queue-store.js'), 'utf8') + '\n' + fs.readFileSync(file, 'utf8').replace(/^import \{\} from '\.\/live-link\/queue-store\.js\?v=1';\n/, '');
   if (isVenues(file)) return ['data', 'helpers'].map(name => fs.readFileSync(path.join(root, 'assets/venues', name + '.js'), 'utf8')).join('\n') + '\n' + fs.readFileSync(file, 'utf8');
   const map = metadata(file);
   return (map ? fs.readFileSync(path.join(root, map.part), 'utf8') + '\n' : '') + fs.readFileSync(file, 'utf8');

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';

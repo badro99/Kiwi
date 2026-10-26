@@ -6,7 +6,7 @@ const caisseTestSource = require('./caisse-test-source.cjs');
 /* Regression contract for the two confirmation boundaries:
  *  1. paying a fresh caisse takeaway dispatches it before clearing the cart;
  *  2. an OrderPro ticket prints only after the server accepts it. */
-const fs = require('fs');
+const fs = require('./core-test-source.cjs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));

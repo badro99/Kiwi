@@ -2,7 +2,9 @@
 import caisseTestSource from './caisse-test-source.cjs';
 /* Regression: a local takeaway split token must never be treated as a D1 visit. */
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import nativeFs from 'node:fs';
+import queueCoreSource from './core-test-source.cjs';
+const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import vm from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost as salePost } from '../functions/api/sale.js';
