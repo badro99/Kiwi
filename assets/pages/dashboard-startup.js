@@ -5,7 +5,7 @@
   'use strict';
   const scripts = [
     'assets/pages-pro-office.js?v=2',
-    'assets/pages-pro.js?v=2182',
+    'assets/pages-pro.js?v=2183',
     'assets/pages-pro-boutique.js?v=4',
     'assets/pages-pro-spa-starter.js?v=2',
     'assets/restaurant-units.js?v=1',
@@ -22,7 +22,7 @@
     'assets/restaurant-menu/styles.js?v=1',
     'assets/restaurant-menu-workspace.js?v=123',
     'assets/sold-insights.js?v=14',
-    'assets/boutique-promos-dashboard.js?v=20',
+    'assets/boutique-promos-dashboard.js?v=21',
     'assets/day-report.js?v=32',
     'assets/z-reconciliation.js?v=25',
     'assets/month-report.js?v=16',
@@ -34,7 +34,7 @@
     'assets/planning-core.js?v=8',
     'assets/team/catalog.js?v=2',
     'assets/team.js?v=320',
-    'assets/team/profile-ui.js?v=1',
+    'assets/team/profile-ui.js?v=2',
     'assets/team-hours.js?v=6',
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=8',
