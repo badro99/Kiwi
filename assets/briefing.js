@@ -31,6 +31,7 @@
       waitingLabel: 'Signaux bloqués', waiting: 'Aucun',
       demo: 'Le point du matin s’active sur un établissement réel connecté. La démonstration ne fabrique aucune alerte.',
       unsaved: 'Non enregistré sur cet appareil : le stockage du navigateur est plein ou bloqué. Kiwi l’envoie au serveur dès que la connexion le permet.',
+      cloudFailed: 'Copie cloud non confirmée. Réessayer',
       handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer',
       wToday: 'Aujourd’hui', wTomorrow: 'Demain', wSource: 'Météo MET Norway',
       wKinds: { clear: 'beau temps', cloudy: 'nuageux', rain: 'pluie', storm: 'orage', snow: 'neige', fog: 'brouillard' }
@@ -43,6 +44,7 @@
       waitingLabel: 'Blocked signals', waiting: 'None',
       demo: 'Morning briefing activates for a connected real venue. The demo never fabricates alerts.',
       unsaved: 'Not saved on this device: browser storage is full or blocked. Kiwi sends it to the server as soon as the connection allows.',
+      cloudFailed: 'Cloud copy not confirmed. Retry',
       handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose',
       wToday: 'Today', wTomorrow: 'Tomorrow', wSource: 'Weather by MET Norway',
       wKinds: { clear: 'fair', cloudy: 'cloudy', rain: 'rain', storm: 'thunderstorm', snow: 'snow', fog: 'fog' }
@@ -55,6 +57,7 @@
       waitingLabel: 'إشارات محجوبة', waiting: 'لا شيء',
       demo: 'يتفعل ملخص الصباح في محل حقيقي متصل. العرض التجريبي لا يصنع تنبيهات.',
       unsaved: 'لم يُحفظ على هذا الجهاز: تخزين المتصفح ممتلئ أو محظور. يرسله Kiwi إلى الخادم فور توفر الاتصال.',
+      cloudFailed: 'لم يتم تأكيد النسخة السحابية. أعد المحاولة',
       handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح',
       wToday: 'اليوم', wTomorrow: 'غدا', wSource: 'الطقس من MET Norway',
       wKinds: { clear: 'صحو', cloudy: 'غائم', rain: 'مطر', storm: 'عاصفة رعدية', snow: 'ثلج', fog: 'ضباب' }
@@ -166,7 +169,10 @@
     render();
   }
   function unsavedNote(t) {
-    return localKept ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>';
+    var failed = false;
+    try { failed = !!localStorage.getItem(localKey() + ':cloud-save'); } catch (_) {}
+    var note = failed ? '<button type="button" class="briefing-unsaved" data-briefing-cloud-retry>' + esc(t.cloudFailed) + '</button>' : '';
+    return note + (localKept ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>');
   }
   function mergeDocs(a, b) {
     return safeDoc({ days: safeDoc(a).days.concat(safeDoc(b).days) });
@@ -704,7 +710,21 @@
   }
   function save() {
     writeLocal(doc);
-    if (cloud) Promise.resolve(cloud.bind()).then(function () { cloud.push(0); }).catch(function () {});
+    var key = localKey() + ':cloud-save', handle = cloud, venue = slug();
+    var id = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
+    try { localStorage.setItem(key, id); } catch (_) {}
+    render();
+    return Promise.resolve().then(function () {
+      if (!handle) throw new Error('cloud-unavailable');
+      return handle.bind();
+    }).then(function () {
+      if (venue !== slug()) throw new Error('venue-changed');
+      return handle.pushNow();
+    }).then(function (result) {
+      if (!result || !result.ok) throw new Error('cloud-unconfirmed');
+      try { if (localStorage.getItem(key) === id) localStorage.removeItem(key); } catch (_) {}
+      render(); return { ok: true, id: id };
+    }).catch(function () { render(); return { ok: false, id: id, error: 'cloud-unconfirmed' }; });
   }
   function compute(rules) {
     if (!isReal() || !slug()) return null;
@@ -887,6 +907,10 @@
       onPulled: function () { compute(); }
     });
   }
+  function retryCloud() { return save(); }
+  document.addEventListener('click', function (event) {
+    if (event.target.closest && event.target.closest('[data-briefing-cloud-retry]')) retryCloud();
+  });
   function boot() {
     installStyle();
     if (!isReal()) return;
@@ -917,7 +941,7 @@
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
     durable: function () { return localKept; },
-    _test: { unsavedNote: unsavedNote, copy: function () { return tr(); }, businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
+    _test: { save: save, retryCloud: retryCloud, unsavedNote: unsavedNote, copy: function () { return tr(); }, businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

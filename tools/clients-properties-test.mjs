@@ -183,13 +183,18 @@ await strict('CL-2 full notes and tag unions remain readable beyond one profile 
  ok(await request(post,{id:'duplicate',notes:'Queued note',tags:['queued']}));
  const after=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture');assert.deepEqual(after.tags,[...first,...second,'queued']);assert.ok(after.notes.includes('B'.repeat(1000)));assert.ok(after.notes.includes('Queued note'));
 }));
-await strict('CL-2 repeated syncs into a merged profile stay bounded (8000 note characters, 100 tags) and keep the oldest text',fc.asyncProperty(fc.constant(null),async()=>{
+await strict('CL-2 repeated syncs preserve every merged note and tag beyond former ceilings',fc.asyncProperty(fc.constant(null),async()=>{
  await reset();ok(await request(post,{id:'client-fixture',notes:'A'.repeat(1000),tags:['keep']},'owner'));ok(await request(post,{id:'duplicate',notes:'B',tags:['dup']},'owner'));
  ok(await request(post,{merge:{from:'duplicate',to:'client-fixture'}},'owner'));
  for(let i=0;i<20;i++)ok(await request(post,{id:'duplicate',notes:String.fromCharCode(67+i).repeat(1000),tags:Array.from({length:20},(_,j)=>'sync-'+i+'-'+j)}));
  const row=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='client-fixture');
- assert.ok(row.notes.length<=8000,'notes capped, got '+row.notes.length);assert.ok(row.tags.length<=100,'tags capped, got '+row.tags.length);
+ assert.equal(row.notes.length,21022,'every note retained');assert.equal(row.tags.length,402,'every unique tag retained');
+ for(let i=0;i<20;i++){assert.ok(row.notes.includes(String.fromCharCode(67+i).repeat(1000)));for(let j=0;j<20;j++)assert.ok(row.tags.includes('sync-'+i+'-'+j));}
  assert.ok(row.notes.startsWith('A'.repeat(1000)),'existing notes kept first');assert.ok(row.tags.includes('keep'),'existing tags kept first');
+ ok(await request(post,{id:'survivor',notes:'Tail',tags:['tail']},'owner'));
+ ok(await request(post,{merge:{from:'client-fixture',to:'survivor'}},'owner'));
+ const survivor=ok(await request(get,{},'owner','GET')).clients.find(c=>c.id==='survivor');
+ assert.equal(survivor.notes,'Tail\n'+row.notes);assert.deepEqual(survivor.tags,['tail',...row.tags]);
 }));
 await strict('CL-2 directory confirmation names the survivor in FR EN AR and sends only after confirmation',fc.asyncProperty(fc.constantFrom('fr','en','ar'),async language=>{
  const modals=[],calls=[],buttons={};let click;

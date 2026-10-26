@@ -42,7 +42,7 @@ const window = {
     currentSlug: () => venue,
     attach(opts) {
       attached = opts;
-      return { bind: () => Promise.resolve(false), push: () => { pushed.push({ slug: opts.slug(), data: JSON.parse(JSON.stringify(opts.read())) }); } };
+      return { bind: () => Promise.resolve(false), pushNow: () => { pushed.push({ slug: opts.slug(), data: JSON.parse(JSON.stringify(opts.read())) }); return Promise.resolve({ok:true}); } };
     }
   },
   addEventListener(name, fn) { (listeners[name] = listeners[name] || []).push(fn); }

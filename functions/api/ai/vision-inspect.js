@@ -36,7 +36,9 @@ Ta mission :
 
 2. Extraire toutes les données structurées pertinentes en Dirhams marocains (MAD).
 
-3. Rédiger une explication claire et bienveillante en français (ou arabe si le texte est en arabe), avec un résumé des montants et des détails clés.
+3. Rédiger une explication claire et bienveillante dans la langue UI sélectionnée, indépendamment de la langue du document, avec un résumé des montants et des détails clés.
+
+Signale incomplete:true si une page, ligne ou portion est illisible, omise ou coupée. Ne limite jamais les lignes extraites.
 
 4. Proposer les ACTIONS 1-CLIC les plus adaptées pour le commerçant.
 
@@ -46,6 +48,7 @@ Réponds UNIQUEMENT avec un objet JSON valide structuré exactement ainsi :
   "categoryLabel": "Nom lisible du type (ex: Facture fournisseur)",
   "title": "Titre court descriptif (ex: Facture Centrale Danone · 1 450 MAD)",
   "confidence": 0.95,
+  "incomplete": false,
   "summary": "Explication claire en 2-4 phrases de ce qui a été détecté et calculé.",
   "entities": {
     "supplier": "Nom du fournisseur ou bénéficiaire",
@@ -73,7 +76,7 @@ Réponds UNIQUEMENT avec un objet JSON valide structuré exactement ainsi :
   ]
 }`;
 
-async function runVisionInspect(env, dataUrl, promptText) {
+async function runVisionInspect(env, dataUrl, promptText, locale) {
   const userContent = [
     { type: 'text', text: promptText && promptText.trim() ? promptText.trim() : "Analyse cette photo ou ce document et dis-moi directement ce qu'il faut faire." },
     { type: 'image_url', image_url: { url: dataUrl } },
@@ -81,7 +84,7 @@ async function runVisionInspect(env, dataUrl, promptText) {
 
   const payload = {
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: SYSTEM_PROMPT + '\nSelected UI language: ' + ({ en: 'English', ar: 'Arabic', fr: 'French' }[locale] || 'French') + '. Write categoryLabel, title, summary, notes and action labels only in this language. Preserve original proper names.' },
       { role: 'user', content: userContent },
     ],
     max_tokens: MAX_TOKENS,
@@ -99,7 +102,7 @@ export function validateVisionData(raw) {
   const validTypes = new Set(['invoice', 'expense_receipt', 'restaurant_menu', 'floorplan', 'tpe_slip', 'boutique_product', 'pressing_garment', 'general_document']);
   const safeDocType = validTypes.has(docType) ? docType : 'general_document';
 
-  const title = String(raw.title || 'Document analysé').slice(0, 140);
+  const title = String(raw.title || '').slice(0, 140);
   const summary = String(raw.summary || '').slice(0, 1000);
   const categoryLabel = String(raw.categoryLabel || 'Document').slice(0, 80);
   /* Une confiance de 0 est une réponse (« je ne suis pas sûr du tout »), pas une
@@ -110,14 +113,23 @@ export function validateVisionData(raw) {
     ? null : Math.min(1, Math.max(0, rawConfidence));
 
   const entities = typeof raw.entities === 'object' && raw.entities ? raw.entities : {};
-  const totalMad = Math.max(0, Math.round((Number(entities.totalMad) || 0) * 100) / 100);
+  const issues = [];
+  function number(value, fallback = 0, money = false) {
+    if (value == null) return fallback;
+    const n = !['number', 'string'].includes(typeof value) || String(value).trim() === '' ? NaN : Number(value);
+    if (!Number.isFinite(n) || n < 0 || n > Number.MAX_SAFE_INTEGER / 100) {
+      issues.push('invalid-number'); return fallback;
+    }
+    return money ? Math.round(n * 100) / 100 : n;
+  }
+  const totalMad = number(entities.totalMad, 0, true);
 
   const items = Array.isArray(entities.items)
-    ? entities.items.slice(0, 60).map(it => ({
+    ? entities.items.map(it => ({
         name: String(it?.name || '').slice(0, 120),
-        qty: Math.max(0, Number(it?.qty) || 1),
-        unitPrice: Math.max(0, Math.round((Number(it?.unitPrice) || 0) * 100) / 100),
-        total: Math.max(0, Math.round((Number(it?.total) || 0) * 100) / 100),
+        qty: number(it?.qty, 1),
+        unitPrice: number(it?.unitPrice, 0, true),
+        total: number(it?.total, 0, true),
         category: String(it?.category || '').slice(0, 60),
       })).filter(it => it.name.length > 0)
     : [];
@@ -126,12 +138,32 @@ export function validateVisionData(raw) {
     ? raw.suggestedActions.slice(0, 4).map((act, idx) => ({
         id: String(act?.id || `act-${idx}`).slice(0, 40),
         type: String(act?.type || 'generic-action').slice(0, 40),
-        label: String(act?.label || 'Exécuter').slice(0, 80),
+        label: String(act?.label || '').slice(0, 80),
         primary: !!act?.primary,
       }))
     : [];
 
+  const taxMad = number(entities.taxMad, 0, true);
+  const tpeTotal = number(entities.tpeTotal, 0, true);
+  const tpeCount = Math.round(number(entities.tpeCount));
+  const tablesCount = Math.round(number(entities.tablesCount));
+  if (raw.incomplete || raw.reviewNeeded) issues.push('incomplete');
+  const clipped = (value, limit) => String(value || '').length > limit;
+  if (clipped(raw.title, 140) || clipped(raw.summary, 1000) || clipped(raw.categoryLabel, 80)
+    || clipped(entities.supplier, 120) || clipped(entities.date, 20) || clipped(entities.invoiceNumber, 60)
+    || clipped(entities.category, 40) || clipped(entities.paymentMethod, 30) || clipped(entities.notes, 300)
+    || (Array.isArray(entities.items) && entities.items.some(it => clipped(it?.name, 120) || clipped(it?.category, 60)))
+    || (raw.suggestedActions || []).length > 4
+    || (Array.isArray(raw.suggestedActions) && raw.suggestedActions.some(act => clipped(act?.id, 40) || clipped(act?.type, 40) || clipped(act?.label, 80)))) issues.push('truncated-fields');
+  if (Array.isArray(entities.items) && items.length !== entities.items.length) issues.push('unreadable-lines');
+  if (['invoice', 'expense_receipt'].includes(safeDocType) && items.length && entities.totalMad != null) {
+    const sum = Math.round(items.reduce((n, it) => n + it.total, 0) * 100);
+    const total = Math.round(totalMad * 100);
+    if (Math.abs(sum - total) > 1 && Math.abs(sum + Math.round(taxMad * 100) - total) > 1) issues.push('total-mismatch');
+  }
   return {
+    ...(issues.length ? { reviewNeeded: true } : {}),
+    reviewReasons: [...new Set(issues)],
     docType: safeDocType,
     categoryLabel,
     title,
@@ -142,16 +174,16 @@ export function validateVisionData(raw) {
       date: String(entities.date || '').slice(0, 20),
       invoiceNumber: String(entities.invoiceNumber || '').slice(0, 60),
       totalMad,
-      taxMad: Math.max(0, Math.round((Number(entities.taxMad) || 0) * 100) / 100),
+      taxMad,
       category: String(entities.category || 'divers').slice(0, 40),
       paymentMethod: String(entities.paymentMethod || 'non_specifie').slice(0, 30),
       items,
-      tpeTotal: Math.max(0, Number(entities.tpeTotal) || 0),
-      tpeCount: Math.max(0, Math.round(Number(entities.tpeCount) || 0)),
-      tablesCount: Math.max(0, Math.round(Number(entities.tablesCount) || 0)),
+      tpeTotal,
+      tpeCount,
+      tablesCount,
       notes: String(entities.notes || '').slice(0, 300),
     },
-    suggestedActions,
+    suggestedActions: issues.length ? [] : suggestedActions,
   };
 }
 
@@ -168,7 +200,7 @@ export function interpretVisionOutput(content) {
     if (match) parsed = JSON.parse(match[0]);
   } catch (_) {}
   const validated = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? validateVisionData(parsed) : null;
-  if (validated) return { status: 'parsed', data: validated };
+  if (validated) return { status: validated.reviewNeeded ? 'review-needed' : 'parsed', data: validated };
   return {
     status: 'review-needed',
     data: {
@@ -186,8 +218,8 @@ export function interpretVisionOutput(content) {
 
 /* Un passage complet : le duo vision, puis la lecture ci-dessus. Exporté pour
  * les tests, qui simulent env.AI (aucun modèle réel n'est appelé). */
-export async function inspectImage(env, dataUrl, promptText) {
-  const { result, model } = await runVisionInspect(env, dataUrl, promptText);
+export async function inspectImage(env, dataUrl, promptText, locale) {
+  const { result, model } = await runVisionInspect(env, dataUrl, promptText, locale);
   return { model, ...interpretVisionOutput(aiText(result)) };
 }
 
@@ -210,7 +242,7 @@ export async function onRequestPost(context) {
   if (image.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-large' }, 413);
 
   try {
-    const { data, model, status } = await inspectImage(env, image, b?.prompt);
+    const { data, model, status } = await inspectImage(env, image, b?.prompt, String(b?.locale || 'fr').slice(0, 2));
     return json({ ok: true, status, data, model }, 200, {
       'x-kiwi-ai-model': model,
     });

@@ -1957,6 +1957,7 @@ section('Whole-project regressions');
     'bridge-win7-test.mjs',
     'agent-voice-test.mjs',
     'agent-vision-test.mjs',
+    'wave-o-truth-test.mjs',
     'briefing-test.mjs',
     'briefing-tenant-test.mjs',
     'register-phone-tickets-test.mjs',

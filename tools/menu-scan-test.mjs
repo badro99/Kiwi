@@ -120,7 +120,7 @@ ok(/kind: 'text'/.test(scanSrc) && /kind: 'url'/.test(scanSrc) && /kind: 'image'
 ok(/toDataURL\('image\/jpeg', 0\.85\)/.test(scanSrc) && /MAX_IMG_EDGE/.test(scanSrc), 'les photos sont réduites côté client avant envoi');
 ok(/KiwiCatalogImport\.openMenuWithCsv\(toCsvText\(items\)/.test(scanSrc), 'le résultat AI entre dans la revue d\'import — rien n\'est écrit avant confirmation');
 ok(!/\.addItem\(|\.updateItem\(|\.addCategory\(/.test(scanSrc), 'menu-scan.js n\'écrit JAMAIS dans la carte directement');
-ok(/slice\(0, MAX_FILES\)/.test(scanSrc), 'au plus ' + (scanSrc.match(/MAX_FILES = (\d+)/) || [])[1] + ' fichiers par scan');
+ok(/files.length > MAX_FILES/.test(scanSrc), 'au plus ' + (scanSrc.match(/MAX_FILES = (\d+)/) || [])[1] + ' fichiers par scan');
 
 // ── 8. Câblage : bouton, handler, coquille ───────────────────────────────────
 ok(/data-action="rmw-menu-scan"/.test(wsSrc) && /H\['rmw-menu-scan'\]/.test(wsSrc), 'bouton « Scanner un menu » + handler dans l\'espace restaurant');

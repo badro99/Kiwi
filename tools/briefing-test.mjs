@@ -83,7 +83,7 @@ assert.ok(memory['kiwi:briefing:v1:acc-7:amira-cafe:2026-08-20'], 'empty result 
   events.length = 0;
   B._test.compute([]);
   assert.equal(B.durable(), true, 'the next landed write clears the warning');
-  assert.equal(B._test.unsavedNote(B._test.copy()), '', 'and the card line disappears');
+  assert.ok(!B._test.unsavedNote(B._test.copy()).includes('Non enregistré sur cet appareil'), 'local failure clears independently of cloud status');
   assert.equal(events.length, 1, 'recovery is announced once');
   assert.equal(events[0].detail.durable, true, 'recovery says durable');
   delete window.dispatchEvent;
