@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* « Analyse du menu » · phase 4 : contribution, estimations, « À faire ».
  *
  *   1. Le vocabulaire : la Performance parle de contribution (prix hors TVA
@@ -30,7 +31,7 @@ console.log('■ Analyse du menu · contribution, « À faire », brouillon de r
 
 /* ── 1 · le vocabulaire ── */
 {
-  const src = R('assets/restaurant-menu-workspace.js');
+  const src = menuWorkspaceSource();
   const keys = ['perfSub', 'grossProfitCalc', 'grossProfitPerItem', 'colProfit', 'colMargin', 'marginMissing', 'quadStarHint', 'quadPlowHint', 'quadPuzzleHint', 'quadDogHint', 'ledgerVatBasis', 'completeRecipesForProfit'];
   const vals = (k) => [...src.matchAll(new RegExp(`^\\s+${k}: '([^']*)'`, 'gm'))].map((m) => m[1]);
   const bad = [];
@@ -100,7 +101,7 @@ async function boot({ features = { simple_food_cost: true }, sheets = null, stat
   loadCost(ctx, { vat: { mode: 'rate', rate: 10, included: true }, costs: { items: { the: { cost: 3 } }, recipes: {}, ingredients: [], charges: [], targets: {} } });
   vm.runInContext(R('assets/restaurant-units.js'), ctx, { filename: 'restaurant-units.js' });
   vm.runInContext(R('assets/simple-food-cost.js'), ctx, { filename: 'simple-food-cost.js' });
-  vm.runInContext(R('assets/restaurant-menu-workspace.js'), ctx, { filename: 'restaurant-menu-workspace.js' });
+  vm.runInContext(menuWorkspaceSource(), ctx, { filename: 'restaurant-menu-workspace.js' });
   vm.runInContext(R('assets/finance.js'), ctx, { filename: 'finance.js' });
 
   const start = DR.dayBounds(DR.today()).from + 1000;

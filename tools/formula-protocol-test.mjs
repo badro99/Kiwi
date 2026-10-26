@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -960,7 +961,7 @@ ok(recordResult.skipped === 1, 'record() increments skipped counter for kind: fo
 
 
 // ── 8. Backoffice & Restaurant Menu Workspace Formule Builder ───────────────
-const rmwSource = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+const rmwSource = menuWorkspaceSource();
 
 // A. Test restaurant-menu-workspace.js row() formula badge (the Menu page lists dishes as rows)
 const rmwCardMatch = rmwSource.match(/function row\(x\)\{[\s\S]*?\n  \}/);

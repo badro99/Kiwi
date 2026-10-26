@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 /* Performance et Heures de pointe vivent dans « Analyse du menu » : la page les rend par KiwiRestaurantMenuWorkspace.analysis, les mêmes panneaux qu'avant. */
 'use strict';
 
@@ -46,7 +47,7 @@ window.document = document;
 vm.createContext(context);
 /* Le vrai moteur de coûts : Performance et Heures lisent KiwiCost.ledger. */
 require('./kiwi-cost-harness').loadCost(context);
-new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
+new vm.Script(menuWorkspaceSource()).runInContext(context);
 root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 
 let html = root.innerHTML;

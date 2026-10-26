@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 const serveurTestSource = require('./serveur-test-source.cjs');
 /* ═════════════════════════════════════════════════════════════════════════════
  * Kiwi · GARDE-FOU de la carte du restaurant / café
@@ -420,7 +421,7 @@ ok(/const m = menuLineFind\(x => \(id && x\.id === id\) \|\| \(name && x\.name =
   'caisse · la catégorie d’une ligne se résout sur la carte entière');
 ok(/\(\(typeof svFormulaItems !== 'undefined' && svFormulaItems\.length\) \? svFormulaItems : menuItems\)\.find\(mm => mm\.id === l\.id\)/.test(serveur),
   'serveur · le poste d’une commande se résout sur la carte entière');
-const rmwSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+const rmwSrc = menuWorkspaceSource();
 const rmwAsk = rmwSrc.slice(rmwSrc.indexOf('function ask('), rmwSrc.indexOf('function ask(') + 700);
 ok(!/data-archive/.test(rmwAsk), 'workspace · ask() ne référence plus x (ReferenceError sur chaque invite)');
 /* La forme d'hier exigeait que « });const isFormulaCb » suive immédiatement le

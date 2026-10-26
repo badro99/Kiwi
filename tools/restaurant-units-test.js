@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 const dashboardDependencies = require('./dashboard-dependencies.cjs');
 'use strict';
 const stockTestSource = require('./stock-test-source.cjs');
@@ -9,7 +10,7 @@ const assert = require('assert');
 
 const source = fs.readFileSync('assets/restaurant-units.js', 'utf8');
 const recipesSource = fs.readFileSync('assets/restaurant-recipes.js', 'utf8');
-const workspaceSource = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
+const workspaceSource = menuWorkspaceSource();
 const stockSource = stockTestSource();
 const dashboard = dashboardDependencies(fs.readFileSync('dashboard.html', 'utf8'));
 

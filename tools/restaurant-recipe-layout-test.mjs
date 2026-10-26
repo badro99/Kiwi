@@ -1,3 +1,4 @@
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ import fs from 'node:fs';
  * translucide sur une page floutée, des cartes dans des cartes, « 32.00 MAD »
  * en français, des libellés d'unité tronqués (« Gramme (... »), un suffixe
  * « min » dessiné par-dessus le champ. Ce test garde la nouvelle forme. */
-const js = fs.readFileSync(new URL('../assets/restaurant-menu-workspace.js', import.meta.url), 'utf8');
+const js = menuWorkspaceSource();
 const dashboard = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const fn = (name) => { const a = js.indexOf(`  function ${name}(`); assert.ok(a > 0, name + ' exists'); const b = js.indexOf('\n  function ', a + 10); return js.slice(a, b); };

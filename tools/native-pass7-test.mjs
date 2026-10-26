@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 // Pass 7: guards for measured iPhone launch, locale and layout regressions.
 import assert from 'node:assert/strict';
@@ -41,11 +42,11 @@ ok(css.includes('.vexel-revenue-rail>.vexel-rail-card{height:auto!important'), '
 ok(css.includes('.kpi-m[data-kpi="ratio"] .v{direction:ltr!important;unicode-bidi:isolate'), 'card and cash retain their order together with the percent unit in RTL');
 ok(read('assets/i18n.js').includes('format: formatNumber'), 'KiwiNumber accepts precision options for display without changing fiscal output');
 for (const file of ['team','restaurant-menu-workspace','account','simple','clients-book','operations-ui','briefing','pages-pro']) {
-  const src = file === 'pages-pro' ? pagesProSource() : read('assets/'+file+'.js');
+  const src = file === 'pages-pro' ? pagesProSource() : (file === 'restaurant-menu-workspace' ? menuWorkspaceSource() : read('assets/'+file+'.js'));
   ok(src.includes('window.KiwiNumber?.format') || src.includes('window.KiwiNumber?.number'), file+' routes display figures through KiwiNumber');
 }
 ok(read("assets/dateRange.js").includes("i < xs.length && Number.isFinite(xs[i])"), "partial chart series cannot abort locale rendering on a stale tick");
-ok(read("assets/restaurant-menu-workspace.js").includes("if(!d.cats.length){openCategory(null);return;}"), "empty-menu New item opens section creation instead of a dead button");
+ok(menuWorkspaceSource().includes("if(!d.cats.length){openCategory(null);return;}"), "empty-menu New item opens section creation instead of a dead button");
 // Execute the shared formatter itself in each supported locale.
 const i18nSource = read('assets/i18n.js');
 const numberStart = i18nSource.indexOf('  const numberLocale =');

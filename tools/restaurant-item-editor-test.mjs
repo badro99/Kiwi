@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* L'éditeur d'article de la carte restaurant (owner, 2026-10-11 : « u gotta ace it »).
  *
@@ -14,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
-const js = read('assets/restaurant-menu-workspace.js');
+const js = menuWorkspaceSource();
 const ia = read('assets/interactive.js');
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n++; };

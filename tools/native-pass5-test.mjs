@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 import stockTestSource from './stock-test-source.cjs';
 // iPhone pass 5 (tickets #0107 to #0114): one source-level guard per fix, so a
@@ -21,7 +22,7 @@ const dateRange = read('assets/dateRange.js');
 const dashboard = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');
 const pages = read('assets/pages.js');
 const pagesPro = pagesProSource();
-const menu = read('assets/restaurant-menu-workspace.js');
+const menu = menuWorkspaceSource();
 const team = teamTestSource();
 const stock = stockTestSource();
 

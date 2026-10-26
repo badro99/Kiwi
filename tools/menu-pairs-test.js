@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 /* « Souvent pris ensemble » (Analyse du menu, assets/restaurant-menu-workspace.js).
  *
  * Les comptes sont refaits ici, ticket par ticket, sans le code testé :
@@ -86,7 +87,7 @@ window.window = window;
 window.document = document;
 vm.createContext(context);
 require('./kiwi-cost-harness').loadCost(context);
-new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
+new vm.Script(menuWorkspaceSource()).runInContext(context);
 const A = window.KiwiRestaurantMenuWorkspace.analysis;
 
 /* Le compte indépendant : tickets uniques, dans la fenêtre, non annulés,

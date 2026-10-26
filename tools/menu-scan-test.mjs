@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Menu scan test — « Scanner un menu » : route AI, garde SSRF,
@@ -29,7 +30,7 @@ console.log('■ Menu scan test (tools/menu-scan-test.mjs)');
 const routeSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-import.js'), 'utf8');
 const scanSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-scan.js'), 'utf8');
 const importSrc = fs.readFileSync(path.join(ROOT, 'assets/catalog-import.js'), 'utf8');
-const wsSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+const wsSrc = menuWorkspaceSource();
 const html = dashboardDependencies(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 const quotaSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');

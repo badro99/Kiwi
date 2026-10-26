@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import stockTestSource from './stock-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
@@ -218,7 +219,7 @@ recipes.recomputeForStock('tomato', 'venue-1');
 assert.equal(menuDoc.items[0].nutritionComplete, false);
 assert.equal(menuDoc.items[0].nutrition, undefined, 'une cascade incomplète efface un ancien chiffre publiable');
 
-const workspaceSource = fs.readFileSync(new URL('../assets/restaurant-menu-workspace.js', import.meta.url), 'utf8');
+const workspaceSource = menuWorkspaceSource();
 assert.match(workspaceSource, /nutritionStatus\(x\)/, 'le workspace affiche un indicateur nutrition par plat');
 assert.match(workspaceSource, /data-hide-nutrition/, 'le masquage par plat reste disponible dans la recette');
 assert.match(workspaceSource, /features\?\.menuNutrition!==false/, 'le workspace copie la règle absent = actif');

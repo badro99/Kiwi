@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* ═════════════════════════════════════════════════════════════════════════
  * MÉTIERS DE BOUCHE · CE QUE LA CAISSE VEND, CE QUE LE TABLEAU DE BORD MONTRE
  *
@@ -47,7 +48,7 @@ const FS = read('assets/food-trade-settings.js');
 const DR = read('assets/dateRange.js');
 const STORE = read('functions/api/store.js');
 const DASH = dashboardDependencies.eager(read('dashboard.html'));
-const MW = read('assets/restaurant-menu-workspace.js');
+const MW = menuWorkspaceSource();
 
 function grab(src, start) {
   const i = src.indexOf(start);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* « Analyse du menu » · phase 0 : un seul moteur de marge.
  *
  * Avant, la vue d'ensemble (KiwiCost.coverage) et la Performance des plats
@@ -151,7 +152,7 @@ function bare(opts) {
      commerciales) ; la Performance dans KiwiDayReport. Mêmes journées. */
   win.KiwiDateRange = { bounds: (p) => { const d = p === 'trenteJours' ? 30 : p === 'septJours' ? 7 : 1; return [DR.dayBounds(DR.shiftDay(DR.today(), -(d - 1))).from, Infinity]; } };
   loadCost(ctx, { vat: { mode: 'rate', rate: 10, included: true }, costs: { items: { the: { cost: 3 } }, recipes: {}, ingredients: [], charges: [], targets: {} } });
-  vm.runInContext(R('assets/restaurant-menu-workspace.js'), ctx, { filename: 'restaurant-menu-workspace.js' });
+  vm.runInContext(menuWorkspaceSource(), ctx, { filename: 'restaurant-menu-workspace.js' });
   vm.runInContext(R('assets/finance.js'), ctx, { filename: 'finance.js' });
 
   /* Aujourd'hui (journée commerciale) : dans « 7 jours » de la vue d'ensemble
