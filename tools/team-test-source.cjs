@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const FILES = ['assets/team.js', 'assets/team/profile-ui.js', 'assets/team-hours.js'];
+const FILES = ['assets/team.js', 'assets/team/profile-ui.js', 'assets/team-hours.js', 'assets/team/catalog.js'];
 module.exports = function teamSource() {
   let source = fs.readFileSync(path.join(root, FILES[0]), 'utf8');
   const part = fs.readFileSync(path.join(root, FILES[1]), 'utf8');
@@ -12,6 +12,15 @@ module.exports = function teamSource() {
     const start = '  /* team-part:' + segment.name + ' */\n';
     const end = '  /* /team-part:' + segment.name + ' */';
     const body = part.slice(part.indexOf(start) + start.length, part.indexOf(end));
+    source = source.replace(segment.relay, () => body);
+  }
+  /* Second stage: the role catalogue now lives in assets/team/catalog.js. */
+  const stage2 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/team-catalog/split.json'), 'utf8'));
+  for (const segment of stage2.segments) {
+    const file = fs.readFileSync(path.join(root, segment.file), 'utf8');
+    const start = '  /* team-part:' + segment.name + ' */\n';
+    const end = '  /* /team-part:' + segment.name + ' */';
+    const body = file.slice(file.indexOf(start) + start.length, file.indexOf(end));
     source = source.replace(segment.relay, () => body);
   }
   return source + '\n' + fs.readFileSync(path.join(root, FILES[2]), 'utf8');

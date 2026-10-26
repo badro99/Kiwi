@@ -2,12 +2,6 @@
   "version": 1,
   "issues": [
     {
-      "suite": "books-money-properties-test.mjs",
-      "label": "BP-1",
-      "kind": "decision",
-      "severity": "display"
-    },
-    {
       "suite": "customer-balance-properties-test.mjs",
       "label": "CB-6",
       "kind": "decision",

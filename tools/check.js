@@ -695,6 +695,7 @@ for (const test of [
   'team-roster-cap-test.mjs',
   'team-properties-test.mjs',
   'team-split-test.mjs',
+  'team-catalog-split-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
   /* TypeScript reads functions/ as plain JS (checkJs): type errors per file pinned, only ever down. */
@@ -2138,6 +2139,7 @@ section('Whole-project regressions');
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',
+    'intake-storage-fault-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
     'legacy-scan-test.mjs',

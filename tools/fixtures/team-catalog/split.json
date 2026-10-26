@@ -1,0 +1,13 @@
+{
+  "sha256": "57a355fb7668f8908be4803ffba65f82e143e69dba46ab28ce5d7a78401d9d5e",
+  "segments": [
+    {
+      "name": "catalog",
+      "file": "assets/team/catalog.js",
+      "start": 2260,
+      "end": 12726,
+      "sha256": "7bdc16a23d5c9b294982611ce84c98056089607a78b1c5a6e21f8a526c3db8d5",
+      "relay": "  /* team-part:catalog */\n  const { CATALOG, unionCatalog, catalogFor, FN_DEPT, deptForFunction, tradeKey } = window.KiwiTeamCatalog;\n  /* /team-part:catalog */\n\n"
+    }
+  ]
+}

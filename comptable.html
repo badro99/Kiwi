@@ -222,7 +222,7 @@
       emptyTitle: 'Aucune donnée ce mois-ci', emptySub: 'Aucune vente, facture ou session de caisse n\'est enregistrée sur cette période. Choisissez un autre mois.',
       total: 'Total net encaissé', count: 'Ventes', countSub: 'tickets', refunds: 'Remboursements', voids: 'Ventes annulées', voidsSub: 'hors total', tips: 'Pourboires (hors total)',
       byMethod: 'Par mode de paiement', byMethodSub: 'Net des remboursements. Un ticket réglé en plusieurs modes est réparti.',
-      daily: 'Journal par jour', dailySub: 'Jour d\'activité : de {h}:00 à {h}:00 le lendemain.', day: 'Jour', tickets: 'Tickets', gross: 'Brut', net: 'Net', total2: 'Total',
+      daily: 'Journal par jour', dailySub: 'Jour d\'activité : de {h}:00 à {h}:00 le lendemain.', day: 'Jour', tickets: 'Tickets', gross: 'Brut', discounts: 'Remises', net: 'Net', total2: 'Total',
       adjust: 'Remboursements et annulations', refundsList: 'Remboursements', voidsList: 'Ventes annulées (sorties des totaux)', date: 'Date', time: 'Heure', ref: 'Pièce', method: 'Mode', amount: 'Montant', reason: 'Motif', none: 'Aucun',
       invoices: 'Factures émises', invoicesSub: 'Montants en dirhams, tels qu\'imprimés sur la facture.', number: 'N°', customer: 'Client', ice: 'ICE', ht: 'HT', tva: 'TVA', ttc: 'TTC', rate: 'Taux',
       vat: 'TVA d\'après les factures émises', vatNote: 'Les tickets de caisse ne portent pas de taux de TVA : seule la TVA des factures est indiquée.',
@@ -248,7 +248,7 @@
       emptyTitle: 'No data this month', emptySub: 'No sale, invoice or cash session is recorded for this period. Pick another month.',
       total: 'Net takings', count: 'Sales', countSub: 'tickets', refunds: 'Refunds', voids: 'Voided sales', voidsSub: 'not in totals', tips: 'Tips (not in total)',
       byMethod: 'By payment method', byMethodSub: 'Net of refunds. A ticket paid with several methods is split.',
-      daily: 'Daily journal', dailySub: 'Business day: from {h}:00 to {h}:00 the next day.', day: 'Day', tickets: 'Tickets', gross: 'Gross', net: 'Net', total2: 'Total',
+      daily: 'Daily journal', dailySub: 'Business day: from {h}:00 to {h}:00 the next day.', day: 'Day', tickets: 'Tickets', gross: 'Gross', discounts: 'Discounts', net: 'Net', total2: 'Total',
       adjust: 'Refunds and voids', refundsList: 'Refunds', voidsList: 'Voided sales (excluded from totals)', date: 'Date', time: 'Time', ref: 'Receipt', method: 'Method', amount: 'Amount', reason: 'Reason', none: 'None',
       invoices: 'Issued invoices', invoicesSub: 'Amounts in dirhams, as printed on the invoice.', number: 'No.', customer: 'Customer', ice: 'ICE', ht: 'Excl. VAT', tva: 'VAT', ttc: 'Incl. VAT', rate: 'Rate',
       vat: 'VAT from issued invoices', vatNote: 'Till receipts carry no VAT rate: only the VAT on invoices is shown.',
@@ -274,7 +274,7 @@
       emptyTitle: 'لا توجد بيانات لهذا الشهر', emptySub: 'لا توجد مبيعات أو فواتير أو جلسات صندوق مسجّلة في هذه الفترة. اختر شهراً آخر.',
       total: 'صافي المقبوضات', count: 'المبيعات', countSub: 'تذكرة', refunds: 'المبالغ المستردة', voids: 'مبيعات ملغاة', voidsSub: 'خارج المجموع', tips: 'الإكراميات (خارج المجموع)',
       byMethod: 'حسب وسيلة الدفع', byMethodSub: 'بعد خصم المبالغ المستردة. التذكرة المدفوعة بعدة وسائل تُوزَّع عليها.',
-      daily: 'اليومية حسب اليوم', dailySub: 'يوم العمل: من الساعة {h}:00 إلى الساعة {h}:00 من اليوم التالي.', day: 'اليوم', tickets: 'التذاكر', gross: 'الإجمالي', net: 'الصافي', total2: 'المجموع',
+      daily: 'اليومية حسب اليوم', dailySub: 'يوم العمل: من الساعة {h}:00 إلى الساعة {h}:00 من اليوم التالي.', day: 'اليوم', tickets: 'التذاكر', gross: 'الإجمالي', discounts: 'التخفيضات', net: 'الصافي', total2: 'المجموع',
       adjust: 'المبالغ المستردة والمبيعات الملغاة', refundsList: 'المبالغ المستردة', voidsList: 'مبيعات ملغاة (مستبعدة من المجاميع)', date: 'التاريخ', time: 'الوقت', ref: 'المرجع', method: 'الوسيلة', amount: 'المبلغ', reason: 'السبب', none: 'لا شيء',
       invoices: 'الفواتير الصادرة', invoicesSub: 'المبالغ بالدرهم كما هي مطبوعة على الفاتورة.', number: 'رقم', customer: 'الزبون', ice: 'ICE', ht: 'دون ضريبة', tva: 'الضريبة', ttc: 'بالضريبة', rate: 'النسبة',
       vat: 'الضريبة حسب الفواتير الصادرة', vatNote: 'لا تحمل تذاكر الصندوق نسبة ضريبة: تُعرض فقط ضريبة الفواتير.',
@@ -400,13 +400,13 @@
     var s = state.data.sales, el = $('cp-sec-days');
     if (s.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('daily')) + '</h2>' + sectionNotice(s); return; }
     var keys = methodKeys(s.summary), h = state.data.range.cutoffHour;
-    var head = [{ t: t('day') }, { t: t('tickets'), n: 1 }, { t: t('gross'), n: 1 }, { t: t('refunds'), n: 1 }, { t: t('net'), n: 1 }].concat(keys.map(function (k) { return { t: methodLabel(k), n: 1 }; }));
+    var head = [{ t: t('day') }, { t: t('tickets'), n: 1 }, { t: t('gross'), n: 1 }, { t: t('discounts'), n: 1 }, { t: t('refunds'), n: 1 }, { t: t('net'), n: 1 }].concat(keys.map(function (k) { return { t: methodLabel(k), n: 1 }; }));
     var rows = s.days.map(function (d) {
       var zero = !d.count && !d.refundsCents && !d.netCents;
-      return tr([td(dateCell(d.day)), td('<span class="num">' + fmtInt(d.count) + '</span>', 1), td(money(d.grossCents), 1), td(money(-d.refundsCents), 1), td(money(d.netCents), 1)]
+      return tr([td(dateCell(d.day)), td('<span class="num">' + fmtInt(d.count) + '</span>', 1), td(money(d.grossCents), 1), td(money(-(d.discountsCents || 0)), 1), td(money(-d.refundsCents), 1), td(money(d.netCents), 1)]
         .concat(keys.map(function (k) { return td(money(d.byMethod[k] || 0), 1); })), zero ? 'zero' : '');
     });
-    var foot = tr([td(esc(t('total2'))), td('<span class="num">' + fmtInt(s.summary.count) + '</span>', 1), td(money(s.summary.grossCents), 1), td(money(-s.summary.refundsCents), 1), td(money(s.summary.netCents), 1)]
+    var foot = tr([td(esc(t('total2'))), td('<span class="num">' + fmtInt(s.summary.count) + '</span>', 1), td(money(s.summary.grossCents), 1), td(money(-(s.summary.discountsCents || 0)), 1), td(money(-s.summary.refundsCents), 1), td(money(s.summary.netCents), 1)]
       .concat(keys.map(function (k) { return td(money(s.summary.byMethod[k]), 1); })));
     el.innerHTML = '<h2>' + esc(t('daily')) + '</h2><p class="sub">' + esc(t('dailySub', { h: String(h).padStart(2, '0') })) + '</p>' + table(head, rows, foot);
   }

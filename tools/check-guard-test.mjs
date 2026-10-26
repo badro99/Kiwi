@@ -364,5 +364,16 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
   });
 }
 
+{
+  ok('the parallel prefetch skips tests marked network-only (they need credentials or the live site)', () => {
+    const named = guard.namedTests(path.join(ROOT, 'tools/check.js')).map((f) => path.basename(f));
+    for (const f of ['supabase-tenancy-test.mjs', 'seo-live-test.mjs']) {
+      assert.ok(readFileSync(path.join(ROOT, 'tools', f), 'utf8').includes('kiwi:network-only'), f + ' carries the marker');
+      assert.ok(!named.includes(f), f + ' is not prefetched');
+    }
+    assert.ok(named.includes('check-guard-test.mjs'), 'ordinary suites are still prefetched');
+  });
+}
+
 console.log(`\ncheck-guard: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
