@@ -26,6 +26,7 @@
           venueCount: S.venueCount, city: S.city, teamSize: S.teamSize, teamGiven: !!S.teamGiven,
           goals: Array.isArray(S.goals) ? S.goals.slice(0, goals.length) : [],
           dailyGoal: S.dailyGoal,
+          ...(S.device ? { device: S.device } : {}),
           pins: (Array.isArray(S.pins) ? S.pins : []).slice(0, 20).map((p) => ({
             role: p && p.role === 'manager' ? 'manager' : (p && p.role === 'owner' ? 'owner' : 'staff'),
             name: String((p && p.name) || '').slice(0, 20), code: '',
@@ -50,6 +51,7 @@
         S.teamGiven = !!d.teamGiven;
         S.goals = Array.isArray(d.goals) ? d.goals.filter((g) => goals.includes(g)).slice(0, goals.length) : [];
         S.dailyGoal = String(d.dailyGoal || '').slice(0, 24);
+        if (['till', 'kds', 'team', 'dashboard'].includes(d.device)) S.device = d.device;
         if (Array.isArray(d.pins) && d.pins.length) {
           S.pins = d.pins.slice(0, 20).map((p, i) => ({
             role: i === 0 ? 'owner' : (p && p.role === 'manager' ? 'manager' : 'staff'),
@@ -110,5 +112,30 @@
     storage.del(KEY);
     return vid;
   }
-  return { createDraft, submit, DRAFT_NOTE };
+  // Saved answers only: no storage, DOM, clock or credentials in this projection.
+  function viewModel(S, types) {
+    const type = types.find((t) => t.id === S.typeId);
+    const restaurant = !!type && type.base === 'restaurant';
+    const steps = [
+      { id: 'kind', done: !!type },
+      { id: 'goals', done: Array.isArray(S.goals) && S.goals.length > 0 },
+      { id: 'code', done: !!(S.pins && S.pins[0] && /^\d{4}$/.test(S.pins[0].code)) },
+      { id: 'device', done: ['till', 'kds', 'team', 'dashboard'].includes(S.device) },
+    ];
+    const recap = [
+      { id: 'business', label: 'Établissement', value: S.bizName || 'Non renseigné' },
+      { id: 'plan', label: 'Offre', value: S.plan || 'Non renseignée' },
+      { id: 'team', label: 'Équipe', value: S.teamGiven ? String(S.teamSize) + (S.teamSize === 1 ? ' personne' : ' personnes') : 'Non renseignée' },
+      { id: restaurant ? 'menu' : 'catalogue', label: restaurant ? 'Menu' : 'Catalogue', value: 'À configurer après la création' },
+      { id: 'devices', label: 'Appareil', value: ({ till: 'Caisse', kds: 'Écran cuisine', team: 'Appareil équipe', dashboard: 'Tableau de bord' })[S.device] || 'Non renseigné' },
+    ];
+    return { steps, recap, nextAction: (steps.find((step) => !step.done) || { id: 'finish' }).id };
+  }
+  function presentation(model, esc) {
+    const labels = { kind: 'Activité', goals: 'Objectifs', code: 'Code personnel', device: 'Appareil' };
+    return '<div data-onboarding-summary data-next="' + esc(model.nextAction) + '">' +
+      model.steps.map((step) => '<p data-setup-step="' + step.id + '" data-done="' + step.done + '">' + labels[step.id] + ' · ' + (step.done ? 'Terminé' : 'À compléter') + '</p>').join('') +
+      model.recap.map((line) => '<div class="r" data-recap="' + line.id + '"><span>' + line.label + '</span><b>' + esc(line.value) + '</b></div>').join('') + '<p>Action suivante : ' + (labels[model.nextAction] || 'Créer mon espace') + '</p></div>';
+  }
+  return { createDraft, submit, DRAFT_NOTE, viewModel, presentation };
 });

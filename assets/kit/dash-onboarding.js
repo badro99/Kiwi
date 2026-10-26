@@ -26,7 +26,8 @@
   var t = function (k, a) { return String(K.t(k, a)).replace(/[⁦-⁩]/g, ''); };
   var esc = K.esc;
 
-  var STEPS = ['kind', 'goals', 'code', 'device'];
+  var STEPS = [];
+  function setupPresentation() { return api.presentation(); }
   var TOTAL = 5, FIRST = 2;                    /* A1 was step 1 */
   var COMMON = 6;
   var GOAL_KEY = { sales: 'ob.goal.sales', time: 'ob.goal.time', theft: 'ob.goal.theft', margins: 'ob.goal.margins', stock: 'ob.goal.stock', loyalty: 'ob.goal.loyalty', remote: 'ob.goal.remote', multi: 'ob.goal.multi' };
@@ -134,7 +135,7 @@
   /* ── 5 · this device, then Start using Kiwi ── */
   function deviceStep() {
     frame('<h1 class="k-heading k-ob__h">' + esc(t('ob.device')) + '</h1><k-list data-l="device" label="' + esc(t('ob.device')) + '"></k-list>' +
-      '<p class="k-foot k-ink2 k-ob__warn" data-warn></p>',
+      '<p class="k-foot k-ink2 k-ob__warn" data-warn></p>' + setupPresentation(),
       primary(t('ob.finish'), !!device));
     $('[data-l="device"]').rows = DEVICES.map(function (d) { return { id: d, title: t('ob.device.' + d), radio: true, selected: device === d }; });
     warn();
@@ -195,6 +196,10 @@
     if (d.action === 'k.list.select' && w === 'kinds') { pickKind(d.id); return; }
     if (d.action === 'k.list.select' && w === 'device') {
       device = d.id;
+      S().device = device;
+      save();
+      var summary = $('[data-onboarding-summary]');
+      if (summary) summary.outerHTML = setupPresentation();
       $('[data-l="device"]').rows = DEVICES.map(function (x) { return { id: x, title: t('ob.device.' + x), radio: true, selected: device === x }; });
       warn();
       enable(true);
@@ -217,7 +222,8 @@
 
   function open(kit) {
     if (!kit || !kit.state) return false;
-    api = kit; at = 0; device = ''; others = false;
+    api = kit; STEPS = api.viewModel().steps.map(function (step) { return step.id; });
+    at = 0; device = S().device || ''; others = false;
     try { if (root.__kiwiLock && root.__kiwiLock.hide) root.__kiwiLock.hide(); } catch (_) {}
     doc.documentElement.style.overflow = 'hidden';
     /* A div: the dashboard's bare section rule (§20.8) would pad a section. */

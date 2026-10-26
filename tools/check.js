@@ -2028,6 +2028,7 @@ section('Whole-project regressions');
     'booking-lens-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'onboarding-data-test.mjs',
+    'onboarding-alignment-properties-test.mjs',
     'onboarding-team-recap-test.mjs',
     'onboarding-business-type-test.mjs',
     'menu-truth-test.mjs',
