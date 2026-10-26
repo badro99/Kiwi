@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { reconstructEconomat } from './economat-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -83,7 +84,7 @@ await check('inventory fulfilment resolves to the substitute identity', () => {
 });
 await check('the route posts substitute stock and persists the trusted snapshot', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const source = fs.readFileSync(path.join(root, 'functions/api/inventory/internal-requests.js'), 'utf8');
+  const source = reconstructEconomat();
   assert.match(source, /const itemId = fulfilmentItemId\(after\)/);
   assert.match(source, /substitute_conversion_snapshot = \?/);
   assert.match(source, /context\.actor\.id, context\.actor\.name, JSON\.stringify\(commandData\)/);

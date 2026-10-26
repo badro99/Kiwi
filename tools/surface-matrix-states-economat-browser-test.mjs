@@ -7,6 +7,7 @@
 // the reservation, the substitution and the custody transfer are the server's
 // own rules, read back from its ledger after each step.
 import assert from 'node:assert/strict';
+import { LOCALES } from './test-locales.mjs';
 import { randomInt } from 'node:crypto';
 import { harness, realPage, sleep, verify } from './surface-matrix-lib.mjs';
 import { createHotelRequestHarness } from './fixtures/hotel-request-db.mjs';
@@ -206,7 +207,7 @@ async function requestFlow(t, cell, locale, viewport) {
   assert.equal(await page.$('.kiwi-backdrop.in'), null, 'the closed request sheet came back after a refresh');
 }
 try {
-  await h.S.run('economat · fr · phone', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('economat · fr · phone', async (t) => {
     // coverage: surface=caisse-hotel locale=fr viewport=phone
     const cell = await open(t, 'fr', 'phone');
     await check(t, cell, 'stock', 'fr', 'phone');
@@ -219,7 +220,7 @@ try {
     await check(t, { page:cell.page, region:'.kiwi-modal' }, 'receipt', 'fr', 'phone');
     await requestFlow(t, cell, 'fr', 'phone');
   });
-  await h.S.run('economat · fr · tablet', async (t) => {
+  if (LOCALES.includes('fr')) await h.S.run('economat · fr · tablet', async (t) => {
     // coverage: surface=caisse-hotel locale=fr viewport=tablet
     const cell = await open(t, 'fr', 'tablet');
     await check(t, cell, 'stock', 'fr', 'tablet');
@@ -232,7 +233,7 @@ try {
     await check(t, { page:cell.page, region:'.kiwi-modal' }, 'receipt', 'fr', 'tablet');
     await requestFlow(t, cell, 'fr', 'tablet');
   });
-  await h.S.run('economat · en · phone', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('economat · en · phone', async (t) => {
     // coverage: surface=caisse-hotel locale=en viewport=phone
     const cell = await open(t, 'en', 'phone');
     await check(t, cell, 'stock', 'en', 'phone');
@@ -245,7 +246,7 @@ try {
     await check(t, { page:cell.page, region:'.kiwi-modal' }, 'receipt', 'en', 'phone');
     await requestFlow(t, cell, 'en', 'phone');
   });
-  await h.S.run('economat · en · tablet', async (t) => {
+  if (LOCALES.includes('en')) await h.S.run('economat · en · tablet', async (t) => {
     // coverage: surface=caisse-hotel locale=en viewport=tablet
     const cell = await open(t, 'en', 'tablet');
     await check(t, cell, 'stock', 'en', 'tablet');
@@ -258,7 +259,7 @@ try {
     await check(t, { page:cell.page, region:'.kiwi-modal' }, 'receipt', 'en', 'tablet');
     await requestFlow(t, cell, 'en', 'tablet');
   });
-  await h.S.run('economat · ar · phone', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('economat · ar · phone', async (t) => {
     // coverage: surface=caisse-hotel locale=ar viewport=phone
     const cell = await open(t, 'ar', 'phone');
     await check(t, cell, 'stock', 'ar', 'phone');
@@ -271,7 +272,7 @@ try {
     await check(t, { page:cell.page, region:'.kiwi-modal' }, 'receipt', 'ar', 'phone');
     await requestFlow(t, cell, 'ar', 'phone');
   });
-  await h.S.run('economat · ar · tablet', async (t) => {
+  if (LOCALES.includes('ar')) await h.S.run('economat · ar · tablet', async (t) => {
     // coverage: surface=caisse-hotel locale=ar viewport=tablet
     const cell = await open(t, 'ar', 'tablet');
     await check(t, cell, 'stock', 'ar', 'tablet');
