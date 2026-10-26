@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import mergedPart from './merged-source.cjs'; // loyalty-reserve.js vit dans retail-sale-hold.js depuis le 22 octobre 2026
 const read = p => maisonSource(readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
+const ticketOwner = vm.runInNewContext(readFileSync('assets/pos-boutique/ticket-owner.js', 'utf8').replace('export { ticketOwner };', 'ticketOwner;'));
+let selectedOwner;
 const book = 'reserve-test', key = 'kiwi:clients-redemptions:v1:' + book;
 async function scenario(mode, status = 200, code = '', pendingPurchase = false) {
   const storage = new Map([['kiwiLive', '1'], ['kiwiLiveMerchant', book]]), calls = [], toasts = [];
@@ -31,7 +33,7 @@ async function scenario(mode, status = 200, code = '', pendingPurchase = false) 
   vm.runInContext(read('assets/clients-store.js'), context);
   vm.runInContext(mergedPart('assets/retail-sale-hold.js', 'assets/loyalty-reserve.js'), context);
   const ticket = { reward: { clientId: 'c1', label: '20 MAD' } };
-  const kit = window.KiwiLoyaltyReserve.create({ ticket, client: { id: 'c1' }, isDemo: mode === 'demo',
+  const kit = window.KiwiLoyaltyReserve.create({ ticket, ticketOwner: selectedOwner, client: { id: 'c1' }, isDemo: mode === 'demo',
     render: () => { total = ticket.reward ? 80 : 100; }, close: () => { closed = true; } });
   const pending = kit.confirm();
   await new Promise(setImmediate);
@@ -60,14 +62,16 @@ async function scenario(mode, status = 200, code = '', pendingPurchase = false) 
     if (['offline','demo','disabled','unresolved'].includes(mode)) assert.equal(ticket.reward.reservation, undefined);
   }
 }
+for (selectedOwner of [undefined, ticketOwner]) {
 for (const mode of ['online','timeout','offline','demo','network','disabled','unresolved']) await scenario(mode);
 for (const [status, code] of [[409,'reward-not-ready'],[409,'loyalty-off'],[409,'ref-conflict'],[400,'client-and-ref-required'],[404,'client-not-found']]) await scenario('online',status,code);
 for (const status of [401,403,408,429,500,503]) await scenario('online',status,'reward-not-ready');
 await scenario('online', 409, 'reward-not-ready', true);
+}
 for (const name of ['boutique','maison']) {
   const source = process.env.KIWI_RESERVE_OLD ? readFileSync(`/tmp/kiwi-c31-${name}-before.js`, 'utf8') : read(`assets/pos-${name}.js`);
   const gate = source.match(/beforePaid: (\(\) => window.KiwiLoyaltyReserve[^\n]+),/);
-  const beforePaid = gate && vm.runInNewContext(gate[1], { window: { KiwiLoyaltyReserve: { create: () => ({ confirm: async () => false }) } }, IS_DEMO: false, t: {}, c: {}, renderTicket() {}, state: {}, closeVeil() {} });
+  const beforePaid = gate && vm.runInNewContext(gate[1], { window: { KiwiLoyaltyReserve: { create: () => ({ confirm: async () => false }) } }, IS_DEMO: false, ticketOwner, t: {}, c: {}, renderTicket() {}, state: {}, closeVeil() {} });
   const paymentProceeds = beforePaid ? await beforePaid() : true;
   assert.equal(paymentProceeds, false, `${name}: final refusal must prevent sale commitment`);
   assert.match(source, /opts.beforePaid && !await opts.beforePaid\(\)/);

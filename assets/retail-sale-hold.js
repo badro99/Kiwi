@@ -104,7 +104,9 @@
       if (!clients.reserveRedemption || !clients.redemptionRef) return true;
       const book = clients.bookId();
       // Keep the intent on the reward across retries, including a timed out request.
-      const intent = reward.reservation || (reward.reservation = { ref: clients.redemptionRef(c.id) });
+      const intent = reward.reservation || (ctx.ticketOwner
+        ? ctx.ticketOwner.reserveReward(t, clients.redemptionRef(c.id))
+        : (reward.reservation = { ref: clients.redemptionRef(c.id) }));
       if (intent.accepted) return true;
       let timer;
       const result = await Promise.race([
@@ -112,9 +114,13 @@
         new Promise(resolve => { timer = setTimeout(() => resolve(null), 3000); }),
       ]).catch(() => null);
       clearTimeout(timer);
-      if (result && result.accepted) intent.accepted = true;
+      if (result && result.accepted) {
+        if (ctx.ticketOwner) ctx.ticketOwner.acceptReward(intent);
+        else intent.accepted = true;
+      }
       if (!result || !result.refused) return true;
-      delete t.reward;
+      if (ctx.ticketOwner) ctx.ticketOwner.removeReward(t);
+      else delete t.reward;
       if (ctx.close) ctx.close();
       if (ctx.render) ctx.render();
       if (window.KiwiCaisseToast) window.KiwiCaisseToast('Récompense indisponible. Confirmez le paiement au plein tarif.', 6000, 'warn');

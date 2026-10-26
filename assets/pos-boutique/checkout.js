@@ -1,6 +1,7 @@
 import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=109';
 import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=15';
 import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=15';
+import { ticketOwner } from './ticket-owner.js?v=1';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -250,8 +251,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
        sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
        la colonne motif répétait la colonne type et le registre ne disait plus
        pourquoi la pièce était revenue. */
-    state.exchange = { saleId: ret.saleId, idx, qty: 1, motif: ret.motif || '' };
-    state.ret = null;
+    ticketOwner.startReturn(state, { saleId: ret.saleId, idx, qty: 1, motif: ret.motif || '' });
     switchView('vente');
     toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
   }

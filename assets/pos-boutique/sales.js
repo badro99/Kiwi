@@ -1,6 +1,7 @@
 import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=109';
 import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=15';
 import { offerRegister } from './inventory.js?v=15';
+import { ticketOwner } from './ticket-owner.js?v=1';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -464,12 +465,12 @@ import { offerRegister } from './inventory.js?v=15';
     const rwBtn = $('#bq-reward-toggle', el);
     if (rwBtn) rwBtn.onclick = () => {
       if (t.reward && t.reward.clientId === t.client) {
-        t.reward = null;
+        ticketOwner.applyReward(t, null);
         toast('Récompense retirée du ticket');
       } else {
         const rw = clReward(t.client);
         if (!rw || !rw.ready) { toast('Pas encore de récompense pour cette cliente'); return; }
-        t.reward = { clientId: t.client, kind: rw.kind, value: rw.value, label: rw.label };
+        ticketOwner.applyReward(t, { clientId: t.client, kind: rw.kind, value: rw.value, label: rw.label });
         toast('Récompense appliquée', rw.label);
       }
       renderTicket(); icons();
@@ -494,11 +495,10 @@ import { offerRegister } from './inventory.js?v=15';
           return;
         }
         stockAdd(ln.pid, ln.size, -1);
-        ln.qty++;
+        ticketOwner.changeQuantity(t, idx, 1);
       } else {
         stockAdd(ln.pid, ln.size, 1);
-        ln.qty--;
-        if (ln.qty <= 0) t.lines.splice(idx, 1);
+        ticketOwner.changeQuantity(t, idx, -1);
       }
       renderTicket(); renderGrid(); renderBadges(); icons();
     };
@@ -579,9 +579,7 @@ import { offerRegister } from './inventory.js?v=15';
        elles se résoudront au même prix, le meilleur pour la cliente. */
     const pr = promoFor(pid);
     const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
-    const same = state.ticket.lines.find((l) => l.pid === pid && l.size === cfg.size && l.color === cfg.color && l.remise === cfg.remise);
-    if (same) { same.qty += cfg.qty; if (stamp && (!same.promo || stamp.price < same.promo.price)) same.promo = stamp; }
-    else state.ticket.lines.push({ pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp });
+    ticketOwner.addLine(state.ticket, { pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp });
     renderTicket(); renderGrid(); renderBadges(); icons();
     if (!opts || !opts.quiet) toast(`${p.name} · ${cfg.size}, sur le ticket`);
     return true;
@@ -753,7 +751,7 @@ import { offerRegister } from './inventory.js?v=15';
      plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
      On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
   function markRemiseAuth(pct, by, role) {
-    state.ticket.remiseAuth = { pct, by: by || '', role: role || '', at: new Date().toISOString() };
+    ticketOwner.applyDiscount(state.ticket, { pct, by: by || '', role: role || '', at: new Date().toISOString() });
   }
 
   /* Sur une boutique RÉELLE, la remise passe par le vrai code responsable — le
@@ -896,7 +894,7 @@ import { offerRegister } from './inventory.js?v=15';
         b.onclick = () => {
           const c = clById(b.dataset.bqCl);
           if (!c) return;
-          state.ticket.client = c.id;
+          ticketOwner.setCustomer(state.ticket, c.id);
           closeVeil('#bq-client-veil');
           const tt = [c.taille ? 'taille ' + c.taille : '', c.points + ' pts'].filter(Boolean).join(', ');
           toast(`${c.name}${tt ? ' · ' + tt : ''}${clAvoirOf(c) ? ', un avoir actif' : ''}`);
@@ -907,7 +905,7 @@ import { offerRegister } from './inventory.js?v=15';
       if (newBtn) newBtn.onclick = () => { mode = 'create'; render(q); icons(); };
       const guest = $('#bq-cl-guest', el);
       if (guest) guest.onclick = () => {
-        state.ticket.client = 'passage';
+        ticketOwner.setCustomer(state.ticket, 'passage');
         closeVeil('#bq-client-veil');
         renderTicket(); icons();
       };
@@ -927,7 +925,7 @@ import { offerRegister } from './inventory.js?v=15';
           const c = { id: cid, name, phone: tel, points: 0, taille: '', achats: 0, spent: 0, prefs: [], history: [] };
           CLIENTES.unshift(c); CL[cid] = c;
         }
-        state.ticket.client = cid;
+        ticketOwner.setCustomer(state.ticket, cid);
         closeVeil('#bq-client-veil');
         queueIfOffline('Fiche cliente');
         toast(`Fiche créée, ${name}`);
@@ -1049,7 +1047,7 @@ import { offerRegister } from './inventory.js?v=15';
     const avB = $('#bq-fiche-av', el);
     if (avB) avB.onclick = () => { closeVeil('#bq-fiche-veil'); openVoucher(av, { mode: 'view' }); };
     $('#bq-fiche-sell', el).onclick = () => {
-      state.ticket.client = c.id;
+      ticketOwner.setCustomer(state.ticket, c.id);
       closeVeil('#bq-fiche-veil');
       switchView('vente');
       toast(`${firstName(c.name)} au comptoir, taille ${c.taille} pré-sélectionnée`);
