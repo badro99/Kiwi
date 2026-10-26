@@ -63,7 +63,8 @@ export function definitions(source) {
 export function reads(source) {
   const own = definitions(source);
   const found = new Set();
-  for (const m of source.matchAll(NAME)) if (!own.has(m[0])) found.add(m[0]);
+  const locals = new Set([...source.matchAll(/^[ \t]+\/\* GENERATED SHARED (Kiwi\w+) BEGIN \*\//gm)].map(m => m[1]));
+  for (const m of source.matchAll(NAME)) if (!own.has(m[0]) && !locals.has(m[0])) found.add(m[0]);
   return found;
 }
 
@@ -109,6 +110,7 @@ export function inventory(root = ROOT) {
   const d = definitions("window.KiwiA = {};\nwindow.KiwiB = window.KiwiB || {};\nvar KiwiC = 1;\nif (window.KiwiD == null) x();\n  w.KiwiE = { a: 1 };\nroot.KiwiF = Object.assign(root.KiwiF || {}, { b: 2 });\nKiwiG.KiwiH = 1;\nconst p = window.KiwiI ||= {};\nroot.KiwiJ ??= {};\n");
   assert.deepEqual([...d], [['KiwiA', 'own'], ['KiwiB', 'merge'], ['KiwiE', 'own'], ['KiwiF', 'merge'], ['KiwiI', 'merge'], ['KiwiJ', 'merge'], ['KiwiC', 'own']]);
   assert.deepEqual([...reads('window.KiwiA = 1; KiwiZ.go(); window.KiwiY && 1;')].sort(), ['KiwiY', 'KiwiZ']);
+  assert.deepEqual([...reads('  /* GENERATED SHARED KiwiLocal BEGIN */\n  var KiwiLocal = (function () { return {}; })();\n  /* GENERATED SHARED KiwiLocal END */\nKiwiLocal.go(); KiwiMissing.go();')], ['KiwiMissing']);
 }
 
 /* ── the rules on the real tree ────────────────────────────────────────── */

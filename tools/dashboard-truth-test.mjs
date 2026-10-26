@@ -106,7 +106,7 @@ ok('client book: a client never seen at the till has no "last visit"', () => {
 
 ok('loyalty runs only once the merchant chose a programme (store, till, assistant)', () => {
   const CS = read('assets/clients-store.js');
-  assert.ok(/function loyaltyOn\(book\)[\s\S]{0,260}return !!\(c && c\.model && !c\.auto\);/.test(CS), 'an auto default is not a programme');
+  assert.ok(/function loyaltyOn\(book\)[\s\S]{0,260}return KiwiLoyaltyRules\.loyaltyOn\(c\);/.test(CS), 'an auto default is not a programme');
   assert.ok(/if \(!loyaltyOn\(book\)\) \{[\s\S]{0,80}\} else if \(cfg\.model === 'amount'\)/.test(CS), 'recordPurchase accrues nothing without one');
   assert.ok(/if \(!loyaltyOn\(book\)\) return rec;/.test(CS), 'redeem burns nothing without one');
   assert.ok(/if \(KC\.loyaltyOn && !KC\.loyaltyOn\(\)\) return '';/.test(caisseTestSource(read('kiwi-caisse.html'))), 'the till shows no "0/10"');

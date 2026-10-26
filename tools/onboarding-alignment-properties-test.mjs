@@ -1,10 +1,11 @@
+import { onboardingTestSource } from './onboarding-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import data from '../assets/onboarding-data.js';
 const fc = createRequire(new URL('../app/package.json', import.meta.url))('fast-check');
-const legacy = fs.readFileSync('assets/onboarding.js', 'utf8');
+const legacy = onboardingTestSource();
 const kit = fs.readFileSync('assets/kit/dash-onboarding.js', 'utf8');
 function grab(src, name) {
   const start = src.indexOf('function ' + name + '(');

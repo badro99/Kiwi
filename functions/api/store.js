@@ -1,3 +1,4 @@
+import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 import { creditSettlementAlerts, creditRefundEdit, refundCreditBook } from './_credit-book-refund.js';
 import { serviceCapacityConflict } from './_booking-capacity.js';
 // /api/store — les documents PRIVÉS d'un établissement, synchronisés entre
@@ -796,30 +797,29 @@ async function employeeAccessFromTeam(env, team, merchant) {
     if (!member) continue;
     const id = String(member.id || '').trim().slice(0, 96);
     const email = String(member.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
-    const pin = String(member.pinCode || member.password || '').trim();
+    const pin = canonicalCode(member);
     if (!id || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) continue;
     if (seen.has(id)) continue;
     seen.add(id);
     const prior = previousById.get(id);
-    const priorPin = String(prior && (prior.pinCode || prior.password) || '');
+    const priorPin = canonicalCode(prior);
     const priorVersion = Math.max(0, Math.round(Number(prior && prior.authVersion) || 0));
     const revision = await planEmployeeAuth(
       env, merchant, id, pin, priorVersion + (prior && priorPin !== pin ? 1 : 0)
     );
     if (!revision.ok) return null;
     plans.push(revision);
-    access.push({
+    access.push(normalizeMember({
       id,
       firstName: String(member.firstName || '').trim().slice(0, 60),
       lastName: String(member.lastName || '').trim().slice(0, 60),
       email,
       pinCode: pin,
-      password: pin,
       authVersion: revision.version,
       function: String(member.function || '').trim().slice(0, 60),
       department: String(member.department || '').trim().slice(0, 60),
       venueSlug: merchant,
-    });
+    }));
   }
   return { doc: { members: access }, plans };
 }
@@ -1069,6 +1069,7 @@ export async function onRequestPost(context) {
 
   if ('team' === feature) {
     clean.value = keepTeamTombstones(mine, clean.value);
+    if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map(normalizeMember);
     text = JSON.stringify(clean.value);
   }
 

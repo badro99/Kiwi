@@ -1,3 +1,4 @@
+import { movementMilli } from '../_rules-recipe-units.js';
 // /api/inventory/movements — registre de stock append-only, par établissement.
 //
 // GET  ?merchant=slug&since=<cursor>  → mouvements incrémentaux
@@ -54,10 +55,7 @@ function sanitize(raw, now) {
   const id = str(raw && raw.id, 80);
   const itemId = str(raw && (raw.itemId ?? raw.item_id), 80);
   const reason = str(raw && raw.reason, 32).toLowerCase();
-  const qty = finite(raw && (raw.qty ?? raw.quantity));
-  const qtyMilli = raw && raw.qtyMilli != null
-    ? Math.round(Number(raw.qtyMilli))
-    : Math.round((qty == null ? 0 : qty) * 1000);
+  const qtyMilli = movementMilli(raw);
   const cost = finite(raw && (raw.unitCost ?? raw.unit_cost));
   /* Deux écritures du coût, deux lecteurs : `unit_cost_cents` reste pour les
    * lecteurs historiques, `unit_cost_rate` (×1e-4, entier) porte le TAUX —

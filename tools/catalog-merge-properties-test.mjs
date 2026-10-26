@@ -5,8 +5,8 @@
  * paired till, a second till) and on the server. Each device sells, counts,
  * deletes and edits offline, then syncs: pull the server copy, mergeDocs() it
  * into its own, push the result. These properties drive the REAL mergeDocs
- * (assets/boutique-catalog.js) and the REAL server compaction
- * (functions/api/catalog.js) on generated histories and check them against a
+ * browser path and server compaction, both owned by
+ * functions/api/_rules-catalog.js on generated histories and check them against a
  * model of what the shop actually did:
  *
  *   stock = the latest physical count + every sale, return or reception after it
@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import * as rules from '../functions/api/_rules-catalog.js';
 import { __test as server } from '../functions/api/catalog.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -44,6 +45,7 @@ function pocketWindow() {
     'assets/boutique-catalog.js']) {
     new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout', 'fetch', 'CustomEvent', 'navigator', 'self', 'console',
       fs.readFileSync(path.join(ROOT, file), 'utf8'))(win, win.document, win.localStorage, setTimeout, clearTimeout, win.fetch, win.CustomEvent, win.navigator, win, console);
+    if (file === 'assets/boutique-catalog-parts.js') win.testLedger = win.__kiwiBoutiqueCatalogParts.ledger;
   }
   return win;
 }
@@ -212,7 +214,7 @@ function oldShop({ counts, moves }) {
 }
 const plain = (doc) => { const by = {}; for (const v of doc.variants) by[v.id] = { n: v.base, at: v.baseAt }; for (const m of doc.moves) if (by[m.vid] && m.at > by[m.vid].at) by[m.vid].n += m.d; return Object.fromEntries(Object.entries(by).map(([k, s]) => [k, Math.max(0, s.n)]).sort()); };
 
-await strict('a device folding moves older than 45 days into its count shows the same stock, alone and merged with a copy that never folded', fc.property(oldLedgerArb, (l) => {
+await strict('old ledgers retain the same stock, alone and merged with an uncompacted copy', fc.property(oldLedgerArb, (l) => {
   const doc = oldShop(l);
   const folded = merge(doc, { v: 1, categories: [], products: doc.products, variants: [], moves: [], removed: {} });
   assert.deepEqual(stockOf(folded), plain(doc));
@@ -242,6 +244,21 @@ function bigShop({ counts, reserves, tieSlot, extra }) {
   reserves.forEach((r, k) => doc.moves.push({ id: 'rsv-' + k, vid: r.vid, d: -r.qty, at: t0 + 1000 + (r.slot % n) * 100 + 50, why: 'reserve', ref: 'web-' + k }));
   return doc;
 }
+
+await strict('browser vs server merge parity on the same documents', fc.property(oldLedgerArb, oldLedgerArb, (a, b) => {
+  const left = oldShop(a), right = oldShop(b);
+  assert.deepEqual(clone(merge(left, right)), clone(rules.mergeDocs(clone(left), clone(right), Date.now()).doc));
+}));
+
+await strict('browser vs server compaction parity, including reservations and equal timestamps', fc.property(
+  fc.oneof(oldLedgerArb.map(oldShop), bigLedgerArb.map(bigShop)), (doc) => {
+    const win = pocketWindow();
+    const till = win.testLedger({ db: clone(doc) });
+    const actual = till.compact(clone(doc));
+    till.materialize(actual);
+    const expected = server.materialize(server.compactForWrite(clone(doc)));
+    assert.deepEqual(clone(actual), clone(expected));
+  }), 40);
 
 await strict('the server folding an oversized ledger never changes a stock, pending reservations included', fc.property(bigLedgerArb, (l) => {
   const doc = server.sanitize(bigShop(l));

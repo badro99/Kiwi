@@ -28,7 +28,7 @@ entries.forEach(({ base, rev }) => {
 const visited = new Set(), moduleUrls = new Set();
 function moduleClosure(file) {
   if (visited.has(file)) return; visited.add(file);
-  for (const m of read(file).matchAll(/(?:from|import)\s+'(\.\.?\/[^']+\.js\?v=[0-9]+)'/g)) {
+  for (const m of read(file).matchAll(/(?:(?:from|import)\s+|import\s*\(\s*)'(\.\.?\/[^']+\.js\?v=[0-9]+)'/g)) {
     const url = path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1]));
     ok(url + ' is pre-cached', sw.includes("'/" + url + "'"));
     moduleUrls.add('/' + url);
@@ -39,6 +39,8 @@ function moduleClosure(file) {
 entries.forEach(({base}) => moduleClosure('assets/' + base + '.js'));
 // Live Link is a module in every shell: its imports must be precached at the stamp it imports.
 moduleClosure('assets/live-link.js');
+moduleClosure('assets/tickets.js');
+moduleClosure('assets/invoicing.js');
 
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);
 /* « Le fichier est là » ne veut pas dire « l'URL répond ». Pages sert une page
@@ -66,7 +68,12 @@ const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-c
   .map(read).join('\n');
 /* Files a shell script loads only when needed (the iPhone barcode decoder,
    fetched by retail-scan.js when the camera opens) keep their stamp there. */
-const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js'].map(read).join('\n');
+const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js'].map(read).join('\n');
+// Public booking modules share their import URL with the offline shell.
+for (const m of read('assets/booking.js').matchAll(/import\('(\/assets\/booking-[a-z]+\.js\?v=\d+)'\)/g)) {
+  ok(m[1] + ' is pre-cached', shell.includes(m[1]));
+  ok(m[1] + ' exists', onDisk(m[1].split('?')[0].slice(1)));
+}
 // Chaque partie du stock doit exister hors ligne avant la première ouverture.
 for (const m of read('assets/stock.js').matchAll(/'(assets\/stock\/[^']+\.js\?v=\d+)'/g)) {
   ok(m[1] + ' is pre-cached', shell.includes('/' + m[1]));

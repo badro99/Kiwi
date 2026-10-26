@@ -1,9 +1,10 @@
+import { bookingTestSource } from './booking-test-source.mjs';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 const locale = readFileSync(new URL('../assets/i18n.js', import.meta.url), 'utf8');
-const booking = readFileSync(new URL('../assets/booking.js', import.meta.url), 'utf8');
+const booking = bookingTestSource();
 function localeSession(mode) {
   const copy = { dataset: { i18n: 'dash.profile.open' }, innerHTML: 'Mon profil' };
   const attrs = { dataset: { i18nAttr: 'title:dash.profile.open' }, title: 'Mon profil', getAttribute(k) { return this[k]; }, setAttribute(k,v) { this[k]=v; } };

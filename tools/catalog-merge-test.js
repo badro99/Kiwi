@@ -180,7 +180,8 @@ const NOW = Date.now();
     ] };
   const merged = C._merge(d, d);
   eq(merged.variants[0].stock, 0, 'la compaction conserve le zéro réel après survente puis retour');
-  eq(merged.variants[0].base, 0, 'le socle replié reste algébriquement exact');
+  eq(merged.variants[0].base, 1, 'sous le plafond serveur, même un ancien journal conserve son socle');
+  eq(merged.moves.length, 3, 'la règle serveur ne replie pas selon l’âge');
 }
 
 /* Un document minimal, à la forme du vrai. */
@@ -356,7 +357,7 @@ const vr = (stock, stockAt) => ({ id: 'var_1', productId: 'prod_1', size: 'M', s
 
   const m = C._merge(vieux, compte);
   eq(m.variants[0].stock, 50, 'le comptage du jour l\'emporte sur le chiffre de la veille');
-  eq(m.moves.length, 0, 'et les mouvements qu\'il annule ne traînent pas');
+  eq(m.moves.length, 1, 'sous le plafond serveur, un ancien mouvement reste conservé mais ne compte plus');
 
   const apresVente = Object.assign({}, compte, {
     moves: [{ id: 'dev-C-2', vid: 'var_1', d: -4, at: NOW, why: 'vente' }],

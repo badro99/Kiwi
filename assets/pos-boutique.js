@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=21';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=21';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=21';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=24';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=24';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=24';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -1129,29 +1129,177 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
    * plus que le prix affiché au moment où l'article a été scanné, ni plus que
    * celui affiché maintenant. » C'est aussi ce qui rend un retour juste trois
    * jours plus tard : la ligne de vente porte le prix réellement payé. */
+  /* GENERATED SHARED KiwiPromotionPricing BEGIN */
+  /* Copy of functions/api/_rules-promotion-pricing.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiPromotionPricing = (function () {
+    const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    const toMin = (s) => { var m = HHMM.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
+    const money = (v) => { var n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0; }
+    const down = (n) => { return Math.max(0, Math.floor(n * 100 + 1e-6) / 100); }
+    const normalize = (p, surface) => {
+        var kind = ['percent', 'amount', 'fixed'].indexOf(p.kind) >= 0 ? p.kind : 'percent';
+        var value = money(p.value);
+        if (kind === 'percent') value = Math.min(100, Math.round(value));
+        var days = (Array.isArray(p.days) ? p.days : []).map(Number).filter(function (d, i, a) {
+          return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i;
+        }).sort(function (a, b) { return a - b; });
+        var start = HHMM.test(p.start || '') ? p.start : '';
+        var end = HHMM.test(p.end || '') ? p.end : '';
+        if (!start || !end || start === end) { start = ''; end = ''; }
+        return { kind: kind, value: value, days: days.length === 7 ? [] : days, start: start, end: end };
+      }
+    const inWindow = (p, b) => {
+        if (p.days && p.days.length && p.days.indexOf(b.weekday) < 0) return false;
+        var s = toMin(p.start), e = toMin(p.end);
+        if (s == null || e == null) return true;
+        return s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e;
+      }
+    const price = (p, unit, surface) => {
+        var base = money(unit);
+        var out = base;
+        if (p.kind === 'percent') out = Math.round(Math.round(base * 100) * (100 - p.value) / 100 + 1e-9) / 100;
+        else if (p.kind === 'amount') out = base - p.value;
+        else out = p.value;
+        return Math.min(base, money(out));
+      }
+    const statusAt = (p, at, moment) => {
+      if (!p) return 'ended';
+      if (p.paused) return 'paused';
+      if (p.to && at > p.to) return 'ended';
+      if (p.from && at < p.from) return 'scheduled';
+      if (!p.days?.length && !(p.start && p.end)) return 'active';
+      return inWindow(p, moment) ? 'active' : 'waiting';
+    }
+    const lineDeal = (line, fullPrice, live) => {
+      const stamp = (line && line.promo && Number.isFinite(+line.promo.price))
+        ? { ...line.promo, price: down(line.promo.price) } : null;
+      let best = { price: down(+fullPrice || 0), promo: null };
+      if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
+      if (live && live.price < best.price) best = { price: live.price,
+        promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
+      return best;
+    }
+    const lineUnit = (base, remise) => { return down(+(base * (100 - remise) / 100) || 0); }
+    const appliesMenu = (p, line) => {
+      if (!line || line.kind === 'formula' || line.kind === 'formula-part') return false;
+      if (p.all) return true;
+      if (line.itemId && p.items.indexOf(String(line.itemId)) >= 0) return true;
+      return !!line.catId && p.cats.indexOf(String(line.catId)) >= 0;
+    }
+    const resolveMenu = (promos, line, unit, moment) => {
+      const base = money(unit);
+      if (!(base > 0) || !Array.isArray(promos) || !promos.length) return null;
+      let best = null;
+      for (const p of promos) {
+        if (!appliesMenu(p, line) || statusAt(p, moment.date, moment) !== 'active') continue;
+        const value = price(p, base);
+        if (value >= base) continue;
+        best = choosePromotion(best, { price: value, promo: p }, true);
+      }
+      if (!best) return null;
+      const p = best.promo;
+      const badge = p.kind === 'percent' ? '−' + p.value + ' %' : p.kind === 'amount'
+        ? '−' + String(p.value).replace('.', ',') + ' MAD' : String(p.value).replace('.', ',') + ' MAD';
+      return { price: best.price, promo: { id: p.id, name: p.name, badge, before: base } };
+    }
+    const stockOf = (item) => {
+        if (!item || !item.sizes) return 0;
+        return Object.keys(item.sizes).reduce(function (s, k) { return s + (+item.sizes[k] || 0); }, 0);
+      }
+    const toTs = (v) => {
+        if (!v) return 0;
+        if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+        var t = new Date(v).getTime();
+        return Number.isFinite(t) ? t : 0;
+      }
+    const matches = (p, item, stock) => {
+        if (!p || !item) return false;
+        var sc = p.scope || {};
+        if (sc.type === 'tout') return true;
+        if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0 || (!!item.uncat && (sc.ids || []).indexOf('_uncat') >= 0);
+        if (sc.type === 'produits') return (sc.ids || []).indexOf(item.id) >= 0;
+        if (sc.type === 'avant') {
+          var bef = toTs(sc.before);
+          var itAt = toTs(item.createdAt);
+          return !!bef && !!itAt && itAt < bef;
+        }
+        if (sc.type === 'stock') {
+          var n = (stock == null) ? stockOf(item) : stock;
+          /* Un article épuisé ne porte pas d'affiche « fin de série » : la pastille
+             promettrait un prix sur une étagère vide. */
+          return n > 0 && n <= (sc.max || 0);
+        }
+        return false;
+      }
+    const choosePromotion = (best, candidate, zeroAge = false) => {
+      const age = p => zeroAge ? (p.createdAt || 0) : p.createdAt;
+      return !best || candidate.price < best.price || (candidate.price === best.price && age(candidate.promo) < age(best.promo)) ? candidate : best;
+    }
+    return { toMin, money, down, normalize, inWindow, price, statusAt, lineDeal, lineUnit, appliesMenu, resolveMenu, stockOf, toTs, matches, choosePromotion };
+  })();
+  /* GENERATED SHARED KiwiPromotionPricing END */
   function lineDeal(ln) {
-    const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? { ...ln.promo, price: shelf(ln.promo.price) } : null;
-    const live = promoFor(ln.pid);
-    const full = shelf(P[ln.pid].price);
-    let best = { price: full, promo: null };
-    if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
-    if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
-    return best;
+    return KiwiPromotionPricing.lineDeal(ln, P[ln.pid].price, promoFor(ln.pid));
   }
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
-  const lineUnit  = (ln) => shelf(lineBase(ln) * (100 - ln.remise) / 100);
+  const lineUnit  = (ln) => KiwiPromotionPricing.lineUnit(lineBase(ln), ln.remise);
   const lineTotal = (ln) => Math.round(lineUnit(ln) * 100) * ln.qty / 100;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
      de s'appliquer d'elle-même, sans avoir à la retirer partout à la main. */
+  /* GENERATED SHARED KiwiLoyaltyRules BEGIN */
+  /* Copy of functions/api/_rules-loyalty.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiLoyaltyRules = (function () {
+    // Loyalty earning, word matching, historical reversals and explicit reward policies.
+    const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
+    const pointsFor = (amount, cfg) => Math.max(0,
+      Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
+    const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const qualifyingQty = (cfg, items) => {
+      const want = foldName(cfg && cfg.product && cfg.product.item);
+      if (!want) return 0;
+      return (Array.isArray(items) ? items : []).reduce((n, item) => {
+        const name = ' ' + foldName(item && item.name) + ' ';
+        return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+      }, 0);
+    }
+    const stampsFor = (cfg, items) => {
+      if (!loyaltyOn(cfg)) return 0;
+      if (cfg.model === 'visit') return 1;
+      if (cfg.model !== 'product') return 0;
+      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+    }
+    const refundFor = (sale, amount, cfg, items, client) => {
+      const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
+      const refunded = Number(sale && sale.refunded || 0), clawed = Number(sale && sale.clawed || 0);
+      const take = Math.max(0, Math.min(amount, Math.round((paid - refunded) * 100) / 100));
+      const claw = paid > 0 && earned > 0
+        ? Math.max(0, Math.min(Math.round(earned * (refunded + take) / paid) - clawed, earned - clawed)) : 0;
+      const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
+      const lines = Array.isArray(items) ? items : [];
+      const whole = paid > 0 && take >= Math.round((paid - refunded) * 100) / 100 - 0.004;
+      const unstamp = cfg.model === 'product' && lines.length
+        ? Math.min(stampsLeft, qualifyingQty(cfg, lines)) : (whole ? stampsLeft : 0);
+      return { take, claw, unstamp,
+        pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
+        stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
+    }
+    const rewardDiscount = (reward, clientId, base, units, policy = 'boutique') => {
+      if (!reward || reward.clientId !== clientId) return 0;
+      const down = n => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
+      if (reward.kind === 'percent') {
+        if (policy === 'librairie') return Math.round(base * reward.value / 100 * 100 + 1e-9) / 100;
+        return base - down(base * (100 - Math.min(100, Math.max(0, reward.value || 0))) / 100);
+      }
+      return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+    }
+    return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
+  })();
+  /* GENERATED SHARED KiwiLoyaltyRules END */
   function rewardDiscount(t, base) {
-    const r = t.reward;
-    if (!r || r.clientId !== t.client) return 0;
-    /* Le total fidélité est arrondi vers le bas au centime. */
-    if (r.kind === 'percent') return base - shelf(base * (100 - Math.min(100, Math.max(0, r.value || 0))) / 100);
-    if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
-    return 0;
+    return KiwiLoyaltyRules.rewardDiscount(t.reward, t.client, base, t.lines.map(lineUnit));
   }
   /* Trois baisses, trois lignes séparées, jamais une seule « remise » fourre-tout :
      la promotion est une décision du magasin, la remise un geste de la gérante,

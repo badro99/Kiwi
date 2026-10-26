@@ -1,3 +1,5 @@
+import { loyaltyOn, pointsFor, stampsFor, refundFor } from './_rules-loyalty.js';
+export { qualifyingQty, stampsFor } from './_rules-loyalty.js';
 // /api/clients — le carnet clients d'un magasin, ligne par ligne.
 //
 // assets/clients-store.js appelait cet endpoint depuis le jour où la fidélité a
@@ -282,6 +284,28 @@ export async function onRequestGet(context) {
       historyByClient.set(row.client_id, list);
     });
 
+    const ledgerRows = rows.length ? await env.DB.prepare(`
+      WITH page AS (SELECT json_extract(value, '$.id') AS client_id,
+        CAST(json_extract(value, '$.srvTs') AS INTEGER) AS row_srv_ts FROM json_each(?))
+      SELECT event.client_id, event.sale_ref,
+        SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN amount ELSE 0 END) AS paid,
+        SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN points ELSE 0 END) AS earned,
+        SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN stamps ELSE 0 END) AS stamped,
+        SUM(CASE WHEN ref LIKE 'refund:%' THEN -amount ELSE 0 END) AS refunded,
+        SUM(CASE WHEN ref LIKE 'refund:%' THEN -points ELSE 0 END) AS clawed,
+        SUM(CASE WHEN ref LIKE 'refund:%' THEN -stamps ELSE 0 END) AS unstamped
+      FROM client_purchase_events AS event JOIN page ON page.client_id = event.client_id
+      WHERE merchant = ? AND event.srv_ts <= page.row_srv_ts
+        AND sale_ref <> '' AND (visits > 0 OR ref LIKE 'refund:%')
+      GROUP BY event.client_id, event.sale_ref`).bind(JSON.stringify(rows.map(row => ({ id: String(row.id), srvTs: Number(row.srv_ts) || 0 }))), merchant).all() : { results: [] };
+    const ledgerByClient = new Map();
+    for (const row of ledgerRows.results || []) {
+      const ledger = ledgerByClient.get(row.client_id) || Object.create(null);
+      ledger[row.sale_ref] = { paid: row.paid, earned: row.earned, stamped: row.stamped,
+        refunded: row.refunded, clawed: row.clawed, unstamped: row.unstamped };
+      ledgerByClient.set(row.client_id, ledger);
+    }
+
     const rewardRefs = await pageEventRefs('client_reward_events');
     const rewardRefsByClient = new Map();
     rewardRefs.forEach((row) => {
@@ -297,6 +321,7 @@ export async function onRequestGet(context) {
         purchase_refs: refsByClient.get(row.id) || [],
         reward_refs: rewardRefsByClient.get(row.id) || [],
         purchase_history: historyByClient.get(row.id) || [],
+        loyalty_sales: ledgerByClient.get(row.id) || {},
       })),
       cursor,
       // Le client rappelle tant que `more` est vrai : un carnet de 2 000 fiches
@@ -310,39 +335,6 @@ export async function onRequestGet(context) {
      * stay explicit and retryable; the client must not merge a partial page. */
     return json({ error: 'sync-unavailable', merchant, cursor: since }, 503);
   }
-}
-
-/* Le programme est-il ouvert ? Un modèle choisi par le commerçant, pas le
- * défaut que la caisse déduit du métier (`auto`). */
-const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
-
-/* Les points ne s'arrondissent jamais vers le haut : 99,50 MAD à un point par
- * dirham donnent 99 points, pas les 100 d'un seuil de récompense. */
-const pointsFor = (amount, cfg) => Math.max(0,
-  Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
-
-/* « 10 cafés = 1 offert » : le tampon se gagne sur l'article nommé, pas sur
- * chaque passage. Le nom est saisi en clair par le commerçant (« Café ») ; il
- * vaut pour toute ligne qui le contient comme mot, accents et casse ignorés
- * (« Café noir », « CAFE CREME » oui ; « Décaféiné » non). */
-const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
-  .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-export function qualifyingQty(cfg, items) {
-  const want = foldName(cfg && cfg.product && cfg.product.item);
-  if (!want) return 0;
-  return (Array.isArray(items) ? items : []).reduce((n, item) => {
-    const name = ' ' + foldName(item && item.name) + ' ';
-    return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
-  }, 0);
-}
-/* Tampons d'un achat. Sans lignes (passage saisi à la main au tableau de bord,
- * ancienne caisse), un passage reste un tampon ; avec des lignes, la carte
- * produit ne compte que l'article choisi. */
-export function stampsFor(cfg, items) {
-  if (!loyaltyOn(cfg)) return 0;
-  if (cfg.model === 'visit') return 1;
-  if (cfg.model !== 'product') return 0;
-  return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
 }
 
 /* L'argent réellement reçu pour une vente, lu dans le livre des ventes et non
@@ -434,7 +426,7 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
         return json({ error: 'ref-conflict' }, 409);
       }
     }
-    return json({ ok: true, replayed: true, points: Number(previous.points || 0), stamps: Number(previous.stamps || 0) });
+    return json({ ok: true, replayed: true, spend: Number(previous.amount || 0), points: Number(previous.points || 0), stamps: Number(previous.stamps || 0) });
   }
   const client = await env.DB.prepare(
     'SELECT id, srv_ts FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
@@ -487,10 +479,10 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
   ]);
   if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
     const replay = await env.DB.prepare(
-      'SELECT client_id, points, stamps FROM client_purchase_events WHERE merchant = ? AND ref = ?'
+      'SELECT client_id, amount, points, stamps FROM client_purchase_events WHERE merchant = ? AND ref = ?'
     ).bind(merchant, ref).first();
     if (replay && replay.client_id === clientId) {
-      return json({ ok: true, replayed: true, points: Number(replay.points || 0), stamps: Number(replay.stamps || 0) });
+      return json({ ok: true, replayed: true, spend: Number(replay.amount || 0), points: Number(replay.points || 0), stamps: Number(replay.stamps || 0) });
     }
     if (attempt < 4) return applyPurchase(env, merchant, raw, attempt + 1);
     return json({ error: 'purchase-write-failed' }, 503);
@@ -522,11 +514,11 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
   if (!clientId || !ref.startsWith('refund:') || !saleRef || !(amount > 0)) return json({ error: 'refund-fields-required' }, 400);
   await ensurePurchaseEvents(env);
   const previous = await env.DB.prepare(
-    'SELECT client_id, amount, points FROM client_purchase_events WHERE merchant = ? AND ref = ?'
+    'SELECT client_id, amount, points, stamps FROM client_purchase_events WHERE merchant = ? AND ref = ?'
   ).bind(merchant, ref).first();
   if (previous) {
     if (previous.client_id !== clientId) return json({ error: 'ref-conflict' }, 409);
-    return json({ ok: true, replayed: true, spend: Number(previous.amount || 0), points: Number(previous.points || 0) });
+    return json({ ok: true, replayed: true, spend: Number(previous.amount || 0), points: Number(previous.points || 0), stamps: Number(previous.stamps || 0) });
   }
   const client = await env.DB.prepare(
     'SELECT id, points, stamps FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
@@ -542,35 +534,10 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
        FROM client_purchase_events WHERE merchant = ? AND client_id = ? AND sale_ref = ?
          AND (visits > 0 OR ref LIKE 'refund:%')`
   ).bind(merchant, clientId, saleRef).first();
-  const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
-  const take = Math.max(0, Math.min(amount, Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100));
-  // Le prorata cumulé récupère aussi le dernier point après plusieurs petits retours.
-  const claw = paid > 0 && earned > 0
-    ? Math.max(0, Math.min(Math.round(earned * (Number(sale && sale.refunded || 0) + take) / paid) - Number(sale && sale.clawed || 0), earned - Number(sale && sale.clawed || 0))) : 0;
-  /* Les tampons de CE ticket suivent le retour : sur une carte produit, autant
-   * que d'articles choisis rendus ; sinon (carte passages, retour sans lignes),
-   * seulement quand le ticket est rendu en entier. Jamais plus que gagné. */
-  const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
-  let unstamp = 0;
-  if (stampsLeft > 0) {
-    const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
-      .bind(merchant).first();
-    const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
-    const lines = Array.isArray(refund.items) ? refund.items : [];
-    const whole = paid > 0 && take >= Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100 - 0.004;
-    unstamp = cfg.model === 'product' && lines.length
-      ? Math.min(stampsLeft, qualifyingQty(cfg, lines))
-      : (whole ? stampsLeft : 0);
-  }
-  /* Never take back more than the card still holds. A customer who earned
-   * 300 points, spent 100 on a reward, then returned the ticket has 200 left:
-   * the return takes 200, and the event says 200. The balance used to be
-   * floored at 0 while the event recorded the full 300, so the history summed
-   * below the balance forever after. The guard on the UPDATE keeps the two
-   * equal if the balance moved since the read: nothing is written, and the
-   * till retries against the new balance. */
-  const pointsTake = Math.min(claw, Math.max(0, Number(client.points) || 0));
-  const stampsTake = Math.min(unstamp, Math.max(0, Number(client.stamps) || 0));
+  const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
+    .bind(merchant).first();
+  const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
+  const { take, pointsTake, stampsTake } = refundFor(sale, amount, cfg, refund.items, client);
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
@@ -591,9 +558,9 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
       .bind(merchant, ref, clientId, -take, -pointsTake, -stampsTake, now, merchant, items, saleRef),
   ]);
   if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
-    const replay = await env.DB.prepare('SELECT client_id FROM client_purchase_events WHERE merchant = ? AND ref = ?')
+    const replay = await env.DB.prepare('SELECT client_id, amount, points, stamps FROM client_purchase_events WHERE merchant = ? AND ref = ?')
       .bind(merchant, ref).first();
-    if (replay && replay.client_id === clientId) return json({ ok: true, replayed: true });
+    if (replay && replay.client_id === clientId) return json({ ok: true, replayed: true, spend: Number(replay.amount || 0), points: Number(replay.points || 0), stamps: Number(replay.stamps || 0) });
     // Relire après une concurrence : ne jamais reprendre le plafond périmé.
     if (attempt < 3) return applyRefund(env, merchant, raw, attempt + 1);
     return json({ error: 'refund-write-failed' }, 503);

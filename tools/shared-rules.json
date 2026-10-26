@@ -1,4 +1,70 @@
 {
   "about": "One business rule, one source. Each entry is a pure ES module under functions/ that the server imports directly; tools/build-shared-rules.mjs copies it into each browser target between GENERATED SHARED markers, so a page needs no extra script tag. tools/shared-rules-test.mjs fails the gate when a copy is stale or a source is not pure.",
-  "rules": []
+  "rules": [
+    {
+      "name": "KiwiCatalogRules",
+      "source": "functions/api/_rules-catalog.js",
+      "targets": [
+        "assets/boutique-catalog-parts.js"
+      ]
+    },
+    {
+      "name": "KiwiStaffCredential",
+      "source": "functions/api/_rules-staff-credential.js",
+      "targets": [
+        "assets/team/profile-ui.js"
+      ]
+    },
+    {
+      "name": "KiwiDayReportModel",
+      "source": "functions/api/_rules-day-report.js",
+      "targets": [
+        "assets/day-report.js",
+        "assets/day-report-dash.js",
+        "assets/caisse-accounting.js"
+      ]
+    },
+    {
+      "name": "KiwiDrawerReportModel",
+      "source": "functions/api/_rules-day-report.js",
+      "targets": [
+        "assets/caisse-accounting.js"
+      ]
+    },
+    {
+      "name": "KiwiMenuSchema",
+      "source": "functions/api/_rules-menu-schema.js",
+      "targets": [
+        "assets/menu-catalog.js"
+      ]
+    },
+    {
+      "name": "KiwiRecipeUnits",
+      "source": "functions/api/_rules-recipe-units.js",
+      "targets": [
+        "assets/restaurant-units.js",
+        "assets/inventory-ledger.js",
+        "assets/inventory-consumption.js"
+      ]
+    },
+    {
+      "name": "KiwiLoyaltyRules",
+      "source": "functions/api/_rules-loyalty.js",
+      "targets": [
+        "assets/clients-store.js",
+        "assets/pos-boutique.js",
+        "assets/pos-librairie.js"
+      ]
+    },
+    {
+      "name": "KiwiPromotionPricing",
+      "source": "functions/api/_rules-promotion-pricing.js",
+      "targets": [
+        "assets/promo-rules.js",
+        "assets/menu-promos.js",
+        "assets/pos-boutique.js",
+        "assets/promos.js"
+      ]
+    }
+  ]
 }

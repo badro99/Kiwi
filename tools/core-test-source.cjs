@@ -48,6 +48,7 @@ function isLiveLink(file) {
   return path.resolve(file instanceof URL ? fileURLToPath(file) : String(file)) === path.join(root, 'assets/live-link.js');
 }
 function source(file) {
+  if (path.resolve(file instanceof URL ? fileURLToPath(file) : String(file)) === path.join(root, 'assets/invoicing.js')) return require('./invoicing-test-source.cjs').invoicingTestSource(root);
   if (isLiveLink(file)) return require('./live-link-queue-source.cjs').source(file);
   if (isVenues(file)) return venuesSource(file);
   if (isInteractive(file)) return interactiveSource(file);
@@ -91,6 +92,10 @@ function source(file) {
   return core;
 }
 function readFileSync(file, options) {
+  if (path.resolve(file instanceof URL ? fileURLToPath(file) : String(file)) === path.join(root, 'assets/invoicing.js')) {
+    const text = source(file);
+    return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
+  }
   if (!isLiveLink(file) && !isVenues(file) && !isInteractive(file) && !metadata(file)) return fs.readFileSync(file, options);
   const text = source(file);
   return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);

@@ -3,6 +3,7 @@ import '../../../assets/menu-promos.js';
 const MenuPromos = () => globalThis.KiwiMenuPromos;
 import { merchantZone } from '../_business-day.js';
 // Contrat : catalogue publié et lignes entrantes vers prix canoniques ; lit le catalogue menus, jamais les commandes ni les sessions.
+import { resolveMenu } from '../_rules-promotion-pricing.js';
 /* ── Le prix, décidé ici et nulle part ailleurs ────────────────────────────
  * Le téléphone envoyait son propre total et ses propres prix unitaires, et on
  * les écrivait tels quels. Une requête modifiée créait donc une commande à
@@ -391,7 +392,7 @@ export async function priceOrder(env, merchant, rawLines, opts = {}) {
      * discounted (assets/menu-promos.js). No promotion: nothing changes. */
     let promo = null;
     if (promos.length) {
-      const hit = MenuPromos().resolve(promos, { itemId: id, catId: ref.catId, kind }, unitPrice, now);
+      const hit = resolveMenu(promos, { itemId: id, catId: ref.catId, kind }, unitPrice, MenuPromos().businessMoment(now));
       if (hit) { unitPrice = hit.price; promo = hit.promo; }
     }
     const line = { id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,

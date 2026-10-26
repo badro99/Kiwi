@@ -1218,7 +1218,7 @@ console.log('\n--- Section 3: Clock Skew Void Protection & Reconcile Voids ---')
   const ledgerRollupBlock = extractBody(caisseHtml, 'function rollupLedger(sinceMs) {', 'function journalTotals() {\n      return rollupLedger();\n    }');
   const reconcileBlock = extractBody(caisseHtml, 'function refreshOpenReconciliationModals() {', 'return touched;\n    }');
   const clotureBlock = extractBody(caisseHtml, 'let clotureExpected = 0;', "el.style.animationDelay = delay + 'ms';\n      });\n    }");
-  const drawerBlock = extractBody(caisseHtml, 'function handoverGapCents() {', 'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC + handoverGapCents());\n    }');
+  const drawerBlock = extractBody(caisseHtml, 'function handoverGapCents() {', 'return major(KiwiDrawerReportModel.expectedCashCents(minor(openingFloat), t.cashC, t.cashTipsC, t.movesInC, t.movesOutC, handoverGapCents()));\n    }');
   const handoverBlock = extractBody(caisseHtml, 'function fmtEcart(e) {', 'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      handoverGapCents,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });');
 
   function makePosMatcher() {
@@ -1548,7 +1548,7 @@ console.log('\n--- Section 5: 7-Visit / 8-Receipt Fixture Reconciliation ---');
   const ledgerRollupBlock = extractBody(caisseHtml, 'function rollupLedger(sinceMs) {', 'function journalTotals() {\n      return rollupLedger();\n    }');
   const reconcileBlock = extractBody(caisseHtml, 'function refreshOpenReconciliationModals() {', 'return touched;\n    }');
   const clotureBlock = extractBody(caisseHtml, 'let clotureExpected = 0;', "el.style.animationDelay = delay + 'ms';\n      });\n    }");
-  const drawerBlock = extractBody(caisseHtml, 'function handoverGapCents() {', 'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC + handoverGapCents());\n    }');
+  const drawerBlock = extractBody(caisseHtml, 'function handoverGapCents() {', 'return major(KiwiDrawerReportModel.expectedCashCents(minor(openingFloat), t.cashC, t.cashTipsC, t.movesInC, t.movesOutC, handoverGapCents()));\n    }');
   const handoverBlock = extractBody(caisseHtml, 'function fmtEcart(e) {', 'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      handoverGapCents,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });');
 
   function makePosMatcher() {

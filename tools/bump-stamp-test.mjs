@@ -295,6 +295,26 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
+/* Ticket module enrollment is explicit, idempotent, and follows later bumps. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-stamp-tickets-'));
+  try {
+    fixture(dir);
+    fs.writeFileSync(path.join(dir, 'tickets.html'), '<script type="module" src="assets/tickets.js?v=1"></script>');
+    fs.writeFileSync(path.join(dir, 'assets/tickets.js'), "import { createData } from './tickets-data.js?v=1';\n");
+    fs.writeFileSync(path.join(dir, 'assets/tickets-data.js'), 'export function createData() {}\n');
+    ok(run(dir, ['--sync']).status === 0, 'tickets: seal module graph');
+    ok(run(dir, ['--precache', 'assets/tickets-data.js']).status === 0, 'tickets: enroll new module through bump-stamp');
+    ok(rd(dir, 'kiwi-sw.js').includes("'/assets/tickets-data.js?v=2'"), 'tickets: new module enters SHELL at its live import stamp');
+    ok(rd(dir, 'assets/tickets.js').includes('./tickets-data.js?v=2'), 'tickets: parent import follows enrollment');
+    ok(rd(dir, 'tickets.html').includes('assets/tickets.js?v=2'), 'tickets: entry stamp cascades');
+    ok(run(dir, ['--precache', 'assets/tickets-data.js']).status === 0, 'tickets: repeated enrollment succeeds');
+    ok(rd(dir, 'kiwi-sw.js').split('/assets/tickets-data.js?').length === 2 && rd(dir, 'kiwi-sw.js').includes('tickets-data.js?v=3'), 'tickets: one precache entry follows later bumps');
+    const check = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+    ok(check.status === 0, 'tickets: imports, SHELL and manifest agree');
+  } finally { fs.rmSync(dir, {recursive:true,force:true}); }
+}
+
 /* Les parties du stock remontent au chargeur, puis à la coquille. */
 {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-stamp-stock-'));
@@ -312,6 +332,25 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
     ok(rd(dir, 'dashboard.html').includes('assets/stock.js?v=2'), 'stock : chargeur remonté dans la coquille');
     const check = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
     ok(check.status === 0, 'stock : manifeste et précache cohérents après cascade');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+/* Public booking split: explicit precache registration, first stamp and cascade. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-stamp-booking-'));
+  try {
+    fixture(dir);
+    fs.writeFileSync(path.join(dir, 'assets/booking.js'), "import('/assets/booking-service.js');\n");
+    fs.writeFileSync(path.join(dir, 'assets/booking-service.js'), 'export const create = () => ({});\n');
+    fs.appendFileSync(path.join(dir, 'dashboard.html'), '<script src="assets/booking.js?v=1"></script>\n');
+    ok(run(dir, ['--sync']).status === 0, 'booking: seal importer before registration');
+    ok(run(dir, ['--precache', 'assets/booking-service.js']).status === 0, 'booking: register and stamp a new module');
+    ok(rd(dir, 'assets/booking.js').includes('/assets/booking-service.js?v=1'), 'booking: dynamic import stamped');
+    ok(rd(dir, 'kiwi-sw.js').includes("'/assets/booking-service.js?v=1'"), 'booking: new module in SHELL');
+    fs.appendFileSync(path.join(dir, 'assets/booking-service.js'), '// changed\n');
+    ok(run(dir, ['assets/booking-service.js']).status === 0, 'booking: subsequent bump succeeds');
+    ok(rd(dir, 'assets/booking.js').includes('/assets/booking-service.js?v=2'), 'booking: import follows subsequent stamp');
+    ok(rd(dir, 'dashboard.html').includes('assets/booking.js?v=3'), 'booking: importer cascade reaches shell');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 

@@ -1,3 +1,4 @@
+import { canonicalCode } from '../api/_rules-staff-credential.js';
 import { hmacKey } from './_crypto.js';
 // Kiwi — shared auth helpers for the account gate (Cloudflare Pages Functions).
 //
@@ -757,7 +758,7 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
     for (const member of members) {
       if (gone.has(String((member && member.id) || ''))) continue;
       const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
-      const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
+      const memberPin = canonicalCode(member);
       const venue = String((member && member.venueSlug) || '').trim();
       if (venue && venue !== merchant) continue;
       const key = `${merchant}:${String((member && member.id) || '')}`;

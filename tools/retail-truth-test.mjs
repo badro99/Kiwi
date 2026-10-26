@@ -30,6 +30,7 @@ import coreTestSource from './core-test-source.cjs';
 const { readFileSync } = coreTestSource;
 import path from 'node:path';
 import vm from 'node:vm';
+import sharedRules from './shared-rules-source.cjs';
 import { fileURLToPath } from 'node:url';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
@@ -167,9 +168,8 @@ ok('une promotion sur « Divers » vise les articles sans catégorie', () => {
   assert.match(CATALOG, /if \(bucket === uncat\) item\.uncat = true;/);
   const ctx = vm.createContext({ Number, Math, Date });
   vm.runInContext(`
-    ${grab(PROMOS, 'function toTs(')}
-    ${grab(PROMOS, 'function stockOf(')}
-    ${grab(PROMOS, 'function matches(')}
+    ${sharedRules(PROMOS)}
+    const matches = KiwiPromotionPricing.matches;
   `, ctx);
   const promo = { scope: { type: 'rayon', ids: ['_uncat'] } };
   const m = (item) => vm.runInContext(`matches(${JSON.stringify(promo)}, ${JSON.stringify(item)}, 0)`, ctx);

@@ -1,0 +1,690 @@
+{
+  "sha256": "badae91ff58cc063f813679c6e9fef1bf45fe375cec4ebaaa57063214db88dfc",
+  "formattedSha256": "ffa0da2c49fd420cf9260c2a56dbb15eaec3ad408177faf623a11b1c7f997e53",
+  "counter": "  var slotSeq=0,hotelSeq=0;",
+  "bootstrap": "  const owner = Object.freeze({ getState() { return state; } });\n  const parts = {};\n  await Promise.all([\n    import('/assets/booking-service.js').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),\n    import('/assets/booking-hotel.js').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),\n    import('/assets/booking-submission.js').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),\n    import('/assets/booking-manage.js').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),\n    import('/assets/booking-view.js').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })\n  ]);\n",
+  "parts": [
+    {
+      "file": "assets/booking-service.js",
+      "prefix": "/* Booking service. Exports: seatCap, venueCap, partyCap, capsDiffer, takesCovers, party, partyControl, syncParty, wireParty, queueSlots, priceTag, contextChip, slotGroups, services, dateButtons, loadSlots, times, renderTimes.\n * Reads only the declared context below and standard browser APIs.\n * Shared booking state belongs to the entry owner; counters stay private. */\nexport function createBookingService(context) {\n  'use strict';\n  const { owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head } = context;\n  const state = owner.getState();\n  var slotSeq=0;\n",
+      "suffix": "\n  return Object.freeze({ seatCap, venueCap, partyCap, capsDiffer, takesCovers, party, partyControl, syncParty, wireParty, queueSlots, priceTag, contextChip, slotGroups, services, dateButtons, loadSlots, times, renderTimes });\n}\n",
+      "names": [
+        "seatCap",
+        "venueCap",
+        "partyCap",
+        "capsDiffer",
+        "takesCovers",
+        "party",
+        "partyControl",
+        "syncParty",
+        "wireParty",
+        "queueSlots",
+        "priceTag",
+        "contextChip",
+        "slotGroups",
+        "services",
+        "dateButtons",
+        "loadSlots",
+        "times",
+        "renderTimes"
+      ],
+      "deps": [
+        "app",
+        "merchant",
+        "plusDays",
+        "details",
+        "t",
+        "esc",
+        "money",
+        "fmt",
+        "venueToday",
+        "venueHour",
+        "layout",
+        "head"
+      ],
+      "fragments": [
+        {
+          "start": 13788,
+          "end": 14174,
+          "offset": 608,
+          "length": 386,
+          "replacement": "\n  function seatCap(...args) { return parts.service.seatCap(...args); }"
+        },
+        {
+          "start": 14174,
+          "end": 14353,
+          "offset": 995,
+          "length": 179,
+          "replacement": "\n  function venueCap(...args) { return parts.service.venueCap(...args); }"
+        },
+        {
+          "start": 14353,
+          "end": 14441,
+          "offset": 1175,
+          "length": 88,
+          "replacement": "\n  function partyCap(...args) { return parts.service.partyCap(...args); }"
+        },
+        {
+          "start": 14441,
+          "end": 14826,
+          "offset": 1264,
+          "length": 385,
+          "replacement": "\n  function capsDiffer(...args) { return parts.service.capsDiffer(...args); }"
+        },
+        {
+          "start": 14826,
+          "end": 14881,
+          "offset": 1650,
+          "length": 55,
+          "replacement": "\n  function takesCovers(...args) { return parts.service.takesCovers(...args); }"
+        },
+        {
+          "start": 14881,
+          "end": 14983,
+          "offset": 1706,
+          "length": 102,
+          "replacement": "\n  function party(...args) { return parts.service.party(...args); }"
+        },
+        {
+          "start": 14983,
+          "end": 15375,
+          "offset": 1809,
+          "length": 392,
+          "replacement": "\n  function partyControl(...args) { return parts.service.partyControl(...args); }"
+        },
+        {
+          "start": 15375,
+          "end": 16013,
+          "offset": 2202,
+          "length": 638,
+          "replacement": "\n  function syncParty(...args) { return parts.service.syncParty(...args); }"
+        },
+        {
+          "start": 16013,
+          "end": 16452,
+          "offset": 2841,
+          "length": 439,
+          "replacement": "\n  function wireParty(...args) { return parts.service.wireParty(...args); }"
+        },
+        {
+          "start": 16452,
+          "end": 16713,
+          "offset": 3281,
+          "length": 261,
+          "replacement": "\n  /* booking service declaration 9 */"
+        },
+        {
+          "start": 16713,
+          "end": 17085,
+          "offset": 3543,
+          "length": 372,
+          "replacement": "\n  function queueSlots(...args) { return parts.service.queueSlots(...args); }"
+        },
+        {
+          "start": 17085,
+          "end": 17344,
+          "offset": 3916,
+          "length": 259,
+          "replacement": "\n  function priceTag(...args) { return parts.service.priceTag(...args); }"
+        },
+        {
+          "start": 17344,
+          "end": 17777,
+          "offset": 4176,
+          "length": 433,
+          "replacement": "\n  function contextChip(...args) { return parts.service.contextChip(...args); }"
+        },
+        {
+          "start": 17777,
+          "end": 18641,
+          "offset": 4610,
+          "length": 864,
+          "replacement": "\n  function slotGroups(...args) { return parts.service.slotGroups(...args); }"
+        },
+        {
+          "start": 18641,
+          "end": 19713,
+          "offset": 5475,
+          "length": 1072,
+          "replacement": "\n  function services(...args) { return parts.service.services(...args); }"
+        },
+        {
+          "start": 19713,
+          "end": 20287,
+          "offset": 6548,
+          "length": 574,
+          "replacement": "\n  function dateButtons(...args) { return parts.service.dateButtons(...args); }"
+        },
+        {
+          "start": 20692,
+          "end": 22292,
+          "offset": 7123,
+          "length": 1600,
+          "replacement": "\n  function loadSlots(...args) { return parts.service.loadSlots(...args); }"
+        },
+        {
+          "start": 22292,
+          "end": 22351,
+          "offset": 8724,
+          "length": 59,
+          "replacement": "\n  function times(...args) { return parts.service.times(...args); }"
+        },
+        {
+          "start": 22351,
+          "end": 23840,
+          "offset": 8784,
+          "length": 1489,
+          "replacement": "\n  function renderTimes(...args) { return parts.service.renderTimes(...args); }"
+        }
+      ]
+    },
+    {
+      "file": "assets/booking-hotel.js",
+      "prefix": "/* Booking hotel. Exports: plusDays, hotelNights, hotelDates, hotelSearch, loadHotelRooms, hotelFacts, hotelPhotoUrl, hotelVisual, hotelRoomList, hotelSummary.\n * Reads only the declared context below and standard browser APIs.\n * Shared booking state belongs to the entry owner; counters stay private. */\nexport function createBookingHotel(context) {\n  'use strict';\n  const { owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head } = context;\n  const state = owner.getState();\n  var hotelSeq=0;\n",
+      "suffix": "\n  return Object.freeze({ plusDays, hotelNights, hotelDates, hotelSearch, loadHotelRooms, hotelFacts, hotelPhotoUrl, hotelVisual, hotelRoomList, hotelSummary });\n}\n",
+      "names": [
+        "plusDays",
+        "hotelNights",
+        "hotelDates",
+        "hotelSearch",
+        "loadHotelRooms",
+        "hotelFacts",
+        "hotelPhotoUrl",
+        "hotelVisual",
+        "hotelRoomList",
+        "hotelSummary"
+      ],
+      "deps": [
+        "app",
+        "merchant",
+        "hotelDetails",
+        "t",
+        "ht",
+        "esc",
+        "money",
+        "ymd",
+        "fmt",
+        "venueToday",
+        "layout",
+        "head"
+      ],
+      "fragments": [
+        {
+          "start": 34356,
+          "end": 34478,
+          "offset": 533,
+          "length": 122,
+          "replacement": "\n  function plusDays(...args) { return parts.hotel.plusDays(...args); }"
+        },
+        {
+          "start": 34478,
+          "end": 34634,
+          "offset": 656,
+          "length": 156,
+          "replacement": "\n  function hotelNights(...args) { return parts.hotel.hotelNights(...args); }"
+        },
+        {
+          "start": 34634,
+          "end": 34876,
+          "offset": 813,
+          "length": 242,
+          "replacement": "\n  function hotelDates(...args) { return parts.hotel.hotelDates(...args); }"
+        },
+        {
+          "start": 34876,
+          "end": 36736,
+          "offset": 1056,
+          "length": 1860,
+          "replacement": "\n  function hotelSearch(...args) { return parts.hotel.hotelSearch(...args); }"
+        },
+        {
+          "start": 36736,
+          "end": 37862,
+          "offset": 2917,
+          "length": 1126,
+          "replacement": "\n  function loadHotelRooms(...args) { return parts.hotel.loadHotelRooms(...args); }"
+        },
+        {
+          "start": 37862,
+          "end": 38220,
+          "offset": 4044,
+          "length": 358,
+          "replacement": "\n  function hotelFacts(...args) { return parts.hotel.hotelFacts(...args); }"
+        },
+        {
+          "start": 38220,
+          "end": 38418,
+          "offset": 4403,
+          "length": 198,
+          "replacement": "\n  function hotelPhotoUrl(...args) { return parts.hotel.hotelPhotoUrl(...args); }"
+        },
+        {
+          "start": 38418,
+          "end": 39502,
+          "offset": 4602,
+          "length": 1084,
+          "replacement": "\n  function hotelVisual(...args) { return parts.hotel.hotelVisual(...args); }"
+        },
+        {
+          "start": 39502,
+          "end": 42412,
+          "offset": 5687,
+          "length": 2910,
+          "replacement": "\n  function hotelRoomList(...args) { return parts.hotel.hotelRoomList(...args); }"
+        },
+        {
+          "start": 42412,
+          "end": 42959,
+          "offset": 8598,
+          "length": 547,
+          "replacement": "\n  function hotelSummary(...args) { return parts.hotel.hotelSummary(...args); }"
+        }
+      ]
+    },
+    {
+      "file": "assets/booking-submission.js",
+      "prefix": "/* Booking submission. Exports: phoneValue, emailOk, badEmailMsg, paymentNote, details, submit, success, hotelDetails, submitHotel, hotelSuccess.\n * Reads only the declared context below and standard browser APIs.\n * Shared booking state belongs to the entry owner; counters stay private. */\nexport function createBookingSubmission(context) {\n  'use strict';\n  const { owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head } = context;\n  const state = owner.getState();\n",
+      "suffix": "\n  return Object.freeze({ phoneValue, emailOk, badEmailMsg, paymentNote, details, submit, success, hotelDetails, submitHotel, hotelSuccess });\n}\n",
+      "names": [
+        "phoneValue",
+        "emailOk",
+        "badEmailMsg",
+        "paymentNote",
+        "details",
+        "submit",
+        "success",
+        "hotelDetails",
+        "submitHotel",
+        "hotelSuccess"
+      ],
+      "deps": [
+        "app",
+        "merchant",
+        "takesCovers",
+        "party",
+        "times",
+        "loadHotelRooms",
+        "hotelRoomList",
+        "hotelSummary",
+        "rememberManage",
+        "manageBlock",
+        "wireManageBlock",
+        "ssGet",
+        "ssSet",
+        "ssDel",
+        "t",
+        "ht",
+        "esc",
+        "money",
+        "fmt",
+        "layout",
+        "head"
+      ],
+      "fragments": [
+        {
+          "start": 9381,
+          "end": 9514,
+          "offset": 614,
+          "length": 133,
+          "replacement": "\n  function phoneValue(...args) { return parts.submission.phoneValue(...args); }"
+        },
+        {
+          "start": 9514,
+          "end": 9949,
+          "offset": 748,
+          "length": 435,
+          "replacement": "\n  function emailOk(...args) { return parts.submission.emailOk(...args); }"
+        },
+        {
+          "start": 9949,
+          "end": 10251,
+          "offset": 1184,
+          "length": 302,
+          "replacement": "\n  function badEmailMsg(...args) { return parts.submission.badEmailMsg(...args); }"
+        },
+        {
+          "start": 23840,
+          "end": 24232,
+          "offset": 1487,
+          "length": 392,
+          "replacement": "\n  function paymentNote(...args) { return parts.submission.paymentNote(...args); }"
+        },
+        {
+          "start": 24232,
+          "end": 26144,
+          "offset": 1880,
+          "length": 1912,
+          "replacement": "\n  function details(...args) { return parts.submission.details(...args); }"
+        },
+        {
+          "start": 26144,
+          "end": 28107,
+          "offset": 3793,
+          "length": 1963,
+          "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }"
+        },
+        {
+          "start": 33561,
+          "end": 34356,
+          "offset": 5757,
+          "length": 795,
+          "replacement": "\n  function success(...args) { return parts.submission.success(...args); }"
+        },
+        {
+          "start": 42959,
+          "end": 44134,
+          "offset": 6553,
+          "length": 1175,
+          "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }"
+        },
+        {
+          "start": 44134,
+          "end": 46628,
+          "offset": 7729,
+          "length": 2494,
+          "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }"
+        },
+        {
+          "start": 46628,
+          "end": 47111,
+          "offset": 10224,
+          "length": 483,
+          "replacement": "\n  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }"
+        }
+      ]
+    },
+    {
+      "file": "assets/booking-manage.js",
+      "prefix": "/* Booking manage. Exports: rememberManage, manageHref, manageBlock, wireManageBlock, mt, statusLabel, manageRows, renderManage, cancelBooking, openManage.\n * Reads only the declared context below and standard browser APIs.\n * Shared booking state belongs to the entry owner; counters stay private. */\nexport function createBookingManage(context) {\n  'use strict';\n  const { owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed } = context;\n  const state = owner.getState();\n",
+      "suffix": "\n  return Object.freeze({ rememberManage, manageHref, manageBlock, wireManageBlock, mt, statusLabel, manageRows, renderManage, cancelBooking, openManage });\n}\n",
+      "names": [
+        "rememberManage",
+        "manageHref",
+        "manageBlock",
+        "wireManageBlock",
+        "mt",
+        "statusLabel",
+        "manageRows",
+        "renderManage",
+        "cancelBooking",
+        "openManage"
+      ],
+      "deps": [
+        "app",
+        "merchant",
+        "manageToken",
+        "t",
+        "ht",
+        "esc",
+        "money",
+        "fmt",
+        "layout",
+        "closed"
+      ],
+      "fragments": [
+        {
+          "start": 28107,
+          "end": 29231,
+          "offset": 496,
+          "length": 1124,
+          "replacement": "\n  function rememberManage(...args) { return parts.manage.rememberManage(...args); }"
+        },
+        {
+          "start": 29231,
+          "end": 29447,
+          "offset": 1621,
+          "length": 216,
+          "replacement": "\n  function manageHref(...args) { return parts.manage.manageHref(...args); }"
+        },
+        {
+          "start": 29447,
+          "end": 29812,
+          "offset": 1838,
+          "length": 365,
+          "replacement": "\n  function manageBlock(...args) { return parts.manage.manageBlock(...args); }"
+        },
+        {
+          "start": 29812,
+          "end": 31125,
+          "offset": 2204,
+          "length": 1313,
+          "replacement": "\n  function wireManageBlock(...args) { return parts.manage.wireManageBlock(...args); }"
+        },
+        {
+          "start": 31125,
+          "end": 33499,
+          "offset": 3518,
+          "length": 2374,
+          "replacement": "\n  /* booking manage declaration 4 */"
+        },
+        {
+          "start": 33499,
+          "end": 33561,
+          "offset": 5893,
+          "length": 62,
+          "replacement": "\n  function mt(...args) { return parts.manage.mt(...args); }"
+        },
+        {
+          "start": 47111,
+          "end": 47614,
+          "offset": 5956,
+          "length": 503,
+          "replacement": "\n  function statusLabel(...args) { return parts.manage.statusLabel(...args); }"
+        },
+        {
+          "start": 47614,
+          "end": 48458,
+          "offset": 6460,
+          "length": 844,
+          "replacement": "\n  function manageRows(...args) { return parts.manage.manageRows(...args); }"
+        },
+        {
+          "start": 48458,
+          "end": 50291,
+          "offset": 7305,
+          "length": 1833,
+          "replacement": "\n  function renderManage(...args) { return parts.manage.renderManage(...args); }"
+        },
+        {
+          "start": 50291,
+          "end": 51118,
+          "offset": 9139,
+          "length": 827,
+          "replacement": "\n  function cancelBooking(...args) { return parts.manage.cancelBooking(...args); }"
+        },
+        {
+          "start": 51118,
+          "end": 51800,
+          "offset": 9967,
+          "length": 682,
+          "replacement": "\n  function openManage(...args) { return parts.manage.openManage(...args); }"
+        }
+      ]
+    },
+    {
+      "file": "assets/booking-view.js",
+      "prefix": "/* Booking view. Exports: lsSet, ssGet, ssSet, ssDel, wireGlobal, t, ht, esc, money, vtz, ymd, fmt, venueToday, venueHour, isHotel, layout, head, closed.\n * Reads only the declared context below and standard browser APIs.\n * Shared booking state belongs to the entry owner; counters stay private. */\nexport function createBookingView(context) {\n  'use strict';\n  const { owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage } = context;\n  const state = owner.getState();\n",
+      "suffix": "\n  return Object.freeze({ lsSet, ssGet, ssSet, ssDel, wireGlobal, t, ht, esc, money, vtz, ymd, fmt, venueToday, venueHour, isHotel, layout, head, closed });\n}\n",
+      "names": [
+        "lsSet",
+        "ssGet",
+        "ssSet",
+        "ssDel",
+        "wireGlobal",
+        "t",
+        "ht",
+        "esc",
+        "money",
+        "vtz",
+        "ymd",
+        "fmt",
+        "venueToday",
+        "venueHour",
+        "isHotel",
+        "layout",
+        "head",
+        "closed"
+      ],
+      "deps": [
+        "app",
+        "services",
+        "times",
+        "hotelSearch",
+        "hotelRoomList",
+        "details",
+        "success",
+        "hotelDetails",
+        "renderManage"
+      ],
+      "fragments": [
+        {
+          "start": 598,
+          "end": 695,
+          "offset": 520,
+          "length": 97,
+          "replacement": "\n  function lsSet(...args) { return parts.view.lsSet(...args); }"
+        },
+        {
+          "start": 695,
+          "end": 815,
+          "offset": 618,
+          "length": 120,
+          "replacement": "\n  function ssGet(...args) { return parts.view.ssGet(...args); }"
+        },
+        {
+          "start": 815,
+          "end": 914,
+          "offset": 739,
+          "length": 99,
+          "replacement": "\n  function ssSet(...args) { return parts.view.ssSet(...args); }"
+        },
+        {
+          "start": 914,
+          "end": 1012,
+          "offset": 839,
+          "length": 98,
+          "replacement": "\n  function ssDel(...args) { return parts.view.ssDel(...args); }"
+        },
+        {
+          "start": 1545,
+          "end": 5986,
+          "offset": 938,
+          "length": 4441,
+          "replacement": "\n  /* booking view declaration 4 */"
+        },
+        {
+          "start": 5986,
+          "end": 9006,
+          "offset": 5380,
+          "length": 3020,
+          "replacement": "\n  /* booking view declaration 5 */"
+        },
+        {
+          "start": 9006,
+          "end": 9067,
+          "offset": 8401,
+          "length": 61,
+          "replacement": "\n  function t(...args) { return parts.view.t(...args); }"
+        },
+        {
+          "start": 9067,
+          "end": 9129,
+          "offset": 8463,
+          "length": 62,
+          "replacement": "\n  function ht(...args) { return parts.view.ht(...args); }"
+        },
+        {
+          "start": 9129,
+          "end": 9273,
+          "offset": 8526,
+          "length": 144,
+          "replacement": "\n  function esc(...args) { return parts.view.esc(...args); }"
+        },
+        {
+          "start": 9273,
+          "end": 9381,
+          "offset": 8671,
+          "length": 108,
+          "replacement": "\n  function money(...args) { return parts.view.money(...args); }"
+        },
+        {
+          "start": 10251,
+          "end": 10698,
+          "offset": 8780,
+          "length": 447,
+          "replacement": "\n  /* booking view declaration 10 */"
+        },
+        {
+          "start": 10698,
+          "end": 10774,
+          "offset": 9228,
+          "length": 76,
+          "replacement": "\n  function vtz(...args) { return parts.view.vtz(...args); }"
+        },
+        {
+          "start": 10774,
+          "end": 10908,
+          "offset": 9305,
+          "length": 134,
+          "replacement": "\n  function ymd(...args) { return parts.view.ymd(...args); }"
+        },
+        {
+          "start": 10908,
+          "end": 11181,
+          "offset": 9440,
+          "length": 273,
+          "replacement": "\n  function fmt(...args) { return parts.view.fmt(...args); }"
+        },
+        {
+          "start": 11181,
+          "end": 11473,
+          "offset": 9714,
+          "length": 292,
+          "replacement": "\n  function venueToday(...args) { return parts.view.venueToday(...args); }"
+        },
+        {
+          "start": 11473,
+          "end": 11762,
+          "offset": 10007,
+          "length": 289,
+          "replacement": "\n  function venueHour(...args) { return parts.view.venueHour(...args); }"
+        },
+        {
+          "start": 11762,
+          "end": 11846,
+          "offset": 10297,
+          "length": 84,
+          "replacement": "\n  function isHotel(...args) { return parts.view.isHotel(...args); }"
+        },
+        {
+          "start": 11846,
+          "end": 13633,
+          "offset": 10382,
+          "length": 1787,
+          "replacement": "\n  function layout(...args) { return parts.view.layout(...args); }"
+        },
+        {
+          "start": 13633,
+          "end": 13788,
+          "offset": 12170,
+          "length": 155,
+          "replacement": "\n  function head(...args) { return parts.view.head(...args); }"
+        },
+        {
+          "start": 52454,
+          "end": 53521,
+          "offset": 12326,
+          "length": 1067,
+          "replacement": "\n  function wireGlobal(...args) { return parts.view.wireGlobal(...args); }"
+        },
+        {
+          "start": 53521,
+          "end": 55000,
+          "offset": 13394,
+          "length": 1479,
+          "replacement": "\n  function closed(...args) { return parts.view.closed(...args); }"
+        }
+      ]
+    }
+  ]
+}

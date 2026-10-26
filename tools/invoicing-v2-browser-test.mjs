@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 /* Facturation v2 · le client suit le contrat, au vrai clic, dans dashboard.html.
  *
  * Le serveur (functions/api/invoices.js) est tenu à part. Ici, un faux serveur
@@ -33,7 +33,7 @@ catch { console.log('○ skip: puppeteer-core unavailable — browser assertions
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 if (!bin) { console.log('○ skip: Chromium unavailable — browser assertions not executed'); process.exit(process.env.CI ? 1 : 0); }
 
-const src = fs.readFileSync(path.join(root, 'assets/invoicing.js'), 'utf8');
+const src = invoicingSourceHelper.invoicingTestSource(root);
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 const eq = (got, want, msg) => { assert.deepEqual(got, want, `${msg}\n      reçu : ${JSON.stringify(got)}\n      voulu : ${JSON.stringify(want)}`); checks++; console.log('  ✓ ' + msg); };

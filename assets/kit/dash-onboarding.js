@@ -94,7 +94,7 @@
       .map(function (x) { return { id: x.id, title: x.label, radio: true, selected: S().typeId === x.id }; });
   }
   function pickKind(id) {
-    S().typeId = id;
+    api.update({ typeId: id });
     save();
     Array.prototype.forEach.call(box.querySelectorAll('[data-kind]'), function (b) {
       var on = b.getAttribute('data-kind') === id;
@@ -135,7 +135,7 @@
         pad.answer({ message: t('ob.code_mismatch'), shake: true, clear: true });
         return;
       }
-      S().pins[0].code = c;
+      api.updatePin(0, { code: c });
       go(1);
     };
   }
@@ -186,9 +186,9 @@
     var step = STEPS[at];
     if (step === 'kind' && !S().typeId) return;
     if (step === 'goals') {
-      S().goals = String($('k-chips').getAttribute('value') || '').split(',').filter(Boolean);
+      api.update({ goals: String($('k-chips').getAttribute('value') || '').split(',').filter(Boolean) });
       var f = $('[data-f="goal"]');
-      S().dailyGoal = String(f.value || '').trim();
+      api.update({ dailyGoal: String(f.value || '').trim() });
       f.removeAttribute('error');
       if (api.dailyGoal() === null) { f.setAttribute('error', t('ob.err.goal')); return; }
       save();
@@ -204,7 +204,7 @@
     if (d.action === 'k.list.select' && w === 'kinds') { pickKind(d.id); return; }
     if (d.action === 'k.list.select' && w === 'device') {
       device = d.id;
-      S().device = device;
+      api.update({ device: device });
       save();
       var summary = $('[data-onboarding-summary]');
       if (summary) summary.outerHTML = setupPresentation();

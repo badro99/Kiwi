@@ -1,3 +1,4 @@
+import { bookingTestSource } from './booking-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -37,7 +38,7 @@ for (const [name, file, target] of [
  ['app#0','app/src/native-shell.js','/api/me'],
  ['returns#0','assets/pages-pro/boutique-promos-returns.js','/api/store-credits']
 ]) await test(name + ' bounded network and body', async () => {
- const source = read(file);
+ const source = file === 'assets/booking.js' ? bookingTestSource() : read(file);
  assert.ok(source.includes('request-deadline.mjs'));
  assert.ok(!new RegExp('(?:await |return |    )fetch\\([\"\x27]' + target.replace(/[?]/g,'\\?')).test(source), 'plain endpoint fetch');
  const old = globalThis.fetch;
@@ -111,7 +112,7 @@ await test('booking#0 hotel#0 stalled reads and cancellation recover their UI',a
     boundedFetch:(u,o)=>deadlineFetch(u,o,5),fetch:globalThis.fetch,encodeURIComponent,
     t:x=>x,ht:x=>x,mt:x=>x,closed:x=>messages.push(x),renderTimes(){},hotelRoomList(){},
     renderManage:(_data,_mode,message)=>messages.push(message),app:{querySelector:()=>null}});
-   vm.runInContext(transportSource(extract(read('assets/booking.js'),name)),ctx);
+   vm.runInContext(transportSource(extract(bookingTestSource(),name)),ctx);
    await waitFor(ctx[name]({booking:{status:'confirmed'}}));
    if(name==='loadSlots'||name==='loadHotelRooms'){assert.equal(state.loading,false);assert.equal(state.error,'timeout');}
    else assert.ok(messages.includes('timeout'),name+' actionable timeout');

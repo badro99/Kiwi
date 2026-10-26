@@ -940,6 +940,22 @@
   /* /team-part:profiles */
 
   /* team-part:editor */
+  /* GENERATED SHARED KiwiStaffCredential BEGIN */
+  /* Copy of functions/api/_rules-staff-credential.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiStaffCredential = (function () {
+    // Preserve the server verifier precedence, including its trim after fallback.
+    const canonicalCode = (member) => {
+      return String((member && (member.pinCode || member.password)) || '').trim();
+    };
+
+    const normalizeMember = (member) => {
+      if (!member || typeof member !== 'object') return member;
+      const pinCode = canonicalCode(member);
+      return { ...member, pinCode, password: pinCode };
+    };
+    return { canonicalCode, normalizeMember };
+  })();
+  /* GENERATED SHARED KiwiStaffCredential END */
   const LANG_KEY = { 'Français': 'langFr', 'Arabe': 'langAr', 'Anglais': 'langEn', 'Espagnol': 'langEs', 'Tamazight': 'langTz', 'Darija': 'langDr' };
   const CONTRACT_KEY = { CDI: 'ctCdi', CDD: 'ctCdd', Stage: 'ctStage', Freelance: 'ctFreelance', 'Intérim': 'ctInterim' };
   const langLabel = (T, l) => (LANG_KEY[l] && T[LANG_KEY[l]]) || l;
@@ -1253,9 +1269,9 @@
             <div class="kt-ed-card kt-ed-code">
               <label class="kt-ed-f" data-f="password">
                 <span class="kt-ed-l">${esc(T.edCodeT)}</span>
-                <input class="kt-ed-in kt-ed-pin" type="text" name="password" value="${esc(isCode(m.password) ? m.password : '')}" data-kt-pwd
+                <input class="kt-ed-in kt-ed-pin" type="text" name="password" value="${esc(isCode(KiwiStaffCredential.canonicalCode(m)) ? KiwiStaffCredential.canonicalCode(m) : '')}" data-kt-pwd
                   inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" spellcheck="false"
-                  placeholder="${esc(isCode(m.password) ? '' : (editing ? T.codeKeep : '0000'))}" />
+                  placeholder="${esc(isCode(KiwiStaffCredential.canonicalCode(m)) ? '' : (editing ? T.codeKeep : '0000'))}" />
                 <span class="kt-ed-err" data-err-for="password" hidden></span>
               </label>
               <div class="kt-ed-code-acts">
@@ -1403,8 +1419,8 @@
     if (emailKey && members.some((x) => x.id !== st.memberId && String(x.email || '').trim().toLocaleLowerCase('en') === emailKey)) {
       errs.push(['email', T.vDuplicateEmail]);
     }
-    const effectiveCode = code || (prev && (prev.pinCode || prev.password)) || '';
-    if (effectiveCode && members.some((x) => x.id !== st.memberId && String(x.pinCode || x.password || '').trim() === effectiveCode)) {
+    const effectiveCode = code || KiwiStaffCredential.canonicalCode(prev);
+    if (effectiveCode && members.some((x) => x.id !== st.memberId && KiwiStaffCredential.canonicalCode(x) === effectiveCode)) {
       errs.push(['password', T.vDuplicateCode]);
     }
     ['firstName', 'lastName', 'email', 'function', 'endDate', 'password'].forEach((n) => edError(root, n, ''));
@@ -1417,6 +1433,7 @@
       Kiwi.toast(T.edCheck, { type: 'pend' });
       return;
     }
+    const savedCode = code || KiwiStaffCredential.canonicalCode(prev) || (prev && prev.hasCode ? '' : makeCode());
     const member = {
       id: st.memberId,
       firstName: data.firstName.trim(),
@@ -1428,8 +1445,8 @@
        * régénérait en douce le code du caissier, qui se retrouvait bloqué
        * devant la caisse sans savoir pourquoi. Seule une VRAIE création
        * (aucun code existant) en fabrique un. */
-      password: code || (prev && prev.password) || (prev && prev.hasCode ? '' : makeCode()),
-      pinCode: code || (prev && prev.pinCode) || '',   // en phase avec la caisse
+      password: savedCode,
+      pinCode: savedCode,
       /* Son code existe mais n'est pas revenu du serveur : on ne lui en invente
          pas un (corriger un numéro de téléphone changerait son code), et son
          drapeau reste, donc rien ne part tant qu'il n'est pas résolu. */
@@ -1503,7 +1520,7 @@
       ? `<span class="kt-pv-num">${esc(window.KiwiNumber?.format((+n), {}) ?? (+n).toLocaleString(dateLocale(), {}))} MAD <i>${esc(per)}</i></span>`
       : notSet);
     const row = (label, html) => `<div><dt>${esc(label)}</dt><dd>${html}</dd></div>`;
-    const code = isCode(m.password) ? String(m.password).trim() : (isCode(m.pinCode) ? String(m.pinCode).trim() : '');
+    const code = isCode(KiwiStaffCredential.canonicalCode(m)) ? KiwiStaffCredential.canonicalCode(m) : '';
     const isFixed = m.contract === 'CDD' || m.contract === 'Stage';
     const profileM = modal({
       title: T.pvTitle,

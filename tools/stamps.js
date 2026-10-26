@@ -205,7 +205,7 @@ function scan() {
     }
   }
 
-  for (const file of ['assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js']) {
+  for (const file of ['assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js']) {
     if (exists(file)) for (const m of read(file).matchAll(SHELL_RE()))
       note(m[1], m[2], { file, kind: 'lazy', stamp: m[2] });
   }
@@ -244,13 +244,13 @@ function scan() {
       note(m[1], m[2], { file: 'assets/dashboard-extra.js', kind: 'lazy', stamp: m[2] });
   }
 
-  // Retail modules share live bindings; every import URL is a stamp site.
-  const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js'];
+  // Explicit ES module entries: static and dynamic import URLs are stamp sites.
+  const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js'];
   for (const dir of ['assets/pos-maison', 'assets/pos-boutique']) {
     if (exists(dir)) retail.push(...fs.readdirSync(path.join(ROOT, dir)).filter(f => f.endsWith('.js')).map(f => dir + '/' + f));
   }
   for (const file of retail.filter(exists)) {
-    for (const m of read(file).matchAll(/from\s+'(\.\.?\/[^']+\.js)\?v=([0-9]+)'/g)) {
+    for (const m of read(file).matchAll(/(?:(?:from|import)\s+|import\s*\(\s*)'(\.\.?\/[^']+\.js)\?v=([0-9]+)'/g)) {
       const asset = path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1]));
       note(asset, m[2], { file, kind: 'module', stamp: m[2] });
     }
@@ -272,6 +272,7 @@ function scan() {
    toute premiere estampille sans modifier a la main les shells et le SW. */
 function referenceFiles(asset) {
   const files = [];
+  if (exists('assets/booking.js') && read('assets/booking.js').includes("'/" + asset)) files.push('assets/booking.js');
   for (const doc of shellDocs()) {
     if (read(doc).includes(asset)) files.push(doc);
   }

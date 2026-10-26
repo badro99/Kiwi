@@ -30,6 +30,7 @@ let sales = [{ id: 'a', ts: 10, amount: 12.50 }, { id: 'a', ts: 10, amount: 12.5
   { id: 'next', ts: 20, amount: 100 }];
 const ctx = vm.createContext({ DR: () => ({ dayBounds: () => ({ from: 10, to: 20 }), normSale: s => s }),
   dashSales: () => sales, archivedDay: () => false, window: { KiwiLive: { status: () => ({ on: true, backfillComplete: true }) } } });
+vm.runInContext(report.match(/\/\* GENERATED SHARED KiwiDayReportModel BEGIN \*\/[\s\S]*?\/\* GENERATED SHARED KiwiDayReportModel END \*\//)[0], ctx);
 vm.runInContext(declaration(report.slice(report.indexOf('  function feedTotals')), 'feedTotals') + '\n' + declaration(report.slice(report.indexOf('  function feedIsAuthoritative')), 'feedIsAuthoritative'), ctx);
 assert.equal(Math.round(ctx.feedTotals('day').net * 100), 1025, 'run: refunds subtract exact centimes once');
 assert.equal(Math.round(ctx.feedTotals('day').gross * 100), 1250);

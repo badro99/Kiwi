@@ -31,6 +31,7 @@
 // écriture. Le client garde alors sa copie locale et retentera : il ne doit
 // jamais perdre de stock parce que le serveur tousse.
 
+import { materialize, compactForWrite } from './_rules-catalog.js';
 import { json } from '../auth/_lib.js';
 // La règle de tenancy vivait ici. Elle vaut maintenant aussi pour /api/store et
 // /api/clients, qui exposent les mêmes données privées ; elle a donc déménagé
@@ -228,56 +229,6 @@ function sanitize(raw) {
   return out;
 }
 
-function materialize(data) {
-  const by = new Map();
-  for (const v of data.variants || []) {
-    by.set(v.id, { v, n: Number(v.base != null ? v.base : v.stock) || 0, at: Number(v.baseAt || v.stockAt) || 0 });
-  }
-  for (const m of data.moves || []) {
-    const slot = m && by.get(m.vid);
-    if (slot && Number(m.at) > slot.at) slot.n += Number(m.d) || 0;
-  }
-  for (const { v, n } of by.values()) v.stock = Math.max(0, Math.round(n));
-  return data;
-}
-
-function compactForWrite(data) {
-  const moves = Array.isArray(data.moves) ? data.moves.slice() : [];
-  if (moves.length <= 11000) return data;
-  const by = new Map((data.variants || []).map((v) => [v.id, v]));
-  const foldable = moves.filter((m) => m && m.why !== 'reserve')
-    .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
-  const foldIds = new Set(foldable.slice(0, Math.max(0, moves.length - 10000)).map((m) => m.id));
-  /* Le socle replié prend l'instant du plus récent mouvement replié, et tout
-   * mouvement de même date ou plus ancien cesse alors de compter. Un mouvement
-   * GARDÉ plus ancien (une réservation en ligne, jamais repliée, ou un ex aequo
-   * à la milliseconde) serait donc effacé du stock : jusqu'au 22 octobre 2026 la
-   * pièce réservée revenait en vente, puis une seconde fois à la libération. On
-   * ne replie, par déclinaison, que ce qui précède strictement son plus ancien
-   * mouvement gardé. */
-  const keptFrom = new Map();
-  for (const m of moves) {
-    if (!m || foldIds.has(m.id)) continue;
-    const at = Number(m.at || 0);
-    if (!keptFrom.has(m.vid) || at < keptFrom.get(m.vid)) keptFrom.set(m.vid, at);
-  }
-  for (const m of foldable) {
-    if (foldIds.has(m.id) && keptFrom.has(m.vid) && Number(m.at || 0) >= keptFrom.get(m.vid)) foldIds.delete(m.id);
-  }
-  const folded = new Map();
-  for (const m of moves) {
-    if (!foldIds.has(m.id)) continue;
-    const v = by.get(m.vid);
-    if (!v || Number(m.at || 0) <= Number(v.baseAt || v.stockAt || 0)) continue;
-    const f = folded.get(v.id) || { d: 0, at: Number(v.baseAt || v.stockAt || 0) };
-    f.d += Number(m.d) || 0; f.at = Math.max(f.at, Number(m.at) || 0); folded.set(v.id, f);
-  }
-  for (const [id, f] of folded) {
-    const v = by.get(id); v.base = Number(v.base != null ? v.base : v.stock) + f.d; v.baseAt = f.at;
-  }
-  data.moves = moves.filter((m) => !foldIds.has(m.id));
-  return materialize(data);
-}
 
 const stockColorMatch = (v, color) => String(v.colorId || '') === String(color || '')
   || String(v.colorFamily || '') === String(color || '');

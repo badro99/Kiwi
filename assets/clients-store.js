@@ -345,7 +345,7 @@
     // La démo montre la fidélité en marche ; elle n'engage aucun commerçant.
     if (isDemoBook(book) || SEED_VENUES[book]) return true;
     var c = fidelityStore.get(book);
-    return !!(c && c.model && !c.auto);
+    return KiwiLoyaltyRules.loyaltyOn(c);
   }
 
   function setConfig(patch, book) {
@@ -432,30 +432,56 @@
     return rec;
   }
 
-  /* Same rules as functions/api/clients.js (pointsFor, qualifyingQty,
-     stampsFor): the till's estimate must be what the server will write. */
-  function pointsFor(amount, cfg) {
-    return Math.max(0, Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
-  }
-  function foldName(v) {
-    return String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+  /* GENERATED SHARED KiwiLoyaltyRules BEGIN */
+  /* Copy of functions/api/_rules-loyalty.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiLoyaltyRules = (function () {
+    // Loyalty earning, word matching, historical reversals and explicit reward policies.
+    const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
+    const pointsFor = (amount, cfg) => Math.max(0,
+      Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
+    const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-  }
-  function qualifyingQty(cfg, items) {
-    var want = foldName(cfg && cfg.product && cfg.product.item);
-    if (!want) return 0;
-    return (Array.isArray(items) ? items : []).reduce(function (n, item) {
-      var name = ' ' + foldName(item && item.name) + ' ';
-      return name.indexOf(' ' + want + ' ') >= 0 ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
-    }, 0);
-  }
-  function stampsFor(cfg, items) {
-    if (!(cfg && cfg.model && !cfg.auto)) return 0;
-    if (cfg.model === 'visit') return 1;
-    if (cfg.model !== 'product') return 0;
-    return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
-  }
-
+    const qualifyingQty = (cfg, items) => {
+      const want = foldName(cfg && cfg.product && cfg.product.item);
+      if (!want) return 0;
+      return (Array.isArray(items) ? items : []).reduce((n, item) => {
+        const name = ' ' + foldName(item && item.name) + ' ';
+        return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+      }, 0);
+    }
+    const stampsFor = (cfg, items) => {
+      if (!loyaltyOn(cfg)) return 0;
+      if (cfg.model === 'visit') return 1;
+      if (cfg.model !== 'product') return 0;
+      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+    }
+    const refundFor = (sale, amount, cfg, items, client) => {
+      const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
+      const refunded = Number(sale && sale.refunded || 0), clawed = Number(sale && sale.clawed || 0);
+      const take = Math.max(0, Math.min(amount, Math.round((paid - refunded) * 100) / 100));
+      const claw = paid > 0 && earned > 0
+        ? Math.max(0, Math.min(Math.round(earned * (refunded + take) / paid) - clawed, earned - clawed)) : 0;
+      const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
+      const lines = Array.isArray(items) ? items : [];
+      const whole = paid > 0 && take >= Math.round((paid - refunded) * 100) / 100 - 0.004;
+      const unstamp = cfg.model === 'product' && lines.length
+        ? Math.min(stampsLeft, qualifyingQty(cfg, lines)) : (whole ? stampsLeft : 0);
+      return { take, claw, unstamp,
+        pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
+        stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
+    }
+    const rewardDiscount = (reward, clientId, base, units, policy = 'boutique') => {
+      if (!reward || reward.clientId !== clientId) return 0;
+      const down = n => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
+      if (reward.kind === 'percent') {
+        if (policy === 'librairie') return Math.round(base * reward.value / 100 * 100 + 1e-9) / 100;
+        return base - down(base * (100 - Math.min(100, Math.max(0, reward.value || 0))) / 100);
+      }
+      return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+    }
+    return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
+  })();
+  /* GENERATED SHARED KiwiLoyaltyRules END */
   // record a purchase / visit against a client and accrue fidelity.
   //   opts.amount  → MAD spent (amount model)
   //   opts.visit   → count a visit toward a stamp card (visit / product model)
@@ -500,14 +526,14 @@
     if (!loyaltyOn(book)) {
       // Pas de programme choisi : le passage compte, la fidélité non.
     } else if (cfg.model === 'amount') {
-      delta.points = pointsFor(amount, cfg);
+      delta.points = KiwiLoyaltyRules.pointsFor(amount, cfg);
       rec.points = (rec.points || 0) + delta.points;
       var thr = (cfg.amount && cfg.amount.threshold) || 100;
       rewardReady = thr > 0 && rec.points >= thr;
     } else {
       // visit → one stamp per visit; product → one per qualifying item bought.
       var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
-      delta.stamps = stampsFor(cfg, opts.items);
+      delta.stamps = KiwiLoyaltyRules.stampsFor(cfg, opts.items);
       rec.stamps = (rec.stamps || 0) + delta.stamps;
       rewardReady = rec.stamps >= target;
     }
@@ -529,8 +555,8 @@
   /* Un retour contre avoir reprend la dépense et les points de CE ticket : sans
    * cela, l'achat comptait, puis l'avoir dépensé comptait une seconde fois. Même
    * registre que les achats (clé « refund: »), même file hors ligne : le serveur
-   * plafonne à ce que le ticket a réellement rapporté ; ici on n'en fait qu'une
-   * estimation locale, remplacée au prochain tirage. */
+   * plafonne à ce que le ticket a réellement rapporté. La projection locale
+   * utilise ce même historique, complété des événements encore hors ligne. */
   function recordRefund(id, opts, book) {
     book = book || bookId();
     opts = opts || {};
@@ -543,15 +569,18 @@
     if (!(amount > 0) || !saleRef || !key) return null;
     var ref = 'refund:' + id + ':' + key;
     if (purchaseRead(book).some(function (event) { return event.ref === ref; })) return { client: rec, replayed: true };
-    var take = Math.min(amount, money(rec.spend || 0));
-    var cfg = config(book), claw = 0, unstamp = 0;
-    if (loyaltyOn(book) && cfg.model === 'amount') {
-      claw = Math.min(Number(rec.points || 0), pointsFor(take, cfg));
-    }
-    /* Estimate only: the server caps it at the stamps that ticket earned. */
-    if (loyaltyOn(book) && cfg.model === 'product' && Array.isArray(opts.items) && opts.items.length) {
-      unstamp = Math.min(Number(rec.stamps || 0), qualifyingQty(cfg, opts.items));
-    }
+    var cfg = config(book);
+    var sale = Object.assign({ paid: 0, earned: 0, stamped: 0, refunded: 0, clawed: 0, unstamped: 0 },
+      rec.loyaltySales && Object.hasOwn(rec.loyaltySales, saleRef) ? rec.loyaltySales[saleRef] : null);
+    purchaseRead(book).forEach(function (event) {
+      if (event.clientId !== id || event.saleRef !== saleRef) return;
+      var refund = event.kind === 'refund';
+      sale[refund ? 'refunded' : 'paid'] += refund ? -event.amount : event.amount;
+      sale[refund ? 'clawed' : 'earned'] += refund ? -event.points : event.points;
+      sale[refund ? 'unstamped' : 'stamped'] += refund ? -event.stamps : event.stamps;
+    });
+    var reversal = KiwiLoyaltyRules.refundFor(sale, amount, cfg, opts.items, rec);
+    var take = reversal.take, claw = reversal.pointsTake, unstamp = reversal.stampsTake;
     rec.spend = Math.max(0, money((rec.spend || 0) - take));
     rec.points = Math.max(0, Number(rec.points || 0) - claw);
     rec.stamps = Math.max(0, Number(rec.stamps || 0) - unstamp);
@@ -769,8 +798,26 @@
           clientId: event.clientId, ref: event.ref, amount: event.amount,
           method: event.method || '', items: event.items || [], saleRef: event.saleRef || '',
         } }),
-      }).then(function (r) {
+      }).then(async function (r) {
         if (r && r.ok) {
+          var receipt = await r.json();
+          var ledgerBook = readBook(book);
+          var ledgerClient = ledgerBook.list.filter(function (c) { return c.id === event.clientId; })[0];
+          if (ledgerClient) {
+            var ledgers = ledgerClient.loyaltySales || (ledgerClient.loyaltySales = Object.create(null));
+            var ledger = Object.hasOwn(ledgers, event.saleRef) ? ledgers[event.saleRef]
+              : (ledgers[event.saleRef] = { paid: 0, earned: 0, stamped: 0, refunded: 0, clawed: 0, unstamped: 0 });
+            if (purchaseRead(book).some(function (e) { return e.ref === event.ref; })
+                && !(ledgerClient.purchaseRefs || []).includes(event.ref)) {
+              ledger[isRefund ? 'refunded' : 'paid'] += isRefund ? -Number(receipt.spend || 0) : Number(receipt.spend || 0);
+              ledger[isRefund ? 'clawed' : 'earned'] += isRefund ? -Number(receipt.points || 0) : Number(receipt.points || 0);
+              ledger[isRefund ? 'unstamped' : 'stamped'] += isRefund ? -Number(receipt.stamps || 0) : Number(receipt.stamps || 0);
+              ledgerClient.points = Math.max(0, Number(ledgerClient.points || 0) + Number(receipt.points || 0) - Number(event.points || 0));
+              ledgerClient.stamps = Math.max(0, Number(ledgerClient.stamps || 0) + Number(receipt.stamps || 0) - Number(event.stamps || 0));
+              ledgerClient.spend = money(Number(ledgerClient.spend || 0) + Number(receipt.spend || 0) - Number(event.spend || 0));
+              writeBook(ledgerBook, book);
+            }
+          }
           purchaseDrop(book, event.ref);
           if (!isRefund) purchaseRead(book).forEach(function (e) {
             if (e.kind === 'refund' && e.clientId === event.clientId && e.saleRef === event.saleRef) purchasePush(book, e);
@@ -969,6 +1016,7 @@
       points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
+      loyaltySales: r.loyalty_sales || {},
       purchaseRefs: Array.isArray(r.purchase_refs) ? r.purchase_refs.slice() : [],
       rewardRefs: Array.isArray(r.reward_refs) ? r.reward_refs.slice() : [],
       history: (Array.isArray(r.purchase_history) ? r.purchase_history : []).map(function (row) {

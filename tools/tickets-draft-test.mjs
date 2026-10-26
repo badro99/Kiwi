@@ -1,3 +1,4 @@
+import { ticketsTestSource } from './tickets-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const {draftKey, createDraftStore} = await import('../assets/tickets-draft.mjs');
@@ -12,7 +13,7 @@ const recovered=await createDraftStore({tenant:'a',operator:'x'},backend).load()
 assert.equal(recovered.files[0].name,'room.png');assert.equal(recovered.body,'unfinished');assert.equal(await recovered.files[0].text(),'image bytes');assert.equal(recovered.attempt.key,'retry-key');
 assert.equal(await createDraftStore({tenant:'a',operator:'y'},backend).load(),undefined);
 await a.clear();assert.equal(await a.load(),undefined);
-const src=fs.readFileSync('assets/tickets.js','utf8');
+const src=ticketsTestSource();
 assert.match(src,/tickets-draft\.mjs/);assert.match(src,/await .*\.clear\(/);assert.match(fs.readFileSync('assets/tickets-draft.mjs','utf8'),/draft\.files/);
 console.log('✓ scoped recoverable ticket draft: text, image bytes, retry identity, clear');
 const {composerDraft}=await import('../assets/tickets-draft.mjs');

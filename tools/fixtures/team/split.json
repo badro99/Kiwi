@@ -1,5 +1,5 @@
 {
-  "sha256": "4a4ed236e0edaa6bef332fb7c3013425130fc7fc7c234c7e45e58da67e44a89f",
+  "sha256": "a2b5ae33dfd92f15376f0c5bf3cda8f311e516651d2d7a32305ad2e3a1a8ba85",
   "segments": [
     {
       "name": "locale",
@@ -17,9 +17,9 @@
     },
     {
       "name": "editor",
-      "start": 121984,
-      "end": 166840,
-      "sha256": "c231e1e7e0e5b729f3e30c2258ceeea3e07c726f9b5cfa39415784960e0aeefb",
+      "start": 122741,
+      "end": 167640,
+      "sha256": "c8df643cbb57a20b05e21d64f9fe7ebf37385c002fb205cff91314b65b73d0df",
       "relay": "  /* team-part:editor */\n  function langLabel(...args) { return teamProfiles.langLabel(...args); }\n  function contractLabel(...args) { return teamProfiles.contractLabel(...args); }\n  function rolePreview(...args) { return teamProfiles.rolePreview(...args); }\n  function openMemberModal(...args) { return teamProfiles.openMemberModal(...args); }\n  /* /team-part:editor */\n\n"
     }
   ],
@@ -68,140 +68,140 @@
     },
     {
       "name": "LANG_KEY",
-      "start": 121984,
-      "end": 122133,
+      "start": 122741,
+      "end": 122890,
       "sha256": "0484768a721c7200b442f4d63494c2a280b18b8c082c6b91bf115d2ef77c118c"
     },
     {
       "name": "CONTRACT_KEY",
-      "start": 122134,
-      "end": 122256,
+      "start": 122891,
+      "end": 123013,
       "sha256": "8396d6b95362bdf9fbfbc9e7afb7b73b8d8ebdb0ffb987650b5b7f88f0cdbf6c"
     },
     {
       "name": "langLabel",
-      "start": 122257,
-      "end": 122324,
+      "start": 123014,
+      "end": 123081,
       "sha256": "7837416a649a2bcde695493e129843e351f7eb571820efddbd1701cd2874b572"
     },
     {
       "name": "contractLabel",
-      "start": 122325,
-      "end": 122404,
+      "start": 123082,
+      "end": 123161,
       "sha256": "1f8affb63a3991904e513d24a9b3f4ff03a798882595db2ee94363b0ebcb2892"
     },
     {
       "name": "rolePreview",
-      "start": 122405,
-      "end": 122526,
+      "start": 123162,
+      "end": 123283,
       "sha256": "d211a4c1ee282ec10c3a25ab1be9fe49c338e02c386f02f4ab2851acb2d722c4"
     },
     {
       "name": "edInput",
-      "start": 122527,
-      "end": 122744,
+      "start": 123284,
+      "end": 123501,
       "sha256": "81af140c785b08ace09bc89c066cf0c7f1c718435f70c2a98078a600ca5ebf53"
     },
     {
       "name": "edField",
-      "start": 122745,
-      "end": 123182,
+      "start": 123502,
+      "end": 123939,
       "sha256": "2d0b471de40bd569a45cacc14189afe0181ece4ed609b014ed537087eee5507f"
     },
     {
       "name": "edError",
-      "start": 123247,
-      "end": 124548,
+      "start": 124004,
+      "end": 125305,
       "sha256": "bae96b731c6877fd47a3f5e66ba434729406db9d721f1cdf8828df34f56bce04"
     },
     {
       "name": "edPreview",
-      "start": 124549,
-      "end": 125476,
+      "start": 125306,
+      "end": 126233,
       "sha256": "3a171c0d2392121bcc5aee856f71ba834d76d9e56f14bb1879007c34243858bc"
     },
     {
       "name": "PROFILE_CSS",
-      "start": 125606,
-      "end": 147168,
-      "sha256": "c5b258db03e7a0c3862b7220798564c3b9f5587f234bc0b5b9ec58c0f3719edb"
+      "start": 126363,
+      "end": 148003,
+      "sha256": "78f6f4b2b305501da2ef1f1bcc091b769ec8da694cb81dd7ec73e8945292c4fa"
     },
     {
       "name": "EDITOR_CSS",
-      "start": 128805,
-      "end": 147168,
-      "sha256": "6e271aa5f88bca0ebd7f05cf22a9337bfa8e8216917228d1bd2f34750ee2dd35"
+      "start": 129562,
+      "end": 148003,
+      "sha256": "770c839b93d710b1f4ad04bf01eb70adad81687e1c980863e998f490507711cb"
     },
     {
       "name": "openMemberModal",
-      "start": 136576,
-      "end": 147168,
-      "sha256": "b7260337e816e1b041b315068d8bf38821cc7e758bbac656045e798310abdb40"
+      "start": 137333,
+      "end": 148003,
+      "sha256": "396cc3dc2d503929e3e239f4db18b855556b5639af5e853a7b6b693c5b42c4d1"
     },
     {
       "name": "handlers.kt-add-member",
-      "start": 147170,
-      "end": 147229,
+      "start": 148005,
+      "end": 148064,
       "sha256": "39157ed559b91bc5f8982ae3a99185e167afe13e6c4aab5fcdf5b6ebb53066d1"
     },
     {
       "name": "handlers.kt-employee-app",
-      "start": 147230,
-      "end": 147859,
+      "start": 148065,
+      "end": 148694,
       "sha256": "891afe92be1ddc474462dad0d1436022001bf14f65973b1cfb361a4b673d52ed"
     },
     {
       "name": "handlers.kt-edit-member",
-      "start": 147860,
-      "end": 148095,
+      "start": 148695,
+      "end": 148930,
       "sha256": "67f25b2501473b127362e564639e762a9e16e971445144d31e7cd6694efbd771"
     },
     {
       "name": "handlers.kt-pwd-gen",
-      "start": 148257,
-      "end": 148550,
+      "start": 149092,
+      "end": 149385,
       "sha256": "820dbbd0337c818a01acf5eec8b827f328135f0fc3a8212db21ef3567a8b626a"
     },
     {
       "name": "handlers.kt-pwd-copy",
-      "start": 148551,
-      "end": 149033,
+      "start": 149386,
+      "end": 149868,
       "sha256": "05b3a9c876c3776051ef88dc2f767ba460358a93de78049dde316057089884f5"
     },
     {
       "name": "handlers.kt-lang-toggle",
-      "start": 149034,
-      "end": 149435,
+      "start": 149869,
+      "end": 150270,
       "sha256": "a95c0512ab9c1de96e298ebd1d8ba2a31eaef338e2a44234f1807facbb9b48c0"
     },
     {
       "name": "handlers.kt-submit-member",
-      "start": 151345,
-      "end": 157390,
-      "sha256": "27b6e2a55f11a6ba62db554a844b95d027c56c72e1d8875879f1c3fff86a95f9"
+      "start": 152180,
+      "end": 158202,
+      "sha256": "d4c87205f663644e41d94b8bd412eb6d15e58b8fa3fc835e4c55958415d44a1b"
     },
     {
       "name": "handlers.kt-view-profile",
-      "start": 157451,
-      "end": 163180,
-      "sha256": "85925df8a0a94d7fbf15a96b80ba1634cadf0aa366dbbdb57d56e1f0769b5b8c"
+      "start": 158263,
+      "end": 163980,
+      "sha256": "29b91b48d8aa1c9b89a19f5012afa32011a38f9496e28e63fb52cbcae11457f3"
     },
     {
       "name": "profileSection",
-      "start": 163182,
-      "end": 163662,
+      "start": 163982,
+      "end": 164462,
       "sha256": "30435a7fe174b5251635e4ffa483ca66bb785e36a5c3648e26f3a814ba68cc6b"
     },
     {
       "name": "handlers.kt-delete-member",
-      "start": 163664,
-      "end": 165829,
+      "start": 164464,
+      "end": 166629,
       "sha256": "5fd04af3e7361ac7a4de1c58ca7a57e7e463f1785b33f7f2eab1aa3df106787a"
     },
     {
       "name": "handlers.kt-confirm-delete",
-      "start": 165831,
-      "end": 166838,
+      "start": 166631,
+      "end": 167638,
       "sha256": "2d7d446975495e09ed5a53725476e42fc9934ab665d4dcadde9bfedc1cd182fd"
     }
   ]

@@ -19,7 +19,7 @@ function ok(label, value) {
 }
 
 const pairing = read('assets/caisse-pairing.js');
-const onboarding = read('assets/onboarding.js');
+const onboarding = read('assets/onboarding-data.js') + read('assets/onboarding.js');
 const caisse = caisseTestSource(read('kiwi-caisse.html')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
 const boutique = read('assets/pos-boutique.js');
 const maison = read('assets/pos-maison.js');

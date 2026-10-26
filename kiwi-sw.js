@@ -18,7 +18,20 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/onboarding-data.js?v=4',
+  '/assets/tickets-data.js?v=3',
+  '/assets/tickets-board.js?v=3',
+  '/assets/tickets-composer.js?v=3',
+  '/assets/tickets-thread.js?v=3',
+  '/assets/invoicing/print.js?v=4',
+  '/assets/invoicing/history.js?v=4',
+  '/assets/invoicing/composer.js?v=6',
+  '/assets/invoicing/transport.js?v=3',
+  '/assets/booking-view.js?v=2',
+  '/assets/booking-manage.js?v=2',
+  '/assets/booking-submission.js?v=2',
+  '/assets/booking-hotel.js?v=2',
+  '/assets/booking-service.js?v=2',
+  '/assets/onboarding-data.js?v=8',
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',
@@ -35,8 +48,8 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=6',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=10',
-  '/assets/caisse-floor.js?v=6',
+  '/assets/caisse-accounting.js?v=11',
+  '/assets/caisse-floor.js?v=8',
   '/assets/caisse-kitchen.js?v=4',
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=1',
@@ -75,7 +88,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=37',
+  '/assets/booking.js?v=40',
   '/assets/booking.css?v=15',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=2',
@@ -114,7 +127,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=23',
+  '/assets/pages/dashboard-startup.js?v=26',
   '/assets/pages/dashboard-loader.js?v=16',
   '/assets/hotel/model.js?v=4',
   '/assets/hotel/views.js?v=2',
@@ -158,7 +171,7 @@ var SHELL = [
   '/assets/view-link.js?v=2',
   '/assets/features.js?v=16',
   '/assets/invoicing.css?v=11',
-  '/assets/invoicing.js?v=23',
+  '/assets/invoicing.js?v=30',
   '/assets/order-qr.js?v=6',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -252,9 +265,9 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=33',
+  '/assets/day-report.js?v=34',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=37',
+  '/assets/day-report-dash.js?v=38',
   '/assets/day-report-export.js?v=13',
   '/assets/month-report.js?v=16',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -303,28 +316,28 @@ var SHELL = [
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=8',
+  '/assets/boutique-catalog-parts.js?v=9',
   '/assets/boutique-catalog.js?v=17',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promo-rules.js?v=4',
-  '/assets/promos.js?v=12',
+  '/assets/promo-rules.js?v=5',
+  '/assets/promos.js?v=13',
   '/assets/boutique-promos-dashboard.js?v=21',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=71',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
-  '/assets/menu-promos.js?v=5',
+  '/assets/menu-promos.js?v=6',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=6',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=15',
+  '/assets/inventory-ledger.js?v=16',
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=11',
@@ -342,14 +355,14 @@ var SHELL = [
   '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
-  '/assets/clients-store.js?v=26',
+  '/assets/clients-store.js?v=27',
   '/assets/clients-book.js?v=49',
   '/assets/clients-directory.js?v=28',
   '/assets/customer-retention.js?v=11',
-  '/assets/menu-catalog.js?v=35',
+  '/assets/menu-catalog.js?v=36',
   '/assets/stock-identity.js?v=3',
   '/assets/restaurant-recipes.js?v=11',
-  '/assets/restaurant-units.js?v=1',
+  '/assets/restaurant-units.js?v=2',
   '/assets/employee-live.js?v=621',
   '/assets/employee-planning.js?v=20',
   '/assets/employee-trade-shell.css?v=2',
@@ -360,7 +373,7 @@ var SHELL = [
   '/assets/team/merge.js?v=2',
   '/assets/field-merge.js?v=1',
   '/assets/team.js?v=325',
-  '/assets/team/profile-ui.js?v=3',
+  '/assets/team/profile-ui.js?v=4',
   '/assets/team-hours.js?v=7',
   '/assets/menu-i18n.js?v=6',
   '/assets/restaurant-menu/strings.js?v=2',
@@ -389,7 +402,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=19',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=17',
-  '/assets/pos-dispatch.js?v=176',
+  '/assets/pos-dispatch.js?v=179',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -429,7 +442,7 @@ var SHELL = [
   '/assets/kit/dash-compliance.js?v=1',
   '/assets/kit/dash-desktop.js?v=9',
   '/assets/kit/dash-ai.js?v=3',
-  '/assets/kit/dash-onboarding.js?v=4',
+  '/assets/kit/dash-onboarding.js?v=5',
   /* and forgot and reset password, behind kiwiSkin2027:access. */
   '/assets/icons/material/sprite.access.svg?v=1',
   '/assets/kit/strings/onboarding.fr.js?v=1',
@@ -473,12 +486,12 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=115',
-  '/assets/pos-boutique/sales.js?v=21',
+  '/assets/pos-boutique.css?v=118',
+  '/assets/pos-boutique/sales.js?v=24',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=21',
-  '/assets/pos-boutique/inventory.js?v=21',
-  '/assets/pos-boutique.js?v=115',
+  '/assets/pos-boutique/checkout.js?v=24',
+  '/assets/pos-boutique/inventory.js?v=24',
+  '/assets/pos-boutique.js?v=118',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -500,8 +513,8 @@ var SHELL = [
   '/assets/pos-epicerie.js?v=25',
   '/assets/pos-pharmacie.css?v=9',
   '/assets/pos-pharmacie.js?v=9',
-  '/assets/pos-librairie.css?v=13',
-  '/assets/pos-librairie.js?v=13',
+  '/assets/pos-librairie.css?v=14',
+  '/assets/pos-librairie.js?v=14',
   '/assets/pos-fleuriste.css?v=15',
   '/assets/pos-fleuriste.js?v=15',
   '/assets/pos-coiffure.css?v=10',

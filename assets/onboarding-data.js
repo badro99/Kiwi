@@ -175,6 +175,97 @@
     storage.del(KEY);
     return vid;
   }
+  /* Session interface: createSession({ TYPES, tr }) owns all onboarding answers.
+   * Renderers read state and call update(), fitPinsToTeam(), validation and submit().
+   * Reads only injected trades/translator, submission adapters and this data module.
+   * No window, DOM, sibling renderer or storage globals. */
+  function createSession({ TYPES, tr }) {
+  const S = {
+    step: 0,
+    /* No type is pre-selected: a shop that taps Continue must not be filed as a
+       restaurant and load the wrong vertical. Continue waits for a choice. */
+    ownerName: '', bizName: '', typeId: '',
+    venueCount: 1, city: '',
+    teamSize: 3, teamGiven: false,
+    goals: [], dailyGoal: '',
+    pins: [ { role: 'owner', name: '', code: '' }, { role: 'manager', name: '', code: '' }, { role: 'staff', name: '', code: '' }, { role: 'staff', name: '', code: '' } ],
+  };
+
+  const RESERVED = ['0000', '0505', '1111', '0909']; // demo codes — keep them free
+
+  const TYPE_HINT = { fr: 'Choisissez votre type d’activité pour continuer.', en: 'Choose your type of business to continue.', ar: 'اختر نوع نشاطك للمتابعة.' };
+
+  function fitPinsToTeam() {
+    const want = S.teamGiven ? (+S.teamSize || 1) : 1;
+    if (S.pinsFitFor === want) return;
+    const rest = S.pins.slice(1);
+    if (rest.some((p) => (p.name || '').trim() || (p.code || '').trim())) return;
+    S.pinsFitFor = want;
+    const others = Math.max(0, Math.min(3, want - 1));
+    const roles = others >= 2 ? ['manager'].concat(Array(others - 1).fill('staff')) : Array(others).fill('staff');
+    S.pins = [S.pins[0] || { role: 'owner', name: '', code: '' }].concat(roles.map((role) => ({ role, name: '', code: '' })));
+  }
+
+  function parsedDailyGoal() {
+    const raw = String(S.dailyGoal == null ? '' : S.dailyGoal).trim();
+    if (!raw) return 0;
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(raw)) return null;
+    const amount = Number(raw.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return null;
+    return Math.round(amount * 100) / 100;
+  }
+
+  function validate() {
+    if ((S.step === 1 || S.step === 7) && !S.ownerName.trim()) return tr({ fr: 'Indiquez votre prénom.', en: 'Enter your first name.', ar: 'أدخل اسمك.' });
+    if ((S.step === 2 || S.step === 7) && !S.bizName.trim()) return tr({ fr: 'Donnez un nom à votre établissement.', en: 'Give your business a name.', ar: 'أدخل اسم نشاطك.' });
+    if ((S.step === 2 || S.step === 7) && !TYPES.some((t) => t.id === S.typeId)) return tr(TYPE_HINT);
+    if (S.step === 5 && parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
+    if (S.step === 6 || S.step === 7) {
+      const owner = S.pins[0];
+      if (!/^\d{4}$/.test(owner.code)) return tr({ fr: 'Choisissez votre code à 4 chiffres (le vôtre est obligatoire).', en: 'Choose your 4-digit code (yours is required).', ar: 'اختر رمزك المكوّن من 4 أرقام.' });
+      const seen = {};
+      for (const p of S.pins) {
+        if (!p.code) continue;
+        if (!/^\d{4}$/.test(p.code)) return tr({ fr: 'Chaque code doit faire exactement 4 chiffres.', en: 'Each code must be exactly 4 digits.', ar: 'كل رمز يجب أن يكون 4 أرقام.' });
+        if (RESERVED.includes(p.code)) return tr({ fr: 'Le code ' + p.code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + p.code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + p.code + ' محجوز، اختر غيره.' });
+        if (seen[p.code]) return tr({ fr: 'Deux personnes ont le même code, chaque code doit être unique.', en: 'Two people share a code, each must be unique.', ar: 'رمزان متطابقان، يجب أن يكون كل رمز فريداً.' });
+        seen[p.code] = 1;
+      }
+    }
+    return null;
+  }
+
+  function kitCodeProblem(code) {
+    if (!/^\d{4}$/.test(code)) return tr({ fr: 'Choisissez votre code à 4 chiffres (le vôtre est obligatoire).', en: 'Choose your 4-digit code (yours is required).', ar: 'اختر رمزك المكوّن من 4 أرقام.' });
+    if (RESERVED.includes(code)) return tr({ fr: 'Le code ' + code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + code + ' محجوز، اختر غيره.' });
+    return null;
+  }
+
+  function kitProblem() {
+    if (!TYPES.some((t) => t.id === S.typeId)) return tr(TYPE_HINT);
+    if (parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
+    return kitCodeProblem(S.pins[0] && S.pins[0].code);
+  }
+
+  let finishing = false;
+    return {
+      state: S, reserved: RESERVED, typeHint: TYPE_HINT,
+      isSubmitting: () => finishing,
+      setSubmitting(value) { finishing = value; },
+      update(answers) { Object.assign(S, answers); },
+      updatePin(index, answers) { if (S.pins[index]) Object.assign(S.pins[index], answers); },
+      addPin() { S.pins.push({ role: 'staff', name: '', code: '' }); },
+      removePin(index) { if (index > 0 && S.pins.length > 1) S.pins.splice(index, 1); },
+      fitPinsToTeam, parsedDailyGoal, validate, kitCodeProblem, kitProblem,
+      finalProblem() {
+        const step = S.step;
+        try { S.step = 7; return validate(); }
+        finally { S.step = step; }
+      },
+      submit(adapters) { return submit({ ...adapters, S, t: TYPES.find((t) => t.id === S.typeId) || TYPES[0], goal: parsedDailyGoal(), tr }); },
+    };
+  }
+
   // Saved answers only: no storage, DOM, clock or credentials in this projection.
   function viewModel(S, types) {
     const type = types.find((t) => t.id === S.typeId);
@@ -200,5 +291,5 @@
       model.steps.map((step) => '<p data-setup-step="' + step.id + '" data-done="' + step.done + '">' + labels[step.id] + ' · ' + (step.done ? 'Terminé' : 'À compléter') + '</p>').join('') +
       model.recap.map((line) => '<div class="r" data-recap="' + line.id + '"><span>' + line.label + '</span><b>' + esc(line.value) + '</b></div>').join('') + '<p>Action suivante : ' + (labels[model.nextAction] || 'Créer mon espace') + '</p></div>';
   }
-  return { createDraft, mountRecovery, submit, DRAFT_NOTE, viewModel, presentation };
+  return { createSession, createDraft, mountRecovery, submit, DRAFT_NOTE, viewModel, presentation };
 });

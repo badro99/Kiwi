@@ -1,9 +1,10 @@
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 import printerTestSource from './printer-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const read = (path) => path === 'assets/invoicing.js' ? invoicingSourceHelper.invoicingTestSource() : readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const paper = read('assets/print-paper.css');
 const printer = printerTestSource() + '\n' + read('assets/printer/pairing-ui.js');
 const barcode = read('assets/barcode.js');

@@ -1,3 +1,4 @@
+import { normalizeModifier, validModifier, normalizeOptionGroup } from './_rules-menu-schema.js';
 // /api/menu — the customer self-order menu, published per merchant.
 //
 // Two halves, mirroring /api/config's trust model:
@@ -46,28 +47,6 @@ const MENU_ALLERGENS = [
   'fruits_a_coque', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques',
 ];
 const MENU_NUTRIENT_LIMITS = { kcal: 5000, protein: 500, carbs: 500, fat: 500, sugars: 500, salt: 500 };
-const OPTION_EMOJIS = new Set([
-  '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
-  '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
-  '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
-  '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
-  '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
-  '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
-  '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
-  '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
-  '🥠', '🥮', '🍢', '🍡', '🥡',
-  '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
-  '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
-  '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
-  '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
-  '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
-  '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
-]);
-const optionEmoji = (v) => {
-  const value = str(v, 16).trim();
-  return OPTION_EMOJIS.has(value) ? value : '';
-};
-
 // Media are stored as URLs (uploaded to R2 via /api/media), never as bytes. Only
 // same-origin /api/media/ paths are kept: a published menu is rendered on a
 // stranger's phone, so it must never be able to point that phone at an
@@ -213,19 +192,10 @@ export function sanitizeMenu(raw, now = Date.now()) {
   // entrerait dans la note sans qu'on ait demandé quoi que ce soit.
   const opts = Array.isArray(raw.opts) ? raw.opts.slice(0, 40) : [];
   out.opts = opts.map((g) => withI18n({
-    id: str(g && g.id, 40),
-    name: str(g && g.name, 60),
-    // Deux règles seulement, et rien d'autre : un choix, ou plusieurs.
-    kind: (g && g.kind) === 'many' ? 'many' : 'one',
-    required: !!(g && g.required),
+    ...normalizeOptionGroup(g),
     choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => withI18n({
-      id: str(c && c.id, 40),
-      name: str(c && c.name, 60),
-      // Repère visuel facultatif pour le KDS. Additif : toutes les cartes
-      // publiées avant cette clé continuent avec une chaîne vide.
-      emoji: optionEmoji(c && c.emoji),
-      price: menuAmount(c && c.price, 1e6),
-    }, c, 60, 0)).filter((c) => c.id && c.name),
+      ...normalizeModifier(c),
+    }, c, 60, 0)).filter(validModifier),
   }, g, 60, 0)).filter((g) => g.id && g.name);
   const cats = Array.isArray(raw.cats) ? raw.cats.slice(0, 60) : [];
   out.cats = cats.map((c) => withI18n({

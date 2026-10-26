@@ -1,12 +1,13 @@
 // Real named declarations; browser/network/storage edges are explicit stubs.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const sharedRules = require('./shared-rules-source.cjs');
 const { declaration } = require('./js-declarations.cjs');
 const ROOT = process.env.KIWI_ROOT || path.resolve(__dirname, '..');
 function source(file) {
   return fs.readFileSync(path.join(ROOT,file),'utf8').replace(/^(?:import .*;\n)+/,'').replace(/\nexport \{[^\n]+\};\n$/,'')
     .replace(/^[\s\S]*?\(function \(\) \{\s*['"]use strict['"];?/, '').replace(/\}\)\(\);\s*$/, '');
 }
-function load(c,file,names) { vm.runInContext(names.map(name=>declaration(source(file),name)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c,{filename:file}); }
+function load(c,file,names) { vm.runInContext(sharedRules(source(file))+'\n'+names.map(name=>declaration(source(file),name)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c,{filename:file}); }
 const TS=Date.parse('2026-10-22T12:00:00Z');
 function world(vertical) {
   const prefix=vertical==='maison'?'mz':'bq', nodes=new Map(), storage=new Map(), timers=[], events=[];

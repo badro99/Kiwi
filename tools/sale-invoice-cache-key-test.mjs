@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 /* Factures de vente · une seule clé de cache, celle du commerce.
  *
  * invoice.js lit et écrit le cache sous `kiwi:sale_invoices:v1:<commerce>`
@@ -42,7 +42,7 @@ ok(KiwiInvoice.getCachedInvoices()['sale-1'].number === 'F-2026-0001' && store.h
   'ce qui s\'écrit se relit, sous la clé du commerce');
 
 /* invoicing.js : la synchronisation serveur, exécutée */
-const invoicing = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
+const invoicing = invoicingSourceHelper.invoicingTestSource(ROOT);
 const from = invoicing.indexOf('  function syncServerInvoices() {');
 const to = invoicing.indexOf('  /* ── vendeur');
 ok(from > 0 && to > from, 'la synchronisation des factures serveur est localisée dans invoicing.js');

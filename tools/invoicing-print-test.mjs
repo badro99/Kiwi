@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 /* Un document de Facturation s'imprime sur son propre gabarit A4, en HT.
  *
  * « Imprimer / PDF » passait la facture au gabarit des ventes de comptoir
@@ -18,7 +18,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
+const src = invoicingSourceHelper.invoicingTestSource(ROOT);
 
 let passed = 0, failed = 0;
 function ok(label, cond, detail) {

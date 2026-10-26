@@ -35,7 +35,7 @@ const fetch = async (_url, options = {}) => {
   const payload = JSON.parse(options.body || '{}');
   if (payload.purchase) {
     purchaseAttempts += 1;
-    return { ok: purchaseAttempts > 1, status: purchaseAttempts > 1 ? 200 : 404 };
+    return { ok: purchaseAttempts > 1, status: purchaseAttempts > 1 ? 200 : 404, json: async () => ({ spend: payload.purchase.amount, points: 0, stamps: 0 }) };
   }
   if (payload.id) { profileWrites += 1; return { ok: true, status: 200 }; }
   return { ok: true, status: 200, json: async () => ({ clients: [], cursor: 0 }) };

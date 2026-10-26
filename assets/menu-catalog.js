@@ -68,31 +68,50 @@
 
   const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
   const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
-  const OPT_EMOJIS = Object.freeze([
-    // Fruits, légumes, aromates et ingrédients bruts.
-    '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
-    '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
-    '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
-    '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
-    // Boulangerie, protéines et plats préparés.
-    '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
-    '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
-    '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
-    '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
-    '🥠', '🥮', '🍢', '🍡', '🥡',
-    // Desserts et boissons.
-    '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
-    '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
-    '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
-    // Repères opérationnels : validation, interdiction, température, matériel et couleurs.
-    '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
-    '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
-    '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
-  ]);
-  const cleanOptEmoji = (value) => {
-    const emoji = String(value || '').trim();
-    return OPT_EMOJIS.indexOf(emoji) >= 0 ? emoji : '';
-  };
+  /* GENERATED SHARED KiwiMenuSchema BEGIN */
+  /* Copy of functions/api/_rules-menu-schema.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiMenuSchema = (function () {
+    const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+    const OPTION_EMOJIS = new Set([
+      '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
+      '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
+      '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
+      '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
+      '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
+      '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
+      '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
+      '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
+      '🥠', '🥮', '🍢', '🍡', '🥡',
+      '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
+      '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
+      '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
+      '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
+      '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
+      '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
+    ]);
+    const optionEmoji = (v) => {
+      const value = str(v, 16).trim();
+      return OPTION_EMOJIS.has(value) ? value : '';
+    };
+
+    const modifierAmount = (value) => {
+      return Math.round(Math.max(0, Math.min(1e6, Number(value) || 0)) * 100) / 100;
+    }
+    const normalizeModifier = (raw) => {
+      return { id: str(raw && raw.id, 40), name: str(raw && raw.name, 60),
+        emoji: optionEmoji(raw && raw.emoji), price: modifierAmount(raw && raw.price) };
+    }
+    const validModifier = (choice) => { return !!(choice && choice.id && choice.name); }
+
+    const normalizeOptionGroup = (raw) => ({
+      id: str(raw && raw.id, 40), name: str(raw && raw.name, 60),
+      kind: raw && raw.kind === 'many' ? 'many' : 'one', required: !!(raw && raw.required),
+    });
+    return { OPTION_EMOJIS, optionEmoji, modifierAmount, normalizeModifier, validModifier, normalizeOptionGroup };
+  })();
+  /* GENERATED SHARED KiwiMenuSchema END */
+  const OPT_EMOJIS = Object.freeze(Array.from(KiwiMenuSchema.OPTION_EMOJIS));
+  const cleanOptEmoji = KiwiMenuSchema.optionEmoji;
 
   function normalizeItem(data, d, id, defaultName) {
     const formula = cleanFormula(data && data.formula, d.items);
@@ -164,17 +183,18 @@
     return { id, name: String(name || defaultName).trim() || defaultName, sub: [], station: '' };
   }
   function normalizeChoice(name, price, emoji, id, defaultName) {
-    return { id, name: String(name || '').trim() || defaultName, price: nonnegative(price), emoji: cleanOptEmoji(emoji) };
+    return KiwiMenuSchema.normalizeModifier({ id, name: String(name || '').trim() || defaultName, price, emoji });
   }
   function normalizeGroup(name, id, defaultName) {
-    return { id, name: String(name || '').trim() || defaultName, kind: 'one', required: false, choices: [] };
+    return { ...KiwiMenuSchema.normalizeOptionGroup({ id, name: String(name || '').trim() || defaultName }), choices: [] };
   }
   function patchGroup(group, patch) {
     const g = { ...group };
     if (patch.name != null) g.name = String(patch.name).trim() || g.name;
-    if (patch.kind != null) g.kind = patch.kind === 'many' ? 'many' : 'one';
-    if (patch.required != null) g.required = !!patch.required;
-    return g;
+    const normalized = KiwiMenuSchema.normalizeOptionGroup({ ...g,
+      kind: patch.kind != null ? patch.kind : g.kind,
+      required: patch.required != null ? patch.required : g.required });
+    return { ...g, ...normalized };
   }
   // New centime API, deliberately separate from legacy float screen pricing.
   // Chosen modifiers are resolved by the caller; prices are MAD. Tax is an
@@ -650,7 +670,7 @@
       const g = optById(d, gid); if (!g) return d;
       const c = (g.choices || []).find((x) => x && x.id === cid); if (!c) return d;
       if (patch.name != null) c.name = String(patch.name).trim() || c.name;
-      if (patch.price != null) c.price = rules.nonnegative(patch.price);
+      if (patch.price != null) c.price = rules.normalizeChoice(c.name, patch.price, c.emoji, c.id, c.name).price;
       if (patch.emoji != null) c.emoji = cleanOptEmoji(patch.emoji);
       return d;
     });

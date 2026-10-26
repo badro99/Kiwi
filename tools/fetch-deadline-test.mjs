@@ -1,7 +1,8 @@
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const read = name => fs.readFileSync(new URL('../assets/' + name + '.js', import.meta.url), 'utf8');
+const read = name => name === 'invoicing' ? invoicingSourceHelper.invoicingTestSource() : fs.readFileSync(new URL('../assets/' + name + '.js', import.meta.url), 'utf8');
 const between = (s, a, b) => s.slice(s.indexOf(a), s.indexOf(b, s.indexOf(a)));
 const drain = async () => { for (let i=0;i<40;i++) await Promise.resolve(); };
 function fixture(name, extra={}) {

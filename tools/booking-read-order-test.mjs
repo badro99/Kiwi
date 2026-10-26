@@ -1,3 +1,4 @@
+import { ticketsTestSource } from './tickets-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -13,12 +14,18 @@ function requests() {
     async at(i) { for (let k=0;k<50&&!pending[i];k++) await Promise.resolve(); return pending[i]; } };
 }
 function booking() {
-  const src=read('assets/booking.js'), net=requests();
-  const c=vm.createContext({ ...net, merchant:'fixture', state:{service:{id:'service'},date:'2026-10-26',partySize:2},
+  const net=requests();
+  const c=vm.createContext({ ...net, merchant:'fixture', state:{config:{settings:{windowDays:1}},service:{id:'service'},date:'2026-10-26',partySize:2,hotelRooms:[]},
     party:()=>2, renderTimes:()=>{}, hotelRoomList:()=>{}, t:x=>x, ht:x=>x,
-    app:{querySelector:()=>null}, setTimeout });
-  vm.runInContext(src.slice(src.indexOf('  var slotSeq='),src.indexOf('  function times()'))+
-    src.slice(src.lastIndexOf('\n',src.indexOf('  async function loadHotelRooms'))+1,src.indexOf('\n',src.indexOf('  async function loadHotelRooms'))),c);
+    app:{querySelector:()=>null,querySelectorAll:()=>[]}, setTimeout, venueToday:()=> '2026-10-26', plusDays:()=> '2026-10-27', esc:String, fmt:()=>'', money:String });
+  for (const name of ['service','hotel']) {
+    const source=read('assets/booking-'+name+'.js').replace('export function create','function create');
+    const keys=source.match(/const \{ owner, ([^}]+) \} = context/)[1].split(',').map(x=>x.trim());
+    c.context={owner:{getState:()=>c.state}};
+    for(const key of keys)c.context[key]=c[key]||(()=>{});
+    vm.runInContext(source+'; this.part=createBooking'+name.replace(/^./,x=>x.toUpperCase())+'(context);',c);
+    c[name==='service'?'loadSlots':'loadHotelRooms']=c.part[name==='service'?'loadSlots':'loadHotelRooms'];
+  }
   return {c,net};
 }
 await test('booking#0 obsolete slot config cannot replace newest service',async()=>{
@@ -31,19 +38,19 @@ await test('booking#1 obsolete hotel success and failure cannot replace newer se
   for(const reject of [false,true]) {
     const {c,net}=booking();c.state.checkIn='2026-10-27';const a=c.loadHotelRooms();
     c.state.checkIn='2026-10-28';c.state.partySize=4;const b=c.loadHotelRooms();
-    await net.at(1);net.reply(1,{hotel:{categories:[{id:'new'}]}});await b;
-    if(reject)net.pending[0].reject(new Error('offline'));else net.reply(0,{hotel:{categories:[{id:'old'}]}});
+    await net.at(1);net.reply(1,{hotel:{categories:[{id:'new',name:'New'}]}});await b;
+    if(reject)net.pending[0].reject(new Error('offline'));else net.reply(0,{hotel:{categories:[{id:'old',name:'Old'}]}});
     await a;assert.equal(c.state.hotelRooms[0].id,'new');assert.ok(!c.state.error);
   }
 });
 await test('tickets#0 newest board read survives older success or failure',async()=>{
   for(const reject of [false,true]) {
-    const src=read('assets/tickets.js'), net=requests();let renders=0;
+    const src=ticketsTestSource(), net=requests();let renders=0;
     const c=vm.createContext({...net,API:'/api/tickets',state:{filters:{}},renderLoading:()=>{},render:()=>renders++,configureComposerClassification:()=>{},lists:{}});
     vm.runInContext(src.slice(src.indexOf('  async function loadTickets'),src.indexOf('  const draftController')),c);
     const a=c.loadTickets({quiet:true}), b=c.loadTickets();
-    (await net.at(1)).resolve({ok:true,json:async()=>({taxonomy:{version:2,kinds:[],areas:[]},tickets:[{id:'new'}]})});await b;
-    if(reject)(await net.at(0)).reject(new Error('offline'));else (await net.at(0)).resolve({ok:true,json:async()=>({taxonomy:{version:1,kinds:[],areas:[]},tickets:[{id:'old'}]})});
+    (await net.at(1)).resolve({ok:true,json:async()=>({taxonomy:{version:2,kinds:[],areas:[]},tickets:[{id:'new',name:'New'}]})});await b;
+    if(reject)(await net.at(0)).reject(new Error('offline'));else (await net.at(0)).resolve({ok:true,json:async()=>({taxonomy:{version:1,kinds:[],areas:[]},tickets:[{id:'old',name:'Old'}]})});
     await a;assert.equal(c.state.tickets[0].id,'new');assert.equal(c.state.taxonomy.version,2);assert.equal(renders,1);
   }
 });

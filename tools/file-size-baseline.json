@@ -15,7 +15,7 @@
     "dashboard.html": 2406,
     "kiwi-caisse.html": 1947,
     "kiwi-serveur.html": 960,
-    "assets/caisse-app.js": 3954,
+    "assets/caisse-app.js": 3880,
     "assets/serveur-app.js": 3372,
     "assets/restaurant-menu-workspace.js": 1354,
     "assets/live-link.js": 1519,
@@ -28,7 +28,7 @@
     "assets/pos-epicerie.js": 1998,
     "assets/caisse-pairing.js": 1219,
     "assets/conformite.js": 1078,
-    "assets/tickets.js": 1343,
+    "assets/tickets.js": 667,
     "assets/pos-pharmacie.js": 1910,
     "assets/pages-pro-boutique.js": 3630,
     "assets/team-hours.js": 1566,
@@ -40,7 +40,7 @@
     "assets/day-report.js": 1411,
     "assets/dashboard-extra.js": 1051,
     "assets/design-vexel-layout.js": 1146,
-    "assets/invoicing.js": 1535,
+    "assets/invoicing.js": 1069,
     "assets/orderpro-guest.js": 1068,
     "assets/account.js": 1423,
     "assets/pos-hotel.js": 1637,
@@ -99,7 +99,9 @@
     "functions/api/store.js": 1214,
     "functions/api/sale.js": 1151,
     "functions/api/operations.js": 2480,
-    "functions/api/clients.js": 1080
+    "functions/api/clients.js": 1043,
+    "assets/booking.js": 164,
+    "assets/onboarding.js": 928
   },
   "scripts": {
     "dashboard.html": 122,

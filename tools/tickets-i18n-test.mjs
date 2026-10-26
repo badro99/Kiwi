@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { ticketsRuntimeSource } from './tickets-test-source.mjs';
 /* Le tableau des tickets parle français (par défaut), anglais et arabe.
  *
  *  1. Parité : chaque clé du dictionnaire de assets/tickets.js existe en FR, EN
@@ -23,7 +24,7 @@ import { TICKET_TAXONOMY } from '../functions/api/tickets/_taxonomy.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const html = readFileSync(resolve(root, 'tickets.html'), 'utf8');
-const client = readFileSync(resolve(root, 'assets/tickets.js'), 'utf8');
+const client = ticketsRuntimeSource();
 
 let passed = 0;
 const failed = [];

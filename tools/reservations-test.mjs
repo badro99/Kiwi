@@ -1,3 +1,4 @@
+import { bookingTestSource } from './booking-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -6,7 +7,7 @@ const source = fs.readFileSync(new URL('../assets/reservations.js', import.meta.
 const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const configClientSource = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 const configApiSource = fs.readFileSync(new URL('../functions/api/config.js', import.meta.url), 'utf8');
-const bookingSource = fs.readFileSync(new URL('../assets/booking.js', import.meta.url), 'utf8');
+const bookingSource = bookingTestSource();
 const bookingApiSource = fs.readFileSync(new URL('../functions/api/booking.js', import.meta.url), 'utf8');
 const listeners = {};
 const ctx = {

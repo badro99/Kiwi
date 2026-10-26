@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { ticketsTestSource } from './tickets-test-source.mjs';
 
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -132,7 +133,7 @@ check('POST still creates a ticket before the columns arrive', response.status =
   && legacy.prepare('SELECT COUNT(*) AS count FROM kiwi_tickets').get().count === 2);
 
 const [html, client, mcp] = await Promise.all([
-  read('tickets.html'), read('assets/tickets.js'), read('tools/tickets-mcp/server.js'),
+  read('tickets.html'), ticketsTestSource(), read('tools/tickets-mcp/server.js'),
 ]);
 check('the board receives taxonomy from GET instead of embedding category ids', client.includes('state.taxonomy = data.taxonomy')
   && client.includes('state.taxonomy.kinds.forEach') && client.includes('state.taxonomy.areas.forEach')

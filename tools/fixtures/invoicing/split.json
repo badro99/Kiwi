@@ -1,0 +1,714 @@
+{
+  "sha256": "28532e6e84c7ad683e333c1012735c313868456bd6368ea6b4b4b2455966b4ee",
+  "parts": [
+    {
+      "file": "assets/invoicing/transport.js",
+      "group": "transport",
+      "entries": [
+        {
+          "name": "fetchDeadline",
+          "start": 772,
+          "end": 1896,
+          "deps": [],
+          "offset": 376,
+          "replacement": "/* Private transport declaration: fetchDeadline. */",
+          "length": 1124
+        },
+        {
+          "name": "apiError",
+          "start": 38184,
+          "end": 38310,
+          "deps": [],
+          "offset": 1502,
+          "replacement": "/* Private transport declaration: apiError. */",
+          "length": 126
+        },
+        {
+          "name": "api",
+          "start": 39161,
+          "end": 40133,
+          "deps": [
+            "apiError",
+            "demo",
+            "fetchDeadline",
+            "merchantSlug",
+            "ownData"
+          ],
+          "offset": 1630,
+          "replacement": "function api(...args) { return transport.api(...args); }",
+          "length": 972
+        },
+        {
+          "name": "demo",
+          "start": 40218,
+          "end": 52591,
+          "deps": [
+            "apiError",
+            "computeTotals",
+            "getSeller",
+            "iceProblem",
+            "lsGet",
+            "lsSet",
+            "shift",
+            "today",
+            "venueId"
+          ],
+          "offset": 2604,
+          "replacement": "/* Private transport declaration: demo. */",
+          "length": 12373
+        },
+        {
+          "name": "cache",
+          "start": 52698,
+          "end": 52754,
+          "deps": [],
+          "offset": 14979,
+          "replacement": "const cache = transport.rows();",
+          "length": 56
+        },
+        {
+          "name": "nextCursor",
+          "start": 52962,
+          "end": 53029,
+          "deps": [],
+          "offset": 15037,
+          "replacement": "const nextCursor = transport.cursors();",
+          "length": 67
+        },
+        {
+          "name": "cacheKey",
+          "start": 53981,
+          "end": 54041,
+          "deps": [
+            "venueId"
+          ],
+          "offset": 15106,
+          "replacement": "/* Private transport declaration: cacheKey. */",
+          "length": 60
+        },
+        {
+          "name": "loadCache",
+          "start": 54044,
+          "end": 54272,
+          "deps": [
+            "TYPES",
+            "cache",
+            "cacheKey",
+            "lsGet",
+            "ownData"
+          ],
+          "offset": 15168,
+          "replacement": "function loadCache(...args) { return transport.loadCache(...args); }",
+          "length": 228
+        },
+        {
+          "name": "saveCache",
+          "start": 54275,
+          "end": 54380,
+          "deps": [
+            "cache",
+            "cacheKey",
+            "lsSet",
+            "ownData"
+          ],
+          "offset": 15398,
+          "replacement": "function saveCache(...args) { return transport.saveCache(...args); }",
+          "length": 105
+        }
+      ],
+      "deps": [
+        "TYPES",
+        "computeTotals",
+        "getSeller",
+        "iceProblem",
+        "lsGet",
+        "lsSet",
+        "merchantSlug",
+        "ownData",
+        "shift",
+        "today",
+        "venueId"
+      ],
+      "windowReads": []
+    },
+    {
+      "file": "assets/invoicing/composer.js",
+      "group": "composer",
+      "entries": [
+        {
+          "name": "clientBook",
+          "start": 54465,
+          "end": 54787,
+          "deps": [],
+          "offset": 420,
+          "replacement": "function clientBook(...args) { return composerModule.clientBook({}, this, args); }",
+          "length": 322
+        },
+        {
+          "name": "vatOptions",
+          "start": 76773,
+          "end": 77070,
+          "deps": [
+            "T",
+            "VAT_RATES",
+            "esc"
+          ],
+          "offset": 844,
+          "replacement": "function vatOptions(...args) { return composerModule.vatOptions({T, VAT_RATES, esc}, this, args); }",
+          "length": 297
+        },
+        {
+          "name": "lineRowHtml",
+          "start": 77073,
+          "end": 78135,
+          "deps": [
+            "ICON",
+            "T",
+            "close",
+            "esc",
+            "vatOptions"
+          ],
+          "offset": 1258,
+          "replacement": "function lineRowHtml(...args) { return composerModule.lineRowHtml({ICON, T, close, esc, vatOptions}, this, args); }",
+          "length": 1062
+        },
+        {
+          "name": "blankLine",
+          "start": 78138,
+          "end": 78230,
+          "deps": [
+            "DEFAULT_VAT"
+          ],
+          "offset": 2416,
+          "replacement": "function blankLine(...args) { return composerModule.blankLine({DEFAULT_VAT}, this, args); }",
+          "length": 92
+        },
+        {
+          "name": "F",
+          "start": 78233,
+          "end": 78303,
+          "deps": [
+            "overlay"
+          ],
+          "offset": 2590,
+          "replacement": "function F(...args) { return composerModule.F({overlay}, this, args); }",
+          "length": 70
+        },
+        {
+          "name": "fv",
+          "start": 78306,
+          "end": 78363,
+          "deps": [
+            "F"
+          ],
+          "offset": 2729,
+          "replacement": "function fv(...args) { return composerModule.fv({F}, this, args); }",
+          "length": 57
+        },
+        {
+          "name": "readLines",
+          "start": 78366,
+          "end": 78741,
+          "deps": [
+            "overlay"
+          ],
+          "offset": 2869,
+          "replacement": "function readLines(...args) { return composerModule.readLines({overlay}, this, args); }",
+          "length": 375
+        },
+        {
+          "name": "apiLines",
+          "start": 78744,
+          "end": 78966,
+          "deps": [
+            "num",
+            "toCents"
+          ],
+          "offset": 3338,
+          "replacement": "function apiLines(...args) { return composerModule.apiLines({num, toCents}, this, args); }",
+          "length": 222
+        },
+        {
+          "name": "paintLines",
+          "start": 78969,
+          "end": 79090,
+          "deps": [
+            "lineRowHtml",
+            "overlay"
+          ],
+          "offset": 3663,
+          "replacement": "function paintLines(...args) { return composerModule.paintLines({lineRowHtml, overlay}, this, args); }",
+          "length": 121
+        },
+        {
+          "name": "termsOptions",
+          "start": 79093,
+          "end": 79394,
+          "deps": [
+            "T",
+            "TERMS_CHOICES",
+            "esc"
+          ],
+          "offset": 3892,
+          "replacement": "function termsOptions(...args) { return composerModule.termsOptions({T, TERMS_CHOICES, esc}, this, args); }",
+          "length": 301
+        },
+        {
+          "name": "formState",
+          "start": 79488,
+          "end": 80639,
+          "deps": [
+            "TERMS_CHOICES",
+            "blankLine",
+            "centsInput",
+            "shift",
+            "today"
+          ],
+          "offset": 4329,
+          "replacement": "function formState(...args) { return composerModule.formState({TERMS_CHOICES, blankLine, centsInput, shift, today}, this, args); }",
+          "length": 1151
+        },
+        {
+          "name": "draftKey",
+          "start": 80642,
+          "end": 80747,
+          "deps": [
+            "cmp",
+            "venueId"
+          ],
+          "offset": 5574,
+          "replacement": "function draftKey(...args) { return composerModule.draftKey({cmp, venueId}, this, args); }",
+          "length": 105
+        },
+        {
+          "name": "composerPayload",
+          "start": 87715,
+          "end": 88424,
+          "deps": [
+            "apiLines",
+            "cmp",
+            "fv",
+            "iceCompact",
+            "readLines",
+            "shift",
+            "today"
+          ],
+          "offset": 5821,
+          "replacement": "function composerPayload(...args) { return composerModule.composerPayload({apiLines, cmp, fv, iceCompact, readLines, shift, today}, this, args); }",
+          "length": 709
+        },
+        {
+          "name": "formSnapshot",
+          "start": 88427,
+          "end": 88797,
+          "deps": [
+            "cmp",
+            "fv",
+            "readLines"
+          ],
+          "offset": 6640,
+          "replacement": "function formSnapshot(...args) { return composerModule.formSnapshot({cmp, fv, readLines}, this, args); }",
+          "length": 370
+        },
+        {
+          "name": "checkIce",
+          "start": 89251,
+          "end": 89761,
+          "deps": [
+            "F",
+            "T",
+            "iceCompact",
+            "iceProblem",
+            "overlay"
+          ],
+          "offset": 7132,
+          "replacement": "function checkIce(...args) { return composerModule.checkIce({F, T, iceCompact, iceProblem, overlay}, this, args); }",
+          "length": 510
+        },
+        {
+          "name": "updateComposer",
+          "start": 89764,
+          "end": 91091,
+          "deps": [
+            "F",
+            "T",
+            "apiLines",
+            "computeTotals",
+            "currentView",
+            "esc",
+            "fv",
+            "lineHT",
+            "money",
+            "num",
+            "overlay",
+            "readLines",
+            "shift",
+            "toCents",
+            "today",
+            "tpl"
+          ],
+          "offset": 7848,
+          "replacement": "function updateComposer(...args) { return composerModule.updateComposer({F, T, apiLines, computeTotals, currentView, esc, fv, lineHT, money, num, overlay, readLines, shift, toCents, today, tpl}, this, args); }",
+          "length": 1327
+        },
+        {
+          "name": "validateComposer",
+          "start": 91095,
+          "end": 91591,
+          "deps": [
+            "F",
+            "T",
+            "checkIce",
+            "composerPayload",
+            "toast"
+          ],
+          "offset": 9308,
+          "replacement": "function validateComposer(...args) { return composerModule.validateComposer({F, T, checkIce, composerPayload, toast}, this, args); }",
+          "length": 496
+        },
+        {
+          "name": "renderComposerForm",
+          "fragment": true,
+          "start": 81877,
+          "end": 87482,
+          "deps": [
+            "overlay",
+            "cmp",
+            "st",
+            "locked",
+            "isQuote",
+            "title",
+            "book",
+            "t",
+            "dis",
+            "showIssue",
+            "issueLabel",
+            "termsOptions",
+            "METHODS",
+            "renderSellerLogo",
+            "esc",
+            "ICON",
+            "seller"
+          ],
+          "length": 5605,
+          "replacement": "composerModule.renderComposerForm({overlay, cmp, st, locked, isQuote, title, book, t, dis, showIssue, issueLabel, termsOptions, METHODS, renderSellerLogo, esc, ICON, seller});",
+          "offset": 10105
+        }
+      ],
+      "windowReads": [
+        "KiwiClientsDirectory",
+        "KiwiClients"
+      ]
+    },
+    {
+      "file": "assets/invoicing/history.js",
+      "group": "history",
+      "entries": [
+        {
+          "name": "getSaleInvoices",
+          "start": 54872,
+          "end": 55603,
+          "deps": [
+            "dayIn",
+            "today"
+          ],
+          "offset": 400,
+          "replacement": "function getSaleInvoices(...args) { return historyModule.getSaleInvoices({dayIn, today}, this, args); }",
+          "length": 731
+        },
+        {
+          "name": "rowsFor",
+          "start": 65626,
+          "end": 65674,
+          "deps": [
+            "cache"
+          ],
+          "offset": 1223,
+          "replacement": "function rowsFor(...args) { return historyModule.rowsFor({cache}, this, args); }",
+          "length": 48
+        },
+        {
+          "name": "stats",
+          "start": 65677,
+          "end": 66333,
+          "deps": [
+            "rowsFor",
+            "today"
+          ],
+          "offset": 1362,
+          "replacement": "function stats(...args) { return historyModule.stats({rowsFor, today}, this, args); }",
+          "length": 656
+        },
+        {
+          "name": "paintStats",
+          "start": 66336,
+          "end": 67555,
+          "deps": [
+            "T",
+            "TYPES",
+            "esc",
+            "getSaleInvoices",
+            "money",
+            "overlay",
+            "rowsFor",
+            "stats"
+          ],
+          "offset": 2160,
+          "replacement": "function paintStats(...args) { return historyModule.paintStats({T, TYPES, esc, getSaleInvoices, money, overlay, rowsFor, stats}, this, args); }",
+          "length": 1219
+        },
+        {
+          "name": "legacyDocs",
+          "start": 67558,
+          "end": 67830,
+          "deps": [
+            "lsGet",
+            "ownData",
+            "venueId"
+          ],
+          "offset": 3487,
+          "replacement": "function legacyDocs(...args) { return historyModule.legacyDocs({lsGet, ownData, venueId}, this, args); }",
+          "length": 272
+        },
+        {
+          "name": "paintNotices",
+          "start": 67833,
+          "end": 68683,
+          "deps": [
+            "T",
+            "authBlocked",
+            "esc",
+            "legacyDocs",
+            "offline",
+            "overlay",
+            "tpl"
+          ],
+          "offset": 3900,
+          "replacement": "function paintNotices(...args) { return historyModule.paintNotices({T, authBlocked, esc, legacyDocs, offline, overlay, tpl}, this, args); }",
+          "length": 850
+        },
+        {
+          "name": "tabsHtml",
+          "start": 68686,
+          "end": 69051,
+          "deps": [
+            "T",
+            "esc",
+            "tab"
+          ],
+          "offset": 4846,
+          "replacement": "function tabsHtml(...args) { return historyModule.tabsHtml({T, esc, tab}, this, args); }",
+          "length": 365
+        },
+        {
+          "name": "newLabel",
+          "start": 69054,
+          "end": 69133,
+          "deps": [
+            "T",
+            "tab"
+          ],
+          "offset": 5298,
+          "replacement": "function newLabel(...args) { return historyModule.newLabel({T, tab}, this, args); }",
+          "length": 79
+        },
+        {
+          "name": "visibleRows",
+          "start": 69137,
+          "end": 69956,
+          "deps": [
+            "filter",
+            "getSaleInvoices",
+            "query",
+            "rowsFor",
+            "tab"
+          ],
+          "offset": 5505,
+          "replacement": "function visibleRows(...args) { return historyModule.visibleRows({filter, getSaleInvoices, query, rowsFor, tab}, this, args); }",
+          "length": 819
+        },
+        {
+          "name": "paintRegister",
+          "start": 69959,
+          "end": 74036,
+          "deps": [
+            "ICON",
+            "NO_OF",
+            "T",
+            "esc",
+            "filter",
+            "fmtDate",
+            "loadingList",
+            "loadingMore",
+            "money",
+            "newLabel",
+            "nextCursor",
+            "overlay",
+            "rowsFor",
+            "statusHtml",
+            "tab",
+            "tpl",
+            "visibleRows"
+          ],
+          "offset": 6557,
+          "replacement": "function paintRegister(...args) { return historyModule.paintRegister({ICON, NO_OF, T, esc, filter, fmtDate, loadingList, loadingMore, money, newLabel, nextCursor, overlay, rowsFor, statusHtml, tab, tpl, visibleRows}, this, args); }",
+          "length": 4077
+        },
+        {
+          "name": "paintAll",
+          "start": 74738,
+          "end": 74856,
+          "deps": [
+            "currentView",
+            "overlay",
+            "paintNotices",
+            "paintRegister",
+            "paintStats"
+          ],
+          "offset": 10781,
+          "replacement": "function paintAll(...args) { return historyModule.paintAll({currentView, overlay, paintNotices, paintRegister, paintStats}, this, args); }",
+          "length": 118
+        },
+        {
+          "name": "renderList",
+          "start": 74860,
+          "end": 75946,
+          "deps": [
+            "ICON",
+            "T",
+            "esc",
+            "newLabel",
+            "overlay",
+            "ownData",
+            "paintAll",
+            "query",
+            "show",
+            "tabsHtml"
+          ],
+          "offset": 11055,
+          "replacement": "function renderList(...args) { return historyModule.renderList({ICON, T, esc, newLabel, overlay, ownData, paintAll, query, show, tabsHtml}, this, args); }",
+          "length": 1086
+        },
+        {
+          "name": "csvCell",
+          "start": 120283,
+          "end": 120641,
+          "deps": [],
+          "offset": 12223,
+          "replacement": "function csvCell(...args) { return historyModule.csvCell({}, this, args); }",
+          "length": 358
+        },
+        {
+          "name": "exportCsv",
+          "start": 120644,
+          "end": 122500,
+          "deps": [
+            "NO_OF",
+            "T",
+            "csvCell",
+            "csvMoney",
+            "statusLabel",
+            "tab",
+            "toast",
+            "today",
+            "visibleRows"
+          ],
+          "offset": 12734,
+          "replacement": "function exportCsv(...args) { return historyModule.exportCsv({NO_OF, T, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, this, args); }",
+          "length": 1856
+        }
+      ],
+      "windowReads": [
+        "KiwiInvoice"
+      ]
+    },
+    {
+      "file": "assets/invoicing/print.js",
+      "group": "print",
+      "entries": [
+        {
+          "name": "termsText",
+          "start": 111453,
+          "end": 111922,
+          "deps": [
+            "T",
+            "tpl"
+          ],
+          "offset": 264,
+          "replacement": "function termsText(...args) { return printModule.termsText({T, tpl}, this, args); }",
+          "length": 469
+        },
+        {
+          "name": "printable",
+          "start": 111925,
+          "end": 119064,
+          "deps": [
+            "T",
+            "businessName",
+            "computeTotals",
+            "dmy",
+            "esc",
+            "getSeller",
+            "lang",
+            "lineHT",
+            "money",
+            "renderSellerLogo",
+            "termsText",
+            "tpl"
+          ],
+          "offset": 922,
+          "replacement": "function printable(...args) { return printModule.printable({T, businessName, computeTotals, dmy, esc, getSeller, lang, lineHT, money, renderSellerLogo, termsText, tpl}, this, args); }",
+          "length": 7139
+        },
+        {
+          "name": "printDocument",
+          "start": 119085,
+          "end": 120035,
+          "deps": [
+            "T",
+            "detail",
+            "pick",
+            "printable",
+            "toast"
+          ],
+          "offset": 8181,
+          "replacement": "function printDocument(...args) { return printModule.printDocument({T, detail, pick, printable, toast}, this, args); }",
+          "length": 950
+        }
+      ],
+      "windowReads": [
+        "open"
+      ]
+    }
+  ],
+  "edits": [
+    {
+      "original": "",
+      "replacement": "  const transport = transportModule.createTransport({TYPES, computeTotals, getSeller, iceProblem, lsGet, lsSet, merchantSlug, ownData, shift, today, venueId});\n\n",
+      "anchor": "  /* ── transport :"
+    },
+    {
+      "original": "(() => {\n  'use strict';",
+      "replacement": "(() => {\n  'use strict';\n  let liveOpen;\n  const openWhenReady = function (...args) { return ready.then(() => liveOpen.apply(this, args)); };\n  window.Kiwi = window.Kiwi || {};\n  window.Kiwi.handlers = window.Kiwi.handlers || {};\n  window.Kiwi.handlers['invoicing'] = openWhenReady;\n  window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};\n  const ready = Promise.all([\n  import('./invoicing/transport.js?v=3'),\n  import('./invoicing/composer.js?v=4'),\n  import('./invoicing/history.js?v=4'),\n  import('./invoicing/print.js?v=4'),\n]).then(([transportModule, composerModule, historyModule, printModule]) => {\n  // invoicing:entry-body\n"
+    },
+    {
+      "original": "})();\n",
+      "replacement": "  });\n})();\n",
+      "tail": true
+    },
+    {
+      "original": "    window.Kiwi.handlers['invoicing'] = open;",
+      "replacement": "    liveOpen = open;"
+    },
+    {
+      "original": "    window.KiwiInvoicing = {open, list: () => TYPES.reduce((a, ty) => a.concat(cache[ty].map(x => Object.assign({}, x))), []), version: '2.0.0'};",
+      "replacement": "    window.KiwiInvoicing.list = () => TYPES.reduce((a, ty) => a.concat(cache[ty].map(x => Object.assign({}, x))), []);"
+    }
+  ],
+  "scriptsBefore": {
+    "dashboard.html": 121,
+    "kiwi-caisse.html": 89,
+    "kiwi-serveur.html": 26,
+    "booking.html": 4
+  }
+}

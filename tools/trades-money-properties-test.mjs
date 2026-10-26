@@ -4,6 +4,7 @@ import caisseWorkflowSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import vm from 'node:vm';
+import sharedRules from './shared-rules-source.cjs';
 import {createRequire} from 'node:module';
 import nativeFs from 'node:fs';
 import queueCoreSource from './core-test-source.cjs';
@@ -11,7 +12,7 @@ const fs = { ...nativeFs, readFileSync: queueCoreSource.readFileSync };
 import {validateRetailTenders,retailTenderMethod} from '../functions/api/_retail-tenders.js';
 import {declaration as scan} from './js-declarations.cjs';
 const declarations=new Map();
-function declaration(text,name){let names=declarations.get(text);if(!names)declarations.set(text,names=new Map());if(names.has(name))return names.get(name);const re=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+name+'\\s*\\(|(?:const|let|var)\\s+'+name+'\\s*=)');const m=re.exec(text);if(!m)throw Error('Missing '+name);const result=scan(text.slice(m.index).trimStart(),name);names.set(name,result);return result;}
+function declaration(text,name){text=text.replace(/^[ \t]*\/\* GENERATED SHARED (Kiwi\w+) BEGIN \*\/[\s\S]*?^[ \t]*\/\* GENERATED SHARED \1 END \*\//gm,'');let names=declarations.get(text);if(!names)declarations.set(text,names=new Map());if(names.has(name))return names.get(name);const re=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+name+'\\s*\\(|(?:const|let|var)\\s+'+name+'\\s*=)');const m=re.exec(text);if(!m)throw Error('Missing '+name);const result=scan(text.slice(m.index).trimStart(),name);names.set(name,result);return result;}
 
 
 const ROOT=process.env.KIWI_ROOT||path.resolve(import.meta.dirname,'..');
@@ -23,7 +24,7 @@ async function knownIssue(id,label,property,examples=[]){const r=await fc.check(
 
 const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const C=x=>Math.round(x*100),sum=xs=>xs.reduce((a,b)=>a+b,0),money=fc.integer({min:1,max:5000000});
-function load(file,names,extra={}){const c=vm.createContext({console,Math,Date,...extra});vm.runInContext(names.map(n=>declaration(read(file),n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c);return c;}
+function load(file,names,extra={}){const c=vm.createContext({console,Math,Date,...extra});vm.runInContext(sharedRules(read(file))+'\n'+names.map(n=>declaration(read(file),n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c);return c;}
 const source=read('assets/pos-sale.js');
 const boot=vm.runInNewContext(declaration(read('tools/pos-sale-hold-test.mjs'),'boot').replace('return { api:', 'return { window, api:')+';boot',{source,vm,console,Date,Map,Set,Uint8Array});
 const saleIdentityWindow={};vm.runInNewContext(read('assets/live-link/sale-identity.js'),{window:saleIdentityWindow});

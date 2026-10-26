@@ -1,0 +1,116 @@
+{
+  "sha256": "88cf680dda66b8fbe013b406664d9cb62a9f15a9a7b637dc7d476d60886ca16b",
+  "dataSha256": "117ec5415d36bdeec430121dd6cdc9562c01a5f8f2be9b3338d9cafda2183438",
+  "fragments": [
+    {
+      "start": 17132,
+      "end": 17633,
+      "replacement": "  const session = window.KiwiOnboardingData.createSession({ TYPES, tr });\n  const S = session.state;",
+      "offset": 9406
+    },
+    {
+      "start": 16968,
+      "end": 17051,
+      "replacement": "  const RESERVED = session.reserved;",
+      "offset": 9909
+    },
+    {
+      "start": 25472,
+      "end": 25632,
+      "replacement": "  const TYPE_HINT = session.typeHint;",
+      "offset": 9994
+    },
+    {
+      "start": 33436,
+      "end": 34000,
+      "replacement": "  const fitPinsToTeam = session.fitPinsToTeam;",
+      "offset": 10156
+    },
+    {
+      "start": 39622,
+      "end": 39985,
+      "replacement": "  const parsedDailyGoal = session.parsedDailyGoal;",
+      "offset": 10722
+    },
+    {
+      "start": 40066,
+      "end": 41851,
+      "replacement": "  const validate = session.validate;",
+      "offset": 11087
+    },
+    {
+      "start": 65674,
+      "end": 66166,
+      "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
+      "offset": 12874
+    },
+    {
+      "start": 66167,
+      "end": 66558,
+      "replacement": "  const kitProblem = session.kitProblem;",
+      "offset": 13368
+    },
+    {
+      "start": 43491,
+      "end": 43515,
+      "replacement": "  // Submission activity belongs to the session owner.",
+      "offset": 13761
+    }
+  ],
+  "dataPrefixLength": 9048,
+  "sessionLength": 5582,
+  "alignments": [
+    {
+      "original": "const finishErr = kit ? kitProblem() : validate();",
+      "replacement": "const finishErr = session.finalProblem();"
+    },
+    {
+      "original": "vid = await data.submit({ S, t: TYPES.find((x) => x.id === S.typeId) || TYPES[0],\n        goal: parsedDailyGoal(), tr, storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });",
+      "replacement": "vid = await session.submit({ storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });"
+    },
+    {
+      "original": "    state: S,",
+      "replacement": "    state: S,\n    update: session.update,\n    updatePin: session.updatePin,"
+    },
+    {
+      "original": "S[i.dataset.f] = i.value;",
+      "replacement": "session.update({ [i.dataset.f]: i.value });"
+    },
+    {
+      "original": "if (S.pins[n]) S.pins[n].name = i.value.trim();",
+      "replacement": "session.updatePin(n, { name: i.value.trim() });"
+    },
+    {
+      "original": "if (S.pins[n]) S.pins[n].code = i.value.replace(/\\D/g, '').slice(0, 4);",
+      "replacement": "session.updatePin(n, { code: i.value.replace(/\\D/g, '').slice(0, 4) });"
+    },
+    {
+      "original": "if (S.pins[n]) S.pins[n].role = i.value;",
+      "replacement": "session.updatePin(n, { role: i.value });"
+    },
+    {
+      "original": "S.pins.push({ role: 'staff', name: '', code: '' });",
+      "replacement": "session.addPin();"
+    },
+    {
+      "original": "if (n > 0 && S.pins.length > 1) S.pins.splice(n, 1);",
+      "replacement": "session.removePin(n);"
+    },
+    {
+      "original": "S.typeId = tc.dataset.type;",
+      "replacement": "session.update({ typeId: tc.dataset.type });"
+    },
+    {
+      "original": "if (finishing)",
+      "replacement": "if (session.isSubmitting())"
+    },
+    {
+      "original": "finishing = true;",
+      "replacement": "session.setSubmitting(true);"
+    },
+    {
+      "original": "finishing = false;",
+      "replacement": "session.setSubmitting(false);"
+    }
+  ]
+}

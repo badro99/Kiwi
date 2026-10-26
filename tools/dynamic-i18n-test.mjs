@@ -4,6 +4,7 @@
  * Périmètre : JS propriétaire assets/** et scripts intégrés des HTML racine.
  * Limite : pas de propagation interprocédurale ni de résolution de propriétés
  * métier. Les alias scalaires locaux sont suivis, sans exécuter le produit. */
+import { ticketsRuntimeSource, ticketsFiles } from './tickets-test-source.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -85,10 +86,22 @@ function walk(dir) {
 const files = [...walk('assets'), ...fs.readdirSync(ROOT).filter(f => /\.html$/.test(f) && !/ 2\./.test(f))].sort();
 const counts = {}, locations = {};
 for (const file of files) {
-  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  // Keep the pre-existing ticket pin on its owner while scanning every live part.
+  if (ticketsFiles.slice(1).includes(file)) continue;
+  const src = file === 'assets/tickets.js' ? ticketsRuntimeSource() : fs.readFileSync(path.join(ROOT, file), 'utf8');
   const scripts = file.endsWith('.html') ? [...src.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]) : [src];
-  locations[file] = scripts.flatMap(s => scan(s, file));
-  counts[file] = locations[file].length;
+  // Count every live split file against the original controller's existing pin.
+  // No strings are exempted and the split identity suite guards module membership.
+  const owner = /^assets\/booking-(service|hotel|submission|manage|view)\.js$/.test(file) ? 'assets/booking.js' : file;
+  const hits = scripts.flatMap(s => scan(s, file));
+  locations[owner] = (locations[owner] || []).concat(hits.map(line => file + ':' + line));
+  counts[owner] = (counts[owner] || 0) + hits.length;
+}
+// A byte-proven move keeps its existing owner budget, including every live part.
+const invoiceSplit = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/invoicing/split.json'), 'utf8'));
+for (const part of invoiceSplit.parts) {
+  counts['assets/invoicing.js'] += counts[part.file] || 0;
+  delete counts[part.file];
 }
 const baseline = JSON.parse(fs.readFileSync(BASE, 'utf8'));
 const errors = [];

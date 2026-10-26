@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { bookingTestSource } from './booking-test-source.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * RÉSERVATIONS · CE QUE LA PAGE ET LE LIEN PUBLIC AFFIRMENT
  *
@@ -25,7 +26,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PAGE = readFileSync(path.join(ROOT, 'assets/booking.js'), 'utf8');
+const PAGE = bookingTestSource();
 const API = readFileSync(path.join(ROOT, 'functions/api/booking.js'), 'utf8');
 const DASH = readFileSync(path.join(ROOT, 'assets/reservations.js'), 'utf8');
 

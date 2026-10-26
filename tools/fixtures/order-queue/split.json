@@ -2,7 +2,7 @@
   {
     "file": "functions/api/order/_lib.js",
     "fixture": "_lib.js.gz",
-    "sha256": "2182be6e878664a249401b602587eb5fd0a3641cdcea0b9da73ad93be747fd39",
+    "sha256": "da479700b94142406b0773915fd93ee0a6fa617aac74b461dccae3a5d1c3391c",
     "prefix": "export { startOfDay, startOfWeek, nextOrderNumber } from './_guest-clock.js';\nexport { normTable, tableKey, planTableKey, floorPlanTables, KNOWN_TABLES_DAYS, servedTables } from './_guest-tables.js';\nexport { newSessionId, SESSION_ID, DESK_FRESH_MS, deskTouch, deskOpen } from './_guest-sessions.js';\nexport { hoursOpenAt, hoursClosed } from './_guest-hours.js';\nexport { priceOrder } from './_guest-pricing.js';\n",
     "segments": [
       {
@@ -89,14 +89,15 @@
       {
         "file": "functions/api/order/_guest-pricing.js",
         "start": 17288,
-        "end": 39683,
+        "end": 39765,
         "header": "import '../../../assets/promo-rules.js';\nimport '../../../assets/menu-promos.js';\nconst MenuPromos = () => globalThis.KiwiMenuPromos;\nimport { merchantZone } from '../_business-day.js';\n// Contrat : catalogue publié et lignes entrantes vers prix canoniques ; lit le catalogue menus, jamais les commandes ni les sessions.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-pricing */\n",
         "imports": [
           "import '../../../assets/promo-rules.js';",
           "import '../../../assets/menu-promos.js';",
-          "import { merchantZone } from '../_business-day.js';"
+          "import { merchantZone } from '../_business-day.js';",
+          "import { resolveMenu } from '../_rules-promotion-pricing.js';"
         ],
         "exports": [
           "priceOrder"

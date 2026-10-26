@@ -88,26 +88,19 @@
     { role: 'staff',   fixed: false, title: { fr: 'Équipe / caissier', en: 'Staff / cashier', ar: 'الفريق' },            perm: { fr: 'Caisse, commandes & salle uniquement.', en: 'Register, orders & floor only.', ar: 'الصندوق والطلبات فقط.' } },
     { role: 'staff',   fixed: false, title: { fr: 'Accès supplémentaire', en: 'Extra access', ar: 'وصول إضافي' },        perm: { fr: 'Caisse & commandes.', en: 'Register & orders.', ar: 'الصندوق والطلبات.' }, extra: true },
   ];
-  const RESERVED = ['0000', '0505', '1111', '0909']; // demo codes — keep them free
+
 
   /* ── Session state ───────────────────────────────────────────────────── */
-  const S = {
-    step: 0,
-    /* No type is pre-selected: a shop that taps Continue must not be filed as a
-       restaurant and load the wrong vertical. Continue waits for a choice. */
-    ownerName: '', bizName: '', typeId: '',
-    venueCount: 1, city: '',
-    teamSize: 3, teamGiven: false,
-    goals: [], dailyGoal: '',
-    pins: [ { role: 'owner', name: '', code: '' }, { role: 'manager', name: '', code: '' }, { role: 'staff', name: '', code: '' }, { role: 'staff', name: '', code: '' } ],
-  };
+  const session = window.KiwiOnboardingData.createSession({ TYPES, tr });
+  const S = session.state;
+  const RESERVED = session.reserved;
   let dataLoad = null, draft = null;
   function loadData() {
     if (window.KiwiOnboardingData) return Promise.resolve(window.KiwiOnboardingData);
     if (dataLoad) return dataLoad;
     dataLoad = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/onboarding-data.js?v=4';
+      script.src = '/assets/onboarding-data.js?v=8';
       const failed = () => { dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
       script.onload = () => window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed();
       script.onerror = failed;
@@ -238,7 +231,7 @@
     };
   }
 
-  const TYPE_HINT = { fr: 'Choisissez votre type d’activité pour continuer.', en: 'Choose your type of business to continue.', ar: 'اختر نوع نشاطك للمتابعة.' };
+  const TYPE_HINT = session.typeHint;
   function typeCard(t, hidden) {
     return `<button class="kob-type${t.id === S.typeId ? ' sel' : ''}${hidden ? ' hide kob-xtra' : ''}" data-type="${t.id}">${t.icon}<span>${esc(tr(t.label))}</span></button>`;
   }
@@ -349,16 +342,7 @@
      chaque rendu, et « Retirer » sur une ligne vide la voyait aussitôt revenir.
      Une équipe passée n'annonce personne : seul le propriétaire, pas un 3 que
      personne n'a donné. */
-  function fitPinsToTeam() {
-    const want = S.teamGiven ? (+S.teamSize || 1) : 1;
-    if (S.pinsFitFor === want) return;
-    const rest = S.pins.slice(1);
-    if (rest.some((p) => (p.name || '').trim() || (p.code || '').trim())) return;
-    S.pinsFitFor = want;
-    const others = Math.max(0, Math.min(3, want - 1));
-    const roles = others >= 2 ? ['manager'].concat(Array(others - 1).fill('staff')) : Array(others).fill('staff');
-    S.pins = [S.pins[0] || { role: 'owner', name: '', code: '' }].concat(roles.map((role) => ({ role, name: '', code: '' })));
-  }
+  const fitPinsToTeam = session.fitPinsToTeam;
   function stepAccess() {
     fitPinsToTeam();
     return {
@@ -435,42 +419,17 @@
 
   /* ── Read inputs of the current step into state ──────────────────────── */
   function capture() {
-    root.querySelectorAll('[data-f]').forEach((i) => { S[i.dataset.f] = i.value; });
-    root.querySelectorAll('[data-pin-name]').forEach((i) => { const n = +i.dataset.pinName; if (S.pins[n]) S.pins[n].name = i.value.trim(); });
-    root.querySelectorAll('[data-pin-code]').forEach((i) => { const n = +i.dataset.pinCode; if (S.pins[n]) S.pins[n].code = i.value.replace(/\D/g, '').slice(0, 4); });
-    root.querySelectorAll('[data-pin-role]').forEach((i) => { const n = +i.dataset.pinRole; if (S.pins[n]) S.pins[n].role = i.value; });
+    root.querySelectorAll('[data-f]').forEach((i) => { session.update({ [i.dataset.f]: i.value }); });
+    root.querySelectorAll('[data-pin-name]').forEach((i) => { const n = +i.dataset.pinName; session.updatePin(n, { name: i.value.trim() }); });
+    root.querySelectorAll('[data-pin-code]').forEach((i) => { const n = +i.dataset.pinCode; session.updatePin(n, { code: i.value.replace(/\D/g, '').slice(0, 4) }); });
+    root.querySelectorAll('[data-pin-role]').forEach((i) => { const n = +i.dataset.pinRole; session.updatePin(n, { role: i.value }); });
     saveDraft();
   }
 
-  function parsedDailyGoal() {
-    const raw = String(S.dailyGoal == null ? '' : S.dailyGoal).trim();
-    if (!raw) return 0;
-    if (!/^\d+(?:[.,]\d{1,2})?$/.test(raw)) return null;
-    const amount = Number(raw.replace(',', '.'));
-    if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return null;
-    return Math.round(amount * 100) / 100;
-  }
+  const parsedDailyGoal = session.parsedDailyGoal;
 
   /* ── Validate before advancing (returns error string or null) ────────── */
-  function validate() {
-    if ((S.step === 1 || S.step === 7) && !S.ownerName.trim()) return tr({ fr: 'Indiquez votre prénom.', en: 'Enter your first name.', ar: 'أدخل اسمك.' });
-    if ((S.step === 2 || S.step === 7) && !S.bizName.trim()) return tr({ fr: 'Donnez un nom à votre établissement.', en: 'Give your business a name.', ar: 'أدخل اسم نشاطك.' });
-    if ((S.step === 2 || S.step === 7) && !TYPES.some((t) => t.id === S.typeId)) return tr(TYPE_HINT);
-    if (S.step === 5 && parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
-    if (S.step === 6 || S.step === 7) {
-      const owner = S.pins[0];
-      if (!/^\d{4}$/.test(owner.code)) return tr({ fr: 'Choisissez votre code à 4 chiffres (le vôtre est obligatoire).', en: 'Choose your 4-digit code (yours is required).', ar: 'اختر رمزك المكوّن من 4 أرقام.' });
-      const seen = {};
-      for (const p of S.pins) {
-        if (!p.code) continue;
-        if (!/^\d{4}$/.test(p.code)) return tr({ fr: 'Chaque code doit faire exactement 4 chiffres.', en: 'Each code must be exactly 4 digits.', ar: 'كل رمز يجب أن يكون 4 أرقام.' });
-        if (RESERVED.includes(p.code)) return tr({ fr: 'Le code ' + p.code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + p.code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + p.code + ' محجوز، اختر غيره.' });
-        if (seen[p.code]) return tr({ fr: 'Deux personnes ont le même code, chaque code doit être unique.', en: 'Two people share a code, each must be unique.', ar: 'رمزان متطابقان، يجب أن يكون كل رمز فريداً.' });
-        seen[p.code] = 1;
-      }
-    }
-    return null;
-  }
+  const validate = session.validate;
 
   /* ── Navigation ──────────────────────────────────────────────────────── */
   function go(dir) {
@@ -503,26 +462,25 @@
   }
 
   /* ── Finish · persist + create venue + celebrate ─────────────────────── */
-  let finishing = false;
+  // Submission activity belongs to the session owner.
   /* kit: the 2027 steps call this with { kit: true } (assets/kit/dash-onboarding.js):
      no shipped card to read or write, the answer is returned instead. */
   async function finish(opts) {
     const kit = !!(opts && opts.kit);
-    if (finishing) return kit ? { error: '' } : undefined;
+    if (session.isSubmitting()) return kit ? { error: '' } : undefined;
     if (!kit) capture();
-    const finishErr = kit ? kitProblem() : validate();
+    const finishErr = session.finalProblem();
     if (finishErr) { if (kit) return { error: finishErr }; flashErr(finishErr); return; }
-    finishing = true;
+    session.setSubmitting(true);
     const finishButton = root ? root.querySelector('[data-finish]') : null;
     if (finishButton) finishButton.disabled = true;
     let vid = null, submitError = null;
     try {
       const data = await loadData();
-      vid = await data.submit({ S, t: TYPES.find((x) => x.id === S.typeId) || TYPES[0],
-        goal: parsedDailyGoal(), tr, storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });
+      vid = await session.submit({ storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });
     } catch (error) { submitError = error; }
     if (!vid) {
-      finishing = false;
+      session.setSubmitting(false);
       if (finishButton) finishButton.disabled = false;
       const reason = submitError && (submitError.status === 409 ? 'conflict' : submitError.status === 401 || submitError.status === 403 ? 'auth' : submitError.status === 400 || submitError.status === 422 ? 'validation' : /quota|storage/i.test(submitError.code || submitError.name || '') ? 'storage' : '');
       const reasons = {
@@ -660,17 +618,17 @@
         return;
       }
       if (e.target.closest('[data-pin-add]')) {
-        capture(); S.pins.push({ role: 'staff', name: '', code: '' }); render(); return;
+        capture(); session.addPin(); render(); return;
       }
       const rmBtn = e.target.closest('[data-pin-remove]');
       if (rmBtn) {
         capture(); const n = +rmBtn.dataset.pinRemove;
-        if (n > 0 && S.pins.length > 1) S.pins.splice(n, 1);
+        session.removePin(n);
         render(); return;
       }
       const tc = e.target.closest('[data-type]');
       if (tc) {
-        S.typeId = tc.dataset.type;
+        session.update({ typeId: tc.dataset.type });
         saveDraft();
         root.querySelectorAll('[data-type]').forEach((x) => x.classList.toggle('sel', x === tc));
         /* A choice is made: Continue opens, the hint goes away. */
@@ -924,22 +882,16 @@
      over this state, these checks and finish(). The steps §18.8 removes (name
      and business, asked once at sign-up; places; team size) are not asked; the
      team's codes come later in Team. */
-  function kitCodeProblem(code) {
-    if (!/^\d{4}$/.test(code)) return tr({ fr: 'Choisissez votre code à 4 chiffres (le vôtre est obligatoire).', en: 'Choose your 4-digit code (yours is required).', ar: 'اختر رمزك المكوّن من 4 أرقام.' });
-    if (RESERVED.includes(code)) return tr({ fr: 'Le code ' + code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + code + ' محجوز، اختر غيره.' });
-    return null;
-  }
-  function kitProblem() {
-    if (!TYPES.some((t) => t.id === S.typeId)) return tr(TYPE_HINT);
-    if (parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
-    return kitCodeProblem(S.pins[0] && S.pins[0].code);
-  }
+  const kitCodeProblem = session.kitCodeProblem;
+  const kitProblem = session.kitProblem;
   function setupPresentation() {
     const data = window.KiwiOnboardingData;
     return data.presentation(data.viewModel(S, TYPES), esc);
   }
   const KIT = {
     state: S,
+    update: session.update,
+    updatePin: session.updatePin,
     viewModel: () => window.KiwiOnboardingData.viewModel(S, TYPES),
     presentation: setupPresentation,
     types: () => TYPES.map((t) => ({ id: t.id, primary: !!t.primary, label: tr(t.label), icon: t.icon })),

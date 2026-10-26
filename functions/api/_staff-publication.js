@@ -1,3 +1,4 @@
+import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 // Staff credential publication: the one place a staff code list becomes
 // till codes, the private employee-login roster and the auth revisions.
 //
@@ -146,25 +147,24 @@ export async function publishStaffCredentials(env, merchant, body) {
       const id = p.memberId || `employee-${p.code}`;
       if (removedIds.has(String(id))) continue;
       const previous = previousById.get(id);
-      const previousPin = String(previous && (previous.pinCode || previous.password) || '');
+      const previousPin = canonicalCode(previous);
       const previousVersion = Math.max(0, Math.round(Number(previous && previous.authVersion) || 0));
       const seedVersion = previousVersion + (previous && previousPin !== p.code ? 1 : 0);
       if (planned.has(id)) continue;
       const revision = await planEmployeeAuth(env, merchant, id, p.code, seedVersion);
       if (!revision.ok) return json({ error: 'employee-access-unavailable' }, 503);
       planned.set(id, revision);
-      accessMembers.push({
+      accessMembers.push(normalizeMember({
         id,
         firstName: p.firstName,
         lastName: p.lastName,
         email: p.email,
         pinCode: p.code,
-        password: p.code,
         authVersion: revision.version,
         function: p.role,
         department: p.department,
         venueSlug: merchant,
-      });
+      }));
     }
     const access = { members: accessMembers };
     const accessText = JSON.stringify(access);

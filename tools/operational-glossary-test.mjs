@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { ticketsTestSource } from './tickets-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -6,7 +7,7 @@ const read = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'ut
 const glossary = JSON.parse(read('content/operational-glossary.json'));
 assert.equal(glossary.version, 1);
 assert.ok(glossary.approvalContract.includes('named reviewer'));
-const ticketSource = read('assets/tickets.js');
+const ticketSource = ticketsTestSource();
 const ticket = vm.runInNewContext('(' + ticketSource.match(/const COPY = (\{[\s\S]*?\n  \});/)[1] + ')');
 const hotelSource = read('assets/hotel-language.js');
 const hotel = vm.runInNewContext('({' + hotelSource.split('/* hx-i18n:begin */')[1].split('/* hx-i18n:end */')[0] + '})');

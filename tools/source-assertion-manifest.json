@@ -40,7 +40,9 @@
     "serveur-split-test.mjs": "byte-exact split reconstruction and syntax only",
     "bundle-manifest-test.mjs": "bundle dependency and manifest shape",
     "dynamic-i18n-test.mjs": "AST translation completeness and literal copy rules",
-    "hotel-stays-group-guards-test.mjs": "Source ownership and recovery wiring guards only. Browser behavior is separately tested; no per-assertion execution proof is claimed here."
+    "hotel-stays-group-guards-test.mjs": "Source ownership and recovery wiring guards only. Browser behavior is separately tested; no per-assertion execution proof is claimed here.",
+    "booking-split-test.mjs": "Token-identical formatting and byte-exact live split reconstruction; structural identity only",
+    "onboarding-split-test.mjs": "Byte-for-byte reconstruction of the controller from live split fragments and frozen SHA-256 fixtures."
   },
   "style": {
     "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",

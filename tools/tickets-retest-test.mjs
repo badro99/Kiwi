@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { ticketsTestSource } from './tickets-test-source.mjs';
 
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -8,7 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFile(resolve(root, path), 'utf8');
 const [html, client, updateApi, listApi, schema] = await Promise.all([
   read('tickets.html'),
-  read('assets/tickets.js'),
+  ticketsTestSource(),
   read('functions/api/tickets/[id].js'),
   read('functions/api/tickets/index.js'),
   read('schema.sql'),

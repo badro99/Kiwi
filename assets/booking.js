@@ -1,176 +1,164 @@
-(function(){
+(async function() {
   'use strict';
   var app=document.getElementById('booking-app'),q=new URLSearchParams(location.search),merchant=String(q.get('merchant')||'').trim().toLowerCase(),manageToken=String(q.get('manage')||'').trim().toLowerCase();
   /* Stockage refusé (navigation privée stricte, cookies bloqués, iframe tiers) :
    * y toucher lève une SecurityError. La page publique doit s'afficher quand
    * même ; elle oublie simplement la langue choisie et la référence d'envoi. */
-  function lsGet(k){try{return localStorage.getItem(k)}catch(_){return null}}
-  function lsSet(k,v){try{localStorage.setItem(k,v)}catch(_){}}
-  function ssGet(k){try{return sessionStorage.getItem(k)}catch(_){return null}}
-  function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(_){}}
-  function ssDel(k){try{sessionStorage.removeItem(k)}catch(_){}}
+  function lsGet(k) {
+    try {
+      return localStorage.getItem(k)
+    }
+    catch(_) {
+      return null
+    }
+  }
+  function lsSet(...args) { return parts.view.lsSet(...args); }
+  function ssGet(...args) { return parts.view.ssGet(...args); }
+  function ssSet(...args) { return parts.view.ssSet(...args); }
+  function ssDel(...args) { return parts.view.ssDel(...args); }
   /* French is the predictable first visit for Kiwi Morocco. Browser language
    * used to turn an unpublished café into an English dead-end; visitors can
    * still choose EN or Arabic and that explicit choice is remembered. */
-  var state={lang:(lsGet('kiwiBookingLang')||document.documentElement.lang||'fr').slice(0,2),step:1,config:null,service:null,date:'',slot:null,partySize:2,checkIn:'',checkOut:'',hotelRooms:[],loading:false,error:''};
-  if(['fr','en','ar'].indexOf(state.lang)<0)state.lang='fr';
-  var C={fr:{aside:'Réservez sans appeler, sans attendre.',sub:'Choisissez votre service et l’heure qui vous convient. La disponibilité est confirmée par l’établissement.',trust:'Réservation sécurisée par Kiwi',choose:'Que souhaitez-vous réserver ?',chooseSub:'Les prix et durées sont ceux publiés par l’établissement.',time:'Choisissez votre horaire',timeSub:'Seuls les créneaux réellement disponibles apparaissent.',details:'Vos coordonnées',detailsSub:'Elles servent uniquement à confirmer et gérer cette réservation.',name:'Nom complet',phone:'Téléphone',email:'E-mail',note:'Demande particulière',back:'Retour',next:'Continuer',confirm:'Confirmer la réservation',price:'Prix',deposit:'Acompte',duration:'Durée',guests:'Personnes',upTo:'jusqu’à {n} personnes',free:'Sans frais',periodMorning:'Matin',periodNoon:'Midi',periodAfternoon:'Après-midi',periodEvening:'Soir',change:'Modifier',recap:'Récapitulatif',noSlots:'Aucun créneau disponible ce jour-là.',closed:'Les réservations en ligne ne sont pas disponibles pour cet établissement.',noHours:'Cet établissement n’a pas encore publié ses horaires de réservation.',timeout:'Délai de réponse dépassé. Réessayez avec les mêmes coordonnées.',error:'Impossible de charger les disponibilités.',invalid:'Indiquez votre nom et au moins un téléphone ou un e-mail.',taken:'Ce créneau vient d’être réservé. Choisissez-en un autre.',success:'Votre réservation est confirmée',requested:'Votre demande a bien été envoyée',successSub:"Conservez cette référence. L’établissement retrouve votre réservation instantanément.",reference:'Référence',when:'Date',service:'Service',powered:'propulsé par Kiwi'},en:{timeout:'The request timed out. Retry with the same details.',aside:'Book without calling or waiting.',sub:'Choose the service and time that suits you. Availability is confirmed by the venue.',trust:'Secure booking by Kiwi',choose:'What would you like to book?',chooseSub:'Prices and durations are published by the venue.',time:'Choose a time',timeSub:'Only genuinely available slots are shown.',details:'Your details',detailsSub:'Used only to confirm and manage this booking.',name:'Full name',phone:'Phone',email:'Email',note:'Special request',back:'Back',next:'Continue',confirm:'Confirm booking',price:'Price',deposit:'Deposit',duration:'Duration',guests:'Guests',upTo:'up to {n} guests',free:'No charge',periodMorning:'Morning',periodNoon:'Midday',periodAfternoon:'Afternoon',periodEvening:'Evening',change:'Change',recap:'Summary',noSlots:'No slots are available on this day.',closed:'Online booking is not available for this venue.',noHours:'This venue has not published its booking hours yet.',error:'Unable to load availability.',invalid:'Enter your name and at least a phone number or email.',taken:'That slot was just taken. Choose another.',success:'Your booking is confirmed',requested:'Your request was sent',successSub:'Keep this reference. The venue can find your booking instantly.',reference:'Reference',when:'Date',service:'Service',powered:'powered by Kiwi'},ar:{aside:'احجز دون اتصال أو انتظار.',sub:'اختر الخدمة والوقت المناسب لك. تؤكد المؤسسة التوفر مباشرة.',trust:'حجز آمن عبر Kiwi',choose:'ما الخدمة التي تريد حجزها؟',chooseSub:'الأسعار والمدد منشورة من طرف المؤسسة.',time:'اختر الموعد',timeSub:'تظهر فقط المواعيد المتاحة فعلياً.',details:'معلوماتك',detailsSub:'تُستخدم فقط لتأكيد هذا الحجز وإدارته.',name:'الاسم الكامل',phone:'الهاتف',email:'البريد الإلكتروني',note:'طلب خاص',back:'رجوع',next:'متابعة',confirm:'تأكيد الحجز',price:'السعر',deposit:'العربون',duration:'المدة',guests:'الأشخاص',upTo:'إلى غاية {n} أشخاص',free:'بدون رسوم',periodMorning:'الصباح',periodNoon:'الظهيرة',periodAfternoon:'بعد الظهر',periodEvening:'المساء',change:'تعديل',recap:'الملخّص',noSlots:'لا توجد مواعيد متاحة في هذا اليوم.',closed:'الحجز عبر الإنترنت غير متاح لهذه المؤسسة.',noHours:'لم تنشر هذه المؤسسة مواعيد الحجز بعد.',timeout:'انتهت مهلة الطلب. أعد المحاولة بنفس المعلومات.',error:'تعذر تحميل المواعيد.',invalid:'أدخل اسمك ورقم هاتف أو بريداً إلكترونياً.',taken:'تم حجز هذا الموعد للتو. اختر موعداً آخر.',success:'تم تأكيد حجزك',requested:'تم إرسال طلب الحجز',successSub:'احتفظ بهذا المرجع. ستجد المؤسسة حجزك فوراً.',reference:'المرجع',when:'التاريخ',service:'الخدمة',powered:'بواسطة Kiwi'}};
-  var H={fr:{aside:'Votre séjour commence ici.',sub:'Choisissez vos dates et votre chambre. Les disponibilités et tarifs viennent directement de l’hôtel.',search:'Préparez votre séjour',searchSub:'Indiquez vos dates et le nombre de voyageurs.',checkIn:'Arrivée',checkOut:'Départ',guests:'Voyageurs',find:'Voir les chambres',rooms:'Choisissez votre chambre',roomsSub:'Seules les catégories disponibles pour tout le séjour peuvent être réservées.',night:'nuit',nights:'nuits',perNight:'par nuit',available:'{n} disponible(s)',full:'Complet à ces dates',beds:'Couchage',size:'Surface',view:'Vue',amenities:'Équipements',total:'Total du séjour',details:'Vos coordonnées',detailsSub:'L’hôtel les utilisera pour confirmer et préparer votre arrivée.',room:'Chambre',stay:'Séjour',confirm:'Confirmer le séjour',invalidDates:'Choisissez une arrivée et un départ valides.',none:'Aucune chambre ne correspond à ces dates et au nombre de voyageurs.',taken:'Cette dernière chambre vient d’être réservée. Relancez la recherche.',success:'Votre séjour est confirmé',requested:'Votre demande de séjour a été envoyée'},en:{aside:'Your stay starts here.',sub:'Choose your dates and room. Availability and rates come directly from the hotel.',search:'Plan your stay',searchSub:'Enter your dates and number of guests.',checkIn:'Check-in',checkOut:'Check-out',guests:'Guests',find:'See rooms',rooms:'Choose your room',roomsSub:'Only categories available for the entire stay can be booked.',night:'night',nights:'nights',perNight:'per night',available:'{n} available',full:'Sold out for these dates',beds:'Beds',size:'Size',view:'View',amenities:'Amenities',total:'Stay total',details:'Your details',detailsSub:'The hotel will use them to confirm and prepare your arrival.',room:'Room',stay:'Stay',confirm:'Confirm stay',invalidDates:'Choose valid check-in and check-out dates.',none:'No room matches these dates and guest count.',taken:'The last room was just booked. Search again.',success:'Your stay is confirmed',requested:'Your stay request was sent'},ar:{aside:'إقامتك تبدأ هنا.',sub:'اختر التواريخ والغرفة. التوفر والأسعار تأتي مباشرة من الفندق.',search:'حضّر إقامتك',searchSub:'حدد تاريخ الوصول والمغادرة وعدد الضيوف.',checkIn:'الوصول',checkOut:'المغادرة',guests:'الضيوف',find:'عرض الغرف',rooms:'اختر غرفتك',roomsSub:'يمكن حجز الفئات المتاحة طوال مدة الإقامة فقط.',night:'ليلة',nights:'ليالٍ',perNight:'لليلة',available:'متاح: {n}',full:'مكتمل في هذه التواريخ',beds:'الأسرة',size:'المساحة',view:'الإطلالة',amenities:'المرافق',total:'إجمالي الإقامة',details:'معلوماتك',detailsSub:'سيستخدمها الفندق لتأكيد وصولك والاستعداد له.',room:'الغرفة',stay:'الإقامة',confirm:'تأكيد الإقامة',invalidDates:'اختر تاريخ وصول ومغادرة صالحين.',none:'لا توجد غرفة مناسبة لهذه التواريخ وعدد الضيوف.',taken:'تم حجز آخر غرفة للتو. أعد البحث.',success:'تم تأكيد إقامتك',requested:'تم إرسال طلب إقامتك'}};
-  function t(k){return(C[state.lang]||C.fr)[k]||k}function ht(k){return(H[state.lang]||H.fr)[k]||k}function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}function money(n){return Number(n||0).toLocaleString(state.lang==='ar'?'ar-MA':'fr-FR')+' MAD'}function phoneValue(v){var s=String(v||'').trim();return !s?'':(window.KiwiPhone?window.KiwiPhone.normalize(s):s)}
-  /* Le même test que le serveur, posé ici pour corriger la faute de frappe
-     pendant que la cliente est encore devant le champ. `type=email` accepte
-     « marie@gmail » : sans domaine complet, personne ne pourra la joindre. */
-  function emailOk(v){return /^[^\s@,;:<>()[\]\\"]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$/.test(String(v||'').trim().toLowerCase())}
-  function badEmailMsg(){return state.lang==='ar'?'تحقّق من بريدك الإلكتروني: لا يمكن إرسال التأكيد إلى هذا العنوان.':state.lang==='en'?'Check your email address: a confirmation cannot be delivered to it.':'Vérifiez votre e-mail : une confirmation ne peut pas être remise à cette adresse.'}
-  /* Les créneaux sont calculés à l'heure de l'établissement (Casablanca).
-     Ils s'affichaient à l'heure du VISITEUR : depuis Paris, une table de
-     11:00 se lisait 12:00, et la dernière avant la fermeture passait après.
-     Un touriste qui réserve avant d'arriver venait une heure en retard sur
-     la table qu'on lui gardait. Tout ce qui est montré passe donc par le
-     fuseau de l'établissement. */
-  var VENUE_TZ='Africa/Casablanca';function vtz(){return(state.config&&state.config.tz)||VENUE_TZ}
-  function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}function fmt(ts,opt){var o=Object.assign({timeZone:vtz()},opt||{});o.timeZone=globalThis.KiwiZoneLaw?.effectiveZone(o.timeZone,ts)||o.timeZone;return new Date(ts).toLocaleString(state.lang==='ar'?'ar-MA':state.lang,o)}
-  function venueToday(){try{return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA',{timeZone:vtz(),year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(_){return ymd(new Date())}}
-  function venueHour(ts){try{return +new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB',{timeZone:vtz(),hour:'2-digit',hourCycle:'h23'}).format(new Date(ts))}catch(_){return new Date(ts).getHours()}}
-  function isHotel(){return !!(state.config&&state.config.kind==='hotel')}function layout(content){var active=document.activeElement,owned=app.contains(active),key=owned&&[...active.attributes].filter(function(a){return /^(data-|name$)/.test(a.name)}).map(function(a){return '['+a.name+'="'+CSS.escape(a.value)+'"]'}).join('');document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==='ar'?'rtl':'ltr';app.innerHTML='<div class="bk-shell'+(isHotel()?' bk-hotel':'')+'"><aside class="bk-aside"><div class="bk-brand"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"><span></span><strong>'+esc(state.config&&state.config.name||'')+'</strong></div><div class="bk-aside-copy"><span class="bk-kicker">KIWI RESERVATIONS</span><h1>'+esc(isHotel()?ht('aside'):t('aside'))+'</h1><p>'+esc(isHotel()?ht('sub'):t('sub'))+'</p></div><div class="bk-trust">'+esc(t('trust'))+'</div></aside><section class="bk-main"><div class="bk-top"><div class="bk-steps" role="list">'+[1,2,3].map(function(x){var label=isHotel()?ht(['search','rooms','details'][x-1]):t(['choose','time','details'][x-1]);return'<span role="listitem" aria-label="'+esc(label)+'"'+(x===state.step?' aria-current="step"':'')+' class="bk-step-dot'+(x<=state.step?' on':'')+'"></span>'}).join('')+'</div><div class="bk-lang">'+['fr','en','ar'].map(function(l){return'<button data-lang="'+l+'" class="'+(l===state.lang?'on':'')+'">'+l.toUpperCase()+'</button>'}).join('')+'</div></div>'+content+'</section></div>';wireGlobal();if(owned){var next=key&&app.querySelector(key);if(!next)next=app.querySelector('input[name=name],.bk-date.on,[data-service],[data-hotel-room],[data-hotel-search] input,[data-manage-keep]');if(next)next.focus()}}
-  function head(title,sub){return'<header class="bk-head"><span>0'+state.step+' / 03</span><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></header>'}
-  /* Whether the venue counts covers is a fact about its tables, not about the
-   * free-text trade label — that label is blank on most merchants, and gating
-   * the stepper on a regex over it silently sent every restaurant booking to
-   * the venue as a party of one. maxParty comes from the resources. */
-  function seatCap(s){return Math.max(1,Number(s&&s.maxParty||0)|0)}
-  function venueCap(){var m=1;((state.config&&state.config.services)||[]).forEach(function(x){var c=seatCap(x);if(c>m)m=c});return m}
-  function partyCap(){return state.service?seatCap(state.service):venueCap()}
-  /* Most venues seat every service from the same tables, so a ceiling printed
-   * on each card would repeat the same number seven times and differentiate
-   * nothing. Print it only where the services really differ. */
-  function capsDiffer(){var v=((state.config&&state.config.services)||[]).map(seatCap);return v.some(function(c){return c!==v[0]})}
-  function takesCovers(){return partyCap()>1}
-  function party(){return takesCovers()?Math.min(Math.max(1,state.partySize),partyCap()):1}
-  function partyControl(){return takesCovers()?'<div class="bk-party"><span>'+esc(t('guests'))+'</span><button type="button" data-party-dec aria-label="'+esc(t('guests'))+' −"'+(party()<=1?' disabled':'')+'>−</button><strong>'+party()+'</strong><button type="button" data-party-inc aria-label="'+esc(t('guests'))+' +"'+(party()>=partyCap()?' disabled':'')+'>+</button></div>':''}
-  /* Patch the stepper in place rather than re-rendering the panel: a fresh DOM
- * node on every press throws away keyboard focus, so a guest tabbing to + can
- * only ever add one cover. */
-function syncParty(){var active=document.activeElement,n=app.querySelector('.bk-party strong'),dec=app.querySelector('[data-party-dec]'),inc=app.querySelector('[data-party-inc]');if(n)n.textContent=party();if(dec)dec.disabled=party()<=1;if(inc)inc.disabled=party()>=partyCap();if(active===dec&&dec.disabled&&inc&&!inc.disabled)inc.focus();else if(active===inc&&inc.disabled&&dec&&!dec.disabled)dec.focus()}
-function wireParty(after){var dec=app.querySelector('[data-party-dec]'),inc=app.querySelector('[data-party-inc]');function step(n){var was=party();state.partySize=Math.min(partyCap(),Math.max(1,was+n));if(party()===was)return;syncParty();if(after)after()}if(dec)dec.onclick=function(){step(-1)};if(inc)inc.onclick=function(){step(1)}}
-/* Stepping 2 -> 20 is eighteen presses; without this it was eighteen availability
- * calls. Grey the stale grid immediately so nobody books a slot that no longer
- * fits, then ask the server once the guest has settled on a number. */
-var partyTimer=0;
-function queueSlots(){state.error='';state.slot=null;clearTimeout(partyTimer);var g=app.querySelector('.bk-slot-groups');if(g){g.setAttribute('data-stale','');g.querySelectorAll('[data-slot]').forEach(function(b){b.setAttribute('aria-disabled','true')})}partyTimer=setTimeout(loadSlots,300)}
-  /* Un prix nul n'est pas un prix : on écrit « sans frais » en neutre plutôt que « 0 MAD » en vert. */
-  function priceTag(s){return +s.price>0?'<b class="bk-price">'+esc(money(s.price))+'</b>':'<b class="bk-price is-free">'+esc(t('free'))+'</b>'}
-  /* Rappel du choix en cours sur les étapes suivantes, avec retour direct. */
-  function contextChip(){var s=state.service;if(!s)return'';return'<div class="bk-context"><strong>'+esc(s.name)+'</strong><i class="bk-dot"></i><span>'+esc(s.duration)+' min</span>'+(+s.price>0?'<i class="bk-dot"></i><span>'+esc(money(s.price))+'</span>':'')+'<button type="button" data-back>'+esc(t('change'))+'</button></div>'}
-  /* Vingt-sept créneaux en une grille se lisent mal ; groupés par moment de la journée ils se lisent d'un coup d'œil. */
-  function slotGroups(slots){var groups=[['periodMorning',0,12],['periodNoon',12,14],['periodAfternoon',14,18],['periodEvening',18,24]];return'<div class="bk-slot-groups">'+groups.map(function(g){var rows=slots.filter(function(s){var h=venueHour(s.startAt);return h>=g[1]&&h<g[2]});if(!rows.length)return'';return'<div class="bk-slot-group"><div class="bk-period">'+esc(t(g[0]))+'</div><div class="bk-slots">'+rows.map(function(s){return'<button class="bk-slot" data-slot="'+s.startAt+'">'+esc(fmt(s.startAt,{hour:'2-digit',minute:'2-digit'}))+'</button>'}).join('')+'</div></div>'}).join('')+'</div>'}
-  function services(){state.service=null;state.step=1;layout('<div class="bk-panel">'+head(t('choose'),t('chooseSub'))+partyControl()+'<div class="bk-grid">'+state.config.services.map(function(s){return'<button class="bk-choice" data-service="'+esc(s.id)+'"><div class="bk-choice-body"><strong>'+esc(s.name)+'</strong><p>'+esc(s.duration)+' min'+(capsDiffer()&&seatCap(s)>1?' · '+esc(t('upTo')).replace('{n}',seatCap(s)):'')+'</p></div><div class="bk-choice-side"><div>'+priceTag(s)+(s.deposit?'<small>'+esc(t('deposit'))+' '+esc(money(s.deposit))+'</small>':'')+'</div><i class="bk-go" aria-hidden="true"></i></div></button>'}).join('')+'</div></div>');wireParty();app.querySelectorAll('[data-service]').forEach(function(b){b.onclick=function(){state.service=state.config.services.find(function(s){return s.id===b.dataset.service});state.partySize=party();state.date=plusDays(venueToday(),1);state.slot=null;times()}})}
-  function dateButtons(){var out=[],today=venueToday();for(var i=0;i<=Number((state.config.settings||{}).windowDays||60);i++){var v=plusDays(today,i),d=Date.parse(v+'T12:00:00Z');out.push('<button class="bk-date'+(v===state.date?' on':'')+'" data-date="'+v+'" aria-pressed="'+(v===state.date)+'"><span>'+esc(fmt(d,{weekday:'short'}))+'</span><strong>'+esc(+v.slice(8))+'</strong><small>'+esc(fmt(d,{month:'short'}))+'</small></button>')}return out.join('')}
+  var state={
+    lang: (lsGet('kiwiBookingLang')||document.documentElement.lang||'fr').slice(0,2),step: 1,config: null,service: null,date: '',slot: null,partySize: 2,checkIn: '',checkOut: '',hotelRooms: [],loading: false,error: ''
+  }
+    ;
+  if(['fr','en','ar'].indexOf(state.lang)<0) state.lang='fr';
+  /* booking view declaration 4 */
+  /* booking view declaration 5 */
+  function t(...args) { return parts.view.t(...args); }
+  function ht(...args) { return parts.view.ht(...args); }
+  function esc(...args) { return parts.view.esc(...args); }
+  function money(...args) { return parts.view.money(...args); }
+  function phoneValue(...args) { return parts.submission.phoneValue(...args); }
+  function emailOk(...args) { return parts.submission.emailOk(...args); }
+  function badEmailMsg(...args) { return parts.submission.badEmailMsg(...args); }
+  /* booking view declaration 10 */
+  function vtz(...args) { return parts.view.vtz(...args); }
+  function ymd(...args) { return parts.view.ymd(...args); }
+  function fmt(...args) { return parts.view.fmt(...args); }
+  function venueToday(...args) { return parts.view.venueToday(...args); }
+  function venueHour(...args) { return parts.view.venueHour(...args); }
+  function isHotel(...args) { return parts.view.isHotel(...args); }
+  function layout(...args) { return parts.view.layout(...args); }
+  function head(...args) { return parts.view.head(...args); }
+  function seatCap(...args) { return parts.service.seatCap(...args); }
+  function venueCap(...args) { return parts.service.venueCap(...args); }
+  function partyCap(...args) { return parts.service.partyCap(...args); }
+  function capsDiffer(...args) { return parts.service.capsDiffer(...args); }
+  function takesCovers(...args) { return parts.service.takesCovers(...args); }
+  function party(...args) { return parts.service.party(...args); }
+  function partyControl(...args) { return parts.service.partyControl(...args); }
+  function syncParty(...args) { return parts.service.syncParty(...args); }
+  function wireParty(...args) { return parts.service.wireParty(...args); }
+  /* booking service declaration 9 */
+  function queueSlots(...args) { return parts.service.queueSlots(...args); }
+  function priceTag(...args) { return parts.service.priceTag(...args); }
+  function contextChip(...args) { return parts.service.contextChip(...args); }
+  function slotGroups(...args) { return parts.service.slotGroups(...args); }
+  function services(...args) { return parts.service.services(...args); }
+  function dateButtons(...args) { return parts.service.dateButtons(...args); }
   /* Choisir une autre date ne repeint plus toute la page d'un coup : la rangée
      reste en place, la lentille glisse vers la date choisie (liquid-lens.js),
      les créneaux d'avant pâlissent le temps de la réponse, puis la page se
      repeint quand la lentille est posée. Un clic plus récent gagne toujours :
      une réponse en retard ne repeint plus la date d'avant. */
-  var slotSeq=0,hotelSeq=0;
-  async function loadSlots(o){var seq=++slotSeq,glide=!!(o&&o.glide),settle=glide?new Promise(function(r){setTimeout(r,330)}):null;state.loading=true;state.error='';if(glide){var old=app.querySelector('.bk-slot-groups,.bk-slots,.bk-empty');if(old){old.setAttribute('data-stale','');old.querySelectorAll('[data-slot]').forEach(function(b){b.setAttribute('aria-disabled','true')})}}else renderTimes([]);try{var r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/booking?merchant='+encodeURIComponent(merchant)+'&service='+encodeURIComponent(state.service.id)+'&date='+encodeURIComponent(state.date)+'&partySize='+encodeURIComponent(party()),{credentials:'omit'}),j=await r.json();if(!r.ok)throw new Error(j.error||'error');if(settle)await settle;if(seq!==slotSeq)return;var keep=state.service&&state.service.id;state.config=j;if(keep)state.service=(j.services||[]).find(function(s){return s.id===keep})||state.service;state.loading=false;renderTimes(j.slots||[])}catch(err){if(settle)await settle;if(seq!==slotSeq)return;state.loading=false;state.error=err.message==='request-timeout'?t('timeout'):t('error');renderTimes([])}}
-  function times(){state.step=2;loadSlots()}
-  function renderTimes(slots){var oldRow=app.querySelector('.bk-date-row'),sl=oldRow?oldRow.scrollLeft:0;layout('<div class="bk-panel">'+head(t('time'),t('timeSub'))+contextChip()+partyControl()+'<div class="bk-date-row">'+dateButtons()+'</div>'+(state.loading?'<div class="bk-loading" style="min-height:180px"><span></span></div>':slots.length?slotGroups(slots):'<div class="bk-empty">'+esc(state.error||t('noSlots'))+'</div>')+'<div class="bk-actions"><button class="bk-btn" data-back>'+esc(t('back'))+'</button></div></div>');var row=app.querySelector('.bk-date-row');if(row&&sl)row.scrollLeft=sl;wireParty(queueSlots);app.querySelectorAll('[data-date]').forEach(function(b){b.onclick=function(){if(b.dataset.date===state.date&&!state.loading)return;state.date=b.dataset.date;state.error='';state.slot=null;app.querySelectorAll('[data-date]').forEach(function(x){x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',String(x===b))});loadSlots({glide:true})}});app.querySelectorAll('[data-slot]').forEach(function(b){b.onclick=function(){if(state.loading||b.closest('[data-stale]'))return;state.slot=+b.dataset.slot;details()}});app.querySelectorAll('[data-back]').forEach(function(b){b.onclick=services})}
-  // Booking records reserve a slot; the API does not collect a payment.
-  function paymentNote(){return state.lang==='ar'?'لا يتم تحصيل أي دفعة عبر الإنترنت. اتفق مع المؤسسة على دفع العربون.':state.lang==='en'?'No payment is collected online. Arrange any deposit with the venue.':'Aucun paiement n’est encaissé en ligne. Convenez du règlement de l’acompte avec l’établissement.'}
-  function details(){state.step=3;layout('<div class="bk-panel">'+head(t('details'),t('detailsSub'))+'<form class="bk-form" data-form><div class="bk-fields"><label class="bk-field"><span>'+esc(t('name'))+'</span><input name="name" maxlength="100" autocomplete="name" required></label><label class="bk-field"><span>'+esc(t('phone'))+'</span><input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="06… / +33…"></label><label class="bk-field full"><span>'+esc(t('email'))+'</span><input name="email" maxlength="160" type="email" autocomplete="email"></label><label class="bk-field full"><span>'+esc(t('note'))+'</span><textarea name="note" maxlength="600"></textarea></label></div><aside class="bk-summary"><div class="bk-summary-head">'+esc(t('recap'))+'</div><div><span>'+esc(t('service'))+'</span><strong>'+esc(state.service.name)+'</strong></div>'+(takesCovers()?'<div><span>'+esc(t('guests'))+'</span><strong>'+party()+'</strong></div>':'')+'<div><span>'+esc(t('when'))+'</span><strong>'+esc(fmt(state.slot,{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))+'</strong></div><div><span>'+esc(t('price'))+'</span><strong>'+(+state.service.price>0?esc(money(state.service.price)):esc(t('free')))+'</strong></div>'+(+state.service.deposit>0?'<div data-deposit><span>'+esc(t('deposit'))+'</span><strong>'+esc(money(state.service.deposit))+'</strong></div>':'')+'<p data-payment-note>'+esc(paymentNote())+'</p></aside><div class="bk-error full" data-error role="alert" aria-live="assertive"></div><div class="bk-actions full"><button type="button" class="bk-btn" data-back>'+esc(t('back'))+'</button><button class="bk-btn primary" type="submit">'+esc(t('confirm'))+'</button></div></form></div>');var form=app.querySelector('[data-form]');app.querySelector('[data-back]').onclick=times;form.onsubmit=submit}
-  async function submit(e){e.preventDefault();var form=e.currentTarget,fd=new FormData(form),name=String(fd.get('name')||'').trim(),rawPhone=String(fd.get('phone')||'').trim(),phone=phoneValue(rawPhone),email=String(fd.get('email')||'').trim();if(email&&!emailOk(email)){form.querySelector('[data-error]').textContent=badEmailMsg();return}if(!name||(!rawPhone&&!email)||rawPhone&&!phone){form.querySelector('[data-error]').textContent=rawPhone&&!phone?(state.lang==='ar'?'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':state.lang==='en'?'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.'):t('invalid');return}var btn=form.querySelector('[type=submit]');btn.disabled=true;var ref=ssGet('kiwiBookingRef')||('web_'+crypto.randomUUID());ssSet('kiwiBookingRef',ref);try{var r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant:merchant,ref:ref,serviceId:state.service.id,startAt:state.slot,partySize:party(),customer:{name:name,phone:phone,email:email},note:fd.get('note')})}),j=await r.json();if(!r.ok)throw new Error(j.error||'error');ssDel('kiwiBookingRef');success(j)}catch(err){btn.disabled=false;form.querySelector('[data-error]').textContent=err.message==='request-timeout'?t('timeout'):err.message==='slot-unavailable'?t('taken'):t('error');if(err.message==='slot-unavailable')setTimeout(times,900)}}
-  /* ── LE LIEN DE GESTION ────────────────────────────────────────────────────
-   * Le serveur frappait un jeton de gestion que personne ne recevait : la page
-   * l'ignorait, effaçait la référence de session et n'affichait le code qu'une
-   * fois. Fermer l'onglet rendait la réservation inatteignable pour toujours.
-   * On garde donc le lien ici — visible, copiable, et rangé dans ce navigateur
-   * pour qu'un retour sur la page le retrouve tout seul. */
-  function rememberManage(j){if(!j||!j.manageToken)return;try{var all=JSON.parse(localStorage.getItem('kiwiBookingManage')||'{}');if(!all||typeof all!=='object')all={};all[merchant+':'+j.code]={merchant:merchant,code:j.code,token:j.manageToken,at:Date.now()};var keys=Object.keys(all).sort(function(a,b){return(all[b].at||0)-(all[a].at||0)}).slice(0,20),kept={};keys.forEach(function(k){kept[k]=all[k]});localStorage.setItem('kiwiBookingManage',JSON.stringify(kept))}catch(_){}}
-  function manageHref(j){if(!j||!j.manageToken)return'';return j.manageUrl||(location.origin+location.pathname+'?merchant='+encodeURIComponent(merchant)+'&manage='+encodeURIComponent(j.manageToken))}
-  function manageBlock(j){var href=manageHref(j);if(!href)return'';var sent=!!j.confirmationSent;return'<div class="bk-manage-link"><p>'+esc(mt('keep'))+(sent?' '+esc(mt('sent')):'')+'</p><a href="'+esc(href)+'">'+esc(mt('open'))+'</a><button type="button" data-copy-manage data-href="'+esc(href)+'">'+esc(mt('copy'))+'</button></div>'}
-  function wireManageBlock(){
-    var b=app.querySelector('[data-copy-manage]');if(!b)return;
-    b.onclick=function(){
-      var done=function(){b.textContent=mt('copied')},fallback=function(){
-        var i=app.querySelector('[data-manage-copy-fallback]');
-        if(!i){i=document.createElement('input');i.setAttribute('data-manage-copy-fallback','');i.readOnly=true;i.setAttribute('aria-label',mt('open'));b.parentNode.appendChild(i)}
-        i.value=b.dataset.href;b.textContent=mt('copyFailed');i.focus();i.select();
-      };
-      try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(b.dataset.href).then(done,fallback)}else{
-        var i=document.createElement('input');i.value=b.dataset.href;document.body.appendChild(i);i.select();
-        var copied=false;try{copied=document.execCommand('copy')}finally{i.remove()}
-        if(copied)done();else fallback();
-      }}catch(_){fallback()}
-    };
-  }
-  var M={fr:{keep:'Conservez ce lien pour retrouver ou annuler votre réservation.',sent:'Il vous a aussi été envoyé par e-mail.',open:'Ouvrir ma réservation',copy:'Copier le lien',copied:'Lien copié',copyFailed:'Copie impossible. Sélectionnez et copiez ce lien.',title:'Votre réservation',cancel:'Annuler ma réservation',cancelSure:'Confirmer l’annulation',keepIt:'Garder ma réservation',cancelled:'Réservation annulée',cancelledSub:'L’établissement en a été informé.',notFound:'Ce lien de réservation n’est plus valide.',closedWindow:'Le délai d’annulation en ligne est passé. Appelez l’établissement.',until:'Annulable en ligne jusqu’au {d}',statusRequested:'En attente de confirmation',statusConfirmed:'Confirmée',statusCancelled:'Annulée',statusOther:'Traitée par l’établissement',failed:'L’annulation n’a pas pu être enregistrée. Réessayez.'},en:{keep:'Keep this link to view or cancel your booking.',sent:'It was also emailed to you.',open:'Open my booking',copy:'Copy link',copied:'Link copied',copyFailed:'Unable to copy. Select and copy this link.',title:'Your booking',cancel:'Cancel my booking',cancelSure:'Confirm cancellation',keepIt:'Keep my booking',cancelled:'Booking cancelled',cancelledSub:'The venue has been notified.',notFound:'This booking link is no longer valid.',closedWindow:'The online cancellation window has closed. Please call the venue.',until:'Cancellable online until {d}',statusRequested:'Awaiting confirmation',statusConfirmed:'Confirmed',statusCancelled:'Cancelled',statusOther:'Handled by the venue',failed:'The cancellation could not be saved. Please try again.'},ar:{keep:'احتفظ بهذا الرابط لعرض حجزك أو إلغائه.',sent:'وقد أُرسل إليك أيضاً بالبريد الإلكتروني.',open:'فتح حجزي',copy:'نسخ الرابط',copied:'تم نسخ الرابط',copyFailed:'تعذر النسخ. حدد هذا الرابط وانسخه.',title:'حجزك',cancel:'إلغاء الحجز',cancelSure:'تأكيد الإلغاء',keepIt:'الاحتفاظ بالحجز',cancelled:'تم إلغاء الحجز',cancelledSub:'تم إخبار المؤسسة.',notFound:'هذا الرابط لم يعد صالحاً.',closedWindow:'انتهت مهلة الإلغاء عبر الإنترنت. اتصل بالمؤسسة.',until:'يمكن الإلغاء عبر الإنترنت حتى {d}',statusRequested:'في انتظار التأكيد',statusConfirmed:'مؤكّد',statusCancelled:'ملغى',statusOther:'بعهدة المؤسسة',failed:'تعذّر تسجيل الإلغاء. حاول مرة أخرى.'}};
-  function mt(k){return(M[state.lang]||M.fr)[k]||k}
+  /* booking counters are private to search owners */
+  function loadSlots(...args) { return parts.service.loadSlots(...args); }
+  function times(...args) { return parts.service.times(...args); }
+  function renderTimes(...args) { return parts.service.renderTimes(...args); }
+  function paymentNote(...args) { return parts.submission.paymentNote(...args); }
+  function details(...args) { return parts.submission.details(...args); }
+  function submit(...args) { return parts.submission.submit(...args); }
+  function rememberManage(...args) { return parts.manage.rememberManage(...args); }
+  function manageHref(...args) { return parts.manage.manageHref(...args); }
+  function manageBlock(...args) { return parts.manage.manageBlock(...args); }
+  function wireManageBlock(...args) { return parts.manage.wireManageBlock(...args); }
+  /* booking manage declaration 4 */
+  function mt(...args) { return parts.manage.mt(...args); }
+  function success(...args) { return parts.submission.success(...args); }
+  function plusDays(...args) { return parts.hotel.plusDays(...args); }
+  function hotelNights(...args) { return parts.hotel.hotelNights(...args); }
+  function hotelDates(...args) { return parts.hotel.hotelDates(...args); }
+  function hotelSearch(...args) { return parts.hotel.hotelSearch(...args); }
+  function loadHotelRooms(...args) { return parts.hotel.loadHotelRooms(...args); }
+  function hotelFacts(...args) { return parts.hotel.hotelFacts(...args); }
+  function hotelPhotoUrl(...args) { return parts.hotel.hotelPhotoUrl(...args); }
+  function hotelVisual(...args) { return parts.hotel.hotelVisual(...args); }
+  function hotelRoomList(...args) { return parts.hotel.hotelRoomList(...args); }
+  function hotelSummary(...args) { return parts.hotel.hotelSummary(...args); }
+  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }
+  function submitHotel(...args) { return parts.submission.submitHotel(...args); }
+  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }
+  function statusLabel(...args) { return parts.manage.statusLabel(...args); }
+  function manageRows(...args) { return parts.manage.manageRows(...args); }
+  function renderManage(...args) { return parts.manage.renderManage(...args); }
+  function cancelBooking(...args) { return parts.manage.cancelBooking(...args); }
+  function openManage(...args) { return parts.manage.openManage(...args); }
 
-  function success(j){rememberManage(j);var requested=j.status==='requested';layout('<div class="bk-success"><div class="bk-success-mark">✓</div><h2>'+esc(requested?t('requested'):t('success'))+'</h2><p>'+esc(t('successSub'))+'</p><div class="bk-code"><span>'+esc(t('reference'))+'</span><strong>'+esc(j.code)+'</strong></div><div class="bk-summary"><div><span>'+esc(t('service'))+'</span><strong>'+esc(state.service.name)+'</strong></div>'+(takesCovers()?'<div><span>'+esc(t('guests'))+'</span><strong>'+party()+'</strong></div>':'')+'<div><span>'+esc(t('when'))+'</span><strong>'+esc(fmt(j.startAt,{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))+'</strong></div></div>'+manageBlock(j)+'</div>');wireManageBlock()}
-  function plusDays(value,n){var d=new Date(value+'T12:00:00');d.setDate(d.getDate()+n);return ymd(d)}
-  function hotelNights(){return Math.max(0,Math.round((Date.parse(state.checkOut+'T12:00:00Z')-Date.parse(state.checkIn+'T12:00:00Z'))/86400000))}
-  function hotelDates(){return esc(fmt(Date.parse(state.checkIn+'T12:00:00'),{day:'numeric',month:'short'}))+' → '+esc(fmt(Date.parse(state.checkOut+'T12:00:00'),{day:'numeric',month:'short'}))}
-  function hotelSearch(){state.step=1;state.service=null;if(!state.checkIn){state.checkIn=plusDays(venueToday(),1);state.checkOut=plusDays(state.checkIn,1)}var max=plusDays(venueToday(),Number((state.config.settings||{}).windowDays||60));layout('<div class="bk-panel">'+head(ht('search'),ht('searchSub'))+'<form class="bk-hotel-search" data-hotel-search><label class="bk-field"><span>'+esc(ht('checkIn'))+'</span><input name="checkIn" type="date" min="'+venueToday()+'" max="'+max+'" value="'+esc(state.checkIn)+'" required></label><label class="bk-field"><span>'+esc(ht('checkOut'))+'</span><input name="checkOut" type="date" min="'+esc(plusDays(state.checkIn,1))+'" max="'+esc(plusDays(max,365))+'" value="'+esc(state.checkOut)+'" required></label><label class="bk-field"><span>'+esc(ht('guests'))+'</span><select name="guests">'+[1,2,3,4,5,6,7,8,9,10,11,12].map(function(n){return'<option value="'+n+'"'+(n===state.partySize?' selected':'')+'>'+n+'</option>'}).join('')+'</select></label><button class="bk-btn primary" type="submit">'+esc(ht('find'))+'</button><p class="bk-error" data-error role="alert" aria-live="assertive"></p></form></div>');var form=app.querySelector('[data-hotel-search]'),ci=form.elements.checkIn,co=form.elements.checkOut;ci.onchange=function(){co.min=plusDays(ci.value,1);if(!co.value||co.value<=ci.value)co.value=plusDays(ci.value,1)};form.onsubmit=function(e){e.preventDefault();state.checkIn=ci.value;state.checkOut=co.value;state.partySize=+form.elements.guests.value||1;if(!state.checkIn||!state.checkOut||state.checkOut<=state.checkIn){form.querySelector('[data-error]').textContent=ht('invalidDates');return}loadHotelRooms()}}
-  async function loadHotelRooms(){var seq=++hotelSeq;state.step=2;state.loading=true;state.error='';state.hotelRooms=[];hotelRoomList();try{var u='/api/booking?merchant='+encodeURIComponent(merchant)+'&checkIn='+encodeURIComponent(state.checkIn)+'&checkOut='+encodeURIComponent(state.checkOut)+'&guests='+encodeURIComponent(state.partySize),r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(u,{credentials:'omit'}),j=await r.json();if(!r.ok)throw new Error(j.error||'error');if(seq!==hotelSeq)return;state.config=j;state.hotelRooms=(j.hotel&&j.hotel.categories)||[];state.loading=false;hotelRoomList()}catch(err){if(seq!==hotelSeq)return;state.loading=false;state.error=err.message==='request-timeout'?t('timeout'):err.message==='invalid-dates'?ht('invalidDates'):t('error');hotelRoomList()}}
-  function hotelFacts(room){var facts=[];if(room.beds)facts.push('<span><b>'+esc(ht('beds'))+'</b>'+esc(room.beds)+'</span>');if(room.sizeM2)facts.push('<span><b>'+esc(ht('size'))+'</b>'+esc(room.sizeM2)+' m²</span>');if(room.view)facts.push('<span><b>'+esc(ht('view'))+'</b>'+esc(room.view)+'</span>');return facts.join('')}
-  function hotelPhotoUrl(v){v=String(v||'');return /^\/api\/media\/(?:media\/)?[a-z0-9][a-z0-9-]{2,63}\/(?:hotel-room\/)?[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(v)?v:''}
-  function hotelVisual(room){var photos=(room.photos||[]).map(function(p){return{url:hotelPhotoUrl(p&&p.url),alt:String(p&&p.alt||room.name||'').slice(0,120)}}).filter(function(p){return p.url}).slice(0,8),fallback='<span class="bk-room-letter">'+esc(room.name.slice(0,1).toUpperCase())+'</span><small>'+esc(room.view||room.beds||'Kiwi')+'</small>';if(!photos.length)return'<div class="bk-room-visual">'+fallback+'</div>';return'<div class="bk-room-visual has-photo" data-hotel-gallery="'+esc(room.id)+'">'+fallback+'<img class="bk-room-cover" src="'+esc(photos[0].url)+'" alt="'+esc(photos[0].alt||room.name)+'" loading="lazy" decoding="async"><div class="bk-room-thumbs">'+photos.map(function(p,i){return'<button type="button" class="'+(i?'':'on')+'" data-hotel-photo="'+esc(room.id)+'" data-src="'+esc(p.url)+'" data-alt="'+esc(p.alt||room.name)+'" aria-label="Photo '+(i+1)+' / '+photos.length+'"><img src="'+esc(p.url)+'" alt="" loading="lazy"></button>'}).join('')+'</div></div>'}
-  function hotelRoomList(){layout('<div class="bk-panel">'+head(ht('rooms'),ht('roomsSub'))+'<div class="bk-stay-chip"><strong>'+hotelDates()+'</strong><span>'+state.partySize+' '+esc(ht('guests').toLowerCase())+'</span><button data-hotel-back>'+esc(t('change'))+'</button></div>'+(state.loading?'<div class="bk-loading bk-inline-loading"><span></span></div>':'<div class="bk-room-grid">'+(state.hotelRooms.length?state.hotelRooms.map(function(room){var available=+room.available||0;return'<article class="bk-room-card'+(available?'':' is-full')+'">'+hotelVisual(room)+'<div class="bk-room-copy"><div class="bk-room-title"><div><h3>'+esc(room.name)+'</h3><p>'+esc(room.description||'')+'</p></div><span class="bk-room-stock">'+esc(available?ht('available').replace('{n}',available):ht('full'))+'</span></div><div class="bk-room-facts">'+hotelFacts(room)+'</div>'+(room.amenities&&room.amenities.length?'<div class="bk-amenities">'+room.amenities.map(function(x){return'<span>'+esc(x)+'</span>'}).join('')+'</div>':'')+'<footer><div><strong>'+esc(money(room.rate))+'</strong><small>'+esc(ht('perNight'))+' · '+hotelNights()+' '+esc(hotelNights()===1?ht('night'):ht('nights'))+'</small></div><div class="bk-room-total"><span>'+esc(ht('total'))+'</span><b>'+esc(money(room.total))+'</b></div><button class="bk-btn primary" data-hotel-room="'+esc(room.id)+'"'+(available?'':' disabled')+'>'+esc(t('next'))+'</button></footer></div></article>'}).join(''):'<div class="bk-empty">'+esc(state.error||ht('none'))+'</div>')+'</div>')+'<div class="bk-actions"><button class="bk-btn" data-hotel-back>'+esc(t('back'))+'</button></div></div>');app.querySelectorAll('[data-hotel-back]').forEach(function(b){b.onclick=hotelSearch});app.querySelectorAll('[data-hotel-room]').forEach(function(b){b.onclick=function(){state.service=state.hotelRooms.find(function(x){return x.id===b.dataset.hotelRoom});hotelDetails()}});app.querySelectorAll('[data-hotel-photo]').forEach(function(b){b.onclick=function(){var gallery=app.querySelector('[data-hotel-gallery="'+CSS.escape(b.dataset.hotelPhoto)+'"]'),cover=gallery&&gallery.querySelector('.bk-room-cover');if(!cover)return;cover.src=b.dataset.src;cover.alt=b.dataset.alt||'';gallery.querySelectorAll('[data-hotel-photo]').forEach(function(x){x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',String(x===b))})}});app.querySelectorAll('.bk-room-cover,.bk-room-thumbs img').forEach(function(img){img.onerror=function(){if(img.classList.contains('bk-room-cover'))img.remove();else img.closest('button')&&img.closest('button').remove()}})}
-  function hotelSummary(){return'<aside class="bk-summary"><div class="bk-summary-head">'+esc(t('recap'))+'</div><div><span>'+esc(ht('room'))+'</span><strong>'+esc(state.service.name)+'</strong></div><div><span>'+esc(ht('stay'))+'</span><strong>'+hotelDates()+' · '+hotelNights()+' '+esc(hotelNights()===1?ht('night'):ht('nights'))+'</strong></div><div><span>'+esc(ht('guests'))+'</span><strong>'+state.partySize+'</strong></div><div><span>'+esc(ht('total'))+'</span><strong>'+esc(money(state.service.total))+'</strong></div></aside>'}
-  function hotelDetails(){state.step=3;layout('<div class="bk-panel">'+head(ht('details'),ht('detailsSub'))+'<form class="bk-form" data-hotel-form><div class="bk-fields"><label class="bk-field"><span>'+esc(t('name'))+'</span><input name="name" maxlength="100" autocomplete="name" required></label><label class="bk-field"><span>'+esc(t('phone'))+'</span><input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="06… / +33…"></label><label class="bk-field full"><span>'+esc(t('email'))+'</span><input name="email" maxlength="160" type="email" autocomplete="email"></label><label class="bk-field full"><span>'+esc(t('note'))+'</span><textarea name="note" maxlength="600"></textarea></label></div>'+hotelSummary()+'<div class="bk-error full" data-error role="alert" aria-live="assertive"></div><div class="bk-actions full"><button type="button" class="bk-btn" data-back>'+esc(t('back'))+'</button><button class="bk-btn primary" type="submit">'+esc(ht('confirm'))+'</button></div></form></div>');var form=app.querySelector('[data-hotel-form]');app.querySelector('[data-back]').onclick=hotelRoomList;form.onsubmit=submitHotel}
-  async function submitHotel(e){e.preventDefault();var form=e.currentTarget,fd=new FormData(form),name=String(fd.get('name')||'').trim(),rawPhone=String(fd.get('phone')||'').trim(),phone=phoneValue(rawPhone),email=String(fd.get('email')||'').trim();if(email&&!emailOk(email)){form.querySelector('[data-error]').textContent=badEmailMsg();return}if(!name||(!rawPhone&&!email)||rawPhone&&!phone){form.querySelector('[data-error]').textContent=rawPhone&&!phone?(state.lang==='ar'?'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':state.lang==='en'?'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.'):t('invalid');return}var btn=form.querySelector('[type=submit]');btn.disabled=true;var ref=ssGet('kiwiHotelBookingRef')||('hotel_'+crypto.randomUUID());ssSet('kiwiHotelBookingRef',ref);try{var r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant:merchant,ref:ref,roomTypeId:state.service.id,checkIn:state.checkIn,checkOut:state.checkOut,partySize:state.partySize,expectedTotal:state.service.total,customer:{name:name,phone:phone,email:email},note:fd.get('note')})}),j=await r.json();if(!r.ok)throw new Error(j.error||'error');ssDel('kiwiHotelBookingRef');hotelSuccess(j)}catch(err){btn.disabled=false;if(err.message==='rate-changed'){form.querySelector('[data-error]').textContent=state.lang==='ar'?'تغيّر السعر. ارجع وراجع السعر الجديد قبل التأكيد.':state.lang==='en'?'The rate changed. Go back and review the new total before confirming.':'Le tarif a changé. Revenez vérifier le nouveau total avant de confirmer.';app.querySelector('[data-back]').onclick=loadHotelRooms;return}form.querySelector('[data-error]').textContent=err.message==='request-timeout'?t('timeout'):err.message==='room-unavailable'?ht('taken'):t('error');if(err.message==='room-unavailable')setTimeout(loadHotelRooms,900)}}
-  function hotelSuccess(j){rememberManage(j);var requested=j.status==='requested';if(Number.isFinite(+j.total))state.service.total=+j.total;layout('<div class="bk-success"><div class="bk-success-mark">✓</div><h2>'+esc(requested?ht('requested'):ht('success'))+'</h2><p>'+esc(t('successSub'))+'</p><div class="bk-code"><span>'+esc(t('reference'))+'</span><strong>'+esc(j.code)+'</strong></div>'+hotelSummary()+manageBlock(j)+'</div>');wireManageBlock()}
-  /* ── L'ÉCRAN DE GESTION ────────────────────────────────────────────────────
-   * Une réservation, son état, et le seul geste que la cliente peut faire
-   * seule : annuler — tant que le délai publié par l'établissement le permet.
-   * Passé ce délai, on ne montre pas un bouton qui échouerait : on dit
-   * d'appeler. */
-  function statusLabel(s){return s==='requested'?mt('statusRequested'):s==='confirmed'?mt('statusConfirmed'):s==='cancelled'?mt('statusCancelled'):mt('statusOther')}
-  function manageRows(bk){var rows=[];if(bk.hotel){rows.push([ht('room'),bk.hotel.roomTypeName]);rows.push([ht('stay'),esc(fmt(Date.parse(bk.hotel.checkIn+'T12:00:00'),{day:'numeric',month:'short'}))+' → '+esc(fmt(Date.parse(bk.hotel.checkOut+'T12:00:00'),{day:'numeric',month:'short'}))]);if(Number.isFinite(+bk.hotel.total))rows.push([ht('total'),money(bk.hotel.total)])}else{rows.push([t('when'),fmt(bk.startAt,{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})]);if(+bk.partySize>1)rows.push([t('guests'),String(bk.partySize)])}return rows.map(function(r){return'<div><span>'+esc(r[0])+'</span><strong>'+esc(r[1])+'</strong></div>'}).join('')}
-  function renderManage(data,mode,message){
-    var bk=data.booking,open=(bk.status==='requested'||bk.status==='confirmed'),inWindow=Date.now()<=+data.cancellableUntil;
-    state.step=3;
-    var actions='';
-    if(bk.status==='cancelled')actions='';
-    else if(!open)actions='';
-    else if(!inWindow)actions='<p class="bk-manage-note">'+esc(mt('closedWindow'))+'</p>';
-    else if(mode==='confirm')actions='<div class="bk-actions"><button class="bk-btn" data-manage-keep>'+esc(mt('keepIt'))+'</button><button class="bk-btn primary" data-manage-do>'+esc(mt('cancelSure'))+'</button></div>';
-    else actions='<p class="bk-manage-note">'+esc(mt('until').replace('{d}',fmt(+data.cancellableUntil,{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})))+'</p><div class="bk-actions"><button class="bk-btn" data-manage-ask>'+esc(mt('cancel'))+'</button></div>';
-    layout('<div class="bk-panel"><header class="bk-head"><span>'+esc(statusLabel(bk.status))+'</span><h2>'+esc(bk.status==='cancelled'?mt('cancelled'):mt('title'))+'</h2><p>'+esc(bk.status==='cancelled'?mt('cancelledSub'):(data.name||''))+'</p></header><div class="bk-code"><span>'+esc(t('reference'))+'</span><strong>'+esc(bk.code)+'</strong></div><div class="bk-summary">'+manageRows(bk)+'</div>'+(message?'<div class="bk-error">'+esc(message)+'</div>':'')+actions+'</div>');
-    var ask=app.querySelector('[data-manage-ask]');if(ask)ask.onclick=function(){renderManage(data,'confirm','')};
-    var keep=app.querySelector('[data-manage-keep]');if(keep)keep.onclick=function(){renderManage(data,'','')};
-    state.manageData=data;
-    var go=app.querySelector('[data-manage-do]');if(go)go.onclick=function(){go.disabled=true;cancelBooking(data)};
+  app.addEventListener('keydown',function(e) {
+    var b=e.target.closest('[data-date],[data-slot]');
+    if(!b) return;
+    var date=b.hasAttribute('data-date'),keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'];
+    if(keys.indexOf(e.key)<0) return;
+    var all=[...app.querySelectorAll(date? '[data-date]':'[data-slot]')],i=all.indexOf(b),rtl=state.lang==='ar',delta=e.key==='ArrowDown'? (date? 7:4):e.key==='ArrowUp'? (date? -7:-4):e.key==='ArrowRight'? (rtl? -1:1):(rtl? 1:-1);
+    var n=e.key==='Home'? 0:e.key==='End'? all.length-1:Math.max(0,Math.min(all.length-1,i+delta));
+    e.preventDefault();
+    all[n]?.focus();
   }
-  async function cancelBooking(data){
-    try{
-      var r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/booking',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant:merchant,manageToken:manageToken})}),j=await r.json();
-      if(!r.ok)throw new Error(j.error||'error');
-      data.booking.status='cancelled';renderManage(data,'','');
-    }catch(err){
-      renderManage(data,'',err.message==='request-timeout'?t('timeout'):err.message==='cancellation-closed'?mt('closedWindow'):mt('failed'));
+  );
+  function wireGlobal(...args) { return parts.view.wireGlobal(...args); }
+  function closed(...args) { return parts.view.closed(...args); }
+  async function init() {
+    if(!merchant) {
+      closed(t('closed'));
+      return
+    }
+    if(manageToken) {
+      openManage();
+      return
+    }
+    try {
+      var r=await (await import('./request-deadline.mjs').catch(function() {
+        return {
+          deadlineFetch: function(u,o) {
+            return fetch(u,o);
+          }
+        }
+          ;
+      }
+      )).deadlineFetch('/api/booking?merchant='+encodeURIComponent(merchant),{
+        credentials: 'omit'
+      }
+      ),j=await r.json();
+      if(!r.ok) throw new Error(j.error||'error');
+      state.config=j;
+      if(j.kind==='hotel') {
+        if(!j.hotel||!j.hotel.categories||!j.hotel.categories.length) throw new Error('booking-closed');
+        hotelSearch();
+        return
+      }
+      if(!j.services||!j.services.length) throw new Error('booking-closed');
+      if(j.hoursSet===false) {
+        state.closedKey='noHours';
+        closed(t('noHours'));
+        return
+      }
+      services()
+    }
+    catch(err) {
+      closed(err.message==='request-timeout'? t('timeout'):err.message==='booking-closed'? t('closed'):t('error'))
     }
   }
-  async function openManage(){
-    try{
-      var r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/booking?merchant='+encodeURIComponent(merchant)+'&manage='+encodeURIComponent(manageToken),{credentials:'omit'}),j=await r.json();
-      if(!r.ok)throw new Error(j.error||'error');
-      state.config=j;renderManage(j,'','');
-    }catch(err){closed(err.message==='request-timeout'?t('timeout'):err.message==='not-found'?mt('notFound'):t('error'))}
-  }
-
-  app.addEventListener('keydown',function(e){
-    var b=e.target.closest('[data-date],[data-slot]');if(!b)return;
-    var date=b.hasAttribute('data-date'),keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'];if(keys.indexOf(e.key)<0)return;
-    var all=[...app.querySelectorAll(date?'[data-date]':'[data-slot]')],i=all.indexOf(b),rtl=state.lang==='ar',delta=e.key==='ArrowDown'?(date?7:4):e.key==='ArrowUp'?(date?-7:-4):e.key==='ArrowRight'?(rtl?-1:1):(rtl?1:-1);
-    var n=e.key==='Home'?0:e.key==='End'?all.length-1:Math.max(0,Math.min(all.length-1,i+delta));e.preventDefault();all[n]?.focus();
-  });
-  function wireGlobal(){app.querySelectorAll('[data-lang]').forEach(function(b){b.onclick=function(){var form=app.querySelector('[data-form],[data-hotel-form]'),draft=form?{}:null;if(form)['name','phone','email','note'].forEach(function(k){draft[k]=form.elements[k].value});state.lang=b.dataset.lang;lsSet('kiwiBookingLang',state.lang);if(state.manageData){renderManage(state.manageData,'','');return}if(isHotel()){if(state.step===1)hotelSearch();else if(state.step===2)hotelRoomList();else hotelDetails()}else if(state.step===1)services();else if(state.step===2)times();else details();if(draft){var next=app.querySelector('[data-form],[data-hotel-form]');if(next)Object.keys(draft).forEach(function(k){next.elements[k].value=draft[k]})}}})}
-  function closed(message){
-    document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==='ar'?'rtl':'ltr';
-    app.innerHTML='<section class="bk-closed"><div class="bk-closed-top"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"><div class="bk-lang">'+['fr','en','ar'].map(function(l){return'<button data-closed-lang="'+l+'" class="'+(l===state.lang?'on':'')+'">'+l.toUpperCase()+'</button>'}).join('')+'</div></div><div class="bk-closed-mark" aria-hidden="true"><span></span></div><p class="bk-kicker">KIWI RESERVATIONS</p><h1>'+esc(message)+'</h1><p class="bk-closed-note">'+esc(state.closedKey==='noHours'?(state.lang==='ar'?'ستظهر المواعيد المتاحة هنا فور تحديد المؤسسة لساعات الحجز.':state.lang==='en'?'Available times will appear here once the venue sets its booking hours.':'Les créneaux apparaîtront ici dès que l’établissement aura renseigné ses horaires.'):(state.lang==='ar'?'ستظهر خدمات المؤسسة ومواعيدها هنا فور تفعيل الحجز.':state.lang==='en'?'The venue’s services and available times will appear here as soon as booking is enabled.':'Les services et les créneaux de l’établissement apparaîtront ici dès l’activation des réservations.'))+'</p></section>';
-    app.querySelectorAll('[data-closed-lang]').forEach(function(b){b.onclick=function(){state.lang=b.dataset.closedLang;lsSet('kiwiBookingLang',state.lang);closed(t(state.closedKey||'closed'))}});
-  }
-  async function init(){if(!merchant){closed(t('closed'));return}if(manageToken){openManage();return}try{var r=await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/booking?merchant='+encodeURIComponent(merchant),{credentials:'omit'}),j=await r.json();if(!r.ok)throw new Error(j.error||'error');state.config=j;if(j.kind==='hotel'){if(!j.hotel||!j.hotel.categories||!j.hotel.categories.length)throw new Error('booking-closed');hotelSearch();return}if(!j.services||!j.services.length)throw new Error('booking-closed');if(j.hoursSet===false){state.closedKey='noHours';closed(t('noHours'));return}services()}catch(err){closed(err.message==='request-timeout'?t('timeout'):err.message==='booking-closed'?t('closed'):t('error'))}}
+  const owner = Object.freeze({ getState() { return state; } });
+  const parts = {};
+  await Promise.all([
+    import('/assets/booking-service.js?v=2').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),
+    import('/assets/booking-hotel.js?v=2').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),
+    import('/assets/booking-submission.js?v=2').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),
+    import('/assets/booking-manage.js?v=2').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),
+    import('/assets/booking-view.js?v=2').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })
+  ]);
   init();
-}());
+}
+  ());

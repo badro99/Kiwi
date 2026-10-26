@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { movementMilli } from '../functions/api/_rules-recipe-units.js';
 import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · intake posting test — l'idempotence au niveau d'écriture.
@@ -48,7 +49,7 @@ const movementsSrc = fs.readFileSync(path.join(root, 'functions/api/inventory/mo
  * INSERT OR IGNORE, séquences par marchand. Les lignes stockées portent les
  * colonnes snake_case exactes (dont unit_cost_rate) — c'est la transformation
  * réelle POST → stockage → GET qui est exercée, pas un écho d'objets. */
-const movementsRt = new Function(
+const movementsRt = new Function('movementMilli',
   'const json = (body, status) => ({ status: status || 200, body });\n' +
   'const tenantFor = async (req, env, asked) => (asked ? String(asked) : null);\n' +
   'const entitledMerchant = async (req, env, merchant) => merchant;\n' +
@@ -60,7 +61,7 @@ const movementsRt = new Function(
     .join('\n')
     .replace(/^export\s+/gm, '') +
   '\nreturn { onRequestPost, onRequestGet };'
-)();
+)(movementMilli);
 
 /* ── Vrai code route /api/ai/intake (sosies D1/R2, session simulée) ───────── */
 const intakeRt = new Function(

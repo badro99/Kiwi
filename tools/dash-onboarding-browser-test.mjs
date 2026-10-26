@@ -82,6 +82,8 @@ async function open(flag = true) {
   // coverage: surface=onboarding locale=en viewport=phone
   await page.goto(base + '/dashboard.html?onboarding=1', { waitUntil: 'load' });
   await page.waitForFunction(() => !!(document.getElementById('kit-onboarding') || document.querySelector('.kob-root')), { timeout: 20000 });
+  // Kit starts after signup; this local offline harness supplies its answers.
+  if (flag) await page.evaluate(() => window.KiwiOnboarding.kit.update({ ownerName: 'Test', bizName: 'Test Shop' }));
   await sleep(500);
   return { ctx, page, errors, requests };
 }

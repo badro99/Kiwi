@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { bookingTestSource, bookingRuntimeSource } from './booking-test-source.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Réservation publique — joindre la cliente, et la laisser gérer
  *                                                   (tickets #0050, #0052)
@@ -21,7 +22,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const API = fs.readFileSync(path.join(ROOT, 'functions/api/booking.js'), 'utf8');
-const UI = fs.readFileSync(path.join(ROOT, 'assets/booking.js'), 'utf8');
+const UI = bookingTestSource();
 const CSS = fs.readFileSync(path.join(ROOT, 'assets/booking.css'), 'utf8');
 
 let passed = 0;
@@ -191,7 +192,7 @@ await (async () => {
   // contexte, sinon vm ne voit pas l'accesseur).
   vm.runInContext("for (const k of ['localStorage', 'sessionStorage']) Object.defineProperty(globalThis, k, { get: __denied, configurable: true });", ctx);
   let boot = null;
-  try { vm.runInContext(UI, ctx); } catch (e) { boot = e; }
+  try { vm.runInContext(bookingRuntimeSource(), ctx); } catch (e) { boot = e; }
   await new Promise((r) => setTimeout(r, 0));
   ok(!boot, `stockage refusé : la page démarre sans lever (${boot && boot.name}: ${boot && boot.message})`);
   ok(/<section class="bk-closed"/.test(html), 'stockage refusé : la page s\'affiche (écran publié, pas une page blanche)');

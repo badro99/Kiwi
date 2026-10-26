@@ -1,7 +1,8 @@
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const read = f => fs.readFileSync(f, 'utf8');
+const read = f => f === 'assets/invoicing.js' ? invoicingSourceHelper.invoicingTestSource() : fs.readFileSync(f, 'utf8');
 const section = (s, a, b) => s.slice(s.indexOf(a), s.indexOf(b, s.indexOf(a)));
 let failures = 0;
 async function test(name, fn) { try { await fn(); console.log('PASS ' + name); } catch(e) { failures++; console.error('FAIL ' + name + ': ' + e.message); } }

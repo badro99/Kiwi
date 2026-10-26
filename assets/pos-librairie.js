@@ -176,6 +176,56 @@
 
   /* ───────────────────────── fidélité — 1 MAD = 1 point, palier –5 % ────────
      Le palier « fidèle » s'ouvre à 500 points : –5 % sur l'achat du jour. */
+  /* GENERATED SHARED KiwiLoyaltyRules BEGIN */
+  /* Copy of functions/api/_rules-loyalty.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiLoyaltyRules = (function () {
+    // Loyalty earning, word matching, historical reversals and explicit reward policies.
+    const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
+    const pointsFor = (amount, cfg) => Math.max(0,
+      Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
+    const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const qualifyingQty = (cfg, items) => {
+      const want = foldName(cfg && cfg.product && cfg.product.item);
+      if (!want) return 0;
+      return (Array.isArray(items) ? items : []).reduce((n, item) => {
+        const name = ' ' + foldName(item && item.name) + ' ';
+        return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+      }, 0);
+    }
+    const stampsFor = (cfg, items) => {
+      if (!loyaltyOn(cfg)) return 0;
+      if (cfg.model === 'visit') return 1;
+      if (cfg.model !== 'product') return 0;
+      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+    }
+    const refundFor = (sale, amount, cfg, items, client) => {
+      const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
+      const refunded = Number(sale && sale.refunded || 0), clawed = Number(sale && sale.clawed || 0);
+      const take = Math.max(0, Math.min(amount, Math.round((paid - refunded) * 100) / 100));
+      const claw = paid > 0 && earned > 0
+        ? Math.max(0, Math.min(Math.round(earned * (refunded + take) / paid) - clawed, earned - clawed)) : 0;
+      const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
+      const lines = Array.isArray(items) ? items : [];
+      const whole = paid > 0 && take >= Math.round((paid - refunded) * 100) / 100 - 0.004;
+      const unstamp = cfg.model === 'product' && lines.length
+        ? Math.min(stampsLeft, qualifyingQty(cfg, lines)) : (whole ? stampsLeft : 0);
+      return { take, claw, unstamp,
+        pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
+        stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
+    }
+    const rewardDiscount = (reward, clientId, base, units, policy = 'boutique') => {
+      if (!reward || reward.clientId !== clientId) return 0;
+      const down = n => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
+      if (reward.kind === 'percent') {
+        if (policy === 'librairie') return Math.round(base * reward.value / 100 * 100 + 1e-9) / 100;
+        return base - down(base * (100 - Math.min(100, Math.max(0, reward.value || 0))) / 100);
+      }
+      return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+    }
+    return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
+  })();
+  /* GENERATED SHARED KiwiLoyaltyRules END */
   const FID_TIER = 500, FID_RATE = 0.05;
   const fidTier = (pts) => pts >= FID_TIER;
 
@@ -764,7 +814,7 @@
   function cartRemise(c) {
     if (!c.client || c.client.type !== 'known') return 0;
     const cu = CUST[c.client.id];
-    return cu && fidTier(cu.points) ? Math.round(cartSub(c) * FID_RATE * 100 + 1e-9) / 100 : 0;
+    return cu && fidTier(cu.points) ? KiwiLoyaltyRules.rewardDiscount({ kind: 'percent', value: FID_RATE * 100, clientId: cu.id }, cu.id, cartSub(c), [], 'librairie') : 0;
   }
   function cartTotal(c) { return cartSub(c) - cartRemise(c); }
   function addToCart(itemId, qty) {

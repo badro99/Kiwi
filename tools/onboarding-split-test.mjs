@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
+import { onboardingTestSource, onboardingSplit as map } from './onboarding-test-source.mjs';
+const read = file => fs.readFileSync(file, 'utf8');
+const original = gunzipSync(fs.readFileSync('tools/fixtures/onboarding/original.js.gz')).toString();
+assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
+assert.equal(onboardingTestSource(), original, 'live source rebuilds original byte for byte');
+const data = read('assets/onboarding-data.js');
+for (const f of map.fragments) assert.equal(data.slice(f.offset, f.offset + f.end - f.start), original.slice(f.start, f.end), 'each moved body unchanged');
+const oldData = gunzipSync(fs.readFileSync('tools/fixtures/onboarding/data-original.js.gz')).toString();
+assert.equal(createHash('sha256').update(oldData).digest('hex'), map.dataSha256);
+assert.equal((data.slice(0, map.dataPrefixLength) + data.slice(map.dataPrefixLength + map.sessionLength)).replace('return { createSession, createDraft,', 'return { createDraft,'), oldData, 'existing data functions untouched');
+console.log('✓ onboarding split: exact controller reconstruction and unchanged data functions');

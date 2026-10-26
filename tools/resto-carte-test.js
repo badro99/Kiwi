@@ -538,9 +538,9 @@ eq(demo.stationFor({ id: 'e', station: '', cat: 'boissons' }), 'boissons',
    à la note sans jamais demander le lait. */
 ok(/out\.opts = opts\.map/.test(menuApi),
   'sanitizeMenu publie la bibliothèque de groupes d\'options');
-ok(/kind: \(g && g\.kind\) === 'many' \? 'many' : 'one'/.test(menuApi),
+ok(/kind: raw && raw\.kind === 'many' \? 'many' : 'one'/.test(fs.readFileSync(path.join(ROOT, 'functions/api/_rules-menu-schema.js'), 'utf8')),
   'deux règles seulement — un choix, ou plusieurs — et rien d\'autre ne passe');
-ok(/required: !!\(g && g\.required\)/.test(menuApi),
+ok(/required: !!\(raw && raw\.required\)/.test(fs.readFileSync(path.join(ROOT, 'functions/api/_rules-menu-schema.js'), 'utf8')),
   '« obligatoire » survit à la publication : c\'est lui qui bloque l\'ajout au comptoir');
 ok(/opts: \(Array\.isArray\(it && it\.opts\)/.test(menuApi),
   'chaque produit garde la liste des groupes qu\'il porte');
@@ -591,8 +591,8 @@ ok(/function kitchenItemsFromLines\(lines\)/.test(caisseSrc)
   'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
 ok(/note: i\.paperNote \|\| i\.note \|\| '', visuals: i\.visuals \|\| \[\]/.test(caisseSrc),
   'le relais vers une tablette cuisine distante conserve aussi le texte des options');
-ok(/emoji: optionEmoji\(c && c\.emoji\)/.test(menuApi)
-  && /OPTION_EMOJIS = new Set/.test(menuApi),
+ok(/normalizeModifier\(c\)/.test(menuApi)
+  && /OPTION_EMOJIS = new Set/.test(fs.readFileSync(path.join(ROOT, 'functions/api/_rules-menu-schema.js'), 'utf8')),
   'le repère visuel choisi survit à la publication sans accepter de texte libre');
 ok(/emoji: String\(c\.emoji \|\| ''\)/.test(caisseSrc),
   'la caisse conserve le repère visuel de chaque choix');

@@ -3,6 +3,7 @@
  * Kiwi · déplacer une estampille ?v= partout où elle vit, en une commande.
  *
  *   node tools/bump-stamp.js assets/venues.js assets/tokens.css
+ *   node tools/bump-stamp.js --precache assets/new-part.js  (add targets to SHELL)
  *   node tools/bump-stamp.js --sync      (re-scelle le manifeste sans rien bumper)
  *   node tools/bump-stamp.js --all       (bump tout asset dont le contenu a bougé)
  *   node tools/bump-stamp.js --sw        (avance la génération du service worker :
@@ -26,6 +27,8 @@ const S = require('./stamps');
 const args = process.argv.slice(2);
 const SYNC_ONLY = args.includes('--sync');
 const ALL = args.includes('--all');
+// Explicitly enroll newly split assets without editing SHELL by hand.
+const PRECACHE = args.includes('--precache');
 const SW_GEN = args.includes('--sw');
 const targets = args.filter((a) => !a.startsWith('--')).map((a) => a.replace(/^\.\//, ''));
 
@@ -59,7 +62,7 @@ function replaceIn(rel, asset, next) {
     hits++;
     return `${ref}?v=${next}${quote}`;
   });
-  after = after.replace(/((?:from|import)\s+')([.][.]?\/[^']+\.js)\?v=[0-9]+(')/g, (all, prefix, written, quote) => {
+  after = after.replace(/((?:(?:from|import)\s+|import\s*\(\s*)')([.][.]?\/[^']+\.js)\?v=[0-9]+(')/g, (all, prefix, written, quote) => {
     if (path.posix.normalize(path.posix.join(path.posix.dirname(rel), written)) !== asset) return all;
     hits++; return prefix + written + '?v=' + next + quote;
   });
@@ -111,6 +114,12 @@ function replaceRev(base, next) {
 function bump(asset, scanned) {
   const entry = scanned.get(asset);
   const referenced = S.referenceFiles(asset);
+  // Newly imported invoice modules join the offline shell through this tool.
+  if (entry?.sites.some(site => site.kind === 'module') && !S.read(S.SW).includes('/' + asset + '?v=') && !S.read(S.SW).includes("'/" + asset + "'")) {
+    const stamp = [...entry.stamps][0];
+    entry.sites.push({file: S.SW, kind: 'sw', stamp});
+    write(S.SW, S.read(S.SW).replace(/(?:var|const) SHELL = \[/, match => match + "\n  '/" + asset + '?v=' + stamp + "',"));
+  }
   if (!entry) {
     const cssSites = S.cssReferences(asset);
     if (!referenced.length && !cssSites.length) {
@@ -194,6 +203,18 @@ function bumpSwGeneration() {
   return moved;
 }
 
+// Explicitly register new split modules through the tool, before stamping URLs.
+if (PRECACHE) {
+  let sw = S.read(S.SW);
+  for (const asset of targets) {
+    if (!S.exists(asset) || !/^assets\/[A-Za-z0-9._/-]+\.js$/.test(asset)) throw new Error('Invalid precache asset: ' + asset);
+    if (!/\b(?:const|var|let) SHELL\s*=\s*\[/.test(sw)) throw new Error('Missing SHELL precache list');
+    if (!sw.includes("'/" + asset + "'") && !sw.includes("'/" + asset + '?v=')) {
+      sw = sw.replace(/(\b(?:const|var|let) SHELL\s*=\s*\[)/, "$1\n  '/" + asset + "',");
+    }
+  }
+  write(S.SW, sw); touched.add(S.SW);
+}
 let scanned = S.scan();
 let bumped = 0;
 const done = new Set();

@@ -1,0 +1,888 @@
+{
+  "sha256": "447f0cafb9895bb0c0b9b75bd281febc637e5ab488028ebf8384c2368ee665de",
+  "parts": [
+    {
+      "name": "data",
+      "file": "assets/tickets-data.js",
+      "header": "/* Tickets data. Exports: loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification.\n * Reads injected: $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t }) {\n",
+      "footer": "  return Object.freeze({ loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification });\n}\n",
+      "deps": [
+        "$",
+        "API",
+        "activateTab",
+        "closeFollowup",
+        "composer",
+        "configureComposerClassification",
+        "draft",
+        "draftController",
+        "followupComposer",
+        "friendlyError",
+        "lists",
+        "make",
+        "render",
+        "renderLoading",
+        "resetComposer",
+        "resetFollowup",
+        "showToast",
+        "state",
+        "t"
+      ],
+      "exports": [
+        "loadTickets",
+        "newIdempotencyKey",
+        "publish",
+        "publishFollowup",
+        "moveTicket",
+        "saveClassification"
+      ],
+      "fragments": [
+        {
+          "name": "loadTickets",
+          "start": 39944,
+          "end": 42292,
+          "offset": 741,
+          "length": 2348,
+          "replacement": "  function loadTickets(...args) { return dataPart.loadTickets(...args); }"
+        },
+        {
+          "name": "newIdempotencyKey",
+          "start": 48269,
+          "end": 48482,
+          "offset": 3091,
+          "length": 213,
+          "replacement": "  function newIdempotencyKey(...args) { return dataPart.newIdempotencyKey(...args); }"
+        },
+        {
+          "name": "publish",
+          "start": 48484,
+          "end": 51205,
+          "offset": 3306,
+          "length": 2721,
+          "replacement": "  function publish(...args) { return dataPart.publish(...args); }"
+        },
+        {
+          "name": "publishFollowup",
+          "start": 51207,
+          "end": 53280,
+          "offset": 6029,
+          "length": 2073,
+          "replacement": "  function publishFollowup(...args) { return dataPart.publishFollowup(...args); }"
+        },
+        {
+          "name": "moveTicket",
+          "start": 55753,
+          "end": 56974,
+          "offset": 8104,
+          "length": 1221,
+          "replacement": "  function moveTicket(...args) { return dataPart.moveTicket(...args); }"
+        },
+        {
+          "name": "saveClassification",
+          "start": 57363,
+          "end": 59308,
+          "offset": 9327,
+          "length": 1945,
+          "replacement": "  function saveClassification(...args) { return dataPart.saveClassification(...args); }"
+        }
+      ],
+      "ownerSuffix": "\nexport function createTicketState({ readFilters }) {\n  const state = {\n    tickets: [], files: [], followupFiles: [], followupTicketId: null,\n    taxonomy: null, filters: readFilters(),\n    loading: true, saving: false, savingFollowup: false, savingClassification: false,\n    publishAttempt: null,\n  };\n  return Object.freeze({\n    read: key => state[key],\n    write: (key, value) => { state[key] = value; },\n    view: () => state,\n  });\n}\n",
+      "windowReads": [
+        "crypto"
+      ],
+      "globalReads": [
+        "JSON",
+        "Object",
+        "Array",
+        "String",
+        "Number",
+        "Boolean",
+        "Math",
+        "Date",
+        "Error",
+        "FormData",
+        "crypto",
+        "fetch",
+        "window"
+      ]
+    },
+    {
+      "name": "board",
+      "file": "assets/tickets-board.js",
+      "header": "/* Tickets board. Exports: saveFilters, labelOf, taxonomyItem, replaceSelectOptions, subkindsFor, make, formatTime, daysRemaining, actionButton, actionArea, copyButton, imageGallery, classificationSummary, classificationEditor, ticketCard, emptyState, filterButton, renderFilters, ticketMatchesFilters, render, renderLoading, toggleClassification, applyFilter, activateTab.\n * Reads injected: $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createBoard({ $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t }) {\n",
+      "footer": "  return Object.freeze({ saveFilters, labelOf, taxonomyItem, replaceSelectOptions, subkindsFor, make, formatTime, daysRemaining, actionButton, actionArea, copyButton, imageGallery, classificationSummary, classificationEditor, ticketCard, emptyState, filterButton, renderFilters, ticketMatchesFilters, render, renderLoading, toggleClassification, applyFilter, activateTab });\n}\n",
+      "deps": [
+        "$",
+        "FILTER_KEY",
+        "LANG",
+        "LOCALE",
+        "TAXONOMY_AR",
+        "board",
+        "followupHistory",
+        "icons",
+        "lists",
+        "plural",
+        "state",
+        "t"
+      ],
+      "exports": [
+        "saveFilters",
+        "labelOf",
+        "taxonomyItem",
+        "replaceSelectOptions",
+        "subkindsFor",
+        "make",
+        "formatTime",
+        "daysRemaining",
+        "actionButton",
+        "actionArea",
+        "copyButton",
+        "imageGallery",
+        "classificationSummary",
+        "classificationEditor",
+        "ticketCard",
+        "emptyState",
+        "filterButton",
+        "renderFilters",
+        "ticketMatchesFilters",
+        "render",
+        "renderLoading",
+        "toggleClassification",
+        "applyFilter",
+        "activateTab"
+      ],
+      "fragments": [
+        {
+          "name": "saveFilters",
+          "start": 25091,
+          "end": 25218,
+          "offset": 750,
+          "length": 127,
+          "replacement": "  function saveFilters(...args) { return boardPart.saveFilters(...args); }"
+        },
+        {
+          "name": "labelOf",
+          "start": 25220,
+          "end": 25418,
+          "offset": 879,
+          "length": 198,
+          "replacement": "  function labelOf(...args) { return boardPart.labelOf(...args); }"
+        },
+        {
+          "name": "taxonomyItem",
+          "start": 25420,
+          "end": 25700,
+          "offset": 1079,
+          "length": 280,
+          "replacement": "  function taxonomyItem(...args) { return boardPart.taxonomyItem(...args); }"
+        },
+        {
+          "name": "replaceSelectOptions",
+          "start": 25702,
+          "end": 26224,
+          "offset": 1361,
+          "length": 522,
+          "replacement": "  function replaceSelectOptions(...args) { return boardPart.replaceSelectOptions(...args); }"
+        },
+        {
+          "name": "subkindsFor",
+          "start": 26226,
+          "end": 26371,
+          "offset": 1885,
+          "length": 145,
+          "replacement": "  function subkindsFor(...args) { return boardPart.subkindsFor(...args); }"
+        },
+        {
+          "name": "make",
+          "start": 26702,
+          "end": 26920,
+          "offset": 2032,
+          "length": 218,
+          "replacement": "  function make(...args) { return boardPart.make(...args); }"
+        },
+        {
+          "name": "formatTime",
+          "start": 26922,
+          "end": 27594,
+          "offset": 2252,
+          "length": 672,
+          "replacement": "  function formatTime(...args) { return boardPart.formatTime(...args); }"
+        },
+        {
+          "name": "daysRemaining",
+          "start": 27596,
+          "end": 27709,
+          "offset": 2926,
+          "length": 113,
+          "replacement": "  function daysRemaining(...args) { return boardPart.daysRemaining(...args); }"
+        },
+        {
+          "name": "actionButton",
+          "start": 27711,
+          "end": 28345,
+          "offset": 3041,
+          "length": 634,
+          "replacement": "  function actionButton(...args) { return boardPart.actionButton(...args); }"
+        },
+        {
+          "name": "actionArea",
+          "start": 28347,
+          "end": 28968,
+          "offset": 3677,
+          "length": 621,
+          "replacement": "  function actionArea(...args) { return boardPart.actionArea(...args); }"
+        },
+        {
+          "name": "copyButton",
+          "start": 28970,
+          "end": 29495,
+          "offset": 4300,
+          "length": 525,
+          "replacement": "  function copyButton(...args) { return boardPart.copyButton(...args); }"
+        },
+        {
+          "name": "imageGallery",
+          "start": 29497,
+          "end": 30146,
+          "offset": 4827,
+          "length": 649,
+          "replacement": "  function imageGallery(...args) { return boardPart.imageGallery(...args); }"
+        },
+        {
+          "name": "classificationSummary",
+          "start": 30896,
+          "end": 32288,
+          "offset": 5478,
+          "length": 1392,
+          "replacement": "  function classificationSummary(...args) { return boardPart.classificationSummary(...args); }"
+        },
+        {
+          "name": "classificationEditor",
+          "start": 32290,
+          "end": 34111,
+          "offset": 6872,
+          "length": 1821,
+          "replacement": "  function classificationEditor(...args) { return boardPart.classificationEditor(...args); }"
+        },
+        {
+          "name": "ticketCard",
+          "start": 34113,
+          "end": 35456,
+          "offset": 8695,
+          "length": 1343,
+          "replacement": "  function ticketCard(...args) { return boardPart.ticketCard(...args); }"
+        },
+        {
+          "name": "emptyState",
+          "start": 35458,
+          "end": 35759,
+          "offset": 10040,
+          "length": 301,
+          "replacement": "  function emptyState(...args) { return boardPart.emptyState(...args); }"
+        },
+        {
+          "name": "filterButton",
+          "start": 35761,
+          "end": 36130,
+          "offset": 10343,
+          "length": 369,
+          "replacement": "  function filterButton(...args) { return boardPart.filterButton(...args); }"
+        },
+        {
+          "name": "renderFilters",
+          "start": 36132,
+          "end": 37817,
+          "offset": 10714,
+          "length": 1685,
+          "replacement": "  function renderFilters(...args) { return boardPart.renderFilters(...args); }"
+        },
+        {
+          "name": "ticketMatchesFilters",
+          "start": 37819,
+          "end": 38107,
+          "offset": 12401,
+          "length": 288,
+          "replacement": "  function ticketMatchesFilters(...args) { return boardPart.ticketMatchesFilters(...args); }"
+        },
+        {
+          "name": "render",
+          "start": 38109,
+          "end": 38849,
+          "offset": 12691,
+          "length": 740,
+          "replacement": "  function render(...args) { return boardPart.render(...args); }"
+        },
+        {
+          "name": "renderLoading",
+          "start": 38851,
+          "end": 39093,
+          "offset": 13433,
+          "length": 242,
+          "replacement": "  function renderLoading(...args) { return boardPart.renderLoading(...args); }"
+        },
+        {
+          "name": "toggleClassification",
+          "start": 56976,
+          "end": 57361,
+          "offset": 13677,
+          "length": 385,
+          "replacement": "  function toggleClassification(...args) { return boardPart.toggleClassification(...args); }"
+        },
+        {
+          "name": "applyFilter",
+          "start": 59310,
+          "end": 59646,
+          "offset": 14064,
+          "length": 336,
+          "replacement": "  function applyFilter(...args) { return boardPart.applyFilter(...args); }"
+        },
+        {
+          "name": "activateTab",
+          "start": 59648,
+          "end": 59958,
+          "offset": 14402,
+          "length": 310,
+          "replacement": "  function activateTab(...args) { return boardPart.activateTab(...args); }"
+        }
+      ],
+      "ownerSuffix": "",
+      "windowReads": [
+        "localStorage",
+        "KiwiLens"
+      ],
+      "globalReads": [
+        "JSON",
+        "Object",
+        "String",
+        "Number",
+        "Boolean",
+        "Math",
+        "Date",
+        "Intl",
+        "document",
+        "window",
+        "undefined"
+      ]
+    },
+    {
+      "name": "composer",
+      "file": "assets/tickets-composer.js",
+      "header": "/* Tickets composer. Exports: syncComposerSubkinds, configureComposerClassification, openComposer, resetComposer, closeComposer, fileKey, renderSelectedImages, addFiles, fallbackCopyText, copyText, blobToPng, showImageCopyFallback, copyImage.\n * Reads injected: $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createComposer({ $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t }) {\n  let previewUrls = [];\n",
+      "footer": "  return Object.freeze({ syncComposerSubkinds, configureComposerClassification, openComposer, resetComposer, closeComposer, fileKey, renderSelectedImages, addFiles, fallbackCopyText, copyText, blobToPng, showImageCopyFallback, copyImage });\n}\n",
+      "deps": [
+        "$",
+        "MAX_IMAGES",
+        "MAX_IMAGE_BYTES",
+        "composer",
+        "draft",
+        "draftController",
+        "fileInput",
+        "form",
+        "make",
+        "replaceSelectOptions",
+        "showToast",
+        "state",
+        "subkindsFor",
+        "t"
+      ],
+      "exports": [
+        "syncComposerSubkinds",
+        "configureComposerClassification",
+        "openComposer",
+        "resetComposer",
+        "closeComposer",
+        "fileKey",
+        "renderSelectedImages",
+        "addFiles",
+        "fallbackCopyText",
+        "copyText",
+        "blobToPng",
+        "showImageCopyFallback",
+        "copyImage"
+      ],
+      "fragments": [
+        {
+          "name": "syncComposerSubkinds",
+          "start": 39409,
+          "end": 39692,
+          "offset": 740,
+          "length": 283,
+          "replacement": "  function syncComposerSubkinds(...args) { return composerPart.syncComposerSubkinds(...args); }"
+        },
+        {
+          "name": "configureComposerClassification",
+          "start": 39694,
+          "end": 39942,
+          "offset": 1025,
+          "length": 248,
+          "replacement": "  function configureComposerClassification(...args) { return composerPart.configureComposerClassification(...args); }"
+        },
+        {
+          "name": "openComposer",
+          "start": 42887,
+          "end": 43144,
+          "offset": 1275,
+          "length": 257,
+          "replacement": "  function openComposer(...args) { return composerPart.openComposer(...args); }"
+        },
+        {
+          "name": "resetComposer",
+          "start": 43146,
+          "end": 43569,
+          "offset": 1534,
+          "length": 423,
+          "replacement": "  function resetComposer(...args) { return composerPart.resetComposer(...args); }"
+        },
+        {
+          "name": "closeComposer",
+          "start": 43571,
+          "end": 43673,
+          "offset": 1959,
+          "length": 102,
+          "replacement": "  function closeComposer(...args) { return composerPart.closeComposer(...args); }"
+        },
+        {
+          "name": "fileKey",
+          "start": 44439,
+          "end": 44533,
+          "offset": 2063,
+          "length": 94,
+          "replacement": "  function fileKey(...args) { return composerPart.fileKey(...args); }"
+        },
+        {
+          "name": "renderSelectedImages",
+          "start": 44535,
+          "end": 45437,
+          "offset": 2159,
+          "length": 902,
+          "replacement": "  function renderSelectedImages(...args) { return composerPart.renderSelectedImages(...args); }"
+        },
+        {
+          "name": "addFiles",
+          "start": 45439,
+          "end": 46351,
+          "offset": 3063,
+          "length": 912,
+          "replacement": "  function addFiles(...args) { return composerPart.addFiles(...args); }"
+        },
+        {
+          "name": "fallbackCopyText",
+          "start": 53282,
+          "end": 53689,
+          "offset": 3977,
+          "length": 407,
+          "replacement": "  function fallbackCopyText(...args) { return composerPart.fallbackCopyText(...args); }"
+        },
+        {
+          "name": "copyText",
+          "start": 53691,
+          "end": 54064,
+          "offset": 4386,
+          "length": 373,
+          "replacement": "  function copyText(...args) { return composerPart.copyText(...args); }"
+        },
+        {
+          "name": "blobToPng",
+          "start": 54066,
+          "end": 54811,
+          "offset": 4761,
+          "length": 745,
+          "replacement": "  function blobToPng(...args) { return composerPart.blobToPng(...args); }"
+        },
+        {
+          "name": "showImageCopyFallback",
+          "start": 54813,
+          "end": 54934,
+          "offset": 5508,
+          "length": 121,
+          "replacement": "  function showImageCopyFallback(...args) { return composerPart.showImageCopyFallback(...args); }"
+        },
+        {
+          "name": "copyImage",
+          "start": 54936,
+          "end": 55751,
+          "offset": 5631,
+          "length": 815,
+          "replacement": "  function copyImage(...args) { return composerPart.copyImage(...args); }"
+        }
+      ],
+      "ownerSuffix": "",
+      "windowReads": [
+        "setTimeout",
+        "isSecureContext",
+        "ClipboardItem"
+      ],
+      "globalReads": [
+        "Object",
+        "Array",
+        "String",
+        "Promise",
+        "Error",
+        "URL",
+        "Image",
+        "ClipboardItem",
+        "fetch",
+        "document",
+        "navigator",
+        "window"
+      ]
+    },
+    {
+      "name": "thread",
+      "file": "assets/tickets-thread.js",
+      "header": "/* Tickets thread. Exports: followupHistory, openFollowup, resetFollowup, closeFollowup, renderFollowupImages, addFollowupFiles.\n * Reads injected: $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createThread({ $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t }) {\n  let followupPreviewUrls = [];\n",
+      "footer": "  return Object.freeze({ followupHistory, openFollowup, resetFollowup, closeFollowup, renderFollowupImages, addFollowupFiles });\n}\n",
+      "deps": [
+        "$",
+        "MAX_IMAGES",
+        "MAX_IMAGE_BYTES",
+        "fileKey",
+        "followupComposer",
+        "followupFileInput",
+        "followupForm",
+        "formatTime",
+        "imageGallery",
+        "make",
+        "state",
+        "t"
+      ],
+      "exports": [
+        "followupHistory",
+        "openFollowup",
+        "resetFollowup",
+        "closeFollowup",
+        "renderFollowupImages",
+        "addFollowupFiles"
+      ],
+      "fragments": [
+        {
+          "name": "followupHistory",
+          "start": 30148,
+          "end": 30894,
+          "offset": 610,
+          "length": 746,
+          "replacement": "  function followupHistory(...args) { return threadPart.followupHistory(...args); }"
+        },
+        {
+          "name": "openFollowup",
+          "start": 43675,
+          "end": 43946,
+          "offset": 1358,
+          "length": 271,
+          "replacement": "  function openFollowup(...args) { return threadPart.openFollowup(...args); }"
+        },
+        {
+          "name": "resetFollowup",
+          "start": 43948,
+          "end": 44314,
+          "offset": 1631,
+          "length": 366,
+          "replacement": "  function resetFollowup(...args) { return threadPart.resetFollowup(...args); }"
+        },
+        {
+          "name": "closeFollowup",
+          "start": 44316,
+          "end": 44437,
+          "offset": 1999,
+          "length": 121,
+          "replacement": "  function closeFollowup(...args) { return threadPart.closeFollowup(...args); }"
+        },
+        {
+          "name": "renderFollowupImages",
+          "start": 46353,
+          "end": 47319,
+          "offset": 2122,
+          "length": 966,
+          "replacement": "  function renderFollowupImages(...args) { return threadPart.renderFollowupImages(...args); }"
+        },
+        {
+          "name": "addFollowupFiles",
+          "start": 47321,
+          "end": 48267,
+          "offset": 3090,
+          "length": 946,
+          "replacement": "  function addFollowupFiles(...args) { return threadPart.addFollowupFiles(...args); }"
+        }
+      ],
+      "ownerSuffix": "",
+      "windowReads": [
+        "setTimeout"
+      ],
+      "globalReads": [
+        "Object",
+        "Array",
+        "String",
+        "URL",
+        "document",
+        "window"
+      ]
+    }
+  ],
+  "edits": [
+    {
+      "start": 39944,
+      "end": 42292,
+      "replacement": "  function loadTickets(...args) { return dataPart.loadTickets(...args); }"
+    },
+    {
+      "start": 48269,
+      "end": 48482,
+      "replacement": "  function newIdempotencyKey(...args) { return dataPart.newIdempotencyKey(...args); }"
+    },
+    {
+      "start": 48484,
+      "end": 51205,
+      "replacement": "  function publish(...args) { return dataPart.publish(...args); }"
+    },
+    {
+      "start": 51207,
+      "end": 53280,
+      "replacement": "  function publishFollowup(...args) { return dataPart.publishFollowup(...args); }"
+    },
+    {
+      "start": 55753,
+      "end": 56974,
+      "replacement": "  function moveTicket(...args) { return dataPart.moveTicket(...args); }"
+    },
+    {
+      "start": 57363,
+      "end": 59308,
+      "replacement": "  function saveClassification(...args) { return dataPart.saveClassification(...args); }"
+    },
+    {
+      "start": 25091,
+      "end": 25218,
+      "replacement": "  function saveFilters(...args) { return boardPart.saveFilters(...args); }"
+    },
+    {
+      "start": 25220,
+      "end": 25418,
+      "replacement": "  function labelOf(...args) { return boardPart.labelOf(...args); }"
+    },
+    {
+      "start": 25420,
+      "end": 25700,
+      "replacement": "  function taxonomyItem(...args) { return boardPart.taxonomyItem(...args); }"
+    },
+    {
+      "start": 25702,
+      "end": 26224,
+      "replacement": "  function replaceSelectOptions(...args) { return boardPart.replaceSelectOptions(...args); }"
+    },
+    {
+      "start": 26226,
+      "end": 26371,
+      "replacement": "  function subkindsFor(...args) { return boardPart.subkindsFor(...args); }"
+    },
+    {
+      "start": 26702,
+      "end": 26920,
+      "replacement": "  function make(...args) { return boardPart.make(...args); }"
+    },
+    {
+      "start": 26922,
+      "end": 27594,
+      "replacement": "  function formatTime(...args) { return boardPart.formatTime(...args); }"
+    },
+    {
+      "start": 27596,
+      "end": 27709,
+      "replacement": "  function daysRemaining(...args) { return boardPart.daysRemaining(...args); }"
+    },
+    {
+      "start": 27711,
+      "end": 28345,
+      "replacement": "  function actionButton(...args) { return boardPart.actionButton(...args); }"
+    },
+    {
+      "start": 28347,
+      "end": 28968,
+      "replacement": "  function actionArea(...args) { return boardPart.actionArea(...args); }"
+    },
+    {
+      "start": 28970,
+      "end": 29495,
+      "replacement": "  function copyButton(...args) { return boardPart.copyButton(...args); }"
+    },
+    {
+      "start": 29497,
+      "end": 30146,
+      "replacement": "  function imageGallery(...args) { return boardPart.imageGallery(...args); }"
+    },
+    {
+      "start": 30896,
+      "end": 32288,
+      "replacement": "  function classificationSummary(...args) { return boardPart.classificationSummary(...args); }"
+    },
+    {
+      "start": 32290,
+      "end": 34111,
+      "replacement": "  function classificationEditor(...args) { return boardPart.classificationEditor(...args); }"
+    },
+    {
+      "start": 34113,
+      "end": 35456,
+      "replacement": "  function ticketCard(...args) { return boardPart.ticketCard(...args); }"
+    },
+    {
+      "start": 35458,
+      "end": 35759,
+      "replacement": "  function emptyState(...args) { return boardPart.emptyState(...args); }"
+    },
+    {
+      "start": 35761,
+      "end": 36130,
+      "replacement": "  function filterButton(...args) { return boardPart.filterButton(...args); }"
+    },
+    {
+      "start": 36132,
+      "end": 37817,
+      "replacement": "  function renderFilters(...args) { return boardPart.renderFilters(...args); }"
+    },
+    {
+      "start": 37819,
+      "end": 38107,
+      "replacement": "  function ticketMatchesFilters(...args) { return boardPart.ticketMatchesFilters(...args); }"
+    },
+    {
+      "start": 38109,
+      "end": 38849,
+      "replacement": "  function render(...args) { return boardPart.render(...args); }"
+    },
+    {
+      "start": 38851,
+      "end": 39093,
+      "replacement": "  function renderLoading(...args) { return boardPart.renderLoading(...args); }"
+    },
+    {
+      "start": 56976,
+      "end": 57361,
+      "replacement": "  function toggleClassification(...args) { return boardPart.toggleClassification(...args); }"
+    },
+    {
+      "start": 59310,
+      "end": 59646,
+      "replacement": "  function applyFilter(...args) { return boardPart.applyFilter(...args); }"
+    },
+    {
+      "start": 59648,
+      "end": 59958,
+      "replacement": "  function activateTab(...args) { return boardPart.activateTab(...args); }"
+    },
+    {
+      "start": 39409,
+      "end": 39692,
+      "replacement": "  function syncComposerSubkinds(...args) { return composerPart.syncComposerSubkinds(...args); }"
+    },
+    {
+      "start": 39694,
+      "end": 39942,
+      "replacement": "  function configureComposerClassification(...args) { return composerPart.configureComposerClassification(...args); }"
+    },
+    {
+      "start": 42887,
+      "end": 43144,
+      "replacement": "  function openComposer(...args) { return composerPart.openComposer(...args); }"
+    },
+    {
+      "start": 43146,
+      "end": 43569,
+      "replacement": "  function resetComposer(...args) { return composerPart.resetComposer(...args); }"
+    },
+    {
+      "start": 43571,
+      "end": 43673,
+      "replacement": "  function closeComposer(...args) { return composerPart.closeComposer(...args); }"
+    },
+    {
+      "start": 44439,
+      "end": 44533,
+      "replacement": "  function fileKey(...args) { return composerPart.fileKey(...args); }"
+    },
+    {
+      "start": 44535,
+      "end": 45437,
+      "replacement": "  function renderSelectedImages(...args) { return composerPart.renderSelectedImages(...args); }"
+    },
+    {
+      "start": 45439,
+      "end": 46351,
+      "replacement": "  function addFiles(...args) { return composerPart.addFiles(...args); }"
+    },
+    {
+      "start": 53282,
+      "end": 53689,
+      "replacement": "  function fallbackCopyText(...args) { return composerPart.fallbackCopyText(...args); }"
+    },
+    {
+      "start": 53691,
+      "end": 54064,
+      "replacement": "  function copyText(...args) { return composerPart.copyText(...args); }"
+    },
+    {
+      "start": 54066,
+      "end": 54811,
+      "replacement": "  function blobToPng(...args) { return composerPart.blobToPng(...args); }"
+    },
+    {
+      "start": 54813,
+      "end": 54934,
+      "replacement": "  function showImageCopyFallback(...args) { return composerPart.showImageCopyFallback(...args); }"
+    },
+    {
+      "start": 54936,
+      "end": 55751,
+      "replacement": "  function copyImage(...args) { return composerPart.copyImage(...args); }"
+    },
+    {
+      "start": 30148,
+      "end": 30894,
+      "replacement": "  function followupHistory(...args) { return threadPart.followupHistory(...args); }"
+    },
+    {
+      "start": 43675,
+      "end": 43946,
+      "replacement": "  function openFollowup(...args) { return threadPart.openFollowup(...args); }"
+    },
+    {
+      "start": 43948,
+      "end": 44314,
+      "replacement": "  function resetFollowup(...args) { return threadPart.resetFollowup(...args); }"
+    },
+    {
+      "start": 44316,
+      "end": 44437,
+      "replacement": "  function closeFollowup(...args) { return threadPart.closeFollowup(...args); }"
+    },
+    {
+      "start": 46353,
+      "end": 47319,
+      "replacement": "  function renderFollowupImages(...args) { return threadPart.renderFollowupImages(...args); }"
+    },
+    {
+      "start": 47321,
+      "end": 48267,
+      "replacement": "  function addFollowupFiles(...args) { return threadPart.addFollowupFiles(...args); }"
+    },
+    {
+      "start": 24089,
+      "end": 24338,
+      "replacement": "  const ticketState = createTicketState({ readFilters });\n  const state = ticketState.view();"
+    },
+    {
+      "start": 24785,
+      "end": 24809,
+      "replacement": ""
+    },
+    {
+      "start": 24809,
+      "end": 24841,
+      "replacement": ""
+    },
+    {
+      "start": 59960,
+      "end": 59960,
+      "replacement": "  const dataPart = createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t });\n  const boardPart = createBoard({ $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t });\n  const composerPart = createComposer({ $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t });\n  const threadPart = createThread({ $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t });\n\n"
+    }
+  ],
+  "prefix": "import { createData, createTicketState } from './tickets-data.js?v=1';\nimport { createBoard } from './tickets-board.js?v=1';\nimport { createComposer } from './tickets-composer.js?v=1';\nimport { createThread } from './tickets-thread.js?v=1';\n"
+}

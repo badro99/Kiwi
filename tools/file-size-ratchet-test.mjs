@@ -38,6 +38,8 @@ const BASE = path.join(ROOT, 'tools', 'file-size-baseline.json');
 const CAP = 5000, SLACK = 200, SCRIPT_SLACK = 3, IMPORTANT_SLACK = 10, IMPORTANT_CAP = 25;
 const SHELLS = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html'];
 const update = process.env.KIWI_UPDATE_SIZE_BASELINE === '1';
+const pinFiles = process.argv.slice(2);
+const updateFile = rel => update && (!pinFiles.length || pinFiles.includes(rel));
 
 const lines = (rel) => { const s = fs.readFileSync(path.join(ROOT, rel), 'utf8'); return s.length ? s.split('\n').length - (s.endsWith('\n') ? 1 : 0) : 0; };
 const scripts = (rel) => (fs.readFileSync(path.join(ROOT, rel), 'utf8').match(/<script\b[^>]*\bsrc=/gi) || []).length;
@@ -67,20 +69,21 @@ for (const rel of files) {
   const pin = base.lines[rel];
   checks++;
   if (pin == null) {
+    if (updateFile(rel) && pinFiles.includes(rel) && n <= CAP) { base.lines[rel] = n; lowered.push(`${rel} newly pinned at ${n}`); }
     if (n > CAP) fail.push(`${rel}: ${n} lines, over the ${CAP} cap for a file that is not pinned. Put the new code in its own file.`);
   } else if (n > pin + SLACK) {
     fail.push(`${rel}: ${n} lines, ${n - pin} over its pin of ${pin} (slack ${SLACK}). Put the new code in its own file.`);
-  } else if (n < pin && update) {
+  } else if (n < pin && updateFile(rel)) {
     base.lines[rel] = n; lowered.push(`${rel} ${pin} → ${n}`);
   }
 }
-for (const rel of Object.keys(base.lines)) if (!files.includes(rel)) { if (update) { delete base.lines[rel]; lowered.push(`${rel} removed`); } }
+for (const rel of Object.keys(base.lines)) if (!files.includes(rel)) { if (updateFile(rel)) { delete base.lines[rel]; lowered.push(`${rel} removed`); } }
 for (const rel of SHELLS) {
   const n = scripts(rel), pin = base.scripts[rel];
   checks++;
   if (pin == null) fail.push(`${rel}: no script pin in tools/file-size-baseline.json`);
   else if (n > pin + SCRIPT_SLACK) fail.push(`${rel}: loads ${n} <script src>, ${n - pin} over its pin of ${pin} (slack ${SCRIPT_SLACK}). Load the new code lazily, or bundle it with a neighbour.`);
-  else if (n < pin && update) { base.scripts[rel] = n; lowered.push(`${rel} scripts ${pin} → ${n}`); }
+  else if (n < pin && updateFile(rel)) { base.scripts[rel] = n; lowered.push(`${rel} scripts ${pin} → ${n}`); }
 }
 const css = walk('assets', (rel) => rel.endsWith('.css') && !/ 2\./.test(rel)).sort();
 base.important = base.important || {};
@@ -90,9 +93,9 @@ for (const rel of css) {
   checks++;
   if (pin == null) { if (n > IMPORTANT_CAP) fail.push(`${rel}: ${n} !important, over the ${IMPORTANT_CAP} cap for a stylesheet that is not pinned. Win by cascade, not by force.`); }
   else if (n > pin + IMPORTANT_SLACK) fail.push(`${rel}: ${n} !important, ${n - pin} over its pin of ${pin} (slack ${IMPORTANT_SLACK}). Win by cascade, not by force.`);
-  else if (n < pin && update) { base.important[rel] = n; lowered.push(`${rel} !important ${pin} → ${n}`); }
+  else if (n < pin && updateFile(rel)) { base.important[rel] = n; lowered.push(`${rel} !important ${pin} → ${n}`); }
 }
-for (const rel of Object.keys(base.important)) if (!css.includes(rel) && update) { delete base.important[rel]; lowered.push(`${rel} removed`); }
+for (const rel of Object.keys(base.important)) if (!css.includes(rel) && updateFile(rel)) { delete base.important[rel]; lowered.push(`${rel} removed`); }
 if (update && lowered.length) { fs.writeFileSync(BASE, JSON.stringify(base, null, 2) + '\n'); console.log('  lowered: ' + lowered.join(' · ')); }
 if (fail.length) {
   console.error('✗ file-size-ratchet-test\n  ' + fail.join('\n  '));

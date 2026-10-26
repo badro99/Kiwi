@@ -1,7 +1,9 @@
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 // Les déclarations réelles, les entrées/sorties du navigateur seulement simulées.
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import sharedRules from './shared-rules-source.cjs';
 import {declaration} from './js-declarations.cjs';
 import {fixture} from './server-money-fixture.mjs';
 import {makeSession,SESS_COOKIE} from '../functions/auth/_lib.js';
@@ -9,8 +11,8 @@ import {onRequestPost as invoices} from '../functions/api/invoices.js';
 import {onRequestPost as invoice} from '../functions/api/invoice.js';
 export const ROOT=process.env.KIWI_ROOT||path.resolve(import.meta.dirname,'..');
 export const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
-export function named(text,name){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const m=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+escaped+'\\s*\\(|(?:const|let|var)\\s+'+escaped+'\\s*=)').exec(text);if(!m)throw Error(name);return declaration(text.slice(m.index).trimStart(),name);}
-export function declarations(file,names,stubs={}){const text=read(file),c=vm.createContext({...stubs});c.window=c;new vm.Script(names.map(n=>named(text,n)).join('\n')).runInContext(c);return c;}
+export function named(text,name){text=text.replace(/^[ \t]*\/\* GENERATED SHARED (Kiwi\w+) BEGIN \*\/[\s\S]*?^[ \t]*\/\* GENERATED SHARED \1 END \*\//gm,'');const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const m=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+escaped+'\\s*\\(|(?:const|let|var)\\s+'+escaped+'\\s*=)').exec(text);if(!m)throw Error(name);return declaration(text.slice(m.index).trimStart(),name);}
+export function declarations(file,names,stubs={}){const text=file==='assets/invoicing.js'?invoicingSourceHelper.invoicingTestSource(ROOT):read(file),c=vm.createContext({...stubs});c.window=c;new vm.Script(sharedRules(text)+'\n'+names.map(n=>named(text,n)).join('\n')).runInContext(c);return c;}
 export function clients(){
  const preview=declarations('assets/invoicing.js',['lineHT','computeTotals','totalsBlock','printable'],{Math,Number,BigInt,Map,document:{baseURI:'https://kiwi.test/'},T:()=>new Proxy({totalHT:'HT',totalTTC:'TTC',vatOn:'TVA {rate} {base}'},{get:(o,k)=>o[k]||String(k)}),esc:String,money:c=>(c/100).toFixed(2),tpl:(s,o)=>s.replace(/\{(\w+)\}/g,(_,k)=>o[k]),lang:()=> 'fr',dmy:String,termsText:()=>'',renderSellerLogo:()=>'',businessName:()=> 'Fixture',getSeller:()=>({name:'Fixture'})});
  const sale=declarations('assets/invoice.js',['round2','validIce','build'],{Math,Number,Date,JSON,String,getSellerBusiness:()=>({name:'Fixture'}),getTvaRate:()=>20});

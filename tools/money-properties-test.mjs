@@ -28,6 +28,7 @@ import maisonSource from './pos-maison-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import sharedRules from './shared-rules-source.cjs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -77,11 +78,12 @@ function grabStatement(re) {
 function tillContext(globals) {
   const ctx = vm.createContext({ Math, Number, Array, Date, String, Object, JSON, ...globals });
   vm.runInContext([
+    sharedRules(SRC),
     grabStatement(/const shelf = [^\n]+\n/),
     grabFn('function lineDeal('),
     grabStatement(/const linePromo = [^\n]+\n/),
     grabStatement(/const lineBase {0,2}= [^\n]+\n/),
-    grabStatement(/const lineUnit {0,2}= [^\n]+\n/),
+    grabStatement(/const lineUnit {0,2}= \(ln\) => [^\n]+\n/),
     grabStatement(/const lineTotal = [^\n]+\n/),
     grabFn('function bqLineTotals('), grabFn('function bqFoldBasket('),
     grabFn('function originalSalePayload('),

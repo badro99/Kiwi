@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { onboardingTestSource } from './onboarding-test-source.mjs';
 /* Installation · le type d'activité n'est jamais pré-choisi.
  *
  * 2026-10-12 (audit design, cluster access). L'assistant démarrait avec
@@ -16,7 +17,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OB = readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
+const OB = onboardingTestSource();
 const DATA = readFileSync(path.join(ROOT, 'assets/onboarding-data.js'), 'utf8');
 
 function grab(start, open = '{') {

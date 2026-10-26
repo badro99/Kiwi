@@ -10,30 +10,22 @@
  * est parti : il prépare ces envois et laisse la confirmation au propriétaire. */
 (() => {
   'use strict';
+  let liveOpen;
+  const openWhenReady = function (...args) { return ready.then(() => liveOpen.apply(this, args)); };
+  window.Kiwi = window.Kiwi || {};
+  window.Kiwi.handlers = window.Kiwi.handlers || {};
+  window.Kiwi.handlers['invoicing'] = openWhenReady;
+  window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
+  const ready = Promise.all([
+  import('./invoicing/transport.js?v=3'),
+  import('./invoicing/composer.js?v=6'),
+  import('./invoicing/history.js?v=4'),
+  import('./invoicing/print.js?v=4'),
+]).then(([transportModule, composerModule, historyModule, printModule]) => {
+  // invoicing:entry-body
+
   // Bound transport and JSON reads, even when a transport ignores abort.
-  function fetchDeadline(url, options, readBody) {
-    var controller = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer;
-    var request = new Promise(function (resolve, reject) {
-      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
-      catch (error) { reject(error); }
-    }).then(function (response) {
-      if (readBody === false || !response || typeof response.json !== 'function') return response;
-      return response.json().then(function (data) {
-        response.json = function () { return Promise.resolve(data); }; return response;
-      }, function (error) {
-        response.json = function () { return Promise.reject(error); }; return response;
-      });
-    });
-    var deadline = new Promise(function (_, reject) {
-      timer = setTimeout(function () {
-        var error = new Error('request-timeout'); error.code = 'timeout';
-        reject(error);
-        if (controller) controller.abort();
-      }, 12000);
-    });
-    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-  }
+  /* Private transport declaration: fetchDeadline. */
 
 
   /* ── constantes métier ─────────────────────────────────────────────────── */
@@ -396,7 +388,7 @@
   const docFrom = (res) => (res && (res.doc || res.draft || res.invoice || res.creditNote || res.credit_note)) || null;
 
   /* ── erreurs d'API ─────────────────────────────────────────────────────── */
-  function apiError(code, message, status) { const e = new Error(message || code); e.code = code; e.status = status; return e; }
+  /* Private transport declaration: apiError. */
   function errText(err) {
     const t = T(), code = String(err?.code || '');
     if (code === 'offline') return t.errOffline;
@@ -413,185 +405,21 @@
     return t.errGeneric;
   }
 
+  const transport = transportModule.createTransport({TYPES, computeTotals, getSeller, iceProblem, lsGet, lsSet, merchantSlug, ownData, shift, today, venueId});
+
   /* ── transport : serveur pour un compte réel, moteur local en démo ─────── */
-  async function api(method, payload) {
-    if (!ownData()) return demo.handle(method, payload || {});
-    const merchant = merchantSlug();
-    let res;
-    try {
-      if (method === 'GET') {
-        res = await fetchDeadline('/api/invoices?' + new URLSearchParams(Object.assign({merchant}, payload || {})).toString(), {credentials: 'same-origin'});
-      } else {
-        res = await fetchDeadline('/api/invoices', {method: 'POST', credentials: 'same-origin', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign({merchant}, payload || {}))});
-      }
-    } catch (_) { throw apiError('offline'); }
-    let data = null;
-    try { data = await res.json(); } catch (_) {}
-    if (!res.ok || !data || data.ok === false || data.error) {
-      throw apiError(data?.error || (res.status === 401 ? 'unauthorized' : res.status === 403 ? 'forbidden' : res.status === 404 ? 'not-found' : 'server'), data?.message, res.status);
-    }
-    return data;
-  }
+  function api(...args) { return transport.api(...args); }
 
   /* ── moteur local (démonstration) : le même contrat, sans réseau ───────── */
-  const demo = (() => {
-    let S = null;
-    const key = () => 'kiwi:invoicing:demo:v2:' + venueId();
-    const persist = () => lsSet(key(), JSON.stringify(S));
-    const PREFIX = {invoice: 'F', credit_note: 'AV', quote: 'D'};
-    function uid() { return 'inv_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10); }
-    function number(prefix, seq, year) { return prefix + '-' + year + '-' + String(seq).padStart(4, '0'); }
-    function fresh(type, patch) {
-      const now = Date.now();
-      return Object.assign({id: uid(), type, status: 'draft', number: '', seq: null, issueDate: today(), dueDate: '', termsDays: 30, validUntil: '',
-        customer: {name: '', address: '', ice: '', if: '', email: '', phone: '', clientId: ''}, seller: null, lines: [], totals: computeTotals([]),
-        paymentMethod: '', note: '', internalNote: '', exemptionMention: '', originalId: '', sourceQuoteId: '', reason: '', createdTs: now, updatedTs: now, issuedTs: null, sentTs: null}, patch || {});
-    }
-    function allocate(doc) {
-      const prefix = PREFIX[doc.type], year = Number(String(doc.issueDate || today()).slice(0, 4));
-      S.seq[prefix] = (S.seq[prefix] || 0) + 1;
-      doc.seq = S.seq[prefix]; doc.number = number(prefix, doc.seq, year);
-    }
-    function creditedOf(doc) { return S.docs.filter(d => d.type === 'credit_note' && d.originalId === doc.id && d.status === 'issued').reduce((s, d) => s + d.totals.ttcCents, 0); }
-    function paidOf(doc) { return S.payments.filter(p => p.docId === doc.id).reduce((s, p) => s + p.amountCents, 0); }
-    function derive(doc) {
-      if (doc.type === 'credit_note') return {displayStatus: doc.status, balanceCents: 0};
-      if (doc.type === 'quote') return {displayStatus: doc.status === 'sent' && doc.validUntil && doc.validUntil < today() ? 'expired' : doc.status, balanceCents: 0};
-      if (doc.status === 'draft') return {displayStatus: 'draft', balanceCents: 0};
-      const ttc = doc.totals.ttcCents, paid = paidOf(doc), credited = creditedOf(doc), balance = Math.max(0, ttc - paid - credited);
-      let ds = 'issued';
-      if (credited >= ttc && ttc > 0) ds = 'cancelled';
-      else if (balance <= 0) ds = 'paid';
-      else if (doc.dueDate && doc.dueDate < today()) ds = 'overdue';
-      else if (paid > 0) ds = 'partial';
-      return {displayStatus: ds, balanceCents: balance};
-    }
-    const rowOf = (d) => Object.assign({id: d.id, type: d.type, status: d.status, number: d.number, issueDate: d.issueDate, dueDate: d.dueDate, validUntil: d.validUntil,
-      customer: {name: d.customer.name, ice: d.customer.ice}, totals: {ttcCents: d.totals.ttcCents},
-      originalNumber: d.originalId ? (S.docs.find(x => x.id === d.originalId)?.number || '') : '', legacyRef: d.legacyRef || ''}, derive(d));
-    const clone = (o) => JSON.parse(JSON.stringify(o));
-    function find(id) { const d = S.docs.find(x => x.id === id); if (!d) throw apiError('not-found'); return d; }
-
-    function applyFields(d, b) {
-      if (b.customer) d.customer = Object.assign({name: '', address: '', ice: '', if: '', email: '', phone: '', clientId: ''}, b.customer);
-      if (Array.isArray(b.lines)) d.lines = b.lines.map(l => ({description: String(l.description || ''), qty: Number(l.qty) || 0, unitHT: Math.round(Number(l.unitHT) || 0), discountPct: Number(l.discountPct) || 0, vatRate: Number(l.vatRate) || 0}));
-      if (b.issueDate) d.issueDate = b.issueDate;
-      if (d.type === 'quote') { d.validUntil = b.validUntil || d.validUntil || shift(30, d.issueDate); }
-      else if (b.dueDate) { d.dueDate = b.dueDate; d.termsDays = null; }
-      else if (b.termsDays != null) { d.termsDays = Number(b.termsDays); d.dueDate = shift(d.termsDays, d.issueDate); }
-      else if (!d.dueDate) { d.dueDate = shift(d.termsDays || 0, d.issueDate); }
-      ['paymentMethod', 'note', 'exemptionMention'].forEach(k => { if (b[k] !== undefined) d[k] = String(b[k] || ''); });
-      d.totals = computeTotals(d.lines); d.updatedTs = Date.now();
-    }
-    function validateIssue(d) {
-      if (!String(d.customer.name || '').trim()) throw apiError('invalid-customer');
-      if (iceProblem(d.customer.ice)) throw apiError('invalid-ice');
-      if (!d.lines.some(l => l.qty > 0)) throw apiError('invalid-lines');
-      if (d.lines.some(l => l.vatRate === 0) && !String(d.exemptionMention || d.note || '').trim()) throw apiError('exempt-mention-required');
-    }
-    function issue(d) {
-      if (d.type === 'quote') {
-        if (!d.number) { validateIssue(d); allocate(d); d.issuedTs = Date.now(); }
-        if (d.status === 'draft') d.status = 'sent';
-        return d;
-      }
-      if (d.status === 'issued') return d;
-      validateIssue(d);
-      d.seller = clone(getSeller());
-      d.totals = computeTotals(d.lines); allocate(d); d.status = 'issued'; d.issuedTs = Date.now();
-      if (d.dueDate === '') d.dueDate = shift(d.termsDays || 0, d.issueDate);
-      return d;
-    }
-    function seedStore() {
-      S = {docs: [], payments: [], seq: {F: 0, AV: 0, D: 0}};
-      const mk = (type, input, pay) => { const patch = Object.assign({}, input); const skip = patch.issue === false; delete patch.issue; const d = fresh(type, patch); d.totals = computeTotals(d.lines); if (!skip) { try { issue(d); } catch (_) {} } S.docs.push(d); (pay || []).forEach(p => S.payments.push(Object.assign({id: uid(), docId: d.id, method: 'transfer', reference: ''}, p))); return d; };
-      const L = (description, qty, price, vatRate) => ({description, qty, unitHT: price * 100, discountPct: 0, vatRate: vatRate == null ? 20 : vatRate});
-      mk('invoice', {customer: {name: 'Atelier Nomade', address: 'Avenue Hassan II, Casablanca', ice: '002136093000040', if: '', email: 'finance@atelier-nomade.ma', phone: '', clientId: ''}, issueDate: shift(-18), termsDays: 15, dueDate: shift(-3), lines: [L('Privatisation de salle', 1, 5400), L('Pause café', 24, 65)], paymentMethod: 'transfer'});
-      mk('invoice', {customer: {name: 'Maison Jasmin', address: 'Rue des Orangers, Marrakech', ice: '001561191000066', if: '', email: 'contact@maisonjasmin.ma', phone: '', clientId: ''}, issueDate: shift(-8), termsDays: 7, dueDate: shift(-1), lines: [L('Commande entreprise', 1, 3950)], paymentMethod: 'transfer'}, [{amountCents: 474000, date: shift(-2)}]);
-      mk('invoice', {customer: {name: 'Riad Zayna', address: 'Médina, Marrakech', ice: '', if: '', email: '', phone: '+212 661 44 08 22', clientId: ''}, issueDate: shift(-2), termsDays: 7, dueDate: shift(5), lines: [L('Service traiteur · 35 couverts', 1, 8750)], paymentMethod: 'transfer', note: 'Merci pour votre confiance.'}, [{amountCents: 300000, date: shift(-1)}]);
-      mk('invoice', {customer: {name: 'Studio Terracotta', address: '', ice: '', if: '', email: '', phone: '', clientId: ''}, issueDate: shift(-1), termsDays: 30, dueDate: shift(29), lines: [L('Événement privé', 1, 6250)], issue: false});
-      mk('quote', {customer: {name: 'Hôtel Les Dunes', address: 'Merzouga', ice: '', if: '', email: 'achats@lesdunes.ma', phone: '', clientId: ''}, issueDate: shift(-3), validUntil: shift(20), lines: [L('Buffet de séminaire · 40 personnes', 1, 12000), L('Location de matériel', 1, 800)]});
-      persist(); return S;
-    }
-    function load() {
-      if (S) return S;
-      try { S = JSON.parse(lsGet(key()) || 'null'); } catch (_) { S = null; }
-      if (!S || !Array.isArray(S.docs)) seedStore();
-      return S;
-    }
-    async function handle(method, p) {
-      load();
-      if (method === 'GET') {
-        if (p.id) {
-          const d = find(p.id), dv = derive(d);
-          return {ok: true, doc: clone(Object.assign({}, d, {originalNumber: d.originalId ? (S.docs.find(x => x.id === d.originalId)?.number || '') : ''})), payments: clone(S.payments.filter(x => x.docId === d.id)),
-            creditNotes: S.docs.filter(x => x.type === 'credit_note' && x.originalId === d.id && x.status === 'issued').map(x => ({id: x.id, number: x.number, ttcCents: x.totals.ttcCents, issueDate: x.issueDate})),
-            displayStatus: dv.displayStatus, balanceCents: dv.balanceCents};
-        }
-        const rows = S.docs.filter(d => !p.type || d.type === p.type).sort((a, b) => (b.issueDate || '').localeCompare(a.issueDate || '') || b.createdTs - a.createdTs).slice(0, 500).map(rowOf);
-        return {ok: true, docs: rows};
-      }
-      const a = p.action;
-      if (a === 'save') {
-        let d;
-        if (p.id) { d = find(p.id); if (d.type !== 'quote' && d.status !== 'draft') { if (Object.keys(p).some(k => !['merchant', 'action', 'id', 'type', 'internalNote'].includes(k) && p[k] !== undefined)) throw apiError('locked'); } }
-        else { d = fresh(p.type || 'invoice'); S.docs.push(d); }
-        if (d.type === 'quote' && d.status === 'invoiced') throw apiError('locked');
-        if (p.internalNote !== undefined) d.internalNote = String(p.internalNote || '');
-        if (d.status === 'draft' || d.type === 'quote') applyFields(d, p);
-        persist(); return {ok: true, doc: clone(d)};
-      }
-      const d = p.id ? find(p.id) : null;
-      if (a === 'issue') { issue(d); persist(); return {ok: true, doc: clone(d)}; }
-      if (a === 'mark-sent') { if (d.status === 'draft') throw apiError('not-issued'); d.sentTs = d.sentTs || Date.now(); persist(); return {ok: true, doc: clone(d)}; }
-      if (a === 'payment') {
-        if (d.type !== 'invoice' || d.status !== 'issued') throw apiError('not-issued');
-        const amount = Math.round(Number(p.amountCents) || 0);
-        if (amount <= 0) throw apiError('invalid-amount');
-        if (amount > derive(d).balanceCents) throw apiError('amount-exceeds-balance');
-        S.payments.push({id: uid(), docId: d.id, amountCents: amount, date: p.date || today(), method: p.method || 'cash', reference: String(p.reference || '')});
-        persist(); const dv = derive(d); return {ok: true, displayStatus: dv.displayStatus, balanceCents: dv.balanceCents};
-      }
-      if (a === 'delete-payment') {
-        const i = S.payments.findIndex(x => x.id === p.paymentId && x.docId === d.id); if (i < 0) throw apiError('not-found');
-        S.payments.splice(i, 1); persist(); const dv = derive(d); return {ok: true, displayStatus: dv.displayStatus, balanceCents: dv.balanceCents};
-      }
-      if (a === 'credit-note') {
-        if (d.type !== 'invoice' || d.status !== 'issued') throw apiError('not-issued');
-        const lines = (Array.isArray(p.lines) && p.lines.length ? p.lines : d.lines);
-        const cn = fresh('credit_note', {customer: clone(d.customer), originalId: d.id, reason: String(p.reason || ''), lines: clone(lines), paymentMethod: d.paymentMethod, exemptionMention: d.exemptionMention});
-        cn.totals = computeTotals(cn.lines);
-        if (cn.totals.ttcCents > d.totals.ttcCents - creditedOf(d)) throw apiError('credit-exceeds-invoice');
-        S.docs.push(cn); persist(); return {ok: true, doc: clone(cn)};
-      }
-      if (a === 'quote-status') { if (d.type !== 'quote' || d.status === 'draft' || d.status === 'invoiced') throw apiError('locked'); d.status = p.status === 'rejected' ? 'rejected' : 'accepted'; persist(); return {ok: true, doc: clone(d)}; }
-      if (a === 'convert-quote') {
-        if (d.type !== 'quote' || d.status === 'draft' || d.status === 'invoiced') throw apiError('locked');
-        const inv = fresh('invoice', {customer: clone(d.customer), lines: clone(d.lines), sourceQuoteId: d.id, exemptionMention: d.exemptionMention, note: d.note});
-        inv.dueDate = shift(inv.termsDays, inv.issueDate); inv.totals = computeTotals(inv.lines);
-        S.docs.push(inv); d.status = 'invoiced'; persist(); return {ok: true, doc: clone(inv)};
-      }
-      if (a === 'duplicate') {
-        const c = fresh(d.type, {customer: clone(d.customer), lines: clone(d.lines), note: d.note, paymentMethod: d.paymentMethod, exemptionMention: d.exemptionMention, termsDays: d.termsDays == null ? 30 : d.termsDays});
-        if (d.type === 'quote') c.validUntil = shift(30); else c.dueDate = shift(c.termsDays, c.issueDate);
-        c.totals = computeTotals(c.lines); S.docs.push(c); persist(); return {ok: true, doc: clone(c)};
-      }
-      if (a === 'delete-draft') {
-        if (d.status !== 'draft') throw apiError('locked');
-        S.docs.splice(S.docs.indexOf(d), 1); persist(); return {ok: true};
-      }
-      throw apiError('server');
-    }
-    return {handle};
-  })();
+  /* Private transport declaration: demo. */
 
   /* ── état de l'écran ───────────────────────────────────────────────────── */
   let overlay = null;
-  const cache = {invoice: [], quote: [], credit_note: []};
+  const cache = transport.rows();
   /* Curseur de la page suivante, par type (null : tout est chargé). Le serveur
      rend 500 documents par page ; les plus anciens restent accessibles par
      « Afficher les documents plus anciens ». */
-  const nextCursor = {invoice: null, quote: null, credit_note: null};
+  const nextCursor = transport.cursors();
   let loadingMore = false;
   let tab = 'invoice';          // invoice | quote | credit_note | sales
   let filter = 'all';
@@ -614,38 +442,15 @@
   }
 
   /* ── cache de liste (dernier résultat connu) ──────────────────────────── */
-  const cacheKey = () => 'kiwi:invdocs:cache:v2:' + venueId();
-  function loadCache() {
-    if (!ownData()) return;
-    try { const c = JSON.parse(lsGet(cacheKey()) || 'null'); if (c && c.docs) TYPES.forEach(ty => { if (Array.isArray(c.docs[ty])) cache[ty] = c.docs[ty]; }); } catch (_) {}
-  }
-  function saveCache() { if (ownData()) lsSet(cacheKey(), JSON.stringify({ts: Date.now(), docs: cache})); }
+  /* Private transport declaration: cacheKey. */
+  function loadCache(...args) { return transport.loadCache(...args); }
+  function saveCache(...args) { return transport.saveCache(...args); }
 
   /* ── clients du carnet ─────────────────────────────────────────────────── */
-  function clientBook() {
-    try {
-      const rows = window.KiwiClientsDirectory?.load?.()?.rows;
-      if (Array.isArray(rows)) return rows.filter(r => r && r.name);
-      const list = window.KiwiClients?.list?.();
-      if (Array.isArray(list)) return list.filter(r => r && r.name);
-    } catch (_) {}
-    return [];
-  }
+  function clientBook(...args) { return composerModule.clientBook({}, this, args); }
 
   /* ── factures de vente (comptoir) : inchangé ───────────────────────────── */
-  function getSaleInvoices() {
-    try {
-      const cached = window.KiwiInvoice?.getCachedInvoices?.() || {};
-      return Object.values(cached).map((doc) => {
-        const id = String(doc.number || (doc.seq ? ('F-' + doc.seq) : 'Facture'));
-        const customer = (doc.customer && doc.customer.name) || 'Client de passage';
-        const contact = (doc.customer && doc.customer.ice) ? ('ICE ' + doc.customer.ice) : 'Vente comptoir';
-        const issueDate = doc.issuedTs ? dayIn(doc.issuedTs) : today();
-        const total = (doc.totals && Number(doc.totals.ttc)) || 0;
-        return {id, customer, contact, issueDate, dueDate: issueDate, total, isSaleInvoice: true, rawDoc: doc};
-      });
-    } catch (_) { return []; }
-  }
+  function getSaleInvoices(...args) { return historyModule.getSaleInvoices({dayIn, today}, this, args); }
   function syncServerInvoices() {
     const m = merchantSlug();
     if (!m || typeof fetch !== 'function') return;
@@ -801,100 +606,16 @@
   const textError = (message) => { const e = new Error(message); e.__text = true; return e; };
 
   /* ── liste : synthèse, onglets, registre ──────────────────────────────── */
-  function rowsFor(ty) { return cache[ty] || []; }
-  function stats() {
-    let outstanding = 0, late = 0, paidMonth = 0, waiting = 0, lateCount = 0;
-    const month = today().slice(0, 7);
-    rowsFor('invoice').forEach(r => {
-      const ds = r.displayStatus;
-      if (ds === 'issued' || ds === 'partial' || ds === 'overdue') { outstanding += r.balanceCents; waiting += 1; }
-      if (ds === 'overdue') { late += r.balanceCents; lateCount += 1; }
-      if ((ds === 'paid' || ds === 'partial' || ds === 'overdue' || ds === 'issued') && String(r.issueDate).slice(0, 7) === month) paidMonth += Math.max(0, r.ttcCents - r.balanceCents);
-    });
-    return {outstanding, late, paidMonth, waiting, lateCount};
-  }
-  function paintStats() {
-    const box = overlay?.querySelector('[data-inv-stats]'); if (!box) return;
-    const t = T(), s = stats();
-    const total = TYPES.reduce((n, ty) => n + rowsFor(ty).length, 0) + getSaleInvoices().length;
-    box.innerHTML = `<article class="inv-stat"><div class="inv-stat-label">${esc(t.outstanding)}</div><div class="inv-stat-value" data-stat="outstanding">${money(s.outstanding)} <small>MAD</small></div><div class="inv-stat-note">${s.waiting} ${esc(t.awaiting)}</div></article>
-      <article class="inv-stat alert"><div class="inv-stat-label">${esc(t.overdue)}</div><div class="inv-stat-value" data-stat="overdue">${money(s.late)} <small>MAD</small></div><div class="inv-stat-note">${s.lateCount} ${esc(t.needsFollowup)}</div></article>
-      <article class="inv-stat"><div class="inv-stat-label">${esc(t.paidMonth)}</div><div class="inv-stat-value" data-stat="paid">${money(s.paidMonth)} <small>MAD</small></div><div class="inv-stat-note">${esc(t.collected)}</div></article>
-      <article class="inv-stat"><div class="inv-stat-label">${esc(t.documents)}</div><div class="inv-stat-value" data-stat="docs">${total}</div><div class="inv-stat-note">${esc(t.totalDocs)}</div></article>`;
-  }
-  function legacyDocs() {
-    if (!ownData()) return [];
-    try {
-      const a = JSON.parse(lsGet('kiwi:invoices:v1:' + venueId()) || '[]');
-      return Array.isArray(a) ? a.filter(x => x && x.id != null && Array.isArray(x.items)) : [];
-    } catch (_) { return []; }
-  }
-  function paintNotices() {
-    const box = overlay?.querySelector('[data-inv-notices]'); if (!box) return;
-    const t = T(), parts = [];
-    const legacy = legacyDocs();
-    if (legacy.length) {
-      parts.push(`<div class="inv-banner" data-inv-legacy><div class="inv-banner-copy"><strong>${esc(legacy.length === 1 ? t.legacyOne : tpl(t.legacyBanner, {n: legacy.length}))}</strong><span>${esc(t.legacyHint)}</span></div><button data-activation=write class="inv-btn small primary" type="button" data-inv-act="import-legacy">${esc(t.legacyImport)}</button></div>`);
-    }
-    if (authBlocked) parts.push(`<div class="inv-banner warn" role="status" data-inv-auth>${esc(t.authError)}</div>`);
-    else if (offline) parts.push(`<div class="inv-banner warn" role="status" data-inv-offline>${esc(t.offline)}</div>`);
-    box.innerHTML = parts.join('');
-  }
-  function tabsHtml() {
-    const t = T();
-    return [['invoice', t.tabInvoices], ['quote', t.tabQuotes], ['credit_note', t.tabCredits], ['sales', t.sales]]
-      .map(([k, l]) => `<button class="inv-tab${tab === k ? ' on' : ''}" type="button" role="tab" aria-selected="${tab === k}" data-lens-item data-inv-act="tab" data-v="${k}">${esc(l)}</button>`).join('');
-  }
-  function newLabel() { return tab === 'quote' ? T().newQuote : T().newInvoice; }
+  function rowsFor(...args) { return historyModule.rowsFor({cache}, this, args); }
+  function stats(...args) { return historyModule.stats({rowsFor, today}, this, args); }
+  function paintStats(...args) { return historyModule.paintStats({T, TYPES, esc, getSaleInvoices, money, overlay, rowsFor, stats}, this, args); }
+  function legacyDocs(...args) { return historyModule.legacyDocs({lsGet, ownData, venueId}, this, args); }
+  function paintNotices(...args) { return historyModule.paintNotices({T, authBlocked, esc, legacyDocs, offline, overlay, tpl}, this, args); }
+  function tabsHtml(...args) { return historyModule.tabsHtml({T, esc, tab}, this, args); }
+  function newLabel(...args) { return historyModule.newLabel({T, tab}, this, args); }
 
-  function visibleRows() {
-    const q = query.trim().toLowerCase();
-    if (tab === 'sales') {
-      return getSaleInvoices().reverse().filter(r => !q || String(r.id).toLowerCase().includes(q) || String(r.customer).toLowerCase().includes(q));
-    }
-    return rowsFor(tab).filter(r => {
-      if (tab === 'invoice') {
-        const ds = r.displayStatus;
-        const ok = filter === 'all' || (filter === 'draft' && ds === 'draft') || (filter === 'paid' && ds === 'paid')
-          || (filter === 'overdue' && ds === 'overdue') || (filter === 'collect' && (ds === 'issued' || ds === 'partial' || ds === 'overdue'));
-        if (!ok) return false;
-      }
-      return !q || String(r.number).toLowerCase().includes(q) || String(r.customer.name).toLowerCase().includes(q) || String(r.customer.ice).includes(q);
-    });
-  }
-  function paintRegister() {
-    const root = overlay?.querySelector('[data-inv-list]'); if (!root || !root.querySelector('[data-inv-table]')) return;
-    const t = T();
-    root.querySelector('[data-inv-filters]').innerHTML = tab === 'invoice'
-      ? [['all', t.fAll], ['collect', t.fCollect], ['overdue', t.fOverdue], ['paid', t.fPaid], ['draft', t.fDraft]].map(([k, l]) => `<button class="inv-filter${filter === k ? ' on' : ''}" type="button" data-inv-act="filter" data-v="${k}">${esc(l)}</button>`).join('')
-      : '';
-    const newBtn = root.querySelector('[data-inv-act="new"]');
-    if (newBtn) { newBtn.hidden = tab === 'credit_note'; newBtn.querySelector('[data-new-label]').textContent = newLabel(); }
-    const rows = visibleRows();
-    let html;
-    if (loadingList && !rows.length && tab !== 'sales') {
-      html = `<div class="inv-empty"><p>${esc(t.loading)}</p></div>`;
-    } else if (rows.length) {
-      const dueHead = tab === 'quote' ? t.colValid : t.colDue;
-      html = `<div class="inv-table-wrap" tabindex="0" role="region" aria-label="${esc(t.title)}"><table class="inv-table"><thead><tr><th>${esc(t.colNo)}</th><th>${esc(t.colCustomer)}</th><th>${esc(t.colIssued)}</th><th>${esc(tab === 'credit_note' ? '' : dueHead)}</th><th>${esc(t.colStatus)}</th><th>${esc(t.colAmount)}</th></tr></thead><tbody>${rows.map(r => {
-        if (r.isSaleInvoice) {
-          return `<tr data-inv-act="sale-open" data-inv-sale-open="${esc(r.id)}" data-id="${esc(r.id)}" tabindex="0"><td><span class="inv-no">${esc(r.id)}</span></td><td><span class="inv-customer">${esc(r.customer)}</span><span class="inv-customer-sub">${esc(r.contact || '·')}</span></td><td class="inv-date" data-label="${esc(t.colIssued)}">${esc(fmtDate(r.issueDate))}</td><td class="inv-date" data-label="${esc(t.colDue)}">${esc(fmtDate(r.dueDate))}</td><td>${statusHtml('invoice', 'paid')}</td><td class="inv-money">${money(Math.round((Number(r.total) || 0) * 100))} MAD</td></tr>`;
-        }
-        const due = r.type === 'quote' ? (r.validUntil || r.dueDate) : r.dueDate;
-        const sub = r.type === 'credit_note' && r.originalNumber ? tpl(t.creditOn, {n: r.originalNumber}) : (r.customer.ice ? 'ICE ' + r.customer.ice : '·');
-        const left = r.type === 'invoice' && (r.displayStatus === 'partial' || r.displayStatus === 'overdue') && r.balanceCents > 0 && r.balanceCents < r.ttcCents ? `<span class="inv-customer-sub">${esc(tpl(t.balanceLeft, {amount: money(r.balanceCents) + ' MAD'}))}</span>` : '';
-        return `<tr data-inv-act="open" data-id="${esc(r.id)}" data-type="${esc(r.type)}" tabindex="0"><td><span class="inv-no">${esc(NO_OF(r))}</span></td><td><span class="inv-customer">${esc(r.customer.name)}</span><span class="inv-customer-sub">${esc(sub)}</span></td><td class="inv-date" data-label="${esc(t.colIssued)}">${esc(fmtDate(r.issueDate))}</td><td class="inv-date" data-label="${esc(dueHead)}">${esc(r.type === 'credit_note' ? '·' : fmtDate(due))}</td><td>${statusHtml(r.type, r.displayStatus)}</td><td class="inv-money">${money(r.ttcCents)} MAD${left}</td></tr>`;
-      }).join('')}</tbody></table></div>`;
-    } else {
-      const hasAny = tab === 'sales' ? false : rowsFor(tab).length > 0;
-      const msg = tab === 'sales' ? [t.salesSub, ''] : hasAny ? [t.emptyFilter, ''] : ({invoice: [t.emptyInvoice, t.emptyInvoiceSub], quote: [t.emptyQuote, t.emptyQuoteSub], credit_note: [t.emptyCredit, t.emptyCreditSub]}[tab]);
-      html = `<div class="inv-empty"><div class="inv-empty-mark">${ICON.invoice}</div><h4>${esc(msg[0])}</h4><p>${esc(msg[1])}</p>${tab === 'credit_note' || hasAny ? '' : `<button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}${esc(newLabel())}</button>`}</div>`;
-    }
-    if (tab !== 'sales' && nextCursor[tab] && !(loadingList && !rows.length)) {
-      html += `<div class="inv-more"><button class="inv-btn" type="button" data-inv-act="more"${loadingMore ? ' disabled aria-busy="true"' : ''}>${esc(loadingMore ? t.loading : t.loadMore)}</button></div>`;
-    }
-    root.querySelector('[data-inv-table]').innerHTML = html;
-  }
+  function visibleRows(...args) { return historyModule.visibleRows({filter, getSaleInvoices, query, rowsFor, tab}, this, args); }
+  function paintRegister(...args) { return historyModule.paintRegister({ICON, NO_OF, T, esc, filter, fmtDate, loadingList, loadingMore, money, newLabel, nextCursor, overlay, rowsFor, statusHtml, tab, tpl, visibleRows}, this, args); }
   async function loadMore() {
     const ty = tab, cursor = nextCursor[ty];
     if (ty === 'sales' || !cursor || loadingMore) return;
@@ -913,17 +634,9 @@
       if (token === refreshToken) paintAll();
     }
   }
-  function paintAll() { if (!overlay || currentView !== 'list') return; paintNotices(); paintStats(); paintRegister(); }
+  function paintAll(...args) { return historyModule.paintAll({currentView, overlay, paintNotices, paintRegister, paintStats}, this, args); }
 
-  function renderList() {
-    const t = T();
-    overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button data-activation=money class="inv-btn" type="button" data-inv-act="export">${ICON.export}${esc(t.export)}</button><button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}<span data-new-label>${esc(newLabel())}</span></button></div></div>
-      <div data-inv-notices></div>
-      <div class="inv-stats" data-inv-stats></div>
-      <section class="inv-register"><div class="inv-tabs" role="tablist" data-lens-demo>${tabsHtml()}</div><div class="inv-register-head"><div class="inv-filters" data-inv-filters></div><input class="inv-search" type="search" value="${esc(query)}" data-inv-search placeholder="${esc(t.search)}" aria-label="${esc(t.search)}"></div><div data-inv-table></div></section>
-      <p class="inv-foot-note">${esc(ownData() ? t.serverNote : t.demoNote)}</p>`;
-    show('list'); paintAll();
-  }
+  function renderList(...args) { return historyModule.renderList({ICON, T, esc, newLabel, overlay, ownData, paintAll, query, show, tabsHtml}, this, args); }
 
   async function refreshAll() {
     const token = ++refreshToken;
@@ -941,55 +654,19 @@
   }
 
   /* ── composer ─────────────────────────────────────────────────────────── */
-  function vatOptions(selected) {
-    const t = T(), set = VAT_RATES.slice();
-    if (!set.includes(Number(selected))) set.push(Number(selected));
-    return set.map(r => `<option value="${r}"${Number(selected) === r ? ' selected' : ''}>${r === 0 ? esc(t.exempt) : r + ' %'}</option>`).join('');
-  }
-  function lineRowHtml(l) {
-    const t = T();
-    return `<div class="inv-line-row" data-line>
-      <div class="inv-line-desc"><input data-l="desc" value="${esc(l.description)}" placeholder="${esc(t.descPh)}" aria-label="${esc(t.desc)}"></div>
-      <label class="inv-cell"><span>${esc(t.qty)}</span><input data-l="qty" inputmode="decimal" value="${esc(l.qty)}"></label>
-      <label class="inv-cell"><span>${esc(t.unitHT)}</span><input data-l="unit" inputmode="decimal" value="${esc(l.unit)}" placeholder="0,00"></label>
-      <label class="inv-cell"><span>${esc(t.discount)}</span><input data-l="disc" inputmode="decimal" value="${esc(l.disc)}" placeholder="0"></label>
-      <label class="inv-cell"><span>${esc(t.vat)}</span><select data-l="vat">${vatOptions(l.vat)}</select></label>
-      <div class="inv-cell"><span>${esc(t.lineHT)}</span><output class="inv-line-total" data-l="total">0,00</output></div>
-      <button class="inv-line-remove" type="button" data-inv-act="remove-line" aria-label="${esc(t.removeLine)}">${ICON.close}</button>
-    </div>`;
-  }
-  const blankLine = () => ({description: '', qty: '1', unit: '', disc: '', vat: DEFAULT_VAT});
-  const F = (name) => overlay?.querySelector('[data-f="' + name + '"]');
-  const fv = (name) => String(F(name)?.value ?? '').trim();
-  function readLines() {
-    return [...overlay.querySelectorAll('.inv-line-row')].map(r => ({
-      description: r.querySelector('[data-l="desc"]').value.trim(), qty: r.querySelector('[data-l="qty"]').value, unit: r.querySelector('[data-l="unit"]').value,
-      disc: r.querySelector('[data-l="disc"]').value, vat: Number(r.querySelector('[data-l="vat"]').value),
-    }));
-  }
-  const apiLines = (rows) => rows.filter(r => r.description || num(r.unit)).map(r => ({description: r.description, qty: num(r.qty), unitHT: toCents(r.unit), discountPct: Math.min(100, num(r.disc)), vatRate: Number(r.vat)}));
-  function paintLines(rows) {
-    overlay.querySelector('[data-inv-lines]').innerHTML = rows.map(lineRowHtml).join('');
-  }
-  function termsOptions(selected) {
-    const t = T();
-    return TERMS_CHOICES.map(d => `<option value="${d}"${String(selected) === String(d) ? ' selected' : ''}>${esc(t['t' + d])}</option>`).join('') + `<option value="custom"${selected === 'custom' ? ' selected' : ''}>${esc(t.tCustom)}</option>`;
-  }
+  function vatOptions(...args) { return composerModule.vatOptions({T, VAT_RATES, esc}, this, args); }
+  function lineRowHtml(...args) { return composerModule.lineRowHtml({ICON, T, close, esc, vatOptions}, this, args); }
+  function blankLine(...args) { return composerModule.blankLine({DEFAULT_VAT}, this, args); }
+  function F(...args) { return composerModule.F({overlay}, this, args); }
+  function fv(...args) { return composerModule.fv({F}, this, args); }
+  function readLines(...args) { return composerModule.readLines({overlay}, this, args); }
+  function apiLines(...args) { return composerModule.apiLines({num, toCents}, this, args); }
+  function paintLines(...args) { return composerModule.paintLines({lineRowHtml, overlay}, this, args); }
+  function termsOptions(...args) { return composerModule.termsOptions({T, TERMS_CHOICES, esc}, this, args); }
 
   /* Un document existant (ou un nouveau) devient les valeurs initiales du formulaire. */
-  function formState(doc, type) {
-    const base = doc ? doc : {type, customer: {}, lines: [], issueDate: today(), termsDays: 30, dueDate: '', validUntil: shift(30), paymentMethod: '', note: '', exemptionMention: ''};
-    const c = base.customer || {};
-    const terms = base.termsDays != null && TERMS_CHOICES.includes(Number(base.termsDays)) ? String(base.termsDays) : (base.dueDate ? 'custom' : '30');
-    return {
-      pick: '', kind: (c.ice || c.if) ? 'business' : 'person',
-      name: c.name || '', addr: c.address || '', ice: c.ice || '', if: c.if || '', email: c.email || '', phone: c.phone || '', clientId: c.clientId || '',
-      issue: base.issueDate || today(), terms, due: base.dueDate || '', valid: base.validUntil || shift(30),
-      method: base.paymentMethod || '', note: base.note || '', exempt: base.exemptionMention || '',
-      lines: (base.lines && base.lines.length ? base.lines : [null]).map(l => l ? ({description: l.description || '', qty: String(l.qty ?? 1).replace('.', ','), unit: centsInput(l.unitHT), disc: l.discountPct ? String(l.discountPct).replace('.', ',') : '', vat: Number(l.vatRate)}) : blankLine()),
-    };
-  }
-  const draftKey = () => 'kiwi:invoicing:draft:v2:' + venueId() + ':' + cmp.type + ':' + (cmp.id || 'new');
+  function formState(...args) { return composerModule.formState({TERMS_CHOICES, blankLine, centsInput, shift, today}, this, args); }
+  function draftKey(...args) { return composerModule.draftKey({cmp, venueId}, this, args); }
 
   function renderComposer(doc, type) {
     const t = T();
@@ -1009,106 +686,23 @@
     const issueLabel = type === 'quote' ? t.sendQuote : type === 'credit_note' ? t.issueCredit : t.issueInvoice;
     const showIssue = !(isQuote && cmp.number);
     const dis = locked ? ' disabled' : '';
-    overlay.querySelector('[data-inv-compose]').innerHTML = `<div class="inv-composer-head"><div><button class="inv-btn small" type="button" data-inv-act="back">${ICON.back}${esc(t.back)}</button></div><div class="inv-step">${esc(cmp.number || t.draftNo)} · <span data-inv-autosave role="status">${esc(t.autosave)}</span></div></div>
-      <h3 class="inv-compose-title" data-compose-title>${esc(title)}</h3>
-      ${locked && cmp.reason ? `<p class="inv-foot-note">${esc(t.reason)} : ${esc(cmp.reason)}</p>` : ''}
-      <div class="inv-form-grid"><div>
-        <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.customerBlock)}</h4>
-          ${book.length && !locked ? `<div class="inv-field wide inv-pick"><label for="inv-f-pick">${esc(t.pickClient)}</label><select id="inv-f-pick" data-f="pick"><option value="">${esc(t.pickNone)}</option>${book.map((c, i) => `<option value="${i}">${esc(c.name)}${c.phone ? ' · ' + esc(c.phone) : ''}</option>`).join('')}</select></div>` : ''}
-          <div class="inv-fields">
-            <div class="inv-field"><label for="inv-f-name">${esc(t.clientName)}</label><input id="inv-f-name" data-f="name" autocomplete="organization" value="${esc(st.name)}"${dis}></div>
-            <div class="inv-field"><label for="inv-f-kind">${esc(t.kind)}</label><select id="inv-f-kind" data-f="kind"${dis}><option value="person"${st.kind === 'person' ? ' selected' : ''}>${esc(t.kindPerson)}</option><option value="business"${st.kind === 'business' ? ' selected' : ''}>${esc(t.kindBusiness)}</option></select></div>
-            <div class="inv-field wide"><label for="inv-f-addr">${esc(t.address)}</label><input id="inv-f-addr" data-f="addr" autocomplete="street-address" value="${esc(st.addr)}"${dis}></div>
-            <div class="inv-field"><label for="inv-f-ice" data-ice-label>${esc(st.kind === 'business' ? t.iceRequired : t.ice)}</label><input id="inv-f-ice" data-f="ice" inputmode="numeric" autocomplete="off" value="${esc(st.ice)}" aria-describedby="inv-f-ice-msg"${dis}><p class="inv-field-msg" id="inv-f-ice-msg" data-ice-msg role="status"></p></div>
-            <div class="inv-field"><label for="inv-f-if">${esc(t.ifLabel)}</label><input id="inv-f-if" data-f="if" inputmode="numeric" value="${esc(st.if)}"${dis}></div>
-            <div class="inv-field"><label for="inv-f-email">${esc(t.email)}</label><input id="inv-f-email" data-f="email" type="email" autocomplete="email" value="${esc(st.email)}"${dis}></div>
-            <div class="inv-field"><label for="inv-f-phone">${esc(t.phone)}</label><input id="inv-f-phone" data-f="phone" type="tel" autocomplete="tel" value="${esc(st.phone)}"${dis}></div>
-          </div></section>
-        <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.datesBlock)}</h4><div class="inv-fields">
-          <div class="inv-field"><label for="inv-f-issue">${esc(t.issueDate)}</label><input id="inv-f-issue" data-f="issue" type="date" value="${esc(st.issue)}"></div>
-          ${isQuote
-            ? `<div class="inv-field"><label for="inv-f-valid">${esc(t.validUntil)}</label><input id="inv-f-valid" data-f="valid" type="date" value="${esc(st.valid)}"></div>`
-            : `<div class="inv-field"><label for="inv-f-terms">${esc(t.terms)}</label><select id="inv-f-terms" data-f="terms">${termsOptions(st.terms)}</select></div>
-               <div class="inv-field" data-due-wrap><label for="inv-f-due">${esc(t.due)}</label><input id="inv-f-due" data-f="due" type="date" value="${esc(st.due)}"></div>`}
-          ${isQuote ? '' : `<div class="inv-field"><label for="inv-f-method">${esc(t.method)}</label><select id="inv-f-method" data-f="method"><option value=""></option>${METHODS.map(m => `<option value="${m}"${st.method === m ? ' selected' : ''}>${esc(t[m])}</option>`).join('')}</select></div>`}
-        </div></section>
-        <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.lines)}</h4><div data-inv-lines></div><button data-activation=write class="inv-add-line" type="button" data-inv-act="add-line">${esc(t.addLine)}</button></section>
-        <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.noteBlock)}</h4><div class="inv-fields">
-          <div class="inv-field wide"><label for="inv-f-note">${esc(t.note)}</label><textarea id="inv-f-note" data-f="note" placeholder="${esc(t.notePh)}">${esc(st.note)}</textarea></div>
-          <div class="inv-field wide" data-exempt-wrap hidden><label for="inv-f-exempt">${esc(t.exemptionMention)}</label><input id="inv-f-exempt" data-f="exempt" value="${esc(st.exempt)}" placeholder="${esc(t.exemptionPh)}"><p class="inv-field-msg warn">${esc(t.exemptionNeed)}</p></div>
-        </div></section>
-      </div><aside class="inv-summary-card"><div class="inv-summary-brand"><div class="inv-summary-logo">${renderSellerLogo(seller, 28)}</div><span class="inv-summary-no">${esc(cmp.number || t.draftNo)}</span></div>
-        <div class="inv-summary-body"><div class="inv-summary-row"><span>${esc(t.totalHT)}</span><strong data-sum="ht">0,00 MAD</strong></div><div data-sum-rates></div><div class="inv-summary-row total"><span>${esc(t.totalTTC)}</span><strong data-sum="ttc">0,00 MAD</strong></div></div>
-        <p class="inv-assurance">${esc(t.previewNote)}</p></aside></div>
-      <div class="inv-form-actions"><button data-activation=write class="inv-btn" type="button" data-inv-act="save-draft">${esc(cmp.id && cmp.status !== 'draft' ? t.save : t.saveDraft)}</button>${showIssue ? `<button class="inv-btn primary" type="button" data-inv-act="issue-composer">${ICON.check}${esc(issueLabel)}</button>` : ''}</div>`;
+    composerModule.renderComposerForm({overlay, cmp, st, locked, isQuote, title, book, t, dis, showIssue, issueLabel, termsOptions, METHODS, renderSellerLogo, esc, ICON, seller});
     paintLines(st.lines);
     if (restored) toast(t.restored);
     show('compose'); updateComposer(); checkIce();
     requestAnimationFrame(() => (locked ? overlay.querySelector('.inv-line-row input') : F('name'))?.focus());
   }
 
-  function composerPayload() {
-    const t = fv('terms');
-    const lines = apiLines(readLines());
-    const payload = {
-      type: cmp.type,
-      customer: {name: fv('name'), address: fv('addr'), ice: iceCompact(fv('ice')), if: fv('if'), email: fv('email'), phone: fv('phone'), clientId: cmp.clientId || ''},
-      lines, issueDate: fv('issue') || today(), note: fv('note'), exemptionMention: fv('exempt'),
-    };
-    if (cmp.id) payload.id = cmp.id;
-    if (cmp.type === 'quote') payload.validUntil = fv('valid') || shift(30);
-    else {
-      if (t === 'custom') payload.dueDate = fv('due'); else payload.termsDays = Number(t || 0);
-      payload.paymentMethod = fv('method');
-    }
-    return payload;
-  }
-  function formSnapshot() {
-    return {pick: '', kind: fv('kind'), name: fv('name'), addr: fv('addr'), ice: fv('ice'), if: fv('if'), email: fv('email'), phone: fv('phone'), clientId: cmp.clientId || '',
-      issue: fv('issue'), terms: fv('terms'), due: fv('due'), valid: fv('valid'), method: fv('method'), note: fv('note'), exempt: fv('exempt'), lines: readLines()};
-  }
+  function composerPayload(...args) { return composerModule.composerPayload({apiLines, cmp, fv, iceCompact, readLines, shift, today}, this, args); }
+  function formSnapshot(...args) { return composerModule.formSnapshot({cmp, fv, readLines}, this, args); }
   function scheduleAutosave() {
     clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(() => { if (overlay && cmp && currentView === 'compose') { const kept = lsSet(draftKey(), JSON.stringify({savedAt: Date.now(), state: formSnapshot()})); const note = overlay.querySelector('[data-inv-autosave]'); if (note) { note.textContent = kept ? T().autosave : T().autosaveError; note.setAttribute('role', kept ? 'status' : 'alert'); } } }, 500);
   }
-  function checkIce() {
-    const el = F('ice'), msg = overlay?.querySelector('[data-ice-msg]'); if (!el || !msg) return null;
-    const t = T(), p = el.disabled ? null : iceProblem(el.value);
-    el.toggleAttribute('aria-invalid', !!p); if (p) el.setAttribute('aria-invalid', 'true');
-    msg.className = 'inv-field-msg' + (p ? ' err' : '');
-    msg.textContent = p ? ({digits: t.iceDigits, length: t.iceLength, checksum: t.iceChecksum}[p] || t.errIce) : (iceCompact(el.value) ? t.iceOk : '');
-    return p;
-  }
-  function updateComposer() {
-    if (!overlay || currentView !== 'compose') return;
-    const t = T();
-    const rows = readLines(), lines = apiLines(rows);
-    overlay.querySelectorAll('.inv-line-row').forEach((row, i) => {
-      const r = rows[i];
-      row.querySelector('[data-l="total"]').textContent = money(lineHT({qty: num(r.qty), unitHT: toCents(r.unit), discountPct: Math.min(100, num(r.disc))}));
-    });
-    const sums = computeTotals(lines);
-    overlay.querySelector('[data-sum="ht"]').textContent = money(sums.htCents) + ' MAD';
-    overlay.querySelector('[data-sum="ttc"]').textContent = money(sums.ttcCents) + ' MAD';
-    overlay.querySelector('[data-sum-rates]').innerHTML = sums.byRate.map(r => `<div class="inv-summary-row" data-rate="${r.rate}"><span>${esc(tpl(t.vatOn, {rate: r.rate, base: money(r.baseCents)}))}</span><strong>${money(r.vatCents)} MAD</strong></div>`).join('');
-    const wrap = overlay.querySelector('[data-exempt-wrap]');
-    if (wrap) wrap.hidden = !lines.some(l => l.vatRate === 0);
-    const dueWrap = overlay.querySelector('[data-due-wrap]');
-    if (dueWrap) {
-      const terms = fv('terms'), input = F('due');
-      if (terms === 'custom') { input.disabled = false; }
-      else { input.disabled = true; input.value = shift(Number(terms || 0), fv('issue') || today()); }
-    }
-  }
+  function checkIce(...args) { return composerModule.checkIce({F, T, iceCompact, iceProblem, overlay}, this, args); }
+  function updateComposer(...args) { return composerModule.updateComposer({F, T, apiLines, computeTotals, currentView, esc, fv, lineHT, money, num, overlay, readLines, shift, toCents, today, tpl}, this, args); }
 
-  function validateComposer(forIssue) {
-    const t = T(), p = composerPayload();
-    if (!p.customer.name) { toast(t.errCustomer); F('name')?.focus(); return null; }
-    if (checkIce()) { toast(t.errIce); F('ice')?.focus(); return null; }
-    if (!p.lines.some(l => l.description && l.qty > 0)) { toast(t.errLines); return null; }
-    if (forIssue && p.lines.some(l => l.vatRate === 0) && !p.exemptionMention && !p.note) { toast(t.errExempt); F('exempt')?.focus(); return null; }
-    return p;
-  }
+  function validateComposer(...args) { return composerModule.validateComposer({F, T, checkIce, composerPayload, toast}, this, args); }
   function setBusy(on) {
     busy = on;
     overlay?.querySelectorAll('[data-inv-act="save-draft"],[data-inv-act="issue-composer"]').forEach(b => { b.disabled = on; b.setAttribute('aria-busy', String(on)); });
@@ -1357,103 +951,16 @@
 
   /* ── impression A4 (gabarit propre au module, jamais KiwiInvoice.html) ─── */
   /* print:start */
-  function termsText(doc) {
-    const t = T();
-    if (doc.type === 'quote') return '';
-    let days = doc.termsDays;
-    if ((days == null || days === '') && doc.issueDate && doc.dueDate) days = Math.round((new Date(doc.dueDate + 'T12:00:00') - new Date(doc.issueDate + 'T12:00:00')) / 86400000);
-    if (days == null || days === '' || !isFinite(days)) return '';
-    return Number(days) === 0 ? t.t0 : (t['t' + days] || tpl(t.t30.replace(/\d+/, '{n}'), {n: days}));
-  }
-  function printable(doc, extra) {
-    /* Pas KiwiInvoice.html : ce gabarit-là est celui d'une vente de comptoir
-     * acquittée (« Payée », prix TTC). Un document saisi ici a des prix HT, une
-     * échéance et peut être impayé : il garde son propre gabarit. */
-    extra = extra || {};
-    const t = T(), draft = doc.status === 'draft', type = doc.type;
-    const seller = doc.seller && !draft ? doc.seller : getSeller(), biz = seller.name || businessName();
-    const tot = doc.totals && doc.totals.byRate ? doc.totals : computeTotals(doc.lines);
-    const rtl = lang() === 'ar';
-    const title = {invoice: {fr: 'FACTURE', en: 'INVOICE', ar: 'فاتورة'}, quote: {fr: 'DEVIS', en: 'QUOTE', ar: 'عرض سعر'}, credit_note: {fr: 'AVOIR', en: 'CREDIT NOTE', ar: 'إشعار دائن'}}[type][lang()] || 'FACTURE';
-    const sellerBlock = [
-      `<strong>${esc(seller.legalName || biz)}</strong>`,
-      [seller.address, seller.city].filter(Boolean).map(esc).join(', '),
-      seller.phone ? `Tél : ${esc(seller.phone)}` : '',
-      seller.email ? esc(seller.email) : '',
-      seller.ice ? `<b>ICE :</b> ${esc(seller.ice)}` : '',
-      (seller.if || seller.fiscal) ? `<b>IF :</b> ${esc(seller.if || seller.fiscal)}` : '',
-      seller.rc ? `<b>RC :</b> ${esc(seller.rc)}` : '',
-      seller.patente ? `<b>Patente :</b> ${esc(seller.patente)}` : '',
-    ].filter(Boolean).join('<br>');
-    const c = doc.customer || {};
-    const customerBlock = [
-      `<strong>${esc(c.name || '')}</strong>`, c.address ? esc(c.address) : '',
-      c.ice ? `<b>ICE :</b> ${esc(c.ice)}` : '', c.if ? `<b>IF :</b> ${esc(c.if)}` : '',
-      c.email ? esc(c.email) : '', c.phone ? esc(c.phone) : '',
-    ].filter(Boolean).join('<br>');
-    const numberText = draft || !doc.number ? '' : esc(doc.number);
-    const dates = [`${esc(t.issuedOn)} : ${esc(dmy(doc.issueDate))}`];
-    if (type === 'invoice' && doc.dueDate) dates.push(`${esc(t.dueOn)} : ${esc(dmy(doc.dueDate))}`);
-    if (type === 'quote' && doc.validUntil) dates.push(`${esc(t.validOn)} : ${esc(dmy(doc.validUntil))}`);
-    const rows = (doc.lines || []).map(l => `<tr><td>${esc(l.description)}</td><td>${esc(String(l.qty).replace('.', ','))}</td><td>${money(l.unitHT)}</td><td>${Number(l.discountPct) ? esc(String(l.discountPct).replace('.', ',')) + ' %' : '·'}</td><td>${Number(l.vatRate)} %</td><td>${money(lineHT(l))}</td></tr>`).join('');
-    const vatRows = tot.byRate.map(r => `<div class="row"><span>${esc(tpl(t.vatOn, {rate: r.rate, base: money(r.baseCents)}))}</span><b>${money(r.vatCents)} MAD</b></div>`).join('');
-    const paid = extra.paidCents != null ? extra.paidCents : 0;
-    const settle = type === 'invoice' && !draft && paid > 0 ? `<div class="row"><span>${esc(t.paid)}</span><b>${money(paid)} MAD</b></div><div class="row"><span>${esc(t.balance)}</span><b>${money(extra.balanceCents != null ? extra.balanceCents : Math.max(0, tot.ttcCents - paid))} MAD</b></div>` : '';
-    const creditRef = type === 'credit_note' ? `<div class="mention">${esc(extra.originalDate ? tpl(t.creditOnDate, {n: doc.originalNumber || '', date: dmy(extra.originalDate)}) : tpl(t.creditOn, {n: doc.originalNumber || ''}))}${doc.reason ? `<br>${esc(t.reason)} : ${esc(doc.reason)}` : ''}</div>` : '';
-    const terms = termsText(doc), method = doc.paymentMethod ? t[doc.paymentMethod] || doc.paymentMethod : '';
-    const payLine = [terms ? `${esc(t.terms)} : ${esc(terms)}` : '', method ? `${esc(t.method)} : ${esc(method)}` : ''].filter(Boolean).join(' · ');
-    const mark = {fr: 'BROUILLON · sans valeur fiscale', en: 'DRAFT · no tax value', ar: 'مسودة · دون قيمة جبائية'}[lang()] || 'BROUILLON · sans valeur fiscale';
-    return `<!doctype html><html lang="${esc(lang())}" dir="${rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><base href="${esc(document.baseURI)}"><title>${esc(title)} ${numberText || esc(t.draftNo)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box;font-style:normal}body{font:12.5px "Inter Tight",Arial,"IBM Plex Sans Arabic",sans-serif;color:#102019;margin:0;position:relative}.top{display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #087653;padding-bottom:20px}.logo img{display:block;width:auto;height:32px}.meta{color:#69746e;line-height:1.6;margin-top:7px}h1{margin:0;font-size:26px;letter-spacing:.02em}.num{font-size:15px;font-weight:600;margin-top:4px}.head{text-align:${rtl ? 'left' : 'right'}}.parties{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:24px 0}.label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#777;margin-bottom:8px}.party{line-height:1.55}.party strong{font-size:13px}table{width:100%;border-collapse:collapse}th{background:#f1f6f3;text-align:${rtl ? 'right' : 'left'};color:#65716b;padding:9px 8px;font-size:11px}td{padding:10px 8px;border-bottom:1px solid #e2e8e4}tr{break-inside:avoid}td:first-child{overflow-wrap:anywhere;unicode-bidi:plaintext}th:not(:first-child),td:not(:first-child){text-align:${rtl ? 'left' : 'right'}}.totals{width:320px;margin-top:18px;margin-inline-start:auto;break-inside:avoid}.row{display:flex;justify-content:space-between;gap:12px;padding:6px 0}.row.total{border-top:2px solid #087653;margin-top:8px;padding-top:12px;font-size:17px;font-weight:700;color:#087653}.note,.mention{margin-top:22px;background:#f3f7f5;border-${rtl ? 'right' : 'left'}:3px solid #087653;padding:12px 14px;color:#58645e;line-height:1.5}.pay{margin-top:18px;color:#58645e}.watermark{position:fixed;top:42%;left:0;right:0;text-align:center;font-size:54px;font-weight:600;letter-spacing:.06em;color:rgba(180,54,41,.16);transform:rotate(-18deg);pointer-events:none}.foot{position:fixed;bottom:0;color:#849089;font-size:10px}</style></head><body>${draft ? `<div class="watermark">${esc(mark)}</div>` : ''}<div class="top"><div><div class="logo">${renderSellerLogo(seller, 32)}</div><div class="meta"><strong>${esc(biz)}</strong></div></div><div class="head"><h1>${esc(title)}</h1>${numberText ? `<div class="num">${numberText}</div>` : ''}<div class="meta">${dates.join('<br>')}</div></div></div>${creditRef}<div class="parties"><div><div class="label">${esc(t.from)}</div><div class="party">${sellerBlock}</div></div><div><div class="label">${esc(t.billTo)}</div><div class="party">${customerBlock}</div></div></div><table><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unitHT)}</th><th>${esc(t.discount.replace(/\s*%/, ''))}</th><th>${esc(t.vat)} %</th><th>${esc(t.lineHT)}</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div class="row"><span>${esc(t.totalHT)}</span><b>${money(tot.htCents)} MAD</b></div>${vatRows}<div class="row total"><span>${esc(t.totalTTC)}</span><span>${money(tot.ttcCents)} MAD</span></div>${settle}</div>${doc.exemptionMention ? `<div class="mention">${esc(t.exemptionMention)} : ${esc(doc.exemptionMention)}</div>` : ''}${payLine ? `<div class="pay">${payLine}</div>` : ''}${doc.note ? `<div class="note">${esc(doc.note)}</div>` : ''}<div class="foot">${esc(biz)} · ${esc(title)} ${numberText || esc(t.draftNo)}</div><script>addEventListener('load',()=>setTimeout(()=>print(),150))<\/script></body></html>`;
-  }
+  function termsText(...args) { return printModule.termsText({T, tpl}, this, args); }
+  function printable(...args) { return printModule.printable({T, businessName, computeTotals, dmy, esc, getSeller, lang, lineHT, money, renderSellerLogo, termsText, tpl}, this, args); }
   /* print:end */
-  function printDocument() {
-    if (!detail) return;
-    const d = detail, doc = d.doc;
-    const extra = {paidCents: Math.max(0, (doc.totals?.ttcCents || 0) - d.balanceCents), balanceCents: d.balanceCents, originalDate: d.original ? d.original.issueDate : ''};
-    if (doc.type === 'invoice') extra.paidCents = d.payments.reduce((s, p) => s + (Number(pick(p, 'amountCents', 'amount_cents')) || 0), 0);
-    const win = window.open('', '_blank'); if (!win) { toast(T().printBlocked); return; }
-    win.document.open(); win.document.write(printable(doc, extra)); win.document.close();
-    /* Un document est du papier, pas une extension du thème du tableau de bord :
-       la page et ses marges restent claires même si la fenêtre mère est sombre. */
-    win.document.documentElement.style.cssText += ';color-scheme:light;background:#fff;color:#102019';
-    if (win.document.body) win.document.body.style.cssText += ';background:#fff;color:#102019';
-  }
+  function printDocument(...args) { return printModule.printDocument({T, detail, pick, printable, toast}, this, args); }
 
   /* ── export CSV de l'onglet courant ───────────────────────────────────── */
   /* ICE et numéros restent du texte : un tableur transforme 001561191000066 en
      1,56119E+14. ="…" force le texte, mais seulement sur des chiffres vérifiés. */
-  function csvCell(v, asText) {
-    let s = String(v == null ? '' : v);
-    if (asText && /^\d+$/.test(s)) return '="' + s + '"';
-    /* Même cité, un tableur exécute une cellule qui commence par = + - @ : les
-       noms de clients sont des données non fiables. */
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-    return '"' + s.replace(/"/g, '""') + '"';
-  }
-  function exportCsv() {
-    const t = T(), rows = visibleRows();
-    let head, body;
-    if (tab === 'sales') {
-      head = [t.colNo, t.colCustomer, t.colIssued, t.colDue, t.colStatus, t.colAmount];
-      body = rows.map(r => [r.id, r.customer, r.issueDate, r.dueDate, t.stPaid, csvMoney(Math.round((Number(r.total) || 0) * 100))]);
-    } else if (tab === 'quote') {
-      head = [t.colNo, t.colCustomer, 'ICE', t.colIssued, t.colValid, t.colStatus, t.colAmount];
-      body = rows.map(r => [NO_OF(r), r.customer.name, r.customer.ice, r.issueDate, r.validUntil || r.dueDate, statusLabel(r.type, r.displayStatus), csvMoney(r.ttcCents)]);
-    } else if (tab === 'credit_note') {
-      head = [t.colNo, t.docInvoice, t.colCustomer, 'ICE', t.colIssued, t.colStatus, t.colAmount];
-      body = rows.map(r => [NO_OF(r), r.originalNumber, r.customer.name, r.customer.ice, r.issueDate, statusLabel(r.type, r.displayStatus), csvMoney(r.ttcCents)]);
-    } else {
-      head = [t.colNo, t.colCustomer, 'ICE', t.colIssued, t.colDue, t.colStatus, t.colAmount, t.balance];
-      body = rows.map(r => [NO_OF(r), r.customer.name, r.customer.ice, r.issueDate, r.dueDate, statusLabel(r.type, r.displayStatus), csvMoney(r.ttcCents), csvMoney(r.balanceCents)]);
-    }
-    const iceCol = head.indexOf('ICE');
-    const csv = '﻿' + [head].concat(body).map((row, ri) => row.map((v, ci) => csvCell(v, ri > 0 && ci === iceCol && iceCol >= 0)).join(';')).join('\r\n');
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'kiwi-' + ({invoice: 'factures', quote: 'devis', credit_note: 'avoirs', sales: 'factures-vente'}[tab]) + '-' + today() + '.csv';
-    a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); toast(t.exported);
-    return csv;
-  }
+  function csvCell(...args) { return historyModule.csvCell({}, this, args); }
+  function exportCsv(...args) { return historyModule.exportCsv({NO_OF, T, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, this, args); }
 
   /* ── événements ───────────────────────────────────────────────────────── */
   function setTab(next) {
@@ -1552,10 +1059,11 @@
   function install() {
     window.Kiwi = window.Kiwi || {};
     window.Kiwi.handlers = window.Kiwi.handlers || {};
-    window.Kiwi.handlers['invoicing'] = open;
-    window.KiwiInvoicing = {open, list: () => TYPES.reduce((a, ty) => a.concat(cache[ty].map(x => Object.assign({}, x))), []), version: '2.0.0'};
+    liveOpen = open;
+    window.KiwiInvoicing.list = () => TYPES.reduce((a, ty) => a.concat(cache[ty].map(x => Object.assign({}, x))), []);
     updatePill();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, {once: true}); else install();
   window.addEventListener('kiwi:langchange', updatePill);
+  });
 })();

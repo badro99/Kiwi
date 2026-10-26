@@ -1,9 +1,10 @@
+import { ticketsTestSource } from './tickets-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const read = p => fs.readFileSync(p, 'utf8');
 function fn(file, name, end, globals = {}) {
-  const source = read(file); const start = source.indexOf('  function ' + name + '(');
+  const source = file === 'assets/tickets.js' ? ticketsTestSource() : read(file); const start = source.indexOf('  function ' + name + '(');
   assert.ok(start >= 0, name);
   return vm.runInNewContext(source.slice(start, source.indexOf(end, start)) + '\n' + name, globals);
 }

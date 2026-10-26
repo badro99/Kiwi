@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
+const sharedRules = require('./shared-rules-source.cjs');
 const { declaration } = require('./js-declarations.cjs');
 const caisse = require('./caisse-test-source.cjs');
 const root = path.resolve(__dirname, '..');
@@ -15,7 +16,7 @@ function decl(file, name) {
   return declaration(source.slice(match.index), name);
 }
 function load(file, name, doubles = {}) {
-  return vm.runInNewContext(decl(file, name) + `\n;${name}`, doubles);
+  return vm.runInNewContext(sharedRules(read(file)) + '\n' + decl(file, name) + `\n;${name}`, doubles);
 }
 const classes = () => ({ add() {}, remove() {}, toggle() {} });
 const esc = s => String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
@@ -99,7 +100,7 @@ const probes = {
     assert.ok(html.includes('till</span>') && html.includes('dashboard</span>'));
   },
   'critical-flow'() {
-    const S = {}; const parse = load('assets/onboarding.js', 'parsedDailyGoal', { S });
+    const S = {}; const parse = load('assets/onboarding-data.js', 'parsedDailyGoal', { S });
     for (const [input, expected] of [['', 0], ['12,50', 12.5], ['12.345', null], ['-1', null], ['Infinity', null], ['1000000001', null]]) {
       S.dailyGoal = input; assert.equal(parse(), expected, `daily goal ${input}`);
     }

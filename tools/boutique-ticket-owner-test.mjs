@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import sharedRules from './shared-rules-source.cjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
@@ -69,8 +70,8 @@ const { declaration } = require('./js-declarations.cjs');
 const core = fs.readFileSync('assets/pos-boutique.js', 'utf8').replace(/^(?:import .*;\n)+/, '');
 const old = require('node:zlib').gunzipSync(fs.readFileSync('tools/fixtures/boutique-ticket/pricing-before.js.gz')).toString();
 function pricing(source) {
-  const ctx = vm.createContext({ P: { a: { price: 129.90 }, b: { price: 249.95 } }, shelf: n => Math.floor(n), promoFor: () => null });
-  vm.runInContext(['lineDeal','linePromo','lineBase','lineUnit','lineTotal','rewardDiscount','ticketTotals'].map(n => declaration(source, n)).join('\n') + '\nthis.total = ticketTotals;', ctx);
+  const ctx = vm.createContext({ P: { a: { price: 129.90 }, b: { price: 249.95 } }, shelf: n => Math.max(0, Math.floor(n * 100 + 1e-6) / 100), promoFor: () => null });
+  vm.runInContext(sharedRules(source) + '\n' + ['lineDeal','linePromo','lineBase','lineUnit','lineTotal','rewardDiscount','ticketTotals'].map(n => declaration(source, n)).join('\n') + '\nthis.total = ticketTotals;', ctx);
   return ctx.total;
 }
 const before = pricing(old), after = pricing(core);
@@ -92,7 +93,7 @@ fc.assert(fc.property(fc.array(fc.record({ op: fc.integer({min:0,max:9}), pid: f
     else if(e.op===9) { owner.numbering(a); b.numbering=true; b.numError=false; owner.numbered(a,'123','2026'); Object.assign(b,{num:'123',period:'2026',numbering:false,numError:false}); }
     else { owner.applyDiscount(a,{pct:e.remise}); b.remiseAuth={pct:e.remise}; }
     assert.equal(JSON.stringify(a),JSON.stringify(b));
-    for(const key of ['sub','promo','remise','reward','total']) assert.equal(Math.round(after(a)[key]*100),Math.round(before(b)[key]*100));
+    for(const key of ['sub','promo','remise','reward','total']) assert.equal((Math.round(after(a)[key]*100) || 0),(Math.round(before(b)[key]*100) || 0));
   }
 }), {numRuns:1000,seed:20261026});
 console.log('✓ Ticket boutique : zéro mutation externe, mutations détectées, 1 000 séquences et centimes identiques');

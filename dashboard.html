@@ -190,7 +190,7 @@
       js("assets/kit/strings/onboarding.fr.js?v=1") +
       js("assets/kit/strings/onboarding.en.js?v=1") +
       js("assets/kit/strings/onboarding.ar.js?v=1") +
-      js("assets/kit/dash-onboarding.js?v=4") +
+      js("assets/kit/dash-onboarding.js?v=5") +
       /* The desktop layout: the kit's sidebar, Home's goal card and grounds. */
       js("assets/kit/dash-desktop.js?v=9")
     );
@@ -1128,7 +1128,7 @@
 
 
 <script src="assets/invoice.js?v=20" defer></script>
-<script src="assets/invoicing.js?v=23" defer></script>
+<script src="assets/invoicing.js?v=30" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=6" defer></script>
 <script src="assets/merchant-health.js?v=5" defer></script>
@@ -1209,8 +1209,8 @@
 <script src="assets/kit/motion.js?v=1" defer></script>
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=11" defer></script>
-<script src="assets/onboarding-data.js?v=4" defer></script>
-<script src="assets/onboarding.js?v=2101" defer></script>
+<script src="assets/onboarding-data.js?v=8" defer></script>
+<script src="assets/onboarding.js?v=2105" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -1247,7 +1247,7 @@
 <script src="assets/printer-bridge.js?v=36" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-<script src="assets/boutique-catalog-parts.js?v=8" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog-parts.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/boutique-catalog.js?v=17" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
@@ -1261,8 +1261,8 @@
 <script src="assets/agent-action-center.js?v=4" defer fetchpriority="low"></script>
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
      here; the caisse only consumes the resulting prices. -->
-<script src="assets/promo-rules.js?v=4" defer></script>
-<script src="assets/promos.js?v=12" defer fetchpriority="low"></script>
+<script src="assets/promo-rules.js?v=5" defer></script>
+<script src="assets/promos.js?v=13" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/discount-policy.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
@@ -1270,7 +1270,7 @@
 <!-- Registre de stock append-only : mouvements locaux immédiats, synchronisés
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
      par des réceptions et ajustements traçables chez un vrai commerçant. -->
-<script src="assets/inventory-ledger.js?v=15" defer fetchpriority="low"></script>
+<script src="assets/inventory-ledger.js?v=16" defer fetchpriority="low"></script>
 <script src="assets/maison-stock-movements.js?v=6" defer fetchpriority="low"></script>
 <!-- Heures d'ouverture · LA source unique des horaires d'un établissement, et
      l'écran qui les saisit. Tout ce qui a besoin de savoir si le commerce est
@@ -1302,16 +1302,16 @@
      ils lisent le registre ; AVANT finance.js, qui affiche le résultat. -->
 <script src="assets/charges-engine.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/charges.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/inventory-consumption.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/inventory-consumption.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=4" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js?v=26" defer fetchpriority="low"></script>
+<script src="assets/clients-store.js?v=27" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 
 
 <script src="assets/clients-directory.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=11" defer fetchpriority="low"></script>
-<script src="assets/menu-catalog.js?v=35" defer fetchpriority="low"></script>
+<script src="assets/menu-catalog.js?v=36" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1338,7 +1338,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=23"></script>
+<script src="assets/pages/dashboard-startup.js?v=26"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=13">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=16" defer fetchpriority="low"></script>

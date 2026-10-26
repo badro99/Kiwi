@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+import invoicingSourceHelper from './invoicing-test-source.cjs';
 /* Facturation · une longue facture mêlant arabe et français s'imprime en PDF
  * lisible, page après page.
  *
@@ -37,7 +37,7 @@ const PDFTOTEXT = ['/opt/homebrew/bin/pdftotext', '/usr/local/bin/pdftotext', '/
 if (!PDFTOTEXT) { console.log('○ skip: pdftotext (poppler) unavailable, PDF pagination not checked'); process.exit(process.env.CI ? 1 : 0); }
 
 /* Le gabarit réel, extrait comme dans invoicing-print-test.mjs. */
-const src = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
+const src = invoicingSourceHelper.invoicingTestSource(ROOT);
 const slice = (from, to) => {
   const a = src.indexOf(from), b = src.indexOf(to, a + from.length);
   if (a < 0 || b < 0) throw new Error('repère introuvable : ' + from + ' … ' + to);

@@ -80,7 +80,7 @@ const clotureBlock = extractBody(
 const drawerBlock = extractBody(
   caisseHtml,
   'function handoverGapCents() {',
-  'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC + handoverGapCents());\n    }'
+  'return major(KiwiDrawerReportModel.expectedCashCents(minor(openingFloat), t.cashC, t.cashTipsC, t.movesInC, t.movesOutC, handoverGapCents()));\n    }'
 );
 
 // Extract handover block through window.KiwiCaisseAccounting definition

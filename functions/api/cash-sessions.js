@@ -1,3 +1,4 @@
+import { expectedCashCents } from './_rules-day-report.js';
 import {
   entitledMerchant, isTillFor, isTerminalFor, json, readCookie,
   TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
@@ -213,7 +214,7 @@ export async function onRequestPost({ request, env }) {
           } catch (_) { part = 0; }
           cashOut += Math.min(part, whole);   // seule la part espèces sort du tiroir
         });
-        floorCents -= cashOut;
+        floorCents = expectedCashCents(floorCents, 0, 0, 0, cashOut, 0);
         if (Number.isFinite(floorCents) && floorCents > expectedFinal) {
           expectedFinal = Math.min(floorCents, MAX_CENTS);
           if (counted != null) gapFinal = counted - expectedFinal;

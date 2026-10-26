@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { onboardingTestSource } from './onboarding-test-source.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * INSTALLATION · CE QUE L'ASSISTANT ET LA FIN DE L'ASSISTANT AFFIRMENT
  *
@@ -22,7 +23,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OB = readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
+const OB = onboardingTestSource();
 const DATA = readFileSync(path.join(ROOT, 'assets/onboarding-data.js'), 'utf8');
 const dataApi = (await import('../assets/onboarding-data.js')).default;
 const ENT = readFileSync(path.join(ROOT, 'assets/entitlements-v2.js'), 'utf8');
