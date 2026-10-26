@@ -417,5 +417,29 @@ await strict('without barcode.js, two devices labelling items in the same millis
     assert.equal(codes.at(-1).slice(2, 8), codes[0].slice(2, 8), 'the device tag is stable across reloads');
   }), 200);
 
+/* Returning device at the exact 180-day retention boundary. Within the
+ * window the deletion wins; at/after expiry the old record can return. This
+ * explicitly documents the bounded offline guarantee without changing it. */
+await strict('tombstone retention boundary with a stale returning device', fc.property(
+  fc.constantFrom(-1, 0, 1), offset => {
+    const realNow = Date.now;
+    const now = realNow();
+    Date.now = () => now;
+    try {
+      const stale = shop([3, 3, 3, 3]);
+      const deleted = clone(stale);
+      const at = now - 180 * 86400000 + offset;
+      deleted.products = deleted.products.filter(p => p.id !== 'p0');
+      deleted.variants = deleted.variants.filter(v => v.productId !== 'p0');
+      deleted.removed = {p0: at, v0: at, v1: at};
+      const stored = server.sanitize(deleted);
+      for (const joined of [merge(stored, stale), merge(stale, stored)]) {
+        assert.equal(joined.products.some(p => p.id === 'p0'), offset <= 0);
+        assert.equal(joined.variants.some(v => v.id === 'v0'), offset <= 0);
+        assert.equal(!!joined.removed.p0, offset > 0);
+      }
+    } finally { Date.now = realNow; }
+  }), 30);
+
 console.log(`${failed ? '✗' : '✓'} catalog-merge-properties-test · ${passed} held, ${known} known, ${failed} failed`);
 process.exit(failed ? 1 : 0);

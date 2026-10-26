@@ -234,11 +234,12 @@ export async function alertStaff(env, ticket, triage) {
 /* Une seule alerte par demande, même si le texte et la capture d'écran sont triés
  * en parallèle : la colonne triage_alert se réserve d'abord (changes === 1), puis
  * reçoit le résultat réel. Si le worker meurt entre les deux, la console lit
- * « alerte non confirmée », jamais « transmise ». */
-async function claimAlert(env, ticketId, now) {
+ * « alerte non confirmée », jamais « transmise ». Le prochain tri automatique
+ * reprend la réservation après expiration du bail de deux minutes. */
+export async function claimAlert(env, ticketId, now) {
   try {
-    const r = await env.DB.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ? AND triage_alert IS NULL')
-      .bind(JSON.stringify({ state: 'unconfirmed', ts: now }), ticketId).run();
+    const r = await env.DB.prepare(`UPDATE support_tickets SET triage_alert = ? WHERE id = ? AND (triage_alert IS NULL OR (json_extract(triage_alert, '$.state') = 'unconfirmed' AND COALESCE(json_extract(triage_alert, '$.ts'), 0) < ?))`)
+      .bind(JSON.stringify({ state: 'unconfirmed', ts: now }), ticketId, now - STALE_ALERT_MS).run();
     return Number(r && r.meta && r.meta.changes) === 1;
   } catch (_) { return false; }
 }
@@ -278,11 +279,12 @@ export async function triageSupportTicket(env, ticket, opts = {}) {
         .bind(JSON.stringify(triage), ticket.id).run();
     } catch (_) { return { status: 'failed', reason: 'store-failed' }; }
 
-    if (triage.verdict === 'urgent' && await claimAlert(env, ticket.id, Date.now())) {
+    const claimTs = Date.now();
+    if (triage.verdict === 'urgent' && await claimAlert(env, ticket.id, claimTs)) {
       const alert = await alertStaff(env, ticket, triage);
       try {
-        await env.DB.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ?')
-          .bind(JSON.stringify(alert), ticket.id).run();
+        await env.DB.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ? AND triage_alert = ?')
+          .bind(JSON.stringify(alert), ticket.id, JSON.stringify({ state: 'unconfirmed', ts: claimTs })).run();
       } catch (_) { /* reste « non confirmée » : plus honnête qu'une fausse réussite */ }
       triage.alert = alert;
     }
@@ -356,6 +358,11 @@ function toBase64(buffer) {
  * la création de la demande). Retrie une fois, avec l'image. Ne lève jamais. */
 export async function triageAfterImage(env, ticket, mime, buffer) {
   try {
+    if (env && env.DB && IMAGE_TYPES.has(mime) && buffer && buffer.byteLength > MAX_IMAGE_BYTES) {
+      await env.DB.prepare('INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)')
+        .bind('msg-' + crypto.randomUUID(), ticket.id, 'triage', 'internal', 'kiwi', 'Capture conservée, mais non analysée : elle dépasse la limite de 4 Mio du tri automatique. Examiner la pièce jointe manuellement.', '', Date.now()).run();
+      return { status: 'skipped', reason: 'image-too-large' };
+    }
     if (!env || !env.AI || !IMAGE_TYPES.has(mime) || !buffer || buffer.byteLength > MAX_IMAGE_BYTES) return { status: 'skipped', reason: 'not-eligible' };
     const row = await env.DB.prepare('SELECT triage FROM support_tickets WHERE id = ?').bind(ticket.id).first();
     const prev = parseJson(row && row.triage, null);

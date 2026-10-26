@@ -135,7 +135,8 @@ if (gone.length) console.log(`  ! no longer dangling, drop from the baseline: ${
 
 // 3 · coupling of the very large files
 const size = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/file-size-baseline.json'), 'utf8'));
-const big = Object.keys(size.lines).filter((f) => f.endsWith('.js'));
+// Only browser globals belong to this inventory; server modules use imports.
+const big = Object.keys(size.lines).filter((f) => f.startsWith('assets/') && f.endsWith('.js'));
 const coupling = {};
 for (const file of big) {
   const src = inv.sources.get(file);

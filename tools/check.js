@@ -2095,6 +2095,7 @@ section('Whole-project regressions');
     'pressing-truth-test.mjs',
     'support-triage-test.mjs',
     'support-triage-retry-test.mjs',
+    'wave-n-server-test.mjs',
     'menu-analysis-test.mjs',
     'ai-vision-models-test.mjs',
     'menu-ledger-test.mjs',
