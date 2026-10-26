@@ -67,6 +67,10 @@
     "v": "3",
     "sha": "f9cecd4026f4dec6"
   },
+  "assets/ai-image-import.js": {
+    "v": "1",
+    "sha": "f0aaee7c5186a29c"
+  },
   "assets/ai-telemetry.js": {
     "v": "1",
     "sha": "ef69bf89a691a261"
@@ -652,8 +656,8 @@
     "sha": "898f42a9fc3842a6"
   },
   "assets/invoicing.js": {
-    "v": "19",
-    "sha": "a5fe6acf0c5eba0d"
+    "v": "20",
+    "sha": "80ddb827538b35b5"
   },
   "assets/kit/access-reset.js": {
     "v": "1",
@@ -716,8 +720,8 @@
     "sha": "fe0458c2c840a960"
   },
   "assets/kit/dash-onboarding.js": {
-    "v": "3",
-    "sha": "c43a7cb7469c994a"
+    "v": "4",
+    "sha": "c8d1eff0900ed3dd"
   },
   "assets/kit/dash-orders.js": {
     "v": "4",
@@ -1024,8 +1028,8 @@
     "sha": "afe2f50832ba5aa8"
   },
   "assets/menu-catalog.js": {
-    "v": "33",
-    "sha": "1db43f9510e0031e"
+    "v": "34",
+    "sha": "fd2e6f4790b95c95"
   },
   "assets/menu-i18n.js": {
     "v": "6",
@@ -1044,8 +1048,8 @@
     "sha": "c05c6cf94045f2a7"
   },
   "assets/menu-scan.js": {
-    "v": "4",
-    "sha": "a51729ae14f8b6d8"
+    "v": "5",
+    "sha": "f67886b4494886e5"
   },
   "assets/merchant-config.js": {
     "v": "282",
@@ -1076,16 +1080,16 @@
     "sha": "ac1fc9442873ae3e"
   },
   "assets/onboarding-data.js": {
-    "v": "2",
-    "sha": "2fe72f80e6bace90"
+    "v": "3",
+    "sha": "5aa783b8ea5051e5"
   },
   "assets/onboarding.css": {
     "v": "1",
     "sha": "164e9d8c308ea77e"
   },
   "assets/onboarding.js": {
-    "v": "2098",
-    "sha": "593088d0d73899fd"
+    "v": "2099",
+    "sha": "5a87102792efef75"
   },
   "assets/operations-ui.js": {
     "v": "26",
@@ -1188,8 +1192,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "10",
-    "sha": "40a56af29b6d4c0d"
+    "v": "11",
+    "sha": "61061d788d7bdc96"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "11",
@@ -1588,16 +1592,16 @@
     "sha": "9f843786854ceadd"
   },
   "assets/salle-scan.js": {
-    "v": "4",
-    "sha": "bd0b2e7eaeec501e"
+    "v": "5",
+    "sha": "560b0674a2798aa1"
   },
   "assets/scan-wedge.js": {
     "v": "1",
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "16",
-    "sha": "199e3528f000d70f"
+    "v": "17",
+    "sha": "c162e815563c52c9"
   },
   "assets/serveur-lang.js": {
     "v": "4",

@@ -12,8 +12,8 @@
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=12',
       'assets/ai-image-import.js?v=1',
-      'assets/menu-scan.js?v=4',
-      'assets/salle-scan.js?v=4',
+      'assets/menu-scan.js?v=5',
+      'assets/salle-scan.js?v=5',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel-rates.js?v=1',

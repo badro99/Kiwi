@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/onboarding-data.js?v=2',
+  '/assets/onboarding-data.js?v=3',
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',
@@ -64,7 +64,7 @@ var SHELL = [
   '/assets/serveur-shell.css?v=6',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/service.js?v=3',
-  '/assets/serveur-app.js?v=16',
+  '/assets/serveur-app.js?v=17',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -115,7 +115,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
   '/assets/pages/dashboard-startup.js?v=11',
-  '/assets/pages/dashboard-loader.js?v=10',
+  '/assets/pages/dashboard-loader.js?v=11',
   '/assets/hotel/model.js?v=2',
   '/assets/hotel/views.js?v=2',
   '/assets/hotel/groups.js?v=1',
@@ -158,7 +158,7 @@ var SHELL = [
   '/assets/view-link.js?v=2',
   '/assets/features.js?v=16',
   '/assets/invoicing.css?v=10',
-  '/assets/invoicing.js?v=19',
+  '/assets/invoicing.js?v=20',
   '/assets/order-qr.js?v=6',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -345,7 +345,7 @@ var SHELL = [
   '/assets/clients-book.js?v=45',
   '/assets/clients-directory.js?v=27',
   '/assets/customer-retention.js?v=11',
-  '/assets/menu-catalog.js?v=33',
+  '/assets/menu-catalog.js?v=34',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
@@ -369,8 +369,8 @@ var SHELL = [
   '/assets/catalog-import.js?v=12',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/ai-image-import.js?v=1',
-  '/assets/menu-scan.js?v=4',
-  '/assets/salle-scan.js?v=4',
+  '/assets/menu-scan.js?v=5',
+  '/assets/salle-scan.js?v=5',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=5',
@@ -426,7 +426,7 @@ var SHELL = [
   '/assets/kit/dash-compliance.js?v=1',
   '/assets/kit/dash-desktop.js?v=9',
   '/assets/kit/dash-ai.js?v=3',
-  '/assets/kit/dash-onboarding.js?v=3',
+  '/assets/kit/dash-onboarding.js?v=4',
   /* and forgot and reset password, behind kiwiSkin2027:access. */
   '/assets/icons/material/sprite.access.svg?v=1',
   '/assets/kit/strings/onboarding.fr.js?v=1',
