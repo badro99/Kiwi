@@ -112,7 +112,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=7',
+  '/assets/pages/dashboard-startup.js?v=8',
   '/assets/pages/dashboard-loader.js?v=8',
   '/assets/hotel/model.js?v=2',
   '/assets/hotel/views.js?v=2',
@@ -305,15 +305,15 @@ var SHELL = [
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promo-rules.js',
-  '/assets/promos.js?v=10',
+  '/assets/promo-rules.js?v=1',
+  '/assets/promos.js?v=11',
   '/assets/boutique-promos-dashboard.js?v=20',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=65',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
-  '/assets/menu-promos.js?v=4',
+  '/assets/menu-promos.js?v=5',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=4',
   '/assets/repeat-sale-guard.js?v=3',

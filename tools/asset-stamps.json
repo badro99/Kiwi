@@ -1036,8 +1036,8 @@
     "sha": "c5242d643d4a61f4"
   },
   "assets/menu-promos.js": {
-    "v": "4",
-    "sha": "979478461068af01"
+    "v": "5",
+    "sha": "c05c6cf94045f2a7"
   },
   "assets/menu-scan.js": {
     "v": "3",
@@ -1188,8 +1188,8 @@
     "sha": "5032ef2889120144"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "7",
-    "sha": "7fe4a2d11705b181"
+    "v": "8",
+    "sha": "2f2799748c19c3e9"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1479,9 +1479,13 @@
     "v": "4",
     "sha": "8fe99f62ce6934a8"
   },
+  "assets/promo-rules.js": {
+    "v": "1",
+    "sha": "642c24cb29958245"
+  },
   "assets/promos.js": {
-    "v": "10",
-    "sha": "736dbc0846c601fe"
+    "v": "11",
+    "sha": "2db1b47036316ad0"
   },
   "assets/pwa-update.js": {
     "v": "368",

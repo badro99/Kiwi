@@ -1,3 +1,4 @@
+import '../../../assets/promo-rules.js';
 import '../../../assets/menu-promos.js';
 const MenuPromos = () => globalThis.KiwiMenuPromos;
 import { merchantZone } from '../_business-day.js';

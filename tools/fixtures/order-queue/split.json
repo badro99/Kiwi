@@ -2,13 +2,13 @@
   {
     "file": "functions/api/order/_lib.js",
     "fixture": "_lib.js.gz",
-    "sha256": "a4deb5db83febc6ef4f99f23dd6498f9ac63d5540e4d417f9bae1cc7c7f857e6",
+    "sha256": "6220c55f205fe83c217185d3448155c9248680ca47e919a826a2518040198012",
     "prefix": "export { startOfDay, startOfWeek, nextOrderNumber } from './_guest-clock.js';\nexport { normTable, tableKey, planTableKey, floorPlanTables, KNOWN_TABLES_DAYS, servedTables } from './_guest-tables.js';\nexport { newSessionId, SESSION_ID, DESK_FRESH_MS, deskTouch, deskOpen } from './_guest-sessions.js';\nexport { hoursOpenAt, hoursClosed } from './_guest-hours.js';\nexport { priceOrder } from './_guest-pricing.js';\n",
     "segments": [
       {
         "file": "functions/api/order/_guest-clock.js",
-        "start": 1792,
-        "end": 5189,
+        "start": 1833,
+        "end": 5230,
         "header": "import { merchantZone, businessDate, businessBoundary, addBusinessDays, DEFAULT_ZONE } from '../_business-day.js';\n// Contrat : bornes civiles et allocation du numéro ; aucune écriture cuisine.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-clock */\n",
@@ -28,8 +28,8 @@
       },
       {
         "file": "functions/api/order/_guest-tables.js",
-        "start": 6036,
-        "end": 9486,
+        "start": 6077,
+        "end": 9527,
         "header": "// Contrat : normalisation et lecture des tables connues ; aucune mutation.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-tables */\n",
@@ -49,8 +49,8 @@
       },
       {
         "file": "functions/api/order/_guest-sessions.js",
-        "start": 11045,
-        "end": 13847,
+        "start": 11086,
+        "end": 13888,
         "header": "// Contrat : capacités de session et présence du comptoir dans order_desk uniquement.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-sessions */\n",
@@ -69,8 +69,8 @@
       },
       {
         "file": "functions/api/order/_guest-hours.js",
-        "start": 13847,
-        "end": 17488,
+        "start": 13888,
+        "end": 17529,
         "header": "import { DateTimeFormat } from '../_cached-clock.js';\nimport { merchantZone } from '../_business-day.js';\n// Contrat : lecture des horaires publiés ; aucune mutation.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-hours */\n",
@@ -88,12 +88,13 @@
       },
       {
         "file": "functions/api/order/_guest-pricing.js",
-        "start": 17488,
-        "end": 39883,
-        "header": "import '../../../assets/menu-promos.js';\nconst MenuPromos = () => globalThis.KiwiMenuPromos;\nimport { merchantZone } from '../_business-day.js';\n// Contrat : catalogue publié et lignes entrantes vers prix canoniques ; lit le catalogue menus, jamais les commandes ni les sessions.\n",
+        "start": 17529,
+        "end": 39924,
+        "header": "import '../../../assets/promo-rules.js';\nimport '../../../assets/menu-promos.js';\nconst MenuPromos = () => globalThis.KiwiMenuPromos;\nimport { merchantZone } from '../_business-day.js';\n// Contrat : catalogue publié et lignes entrantes vers prix canoniques ; lit le catalogue menus, jamais les commandes ni les sessions.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-pricing */\n",
         "imports": [
+          "import '../../../assets/promo-rules.js';",
           "import '../../../assets/menu-promos.js';",
           "import { merchantZone } from '../_business-day.js';"
         ],

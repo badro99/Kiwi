@@ -66,5 +66,5 @@ for (const [core, part] of [['dateRange', 'daterange/renderers'], ['agent', 'age
   assert.ok(html.indexOf('assets/' + part + '.js') < html.indexOf('<script src="assets/' + core + '.js'), 'factory available before synchronous public APIs');
 }
 // Les découpages interactive et venues ajoutent chacun deux parties, celui de l'imprimante une (transports.js).
-assert.equal([...html.matchAll(/<script\b[^>]*\bsrc=/g)].length, 117, 'dashboard script count after merged splits');
-console.log('PASS core split: both originals reconstructed byte for byte; factories are inert; parts precached; 117 shell scripts');
+assert.equal([...html.matchAll(/<script\b[^>]*\bsrc=/g)].length, 118, 'dashboard script count after merged splits');
+console.log('PASS core split: both originals reconstructed byte for byte; factories are inert; parts precached; 118 shell scripts');
