@@ -25,8 +25,9 @@ for (const [, url, attributes] of startupTags) {
 assert.ok(read('dashboard.html').includes('<script src="assets/pages/dashboard-startup.js'), 'startup record is parser blocking');
 const before = JSON.parse(read('tools/fixtures/dashboard-first-use.json'));
 const shell = [...dashboardDependencies.eager(read('dashboard.html')).matchAll(/<script\b[^>]*src="([^"]+)"/g)].map(m => m[1]);
-assert.equal(urls.length, 6, 'only optional drawer owners leave the eager shell');
+assert.equal(urls.length, 7, 'only optional drawer owners leave the eager shell');
 assert.equal(new Set(urls).size, urls.length);
+for (const surface of ['menu', 'salle']) assert.ok(urls.indexOf('assets/ai-image-import.js?v=1') < urls.indexOf('assets/' + surface + '-scan.js?v=4'), 'shared import precedes consumers');
 assert.ok([...read('dashboard.html').matchAll(/<script\b[^>]*src=/g)].length <= 122);
 const asset = url => url.split('?')[0];
 assert.deepEqual(before.filter(u => urls.includes(u)), urls, 'moved dependencies retain their proven relative order and versions');
@@ -143,4 +144,4 @@ for (const action of ['mx-import', 'bqx-import', 'rmw-menu-scan', 'clients-direc
   assert.equal(clicked, 1, action + ': replay once after owner registration');
 }
 assert.match(read('assets/view-link.js'), /load\('workspace'\)\)[\s\S]*?\.then\(\(\) => restoreReady\(target\)/, 'deep links await the same first-use owner graph');
-console.log('PASS dashboard dependencies: ordered deferred startup; 6 offline optional owners, single flight, retry and one intent replay');
+console.log('PASS dashboard dependencies: ordered deferred startup; 7 offline optional owners, single flight, retry and one intent replay');

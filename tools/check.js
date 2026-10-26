@@ -2167,6 +2167,7 @@ section('Whole-project regressions');
     'ai-routes-test.mjs',
     'inventory-count-test.mjs',
     'inventory-count-review-test.mjs',
+    'ai-image-import-test.mjs',
     'menu-scan-test.mjs',
     'menu-scan-i18n-test.mjs',
     'printer-i18n-test.mjs',

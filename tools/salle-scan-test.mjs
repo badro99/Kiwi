@@ -86,7 +86,7 @@ ok(lib.aggregate([{ venue: 'cafe', tables: [] }]) === null, 'aggregate : zéro t
 
 // ── 3. Le scan n'écrit jamais dans le plan ───────────────────────────────────
 ok(!/pdsSave|kiwiPlanDeSalle|localStorage\.setItem/.test(scan), 'salle-scan.js n\'écrit JAMAIS dans le plan ni dans localStorage');
-ok(/onFacts/.test(scan) && /fetch\('\/api\/ai\/salle-import'/.test(scan), 'salle-scan.js remet les faits à onFacts et n\'appelle que sa route');
+ok(/onFacts/.test(scan) && /callApi\('\/api\/ai\/salle-import'/.test(scan), 'salle-scan.js remet les faits à onFacts et n\'appelle que sa route');
 
 // ── 4. Câblage — boutons, case, mix, i18n ×3, estampilles accordées ──────────
 ok((pro.match(/data-pds-action="scan-salle"/g) || []).length === 2, 'deux boutons « Scanner ma salle » : écran vide + rail latéral');
