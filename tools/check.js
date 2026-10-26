@@ -622,6 +622,7 @@ for (const test of [
   'd1-schema-test.mjs',
   /* migrations/ (wrangler d1 migrations) appliquées en mémoire = schema.sql, à la colonne près. */
   'd1-migrations-test.mjs',
+  'schema-minimum-test.mjs',
   'worker-cpu-test.mjs',
   'd1-restore-rehearsal-test.mjs',
   /* D1 refuse plus de 100 paramètres liés par requête : la file de stock (200 mouvements) et la purge des tickets. */
