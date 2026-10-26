@@ -13,17 +13,17 @@
     fr: {
       title:'Économat', eyebrow:'STOCK CENTRAL · HÔTEL', intro:'Linge, boissons, produits d’accueil et consommables, avec les réceptions et mouvements en attente au même endroit.',
       sync:'Synchroniser', receive:'Réceptionner', products:'Articles suivis', low:'Stock bas', queued:'Mouvements en attente', orders:'Commandes ouvertes', stock:'Stock disponible', stockSub:'Quantités du périmètre autorisé', activity:'Réceptions & commandes', activitySub:'Dernières opérations d’approvisionnement', noStock:'Aucun stock dans cet Économat', noStockD:'Réceptionnez un premier article pour démarrer le suivi.', noActivity:'Aucune opération récente', noActivityD:'Les réceptions et commandes fournisseurs apparaîtront ici.',
-      healthy:'Disponible', lowState:'À commander', out:'Rupture', location:'Emplacement', receiptTitle:'Réceptionner une livraison', receiptTag:'BON DE RÉCEPTION', item:'Article ou référence', qty:'Quantité reçue', cost:'Coût unitaire · MAD', supplier:'Fournisseur', reference:'Bon / facture', cancel:'Annuler', confirm:'Ajouter au stock', invalid:'Article, quantité et coût positif requis.', saved:'Réception enregistrée', syncOk:'Stock synchronisé', syncFail:'Synchronisation indisponible', unavailable:'Économat indisponible pour cet établissement', unit:'unité', pending:'En cours', received:'Reçu', outlets:'Points de vente', hidden:'{n} autres lignes non affichées. Les totaux ci-dessus les comptent. Recherchez un article pour l’afficher.', search:'Rechercher un article', noMatch:'Aucun article ne correspond à cette recherche.'
+      healthy:'Disponible', lowState:'À commander', out:'Rupture', location:'Emplacement', receiptTitle:'Réceptionner une livraison', receiptTag:'BON DE RÉCEPTION', item:'Article ou référence', qty:'Quantité reçue', cost:'Coût unitaire · MAD', supplier:'Fournisseur', reference:'Bon / facture', cancel:'Annuler', confirm:'Ajouter au stock', invalid:'Article, quantité et coût positif requis.', saved:'Réception enregistrée', syncOk:'Stock synchronisé', syncFail:'Synchronisation indisponible', unavailable:'Économat indisponible pour cet établissement', unit:'unité', pending:'En cours', received:'Reçu', outlets:'Points de vente', hidden:'{n} autres lignes non affichées. Les totaux ci-dessus les comptent. Recherchez un article pour l’afficher.', showMore:'Afficher plus', search:'Rechercher un article', noMatch:'Aucun article ne correspond à cette recherche.'
     },
     en: {
       title:'Central storeroom', eyebrow:'CENTRAL STOCK · HOTEL', intro:'Linen, drinks, guest supplies and consumables, with receipts and pending movements in one place.',
       sync:'Sync', receive:'Receive delivery', products:'Tracked items', low:'Low stock', queued:'Queued movements', orders:'Open orders', stock:'Available stock', stockSub:'Quantities in the authorised scope', activity:'Receipts & orders', activitySub:'Recent procurement operations', noStock:'No stock in this storeroom', noStockD:'Receive the first item to start tracking it.', noActivity:'No recent operation', noActivityD:'Supplier receipts and orders will appear here.',
-      healthy:'Available', lowState:'Reorder', out:'Out of stock', location:'Location', receiptTitle:'Receive a delivery', receiptTag:'GOODS RECEIPT', item:'Item or reference', qty:'Quantity received', cost:'Unit cost · MAD', supplier:'Supplier', reference:'Delivery note / invoice', cancel:'Cancel', confirm:'Add to stock', invalid:'Item, positive quantity and cost are required.', saved:'Receipt recorded', syncOk:'Stock synced', syncFail:'Sync unavailable', unavailable:'Storeroom unavailable for this property', unit:'unit', pending:'Pending', received:'Received', outlets:'Outlets', hidden:'{n} more rows not shown. The totals above include them. Search for an item to show it.', search:'Search an item', noMatch:'No item matches this search.'
+      healthy:'Available', lowState:'Reorder', out:'Out of stock', location:'Location', receiptTitle:'Receive a delivery', receiptTag:'GOODS RECEIPT', item:'Item or reference', qty:'Quantity received', cost:'Unit cost · MAD', supplier:'Supplier', reference:'Delivery note / invoice', cancel:'Cancel', confirm:'Add to stock', invalid:'Item, positive quantity and cost are required.', saved:'Receipt recorded', syncOk:'Stock synced', syncFail:'Sync unavailable', unavailable:'Storeroom unavailable for this property', unit:'unit', pending:'Pending', received:'Received', outlets:'Outlets', hidden:'{n} more rows not shown. The totals above include them. Search for an item to show it.', showMore:'Show more', search:'Search an item', noMatch:'No item matches this search.'
     },
     ar: {
       title:'المخزن المركزي', eyebrow:'المخزون المركزي · الفندق', intro:'البياضات والمشروبات ولوازم الضيوف والمواد الاستهلاكية، مع الاستلامات والحركات المعلّقة في مكان واحد.',
       sync:'مزامنة', receive:'استلام توريد', products:'المواد المتتبعة', low:'مخزون منخفض', queued:'حركات معلّقة', orders:'طلبات مفتوحة', stock:'المخزون المتاح', stockSub:'الكميات ضمن النطاق المسموح', activity:'الاستلامات والطلبات', activitySub:'آخر عمليات التوريد', noStock:'لا يوجد مخزون في هذا المستودع', noStockD:'استلم أول مادة لبدء التتبع.', noActivity:'لا توجد عملية حديثة', noActivityD:'ستظهر الاستلامات وطلبات الموردين هنا.',
-      healthy:'متاح', lowState:'يجب طلبه', out:'نفد', location:'الموقع', receiptTitle:'استلام توريد', receiptTag:'وصل استلام', item:'المادة أو المرجع', qty:'الكمية المستلمة', cost:'تكلفة الوحدة · درهم', supplier:'المورد', reference:'وصل / فاتورة', cancel:'إلغاء', confirm:'إضافة للمخزون', invalid:'المادة والكمية والتكلفة الإيجابية مطلوبة.', saved:'تم تسجيل الاستلام', syncOk:'تمت مزامنة المخزون', syncFail:'المزامنة غير متاحة', unavailable:'المخزن غير متاح لهذا الفندق', unit:'وحدة', pending:'قيد المعالجة', received:'مستلم', outlets:'نقاط البيع', hidden:'{n} سطرًا إضافيًا غير معروض، والمجاميع أعلاه تحتسبها. ابحث عن مادة لعرضها.', search:'ابحث عن مادة', noMatch:'لا توجد مادة مطابقة لهذا البحث.'
+      healthy:'متاح', lowState:'يجب طلبه', out:'نفد', location:'الموقع', receiptTitle:'استلام توريد', receiptTag:'وصل استلام', item:'المادة أو المرجع', qty:'الكمية المستلمة', cost:'تكلفة الوحدة · درهم', supplier:'المورد', reference:'وصل / فاتورة', cancel:'إلغاء', confirm:'إضافة للمخزون', invalid:'المادة والكمية والتكلفة الإيجابية مطلوبة.', saved:'تم تسجيل الاستلام', syncOk:'تمت مزامنة المخزون', syncFail:'المزامنة غير متاحة', unavailable:'المخزن غير متاح لهذا الفندق', unit:'وحدة', pending:'قيد المعالجة', received:'مستلم', outlets:'نقاط البيع', hidden:'{n} سطرًا إضافيًا غير معروض، والمجاميع أعلاه تحتسبها. ابحث عن مادة لعرضها.', showMore:'عرض المزيد', search:'ابحث عن مادة', noMatch:'لا توجد مادة مطابقة لهذا البحث.'
     }
   };
 
@@ -57,11 +57,13 @@
    * l'article ; sans seuil, l'ancienne règle « 5 ou moins » s'applique. */
   function isLow(row) { return row.threshold != null ? row.qty < row.threshold : row.qty <= LOW_FALLBACK; }
 
-  /* Recherche locale : la liste n'affiche que DISPLAY_LIMIT lignes, mais la
+  /* Recherche locale : chaque ajout affiche DISPLAY_LIMIT lignes, et la
    * recherche parcourt toutes les lignes (nom, référence, emplacement), sans
    * tenir compte des accents ni de la casse. */
   var query = '';
   var receiveRows = [];
+  var shownLimit = DISPLAY_LIMIT, receiveLimit = DISPLAY_LIMIT;
+  var receiveQuery = '';
   function fold(value) { return String(value == null ? '' : value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
   function matching(rows, q) {
     var needle = fold(q);
@@ -107,7 +109,7 @@
     var orders = Array.isArray(doc.orders) ? doc.orders : [];
     var receipts = Array.isArray(doc.receipts) ? doc.receipts : [];
     var found = matching(rows, query);
-    return { rows:rows, found:found, shown:found.slice(0, DISPLAY_LIMIT), low:rows.filter(function (row) { return row.low; }).length, queued:inv && inv.pending ? qty(inv.pending()) : 0, orders:orders, receipts:receipts, openOrders:orders.filter(function (order) { return ['draft','sent','partial'].indexOf(order && order.status) >= 0; }).length, location:inv && inv.locationId ? String(inv.locationId() || '') : '' };
+    return { rows:rows, found:found, shown:found.slice(0, shownLimit), low:rows.filter(function (row) { return row.low; }).length, queued:inv && inv.pending ? qty(inv.pending()) : 0, orders:orders, receipts:receipts, openOrders:orders.filter(function (order) { return ['draft','sent','partial'].indexOf(order && order.status) >= 0; }).length, location:inv && inv.locationId ? String(inv.locationId() || '') : '' };
   }
 
   function pill(row, T) {
@@ -121,7 +123,7 @@
     var hidden = s.found.length - s.shown.length;
     return '<div class="hx-eco-table">' + s.shown.map(function (row) {
       return '<div class="hx-eco-row"><div class="hx-eco-item"><b>' + esc(row.name) + '</b><small>' + esc(row.id) + (row.unit ? ' · ' + esc(row.unit) : '') + (row.location ? ' · ' + esc(row.location) : '') + '</small></div><div class="hx-eco-qty">' + fmt(row.qty) + '</div>' + pill(row, T) + '</div>';
-    }).join('') + '</div>' + (hidden > 0 ? '<p class="hx-eco-more" role="note">' + esc(T.hidden.replace('{n}', fmt(hidden))) + '</p>' : '');
+    }).join('') + '</div>' + (hidden > 0 ? '<p class="hx-eco-more" role="note">' + esc(T.hidden.replace('{n}', fmt(hidden))) + '</p><button type="button" class="hx-btn ghost" data-action="eco-show-more">' + esc(T.showMore) + '</button>' : '');
   }
 
   function stockHtml(s, T) {
@@ -191,22 +193,28 @@
   window.KiwiEconomatStock = { rows: inventoryRows };
 
   /* Suggestions du bon de réception : les DISPLAY_LIMIT premières, puis, dès
-   * qu'on tape, celles qui correspondent parmi TOUS les articles. */
+   * qu'on tape, celles qui correspondent parmi TOUS les articles. Afficher plus
+   * ajoute une page sans perdre la recherche ni les champs du formulaire. */
+  function itemMoreHtml(count, T) {
+    return '<button type="button" class="hx-btn ghost wide" id="eco-items-more" data-action="eco-items-more"' + (count <= receiveLimit ? ' hidden' : '') + '>' + esc(T.showMore) + '</button>';
+  }
   function itemOptions(rows, q) {
-    return matching(rows, q).slice(0, DISPLAY_LIMIT).map(function (row) { return '<option value="' + esc(row.id) + '">' + esc(row.name) + '</option>'; }).join('');
+    return matching(rows, q).slice(0, receiveLimit).map(function (row) { return '<option value="' + esc(row.id) + '">' + esc(row.name) + '</option>'; }).join('');
   }
   function onInput(event) {
     var el = event && event.target;
     if (!el) return;
     if (el.matches && el.matches('[data-eco-search]')) {
       query = String(el.value || '');
+      shownLimit = DISPLAY_LIMIT;
       var box = document.querySelector('[data-eco-stock]');
       if (box) box.innerHTML = stockListHtml(state(), text());
       return;
     }
     if (el.id === 'eco-item') {
-      var list = document.getElementById('eco-items');
-      if (list) list.innerHTML = itemOptions(receiveRows, el.value);
+      receiveQuery = String(el.value || '');
+      receiveLimit = DISPLAY_LIMIT;
+      updateItemOptions();
     }
   }
   if (typeof document !== 'undefined' && document && document.addEventListener) document.addEventListener('input', onInput);
@@ -214,6 +222,7 @@
   handlers['nav-economat'] = function () {
     if (!isHotel()) { Kiwi.toast(text().unavailable, { type:'warning' }); return; }
     query = '';
+    shownLimit = DISPLAY_LIMIT;
     if (window.KiwiEconomatRequests) window.KiwiEconomatRequests.reset();
     if (unsubscribe) { try { unsubscribe(); } catch (_) {} unsubscribe = null; }
     if (window.KiwiInventory && window.KiwiInventory.subscribe) unsubscribe = window.KiwiInventory.subscribe(function () { if (Kiwi.activePage === 'economat') render(); });
@@ -228,11 +237,28 @@
     finally { busy = false; render(); }
   };
 
+  handlers['eco-show-more'] = function () {
+    shownLimit += DISPLAY_LIMIT;
+    var box = document.querySelector('[data-eco-stock]');
+    if (box) box.innerHTML = stockListHtml(state(), text());
+  };
+  function updateItemOptions() {
+    var list = document.getElementById('eco-items');
+    if (list) list.innerHTML = itemOptions(receiveRows, receiveQuery);
+    var more = document.getElementById('eco-items-more');
+    if (more) more.hidden = matching(receiveRows, receiveQuery).length <= receiveLimit;
+  }
+  handlers['eco-items-more'] = function () {
+    receiveLimit += DISPLAY_LIMIT;
+    updateItemOptions();
+  };
+
   handlers['eco-receive'] = function () {
     var T = text(), rows = receiveRows = inventoryRows();
+    receiveLimit = DISPLAY_LIMIT; receiveQuery = '';
     modalRef = Kiwi.modal({
       tag:T.receiptTag, title:T.receiptTitle, width:580,
-      body:'<div class="hx-eco-form"><label class="wide">' + esc(T.item) + '<input id="eco-item" list="eco-items" autocomplete="off"><datalist id="eco-items">' + itemOptions(rows, '') + '</datalist></label><label>' + esc(T.qty) + '<input id="eco-qty" type="number" min="0.001" step="0.001" inputmode="decimal"></label><label>' + esc(T.cost) + '<input id="eco-cost" type="number" min="0.01" step="0.01" inputmode="decimal"></label><label>' + esc(T.supplier) + '<input id="eco-supplier" autocomplete="organization"></label><label>' + esc(T.reference) + '<input id="eco-ref" autocomplete="off"></label></div>',
+      body:'<div class="hx-eco-form"><label class="wide">' + esc(T.item) + '<input id="eco-item" list="eco-items" autocomplete="off"><datalist id="eco-items">' + itemOptions(rows, '') + '</datalist></label>' + itemMoreHtml(rows.length, T) + '<label>' + esc(T.qty) + '<input id="eco-qty" type="number" min="0.001" step="0.001" inputmode="decimal"></label><label>' + esc(T.cost) + '<input id="eco-cost" type="number" min="0.01" step="0.01" inputmode="decimal"></label><label>' + esc(T.supplier) + '<input id="eco-supplier" autocomplete="organization"></label><label>' + esc(T.reference) + '<input id="eco-ref" autocomplete="off"></label></div>',
       foot:'<button class="kb ghost" data-dismiss>' + esc(T.cancel) + '</button><button data-activation=write class="kb atlas" data-action="eco-receive-save">' + esc(T.confirm) + '</button>'
     });
     setTimeout(function () { document.getElementById('eco-item')?.focus(); }, 30);

@@ -17,7 +17,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestPost as connectDirect } from '../functions/api/shopify/connect-direct.js';
-import { onRequestPost as status } from '../functions/api/shopify/status.js';
+import { onRequestPost as status, onRequestGet as getStatus } from '../functions/api/shopify/status.js';
 import { planReplay } from '../functions/api/shopify/_replay-orders.js';
 import { __test as catalogFns } from '../functions/api/catalog.js';
 const catalogMaterialize = catalogFns.materialize;
@@ -43,7 +43,7 @@ const DB = {
       bind(...a) { args = a.map((v) => (v === undefined ? null : v)); return st; },
       first() { const r = sql.prepare(q).get(...args); return r === undefined ? null : r; },
       all() { return { results: sql.prepare(q).all(...args) }; },
-      run() { const r = sql.prepare(q).run(...args); return { success: true, meta: { changes: r.changes } }; },
+      async run() { const r = sql.prepare(q).run(...args); return { success: true, meta: { changes: r.changes } }; },
     };
     return st;
   },
@@ -73,6 +73,7 @@ const orders = [
     lineItems: { nodes: [{ id: 'gid://shopify/LineItem/9005', currentQuantity: 3, variant: { id: 'gid://shopify/ProductVariant/701' } }] } },
 ];
 let orderCalls = 0;
+let replayMode = '';
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init) => {
   const u = String(url);
@@ -80,6 +81,28 @@ globalThis.fetch = async (url, init) => {
     return new Response(JSON.stringify({ access_token: 'jeton-factice', scope: 'read_orders', expires_in: 86400 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   const q = String((init && init.body) || '');
+  if (q.includes('KiwiOrderLines') && replayMode === 'oversized') {
+    const after = Number(JSON.parse(init.body).variables.after || 0);
+    return Response.json({ data: { order: { lineItems: { nodes: [], pageInfo: { hasNextPage: true, endCursor: String(after + 1) } } } } });
+  }
+  if (q.includes('KiwiMissedOrders') && replayMode === 'failure') throw new Error('network-test');
+  if (q.includes('KiwiMissedOrders') && replayMode === 'paged') {
+    const after = JSON.parse(init.body).variables.after;
+    const start = after ? Number(after.slice(2)) + 1 : 0;
+    const end = Math.min(start + 50, 1002);
+    return Response.json({ data: { orders: {
+      pageInfo: { hasNextPage: end < 1002, endCursor: 'p:' + (end - 1) },
+      edges: Array.from({ length: end - start }, (_, i) => ({ cursor: 'p:' + (start + i), node: {
+        id: 'gid://shopify/Order/' + (10000 + start + i), createdAt: new Date(T0).toISOString(), lineItems: { nodes: [] },
+      } })),
+    } } });
+  }
+  if (q.includes('KiwiMissedOrders') && replayMode === 'oversized') return Response.json({ data: { orders: {
+    pageInfo: { hasNextPage: false }, edges: [
+      { cursor: 'big', node: { id: 'gid://shopify/Order/99999', name: '#BIG', createdAt: new Date(T0).toISOString(), lineItems: { nodes: [{ id: 'big-line', currentQuantity: 9, variant: { id: 'gid://shopify/ProductVariant/701' } }], pageInfo: { hasNextPage: true, endCursor: '0' } } } },
+      { cursor: 'small', node: { id: 'gid://shopify/Order/99998', createdAt: new Date(T0).toISOString(), lineItems: { nodes: [] } } },
+    ],
+  } } });
   if (q.includes('KiwiMissedOrders')) {
     orderCalls++;
     return new Response(JSON.stringify({ data: { orders: { pageInfo: { hasNextPage: false, endCursor: 'c:' + (orders.length - 1) }, nodes: orders, edges: orders.map((node, i) => ({ cursor: 'c:' + i, node })) } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -176,6 +199,25 @@ try {
   catalogMaterialize(deficit);
   ok('un réassort rembourse le déficit avant de devenir vendable', deficit.variants.find(v=>v.id==='v-one').stock === 0);
   ok('un rejeu ne répète pas la sortie déficitaire', planReplay(deficit,links2,[mk(6002,9102,802,3,T0+1000)]).already === 1);
+
+  const progress = async () => (await (await getStatus({ env, request: new Request('https://kiwi.test/api/shopify/status?merchant=maison-test', { headers: { cookie } }) })).json()).replay;
+  replayMode = 'paged';
+  const capped = await call({ since: T0 });
+  ok('un lot plafonné expose sa progression dans le statut', capped.status === 200 && (await progress())?.done === 1000 && (await progress())?.remaining === null && (await progress())?.more === true);
+  replayMode = 'failure';
+  const failed = await call({ since: T0 });
+  ok('un échec conserve la progression et une erreur visible', failed.status === 502 && (await progress())?.done === 1000 && !!(await progress())?.lastError);
+  replayMode = 'paged';
+  const resumed = await call({ since: T0 });
+  ok('la reprise termine les commandes restantes et conserve le bilan', resumed.status === 200 && resumed.body.result.resumed && (await progress())?.done === 1002 && (await progress())?.remaining === 0 && (await progress())?.lastError === '');
+  replayMode = 'oversized';
+  const beforeBig = stockOf('v-a').stock;
+  const big = await call({ since: T0 + 1 });
+  ok('une commande surdimensionnée est une exception listée, sans retrait partiel', big.status === 200 && big.body.result.exceptions?.[0]?.code === 'shopify-order-too-many-lines' && stockOf('v-a').stock === beforeBig);
+  ok('le statut liste cette exception et le traitement continue', (await progress())?.exceptions?.[0]?.orderId === 'gid://shopify/Order/99999' && (await progress())?.done === 1 && (await progress())?.remaining === 0);
+  const beforePreview = JSON.stringify(await progress());
+  await call({ since: T0, dryRun: true });
+  ok('un aperçu ne modifie pas la progression enregistrée', JSON.stringify(await progress()) === beforePreview);
 } finally {
   globalThis.fetch = realFetch;
 }

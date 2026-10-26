@@ -34,6 +34,7 @@
     "vertical-feature-parity-test.mjs": "each vertical declares the same features"
   },
   "style": {
+    "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",
     "admin-crm-layout-test.mjs": "layout, contrast or copy in CSS/markup",
     "caisse-color-picker-language-test.mjs": "layout, contrast or copy in CSS/markup",
     "caisse-dna-test.js": "layout, contrast or copy in CSS/markup",
