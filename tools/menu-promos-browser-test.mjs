@@ -213,9 +213,14 @@ try {
     await page.waitForSelector('[data-mp-days] [data-mp-day="1"]', { visible: true });
     check(/Toujours active/.test(await text(page, '[data-mp-preview]')), 'with no days or hours the editor says it is always on');
     const setField = (f, v) => page.$eval(`[data-mp-field="${f}"]`, (el, val) => { el.value = val; el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
-    /* A one-hour window three hours from now, in Morocco time: the rule must be
-       "outside its hours" now and running three hours later. */
-    const hh = await page.evaluate(() => +new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Casablanca' }).format(new Date()));
+    /* A one-hour window three hours from now, on the merchant's clock (the day
+       report's zone, Casablanca when it has none): the rule must be "outside its
+       hours" now and running three hours later. */
+    const hh = await page.evaluate(() => {
+      const zone = (window.KiwiDayReport && window.KiwiDayReport.timezone && window.KiwiDayReport.timezone()) || 'Africa/Casablanca';
+      const F = (window.KiwiZoneLaw && window.KiwiZoneLaw.DateTimeFormat) || Intl.DateTimeFormat;
+      return +new F('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: zone }).format(new Date());
+    });
     const pad = (n) => String(n).padStart(2, '0');
     const start = pad((hh + 3) % 24) + ':00', end = pad((hh + 4) % 24) + ':00';
     await setField('start', start);
