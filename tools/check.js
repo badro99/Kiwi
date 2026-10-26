@@ -1682,6 +1682,7 @@ section('Whole-project regressions');
     'pos-maison-test.mjs',
     'pos-maison-split-test.mjs',
     'pos-boutique-split-test.mjs',
+    'boutique-ticket-owner-test.mjs',
     'caisse-app-split-test.mjs',
     'core-split-test.mjs',
     'dashboard-first-use-test.mjs',

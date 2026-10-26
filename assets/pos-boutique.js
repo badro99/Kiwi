@@ -1,6 +1,7 @@
 import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=15';
 import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=15';
 import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
 
@@ -1047,26 +1048,21 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
 
   function assignTicketNumber(ticket) {
     if (!ticket || ticket.num) return Promise.resolve(ticket && ticket.num);
-    ticket.numbering = true;
-    ticket.numError = false;
+    ticketOwner.numbering(ticket);
     return claimTicketNumber().then((n) => {
       /* The ticket object, not merely state.ticket, is captured. A reset while
          the request is in flight cannot put the old response on the new cart. */
-      ticket.num = n;
-      ticket.period = ticketPeriod();
-      ticket.numbering = false;
-      ticket.numError = false;
+      ticketOwner.numbered(ticket, n, ticketPeriod());
       if (state.ticket === ticket && root) { renderTicket(); icons(); }
       return n;
     }).catch((e) => {
-      ticket.numbering = false;
+      ticketOwner.numberFailed(ticket);
       /* L'ÉCHEC DOIT SE VOIR TOUT DE SUITE, PAS AU MOMENT DE PAYER.
          Sans marque d'erreur, un ticket sans numéro reste bloqué sur
          « attribution… » : la vendeuse scanne tout le panier, la cliente sort sa
          carte, et c'est seulement là qu'on découvre que la caisse n'a jamais pu
          réserver de série. On distingue donc « en cours » de « échoué », pour
          que la tête du ticket le dise et propose de réessayer. */
-      ticket.numError = true;
       if (state.ticket === ticket && root) { renderTicket(); icons(); }
       throw e;
     });
@@ -1084,7 +1080,7 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
       syncId: newSaleId(),
       lines: [], client: null, remiseAuth: false, numbering: false, numError: false,
     };
-    state.ticket = ticket;
+    ticketOwner.clear(state, ticket);
     if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {
       if (state.ticket !== ticket) return;
       toast('Numéro de ticket indisponible', state.ticketStorageError
@@ -1537,11 +1533,11 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
       }
       if (picks.length >= 2) break;
     }
-    state.ticket.lines = picks;
+    ticketOwner.replaceLines(state.ticket, picks);
     picks.forEach((ln) => stockAdd(ln.pid, ln.size, -ln.qty));
   }
   /* Drop ticket lines whose product vanished from the catalogue. */
-  function pruneTicket() { if (state.ticket) state.ticket.lines = state.ticket.lines.filter((ln) => P[ln.pid]); }
+  function pruneTicket() { if (state.ticket) ticketOwner.prune(state.ticket, P); }
   function refreshAfterCatalog() {
     if (!root) return;
     /* Pendant une reprise de stock, la liste d'inventaire est CACHÉE derrière le
@@ -1684,8 +1680,7 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
        replacing the number is safe and prevents a January sale from consuming
        a number leased for December. */
     if (!IS_DEMO && t.period !== ticketPeriod()) {
-      t.num = '';
-      t.period = ticketPeriod();
+      ticketOwner.renewPeriod(t, ticketPeriod());
     }
     if (!t.num) {
       assignTicketNumber(t).then(() => { if (state.ticket === t) checkout(); })
@@ -1717,7 +1712,7 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';
     const beginPay = () => openPay({
       amount: total,
       customerId: c ? c.id : null,
-      beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
+      beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, ticketOwner, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
       title: 'Encaissement',
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       // Real ticket contents, so the printed receipt itemises the sale instead

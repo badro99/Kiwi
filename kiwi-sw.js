@@ -471,6 +471,7 @@ var SHELL = [
      une mise à jour de la caisse. */
   '/assets/pos-boutique.css?v=109',
   '/assets/pos-boutique/sales.js?v=15',
+  '/assets/pos-boutique/ticket-owner.js?v=1',
   '/assets/pos-boutique/checkout.js?v=15',
   '/assets/pos-boutique/inventory.js?v=15',
   '/assets/pos-boutique.js?v=109',
