@@ -28,6 +28,7 @@ import {
   TILL_COOKIE, TILL_STORE_COOKIE, TILL_STORE, tillVerification, readEmployee,
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
+import { withFastNext } from './_fast-next.js';
 
 import { visitorRedirect, recordOldOrigin } from './_origin-move.js';
 
@@ -922,6 +923,7 @@ async function withStaffSkin(context, response) {
 }
 
 export async function onRequest(context) {
+  withFastNext(context); // exact static routes skip the Pages router (docs/ops/CPU.md)
   const record = recordOldOrigin(context.request, context.env);
   if (context.waitUntil) context.waitUntil(record);
   else await record;

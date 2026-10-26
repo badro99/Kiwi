@@ -192,6 +192,13 @@ working tree, so an asset a *concurrent session* edited but did not stage enters
 manifest you stage — the hook refuses and names that file; stage it if it's yours,
 else `KIWI_SKIP_STAMP_HOOK=1` for that one commit.
 
+**Adding, moving or removing a route file under `functions/`?** Run
+`node tools/build-fast-routes.mjs` and commit `functions/_fast-routes.js` with
+it. The root middleware calls static routes directly from that table (the Pages
+router cost most of our Workers CPU, `docs/ops/CPU.md`); a deleted route still
+listed there fails the Pages build. The gate and the pre-commit hook refuse a
+stale table.
+
 **The gate is `node tools/check.js`.** It parses every `assets/*.js`, checks that
 every `data-action` in HTML is handled, that every `data-i18n` key exists in EN + AR,
 bans `background:var(--ink)` and secret-shaped strings — then runs every test file
