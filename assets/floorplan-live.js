@@ -78,7 +78,7 @@
       return;
     }
     inflight = true;
-    import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/floor/live?merchant=' + encodeURIComponent(s), { credentials: 'same-origin', cache: 'no-store' }); })
+    import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; }).then(function (net) { return net.deadlineFetch('/api/floor/live?merchant=' + encodeURIComponent(s), { credentials: 'same-origin', cache: 'no-store' }); })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('http-' + r.status)); })
       .then(function (d) {
         if (!d || !d.ok) throw new Error('bad-body');

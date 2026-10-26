@@ -757,7 +757,8 @@
   function teamReadTimedOut(error) {
     if (!error || error.code !== 'timeout' || !pageActive || teamReadFailed) return;
     teamReadFailed = true;
-    toast(trLang() === 'ar' ? 'الشبكة لا تستجيب. حاول مرة أخرى.' : trLang() === 'en' ? 'The network is not responding. Please retry.' : 'Le réseau ne répond pas. Réessayez.', {type: 'pend'});
+    const copy = { fr: 'Le réseau ne répond pas. Réessayez.', en: 'The network is not responding. Please retry.', ar: 'الشبكة لا تستجيب. حاول مرة أخرى.' };
+    toast(copy[trLang()] || copy.fr, {type: 'pend'});
   }
   function hydrateCodes() {
     const c = teamCloudInit();

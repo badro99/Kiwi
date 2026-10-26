@@ -115,7 +115,7 @@
           expiresAt: expiresAt || Date.now() + OFFLINE_PIN_TTL,
           staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80) } });
-        set(offlinePinKey(merchant), JSON.stringify(rows));
+        set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12))); // Bounded: each cached verifier is one more offline guess target.
         return staff;
       });
     }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.

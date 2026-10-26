@@ -41,7 +41,7 @@ async function cuFetchStaysForWindow(start, end) {
     const load = { loading: true, error: '' };
     cuStayLoads.set(scope, load);
     try {
-      const res = await (await import('../request-deadline.mjs')).deadlineFetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&includeCancelled=1`, { cache: 'no-store' });
+      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&includeCancelled=1`, { cache: 'no-store' });
       if (!res.ok) throw new Error('unavailable');
       const data = await res.json();
       if (!Array.isArray(data.stays)) throw new Error('invalid-response');
@@ -385,7 +385,7 @@ async function cuFetchInHouseStays() {
     const scope = cuStayScope(), cache = cuStayCache();
     const startedAt = Date.now();
     try {
-      const res = await (await import('../request-deadline.mjs')).deadlineFetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&status=checked_in', { cache: 'no-store' });
+      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&status=checked_in', { cache: 'no-store' });
       if (!res.ok) throw new Error('unavailable');
       const data = await res.json();
       if (!Array.isArray(data.stays)) throw new Error('invalid-response');

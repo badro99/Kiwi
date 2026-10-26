@@ -57,7 +57,10 @@ await run('pairing', async () => {
  const ctx={window:w,TextEncoder,Uint8Array,Date,localStorage:{},OFFLINE_PIN_KEY:'fixture:',OFFLINE_PIN_TTL:60000,ls:k=>cache.get(k),set:(k,v)=>cache.set(k,v),activeVenue:()=>({merchant:'fixture'})};
  vm.createContext(ctx);vm.runInContext(src.slice(begin,end)+';this.remember=rememberOfflinePin;this.rows=offlinePinRows;',ctx);
  for(let i=0;i<20;i++) await ctx.remember('fixture',String(i).padStart(4,'0'),{id:'staff-'+i,name:'Staff '+i,role:'cashier'});
- assert.equal(ctx.rows('fixture').length,20);
+ // The cache stays bounded (a stolen device holds at most 12 verifiers); the newest identities stay covered.
+ assert.equal(ctx.rows('fixture').length,12);
+ assert.equal(ctx.rows('fixture').at(-1).staff.name,'Staff 19');
+ assert.ok(!ctx.rows('fixture').some(r=>r.staff.name==='Staff 0'));
 });
 console.log('✓ wave O infra '+(mode||'all'));
 

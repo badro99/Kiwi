@@ -312,7 +312,7 @@
     async function runFiles(files) {
       if (busy) return;
       if (files.length > MAX_FILES) {
-        toast(ui('overflow'), { type: 'error' }); return;
+        toast(COPY[language()].overflow, { type: 'error' }); return;
       }
       const list = [...files];
       if (!list.length) return;

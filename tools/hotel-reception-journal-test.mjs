@@ -314,6 +314,8 @@ for (const reader of ['cuFetchStaysForWindow', 'cuFetchInHouseStays']) {
     Object.assign(f.api.cuReceptionSelection(), { q: 'Alpha private', date: TODAY });
     f.reply(pending.promise);
     const work = f.api[reader](TODAY, TODAY);
+    // The read loads its deadline helper first; the request leaves a few microtasks later.
+    for (let k = 0; k < 50 && !f.requests[0]; k++) await Promise.resolve();
     assert.equal(f.requests[0].url.searchParams.get('merchant'), 'journal-alpha');
     f.switchTenant('journal-beta');
     f.setDoc([stay('beta-doc')]);

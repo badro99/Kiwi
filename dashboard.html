@@ -1128,7 +1128,7 @@
 
 
 <script src="assets/invoice.js?v=20" defer></script>
-<script src="assets/invoicing.js?v=20" defer></script>
+<script src="assets/invoicing.js?v=21" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=6" defer></script>
 <script src="assets/merchant-health.js?v=5" defer></script>
@@ -1186,7 +1186,7 @@
 <script defer src="assets/dashboard-pin-vault.js?v=4"></script>
 <script defer src="assets/identity.js?v=12"></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-<script type="module" defer src="assets/live-link.js?v=78"></script>
+<script type="module" defer src="assets/live-link.js?v=79"></script>
 <script defer src="assets/channel-sales.js?v=6"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -1228,7 +1228,7 @@
 
 <script src="assets/agent/ui.js?v=3" defer></script>
 <script src="assets/agent.js?v=43" defer fetchpriority="low"></script>
-<script src="assets/agent-voice.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/agent-voice.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/pages.js?v=13" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
@@ -1256,13 +1256,13 @@
 <!-- La copie serveur de tout ce qu'un commerçant configure (carte, équipe,
      fidélité…) : un deuxième appareil ne doit pas trouver un établissement
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
-<script src="assets/cloud-doc.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/cloud-doc.js?v=12" defer fetchpriority="low"></script>
 <!-- Tenant-scoped approval queue and audited inverse operations for Kiwi AI. -->
 <script src="assets/agent-action-center.js?v=4" defer fetchpriority="low"></script>
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
      here; the caisse only consumes the resulting prices. -->
-<script src="assets/promo-rules.js?v=2" defer></script>
-<script src="assets/promos.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/promo-rules.js?v=3" defer></script>
+<script src="assets/promos.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/discount-policy.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
@@ -1305,7 +1305,7 @@
 <script src="assets/inventory-consumption.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=4" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js?v=24" defer fetchpriority="low"></script>
+<script src="assets/clients-store.js?v=25" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 
 
@@ -1329,17 +1329,17 @@
 <script src="assets/floorplan-core.js?v=2055" defer fetchpriority="low"></script>
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
-<script src="assets/floorplan-live.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/floorplan-live.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/starter-copy.js?v=1" defer fetchpriority="low"></script>
 
 
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=13"></script>
+<script src="assets/pages/dashboard-startup.js?v=15"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=12">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
-<script src="assets/pages/dashboard-loader.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/pages/dashboard-loader.js?v=13" defer fetchpriority="low"></script>
 <script src="assets/trade-workspace-schema.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/trade-workspaces.js?v=13" defer fetchpriority="low"></script>
 <script src="assets/delivery-receivables.js?v=2" defer fetchpriority="low"></script>

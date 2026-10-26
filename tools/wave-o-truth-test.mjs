@@ -125,8 +125,8 @@ test('menu#2 real file handler makes no API calls on overflow', async () => {
  const src=read('assets/menu-scan.js');
  const section=src.slice(src.indexOf('    async function runFiles('),src.indexOf('    async function runUrl('));
  const notices=[];let calls=0;
- const run=new Function('toast','ui','callApi','MAX_FILES','busy',section+';return runFiles;')(
-  msg=>notices.push(msg),key=>key,()=>{calls++;},6,false);
+ const run=new Function('toast','ui','callApi','MAX_FILES','busy','COPY','language',section+';return runFiles;')(
+  msg=>notices.push(msg),key=>key,()=>{calls++;},6,false,{fr:{overflow:'overflow'}},()=>'fr');
  await run(Array.from({length:7},()=>({name:'page.png',type:'image/png'})));
  assert.deepEqual(notices,['overflow']);assert.equal(calls,0);
 });

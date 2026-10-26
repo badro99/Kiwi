@@ -834,7 +834,7 @@
   async function loadTickets(options) { const seq = loadTickets.seq = (loadTickets.seq || 0) + 1;
     if (!options || !options.quiet) renderLoading();
     try {
-      const response = await (await import('./request-deadline.mjs')).deadlineFetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
       const data = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; }); if (seq !== loadTickets.seq) return;
       if (!response.ok) throw Object.assign(new Error(data.error || 'read-failed'), { code: data.error });
       if (!data.taxonomy || !Array.isArray(data.taxonomy.kinds) || !Array.isArray(data.taxonomy.areas)) {
@@ -1053,7 +1053,7 @@
     }
     data.append('idempotency_key', state.publishAttempt.key);
     try {
-      const response = await (await import('./request-deadline.mjs')).deadlineFetch(API, { method: 'POST', body: data }, 60000);
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(API, { method: 'POST', body: data }, 60000);
       const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
       composer.close();
@@ -1097,7 +1097,7 @@
     data.append('note', note);
     state.followupFiles.forEach((file) => data.append('images', file, file.name));
     try {
-      const response = await (await import('./request-deadline.mjs')).deadlineFetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { Accept: 'application/json' },
         body: data,
@@ -1194,7 +1194,7 @@
     const original = button.innerHTML;
     button.textContent = t(action === 'fixed' ? 'busy.moving' : 'busy.deletingImages');
     try {
-      const response = await (await import('./request-deadline.mjs')).deadlineFetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ action }),
@@ -1238,7 +1238,7 @@
     const oldLabel = button.textContent;
     button.textContent = t('busy.saving');
     try {
-      const response = await (await import('./request-deadline.mjs')).deadlineFetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({

@@ -8,9 +8,12 @@ export function reportConsumerFailure(host, consumer, operation, merchant) {
   try { host.localStorage.setItem(key, JSON.stringify(result)); } catch (_) {}
   host.document.dispatchEvent(new host.CustomEvent('kiwi:live-consumer-error', { detail: result }));
   const lang = host.document.documentElement.lang;
-  const copy = lang === 'en' ? 'Sales sync failed for {consumer}. Reload to retry. If it persists, contact support.'
-    : lang === 'ar' ? 'تعذرت مزامنة المبيعات مع {consumer}. أعد تحميل الصفحة للمحاولة. إذا استمر الخطأ، اتصل بالدعم.'
-    : 'Synchronisation des ventes échouée pour {consumer}. Rechargez pour réessayer. Si le problème persiste, contactez le support.';
-  if (first && host.Kiwi && host.Kiwi.toast) host.Kiwi.toast(copy.replace('{consumer}', consumer + ' · ' + operation), { type: 'error' });
+  const COPY = {
+    fr: 'Synchronisation des ventes échouée pour {consumer}. Rechargez pour réessayer. Si le problème persiste, contactez le support.',
+    en: 'Sales sync failed for {consumer}. Reload to retry. If it persists, contact support.',
+    ar: 'تعذرت مزامنة المبيعات مع {consumer}. أعد تحميل الصفحة للمحاولة. إذا استمر الخطأ، اتصل بالدعم.',
+  };
+  const copy = COPY[lang] || COPY.fr;
+  if (first && host.Kiwi && host.Kiwi.toast) host.Kiwi.toast(copy.replace(/\{consumer\}/, consumer + ' · ' + operation), { type: 'error' });
   return result;
 }
