@@ -65,24 +65,6 @@
     "discount-policy-test.mjs": "discount-policy-api-test.mjs",
     "hotel-stays-group-guards-test.mjs": "hotel-stays-group-browser-test.mjs"
   },
-  "unbacked": [
-    "action-center-loop-test.mjs",
-    "agent-open-targets-test.mjs",
-    "agent-voice-test.mjs",
-    "app-audit-sweep-test.mjs",
-    "boutique-printer-settings-test.mjs",
-    "caisse-godmode-toggles-test.mjs",
-    "caisse-link-success-test.js",
-    "critical-flow-test.mjs",
-    "dashboard-kds-nav-test.mjs",
-    "dashboard-truth-test.mjs",
-    "dashboard-unoffered-actions-test.mjs",
-    "menu-option-group-editor-test.mjs",
-    "menu-ordering-surfaces-test.js",
-    "restaurant-item-editor-test.mjs",
-    "scan-view-test.mjs",
-    "shared-day-selector-test.mjs",
-    "team-member-editor-test.mjs"
-  ],
-  "pin": 17
+  "unbacked": [],
+  "pin": 0
 }

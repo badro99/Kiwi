@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : ticketDone() retourne avant les événements de vente payée.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('app-audit-sweep');
 import orderProTestSource from './orderpro-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import maisonSource from './pos-maison-test-source.cjs';

@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : kpActionEntries() retourne [] malgré des actions disponibles.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('dashboard-unoffered-actions');
 import coreTestSource from './core-test-source.cjs';
 // Ticket #99: no dashboard entry point may promise an unavailable payment rail
 // or advertise mock integrations. The actual Settings integration route stays.

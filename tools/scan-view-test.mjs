@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : renderScan() retourne avant le choix du message caméra.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('scan-view');
 import retailSource from './pos-retail-test-source.cjs';
 /* Ticket #0157 · Boutique scan view keeps phone clearance + honest camera note.
  *

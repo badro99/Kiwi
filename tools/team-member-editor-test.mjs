@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : edError() retourne avant de signaler ou effacer une erreur.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('team-member-editor');
 /* Équipe · the member editor and the empty roster say only what is true.
  *
  * 2026-10-12. The form behind « Ajouter un membre » was a single grey column

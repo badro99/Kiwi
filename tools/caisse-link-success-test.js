@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Mutation vérifiée : panelBody() retourne une chaîne vide.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+require('node:module').createRequire(__filename)('./text2-runtime.cjs').run('caisse-link-success');
 'use strict';
 
 const fs = require('fs');

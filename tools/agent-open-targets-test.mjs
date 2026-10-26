@@ -1,3 +1,7 @@
+// Mutation vérifiée : open1() retourne [] au lieu de la cible ouvrable.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('agent-open-targets');
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* Les boutons « Ouvrir … » de l'assistant appellent Kiwi.handlers[nom].

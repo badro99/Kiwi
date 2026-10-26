@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : hasTables() retourne false malgré deux tables autorisées.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('caisse-godmode-toggles');
 import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 'use strict';

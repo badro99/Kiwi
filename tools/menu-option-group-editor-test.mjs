@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : choiceRow() retourne une chaîne vide.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('menu-option-group-editor');
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import orderQueueTestSource from './order-queue-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';

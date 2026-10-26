@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : mount() retourne avant le rendu du panneau imprimantes.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('boutique-printer-settings');
 import maisonSource from './pos-maison-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';

@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Mutation vérifiée : shift(+offset) devient shift(-offset) dans le clic relatif.
+// Anciennes assertions vertes, exécution rouge ; octets livrés restaurés ensuite.
+import { createRequire as text2Require } from 'node:module';
+text2Require(import.meta.url)('./text2-runtime.cjs').run('shared-day-selector');
 import coreTestSource from './core-test-source.cjs';
 // #100/#97: daily report and restaurant orders must mount the same day picker
 // from dateRange.js, not independent native-date controls or calendar skins.
