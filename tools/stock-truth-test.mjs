@@ -24,6 +24,8 @@ import caisseTestSource from './caisse-test-source.cjs';
  *   node tools/stock-truth-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const fc = createRequire(new URL('../app/package.json', import.meta.url))('fast-check');
 import coreTestSource from './core-test-source.cjs';
 const { readFileSync } = coreTestSource;
 import path from 'node:path';
@@ -110,7 +112,7 @@ ok('accueil : « 1 article est au-dessus de son seuil », « 2 articles … de l
   assert.equal(c.S.fr(2), 'Rien à recommander : 2 articles sont au-dessus de leur seuil configuré.');
   assert.equal(c.S.en(1), 'Nothing to reorder: 1 item is above its configured threshold.');
 });
-ok('un petit montant garde ses centimes : 1,80 MAD, pas « 2 MAD »', () => {
+ok('les centimes restent exacts sous et au-dessus de 1 000 MAD', () => {
   const c = vm.createContext({ window: { KiwiNumber: { number: (n, d) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n) } }, Intl, Math, Number, isNaN, lang: () => 'fr' });
   const pick = (start) => { const i = STOCK.indexOf(start); return STOCK.slice(i, STOCK.indexOf('\n  const ', i + 10)); };
   vm.runInContext(pick('  const localeFor') + pick('  const fmtNum') + pick('  const fmtMad') + '\nthis.f = fmtMad;', c);
@@ -118,8 +120,40 @@ ok('un petit montant garde ses centimes : 1,80 MAD, pas « 2 MAD »', () => {
   assert.equal(nb(c.f(1.8)), '1,80 MAD');
   assert.equal(nb(c.f(88.2)), '88,20 MAD');
   assert.equal(nb(c.f(90)), '90 MAD');
-  assert.equal(nb(c.f(8920.4)), '8 920 MAD');
+  assert.equal(nb(c.f(8920.4)), '8 920,40 MAD');
 });
+
+// Execute the shipped formatter declarations and the shared locale service.
+for (const language of ['fr', 'en', 'ar']) for (const shared of [false, true]) {
+  const c = vm.createContext({ window: {}, Intl, Math, Number, isNaN,
+    localStorage: { getItem: () => language },
+    document: { readyState: 'loading', addEventListener() {} }, lang: () => language });
+  if (shared) vm.runInContext(readFileSync(path.join(ROOT, 'assets/i18n.js'), 'utf8'), c);
+  const start = STOCK.indexOf('  const localeFor');
+  vm.runInContext(STOCK.slice(start, STOCK.indexOf('  const unitApi', start)) +
+    '\nthis.money = fmtMad; this.quantity = fmtUnit;', c);
+  const locale = language === 'en' ? 'en-US' : 'fr-FR';
+  const parse = text => Number(text.replace(/ (MAD|kg)$/, '').replace(/[\u202f\u00a0 ]/g, '')
+    .replace(language === 'en' ? /,/g : /\./g, '').replace(',', '.'));
+  const options = { seed: 20261026, numRuns: 1000 };
+  ok(`centimes exacts et dirhams entiers ${language}, service=${shared}`, () => {
+    fc.assert(fc.property(fc.integer({ min: -1000000000, max: 1000000000 }), cents => {
+      const display = c.money(cents / 100);
+      assert.equal(parse(display), cents / 100);
+      const digits = cents % 100 === 0 ? 0 : 2;
+      assert.equal(display, new Intl.NumberFormat(locale, {
+        minimumFractionDigits: digits, maximumFractionDigits: digits }).format(cents / 100) + ' MAD');
+    }), { ...options, examples: [[100049], [892040], [100000], [-100049], [0]] });
+  });
+  ok(`quantités exactes au millième ${language}, service=${shared}`, () => {
+    fc.assert(fc.property(fc.integer({ min: -1000000000, max: 1000000000 }), milli => {
+      const display = c.quantity(milli / 1000, 'kg');
+      assert.equal(parse(display), milli / 1000);
+      assert.equal(display, new Intl.NumberFormat(locale, {
+        maximumFractionDigits: 3 }).format(milli / 1000) + ' kg');
+    }), { ...options, examples: [[12250], [1251], [100001], [12000], [0]] });
+  });
+}
 
 console.log(`\nstock-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
