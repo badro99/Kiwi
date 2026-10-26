@@ -114,7 +114,7 @@ function draftRun(fails, lang) {
   const store = {};
   const ctx = vm.createContext({
     S: { step: 2, ownerName: 'Salma', bizName: 'Atlas', typeId: 'boutique', venueCount: 1, city: '', teamSize: 1, teamGiven: false, goals: [], dailyGoal: '', pins: [owner()] },
-    draft: dataApi.createDraft(LS, ['boutique'], []), lang: () => lang,
+    draft: dataApi.createDraft(LS, ['boutique'], []), namePrefilled: false, lang: () => lang,
     tr: (o) => (o == null ? '' : (o[lang] ?? o.fr ?? '')),
     root: { querySelector: (s) => (s === '.kob-card' ? card : null) },
     document: { createElement: () => ({ className: '', textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }) },
