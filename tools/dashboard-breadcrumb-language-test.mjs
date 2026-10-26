@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* Fil d'Ariane du tableau de bord · une seule peinture, dans la langue de l'écran.
  *
  * 2026-10-12. Stock, Équipe, Conformité, Marges, Menu, Paie, Réservations et le
@@ -227,7 +228,7 @@ try {
   const files = ['assets/team.js', 'assets/team-hours.js', 'assets/stock.js', 'assets/conformite.js', 'assets/finance.js', 'assets/venues.js',
     'assets/restaurant-menu-workspace.js', 'assets/hotel.js', 'assets/interactive.js', 'dashboard.html'];
   const offenders = files.filter((f) => {
-    const src = fs.readFileSync(path.join(root, f), 'utf8');
+    const src = f === 'assets/restaurant-menu-workspace.js' ? menuWorkspaceSource() : fs.readFileSync(path.join(root, f), 'utf8');
     return /Accueil\s*<span class="sep">/.test(src) || /\.breadcrumb'\)\s*;\s*if\s*\(bc\)\s*bc\.innerHTML/.test(src) || /bc\.innerHTML\s*=/.test(src) || /\.breadcrumb b'\)/.test(src);
   });
   check(offenders.length === 0, 'no module writes the breadcrumb itself any more (no « Accueil <span class="sep"> », no bc.innerHTML): ' + offenders.join(', '));

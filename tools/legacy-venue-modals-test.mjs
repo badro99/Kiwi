@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* Anciens écrans Équipe, Paie et Menu de assets/venues.js · retirés, et le
  * « menu » d'une activité sans carte mène à son propre catalogue.
@@ -176,7 +177,7 @@ for (const [lang, title] of [['fr', 'Pas de carte ici'], ['en', 'No menu here'],
 }
 check(/refreshMenu: \(\) => \{\n\s+if \(!document\.body\.classList\.contains\('page-menu'\) \|\| !menuOwnedByWorkspace\(\)\) return;\n\s+menuWorkspace\(\)\?\.render\?\.\(\);/.test(venues),
   'KiwiVenue.refreshMenu only ever repaints the workspace, never a legacy carte');
-const rmw = read('assets/restaurant-menu-workspace.js');
+const rmw = menuWorkspaceSource();
 check(/if\(legacyMenuHandler\)return legacyMenuHandler\.apply\(this,arguments\);/.test(rmw),
   'the workspace still hands non-restaurant activities to the handler it replaced, the router above');
 
@@ -185,7 +186,7 @@ const PFX = '(?:eq|mi|pay)-[a-z0-9][a-z0-9-]*';
 const listFiles = (dir, rx) => fs.readdirSync(path.join(root, dir)).filter((f) => rx.test(f)).map((f) => path.posix.join(dir, f));
 const stripStyles = (s) => s.replace(/<style[^>]*>[\s\S]*?<\/style>/g, ' ');
 const emitters = [...listFiles('assets', /\.js$/), ...listFiles('assets/interactive', /\.js$/), ...listFiles('.', /\.html$/)]
-  .map((f) => (f === 'assets/team.js' ? team : f.endsWith('.html') ? stripStyles(read(f)) : read(f))).join('\n');
+  .map((f) => (f === 'assets/restaurant-menu-workspace.js' ? menuWorkspaceSource() : f === 'assets/team.js' ? team : f.endsWith('.html') ? stripStyles(read(f)) : read(f))).join('\n');
 const emitted = new Set(emitters.match(new RegExp(`(?<![a-z0-9-])${PFX}(?![a-z0-9-])`, 'g')) || []);
 const dynamic = [...emitters.matchAll(new RegExp(`(${PFX}-)\\$\\{`, 'g'))].map((m) => m[1]);
 const cssFiles = ['dashboard.html', ...listFiles('assets', /\.css$/)];

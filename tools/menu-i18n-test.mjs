@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
@@ -42,7 +43,7 @@ function loadResolver() {
   vm.runInContext(read('assets/menu-i18n.js'), vm.createContext(w), { filename: 'menu-i18n.js' });
   return w.KiwiMenuI18n;
 }
-const workspace = read('assets/restaurant-menu-workspace.js');
+const workspace = menuWorkspaceSource();
 assert((workspace.match(/i18nReview:/g)||[]).length===3 && workspace.includes("esc(ui('i18nReview'))"), 'merchant review contract is visible in FR/EN/AR, including empty translation state');
 const M = loadResolver();
 assert(M && typeof M.name === 'function' && typeof M.needs === 'function' && typeof M.apply === 'function', 'KiwiMenuI18n expose name/desc/t/index/needs/apply/setManual/clear/summary');
@@ -144,7 +145,7 @@ assert(/function setI18n\(lang, res, opts\)/.test(cat) && /function setI18nEntry
 assert(/setI18n, setI18nEntry, clearI18n,/.test(cat), 'menu-catalog : exportés sur window.KiwiMenuStore');
 
 /* ── workspace ───────────────────────────────────────────────────────── */
-const ws = read('assets/restaurant-menu-workspace.js');
+const ws = menuWorkspaceSource();
 assert(!/TRANSLATE_DICT|applyLocalTranslation|openTranslateModal|translateTextDirect/.test(ws), 'workspace : le modal qui ÉCRASAIT les libellés a disparu');
 assert(!/S\(\)\.updateItem\(it\.id, \{ name: it\.name, desc: it\.desc \}\)/.test(ws), 'workspace : aucune traduction n’est écrite dans name/desc');
 assert(/async function ensureTranslations\(o\)/.test(ws) && /S\(\)\.setI18n\(lang,data,\{force:o\.force\|\|false\}\)/.test(ws), 'workspace : ensureTranslations dépose la réponse via setI18n');

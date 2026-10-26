@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Menu translation test — « Traduire la carte » : route AI, validation
  * des identifiants et prix, préservation de structure, handler workspace.
@@ -22,7 +23,7 @@ function ok(cond, msg) {
 console.log('■ Menu translate test (tools/menu-translate-test.mjs)');
 
 const transSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-translate.js'), 'utf8');
-const wsSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+const wsSrc = menuWorkspaceSource();
 const quotaSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');
 const langSrc = fs.readFileSync(path.join(ROOT, 'functions/api/_menu-langs.js'), 'utf8');
 const route = await import(new URL('../functions/api/ai/menu-translate.js', import.meta.url).href);

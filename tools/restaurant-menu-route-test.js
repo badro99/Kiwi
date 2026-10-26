@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 'use strict';
 
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 
-const source = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
+const source = menuWorkspaceSource();
 
 assert.ok(source.includes('data-action="rmw-sub-add"'), 'the restaurant workspace exposes subsection creation');
 assert.ok(!source.includes("if(!subs.length&&all.length<2)return ''"),

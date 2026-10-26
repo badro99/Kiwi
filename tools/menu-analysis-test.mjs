@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* « Analyse du menu » · phase 1 : la page restaurant « Marges » devient
  * « Analyse du menu », et Performance + Heures de pointe y déménagent depuis
@@ -52,11 +53,11 @@ function bootWorkspace({ finance } = {}) {
   const context = { window, document, console, setTimeout, clearTimeout, requestAnimationFrame: (fn) => fn(), innerWidth: 1400, innerHeight: 900 };
   window.window = window; window.document = document;
   vm.createContext(context);
-  new vm.Script(R('assets/restaurant-menu-workspace.js'), { filename: 'restaurant-menu-workspace.js' }).runInContext(context);
+  new vm.Script(menuWorkspaceSource(), { filename: 'restaurant-menu-workspace.js' }).runInContext(context);
   return { window, root };
 }
 {
-  const src = R('assets/restaurant-menu-workspace.js');
+  const src = menuWorkspaceSource();
   const tabListSrc = (src.match(/function tabList\(\)\{[\s\S]*?\n  \}/) || [''])[0];
   const tabsSrc = (src.match(/function tabs\(\)\{[\s\S]*?\.join\(''\);/) || [''])[0];
   const panelSrc = (src.match(/function panel\(\)\{[^\n]*/) || [''])[0];

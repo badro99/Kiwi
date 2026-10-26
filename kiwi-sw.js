@@ -355,6 +355,9 @@ var SHELL = [
   '/assets/team/profile-ui.js?v=1',
   '/assets/team-hours.js?v=6',
   '/assets/menu-i18n.js?v=6',
+  '/assets/restaurant-menu/strings.js?v=1',
+  '/assets/restaurant-menu/recipes.js?v=1',
+  '/assets/restaurant-menu/styles.js?v=1',
   '/assets/restaurant-menu-workspace.js?v=121',
   '/assets/menu-promos-dashboard.js?v=3',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

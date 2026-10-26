@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 'use strict';
 /* Onglet Nutrition de l'atelier carte : une ligne par plat avec son état
    (complète / à compléter / masquée), les valeurs par portion, les allergènes,
@@ -52,7 +53,7 @@ const context = { window, document, console, setTimeout, clearTimeout, requestAn
 window.window = window;
 window.document = document;
 vm.createContext(context);
-new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
+new vm.Script(menuWorkspaceSource()).runInContext(context);
 
 const H = window.Kiwi.handlers;
 H['rmw-tab']({ dataset: { tab: 'nutrition' } });

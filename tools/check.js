@@ -1560,6 +1560,7 @@ section('Whole-project regressions');
     'caisse-offline-sync-test.mjs',
     'resto-carte-test.js',
     'restaurant-menu-route-test.js',
+    'menu-workspace-split-test.mjs',
     'menu-pull-route-test.js',
     'restaurant-menu-performance-test.js',
     'menu-pairs-test.js',

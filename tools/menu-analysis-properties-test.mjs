@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 // Real browser modules in a VM, real public/private routes over local SQLite only.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -30,7 +31,7 @@ await strict('simple calculator converts units and yield with centime-correct di
 await strict('simple missing price retains only the known estimate',fc.property(cents,p=>{const c=F.compute({portions:2,lines:[{packPrice:p/100,packQty:1,useQty:1,packUnit:'kg'},{packPrice:null,packQty:1,useQty:1,packUnit:'kg'}]});assert.equal(c.total,null);assert.equal(c.pct,null);assert.equal(c.known,p/100);assert.equal(c.knownPerPortion,p/200);}));
 await strict('recipe editor bridge converts g/kg, ml/L and pieces before resolution',fc.property(cents,small,small,fc.constantFrom(['kg','g',1000],['L','ml',1000],['unité','piece',1]),(p,q,y,[stockUnit,unit,factor])=>{doc({});w.stock=[{id:'s',name:'Ingredient',unit:stockUnit,costPerUnit:p/100}];R.save('converted',{portions:y,ingredients:[{stockId:'s',name:'Ingredient',qty:q*factor,unit}]});assert.equal(C.of({kind:'menu',id:'converted'}).mad,round(p/100*q/y));}));
 // Exercise the shipped performance aggregator with its actual matcher/resolvers.
-const workspace=read('assets/restaurant-menu-workspace.js');
+const workspace=menuWorkspaceSource();
 const screen=vm.createContext({window:w,D:()=>({items:screenItems}),sales:()=>screenSales,venue:()=>null,norm:s=>String(s||'').trim().toLowerCase(),cat:()=>null,ui:s=>s,COST_SRC:{frozen:'frozen',recipe:'recipe'},analysisWindow:()=>({from:0,to:10}),feedCompleteness:()=> 'complete'});
 let screenItems=[],screenSales=[];
 for(const name of ['saleLineMatcher','recipeCostResolver','menuLedger','performanceData'])vm.runInContext(declaration(workspace.slice(workspace.indexOf('function '+name+'(')),name),screen);

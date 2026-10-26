@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const menuWorkspaceSource = require('./menu-workspace-test-source.cjs');
 /* Performance et Heures de pointe vivent dans « Analyse du menu » : la page les rend par KiwiRestaurantMenuWorkspace.analysis, les mêmes panneaux qu'avant. */
 'use strict';
 /* Restaurant MixMax, septembre 2026. « Performance des articles · 30 derniers
@@ -62,7 +63,7 @@ vm.createContext(context);
 new vm.Script(fs.readFileSync('assets/day-report.js', 'utf8')).runInContext(context);
 /* Le vrai moteur de coûts : Performance et Heures lisent KiwiCost.ledger. */
 require('./kiwi-cost-harness').loadCost(context);
-new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
+new vm.Script(menuWorkspaceSource()).runInContext(context);
 
 const DR = window.KiwiDayReport;
 const today = DR.today();

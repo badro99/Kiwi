@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
@@ -27,7 +28,7 @@ assert.equal(sanitized.items.find((item) => item.id === 'legacy').showPhotoInFor
   'existing menu items default to text-only formula choices');
 
 const catalog = read('assets/menu-catalog.js');
-const workspace = read('assets/restaurant-menu-workspace.js');
+const workspace = menuWorkspaceSource();
 const orderPro = orderProTestSource(ROOT);
 const dashboard = dashboardDependencies(read('dashboard.html'));
 

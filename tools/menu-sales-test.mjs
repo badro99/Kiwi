@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* « Analyse du menu » · phase 2 : les ventes par catégorie et par article.
  *
  * Ce que ce fichier tient, sur les vrais fichiers (day-report.js, cost.js,
@@ -86,7 +87,7 @@ vm.runInContext(R('assets/day-report.js'), ctx, { filename: 'day-report.js' });
 const DR = win.KiwiDayReport;
 win.KiwiDateRange = { bounds: (p) => { const d = p === 'trenteJours' ? 30 : p === 'septJours' ? 7 : 1; return [DR.dayBounds(DR.shiftDay(DR.today(), -(d - 1))).from, Infinity]; } };
 loadCost(ctx, { vat: { mode: 'rate', rate: 10, included: true }, costs: { items: {}, recipes: {}, ingredients: [], charges: [], targets: {} } });
-vm.runInContext(R('assets/restaurant-menu-workspace.js'), ctx, { filename: 'restaurant-menu-workspace.js' });
+vm.runInContext(menuWorkspaceSource(), ctx, { filename: 'restaurant-menu-workspace.js' });
 vm.runInContext(R('assets/finance.js'), ctx, { filename: 'finance.js' });
 const A = win.KiwiRestaurantMenuWorkspace.analysis;
 const H = win.Kiwi.handlers;
@@ -194,7 +195,7 @@ ok(/المبيعات حسب الفئة والمنتج/.test(html) && /الشهر
 lang = 'fr'; document.documentElement.lang = 'fr';
 
 /* ── 6 · source ── */
-const src = R('assets/restaurant-menu-workspace.js');
+const src = menuWorkspaceSource();
 const keys = ['salesTitle', 'salesPresetMonth', 'salesPresetLastMonth', 'salesShareNote', 'salesOffline', 'salesError', 'salesLoading', 'salesInFormula'];
 ok(keys.every((k) => (src.match(new RegExp(`\\n\\s+${k}: '`, 'g')) || []).length === 3), 'chaque libellé existe en FR, EN et AR');
 ok(/@media \(max-width:720px\)\{\.rmw-sales-table thead\{display:none\}/.test(src) && /content:var\(--l2\)/.test(src), 'téléphone : chaque ligne devient une carte, chaque chiffre garde son libellé');
