@@ -462,12 +462,15 @@
       "owner": "serveur",
       "reads": [
         "KiwiEmployeeLive",
+        "KiwiLiveSocket",
         "KiwiMenuI18n",
         "KiwiMenuPromos",
         "KiwiPairs",
         "KiwiPlatform",
         "KiwiRoles",
         "KiwiServeurLang",
+        "KiwiServiceRequests",
+        "KiwiTeamPin",
         "KiwiZoneLaw",
         "__kiwiApplyTheme",
         "addToTableOrder",
@@ -733,12 +736,12 @@
     ],
     "renderCatPills": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderMenu": [
       "assets/caisse-app.js",
       "assets/orderpro-page.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "standaloneMenuItem": [
       "assets/caisse-app.js",
@@ -746,7 +749,7 @@
     ],
     "applyGroupedLineQtyDelta": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "pairSellable": [
       "assets/caisse-app.js",
@@ -766,15 +769,15 @@
     ],
     "openCardModal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "triggerCardSuccess": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "closeCardModal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "cashModal": [
       "assets/caisse-app.js",
@@ -806,15 +809,15 @@
     ],
     "updateRendu": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "openCashModal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "closeCashModal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "splitPayCallback": [
       "assets/caisse-app.js",
@@ -822,7 +825,7 @@
     ],
     "splitItemTotals": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "splitState": [
       "assets/caisse-app.js",
@@ -831,87 +834,87 @@
     ],
     "effectiveTipPct": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "openSplitModal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "remainingQty": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "conviveTotal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "assignUnit": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "unassignUnit": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "closeSplitModal": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderSplitSetup": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderArticleMode": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "splitArticleAllocation": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderConvivesTabs": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderPool": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderConviveCart": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderPartsChips": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderTipChips": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "updateSplitSummary": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderConvivesChips": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "launchSplitFlow": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderSplitFlow": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "paySplitPart": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "markSplitPartPaid": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderPinDots": [
       "assets/caisse-app.js",
@@ -928,11 +931,11 @@
     ],
     "saveSplitFlow": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "loadSplitFlow": [
       "assets/caisse-app.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "SERVICE_BILL_SYNC_VERSION": [
       "assets/caisse-app.js",
@@ -954,19 +957,19 @@
     ],
     "openNewTableModal": [
       "assets/caisse-floor.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "renderNewTableChips": [
       "assets/caisse-floor.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "confirmNewTable": [
       "assets/caisse-floor.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "addToTableOrder": [
       "assets/caisse-floor.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "__kiwiScrollLocks": [
       "assets/conformite.js",
@@ -1034,7 +1037,7 @@
     ],
     "runGreetingFlash": [
       "assets/orderpro-page.js",
-      "assets/serveur/service.js"
+      "assets/serveur-app.js"
     ],
     "saleMatches": [
       "assets/pos-boutique/checkout.js",
@@ -2526,6 +2529,10 @@
     "stock": {
       "parent": "assets/stock.js",
       "parts": "assets/stock/"
+    },
+    "serveur": {
+      "parent": "assets/serveur-app.js",
+      "parts": "assets/serveur/"
     }
   }
 }

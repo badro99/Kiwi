@@ -2,9 +2,9 @@
 const source = require('./serveur-source.cjs');
 const map = require('./fixtures/serveur/split.json');
 module.exports = function serveurTestSource(html) {
-  for (const file of map.parts) {
+  for (const file of [map.bundle]) {
     const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    html = html.replace(new RegExp('<script src="' + escaped + '\\?v=\\d+"></script>'), '');
+    html = html.replace(new RegExp('<script src="' + escaped + '(?:\\?v=\\d+)?"></script>'), '');
   }
   return html.replace(/<script src="assets\/serveur-app\.js\?v=\d+"><\/script>/,
     () => '<script>' + source() + '</script>');

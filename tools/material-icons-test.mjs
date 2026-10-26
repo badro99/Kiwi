@@ -178,7 +178,7 @@ let total = 0;
 // Count moved waiter call sites at their original path; the split proof checks every byte.
 // Preserve the same icon ceiling across the caisse's byte-exact move.
 const caisseParts = new Set(JSON.parse(read('tools/fixtures/caisse-app/workflows.json')).files);
-const serveurParts = new Set(serveurSource.fragments().map(m => m.file));
+const serveurParts = new Set([...serveurSource.fragments().map(m => m.file), JSON.parse(read('tools/fixtures/serveur/split.json')).bundle]);
 // Count extracted caisse and core code at its original owner.
 const coreParts = new Set(['assets/daterange/renderers.js', 'assets/agent/ui.js',
   ...JSON.parse(read('tools/fixtures/venues-split/split.json')).parts]);
