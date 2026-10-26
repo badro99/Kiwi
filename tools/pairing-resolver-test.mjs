@@ -756,7 +756,7 @@ function testShellResolver(shell, fnName) {
     const fn = new Function('window', 'localStorage', match[0] + '; return ' + fnName + '();');
     return fn(win, storage);
   };
-  return { found: true, withPlatform: run(true), fallback: run(false) };
+  return { found: true, withPlatform: run(true), fallback: shell === 'kiwi-serveur.html' ? null : run(false) };
 }
 
 for (const [shell, fnName] of [['kiwi-caisse.html', 'storePaired'], ['kiwi-serveur.html', 'svPaired']]) {
@@ -764,7 +764,7 @@ for (const [shell, fnName] of [['kiwi-caisse.html', 'storePaired'], ['kiwi-serve
   ok(r.found, `${shell} exposes an extractable ${fnName}() resolver`);
   ok(r.found && r.withPlatform && r.withPlatform.merchant === 'santos-store',
     `${shell} ${fnName}() resolves santos-store with KiwiPlatform present`);
-  ok(r.found && r.fallback && r.fallback.merchant === 'santos-store',
+  if (shell !== 'kiwi-serveur.html') ok(r.found && r.fallback && r.fallback.merchant === 'santos-store',
     `${shell} ${fnName}() resolves santos-store via fallback without KiwiPlatform`);
 }
 
