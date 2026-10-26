@@ -1967,6 +1967,7 @@ ar: {
    * reset must not come back over the dashboard. */
   const CRUMB_HOME = { fr: 'Accueil', en: 'Home', ar: 'الرئيسية' };
   let crumb = null; // { title, page } of the open page's crumb, null on the dashboard
+  let lastGenPage = null; // navKey of the appPage() view currently mounted
   const bodyPage = () => [...document.body.classList].find((c) => c.indexOf('page-') === 0) || '';
   function crumbText(title) {
     const t = typeof title === 'function' ? title() : title;
@@ -2012,6 +2013,17 @@ ar: {
      * host element, so reusing one node would stack duplicate listeners
      * across page visits. Replacing it lets them die with the old node. */
     const stale = container.querySelector('.dash-genpage');
+    /* Un repeint n'est pas une navigation. Plusieurs destinations rappellent
+     * appPage() pour se redessiner dès que leurs données bougent — le pointage
+     * relu à la seconde (team.js), le rapport journalier à chaque vente qui
+     * arrive de la caisse, les réservations, la note d'un séjour. Remonter en
+     * haut à ce moment-là arrache la page des yeux de quelqu'un qui lisait,
+     * quelques secondes après qu'il a lâché la molette, et il n'a rien
+     * demandé. Le saut en haut appartient au CHANGEMENT de page ; le repeint
+     * de la page déjà à l'écran garde la position de lecture. */
+    const repaint = !!stale && lastGenPage === navKey
+      && document.body.classList.contains('page-genpage');
+    const keepY = repaint ? (window.scrollY || 0) : 0;
     if (stale) stale.remove();
     const host = document.createElement('div'); host.className = 'dash-genpage'; container.appendChild(host);
     // Head — plain text via textContent (native-escaped, no injection).
@@ -2049,7 +2061,8 @@ ar: {
     document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     const navEl = document.querySelector(`.sidebar nav a[data-nav="${navKey}"]`);
     if (navEl) navEl.classList.add('active');
-    window.scrollTo({ top: 0 });
+    lastGenPage = navKey;
+    window.scrollTo({ top: keepY });
     /* Move screen-reader/keyboard focus to the new page's heading — without
      * this, focus stays on the sidebar link and the page change is silent. */
     h1.setAttribute('tabindex', '-1');
