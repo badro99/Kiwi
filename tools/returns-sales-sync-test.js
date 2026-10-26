@@ -36,6 +36,26 @@ const checks = [
   ['le serveur ne tronque pas une semaine active à 300 tickets', /const DAY_LIMIT = 2000/.test(feed)],
 ];
 
+/* Run: mutation paidUnit rounds up instead of down; the source contracts
+ * survive but partial returns exceed the paid per-piece centimes. */
+{
+  const vm = require('node:vm'), strict = require('node:assert/strict');
+  const { declaration } = require('./js-declarations.cjs');
+  const live = fs.readFileSync(path.join(__dirname, '../assets/pos-boutique/checkout.js'), 'utf8');
+  const ctx = vm.createContext({});
+  vm.runInContext(['lineReturnedQty', 'lineAvailableQty', 'markLineReturned', 'returnRatio', 'paidUnit']
+    .map(name => declaration(live.slice(live.indexOf('  function ' + name + '(')), name)).join('\n'), ctx);
+  const line = { qty: 3, unit: 10 };
+  const sale = { lines: [line], reward: true, balanceTotal: 20 };
+  strict.equal(Math.round(ctx.paidUnit(sale, line) * 100), 666, 'run: partial refund rounds down to paid centimes');
+  ctx.markLineReturned(line, 1, 'partial');
+  strict.equal(ctx.lineAvailableQty(line), 2); strict.equal(line.returned, false);
+  ctx.markLineReturned(line, 99, 'rest');
+  strict.equal(ctx.lineAvailableQty(line), 0); strict.equal(line.returnedQty, 3);
+  strict.equal(ctx.lineReturnedQty({ qty: 2, returned: true }), 2, 'run: legacy returned tickets stay exhausted');
+  strict.equal(ctx.paidUnit({ lines: [line], total: 30 }, line), 10);
+}
+
 const failed = checks.filter(([, ok]) => !ok);
 if (failed.length) {
   failed.forEach(([name]) => console.error('  ✗ ' + name));

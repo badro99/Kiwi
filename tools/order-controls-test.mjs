@@ -56,4 +56,19 @@ assert(/function openEditProduct\(pid\)\s*\{\s*catalogDashboardOnly\(\);\s*retur
 assert(!boutique.includes('data-vcolor="${v.id}"'), 'boutique caisse still exposes a variant price/color edit action');
 assert(!boutique.includes('data-vdel="${v.id}"'), 'boutique caisse still exposes a variant deletion action');
 
+/* Run: mutation normalizedRole returns the unnormalized input; the existing
+ * text guards stay green while accented/case manager authorization breaks. */
+const vm = await import('node:vm');
+const { createRequire } = await import('node:module');
+const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
+const managerContext = vm.createContext({});
+vm.runInContext(['MANAGER_ROLES', 'normalizedRole', 'isManagerRole']
+  .map(name => declaration(cancel.slice(cancel.indexOf(name === 'MANAGER_ROLES' ? 'const ' + name : 'function ' + name)), name)).join('\n'), managerContext);
+for (const role of ['manager', 'OWNER', 'Gérant', 'Responsable', 'store-manager']) {
+  assert(managerContext.isManagerRole(role), 'run: manager role recognized: ' + role);
+}
+for (const role of ['cashier', 'serveur', 'manager-assistant', '', null]) {
+  assert(!managerContext.isManagerRole(role), 'run: non-manager role refused');
+}
+
 console.log('order controls tests passed');

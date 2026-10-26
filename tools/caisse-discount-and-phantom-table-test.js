@@ -208,5 +208,24 @@ sessionsFresh.forEach(s => {
 ok('Genuine new session after closure properly seats Table 9',
   tables['9'].status === 'ka-yaklo');
 
+/* Run: mutation const target = 'vrap' in removeRemise keeps source checks
+ * green but removes the takeaway discount when a table was targeted. */
+{
+  const vm = require('node:vm'), strict = require('node:assert/strict');
+  const ctx = vm.createContext({ tables: { '2': { discount: { kind: 'pct', value: 10 } },
+    '3': { discount: { kind: 'amount', value: 5 } } },
+    remiseState: { target: 'table', tableId: '2' }, selectedId: '2',
+    vrapDiscount: { kind: 'pct', value: 20 }, closeRemiseModal() {}, renderCart() {},
+    renderRightPanel() {}, refreshTableNode() {}, toast() {} });
+  vm.runInContext(caisseTestSource.declarations('removeRemise'), ctx);
+  ctx.removeRemise();
+  strict.equal(ctx.tables['2'].discount, undefined, 'run: targeted table discount is removed');
+  strict.equal(ctx.tables['3'].discount.value, 5, 'run: another table remains isolated');
+  strict.equal(ctx.vrapDiscount.value, 20, 'run: takeaway remains isolated');
+  ctx.remiseState.target = 'vrap'; ctx.removeRemise();
+  strict.equal(ctx.vrapDiscount, null, 'run: takeaway removal targets its own discount');
+  strict.equal(ctx.tables['3'].discount.value, 5);
+}
+
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

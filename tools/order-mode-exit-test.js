@@ -413,6 +413,26 @@ const stuck = (t) => t.state.mode === 'order' && !t.state.selected;
     + (lost ? ` (perdu par : ${lost})` : ''), !lost);
 }
 
+/* Run: mutation orderInProgressCount returns 99 before its existing body;
+ * all text checks survive, while the actual exit guard fails below. */
+{
+  const vm = require('node:vm');
+  const strict = require('node:assert/strict');
+  const ctx = vm.createContext({ mode: 'order', selectedId: '2', tableOrders: {
+    '2': [{ qty: 3, sent: true }, { qty: 2, committed: true }, { qty: 1 }] },
+    tableSentCount: () => 3, renderMenu() {}, toast() {},
+    backToSalle: () => { ctx.mode = 'salle'; ctx.selectedId = null; } });
+  vm.runInContext(caisseTestSource.declarations('orderInProgressCount', 'cancelNewOrder'), ctx);
+  strict.equal(ctx.orderInProgressCount(), 1, 'run: sent and committed meals do not block exit');
+  ctx.cancelNewOrder();
+  strict.equal(ctx.mode, 'salle');
+  strict.equal(ctx.selectedId, null);
+  strict.equal(ctx.tableOrders['2'].length, 2, 'run: cancel drops only unsent additions');
+  strict.ok(ctx.tableOrders['2'].every(l => l.sent || l.committed));
+  ctx.mode = 'order'; ctx.cancelNewOrder();
+  strict.equal(ctx.mode, 'salle', 'run: a missing table still exits order mode');
+}
+
 /* ── Verdict ──────────────────────────────────────────────────────────────── */
 const line = '─'.repeat(64);
 console.log('\n' + line);

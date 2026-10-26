@@ -86,6 +86,24 @@ const recordSaleSnippet = recordSaleIdx !== -1 ? CAISSE.slice(recordSaleIdx, CAI
 ok("recordSale always sets entry.table on table settlements",
   /if \(settlementTable\) \{\s*entry\.table = String\(settlementTable\);[\s\S]*?const visit = phoneSessionOf/.test(recordSaleSnippet));
 
+/* Run: mutation const list = [] in sendToKitchen preserves text checks
+ * but prevents an actual takeaway dispatch. */
+{
+  const vm = require('node:vm'), strict = require('node:assert/strict');
+  const calls = [];
+  const ctx = vm.createContext({ mode: 'order', selectedId: '2', cart: [{ qty: 2 }],
+    vrapEditingNum: null, validateOrder: id => calls.push('table:' + id),
+    backToSalle: () => calls.push('salle'), toast() {},
+    createTakeawayKitchenOrder: lines => { calls.push('takeaway:' + lines[0].qty); return { num: 1 }; },
+    clearCart: () => calls.push('clear'), setVrapView: () => calls.push('board') });
+  vm.runInContext(caisseTestSource.declarations('sendToKitchen'), ctx);
+  ctx.sendToKitchen(); strict.deepEqual(calls, ['table:2'], 'run: table send never dispatches takeaway cart');
+  calls.length = 0; ctx.selectedId = null; ctx.sendToKitchen();
+  strict.deepEqual(calls, ['salle'], 'run: orphan order returns to floor');
+  calls.length = 0; ctx.mode = 'vrap'; ctx.sendToKitchen();
+  strict.deepEqual(calls, ['takeaway:2', 'clear', 'board'], 'run: takeaway dispatch precedes cart clearing');
+}
+
 console.log(`\nTable vs Takeaway routing tests: ${pass} passed, ${fails.length} failed`);
 if (fails.length) {
   fails.forEach(f => console.error("  ✗", f));

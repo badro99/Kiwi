@@ -78,5 +78,27 @@ ok('le reçu imprime le même numéro que la caisse et la cuisine',
       && /data-vrap-cancel/.test(CAISSE)
       && /cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(CAISSE));
 }
+/* Run: mutation return null at dispatchUnsentKitchenBeforePayment entry
+ * leaves all text contracts green, but drops the paid kitchen dispatch. */
+{
+  const vm = require('node:vm'), strict = require('node:assert/strict');
+  const calls = [], existing = { num: 8, status: 'held' };
+  const ctx = vm.createContext({ mode: 'vrap', vrapEditingNum: null, cart: [{ qty: 2 }],
+    kdsOrders: [existing], selectedId: '2',
+    createTakeawayKitchenOrder: lines => { calls.push(lines); return { num: 9 }; },
+    dispatchHeldTakeaway: (...args) => calls.push(args),
+    dispatchTableUnsentToKitchen: (...args) => { calls.push(args); return 'table-dispatched'; } });
+  vm.runInContext(caisseTestSource.declarations('dispatchUnsentKitchenBeforePayment'), ctx);
+  strict.equal(ctx.dispatchUnsentKitchenBeforePayment()?.num, 9);
+  strict.equal(ctx.vrapEditingNum, 9, 'run: payment retains the exact dispatched ticket');
+  strict.equal(calls[0], ctx.cart);
+  calls.length = 0; ctx.vrapEditingNum = 8;
+  strict.equal(ctx.dispatchUnsentKitchenBeforePayment(), existing);
+  strict.deepEqual(calls[0], [existing, true, true], 'run: paid held order uses paid dispatch');
+  calls.length = 0; ctx.mode = 'salle';
+  strict.equal(ctx.dispatchUnsentKitchenBeforePayment(), 'table-dispatched');
+  strict.deepEqual(calls[0], ['2', true], 'run: table tender cannot dispatch as takeaway');
+}
+
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');

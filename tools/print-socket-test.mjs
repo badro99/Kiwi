@@ -51,4 +51,38 @@ ok(!manifest.includes('android.permission.BLUETOOTH'), 'Android v1 ne demande pa
 const pkg = JSON.parse(read('app/package.json'));
 ok(pkg.dependencies['kiwi-printer-socket'] === 'file:plugins/kiwi-printer-socket', 'le plugin local est une dépendance de l’app');
 
+/* Run: mutation return r.ok ? next() : r preserves all text contracts but
+ * sends a successful socket print through the fallback, duplicating paper. */
+{
+  const vm = await import('node:vm');
+  const strict = await import('node:assert/strict');
+  const { createRequire } = await import('node:module');
+  const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
+  const source = read('assets/printer/transports.js');
+  let plugin = true, cfg = { ip: '192.0.2.1' }, answer = { ok: true, bytes: 3 }, fallback = 0;
+  const sends = [], failures = [];
+  const ctx = vm.createContext({ window: { Capacitor: { isNativePlatform: () => plugin,
+    isPluginAvailable: () => true, Plugins: { KiwiPrinterSocket: { send: async options => {
+      sends.push(options); if (answer instanceof Error) throw answer; return answer;
+    } } } }, KiwiEscPos: { toB64: bytes => Buffer.from(bytes).toString('base64') } },
+    getConfig: () => cfg, noteNativeFailure: reason => failures.push(reason), nativeFailureCount: 0 });
+  vm.runInContext(['nativeSocket', 'nativeSocketTarget', 'nativeSocketSend', 'nativeSocketFirst']
+    .map(name => declaration(source.slice(source.indexOf('  function ' + name + '(')), name)).join('\n'), ctx);
+  const bytes = new Uint8Array([27, 64, 10]);
+  const next = async () => { fallback++; return { ok: true, via: 'fallback' }; };
+  strict.equal((await ctx.nativeSocketFirst(bytes, null, next)).via, 'socket');
+  strict.equal(fallback, 0, 'run: successful socket sends never duplicate on fallback');
+  strict.equal(sends[0].host, '192.0.2.1'); strict.equal(sends[0].port, 9100);
+  strict.equal(sends[0].timeoutMs, 4000); strict.equal(sends[0].data, 'G0AK');
+  answer = { ok: false, code: 'local-network-denied' };
+  strict.equal((await ctx.nativeSocketFirst(bytes, { ip: '192.0.2.2', port: 9200 }, next)).via, 'fallback');
+  strict.equal(sends[1].host, '192.0.2.2'); strict.equal(sends[1].port, 9200);
+  answer = new Error('unreachable'); await ctx.nativeSocketFirst(bytes, null, next);
+  strict.deepEqual(failures, ['local-network-denied', 'unreachable']);
+  plugin = false; await ctx.nativeSocketFirst(bytes, null, next);
+  plugin = true; cfg = {}; await ctx.nativeSocketFirst(bytes, null, next);
+  strict.equal(sends.length, 3, 'run: missing plugin or IP bypasses socket');
+  strict.equal(fallback, 4);
+}
+
 console.log('print-socket-test: ' + pass + ' contrôles' + (process.exitCode ? ' · ÉCHEC' : ' ✓'));

@@ -120,6 +120,29 @@ check('Encaisser occupies its own full-width action row',
     pushed.some(p => p.num === 42 && p.status === 'ready'));
 }
 
+/* Run: mutation i.stationReady = false preserves the status/push text
+ * assertions but leaves a dish unready after the shipped ready action. */
+{
+  const vm = await import('node:vm');
+  const { createRequire } = await import('node:module');
+  const strict = await import('node:assert/strict');
+  const { declarations } = createRequire(import.meta.url)('./caisse-test-source.cjs');
+  const order = { num: 42, status: 'new', items: [{ stationReady: false }] };
+  const pushes = []; let saves = 0;
+  const ctx = vm.createContext({ kdsOrders: [order], kdsNowHM: () => '12:00',
+    kdsPaint() {}, renderVrapBoard() {}, opPush: (o, status) => pushes.push(status),
+    persistShift: () => saves++, toast() {}, ticketNo: o => String(o.num), vrapHandoverTime: () => '12:01' });
+  vm.runInContext(declarations('vrapMarkReady', 'vrapHandover'), ctx);
+  ctx.vrapMarkReady(999); strict.equal(pushes.length, 0);
+  ctx.vrapMarkReady(42);
+  strict.equal(order.status, 'ready'); strict.equal(order.items[0].stationReady, true);
+  strict.equal(order.readyAt, '12:00'); strict.equal(saves, 1);
+  ctx.vrapMarkReady(42); strict.equal(pushes.length, 1, 'run: readiness is idempotent');
+  ctx.vrapHandover(42); strict.equal(order.pickedUp, true); strict.equal(saves, 2);
+  strict.deepEqual(pushes, ['ready', 'served']);
+  ctx.vrapHandover(42); strict.equal(pushes.length, 2, 'run: handover is idempotent');
+}
+
 if (failed > 0) {
   console.error(`\nTakeout KDS ready tests failed (${failed} error(s)).`);
   process.exit(1);

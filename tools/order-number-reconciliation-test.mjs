@@ -31,5 +31,49 @@ check('printing heals a persisted receipt-number race before using its snapshot'
 check('an idempotent replay repairs the dashboard reference without adding a sale',
   /UPDATE sales SET ref = \? WHERE id = \? AND merchant = \?/.test(saleApi));
 
+/* Run: mutation row.ref = 'wrong' after the canonical assignment leaves all
+ * text contracts green, but fails receipt/journal/mirror identity below. */
+const { declarations } = (await import('node:module')).createRequire(import.meta.url)('./caisse-test-source.cjs');
+const vm = await import('node:vm');
+const row = { id: 'sale-1', orderId: 'remote-1', ref: 'L9', amount: 12.50 };
+const effects = [];
+const ctx = vm.createContext({ journal: [row], orderServerInitials: () => '',
+  attachReceipt: r => effects.push(['receipt', r.ref]), persistShift: () => effects.push(['persist']),
+  window: { KiwiLive: { postSale: r => effects.push(['mirror', r.id, r.ref]) } } });
+vm.runInContext(declarations('ticketNo', 'reconcileReceiptOrderNumber'), ctx);
+const order = { num: 9, opNum: 72, opId: 'remote-1', opChannel: 'kiwi', type: 'takeaway' };
+ctx.reconcileReceiptOrderNumber(order);
+check('run: canonical identity repairs the frozen receipt and idempotent mirror',
+  row.ref === 'OPD-72' && row.amount === 12.50 && ctx.journal.length === 1
+  && JSON.stringify(effects) === JSON.stringify([['receipt', 'OPD-72'], ['mirror', 'sale-1', 'OPD-72'], ['persist']]));
+ctx.reconcileReceiptOrderNumber(order);
+check('run: replaying the canonical number has no side effects', effects.length === 3);
+check('run: a provisional number does not rewrite the receipt',
+  ctx.reconcileReceiptOrderNumber({ num: 10 }) === null && effects.length === 3);
+
+// A responsive server gates payment until allocation; refusal releases it.
+for (const refused of [false, true]) {
+  let release, settled = false;
+  const promise = new Promise((resolve, reject) => { release = () => refused ? reject(Error('refused')) : resolve(); });
+  const gate = vm.createContext({ mode: 'vrap', selectedId: null, kdsOrders: [],
+    setTimeout: () => 1, clearTimeout() {} });
+  vm.runInContext(declarations('awaitCanonicalTicketNumber'), gate);
+  const waiting = gate.awaitCanonicalTicketNumber({ canonicalNumberPromise: promise }).then(() => { settled = true; });
+  for (let i = 0; i < 5; i++) await null;
+  check('run: payment waits while allocation is pending', !settled);
+  release(); await waiting;
+  check('run: server ' + (refused ? 'refusal' : 'answer') + ' releases payment', settled);
+}
+// An unreachable server is bounded by the shipped deadline.
+{
+  let timeout, milliseconds, cleared = false;
+  const gate = vm.createContext({ mode: 'vrap', selectedId: null, kdsOrders: [],
+    setTimeout: (cb, ms) => { timeout = cb; milliseconds = ms; return 1; }, clearTimeout: () => { cleared = true; } });
+  vm.runInContext(declarations('awaitCanonicalTicketNumber'), gate);
+  const waiting = gate.awaitCanonicalTicketNumber({ canonicalNumberPromise: new Promise(() => {}) });
+  timeout(); await waiting;
+  check('run: unreachable allocation releases at 2500ms and clears the timer', milliseconds === 2500 && cleared);
+}
+
 if (failed) process.exit(1);
 console.log('order-number-reconciliation-test: PASS');
