@@ -936,8 +936,8 @@
     "sha": "a436f63c3efda891"
   },
   "assets/kiwi-env.js": {
-    "v": "8",
-    "sha": "05dcde094f451493"
+    "v": "9",
+    "sha": "81658a75618730c5"
   },
   "assets/kiwi-health.css": {
     "v": "2",
@@ -1600,8 +1600,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "18",
-    "sha": "199e3528f000d70f"
+    "v": "19",
+    "sha": "c162e815563c52c9"
   },
   "assets/serveur-lang.js": {
     "v": "4",
