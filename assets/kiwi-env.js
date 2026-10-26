@@ -49,7 +49,8 @@
   // Employee entry links select a real sign-in flow even on a demo origin.
   // Evaluate lazily: the shared pairing runtime loads after this early gate.
   function employeeEntry() {
-    if (!/\/kiwi-serveur\.html$/.test(location.pathname || '')) return false;
+    // Pages serves the app as /kiwi-serveur (pretty URL) and /kiwi-serveur.html.
+    if (!/\/kiwi-serveur(?:\.html)?\/?$/.test(location.pathname || '')) return false;
     try {
       var q = new URLSearchParams(location.search).get('merchant');
       if (q && /^[a-z0-9][a-z0-9-]{0,63}$/i.test(q)) return true;

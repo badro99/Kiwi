@@ -22,7 +22,9 @@ for (const session of [false, true])
 for (const native of [false, true])
 for (const account of [null, 'account-a']) {
   const entries = {kiwiEmployeeMerchant:employee, kiwiDemos:forced, kiwiPaired:paired, kiwiPairedVenue:pairing, kiwiLiveMerchant:leftover, kiwiAccountKey:account};
-  const context = vm.createContext({location:{hostname,protocol:'https:',search,pathname:'/kiwi-serveur.html'}, URLSearchParams,
+  // Pages serves the app at its pretty URL too: alternate both paths.
+  const appPath = count % 2 ? '/kiwi-serveur' : '/kiwi-serveur.html';
+  const context = vm.createContext({location:{hostname,protocol:'https:',search,pathname:appPath}, URLSearchParams,
     localStorage:{getItem:k=>entries[k] ?? null}, console:{warn(){},error(){}},
     document:{addEventListener(){},querySelectorAll(){return [];}}, addEventListener(){},
     KiwiMe:session ? {} : null, KiwiApiBase:{native}});
@@ -42,7 +44,7 @@ for (const account of [null, 'account-a']) {
   // Employee routing must not switch other local surfaces into real mode.
   context.location.pathname = '/dashboard.html';
   assert.equal(context.KiwiEnv.isReal(), !!sharedReal, 'entry hints stay employee-scoped');
-  context.location.pathname = '/kiwi-serveur.html';
+  context.location.pathname = appPath;
   context.KiwiMe = {};
   assert.equal(context.svReal(), true, 'late authenticated session stays real');
   count++;
