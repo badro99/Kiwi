@@ -168,7 +168,7 @@
       const label = (e.label != null ? e.label : (K.label || ''));
       return `<div class="pds-el pds-el-${e.type}" style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px; transform:rotate(${e.rot || 0}deg); z-index:${10 + (e.z || 0)};">
           <div class="pds-el-fill"><svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${caisseNoirFixture(e, g)}</svg></div>
-          ${label ? `<span class="pds-el-label" style="color:${caisseJour() ? 'rgba(10,15,13,0.45)' : 'rgba(255,255,255,0.45)'};">${escTeam(label)}</span>` : ''}
+          ${label ? `<span class="pds-el-label" style="color:${caisseJour() ? 'rgba(10,15,13,0.85)' : 'rgba(255,255,255,0.8)'};">${escTeam(label)}</span>` : ''}
         </div>`;
     }
 

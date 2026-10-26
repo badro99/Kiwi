@@ -124,8 +124,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "5",
-    "sha": "56054a5411d845f3"
+    "v": "6",
+    "sha": "a69eba51bed20c6b"
   },
   "assets/caisse-hardware.js": {
     "v": "7",
@@ -144,8 +144,8 @@
     "sha": "662c68f00351f801"
   },
   "assets/caisse-menu-availability.js": {
-    "v": "8",
-    "sha": "015aaf4244e04771"
+    "v": "10",
+    "sha": "dcd1810d1b93852c"
   },
   "assets/caisse-motion.js": {
     "v": "8",
@@ -168,8 +168,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "11",
-    "sha": "17b87fdc57451557"
+    "v": "14",
+    "sha": "3d4dcbfb41eeb8ab"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -284,8 +284,8 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "37",
-    "sha": "9377e830c59d0074"
+    "v": "41",
+    "sha": "b509569d5debfae1"
   },
   "assets/clients-directory.js": {
     "v": "26",
@@ -624,8 +624,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "69",
-    "sha": "4028eef1cdcae694"
+    "v": "72",
+    "sha": "faaa421835b860d9"
   },
   "assets/interactive/handlers.js": {
     "v": "1",
@@ -768,8 +768,8 @@
     "sha": "91fba1b73e21ba8a"
   },
   "assets/kit/kit.css": {
-    "v": "54",
-    "sha": "6f34c9e59a8c7de0"
+    "v": "59",
+    "sha": "2e91a08f4f647638"
   },
   "assets/kit/layout.js": {
     "v": "1",

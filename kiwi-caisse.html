@@ -165,7 +165,7 @@
         '<meta name="theme-color" content="#F7F5F0">' +
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=9">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=54">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=59">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -222,7 +222,7 @@
        are inherited from here. -->
   <link rel="stylesheet" href="assets/tokens.css?v=2053" />
 
-  <link rel="stylesheet" href="assets/caisse-shell.css?v=11" />
+  <link rel="stylesheet" href="assets/caisse-shell.css?v=14" />
   <link rel="stylesheet" href="assets/caisse-skin.css?v=4" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
@@ -381,7 +381,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=17" defer></script>
   <script src="assets/clients-store.js?v=19" defer></script>
-  <script src="assets/clients-book.js?v=37" defer></script>
+  <script src="assets/clients-book.js?v=41" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -395,7 +395,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=39" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>
-  <script src="assets/caisse-menu-availability.js?v=8" defer></script>
+  <script src="assets/caisse-menu-availability.js?v=10" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -1176,11 +1176,11 @@
     <div class="modal modal-client">
       <div class="split-badge">Carnet clients</div>
       <h3 class="modal-title" id="cl-title" style="margin-bottom:10px;">Attacher un client à la note</h3>
-      <input type="text" class="wl-input" id="cl-search" placeholder="Nom ou téléphone" autocomplete="off" />
+      <input type="text" class="wl-input" id="cl-search" aria-label="Rechercher un client" placeholder="Nom ou téléphone" autocomplete="off" />
       <div class="cl-list" id="cl-list"></div>
       <div id="cl-new" hidden>
-        <input type="text" class="wl-input" id="cl-new-name" placeholder="Nom du client" autocomplete="off" style="margin-top:12px;" />
-        <input type="tel" class="wl-input" id="cl-new-phone" placeholder="06… / +33… / +49…" autocomplete="tel" inputmode="tel" style="margin-top:8px;" />
+        <input type="text" class="wl-input" id="cl-new-name" aria-label="Nom du client" placeholder="Nom du client" autocomplete="off" style="margin-top:12px;" />
+        <input type="tel" class="wl-input" id="cl-new-phone" aria-label="Téléphone du client" placeholder="06… / +33… / +49…" autocomplete="tel" inputmode="tel" style="margin-top:8px;" />
         <label class="cl-consent">
           <input type="checkbox" id="cl-new-consent" />
           <span>Le client accepte d'être recontacté</span>
@@ -1216,7 +1216,7 @@
     <div class="modal modal-waitlist">
       <div class="split-badge">File d'attente</div>
       <h3 class="modal-title" id="wl-title" style="margin-bottom:12px;">Ajouter à la file</h3>
-      <input type="text" class="wl-input" id="wl-name" placeholder="Nom du client" autocomplete="off" />
+      <input type="text" class="wl-input" id="wl-name" aria-label="Nom du client" placeholder="Nom du client" autocomplete="off" />
       <p class="modal-subtle" style="margin:14px 0 0;">Combien de personnes?</p>
       <div class="nt-chips" id="wl-size-chips"></div>
       <p class="modal-subtle" style="margin:6px 0 0;">Préférence d'installation</p>
@@ -1298,7 +1298,7 @@
           <div class="split-section-label">Pourboire commun</div>
           <div class="split-chips" id="split-tip-chips"></div>
           <div class="split-tip-custom" id="split-tip-custom">
-            <input class="split-tip-input" id="split-tip-input" type="number" min="0" max="100" step="0.5" placeholder="Entrez un %" />
+            <input class="split-tip-input" id="split-tip-input" aria-label="Pourboire en %" type="number" min="0" max="100" step="0.5" placeholder="Entrez un %" />
           </div>
 
           <div class="split-summary">
@@ -1380,7 +1380,7 @@
         <div class="pay-tip-label">Pourboire</div>
         <div class="pay-tip-chips" id="card-tip-chips"></div>
         <div class="pay-tip-custom" id="card-tip-custom">
-          <input class="pay-tip-input" id="card-tip-input" type="number" min="0" max="100" step="0.5" placeholder="Entrez un %" />
+          <input class="pay-tip-input" id="card-tip-input" aria-label="Pourboire en %" type="number" min="0" max="100" step="0.5" placeholder="Entrez un %" />
         </div>
         <div class="pay-tip-breakdown" id="card-tip-breakdown"></div>
       </div>
@@ -1416,7 +1416,7 @@
         <div class="pay-tip-label">Pourboire</div>
         <div class="pay-tip-chips" id="cash-tip-chips"></div>
         <div class="pay-tip-custom" id="cash-tip-custom">
-          <input class="pay-tip-input" id="cash-tip-input" type="number" min="0" max="100" step="0.5" placeholder="Entrez un %" />
+          <input class="pay-tip-input" id="cash-tip-input" aria-label="Pourboire en %" type="number" min="0" max="100" step="0.5" placeholder="Entrez un %" />
         </div>
         <div class="pay-tip-breakdown" id="cash-tip-breakdown"></div>
       </div>
@@ -1877,7 +1877,7 @@
         <span class="team-avatar" id="msg-target-avatar" style="background:#3FB67A;">YA</span>
         <span><b id="msg-target-name">Yassir A.</b> <span style="color:var(--ink-4);" id="msg-target-status">· En service</span></span>
       </div>
-      <textarea class="msg-input" id="msg-input" placeholder="Écris ton message en darija/français…"></textarea>
+      <textarea class="msg-input" id="msg-input" aria-label="Message" placeholder="Écris ton message en darija/français…"></textarea>
       <div class="msg-quick">
         <button data-msg="Table prête, merci de venir la débarrasser.">Table prête</button>
         <button data-msg="Khalik blati svp · client attend.">Client attend</button>
@@ -1981,7 +1981,7 @@
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
   <link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-accounting.js?v=8" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-floor.js?v=5" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-floor.js?v=6" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=8" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=4" data-caisse-script>

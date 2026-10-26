@@ -203,6 +203,55 @@ html[data-k-till] #kds-screen .kit-history-inner { gap: 8px; padding: 0; padding
   html[data-k-till] #kds-screen .kit-history-inner { width: auto; }
   html[data-k-till] #kds-screen .kit-history-inner { padding-inline-start: 0; }
 }
+/* The till's Clients page in the 2027 till (clients-book.js), owner 26 Oct
+   2026: it still wore the shipped page, a 28 px bold title, a column centred
+   at 1 280 px (a 100 px gutter beside the rail on a wide screen), uppercase
+   tracked labels and a search field ringed green on open. It now reads like
+   Cuisine and À emporter: the light title line on the rail's edge, the kit's
+   surfaces and chips, sentence-case labels, and the kit's own focus ring. */
+html[data-k-till] #kcb-root { background-color: var(--k-bg); color: var(--k-ink-1); font-family: var(--k-font); }
+/* Beside the rail it is a page, not a sheet: no rounded corner, edge line or
+   shadow thrown over the rail (owner's screenshot, 26 Oct), as Salle and
+   Cuisine sit flat beside it. */
+html[data-k-till] #kcb-root[data-rail] { border-inline-start: 0; border-start-start-radius: 0; box-shadow: none; animation: none; }
+html[data-k-till] #kcb-root .kcb-page { max-width: none; margin: 0; padding: 18px 24px 32px; }
+html[data-k-till] #kcb-root .kcb-top { align-items: center; margin-bottom: 16px; }
+html[data-k-till] #kcb-root .kcb-top > div:first-child { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; min-width: 0; }
+html[data-k-till] #kcb-root .kcb-top h2 { font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong); line-height: var(--k-lh-body); letter-spacing: 0; color: var(--k-ink-1); }
+html[data-k-till] #kcb-root .kcb-prog { display: inline; margin: 0; font-size: var(--k-fs-callout); color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-prog::before { content: "\00B7\00A0"; }
+html[data-k-till] #kcb-root .kcb-add { height: auto; min-height: 44px; padding: 0 18px; border-radius: 999px; background-color: var(--k-accent); color: var(--k-on-accent); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); }
+html[data-k-till] #kcb-root .kcb-add:hover { background-color: var(--k-accent-pressed, var(--k-accent)); }
+html[data-k-till] #kcb-root .kcb-strip { gap: 1px; border: 1px solid var(--k-line); border-radius: var(--k-r-3); background-color: var(--k-line); box-shadow: none; margin-bottom: 16px; }
+html[data-k-till] #kcb-root .kcb-strip .kx-kpi { background-color: var(--k-surface-1); padding: 14px 16px; }
+html[data-k-till] #kcb-root .kcb-strip .l { font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote); letter-spacing: 0; text-transform: none; color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-strip .v { margin-top: 4px; font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); letter-spacing: 0; color: var(--k-ink-1); }
+html[data-k-till] #kcb-root .kcb-strip .v .u { font-size: var(--k-fs-footnote); color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-tools { gap: 8px; margin-bottom: 12px; }
+html[data-k-till] #kcb-root .kcb-searchwrap svg { color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-search { border: 0; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-1); font-family: inherit; font-size: var(--k-fs-callout); }
+html[data-k-till] #kcb-root .kcb-search::placeholder { color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-search:focus { border: 0; box-shadow: none; }
+html[data-k-till] #kcb-root .kcb-search:focus-visible { box-shadow: inset 0 0 0 var(--k-focus-w) var(--k-focus); }
+html[data-k-till] #kcb-root .kx-tabs { gap: 8px; padding: 0; border-radius: 0; background: none; }
+html[data-k-till] #kcb-root .kx-tab { height: auto; min-height: 44px; padding: 0 16px; border-radius: 999px; background-color: var(--k-surface-2); color: var(--k-ink-1); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); }
+html[data-k-till] #kcb-root .kx-tab.on,
+html[data-k-till] #kcb-root .kx-tabs[data-kw-lens] .kx-tab.on { background-color: var(--k-select); box-shadow: inset 0 0 0 var(--k-select-edge-w) var(--k-line-strong); font-weight: var(--k-fw-callout-strong); }
+html[data-k-till] #kcb-root .kx-tab b { color: var(--k-ink-3); font-weight: var(--k-fw-callout-strong); }
+html[data-k-till] #kcb-root .kx-tab:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+html[data-k-till] #kcb-root .kcb-list { border: 1px solid var(--k-line); border-radius: var(--k-r-3); background-color: var(--k-surface-1); }
+html[data-k-till] #kcb-root .kcb-cols { height: auto; min-height: 40px; border-bottom: 1px solid var(--k-line); background: none; font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote); letter-spacing: 0; text-transform: none; color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-row { border-top-color: var(--k-line); }
+html[data-k-till] #kcb-root .kcb-row:focus-visible { outline: 0; box-shadow: inset 0 0 0 var(--k-focus-w) var(--k-focus); }
+html[data-k-till] #kcb-root .kcb-row .kcb-ph,
+html[data-k-till] #kcb-root .kcb-num small,
+html[data-k-till] #kcb-root .kcb-muted { color: var(--k-ink-3); }
+html[data-k-till] #kcb-root .kcb-fid .kcb-minibar { background-color: var(--k-surface-2); }
+html[data-k-till] #kcb-root .kcb-fid .kcb-minibar i { background-color: var(--k-accent); }
+@media (max-width: 640px) {
+  html[data-k-till] #kcb-root .kcb-page { padding: 14px 16px 28px; }
+  html[data-k-till] #kcb-root .kcb-prog { display: none; }
+}
 /* The till's menu and bill on the kit (kiwi-caisse.html, stage 4 (1)).
    html[data-k-till] is set only once till-frame.js has mounted, so a kit that
    failed to load leaves the shipped grid and panel in place. */

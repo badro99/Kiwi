@@ -531,6 +531,10 @@
     }
     root.style.display = 'flex';
     positionRoot(root);
+    // Opened just after the unlock, the 2027 rail can still be settling and is
+    // missed: the page then took the menu pane's box, 35 px off the rail and
+    // 28 px down. Measure again once it has settled.
+    setTimeout(function () { if (root.style.display !== 'none') positionRoot(root); }, 400);
     markNav(entry);
     root.innerHTML =
       '<div class="kcb-scroll" tabindex="0" role="region" aria-label="Clients"><div class="kcb-page">' +
@@ -540,7 +544,7 @@
           '<button data-activation=write class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
         '<div class="kcb-strip" id="kcb-strip"></div>' +
         '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
-          '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
+          '<input class="kcb-search" id="kcb-q" inputmode="search" aria-label="Rechercher un client" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
           '<div class="kx-tabs" id="kcb-segs" role="tablist" aria-label="Profils"></div></div>' +
         '<div class="kcb-list" id="kcb-list"></div>' +
       '</div></div>';
@@ -553,8 +557,10 @@
     // A touch keyboard that rises the moment the page opens hides the list
     // the merchant came to read: a phone, and an iPad too. Only a mouse or
     // trackpad gets the field focused.
+    // The 2027 till's page opens from its rail like Salle or Cuisine, with
+    // nothing focused (owner, 26 Oct 2026: the ringed field read as a bug).
     var fine = false; try { fine = window.matchMedia('(pointer: fine)').matches; } catch (_) {}
-    if (!isPhone() && fine) q.focus();
+    if (!isPhone() && fine && !railed()) q.focus();
     announce(true);
   }
   /* Le rail de la caisse 2027 allume son entrée tant que le carnet est ouvert. */
