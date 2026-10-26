@@ -121,7 +121,7 @@ ok('resumeTableOrder retourne bien dans le mode commande', /setMode\('order'\)/.
 ok('resumeTableOrder survit à une table disparue du plan', /if \(!t\)/.test(resumeFn));
 ok("resumeTableOrder ne rouvre pas une note déjà encaissée", /'khlass'/.test(resumeFn));
 ok("resumeTableOrder n'écrase pas la commande en cours",
-  /if \(!tableOrders\[id\]\) tableOrders\[id\] = \[\];/.test(resumeFn));
+  /if \(!tableOrders\[id\]\) currentOrder\(\)\.replaceTable\(id, \[\]\);/.test(resumeFn));
 
 // Le compteur de garde doit ignorer ce qui est déjà en cuisine, sinon la
 // sortie qu'on vient d'ouvrir se referme sur toute mesa rouverte.
@@ -176,7 +176,7 @@ ok('releasePhoneTable peut fermer une session sans pastille locale',
 // La cuisine ne reçoit que le neuf — la règle existait, elle doit tenir.
 const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId, opts\)\s*\{[\s\S]{0,4200}?\n {4}\}/) || [''])[0];
 ok('sendTableToKitchen n’envoie que les lignes non parties', /!l\.sent/.test(sendFn));
-ok('sendTableToKitchen marque les lignes envoyées', /l\.sent = true/.test(sendFn));
+ok('sendTableToKitchen marque les lignes envoyées', /currentOrder\(\)\.patchLine\(l, \{ \["sent"\]: true \}\)/.test(sendFn));
 
 const retireRejectedFn = (CAISSE.match(/function retireRejectedKitchenTicket\(ticket\)\s*\{[\s\S]{0,1800}?\n    \}/) || [''])[0];
 ok('un ticket rejeté retire aussi son pont de ligne OrderPro de la table',

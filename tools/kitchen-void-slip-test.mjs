@@ -93,7 +93,7 @@ console.log('\n■ Seulement quand l’annulation est faite');
   ok(call > at("if (!Array.isArray(data.remainingLines)) throw"), 'printed only after the server returned the remaining lines');
   ok(call > at('if (data && data.alertSent)') && fn.slice(at('if (data && data.alertSent)'), at('if (!Array.isArray(data.remainingLines))')).indexOf('printKitchenVoid') < 0, 'not while the cancellation waits for the kitchen');
   ok(fn.slice(at('} catch (err) {')).split('/* Local demo')[0].indexOf('printKitchenVoid') < 0, 'not when the cancellation failed');
-  ok(at('const voidRequestId = line.cancelRequestId;') > 0 && at('const voidRequestId = line.cancelRequestId;') < at('delete line.cancelRequestId;\n          toast(`${line.name} annulé en cuisine`)'), 'keyed by the request id, read before it is cleared');
+  ok(at('const voidRequestId = line.cancelRequestId;') > 0 && at('const voidRequestId = line.cancelRequestId;') < at('currentOrder().patchLine(line, {}, ["cancelRequestId"]);\n          toast(`${line.name} annulé en cuisine`)'), 'keyed by the request id, read before it is cleared');
 }
 
 console.log('\n■ Sur le papier');

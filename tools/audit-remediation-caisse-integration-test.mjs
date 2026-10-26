@@ -17,7 +17,7 @@ for (const status of ['held', 'new', 'cooking', 'ready']) {
     opRepairFormulaParents() {}, attachOrderProTable() {},
     journal: [{ id: 'paid-sale', amount: 40 }],
   });
-  vm.runInContext(shipped('retireRejectedKitchenTicket') + '\n' + shipped('opIngest'), context);
+  vm.runInContext(caisseTestSource.withSettlement(shipped('retireRejectedKitchenTicket') + '\n' + shipped('opIngest')), context);
   context.opIngest({ id: ticket.opId, status: 'rejected', channel: 'kiwi' });
   assert.equal(context.kdsOrders.length, 1, status + ' rejected ticket leaves active KDS');
   assert.equal(context.kdsOrders[0], other, 'unrelated ticket remains');

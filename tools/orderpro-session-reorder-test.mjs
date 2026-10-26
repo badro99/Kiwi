@@ -100,10 +100,10 @@ ok('live elapsed loop only increments elapsed when table has orders',
   /const hasOrder = \(tableOrders\[id\] && tableOrders\[id\]\.length > 0\) \|\| \(orders\[id\] && orders\[id\]\.length > 0\);[\s\S]{0,150}if \(hasOrder && \(t\.status === 'ka-yaklo'/.test(CAISSE_SRC));
 
 ok('markPaid clears tableOrders synchronously',
-  /function markPaid\(id\) \{[\s\S]{0,1700}tableOrders\[id\] = \[\];/.test(CAISSE_SRC));
+  /function markPaid\(id\) \{[\s\S]{0,1700}currentOrder\(\)\.replaceTable\(id, \[\]\);/.test(CAISSE_SRC));
 
 ok('attachOrderProTable purges lines from other sessions',
-  /let lines = tableOrders\[id\] \|\| \(tableOrders\[id\] = \[\]\);[\s\S]{0,200}const curSession = String\(activeSeat\.session\);[\s\S]{0,200}const filtered = lines\.filter\(l => !l\.orderSession \|\| String\(l\.orderSession\) === curSession\);[\s\S]{0,150}lines = tableOrders\[id\] = filtered;/.test(CAISSE_SRC));
+  /let lines = tableOrders\[id\] \|\| \(currentOrder\(\)\.replaceTable\(id, \[\]\)\);[\s\S]{0,200}const curSession = String\(activeSeat\.session\);[\s\S]{0,200}const filtered = lines\.filter\(l => !l\.orderSession \|\| String\(l\.orderSession\) === curSession\);[\s\S]{0,150}lines = currentOrder\(\)\.replaceTable\(id, filtered\);/.test(CAISSE_SRC));
 
 console.log('■ Commandes Clients Print Button Removal');
 

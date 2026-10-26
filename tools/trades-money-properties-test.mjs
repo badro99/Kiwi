@@ -64,7 +64,7 @@ await strict('boulangerie last-hour markdown follows declared floor-to-cent poli
 // Restaurant harness edges are shared with the existing money suite; functions stay real.
 const cs=caisseWorkflowSource.liveSource(),h=read('tools/caisse-money-properties-test.mjs');
 const selected=vm.runInNewContext(declaration(h,'selected')+';selected');
-const context=vm.runInNewContext(declaration(h,'context')+';context',{vm,declaration,source:cs,selected,TS:Date.parse('2026-10-22T12:00Z'),Clock:Date,console});
+const context=vm.runInNewContext(declaration(h,'context')+';context',{vm,declaration,caisseWorkflowSource,source:cs,selected,TS:Date.parse('2026-10-22T12:00Z'),Clock:Date,console});
 const restaurantPosted=[],restaurant=context({KiwiPosSale:{foldLines:fold},KiwiLive:{postSale:p=>{restaurantPosted.push(p);return {ok:true,queued:true,id:'sale'};}}});
 await strict('restaurant mirror folds 41..60 lines without changing full receipt or ticket',fc.property(fc.array(fc.integer({min:1,max:10000}),{minLength:41,maxLength:60}),amounts=>{const posted=restaurantPosted,t=restaurant;posted.length=0;t.c.journal=[];t.c.recordSale(sum(amounts)/100,'cash','Ticket',0,amounts.map((n,i)=>({name:'Plat '+i,qty:1,price:n/100,total:n/100})));assert.equal(posted.length,1);assert.ok(posted[0].lines.length<=40);assert.equal(sum(posted[0].lines.map(l=>C(l.total))),sum(amounts));assert.equal(C(posted[0].amount),sum(amounts));}),[[Array(41).fill(1)]]);
 const sc=context().c;

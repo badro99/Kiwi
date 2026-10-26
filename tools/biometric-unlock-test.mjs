@@ -185,7 +185,7 @@ async function run() {
   check('Caisse persists and restores the in-progress cart across relock reload',
     caisseHtml.includes('cart: cart,') &&
     caisseHtml.includes('localStorage.setItem(KC_STORE, JSON.stringify({') &&
-    caisseHtml.includes('if (Array.isArray(d.cart)) cart = d.cart;'));
+    caisseHtml.includes('if (Array.isArray(d.cart)) currentOrder().replaceCart(d.cart);'));
 
   const short = runtimeHarness();
   short.api.handleNativeAppState({ isActive: false });

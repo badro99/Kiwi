@@ -659,6 +659,8 @@ for (const test of [
   'restaurant-payment-identity-test.mjs',
   'table-settlement-browser-test.mjs',
   'table-settlement-source-test.mjs',
+  'current-order-source-test.mjs',
+  'current-order-properties-test.mjs',
   'table-settlement-properties-test.mjs',
   'restaurant-reopen-test.mjs',
   'restaurant-reopen-ui-test.mjs',

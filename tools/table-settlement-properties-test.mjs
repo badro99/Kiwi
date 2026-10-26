@@ -5,6 +5,8 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 const fc = createRequire(new URL('../app/package.json', import.meta.url))('fast-check');
 const context = vm.createContext({});
+const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
+vm.runInContext(declaration(fs.readFileSync('assets/caisse/catalogue.js', 'utf8'), 'createCurrentOrder'), context);
 vm.runInContext(fs.readFileSync('assets/caisse/table-settlement.js', 'utf8'), context);
 const plain = x => JSON.parse(JSON.stringify(x));
 const actions = fc.array(fc.record({ kind: fc.constantFrom('open', 'pay', 'split', 'settle', 'reopen', 'transfer', 'merge'),
@@ -14,7 +16,7 @@ const runs = Number(process.env.KIWI_PROPERTY_RUNS) || 300;
 let steps = 0;
 fc.assert(fc.property(actions, sequence => {
   let tables = Object.fromEntries([0, 1, 2, 3].map(id => [id, { status: 'khawya' }]));
-  let lines = {}, api = context.createTableSettlement(tables, lines);
+  let lines = {}, api = context.createTableSettlement(tables, lines, null, context.createCurrentOrder({ tables: lines }));
   const model = [0, 1, 2, 3].map(() => ({ total: 0, entries: [], lines: [], allocations: [] }));
   const due = m => m.total - m.entries.reduce((sum, e) => sum + (e.kind === 'refund' ? -e.amountCents : e.amountCents), 0);
   sequence.forEach((action, index) => {
@@ -54,7 +56,7 @@ fc.assert(fc.property(actions, sequence => {
       const before = JSON.stringify(tables);
       if (action.retry) { call(); assert.equal(JSON.stringify(tables), before, 'Tentative répétée sans mutation'); }
     }
-    if (action.reload) { tables = plain(tables); lines = plain(lines); api = context.createTableSettlement(tables, lines); }
+    if (action.reload) { tables = plain(tables); lines = plain(lines); api = context.createTableSettlement(tables, lines, null, context.createCurrentOrder({ tables: lines })); }
     model.forEach((expected, key) => {
       const actual = api.snapshot(key).settlement;
       if (!actual) { assert.equal(expected.total, 0); return; }
@@ -77,11 +79,11 @@ fc.assert(fc.property(actions, sequence => {
 }), { seed: 20261026, numRuns: runs });
 // Lignes réelles déplacées une fois, y compris après restauration et nouvelle tentative.
 const t = { a: { status: 'ka-yaklo' }, b: { status: 'khawya' } }, l = { a: [{ uid: 'article' }] };
-let api = context.createTableSettlement(t, l);
+let api = context.createTableSettlement(t, l, null, context.createCurrentOrder({ tables: l }));
 api.open('a', { id: 'open', totalCents: 17, lines: l.a });
 api.addPayment('a', { id: 'pay', amountCents: 5 });
 api.transfer('a', 'b', { id: 'move' });
-api = context.createTableSettlement(plain(t), l);
+api = context.createTableSettlement(plain(t), l, null, context.createCurrentOrder({ tables: l }));
 api.transfer('a', 'b', { id: 'move' });
 assert.equal(l.b.length, 1); assert.equal(l.a, undefined); assert.equal(api.balance('b'), 12);
 // Reprise sur une autre table après réutilisation de la table d'origine.

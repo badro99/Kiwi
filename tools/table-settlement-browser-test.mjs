@@ -39,10 +39,35 @@ try {
     await page.waitForFunction(() => typeof doOpenService === 'function');
     await page.evaluate(() => { doOpenService(); });
     await page.waitForFunction(() => document.body.classList.contains('is-unlocked'));
+    t.step('saisir et encaisser une table par les commandes visibles');
+    await page.click('.mode-pill[data-mode="salle"]');
+    const paidTable = await page.evaluate(() => [...document.querySelectorAll('.cplan-tbl')]
+      .find(node => node.offsetParent && tables[node.dataset.table]?.status === 'khawya')?.dataset.table);
+    assert.ok(paidTable, 'Table libre du plan de démonstration');
+    await page.click(`.cplan-tbl[data-table="${paidTable}"]`);
+    await page.waitForSelector('#new-table-modal.is-open');
+    await page.click('#nt-covers-chips button');
+    await page.click('#nt-confirm');
+    await page.waitForFunction(() => mode === 'order');
+    const dish = await page.evaluate(() => [...document.querySelectorAll('.menu-item')]
+      .find(node => {
+        const item = standaloneMenuItem(node.dataset.menuId);
+        return node.offsetParent && item && item.price > 0 && !item.formula && !itemOptGroups(item).length;
+      })?.dataset.menuId);
+    assert.ok(dish, 'Plat sans options disponible');
+    await page.click(`.menu-item[data-menu-id="${dish}"]`);
+    const amount = await page.evaluate(() => Math.round(currentTotal() * 100));
+    assert.ok(amount > 0);
+    await page.click('#pay-charge-order');
+    await page.waitForSelector('#cash-modal.is-open');
+    await page.click('#cash-confirm');
+    await page.waitForFunction(id => tables[id].status === 'khlass' && !(tableOrders[id] || []).length, {}, paidTable);
+    const sale = await page.evaluate(() => ({ method: lastSaleEntry().method, cents: Math.round(lastSaleEntry().amount * 100) }));
+    assert.deepEqual(sale, { method: 'cash', cents: amount });
     await page.evaluate(() => {
       setMode('salle');
       const lines = [{ uid: 'test-line', id: 'test-line', name: 'TEST KIWI', qty: 1, price: 60, sent: true }];
-      tableOrders.T8 = lines;
+      currentOrder().replaceTable('T8', lines);
       tableSettlement().open('T8', { id: 'test-open', session: 'test-visit', totalCents: 6000, lines });
       tableSettlement().addPayment('T8', { id: 'test-payment-1', amountCents: 2000, method: 'cash' });
       tableSplits.set('T8', { id: 'test-split', session: 'test-visit', total: 60, paidCount: 1, mode: 'egal',

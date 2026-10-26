@@ -153,7 +153,7 @@ check('caisse local tickets print the composed-menu parent and its components',
 check('caisse takeout billing uses priced formula parents, never zero-price kitchen components',
   caisseHtml.includes('function vrapFinancialItems(o)')
     && caisseHtml.includes("filter(l => l.kind !== 'formula-part')")
-    && caisseHtml.includes('cart = vrapFinancialItems(o).map(i =>')
+    && caisseHtml.includes('currentOrder().replaceCart(vrapFinancialItems(o).map(i =>')
     && caisseHtml.includes('saveVrapBillItems(o, vrapCartItems(o))'));
 check('caisse relay preserves formula and canonical option metadata',
   caisseHtml.includes('function relayLinesFromCaisse(lines)')

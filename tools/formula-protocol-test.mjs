@@ -594,6 +594,7 @@ if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemove
   ok(false, 'caisse formula group/edit helpers or one-tap cancellation missing');
 } else {
   const caisseGroupHarness = new Function(`
+    ${caisseTestSource.orderDeclarations()}
     let idSeq = 0;
     const newLineUid = () => 'new-' + (++idSeq);
     const optSig = (opts) => (opts || []).map(option => option.c).join('|');
@@ -618,7 +619,7 @@ if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemove
   const caisseAfterDec = caisseGroupHarness.applyGroupedLineQtyDelta(qtyTwo, qtyTwo[0], -1);
   ok(caisseAfterDec.filter(line => line.formulaUid === 'cash-f1').every(line => line.qty === 1), 'caisse formula decrement keeps parent and component quantities synchronized');
   ok(caisseAfterDec.find(line => line.uid === 'cash-standalone').qty === 1, 'caisse formula decrement does not touch an identical standalone drink');
-  ok(/cart = removeGroupedLine\(cart, uid\)/.test(caisseSource) && /tableOrders\[selectedId\] = removeGroupedLine\(tableOrders\[selectedId\], uid\)/.test(caisseSource), 'caisse review trash routes takeaway and table formulas through grouped removal');
+  ok(/currentOrder\(\)\.replaceCart\(removeGroupedLine\(cart, uid\)\)/.test(caisseSource) && /currentOrder\(\)\.replaceTable\(selectedId, removeGroupedLine\(tableOrders\[selectedId\], uid\)\)/.test(caisseSource), 'caisse review trash routes takeaway and table formulas through grouped removal');
   ok(/l\.sent \|\| l\.kind === 'formula-part' \? ''/.test(caisseSource) && /l\.kind === 'formula-part' \? `<span class="rp-sent-qty">/.test(caisseSource), 'caisse component rows expose no independent delete or quantity controls');
   ok(/await postCaisseCancellation\(\{/.test(cancelCaisseLineMatch[0])
     && /catch \(err\) \{[\s\S]*?return;/.test(cancelCaisseLineMatch[0])
@@ -661,7 +662,7 @@ if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemove
   );
   ok(replacedEdit.map(line => line.uid).join('|') === `before|parent-stable|bread-stable|${editedGroup.parts[1].uid}|after`, 'formula edit atomically replaces the group in place without moving unrelated lines');
   ok(/!l\.sent && l\.kind === 'formula'/.test(caisseSource) && /data-review-action="edit-formula"/.test(caisseSource) && /editFormulaLine\(row\.dataset\.reviewUid\)/.test(caisseSource), 'review modal exposes Modifier only for unsent formula parents and wires it to editing');
-  ok(/cart = replaceFormulaGroup\(cart, parent\.formulaUid, replacement\)/.test(caisseSource) && /tableOrders\[selectedId\] = replaceFormulaGroup\(tableOrders\[selectedId\], parent\.formulaUid, replacement\)/.test(caisseSource), 'formula editor replaces takeaway and table groups through the same atomic helper');
+  ok(/currentOrder\(\)\.replaceCart\(replaceFormulaGroup\(cart, parent\.formulaUid, replacement\)\)/.test(caisseSource) && /currentOrder\(\)\.replaceTable\(selectedId, replaceFormulaGroup\(tableOrders\[selectedId\], parent\.formulaUid, replacement\)\)/.test(caisseSource), 'formula editor replaces takeaway and table groups through the same atomic helper');
 }
 
 const serveurGroupedDeltaMatch = serveurSource.match(/function applyGroupedLineQtyDelta\(lines, line, delta, adjustSentQty\) \{[\s\S]*?\n    \}/);

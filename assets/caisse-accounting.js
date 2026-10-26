@@ -443,9 +443,9 @@
       /* New discounts explicitly carry `accounted:false`. Legacy persisted
          discounts have no flag and were already added at approval time. */
       if (!d || d.accounted !== false || !(cut > 0)) return;
-      d.amount = money(cut);
-      d.accounted = true;
-      if (mode !== 'vrap' && tId && tables[tId]) tableSettlement().project(tables[tId], { discount: d });
+      const accounted = { ...d, amount: money(cut), accounted: true };
+      if (mode === 'vrap') currentOrder().setDiscount(accounted);
+      else if (tId && tables[tId]) tableSettlement().project(tables[tId], { discount: accounted });
       shift.discounts = money(shift.discounts + cut);
       shift.discountsCount++;
     }

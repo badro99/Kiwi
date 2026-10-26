@@ -100,8 +100,8 @@
     function toggleLineHold(tableId, uid) {
       const line = (tableOrders[tableId] || []).find(l => l && l.uid === uid);
       if (!line || line.sent || line.kind === 'formula-part') return;
-      if (line.hold) delete line.hold;
-      else line.hold = true;
+      if (line.hold) currentOrder().patchLine(line, {}, ["hold"]);
+      else currentOrder().patchLine(line, { ["hold"]: true });
       renderOrderPanel(tableId);
       try { persistShift(); } catch (_) {}
     }
@@ -111,7 +111,7 @@
       const all = tableOrders[tableId] || [];
       /* Ce qui reste « à suivre » après cet envoi est confirmé : il fait
          désormais partie du repas, plus d'un ajout qu'on peut annuler. */
-      if (!fire) all.forEach((l) => { if (l && lineHeld(l, all)) l.committed = true; });
+      if (!fire) all.forEach((l) => { if (l && lineHeld(l, all)) currentOrder().patchLine(l, { ["committed"]: true }); });
       /* Les lignes OrderPro pending ont leur propre identifiant canonique et
          doivent être acceptées comme leur commande d'origine, pas fusionnées
          dans un nouveau bon caisse. */
@@ -136,7 +136,7 @@
       if (firing) kdsOrders.forEach((o) => { if (o && o.following && String(o.table) === String(tableId)) delete o.following; });
       kdsOrders.push(order);
       if (tables[tableId] && !tables[tableId].orderNo) tableSettlement().project(tables[tableId], { orderNo: ticketNo(order) });
-      lines.forEach((l) => { l.sent = true; delete l.hold; delete l.committed; });
+      lines.forEach((l) => { currentOrder().patchLine(l, { ["sent"]: true }); currentOrder().patchLine(l, {}, ["hold"]); currentOrder().patchLine(l, {}, ["committed"]); });
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
       /* Le relais donne immédiatement au bon son identifiant canonique. La file
@@ -383,7 +383,7 @@
       });
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
-      delete tableOrders[id];
+      currentOrder().removeTable(id);
       delete orders[id];
       tableSplits.delete(id);
       const t = tables[id];
@@ -405,7 +405,7 @@
     function cancelOpenTable(id, who = null) {
       if (!id || tableSentCount(id) > 0) return false;
       if (!who) { window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: id } }); requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; }
-      delete tableOrders[id];
+      currentOrder().removeTable(id);
       tableSplits.delete(id);
       const t = tables[id];
       if (t) {
@@ -436,7 +436,7 @@
       if (selectedId && (tableSentCount(selectedId) > 0 || (tableOrders[selectedId] || []).some(l => l && l.committed))) {
         const id = selectedId;
         const dropped = (tableOrders[id] || []).reduce((s, l) => s + ((l.sent || l.committed) ? 0 : l.qty), 0);
-        tableOrders[id] = (tableOrders[id] || []).filter(l => l.sent || l.committed);
+        currentOrder().replaceTable(id, (tableOrders[id] || []).filter(l => l.sent || l.committed));
         renderMenu();
         backToSalle(id);
         toast(dropped > 0
@@ -453,7 +453,7 @@
           requireTillOperator(`Annuler la table ${target}`, actor => { if (selectedId === target) cancelNewOrder(actor); });
           return;
         }
-        delete tableOrders[selectedId];
+        currentOrder().removeTable(selectedId);
         const t = tables[selectedId];
         /* La table peut avoir disparu sous nos pieds · setupRealSalle() efface
            et reconstruit `tables` dès que le patron touche son plan depuis son
@@ -492,10 +492,10 @@
          depuis son téléphone. On ne relance pas une commande sur un fantôme. */
       if (!t) { backToSalle(); toast('Cette table n\'existe plus sur le plan'); return; }
       if (t.status === 'khlass') { toast('Table déjà encaissée'); return; }
-      if (!tableOrders[id]) tableOrders[id] = [];
+      if (!tableOrders[id]) currentOrder().replaceTable(id, []);
       selectedId = id;
       markSelectedTable(id);
-      cart = [];
+      currentOrder().replaceCart([]);
       setMode('order');
       const n = tableSentCount(id);
       if (n > 0) toast(`Table ${id} · ${n} article${n > 1 ? 's' : ''} déjà en cuisine`);
@@ -1568,9 +1568,9 @@
       if (mode !== 'vrap') setMode('vrap');
       vrapResumedExpiredId = String(id);
       dismissExpired(id);
-      vrapEditingNum = null;
-      vrapDiscount = null;
-      cart = (e.lines || []).map(l => {
+      currentOrder().setEditing(null);
+      currentOrder().setDiscount(null);
+      currentOrder().replaceCart((e.lines || []).map(l => {
         const m = menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
         return {
           uid: newLineUid(),
@@ -1581,7 +1581,7 @@
           note: l.note || '',
           kind: '', formulaUid: '', formulaChoices: [],
         };
-      }).filter(c => c.name);
+      }).filter(c => c.name));
       if (!cart.length) { toast('Expirée vide · rien à reprendre'); return; }
       setVrapView('builder');
       renderMenu();
@@ -1692,7 +1692,7 @@
           const index = kdsOrders.indexOf(o);
           if (index >= 0) kdsOrders.splice(index, 1);
           if (vrapEditingNum === o.num) {
-            vrapEditingNum = null;
+            currentOrder().setEditing(null);
             clearCart();
             setVrapView('board');
           } else renderVrapBoard();
@@ -1797,7 +1797,7 @@
           try { persistShift(); } catch (_) {}
           toast(`Commande ${ticketNo(o)} encaissée · ${fmtMAD(o.total)}`);
         }
-        vrapEditingNum = null;
+        currentOrder().setEditing(null);
         clearCart();
         setVrapView('board');
       } else {
@@ -1810,9 +1810,9 @@
       const o = kdsOrders.find(x => x.num === num);
       if (!o || o.paid) return;
       if (mode !== 'vrap') setMode('vrap');
-      vrapEditingNum = num;
-      vrapDiscount   = null;
-      cart = vrapFinancialItems(o).map(i => {
+      currentOrder().setEditing(num);
+      currentOrder().setDiscount(null);
+      currentOrder().replaceCart(vrapFinancialItems(o).map(i => {
         const m = menuLineFind(x => x.name === i.n);
         return {
           uid:   newLineUid(),
@@ -1824,7 +1824,7 @@
           kind: i.kind || '', formulaUid: i.formulaUid || '',
           formulaChoices: Array.isArray(i.formulaChoices) ? i.formulaChoices.map(choice => ({ ...choice })) : [],
         };
-      });
+      }));
       setVrapView('builder');
       const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
       if (vrapTitle) {
@@ -2102,7 +2102,7 @@
         }
         if (cart && cart.length) {
           const created = createTakeawayKitchenOrder(cart);
-          if (created) vrapEditingNum = created.num;
+          if (created) currentOrder().setEditing(created.num);
           return created;
         }
         return null;
@@ -2208,7 +2208,7 @@
          This is deliberately narrower than clearing the table. */
       if (o.status === 'rejected') {
         const before = (tableOrders[id] || []).length;
-        tableOrders[id] = (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(orderId + ':'));
+        currentOrder().replaceTable(id, (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(orderId + ':')));
         const changed = tableOrders[id].length !== before;
         if (changed) {
           refreshTableNode(id);
@@ -2272,12 +2272,12 @@
         if (t.timerSession && t.timerSession !== String(activeSeat.session)) resetTableTimer(t);
         tableSettlement().project(t, { timerSession: String(activeSeat.session) });
       }
-      let lines = tableOrders[id] || (tableOrders[id] = []);
+      let lines = tableOrders[id] || (currentOrder().replaceTable(id, []));
       if (activeSeat && activeSeat.session) {
         const curSession = String(activeSeat.session);
         const filtered = lines.filter(l => !l.orderSession || String(l.orderSession) === curSession);
         if (filtered.length !== lines.length) {
-          lines = tableOrders[id] = filtered;
+          lines = currentOrder().replaceTable(id, filtered);
           changed = true;
         }
       }
@@ -2287,7 +2287,7 @@
         if (existing) {
           const pending = o.status === 'pending';
           const canonicalUid = l.uid || l.id || '';
-          if (existing.orderProPending !== pending) { existing.orderProPending = pending; changed = true; }
+          if (existing.orderProPending !== pending) { currentOrder().patchLine(existing, { ["orderProPending"]: pending }); changed = true; }
           const nextQty = Math.max(1, Number(l.qty) || 1);
           if (existing.qty !== nextQty || existing.voidPending !== !!l.voidAlert
             || existing.name !== (l.name || '') || existing.price !== (+l.unitPrice || 0)
@@ -2297,20 +2297,20 @@
              * answers line-not-on-order. */
             || existing.canonicalUid !== canonicalUid
             || existing.canonicalOrderId !== orderId) {
-            existing.qty = nextQty;
-            existing.voidPending = !!l.voidAlert;
-            existing.canonicalUid = canonicalUid;
-            existing.canonicalOrderId = orderId;
-            existing.id = l.id || existing.id;
-            existing.name = l.name || existing.name;
-            existing.price = +l.unitPrice || 0;
+            currentOrder().patchLine(existing, { ["qty"]: nextQty });
+            currentOrder().patchLine(existing, { ["voidPending"]: !!l.voidAlert });
+            currentOrder().patchLine(existing, { ["canonicalUid"]: canonicalUid });
+            currentOrder().patchLine(existing, { ["canonicalOrderId"]: orderId });
+            currentOrder().patchLine(existing, { ["id"]: l.id || existing.id });
+            currentOrder().patchLine(existing, { ["name"]: l.name || existing.name });
+            currentOrder().patchLine(existing, { ["price"]: +l.unitPrice || 0 });
             changed = true;
           }
           return;
         }
         const menuHit = menuLineFind(x => String(x.id) === String(l.id))
           || menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
-        lines.push({
+        currentOrder().append(lines, {
           uid: newLineUid(), canonicalUid: l.uid || l.id || '', canonicalOrderId: orderId,
           id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
@@ -2333,7 +2333,7 @@
       const activeMarkers = new Set(incomingLines.map((l, index) => orderId + ':' + String(l.uid || l.lineId || index)));
       const kept = lines.filter(line => !String(line.orderProLine || '').startsWith(orderId + ':')
         || activeMarkers.has(String(line.orderProLine)));
-      if (kept.length !== lines.length) { tableOrders[id] = kept; changed = true; }
+      if (kept.length !== lines.length) { currentOrder().replaceTable(id, kept); changed = true; }
       if (changed) {
         if ((tableOrders[id] || []).length) startTableTimer(id, o.created_ts);
         refreshTableNode(id);
@@ -2357,7 +2357,7 @@
         opTickets.delete(String(ticket.opId));
         retired = true;
         if (vrapEditingNum === ticket.num) {
-          vrapEditingNum = null;
+          currentOrder().setEditing(null);
           clearCart();
           setVrapView('board');
         }
@@ -2370,8 +2370,8 @@
         const id = ticket.table ? caisseTableId(ticket.table) : null;
         if (id && Array.isArray(tableOrders[id])) {
           const before = tableOrders[id].length;
-          tableOrders[id] = tableOrders[id].filter(line =>
-            !String(line.orderProLine || '').startsWith(String(ticket.opId) + ':'));
+          currentOrder().replaceTable(id, tableOrders[id].filter(line =>
+            !String(line.orderProLine || '').startsWith(String(ticket.opId) + ':')));
           if (tableOrders[id].length !== before) {
             refreshTableNode(id);
             if (selectedId === id && mode === 'salle') renderRightPanel(id);
@@ -2448,12 +2448,12 @@
             if (o.status === 'rejected' || !remote) { changed = true; return false; }
             const qty = Math.max(1, Number(remote.qty) || 1);
             if (line.qty !== qty || line.voidPending !== !!remote.voidAlert) {
-              line.qty = qty; line.voidPending = !!remote.voidAlert; changed = true;
+              currentOrder().patchLine(line, { qty, voidPending: !!remote.voidAlert }); changed = true;
             }
             return true;
           });
           if (changed) {
-            tableOrders[tableId] = next;
+            currentOrder().replaceTable(tableId, next);
             refreshTableNode(tableId);
             if (selectedId === tableId) mode === 'order' ? renderOrderPanel(tableId) : renderRightPanel(tableId);
             try { persistShift(); } catch (_) {}
@@ -2486,7 +2486,7 @@
               && String(l.note || '') === String(line.note || ''));
           });
           if (kept.length !== bill.length) {
-            tableOrders[id] = kept;
+            currentOrder().replaceTable(id, kept);
             refreshTableNode(id);
             if (selectedId === id) mode === 'order' ? renderOrderPanel(id) : renderRightPanel(id);
             try { persistShift(); } catch (_) {}
@@ -2514,7 +2514,7 @@
           // sondage suivant ne doit pas la renvoyer en salle sous le panier.
           const type = o.mode === 'table' && !known.offPlan ? 'dineIn' : 'takeaway';
           if (known.type !== type && vrapEditingNum === known.num) {
-            vrapEditingNum = null;
+            currentOrder().setEditing(null);
             clearCart();
             setVrapView('board');
           }

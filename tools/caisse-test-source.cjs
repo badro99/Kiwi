@@ -248,7 +248,7 @@ module.exports.declarations = function declarations(...names) {
   const { declaration } = require('./js-declarations.cjs');
   const source = liveSource();
   const body = names.map(name => declaration(source, name)).join('\n');
-  return /\btableSettlement\(/.test(body) ? module.exports.withSettlement(body) : body;
+  return /\b(?:tableSettlement|currentOrder)\(/.test(body) ? module.exports.withSettlement(body) : body;
 };
 // The four live files, concatenated in load order, for tests that read or run the core.
 module.exports.FILES = LIVE;
@@ -263,8 +263,17 @@ module.exports.appSource = () => appBeforeWorkflows() || [...workflows.files.map
 
 // Les bacs à sable de fonctions isolées chargent le propriétaire réel une seule fois.
 module.exports.withSettlement = function withSettlement(source) {
+  const { declaration } = require('./js-declarations.cjs');
+  const catalogue = read('assets/caisse/catalogue.js');
+  const order = ['createCurrentOrder', 'currentOrder'].map(name => declaration(catalogue, name)).join('\n');
   const body = read('assets/caisse/table-settlement.js');
   const at = body.indexOf('function tableSettlement()');
-  return 'if (!globalThis.createTableSettlement) { globalThis.createTableSettlement = ('
+  return 'if (!globalThis.createCurrentOrder) { ' + order + '\nglobalThis.createCurrentOrder = createCurrentOrder; globalThis.currentOrder = currentOrder; }\n' + 'if (!globalThis.createTableSettlement) { globalThis.createTableSettlement = ('
     + body.slice(0, at) + '); globalThis.tableSettlement = (' + body.slice(at) + '); }\n' + source;
+};
+
+module.exports.orderDeclarations = function () {
+  const { declaration } = require('./js-declarations.cjs');
+  const catalogue = read('assets/caisse/catalogue.js');
+  return ['createCurrentOrder', 'currentOrder'].map(name => declaration(catalogue, name)).join('\n');
 };

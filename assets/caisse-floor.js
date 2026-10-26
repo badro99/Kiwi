@@ -839,8 +839,8 @@
       }
 
       // Reset right panel · persist any À emporter edit, drop the edit state
-      if (vrapEditingNum != null) { saveVrapEdits(); vrapEditingNum = null; cart = []; }
-      vrapDiscount = null;
+      if (vrapEditingNum != null) { saveVrapEdits(); currentOrder().setEditing(null); currentOrder().replaceCart([]); }
+      currentOrder().setDiscount(null);
       // Changer de mode change de note : la fiche client attachée se relâche.
       try { renderSaleClient(); } catch (_) {}
       if (newMode === 'salle') {
@@ -848,7 +848,7 @@
         if (selectedId) renderRightPanel(selectedId);
         else showEmpty();
       } else if (newMode === 'order') {
-        cart = [];
+        currentOrder().replaceCart([]);
         setVrapView('builder');
         renderOrderPanel(selectedId);
       } else if (newMode === 'waitlist') {
@@ -1195,7 +1195,7 @@
       tableSettlement().project(t, {}, ['reopenRef']);
       tableSettlement().project(t, {}, ['reopenSessionId']);
       tableSettlement().project(t, {}, ['orderNo']);
-      tableOrders[id] = [];
+      currentOrder().replaceTable(id, []);
       delete orders[id];
       /* L'addition est réglée : le téléphone posé sur cette table cesse d'être
          un terminal de commande. C'est LE point de passage de tous les
@@ -1215,7 +1215,7 @@
         if (tables[id] && tables[id].status === 'khlass') {
           tableSettlement().project(tables[id], { status: 'khawya' });
           delete orders[id]; // clear order
-          delete tableOrders[id]; // clear cashier-built order
+          currentOrder().removeTable(id); // clear cashier-built order
           tableSettlement().project(tables[id], {}, ['discount']); // clear remise · table reset
           tableSettlement().project(tables[id], {}, ['orderNo']); // next party gets its own order number
           refreshTableNode(id);
@@ -1277,7 +1277,7 @@
          genuinely new table invalidates it even if the old close was missed. */
       tableSplits.delete(newTableId);
       delete tableClosedAt[tableKey(newTableId)]; // Nouvelle table légitime · lever le filtre de fermeture
-      tableOrders[newTableId] = [];
+      currentOrder().replaceTable(newTableId, []);
       serviceFloorLocalVersion[newTableId] = Date.now();
       serviceFloorRemoteVersion[newTableId] = Math.max(serviceFloorRemoteVersion[newTableId] || 0, Date.now());
       refreshTableNode(newTableId);
@@ -1394,7 +1394,7 @@
         tableSettlement().project(t, { covers: e.size });
         resetTableTimer(t);
         delete orders[tableId];       // drop any cached/fabricated order
-        tableOrders[tableId] = [];    // fresh table, ready to take their order
+        currentOrder().replaceTable(tableId, []);    // fresh table, ready to take their order
         refreshTableNode(tableId);
       }
       if (idx >= 0) waitlist.splice(idx, 1);
@@ -1482,7 +1482,7 @@
       phonePending.delete(fromKey);
       phonePending.set(toKey, pending + (merge ? (phonePending.get(toKey) || 0) : 0));
       (tableOrders[to] || []).forEach(line => {
-        if (line.orderProLine) line.orderSession = session;
+        if (line.orderProLine) currentOrder().patchLine(line, { ["orderSession"]: session });
       });
       // Acknowledged movement changes location/visit, never acceptance or payment.
       try {
@@ -1806,13 +1806,13 @@
         toast('Annulation impossible · caisse non appairée, article conservé');
         return;
       }
-      line.voidBusy = true;
+      currentOrder().patchLine(line, { ["voidBusy"]: true });
       toast(`Annulation de ${line.name}…`);
 
       if (slug) {
         try {
           // Keep the operation identity across a lost response / retry.
-          line.cancelRequestId ||= 'voi-' + crypto.randomUUID();
+          currentOrder().patchLine(line, { ["cancelRequestId"]: line.cancelRequestId || ('voi-' + crypto.randomUUID()) });
           const owner = tableId && canonicalOrdersForTable(tableId).find(entry =>
             (entry.order.relayLines || []).some(item => item.uid === line.uid));
           const data = await postCaisseCancellation({
@@ -1834,7 +1834,7 @@
               }
           });
           if (data && data.alertSent) {
-            line.voidPending = true;
+            currentOrder().patchLine(line, { ["voidPending"]: true });
             toast(`Annulation demandée · attente de la cuisine · ${line.name}`);
             if (tableId) renderRightPanel(tableId);
             return;
@@ -1849,23 +1849,22 @@
             const remote = data.remainingLines.find(row => String(row.uid || row.id) === String(item.canonicalUid || item.uid))
               || (!item.canonicalUid && data.remainingLines.find(row => !row.uid && row.id === item.id));
             if (!remote) return false;
-            item.qty = Number(remote.qty); item.voidPending = !!remote.voidAlert;
-            delete item.cancelRequestId;
+            currentOrder().patchLine(item, { qty: Number(remote.qty), voidPending: !!remote.voidAlert }, ['cancelRequestId']);
             return item.qty > 0;
           });
           const voidRequestId = line.cancelRequestId;
           printKitchenVoid(tableId, line, voidRequestId, scope, qtyBefore);
-          if (scope.cart) cart = reconcile(cart);
-          else tableOrders[tableId] = reconcile(tableOrders[tableId]);
+          if (scope.cart) currentOrder().replaceCart(reconcile(cart));
+          else currentOrder().replaceTable(tableId, reconcile(tableOrders[tableId]));
           try { persistShift(); } catch (_) {}
-          delete line.cancelRequestId;
+          currentOrder().patchLine(line, {}, ["cancelRequestId"]);
           toast(`${line.name} annulé en cuisine`);
           return;
         } catch (err) {
           toast(`Article conservé · ${err.message || 'annulation non transmise'} · touchez − pour réessayer`);
           return;
         } finally {
-          line.voidBusy = false;
+          currentOrder().patchLine(line, { ["voidBusy"]: false });
           renderMenu();
           if (tableId) {
             if (mode === 'order') renderOrderPanel(tableId);
@@ -1878,11 +1877,11 @@
          still gets its slip. */
       printKitchenVoid(tableId, line, 'demo-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8), scope, qtyBefore);
       if (scope.cart) {
-        cart = applyGroupedLineQtyDelta(cart, line, -1);
+        currentOrder().replaceCart(applyGroupedLineQtyDelta(cart, line, -1));
       } else {
-        tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1);
+        currentOrder().replaceTable(tableId, applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1));
       }
-      line.voidBusy = false;
+      currentOrder().patchLine(line, { ["voidBusy"]: false });
       renderMenu();
       if (tableId) {
         try { persistShift(); } catch (_) {}
@@ -1894,7 +1893,7 @@
     /* ---- table order management ---- */
     function pushTableOrderLine(tableId, item, opts) {
       nativeHapticLight();
-      if (!tableOrders[tableId]) tableOrders[tableId] = [];
+      if (!tableOrders[tableId]) currentOrder().replaceTable(tableId, []);
       // First item taken → order started, table is now being served (eating)
       if (tables[tableId] && tables[tableId].status === 'a-commander') {
         tableSettlement().project(tables[tableId], { status: 'ka-yaklo' });
@@ -1914,8 +1913,8 @@
       const line = tableOrders[tableId].find(l => l.id === item.id && !l.sent
         && !l.hold && !l.committed
         && !(l.note || '').trim() && (l.optSig || '') === sig && promoKey(l.promo) === promoKey(priced.promo));
-      if (line) line.qty++;
-      else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name,
+      if (line) currentOrder().patchLine(line, { qty: +line.qty + 1 });
+      else currentOrder().append(tableOrders[tableId], Object.assign({ uid: newLineUid(), id: item.id, name: item.name,
         price: priced.price, qty: 1, note: '', opts: (opts || []).slice(), optSig: sig },
         priced.promo ? { promo: priced.promo } : null));
       startTableTimer(tableId);
@@ -1931,7 +1930,7 @@
       if (!item) return;
       const groups = itemOptGroups(item);
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
-        openCaisseFormula(item, (parent, parts) => { (tableOrders[tableId] = tableOrders[tableId] || []).push(parent, ...parts); startTableTimer(tableId); nativeHapticLight(); renderMenu(); renderOrderPanel(tableId); });
+        openCaisseFormula(item, (parent, parts) => { currentOrder().append((currentOrder().replaceTable(tableId, tableOrders[tableId] || [])), parent, ...parts); startTableTimer(tableId); nativeHapticLight(); renderMenu(); renderOrderPanel(tableId); });
         return;
       }
       if (groups.length) {
@@ -1951,7 +1950,7 @@
         if (delta < 0) cancelCaisseLineImmediately(tableId, line);
         return;
       }
-      tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId], line, delta);
+      currentOrder().replaceTable(tableId, applyGroupedLineQtyDelta(tableOrders[tableId], line, delta));
       renderMenu();
       renderOrderPanel(tableId);
     }

@@ -30,7 +30,8 @@ async function knownIssue(id, label, property, examples) {
 }
 // Extract declarations by name from current production files, never split offsets.
 const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
-const source = createRequire(import.meta.url)('./caisse-test-source.cjs').FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+const caisseWorkflowSource = createRequire(import.meta.url)('./caisse-test-source.cjs');
+const source = caisseWorkflowSource.FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 const cents = mad => Math.round(mad * 100);
 const add = rows => rows.reduce((a,b) => a+b, 0);
 const MAX = 5_000_000;
@@ -70,7 +71,7 @@ function context(extra = {}) {
   for(const name of ['money','minor','major','fmtMAD','fmtMADcents']) {
     vm.runInContext(declaration(source, name),c);
   }
-  vm.runInContext(selected.map(name=>declaration(source,name)).join('\n'),c);
+  vm.runInContext(caisseWorkflowSource.withSettlement(selected.map(name=>declaration(source,name)).join('\n')),c);
   return { c, nodes, timers, $ };
 }
 const { c } = context();

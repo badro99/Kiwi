@@ -24,7 +24,7 @@ const setModeIdx = CAISSE.indexOf("function setMode(newMode)");
 const setModeFn = setModeIdx !== -1 ? CAISSE.slice(setModeIdx, setModeIdx + 4000) : "";
 ok("setMode exists", !!setModeFn);
 ok("setMode clears cart in order mode",
-  /else if \(newMode === .order.\)\s*\{\s*cart = \[\];/.test(setModeFn));
+  /else if \(newMode === .order.\)\s*\{\s*currentOrder\(\)\.replaceCart\(\[\]\);/.test(setModeFn));
 ok("setMode releases table lock and clears selectedId in vrap mode",
   /if \(selectedId\) \{\s*setCaisseTableLock\(selectedId, .release.\);\s*selectedId = null;\s*\}/.test(setModeFn));
 
@@ -56,7 +56,7 @@ ok("confirmNewTable stamps local and remote floor version",
 const resumeTableOrderIdx = CAISSE.indexOf("function resumeTableOrder(id)");
 const resumeTableOrderFn = resumeTableOrderIdx !== -1 ? CAISSE.slice(resumeTableOrderIdx, resumeTableOrderIdx + 800) : "";
 ok("resumeTableOrder clears cart before order mode",
-  /cart = \[\];\s*setMode\(.order.\);/.test(resumeTableOrderFn));
+  /currentOrder\(\)\.replaceCart\(\[\]\);\s*setMode\(.order.\);/.test(resumeTableOrderFn));
 
 // 7. sendToKitchen never dispatches tableOrders as takeaway
 const sendToKitchenIdx = CAISSE.indexOf("function sendToKitchen()");

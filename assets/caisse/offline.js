@@ -175,7 +175,7 @@
           serviceFloorLocalVersion[String(id)] = Number(state.ts) || Date.now();
           if (state.status === 'khawya' || state.status === 'khlass') {
             delete orders[id];
-            delete tableOrders[id];
+            currentOrder().removeTable(id);
             tableSettlement().project(tables[id], {}, ['discount']);
             if (selectedId === id) closeRightPanel();
           }
@@ -483,8 +483,7 @@
         if (tables[id]) tableSettlement().project(tables[id], d.tables[id]);
       });
       if (d.tableOrders) {
-        Object.keys(tableOrders).forEach(k => delete tableOrders[k]);
-        Object.assign(tableOrders, d.tableOrders);
+        currentOrder().restoreTables(d.tableOrders);
       }
       if (d.orders) {
         Object.keys(orders).forEach(k => delete orders[k]);
@@ -502,7 +501,7 @@
         resetTableTimer(tables[id]);
         tableSettlement().project(tables[id], {}, ['orderNo']);
         tableSettlement().project(tables[id], {}, ['discount']);
-        delete tableOrders[id];
+        currentOrder().removeTable(id);
         delete orders[id];
       });
       tableSplits.clear();
@@ -522,9 +521,9 @@
         /* Shift saved before per-order splits: one slot, keyed by its order. */
         vrapSplits.set(vrapSplitKey(d.vrapSplit.orderNum), d.vrapSplit);
       }
-      if (Array.isArray(d.cart)) cart = d.cart;
-      vrapDiscount = d.vrapDiscount || null;
-      vrapEditingNum = d.vrapEditingNum != null ? d.vrapEditingNum : null;
+      if (Array.isArray(d.cart)) currentOrder().replaceCart(d.cart);
+      currentOrder().setDiscount(d.vrapDiscount || null);
+      currentOrder().setEditing(d.vrapEditingNum != null ? d.vrapEditingNum : null);
       /* Le board cuisine. `sentAt` revient en texte du JSON alors que tout
          l'écran cuisine calcule un âge dessus (kdsElapsed lit .getTime()) :
          sans cette reprise en Date, la première peinture jetterait. */

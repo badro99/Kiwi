@@ -592,7 +592,7 @@
         "discountAmountFor",
         "generateOrder",
         "liveTableSplit",
-        "tableOrders",
+        "currentOrder",
         "tables"
       ],
       "coupling": 5
