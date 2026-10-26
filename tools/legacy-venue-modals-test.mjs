@@ -183,7 +183,7 @@ check(/if\(legacyMenuHandler\)return legacyMenuHandler\.apply\(this,arguments\);
 const PFX = '(?:eq|mi|pay)-[a-z0-9][a-z0-9-]*';
 const listFiles = (dir, rx) => fs.readdirSync(path.join(root, dir)).filter((f) => rx.test(f)).map((f) => path.posix.join(dir, f));
 const stripStyles = (s) => s.replace(/<style[^>]*>[\s\S]*?<\/style>/g, ' ');
-const emitters = [...listFiles('assets', /\.js$/), ...listFiles('.', /\.html$/)]
+const emitters = [...listFiles('assets', /\.js$/), ...listFiles('assets/interactive', /\.js$/), ...listFiles('.', /\.html$/)]
   .map((f) => (f === 'assets/team.js' ? team : f.endsWith('.html') ? stripStyles(read(f)) : read(f))).join('\n');
 const emitted = new Set(emitters.match(new RegExp(`(?<![a-z0-9-])${PFX}(?![a-z0-9-])`, 'g')) || []);
 const dynamic = [...emitters.matchAll(new RegExp(`(${PFX}-)\\$\\{`, 'g'))].map((m) => m[1]);

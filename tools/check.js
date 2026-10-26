@@ -109,7 +109,7 @@ const list = (dir, ext) => fs.readdirSync(dir)
   .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
-const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/pos-maison', 'assets/pos-boutique', 'assets/team', 'assets/printer', 'assets/serveur', 'assets/stock', 'assets/pages-pro'].map(dir => list(path.join(ROOT, dir), '.js')));
+const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/interactive', 'assets/daterange', 'assets/agent', 'assets/pos-maison', 'assets/pos-boutique', 'assets/team', 'assets/printer', 'assets/serveur', 'assets/stock', 'assets/pages-pro'].map(dir => list(path.join(ROOT, dir), '.js')));
 const CSS_FILES = list(path.join(ROOT, 'assets'), '.css');
 const HTML_FILES = list(ROOT, '.html');
 
@@ -1668,9 +1668,11 @@ section('Whole-project regressions');
     'pos-boutique-split-test.mjs',
     'caisse-app-split-test.mjs',
     'core-split-test.mjs',
+    'dashboard-first-use-test.mjs',
     'serveur-split-test.mjs',
     'stock-split-test.mjs',
     'hotel-split-test.mjs',
+    'interactive-split-test.mjs',
     'caisse-money-properties-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',
@@ -1692,6 +1694,7 @@ section('Whole-project regressions');
     'tickets-properties-test.mjs',
     'tickets-mcp-auth-test.mjs',
     'tickets-workflow-browser-test.mjs',
+    'operator-followups-browser-test.mjs',
     'auth-properties-test.mjs',
     'employee-properties-test.mjs',
     'orderpro-properties-test.mjs',

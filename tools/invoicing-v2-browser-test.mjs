@@ -607,29 +607,32 @@ try {
   });
 
   /* 3b · Un appareil à l’est du magasin, la nuit ──────────────────────────
-     À 22 h 30 UTC, Dubaï (UTC+4, sans heure d'été) est déjà le lendemain,
-     Casablanca (UTC+0 ou UTC+1 selon la base de fuseaux) pas encore. Le serveur
-     juge « futur » dans le fuseau du magasin : chaque date proposée par défaut
-     doit être la sienne. Paris ne convenait pas : il n'est à UTC+2 que l'été,
-     et le 25 octobre, à l'heure d'hiver, 22 h 30 UTC y restait le même jour. */
-  await S.run('fuseau · à Dubaï à 22 h 30 UTC, les dates par défaut sont celles du magasin', async (tr) => {
-    const day = new Date().toISOString().slice(0, 10);
-    const at = Date.parse(day + 'T22:30:00Z');
-    const next = new Date(at + 864e5).toISOString().slice(0, 10);
-    const { page } = await dashboard(tr, { tz: 'Asia/Dubai', at });
-    eq(await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())), next, 'l’appareil, lui, est déjà au lendemain');
-    await openInvoicing(page);
-    await click(page, '[data-inv-act="new"]');
-    await page.waitForSelector('[data-f="issue"]', { visible: true });
-    eq(await page.$eval('[data-f="issue"]', (n) => n.value), day, 'la date d’émission proposée est celle du magasin');
-    await click(page, '[data-inv-act="back"]');
-    await page.waitForSelector('[data-inv-table]', { visible: true });
-    await page.evaluate(() => [...document.querySelectorAll('[data-inv-table] tbody tr')].find((r) => r.textContent.includes('Riad Zayna'))?.click());
-    await waitDetail(page);
-    await click(page, '[data-inv-act="pay"]'); await waitSheet(page);
-    eq(await page.$eval('[data-sf="date"]', (n) => n.value), day, 'la date d’un règlement proposée est celle du magasin, pas « demain »');
-    await click(page, '.inv-sheet [data-sheet-cancel]');
-  });
+     À 22 h 30 UTC, Dubaï (UTC+4, sans heure d'été) et Paris en été (UTC+2)
+     sont déjà le lendemain, Casablanca (UTC+0 ou UTC+1 selon la base de fuseaux)
+     pas encore. Le serveur juge « futur » dans le fuseau du magasin : chaque
+     date proposée par défaut doit être la sienne. Une date fixe rend le scénario
+     indépendant de la date d’exécution ; Dubaï ne change pas d’heure saisonnière
+     et ce jour d’été maintient Paris à UTC+2, même lors d’un lancement en hiver. */
+  for (const [city, tz] of [['Dubaï', 'Asia/Dubai'], ['Paris', 'Europe/Paris']]) {
+    await S.run(`fuseau · à ${city} à 22 h 30 UTC, les dates par défaut sont celles du magasin`, async (tr) => {
+      const day = '2026-07-15';
+      const at = Date.parse(day + 'T22:30:00Z');
+      const next = new Date(at + 864e5).toISOString().slice(0, 10);
+      const { page } = await dashboard(tr, { tz, at });
+      eq(await page.evaluate((timeZone) => new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date()), tz), next, 'l’appareil, lui, est déjà au lendemain');
+      await openInvoicing(page);
+      await click(page, '[data-inv-act="new"]');
+      await page.waitForSelector('[data-f="issue"]', { visible: true });
+      eq(await page.$eval('[data-f="issue"]', (n) => n.value), day, 'la date d’émission proposée est celle du magasin');
+      await click(page, '[data-inv-act="back"]');
+      await page.waitForSelector('[data-inv-table]', { visible: true });
+      await page.evaluate(() => [...document.querySelectorAll('[data-inv-table] tbody tr')].find((r) => r.textContent.includes('Riad Zayna'))?.click());
+      await waitDetail(page);
+      await click(page, '[data-inv-act="pay"]'); await waitSheet(page);
+      eq(await page.$eval('[data-sf="date"]', (n) => n.value), day, 'la date d’un règlement proposée est celle du magasin, pas « demain »');
+      await click(page, '.inv-sheet [data-sheet-cancel]');
+    });
+  }
 
   /* 3 bis · Liste par pages : les documents au-delà de la première page ──── */
   await S.run('compte réel · « Afficher les documents plus anciens » charge la page suivante', async (tr) => {

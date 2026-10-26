@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* L'éditeur d'article de la carte restaurant (owner, 2026-10-11 : « u gotta ace it »).
  *
  * Avant : une colonne de champs gris, des cases à cocher natives dans des
@@ -12,7 +13,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => coreTestSource.readFileSync(path.join(ROOT, p), 'utf8');
 const js = read('assets/restaurant-menu-workspace.js');
 const ia = read('assets/interactive.js');
 let n = 0;

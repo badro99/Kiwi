@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Inventaire boutique · la fiche produit ne perd pas de stock et dit vrai.
  *
  * 2026-10-12. On the product sheet (dashboard, boutique and maison):
@@ -180,7 +181,7 @@ ok('a scan lands in the field: windows name it instead of racing a timer', () =>
   assert.ok(copies.includes('data-autofocus data-autofocus-select'), 'copies field is focused with its value selected');
   assert.ok(!/setTimeout\(\(\) => \{?\s*inp\.focus\(\)/.test(copies), 'no timer focus left in the copies window');
   assert.ok(copies.includes('(count || 1) > 1 ? t.copies : t.copiesOne'), 'one variant asks for a number of labels, not copies per variant');
-  const ia = readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
+  const ia = coreTestSource.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
   assert.ok(ia.includes("panel.querySelector('[data-autofocus]')"), 'trapFocus honours [data-autofocus]');
 });
 ok('dark mode puts the barcode on paper, and dark-fixes leaves it there', () => {

@@ -92,6 +92,7 @@
   }
 
   window.KiwiProductionActions = { install, guarded: GUARDED, realMerchant };
+  document.addEventListener('kiwi:dashboard-owners-ready', install);
   if (!install()) {
     const retry = setInterval(() => { if (install()) clearInterval(retry); }, 80);
     setTimeout(() => clearInterval(retry), 5000);

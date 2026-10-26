@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · « On ne demande pas l'addition pendant qu'il monte sa carte »
  *
@@ -66,7 +67,7 @@ for (const [file, attribute, marker] of [
   ['assets/interactive.js', 'data-ob-create', 'write'],
   ['assets/onboarding.js', 'data-pin-add', 'write'],
 ]) {
-  const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const source = coreTestSource.readFileSync(path.join(ROOT, file), 'utf8');
   const tags = source.match(/<(?:button|a)\b[^>]*>/g) || [];
   ok(tags.some(tag => tag.includes(attribute) && tag.includes('data-activation=' + marker)), `${file}: ${attribute} porte le marqueur stable ${marker}`);
 }

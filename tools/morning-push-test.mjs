@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* « Le point du matin » : push d'ouverture avec le total d'hier.
  *
  * Passe par les vraies routes (morning.js, register.js, _dispatch.js) sur une
@@ -336,7 +337,7 @@ try {
 
   console.log('■ Coque iOS et page : câblage statique');
   {
-    const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const read = (f) => coreTestSource.readFileSync(path.join(ROOT, f), 'utf8');
     const ent = read('app/ios/App/App/App.entitlements'), proj = read('app/ios/App/App.xcodeproj/project.pbxproj');
     const shell = read('app/ios/App/App/KiwiNativeShell.swift'), appDelegate = read('app/ios/App/App/AppDelegate.swift');
     const scene = read('app/ios/App/App/SceneDelegate.swift'), ui = read('assets/interactive.js');

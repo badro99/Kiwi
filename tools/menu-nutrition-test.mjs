@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import stockTestSource from './stock-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
@@ -165,7 +166,7 @@ assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'prote
 assert.ok(ciqual.foods.every((food) => food.nameFr && food.nameEn && N.NUTRIENT_KEYS.every((key) => Number.isFinite(food[key]) && food[key] >= 0)));
 assert.ok(ciqual.foods.every((food) => food.allergenHints.every((key) => N.ALLERGEN_KEYS.includes(key))));
 const stockSource = stockTestSource();
-const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dashboardSource = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json\?v=\d+'/,
   'Ciqual reste chargé à la demande dans l’éditeur, avec une URL versionnée');
 assert.match(stockSource, /Object\.entries\(ciqual\.aliases\)/, 'la recherche inclut les noms marocains du fichier lazy');

@@ -5,6 +5,9 @@ import vm from 'node:vm';
 
 const source = coreTestSource.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
 const now = Date.now();
+// Yesterday is a calendar day; the autumn DST day can contain 25 hours.
+const previousDay = new Date(now);
+previousDay.setDate(previousDay.getDate() - 1);
 let sales = [];
 let stock = [];
 const window = {
@@ -74,7 +77,7 @@ assert.equal(low.rows[0].name, 'Lait');
 assert.equal(low.rows[0].suggested, 10);
 
 sales = [
-  { ts: now - 864e5, amount: 592, method: 'card' },
+  { ts: previousDay.getTime(), amount: 592, method: 'card' },
 ];
 let insight = truth.realInsightSummary('aujourdhui');
 assert.equal(insight.count, 0, 'today never falls back to older sales');

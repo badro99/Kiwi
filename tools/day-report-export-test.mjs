@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
@@ -7,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const src=fs.readFileSync(path.join(root,'assets/day-report-export.js'),'utf8');
 const layoutSrc=fs.readFileSync(path.join(root,'assets/design-vexel-layout.js'),'utf8');
-const interactiveSrc=fs.readFileSync(path.join(root,'assets/interactive.js'),'utf8');
+const interactiveSrc=coreTestSource.readFileSync(path.join(root,'assets/interactive.js'),'utf8');
 let pass=0;function ok(v,msg){if(!v)throw new Error(msg);pass++;}
 const ctx={console,setTimeout:function(){},window:{},document:{},Blob:function(){},URL:{}};ctx.window=ctx;
 vm.createContext(ctx);vm.runInContext(src,ctx);

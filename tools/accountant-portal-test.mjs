@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Espace comptable : l'expert-comptable lit les livres d'UN magasin, sans rien
  * pouvoir écrire, et son cookie n'ouvre rien d'autre.
  *
@@ -381,7 +382,7 @@ console.log('■ Porte du site (middleware) · trois entrées, pas une de plus')
 console.log('■ Pages · portail comptable et ligne des Réglages');
 {
   const page = fs.readFileSync(path.join(ROOT, 'comptable.html'), 'utf8');
-  const dash = fs.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
+  const dash = coreTestSource.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
   const inlineScript = (page.match(/<script>([\s\S]*?)<\/script>/) || [])[1] || '';
   let parses = true;
   try { new vm.Script(inlineScript); } catch (_) { parses = false; }

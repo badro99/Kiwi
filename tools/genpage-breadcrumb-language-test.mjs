@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* Fil d'Ariane des pages Kiwi.appPage() · écrit dans la langue de l'écran.
  *
  * 2026-10-12. appPage() écrivait un « Accueil » en dur : toute page ouverte
@@ -27,7 +28,7 @@ const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta n
 <div class="container"><div class="topbar"><div class="topbar-inner">
 <nav class="breadcrumb" aria-label="Fil d’Ariane" data-i18n="dash.breadcrumb"><span class="breadcrumb-home">Accueil</span> <span class="sep" aria-hidden="true">/</span> <b>Tableau de bord</b></nav>
 </div></div></div></div>
-<script src="/assets/i18n.js"></script><script src="/assets/interactive.js"></script></body></html>`;
+<script src="/assets/i18n.js"></script><script src="/assets/interactive/helpers.js"></script><script src="/assets/interactive/handlers.js"></script><script src="/assets/interactive.js"></script></body></html>`;
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');
   if (u.pathname === '/') { res.setHeader('Content-Type', 'text/html'); res.end(html); return; }
@@ -117,7 +118,7 @@ try {
   }
 
   /* 5 · Plus aucun « Accueil » littéral dans appPage. */
-  const src = fs.readFileSync(path.join(root, 'assets/interactive.js'), 'utf8');
+  const src = coreTestSource.readFileSync(path.join(root, 'assets/interactive.js'), 'utf8');
   const start = src.indexOf('  function appPage(');
   const fn = src.slice(start, src.indexOf('\n  }\n', start));
   check(start > 0 && !/Accueil/.test(fn), 'appPage() writes no literal « Accueil »');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import { hotelTestSource } from './hotel-test-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -13,7 +14,7 @@ import { stayOptions } from '../functions/api/hotel/_stay-options.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const hotelJs = hotelTestSource();
 const teamJs = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
-const interactiveJs = fs.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
+const interactiveJs = coreTestSource.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
 
 let controls = 0;
 function ok(value, label) { assert.ok(value, label); controls++; }

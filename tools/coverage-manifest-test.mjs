@@ -48,6 +48,12 @@ for (const suite of suites) for (const c of suite.cells) {
   covered.add(key);
 }
 const baselinePath = path.join(ROOT, 'tools/coverage-baseline.json');
+for (const origin of ['photo', 'document', 'assistant']) {
+  for (const locale of ['fr', 'en', 'ar']) for (const viewport of ['phone', 'tablet']) {
+    const key = `dashboard-intake-${origin}|${locale}|${viewport}`;
+    assert(declared.has(key) && covered.has(key), 'complete annotated intake workflow missing: ' + key);
+  }
+}
 const baseline = fs.existsSync(baselinePath) ? read('coverage-baseline.json') : { covered: [] };
 assert(Array.isArray(baseline.covered), 'invalid coverage baseline');
 // Check losses BEFORE the update: the update flag cannot bless a regression.

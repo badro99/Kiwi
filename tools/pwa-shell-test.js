@@ -64,7 +64,7 @@ const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-c
   .map(read).join('\n');
 /* Files a shell script loads only when needed (the iPhone barcode decoder,
    fetched by retail-scan.js when the camera opens) keep their stamp there. */
-const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/dateRange.js', 'assets/agent.js'].map(read).join('\n');
+const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js'].map(read).join('\n');
 // Chaque partie du stock doit exister hors ligne avant la première ouverture.
 for (const m of read('assets/stock.js').matchAll(/'(assets\/stock\/[^']+\.js\?v=\d+)'/g)) {
   ok(m[1] + ' is pre-cached', shell.includes('/' + m[1]));

@@ -21,7 +21,9 @@ const window = {
   Kiwi: { handlers, toast: (title, opts) => toasts.push({ title, opts }) },
   addEventListener: () => {}
 };
-vm.runInNewContext(source, { window, setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 1 }, { filename: 'production-action-guard.js' });
+const events = new Map();
+const document = { addEventListener: (name, fn) => events.set(name, fn) };
+vm.runInNewContext(source, { window, document, setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 1 }, { filename: 'production-action-guard.js' });
 
 function check(ok, label) {
   if (!ok) { console.error(`  ✗ ${label}`); process.exitCode = 1; return; }
@@ -37,6 +39,10 @@ check(calls === 0 && toasts.length === 2, 'real WhatsApp claim is blocked');
 check(handlers['appt-filter']() === 'filtered' && calls === 1, 'non-effect filter remains usable');
 real = false;
 check(handlers['ret-refund-original']() === 'refunded' && calls === 2, 'local demo action remains available');
+real = true;
+handlers['ret-refund-original'] = () => { calls++; return 'unsafe late refund'; };
+events.get('kiwi:dashboard-owners-ready')();
+check(handlers['ret-refund-original']().reason === 'not-connected' && calls === 2, 'first-use registration reinstalls honesty guards before replay');
 
 /* Une clé mal orthographiée protège le vide en silence : le garde s'installe
  * sans erreur, le bouton continue de mentir. Chaque clé gardée doit donc être
@@ -44,6 +50,7 @@ check(handlers['ret-refund-original']() === 'refunded' && calls === 2, 'local de
 const guarded = [...window.KiwiProductionActions.guarded];
 const assetsDir = path.join(__dirname, '..', 'assets');
 const bundle = fs.readdirSync(assetsDir)
+  .concat(fs.readdirSync(path.join(assetsDir, 'interactive')).map((f) => 'interactive/' + f))
   /* sans le garde lui-même : sa propre liste ferait correspondre n'importe
    * quelle faute de frappe à elle-même, et le contrôle ne dirait plus rien. */
   .filter((f) => f.endsWith('.js') && f !== 'production-action-guard.js')

@@ -70,6 +70,13 @@
   }
   function restore(target) {
     if (!target) return;
+    if (!['home', 'accueil'].includes(target.page)) {
+      return Promise.resolve().then(() => window.KiwiDashboardLoader?.load('workspace'))
+        .then(() => restoreReady(target), () => {});
+    }
+    return restoreReady(target);
+  }
+  function restoreReady(target) {
     restoring = true;
     /* Une page que ce tableau de bord ne connaît pas n'arrivera jamais :
      * on abandonne trois secondes après le chargement complet (12 s au plus),

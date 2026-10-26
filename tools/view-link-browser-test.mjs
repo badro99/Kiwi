@@ -87,6 +87,7 @@ const state = (page) => page.evaluate(() => ({ hash: location.hash, active: wind
   check(s.hash === '' && s.btn && s.btn.hidden, 'on the dashboard the address carries nothing and the copy button is hidden');
 
   await page.click('.sidebar nav a[data-nav="equipe"]');
+  await page.evaluate(() => window.KiwiDashboardLoader.load('workspace'));
   await sleep(900);
   s = await state(page);
   check(s.active === 'equipe' && s.hash === '#/equipe?r=septJours', `opening Équipe writes it in the address (${s.hash})`);
@@ -120,6 +121,7 @@ const state = (page) => page.evaluate(() => ({ hash: location.hash, active: wind
   await sleep(800);
   const s = await state(page);
   check(s.active === 'equipe', 'a link opens its page in a fresh browser');
+  check(await page.evaluate(() => [...document.scripts].filter(s => /\/assets\/operations-ui\.js\?/.test(s.src)).length === 1), 'deep-link restoration loads the first-use workspace owner once');
   check(s.range === 'trenteJours', 'and its period, over the one the browser had saved');
   check(s.hash === '#/equipe?r=trenteJours', 'the dashboard painting first does not erase the address');
   check(problems.length === 0, 'no page error on restore' + (problems.length ? ': ' + problems[0] : ''));

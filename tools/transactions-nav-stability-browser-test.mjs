@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import pagesProSource from './pages-pro-test-source.cjs';
+import dashboardDependencies from './dashboard-dependencies.cjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
@@ -16,7 +17,7 @@ const executablePath = process.env.KIWI_CHROMIUM_BIN || [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium',
 ].find(fs.existsSync);
 assert.ok(executablePath, 'Chromium is required for the #98 browser regression');
-const pagesProAsset = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').match(/assets\/pages-pro\.js\?v=\d+/)?.[0];
+const pagesProAsset = dashboardDependencies.eager(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8')).match(/assets\/pages-pro\.js\?v=\d+/)?.[0];
 assert.ok(pagesProAsset, 'dashboard.html must version pages-pro.js');
 /* pages-pro.js tient en quatre fichiers depuis le 22 octobre 2026 (nav-transactions
  * vit dans pages-pro-office.js). Une référence d'avant le découpage n'a que

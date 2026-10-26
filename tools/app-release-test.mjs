@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import { readNativeRuntime } from './native-runtime-source.mjs';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
-const read = (file) => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+const read = (file) => coreTestSource.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const runtime = readNativeRuntime();
 const appShell = read('app/src/index.html');
 const nativeShell = read('app/src/native-shell.js');

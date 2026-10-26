@@ -1,9 +1,10 @@
+import coreTestSource from './core-test-source.cjs';
 import { hotelTestSource } from './hotel-test-source.mjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => coreTestSource.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const interactive = read('assets/interactive.js');
 const hotel = hotelTestSource();
 const report = read('assets/day-report-dash.js');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,7 @@ assert.equal(sanitized.items.find((item) => item.id === 'legacy').showPhotoInFor
 const catalog = read('assets/menu-catalog.js');
 const workspace = read('assets/restaurant-menu-workspace.js');
 const orderPro = orderProTestSource(ROOT);
-const dashboard = read('dashboard.html');
+const dashboard = dashboardDependencies(read('dashboard.html'));
 
 for (const [surface, source] of [['menu catalogue', catalog], ['restaurant workspace', workspace]]) {
   assert.match(source, /showPhotoInFormulas/, `${surface} persists the item setting`);

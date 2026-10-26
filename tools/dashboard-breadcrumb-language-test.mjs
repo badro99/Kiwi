@@ -38,7 +38,7 @@ const harness = `<!doctype html><html lang="fr"><head><meta charset="utf-8"></he
   <span class="sep" aria-hidden="true">/</span>
   <b>Tableau de bord</b>
 </nav></div></div></div>
-<script src="/assets/i18n.js"></script><script src="/assets/interactive.js"></script></body></html>`;
+<script src="/assets/i18n.js"></script><script src="/assets/interactive/helpers.js"></script><script src="/assets/interactive/handlers.js"></script><script src="/assets/interactive.js"></script></body></html>`;
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');

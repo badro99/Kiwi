@@ -7,6 +7,7 @@
  * main quand on veut faire baisser les épingles `important` de
  * tools/file-size-baseline.json sans changer un pixel.
  *
+ *   node tools/css-important-audit.mjs self-test [--product] # racines CSSOM, activation des modes
  *   node tools/css-important-audit.mjs list                  # les candidats, par fichier
  *   node tools/css-important-audit.mjs audit [--write]       # la preuve, et l'écriture
  *   node tools/css-important-audit.mjs snapshot <out.json.gz> [--all-pages]
@@ -33,10 +34,12 @@
  * longhands sur tous les éléments, plus le rectangle de chaque élément, avec et
  * sans le retrait.
  *
- * Les états mesurés : drapeau kit 2027 éteint et allumé × clair et sombre ×
+ * Les états mesurés : démo standard et Go Ultra (bouton produit), chacun ×
+ * drapeau kit 2027 éteint et allumé × clair et sombre ×
  * bureau 1440×900 et téléphone 390×844 × FR et AR × chaque destination de la
  * barre latérale (accueil, transactions, rapport, clients, équipe, stock, menu,
- * …) et le tiroir des réglages. Pour les remplacer à chaud, chaque <link> audité
+ * …), le tiroir des réglages, le sélecteur de lieu, le calendrier et les
+ * détails de commande / transaction présents dans la démo. Pour les remplacer à chaud, chaque <link> audité
  * devient un <style> au même rang de la cascade, url() rendues absolues ; une
  * mesure complète avant et après ce remplacement vérifie qu'il ne change rien.
  *
@@ -357,10 +360,10 @@ async function launch() {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/* Seize configurations : drapeau du kit × thème × écran × langue. */
+/* Mode produit × drapeau du kit × thème × écran × langue. */
 const CONFIGS = [];
-for (const flag of [false, true]) for (const theme of ['light', 'dark']) for (const vp of ['desktop', 'phone']) for (const lang of ['fr', 'ar'])
-  CONFIGS.push({ id: `${flag ? 'kit' : 'std'}-${theme}-${vp}-${lang}`, flag, theme, vp, lang });
+for (const theme of ['light', 'dark']) for (const vp of ['desktop', 'phone']) for (const lang of ['fr', 'ar']) for (const ultra of [false, true]) for (const flag of [false, true])
+  CONFIGS.push({ id: `${ultra ? 'ultra-' : ''}${flag ? 'kit' : 'std'}-${theme}-${vp}-${lang}`, ultra, flag, theme, vp, lang });
 const KEY_PAGES = ['accueil', 'transactions', 'equipe', 'stock', 'menu', 'settings'];
 
 async function openDashboard(browser, base, cfg) {
@@ -394,6 +397,17 @@ async function openDashboard(browser, base, cfg) {
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !!document.querySelector('[data-kpi-band] .kpi-m'), { timeout: 30000 });
   await sleep(1200);
+  await page.waitForFunction(() => document.body.classList.contains('design-vexel'));
+  if (cfg.flag) await page.waitForFunction(() => document.documentElement.getAttribute('data-skin-2027') === 'dashboard');
+  if (cfg.ultra) {
+    // Product handler owns the palette, venue, storage, render and subscribers.
+    await page.evaluate(() => document.querySelector('[data-action="venue-toggle"]').click());
+    await page.waitForSelector('[data-action="venue-enter-fusion"]');
+    await page.evaluate(() => document.querySelector('[data-action="venue-enter-fusion"]').click());
+    await page.waitForFunction(() => window.KiwiVenue?.isFusion?.() && document.body.classList.contains('fusion-mode'));
+    await sleep(4000);
+    await page.waitForFunction(() => !document.body.classList.contains('fusion-reconstruct') && !document.body.classList.contains('fusion-glass-melt'));
+  }
   return { ctx, page };
 }
 async function pageList(page) {
@@ -404,7 +418,7 @@ async function pageList(page) {
       if (id && !out.includes(id)) out.push(id);
     }
     if (document.querySelector('[data-action="settings"]')) out.push('settings');
-    return out;
+    return [...out, 'overlay:venue-toggle', 'overlay:open-date-picker', 'overlay:open-order', 'overlay:tx-detail'];
   });
 }
 async function closeOverlays(page) {
@@ -414,9 +428,11 @@ async function closeOverlays(page) {
 }
 async function goPage(page, name) {
   await closeOverlays(page);
+  if (name.startsWith('overlay:')) await goPage(page, name === 'overlay:tx-detail' ? 'transactions' : 'accueil');
   const ok = await page.evaluate((n) => {
     let el = null;
-    if (n === 'settings') el = document.querySelector('[data-action="settings"]');
+    if (n.startsWith('overlay:')) el = document.querySelector('[data-action="' + n.slice(8) + '"]');
+    else if (n === 'settings') el = document.querySelector('[data-action="settings"]');
     else if (n.startsWith('act:')) el = document.querySelector('.sidebar nav a[data-action="' + n.slice(4) + '"]');
     else el = document.querySelector('.sidebar [data-nav="' + n + '"]');
     if (el) el.click();
@@ -766,6 +782,44 @@ function payloadOf(files) {
   return files.map((f) => ({ rel: f.rel, text: f.text, cands: Object.fromEntries(f.cands.filter((c) => c.bang).map((c) => [c.id, c.bang])) }));
 }
 
+/* A real CSSOM check: root subjects, pseudo-elements and a missing part.
+   Uses exactly the analyzer used by audit, including its media guards. */
+if (cmd === 'self-test') {
+  const browser = await launch();
+  try {
+    const page = await browser.newPage();
+    const text = 'html { color: red !important } body.design-vexel { color: blue !important } body.fusion-mode { padding: 2px !important } html[data-skin-2027="dashboard"] body { margin: 3px !important } body::before { content: "test" !important } body, .absent { border: 0 !important } @media (min-width: 99999px) { body { opacity: 0 !important } }';
+    const rel = 'fixture.css';
+    const parsed = parseCss(text, rel);
+    await page.setContent('<html data-skin-2027="dashboard"><head></head><body class="design-vexel fusion-mode"><main></main></body></html>');
+    await installRuntime(page, payloadOf([{ rel, text, ...parsed }]));
+    await page.evaluate((text) => {
+      const style = document.createElement('style');
+      style.dataset.cia = 'fixture.css'; style.textContent = text;
+      document.head.append(style); window.__cia.files['fixture.css'].style = style;
+    }, text);
+    const result = await page.evaluate((C) => window.__cia.analyze(C), {
+      rules: { [rel]: parsed.rules }, cands: parsed.cands,
+    });
+    const rows = Object.values(result.result);
+    if (result.alignMiss.length || rows.slice(0, 5).some((r) => !r.aligned || !r.live || r.parts[0].n !== 1) ||
+        rows[5].parts[0].n !== 1 || rows[5].parts[1].n !== 0 || rows[6].parts[0].n !== 0)
+      throw new Error('root / pseudo-element / missing selector / media regression');
+    log('✓ analyzer: html, body skins, body::before, missing selector and inactive media');
+    if (has('product')) {
+      const { server, base } = await startServer();
+      try {
+        for (const cfg of CONFIGS.filter((c) => c.theme === 'light' && c.vp === 'desktop' && c.lang === 'fr')) {
+          const { ctx } = await openDashboard(browser, base, cfg);
+          await ctx.close();
+          log('✓ product activation: ' + cfg.id);
+        }
+      } finally { server.close(); }
+    }
+  } finally { await browser.close(); }
+  process.exit(0);
+}
+
 /* ── list ─────────────────────────────────────────────────────────────────── */
 if (cmd === 'list') {
   for (const f of loadFiles()) {
@@ -1094,6 +1148,8 @@ try {
   });
   /* Ce que l'ensemble des états n'a pas exercé ne se prouve pas. */
   const unexercised = new Map();
+  // A matched root blocked by a potential competitor is exercised, but unsafe.
+  const guarded = new Map();
   for (const c of all) {
     if (pre.has(c.id)) continue;
     const inf = info.get(c.id);
@@ -1102,7 +1158,7 @@ try {
     else if (!inf.live) why = 'déclaration ignorée par Chromium';
     else if (inf.dyn) why = 'sélecteur à état (' + inf.dyn + ')';
     else if (!inf.partsSeen || inf.partsSeen.some((n) => !n)) why = 'un sélecteur de la liste ne trouve aucun élément';
-    else if (inf.contest) why = 'concurrent hors des états mesurés : ' + inf.contest;
+    else if (inf.contest) { guarded.set(c.id, inf.contest); ACC.delete(c.id); }
     if (why) { unexercised.set(c.id, why); ACC.delete(c.id); }
   }
   /* Passes de vérification : tout ACC d'un seul tenant contre le texte
@@ -1129,10 +1185,11 @@ try {
     per[f.rel] = { before: total, after: total - acc.length, removed: acc.length,
       rejected: f.cands.filter((c) => REJ.has(c.id)).length,
       unexercised: f.cands.filter((c) => unexercised.has(c.id)).length,
+      guarded: f.cands.filter((c) => guarded.has(c.id)).length,
       excluded: f.cands.filter((c) => pre.has(c.id)).length };
   }
   log('\nrésultat :');
-  for (const [rel, p] of Object.entries(per)) log(`  ${rel} · ${p.before} → ${p.after} (retirés ${p.removed} · rejetés à la mesure ${p.rejected} · non exercés ${p.unexercised} · écartés d'avance ${p.excluded})`);
+  for (const [rel, p] of Object.entries(per)) log(`  ${rel} · ${p.before} → ${p.after} (retirés ${p.removed} · rejetés à la mesure ${p.rejected} · concurrents potentiels ${p.guarded} · non exercés ${p.unexercised} · écartés d'avance ${p.excluded})`);
   log(`  ${tests} essais en ${Math.round((Date.now() - t0) / 1000)} s`);
   const report = opt('report', '');
   if (report) {
@@ -1142,6 +1199,8 @@ try {
       accepted: all.filter((c) => ACC.has(c.id)).map((c) => row(c, '')),
       rejected: all.filter((c) => REJ.has(c.id)).map((c) => row(c, REJ.get(c.id))),
       unexercised: all.filter((c) => unexercised.has(c.id)).map((c) => row(c, unexercised.get(c.id))),
+      guarded: all.filter((c) => guarded.has(c.id)).map((c) => row(c, guarded.get(c.id))),
+      coverage: Object.fromEntries([...info].map(([id, inf]) => [id, { partsSeen: inf.partsSeen, states: inf.states }])),
       excluded: all.filter((c) => pre.has(c.id)).map((c) => row(c, pre.get(c.id))),
     }, null, 1));
     log(`  détail → ${report}`);

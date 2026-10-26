@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* La météo du commerce : functions/api/_weather.js, functions/api/weather.js,
  * assets/weather.js et la ligne du point du matin (assets/briefing.js).
  *
@@ -249,7 +250,7 @@ function briefingWith(weather) {
 
 const brief = fs.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
 ok(/weatherRule\]/.test(brief) && /'kiwi:weather'/.test(brief), 'the rule is registered and recomputed when the weather arrives');
-const dash = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dash = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 ok(dash.indexOf('assets/weather.js') > 0 && dash.indexOf('assets/weather.js') < dash.indexOf('assets/briefing.js'), 'the dashboard loads weather.js before briefing.js');
 ok(/'light_mode'/.test(brief) && /'water_drop'/.test(brief) && ['light_mode', 'water_drop', 'thermometer', 'bolt', 'ac_unit'].every((n) => fs.existsSync(new URL(`../assets/icons/material/${n}.svg`, import.meta.url))), 'weather icons are vendored Material Symbols');
 

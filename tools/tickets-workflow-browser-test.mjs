@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Coverage annotations await a successful browser run.
+// Rendered evidence is annotated only after a successful browser run.
 // Rendered synthetic operator board, attachments and retest on touch screens.
 import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
@@ -29,6 +29,13 @@ try {
       },
     };
     const { page, ctx } = await realPage(h, locale, viewport, routes); t.defer(() => ctx.close()); t.watch(page);
+    t.step('Open the localized board and submit an attachment with a failed retest');
+    // coverage: surface=shell-tickets locale=fr viewport=phone
+    // coverage: surface=shell-tickets locale=fr viewport=tablet
+    // coverage: surface=shell-tickets locale=en viewport=phone
+    // coverage: surface=shell-tickets locale=en viewport=tablet
+    // coverage: surface=shell-tickets locale=ar viewport=phone
+    // coverage: surface=shell-tickets locale=ar viewport=tablet
     await page.goto(h.base + '/tickets.html?lang=' + locale, { waitUntil: 'load' });
     const tab = async status => { if (viewport === 'phone') await page.click(`[data-status="${status}"]`); };
     await page.waitForSelector('[data-action="test-failed"]'); await tab('testing');

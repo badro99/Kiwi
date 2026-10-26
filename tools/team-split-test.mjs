@@ -1,3 +1,4 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* Byte-exact profile extraction, loading, API and live-state equivalence. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -20,7 +21,11 @@ for (const segment of [...map.segments, ...map.moved]) {
 }
 assert.ok(core.split('\n').length < 2200);
 assert.doesNotMatch(part, /\bwith\s*\(|\bnew Proxy\b/);
-assert.match(read('dashboard.html'), /assets\/team\.js\?v=\d+" defer fetchpriority="low"><\/script>\s*<script src="assets\/team\/profile-ui\.js\?v=\d+" defer fetchpriority="low"><\/script>\s*<script src="assets\/team-hours\.js/);
+const graph = dashboardDependencies(read('dashboard.html'));
+const coreAt = graph.indexOf('src="assets/team.js?');
+const profileAt = graph.indexOf('src="assets/team/profile-ui.js?');
+const hoursAt = graph.indexOf('src="assets/team-hours.js?');
+assert.ok(coreAt >= 0 && profileAt > coreAt && hoursAt > profileAt, 'team model precedes first-use profile and hours owners');
 for (const src of [core, part, hours]) new vm.Script(src);
 vm.runInNewContext(core + '\n' + part, { window: {} });
 function realm(source, lang) {

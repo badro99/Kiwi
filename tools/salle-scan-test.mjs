@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Salle scan test — « Scanner ma salle » : la photo remplit le
  * questionnaire, le générateur dessine, le commerçant confirme.
@@ -35,7 +36,7 @@ const route = fs.readFileSync(path.join(ROOT, 'functions/api/ai/salle-import.js'
 const scan = fs.readFileSync(path.join(ROOT, 'assets/salle-scan.js'), 'utf8');
 const pro = pagesProSource();
 const quota = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');
-const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const html = dashboardDependencies(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 
 const extract = (src, re, what) => {

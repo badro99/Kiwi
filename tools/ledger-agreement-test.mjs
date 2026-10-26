@@ -385,6 +385,7 @@ section('assets/kit/ledger.js');
      page allowed to load it, to show the KPI tiles' polarity (§21.1: "Adopts
      it: Gallery only"). */
   const hosts = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && !/ \d+\.html$/.test(f)).concat(['kiwi-sw.js'])
+    .concat(fs.readdirSync(path.join(ROOT, 'assets/interactive')).filter((f) => f.endsWith('.js')).map((f) => 'assets/interactive/' + f))
     .concat(fs.readdirSync(path.join(ROOT, 'assets')).filter((f) => f.endsWith('.js') && !/ \d+\.js$/.test(f)).map((f) => 'assets/' + f));
   const users = hosts.filter((f) => { try { return /kit\/ledger\.js|KiwiLedger/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')); } catch { return false; } });
   eq(users.filter((f) => f !== 'kit.html'), [], 'KiwiLedger is adopted by no product surface (the stage-2 gallery aside)');

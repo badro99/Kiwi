@@ -89,6 +89,7 @@ function restaurantPage() {
     <main id="kw-main"><section class="hero"><div data-hero-label class="hero-label">ACCUEIL</div><div data-hero-amount class="hero-amount">0,00 MAD</div></section></main>
     <section id="fixture-drawer" class="drawer" hidden></section>
     <script src="/assets/sales-history.js?v=${stamps['assets/sales-history.js'].v}"></script>
+    <script src="/assets/daterange/renderers.js?v=${stamps['assets/daterange/renderers.js'].v}"></script>
     <script src="/assets/dateRange.js?v=${stamps['assets/dateRange.js'].v}"></script>
     <script src="/assets/z-reconciliation.js?v=${stamps['assets/z-reconciliation.js'].v}"></script>
     <script>document.getElementById('fixture-home').onclick=()=>window.KiwiZReconciliation.showDashboard();

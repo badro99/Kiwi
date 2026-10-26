@@ -6,6 +6,14 @@
   const H = window.Kiwi?.handlers;
   if (!H) return;
   const REGISTRY = Object.freeze({
+    workspace: { dependencies: [], scripts: [
+      'assets/order-qr.js?v=6',
+      'assets/growth-crm.js?v=7',
+      'assets/ramadan.js?v=3',
+      'assets/catalog-import.js?v=12',
+      'assets/menu-scan.js?v=3',
+      'assets/salle-scan.js?v=3',
+    ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel-rates.js?v=1',
       'assets/hotel-folio.js?v=1',
@@ -21,6 +29,7 @@
     if (scripts.has(url)) return scripts.get(url);
     const request = new Promise((resolve, reject) => {
       const node = document.createElement('script');
+      node.async = false;
       node.src = url;
       node.onload = resolve;
       node.onerror = () => { node.remove(); scripts.delete(url); reject(new Error('Module indisponible')); };
@@ -35,12 +44,47 @@
     if (!entry) return Promise.reject(new Error('Unknown dashboard owner: ' + name));
     const request = entry.dependencies.reduce((p, dep) => p.then(() => load(dep)), Promise.resolve())
       .then(() => entry.scripts.reduce((p, url) => p.then(() => script(url)), Promise.resolve()))
-      .then(() => { ready.add(name); })
+      .then(() => {
+        document.dispatchEvent(new Event('kiwi:dashboard-owners-ready'));
+        ready.add(name);
+      })
       .catch(error => { pending.delete(name); throw error; });
     pending.set(name, request);
     return request;
   }
   window.KiwiDashboardLoader = Object.freeze({ load });
+  let replaying = false;
+  function firstUse(event, target, activate) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return load('workspace').then(() => {
+      if (!target.isConnected) return;
+      replaying = true;
+      try { activate(); } finally { replaying = false; }
+    }).catch(() => {
+      const lang = window.KiwiI18n?.getLang?.() || 'fr';
+      const message = {fr:'Chargement impossible. Réessayez.',en:'Unable to load. Please retry.',ar:'تعذر التحميل. حاول مجددا.'};
+      window.Kiwi?.toast?.(message[lang] || message.fr, {type:'error'});
+    });
+  }
+  window.addEventListener('click', event => {
+    if (replaying || ready.has('workspace')) return;
+    const target = event.target.closest?.('[data-nav], [data-action], [data-fa-open], [data-kv-action], [data-pds-action="scan-salle"], #cd-campaign');
+    if (!target) return;
+    const nav = target.getAttribute('data-nav');
+    const action = target.getAttribute('data-action') || '';
+    const optional = target.matches?.('[data-pds-action="scan-salle"], #cd-campaign');
+    // Eager pages and the date picker keep their synchronous click contract.
+    // Only intents owned by the optional workspace graph may be replayed.
+    if (!optional && !target.hasAttribute('data-fa-open') && !target.hasAttribute('data-kv-action') && !/^(?:clients-directory|growth-crm|order-qr|mx-import|bqx-import|rmw-menu-scan|scan-salle)$/.test(action)) return;
+    if (['home', 'accueil'].includes(nav) || ['nav-home', 'nav-accueil'].includes(action)) return;
+    firstUse(event, target, () => target.click());
+  }, true);
+  window.addEventListener('submit', event => {
+    if (replaying || ready.has('workspace')) return;
+    const form = event.target.closest?.('form.hai-input');
+    if (form) firstUse(event, form, () => form.requestSubmit());
+  }, true);
   const navigation = ['nav-reception', 'nav-chambres', 'nav-sejours', 'nav-menage', 'nav-tarifs', 'nav-hotes', 'nav-folios', 'nav-canaux', 'nav-hotelintel', 'nav-points-vente'];
   for (const name of Object.keys(H).filter(name => name.startsWith('hx-') || navigation.includes(name))) {
     const real = H[name];

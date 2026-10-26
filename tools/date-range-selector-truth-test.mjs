@@ -44,9 +44,9 @@ window.KiwiDashboardBoot = { whenUnlocked(cb) { __boot.push(cb); } };
 window.KiwiI18n = { getLang: () => document.documentElement.lang || 'fr' };
 window.__unlock = () => { __boot.splice(0).forEach((cb) => { try { cb(); } catch (e) { console.log('render after unlock: ' + e.message); } }); };
 </script>
-<script src="/assets/interactive.js"></script>
+<script src="/assets/interactive/helpers.js"></script><script src="/assets/interactive/handlers.js"></script><script src="/assets/interactive.js"></script>
 <script src="/assets/sales-history.js"></script>
-<script src="/assets/dateRange.js"></script>
+<script src="/assets/daterange/renderers.js"></script><script src="/assets/dateRange.js"></script>
 <script src="/assets/liquid-lens.js"></script>
 </body></html>`;
 

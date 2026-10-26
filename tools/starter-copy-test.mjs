@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* starter-copy-test · a real store's empty pages read in its language.
  *
  * Before it has data, a real store opens dashboard pages on a « starter »: a
@@ -57,7 +58,7 @@ check(view('fr', C).terminaux.d === FR.terminaux.d, 'French reads the French tab
 check(view('en', { en: {} }).menu.d === FR.menu.d, 'a missing translation falls back to French');
 check(view('en', undefined).stock.t === FR.stock.t, 'no copy file loaded: French, never undefined');
 
-const dash = read('dashboard.html');
+const dash = dashboardDependencies(read('dashboard.html'));
 const sc = dash.indexOf('assets/starter-copy.js?v='), pp = dash.indexOf('assets/pages-pro.js?v=');
 check(sc > 0 && sc < pp, 'dashboard loads starter-copy.js before pages-pro.js');
 

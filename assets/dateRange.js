@@ -165,9 +165,92 @@
     trStr: { get: () => trStr },
     tradeStr: { get: () => tradeStr },
     vData: { get: () => vData },
+    FUSION_AVG_KEYS: { get: () => FUSION_AVG_KEYS },
+    isPlainObj: { get: () => isPlainObj },
+    ledgerSum: { get: () => ledgerSum },
+    tenderAmounts: { get: () => tenderAmounts },
+    REAL_MIX: { get: () => REAL_MIX },
+    DEMO_ROLE: { get: () => DEMO_ROLE },
+    VALID: { get: () => VALID },
+    DEFAULT_RANGE: { get: () => DEFAULT_RANGE },
+    customRange: { get: () => customRange, set: value => { customRange = value; } },
+    STORAGE_KEY: { get: () => STORAGE_KEY },
+    renderSelector: { get: () => renderSelector },
+    subscribers: { get: () => subscribers },
+    CUSTOM_KEY: { get: () => CUSTOM_KEY },
+    dateToIso: { get: () => dateToIso },
+    CMP_KEY: { get: () => CMP_KEY },
+    renderRevChart: { get: () => renderRevChart },
+    homeStore: { get: () => homeStore },
+    numberShape: { get: () => numberShape },
+    textNodesOf: { get: () => textNodesOf },
+    DEFAULT_MERCHANT_TZ: { get: () => DEFAULT_MERCHANT_TZ },
+    dayCutoffH: { get: () => dayCutoffH },
+    addMerchantDays: { get: () => addMerchantDays },
+    realSalesList: { get: () => realSalesList },
+    saleHour: { get: () => saleHour },
+    tenderBucket: { get: () => tenderBucket },
+    salesMath: { get: () => salesMath },
+    realRefundList: { get: () => realRefundList },
+    deliveryDue: { get: () => deliveryDue },
+    TENDER_NAME: { get: () => TENDER_NAME },
+    shiftedBusinessBounds: { get: () => shiftedBusinessBounds },
+    halfUpDiv: { get: () => halfUpDiv },
+    realMoneyList: { get: () => realMoneyList },
+    niceCeil: { get: () => niceCeil },
+    HH_HOURS: { get: () => HH_HOURS },
+    HH_RAW_BY_VENUE: { get: () => HH_RAW_BY_VENUE },
+    HH_COVERS_BY_VENUE: { get: () => HH_COVERS_BY_VENUE },
+    hotelMerchant: { get: () => hotelMerchant },
+    hotelPerf: { get: () => hotelPerf },
+    HOTEL_PERF_TTL: { get: () => HOTEL_PERF_TTL },
+    renderKpiBand: { get: () => renderKpiBand },
+    hotelDelta: { get: () => hotelDelta },
+    tableTime: { get: () => tableTime },
+    TABLE_TIME_TTL: { get: () => TABLE_TIME_TTL },
+    KC_STR: { get: () => KC_STR },
+    saveKpiLayout: { get: () => saveKpiLayout },
+    resetKpiLayout: { get: () => resetKpiLayout },
+    LOW_STOCK_SEUIL: { get: () => LOW_STOCK_SEUIL },
+    PAIRS_MAX_KEYS: { get: () => PAIRS_MAX_KEYS },
+    PAIRS_MIN_TOGETHER: { get: () => PAIRS_MIN_TOGETHER },
+    BAND_NAV: { get: () => BAND_NAV },
+    renderHero: { get: () => renderHero },
+    renderHeroAi: { get: () => renderHeroAi },
+    renderGoal: { get: () => renderGoal },
+    renderHeatmap: { get: () => renderHeatmap },
+    renderMix: { get: () => renderMix },
+    renderFeed: { get: () => renderFeed },
+    renderSettle: { get: () => renderSettle },
+    renderEvening: { get: () => renderEvening },
+    renderStock: { get: () => renderStock },
+    renderHealth: { get: () => renderHealth },
+    renderBench: { get: () => renderBench },
+    renderInteg: { get: () => renderInteg },
+    renderProducts: { get: () => renderProducts },
+    renderStaff: { get: () => renderStaff },
+    sameDay: { get: () => sameDay },
+    monthOnly: { get: () => monthOnly },
+    dpEl: { get: () => dpEl, set: value => { dpEl = value; } },
+    dpOutside: { get: () => dpOutside, set: value => { dpOutside = value; } },
+    dpKey: { get: () => dpKey, set: value => { dpKey = value; } },
+    dpControl: { get: () => dpControl, set: value => { dpControl = value; } },
+    PICKER_STR: { get: () => PICKER_STR },
+    isoToDate: { get: () => isoToDate },
+    startOfDay: { get: () => startOfDay },
+    shiftMonth: { get: () => shiftMonth },
+    addDays: { get: () => addDays },
+    LOCALES: { get: () => LOCALES },
+    dpEsc: { get: () => dpEsc },
+    ymdInt: { get: () => ymdInt },
+    monthLabel: { get: () => monthLabel },
+    spanDays: { get: () => spanDays },
+    onAction: { get: () => onAction },
+    onCompareToggle: { get: () => onCompareToggle },
+    GLOVO_TOAST: { get: () => GLOVO_TOAST },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=1';
+  const partUrl = 'assets/daterange/renderers.js?v=3';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;
@@ -328,106 +411,20 @@
   function isPlainObj(o) {
     return o && typeof o === 'object' && !Array.isArray(o);
   }
-  function aggFusion(values, parentKey, rateCtx) {
-    const defined = values.filter(v => v !== undefined && v !== null);
-    if (defined.length === 0) return values[0] ?? null;
-    const first = defined[0];
-    // Rate context: once an ancestor key is "rate-like" (success/ratio/taux/
-    // delta…) every numeric descendant averages instead of sums. This keeps
-    // a fused success of 95% × 92% × 88% reading as ~91%, not 275%.
-    const myRateCtx = rateCtx || FUSION_AVG_KEYS.test(String(parentKey || ''));
-    if (typeof first === 'number') {
-      const sum = defined.reduce((a, v) => a + (typeof v === 'number' ? v : 0), 0);
-      return myRateCtx ? sum / defined.length : sum;
-    }
-    if (typeof first === 'string' || typeof first === 'boolean') {
-      // Take cafeAtlas (index 0 in source order) — labels/copy don't aggregate.
-      return values[0] ?? first;
-    }
-    if (Array.isArray(first)) {
-      const maxLen = Math.max(...defined.map(a => Array.isArray(a) ? a.length : 0));
-      const out = [];
-      for (let i = 0; i < maxLen; i++) {
-        const slice = defined.map(a => Array.isArray(a) ? a[i] : undefined);
-        out.push(aggFusion(slice, parentKey, myRateCtx));
-      }
-      return out;
-    }
-    if (isPlainObj(first)) {
-      const keys = new Set();
-      defined.forEach(o => isPlainObj(o) && Object.keys(o).forEach(k => keys.add(k)));
-      const out = {};
-      keys.forEach(k => {
-        const slice = defined.map(o => isPlainObj(o) ? o[k] : undefined);
-        out[k] = aggFusion(slice, k, myRateCtx);
-      });
-      return out;
-    }
-    return first;
-  }
+  function aggFusion(...args) { return callPart('aggFusion', this, args); }
   // Deep clone of a data slice with every number zeroed and every array kept
   // at the same length — used to give a brand-new user-created venue a
   // structurally-valid but empty dataset, so every renderer paints its real
   // "no data yet" state instead of crashing or falling back to demo numbers.
-  function zeroClone(x) {
-    if (typeof x === 'number') return 0;
-    if (Array.isArray(x)) return x.map(zeroClone);
-    if (x && typeof x === 'object') {
-      const o = {};
-      for (const k in x) o[k] = zeroClone(x[k]);
-      return o;
-    }
-    return x; // strings (labels), booleans, null — preserved
-  }
+  function zeroClone(...args) { return callPart('zeroClone', this, args); }
 
   // Resolve a venue-keyed table for the active venue + range, with cafeAtlas fallback.
-  function vData(table, range) {
-    const v = getCurrentVenue();
-    const knownRanges = ['aujourdhui', 'hier', 'septJours', 'trenteJours', 'personnalise'];
-    const requested = range === 'personnalise' ? effRange() : range;
-    const hasRequested = !!(table?.[v]?.[requested] ?? table?.cafeAtlas?.[requested]);
-    const eff = knownRanges.includes(range) || hasRequested ? requested : 'trenteJours';
-    // A user-created venue has no demo data — hand back a zeroed clone of its
-    // base type's demo sibling so the dashboard renders empty rather than
-    // borrowing live numbers via the fallback below. The shape must match the
-    // vertical (a boutique-based venue needs tauxRetour, a spa needs tips…),
-    // otherwise vertical-specific KPI tiles silently drop.
-    if (ownData(v)) {
-      const baseIds = { restaurant: 'cafeAtlas', boutique: 'maisonMansour', spa: 'spaBahia' };
-      const baseId = baseIds[window.KiwiVenue?.getVenueType?.() || 'restaurant'] || 'cafeAtlas';
-      const shape = table?.[baseId]?.[eff] ?? table?.[baseId]?.trenteJours
-                 ?? table?.cafeAtlas?.[eff] ?? table?.cafeAtlas?.trenteJours;
-      return shape == null ? shape : zeroClone(shape);
-    }
-    if (v === 'fusion') {
-      const slices = [
-        table?.cafeAtlas?.[eff],
-        table?.maisonMansour?.[eff],
-        table?.spaBahia?.[eff],
-      ];
-      const merged = aggFusion(slices, '');
-      // If every slice was null/undefined fallback gracefully.
-      return merged ?? table?.cafeAtlas?.[eff] ?? table?.cafeAtlas?.trenteJours;
-    }
-    const shape = table?.[v]?.[eff] ?? table?.cafeAtlas?.[eff] ?? table?.[v]?.trenteJours ?? table?.cafeAtlas?.trenteJours;
-    return demoLedgerProjection(table, eff, shape);
-
-  }
+  function vData(...args) { return callPart('vData', this, args); }
   const ledgerSum = rows => rows.reduce((s,r)=>s+Math.round(r.amount*100),0)/100;
   /* The same-length window before the selected one: yesterday up to the same
      point of its business day for Today, the day before for Yesterday, the
      previous 7 or 30 days otherwise. */
-  function priorLedgerRows(range, selected, days, day) {
-    const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
-    if (days === 1) {
-      const before = dr.shiftDay(selected,-1), b = dr.dayBounds(selected), o = dr.dayBounds(before);
-      const cut = range === 'aujourdhui' ? o.from + (Date.now() - b.from) : o.to;
-      return clock.getDaySales(before).filter(r=>r.ts<=cut);
-    }
-    let prior = [];
-    for (let i = days; i < days * 2; i++) prior = prior.concat(clock.getDaySales(dr.shiftDay(day,-i)));
-    return prior;
-  }
+  function priorLedgerRows(...args) { return callPart('priorLedgerRows', this, args); }
   /* Today against yesterday at the same time, from the same ledger, for Kiwi
      AI's Today card on the kit (§18.6); null where that ledger is not running. */
   function todayPace() {
@@ -436,77 +433,7 @@
     const day = dr.today(), rows = clock.getDaySales(day) || [];
     return { total:ledgerSum(rows), count:rows.length, priorTotal:ledgerSum(priorLedgerRows('aujourdhui', day, 1, day)), at:Date.now() };
   }
-  function demoLedgerProjection(table, range, shape) {
-    const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
-    if (!shape || !dr || !['aujourdhui','hier','septJours','trenteJours'].includes(range)
-      || ![heroDataByVenue,goalByVenue,kpiByVenue,revChartByVenue,mixByVenue].includes(table) || !clock?.getSimState?.()) return shape;
-    const day = dr.today(), days = range === 'septJours' ? 7 : range === 'trenteJours' ? 30 : 1;
-    const selected = range === 'hier' ? dr.shiftDay(day,-1) : day;
-    const rows = days === 1 ? clock.getDaySales(selected) : clock.getSales(days);
-    const sum = ledgerSum;
-    const total = sum(rows), count = rows.length;
-    if (table === heroDataByVenue) return {...shape,amount:total,netAfterKiwi:total,deltaHier:null,deltaSemaine:null,deltaMois:null};
-    if (table === goalByVenue) return {...shape,current:total};
-    // One ledger, one tender definition across the donut and card/cash KPI.
-    const tenders = entries => {
-      const by = {};
-      entries.forEach(entry => tenderAmounts(entry).forEach(part => {
-        if (part.key) by[part.key] = (by[part.key] || 0) + Math.round(part.amount * 100);
-      }));
-      return by;
-    };
-    const by = tenders(rows);
-    if (table === mixByVenue) {
-      const collectedCents = Object.values(by).reduce((s, value) => s + value, 0);
-      const lang = getLang();
-      return {...shape, _demoLedger:true, centerMad:collectedCents / 100,
-        mixRows:REAL_MIX.filter(m => by[m.key] > 0).map(m => ({
-          color:m.color, label:m[lang] || m.fr, pct:by[m.key] / collectedCents * 100}))};
-    }
-    if (table === kpiByVenue) {
-      // Same-length previous window (priorLedgerRows). Deltas come from the
-      // ledger, never a constant.
-      const prior = priorLedgerRows(range, selected, days, day);
-      const pct = (now, then) => then ? Math.round((now - then) / then * 1000) / 10 : 0;
-      const priorTotal = sum(prior), priorCount = prior.length;
-      const cardShare = tender => {
-        const card = (tender.card || 0) + (tender.tap || 0), cash = tender.cash || 0;
-        return card + cash ? card / (card + cash) * 100 : null;
-      };
-      const share = cardShare(by), oldShare = cardShare(tenders(prior));
-      const roundedShare = Math.round(share || 0);
-      return {...shape,
-        ratio:shape.ratio && {...shape.ratio,
-          text:share == null ? '·' : `${roundedShare} / ${100 - roundedShare}`,
-          unit:share == null ? '' : '%', delta:share == null || oldShare == null ? null : pct(share, oldShare)},
-        tx:shape.tx && {...shape.tx,value:count,delta:pct(count,priorCount)},
-        panier:shape.panier && {...shape.panier,value:count ? total/count : 0,
-          delta:pct(count ? total/count : 0, priorCount ? priorTotal/priorCount : 0)}};
-    }
-    let rev, revPrev, xLabels, visibleXIdx, cursor = {};
-    if (days > 1) {
-      const keys = Array.from({length:days},(_,i)=>dr.shiftDay(day,i-days+1));
-      rev = keys.map(key=>sum(clock.getDaySales(key)));
-      revPrev = keys.map(key=>sum(clock.getDaySales(dr.shiftDay(key,-days))));
-      xLabels = keys.map(key=>new Date(key+'T12:00:00').toLocaleDateString(getLang()==='ar'?'ar-MA':getLang()==='en'?'en-GB':'fr-FR',{weekday:'short',day:'numeric'}));
-      visibleXIdx = keys.map((_,i)=>i).filter(i=>days===7 || i%5===0 || i===days-1);
-    } else {
-      const bounds=dr.dayBounds(selected), before=dr.shiftDay(selected,-1), prior=clock.getDaySales(before), old=dr.dayBounds(before);
-      const progress = range==='aujourdhui' ? Math.min(24,(Date.now()-bounds.from)/(bounds.to-bounds.from)*24) : 24;
-      const index=Math.min(23,Math.floor(progress));
-      rev = Array.from({length:25},(_,i)=>i>Math.ceil(progress)?null:sum(rows.filter(r=>r.ts<=bounds.from+Math.min(i,progress)/24*(bounds.to-bounds.from))));
-      revPrev = Array.from({length:25},(_,i)=>sum(prior.filter(r=>r.ts<=old.from+i/24*(old.to-old.from))));
-      xLabels=Array.from({length:25},(_,i)=>String((5+i)%24).padStart(2,'0')+'h');
-      visibleXIdx=xLabels.map((_,i)=>i);
-      if(range==='aujourdhui') cursor={_simIdx:index,_simWithin:progress-index};
-    }
-    const maximum=Math.max(1,...rev.filter(v=>v!=null),...revPrev);
-    const ceiling=Math.ceil(maximum/4000)*4000;
-    return {...shape,...cursor,_demoLedger:true,rev,revPrev,xLabels,visibleXIdx,total,
-      yTicks:[0,.25,.5,.75,1].map(n=>Math.round(n*ceiling)),
-      legendPrimary:shape.legendPrimary.split(' · ')[0]+' · '+frInt(total)+' MAD',
-      legendCompare:shape.legendCompare.split(' · ')[0]+' · '+frInt(days>1?sum(revPrev.map(amount=>({amount}))):revPrev.at(-1))+' MAD'};
-  }
+  function demoLedgerProjection(...args) { return callPart('demoLedgerProjection', this, args); }
 
   // True only on the live "today" range, with the demo clock active.
   function isLiveDemo() {
@@ -521,19 +448,7 @@
   // One same-time yesterday comparator for both demo cards. The old goal
   // breakdown kept a fixed +3.2% while the chart used a future hour boundary.
   // Called only from the demo branch; merchant sales/reconciliation stay intact.
-  function demoPreviousAt(sim) {
-    const dr=window.KiwiDayReport, clock=window.KiwiDemoClock;
-    if (sim && dr && clock?.getDaySales) {
-      const day=dr.shiftDay(dr.today(),-1), bounds=dr.dayBounds(day);
-      const before=bounds.from+sim.fraction*(bounds.to-bounds.from);
-      return clock.getDaySales(day).filter(r=>r.ts<=before).reduce((s,r)=>s+Math.round(r.amount*100),0)/100;
-    }
-    const series = vData(revChartByVenue, currentRange)?.revPrev;
-    if (!sim || !series?.length) return null;
-    const index = Math.min(series.length - 1, Math.max(0, sim.simIdx));
-    const next = Math.min(series.length - 1, index + 1);
-    return series[index] + (series[next] - series[index]) * sim.simWithin;
-  }
+  function demoPreviousAt(...args) { return callPart('demoPreviousAt', this, args); }
   // Set true while a demoClock tick is fanning out renders — used to suppress
   // entrance animations on the chart (would otherwise replay every 3s).
   let liveTickInProgress = false;
@@ -798,38 +713,7 @@
 
   /* ═══════════════ DATA TABLES ═══════════════ */
 
-  const heroDataByVenue = {
-    cafeAtlas: {
-      aujourdhui:  { amount: 27512.50, deltaHier: 3.2,  deltaSemaine: 18,   deltaMois: 9,  netAfterKiwi: 23091  },
-      hier:        { amount: 24820.00, deltaHier: -1.8, deltaSemaine: 12,   deltaMois: 6,  netAfterKiwi: 20640  },
-      septJours:   { amount: 198400.00,deltaHier: null, deltaSemaine: 22,   deltaMois: 11, netAfterKiwi: 165280 },
-      trenteJours: { amount: 842300.00,deltaHier: null, deltaSemaine: null, deltaMois: 15, netAfterKiwi: 702800 },
-      moisDernier: { amount: 783339.00,deltaHier: null, deltaSemaine: null, deltaMois: 11, netAfterKiwi: 653604 },
-      trimestre:   { amount: 2526900.00,deltaHier: null, deltaSemaine: null, deltaMois: 12, netAfterKiwi: 2108400 },
-      annee:       { amount: 10107600.00,deltaHier: null, deltaSemaine: null, deltaMois: 18, netAfterKiwi: 8433600 },
-      personnalise: null,
-    },
-    maisonMansour: {
-      aujourdhui:  { amount: 11820.00, deltaHier: -2.4, deltaSemaine: 11,   deltaMois: 7,  netAfterKiwi: 9920   },
-      hier:        { amount: 12110.00, deltaHier: 1.8,  deltaSemaine: 8,    deltaMois: 5,  netAfterKiwi: 10170  },
-      septJours:   { amount: 84800.00, deltaHier: null, deltaSemaine: 14,   deltaMois: 8,  netAfterKiwi: 71200  },
-      trenteJours: { amount: 358200.00,deltaHier: null, deltaSemaine: null, deltaMois: 12, netAfterKiwi: 300700 },
-      moisDernier: { amount: 333126.00,deltaHier: null, deltaSemaine: null, deltaMois: 9,  netAfterKiwi: 279651 },
-      trimestre:   { amount: 1074600.00,deltaHier: null, deltaSemaine: null, deltaMois: 11, netAfterKiwi: 902100 },
-      annee:       { amount: 4298400.00,deltaHier: null, deltaSemaine: null, deltaMois: 16, netAfterKiwi: 3608400 },
-      personnalise: null,
-    },
-    spaBahia: {
-      aujourdhui:  { amount: 8950.00,  deltaHier: 6.8,  deltaSemaine: 22,   deltaMois: 14, netAfterKiwi: 7510   },
-      hier:        { amount: 8380.00,  deltaHier: -3.1, deltaSemaine: 16,   deltaMois: 9,  netAfterKiwi: 7035   },
-      septJours:   { amount: 64200.00, deltaHier: null, deltaSemaine: 19,   deltaMois: 11, netAfterKiwi: 53890  },
-      trenteJours: { amount: 269400.00,deltaHier: null, deltaSemaine: null, deltaMois: 16, netAfterKiwi: 226300 },
-      moisDernier: { amount: 250542.00,deltaHier: null, deltaSemaine: null, deltaMois: 12, netAfterKiwi: 210459 },
-      trimestre:   { amount: 808200.00,deltaHier: null, deltaSemaine: null, deltaMois: 13, netAfterKiwi: 678900 },
-      annee:       { amount: 3232800.00,deltaHier: null, deltaSemaine: null, deltaMois: 19, netAfterKiwi: 2715600 },
-      personnalise: null,
-    },
-  };
+  const heroDataByVenue = installPart().heroDataByVenue;
 
   // Goal bar — current revenue vs target for the selected venue + range.
   const goalByVenue = {
@@ -915,185 +799,7 @@
     },
   };
 
-  const kpiByVenue = {
-    cafeAtlas: {
-      aujourdhui: {
-        tx:       { value: 182,    unit: '',     fmt: 'int',  delta: 15.2 },
-        panier:   { value: 134,    unit: 'MAD',  fmt: 'int',  delta: 1.5 },
-        marge:    { value: 71.4,   unit: '%',    fmt: 'pct1', delta: 1.8 },
-        success:  { value: 99.34,  unit: '%',    fmt: 'pct2', delta: 0.2 },
-        ratio:    { text: '68 / 32', unit: '%',                delta: 4 },
-        regulars: { value: 47,     unit: '/ 182',fmt: 'int',  delta: 26 },
-      },
-      hier: {
-        tx:       { value: 168,    unit: '',     fmt: 'int',  delta: 8.4 },
-        panier:   { value: 132,    unit: 'MAD',  fmt: 'int',  delta: 0.8 },
-        marge:    { value: 69.6,   unit: '%',    fmt: 'pct1', delta: 0.4 },
-        success:  { value: 99.18,  unit: '%',    fmt: 'pct2', delta: 0.1 },
-        ratio:    { text: '64 / 36', unit: '%',                delta: 2 },
-        regulars: { value: 42,     unit: '/ 168',fmt: 'int',  delta: 25 },
-      },
-      septJours: {
-        tx:       { value: 1240,   unit: '',     fmt: 'int',  delta: 18 },
-        panier:   { value: 138,    unit: 'MAD',  fmt: 'int',  delta: 3 },
-        marge:    { value: 70.8,   unit: '%',    fmt: 'pct1', delta: 2.1 },
-        success:  { value: 99.28,  unit: '%',    fmt: 'pct2', delta: 0.3 },
-        ratio:    { text: '66 / 34', unit: '%',                delta: 5 },
-        regulars: { value: 286,    unit: '/ 1240',fmt:'int',  delta: 23 },
-      },
-      trenteJours: {
-        tx:       { value: 5320,   unit: '',     fmt: 'int',  delta: 21 },
-        panier:   { value: 142,    unit: 'MAD',  fmt: 'int',  delta: 5 },
-        marge:    { value: 70.2,   unit: '%',    fmt: 'pct1', delta: 1.5 },
-        success:  { value: 99.32,  unit: '%',    fmt: 'pct2', delta: 0.5 },
-        ratio:    { text: '68 / 32', unit: '%',                delta: 6 },
-        regulars: { value: 1240,   unit: '/ 5320',fmt:'int',  delta: 24 },
-      },
-      moisDernier: {
-        tx:       { value: 4948,   unit: '',     fmt: 'int',  delta: 17 },
-        panier:   { value: 140,    unit: 'MAD',  fmt: 'int',  delta: 3 },
-        marge:    { value: 69.4,   unit: '%',    fmt: 'pct1', delta: 0.9 },
-        success:  { value: 99.26,  unit: '%',    fmt: 'pct2', delta: 0.3 },
-        ratio:    { text: '67 / 33', unit: '%',                delta: 4 },
-        regulars: { value: 1153,   unit: '/ 4948',fmt:'int',  delta: 19 },
-      },
-      trimestre: {
-        tx:       { value: 15960,  unit: '',     fmt: 'int',  delta: 12 },
-        panier:   { value: 143,    unit: 'MAD',  fmt: 'int',  delta: 4 },
-        marge:    { value: 70.0,   unit: '%',    fmt: 'pct1', delta: 1.2 },
-        success:  { value: 99.30,  unit: '%',    fmt: 'pct2', delta: 0.4 },
-        ratio:    { text: '68 / 32', unit: '%',                delta: 5 },
-        regulars: { value: 3720,   unit: '/ 15960',fmt:'int', delta: 16 },
-      },
-      annee: {
-        tx:       { value: 63840,  unit: '',     fmt: 'int',  delta: 18 },
-        panier:   { value: 145,    unit: 'MAD',  fmt: 'int',  delta: 6 },
-        marge:    { value: 70.6,   unit: '%',    fmt: 'pct1', delta: 2.4 },
-        success:  { value: 99.35,  unit: '%',    fmt: 'pct2', delta: 0.6 },
-        ratio:    { text: '69 / 31', unit: '%',                delta: 6 },
-        regulars: { value: 14880,  unit: '/ 63840',fmt:'int', delta: 21 },
-      },
-      personnalise: null,
-    },
-    maisonMansour: {
-      aujourdhui: {
-        tx:         { value: 42,    unit: '',     fmt: 'int',  delta: 12 },
-        panier:     { value: 282,   unit: 'MAD',  fmt: 'int',  delta: 4.5 },
-        tauxRetour: { value: 6.2,   unit: '%',    fmt: 'pct1', delta: -1.3 },
-        success:    { value: 99.6,  unit: '%',    fmt: 'pct2', delta: 0.1 },
-        ratio:      { text: '85 / 15', unit: '%',               delta: 3 },
-        regulars:   { value: 11,    unit: '/ 42', fmt: 'int',  delta: 18 },
-      },
-      hier: {
-        tx:         { value: 43,    unit: '',     fmt: 'int',  delta: 8 },
-        panier:     { value: 282,   unit: 'MAD',  fmt: 'int',  delta: 1.2 },
-        tauxRetour: { value: 5.8,   unit: '%',    fmt: 'pct1', delta: -1.8 },
-        success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.0 },
-        ratio:      { text: '83 / 17', unit: '%',               delta: 2 },
-        regulars:   { value: 12,    unit: '/ 43', fmt: 'int',  delta: 20 },
-      },
-      septJours: {
-        tx:         { value: 295,   unit: '',     fmt: 'int',  delta: 14 },
-        panier:     { value: 287,   unit: 'MAD',  fmt: 'int',  delta: 3 },
-        tauxRetour: { value: 6.4,   unit: '%',    fmt: 'pct1', delta: -0.8 },
-        success:    { value: 99.4,  unit: '%',    fmt: 'pct2', delta: 0.2 },
-        ratio:      { text: '84 / 16', unit: '%',               delta: 4 },
-        regulars:   { value: 78,    unit: '/ 295',fmt: 'int',  delta: 16 },
-      },
-      trenteJours: {
-        tx:         { value: 1240,  unit: '',     fmt: 'int',  delta: 18 },
-        panier:     { value: 289,   unit: 'MAD',  fmt: 'int',  delta: 5 },
-        tauxRetour: { value: 6.1,   unit: '%',    fmt: 'pct1', delta: -1.4 },
-        success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.3 },
-        ratio:      { text: '85 / 15', unit: '%',               delta: 5 },
-        regulars:   { value: 320,   unit: '/ 1240',fmt:'int',  delta: 21 },
-      },
-      moisDernier: {
-        tx:         { value: 1153,  unit: '',     fmt: 'int',  delta: 14 },
-        panier:     { value: 286,   unit: 'MAD',  fmt: 'int',  delta: 3 },
-        tauxRetour: { value: 6.3,   unit: '%',    fmt: 'pct1', delta: -1.1 },
-        success:    { value: 99.4,  unit: '%',    fmt: 'pct2', delta: 0.2 },
-        ratio:      { text: '84 / 16', unit: '%',               delta: 4 },
-        regulars:   { value: 298,   unit: '/ 1153',fmt:'int',  delta: 17 },
-      },
-      trimestre: {
-        tx:         { value: 3720,  unit: '',     fmt: 'int',  delta: 11 },
-        panier:     { value: 291,   unit: 'MAD',  fmt: 'int',  delta: 4 },
-        tauxRetour: { value: 5.9,   unit: '%',    fmt: 'pct1', delta: -0.9 },
-        success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.3 },
-        ratio:      { text: '85 / 15', unit: '%',               delta: 4 },
-        regulars:   { value: 960,   unit: '/ 3720',fmt:'int',  delta: 15 },
-      },
-      annee: {
-        tx:         { value: 14880, unit: '',     fmt: 'int',  delta: 16 },
-        panier:     { value: 294,   unit: 'MAD',  fmt: 'int',  delta: 6 },
-        tauxRetour: { value: 5.7,   unit: '%',    fmt: 'pct1', delta: -1.2 },
-        success:    { value: 99.6,  unit: '%',    fmt: 'pct2', delta: 0.4 },
-        ratio:      { text: '86 / 14', unit: '%',               delta: 5 },
-        regulars:   { value: 3840,  unit: '/ 14880',fmt:'int', delta: 19 },
-      },
-      personnalise: null,
-    },
-    spaBahia: {
-      aujourdhui: {
-        tx:       { value: 20,    unit: '',     fmt: 'int',  delta: 14 },
-        panier:   { value: 447,   unit: 'MAD',  fmt: 'int',  delta: 6.5 },
-        marge:    { value: 78.2,  unit: '%',    fmt: 'pct1', delta: 2.1 },
-        success:  { value: 92.5,  unit: '%',    fmt: 'pct1', delta: 3.2 },
-        ratio:    { text: '92 / 8', unit: '%',                 delta: 2 },
-        regulars: { value: 14,    unit: '/ 20', fmt: 'int',  delta: 12 },
-      },
-      hier: {
-        tx:       { value: 18,    unit: '',     fmt: 'int',  delta: 5 },
-        panier:   { value: 466,   unit: 'MAD',  fmt: 'int',  delta: 2 },
-        marge:    { value: 76.5,  unit: '%',    fmt: 'pct1', delta: -0.8 },
-        success:  { value: 89.3,  unit: '%',    fmt: 'pct1', delta: -1.5 },
-        ratio:    { text: '90 / 10', unit: '%',                 delta: -2 },
-        regulars: { value: 13,    unit: '/ 18', fmt: 'int',  delta: 14 },
-      },
-      septJours: {
-        tx:       { value: 142,   unit: '',     fmt: 'int',  delta: 19 },
-        panier:   { value: 452,   unit: 'MAD',  fmt: 'int',  delta: 4 },
-        marge:    { value: 77.8,  unit: '%',    fmt: 'pct1', delta: 1.6 },
-        success:  { value: 91.8,  unit: '%',    fmt: 'pct1', delta: 2.7 },
-        ratio:    { text: '91 / 9', unit: '%',                 delta: 3 },
-        regulars: { value: 92,    unit: '/ 142',fmt: 'int',  delta: 18 },
-      },
-      trenteJours: {
-        tx:       { value: 580,   unit: '',     fmt: 'int',  delta: 22 },
-        panier:   { value: 464,   unit: 'MAD',  fmt: 'int',  delta: 6 },
-        marge:    { value: 78.0,  unit: '%',    fmt: 'pct1', delta: 2.4 },
-        success:  { value: 92.1,  unit: '%',    fmt: 'pct1', delta: 4.5 },
-        ratio:    { text: '92 / 8', unit: '%',                 delta: 5 },
-        regulars: { value: 412,   unit: '/ 580',fmt: 'int',  delta: 20 },
-      },
-      moisDernier: {
-        tx:       { value: 539,   unit: '',     fmt: 'int',  delta: 18 },
-        panier:   { value: 458,   unit: 'MAD',  fmt: 'int',  delta: 4 },
-        marge:    { value: 77.2,  unit: '%',    fmt: 'pct1', delta: 1.1 },
-        success:  { value: 91.6,  unit: '%',    fmt: 'pct1', delta: 3.6 },
-        ratio:    { text: '91 / 9', unit: '%',                 delta: 4 },
-        regulars: { value: 383,   unit: '/ 539',fmt: 'int',  delta: 16 },
-      },
-      trimestre: {
-        tx:       { value: 1740,  unit: '',     fmt: 'int',  delta: 13 },
-        panier:   { value: 466,   unit: 'MAD',  fmt: 'int',  delta: 5 },
-        marge:    { value: 77.6,  unit: '%',    fmt: 'pct1', delta: 1.8 },
-        success:  { value: 92.3,  unit: '%',    fmt: 'pct1', delta: 4.0 },
-        ratio:    { text: '92 / 8', unit: '%',                 delta: 5 },
-        regulars: { value: 1236,  unit: '/ 1740',fmt:'int',   delta: 17 },
-      },
-      annee: {
-        tx:       { value: 6960,  unit: '',     fmt: 'int',  delta: 19 },
-        panier:   { value: 472,   unit: 'MAD',  fmt: 'int',  delta: 7 },
-        marge:    { value: 78.4,  unit: '%',    fmt: 'pct1', delta: 3.0 },
-        success:  { value: 92.8,  unit: '%',    fmt: 'pct1', delta: 4.8 },
-        ratio:    { text: '93 / 7', unit: '%',                 delta: 6 },
-        regulars: { value: 4944,  unit: '/ 6960',fmt:'int',   delta: 21 },
-      },
-      personnalise: null,
-    },
-  };
+  const kpiByVenue = installPart().kpiByVenue;
 
   /* tempsTable seed — average time a covert occupies a table (restaurant)
    * or a cabin (spa). Lower is better for restaurants (faster turnover ⇒
@@ -1127,198 +833,7 @@
     });
   });
 
-  const revChartByVenue = {
-    cafeAtlas: {
-    // Today: hourly cumulative across the full opening band (11h → 02h).
-    // Past hours (≤14h) are real cumul; post-14h are projected forward to end of service.
-    // Compare line is yesterday's full-day cumul at the same hours.
-    aujourdhui: {
-      rangeBadge: "AUJOURD'HUI · LIVE",
-      sub: 'Cumul horaire · service en cours',
-      xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-      visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // every 2h: 12h, 14h, 16h, 18h, 20h, 22h, 00h, 02h
-      rev:    [0, 4800, 12200, 27512.50, 29400, 30600, 31800, 35200, 39400, 43000, 45200, 47000, 48200, 49000, 49600, 50000],
-      revPrev:[0,  600,  2200,  4400,    5400,  6000,  6800,  9400, 13800, 18200, 21400, 23200, 24200, 24600, 24800, 24820],
-      yTicks: [0, 12500, 25000, 37500, 50000],
-      legendPrimary: "Cumul aujourd'hui · 27 512,50 MAD",
-      legendCompare: 'Cumul hier · 24 820 MAD',
-    },
-    hier: {
-      rangeBadge: 'HIER · COMPLET',
-      sub: "Cumul horaire · journée d'hier",
-      xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-      visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      rev:    [0,  600,  2200,  4400,  5400,  6000,  6800,  9400, 13800, 18200, 21400, 23200, 24200, 24600, 24800, 24820],
-      revPrev:[0,  500,  1900,  3800,  4700,  5300,  6000,  8400, 12500, 16400, 19400, 21000, 21800, 22200, 22600, 22800],
-      yTicks: [0, 6500, 13000, 19500, 26000],
-      legendPrimary: 'Cumul hier · 24 820 MAD',
-      legendCompare: 'Cumul avant-hier · 22 800 MAD',
-    },
-    septJours: {
-      rangeBadge: '7 DERNIERS JOURS',
-      sub: 'Total journalier · 7 derniers jours',
-      xLabels: ['Sam 18','Dim 19','Lun 20','Mar 21','Mer 22','Jeu 23','Ven 24'],
-      visibleXIdx: [0, 1, 2, 3, 4, 5, 6],
-      rev:    [18200, 22500, 17800, 19200, 21300, 25600, 27512],
-      revPrev:[15400, 19200, 15600, 17400, 17800, 21000, 21800],
-      yTicks: [0, 8000, 16000, 24000, 32000],
-      legendPrimary: 'Total 7 jours · 198 400 MAD',
-      legendCompare: '7 jours précédents · 126 200 MAD',
-    },
-    trenteJours: {
-      rangeBadge: '30 DERNIERS JOURS',
-      sub: 'Total journalier · 30 derniers jours',
-      // 30 daily totals; labels visible every 5 days (idx 0,5,10,15,20,25,29).
-      xLabels: [
-        '26 mar','27 mar','28 mar','29 mar','30 mar',
-        '31 mar','1 avr','2 avr','3 avr','4 avr',
-        '5 avr','6 avr','7 avr','8 avr','9 avr',
-        '10 avr','11 avr','12 avr','13 avr','14 avr',
-        '15 avr','16 avr','17 avr','18 avr','19 avr',
-        '20 avr','21 avr','22 avr','23 avr','24 avr',
-      ],
-      visibleXIdx: [0, 5, 10, 15, 20, 25, 29],
-      rev: [
-        22400, 23600, 24100, 24400, 24800,
-        25200, 25800, 26000, 26100, 26200,
-        26500, 26800, 27000, 27200, 27800,
-        28000, 28200, 28000, 28100, 28400,
-        28600, 28900, 29100, 29200, 29600,
-        29400, 28800, 28200, 28000, 27512,
-      ],
-      revPrev: [
-        19200, 20100, 20400, 20800, 21400,
-        21800, 22200, 22500, 22600, 22800,
-        23200, 23600, 23900, 24200, 24600,
-        24900, 25200, 25400, 25600, 25800,
-        26100, 26400, 26500, 26700, 26900,
-        26800, 26200, 25600, 25200, 24800,
-      ],
-      yTicks: [0, 8000, 16000, 24000, 32000],
-      legendPrimary: 'Total 30 jours · 842 300 MAD',
-      legendCompare: '30 jours précédents · 731 200 MAD',
-    },
-    personnalise: null,
-    },
-    maisonMansour: {
-      aujourdhui: {
-        rangeBadge: "AUJOURD'HUI · LIVE",
-        sub: 'Cumul horaire · boutique ouverte',
-        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        rev:    [0, 2400, 6400, 11820, 11900, 12000, 12200, 12500, 12900, 13400, 13800, 14000, 14100, 14200, 14200, 14200],
-        revPrev:[0, 1100, 2400,  3400,  3800,  4100,  4500,  5800,  7400,  9100, 11000, 11800, 12000, 12080, 12100, 12110],
-        yTicks: [0, 4000, 8000, 12000, 16000],
-        legendPrimary: "Cumul aujourd'hui · 11 820 MAD",
-        legendCompare: 'Cumul hier · 12 110 MAD',
-      },
-      hier: {
-        rangeBadge: 'HIER · COMPLET',
-        sub: "Cumul horaire · journée d'hier",
-        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        rev:    [0, 1100, 2400, 3400, 3800, 4100, 4500, 5800, 7400, 9100, 11000, 11800, 12000, 12080, 12100, 12110],
-        revPrev:[0, 1080, 2380, 3380, 3780, 4080, 4480, 5780, 7380, 9080, 10940, 11700, 11800, 11800, 11800, 11800],
-        yTicks: [0, 3500, 7000, 10500, 14000],
-        legendPrimary: 'Cumul hier · 12 110 MAD',
-        legendCompare: 'Cumul avant-hier · 11 800 MAD',
-      },
-      septJours: {
-        rangeBadge: '7 DERNIERS JOURS',
-        sub: 'Total journalier · 7 derniers jours',
-        xLabels: ['Sam 18','Dim 19','Lun 20','Mar 21','Mer 22','Jeu 23','Ven 24'],
-        visibleXIdx: [0, 1, 2, 3, 4, 5, 6],
-        rev:    [10800, 13200, 11400, 12100, 12400, 13100, 11800],
-        revPrev:[ 9100, 11400,  9700, 10300, 10500, 11100, 10000],
-        yTicks: [0, 4000, 8000, 12000, 16000],
-        legendPrimary: 'Total 7 jours · 84 800 MAD',
-        legendCompare: '7 jours précédents · 72 100 MAD',
-      },
-      trenteJours: {
-        rangeBadge: '30 DERNIERS JOURS',
-        sub: 'Total journalier · 30 derniers jours',
-        xLabels: [
-          '26 mar','27 mar','28 mar','29 mar','30 mar','31 mar','1 avr','2 avr','3 avr','4 avr',
-          '5 avr','6 avr','7 avr','8 avr','9 avr','10 avr','11 avr','12 avr','13 avr','14 avr',
-          '15 avr','16 avr','17 avr','18 avr','19 avr','20 avr','21 avr','22 avr','23 avr','24 avr',
-        ],
-        visibleXIdx: [0, 5, 10, 15, 20, 25, 29],
-        rev: [
-          10800, 11200, 11400, 11600, 11800, 12000, 12200, 12000, 11800, 11900,
-          12100, 12300, 12400, 12200, 12000, 11900, 12000, 12200, 12400, 12600,
-          12400, 12200, 12000, 11800, 11600, 11400, 11600, 11800, 12000, 12110,
-        ],
-        revPrev: [
-          9700, 10100, 10300, 10500, 10700, 10900, 11000, 10900, 10700, 10800,
-          11000, 11200, 11200, 11000, 10800, 10700, 10800, 11000, 11200, 11400,
-          11200, 11000, 10800, 10600, 10400, 10300, 10500, 10700, 10800, 10900,
-        ],
-        yTicks: [0, 4000, 8000, 12000, 16000],
-        legendPrimary: 'Total 30 jours · 358 200 MAD',
-        legendCompare: '30 jours précédents · 322 100 MAD',
-      },
-      personnalise: null,
-    },
-    spaBahia: {
-      aujourdhui: {
-        rangeBadge: "AUJOURD'HUI · LIVE",
-        sub: 'Cumul horaire · réservations en cours',
-        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        rev:    [0, 1500, 4200, 8950, 9050, 9300, 9700, 10100, 10500, 10800, 10950, 11000, 11000, 11000, 11000, 11000],
-        revPrev:[0,  600, 1900, 3200, 3700, 4500, 5300,  6100,  7100,  7900,  8200,  8350,  8380,  8380,  8380,  8380],
-        yTicks: [0, 3000, 6000, 9000, 12000],
-        legendPrimary: "Cumul aujourd'hui · 8 950 MAD",
-        legendCompare: 'Cumul hier · 8 380 MAD',
-      },
-      hier: {
-        rangeBadge: 'HIER · COMPLET',
-        sub: "Cumul horaire · journée d'hier",
-        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        rev:    [0, 600, 1900, 3200, 3700, 4500, 5300, 6100, 7100, 7900, 8200, 8350, 8380, 8380, 8380, 8380],
-        revPrev:[0, 580, 1850, 3100, 3600, 4400, 5200, 5950, 6900, 7700, 8000, 8100, 8100, 8100, 8100, 8100],
-        yTicks: [0, 2500, 5000, 7500, 10000],
-        legendPrimary: 'Cumul hier · 8 380 MAD',
-        legendCompare: 'Cumul avant-hier · 8 100 MAD',
-      },
-      septJours: {
-        rangeBadge: '7 DERNIERS JOURS',
-        sub: 'Total journalier · 7 derniers jours',
-        xLabels: ['Sam 18','Dim 19','Lun 20','Mar 21','Mer 22','Jeu 23','Ven 24'],
-        visibleXIdx: [0, 1, 2, 3, 4, 5, 6],
-        rev:    [8200, 9400, 8800, 9100, 9300, 10100, 9300],
-        revPrev:[7000, 8000, 7500, 7800, 7900,  8600, 7900],
-        yTicks: [0, 3000, 6000, 9000, 12000],
-        legendPrimary: 'Total 7 jours · 64 200 MAD',
-        legendCompare: '7 jours précédents · 54 700 MAD',
-      },
-      trenteJours: {
-        rangeBadge: '30 DERNIERS JOURS',
-        sub: 'Total journalier · 30 derniers jours',
-        xLabels: [
-          '26 mar','27 mar','28 mar','29 mar','30 mar','31 mar','1 avr','2 avr','3 avr','4 avr',
-          '5 avr','6 avr','7 avr','8 avr','9 avr','10 avr','11 avr','12 avr','13 avr','14 avr',
-          '15 avr','16 avr','17 avr','18 avr','19 avr','20 avr','21 avr','22 avr','23 avr','24 avr',
-        ],
-        visibleXIdx: [0, 5, 10, 15, 20, 25, 29],
-        rev: [
-          7800, 8100, 8400, 8600, 8800, 9000, 9200, 9000, 8800, 8900,
-          9100, 9300, 9400, 9200, 9000, 8900, 9000, 9200, 9400, 9600,
-          9400, 9200, 9000, 8800, 8600, 8400, 8600, 8800, 9000, 9100,
-        ],
-        revPrev: [
-          6700, 7000, 7200, 7400, 7500, 7700, 7900, 7700, 7500, 7600,
-          7800, 8000, 8000, 7900, 7700, 7600, 7700, 7900, 8100, 8200,
-          8100, 7900, 7700, 7500, 7300, 7200, 7300, 7500, 7700, 7800,
-        ],
-        yTicks: [0, 3000, 6000, 9000, 12000],
-        legendPrimary: 'Total 30 jours · 269 400 MAD',
-        legendCompare: '30 jours précédents · 232 100 MAD',
-      },
-      personnalise: null,
-    },
-  };
+  const revChartByVenue = installPart().revChartByVenue;
 
   const mixByVenue = {
     cafeAtlas: {
@@ -1773,17 +1288,7 @@
     'soins du visage': { en: 'facials', ar: 'العناية بالوجه' }, 'hammam & gommage': { en: 'hammam & scrub', ar: 'حمام وتقشير' },
     'hammam': { en: 'hammam', ar: 'حمام' }, 'massages': { en: 'massages', ar: 'تدليك' },
   };
-  function demoRole(text, lang) {
-    if (!text || lang === 'fr' || (lang !== 'en' && lang !== 'ar')) return text;
-    return String(text).split(' · ').map((part) => {
-      const hit = DEMO_ROLE[part]; if (hit) return hit[lang];
-      let m;
-      if ((m = /^(\d+) jours?( de service)?$/.exec(part))) return lang === 'en' ? `${m[1]} days` : `${m[1]} أيام`;
-      if ((m = /^pause depuis (\d\d:\d\d)$/.exec(part))) return lang === 'en' ? `on break since ${m[1]}` : `في استراحة منذ ${m[1]}`;
-      if ((m = /^fini(?: son service)? (\d\d:\d\d)$/.exec(part))) return lang === 'en' ? `shift ended ${m[1]}` : `انتهت ورديته ${m[1]}`;
-      return part;
-    }).join(' · ');
-  }
+  function demoRole(...args) { return callPart('demoRole', this, args); }
 
   const staffByVenue = {
     cafeAtlas: {
@@ -1864,36 +1369,11 @@
 
   /* ═══════════════ STATE + EVENTS ═══════════════ */
 
-  function setDateRange(id) {
-    if (!VALID.includes(id)) id = DEFAULT_RANGE;
-    // 'personnalise' is only meaningful with a date pair behind it.
-    if (id === 'personnalise' && !customRange) id = DEFAULT_RANGE;
-    currentRange = id;
-    try { localStorage.setItem(STORAGE_KEY, id); } catch (_) {}
-    renderSelector();
-    subscribers.forEach(fn => { try { fn(id); } catch (_) {} });
-  }
+  function setDateRange(...args) { return callPart('setDateRange', this, args); }
   /* Commit a calendar-picked pair and switch the dashboard onto it —
    * called by the custom-range popover's "Appliquer" button. */
-  function commitCustomRange(start, end) {
-    if (!start || !end) return;
-    customRange = start <= end ? { start, end } : { start: end, end: start };
-    try {
-      localStorage.setItem(CUSTOM_KEY,
-        dateToIso(customRange.start) + '|' + dateToIso(customRange.end));
-    } catch (_) {}
-    setDateRange('personnalise');
-  }
-  function setShowComparison(v) {
-    showComparison = !!v;
-    try { localStorage.setItem(CMP_KEY, showComparison ? '1' : '0'); } catch (_) {}
-    const btn = document.querySelector('[data-rev-compare-btn]');
-    if (btn) {
-      btn.classList.toggle('on', showComparison);
-      btn.setAttribute('aria-pressed', String(showComparison));
-    }
-    renderRevChart();
-  }
+  function commitCustomRange(...args) { return callPart('commitCustomRange', this, args); }
+  function setShowComparison(...args) { return callPart('setShowComparison', this, args); }
   function subscribe(fn) { subscribers.add(fn); return () => subscribers.delete(fn); }
 
   /* ═══════════════ DATE / NUMBER HELPERS ═══════════════ */
@@ -1933,15 +1413,7 @@
    * ici ce qu'il vient d'écrire dans le DOM livré ; un évènement par image
    * (kiwi:home-model) prévient le kit. Drapeau éteint : personne n'écoute. */
   function homeStore() { return homeStore.m || (homeStore.m = {}); }
-  function homeSet(key, value) {
-    homeStore()[key] = value;
-    if (homeSet.q) return;
-    homeSet.q = true;
-    Promise.resolve().then(() => {
-      homeSet.q = false;
-      try { window.dispatchEvent(new CustomEvent('kiwi:home-model')); } catch (_) {}
-    });
-  }
+  function homeSet(...args) { return callPart('homeSet', this, args); }
   const fmtPct = v => {
     const sign = v > 0 ? '+' : v < 0 ? '−' : '';
     const abs = Math.abs(v);
@@ -1962,73 +1434,14 @@
     while (w.nextNode()) out.push(w.currentNode);
     return out;
   }
-  function paintNumber(el, html) {
-    const shape = numberShape(html);
-    const mine = el.__kiwiNumText;
-    /* Reuse only what this function wrote and nobody has replaced since: any
-     * other write (a plain re-render, the '…' placeholder) detaches these. */
-    if (mine && el.__kiwiNumShape === shape) {
-      const live = textNodesOf(el);
-      if (live.length === mine.length && live.every((t, i) => t === mine[i])) {
-        const tpl = document.createElement('template');
-        tpl.innerHTML = html;
-        const next = textNodesOf(tpl.content);
-        if (next.length === live.length) {
-          next.forEach((t, i) => { if (live[i].data !== t.data) live[i].data = t.data; });
-          return;
-        }
-      }
-    }
-    el.innerHTML = html;
-    el.__kiwiNumShape = shape;
-    el.__kiwiNumText = textNodesOf(el);
-  }
+  function paintNumber(...args) { return callPart('paintNumber', this, args); }
 
-  function animateNumber(el, from, to, { duration = 800, format } = {}) {
-    if (!el) return;
-    if (operatorLedgerPending()) { el.textContent = '…'; return; }
-    // Hidden tabs freeze requestAnimationFrame — set the final value at once
-    // so a background re-render never leaves a tile blank.
-    if (document.hidden || duration === 0 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { el['inner' + 'HTML'] = format(to); return; }
-    const start = performance.now();
-    const ease = t => 1 - Math.pow(1 - t, 3);
-    function tick(now) {
-      if (operatorLedgerPending()) { el.textContent = '…'; return; }
-      const p = Math.min(1, (now - start) / duration);
-      const v = from + (to - from) * ease(p);
-      paintNumber(el, format(v));
-      if (p < 1) requestAnimationFrame(tick);
-      else paintNumber(el, format(to));
-    }
-    requestAnimationFrame(tick);
-  }
+  function animateNumber(...args) { return callPart('animateNumber', this, args); }
 
   /* Auto-size the hero amount so it always sits on a single line.
    * Renders the target value in a hidden mirror (same fonts/letter-spacing),
    * measures, and shrinks font-size if it would overflow the column. */
-  function fitHeroAmount(el, targetValue) {
-    if (!el) return;
-    el.style.fontSize = '';
-    const parent = el.parentElement;
-    if (!parent) return;
-    const cs = getComputedStyle(el);
-    const probe = document.createElement('span');
-    probe.style.cssText = `position: absolute; left: -9999px; top: -9999px; visibility: hidden; white-space: nowrap; pointer-events: none;`;
-    probe.style.fontFamily = cs.fontFamily;
-    probe.style.fontWeight = cs.fontWeight;
-    probe.style.fontSize = cs.fontSize;
-    probe.style.letterSpacing = cs.letterSpacing;
-    probe.style.fontFeatureSettings = cs.fontFeatureSettings;
-    probe.innerHTML = fmtHeroAmount(targetValue);
-    document.body.appendChild(probe);
-    const naturalW = probe.scrollWidth;
-    document.body.removeChild(probe);
-    const availW = parent.clientWidth;
-    if (availW > 0 && naturalW > availW) {
-      const baseSize = parseFloat(cs.fontSize);
-      el.style.fontSize = `${Math.floor(baseSize * (availW / naturalW) * 0.97)}px`;
-    }
-  }
+  function fitHeroAmount(...args) { return callPart('fitHeroAmount', this, args); }
 
   function parseAmountFromEl(el) {
     if (!el) return 0;
@@ -2051,15 +1464,7 @@
 
   /* ═══════════════ RENDER: SELECTOR ═══════════════ */
 
-  function revealDayPill(pill) {
-    const track = pill.parentElement;
-    if (!track) return;
-    const p = pill.getBoundingClientRect(), r = track.getBoundingClientRect();
-    const delta = p.left < r.left ? p.left - r.left : p.right > r.right ? p.right - r.right : 0;
-    // Only this horizontal track moves. scrollIntoView also pulled the entire
-    // page vertically on each live re-render, sometimes during a user's swipe.
-    if (delta) track.scrollBy({left: delta, behavior: 'instant'});
-  }
+  function revealDayPill(...args) { return callPart('revealDayPill', this, args); }
 
   function renderSelector() {
     const lang = getLang();
@@ -2121,52 +1526,14 @@
   function activeMerchantSlug() {
     try { return getCurrentVenue(); } catch (_) { return ''; }
   }
-  function merchantTimeZone(slug) {
-    try {
-      const R = window.KiwiDayReport;
-      if (R?.timezone) return R.timezone(slug);
-    } catch (_) {}
-    try {
-      const vd = window.KiwiVenue?.getCurrentVenueData?.();
-      const zone = vd?.timezone || vd?.timeZone || vd?.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone;
-      if (zone) { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone }).format(); return zone; }
-    } catch (_) {}
-    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_MERCHANT_TZ; } catch (_) { return DEFAULT_MERCHANT_TZ; }
-  }
-  function merchantParts(ts, slug) {
-    const f = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {
-      timeZone: merchantTimeZone(slug), year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
-    });
-    const out = {};
-    f.formatToParts(new Date(ts)).forEach(p => { if (p.type !== 'literal') out[p.type] = p.value; });
-    return out;
-  }
+  function merchantTimeZone(...args) { return callPart('merchantTimeZone', this, args); }
+  function merchantParts(...args) { return callPart('merchantParts', this, args); }
   function addMerchantDays(day, delta) {
     const p = String(day || '').split('-');
     return new Date(Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + delta * 864e5).toISOString().slice(0, 10);
   }
-  function merchantBoundary(day, hour, slug) {
-    const zone = merchantTimeZone(slug);
-    const target = Date.parse(String(day) + 'T00:00:00Z') + hour * 3600000;
-    let guess = target;
-    for (let i = 0; i < 6; i++) {
-      const p = merchantParts(guess, slug);
-      const observed = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`);
-      if (observed === target) return guess;
-      guess += target - observed;
-    }
-    return guess;
-  }
-  function merchantDayKey(ts, slug) {
-    try {
-      const R = window.KiwiDayReport;
-      if (R?.businessDay) return R.businessDay(ts, slug);
-    } catch (_) {}
-    const p = merchantParts(ts, slug);
-    const day = `${p.year}-${p.month}-${p.day}`;
-    return +p.hour < dayCutoffH(slug) ? addMerchantDays(day, -1) : day;
-  }
+  function merchantBoundary(...args) { return callPart('merchantBoundary', this, args); }
+  function merchantDayKey(...args) { return callPart('merchantDayKey', this, args); }
   function merchantDayBounds(day, slug) {
     try {
       const R = window.KiwiDayReport;
@@ -2202,52 +1569,12 @@
    * octobre, « Septembre 2026 » totalisait du 13 septembre au 12 octobre, et
    * « 2026 » remontait au 13 octobre 2025. Clés de journée en texte : pas de
    * fuseau, la journée de caisse reste celle de merchantDayBounds. */
-  function calendarStartKey(dayKey, unit, back) {
-    let y = +dayKey.slice(0, 4), m = +dayKey.slice(5, 7) - 1;
-    if (unit === 'year') { y -= back; m = 0; }
-    else {
-      m = (unit === 'quarter' ? Math.floor(m / 3) * 3 : m) - (unit === 'quarter' ? 3 : 1) * back;
-      while (m < 0) { m += 12; y--; }
-      while (m > 11) { m -= 12; y++; }
-    }
-    return y + '-' + String(m + 1).padStart(2, '0') + '-01';
-  }
+  function calendarStartKey(...args) { return callPart('calendarStartKey', this, args); }
   /* [début, fin) de la période, `back` périodes en arrière. « Mois dernier »
    * est le mois précédent ENTIER ; trimestre et année courent depuis leur
    * premier jour, ouverts jusqu'à maintenant. null hors calendrier. */
-  function calendarBounds(range, back) {
-    const unit = range === 'moisDernier' ? 'month' : range === 'trimestre' ? 'quarter' : range === 'annee' ? 'year' : '';
-    if (!unit) return null;
-    const slug = activeMerchantSlug();
-    const todayDay = merchantDayKey(Date.now(), slug);
-    const shift = (range === 'moisDernier' ? 1 : 0) + (back || 0);
-    const from = merchantDayBounds(calendarStartKey(todayDay, unit, shift), slug).from;
-    if (range !== 'moisDernier' && !back) return [from, Infinity];
-    return [from, merchantDayBounds(calendarStartKey(todayDay, unit, shift - 1), slug).from];
-  }
-  function rangeBounds(range) {
-    /* A merchant-picked range is exact. Demo tables may use a presentation
-     * bucket, but live ledgers must never turn "3–5 August" into "last 7
-     * days" while keeping the precise dates on screen. */
-    if ((range === 'personnalise' || (range == null && currentRange === 'personnalise')) && customRange) {
-      const slug = activeMerchantSlug();
-      const start = merchantDayBounds(dateToIso(customRange.start), slug).from;
-      const end = merchantDayBounds(dateToIso(customRange.end), slug).to;
-      return [start, end];
-    }
-    const slug = activeMerchantSlug();
-    const todayDay = merchantDayKey(Date.now(), slug);
-    const today = merchantDayBounds(todayDay, slug).from;
-    if (range === 'aujourdhui') return [today, Infinity];
-    if (range === 'hier') {
-      const yesterday = merchantDayBounds(addMerchantDays(todayDay, -1), slug);
-      return [yesterday.from, yesterday.to];
-    }
-    const calendar = calendarBounds(range, 0);
-    if (calendar) return calendar;
-    const days = RANGE_DAYS[range] || 1;
-    return [merchantDayBounds(addMerchantDays(todayDay, -(days - 1)), slug).from, Infinity];
-  }
+  function calendarBounds(...args) { return callPart('calendarBounds', this, args); }
+  function rangeBounds(...args) { return callPart('rangeBounds', this, args); }
   /* Les livraisons pas encore payées par le transporteur. Une vente partie en
    * livraison est enregistrée à 0 MAD, et le magasin des ventes ne garde que
    * l'argent : elle n'était donc dans aucune créance. Le montant dû vient de
@@ -2288,94 +1615,15 @@
     } catch (_) {}
     return new Date(ts).getHours();
   }
-  function realInsightSummary(range) {
-    const [from, to] = rangeBounds(range == null ? currentRange : range);
-    const rows = realSalesList().filter((e) => {
-      const ts = +e.ts || 0;
-      return ts >= from && ts < to;
-    });
-    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0;
-    const byHour = window.KiwiSalesMath.hoursFromSales(rows, from, to, saleHour), byTender = {};
-    rows.forEach((e) => {
-      const amount = Math.max(0, +e.amount || 0);
-      revenue += amount; gross += amount;
-      const tender = tenderBucket(e && e.method);
-      if (tender && amount) {
-        tenderAmounts(e).forEach(part => {
-          if (part.key) byTender[part.key] = (byTender[part.key] || 0) + part.amount;
-        });
-        collected += amount;
-      } else if (salesMath().RECEIVABLE_METHODS.includes(String(e && e.method || '').trim().toLowerCase())) {
-        receivable += amount;
-      }
-    });
-    realRefundList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amount = Math.abs(+e.amount || 0);
-      revenue -= Math.abs(+e.amount || 0); refunds += amount;
-      const hour = saleHour(ts);
-      byHour[hour] = (byHour[hour] || 0) - amount;
-      const tender = tenderBucket(e && e.method);
-      if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
-      else if (salesMath().RECEIVABLE_METHODS.includes(String(e && e.method || '').trim().toLowerCase())) receivable -= amount;
-    });
-    receivable += deliveryDue(from, to);
-    const topKey = (obj) => Object.keys(obj).reduce((best, key) =>
-      best == null || obj[key] > obj[best] ? key : best, null);
-    const peakHour = topKey(byHour);
-    const topTender = topKey(byTender);
-    return {
-      from, to, count: rows.length, revenue, gross, refunds, collected, receivable,
-      basket: rows.length ? revenue / rows.length : 0,
-      peakHour: peakHour == null ? null : +peakHour,
-      peakRevenue: peakHour == null ? 0 : byHour[peakHour],
-      activeHours: Object.keys(byHour).length,
-      topTender,
-      tenderAmount: topTender == null ? 0 : byTender[topTender],
-      collected,
-    };
-  }
+  function realInsightSummary(...args) { return callPart('realInsightSummary', this, args); }
 
   const TENDER_NAME = {
     fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'lien de paiement', transfer: 'virement', cheque: 'chèque', split: 'paiement partagé', other: 'autre mode' },
     en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'payment link', transfer: 'bank transfer', cheque: 'cheque', split: 'split payment', other: 'other tender' },
     ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR / محفظة', link: 'رابط دفع', transfer: 'تحويل بنكي', cheque: 'شيك', split: 'دفع مقسّم', other: 'طريقة أخرى' },
   };
-  function buildRealHeroRec() {
-    const s = realInsightSummary();
-    if (!s.count || !s.revenue) return null;
-    const lang = getLang();
-    const today = currentRange === 'aujourdhui';
-    const num = (n) => frInt(Math.round(n));
-    const tender = s.topTender && s.collected ? Math.round((s.tenderAmount / s.collected) * 100) : null;
-    const tenderName = s.topTender ? (TENDER_NAME[lang] || TENDER_NAME.fr)[s.topTender] : '';
-    const peakFr = s.peakHour == null ? '' : ` Votre meilleure heure : ${s.peakHour}h.`;
-    const payFr = tender == null ? '' : ` ${tender} % des encaissements identifiés sont en ${tenderName}.`;
-    const peakEn = s.peakHour == null ? '' : ` Your best hour: ${s.peakHour}:00.`;
-    const payEn = tender == null ? '' : ` ${tender}% of identified payments are ${tenderName}.`;
-    const peakAr = s.peakHour == null ? '' : ` أفضل ساعة: ${s.peakHour}.`;
-    const payAr = tender == null ? '' : ` ${tender}٪ من المدفوعات المحددة عبر ${tenderName}.`;
-    const W = {
-      fr: { title: today ? 'Votre journée en cours' : 'La période sélectionnée', obs: `${s.count} vente${s.count > 1 ? 's' : ''} ${today ? "aujourd'hui" : 'sur la période'} pour ${num(s.revenue)} MAD, panier moyen ${num(s.basket)} MAD.${peakFr}${payFr}`, act: '→ Calculé à partir des ventes affichées sur cette période.', basisLabel: 'mesuré' },
-      en: { title: today ? 'Your day so far' : 'Selected period', obs: `${s.count} sale${s.count > 1 ? 's' : ''} ${today ? 'today' : 'in this period'} for ${num(s.revenue)} MAD, average basket ${num(s.basket)} MAD.${peakEn}${payEn}`, act: '→ Calculated from the sales shown for this period.', basisLabel: 'measured' },
-      ar: { title: today ? 'يومك حتى الآن' : 'الفترة المحددة', obs: `${s.count} عملية بيع ${today ? 'اليوم' : 'خلال هذه الفترة'} بقيمة ${num(s.revenue)} درهم، ومتوسط السلة ${num(s.basket)} درهم.${peakAr}${payAr}`, act: '← محسوب من المبيعات المعروضة لهذه الفترة.', basisLabel: 'مقاس' },
-    };
-    return W[lang] || W.fr;
-  }
-  function buildRealHeatmapRec() {
-    const s = realInsightSummary();
-    if (!s.count || !s.revenue || s.peakHour == null) return null;
-    const lang = getLang();
-    const share = Math.round((s.peakRevenue / s.revenue) * 100);
-    const num = (n) => frInt(Math.round(n));
-    const W = {
-      fr: { title: `Votre pic : ${s.peakHour}h`, obs: `${num(s.peakRevenue)} MAD de ventes nettes à ${s.peakHour}h, soit ${share} % de la période, réparties sur ${s.activeHours} heure${s.activeHours > 1 ? 's' : ''} d’activité.`, cta: '' },
-      en: { title: `Your peak: ${s.peakHour}:00`, obs: `${num(s.peakRevenue)} MAD in net sales at ${s.peakHour}:00, ${share}% of the period across ${s.activeHours} active hour${s.activeHours > 1 ? 's' : ''}.`, cta: '' },
-      ar: { title: `ذروتك: ${s.peakHour}`, obs: `${num(s.peakRevenue)} درهم من صافي المبيعات عند الساعة ${s.peakHour}، أي ${share}٪ من الفترة موزعة على ${s.activeHours} ساعة نشاط.`, cta: '' },
-    };
-    return W[lang] || W.fr;
-  }
+  function buildRealHeroRec(...args) { return callPart('buildRealHeroRec', this, args); }
+  function buildRealHeatmapRec(...args) { return callPart('buildRealHeatmapRec', this, args); }
   /* Coût matière RÉEL — délégué à window.KiwiCost (assets/cost.js), qui est
    * désormais le seul endroit de l'application qui sache répondre « combien me
    * coûte ce produit ».
@@ -2445,17 +1693,7 @@
    * côté des ventes de l'établissement à l'écran ; elles lisent donc le même
    * établissement, par son slug gravé (le même calcul que ces deux carnets en
    * mode tableau de bord), ou rien du tout. */
-  function screenBook() {
-    try {
-      const KV = window.KiwiVenue;
-      if (!KV || !KV.isCustom || !KV.isCustom() || !KV.getCurrentVenueData) return '';
-      const vd = KV.getCurrentVenueData();
-      if (!vd) return '';
-      if (vd.slug) return String(vd.slug);
-      return String(vd.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    } catch (_) { return ''; }
-  }
+  function screenBook(...args) { return callPart('screenBook', this, args); }
   /* Les pourboires déclarés par les journées CLOSES de la fenêtre, et, pour une
    * journée encore ouverte, ceux que la caisse a saisis à l'encaissement
    * (sales.tip_cents, porté par le flux). Une journée close garde son chiffre
@@ -2463,45 +1701,7 @@
    * journée ouverte sans aucun pourboire saisi n'est pas comptée : rien à dire,
    * plutôt qu'un 0 qu'une caisse plus ancienne n'aurait simplement pas envoyé.
    * null quand le classeur n'est pas chargé (rien à dire). */
-  function realClosedTips(range) {
-    const DR = window.KiwiDayReport;
-    if (!DR || typeof DR.list !== 'function') return null;
-    const book = screenBook();
-    if (!book) return null;
-    const [from, to] = rangeBounds(range == null ? currentRange : range);
-    const slug = activeMerchantSlug();
-    const coverage = window.KiwiSalesReconcile?.coverage();
-    const first = merchantDayKey(from + 1, slug);
-    const last = to === Infinity ? merchantDayKey(Date.now(), slug) : merchantDayKey(to - 1, slug);
-    let sum = 0, days = 0;
-    let reports = [];
-    try { reports = DR.list(book) || []; } catch (_) { return null; }
-    const closed = new Set();
-    reports.forEach((r) => {
-      if (!r || !r.closed || !r.day || r.day < first || r.day > last) return;
-      const t = Number(r.tips);
-      days++; closed.add(r.day);
-      if (Number.isFinite(t) && t > 0) sum += t;
-    });
-    const live = new Set();
-    let sales = [];
-    try { sales = typeof realSalesList === 'function' ? realSalesList() : []; } catch (_) { sales = []; }
-    (sales || []).forEach((e) => {
-      const cents = Math.round(Number(e && e.tipCents));
-      if (!(cents > 0)) return;
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to || (coverage != null && ts < coverage)) return;
-      const day = merchantDayKey(ts, slug);
-      if (closed.has(day)) return;
-      live.add(day);
-      sum += cents / 100;
-    });
-    const old = window.KiwiSalesHistory?.oldTips(from, to, closed);
-    if (old?.partial) return { partial: true };
-    sum += old?.sum || 0; days += old?.days || 0;
-    days += live.size;
-    return { sum: Math.round(sum * 100) / 100, days, liveDays: live.size };
-  }
+  function realClosedTips(...args) { return callPart('realClosedTips', this, args); }
   /* Les clients du carnet (KiwiClients) venus sur [from, to) : ceux qu'on a
    * déjà vus avant `from` sont des réguliers, les autres des nouveaux. Seuls
    * comptent les passages DATÉS, c'est-à-dire l'historique d'achats que la
@@ -2512,21 +1712,7 @@
    * que des passages plus anciens existent : le client était déjà venu.
    * Un client anonyme n'est pas dans le carnet : ces chiffres portent sur les
    * clients identifiés, jamais sur toutes les ventes. */
-  function realClientMix(from, to) {
-    const KC = window.KiwiClients;
-    const book = screenBook();
-    let list = [];
-    try { list = (book && KC && typeof KC.list === 'function' && KC.list(book)) || []; } catch (_) { list = []; }
-    let visitors = 0, regulars = 0;
-    list.forEach((c) => {
-      const stamps = (Array.isArray(c && c.history) ? c.history : [])
-        .map((h) => Number(h && h.ts)).filter((t) => Number.isFinite(t) && t > 0);
-      if (!stamps.some((t) => t >= from && t < to)) return;
-      visitors++;
-      if (stamps.some((t) => t < from) || Number(c.visits || 0) > stamps.length) regulars++;
-    });
-    return { visitors, regulars, newcomers: visitors - regulars };
-  }
+  function realClientMix(...args) { return callPart('realClientMix', this, args); }
   function windowDays(range) {
     const [from, to] = closedBounds(range);
     const slug = activeMerchantSlug();
@@ -2539,38 +1725,8 @@
    * fermé le dimanche voyait sa moyenne amputée d'un septième, une semaine de
    * congés la divisait encore. Une période sans aucune vente vaut 1 (la
    * moyenne est alors 0, pas une division par zéro). */
-  function openDays(range) {
-    const [from, to] = closedBounds(range);
-    const slug = activeMerchantSlug();
-    const days = new Set();
-    realSalesList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts >= from && ts < to) days.add(merchantDayKey(ts, slug));
-    });
-    return Math.max(1, days.size);
-  }
-  function realDeltaPct(range, pick, backDays, stats = realWindowStats) {
-    const [from, to] = closedBounds(range);
-    const startDay = merchantDayKey(from + 1, activeMerchantSlug());
-    const endDay = merchantDayKey(to - 1, activeMerchantSlug());
-    const spanDays = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
-    /* « vs mois préc. », « vs trimestre préc. », « vs année préc. » : la période
-       du calendrier d'avant, pas les N jours qui précèdent. */
-    const calendarBase = backDays ? null : calendarBounds(range == null ? currentRange : range, 1);
-    const baseBounds = calendarBase || shiftedBusinessBounds(from, to, backDays || spanDays);
-    /* The promise above, kept. shiftedBusinessBounds returns WHOLE business
-       days, so a live range (« Aujourd'hui », « 7 jours » ending now) was
-       weighed against complete days: at 11h42, six hours of trading against
-       all of yesterday, and every morning tile read −80 % to −100 %. A live
-       window's baseline stops at the same point of its own day. */
-    if (rangeBounds(range == null ? currentRange : range)[1] === Infinity) {
-      baseBounds[1] = Math.min(baseBounds[1], baseBounds[0] + (to - from));
-    }
-    const base = pick(stats(baseBounds[0], baseBounds[1]));
-    if (!base) return null;
-    const cur = pick(stats(from, to));
-    return deltaTenths(cur, base);
-  }
+  function openDays(...args) { return callPart('openDays', this, args); }
+  function realDeltaPct(...args) { return callPart('realDeltaPct', this, args); }
   /* round(num / den), une demie vers le haut, en entiers : 2,01 MAD sur deux
      tickets fait 1,005, que le flottant range sous 1,005 et arrondit à 1,00. */
   function halfUpDiv(num, den) {
@@ -2584,15 +1740,7 @@
      centimes entiers : 0,80 → 0,79 fait −1,25 %, que (0,79 − 0,80) / 0,80 en
      flottant poussait à −1,3. Un taux (part carte, fidèles…) garde le calcul
      flottant, il n'a pas de centime. */
-  function deltaTenths(cur, base) {
-    const c = Math.round(cur * 100), b = Math.round(base * 100);
-    const onCents = (v, k) => Math.abs(v * 100 - k) <= 1e-6 * Math.max(1, Math.abs(k));
-    const num = (c - b) * 1000;
-    if (b && onCents(cur, c) && onCents(base, b) && Number.isSafeInteger(2 * num + 2 * Math.abs(b))) {
-      return halfUpDiv(num, b) / 10;
-    }
-    return Math.round(((cur - base) / base) * 1000) / 10;
-  }
+  function deltaTenths(...args) { return callPart('deltaTenths', this, args); }
   // Le panier moyen au centime, une demie vers le haut, depuis la somme en centimes.
   function basketCents(s) {
     const n = s && s.count > 0 ? s.count : 0;
@@ -2625,35 +1773,9 @@
    * built by the same code and are readable point-for-point.
    * Bucketing is relative to `base` (the business day start, e.g. 5:00 AM)
    * so late-night sales after midnight are attributed to their service. */
-  function hourlyCumul(list, base, end) {
-    const hours = Math.max(1, Math.ceil((end - base) / 3600000));
-    const per = new Array(hours).fill(0);
-    list.forEach(e => {
-      const ts = +e.ts || 0;
-      if (ts >= base && ts < end) {
-        const idx = Math.floor((ts - base) / 3600000);
-        if (idx >= 0 && idx < hours) per[idx] += (+e.amount || 0);
-      }
-    });
-    const out = [];
-    let acc = 0;
-    for (let h = 0; h < hours; h++) { acc += per[h]; out.push(acc); }
-    return out;
-  }
+  function hourlyCumul(...args) { return callPart('hourlyCumul', this, args); }
   // Same idea over N whole days: one total per day from `start`.
-  function dailyTotals(list, start, days) {
-    const out = new Array(days).fill(0);
-    const startDay = merchantDayKey(start, activeMerchantSlug());
-    list.forEach(e => {
-      const ts = +e.ts || 0;
-      if (ts >= start) {
-        const day = merchantDayKey(ts, activeMerchantSlug());
-        const idx = Math.round((Date.parse(day + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5);
-        if (idx >= 0 && idx < days) out[idx] += (+e.amount || 0);
-      }
-    });
-    return out;
-  }
+  function dailyTotals(...args) { return callPart('dailyTotals', this, args); }
   // Build a REAL revenue-chart series for the active range from KiwiSales — the
   // custom-venue replacement for the zeroed demo clone (which plots a flat line
   // and leaks the demo legend total). Hourly-cumulative on day ranges, daily
@@ -2665,85 +1787,13 @@
   // empty legend: indistinguishable from a dead control. A window with no sale
   // at all returns null, not zeros — same rule realDeltaPct states above: a
   // fabricated baseline claims a comparison that was never possible.
-  function realRevSeries(range) {
-    range = range == null ? currentRange : range;
-    const list = realMoneyList();
-    const hourly = (range === 'aujourdhui' || range === 'hier');
-    let rev = [], prev = [], xLabels = [], visibleXIdx = [], dayKeys = null, sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
-
-    if (hourly) {
-      const slug = activeMerchantSlug();
-      const todayDay = merchantDayKey(Date.now(), slug);
-      const day = addMerchantDays(todayDay, range === 'hier' ? -1 : 0);
-      const previousDay = addMerchantDays(day, -1);
-      const currentWindow = merchantDayBounds(day, slug);
-      const previousWindow = merchantDayBounds(previousDay, slug);
-      const base = currentWindow.from;
-      rev = hourlyCumul(list, currentWindow.from, currentWindow.to);
-      prev = hourlyCumul(list, previousWindow.from, previousWindow.to);
-      total = rev[rev.length - 1];
-      prevTotal = prev[prev.length - 1];
-      for (let h = 0; h < rev.length; h++) {
-        const hr = +merchantParts(base + h * 3600000, slug).hour;
-        xLabels.push((hr < 10 ? '0' : '') + hr + 'h');
-      }
-      visibleXIdx = Array.from({ length: rev.length }, (_, i) => i).filter(i => i % Math.max(1, Math.floor(rev.length / 8)) === 0);
-      // Today is unfinished. Truncate at current hour elapsed in this business window.
-      if (range === 'aujourdhui') {
-        const nowIdx = Math.min(rev.length - 1, Math.max(0, Math.floor((Date.now() - base) / 3600000)));
-        for (let i = nowIdx + 1; i < rev.length; i++) rev[i] = null;
-      }
-      rangeBadge = (range === 'hier') ? 'HIER' : "AUJOURD'HUI";
-      sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';
-      cmpPrefix = (range === 'hier') ? 'Cumul avant-hier' : 'Cumul hier';
-    } else {
-      const [start, end] = closedBounds(range);
-      const startDay = merchantDayKey(start + 1, activeMerchantSlug());
-      const endDay = merchantDayKey(end - 1, activeMerchantSlug());
-      const days = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
-      rev = dailyTotals(list, start, days);
-      const previousStart = merchantDayBounds(addMerchantDays(startDay, -days), activeMerchantSlug()).from;
-      prev = dailyTotals(list, previousStart, days);
-      dayKeys = [];
-      for (let i = 0; i < days; i++) { dayKeys.push(addMerchantDays(startDay, i)); const d = new Date(Date.parse(dayKeys[i] + 'T12:00:00Z')); xLabels.push(DAY_ABBR[d.getUTCDay()] + ' ' + d.getUTCDate()); }
-      const step = Math.max(1, Math.round(days / 6));
-      for (let i = 0; i < days; i += step) visibleXIdx.push(i);
-      if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
-      total = rev.reduce((s, x) => s + x, 0);
-      prevTotal = prev.reduce((s, x) => s + x, 0);
-      const named = { moisDernier: ['MOIS DERNIER', 'mois dernier'], trimestre: ['CE TRIMESTRE', 'ce trimestre'], annee: ['CETTE ANNÉE', 'cette année'] }[range];
-      rangeBadge = range === 'personnalise' ? 'PÉRIODE PERSONNALISÉE' : named ? named[0] : days + ' DERNIERS JOURS';
-      sub = range === 'personnalise' ? 'Total journalier · période sélectionnée' : 'Total journalier · ' + (named ? named[1] : days + ' derniers jours');
-      cmpPrefix = days + ' jours précédents';
-    }
-
-    const hasPrev = prevTotal > 0;
-    // The ceiling has to clear BOTH curves, or a stronger previous period gets
-    // clipped off the top of the box the moment the comparison is switched on.
-    const top = niceCeil(Math.max(1, ...rev.filter(v => v != null), ...(hasPrev ? prev : [])));
-    const yTicks = [0, top * 0.25, top * 0.5, top * 0.75, top].map(Math.round);
-    const legendPrimary = (hourly ? 'Cumul' : ('Total ' + rev.length + ' jours')) + ' · ' + frInt(total) + ' MAD';
-    return {
-      rev, revPrev: hasPrev ? prev : null, total, prevTotal: hasPrev ? prevTotal : null,
-      yTicks, xLabels, visibleXIdx, dayKeys, sub, rangeBadge, legendPrimary,
-      legendCompare: hasPrev ? (cmpPrefix + ' · ' + frInt(prevTotal) + ' MAD') : '',
-    };
-  }
+  function realRevSeries(...args) { return callPart('realRevSeries', this, args); }
 
   /* ═══════════════ RENDER: HERO ═══════════════ */
 
   // dateRange loads before live-link. An operator URL starts unverified even
   // before identity/feed initialization; cached or partial totals are not zero.
-  function operatorLedgerPending() {
-    if (!/[?&]op=1(?:&|$)/.test(location.search)) return false;
-    const live = window.KiwiLive;
-    const state = live?.snapshotStatus?.();
-    const requested = new URLSearchParams(location.search).get('merchant');
-    const venue = window.KiwiVenue?.getCurrentVenueData?.();
-    return !state || state.phase !== 'complete' || (requested && state.merchant !== requested) ||
-      !venue || (venue.slug && venue.slug !== state.merchant) ||
-      !state.venue || state.venue !== window.KiwiVenue?.getVenue?.();
-  }
+  function operatorLedgerPending(...args) { return callPart('operatorLedgerPending', this, args); }
   function operatorUnavailableText() {
     const state = window.KiwiLive?.snapshotStatus?.();
     const loading = !state || state.phase === 'loading';
@@ -2781,77 +1831,7 @@
     if (v < 0.8) return 'i3';
     return 'i4';
   }
-  function buildHeatmap(rng) {
-    const v = getCurrentVenue();
-    /* A real merchant's peak hours come from their OWN tickets: every sale
-     * carries a `ts`, so bucket the active window by hour of day. Before the
-     * first sale this still draws flat — the honest answer — but it no longer
-     * STAYS flat once the till has rung, which is the one thing a merchant
-     * opens this card to find out. Never borrows Café Atlas's shape. */
-    if (ownData(v)) {
-      const [from, to] = closedBounds(rng);
-      const span = HH_HOURS.length;                          // 16 créneaux, la largeur de la carte
-      /* ── La bande suit le commerce, elle ne lui est plus imposée ───────────
-       * Les heures affichées étaient figées de 11 h à 02 h — les heures d'un
-       * restaurant. Toute vente en dehors était JETÉE en silence
-       * (`if (i >= HH_HOURS.length) return`). Une boulangerie qui ouvre à 6 h,
-       * un café qui sert les petits-déjeuners à 8 h : leur matinée entière
-       * disparaissait de la carte « Heures de pointe ». Et la carte ne restait
-       * pas vide — elle affichait un pic à midi, c'est-à-dire le contraire de
-       * la réponse. Un commerçant qui déplace du personnel là-dessus le déplace
-       * à l'envers.
-       *
-       * On garde les seize créneaux (la carte est dessinée pour eux) mais on
-       * choisit OÙ ils commencent : la fenêtre de seize heures qui capte le
-       * plus de recette. À égalité, celle qui commence le plus près de la
-       * première vente, pour ne pas ouvrir sur des créneaux vides. Un
-       * restaurant retombe naturellement sur 11 h–02 h ; une boulangerie sur
-       * 06 h–21 h. Aucun réglage à saisir, et rien n'est plus jeté tant que le
-       * commerce tient dans seize heures d'affilée. */
-      const byHour = new Array(24).fill(0);
-      const covByHour = new Array(24).fill(0);
-      realSalesList().forEach((e) => {
-        const ts = +e.ts || 0;
-        if (ts < from || ts >= to) return;
-        const h = saleHour(ts);
-        byHour[h] += Math.max(0, +e.amount || 0);
-        covByHour[h] += 1;
-      });
-      let start = 11, bestSum = -1, bestLead = 99;
-      for (let s = 0; s < 24; s++) {
-        let sum = 0, lead = 0, counting = true;
-        for (let k = 0; k < span; k++) {
-          const val = byHour[(s + k) % 24];
-          sum += val;
-          if (counting) { if (val > 0) counting = false; else lead++; }
-        }
-        if (sum > bestSum || (sum === bestSum && lead < bestLead)) { bestSum = sum; bestLead = lead; start = s; }
-      }
-      if (bestSum <= 0) start = 11;                          // rien encore vendu : la bande d'origine
-      const rev = [], cov = [], labels = [];
-      for (let k = 0; k < span; k++) {
-        const h = (start + k) % 24;
-        rev.push(byHour[h]);
-        cov.push(covByHour[h]);
-        labels.push(String(h).padStart(2, '0') + 'h');
-      }
-      const max = Math.max(...rev);
-      return labels.map((h, i) => ({
-        hour: h, revenue: rev[i], covers: cov[i], unit: 'orders', intensity: max ? rev[i] / max : 0,
-      }));
-    }
-    // Demo fixtures only carry base ranges; mapping is confined to that path.
-    rng = ({ personnalise: 'aujourdhui', moisDernier: 'trenteJours', trimestre: 'trenteJours', annee: 'trenteJours' })[rng] || rng;
-    const rev = HH_RAW_BY_VENUE[v]?.[rng] || HH_RAW_BY_VENUE.cafeAtlas[rng]
-      || HH_RAW_BY_VENUE.cafeAtlas.trenteJours || HH_RAW_BY_VENUE.cafeAtlas.aujourdhui;
-    const cov = HH_COVERS_BY_VENUE[v]?.[rng] || HH_COVERS_BY_VENUE.cafeAtlas[rng]
-      || HH_COVERS_BY_VENUE.cafeAtlas.trenteJours || HH_COVERS_BY_VENUE.cafeAtlas.aujourdhui;
-    const max = Math.max(...rev);
-    return HH_HOURS.map((h, i) => ({
-      hour: h, revenue: rev[i], covers: cov[i],
-      intensity: max ? rev[i] / max : 0,
-    }));
-  }
+  function buildHeatmap(...args) { return callPart('buildHeatmap', this, args); }
   function renderHeatmap(...args) { return callPart('renderHeatmap', this, args); }
 
   /* ═══════════════ RENDER: KPI BAND ═══════════════ */
@@ -3092,64 +2072,13 @@
   /* Lit (et au besoin recharge) la performance d'une plage. Rend toujours une
    * entrée : { data } quand on sait, { error } quand le serveur ne sait pas,
    * ni l'un ni l'autre tant que la première réponse n'est pas arrivée. */
-  function hotelPerfEntry(w) {
-    const merchant = hotelMerchant();
-    const key = merchant + '|' + w.from + '|' + w.to;
-    let e = hotelPerf.get(key);
-    if (!e) { e = { data: null, error: '', ts: 0, loading: false }; hotelPerf.set(key, e); }
-    if (merchant && !e.loading && Date.now() - e.ts > HOTEL_PERF_TTL) {
-      e.loading = true;
-      fetch('/api/hotel/performance?' + new URLSearchParams({ merchant, from: w.from, to: w.to }), { cache: 'no-store', credentials: 'same-origin' })
-        .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
-        .then(({ ok, b }) => {
-          const next = ok && b && b.ok ? b : null;
-          const before = JSON.stringify([e.data, e.error]);
-          e.data = next; e.error = next ? '' : String((b && b.error) || 'unavailable');
-          e.changed = before !== JSON.stringify([e.data, e.error]);
-        })
-        .catch(() => { if (!e.data) { e.error = 'unavailable'; e.changed = true; } })
-        .finally(() => {
-          e.loading = false; e.ts = Date.now();
-          /* Repeindre seulement si quelque chose a bougé : le rafraîchissement
-           * périodique ne doit pas rejouer l'animation des tuiles pour rien. */
-          if (e.changed) { e.changed = false; try { renderKpiBand(); } catch (_) {} }
-        });
-    }
-    return e;
-  }
+  function hotelPerfEntry(...args) { return callPart('hotelPerfEntry', this, args); }
   const hotelDelta = (cur, prev) => (cur != null && prev != null && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null);
   /* Pure : les six tuiles hôtel à partir de deux lectures (période, période
    * précédente de même durée) et de l'état du ménage. Une valeur inconnue est
    * « · » ; une lecture pas encore arrivée est « … » pour que la bande ne
    * clignote pas entre trois et six tuiles. */
-  function hotelTilesFrom(cur, prev, clean) {
-    const dash = { text: '·', unit: '', delta: null };
-    const wait = { text: '…', unit: '', delta: null };
-    const pd = prev && prev.data;
-    let out;
-    if (cur && cur.data) {
-      const d = cur.data;
-      const num = (v, unit, fmt, prevV) => (v == null ? { ...dash } : { value: v, unit, fmt, delta: hotelDelta(v, prevV) });
-      out = {
-        occupation: num(d.occupancyPct, '%', 'pct1', pd && pd.occupancyPct),
-        adr: num(d.adr, 'MAD', 'int', pd && pd.adr),
-        revpar: num(d.revpar, 'MAD', 'int', pd && pd.revpar),
-        /* Mouvements de la période : une arrivée attendue compte. Aucun
-         * dossier = « 0 / 0 » est ici une mesure (il n'y a pas de mouvement). */
-        arrdep: { text: `${d.arrivals} / ${d.departures}`, unit: '', delta: null },
-      };
-    } else {
-      const blank = cur && cur.error ? dash : wait;
-      out = { occupation: { ...blank }, adr: { ...blank }, revpar: { ...blank }, arrdep: { ...blank } };
-    }
-    out.menage = clean && clean.total > 0
-      ? { value: clean.toClean, unit: `/ ${clean.total}`, fmt: 'int', delta: null }
-      : { ...(clean && clean.loading ? wait : dash) };
-    /* « Mix revenu · ch · resto · spa » : aucune source n'attribue encore le
-     * revenu par point de vente. */
-    out.mixRev = { ...dash };
-    return out;
-  }
+  function hotelTilesFrom(...args) { return callPart('hotelTilesFrom', this, args); }
   function hotelBandTiles(range) {
     const w = hotelRangeNights(range);
     const cur = hotelPerfEntry(w);
@@ -3184,29 +2113,7 @@
    * minutes au plus, la bande repeinte seulement quand la réponse change. */
   const TABLE_TIME_TTL = 5 * 60 * 1000;
   const tableTime = new Map();
-  function tableTimeEntry(from, to) {
-    const merchant = hotelMerchant();
-    const key = merchant + '|' + from + '|' + to;
-    let e = tableTime.get(key);
-    if (!e) { e = { data: null, error: '', ts: 0, loading: false }; tableTime.set(key, e); }
-    if (merchant && !e.loading && Date.now() - e.ts > TABLE_TIME_TTL) {
-      e.loading = true;
-      fetch('/api/table-time?' + new URLSearchParams({ merchant, from: String(from), to: String(to) }), { cache: 'no-store', credentials: 'same-origin' })
-        .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
-        .then(({ ok, b }) => {
-          const next = ok && b && b.ok ? { visits: +b.visits || 0, avgMin: b.avgMin == null ? null : +b.avgMin } : null;
-          const before = JSON.stringify([e.data, e.error]);
-          e.data = next; e.error = next ? '' : String((b && b.error) || 'unavailable');
-          e.changed = before !== JSON.stringify([e.data, e.error]);
-        })
-        .catch(() => { if (!e.data) { e.error = 'unavailable'; e.changed = true; } })
-        .finally(() => {
-          e.loading = false; e.ts = Date.now();
-          if (e.changed) { e.changed = false; try { renderKpiBand(); } catch (_) {} }
-        });
-    }
-    return e;
-  }
+  function tableTimeEntry(...args) { return callPart('tableTimeEntry', this, args); }
   /* Pure : la tuile à partir de la période et de la précédente. Pas encore
    * de réponse : « … ». Pas de source, ou moins de cinq visites : « · ». */
   function tableTimeTileFrom(cur, prev) {
@@ -3230,113 +2137,7 @@
   function renderKpiBand(...args) { return callPart('renderKpiBand', this, args); }
 
   /* ═══════════════ KPI BAND · personnalisation drawer ═══════════════ */
-  function openKpiCustomizer() {
-    const Kiwi = window.Kiwi;
-    if (!Kiwi || !Kiwi.drawer) return;
-    const lang = getLang();
-    const kc = KC_STR[lang] || KC_STR.fr;
-    const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
-    /* Les tuiles du sélecteur montrent les chiffres de la bande : un vrai
-     * commerçant voyait ici « Café Atlas » (le tableau de démo) en choisissant
-     * ses indicateurs. */
-    if (!(lastBand && lastBand.range === currentRange)) { try { renderKpiBand(); } catch (_) {} }
-    const data = (lastBand && lastBand.range === currentRange && lastBand.data)
-      || (ownData() ? {} : vData(kpiByVenue, currentRange)) || {};
-    const ctx = { venueType, range: effRange(), nbDays: (ownData() && window.KiwiSales) ? openDays(effRange()) : (RANGE_DAYS[effRange()] || 1) };
-
-    // Only offer KPIs that actually resolve for this venue + range.
-    const available = Object.keys(KPI_CATALOG).filter((k) => {
-      try { return !!KPI_CATALOG[k].derive(data, ctx); } catch (_) { return false; }
-    });
-    const maxKpis = KPI_MAX;
-    let selected = (getKpiLayout(venueType) || defaultKpiKeys(venueType))
-      .filter((k) => available.includes(k)).slice(0, maxKpis);
-
-    const deltaSuffix = KPI_DELTA_SUFFIX[lang]?.[currentRange] || KPI_DELTA_SUFFIX.fr[currentRange];
-    // Each picker tile is a faithful preview of the dashboard KPI card —
-    // label + icon, the period value, its delta and a sparkline.
-    const cardHtml = (k) => {
-      const c = KPI_CATALOG[k];
-      const iconName = KPI_MATERIAL_ICONS[k] || 'credit-card';
-      const sparkPath = KPI_SPARKS[k] || KPI_SPARKS.tx;
-      let tile = null;
-      try { tile = c.derive(data, ctx); } catch (_) { tile = null; }
-      tile = tile || { value: 0, delta: 0 };
-      const valHtml = tile.text != null ? fmtKpiVal(tile, 0) : fmtKpiVal(tile, tile.value || 0);
-      const dv = tile.delta || 0;
-      const dCls = dv < 0 ? ' dn' : dv === 0 ? ' neutral' : '';
-      return `
-        <button class="kpi-pick" data-kc="${k}" type="button" aria-pressed="false">
-          <span class="kc-badge"></span>
-          <span class="l"><span>${kpiLabel(k, venueType, lang)}</span><span class="ico"><i data-lucide="${iconName}" style="width:13px;height:13px" aria-hidden="true"></i></span></span>
-          <span class="v">${valHtml}</span>
-          <span class="d${dCls}">${arrowSvg(dv >= 0)}${fmtPct(dv)} ${deltaSuffix}</span>
-          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none"><path d="${sparkPath}" stroke="#0B6E4F" stroke-width="4" stroke-opacity="0.16" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${sparkPath}" stroke="#0B6E4F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>`;
-    };
-
-    const body = `
-      <div class="kc">
-        <p class="kc-intro">${kc.intro}</p>
-        <div class="kc-counter"><b data-kc-count>0 / ${maxKpis}</b> ${kc.counter}</div>
-        <div class="kc-grid">${available.map(cardHtml).join('')}</div>
-      </div>`;
-
-    const res = Kiwi.drawer({
-      title: kc.title,
-      subtitle: kc.subtitle,
-      width: 520,
-      body,
-      foot: `<button class="kb ghost" data-kc-reset type="button">${kc.reset}</button>
-             <button data-activation=write class="kb atlas" data-kc-save type="button" style="flex:1; justify-content:center;">${kc.save}</button>`,
-    });
-    const root = res.el;
-
-    function refresh() {
-      root.querySelectorAll('.kpi-pick').forEach((card) => {
-        const idx = selected.indexOf(card.getAttribute('data-kc'));
-        const badge = card.querySelector('.kc-badge');
-        card.setAttribute('aria-pressed', idx >= 0 ? 'true' : 'false');
-        if (idx >= 0) { card.classList.add('sel'); badge.textContent = String(idx + 1); }
-        else { card.classList.remove('sel'); badge.textContent = ''; }
-      });
-      const count = root.querySelector('[data-kc-count]');
-      if (count) count.textContent = `${selected.length} / ${maxKpis}`;
-      const cwrap = root.querySelector('.kc-counter');
-      if (cwrap) cwrap.classList.toggle('full', selected.length === maxKpis);
-      const save = root.querySelector('[data-kc-save]');
-      if (save) save.toggleAttribute('disabled', selected.length !== maxKpis);
-    }
-
-    root.addEventListener('click', (e) => {
-      const card = e.target.closest('.kpi-pick');
-      if (card) {
-        const k = card.getAttribute('data-kc');
-        const idx = selected.indexOf(k);
-        if (idx >= 0) selected.splice(idx, 1);
-        else if (selected.length < maxKpis) selected.push(k);
-        else { Kiwi.toast?.(kc.maxT, { type: 'info', desc: kc.maxD }); return; }
-        refresh();
-        return;
-      }
-      if (e.target.closest('[data-kc-save]')) {
-        if (selected.length !== maxKpis) return;
-        saveKpiLayout(venueType, selected);
-        res.close();
-        renderKpiBand();
-        Kiwi.toast?.(kc.savedT, { type: 'success', desc: kc.savedD });
-        return;
-      }
-      if (e.target.closest('[data-kc-reset]')) {
-        resetKpiLayout(venueType);
-        res.close();
-        renderKpiBand();
-        Kiwi.toast?.(kc.resetT, { type: 'info', desc: kc.resetD });
-        return;
-      }
-    });
-    refresh();
-  }
+  function openKpiCustomizer(...args) { return callPart('openKpiCustomizer', this, args); }
 
   /* ═══════════════ RENDER: REVENUE LINE CHART ═══════════════ */
 
@@ -3375,48 +2176,7 @@
    * que 450 MAD par carte. Deux légendes, un seul centre. */
   const MIX_CENTER_ALL = { fr: 'MAD encaissé', en: 'MAD collected', ar: 'درهم محصّل' };
 
-  function realMixRows(lang, range) {
-    const [from, to] = rangeBounds(range == null ? currentRange : range);
-    const by = {};
-    let total = 0;
-    realSalesList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.max(0, +e.amount || 0);
-      if (!amt) return;
-      const k = tenderBucket(e && e.method);
-      if (!k) return; // crédit client / créance livraison ≠ argent encaissé
-      tenderAmounts(e).forEach(part => {
-        if (part.key) by[part.key] = (by[part.key] || 0) + part.amount;
-      });
-      total += amt;
-    });
-    /* The ring says « MAD encaissé »: money kept, after refunds, the way the
-     * till's « Moyens de paiement · net » and the day report count it. It used
-     * to add sales only, so a day with a 20,40 card refund read 425 here and
-     * 404,10 everywhere else, on the same screen as the 404,10 band. A refund
-     * goes back on the tender it was paid with (realWindowStats does the same
-     * for the card/cash tile). */
-    realRefundList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.abs(+e.amount || 0);
-      const k = tenderBucket(e && e.method);
-      if (!amt || !k) return;
-      by[k] = (by[k] || 0) - amt;
-      total -= amt;
-    });
-    total = Math.round(total * 100) / 100;
-    const kept = REAL_MIX.filter((m) => by[m.key] > 0.004);
-    const keptSum = kept.reduce((s, m) => s + by[m.key], 0);
-    if (!(total > 0) || !keptSum) return { rows: [], total: 0, cardTotal: 0 };
-    return {
-      total,
-      rows: kept.map((m) => ({
-        color: m.color, label: m[lang] || m.fr, pct: (by[m.key] / keptSum) * 100,
-      })),
-    };
-  }
+  function realMixRows(...args) { return callPart('realMixRows', this, args); }
 
   function renderMix(...args) { return callPart('renderMix', this, args); }
 
@@ -3439,191 +2199,13 @@
   /* Deterministic order generator — same (venue, date, idx) always
    * yields the same order object, so the feed visually stabilises and
    * doesn't shuffle on every clock tick. */
-  function buildOrder(venue, dateKey, idx) {
-    const seedStr = `${venue}-${dateKey}-${idx}`;
-    let h = 2166136261;
-    for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
-    const rnd = () => {
-      h |= 0; h = (h + 0x6D2B79F5) | 0;
-      let t = Math.imul(h ^ (h >>> 15), 1 | h);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-
-    /* Payment-method mix: 20% Visa, 20% MC, 15% Tap, 15% QR, 30% cash —
-     * realistic for a Moroccan café/restaurant. */
-    const r = rnd();
-    let method, primary, sub, flag;
-    if (r < 0.20) {
-      method = 'visa';
-      const last4 = String(Math.floor(rnd() * 10000)).padStart(4, '0');
-      primary = `Visa •• ${last4}`;
-      const banks = [['ma', 'Carte marocaine · Attijariwafa'], ['ma', 'Carte marocaine · BMCE'], ['ma', 'Carte marocaine · CIH'], ['fr', 'Carte française · Société Générale'], ['es', 'Carte espagnole · CaixaBank']];
-      const b = banks[Math.floor(rnd() * banks.length)]; flag = b[0]; sub = b[1];
-    } else if (r < 0.40) {
-      method = 'mc';
-      const last4 = String(Math.floor(rnd() * 10000)).padStart(4, '0');
-      primary = `Mastercard •• ${last4}`;
-      const banks = [['ma', 'Carte marocaine · BOA'], ['ma', 'Carte marocaine · CIH'], ['fr', 'Carte française · BNP Paribas']];
-      const b = banks[Math.floor(rnd() * banks.length)]; flag = b[0]; sub = b[1];
-    } else if (r < 0.55) {
-      method = 'tap'; primary = 'Kiwi Tap'; flag = 'ma'; sub = 'NFC · contactless';
-    } else if (r < 0.70) {
-      method = 'qr'; primary = 'Kiwi Wallet QR'; flag = 'ma'; sub = 'Client abonné';
-    } else {
-      method = 'cash'; primary = 'Espèces'; flag = 'ma'; sub = 'Cash · table';
-    }
-
-    const customers = ['Karim B.', 'Sara L.', 'Youssef A.', 'Nawal K.', 'Hassan J.', 'Imane M.', 'Mehdi R.', 'Fatima Z.', 'Rachid O.', 'Lina S.', 'Ahmed T.', 'Yasmine H.', 'Julie M.', 'Fadoua K.', 'Hind M.', 'Walid F.', 'Soukaina A.', 'Aïcha R.', 'Brahim K.', 'Salma F.'];
-    const customer = customers[Math.floor(rnd() * customers.length)];
-    const tableNum = 1 + Math.floor(rnd() * 12);
-    const covers = 1 + Math.floor(rnd() * 5); // 1–5 people at the table
-
-    /* Servers — small rotating crew per venue. The same hire roster appears
-     * across the dashboard so the names feel familiar to the merchant. */
-    const servers = ['Fatima K.', 'Omar B.', 'Naima R.', 'Hicham E.', 'Khadija M.'];
-    const server = servers[Math.floor(rnd() * servers.length)];
-
-    /* Items — pull the venue's real menu via KiwiVenue.getMenuItems(). Pick
-     * 1–4 dishes with realistic quantities; if the menu isn't loaded yet
-     * (early-render race) we fall back to a sensible Café Atlas-style mix. */
-    const menu = (window.KiwiVenue?.getMenuItems?.(venue) || []);
-    const itemCount = 1 + Math.floor(rnd() * 4); // 1–4 distinct items
-    const items = [];
-    const usedIds = new Set();
-    let computedSubtotal = 0;
-    if (menu.length) {
-      for (let i = 0; i < itemCount && i < menu.length; i++) {
-        let pick, guard = 0;
-        do { pick = menu[Math.floor(rnd() * menu.length)]; guard++; }
-        while (usedIds.has(pick.id) && guard < 12);
-        if (usedIds.has(pick.id)) break;
-        usedIds.add(pick.id);
-        const qty = 1 + (rnd() < 0.3 ? 1 : 0) + (rnd() < 0.15 ? 1 : 0); // 1–3
-        items.push({ id: pick.id, name: pick.name, qty, price: pick.price });
-        computedSubtotal += qty * pick.price;
-      }
-    } else {
-      const fallback = [
-        { name: 'Tajine kefta',        price: 120 },
-        { name: 'Thé à la menthe',     price: 30  },
-        { name: 'Café noir',           price: 15  },
-        { name: 'Pastilla poulet',     price: 140 },
-        { name: "Jus d'avocat",        price: 50  },
-        { name: 'Couscous royal',      price: 220 },
-      ];
-      for (let i = 0; i < itemCount; i++) {
-        const pick = fallback[Math.floor(rnd() * fallback.length)];
-        const qty = 1 + (rnd() < 0.3 ? 1 : 0);
-        items.push({ name: pick.name, qty, price: pick.price });
-        computedSubtotal += qty * pick.price;
-      }
-    }
-
-    /* Tax (TVA 10% restauration au Maroc, 20% spa/services). Use the
-     * computed subtotal for the displayed amount so the modal numbers add
-     * up — the legacy amt range is dropped in favour of real menu math. */
-    const tvaRate = venue === 'spaBahia' ? 0.20 : 0.10;
-    const subtotal = Math.round(computedSubtotal * 100) / 100;
-    const tva = Math.round(subtotal * tvaRate * 100) / 100;
-    const amt = Math.round((subtotal + tva) * 100) / 100;
-
-    /* Receipt number — deterministic, looks like a real POS sequence. */
-    const receiptNo = 'TKT-' + String(10000 + Math.floor(rnd() * 89999));
-
-    /* Service duration — 12–75 min, longer for tables with more covers. */
-    const serviceMinutes = 12 + Math.floor(rnd() * 50) + covers * 4;
-
-    const fmt = (n) => (window.KiwiNumber?.format(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    return {
-      method, primary, sub, flag,
-      customer, table: tableNum,
-      ctx: `${customer} · T${tableNum}`,
-      amt: fmt(amt),
-      amtRaw: amt,
-      neg: false,
-      /* Rich detail used by the order-detail drawer. */
-      receiptNo, server, covers, serviceMinutes,
-      items,
-      subtotal: fmt(subtotal),
-      tva: fmt(tva),
-      tvaRate: Math.round(tvaRate * 100),
-      total: fmt(amt),
-    };
-  }
+  function buildOrder(...args) { return callPart('buildOrder', this, args); }
 
   /* Pull the last 6 orders from the simulator's current cumTx. */
-  function buildLiveFeed(venue) {
-    const rows = window.KiwiDemoClock?.getDaySales?.() || [];
-    const fmt = n => (window.KiwiNumber?.format(n, {minimumFractionDigits:2, maximumFractionDigits:2}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}));
-    return rows.slice(-10).reverse().map((sale, slot) => ({
-      method:sale.method === 'card' ? 'visa' : sale.method === 'wallet' ? 'qr' : 'cash',
-      primary:sale.method === 'card' ? 'Visa' : sale.method === 'wallet' ? 'Kiwi Wallet QR' : ({en:'Cash',ar:'نقداً'}[(window.KiwiI18n?.getLang?.() || 'fr')] || 'Espèces'),
-      sub:'', flag:'ma', customer:sale.customer, table:sale.table,
-      ctx:sale.customer + ' · T' + sale.table,
-      amt:fmt(sale.amount), amtRaw:sale.amount, neg:false, receiptNo:sale.ref,
-      server:sale.staff, covers:1, serviceMinutes:0,
-      items:sale.lines.map(line => ({n:line.name, name:line.name, q:line.qty, qty:line.qty, p:line.price, price:line.price, total:line.total})),
-      subtotal:fmt(sale.amount), tva:fmt(0), tvaRate:0, total:fmt(sale.amount),
-      t:new Date(sale.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:(globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), sale.ts) || window.KiwiDayReport?.timezone?.())}), isNew:slot===0
-    }));
-  }
+  function buildLiveFeed(...args) { return callPart('buildLiveFeed', this, args); }
 
   // Feed rows for a user-created venue — newest 8 of the merchant's sales.
-  function buildCustomFeed(venue) {
-    /* Bornées à la MÊME période que le sous-titre affiché juste au-dessus.
-     * Ce `.slice(-8)` prenait les huit dernières ventes de tout l'historique,
-     * pendant que le sous-titre, lui, comptait « N commandes aujourd'hui » sur
-     * la seule journée. Un commerçant qui n'avait encore rien vendu ce matin
-     * lisait donc « 0 commande aujourd'hui » posé sur trois tickets d'hier — et
-     * comme les lignes ne portent que l'heure, rien ne trahissait leur date. Le
-     * titre du panneau rendait la chose pire : ces ventes-là n'étaient ni en
-     * direct, ni du jour. */
-    const [lo, hi] = rangeBounds(currentRange);
-    const sales = (window.KiwiSales?.list?.(venue) || []).concat(
-      (window.KiwiRefunds?.list?.(venue) || []).map((r) => ({ ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund' }))
-    )
-      .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
-      .sort((a, b) => (+a.ts || 0) - (+b.ts || 0)).slice(-8).reverse();
-    const lang = getLang();
-    /* Every method the till can actually record (see live-link METHOD_LABEL).
-     * `cash` was missing, so `L[s.method] || L.card` relabelled EVERY cash sale
-     * as "Carte bancaire" — on a Moroccan boutique dashboard, where cash is the
-     * dominant tender, the owner could not tell cash from card on their own
-     * feed. */
-    const ML = {
-      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', transfer: 'Virement / Versement', cheque: 'Chèque', split: 'Paiement partagé', credit: 'Crédit client', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
-      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', transfer: 'Bank transfer', cheque: 'Cheque', split: 'Split payment', credit: 'Customer credit', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
-      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', transfer: 'تحويل بنكي', cheque: 'شيك', split: 'دفع مقسّم', credit: 'دين العميل', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
-    };
-    /* Chip art per method. The till records the TENDER, never the card network,
-     * so a card sale gets the neutral card chip — printing a Visa or Mastercard
-     * mark here would invent a fact the sale does not carry. */
-    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', transfer: 'qr', cheque: 'qr', split: 'cmi', credit: 'qr', delivery: 'qr' };
-    const L = ML[lang] || ML.fr;
-    return sales.map((s, i) => {
-      const d = new Date(s.ts);
-      const t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
-      return {
-        t,
-        method: ICON_FOR[s.method] || 'cmi',
-        primary: isRefund ? (lang === 'en' ? 'Refund' : lang === 'ar' ? 'استرداد' : 'Remboursement') : (L[s.method] || L.card),
-        /* The "who/what" column. On a boutique the useful identifier is the item,
-         * which the sale now carries — a row reading "Chemise en lin" is what the
-         * owner needs to find the original sale when that customer returns. Falls
-         * back to the generic subtitle only when the till sent no label. */
-        sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: s.label || '',
-        // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
-        // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
-        amt: (isRefund ? '− ' : '') + (window.KiwiNumber?.number(Math.abs(s.amount || 0), 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(s.amount || 0))),
-        tip: '·', neg: isRefund, isNew: i === 0,
-        saleId: String(s.id || ''),
-        ref: String(s.ref || s.receiptRef || s.id || '').trim(),
-        receiptNo: String(s.ref || s.receiptRef || '').trim(),
-      };
-    });
-  }
+  function buildCustomFeed(...args) { return callPart('buildCustomFeed', this, args); }
 
   function renderFeed(...args) { return callPart('renderFeed', this, args); }
 
@@ -3720,59 +2302,9 @@
    * n'affichent que des libellés de démo. */
   const escTxt = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  function realLowStock() {
-    try {
-      const type = window.KiwiVenue?.getVenueType?.();
-      if (type === 'restaurant' && window.KiwiRestaurantStock?.items) {
-        const items = window.KiwiRestaurantStock.items() || [];
-        if (!items.length) return null;
-        const configured = items.filter((it) => Number(it.reorderLevel) > 0);
-        const rows = configured.map((it) => {
-          const stock = Number(it.currentStock) || 0; // Montrer aussi le déficit réel.
-          const threshold = Math.max(0, Number(it.reorderLevel) || 0);
-          const par = Math.max(threshold, Number(it.parLevel) || threshold);
-          const suggested = Math.max(0, Math.round((par * 1.2 - stock) * 10) / 10);
-          return { id: it.id, name: it.name, stock, threshold, par, suggested,
-            unit: it.unit || 'unité', cost: Math.max(0, Number(it.costPerUnit) || 0) };
-        }).filter((r) => r.stock < r.threshold)
-          .sort((a, b) => (a.stock / a.threshold) - (b.stock / b.threshold))
-          .slice(0, 5);
-        return { rows, tracked: items.length, configured: configured.length, source: 'restaurant' };
-      }
-      if (type === 'boutique') {
-        const cat = window.KiwiBoutiqueCatalog;
-        if (!cat) return null;
-        const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
-        if (key) cat.use(key);
-        const prods = cat.listProducts() || [];
-        if (!prods.length) return null;
-        const rows = prods.map((p) => ({ id: p.id, name: p.name, stock: cat.productStock(p.id), threshold: LOW_STOCK_SEUIL }))
-          .filter((r) => r.stock <= LOW_STOCK_SEUIL).sort((a, b) => a.stock - b.stock).slice(0, 5);
-        return { rows, tracked: prods.length, configured: prods.length, source: 'boutique' };
-      }
-    } catch (_) { return null; }
-    return null;
-  }
+  function realLowStock(...args) { return callPart('realLowStock', this, args); }
 
-  function realTopProducts(range) {
-    const [from, to] = rangeBounds(range == null ? currentRange : range);
-    const sales = realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to);
-    const by = new Map(); let covered = 0;
-    sales.forEach((sale) => {
-      const lines = Array.isArray(sale.lines) ? sale.lines.filter((l) => l && l.name && (+l.qty || 0) > 0) : [];
-      if (!lines.length) return;
-      covered++;
-      lines.forEach((line) => {
-        const key = String(line.itemId || line.variantId || line.name).trim().toLowerCase();
-        const qty = Math.max(0, Number(line.qty) || 0);
-        const revenue = Math.max(0, Number(line.total) || ((Number(line.price) || 0) * qty));
-        const row = by.get(key) || { name: line.name, qty: 0, revenue: 0 };
-        row.qty += qty; row.revenue += revenue; by.set(key, row);
-      });
-    });
-    const rows = [...by.values()].sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 5);
-    return { rows, sales: sales.length, covered };
-  }
+  function realTopProducts(...args) { return callPart('realTopProducts', this, args); }
 
   /* ── « Souvent pris ensemble » ─────────────────────────────────────────────
    * Les paires d'articles que les tickets RÉELS de la période réunissent. On
@@ -3784,41 +2316,7 @@
    * moins vendu des deux contenaient aussi l'autre. Mêmes clés d'article que
    * le classement juste au-dessus (realTopProducts). */
   const PAIRS_MIN_BASKETS = 20, PAIRS_MIN_TOGETHER = 5, PAIRS_MAX_KEYS = 40;
-  function realPairs(range) {
-    const [from, to] = rangeBounds(range == null ? currentRange : range);
-    const seen = new Map(), names = new Map(), together = new Map();
-    let baskets = 0;
-    realSalesList().forEach((sale) => {
-      const ts = +sale.ts || 0;
-      if (ts < from || ts >= to) return;
-      const keys = new Set();
-      (Array.isArray(sale.lines) ? sale.lines : []).forEach((l) => {
-        if (!l || !l.name || !((+l.qty || 0) > 0)) return;
-        const k = String(l.itemId || l.variantId || l.name).trim().toLowerCase();
-        if (!k || keys.size >= PAIRS_MAX_KEYS) return;
-        keys.add(k);
-        if (!names.has(k)) names.set(k, String(l.name));
-      });
-      keys.forEach((k) => seen.set(k, (seen.get(k) || 0) + 1));
-      if (keys.size < 2) return;
-      baskets++;
-      const ks = [...keys].sort();
-      for (let i = 0; i < ks.length; i++) {
-        for (let j = i + 1; j < ks.length; j++) {
-          const pk = ks[i] + '\u0000' + ks[j];
-          together.set(pk, (together.get(pk) || 0) + 1);
-        }
-      }
-    });
-    if (baskets < PAIRS_MIN_BASKETS) return { rows: [], baskets };
-    const rows = [...together].filter(([, n]) => n >= PAIRS_MIN_TOGETHER).map(([pk, n]) => {
-      const [x, y] = pk.split('\u0000');
-      const lead = (seen.get(x) || 0) <= (seen.get(y) || 0) ? x : y;
-      const other = lead === x ? y : x;
-      return { lead: names.get(lead), other: names.get(other), together: n, share: n / Math.max(1, seen.get(lead) || 0) };
-    }).sort((p, q) => q.together - p.together || q.share - p.share || String(p.lead).localeCompare(String(q.lead))).slice(0, 3);
-    return { rows, baskets };
-  }
+  function realPairs(...args) { return callPart('realPairs', this, args); }
   const PAIRS_STR = {
     fr: { t: 'Souvent pris ensemble',
           why: (n, pct, lead) => `${n} tickets · ${pct} % des tickets avec ${lead}`,
@@ -3885,20 +2383,7 @@
   /* Grow [data-grow] elements from width 0 to their target — bars draw in
    * on every data change. The double-rAF lets the 0-width frame paint first
    * so the CSS width transition has something to animate from. */
-  function growBars(scope) {
-    if (!scope) return;
-    const els = scope.querySelectorAll('[data-grow]');
-    if (!els.length) return;
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      els.forEach((el) => { el.style.width = el.dataset.grow; });
-      return;
-    }
-    const apply = () => els.forEach((el) => { el.style.width = el.dataset.grow; });
-    requestAnimationFrame(() => requestAnimationFrame(apply));
-    /* rAF is frozen in hidden tabs — the timer guarantees the bars land at
-     * their real widths even if the render happened in the background. */
-    setTimeout(apply, 450);
-  }
+  function growBars(...args) { return callPart('growBars', this, args); }
 
   /* Merge the current venue's trade vocabulary over a default empty-state
    * dict — a gym's cards talk passages/adhérents, a boutique's talk ventes.
@@ -3930,34 +2415,7 @@
   /* Ces destinations n'ont pas de gestionnaire écrit à la main : trade-workspaces.js enregistre
      « nav-<route> » pour chaque fiche du métier. On les nomme ici pour que le lien soit lisible. */
   const BAND_NAV = { duty: 'nav-duty', bookorders: 'nav-bookorders' };
-  function dutyBand(lang, t) {
-    const W = window.KiwiTradeWorkspaces, S = window.KiwiTradeSchema;
-    if (!W || !S || !W.config || !W.config('duty')) return null;
-    const rows = (W.rows('duty') || []).map((r) => ({ r, v: r.values || {} }));
-    const now = S.wallNow();
-    const cur = rows.filter((x) => (+x.r.status || 0) === 2 || ((+x.r.status || 0) < 3 && String(x.v.startAt || '') <= now && now <= String(x.v.endAt || ''))).sort((a, b) => String(a.v.startAt).localeCompare(String(b.v.startAt)))[0];
-    const next = rows.filter((x) => (+x.r.status || 0) < 2 && String(x.v.startAt || '') > now).sort((a, b) => String(a.v.startAt).localeCompare(String(b.v.startAt)))[0];
-    const S2 = {
-      fr: { on: 'EN GARDE', until: (x) => `jusqu’à ${x}`, since: (x) => `depuis ${x}`, next: 'PROCHAINE GARDE', open: 'Ouvrir Gardes & relève' },
-      en: { on: 'ON DUTY', until: (x) => `until ${x}`, since: (x) => `since ${x}`, next: 'NEXT DUTY', open: 'Open Duty & handover' },
-      ar: { on: 'في الحراسة', until: (x) => `حتى ${x}`, since: (x) => `منذ ${x}`, next: 'الحراسة القادمة', open: 'فتح الحراسة والتسليم' },
-    }[lang] || null;
-    const L2 = S2 || { on: 'EN GARDE', until: (x) => `jusqu’à ${x}`, since: (x) => `depuis ${x}`, next: 'PROCHAINE GARDE', open: 'Ouvrir Gardes & relève' };
-    const fmt = (k) => { try { return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(String(k).slice(0, 16) + ':00')); } catch (_) { return String(k); } };
-    const cta = `<div class="instant" data-action="${BAND_NAV.duty}"><div style="font-weight:500;">${L2.open}</div></div>`;
-    const hand = (x) => (x.v.handover ? `<div style="font-size:12px;opacity:.7;margin-top:8px;line-height:1.45;">${escTxt(String(x.v.handover).slice(0, 160))}</div>` : '');
-    if (cur) {
-      return `<div class="lbl">${L2.on}</div><div class="big" style="font-size:30px;">${escTxt(cur.r.title || '')}</div>` +
-        `<div class="sub">${L2.since(escTxt(fmt(cur.v.startAt)))} · ${L2.until(escTxt(fmt(cur.v.endAt)))}</div>${hand(cur)}${cta}`;
-    }
-    if (next) {
-      return `<div class="lbl">${L2.next}</div><div class="big" style="font-size:30px;">${escTxt(fmt(next.v.startAt))}</div>` +
-        `<div class="sub">${escTxt(next.r.title || '')} · ${L2.until(escTxt(fmt(next.v.endAt)))}</div>${hand(next)}${cta}`;
-    }
-    return `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
-      `<div style="font-size:14px;font-weight:600;">${t.head}</div>` +
-      `<div style="font-size:12px;opacity:.7;margin-top:6px;line-height:1.5;">${t.msg}</div></div>${cta}`;
-  }
+  function dutyBand(...args) { return callPart('dutyBand', this, args); }
 
   /* Librairie, épicerie : « fin de journée » n'est pas un service du soir avec des tables à réserver.
      L'ancien bandeau disait « Réservations non configurées, ajoutez vos tables » à un libraire. La
@@ -3966,31 +2424,7 @@
      Même chose pour TOUT commerce de détail (boutique, maison, fleuriste, autre) : ils tombaient
      dans la branche des réservations et lisaient « Réservations non configurées, ajoutez vos
      tables ». Une boutique ne prend pas de réservation ; son état vide est celui de son métier. */
-  function retailBand(lang, t) {
-    let trade = '', base = '';
-    try { const v = window.KiwiVenue?.getCurrentVenueData?.() || {}; trade = String(v.subtype || v.type || ''); } catch (_) {}
-    try { base = String(window.KiwiVenue?.getVenueType?.() || ''); } catch (_) {}
-    if (trade !== 'librairie' && trade !== 'epicerie' && base !== 'boutique') return null;
-    const W = window.KiwiTradeWorkspaces;
-    const T = {
-      fr: { lbl: 'COMMANDES SPÉCIALES', arrived: (n) => `${n} ${n > 1 ? 'arrivées' : 'arrivée'} à retirer`, waiting: (n) => `${n} en attente de livraison`, open: 'Ouvrir Commandes de livres' },
-      en: { lbl: 'SPECIAL ORDERS', arrived: (n) => `${n} arrived, to collect`, waiting: (n) => `${n} awaiting delivery`, open: 'Open Special orders' },
-      ar: { lbl: 'الطلبات الخاصة', arrived: (n) => `${n} وصلت للاستلام`, waiting: (n) => `${n} في انتظار التسليم`, open: 'فتح الطلبات الخاصة' },
-    }[lang] || null;
-    const L2 = T || { lbl: 'COMMANDES SPÉCIALES', arrived: (n) => `${n} ${n > 1 ? 'arrivées' : 'arrivée'} à retirer`, waiting: (n) => `${n} en attente de livraison`, open: 'Ouvrir Commandes de livres' };
-    if (trade === 'librairie' && W && W.config && W.config('bookorders')) {
-      const rows = (W.rows('bookorders') || []).filter((r) => (+r.status || 0) < 2);
-      const arrived = rows.filter((r) => (+r.status || 0) === 1).length, waiting = rows.length - arrived;
-      if (rows.length) {
-        return `<div class="lbl">${L2.lbl}</div><div class="big">${rows.length}</div>` +
-          `<div class="sub">${L2.arrived(arrived)} · ${L2.waiting(waiting)}</div>` +
-          `<div class="instant" data-action="${BAND_NAV.bookorders}"><div style="font-weight:500;">${L2.open}</div></div>`;
-      }
-    }
-    return `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
-      `<div style="font-size:14px;font-weight:600;">${t.head}</div>` +
-      `<div style="font-size:12px;opacity:.7;margin-top:6px;line-height:1.5;">${t.msg}</div></div>`;
-  }
+  function retailBand(...args) { return callPart('retailBand', this, args); }
 
   function renderEvening(...args) { return callPart('renderEvening', this, args); }
 
@@ -4025,34 +2459,7 @@
   }
   function onCompareToggle() { setShowComparison(!showComparison); }
 
-  function hookI18n() {
-    const api = window.KiwiI18n;
-    if (!api?.setLang || api.__drWrapped) return;
-    const orig = api.setLang;
-    api.setLang = function () {
-      const r = orig.apply(this, arguments);
-      // Re-render everything that has lang-dependent text
-      renderSelector();
-      renderHero();
-      renderHeroAi();
-      renderGoal();
-      renderHeatmap();
-      renderKpiBand();
-      renderRevChart();
-      renderMix();
-      renderFeed();
-      renderSettle();
-      renderEvening();
-      renderStock();
-      renderHealth();
-      renderBench();
-      renderInteg();
-      renderProducts();
-      renderStaff();
-      return r;
-    };
-    api.__drWrapped = true;
-  }
+  function hookI18n(...args) { return callPart('hookI18n', this, args); }
 
   /* ═══════════════ CUSTOM RANGE · calendar popover ═══════════════
    * A branded two-month range picker that drops under the "Personnalisé"
@@ -4094,397 +2501,20 @@
 
   /* Human span — "14 mai 2026" · "1 – 14 mai 2026" · "28 avr. – 3 mai 2026"
    * · "28 déc. 2025 – 4 janv. 2026". */
-  function fmtHumanRange(s, e, lang) {
-    if (sameDay(s, e)) return `${s.getDate()} ${monthOnly(s, lang, 'long')} ${s.getFullYear()}`;
-    const sameYear = s.getFullYear() === e.getFullYear();
-    if (sameYear && s.getMonth() === e.getMonth())
-      return `${s.getDate()} – ${e.getDate()} ${monthOnly(e, lang, 'long')} ${e.getFullYear()}`;
-    if (sameYear)
-      return `${s.getDate()} ${monthOnly(s, lang, 'short')} – ${e.getDate()} ${monthOnly(e, lang, 'short')} ${e.getFullYear()}`;
-    return `${s.getDate()} ${monthOnly(s, lang, 'short')} ${s.getFullYear()} – `
-         + `${e.getDate()} ${monthOnly(e, lang, 'short')} ${e.getFullYear()}`;
-  }
+  function fmtHumanRange(...args) { return callPart('fmtHumanRange', this, args); }
 
   let dpEl = null, dpOutside = null, dpKey = null, dpControl = null;
 
-  function closeCustomPicker() {
-    if (!dpEl) return;
-    const pop = dpEl;
-    dpEl = null;
-    pop.classList.remove('open');
-    pop.removeAttribute('aria-modal');
-    if (pop.__releaseScroll) pop.__releaseScroll();
-    if (pop.__focusBefore?.isConnected) pop.__focusBefore.focus({ preventScroll: true });
-    const veil = pop.__veil;
-    if (veil) { veil.classList.remove('in'); setTimeout(() => veil.remove(), 260); }
-    if (dpOutside) document.removeEventListener('mousedown', dpOutside);
-    if (dpKey) document.removeEventListener('keydown', dpKey);
-    dpOutside = dpKey = null;
-    const pill = dpControl?.querySelector('.dr-pill-custom');
-    if (pill) pill.setAttribute('aria-expanded', 'false');
-    dpControl = null;
-    let gone = false;
-    const drop = () => { if (gone) return; gone = true; pop.remove(); };
-    pop.addEventListener('transitionend', drop, { once: true });
-    setTimeout(drop, 300);
-  }
+  function closeCustomPicker(...args) { return callPart('closeCustomPicker', this, args); }
 
-  function openCustomPicker(options) {
-    if (dpEl) { closeCustomPicker(); return; }          // second click → toggle shut
-    const dayMode = options?.mode === 'day';
-    const control = options?.control || document.querySelector('.dash-date-range .dr-control');
-    if (!control) return;
-    dpControl = control;
-    const lang = getLang();
-    const S = PICKER_STR[lang] || PICKER_STR.fr;
-    const today = dayMode && isoToDate(options.maxDay) ? isoToDate(options.maxDay) : startOfDay(new Date());
-    const monIdx = (y, m) => y * 12 + m;
-    const maxLeft = monIdx(today.getFullYear(), today.getMonth()) - 1;  // right pane never future
-
-    const selectedDay = dayMode ? isoToDate(options.selected) : null;
-    let selStart = dayMode ? selectedDay : customRange ? startOfDay(customRange.start) : null;
-    let selEnd   = dayMode ? selectedDay : customRange ? startOfDay(customRange.end)   : null;
-    let hoverD   = null;
-    let view = selEnd
-      ? shiftMonth(selEnd.getFullYear(), selEnd.getMonth(), -1)
-      : shiftMonth(today.getFullYear(), today.getMonth(), -1);
-
-    const pop = document.createElement('div');
-    pop.className = 'dr-popover';
-    pop.setAttribute('role', 'dialog');
-    pop.setAttribute('aria-label', S.title);
-    if (lang === 'ar') pop.setAttribute('dir', 'rtl');
-    dpEl = pop;
-    // On a phone the two-month popover is taller than the screen and its
-    // Apply button ends up under the tab bar (ticket #0108): present it as a
-    // bottom sheet instead, with a scrolling calendar and a pinned footer.
-    const asSheet = window.matchMedia && matchMedia('(max-width: 640px)').matches;
-    if (asSheet) {
-      const veil = document.createElement('div');
-      veil.className = 'dr-sheet-veil';
-      document.body.appendChild(veil);
-      pop.__veil = veil;
-      pop.classList.add('dr-sheet');
-      veil.addEventListener('click', closeCustomPicker);
-      pop.setAttribute('aria-modal', 'true');
-      pop.__focusBefore = document.activeElement;
-      pop.__releaseScroll = window.Kiwi?.scrollLock?.acquire();
-      document.body.appendChild(pop);
-      requestAnimationFrame(() => veil.classList.add('in'));
-    } else if (dayMode) document.body.appendChild(pop);
-    else control.appendChild(pop);
-
-    const presets = [['p7', S.p7], ['p14', S.p14], ['p30', S.p30],
-                     ['pMonth', S.pMonth], ['pLast', S.pLast], ['p90', S.p90]];
-    function presetRange(key) {
-      if (key === 'p7')  return [addDays(today, -6), today];
-      if (key === 'p14') return [addDays(today, -13), today];
-      if (key === 'p30') return [addDays(today, -29), today];
-      if (key === 'p90') return [addDays(today, -89), today];
-      if (key === 'pMonth') return [new Date(today.getFullYear(), today.getMonth(), 1), today];
-      if (key === 'pLast')  return [new Date(today.getFullYear(), today.getMonth() - 1, 1),
-                                    new Date(today.getFullYear(), today.getMonth(), 0)];
-      return null;
-    }
-    function activePreset() {
-      if (!selStart || !selEnd) return null;
-      for (let i = 0; i < presets.length; i++) {
-        const r = presetRange(presets[i][0]);
-        if (r && sameDay(startOfDay(r[0]), selStart) && sameDay(startOfDay(r[1]), selEnd))
-          return presets[i][0];
-      }
-      return null;
-    }
-    const chev = (dir) => `<span class="dr-icon dr-icon-${dir === 'prev' ? 'prev' : 'next'}" aria-hidden="true"></span>`;
-
-    function weekdayRow() {
-      const mon = addDays(today, -((today.getDay() + 6) % 7));
-      let h = '';
-      for (let i = 0; i < 7; i++) {
-        const wd = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOCALES[lang] || LOCALES.fr, { weekday: 'short' })
-          .format(addDays(mon, i)).replace('.', '');
-        h += `<span class="drp-wd">${dpEsc(wd)}</span>`;
-      }
-      return h;
-    }
-    function monthGrid(y, m) {
-      const lead = (new Date(y, m, 1).getDay() + 6) % 7;
-      const days = new Date(y, m + 1, 0).getDate();
-      let cells = '';
-      for (let i = 0; i < lead; i++) cells += '<span class="drp-day drp-empty"></span>';
-      for (let d = 1; d <= days; d++) {
-        const date = new Date(y, m, d);
-        const future = ymdInt(date) > ymdInt(today);
-        let cls = 'drp-day';
-        if (future) cls += ' is-disabled';
-        if (sameDay(date, today)) cls += ' is-today';
-        cells += `<button type="button" class="${cls}" data-day="${dateToIso(date)}"`
-          + `${future ? ' disabled' : ''}><span class="drp-dn">${d}</span></button>`;
-      }
-      return cells;
-    }
-    function monthCard(y, m, side) {
-      const canNext = monIdx(view.y, view.m) < maxLeft;
-      const lBtn = side === 'left'
-        ? `<button type="button" class="drp-nav" data-nav="prev" aria-label="${dpEsc({fr:'Mois précédent',en:'Previous month',ar:'الشهر السابق'}[lang])}">${chev('prev')}</button>`
-        : '<span class="drp-nav-gap"></span>';
-      const rBtn = side === 'right'
-        ? `<button type="button" class="drp-nav" data-nav="next" aria-label="${dpEsc({fr:'Mois suivant',en:'Next month',ar:'الشهر التالي'}[lang])}"${canNext ? '' : ' disabled'}>${chev('next')}</button>`
-        : '<span class="drp-nav-gap"></span>';
-      return `<div class="drp-month"><div class="drp-mhead">${lBtn}`
-        + `<span class="drp-mname">${dpEsc(monthLabel(y, m, lang))}</span>${rBtn}</div>`
-        + `<div class="drp-wdrow">${weekdayRow()}</div>`
-        + `<div class="drp-grid">${monthGrid(y, m)}</div></div>`;
-    }
-
-    function decorate() {
-      let lo = selStart, hi = selEnd;
-      if (selStart && !selEnd && hoverD) {
-        lo = ymdInt(hoverD) < ymdInt(selStart) ? hoverD : selStart;
-        hi = ymdInt(hoverD) < ymdInt(selStart) ? selStart : hoverD;
-      }
-      const a = lo ? ymdInt(lo) : null;
-      const b = hi ? ymdInt(hi) : null;
-      pop.querySelectorAll('.drp-day').forEach((btn) => {
-        btn.classList.remove('in-range', 'is-start', 'is-end', 'is-edge', 'is-solo');
-        if (!btn.dataset.day) return;
-        const v = ymdInt(isoToDate(btn.dataset.day));
-        if (a != null && b != null) {
-          if (a === b) { if (v === a) btn.classList.add('is-edge', 'is-solo'); }
-          else if (v === a) btn.classList.add('is-start', 'is-edge');
-          else if (v === b) btn.classList.add('is-end', 'is-edge');
-          else if (v > a && v < b) btn.classList.add('in-range');
-        } else if (a != null && v === a) {
-          btn.classList.add('is-edge', 'is-solo');
-        }
-      });
-      const ro = pop.querySelector('[data-drp-readout]');
-      if (ro) {
-        if (lo && hi) ro.textContent = fmtHumanRange(lo, hi, lang);
-        else if (selStart) ro.textContent = fmtHumanRange(selStart, selStart, lang);
-        // Nothing picked yet: name the period in effect, in the muted colour,
-        // instead of a lone dot.
-        else ro.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange] || S.hintStart;
-        ro.classList.toggle('is-set', !!(lo || selStart));
-      }
-      const hint = pop.querySelector('[data-drp-hint]');
-      if (hint) {
-        if (lo && hi) {
-          const n = spanDays(lo, hi);
-          hint.innerHTML = `<b>${n}</b> ${dpEsc(n > 1 ? S.days : S.day)}`;
-        } else {
-          hint.textContent = selStart ? S.hintEnd : S.hintStart;
-        }
-      }
-      const apply = pop.querySelector('[data-drp-apply]');
-      if (apply) apply.disabled = !(selStart && selEnd);
-      const ap = dayMode ? null : activePreset();
-      pop.querySelectorAll('.drp-preset').forEach((p) => {
-        p.classList.toggle('is-active', p.dataset.preset === ap);
-      });
-    }
-
-    function render() {
-      const scrollTop = pop.querySelector('.drp-body')?.scrollTop || 0;
-      const r = shiftMonth(view.y, view.m, 1);
-      pop.innerHTML =
-        `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(dayMode ? ({ fr: 'Choisir une date', en: 'Pick a date', ar: 'اختر تاريخاً' }[lang] || 'Choisir une date') : S.title)}</div>`
-        + `<div class="drp-readout" data-drp-readout></div></div>`
-        + `<button type="button" class="drp-x" data-drp-cancel aria-label="${dpEsc(S.cancel)}">`
-        + `<span class="dr-icon dr-icon-close" aria-hidden="true"></span></button></div>`
-        + `<div class="drp-body">${dayMode ? '' : `<div class="drp-presets">`
-        + `<div class="drp-presets-lbl">${dpEsc(S.presets)}</div>`
-        + presets.map(([k, lbl]) =>
-            `<button type="button" class="drp-preset" data-preset="${k}">${dpEsc(lbl)}</button>`).join('')
-        + `</div>`}<div class="drp-cal"><div class="drp-months">`
-        + monthCard(view.y, view.m, 'left') + monthCard(r.y, r.m, 'right')
-        + `</div></div></div>`
-        + `<div class="drp-foot"><div class="drp-hint" data-drp-hint></div>`
-        + `<div class="drp-acts">`
-        + `<button type="button" class="drp-btn drp-btn-ghost" data-drp-cancel>${dpEsc(S.cancel)}</button>`
-        + `<button type="button" class="drp-btn drp-btn-go" data-drp-apply>${dpEsc(S.apply)}</button>`
-        + `</div></div>`;
-      decorate();
-      pop.querySelector('.drp-body').scrollTop = scrollTop;
-    }
-
-    function pickDay(iso) {
-      const d = isoToDate(iso);
-      if (!d) return;
-      if (dayMode) { selStart = d; selEnd = d; hoverD = null; render(); return; }
-      if (!selStart || (selStart && selEnd)) { selStart = d; selEnd = null; }
-      else if (ymdInt(d) < ymdInt(selStart)) { selEnd = selStart; selStart = d; }
-      else { selEnd = d; }
-      hoverD = null;
-      render();
-    }
-    function applyPreset(key) {
-      const r = presetRange(key);
-      if (!r) return;
-      selStart = startOfDay(r[0]);
-      selEnd = startOfDay(r[1]);
-      hoverD = null;
-      view = shiftMonth(selEnd.getFullYear(), selEnd.getMonth(), -1);
-      render();
-    }
-    function shiftView(n) {
-      const nv = shiftMonth(view.y, view.m, n);
-      if (n > 0 && monIdx(nv.y, nv.m) > maxLeft) return;
-      view = nv;
-      render();
-    }
-
-    pop.addEventListener('click', (e) => {
-      const day = e.target.closest('.drp-day');
-      if (day && day.dataset.day && !day.disabled) { pickDay(day.dataset.day); return; }
-      const nav = e.target.closest('[data-nav]');
-      if (nav) { shiftView(nav.dataset.nav === 'next' ? 1 : -1); return; }
-      const pre = e.target.closest('[data-preset]');
-      if (pre) { applyPreset(pre.dataset.preset); return; }
-      if (e.target.closest('[data-drp-cancel]')) { closeCustomPicker(); return; }
-      if (e.target.closest('[data-drp-apply]') && selStart && selEnd) {
-        if (dayMode) options.onApply(dateToIso(selStart));
-        else commitCustomRange(selStart, selEnd);
-        closeCustomPicker();
-      }
-    });
-    pop.addEventListener('mouseover', (e) => {
-      if (dayMode || !selStart || selEnd) return;
-      const day = e.target.closest('.drp-day');
-      const nd = (day && day.dataset.day && !day.disabled) ? isoToDate(day.dataset.day) : null;
-      if ((nd ? ymdInt(nd) : 0) === (hoverD ? ymdInt(hoverD) : 0)) return;
-      hoverD = nd;
-      decorate();
-    });
-    pop.addEventListener('mouseleave', () => {
-      if (selStart && !selEnd && hoverD) { hoverD = null; decorate(); }
-    });
-
-    // Swipe the calendar sideways to change month, like the iOS date picker.
-    let swipeX = null, swipeY = 0;
-    pop.addEventListener('touchstart', (e) => {
-      if (!e.target.closest('.drp-cal') || e.touches.length !== 1) { swipeX = null; return; }
-      swipeX = e.touches[0].clientX; swipeY = e.touches[0].clientY;
-    }, { passive: true });
-    pop.addEventListener('touchend', (e) => {
-      if (swipeX == null) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - swipeX, dy = t.clientY - swipeY;
-      swipeX = null;
-      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
-      const forward = lang === 'ar' ? dx > 0 : dx < 0;
-      shiftView(forward ? 1 : -1);
-    }, { passive: true });
-
-    render();
-    if (dayMode && !asSheet) {
-      // Drawers clip their scrollable bodies with contain:paint. Portal the
-      // SAME calendar above them and anchor it to the shared pill.
-      const rect = control.getBoundingClientRect();
-      pop.style.position = 'fixed';
-      pop.style.insetInlineEnd = 'auto';
-      const anchorX = lang === 'ar' ? rect.right - pop.offsetWidth : rect.left;
-      pop.style.left = Math.max(8, Math.min(anchorX, innerWidth - pop.offsetWidth - 8)) + 'px';
-      pop.style.top = Math.max(8, Math.min(rect.bottom + 10, innerHeight - pop.offsetHeight - 8)) + 'px';
-    }
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (dpEl === pop) pop.classList.add('open');
-    }));
-
-    dpOutside = (e) => {
-      if (pop.contains(e.target)) return;
-      if (control.contains(e.target)) return;   // the control's own click toggles
-      closeCustomPicker();
-    };
-    dpKey = (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); closeCustomPicker(); return; }
-      if (!asSheet || e.key !== 'Tab') return;
-      const buttons = [...pop.querySelectorAll('button:not([disabled])')];
-      const first = buttons[0], last = buttons[buttons.length - 1];
-      if (e.shiftKey && (document.activeElement === first || !pop.contains(document.activeElement))) {
-        e.preventDefault(); last?.focus({preventScroll:true});
-      } else if (!e.shiftKey && (document.activeElement === last || !pop.contains(document.activeElement))) {
-        e.preventDefault(); first?.focus({preventScroll:true});
-      }
-    };
-    setTimeout(() => {
-      if (dpEl !== pop) return;
-      document.addEventListener('mousedown', dpOutside);
-      document.addEventListener('keydown', dpKey);
-    }, 0);
-
-    const pill = control.querySelector('.dr-pill-custom');
-    if (pill) pill.setAttribute('aria-expanded', 'true');
-  }
+  function openCustomPicker(...args) { return callPart('openCustomPicker', this, args); }
 
   /* A business-day version of the SAME control and two-month calendar used on
    * Accueil. Rapport journalier and restaurant Commandes supply only their
    * relative-day choices; neither owns another native date input or picker. */
-  function mountDaySelector(host, options = {}) {
-    if (!host) return;
-    const report = window.KiwiDayReport;
-    const today = report?.today?.(options.merchant) || dateToIso(new Date());
-    const shift = (n) => report?.shiftDay?.(today, -n, options.merchant) || dateToIso(addDays(isoToDate(today), -n));
-    const chosen = isoToDate(options.value) ? options.value : today;
-    const offsets = options.offsets || [0, 1];
-    const lang = getLang();
-    const labels = {
-      fr: ["Aujourd'hui", 'Hier', 'Avant-hier', 'Choisir une date'],
-      en: ['Today', 'Yesterday', 'Day before yesterday', 'Pick a date'],
-      ar: ['اليوم', 'أمس', 'أول أمس', 'اختر تاريخاً'],
-    }[lang] || ["Aujourd'hui", 'Hier', 'Avant-hier', 'Choisir une date'];
-    const relative = offsets.find(n => shift(n) === chosen);
-    const custom = relative == null;
-    const customLabel = custom ? new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA' : lang,
-      { day: 'numeric', month: 'short', year: 'numeric' }).format(isoToDate(chosen)) : labels[3];
-    host.innerHTML = `<div class="dr-control dr-day-control"><div class="dr-pills" role="group" aria-label="${dpEsc(options.ariaLabel || labels[3])}">`
-      + offsets.map(n => `<button type="button" class="dr-pill${relative === n ? ' on' : ''}" data-dr-day-offset="${n}" aria-pressed="${relative === n}">${dpEsc(labels[n])}</button>`).join('')
-      + `<button type="button" class="dr-pill dr-pill-custom${custom ? ' on' : ''}" data-dr-day-custom aria-pressed="${custom}" aria-haspopup="dialog" aria-expanded="false">`
-      + `<span class="dr-icon dr-icon-calendar" aria-hidden="true"></span>${dpEsc(customLabel)}</button></div></div>`;
-    const control = host.querySelector('.dr-control');
-    requestAnimationFrame(() => { const selected = control.querySelector('.dr-pill.on'); if (selected) revealDayPill(selected); });
-    host.querySelectorAll('[data-dr-day-offset]').forEach(button => {
-      button.addEventListener('click', () => options.onChange?.(shift(+button.dataset.drDayOffset)));
-    });
-    host.querySelector('[data-dr-day-custom]').addEventListener('click', () => openCustomPicker({
-      mode: 'day', control, selected: chosen, maxDay: today, onApply: day => options.onChange?.(day),
-    }));
-    window.KiwiLens?.rescan?.();
-  }
+  function mountDaySelector(...args) { return callPart('mountDaySelector', this, args); }
 
-  function registerHandler() {
-    const tryReg = () => {
-      if (window.Kiwi?.handlers) {
-        window.Kiwi.handlers['date-range'] = onAction;
-        window.Kiwi.handlers['open-date-picker'] = openCustomPicker;
-        window.Kiwi.handlers['rev-compare'] = onCompareToggle;
-        window.Kiwi.handlers['customize-kpi'] = openKpiCustomizer;
-        window.Kiwi.handlers['hero-toggle-chart'] = () => {
-          const hero = document.querySelector('.hero-today');
-          if (!hero) return;
-          const toChart = !hero.classList.contains('chart-view');
-          hero.classList.toggle('chart-view', toChart);
-          const btn = hero.querySelector('.hero-view-toggle');
-          if (btn) btn.setAttribute('aria-pressed', String(toChart));
-          try { localStorage.setItem('kiwiHeroView', toChart ? 'chart' : 'today'); } catch (_) {}
-          if (toChart) {
-            // Pane was display:none — SVG had no measurable width. Reset the
-            // render cache so the chart re-measures and replays its draw-in.
-            const svg = document.querySelector('[data-rev-svg]');
-            if (svg) { svg.dataset.lastW = '0'; svg.dataset.lastRange = ''; }
-            renderRevChart();
-          }
-        };
-        window.Kiwi.handlers['hh-ai-glovo'] = () => {
-          const gl = GLOVO_TOAST[getLang()] || GLOVO_TOAST.fr;
-          window.Kiwi?.toast?.(gl.t, { type: 'info', desc: gl.d });
-        };
-        return;
-      }
-      setTimeout(tryReg, 30);
-    };
-    tryReg();
-  }
+  function registerHandler(...args) { return callPart('registerHandler', this, args); }
 
   function restoreRange() {
     let stored = null;
@@ -4820,37 +2850,7 @@
   });
 
   /* ─── Live tick API · called from polish.js when a new fake tx lands ─── */
-  function tickLiveRevenue({ amount = 0, tip = 0 } = {}) {
-    // Demo clock owns deterministic ticking on aujourdhui — skip random ticks.
-    if (window.KiwiDemoClock?.isActive?.()) return;
-    // Live ticks only make sense on "today" — skip on historical ranges.
-    const r = effRange();
-    if (r !== 'aujourdhui') return;
-    // And only mutate the currently active venue's data (each venue has its own).
-    const v = getCurrentVenue();
-    const hero = heroDataByVenue[v]?.aujourdhui;
-    const goal = goalByVenue[v]?.aujourdhui;
-    const kpi  = kpiByVenue[v]?.aujourdhui;
-    if (!hero || !goal || !kpi) return;
-
-    hero.amount += amount;
-    goal.current = hero.amount;
-    // Keep "Net après Kiwi" roughly proportional (~83.9 % after commission)
-    hero.netAfterKiwi = Math.round(hero.amount * 0.839);
-
-    // Bump KPI counters that the live tx affects
-    if (kpi.tx)     kpi.tx.value += 1;
-    if (kpi.tips)   kpi.tips.value += tip;
-    if (kpi.panier && kpi.tx?.value > 0) {
-      kpi.panier.value = Math.round(hero.amount / kpi.tx.value);
-    }
-    if (kpi.regulars) kpi.regulars.unit = `/ ${kpi.tx.value}`;
-
-    // Re-render the affected blocks (each respects its own animation)
-    renderHero();
-    renderGoal();
-    renderKpiBand();
-  }
+  function tickLiveRevenue(...args) { return callPart('tickLiveRevenue', this, args); }
 
   /* `bounds` sort d'ici parce que la fenêtre « en ce moment » doit avoir UNE
    * définition, pas une par écran. Elle était privée, alors trois surfaces se

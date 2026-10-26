@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Menu scan test — « Scanner un menu » : route AI, garde SSRF,
  * validation bornée, CSV → revue d'import (seul chemin d'écriture).
@@ -29,7 +30,7 @@ const routeSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-import.j
 const scanSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-scan.js'), 'utf8');
 const importSrc = fs.readFileSync(path.join(ROOT, 'assets/catalog-import.js'), 'utf8');
 const wsSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
-const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const html = dashboardDependencies(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 const quotaSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');
 

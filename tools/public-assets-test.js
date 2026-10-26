@@ -153,7 +153,9 @@ const assetsDir = path.join(ROOT, 'assets');
 const SECRET = /(?:AUTH_SECRET|SITE_PASSWORD|api[_-]?key|secret)\s*[:=]\s*['"][A-Za-z0-9_\-]{16,}['"]/i;
 let scanned = 0;
 if (fs.existsSync(assetsDir)) {
-  fs.readdirSync(assetsDir).filter((f) => /\.(js|css)$/.test(f)).forEach((f) => {
+  fs.readdirSync(assetsDir)
+    .concat(fs.readdirSync(path.join(assetsDir, 'interactive')).map((f) => 'interactive/' + f))
+    .filter((f) => /\.(js|css)$/.test(f)).forEach((f) => {
     scanned++;
     const body = fs.readFileSync(path.join(assetsDir, f), 'utf8');
     if (SECRET.test(body)) fails.push(`assets/${f} contient une chaîne en forme de secret`);

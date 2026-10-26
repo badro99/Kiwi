@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · LES MODÈLES DE RAYONS (assets/store-templates.js)
  *
@@ -31,7 +32,7 @@ console.log('■ Modèles de rayons (store-templates)');
 const src = fs.readFileSync(path.join(ROOT, 'assets/store-templates.js'), 'utf8');
 const proSrc = pagesProSource();
 const onbSrc = fs.readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
-const shell = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const shell = dashboardDependencies(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 const trades = fs.readFileSync(path.join(ROOT, 'assets/trades.js'), 'utf8');
 

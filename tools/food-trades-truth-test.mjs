@@ -26,6 +26,7 @@
  *
  *   node tools/food-trades-truth-test.mjs
  * ═════════════════════════════════════════════════════════════════════════ */
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import assert from 'node:assert/strict';
 import coreTestSource from './core-test-source.cjs';
 const { readFileSync } = coreTestSource;
@@ -45,7 +46,7 @@ const TW = read('assets/trade-workspaces.js');
 const FS = read('assets/food-trade-settings.js');
 const DR = read('assets/dateRange.js');
 const STORE = read('functions/api/store.js');
-const DASH = read('dashboard.html');
+const DASH = dashboardDependencies.eager(read('dashboard.html'));
 const MW = read('assets/restaurant-menu-workspace.js');
 
 function grab(src, start) {

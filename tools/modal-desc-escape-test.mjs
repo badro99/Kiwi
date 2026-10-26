@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import { hotelTestSource } from './hotel-test-source.mjs';
 import stockTestSource from './stock-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -17,7 +18,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
-const read = (rel) => fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+const read = (rel) => coreTestSource.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
 let controls = 0;
 const has = (src, needle, label) => { assert.ok(src.includes(needle), label); controls++; };
 const hasNot = (src, needle, label) => { assert.ok(!src.includes(needle), label); controls++; };

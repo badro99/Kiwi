@@ -28,7 +28,7 @@ assert.ok(!map.moved.some(m => m.name === 'cancelWasteMovement'), 'annulation in
 const html = read('dashboard.html');
 // Aucune balise pour les parties (le total de la coquille est épinglé par file-size-ratchet-test).
 assert.ok(!/<script\b[^>]*src="assets\/stock\//.test(html), 'aucune balise ajoutée');
-assert.equal(JSON.parse(read('tools/file-size-baseline.json')).scripts['dashboard.html'], 159, 'plafond de 162 avec marge 3');
+assert.ok(JSON.parse(read('tools/file-size-baseline.json')).scripts['dashboard.html'] <= 122, 'plafond abaissé après chargement au premier usage');
 const scanned = require('./stamps.js').scan();
 for (const g of map.groups) {
   const file = `assets/stock/${g}.js`;

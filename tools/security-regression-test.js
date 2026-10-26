@@ -59,6 +59,7 @@ const STATIC_ONLY = new Set([
 ]);
 
 const csvProducers = fs.readdirSync(path.join(ROOT, 'assets'))
+  .concat(fs.readdirSync(path.join(ROOT, 'assets/interactive')).map((f) => 'interactive/' + f))
   .filter((f) => f.endsWith('.js'))
   .map((f) => 'assets/' + f)
   .filter((rel) => /type:\s*['"]text\/csv/.test(read(rel)));

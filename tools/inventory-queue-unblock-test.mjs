@@ -211,7 +211,7 @@ const WIRE = (() => {
   const m = read('assets/inventory-ledger.js').match(/var WIRE_REASON = \{([^}]*)\}/);
   return new Set(m ? [...m[1].matchAll(/([a-z-]+):/g)].map((x) => x[1]) : []);
 })();
-const sources = [...fs.readdirSync(path.join(root, 'assets')).filter((f) => f.endsWith('.js')).map((f) => 'assets/' + f), 'kiwi-caisse.html', 'dashboard.html'];
+const sources = [...fs.readdirSync(path.join(root, 'assets/interactive')).filter((f) => f.endsWith('.js')).map((f) => 'assets/interactive/' + f), ...fs.readdirSync(path.join(root, 'assets')).filter((f) => f.endsWith('.js')).map((f) => 'assets/' + f), 'kiwi-caisse.html', 'dashboard.html'];
 const bad = [];
 for (const f of sources) {
   const src = read(f);

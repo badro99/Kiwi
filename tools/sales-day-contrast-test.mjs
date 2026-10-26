@@ -1,9 +1,10 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const pages = pagesProSource();
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
+const dashboard = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8')).replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 
 const darkPill = dashboard.match(/\.dr-pill\.on\s*\{([^}]+)\}/)?.[1] || '';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 /* plan-catalog-test · the dashboard's plan picker says what the site says.
  *
  * assets/plan-catalog.js carries the picker in French, English and Arabic.
@@ -12,7 +13,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const ROOT = new URL('..', import.meta.url);
-const read = (p) => fs.readFileSync(new URL(p, ROOT), 'utf8');
+const read = (p) => coreTestSource.readFileSync(new URL(p, ROOT), 'utf8');
 let n = 0; const fails = [];
 const check = (ok, label) => { n++; if (!ok) fails.push(label); };
 

@@ -580,7 +580,8 @@
     {
       "id": "console",
       "shells": [
-        "kiwi-admin.html"
+        "kiwi-admin.html",
+        "kiwi-admin-followups.html"
       ],
       "locales": [
         "fr",
@@ -1436,7 +1437,9 @@
         "tickets.html"
       ],
       "locales": [
-        "fr"
+        "fr",
+        "en",
+        "ar"
       ],
       "viewports": [
         "desktop",
@@ -1772,6 +1775,54 @@
         "phone"
       ],
       "state": "Origin handoff queue safety, exchange and retry"
+    },
+    {
+      "id": "dashboard-intake-photo",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "upload, review, correction, confirmed stock receipt using synthetic local fixtures"
+    },
+    {
+      "id": "dashboard-intake-document",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "upload, review, correction, confirmed stock receipt using synthetic local fixtures"
+    },
+    {
+      "id": "dashboard-intake-assistant",
+      "shells": [
+        "dashboard.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone",
+        "tablet"
+      ],
+      "state": "synthetic assistant inspection, canonical stock receipt review, correction and confirmation; no model call"
     }
   ],
   "excludedHtml": [

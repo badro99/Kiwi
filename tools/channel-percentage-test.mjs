@@ -1,9 +1,10 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const layout = fs.readFileSync(new URL('../assets/design-vexel-layout.js', import.meta.url), 'utf8');
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dashboard = dashboardDependencies.eager(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 const channelSource = fs.readFileSync(new URL('../assets/channel-sales.js', import.meta.url), 'utf8');
 const context = { window: {} };
 vm.runInNewContext(channelSource, context);

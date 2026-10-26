@@ -22,7 +22,7 @@ for (const area of ['daterange', 'agent']) {
   const accessed = [];
   const state = new Proxy({}, { get: (_, key) => { accessed.push(key); throw new Error('eager state read'); } });
   const functions = register[0](state);
-  assert.deepEqual(Object.keys(functions), map.entries.map(e => e.name));
+  assert.deepEqual(Object.keys(functions).sort(), [...map.entries, ...(map.constants || [])].map(e => e.name).sort());
   assert.deepEqual(accessed, [], 'registration reads no merchant state or DOM');
   for (const entry of map.entries) assert.equal(typeof functions[entry.name], 'function');
   precached(new URL('/' + fs.readFileSync(map.file, 'utf8').match(/const partUrl = '([^']+)'/)[1], 'https://kiwi.test'));
@@ -61,5 +61,10 @@ for (const area of ['daterange', 'agent']) {
 
 }
 const html = fs.readFileSync('dashboard.html', 'utf8');
-assert.equal([...html.matchAll(/<script\b[^>]*\bsrc=/g)].length, 160, 'dashboard script count after merged splits');
-console.log('PASS core split: both originals reconstructed byte for byte; factories are inert; parts precached; 160 shell scripts');
+for (const [core, part] of [['dateRange', 'daterange/renderers'], ['agent', 'agent/ui']]) {
+  assert.ok(fs.readFileSync('assets/' + core + '.js', 'utf8').split('\n').length <= 3000, core + ' stays below 3000 lines');
+  assert.ok(html.indexOf('assets/' + part + '.js') < html.indexOf('<script src="assets/' + core + '.js'), 'factory available before synchronous public APIs');
+}
+// The interactive split adds exactly two tags: helpers.js and handlers.js.
+assert.equal([...html.matchAll(/<script\b[^>]*\bsrc=/g)].length, 114, 'dashboard script count after merged splits');
+console.log('PASS core split: both originals reconstructed byte for byte; factories are inert; parts precached; 114 shell scripts');

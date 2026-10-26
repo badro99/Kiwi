@@ -205,6 +205,10 @@ function scan() {
     }
   }
 
+  for (const file of ['assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js']) {
+    if (exists(file)) for (const m of read(file).matchAll(SHELL_RE()))
+      note(m[1], m[2], { file, kind: 'lazy', stamp: m[2] });
+  }
   if (exists('assets/pages/dashboard-loader.js')) {
     for (const m of read('assets/pages/dashboard-loader.js').matchAll(SHELL_RE()))
       note(m[1], m[2], { file: 'assets/pages/dashboard-loader.js', kind: 'lazy', stamp: m[2] });

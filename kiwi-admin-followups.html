@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Kiwi</title>
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/admin-followups.css">
+  <script src="assets/admin-followups.js" defer></script>
+</head>
+<body>
+  <header><a href="kiwi-admin.html" data-copy="console"></a><nav aria-label="Langues · Languages · اللغات"><a href="?lang=fr" lang="fr">Français</a> · <a href="?lang=en" lang="en">English</a> · <a href="?lang=ar" lang="ar">العربية</a></nav></header>
+  <main>
+    <h1 data-copy="title"></h1>
+    <p data-copy="scope"></p>
+    <p id="page-error" role="alert"></p>
+    <label for="merchant" data-copy="merchant"></label>
+    <select id="merchant" disabled></select>
+    <button id="refresh" type="button" data-copy="refresh"></button>
+    <p id="read-state" role="status"></p>
+    <section aria-labelledby="tasks-title"><h2 id="tasks-title" data-copy="tasks"></h2><div id="tasks"></div></section>
+    <section id="task-editor" hidden aria-labelledby="editor-title">
+      <h2 id="editor-title" data-copy="edit"></h2><p id="task-title"></p>
+      <form id="task-form">
+        <label for="task-status" data-copy="status"></label><select id="task-status"></select>
+        <div id="snooze-field" hidden><label for="task-snooze" data-copy="snooze"></label><input id="task-snooze" type="datetime-local"></div>
+        <label for="task-outcome" data-copy="outcome"></label><textarea id="task-outcome" maxlength="2000"></textarea>
+        <p id="task-error" role="alert"></p>
+        <button id="save-task" type="submit" data-copy="save"></button>
+        <button id="reload-task" type="button" data-copy="reload"></button>
+        <button id="cancel-task" type="button" data-copy="cancel"></button>
+      </form>
+    </section>
+    <section aria-labelledby="notes-title">
+      <h2 id="notes-title" data-copy="notes"></h2><p data-copy="privacy"></p><div id="notes"></div>
+      <form id="note-form"><label for="note-body" data-copy="note"></label><textarea id="note-body" required maxlength="4000"></textarea>
+        <p id="note-error" role="alert"></p><button id="save-note" type="submit" disabled data-copy="saveNote"></button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

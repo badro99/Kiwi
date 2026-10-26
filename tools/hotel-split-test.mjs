@@ -1,3 +1,4 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* Preuve de découpe : reconstruction exacte et exécution des fichiers réels. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -52,7 +53,7 @@ for (const [parent, children] of [
     assert.ok(!fs.existsSync(old), old + ': obsolete file removed');
   }
 }
-const html = read('dashboard.html');
+const html = dashboardDependencies.eager(read('dashboard.html'));
 // The split added its five part tags and merged five files away: net zero at the time (161). Later work may add
 // unrelated tags (the shell total is pinned by file-size-ratchet-test), so compare only the tags this split knew.
 const splitTags = (html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g) || []);
@@ -154,9 +155,9 @@ console.log('✓ hotel-split: exact reconstruction, ordered deferred loading, st
 {
   const requests = [], calls = [];
   const H = { 'nav-reception': function (...args) { calls.push([this, args]); return 'opened'; }, 'hx-group-new': () => 'group' };
-  const doc = { baseURI:'https://kiwi.test/dashboard.html', currentScript:null, createElement:() => ({ remove() {} }), head:{appendChild:node => requests.push(node)} };
-  const win = { Kiwi:{handlers:H} };
-  vm.runInNewContext(lazyLoader, { window:win, document:doc, URL, Map, Promise });
+  const doc = { addEventListener() {}, dispatchEvent() {}, baseURI:'https://kiwi.test/dashboard.html', currentScript:null, createElement:() => ({ remove() {} }), head:{appendChild:node => requests.push(node)} };
+  const win = { Kiwi:{handlers:H}, addEventListener() {} };
+  vm.runInNewContext(lazyLoader, { window:win, document:doc, URL, Map, Promise, Event });
   assert.equal(requests.length,0,'hotel UI does not load at first paint');
   const self = {}, args = ['one'];
   const first = H['nav-reception'].apply(self,args), second = H['nav-reception'].apply(self,args);

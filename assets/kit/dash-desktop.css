@@ -116,7 +116,7 @@ html[data-skin-2027="dashboard"] body .scroll-progress { display: none; }
   html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-row { color: var(--k-ink-1); background: none; border-radius: var(--k-r-1); }
   html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-row.active { background: var(--k-surface-2); }
   html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown :is(.venue-row-icon, .va-icon) { color: var(--k-ink-2); background: var(--k-surface-2); border: 0; box-shadow: none; }
-  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-action { background: var(--k-surface-2) !important; border: 0 !important; box-shadow: none !important; color: var(--k-ink-1); }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-action { background: var(--k-surface-2) !important; border: 0 !important; box-shadow: none; color: var(--k-ink-1); }
 
   /* The app card: a quiet surface-1 card at the foot; its button the
      secondary fill, so the page keeps one green action. */
@@ -355,7 +355,7 @@ html[data-skin-2027="dashboard"] body .scroll-progress { display: none; }
     background: none !important; box-shadow: none !important; overflow: visible;
   }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today::before,
-  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today::after { content: none !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today::after { content: none; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today .block-head { min-height: 0; padding: 0; margin: 0 0 8px; align-items: center; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today .block-head :is(.t, .rev-hero-val, .rev-hero-delta) { display: none !important; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today .block-head .s {
@@ -637,12 +637,12 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer
 /* An order's drawer (pages-pro.js): its blocks on the kit's card, the
    figures' cells on the card itself. */
 html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-hero, .ord-stats, .ord-items, .ord-totals, .ord-pay) {
-  border: 0 !important; border-radius: var(--k-r-3) !important;
-  background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
+  border: 0; border-radius: var(--k-r-3);
+  background: var(--k-surface-1) !important; box-shadow: none; color: var(--k-ink-1);
 }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::before,
-html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::after { content: none !important; }
-html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-stat, .ord-item, .ord-pay .ci) { background: none !important; box-shadow: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::after { content: none; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-stat, .ord-item, .ord-pay .ci) { background: none !important; box-shadow: none; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-stat + .ord-stat { border-inline-start: 1px solid var(--k-line); }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero .status { background: var(--k-accent-tint) !important; color: var(--k-accent-ink) !important; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-item .qty { background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; }
@@ -732,7 +732,7 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover {
   background: var(--k-surface-1) !important; color: var(--k-ink-1); backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
   border: 0 !important; box-shadow: var(--k-shadow-3) !important; font-family: var(--k-font);
 }
-html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover.dr-sheet { border-radius: var(--k-r-4) var(--k-r-4) 0 0 !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover.dr-sheet { border-radius: var(--k-r-4) var(--k-r-4) 0 0; }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover :is(div, span, b, button, th, td, abbr) { text-transform: none !important; font-family: var(--k-font); }
 html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover :is(.drp-eyebrow, .drp-presets-lbl) {
   letter-spacing: var(--k-track-footnote) !important; color: var(--k-ink-2) !important;

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import coreTestSource from './core-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 // Execute the shipped handler. The modal DOM and transport are doubles, not a
 // second implementation of the deletion state machine. No network or real data.
-const source = fs.readFileSync(new URL('../assets/interactive.js', import.meta.url), 'utf8');
+const source = coreTestSource.readFileSync(new URL('../assets/interactive.js', import.meta.url), 'utf8');
 const start = source.indexOf("'settings-delete-account': () => {");
 const end = source.indexOf("    'glass-level':", start);
 assert.ok(start > 0 && end > start);

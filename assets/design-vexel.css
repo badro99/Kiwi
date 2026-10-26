@@ -3545,7 +3545,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
 html[data-theme="dark"] .dr-popover {
   background: #111714 !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 32px 80px rgba(0, 0, 0, 0.95) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 32px 80px rgba(0, 0, 0, 0.95);
   backdrop-filter: blur(28px) saturate(1.5);
   -webkit-backdrop-filter: blur(28px) saturate(1.5);
   z-index: 10000;
@@ -3591,7 +3591,7 @@ html[data-theme="dark"] .drp-body {
 :root[data-theme="dark"] .drp-presets,
 html[data-theme="dark"] .drp-presets {
   background: #0B100E !important;
-  border-inline-end: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 :root[data-theme="dark"] .drp-presets-lbl,
@@ -4839,7 +4839,7 @@ body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-ca
   body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
     height: 390px !important;
     min-height: 390px;
-    padding: 22px 18px 18px !important;
+    padding: 22px 18px 18px;
   }
 
   body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-val {

@@ -1,3 +1,4 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en qua
 
 const team = teamTestSource();
 const css = fs.readFileSync(new URL('../assets/planning-ui.css', import.meta.url), 'utf8');
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
+const dashboard = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8')).replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const merchantConfig = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 const i18n = fs.readFileSync(new URL('../assets/i18n.js', import.meta.url), 'utf8');

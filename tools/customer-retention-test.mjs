@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 /* Ticket #0165 · Customer retention: the rules the owner controls.
  *
  * Groups come from the owner's thresholds and the customer's own rhythm; an
@@ -102,7 +103,7 @@ ok('paired tills cannot read the send log nor write the document', () => {
   assert.match(store, /function stripRetention\(\) \{ return \{ settings: null, offers: null, sends: \[\] \}; \}/);
   assert.match(store, /const REDACT = \{[^}]*retention: stripRetention/);
 });
-const dash = read('dashboard.html');
+const dash = dashboardDependencies(read('dashboard.html'));
 ok('the sidebar opens the page, sold with the CRM', () => {
   assert.match(dash, /data-action="customer-retention" data-feature="crm"/);
   assert.match(dash, /assets\/customer-retention\.js\?v=\d+/);

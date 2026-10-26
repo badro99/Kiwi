@@ -1,3 +1,4 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
@@ -86,7 +87,7 @@ ok(SUPPORT_WHATSAPP_PHONE === '212624495159', 'WhatsApp support routes to the ap
 
 const help = fs.readFileSync(new URL('../assets/help-centre.js', import.meta.url), 'utf8');
 const account = fs.readFileSync(new URL('../assets/account.js', import.meta.url), 'utf8');
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dashboard = dashboardDependencies.eager(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 const tickets = fs.readFileSync(new URL('../functions/api/support/tickets.js', import.meta.url), 'utf8');
 const landing = fs.readFileSync(new URL('../fr/index.html', import.meta.url), 'utf8');

@@ -23,7 +23,7 @@ const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium required for the overlay stack');
 
-const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main><button id="opener">Ouvrir</button></main><script src="/assets/interactive.js"></script></body></html>`;
+const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main><button id="opener">Ouvrir</button></main><script src="/assets/interactive/helpers.js"></script><script src="/assets/interactive/handlers.js"></script><script src="/assets/interactive.js"></script></body></html>`;
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');
   if (u.pathname === '/') { res.setHeader('Content-Type', 'text/html'); res.end(html); return; }

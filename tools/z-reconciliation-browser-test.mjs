@@ -49,7 +49,7 @@ const server=http.createServer((req,res)=>{
   window.KiwiLive={merchant:()=>"amira-fixture"};
   window.KiwiVenue={isCustom:()=>true,getVenue:()=>"amira-fixture",getCurrentVenueData:()=>({id:'amira-fixture',type:new URLSearchParams(location.search).get('type')||'cafe'}),subscribe:()=>{}};
   window.KiwiSales={list:()=>[],subscribe:()=>{}};
-  </script><script src="/assets/sales-history.js"></script><script src="/assets/dateRange.js"></script><script src="/assets/z-reconciliation.js"></script></body></html>`);
+  </script><script src="/assets/sales-history.js"></script><script src="/assets/daterange/renderers.js"></script><script src="/assets/dateRange.js"></script><script src="/assets/z-reconciliation.js"></script></body></html>`);
  }
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));

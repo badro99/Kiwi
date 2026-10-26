@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const dashboardDependencies = require('./dashboard-dependencies.cjs');
 'use strict';
 const stockTestSource = require('./stock-test-source.cjs');
 
@@ -10,7 +11,7 @@ const source = fs.readFileSync('assets/restaurant-units.js', 'utf8');
 const recipesSource = fs.readFileSync('assets/restaurant-recipes.js', 'utf8');
 const workspaceSource = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
 const stockSource = stockTestSource();
-const dashboard = fs.readFileSync('dashboard.html', 'utf8');
+const dashboard = dashboardDependencies(fs.readFileSync('dashboard.html', 'utf8'));
 
 let recipeDoc = { items: {} };
 const subscribers = new Set();

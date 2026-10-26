@@ -56,12 +56,12 @@
     "sha": "c8185a8db5db7ff1"
   },
   "assets/agent.js": {
-    "v": "41",
-    "sha": "9845c3406e0b1c8b"
+    "v": "43",
+    "sha": "e1936e4166aa6508"
   },
   "assets/agent/ui.js": {
-    "v": "1",
-    "sha": "9e4c2327aedc91ef"
+    "v": "3",
+    "sha": "f9cecd4026f4dec6"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -156,8 +156,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "627",
-    "sha": "2a9b8205c9d0ef3d"
+    "v": "630",
+    "sha": "5018e3e4a10c0ba6"
   },
   "assets/caisse-refresh.js": {
     "v": "8",
@@ -324,24 +324,24 @@
     "sha": "f2b4d7294e6f0c1a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "610",
-    "sha": "d2220b21e656e826"
+    "v": "613",
+    "sha": "fe3e66adcbb632b7"
   },
   "assets/dashboard-shell.css": {
-    "v": "5",
-    "sha": "970fee020d2333f2"
+    "v": "6",
+    "sha": "82c1e457878f3dcc"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "100",
-    "sha": "a70fb538caec2fce"
+    "v": "102",
+    "sha": "66fedd2c49c622cb"
   },
   "assets/daterange/renderers.js": {
-    "v": "1",
-    "sha": "107683fc9922e9b4"
+    "v": "3",
+    "sha": "ae0917aa8c511a7e"
   },
   "assets/day-report-dash.js": {
     "v": "36",
@@ -384,8 +384,8 @@
     "sha": "f3caad37a4c63eed"
   },
   "assets/design-vexel.css": {
-    "v": "2125",
-    "sha": "825c8f28f31407e0"
+    "v": "2126",
+    "sha": "93170fe8303d628a"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -400,8 +400,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "613",
-    "sha": "045438dae4f76337"
+    "v": "616",
+    "sha": "59b14d0bfd3a9ec8"
   },
   "assets/employee-planning.js": {
     "v": "17",
@@ -616,8 +616,16 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "68",
-    "sha": "b76cc77d8ac53289"
+    "v": "69",
+    "sha": "4028eef1cdcae694"
+  },
+  "assets/interactive/handlers.js": {
+    "v": "1",
+    "sha": "d7344bdf93762300"
+  },
+  "assets/interactive/helpers.js": {
+    "v": "1",
+    "sha": "dba3937b8684a6be"
   },
   "assets/inventory-consumption.js": {
     "v": "17",
@@ -688,8 +696,8 @@
     "sha": "9e0574e4df6e1a34"
   },
   "assets/kit/dash-desktop.css": {
-    "v": "12",
-    "sha": "fb49b9798a777a19"
+    "v": "13",
+    "sha": "7b43bbc52565c9e2"
   },
   "assets/kit/dash-desktop.js": {
     "v": "9",
@@ -1168,8 +1176,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "2",
-    "sha": "ca2c0f4a581c1968"
+    "v": "8",
+    "sha": "5032ef2889120144"
+  },
+  "assets/pages/dashboard-startup.js": {
+    "v": "3",
+    "sha": "a95a7d4b58aa6817"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1452,8 +1464,8 @@
     "sha": "b64ceeca514afc2f"
   },
   "assets/production-action-guard.js": {
-    "v": "3",
-    "sha": "40e1323d45678bee"
+    "v": "4",
+    "sha": "8fe99f62ce6934a8"
   },
   "assets/promos.js": {
     "v": "10",
@@ -1700,8 +1712,8 @@
     "sha": "640ed8c4c8c5aec8"
   },
   "assets/view-link.js": {
-    "v": "1",
-    "sha": "d1b464561a457b9f"
+    "v": "2",
+    "sha": "a4a72617d62b67fe"
   },
   "assets/weather.js": {
     "v": "1",

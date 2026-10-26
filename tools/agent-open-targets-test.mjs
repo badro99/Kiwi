@@ -1,3 +1,4 @@
+import dashboardDependencies from './dashboard-dependencies.cjs';
 import coreTestSource from './core-test-source.cjs';
 /* Les boutons « Ouvrir … » de l'assistant appellent Kiwi.handlers[nom].
    Chaque nom doit exister, et le carnet clients doit ouvrir le carnet réel
@@ -11,7 +12,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = (f) => coreTestSource.readFileSync(path.join(root, f), 'utf8');
 const agentData = read('assets/agent-data.js');
 const agent = read('assets/agent.js');
-const shell = read('dashboard.html');
+const shell = dashboardDependencies(read('dashboard.html'));
 
 const targets = new Set();
 for (const m of agentData.matchAll(/open1\(L, '([A-Za-z]+)', '([a-z0-9-]+)'\)/g)) targets.add(m[1] + ' ' + m[2]);

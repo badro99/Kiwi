@@ -362,6 +362,28 @@ try {
     ok(DATASET.length >= 20 && validateDataset(DATASET).length === 0, 'jeu d\'évaluation : 20 demandes ou plus, étiquettes valides');
     ok(['fr', 'en', 'darija', 'ar'].every((l) => DATASET.some((t) => t.lang === l)), 'jeu d\'évaluation : français, anglais, darija, arabe');
     ok(DATASET.some((t) => t.text === 'imprimante ma kat5demch') && DATASET.some((t) => /prix d'un plat/.test(t.text)), 'jeu d\'évaluation : les cas du cahier des charges');
+    // Labeled corpus, actual route and persistence, adversarially calm model.
+    // This measures the conservative urgency floor, never model accuracy.
+    const urgent = DATASET.filter(t => t.expect.urgency === 2 || t.expect.blocked);
+    for (const sample of urgent) {
+      const env = freshEnv({ MAIL_WEBHOOK: 'https://mail.test/hook', SUPPORT_ALERT_EMAIL: 'equipe@kiwi.test' });
+      env.__reply = () => clef({ urgency: [0.9, 0.08, 0.02], blocked: 0.01 });
+      mails.length = 0;
+      try {
+        const { res, body } = await post(env, sample.text);
+        eq(res.status, 200, sample.id + ': report recorded');
+        const stored = row(env, body.ticket.id), triage = JSON.parse(stored.triage);
+        eq(stored.priority, 'urgent', sample.id + ': deterministic floor recall');
+        eq(triage.verdict, 'urgent', sample.id + ': calm model cannot demote urgency');
+        eq(triage.urgency.now, 0.02, sample.id + ': model probability remains factual');
+        eq(triage.safetyFloor, 'urgent', sample.id + ': floor provenance recorded');
+        eq(JSON.parse(stored.triage_alert).state, 'sent', sample.id + ': alert delivered');
+        eq(urgentMails().length, 1, sample.id + ': one alert');
+        await triageSupportTicket(env, { id: body.ticket.id, merchant: MERCHANT, summary: sample.text });
+        eq(urgentMails().length, 1, sample.id + ': retry does not alert twice');
+      } finally { env.DB.db.close(); }
+    }
+    console.log(`Urgency floor benchmark: ${urgent.length}/${urgent.length} urgent reports, FR/EN/AR/Darija, calm model stub`);
     const clean = { ...process.env }; delete clean.CLOUDFLARE_ACCOUNT_ID; delete clean.CLOUDFLARE_API_TOKEN;
     const dry = execFileSync(process.execPath, [fileURLToPath(new URL('./support-triage-eval.mjs', import.meta.url)), '--dry'], { env: clean, encoding: 'utf8' });
     ok(/MODE SEC/.test(dry) && /Catégorie\s+: 100\.0 %/.test(dry) && /"model": "clef"/.test(dry), 'mode sec : requête affichée, calcul exercé, aucun réseau');

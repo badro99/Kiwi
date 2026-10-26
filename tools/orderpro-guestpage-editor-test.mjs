@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dashboardDependencies from './dashboard-dependencies.cjs';
 // OrderPro · ce que le propriétaire règle de la page client
 // (assets/orderpro-guestpage.js), confronté au serveur qui la nettoie
 // (functions/api/order/_guest.js).
@@ -20,7 +21,7 @@ import { CITIES, nickKey, cleanGuestDoc } from '../functions/api/order/_guest.js
 const src = mergedPart('assets/orderpro-panel.js', 'assets/orderpro-guestpage.js');
 const gate = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 const menu = fs.readFileSync(new URL('../assets/menu-catalog.js', import.meta.url), 'utf8');
-const dash = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dash = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 
 let passed = 0, failed = 0;

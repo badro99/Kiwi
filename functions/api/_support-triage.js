@@ -24,7 +24,7 @@
 import { sendMail } from '../auth/_lib.js';
 import { runAiWithGateway } from './ai/_run.js';
 import { quotaOk, DAILY_CAPS } from './ai/_quota.js';
-import { cleanText, parseJson } from './_support.js';
+import { classify, cleanText, parseJson } from './_support.js';
 
 /* Clef complet (27B), pas Clef-flash (9B) : sur les 31 demandes synthétiques de
  * tools/support-triage-eval.mjs (2026-10-18), catégorie 96,8 % contre 93,5 %,
@@ -262,6 +262,11 @@ export async function triageSupportTicket(env, ticket, opts = {}) {
 
     const triage = readTriageAnswers(response);
     if (!triage) return { status: 'failed', reason: 'bad-response' };
+    // Keep model scores intact; this is a deterministic escalation, not a probability.
+    if (classify(ticket.summary).priority === 'urgent') {
+      triage.safetyFloor = 'urgent';
+      triage.verdict = 'urgent';
+    }
     triage.images = request.images ? request.images.length : 0;
 
     /* Le tri du texte seul ne remplace jamais celui qui a vu la capture. */

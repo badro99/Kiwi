@@ -2498,6 +2498,10 @@
     "agent": {
       "parent": "assets/agent.js",
       "parts": "assets/agent/"
+    },
+    "interactive": {
+      "parent": "assets/interactive.js",
+      "parts": "assets/interactive/"
     }
   }
 }
