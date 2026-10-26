@@ -107,7 +107,7 @@
 
   function schedule() {
     stop();
-    if (subs.length && !document.hidden) timer = setTimeout(poll, window.KiwiPoll?.delay(idleDelay) ?? idleDelay);
+    if (subs.length && !document.hidden) timer = setTimeout(poll, Math.min(15000, window.KiwiPoll?.delay(idleDelay) ?? idleDelay));
   }
   function start() { if (!timer && !inflight) poll(); }
   function stop() { if (timer) { clearTimeout(timer); timer = 0; } }

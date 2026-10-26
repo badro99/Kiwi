@@ -24,7 +24,7 @@ function harness(extra = {}) {
     async hide(hidden) { document.hidden = hidden; document.visibilityState = hidden ? 'hidden' : 'visible'; document.fire('visibilitychange'); await settle(); }
   };
 }
-async function pacing(name, h, start, { cap = 120000, first = true } = {}) {
+async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 600000 } = {}) {
   start(); await h.settle();
   if (first) assert.ok(h.count() > 0, name + ' initial request');
   await h.advance(600000);
@@ -44,7 +44,7 @@ async function pacing(name, h, start, { cap = 120000, first = true } = {}) {
   h.window.KiwiPoll = { delay: ms => quiet ? Math.max(600000, ms) : ms };
   h.document.fire('kiwi:request-wake'); await h.settle(); await h.advance(0);
   const quietStart = h.count();
-  await h.advance(599999); assert.equal(h.count(), quietStart, name + ' quiet minimum ten minutes');
+  await h.advance(quietCap - 1); assert.equal(h.count(), quietStart, name + ' quiet minimum delay');
   await h.advance(1); assert.equal(h.count(), quietStart + 1, name + ' quiet tick');
   await h.hide(true); const quietHidden = h.count();
   await h.advance(3600000); assert.equal(h.count(), quietHidden, name + ' quiet hidden hour');
@@ -57,7 +57,7 @@ async function pacing(name, h, start, { cap = 120000, first = true } = {}) {
   Object.assign(h.window, { KiwiCloudDoc: { currentSlug: () => 'test' }, KiwiEnv: { isReal: () => true } });
   h.ctx.fetch = async () => { h.hit(); return { ok: true, json: async () => ({ ok: true, tables: {}, stats: {}, now: Date.now() }) }; };
   h.run(read('assets/floorplan-live.js'));
-  await pacing('floor live', h, () => h.window.KiwiFloorLive.watch(() => {}), { cap: 60000 });
+  await pacing('floor live', h, () => h.window.KiwiFloorLive.watch(() => {}), { cap: 15000, quietCap: 15000 });
 }
 {
   const h = harness({ on: () => true, merchant: () => 'test', FAST_MS: 2500, SLOW_MS: 60000,

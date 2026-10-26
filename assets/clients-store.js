@@ -683,6 +683,18 @@
   function purchaseDrop(book, ref) {
     purchaseWrite(book, purchaseRead(book).filter(function (e) { return e.ref !== ref; }));
   }
+  function purchaseFailure(book, ref, reason) {
+    var events = purchaseRead(book);
+    events.forEach(function (e) { if (e.ref === ref) e.lastFailure = reason; });
+    purchaseWrite(book, events);
+  }
+  // Fresh detached values: callers cannot mutate the pending queue.
+  function purchaseSyncStatus(book) {
+    var events = purchaseRead(book || bookId());
+    return { count: events.length, failures: events.filter(function (e) { return e.lastFailure; }).map(function (e) {
+      return { ref: e.ref, reason: e.lastFailure };
+    }) };
+  }
   function purchasePush(book, event, afterClientCreate) {
     if (!syncable(book) || !event || !event.ref) return;
     var isRefund = event.kind === 'refund';
@@ -709,6 +721,7 @@
           });
           return;
         }
+        purchaseFailure(book, event.ref, r ? 'http-' + r.status : 'offline');
         /* A client created at checkout and its purchase used to be sent as two
          * unrelated requests.  If the purchase won the race, D1 returned
          * client-not-found and the history appeared only after a later poll.
@@ -721,8 +734,8 @@
             created.then(function (ok) { if (ok) purchasePush(book, event, true); });
           }
         }
-      }).catch(function () {});
-    } catch (_) {}
+      }).catch(function () { purchaseFailure(book, event.ref, 'offline'); });
+    } catch (_) { purchaseFailure(book, event.ref, 'offline'); }
   }
   function flushPurchases(book) {
     purchaseRead(book).slice(0, 25).forEach(function (event) { purchasePush(book, event); });
@@ -1035,7 +1048,7 @@
     bookId: bookId,
     hasBook: function () { return !!bookId(); },
     // reads
-    list: list, get: get, refusedRedemptions: refusedRedemptions, findByPhone: findByPhone, count: count,
+    list: list, get: get, purchaseSyncStatus: purchaseSyncStatus, refusedRedemptions: refusedRedemptions, findByPhone: findByPhone, count: count,
     // writes
     upsert: upsert, recordPurchase: recordPurchase, recordRefund: recordRefund, redeem: redeem, redemptionRef: redemptionRef, reserveRedemption: reserveRedemption, remove: remove,
     // fidelity config

@@ -32,7 +32,7 @@ const importer = { openMenuWithCsv: (csv, opts) => { review = { csv, opts }; } }
 const win = { Kiwi, KiwiCatalogImport: importer };
 win.window = win;
 const context = vm.createContext({
-  window: win, document: doc, Kiwi, KiwiCatalogImport: importer,
+  window: win, document: doc, Kiwi, KiwiCatalogImport: importer, AbortController, setTimeout, clearTimeout,
   localStorage: { getItem: () => lang },
   fetch: async (_, opts) => {
     assert.equal(JSON.parse(opts.body).targetLang, lang);
@@ -61,7 +61,7 @@ function noFrench(output) {
 function click(selector) {
   events.click({ target: { closest: (q) => q === selector ? {} : null } });
 }
-async function settle() { for (let i = 0; i < 8; i++) await Promise.resolve(); }
+async function settle() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 for (lang of ['fr', 'en', 'ar']) {
   win.KiwiMenuScan.open();
   assert.equal(modal.opts.title, copy[lang].title);
