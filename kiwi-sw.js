@@ -34,14 +34,14 @@ var SHELL = [
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=6',
   '/kiwi-caisse.html',
-  '/assets/caisse/table-settlement.js?v=1',
-  '/assets/caisse-accounting.js?v=6',
-  '/assets/caisse-floor.js?v=3',
-  '/assets/caisse-kitchen.js?v=2',
+  '/assets/caisse/table-settlement.js?v=2',
+  '/assets/caisse-accounting.js?v=7',
+  '/assets/caisse-floor.js?v=4',
+  '/assets/caisse-kitchen.js?v=3',
   '/assets/caisse/receipts.js?v=1',
   '/assets/caisse/closing.js?v=1',
   '/assets/caisse/workflows-loader.js?v=3',
-  '/assets/caisse/catalogue.js?v=6',
+  '/assets/caisse/catalogue.js?v=7',
   '/assets/caisse/till-frame.js?v=3',
   '/assets/caisse/orders.js?v=1',
   '/assets/caisse/payment.js?v=2',
@@ -49,12 +49,12 @@ var SHELL = [
   '/assets/caisse/shift.js?v=3',
   '/assets/caisse/settings.js?v=1',
   '/assets/caisse/held-sales.js?v=1',
-  '/assets/caisse/discounts.js?v=2',
+  '/assets/caisse/discounts.js?v=3',
   '/assets/caisse/returns.js?v=1',
   '/assets/caisse/handover.js?v=1',
   '/assets/caisse/inventory.js?v=1',
-  '/assets/caisse/offline.js?v=2',
-  '/assets/caisse-app.js?v=25',
+  '/assets/caisse/offline.js?v=3',
+  '/assets/caisse-app.js?v=26',
   '/assets/caisse-refresh.js?v=8',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -318,7 +318,7 @@ var SHELL = [
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=5',
   '/assets/retail-balances.js?v=4',
-  '/assets/retail-sale-hold.js?v=5',
+  '/assets/retail-sale-hold.js?v=6',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
@@ -385,7 +385,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=19',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=167',
+  '/assets/pos-dispatch.js?v=168',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -469,12 +469,12 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=109',
-  '/assets/pos-boutique/sales.js?v=15',
+  '/assets/pos-boutique.css?v=110',
+  '/assets/pos-boutique/sales.js?v=16',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=15',
-  '/assets/pos-boutique/inventory.js?v=15',
-  '/assets/pos-boutique.js?v=109',
+  '/assets/pos-boutique/checkout.js?v=16',
+  '/assets/pos-boutique/inventory.js?v=16',
+  '/assets/pos-boutique.js?v=110',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
