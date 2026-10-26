@@ -105,17 +105,17 @@
       mgrModal.classList.remove('is-error', 'is-needs-connection');
       showMgrNote('');
       $('#mgr-needs').hidden = true;
-      $('#manager-modal-title').textContent = mgrAccess === 'till' ? 'Autorisation caisse' : 'Autorisation manager';
-      $('#manager-modal-sub').textContent = actionLabel || 'Action à autoriser';
+      $('#manager-modal-title').textContent = mgrAccess === 'till' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Autorisation caisse') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Autorisation manager');
+      $('#manager-modal-sub').textContent = actionLabel || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Action à autoriser');
       $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
       mgrModal.classList.add('is-open');
       const hint = mgrModal.querySelector('.mgr-hint');
       if (hint) {
         let demo = true;
         try { demo = !(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
-        hint.textContent = (opts && opts.hint) || (demo ? 'Démo locale · n’importe quel code' : (mgrAccess === 'till'
-          ? 'Code caissier, manager ou propriétaire requis'
-          : 'Code manager ou propriétaire requis'));
+        hint.textContent = (opts && opts.hint) || (demo ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Démo locale · n’importe quel code') : (mgrAccess === 'till'
+          ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code caissier, manager ou propriétaire requis')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code manager ou propriétaire requis')));
       }
       if (mgrNeedsServer && !tillReachable()) showNeedsConnection();
       if (window.lucide) lucide.createIcons();
@@ -178,7 +178,7 @@
           }
           if (!valid) {
             mgrModal.classList.add('is-error');
-            toast((mgrAccess === 'till' ? 'Code caisse' : 'Code manager') + ' incorrect ou impossible à vérifier');
+            toast((mgrAccess === 'till' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code caisse') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code manager')) + ' incorrect ou impossible à vérifier');
             setTimeout(() => {
               mgrModal.classList.remove('is-error');
               mgrBuffer = ''; mgrBusy = false; renderMgrDots();
@@ -242,7 +242,7 @@
       const label = $('#attendance-code-expiry');
       if (!label) return;
       if (!remaining) {
-        label.textContent = 'Code expiré · générez-en un nouveau';
+        label.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code expiré · générez-en un nouveau');
         return;
       }
       const seconds = Math.ceil(remaining / 1000);
@@ -266,8 +266,8 @@
         if (attendanceCodeTimer) clearInterval(attendanceCodeTimer);
         attendanceCodeTimer = setInterval(renderAttendanceCodeExpiry, 1000);
       }).catch(() => {
-        value.textContent = 'Erreur';
-        $('#attendance-code-expiry').textContent = 'Code non généré · vérifiez la connexion';
+        value.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Erreur');
+        $('#attendance-code-expiry').textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code non généré · vérifiez la connexion');
       }).finally(() => { button.disabled = false; });
     }
     function openAttendanceCode() {
@@ -417,7 +417,7 @@
       if (isAll) {
         av.textContent = '∀';
         av.style.background = 'var(--ink)';
-        nm.textContent = 'Toute l\'équipe';
+        nm.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Toute l\'équipe');
         /* Singulier pour 0 et 1 : « 1 serveurs en service » ne se dit pas. */
         const n = activeServerCount();
         st.textContent = `· ${n} serveur${n > 1 ? 's' : ''} en service`;
@@ -426,9 +426,9 @@
         av.textContent = serverInitials(s);
         av.style.background = s.color;
         nm.textContent = s.name;
-        st.textContent = s.status === 'on' ? '· En service'
+        st.textContent = s.status === 'on' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('· En service')
                        : s.status === 'pause' ? `· en pause depuis ${pauseElapsedMn(s)} mn`
-                       : '· hors service · il le verra à son pointage';
+                       : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('· hors service · il le verra à son pointage');
       }
       $('#msg-input').value = '';
       $('#msg-modal').classList.add('is-open');

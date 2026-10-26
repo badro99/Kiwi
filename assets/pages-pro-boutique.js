@@ -17,6 +17,7 @@
   const fullpage = Kiwi.fullpage;
   const modal = Kiwi.modal;
   const toast = Kiwi.toast;
+  const dt = (key, fr) => window.KiwiI18n?.T?.[window.KiwiI18n.getLang()]?.[key] ?? fr;
   const menu = Kiwi.menu;
   const confetti = Kiwi.confetti;
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1916,7 +1917,7 @@ function _mzTableHtml(rows, opts) {
 
 function _mzRenderPage() {
   const M = MZS();
-  if (!M) { toast('Registre indisponible', { type: 'warn' }); return; }
+  if (!M) { toast(dt("inventory.registerUnavailable", "Registre indisponible"), { type: 'warn' }); return; }
   _mzCss();
   const rows = _mzRows();
   const tot = M.totals(rows);
@@ -1976,7 +1977,7 @@ function _mzRenderPage() {
 }
 
 handlers['nav-stock-movements'] = () => {
-  if (!_bqxReady() || !MZS()) { toast('Mouvements de stock indisponibles', { desc: 'Le registre n’est pas chargé, rechargez la page.', type: 'warn' }); return; }
+  if (!_bqxReady() || !MZS()) { toast(dt("inventory.movementsUnavailable", "Mouvements de stock indisponibles"), { desc: dt("inventory.reloadRegister", "Le registre n’est pas chargé, rechargez la page."), type: 'warn' }); return; }
   MZS().enable();
   _mzFilter.days = 0;
   _mzRenderPage();
@@ -1999,7 +2000,7 @@ handlers['mz-export'] = () => {
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
   a.download = 'mouvements-stock.csv';
   document.body.appendChild(a); a.click(); a.remove();
-  toast('Mouvements exportés', { desc: `${rows.length} ligne(s) au format CSV.`, type: 'success' });
+  toast(dt("inventory.exported", "Mouvements exportés"), { desc: `${rows.length} ligne(s) au format CSV.`, type: 'success' });
 };
 
 /* ── La saisie manuelle, au tableau de bord ───────────────────────────────

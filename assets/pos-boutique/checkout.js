@@ -92,7 +92,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       const lnB = e.target.closest('[data-bq-pick]');
       if (lnB) { togglePick(lnB.dataset.bqPick); return; }
       const lockB = e.target.closest('[data-bq-locked]');
-      if (lockB) { toast('Pièce déjà retournée, rien à reprendre dessus'); return; }
+      if (lockB) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Pièce déjà retournée, rien à reprendre dessus')); return; }
       const motif = e.target.closest('[data-bq-motif]');
       if (motif && state.ret) { state.ret.motif = motif.dataset.bqMotif; renderEchanges(); icons(); return; }
       const exch = e.target.closest('[data-bq-do-exch]');
@@ -239,13 +239,13 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
   function doExchange() {
     const ret = state.ret;
     if (!ret) return;
-    if (ret.picks.size !== 1) { toast('L\'échange se fait pièce par pièce, gardez une seule ligne cochée'); return; }
+    if (ret.picks.size !== 1) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('L\'échange se fait pièce par pièce, gardez une seule ligne cochée')); return; }
     const idx = ret.picks.values().next().value;
     const sale = findSale(ret.saleId);
     if (sale?.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
     const ln = sale.lines[idx];
     const qty = pickedQty(ret, idx, ln);
-    if (qty !== 1) { toast('L\'échange se fait une pièce à la fois, choisissez la quantité 1'); return; }
+    if (qty !== 1) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('L\'échange se fait une pièce à la fois, choisissez la quantité 1')); return; }
     /* Le motif choisi sur la fiche de retour suit l'échange jusqu'au registre :
        sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
        la colonne motif répétait la colonne type et le registre ne disait plus
@@ -326,7 +326,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       if (!restored) unresolved += qty;
     });
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
-    if (unresolved) toast('Retour enregistré, stock à rapprocher', `${unresolved} pièce${unresolved > 1 ? 's' : ''} appartenait à une variante supprimée du catalogue.`);
+    if (unresolved) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Retour enregistré, stock à rapprocher'), `${unresolved} pièce${unresolved > 1 ? 's' : ''} appartenait à une variante supprimée du catalogue.`);
     return unresolved === 0;
   }
 
@@ -382,15 +382,15 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       /* Le même papier que le reçu (thermique, file durable), plus l'impression
          système qui le transformait en PDF. Code-barres Code 128 scannable. */
       const K = window.KiwiReceipt;
-      if (!K || !K.printVoucher) { toast('Impression indisponible sur cet appareil'); return; }
-      toast('Impression de l’avoir…');
+      if (!K || !K.printVoucher) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return; }
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression de l’avoir…'));
       K.printVoucher({ code: av.code, amount: av.amount, balance: av.balance, holderName: av.holderName,
         motif: av.motif, from: av.from, at: av.at, until: av.until, untilText: fmtValidUntil(av.until) }).then(
-        (r) => toast(!r || !r.ok ? 'Impression échouée'
-          : r.queued ? 'Avoir envoyé à l’imprimante'
-          : r.thermalFailed ? 'Imprimante injoignable · avoir ouvert dans l’impression système'
-          : r.via === 'pdf' || r.via === 'browser' ? 'Avoir ouvert dans l’impression système' : 'Avoir imprimé'),
-        () => toast('Impression échouée'));
+        (r) => toast(!r || !r.ok ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée')
+          : r.queued ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Avoir envoyé à l’imprimante')
+          : r.thermalFailed ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Imprimante injoignable · avoir ouvert dans l’impression système')
+          : r.via === 'pdf' || r.via === 'browser' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Avoir ouvert dans l’impression système') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Avoir imprimé')),
+        () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée')));
     };
   }
 
@@ -406,7 +406,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
        et pas sur la fiche produit, qui a pu changer de prix depuis. */
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
-    if (!newP) { toast('Article de remplacement introuvable'); return; }
+    if (!newP) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Article de remplacement introuvable')); return; }
     const diff = Math.round((shelf(newP.price) - paidUnit(sale, ln)) * 100) / 100;
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
@@ -470,7 +470,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       persistDay();
       queueIfOffline(`Échange · ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();
-      if (!oldRestored) toast('Échange enregistré, retour à rapprocher', 'La variante d’origine a été supprimée du catalogue.');
+      if (!oldRestored) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange enregistré, retour à rapprocher'), 'La variante d’origine a été supprimée du catalogue.');
       return true;
     };
 
@@ -483,7 +483,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
             if (!reservation.ok && !reservation.offline) {
               if (go) go.disabled = false;
               if (reservation.issue) showStockIssue(reservation.issue);
-              else toast('Échange suspendu', 'Impossible de réserver l’article de remplacement.');
+              else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange suspendu'), 'Impossible de réserver l’article de remplacement.');
               return;
             }
             const reserved = !!reservation.ok;
@@ -550,7 +550,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           });
         }).catch(() => {
           if (go) go.disabled = false;
-          toast('Numéro de ticket indisponible', 'Reconnectez cette caisse pour réserver sa prochaine série.');
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Numéro de ticket indisponible'), 'Reconnectez cette caisse pour réserver sa prochaine série.');
         });
       } else if (diff < 0) {
         const go = $('#bq-exch-go', el); if (go) go.disabled = true;
@@ -578,7 +578,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           }
           closeVeil('#bq-exch-veil');
           if (!apply(!!reservation.ok)) {
-            toast('Avoir émis, échange à régulariser', `${av.code} existe mais le remplacement est devenu indisponible.`);
+            toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Avoir émis, échange à régulariser'), `${av.code} existe mais le remplacement est devenu indisponible.`);
             refreshOps(); openVoucher(av, { mode: 'fresh' });
             return;
           }
@@ -612,7 +612,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
      so and opens the printer setup instead of pretending. */
   function printReceiptNow(opts, parts) {
     const KP = window.KiwiPrinter;
-    if (!KP || !KP.printReceipt) { toast('Impression indisponible sur cet appareil'); return; }
+    if (!KP || !KP.printReceipt) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return; }
 
     /* Le ticket que la boutique imprime est celui que la propriétaire a réglé
        dans Réglages → Reçu : son enseigne, son adresse, son ICE, sa politique
@@ -659,12 +659,12 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           if (queued && (queued.accepted || queued.pending)) return;
         } catch (_) {}
       }
-      toast('Impression du reçu…');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression du reçu…'));
       Promise.resolve(K.print(doc)).then(
         (r) => toast(r && r.ok
-          ? (r.via === 'pdf' ? 'Reçu prêt · imprimer ou partager le PDF' : r.via === 'browser' ? 'Reçu ouvert dans l\'impression système' : ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : 'réseau')))
-          : 'Impression échouée'),
-        () => toast('Impression échouée')
+          ? (r.via === 'pdf' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Reçu prêt · imprimer ou partager le PDF') : r.via === 'browser' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Reçu ouvert dans l\'impression système') : ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : 'réseau')))
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée')),
+        () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée'))
       );
       return;
     }
@@ -678,7 +678,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       shop: (pv && pv.name) || 'Kiwi',
       ref: opts.ref || '',
       date: fmtDT(new Date()),
-      lines: lines.length ? lines : [{ name: opts.title || 'Vente', price: fmtMAD(opts.amount) }],
+      lines: lines.length ? lines : [{ name: opts.title || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente'), price: fmtMAD(opts.amount) }],
       total: fmtMAD(opts.amount),
       method: (parts || []).map((x) => label[x.m] || x.m).join(' + '),
     };
@@ -693,7 +693,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
     if (!KP.isConnected || !KP.isConnected()) {
       const cfg = (KP.getConfig && KP.getConfig()) || {};
       if (cfg.browserFallback && KP.browserReceipt) { KP.browserReceipt(doc); return; }
-      toast('Aucune imprimante connectée');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune imprimante connectée'));
       try {
         KP.openSetup(KP.browserReceipt ? {
           kind: 'receipt',
@@ -705,12 +705,12 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       } catch (_) {}
       return;
     }
-    toast('Impression du reçu…');
+    toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression du reçu…'));
     KP.printReceipt(doc).then(
       (r) => toast(r && r.ok
         ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : 'réseau'))
-        : ('Impression échouée : ' + ((r && r.reason) || 'inconnu'))),
-      (e) => toast('Impression échouée : ' + ((e && e.message) || 'erreur'))
+        : ('Impression échouée : ' + ((r && r.reason) || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('inconnu')))),
+      (e) => toast('Impression échouée : ' + ((e && e.message) || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('erreur')))
     );
   }
 
@@ -727,7 +727,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
   function renderAcomptes() {
     const panel = $('[data-bq-panel="acomptes"]', root);
     const R = window.KiwiRetailBalances;
-    if (!R) { panel.textContent = 'Registre des acomptes indisponible'; return; }
+    if (!R) { panel.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Registre des acomptes indisponible'); return; }
     void R.render(panel, {
       merchant: merchantSlug(), prefix: 'bq',
       customerName: id => (clById(id) || {}).name || id,
@@ -816,7 +816,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
            received (especially a card charge) while leaving the cart unpaid.
            Finish the remaining balance; the success screen can close normally. */
         if (!committed && (settled.length || avoirPart)) {
-          toast('Paiement commencé', `Il reste ${fmtMAD(due())} à régler avant de fermer.`);
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Paiement commencé'), `Il reste ${fmtMAD(due())} à régler avant de fermer.`);
           return;
         }
         if (!committed && opts.onCancel) opts.onCancel();
@@ -957,7 +957,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           else if (m === 'virement' || m === 'cheque') stepExternal(m, portion());
           else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
           else if (m === 'avoir') stepAvoir();
-          else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
+          else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun avoir actif, émettez-en un depuis Échanges & avoirs'));
         };
       });
     };
@@ -1026,7 +1026,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           const why = !av ? 'Aucun avoir avec ce code, vérifiez-le sur le bon.'
             : avoirExpired(av) ? (av.until ? `Cet avoir a expiré le ${new Date(av.until).toLocaleDateString('fr-FR')}.` : 'Cet avoir a expiré.')
             : 'Cet avoir est déjà entièrement utilisé.';
-          toast('Bon indisponible', why);
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Bon indisponible'), why);
           if (errEl) { errEl.textContent = why; errEl.hidden = false; }
           const input = $('#bq-av-code', el); if (input) { input.focus(); input.select(); }
           return;
@@ -1114,7 +1114,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         disc.classList.remove('is-pulsing');
         disc.classList.add('is-success');
         disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#bq-reader-status', el).textContent = 'Confirmez l\'encaissement sur le lecteur';
+        $('#bq-reader-status', el).textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Confirmez l\'encaissement sur le lecteur');
         $('#bq-reader-status', el).classList.add('is-success');
         const cw = $('#bq-card-confirm', el);
         if (cw) cw.hidden = false;
@@ -1152,7 +1152,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       if (committed) return;
       if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
-        toast('Acompte : une cliente et un seul règlement sont requis'); return;
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Acompte : une cliente et un seul règlement sont requis')); return;
       }
       committed = true;
       if (opts.beforePaid && !await opts.beforePaid()) { committed = false; return; }
@@ -1178,7 +1178,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
                  consommé le bon. */
               action: 'redeem-batch', id: creditCommitId,
               saleId: (opts.sale && opts.sale.id) || opts.ref || '',
-              detail: opts.title || 'Vente boutique',
+              detail: opts.title || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente boutique'),
               credits: [{ code: avp.code, amountCents: Math.round(avp.amount * 100) }],
             });
             const row = ((remote && remote.credits) || []).find((r) => r.code === avp.code);
@@ -1191,7 +1191,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         } catch (_) {
           committed = false;
           await refreshRemoteAvoirs();
-          toast('Avoir refusé par le registre', 'Le solde a changé, le bon a expiré ou une autre caisse vient de l’utiliser. Aucun encaissement n’a été enregistré.');
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Avoir refusé par le registre'), 'Le solde a changé, le bon a expiré ou une autre caisse vient de l’utiliser. Aucun encaissement n’a été enregistré.');
           stepMethods();
           return;
         }
@@ -1204,7 +1204,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           paid: (opts.balancePaid || 0) + paidNow,
           remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
         opts.amount = paidNow;
-        opts.title = partial ? 'Acompte' : 'Solde de l’acompte';
+        opts.title = partial ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Acompte') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Solde de l’acompte');
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else { closeVeil('#bq-pay-veil'); printReceiptNow(opts, parts); }
@@ -1238,7 +1238,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
          page, and it shouldn't be — the merchant should see what goes to their
          client. So we open a real pre-filled WhatsApp draft; they press send. */
       $('#bq-pay-wa', el).onclick = () => {
-        if (!opts.waPhone) { toast('Cliente de passage, pas de numéro WhatsApp sur le ticket'); return; }
+        if (!opts.waPhone) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cliente de passage, pas de numéro WhatsApp sur le ticket')); return; }
         const pv = pvPaired();
         const body = [
           (pv && pv.name) || 'Kiwi',
@@ -1254,8 +1254,8 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         const num = String(opts.waPhone).replace(/\D/g, '');
         try {
           window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
-          toast(`WhatsApp ouvert pour ${opts.waName || 'la cliente'}, appuyez sur envoyer`);
-        } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
+          toast(`WhatsApp ouvert pour ${opts.waName || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('la cliente')}, appuyez sur envoyer`);
+        } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impossible d\'ouvrir WhatsApp')); }
       };
       $('#bq-pay-done', el).onclick = () => closeVeil('#bq-pay-veil');
     };
@@ -1282,21 +1282,21 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
   function toggleOffline() {
     if (!IS_DEMO) {
       syncNetworkState();
-      toast(state.syncBlocked ? 'Synchronisation bloquée, contactez le support'
-        : state.offline ? 'Wi-Fi indisponible, les ventes restent sur cette caisse'
+      toast(state.syncBlocked ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Synchronisation bloquée, contactez le support')
+        : state.offline ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Wi-Fi indisponible, les ventes restent sur cette caisse')
           : state.queued ? `${state.queued} vente${state.queued > 1 ? 's' : ''} en cours de synchronisation`
-            : 'Caisse en ligne, toutes les ventes sont synchronisées');
+            : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Caisse en ligne, toutes les ventes sont synchronisées'));
       return;
     }
     state.simulatedOffline = !state.simulatedOffline;
     syncNetworkState();
-    toast(state.offline ? 'Mode hors-ligne simulé, la boutique continue' : 'Réseau simulé rétabli');
+    toast(state.offline ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Mode hors-ligne simulé, la boutique continue') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Réseau simulé rétabli'));
   }
   function renderNet() {
     const net = $('#bq-net', root);
     if (!net) return;
     net.classList.toggle('is-off', state.offline || state.syncBlocked);
-    $('.bq-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : state.queued ? 'Synchronisation' : 'En ligne';
+    $('.bq-net-label', net).textContent = state.syncBlocked ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Sync bloquée') : state.offline ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Hors-ligne') : state.queued ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Synchronisation') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('En ligne');
     let q = $('.bq-net-queue', net);
     if (state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'bq-net-queue'; net.appendChild(q); }
@@ -1722,7 +1722,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
   function handleWedge(code) {
     if (scanCapture) { try { scanCapture(code); } catch (_) {} return; }  /* saisie inventaire */
     if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) {
-      toast('Terminez la fenêtre ouverte avant de scanner');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Terminez la fenêtre ouverte avant de scanner'));
       return;
     }
     if (state.view === 'inventaire') { invScanHandle(code); return; }   /* fiche stock */
@@ -1833,7 +1833,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         if (cp) cp.onclick = () => {
           const txt = JSON.stringify({ ua: navigator.userAgent, burst: burst && { raw: burst.raw, norm: burst.norm, n: burst.n, span: burst.span, enter: burst.enter, ev: burst.ev.map((x) => [x.code, x.key, x.ch]) } }, null, 1);
           (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(
-            () => toast('Diagnostic copié'), () => toast('Copie impossible sur cet appareil'));
+            () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Diagnostic copié')), () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Copie impossible sur cet appareil')));
         };
       });
     }
@@ -1871,7 +1871,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
 
   /* Entrer dans la reprise avec un code déjà lu (scan depuis l'inventaire). */
   function intakeStartWith(raw) {
-    if (!catDB()) { toast('Base d\'inventaire indisponible'); return; }
+    if (!catDB()) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Base d\'inventaire indisponible')); return; }
     if (state.view !== 'inventaire') switchView('inventaire');
     if (!intake.open) { intake.open = true; intakeReset(); }
     intakeTake(raw);

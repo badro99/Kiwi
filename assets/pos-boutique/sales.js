@@ -356,7 +356,7 @@ import { offerRegister } from './inventory.js?v=15';
     $('#bq-exch-cancel', slot).onclick = () => {
       state.exchange = null;
       renderExchNote();
-      toast('Échange annulé, rien n\'a bougé');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange annulé, rien n\'a bougé'));
       icons();
     };
     icons();
@@ -448,7 +448,7 @@ import { offerRegister } from './inventory.js?v=15';
       retry.disabled = true;
       assignTicketNumber(t).then(
         () => toast('Numéro attribué · ticket ' + t.num),
-        () => toast('Numéro de ticket toujours indisponible', state.ticketStorageError
+        () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Numéro de ticket toujours indisponible'), state.ticketStorageError
           ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
           : 'Reconnectez cette caisse pour réserver sa prochaine série.')
       );
@@ -458,19 +458,19 @@ import { offerRegister } from './inventory.js?v=15';
       t.lines.forEach((ln) => stockAdd(ln.pid, ln.size, ln.qty));
       freshTicket();                      /* ticket ET cliente remis à zéro — pas d'attache auto */
       renderTicket(); renderGrid(); renderBadges(); icons();
-      toast('Ticket vidé, articles remis en stock');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket vidé, articles remis en stock'));
     };
     $('#bq-tk-client', el).onclick = openClientModal;
     const rwBtn = $('#bq-reward-toggle', el);
     if (rwBtn) rwBtn.onclick = () => {
       if (t.reward && t.reward.clientId === t.client) {
         t.reward = null;
-        toast('Récompense retirée du ticket');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Récompense retirée du ticket'));
       } else {
         const rw = clReward(t.client);
-        if (!rw || !rw.ready) { toast('Pas encore de récompense pour cette cliente'); return; }
+        if (!rw || !rw.ready) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Pas encore de récompense pour cette cliente')); return; }
         t.reward = { clientId: t.client, kind: rw.kind, value: rw.value, label: rw.label };
-        toast('Récompense appliquée', rw.label);
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Récompense appliquée'), rw.label);
       }
       renderTicket(); icons();
     };
@@ -726,7 +726,7 @@ import { offerRegister } from './inventory.js?v=15';
       const b = e.target.closest('[data-bq-rem]');
       if (!b) return;
       const r = +b.dataset.bqRem;
-      if (r > 0 && window.KiwiDiscountPolicy && !window.KiwiDiscountPolicy.allowed(r, _bqKey)) { toast('Pourcentage non autorisé'); return; }
+      if (r > 0 && window.KiwiDiscountPolicy && !window.KiwiDiscountPolicy.allowed(r, _bqKey)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Pourcentage non autorisé')); return; }
       if (r > 0 && !state.ticket.remiseAuth) { openApprove(r, () => { sheet.remise = r; renderSheet(); icons(); lens(); }); return; }
       sheet.remise = r;
       $$('[data-bq-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.bqRem === r));
@@ -917,7 +917,7 @@ import { offerRegister } from './inventory.js?v=15';
       if (create) create.onclick = () => {
         const name = $('#bq-cl-name', el).value.trim();
         const tel = $('#bq-cl-tel', el).value.trim();
-        if (!name) { toast('Le nom est requis pour la fiche'); return; }
+        if (!name) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Le nom est requis pour la fiche')); return; }
         let cid;
         if (useKiwiCl()) {
           const rec = window.KiwiClients.upsert({ name, phone: tel, consent: true, source: 'caisse' });
@@ -1251,7 +1251,7 @@ import { offerRegister } from './inventory.js?v=15';
   function openCamScan(onCode) {
     if (camBusy) return;
     if (!camSupported()) {
-      toast('Lecture caméra indisponible sur ce navigateur, utilisez la douchette ou tapez le code');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Lecture caméra indisponible sur ce navigateur, utilisez la douchette ou tapez le code'));
       return;
     }
     camBusy = true;
@@ -1301,7 +1301,7 @@ import { offerRegister } from './inventory.js?v=15';
         } catch (_) {}
         detector = new window.BarcodeDetector({ formats: fmts });
       } catch (_) {
-        hint.textContent = 'Lecture caméra indisponible sur cet appareil';
+        hint.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Lecture caméra indisponible sur cet appareil');
         return;
       }
       try {
@@ -1312,9 +1312,9 @@ import { offerRegister } from './inventory.js?v=15';
       } catch (err) {
         const n = err && err.name;
         hint.textContent = n === 'NotAllowedError' || n === 'SecurityError'
-          ? 'Accès caméra refusé, autorisez-le dans le navigateur puis réessayez'
-          : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'Aucune caméra utilisable sur cet appareil'
-          : 'Caméra indisponible';
+          ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Accès caméra refusé, autorisez-le dans le navigateur puis réessayez')
+          : n === 'NotFoundError' || n === 'OverconstrainedError' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune caméra utilisable sur cet appareil')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Caméra indisponible');
         return;
       }
       if (stopped) { try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {} return; }
@@ -1440,7 +1440,7 @@ import { offerRegister } from './inventory.js?v=15';
      an article. Unknown → offer to register it on a product (no reprint). */
   function commitEan(raw) {
     if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) {
-      toast('Terminez la fenêtre ouverte avant de scanner');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Terminez la fenêtre ouverte avant de scanner'));
       return;
     }
     const code = normScan(raw);

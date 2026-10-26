@@ -194,7 +194,7 @@
 
     function openHandover() {
       if (isFeatureOff('passation')) {
-        toast('Passation de caisse désactivée pour cet établissement');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Passation de caisse désactivée pour cet établissement'));
         return;
       }
       handoverState.counted = 0;
@@ -228,12 +228,12 @@
 
     function confirmHandover(who) {
       const inc = handoverState.incoming;
-      if (!inc) { toast('Choisis le caissier entrant'); return; }
+      if (!inc) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Choisis le caissier entrant')); return; }
       const refusal = handoverApprovalRefusal(who);
       if (refusal) { toast(refusal); return false; }
       if ($('#ho-verify').value === '' ||
           minor(handoverState.verifyCount) !== minor(handoverState.counted)) {
-        toast('Les deux comptes doivent concorder'); return false;
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Les deux comptes doivent concorder')); return false;
       }
       const now = new Date();
       const openedAt = posteOpenedAt || shiftOpenedAt || now;

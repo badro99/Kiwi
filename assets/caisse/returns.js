@@ -81,17 +81,17 @@
 
     function recoverRefund(entry) {
       const original = refundOriginalFor(entry);
-      if (!original) { toast('Ticket original introuvable · aucune écriture envoyée'); return; }
+      if (!original) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket original introuvable · aucune écriture envoyée')); return; }
       const amountCents = Math.abs(Math.round(Number(entry.amount) * 100));
       const originalSaleId = String(original.serverSaleId || window.KiwiLive?.moneyId?.(original) || '');
       const refundServerId = String(entry.serverSaleId || window.KiwiLive?.moneyId?.(entry) || '');
       if (!amountCents || !originalSaleId || !refundServerId) {
-        toast('Synchronisation impossible · aucune écriture envoyée'); return;
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Synchronisation impossible · aucune écriture envoyée')); return;
       }
       window.KiwiAuthAct?.({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amountCents / 100) } });
       requireManager('Synchroniser le remboursement · ' + fmtMAD(amountCents / 100), () => {
         const manager = window.KiwiCaissePairing?.lastManager?.() || {};
-        if (!manager.approval) { toast('Autorisation manager non reçue'); return; }
+        if (!manager.approval) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Autorisation manager non reçue')); return; }
         entry.refundActor = {
           id: String(manager.id || '').slice(0, 96), name: String(manager.name || '').slice(0, 80),
           role: String(manager.role || '').slice(0, 80), approval: String(manager.approval).slice(0, 1400),
@@ -105,8 +105,8 @@
         try { saveProvisional(true); } catch (_) {}
         renderRefundRecovery();
         toast(queued && queued.ok !== false
-          ? 'Remboursement autorisé · synchronisation en cours'
-          : 'Remboursement conservé · synchronisation impossible');
+          ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remboursement autorisé · synchronisation en cours')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remboursement conservé · synchronisation impossible'));
       }, { kind: 'refund', refundId: refundServerId, originalSaleId, amountCents });
     }
 
@@ -216,7 +216,7 @@
     }
     function openRefund() {
       if (isFeatureOff('remboursement') || isFeatureOff('refund')) {
-        toast('Remboursements désactivés pour cet établissement');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remboursements désactivés pour cet établissement'));
         return;
       }
       refundState.search = '';
@@ -244,20 +244,20 @@
     function confirmRefund() {
       const orig = refundState.orig;
       if (!orig) { showRefundStep('pick'); return; }
-      if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
+      if (refundableLeft(orig) <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Transaction déjà remboursée')); return; }
       clampRefundAmount();
       const amount = refundState.amount;
-      if (amount <= 0) { toast('Saisis un montant'); return; }
+      if (amount <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Saisis un montant')); return; }
       const refundLocalId = 'refund-' + Date.now() + '-' + journal.length;
       const originalSaleId = String(orig.serverSaleId || window.KiwiLive?.moneyId?.(orig) || '');
       const refundServerId = String(window.KiwiLive?.moneyId?.({ id: refundLocalId }) || '');
       window.KiwiAuthAct?.({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } });
       requireManager('Remboursement', () => {
-        if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
+        if (refundableLeft(orig) <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Transaction déjà remboursée')); return; }
         /* Un autre remboursement du même ticket a pu être accepté pendant la
            validation : le montant validé dépasserait alors ce qui reste. */
         if (Math.round(amount * 100) > Math.round(refundableLeft(orig) * 100)) {
-          toast('Le ticket a changé pendant la validation · relancez le remboursement'); return;
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Le ticket a changé pendant la validation · relancez le remboursement')); return;
         }
         const manager = window.KiwiCaissePairing?.lastManager?.() || {};
         // NEGATIVE journal entry · NOT via recordSale (it rejects amount<=0).
@@ -312,7 +312,7 @@
         refreshOpenReconciliationModals();
         closeRefund();
         if (window.KiwiEnv?.isReal?.() && (!refundQueued || refundQueued.ok === false)) {
-          toast('Remboursement enregistré ici · synchronisation à reprendre');
+          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Remboursement enregistré ici · synchronisation à reprendre'));
         } else toast('Remboursement · −' + fmtMAD(amount));
       }, { kind: 'refund', refundId: refundServerId, originalSaleId, amountCents: Math.round(amount * 100) });
     }

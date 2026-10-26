@@ -764,7 +764,8 @@ handlers['menu-publish'] = () => {
         }
         if (real) return forward();
         return load().then(forward, () => {
-          window.Kiwi.toast('Module indisponible', { type: 'error', desc: 'Impossible de charger cette page. Réessayez.' });
+          const dt = (key, fr) => window.KiwiI18n?.T?.[window.KiwiI18n.getLang()]?.[key] ?? fr;
+          window.Kiwi.toast(dt("page.unavailable", "Module indisponible"), { type: 'error', desc: dt("page.retry", "Impossible de charger cette page. Réessayez.") });
         });
       }
       live = stub;

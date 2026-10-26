@@ -1082,7 +1082,7 @@
 
     function standaloneMenuItem(itemId) {
       const source = (carteState.formulaItems || []).find(m => String(m.id) === String(itemId)) || menuItems.find(m => String(m.id) === String(itemId));
-      if (source && (source.archived || source.formulaOnly || source.avail === false)) { toast('Article non vendable individuellement'); return null; }
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Article non vendable individuellement')); return null; }
       return menuItems.find(m => m.id === itemId) || null;
     }
 
@@ -1264,7 +1264,7 @@
       const item = (carteState.formulaItems || []).find(candidate => String(candidate.id) === String(parent.id))
         || menuItems.find(candidate => String(candidate.id) === String(parent.id));
       if (!item || !item.formula || !Array.isArray(item.formula.slots)) {
-        toast('Cette formule n’est plus disponible sur la carte');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cette formule n’est plus disponible sur la carte'));
         return;
       }
       const initial = {
@@ -1403,7 +1403,7 @@
       const tt = $('#rp-table-tools'); if (tt) tt.hidden = true;
 
       // Header
-      $('#rp-table').textContent = editing ? `À emporter · #${vrapEditingNum}` : 'À emporter';
+      $('#rp-table').textContent = editing ? `À emporter · #${vrapEditingNum}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('À emporter');
       const sub = $('#rp-substatus');
       sub.dataset.flag = 'ka-yaklo';
       sub.textContent = editing

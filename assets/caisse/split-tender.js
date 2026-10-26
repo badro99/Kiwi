@@ -167,7 +167,7 @@
 
       if (splitState.splitMode === 'egal') {
         $('#split-launch').disabled = false;
-        $('#split-launch').textContent = 'Lancer le split';
+        $('#split-launch').textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Lancer le split');
         $('#split-launch').title = '';
         renderPartsChips();
         renderTipChips();
@@ -186,7 +186,7 @@
       renderConviveCart();
       const allocation = splitArticleAllocation();
       $('#split-launch').disabled = !allocation.ok;
-      $('#split-launch').textContent = allocation.ok ? 'Encaisser les articles attribués' : allocation.message;
+      $('#split-launch').textContent = allocation.ok ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Encaisser les articles attribués') : allocation.message;
       $('#split-launch').title = allocation.message || '';
       lucide.createIcons();
     }
@@ -382,16 +382,16 @@
             if (entry) {
               $('#split-modal').classList.remove('is-open');
               markPaid(splitState.tableId);
-              toast('Addition offerte enregistrée · table clôturée');
+              toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition offerte enregistrée · table clôturée'));
               return;
             }
           }
         }
-        toast('Montant nul non justifié · appliquez une remise de 100 % approuvée');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Montant nul non justifié · appliquez une remise de 100 % approuvée'));
         return;
       }
       if (splitState.splitMode === 'egal' && minor(splitState.total) < splitState.numParts) {
-        toast('Trop de parts pour ce montant · chaque part doit avoir au moins 0,01 MAD');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Trop de parts pour ce montant · chaque part doit avoir au moins 0,01 MAD'));
         return;
       }
       if (splitState.splitMode !== 'egal') {
@@ -487,7 +487,7 @@
       }
 
       if (!parts.length || parts.some(part => minor(part.base) <= 0)) {
-        toast('Une part vaut 0 MAD · regroupez les articles ou ajustez la remise');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Une part vaut 0 MAD · regroupez les articles ou ajustez la remise'));
         return;
       }
       const flowSession = (splitState.tableId && phoneSessionOf(splitState.tableId)) || ('flow-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7));
@@ -574,7 +574,7 @@
         (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
         splitState.tableId || '', null, splitInfo);
       if (!entry) {
-        toast('Encaissement non enregistré · la table reste ouverte');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Encaissement non enregistré · la table reste ouverte'));
         return null;
       }
       if (entry) {

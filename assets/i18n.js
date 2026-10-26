@@ -14,6 +14,15 @@
   /* ─── TRANSLATIONS ─── */
   const T = {
     fr: {
+      "stock.noPhone": "Pas de numéro · modifiez le fournisseur",
+      "stock.editSuggested": "Édition de la commande suggérée",
+      "team.payrollAccess": "Accès réservé au gérant ou au propriétaire",
+      "inventory.registerUnavailable": "Registre indisponible",
+      "inventory.movementsUnavailable": "Mouvements de stock indisponibles",
+      "inventory.reloadRegister": "Le registre n’est pas chargé, rechargez la page.",
+      "inventory.exported": "Mouvements exportés",
+      "page.unavailable": "Module indisponible",
+      "page.retry": "Impossible de charger cette page. Réessayez.",
       "home.newSale": "Nouvelle vente",
       "quarantine.receipt": "Reçu",
       "quarantine.original": "Vente d’origine",
@@ -47,6 +56,15 @@
   "quarantine.processing": "Validation en cours, réessayez pour terminer."
 },
     en: {
+      "stock.noPhone": "No phone number · edit the supplier",
+      "stock.editSuggested": "Edit suggested order",
+      "team.payrollAccess": "Only the manager or owner can access this",
+      "inventory.registerUnavailable": "Register unavailable",
+      "inventory.movementsUnavailable": "Stock movements unavailable",
+      "inventory.reloadRegister": "The register has not loaded. Reload the page.",
+      "inventory.exported": "Movements exported",
+      "page.unavailable": "Module unavailable",
+      "page.retry": "Unable to load this page. Try again.",
       "home.newSale": "New sale",
       "quarantine.receipt": "Receipt",
       "quarantine.original": "Original sale",
@@ -788,6 +806,15 @@
     },
 
     ar: {
+      "stock.noPhone": "لا يوجد رقم هاتف · عدّل المورد",
+      "stock.editSuggested": "تعديل الطلب المقترح",
+      "team.payrollAccess": "الوصول متاح للمسؤول أو المالك فقط",
+      "inventory.registerUnavailable": "السجل غير متاح",
+      "inventory.movementsUnavailable": "حركات المخزون غير متاحة",
+      "inventory.reloadRegister": "لم يتم تحميل السجل. أعد تحميل الصفحة.",
+      "inventory.exported": "تم تصدير الحركات",
+      "page.unavailable": "الوحدة غير متاحة",
+      "page.retry": "تعذر تحميل هذه الصفحة. حاول مجددًا.",
       "home.newSale": "عملية بيع جديدة",
       "quarantine.receipt": "الإيصال",
       "quarantine.original": "البيع الأصلي",

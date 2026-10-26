@@ -664,15 +664,15 @@
        * plainly: a shop that mistyped its way into the lockout must know to
        * wait, not keep retrying a code it thinks is wrong. */
       toast(res && res.error === 'too_many_attempts'
-              ? 'Trop de tentatives. Réessayez dans quelques minutes.'
-          : res && res.error === 'expired' ? 'Code expiré, régénérez-en un.'
-          : 'Code invalide.');
+              ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Trop de tentatives. Réessayez dans quelques minutes.')
+          : res && res.error === 'expired' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code expiré, régénérez-en un.')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code invalide.'));
       buf = ''; renderDots();
       pairSubmitting = false;
     }).catch(function () {
       pairSubmitting = false;
       buf = ''; renderDots();
-      toast('Connexion impossible. Réessayez.');
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Connexion impossible. Réessayez.'));
     });
   }
   function toast(msg) {

@@ -834,8 +834,8 @@
       // Update mode-specific labels
       const cancelLabel = $('[data-cancel-label]');
       if (cancelLabel) {
-        cancelLabel.textContent = newMode === 'vrap' ? "Vider la commande"
-          : newMode === 'order' ? 'Annuler commande' : 'Annuler la table';
+        cancelLabel.textContent = newMode === 'vrap' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Vider la commande")
+          : newMode === 'order' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Annuler commande') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Annuler la table');
       }
 
       // Reset right panel · persist any À emporter edit, drop the edit state
@@ -1048,8 +1048,8 @@
       const kitchenBtnLabel = kitchenBtn.querySelector('span');
       const heldQty = tableHeldQty(id);
       if (kitchenBtnLabel) kitchenBtnLabel.textContent = (tableOrders[id] || []).some(l => l && l.orderProPending)
-        ? 'Accepter · envoyer en cuisine'
-        : tableSuiteOnly(id) ? `Envoyer la suite · ${heldQty}` : 'Envoyer en cuisine';
+        ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Accepter · envoyer en cuisine')
+        : tableSuiteOnly(id) ? `Envoyer la suite · ${heldQty}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Envoyer en cuisine');
       /* La seule porte de retour vers le menu depuis une addition ouverte. Elle
          n'existe qu'en salle, et pas sur une table déjà encaissée · on ne
          rouvre pas une note soldée, on rouvre une mesa. */
@@ -1102,8 +1102,8 @@
       const txt = $('#rp-empty-text');
       if (txt) {
         txt.textContent = mode === 'vrap'
-          ? 'Commande vide. Choisissez un article dans le menu.'
-          : "Touchez une table pour voir l'addition.";
+          ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Commande vide. Choisissez un article dans le menu.')
+          : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Touchez une table pour voir l'addition.");
       }
     }
 
@@ -1307,7 +1307,7 @@
 
     function confirmWaitlistAdd() {
       const name = ($('#wl-name').value || '').trim();
-      if (!name) { $('#wl-name').focus(); toast('Ajoute un nom'); return; }
+      if (!name) { $('#wl-name').focus(); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajoute un nom')); return; }
       waitlist.push({ id: ++wlSeq, name, size: wlDraft.size, pref: wlDraft.pref, addedAt: Date.now() });
       $('#waitlist-modal').classList.remove('is-open');
       renderWaitlist();
@@ -1498,14 +1498,14 @@
 
     function openCaisseTransferModal(tableId) {
       if (!hasTables() || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
-        toast('Déplacement de table non disponible');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Déplacement de table non disponible'));
         return;
       }
       ctrfFromId = tableId;
       ctrfSelectedToId = null;
       $('#ctrf-from-id').textContent = tableId;
       const btnText = $('#ctrf-btn-text');
-      if (btnText) btnText.textContent = 'Déplacer';
+      if (btnText) btnText.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Déplacer');
       const confirmBtn = $('#ctrf-confirm');
       if (confirmBtn) confirmBtn.disabled = true;
       renderCaisseTransferGrid();
@@ -1569,7 +1569,7 @@
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
           toast(`Déplacement impossible : ${err.message === 'source-session-required' || err.message === 'stale-table-visit'
-            ? 'visite à actualiser · synchronisez puis réessayez' : (err.message || 'erreur réseau')}`);
+            ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('visite à actualiser · synchronisez puis réessayez') : (err.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('erreur réseau'))}`);
           return;
         }
       }
@@ -1615,14 +1615,14 @@
 
     function openCaisseMergeModal(tableId) {
       if (!hasTables() || isFeatureOff('tableMerge') || isFeatureOff('table-merge')) {
-        toast('Fusion de tables non disponible');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fusion de tables non disponible'));
         return;
       }
       cmrgSourceId = tableId;
       cmrgSelectedTargetId = null;
       $('#cmrg-source-id').textContent = tableId;
       const btnText = $('#cmrg-btn-text');
-      if (btnText) btnText.textContent = 'Fusionner';
+      if (btnText) btnText.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fusionner');
       const confirmBtn = $('#cmrg-confirm');
       if (confirmBtn) confirmBtn.disabled = true;
       renderCaisseMergeGrid();
@@ -1667,7 +1667,7 @@
          is settled rather than lose the record of what was paid. */
       if ([source, target].some((id) => { const sp = liveTableSplit(id); return sp && splitPaidCount(sp) > 0; })) {
         if (confirmBtn) confirmBtn.disabled = false;
-        toast('Un split déjà encaissé est en cours : terminez-le avant de fusionner');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Un split déjà encaissé est en cours : terminez-le avant de fusionner'));
         return;
       }
 
@@ -1695,7 +1695,7 @@
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
           toast(`Fusion impossible : ${err.message === 'source-session-required' || err.message === 'stale-table-visit'
-            ? 'visite à actualiser · synchronisez puis réessayez' : (err.message || 'erreur réseau')}`);
+            ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('visite à actualiser · synchronisez puis réessayez') : (err.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('erreur réseau'))}`);
           return;
         }
       }
@@ -1803,7 +1803,7 @@
       const qtyBefore = Number(line.qty) || 1;
       const slug = currentMerchantSlug();
       if (storeIsReal() && !slug) {
-        toast('Annulation impossible · caisse non appairée, article conservé');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Annulation impossible · caisse non appairée, article conservé'));
         return;
       }
       line.voidBusy = true;
@@ -1862,7 +1862,7 @@
           toast(`${line.name} annulé en cuisine`);
           return;
         } catch (err) {
-          toast(`Article conservé · ${err.message || 'annulation non transmise'} · touchez − pour réessayer`);
+          toast(`Article conservé · ${err.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('annulation non transmise')} · touchez − pour réessayer`);
           return;
         } finally {
           line.voidBusy = false;
@@ -1966,7 +1966,7 @@
       const line = lines.find(l => !(l.note || '').trim()) || lines[lines.length - 1];
       if (line) { changeTableOrderLineQty(tableId, line.uid, -1); return; }
       if ((tableOrders[tableId] || []).some(l => l.id === itemId)) {
-        toast('Déjà en cuisine · ça s\'annule à la cuisine');
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Déjà en cuisine · ça s\'annule à la cuisine'));
       }
     }
 
@@ -2012,7 +2012,7 @@
       const sub = $('#rp-substatus');
       sub.dataset.flag = 'ka-yaklo';
       sub.textContent = order.length === 0
-        ? 'Nouvelle table, en attente de commande'
+        ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Nouvelle table, en attente de commande')
         : orderProPendingQty > 0
           ? `${orderProPendingQty} OrderPro à accepter · ${fmtMAD(total)}`
         : sentQty > 0
@@ -2082,7 +2082,7 @@
          garde, la ligne suivante lève, l'écouteur du bouton meurt sur place, et
          « Envoyer en cuisine » devient un bouton mort de plus · le symptôme même
          qu'on est en train de corriger. On sort proprement. */
-      if (!t) { backToSalle(); toast('Cette table n\'existe plus sur le plan'); return; }
+      if (!t) { backToSalle(); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cette table n\'existe plus sur le plan')); return; }
       /* Un AJOUT ou une première commande ? La question se pose AVANT l'envoi,
          parce que c'est l'envoi qui pose les drapeaux `sent`. */
       const wasAddition = tableSentCount(tableId) > 0;
