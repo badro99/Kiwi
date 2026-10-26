@@ -645,11 +645,14 @@ for (const test of [
   'order-queue-pagination-test.mjs',
   'queue-open-visit-unpaid-test.mjs',
   'planning-core-test.mjs',
+  'wave-p-merge-test.mjs',
   'planning-layout-test.mjs',
   /* Le planning sur un téléphone (390 × 844) : un jour à la fois, une ligne
      par personne, rien ne défile de côté, ajout et modification au vrai
      toucher ; et à 1280 le tableau de la semaine tel qu'il était. */
   'planning-phone-browser-test.mjs',
+  'wave-p-keyboard-browser-test.mjs',
+  'wave-p-a11y-test.mjs',
   'reservations-test.mjs',
   'reservations-business-day-test.mjs',
   'serveur-menu-live-test.mjs',
@@ -700,6 +703,7 @@ for (const test of [
   'till-gate-test.mjs',
   'staff-skin-test.mjs',
   'skin-cloak-test.mjs',
+  'wave-p-polish-test.mjs',
   'employee-timezone-test.mjs',
   'wave-n-caps-test.mjs',
   'employee-timezone-browser-test.mjs',
@@ -2029,7 +2033,7 @@ section('Whole-project regressions');
     /* Promotions de la carte : la règle (assets/menu-promos.js), le serveur
        qui l'applique dans priceOrder, puis la caisse, Serveur et l'onglet
        « Promotions » du tableau de bord, en vrais clics sur la démo. */
-    'promo-rules-properties-test.mjs',
+    'promo-rules-properties-test.mjs', 'wave-p-money-test.mjs',
     'menu-promos-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',
@@ -2175,6 +2179,7 @@ section('Whole-project regressions');
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',
+    'net-wave-p-test.mjs',
     'fetch-deadline-test.mjs',
     'invoices-split-test.mjs',
     'order-queue-split-test.mjs',
@@ -2275,6 +2280,9 @@ section('Whole-project regressions');
     'trades-ledger-retail-browser-test.mjs',
     'trades-ledger-care-browser-test.mjs',
     'restaurant-recipes-test.js',
+    'wave-p-limits-test.mjs',
+    'tickets-draft-test.mjs',
+    'recipe-refund-feed-test.mjs',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',
     'service-requests-ui-test.mjs',
@@ -2958,7 +2966,7 @@ section('Politique typographique (tools/type-policy-test.js)');
  * coverage holds §10 to §18's quoted strings; sw holds the stamp layout;
  * bidi holds the isolation of every argument (its DOM half needs Chromium). */
 section('Chaînes à clé · design 2027 (strings-*-test, strings-lint)');
-for (const test of ['dynamic-i18n-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
+for (const test of ['wave-p-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');

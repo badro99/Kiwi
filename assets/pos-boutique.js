@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=18';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=18';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=18';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=19';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=19';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=19';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -1765,14 +1765,14 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
              de la clôture exact quand un ticket est réglé moitié carte moitié
              espèces (voir bqMoneyParts). La remise suit pour le rapport Z. */
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
-          discount: Math.round(tot.remise + tot.reward),
+          discount: Math.sign((tot.remise + tot.reward)) * Math.round(Number(Math.abs((tot.remise + tot.reward)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,
           /* L'accord responsable suit la vente, pas seulement l'écran : qui a
              autorisé, quand, quel pourcentage, et ce que la remise a coûté au
              magasin. C'est la seule chose relisible le jour d'un contrôle. */
           remiseAuth: frozen.remiseAuth
-            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, amount: Math.round(tot.remise) }
+            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, amount: Math.sign((tot.remise)) * Math.round(Number(Math.abs((tot.remise)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100 }
             : null,
-          promoOff: Math.round(tot.promo),        // ce que les promotions ont coûté, pour la clôture
+          promoOff: Math.sign((tot.promo)) * Math.round(Number(Math.abs((tot.promo)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,        // ce que les promotions ont coûté, pour la clôture
           /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
              `unit` (le prix réellement payé), mais un échange ou une réclamation
              trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —

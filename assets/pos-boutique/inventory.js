@@ -1,6 +1,6 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor } from '../pos-boutique.js?v=112';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=18';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor } from '../pos-boutique.js?v=113';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=19';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=19';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════

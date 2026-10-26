@@ -11,6 +11,8 @@ if (!puppeteer || !fs.existsSync(bin)) {
   process.exit(process.env.CI ? 1 : 0);
 }
 const allowed = new Map([
+  ['/assets/live-link/sale-identity.js', new URL('../assets/live-link/sale-identity.js', import.meta.url)],
+
   ['/test', new URL('./live-link-outbox-browser-test.html', import.meta.url)],
   ['/assets/vendor/dexie.min.js', new URL('../assets/vendor/dexie.min.js', import.meta.url)],
   ['/assets/offline-db.js', new URL('../assets/offline-db.js', import.meta.url)],

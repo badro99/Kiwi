@@ -317,7 +317,9 @@ export async function onRequestGet({ request, env, waitUntil }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const merchant = await tenantFor(request, env, new URL(request.url).searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
-  const out = await health(env, merchant);
+  let out;
+  try { out = await health(env, merchant); }
+  catch (e) { if (e && e.message === 'replay-progress-corrupt') return json({ error: 'replay-progress-corrupt' }, 503); throw e; }
   let locations = [];
   if (out.connection) {
     try { locations = await listLocations(env, merchant); }

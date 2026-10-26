@@ -5,7 +5,9 @@ const {declaration}=require('./js-declarations.cjs');
 const ROOT=process.env.KIWI_ROOT||path.resolve(__dirname,'..'),texts=new Map();
 function read(file){if(!texts.has(file))texts.set(file,coreTestSource.readFileSync(path.join(ROOT,file),'utf8'));return texts.get(file);}
 function body(file,index=0){const sections=read(file).split(/^(?:\(function \(\) \{|\(\(\) => \{)/m);if(sections.length===1)throw Error('Missing wrapper '+file);const part=sections[index+1];return part.slice(0,part.lastIndexOf('})();'));}
-function load(c,file,names,index=0){const s=body(file,index);vm.runInContext(names.map(n=>declaration(s,n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c,{filename:file});}
+// Imports inlined by core-test-source add wrapped sections ahead of the file's own; take the first section that declares the requested names.
+function owner(file,names,index){const count=read(file).split(/^(?:\(function \(\) \{|\(\(\) => \{)/m).length-1;for(let i=index;i<count;i++){const s=body(file,i);if(names.every(n=>new RegExp('function\\s+'+n+'\\s*\\(|(?:const|let|var)\\s+'+n+'\\s*=').test(s)))return s;}return body(file,index);}
+function load(c,file,names,index=0){const s=owner(file,names,index);vm.runInContext(names.map(n=>declaration(s,n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c,{filename:file});}
 const formatters=new Map();function CachedFormat(locales,options){const key=JSON.stringify([locales,options]);if(!formatters.has(key))formatters.set(key,new Intl.DateTimeFormat(locales,options));return formatters.get(key);}
 CachedFormat.supportedLocalesOf=Intl.DateTimeFormat.supportedLocalesOf;
 function world(zone='UTC'){

@@ -1,0 +1,1033 @@
+{
+  "assets/agent.js": {
+    "entryPoints": 148,
+    "owners": [
+      "Kiwi",
+      "KiwiAgent",
+      "KiwiAgentAsk",
+      "KiwiAgentChunkText",
+      "KiwiAgentConvoTest",
+      "KiwiAgentEval",
+      "KiwiAgentEvalSet",
+      "KiwiAgentHome",
+      "KiwiAgentOperation",
+      "KiwiAgentProfile",
+      "KiwiAgentRedact",
+      "KiwiAgentRoute",
+      "KiwiAgentTier",
+      "KiwiAgentTools",
+      "KiwiGuardTest",
+      "__kiwiAgentOpen",
+      "nav-assistant",
+      "open-assistant",
+      "stock-scan-invoice"
+    ]
+  },
+  "assets/dateRange.js": {
+    "entryPoints": 151,
+    "owners": [
+      "KiwiDateRange"
+    ]
+  },
+  "assets/hotel.js": {
+    "entryPoints": 194,
+    "owners": [
+      "KiwiHotelRooms",
+      "__kiwiHotelRoomSearchWired",
+      "hx-account-edit",
+      "hx-account-new",
+      "hx-account-stays",
+      "hx-add-charge",
+      "hx-apply-ai",
+      "hx-bulk-back",
+      "hx-bulk-cancel",
+      "hx-bulk-confirm",
+      "hx-bulk-resume",
+      "hx-bulk-review",
+      "hx-cb-connect",
+      "hx-cb-rate-step",
+      "hx-channel-close",
+      "hx-channel-delete",
+      "hx-channel-guide",
+      "hx-channel-save",
+      "hx-channel-status",
+      "hx-channel-sync",
+      "hx-char-add",
+      "hx-char-remove",
+      "hx-checkin",
+      "hx-checkout",
+      "hx-checkout-pay",
+      "hx-commercial",
+      "hx-commercial-refresh",
+      "hx-configure-rate",
+      "hx-contract-edit",
+      "hx-contract-new",
+      "hx-daily-apply",
+      "hx-daily-refresh",
+      "hx-demo-folio",
+      "hx-direct-push",
+      "hx-dispo",
+      "hx-dispo-back",
+      "hx-dispo-next",
+      "hx-dispo-prev",
+      "hx-dispo-refresh",
+      "hx-dispo-today",
+      "hx-dossier",
+      "hx-econ-add-terminal",
+      "hx-econ-add-unit",
+      "hx-econ-refresh",
+      "hx-econ-remove-terminal",
+      "hx-econ-save",
+      "hx-econ-shift",
+      "hx-filter-modal-apply",
+      "hx-filter-modal-reset",
+      "hx-filter-remove",
+      "hx-floor-delete",
+      "hx-floor-edit",
+      "hx-floor-move",
+      "hx-floor-new",
+      "hx-floor-save",
+      "hx-floors",
+      "hx-folio",
+      "hx-folio-back",
+      "hx-group-new",
+      "hx-group-resume",
+      "hx-guest",
+      "hx-guest-direct",
+      "hx-guest-msg",
+      "hx-hk-assign",
+      "hx-hk-assign-to",
+      "hx-hk-done",
+      "hx-hk-open",
+      "hx-hs-fix",
+      "hx-monthly-closing",
+      "hx-noshow-secure",
+      "hx-outlet-edit-menu",
+      "hx-outlet-menu",
+      "hx-post-charge",
+      "hx-production",
+      "hx-rate-cell",
+      "hx-rate-save",
+      "hx-rate-step",
+      "hx-room",
+      "hx-room-add",
+      "hx-room-add-floor",
+      "hx-room-batch-save",
+      "hx-room-bulk-edit-open",
+      "hx-room-check",
+      "hx-room-delete",
+      "hx-room-delete-open",
+      "hx-room-edit",
+      "hx-room-filter-reset",
+      "hx-room-filters-open",
+      "hx-room-floor",
+      "hx-room-save",
+      "hx-room-search",
+      "hx-room-select-cancel",
+      "hx-room-select-filtered",
+      "hx-room-select-none",
+      "hx-room-select-toggle",
+      "hx-room-status",
+      "hx-room-type-delete",
+      "hx-room-type-edit",
+      "hx-room-type-new",
+      "hx-room-type-save",
+      "hx-room-types",
+      "hx-stay",
+      "hx-stay-cancel",
+      "hx-stay-cancel-close",
+      "hx-stay-cancel-confirm",
+      "hx-stay-checkin",
+      "hx-stay-checkout",
+      "hx-stay-edit",
+      "hx-stay-new",
+      "hx-stay-noshow",
+      "hx-stay-reopen",
+      "hx-stay-undo-checkin",
+      "hx-tape-next",
+      "hx-tape-prev",
+      "hx-tape-today",
+      "hx-tariff-retry",
+      "hx-taxe-export",
+      "hx-type-photo-move",
+      "hx-type-photo-pick",
+      "hx-type-photo-remove",
+      "hx-view-add",
+      "hx-view-remove",
+      "hx-views-manage-close",
+      "hx-views-manage-open",
+      "hx-walkin",
+      "hx-walkin-room",
+      "nav-canaux",
+      "nav-chambres",
+      "nav-folios",
+      "nav-hotelintel",
+      "nav-hotes",
+      "nav-menage",
+      "nav-points-vente",
+      "nav-reception",
+      "nav-sejours",
+      "nav-tarifs",
+      "onboard"
+    ]
+  },
+  "assets/interactive.js": {
+    "entryPoints": 41,
+    "owners": [
+      "Kiwi",
+      "__kiwiClickTs",
+      "__kiwiOverlayBaseline",
+      "__kiwiScrollLocks",
+      "bqx-open",
+      "clients-directory",
+      "menu-edit",
+      "nav-catalogue",
+      "nav-equipe",
+      "nav-menu",
+      "nav-transactions",
+      "open-assistant"
+    ]
+  },
+  "assets/pages-pro.js": {
+    "entryPoints": 7,
+    "owners": [
+      "kds-86",
+      "kds-bump",
+      "kds-fullscreen",
+      "kds-print-summary",
+      "kds-reassign",
+      "kds-recall",
+      "menu-add",
+      "menu-mass",
+      "menu-promote",
+      "menu-publish",
+      "menu-schedule",
+      "nav-kds",
+      "nav-menu"
+    ]
+  },
+  "assets/pos-boutique.js": {
+    "entryPoints": 113,
+    "owners": [
+      "KiwiBoutiqueDemoDay",
+      "KiwiCaisseToast",
+      "__kiwiCatalogSaveWarn"
+    ]
+  },
+  "assets/pos-maison.js": {
+    "entryPoints": 120,
+    "owners": [
+      "KiwiCaisseToast",
+      "__kiwiCatalogSaveWarn"
+    ]
+  },
+  "assets/stock.js": {
+    "entryPoints": 230,
+    "owners": [
+      "KiwiRestaurantStock",
+      "KiwiStockBriefing",
+      "KiwiStockInternal",
+      "KiwiStockOperatingDay"
+    ]
+  },
+  "assets/team.js": {
+    "entryPoints": 102,
+    "owners": [
+      "KiwiTeam",
+      "__kiwiTeamDeactivate",
+      "__kiwiTeamSearchTimer",
+      "__kiwiTeamV2",
+      "__kiwiTenantPurging",
+      "kt-filter-contract",
+      "kt-filter-dept",
+      "kt-tab"
+    ]
+  },
+  "assets/venues.js": {
+    "entryPoints": 73,
+    "owners": [
+      "KiwiMenu",
+      "KiwiRecipes",
+      "KiwiRefunds",
+      "KiwiSales",
+      "KiwiVenue",
+      "fs-ultra-api",
+      "fs-ultra-call",
+      "fs-ultra-transfer",
+      "location-switch",
+      "venue-enter-fusion",
+      "venue-exit-fusion",
+      "venue-pick",
+      "venue-scope",
+      "venue-toggle"
+    ]
+  },
+  "assets/caisse-app.js": {
+    "entryPoints": 9,
+    "owners": [
+      "KiwiAuthAct",
+      "KiwiAuthorizeTillAction",
+      "KiwiCaisseAccounting",
+      "KiwiCaisseCarte",
+      "KiwiCaisseContext",
+      "KiwiCaisseHeldSales",
+      "KiwiCaisseKitchen",
+      "KiwiCaisseStations",
+      "KiwiCaisseToast",
+      "KiwiFloorPlan",
+      "KiwiRestaurantReopen",
+      "__kiwiCaisseBootedAsDemo",
+      "__kiwiPinReset",
+      "__kiwiTillTenantHook",
+      "__kiwiUnlockApp",
+      "__lastTicket",
+      "kdsStations",
+      "requireManager"
+    ]
+  },
+  "assets/serveur-app.js": {
+    "entryPoints": 101,
+    "owners": [
+      "KiwiPairsMerchant",
+      "KiwiTeamDemoSchedule",
+      "kgRenderProfil"
+    ]
+  },
+  "assets/restaurant-menu-workspace.js": {
+    "entryPoints": 91,
+    "owners": [
+      "KiwiRestaurantMenuWorkspace",
+      "rmw-formula-duplicate"
+    ]
+  },
+  "assets/live-link.js": {
+    "entryPoints": 82,
+    "owners": [
+      "KiwiLive",
+      "KiwiLiveLink",
+      "KiwiQuarantine",
+      "KiwiSaleQueue",
+      "KiwiTillPresence",
+      "KiwiTillServiceReady"
+    ]
+  },
+  "assets/orderpro-page.js": {
+    "entryPoints": 105,
+    "owners": []
+  },
+  "assets/boutique-catalog.js": {
+    "entryPoints": 72,
+    "owners": [
+      "KiwiBoutiqueCatalog",
+      "dispatchEvent"
+    ]
+  },
+  "assets/features.js": {
+    "entryPoints": 4,
+    "owners": [
+      "KiwiFeatures",
+      "_kiwiAgentHandler",
+      "agent-mode",
+      "capital",
+      "diaspora",
+      "kiwi-compte",
+      "loyalty",
+      "ramadan-toggle",
+      "sadaqa",
+      "zakat"
+    ]
+  },
+  "assets/clients-store.js": {
+    "entryPoints": 91,
+    "owners": [
+      "KiwiCaisseToast",
+      "KiwiClientNumbers",
+      "KiwiClients"
+    ]
+  },
+  "assets/pos-pizzeria.js": {
+    "entryPoints": 71,
+    "owners": []
+  },
+  "assets/pages-pro-spa-starter.js": {
+    "entryPoints": 21,
+    "owners": [
+      "nav-clients",
+      "nav-transactions-day",
+      "spa-cli-add",
+      "spa-cli-add-confirm",
+      "spa-cli-bday",
+      "spa-cli-bday-batch",
+      "spa-cli-bday-batch-send",
+      "spa-cli-bday-send",
+      "spa-cli-block",
+      "spa-cli-block-confirm",
+      "spa-cli-book",
+      "spa-cli-filter",
+      "spa-cli-gift",
+      "spa-cli-gift-confirm",
+      "spa-cli-note",
+      "spa-cli-row",
+      "spa-cli-search",
+      "spa-cli-wa",
+      "spa-cli-wa-send"
+    ]
+  },
+  "assets/pos-epicerie.js": {
+    "entryPoints": 73,
+    "owners": []
+  },
+  "assets/caisse-pairing.js": {
+    "entryPoints": 79,
+    "owners": [
+      "KiwiCaissePairing",
+      "KiwiStaff",
+      "__kiwiCaisseBootedAsDemo",
+      "__kiwiPairedBoutiqueVenue",
+      "__kiwiPinReset",
+      "__kiwiUnlockApp"
+    ]
+  },
+  "assets/conformite.js": {
+    "entryPoints": 23,
+    "owners": [
+      "KiwiConformite",
+      "__kiwiScrollLocks"
+    ]
+  },
+  "assets/tickets.js": {
+    "entryPoints": 56,
+    "owners": [
+      "KiwiTicketsCopy"
+    ]
+  },
+  "assets/pos-pharmacie.js": {
+    "entryPoints": 66,
+    "owners": []
+  },
+  "assets/pages-pro-boutique.js": {
+    "entryPoints": 99,
+    "owners": [
+      "KiwiBoutiqueVenueKey",
+      "bqx-cat-color",
+      "bqx-cat-del",
+      "bqx-cat-del-ok",
+      "bqx-cat-new",
+      "bqx-cat-new-save",
+      "bqx-cat-rename",
+      "bqx-cat-rename-save",
+      "bqx-cfilter",
+      "bqx-export",
+      "bqx-filter",
+      "bqx-import",
+      "bqx-low",
+      "bqx-new",
+      "bqx-new-save",
+      "bqx-open",
+      "bqx-print-go",
+      "bqx-prod-del",
+      "bqx-prod-del-ok",
+      "bqx-prod-edit",
+      "bqx-prod-edit-save",
+      "bqx-prod-movements",
+      "bqx-prod-print",
+      "bqx-sel-all",
+      "bqx-sel-archive",
+      "bqx-sel-del",
+      "bqx-sel-del-ok",
+      "bqx-sel-mode",
+      "bqx-sel-move",
+      "bqx-sel-move-ok",
+      "bqx-sel-restore",
+      "bqx-sel-toggle",
+      "bqx-templates",
+      "bqx-var-add",
+      "bqx-var-add-save",
+      "bqx-var-color",
+      "bqx-var-color-save",
+      "bqx-var-dec",
+      "bqx-var-del",
+      "bqx-var-del-ok",
+      "bqx-var-gen",
+      "bqx-var-gen-all",
+      "bqx-var-inc",
+      "bqx-var-print",
+      "bqx-var-reg",
+      "bqx-var-reg-save",
+      "bqx-view",
+      "mz-clear-product",
+      "mz-export",
+      "mz-new",
+      "nav-categories",
+      "nav-inventory",
+      "nav-stock-movements"
+    ]
+  },
+  "assets/team-hours.js": {
+    "entryPoints": 52,
+    "owners": [
+      "__kiwiPlanningCoverage",
+      "__kiwiPlanningFair",
+      "__kiwiPlanningModal",
+      "__kiwiPlanningOpen",
+      "__kiwiPlanningOptimize",
+      "__kiwiPlanningRequests",
+      "__kiwiTeamQuickEntry",
+      "kt-attendance-decision",
+      "kt-export-csv",
+      "kt-import-csv",
+      "kt-import-csv-apply",
+      "kt-paytab",
+      "kt-period",
+      "kt-period-nav",
+      "kt-plan-apply",
+      "kt-plan-clear",
+      "kt-plan-coverage",
+      "kt-plan-coverage-delete",
+      "kt-plan-coverage-save",
+      "kt-plan-day",
+      "kt-plan-fair",
+      "kt-plan-fair-build",
+      "kt-plan-fair-confirm",
+      "kt-plan-hours",
+      "kt-plan-open",
+      "kt-plan-open-save",
+      "kt-plan-optimize",
+      "kt-plan-optimize-confirm",
+      "kt-plan-publish",
+      "kt-plan-request-decision",
+      "kt-plan-requests",
+      "kt-plan-template-apply",
+      "kt-plan-template-confirm",
+      "kt-plan-template-save",
+      "kt-plan-week",
+      "kt-qe-save",
+      "kt-quick-entry",
+      "kt-shift-edit",
+      "kt-unlock-period",
+      "kt-validate-period"
+    ]
+  },
+  "assets/day-report-dash.js": {
+    "entryPoints": 42,
+    "owners": [
+      "KiwiReportPage"
+    ]
+  },
+  "assets/caisse-floor.js": {
+    "entryPoints": 80,
+    "owners": []
+  },
+  "assets/pos-coiffure.js": {
+    "entryPoints": 70,
+    "owners": []
+  },
+  "assets/finance.js": {
+    "entryPoints": 29,
+    "owners": [
+      "KiwiFinance",
+      "nav-finance"
+    ]
+  },
+  "assets/pos-traiteur.js": {
+    "entryPoints": 68,
+    "owners": []
+  },
+  "assets/day-report.js": {
+    "entryPoints": 67,
+    "owners": [
+      "KiwiDayReport"
+    ]
+  },
+  "assets/dashboard-extra.js": {
+    "entryPoints": 9,
+    "owners": [
+      "add-integration",
+      "export",
+      "feed-view-all",
+      "filter-tx",
+      "help-whatsapp",
+      "integration-configure",
+      "integration-connect",
+      "margin-export",
+      "menu-edit",
+      "supplier-new-po",
+      "supplier-po-detail",
+      "team-settings",
+      "tip-prompt",
+      "view-margins",
+      "view-suppliers"
+    ]
+  },
+  "assets/design-vexel-layout.js": {
+    "entryPoints": 54,
+    "owners": []
+  },
+  "assets/invoicing.js": {
+    "entryPoints": 101,
+    "owners": [
+      "Kiwi",
+      "KiwiInvoicing",
+      "invoicing"
+    ]
+  },
+  "assets/orderpro-guest.js": {
+    "entryPoints": 59,
+    "owners": [
+      "KiwiGuest"
+    ]
+  },
+  "assets/account.js": {
+    "entryPoints": 18,
+    "owners": [
+      "KiwiICE",
+      "account-add-business",
+      "account-billing",
+      "account-change-pw",
+      "account-edit-business",
+      "account-edit-profile",
+      "account-help",
+      "account-help-mail",
+      "account-help-phone",
+      "account-hours",
+      "account-plan-cancel",
+      "account-plan-downgrade",
+      "account-profile",
+      "account-receipt"
+    ]
+  },
+  "assets/pos-hotel.js": {
+    "entryPoints": 54,
+    "owners": [
+      "KiwiHotelPosCatalog"
+    ]
+  },
+  "assets/pressing-caisse.js": {
+    "entryPoints": 147,
+    "owners": [
+      "KiwiPressing",
+      "__kiwiPinReset"
+    ]
+  },
+  "assets/pos-gym.js": {
+    "entryPoints": 91,
+    "owners": []
+  },
+  "assets/boutique-catalog-parts.js": {
+    "entryPoints": 38,
+    "owners": [
+      "__kiwiBoutiqueCatalogParts",
+      "setInterval"
+    ]
+  },
+  "assets/pos-foodtruck.js": {
+    "entryPoints": 48,
+    "owners": []
+  },
+  "assets/menu-catalog.js": {
+    "entryPoints": 83,
+    "owners": [
+      "KiwiMenuRules",
+      "KiwiMenuStore"
+    ]
+  },
+  "assets/caisse-lang.js": {
+    "entryPoints": 29,
+    "owners": [
+      "KiwiCaisseLang"
+    ]
+  },
+  "assets/floorplan-core.js": {
+    "entryPoints": 42,
+    "owners": [
+      "KiwiFloorCore"
+    ]
+  },
+  "assets/hotel-language.js": {
+    "entryPoints": 2,
+    "owners": [
+      "__kiwiHotelInternal"
+    ]
+  },
+  "assets/pos-librairie.js": {
+    "entryPoints": 73,
+    "owners": []
+  },
+  "assets/pos-fastfood.js": {
+    "entryPoints": 58,
+    "owners": []
+  },
+  "assets/pos-boulangerie.js": {
+    "entryPoints": 60,
+    "owners": []
+  },
+  "assets/pages.js": {
+    "entryPoints": 2,
+    "owners": [
+      "add-reservation",
+      "clock-out",
+      "distribute-tips",
+      "edit-shifts",
+      "edit-tip-rule",
+      "export-payroll",
+      "manual-clock",
+      "nav-accueil",
+      "nav-conformite",
+      "nav-equipe",
+      "nav-kds",
+      "nav-menu",
+      "nav-payroll",
+      "nav-reglements",
+      "nav-reservations",
+      "nav-stock",
+      "nav-tables",
+      "nav-terminaux",
+      "nav-transactions",
+      "resv-builder",
+      "resv-sms"
+    ]
+  },
+  "assets/pages-pro-office.js": {
+    "entryPoints": 14,
+    "owners": [
+      "KiwiOrdersPage",
+      "__kiwiScrollLocks",
+      "__kiwiTeam",
+      "add-iban",
+      "add-member",
+      "add-terminal",
+      "ai-pointage",
+      "all-leaves",
+      "audit-export",
+      "broadcast-team",
+      "cal-export",
+      "catalog-order",
+      "contact-sales",
+      "edit-perms",
+      "eq-regen-pin",
+      "eq-send-broadcast",
+      "eq-submit-member",
+      "export-comptable",
+      "export-csv",
+      "export-dgi",
+      "export-pdf",
+      "generate-payslips",
+      "iban-detail",
+      "kyc-replace",
+      "leave-approve",
+      "leave-deny",
+      "member-detail",
+      "member-reset-pin",
+      "nav-accueil",
+      "nav-conformite",
+      "nav-equipe",
+      "nav-payroll",
+      "nav-reglements",
+      "nav-reservations",
+      "nav-terminaux",
+      "nav-transactions",
+      "payslip-pdf",
+      "resv-buffer",
+      "resv-detail",
+      "rotate-secret",
+      "settle-now",
+      "term-add",
+      "term-manage",
+      "term-test",
+      "terminal-catalog",
+      "tx-daterange",
+      "tx-detail",
+      "tx-filter",
+      "tx-refresh",
+      "tx-show-all",
+      "upload-kyc"
+    ]
+  },
+  "assets/operations-ui.js": {
+    "entryPoints": 67,
+    "owners": [
+      "KiwiOperationsUI"
+    ]
+  },
+  "assets/pos-spa.js": {
+    "entryPoints": 66,
+    "owners": []
+  },
+  "assets/pos-fleuriste.js": {
+    "entryPoints": 83,
+    "owners": []
+  },
+  "assets/agent-voice.js": {
+    "entryPoints": 45,
+    "owners": [
+      "KiwiAiSkin",
+      "KiwiVision",
+      "KiwiVoice"
+    ]
+  },
+  "assets/receipt.js": {
+    "entryPoints": 69,
+    "owners": [
+      "KiwiReceipt"
+    ]
+  },
+  "assets/i18n.js": {
+    "entryPoints": 10,
+    "owners": [
+      "KiwiI18n",
+      "KiwiNumber"
+    ]
+  },
+  "assets/caisse-kitchen.js": {
+    "entryPoints": 108,
+    "owners": []
+  },
+  "assets/caisse-accounting.js": {
+    "entryPoints": 125,
+    "owners": [
+      "KiwiCaisseSaleClient",
+      "__kiwiCashSessionPending"
+    ]
+  },
+  "assets/clients-book.js": {
+    "entryPoints": 59,
+    "owners": [
+      "KiwiClientsBook"
+    ]
+  },
+  "assets/caisse/catalogue.js": {
+    "entryPoints": 68,
+    "owners": []
+  },
+  "assets/restaurant-menu/strings.js": {
+    "entryPoints": 0,
+    "owners": [
+      "KiwiMenuWorkspaceParts"
+    ]
+  },
+  "assets/daterange/renderers.js": {
+    "entryPoints": 100,
+    "owners": [
+      "__kiwiDateRangeParts",
+      "__kiwiFeedOrders",
+      "customize-kpi",
+      "date-range",
+      "hero-toggle-chart",
+      "hh-ai-glovo",
+      "open-date-picker",
+      "rev-compare"
+    ]
+  },
+  "assets/hotel/groups.js": {
+    "entryPoints": 1,
+    "owners": [
+      "__kiwiHotelSections"
+    ]
+  },
+  "assets/hotel/editors.js": {
+    "entryPoints": 29,
+    "owners": [
+      "__kiwiHotelSections"
+    ]
+  },
+  "assets/hotel/views.js": {
+    "entryPoints": 34,
+    "owners": [
+      "__kiwiHotelSections"
+    ]
+  },
+  "assets/pages-pro/restaurant-stations.js": {
+    "entryPoints": 0,
+    "owners": [
+      "kds-86",
+      "kds-bump",
+      "kds-fullscreen",
+      "kds-print-summary",
+      "kds-reassign",
+      "kds-recall",
+      "menu-add",
+      "menu-cat-add",
+      "menu-cat-edit",
+      "menu-opt-add",
+      "menu-promote",
+      "menu-publish",
+      "menu-schedule",
+      "menu-station-create",
+      "menu-stations-manage",
+      "nav-kds",
+      "nav-menu"
+    ]
+  },
+  "assets/pages-pro/boutique-promos-returns.js": {
+    "entryPoints": 5,
+    "owners": [
+      "credit-adjust",
+      "credit-adjust-confirm",
+      "credit-cancel",
+      "nav-promos",
+      "nav-returns",
+      "promo-archive-detail",
+      "promo-edit",
+      "promo-end",
+      "promo-pause",
+      "promo-schedule",
+      "promo-segment",
+      "ret-approve",
+      "ret-block",
+      "ret-detail",
+      "ret-exchange",
+      "ret-export",
+      "ret-policy-jump",
+      "ret-policy-save",
+      "ret-refund-credit",
+      "ret-refund-original",
+      "ret-refund-whatsapp",
+      "ret-refuse"
+    ]
+  },
+  "assets/agent/ui.js": {
+    "entryPoints": 95,
+    "owners": [
+      "__kiwiAgentParts"
+    ]
+  },
+  "assets/venues/data.js": {
+    "entryPoints": 15,
+    "owners": [
+      "__kiwiVenueParts"
+    ]
+  },
+  "assets/serveur/service.js": {
+    "entryPoints": 180,
+    "owners": [
+      "__kiwiShiftProgress",
+      "kgRenderProfil",
+      "kgSnapshot",
+      "shareShiftCard"
+    ]
+  },
+  "assets/serveur/payments.js": {
+    "entryPoints": 57,
+    "owners": []
+  },
+  "assets/serveur/service-runtime.js": {
+    "entryPoints": 101,
+    "owners": []
+  },
+  "assets/team/profile-ui.js": {
+    "entryPoints": 8,
+    "owners": [
+      "__kiwiTeamConfirmModal",
+      "__kiwiTeamModal",
+      "__kiwiTeamProfileDrawer",
+      "kt-add-member",
+      "kt-confirm-delete",
+      "kt-delete-member",
+      "kt-edit-member",
+      "kt-employee-app",
+      "kt-lang-toggle",
+      "kt-pwd-copy",
+      "kt-pwd-gen",
+      "kt-submit-member",
+      "kt-view-profile"
+    ]
+  },
+  "assets/interactive/handlers.js": {
+    "entryPoints": 5,
+    "owners": [
+      "__kiwiAgentOpen",
+      "__kiwiInteractiveParts"
+    ]
+  },
+  "assets/stock/catalog.js": {
+    "entryPoints": 32,
+    "owners": []
+  },
+  "assets/stock/intake.js": {
+    "entryPoints": 61,
+    "owners": []
+  },
+  "assets/stock/strings.js": {
+    "entryPoints": 0,
+    "owners": [
+      "KiwiStockStrings"
+    ]
+  },
+  "assets/pages/tables-operations.js": {
+    "entryPoints": 69,
+    "owners": [
+      "onload"
+    ]
+  },
+  "assets/pages/tables-data.js": {
+    "entryPoints": 0,
+    "owners": [
+      "__kiwiPagesTables"
+    ]
+  },
+  "assets/pages/tables-drawing.js": {
+    "entryPoints": 60,
+    "owners": []
+  },
+  "assets/pages/tables.js": {
+    "entryPoints": 149,
+    "owners": [
+      "nav-tables"
+    ]
+  },
+  "assets/pos-maison/sales.js": {
+    "entryPoints": 88,
+    "owners": [
+      "onload",
+      "requireManager"
+    ]
+  },
+  "assets/pos-maison/inventory.js": {
+    "entryPoints": 77,
+    "owners": []
+  },
+  "assets/pos-maison/checkout.js": {
+    "entryPoints": 47,
+    "owners": [
+      "onload"
+    ]
+  },
+  "assets/pos-boutique/sales.js": {
+    "entryPoints": 54,
+    "owners": [
+      "requireManager"
+    ]
+  },
+  "assets/pos-boutique/inventory.js": {
+    "entryPoints": 62,
+    "owners": []
+  },
+  "assets/pos-boutique/checkout.js": {
+    "entryPoints": 42,
+    "owners": []
+  },
+  "functions/_middleware.js": {
+    "entryPoints": 23,
+    "owners": []
+  },
+  "functions/auth/_lib.js": {
+    "entryPoints": 93,
+    "owners": []
+  },
+  "functions/api/store.js": {
+    "entryPoints": 29,
+    "owners": []
+  },
+  "functions/api/sale.js": {
+    "entryPoints": 11,
+    "owners": []
+  },
+  "functions/api/operations.js": {
+    "entryPoints": 66,
+    "owners": []
+  },
+  "functions/api/clients.js": {
+    "entryPoints": 33,
+    "owners": []
+  }
+}

@@ -28,6 +28,17 @@ async function visit(table='1',m=merchant){return ok(await request(seat,{table,m
 const submit=(session,ref='phone-ref-0001',extra={})=>request(order,{table:'1',session,ref,lines:[{id:'dish',qty:1}],...extra});
 const qty=fc.integer({min:1,max:5});
 try{
+await strict('missing idempotency column refuses initial writes and replays',fc.asyncProperty(fc.constantFrom('public','floor'),async(surface)=>{
+ await reset();
+ sql.exec('ALTER TABLE orders RENAME COLUMN client_ref TO unavailable_client_ref');
+ try {
+  const send=()=>surface==='public'
+   ? request(order,{mode:'takeout',ref:'missing-column-replay',lines:[{id:'dish',qty:1}]})
+   : request(queue,{create:true,mode:'takeout',ref:'missing-column-replay',lines:[{id:'dish',qty:1}]},true);
+  for(let i=0;i<2;i++){const r=await send();assert.equal(r.status,503);assert.equal(r.body.error,'idempotency-unavailable');}
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM orders').get().n,0);
+ } finally { sql.exec('ALTER TABLE orders RENAME COLUMN unavailable_client_ref TO client_ref'); }
+}));
 await strict('sequential and concurrent retries create one durable order',fc.asyncProperty(qty,fc.boolean(),async(q,concurrent)=>{await reset();const s=await visit(),send=()=>submit(s,'same-client-reference',{lines:[{id:'dish',qty:q}]});const rs=concurrent?await Promise.all([send(),send()]):[await send(),await send()];rs.forEach(ok);assert.equal(rs[0].body.id,rs[1].body.id);assert.equal(sql.prepare('SELECT COUNT(*) n FROM orders').get().n,1);assert.equal(sql.prepare('SELECT session_id FROM orders').get().session_id,s);}));
 await strict('visit cannot order at another table, mode, merchant or closed visit',fc.asyncProperty(fc.constantFrom('table','mode','merchant','closed'),async(kind)=>{await reset();const s=await visit();const extra=kind==='table'?{table:'2'}:kind==='mode'?{mode:'takeout'}:kind==='merchant'?{merchant:other}:{};if(kind==='closed')ok(await request(queue,{closeSession:s,closedBy:'caisse'},true));assert.equal((await submit(s,'ownership-ref',extra)).status,409);assert.equal(sql.prepare('SELECT COUNT(*) n FROM orders').get().n,0);}));
 await strict('settlement revokes phone and reseating creates a fresh visit',fc.asyncProperty(qty,async(q)=>{await reset();const s=await visit();const o=ok(await submit(s,'settlement-ref',{lines:[{id:'dish',qty:q}]}));ok(await request(queue,{id:o.id,status:'accepted'},true));ok(await request(queue,{closeSession:s,closedBy:'settle'},true));assert.equal((await submit(s,'after-settle-ref')).status,409);assert.notEqual(await visit(),s);assert.equal(ok(await request(sessionGet,{session:s},false,true)).status,'closed');}));

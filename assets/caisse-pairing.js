@@ -27,6 +27,9 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  /* Tells the head's paired-till gate that the lock owner is here: from now on only
+     the staff lock (bootVertical) may release it, never a timer. */
+  try { document.documentElement.setAttribute('data-pairing-loaded', ''); } catch (_) {}
 
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
   var OFFLINE_PIN_KEY = 'kiwi:caisse:offline-pins:v1:';
@@ -59,9 +62,11 @@
     try {
       var rows = JSON.parse(ls(offlinePinKey(merchant)) || '[]');
       var at = Date.now();
-      return Array.isArray(rows) ? rows.filter(function (row) {
-        return row && (row.digest || row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at;
+      var kept = Array.isArray(rows) ? rows.filter(function (row) {
+        return row && (row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at;
       }) : [];
+      if (JSON.stringify(kept) !== JSON.stringify(rows)) set(offlinePinKey(merchant), JSON.stringify(kept));
+      return kept;
     } catch (_) { return []; }
   }
   function bytesHex(bytes) {
@@ -77,9 +82,6 @@
   function pinDigest(merchant, salt, code, iterations) {
     if (!hasSubtle()) return Promise.resolve('');
     var subtle = window.crypto.subtle;
-    if (!iterations) {
-      return subtle.digest('SHA-256', new TextEncoder().encode(String(merchant) + ':' + salt + ':' + code)).then(bytesHex);
-    }
     var bytes = new Uint8Array(salt.match(/../g).map(function (h) { return parseInt(h, 16); }));
     return subtle.importKey('raw', new TextEncoder().encode(String(merchant) + ':' + code),
       'PBKDF2', false, ['deriveBits']).then(function (key) {
@@ -125,20 +127,17 @@
     var rows = offlinePinRows(merchant);
     /* One derivation per (salt, rounds) pair, not per row. */
     var derived = {};
-    function derive(row, v2) {
-      var k = (v2 ? row.it : 0) + ':' + row.salt;
-      if (!derived[k]) derived[k] = pinDigest(merchant, row.salt, code, v2 ? row.it : 0);
+    function derive(row) {
+      var k = row.it + ':' + row.salt;
+      if (!derived[k]) derived[k] = pinDigest(merchant, row.salt, code, row.it);
       return derived[k];
     }
     return Promise.all(rows.map(function (row) {
-      var v2 = row.v === 2;
-      if (v2 && (row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
-          row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt))) return null;
-      return derive(row, v2).then(function (digest) {
-        if (!sameDigest(digest, v2 ? row.hash : row.digest)) return null;
+      if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
+          row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
+      return derive(row).then(function (digest) {
+        if (!sameDigest(digest, row.hash)) return null;
         var who = Object.assign({}, row.staff, { provenAt: Number(row.expiresAt || 0) - OFFLINE_PIN_TTL });
-        /* An old SHA-256 row is rewritten in the background: the unlock does not wait. */
-        if (!v2) rememberOfflinePin(merchant, code, row.staff, row.expiresAt);
         return who;
       }).catch(function () { return null; });
     })).then(function (matches) { return matches.find(Boolean) || null; });
@@ -230,6 +229,8 @@
   }
 
   function bootVertical(v) {
+    var gate = document.getElementById('till-boot-gate');
+    if (gate) gate.remove();
     hidePad();
     hideNativePin();
     var lockScr = document.getElementById('cp-pin-screen');
@@ -851,8 +852,8 @@
       var current = activeVenue();
       if (!current || current.merchant !== venue.merchant) return;
       coverage.showCoverage(document.getElementById('cp-pin-screen'),
-        offlinePinRows(venue.merchant).map(function (row) { return row.staff && row.staff.name || ''; }).filter(Boolean),
-        function (text) { return (window.KiwiCaisseLang || {tr:function (s) {return s;}}).tr(text); });
+        (hasSubtle() ? offlinePinRows(venue.merchant) : []).map(function (row) { return row.staff && row.staff.name || ''; }).filter(Boolean),
+        function (text) { return (window.KiwiCaisseLang || {tr:function (s) {return s;}}).tr(text); }, hasSubtle());
     }).catch(function () {});
     try { document.documentElement.setAttribute('data-till-paired', ''); } catch (_) {}
     /* Design 2027 (kiwiSkin2027:till): the same door on the kit's pad, through
@@ -1221,6 +1222,7 @@
     lastVerifyState: function () { return { status: lastVerify.status, wait: lastVerify.wait, offline: !!lastVerify.offline }; },
   };
 
+  if (pairedVenue()) offlinePinRows(pairedVenue().merchant); // Purge obsolete verifiers before any unlock.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

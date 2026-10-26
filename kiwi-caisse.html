@@ -23,6 +23,19 @@
         else document.documentElement.removeAttribute('data-caisse-theme');
       }
       apply(stored === 'dark' ? 'dark' : 'light');
+      /* A paired till on the 2027 skin paints its lock first (owner, 2026-10-23): until the lock
+         or the pairing screen is up, the page waits unseen, 8 s at most. Other pages stay visible. */
+      try {
+        var lockWait = localStorage.getItem('kiwiPaired') === '1' && (document.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:till') === '1');
+        if (lockWait) {
+          var waitStyle = document.createElement('style'); waitStyle.id = 'till-lock-wait'; waitStyle.textContent = 'body{visibility:hidden}'; document.head.appendChild(waitStyle);
+          var t0 = Date.now(), up = function (id) { var e = document.getElementById(id); return e && getComputedStyle(e).display !== 'none'; };
+          (function wait() {
+            if (up('cp-pin-screen') || up('cp-screen') || Date.now() - t0 > 8000) { var x = document.getElementById('till-lock-wait'); if (x) x.remove(); return; }
+            requestAnimationFrame(wait);
+          })();
+        }
+      } catch (e) {}
       window.KiwiCaisseTheme = {
         current: function () {
           return document.documentElement.getAttribute('data-caisse-theme') === 'dark' ? 'dark' : 'light';
@@ -81,7 +94,8 @@
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
        the salle view, so it has to be resolved by then. -->
-  <script src="assets/floorplan-core.js?v=2055"></script>
+  <script src="assets/field-merge.js?v=1"></script>
+  <script src="assets/floorplan-core.js?v=2056"></script>
 
   <!-- Material Symbols Outlined, generated from assets/icons/material/ by
        tools/build-material-icons.mjs. Renders data-icon (Material names) and the
@@ -101,7 +115,7 @@
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=15" defer></script>
   <script src="assets/printer/transports.js?v=2" defer></script>
-  <script src="assets/printer-bridge.js?v=31" defer></script>
+  <script src="assets/printer-bridge.js?v=32" defer></script>
   <script src="assets/caisse-hardware.js?v=7" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -114,7 +128,7 @@
   <!-- Garment workflow snapshot and garment product art, shared with the
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
-  <script src="assets/pressing-ops.js?v=13" defer></script>
+  <script src="assets/pressing-ops.js?v=14" defer></script>
   <script src="assets/pressing-catalog.js?v=10" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
@@ -152,11 +166,22 @@
       document.documentElement.setAttribute('data-skin-2027', 'till');
       /* A paired till never shows the demo pad (#pin-screen): its door is the 2027 lock. */
       try { if (localStorage.getItem('kiwiPaired') === '1') document.documentElement.setAttribute('data-till-paired', ''); } catch (_) {}
-      /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,
-         two frames after DOMContentLoaded (every kit script is deferred, so it has run by then), at most 8 s. */
-      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{visibility:hidden;opacity:0}'; d.head.appendChild(s);
+      if (document.documentElement.hasAttribute('data-till-paired')) {
+        var gateStyle = document.createElement('style'); gateStyle.id = 'till-boot-gate';
+        gateStyle.textContent = 'body > :not(#cp-pin-screen):not(#cp-screen){display:none !important}';
+        document.head.appendChild(gateStyle);
+        /* Fail-closed: once the pairing script has loaded, only the staff lock releases this gate.
+           Only if that script never loaded at all (and no lock or pairing screen exists) is the till shown after 8 s. */
+        setTimeout(function () {
+          var de = document.documentElement;
+          if (de.hasAttribute('data-pairing-loaded') || document.getElementById('cp-pin-screen') || document.getElementById('cp-screen')) return;
+          var g = document.getElementById('till-boot-gate'); if (g) g.remove();
+        }, 8000);
+      }
+      /* Optional skin ground paint. The paired till gate above remains until staff entry. */
+      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{background:var(--paper,#F7F5F0)}'; d.head.appendChild(s);
         var go = function () { var c = d.getElementById('k-cloak'); if (c) c.remove(); };
-        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 8000); })(document);
+        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 500); })(document);
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
@@ -204,13 +229,13 @@
   <script src="assets/retail-scan.js?v=12" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=68" defer></script>
+  <script src="assets/caisse-lang.js?v=69" defer></script>
   <script src="assets/menu-i18n.js?v=6" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=172" defer></script>
+  <script src="assets/pos-dispatch.js?v=174" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -311,7 +336,7 @@
   <script src="assets/pwa-update.js?v=368" defer></script>
   <script src="assets/caisse-pwa.js?v=631" defer></script>
   <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-  <script type="module" src="assets/live-link.js?v=79" defer></script>
+  <script type="module" src="assets/live-link.js?v=81" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <script src="assets/retail-sale-hold.js?v=6" defer></script>
   <script src="assets/repeat-sale-guard.js?v=3" defer></script>
@@ -327,7 +352,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=41" defer></script>
+  <script src="assets/caisse-pairing.js?v=45" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -342,7 +367,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=32" defer></script>
+  <script src="assets/day-report.js?v=33" defer></script>
   <script src="assets/z-reconciliation.js?v=25" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->

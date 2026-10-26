@@ -49,8 +49,9 @@
   var DICT = {
     en: {
       "Accès hors ligne sur cet appareil": "Offline access on this device",
+      "Accès hors ligne indisponible sur ce navigateur. Une connexion est nécessaire pour déverrouiller.": "Offline access is unavailable in this browser. A connection is required to unlock.",
       "Aucun employé vérifié": "No verified staff",
-      "Validité maximale : 7 jours. Les autres employés doivent se connecter.": "Valid for up to 7 days. Other staff need a connection.",
+      "Validité maximale : 7 jours. Les autres employés doivent déverrouiller une fois avec une connexion.": "Valid for up to 7 days. Other staff must unlock once with a connection.",
 
       // Explicit merchant-facing till messages.
       "Article non vendable individuellement": "Item cannot be sold individually",
@@ -697,8 +698,9 @@
 
     ar: {
       "Accès hors ligne sur cet appareil": "الدخول دون اتصال على هذا الجهاز",
+      "Accès hors ligne indisponible sur ce navigateur. Une connexion est nécessaire pour déverrouiller.": "الدخول دون اتصال غير متاح في هذا المتصفح. يلزم الاتصال لفتح القفل.",
       "Aucun employé vérifié": "لا يوجد موظفون تم التحقق منهم",
-      "Validité maximale : 7 jours. Les autres employés doivent se connecter.": "صالحة لمدة 7 أيام كحد أقصى. يحتاج الموظفون الآخرون إلى الاتصال.",
+      "Validité maximale : 7 jours. Les autres employés doivent déverrouiller une fois avec une connexion.": "صالحة لمدة 7 أيام كحد أقصى. يجب على الموظفين الآخرين فتح القفل مرة واحدة مع الاتصال.",
 
       // Explicit merchant-facing till messages.
       "Article non vendable individuellement": "لا يمكن بيع الصنف منفردًا",

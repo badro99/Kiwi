@@ -82,11 +82,11 @@
   }
 
   function sanitizeOrder(o, customer, total) {
-    var pieces = (o.pieces || []).slice(0, 120).map(function (p) {
+    var pieces = (o.pieces || []).map(function (p) {
       return {
         id: text(p.pid, 40), label: text(p.label, 100), itemId: text(p.itemId, 40), variantId: text(p.variantId, 40),
         status: ['recu', 'trait', 'pret', 'livre'].indexOf(p.status) >= 0 ? p.status : 'recu',
-        services: (p.svcs || p.services || []).slice(0, 8).map(function (s) { return text(s, 24); }),
+        services: (p.svcs || p.services || []).map(function (s) { return text(s, 24); }),
         photos: number(p.photos),
         notes: number(p.photos) > 0 || !!(p.freeNote && text(p.freeNote, 300)) || !!(p.notes && p.notes.length)
       };

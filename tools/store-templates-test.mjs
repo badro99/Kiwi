@@ -147,7 +147,7 @@ ok(/onApplied: \(\) => _renderInventory\(\)/.test(proSrc),
   'la page se redessine une fois les articles créés');
 ok(/KiwiStoreTemplates\.offer\(S\.typeId/.test(onbSrc),
   'l’assistant d’installation le propose avec le métier choisi');
-ok(/then: function \(\) \{ setTimeout\(pair, 500\); \}/.test(onbSrc) && /if \(!offered\) pair\(\);/.test(onbSrc),
+ok(/then: pair/.test(onbSrc) && /if \(!offered\) pair\(\);/.test(onbSrc),
   'appairage de la caisse et modèles s’ENCHAÎNENT — deux fenêtres ne s’empilent pas');
 
 /* ── 7. LA CHARTE ────────────────────────────────────────────────────────── */

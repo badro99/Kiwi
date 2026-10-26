@@ -1,3 +1,4 @@
+import { enrichRecipeRefunds } from './_recipe-refunds.js';
 import { hmacKey } from '../auth/_crypto.js';
 // GET /api/feed?merchant=<id>&since=<cursor> — real sales after a cursor.
 //
@@ -432,6 +433,8 @@ export async function onRequestGet({ request, env }) {
     } catch (_) { r.lines = null; }
     return r;
   });
+
+  await enrichRecipeRefunds(env, merchant, rows, legacy);
 
   // The receipt cursor remains one sale. Tender detail lives on that row and
   // can be absent on old deployments/receipts without hiding the money feed.

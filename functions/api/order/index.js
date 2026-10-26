@@ -191,7 +191,7 @@ export async function onRequestPost(context) {
         return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
                       lines: (() => { try { const v = JSON.parse(dup.lines); return Array.isArray(v) ? v : []; } catch (_) { return []; } })(), replayed: true });
       }
-    } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
+    } catch (_) { return json({ error: 'idempotency-unavailable' }, 503); }
   }
 
   /* Une file que personne ne pourrait écouler est une attaque, pas un coup de
@@ -325,8 +325,9 @@ export async function onRequestPost(context) {
           return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
                         lines: (() => { try { const v = JSON.parse(raced.lines); return Array.isArray(v) ? v : []; } catch (_) { return []; } })(), replayed: true });
         }
-      } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
+      } catch (_) { return json({ error: 'idempotency-unavailable' }, 503); }
     }
+    if (clientRef) return json({ error: 'idempotency-unavailable' }, 503);
     /* A table order must never degrade to the legacy insert because that
      * insert drops session_id and would recreate the revocation bypass. */
     if (mode === 'table') return json({ error: 'session-storage-unavailable' }, 503);

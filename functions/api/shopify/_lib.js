@@ -422,7 +422,7 @@ export function stockSnapshot(catalog) {
 export async function enqueueStockChanges(env, merchant, before, after, sourceRev, forceAll) {
   if (!env.DB) return 0;
   let connection;
-  try { connection = await connectionFor(env, merchant); } catch (_) { return 0; }
+  connection = await connectionFor(env, merchant);
   if (!connection || connection.status !== 'active' || !connection.location_id) return 0;
   const prior = stockSnapshot(before), next = stockSnapshot(after);
   const ids = [...next.keys()].filter((id) => forceAll || prior.get(id) !== next.get(id));
@@ -434,7 +434,7 @@ export async function enqueueStockChanges(env, merchant, before, after, sourceRe
         WHERE merchant = ? AND location_id = ? AND status = 'active'`
     ).bind(merchant, connection.location_id).all();
     links = (rs.results || []).map((r) => String(r.kiwi_variant_id));
-  } catch (_) { return 0; }
+  } catch (_) { throw new Error('shopify-mappings-unavailable'); }
   const allowed = new Set(links);
   const now = Date.now();
   const statements = ids.filter((id) => allowed.has(id)).map((id) => env.DB.prepare(

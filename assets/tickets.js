@@ -12,6 +12,8 @@
      servent qu'aux pluriels arabes ; les autres langues retombent sur .other. */
   const COPY = {
     fr: {
+      'draft.failed': 'Brouillon non sauvegardé sur cet appareil. Gardez cette page ouverte.',
+      'draft.policy': 'Brouillon local : texte et 6 images maximum, 10 Mo chacune, conservés sur cet appareil jusqu’à l’envoi.',
       'doc.title': 'Kiwi Tickets',
       'brand.home': 'Accueil Kiwi Tickets',
       'brand.product': 'tickets',
@@ -134,6 +136,8 @@
       'toast.classified': '{number} classé',
     },
     en: {
+      'draft.failed': 'Draft not saved on this device. Keep this page open.',
+      'draft.policy': 'Local draft: text and up to 6 images, 10 MB each, kept on this device until sent.',
       'doc.title': 'Kiwi Tickets',
       'brand.home': 'Kiwi Tickets home',
       'brand.product': 'tickets',
@@ -256,6 +260,8 @@
       'toast.classified': '{number} classified',
     },
     ar: {
+      'draft.failed': 'لم يتم حفظ المسودة على هذا الجهاز. أبقِ هذه الصفحة مفتوحة.',
+      'draft.policy': 'مسودة محلية: النص وحتى 6 صور، 10 ميغابايت لكل صورة، محفوظة على هذا الجهاز حتى الإرسال.',
       'doc.title': 'Kiwi · التذاكر',
       'brand.home': 'الصفحة الرئيسية لتذاكر Kiwi',
       'brand.product': 'التذاكر',
@@ -852,6 +858,8 @@
         moneyAtRisk: Boolean(ticket.moneyAtRisk),
       })) : [];
       if (taxonomyChanged) configureComposerClassification();
+      if (data.draftScope) await draft.restore(data.draftScope);
+      if (seq !== loadTickets.seq) return;
       state.loading = false;
       render();
     } catch (error) {
@@ -869,8 +877,15 @@
     }
   }
 
-  function openComposer() {
-    $('formError').textContent = '';
+  const draftController = import('./tickets-draft.mjs').then(({composerDraft}) => composerDraft({
+    $, state, composer, syncComposerSubkinds, renderSelectedImages, resetComposer, t,
+  })).catch(() => ({ store: null, saveDraft() { $('formError').textContent = t('draft.failed'); }, restoreDraft() { $('formError').textContent = t('draft.failed'); } }));
+  /* The draft logic lives in tickets-draft.mjs; these are its two entry points here. */
+  const draft = { save: () => draftController.then((c) => c.saveDraft()), restore: (scope) => draftController.then((c) => c.restoreDraft(scope)) };
+
+  async function openComposer() {
+    if (state.loading) return;
+    $('formError').textContent = t((await draftController).available ? 'draft.policy' : 'draft.failed');
     composer.showModal();
     window.setTimeout(() => $('ticketBody').focus(), 80);
   }
@@ -891,8 +906,8 @@
 
   function closeComposer() {
     if (state.saving) return;
+    draft.save();
     composer.close();
-    resetComposer();
   }
 
   function openFollowup(ticket) {
@@ -968,6 +983,7 @@
     $('formError').textContent = error;
     fileInput.value = '';
     renderSelectedImages();
+    draft.save();
   }
 
   function renderFollowupImages() {
@@ -1031,6 +1047,7 @@
       return;
     }
     state.saving = true;
+    const sendingDraft = (await draftController).store;
     const button = $('publishTicket');
     const oldLabel = button.textContent;
     button.disabled = true;
@@ -1052,10 +1069,12 @@
       state.publishAttempt = { fingerprint, key: newIdempotencyKey() };
     }
     data.append('idempotency_key', state.publishAttempt.key);
+    await draft.save();
     try {
       const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(API, { method: 'POST', body: data }, 60000);
       const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
+      if (sendingDraft) await sendingDraft.clear();
       composer.close();
       resetComposer();
       state.publishAttempt = null;
@@ -1290,6 +1309,9 @@
   $('closeComposer').addEventListener('click', closeComposer);
   $('cancelComposer').addEventListener('click', closeComposer);
   form.addEventListener('submit', publish);
+  form.addEventListener('input', draft.save);
+  form.addEventListener('change', draft.save);
+  composer.addEventListener('cancel', draft.save);
   $('ticketKind').addEventListener('change', () => syncComposerSubkinds(''));
   fileInput.addEventListener('change', () => addFiles(fileInput.files));
   $('selectedImages').addEventListener('click', (event) => {
@@ -1297,6 +1319,7 @@
     if (!button) return;
     state.files.splice(Number(button.dataset.removeFile), 1);
     renderSelectedImages();
+    draft.save();
   });
   $('closeFollowup').addEventListener('click', closeFollowup);
   $('cancelFollowup').addEventListener('click', closeFollowup);

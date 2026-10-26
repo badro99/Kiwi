@@ -121,8 +121,8 @@ if (!sanitizeMenuFn) {
       ...Array.from({ length: 25 }, (_, j) => ({ id: 'it_' + j, name: 'Article ' + j, price: 1 }))]
   });
   const bloatedItem = bloatedRes.items && bloatedRes.items[0];
-  ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots.length === 10, 'slots capped at 10');
-  ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots[0].choices.length === 20, 'choices per slot capped at 20');
+  ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots.length === 15, 'all 15 imported slots preserved');
+  ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots[0].choices.length === 25, 'all 25 imported choices preserved');
   ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots[0].choices[0].extra <= 100000, 'extra clamped to max 1e5');
   ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots[0].label.length <= 60, 'slot label clamped to <= 60 chars');
   ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots[0].min <= bloatedItem.formula.slots[0].max, 'min > max normalized');

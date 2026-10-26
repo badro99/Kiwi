@@ -38,7 +38,7 @@ check('operator access remains present', html.includes('id="operators"'));
 check('responsive cockpit uses phone bottom navigation', css.includes('@media(max-width:720px)') && css.includes('inset:auto 0 0'));
 check('user-visible business copy hides raw SQL', !html.includes("hint.textContent = 'Les colonnes ville"));
 check('CRM preserves honest metric wording', html.includes('Signal portefeuille, jamais un revenu Kiwi'));
-check('dossier tools are separated into focused tabs', html.includes('data-dossier-panel="configuration"') && workspace.includes("onboarding:'Mise en route'"));
+check('dossier tools are separated into focused tabs', html.includes('data-dossier-panel="configuration"') && workspace.includes("onboarding:L('Mise en route')"));
 check('notes are append-only server requests', workspace.includes("request('/notes'") && workspace.includes('crypto.randomUUID()'));
 check('forms are protected from automatic polling', workspace.includes("state.route!=='merchant'") && workspace.includes("dialog[open]"));
 check('freshness is explicit', html.includes('id="op-freshness"') && workspace.includes('données anciennes'));

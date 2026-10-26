@@ -92,7 +92,7 @@ if (first) {
     'assistant : ?setup relance le parcours et ?choose conserve le lanceur manuel');
   assert(/state\.role !== 'equipe' && state\.account !== 'connected'/.test(nativeShell),
     'assistant : caisse, cuisine et dashboard exigent la session marchande; Équipe garde son code employé');
-  assert(nativeShell.includes("fetch('/api/pair/create'") && nativeShell.includes("fetch('/api/pair/redeem'") && nativeShell.includes('window.KiwiPairingCommit.commit') && nativeShell.includes('terminalId:device'),
+  assert(nativeShell.includes("nativeRequest('/api/pair/create'") && nativeShell.includes("nativeRequest('/api/pair/redeem'") && nativeShell.includes('window.KiwiPairingCommit.commit') && nativeShell.includes('terminalId:device'),
     'assistant : la session crée une liaison pour son magasin, la consomme, puis utilise le commit locataire partagé avec identité terminal');
   assert(shell.includes('id="store-list"') && !shell.includes('id="pair-code"') && nativeShell.includes('Array.isArray(me && me.stores)'),
     'assistant : choisit un établissement autorisé de /api/me au lieu de demander un code supprimé du dashboard');

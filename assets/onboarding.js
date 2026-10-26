@@ -430,7 +430,7 @@
       <div class="kob-foot">${def.foot}</div>`;
     paintDraftNote();
     const first = root.querySelector('.kob-body input[type="text"], .kob-body input:not([type])');
-    if (first && !first.value && (S.step === 1 || S.step === 2)) setTimeout(() => { try { first.focus(); } catch (_) {} }, 340);
+    if (first && !first.value && (S.step === 1 || S.step === 2)) first.focus({ preventScroll: true });
   }
 
   /* ── Read inputs of the current step into state ──────────────────────── */
@@ -540,7 +540,6 @@
     celebrate(vid);
   }
 
-  let autoEnter = null;
   function celebrate() {
     const name = S.ownerName.trim();
     root.querySelector('.kob-card').innerHTML = `
@@ -551,12 +550,11 @@
         <p class="kob-sub" style="margin:0 auto;text-align:center;">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
       </div></div>
       <div class="kob-foot"><button class="kob-btn primary" data-enter>${tr({ fr: 'Entrer dans mon espace →', en: 'Enter my space →', ar: 'ادخل مساحتي ←' })}</button></div>`;
-    autoEnter = setTimeout(enterApp, 2800);
+    root.querySelector('[data-enter]').focus({ preventScroll: true });
   }
 
   /* ── Dismiss the wizard + reveal the dashboard underneath ────────────── */
   function enterApp() {
-    if (autoEnter) { clearTimeout(autoEnter); autoEnter = null; }
     const name = S.ownerName.trim();
     close();
     /* The identity gate answered "not onboarded" when this page loaded. Tell the
@@ -582,12 +580,20 @@
         desc: tr({ fr: 'Votre espace est prêt, enregistrez votre première vente.', en: 'Your space is ready, record your first sale.', ar: 'مساحتك جاهزة، سجّل أول بيع.' }),
       });
     } catch (_) {}
+    const destination = document.querySelector('.app main h1, .app main, .app');
+    if (destination) { destination.setAttribute('tabindex', '-1'); destination.focus({ preventScroll: true }); }
     /* Brand-new business: surface the "Connectez votre caisse" panel so the owner
-     * pairs their till immediately (once the entry choreography has settled). */
+     * pairs their till after the dashboard is revealed. */
     try {
-      setTimeout(function () {
+      (function () {
         const pair = function () {
-          try { if (window.KiwiCaisseLink && KiwiCaisseLink.promptNewMerchant) KiwiCaisseLink.promptNewMerchant(); } catch (_) {}
+          const template = document.querySelector('[data-kst-go]')?.closest('.kiwi-backdrop');
+          const ready = function () { try { window.KiwiCaisseLink?.promptNewMerchant?.(); } catch (_) {} };
+          if (!template) { ready(); return; }
+          const observer = new MutationObserver(() => {
+            if (!template.isConnected) { observer.disconnect(); ready(); }
+          });
+          observer.observe(document.body, { childList: true });
         };
         /* Avant l'appairage, pour les métiers qui en ont, les MODÈLES DE RAYONS :
            un magasin qui démarre a un catalogue vide, et le remplir article par
@@ -597,10 +603,10 @@
         let offered = false;
         try {
           offered = !!(window.KiwiStoreTemplates && KiwiStoreTemplates.offer
-            && KiwiStoreTemplates.offer(S.typeId, { then: function () { setTimeout(pair, 500); } }));
+            && KiwiStoreTemplates.offer(S.typeId, { then: pair }));
         } catch (_) { offered = false; }
         if (!offered) pair();
-      }, 1300);
+      })();
     } catch (_) {}
   }
 
@@ -756,9 +762,7 @@
   function close() {
     if (!root) return;
     opened = false;
-    root.classList.add('kob-out');
-    const dead = root;
-    setTimeout(() => { if (dead && dead.parentNode) dead.remove(); if (root === dead) root = null; }, 480);
+    root.remove(); root = null;
   }
 
   function isComplete() { return LS.get('kiwiOnboarded') === '1'; }

@@ -299,9 +299,9 @@
     const ingredients = food.map((l) => {
       const y = isNum(l.yieldPct) && +l.yieldPct > 0 && +l.yieldPct <= 100 ? +l.yieldPct / 100 : 1;
       const unit = l.useUnit || l.packUnit || '';
-      return { stockId: '', name: String(l.name).trim(), qty: isNum(l.useQty) ? Math.round(+l.useQty / y * 1000) / 1000 : 0, unit: (U && U.normalize ? U.normalize(unit, '') : unit) || '' };
+      return { stockId: '', name: String(l.name).trim(), qty: isNum(l.useQty) ? +l.useQty / y : 0, unit: (U && U.normalize ? U.normalize(unit, '') : unit) || '' };
     });
-    return { seed: { itemName: d.menuItemName || d.name || '', portions: isNum(d.portions) && +d.portions >= 1 ? Math.round(+d.portions) : 1, prepMinutes: 0, ingredients, steps: [], note: d.note || '' }, packaging: lines.filter((l) => l && l.type === 'packaging').length };
+    return { seed: { itemName: d.menuItemName || d.name || '', portions: isNum(d.portions) && +d.portions > 0 ? +d.portions : 1, prepMinutes: 0, ingredients, steps: [], note: d.note || '' }, packaging: lines.filter((l) => l && l.type === 'packaging').length };
   }
   const recipeBridge = () => { try { const w = window.KiwiRestaurantMenuWorkspace; return w && typeof w.recipeFromSheet === 'function' ? w : null; } catch (_) { return null; } };
   function toRecipe() {

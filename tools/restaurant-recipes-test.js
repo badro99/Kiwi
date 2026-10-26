@@ -58,4 +58,19 @@ assert.equal(JSON.stringify(docs.recipes.items.legacy), legacyBefore,
 R.save('legacy', legacy, 'restaurant-1');
 assert.equal(docs.recipes.items.legacy.ingredients[0].stockId, 'tomato',
   'le prochain enregistrement ajoute l’identifiant stable à la recette');
+context.window.KiwiSales.list = () => [
+ { id: 'a', ts: now, lines: [{itemId: 'dish-1', qty: 10}] },
+ { id: 'b', ts: now, lines: [{itemId: 'dish-2', qty: 10}] },
+ { id: 'void', ts: now, voided: true, lines: [{itemId: 'dish-1', qty: 50}] },
+ { id: 'void-ts', ts: now, void_ts: now, lines: [{itemId: 'dish-1', qty: 50}] },
+ { id: 'r1', ts: now, kind: 'refund', lines: [{itemId: 'dish-1', qty: 4}] },
+];
+context.window.KiwiRefunds = {list: () => [
+ {id: 'r1', ts: now, kind: 'refund', lines: [{itemId: 'dish-1', qty: 4}]},
+ {id: 'r2', ts: now, kind: 'refund', lines: [{itemId: 'dish-2', qty: -2}]},
+]};
+assert.equal(R.theoreticalUsage('tomato', 'restaurant-1', 7), 14, 'voids excluded, positive/negative refunds reversed exactly once');
+const reversed = R.metrics({id:'dish-1', price:100}, R.get('dish-1'), 'restaurant-1');
+assert.equal(reversed.sold, 6);
+assert.equal(reversed.actualCost, 21.43, 'menu analysis allocates physical cost using net quantities');
 console.log('✓ restaurant recipes (stock quantities, shared-ingredient allocation, costs and margins)');

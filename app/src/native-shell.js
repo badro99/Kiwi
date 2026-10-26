@@ -7,6 +7,8 @@
 (function () {
   'use strict';
 
+  function nativeRequest(url, options) { return import('/assets/request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; }).then(function (m) { return m.deadlineFetch(url, options); }); }
+
   var ROLES = { caisse: 'kiwi-caisse.html', equipe: 'kiwi-serveur.html', cuisine: 'kiwi-cuisine.html', dashboard: 'dashboard.html' };
   var ROLE_KEY = 'kiwiAppRole';
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
@@ -243,7 +245,7 @@
     if (acctNext) { acctNext.hidden = true; acctNext.classList.remove('cta'); acctNext.classList.add('secondary'); }
   }
   function refreshAccount() {
-    return fetch('/api/me', { headers: { Accept: 'application/json' }, cache: 'no-store' }).then(function (r) {
+    return nativeRequest('/api/me', { headers: { Accept: 'application/json' }, cache: 'no-store' }).then(function (r) {
       if (!r.ok) { showLogin(); return null; }
       return r.json().then(function (me) { if (me && me.authenticated !== false) showAccount(me); else showLogin(); return me; });
     }).catch(function () { showUnknown(); return null; });
@@ -277,7 +279,7 @@
       loginBtn.disabled = false;
       loginBtn.textContent = loginIdle;
     }
-    fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({email:email,password:password}) })
+    nativeRequest('/auth/login', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({email:email,password:password}) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) {
         if (r.ok && body && body.ok) { login.password.value = ''; clearLoginErrors(); clearRevocationFence(); restoreBtn(); return refreshAccount(); }
         var isCreds = !!(body && body.error === 'bad-creds');
@@ -291,7 +293,7 @@
         setLoginError(ERRORS.network, false);
       });
   });
-  $('#logout').addEventListener('click', function () { var done = function () { clearLoginErrors(); showLogin(); }; fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(done, done); });
+  $('#logout').addEventListener('click', function () { var done = function () { clearLoginErrors(); showLogin(); }; nativeRequest('/auth/logout', { credentials:'include', redirect:'manual' }).then(done, done); });
 
   var ORDER = ['account', 'role', 'connect', 'printer', 'ready'];
   function showStep(name) {
@@ -397,9 +399,9 @@
     var store = state.selectedStore, button = this, status = $('#pair-status');
     if (!store) { setStatus(status, tr('chooseStore'), 'bad'); return; }
     var device = terminalId(); button.disabled = true; button.textContent = tr('pairing'); setStatus(status, '', '');
-    fetch('/api/pair/create', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({merchant:store.merchant,name:store.name,type:store.type}) })
+    nativeRequest('/api/pair/create', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({merchant:store.merchant,name:store.name,type:store.type}) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) { if (!r.ok || !body || !body.ok || !body.code) throw new Error(r.status === 429 ? 'pairRate' : 'pairUnavailable'); return body.code; }); })
-      .then(function (code) { return fetch('/api/pair/redeem', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({code:code,terminalId:device}) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) { if (!r.ok || !body || !body.ok) throw new Error(r.status === 429 ? 'pairRate' : 'pairUnavailable'); return { code:code, body:body }; }); }); })
+      .then(function (code) { return nativeRequest('/api/pair/redeem', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({code:code,terminalId:device}) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) { if (!r.ok || !body || !body.ok) throw new Error(r.status === 429 ? 'pairRate' : 'pairUnavailable'); return { code:code, body:body }; }); }); })
       .then(function (pairing) {
         var commit = window.KiwiPairingCommit && window.KiwiPairingCommit.commit;
         if (!commit) throw new Error('pairUnavailable');

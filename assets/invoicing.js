@@ -126,7 +126,7 @@
       converted: 'Brouillon de facture créé depuis le devis', duplicated: 'Copie créée en brouillon', deleted: 'Brouillon supprimé', sentMarked: 'Marquée envoyée', quoteUpdated: 'Devis mis à jour',
       exported: 'Export CSV téléchargé', noteSaved: 'Note enregistrée', printBlocked: 'Autorisez les fenêtres contextuelles pour imprimer.', noContact: 'Ajoutez un e-mail ou un téléphone au client.',
       validation: 'Ajoutez un client et au moins une ligne valide.', errGeneric: 'Action impossible pour le moment. Rien n’a été enregistré.',
-      errOffline: 'Hors ligne : rien n’a été enregistré. Réessayez avec une connexion.', errLocked: 'Ce document est émis : il ne peut plus être modifié.',
+      errLoad: 'Factures indisponibles. Vérifiez la connexion puis rouvrez le registre.', errOffline: 'Hors ligne : rien n’a été enregistré. Réessayez avec une connexion.', errLocked: 'Ce document est émis : il ne peut plus être modifié.',
       errExempt: 'Indiquez la mention d’exonération avant d’émettre.', errExceeds: 'Le montant dépasse le reste à payer.', errCredit: 'L’avoir dépasse le montant restant à créditer sur la facture.',
       errAuth: 'Session expirée ou accès réservé au propriétaire du compte.', errIce: 'ICE invalide : corrigez-le avant d’enregistrer.', errNotIssued: 'Cette facture n’est pas encore émise.', errNotFound: 'Document introuvable.',
       errCustomer: 'Indiquez le nom du client.', errLines: 'Ajoutez au moins une ligne avec une quantité.',
@@ -200,7 +200,7 @@
       converted: 'Draft invoice created from the quote', duplicated: 'Copy created as a draft', deleted: 'Draft deleted', sentMarked: 'Marked as sent', quoteUpdated: 'Quote updated',
       exported: 'CSV export downloaded', noteSaved: 'Note saved', printBlocked: 'Allow pop-ups to print.', noContact: 'Add an email or phone for this customer.',
       validation: 'Add a customer and at least one valid line.', errGeneric: 'Not possible right now. Nothing was saved.',
-      errOffline: 'Offline: nothing was saved. Try again with a connection.', errLocked: 'This document is issued: it can no longer be modified.',
+      errLoad: 'Invoices unavailable. Check your connection and reopen the register.', errOffline: 'Offline: nothing was saved. Try again with a connection.', errLocked: 'This document is issued: it can no longer be modified.',
       errExempt: 'State the exemption mention before issuing.', errExceeds: 'The amount exceeds the balance due.', errCredit: 'The credit note exceeds the amount still creditable on the invoice.',
       errAuth: 'Session expired, or access reserved to the account owner.', errIce: 'Invalid ICE: fix it before saving.', errNotIssued: 'This invoice is not issued yet.', errNotFound: 'Document not found.',
       errCustomer: 'Enter the customer name.', errLines: 'Add at least one line with a quantity.',
@@ -274,7 +274,7 @@
       converted: 'تم إنشاء مسودة فاتورة من عرض السعر', duplicated: 'تم إنشاء نسخة كمسودة', deleted: 'تم حذف المسودة', sentMarked: 'حددت كمرسلة', quoteUpdated: 'تم تحديث عرض السعر',
       exported: 'تم تنزيل ملف CSV', noteSaved: 'تم حفظ الملاحظة', printBlocked: 'اسمح بالنوافذ المنبثقة للطباعة.', noContact: 'أضف بريداً أو هاتفاً للعميل.',
       validation: 'أضف عميلاً وبنداً صالحاً واحداً على الأقل.', errGeneric: 'تعذر تنفيذ العملية حالياً. لم يُحفظ شيء.',
-      errOffline: 'دون اتصال: لم يُحفظ شيء. أعد المحاولة عند توفر الاتصال.', errLocked: 'هذا المستند صادر: لا يمكن تعديله.',
+      errLoad: 'الفواتير غير متاحة. تحقق من الاتصال ثم أعد فتح السجل.', errOffline: 'دون اتصال: لم يُحفظ شيء. أعد المحاولة عند توفر الاتصال.', errLocked: 'هذا المستند صادر: لا يمكن تعديله.',
       errExempt: 'اذكر بيان الإعفاء قبل الإصدار.', errExceeds: 'المبلغ يتجاوز المتبقي للأداء.', errCredit: 'يتجاوز الإشعار الدائن المبلغ المتبقي قابلاً للتصحيح في الفاتورة.',
       errAuth: 'انتهت الجلسة أو أن الدخول محجوز لمالك الحساب.', errIce: 'ICE غير صحيح: صححه قبل الحفظ.', errNotIssued: 'هذه الفاتورة لم تصدر بعد.', errNotFound: 'المستند غير موجود.',
       errCustomer: 'أدخل اسم العميل.', errLines: 'أضف بنداً واحداً على الأقل بكمية.',
@@ -318,7 +318,7 @@
   const parseJ = (v, d) => { if (typeof v === 'string') { try { return JSON.parse(v); } catch (_) { return d; } } return v == null ? d : v; };
 
   function venueId() {
-    try { return String(window.KiwiVenue?.getVenue?.() || 'demo').replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'demo'; } catch (_) { return 'demo'; }
+    try { return String(window.KiwiVenue?.getVenue?.() || 'demo').slice(0, 64) || 'demo'; } catch (_) { return 'demo'; }
   }
   function ownData() {
     try { return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
@@ -329,7 +329,7 @@
   function businessName() {
     try { return window.KiwiMe?.business || window.KiwiVenue?.getCurrentVenueData?.()?.name || localStorage.getItem('kiwiBizName') || 'Kiwi Commerce'; } catch (_) { return 'Kiwi Commerce'; }
   }
-  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  const lsGet = (k) => { try { const value = localStorage.getItem(k); if (value !== null) return value; const id = venueId(), legacy = id.replace(/[^a-z0-9_-]/gi, '').slice(0, 32); const previous = localStorage.getItem(k.replace(':' + id, ':' + legacy)); return id === legacy || !ownData() ? previous : null; } catch (_) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
   const lsDel = (k) => { try { localStorage.removeItem(k); } catch (_) {} };
 
@@ -649,9 +649,10 @@
   function syncServerInvoices() {
     const m = merchantSlug();
     if (!m || typeof fetch !== 'function') return;
-    fetch('/api/invoice?merchant=' + encodeURIComponent(m), { credentials: 'same-origin' })
-      .then(r => r.ok ? r.json() : null)
+    import('./request-deadline.mjs').catch(() => ({ deadlineFetch: (u, o) => fetch(u, o) })).then(net => net.deadlineFetch('/api/invoice?merchant=' + encodeURIComponent(m), { credentials: 'same-origin' }))
+      .then(r => { if (!r.ok) throw new Error('invoice-load-failed'); return r.json(); })
       .then(data => {
+        if (!data || !Array.isArray(data.invoices)) throw new Error('invoice-load-invalid');
         if (data && Array.isArray(data.invoices)) {
           if (merchantSlug() !== m) return;   // le commerce a changé pendant la réponse
           /* Le cache des factures est rangé sous la clé de CE commerce
@@ -673,7 +674,7 @@
           if (overlay && tab === 'sales' && currentView === 'list') paintRegister();
         }
       })
-      .catch(() => {});
+      .catch(() => { if (merchantSlug() === m) toast(T().errLoad); });
   }
 
   /* ── vendeur (identité légale) ─────────────────────────────────────────── */

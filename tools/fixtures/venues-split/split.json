@@ -1,6 +1,6 @@
 {
   "file": "assets/venues.js",
-  "sha256": "70874d412dd7823393b0f25a637a13a8a0b07a9401cd945165514b29e3735d4d",
+  "sha256": "417b3979ad9838c013636420838cc4d7589aa454616af964e27bf7be887077ce",
   "parts": [
     "assets/venues/data.js",
     "assets/venues/helpers.js"
@@ -89,8 +89,8 @@
         "REAL_VENUES",
         "STAFF"
       ],
-      "start": 278896,
-      "end": 326360,
+      "start": 279251,
+      "end": 326715,
       "bridge": "\n  /* <<split:bridge:recipes>> */\n  const { INVENTORY, SUPPLIERS, PLACEHOLDER_COSTS, RECIPES, RECIPES_SESSION, STAFF_DISH_RESPONSIBILITY, recFindInventoryItem, recResolveIngredient, recPortionCost, recFindMenuItem, recGetRecipe, recSetRecipe, recListRecipes, recRecipeStats, recTheoreticalConsumption, recActualConsumption, recComputeVariance, recVarianceByRecipe, recVarianceByCategory, recVariancePerStaffMember } = window.__kiwiVenueParts.recipes.call(this, { EQ_MONTH_WEEKS, MENU, REAL_VENUES, STAFF });\n  /* <</split:bridge:recipes>> */"
     },
     {
@@ -176,8 +176,8 @@
         "refundsList",
         "salesList"
       ],
-      "start": 274335,
-      "end": 275346,
+      "start": 274690,
+      "end": 275701,
       "bridge": "\n  /* <<split:bridge:totals>> */\n  const { salesTotals } = window.__kiwiVenueParts.totals.call(this, { refundsList, salesList });\n  /* <</split:bridge:totals>> */"
     },
     {
@@ -247,8 +247,8 @@
         "salesSubs",
         "salesWrite"
       ],
-      "start": 273199,
-      "end": 274335,
+      "start": 273554,
+      "end": 274690,
       "bridge": "\n  /* <<split:bridge:reconcile>> */\n  const { salesReconcile } = window.__kiwiVenueParts.reconcile.call(this, { refundSubs, refundsList, refundsWrite, salesEntry, salesList, salesSubs, salesWrite });\n  /* <</split:bridge:reconcile>> */"
     },
     {

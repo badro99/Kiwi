@@ -23,7 +23,7 @@ function booking() {
 }
 await test('booking#0 obsolete slot config cannot replace newest service',async()=>{
   const {c,net}=booking(); const a=c.loadSlots(), b=c.loadSlots();
-  net.reply(1,{services:[{id:'service',price:20}],slots:[2]});await b;
+  await net.at(1);net.reply(1,{services:[{id:'service',price:20}],slots:[2]});await b;
   net.reply(0,{services:[{id:'service',price:10}],slots:[1]});await a;
   assert.equal(c.state.service.price,20);assert.equal(c.state.config.services[0].price,20);
 });
@@ -31,7 +31,7 @@ await test('booking#1 obsolete hotel success and failure cannot replace newer se
   for(const reject of [false,true]) {
     const {c,net}=booking();c.state.checkIn='2026-10-27';const a=c.loadHotelRooms();
     c.state.checkIn='2026-10-28';c.state.partySize=4;const b=c.loadHotelRooms();
-    net.reply(1,{hotel:{categories:[{id:'new'}]}});await b;
+    await net.at(1);net.reply(1,{hotel:{categories:[{id:'new'}]}});await b;
     if(reject)net.pending[0].reject(new Error('offline'));else net.reply(0,{hotel:{categories:[{id:'old'}]}});
     await a;assert.equal(c.state.hotelRooms[0].id,'new');assert.ok(!c.state.error);
   }
@@ -40,7 +40,7 @@ await test('tickets#0 newest board read survives older success or failure',async
   for(const reject of [false,true]) {
     const src=read('assets/tickets.js'), net=requests();let renders=0;
     const c=vm.createContext({...net,API:'/api/tickets',state:{filters:{}},renderLoading:()=>{},render:()=>renders++,configureComposerClassification:()=>{},lists:{}});
-    vm.runInContext(src.slice(src.indexOf('  async function loadTickets'),src.indexOf('  function openComposer')),c);
+    vm.runInContext(src.slice(src.indexOf('  async function loadTickets'),src.indexOf('  const draftController')),c);
     const a=c.loadTickets({quiet:true}), b=c.loadTickets();
     (await net.at(1)).resolve({ok:true,json:async()=>({taxonomy:{version:2,kinds:[],areas:[]},tickets:[{id:'new'}]})});await b;
     if(reject)(await net.at(0)).reject(new Error('offline'));else (await net.at(0)).resolve({ok:true,json:async()=>({taxonomy:{version:1,kinds:[],areas:[]},tickets:[{id:'old'}]})});

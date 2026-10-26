@@ -548,7 +548,7 @@
     if (liveCreditsLoading) return;
     if (!slug || liveCreditsLoadedSlug === slug) return;
     liveCreditsLoading = true;
-    fetch('/api/store-credits?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
+    import('../request-deadline.mjs').catch(() => ({ deadlineFetch: (u, o) => fetch(u, o) })).then(m => m.deadlineFetch('/api/store-credits?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } }))
       .then((response) => { if (!response?.ok) throw new Error('credits-http'); return response.json(); })
       .then((data) => {
         if (currentSlug() !== slug) return;
@@ -560,7 +560,7 @@
         liveCreditsLoadedSlug = slug;
         liveCreditsChanged = first || JSON.stringify(liveCredits) !== before;
         liveCreditsShown = true;
-      }).catch(() => {}).finally(() => {
+      }).catch(() => { if (currentSlug() === slug) toast(_rL('Avoirs indisponibles. Réessayez dans quelques instants.', 'Credits unavailable. Try again shortly.', 'الأرصدة غير متاحة. أعد المحاولة بعد قليل.')); }).finally(() => {
         liveCreditsLoading = false;
         clearTimeout(liveCreditsTimer);
         liveCreditsTimer = setTimeout(() => {
@@ -573,7 +573,7 @@
   }
   async function mutateLiveCredit(payload) {
     const slug = window.KiwiCloudDoc?.currentSlug?.() || window.KiwiVenue?.getCurrentVenueData?.()?.slug || '';
-    const response = await fetch('/api/store-credits', {
+    const response = await (await import('../request-deadline.mjs').catch(() => ({ deadlineFetch: (u, o) => fetch(u, o) }))).deadlineFetch('/api/store-credits', {
       method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ ...payload, merchant: slug }),
     });
@@ -616,7 +616,10 @@
   };
   handlers['credit-cancel'] = async (el) => {
     const code = el.dataset.code || '';
-    if (!window.confirm(_rL(`Annuler définitivement l’avoir ${code} ? Cette action sera journalisée.`, `Cancel store credit ${code} permanently? This action will be logged.`, `إلغاء رصيد المتجر ${code} نهائيًا؟ سيتم تسجيل هذا الإجراء.`))) return;
+    const credit = liveCredits.find(item => item.code === code);
+    if (!credit) return;
+    const { confirmCreditCancellation } = await import('../credit-cancel-dialog.js');
+    if (!await confirmCreditCancellation({ modal, credit, code, esc, fmtMAD, translate: _rL })) return;
     el.disabled = true;
     try {
       await mutateLiveCredit({ action: 'cancel', id: `credit-cancel-${Date.now().toString(36)}`, code, reason: 'Annulation depuis le registre propriétaire' });

@@ -395,7 +395,7 @@
     var first = low.find(function (item) { return String(item.supplier || '').trim(); });
     var action = null;
     if (first) {
-      var qty = Math.max(1, Math.ceil((Number(first.par) > Number(first.balance) ? Number(first.par) : Number(first.threshold)) - Number(first.balance)));
+      var qty = Number(((Number(first.par) > Number(first.balance) ? Number(first.par) : Number(first.threshold)) - Number(first.balance)).toPrecision(15));
       action = { name: 'create-po', args: { supplierName: String(first.supplier), lines: [{ itemId: String(first.id), name: String(first.name || first.id), qty: qty, unit: String(first.unit || '') }], note: 'Proposition du point du matin · stock sous seuil' } };
     }
     return {

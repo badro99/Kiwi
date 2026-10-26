@@ -37,6 +37,8 @@ function moduleClosure(file) {
   }
 }
 entries.forEach(({base}) => moduleClosure('assets/' + base + '.js'));
+// Live Link is a module in every shell: its imports must be precached at the stamp it imports.
+moduleClosure('assets/live-link.js');
 
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);
 /* « Le fichier est là » ne veut pas dire « l'URL répond ». Pages sert une page

@@ -42,7 +42,7 @@ check('workspace renders route-level read failures as unavailable, not zero', wo
 check('workspace renders per-source failure action', workspaceSource.includes('Causes à vérifier') && workspaceSource.includes('failure.action'));
 const noticeFunction = workspaceSource.match(/  function notice\(\)\s*\{[\s\S]*?\n  \}/)?.[0];
 assert.ok(noticeFunction, 'production notice renderer is extractable');
-const renderNotice = new Function('state', 'sources', 'available', 'esc', `${noticeFunction}; return notice();`);
+const renderNotice = new Function('state', 'sources', 'available', 'esc', `const L = value => value; ${noticeFunction}; return notice();`);
 const partialState = { live:true, data:{sources:{
   errors:{available:false,failure:{action:'Verify schema'}},
   print:{available:false},

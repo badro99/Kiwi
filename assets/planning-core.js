@@ -120,6 +120,7 @@
   }
 
   function latestById(a, b) {
+    if (globalThis.KiwiFieldMerge) return globalThis.KiwiFieldMerge.merge({ items:a || [] }, { items:b || [] }).items || [];
     const map = new Map();
     [...(a || []), ...(b || [])].forEach((item) => {
       if (!item || !item.id) return;
@@ -134,6 +135,7 @@
   function merge(mine, theirs, members) {
     mine = normalize(mine, members);
     theirs = normalize(theirs, members);
+    if (globalThis.KiwiFieldMerge) return normalize(globalThis.KiwiFieldMerge.merge(mine, theirs), members);
     const out = normalize(theirs, members);
     out.publishingEnabled = mine.publishingEnabled || theirs.publishingEnabled;
     out.availability = Object.assign({}, theirs.availability, mine.availability);
@@ -631,7 +633,7 @@
       const notice = { id:`schedule-${key}-${clean.publications[key].revision}-${memberId}`, memberId, type:"schedule-published", periodKey:key, revision:clean.publications[key].revision, createdAt:clean.publications[key].publishedAt, readAt:"" };
       clean.notices = latestById(clean.notices, [notice]).slice(-200);
     });
-    return { ok: true, planning: clean, issues: [] };
+    return { ok: true, planning: globalThis.KiwiFieldMerge ? globalThis.KiwiFieldMerge.stamp(clean, normalize(planning, members), now) : clean, issues: [] };
   }
 
   function employeeSchedule(teamDoc, memberId) {

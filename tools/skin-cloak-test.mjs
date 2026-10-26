@@ -6,14 +6,12 @@ import coreTestSource from './core-test-source.cjs';
  *
  *   node tools/skin-cloak-test.mjs
  *
- * Every page whose <head> turns the 2027 skin on also hides <body> until the
- * kit has drawn, and gives it back on its own if anything goes wrong:
+ * Every page whose <head> turns the 2027 skin on keeps a visible base while the
+ * kit loads. Temporary ground paint is bounded; content is never hidden:
  *   · the cloak sits inside the switched-on branch, after data-skin-2027 is
  *     set (a page with the flag off is never hidden);
- *   · it hides with visibility AND opacity (a shipped layer that forces
- *     visibility:visible, as the dashboard hero does, cannot show through);
- *   · it is removed two frames after DOMContentLoaded, and by a timeout of at
- *     most 8 s, so a script that throws never leaves a blank page;
+ *   · it paints paper without hiding or disabling any content;
+ *   · it is removed two frames after DOMContentLoaded or within 500 ms;
  *   · the dashboard's venue code follows only kiwiDashTheme, as its <head>
  *     does, so a Mac in dark mode does not paint it black for a second;
  *   · the 2027 till paints the clock-in screen's ground under it while it
@@ -42,12 +40,11 @@ for (const f of pages) {
   const cut = script.search(LOADER);
   const local = script.slice(cut);
   check(/if \(!on\) return/.test(script.slice(0, cut)), `${f}: the cloak is in the branch that turns the skin on`);
-  check(/id = 'k-cloak'/.test(local) && /body\{visibility:hidden;opacity:0\}/.test(local),
-    `${f}: <body> is hidden by visibility and opacity until the kit has drawn`);
-  check(/DOMContentLoaded[\s\S]{0,120}requestAnimationFrame\(function \(\) \{ requestAnimationFrame\(go\)/.test(local),
-    `${f}: the cloak lifts two frames after DOMContentLoaded`);
+  check(/id = 'k-cloak'/.test(local) && !/visibility:hidden|opacity:0/.test(local),
+    `${f}: the base product remains visible during skin loading`);
+  check(/body\{background:var\(--paper,#F7F5F0\)\}/.test(local), `${f}: a brand base surface is available`);
   const t = local.match(/setTimeout\(go, (\d+)\)/);
-  check(t && Number(t[1]) <= 8000, `${f}: and on its own after ${t ? t[1] : '?'} ms at most, whatever happens`);
+  check(t && Number(t[1]) <= 500, `${f}: enhancement style expires within 500 ms`);
 }
 
 const venues = read('assets/venues.js');

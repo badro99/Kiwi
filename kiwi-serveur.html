@@ -99,9 +99,9 @@
       document.documentElement.setAttribute('data-skin-2027', 'team');
       /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,
          two frames after DOMContentLoaded (every kit script is deferred, so it has run by then), at most 8 s. */
-      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{visibility:hidden;opacity:0}'; d.head.appendChild(s);
+      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{background:var(--paper,#F7F5F0)}'; d.head.appendChild(s);
         var go = function () { var c = d.getElementById('k-cloak'); if (c) c.remove(); };
-        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 8000); })(document);
+        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 500); })(document);
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
@@ -933,7 +933,7 @@
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=17" defer></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-<script type="module" src="assets/live-link.js?v=79" defer></script>
+<script type="module" src="assets/live-link.js?v=81" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=282" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -942,7 +942,7 @@
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=368" defer></script>
   <script src="assets/employee-live.js?v=618" defer></script>
-  <script src="assets/employee-planning.js?v=18" defer></script>
+  <script src="assets/employee-planning.js?v=20" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=6" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est

@@ -31,7 +31,8 @@ async function readTicketRows(env) {
 }
 
 export async function onRequestGet({ request, env }) {
-  if (!(await ticketActor(request, env))) return forbidden();
+  const actor = await ticketActor(request, env);
+  if (!actor) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     await purgeExpired(env);
@@ -96,6 +97,7 @@ export async function onRequestGet({ request, env }) {
     })).sort((a, b) => Number(b.moneyAtRisk) - Number(a.moneyAtRisk) || b.id - a.id);
     return json({
       tickets,
+      draftScope: { tenant: 'kiwi-operations', operator: actor },
       taxonomy: TICKET_TAXONOMY,
       classificationSchemaReady: ticketRows.classificationSchemaReady !== false,
       retentionDays: 20,

@@ -3,8 +3,7 @@
  * After the server proves a code, the till keeps PBKDF2-SHA-256 (1M rounds,
  * one 16-byte salt per till) over merchant:code, never the code. Proven here
  * on the real file: v2 rows, no plain hash, a wrong code neither unlocks nor
- * migrates, a v1 SHA-256 row still unlocks and is rewritten as v2 without its
- * expiry being renewed, one derivation per unlock however many staff are
+ * migrates, a v1 SHA-256 row is removed on boot without an unlock, one derivation per unlock however many staff are
  * cached, the online unlock never waits on the derivation, and enumerating a
  * copied cache costs minutes on this machine. Codes are generated, never real. */
 import assert from 'node:assert/strict';
@@ -53,14 +52,17 @@ context.window = context;
 const until = async (fn, what) => { for (let i = 0; i < 200; i++) { if (fn()) return; await new Promise((r) => setTimeout(r, 25)); } assert.fail('timed out: ' + what); };
 context.window.KiwiEnv = { demosAllowed: false };
 context.window.KiwiRoles = { opensTill: role => /manager|owner|caiss/i.test(String(role)) };
+const bootKey = 'kiwi:caisse:offline-pins:v1:offline-fixture';
+storage.set(bootKey, JSON.stringify([{digest: 'a'.repeat(64), expiresAt: Date.now() + 60000, staff: {id:'old-unused'}}]));
 vm.runInNewContext(source, context, { filename: 'assets/caisse-pairing.js' });
+assert.deepEqual(JSON.parse(storage.get(bootKey)), [], 'boot purges unused legacy verifiers before any code is entered');
 
 const code = String(randomInt(10000)).padStart(4, '0');
 const wrong = String((Number(code) + 1) % 10000).padStart(4, '0');
 const api = context.KiwiCaissePairing;
 const key = 'kiwi:caisse:offline-pins:v1:offline-fixture';
 await api.authorizeTill(code);
-await until(() => storage.has(key), 'first verifier written');
+await until(() => JSON.parse(storage.get(key) || '[]').length === 1, 'first verifier written');
 let row = JSON.parse(storage.get(key))[0];
 assert.equal(row.v, 2, 'new entries must use v2');
 assert.equal(row.kdf, 'pbkdf2-sha256');
@@ -100,16 +102,12 @@ const digest = Buffer.from(await webcrypto.subtle.digest('SHA-256', new TextEnco
 const legacy = JSON.stringify([{ salt: legacySalt, digest, staff: row.staff, expiresAt: row.expiresAt }]);
 storage.set(key, legacy);
 assert.equal(await api.offlineRow(wrong), null);
-assert.equal(storage.get(key), legacy, 'wrong code never migrates');
-assert.ok(await api.offlineRow(code));
-await until(() => JSON.parse(storage.get(key))[0].v === 2, 'offline migration');
-let migrated = JSON.parse(storage.get(key))[0];
-assert.equal(migrated.v, 2);
-assert.equal(migrated.expiresAt, row.expiresAt, 'offline migration cannot renew server proof');
+assert.deepEqual(JSON.parse(storage.get(key)), [], 'unused legacy rows are deleted without a successful unlock');
+assert.equal(await api.offlineRow(code), null, 'legacy proof can never unlock offline');
 storage.set(key, legacy);
 online = true;
 await api.authorizeTill(code);
-await until(() => JSON.parse(storage.get(key))[0].v === 2, 'online migration');
+await until(() => JSON.parse(storage.get(key))[0]?.v === 2, 'online migration');
 const start = performance.now();
 for (let i = 0; i < 20; i++) await derive();
 const ms = (performance.now() - start) / 20;

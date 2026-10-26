@@ -96,9 +96,9 @@
     document.documentElement.setAttribute('data-skin-2027', 'access');
     /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,
        two frames after DOMContentLoaded (every kit script is deferred, so it has run by then), at most 8 s. */
-    (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{visibility:hidden;opacity:0}'; d.head.appendChild(s);
+    (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{background:var(--paper,#F7F5F0)}'; d.head.appendChild(s);
       var go = function () { var c = d.getElementById('k-cloak'); if (c) c.remove(); };
-      d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 8000); })(document);
+      d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 500); })(document);
     /* The attribute is built in two pieces so public-assets-test, which reads
        every src attribute literally, sees no URL here; each file is listed
        below. */

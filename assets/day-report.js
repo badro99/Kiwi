@@ -108,7 +108,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
   /* ─────────────────────────── petits outils ─────────────────────────── */
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
-  function lset(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function lset(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } }
   function num(n) { var x = +n; return isFinite(x) ? x : 0; }
   function round2(n) { return Math.round(num(n) * 100) / 100; }
   function pad2(n) { return String(n).padStart(2, '0'); }
@@ -529,7 +529,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       label: String(s.label || ''),
       ref: String(s.ref || ''),
       kind: String(s.kind || ''),
-      tip: num(s.tip),
+      tip: num(s.tip), tipMethod: String(s.tipMethod || s.tip_method || '').toLowerCase(),
       discount: num(s.discount),
       cashier: String(s.cashier || ''),
       lines: lines,
@@ -688,7 +688,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       });
       else methods[m] = round2(num(methods[m]) + (isRefund ? -mag : s.amount));
       tips += s.tip;
-      if (m === 'cash') cashTips += s.tip;
+      cashTips += s.tipMethod ? (s.tipMethod === 'cash' ? s.tip : 0) : tenderParts ? Math.sign(s.tip) * Math.round(Math.abs(s.tip) * 100 * tenderParts.reduce(function (n, p) { return n + (p.method === 'cash' ? p.amountCents : 0); }, 0) / tenderParts.reduce(function (n, p) { return n + p.amountCents; }, 0) + 1e-9) / 100 : m === 'cash' ? s.tip : 0;
 
       var off = Math.floor((s.ts - b.from) / 3600000);
       if (off >= 0 && off < 25) {
@@ -963,8 +963,9 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
 
   function writeAll(doc, slug) {
     try { pruneToBudget(doc); } catch (_) {}
-    try { lset(localKey(slug), JSON.stringify(doc)); } catch (_) {}
+    try { if (!lset(localKey(slug), JSON.stringify(doc))) return false; } catch (_) { return false; }
     push();
+    return true;
   }
 
   function load(day, slug) {
@@ -1324,7 +1325,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     if (prev && prev.openedBy && !report.openedBy) report.openedBy = prev.openedBy;
 
     doc.days[report.day] = report;
-    writeAll(doc, slug);
+    if (!writeAll(doc, slug)) return false;
     notify(report.day);
     return report;
   }

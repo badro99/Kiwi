@@ -218,6 +218,13 @@ try {
   const beforePreview = JSON.stringify(await progress());
   await call({ since: T0, dryRun: true });
   ok('un aperçu ne modifie pas la progression enregistrée', JSON.stringify(await progress()) === beforePreview);
+  const savedProgress = sql.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='shopify-replay'").get('maison-test').data;
+  sql.prepare("UPDATE store_docs SET data='{' WHERE merchant=? AND feature='shopify-replay'").run('maison-test');
+  try {
+    const damaged = await getStatus({env, request:new Request('https://kiwi.test/api/shopify/status?merchant=maison-test',{headers:{cookie}})});
+    ok('un curseur endommagé expose une erreur d’intégrité sans repartir de zéro', damaged.status===503 && (await damaged.json()).error==='replay-progress-corrupt');
+  } finally { sql.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='shopify-replay'").run(savedProgress,'maison-test'); }
+
 } finally {
   globalThis.fetch = realFetch;
 }

@@ -1165,6 +1165,14 @@ function pdsMergePlans(mine, theirs, union) {
         return w;
       });
     });
+    if (typeof KiwiFieldMerge !== 'undefined') {
+      const fields = KiwiFieldMerge.floorMerge(mine, theirs);
+      ['tables', 'elements', 'zones'].forEach(key => {
+        if (Array.isArray(fields[key])) out[key] = fields[key];
+      });
+      out.fieldEdits = fields.fieldEdits;
+      KiwiFieldMerge.notice(out);
+    }
     /* A compact deletion frontier, advanced only by actual expired tombstones.
      * A peer with an older frontier has not observed all forgotten deletions:
      * its IDs absent from the informed peer, last written before the frontier,
@@ -1229,6 +1237,8 @@ function pdsStampPlan(state, prevRaw) {
   try { prev = typeof prevRaw === 'string' ? JSON.parse(prevRaw) : prevRaw; } catch (e) { prev = null; }
   /* Daté une seule fois par écriture, et seulement s'il y a quelque chose à
    * dater : ouvrir la page ne fait pas avancer l'horloge. */
+  const fieldDoc = typeof KiwiFieldMerge !== 'undefined' ? KiwiFieldMerge.floorStamp(state, prev) : null;
+  if (fieldDoc) state.fieldEdits = fieldDoc.fieldEdits;
   let at = 0;
   const now = () => at || (at = pdsTick(state, prev));
   ['tables', 'elements', 'zones'].forEach(key => {

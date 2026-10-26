@@ -560,7 +560,7 @@
   function dayReportHTML(o) {
     o = withPaper(o || {});
     var r = o.report || {};
-    var f = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    var f = o.fmt || function (n) { return (Math.sign((+n || 0)) * Math.round(Number(Math.abs((+n || 0)).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100).toFixed(2); };
     var money = function (n) { return f(n) + ' MAD'; };
     var out = [];
     var R = function (l, v, cls) {

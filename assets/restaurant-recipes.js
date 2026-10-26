@@ -77,19 +77,25 @@
     const since = Date.now() - Math.max(1, days || 7) * 864e5;
     let qty = 0;
     try {
-      (window.KiwiSales?.list?.(venue(id)) || []).forEach((sale) => {
-        if ((+sale.ts || 0) < since) return;
+      const seen = new Set();
+      const sales = window.KiwiSales?.list?.(venue(id)) || [];
+      const refunds = window.KiwiRefunds?.list?.(venue(id)) || [];
+      [...sales, ...refunds].forEach((sale) => {
+        if ((+sale.ts || 0) < since || sale.voided || sale.void_ts || sale.voidTs) return;
+        const refund = refunds.includes(sale) || sale.kind === 'refund' || sale.channel === 'refund' || Number(sale.amountCents ?? sale.amount) < 0;
+        const key = String(sale.saleId || sale.id || sale.cursor || '');
+        if (key && seen.has((refund ? 'r:' : 's:') + key)) return;
+        if (key) seen.add((refund ? 'r:' : 's:') + key);
         (sale.lines || []).forEach((line) => {
-          /* La caisse écrit `itemId`, jamais `id`, et un plat vendu avec une
-             option porte son libellé complet (« Café crème (Lait entier) ») :
-             le test sur `id` puis sur le nom ne retrouvait aucune vente avec
-             option, et l'usage théorique comptait un café crème sur trois. */
           const lineId = line.itemId || line.id;
-          if ((lineId && String(lineId) === String(itemId)) || (!lineId && norm(line.name) === norm(itemName))) qty += number(line.qty);
+          if ((lineId && String(lineId) === String(itemId)) || (!lineId && norm(line.name) === norm(itemName))) {
+            const n = Number(line.qty);
+            if (Number.isFinite(n)) qty += refund ? -Math.abs(n) : n;
+          }
         });
       });
     } catch (_) {}
-    return qty;
+    return Math.max(0, qty);
   }
   function metrics(item, recipe, id) {
     const r = normalizeRecipe(recipe, item?.id) || { portions: 1, ingredients: [] };

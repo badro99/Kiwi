@@ -17,7 +17,7 @@
     const menuAmount = (v, max) => Math.round(Math.max(0, Math.min(max, Number(v) || 0)) * 100) / 100;
     function sanitizeFormula(raw, allowedIds) {
       if (!raw || typeof raw !== 'object') return null;
-      const rawSlots = Array.isArray(raw.slots) ? raw.slots.slice(0, 10) : [];
+      const rawSlots = Array.isArray(raw.slots) ? raw.slots : [];
       const slots = rawSlots.map((s, idx) => {
         if (!s || typeof s !== 'object') return null;
         const id = str(s.id, 40) || ('sl_' + (idx + 1));
@@ -25,7 +25,7 @@
         let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
         let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
         if (min > max) min = max;
-        const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
+        const rawChoices = Array.isArray(s.choices) ? s.choices : [];
         const choices = rawChoices.map((c) => ({
           itemId: str(c && c.itemId, 40),
           extra: menuAmount(c && c.extra, 1e5),
@@ -1063,7 +1063,7 @@
       .mx-product-card .act button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--mx-line); border-radius: 9px; background: var(--surface); color: var(--n-500); cursor: pointer; }
       .mx-product-card .act button:hover { border-color: var(--n-400); color: var(--ink); }
       .mx-product-card .act button.del:hover { border-color: var(--danger); color: var(--danger); }
-      .mx-product-card .sw { width: 32px; height: 19px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; flex: 0 0 auto; }
+      .mx-product-card .sw { border: 0; padding: 0; width: 32px; height: 19px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; flex: 0 0 auto; }
       .mx-product-card .sw.on { background: var(--atlas); }
       .mx-product-card .sw::after { content: ''; position: absolute; inset: 2px auto auto 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--surface); transition: transform 150ms; }
       .mx-product-card .sw.on::after { transform: translateX(13px); }
@@ -1226,7 +1226,7 @@
           <div class="price">${fmt(it.price)} MAD${mgHtml(it)}</div>
           <div class="foot">
             <span class="meta">${esc(footer || tr(it.avail === false ? T.unavail : T.avail))}</span>
-            <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
+            <button type="button" class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" aria-label="${esc(it.name)}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></button>
             <div class="act">
               <button data-activation=write data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
               <button class="del" data-action="mx-item-del" data-arg="${it.id}" title="${esc(tr(T.del))}">${TRASH}</button>
@@ -1867,7 +1867,6 @@
 
     if (m.el.querySelector('[data-f-add-slot]')) {
       m.el.querySelector('[data-f-add-slot]').addEventListener('click', () => {
-        if (formulaSlots.length >= 10) return;
         const nextId = 'sl_' + (formulaSlots.length + 1);
         formulaSlots.push({ id: nextId, label: '', min: 1, max: 1, choices: [] });
         renderFormulaSlots();
@@ -1937,7 +1936,7 @@
         const pickedId = pickerItem.dataset.fPickerItem;
         if (pickedId && formulaSlots[si]) {
           formulaSlots[si].choices = formulaSlots[si].choices || [];
-          if (formulaSlots[si].choices.length < 20 && !formulaSlots[si].choices.some((choice) => choice.itemId === pickedId)) {
+          if (!formulaSlots[si].choices.some((choice) => choice.itemId === pickedId)) {
             formulaSlots[si].choices.push({ itemId: pickedId, extra: 0 });
             renderFormulaSlots();
           }

@@ -16,6 +16,12 @@ const plain = v => JSON.parse(JSON.stringify(v));
 const items = [{ id: 'i', name: 'Plat' }, { id: 'archived', name: 'Archive', archived: true }];
 const allowed = new Set(['i']);
 function compare(raw) {
+  // Wave P preserves oversized valid data; equivalence applies within the old limits.
+  if (raw && Array.isArray(raw.slots) && (raw.slots.length > 10 || raw.slots.some(s => s && Array.isArray(s.choices) && s.choices.length > 20))) {
+    const expected = sanitizeFormula(raw, allowed);
+    assert.deepEqual(plain(editor(raw, items)), expected);
+    return;
+  }
   let expected;
   try { expected = plain(oldServer(raw, allowed)); }
   catch (error) {

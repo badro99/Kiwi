@@ -8,7 +8,11 @@
 
   const clean = (value) => String(value == null ? '' : value).trim();
   const fold = (value) => clean(value).toLocaleLowerCase('fr').normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+    .replace(/[\u0300-\u036f\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g, '')
+    .replace(/[آأإٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/[ئى]/g, 'ي').replace(/ة/g, 'ه')
+    // Preserve the historical Latin fold, including separators for ø, ß and ligatures.
+    .replace(/\p{Script=Latin}/gu, (letter) => /[a-z]/.test(letter) ? letter : ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
   function hash(value) {
     let result = 2166136261;
@@ -45,7 +49,8 @@
       if (exact) return exact;
     }
     const name = fold(line.name);
-    return name ? stableRows.find((row) => fold(row.name) === name) || null : null;
+    const matches = name ? stableRows.filter((row) => fold(row.name) === name) : [];
+    return matches.length === 1 ? matches[0] : null;
   }
 
   function bindRecipe(recipe, rows) {

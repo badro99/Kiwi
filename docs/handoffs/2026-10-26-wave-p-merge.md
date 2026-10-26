@@ -1,0 +1,469 @@
+# Wave P · merge · validation
+
+Six gaps implemented: team#0, team#1, planning#0, planning#1, booking#1, floor#2.
+
+## Evidence
+
+`tools/wave-p-merge-test.mjs` is named in `tools/check.js`. Six fast-check properties run 60 cases each, with both merge orders, independent edits, stale copies, equal clocks and retained alternatives. Additional checks exercise the booking form review, persistence, deletion registers and the real store sanitizer on a 20-member monthly roster. All nine checks pass.
+
+Red-first proof: temporarily replaced the four production integration files with their exact `git show HEAD:<path>` contents, ran the regression suite (exit 1, all six gap properties plus review and persistence failed), then restored the working bytes in `finally` and reran green. No Git-writing command was used. Proof transcript: `/tmp/kiwi-wave-p-revert-red.log`.
+
+Decisions: [wave-p](../decisions/2026-10-26-wave-p.md).
+
+## Remaining lead work
+
+- Restamp `assets/team.js`, `assets/planning-core.js`, `assets/reservations.js`, `assets/floorplan-core.js`; register/stamp/precache new dependencies `assets/field-merge.js`, `assets/team/merge.js`. Existing query versions, asset manifest and service-worker generation are untouched.
+- `asset-stamp-coverage-test.mjs`: two newly referenced assets await registration/stamps.
+- `stamp-drift-test.js`: four edited runtime assets await restamping.
+- `core-split-test.mjs`: exact shell assertion is 119, current count is 121. No script pin or fixture was raised. Lead must resolve this assertion alongside the new dependencies.
+- Run the browser suites below, one at a time, and the lead's full gate. No browser suite or `tools/check.js` was run here.
+- Changes remain uncommitted by instruction. Credentials and frozen modules were not changed.
+- Legacy records without provenance use existing record timestamps and deterministic tie selection; unknowable pre-upgrade same-field alternatives produce a conflict notice. Provenance journals remain subject to existing document-size limits; no limit was raised.
+
+## Changed files · added/deleted lines
+
+- `assets/floorplan-core.js`: +10/-0.
+- `assets/planning-core.js`: +3/-1.
+- `assets/reservations.js`: +25/-7.
+- `assets/team.js`: +12/-1.
+- `dashboard.html`: +2/-0.
+- `kiwi-caisse.html`: +1/-0.
+- `tools/check.js`: +1/-0.
+- `assets/field-merge.js`: +135/-0 (new).
+- `assets/team/merge.js`: +32/-0 (new).
+- `tools/wave-p-merge-test.mjs`: +88/-0 (new).
+- `docs/decisions/2026-10-26-wave-p.md`: +15/-0 (new).
+- This validation report is new.
+
+## Suites run
+
+286 distinct targeted non-browser suites: 283 pass, three expected handoff failures above. All 26 focused team/planning/reservation/booking/floorplan suites pass. Size ratchet: 779 checks pass. PWA shell: 947 checks pass. Changed JavaScript syntax and `git diff --check`: pass.
+
+`economat-real-d1-transfer-test.mjs` initially hit npm cache permissions; rerun with `npm_config_cache=/tmp/kiwi-wave-p-npm-cache`, `XDG_CONFIG_HOME=/tmp/kiwi-wave-p-config`, `WRANGLER_SEND_METRICS=false` passed all 20 local D1 checks.
+
+- PASS `agent-month-business-day-test.mjs`
+- PASS `agent-open-targets-test.mjs`
+- PASS `agent-test.js`
+- PASS `agent-vision-test.mjs`
+- PASS `agent-voice-test.mjs`
+- PASS `android-native-test.mjs`
+- PASS `android-print-bridge-test.mjs`
+- PASS `app-audit-sweep-test.mjs`
+- PASS `app-bundle-test.mjs`
+- PASS `app-release-test.mjs`
+- HANDOFF `asset-stamp-coverage-test.mjs`
+- PASS `audit-remediation-caisse-integration-test.mjs`
+- PASS `audit-remediation-devices-test.mjs`
+- PASS `audit-remediation-money-test.mjs`
+- PASS `basket-pairs-test.mjs`
+- PASS `biometric-unlock-test.mjs`
+- PASS `booking-api-test.mjs`
+- PASS `booking-hotel-beyond-window-test.mjs`
+- PASS `booking-manage-test.mjs`
+- PASS `booking-properties-test.mjs`
+- PASS `booking-read-order-test.mjs`
+- PASS `booking-truth-test.mjs`
+- PASS `briefing-cash-sessions-test.mjs`
+- PASS `briefing-discounts-test.mjs`
+- PASS `briefing-planning-test.mjs`
+- PASS `briefing-test.mjs`
+- PASS `bump-stamp-test.mjs`
+- PASS `business-day-default-test.mjs`
+- PASS `business-day-surfaces-test.mjs`
+- PASS `caisse-accounting-handover-test.mjs`
+- PASS `caisse-app-split-test.mjs`
+- PASS `caisse-auto-receipt-test.mjs`
+- PASS `caisse-boot-restore-guard-test.mjs`
+- PASS `caisse-chip-gate-test.mjs`
+- PASS `caisse-client-sale-test.mjs`
+- PASS `caisse-discount-and-phantom-table-test.js`
+- PASS `caisse-dna-test.js`
+- PASS `caisse-floor-gap-test.mjs`
+- PASS `caisse-frozen-cost-test.mjs`
+- PASS `caisse-godmode-toggles-test.mjs`
+- PASS `caisse-handoff-demo-reload-test.mjs`
+- PASS `caisse-lang-test.js`
+- PASS `caisse-link-success-test.js`
+- PASS `caisse-menu-add-contrast-test.mjs`
+- PASS `caisse-opening-gate-test.mjs`
+- PASS `caisse-order-panel-space-test.mjs`
+- PASS `caisse-outbox-full-test.mjs`
+- PASS `caisse-pairing-repair-test.mjs`
+- PASS `caisse-pay-subtitle-test.mjs`
+- PASS `caisse-payment-guards-test.mjs`
+- PASS `caisse-payment-upload-test.mjs`
+- PASS `caisse-product-art-test.mjs`
+- PASS `caisse-repair-pin-venue-test.mjs`
+- PASS `caisse-service-ledger-scope-test.mjs`
+- PASS `caisse-stock-sync-test.mjs`
+- PASS `caisse-stock-test.mjs`
+- PASS `caisse-support-entry-test.mjs`
+- PASS `caisse-surface-lang-test.js`
+- PASS `caisse-table-actions-test.mjs`
+- PASS `caisse-takeaway-ledger-dedup-test.mjs`
+- PASS `caisse-theme-contrast-test.mjs`
+- PASS `caisse-winter-clock-test.mjs`
+- PASS `card-confirm-test.mjs`
+- PASS `card-z-reconciliation-test.mjs`
+- PASS `cash-move-custom-reason-test.mjs`
+- PASS `cash-sessions-auth-test.mjs`
+- PASS `cashier-cancel-test.mjs`
+- PASS `channel-percentage-test.mjs`
+- PASS `check-parallel-test.mjs`
+- PASS `clockin-float-test.mjs`
+- PASS `close-register-durability-test.mjs`
+- PASS `cloud-doc-quota-test.mjs`
+- PASS `config-pin-projection-test.mjs`
+- HANDOFF `core-split-test.mjs`
+- PASS `cost-margin-test.js`
+- PASS `counter-sale-flow-test.mjs`
+- PASS `critical-flow-test.mjs`
+- PASS `cross-store-copy-test.mjs`
+- PASS `customer-retention-test.mjs`
+- PASS `dark-fixes-gradient-test.mjs`
+- PASS `dashboard-analytics-toggle-test.mjs`
+- PASS `dashboard-kds-nav-test.mjs`
+- PASS `dashboard-pin-vault-test.mjs`
+- PASS `dashboard-truth-test.mjs`
+- PASS `dashboard-unoffered-actions-test.mjs`
+- PASS `day-report-formatter-cache-test.mjs`
+- PASS `device-timezone-test.mjs`
+- PASS `discount-policy-test.mjs`
+- PASS `discount-reasons-test.mjs`
+- PASS `economat-rd-invariants-test.mjs`
+- PASS `economat-real-d1-transfer-test.mjs`
+- PASS `employee-live-test.mjs`
+- PASS `employee-truth-test.mjs`
+- PASS `error-redaction-test.mjs`
+- PASS `error-reporter-test.mjs`
+- PASS `escpos-unsupported-test.mjs`
+- PASS `face-unlock-test.mjs`
+- PASS `field-orderpro-acceptance-test.mjs`
+- PASS `field-table-transfer-test.mjs`
+- PASS `field-whole-item-split-test.mjs`
+- PASS `file-size-ratchet-test.mjs`
+- PASS `financial-ledger-invariant-test.mjs`
+- PASS `floorplan-lww-test.mjs`
+- PASS `floorplan-sync-test.js`
+- PASS `food-production-print-test.mjs`
+- PASS `food-trades-truth-test.mjs`
+- PASS `forgot-password-test.mjs`
+- PASS `formula-kitchen-paper-test.mjs`
+- PASS `formula-protocol-test.mjs`
+- PASS `formula-receipt-pricing-test.mjs`
+- PASS `haptics-test.js`
+- PASS `hardware-test.js`
+- PASS `hotel-commercial-test.mjs`
+- PASS `hotel-economat-ui-test.mjs`
+- PASS `hotel-rooms-test.mjs`
+- PASS `hotel-split-test.mjs`
+- PASS `hotel-stays-group-test.mjs`
+- PASS `hotel-units-test.mjs`
+- PASS `idle-lock-test.mjs`
+- PASS `import-test.js`
+- PASS `install-card-icon-test.mjs`
+- PASS `interactive-split-test.mjs`
+- PASS `inventory-count-test.mjs`
+- PASS `inventory-expiry-test.mjs`
+- PASS `inventory-queue-unblock-test.mjs`
+- PASS `inventory-waste-test.mjs`
+- PASS `kds-recall-test.mjs`
+- PASS `kitchen-modifiers-and-seating-test.mjs`
+- PASS `kitchen-print-queue-test.mjs`
+- PASS `kitchen-relay-test.js`
+- PASS `kitchen-reprint-test.mjs`
+- PASS `kitchen-void-protocol-test.mjs`
+- PASS `kitchen-void-slip-test.mjs`
+- PASS `kpi-card-layout-test.mjs`
+- PASS `landing-claims-test.mjs`
+- PASS `legacy-venue-modals-test.mjs`
+- PASS `live-link-merchant-identity-test.mjs`
+- PASS `live-link-queue-ownership-test.mjs`
+- PASS `locale-handoff-test.mjs`
+- PASS `lock-caisse-link-test.mjs`
+- PASS `lock-greeting-truth-test.mjs`
+- PASS `material-icons-test.mjs`
+- PASS `menu-i18n-test.mjs`
+- PASS `menu-nutrition-test.mjs`
+- PASS `menu-option-group-editor-test.mjs`
+- PASS `menu-ordering-surfaces-test.js`
+- PASS `menu-scan-test.mjs`
+- PASS `menu-truth-test.mjs`
+- PASS `menu-workspace-split-test.mjs`
+- PASS `mixmax-reconciliation-repair-test.mjs`
+- PASS `module-gate-test.mjs`
+- PASS `native-audit-fixes-test.mjs`
+- PASS `native-pass4-test.mjs`
+- PASS `native-pass5-test.mjs`
+- PASS `native-workspace-ux-test.mjs`
+- PASS `offline-foundation-test.mjs`
+- PASS `onboarding-gate-test.mjs`
+- PASS `operating-day-ai-context-test.mjs`
+- PASS `operating-day-inventory-cycle-test.mjs`
+- PASS `operating-day-split-session-test.mjs`
+- PASS `operating-day-split-ui-test.mjs`
+- PASS `operations-system-test.mjs`
+- PASS `order-controls-test.mjs`
+- PASS `order-delivery-test.mjs`
+- PASS `order-line-cap-test.mjs`
+- PASS `order-mode-exit-test.js`
+- PASS `order-number-reconciliation-test.mjs`
+- PASS `orderpro-cancellation-lifecycle-test.mjs`
+- PASS `orderpro-floorplan-race-test.mjs`
+- PASS `orderpro-formula-choice-images-test.mjs`
+- PASS `orderpro-guestpage-editor-test.mjs`
+- PASS `orderpro-inbox-display-test.js`
+- PASS `orderpro-relay-test.js`
+- PASS `orderpro-session-reorder-test.mjs`
+- PASS `origin-move-test.mjs`
+- PASS `pages-pro-lazy-registry-test.mjs`
+- PASS `pages-workflow-split-test.mjs`
+- PASS `pairing-parity-test.mjs`
+- PASS `pairing-resolver-test.mjs`
+- PASS `pairs-api-test.mjs`
+- PASS `payment-kitchen-dispatch-test.mjs`
+- PASS `phone-test.mjs`
+- PASS `pin-dashboard-test.mjs`
+- PASS `pin-hardening-test.mjs`
+- PASS `pin-lockout-truth-test.mjs`
+- PASS `plan-catalog-test.mjs`
+- PASS `planning-core-test.mjs`
+- PASS `planning-layout-test.mjs`
+- PASS `platform-ops-test.mjs`
+- PASS `pos-inventory-count-test.mjs`
+- PASS `pos-mobile-test.mjs`
+- PASS `pos-reprint-test.js`
+- PASS `pos-truth-b-test.mjs`
+- PASS `pressing-workspace-test.js`
+- PASS `print-paper-test.mjs`
+- PASS `print-relay-test.mjs`
+- PASS `production-split-void-menu-test.mjs`
+- PASS `public-assets-test.js`
+- PASS `pwa-shell-test.js`
+- PASS `quiet-mode-test.mjs`
+- PASS `ramadan-test.js`
+- PASS `receivables-test.mjs`
+- PASS `refund-reporting-test.mjs`
+- PASS `refund-split-identity-test.mjs`
+- PASS `relay-print-verdict-test.mjs`
+- PASS `request-headers-test.mjs`
+- PASS `request-pollers-test.mjs`
+- PASS `reservation-overlap-test.mjs`
+- PASS `reservations-business-day-test.mjs`
+- PASS `reservations-test.mjs`
+- PASS `restaurant-recipe-layout-test.mjs`
+- PASS `restaurant-reopen-resume-test.mjs`
+- PASS `restaurant-reopen-ui-test.mjs`
+- PASS `restaurant-units-test.js`
+- PASS `resto-carte-test.js`
+- PASS `retail-scan-test.mjs`
+- PASS `retail-z-reconciliation-test.mjs`
+- PASS `return-client-guards-test.mjs`
+- PASS `sale-invoice-test.mjs`
+- PASS `sale-line-v2-test.mjs`
+- PASS `sales-day-contrast-test.mjs`
+- PASS `sales-trim-test.mjs`
+- PASS `salle-scan-test.mjs`
+- PASS `security-regression-test.js`
+- PASS `serveur-identity-test.mjs`
+- PASS `serveur-kitchen-truth-test.mjs`
+- PASS `service-draft-durability-test.mjs`
+- PASS `settled-table-reopen-test.mjs`
+- PASS `settlement-recovery-test.mjs`
+- PASS `sheet-opacity-test.mjs`
+- PASS `sidebar-language-test.mjs`
+- PASS `skin-cloak-test.mjs`
+- PASS `source-assertion-ratchet-test.mjs`
+- PASS `split-bill-tender-test.mjs`
+- PASS `split-edit-resilience-test.mjs`
+- PASS `staff-skin-test.mjs`
+- HANDOFF `stamp-drift-test.js`
+- PASS `starter-copy-test.mjs`
+- PASS `stock-alert-truth-test.mjs`
+- PASS `stock-split-test.mjs`
+- PASS `stock-strings-split-test.mjs`
+- PASS `stock-truth-test.mjs`
+- PASS `store-clock-test.mjs`
+- PASS `store-templates-test.mjs`
+- PASS `subscription-privacy-test.mjs`
+- PASS `support-system-test.mjs`
+- PASS `surface-parity-test.mjs`
+- PASS `sw-immutable-revalidation-test.mjs`
+- PASS `sync-ledger-boutique-clock-test.mjs`
+- PASS `table-refresh-test.js`
+- PASS `table-split-lifecycle-test.mjs`
+- PASS `table-takeaway-routing-test.js`
+- PASS `table-transfer-merge-test.mjs`
+- PASS `table-visit-reuse-test.mjs`
+- PASS `takeaway-cancel-authorization-test.mjs`
+- PASS `takeaway-history-timestamps-test.mjs`
+- PASS `takeaway-stale-archive-test.mjs`
+- PASS `takeout-confirmation-test.js`
+- PASS `takeout-kds-ready-test.mjs`
+- PASS `team-added-toast-test.mjs`
+- PASS `team-catalog-split-test.mjs`
+- PASS `team-codes-at-rest-test.mjs`
+- PASS `team-doc-redaction-test.mjs`
+- PASS `team-job-names-test.mjs`
+- PASS `team-member-editor-test.mjs`
+- PASS `team-offshift-server-test.mjs`
+- PASS `team-properties-test.mjs`
+- PASS `team-removal-shift-test.mjs`
+- PASS `team-roster-cap-test.mjs`
+- PASS `team-roster-purge-test.mjs`
+- PASS `team-split-test.mjs`
+- PASS `team-truth-test.mjs`
+- PASS `tenant-guard-test.mjs`
+- PASS `terminaux-truth-test.mjs`
+- PASS `till-gate-test.mjs`
+- PASS `till-truth-test.mjs`
+- PASS `trade-workspaces-test.js`
+- PASS `vertical-feature-parity-test.mjs`
+- PASS `vexel-startup-test.mjs`
+- PASS `wave-p-merge-test.mjs`
+- PASS `weather-test.mjs`
+- PASS `worker-cpu-test.mjs`
+- PASS `z-alert-copy-test.mjs`
+- PASS `z-reconciliation-client-test.mjs`
+- PASS `z-refund-total-coherence-test.mjs`
+- PASS `zone-law-test.mjs`
+
+## Browser suites for the lead · not run
+
+The list includes suites naming the edited shells, runtime files or runner; classifier follows local harness imports.
+
+- `a11y-browser-test.mjs`
+- `access-gate-browser-test.mjs`
+- `analysis-calculator-browser-test.mjs`
+- `app-interaction-test.mjs`
+- `attendance-browser-test.mjs`
+- `avoir-customer-scope-browser-test.mjs`
+- `banner-announce-test.mjs`
+- `boutique-phone-browser-test.mjs`
+- `caisse-ink-dark-browser-test.mjs`
+- `caisse-item-cancel-browser-test.mjs`
+- `caisse-restaurant-lang-browser-test.mjs`
+- `caisse-viewport-guard-test.mjs`
+- `cash-count-browser-test.mjs`
+- `charges-browser-test.mjs`
+- `check-guard-test.mjs`
+- `client-history-browser-test.mjs`
+- `clients-book-page-browser-test.mjs`
+- `close-open-tables-browser-test.mjs`
+- `components-sum-test.mjs`
+- `course-firing-browser-test.mjs`
+- `credit-book-dashboard-browser-test.mjs`
+- `credit-book-refund-browser-test.mjs`
+- `dark-startup-browser-test.mjs`
+- `dash-ai-browser-test.mjs`
+- `dash-compliance-browser-test.mjs`
+- `dash-customers-browser-test.mjs`
+- `dash-desktop-browser-test.mjs`
+- `dash-figures-agreement-test.mjs`
+- `dash-frame-browser-test.mjs`
+- `dash-home-browser-test.mjs`
+- `dash-onboarding-browser-test.mjs`
+- `dash-orders-browser-test.mjs`
+- `dash-phone-browser-test.mjs`
+- `dash-phone-pages-ar-browser-test.mjs`
+- `dash-phone-pages-browser-test.mjs`
+- `dash-phone-pages-kit-browser-test.mjs`
+- `dash-phone-sheets-ar-browser-test.mjs`
+- `dash-phone-sheets-browser-test.mjs`
+- `dash-pin-browser-test.mjs`
+- `dash-polish-browser-test.mjs`
+- `dash-report-browser-test.mjs`
+- `dash-retention-browser-test.mjs`
+- `dashboard-breadcrumb-language-test.mjs`
+- `dashboard-first-use-test.mjs`
+- `dashboard-pin-vault-browser-test.mjs`
+- `date-controls-browser-test.mjs`
+- `date-range-selector-truth-test.mjs`
+- `delivery-collect-browser-test.mjs`
+- `demo-morning-band-test.mjs`
+- `discount-policy-live-browser-test.mjs`
+- `dynamic-type-200-browser-test.mjs`
+- `epicerie-phone-browser-test.mjs`
+- `field-split-ui-test.mjs`
+- `font-face-census-test.mjs`
+- `french-leak-browser-test.mjs`
+- `genpage-breadcrumb-language-test.mjs`
+- `hotel-direct-booking-browser-test.mjs`
+- `hotel-journey-browser-test.mjs`
+- `hotel-stays-group-browser-test.mjs`
+- `ice-browser-test.mjs`
+- `ink-debt-browser-test.mjs`
+- `invoicing-v2-browser-test.mjs`
+- `ipad-touch-browser-test.mjs`
+- `kds-board-browser-test.mjs`
+- `kds-recall-browser-test.mjs`
+- `maison-caisse-browser-test.mjs`
+- `maison-dashboard-browser-test.mjs`
+- `menu-formula-keyboard-browser-test.mjs`
+- `menu-phone-test.mjs`
+- `menu-promos-browser-test.mjs`
+- `menu-shell-browser-test.mjs`
+- `merchant-health-browser-test.mjs`
+- `month-report-browser-test.mjs`
+- `native-demo-ledger-test.mjs`
+- `native-device-layout-test.mjs`
+- `native-face-entry-test.mjs`
+- `native-owner-home-browser-test.mjs`
+- `native-pass2-browser-test.mjs`
+- `native-pass3-gates-test.mjs`
+- `native-pass3-locale-test.mjs`
+- `native-premium-feel-test.mjs`
+- `native-qa-six-fixes-test.mjs`
+- `native-store-readiness-test.mjs`
+- `onboarding-recovery-browser-test.mjs`
+- `online-inbox-test.mjs`
+- `opening-float-test.mjs`
+- `owner-identity-browser-test.mjs`
+- `ownership-test.mjs`
+- `pages-pro-lazy-test.mjs`
+- `pairs-boutique-browser-test.mjs`
+- `pairs-caisse-browser-test.mjs`
+- `pay-height-test.mjs`
+- `planning-phone-browser-test.mjs`
+- `pos-maison-split-browser-test.mjs`
+- `promo-window-browser-test.mjs`
+- `pwa-first-install-browser-test.mjs`
+- `quarantine-review-browser-test.mjs`
+- `quiet-demo-browser-test.mjs`
+- `rev-chart-daily-browser-test.mjs`
+- `sale-unsynced-test.mjs`
+- `scan-wedge-browser-test.mjs`
+- `shared-day-selector-browser-test.mjs`
+- `surface-matrix-apps-browser-test.mjs`
+- `surface-matrix-browser-test.mjs`
+- `surface-matrix-states-agent-doc-browser-test.mjs`
+- `surface-matrix-states-credit-real-browser-test.mjs`
+- `surface-matrix-states-economat-browser-test.mjs`
+- `surface-matrix-states-intake-browser-test.mjs`
+- `surface-matrix-states-loyalty-till-browser-test.mjs`
+- `surface-matrix-states-ops-browser-test.mjs`
+- `surface-matrix-states-real-browser-test.mjs`
+- `surface-matrix-states-shopify-browser-test.mjs`
+- `surface-matrix-till-tablet-browser-test.mjs`
+- `sync-ledger-boutique-browser-test.mjs`
+- `sync-ledger-browser-test.mjs`
+- `table-settlement-browser-test.mjs`
+- `team-codes-browser-test.mjs`
+- `team-editor-keyboard-browser-test.mjs`
+- `test-verify-all-15.mjs`
+- `ticket151-browser-test.mjs`
+- `till-approval-server-writes-test.mjs`
+- `till-autre-frame-test.mjs`
+- `till-frame-browser-test.mjs`
+- `till-phone-tabs-browser-test.mjs`
+- `till-pin-browser-test.mjs`
+- `till-repair-lock-browser-test.mjs`
+- `trade-tickets-phone-browser-test.mjs`
+- `trades-ledger-browser-test.mjs`
+- `trades-ledger-care-browser-test.mjs`
+- `trades-ledger-retail-browser-test.mjs`
+- `transactions-nav-stability-browser-test.mjs`
+- `venue-type-refocus-browser-test.mjs`
+- `venues-split-browser-test.mjs`
+- `view-link-browser-test.mjs`
+- `z-reconciliation-browser-test.mjs`

@@ -42,3 +42,27 @@ fc.assert(fc.property(promo, time, fc.integer({ min: 0, max: 1000000 }), (p, now
 }), { numRuns: 2500, seed: 20261026 });
 assert.ok(Object.isFrozen(shared.KiwiPromoRules));
 console.log('✓ 2500 promotions générées : normalisation, calendrier et prix historiques préservés');
+
+// Hand-computed oracle, independent of both historical implementations.
+// 26 October 2026 is Monday; the configured Casablanca zone law is UTC, cutoff 05:00 local.
+for (const [kind,value,base,want] of [
+  ['percent',15,1.45,1.23], ['percent',50,.05,.03],
+  ['amount',.27,1.34,1.07], ['fixed',1.23,2.99,1.23],
+  ['amount',10,1.34,0], ['fixed',10,1.34,1.34]
+]) {
+  const p = shared.KiwiPromoRules.normalize({kind,value},'menu');
+  assert.equal(shared.KiwiPromoRules.price(p,base,'menu'),want,`centime oracle ${kind}/${base}`);
+}
+const calendar = {days:[1],start:'22:00',end:'02:00',from:'2026-10-26',to:'2026-10-26'};
+for (const [iso,want] of [
+  ['2026-10-26T04:59:59Z','scheduled'], // Sunday business date
+  ['2026-10-26T05:00:00Z','waiting'],
+  ['2026-10-26T21:59:59Z','waiting'],
+  ['2026-10-26T22:00:00Z','active'],
+  ['2026-10-27T01:59:59Z','active'],
+  ['2026-10-27T02:00:00Z','waiting'],
+  ['2026-10-27T04:59:59Z','waiting'],
+  ['2026-10-27T05:00:00Z','ended']
+]) assert.equal(shared.KiwiPromoRules.status(calendar,Date.parse(iso),'menu'),want,`calendar oracle ${iso}`);
+assert.equal(shared.KiwiPromoRules.price({kind:'percent',value:15},1.45,'boutique'),0,'whole-MAD boutique shelf policy unchanged');
+console.log('✓ independent centime and business-cutoff oracles');

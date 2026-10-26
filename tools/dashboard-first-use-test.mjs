@@ -25,6 +25,10 @@ for (const [, url, attributes] of startupTags) {
 assert.ok(read('dashboard.html').includes('<script src="assets/pages/dashboard-startup.js'), 'startup record is parser blocking');
 const before = JSON.parse(read('tools/fixtures/dashboard-first-use.json'));
 const shell = [...dashboardDependencies.eager(read('dashboard.html')).matchAll(/<script\b[^>]*src="([^"]+)"/g)].map(m => m[1]);
+for (const [provider, consumer] of [['assets/team/merge.js', 'assets/team.js'], ['assets/field-merge.js', 'assets/floorplan-core.js']]) {
+  const at = name => shell.findIndex(url => url.split('?')[0] === name);
+  assert.ok(at(provider) >= 0 && at(provider) < at(consumer), provider + ' precedes its consumer');
+}
 assert.equal(urls.length, 7, 'only optional drawer owners leave the eager shell');
 assert.equal(new Set(urls).size, urls.length);
 for (const surface of ['menu', 'salle']) { const at = (name) => urls.findIndex((u) => u.split('?')[0] === name); assert.ok(at('assets/ai-image-import.js') >= 0 && at('assets/ai-image-import.js') < at('assets/' + surface + '-scan.js'), 'shared import precedes consumers'); }

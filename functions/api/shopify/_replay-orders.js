@@ -109,7 +109,14 @@ export async function listShopifyOrdersSince(env, merchant, sinceTs, { after = n
  * remaining=null signifie que Shopify annonce encore une page sans total exact. */
 export async function readReplayProgress(env, merchant) {
   const row = await env.DB.prepare('SELECT data FROM store_docs WHERE merchant = ? AND feature = ?').bind(merchant, CURSOR_DOC).first();
-  try { return row ? { ...JSON.parse(row.data), unresolved: await readUnresolved(env, merchant) } : null; } catch { return null; }
+  if (!row) return null;
+  let progress;
+  try { progress = JSON.parse(row.data); } catch { throw new Error('replay-progress-corrupt'); }
+  if (!progress || typeof progress !== 'object' || Array.isArray(progress) ||
+      !Number.isFinite(progress.since) || !Number.isInteger(progress.done) || progress.done < 0 ||
+      typeof progress.more !== 'boolean' ||
+      (progress.after !== null && typeof progress.after !== 'string')) throw new Error('replay-progress-corrupt');
+  return { ...progress, unresolved: await readUnresolved(env, merchant) };
 }
 async function writeProgress(env, merchant, progress) {
   await env.DB.prepare(

@@ -19,20 +19,21 @@ let fc;try{fc=createRequire(path.join(ROOT,'app/package.json'))('fast-check');}c
 const RUNS=Number(process.env.KIWI_PROPERTY_RUNS)||300,SEED=process.env.KIWI_PROPERTY_SEED?Number(process.env.KIWI_PROPERTY_SEED):20261026;
 let passed=0,failed=0,known=0;
 async function strict(label,property,examples=[]){const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(r.failed){failed++;console.error('✗ '+label,fc.stringify(r.counterexample),r.errorInstance||r.error);}else{passed++;console.log('✓ '+label);}}
-async function knownIssue(id,label,property,examples=[]){const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(r.failed&&r.errorInstance?.message!=='Property failed by returning false'){failed++;console.error('✗ known property raised an unexpected error: '+id,r.errorInstance);return;}if(r.failed){known++;console.log(`◦ known ${id} · ${label}\n  shrunk: ${fc.stringify(r.counterexample)}; seed=${r.seed}; path=${r.counterexamplePath}`);}else console.log('! known '+id+' holds now: promote to strict');}
+async function knownIssue(id,label,property,examples=[]){const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(r.failed&&r.errorInstance?.message!=='Property failed by returning false'){failed++;console.error('✗ known property raised an unexpected error: '+id,r.errorInstance);return;}if(r.failed){known++;console.log(`◦ known ${id} · ${label}\n  shrunk: ${fc.stringify(r.counterexample)}; seed=${r.seed}; path=${r.counterexamplePath}`);}else {failed++;console.error('✗ '+id+' holds: promote to strict');}}
 
 const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const C=x=>Math.round(x*100),sum=xs=>xs.reduce((a,b)=>a+b,0),money=fc.integer({min:1,max:5000000});
 function load(file,names,extra={}){const c=vm.createContext({console,Math,Date,...extra});vm.runInContext(names.map(n=>declaration(read(file),n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c);return c;}
 const source=read('assets/pos-sale.js');
 const boot=vm.runInNewContext(declaration(read('tools/pos-sale-hold-test.mjs'),'boot').replace('return { api:', 'return { window, api:')+';boot',{source,vm,console,Date,Map,Set,Uint8Array});
-const wire=load('assets/live-link.js',['stableId','serverSession','postSale'],{on:()=>true,merchant:()=> 'shop',tenantHold:()=>null,stableId:(_m,e)=>e.ref,serverSession:()=>'',enqueueMoneyBody:body=>body});
+const saleIdentityWindow={};vm.runInNewContext(read('assets/live-link/sale-identity.js'),{window:saleIdentityWindow});
+const wire=load('assets/live-link.js',['stableId','serverSession','postSale'],{window:saleIdentityWindow,on:()=>true,merchant:()=> 'shop',tenantHold:()=>null,stableId:(_m,e)=>e.ref,serverSession:()=>'',enqueueMoneyBody:body=>body});
 const journal=boot();
 function reset(t=journal){t.rows.clear();t.rows.set('kiwiPairedVenue',JSON.stringify({merchant:'amira-snack'}));t.rows.set('kiwi:posDevice','A7');t.posted.length=0;delete t.window.KiwiInventoryConsumption;return t;}
 let retryCalls=0;
 const retryJournal=boot({answer:()=>++retryCalls===1?{ok:false}:{ok:true,queued:true,id:'fixed'}});
 const fold=journal.api.foldLines || (rows=>rows.slice(0,40));
-wire.window={KiwiPosSale:{foldLines:fold}};
+wire.window={...saleIdentityWindow,KiwiPosSale:{foldLines:fold}};
 const lines=fc.array(fc.integer({min:1,max:80000}),{minLength:1,maxLength:60});
 await strict('shared journal and outgoing mirror retain every cent with 1..60 lines',fc.property(lines,amounts=>{
  const t=reset(),stock=[];t.window.KiwiInventoryConsumption={record:entry=>stock.push(entry)};const total=sum(amounts),ls=amounts.map((n,i)=>({name:'Article '+i,qty:1,total:n/100}));

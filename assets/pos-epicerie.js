@@ -1458,7 +1458,12 @@
   }
 
   /* ---------- ardoise detail (history + règlement + WhatsApp) ---------- */
+  let bindHistoryPages, historyPagesReady;
   function openArdoise(id) {
+    if (!bindHistoryPages) {
+      historyPagesReady ||= import('./credit-history-page.js').then(module => { bindHistoryPages = module.bindHistoryPages; });
+      return historyPagesReady.then(() => openArdoise(id));
+    }
     const c = CRED[id];
     if (!c) return;
     const el = $('#ep-ardm', root);
@@ -1478,18 +1483,10 @@
           <span class="lbl">${bal > 0 ? `dû ${oldest ? 'depuis ' + sinceLabel(oldest) : ''}` : bal < 0 ? 'payé en trop, à rendre ou à déduire de la prochaine dette' : 'à jour'}</span>
         </span>
       </div>
-      <div class="ep-dt-hist">
+      <div class="ep-dt-hist" tabindex="0" role="region" aria-label="Historique du carnet">
         <div class="ep-dt-hist-head">Historique du carnet</div>
         <div class="ep-htl">
-          ${hist.map((h) => `
-            <div class="ep-ht">
-              <span class="ep-ht-ic ${h.type}"><i data-lucide="${h.type === 'pay' ? 'hand-coins' : 'shopping-bag'}"></i></span>
-              <span class="ep-ht-mid">
-                <span class="ep-ht-label">${esc(h.label)}</span>
-                <span class="ep-ht-date">${fmtDT(h.at)}</span>
-              </span>
-              <span class="ep-ht-amt ${h.type}">${h.type === 'pay' ? '−' : '+'}${fmtMAD(h.amt)}</span>
-            </div>`).join('')}
+
         </div>
       </div>
       <div class="ep-dt-actions">
@@ -1497,6 +1494,15 @@
         ${bal > 0 ? `<button class="ep-btn secondary" id="ep-ard-wa"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>` : ''}
         <button class="ep-btn ghost" id="ep-ard-add"><i data-lucide="plus"></i>Ajouter une dette</button>
       </div>`;
+    bindHistoryPages(el, hist, (h) => `
+            <div class="ep-ht">
+              <span class="ep-ht-ic ${h.type}"><i data-lucide="${h.type === 'pay' ? 'hand-coins' : 'shopping-bag'}"></i></span>
+              <span class="ep-ht-mid">
+                <span class="ep-ht-label">${esc(h.label)}</span>
+                <span class="ep-ht-date">${fmtDT(h.at)}</span>
+              </span>
+              <span class="ep-ht-amt ${h.type}">${h.type === 'pay' ? '−' : '+'}${fmtMAD(h.amt)}</span>
+            </div>`, icons);
     openVeil('#ep-ard-veil');
     icons();
     $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-ard-veil'); });

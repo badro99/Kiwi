@@ -53,11 +53,11 @@ const tomorrow = { ref: 'A-1-X1', amount: 55, method: 'cash', idDay: '20261015' 
 ne(live.saleIdFor(today, M), live.saleIdFor(tomorrow, M), 'ticket 1 of two business days gets two different ids');
 eq(live.saleIdFor(today, M), live.saleIdFor({ ...today }, M), 'a retry of the same sale keeps one id');
 eq(live.saleIdFor(today, M), live.saleIdFor({ ...today, amount: 99, time: new Date() }, M), 'the id depends on the ref and the day only, not on later fields');
-eq(live.saleIdFor({ ref: 'A-1-X1' }, M), legacyId(M, 'A-1-X1'), 'an entry with no idDay (already stored or queued) keeps its old id byte for byte');
+eq(live.saleIdFor({ id: 'sale-local-77' }, M), legacyId(M, 'sale-local-77'), 'an entry with an existing id keeps its old id byte for byte');
 eq(live.saleIdFor({ id: 'sale-local-77', ref: 'A-1', idDay: '20261014' }, M), live.saleIdFor({ id: 'sale-local-77', ref: 'A-1' }, M), 'an entry that already owns an id is not re-keyed by the day');
 ne(live.saleIdFor(today, 'other-shop'), live.saleIdFor(today, M), 'the tenant is still part of the id');
 ok(live.saleIdFor(today, M).length <= 64, 'the id still fits the 64-character key');
-ok(/^sale-ref-[0-9a-f]+-[A-Za-z0-9_-]+$/.test(live.saleIdFor(today, M)), 'the id keeps the sale-ref-<hash>-<ref> shape');
+ok(/^[0-9a-f]{64}$/.test(live.saleIdFor(today, M)), 'ref-only identity keeps the full SHA256 digest');
 
 /* ── pos-sale.js : le jour d'activité est posé UNE fois, à l'encaissement ── */
 function bootPosSale() {

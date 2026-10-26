@@ -170,7 +170,13 @@
 
     async function runFiles(files) {
       if (busy) return;
-      const list = [...files].slice(0, MAX_FILES);
+      const list = [...files];
+      if (list.length > MAX_FILES) {
+        toast(L('limitT', 'Sélection refusée'), { type: 'warn', desc: L('limitD',
+          'Maximum {max} photos. Aucune photo analysée. Fichiers au-delà de la limite : {files}',
+          { max: MAX_FILES, files: list.slice(MAX_FILES).map((file) => file.name).join(', ') }) });
+        return;
+      }
       if (!list.length) return;
       busy = true;
       const signal = (operation = new AbortController()).signal;

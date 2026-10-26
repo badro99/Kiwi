@@ -363,7 +363,8 @@ function stockMutation(data, body, now) {
 function scheduleShopifySync(env, merchant, before, after, rev, waitUntil) {
   const task = enqueueStockChanges(env, merchant, before, after, rev, false)
     .then((queued) => queued ? flushShopifyOutbox(env, merchant, 2) : null)
-    .catch(() => null);
+    .catch(() => env.DB.prepare('UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?')
+      .bind('shopify-sync-unavailable', Date.now(), merchant).run().catch(() => null));
   // Cloudflare keeps this promise alive after the catalogue response. Shopify
   // can be down without turning a successful local sale into a failed sale.
   if (typeof waitUntil === 'function') waitUntil(task);

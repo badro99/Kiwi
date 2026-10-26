@@ -29,6 +29,7 @@
  * KIWI_UPDATE_SIZE_BASELINE=1 to lower it; never raise a pin to make a red
  * run go away. */
 import fs from 'node:fs';
+import { checkInterfaces } from './controller-interfaces.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,7 +59,8 @@ const files = [
 ].sort();
 
 const base = JSON.parse(fs.readFileSync(BASE, 'utf8'));
-const fail = [], lowered = [];
+const fail = checkInterfaces(rel => fs.readFileSync(path.join(ROOT, rel), 'utf8'),
+  JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/controller-interfaces.json'), 'utf8'))), lowered = [];
 let checks = 0;
 for (const rel of files) {
   const n = lines(rel);

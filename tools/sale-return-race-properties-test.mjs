@@ -296,7 +296,7 @@ process.exitCode = failed ? 1 : 0;
   const block = source.slice(source.indexOf('  let liveCredits ='), source.indexOf('  async function mutateLiveCredit'));
   let slug = 'fixture-a', reply, calls = 0, timer, renders = 0;
   const context = { window: { KiwiEnv: { isReal: () => true }, KiwiCloudDoc: { currentSlug: () => slug } },
-    document: { querySelector: () => true }, handlers: { 'nav-returns': () => { renders++; } },
+    toast() {}, _rL: (fr, en) => en, document: { querySelector: () => true }, handlers: { 'nav-returns': () => { renders++; } },
     fetch: async () => { calls++; return reply; }, setTimeout: fn => { timer = fn; return 1; }, clearTimeout() {}, console };
   vm.createContext(context);
   vm.runInContext(block + '\nthis.load = loadLiveCredits; this.rows = () => liveCredits; this.invalidate = () => { liveCreditsLoadedSlug = ""; };', context);

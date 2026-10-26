@@ -2181,15 +2181,22 @@
     const rows = refundsList(id);
     const cursor = Number(refund && refund.cursor) || 0;
     const saleId = String((refund && (refund.saleId || refund.id)) || '').slice(0, 80);
-    if ((cursor && rows.some((r) => Number(r && r.cursor) === cursor))
-      || (saleId && rows.some((r) => String(r && r.saleId) === saleId))) return false;
+    const existing = rows.find(r => (cursor && Number(r && r.cursor) === cursor) || (saleId && r && r.saleId === saleId));
+    if (existing) {
+      if (Array.isArray(refund.lines) && JSON.stringify(existing.lines) !== JSON.stringify(refund.lines)) {
+        existing.lines = refund.lines;
+        if (refundsWrite(id, rows)) salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+      }
+      return false;
+    }
     const entry = {
       ts: Number(refund && refund.ts) || Date.now(), amount: Math.abs(Number(refund && refund.amount) || 0),
       method: String((refund && refund.method) || 'cash').slice(0, 16), kind: 'refund',
       label: String((refund && refund.label) || 'Remboursement').slice(0, 80),
       ref: String((refund && refund.ref) || '').slice(0, 80), cursor, saleId,
+      lines: Array.isArray(refund && refund.lines) ? refund.lines : [],
     };
-    if (!(entry.amount > 0) || !refundsWrite(id, rows.concat(entry))) return false;
+    if (!(entry.amount > 0 || entry.lines.length) || !refundsWrite(id, rows.concat(entry))) return false;
     refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return true;

@@ -62,6 +62,8 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>crash</title>
 /* The server is the till's backend: it counts what actually arrived. */
 const received = [];
 const files = {
+  '/assets/live-link/sale-identity.js': new URL('../assets/live-link/sale-identity.js', import.meta.url),
+
   '/assets/vendor/dexie.min.js': new URL('../assets/vendor/dexie.min.js', import.meta.url),
   '/assets/offline-db.js': new URL('../assets/offline-db.js', import.meta.url),
   '/assets/live-link.js': new URL('../assets/live-link.js', import.meta.url),

@@ -96,7 +96,7 @@ function readFileSync(file, options) {
   return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
 }
 function live(file) {
-  if (isLiveLink(file)) return fs.readFileSync(path.join(root, 'assets/live-link/queue-store.js'), 'utf8') + '\n' + fs.readFileSync(file, 'utf8').replace(/^import \{\} from '\.\/live-link\/queue-store\.js\?v=1';\n/, '');
+  if (isLiveLink(file)) return fs.readFileSync(path.join(root, 'assets/live-link/sale-identity.js'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'assets/live-link/queue-store.js'), 'utf8') + '\n' + fs.readFileSync(file, 'utf8').replace(/^import \{\} from '\.\/live-link\/sale-identity\.js(?:\?v=\d+)?';\n/m, '').replace(/^import \{\} from '\.\/live-link\/queue-store\.js(?:\?v=\d+)?';\n/m, '');
   if (isVenues(file)) return ['data', 'helpers'].map(name => fs.readFileSync(path.join(root, 'assets/venues', name + '.js'), 'utf8')).join('\n') + '\n' + fs.readFileSync(file, 'utf8');
   const map = metadata(file);
   return (map ? fs.readFileSync(path.join(root, map.part), 'utf8') + '\n' : '') + fs.readFileSync(file, 'utf8');

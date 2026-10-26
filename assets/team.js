@@ -491,11 +491,13 @@
       Object.keys(raw.byVenue || {}).forEach((k) => {
         if (persistableTeamKey(k)) {
           root.byVenue[k] = raw.byVenue[k];
+          (root.mergeByVenue || (root.mergeByVenue = {}))[k] = (raw.mergeByVenue || {})[k];
           root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {};
           root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
           root.planningByVenue[k] = window.KiwiPlanningCore?.normalize?.((raw.planningByVenue || {})[k], root.byVenue[k]) || (raw.planningByVenue || {})[k] || {};
           root.locksByVenue[k] = cleanLocks((raw.locksByVenue || {})[k]);
           root.removedByVenue[k] = cleanRemoved((raw.removedByVenue || {})[k]);
+          window.Kiwi?.__teamMerge?.remember(root, k);
         }
       });
     } catch (_) {}
@@ -535,10 +537,11 @@
     if (rosterWriteBlocked()) return;
     try {
       const root = window.__kiwiTeamV2;
-      const out = { account: teamAccount() || ROSTER_ACCOUNT, byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
+      const out = { mergeByVenue: {}, account: teamAccount() || ROSTER_ACCOUNT, byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
           out.byVenue[k] = diskMembers(root.byVenue[k], serverCodes);
+          out.mergeByVenue[k] = (root.mergeByVenue || {})[k];
           out.hoursByVenue[k] = root.hoursByVenue[k] || {};
           out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
           out.planningByVenue[k] = root.planningByVenue[k] || {};
@@ -561,6 +564,8 @@
   }
   function saveCustomTeams() {
     if (rosterWriteBlocked()) return;
+    const state = window.__kiwiTeamV2;
+    Object.keys(state.byVenue).filter(persistableTeamKey).forEach(k => window.Kiwi?.__teamMerge?.stamp(state, k));
     persistTeams();
     afterTeamChange();
     teamCloudPush();
@@ -635,6 +640,7 @@
     const alive = Object.create(null);
     members.forEach((m) => { if (m && m.id) alive[m.id] = 1; });
     return {
+      fieldEdits: src.fieldEdits,
       members,
       removed,
       hours: mergeByDay(src.hours, null, alive),
@@ -672,6 +678,7 @@
     /* Une suppression EST enregistrée : l'union ne ressuscite plus un salarié
      * dont l'un des deux côtés porte la pierre tombale. */
     const removed = mergeRemoved(mine && mine.removed, theirs && theirs.removed);
+    if (window.Kiwi?.__teamMerge) return window.Kiwi.__teamMerge.merge(mine, theirs, removed, fillCodes);
     const gone = Object.create(null);
     removed.forEach((r) => { gone[r.id] = 1; });
     const take = (m) => { const id = m && m.id; if (!id || seen[id] || gone[id]) return; seen[id] = 1; members.push(m); };
@@ -698,6 +705,7 @@
         const root = window.__kiwiTeamV2;
         if (!k) return { members: [], removed: [], hours: {}, shifts: {}, planning: {}, locks: {} };
         return scopeTeamDoc({
+          fieldEdits: (root.mergeByVenue || {})[k],
           members: outboundMembers(root.byVenue[k] || []),
           removed: root.removedByVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
@@ -712,11 +720,14 @@
         const root = window.__kiwiTeamV2;
         const clean = scopeTeamDoc(doc, teamSlug());
         root.byVenue[k] = clean.members;
+        (root.mergeByVenue || (root.mergeByVenue = {}))[k] = clean.fieldEdits;
         root.removedByVenue[k] = clean.removed;
         root.hoursByVenue[k] = clean.hours;
         root.shiftsByVenue[k] = clean.shifts;
         root.planningByVenue[k] = clean.planning;
         root.locksByVenue[k] = clean.locks;
+        window.Kiwi?.__teamMerge?.remember(root, k);
+        window.Kiwi?.__teamMerge?.notice(clean);
         restorePeriodLock(root, root.periodKind, buildPeriod(root.periodKind));
         persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe

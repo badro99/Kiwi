@@ -43,9 +43,9 @@
       document.documentElement.setAttribute('data-skin-2027', 'kds');
       /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,
          two frames after DOMContentLoaded (every kit script is deferred, so it has run by then), at most 8 s. */
-      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{visibility:hidden;opacity:0}'; d.head.appendChild(s);
+      (function (d) { var s = d.createElement('style'); s.id = 'k-cloak'; s.textContent = 'body{background:var(--paper,#F7F5F0)}'; d.head.appendChild(s);
         var go = function () { var c = d.getElementById('k-cloak'); if (c) c.remove(); };
-        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 8000); })(document);
+        d.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); }); setTimeout(go, 500); })(document);
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(

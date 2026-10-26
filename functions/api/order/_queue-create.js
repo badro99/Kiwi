@@ -101,7 +101,7 @@ export async function createFloorTicket(ctx) {
           return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
                         session: dup.session_id || null, lines: storedOrderLines(dup), replayed: true });
         }
-      } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
+      } catch (_) { return json({ error: 'idempotency-unavailable' }, 503); }
     }
     /* A table number is reusable; a bill is not. Every employee ticket belongs
        to the current visit/session so a later party at table 3 never inherits
@@ -172,8 +172,9 @@ export async function createFloorTicket(ctx) {
             return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
                           lines: storedOrderLines(raced), replayed: true });
           }
-        } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
+        } catch (_) { return json({ error: 'idempotency-unavailable' }, 503); }
       }
+      if (clientRef) return json({ error: 'idempotency-unavailable' }, 503);
       try {
         row = await env.DB.prepare(
           `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,

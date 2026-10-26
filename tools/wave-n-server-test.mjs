@@ -51,7 +51,7 @@ const cases = {
   const now=Date.now(), merchant='merchant';
   for (const [reports,expected] of [[[],true],[[{updated_ts:now-86400001,sync:{},stock:{}}],true],[[{updated_ts:now,sync:{}}],true],[[{updated_ts:now,sync:{},stock:{}}],false]]) {
    const c={merchant};
-   const context={P:{signals:()=>[]},state:{clients:[c],data:{now}},client:()=>c,rows:k=>k==='caisseSync'?reports.map(r=>({...r,merchant,app:'caisse',deviceId:'device'})):[],Date,Set};
+   const context={L:v=>v,localSignal:v=>v,P:{signals:()=>[]},state:{clients:[c],data:{now}},client:()=>c,rows:k=>k==='caisseSync'?reports.map(r=>({...r,merchant,app:'caisse',deviceId:'device'})):[],Date,Set};
    const signals=vm.runInNewContext(fn+';allSignals()',context);
    assert.equal(signals.some(s=>s.signal_key==='unobserved:queues'),expected,JSON.stringify(reports));
   }

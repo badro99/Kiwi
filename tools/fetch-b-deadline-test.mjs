@@ -83,7 +83,7 @@ for (const operation of ['getJson','post']) {
 for(const name of ['publish','publishFollowup','moveTicket','saveClassification']) {
   const nodes=new Map(); const node=k=>{if(!nodes.has(k))nodes.set(k,{value:'text',textContent:'Send',innerHTML:'Send',isConnected:true,hidden:true});return nodes.get(k);};
   const ticket={id:1};
-  const h=setup({state:{files:[],followupFiles:[],tickets:[ticket],followupTicketId:1},API:'/api/tickets',$:node,t:x=>x,newIdempotencyKey:()=> 'attempt',friendlyError:()=> 'retry',showToast:x=>h.messages.push(x),loadTickets:async()=>{}});
+  const h=setup({state:{files:[],followupFiles:[],tickets:[ticket],followupTicketId:1},API:'/api/tickets',draftController:Promise.resolve({store:null}),saveDraft:async()=>{},draft:{save:async()=>{},restore:async()=>{}},$:node,t:x=>x,newIdempotencyKey:()=> 'attempt',friendlyError:()=> 'retry',showToast:x=>h.messages.push(x),loadTickets:async()=>{}});
   const fn=h.run('('+extract('tickets.js',name)+')');
   const editor={dataset:{classificationForm:'1'},querySelector:()=>node('classification')};
   const p=name==='moveTicket'?fn(ticket,'fixed',node('move')):fn({...event,target:{closest:()=>editor}});

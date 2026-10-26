@@ -1,4 +1,5 @@
-import {} from './live-link/queue-store.js?v=1';
+import {} from './live-link/queue-store.js?v=2';
+import {} from './live-link/sale-identity.js?v=1';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
  * ALLUMÉ dès qu'il s'agit d'un vrai commerçant (KiwiEnv.isReal()), comme le
@@ -285,6 +286,7 @@ import {} from './live-link/queue-store.js?v=1';
   function stableId(merchantId, entry) {
     var source = String((entry && (entry.id || entry.ref)) || '');
     if (!source) return uid();
+    if (!entry.id) return window.KiwiSaleIdentity(merchantId, entry);
     if (source.startsWith('visit-')) return source.slice(0, 64);
     /* FNV-1a: deterministic across reloads, short enough for the 64-char DB
        key, and includes the tenant so two shops may both own ticket #42. */
@@ -1039,12 +1041,12 @@ import {} from './live-link/queue-store.js?v=1';
       if (!cur) return;
       var signedCents = s.amountCents != null
         ? Math.round(Number(s.amountCents)) : Math.round(Number(s.amount || 0) * 100);
-      if (signedCents < 0) {
-        if (haveRefund[cur] || !window.KiwiRefunds || !window.KiwiRefunds.add) return;
+      if (signedCents < 0 || s.channel === 'refund') {
+        if (!window.KiwiRefunds || !window.KiwiRefunds.add) return;
         try {
           window.KiwiRefunds.add(vid, {
             amount: Math.abs(signedCents) / 100, method: s.method || 'cash', cursor: cur, ts: s.ts,
-            label: s.label || 'Remboursement', ref: s.orderRef || s.ref || '', saleId: s.id || '',
+            label: s.label || 'Remboursement', ref: s.orderRef || s.ref || '', saleId: s.id || '', lines: s.lines,
           });
           haveRefund[cur] = 1;
         } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiRefunds', 'add', tenant); }).catch(function () { /* next feed retries */ }); }

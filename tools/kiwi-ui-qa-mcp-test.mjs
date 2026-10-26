@@ -200,7 +200,16 @@ try {
   /* Popover menus (interactive.js menu()) render div[role=menuitem], not
      buttons. Language QA goes through two of them: the profile menu's
      Paramètres, then Settings → app language → English. */
-  const profile = await call('ui_click', { ref: actionRef(body(await call('ui_snapshot')), 'profile-menu') });
+  // The hotel uses its own home layout. Its profile menu lives in the
+  // scrollable sidebar, rather than Vexel's home-only topbar clone.
+  async function profileMenuRef() {
+    let screen = body(await call('ui_snapshot'));
+    for (let i = 0; i < 4 && !screen.includes(' [profile-menu] '); i++) {
+      screen = body(await call('ui_scroll', { direction: 'down', pixels: 700, selector: '.sidebar' }));
+    }
+    return actionRef(screen, 'profile-menu');
+  }
+  const profile = await call('ui_click', { ref: await profileMenuRef() });
   const profileScreen = await screenWith(profile, s => /^q\d+ div\/menuitem Paramètres$/m.test(s));
   ok(!profile.isError && /^q\d+ div\/menuitem Paramètres$/m.test(profileScreen), 'profile popover items get q-refs as menu items');
   const settings = await call('ui_click', { ref: menuItemRef(profileScreen, 'Paramètres') });
@@ -261,7 +270,7 @@ try {
   const storeroomAr = await call('ui_assert', { selector: 'a[data-nav="economat"]', condition: 'text_contains', expected: 'المخزن',
     description: 'Économat reads المخزن in Arabic' });
   ok(!storeroomAr.isError, 'Économat reads المخزن in Arabic');
-  const profileAr = await call('ui_click', { ref: actionRef(body(await call('ui_snapshot')), 'profile-menu') });
+  const profileAr = await call('ui_click', { ref: await profileMenuRef() });
   const profileArScreen = await screenWith(profileAr, s => /^q\d+ div\/menuitem الإعدادات$/m.test(s));
   const settingsAr = await call('ui_click', { ref: menuItemRef(profileArScreen, 'الإعدادات') });
   ok(!settingsAr.isError, 'الإعدادات opens from the Arabic profile menu');

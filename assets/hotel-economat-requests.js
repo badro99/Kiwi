@@ -103,8 +103,20 @@
   }
   function when(ts) {
     var l = lang(); if (!ts) return '';
-    if (!timeFmt[l]) timeFmt[l] = new Intl.DateTimeFormat(l === 'ar' ? 'ar-MA' : l === 'en' ? 'en-GB' : 'fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-    try { return timeFmt[l].format(new Date(Number(ts))); } catch (_) { return ''; }
+    var zone = '';
+    try { zone = window.KiwiDayReport && window.KiwiDayReport.timezone && window.KiwiDayReport.timezone(merchant()); } catch (_) {}
+    if (!zone) {
+      try { var venue = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData(); zone = venue && (venue.timezone || venue.timeZone || venue.tz); } catch (_) {}
+    }
+    var Formatter = window.KiwiZoneLaw && window.KiwiZoneLaw.DateTimeFormat || Intl.DateTimeFormat;
+    var key = l + '|' + (zone || 'Africa/Casablanca');
+    try {
+      if (!timeFmt[key]) timeFmt[key] = new Formatter(l === 'ar' ? 'ar-MA' : l === 'en' ? 'en-GB' : 'fr-FR', { timeZone:zone || 'Africa/Casablanca', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    } catch (_) {
+      key = l + '|Africa/Casablanca';
+      if (!timeFmt[key]) timeFmt[key] = new Formatter(l === 'ar' ? 'ar-MA' : l === 'en' ? 'en-GB' : 'fr-FR', { timeZone:'Africa/Casablanca', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    }
+    try { return timeFmt[key].format(new Date(Number(ts))); } catch (_) { return ''; }
   }
   /* « req-mvmep6gj-6e3w » se lit mal : on montre la fin, en capitales. */
   function shortRef(id) { var parts = String(id || '').split('-'); return T().ref.replace('{r}', String(parts[parts.length - 1] || id).toUpperCase()); }
@@ -172,14 +184,14 @@
     try {
       var all = await Promise.all([
         getJson('/api/inventory/internal-requests?merchant=' + qs),
-        getJson('/api/store?feature=hotel-units&merchant=' + qs).catch(function () { return null; }),
-        getJson('/api/store?feature=economat-catalogue&merchant=' + qs).catch(function () { return null; }),
+        getJson('/api/store?feature=hotel-units&merchant=' + qs),
+        getJson('/api/store?feature=economat-catalogue&merchant=' + qs),
       ]);
       S.requests = Array.isArray(all[0].requests) ? all[0].requests : [];
       S.side = all[0].confirmationSide === 'economat' ? 'economat' : 'recipient';
       S.actor = all[0].actor || null;
-      if (all[1] && all[1].data && Array.isArray(all[1].data.units)) S.units = all[1].data.units;
-      if (all[2] && all[2].data && Array.isArray(all[2].data.items)) S.catalogue = all[2].data.items;
+      S.units = all[1] && all[1].data && Array.isArray(all[1].data.units) ? all[1].data.units : [];
+      S.catalogue = all[2] && all[2].data && Array.isArray(all[2].data.items) ? all[2].data.items : [];
       S.error = '';
     } catch (e) { S.error = String(e && e.message || 'offline'); }
     S.loading = false; S.loaded = true;

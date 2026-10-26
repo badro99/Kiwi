@@ -13,7 +13,7 @@
       'assets/catalog-import.js?v=12',
       'assets/ai-image-import.js?v=1',
       'assets/menu-scan.js?v=7',
-      'assets/salle-scan.js?v=5',
+      'assets/salle-scan.js?v=6',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel-rates.js?v=1',
@@ -23,7 +23,7 @@
       'assets/hotel/editors.js?v=2',
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=1'] },
-    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=14'] },
+    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=15'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url) {
