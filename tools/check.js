@@ -2138,6 +2138,7 @@ section('Whole-project regressions');
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',
+    'intake-storage-fault-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
     'legacy-scan-test.mjs',
