@@ -178,9 +178,17 @@ function namedTests(script) {
     const file = path.isAbsolute(m[1]) ? m[1] : path.join(dir, m[1]);
     if (seen.has(file) || own.has(file)) continue;
     seen.add(file);
-    try { if (fs.statSync(file).isFile()) out.push(file); } catch (_) {}
+    try { if (fs.statSync(file).isFile() && !networkOnly(file)) out.push(file); } catch (_) {}
   }
   return out;
+}
+
+/* A test that needs the network or outside credentials says so in its first
+ * lines (`kiwi:network-only`). check.js names it only to exempt it from the
+ * "every test is wired" rule, so the parallel prefetch must not run it: it
+ * would fail without credentials, or call the live site, on every gate. */
+function networkOnly(file) {
+  try { return /kiwi:network-only/.test(fs.readFileSync(file, 'utf8').slice(0, 600)); } catch (_) { return false; }
 }
 
 /* Run every child test check.js names, side by side, before check.js runs

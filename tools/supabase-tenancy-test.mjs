@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// kiwi:network-only, needs the network or outside credentials; run by hand, never by the gate (tools/check-guard.js).
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · la porte 5, rendue capable d'échouer.
  *
