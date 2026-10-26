@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/onboarding-data.js?v=1',
+  '/assets/onboarding-data.js?v=2',
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',
@@ -63,8 +63,8 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=6',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/service.js?v=2',
-  '/assets/serveur-app.js?v=15',
+  '/assets/serveur/service.js?v=3',
+  '/assets/serveur-app.js?v=16',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -205,7 +205,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
-  '/assets/sales-history.js?v=6',
+  '/assets/sales-history.js?v=7',
   '/assets/dateRange.js?v=102',
   '/assets/daterange/renderers.js?v=3',
   '/assets/agent/ui.js?v=3',
@@ -245,7 +245,7 @@ var SHELL = [
   '/assets/operations.js?v=17',
   '/assets/operations-ui.js?v=26',
   '/assets/live-link/queue-store.js?v=1',
-  '/assets/live-link.js?v=77',
+  '/assets/live-link.js?v=78',
   '/assets/channel-sales.js?v=6',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -318,7 +318,7 @@ var SHELL = [
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=5',
   '/assets/retail-balances.js?v=4',
-  '/assets/retail-sale-hold.js?v=4',
+  '/assets/retail-sale-hold.js?v=5',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
@@ -425,7 +425,7 @@ var SHELL = [
   '/assets/kit/dash-compliance.js?v=1',
   '/assets/kit/dash-desktop.js?v=9',
   '/assets/kit/dash-ai.js?v=3',
-  '/assets/kit/dash-onboarding.js?v=2',
+  '/assets/kit/dash-onboarding.js?v=3',
   /* and forgot and reset password, behind kiwiSkin2027:access. */
   '/assets/icons/material/sprite.access.svg?v=1',
   '/assets/kit/strings/onboarding.fr.js?v=1',

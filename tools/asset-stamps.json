@@ -716,8 +716,8 @@
     "sha": "fe0458c2c840a960"
   },
   "assets/kit/dash-onboarding.js": {
-    "v": "2",
-    "sha": "c58bc7bafbf4f97c"
+    "v": "3",
+    "sha": "c43a7cb7469c994a"
   },
   "assets/kit/dash-orders.js": {
     "v": "4",
@@ -996,8 +996,12 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "77",
-    "sha": "323ccee08ba73509"
+    "v": "78",
+    "sha": "15e1c3c180b8284f"
+  },
+  "assets/live-link/queue-store.js": {
+    "v": "1",
+    "sha": "f2a1e497d9b4b9f3"
   },
   "assets/live-socket.js": {
     "v": "5",
@@ -1072,16 +1076,16 @@
     "sha": "ac1fc9442873ae3e"
   },
   "assets/onboarding-data.js": {
-    "v": "1",
-    "sha": "6716214104228a85"
+    "v": "2",
+    "sha": "2fe72f80e6bace90"
   },
   "assets/onboarding.css": {
     "v": "1",
     "sha": "164e9d8c308ea77e"
   },
   "assets/onboarding.js": {
-    "v": "2097",
-    "sha": "8400c05916fd8a52"
+    "v": "2098",
+    "sha": "593088d0d73899fd"
   },
   "assets/operations-ui.js": {
     "v": "26",
@@ -1560,8 +1564,8 @@
     "sha": "21e7a85d7c96be09"
   },
   "assets/retail-sale-hold.js": {
-    "v": "4",
-    "sha": "7284d27ec10421e6"
+    "v": "5",
+    "sha": "96146417f2474be7"
   },
   "assets/retail-scan.css": {
     "v": "10",
@@ -1576,8 +1580,8 @@
     "sha": "8abf8684b022329c"
   },
   "assets/sales-history.js": {
-    "v": "6",
-    "sha": "f3465051c0548f42"
+    "v": "7",
+    "sha": "9f843786854ceadd"
   },
   "assets/salle-scan.js": {
     "v": "3",
@@ -1588,8 +1592,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "15",
-    "sha": "8cf47e6ae211b83c"
+    "v": "16",
+    "sha": "199e3528f000d70f"
   },
   "assets/serveur-lang.js": {
     "v": "4",
@@ -1600,8 +1604,8 @@
     "sha": "0ce114ed2ac13e74"
   },
   "assets/serveur/service.js": {
-    "v": "2",
-    "sha": "8c1274ba9319a8da"
+    "v": "3",
+    "sha": "852f0b30c16cc4f5"
   },
   "assets/service-requests.js": {
     "v": "2",

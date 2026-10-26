@@ -63,8 +63,9 @@ for (const [name, bodies] of beforeBodies) {
 const html = read('kiwi-serveur.html');
 const tags = html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g);
 const at = tags.findIndex(tag => tag.includes('assets/serveur-app.js?'));
-assert.equal(read(map.bundle), map.parts.map(read).join(''), 'bundle livré identique aux trois parties');
+assert.equal(read(map.bundle), map.parts.map(read).join(''), 'bundle livré identique aux trois parties ; le refaire : cat ' + map.parts.join(' ') + ' > ' + map.bundle);
 assert.equal(tags[at - 1].match(/src="([^"]+)"/)[1], map.bundle + '?v=' + JSON.parse(read('tools/asset-stamps.json'))[map.bundle].v);
 for (const tag of tags.slice(at - 1, at + 1)) assert.ok(!/\b(?:async|defer|type)\s*(?:=|>)/.test(tag), 'scripts classiques synchrones');
-assert.equal(tags.length, 27, 'nombre de scripts inchangé');
+// 27, moins menu-promos.js chargé avec promo-rules.js par un module (vague I).
+assert.equal(tags.length, 26, 'nombre de scripts de la page serveur');
 console.log(`✓ serveur-split-test : ${map.moved.length} fragments identiques, reconstruction, noms et ordre classiques conservés`);

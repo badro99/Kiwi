@@ -12,7 +12,7 @@
  * After the restart the network is back: every accepted sale reaches the
  * server, with its original id, and none is counted twice.
  *
- * Real assets/offline-db.js, live-link.js and Dexie; only fetch is a double. */
+ * Real assets/offline-db.js, live-link.js (a module, with its queue store) and Dexie; only fetch is a double. */
 import fs from 'node:fs';
 import http from 'node:http';
 import { createRequire } from 'node:module';
@@ -57,7 +57,7 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>crash</title>
 </script>
 <script src="/assets/vendor/dexie.min.js"></script>
 <script src="/assets/offline-db.js"></script>
-<script src="/assets/live-link.js"></script>`;
+<script type="module" src="/assets/live-link.js"></script>`;
 
 /* The server is the till's backend: it counts what actually arrived. */
 const received = [];
@@ -65,6 +65,7 @@ const files = {
   '/assets/vendor/dexie.min.js': new URL('../assets/vendor/dexie.min.js', import.meta.url),
   '/assets/offline-db.js': new URL('../assets/offline-db.js', import.meta.url),
   '/assets/live-link.js': new URL('../assets/live-link.js', import.meta.url),
+  '/assets/live-link/queue-store.js': new URL('../assets/live-link/queue-store.js', import.meta.url),
 };
 const server = http.createServer((req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
