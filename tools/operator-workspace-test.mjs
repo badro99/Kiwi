@@ -231,4 +231,58 @@ for(const channel of ['email','whatsapp']){
   check(channel+' reply not falsely delivered',reply.ok&&reply.delivery.ok===false);
   check(channel+' reply stays operator-owned',db.prepare('SELECT status FROM support_tickets WHERE id=?').get('ticket-'+channel).status==='open');
 }
-console.log(`operator-workspace-test: ${checks} controls passed`);
+
+
+// Les formulaires historiques doivent partager une traduction complète et une reprise clavier.
+const legacyPath = new URL('../assets/admin-legacy.js', import.meta.url);
+check('module des formulaires historiques présent', fs.existsSync(legacyPath));
+const legacy = fs.readFileSync(legacyPath, 'utf8');
+const sandbox = { window: {}, URLSearchParams, location: { search: '?lang=ar' }, localStorage: { getItem: () => null } };
+vm.runInNewContext(legacy.split('/* DOM */')[0], sandbox);
+const i18n = sandbox.window.KiwiAdminI18n;
+check('arabe sélectionné', i18n.lang === 'ar');
+for (const [fr, pair] of Object.entries(i18n.copy)) {
+  check('traductions complètes : '+fr, pair.length === 2 && pair.every(s => typeof s === 'string' && s.trim() && !s.includes('\u2014')));
+  check('résolution arabe : '+fr, i18n.text(fr) === pair[1]);
+}
+for (const label of ['Chargement…','Aucun détail de panier enregistré pour cette vente.','code opérateur','Lecture seule.','Établissement supprimé.','Tables purgées : {value}','Ce commerce tient un carnet de {value} clients.']) check('message historique complet : '+label,Object.hasOwn(i18n.copy,label));
+check('clavier et alertes récupérables', /requestSubmit/.test(legacy) && /Escape/.test(legacy) && /role.*alert/.test(legacy));
+const legacyHtml = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
+check('module historique chargé par la console', /<script src="assets\/admin-legacy\.js"><\/script>/.test(legacyHtml));
+check('focus visible et champs RTL isolés', /#op-config-panel :focus-visible/.test(legacyHtml) && /html\[dir="rtl"\] #operators/.test(legacyHtml));
+
+
+
+for (const lang of ['fr','en','ar']) {
+  const context={window:{},URLSearchParams,location:{search:'?lang='+lang},localStorage:{getItem:()=>null}};
+  vm.runInNewContext(legacy.split('/* DOM */')[0],context);
+  check('langue historique '+lang,context.window.KiwiAdminI18n.lang===lang);
+  check('titre dynamique '+lang,context.window.KiwiAdminI18n.text('Supprimer « Commerce fictif »').includes('Commerce fictif'));
+}
+// Exécuter les gestionnaires, sans navigateur ni requête : Entrée déclenche
+// exactement un clic et reste sans effet tant que l’enregistrement est bloqué.
+const handlers={},forms=[],buttons={};
+const doc={readyState:'complete',documentElement:{},body:{},querySelectorAll:()=>[],
+  getElementById(id){if(id.endsWith('add')||id.endsWith('save')||id.endsWith('search'))return buttons[id]||=( {disabled:false,type:'',click(){this.clicks=(this.clicks||0)+1;}} );return {closest:()=>({parentNode:{insertBefore(){} }})};},
+  createElement(){const events={};const form={appendChild(){},addEventListener:(k,fn)=>events[k]=fn,requestSubmit(){events.submit({preventDefault(){}});},events};forms.push(form);return form;},
+  addEventListener:(k,fn)=>handlers[k]=fn};
+vm.runInNewContext(legacy,{window:{},document:doc,URLSearchParams,location:{search:'?lang=ar'},localStorage:{getItem:()=>null},MutationObserver:class{observe(){}}});
+check('direction arabe',doc.documentElement.dir==='rtl');
+for(const [index,id] of ['pin-add','op-add','biz-save','ts-search'].entries()){
+  const event={key:'Enter',target:{matches:()=>true},preventDefault(){}};
+  forms[index].events.keydown(event);check('Entrée unique '+id,buttons[id].clicks===1);
+  buttons[id].disabled=true;forms[index].events.keydown(event);check('envoi bloqué '+id,buttons[id].clicks===1);
+}
+const catalogue = legacyHtml.slice(legacyHtml.indexOf('var TYPES ='),legacyHtml.indexOf('// ── store:'));
+for (const match of catalogue.matchAll(/(?:label|hint):'([^']+)'/g)) check('libellé de configuration traduit : '+match[1],Object.hasOwn(i18n.copy,match[1]));
+const staffCatalogue=fs.readFileSync(new URL('../assets/staff-roles.js',import.meta.url),'utf8').split('var LABELS = {')[1].split('};')[0];
+for (const match of staffCatalogue.matchAll(/:\s*'([^']+)'/g)) check('rôle traduit : '+match[1],Object.hasOwn(i18n.copy,match[1]));
+let cancelled=0,submitted=0,focused=0;
+const firstControl={disabled:false,getClientRects:()=>[{}],focus(){focused=1;}},lastControl={disabled:false,getClientRects:()=>[{}],focus(){focused=2;}};
+const card={querySelector:selector=>selector==='.mini.ghost'?{click(){cancelled++;}}:{disabled:false,click(){submitted++;}},matches:()=>true,querySelectorAll:()=>[firstControl,lastControl]};
+const target={closest:()=>card,matches:()=>true};
+handlers.keydown({key:'Enter',target,preventDefault(){}});check('Entrée dans un éditeur',submitted===1);
+handlers.keydown({key:'Escape',target,preventDefault(){},stopImmediatePropagation(){}});check('Échap annule l’éditeur',cancelled===1);
+doc.activeElement=lastControl;handlers.keydown({key:'Tab',target,preventDefault(){}});check('Tab contenu dans le dialogue',focused===1);
+doc.activeElement=firstControl;handlers.keydown({key:'Tab',target,shiftKey:true,preventDefault(){}});check('Maj Tab contenu dans le dialogue',focused===2);
+console.log('operator-workspace-test: '+checks+' controls passed');

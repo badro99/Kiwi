@@ -74,13 +74,15 @@ document.addEventListener('click',e=>{
 </script><script src="/assets/trade-workspaces.js"></script></head><body><main></main></body></html>`;
 
 const mime = { '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
-let book=JSON.parse(JSON.stringify(CARNET));let writes=0;
+let book=JSON.parse(JSON.stringify(CARNET));let writes=0, failSave=false, serverCap=false;
 const server = http.createServer((rq, res) => {
   if(rq.url==='/api/store'){
     res.setHeader('Content-Type','application/json');
     if(rq.method==='GET'){res.end(JSON.stringify({verticals:{epicerie:{data:{carnet:book}}}}));return;}
     let body='';rq.on('data',chunk=>body+=chunk);rq.on('end',()=>{
       const request=JSON.parse(body),c=book.find(c=>c.id===request.clientId);
+      if(failSave){failSave=false;res.statusCode=503;res.end(JSON.stringify({error:'storage-unavailable'}));return;}
+      if(serverCap){serverCap=false;res.statusCode=409;res.end(JSON.stringify({error:'refund-exceeds-advance',availableCents:500}));return;}
       const available=-(c.hist||[]).reduce((n,h)=>n+(h.type==='debt'?1:-1)*Math.round(h.amt*100),0);
       if(request.amountCents>available){res.statusCode=409;res.end(JSON.stringify({error:'refund-exceeds-advance',availableCents:available}));return;}
       writes++;c.hist.push({id:request.id,kind:'advance-refund',type:'debt',amt:request.amountCents/100,at:new Date().toISOString(),method:'transfer'});
@@ -129,5 +131,32 @@ await S.run('avance plafonnée, remboursement distinct et actualisation',async(t
  await page.click('[data-tw-refund="advance"]');
  check(await page.$eval('[data-refund-available]',el=>/12[,.]50/.test(el.textContent)),'le reste remboursable vient du journal actualisé');
  check(await page.$eval('.tw-till',el=>el.textContent.includes('Remboursements enregistrés')&&/7[,.]50/.test(el.textContent)),'le remboursement a sa propre entrée affichée');
+});
+// coverage: surface=credit-book locale=fr viewport=phone
+// coverage: surface=credit-book locale=fr viewport=tablet
+for (const width of [390, 820]) await S.run(`FR · ${width} px · avance, refus serveur et reprise`, async t => {
+ book=JSON.parse(JSON.stringify(CARNET));writes=0;
+ const page=await open(t,{width,lang:'fr'});
+ const click=async selector=>{await page.waitForSelector(selector,{visible:true});await page.click(selector);};
+ const amount=async value=>{await page.click('#tw-refund-amount',{clickCount:3});await page.keyboard.type(value);};
+ check(await page.$eval('.tw-till',el=>el.textContent.includes('Avance')),'avance distincte de la dette');
+ check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'carnet sans débordement de la page');
+ await click('[data-tw-refund="advance"]');
+ await amount('7.5');serverCap=true;
+ await click('[role=dialog] [type=submit]');
+ await page.waitForFunction(()=>document.querySelector('[data-refund-error]').textContent.includes('dépasse'));
+ check(writes===0,'sur-remboursement refusé par le serveur, aucun débit');
+ check(await page.$eval('#tw-refund-amount',el=>el.value==='7.5'&&!el.disabled),'montant conservé et modifiable après conflit');
+ await amount('5');failSave=true;
+ await click('[role=dialog] [type=submit]');
+ await page.waitForFunction(()=>document.querySelector('[data-refund-error]').textContent.length>0&&!document.querySelector('[role=dialog] [type=submit]').disabled);
+ check(await page.$eval('#tw-refund-amount',el=>el.value==='5'),'échec réseau : saisie conservée');
+ check(writes===0,'échec sans modification du journal');
+ check(await page.$eval('[data-tw-refund-form]',el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&el.scrollWidth<=el.clientWidth+1;}),'formulaire contenu dans la largeur disponible');
+ await click('[role=dialog] [type=submit]');
+ await page.waitForFunction(()=>!document.querySelector('[role=dialog]'));
+ check(writes===1,'réessai : une seule écriture confirmée');
+ await click('[data-tw-refund="advance"]');
+ check(await page.$eval('[data-refund-available]',el=>el.textContent.includes('15 MAD')),'solde serveur relu après remboursement');
 });
 await browser.close();server.close();S.finish();

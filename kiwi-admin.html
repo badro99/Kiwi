@@ -695,6 +695,15 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   #manage>.sec-head{top:64px}.panel .grid2{grid-template-columns:1fr}#operators .panel{grid-template-columns:1fr}
 }
 @media(max-width:480px){.ov-grid{grid-template-columns:1fr}.crm-hero h2{font-size:38px}.top-title h1{font-size:14px}.badge{display:none}}
+
+/* Parcours clavier des formulaires historiques et direction de lecture. */
+#op-config-panel :focus-visible, [data-dossier-panel="commercial"] :focus-visible,
+#ts-blk :focus-visible, #acct-blk :focus-visible, #operators :focus-visible,
+.md-card :focus-visible { outline:3px solid var(--atlas); outline-offset:3px; }
+html[dir="rtl"] #operators, html[dir="rtl"] #manage, html[dir="rtl"] .md-card { text-align:start; }
+.op-navigation a [data-admin-copy]{display:inline;margin:0;background:none;font:inherit}
+html[dir="rtl"] .md-x { left:12px; right:auto; }
+#op-config-panel input, #operators input[type="password"], #mail-editor input[type="email"] { unicode-bidi:plaintext; }
 </style>
 <link rel="stylesheet" href="assets/admin-workspace.css?v=4" />
 <script src="assets/kit/haptics.js?v=7"></script>
@@ -713,11 +722,12 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       <a href="#fleet" data-op-route="fleet"><img src="assets/icons/material/monitor.svg" alt="" />Parc &amp; incidents</a>
       <a href="#revenue" data-op-route="revenue"><img src="assets/icons/material/bar_chart.svg" alt="" />Revenus &amp; activité</a>
       <a href="#onboarding" data-op-route="onboarding"><img src="assets/icons/material/menu_book.svg" alt="" />Accompagnement</a>
+      <a href="#operators" data-op-route="operators"><img src="assets/icons/material/group.svg" alt="" /><span data-admin-copy>Équipe</span></a>
       <!-- Une fenêtre à part, pas une vue : on la garde ouverte sur un second
            écran pendant qu'on travaille un dossier ici. -->
       <a href="kiwi-health.html" target="kiwi-health" data-op-window><img src="assets/icons/material/trending_up.svg" alt="" />Santé de Kiwi<span>↗</span></a>
     </nav>
-    <div class="op-sidebar-bottom"><p>Un problème. Un responsable.<br />Une prochaine étape.</p><a href="#operators" data-op-route="operators">Équipe opérateur <span>↗</span></a></div>
+    <div class="op-sidebar-bottom"><p>Un problème. Un responsable.<br />Une prochaine étape.</p></div>
   </aside>
   <header class="top">
     <div class="top-brand">
@@ -1038,6 +1048,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
+  <script src="assets/admin-legacy.js"></script>
   <script src="assets/staff-roles.js?v=1"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1058,16 +1069,16 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var n = document.createElement(tag);
     if (props){
       for (var k in props){
-        if (k === 'text') n.textContent = props[k];
+        if (k === 'text') n.textContent = window.KiwiAdminI18n.text(props[k]);
         else if (k === 'class') n.className = props[k];
         else if (k.slice(0,2) === 'on') n.addEventListener(k.slice(2).toLowerCase(), props[k]);
-        else if (props[k] != null && props[k] !== false) n.setAttribute(k, props[k]);
+        else if (props[k] != null && props[k] !== false) n.setAttribute(k, /^(title|aria-label|placeholder)$/.test(k) ? window.KiwiAdminI18n.text(props[k]) : props[k]);
       }
     }
     for (var i = 2; i < arguments.length; i++){
       var c = arguments[i];
       if (c == null || c === false) continue;
-      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      n.appendChild(typeof c === 'string' ? document.createTextNode(props && props['data-admin-raw'] != null ? c : window.KiwiAdminI18n.text(c)) : c);
     }
     return n;
   }
@@ -1076,7 +1087,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   function notify(msg){
     var el = document.getElementById('op-toast');
     if (!el){ el = h('div', { id:'op-toast', class:'op-toast' }); document.body.appendChild(el); }
-    el.textContent = msg;
+    el.textContent = window.KiwiAdminI18n.text(msg);
     // reflow so the transition replays even on back-to-back calls
     void el.offsetWidth; el.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
@@ -1118,14 +1129,19 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     }, 0);
     return { el:el, body:body, close:close };
   }
-  function fmt(n){ try { return (Math.round(n)||0).toLocaleString('fr-FR'); } catch(_) { return String(Math.round(n)||0); } }
+  function refused(error){
+    return window.KiwiAdminI18n.text(error && error.status === 409
+      ? 'Conflit serveur. Votre saisie est conservée. Vérifiez les données puis réessayez.'
+      : 'Enregistrement refusé. Votre saisie est conservée. Vérifiez les données puis réessayez.');
+  }
+  function fmt(n){ try { return (Math.round(n)||0).toLocaleString(window.KiwiAdminI18n.lang); } catch(_) { return String(Math.round(n)||0); } }
   function ago(ts){
     if (!ts) return '·';
     var s = Math.max(0, Math.round((Date.now()-ts)/1000));
-    if (s < 60) return 'à l’instant';
-    var m = Math.round(s/60); if (m < 60) return 'il y a ' + m + ' min';
-    var hh = Math.round(m/60); if (hh < 24) return 'il y a ' + hh + ' h';
-    return 'il y a ' + Math.round(hh/24) + ' j';
+    if (s < 60) return window.KiwiAdminI18n.text('à l’instant');
+    var m = Math.round(s/60); if (m < 60) return window.KiwiAdminI18n.text('il y a ' + m + ' min');
+    var hh = Math.round(m/60); if (hh < 24) return window.KiwiAdminI18n.text('il y a ' + hh + ' h');
+    return window.KiwiAdminI18n.text('il y a ' + Math.round(hh/24) + ' j');
   }
 
   // Business subtype (onboarding kiwiBizType) → its label + base vertical. The
@@ -2227,6 +2243,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       + 'carte, clients, codes équipe, appairages · seront effacés définitivement. '
       + 'Les journaux d’opérateur sont conservés. Recopiez son identifiant pour confirmer.');
     var input = h('input', { class:'inp', placeholder:c.merchant, 'aria-label':'Identifiant à recopier : ' + c.merchant, autocomplete:'off', style:'width:100%;margin:10px 0' });
+    var msg = h('p', {class:'err',role:'alert'});
     var go = h('button', { class:'mini danger', disabled:true }, 'Supprimer définitivement');
     input.addEventListener('input', function(){ go.disabled = input.value.trim() !== c.merchant; });
     go.addEventListener('click', async function(){
@@ -2236,13 +2253,14 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         m.close();
         await renderClients();
         var n = Object.keys((r && r.removed) || {}).length;
-        notify('« ' + c.merchant + ' » supprimé · ' + n + ' table(s) purgée(s).');
+        notify(window.KiwiAdminI18n.text('Établissement supprimé.') + ' « ' + c.merchant + ' » · ' + window.KiwiAdminI18n.text('Tables purgées : ' + n));
       } catch(e){
         go.disabled = false; go.textContent = 'Supprimer définitivement';
-        notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur'));
+        msg.textContent = refused(e);
       }
     });
     m.body.appendChild(input);
+    m.body.appendChild(msg);
     m.body.appendChild(h('div', { class:'row-actions' }, go));
   }
 
@@ -2725,10 +2743,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       wrap.appendChild(h('div', { class:'pin' },
         h('b', null, '••••'),
         h('span', { class:'role' }, roleLabel(p.role)),
-        p.name ? h('span', { class:'nm' }, p.name) : null,
+        p.name ? h('span', { class:'nm', 'data-admin-raw':'' }, p.name) : null,
         h('span', { class:'spacer' }),
         h('button', { class:'mini danger', disabled:SENIOR === false,
-          onClick:async function(){ await store.delPin(target.merchant, p.id); if(selected===target)renderPins(); } }, 'Supprimer')
+          onClick:async function(e){ var button=e.currentTarget; button.disabled=true; try { await store.delPin(target.merchant,p.id); if(selected===target)renderPins(); } catch(error){ document.getElementById('pin-err').textContent=refused(error); button.disabled=false; } } }, 'Supprimer')
       ));
     });
   }
@@ -2763,7 +2781,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     TYPES.forEach(function(t){ sel.appendChild(h('option', { value:t.id }, t.label)); });
     sel.value = selected.type || '';
     sel.disabled = SENIOR === false;
-    sel.addEventListener('change', async function(){
+    var msg=h('p',{class:'err',role:'alert'});
+    var retry=h('button',{class:'mini',type:'button',hidden:true},'Enregistrer');
+    async function saveType(){
+      if(retry.disabled)return; retry.disabled=true; msg.textContent='';
       var v = sel.value;
       try {
         await store.setType(target.merchant, v);
@@ -2773,10 +2794,15 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         renderPinRoles();         // staff roles switch to the new trade
         await renderFeatures();   // module set switches to the new vertical
         notify(v ? ('Type : ' + typeLabel(v) + ', modules adaptés.') : 'Type effacé.');
-      } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
-    });
+      } catch(e){ msg.textContent=refused(e);retry.hidden=false; }
+      finally {retry.disabled=false;}
+    }
+    sel.addEventListener('change',saveType);
+    sel.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();saveType();}});
+    retry.onclick=saveType;
     row.appendChild(h('label', { class:'type-field' },
       h('span', { class:'type-lbl' }, 'Type d’activité'), sel));
+    row.appendChild(msg);row.appendChild(retry);
   }
 
   /* Un module a un état, et cet état a une origine. Les deux se lisent :
@@ -2843,17 +2869,17 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var plan = (selected.plan || '').toLowerCase();
     var listed = TIER_PRICE[plan] || null;
     var vCount = selected.account_venues || 1;
-    var vText = vCount > 1 ? (' · ' + vCount + ' établissements') : '';
+    var vText = vCount > 1 ? (' · ' + window.KiwiAdminI18n.text(vCount + ' établissements')) : '';
     state.textContent = (b.city
-      ? (b.city + (b.mrr != null ? ' · ' + fmt(b.mrr) + ' MAD/mois' : ''))
-      : 'ville non renseignée') + vText;
+      ? (b.city + (b.mrr != null ? ' · ' + window.KiwiAdminI18n.text(fmt(b.mrr) + ' MAD/mois') : ''))
+      : window.KiwiAdminI18n.text('ville non renseignée')) + vText;
 
     if (noColumn || (b.columns && b.columns.lifecycle === false)){
       hint.textContent = 'La fiche commerciale n’est pas encore disponible sur cet environnement. Une mise à niveau technique est nécessaire ; aucune donnée client n’a été modifiée.';
     } else if (readOnly){
       hint.textContent = 'Lecture seule : modifier la fiche commerciale demande un code opérateur personnel, pas l’accès équipe partagé.';
     } else if (vCount > 1 && !plan) {
-      hint.innerHTML = '<span style="color:var(--amber,#b45309);font-weight:600;">⚠️ Compte multi-établissements (' + vCount + ' établissements actifs) sans offre explicite.</span> Définir son offre (ex: Ultra) pour formaliser son statut multi-sites.';
+      hint.textContent = 'Compte multi-établissements (' + vCount + ' établissements actifs) sans offre explicite. Définir son offre pour formaliser son statut multi-sites.';
     } else if (listed){
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé », jamais rangé ailleurs. ' +
         'Le montant est facultatif · laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
@@ -2895,6 +2921,9 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (kind === 'trial' && (!lifecycle.trialStart || !lifecycle.trialEnd || lifecycle.trialEnd < lifecycle.trialStart)){
       err.textContent = 'Choisissez des dates valides pour la période d’essai.'; return;
     }
+    var save = document.getElementById('biz-save');
+    if (save.disabled) return;
+    save.disabled = true;
     try {
       var r = await store.setBiz(target.merchant, city.value.trim(), amount, nextPlan, lifecycle);
       if(selected!==target)return;
@@ -2916,8 +2945,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     } catch (e) {
       err.textContent = (e && e.body && e.body.error === 'operator-code-required')
         ? 'Code opérateur personnel requis.'
-        : 'Échec de l’enregistrement.';
-    }
+        : refused(e);
+    } finally { if (selected === target) save.disabled = false; }
   }
 
   function syncLifecycleFields(){
@@ -2987,7 +3016,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
             pill.textContent = next ? 'Activé' : 'Désactivé';
             src.textContent = 'Enregistré · appliqué au prochain chargement';
             renderAudit();
-          } catch(_){ if(selected===target){pill.textContent=sw.getAttribute('aria-checked')==='true'?'Activé':'Désactivé';notify('Enregistrement refusé. Le réglage affiché n’a pas changé.');} }
+          } catch(error){ if(selected===target){pill.textContent=sw.getAttribute('aria-checked')==='true'?'Activé':'Désactivé';src.setAttribute('role','alert');src.textContent=refused(error);} }
           finally {sw.disabled=false;}
         });
         var src = h('small', { class:'fsrc' }, st.explicit ? 'réglé pour ce client' : 'valeur par défaut');
@@ -3202,7 +3231,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       h('span', { class:'ts-when' }, stamp(s.ts)),
       h('span', { class:'ts-amt' }, fmt(s.amount) + ' MAD'),
       h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '·'),
-      h('span', { class:'ts-lbl' }, s.label || '·',
+      h('span', { class:'ts-lbl', 'data-admin-raw':'' }, s.label || '·',
         refunded ? h('span', { class:'vpill', style:'margin-left:8px' }, 'remboursement')
           : (s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null)),
       voided ? h('span', { class:'vpill' }, 'sortie') : h('span', { class:'ts-ref' }, s.ref || ''));
@@ -3331,9 +3360,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (!restore && imp.loyalty){
       panel.appendChild(h('div', { class:'box warn' }, h('p', null,
         h('b', null, 'Fidélité à vérifier. '),
-        'Ce commerce tient un carnet de ' + imp.loyalty.clients + ' client' + (imp.loyalty.clients > 1 ? 's' : '') +
-        ' et aucune colonne ne relie une vente à une fiche. Si cette vente a crédité un client, retirez-lui ' +
-        fmt(imp.loyalty.amount) + ' MAD de dépense et les points correspondants depuis Clients & Marketing.')));
+        window.KiwiAdminI18n.text('Ce commerce tient un carnet de ' + imp.loyalty.clients + ' clients.') + ' ' +
+        window.KiwiAdminI18n.text('Si cette vente a crédité un client, retirez-lui ' + fmt(imp.loyalty.amount) + ' MAD de dépense et les points correspondants depuis Clients & Marketing.'))));
     }
     (imp.warnings || []).forEach(function(w){
       panel.appendChild(h('div', { class:'box warn' }, h('p', null, w.label)));
@@ -3358,7 +3386,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       panel.appendChild(h('div', { class:'reason' }, sel, note));
     }
 
-    var msg = h('p', { class:'err' });
+    var msg = h('p', { class:'err', role:'alert' });
     var go = h('button', { class:'mini ' + (restore ? '' : 'danger') }, restore
       ? 'Confirmer la remise' : (blocked ? 'Sortir malgré l’avertissement' : 'Confirmer la sortie'));
     go.addEventListener('click', async function(){
@@ -3445,7 +3473,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       tl.appendChild(h('p', { class:'sub', style:'margin:14px 0 4px' }, 'Adresses de l’équipe (lecture seule)'));
       data.team.forEach(function(t){
         tl.appendChild(h('div', { class:'tm' },
-          h('b', null, t.name || '·'), t.role ? h('span', null, t.role) : null,
+          h('b', {'data-admin-raw':''}, t.name || '·'), t.role ? h('span', null, t.role) : null,
           h('span', { class:'em' }, t.email),
           h('span', null, t.merchant)));
       });
@@ -3475,7 +3503,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       else if (s.live) bits.push('un lien est encore valable');
       if (!s.canSend && s.retryAfter) bits.push('nouvel envoi dans ' + Math.ceil(s.retryAfter/60) + ' min');
       if (data.mail === false) bits.push('envoi d’e-mail non configuré côté serveur');
-      state.textContent = bits.length ? bits.join(' · ') : 'aucun envoi enregistré';
+      state.textContent = bits.length ? bits.map(window.KiwiAdminI18n.text).join(' · ') : window.KiwiAdminI18n.text('aucun envoi enregistré');
       btn.disabled = SENIOR === false || !s.canSend;
     }
     btn.addEventListener('click', async function(){
@@ -3511,13 +3539,13 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var input = h('input', { type:'email', value:r.v || '', placeholder:'nouvelle adresse',
                              'aria-label':'Nouvelle adresse', autocomplete:'off', spellcheck:'false' });
     var why = h('input', { placeholder:'Motif (saisie erronée, adresse perdue…)', 'aria-label':'Motif' });
-    var msg = h('p', { class:'err' });
+    var msg = h('p', { class:'err', role:'alert' });
     var go = h('button', { class:'mini danger' }, 'Confirmer le changement');
 
     var box = h('div', { class:'imp', id:'mail-editor' },
-      h('h4', null, 'Corriger l’adresse · ' + r.k),
+      h('h4', null, 'Corriger l’adresse · ' + window.KiwiAdminI18n.text(r.k)),
       h('p', { class:'lst' },
-        h('b', null, acct.business || selected.merchant), ' · ', acct.name || '·',
+        h('b', {'data-admin-raw':''}, acct.business || selected.merchant), ' · ', acct.name || '·',
         ' · compte ', h('b', null, acct.login)));
 
     if (r.f === 'login'){
@@ -3530,7 +3558,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     }
     box.appendChild(h('div', { class:'reason' }, input, why));
     box.appendChild(h('div', { class:'acts' }, go,
-      h('button', { class:'mini ghost', onClick:function(){ box.parentNode.removeChild(box); } }, 'Annuler'), msg));
+      h('button', { class:'mini ghost', onClick:function(){ box.parentNode.removeChild(box); row.querySelector('button').focus(); } }, 'Annuler'), msg));
 
     /* Une reprise n'est possible que s'il y a quelque chose à reprendre : le
        bouton n'apparaît donc qu'après un premier changement, et il relit le
@@ -3556,10 +3584,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
                                        field:r.f, email:email, reason:reason, revert:revert });
       var d = (res && res.delivery) || {};
       var bad = [];
-      if (d.old && d.old.indexOf('failed') === 0) bad.push('l’ancienne adresse');
-      if (d.new && d.new.indexOf('failed') === 0) bad.push('la nouvelle');
+      if (d.old && d.old.indexOf('failed') === 0) bad.push(window.KiwiAdminI18n.text('l’ancienne adresse'));
+      if (d.new && d.new.indexOf('failed') === 0) bad.push(window.KiwiAdminI18n.text('la nouvelle'));
       notify(bad.length
-        ? 'Adresse changée. Avis non délivré à ' + bad.join(' et ') + '.'
+        ? 'Adresse changée. Avis non délivré à ' + bad.join(' ' + window.KiwiAdminI18n.text('et') + ' ') + '.'
         : 'Adresse changée, les deux adresses ont été prévenues.');
       if (box.parentNode) box.parentNode.removeChild(box);
       /* Le nom affiché en tête de console vient de la fiche client : on la
@@ -3594,10 +3622,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     ops.forEach(function(o){
       wrap.appendChild(h('div', { class:'op-item' },
         h('b', null, '••••'),
-        o.label ? h('span', { class:'nm' }, o.label) : null,
+        o.label ? h('span', { class:'nm', 'data-admin-raw':'' }, o.label) : null,
         h('span', { class:'spacer' }),
         h('button', { class:'mini danger', disabled:SENIOR === false,
-          onClick:async function(){ await store.delOperator(o.id); renderOperators(); } }, 'Supprimer')
+          onClick:async function(e){ var button=e.currentTarget; button.disabled=true; try { await store.delOperator(o.id); renderOperators(); } catch(error){ document.getElementById('op-err').textContent=refused(error); button.disabled=false; } } }, 'Supprimer')
       ));
     });
   }
@@ -3611,11 +3639,14 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var name = document.getElementById('pin-name').value.trim();
     var role = document.getElementById('pin-role').value;
     if (!/^\d{4}$/.test(pin)) { err.textContent = 'PIN à 4 chiffres.'; return; }
+    var submit = document.getElementById('pin-add');
+    if (submit.disabled) return;
+    submit.disabled = true;
     try {
       await store.addPin(selected.merchant, pin, name, role);
       document.getElementById('pin-new').value = ''; document.getElementById('pin-name').value = '';
       renderPins();
-    } catch(e){ err.textContent = (e.body && e.body.error === 'pin-exists') ? 'Ce PIN existe déjà.' : 'Échec de l’ajout.'; }
+    } catch(e){ err.textContent = (e.body && e.body.error === 'pin-exists') ? window.KiwiAdminI18n.text('Ce PIN existe déjà.') : refused(e); } finally { submit.disabled = false; }
   });
 
   document.getElementById('op-add').addEventListener('click', async function(){
@@ -3629,29 +3660,23 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var label = document.getElementById('op-label').value.trim();
     var code = document.getElementById('op-code').value.trim();
     if (code.length < 10) { err.textContent = 'Code trop court (10 caractères min.). Ce code ouvre les données de TOUS les commerçants.'; return; }
+    var submit = document.getElementById('op-add');
+    if (submit.disabled) return;
+    submit.disabled = true;
     try {
       await store.addOperator(label, code);
       document.getElementById('op-label').value = ''; document.getElementById('op-code').value = '';
       renderOperators();
-    } catch(e){ err.textContent = 'Échec de l’ajout.'; }
+    } catch(e){ err.textContent = refused(e); } finally { submit.disabled = false; }
   });
 
   document.getElementById('ts-search').addEventListener('click', function(){ renderTestSales(); });
-  ['ts-q','ts-min','ts-max'].forEach(function(id){
-    document.getElementById(id).addEventListener('keydown', function(e){
-      if (e.key === 'Enter') renderTestSales();
-    });
-  });
   ['ts-from','ts-to','ts-method','ts-state'].forEach(function(id){
     document.getElementById(id).addEventListener('change', function(){ renderTestSales(); });
   });
 
   document.getElementById('biz-save').addEventListener('click', function(){ saveBiz(); });
-  ['biz-city','biz-mrr'].forEach(function(id){
-    document.getElementById(id).addEventListener('keydown', function(e){
-      if (e.key === 'Enter') saveBiz();
-    });
-  });
+
 
   /* La recherche du roster. Filtrée à la frappe et localement : le roster est
      déjà en mémoire, donc une requête par caractère ne rapporterait rien.
