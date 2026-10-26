@@ -496,8 +496,10 @@ quote-only Ultimate strip under them (owner, 2026-10-16):
   2 988 MAD a year) — everything in Basic + boutique management: size and colour
   catalogue, returns/exchanges/credit notes, promotions, Loyalty+, customer
   records, sales and margin tracking. OrderPro and employee management are NOT
-  in Plus. **Landing only for now:** the backend has no `plus` plan, so signup
-  ignores it and config treats an unknown plan as `basic`.
+  in Plus. The backend knows `plus`: `functions/api/config.js` accepts it as an
+  explicit plan and the operator console bills it at 300 MAD
+  (`tools/plan-catalog-test.mjs` holds both). Signup does not take a plan from
+  the landing, so a new account starts on `basic` until an operator sets it.
 - **Kiwi Pro · 399 MAD/month, 349 on the annual plan** (billed 4 200 MAD a
   year) — everything in Plus + restaurant operations: interactive floor plan,
   waiter ordering, kitchen display, OrderPro Restaurant, multilingual menu,

@@ -27,6 +27,11 @@ const KEYS = ['tag', 'title', 'desc', 'badgeCurrent', 'badgeReco', 'ctaCurrent',
 const tierPrice = Object.fromEntries([...read('functions/api/admin/overview.js')
   .match(/const TIER_PRICE = \{([^}]+)\}/)[1].matchAll(/(\w+):\s*(\d+)/g)].map((m) => [m[1], Number(m[2])]));
 check(IDS.every((id) => tierPrice[id] > 0), 'the console bills a price for each of basic, plus, pro, ultra');
+/* The operating notes must describe the plans the backend actually accepts:
+   an agent reading "no plus plan" would strip Plus from config and billing. */
+const configPlans = (read('functions/api/config.js').match(/planExplicit = \[([^\]]+)\]/) || [, ''])[1];
+const notes = read('CLAUDE.md');
+check(configPlans.includes("'plus'") && !/backend has no `plus` plan/.test(notes), 'CLAUDE.md does not deny the plus plan that config accepts and the console bills');
 
 for (const lang of ['fr', 'en', 'ar']) {
   const c = cat && cat[lang], L = landing[lang];
