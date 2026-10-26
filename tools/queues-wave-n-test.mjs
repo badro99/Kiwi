@@ -18,9 +18,10 @@ if (!only || only === 'corruption') {
     assert.equal(await queue.migrateLegacy(), false);
   }
 }
-if (!only || only === 'fairness') {
+if (!only || only.startsWith('fairness')) {
   const src = read('assets/clients-store.js');
   for (const kind of ['purchase', 'redemption']) {
+    if (only && only !== 'fairness' && only !== 'fairness-' + kind) continue;
     let rows = Array.from({length: 60}, (_, i) => ({ ref: 'event-' + i, clientId: 'fixture', lastFailure: 'http-422', amount: i }));
     const sent = [];
     const context = { [kind + 'Read']: () => rows, [kind + 'Write']: (_book, value) => { rows = value; }, [kind + 'Push']: (_book, event) => sent.push(event.ref) };
@@ -32,8 +33,9 @@ if (!only || only === 'fairness') {
     assert.equal(rows.find(e => e.ref === 'event-0').lastFailure, 'http-422');
   }
 }
-if (!only || only === 'history') {
+if (!only || only.startsWith('history')) {
   for (const surface of ['directory', 'book']) {
+    if (only && only !== 'history' && only !== 'history-' + surface) continue;
     const src = read('assets/clients-' + surface + '.js');
     assert.doesNotMatch(src, /history\.slice\(0, 50\)/, 'source must retain full history');
     const start = src.indexOf('    var purchaseHistory =');
@@ -43,6 +45,8 @@ if (!only || only === 'history') {
     vm.createContext(context);
     vm.runInContext(block + '; globalThis.render = renderHistory;', context);
     const pages = [context.render(0), context.render(1), context.render(2)];
+    assert.match(pages[0], /data-history-page="-1" disabled/, 'first page cannot go back');
+    assert.match(pages[2], /data-history-page="3" disabled/, 'last page cannot go forward');
     assert.ok(pages.every(html => html.includes('data-history-page')), 'each page exposes navigation');
     for (let i=0;i<121;i++) assert.equal(pages.filter(html => html.includes('ticket-'+i+(surface === 'directory' ? '</span>' : ' · '))).length, 1, 'each ticket appears on one page');
     assert.match(src, /renderHistory\(Number\(.*dataset\.historyPage\)\)/, 'navigation renders the requested page');

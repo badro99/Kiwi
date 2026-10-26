@@ -86,7 +86,7 @@ ok(boutique.includes('method: sale.methods') && boutique.includes('eventRef: sal
   'boutique checkout records payment, stable ticket identity, and purchased items');
 
 const directory = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-directory.js'), 'utf8'));
-ok(directory.includes('history: Array.isArray(c.history) ? c.history.slice(0, 50) : []'),
+ok(directory.includes('history: Array.isArray(c.history) ? c.history.slice() : []'),
   'dashboard directory preserves purchase history returned by the shared store');
 ok(directory.includes('class="cd-history-row"') && directory.includes('entry.method') && directory.includes('entry.items') && directory.includes('entry.ref'),
   'dashboard customer detail renders date, payment, items, ticket reference, and amount');
