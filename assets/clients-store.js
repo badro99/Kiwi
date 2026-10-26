@@ -26,6 +26,33 @@
 (function () {
   'use strict';
 
+  // Shared by the till book and dashboard directory. Arabic keeps this
+  // surface's Latin digits, including when the dashboard i18n is unavailable.
+  var numberFormats = {};
+  function clientNumber(value, language, quantity) {
+    var n = Number(value);
+    if (!isFinite(n)) n = 0;
+    var scale = quantity ? 1000 : 100;
+    n = Math.round(n * scale) / scale;
+    var lang = language || document.documentElement.lang || 'fr';
+    var locale = lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR';
+    var digits = quantity ? 0 : (Number.isInteger(n) ? 0 : 2);
+    var key = locale + ':' + quantity + ':' + digits;
+    var formatter = numberFormats[key] || (numberFormats[key] = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: digits, maximumFractionDigits: quantity ? 3 : digits
+    }));
+    return formatter.format(n).replace(/[\u202f\u00a0]/g, '\u00a0');
+  }
+  function clientQuantity(value) {
+    var n = Number(value);
+    return isFinite(n) ? Math.max(0, Math.round(n * 1000) / 1000) : 0;
+  }
+  window.KiwiClientNumbers = {
+    money: function (n, lang) { return clientNumber(n, lang, false); },
+    quantity: function (n, lang) { return clientNumber(n, lang, true); },
+    csv: function (n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
+  };
+
   if (!window.KiwiStore || !window.KiwiStore.define) {
     console.warn('clients-store.js loaded before venue-store.js · KiwiClients disabled');
     return;
@@ -432,7 +459,7 @@
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
-        return { name: String(item && item.name || '').slice(0, 120), qty: Math.max(0, Math.round(+item?.qty || 0)), total: money(item && item.total) };
+        return { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) };
       }),
     };
     rec.history = [detail].concat(rec.history.filter(function (row) {
@@ -508,7 +535,7 @@
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
-        return { name: String(item && item.name || '').slice(0, 120), qty: Math.max(0, Math.round(+item?.qty || 0)), total: money(item && item.total) };
+        return { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) };
       }) };
     purchaseAdd(book, event);
     purchasePush(book, event);

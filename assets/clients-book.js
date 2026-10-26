@@ -24,7 +24,7 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   // Libellés de la caisse : passent par son dictionnaire quand il est chargé.
   function tr(s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; }
-  function fmt(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
+  function fmt(n) { return window.KiwiClientNumbers.money(n); }
   /* Dernière journée commerciale où un avoir reste utilisable : le serveur le
      fait expirer à la bascule (05:00) qui clôt cette journée, dont la date civile
      serait le lendemain. Même lecture que la caisse (pos-boutique et pos-maison, sales.js). */
@@ -394,7 +394,7 @@
         ? '<div class="kcb-info">' + credits.map(function (credit) {
             var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
             var products = Array.isArray(issued.lines) && issued.lines.length
-              ? issued.lines.map(function (line) { return (line.qty || 1) + '× ' + (line.name || 'Article'); }).join(' · ')
+              ? issued.lines.map(function (line) { return window.KiwiClientNumbers.quantity(line.qty ?? 1) + '× ' + (line.name || 'Article'); }).join(' · ')
               : (credit.reason || 'Retour');
             var movements = (credit.events || []).filter(function (event) { return event.action !== 'issue'; }).map(function (event) {
               return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : event.action)
@@ -932,12 +932,12 @@
             ? row.items.map(function (it) {
                 var qty = it.qty || 1, gone = Math.min(qty, back[it.name] || 0);
                 if (gone) back[it.name] -= gone;
-                var label = esc(qty + '× ' + (it.name || 'Article'));
+                var label = esc(window.KiwiClientNumbers.quantity(qty) + '× ' + (it.name || 'Article'));
                 return gone >= qty ? '<span class="kcb-struck">' + label + '</span>' : label;
               }).join(' · ')
             : esc(row.ref || 'Achat enregistré');
           var retLine = rets.map(function (r) {
-            var what = (r.items || []).map(function (it) { return (it.qty || 1) + '× ' + (it.name || 'Article'); }).join(' · ');
+            var what = (r.items || []).map(function (it) { return window.KiwiClientNumbers.quantity(it.qty ?? 1) + '× ' + (it.name || 'Article'); }).join(' · ');
             var kind = String(r.kind || '');
             var verb = kind === 'echange' ? 'Échangé' : 'Retourné';
             var how = kind.indexOf('avoir') === 0 ? 'avoir ' + (r.reference || '') : (kind.indexOf('refund') === 0 ? 'remboursé' : '');
