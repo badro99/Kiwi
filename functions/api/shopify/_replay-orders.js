@@ -176,6 +176,7 @@ export async function replayShopifyOrders(env, merchant, options = {}) {
     throw error;
   }
 }
+/** @param {any} env @param {string} merchant @param {{ sinceTs?: number, dryRun?: boolean }} [opts] */
 async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
   const rs = await env.DB.prepare(
     `SELECT kiwi_variant_id, shopify_variant_id FROM shopify_variant_links
