@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderQueueTestSource from './order-queue-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ const source = file => base ? execFileSync('git', ['show', `HEAD:${file}`], { en
 const till = caisseTestSource(source('kiwi-caisse.html'));
 const reprint = source('assets/pos-reprint.js');
 const waiter = serveurTestSource(source('kiwi-serveur.html'));
-const queue = source('functions/api/order/queue.js');
+const queue = orderQueueTestSource('functions/api/order/queue.js');
 let passed = 0, failed = 0;
 function check(label, ok) { if (ok) passed++; else { failed++; console.error('FAIL ' + label); } }
 const marker = 'window.KiwiRestaurantReopen = {';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderQueueTestSource from './order-queue-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -17,7 +18,7 @@ const ORDERPRO_SRC = orderProTestSource(ROOT);
 const CAISSE_SRC   = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
 const SESSION_SRC  = fs.readFileSync(path.join(ROOT, 'functions/api/order/session.js'), 'utf8');
 const INBOX_SRC    = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
-const QUEUE_SRC    = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const QUEUE_SRC    = orderQueueTestSource('functions/api/order/queue.js');
 
 let passed = 0;
 let failed = 0;

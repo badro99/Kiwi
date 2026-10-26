@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderQueueTestSource from './order-queue-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · « Le serveur autorise une commande OrderPro » — garde de comportement
@@ -23,7 +24,7 @@ console.log('■ Autorisation OrderPro depuis la salle');
 const queueSrc = queueTestSource();
 const decisionMatch = queueSrc.match(/function floorMayAcceptOrder\([\s\S]*?\n\}/);
 const orderIdMatch = queueSrc.match(/const ORDER_ID = [^\n]+/);
-const orderLibSrc = fs.readFileSync(path.join(ROOT, 'functions/api/order/_lib.js'), 'utf8');
+const orderLibSrc = orderQueueTestSource('functions/api/order/_lib.js');
 const normTableMatch = orderLibSrc.match(/function normTable\([\s\S]*?\n\}/);
 
 let floorMayAcceptOrder = null;

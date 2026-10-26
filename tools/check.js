@@ -2130,6 +2130,7 @@ section('Whole-project regressions');
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',
     'invoices-split-test.mjs',
+    'order-queue-split-test.mjs',
     /* L'ICE se vérifie (15 chiffres, multiple de 97) au champ du formulaire
        Établissement, au vrai clic, et côté serveur pour les factures. */
     'ice-browser-test.mjs',
