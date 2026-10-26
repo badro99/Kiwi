@@ -1,10 +1,10 @@
 {
   "note": "Deuxième découpage de caisse-app.js (22 octobre 2026) : déclarations de fonction sorties vers caisse-floor.js et caisse-kitchen.js. Chaque tronçon (start = son début, unique dans son fichier) reprend sa place dans caisse-app.js juste avant le texte « before » (unique dans caisse-app.js). tools/caisse-test-source.cjs s'en sert pour rendre aux tests l'ordre d'avant ; sha256 est celui de caisse-app.js d'avant, splitFiles ceux des trois fichiers juste après.",
-  "sha256": "9c6a903abdf50be2200831f5117a3b14588f94996f4148fdde9408100008b89e",
+  "sha256": "0e872938a8c536eb5c5b3e886ed27fd0a0e7afa18749dea65715944f8519d30c",
   "splitFiles": {
-    "assets/caisse-app.js": "2973c0f5255fb7f52e0a312dbbfc79307ea0d41fa0c14b03122100c000d03cff",
-    "assets/caisse-floor.js": "9146ee07e1050d20a2f1885408b5836e0a5c09f48b4e1d31a7433e3f2177c709",
-    "assets/caisse-kitchen.js": "e138c46a2450d9c7981a6e60ee3364e2e6dc258ce4b30aef25fc8f963de52be5"
+    "assets/caisse-app.js": "65ed72bae6359b3a1abe5cddb93daeee82736f12423b4f34a2283fb7f21bfedb",
+    "assets/caisse-floor.js": "49b02bd76ad55490b33aaf454371bef9de0f940b3a5d4854fa976b2159d0a4fe",
+    "assets/caisse-kitchen.js": "2cb3e7f8b22215d2170a6c39c1e08721ed34e057adbbbf727cf2c20a17f91976"
   },
   "runs": [
     {

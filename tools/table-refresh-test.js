@@ -16,7 +16,7 @@ ok('the shift snapshot persists tables', /tables:\s*tables,/.test(src));
 ok('the shift snapshot persists only unsent local table lines',
   /tableOrders: \(function \(\) \{[\s\S]{0,400}filter\(function \(l\) \{ return !l\.orderProLine; \}\)/.test(src));
 ok('restore reapplies table state', /if \(d\.tables\)[\s\S]{0,180}tableSettlement\(\)\.project\(tables\[id\], d\.tables\[id\]\)/.test(src));
-ok('restore reapplies table order lines', /if \(d\.tableOrders\)[\s\S]{0,180}Object\.assign\(tableOrders, d\.tableOrders\)/.test(src));
+ok('restore reapplies table order lines', /if \(d\.tableOrders\)[\s\S]{0,180}currentOrder\(\)\.restoreTables\(d\.tableOrders\)/.test(src));
 ok('an empty real sales journal is not discarded by itself',
   /const hadDemoSeeds = genuine\.length !== originalJournal\.length;[\s\S]{0,900}if \(hadDemoSeeds && !genuine\.length\)/.test(src));
 ok('only a journal emptied by demo cleanup is discarded',

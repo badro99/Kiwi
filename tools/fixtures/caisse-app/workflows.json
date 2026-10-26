@@ -1,5 +1,5 @@
 {
-  "sha256": "2973c0f5255fb7f52e0a312dbbfc79307ea0d41fa0c14b03122100c000d03cff",
+  "sha256": "65ed72bae6359b3a1abe5cddb93daeee82736f12423b4f34a2283fb7f21bfedb",
   "core": "assets/caisse-app.js",
   "files": [
     "assets/caisse/catalogue.js",
@@ -149,1832 +149,1832 @@
     {
       "file": "assets/caisse-app.js",
       "start": 9993,
-      "end": 19013
+      "end": 19032
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 19013,
-      "end": 21661
+      "start": 19032,
+      "end": 21680
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 21661,
-      "end": 45778
+      "start": 21680,
+      "end": 45797
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 45778,
-      "end": 46333
+      "start": 45797,
+      "end": 46352
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 46333,
-      "end": 46462
+      "start": 46352,
+      "end": 46481
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 46462,
-      "end": 46806
+      "start": 46481,
+      "end": 46825
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 46806,
-      "end": 52898
+      "start": 46825,
+      "end": 52917
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 52898,
-      "end": 53675
+      "start": 52917,
+      "end": 53694
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 53675,
-      "end": 53964
+      "start": 53694,
+      "end": 53983
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 53964,
-      "end": 54915
+      "start": 53983,
+      "end": 54934
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 54915,
-      "end": 55711
+      "start": 54934,
+      "end": 55747
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 55711,
-      "end": 55765
+      "start": 55747,
+      "end": 55801
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 55765,
-      "end": 56357
+      "start": 55801,
+      "end": 56393
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 56357,
-      "end": 56586
+      "start": 56393,
+      "end": 56622
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 56586,
-      "end": 57478
+      "start": 56622,
+      "end": 57514
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 57478,
-      "end": 62221
+      "start": 57514,
+      "end": 62257
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 62221,
-      "end": 62641
+      "start": 62257,
+      "end": 62677
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 62641,
-      "end": 62956
+      "start": 62677,
+      "end": 62992
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 62956,
-      "end": 63086
+      "start": 62992,
+      "end": 63122
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 63086,
-      "end": 63524
+      "start": 63122,
+      "end": 63560
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 63524,
-      "end": 65776
+      "start": 63560,
+      "end": 65812
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 65776,
-      "end": 65776
+      "start": 65812,
+      "end": 65812
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 65776,
-      "end": 65776
+      "start": 65812,
+      "end": 65812
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 65776,
-      "end": 65776
+      "start": 65812,
+      "end": 65812
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 65776,
-      "end": 65776
+      "start": 65812,
+      "end": 65812
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 65776,
-      "end": 65776
+      "start": 65812,
+      "end": 65812
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 65776,
-      "end": 65776
+      "start": 65812,
+      "end": 65812
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 65776,
-      "end": 67232
+      "start": 65812,
+      "end": 67273
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 67232,
-      "end": 67438
+      "start": 67273,
+      "end": 67479
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 67438,
-      "end": 68206
+      "start": 67479,
+      "end": 68247
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 68206,
-      "end": 88732
+      "start": 68247,
+      "end": 88779
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 88732,
-      "end": 90936
+      "start": 88779,
+      "end": 92336
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 90936,
-      "end": 92186
+      "start": 92336,
+      "end": 93586
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 92186,
-      "end": 92919
+      "start": 93586,
+      "end": 94319
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 92919,
-      "end": 93045
+      "start": 94319,
+      "end": 94445
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 93045,
-      "end": 93318
+      "start": 94445,
+      "end": 94718
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 93318,
-      "end": 93505
+      "start": 94718,
+      "end": 94905
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 93505,
-      "end": 93647
+      "start": 94905,
+      "end": 95047
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 93647,
-      "end": 94451
+      "start": 95047,
+      "end": 95851
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 94451,
-      "end": 97396
+      "start": 95851,
+      "end": 98796
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 97396,
-      "end": 98688
+      "start": 98796,
+      "end": 100088
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 98688,
-      "end": 98756
+      "start": 100088,
+      "end": 100156
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 98756,
-      "end": 98827
+      "start": 100156,
+      "end": 100227
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 98827,
-      "end": 98992
+      "start": 100227,
+      "end": 100392
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 98992,
-      "end": 99403
+      "start": 100392,
+      "end": 100803
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 99403,
-      "end": 99776
+      "start": 100803,
+      "end": 101176
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 99776,
-      "end": 99937
+      "start": 101176,
+      "end": 101337
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 99937,
-      "end": 100434
+      "start": 101337,
+      "end": 101834
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 100434,
-      "end": 100675
+      "start": 101834,
+      "end": 102075
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 100675,
-      "end": 101328
+      "start": 102075,
+      "end": 102728
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 101328,
-      "end": 101538
+      "start": 102728,
+      "end": 102938
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 101538,
-      "end": 101776
+      "start": 102938,
+      "end": 103176
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 101776,
-      "end": 103181
+      "start": 103176,
+      "end": 104643
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 103181,
-      "end": 103200
+      "start": 104643,
+      "end": 104662
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 103200,
-      "end": 103316
+      "start": 104662,
+      "end": 104778
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 103316,
-      "end": 107205
+      "start": 104778,
+      "end": 108667
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 107205,
-      "end": 107618
+      "start": 108667,
+      "end": 109080
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 107618,
-      "end": 108118
+      "start": 109080,
+      "end": 109598
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 108118,
-      "end": 109182
+      "start": 109598,
+      "end": 110662
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 109182,
-      "end": 111892
+      "start": 110662,
+      "end": 113372
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 111892,
-      "end": 115856
+      "start": 113372,
+      "end": 117336
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 115856,
-      "end": 116682
+      "start": 117336,
+      "end": 118213
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 116682,
-      "end": 117853
+      "start": 118213,
+      "end": 119384
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 117853,
-      "end": 118381
+      "start": 119384,
+      "end": 119912
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 118381,
-      "end": 118710
+      "start": 119912,
+      "end": 120271
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 118710,
-      "end": 119040
+      "start": 120271,
+      "end": 120601
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 119040,
-      "end": 119512
+      "start": 120601,
+      "end": 121073
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 119512,
-      "end": 120908
+      "start": 121073,
+      "end": 122505
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 120908,
-      "end": 122508
+      "start": 122505,
+      "end": 124126
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 122508,
-      "end": 122827
+      "start": 124126,
+      "end": 124445
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 122827,
-      "end": 123138
+      "start": 124445,
+      "end": 124790
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 123138,
-      "end": 123873
+      "start": 124790,
+      "end": 125525
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 123873,
-      "end": 125404
+      "start": 125525,
+      "end": 127056
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 125404,
-      "end": 130089
+      "start": 127056,
+      "end": 131741
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 130089,
-      "end": 130966
+      "start": 131741,
+      "end": 132618
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 130966,
-      "end": 135218
+      "start": 132618,
+      "end": 136870
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 135218,
-      "end": 136276
+      "start": 136870,
+      "end": 137928
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 136276,
-      "end": 136678
+      "start": 137928,
+      "end": 138330
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 136678,
-      "end": 136819
+      "start": 138330,
+      "end": 138471
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 136819,
-      "end": 138809
+      "start": 138471,
+      "end": 140461
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 138809,
-      "end": 140093
+      "start": 140461,
+      "end": 141745
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 140093,
-      "end": 140123
+      "start": 141745,
+      "end": 141775
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 140123,
-      "end": 141654
+      "start": 141775,
+      "end": 143306
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 141654,
-      "end": 142097
+      "start": 143306,
+      "end": 143749
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 142097,
-      "end": 142556
+      "start": 143749,
+      "end": 144208
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 142556,
-      "end": 142772
+      "start": 144208,
+      "end": 144424
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 142772,
-      "end": 145289
+      "start": 144424,
+      "end": 146941
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 145289,
-      "end": 145852
+      "start": 146941,
+      "end": 147504
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 145852,
-      "end": 146085
+      "start": 147504,
+      "end": 147737
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 146085,
-      "end": 146339
+      "start": 147737,
+      "end": 147991
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 146339,
-      "end": 146509
+      "start": 147991,
+      "end": 148161
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 146509,
-      "end": 147082
+      "start": 148161,
+      "end": 148734
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 147082,
-      "end": 148579
+      "start": 148734,
+      "end": 150231
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 148579,
-      "end": 149059
+      "start": 150231,
+      "end": 150711
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 149059,
-      "end": 149442
+      "start": 150711,
+      "end": 151094
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 149442,
-      "end": 150014
+      "start": 151094,
+      "end": 151666
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 150014,
-      "end": 150404
+      "start": 151666,
+      "end": 152056
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 150404,
-      "end": 151052
+      "start": 152056,
+      "end": 152704
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 151052,
-      "end": 151480
+      "start": 152704,
+      "end": 153132
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 151480,
-      "end": 153235
+      "start": 153132,
+      "end": 154887
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 153235,
-      "end": 153373
+      "start": 154887,
+      "end": 155025
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 153373,
-      "end": 153506
+      "start": 155025,
+      "end": 155158
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 153506,
-      "end": 156287
+      "start": 155158,
+      "end": 157939
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 156287,
-      "end": 156953
+      "start": 157939,
+      "end": 158605
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 156953,
-      "end": 157970
+      "start": 158605,
+      "end": 159622
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 157970,
-      "end": 158305
+      "start": 159622,
+      "end": 159957
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 158305,
-      "end": 158573
+      "start": 159957,
+      "end": 160225
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 158573,
-      "end": 158721
+      "start": 160225,
+      "end": 160373
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 158721,
-      "end": 159310
+      "start": 160373,
+      "end": 160962
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 159310,
-      "end": 160267
+      "start": 160962,
+      "end": 161919
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 160267,
-      "end": 160787
+      "start": 161919,
+      "end": 162439
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 160787,
-      "end": 161999
+      "start": 162439,
+      "end": 163651
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 161999,
-      "end": 162842
+      "start": 163651,
+      "end": 164494
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 162842,
-      "end": 164733
+      "start": 164494,
+      "end": 166385
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 164733,
-      "end": 165213
+      "start": 166385,
+      "end": 166865
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 165213,
-      "end": 165386
+      "start": 166865,
+      "end": 167038
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 165386,
-      "end": 165655
+      "start": 167038,
+      "end": 167307
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 165655,
-      "end": 166462
+      "start": 167307,
+      "end": 168114
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 166462,
-      "end": 166746
+      "start": 168114,
+      "end": 168398
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 166746,
-      "end": 168019
+      "start": 168398,
+      "end": 169671
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 168019,
-      "end": 168662
+      "start": 169671,
+      "end": 170314
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 168662,
-      "end": 171399
+      "start": 170314,
+      "end": 173051
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 171399,
-      "end": 172265
+      "start": 173051,
+      "end": 173917
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 172265,
-      "end": 172679
+      "start": 173917,
+      "end": 174331
     },
     {
       "file": "assets/caisse/till-frame.js",
-      "start": 172679,
-      "end": 173124
+      "start": 174331,
+      "end": 174776
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 173124,
-      "end": 174251
+      "start": 174776,
+      "end": 175903
     },
     {
       "file": "assets/caisse/closing.js",
-      "start": 174251,
-      "end": 176635
+      "start": 175903,
+      "end": 178287
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 176635,
-      "end": 177179
+      "start": 178287,
+      "end": 178831
     },
     {
       "file": "assets/caisse/shift.js",
-      "start": 177179,
-      "end": 178909
+      "start": 178831,
+      "end": 180561
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 178909,
-      "end": 185112
+      "start": 180561,
+      "end": 186798
     },
     {
       "file": "assets/caisse/orders.js",
-      "start": 185112,
-      "end": 185410
+      "start": 186798,
+      "end": 187096
     },
     {
       "file": "assets/caisse/orders.js",
-      "start": 185410,
-      "end": 185554
+      "start": 187096,
+      "end": 187240
     },
     {
       "file": "assets/caisse/orders.js",
-      "start": 185554,
-      "end": 191140
+      "start": 187240,
+      "end": 192826
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 191140,
-      "end": 196351
+      "start": 192826,
+      "end": 198107
     },
     {
       "file": "assets/caisse/receipts.js",
-      "start": 196351,
-      "end": 198413
+      "start": 198107,
+      "end": 200169
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 198413,
-      "end": 208645
+      "start": 200169,
+      "end": 210401
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 208645,
-      "end": 208952
+      "start": 210401,
+      "end": 210708
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 208952,
-      "end": 209400
+      "start": 210708,
+      "end": 211156
     },
     {
       "file": "assets/caisse/receipts.js",
-      "start": 209400,
-      "end": 210183
+      "start": 211156,
+      "end": 211939
     },
     {
       "file": "assets/caisse/receipts.js",
-      "start": 210183,
-      "end": 211593
+      "start": 211939,
+      "end": 213349
     },
     {
       "file": "assets/caisse/receipts.js",
-      "start": 211593,
-      "end": 213112
+      "start": 213349,
+      "end": 214868
     },
     {
       "file": "assets/caisse/receipts.js",
-      "start": 213112,
-      "end": 213502
+      "start": 214868,
+      "end": 215258
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 213502,
-      "end": 213585
+      "start": 215258,
+      "end": 215341
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 213585,
-      "end": 215359
+      "start": 215341,
+      "end": 217115
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 215359,
-      "end": 215933
+      "start": 217115,
+      "end": 217689
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 215933,
-      "end": 217108
+      "start": 217689,
+      "end": 218864
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 217108,
-      "end": 219861
+      "start": 218864,
+      "end": 221617
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 219861,
-      "end": 220403
+      "start": 221617,
+      "end": 222159
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 220403,
-      "end": 221740
+      "start": 222159,
+      "end": 223496
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 221740,
-      "end": 221853
+      "start": 223496,
+      "end": 223609
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 221853,
-      "end": 222859
+      "start": 223609,
+      "end": 224615
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 222859,
-      "end": 223633
+      "start": 224615,
+      "end": 225389
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 223633,
-      "end": 225755
+      "start": 225389,
+      "end": 227511
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 225755,
-      "end": 226323
+      "start": 227511,
+      "end": 228079
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 226323,
-      "end": 228873
+      "start": 228079,
+      "end": 230629
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 228873,
-      "end": 230050
+      "start": 230629,
+      "end": 231806
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 230050,
-      "end": 230615
+      "start": 231806,
+      "end": 232371
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 230615,
-      "end": 230959
+      "start": 232371,
+      "end": 232715
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 230959,
-      "end": 234359
+      "start": 232715,
+      "end": 236115
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 234359,
-      "end": 235896
+      "start": 236115,
+      "end": 237652
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 235896,
-      "end": 237559
+      "start": 237652,
+      "end": 239315
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 237559,
-      "end": 237850
+      "start": 239315,
+      "end": 239606
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 237850,
-      "end": 238837
+      "start": 239606,
+      "end": 240593
     },
     {
       "file": "assets/caisse/payment.js",
-      "start": 238837,
-      "end": 239993
+      "start": 240593,
+      "end": 241749
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 239993,
-      "end": 247547
+      "start": 241749,
+      "end": 249324
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 247547,
-      "end": 248636
+      "start": 249324,
+      "end": 250413
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 248636,
-      "end": 249040
+      "start": 250413,
+      "end": 250817
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 249040,
-      "end": 249069
+      "start": 250817,
+      "end": 250846
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 249069,
-      "end": 249249
+      "start": 250846,
+      "end": 251026
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 249249,
-      "end": 249415
+      "start": 251026,
+      "end": 251192
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 249415,
-      "end": 250490
+      "start": 251192,
+      "end": 252267
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 250490,
-      "end": 251211
+      "start": 252267,
+      "end": 252988
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 251211,
-      "end": 251515
+      "start": 252988,
+      "end": 253292
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 251515,
-      "end": 253538
+      "start": 253292,
+      "end": 255315
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 253538,
-      "end": 253861
+      "start": 255315,
+      "end": 255638
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 253861,
-      "end": 254099
+      "start": 255638,
+      "end": 255876
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 254099,
-      "end": 254433
+      "start": 255876,
+      "end": 256210
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 254433,
-      "end": 254681
+      "start": 256210,
+      "end": 256458
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 254681,
-      "end": 254893
+      "start": 256458,
+      "end": 256670
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 254893,
-      "end": 255609
+      "start": 256670,
+      "end": 257386
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 255609,
-      "end": 256099
+      "start": 257386,
+      "end": 257876
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 256099,
-      "end": 257544
+      "start": 257876,
+      "end": 259321
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 257544,
-      "end": 258088
+      "start": 259321,
+      "end": 259865
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 258088,
-      "end": 258884
+      "start": 259865,
+      "end": 260661
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 258884,
-      "end": 260323
+      "start": 260661,
+      "end": 262100
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 260323,
-      "end": 260594
+      "start": 262100,
+      "end": 262371
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 260594,
-      "end": 261367
+      "start": 262371,
+      "end": 263144
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 261367,
-      "end": 262190
+      "start": 263144,
+      "end": 263967
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 262190,
-      "end": 262482
+      "start": 263967,
+      "end": 264259
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 262482,
-      "end": 262958
+      "start": 264259,
+      "end": 264735
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 262958,
-      "end": 263853
+      "start": 264735,
+      "end": 265630
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 263853,
-      "end": 270946
+      "start": 265630,
+      "end": 272723
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 270946,
-      "end": 272767
+      "start": 272723,
+      "end": 274544
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 272767,
-      "end": 273599
+      "start": 274544,
+      "end": 275376
     },
     {
       "file": "assets/caisse/split-tender.js",
-      "start": 273599,
-      "end": 275532
+      "start": 275376,
+      "end": 277309
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 275532,
-      "end": 279880
+      "start": 277309,
+      "end": 281657
     },
     {
       "file": "assets/caisse/shift.js",
-      "start": 279880,
-      "end": 280048
+      "start": 281657,
+      "end": 281825
     },
     {
       "file": "assets/caisse/shift.js",
-      "start": 280048,
-      "end": 280451
+      "start": 281825,
+      "end": 282228
     },
     {
       "file": "assets/caisse/shift.js",
-      "start": 280451,
-      "end": 281686
+      "start": 282228,
+      "end": 283463
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 281686,
-      "end": 312505
+      "start": 283463,
+      "end": 314282
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 312505,
-      "end": 312728
+      "start": 314282,
+      "end": 314505
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 312728,
-      "end": 313335
+      "start": 314505,
+      "end": 315112
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 313335,
-      "end": 313499
+      "start": 315112,
+      "end": 315276
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 313499,
-      "end": 313821
+      "start": 315276,
+      "end": 315598
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 313821,
-      "end": 314144
+      "start": 315598,
+      "end": 315921
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 314144,
-      "end": 314231
+      "start": 315921,
+      "end": 316008
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 314231,
-      "end": 314260
+      "start": 316008,
+      "end": 316037
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 314260,
-      "end": 315077
+      "start": 316037,
+      "end": 316854
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 315077,
-      "end": 315199
+      "start": 316854,
+      "end": 316976
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 315199,
-      "end": 315556
+      "start": 316976,
+      "end": 317333
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 315556,
-      "end": 315896
+      "start": 317333,
+      "end": 317673
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 315896,
-      "end": 318626
+      "start": 317673,
+      "end": 320403
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 318626,
-      "end": 319734
+      "start": 320403,
+      "end": 321511
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 319734,
-      "end": 321975
+      "start": 321511,
+      "end": 323752
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 321975,
-      "end": 322564
+      "start": 323752,
+      "end": 324341
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 322564,
-      "end": 323350
+      "start": 324341,
+      "end": 325127
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 323350,
-      "end": 325285
+      "start": 325127,
+      "end": 327062
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 325285,
-      "end": 327085
+      "start": 327062,
+      "end": 328862
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 327085,
-      "end": 327562
+      "start": 328862,
+      "end": 329339
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 327562,
-      "end": 328792
+      "start": 329339,
+      "end": 330569
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 328792,
-      "end": 329742
+      "start": 330569,
+      "end": 331519
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 329742,
-      "end": 329949
+      "start": 331519,
+      "end": 331726
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 329949,
-      "end": 330437
+      "start": 331726,
+      "end": 332214
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 330437,
-      "end": 330762
+      "start": 332214,
+      "end": 332539
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 330762,
-      "end": 330898
+      "start": 332539,
+      "end": 332675
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 330898,
-      "end": 330996
+      "start": 332675,
+      "end": 332773
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 330996,
-      "end": 333550
+      "start": 332773,
+      "end": 335327
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 333550,
-      "end": 335226
+      "start": 335327,
+      "end": 337003
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 335226,
-      "end": 335362
+      "start": 337003,
+      "end": 337139
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 335362,
-      "end": 335455
+      "start": 337139,
+      "end": 337232
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 335455,
-      "end": 337849
+      "start": 337232,
+      "end": 339626
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 337849,
-      "end": 338955
+      "start": 339626,
+      "end": 340732
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 338955,
-      "end": 339069
+      "start": 340732,
+      "end": 340846
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 339069,
-      "end": 340749
+      "start": 340846,
+      "end": 342526
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 340749,
-      "end": 342186
+      "start": 342526,
+      "end": 343963
     },
     {
       "file": "assets/caisse/settings.js",
-      "start": 342186,
-      "end": 342314
+      "start": 343963,
+      "end": 344091
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 342314,
-      "end": 343685
+      "start": 344091,
+      "end": 345462
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 343685,
-      "end": 343773
+      "start": 345462,
+      "end": 345550
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 343773,
-      "end": 343871
+      "start": 345550,
+      "end": 345648
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 343871,
-      "end": 344052
+      "start": 345648,
+      "end": 345829
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 344052,
-      "end": 344847
+      "start": 345829,
+      "end": 346624
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 344847,
-      "end": 345207
+      "start": 346624,
+      "end": 346984
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 345207,
-      "end": 345432
+      "start": 346984,
+      "end": 347209
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 345432,
-      "end": 345800
+      "start": 347209,
+      "end": 347577
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 345800,
-      "end": 346786
+      "start": 347577,
+      "end": 348563
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 346786,
-      "end": 348390
+      "start": 348563,
+      "end": 350167
     },
     {
       "file": "assets/caisse/held-sales.js",
-      "start": 348390,
-      "end": 348985
+      "start": 350167,
+      "end": 350762
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 348985,
-      "end": 356727
+      "start": 350762,
+      "end": 358519
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 356727,
-      "end": 357796
+      "start": 358519,
+      "end": 359588
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 357796,
-      "end": 357956
+      "start": 359588,
+      "end": 359748
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 357956,
-      "end": 358213
+      "start": 359748,
+      "end": 360005
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 358213,
-      "end": 358721
+      "start": 360005,
+      "end": 360513
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 358721,
-      "end": 358989
+      "start": 360513,
+      "end": 360781
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 358989,
-      "end": 359618
+      "start": 360781,
+      "end": 361410
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 359618,
-      "end": 359917
+      "start": 361410,
+      "end": 361709
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 359917,
-      "end": 361759
+      "start": 361709,
+      "end": 363551
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 361759,
-      "end": 361837
+      "start": 363551,
+      "end": 363629
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 361837,
-      "end": 364579
+      "start": 363629,
+      "end": 366384
     },
     {
       "file": "assets/caisse/discounts.js",
-      "start": 364579,
-      "end": 365199
+      "start": 366384,
+      "end": 367017
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 365199,
-      "end": 368135
+      "start": 367017,
+      "end": 369953
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 368135,
-      "end": 368702
+      "start": 369953,
+      "end": 370520
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 368702,
-      "end": 368908
+      "start": 370520,
+      "end": 370726
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 368908,
-      "end": 369433
+      "start": 370726,
+      "end": 371251
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 369433,
-      "end": 370509
+      "start": 371251,
+      "end": 372327
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 370509,
-      "end": 370881
+      "start": 372327,
+      "end": 372699
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 370881,
-      "end": 372119
+      "start": 372699,
+      "end": 373937
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 372119,
-      "end": 374067
+      "start": 373937,
+      "end": 375885
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 374067,
-      "end": 374310
+      "start": 375885,
+      "end": 376128
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 374310,
-      "end": 374421
+      "start": 376128,
+      "end": 376239
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 374421,
-      "end": 375396
-    },
-    {
-      "file": "assets/caisse/returns.js",
-      "start": 375396,
-      "end": 375622
-    },
-    {
-      "file": "assets/caisse/returns.js",
-      "start": 375622,
+      "start": 376239,
       "end": 377214
     },
     {
       "file": "assets/caisse/returns.js",
       "start": 377214,
-      "end": 377826
+      "end": 377440
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 377826,
-      "end": 377979
+      "start": 377440,
+      "end": 379032
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 377979,
-      "end": 379253
+      "start": 379032,
+      "end": 379644
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 379253,
-      "end": 380030
+      "start": 379644,
+      "end": 379797
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 380030,
-      "end": 380103
+      "start": 379797,
+      "end": 381071
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 380103,
-      "end": 380405
+      "start": 381071,
+      "end": 381848
     },
     {
       "file": "assets/caisse/returns.js",
-      "start": 380405,
-      "end": 384533
+      "start": 381848,
+      "end": 381921
+    },
+    {
+      "file": "assets/caisse/returns.js",
+      "start": 381921,
+      "end": 382223
+    },
+    {
+      "file": "assets/caisse/returns.js",
+      "start": 382223,
+      "end": 386351
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 384533,
-      "end": 386602
+      "start": 386351,
+      "end": 388420
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 386602,
-      "end": 387426
+      "start": 388420,
+      "end": 389244
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 387426,
-      "end": 387572
+      "start": 389244,
+      "end": 389390
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 387572,
-      "end": 387635
+      "start": 389390,
+      "end": 389453
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 387635,
-      "end": 387798
+      "start": 389453,
+      "end": 389616
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 387798,
-      "end": 388224
+      "start": 389616,
+      "end": 390042
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 388224,
-      "end": 389366
+      "start": 390042,
+      "end": 391184
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 389366,
-      "end": 389854
+      "start": 391184,
+      "end": 391672
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 389854,
-      "end": 390565
+      "start": 391672,
+      "end": 392383
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 390565,
-      "end": 390778
+      "start": 392383,
+      "end": 392596
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 390778,
-      "end": 392630
+      "start": 392596,
+      "end": 394448
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 392630,
-      "end": 393505
+      "start": 394448,
+      "end": 395323
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 393505,
-      "end": 394912
+      "start": 395323,
+      "end": 396730
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 394912,
-      "end": 396325
+      "start": 396730,
+      "end": 398143
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 396325,
-      "end": 398163
+      "start": 398143,
+      "end": 399981
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 398163,
-      "end": 398678
+      "start": 399981,
+      "end": 400496
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 398678,
-      "end": 398755
+      "start": 400496,
+      "end": 400573
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 398755,
-      "end": 398942
+      "start": 400573,
+      "end": 400760
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 398942,
-      "end": 399620
+      "start": 400760,
+      "end": 401438
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 399620,
-      "end": 401717
+      "start": 401438,
+      "end": 403535
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 401717,
-      "end": 410044
+      "start": 403535,
+      "end": 411875
     },
     {
       "file": "assets/caisse/handover.js",
-      "start": 410044,
-      "end": 410814
+      "start": 411875,
+      "end": 412645
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 410814,
-      "end": 429885
+      "start": 412645,
+      "end": 431716
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 429885,
-      "end": 430010
+      "start": 431716,
+      "end": 431841
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 430010,
-      "end": 430103
+      "start": 431841,
+      "end": 431934
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 430103,
-      "end": 430206
+      "start": 431934,
+      "end": 432037
     },
     {
       "file": "assets/caisse/catalogue.js",
-      "start": 430206,
-      "end": 430371
+      "start": 432037,
+      "end": 435951
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 430371,
-      "end": 430925
+      "start": 435951,
+      "end": 436505
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 430925,
-      "end": 439931
+      "start": 436505,
+      "end": 445511
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 439931,
-      "end": 440330
+      "start": 445511,
+      "end": 445910
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 440330,
-      "end": 441729
+      "start": 445910,
+      "end": 447309
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 441729,
-      "end": 441872
+      "start": 447309,
+      "end": 447452
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 441872,
-      "end": 443198
+      "start": 447452,
+      "end": 448778
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 443198,
-      "end": 445465
+      "start": 448778,
+      "end": 451045
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 445465,
-      "end": 446641
+      "start": 451045,
+      "end": 452221
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 446641,
-      "end": 446851
+      "start": 452221,
+      "end": 452431
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 446851,
-      "end": 446926
+      "start": 452431,
+      "end": 452506
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 446926,
-      "end": 447093
+      "start": 452506,
+      "end": 452673
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 447093,
-      "end": 447245
+      "start": 452673,
+      "end": 452825
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 447245,
-      "end": 448536
+      "start": 452825,
+      "end": 454116
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 448536,
-      "end": 449262
+      "start": 454116,
+      "end": 454842
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 449262,
-      "end": 450808
+      "start": 454842,
+      "end": 456388
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 450808,
-      "end": 451738
+      "start": 456388,
+      "end": 457318
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 451738,
-      "end": 452409
+      "start": 457318,
+      "end": 457989
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 452409,
-      "end": 453213
+      "start": 457989,
+      "end": 458793
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 453213,
-      "end": 453958
+      "start": 458793,
+      "end": 459538
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 453958,
-      "end": 454125
+      "start": 459538,
+      "end": 459705
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 454125,
-      "end": 456074
+      "start": 459705,
+      "end": 461654
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 456074,
-      "end": 456363
+      "start": 461654,
+      "end": 461943
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 456363,
-      "end": 456753
+      "start": 461943,
+      "end": 462333
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 456753,
-      "end": 457025
+      "start": 462333,
+      "end": 462605
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 457025,
-      "end": 457264
+      "start": 462605,
+      "end": 462844
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 457264,
-      "end": 458894
+      "start": 462844,
+      "end": 464474
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 458894,
-      "end": 460107
+      "start": 464474,
+      "end": 465687
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 460107,
-      "end": 461902
+      "start": 465687,
+      "end": 467482
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 461902,
-      "end": 462219
+      "start": 467482,
+      "end": 467799
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 462219,
-      "end": 462349
+      "start": 467799,
+      "end": 467929
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 462349,
-      "end": 462503
+      "start": 467929,
+      "end": 468083
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 462503,
-      "end": 462968
+      "start": 468083,
+      "end": 468548
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 462968,
-      "end": 466934
+      "start": 468548,
+      "end": 472514
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 466934,
-      "end": 472408
+      "start": 472514,
+      "end": 477988
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 472408,
-      "end": 475491
+      "start": 477988,
+      "end": 481071
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 475491,
-      "end": 476116
+      "start": 481071,
+      "end": 481696
     },
     {
       "file": "assets/caisse/inventory.js",
-      "start": 476116,
-      "end": 476193
+      "start": 481696,
+      "end": 481773
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 476193,
-      "end": 501485
+      "start": 481773,
+      "end": 507093
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 501485,
-      "end": 501852
+      "start": 507093,
+      "end": 507460
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 501852,
-      "end": 502050
+      "start": 507460,
+      "end": 507658
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 502050,
-      "end": 503147
+      "start": 507658,
+      "end": 508755
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 503147,
-      "end": 503810
+      "start": 508755,
+      "end": 509418
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 503810,
-      "end": 504674
+      "start": 509418,
+      "end": 510282
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 504674,
-      "end": 505690
+      "start": 510282,
+      "end": 511298
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 505690,
-      "end": 507240
+      "start": 511298,
+      "end": 512848
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 507240,
-      "end": 514353
+      "start": 512848,
+      "end": 519969
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 514353,
-      "end": 516057
+      "start": 519969,
+      "end": 521673
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 516057,
-      "end": 522320
+      "start": 521673,
+      "end": 527936
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 522320,
-      "end": 522918
+      "start": 527936,
+      "end": 528534
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 522918,
-      "end": 523091
+      "start": 528534,
+      "end": 528707
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 523091,
-      "end": 523933
+      "start": 528707,
+      "end": 529549
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 523933,
-      "end": 528191
+      "start": 529549,
+      "end": 533807
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 528191,
-      "end": 534770
+      "start": 533807,
+      "end": 540370
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 534770,
-      "end": 534952
+      "start": 540370,
+      "end": 540552
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 534952,
-      "end": 535705
+      "start": 540552,
+      "end": 541305
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 535705,
-      "end": 545756
+      "start": 541305,
+      "end": 551356
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 545756,
-      "end": 546470
+      "start": 551356,
+      "end": 552070
     },
     {
       "file": "assets/caisse/offline.js",
-      "start": 546470,
-      "end": 546854
+      "start": 552070,
+      "end": 552454
     },
     {
       "file": "assets/caisse-app.js",
-      "start": 546854,
-      "end": 548921
+      "start": 552454,
+      "end": 554521
     }
   ],
   "splitFiles": {
-    "assets/caisse-app.js": "ea6ac2e02bca44c613c12a5662a5efadc0d7e96ce5be7b9f423345522c70aebb",
-    "assets/caisse/catalogue.js": "04f09803ffc578d52d3678d1b632a441777203f65d06fd8432f5d210985fc1c9",
+    "assets/caisse-app.js": "13f1751df83569219e7a0c19780def3a1e898d7ea1e4b71c1963efa97ce8e5d1",
+    "assets/caisse/catalogue.js": "ddb89af1cadb4467d563dbcf2433d9a57004de7713083a84d740c66b11a2b4ec",
     "assets/caisse/till-frame.js": "7c61d5e5d8fa0f21d4d4c003642603b0846392b00f23517e3c93c13f4f273c7b",
     "assets/caisse/orders.js": "efb08526dd03ec262688e8ca3602589895fc55672a844d9f35f8a8a470988466",
     "assets/caisse/payment.js": "bab69b7516127ba0c6f8d0fa8a1cb6c94fd986a48bca947f286b74a2940711fb",
@@ -1982,11 +1982,11 @@
     "assets/caisse/shift.js": "44bc7f937197d5813974b19ec80f99955223faf60d92777aa692fd815df3a237",
     "assets/caisse/settings.js": "fd6b660eb1e7a1792bf7f6bbd74927bf9fc5b7ae9e44eca79aeee1504e0bee44",
     "assets/caisse/held-sales.js": "cfc633029756952a25d4d825d3e059c4f04f55287cf71597640369900928b72f",
-    "assets/caisse/discounts.js": "30c96e592d77502b8944e824b5f2373eab85f0d9aa8aa58ddd2dde0b5b968f96",
+    "assets/caisse/discounts.js": "b4262857130214163942b6d2fce6d003685cae7edb50934041f0ff317944b739",
     "assets/caisse/returns.js": "613f0e29322af379224258846aa18b2694f7db69f476e8a042b1fab8520117b1",
     "assets/caisse/handover.js": "fdc2825664e8148f1f49335836852f9fb8e98123fd4bf1df4406b53bb5e5bf37",
     "assets/caisse/inventory.js": "e1751a8f6f19729249e1c2bc46d9408f24492b474908fd9c617eab730a7b17ce",
-    "assets/caisse/offline.js": "88b925a3dcdd1509c440c273a362cbbaf5909bf5e4fd4eda33c3e8f4f9707fee",
+    "assets/caisse/offline.js": "17e561202572926040e7be993f5766a95c0bbf8c4e97a3f5522f15e58714c4b6",
     "assets/caisse/receipts.js": "5050c089ed440141fc536fc093be07334aafaba3746b036c9a9b855727bc4ea3",
     "assets/caisse/closing.js": "d7b1e765f69078d42e992eda779c89cb231369f1e75a75aba2eeb3243f5aca7f"
   },
@@ -2008,475 +2008,475 @@
       "text": "\n"
     },
     {
-      "at": 10081,
+      "at": 10100,
       "text": "\n"
     },
     {
-      "at": 13450,
+      "at": 13469,
       "text": "\n"
     },
     {
-      "at": 16313,
+      "at": 16332,
       "text": "\n"
     },
     {
-      "at": 17713,
+      "at": 17732,
       "text": "\n"
     },
     {
-      "at": 18675,
+      "at": 18694,
       "text": "\n"
     },
     {
-      "at": 19098,
+      "at": 19117,
       "text": "\n"
     },
     {
-      "at": 19987,
+      "at": 20006,
       "text": "\n"
     },
     {
-      "at": 20443,
+      "at": 20462,
       "text": "\n"
     },
     {
-      "at": 25375,
+      "at": 25394,
       "text": "\n"
     },
     {
-      "at": 25516,
+      "at": 25535,
       "text": "\n"
     },
     {
-      "at": 25675,
+      "at": 25694,
       "text": "\n"
     },
     {
-      "at": 26948,
+      "at": 26967,
       "text": "\n"
     },
     {
-      "at": 27056,
+      "at": 27075,
       "text": "\n"
     },
     {
-      "at": 27227,
+      "at": 27246,
       "text": "\n"
     },
     {
-      "at": 27787,
+      "at": 27806,
       "text": "\n"
     },
     {
-      "at": 28280,
+      "at": 28299,
       "text": "\n"
     },
     {
-      "at": 28618,
+      "at": 28637,
       "text": "\n"
     },
     {
-      "at": 28886,
+      "at": 28905,
       "text": "\n"
     },
     {
-      "at": 31999,
+      "at": 32018,
       "text": "\n"
     },
     {
-      "at": 33252,
+      "at": 33271,
       "text": "\n"
     },
     {
-      "at": 35908,
+      "at": 35927,
       "text": "\n"
     },
     {
-      "at": 36212,
+      "at": 36231,
       "text": "\n"
     },
     {
-      "at": 36917,
+      "at": 36953,
       "text": "\n"
     },
     {
-      "at": 37400,
+      "at": 37436,
       "text": "\n"
     },
     {
-      "at": 59648,
+      "at": 59689,
       "text": "\n"
     },
     {
-      "at": 63752,
+      "at": 63863,
       "text": "\n"
     },
     {
-      "at": 64406,
+      "at": 64551,
       "text": "\n"
     },
     {
-      "at": 65452,
+      "at": 65597,
       "text": "\n"
     },
     {
-      "at": 73078,
+      "at": 73223,
       "text": "\n"
     },
     {
-      "at": 75091,
+      "at": 75236,
       "text": "\n"
     },
     {
-      "at": 75536,
+      "at": 75681,
       "text": "\n"
     },
     {
-      "at": 76928,
+      "at": 77073,
       "text": "\n"
     },
     {
-      "at": 78821,
+      "at": 78966,
       "text": "\n"
     },
     {
-      "at": 79127,
+      "at": 79272,
       "text": "\n"
     },
     {
-      "at": 83242,
+      "at": 83387,
       "text": "\n"
     },
     {
-      "at": 84438,
+      "at": 84583,
       "text": "\n"
     },
     {
-      "at": 84699,
+      "at": 84844,
       "text": "\n"
     },
     {
-      "at": 85172,
+      "at": 85317,
       "text": "\n"
     },
     {
-      "at": 85697,
+      "at": 85842,
       "text": "\n"
     },
     {
-      "at": 87140,
+      "at": 87285,
       "text": "\n"
     },
     {
-      "at": 87271,
+      "at": 87416,
       "text": "\n"
     },
     {
-      "at": 87337,
+      "at": 87482,
       "text": "\n"
     },
     {
-      "at": 87832,
+      "at": 87977,
       "text": "\n"
     },
     {
-      "at": 88595,
+      "at": 88740,
       "text": "\n"
     },
     {
-      "at": 89360,
+      "at": 89505,
       "text": "\n"
     },
     {
-      "at": 90774,
+      "at": 90919,
       "text": "\n"
     },
     {
-      "at": 91647,
+      "at": 91813,
       "text": "\n"
     },
     {
-      "at": 91802,
+      "at": 91968,
       "text": "\n"
     },
     {
-      "at": 95827,
+      "at": 95993,
       "text": "\n"
     },
     {
-      "at": 96098,
+      "at": 96264,
       "text": "\n"
     },
     {
-      "at": 96455,
+      "at": 96621,
       "text": "\n"
     },
     {
-      "at": 97571,
+      "at": 97737,
       "text": "\n"
     },
     {
-      "at": 98022,
+      "at": 98188,
       "text": "\n"
     },
     {
-      "at": 98734,
+      "at": 98900,
       "text": "\n"
     },
     {
-      "at": 99725,
+      "at": 99891,
       "text": "\n"
     },
     {
-      "at": 100002,
+      "at": 100168,
       "text": "\n"
     },
     {
-      "at": 102077,
+      "at": 102243,
       "text": "\n"
     },
     {
-      "at": 102995,
+      "at": 103161,
       "text": "\n"
     },
     {
-      "at": 103967,
+      "at": 104133,
       "text": "\n"
     },
     {
-      "at": 104071,
+      "at": 104237,
       "text": "\n"
     },
     {
-      "at": 105766,
+      "at": 105932,
       "text": "\n"
     },
     {
-      "at": 106150,
+      "at": 106316,
       "text": "\n"
     },
     {
-      "at": 107564,
+      "at": 107730,
       "text": "\n"
     },
     {
-      "at": 107756,
+      "at": 107922,
       "text": "\n"
     },
     {
-      "at": 109260,
+      "at": 109426,
       "text": "\n"
     },
     {
-      "at": 112371,
+      "at": 112537,
       "text": "\n"
     },
     {
-      "at": 112815,
+      "at": 112981,
       "text": "\n"
     },
     {
-      "at": 113673,
+      "at": 113839,
       "text": "\n"
     },
     {
-      "at": 114966,
+      "at": 115132,
       "text": "\n"
     },
     {
-      "at": 116560,
+      "at": 116726,
       "text": "\n"
     },
     {
-      "at": 117107,
+      "at": 117273,
       "text": "\n"
     },
     {
-      "at": 120040,
+      "at": 120206,
       "text": "\n"
     },
     {
-      "at": 120438,
+      "at": 120604,
       "text": "\n"
     },
     {
-      "at": 121499,
+      "at": 121665,
       "text": "\n"
     },
     {
-      "at": 122130,
+      "at": 122296,
       "text": "\n"
     },
     {
-      "at": 122474,
+      "at": 122640,
       "text": "\n"
     },
     {
-      "at": 123142,
+      "at": 123308,
       "text": "\n"
     },
     {
-      "at": 124670,
+      "at": 124836,
       "text": "\n"
     },
     {
-      "at": 125154,
+      "at": 125320,
       "text": "\n"
     },
     {
-      "at": 125333,
+      "at": 125499,
       "text": "\n"
     },
     {
-      "at": 126267,
+      "at": 126433,
       "text": "\n"
     },
     {
-      "at": 128124,
+      "at": 128290,
       "text": "\n"
     },
     {
-      "at": 129807,
+      "at": 129973,
       "text": "\n"
     },
     {
-      "at": 129851,
+      "at": 130017,
       "text": "\n"
     },
     {
-      "at": 132385,
+      "at": 132551,
       "text": "\n"
     },
     {
-      "at": 132816,
+      "at": 132982,
       "text": "\n"
     },
     {
-      "at": 134486,
+      "at": 134652,
       "text": "\n"
     },
     {
-      "at": 135451,
+      "at": 135617,
       "text": "\n"
     },
     {
-      "at": 136619,
+      "at": 136785,
       "text": "\n"
     },
     {
-      "at": 137443,
+      "at": 137609,
       "text": "\n"
     },
     {
-      "at": 138175,
+      "at": 138341,
       "text": "\n"
     },
     {
-      "at": 142847,
+      "at": 143028,
       "text": "\n"
     },
     {
-      "at": 146326,
+      "at": 146507,
       "text": "\n"
     },
     {
-      "at": 151181,
+      "at": 151362,
       "text": "\n"
     },
     {
-      "at": 151697,
+      "at": 151878,
       "text": "\n"
     },
     {
-      "at": 155789,
+      "at": 155970,
       "text": "\n"
     },
     {
-      "at": 158156,
+      "at": 158350,
       "text": "\n"
     },
     {
-      "at": 158555,
+      "at": 158749,
       "text": "\n"
     },
     {
-      "at": 159907,
+      "at": 160101,
       "text": "\n"
     },
     {
-      "at": 161873,
+      "at": 162067,
       "text": "\n"
     },
     {
-      "at": 170856,
+      "at": 171050,
       "text": "\n"
     },
     {
-      "at": 171274,
+      "at": 171468,
       "text": "\n"
     },
     {
-      "at": 175166,
+      "at": 175360,
       "text": "\n"
     },
     {
-      "at": 176222,
+      "at": 176416,
       "text": "\n"
     },
     {
-      "at": 176867,
+      "at": 177061,
       "text": "\n"
     },
     {
-      "at": 178187,
+      "at": 178381,
       "text": "\n"
     },
     {
-      "at": 183687,
+      "at": 183881,
       "text": "\n"
     },
     {
-      "at": 183949,
+      "at": 184143,
       "text": "\n"
     },
     {
-      "at": 184597,
+      "at": 184791,
       "text": "\n"
     },
     {
-      "at": 186759,
+      "at": 186963,
       "text": "\n"
     },
     {
-      "at": 187027,
+      "at": 187241,
       "text": "\n"
     },
     {
-      "at": 187270,
+      "at": 187484,
       "text": "\n"
     },
     {
-      "at": 188220,
+      "at": 188434,
       "text": "\n"
     },
     {
-      "at": 188910,
+      "at": 189124,
       "text": "\n"
     },
     {
-      "at": 215421,
+      "at": 215643,
       "text": "\n"
     },
     {
-      "at": 216553,
+      "at": 216775,
       "text": "\n"
     },
     {
-      "at": 217297,
+      "at": 217519,
       "text": "\n"
     },
     {
-      "at": 218992,
+      "at": 219214,
       "text": "\n"
     }
   ]

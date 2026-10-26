@@ -126,14 +126,14 @@
             : money(targetValue || 0);
           amount = money(Math.max(0, Math.min(amount, money(gross))));
           if (amount <= 0) { toast('Remise sans effet'); return; }
-          vrapDiscount = {
+          currentOrder().setDiscount({
             kind:   targetKind,
             value:  targetValue,
             amount: amount,
             reason: targetReason,
             actorId: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96),
             accounted: false,
-          };
+          });
           closeRemiseModal();
           renderCart();
           toast(`Remise appliquée · −${fmtMAD(amount)}`);
@@ -170,7 +170,7 @@
       const target = remiseState.target;
       const targetTableId = remiseState.tableId;
       if (target === 'vrap') {
-        vrapDiscount = null;
+        currentOrder().setDiscount(null);
         closeRemiseModal();
         renderCart();
         toast('Remise supprimée');

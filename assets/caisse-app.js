@@ -121,7 +121,7 @@
       ],
     } : {};
     // Live per-table orders built by the cashier (format: {id,name,price,qty}[])
-    const tableOrders = {};
+    const tableOrders = currentOrder().tables;
     tableSettlement();
     /* For other occupied tables, generate plausible orders (deterministic per table id) */
     const menu = IS_DEMO ? [
@@ -547,7 +547,7 @@
        carte ne se chargerait jamais sans que rien ne le dise. */
     let activeCat = 'all';
     let activeSub = null;
-    let cart = []; // line: { uid, id, name, price, qty, note }
+    let cart = currentOrder().cart; // line: { uid, id, name, price, qty, note }
     /* Stable per-line id so the same dish can sit on two lines with
        different kitchen notes (id stays = menu id for menu/station lookups). */
     let lineSeq = 0;/* À emporter · an existing board order can be re-opened in the builder
@@ -935,7 +935,7 @@
       const list = (mode === 'order' && selectedId) ? (tableOrders[selectedId] || []) : cart;
       const line = list.find(l => l.uid === uid);
       if (line) {
-        line.note = inp.value;
+        currentOrder().patchLine(line, { ["note"]: inp.value });
         inp.classList.toggle('has-note', !!inp.value.trim());
       }
     });
@@ -1001,11 +1001,11 @@
         if (!row) return;
         const uid = row.dataset.reviewUid;
         if (mode === 'vrap') {
-          cart = removeGroupedLine(cart, uid);
+          currentOrder().replaceCart(removeGroupedLine(cart, uid));
           renderMenu();
           renderCart();
         } else if (selectedId && tableOrders[selectedId]) {
-          tableOrders[selectedId] = removeGroupedLine(tableOrders[selectedId], uid);
+          currentOrder().replaceTable(selectedId, removeGroupedLine(tableOrders[selectedId], uid));
           renderMenu();
           renderOrderPanel(selectedId);
         }
@@ -1046,7 +1046,7 @@
       const list = (mode === 'order' && selectedId) ? (tableOrders[selectedId] || []) : cart;
       const line = list.find(l => l.uid === uid);
       if (line) {
-        line.note = inp.value;
+        currentOrder().patchLine(line, { ["note"]: inp.value });
         const sideInp = document.querySelector(`.rp-item-note[data-note-uid="${uid}"]`);
         if (sideInp) {
           sideInp.value = inp.value;
@@ -1549,7 +1549,7 @@
          on le lui dit. Le panier ramassé par erreur pendant ce temps repart avec
          (il n'appartient à aucune note), sinon il ressortirait tout seul au
          prochain passage en « À emporter ». */
-      cart = [];
+      currentOrder().replaceCart([]);
       backToSalle();
       toast('Aucune table en cours');
     });
@@ -2544,11 +2544,11 @@
         tableSettlement().project(table, { reopenedBill: saleId });
         delete tableClosedAt[tableKey(target)];
         delete orders[target];
-        tableOrders[target] = snap.lines.slice(0, 40).map((line, index) => {
+        currentOrder().replaceTable(target, snap.lines.slice(0, 40).map((line, index) => {
           const qty = Math.max(1, Number(line.qty) || 1);
           return { id: 'reopen-' + index, name: String(line.name || 'Article'), qty,
             price: Number(line.total || 0) / qty, sent: true, reopenedBill: true };
-        });
+        }));
         if (snap.split && Array.isArray(snap.split.parts)) {
           const flowId = String(snap.split.id || result.splitFlowId || '');
           const parts = snap.split.parts.map((part, index) => {
@@ -2867,7 +2867,7 @@
         toast('Remise supprimée');
       } else if (name === 'remove-vrap-discount') {
         e.stopPropagation();
-        vrapDiscount = null;
+        currentOrder().setDiscount(null);
         renderCart();
         toast('Remise supprimée');
       } else if (name === 'resume-split' && selectedId) {
@@ -3265,7 +3265,7 @@
     $('#vrap-board').addEventListener('click', (e) => {
       if (e.target.closest('#vrap-new-order')) {
         // Start a fresh order · drop any edit state and the working cart
-        vrapEditingNum = null;
+        currentOrder().setEditing(null);
         clearCart();
         setVrapView('builder');
         if (window.lucide) lucide.createIcons();
@@ -3315,7 +3315,7 @@
     $('#vrap-back-board').addEventListener('click', () => {
       if (vrapEditingNum != null) {
         saveVrapEdits();
-        vrapEditingNum = null;
+        currentOrder().setEditing(null);
         clearCart();         // empties cart + réduction, panel → empty
       }
       setVrapView('board');
@@ -3462,7 +3462,7 @@
           tableSettlement().project(tables[id], { covers: 0 });
           resetTableTimer(tables[id]);
           delete orders[id];
-          delete tableOrders[id];
+          currentOrder().removeTable(id);
           tableSettlement().project(tables[id], {}, ['discount']);
           tableSettlement().project(tables[id], {}, ['orderNo']);
           if (selectedId === id) closeRightPanel();

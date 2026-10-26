@@ -698,7 +698,7 @@ ok(/function sendTableToKitchen\(tableId, opts\)/.test(caisse),
   'une mesa validée a un chemin vers l\'écran cuisine');
 ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent && !l\.orderProPending && \(fire \|\| !lineHeld\(l, all\)\)\)/.test(caisse),
   'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
-ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; delete l\.hold; delete l\.committed; \}\);/.test(caisse),
+ok(/lines\.forEach\(\(l\) => \{ currentOrder\(\)\.patchLine\(l, \{ \["sent"\]: true \}\); currentOrder\(\)\.patchLine\(l, \{\}, \["hold"\]\); currentOrder\(\)\.patchLine\(l, \{\}, \["committed"\]\); \}\);/.test(caisse),
   'et elles sont marquées une fois parties');
 ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !staleQueuedServerTicket\(o\)\)\.map/.test(caisse),
   'le board cuisine persiste sans réenregistrer les vieux tickets serveur en attente');

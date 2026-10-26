@@ -2,7 +2,7 @@
  * Les objets du plan sont des projections en lecture seule des champs de session.
  * Aucune dépendance DOM, réseau ou stockage : le journal voyage avec la sauvegarde.
  */
-function createTableSettlement(tables = {}, tableLines = {}, readBill = null) {
+function createTableSettlement(tables = {}, tableLines = {}, readBill = null, lineOwner = null) {
   const fields = ['status', 'covers', 'elapsed', 'orderStartedAt', 'timerSession', 'orderNo',
     'server', 'discount', 'reopenRef', 'reopenSessionId', 'reopenedBill', 'settlement'];
   const privateState = new WeakMap();
@@ -175,8 +175,8 @@ function createTableSettlement(tables = {}, tableLines = {}, readBill = null) {
       : { status: source.status, covers: source.covers, elapsed: source.elapsed,
         orderStartedAt: source.orderStartedAt, timerSession: source.timerSession,
         server: source.server, orderNo: source.orderNo, discount: source.discount });
-    tableLines[to] = merge ? (tableLines[to] || []).concat(tableLines[from] || []) : (tableLines[from] || []);
-    delete tableLines[from];
+    lineOwner.replaceTable(to, merge ? (tableLines[to] || []).concat(tableLines[from] || []) : (tableLines[from] || []));
+    lineOwner.removeTable(from);
     project(from, { status: 'khawya', covers: 0, elapsed: 0 },
       ['orderStartedAt', 'timerSession', 'orderNo', 'server', 'discount']);
     return snapshot(to);
@@ -199,7 +199,7 @@ function createTableSettlement(tables = {}, tableLines = {}, readBill = null) {
  * Les tests peuvent instancier exactement le même module sans démarrer la caisse. */
 function tableSettlement() {
   if (!tableSettlement.owner) tableSettlement.owner = createTableSettlement(tables,
-    typeof tableOrders === 'undefined' ? {} : tableOrders, id => {
+    currentOrder().tables, id => {
       if (typeof generateOrder !== 'function') return null;
       const lines = generateOrder(id, tables[id]);
       const gross = Math.round(lines.reduce((sum, line) => sum + Number(line.total || 0), 0) * 100);
@@ -211,6 +211,6 @@ function tableSettlement() {
           amountCents: Math.round(Number(part.base ?? (part.amount - (part.tip || 0))) * 100),
           tipCents: Math.round(Number(part.tip || 0) * 100), method: part.payMethod,
         }] : []) : [] };
-    });
+    }, currentOrder());
   return tableSettlement.owner;
 }

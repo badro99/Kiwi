@@ -127,7 +127,7 @@ await check('a takeaway void names its order, since it has no table', () => {
 await check('the line leaves the cart only once the kitchen has been told', () => {
   const confirm = caisse.slice(caisse.indexOf('async function cancelCaisseLineImmediately('));
   const postAt = confirm.indexOf('await postCaisseCancellation({');
-  const removeAt = confirm.indexOf('cart = applyGroupedLineQtyDelta(cart, line, -1);');
+  const removeAt = confirm.indexOf('currentOrder().replaceCart(applyGroupedLineQtyDelta(cart, line, -1));');
   assert.ok(postAt > 0 && removeAt > postAt,
     'the local removal must follow the server call, never precede it');
   /* Un échec réseau rend la main AVANT de toucher au panier : l'addition ne

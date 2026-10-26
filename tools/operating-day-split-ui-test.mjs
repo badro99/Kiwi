@@ -238,7 +238,7 @@ section('Takeaway finalization and history path');
     vrapHandoverTime: () => '12:00',
     kdsEsc: (value) => String(value),
   });
-  vm.runInContext(`${counterSaleRule}\n${takeawayFinalize}\n${takeawayHistory}`, context);
+  vm.runInContext(caisseTestSource.withSettlement(`${counterSaleRule}\n${takeawayFinalize}\n${takeawayHistory}`), context);
   context.settleVrapPayment();
   ok(order.paid === true && order.total === 60 && context.persisted && context.boardShown,
     'actual takeaway finalization marks the order paid and restores the original 60 MAD total');

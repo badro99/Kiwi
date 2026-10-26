@@ -42,7 +42,7 @@ ok('openVrapRemise does not reference undefined openSalleRemise',
 
 ok('removeRemise function is defined and handles both vrap and table',
   /function removeRemise\(\) \{[\s\S]{0,500}tableSettlement\(\)\.project\(tables\[id\], \{\}, \['discount'\]\);/.test(CAISSE_SRC) &&
-  /vrapDiscount = null;/.test(CAISSE_SRC));
+  /currentOrder\(\)\.setDiscount\(null\);/.test(CAISSE_SRC));
 
 ok('remiseModal click listener handles #rm-remove',
   /e\.target\.closest\('#rm-remove'\)/.test(CAISSE_SRC));
@@ -60,7 +60,7 @@ ok('click router isolates vrap discount from table discount',
 
 ok('click router handles remove-table-discount and remove-vrap-discount',
   /name === 'remove-table-discount'[\s\S]{0,150}tableSettlement\(\)\.project\(tables\[selectedId\], \{\}, \['discount'\]\);/.test(CAISSE_SRC) &&
-  /name === 'remove-vrap-discount'[\s\S]{0,150}vrapDiscount = null;/.test(CAISSE_SRC));
+  /name === 'remove-vrap-discount'[\s\S]{0,150}currentOrder\(\)\.setDiscount\(null\);/.test(CAISSE_SRC));
 
 // 3. Static Source Guards - Table Lifecycle & Discount Purge
 ok('markPaid deletes discount immediately and forces release',

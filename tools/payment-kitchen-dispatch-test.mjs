@@ -23,6 +23,7 @@ function extractFunction(name) {
 // A paid OrderPro takeaway leaves `held` once, prints once, and cannot print
 // again when the server echo or a second payment callback revisits it.
 const takeawayHarness = new Function(`
+  ${caisseTestSource.orderDeclarations()}
   const prints = [], pushes = [];
   const window = {};
   const kdsEl = { classList: { contains: () => false } };
@@ -49,8 +50,9 @@ assert.deepEqual(takeawayHarness.pushes.map(x => [x.status, x.extra.paid]), [['a
   'the customer queue learns that the paid order was accepted');
 
 const freshTakeawayHarness = new Function(`
+  ${caisseTestSource.orderDeclarations()}
   let mode = 'vrap', vrapEditingNum = null, kdsOrderSeq = 0;
-  const cart = [{ id: 'pasta', name: 'Pasta', qty: 1, price: 40 }];
+  let cart = [{ id: 'pasta', name: 'Pasta', qty: 1, price: 40 }];
   const kdsOrders = [], prints = [], relays = [];
   const window = {};
   const kdsEl = { classList: { contains: () => false } };
@@ -87,6 +89,7 @@ assert.equal(freshTakeawayHarness.second, freshTakeawayHarness.first,
 // then acknowledges it to the server. Clearing orderProPending is the durable
 // guard used by both the manual button and payment fallback.
 const tableHarness = new Function(`
+  ${caisseTestSource.orderDeclarations()}
   const ingested = [], statuses = [];
   const tableOrders = { T4: [
     { orderProPending: true, orderProLine: 'op-table-a:0' },
@@ -130,6 +133,7 @@ assert.deepEqual(tableHarness.statuses.map(x => x.id), ['op-table-a', 'op-table-
 // must finish before a later cash tender records the visit, even when this
 // tender adds no new dish (the physical #0068 sequence).
 const lateRelay = new Function(`
+  ${caisseTestSource.orderDeclarations()}
   let resolveRelay;
   const pending = new Promise(resolve => { resolveRelay = resolve; });
   const selectedId = '13', mode = 'salle';
@@ -174,7 +178,7 @@ assert.match(source, /remote: o\.localKitchenAction === true \? false[\s\S]{0,18
   'operator acceptance prints locally, employee-authorised tables print on the connected caisse, and other polling remains hub-only');
 assert.match(source, /!l\.sent && !l\.orderProPending/,
   'pending remote lines cannot be merged into a second local table ticket');
-assert.match(source, /if \(cart && cart\.length\)[\s\S]{0,180}?createTakeawayKitchenOrder\(cart\)[\s\S]{0,100}?vrapEditingNum = created\.num/,
+assert.match(source, /if \(cart && cart\.length\)[\s\S]{0,180}?createTakeawayKitchenOrder\(cart\)[\s\S]{0,100}?currentOrder\(\)\.setEditing\(created\.num\)/,
   'paying a fresh counter order creates one kitchen order and then settles that same order');
 
 console.log('✓ payment and table confirmation dispatch each unsent kitchen order exactly once');

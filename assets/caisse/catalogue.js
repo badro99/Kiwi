@@ -988,8 +988,8 @@
       const priced = promoPrice(item, item.price + extra);
       const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && (c.optSig || '') === sig
         && promoKey(c.promo) === promoKey(priced.promo));
-      if (line) line.qty++;
-      else cart.push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price: priced.price,
+      if (line) currentOrder().patchLine(line, { qty: +line.qty + 1 });
+      else currentOrder().append(cart, Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price: priced.price,
                        qty: 1, note: '', opts: (opts || []).slice(), optSig: sig },
                        priced.promo ? { promo: priced.promo } : null));
 
@@ -1090,7 +1090,7 @@
       const item = standaloneMenuItem(itemId);
       if (!item) return;
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
-        openCaisseFormula(item, (parent, parts) => { cart.push(parent, ...parts); nativeHapticLight(); renderMenu(); renderCart(); });
+        openCaisseFormula(item, (parent, parts) => { currentOrder().append(cart, parent, ...parts); nativeHapticLight(); renderMenu(); renderCart(); });
         return;
       }
       const groups = itemOptGroups(item);
@@ -1204,13 +1204,13 @@
       if (!(amt > 0)) return;
       nativeHapticLight();
       if (mode === 'order' && selectedId) {
-        (tableOrders[selectedId] = tableOrders[selectedId] || []).push({
+        currentOrder().append((currentOrder().replaceTable(selectedId, tableOrders[selectedId] || [])), {
           uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt, qty: 1, note: ''
         });
         startTableTimer(selectedId);
         renderOrderPanel(selectedId);
       } else {
-        cart.push({ uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt,
+        currentOrder().append(cart, { uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt,
                     qty: 1, note: '', opts: [], optSig: '' });
         renderCart();
       }
@@ -1232,7 +1232,7 @@
     function applyGroupedLineQtyDelta(lines, line, delta) {
       if (!line || line.kind === 'formula-part') return lines || [];
       formulaGroup(lines, line).forEach(member => {
-        member.qty = Math.max(0, (+member.qty || 0) + delta);
+        currentOrder().patchLine(member, { qty: Math.max(0, (+member.qty || 0) + delta) });
       });
       return (lines || []).filter(member => (+member.qty || 0) > 0);
     }
@@ -1274,10 +1274,10 @@
       openCaisseFormula(item, (nextParent, nextParts) => {
         const replacement = { parent: nextParent, parts: nextParts };
         if (isVrap) {
-          cart = replaceFormulaGroup(cart, parent.formulaUid, replacement);
+          currentOrder().replaceCart(replaceFormulaGroup(cart, parent.formulaUid, replacement));
           renderCart();
         } else if (selectedId && tableOrders[selectedId]) {
-          tableOrders[selectedId] = replaceFormulaGroup(tableOrders[selectedId], parent.formulaUid, replacement);
+          currentOrder().replaceTable(selectedId, replaceFormulaGroup(tableOrders[selectedId], parent.formulaUid, replacement));
           renderOrderPanel(selectedId);
         }
         nativeHapticLight();
@@ -1312,7 +1312,7 @@
         cancelCaisseLineImmediately(null, line, { orderId: editing.opId, cart: true });
         return;
       }
-      cart = applyGroupedLineQtyDelta(cart, line, delta);
+      currentOrder().replaceCart(applyGroupedLineQtyDelta(cart, line, delta));
       renderMenu();
       renderCart();
     }
@@ -1329,8 +1329,8 @@
         dismissExpired(vrapResumedExpiredId);
         vrapResumedExpiredId = null;
       }
-      cart = [];
-      vrapDiscount = null;
+      currentOrder().replaceCart([]);
+      currentOrder().setDiscount(null);
       renderMenu();
       renderCart();
       if (typeof renderVrapBoard === 'function') renderVrapBoard();
@@ -1467,3 +1467,71 @@
     function updateStockBadge(){ const el = $('#stock-alert-count'); if (el){ const n = skAlertCount(); el.textContent = n; el.classList.toggle('warn', n > 0); } }
 
     
+/* Propriétaire du panier courant et des lignes de table. Les projections sont
+ * protégées récursivement, les entrées sont copiées, aucune dépendance DOM. */
+function createCurrentOrder(initial = {}, publish = () => {}) {
+  const rawOf = new WeakMap(), views = new WeakMap();
+  const copy = value => {
+    if (!value || typeof value !== 'object') return value;
+    if (rawOf.has(value)) return rawOf.get(value);
+    if (value instanceof Date) return new Date(value);
+    return Array.isArray(value) ? value.map(copy) : Object.fromEntries(Object.entries(value).map(([k, v]) => [k, copy(v)]));
+  };
+  const view = raw => {
+    if (!raw || typeof raw !== 'object') return raw;
+    if (!views.has(raw)) {
+      const proxy = new Proxy(raw, {
+        get: (target, key) => view(Reflect.get(target, key)),
+        set() { throw new TypeError('Panier en lecture seule'); },
+        deleteProperty() { throw new TypeError('Panier en lecture seule'); },
+        defineProperty() { throw new TypeError('Panier en lecture seule'); },
+        setPrototypeOf() { throw new TypeError('Panier en lecture seule'); },
+        preventExtensions() { throw new TypeError('Panier en lecture seule'); },
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          return descriptor && 'value' in descriptor ? { ...descriptor, value: view(descriptor.value) } : descriptor;
+        },
+      });
+      views.set(raw, proxy); rawOf.set(proxy, raw);
+    }
+    return views.get(raw);
+  };
+  const orderTables = initial.tables || {};
+  Object.keys(orderTables).forEach(id => { orderTables[id] = copy(orderTables[id]); });
+  let cart = copy(initial.cart || []), discount = copy(initial.discount || null), editing = initial.editing ?? null;
+  const changed = () => { publish(api); };
+  const replaceTable = (id, lines) => { orderTables[id] = copy(lines); changed(); return view(orderTables[id]); };
+  const replaceCart = lines => { cart = copy(lines); changed(); return view(cart); };
+  const patchLine = (line, patch, removed = []) => {
+    const raw = rawOf.get(line) || line;
+    Object.entries(patch).forEach(([key, value]) => { raw[key] = copy(value); });
+    removed.forEach(key => { delete raw[key]; }); changed(); return view(raw);
+  };
+  const api = Object.freeze({
+    get tables() { return view(orderTables); }, get cart() { return view(cart); },
+    get discount() { return view(discount); }, get editing() { return editing; },
+    replaceTable, replaceCart, patchLine,
+    removeTable(id) { delete orderTables[id]; changed(); },
+    restoreTables(input) { Object.keys(orderTables).forEach(id => { delete orderTables[id]; }); Object.entries(input).forEach(([id, lines]) => { orderTables[id] = copy(lines); }); changed(); },
+    append(lines, ...added) { (rawOf.get(lines) || lines).push(...added.map(copy)); changed(); },
+    setDiscount(value) { discount = copy(value); changed(); },
+    setEditing(value) { editing = value; changed(); },
+  });
+  return api;
+}
+
+/* L'adaptateur conserve les noms des projections classiques. Les bacs à sable
+ * historiques peuvent aussi fournir leurs lignes avant la première opération. */
+function currentOrder() {
+  if (!currentOrder.owner) {
+    let initial = {};
+    try { initial.tables = tableOrders; } catch (_) {}
+    try { initial.cart = cart; initial.discount = vrapDiscount; initial.editing = vrapEditingNum; } catch (_) {}
+    currentOrder.owner = createCurrentOrder(initial, owner => {
+      if (typeof cart !== 'undefined') cart = owner.cart;
+      if (typeof vrapDiscount !== 'undefined') vrapDiscount = owner.discount;
+      if (typeof vrapEditingNum !== 'undefined') vrapEditingNum = owner.editing;
+    });
+  }
+  return currentOrder.owner;
+}

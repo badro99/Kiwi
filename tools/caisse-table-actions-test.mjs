@@ -35,7 +35,7 @@ ok(/or-item-void-btn[\s\S]{0,180}data-review-action="void"/.test(caisse)
 ok(!/data-order-cancel/.test(caisse), 'bill no longer exposes cancellation by kitchen order number');
 ok(/const liveLines = tableOrders\[tableId\][\s\S]{0,120}liveLines\.length[\s\S]{0,420}sent: !!l\.sent/.test(caisse),
   'cashier-built Atlas lines win over stale generated demo bills and preserve cancellation identity');
-ok(/const canonicalUid = l\.uid \|\| l\.id \|\| ''[\s\S]{0,700}existing\.canonicalUid !== canonicalUid[\s\S]{0,300}existing\.canonicalUid = canonicalUid/.test(caisse),
+ok(/const canonicalUid = l\.uid \|\| l\.id \|\| ''[\s\S]{0,700}existing\.canonicalUid !== canonicalUid[\s\S]{0,300}currentOrder\(\)\.patchLine\(existing, \{ \["canonicalUid"\]: canonicalUid \}\)/.test(caisse),
   'equal-value cashier lines still converge to the canonical server UID before cancellation');
 ok(/rp-item--sent[\s\S]{0,420}data-cart-action="dec"/.test(caisse), 'sent line remains cancellable after reopening the menu');
 ok(/function cancelSentTable[\s\S]{0,2600}canonicalNumberPromise[\s\S]{0,2600}cancelTable: \{ table: id, expectedSession \}, actorProof/.test(caisse)
