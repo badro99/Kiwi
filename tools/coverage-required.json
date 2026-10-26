@@ -3,6 +3,7 @@
   "required": [
     {"surface": "dashboard", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-conformite", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
+    {"surface": "dashboard-count-review", "locale": "fr", "viewports": ["desktop", "tablet"], "reason": "Revue propriétaire des comptages de stock : quantités gelées, approbation et refus."},
     {"surface": "dashboard-equipe", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-payroll", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "dashboard-rapport", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
@@ -44,6 +45,7 @@
     {"surface": "dashboard-finance", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Gestion opérationnelle du tableau de bord, des montants ou du stock."},
     {"surface": "kitchen-entry", "locale": "fr", "viewports": ["desktop", "tablet", "phone"], "reason": "Accès cuisine avant connexion à la file."},
     {"surface": "boutique-checkout", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Retours, échanges et validation des mouvements monétaires."},
+    {"surface": "boutique-count-review", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Revue de comptage du stock en boutique : quantités gelées, approbation et refus."},
     {"surface": "boutique-returns", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Retours, échanges et validation des mouvements monétaires."},
     {"surface": "boutique-exchange", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Retours, échanges et validation des mouvements monétaires."},
     {"surface": "boutique-return-refusal", "locale": "fr", "viewports": ["phone", "tablet"], "reason": "Retours, échanges et validation des mouvements monétaires."},
