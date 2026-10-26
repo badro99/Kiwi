@@ -41,7 +41,7 @@ ok('openVrapRemise does not reference undefined openSalleRemise',
   !/openSalleRemise\(/.test(CAISSE_SRC));
 
 ok('removeRemise function is defined and handles both vrap and table',
-  /function removeRemise\(\) \{[\s\S]{0,500}delete tables\[id\]\.discount;/.test(CAISSE_SRC) &&
+  /function removeRemise\(\) \{[\s\S]{0,500}tableSettlement\(\)\.project\(tables\[id\], \{\}, \['discount'\]\);/.test(CAISSE_SRC) &&
   /vrapDiscount = null;/.test(CAISSE_SRC));
 
 ok('remiseModal click listener handles #rm-remove',
@@ -59,29 +59,29 @@ ok('click router isolates vrap discount from table discount',
   /name === 'discount'[\s\S]{0,200}if \(mode === 'vrap'\) \{[\s\S]{0,100}openVrapRemise\(\);[\s\S]{0,100}\} else if \(selectedId\) \{[\s\S]{0,100}openRemiseModal\(selectedId\);/.test(CAISSE_SRC));
 
 ok('click router handles remove-table-discount and remove-vrap-discount',
-  /name === 'remove-table-discount'[\s\S]{0,150}delete tables\[selectedId\]\.discount;/.test(CAISSE_SRC) &&
+  /name === 'remove-table-discount'[\s\S]{0,150}tableSettlement\(\)\.project\(tables\[selectedId\], \{\}, \['discount'\]\);/.test(CAISSE_SRC) &&
   /name === 'remove-vrap-discount'[\s\S]{0,150}vrapDiscount = null;/.test(CAISSE_SRC));
 
 // 3. Static Source Guards - Table Lifecycle & Discount Purge
 ok('markPaid deletes discount immediately and forces release',
-  /function markPaid\(id\) \{[\s\S]{0,1900}releasePhoneTable\(id, 'settle', true\);/.test(CAISSE_SRC) &&
-  /delete t\.discount;/.test(CAISSE_SRC));
+  /function markPaid\(id\) \{[\s\S]{0,2300}releasePhoneTable\(id, 'settle', true\);/.test(CAISSE_SRC) &&
+  /tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 ok('cancelNewOrder deletes discount and forces release',
   /function cancelNewOrder\(who = null\) \{[\s\S]{0,3000}releasePhoneTable\(selectedId, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC) &&
-  /delete t\.discount;/.test(CAISSE_SRC));
+  /tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 ok('cancelOpenTable deletes discount and forces release',
-  /function cancelOpenTable\(id, who = null\) \{[\s\S]{0,600}delete t\.discount;[\s\S]{0,300}releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC));
+  /function cancelOpenTable\(id, who = null\) \{[\s\S]{0,600}tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);[\s\S]{0,600}releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC));
 
 ok('confirmNewTable clears any lingering discount on table',
-  /function confirmNewTable\(\) \{[\s\S]{0,300}delete t\.discount;/.test(CAISSE_SRC));
+  /function confirmNewTable\(\) \{[\s\S]{0,600}tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 ok('closedSessions purges table discount upon closure',
-  /\(closedSessions \|\| \[\]\)\.forEach\([\s\S]{0,700}delete tables\[id\]\.discount;/.test(CAISSE_SRC));
+  /\(closedSessions \|\| \[\]\)\.forEach\([\s\S]{0,1000}tableSettlement\(\)\.project\(tables\[id\], \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 ok('serviceFloor purges table discount on terminal state',
-  /state\.status === 'khawya' \|\| state\.status === 'khlass'[\s\S]{0,300}delete tables\[id\]\.discount;/.test(CAISSE_SRC));
+  /state\.status === 'khawya' \|\| state\.status === 'khlass'[\s\S]{0,600}tableSettlement\(\)\.project\(tables\[id\], \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 // 4. Static Source Guards - Phantom Table Prevention
 ok('tableClosedAt registry tracks local closure timestamps',

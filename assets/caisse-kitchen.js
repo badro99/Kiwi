@@ -135,7 +135,7 @@
          cette table n'a plus rien à annoncer. */
       if (firing) kdsOrders.forEach((o) => { if (o && o.following && String(o.table) === String(tableId)) delete o.following; });
       kdsOrders.push(order);
-      if (tables[tableId] && !tables[tableId].orderNo) tables[tableId].orderNo = ticketNo(order);
+      if (tables[tableId] && !tables[tableId].orderNo) tableSettlement().project(tables[tableId], { orderNo: ticketNo(order) });
       lines.forEach((l) => { l.sent = true; delete l.hold; delete l.committed; });
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -219,7 +219,7 @@
                secours (ou pas du tout). Ce qu'on imprime doit le DIRE. */
             order.provisionalNumber = true;
             if (order.table && tables[order.table] && !tables[order.table].orderNo) {
-              tables[order.table].orderNo = ticketNo(order);
+              tableSettlement().project(tables[order.table], { orderNo: ticketNo(order) });
             }
           }
           if (r && r.ok && r.number != null) {
@@ -227,7 +227,7 @@
             order.provisionalNumber = false;
             if (order.table && r.session && tables[order.table]) {
               order.session = String(r.session);
-              tables[order.table].timerSession = order.session;
+              tableSettlement().project(tables[order.table], { timerSession: order.session });
             }
             /* A fresh counter takeaway can be paid while this request is in
                flight. Its customer receipt was already snapshotted with the
@@ -237,7 +237,7 @@
             if (order.table && tables[order.table]
                 && (String(tables[order.table].orderNo) === String(order.num)
                   || String(tables[order.table].orderNo) === 'L' + String(order.num))) {
-              tables[order.table].orderNo = ticketNo(order);
+              tableSettlement().project(tables[order.table], { orderNo: ticketNo(order) });
               try { persistShift(); } catch (_) {}
             }
             updateKdsCount();
@@ -388,8 +388,8 @@
       tableSplits.delete(id);
       const t = tables[id];
       if (t) {
-        t.status = 'khawya'; t.covers = 0; resetTableTimer(t);
-        delete t.orderNo; delete t.server; delete t.discount;
+        tableSettlement().project(t, { status: 'khawya' }); tableSettlement().project(t, { covers: 0 }); resetTableTimer(t);
+        tableSettlement().project(t, {}, ['orderNo']); tableSettlement().project(t, {}, ['server']); tableSettlement().project(t, {}, ['discount']);
       }
       releasePhoneTable(id, 'cancelled', true, (who && who.actorProof) || '', true);
       try { persistShift(); publishServiceFloor(); } catch (_) {}
@@ -409,11 +409,11 @@
       tableSplits.delete(id);
       const t = tables[id];
       if (t) {
-        t.status = 'khawya';
-        t.covers = 0;
+        tableSettlement().project(t, { status: 'khawya' });
+        tableSettlement().project(t, { covers: 0 });
         resetTableTimer(t);
-        delete t.discount;
-        delete t.orderNo;
+        tableSettlement().project(t, {}, ['discount']);
+        tableSettlement().project(t, {}, ['orderNo']);
       }
       /* Force the event when this caisse missed the local phone-seat badge.
          orderpro-inbox.js safely falls back to closing by table number. */
@@ -458,7 +458,7 @@
         /* La table peut avoir disparu sous nos pieds · setupRealSalle() efface
            et reconstruit `tables` dès que le patron touche son plan depuis son
            téléphone. Ce n'est pas une raison pour rester coincé. */
-        if (t) { t.status = 'khawya'; resetTableTimer(t); delete t.discount; }
+        if (t) { tableSettlement().project(t, { status: 'khawya' }); resetTableTimer(t); tableSettlement().project(t, {}, ['discount']); }
         /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
            « assis » à une table redevenue libre et pourrait continuer à commander
            · le trou exact que la session existe pour boucher. */
@@ -2251,26 +2251,26 @@
       if (!o.session && activeSeat && Number(o.created_ts || 0) < Number(activeSeat.since || 0)) return false;
 
       if (o.number != null && !t.orderNo) {
-        t.orderNo = ticketNo({
+        tableSettlement().project(t, { orderNo: ticketNo({
           opNum: o.number, opChannel: o.channel || 'kiwi',
           type: o.mode === 'takeout' ? 'takeaway' : 'dineIn', server: o.server || '',
-        });
+        }) });
       }
 
       let changed = false;
       if (t.status === 'khawya' || t.status === 'a-commander') {
         if (t.status === 'khawya') resetTableTimer(t);
-        t.status = 'ka-yaklo';
+        tableSettlement().project(t, { status: 'ka-yaklo' });
         changed = true;
       }
       if (o.server && !t.server) {
         const serverId = Object.keys(servers).find(k => servers[k] && servers[k].name === o.server);
-        if (serverId) { t.server = serverId; changed = true; }
+        if (serverId) { tableSettlement().project(t, { server: serverId }); changed = true; }
       }
 
       if (activeSeat && activeSeat.session) {
         if (t.timerSession && t.timerSession !== String(activeSeat.session)) resetTableTimer(t);
-        t.timerSession = String(activeSeat.session);
+        tableSettlement().project(t, { timerSession: String(activeSeat.session) });
       }
       let lines = tableOrders[id] || (tableOrders[id] = []);
       if (activeSeat && activeSeat.session) {

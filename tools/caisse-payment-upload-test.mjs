@@ -119,7 +119,7 @@ async function fixture(t, opts = {}) {
       registerClosing: false, lastProvisional: 0, toast: message => events.push({ type: 'toast', message }),
       currentCashier: { id: 'cashier-local', name: 'Fixture cashier' },
       tables: { '5': { zone: 'salle' } }, tableOrders: {}, orders: {}, tableSplits: new Map(),
-      splitState: { flow: null, sourceLines: [] }, generateOrder: () => [],
+      splitState: { flow: null, sourceLines: [] }, generateOrder: () => [{ name: 'Pasta', qty: 1, total: 30 }],
       settledOrderRef: () => '5',
       /* L'heure de fermeture locale des tables · persistShift l'écrit dans
          l'instantané depuis qu'un bon payé ne doit plus rouvrir sa table. */
@@ -139,15 +139,15 @@ async function fixture(t, opts = {}) {
       $: () => ({ classList: { contains: () => false } }),
     };
     vm.createContext(context);
-    vm.runInContext(live, context, { filename: 'assets/live-link.js' });
-    vm.runInContext(['tableSaleLabel', 'paidReceiptForCurrentTable', 'resetTableTimer',
+    vm.runInContext(caisseTestSource.withSettlement(live), context, { filename: 'assets/live-link.js' });
+    vm.runInContext(caisseTestSource.withSettlement(['tableSaleLabel', 'paidReceiptForCurrentTable', 'resetTableTimer',
       'activeSaleDiscount', 'recordSale', 'persistShift', 'reviveJournalEntry', 'restoreShift',
-      'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n') + '\n' + heldBlock, context, { filename: 'kiwi-caisse-payment-functions.js' });
+      'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n') + '\n' + heldBlock), context, { filename: 'kiwi-caisse-payment-functions.js' });
     // The real caisse installs this listener on window; document would miss
     // KiwiLive's acknowledgement entirely.
     const ack = page.match(/window\.addEventListener\('kiwi:money-sync',[\s\S]*?\n    \}\);/);
     assert.ok(ack, 'caisse listens for money-sync on window');
-    vm.runInContext(ack[0], context, { filename: 'kiwi-caisse-money-sync.js' });
+    vm.runInContext(caisseTestSource.withSettlement(ack[0]), context, { filename: 'kiwi-caisse-money-sync.js' });
     window.KiwiOrderInbox = context.KiwiOrderInbox = {
       setStatus: async (id, status, extra) => {
         const response = await call('/api/order/queue', { merchant, id, status, ...extra });

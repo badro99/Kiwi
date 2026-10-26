@@ -7,7 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const workflows = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/caisse-app/workflows.json'), 'utf8'));
-const LIVE = ['assets/caisse-accounting.js', 'assets/caisse-floor.js', 'assets/caisse-kitchen.js', ...workflows.files, 'assets/caisse-app.js'];
+const LIVE = ['assets/caisse/table-settlement.js', 'assets/caisse-accounting.js', 'assets/caisse-floor.js', 'assets/caisse-kitchen.js', ...workflows.files, 'assets/caisse-app.js'];
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const liveSource = () => LIVE.map(read).join('\n');
@@ -247,7 +247,8 @@ module.exports = function caisseTestSource(html) {
 module.exports.declarations = function declarations(...names) {
   const { declaration } = require('./js-declarations.cjs');
   const source = liveSource();
-  return names.map(name => declaration(source, name)).join('\n');
+  const body = names.map(name => declaration(source, name)).join('\n');
+  return /\btableSettlement\(/.test(body) ? module.exports.withSettlement(body) : body;
 };
 // The four live files, concatenated in load order, for tests that read or run the core.
 module.exports.FILES = LIVE;
@@ -259,3 +260,11 @@ module.exports.originalOrder = originalOrder;
 module.exports.lineHunks = lineHunks;
 module.exports.carryEdits = carryEdits;
 module.exports.appSource = () => appBeforeWorkflows() || [...workflows.files.map(read), read(workflows.core)].join("\n");
+
+// Les bacs à sable de fonctions isolées chargent le propriétaire réel une seule fois.
+module.exports.withSettlement = function withSettlement(source) {
+  const body = read('assets/caisse/table-settlement.js');
+  const at = body.indexOf('function tableSettlement()');
+  return 'if (!globalThis.createTableSettlement) { globalThis.createTableSettlement = ('
+    + body.slice(0, at) + '); globalThis.tableSettlement = (' + body.slice(at) + '); }\n' + source;
+};

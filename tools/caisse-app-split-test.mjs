@@ -71,7 +71,7 @@ const orderedHTML = LIVE.map(file => effectiveHTML.match(new RegExp('<script src
 const pair = orderedHTML.match(new RegExp(LIVE.map(f => '<script src="' + f.replace(/[./]/g, '\\$&') + '(?:\\?v=\\d+)?"></script>').join('\\s*')));
 assert.ok(pair, 'adjacent blocking classic scripts, declarations before initializers');
 assert.ok(!/\b(?:async|defer|type=)/.test(pair[0]));
-for (const [, url] of pair[0].matchAll(/src="([^"]+)"/g)) precached(new URL(url, 'https://kiwi.test/'));
+for (const [, url] of pair[0].matchAll(/src="([^"]+)"/g)) precached(new URL(url, 'https://kiwi.test/'), { allowUnstamped: url === 'assets/caisse/table-settlement.js' });
 /* Second split: runs of declarations moved to caisse-floor.js and caisse-kitchen.js,
    anchored by text in tools/fixtures/caisse-app/split-2.json. */
 const map2 = JSON.parse(read('tools/fixtures/caisse-app/split-2.json'));
@@ -144,10 +144,10 @@ for (const real of [false, true]) {
   const before = realm(real), after = realm(real);
   const workflowBefore = realm(real);
   if (workflowPristine) {
-    for (const file of LIVE.slice(0, 3)) vm.runInContext(read(file), workflowBefore.context, { filename: file });
+    for (const file of LIVE.slice(0, 4)) vm.runInContext(read(file), workflowBefore.context, { filename: file });
     vm.runInContext(workflowOriginal, workflowBefore.context, { filename: 'before-workflows.js' });
   }
-  if (pristine || workflowPristine) vm.runInContext(original, before.context, { filename: 'original-caisse-app.js' });
+  if (pristine || workflowPristine) vm.runInContext(caisseTestSource.withSettlement(original), before.context, { filename: 'original-caisse-app.js' });
   for (const file of LIVE) vm.runInContext(read(file), after.context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   for (const name of ['KiwiCaisseAccounting','KiwiCaisseCarte','KiwiCaisseKitchen','KiwiCaisseContext','KiwiCaisseHeldSales']) assert.ok(after.context[name], name + ' registered');

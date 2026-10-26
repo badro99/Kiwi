@@ -33,6 +33,7 @@ var SHELL = [
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=6',
   '/kiwi-caisse.html',
+  '/assets/caisse/table-settlement.js',
   '/assets/caisse-accounting.js?v=5',
   '/assets/caisse-floor.js?v=2',
   '/assets/caisse-kitchen.js?v=1',

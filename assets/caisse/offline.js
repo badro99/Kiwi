@@ -151,8 +151,8 @@
           if (state.status === 'bgha-ykhlass' && state.reopenSessionId
             && (!tables[id].timerSession || String(tables[id].timerSession) === String(state.reopenSessionId))
             && !(tableOrders[id] || []).length && !(orders[id] || []).length) {
-            tables[id].reopenSessionId = String(state.reopenSessionId);
-          } else if (terminalEmployeeState) delete tables[id].reopenSessionId;
+            tableSettlement().project(tables[id], { reopenSessionId: String(state.reopenSessionId) });
+          } else if (terminalEmployeeState) tableSettlement().project(tables[id], {}, ['reopenSessionId']);
           /* Remember even an already-matching free state. Otherwise opening a
              new party later would make that old close look new and close the
              freshly seated table. */
@@ -168,15 +168,15 @@
              the exact path that left the previous party's items in memory and
              attached the next party's order to the old bill. */
           if (!statusChanged && !terminalHadLocalBill) return;
-          tables[id].status = state.status;
-          tables[id].covers = state.status === 'khawya' ? 0 : Math.max(0, Number(state.covers) || tables[id].covers || 0);
+          tableSettlement().project(tables[id], { status: state.status });
+          tableSettlement().project(tables[id], { covers: state.status === 'khawya' ? 0 : Math.max(0, Number(state.covers) || tables[id].covers || 0) });
           if (terminalEmployeeState) resetTableTimer(tables[id]);
           else if ((tableOrders[id] || []).length || (orders[id] || []).length) startTableTimer(id);
           serviceFloorLocalVersion[String(id)] = Number(state.ts) || Date.now();
           if (state.status === 'khawya' || state.status === 'khlass') {
             delete orders[id];
             delete tableOrders[id];
-            delete tables[id].discount;
+            tableSettlement().project(tables[id], {}, ['discount']);
             if (selectedId === id) closeRightPanel();
           }
           refreshTableNode(id);
@@ -480,7 +480,7 @@
         confirmedById: h.confirmedById || '', confirmedByName: h.confirmedByName || '',
       }));
       if (d.tables) Object.keys(d.tables).forEach(id => {
-        if (tables[id]) Object.assign(tables[id], d.tables[id]);
+        if (tables[id]) tableSettlement().project(tables[id], d.tables[id]);
       });
       if (d.tableOrders) {
         Object.keys(tableOrders).forEach(k => delete tableOrders[k]);
@@ -497,11 +497,11 @@
       Object.keys(tables).forEach(id => {
         const paid = paidReceiptForCurrentTable(id);
         if (!paid) return;
-        tables[id].status = 'khawya';
-        tables[id].covers = 0;
+        tableSettlement().project(tables[id], { status: 'khawya' });
+        tableSettlement().project(tables[id], { covers: 0 });
         resetTableTimer(tables[id]);
-        delete tables[id].orderNo;
-        delete tables[id].discount;
+        tableSettlement().project(tables[id], {}, ['orderNo']);
+        tableSettlement().project(tables[id], {}, ['discount']);
         delete tableOrders[id];
         delete orders[id];
       });

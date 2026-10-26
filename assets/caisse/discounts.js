@@ -151,14 +151,14 @@
           : money(targetValue || 0);
         amount = money(Math.max(0, Math.min(amount, money(gross))));
         if (amount <= 0) { toast('Remise sans effet'); return; }
-        t.discount = {
+        tableSettlement().project(t, { discount: {
           kind:   targetKind,
           value:  targetValue,
           amount: amount,
           reason: targetReason,
           actorId: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96),
           accounted: false,
-        };
+        } });
         closeRemiseModal();
         if (selectedId === id) renderRightPanel(id);
         refreshTableNode(id);
@@ -178,7 +178,7 @@
       }
       const id = targetTableId;
       if (id && tables[id]) {
-        delete tables[id].discount;
+        tableSettlement().project(tables[id], {}, ['discount']);
         closeRemiseModal();
         if (selectedId === id) renderRightPanel(id);
         refreshTableNode(id);

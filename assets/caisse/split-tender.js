@@ -494,6 +494,10 @@
       splitState.flow = { parts, paidCount: 0, session: flowSession,
         id: 'split-' + (window.crypto && window.crypto.randomUUID
           ? window.crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)) };
+      if (!splitState.isVrap && splitState.tableId) {
+        tableSettlement().bill(splitState.tableId, { totalCents: minor(splitState.total), lines: splitState.sourceLines });
+        tableSettlement().allocateSplit(splitState.tableId, { id: splitState.flow.id, parts: parts.map(part => minor(part.base)) });
+      }
       $('#split-setup').hidden = true;
       $('#split-flow').hidden = false;
       renderSplitFlow();

@@ -82,7 +82,7 @@ ok("cancelNewOrder ne renonce plus quand il n'y a pas de mesa",
   !/^\s*if \(!selectedId\) return;/m.test(cancelFn));
 ok('cancelNewOrder repasse toujours par le retour salle', /backToSalle\(\)/.test(cancelFn));
 ok('cancelNewOrder survit à une table disparue du plan',
-  /if \(t\) \{ t\.status/.test(cancelFn));
+  /if \(t\) \{ tableSettlement\(\)\.project\(t, \{ status:/.test(cancelFn));
 
 // Le bouton d'envoi ne doit plus être muet.
 const validateWire = (CAISSE.match(/getElementById\('validate-order'\)\.addEventListener\([\s\S]{0,700}?\n {4}\}\);/) || [''])[0];
@@ -93,7 +93,7 @@ ok('« Envoyer en cuisine » sans mesa ramène à la salle au lieu de se taire',
 // validateOrder ne doit pas lever si le plan a été redessiné pendant la saisie
 // (setupRealSalle reconstruit `tables`) — une exception tue l'écouteur et rend
 // le bouton mort, exactement le symptôme corrigé.
-const validateFn = (CAISSE.match(/function validateOrder\(tableId\)\s*\{[\s\S]{0,900}?t\.status/) || [''])[0];
+const validateFn = (CAISSE.match(/function validateOrder\(tableId\)\s*\{[\s\S]{0,900}?tableSettlement\(\)\.project\(t, \{ status:/) || [''])[0];
 ok('validateOrder se garde contre une table disparue', /if \(!t\)/.test(validateFn));
 
 // L'addition remise à zéro quand le panneau se vide — sinon la barre repliée du
@@ -168,7 +168,7 @@ const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id, who = null\)\s
 ok('cancelOpenTable existe et libère la session OrderPro',
   /releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\)/.test(cancelOpenFn));
 ok('cancelOpenTable remet le statut à khawya',
-  /t\.status = 'khawya'/.test(cancelOpenFn));
+  /tableSettlement\(\)\.project\(t, \{ status: 'khawya'/.test(cancelOpenFn));
 const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force, actorProof = '', alreadyClosed = false\)\s*\{[\s\S]{0,1000}?\n    \}/) || [''])[0];
 ok('releasePhoneTable peut fermer une session sans pastille locale',
   /!seat && !force/.test(releaseFn));

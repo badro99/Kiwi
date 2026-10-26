@@ -108,6 +108,7 @@ export function inspect(sources, shells, manifest) {
   // A split moves code, not ownership. Canonical paths also preserve the
   // pre-split duplicate and eager-order debt keys without adding allowances.
   const canonical = file => {
+    if (Object.values(manifest.units || {}).some(unit => file === unit.parent)) return file;
     for (const unit of Object.values(manifest.units || {}))
       if (file === unit.parent || file.startsWith(unit.parts)) return unit.parent;
     return file;

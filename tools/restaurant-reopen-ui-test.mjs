@@ -22,7 +22,7 @@ check('receipt freezes original bill and guest count before table clear',
 check('saved split retains identity and visit after background/reload',
   till.includes("id: String(splitState.flow.id || '')") && till.includes("session: String(splitState.flow.session || '')"));
 check('cashier floor poll keeps an authorized reopen identity for crash recovery',
-  till.includes('tables[id].reopenSessionId = String(state.reopenSessionId)')
+  till.includes('tableSettlement().project(tables[id], { reopenSessionId: String(state.reopenSessionId) })')
   && till.includes('table.reopenSessionId === result.sessionId'));
 check('reprint exposes explicit reopen choice alongside plain cancel',
   reprint.includes('Annuler et rouvrir la note') && reprint.includes('Annuler définitivement'));
@@ -63,7 +63,7 @@ if (till.includes(marker) && till.includes(end)) {
     Date, Number, String, Object, Array, Math,
   };
   try {
-    vm.runInNewContext(section, context, { filename: 'restaurant-reopen-bridge.js' });
+    vm.runInNewContext(caisseTestSource.withSettlement(section), context, { filename: 'restaurant-reopen-bridge.js' });
     const bridge = context.window.KiwiRestaurantReopen;
     const receipt = { saleId: 'cash-void', reopenSnapshot: {
       table: '1', covers: 2, orderNo: '77', ref: 'Table 1 #77',

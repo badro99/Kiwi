@@ -163,7 +163,7 @@ async function get(fn, qs, headers = {}) {
     /const employeePrefix = orderServerInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(caissePage));
   ok('une session OrderPro occupe la table dans la caisse sans redemander les couverts',
     /function caisseTableId\(v\)/.test(caissePage)
-      && /const id = caisseTableId\(s\.table\);[\s\S]{0,180}tables\[id\]\.status = 'ka-yaklo'/.test(caissePage));
+      && /const id = caisseTableId\(s\.table\);[\s\S]{0,180}tableSettlement\(\)\.project\(tables\[id\], \{ status: 'ka-yaklo'/.test(caissePage));
   ok('les lignes OrderPro rejoignent une seule fois l’addition de leur table',
     /function attachOrderProTable\(o\)/.test(caissePage)
       && /orderProLine: marker/.test(caissePage)

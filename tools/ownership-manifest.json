@@ -127,7 +127,6 @@
         "fmtDur",
         "genRef",
         "handoverGapCents",
-        "hasTables",
         "heldSaleRows",
         "hookClientBook",
         "initDemoPlanes",
@@ -236,6 +235,7 @@
         "tableKey",
         "tableOrderMinusMenu",
         "tableSentCount",
+        "tableSettlement",
         "ticketNo",
         "toast",
         "toggleLineHold",
@@ -581,6 +581,17 @@
         "fetch"
       ],
       "coupling": 21
+    },
+    "assets/caisse/table-settlement.js": {
+      "owner": "table-settlement",
+      "reads": [
+        "discountAmountFor",
+        "generateOrder",
+        "liveTableSplit",
+        "tableOrders",
+        "tables"
+      ],
+      "coupling": 5
     }
   },
   "duplicates": {
@@ -2506,6 +2517,10 @@
     "interactive": {
       "parent": "assets/interactive.js",
       "parts": "assets/interactive/"
+    },
+    "table-settlement": {
+      "parent": "assets/caisse/table-settlement.js",
+      "parts": "assets/caisse/table-settlement/"
     }
   }
 }
