@@ -1,6 +1,6 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=96';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=14';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=14';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=97';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=17';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=17';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════

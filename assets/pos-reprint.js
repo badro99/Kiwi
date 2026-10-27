@@ -412,9 +412,9 @@
   function fetchDay(vertical) {
     var m = merchant();
     if (!m || typeof fetch !== 'function') return Promise.resolve([]);
-    return fetch('/api/feed?merchant=' + encodeURIComponent(m) + '&from=' + startOfToday(), {
+    return (window.KiwiPosSale && window.KiwiPosSale.feedDay || function (u, o) { return fetch(u, o).then(function (r) { return r.ok ? r.json() : null; }); })('/api/feed?merchant=' + encodeURIComponent(m) + '&from=' + startOfToday(), {
       credentials: 'same-origin',
-    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    }).then(function (j) {
       var out = ((j && j.sales) || []).map(function (s) {
         return {
           saleId: String(s.id || ''),

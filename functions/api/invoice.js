@@ -13,6 +13,7 @@ import { json } from '../auth/_lib.js';
 import { iceCompact, iceProblem, ICE_DETAIL } from './_ice.js';
 import { businessDate, merchantZone } from './_business-day.js';
 import { allocateNumber } from './_invoice-series.js';
+import { reconcileInvoiceSnapshot } from './_invoice-reconcile.js';
 
 export function validateCustomer(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -77,7 +78,7 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
    * dans un exercice clos, d'un montant choisi, contre une vente déjà annulée.
    * On lit maintenant la vente pour de bon. */
   const saleRow = await env.DB.prepare(
-    'SELECT ts, void_ts, amount, amount_cents FROM sales WHERE merchant = ? AND id = ?'
+    'SELECT ts, void_ts, amount, amount_cents, lines, ref, label FROM sales WHERE merchant = ? AND id = ?'
   ).bind(merchant, saleId).first();
 
   if (!saleRow) {
@@ -135,6 +136,13 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
       throw err;
     }
   }
+
+  /* Le TTC est celui de la vente ; le taux doit être un taux que le moteur
+   * v2 accepte (même série F) ; HT et TVA sont recalculés depuis l'un et
+   * l'autre, et les lignes sont celles de la vente. Ce que la caisse a envoyé
+   * de différent est remplacé et noté dans `snapshot.reconciled`
+   * (functions/api/_invoice-reconcile.js). */
+  reconcileInvoiceSnapshot(snap, saleRow);
 
   /* Le numéro vient de l'allocateur commun (functions/api/_invoice-series.js) :
    * la série F est PARTAGÉE avec les factures saisies au tableau de bord
@@ -227,6 +235,7 @@ export async function onRequestPost({ request, env }) {
     if (e?.message === 'unknown-sale' || e?.status === 404) {
       return json({ error: 'unknown-sale', detail: 'Vente introuvable dans le grand livre D1.' }, 404);
     }
+    if (e?.status === 409) return json({ error: String(e.message || 'invoice-conflict') }, 409);
     return json({ error: 'invoice-creation-failed', detail: String(e?.message || e) }, 500);
   }
 }

@@ -124,7 +124,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=17" defer></script>
+  <script src="assets/pos-sale.js?v=18" defer></script>
   <!-- Garment workflow snapshot and garment product art, shared with the
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
@@ -143,7 +143,7 @@
        les échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
   <script src="assets/boutique-catalog-parts.js?v=11" defer></script>
   <script src="assets/boutique-catalog.js?v=19" defer></script>
-  <script src="assets/sold-insights.js?v=15" defer></script>
+  <script src="assets/sold-insights.js?v=16" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
@@ -235,7 +235,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=185" defer></script>
+  <script src="assets/pos-dispatch.js?v=186" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -336,7 +336,7 @@
   <script src="assets/pwa-update.js?v=368" defer></script>
   <script src="assets/caisse-pwa.js?v=631" defer></script>
   <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-  <script type="module" src="assets/live-link.js?v=83" defer></script>
+  <script type="module" src="assets/live-link.js?v=84" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <script src="assets/retail-sale-hold.js?v=6" defer></script>
   <script src="assets/repeat-sale-guard.js?v=3" defer></script>
@@ -435,7 +435,7 @@
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
   <script src="assets/invoice.js?v=20" defer></script>
-  <script src="assets/pos-reprint.js?v=13" defer></script>
+  <script src="assets/pos-reprint.js?v=14" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -2005,7 +2005,7 @@
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
   <link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=11" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=13" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=8" data-caisse-script>

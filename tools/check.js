@@ -1538,6 +1538,7 @@ section('Whole-project regressions');
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',
     'feed-limit-test.mjs',
+    'feed-day-client-test.mjs',
     'feed-window-test.mjs',
     'feed-voids-test.mjs',
     'feed-changes-test.mjs',
@@ -1663,6 +1664,7 @@ section('Whole-project regressions');
     /* Un départ dont les heures n'ont pas pu être créditées ne répond plus ok :
        le rejeu du téléphone les crédite, une seule fois. */
     'attendance-hours-credit-test.mjs',
+    'employee-progress-truth-test.mjs',
     'employee-trade-shell-test.mjs',
     'locale-handoff-test.mjs',
     'canonical-origin-test.mjs',
@@ -1834,6 +1836,7 @@ section('Whole-project regressions');
     'discount-policy-api-test.mjs',
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',
+    'sale-server-truth-test.mjs',
     'discount-policy-live-browser-test.mjs',
     'caisse-viewport-guard-test.mjs',
     'boutique-printer-settings-test.mjs',
@@ -2183,6 +2186,7 @@ section('Whole-project regressions');
        français visible, montants isolés, la page ouverte suit la langue. */
     'hotel-i18n-test.mjs',
     'pressing-truth-test.mjs',
+    'pressing-notification-freeze-test.mjs',
     'support-triage-test.mjs',
     'support-triage-retry-test.mjs',
     'wave-n-server-test.mjs',
@@ -2257,6 +2261,7 @@ section('Whole-project regressions');
     'receipt-voucher-print-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
+    'invoice-server-truth-test.mjs',
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',

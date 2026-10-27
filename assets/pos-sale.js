@@ -693,8 +693,7 @@
     var slot = who + ':' + vertical;
     if (syncing[slot]) return syncing[slot];
     var url = '/api/feed?merchant=' + encodeURIComponent(who) + '&from=' + encodeURIComponent(dayStart(who));
-    syncing[slot] = fetch(url, { headers: { Accept: 'application/json' } })
-      .then(function (r) { return r && r.ok ? r.json() : null; })
+    syncing[slot] = feedDay(url, { headers: { Accept: 'application/json' } })
       .then(function (data) {
         if (!data || (data.merchant && String(data.merchant) !== who)) return { changed: 0, added: 0 };
         var removed = 0;
@@ -792,8 +791,28 @@
     return new RegExp('-' + tag + '$').test(s) ? s : (s + '-' + tag);
   }
 
+  /* Une journée du flux (/api/feed?from=) s'arrête à 2 000 lignes : le serveur le
+     dit (`truncated`) et donne la clé de la page plus ancienne (`before`). Les
+     écrans qui additionnent la journée (caisses boutique et maison, synchro des
+     ventes, réimpression, Vendus, contrôle du Z) la lisaient comme complète.
+     Cette lecture suit les pages (20 000 lignes au plus) et rend UNE réponse ;
+     si une page manque ou si la borne est atteinte, `truncated` reste vrai. */
+  function feedDay(url, init) {
+    var pages = 0, all = [], first = null;
+    function more(u) {
+      return fetch(u, init).then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
+        if (!j || !Array.isArray(j.sales)) return first ? Object.assign({}, first, { sales: all, truncated: true }) : j;
+        first = first || j;
+        all = all.concat(j.sales);
+        if (j.truncated && j.before && ++pages < 10) return more(url + '&bt=' + j.before.ts + '&bc=' + j.before.cursor);
+        return Object.assign({}, first, { sales: all, truncated: !!j.truncated });
+      }, function (e) { if (first) return Object.assign({}, first, { sales: all, truncated: true }); throw e; });
+    }
+    return more(url);
+  }
+
   window.KiwiPosSale = {
-    foldLines: foldLines,
+    feedDay: feedDay, foldLines: foldLines,
     record: record, businessDayKey: businessDayKey, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
