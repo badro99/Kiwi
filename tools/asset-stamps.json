@@ -1808,8 +1808,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "21",
-    "sha": "186d0d7e8e6faaf4"
+    "v": "22",
+    "sha": "bb6917370a64a020"
   },
   "assets/serveur-lang.js": {
     "v": "6",
@@ -1820,8 +1820,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "7",
-    "sha": "170c493aeb1a11b4"
+    "v": "8",
+    "sha": "ba7dd817d4c093d3"
   },
   "assets/service-requests.js": {
     "v": "2",

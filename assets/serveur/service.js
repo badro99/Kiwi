@@ -1492,9 +1492,9 @@
     function renderTableDetailSplit(id) {
       const t = tables[id];
       const split = tableSplits.get(id);
-      const paidTotal = split.parts.reduce((s, p) => s + (p.paid ? p.amount : 0), 0);
+      const paidTotal = split.parts.reduce((s, p) => s + (p.paid ? p.amountCents : 0), 0) / 100;
       const remaining = split.parts.length - split.paidCount;
-      const remainingAmt = split.total - paidTotal;
+      const remainingAmt = (split.totalCents - Math.round(paidTotal * 100)) / 100;
       const pct = Math.round((split.paidCount / split.parts.length) * 100);
 
       $('#td-table-name').textContent = `${id} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
@@ -1522,7 +1522,7 @@
             <div class="td-split-banner-icon"><i data-lucide="split"></i></div>
             <div class="td-split-banner-text">
               <div class="td-split-banner-title">Split en cours · ${split.paidCount}/${split.parts.length}</div>
-              <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.total)} · reste ${fmtMAD(remainingAmt)}</div>
+              <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.totalCents / 100)} · reste ${fmtMAD(remainingAmt)}</div>
             </div>
           </div>
           <div class="td-split-progress">
@@ -3255,8 +3255,9 @@ cashModal.addEventListener('click', (e) => {
     function saveSplitFlow(state = splitState) {
       if (!state.tableId || !state.flow) return;
       const saved = {
+        v: 2,
         mode: state.splitMode,
-        total: state.total,
+        totalCents: state.totalCents,
         parts: state.flow.parts,
         paidCount: state.flow.paidCount,
         id: state.flow.id,
@@ -3283,13 +3284,15 @@ cashModal.addEventListener('click', (e) => {
       if (!saved && !SV_DEMO) {
         const session = serviceTableSessions.get(tableId);
         saved = session && empPayRefsRead()['split:' + empPayRefKey('visit') + ':' + session];
-        if (saved && (!Array.isArray(saved.parts) || !saved.id || !saved.parts.length
-          || saved.parts.some(p => !p || !Number.isFinite(p.amount) || p.amount < 0))) saved = null;
+        /* Enregistré avant les centimes (v absent) : montants en dirhams, convertis une fois à la lecture. */
+        if (saved && saved.v !== 2) saved = { ...saved, v: 2, totalCents: Math.round(saved.total * 100), parts: Array.isArray(saved.parts) ? saved.parts.map(p => p && { ...p, amountCents: Math.round(p.amount * 100) }) : saved.parts };
+        if (saved && (!Array.isArray(saved.parts) || !saved.id || !saved.parts.length || !Number.isInteger(saved.totalCents)
+          || saved.parts.some(p => !p || !Number.isInteger(p.amountCents) || p.amountCents < 0))) saved = null;
         if (saved) tableSplits.set(tableId, saved);
       }
       if (!saved) return false;
       splitState.tableId  = tableId;
-      splitState.total    = saved.total;
+      splitState.totalCents = saved.totalCents;
       splitState.splitMode = saved.mode;
       splitState.flow = {
         parts: saved.parts,
@@ -3328,9 +3331,9 @@ cashModal.addEventListener('click', (e) => {
       // dish with its remaining count, not one card per unit)
       const itemTotals = splitItemTotals(order);
       // Le reste dû : un acompte déjà encaissé sur la visite n'est pas repartagé.
-      const total = getTableTotal(tableId);
+      const totalCents = Math.round(getTableTotal(tableId) * 100);
       Object.assign(splitState, {
-        tableId, total, itemTotals,
+        tableId, totalCents, itemTotals,
         splitMode: 'egal',
         numParts: Math.max(2, t.covers || 2),
         tipMode: '0', customTipPct: 0,
@@ -3548,15 +3551,14 @@ cashModal.addEventListener('click', (e) => {
 
     function updateSplitSummary() {
       const tipPct = effectiveTipPct();
-      const tipAmt = splitState.total * tipPct / 100;
-      const withTip = splitState.total + tipAmt;
-      const perPerson = withTip / splitState.numParts;
-      $('#split-total-display').textContent = fmtMADcents(splitState.total);
+      const tipCents = Math.round(splitState.totalCents * tipPct / 100 + 1e-9);
+      const perPerson = Math.round((splitState.totalCents + tipCents) / splitState.numParts) / 100;
+      $('#split-total-display').textContent = fmtMADcents(splitState.totalCents / 100);
       const tipRow = $('#split-tip-row');
       if (tipPct > 0) {
         tipRow.style.display = '';
         $('#split-tip-label').textContent = `+ pourboire ${tipPct}%`;
-        $('#split-tip-display').textContent = `+ ${fmtMADcents(tipAmt)}`;
+        $('#split-tip-display').textContent = `+ ${fmtMADcents(tipCents / 100)}`;
       } else tipRow.style.display = 'none';
       $('#split-per-person').textContent = fmtMADcents(perPerson);
       $('#split-egal-desc').textContent = `${splitState.numParts} parts · ${fmtMADcents(perPerson)} chacun`;
@@ -3629,8 +3631,8 @@ cashModal.addEventListener('click', (e) => {
       }
       const parts = [];
       if (splitState.splitMode === 'egal') {
-        const cents = Math.round(splitState.total * 100), n = splitState.numParts;
-        if (!Number.isInteger(n) || n < 1 || cents < n) { toast(employeePick('Montant insuffisant pour ces parts', 'Amount too small for these shares', 'المبلغ غير كافٍ لهذه الحصص')); return; }
+        const cents = splitState.totalCents, n = splitState.numParts;
+        if (!Number.isInteger(n) || n < 1 || !Number.isInteger(cents) || cents < n) { toast(employeePick('Montant insuffisant pour ces parts', 'Amount too small for these shares', 'المبلغ غير كافٍ لهذه الحصص')); return; }
         // Le dernier convive reçoit le reliquat, le pourboire reste hors recette.
         const pct = effectiveTipPct();
         if (!Number.isFinite(pct) || pct < 0 || pct > 100) { toast(employeePick('Pourboire invalide (0 à 100 %)', 'Invalid tip (0 to 100 %)', 'بقشيش غير صالح (0 إلى 100 %)')); return; }
@@ -3658,18 +3660,15 @@ cashModal.addEventListener('click', (e) => {
             return { name: `${name} · 1/${n}`, qty: info.totalQty, unit: shares[j] / 100 / info.totalQty,
               price: shares[j] / 100 / info.totalQty, total: shares[j] / 100 };
           });
-          parts.push({ amount: base / 100, tipCents, label: tips ? 'Part égale · pourboire inclus' : 'Part égale', lines, paid: false, payMethod: null });
+          parts.push({ amountCents: base, tipCents, label: tips ? 'Part égale · pourboire inclus' : 'Part égale', lines, paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
 
         for (let c = 1; c <= n; c++) {
           const cart = splitState.perConvive[c] || {};
-          const amt = Object.entries(cart).reduce((s, [name, qty]) => {
-            return s + qty * (splitState.itemTotals[name]?.unitPrice || 0);
-          }, 0);
-
-          if (amt < 0.01) continue; // skip empty convives
+          const amtCents = Object.entries(cart).reduce((s, [name, qty]) => s + qty * Math.round((splitState.itemTotals[name]?.unitPrice || 0) * 100), 0);
+          if (amtCents < 1) continue; // skip empty convives
 
           const items = Object.entries(cart)
             .map(([name, qty]) => qty > 1 ? `${qty}× ${name}` : name)
@@ -3682,12 +3681,12 @@ cashModal.addEventListener('click', (e) => {
               qty,
               unit: unitPrice,
               price: unitPrice,
-              total: Math.round(qty * unitPrice * 100) / 100,
+              total: (qty * Math.round(unitPrice * 100)) / 100,
             };
           });
           const partLines = assignedLines;
           parts.push({
-            amount: amt,
+            amountCents: amtCents,
             label: items || 'Part équilibrée',
             lines: partLines,
             paid: false, payMethod: null,
@@ -3710,7 +3709,7 @@ cashModal.addEventListener('click', (e) => {
           return `<div class="split-part-card is-paid">
             <div class="split-part-num"><i data-lucide="check"></i></div>
             <div class="split-part-info">
-              <div class="split-part-amount">${fmtMADcents(p.amount + (p.tipCents || 0) / 100)}</div>
+              <div class="split-part-amount">${fmtMADcents((p.amountCents + (p.tipCents || 0)) / 100)}</div>
               <div class="split-part-paid-label">Réglé · ${p.payMethod === 'carte' ? 'Carte' : 'Espèces'}</div>
             </div>
           </div>`;
@@ -3718,7 +3717,7 @@ cashModal.addEventListener('click', (e) => {
         return `<div class="split-part-card">
           <div class="split-part-num">${idx + 1}</div>
           <div class="split-part-info">
-            <div class="split-part-amount">${fmtMADcents(p.amount + (p.tipCents || 0) / 100)}</div>
+            <div class="split-part-amount">${fmtMADcents((p.amountCents + (p.tipCents || 0)) / 100)}</div>
             <div class="split-part-label">${esc(p.label)}</div>
           </div>
           <div class="split-part-btns">
@@ -3744,7 +3743,7 @@ cashModal.addEventListener('click', (e) => {
       $('#split-modal').classList.remove('is-open');
 
       if (method === 'carte') {
-        $('#card-amount').textContent = fmtMADcents(part.amount + (part.tipCents || 0) / 100);
+        $('#card-amount').textContent = fmtMADcents((part.amountCents + (part.tipCents || 0)) / 100);
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
         splitPayCallback = () => {
           markSplitPartPaid(partIdx, 'carte');
@@ -3763,7 +3762,7 @@ cashModal.addEventListener('click', (e) => {
         lucide.createIcons();
         cardReaderArm(payTableId);
       } else {
-        cashAmountOverride = part.amount + (part.tipCents || 0) / 100;
+        cashAmountOverride = (part.amountCents + (part.tipCents || 0)) / 100;
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
         cashPay = () => markSplitPartPaid(partIdx, 'cash');
         cashSettled = false;
@@ -3773,7 +3772,7 @@ cashModal.addEventListener('click', (e) => {
         cashStepInput.hidden = false;
         cashStepSuccess.hidden = true;
         cashInput.value = cashAmountOverride;
-        $('#cash-amount').textContent = fmtMADcents(part.amount + (part.tipCents || 0) / 100);
+        $('#cash-amount').textContent = fmtMADcents((part.amountCents + (part.tipCents || 0)) / 100);
         updateRendu();
         cashModal.classList.add('is-open');
         lucide.createIcons();
@@ -3836,8 +3835,8 @@ cashModal.addEventListener('click', (e) => {
               table: tableId,
               session,
               split: { index: partIdx, count: flow.parts.length, flowId: flow.id },
-              amount: Math.round(p.amount * 100) / 100,
-              amountCents: Math.round(p.amount * 100),
+              amount: p.amountCents / 100,
+              amountCents: p.amountCents,
               tipCents: p.tipCents || 0,
               method: payMethod,
               ts: Date.now(),
@@ -3846,7 +3845,7 @@ cashModal.addEventListener('click', (e) => {
               lines: (Array.isArray(p.lines) && p.lines.length) ? p.lines : [{
                 name: (tableId ? `Table ${tableId}` : 'Table') + ` · part ${partIdx + 1}`,
                 qty: 1,
-                total: Math.round(p.amount * 100) / 100,
+                total: p.amountCents / 100,
                 cat: '',
               }],
             }),
@@ -3875,7 +3874,7 @@ cashModal.addEventListener('click', (e) => {
       if (partPaymentId) p.saleId = (saved && saved.id) || partPaymentId;
       flow.paidCount = flow.parts.filter(part => part.paid).length;
       const completesTable = Boolean(tableId && flow.parts.every(part => part.paid));
-      try { servicePaymentTally(p.amount, completesTable ? (t && t.elapsed) || 0 : 0); } catch (_) {}
+      try { servicePaymentTally(p.amountCents / 100, completesTable ? (t && t.elapsed) || 0 : 0); } catch (_) {}
       const visibleFlow = splitState.flow && splitState.flow.parts === flow.parts;
       if (visibleFlow) splitState.flow.paidCount = flow.paidCount;
 
@@ -3906,7 +3905,7 @@ cashModal.addEventListener('click', (e) => {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              merchant, clientId: paidClient.id, amount: state.total,
+              merchant, clientId: paidClient.id, amount: state.totalCents / 100,
               ref: 'employee-payment:' + tableId + ':' + Date.now(),
             }),
           }).then((r) => r.ok ? r.json() : null).then((data) => {
