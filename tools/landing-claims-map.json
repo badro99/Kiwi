@@ -226,8 +226,8 @@
           "assertion": "un avoir partiel est accepté (session propriétaire)"
         },
         {
-          "file": "tools/returns-sales-sync-test.js",
-          "assertion": "les échanges sont eux aussi journalisés"
+          "file": "tools/retail-money-properties-test.mjs",
+          "assertion": " exchange difference requests exactly replacement minus the frozen paid return unit"
         }
       ]
     },

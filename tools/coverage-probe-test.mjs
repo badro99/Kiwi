@@ -69,6 +69,25 @@ check('without a ledger the probe changes nothing', () => {
     NODE_OPTIONS: '--import=' + pathToFileURL(path.join(HERE, 'coverage-probe.mjs')).href } });
   assert.equal(r.status, 0, r.stderr);
 });
+check('a landing claim anchor is marked where it starts, and a CommonJS run records only the anchor it reached', () => {
+  const anchors = [{ assertion: 'the claim holds for real', key: 'claim:x#0' }];
+  const out = mark('setup();\n  ok(value === 2, "the claim holds for real");\n', anchors);
+  assert.equal(out.split('\n')[1], '  globalThis.__kiwiCoverageCell?.("claim:x#0"); ok(value === 2, "the claim holds for real");');
+  const cjs = path.join(dir, 'tools', 'fixture-claim-test.js');
+  fs.writeFileSync(cjs, 'const n = [1, 2].length;\nif (n > 5) {\n  console.log("never reached");\n}\nconsole.log("ran");\n');
+  const r = spawnSync(process.execPath, ['-e', `
+    import(${JSON.stringify(pathToFileURL(path.join(HERE, 'coverage-hooks.mjs')).href)}).then((m) => {
+      const src = require('fs').readFileSync(${JSON.stringify(cjs)}, 'utf8');
+      const marked = m.mark(src, [{ assertion: 'console.log("ran")', key: 'claim:y#0' }, { assertion: 'console.log("never reached")', key: 'claim:y#1' }]);
+      require('fs').writeFileSync(${JSON.stringify(cjs)}, marked.replace(/globalThis/g, 'globalThis'));
+    });`], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const ledger = path.join(dir, 'cjs-ledger.txt');
+  const run2 = spawnSync(process.execPath, [cjs], { encoding: 'utf8', env: { ...process.env, KIWI_COVERAGE_LEDGER: ledger,
+    NODE_OPTIONS: '--import=' + pathToFileURL(path.join(HERE, 'coverage-probe.mjs')).href } });
+  assert.equal(run2.status, 0, run2.stderr);
+  assert.deepEqual(fs.readFileSync(ledger, 'utf8').split('\n').filter(Boolean), ['claim:y#0'], 'a CommonJS test records the anchor it reached, not the one it skipped');
+});
 check('the pool and the guard preload the probe, keep the cells with each pass, and the full gate requires the French cells', () => {
   const pool = fs.readFileSync(path.join(HERE, 'check-pool.js'), 'utf8');
   const guard = fs.readFileSync(path.join(HERE, 'check-guard.js'), 'utf8');

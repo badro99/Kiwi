@@ -76,10 +76,15 @@ const probeOn = process.env.KIWI_COVERAGE_PROBE !== '0' && fs.existsSync(PROBE);
 const ledgerDir = probeOn ? fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-cells-')) : null;
 let ledgerN = 0;
 const annotatedMemo = new Map();
+let claimFiles = null;   // test files holding a landing claim anchor (tools/landing-claims-map.json)
 function annotated(file) {
+  if (!claimFiles) {
+    claimFiles = new Set();
+    try { for (const e of Object.values(JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'landing-claims-map.json'), 'utf8')).claims || {})) for (const c of e.contracts || []) claimFiles.add(c.file); } catch (_) {}
+  }
   if (!annotatedMemo.has(file)) {
-    let hit = false;
-    try { hit = /\.mjs$/.test(file) && fs.readFileSync(file, 'utf8').includes('// coverage: surface='); } catch (_) {}
+    let hit = claimFiles.has(relOf(file));
+    try { hit = hit || (/\.mjs$/.test(file) && fs.readFileSync(file, 'utf8').includes('// coverage: surface=')); } catch (_) {}
     annotatedMemo.set(file, hit);
   }
   return annotatedMemo.get(file);
@@ -142,7 +147,7 @@ function contentHash(rel) {
   return h;
 }
 const SALT = sha(JSON.stringify([
-  new Date().toDateString(), process.version, contentHash('app/package-lock.json'), contentHash('tools/dep-trace.cjs'), contentHash('tools/coverage-probe.mjs'), contentHash('tools/coverage-hooks.mjs'), process.env.KIWI_CHROMIUM_BIN || '',
+  new Date().toDateString(), process.version, contentHash('app/package-lock.json'), contentHash('tools/dep-trace.cjs'), contentHash('tools/coverage-probe.mjs'), contentHash('tools/coverage-hooks.mjs'), contentHash('tools/landing-claims-map.json'), process.env.KIWI_CHROMIUM_BIN || '',
   Object.keys(process.env).filter((k) => /^KIWI_/.test(k) && !/^KIWI_(DEP_|CHECK_|PASS_CACHE)/.test(k)).sort().map((k) => k + '=' + process.env[k]),
 ]));
 /* A program other than node reads files the tracer cannot see (git reads the

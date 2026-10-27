@@ -131,11 +131,19 @@ function noteCells(args, cells) {
   for (const c of cells) { if (!reached.has(c)) reached.set(c, new Set()); reached.get(c).add(script); }
 }
 function reachedCells() { return new Map(reached); }
+let claimFiles = null;   // test files holding a landing claim anchor
 function probeEnv(script, o) {
-  if (process.env.KIWI_COVERAGE_PROBE === '0' || !/\.mjs$/.test(script) || !fs.existsSync(PROBE)) return null;
+  if (process.env.KIWI_COVERAGE_PROBE === '0' || !/\.(?:mjs|js|cjs)$/.test(script) || !fs.existsSync(PROBE)) return null;
+  const root = path.resolve(__dirname, '..');
+  if (!claimFiles) {
+    claimFiles = new Set();
+    try { for (const e of Object.values(JSON.parse(fs.readFileSync(path.join(root, 'tools', 'landing-claims-map.json'), 'utf8')).claims || {})) for (const c of e.contracts || []) claimFiles.add(c.file); } catch (_) {}
+  }
+  const abs = path.resolve(o.cwd || process.cwd(), script);
   let src = '';
-  try { src = fs.readFileSync(path.resolve(o.cwd || process.cwd(), script), 'utf8'); } catch (_) { return null; }
-  if (!src.includes('// coverage: surface=')) return null;
+  try { src = fs.readFileSync(abs, 'utf8'); } catch (_) { return null; }
+  const claim = claimFiles.has(path.relative(root, abs).split(path.sep).join('/'));
+  if (!claim && !(/\.mjs$/.test(script) && src.includes('// coverage: surface='))) return null;
   const ledger = path.join(os.tmpdir(), `kiwi-cells-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
   const base = o.env || process.env;
   return { ledger, env: Object.assign({}, base, {

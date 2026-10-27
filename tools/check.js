@@ -3083,7 +3083,18 @@ else {
   for (const row of required.required) for (const v of row.viewports) need.push(`${row.surface}|${row.locale}|${v}`);
   const unreached = need.filter((k) => !blocked.has(k) && !reached.has(k));
   if (unreached.length) unreached.forEach((k) => fail(`coverage cell ${k} is required and declared, but no passing suite reached its annotation in this run`));
-  else ok(`${need.length - blocked.size} required French cells reached at run time (${reached.size} annotated cells reached in all)`);
+  else ok(`${need.length - blocked.size} required French cells reached at run time (${[...reached.keys()].filter((k) => !k.startsWith('claim:')).length} annotated cells reached in all)`);
+  /* Each landing claim names the assertions that prove it; finding the text in a
+     test is not proof that it ran (tenth rating, landing#1). */
+  const claims = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'landing-claims-map.json'), 'utf8')).claims || {};
+  let anchors = 0;
+  const silent = [];
+  for (const [claim, entry] of Object.entries(claims)) (entry.contracts || []).forEach((c, i) => {
+    anchors++;
+    if (!reached.has(`claim:${claim}#${i}`)) silent.push(`${claim} → ${c.file} « ${c.assertion.trim()} »`);
+  });
+  if (silent.length) silent.forEach((x) => fail(`landing claim ${x}: the assertion is in the test but no passing run reached it`));
+  else ok(`${anchors} landing claim assertions reached at run time (tools/landing-claims-map.json)`);
 }
 
 section('Suite CPU time (tools/suite-cpu-baseline.json)');

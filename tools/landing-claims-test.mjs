@@ -38,6 +38,16 @@ for (const [key, text] of sourceClaims) {
       ok(exists, `${key}: contract file exists`);
       ok(gate.includes("'" + path.basename(contract.file) + "'") || gate.includes("'" + contract.file + "'"), `${key}: contract named in gate`);
       ok(exists && typeof contract.assertion === 'string' && contract.assertion.length > 15 && read(contract.file).includes(contract.assertion), `${key}: exact assertion anchor exists`);
+      /* The full gate proves each anchor RAN (tools/coverage-probe.mjs puts a
+         call before it): it must be unique in its file and start a statement. */
+      if (exists && typeof contract.assertion === 'string') {
+        const lines = read(contract.file).split('\n');
+        const at = lines.flatMap((l, i) => l.includes(contract.assertion) ? [i] : []);
+        ok(at.length === 1, `${key}: assertion anchor is unique in ${contract.file}`);
+        let prev = at[0] - 1;
+        while (prev >= 0 && /^\s*(?:\/\/.*)?$/.test(lines[prev])) prev--;
+        ok(at.length === 1 && (prev < 0 || /(?:[;{}]|\*\/)\s*$/.test(lines[prev])), `${key}: assertion anchor starts a statement (${contract.file}:${at[0] + 1}), so the gate can prove it ran`);
+      }
     }
   }
 }
