@@ -2853,6 +2853,49 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
   }
 }
 
+/* ── 14g bis · Parité 2027 : la peau change le regard, jamais les gestes ──
+ * Le chantier 2027 est une PEAU (propriétaire, 2026-10-27). Chaque parcours
+ * ci-dessous est joué deux fois par de vrais appuis, une fois sur le design
+ * livré et une fois en 2027, et ce qu'il laisse derrière lui est comparé :
+ * bons de cuisine, tables, commandes de table, panier à emporter et journal de
+ * service (ventes, remboursements, mouvements d'espèces). Toute différence, ou
+ * un geste que 2027 ne peut pas accomplir (bouton absent ou recouvert), est un
+ * échec de parité.
+ *
+ * C'est le filet de la seule classe de régression que ce chantier ait produite :
+ * un bouton livré que la peau n'a pas réexposé (« envoyer en cuisine »,
+ * « Client & fidélité », « Changer de serveur », « Réimprimer le dernier
+ * ticket »), ou un volet 2027 qui ne part pas du même état que la fenêtre
+ * livrée (espèces reçues, remise, partage). Le moteur, tools/parity-2027.mjs,
+ * ne finissait pas par « test » : aucune des deux gardes (« tout fichier de
+ * test est câblé », « tout fichier de test a tourné ») ne le voyait, et il ne
+ * tournait donc qu'à la main. Les cinq enveloppes ci-dessous le découpent par
+ * groupe et par taille d'écran pour tenir dans le délai d'une suite. */
+section('Kiwi 2027 · parité de la caisse (peau contre gestes)');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['parity-2027-dine-tablet-test.mjs', 'parity-2027-dine-tablet-test'],
+    ['parity-2027-dine-phone-test.mjs', 'parity-2027-dine-phone-test'],
+    ['parity-2027-takeaway-tablet-test.mjs', 'parity-2027-takeaway-tablet-test'],
+    ['parity-2027-takeaway-phone-test.mjs', 'parity-2027-takeaway-phone-test'],
+    ['parity-2027-drawer-kitchen-test.mjs', 'parity-2027-drawer-kitchen-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('\u25cb skip')) warn(`${label} sauté (pas de Chromium : la parité n'a pas été jouée)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => /^parity-2027:/.test(l)).pop() || 'vert').trim();
+      ok(`${label} · ${line}`);
+    } else {
+      const lines = out.split('\n').filter((l) => /^\s*\u2717/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*\u2717\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── 14h · Le tableau de bord livré, au téléphone ───────────────────────
  * Le chantier 2027 ne touche plus le tableau de bord (décision du
  * propriétaire, 2026-10-27) : les suites qui mesuraient sa version sur le kit
