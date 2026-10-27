@@ -2300,6 +2300,7 @@ section('Whole-project regressions');
     'briefing-discounts-test.mjs',
     'briefing-cash-sessions-test.mjs',
     'briefing-late-orders-test.mjs',
+    'briefing-settings-ui-test.mjs',
     'weather-test.mjs',
     'briefing-card-placement-test.mjs',
     'dark-fixes-gradient-test.mjs',

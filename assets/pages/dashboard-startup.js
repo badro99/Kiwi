@@ -56,7 +56,7 @@
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=8',
     'assets/weather.js?v=1',
-    'assets/briefing.js?v=31',
+    'assets/briefing.js?v=32',
     'assets/simple-food-cost.js?v=15',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=7',

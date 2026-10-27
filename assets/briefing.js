@@ -11,26 +11,53 @@
   // One year plus five days for month-end review. Financial books live in their own ledgers.
   var MAX_DAYS = 370;
   var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
+  /* briefing-limits:begin · copie générée de functions/api/_briefing-limits.js par tools/build-briefing-limits.mjs : ne pas modifier ici */
+  /* clé : [réglage d'usine, minimum, maximum, nom fr, nom en, nom ar] */
   var LIMITS = {
-    "salesDrop": [20, 1, 100, "Baisse des ventes (%)", "Sales drop (%)", "انخفاض المبيعات (%)"],
-    "stockFactor": [1, 0.1, 10, "Multiplicateur du seuil stock", "Stock threshold multiplier", "مضاعف عتبة المخزون"],
-    "marginDrop": [5, 0.1, 100, "Baisse de marge (points)", "Margin drop (points)", "انخفاض الهامش (نقاط)"],
-    "coverage": [80, 1, 100, "Couverture minimale (%)", "Minimum coverage (%)", "الحد الأدنى للتغطية (%)"],
-    "coverageGap": [10, 0, 100, "Écart de couverture (%)", "Coverage gap (%)", "فرق التغطية (%)"],
-    "samples": [3, 1, 4, "Échantillons minimum", "Minimum samples", "الحد الأدنى للعينات"],
-    "events": [2, 1, 100, "Événements minimum", "Minimum events", "الحد الأدنى للأحداث"],
-    "share": [5, 0.1, 100, "Part minimale (%)", "Minimum share (%)", "الحد الأدنى للنسبة (%)"],
-    "multiple": [2, 1, 10, "Multiple de référence", "Baseline multiple", "مضاعف المرجع"],
-    "cashCents": [10000, 1, 10000000, "Écart de caisse (MAD)", "Cash gap (MAD)", "فرق الصندوق (درهم)"],
-    "weatherEffect": [8, 1, 100, "Effet météo (%)", "Weather effect (%)", "تأثير الطقس (%)"],
-    "lateMultiple": [1.5, 1, 10, "Multiple du délai", "Timing multiple", "مضاعف المدة"],
-    "lateMinutes": [5, 1, 240, "Retard (minutes)", "Delay (minutes)", "التأخير (دقائق)"],
-    "lateSamples": [5, 1, 100, "Historique délais minimum", "Minimum timing history", "الحد الأدنى لسجل المدد"],
-    "planningMinutes": [1, 1, 1440, "Absence de couverture (minutes)", "Uncovered period (minutes)", "فترة بدون تغطية (دقائق)"],
-    "rainMm": [1, 0.1, 500, "Pluie prévue (mm)", "Forecast rain (mm)", "المطر المتوقع (مم)"],
-    "weatherDays": [5, 1, 100, "Jours météo minimum", "Minimum weather days", "الحد الأدنى لأيام الطقس"]
+    "salesDrop": [20,1,100,"Baisse des ventes (%)","Sales drop (%)","انخفاض المبيعات (%)"],
+    "stockFactor": [1,0.1,10,"Multiplicateur du seuil stock","Stock threshold multiplier","مضاعف عتبة المخزون"],
+    "marginDrop": [5,0.1,100,"Baisse de marge (points)","Margin drop (points)","انخفاض الهامش (نقاط)"],
+    "coverage": [80,1,100,"Couverture minimale (%)","Minimum coverage (%)","الحد الأدنى للتغطية (%)"],
+    "coverageGap": [10,0,100,"Écart de couverture (%)","Coverage gap (%)","فرق التغطية (%)"],
+    "samples": [3,1,4,"Repères minimum","Minimum reference points","الحد الأدنى للمراجع"],
+    "events": [2,1,100,"Cas minimum dans la journée","Minimum cases in the day","الحد الأدنى للحالات في اليوم"],
+    "share": [5,0.1,100,"Part d’alerte (%)","Alert share (%)","نسبة التنبيه (%)"],
+    "multiple": [2,1,10,"Fois la normale","Times the usual","مرات المعتاد"],
+    "cashCents": [10000,1,10000000,"Écart de caisse (MAD)","Cash gap (MAD)","فرق الصندوق (درهم)"],
+    "weatherEffect": [8,1,100,"Effet météo (%)","Weather effect (%)","تأثير الطقس (%)"],
+    "lateMultiple": [1.5,1,10,"Délai : fois la normale","Timing: times the usual","المدة: مرات المعتاد"],
+    "lateMinutes": [5,1,240,"Retard (minutes)","Delay (minutes)","التأخير (دقائق)"],
+    "lateSamples": [5,1,100,"Commandes de référence (min.)","Reference orders (min.)","الطلبات المرجعية (الحد الأدنى)"],
+    "planningMinutes": [1,1,1440,"Absence de couverture (minutes)","Uncovered period (minutes)","فترة بدون تغطية (دقائق)"],
+    "rainMm": [1,0.1,500,"Pluie prévue (mm)","Forecast rain (mm)","المطر المتوقع (مم)"],
+    "weatherDays": [5,1,100,"Jours météo minimum","Minimum weather days","الحد الأدنى لأيام الطقس"]
   };
-  function integerLimit(key) { return /^(samples|events|cashCents|lateSamples|planningMinutes|weatherDays)$/.test(key); }
+  /* clé : [aide fr, aide en, aide ar], une phrase pour le réglage */
+  var HELP = {
+    "salesDrop": ["Alerte quand les ventes du jour sont inférieures d’autant à celles des mêmes jours des semaines passées.","Alerts when today’s sales are this far below the same weekdays in past weeks.","تنبيه عندما تقل مبيعات اليوم بهذه النسبة عن نفس الأيام في الأسابيع الماضية."],
+    "stockFactor": ["1 alerte quand un article atteint son seuil minimum ; 2 alerte deux fois plus tôt.","1 alerts when an item reaches its minimum level; 2 alerts twice as early.","1 ينبه عند بلوغ الحد الأدنى للمنتج، و2 ينبه أبكر بمرتين."],
+    "marginDrop": ["Alerte quand la marge brute perd autant de points par rapport à d’habitude.","Alerts when gross margin loses this many points compared with usual.","تنبيه عندما يفقد الهامش الإجمالي هذا العدد من النقاط مقارنة بالمعتاد."],
+    "coverage": ["Part des ventes dont le coût d’achat est connu. En dessous, Kiwi ne juge pas la marge.","Share of sales whose purchase cost is known. Below it, Kiwi does not judge the margin.","نسبة المبيعات المعروفة التكلفة. دون ذلك لا يحكم Kiwi على الهامش."],
+    "coverageGap": ["Si la part de coûts connus change trop entre aujourd’hui et d’habitude, la comparaison est ignorée.","If the share of known costs differs too much from usual, the comparison is skipped.","إذا اختلفت نسبة التكاليف المعروفة كثيرا عن المعتاد، يتم تجاهل المقارنة."],
+    "samples": ["Repères exigés avant d’alerter : semaines comparables (ventes, annulations, remises) ou commandes du jour (délais). De 1 à 4.","Reference points required before alerting: comparable weeks (sales, cancellations, discounts) or today’s orders (timing). From 1 to 4.","عدد المراجع المطلوبة قبل التنبيه: أسابيع قابلة للمقارنة (المبيعات، الإلغاءات، التخفيضات) أو طلبات اليوم (المدد). من 1 إلى 4."],
+    "events": ["Nombre d’annulations (ou de ventes remisées) à atteindre aujourd’hui avant d’alerter.","Number of cancellations (or discounted sales) to reach today before alerting.","عدد الإلغاءات (أو المبيعات المخفضة) المطلوب بلوغه اليوم قبل التنبيه."],
+    "share": ["Kiwi ne parle jamais sous cette part du chiffre, même si c’est plus que d’habitude.","Kiwi never speaks below this share of sales, even if it is above usual.","لا ينبه Kiwi دون هذه النسبة من المبيعات حتى لو تجاوزت المعتاد."],
+    "multiple": ["Alerte quand la part du jour atteint ce multiple de votre part habituelle.","Alerts when today’s share reaches this multiple of your usual share.","تنبيه عندما تبلغ نسبة اليوم هذا المضاعف من نسبتك المعتادة."],
+    "cashCents": ["Un écart à la clôture de caisse au-delà de ce montant, en plus ou en moins, déclenche l’alerte.","A gap at register close beyond this amount, over or short, triggers the alert.","فرق عند إغلاق الصندوق يتجاوز هذا المبلغ، زيادة أو نقصانا، يطلق التنبيه."],
+    "weatherEffect": ["Alerte quand la pluie a déjà changé vos ventes d’au moins ce pourcentage.","Alerts when rain has already moved your sales by at least this percentage.","تنبيه عندما غيّر المطر مبيعاتك سابقا بهذه النسبة على الأقل."],
+    "lateMultiple": ["Alerte quand le délai du jour atteint ce multiple de votre délai habituel.","Alerts when today’s wait reaches this multiple of your usual wait.","تنبيه عندما تبلغ مدة اليوم هذا المضاعف من مدتك المعتادة."],
+    "lateMinutes": ["Et le délai doit aussi s’allonger d’au moins ce nombre de minutes, pour ignorer les petits écarts.","The wait must also grow by at least this many minutes, to ignore small gaps.","ويجب أيضا أن تطول المدة بهذا العدد من الدقائق على الأقل لتجاهل الفروق الصغيرة."],
+    "lateSamples": ["Nombre de commandes passées nécessaires pour connaître votre délai habituel.","Number of past orders needed to know your usual wait.","عدد الطلبات السابقة اللازمة لمعرفة مدتك المعتادة."],
+    "planningMinutes": ["Alerte quand le planning laisse l’établissement sans personne au moins cette durée pendant l’ouverture.","Alerts when the schedule leaves the venue unstaffed for at least this long while open.","تنبيه عندما يترك الجدول المحل بلا أحد هذه المدة على الأقل أثناء الفتح."],
+    "rainMm": ["Pluie prévue à partir de laquelle une journée compte comme pluvieuse (1 mm est le réglage de base).","Forecast rain from which a day counts as rainy (1 mm is the standard setting).","كمية المطر المتوقعة التي يعد اليوم عندها ممطرا (1 مم هو الإعداد الأساسي)."],
+    "weatherDays": ["Nombre de jours de pluie passés à observer avant que Kiwi parle d’un effet.","Number of past rainy days to observe before Kiwi reports an effect.","عدد أيام المطر السابقة التي تُرصد قبل أن يتحدث Kiwi عن تأثير."]
+  };
+  /* les clés qui doivent rester entières */
+  var INTEGER = {"samples":true,"events":true,"cashCents":true,"lateSamples":true,"planningMinutes":true,"weatherDays":true};
+  /* par règle, dans l'ordre de RULES : les clés qu'elle lit */
+  var GROUPS = [["salesDrop","samples"],["stockFactor"],["marginDrop","coverage","coverageGap"],["planningMinutes"],["share","multiple","events","samples"],["share","multiple","events","samples"],["cashCents"],["lateMultiple","lateMinutes","samples","lateSamples"],["weatherEffect","rainMm","weatherDays"]];
+  /* briefing-limits:end */
+  function integerLimit(key) { return INTEGER[key] === true; }
   function validSettings(value) {
     var out = {};
     Object.keys(LIMITS).forEach(function (key) {
@@ -65,18 +92,46 @@
     Object.keys(clean).forEach(function (key) { doc.settingsFieldsAt[key] = at; });
     compute(); return true;
   }
+  /* Quels pavés de réglages sont ouverts : le point du matin se redessine
+   * après chaque saisie, sans cela le commerçant retrouvait tout replié. */
+  var openState = {};
+  function atFactory(key) { return Number(limit(key)) === LIMITS[key][0]; }
+  function sharedWith(key, index, t) {
+    var names = [];
+    GROUPS.forEach(function (keys, i) { if (i !== index && keys.indexOf(key) >= 0 && t.ruleNames[i]) names.push(t.ruleNames[i]); });
+    return names.length ? t.alsoUsed.replace('{names}', names.join(', ')) : '';
+  }
+  function fieldHtml(key, index, idx, t) {
+    var spec = LIMITS[key], id = index + '-' + key, help = HELP[key][idx - 3];
+    var note = [help, sharedWith(key, index, t), t.usual.replace('{value}', num(shown(key, spec[0]), lang()))].filter(Boolean).join(' ');
+    return '<div class="briefing-set-field"><label class="briefing-set-name" for="briefing-in-' + id + '">' + esc(spec[idx]) + '</label><input type="number" id="briefing-in-' + id + '" data-briefing-limit="' + key + '" data-briefing-error="briefing-error-' + id + '" min="' + shown(key, spec[1]) + '" max="' + shown(key, spec[2]) + '" step="' + (SCALE[key] ? String(1 / SCALE[key]) : integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-help-' + id + ' briefing-error-' + id + '" value="' + shown(key) + '"><small class="briefing-set-help" id="briefing-help-' + id + '">' + esc(note) + '</small><span class="briefing-set-error" id="briefing-error-' + id + '" role="status"></span></div>';
+  }
+  function ruleHtml(index, idx, t) {
+    var keys = GROUPS[index], pristine = keys.every(atFactory);
+    return '<details class="briefing-rule" data-briefing-open="rule-' + index + '"' + (openState['rule-' + index] ? ' open' : '') + '><summary>' + esc(t.ruleNames[index]) + '</summary>' +
+      keys.map(function (key) { return fieldHtml(key, index, idx, t); }).join('') +
+      '<button type="button" class="briefing-reset" data-briefing-reset="' + index + '"' + (pristine ? ' disabled' : '') + '>' + esc(t.resetRule) + '</button></details>';
+  }
   function settingsHtml() {
     if (!/^(owner|manager)$/.test(tier())) return '';
-    var L = lang(), idx = L === 'ar' ? 5 : L === 'en' ? 4 : 3;
-    var title = { fr: 'Réglages des seuils', en: 'Threshold settings', ar: 'إعدادات العتبات' }[L];
-    return '<details><summary>' + title + '</summary>' + Object.keys(LIMITS).map(function (key) {
-      var spec = LIMITS[key];
-      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + shown(key, spec[1]) + '" max="' + shown(key, spec[2]) + '" step="' + (SCALE[key] ? String(1 / SCALE[key]) : integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-error-' + key + '" value="' + shown(key) + '"><span id="briefing-error-' + key + '" role="status"></span></label>';
-    }).join('') + '</details>';
+    var L = lang(), idx = L === 'ar' ? 5 : L === 'en' ? 4 : 3, t = tr(L);
+    return '<details class="briefing-settings" data-briefing-open="all"' + (openState.all ? ' open' : '') + '><summary>' + esc(t.settings) + '</summary><p class="briefing-set-intro">' + esc(t.settingsIntro) + '</p>' +
+      GROUPS.map(function (keys, index) { return ruleHtml(index, idx, t); }).join('') + '</details>';
+  }
+  /* Rétablit les valeurs d'usine des seuils d'UNE règle. La valeur d'usine est
+   * rangée comme un réglage (pas effacée) : l'effacement ne survivrait pas à la
+   * fusion entre appareils. Un seuil que la règle partage avec une autre revient
+   * aussi chez celle-ci, la ligne d'aide le dit. */
+  function resetRule(index) {
+    var keys = GROUPS[index], value = {};
+    if (!keys) return false;
+    keys.forEach(function (key) { value[key] = LIMITS[key][0]; });
+    return setSettings(value);
   }
   function thresholdEvidence(line) {
-    var keys = { 'sales-drop': ['salesDrop','samples'], 'low-stock': ['stockFactor'], 'margin-erosion': ['marginDrop','coverage','coverageGap'], 'cancellation-rate': ['share','multiple','events','samples'], 'discount-share': ['share','multiple','events','samples'], 'cash-gap': ['cashCents'], weather: ['weatherEffect','rainMm','weatherDays'], 'planning-gap': ['planningMinutes'], 'late-orders': ['lateMultiple','lateMinutes','samples','lateSamples'] };
-    var used = keys[line.kind] || (/^late-orders-/.test(line.kind) ? keys['late-orders'] : []);
+    var RULE_OF = { 'sales-drop': 0, 'low-stock': 1, 'margin-erosion': 2, 'planning-gap': 3, 'cancellation-rate': 4, 'discount-share': 5, 'cash-gap': 6, 'late-orders': 7, weather: 8 };
+    var rule = Object.prototype.hasOwnProperty.call(RULE_OF, line.kind) ? RULE_OF[line.kind] : /^late-orders-/.test(line.kind) ? 7 : -1;
+    var used = rule >= 0 ? GROUPS[rule] : [];
     if (!used.length) return line;
     var list = function (L) { return used.map(function (k) { return LIMITS[k][L === 'ar' ? 5 : L === 'en' ? 4 : 3] + ' ' + num(shown(k), L); }).join(', '); };
     line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + list(lang());
@@ -97,7 +152,7 @@
 
   var COPY = {
     fr: {
-      ruleNames: ["Ventes", "Stock", "Marge", "Planning", "Annulations", "Remises", "Caisse", "Délais de service", "Météo"], analysisFailed: 'Analyse indisponible', retryAnalysis: 'Réessayer', invalidLimit: 'Saisissez une valeur entre {min} et {max}.', integerOnly: 'Un nombre entier est requis.', eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
+      ruleNames: ["Ventes", "Stock", "Marge", "Planning", "Annulations", "Remises", "Caisse", "Délais de service", "Météo"], analysisFailed: 'Analyse indisponible', retryAnalysis: 'Réessayer', invalidLimit: 'Saisissez une valeur entre {min} et {max}.', integerOnly: 'Un nombre entier est requis.', settings: 'Réglages des seuils', settingsIntro: 'Chaque règle a ses seuils. Les valeurs d’usine conviennent à la plupart des établissements.', resetRule: 'Rétablir les valeurs d’usine', alsoUsed: 'Aussi utilisé par : {names}.', usual: 'Valeur d’usine : {value}', eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
       emptyNote: 'Kiwi surveille uniquement les données mesurées de cet établissement.', ask: 'Voir le point du matin',
       coverage: 'Je surveille les signaux déjà mesurables, sans inventer les données manquantes.',
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
@@ -110,7 +165,7 @@
       wKinds: { clear: 'beau temps', cloudy: 'nuageux', rain: 'pluie', storm: 'orage', snow: 'neige', fog: 'brouillard' }
     },
     en: {
-      ruleNames: ["Sales", "Stock", "Margin", "Staffing", "Cancellations", "Discounts", "Cash", "Service timing", "Weather"], analysisFailed: 'Analysis unavailable', retryAnalysis: 'Retry', invalidLimit: 'Enter a value between {min} and {max}.', integerOnly: 'A whole number is required.', eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
+      ruleNames: ["Sales", "Stock", "Margin", "Staffing", "Cancellations", "Discounts", "Cash", "Service timing", "Weather"], analysisFailed: 'Analysis unavailable', retryAnalysis: 'Retry', invalidLimit: 'Enter a value between {min} and {max}.', integerOnly: 'A whole number is required.', settings: 'Threshold settings', settingsIntro: 'Each rule has its own thresholds. The factory values suit most venues.', resetRule: 'Restore factory values', alsoUsed: 'Also used by: {names}.', usual: 'Factory value: {value}', eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
       emptyNote: 'Kiwi monitors only measured data from this venue.', ask: 'Open morning briefing',
       coverage: 'I monitor the signals that are already measurable, without inventing missing data.',
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
@@ -123,7 +178,7 @@
       wKinds: { clear: 'fair', cloudy: 'cloudy', rain: 'rain', storm: 'thunderstorm', snow: 'snow', fog: 'fog' }
     },
     ar: {
-      ruleNames: ["المبيعات", "المخزون", "الهامش", "جدول العمل", "الإلغاءات", "التخفيضات", "الصندوق", "مدة الخدمة", "الطقس"], analysisFailed: 'التحليل غير متاح', retryAnalysis: 'أعد المحاولة', invalidLimit: 'أدخل قيمة بين {min} و{max}.', integerOnly: 'يجب إدخال عدد صحيح.', eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
+      ruleNames: ["المبيعات", "المخزون", "الهامش", "جدول العمل", "الإلغاءات", "التخفيضات", "الصندوق", "مدة الخدمة", "الطقس"], analysisFailed: 'التحليل غير متاح', retryAnalysis: 'أعد المحاولة', invalidLimit: 'أدخل قيمة بين {min} و{max}.', integerOnly: 'يجب إدخال عدد صحيح.', settings: 'إعدادات العتبات', settingsIntro: 'لكل قاعدة عتباتها. القيم الأصلية تناسب معظم المحلات.', resetRule: 'استرجاع القيم الأصلية', alsoUsed: 'تُستعمل أيضا في: {names}.', usual: 'القيمة الأصلية: {value}', eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
       emptyNote: 'يراقب Kiwi فقط البيانات المقاسة لهذا المحل.', ask: 'عرض ملخص الصباح',
       coverage: 'أراقب الإشارات القابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
@@ -978,6 +1033,19 @@
       '.briefing-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}',
       '.briefing-status.is-alert{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 40%,transparent);background:color-mix(in srgb,var(--atlas) 7%,transparent)}',
       '.briefing-status.is-alert::before{background:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 18%,transparent)}',
+      /* Réglages : un pavé par règle, un champ = nom, saisie, une phrase d'aide. */
+      '.briefing-settings,.briefing-rule{font:500 12.5px/1.4 var(--sans);color:var(--n-700)}',
+      '.briefing-settings>summary,.briefing-rule>summary{cursor:pointer;font-weight:600;color:var(--n-600)}',
+      '.briefing-rule{margin-top:8px;padding:8px 12px;border:1px solid var(--n-200);border-radius:12px}',
+      '.briefing-set-intro{margin:8px 0 0;color:var(--n-500)}',
+      '.briefing-set-field{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--n-200)}',
+      '.briefing-set-name{font-weight:600;color:var(--n-700)}',
+      '.briefing-set-field input{width:7.5em;padding:6px 8px;border:1px solid var(--n-300);border-radius:8px;background:transparent;color:inherit;font:inherit}',
+      '.briefing-set-field input[aria-invalid="true"]{border-color:var(--atlas)}',
+      '.briefing-set-help,.briefing-set-error{grid-column:1/-1;font:500 11.5px/1.4 var(--sans);color:var(--n-500)}',
+      '.briefing-set-error:empty{display:none}',
+      '.briefing-reset{margin-top:8px;border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);cursor:pointer}',
+      '.briefing-reset:hover:not(:disabled){border-color:var(--atlas);color:var(--atlas)}.briefing-reset:disabled{opacity:.5;cursor:default}',
       /* Rien n'a pris sur cet appareil : une ligne posée, pas une alerte rouge. */
       '.briefing-unsaved{margin:0;font:500 12px/1.4 var(--sans);color:var(--n-600)}',
       '@keyframes briefing-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
@@ -1070,10 +1138,18 @@
     var handled = event.target.closest && event.target.closest('[data-briefing-handled]');
     var dismissed = event.target.closest && event.target.closest('[data-briefing-dismiss]');
     var proposed = event.target.closest && event.target.closest('[data-briefing-propose]');
+    var reset = event.target.closest && event.target.closest('[data-briefing-reset]');
+    if (reset && !reset.disabled) resetRule(Number(reset.getAttribute('data-briefing-reset')));
     if (proposed) proposeLine(proposed.getAttribute('data-briefing-propose'));
     if (handled) setState(handled.getAttribute('data-briefing-handled'), 'handled');
     if (dismissed) setState(dismissed.getAttribute('data-briefing-dismiss'), 'dismissed');
   });
+
+  /* « toggle » ne remonte pas : on l'écoute à la capture pour retenir ce qui est ouvert. */
+  document.addEventListener('toggle', function (event) {
+    var box = event.target, key = box && box.getAttribute && box.getAttribute('data-briefing-open');
+    if (key) openState[key] = !!box.open;
+  }, true);
 
   document.addEventListener('change', function (event) {
     var input = event.target;
@@ -1084,11 +1160,11 @@
     value[key] = scale > 1 && Math.abs(typed - Math.round(typed)) > 1e-6 ? NaN : scale > 1 ? Math.round(typed) : typed;
     var ok = setSettings(value);
     input.setAttribute('aria-invalid', String(!ok));
-    var message = document.getElementById('briefing-error-' + key);
+    var message = document.getElementById(input.getAttribute('data-briefing-error') || 'briefing-error-' + key);
     if (message) message.textContent = ok ? '' : [tr().invalidLimit.replace('{min}', num(shown(key, LIMITS[key][1]), lang())).replace('{max}', num(shown(key, LIMITS[key][2]), lang())), integerLimit(key) && !SCALE[key] ? tr().integerOnly : ''].filter(Boolean).join(' ');
   });
   window.KiwiBriefing = {
-    setSettings: setSettings, settings: function () { return clone(own().settings || {}); },
+    setSettings: setSettings, resetRule: resetRule, settings: function () { return clone(own().settings || {}); },
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
     durable: function () { return localKept; },

@@ -132,8 +132,8 @@
     "sha": "fd42eade73417d7e"
   },
   "assets/briefing.js": {
-    "v": "31",
-    "sha": "72da20864e71030c"
+    "v": "32",
+    "sha": "e9738a53174f1fcd"
   },
   "assets/caisse-accounting.js": {
     "v": "14",
@@ -1356,8 +1356,8 @@
     "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "53",
-    "sha": "7bee5d7d69c1ffb0"
+    "v": "54",
+    "sha": "077b7014ac8148f5"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
