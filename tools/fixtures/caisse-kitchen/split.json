@@ -1,0 +1,209 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/caisse-kitchen.js, and move its stamp (node tools/bump-stamp.js assets/caisse-kitchen.js).",
+  "bundles": [
+    {
+      "file": "assets/caisse-kitchen.js",
+      "sha256AtSplit": "eafd27c59bfd43411c865a3116346fcaf70e7ef64e64ee884cf597bc1360ee90",
+      "parts": [
+        {
+          "file": "assets/caisse-kitchen/send-from-floor.js",
+          "concern": "la salle part en cuisine : lignes à envoyer, mises en attente, relais",
+          "lines": [
+            1,
+            251
+          ],
+          "declares": [
+            "kitchenItemsFromLines",
+            "relayLinesFromCaisse",
+            "lineHeld",
+            "tableHeldQty",
+            "tableFreshQty",
+            "tableSuiteOnly",
+            "toggleLineHold",
+            "sendTableToKitchen",
+            "tooLongForKitchen",
+            "relayToKitchen"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/table-orders.js",
+          "concern": "cycle d'une commande de table : retour en salle, annulation, reprise",
+          "lines": [
+            252,
+            502
+          ],
+          "declares": [
+            "backToSalle",
+            "orderInProgressCount",
+            "tableSentCount",
+            "canonicalOrdersForTable",
+            "tableCancelNeedsServer",
+            "cancelSentTable",
+            "cancelOpenTable",
+            "cancelNewOrder",
+            "resumeTableOrder"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/screen-access.js",
+          "concern": "accès au mode écran cuisine",
+          "lines": [
+            503,
+            592
+          ],
+          "declares": [
+            "unlockKitchenScreen",
+            "runKitchenEntrySequence",
+            "lockoutKitchen"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/kds-model.js",
+          "concern": "écran cuisine : postes, tickets, cartes et rangées",
+          "lines": [
+            593,
+            844
+          ],
+          "declares": [
+            "kdsStations",
+            "kdsKitchenId",
+            "kdsStationFor",
+            "kdsRepaintStations",
+            "kdsHasRecipe",
+            "isDemoSeedOrder",
+            "kdsSeed",
+            "kdsEsc",
+            "kdsElapsed",
+            "kdsUrgency",
+            "kdsFmt",
+            "kdsNowHM",
+            "kdsEnsureFormulaParents",
+            "kdsMatches",
+            "kdsViewStatus",
+            "kdsGroup",
+            "kdsTypeChip",
+            "kdsOrderInner",
+            "kdsOrderCard",
+            "kdsHistoryRow",
+            "kdsEmpty",
+            "kdsStationBar",
+            "updateKdsCount",
+            "orderServerInitials",
+            "ticketNo"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/kds-board.js",
+          "concern": "écran cuisine : affichage, actions, rappel, ouverture",
+          "lines": [
+            845,
+            1144
+          ],
+          "declares": [
+            "kdsPaint",
+            "kkt",
+            "kdsKitOn",
+            "kdsKitTicket",
+            "kdsKitPaint",
+            "kdsKitAct",
+            "kdsAccept",
+            "kdsReady",
+            "kdsRecall",
+            "kdsOpenZoom",
+            "kdsOpenRecipe",
+            "kdsTick",
+            "isKdsOff",
+            "openKds",
+            "closeKds"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/kitchen-paper.js",
+          "concern": "bons papier par poste et envoi en cuisine",
+          "lines": [
+            1145,
+            1400
+          ],
+          "declares": [
+            "kitchenPaperItems",
+            "printKitchenTickets",
+            "createTakeawayKitchenOrder",
+            "sendToKitchen"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/takeaway-board.js",
+          "concern": "tableau à emporter : vues, encaissement, remise, archives",
+          "lines": [
+            1401,
+            1965
+          ],
+          "declares": [
+            "setVrapView",
+            "vrapElapsed",
+            "vrapItemsLine",
+            "vrapFinancialItems",
+            "vrapIsCounterSale",
+            "vrapOrderCard",
+            "vrapHandoverTimestamp",
+            "vrapHistoryDay",
+            "vrapHandoverTime",
+            "vrapHistoryRow",
+            "expiredRow",
+            "reprendreExpired",
+            "renderVrapBoard",
+            "vrapCartItems",
+            "saveVrapBillItems",
+            "saveVrapEdits",
+            "cancelOrderProTakeaway",
+            "settleVrapPayment",
+            "openVrapOrder",
+            "openVrapRemise",
+            "vrapMarkReady",
+            "vrapHandover",
+            "vrapArchivePaid",
+            "archivedTakeawaySet",
+            "rememberArchivedTakeaway"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/orderpro-dispatch.js",
+          "concern": "pont OrderPro : envoi des commandes en attente et numéro de ticket",
+          "lines": [
+            1966,
+            2130
+          ],
+          "declares": [
+            "opMerchant",
+            "opPush",
+            "orderProPendingIdsForTable",
+            "dispatchPendingOrderProAtTable",
+            "dispatchHeldTakeaway",
+            "dispatchTableUnsentToKitchen",
+            "awaitCanonicalTicketNumber",
+            "dispatchUnsentKitchenBeforePayment",
+            "serverNameFor",
+            "caisseTableId"
+          ]
+        },
+        {
+          "file": "assets/caisse-kitchen/orderpro-ingest.js",
+          "concern": "pont OrderPro : une commande du téléphone devient un ticket de cette caisse",
+          "lines": [
+            2131,
+            2723
+          ],
+          "declares": [
+            "opRepairFormulaParents",
+            "attachOrderProTable",
+            "retireRejectedKitchenTicket",
+            "canRecoverCaisseTable",
+            "opIngest",
+            "kdsStationForName",
+            "sameMap"
+          ]
+        }
+      ]
+    }
+  ]
+}
