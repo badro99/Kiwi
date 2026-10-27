@@ -280,6 +280,31 @@ try {
     assert.equal((await poll(BRIDGES[0])).jobs[0].id, copy.body.id);
   }));
 
+  await strict('R a Reprint of the original still produces a fresh copy once the previous copy expired or failed', fc.asyncProperty(fc.integer({min:0,max:20}), fc.constantFrom('expired', 'failed'), async (k, end) => {
+    reset(); const original = (await deposit(k)).body.id;
+    clock += 10 * 60000 + 1;
+    await poll(BRIDGES[0]);
+    const first = await reprintOf(original);
+    assert.equal(first.status, 200);
+    assert.equal((await reprintOf(original)).body.id, first.body.id, 'a double tap within one attempt returns the same copy');
+    if (end === 'expired') clock += 10 * 60000 + 1;
+    else {
+      assert.equal((await poll(BRIDGES[0])).jobs[0].id, first.body.id);
+      sql.prepare('UPDATE print_bridges SET last_seen_ts = ? WHERE id <> ?').run(clock - 46000, BRIDGES[0].id);
+      assert.equal((await ack(BRIDGES[0], first.body.id, 'failed', 'printer-target-not-saved')).updated, true);
+    }
+    sql.prepare('UPDATE print_bridges SET last_seen_ts = ?').run(clock);
+    const second = await reprintOf(original);
+    assert.equal(second.status, 200, JSON.stringify(second.body));
+    assert.notEqual(second.body.id, first.body.id, 'the dead copy is not handed back');
+    assert.notEqual(second.body.id, original);
+    assert.equal((await reprintOf(original)).body.id, second.body.id, 'and the new attempt is idempotent too');
+    const offered = (await listingOf()).map((j) => j.id);
+    assert.ok(!offered.includes(original) && !offered.includes(first.body.id), 'only the live attempt is offered, not its superseded copy');
+    assert.equal((await poll(BRIDGES[0])).jobs[0].id, second.body.id);
+    assert.ok(!JSON.stringify((await poll(BRIDGES[0])).jobs).includes('_reprintOf'), 'lineage never reaches the bridge');
+  }));
+
   await strict('R Reprint with no bridge online says relay-offline, deposits nothing and keeps the ticket offered', fc.asyncProperty(fc.integer({min:0,max:20}), async k => {
     reset(); const original = (await deposit(k)).body.id;
     clock += 10 * 60000 + 1;

@@ -85,6 +85,16 @@ check('multi-item tickets counted: 33 (voided, older than 28 days and id-less ti
 const msemen = ok.body.pairs.it_msemen || [];
 check('after a msemen: the thé (12 of its 12 tickets)', msemen[0] && msemen[0].i === 'it_the' && msemen[0].together === 12 && msemen[0].share === 1, JSON.stringify(msemen));
 check('voided and old msemen + jus tickets do not make a pair', !msemen.some((p) => p.i === 'it_jus'));
+{
+  /* Une erreur sur la requête filtrée ne doit jamais déclencher une lecture sans
+     filtre void_ts : les ventes annulées entreraient dans les paires. */
+  const seen = [];
+  const failing = { prepare(query) { seen.push(query); if (/void_ts/.test(query)) throw new Error('boom: void_ts'); return DB.prepare(query); } };
+  const req = new Request('https://kiwi-os.com/api/pairs?merchant=' + encodeURIComponent(M), { headers: { Cookie: await cookieFor(M) } });
+  const res = await pairsApi.onRequestGet({ request: req, env: { ...env, DB: failing } }, { now: () => NOW, noCache: true });
+  check('a failing void_ts query answers 503 and never reads sales unfiltered',
+    res.status === 503 && seen.filter((q) => /FROM sales/.test(q)).every((q) => /void_ts IS NULL/.test(q)), String(res.status) + ' ' + seen.length);
+}
 const cafe = ok.body.pairs.it_cafe || [];
 check('after a café: jus and thé, 6 tickets each, 27 % of its 22 tickets', cafe.length === 2 && cafe.every((p) => p.together === 6 && Math.round(p.share * 100) === 27), JSON.stringify(cafe));
 const the = ok.body.pairs.it_the || [];

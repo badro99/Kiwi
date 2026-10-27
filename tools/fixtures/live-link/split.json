@@ -4,14 +4,14 @@
     {
       "file": "assets/live-link.js",
       "module": true,
-      "sha256AtSplit": "e693a6b677ec08bd32f3a96f0391ce5b97a8ec809fdadf6371ffa73dcc046ee9",
+      "sha256AtSplit": "906258d6cf130d8f2135c79afd7853318c2e621e6428c810628a981626a8436a",
       "parts": [
         {
           "file": "assets/live-link/parts/merchant.js",
           "concern": "allumage, mode et commerçant résolu",
           "lines": [
             1,
-            178
+            194
           ],
           "declares": [
             "LS",
@@ -29,8 +29,8 @@
           "file": "assets/live-link/parts/signals.js",
           "concern": "affichage, réveil entre onglets, signal d'argent",
           "lines": [
-            179,
-            241
+            195,
+            270
           ],
           "declares": [
             "SALE_COPY",
@@ -48,8 +48,8 @@
           "file": "assets/live-link/parts/outbox.js",
           "concern": "file d'envoi des ventes : statut, identité, reprise, requêtes d'argent",
           "lines": [
-            242,
-            537
+            271,
+            570
           ],
           "declares": [
             "saleQueue",
@@ -85,8 +85,8 @@
           "file": "assets/live-link/parts/feed.js",
           "concern": "lecture du flux et instantanés",
           "lines": [
-            538,
-            871
+            571,
+            904
           ],
           "declares": [
             "FAST_MS",
@@ -105,8 +105,8 @@
           "file": "assets/live-link/parts/ledger-bridge.js",
           "concern": "annulations, cumul du flux, pont vers les ventes du tableau de bord",
           "lines": [
-            872,
-            1124
+            905,
+            1157
           ],
           "declares": [
             "lastSync",
@@ -128,8 +128,8 @@
           "file": "assets/live-link/parts/operator.js",
           "concern": "pompe et bandeau de la vue opérateur, surveillance des annulations",
           "lines": [
-            1125,
-            1340
+            1158,
+            1373
           ],
           "declares": [
             "pumping",
@@ -147,8 +147,8 @@
           "file": "assets/live-link/parts/boot.js",
           "concern": "démarrage et interface publique",
           "lines": [
-            1341,
-            1525
+            1374,
+            1557
           ],
           "declares": [
             "boot",

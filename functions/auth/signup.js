@@ -4,6 +4,7 @@ import {
   PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
   limitCheck, limitFail, passwordProblem, slugMerchant, rateLimitUnavailable,
 } from './_lib.js';
+import { legacyNameTaken } from './_slug-backfill.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -89,12 +90,8 @@ export async function onRequestPost(context) {
       } catch (_) { return json({ error: 'signup-unavailable' }, 503); }
     }
     if (!taken) {
-      try {
-        const rs = await env.DB.prepare(
-          "SELECT business FROM accounts WHERE business_slug IS NULL AND business IS NOT NULL AND business <> ''"
-        ).all();
-        taken = (rs.results || []).some((r) => slugMerchant(r.business) === wantedSlug);
-      } catch (_) { return json({ error: 'signup-unavailable' }, 503); }
+      try { taken = await legacyNameTaken(env, wantedSlug); }
+      catch (_) { return json({ error: 'signup-unavailable' }, 503); }
     }
     if (taken) {
       if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();

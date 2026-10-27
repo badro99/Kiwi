@@ -68,7 +68,23 @@ import {} from './live-link/sale-identity.js?v=1';
       if (urlFlag()) { localStorage.setItem(LS, '1'); return true; }
       var v = localStorage.getItem(LS);
       if (v === '1') return true;
-      if (v === '0') return false;
+      if (v === '0') {
+        /* Un « 0 » resté dans le stockage ne doit jamais couper en silence les
+         * ventes d'un vrai commerçant : ni la caisse ni le serveur n'en disent
+         * rien, et le chiffre d'affaires reste dans l'onglet. Chez un vrai
+         * commerçant (session réelle, ou caisse appairée à un magasin) le refus
+         * est ignoré et effacé ; il ne vaut que pour une démonstration locale. */
+        var pv = null;
+        try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) {}
+        if (realEnv() || (pv && pv.merchant)) {
+          try { localStorage.removeItem(LS); } catch (_) {}
+          try {
+            if (window.KiwiReportError) window.KiwiReportError(new Error('kiwiLive=0 ignoré chez un vrai commerçant'), 'live:stale_off_flag_ignored');
+          } catch (_) {}
+          return true;
+        }
+        return false;
+      }
       return realEnv();
     } catch (_) { return urlFlag(); }
   }

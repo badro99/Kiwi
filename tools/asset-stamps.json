@@ -36,8 +36,8 @@
     "sha": "606482db0d68d9bf"
   },
   "assets/admin-workspace.js": {
-    "v": "26",
-    "sha": "799d1a5746c8b30d"
+    "v": "27",
+    "sha": "663df2b6a7fd5445"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -1100,8 +1100,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "84",
-    "sha": "b8a18c9b0c404586"
+    "v": "85",
+    "sha": "906258d6cf130d8f"
   },
   "assets/live-link/queue-store.js": {
     "v": "2",

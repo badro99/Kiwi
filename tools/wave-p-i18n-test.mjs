@@ -67,9 +67,15 @@ if(!job||job==='console'){
   const window={KiwiAdminPolicy:policy,KiwiOperator:{},KiwiAdminI18n:{lang}};
   const context=vm.createContext({window,document,Intl,Date,crypto:{randomUUID:()=> 'test-id'}});
   vm.runInContext(source.slice(0,source.indexOf("  document.addEventListener('click'"))+`;window.test={state,copy,L,policyText,today,fleet,dossierView,taskDialog,day,ago};})();`,context);
-  const t=window.test, sources=Object.fromEntries(['quarantine','bridges','print','errors','support','integrations','caisseSync','shopify','shopifyLink','receivables','unpaidTables','zChecks','conflicts','tenantGuard','discountPolicy','activity','board','tasks','notes','events'].map(k=>[k,{available:true,rows:[]}]));
+  const t=window.test, sources=Object.fromEntries(['quarantine','bridges','print','errors','support','integrations','caisseSync','shopify','shopifyLink','receivables','unpaidTables','zChecks','conflicts','tenantGuard','discountPolicy','saleFlags','activity','board','tasks','notes','events'].map(k=>[k,{available:true,rows:[]}]));
   const merchant={merchant:'fixture',business:'Établissement',type:'hotel',city:'Rabat',store_status:'active',plan:'pro',last_ts:Date.now(),today_amount:10};
   Object.assign(t.state,{live:true,clients:[merchant],merchant:'fixture',data:{sources,now:Date.now(),actor:{id:'test'}}});
+  const flagged={merchant:'fixture',id:'sale-flag-1',action:'basket-flag',note:'basket-mismatch',ref:'T-9',amount_cents:1200,sale_ts:Date.now(),updated_ts:Date.now()};
+  t.state.data.sources.saleFlags.rows=[flagged,{...flagged,id:'sale-flag-2',action:'clock-flag',note:'clock-skew'}];
+  const flaggedToday=t.today();
+  assert.ok(flaggedToday.includes({fr:'Montant encaissé en désaccord avec son panier',en:'Amount collected disagrees with its basket',ar:'المبلغ المحصل لا يطابق سلة الشراء'}[lang]),'basket flag reaches the operator queue');
+  assert.ok(flaggedToday.includes({fr:'Horloge de la caisse décalée',en:'Till clock is off',ar:'ساعة الصندوق غير مضبوطة'}[lang]),'clock flag reaches the operator queue');
+  t.state.data.sources.saleFlags.rows=[];
   const today=t.today();assert.ok(today.includes({fr:'Votre file de travail',en:'Your work queue',ar:'قائمة عملك'}[lang]));
   assert.ok(today.includes({fr:'État des établissements',en:'Store health',ar:'حالة المؤسسات'}[lang]));
   assert.ok(today.includes('>Établissement</button>'),'merchant-authored label is untouched');

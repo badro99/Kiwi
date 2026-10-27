@@ -39,8 +39,8 @@ async function refDigest(merchant, clientRef) {
    qui l'a réclamé), donc le dépôt écrit la visée dans la cible, sous `_pin`,
    et elle n'est jamais rendue au pont. */
 function publicTarget(t) {
-  if (!t || typeof t !== 'object' || !('_pin' in t || '_refused' in t)) return t;
-  const { _pin, _refused, ...rest } = t;
+  if (!t || typeof t !== 'object' || !('_pin' in t || '_refused' in t || '_reprintOf' in t)) return t;
+  const { _pin, _refused, _reprintOf, _attempt, ...rest } = t;
   return rest;
 }
 /* Someone has to fetch the ticket: an unrevoked bridge of the store seen in
@@ -51,6 +51,11 @@ async function bridgeOnline(env, merchant, t, bridgeId) {
       WHERE merchant = ? AND revoked_ts IS NULL AND last_seen_ts > ?` + (bridgeId ? ' AND id = ?' : '')
   ).bind(...(bridgeId ? [merchant, t - BRIDGE_ONLINE_MS, bridgeId] : [merchant, t - BRIDGE_ONLINE_MS])).first();
   return !!(seen && Number(seen.n));
+}
+const MAX_REPRINT_ATTEMPTS = 8;
+/** @param {string} merchant @param {string} sourceId @param {number} attempt */
+async function reprintId(merchant, sourceId, attempt) {
+  return 'pj_' + await refDigest(merchant, 'reprint:' + sourceId + (attempt ? ':' + attempt : ''));
 }
 const RECOVERABLE = "('expired', 'failed', 'uncertain')";
 const RETRY_DELAY_MS = 10000;
@@ -144,14 +149,18 @@ export async function onRequestGet(context) {
       /* Not printed, for sure or maybe: expired, refused for good, or left
        * uncertain by a lost acknowledgement. Each is offered for 24 h with its
        * state, so nothing ends silently (owner ruling, 26 October). */
-      const rows = await env.DB.prepare(`SELECT id, kind, status, created_ts, expires_ts FROM print_jobs
+      const rows = await env.DB.prepare(`SELECT id, kind, status, created_ts, expires_ts, target FROM print_jobs
         WHERE merchant = ? AND status IN ${RECOVERABLE} AND expires_ts > ? ORDER BY created_ts DESC`).bind(merchant, t - EXPIRED_RETENTION_MS).all();
       // A recovery owns its own lifecycle. Hide its source even for recoveries
       // created before this filter existed; an expired replacement remains recoverable.
+      // A copy that was itself copied again (a later attempt of the same source)
+      // is superseded by that attempt and hidden too.
+      const exists = async (rowId) => !!await env.DB.prepare('SELECT id FROM print_jobs WHERE merchant = ? AND id = ?').bind(merchant, rowId).first();
       const pending = await Promise.all((rows.results || []).map(async (job) => {
-        const replacement = 'pj_' + await refDigest(merchant, 'reprint:' + job.id);
-        const recovered = await env.DB.prepare('SELECT id FROM print_jobs WHERE merchant = ? AND id = ?').bind(merchant, replacement).first();
-        return recovered ? null : job;
+        if (await exists('pj_' + await refDigest(merchant, 'reprint:' + job.id))) return null;
+        const lineage = safeJsonParse(job.target, {}) || {};
+        if (lineage._reprintOf && await exists(await reprintId(merchant, lineage._reprintOf, Number(lineage._attempt || 0) + 1))) return null;
+        return { id: job.id, kind: job.kind, status: job.status, created_ts: job.created_ts, expires_ts: job.expires_ts };
       }));
       return relayJson({ ok: true, jobs: pending.filter(Boolean) }, 200, request);
     }
@@ -271,9 +280,25 @@ export async function onRequestPost(context) {
       const source = await env.DB.prepare(`SELECT * FROM print_jobs WHERE id = ? AND merchant = ? AND expires_ts > ?
           AND ((status IN ('queued', 'expired') AND expires_ts <= ?) OR status IN ('failed', 'uncertain'))`).bind(sourceId, merchant, t - EXPIRED_RETENTION_MS, t).first();
       if (!source) return relayJson({ ok: false, error: 'not-found' }, 404, request);
-      const id = 'pj_' + await refDigest(merchant, 'reprint:' + sourceId);
+      /* One copy per ATTEMPT. A second tap within the same attempt lands on the
+       * same row (a double tap deposits one job). Once that copy has itself
+       * expired or failed, the next Reprint opens attempt n+1, so the original
+       * can always be sent again. A copy that is queued, claimed, done or
+       * uncertain (it may have printed) is returned as it is. */
+      let id = '', attempt = 0;
+      for (; attempt < MAX_REPRINT_ATTEMPTS; attempt++) {
+        const candidate = await reprintId(merchant, sourceId, attempt);
+        const prior = await env.DB.prepare('SELECT status, expires_ts FROM print_jobs WHERE merchant = ? AND id = ?').bind(merchant, candidate).first();
+        if (!prior) { id = candidate; break; }
+        const dead = prior.status === 'expired' || prior.status === 'failed'
+          || (prior.status === 'queued' && Number(prior.expires_ts) <= t);
+        if (!dead) return relayJson({ ok: true, id: candidate }, 200, request);
+      }
+      if (!id) return relayJson({ ok: false, error: 'too-many-reprints' }, 409, request);
       const target = safeJsonParse(source.target, {});
       delete target._refused;
+      target._reprintOf = sourceId;
+      target._attempt = attempt;
       /* The same rule as a deposit: a copy nobody will fetch would expire
        * again in silence, so say relay-offline now and keep the ticket offered. */
       if (!await bridgeOnline(env, merchant, t, target._pin || null)) return relayJson({ ok: false, error: 'relay-offline' }, 409, request);

@@ -111,7 +111,21 @@ function check(ok, label) {
 
   window.KiwiEnv.isReal = wasReal;
   data.set('kiwiLive', '0');
-  check(window.KiwiLive.isOn() === false, 'le refus explicite prime sur le défaut');
+  check(window.KiwiLive.isOn() === true && !data.has('kiwiLive'),
+    'un « 0 » resté dans le stockage ne coupe pas les ventes d\'un vrai commerçant, et il est effacé');
+
+  /* Caisse appairée en local, sans session : le drapeau périmé est ignoré aussi. */
+  window.KiwiEnv.isReal = () => false;
+  data.set('kiwiLive', '0');
+  check(window.KiwiLive.isOn() === true, 'une caisse appairée à un magasin ignore le refus périmé');
+
+  /* En démonstration locale (ni session réelle, ni appairage), le refus reste honoré. */
+  const pairedVenue = data.get('kiwiPairedVenue');
+  data.delete('kiwiPairedVenue');
+  data.set('kiwiLive', '0');
+  check(window.KiwiLive.isOn() === false && data.get('kiwiLive') === '0', 'le refus explicite prime en démonstration locale');
+  data.set('kiwiPairedVenue', pairedVenue);
+  window.KiwiEnv.isReal = wasReal;
 
   delete window.KiwiEnv;
   data.delete('kiwiLive');
@@ -129,5 +143,5 @@ function check(ok, label) {
   check(twinA && twinB && queue().length === 2 && queue()[0].id !== queue()[1].id,
     'deux UUID distincts survivent même avec la même référence imprimée');
 
-  if (!process.exitCode) console.log('\n✓ 15 live-link resilience checks passed.');
+  if (!process.exitCode) console.log('\n✓ 17 live-link resilience checks passed.');
 })().catch((e) => { console.error(e); process.exit(1); });
