@@ -1746,7 +1746,7 @@ section('Whole-project regressions');
     'stock-split-test.mjs',
     'stock-controller-split-test.mjs',
     'stock-strings-split-test.mjs',
-    'hotel-split-test.mjs', 'hotel-reception-split-test.mjs',
+    'hotel-split-test.mjs', 'hotel-core-split-test.mjs', 'hotel-reception-split-test.mjs',
     'interactive-split-test.mjs',
     'venues-split-test.mjs',
     'venues-split-browser-test.mjs',
