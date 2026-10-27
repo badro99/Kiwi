@@ -31,6 +31,7 @@
  * et `null` remonte jusqu'à l'écran.
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
+const menuCatalogSource = require('./menu-catalog-test-source.cjs');
 const coreTestSource = require('./core-test-source.cjs');
 
 const stockTestSource = require('./stock-test-source.cjs');
@@ -337,14 +338,14 @@ const MENU = [
 
   const sw = R('kiwi-sw.js');
   ok('service worker : cost.js est dans la coquille', /'\/assets\/cost\.js(\?v=\d+)?'/.test(sw));
-  const dash = R('dashboard.html');
+  const dash = require('./dashboard-dependencies.cjs').eager(R('dashboard.html'));
   ok('dashboard : cost.js est chargé', /<script src="assets\/cost\.js(\?v=\d+)?"/.test(dash));
   ok('dashboard : cost.js après venue-store.js',
     dash.indexOf('assets/cost.js') > dash.indexOf('assets/venue-store.js'));
   ok('dashboard : cost.js avant menu-catalog.js',
     dash.indexOf('assets/cost.js') < dash.indexOf('assets/menu-catalog.js'));
 
-  const mc = R('assets/menu-catalog.js');
+  const mc = menuCatalogSource();
   ok('carte : le champ coût existe', /data-f-cost/.test(mc));
   ok('carte : la marge vivante existe', /data-f-margin/.test(mc));
   ok('carte : le coût n\'est PAS écrit sur l\'article',

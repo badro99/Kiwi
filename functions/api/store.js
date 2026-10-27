@@ -1,5 +1,6 @@
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
-import { creditSettlementAlerts, creditRefundEdit, refundCreditBook } from './_credit-book-refund.js';
+import { refundCreditBook } from './_credit-book-refund.js';
+import { BOOK_FEATURE, commitBook, getVerticalOps, legacyBook, readBook, withBook, withoutBook } from './_credit-book-store.js';
 import { serviceCapacityConflict } from './_booking-capacity.js';
 // /api/store — les documents PRIVÉS d'un établissement, synchronisés entre
 // appareils. Le même filet que /api/catalog, généralisé.
@@ -842,6 +843,8 @@ export async function onRequestGet(context) {
     return json({ feature, merchant, data: null, rev: 0 });
   }
 
+  if (feature === 'verticalops') return getVerticalOps(request, env, merchant);
+
   try {
     const redact = REDACT[feature] || (PARTIAL[feature] && PARTIAL[feature].hide);
     /* Revalidation (docs/ops/CPU.md, "Store revalidation"). A document whose
@@ -981,7 +984,17 @@ export async function onRequestPost(context) {
   const serverRev = (current && current.rev) || 0;
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
-  if (feature === 'verticalops' && JSON.stringify(mine?.verticals?.epicerie?.data?.carnet || []) !== JSON.stringify(clean.value?.verticals?.epicerie?.data?.carnet || [])) {
+  /* Le carnet de crédit a son propre document (functions/api/_credit-book-store.js).
+   * `book` est le carnet enregistré : la ligne creditbook, ou à défaut la copie
+   * encore rangée dans verticalops. */
+  let book = null;
+  if (feature === 'verticalops') {
+    try { book = await readBook(env, merchant, mine); }
+    catch (_) { return json({ error: 'credit-book-unavailable' }, 503); }
+  }
+  const bookChanged = feature === 'verticalops'
+    && JSON.stringify(book.carnet || []) !== JSON.stringify(legacyBook(clean.value) || []);
+  if (bookChanged) {
     const session = await activeAccountSession(request, env);
     const owner = session && await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?').bind(merchant).first();
     if (!(session && owner?.account_id === session.aid) && !(await isTillFor(request, env, merchant))) {
@@ -1009,11 +1022,46 @@ export async function onRequestPost(context) {
   // Écriture basée sur une révision périmée : on ne l'applique PAS. On renvoie la
   // copie serveur pour que le client fusionne et repropose. Sans ça, deux
   // appareils ouverts en même temps se recouvrent l'un l'autre.
-  if (serverRev && baseRev !== serverRev) {
-    return json({ error: 'stale', feature, rev: serverRev, data: view(mine) }, 409);
+  /* Le carnet passe avant la révision de verticalops : ses lignes ne font que
+   * s'ajouter, une caisse qui n'a pas vu celles d'une autre n'est donc pas en
+   * conflit avec elle. Une modification d'un autre métier ne fait plus échouer
+   * une dette notée au comptoir. */
+  let bookSaved = null;
+  if (feature === 'verticalops') {
+    try {
+      bookSaved = await commitBook(env, merchant, mine, legacyBook(clean.value) || [], {
+        now,
+        /* Les carnets pas encore déménagés vivent encore dans verticalops : la
+         * garde cherche dans les deux. */
+        guard: async (next, cur, bookText) => (await foreignCopy(env, { table: 'store', merchant, feature: BOOK_FEATURE, next, current: cur, text: bookText }))
+          || foreignCopy(env, { table: 'store', merchant, feature: 'verticalops', next, current: cur, text: bookText }),
+        keepHistory: () => keepHistory(env, 'store', merchant, BOOK_FEATURE),
+      });
+    } catch (_) { return json({ error: 'credit-book-unavailable' }, 503); }
+    if (!bookSaved.ok) return json({ error: bookSaved.error, feature }, bookSaved.status);
+    if (bookSaved.changed) await poke(env, merchant, feature);
   }
 
-  if (feature === 'verticalops' && creditRefundEdit(mine, clean.value)) return json({ error: 'credit-refund-use-operation' }, 409);
+  /* Un appareil dont le carnet est en retard n'est pas en conflit : ses lignes
+   * neuves sont ajoutées ci-dessus, les autres restent, et sa prochaine lecture
+   * voit le carnet complet (l'ETag de verticalops couvre le carnet). */
+  if (serverRev && baseRev !== serverRev) {
+    const latest = feature === 'verticalops' && bookSaved.exists ? withBook(mine, bookSaved.carnet) : mine;
+    return json({ error: 'stale', feature, rev: serverRev, data: view(latest) }, 409);
+  }
+
+  /* Le carnet est écrit dans son document : verticalops ne le garde plus.
+   * Tant qu'aucune ligne creditbook n'existe (commerçant sans client à crédit),
+   * la copie reste où l'appareil l'a écrite. */
+  if (feature === 'verticalops' && bookSaved.exists) {
+    clean.value = withoutBook(clean.value);
+    text = JSON.stringify(clean.value);
+    /* Rien d'autre n'a bougé : pas de nouvelle révision de verticalops, sinon
+     * chaque dette notée redeviendrait un conflit pour les autres appareils. */
+    if (current && text === JSON.stringify(mine)) {
+      return json({ ok: true, feature, merchant, rev: serverRev, updated_ts: now, bytes: text.length });
+    }
+  }
 
   if (partial) {
     clean.value = partial.keep(mine, clean.value);
@@ -1021,7 +1069,6 @@ export async function onRequestPost(context) {
   }
   /* After the merge, not before: two offline tills each send only their own
      settlement, and only the combined book shows the same debt paid twice. */
-  if (feature === 'verticalops') { creditSettlementAlerts(clean.value); text = JSON.stringify(clean.value); }
   if (partial && text.length > FEATURES[feature].max) {
     return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
   }

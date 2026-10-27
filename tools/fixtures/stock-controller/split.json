@@ -1,0 +1,446 @@
+{
+  "files": {
+    "assets/stock.js": {
+      "fixture": "tools/fixtures/stock-controller/stock.js.gz",
+      "sha256": "533f507058527c999b915f2a4b49f2e0697de76bebdf22111d188cfef6849bd7",
+      "stamps": [
+        "assets/stock/loss.js?v=1",
+        "assets/stock/counts.js?v=3",
+        "assets/stock/purchasing.js?v=2",
+        "assets/stock/intake.js?v=4",
+        "assets/stock/catalog.js?v=1"
+      ]
+    },
+    "assets/stock/intake.js": {
+      "fixture": "tools/fixtures/stock-controller/intake.js.gz",
+      "sha256": "5c54dec7898790fa88ae139a3accbcab23dfc1c83c6d2f4954283d69de973607",
+      "stamps": []
+    },
+    "assets/stock/catalog.js": {
+      "fixture": "tools/fixtures/stock-controller/catalog.js.gz",
+      "sha256": "43526c0e6dbfba966593c978b4fb5c1c805041f16554c399539b96e2f56369c2",
+      "stamps": []
+    },
+    "assets/stock/counts.js": {
+      "fixture": "tools/fixtures/stock-controller/counts.js.gz",
+      "sha256": "f1e2b851f3e51a6138c40866c606cd6cbc284742f6a50b3bfaa0f8d2667e8c74",
+      "stamps": []
+    }
+  },
+  "parts": [
+    {
+      "file": "assets/stock/overview.js",
+      "group": "overview",
+      "deps": [
+        "esc",
+        "fmtDateShort",
+        "fmtMad",
+        "fmtPct",
+        "foodCostMonth",
+        "getInv",
+        "getSup",
+        "isFusion",
+        "isRetailStock",
+        "monthlyRevenue",
+        "overviewAlertRows",
+        "renderAlertCard",
+        "retailProcurementDoc",
+        "stShowReal",
+        "statusOf",
+        "stockBusinessDateDate",
+        "stockCalendarDates",
+        "svg",
+        "t",
+        "totalValue",
+        "weeklyRevenue"
+      ],
+      "prefix": "/* Stock overview. Reads only the listed bridge dependencies and declared browser services. */\nwindow.KiwiStockInternal.install('overview', (S) => {\n  'use strict';\n  const { esc, fmtDateShort, fmtMad, fmtPct, foodCostMonth, getInv, getSup, isFusion, isRetailStock, monthlyRevenue, overviewAlertRows, renderAlertCard, retailProcurementDoc, stShowReal, statusOf, stockBusinessDateDate, stockCalendarDates, svg, t, totalValue, weeklyRevenue } = S;\n\n  ",
+      "suffix": "return { renderOverview, renderKpiCards, renderAiCard, renderDeliveryStrip, computeDeliveriesForDay, computeNextDelivery, openDayDetail };\n});\n",
+      "fragments": [
+        {
+          "name": "renderOverview",
+          "offset": 449,
+          "length": 8431,
+          "replacement": "function renderOverview(...args) { return stockParts.overview.renderOverview.apply(this, args); }"
+        },
+        {
+          "name": "renderKpiCards",
+          "offset": 8884,
+          "length": 2278,
+          "replacement": "function renderKpiCards(...args) { return stockParts.overview.renderKpiCards.apply(this, args); }"
+        },
+        {
+          "name": "renderAiCard",
+          "offset": 11166,
+          "length": 303,
+          "replacement": "function renderAiCard(...args) { return stockParts.overview.renderAiCard.apply(this, args); }"
+        },
+        {
+          "name": "renderDeliveryStrip",
+          "offset": 11473,
+          "length": 1137,
+          "replacement": "function renderDeliveryStrip(...args) { return stockParts.overview.renderDeliveryStrip.apply(this, args); }"
+        },
+        {
+          "name": "computeDeliveriesForDay",
+          "offset": 12614,
+          "length": 1455,
+          "replacement": "function computeDeliveriesForDay(...args) { return stockParts.overview.computeDeliveriesForDay.apply(this, args); }"
+        },
+        {
+          "name": "computeNextDelivery",
+          "offset": 14073,
+          "length": 695,
+          "replacement": "function computeNextDelivery(...args) { return stockParts.overview.computeNextDelivery.apply(this, args); }"
+        },
+        {
+          "name": "openDayDetail",
+          "offset": 14772,
+          "length": 863,
+          "replacement": "function openDayDetail(...args) { return stockParts.overview.openDayDetail.apply(this, args); }"
+        }
+      ],
+      "globals": [
+        "Kiwi",
+        "KiwiInventoryConsumption",
+        "KiwiStockInternal"
+      ]
+    },
+    {
+      "file": "assets/stock/alerts.js",
+      "group": "alerts",
+      "deps": [
+        "IGNORE_KEY",
+        "M86_COPY",
+        "TIER_LOW",
+        "actualLastDelivery",
+        "catLabel",
+        "closeTopModal",
+        "currentStockFor",
+        "currentVenueId",
+        "daysOfStock",
+        "esc",
+        "fmtDateShort",
+        "fmtMad",
+        "fmtUnit",
+        "getInv",
+        "isAlertIgnored",
+        "lang",
+        "stMarked86",
+        "stOverlayRaw",
+        "statusOf",
+        "svg",
+        "t",
+        "topBackdrop",
+        "wireDismiss"
+      ],
+      "prefix": "/* Stock alerts. Reads only the listed bridge dependencies and declared browser services. */\nwindow.KiwiStockInternal.install('alerts', (S) => {\n  'use strict';\n  const { IGNORE_KEY, M86_COPY, TIER_LOW, actualLastDelivery, catLabel, closeTopModal, currentStockFor, currentVenueId, daysOfStock, esc, fmtDateShort, fmtMad, fmtUnit, getInv, isAlertIgnored, lang, stMarked86, stOverlayRaw, statusOf, svg, t, topBackdrop, wireDismiss } = S;\n\n  ",
+      "suffix": "return { stockConfiguredSupplierName, stockSupplierEvidence, stockAlertState, computeTier1LowAlerts, overviewAlertRows, ignoredAlerts, ignoreAlert, openMark86, renderAlertCard, dishesUsing };\n});\n",
+      "fragments": [
+        {
+          "name": "stockConfiguredSupplierName",
+          "offset": 439,
+          "length": 265,
+          "replacement": "function stockConfiguredSupplierName(...args) { return stockParts.alerts.stockConfiguredSupplierName.apply(this, args); }"
+        },
+        {
+          "name": "stockSupplierEvidence",
+          "offset": 708,
+          "length": 484,
+          "replacement": "function stockSupplierEvidence(...args) { return stockParts.alerts.stockSupplierEvidence.apply(this, args); }"
+        },
+        {
+          "name": "stockAlertState",
+          "offset": 1196,
+          "length": 468,
+          "replacement": "function stockAlertState(...args) { return stockParts.alerts.stockAlertState.apply(this, args); }"
+        },
+        {
+          "name": "computeTier1LowAlerts",
+          "offset": 1668,
+          "length": 2430,
+          "replacement": "function computeTier1LowAlerts(...args) { return stockParts.alerts.computeTier1LowAlerts.apply(this, args); }"
+        },
+        {
+          "name": "overviewAlertRows",
+          "offset": 4102,
+          "length": 569,
+          "replacement": "function overviewAlertRows(...args) { return stockParts.alerts.overviewAlertRows.apply(this, args); }"
+        },
+        {
+          "name": "ignoredAlerts",
+          "offset": 4675,
+          "length": 287,
+          "replacement": "function ignoredAlerts(...args) { return stockParts.alerts.ignoredAlerts.apply(this, args); }"
+        },
+        {
+          "name": "ignoreAlert",
+          "offset": 4966,
+          "length": 207,
+          "replacement": "function ignoreAlert(...args) { return stockParts.alerts.ignoreAlert.apply(this, args); }"
+        },
+        {
+          "name": "openMark86",
+          "offset": 5177,
+          "length": 3735,
+          "replacement": "function openMark86(...args) { return stockParts.alerts.openMark86.apply(this, args); }"
+        },
+        {
+          "name": "renderAlertCard",
+          "offset": 8916,
+          "length": 4703,
+          "replacement": "function renderAlertCard(...args) { return stockParts.alerts.renderAlertCard.apply(this, args); }"
+        },
+        {
+          "name": "dishesUsing",
+          "offset": 13623,
+          "length": 567,
+          "replacement": "function dishesUsing(...args) { return stockParts.alerts.dishesUsing.apply(this, args); }"
+        }
+      ],
+      "globals": [
+        "Kiwi",
+        "KiwiCloudDoc",
+        "KiwiEnv",
+        "KiwiInventoryConsumption",
+        "KiwiMenuStore",
+        "KiwiRestaurantRecipes",
+        "KiwiStockInternal",
+        "KiwiVenue"
+      ]
+    },
+    {
+      "file": "assets/stock/state.js",
+      "group": "state",
+      "deps": [
+        "currentStockFor",
+        "retailCatalog",
+        "retailSetProductStock",
+        "stShowReal",
+        "stockLocationId",
+        "stockUnitId"
+      ],
+      "prefix": "/* Stock state owner. Exports named ledger, movement, count and receipt methods.\n * Reads injected functions only; browser services are listed in the split contract. */\nwindow.KiwiStockState = (read) => {\n  'use strict';\n  const stStockOverrides = {};\n  let stCountsCache = [];\n  let stCountsLastFetched = 0;\n  const currentStockFor = (...args) => read().currentStockFor(...args);\n  const retailCatalog = (...args) => read().retailCatalog(...args);\n  const retailSetProductStock = (...args) => read().retailSetProductStock(...args);\n  const stShowReal = (...args) => read().stShowReal(...args);\n  const stockLocationId = (...args) => read().stockLocationId(...args);\n  const stockUnitId = (...args) => read().stockUnitId(...args);\n\n  ",
+      "suffix": "return Object.freeze({ ledgerOpeningFor, moveStock, moveRetailStock, countStock,\n    overrides: () => stStockOverrides,\n    counts: () => stCountsCache, replaceCounts: value => { stCountsCache = value; },\n    countsFetchedAt: () => stCountsLastFetched, markCountsFetched: value => { stCountsLastFetched = value; },\n    stLegacyPostAll: stLegacyPostAllOwner, stIntakePostAll: stIntakePostAllOwner, fetchServerCounts: fetchServerCountsOwner,\n  });\n};\n",
+      "fragments": [
+        {
+          "name": "ledgerOpeningFor",
+          "offset": 734,
+          "length": 524,
+          "replacement": "function ledgerOpeningFor(...args) { return stockState.ledgerOpeningFor.apply(this, args); }"
+        },
+        {
+          "name": "moveStock",
+          "offset": 1262,
+          "length": 1223,
+          "replacement": "function moveStock(...args) { return stockState.moveStock.apply(this, args); }"
+        },
+        {
+          "name": "moveRetailStock",
+          "offset": 2489,
+          "length": 310,
+          "replacement": "function moveRetailStock(...args) { return stockState.moveRetailStock.apply(this, args); }"
+        },
+        {
+          "name": "countStock",
+          "offset": 2803,
+          "length": 256,
+          "replacement": "function countStock(...args) { return stockState.countStock.apply(this, args); }"
+        }
+      ],
+      "extra": [
+        {
+          "file": "assets/stock/intake.js",
+          "name": "stIntakePostAll",
+          "offset": 3260,
+          "length": 4647,
+          "replacement": "function stIntakePostAll(...args) { return S.stockState.stIntakePostAll(S, { stIntakePostingCanonical, stIntakePostingIds, stIntakePostingLines, stIntakePrepare, stIntakeSupplierId, stSha256Hex }).apply(this, args); }"
+        },
+        {
+          "file": "assets/stock/counts.js",
+          "name": "fetchServerCounts",
+          "offset": 7999,
+          "length": 426,
+          "replacement": "function fetchServerCounts(...args) { return S.stockState.fetchServerCounts(S, {  }).apply(this, args); }"
+        },
+        {
+          "file": "assets/stock/intake.js",
+          "name": "stLegacyPostAll",
+          "offset": 8535,
+          "length": 2628,
+          "replacement": "function stLegacyPostAll(...args) { return S.stockState.stLegacyPostAll(S, { stUpsertSupplierCard }).apply(this, args); }"
+        }
+      ],
+      "globals": [
+        "KiwiCost",
+        "KiwiInventory",
+        "KiwiProcurement",
+        "KiwiStockState"
+      ]
+    },
+    {
+      "file": "assets/stock/movements.js",
+      "from": "assets/stock/catalog.js",
+      "group": "movements",
+      "deps": [
+        "esc",
+        "fmtMad",
+        "fmtUnit",
+        "lang",
+        "stOverlayRaw",
+        "stShowReal",
+        "svg",
+        "t"
+      ],
+      "prefix": "/* Stock movement journal. Reads only injected helpers and declared browser services. */\nwindow.KiwiStockInternal.install('movements', (S) => {\n  'use strict';\n  const { esc, fmtMad, fmtUnit, lang, stOverlayRaw, stShowReal, svg, t } = S;\n\n  ",
+      "suffix": "return { movementLabel, itemHistory, renderRealItemMovementSummary, renderRealItemHistory };\n});\n",
+      "fragments": [
+        {
+          "name": "movementLabel",
+          "offset": 241,
+          "length": 582,
+          "replacement": "function movementLabel(...args) { return S.stockMovements.movementLabel.apply(this, args); }"
+        },
+        {
+          "name": "itemHistory",
+          "offset": 827,
+          "length": 120,
+          "replacement": "function itemHistory(...args) { return S.stockMovements.itemHistory.apply(this, args); }"
+        },
+        {
+          "name": "renderRealItemMovementSummary",
+          "offset": 951,
+          "length": 1087,
+          "replacement": "function renderRealItemMovementSummary(...args) { return S.stockMovements.renderRealItemMovementSummary.apply(this, args); }"
+        },
+        {
+          "name": "renderRealItemHistory",
+          "offset": 2042,
+          "length": 5977,
+          "replacement": "function renderRealItemHistory(...args) { return S.stockMovements.renderRealItemHistory.apply(this, args); }"
+        }
+      ],
+      "globals": [
+        "KiwiInventory",
+        "KiwiStockInternal"
+      ]
+    }
+  ],
+  "edits": [
+    {
+      "before": "  let stCountsCache = [];\n  let stCountsLastFetched = 0;\n  const stStockOverrides = {};",
+      "after": "  const stockState = window.KiwiStockState(() => ({ currentStockFor, retailCatalog, retailSetProductStock, stShowReal, stockLocationId, stockUnitId }));\n  const stStockOverrides = stockState.overrides();"
+    },
+    {
+      "before": "get stCountsCache() { return stCountsCache; }, set stCountsCache(value) { stCountsCache = value; }",
+      "after": "get stCountsCache() { return stockState.counts(); }, set stCountsCache(value) { stockState.replaceCounts(value); }"
+    },
+    {
+      "before": "get stCountsLastFetched() { return stCountsLastFetched; }, set stCountsLastFetched(value) { stCountsLastFetched = value; }",
+      "after": "get stCountsLastFetched() { return stockState.countsFetchedAt(); }, set stCountsLastFetched(value) { stockState.markCountsFetched(value); }"
+    },
+    {
+      "before": "  const stockScope = {",
+      "after": "  const stockScope = {\n    stockState,\n    get IGNORE_KEY() { return IGNORE_KEY; },\n    get M86_COPY() { return M86_COPY; },\n    get TIER_LOW() { return TIER_LOW; },\n    get actualLastDelivery() { return actualLastDelivery; },\n    get currentVenueId() { return currentVenueId; },\n    get foodCostMonth() { return foodCostMonth; },\n    get isAlertIgnored() { return isAlertIgnored; },\n    get isFusion() { return isFusion; },\n    get monthlyRevenue() { return monthlyRevenue; },\n    get overviewAlertRows() { return overviewAlertRows; },\n    get renderAlertCard() { return renderAlertCard; },\n    get stMarked86() { return stMarked86; },\n    get stockBusinessDateDate() { return stockBusinessDateDate; },\n    get stockCalendarDates() { return stockCalendarDates; },\n    get totalValue() { return totalValue; },\n    get weeklyRevenue() { return weeklyRevenue; },"
+    },
+    {
+      "before": "  const stockUrls = [",
+      "after": "  const stockUrls = [\n    'assets/stock/overview.js?v=1',\n    'assets/stock/alerts.js?v=1',"
+    },
+    {
+      "before": "  const stockScope = {",
+      "after": "  const stockScope = {\n    get stockMovements() { return stockParts.movements; },"
+    },
+    {
+      "before": "  const stockUrls = [",
+      "after": "  const stockUrls = [\n    'assets/stock/movements.js?v=1',"
+    }
+  ],
+  "legacyBoundaries": {
+    "assets/stock/catalog.js": {
+      "globals": [
+        "Kiwi",
+        "KiwiInventory",
+        "KiwiMenuNutrition",
+        "KiwiProcurement",
+        "KiwiRestaurantRecipes",
+        "KiwiStockInternal"
+      ],
+      "state": [
+        "ciqualPromise",
+        "stCatFilter",
+        "stPageActive",
+        "stUserCategories",
+        "stUserItems",
+        "stockMovements"
+      ]
+    },
+    "assets/stock/intake.js": {
+      "globals": [
+        "Kiwi",
+        "KiwiStockInternal",
+        "crypto",
+        "localStorage",
+        "location",
+        "pdfjsLib"
+      ],
+      "state": [
+        "_pdfjsPromise",
+        "stConflictStash",
+        "stPageActive",
+        "stockState"
+      ]
+    },
+    "assets/stock/counts.js": {
+      "globals": [
+        "Kiwi",
+        "KiwiBoutiqueCatalog",
+        "KiwiDayReport",
+        "KiwiInventory",
+        "KiwiStockInternal",
+        "KiwiVenue"
+      ],
+      "state": [
+        "stCountDateFilter",
+        "stCountSearch",
+        "stCountStatusFilter",
+        "stCountSubTab",
+        "stCountsCache",
+        "stCountsLastFetched",
+        "stItemSubView",
+        "stPageActive",
+        "stReviewBusy",
+        "stockState"
+      ]
+    },
+    "assets/stock/loss.js": {
+      "globals": [
+        "Kiwi",
+        "KiwiDayReport",
+        "KiwiInventory",
+        "KiwiStockInternal"
+      ],
+      "state": [
+        "stPageActive",
+        "stWasteDateRange",
+        "stWasteFilterReason",
+        "stWasteSearch"
+      ]
+    },
+    "assets/stock/purchasing.js": {
+      "globals": [
+        "Kiwi",
+        "KiwiCost",
+        "KiwiInventory",
+        "KiwiProcurement",
+        "KiwiRestaurantRecipes",
+        "KiwiStockInternal",
+        "open"
+      ],
+      "state": [
+        "stPageActive",
+        "stUserSuppliers"
+      ]
+    }
+  }
+}

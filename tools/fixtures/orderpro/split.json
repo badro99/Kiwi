@@ -1,0 +1,1198 @@
+{
+  "sha256": "1aa175ccba2979c633375daac55aad5c83f12a4eaddc9d7227f6521d2cef1a08",
+  "parts": [
+    {
+      "name": "session",
+      "file": "assets/orderpro/session.js",
+      "reads": [
+        "LIVE",
+        "NET",
+        "bootState",
+        "cart",
+        "currentOrderId",
+        "gotoScreen",
+        "onSessionClosed",
+        "sentKey",
+        "sentLines",
+        "sentOrders",
+        "sessionTotal",
+        "showToast",
+        "t",
+        "toCents"
+      ],
+      "exports": [
+        "rebuildSent",
+        "saveSent",
+        "loadSent",
+        "clearSent",
+        "SESSION"
+      ],
+      "header": "/* OrderPro session. Exports: rebuildSent, saveSent, loadSent, clearSent, SESSION.\n * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.\n * Classic lexical adapter intentionally preserves original function bodies, including assignments. */\nKiwiOrderMenu.orderProParts.define('session', [\"LIVE\",\"NET\",\"bootState\",\"cart\",\"currentOrderId\",\"gotoScreen\",\"onSessionClosed\",\"sentKey\",\"sentLines\",\"sentOrders\",\"sessionTotal\",\"showToast\",\"t\",\"toCents\"], function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({ rebuildSent, saveSent, loadSent, clearSent, SESSION });\n  }\n});\n\n/* One private state owner, with named methods and capability-limited views. */\nKiwiOrderMenu.orderProParts.owner = function () {\n  const values = Object.create(null);\n  const initialize = (name, value) => {\n    if (Object.hasOwn(values, name)) throw new Error('Duplicate OrderPro state: ' + name);\n    values[name] = value;\n  };\n  const read = name => {\n    if (!Object.hasOwn(values, name)) throw new ReferenceError(name + ' is not initialized');\n    return values[name];\n  };\n  const write = (name, value) => { read(name); values[name] = value; return value; };\n  const view = names => Object.defineProperties(Object.create(null), Object.fromEntries(names.map(name => [name, {\n    enumerable: true, get: () => read(name), set: value => write(name, value),\n  }])));\n  return Object.freeze({ initialize, read, write, view });\n};\n",
+      "fragments": [
+        {
+          "name": "rebuildSent",
+          "start": 40520,
+          "end": 40874,
+          "offset": 539,
+          "length": 354,
+          "marker": "    instances.session = KiwiOrderMenu.orderProParts.create('session', {\n      get LIVE() { return LIVE; },\n      get NET() { return NET; },\n      get bootState() { return bootState; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get currentOrderId() { return currentOrderId; }, set currentOrderId(value) { currentOrderId = value; },\n      get gotoScreen() { return gotoScreen; },\n      get onSessionClosed() { return onSessionClosed; },\n      get sentKey() { return sentKey; },\n      get sentLines() { return sentLines; }, set sentLines(value) { sentLines = value; },\n      get sentOrders() { return sentOrders; }, set sentOrders(value) { sentOrders = value; },\n      get sessionTotal() { return sessionTotal; }, set sessionTotal(value) { sessionTotal = value; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n      get toCents() { return toCents; },\n    });\n\n    // OrderPro session: rebuildSent is supplied by its private factory.\n"
+        },
+        {
+          "name": "saveSent",
+          "start": 40874,
+          "end": 41131,
+          "offset": 894,
+          "length": 257,
+          "marker": "    // OrderPro session: saveSent is supplied by its private factory.\n"
+        },
+        {
+          "name": "loadSent",
+          "start": 41261,
+          "end": 41874,
+          "offset": 1152,
+          "length": 613,
+          "marker": "    // OrderPro session: loadSent is supplied by its private factory.\n"
+        },
+        {
+          "name": "clearSent",
+          "start": 41874,
+          "end": 42057,
+          "offset": 1766,
+          "length": 183,
+          "marker": "    // OrderPro session: clearSent is supplied by its private factory.\n"
+        },
+        {
+          "name": "SESSION",
+          "start": 98734,
+          "end": 105178,
+          "offset": 1950,
+          "length": 6444,
+          "marker": "    // OrderPro session: SESSION is supplied by its private factory.\n"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "file": "assets/orderpro/table.js",
+      "reads": [
+        "$",
+        "SESSION",
+        "gotoScreen",
+        "guestReady",
+        "onSessionClosed",
+        "orderMode",
+        "t",
+        "tableNumber"
+      ],
+      "exports": [
+        "pressKey",
+        "renderTableDisplay",
+        "updateContinueState",
+        "chooseMode",
+        "seatHere",
+        "applyMenuMode",
+        "guestLand",
+        "commitTable"
+      ],
+      "header": "/* OrderPro table. Exports: pressKey, renderTableDisplay, updateContinueState, chooseMode, seatHere, applyMenuMode, guestLand, commitTable.\n * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.\n * Classic lexical adapter intentionally preserves original function bodies, including assignments. */\nKiwiOrderMenu.orderProParts.define('table', [\"$\",\"SESSION\",\"gotoScreen\",\"guestReady\",\"onSessionClosed\",\"orderMode\",\"t\",\"tableNumber\"], function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({ pressKey, renderTableDisplay, updateContinueState, chooseMode, seatHere, applyMenuMode, guestLand, commitTable });\n  }\n});\n",
+      "fragments": [
+        {
+          "name": "pressKey",
+          "start": 44000,
+          "end": 44390,
+          "offset": 526,
+          "length": 390,
+          "marker": "    instances.table = KiwiOrderMenu.orderProParts.create('table', {\n      get $() { return $; },\n      get SESSION() { return SESSION; },\n      get gotoScreen() { return gotoScreen; },\n      get guestReady() { return guestReady; }, set guestReady(value) { guestReady = value; },\n      get onSessionClosed() { return onSessionClosed; },\n      get orderMode() { return orderMode; }, set orderMode(value) { orderMode = value; },\n      get t() { return t; },\n      get tableNumber() { return tableNumber; }, set tableNumber(value) { tableNumber = value; },\n    });\n\n    // OrderPro table: pressKey is supplied by its private factory.\n"
+        },
+        {
+          "name": "renderTableDisplay",
+          "start": 44390,
+          "end": 44705,
+          "offset": 917,
+          "length": 315,
+          "marker": "    // OrderPro table: renderTableDisplay is supplied by its private factory.\n"
+        },
+        {
+          "name": "updateContinueState",
+          "start": 44705,
+          "end": 44850,
+          "offset": 1233,
+          "length": 145,
+          "marker": "    // OrderPro table: updateContinueState is supplied by its private factory.\n"
+        },
+        {
+          "name": "chooseMode",
+          "start": 114897,
+          "end": 115402,
+          "offset": 1379,
+          "length": 505,
+          "marker": "    // OrderPro table: chooseMode is supplied by its private factory.\n"
+        },
+        {
+          "name": "seatHere",
+          "start": 115612,
+          "end": 116123,
+          "offset": 1885,
+          "length": 511,
+          "marker": "    // OrderPro table: seatHere is supplied by its private factory.\n"
+        },
+        {
+          "name": "applyMenuMode",
+          "start": 116124,
+          "end": 117249,
+          "offset": 2397,
+          "length": 1125,
+          "marker": "    // OrderPro table: applyMenuMode is supplied by its private factory.\n"
+        },
+        {
+          "name": "guestLand",
+          "start": 117487,
+          "end": 117766,
+          "offset": 3523,
+          "length": 279,
+          "marker": "    // OrderPro table: guestLand is supplied by its private factory.\n"
+        },
+        {
+          "name": "commitTable",
+          "start": 117837,
+          "end": 118051,
+          "offset": 3803,
+          "length": 214,
+          "marker": "    // OrderPro table: commitTable is supplied by its private factory.\n"
+        }
+      ]
+    },
+    {
+      "name": "menu",
+      "file": "assets/orderpro/menu.js",
+      "reads": [
+        "$",
+        "$$",
+        "I18N",
+        "ICON_CLASS",
+        "MENU",
+        "MENU_ALL",
+        "MENU_I18N",
+        "MENU_SUBTABS",
+        "OPT",
+        "addLineToCart",
+        "availabilitySignature",
+        "cart",
+        "currentLang",
+        "customizerEditingKey",
+        "customizerEditingQty",
+        "customizerItem",
+        "customizerNote",
+        "customizerSelections",
+        "escapeHtml",
+        "itemI18n",
+        "itemOf",
+        "menuTr",
+        "money",
+        "showToast",
+        "t",
+        "toCents"
+      ],
+      "exports": [
+        "feedMedia",
+        "dishMedia",
+        "dishTag",
+        "renderMenu",
+        "renderMenuSubtabs",
+        "activeMenuFilter",
+        "choiceLabel",
+        "groupLabel",
+        "choiceEmoji",
+        "describeOptions",
+        "describeOptionChoices",
+        "describeOptionVisuals",
+        "standaloneMenuItem",
+        "handleAddClick",
+        "initialCustomizerSelections",
+        "unansweredRequiredOption",
+        "syncCustomizerGate",
+        "openCustomizer",
+        "closeCustomizer",
+        "selectCustomizerChoice",
+        "customizerUnitPrice",
+        "refreshCustomizerPrice",
+        "confirmCustomizer",
+        "availabilityOf",
+        "bootRestaurant"
+      ],
+      "header": "/* OrderPro menu. Exports: feedMedia, dishMedia, dishTag, renderMenu, renderMenuSubtabs, activeMenuFilter, choiceLabel, groupLabel, choiceEmoji, describeOptions, describeOptionChoices, describeOptionVisuals, standaloneMenuItem, handleAddClick, initialCustomizerSelections, unansweredRequiredOption, syncCustomizerGate, openCustomizer, closeCustomizer, selectCustomizerChoice, customizerUnitPrice, refreshCustomizerPrice, confirmCustomizer, availabilityOf, bootRestaurant.\n * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.\n * Classic lexical adapter intentionally preserves original function bodies, including assignments. */\nKiwiOrderMenu.orderProParts.define('menu', [\"$\",\"$$\",\"I18N\",\"ICON_CLASS\",\"MENU\",\"MENU_ALL\",\"MENU_I18N\",\"MENU_SUBTABS\",\"OPT\",\"addLineToCart\",\"availabilitySignature\",\"cart\",\"currentLang\",\"customizerEditingKey\",\"customizerEditingQty\",\"customizerItem\",\"customizerNote\",\"customizerSelections\",\"escapeHtml\",\"itemI18n\",\"itemOf\",\"menuTr\",\"money\",\"showToast\",\"t\",\"toCents\"], function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({ feedMedia, dishMedia, dishTag, renderMenu, renderMenuSubtabs, activeMenuFilter, choiceLabel, groupLabel, choiceEmoji, describeOptions, describeOptionChoices, describeOptionVisuals, standaloneMenuItem, handleAddClick, initialCustomizerSelections, unansweredRequiredOption, syncCustomizerGate, openCustomizer, closeCustomizer, selectCustomizerChoice, customizerUnitPrice, refreshCustomizerPrice, confirmCustomizer, availabilityOf, bootRestaurant });\n  }\n});\n",
+      "fragments": [
+        {
+          "name": "feedMedia",
+          "start": 48020,
+          "end": 50249,
+          "offset": 1089,
+          "length": 2229,
+          "marker": "    instances.menu = KiwiOrderMenu.orderProParts.create('menu', {\n      get $() { return $; },\n      get $$() { return $$; },\n      get I18N() { return I18N; },\n      get ICON_CLASS() { return ICON_CLASS; },\n      get MENU() { return MENU; },\n      get MENU_ALL() { return MENU_ALL; },\n      get MENU_I18N() { return MENU_I18N; },\n      get MENU_SUBTABS() { return MENU_SUBTABS; },\n      get OPT() { return OPT; },\n      get addLineToCart() { return addLineToCart; },\n      get availabilitySignature() { return availabilitySignature; }, set availabilitySignature(value) { availabilitySignature = value; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get currentLang() { return currentLang; },\n      get customizerEditingKey() { return customizerEditingKey; }, set customizerEditingKey(value) { customizerEditingKey = value; },\n      get customizerEditingQty() { return customizerEditingQty; }, set customizerEditingQty(value) { customizerEditingQty = value; },\n      get customizerItem() { return customizerItem; }, set customizerItem(value) { customizerItem = value; },\n      get customizerNote() { return customizerNote; }, set customizerNote(value) { customizerNote = value; },\n      get customizerSelections() { return customizerSelections; }, set customizerSelections(value) { customizerSelections = value; },\n      get escapeHtml() { return escapeHtml; },\n      get itemI18n() { return itemI18n; },\n      get itemOf() { return itemOf; },\n      get menuTr() { return menuTr; },\n      get money() { return money; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n      get toCents() { return toCents; },\n    });\n\n    // OrderPro menu: feedMedia is supplied by its private factory.\n"
+        },
+        {
+          "name": "dishMedia",
+          "start": 50533,
+          "end": 51882,
+          "offset": 3319,
+          "length": 1349,
+          "marker": "    // OrderPro menu: dishMedia is supplied by its private factory.\n"
+        },
+        {
+          "name": "dishTag",
+          "start": 51882,
+          "end": 52011,
+          "offset": 4669,
+          "length": 129,
+          "marker": "    // OrderPro menu: dishTag is supplied by its private factory.\n"
+        },
+        {
+          "name": "renderMenu",
+          "start": 52012,
+          "end": 53543,
+          "offset": 4799,
+          "length": 1531,
+          "marker": "    // OrderPro menu: renderMenu is supplied by its private factory.\n"
+        },
+        {
+          "name": "renderMenuSubtabs",
+          "start": 53544,
+          "end": 54019,
+          "offset": 6331,
+          "length": 475,
+          "marker": "    // OrderPro menu: renderMenuSubtabs is supplied by its private factory.\n"
+        },
+        {
+          "name": "activeMenuFilter",
+          "start": 54020,
+          "end": 54234,
+          "offset": 6807,
+          "length": 214,
+          "marker": "    // OrderPro menu: activeMenuFilter is supplied by its private factory.\n"
+        },
+        {
+          "name": "choiceLabel",
+          "start": 55758,
+          "end": 57833,
+          "offset": 7022,
+          "length": 2075,
+          "marker": "    // OrderPro menu: choiceLabel is supplied by its private factory.\n"
+        },
+        {
+          "name": "groupLabel",
+          "start": 57833,
+          "end": 58511,
+          "offset": 9098,
+          "length": 678,
+          "marker": "    // OrderPro menu: groupLabel is supplied by its private factory.\n"
+        },
+        {
+          "name": "choiceEmoji",
+          "start": 58511,
+          "end": 58639,
+          "offset": 9777,
+          "length": 128,
+          "marker": "    // OrderPro menu: choiceEmoji is supplied by its private factory.\n"
+        },
+        {
+          "name": "describeOptions",
+          "start": 58639,
+          "end": 59718,
+          "offset": 9906,
+          "length": 1079,
+          "marker": "    // OrderPro menu: describeOptions is supplied by its private factory.\n"
+        },
+        {
+          "name": "describeOptionChoices",
+          "start": 59718,
+          "end": 60274,
+          "offset": 10986,
+          "length": 556,
+          "marker": "    // OrderPro menu: describeOptionChoices is supplied by its private factory.\n"
+        },
+        {
+          "name": "describeOptionVisuals",
+          "start": 60274,
+          "end": 60938,
+          "offset": 11543,
+          "length": 664,
+          "marker": "    // OrderPro menu: describeOptionVisuals is supplied by its private factory.\n"
+        },
+        {
+          "name": "standaloneMenuItem",
+          "start": 63939,
+          "end": 64197,
+          "offset": 12208,
+          "length": 258,
+          "marker": "    // OrderPro menu: standaloneMenuItem is supplied by its private factory.\n"
+        },
+        {
+          "name": "handleAddClick",
+          "start": 64198,
+          "end": 64554,
+          "offset": 12467,
+          "length": 356,
+          "marker": "    // OrderPro menu: handleAddClick is supplied by its private factory.\n"
+        },
+        {
+          "name": "initialCustomizerSelections",
+          "start": 64602,
+          "end": 65051,
+          "offset": 12824,
+          "length": 449,
+          "marker": "    // OrderPro menu: initialCustomizerSelections is supplied by its private factory.\n"
+        },
+        {
+          "name": "unansweredRequiredOption",
+          "start": 65233,
+          "end": 65641,
+          "offset": 13274,
+          "length": 408,
+          "marker": "    // OrderPro menu: unansweredRequiredOption is supplied by its private factory.\n"
+        },
+        {
+          "name": "syncCustomizerGate",
+          "start": 65641,
+          "end": 65975,
+          "offset": 13683,
+          "length": 334,
+          "marker": "    // OrderPro menu: syncCustomizerGate is supplied by its private factory.\n"
+        },
+        {
+          "name": "openCustomizer",
+          "start": 65976,
+          "end": 69593,
+          "offset": 14018,
+          "length": 3617,
+          "marker": "    // OrderPro menu: openCustomizer is supplied by its private factory.\n"
+        },
+        {
+          "name": "closeCustomizer",
+          "start": 69593,
+          "end": 69844,
+          "offset": 17636,
+          "length": 251,
+          "marker": "    // OrderPro menu: closeCustomizer is supplied by its private factory.\n"
+        },
+        {
+          "name": "selectCustomizerChoice",
+          "start": 69844,
+          "end": 71365,
+          "offset": 17888,
+          "length": 1521,
+          "marker": "    // OrderPro menu: selectCustomizerChoice is supplied by its private factory.\n"
+        },
+        {
+          "name": "customizerUnitPrice",
+          "start": 71365,
+          "end": 71970,
+          "offset": 19410,
+          "length": 605,
+          "marker": "    // OrderPro menu: customizerUnitPrice is supplied by its private factory.\n"
+        },
+        {
+          "name": "refreshCustomizerPrice",
+          "start": 71970,
+          "end": 72096,
+          "offset": 20016,
+          "length": 126,
+          "marker": "    // OrderPro menu: refreshCustomizerPrice is supplied by its private factory.\n"
+        },
+        {
+          "name": "confirmCustomizer",
+          "start": 72096,
+          "end": 73910,
+          "offset": 20143,
+          "length": 1814,
+          "marker": "    // OrderPro menu: confirmCustomizer is supplied by its private factory.\n"
+        },
+        {
+          "name": "availabilityOf",
+          "start": 130567,
+          "end": 130865,
+          "offset": 21958,
+          "length": 298,
+          "marker": "    // OrderPro menu: availabilityOf is supplied by its private factory.\n"
+        },
+        {
+          "name": "bootRestaurant",
+          "start": 131823,
+          "end": 138054,
+          "offset": 22257,
+          "length": 6231,
+          "marker": "    // OrderPro menu: bootRestaurant is supplied by its private factory.\n"
+        }
+      ]
+    },
+    {
+      "name": "cart",
+      "file": "assets/orderpro/cart.js",
+      "reads": [
+        "$",
+        "cart",
+        "describeOptions",
+        "escapeHtml",
+        "money",
+        "nameOf",
+        "showToast",
+        "t"
+      ],
+      "exports": [
+        "lineKey",
+        "totals",
+        "refreshCartUI",
+        "addLineToCart",
+        "decFromCart",
+        "incFromCart",
+        "openCart",
+        "closeCart"
+      ],
+      "header": "/* OrderPro cart. Exports: lineKey, totals, refreshCartUI, addLineToCart, decFromCart, incFromCart, openCart, closeCart.\n * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.\n * Classic lexical adapter intentionally preserves original function bodies, including assignments. */\nKiwiOrderMenu.orderProParts.define('cart', [\"$\",\"cart\",\"describeOptions\",\"escapeHtml\",\"money\",\"nameOf\",\"showToast\",\"t\"], function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({ lineKey, totals, refreshCartUI, addLineToCart, decFromCart, incFromCart, openCart, closeCart });\n  }\n});\n",
+      "fragments": [
+        {
+          "name": "lineKey",
+          "start": 55292,
+          "end": 55757,
+          "offset": 493,
+          "length": 465,
+          "marker": "    instances.cart = KiwiOrderMenu.orderProParts.create('cart', {\n      get $() { return $; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get describeOptions() { return describeOptions; },\n      get escapeHtml() { return escapeHtml; },\n      get money() { return money; },\n      get nameOf() { return nameOf; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n    });\n\n    // OrderPro cart: lineKey is supplied by its private factory.\n"
+        },
+        {
+          "name": "totals",
+          "start": 60939,
+          "end": 61142,
+          "offset": 959,
+          "length": 203,
+          "marker": "    // OrderPro cart: totals is supplied by its private factory.\n"
+        },
+        {
+          "name": "refreshCartUI",
+          "start": 61142,
+          "end": 62880,
+          "offset": 1163,
+          "length": 1738,
+          "marker": "    // OrderPro cart: refreshCartUI is supplied by its private factory.\n"
+        },
+        {
+          "name": "addLineToCart",
+          "start": 63032,
+          "end": 63560,
+          "offset": 2902,
+          "length": 528,
+          "marker": "    // OrderPro cart: addLineToCart is supplied by its private factory.\n"
+        },
+        {
+          "name": "decFromCart",
+          "start": 63560,
+          "end": 63753,
+          "offset": 3431,
+          "length": 193,
+          "marker": "    // OrderPro cart: decFromCart is supplied by its private factory.\n"
+        },
+        {
+          "name": "incFromCart",
+          "start": 63753,
+          "end": 63878,
+          "offset": 3625,
+          "length": 125,
+          "marker": "    // OrderPro cart: incFromCart is supplied by its private factory.\n"
+        },
+        {
+          "name": "openCart",
+          "start": 85851,
+          "end": 85993,
+          "offset": 3751,
+          "length": 142,
+          "marker": "    // OrderPro cart: openCart is supplied by its private factory.\n"
+        },
+        {
+          "name": "closeCart",
+          "start": 85993,
+          "end": 86138,
+          "offset": 3894,
+          "length": 145,
+          "marker": "    // OrderPro cart: closeCart is supplied by its private factory.\n"
+        }
+      ]
+    },
+    {
+      "name": "payment",
+      "file": "assets/orderpro/payment.js",
+      "reads": [
+        "$",
+        "$$",
+        "MENU",
+        "NET",
+        "ORDER_DONE",
+        "ORDER_STATE_KEY",
+        "PREP_STAGE",
+        "SESSION",
+        "TIP_LEVELS",
+        "activeMenuFilter",
+        "cart",
+        "closeCart",
+        "cur",
+        "currentOrderId",
+        "describeOptionChoices",
+        "describeOptionVisuals",
+        "describeOptions",
+        "escapeHtml",
+        "fmtAmount",
+        "gotoScreen",
+        "groupLabel",
+        "itemOf",
+        "lastStatus",
+        "lineKey",
+        "money",
+        "nameOf",
+        "openCustomizer",
+        "orderMode",
+        "orderNumber",
+        "pendingRef",
+        "rebuildSent",
+        "refreshCartUI",
+        "reloadMenu",
+        "renderMenu",
+        "renderMenuSubtabs",
+        "saveSent",
+        "sentLines",
+        "sentOrders",
+        "serviceRequestPending",
+        "sessionTotal",
+        "showToast",
+        "splitState",
+        "t",
+        "tableNumber",
+        "tipPercent",
+        "toCents",
+        "totals"
+      ],
+      "exports": [
+        "sendServiceRequest",
+        "callServer",
+        "openBill",
+        "renderBill",
+        "closeBill",
+        "setTipPercent",
+        "confirmBill",
+        "openSplit",
+        "closeSplit",
+        "setSplitMode",
+        "setEgalCount",
+        "setArticleCount",
+        "setSplitPerson",
+        "toggleSplitItem",
+        "refreshSplitUI",
+        "personSubtotal",
+        "renderSplitArticle",
+        "confirmSplit",
+        "sendOrder",
+        "onSessionClosed",
+        "LIVE",
+        "onOrderStatus",
+        "applyOrderStatus",
+        "watchTableOrder",
+        "dropUnavailable",
+        "restartMenu",
+        "confirmCashierPayment",
+        "startPreparing",
+        "triggerReady",
+        "playChime",
+        "refreshPermBanner",
+        "askNotificationPermission"
+      ],
+      "header": "/* OrderPro payment. Exports: sendServiceRequest, callServer, openBill, renderBill, closeBill, setTipPercent, confirmBill, openSplit, closeSplit, setSplitMode, setEgalCount, setArticleCount, setSplitPerson, toggleSplitItem, refreshSplitUI, personSubtotal, renderSplitArticle, confirmSplit, sendOrder, onSessionClosed, LIVE, onOrderStatus, applyOrderStatus, watchTableOrder, dropUnavailable, restartMenu, confirmCashierPayment, startPreparing, triggerReady, playChime, refreshPermBanner, askNotificationPermission.\n * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.\n * Classic lexical adapter intentionally preserves original function bodies, including assignments. */\nKiwiOrderMenu.orderProParts.define('payment', [\"$\",\"$$\",\"MENU\",\"NET\",\"ORDER_DONE\",\"ORDER_STATE_KEY\",\"PREP_STAGE\",\"SESSION\",\"TIP_LEVELS\",\"activeMenuFilter\",\"cart\",\"closeCart\",\"cur\",\"currentOrderId\",\"describeOptionChoices\",\"describeOptionVisuals\",\"describeOptions\",\"escapeHtml\",\"fmtAmount\",\"gotoScreen\",\"groupLabel\",\"itemOf\",\"lastStatus\",\"lineKey\",\"money\",\"nameOf\",\"openCustomizer\",\"orderMode\",\"orderNumber\",\"pendingRef\",\"rebuildSent\",\"refreshCartUI\",\"reloadMenu\",\"renderMenu\",\"renderMenuSubtabs\",\"saveSent\",\"sentLines\",\"sentOrders\",\"serviceRequestPending\",\"sessionTotal\",\"showToast\",\"splitState\",\"t\",\"tableNumber\",\"tipPercent\",\"toCents\",\"totals\"], function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({ sendServiceRequest, callServer, openBill, renderBill, closeBill, setTipPercent, confirmBill, openSplit, closeSplit, setSplitMode, setEgalCount, setArticleCount, setSplitPerson, toggleSplitItem, refreshSplitUI, personSubtotal, renderSplitArticle, confirmSplit, sendOrder, onSessionClosed, LIVE, onOrderStatus, applyOrderStatus, watchTableOrder, dropUnavailable, restartMenu, confirmCashierPayment, startPreparing, triggerReady, playChime, refreshPermBanner, askNotificationPermission });\n  }\n});\n",
+      "fragments": [
+        {
+          "name": "sendServiceRequest",
+          "start": 74011,
+          "end": 74514,
+          "offset": 1412,
+          "length": 503,
+          "marker": "    instances.payment = KiwiOrderMenu.orderProParts.create('payment', {\n      get $() { return $; },\n      get $$() { return $$; },\n      get MENU() { return MENU; },\n      get NET() { return NET; },\n      get ORDER_DONE() { return ORDER_DONE; },\n      get ORDER_STATE_KEY() { return ORDER_STATE_KEY; },\n      get PREP_STAGE() { return PREP_STAGE; },\n      get SESSION() { return SESSION; },\n      get TIP_LEVELS() { return TIP_LEVELS; },\n      get activeMenuFilter() { return activeMenuFilter; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get closeCart() { return closeCart; },\n      get cur() { return cur; },\n      get currentOrderId() { return currentOrderId; }, set currentOrderId(value) { currentOrderId = value; },\n      get describeOptionChoices() { return describeOptionChoices; },\n      get describeOptionVisuals() { return describeOptionVisuals; },\n      get describeOptions() { return describeOptions; },\n      get escapeHtml() { return escapeHtml; },\n      get fmtAmount() { return fmtAmount; },\n      get gotoScreen() { return gotoScreen; },\n      get groupLabel() { return groupLabel; },\n      get itemOf() { return itemOf; },\n      get lastStatus() { return lastStatus; }, set lastStatus(value) { lastStatus = value; },\n      get lineKey() { return lineKey; },\n      get money() { return money; },\n      get nameOf() { return nameOf; },\n      get openCustomizer() { return openCustomizer; },\n      get orderMode() { return orderMode; }, set orderMode(value) { orderMode = value; },\n      get orderNumber() { return orderNumber; }, set orderNumber(value) { orderNumber = value; },\n      get pendingRef() { return pendingRef; }, set pendingRef(value) { pendingRef = value; },\n      get rebuildSent() { return rebuildSent; },\n      get refreshCartUI() { return refreshCartUI; },\n      get reloadMenu() { return reloadMenu; },\n      get renderMenu() { return renderMenu; },\n      get renderMenuSubtabs() { return renderMenuSubtabs; },\n      get saveSent() { return saveSent; },\n      get sentLines() { return sentLines; }, set sentLines(value) { sentLines = value; },\n      get sentOrders() { return sentOrders; }, set sentOrders(value) { sentOrders = value; },\n      get serviceRequestPending() { return serviceRequestPending; }, set serviceRequestPending(value) { serviceRequestPending = value; },\n      get sessionTotal() { return sessionTotal; }, set sessionTotal(value) { sessionTotal = value; },\n      get showToast() { return showToast; },\n      get splitState() { return splitState; }, set splitState(value) { splitState = value; },\n      get t() { return t; },\n      get tableNumber() { return tableNumber; }, set tableNumber(value) { tableNumber = value; },\n      get tipPercent() { return tipPercent; }, set tipPercent(value) { tipPercent = value; },\n      get toCents() { return toCents; },\n      get totals() { return totals; },\n    });\n\n    // OrderPro payment: sendServiceRequest is supplied by its private factory.\n"
+        },
+        {
+          "name": "callServer",
+          "start": 74514,
+          "end": 74864,
+          "offset": 1916,
+          "length": 350,
+          "marker": "    // OrderPro payment: callServer is supplied by its private factory.\n"
+        },
+        {
+          "name": "openBill",
+          "start": 74927,
+          "end": 75114,
+          "offset": 2267,
+          "length": 187,
+          "marker": "    // OrderPro payment: openBill is supplied by its private factory.\n"
+        },
+        {
+          "name": "renderBill",
+          "start": 75305,
+          "end": 77290,
+          "offset": 2455,
+          "length": 1985,
+          "marker": "    // OrderPro payment: renderBill is supplied by its private factory.\n"
+        },
+        {
+          "name": "closeBill",
+          "start": 77290,
+          "end": 77435,
+          "offset": 4441,
+          "length": 145,
+          "marker": "    // OrderPro payment: closeBill is supplied by its private factory.\n"
+        },
+        {
+          "name": "setTipPercent",
+          "start": 77794,
+          "end": 79210,
+          "offset": 4587,
+          "length": 1416,
+          "marker": "    // OrderPro payment: setTipPercent is supplied by its private factory.\n"
+        },
+        {
+          "name": "confirmBill",
+          "start": 79211,
+          "end": 79619,
+          "offset": 6004,
+          "length": 408,
+          "marker": "    // OrderPro payment: confirmBill is supplied by its private factory.\n"
+        },
+        {
+          "name": "openSplit",
+          "start": 79688,
+          "end": 80070,
+          "offset": 6413,
+          "length": 382,
+          "marker": "    // OrderPro payment: openSplit is supplied by its private factory.\n"
+        },
+        {
+          "name": "closeSplit",
+          "start": 80070,
+          "end": 80218,
+          "offset": 6796,
+          "length": 148,
+          "marker": "    // OrderPro payment: closeSplit is supplied by its private factory.\n"
+        },
+        {
+          "name": "setSplitMode",
+          "start": 80218,
+          "end": 80535,
+          "offset": 6945,
+          "length": 317,
+          "marker": "    // OrderPro payment: setSplitMode is supplied by its private factory.\n"
+        },
+        {
+          "name": "setEgalCount",
+          "start": 80535,
+          "end": 80766,
+          "offset": 7263,
+          "length": 231,
+          "marker": "    // OrderPro payment: setEgalCount is supplied by its private factory.\n"
+        },
+        {
+          "name": "setArticleCount",
+          "start": 80766,
+          "end": 81305,
+          "offset": 7495,
+          "length": 539,
+          "marker": "    // OrderPro payment: setArticleCount is supplied by its private factory.\n"
+        },
+        {
+          "name": "setSplitPerson",
+          "start": 81305,
+          "end": 81413,
+          "offset": 8035,
+          "length": 108,
+          "marker": "    // OrderPro payment: setSplitPerson is supplied by its private factory.\n"
+        },
+        {
+          "name": "toggleSplitItem",
+          "start": 81413,
+          "end": 81695,
+          "offset": 8144,
+          "length": 282,
+          "marker": "    // OrderPro payment: toggleSplitItem is supplied by its private factory.\n"
+        },
+        {
+          "name": "refreshSplitUI",
+          "start": 81696,
+          "end": 82522,
+          "offset": 8427,
+          "length": 826,
+          "marker": "    // OrderPro payment: refreshSplitUI is supplied by its private factory.\n"
+        },
+        {
+          "name": "personSubtotal",
+          "start": 82523,
+          "end": 82769,
+          "offset": 9254,
+          "length": 246,
+          "marker": "    // OrderPro payment: personSubtotal is supplied by its private factory.\n"
+        },
+        {
+          "name": "renderSplitArticle",
+          "start": 82770,
+          "end": 84311,
+          "offset": 9501,
+          "length": 1541,
+          "marker": "    // OrderPro payment: renderSplitArticle is supplied by its private factory.\n"
+        },
+        {
+          "name": "confirmSplit",
+          "start": 84312,
+          "end": 85199,
+          "offset": 11043,
+          "length": 887,
+          "marker": "    // OrderPro payment: confirmSplit is supplied by its private factory.\n"
+        },
+        {
+          "name": "sendOrder",
+          "start": 86769,
+          "end": 97420,
+          "offset": 11931,
+          "length": 10651,
+          "marker": "    // OrderPro payment: sendOrder is supplied by its private factory.\n"
+        },
+        {
+          "name": "onSessionClosed",
+          "start": 105471,
+          "end": 106091,
+          "offset": 22583,
+          "length": 620,
+          "marker": "    // OrderPro payment: onSessionClosed is supplied by its private factory.\n"
+        },
+        {
+          "name": "LIVE",
+          "start": 107002,
+          "end": 109093,
+          "offset": 23204,
+          "length": 2091,
+          "marker": "    // OrderPro payment: LIVE is supplied by its private factory.\n"
+        },
+        {
+          "name": "onOrderStatus",
+          "start": 109340,
+          "end": 110019,
+          "offset": 25296,
+          "length": 679,
+          "marker": "    // OrderPro payment: onOrderStatus is supplied by its private factory.\n"
+        },
+        {
+          "name": "applyOrderStatus",
+          "start": 110019,
+          "end": 113042,
+          "offset": 25976,
+          "length": 3023,
+          "marker": "    // OrderPro payment: applyOrderStatus is supplied by its private factory.\n"
+        },
+        {
+          "name": "watchTableOrder",
+          "start": 113043,
+          "end": 113422,
+          "offset": 29000,
+          "length": 379,
+          "marker": "    // OrderPro payment: watchTableOrder is supplied by its private factory.\n"
+        },
+        {
+          "name": "dropUnavailable",
+          "start": 113791,
+          "end": 114424,
+          "offset": 29380,
+          "length": 633,
+          "marker": "    // OrderPro payment: dropUnavailable is supplied by its private factory.\n"
+        },
+        {
+          "name": "restartMenu",
+          "start": 114501,
+          "end": 114834,
+          "offset": 30014,
+          "length": 333,
+          "marker": "    // OrderPro payment: restartMenu is supplied by its private factory.\n"
+        },
+        {
+          "name": "confirmCashierPayment",
+          "start": 118117,
+          "end": 118251,
+          "offset": 30348,
+          "length": 134,
+          "marker": "    // OrderPro payment: confirmCashierPayment is supplied by its private factory.\n"
+        },
+        {
+          "name": "startPreparing",
+          "start": 118775,
+          "end": 119481,
+          "offset": 30483,
+          "length": 706,
+          "marker": "    // OrderPro payment: startPreparing is supplied by its private factory.\n"
+        },
+        {
+          "name": "triggerReady",
+          "start": 119556,
+          "end": 120150,
+          "offset": 31190,
+          "length": 594,
+          "marker": "    // OrderPro payment: triggerReady is supplied by its private factory.\n"
+        },
+        {
+          "name": "playChime",
+          "start": 120231,
+          "end": 121102,
+          "offset": 31785,
+          "length": 871,
+          "marker": "    // OrderPro payment: playChime is supplied by its private factory.\n"
+        },
+        {
+          "name": "refreshPermBanner",
+          "start": 121168,
+          "end": 122153,
+          "offset": 32657,
+          "length": 985,
+          "marker": "    // OrderPro payment: refreshPermBanner is supplied by its private factory.\n"
+        },
+        {
+          "name": "askNotificationPermission",
+          "start": 122154,
+          "end": 122644,
+          "offset": 33643,
+          "length": 490,
+          "marker": "    // OrderPro payment: askNotificationPermission is supplied by its private factory.\n"
+        }
+      ]
+    }
+  ],
+  "states": [
+    {
+      "name": "orderMode",
+      "start": 39202,
+      "end": 39227,
+      "marker": "    // Session owner binding: orderMode.\n",
+      "before": "    let orderMode = ",
+      "after": ";",
+      "initializer": "null",
+      "replacement": "    owner.initialize('orderMode', null);\n"
+    },
+    {
+      "name": "tableNumber",
+      "start": 39257,
+      "end": 39283,
+      "marker": "    // Session owner binding: tableNumber.\n",
+      "before": "    let tableNumber = ",
+      "after": ";\n",
+      "initializer": "''",
+      "replacement": "    owner.initialize('tableNumber', '');\n"
+    },
+    {
+      "name": "orderNumber",
+      "start": 39283,
+      "end": 39308,
+      "marker": "    // Session owner binding: orderNumber.\n",
+      "before": "    let orderNumber = ",
+      "after": ";",
+      "initializer": "''",
+      "replacement": "    owner.initialize('orderNumber', '');\n"
+    },
+    {
+      "name": "cart",
+      "start": 39407,
+      "end": 39435,
+      "marker": "    // Session owner binding: cart.\n",
+      "before": "    const cart = ",
+      "after": ";\n",
+      "initializer": "new Map()",
+      "replacement": "    owner.initialize('cart', new Map());\n"
+    },
+    {
+      "name": "sentOrders",
+      "start": 40201,
+      "end": 40226,
+      "marker": "    // Session owner binding: sentOrders.\n",
+      "before": "    let sentOrders = ",
+      "after": ";\n",
+      "initializer": "[]",
+      "replacement": "    owner.initialize('sentOrders', []);\n"
+    },
+    {
+      "name": "sentLines",
+      "start": 40226,
+      "end": 40251,
+      "marker": "    // Session owner binding: sentLines.\n",
+      "before": "    const sentLines = ",
+      "after": ";",
+      "initializer": "[]",
+      "replacement": "    owner.initialize('sentLines', []);\n"
+    },
+    {
+      "name": "sessionTotal",
+      "start": 40304,
+      "end": 40329,
+      "marker": "    // Session owner binding: sessionTotal.\n",
+      "before": "    let sessionTotal = ",
+      "after": ";",
+      "initializer": "0",
+      "replacement": "    owner.initialize('sessionTotal', 0);\n"
+    },
+    {
+      "name": "tipPercent",
+      "start": 42199,
+      "end": 42223,
+      "marker": "    // Session owner binding: tipPercent.\n",
+      "before": "    let tipPercent = ",
+      "after": ";\n",
+      "initializer": "0",
+      "replacement": "    owner.initialize('tipPercent', 0);\n"
+    },
+    {
+      "name": "splitState",
+      "start": 42243,
+      "end": 42452,
+      "marker": "    // Session owner binding: splitState.\n",
+      "before": "    let splitState = ",
+      "after": ";\n",
+      "initializer": "{\n      mode: 'egal',          // 'egal' | 'article'\n      egalCount: 3,\n      articleCount: 3,\n      selectedPerson: 0,\n      assignments: {},        // sentLine idx -> person idx\n    }",
+      "replacement": "    owner.initialize('splitState', {\n      mode: 'egal',          // 'egal' | 'article'\n      egalCount: 3,\n      articleCount: 3,\n      selectedPerson: 0,\n      assignments: {},        // sentLine idx -> person idx\n    });\n"
+    },
+    {
+      "name": "customizerItem",
+      "start": 42477,
+      "end": 42508,
+      "marker": "    // Session owner binding: customizerItem.\n",
+      "before": "    let customizerItem = ",
+      "after": ";\n",
+      "initializer": "null",
+      "replacement": "    owner.initialize('customizerItem', null);\n"
+    },
+    {
+      "name": "customizerSelections",
+      "start": 42508,
+      "end": 42543,
+      "marker": "    // Session owner binding: customizerSelections.\n",
+      "before": "    let customizerSelections = ",
+      "after": ";\n",
+      "initializer": "{}",
+      "replacement": "    owner.initialize('customizerSelections', {});\n"
+    },
+    {
+      "name": "customizerNote",
+      "start": 42543,
+      "end": 42572,
+      "marker": "    // Session owner binding: customizerNote.\n",
+      "before": "    let customizerNote = ",
+      "after": ";\n",
+      "initializer": "''",
+      "replacement": "    owner.initialize('customizerNote', '');\n"
+    },
+    {
+      "name": "customizerEditingKey",
+      "start": 42572,
+      "end": 42609,
+      "marker": "    // Session owner binding: customizerEditingKey.\n",
+      "before": "    let customizerEditingKey = ",
+      "after": ";\n",
+      "initializer": "null",
+      "replacement": "    owner.initialize('customizerEditingKey', null);\n"
+    },
+    {
+      "name": "customizerEditingQty",
+      "start": 42609,
+      "end": 42643,
+      "marker": "    // Session owner binding: customizerEditingQty.\n",
+      "before": "    let customizerEditingQty = ",
+      "after": ";\n",
+      "initializer": "1",
+      "replacement": "    owner.initialize('customizerEditingQty', 1);\n"
+    },
+    {
+      "name": "serviceRequestPending",
+      "start": 73972,
+      "end": 74011,
+      "marker": "    // Session owner binding: serviceRequestPending.\n",
+      "before": "    let serviceRequestPending = ",
+      "after": ";\n",
+      "initializer": "false",
+      "replacement": "    owner.initialize('serviceRequestPending', false);\n"
+    },
+    {
+      "name": "currentOrderId",
+      "start": 86421,
+      "end": 86450,
+      "marker": "    // Session owner binding: currentOrderId.\n",
+      "before": "    let currentOrderId = ",
+      "after": ";\n",
+      "initializer": "''",
+      "replacement": "    owner.initialize('currentOrderId', '');\n"
+    },
+    {
+      "name": "pendingRef",
+      "start": 86744,
+      "end": 86769,
+      "marker": "    // Session owner binding: pendingRef.\n",
+      "before": "    let pendingRef = ",
+      "after": ";\n",
+      "initializer": "''",
+      "replacement": "    owner.initialize('pendingRef', '');\n"
+    },
+    {
+      "name": "lastStatus",
+      "start": 109315,
+      "end": 109340,
+      "marker": "    // Session owner binding: lastStatus.\n",
+      "before": "    let lastStatus = ",
+      "after": ";\n",
+      "initializer": "''",
+      "replacement": "    owner.initialize('lastStatus', '');\n"
+    },
+    {
+      "name": "guestReady",
+      "start": 117460,
+      "end": 117487,
+      "marker": "    // Session owner binding: guestReady.\n",
+      "before": "    let guestReady = ",
+      "after": ";\n",
+      "initializer": "null",
+      "replacement": "    owner.initialize('guestReady', null);\n"
+    },
+    {
+      "name": "availabilitySignature",
+      "start": 130531,
+      "end": 130567,
+      "marker": "    // Session owner binding: availabilitySignature.\n",
+      "before": "    let availabilitySignature = ",
+      "after": ";\n",
+      "initializer": "''",
+      "replacement": "    owner.initialize('availabilitySignature', '');\n"
+    },
+    {
+      "name": "currentLang",
+      "start": 35116,
+      "end": 35162,
+      "before": "    let currentLang = ",
+      "after": ";\n",
+      "initializer": "savedOrderLang || 'fr'",
+      "replacement": "    owner.initialize('currentLang', savedOrderLang || 'fr');\n"
+    },
+    {
+      "name": "OPT",
+      "start": 38454,
+      "end": 38474,
+      "before": "    const OPT = ",
+      "after": ";\n",
+      "initializer": "{}",
+      "replacement": "    owner.initialize('OPT', {});\n"
+    },
+    {
+      "name": "MENU",
+      "start": 38907,
+      "end": 38928,
+      "before": "    const MENU = ",
+      "after": ";\n",
+      "initializer": "[]",
+      "replacement": "    owner.initialize('MENU', []);\n"
+    },
+    {
+      "name": "MENU_ALL",
+      "start": 38928,
+      "end": 38960,
+      "before": "    const MENU_ALL = ",
+      "after": ";\n",
+      "initializer": "new Map()",
+      "replacement": "    owner.initialize('MENU_ALL', new Map());\n"
+    },
+    {
+      "name": "MENU_SUBTABS",
+      "start": 38960,
+      "end": 38996,
+      "before": "    const MENU_SUBTABS = ",
+      "after": ";\n",
+      "initializer": "new Map()",
+      "replacement": "    owner.initialize('MENU_SUBTABS', new Map());\n"
+    }
+  ],
+  "prefix": "/* Private lazy registry. Classic dependencies execute in their declared order.\n * Only static assets are loaded; the original guest bootstrap waits for readiness. */\n(() => {\n  const definitions = new Map();\n  let started = false;\n  const scopes = Object.create(null), extensions = Object.create(null);\n  const registry = {\n    attach(name, scope) { scopes[name] = Object.freeze(scope); },\n    run(name, factory) { extensions[name] = factory(scopes[name]); },\n    extension(name, key) { return extensions[name] && extensions[name][key]; },\n    owner: null,\n    define(name, reads, factory) {\n      if (definitions.has(name)) throw new Error('Duplicate OrderPro module: ' + name);\n      definitions.set(name, { reads, factory });\n      if (definitions.size === 5) registry.start();\n    },\n    create(name, scope) {\n      const definition = definitions.get(name);\n      if (Object.keys(scope).sort().join() !== [...definition.reads].sort().join()) throw new Error('Invalid OrderPro interface: ' + name);\n      return definition.factory(Object.freeze(scope));\n    },\n    start() {\n      if (started) return;\n      started = true;\n      Object.freeze(registry);\n      start();\n    },\n  };\n  window.KiwiOrderMenu.orderProParts = registry;\n  function onReady(callback) {\n    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', callback);\n    else callback();\n  }\n  function start() {\n  const owner = KiwiOrderMenu.orderProParts.owner();\n  const state = owner.view([\"orderMode\",\"tableNumber\",\"orderNumber\",\"cart\",\"sentOrders\",\"sentLines\",\"sessionTotal\",\"tipPercent\",\"splitState\",\"customizerItem\",\"customizerSelections\",\"customizerNote\",\"customizerEditingKey\",\"customizerEditingQty\",\"serviceRequestPending\",\"currentOrderId\",\"pendingRef\",\"lastStatus\",\"guestReady\",\"availabilitySignature\",\"currentLang\",\"OPT\",\"MENU\",\"MENU_ALL\",\"MENU_SUBTABS\"]);\n  const instances = Object.create(null);\n  const bindings = Object.create(state);\n  for (const name of [\"rebuildSent\",\"saveSent\",\"loadSent\",\"clearSent\",\"SESSION\"]) Object.defineProperty(bindings, name, { get: () => instances.session[name] });\n  for (const name of [\"pressKey\",\"renderTableDisplay\",\"updateContinueState\",\"chooseMode\",\"seatHere\",\"applyMenuMode\",\"guestLand\",\"commitTable\"]) Object.defineProperty(bindings, name, { get: () => instances.table[name] });\n  for (const name of [\"feedMedia\",\"dishMedia\",\"dishTag\",\"renderMenu\",\"renderMenuSubtabs\",\"activeMenuFilter\",\"choiceLabel\",\"groupLabel\",\"choiceEmoji\",\"describeOptions\",\"describeOptionChoices\",\"describeOptionVisuals\",\"standaloneMenuItem\",\"handleAddClick\",\"initialCustomizerSelections\",\"unansweredRequiredOption\",\"syncCustomizerGate\",\"openCustomizer\",\"closeCustomizer\",\"selectCustomizerChoice\",\"customizerUnitPrice\",\"refreshCustomizerPrice\",\"confirmCustomizer\",\"availabilityOf\",\"bootRestaurant\"]) Object.defineProperty(bindings, name, { get: () => instances.menu[name] });\n  for (const name of [\"lineKey\",\"totals\",\"refreshCartUI\",\"addLineToCart\",\"decFromCart\",\"incFromCart\",\"openCart\",\"closeCart\"]) Object.defineProperty(bindings, name, { get: () => instances.cart[name] });\n  for (const name of [\"sendServiceRequest\",\"callServer\",\"openBill\",\"renderBill\",\"closeBill\",\"setTipPercent\",\"confirmBill\",\"openSplit\",\"closeSplit\",\"setSplitMode\",\"setEgalCount\",\"setArticleCount\",\"setSplitPerson\",\"toggleSplitItem\",\"refreshSplitUI\",\"personSubtotal\",\"renderSplitArticle\",\"confirmSplit\",\"sendOrder\",\"onSessionClosed\",\"LIVE\",\"onOrderStatus\",\"applyOrderStatus\",\"watchTableOrder\",\"dropUnavailable\",\"restartMenu\",\"confirmCashierPayment\",\"startPreparing\",\"triggerReady\",\"playChime\",\"refreshPermBanner\",\"askNotificationPermission\"]) Object.defineProperty(bindings, name, { get: () => instances.payment[name] });\n  with (bindings) {\n    registry.attach('guest', {\n      get I18N() { return I18N; },\n      get MENU() { return MENU; },\n      get MENU_ALL() { return MENU_ALL; },\n      get NET() { return NET; },\n      get OPT() { return OPT; },\n      get SESSION() { return SESSION; },\n      get STORE() { return STORE; },\n      get activeMenuFilter() { return activeMenuFilter; },\n      get applyMenuMode() { return applyMenuMode; },\n      get applyStaticI18n() { return applyStaticI18n; },\n      get cart() { return cart; },\n      get closeBill() { return closeBill; },\n      get currentLang() { return currentLang; },\n      get escapeHtml() { return escapeHtml; },\n      get gotoScreen() { return gotoScreen; },\n      get handleAddClick() { return handleAddClick; },\n      get itemOf() { return itemOf; },\n      get lineKey() { return lineKey; },\n      get money() { return money; },\n      get nameOf() { return nameOf; },\n      get openCart() { return openCart; },\n      get orderMode() { return orderMode; },\n      get refreshCartUI() { return refreshCartUI; },\n      get renderMenu() { return renderMenu; },\n      get sendServiceRequest() { return sendServiceRequest; },\n      get sentLines() { return sentLines; },\n      get sentOrders() { return sentOrders; },\n      get sessionTotal() { return sessionTotal; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n      get tableNumber() { return tableNumber; },\n      get toCents() { return toCents; },\n    });\n\n    registry.attach('boutique', {\n      get $() { return $; },\n      get escapeHtml() { return escapeHtml; },\n      get money() { return money; },\n      get t() { return t; },\n      get toCents() { return toCents; },\n    });\n    Object.defineProperty(bindings, 'bootBoutique', { get: () => registry.extension('boutique', 'bootBoutique') });\n    Object.defineProperty(bindings, 'stockOf', { get: () => registry.extension('boutique', 'stockOf') });\n    Object.defineProperty(bindings, 'stockPill', { get: () => registry.extension('boutique', 'stockPill') });\n    Object.defineProperty(bindings, 'renderBoutique', { get: () => registry.extension('boutique', 'renderBoutique') });\n    Object.defineProperty(bindings, 'openBoutiqueItem', { get: () => registry.extension('boutique', 'openBoutiqueItem') });\n    Object.defineProperty(bindings, 'openSheet', { get: () => registry.extension('boutique', 'openSheet') });\n    Object.defineProperty(bindings, 'closeSheet', { get: () => registry.extension('boutique', 'closeSheet') });\n    Object.defineProperty(bindings, 'openScanner', { get: () => registry.extension('boutique', 'openScanner') });\n    Object.defineProperty(bindings, 'closeScanner', { get: () => registry.extension('boutique', 'closeScanner') });\n    Object.defineProperty(bindings, 'resolveScan', { get: () => registry.extension('boutique', 'resolveScan') });\n",
+  "suffix": "\n  }\n  }\n  const scripts = [\"assets/orderpro/session.js?v=2\",\"assets/orderpro/table.js?v=2\",\"assets/orderpro/menu.js?v=2\",\"assets/orderpro/cart.js?v=2\",\"assets/orderpro/payment.js?v=2\"];\n  for (const src of scripts) {\n    const script = document.createElement('script');\n    script.async = false;\n    script.src = src;\n    document.head.appendChild(script);\n  }\n})();\n",
+  "readyOriginal": "    document.addEventListener('DOMContentLoaded', () => {",
+  "readyReplacement": "    onReady(() => {",
+  "shellScripts": {
+    "dashboard.html": 121,
+    "kiwi-caisse.html": 89,
+    "kiwi-serveur.html": 26,
+    "booking.html": 4,
+    "OrderPro.html": 10
+  },
+  "extensions": [
+    {
+      "name": "guest",
+      "file": "assets/orderpro-guest.js",
+      "reads": [
+        "I18N",
+        "MENU",
+        "MENU_ALL",
+        "NET",
+        "OPT",
+        "SESSION",
+        "STORE",
+        "activeMenuFilter",
+        "applyMenuMode",
+        "applyStaticI18n",
+        "cart",
+        "closeBill",
+        "currentLang",
+        "escapeHtml",
+        "gotoScreen",
+        "handleAddClick",
+        "itemOf",
+        "lineKey",
+        "money",
+        "nameOf",
+        "openCart",
+        "orderMode",
+        "refreshCartUI",
+        "renderMenu",
+        "sendServiceRequest",
+        "sentLines",
+        "sentOrders",
+        "sessionTotal",
+        "showToast",
+        "t",
+        "tableNumber",
+        "toCents"
+      ],
+      "exports": [],
+      "header": "/* Private OrderPro guest bridge. Reads: I18N, MENU, MENU_ALL, NET, OPT, SESSION, STORE, activeMenuFilter, applyMenuMode, applyStaticI18n, cart, closeBill, currentLang, escapeHtml, gotoScreen, handleAddClick, itemOf, lineKey, money, nameOf, openCart, orderMode, refreshCartUI, renderMenu, sendServiceRequest, sentLines, sentOrders, sessionTotal, showToast, t, tableNumber, toCents.\n * Browser capabilities: tools/fixtures/orderpro/interfaces.json. Original bodies below are unchanged. */\nKiwiOrderMenu.orderProParts.run('guest', function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({  });\n  }\n});\n",
+      "sha256": "236d79bdf4f9461df33f2a2151c19f75ea2200ba5eb1b2f9e78e6f91909ffaf3"
+    },
+    {
+      "name": "boutique",
+      "file": "assets/orderpro-boutique.js",
+      "reads": [
+        "$",
+        "escapeHtml",
+        "money",
+        "t",
+        "toCents"
+      ],
+      "exports": [
+        "bootBoutique",
+        "stockOf",
+        "stockPill",
+        "renderBoutique",
+        "openBoutiqueItem",
+        "openSheet",
+        "closeSheet",
+        "openScanner",
+        "closeScanner",
+        "resolveScan"
+      ],
+      "header": "/* Private OrderPro boutique bridge. Reads: $, escapeHtml, money, t, toCents.\n * Browser capabilities: tools/fixtures/orderpro/interfaces.json. Original bodies below are unchanged. */\nKiwiOrderMenu.orderProParts.run('boutique', function (scope) {\n  with (scope) {\n",
+      "footer": "\n    return Object.freeze({ bootBoutique, stockOf, stockPill, renderBoutique, openBoutiqueItem, openSheet, closeSheet, openScanner, closeScanner, resolveScan });\n  }\n});\n",
+      "sha256": "0b2f07204a1fee2408b305a40e9ab47ccbb4e58513b4f7087415886f6345c1fb"
+    }
+  ]
+}

@@ -1,3 +1,99 @@
+/* Private lazy registry. Classic dependencies execute in their declared order.
+ * Only static assets are loaded; the original guest bootstrap waits for readiness. */
+(() => {
+  const definitions = new Map();
+  let started = false;
+  const scopes = Object.create(null), extensions = Object.create(null);
+  const registry = {
+    attach(name, scope) { scopes[name] = Object.freeze(scope); },
+    run(name, factory) { extensions[name] = factory(scopes[name]); },
+    extension(name, key) { return extensions[name] && extensions[name][key]; },
+    owner: null,
+    define(name, reads, factory) {
+      if (definitions.has(name)) throw new Error('Duplicate OrderPro module: ' + name);
+      definitions.set(name, { reads, factory });
+      if (definitions.size === 5) registry.start();
+    },
+    create(name, scope) {
+      const definition = definitions.get(name);
+      if (Object.keys(scope).sort().join() !== [...definition.reads].sort().join()) throw new Error('Invalid OrderPro interface: ' + name);
+      return definition.factory(Object.freeze(scope));
+    },
+    start() {
+      if (started) return;
+      started = true;
+      Object.freeze(registry);
+      start();
+    },
+  };
+  window.KiwiOrderMenu.orderProParts = registry;
+  function onReady(callback) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', callback);
+    else callback();
+  }
+  function start() {
+  const owner = KiwiOrderMenu.orderProParts.owner();
+  const state = owner.view(["orderMode","tableNumber","orderNumber","cart","sentOrders","sentLines","sessionTotal","tipPercent","splitState","customizerItem","customizerSelections","customizerNote","customizerEditingKey","customizerEditingQty","serviceRequestPending","currentOrderId","pendingRef","lastStatus","guestReady","availabilitySignature","currentLang","OPT","MENU","MENU_ALL","MENU_SUBTABS"]);
+  const instances = Object.create(null);
+  const bindings = Object.create(state);
+  for (const name of ["rebuildSent","saveSent","loadSent","clearSent","SESSION"]) Object.defineProperty(bindings, name, { get: () => instances.session[name] });
+  for (const name of ["pressKey","renderTableDisplay","updateContinueState","chooseMode","seatHere","applyMenuMode","guestLand","commitTable"]) Object.defineProperty(bindings, name, { get: () => instances.table[name] });
+  for (const name of ["feedMedia","dishMedia","dishTag","renderMenu","renderMenuSubtabs","activeMenuFilter","choiceLabel","groupLabel","choiceEmoji","describeOptions","describeOptionChoices","describeOptionVisuals","standaloneMenuItem","handleAddClick","initialCustomizerSelections","unansweredRequiredOption","syncCustomizerGate","openCustomizer","closeCustomizer","selectCustomizerChoice","customizerUnitPrice","refreshCustomizerPrice","confirmCustomizer","availabilityOf","bootRestaurant"]) Object.defineProperty(bindings, name, { get: () => instances.menu[name] });
+  for (const name of ["lineKey","totals","refreshCartUI","addLineToCart","decFromCart","incFromCart","openCart","closeCart"]) Object.defineProperty(bindings, name, { get: () => instances.cart[name] });
+  for (const name of ["sendServiceRequest","callServer","openBill","renderBill","closeBill","setTipPercent","confirmBill","openSplit","closeSplit","setSplitMode","setEgalCount","setArticleCount","setSplitPerson","toggleSplitItem","refreshSplitUI","personSubtotal","renderSplitArticle","confirmSplit","sendOrder","onSessionClosed","LIVE","onOrderStatus","applyOrderStatus","watchTableOrder","dropUnavailable","restartMenu","confirmCashierPayment","startPreparing","triggerReady","playChime","refreshPermBanner","askNotificationPermission"]) Object.defineProperty(bindings, name, { get: () => instances.payment[name] });
+  with (bindings) {
+    registry.attach('guest', {
+      get I18N() { return I18N; },
+      get MENU() { return MENU; },
+      get MENU_ALL() { return MENU_ALL; },
+      get NET() { return NET; },
+      get OPT() { return OPT; },
+      get SESSION() { return SESSION; },
+      get STORE() { return STORE; },
+      get activeMenuFilter() { return activeMenuFilter; },
+      get applyMenuMode() { return applyMenuMode; },
+      get applyStaticI18n() { return applyStaticI18n; },
+      get cart() { return cart; },
+      get closeBill() { return closeBill; },
+      get currentLang() { return currentLang; },
+      get escapeHtml() { return escapeHtml; },
+      get gotoScreen() { return gotoScreen; },
+      get handleAddClick() { return handleAddClick; },
+      get itemOf() { return itemOf; },
+      get lineKey() { return lineKey; },
+      get money() { return money; },
+      get nameOf() { return nameOf; },
+      get openCart() { return openCart; },
+      get orderMode() { return orderMode; },
+      get refreshCartUI() { return refreshCartUI; },
+      get renderMenu() { return renderMenu; },
+      get sendServiceRequest() { return sendServiceRequest; },
+      get sentLines() { return sentLines; },
+      get sentOrders() { return sentOrders; },
+      get sessionTotal() { return sessionTotal; },
+      get showToast() { return showToast; },
+      get t() { return t; },
+      get tableNumber() { return tableNumber; },
+      get toCents() { return toCents; },
+    });
+
+    registry.attach('boutique', {
+      get $() { return $; },
+      get escapeHtml() { return escapeHtml; },
+      get money() { return money; },
+      get t() { return t; },
+      get toCents() { return toCents; },
+    });
+    Object.defineProperty(bindings, 'bootBoutique', { get: () => registry.extension('boutique', 'bootBoutique') });
+    Object.defineProperty(bindings, 'stockOf', { get: () => registry.extension('boutique', 'stockOf') });
+    Object.defineProperty(bindings, 'stockPill', { get: () => registry.extension('boutique', 'stockPill') });
+    Object.defineProperty(bindings, 'renderBoutique', { get: () => registry.extension('boutique', 'renderBoutique') });
+    Object.defineProperty(bindings, 'openBoutiqueItem', { get: () => registry.extension('boutique', 'openBoutiqueItem') });
+    Object.defineProperty(bindings, 'openSheet', { get: () => registry.extension('boutique', 'openSheet') });
+    Object.defineProperty(bindings, 'closeSheet', { get: () => registry.extension('boutique', 'closeSheet') });
+    Object.defineProperty(bindings, 'openScanner', { get: () => registry.extension('boutique', 'openScanner') });
+    Object.defineProperty(bindings, 'closeScanner', { get: () => registry.extension('boutique', 'closeScanner') });
+    Object.defineProperty(bindings, 'resolveScan', { get: () => registry.extension('boutique', 'resolveScan') });
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
     const $$ = (s, c = document) => [...c.querySelectorAll(s)];
@@ -697,7 +793,7 @@
     const savedOrderLang = (() => {
       try { return localStorage.getItem('orderProLang') || localStorage.getItem('kiwiOrderLang') || ''; } catch (_) { return ''; }
     })();
-    let currentLang = savedOrderLang || 'fr';
+    owner.initialize('currentLang', savedOrderLang || 'fr');
     function t(key) {
       /* A language beyond the three reads English where it has no line of its
          own (the QR page did the same); Arabic keeps French, as shipped. */
@@ -765,7 +861,7 @@
                      choices:[ {id:'x', label:'X', delta:2}, … ] },
          };
        type: 'single' (radio) | 'multi' (checkbox); delta is the price add in MAD. */
-    const OPT = {};
+    owner.initialize('OPT', {});
 
     /* ============ menu data ============
        One object per item. Empty in the white-label template — add the client's menu:
@@ -773,9 +869,9 @@
            icon:'coffee', options:[OPT.sucre], video:'path/to/clip.mp4', tag:'new' }
        - cat must match a menu-tab data-tab; icon maps to a style via ICON_CLASS below.
        - options, video and tag are optional. */
-    const MENU = [];
-    const MENU_ALL = new Map();
-    const MENU_SUBTABS = new Map();
+    owner.initialize('MENU', []);
+    owner.initialize('MENU_ALL', new Map());
+    owner.initialize('MENU_SUBTABS', new Map());
     const ICON_CLASS = {
       coffee: 'coffee',
       croissant: 'pastry',
@@ -785,12 +881,14 @@
     };
 
     /* ============ state ============ */
-    let orderMode = null;       // 'table' | 'takeout'
-    let tableNumber = '';
-    let orderNumber = '';       // takeout only — like "047"
+    owner.initialize('orderMode', null);
+       // 'table' | 'takeout'
+    owner.initialize('tableNumber', '');
+    owner.initialize('orderNumber', '');
+       // takeout only — like "047"
 
     // Cart: lineKey -> { id, options, note, unitPrice, qty }
-    const cart = new Map();
+    owner.initialize('cart', new Map());
     /* Les commandes envoyées depuis ce téléphone, une entrée par commande :
        { id, number, status, total, lines:[{ id, options, note, unitPrice, qty }] }.
        Une simple liste de lignes se trompait de trois façons : une commande
@@ -801,71 +899,55 @@
        précédente n'arrivait jamais. Les prix sont ceux que le SERVEUR a
        calculés, pour que les lignes tombent juste sur son total. La liste est
        gardée pour la session en cours (localStorage), jamais au-delà. */
-    let sentOrders = [];
-    const sentLines = [];   // dérivé : les lignes des commandes non refusées
-    let sessionTotal = 0;   // dérivé : leur total, tel que le serveur l'a calculé
+    owner.initialize('sentOrders', []);
+    owner.initialize('sentLines', []);
+   // dérivé : les lignes des commandes non refusées
+    owner.initialize('sessionTotal', 0);
+   // dérivé : leur total, tel que le serveur l'a calculé
     const ORDER_DONE = new Set(['served', 'rejected', 'archived']);
     const sentKey = id => 'kiwi-op-sent:' + NET.slug + ':' + id;
-    function rebuildSent() {
-      sentLines.length = 0;
-      let c = 0;
-      for (const o of sentOrders) {
-        if (o.status === 'rejected') continue;
-        for (const l of o.lines) sentLines.push(l);
-        c += toCents(o.total);
-      }
-      sessionTotal = c / 100;
-      if (globalThis.KiwiGuest) globalThis.KiwiGuest.refreshStatus();
-    }
-    function saveSent() {
-      if (!SESSION.id) return;
-      try {
-        if (sentOrders.length) localStorage.setItem(sentKey(SESSION.id), JSON.stringify(sentOrders));
-        else localStorage.removeItem(sentKey(SESSION.id));
-      } catch (_) {}
-    }
+    instances.session = KiwiOrderMenu.orderProParts.create('session', {
+      get LIVE() { return LIVE; },
+      get NET() { return NET; },
+      get bootState() { return bootState; },
+      get cart() { return cart; }, set cart(value) { cart = value; },
+      get currentOrderId() { return currentOrderId; }, set currentOrderId(value) { currentOrderId = value; },
+      get gotoScreen() { return gotoScreen; },
+      get onSessionClosed() { return onSessionClosed; },
+      get sentKey() { return sentKey; },
+      get sentLines() { return sentLines; }, set sentLines(value) { sentLines = value; },
+      get sentOrders() { return sentOrders; }, set sentOrders(value) { sentOrders = value; },
+      get sessionTotal() { return sessionTotal; }, set sessionTotal(value) { sessionTotal = value; },
+      get showToast() { return showToast; },
+      get t() { return t; },
+      get toCents() { return toCents; },
+    });
+
+    // OrderPro session: rebuildSent is supplied by its private factory.
+    // OrderPro session: saveSent is supplied by its private factory.
     /* La session vient d'être ouverte ou reprise : on relit SES commandes, et
        on jette celles d'une visite précédente. */
-    function loadSent(sessionId) {
-      sentOrders = [];
-      try {
-        const prefix = 'kiwi-op-sent:' + NET.slug + ':';
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith(prefix) && k !== sentKey(sessionId)) localStorage.removeItem(k);
-        }
-        const saved = JSON.parse(localStorage.getItem(sentKey(sessionId)) || '[]');
-        if (Array.isArray(saved)) {
-          sentOrders = saved.filter(o => o && typeof o.id === 'string' && Array.isArray(o.lines));
-        }
-      } catch (_) {}
-      rebuildSent();
-    }
-    function clearSent() {
-      const id = SESSION.id;
-      sentOrders = [];
-      rebuildSent();
-      if (id) { try { localStorage.removeItem(sentKey(id)); } catch (_) {} }
-    }
+    // OrderPro session: loadSent is supplied by its private factory.
+    // OrderPro session: clearSent is supplied by its private factory.
     /* Aucun pourboire présélectionné : un 15 % coché d'office gonflait le « Total »
        d'un montant que le client n'avait pas choisi. */
-    let tipPercent = 0;
+    owner.initialize('tipPercent', 0);
 
     // Split state
-    let splitState = {
+    owner.initialize('splitState', {
       mode: 'egal',          // 'egal' | 'article'
       egalCount: 3,
       articleCount: 3,
       selectedPerson: 0,
       assignments: {},        // sentLine idx -> person idx
-    };
+    });
 
     // Customizer state
-    let customizerItem = null;
-    let customizerSelections = {};
-    let customizerNote = '';
-    let customizerEditingKey = null;
-    let customizerEditingQty = 1;
+    owner.initialize('customizerItem', null);
+    owner.initialize('customizerSelections', {});
+    owner.initialize('customizerNote', '');
+    owner.initialize('customizerEditingKey', null);
+    owner.initialize('customizerEditingQty', 1);
 
     /* ============ greeting flash (ported from kiwi-serveur) ============ */
     function runGreetingFlash() {
@@ -900,30 +982,20 @@
     }
 
     /* ============ table-number entry ============ */
-    function pressKey(key) {
-      if (key === 'back') {
-        tableNumber = tableNumber.slice(0, -1);
-      } else if (/^\d$/.test(key)) {
-        if (tableNumber.length >= 3) return; // cap at 3 digits
-        // avoid leading zero
-        if (tableNumber === '' && key === '0') return;
-        tableNumber += key;
-      }
-      renderTableDisplay();
-      updateContinueState();
-    }
-    function renderTableDisplay() {
-      const disp = $('#table-display');
-      if (!tableNumber) {
-        disp.innerHTML = `<span class="table-digit is-placeholder">·</span>`;
-        return;
-      }
-      disp.innerHTML = tableNumber.split('').map(d => `<span class="table-digit">${d}</span>`).join('');
-    }
-    function updateContinueState() {
-      const btn = $('#continue-btn');
-      btn.classList.toggle('is-ready', tableNumber.length > 0);
-    }
+    instances.table = KiwiOrderMenu.orderProParts.create('table', {
+      get $() { return $; },
+      get SESSION() { return SESSION; },
+      get gotoScreen() { return gotoScreen; },
+      get guestReady() { return guestReady; }, set guestReady(value) { guestReady = value; },
+      get onSessionClosed() { return onSessionClosed; },
+      get orderMode() { return orderMode; }, set orderMode(value) { orderMode = value; },
+      get t() { return t; },
+      get tableNumber() { return tableNumber; }, set tableNumber(value) { tableNumber = value; },
+    });
+
+    // OrderPro table: pressKey is supplied by its private factory.
+    // OrderPro table: renderTableDisplay is supplied by its private factory.
+    // OrderPro table: updateContinueState is supplied by its private factory.
 
     /* ============ screen transitions ============ */
     /* ═══════════════════════════════════════════════════════════════════════
@@ -976,138 +1048,49 @@
        La photo du plat sert d'affiche à sa propre vidéo, donc la tuile n'est
        jamais un rectangle noir pendant le chargement.
        ═══════════════════════════════════════════════════════════════════════ */
-    const feedMedia = (() => {
-      let io = null;
-      const calm = () => {
-        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-        catch (_) { return false; }
-      };
+    instances.menu = KiwiOrderMenu.orderProParts.create('menu', {
+      get $() { return $; },
+      get $$() { return $$; },
+      get I18N() { return I18N; },
+      get ICON_CLASS() { return ICON_CLASS; },
+      get MENU() { return MENU; },
+      get MENU_ALL() { return MENU_ALL; },
+      get MENU_I18N() { return MENU_I18N; },
+      get MENU_SUBTABS() { return MENU_SUBTABS; },
+      get OPT() { return OPT; },
+      get addLineToCart() { return addLineToCart; },
+      get availabilitySignature() { return availabilitySignature; }, set availabilitySignature(value) { availabilitySignature = value; },
+      get cart() { return cart; }, set cart(value) { cart = value; },
+      get currentLang() { return currentLang; },
+      get customizerEditingKey() { return customizerEditingKey; }, set customizerEditingKey(value) { customizerEditingKey = value; },
+      get customizerEditingQty() { return customizerEditingQty; }, set customizerEditingQty(value) { customizerEditingQty = value; },
+      get customizerItem() { return customizerItem; }, set customizerItem(value) { customizerItem = value; },
+      get customizerNote() { return customizerNote; }, set customizerNote(value) { customizerNote = value; },
+      get customizerSelections() { return customizerSelections; }, set customizerSelections(value) { customizerSelections = value; },
+      get escapeHtml() { return escapeHtml; },
+      get itemI18n() { return itemI18n; },
+      get itemOf() { return itemOf; },
+      get menuTr() { return menuTr; },
+      get money() { return money; },
+      get showToast() { return showToast; },
+      get t() { return t; },
+      get toCents() { return toCents; },
+    });
 
-      function load(v) {
-        if (!v.getAttribute('src') && v.dataset.src) v.setAttribute('src', v.dataset.src);
-      }
-      function play(v) {
-        load(v);
-        if (calm()) return;                       // affiche fixe, pas de boucle
-        const p = v.play();
-        if (p && p.catch) p.catch(() => {});      // refus d'autoplay → on n'insiste pas
-      }
-
-      function bind() {
-        if (io) { io.disconnect(); io = null; }
-        const list = $('#menu-list');
-        if (!list) return;
-        const vids = list.querySelectorAll('video[data-src]');
-        if (!vids.length) return;
-
-        if (!('IntersectionObserver' in window)) {
-          // Vieux navigateur : on charge tout et on laisse le navigateur faire.
-          vids.forEach(play);
-          return;
-        }
-        io = new IntersectionObserver((entries) => {
-          entries.forEach((e) => {
-            const v = e.target;
-            if (!e.isIntersecting) { try { v.pause(); } catch (_) {} return; }
-            if (e.intersectionRatio >= 0.3) play(v);
-            else load(v);                          // en approche : on précharge seulement
-          });
-        }, { root: list, rootMargin: '300px 0px', threshold: [0, 0.3] });
-        vids.forEach(v => io.observe(v));
-      }
-
-      /* L'app passe d'un écran à l'autre : quand la carte n'est plus affichée,
-         rien ne doit continuer à tourner derrière. Idem quand le téléphone se
-         verrouille ou que le client change d'onglet. */
-      function pauseAll() {
-        const list = $('#menu-list');
-        if (!list) return;
-        list.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} });
-      }
-      function resume() {
-        const list = $('#menu-list');
-        if (!list || !list.closest('.screen.is-active')) return;
-        bind();
-      }
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) pauseAll(); else resume();
-      });
-
-      return { bind, pauseAll, resume };
-    })();
+    // OrderPro menu: feedMedia is supplied by its private factory.
 
     /* Le média d'un plat, dans le cadre commun. L'ordre compte : une vidéo
        l'emporte sur une photo (elle vend mieux), la photo devient son affiche,
        et l'icône ne sert que quand le patron n'a rien mis — jamais comme
        vignette au rabais à côté d'un plat filmé. */
-    function dishMedia(m) {
-      if (m.video) {
-        /* Une vidéo sans affiche est un rectangle VIDE tant qu'elle ne joue
-           pas — et elle ne joue pas toujours : mode économie d'énergie, données
-           réduites, « limiter les animations ». Le plat disparaissait alors du
-           fil sans que rien ne le dise.
-           Donc : avec une photo, elle sert d'affiche et on ne précharge rien ;
-           sans photo, on demande les métadonnées, ce qui suffit au navigateur
-           pour peindre la première image. Le coût réseau ne tombe que sur les
-           plats que le patron n'a pas photographiés. */
-        const poster = m.photo ? ` poster="${escapeHtml(m.photo)}"` : '';
-        const pre = m.photo ? 'none' : 'metadata';
-        return `<div class="dish-media">${dishTag(m)}` +
-          `<video data-src="${escapeHtml(m.video)}"${poster} loop muted playsinline ` +
-          `preload="${pre}" disablepictureinpicture aria-hidden="true"></video></div>`;
-      }
-      if (m.photo) {
-        return `<div class="dish-media">${dishTag(m)}` +
-          `<img src="${escapeHtml(m.photo)}" alt="" loading="lazy" decoding="async" /></div>`;
-      }
-      return `<div class="dish-media is-plain ${ICON_CLASS[m.icon] || 'coffee'}">${dishTag(m)}` +
-        `<i data-lucide="${escapeHtml(m.icon || 'utensils')}"></i></div>`;
-    }
-    function dishTag(m) {
-      return m.tag === 'new' ? `<span class="dish-tag">${escapeHtml(t('tag_new'))}</span>` : '';
-    }
+    // OrderPro menu: dishMedia is supplied by its private factory.
+    // OrderPro menu: dishTag is supplied by its private factory.
 
-    function renderMenu(filter = 'all') {
-      const list = $('#menu-list');
-      list.classList.add('is-feed');
-      const bits = String(filter).split('::'), catFilter = bits[0], subFilter = bits[1] || '';
-      const items = MENU.filter(m => catFilter === 'all' || (m.cat === catFilter && (!subFilter || m.subId === subFilter)))
-        .filter(m => !globalThis.KiwiGuest || globalThis.KiwiGuest.dietAllows(m));
-      list.innerHTML = items.map(m => {
-        const i = itemI18n(m.id);
-        const out = m.avail === false;
-        return `
-        <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-card="${escapeHtml(m.id)}"`}>
-          ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
-          <div class="dish-meta">
-            ${m.formula ? `<div class="dish-tag">${escapeHtml(t('tag_formula'))}</div>` : ''}
-            <div class="dish-name">${escapeHtml(i.name)}</div>
-            <div class="dish-foot">
-              <span class="dish-price">${money(m.price)}</span>
-              ${globalThis.KiwiOrderMenu ? KiwiOrderMenu.infoButton(m, i.name, t) : ''}
-              ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
-            </div>
-          </div>
-        </article>
-      `;}).join('');
-      if (window.lucide) window.lucide.createIcons();
-      feedMedia.bind();
-      if (globalThis.KiwiGuest) globalThis.KiwiGuest.afterMenu();
-    }
+    // OrderPro menu: renderMenu is supplied by its private factory.
 
-    function renderMenuSubtabs(categoryId) {
-      const row = $('.menu-subtabs');
-      if (!row) return;
-      const subtabs = MENU_SUBTABS.get(String(categoryId)) || [];
-      row.innerHTML = subtabs.map(s => `<button class="menu-tab menu-subtab" role="tab" aria-selected="false" data-tab="${escapeHtml(String(categoryId) + '::' + String(s.id))}">${escapeHtml(String(s.name || ''))}</button>`).join('');
-      row.classList.toggle('is-visible', subtabs.length > 0);
-    }
+    // OrderPro menu: renderMenuSubtabs is supplied by its private factory.
 
-    function activeMenuFilter() {
-      return document.querySelector('.menu-subtab.is-active')?.dataset.tab
-        || document.querySelector('.menu-tabs .menu-tab.is-active')?.dataset.tab
-        || 'all';
-    }
+    // OrderPro menu: activeMenuFilter is supplied by its private factory.
 
     /* ============ cart logic — line keys support variants ============ */
     const itemOf  = id => MENU.find(m => m.id === id);
@@ -1127,518 +1110,118 @@
     }
     const money = v => fmtAmount(v) + ' ' + cur();
 
-    function lineKey(id, options, note) {
-      const parts = [id];
-      const keys = Object.keys(options || {}).sort();
-      for (const k of keys) {
-        const v = options[k];
-        if (Array.isArray(v)) {
-          if (v.length) parts.push(`${k}=${v.slice().sort().join('+')}`);
-        } else if (v != null && v !== '') {
-          parts.push(`${k}=${v}`);
-        }
-      }
-      if (note) parts.push(`note=${note}`);
-      return parts.join('|');
-    }
+    instances.cart = KiwiOrderMenu.orderProParts.create('cart', {
+      get $() { return $; },
+      get cart() { return cart; }, set cart(value) { cart = value; },
+      get describeOptions() { return describeOptions; },
+      get escapeHtml() { return escapeHtml; },
+      get money() { return money; },
+      get nameOf() { return nameOf; },
+      get showToast() { return showToast; },
+      get t() { return t; },
+    });
 
-    function choiceLabel(optKey, choiceId, optChoice, optGroup) {
-      const key = `opt_${optKey}_${choiceId}`;
-      const staticVal = I18N[currentLang]?.[key] || I18N.fr?.[key];
-      if (staticVal) return staticVal;
+    // OrderPro cart: lineKey is supplied by its private factory.
 
-      const choiceStr = String(choiceId || '');
-      const catalogItem = (typeof MENU_ALL !== 'undefined' && MENU_ALL ? MENU_ALL.get(choiceStr) : null)
-        || (typeof allItems !== 'undefined' && Array.isArray(allItems) ? allItems.find(x => String(x.id) === choiceStr) : null);
-      if (catalogItem) {
-        const tr = (MENU_I18N[currentLang] && MENU_I18N[currentLang][choiceStr])
-          || (typeof menuTr === 'function' ? menuTr(catalogItem, currentLang) : null);
-        if (tr && tr.name) return String(tr.name);
-        if (catalogItem.name) return String(catalogItem.name);
-      }
+    // OrderPro menu: choiceLabel is supplied by its private factory.
+    // OrderPro menu: groupLabel is supplied by its private factory.
+    // OrderPro menu: choiceEmoji is supplied by its private factory.
+    // OrderPro menu: describeOptions is supplied by its private factory.
+    // OrderPro menu: describeOptionChoices is supplied by its private factory.
+    // OrderPro menu: describeOptionVisuals is supplied by its private factory.
 
-      const opt = optGroup || OPT[optKey];
-      let choice = optChoice || (opt && opt.choices ? opt.choices.find(c => String(c.id) === choiceStr) : null);
-      if (!choice && optKey && String(optKey).startsWith('formula_')) {
-        for (const [k, g] of Object.entries(OPT)) {
-          if (k.startsWith('formula_') && Array.isArray(g?.choices)) {
-            const found = g.choices.find(c => String(c.id) === choiceStr);
-            if (found) { choice = found; break; }
-          }
-        }
-      }
-
-      if (choice) {
-        if (choice.targetItem) {
-          const tr = (MENU_I18N[currentLang] && MENU_I18N[currentLang][choiceStr])
-            || (typeof menuTr === 'function' ? menuTr(choice.targetItem, currentLang) : null);
-          if (tr && tr.name) return String(tr.name);
-          if (choice.targetItem.name) return String(choice.targetItem.name);
-        }
-        if (choice._src && typeof menuTr === 'function') {
-          const tr = menuTr(choice._src, currentLang);
-          if (tr && tr.name) return String(tr.name);
-        }
-        if (choice.label) return String(choice.label);
-      }
-
-      if (/^(it|sl|opt)_[A-Za-z0-9_-]+$/i.test(choiceStr)) {
-        return t('opt_unavailable');
-      }
-
-      return choiceStr;
-    }
-    function groupLabel(optKey) {
-      const key = `opt_label_${optKey}`;
-      if (I18N[currentLang]?.[key]) return I18N[currentLang][key];
-      if (I18N.fr?.[key]) return I18N.fr[key];
-      const opt = OPT[optKey];
-      if (opt) {
-        if (opt._src && typeof menuTr === 'function') {
-          const tr = menuTr(opt._src, currentLang);
-          if (tr && tr.name) return String(tr.name);
-          if (tr && tr.label) return String(tr.label);
-        }
-        if (opt.label) return String(opt.label);
-      }
-      if (/^(it|sl|opt)_[A-Za-z0-9_-]+$/i.test(String(optKey || ''))) {
-        return t('opt_unavailable');
-      }
-      return String(optKey || '');
-    }
-    function choiceEmoji(optKey, choiceId) {
-      return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
-    }
-    function describeOptions(line) {
-      const item = itemOf(line.id);
-      if (!item || !item.options) return '';
-      const parts = [];
-      for (const opt of item.options) {
-        const sel = line.options?.[opt.key];
-        if (sel == null) continue;
-        if (opt.type === 'single') {
-          /* Tout choix fait est écrit, y compris celui que la carte appelait
-             « par défaut » : une ligne « Espresso » qui cache « Sucré » laisse
-             le client recevoir un sucre qu'il n'a jamais lu. Un groupe laissé
-             vide n'est pas un choix : rien à écrire. */
-          if (!sel) continue;
-          parts.push(choiceLabel(opt.key, sel));
-        } else if (opt.type === 'multi' && Array.isArray(sel) && sel.length) {
-          const labels = sel.map(id => choiceLabel(opt.key, id)).filter(Boolean);
-          if (labels.length) {
-            const prefix = opt.key === 'retirer' ? t('opt_retirer_prefix') : '';
-            parts.push(prefix + labels.join(', ').toLowerCase());
-          }
-        }
-      }
-      return parts.join(' · ');
-    }
-    function describeOptionChoices(line) {
-      const item = itemOf(line.id);
-      if (!item || !item.options) return [];
-      const out = [];
-      for (const opt of item.options) {
-        if (opt.formulaSlotId) continue;
-        const sel = line.options?.[opt.key];
-        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
-        ids.forEach(id => {
-          if (!id) return;
-          out.push({ group: opt.key, choiceId: id, label: choiceLabel(opt.key, id) });
-        });
-      }
-      return out;
-    }
-    function describeOptionVisuals(line, regularOnly = false) {
-      const item = itemOf(line.id);
-      if (!item || !item.options) return [];
-      const out = [];
-      for (const opt of item.options) {
-        if (regularOnly && opt.formulaSlotId) continue;
-        const sel = line.options?.[opt.key];
-        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
-        ids.forEach(id => {
-          if (!id) return;
-          const emoji = choiceEmoji(opt.key, id);
-          const name = choiceLabel(opt.key, id);
-          if (name) out.push({ emoji: emoji || '', name });
-        });
-      }
-      return out;
-    }
-
-    function totals() {
-      let count = 0, total = 0;
-      cart.forEach(line => {
-        count += line.qty;
-        total += line.qty * line.unitPrice;
-      });
-      return { count, total };
-    }
-    function refreshCartUI() {
-      const { count, total } = totals();
-      const pill = $('#cart-pill');
-      $('#cart-count').textContent = count;
-      $('#cart-total').textContent = `${money(total)}`;
-      $('#cart-grand').textContent = `${money(total)}`;
-      pill.classList.toggle('is-visible', count > 0);
-      /* Closed hours or no Order Pro: the button says so before the server would. */
-      const gate = !!(globalThis.KiwiOrderMenu && KiwiOrderMenu.blocked());
-      $('#send-btn').disabled = count === 0 || gate;
-      if (gate) $('#send-btn').setAttribute('title', t('closed_why')); else $('#send-btn').removeAttribute('title');
-
-      const itemsEl = $('#cart-items');
-      if (count === 0) {
-        itemsEl.innerHTML = `<li class="cart-empty">${t('cart_empty')}</li>`;
-        return;
-      }
-      itemsEl.innerHTML = [...cart.entries()].map(([key, line]) => {
-        const safe = encodeURIComponent(key);
-        const opts = describeOptions(line);
-        const note = line.note ? `<div class="cart-item-note">${escapeHtml(line.note)}</div>` : '';
-        return `
-          <li class="cart-row">
-            <div class="info">
-              <span class="label">${escapeHtml(nameOf(line.id))}</span>
-              ${opts ? `<div class="cart-item-opts">${escapeHtml(opts)}</div>` : ''}
-              ${note}
-            </div>
-            <span class="qty">
-              <button type="button" data-dec="${safe}" aria-label="−">−</button>
-              <span>${line.qty}</span>
-              <button type="button" data-inc="${safe}" aria-label="+">+</button>
-            </span>
-            <span class="row-price">${money(line.qty * line.unitPrice)}</span>
-          </li>
-        `;
-      }).join('');
-    }
+    // OrderPro cart: totals is supplied by its private factory.
+    // OrderPro cart: refreshCartUI is supplied by its private factory.
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    function addLineToCart(line) {
-      if (globalThis.KiwiOrderMenu && !KiwiOrderMenu.ordering()) return;
-      const key = lineKey(line.id, line.options, line.note);
-      const addQty = Math.max(1, Number(line && line.qty) || 1);
-      if (cart.has(key)) {
-        cart.get(key).qty += addQty;
-      } else {
-        cart.set(key, { ...line, qty: addQty });
-      }
-      refreshCartUI();
-      showToast(`${nameOf(line.id)} · ${t('toast_added')}`);
-      if (globalThis.KiwiGuest) globalThis.KiwiGuest.onAdded(line);
-    }
-    function decFromCart(key) {
-      if (!cart.has(key)) return;
-      const line = cart.get(key);
-      line.qty -= 1;
-      if (line.qty <= 0) cart.delete(key);
-      refreshCartUI();
-    }
-    function incFromCart(key) {
-      if (!cart.has(key)) return;
-      cart.get(key).qty += 1;
-      refreshCartUI();
-    }
+    // OrderPro cart: addLineToCart is supplied by its private factory.
+    // OrderPro cart: decFromCart is supplied by its private factory.
+    // OrderPro cart: incFromCart is supplied by its private factory.
 
     /* ============ + button on a menu item ============ */
-    function standaloneMenuItem(itemId) {
-      const source = MENU_ALL.get(String(itemId));
-      if (source && (source.archived || source.formulaOnly || source.avail === false)) { showToast(t('dish_out')); return null; }
-      return itemOf(itemId);
-    }
+    // OrderPro menu: standaloneMenuItem is supplied by its private factory.
 
-    function handleAddClick(itemId) {
-      const item = standaloneMenuItem(itemId);
-      if (!item) return;
-      if (item.options && item.options.length > 0) {
-        openCustomizer(item);
-      } else {
-        addLineToCart({
-          id: itemId,
-          options: {},
-          note: '',
-          unitPrice: item.price,
-        });
-      }
-    }
+    // OrderPro menu: handleAddClick is supplied by its private factory.
 
     /* ============ Customizer ============ */
-    function initialCustomizerSelections(options) {
-      const selections = {};
-      for (const opt of options || []) {
-        /* A published default is menu configuration, not customer consent.
-           Every OrderPro option starts empty and only an explicit tap may
-           select it, for ordinary modifiers and formula stages alike. */
-        selections[opt.key] = opt.type === 'single' ? '' : [];
-      }
-      return selections;
-    }
+    // OrderPro menu: initialCustomizerSelections is supplied by its private factory.
 
     /* Le groupe obligatoire encore vide, ou null. Même règle que le contrôle de
        confirmCustomizer, pour que le bouton « Ajouter » et le refus ne
        divergent jamais. */
-    function unansweredRequiredOption(item, selections) {
-      return (item && item.options || []).find((opt) => {
-        const selected = selections[opt.key];
-        const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
-        const minimum = opt.formulaSlotId ? Math.max(0, Number(opt.min) || 0) : (opt.required ? 1 : 0);
-        return count < minimum;
-      }) || null;
-    }
-    function syncCustomizerGate() {
-      const btn = document.getElementById('custom-add-btn');
-      if (!btn) return;
-      const blocked = !!(customizerItem && unansweredRequiredOption(customizerItem, customizerSelections));
-      btn.disabled = blocked;
-      btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
-    }
+    // OrderPro menu: unansweredRequiredOption is supplied by its private factory.
+    // OrderPro menu: syncCustomizerGate is supplied by its private factory.
 
-    function openCustomizer(item, qty, editingKey) {
-      customizerItem = item;
-      customizerEditingKey = editingKey || null;
-      customizerEditingQty = Math.max(1, Number(qty) || 1);
-      customizerSelections = initialCustomizerSelections(item.options);
-      customizerNote = '';
-
-      // Populate header
-      const i = itemI18n(item.id);
-      $('#custom-name').textContent = i.name;
-      $('#custom-desc').textContent = i.desc;
-      $('#custom-base').textContent = `${t('custom_from')} ${money(item.price)}`;
-      const nutritionEl = $('#custom-nutrition');
-      const nutritionHtml = globalThis.KiwiOrderMenu ? KiwiOrderMenu.nutritionDetail(item, t) : '';
-      nutritionEl.innerHTML = nutritionHtml;
-      nutritionEl.hidden = !nutritionHtml;
-      const imgEl = $('#custom-img');
-      imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
-      imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
-
-      // Render option groups
-      const opts = $('#custom-options');
-      opts.innerHTML = (item.options || []).map(opt => {
-        const showChoiceImages = !!opt.formulaSlotId && opt.choices.some(choice => choice.photo);
-        return `
-        <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${escapeHtml(opt.key)}">
-          <div class="option-group-label">
-            <span>${escapeHtml(groupLabel(opt.key))}</span>
-            <span class="opt-type">${(opt.required || (opt.formulaSlotId && Math.max(0, Number(opt.min) || 0) > 0))
-              ? `${t('opt_required')} · ${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}`
-              : (opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one'))}</span>
-          </div>
-          <div class="option-chips">
-            ${opt.choices.map(c => `
-              <button class="option-chip" type="button"
-                      data-opt="${escapeHtml(opt.key)}" data-choice="${escapeHtml(c.id)}" data-type="${escapeHtml(opt.type)}">
-                ${showChoiceImages ? `<span class="option-choice-media">${c.photo
-                  ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" decoding="async" />`
-                  : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id, c, opt).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
-                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${escapeHtml(choiceLabel(opt.key, c.id, c, opt))}</span>
-                ${c.delta ? `<span class="delta">+${money(c.delta)}</span>` : ''}</span>
-                ${showChoiceImages ? '<span class="option-choice-check" aria-hidden="true"><i data-lucide="check"></i></span>' : ''}
-              </button>
-            `).join('')}
-          </div>
-        </div>
-      `; }).join('');
-
-      // Mark defaults as active
-      $$('.option-chip', opts).forEach(chip => {
-        const k = chip.dataset.opt, c = chip.dataset.choice, t = chip.dataset.type;
-        if (t === 'single' && customizerSelections[k] === c) chip.classList.add('is-active');
-      });
-
-      // Reset note
-      $('#custom-note-input').value = '';
-
-      refreshCustomizerPrice();
-      syncCustomizerGate();
-      const customScroll = $('.custom-scroll', $('#custom-sheet'));
-      if (customScroll) customScroll.scrollTop = 0;
-      $('#custom-sheet').classList.add('is-open');
-      $('#custom-sheet').setAttribute('aria-hidden', 'false');
-      if (window.lucide) window.lucide.createIcons();
-    }
-    function closeCustomizer() {
-      $('#custom-sheet').classList.remove('is-open');
-      $('#custom-sheet').setAttribute('aria-hidden', 'true');
-      customizerItem = null;
-      customizerEditingKey = null;
-      customizerEditingQty = 1;
-    }
-    function selectCustomizerChoice(optKey, choiceId, type) {
-      if (type === 'single') {
-        const definition = (customizerItem.options || []).find(opt => opt.key === optKey);
-        const mayClear = !definition || (!definition.required && !(definition.formulaSlotId && Math.max(0, Number(definition.min) || 0) > 0));
-        customizerSelections[optKey] = mayClear && customizerSelections[optKey] === choiceId ? '' : choiceId;
-      } else {
-        const arr = customizerSelections[optKey] || [];
-        const i = arr.indexOf(choiceId);
-        const def = (customizerItem.options || []).find(opt => opt.key === optKey);
-        if (i >= 0) arr.splice(i, 1);
-        else if (!def || !def.formulaSlotId || arr.length < Math.max(1, Number(def.max) || 1)) arr.push(choiceId);
-        customizerSelections[optKey] = arr;
-      }
-      // Update chip visuals
-      const group = document.querySelector(`.option-group[data-opt="${CSS.escape(String(optKey))}"]`);
-      if (!group) return;
-      group.classList.remove('is-invalid');
-      group.removeAttribute('aria-invalid');
-      if (type === 'single') {
-        $$('.option-chip', group).forEach(c => {
-          c.classList.toggle('is-active', customizerSelections[optKey] === c.dataset.choice);
-        });
-      } else {
-        $$('.option-chip', group).forEach(c => {
-          c.classList.toggle('is-active', customizerSelections[optKey].includes(c.dataset.choice));
-        });
-      }
-      refreshCustomizerPrice();
-      syncCustomizerGate();
-    }
-    function customizerUnitPrice() {
-      if (!customizerItem) return 0;
-      let p = customizerItem.price;
-      for (const opt of customizerItem.options || []) {
-        const sel = customizerSelections[opt.key];
-        if (opt.type === 'single' && sel) {
-          const c = opt.choices.find(c => c.id === sel);
-          if (c) p += (c.delta || 0);
-        } else if (opt.type === 'multi' && Array.isArray(sel)) {
-          for (const id of sel) {
-            const c = opt.choices.find(c => c.id === id);
-            if (c) p += (c.delta || 0);
-          }
-        }
-      }
-      return p;
-    }
-    function refreshCustomizerPrice() {
-      $('#custom-price-value').textContent = `${money(customizerUnitPrice())}`;
-    }
-    function confirmCustomizer() {
-      if (!customizerItem) return;
-      const invalidRequiredOption = (customizerItem.options || []).find((opt) => {
-        const selected = customizerSelections[opt.key];
-        const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
-        const minimum = opt.formulaSlotId ? Math.max(0, Number(opt.min) || 0) : (opt.required ? 1 : 0);
-        const maximum = opt.formulaSlotId ? Math.max(1, Number(opt.max) || 1) : Infinity;
-        return count < minimum || count > maximum;
-      });
-      if (invalidRequiredOption) {
-        const group = Array.from(document.querySelectorAll('.option-group'))
-          .find(el => el.dataset.opt === invalidRequiredOption.key);
-        if (group) {
-          group.classList.add('is-invalid');
-          group.setAttribute('aria-invalid', 'true');
-          group.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          const firstChoice = group.querySelector('.option-chip');
-          if (firstChoice) window.setTimeout(() => firstChoice.focus({ preventScroll: true }), 260);
-        }
-        const optGroupName = groupLabel(invalidRequiredOption.key) || '';
-        showToast(t('opt_required_missing').replace('{name}', optGroupName));
-        return;
-      }
-      if (customizerEditingKey && cart.has(customizerEditingKey)) {
-        cart.delete(customizerEditingKey);
-      }
-      const restoreQty = customizerEditingQty || 1;
-      customizerEditingKey = null;
-      customizerEditingQty = 1;
-      customizerNote = $('#custom-note-input').value.trim();
-      addLineToCart({
-        id: customizerItem.id,
-        options: { ...customizerSelections },
-        note: customizerNote,
-        unitPrice: customizerUnitPrice(),
-        qty: restoreQty,
-      });
-      closeCustomizer();
-    }
+    // OrderPro menu: openCustomizer is supplied by its private factory.
+    // OrderPro menu: closeCustomizer is supplied by its private factory.
+    // OrderPro menu: selectCustomizerChoice is supplied by its private factory.
+    // OrderPro menu: customizerUnitPrice is supplied by its private factory.
+    // OrderPro menu: refreshCustomizerPrice is supplied by its private factory.
+    // OrderPro menu: confirmCustomizer is supplied by its private factory.
 
     /* ============ Service bar (table mode) ============ */
-    let serviceRequestPending = false;
-    async function sendServiceRequest(action) {
-      if (serviceRequestPending || !SESSION.id || SESSION.closed) return false;
-      serviceRequestPending = true;
-      const res = await NET.serviceRequest(SESSION.id, action);
-      serviceRequestPending = false;
-      if (res && res.ok) return true;
-      if (res && res.error === 'session-closed') SESSION.markClosed('settle');
-      else showToast(res && res.error === 'network' ? t('order_offline') : t('order_failed'));
-      return false;
-    }
-    async function callServer() {
-      const pill = document.querySelector('[data-service="call-server"]');
-      pill.classList.add('is-pulled');
-      if (await sendServiceRequest('call-server')) {
-        showToast(`${t('toast_server_coming_pre')} ${tableNumber}`);
-      }
-      setTimeout(() => pill.classList.remove('is-pulled'), 4000);
-    }
+    owner.initialize('serviceRequestPending', false);
+    instances.payment = KiwiOrderMenu.orderProParts.create('payment', {
+      get $() { return $; },
+      get $$() { return $$; },
+      get MENU() { return MENU; },
+      get NET() { return NET; },
+      get ORDER_DONE() { return ORDER_DONE; },
+      get ORDER_STATE_KEY() { return ORDER_STATE_KEY; },
+      get PREP_STAGE() { return PREP_STAGE; },
+      get SESSION() { return SESSION; },
+      get TIP_LEVELS() { return TIP_LEVELS; },
+      get activeMenuFilter() { return activeMenuFilter; },
+      get cart() { return cart; }, set cart(value) { cart = value; },
+      get closeCart() { return closeCart; },
+      get cur() { return cur; },
+      get currentOrderId() { return currentOrderId; }, set currentOrderId(value) { currentOrderId = value; },
+      get describeOptionChoices() { return describeOptionChoices; },
+      get describeOptionVisuals() { return describeOptionVisuals; },
+      get describeOptions() { return describeOptions; },
+      get escapeHtml() { return escapeHtml; },
+      get fmtAmount() { return fmtAmount; },
+      get gotoScreen() { return gotoScreen; },
+      get groupLabel() { return groupLabel; },
+      get itemOf() { return itemOf; },
+      get lastStatus() { return lastStatus; }, set lastStatus(value) { lastStatus = value; },
+      get lineKey() { return lineKey; },
+      get money() { return money; },
+      get nameOf() { return nameOf; },
+      get openCustomizer() { return openCustomizer; },
+      get orderMode() { return orderMode; }, set orderMode(value) { orderMode = value; },
+      get orderNumber() { return orderNumber; }, set orderNumber(value) { orderNumber = value; },
+      get pendingRef() { return pendingRef; }, set pendingRef(value) { pendingRef = value; },
+      get rebuildSent() { return rebuildSent; },
+      get refreshCartUI() { return refreshCartUI; },
+      get reloadMenu() { return reloadMenu; },
+      get renderMenu() { return renderMenu; },
+      get renderMenuSubtabs() { return renderMenuSubtabs; },
+      get saveSent() { return saveSent; },
+      get sentLines() { return sentLines; }, set sentLines(value) { sentLines = value; },
+      get sentOrders() { return sentOrders; }, set sentOrders(value) { sentOrders = value; },
+      get serviceRequestPending() { return serviceRequestPending; }, set serviceRequestPending(value) { serviceRequestPending = value; },
+      get sessionTotal() { return sessionTotal; }, set sessionTotal(value) { sessionTotal = value; },
+      get showToast() { return showToast; },
+      get splitState() { return splitState; }, set splitState(value) { splitState = value; },
+      get t() { return t; },
+      get tableNumber() { return tableNumber; }, set tableNumber(value) { tableNumber = value; },
+      get tipPercent() { return tipPercent; }, set tipPercent(value) { tipPercent = value; },
+      get toCents() { return toCents; },
+      get totals() { return totals; },
+    });
+
+    // OrderPro payment: sendServiceRequest is supplied by its private factory.
+    // OrderPro payment: callServer is supplied by its private factory.
 
     /* ============ Bill sheet + gamified tip ============ */
-    function openBill() {
-      renderBill();
-      setTipPercent(0);
-
-      $('#bill-sheet').classList.add('is-open');
-      $('#bill-sheet').setAttribute('aria-hidden', 'false');
-    }
+    // OrderPro payment: openBill is supplied by its private factory.
     const ORDER_STATE_KEY = { pending: 'prep_waiting', accepted: 'prep_accepted', ready: 'prep_ready',
                               served: 'order_served', rejected: 'bill_order_refused' };
-    function renderBill() {
-      $('#bill-table').textContent = tableNumber;
-      const ordersEl = $('#bill-orders');
-      if (ordersEl) {
-        ordersEl.innerHTML = sentOrders.map(o => `
-          <li class="bill-order${o.status === 'rejected' ? ' is-refused' : ''}">
-            <span>${escapeHtml(t('bill_order_label'))} ${escapeHtml(o.number || '')}</span>
-            <span>${escapeHtml(t(ORDER_STATE_KEY[o.status] || 'prep_accepted'))}</span>
-          </li>`).join('');
-        ordersEl.hidden = !sentOrders.length;
-      }
-
-      // Aggregate sent lines by lineKey
-      const agg = new Map();
-      for (const l of sentLines) {
-        // Same dish at two prices (a promotion that ended) stays two rows.
-        const key = lineKey(l.id, l.options, l.note) + '|' + toCents(l.unitPrice);
-        if (agg.has(key)) agg.get(key).qty += l.qty;
-        else agg.set(key, { ...l });
-      }
-      const billItems = [...agg.values()];
-
-      const itemsEl = $('#bill-items');
-      if (billItems.length === 0) {
-        itemsEl.innerHTML = `<li class="bill-empty">${t('bill_empty')}</li>`;
-      } else {
-        itemsEl.innerHTML = billItems.map(l => {
-          const opts = describeOptions(l);
-          return `
-            <li class="bill-row">
-              <div class="bill-row-info">
-                <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
-                ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
-              </div>
-              <div class="bill-row-price">${money(l.qty * l.unitPrice)}</div>
-            </li>
-          `;
-        }).join('');
-      }
-
-      // Update bill subtitle (e.g. "Table 7")
-      const subtitleEl = $('#bill-subtitle');
-      if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span>`;
-
-      $('#bill-subtotal-value').textContent = `${money(sessionTotal)}`;
-      if (globalThis.KiwiGuest) globalThis.KiwiGuest.decorateBill();
-    }
-    function closeBill() {
-      $('#bill-sheet').classList.remove('is-open');
-      $('#bill-sheet').setAttribute('aria-hidden', 'true');
-    }
+    // OrderPro payment: renderBill is supplied by its private factory.
+    // OrderPro payment: closeBill is supplied by its private factory.
 
     const TIP_LEVELS = [
       { min: 0,  max: 0,   key: 'tip_level_0', empty: true },
@@ -1649,193 +1232,26 @@
       { min: 23, max: 100, key: 'tip_level_5', celebrated: true },
     ];
 
-    function setTipPercent(pct) {
-      tipPercent = pct;
-      const tipAmt = Math.round(sessionTotal * pct / 100);
-      const total = sessionTotal + tipAmt;
+    // OrderPro payment: setTipPercent is supplied by its private factory.
 
-      const tipAmtEl = $('#tip-amount');
-      tipAmtEl.textContent = `+${money(pct === 0 ? 0 : tipAmt)}`;
-      tipAmtEl.classList.toggle('is-zero', pct === 0);
-
-      // Jar fill — 20% tip fills jar to top, 25%+ overflows
-      const fillPct = Math.min(100, pct * 5);
-      const offset = 86 * (1 - fillPct / 100);
-      const fill = $('#tip-jar-fill');
-      const shimmer = $('#tip-jar-shimmer');
-      if (fill) fill.style.transform = `translateY(${offset}px)`;
-      if (shimmer) shimmer.style.transform = `translateY(${offset}px)`;
-
-      // Level label
-      const level = TIP_LEVELS.find(l => pct >= l.min && pct <= l.max) || TIP_LEVELS[0];
-      const lbl = $('#tip-level');
-      lbl.textContent = t(level.key);
-      lbl.classList.toggle('is-empty', !!level.empty);
-      lbl.classList.toggle('is-celebrated', !!level.celebrated);
-
-      // Sparkles + shimmer
-      const wrap = $('#tip-jar-wrap');
-      wrap.classList.toggle('is-overflow', pct >= 20);
-      wrap.classList.toggle('is-fancy', pct >= 13);
-
-      // Chip active state
-      $$('.tip-chip').forEach(c => {
-        c.classList.toggle('is-active', parseInt(c.dataset.tip, 10) === pct);
-      });
-
-      // Total
-      $('#bill-total-value').textContent = `${money(total)}`;
-    }
-
-    async function confirmBill() {
-      if (!await sendServiceRequest('ask-bill')) return;
-      if (globalThis.KiwiGuest) globalThis.KiwiGuest.billAsked();
-      closeBill();
-      // This requests the whole table's bill, not this phone's subtotal or an
-      // unsaved tip. A successful write is not a promise that staff has arrived.
-      showToast(`${t('toast_bill_asked_pre')} ${tableNumber}`);
-    }
+    // OrderPro payment: confirmBill is supplied by its private factory.
 
     /* ============ Split-bill (égal / par article) ============ */
-    function openSplit() {
-      if (sessionTotal === 0) return; // nothing to split
-      // Reset assignments when opening fresh
-      splitState.assignments = {};
-      splitState.selectedPerson = 0;
-      refreshSplitUI();
-      setSplitMode(splitState.mode);
-      $('#split-sheet').classList.add('is-open');
-      $('#split-sheet').setAttribute('aria-hidden', 'false');
-    }
-    function closeSplit() {
-      $('#split-sheet').classList.remove('is-open');
-      $('#split-sheet').setAttribute('aria-hidden', 'true');
-    }
-    function setSplitMode(mode) {
-      splitState.mode = mode;
-      $$('.split-mode-tab').forEach(tab =>
-        tab.classList.toggle('is-active', tab.dataset.splitMode === mode));
-      $('#split-egal').hidden = mode !== 'egal';
-      $('#split-article').hidden = mode !== 'article';
-      refreshSplitUI();
-    }
-    function setEgalCount(count) {
-      splitState.egalCount = count;
-      $$('[data-egal-count]').forEach(c =>
-        c.classList.toggle('is-active', parseInt(c.dataset.egalCount, 10) === count));
-      refreshSplitUI();
-    }
-    function setArticleCount(count) {
-      splitState.articleCount = count;
-      if (splitState.selectedPerson >= count) splitState.selectedPerson = 0;
-      // Drop any assignment that points to a now-out-of-range person
-      Object.keys(splitState.assignments).forEach(k => {
-        if (splitState.assignments[k] >= count) delete splitState.assignments[k];
-      });
-      $$('[data-article-count]').forEach(c =>
-        c.classList.toggle('is-active', parseInt(c.dataset.articleCount, 10) === count));
-      refreshSplitUI();
-    }
-    function setSplitPerson(idx) {
-      splitState.selectedPerson = idx;
-      renderSplitArticle();
-    }
-    function toggleSplitItem(lineIdx) {
-      const cur = splitState.assignments[lineIdx];
-      if (cur === splitState.selectedPerson) delete splitState.assignments[lineIdx];
-      else splitState.assignments[lineIdx] = splitState.selectedPerson;
-      renderSplitArticle();
-    }
+    // OrderPro payment: openSplit is supplied by its private factory.
+    // OrderPro payment: closeSplit is supplied by its private factory.
+    // OrderPro payment: setSplitMode is supplied by its private factory.
+    // OrderPro payment: setEgalCount is supplied by its private factory.
+    // OrderPro payment: setArticleCount is supplied by its private factory.
+    // OrderPro payment: setSplitPerson is supplied by its private factory.
+    // OrderPro payment: toggleSplitItem is supplied by its private factory.
 
-    function refreshSplitUI() {
-      const subtotal = sessionTotal;
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
-      const grand = subtotal + tipAmt;
-      // Subtitle
-      const subtitleEl = $('#split-subtitle');
-      if (subtitleEl) {
-        subtitleEl.textContent = t('split_subtitle_tpl')
-          .replace('{n}', tableNumber || '—')
-          .replace('{total}', fmtAmount(grand))
-          .replace('{cur}', cur());
-      }
-      if (splitState.mode === 'egal') {
-        $('#split-egal-subtotal').textContent = `${money(subtotal)}`;
-        $('#split-egal-tip').textContent = `${money(tipAmt)}`;
-        const per = Math.ceil(toCents(grand) / splitState.egalCount) / 100;
-        $('#split-egal-per').textContent = `${money(per)}`;
-      } else {
-        renderSplitArticle();
-      }
-    }
+    // OrderPro payment: refreshSplitUI is supplied by its private factory.
 
-    function personSubtotal(personIdx) {
-      let sum = 0;
-      sentLines.forEach((line, idx) => {
-        if (splitState.assignments[idx] === personIdx) {
-          sum += line.qty * line.unitPrice;
-        }
-      });
-      return sum;
-    }
+    // OrderPro payment: personSubtotal is supplied by its private factory.
 
-    function renderSplitArticle() {
-      const tabsEl = $('#split-people-tabs');
-      const poolEl = $('#split-items-pool');
-      if (!tabsEl || !poolEl) return;
+    // OrderPro payment: renderSplitArticle is supplied by its private factory.
 
-      const people = Array.from({ length: splitState.articleCount }, (_, i) => i);
-      tabsEl.innerHTML = people.map(i => {
-        const total = personSubtotal(i);
-        const isActive = splitState.selectedPerson === i;
-        return `
-          <button class="split-person-tab ${isActive ? 'is-active' : ''}" type="button" data-split-person="${i}">
-            <span class="name">${t('split_person_pre')} ${i + 1}</span>
-            <span class="val">${money(total)}</span>
-          </button>
-        `;
-      }).join('');
-
-      poolEl.innerHTML = sentLines.map((line, idx) => {
-        const owner = splitState.assignments[idx];
-        const isMine = owner === splitState.selectedPerson;
-        const isOther = owner != null && owner !== splitState.selectedPerson;
-        const ownerLabel = isOther ? `${t('split_person_pre')} ${owner + 1}` : '';
-        return `
-          <div class="split-pool-item ${isMine ? 'is-mine' : ''} ${isOther ? 'is-other' : ''}"
-               data-split-item="${idx}" ${isOther ? `data-owner="${escapeHtml(ownerLabel)}"` : ''}>
-            <span class="info">
-              <span class="qty">${line.qty}×</span>
-              <span class="name">${escapeHtml(nameOf(line.id))}</span>
-            </span>
-            <span class="price">${money(line.qty * line.unitPrice)}</span>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function confirmSplit() {
-      const subtotal = sessionTotal;
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
-      const grand = subtotal + tipAmt;
-      let msg;
-      if (splitState.mode === 'egal') {
-        const per = Math.ceil(toCents(grand) / splitState.egalCount) / 100;
-        msg = `${t('toast_split_egal')} ${splitState.egalCount} × ${money(per)}`;
-      } else {
-        const totals = [];
-        for (let i = 0; i < splitState.articleCount; i++) {
-          const sub = personSubtotal(i);
-          // Distribute tip proportionally per person
-          const tipShare = subtotal > 0 ? Math.round(tipAmt * (sub / subtotal)) : 0;
-          totals.push(sub + tipShare);
-        }
-        msg = `${t('toast_split_egal')} ${totals.map(x => fmtAmount(x)).join(' · ')} ${cur()}`;
-      }
-      closeSplit();
-      closeBill();
-      showToast(msg);
-    }
+    // OrderPro payment: confirmSplit is supplied by its private factory.
 
     /* ============ toast ============ */
     let toastTimer = null;
@@ -1853,251 +1269,20 @@
     }
 
     /* ============ cart sheet ============ */
-    function openCart() {
-      $('#cart-sheet').classList.add('is-open');
-      $('#cart-sheet').setAttribute('aria-hidden', 'false');
-    }
-    function closeCart() {
-      $('#cart-sheet').classList.remove('is-open');
-      $('#cart-sheet').setAttribute('aria-hidden', 'true');
-    }
+    // OrderPro cart: openCart is supplied by its private factory.
+    // OrderPro cart: closeCart is supplied by its private factory.
 
     /* ============ send order ============ */
     /* The order leaves the phone over WiFi and lands in the caisse's queue.
        No optimistic UI: if the relay fails the customer is told, because a
        fake "sent to the kitchen" is how a table waits 20 minutes for nothing. */
-    let currentOrderId = '';
+    owner.initialize('currentOrderId', '');
     /* La clé d'idempotence de l'envoi en cours. Conservée tant que l'envoi n'a
        pas abouti, pour qu'un deuxième tap rejoue la même commande au lieu d'en
        créer une seconde ; effacée dès qu'elle est acceptée, pour que la
        commande SUIVANTE soit bien une nouvelle commande. */
-    let pendingRef = '';
-    async function sendOrder() {
-      if (!cart.size) return;
-      if (globalThis.KiwiOrderMenu && KiwiOrderMenu.blocked()) {
-        showToast(t(KiwiOrderMenu.ordering() ? 'closed_why' : 'ordering_off_note'));
-        return;
-      }
-      const btn = $('#send-btn');
-      if (btn.classList.contains('is-loading')) return;
-      if (SESSION.closed) { gotoScreen('screen-thanks'); return; }
-      const label = $('#send-label');
-      const prevLabel = label ? label.textContent : '';
-      const loadingOwner = { scope: SESSION.sendScope() };
-      btn.orderProLoadingOwner = loadingOwner;
-      const releaseLoading = (restoreLabel = true) => {
-        if (btn.orderProLoadingOwner !== loadingOwner) return;
-        btn.classList.remove('is-loading');
-        if (label && restoreLabel) label.textContent = prevLabel;
-        delete btn.orderProLoadingOwner;
-      };
-      btn.classList.add('is-loading');
-      if (label) label.textContent = t('order_sending');
-
-      const summary = [...cart.entries()]
-        .map(([, line]) => `${line.qty}× ${nameOf(line.id)}`)
-        .join(' · ');
-      const totalNow = totals().total;
-      // Snapshot current cart into sentLines (for à-table bill aggregation)
-      const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
-
-      // Resolve the visit BEFORE choosing its retry identity.
-      if ((!SESSION.id || SESSION.mode !== orderMode || String(SESSION.table || '') !== String(orderMode === 'table' ? tableNumber : ''))
-          && !(await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : ''))) {
-        releaseLoading();
-        return;
-      }
-      loadingOwner.scope = SESSION.sendScope();
-
-      /* On n'envoie plus ni les noms ni les prix : rien que des identifiants et
-         des quantités. Le serveur ouvre la carte publiée par le commerçant, y
-         lit le prix et recalcule le total. Avant, une requête modifiée créait
-         une commande à 1 MAD pour un plat à 250 et le ticket cuisine sortait
-         avec le faux prix. */
-      const makeLinesPayload = ref => linesCopy.flatMap((l, lineIndex) => {
-        const item = itemOf(l.id);
-        const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
-        const formulaUid = formulaSlots.length ? `${ref}-${lineIndex}`.slice(0, 40) : '';
-        const parent = {
-          id: l.id, qty: l.qty,
-          options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
-          optionChoices: describeOptionChoices(l),
-          visuals: describeOptionVisuals(l, true),
-          note: l.note || '',
-        };
-        if (!formulaUid) return [parent];
-        Object.assign(parent, { kind: 'formula', formulaUid, formulaName: nameOf(l.id) });
-        const children = [];
-        formulaSlots.forEach(slot => {
-          const selected = l.options?.[slot.key];
-          /* Une étape facultative jamais touchée vaut '' (initialCustomizerSelections),
-             pas `undefined` : `== null` la laissait passer et on envoyait un
-             composant d'identifiant vide. Le serveur ne le trouvait dans aucun
-             choix du créneau et refusait TOUTE la formule — « Options à
-             rechoisir » sur un plat pourtant correctement composé. */
-          const ids = (slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
-            : (selected == null ? [] : [selected])).filter(Boolean);
-          ids.forEach((id, choiceIndex) => children.push({
-            id, qty: l.qty, kind: 'formula-part', formulaUid,
-            formulaName: nameOf(l.id), slotLabel: slot.label || '',
-            formulaSlotId: slot.formulaSlotId,
-            lineId: `${formulaUid}-${slot.formulaSlotId}-${choiceIndex}`.slice(0, 60),
-          }));
-        });
-        return [parent].concat(children);
-      });
-
-      // Hash the exact payload with neutral formula IDs, then restore its ref
-      // before deriving the real formulaUid/lineId values. No basket is stored.
-      const neutralPayload = makeLinesPayload('');
-      const attempt = await SESSION.prepareSend(neutralPayload);
-      if (SESSION.closed || attempt.scope !== SESSION.sendScope()) {
-        SESSION.clearPendingSend(attempt);
-        pendingRef = '';
-        releaseLoading();
-        return;
-      }
-      pendingRef = attempt.ref;
-      const linesPayload = neutralPayload.map(line => !line.formulaUid ? line : {
-        ...line, formulaUid: (pendingRef + line.formulaUid).slice(0, 40),
-        ...(line.lineId ? { lineId: (pendingRef + line.lineId).slice(0, 60) } : {}),
-      });
-
-      let res = await NET.placeOrder({
-        mode: orderMode,                       // 'table' | 'takeout'
-        table: orderMode === 'table' ? tableNumber : '',
-        session: SESSION.id || '',
-        ref: pendingRef,
-        lines: linesPayload,
-        ...(globalThis.KiwiGuest ? globalThis.KiwiGuest.orderExtras() : {}),
-      });
-
-      const currentVisit = !SESSION.closed && attempt.scope === SESSION.sendScope();
-      releaseLoading(currentVisit);
-      // A response can outlive payment and an explicit reorder. Retire an
-      // acknowledged old attempt, but never apply it to the new visit's UI.
-      if (!currentVisit) {
-        if (res && res.ok) SESSION.clearPendingSend(attempt);
-        if (pendingRef === attempt.ref) pendingRef = '';
-        return;
-      }
-
-      if (!res || !res.ok) {
-        const err = res && res.error;
-        /* La session a été fermée pendant qu'on commandait : l'addition vient
-           d'être réglée. Le dire franchement vaut mieux qu'un « échec » qui
-           inviterait à réessayer indéfiniment. */
-        if (err === 'session-closed') {
-          SESSION.markClosed('settle');
-          return;
-        }
-        if (err === 'service-closed') { showToast(t('order_closed')); return; }
-        /* « Servir au ftour » arrivé trop tard : on décoche, on le dit, le
-           client renvoie la même commande pour tout de suite. */
-        if (err === 'ftour-unavailable') {
-          SESSION.clearPendingSend(attempt);
-          pendingRef = '';
-          if (globalThis.KiwiGuest) globalThis.KiwiGuest.ftourRefused();
-          return;
-        }
-        /* La file est pleine : renvoyer échouerait pareil. On le dit, et on
-           envoie le client vers l'équipe. */
-        if (err === 'queue-full' || err === 'table-queue-full') {
-          SESSION.clearPendingSend(attempt);
-          pendingRef = '';
-          showToast(t('order_busy'));
-          return;
-        }
-        /* La carte a bougé sous les doigts du client — un plat épuisé, un plat
-           retiré. On le dit avec le nom, et on retire la ligne : réessayer à
-           l'identique échouerait exactement pareil. */
-        if (err === 'menu-changed') {
-          SESSION.clearPendingSend(attempt);
-          pendingRef = '';
-          const invalidOpts = Array.isArray(res.invalidOptions) ? res.invalidOptions.filter(Boolean) : [];
-          const gone = [].concat(res.unavailable || [], res.unknown || []).filter(Boolean);
-
-          if (invalidOpts.length) {
-            const targetNames = invalidOpts.join(', ');
-            showToast(t('order_options_changed').replace('{n}', targetNames || t('order_item_fallback')));
-            let reopened = false;
-            for (const [key, line] of [...cart.entries()]) {
-              const m = itemOf(line.id);
-              const match = invalidOpts.includes(line.id) || (m && invalidOpts.includes(m.name));
-              if (match && m) {
-                openCustomizer(m, line.qty, key);
-                reopened = true;
-                break;
-              }
-            }
-            if (!reopened) {
-              refreshCartUI();
-              reloadMenu();
-            }
-            return;
-          }
-
-          if (gone.length) {
-            const targetGone = gone.join(', ');
-            showToast(t('order_gone').replace('{n}', targetGone || t('order_item_fallback')));
-            dropUnavailable(res.unknown || [], res.unavailable || []);
-            return;
-          }
-
-          showToast(t('order_menu_updated'));
-          reloadMenu();
-          return;
-        }
-        showToast(err === 'network' && !attempt.durable ? t('order_retry_local')
-          : err === 'network' ? t('order_unconfirmed') : t('order_failed'));
-        return;                                // cart intact — they can retry
-      }
-
-      SESSION.clearPendingSend(attempt);
-      pendingRef = '';
-      currentOrderId = String(res.id || '');
-      lastStatus = '';
-      /* Le total qui compte est celui que le SERVEUR a calculé. S'il diffère de
-         ce que le téléphone affichait (un prix changé au bureau il y a dix
-         secondes), c'est le sien qui est vrai, et le client doit voir celui-là
-         sur son écran de confirmation. */
-      const serverTotal = Number(res.total);
-      const shownTotal = isFinite(serverTotal) && serverTotal > 0 ? serverTotal : totalNow;
-      closeCart();
-      if (orderMode === 'takeout') {
-        orderNumber = 'OPD-' + String(res.number || '');
-        $('#cashier-number-digits').textContent = orderNumber;
-        $('#prep-number').textContent = orderNumber;
-        $('#ready-number').textContent = orderNumber;
-        $('#cashier-items').textContent = summary || '·';
-        $('#cashier-total').textContent = `${money(shownTotal)}`;
-        gotoScreen('screen-cashier');
-      } else {
-        // Table mode — one record per order, priced by the server
-        const serverLines = Array.isArray(res.lines)
-          ? res.lines.filter(l => l && l.kind !== 'formula-part') : [];
-        const sameShape = serverLines.length === linesCopy.length
-          && serverLines.every((l, i) => String(l.id) === String(linesCopy[i].id));
-        const lines = linesCopy.map((l, i) => ({
-          id: l.id, options: l.options, note: l.note || '', qty: l.qty,
-          unitPrice: sameShape && isFinite(Number(serverLines[i].unitPrice))
-            ? Number(serverLines[i].unitPrice) : l.unitPrice,
-        }));
-        if (!sentOrders.some(o => o.id === currentOrderId)) {   // a replayed send is the same order
-          sentOrders.push({ id: currentOrderId, number: String(res.number || ''), status: 'pending',
-                            total: shownTotal, lines });
-        }
-        rebuildSent();
-        saveSent();
-        $('#success-table').textContent = tableNumber;
-        $('#success-items').textContent = summary || '·';
-        gotoScreen('screen-success');
-        watchTableOrder();
-        if (globalThis.KiwiGuest) globalThis.KiwiGuest.onSent(lines, res);
-      }
-      cart.clear();
-      refreshCartUI();
-    }
+    owner.initialize('pendingRef', '');
+    // OrderPro payment: sendOrder is supplied by its private factory.
 
     /* Table mode gets the same truth as takeout, just quieter: the ETA line
        becomes the ticket's real state at the till, not a decorative fixed delay.
@@ -2118,152 +1303,13 @@
        appartient au client suivant, et il n'a de toute façon pas ce souvenir
        dans SON téléphone.
        ═══════════════════════════════════════════════════════════════════════ */
-    const SESSION = {
-      id: '', mode: '', table: '', closed: false, closedBy: '',
-      pendingSend: null,
-      retiredSendRefs: new Set(),
-      sendKey() { return 'kiwi-op-send:' + NET.slug; },
-      sendScope() { return JSON.stringify([NET.slug, this.id, this.mode, String(this.table || '')]); },
-      async prepareSend(lines) {
-        const key = this.sendKey(), scope = this.sendScope(), payload = JSON.stringify(lines);
-        const previous = this.pendingSend;
-        let fingerprint = '';
-        try {
-          const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
-          fingerprint = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-        } catch (_) { /* unavailable storage/crypto permits only an in-page retry */ }
-        let ref = previous && previous.scope === scope && previous.payload === payload
-          && !this.retiredSendRefs.has(key + ':' + previous.ref) ? previous.ref : '';
-        if (!ref && fingerprint) {
-          try {
-            const saved = JSON.parse(localStorage.getItem(key) || 'null');
-            if (saved && saved.v === 1 && saved.scope === scope && saved.fingerprint === fingerprint
-                && /^r[A-Za-z0-9_-]{6,40}$/.test(saved.ref || '')
-                && !this.retiredSendRefs.has(key + ':' + saved.ref)
-                && localStorage.getItem(key + ':retired:' + saved.ref) !== '1') ref = saved.ref;
-          } catch (_) {}
-        }
-        if (!ref) ref = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
-        const attempt = { key, scope, payload, ref, durable: false };
-        if (fingerprint) {
-          try {
-            const record = JSON.stringify({ v: 1, scope, fingerprint, ref });
-            localStorage.setItem(key, record);
-            attempt.durable = localStorage.getItem(key) === record;
-          } catch (_) {}
-        }
-        this.pendingSend = attempt;
-        return attempt;
-      },
-      clearPendingSend(attempt = this.pendingSend) {
-        const key = attempt ? attempt.key : this.sendKey();
-        let retireDurably = !!attempt;
-        if (attempt) this.retiredSendRefs.add(key + ':' + attempt.ref);
-        try {
-          const saved = JSON.parse(localStorage.getItem(key) || 'null');
-          if (saved && (attempt ? saved.ref === attempt.ref && saved.scope === attempt.scope
-              : saved.scope === this.sendScope())) {
-            // Tombstone first: if removeItem fails, a successful write still
-            // prevents an acknowledged ref from being restored after navigation.
-            try { localStorage.setItem(key, 'null'); } catch (_) {}
-            localStorage.removeItem(key);
-          }
-          retireDurably = false;
-        } catch (_) {}
-        // If the shared slot cannot be read, do not overwrite a potentially
-        // newer attempt. Retire ONLY the captured ref in its own small marker;
-        // navigation can then reject the stale record once reads recover.
-        if (retireDurably) {
-          try { localStorage.setItem(key + ':retired:' + attempt.ref, '1'); } catch (_) {}
-        }
-        if (!attempt || this.pendingSend === attempt) this.pendingSend = null;
-      },
-      _key() { return 'kiwi-op-ses:' + NET.slug; },
-      _read() {
-        try { return JSON.parse(localStorage.getItem(this._key()) || 'null') || null; }
-        catch (_) { return null; }
-      },
-      _write(v) {
-        try {
-          if (v) localStorage.setItem(this._key(), JSON.stringify(v));
-          else localStorage.removeItem(this._key());
-        } catch (_) {}
-      },
-      /* Une addition réglée à l'instant, sur CETTE table. */
-      recentlySettled(mode, table, allowReorder = false) {
-        if (allowReorder) return false;
-        if (cart && cart.size > 0) return false;
-        // A counter tag starts a new takeaway purchase each time it is tapped.
-        // Keeping its previous closed session here made the promised NFC retry
-        // reopen the thank-you screen for 30 minutes instead of the menu.
-        if (mode === 'takeout') return false;
-        const s = this._read();
-        if (!s || !s.closedAt) return false;
-        // Seule une vraie addition encaissée en caisse (settle) empêche la réouverture immédiate.
-        // Une table annulée sans encaissement ou expirée ne doit pas bloquer le client.
-        if (s.closedBy && s.closedBy !== 'settle') return false;
-        if (s.hadOrder === false) return false;
-        if (s.mode !== mode || String(s.table || '') !== String(table || '')) return false;
-        return (Date.now() - s.closedAt) < 30 * 60 * 1000;
-      },
-      async open(mode, table) {
-        if (this.id && this.mode === mode && String(this.table) === String(table || '')) return true;
-        const res = await NET.openSession(mode, table);
-        if (!res || !res.ok) {
-          /* On n'invente rien : « le service n'est pas ouvert » est une réponse
-             vraie et utile, et bien meilleure qu'une carte qu'on laisse
-             parcourir avant de refuser la commande à la fin.
-             Le refus peut tomber depuis le pavé numérique aussi bien qu'au
-             démarrage : il faut donc REVENIR sur l'écran d'accueil, sinon le
-             message s'écrirait dans un écran que personne ne regarde. */
-          const err = res && res.error;
-          if (err === 'service-closed' || err === 'orderpro-off') {
-            gotoScreen('screen-boot');
-            bootState(err === 'service-closed' ? 'closed' : 'off',
-              { icon: err === 'service-closed' ? 'moon' : 'power-off' });
-          } else {
-            showToast(t('order_offline'));
-          }
-          return false;
-        }
-        this.id = res.session; this.mode = res.mode; this.table = res.table || '';
-        this.closed = false; this.closedBy = '';
-        this._write({ id: this.id, mode: this.mode, table: this.table });
-        if (this.mode === 'table') loadSent(this.id);
-        LIVE.start();
-        return true;
-      },
-      markClosed(why) {
-        if (this.closed) return;
-        this.clearPendingSend();
-        this.closed = true; this.closedBy = why || '';
-        this._write({ closedBy: this.closedBy, id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), hadOrder: !!currentOrderId || (Array.isArray(sentLines) && sentLines.length > 0) });
-        clearSent();
-        onSessionClosed();
-      },
-    };
+    // OrderPro session: SESSION is supplied by its private factory.
 
     /* Le service est fini pour ce téléphone : plus de carte, plus de panier,
        plus de commande. On ne se contente pas de masquer le bouton — le panier
        est vidé et la boucle s'arrête, pour qu'aucun écran resté ouvert derrière
        ne puisse encore envoyer quoi que ce soit. */
-    function onSessionClosed() {
-      LIVE.stop();
-      const sendButton = $('#send-btn');
-      if (sendButton && sendButton.orderProLoadingOwner?.scope === SESSION.sendScope()) {
-        sendButton.classList.remove('is-loading');
-        delete sendButton.orderProLoadingOwner;
-      }
-      pendingRef = '';
-      cart.clear();
-      refreshCartUI();
-      const sub = $('#thanks-sub');
-      if (sub) {
-        sub.textContent = SESSION.closedBy === 'expiry' ? t('thanks_expired') : t('thanks_sub');
-      }
-      if (globalThis.KiwiGuest) globalThis.KiwiGuest.onClosed();
-      gotoScreen('screen-thanks');
-    }
+    // OrderPro payment: onSessionClosed is supplied by its private factory.
 
     /* ═══════════════════════════════════════════════════════════════════════
        LE DIRECT — une seule boucle, pour la session ET la commande
@@ -2278,263 +1324,48 @@
            suivant : c'est exactement le moment où le client regarde ;
          · le réseau qui revient relance aussi.
        ═══════════════════════════════════════════════════════════════════════ */
-    const LIVE = (() => {
-      const FAST = 4000;      // une commande est en jeu
-      const SLOW = 15000;     // simplement assis, la carte ouverte
-      let timer = null, running = false;
-
-      const busy = () => (!!currentOrderId && !ORDER_DONE.has(lastStatus))
-        || sentOrders.some(o => !ORDER_DONE.has(o.status));
-
-      async function tick() {
-        if (!running || document.hidden) return;
-
-        if (SESSION.id && !SESSION.closed) {
-          const s = await NET.sessionStatus(SESSION.id);
-          // Injoignable ⇒ on ne conclut RIEN. Déclarer la session fermée sur un
-          // réseau qui tousse mettrait le client dehors au milieu du repas.
-          if (s && s.ok && s.status !== 'open') {
-            // Settlement ends the shared visit for EVERY phone, including
-            // phones with a draft. Only the explicit reorder action may reseat.
-            SESSION.markClosed(s.closedBy);
-            return;
-          }
-        }
-
-        /* Toutes les commandes encore en jeu, pas seulement la dernière : un
-           refus de la première doit arriver même après une deuxième commande. */
-        const watched = new Set(sentOrders.filter(o => !ORDER_DONE.has(o.status)).map(o => o.id));
-        if (currentOrderId) watched.add(currentOrderId);
-        for (const id of watched) {
-          const r = await NET.orderStatus(id);
-          if (r && r.ok) onOrderStatus(id, String(r.status || 'pending'));
-        }
-        schedule();
-      }
-
-      function schedule() {
-        clearTimeout(timer);
-        if (!running || document.hidden) return;
-        timer = setTimeout(tick, busy() ? FAST : SLOW);
-      }
-      function start() { running = true; clearTimeout(timer); tick(); }
-      function stop() { running = false; clearTimeout(timer); }
-      function kick() { if (running) { clearTimeout(timer); tick(); } }
-
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
-      window.addEventListener('online', kick);
-      window.addEventListener('pageshow', kick);
-
-      return { start, stop, kick };
-    })();
+    // OrderPro payment: LIVE is supplied by its private factory.
 
     /* L'état de la commande, appliqué à l'écran qui est devant les yeux du
        client. Une seule fonction pour les deux parcours : la table et le
        comptoir affichent la même vérité, avec des mots différents. */
-    let lastStatus = '';
-    function onOrderStatus(id, status) {
-      const o = sentOrders.find(x => x.id === id);
-      if (o && o.status !== status) {
-        o.status = status;
-        rebuildSent();
-        saveSent();
-        if ($('#bill-sheet').classList.contains('is-open')) { renderBill(); setTipPercent(tipPercent); }
-        /* La commande à l'écran a son propre message (applyOrderStatus) ; une
-           commande précédente refusée doit être dite, avec son numéro. */
-        if (status === 'rejected' && id !== currentOrderId) {
-          showToast(t('order_refused_n').replace('{n}', o.number || '?'));
-        }
-      }
-      if (id === currentOrderId) applyOrderStatus(status);
-    }
-    function applyOrderStatus(status) {
-      if (status === lastStatus) return;
-      lastStatus = status;
+    owner.initialize('lastStatus', '');
+    // OrderPro payment: onOrderStatus is supplied by its private factory.
+    // OrderPro payment: applyOrderStatus is supplied by its private factory.
 
-      // Salle — l'écran « c'est parti »
-      const em = $('.success-eta em');
-      if (em) {
-        em.removeAttribute('data-i18n');
-        em.textContent = status === 'pending' ? t('prep_waiting')
-                       : status === 'ready' ? t('prep_ready')
-                       : status === 'served' ? t('order_served')
-                       : status === 'rejected' ? t('order_refused')
-                       : t('prep_accepted');
-      }
-      /* « Envoyée en cuisine » n'est vrai qu'une fois la caisse d'accord :
-         avant, la commande attend au comptoir. */
-      const titleEm = $('.success-title em');
-      if (titleEm) {
-        titleEm.removeAttribute('data-i18n');
-        titleEm.textContent = status === 'pending' || status === 'rejected'
-          ? t('success_title_em') : t('success_title_em_kitchen');
-      }
-
-      // Comptoir — la barre de préparation
-      const bar = $('#prep-bar-fill');
-      const eta = $('#prep-eta');
-      if (bar) bar.style.width = (PREP_STAGE[status] || PREP_STAGE.pending) + '%';
-      if (eta) {
-        eta.textContent = status === 'ready' ? t('prep_now')
-                        : status === 'accepted' ? t('prep_accepted')
-                        : t('prep_waiting');
-      }
-
-      if (status === 'rejected') { showToast(t('order_refused')); currentOrderId = ''; return; }
-      if (status === 'archived' && orderMode === 'takeout') {
-        showToast(t('order_archived'));
-        currentOrderId = '';
-        SESSION.markClosed('archived');
-        return;
-      }
-
-      /* À emporter : c'est L'ENCAISSEMENT au comptoir qui fait avancer l'écran,
-         pas un bouton que le client devrait penser à taper. Il annonce son
-         numéro, il paie, et son téléphone passe tout seul en préparation —
-         personne ne surveille un écran en attendant qu'on lui dise de cliquer.
-         (Le bouton reste, comme repli, si le client a déjà avancé lui-même.) */
-      if (status === 'accepted' && orderMode === 'takeout'
-          && $('#screen-cashier').classList.contains('is-active')) {
-        /* On ne rappelle PAS startPreparing() ici : cette fonction relance la
-           boucle, et nous sommes précisément à l'intérieur d'un de ses tours —
-           elle se rappellerait elle-même. L'écran suffit ; la barre a déjà été
-           positionnée quelques lignes plus haut. */
-        const etaLabel = $('[data-i18n="prep_ready_in"]');
-        if (etaLabel) etaLabel.textContent = '';
-        gotoScreen('screen-preparing');
-        refreshPermBanner();
-        return;
-      }
-      if (status === 'ready' && orderMode === 'takeout') triggerReady();
-      /* Remise en main propre : pour un retrait au comptoir c'est le point
-         final — il n'y a pas d'addition à encaisser plus tard qui viendrait
-         fermer la session à sa place. */
-      if (status === 'served' && orderMode === 'takeout') SESSION.markClosed('served');
-    }
-
-    function watchTableOrder() {
-      const em = $('.success-eta em');
-      if (em) { em.removeAttribute('data-i18n'); em.textContent = t('prep_waiting'); }
-      const titleEm = $('.success-title em');
-      if (titleEm) { titleEm.removeAttribute('data-i18n'); titleEm.textContent = t('success_title_em'); }
-      lastStatus = '';
-      LIVE.start();
-      LIVE.kick();
-    }
+    // OrderPro payment: watchTableOrder is supplied by its private factory.
 
     /* La carte a bougé pendant que le client composait. Plutôt que de laisser
        le plat dans le panier — où il ferait échouer chaque nouvelle tentative
        à l'identique — on le retire et on le barre sur le fil, à sa place, dans
        sa tuile. Le fil ne se réordonne pas sous les doigts : c'est la même
        carte, avec un plat en moins de disponible. */
-    function dropUnavailable(ids, names) {
-      const byId = new Set((ids || []).map(String));
-      const byName = new Set((names || []).map(n => String(n).toLowerCase()));
-      let hit = false;
-      for (const m of MENU) {
-        const gone = byId.has(m.id) || byName.has(String(m.name || '').toLowerCase());
-        if (gone) { m.avail = false; hit = true; }
-      }
-      for (const [key, line] of [...cart.entries()]) {
-        const m = itemOf(line.id);
-        if (m && m.avail === false) { cart.delete(key); hit = true; }
-      }
-      if (!hit) return;
-      refreshCartUI();
-      renderMenu(activeMenuFilter());
-    }
+    // OrderPro payment: dropUnavailable is supplied by its private factory.
 
     /* ============ restart (back to menu after order sent) ============ */
-    function restartMenu() {
-      cart.clear();
-      refreshCartUI();
-      $$('.menu-tab').forEach(t => { t.classList.toggle('is-active', t.dataset.tab === 'all'); t.setAttribute('aria-selected', String(t.dataset.tab === 'all')); });
-      renderMenuSubtabs('all');
-      renderMenu('all');
-      gotoScreen('screen-menu');
-    }
+    // OrderPro payment: restartMenu is supplied by its private factory.
 
     /* ============ mode choice → next screen ============ */
-    async function chooseMode(mode) {
-      orderMode = mode;
-      if (mode === 'table') {
-        tableNumber = '';
-        renderTableDisplay();
-        updateContinueState();
-        gotoScreen('screen-table');
-      } else {
-        // Un retrait au comptoir s'assoit lui aussi : c'est la session qui
-        // porte la révocation quand la commande est remise au client.
-        if (!(await seatHere('takeout', ''))) return;
-        gotoScreen('screen-menu');
-        applyMenuMode();
-      }
-    }
+    // OrderPro table: chooseMode is supplied by its private factory.
 
     /* S'asseoir. Le seul chemin par lequel une session s'ouvre, pour que les
        trois entrées (tag de table, tag de comptoir, choix à la main) passent
        par les mêmes refus et les mêmes messages. */
-    async function seatHere(mode, table, allowReorder = false) {
-      if (SESSION.recentlySettled(mode, table, allowReorder)) {
-        // L'addition vient d'être réglée sur ce téléphone : recharger la page
-        // ne rouvre pas le robinet. Le tag de la table servira au client
-        // suivant, qui n'a pas ce souvenir dans le sien.
-        SESSION.closed = true;
-        SESSION.closedBy = 'settle';
-        onSessionClosed();
-        return false;
-      }
-      return SESSION.open(mode, table);
-    }
+    // OrderPro table: seatHere is supplied by its private factory.
 
-    function applyMenuMode() {
-      const badge = $('#menu-badge');
-      const subtitle = $('#cart-subtitle');
-      const note = $('#cart-note');
-      const sendLabel = $('#send-label');
-      const serviceBar = $('#service-bar');
-      if (orderMode === 'takeout') {
-        badge.innerHTML = `<i data-lucide="shopping-bag"></i><span id="menu-badge-text">${t('badge_takeout')}</span>`;
-        subtitle.textContent = t('cart_subtitle_takeout');
-        note.innerHTML = t('cart_note_takeout_html');
-        sendLabel.textContent = t('send_takeout');
-        serviceBar.classList.add('is-takeout');
-        serviceBar.hidden = false;
-      } else {
-        badge.innerHTML = `<i data-lucide="utensils"></i><span id="menu-badge-text">${t('badge_table')} ${tableNumber}</span>`;
-        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber || '—');
-        note.textContent = t('cart_note_table');
-        sendLabel.textContent = t('send_table');
-        serviceBar.classList.remove('is-takeout');
-        serviceBar.hidden = false;
-      }
-      if (window.lucide) window.lucide.createIcons();
-    }
+    // OrderPro table: applyMenuMode is supplied by its private factory.
 
     /* The guest page lands after a table is seated; its module may still be on
        its way (it loads after the first screen), so wait for it as land()
        waits for its data, never longer than 2.5 s. */
-    let guestReady = null;
-    async function guestLand(pending) {
-      const wait = pending || guestReady;
-      if (wait) { try { await Promise.race([wait, new Promise(r => setTimeout(r, 2500))]); } catch (_) {} }
-      return !!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land(pending));
-    }
+    owner.initialize('guestReady', null);
+    // OrderPro table: guestLand is supplied by its private factory.
 
     /* ============ continue from table-entry to menu ============ */
-    async function commitTable() {
-      if (!tableNumber) return;
-      if (!(await seatHere('table', tableNumber))) return;
-      applyMenuMode();
-      if (!(await guestLand())) gotoScreen('screen-menu');
-    }
+    // OrderPro table: commitTable is supplied by its private factory.
 
     /* ============ takeout: cashier → preparing ============ */
-    function confirmCashierPayment() {
-      gotoScreen('screen-preparing');
-      refreshPermBanner();
-      startPreparing();
-    }
+    // OrderPro payment: confirmCashierPayment is supplied by its private factory.
 
     /* ============ takeout: live status from the caisse ============
        The bar is not a countdown — it tracks the ticket's REAL state, polled
@@ -2543,104 +1374,18 @@
        poll can't reach the store we hold the last known state and keep trying
        rather than declaring an order ready that isn't. */
     const PREP_STAGE = { pending: 18, accepted: 62, ready: 100, served: 100 };
-    function startPreparing() {
-      const bar = $('#prep-bar-fill');
-      const eta = $('#prep-eta');
-      const etaLabel = $('[data-i18n="prep_ready_in"]');
-      if (etaLabel) etaLabel.textContent = '';
-      if (bar) bar.style.width = PREP_STAGE.pending + '%';
-      if (eta) eta.textContent = t('prep_waiting');
-      /* Le suivi lui-même est tenu par LIVE : une seule boucle pour la commande
-         ET la session, qui se met en veille avec l'écran et repart au réveil.
-         Deux minuteries séparées finissaient par se contredire — l'une arrêtée,
-         l'autre non — et c'est la commande à emporter qui restait figée. */
-      lastStatus = '';
-      LIVE.start();
-      LIVE.kick();
-    }
+    // OrderPro payment: startPreparing is supplied by its private factory.
 
     /* ============ takeout: ready (chime + system notif) ============ */
-    function triggerReady() {
-      gotoScreen('screen-ready');
-      // Audio chime — works on every modern browser.
-      playChime();
-      // System notification — only fires if the user previously granted permission.
-      if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-          new Notification(t('notif_ready_title'), {
-            body: `${t('notif_ready_body_pre')}${orderNumber} ${t('notif_ready_body_post')}`,
-            tag: 'order-ready',
-          });
-        } catch (_) { /* iOS Safari throws unless installed as PWA */ }
-      }
-    }
+    // OrderPro payment: triggerReady is supplied by its private factory.
 
     /* ============ Web Audio chime (two-note, no asset needed) ============ */
-    function playChime() {
-      try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        const ctx = new Ctx();
-        const tone = (freq, startSec, durSec, peak) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          const t0 = ctx.currentTime + startSec;
-          gain.gain.setValueAtTime(0, t0);
-          gain.gain.linearRampToValueAtTime(peak, t0 + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0008, t0 + durSec);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(t0);
-          osc.stop(t0 + durSec + 0.05);
-        };
-        tone(740, 0.00, 0.45, 0.35); // F#5
-        tone(988, 0.18, 0.55, 0.35); // B5
-      } catch (_) { /* audio unavailable */ }
-    }
+    // OrderPro payment: playChime is supplied by its private factory.
 
     /* ============ Notification permission flow ============ */
-    function refreshPermBanner() {
-      const banner = $('#prep-perm');
-      const body = $('#prep-perm-body');
-      const btn = $('#prep-perm-btn');
-      if (!banner || !('Notification' in window)) {
-        if (banner) {
-          banner.classList.add('is-denied');
-          body.textContent = t('prep_perm_unsupported');
-          btn.style.display = 'none';
-        }
-        return;
-      }
-      const p = Notification.permission;
-      banner.classList.remove('is-granted', 'is-denied');
-      if (p === 'granted') {
-        banner.classList.add('is-granted');
-        body.innerHTML = t('prep_perm_granted_html');
-        btn.style.display = 'none';
-      } else if (p === 'denied') {
-        banner.classList.add('is-denied');
-        body.textContent = t('prep_perm_denied');
-        btn.style.display = 'none';
-      } else {
-        body.textContent = t('prep_perm_default');
-        btn.style.display = '';
-        btn.textContent = t('prep_perm_btn');
-      }
-    }
+    // OrderPro payment: refreshPermBanner is supplied by its private factory.
 
-    async function askNotificationPermission() {
-      if (!('Notification' in window)) return;
-      try {
-        const result = await Notification.requestPermission();
-        // Some browsers don't return a value from the promise; re-read the global.
-        if (result === 'granted' || Notification.permission === 'granted') {
-          // Show a tiny confirmation chime so the user knows it works
-          playChime();
-        }
-      } catch (_) {}
-      refreshPermBanner();
-    }
+    // OrderPro payment: askNotificationPermission is supplied by its private factory.
 
     /* ═══════════════════════════════════════════════════════════════════════
        STORE — who this phone is talking to, learned from the network.
@@ -2814,11 +1559,8 @@
     /* A cashier can sell out a dish while this page is already open. Refresh
        only when the availability map changes, so browsing is uninterrupted
        while the unavailable card disappears from the public menu. */
-    let availabilitySignature = '';
-    function availabilityOf(data) {
-      return ((Array.isArray(data && data.items) ? data.items : []).concat(Array.isArray(data && data.formulaItems) ? data.formulaItems : []))
-        .map((it) => String(it && it.id || '') + ':' + (it && it.avail === false ? '0' : '1')).sort().join('|');
-    }
+    owner.initialize('availabilitySignature', '');
+    // OrderPro menu: availabilityOf is supplied by its private factory.
     setInterval(async () => {
       if (!STORE.ready || STORE.type === 'boutique' || !STORE.slug) return;
       const res = await NET.catalog();
@@ -2839,121 +1581,14 @@
            items:[{id,name,price,catId,subId,desc,avail,photo,video}] }
        Returns false when there is nothing orderable to show.
        ═══════════════════════════════════════════════════════════════════════ */
-    function bootRestaurant(data) {
-      const cats = Array.isArray(data.cats) ? data.cats : [];
-      const allItems = (Array.isArray(data.items) ? data.items : []).concat(Array.isArray(data.formulaItems) ? data.formulaItems : []);
-      availabilitySignature = availabilityOf(data);
-      const items = allItems.filter(i => i && i.avail !== false && !i.formulaOnly && !i.archived);
-      MENU_ALL.clear();
-      MENU.length = 0;
-      if (!items.length) return false;
-      allItems.forEach((it) => { if (it && it.id) MENU_ALL.set(String(it.id), it); });
-
-      const groups = new Map();
-      (Array.isArray(data.opts) ? data.opts : []).forEach(g => {
-        if (!g || !g.id || !Array.isArray(g.choices) || !g.choices.length) return;
-        const key = String(g.id);
-        const mapped = {
-          key,
-          label: String(g.name || ''),
-          type: g.kind === 'many' ? 'multi' : 'single',
-          default: '',
-          required: !!g.required,
-          _src: g,
-          choices: g.choices.filter(c => c && c.id && c.name).map(c => ({
-            id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0),
-            _src: c,
-          })),
-        };
-        OPT[key] = mapped;
-        groups.set(key, mapped);
-      });
-
-      /* Every language this store publishes, not only the three. */
-      const langs = globalThis.KiwiOrderMenu ? KiwiOrderMenu.langs() : ['fr', 'en', 'ar'];
-      const names = {}, byLang = {};
-      langs.forEach(l => { byLang[l] = {}; });
-      const allToTranslate = (Array.isArray(allItems) && allItems.length) ? allItems : items;
-      for (const it of allToTranslate) {
-        if (!it || !it.id) continue;
-        names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
-        langs.forEach((l) => {
-          const x = menuTr(it, l);
-          if (x) byLang[l][String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
-        });
-      }
-
-      for (const it of items) {
-        const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
-          const g = { key: 'formula_' + String(it.id) + '_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1), _src: s,
-            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0),photo:target.showPhotoInFormulas === true ? String(target.photo || '') : '', targetItem: target, _src: target} : null; }).filter(Boolean) };
-          OPT[g.key] = g;
-          if (!OPT['formula_' + String(s.id)]) OPT['formula_' + String(s.id)] = g;
-          return g;
-        }).filter(g=>g.choices.length) : [];
-        const formulaBroken = it.formula && Array.isArray(it.formula.slots)
-          && it.formula.slots.some((slot) => {
-            const mapped = formulaOptions.find((opt) => opt.formulaSlotId === String(slot.id));
-            return !mapped || mapped.choices.length < Math.max(0, Number(slot.min) || 0);
-          });
-        if (formulaBroken) continue;
-        MENU.push({
-          id: String(it.id),
-          cat: String(it.catId || ''),
-          subId: String(it.subId || ''),
-          name: String(it.name || ''),
-          desc: String(it.desc || ''),
-          price: Math.max(0, toCents(it.price) / 100),
-          icon: it.icon || 'utensils',
-          photo: it.photo || '',
-          video: it.video || '',
-          tag: it.tag || '',
-          avail: it.avail !== false,
-          /* Publiés seulement quand la fiche est complète (functions/api/menu.js) :
-             null = « on ne sait pas », jamais « sans allergène ». */
-          allergens: Array.isArray(it.allergens) ? it.allergens.slice() : null,
-          options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean).concat(formulaOptions),
-          formula: formulaOptions.length > 0,
-          nutrition: it.nutritionComplete === true && it.nutrition ? { ...it.nutrition } : null,
-          allergens: it.nutritionComplete === true && Array.isArray(it.allergens) ? it.allergens.slice() : [],
-        });
-      }
-      // Le patron écrit sa carte une fois ; ses traductions (tableau de bord →
-      // Traductions) voyagent avec elle. Une langue non traduite retombe sur
-      // son texte (itemI18n → MENU_I18N.fr).
-      Object.keys(MENU_I18N).forEach(l => { delete MENU_I18N[l]; });
-      langs.forEach(l => { MENU_I18N[l] = byLang[l]; });
-      MENU_I18N.fr = Object.assign({}, names, byLang.fr || {});
-
-      /* Les onglets sont ceux du patron, et rien d'autre. L'onglet « Top »
-         a été retiré : il ne montrait que les plats filmés, ce qui coupait la
-         carte en deux et laissait croire que le reste n'était pas commandable.
-         Depuis que chaque plat occupe la même tuile, tout le fil EST le fil
-         vidéo — un onglet pour le redire n'aurait plus rien à filtrer. */
-      const used = new Set(MENU.map(m => m.cat));
-      const tabs = $('.menu-tabs');
-      const parts = [];
-      MENU_SUBTABS.clear();
-      parts.push(`<button class="menu-tab is-active" role="tab" aria-selected="true" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
-      for (const c of cats) {
-        if (!used.has(String(c.id))) continue;        // empty category → no tab
-        parts.push(`<button class="menu-tab" role="tab" aria-selected="false" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String((menuTr(c, currentLang) || c).name || ''))}</button>`);
-        const subtabs = (Array.isArray(c.sub) ? c.sub : []).filter(s =>
-          MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id)));
-        if (subtabs.length) MENU_SUBTABS.set(String(c.id), subtabs);
-      }
-      tabs.innerHTML = parts.join('');
-      renderMenuSubtabs('all');
-      renderMenu('all');
-      return true;
-    }
+    // OrderPro menu: bootRestaurant is supplied by its private factory.
 
     /* The boutique vertical (product list, barcode lookup) lives in
        assets/orderpro-boutique.js, loaded for a boutique only: a restaurant
        never runs it, and its guests do not download it (§19, 60 KB). */
 
     /* ============ wire it up ============ */
-    document.addEventListener('DOMContentLoaded', () => {
+    onReady(() => {
       // Apply saved language FIRST so the greeting flash measures the right em width
       applyLang(currentLang);
       refreshCartUI();
@@ -3133,3 +1768,14 @@
       // Greeting plays on landing
       requestAnimationFrame(() => setTimeout(runGreetingFlash, 280));
     });
+
+  }
+  }
+  const scripts = ["assets/orderpro/session.js?v=3","assets/orderpro/table.js?v=3","assets/orderpro/menu.js?v=3","assets/orderpro/cart.js?v=3","assets/orderpro/payment.js?v=3"];
+  for (const src of scripts) {
+    const script = document.createElement('script');
+    script.async = false;
+    script.src = src;
+    document.head.appendChild(script);
+  }
+})();

@@ -707,6 +707,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
 </style>
 <link rel="stylesheet" href="assets/admin-workspace.css?v=5" />
 <script src="assets/kit/haptics.js?v=7"></script>
+<script src="assets/admin-api.js?v=1"></script>
 <script src="assets/admin-policy.js?v=5"></script>
 <script src="assets/admin-workspace.js?v=26" defer></script>
   <link rel="stylesheet" href="/assets/origin-move.css">
@@ -1057,8 +1058,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <script src="assets/kit/lens.js?v=1"></script>
   <script src="assets/liquid-lens.js?v=11"></script>
   <link rel="stylesheet" href="assets/admin-support.css?v=2" />
-  <script src="assets/admin-support.js?v=10" defer></script>
-  <script src="assets/admin-demo-requests.js?v=4" defer></script>
+  <script src="assets/admin-support.js?v=11" defer></script>
+  <script src="assets/admin-demo-requests.js?v=5" defer></script>
 
 <script>
 (function(){
@@ -1546,10 +1547,9 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
              manual:(stock.length ? ['stock'] : []).concat(stock.length ? ['loyalty'] : []) };
   }
 
+  /* Toute route privilégiée passe par le propriétaire unique (assets/admin-api.js). */
   async function api(path, opts){
-    var r = await fetch('/api/admin' + path, Object.assign({ headers:{ 'Content-Type':'application/json' } }, opts||{}));
-    if (!r.ok) { var e = new Error('http'); e.status = r.status; try { e.body = await r.json(); } catch(_){} throw e; }
-    var data = await r.json();
+    var data = await window.KiwiAdminApi.request(path, opts);
     if (opts && opts.method && opts.method !== 'GET') ROSTER_LOADED = false;
     return data;
   }

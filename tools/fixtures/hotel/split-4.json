@@ -1,0 +1,486 @@
+{
+  "sha256": "b75ebef24ba7fa09538808fff2038238c48746738f65afae1e5cbf7b73aa85ca",
+  "parts": [
+    {
+      "name": "arrivals",
+      "file": "assets/hotel/arrivals.js",
+      "prefix": "/* Owner: hotel arrivals. Exports named methods below. Reads only the declared scope and browser globals in tools/fixtures/hotel/reception-interfaces.json. */\n(window.__kiwiHotelSections ||= {}).arrivals = (scope) => {\n'use strict';\nfunction cuDraftMoney(...args) { return scope.cuDraftMoney.apply(this, args); }\nfunction cuMerchantSlug(...args) { return scope.cuMerchantSlug.apply(this, args); }\nfunction cuStayCache(...args) { return scope.cuStayCache.apply(this, args); }\nfunction cuStaysChanged(...args) { return scope.cuStaysChanged.apply(this, args); }\nfunction tx(...args) { return scope.tx.apply(this, args); }\n",
+      "suffix": "return Object.freeze({ cuReceptionBuckets, cuStayStatus, cuStayCancel });\n};\n",
+      "deps": [
+        "cuDraftMoney",
+        "cuMerchantSlug",
+        "cuStayCache",
+        "cuStaysChanged",
+        "tx"
+      ],
+      "fragments": [
+        {
+          "name": "cuReceptionBuckets",
+          "start": 55947,
+          "end": 56661,
+          "offset": 619,
+          "length": 714
+        },
+        {
+          "name": "cuStayStatus",
+          "start": 65747,
+          "end": 66644,
+          "offset": 1335,
+          "length": 897
+        },
+        {
+          "name": "cuStayCancel",
+          "start": 66806,
+          "end": 67409,
+          "offset": 2234,
+          "length": 603
+        }
+      ]
+    },
+    {
+      "name": "roomBoard",
+      "file": "assets/hotel/room-board.js",
+      "prefix": "/* Owner: hotel roomBoard. Exports named methods below. Reads only the declared scope and browser globals in tools/fixtures/hotel/reception-interfaces.json. */\n(window.__kiwiHotelSections ||= {}).roomBoard = (scope) => {\n'use strict';\nfunction cuFloorRows(...args) { return scope.cuFloorRows.apply(this, args); }\nfunction cuStamp(...args) { return scope.cuStamp.apply(this, args); }\nfunction esc(...args) { return scope.esc.apply(this, args); }\nfunction ltr(...args) { return scope.ltr.apply(this, args); }\nfunction tx(...args) { return scope.tx.apply(this, args); }\n",
+      "suffix": "return Object.freeze({ cuPhotoEditorMarkup, cuRenderPhotoEditor, cuShrinkHotelPhoto, cuRefreshFloorSelectors, cuLinkConnectingRooms });\n};\n",
+      "deps": [
+        "cuFloorRows",
+        "cuStamp",
+        "esc",
+        "ltr",
+        "tx"
+      ],
+      "fragments": [
+        {
+          "name": "cuPhotoEditorMarkup",
+          "start": 58422,
+          "end": 59297,
+          "offset": 567,
+          "length": 875
+        },
+        {
+          "name": "cuRenderPhotoEditor",
+          "start": 59300,
+          "end": 59618,
+          "offset": 1444,
+          "length": 318
+        },
+        {
+          "name": "cuShrinkHotelPhoto",
+          "start": 59621,
+          "end": 60790,
+          "offset": 1764,
+          "length": 1169
+        },
+        {
+          "name": "cuRefreshFloorSelectors",
+          "start": 61520,
+          "end": 62246,
+          "offset": 2935,
+          "length": 726
+        },
+        {
+          "name": "cuLinkConnectingRooms",
+          "start": 70230,
+          "end": 71024,
+          "offset": 3663,
+          "length": 794
+        }
+      ]
+    },
+    {
+      "name": "folioActions",
+      "file": "assets/hotel/folio-actions.js",
+      "prefix": "/* Owner: hotel folioActions. Exports named methods below. Reads only the declared scope and browser globals in tools/fixtures/hotel/reception-interfaces.json. */\n(window.__kiwiHotelSections ||= {}).folioActions = (scope) => {\n'use strict';\nfunction isCustomHotel(...args) { return scope.isCustomHotel.apply(this, args); }\n",
+      "suffix": "return Object.freeze({ recordSale });\n};\n",
+      "deps": [
+        "isCustomHotel"
+      ],
+      "fragments": [
+        {
+          "name": "recordSale",
+          "start": 48518,
+          "end": 49157,
+          "offset": 323,
+          "length": 639
+        }
+      ]
+    },
+    {
+      "name": "rateActions",
+      "file": "assets/hotel/rate-actions.js",
+      "prefix": "/* Owner: hotel rateActions. Exports named methods below. Reads only the declared scope and browser globals in tools/fixtures/hotel/reception-interfaces.json. */\n(window.__kiwiHotelSections ||= {}).rateActions = (scope) => {\n'use strict';\nconst STAYS = scope.STAYS;\nconst TAPE_DAYS = scope.TAPE_DAYS;\n",
+      "suffix": "return Object.freeze({ occupancyByDay, donutCss });\n};\n",
+      "deps": [
+        "STAYS",
+        "TAPE_DAYS"
+      ],
+      "fragments": [
+        {
+          "name": "occupancyByDay",
+          "start": 52344,
+          "end": 52528,
+          "offset": 301,
+          "length": 184
+        },
+        {
+          "name": "donutCss",
+          "start": 53021,
+          "end": 53244,
+          "offset": 487,
+          "length": 223
+        }
+      ]
+    },
+    {
+      "name": "receptionState",
+      "file": "assets/hotel/model.js",
+      "prefix": "/* Owner: hotel receptionState. Exports named methods below. Reads only the declared scope and browser globals in tools/fixtures/hotel/reception-interfaces.json. */\n(window.__kiwiHotelSections ||= {}).receptionState = (scope) => {\n'use strict';\nfunction cuDocument(...args) { return scope.cuDocument.apply(this, args); }\nfunction cuEnsureFilterVenue(...args) { return scope.cuEnsureFilterVenue.apply(this, args); }\nfunction cuHydrate(...args) { return scope.cuHydrate.apply(this, args); }\nfunction cuSeed(...args) { return scope.cuSeed.apply(this, args); }\nfunction cuStamp(...args) { return scope.cuStamp.apply(this, args); }\nfunction cuStayScope(...args) { return scope.cuStayScope.apply(this, args); }\nfunction cuVenueId(...args) { return scope.cuVenueId.apply(this, args); }\nfunction toast(...args) { return scope.toast.apply(this, args); }\nfunction trL(...args) { return scope.trL.apply(this, args); }\nfunction tx(...args) { return scope.tx.apply(this, args); }\nconst CUSTOM_HX = {};\nconst HX_STORE_PREFIX = 'kiwi:hotel-rooms:v2:';\nlet hotelCloud = null;\nconst cuD1Stays = new Map();\nconst cuStayLoads = new Map();\nconst cuInHouseSnapshots = new Map();\nconst cuReceptionFilters = new Map();\n",
+      "suffix": "return Object.freeze({ cuStayCache, cuAllStays, cuStateId, cuStoreKey, cuWriteLocal, cuReadLocal, cuState, cuSave, cuSaveCloud, cuCommitDraft, cloud: () => hotelCloud, setCloud: value => { hotelCloud = value; }, stateFor: id => CUSTOM_HX[id], replaceState: (id, value) => { CUSTOM_HX[id] = value; return value; }, stayLoads: () => cuStayLoads, inHouseSnapshots: () => cuInHouseSnapshots, receptionFilters: () => cuReceptionFilters });\n};\n",
+      "deps": [
+        "cuDocument",
+        "cuEnsureFilterVenue",
+        "cuHydrate",
+        "cuSeed",
+        "cuStamp",
+        "cuStayScope",
+        "cuVenueId",
+        "toast",
+        "trL",
+        "tx"
+      ],
+      "fragments": [
+        {
+          "name": "cuStayCache",
+          "start": 40668,
+          "end": 40826,
+          "offset": 24909,
+          "length": 158
+        },
+        {
+          "name": "cuAllStays",
+          "start": 40951,
+          "end": 41303,
+          "offset": 25069,
+          "length": 352
+        },
+        {
+          "name": "cuStateId",
+          "start": 41307,
+          "end": 41617,
+          "offset": 25423,
+          "length": 310
+        },
+        {
+          "name": "cuStoreKey",
+          "start": 41620,
+          "end": 41712,
+          "offset": 25735,
+          "length": 92
+        },
+        {
+          "name": "cuWriteLocal",
+          "start": 43484,
+          "end": 43726,
+          "offset": 25829,
+          "length": 242
+        },
+        {
+          "name": "cuReadLocal",
+          "start": 43729,
+          "end": 43922,
+          "offset": 26073,
+          "length": 193
+        },
+        {
+          "name": "cuState",
+          "start": 44011,
+          "end": 44311,
+          "offset": 26268,
+          "length": 300
+        },
+        {
+          "name": "cuSave",
+          "start": 44314,
+          "end": 44556,
+          "offset": 26570,
+          "length": 242
+        },
+        {
+          "name": "cuSaveCloud",
+          "start": 44559,
+          "end": 45014,
+          "offset": 26814,
+          "length": 455
+        },
+        {
+          "name": "cuCommitDraft",
+          "start": 45017,
+          "end": 46038,
+          "offset": 27271,
+          "length": 1021
+        }
+      ],
+      "base": "/* Owner: hotel model. Exposes a private factory; immutable dependencies are explicit, mutable owner state is accessed through live scope getters/setters. */\n(window.__kiwiHotelSections ||= {}).model = (scope) => {\n'use strict';\nconst { DEFAULT_VIEWS, cuAllStays, cuDefaultTypes, cuFloorId, cuInHouseSnapshots, cuRoomLive, cuSafePhoto, cuStamp, cuStayCache, cuStayLoads, cuStayScope, cuToday, cuTypeId, cuVenueId, isCustomHotel, tx, txk } = scope;\nfunction cuActiveActor() {\n    if (window.KiwiMe && typeof window.KiwiMe === 'object') {\n      return {\n        id: String(window.KiwiMe.id || window.KiwiMe.email || 'me'),\n        name: String(window.KiwiMe.name || window.KiwiMe.business || 'Propriétaire').trim(),\n        role: String(window.KiwiMe.role || (window.KiwiMe.operator ? 'operator' : 'owner')).trim(),\n      };\n    }\n    if (window.KiwiCurrentStaff && typeof window.KiwiCurrentStaff === 'object') {\n      return {\n        id: String(window.KiwiCurrentStaff.id || 'staff'),\n        name: String(window.KiwiCurrentStaff.name || 'Personnel').trim(),\n        role: String(window.KiwiCurrentStaff.role || 'staff').trim(),\n      };\n    }\n    if (window.KiwiIdentity?.state?.authenticated) {\n      return {\n        id: 'authenticated-user',\n        name: 'Utilisateur connecté',\n        role: window.KiwiIdentity.state.operator ? 'operator' : 'owner',\n      };\n    }\n    return {\n      id: 'local-operator',\n      name: 'Opérateur local',\n      role: 'operator',\n    };\n  }\n\nasync function cuFetchStaysForWindow(start, end) {\n    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';\n    if (!slug) {\n      cuStayLoads.set(cuStayScope(), { loading: false, error: txk('Hôtel non connecté au serveur : liste non vérifiée.') });\n      return [];\n    }\n    const scope = cuStayScope(), cache = cuStayCache();\n    const load = { loading: true, error: '' };\n    cuStayLoads.set(scope, load);\n    try {\n      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&includeCancelled=1`, { cache: 'no-store' });\n      if (!res.ok) throw new Error('unavailable');\n      const data = await res.json();\n      if (!Array.isArray(data.stays)) throw new Error('invalid-response');\n      data.stays.forEach((s) => {\n        if (s && s.id && (+s.updatedAt || 0) >= (+cache.get(s.id)?.updatedAt || 0)) cache.set(s.id, s);\n      });\n      if (data.stays.length >= 1000) load.error = txk('Limite de lecture atteinte : cette liste peut être incomplète. Réduisez la période.');\n      return data.stays;\n    } catch (_) {\n      load.error = txk('Actualisation indisponible. Les données affichées peuvent être anciennes ; réessayez avant de confirmer une disponibilité.');\n      return [];\n    } finally {\n      load.loading = false;\n    }\n  }\n\nfunction cuSeed() {\n    const vd = window.KiwiVenue?.getCurrentVenueData?.() || {};\n    const configuredRooms = parseInt(vd.profileInfo && vd.profileInfo.rooms, 10);\n    const count = Number.isFinite(configuredRooms) && configuredRooms > 0\n      ? Math.min(120, configuredRooms) : 0;\n    const now = cuStamp();\n    const roomTypes = Object.fromEntries(cuDefaultTypes(now).map((x) => [x.id, x]));\n    const rooms = {};\n    for (let n = 1; n <= count; n++) rooms[n] = {\n      id: 'room:' + n, n, typeId: 'type:chambre', typeName: tx('Chambre'),\n      floor: count > 8 ? tx('Niveau {n}', { n: Math.floor((n - 1) / 8) + 1 }) : tx('Vos chambres'),\n      rate: null, status: 'libre', hk: 'clean', guest: null, meta: txk('Libre · propre'), updatedAt: now,\n    };\n    const floorNames = [...new Set(Object.values(rooms).map((r) => r.floor))];\n    if (!floorNames.length) floorNames.push(tx('Vos chambres'));\n    const floors = Object.fromEntries(floorNames.map((name, order) => {\n      const id = cuFloorId(name, now + order);\n      Object.values(rooms).filter((r) => r.floor === name).forEach((r) => { r.floorId = id; });\n      return [id, { id, name, order, updatedAt: now + order }];\n    }));\n    return {\n      v: 4, rooms, roomRecords: Object.values(rooms), roomTypes, floors,\n      floorRecords: Object.values(floors),\n      typeRecords: Object.values(roomTypes), folios: {}, baseRate: null,\n      rateUpdatedAt: 0, sold: 0, updatedAt: now,\n      views: DEFAULT_VIEWS.slice(),\n      customCharacteristics: [],\n      roomAudits: [],\n    };\n  }\n\nfunction cuHydrate(raw) {\n    raw = raw && typeof raw === 'object' ? raw : {};\n    const roomRecords = Array.isArray(raw.rooms) ? raw.rooms : (Array.isArray(raw.roomRecords) ? raw.roomRecords : []);\n    let typeRecords = Array.isArray(raw.roomTypes) ? raw.roomTypes : (Array.isArray(raw.typeRecords) ? raw.typeRecords : []);\n    if (!typeRecords.length) {\n      const migrated = new Map();\n      roomRecords.filter((x) => x && !x.deletedAt).forEach((x) => {\n        const name = String(x.typeName || x.type || 'Chambre').trim() || 'Chambre';\n        const key = name.toLocaleLowerCase('fr');\n        if (!migrated.has(key)) migrated.set(key, {\n          id: cuTypeId(name, x.updatedAt || cuStamp()), name,\n          rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,\n          updatedAt: +x.updatedAt || 0,\n        });\n      });\n      typeRecords = migrated.size ? [...migrated.values()] : cuDefaultTypes(cuStamp());\n    }\n    const roomTypes = {};\n    typeRecords.forEach((x) => {\n      if (!x || x.deletedAt) return;\n      const id = String(x.id || cuTypeId(x.name, x.updatedAt));\n      // Direct-guest meal supplements (MAD per person per night), same\n      // sanitize-as-missing rule as the server: garbage reads as unset.\n      let boardRates;\n      if (x.boardRates && typeof x.boardRates === 'object' && !Array.isArray(x.boardRates)) {\n        boardRates = {};\n        let any = false;\n        for (const key of ['bb', 'hb_lunch', 'hb_dinner', 'full_board']) {\n          const value = x.boardRates[key];\n          const rate = (value == null || value === '') ? null\n            : (Number.isFinite(+value) && +value >= 0 ? Math.round(+value * 100) / 100 : null);\n          boardRates[key] = rate;\n          if (rate != null) any = true;\n        }\n        if (!any) boardRates = undefined;\n      }\n      roomTypes[id] = {\n        ...x,\n        id, name: String(x.name || 'Chambre').trim().slice(0, 60) || 'Chambre',\n        rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,\n        boardRates,\n        description: String(x.description || '').trim().slice(0, 300),\n        maxGuests: Number.isFinite(+x.maxGuests) ? Math.max(1, Math.min(12, Math.round(+x.maxGuests))) : 2,\n        beds: String(x.beds || '').trim().slice(0, 80),\n        sizeM2: x.sizeM2 != null && Number.isFinite(+x.sizeM2) && +x.sizeM2 > 0 ? Math.min(999, Math.round(+x.sizeM2)) : null,\n        view: String(x.view || '').trim().slice(0, 80),\n        amenities: (Array.isArray(x.amenities) ? x.amenities : String(x.amenities || '').split(','))\n          .map((v) => String(v || '').trim().slice(0, 40)).filter(Boolean).slice(0, 12),\n        photos: (Array.isArray(x.photos) ? x.photos : []).slice(0, 8).map((p, i) => cuSafePhoto(p, i, String(x.name || 'Chambre'))).filter(Boolean),\n        public: x.public !== false,\n        updatedAt: +x.updatedAt || 0,\n      };\n    });\n    if (!Object.keys(roomTypes).length) cuDefaultTypes(cuStamp()).forEach((x) => { roomTypes[x.id] = x; });\n    const findType = (x) => {\n      if (x.typeId && roomTypes[x.typeId]) return x.typeId;\n      const name = String(x.typeName || x.type || 'Chambre').trim().toLocaleLowerCase('fr');\n      return Object.values(roomTypes).find((t) => t.name.toLocaleLowerCase('fr') === name)?.id || Object.keys(roomTypes)[0];\n    };\n    let floorRecords = Array.isArray(raw.floors) ? raw.floors : (Array.isArray(raw.floorRecords) ? raw.floorRecords : []);\n    if (!floorRecords.length) {\n      const names = [];\n      roomRecords.filter((x) => x && !x.deletedAt).forEach((x) => {\n        const name = String(x.floor || 'Vos chambres').trim() || 'Vos chambres';\n        if (!names.some((n) => n.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr'))) names.push(name);\n      });\n      if (!names.length) names.push('Vos chambres');\n      floorRecords = names.map((name, order) => ({ id: cuFloorId(name, order + 1), name, order, updatedAt: 0 }));\n    }\n    const floors = {};\n    floorRecords.forEach((x, index) => {\n      if (!x || x.deletedAt) return;\n      const id = String(x.id || cuFloorId(x.name, x.updatedAt));\n      floors[id] = { ...x, id, name: String(x.name || 'Vos chambres').trim().slice(0, 60) || 'Vos chambres', order: Number.isFinite(+x.order) ? +x.order : index, updatedAt: +x.updatedAt || 0 };\n    });\n    const findFloor = (x) => {\n      if (x.floorId && floors[x.floorId]) return x.floorId;\n      const name = String(x.floor || 'Vos chambres').trim().toLocaleLowerCase('fr');\n      return Object.values(floors).find((f) => f.name.toLocaleLowerCase('fr') === name)?.id || Object.keys(floors)[0];\n    };\n    const rooms = {};\n    roomRecords.forEach((x) => {\n      if (!x || x.deletedAt) return;\n      const n = parseInt(x.n, 10);\n      if (!Number.isFinite(n) || n < 1 || n > 9999 || rooms[n]) return;\n      rooms[n] = {\n        ...x,\n        id: String(x.id || ('room:' + n)), n,\n        typeId: findType(x),\n        typeName: String(x.typeName || x.type || 'Chambre').slice(0, 60),\n        floorId: findFloor(x),\n        floor: String(x.floor || floors[findFloor(x)]?.name || 'Vos chambres').slice(0, 60),\n        rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,\n        status: ['libre', 'sale', 'hs', 'occ', 'depart', 'arrivee'].includes(x.status) ? x.status : 'libre',\n        hk: String(x.hk || (x.status === 'sale' ? 'dirty' : 'clean')),\n        guest: x.guest ? String(x.guest).slice(0, 120) : null,\n        meta: String(x.meta || (x.status === 'sale' ? txk('À remettre à blanc') : txk('Libre · propre'))).slice(0, 180),\n        updatedAt: +x.updatedAt || 0,\n        view: x.view ? String(x.view).trim().slice(0, 60) : null,\n        characteristics: Array.isArray(x.characteristics) ? x.characteristics.map(String) : [],\n        connectingRoomIds: Array.isArray(x.connectingRoomIds) ? x.connectingRoomIds.map(String) : [],\n        connectingMeta: (x.connectingMeta && typeof x.connectingMeta === 'object') ? x.connectingMeta : {},\n      };\n    });\n    const folios = {};\n    const folioRows = Array.isArray(raw.folios) ? raw.folios : Object.values(raw.folios || {});\n    folioRows.forEach((f) => { if (f && !f.closedAt && rooms[+f.room]) folios[+f.room] = f; });\n    return {\n      documentExtras: { ...raw },\n      configUpdatedAt: +raw.configUpdatedAt || 0,\n      v: 4, rooms, roomRecords: roomRecords.slice(), roomTypes, typeRecords: typeRecords.slice(), floors,\n      floorRecords: floorRecords.slice(), folios, closedFolios: folioRows.filter((f) => f?.closedAt),\n      baseRate: raw.baseRate != null && Number.isFinite(+raw.baseRate) && +raw.baseRate >= 0 ? +raw.baseRate : null,\n      rateUpdatedAt: +raw.rateUpdatedAt || 0,\n      sold: Math.max(0, +raw.sold || 0), updatedAt: +raw.updatedAt || 0,\n      count: Object.keys(rooms).length,\n      views: Array.isArray(raw.views) ? raw.views.map(String).slice(0, 50) : DEFAULT_VIEWS.slice(),\n      customCharacteristics: Array.isArray(raw.customCharacteristics) ? raw.customCharacteristics.slice(0, 50) : [],\n      roomAudits: Array.isArray(raw.roomAudits) ? raw.roomAudits.slice() : [],\n    };\n  }\n\nfunction cuDocument(st) {\n    const live = Object.values(st.rooms || {});\n    const byId = {};\n    (st.roomRecords || []).forEach((r) => { if (r && r.id) byId[r.id] = r; });\n    live.forEach((r) => { byId[r.id || ('room:' + r.n)] = { ...r, id: r.id || ('room:' + r.n) }; });\n    const typeById = {};\n    (st.typeRecords || []).forEach((t) => { if (t && t.id) typeById[t.id] = t; });\n    Object.values(st.roomTypes || {}).forEach((t) => { typeById[t.id] = t; });\n    const floorById = {};\n    (st.floorRecords || []).forEach((f) => { if (f && f.id) floorById[f.id] = f; });\n    Object.values(st.floors || {}).forEach((f) => { floorById[f.id] = f; });\n    return {\n      ...(st.documentExtras || {}),\n      v: 4, rooms: Object.values(byId), roomTypes: Object.values(typeById), floors: Object.values(floorById), folios: (st.closedFolios || []).concat(Object.values(st.folios || {})),\n      configUpdatedAt: st.configUpdatedAt || 0,\n      baseRate: st.baseRate, rateUpdatedAt: st.rateUpdatedAt || 0,\n      sold: st.sold || 0, updatedAt: st.updatedAt || 0,\n      views: Array.isArray(st.views) ? st.views.slice(0, 50) : DEFAULT_VIEWS.slice(),\n      customCharacteristics: Array.isArray(st.customCharacteristics) ? st.customCharacteristics.slice(0, 50) : [],\n      roomAudits: Array.isArray(st.roomAudits) ? st.roomAudits.slice() : [],\n    };\n  }\n\nfunction cuMerge(mine, theirs) {\n    const a = mine && typeof mine === 'object' ? mine : {};\n    const b = theirs && typeof theirs === 'object' ? theirs : {};\n    const rows = {};\n    const take = (x) => {\n      if (!x) return;\n      const id = String(x.id || ('room:' + x.n));\n      const old = rows[id];\n      const xt = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);\n      const ot = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;\n      if (!old || xt >= ot) rows[id] = { ...x, id };\n    };\n    (Array.isArray(b.rooms) ? b.rooms : []).forEach(take);\n    (Array.isArray(a.rooms) ? a.rooms : []).forEach(take);\n\n    // Connecting-room reciprocity reconciliation\n    const activeRooms = Object.values(rows).filter((r) => r && !r.deletedAt);\n    const activeMap = new Map();\n    activeRooms.forEach((r) => activeMap.set(String(r.id), r));\n\n    const linkDecisions = new Map();\n    const pairKeyOf = (id1, id2) => JSON.stringify([String(id1), String(id2)].sort());\n    const recordDecision = (id1, id2, at, linked, explicit = true) => {\n      if (!id1 || !id2 || id1 === id2) return;\n      const pairKey = pairKeyOf(id1, id2);\n      const prev = linkDecisions.get(pairKey);\n      if (!prev || (explicit && !prev.explicit) || (explicit === prev.explicit && (at > prev.at || (at === prev.at && !linked)))) linkDecisions.set(pairKey, { at, linked, explicit });\n    };\n\n    const allSources = (Array.isArray(a.rooms) ? a.rooms : []).concat(Array.isArray(b.rooms) ? b.rooms : []);\n    allSources.forEach((r) => {\n      if (!r || !r.id) return;\n      const rid = String(r.id);\n      const meta = (r.connectingMeta && typeof r.connectingMeta === 'object') ? r.connectingMeta : {};\n      for (const [targetId, entry] of Object.entries(meta)) {\n        if (entry && typeof entry === 'object' && entry.at != null) {\n          recordDecision(rid, String(targetId), +entry.at || 0, !!entry.linked);\n        }\n      }\n      if (Array.isArray(r.connectingRoomIds)) {\n        const rTime = Math.max(+r.updatedAt || 0, 1);\n        r.connectingRoomIds.forEach((cid) => {\n          if (cid && cid !== rid) {\n            const pairKey = pairKeyOf(rid, cid);\n            if (!linkDecisions.has(pairKey)) {\n              recordDecision(rid, String(cid), rTime, true, false);\n            }\n          }\n        });\n      }\n    });\n\n    activeRooms.forEach((r) => {\n      const rid = String(r.id);\n      const newConnecting = new Set();\n      const newMeta = { ...(r.connectingMeta || {}) };\n\n      for (const other of activeRooms) {\n        const oid = String(other.id);\n        if (rid === oid) continue;\n        const pairKey = pairKeyOf(rid, oid);\n        const decision = linkDecisions.get(pairKey);\n        if (decision) {\n          newMeta[oid] = { at: decision.at, linked: decision.linked };\n          if (decision.linked) newConnecting.add(oid);\n        } else if (Array.isArray(r.connectingRoomIds) && r.connectingRoomIds.includes(oid)) {\n          newConnecting.add(oid);\n        }\n      }\n      r.connectingRoomIds = Array.from(newConnecting);\n      r.connectingMeta = newMeta;\n    });\n\n    // Enforce strict mutual reciprocity and remove dead references\n    activeRooms.forEach((r) => {\n      const rid = String(r.id);\n      r.connectingRoomIds = (r.connectingRoomIds || []).filter((cid) => {\n        const other = activeMap.get(String(cid));\n        return other && Array.isArray(other.connectingRoomIds) && other.connectingRoomIds.map(String).includes(rid);\n      });\n    });\n\n    const types = {};\n    const takeType = (x) => {\n      if (!x) return;\n      const id = String(x.id || cuTypeId(x.name, x.updatedAt));\n      const old = types[id];\n      const xt = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);\n      const ot = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;\n      if (!old || xt >= ot) types[id] = { ...x, id };\n    };\n    (Array.isArray(b.roomTypes) ? b.roomTypes : []).forEach(takeType);\n    (Array.isArray(a.roomTypes) ? a.roomTypes : []).forEach(takeType);\n    const floors = {};\n    const takeFloor = (x) => {\n      if (!x) return;\n      const id = String(x.id || cuFloorId(x.name, x.updatedAt));\n      const old = floors[id];\n      const xt = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);\n      const ot = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;\n      if (!old || xt >= ot) floors[id] = { ...x, id };\n    };\n    (Array.isArray(b.floors) ? b.floors : []).forEach(takeFloor);\n    (Array.isArray(a.floors) ? a.floors : []).forEach(takeFloor);\n    const folios = {};\n    const takeFolio = (f) => {\n      if (!f || !f.room) return;\n      const old = folios[f.room];\n      if (!old || (+f.updatedAt || 0) >= (+old.updatedAt || 0)) folios[f.room] = f;\n    };\n    (Array.isArray(b.folios) ? b.folios : []).forEach(takeFolio);\n    (Array.isArray(a.folios) ? a.folios : []).forEach(takeFolio);\n    const rateOwner = (+a.rateUpdatedAt || 0) >= (+b.rateUpdatedAt || 0) ? a : b;\n\n    // Deduplicate audit events by id\n    const auditMap = new Map();\n    const takeAudit = (item) => {\n      if (!item || typeof item !== 'object') return;\n      const id = String(item.operationId || item.id || ('audit_' + item.at + '_' + (item.actor?.id || '')));\n      if (!auditMap.has(id)) {\n        auditMap.set(id, item);\n      } else {\n        const prev = auditMap.get(id);\n        if ((+item.at || 0) >= (+prev.at || 0)) auditMap.set(id, item);\n      }\n    };\n    (Array.isArray(a.roomAudits) ? a.roomAudits : []).forEach(takeAudit);\n    (Array.isArray(b.roomAudits) ? b.roomAudits : []).forEach(takeAudit);\n\n    const configOwner = (+a.configUpdatedAt || 0) > (+b.configUpdatedAt || 0) ? a : b;\n    const mergedViews = Array.isArray(configOwner.views) ? configOwner.views.slice() : DEFAULT_VIEWS.slice();\n\n    return {\n      ...a, ...b,\n      v: 4, rooms: Object.values(rows), roomTypes: Object.values(types), floors: Object.values(floors), folios: Object.values(folios),\n      baseRate: rateOwner.baseRate == null ? null : +rateOwner.baseRate,\n      rateUpdatedAt: +rateOwner.rateUpdatedAt || 0,\n      sold: Math.max(+a.sold || 0, +b.sold || 0), updatedAt: Math.max(+a.updatedAt || 0, +b.updatedAt || 0),\n      views: mergedViews,\n      configUpdatedAt: +configOwner.configUpdatedAt || 0,\n      customCharacteristics: (configOwner.customCharacteristics || []).slice(),\n      roomAudits: Array.from(auditMap.values()).sort((x, y) => (+x.at || 0) - (+y.at || 0)),\n    };\n  }\n\nasync function cuFetchInHouseStays() {\n    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';\n    if (!slug) return;\n    const scope = cuStayScope(), cache = cuStayCache();\n    const startedAt = Date.now();\n    try {\n      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&status=checked_in', { cache: 'no-store' });\n      if (!res.ok) throw new Error('unavailable');\n      const data = await res.json();\n      if (!Array.isArray(data.stays)) throw new Error('invalid-response');\n      data.stays.forEach((s) => { if (s?.id && (+s.updatedAt || 0) >= (+cache.get(s.id)?.updatedAt || 0)) cache.set(s.id, s); });\n      if (data.stays.length >= 1000) throw new Error('incomplete');\n      const previous = cuInHouseSnapshots.get(scope);\n      if (!previous || startedAt >= previous.startedAt) cuInHouseSnapshots.set(scope, { startedAt, ids: new Set(data.stays.map((s) => s.id)) });\n    } catch (_) {\n      const load = cuStayLoads.get(scope) || {};\n      load.error = txk('Liste en maison non vérifiée. Actualisez avant de vous fier aux effectifs.');\n      cuStayLoads.set(scope, load);\n    }\n  }\n\nfunction cuRoomOccupancy() {\n    const stays = cuAllStays();\n    /* Le cache se périme tout seul : se fier au seul `rerender()` rendrait la\n     * réponse fausse pour tout appel fait entre deux peintures. */\n    let freshest = 0;\n    stays.forEach((b) => { const u = +b?.updatedAt || 0; if (u > freshest) freshest = u; });\n    const signature = cuStayScope() + ':' + stays.size + ':' + freshest;\n    if (scope.cuOccupancyMemo && scope.cuOccupancyMemo.signature === signature) return scope.cuOccupancyMemo.map;\n    const today = cuToday();\n    const map = new Map();\n    const completed = new Map();\n    stays.forEach((b) => {\n      if (!b?.hotel || !b.resourceId) return;\n      if (b.status === 'completed') {\n        const stamp = +b.updatedAt || 0;\n        if (stamp > (completed.get(b.resourceId) || 0)) completed.set(b.resourceId, stamp);\n      }\n      if (['cancelled', 'no_show', 'completed'].includes(b.status)) return;\n      const cin = b.hotel.checkIn, cout = b.hotel.checkOut;\n      if (!cin || !cout) return;\n      if (b.status === 'checked_in' && cin <= today && today <= cout) {\n        map.set(b.resourceId, { kind: cout === today ? 'depart' : 'occ', stay: b });\n        return;\n      }\n      // Une arrivée attendue ne masque jamais un client déjà présent.\n      if (b.status === 'confirmed' && cin === today && !map.has(b.resourceId)) {\n        map.set(b.resourceId, { kind: 'arrivee', stay: b });\n      }\n    });\n    scope.cuOccupancyMemo = { signature, map, completed };\n    return map;\n  }\n\nfunction cuRoomStatus(room) {\n    // Hors-service l'emporte : une chambre condamnée ne se vend pas, même\n    // si un dossier la désigne encore.\n    if (room.status === 'hs') return { key: 'hs', label: tx('Hors-service') };\n    const live = cuRoomLive(room);\n    if (live) {\n      if (live.kind === 'depart') return { key: 'occ', label: tx('Départ aujourd’hui') };\n      if (live.kind === 'occ') return { key: 'occ', label: tx('Occupée') };\n    }\n    // A completed stay is the authoritative checkout event. Until the room\n    // document is saved *after* that event as clean, it belongs in the\n    // housekeeping queue, even if its old manual status still says occupied.\n    const lastCheckout = isCustomHotel() && room.id ? (scope.cuOccupancyMemo?.completed?.get(room.id) || 0) : 0;\n    if (lastCheckout > (+room.updatedAt || 0) || room.status === 'sale') return { key: 'sale', label: tx('À nettoyer') };\n    if (live) return { key: 'arrivee', label: tx('Arrivée attendue') };\n    if (room.status === 'occ') return { key: 'occ', label: tx('Occupée') };\n    if (room.status === 'depart') return { key: 'occ', label: tx('Départ aujourd’hui') };\n    if (room.status === 'arrivee') return { key: 'arrivee', label: tx('Arrivée attendue') };\n    if (room.status === 'sale') return { key: 'sale', label: tx('À nettoyer') };\n    return { key: 'libre', label: tx('Libre · propre') };\n  }\n\nreturn Object.freeze({ cuActiveActor, cuFetchStaysForWindow, cuSeed, cuHydrate, cuDocument, cuMerge, cuFetchInHouseStays, cuRoomOccupancy, cuRoomStatus });\n};\n"
+    }
+  ],
+  "edits": [
+    {
+      "start": 55947,
+      "end": 56661,
+      "original": "function cuReceptionBuckets(stays, day, today) {\n    const buckets = { arrivals: [], departures: [], inhouse: [], attention: [] };\n    stays.forEach((b) => {\n      if (!b?.hotel || ['cancelled', 'no_show'].includes(b.status)) return;\n      const h = b.hotel;\n      if (h.checkIn === day) buckets.arrivals.push(b);\n      if (h.checkOut === day) buckets.departures.push(b);\n      // This is current presence, not a forecast inferred from booking dates.\n      if (b.status === 'checked_in') buckets.inhouse.push(b);\n      if ((b.status === 'checked_in' && h.checkOut < today) ||\n          (['requested', 'confirmed'].includes(b.status) && h.checkIn < today)) buckets.attention.push(b);\n    });\n    return buckets;\n  }",
+      "replacement": "function cuReceptionBuckets() { return hotelSection('arrivals').cuReceptionBuckets.apply(this, arguments); }"
+    },
+    {
+      "start": 65747,
+      "end": 66644,
+      "original": "async function cuStayStatus(id, status, force = false) {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    try {\n      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force }) });\n      const data = await res.json().catch(() => ({}));\n      if (cuMerchantSlug() !== slug) return false;\n      if (res.status === 409 && data.error === 'stay-unpaid' && !force && confirm(tx('Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?', { amount: cuDraftMoney(data.owedCents) }))) return cuStayStatus(id, status, true);\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (_) {}\n    return false;\n  }",
+      "replacement": "async function cuStayStatus() { return hotelSection('arrivals').cuStayStatus.apply(this, arguments); }"
+    },
+    {
+      "start": 66806,
+      "end": 67409,
+      "original": "async function cuStayCancel(id) {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    await cuStayStatus(id, 'confirmed');\n    try {\n      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });\n      const data = await res.json().catch(() => ({}));\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (_) {}\n    return false;\n  }",
+      "replacement": "async function cuStayCancel() { return hotelSection('arrivals').cuStayCancel.apply(this, arguments); }"
+    },
+    {
+      "start": 58422,
+      "end": 59297,
+      "original": "function cuPhotoEditorMarkup(photos) {\n    return photos.length ? photos.map((p, i) => `<div class=\"hx-type-photo\"><img src=\"${esc(p.url)}\" alt=\"${esc(p.alt || '')}\"><span>${i === 0 ? tx('PHOTO PRINCIPALE') : ltr((i + 1) + ' / ' + photos.length)}</span><div><button type=\"button\" data-action=\"hx-type-photo-move\" data-arg=\"${i}:-1\" ${i === 0 ? 'disabled' : ''} aria-label=\"${tx('Déplacer avant')}\">←</button><button type=\"button\" data-action=\"hx-type-photo-move\" data-arg=\"${i}:1\" ${i === photos.length - 1 ? 'disabled' : ''} aria-label=\"${tx('Déplacer après')}\">→</button><button type=\"button\" data-action=\"hx-type-photo-remove\" data-arg=\"${i}\" aria-label=\"${tx('Retirer la photo')}\">×</button></div></div>`).join('') : `<div class=\"hx-type-photo-empty\"><b>${tx('Aucune photo')}</b><span>${tx('Le visuel Kiwi reste affiché tant que vous n’ajoutez rien.')}</span></div>`;\n  }",
+      "replacement": "function cuPhotoEditorMarkup() { return hotelSection('roomBoard').cuPhotoEditorMarkup.apply(this, arguments); }"
+    },
+    {
+      "start": 59300,
+      "end": 59618,
+      "original": "function cuRenderPhotoEditor(root) {\n    const host = root?.querySelector('[data-hx-type-photos]');\n    if (host) host.innerHTML = cuPhotoEditorMarkup(root.__hxPhotos || []);\n    const add = root?.querySelector('[data-action=\"hx-type-photo-pick\"]');\n    if (add) add.disabled = (root.__hxPhotos || []).length >= 8;\n  }",
+      "replacement": "function cuRenderPhotoEditor() { return hotelSection('roomBoard').cuRenderPhotoEditor.apply(this, arguments); }"
+    },
+    {
+      "start": 59621,
+      "end": 60790,
+      "original": "function cuShrinkHotelPhoto(file) {\n    if (!file || !/^image\\/(jpeg|png|webp|avif)$/i.test(file.type || '') || file.size < 900 * 1024 || typeof createImageBitmap !== 'function') return Promise.resolve(file);\n    return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file)).then((image) => {\n      const scale = Math.min(1, 1800 / Math.max(image.width, image.height));\n      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));\n      const ctx = canvas.getContext('2d'); if (!ctx) return file;\n      ctx.drawImage(image, 0, 0, canvas.width, canvas.height); try { image.close(); } catch (_) {}\n      return new Promise((resolve) => canvas.toBlob((blob) => {\n        if (!blob || blob.size >= file.size) return resolve(file);\n        const name = String(file.name || 'chambre').replace(/\\.[a-z0-9]{1,6}$/i, '') + '.jpg';\n        try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); } catch (_) { resolve(blob); }\n      }, 'image/jpeg', .84));\n    }).catch(() => file);\n  }",
+      "replacement": "function cuShrinkHotelPhoto() { return hotelSection('roomBoard').cuShrinkHotelPhoto.apply(this, arguments); }"
+    },
+    {
+      "start": 61520,
+      "end": 62246,
+      "original": "function cuRefreshFloorSelectors() {\n    if (typeof document === 'undefined' || !document.querySelectorAll) return;\n    const floors = cuFloorRows();\n    document.querySelectorAll('select[data-hx-room-floor-id], select[data-hx-bulk-floor-id]').forEach((sel) => {\n      const currentVal = sel.value;\n      const isBulk = sel.hasAttribute('data-hx-bulk-floor-id');\n      const prefix = isBulk ? `<option value=\"\">${tx('Ne pas modifier')}</option>` : '';\n      sel.innerHTML = prefix + floors.map((f) => `<option value=\"${esc(f.id)}\" ${f.id === currentVal ? 'selected' : ''}>${esc(f.name)}</option>`).join('');\n      if (currentVal && floors.some((f) => f.id === currentVal)) {\n        sel.value = currentVal;\n      }\n    });\n  }",
+      "replacement": "function cuRefreshFloorSelectors() { return hotelSection('roomBoard').cuRefreshFloorSelectors.apply(this, arguments); }"
+    },
+    {
+      "start": 70230,
+      "end": 71024,
+      "original": "function cuLinkConnectingRooms(st, roomA, roomB) {\n    if (!roomA || !roomB || roomA.id === roomB.id) return;\n    const now = cuStamp();\n    if (!Array.isArray(roomA.connectingRoomIds)) roomA.connectingRoomIds = [];\n    if (!Array.isArray(roomB.connectingRoomIds)) roomB.connectingRoomIds = [];\n    if (!roomA.connectingRoomIds.includes(roomB.id)) roomA.connectingRoomIds.push(roomB.id);\n    if (!roomB.connectingRoomIds.includes(roomA.id)) roomB.connectingRoomIds.push(roomA.id);\n    roomA.connectingMeta = { ...(roomA.connectingMeta || {}) };\n    roomB.connectingMeta = { ...(roomB.connectingMeta || {}) };\n    roomA.connectingMeta[roomB.id] = { at: now, linked: true };\n    roomB.connectingMeta[roomA.id] = { at: now, linked: true };\n    roomA.updatedAt = now;\n    roomB.updatedAt = now;\n  }",
+      "replacement": "function cuLinkConnectingRooms() { return hotelSection('roomBoard').cuLinkConnectingRooms.apply(this, arguments); }"
+    },
+    {
+      "start": 48518,
+      "end": 49157,
+      "original": "function recordSale(amount, identity, label, method) {\n    if (!isCustomHotel() || !(amount > 0)) return false;\n    if (method !== 'cash' && method !== 'card') return false;\n    const live = window.KiwiLive;\n    if (!live?.isOn?.() || !live?.postSale) return false;\n    const key = String(identity || ('hotel-' + Date.now())).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 54);\n    const result = live.postSale({\n      id: 'hotel-' + key, amount: Math.round(amount * 100) / 100, method,\n      label: String(label || 'Encaissement hôtel').slice(0, 80), ref: key,\n      time: new Date(), channel: 'hotel'\n    });\n    return result?.ok === true;\n  }",
+      "replacement": "function recordSale() { return hotelSection('folioActions').recordSale.apply(this, arguments); }"
+    },
+    {
+      "start": 52344,
+      "end": 52528,
+      "original": "function occupancyByDay() {\n    return TAPE_DAYS.map((_, di) => {\n      const cnt = STAYS.filter((s) => di >= s.s && di < s.s + s.n).length;\n      return Math.min(cnt, 23);\n    });\n  }",
+      "replacement": "function occupancyByDay() { return hotelSection('rateActions').occupancyByDay.apply(this, arguments); }"
+    },
+    {
+      "start": 53021,
+      "end": 53244,
+      "original": "function donutCss(parts) {\n    let acc = 0;\n    const stops = parts.map((p) => { const s = `${p.color} ${acc}% ${acc + p.pct}%`; acc += p.pct; return s; }).join(', ');\n    return `background: conic-gradient(${stops});`;\n  }",
+      "replacement": "function donutCss() { return hotelSection('rateActions').donutCss.apply(this, arguments); }"
+    },
+    {
+      "start": 40668,
+      "end": 40826,
+      "original": "function cuStayCache() {\n    const scope = cuStayScope();\n    if (!cuD1Stays.has(scope)) cuD1Stays.set(scope, new Map());\n    return cuD1Stays.get(scope);\n  }",
+      "replacement": "function cuStayCache() { return hotelSection('receptionState').cuStayCache.apply(this, arguments); }"
+    },
+    {
+      "start": 40951,
+      "end": 41303,
+      "original": "function cuAllStays() {\n    const doc = window.KiwiReservations?.get?.() || { bookings: [] };\n    const all = new Map();\n    (doc.bookings || []).forEach((b) => { if (b && b.id) all.set(b.id, b); });\n    cuStayCache().forEach((b, id) => {\n      if (b && (+b.updatedAt || 0) >= (+all.get(id)?.updatedAt || 0)) all.set(id, b);\n    });\n    return all;\n  }",
+      "replacement": "function cuAllStays() { return hotelSection('receptionState').cuAllStays.apply(this, arguments); }"
+    },
+    {
+      "start": 41307,
+      "end": 41617,
+      "original": "function cuStateId() {\n    const id = cuVenueId();\n    if (id !== 'scoped' && id !== 'own') return id;\n    try {\n      const slug = String(window.KiwiVenue?.getCurrentVenueData?.()?.slug || '').trim();\n      return slug ? id + ':' + slug : id + ':unresolved';\n    } catch (_) { return id + ':unresolved'; }\n  }",
+      "replacement": "function cuStateId() { return hotelSection('receptionState').cuStateId.apply(this, arguments); }"
+    },
+    {
+      "start": 41620,
+      "end": 41712,
+      "original": "function cuStoreKey(id) { return HX_STORE_PREFIX + String(id || cuStateId() || 'unknown'); }",
+      "replacement": "function cuStoreKey() { return hotelSection('receptionState').cuStoreKey.apply(this, arguments); }"
+    },
+    {
+      "start": 43484,
+      "end": 43726,
+      "original": "function cuWriteLocal(st, id) {\n    try {\n      localStorage.setItem(cuStoreKey(id), JSON.stringify(cuDocument(st)));\n      return true;\n    } catch (err) {\n      console.warn('cuWriteLocal storage failed', err);\n      return false;\n    }\n  }",
+      "replacement": "function cuWriteLocal() { return hotelSection('receptionState').cuWriteLocal.apply(this, arguments); }"
+    },
+    {
+      "start": 43729,
+      "end": 43922,
+      "original": "function cuReadLocal(id) {\n    try {\n      const raw = JSON.parse(localStorage.getItem(cuStoreKey(id)) || 'null');\n      return raw ? cuHydrate(raw) : null;\n    } catch (_) { return null; }\n  }",
+      "replacement": "function cuReadLocal() { return hotelSection('receptionState').cuReadLocal.apply(this, arguments); }"
+    },
+    {
+      "start": 44011,
+      "end": 44311,
+      "original": "function cuState() {\n    cuEnsureFilterVenue();\n    const id = cuStateId();\n    if (!CUSTOM_HX[id]) {\n      CUSTOM_HX[id] = cuReadLocal(id) || cuSeed();\n      cuWriteLocal(CUSTOM_HX[id], id);\n    }\n    CUSTOM_HX[id].count = Object.keys(CUSTOM_HX[id].rooms || {}).length;\n    return CUSTOM_HX[id];\n  }",
+      "replacement": "function cuState() { return hotelSection('receptionState').cuState.apply(this, arguments); }"
+    },
+    {
+      "start": 44314,
+      "end": 44556,
+      "original": "function cuSave(st) {\n    st = st || cuState();\n    st.count = Object.keys(st.rooms || {}).length;\n    st.updatedAt = cuStamp();\n    const localOk = cuWriteLocal(st, cuStateId());\n    if (hotelCloud) hotelCloud.push();\n    return localOk;\n  }",
+      "replacement": "function cuSave() { return hotelSection('receptionState').cuSave.apply(this, arguments); }"
+    },
+    {
+      "start": 44559,
+      "end": 45014,
+      "original": "async function cuSaveCloud(st) {\n    if (!hotelCloud || typeof hotelCloud.save !== 'function') return { ok: false, status: 503, error: 'cloud-unavailable' };\n    const scope = cuStateId();\n    const payload = cuDocument(st || cuState());\n    const result = await hotelCloud.save(payload);\n    if (scope !== cuStateId()) return { ok: false, status: 409, error: 'tenant-switched' };\n    return result || { ok: false, status: 503, error: 'unconfirmed' };\n  }",
+      "replacement": "async function cuSaveCloud() { return hotelSection('receptionState').cuSaveCloud.apply(this, arguments); }"
+    },
+    {
+      "start": 45017,
+      "end": 46038,
+      "original": "async function cuCommitDraft(st) {\n    const scope = cuStateId();\n    st.updatedAt = cuStamp();\n    const result = await cuSaveCloud(st);\n    if (!result.ok) throw new Error(result.status === 409\n      ? trL({fr:'Actualisez le plan puis réessayez. Aucune modification confirmée.',en:'Refresh the room plan and retry. No change confirmed.',ar:'حدّث مخطط الغرف وأعد المحاولة. لم يتم تأكيد أي تعديل.'})\n      : trL({fr:'Enregistrement non confirmé. Vérifiez la connexion et réessayez.',en:'Save not confirmed. Check your connection and retry.',ar:'لم يتم تأكيد الحفظ. تحقق من الاتصال وأعد المحاولة.'}));\n    if (scope !== cuStateId()) throw new Error(tx('Établissement changé'));\n    const next = result.data ? cuHydrate(result.data) : st;\n    CUSTOM_HX[scope] = next;\n    const cached = cuWriteLocal(next, scope);\n    if (!cached) toast(trL({fr:'Confirmé au serveur, cache local indisponible',en:'Saved on server; local cache unavailable',ar:'حُفظ في الخادم؛ التخزين المحلي غير متاح'}), {type:'warn'});\n    return next;\n  }",
+      "replacement": "async function cuCommitDraft() { return hotelSection('receptionState').cuCommitDraft.apply(this, arguments); }"
+    },
+    {
+      "start": 40158,
+      "end": 40220,
+      "original": "  const CUSTOM_HX = {}; // venueId → hydrated operating state\n",
+      "replacement": ""
+    },
+    {
+      "start": 40220,
+      "end": 40270,
+      "original": "  const HX_STORE_PREFIX = 'kiwi:hotel-rooms:v2:';\n",
+      "replacement": ""
+    },
+    {
+      "start": 40270,
+      "end": 40295,
+      "original": "  let hotelCloud = null;\n",
+      "replacement": ""
+    },
+    {
+      "start": 40415,
+      "end": 40446,
+      "original": "  const cuD1Stays = new Map();\n",
+      "replacement": ""
+    },
+    {
+      "start": 40448,
+      "end": 40478,
+      "original": "const cuStayLoads = new Map();",
+      "replacement": "const cuStayLoads = hotelSection('receptionState').stayLoads();"
+    },
+    {
+      "start": 40481,
+      "end": 40518,
+      "original": "const cuInHouseSnapshots = new Map();",
+      "replacement": "const cuInHouseSnapshots = hotelSection('receptionState').inHouseSnapshots();"
+    },
+    {
+      "start": 40521,
+      "end": 40558,
+      "original": "const cuReceptionFilters = new Map();",
+      "replacement": "const cuReceptionFilters = hotelSection('receptionState').receptionFilters();"
+    },
+    {
+      "start": 8342,
+      "end": 8381,
+      "original": "get hotelCloud() { return hotelCloud; }",
+      "replacement": "get hotelCloud() { return hotelSection('receptionState').cloud(); }"
+    },
+    {
+      "start": 8389,
+      "end": 8434,
+      "original": "set hotelCloud(value) { hotelCloud = value; }",
+      "replacement": "set hotelCloud(value) { hotelSection('receptionState').setCloud(value); }"
+    },
+    {
+      "start": 228817,
+      "end": 228851,
+      "original": "CUSTOM_HX[stateId] = acknowledged;",
+      "replacement": "hotelSection('receptionState').replaceState(stateId, acknowledged);"
+    },
+    {
+      "start": 46123,
+      "end": 46154,
+      "original": "CUSTOM_HX[id] = cuHydrate(doc);",
+      "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
+    },
+    {
+      "start": 258328,
+      "end": 258359,
+      "original": "CUSTOM_HX[id] = cuHydrate(doc);",
+      "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
+    },
+    {
+      "start": 46159,
+      "end": 46191,
+      "original": "cuWriteLocal(CUSTOM_HX[id], id);",
+      "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
+    },
+    {
+      "start": 258368,
+      "end": 258400,
+      "original": "cuWriteLocal(CUSTOM_HX[id], id);",
+      "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
+    },
+    {
+      "start": 258409,
+      "end": 258430,
+      "original": "return CUSTOM_HX[id];",
+      "replacement": "return hotelSection('receptionState').stateFor(id);"
+    },
+    {
+      "start": 46274,
+      "end": 46274,
+      "original": "",
+      "replacement": "    let hotelCloud = hotelSection('receptionState').cloud();\n"
+    },
+    {
+      "start": 46781,
+      "end": 46781,
+      "original": "",
+      "replacement": "    hotelSection('receptionState').setCloud(hotelCloud);\n"
+    },
+    {
+      "start": 227871,
+      "end": 227881,
+      "original": "hotelCloud",
+      "replacement": "hotelSection('receptionState').cloud()"
+    },
+    {
+      "start": 227905,
+      "end": 227915,
+      "original": "hotelCloud",
+      "replacement": "hotelSection('receptionState').cloud()"
+    },
+    {
+      "start": 229062,
+      "end": 229072,
+      "original": "hotelCloud",
+      "replacement": "hotelSection('receptionState').cloud()"
+    },
+    {
+      "start": 229080,
+      "end": 229090,
+      "original": "hotelCloud",
+      "replacement": "hotelSection('receptionState').cloud()"
+    },
+    {
+      "start": 9415,
+      "end": 9415,
+      "original": "",
+      "replacement": "      get cuDocument() { return cuDocument; },\n      get cuHydrate() { return cuHydrate; },\n      get cuSeed() { return cuSeed; },\n"
+    }
+  ]
+}

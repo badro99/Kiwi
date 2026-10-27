@@ -1,10 +1,12 @@
+import { hotelC1Source, hotelC1 } from './hotel-c1-source.mjs';
 /* Les anciens tests extraient des fonctions dans leur portée lexicale d'origine.
  * Toujours lire les corps de production, jamais l'archive de référence. */
 import fs from 'node:fs';
-const read = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+const liveRead = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+const read = hotelC1Source;
 export const hotelParts = JSON.parse(read('tools/fixtures/hotel/split-2.json'));
 export const hotelSections = JSON.parse(read('tools/fixtures/hotel/split-3.json'));
-export const hotelFiles = ['assets/hotel-language.js', ...hotelParts.parts.map(p => p.file), ...hotelSections.parts.map(p => p.file), 'assets/hotel.js'];
+export const hotelFiles = ['assets/hotel-language.js', ...hotelParts.parts.map(p => p.file), ...hotelSections.parts.map(p => p.file), ...hotelC1.parts.filter(p => p.file !== 'assets/hotel/model.js').map(p => p.file), 'assets/hotel.js'];
 export function hotelCoreSource() {
   let core = read('assets/hotel.js');
   if (!core.includes(hotelSections.bind)) throw new Error('Hotel section binding changed');
@@ -27,7 +29,7 @@ export function hotelCoreSource() {
   return core;
 }
 export function hotelTestSource() {
-  if (process.env.KIWI_HOTEL_TEST_RUNTIME === '1') return hotelFiles.map(read).join('\n');
+  if (process.env.KIWI_HOTEL_TEST_RUNTIME === '1') return hotelFiles.map(liveRead).join('\n');
   const map = JSON.parse(read('tools/fixtures/hotel/split.json'));
   const language = read('assets/hotel-language.js');
   if (!language.startsWith(map.prefix) || !language.endsWith(map.suffix)) throw new Error('Hotel language wrapper changed');

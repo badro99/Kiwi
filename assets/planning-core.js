@@ -6,6 +6,16 @@
   "use strict";
 
   const DAY_MS = 86400000;
+  /* Les notices vivent sous un plafond d'appareil : 200 restent dans la liste
+   * courante, les plus anciennes glissent dans l'archive du document (lues
+   * page par page, jamais jetées). */
+  const NOTICE_KEEP = 200;
+  /* 400, pas plus : l'archive voyage dans le document « team », plafonné à
+   * 600 Ko par le serveur (functions/api/store.js). Une notice pèse environ
+   * 200 octets ; 400 notices ajoutent ~80 Ko, ce qui laisse la place aux
+   * fiches et aux horaires d'une grande équipe. */
+  const NOTICE_ARCHIVE_KEEP = 400;
+  const NOTICE_PAGE_SIZE = 25;
 
   function clone(value) {
     return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -22,6 +32,7 @@
       openShifts: [],
       swapRequests: [],
       notices: [],
+      noticeArchive: [],
       settings: { minRestHours: 10, maxDailyHours: 12, maxWeeklyHours: 48 },
       publishedShifts: {},
       publications: {}
@@ -93,6 +104,22 @@
     return new Set((members || []).map((member) => String(member.id || "")).filter(Boolean));
   }
 
+  /* Les notices qui débordent du plafond de liste ne sont plus perdues : elles
+   * rejoignent l'archive du document, dédupliquée contre la liste courante.
+   * L'archive reste bornée (stockage d'appareil) : au-delà de
+   * NOTICE_ARCHIVE_KEEP, les plus anciennes cèdent leur place. */
+  function archiveNotices(out, overflow) {
+    const live = new Set((out.notices || []).map((item) => String(item && item.id || "")));
+    const map = new Map();
+    (Array.isArray(out.noticeArchive) ? out.noticeArchive : []).forEach((item) => {
+      if (item && item.id && !live.has(String(item.id))) map.set(String(item.id), item);
+    });
+    (Array.isArray(overflow) ? overflow : []).forEach((item) => {
+      if (item && item.id && !live.has(String(item.id)) && !map.has(String(item.id))) map.set(String(item.id), item);
+    });
+    out.noticeArchive = Array.from(map.values()).slice(-NOTICE_ARCHIVE_KEEP);
+  }
+
   function normalize(raw, members) {
     const out = Object.assign(blank(), clone(raw || {}));
     const alive = members && members.length ? memberIds(members) : null;
@@ -104,7 +131,10 @@
     out.coverageRules = Array.isArray(out.coverageRules) ? out.coverageRules : [];
     out.openShifts = Array.isArray(out.openShifts) ? out.openShifts : [];
     out.swapRequests = Array.isArray(out.swapRequests) ? out.swapRequests : [];
-    out.notices = Array.isArray(out.notices) ? out.notices.slice(-200) : [];
+    const rawNotices = Array.isArray(out.notices) ? out.notices : [];
+    out.noticeArchive = Array.isArray(out.noticeArchive) ? out.noticeArchive : [];
+    out.notices = rawNotices.slice(-NOTICE_KEEP);
+    archiveNotices(out, rawNotices.slice(0, -NOTICE_KEEP));
     out.settings = Object.assign({ minRestHours: 10, maxDailyHours: 12, maxWeeklyHours: 48 }, out.settings || {});
     out.publishedShifts = out.publishedShifts && typeof out.publishedShifts === "object" ? out.publishedShifts : {};
     out.publications = out.publications && typeof out.publications === "object" ? out.publications : {};
@@ -144,7 +174,10 @@
     out.coverageRules = latestById(theirs.coverageRules, mine.coverageRules);
     out.openShifts = latestById(theirs.openShifts, mine.openShifts);
     out.swapRequests = latestById(theirs.swapRequests, mine.swapRequests);
-    out.notices = latestById(theirs.notices, mine.notices).slice(-200);
+    const mergedNotices = latestById(theirs.notices, mine.notices);
+    out.notices = mergedNotices.slice(-NOTICE_KEEP);
+    archiveNotices(out, mergedNotices.slice(0, -NOTICE_KEEP));
+    archiveNotices(out, mine.noticeArchive);
     out.settings = Object.assign({}, theirs.settings || {}, mine.settings || {});
     out.publishedShifts = clone(theirs.publishedShifts || {});
     Object.keys(mine.publishedShifts || {}).forEach((memberId) => {
@@ -498,8 +531,22 @@
   function addNotice(planning, notice) {
     const clean = normalize(planning);
     const item = Object.assign({ id: "notice-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7), createdAt: new Date().toISOString(), readAt: "" }, clone(notice || {}));
-    clean.notices = latestById(clean.notices, [item]).slice(-200);
+    const mergedNotice = latestById(clean.notices, [item]);
+    clean.notices = mergedNotice.slice(-NOTICE_KEEP);
+    archiveNotices(clean, mergedNotice.slice(0, -NOTICE_KEEP));
     return clean;
+  }
+
+  /* Lecture page par page de l'archive des notices : la plus récente d'abord,
+   * 25 à la fois par défaut. `next` nul quand chaque page a été lue. */
+  function noticeArchivePage(planning, page, size) {
+    const data = (Array.isArray(planning && planning.noticeArchive) ? planning.noticeArchive : []).slice()
+      .sort((a, b) => String(a && a.createdAt || "").localeCompare(String(b && b.createdAt || "")) || String(a && a.id || "").localeCompare(String(b && b.id || "")));
+    const per = Math.max(1, Math.min(100, Math.floor(Number(size) || NOTICE_PAGE_SIZE)));
+    const pages = Math.max(1, Math.ceil(data.length / per));
+    const index = Math.max(0, Math.min(pages - 1, Math.floor(Number(page) || 0)));
+    const items = data.slice(Math.max(0, data.length - (index + 1) * per), data.length - index * per).reverse();
+    return { items, page: index, pages, total: data.length, next: index + 1 < pages ? index + 1 : null, size: per };
   }
 
   function createOpenShift(planning, data, now) {
@@ -631,7 +678,9 @@
     };
     Object.keys(selected).forEach((memberId) => {
       const notice = { id:`schedule-${key}-${clean.publications[key].revision}-${memberId}`, memberId, type:"schedule-published", periodKey:key, revision:clean.publications[key].revision, createdAt:clean.publications[key].publishedAt, readAt:"" };
-      clean.notices = latestById(clean.notices, [notice]).slice(-200);
+      const mergedNotice = latestById(clean.notices, [notice]);
+      clean.notices = mergedNotice.slice(-NOTICE_KEEP);
+      archiveNotices(clean, mergedNotice.slice(0, -NOTICE_KEEP));
     });
     return { ok: true, planning: globalThis.KiwiFieldMerge ? globalThis.KiwiFieldMerge.stamp(clean, normalize(planning, members), now) : clean, issues: [] };
   }
@@ -815,5 +864,5 @@
     return { ok: !issues.some((issue) => issue.severity === 'blocker'), shifts, assignments:candidates.filter((x) => !x.unresolved), unresolved:candidates.filter((x) => x.unresolved), issues };
   }
 
-  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, calendarPeriod, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
+  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, calendarPeriod, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, noticeArchivePage, publish, employeeSchedule, hash, minutes, isoDay, NOTICE_PAGE_SIZE };
 });

@@ -4,17 +4,23 @@
  * Périmètre : JS propriétaire assets/** et scripts intégrés des HTML racine.
  * Limite : pas de propagation interprocédurale ni de résolution de propriétés
  * métier. Les alias scalaires locaux sont suivis, sans exécuter le produit. */
+import planningSourceHelper from './planning-test-source.cjs';
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 import { ticketsRuntimeSource, ticketsFiles } from './tickets-test-source.mjs';
+import orderProSplit from './orderpro-split-source.cjs';
+const orderProFiles = ['session', 'table', 'menu', 'cart', 'payment'].map(name => 'assets/orderpro/' + name + '.js');
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { concatParts } from './concat-parts.mjs';
 const require = createRequire(import.meta.url);
 const ts = require('../app/node_modules/typescript');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
-const translated = /^(?:t|tr|dt|mt|translate|translateCore|i18n|L|text|formatMessage)$/;
+// employeePick(fr, en, ar) is the waiter app's explicit per-language choice.
+const translated = /^(?:t|tr|dt|mt|translate|translateCore|i18n|L|text|formatMessage|employeePick)$/;
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;
 const prop = n => ts.isPropertyAccessExpression(n) ? n.name.text : ts.isElementAccessExpression(n) && ts.isStringLiteral(n.argumentExpression) ? n.argumentExpression.text : '';
 const name = n => ts.isIdentifier(n) ? n.text : prop(n);
@@ -85,14 +91,19 @@ function walk(dir) {
 }
 const files = [...walk('assets'), ...fs.readdirSync(ROOT).filter(f => /\.html$/.test(f) && !/ 2\./.test(f))].sort();
 const counts = {}, locations = {};
+const home = require('./home-test-source.cjs');
+const homeParts = new Set(home.metadata().parts.map(p => p.file));
+const concat = concatParts(ROOT);
 for (const file of files) {
-  // Keep the pre-existing ticket pin on its owner while scanning every live part.
-  if (ticketsFiles.slice(1).includes(file)) continue;
-  const src = file === 'assets/tickets.js' ? ticketsRuntimeSource() : fs.readFileSync(path.join(ROOT, file), 'utf8');
+  // A concatenation part is scanned through its bundle, the file the pages load.
+  if (concat.has(file)) continue;
+  // Keep each split controller's existing pin while scanning every live body.
+  if (ticketsFiles.slice(1).includes(file) || planningSourceHelper.planningFiles.includes(file) || orderProFiles.includes(file) || homeParts.has(file) || file.startsWith('assets/menu-catalog/')) continue;
+  const src = file === 'assets/daterange/renderers.js' ? home.source() : file === 'assets/team-hours.js' ? planningSourceHelper.planningTestSource() : file === 'assets/orderpro-page.js' ? orderProSplit.orderProScriptSource() : file === 'assets/menu-catalog.js' ? menuCatalogSource() : file === 'assets/tickets.js' ? ticketsRuntimeSource() : fs.readFileSync(path.join(ROOT, file), 'utf8');
   const scripts = file.endsWith('.html') ? [...src.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]) : [src];
   // Count every live split file against the original controller's existing pin.
   // No strings are exempted and the split identity suite guards module membership.
-  const owner = /^assets\/booking-(service|hotel|submission|manage|view)\.js$/.test(file) ? 'assets/booking.js' : file;
+  const owner = file.startsWith('assets/pressing/') ? 'assets/pressing-caisse.js' : /^assets\/booking-(service|hotel|submission|manage|view)\.js$/.test(file) ? 'assets/booking.js' : file;
   const hits = scripts.flatMap(s => scan(s, file));
   locations[owner] = (locations[owner] || []).concat(hits.map(line => file + ':' + line));
   counts[owner] = (counts[owner] || 0) + hits.length;
@@ -101,6 +112,13 @@ for (const file of files) {
 const invoiceSplit = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/invoicing/split.json'), 'utf8'));
 for (const part of invoiceSplit.parts) {
   counts['assets/invoicing.js'] += counts[part.file] || 0;
+  delete counts[part.file];
+}
+// C1 bodies keep the controller's budget; every live UI part is still scanned.
+const hotelSplit = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/hotel/split-4.json'), 'utf8'));
+for (const part of hotelSplit.parts.filter(p => !p.base)) {
+  counts['assets/hotel.js'] += counts[part.file] || 0;
+  locations['assets/hotel.js'].push(...(locations[part.file] || []));
   delete counts[part.file];
 }
 const baseline = JSON.parse(fs.readFileSync(BASE, 'utf8'));

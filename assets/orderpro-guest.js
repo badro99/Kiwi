@@ -1,3 +1,7 @@
+/* Private OrderPro guest bridge. Reads: I18N, MENU, MENU_ALL, NET, OPT, SESSION, STORE, activeMenuFilter, applyMenuMode, applyStaticI18n, cart, closeBill, currentLang, escapeHtml, gotoScreen, handleAddClick, itemOf, lineKey, money, nameOf, openCart, orderMode, refreshCartUI, renderMenu, sendServiceRequest, sentLines, sentOrders, sessionTotal, showToast, t, tableNumber, toCents.
+ * Browser capabilities: tools/fixtures/orderpro/interfaces.json. Original bodies below are unchanged. */
+KiwiOrderMenu.orderProParts.run('guest', function (scope) {
+  with (scope) {
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · ORDER PRO, LA PAGE D'ACCUEIL DU CLIENT (assets/orderpro-guest.js)
  * ---------------------------------------------------------------------------
@@ -1066,3 +1070,7 @@
     _test: { makeSudoku, okAt, solve, unitPriceOf, whatsappText, estimate, dietAllows, nickOk, G, Q, MEM, SUDO },
   };
 })();
+
+    return Object.freeze({  });
+  }
+});

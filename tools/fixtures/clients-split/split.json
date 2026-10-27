@@ -1,0 +1,273 @@
+{
+  "note": "Each bundle is the exact concatenation of its parts. Edit a part, then rebuild the bundle with: cat <parts> > <file>.",
+  "bundles": [
+    {
+      "file": "assets/clients-store.js",
+      "sha256AtSplit": "d443db736550a2e9482bf8c836ca312bccb7741440753592d5399febab9df32d",
+      "parts": [
+        {
+          "file": "assets/clients-store/profile.js",
+          "concern": "book identity, store config, client records (list, find, upsert)",
+          "lines": [
+            1,
+            434
+          ],
+          "declares": [
+            "fetchDeadline",
+            "numberFormats",
+            "clientNumber",
+            "clientQuantity",
+            "window.KiwiClientNumbers",
+            "DAY",
+            "ls",
+            "now",
+            "daysSince",
+            "activePosId",
+            "slugStore",
+            "adopted",
+            "hasClients",
+            "soleStore",
+            "adoptLegacyBook",
+            "pairedVenueData",
+            "bookId",
+            "DEMO_VENUE_BY_POS",
+            "SEED_VENUES",
+            "isDemoBook",
+            "shouldSeed",
+            "venueMeta",
+            "MODEL_BY_TRADE",
+            "defaultModel",
+            "DEFAULT_CFG",
+            "clientsStore",
+            "fidelityStore",
+            "maybeSeedDemo",
+            "readBook",
+            "writeBook",
+            "config",
+            "loyaltyOn",
+            "setConfig",
+            "normPhone",
+            "money",
+            "samePhone",
+            "blankClient",
+            "list",
+            "get",
+            "findByPhone",
+            "count",
+            "upsert"
+          ]
+        },
+        {
+          "file": "assets/clients-store/loyalty.js",
+          "concern": "loyalty rules (generated copy), purchases, refunds, redemptions, segments, progress",
+          "lines": [
+            435,
+            670
+          ],
+          "declares": [
+            "KiwiLoyaltyRules",
+            "recordPurchase",
+            "recordRefund",
+            "redeem",
+            "remove",
+            "VIP_SPEND",
+            "VIP_VISITS",
+            "DORMANT_DAYS",
+            "NEW_DAYS",
+            "segment",
+            "segmentCounts",
+            "progress"
+          ]
+        },
+        {
+          "file": "assets/clients-store/sync.js",
+          "concern": "cloud sync: cursors, outboxes, purchase and redemption replay, pull and merge, polling",
+          "lines": [
+            671,
+            1159
+          ],
+          "declares": [
+            "hash",
+            "realEnv",
+            "syncable",
+            "curKey",
+            "getCursor",
+            "setCursor",
+            "heldQueues",
+            "outboxRead",
+            "outboxWrite",
+            "outboxPersistHeld",
+            "outKey",
+            "outRead",
+            "outWrite",
+            "outAdd",
+            "outDrop",
+            "purchaseKey",
+            "purchaseRead",
+            "purchaseWrite",
+            "purchaseAdd",
+            "purchaseDrop",
+            "purchaseFailure",
+            "purchaseSyncStatus",
+            "purchasePush",
+            "flushPurchases",
+            "redemptionKey",
+            "redemptionRead",
+            "redemptionWrite",
+            "redemptionAdd",
+            "redemptionDrop",
+            "refusedKey",
+            "refusedRedemptions",
+            "redemptionRefuse",
+            "redemptionRef",
+            "reserveRedemption",
+            "redemptionPush",
+            "flushRedemptions",
+            "profileSnapshot",
+            "pushClient",
+            "deleteRemote",
+            "flushOutbox",
+            "fromServer",
+            "pendingPurchaseDelta",
+            "pendingRedemptionDelta",
+            "mergeServer",
+            "clientPulls",
+            "pull",
+            "pollTimer",
+            "tick",
+            "startSync"
+          ]
+        },
+        {
+          "file": "assets/clients-store/api.js",
+          "concern": "public window.KiwiClients surface, cross-tab listener, sync start",
+          "lines": [
+            1160,
+            1192
+          ],
+          "declares": [
+            "subscribe",
+            "subscribeConfig",
+            "window.KiwiClients"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "assets/clients-book.js",
+      "sha256AtSplit": "eac036eac6dcbce5bb1de2fe1fef5083f351ef26e47bec1d2a3c66ee3dadb934",
+      "parts": [
+        {
+          "file": "assets/clients-book/base.js",
+          "concern": "guards, helpers, labels, icons and the panel stylesheet",
+          "lines": [
+            1,
+            341
+          ],
+          "declares": [
+            "KC",
+            "redemptionRequests",
+            "esc",
+            "tr",
+            "fmt",
+            "creditLastDay",
+            "paired",
+            "hospitalityMode",
+            "integrationHost",
+            "tillLocked",
+            "kitRail",
+            "shouldShow",
+            "toast",
+            "ICON",
+            "SEG_LBL",
+            "css",
+            "progLabel",
+            "initials"
+          ]
+        },
+        {
+          "file": "assets/clients-book/credit.js",
+          "concern": "store credit view: authoritative read, local fallback, unavailable state",
+          "lines": [
+            342,
+            433
+          ],
+          "declares": [
+            "creditMerchant",
+            "localAvoirs",
+            "localReturns",
+            "localCreditView",
+            "clientLocalCredits",
+            "loadClientCredits"
+          ]
+        },
+        {
+          "file": "assets/clients-book/profiles.js",
+          "concern": "client panel: list, segments, sale attach, client form and client detail with its loyalty card",
+          "lines": [
+            434,
+            1078
+          ],
+          "declares": [
+            "ensureChip",
+            "state",
+            "railBox",
+            "panelInset",
+            "PHONE_Q",
+            "isPhone",
+            "phoneTabInset",
+            "railed",
+            "positionRoot",
+            "open",
+            "announce",
+            "close",
+            "foldText",
+            "matches",
+            "SEG_TABS",
+            "lastSeenTxt",
+            "renderStrip",
+            "renderSegs",
+            "localCreditsByHolder",
+            "renderList",
+            "refreshOpen",
+            "POS_ATTACH",
+            "posAttachOn",
+            "saleTarget",
+            "renderSalePill",
+            "sheet",
+            "closeSheet",
+            "genderOpts",
+            "openForm",
+            "openDetail"
+          ]
+        },
+        {
+          "file": "assets/clients-book/entry.js",
+          "concern": "till entry: sidebar item, door watching, dismissal, boot and window.KiwiClientsBook",
+          "lines": [
+            1079,
+            1225
+          ],
+          "declares": [
+            "ACTIVE",
+            "navMark",
+            "markNav",
+            "clearNav",
+            "makeItem",
+            "wireCaisseEntry",
+            "wireScheduled",
+            "scheduleWire",
+            "doorWatch",
+            "watchedDoors",
+            "watchDoors",
+            "isOpen",
+            "sheetOpen",
+            "wireDismiss",
+            "boot",
+            "window.KiwiClientsBook"
+          ]
+        }
+      ]
+    }
+  ]
+}

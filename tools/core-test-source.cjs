@@ -55,7 +55,7 @@ function source(file) {
   const map = metadata(file);
   let core = fs.readFileSync(file, 'utf8');
   if (!map) return core;
-  const part = fs.readFileSync(path.join(root, map.part), 'utf8');
+  const part = map.part === 'assets/daterange/renderers.js' ? require('./home-test-source.cjs').source() : fs.readFileSync(path.join(root, map.part), 'utf8');
   for (const entry of map.constants || []) {
     const start = part.indexOf('const ' + entry.name + ' =');
     let expected = entry.body;
@@ -92,6 +92,7 @@ function source(file) {
   return core;
 }
 function readFileSync(file, options) {
+  if (String(file).endsWith('/assets/pressing-caisse.js') || String(file) === 'assets/pressing-caisse.js') return require('./pressing-test-source.cjs').readFileSync(file, options);
   if (path.resolve(file instanceof URL ? fileURLToPath(file) : String(file)) === path.join(root, 'assets/invoicing.js')) {
     const text = source(file);
     return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
@@ -104,6 +105,6 @@ function live(file) {
   if (isLiveLink(file)) return fs.readFileSync(path.join(root, 'assets/live-link/sale-identity.js'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'assets/live-link/queue-store.js'), 'utf8') + '\n' + fs.readFileSync(file, 'utf8').replace(/^import \{\} from '\.\/live-link\/sale-identity\.js(?:\?v=\d+)?';\n/m, '').replace(/^import \{\} from '\.\/live-link\/queue-store\.js(?:\?v=\d+)?';\n/m, '');
   if (isVenues(file)) return ['data', 'helpers'].map(name => fs.readFileSync(path.join(root, 'assets/venues', name + '.js'), 'utf8')).join('\n') + '\n' + fs.readFileSync(file, 'utf8');
   const map = metadata(file);
-  return (map ? fs.readFileSync(path.join(root, map.part), 'utf8') + '\n' : '') + fs.readFileSync(file, 'utf8');
+  return (map ? (map.part === 'assets/daterange/renderers.js' ? require('./home-test-source.cjs').live() : fs.readFileSync(path.join(root, map.part), 'utf8')) + '\n' : '') + fs.readFileSync(file, 'utf8');
 }
 module.exports = { readFileSync, source, live };

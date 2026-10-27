@@ -16,6 +16,10 @@
       'assets/salle-scan.js?v=7',
     ] },
     hotel: { dependencies: [], scripts: [
+      'assets/hotel/arrivals.js?v=4',
+      'assets/hotel/room-board.js?v=4',
+      'assets/hotel/folio-actions.js?v=4',
+      'assets/hotel/rate-actions.js?v=6',
       'assets/hotel-rates.js?v=1',
       'assets/hotel-folio.js?v=1',
       'assets/hotel-channels.js?v=1',

@@ -16,12 +16,13 @@ import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import teamSource from './team-test-source.cjs';
+import owners from './team-owners-test-source.cjs';
 
 const read = (f) => fs.readFileSync(f, 'utf8');
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/team-catalog/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/team-catalog/split.json'));
-const core = read('assets/team.js'), catalog = read('assets/team/catalog.js');
+const core = owners.originalFile('assets/team.js'), catalog = read('assets/team/catalog.js');
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 

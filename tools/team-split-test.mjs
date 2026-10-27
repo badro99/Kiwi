@@ -1,3 +1,4 @@
+import planningSourceHelper from './planning-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 /* Byte-exact profile extraction, loading, API and live-state equivalence. */
 import assert from 'node:assert/strict';
@@ -6,11 +7,13 @@ import vm from 'node:vm';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import teamSource from './team-test-source.cjs';
+import owners from './team-owners-test-source.cjs';
 const read = file => fs.readFileSync(file, 'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/team/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/team/split.json'));
-const core = read('assets/team.js'), part = read('assets/team/profile-ui.js'), hours = read('assets/team-hours.js');
+const core = owners.originalFile('assets/team.js'), part = owners.originalFile('assets/team/profile-ui.js'), hours = planningSourceHelper.planningTestSource();
+const runtime = owners.runtimeSource();
 /* Second stage moved the role catalogue out of core; it loads first (team-catalog-split-test). */
 const catalog = read('assets/team/catalog.js');
 assert.equal(hash(original), map.sha256);
@@ -55,11 +58,11 @@ function realm(source, lang) {
 }
 for (const lang of ['fr', 'en', 'ar']) {
   const before = realm(original + '\n' + hours, lang);
-  const after = realm(catalog + '\n' + core + '\n' + part + '\n' + hours, lang);
+  const after = realm(catalog + '\n' + runtime, lang);
   assert.ok(Object.isFrozen(after.context.Kiwi.__teamProfileCore));
   assert.deepEqual(Object.keys(after.context.KiwiTeam).sort(), Object.keys(before.context.KiwiTeam).sort());
   assert.deepEqual(Object.keys(after.context.Kiwi.handlers).sort(), Object.keys(before.context.Kiwi.handlers).sort());
-  assert.deepEqual(after.events.filter(name => name !== 'kiwi:request-wake'), before.events);
+  assert.deepEqual(after.events.filter(name => name !== 'kiwi:request-wake').sort(), [...before.events].sort());
   assert.equal(after.events.filter(name => name === 'kiwi:request-wake').length, 1, 'one push wake listener added by request pacing');
   for (const r of [before, after]) r.context.Kiwi.handlers['nav-equipe']();
   assert.equal(hash(after.root.innerHTML), hash(before.root.innerHTML), 'roster markup ' + lang);

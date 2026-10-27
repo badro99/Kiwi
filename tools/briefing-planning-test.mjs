@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+import teamOwners from './team-owners-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
-const teamSource = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
+const teamSource = teamOwners.originalFile('assets/team.js');
 let checks = 0;
 function ok(condition, message) { if (!condition) throw new Error(message); checks += 1; }
 function boot(lang = 'fr') {

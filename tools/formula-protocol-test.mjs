@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import readMenuCatalogSource from './menu-catalog-test-source.cjs';
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
@@ -37,7 +38,7 @@ function ok(cond, msg) {
 console.log('■ Formules (Menus Composés) Protocol & Explosion Gate');
 
 const menuApiSource = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
-const menuCatalogSource = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
+const menuCatalogSource = readMenuCatalogSource();
 const queueSource = queueTestSource();
 const serveurSource = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 

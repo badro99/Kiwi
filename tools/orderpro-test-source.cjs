@@ -23,7 +23,7 @@ function orderProTestSource(root = ROOT) {
   if (!css.test(html)) throw new Error(`${PAGE} ne charge plus ${CSS}`);
   if (!js.test(html)) throw new Error(`${PAGE} ne charge plus ${JS}`);
   html = html.replace(css, () => `<style>\n${read(CSS)}  </style>`);
-  html = html.replace(js, () => `<script>\n${read(JS)}  </script>`);
+  html = html.replace(js, () => `<script>\n${require('./orderpro-split-source.cjs').orderProScriptSource(root)}  </script>`);
   return html;
 }
 

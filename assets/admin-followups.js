@@ -48,10 +48,7 @@
     return error.status === 403 ? c.forbidden : error.code === 'version-conflict' ? c.conflict : error.code === 'outcome-required' ? c.required : error.code === 'invalid-task-state' ? c.invalid : c.unavailable;
   }
   async function api(route, method, body) {
-    var res = await fetch('/api/admin/' + route, { method:method || 'GET', credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...(body ? {body:JSON.stringify(body)} : {}) });
-    var data = await res.json();
-    if (!res.ok) { var err = new Error(); err.status = res.status; err.code = data.error; throw err; }
-    return data;
+    return window.KiwiAdminApi.request(route, { method:method || 'GET', ...(body ? {body:JSON.stringify(body)} : {}) });
   }
   function taskFocus(id) { var button = Array.from(document.querySelectorAll('[data-task]')).find(function (b) { return b.dataset.task === id; }); (button || $('merchant')).focus(); }
   function closeEditor() { var id = editing && editing.id; editing = null; $('task-editor').hidden = true; taskFocus(id); }

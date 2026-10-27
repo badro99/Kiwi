@@ -64,9 +64,8 @@
   let stCountStatusFilter = 'all'; // 'all' | 'submitted' | 'applied' | 'rejected'
   let stCountDateFilter = '30j'; // 'aujourdhui' | '7j' | '30j' | 'tout'
   let stCountSearch = '';
-  let stCountsCache = [];
-  let stCountsLastFetched = 0;
-  const stStockOverrides = {};
+  const stockState = window.KiwiStockState(() => ({ currentStockFor, retailCatalog, retailSetProductStock, stShowReal, stockLocationId, stockUnitId }));
+  const stStockOverrides = stockState.overrides();
   const stMarked86 = new Set();
   const stConfirmedOrders = new Set();
   const stSentSuggested = false;
@@ -699,19 +698,7 @@
     try { return window.KiwiInventory?.unitId?.() || ''; }
     catch (_) { return ''; }
   }
-  function ledgerOpeningFor(it) {
-    if (it?.retail) return +it.currentStock || 0;
-    const legacy = stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock;
-    try {
-      const L = window.KiwiInventory;
-      if (stShowReal() && L && L.isReal && L.isReal()) {
-        const locationId = stockLocationId();
-        L.ensureOpening(it.id, +legacy || 0, { unitCost: +it.costPerUnit || null, locationId });
-        return L.balance(it.id, { locationId });
-      }
-    } catch (_) {}
-    return legacy;
-  }
+  function ledgerOpeningFor(...args) { return stockState.ledgerOpeningFor.apply(this, args); }
   const currentStockFor = (it) => ledgerOpeningFor(it);
   /* Read-only projection for the morning briefing. "Tracked" means both an
    * explicit positive reorder threshold and durable ledger history; an absent
@@ -738,42 +725,11 @@
   }
   window.KiwiStockBriefing = { items: briefingStockItems };
 
-  function moveStock(it, qty, reason, refType, refId, note, unitCost, meta) {
-    if (!it || !qty) return null;
-    if (it.retail && retailCatalog()) return moveRetailStock(it, qty, reason, refType, refId);
-    try {
-      const L = window.KiwiInventory;
-      if (stShowReal() && L && L.isReal && L.isReal()) {
-        const locationId = meta && meta.locationId ? meta.locationId : stockLocationId();
-        const movementMeta = Object.assign({}, meta || {}, { unitId: (meta && meta.unitId) || stockUnitId() });
-        delete movementMeta.locationId;
-        /* movementId explicite ⇒ le registre déduplique sur l'id (rejouer le
-         * même dépôt est un no-op). Absent ⇒ comportement historique (UUID). */
-        const payload = {
-          itemId: it.id, locationId, qty, reason, refType: refType || 'manual', refId: refId || '',
-          note: note || '', unitCost: unitCost == null ? (+it.costPerUnit || null) : unitCost,
-          meta: movementMeta,
-        };
-        if (movementMeta.movementId) payload.id = movementMeta.movementId;
-        delete movementMeta.movementId;
-        return L.add(payload);
-      }
-    } catch (_) {}
-    stStockOverrides[it.id] = currentStockFor(it) + qty;
-    return null;
-  }
+  function moveStock(...args) { return stockState.moveStock.apply(this, args); }
 
-  function moveRetailStock(it, qty, reason, refType, refId) {
-    const next = Math.max(0, currentStockFor(it) + (+qty || 0));
-    retailSetProductStock(it.id, next, reason || 'ajust');
-    return { itemId: it.id, qty: +qty || 0, reason: reason || 'ajust', refType: refType || 'manual', refId: refId || '' };
-  }
+  function moveRetailStock(...args) { return stockState.moveRetailStock.apply(this, args); }
 
-  function countStock(it, counted, refId) {
-    const diff = Math.round((counted - currentStockFor(it)) * 1000) / 1000;
-    if (diff) moveStock(it, diff, 'count', 'count', refId || ('count-' + Date.now()), 'Ajustement issu du comptage');
-    return diff;
-  }
+  function countStock(...args) { return stockState.countStock.apply(this, args); }
   /* A real restaurant's recipe is the source of theoretical ingredient usage.
    * Demo venues keep their historic fixture values; real venues never inherit
    * those figures and only receive a number once sales + recipes exist. */
@@ -790,35 +746,9 @@
     } catch (_) {} finally { stTheoUsageBusy = false; }
     return Number(it.theoreticalUsage) || 0;
   };
-  function stockConfiguredSupplierName(value) {
-    const name = String(value || '').trim();
-    if (!name) return '';
-    if (/^(?:fournisseur principal|primary supplier|supplier|nosupplier|no supplier|none|null|n\/a|-)$/i.test(name)) return '';
-    return name;
-  }
-  function stockSupplierEvidence(it) {
-    const supplier = stockConfiguredSupplierName(it?.supplier);
-    if (supplier) return { kind: 'supplier', name: supplier };
-    try {
-      const lots = it?.id && window.KiwiInventoryConsumption?.deriveLots?.(it.id);
-      const lot = (lots || []).find(l => Number(l?.remainingQty) > 0 && Number(l?.rank) < 999);
-      if (lot) return { kind: 'lot', name: stockConfiguredSupplierName(lot.supplierName) };
-    } catch (_) {}
-    return null;
-  }
-  function stockAlertState(it, stock) {
-    const s = Number(stock);
-    const threshold = Number(it?.reorderLevel);
-    const hasThreshold = Number.isFinite(threshold) && threshold > 0;
-    const status = !Number.isFinite(s) || s <= 0
-      ? 'out'
-      : (hasThreshold && s < threshold ? 'low' : 'ok');
-    return {
-      status,
-      threshold: hasThreshold ? threshold : null,
-      supplierEvidence: status === 'low' ? stockSupplierEvidence(it) : null,
-    };
-  }
+  function stockConfiguredSupplierName(...args) { return stockParts.alerts.stockConfiguredSupplierName.apply(this, args); }
+  function stockSupplierEvidence(...args) { return stockParts.alerts.stockSupplierEvidence.apply(this, args); }
+  function stockAlertState(...args) { return stockParts.alerts.stockAlertState.apply(this, args); }
   const statusOf = (it) => stockAlertState(it, currentStockFor(it)).status;
   window.KiwiStockOperatingDay = {
     businessDate: stockBusinessDate,
@@ -1039,215 +969,13 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 1 · Vue d'ensemble
    * ═══════════════════════════════════════════════════════════════════════ */
-  function computeTier1LowAlerts(items) {
-    if (!window.KiwiInventoryConsumption?.deriveLots) return [];
-    const raw = stOverlayRaw();
-    const subMap = new Map((raw.subcategories || []).map(s => [s.id, s]));
-    const list = [];
-    (items || []).forEach(it => {
-      if (!it || !it.id) return;
-      if (statusOf(it) === 'out' || statusOf(it) === 'low') return;
-      const lots = window.KiwiInventoryConsumption.deriveLots(it.id) || [];
-      if (!lots.length) return;
-      const r1Lots = lots.filter(l => l.rank === 1 && l.remainingQty > 0);
-      // Opening stock is rank 999 and is not a supplier tier. Without a real
-      // rank-1 lot/card this path fabricated a "principal vs next lot"
-      // alert for every newly-created item.
-      const r1Qty = Math.round(r1Lots.reduce((sum, l) => sum + l.remainingQty, 0) * 1000) / 1000;
-      const sub = subMap.get(it.id);
-      const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
-      const primaryCard = cards.find(c => c.rank === 1);
-      const secondaryCard = cards.find(c => c.rank === 2);
-      const secondaryLot = lots.find(l => l.rank > 1 && l.rank < 999 && l.remainingQty > 0);
-      const primarySupplier = stockConfiguredSupplierName(primaryCard?.supplierName);
-      const hasRankedSupplierLot = r1Lots.some(l => stockConfiguredSupplierName(l.supplierName));
-      const secondarySupplier = stockConfiguredSupplierName(secondaryCard?.supplierName);
-      if (!primarySupplier && !hasRankedSupplierLot) return;
-      
-      const threshold = (primaryCard && primaryCard.lowBuffer > 0)
-        ? primaryCard.lowBuffer
-        : Math.max(1, Math.round(((it.usageThisWeek || 0) / 7) * 3 * 10) / 10);
-      
-      if (r1Qty <= threshold && (secondaryLot || (secondarySupplier && secondaryCard.defaultPrice > (primaryCard ? primaryCard.defaultPrice : it.costPerUnit)))) {
-        list.push(Object.assign({}, it, {
-          alertKind: 'tierLow',
-          r1Qty: r1Qty,
-          t1Threshold: threshold,
-          p1Cost: (primaryCard && primaryCard.defaultPrice != null) ? primaryCard.defaultPrice : it.costPerUnit,
-          p2Cost: secondaryLot ? secondaryLot.unitCost : (secondaryCard ? secondaryCard.defaultPrice : null),
-          p2SupName: secondaryLot ? (secondaryLot.supplierName || 'Fournisseur secondaire') : (secondaryCard ? secondaryCard.supplierName : 'Fournisseur secondaire'),
-        }));
-      }
-    });
-    return list;
-  }
+  function computeTier1LowAlerts(...args) { return stockParts.alerts.computeTier1LowAlerts.apply(this, args); }
 
-  function overviewAlertRows(items) {
-    const rows = items || [];
-    const out = rows.filter(it => statusOf(it) === 'out');
-    const low = rows.filter(it => statusOf(it) === 'low');
-    const tierLow = computeTier1LowAlerts(rows);
-    const alerts = [
-      ...out,
-      ...low.filter(it => !isAlertIgnored(it.name)).sort((a, b) => (daysOfStock(a) ?? Number.MAX_SAFE_INTEGER) - (daysOfStock(b) ?? Number.MAX_SAFE_INTEGER)),
-      ...tierLow,
-    ].slice(0, 12);
-    return { out, low, tierLow, alerts, totalAlertCount: out.length + low.length + tierLow.length };
-  }
+  function overviewAlertRows(...args) { return stockParts.alerts.overviewAlertRows.apply(this, args); }
 
-  function renderOverview() {
-    const items = getInv();
-    const { out, low, tierLow, alerts, totalAlertCount } = overviewAlertRows(items);
-    if (isRetailStock()) {
-      const d = retailProcurementDoc();
-      const since = Date.now() - 30 * 86400000;
-      const spend = (d.receipts || []).filter((r) => (+r.receivedAt || +r.createdAt || 0) >= since)
-        .reduce((sum, r) => sum + (r.lines || []).reduce((s, line) => s + (+line.qty || 0) * (+line.unitCost || 0), 0), 0);
-      const activeOrders = (d.orders || []).filter((o) => !['received', 'cancelled'].includes(o.status)).length;
-      return `
-        <div class="st-kpis">
-          <div class="st-kpi"><div class="st-kpi-l">${esc(t('kpiValueL'))}<span class="st-kpi-ico">${svg('wallet', 14)}</span></div><div class="st-kpi-v">${esc(fmtMad(totalValue(items)))}</div><div class="st-kpi-sub">${esc(t('kpiValueSub', items.length))}</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">${esc(t('kpiAlertL'))}<span class="st-kpi-ico ${totalAlertCount ? 'warn' : 'ok'}">${svg('alertTriangle', 14)}</span></div><div class="st-kpi-v ${totalAlertCount ? 'warn' : 'ok'}">${totalAlertCount}</div><div class="st-kpi-sub">${esc(totalAlertCount ? t('kpiAlertSub', out.length, low.length + tierLow.length) : t('kpiAlertOk'))}</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">ACHATS · 30 JOURS<span class="st-kpi-ico">${svg('receipt', 14)}</span></div><div class="st-kpi-v">${esc(fmtMad(spend))}</div><div class="st-kpi-sub">${(d.receipts || []).length} réception(s) enregistrée(s)</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">COMMANDES EN COURS<span class="st-kpi-ico">${svg('truck', 14)}</span></div><div class="st-kpi-v">${activeOrders}</div><div class="st-kpi-sub">${getSup().length} fournisseur(s) actif(s)</div></div>
-        </div>
-        <div class="st-section"><div class="st-section-head"><h3>${esc(t('alertsT'))}</h3>${totalAlertCount ? `<span class="st-count-badge warn">${totalAlertCount}</span>` : ''}</div><div class="st-alerts">${alerts.length ? alerts.map(renderAlertCard).join('') : `<div style="padding:28px 16px;text-align:center;color:var(--n-500);font-size:13px;background:var(--paper-soft);border-radius:12px;border:1px solid var(--n-200);">${esc(t('alertsEmpty'))}</div>`}</div></div>`;
-    }
-    const ok  = items.filter(it => statusOf(it) === 'ok');
-    const totalVal = totalValue(items);
-    const costMonth = foodCostMonth(items);
-    /* Chez un vrai commerçant, un coût nul n'est pas un coût bas : c'est
-       qu'aucun article ne porte encore de consommation chiffrée. « 0 MAD ·
-       ratio 0,0 % » s'affichait face à de vraies ventes. */
-    const costKnown = !stShowReal() || costMonth > 0;
-    /* Chez un vrai commerçant, coût et ventes sur la MÊME semaine. L'ancien
-       calcul extrapolait la semaine à un mois (× 4,33), la redivisait par 4
-       pour l'afficher, puis la comparait aux ventes RÉELLES de 30 jours : un
-       commerce ouvert depuis huit jours lisait 15,7 % pour 3,6 % réels. */
-    const costWeek = !costKnown ? null : stShowReal() ? costMonth / 4.33 : costMonth / 4;
-    const wRev = stShowReal() ? weeklyRevenue() : null;
-    const mRev = stShowReal() ? null : monthlyRevenue();
-    const ratio = !costKnown ? null
-      : stShowReal() ? (wRev > 0 ? (costWeek / wRev) * 100 : null)
-      : (mRev > 0 ? (costMonth / mRev) * 100 : null);
-    const ratioClass = ratio == null ? '' : ratio < 30 ? 'ok' : ratio < 35 ? '' : 'warn';
+  function renderOverview(...args) { return stockParts.overview.renderOverview.apply(this, args); }
 
-    // Next delivery — pick the supplier with the soonest scheduled day
-    const nextDelivery = computeNextDelivery();
-
-    // Demo only: no stock-value history is recorded, so a real store draws no trend.
-    const trendBars = stShowReal() ? '' : [62, 70, 66, 74].map(h => `<i style="height:${h}%;"></i>`).join('');
-
-    // Alerts sorted: out first, then low (by daysOfStock asc), then tierLow
-    return `
-      ${renderKpiCards({ totalVal, items, out, low, tierLow, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
-
-      ${(function() {
-        const expiringLots = (window.KiwiInventoryConsumption?.expiring && window.KiwiInventoryConsumption.expiring({ horizonDays: 7 })) || [];
-        if (!expiringLots.length) return '';
-        return `
-          <div class="st-section" style="margin-bottom:20px;">
-            <div class="st-section-head">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <div style="width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,0.12);color:#dc2626;display:grid;place-items:center;">
-                  ${svg('alertTriangle', 14)}
-                </div>
-                <h3 style="color:#b91c1c;">Alertes péremptions (DLC / DDM)</h3>
-              </div>
-              <span class="st-count-badge warn">${expiringLots.length}</span>
-            </div>
-            <div class="st-alerts" style="display:grid;gap:8px;">
-              ${expiringLots.map(l => {
-                const isExp = l.status === 'expired';
-                const badgeStyle = isExp ? 'background:#fef2f2;color:#b91c1c;border:1px solid rgba(185,28,28,0.25);' : 'background:#fffbeb;color:#b45309;border:1px solid rgba(180,83,9,0.25);';
-                const dateStr = new Date(l.expiresAt).toLocaleDateString('fr-FR');
-                const statusLabel = isExp ? `Périmé (${dateStr})` : (l.daysLeft === 0 ? `Périme aujourd'hui` : `Expire dans ${l.daysLeft} j (${dateStr})`);
-                return `
-                  <div class="st-alert-card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--paper-soft);border:1px solid var(--n-200);border-radius:10px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                      <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;${badgeStyle}">${statusLabel}</span>
-                      <div>
-                        <b style="font-size:13.5px;color:var(--ink);">${esc(l.name)}</b>
-                        <div style="font-size:11.5px;color:var(--n-500);">${l.remainingQty} ${esc(l.unit)} restant${l.supplierName ? ` · Fournisseur : ${esc(l.supplierName)}` : ''}${l.totalCostMAD ? ` · Valeur : ${fmtMad(l.totalCostMAD)}` : ''}</div>
-                      </div>
-                    </div>
-                    <button class="st-btn small" type="button" data-action="stock-declare-waste-prefill" data-item-id="${esc(l.itemId)}" data-qty="${l.remainingQty}" data-reason="perime" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);white-space:nowrap;">
-                      ${svg('trash2', 12)}<span style="margin-left:4px;">Déclarer en perte</span>
-                    </button>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      })()}
-
-      <div class="st-section">
-        <div class="st-section-head">
-          <h3>${esc(t('alertsT'))}</h3>
-          ${totalAlertCount > 0 ? `<span class="st-count-badge warn">${totalAlertCount}</span>` : ''}
-        </div>
-        <div class="st-alerts">
-          ${alerts.length === 0 ? `<div style="padding:28px 16px; text-align:center; color:var(--n-500); font-size:13px; background:var(--paper-soft); border-radius:12px; border:1px solid var(--n-200); display:flex; align-items:center; justify-content:center; gap:10px;">
-            <div style="width:28px; height:28px; border-radius:8px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center;">
-              <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
-            </div>
-            <span style="font-weight:500; color:var(--ink);">${esc(t(items.length ? 'alertsEmpty' : 'alertsNone'))}</span>
-          </div>` :
-            alerts.map(renderAlertCard).join('')}
-        </div>
-      </div>
-
-      ${stShowReal() ? '' : `<div class="st-section">
-        <div class="st-section-head">
-          <h3>${t(isFusion() ? 'aiSectionPortfolio' : 'aiSectionKitchen')}</h3>
-        </div>
-        ${renderAiCard(t('aiVarianceT'), t('aiVarianceB'), t('aiVarianceA'))}
-        ${renderAiCard(t('aiPriceT'), t('aiPriceB'), t('aiPriceA'))}
-      </div>`}
-
-      <div class="st-section">
-        <div class="st-section-head">
-          <h3>${esc(t('calT'))}</h3>
-        </div>
-        ${renderDeliveryStrip()}
-      </div>
-    `;
-  }
-
-  function renderKpiCards({ totalVal, items, out, low, tierLow = [], costWeek, ratio, ratioClass, nextDelivery, trendBars }) {
-    const alertCount = out.length + low.length + tierLow.length;
-    const alertColor = alertCount > 0 ? 'warn' : 'ok';
-    return `
-      <div class="st-kpis">
-        <div class="st-kpi">
-          <div class="st-kpi-l">${esc(t('kpiValueL'))}<span class="st-kpi-ico">${svg('wallet', 14)}</span></div>
-          <div class="st-kpi-v">${esc(fmtMad(totalVal))}</div>
-          <div class="st-kpi-sub">${esc(t('kpiValueSub', items.length))}</div>
-          ${trendBars ? `<div class="st-kpi-trend" aria-hidden="true">${trendBars}</div>` : ''}
-        </div>
-        <div class="st-kpi">
-          <div class="st-kpi-l">${esc(t('kpiAlertL'))}<span class="st-kpi-ico ${alertColor}">${svg('alertTriangle', 14)}</span></div>
-          <div class="st-kpi-v ${alertColor}">${alertCount}</div>
-          <div class="st-kpi-sub">${esc(alertCount === 0 ? t(items.length ? 'kpiAlertOk' : 'kpiAlertNone') : t('kpiAlertSub', out.length, low.length + tierLow.length))}</div>
-        </div>
-        <div class="st-kpi">
-          <div class="st-kpi-l">${esc(t('kpiCostL'))}<span class="st-kpi-ico">${svg('receipt', 14)}</span></div>
-          <div class="st-kpi-v" data-stock-live-foodcost>${costWeek == null ? '·' : esc(fmtMad(costWeek))}</div>
-          <div class="st-kpi-sub st-kpi-tip">
-            <span class="${ratioClass === 'ok' ? '' : ratioClass === 'warn' ? '' : ''}" style="color: var(--${ratioClass === 'ok' ? 'success' : ratioClass === 'warn' ? 'warning' : 'n-600'}); font-weight: 600;">${ratio == null ? (costWeek == null ? esc(t('kpiCostNone')) : '') : esc(t('kpiCostSub', fmtPct(ratio, 1).replace('+', '')))}</span>
-            ${svg('info', 11)}
-            <div class="st-tt">${esc(t('kpiCostTip'))}</div>
-          </div>
-        </div>
-        <div class="st-kpi">
-          <div class="st-kpi-l">${esc(t('kpiDelivL'))}<span class="st-kpi-ico">${svg('truck', 14)}</span></div>
-          <div class="st-kpi-v" style="font-size:22px;">${esc(nextDelivery.when)}</div>
-          <div class="st-kpi-sub">${esc(nextDelivery.supplier)}${nextDelivery.cost == null ? '' : ' · ' + esc(fmtMad(nextDelivery.cost))}</div>
-        </div>
-      </div>
-    `;
-  }
+  function renderKpiCards(...args) { return stockParts.overview.renderKpiCards.apply(this, args); }
 
   const TIER_LOW = {
     fr: { status: (q) => `Fournisseur principal bas · ${q} restant`, main: 'Lot principal', next: 'Lot suivant', buffer: 'Seuil tampon', basis: 'calculé sur 3j d\'usage', trans: 'Transition prochaine vers tarif secondaire.', order: 'Commander chez principal' },
@@ -1259,20 +987,9 @@
    * this device: a low-stock warning is a reminder, not shared data. An item
    * that is OUT is never silenced. */
   const IGNORE_KEY = () => `kiwiStockIgnore:${currentVenueId()}`;
-  function ignoredAlerts() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(IGNORE_KEY()) || '{}');
-      const now = Date.now(), live = {};
-      Object.keys(raw).forEach((k) => { if (+raw[k] > now) live[k] = +raw[k]; });
-      return live;
-    } catch (_) { return {}; }
-  }
+  function ignoredAlerts(...args) { return stockParts.alerts.ignoredAlerts.apply(this, args); }
   function isAlertIgnored(name) { return !!ignoredAlerts()[String(name || '')]; }
-  function ignoreAlert(name) {
-    const live = ignoredAlerts();
-    live[String(name || '')] = Date.now() + 24 * 3600000;
-    try { localStorage.setItem(IGNORE_KEY(), JSON.stringify(live)); } catch (_) {}
-  }
+  function ignoreAlert(...args) { return stockParts.alerts.ignoreAlert.apply(this, args); }
 
   /* « Marquer 86 » said « marqué 86 sur 6 terminaux » (six, always) and put the
    * name in a Set nothing read. A stock item is an ingredient; what the till
@@ -1310,215 +1027,23 @@
     en: (n) => `${n} alert hidden for 24 h on this device`,
     ar: (n) => `تم إخفاء تنبيه ${n} لمدة 24 ساعة على هذا الجهاز`,
   };
-  function openMark86(ingredientName) {
-    const L = M86_COPY[lang()] || M86_COPY.fr;
-    const vid = currentVenueId();
-    const inv = getInv().find((x) => x.name === ingredientName);
-    const dishes = (window.KiwiMenuStore?.items?.(vid) || []).filter((d) => d && d.id && !d.archived && !d.formulaOnly && d.avail !== false);
-    if (!dishes.length) { window.Kiwi.toast(L.none, { type: 'info', desc: L.noneDesc }); return; }
-    const norm = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    const target = norm(ingredientName);
-    const uses = new Set();
-    (window.KiwiRestaurantRecipes?.all?.(vid) || []).forEach((r) => {
-      if ((r.ingredients || []).some((ing) => (inv && ing.stockId && String(ing.stockId) === String(inv.id)) || (target && norm(ing.name) === target))) uses.add(String(r.itemId));
-    });
-    const sorted = dishes.slice().sort((a, b) => (uses.has(String(b.id)) - uses.has(String(a.id))) || String(a.name).localeCompare(String(b.name)));
-    const m = window.Kiwi.modal({
-      title: L.title(ingredientName), width: 520,
-      body: `<p style="margin:0 0 12px; font-size:13px; color:var(--n-500); line-height:1.5;">${esc(L.intro)}</p>
-        <div style="display:grid; gap:6px; max-height:52vh; overflow:auto;">${sorted.map((d) => `
-          <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--n-200); border-radius:10px; cursor:pointer;">
-            <input type="checkbox" data-m86-dish="${esc(d.id)}" ${uses.has(String(d.id)) ? 'checked' : ''} />
-            <span style="flex:1; font-size:13.5px;">${esc(d.name || d.id)}</span>
-            ${uses.has(String(d.id)) ? `<span style="font-size:11px; color:var(--n-500);">${esc(L.fromRecipe)}</span>` : ''}
-          </label>`).join('')}</div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(L.cancel)}</button><button class="st-btn primary" data-m86-apply>${esc(L.apply)}</button>`,
-    });
-    requestAnimationFrame(() => {
-      const scope = m?.el || topBackdrop();
-      wireDismiss(scope);
-      scope?.querySelector('[data-m86-apply]')?.addEventListener('click', async (e) => {
-        const ids = [...scope.querySelectorAll('[data-m86-dish]:checked')].map((x) => x.dataset.m86Dish);
-        if (!ids.length) { window.Kiwi.toast(L.pick, { type: 'info' }); return; }
-        let slug = '';
-        try { slug = window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) {}
-        const real = !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.());
-        if (!slug || !real) { stMarked86.add(ingredientName); closeTopModal(); window.Kiwi.toast(L.done(ids.length), { type: 'info', desc: L.demo }); return; }
-        e.currentTarget.disabled = true;
-        const results = await Promise.all(ids.map((itemId) => fetch('/api/menu/availability', {
-          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ merchant: slug, itemId, available: false }),
-        }).then((r) => r.json().then((j) => !!(r.ok && j && j.ok)), () => false).catch(() => false)));
-        const ok = results.filter(Boolean).length, ko = results.length - ok;
-        closeTopModal();
-        if (ok) {
-          stMarked86.add(ingredientName);
-          try { document.dispatchEvent(new CustomEvent('kiwi-menu-availability', { detail: { itemIds: ids, available: false } })); } catch (_) {}
-        }
-        if (!ok) window.Kiwi.toast(L.fail, { type: 'warning', desc: L.failDesc });
-        else if (ko) window.Kiwi.toast(L.partial(ok, ko), { type: 'warning', desc: L.failDesc });
-        else window.Kiwi.toast(L.done(ok), { type: 'success', desc: L.doneDesc });
-      });
-    });
-  }
+  function openMark86(...args) { return stockParts.alerts.openMark86.apply(this, args); }
 
-  function renderAlertCard(it) {
-    if (it.alertKind === 'tierLow') {
-      const priceDiff = it.p2Cost != null ? (it.p2Cost - it.p1Cost) : null;
-      const L = TIER_LOW[lang()] || TIER_LOW.fr;
-      return `
-        <div class="st-alert tier-low">
-          <div class="st-alert-ico" style="color:var(--warning);">${svg('alertTriangle', 18)}</div>
-          <div class="st-alert-body">
-            <div class="st-alert-top">
-              <span class="st-alert-name">${esc(it.name)}</span>
-              <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
-              <span class="st-alert-status low">${esc(L.status(fmtUnit(it.r1Qty, it.unit)))}</span>
-            </div>
-            <div class="st-alert-meta">
-              ${esc(L.main)} : ${esc(fmtMad(it.p1Cost))}/${esc(it.unit)}${it.p2Cost != null ? ` · ${esc(L.next)} : ${esc(it.p2SupName)} (${esc(fmtMad(it.p2Cost))}/${esc(it.unit)}${priceDiff > 0 ? ` +${esc(fmtMad(priceDiff))}` : ''})` : ''}
-            </div>
-            <div class="st-alert-impact">
-              ${esc(L.buffer)} : <b>${esc(fmtUnit(it.t1Threshold, it.unit))}</b> (${esc(L.basis)}) · ${esc(L.trans)}
-            </div>
-          </div>
-          <div class="st-alert-acts">
-            <button data-activation=write class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(L.order)}</button>
-          </div>
-        </div>
-      `;
-    }
-    const st = statusOf(it);
-    const isOut = st === 'out';
-    const days = isOut ? 0 : daysOfStock(it);
-    const cur = currentStockFor(it);
-    /* Une rupture se dit par ce qu'elle bloque, pas par un chiffre inventé :
-     * l'ancien « manque à gagner » multipliait le coût d'achat par 3,2, une
-     * marge supposée. On nomme les plats dont la fiche technique utilise
-     * l'article, et la consommation réelle de la semaine quand elle existe. */
-    const blocked = isOut ? dishesUsing(it) : null;
-    const dailyUse = +it.usageThisWeek > 0 ? it.usageThisWeek / 7 : 0;
-    const parPct = it.parLevel > 0 ? (cur / it.parLevel) * 100 : 0;
-    const state = stockAlertState(it, cur);
-    const supplierMeta = state.supplierEvidence
-      ? `${esc(t('supplier'))}${lang() === 'fr' ? ' : ' : ': '}${esc(state.supplierEvidence.name || t('lotRecorded'))}`
-      : '';
-    const deliveryDate = actualLastDelivery(it);
-    const deliveryMeta = deliveryDate ? `${esc(t('lastDeliv'))} : ${esc(fmtDateShort(deliveryDate))}` : '';
-    const alertMeta = [deliveryMeta, supplierMeta].filter(Boolean).join('<span class="sep">·</span>');
-    const lowLabel = days == null ? t('statusLow') : `${t('statusLow')} · ${t('daysLeft', days)}`;
-
-    return `
-      <div class="st-alert ${isOut ? 'out' : ''}">
-        <div class="st-alert-ico">${svg(isOut ? 'alertCircle' : 'alertTriangle', 18)}</div>
-        <div class="st-alert-body">
-          <div class="st-alert-top">
-            <span class="st-alert-name">${esc(it.name)}</span>
-            <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
-            <span class="st-alert-status ${isOut ? 'out' : 'low'}">${esc(isOut ? t('statusOut') : lowLabel)}</span>
-          </div>
-          ${alertMeta ? `<div class="st-alert-meta">${alertMeta}</div>` : ''}
-          ${isOut
-            ? `<div class="st-alert-impact">${[blocked == null ? '' : blocked.length ? `<b>${esc(t('impactBlocks', blocked.length, blocked.slice(0, 3).join(', ') + (blocked.length > 3 ? '…' : '')))}</b>` : esc(t('impactNone')), dailyUse ? esc(t('impactUsage', fmtUnit(dailyUse, it.unit))) : ''].filter(Boolean).join('<span class="sep">·</span>')}</div>`
-            : `<div class="st-alert-impact">${esc(t('level'))} : <b>${esc(fmtUnit(cur, it.unit))}</b> · ${esc(t('par'))} : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></div>
-               <div class="st-alert-bar-wrap"><div class="st-alert-bar"><div class="st-alert-bar-fill" data-stock-bar="${Math.min(100, parPct)}"></div></div></div>`}
-        </div>
-        <div class="st-alert-acts">
-          ${isOut
-            ? `<button data-activation=write class="st-btn primary" type="button" data-action="stock-urgent-order" data-item-id="${esc(it.id)}">${esc(t('btnUrgentOrder'))}</button>
-               <button class="st-btn" type="button" data-action="stock-mark-86" data-item-name="${esc(it.name)}">${esc(t('btnMark86'))}</button>`
-            : `<button data-activation=write class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(t('btnReorder'))}</button>
-               <button class="st-btn" type="button" data-action="stock-ignore-24h" data-item-name="${esc(it.name)}">${esc(t('btnIgnore'))}</button>`}
-        </div>
-      </div>
-    `;
-  }
+  function renderAlertCard(...args) { return stockParts.alerts.renderAlertCard.apply(this, args); }
 
   // Les plats dont une fiche technique utilise cet article (restaurant seulement ; ailleurs, rien).
-  function dishesUsing(it) {
-    try {
-      const R = window.KiwiRestaurantRecipes;
-      if (!R?.all || !R?.stockFor || !it?.id) return null;
-      const recipes = R.all() || [];
-      if (!recipes.length) return null; // pas de fiches techniques : rien à affirmer
-      const names = [];
-      recipes.forEach((r) => {
-        if ((r.ingredients || []).some((line) => { const s = R.stockFor(line); return s && String(s.id) === String(it.id); })) names.push(r.itemName);
-      });
-      return [...new Set(names.filter(Boolean))];
-    } catch (_) { return null; }
-  }
+  function dishesUsing(...args) { return stockParts.alerts.dishesUsing.apply(this, args); }
 
-  function renderAiCard(title, body, action) {
-    return `
-      <div class="st-ai">
-        <div class="st-ai-eyebrow">KIWI AI</div>
-        <div class="st-ai-t">${esc(title)}</div>
-        <div class="st-ai-b">${esc(body)}</div>
-        <div class="st-ai-a">${esc(action)}</div>
-      </div>
-    `;
-  }
+  function renderAiCard(...args) { return stockParts.overview.renderAiCard.apply(this, args); }
 
   /* 7-day delivery strip — the weekday supplier pattern is demo data, but the
    * displayed dates follow the merchant's current operating day. */
-  function renderDeliveryStrip() {
-    const items = [];
-    const dayNames = [t('daySun'), t('dayMon'), t('dayTue'), t('dayWed'), t('dayThu'), t('dayFri'), t('daySat')];
-    const dates = stockCalendarDates();
-    for (let i = 0; i < dates.length; i++) {
-      const d = dates[i];
-      const dow = d.getDay();
-      const monthLabel = fmtDateShort(d.toISOString().slice(0, 10));
-      const isToday = i === 0;
-      const sups = computeDeliveriesForDay(dow);
-      items.push(`
-        <div class="st-cal-day ${isToday ? 'today' : ''}" data-action="stock-day-detail" data-day="${dow}" data-day-name="${esc(dayNames[dow])}">
-          <div class="st-cal-day-d">${esc(isToday ? t('today') : dayNames[dow])}</div>
-          <div class="st-cal-day-date">${esc(monthLabel)}</div>
-          ${sups.length === 0
-            ? `<div class="st-cal-day-empty">${esc(t('calEmpty'))}</div>`
-            : sups.map(s => `<div class="st-cal-day-item"><b>${esc(s.name)}</b><span class="h">${esc(s.time)} · ${esc(fmtMad(s.cost))}</span></div>`).join('')}
-        </div>
-      `);
-    }
-    return `<div class="st-cal-strip">${items.join('')}</div>`;
-  }
+  function renderDeliveryStrip(...args) { return stockParts.overview.renderDeliveryStrip.apply(this, args); }
 
   /* Day-of-week → suppliers delivering. Demo data — Sun=0..Sat=6 */
-  function computeDeliveriesForDay(dow) {
-    // Real / custom store → no demo supplier deliveries (this is the single
-    // source for both the delivery strip and the "next delivery" KPI).
-    if (stShowReal()) return [];
-    const wkdayMap = {
-      0: [], // Sun — most closed
-      1: [{ name: 'Centrale Danone', time: '07h', cost: 1240 }, { name: 'Avicole Atlas', time: '08h', cost: 480 }, { name: 'Marché Inezgane', time: '06h', cost: 1840 }], // Mon
-      2: [{ name: 'Boucherie Errazi', time: '09h', cost: 3840 }, { name: 'Marché Central · Port', time: '06h', cost: 820 }, { name: 'Fruits Premium', time: '11h', cost: 1240 }], // Tue
-      3: [{ name: 'Marché Inezgane', time: '06h', cost: 1840 }, { name: 'Bakery El Ouafy', time: '07h', cost: 320 }], // Wed
-      4: [{ name: 'Métro Casablanca', time: '14h', cost: 4620 }, { name: 'Centrale Danone', time: '07h', cost: 1240 }, { name: 'Avicole Atlas', time: '08h', cost: 480 }, { name: 'Minoterie Lazaar', time: '10h', cost: 480 }], // Thu
-      5: [{ name: 'Boucherie Errazi', time: '09h', cost: 3840 }, { name: 'Fruits Premium', time: '11h', cost: 1240 }, { name: 'Marché Inezgane', time: '06h', cost: 1840 }, { name: 'NABC', time: '13h', cost: 2160 }, { name: 'Bakery El Ouafy', time: '07h', cost: 320 }], // Fri
-      6: [{ name: 'Marché Central · Port', time: '06h', cost: 820 }, { name: 'Sidi Ali · Distributeur', time: '11h', cost: 1080 }], // Sat
-    };
-    return wkdayMap[dow] || [];
-  }
+  function computeDeliveriesForDay(...args) { return stockParts.overview.computeDeliveriesForDay.apply(this, args); }
 
-  function computeNextDelivery() {
-    const today = stockBusinessDateDate();
-    for (let i = 1; i <= 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const sups = computeDeliveriesForDay(d.getDay());
-      if (sups.length > 0) {
-        const dayNames = [t('daySun'), t('dayMon'), t('dayTue'), t('dayWed'), t('dayThu'), t('dayFri'), t('daySat')];
-        return {
-          when: i === 1 ? `${t('ramTomorrow')} · ${sups[0].time}` : `${dayNames[d.getDay()]} · ${sups[0].time}`,
-          supplier: sups[0].name,
-          cost: sups[0].cost,
-        };
-      }
-    }
-    return { when: t('noDeliveryPlanned'), supplier: t('noDeliveryHint'), cost: null };
-  }
+  function computeNextDelivery(...args) { return stockParts.overview.computeNextDelivery.apply(this, args); }
 
   function tickFoodCost() {
     /* A real store's cost does not wobble on a timer: the figure moves when
@@ -2621,27 +2146,7 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Day deliveries detail
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openDayDetail(dow, dayName) {
-    const sups = computeDeliveriesForDay(+dow);
-    window.Kiwi.modal({
-      title: t('mDayTitle', dayName),
-      width: 560,
-      body: sups.length === 0
-        ? `<div style="padding:24px; text-align:center; color:var(--n-500);">${esc(t('calEmpty'))}</div>`
-        : `
-          <div class="st-md-list">
-            ${sups.map(s => `
-              <div class="st-md-list-row">
-                <div><span class="n">${esc(s.name)}</span> <span class="d" style="margin-left:6px;">${esc(s.time)}</span></div>
-                <div class="v">${esc(fmtMad(s.cost))}</div>
-                <div class="status-ok" style="font-size:11px;">Confirmée</div>
-              </div>
-            `).join('')}
-          </div>
-        `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mItClose'))}</button>`,
-    });
-  }
+  function openDayDetail(...args) { return stockParts.overview.openDayDetail.apply(this, args); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * Send suggested order
@@ -2813,6 +2318,24 @@
    * Les fonctions stables sont capturées par les parties ; les let restent ici. */
   const stockParts = Object.create(null);
   const stockScope = {
+    get stockMovements() { return stockParts.movements; },
+    stockState,
+    get IGNORE_KEY() { return IGNORE_KEY; },
+    get M86_COPY() { return M86_COPY; },
+    get TIER_LOW() { return TIER_LOW; },
+    get actualLastDelivery() { return actualLastDelivery; },
+    get currentVenueId() { return currentVenueId; },
+    get foodCostMonth() { return foodCostMonth; },
+    get isAlertIgnored() { return isAlertIgnored; },
+    get isFusion() { return isFusion; },
+    get monthlyRevenue() { return monthlyRevenue; },
+    get overviewAlertRows() { return overviewAlertRows; },
+    get renderAlertCard() { return renderAlertCard; },
+    get stMarked86() { return stMarked86; },
+    get stockBusinessDateDate() { return stockBusinessDateDate; },
+    get stockCalendarDates() { return stockCalendarDates; },
+    get totalValue() { return totalValue; },
+    get weeklyRevenue() { return weeklyRevenue; },
     get STR() { return STR; },
     get lang() { return lang; },
     get t() { return t; },
@@ -2827,8 +2350,8 @@
     get stCountStatusFilter() { return stCountStatusFilter; }, set stCountStatusFilter(value) { stCountStatusFilter = value; },
     get stCountDateFilter() { return stCountDateFilter; }, set stCountDateFilter(value) { stCountDateFilter = value; },
     get stCountSearch() { return stCountSearch; }, set stCountSearch(value) { stCountSearch = value; },
-    get stCountsCache() { return stCountsCache; }, set stCountsCache(value) { stCountsCache = value; },
-    get stCountsLastFetched() { return stCountsLastFetched; }, set stCountsLastFetched(value) { stCountsLastFetched = value; },
+    get stCountsCache() { return stockState.counts(); }, set stCountsCache(value) { stockState.replaceCounts(value); },
+    get stCountsLastFetched() { return stockState.countsFetchedAt(); }, set stCountsLastFetched(value) { stockState.markCountsFetched(value); },
     get stStockOverrides() { return stStockOverrides; },
     get stConfirmedOrders() { return stConfirmedOrders; },
     get stPageActive() { return stPageActive; }, set stPageActive(value) { stPageActive = value; },
@@ -2908,11 +2431,14 @@
   };
   /* URLs littérales : tools/stamps.js les découvre et remonte au chargeur. */
   const stockUrls = [
+    'assets/stock/movements.js?v=3',
+    'assets/stock/overview.js?v=3',
+    'assets/stock/alerts.js?v=3',
     'assets/stock/loss.js?v=1',
-    'assets/stock/counts.js?v=3',
+    'assets/stock/counts.js?v=5',
     'assets/stock/purchasing.js?v=2',
-    'assets/stock/intake.js?v=4',
-    'assets/stock/catalog.js?v=1',
+    'assets/stock/intake.js?v=7',
+    'assets/stock/catalog.js?v=3',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

@@ -1,4 +1,5 @@
 import { deadlineVmSource } from './deadline-vm-source.mjs';
+import teamOwners from './team-owners-test-source.cjs';
 import assert from 'node:assert/strict';
 import nativeFs from 'node:fs';
 import queueCoreSource from './core-test-source.cjs';
@@ -100,7 +101,7 @@ async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 6
   const h = harness({ liveTeamBusy: false, isCustomVenue: () => true, teamSlug: () => 'test',
     liveTeamSignature: JSON.stringify(['test', [], {}, {}, []]), pageActive: true, applyLiveTeam() {} });
   h.ctx.fetch = async () => { h.hit(); return { ok: true, json: async () => ({ ok: true, merchant: 'test' }) }; };
-  const src = read('assets/team.js');
+  const src = teamOwners.originalFile('assets/team.js');
   h.run(src.slice(src.indexOf('  function fetchDeadline('),src.indexOf('\n  }',src.indexOf('  function fetchDeadline(')))+'\n  }');
   h.run(src.slice(src.indexOf('  let teamReadFailed'),src.indexOf('  function hydrateCodes()')));
   h.run(src.slice(src.indexOf('  function pollLiveTeam()'), src.indexOf('  /* ═══════════════ HELPERS')));

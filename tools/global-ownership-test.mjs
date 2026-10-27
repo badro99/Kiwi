@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { concatParts } from './concat-parts.mjs';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SLACK = 2;
@@ -85,7 +86,8 @@ export function inventory(root = ROOT) {
     .concat(walk(path.join(root, 'app/src'), (n) => /\.js$/.test(n)));
   const pages = fs.readdirSync(root).filter((n) => n.endsWith('.html')).map((n) => path.join(root, n));
   const sources = new Map();
-  for (const f of files) sources.set(rel(f), fs.readFileSync(f, 'utf8'));
+  const parts = concatParts(root);
+  for (const f of files) if (!parts.has(rel(f))) sources.set(rel(f), fs.readFileSync(f, 'utf8'));
   for (const p of pages) sources.set(rel(p), inlineScripts(fs.readFileSync(p, 'utf8')));
   // The native shell also injects names from Swift/Kotlin; they count as defined.
   const native = walk(path.join(root, 'app'), (n) => /\.(swift|kt|java)$/.test(n)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');

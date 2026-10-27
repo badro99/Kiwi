@@ -1,0 +1,1206 @@
+{
+  "file": "assets/daterange/renderers.js",
+  "sha256": "e63e71b7b970cfc2a747193f3e9a8c0317f79b4d6ff935efe7f6b47336eb01c5",
+  "parts": [
+    {
+      "name": "hero",
+      "file": "assets/daterange/hero.js",
+      "prefix": "/* Owner: dashboard hero. Exports: renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue.\n * Sibling calls via live owner: none.\n * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, realDeltaPct, realSalesTotals, vData.\n * Reads globalThis: none.\n * Reads window: KiwiSales, KiwiVenue, KiwiZReconciliation. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['hero'] = function (__state) {\n",
+      "suffix": "    return Object.freeze({ renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue });\n  };\n})();\n",
+      "exports": [
+        "renderHero",
+        "renderHeroAi",
+        "renderHeatmapAi",
+        "renderGoal",
+        "renderHeatmap",
+        "heroDataByVenue"
+      ],
+      "reads": [
+        "COVERS_LABEL",
+        "GOAL_LABEL",
+        "GOAL_UNSET",
+        "HERO_LABEL",
+        "HH_SUB",
+        "ORDERS_LABEL",
+        "animateNumber",
+        "arrowSvg",
+        "buildHeatmap",
+        "buildRealHeatmapRec",
+        "buildRealHeroRec",
+        "curUnit",
+        "currentRange",
+        "deltaLabels",
+        "demoHeroSim",
+        "demoPreviousAt",
+        "effRange",
+        "fitHeroAmount",
+        "fmtHeroAmount",
+        "fmtPct",
+        "frInt",
+        "getLang",
+        "getSim",
+        "goalByVenue",
+        "guardOperatorFigures",
+        "heroDataByVenue",
+        "homeSet",
+        "intensityClass",
+        "isLiveDemo",
+        "kitCase",
+        "liveTickInProgress",
+        "operatorUnavailableText",
+        "ownData",
+        "parseAmountFromEl",
+        "parsePctFromEl",
+        "realDeltaPct",
+        "realSalesTotals",
+        "vData"
+      ],
+      "globals": [
+        "KiwiSales",
+        "KiwiVenue",
+        "KiwiZReconciliation"
+      ],
+      "fragments": [
+        {
+          "name": "renderHero",
+          "start": 283,
+          "length": 6557,
+          "offset": 978
+        },
+        {
+          "name": "renderHeroAi",
+          "start": 6840,
+          "length": 3556,
+          "offset": 7535
+        },
+        {
+          "name": "renderHeatmapAi",
+          "start": 10396,
+          "length": 1307,
+          "offset": 11091
+        },
+        {
+          "name": "renderGoal",
+          "start": 11703,
+          "length": 3572,
+          "offset": 12398
+        },
+        {
+          "name": "renderHeatmap",
+          "start": 15275,
+          "length": 1726,
+          "offset": 15970
+        },
+        {
+          "name": "heroDataByVenue",
+          "start": 218594,
+          "length": 2609,
+          "offset": 17696
+        }
+      ],
+      "bridges": [],
+      "globalThis": []
+    },
+    {
+      "name": "kpi",
+      "file": "assets/daterange/kpi.js",
+      "prefix": "/* Owner: dashboard kpi. Exports: renderKpiBand, hotelPerfEntry, hotelTilesFrom, tableTimeEntry, openKpiCustomizer, dutyBand, retailBand, kpiByVenue.\n * Sibling calls via live owner: openDays, vData.\n * Reads live owner: BAND_NAV, HOTEL_PERF_TTL, KC_STR, KPI_CATALOG, KPI_DELTA_SUFFIX, KPI_MATERIAL_ICONS, KPI_MAX, KPI_SPARKS, RANGE_DAYS, TABLE_TIME_TTL, animateNumber, arrowSvg, basketCents, closedBounds, curUnit, currentRange, defaultKpiKeys, effRange, escTxt, fmtKpiVal, fmtPct, frInt, getCurrentVenue, getKpiLayout, getLang, getSim, guardOperatorFigures, homeSet, hotelBandTiles, hotelDelta, hotelMerchant, hotelPerf, isLiveDemo, kpiByVenue, kpiLabel, lastBand, openDays, operatorUnavailableText, ownData, parseAmountFromEl, realClientMix, realDeltaPct, realGrossProfit, realSalesTotals, realWindowStats, renderKpiBand, resetKpiLayout, saveKpiLayout, tableTime, tableTimeTile, vData.\n * Reads globalThis: KiwiZoneLaw.\n * Reads window: Kiwi, KiwiHotelRooms, KiwiI18n, KiwiPressingOps, KiwiSales, KiwiTradeSchema, KiwiTradeWorkspaces, KiwiVenue. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['kpi'] = function (__state) {\n  function openDays(...args) { return __state.openDays.apply(this, args); }\n  function vData(...args) { return __state.vData.apply(this, args); }\n",
+      "suffix": "    return Object.freeze({ renderKpiBand, hotelPerfEntry, hotelTilesFrom, tableTimeEntry, openKpiCustomizer, dutyBand, retailBand, kpiByVenue });\n  };\n})();\n",
+      "exports": [
+        "renderKpiBand",
+        "hotelPerfEntry",
+        "hotelTilesFrom",
+        "tableTimeEntry",
+        "openKpiCustomizer",
+        "dutyBand",
+        "retailBand",
+        "kpiByVenue"
+      ],
+      "reads": [
+        "BAND_NAV",
+        "HOTEL_PERF_TTL",
+        "KC_STR",
+        "KPI_CATALOG",
+        "KPI_DELTA_SUFFIX",
+        "KPI_MATERIAL_ICONS",
+        "KPI_MAX",
+        "KPI_SPARKS",
+        "RANGE_DAYS",
+        "TABLE_TIME_TTL",
+        "animateNumber",
+        "arrowSvg",
+        "basketCents",
+        "closedBounds",
+        "curUnit",
+        "currentRange",
+        "defaultKpiKeys",
+        "effRange",
+        "escTxt",
+        "fmtKpiVal",
+        "fmtPct",
+        "frInt",
+        "getCurrentVenue",
+        "getKpiLayout",
+        "getLang",
+        "getSim",
+        "guardOperatorFigures",
+        "homeSet",
+        "hotelBandTiles",
+        "hotelDelta",
+        "hotelMerchant",
+        "hotelPerf",
+        "isLiveDemo",
+        "kpiByVenue",
+        "kpiLabel",
+        "lastBand",
+        "openDays",
+        "operatorUnavailableText",
+        "ownData",
+        "parseAmountFromEl",
+        "realClientMix",
+        "realDeltaPct",
+        "realGrossProfit",
+        "realSalesTotals",
+        "realWindowStats",
+        "renderKpiBand",
+        "resetKpiLayout",
+        "saveKpiLayout",
+        "tableTime",
+        "tableTimeTile",
+        "vData"
+      ],
+      "globals": [
+        "Kiwi",
+        "KiwiHotelRooms",
+        "KiwiI18n",
+        "KiwiPressingOps",
+        "KiwiSales",
+        "KiwiTradeSchema",
+        "KiwiTradeWorkspaces",
+        "KiwiVenue"
+      ],
+      "fragments": [
+        {
+          "name": "renderKpiBand",
+          "start": 17001,
+          "length": 23640,
+          "offset": 1391
+        },
+        {
+          "name": "hotelPerfEntry",
+          "start": 163511,
+          "length": 1346,
+          "offset": 25031
+        },
+        {
+          "name": "hotelTilesFrom",
+          "start": 164857,
+          "length": 1364,
+          "offset": 26377
+        },
+        {
+          "name": "tableTimeEntry",
+          "start": 166221,
+          "length": 1263,
+          "offset": 27741
+        },
+        {
+          "name": "openKpiCustomizer",
+          "start": 167484,
+          "length": 5621,
+          "offset": 29004
+        },
+        {
+          "name": "dutyBand",
+          "start": 191506,
+          "length": 2830,
+          "offset": 34625
+        },
+        {
+          "name": "retailBand",
+          "start": 194336,
+          "length": 2025,
+          "offset": 37455
+        },
+        {
+          "name": "kpiByVenue",
+          "start": 221203,
+          "length": 10257,
+          "offset": 39480
+        }
+      ],
+      "bridges": [
+        "openDays",
+        "vData"
+      ],
+      "globalThis": [
+        "KiwiZoneLaw"
+      ]
+    },
+    {
+      "name": "revenue",
+      "file": "assets/daterange/revenue.js",
+      "prefix": "/* Owner: dashboard revenue. Exports: renderRevChart, hourlyCumul, dailyTotals, realRevSeries, revChartByVenue.\n * Sibling calls via live owner: merchantDayKey, merchantParts.\n * Reads live owner: CMP_EMPTY_TITLE, COMPARE_CAPTION, COMPARE_SHORT, DAY_ABBR, LEGEND_PREFIX, REV_BADGE, REV_SUB, activeMerchantSlug, addMerchantDays, animateNumber, arrowSvg, closedBounds, curUnit, currentRange, demoHeroSim, demoPreviousAt, effRange, frInt, frMoney, getCurrentVenue, getLang, getSim, guardOperatorFigures, homeSet, isLiveDemo, liveTickInProgress, localDayTick, merchantDayBounds, merchantDayKey, niceCeil, operatorUnavailableText, ownData, parseAmountFromEl, realMoneyList, realRevSeries, revChartByVenue, showComparison, trLegend, trStr, vData.\n * Reads globalThis: KiwiZoneLaw.\n * Reads window: KiwiNumber, KiwiSales. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['revenue'] = function (__state) {\n  function merchantDayKey(...args) { return __state.merchantDayKey.apply(this, args); }\n  function merchantParts(...args) { return __state.merchantParts.apply(this, args); }\n",
+      "suffix": "    return Object.freeze({ renderRevChart, hourlyCumul, dailyTotals, realRevSeries, revChartByVenue });\n  };\n})();\n",
+      "exports": [
+        "renderRevChart",
+        "hourlyCumul",
+        "dailyTotals",
+        "realRevSeries",
+        "revChartByVenue"
+      ],
+      "reads": [
+        "CMP_EMPTY_TITLE",
+        "COMPARE_CAPTION",
+        "COMPARE_SHORT",
+        "DAY_ABBR",
+        "LEGEND_PREFIX",
+        "REV_BADGE",
+        "REV_SUB",
+        "activeMerchantSlug",
+        "addMerchantDays",
+        "animateNumber",
+        "arrowSvg",
+        "closedBounds",
+        "curUnit",
+        "currentRange",
+        "demoHeroSim",
+        "demoPreviousAt",
+        "effRange",
+        "frInt",
+        "frMoney",
+        "getCurrentVenue",
+        "getLang",
+        "getSim",
+        "guardOperatorFigures",
+        "homeSet",
+        "isLiveDemo",
+        "liveTickInProgress",
+        "localDayTick",
+        "merchantDayBounds",
+        "merchantDayKey",
+        "merchantParts",
+        "niceCeil",
+        "operatorUnavailableText",
+        "ownData",
+        "parseAmountFromEl",
+        "realMoneyList",
+        "realRevSeries",
+        "revChartByVenue",
+        "showComparison",
+        "trLegend",
+        "trStr",
+        "vData"
+      ],
+      "globals": [
+        "KiwiNumber",
+        "KiwiSales"
+      ],
+      "fragments": [
+        {
+          "name": "renderRevChart",
+          "start": 40641,
+          "length": 38663,
+          "offset": 1189
+        },
+        {
+          "name": "hourlyCumul",
+          "start": 153761,
+          "length": 503,
+          "offset": 39852
+        },
+        {
+          "name": "dailyTotals",
+          "start": 154264,
+          "length": 520,
+          "offset": 40355
+        },
+        {
+          "name": "realRevSeries",
+          "start": 154784,
+          "length": 4247,
+          "offset": 40875
+        },
+        {
+          "name": "revChartByVenue",
+          "start": 231460,
+          "length": 9857,
+          "offset": 45122
+        }
+      ],
+      "bridges": [
+        "merchantDayKey",
+        "merchantParts"
+      ],
+      "globalThis": [
+        "KiwiZoneLaw"
+      ]
+    },
+    {
+      "name": "activity",
+      "file": "assets/daterange/activity.js",
+      "prefix": "/* Owner: dashboard activity. Exports: renderFeed, buildOrder, buildLiveFeed, buildCustomFeed.\n * Sibling calls via live owner: rangeBounds.\n * Reads live owner: FEED_BY_VENUE, FEED_EMPTY, FEED_SUB, FEED_TITLE, buildCustomFeed, buildLiveFeed, curUnit, currentRange, effRange, escTxt, getCurrentVenue, getLang, homeSet, liveTickInProgress, ownData, rangeBounds, tradeStr, vData.\n * Reads globalThis: KiwiZoneLaw.\n * Reads window: KiwiDayReport, KiwiDemoClock, KiwiI18n, KiwiNumber, KiwiRefunds, KiwiSales, KiwiVenue, __kiwiFeedOrders. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['activity'] = function (__state) {\n  function rangeBounds(...args) { return __state.rangeBounds.apply(this, args); }\n",
+      "suffix": "    return Object.freeze({ renderFeed, buildOrder, buildLiveFeed, buildCustomFeed });\n  };\n})();\n",
+      "exports": [
+        "renderFeed",
+        "buildOrder",
+        "buildLiveFeed",
+        "buildCustomFeed"
+      ],
+      "reads": [
+        "FEED_BY_VENUE",
+        "FEED_EMPTY",
+        "FEED_SUB",
+        "FEED_TITLE",
+        "buildCustomFeed",
+        "buildLiveFeed",
+        "curUnit",
+        "currentRange",
+        "effRange",
+        "escTxt",
+        "getCurrentVenue",
+        "getLang",
+        "homeSet",
+        "liveTickInProgress",
+        "ownData",
+        "rangeBounds",
+        "tradeStr",
+        "vData"
+      ],
+      "globals": [
+        "KiwiDayReport",
+        "KiwiDemoClock",
+        "KiwiI18n",
+        "KiwiNumber",
+        "KiwiRefunds",
+        "KiwiSales",
+        "KiwiVenue",
+        "__kiwiFeedOrders"
+      ],
+      "fragments": [
+        {
+          "name": "renderFeed",
+          "start": 87979,
+          "length": 9825,
+          "offset": 817
+        },
+        {
+          "name": "buildOrder",
+          "start": 174883,
+          "length": 5590,
+          "offset": 10642
+        },
+        {
+          "name": "buildLiveFeed",
+          "start": 180473,
+          "length": 1375,
+          "offset": 16232
+        },
+        {
+          "name": "buildCustomFeed",
+          "start": 181848,
+          "length": 4420,
+          "offset": 17607
+        }
+      ],
+      "bridges": [
+        "rangeBounds"
+      ],
+      "globalThis": [
+        "KiwiZoneLaw"
+      ]
+    },
+    {
+      "name": "date-picker",
+      "file": "assets/daterange/date-picker.js",
+      "prefix": "/* Owner: dashboard date-picker. Exports: setDateRange, commitCustomRange, setShowComparison, revealDayPill, fmtHumanRange, closeCustomPicker, openCustomPicker, mountDaySelector, registerHandler.\n * Sibling calls via live owner: openKpiCustomizer.\n * Reads live owner: CMP_KEY, CUSTOM_KEY, DEFAULT_RANGE, GLOVO_TOAST, LOCALES, PICKER_STR, RANGE_STR, STORAGE_KEY, VALID, addDays, currentRange, customRange, dateToIso, dpControl, dpEl, dpEsc, dpKey, dpOutside, getLang, isoToDate, monthLabel, monthOnly, onAction, onCompareToggle, renderRevChart, renderSelector, sameDay, shiftMonth, showComparison, spanDays, startOfDay, subscribers, ymdInt.\n * Reads globalThis: KiwiZoneLaw.\n * Reads window: Kiwi, KiwiDayReport, KiwiLens, matchMedia. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['date-picker'] = function (__state) {\n  function openKpiCustomizer(...args) { return __state.openKpiCustomizer.apply(this, args); }\n",
+      "suffix": "    return Object.freeze({ setDateRange, commitCustomRange, setShowComparison, revealDayPill, fmtHumanRange, closeCustomPicker, openCustomPicker, mountDaySelector, registerHandler });\n  };\n})();\n",
+      "exports": [
+        "setDateRange",
+        "commitCustomRange",
+        "setShowComparison",
+        "revealDayPill",
+        "fmtHumanRange",
+        "closeCustomPicker",
+        "openCustomPicker",
+        "mountDaySelector",
+        "registerHandler"
+      ],
+      "reads": [
+        "CMP_KEY",
+        "CUSTOM_KEY",
+        "DEFAULT_RANGE",
+        "GLOVO_TOAST",
+        "LOCALES",
+        "PICKER_STR",
+        "RANGE_STR",
+        "STORAGE_KEY",
+        "VALID",
+        "addDays",
+        "currentRange",
+        "customRange",
+        "dateToIso",
+        "dpControl",
+        "dpEl",
+        "dpEsc",
+        "dpKey",
+        "dpOutside",
+        "getLang",
+        "isoToDate",
+        "monthLabel",
+        "monthOnly",
+        "onAction",
+        "onCompareToggle",
+        "openKpiCustomizer",
+        "renderRevChart",
+        "renderSelector",
+        "sameDay",
+        "shiftMonth",
+        "showComparison",
+        "spanDays",
+        "startOfDay",
+        "subscribers",
+        "ymdInt"
+      ],
+      "globals": [
+        "Kiwi",
+        "KiwiDayReport",
+        "KiwiLens",
+        "matchMedia"
+      ],
+      "fragments": [
+        {
+          "name": "setDateRange",
+          "start": 134251,
+          "length": 456,
+          "offset": 1033
+        },
+        {
+          "name": "commitCustomRange",
+          "start": 134707,
+          "length": 380,
+          "offset": 1489
+        },
+        {
+          "name": "setShowComparison",
+          "start": 135087,
+          "length": 418,
+          "offset": 1869
+        },
+        {
+          "name": "revealDayPill",
+          "start": 138565,
+          "length": 500,
+          "offset": 2287
+        },
+        {
+          "name": "fmtHumanRange",
+          "start": 197194,
+          "length": 708,
+          "offset": 2787
+        },
+        {
+          "name": "closeCustomPicker",
+          "start": 197902,
+          "length": 1011,
+          "offset": 3495
+        },
+        {
+          "name": "openCustomPicker",
+          "start": 198913,
+          "length": 14403,
+          "offset": 4506
+        },
+        {
+          "name": "mountDaySelector",
+          "start": 213316,
+          "length": 2406,
+          "offset": 18909
+        },
+        {
+          "name": "registerHandler",
+          "start": 215722,
+          "length": 1551,
+          "offset": 21315
+        }
+      ],
+      "bridges": [
+        "openKpiCustomizer"
+      ],
+      "globalThis": [
+        "KiwiZoneLaw"
+      ]
+    },
+    {
+      "name": "cards",
+      "file": "assets/daterange/cards.js",
+      "prefix": "/* Owner: dashboard cards. Exports: renderMix, renderMixPlan, renderSettle, renderPairs, renderInteg, renderNotifBadge, renderEvening, renderStock, renderTimeline, renderHealth, renderBench, renderProducts, renderStaff, realMixRows, realLowStock, realTopProducts, realPairs, growBars.\n * Sibling calls via live owner: rangeBounds.\n * Reads live owner: BENCH_CITY, BENCH_EMPTY, BENCH_LBL, BENCH_PEER, BENCH_RANK_SUB, BENCH_SUB, BENCH_TITLE_FALLBACK, EVENING_EMPTY, HEALTH_CHIP, HEALTH_EMPTY, HEALTH_SUB, INTEG_LIST, INTEG_NOTCONN, INTEG_SUB, INTEG_TITLE, LOWSTK_STR, LOW_STOCK_SEUIL, MIX_CENTER_ALL, MIX_EMPTY, PAIRS_MAX_KEYS, PAIRS_MIN_BASKETS, PAIRS_MIN_TOGETHER, PAIRS_STR, PLAN_ACTIVE, PLAN_NAME, PLAN_PENDING, PRODUCTS_COVERAGE, PRODUCTS_EMPTY, PRODUCTS_MANAGE, PRODUCTS_NO_LINES, PRODUCTS_SUB, PRODUCTS_TITLE, PRODUCT_SOLD, RANGE_STR, REAL_MIX, RUPTURE_STR, SETTLE_DETAIL_LBL, SETTLE_LBL, STAFF_EMPTY, STAFF_ONDUTY_STR, STAFF_SUB, STAFF_TITLE, STOCK_EMPTY, STOCK_NO_THRESHOLDS, STOCK_OK_STR, STOCK_SUB_STR, STOCK_TITLE_STR, _benchOrig, _eveningOrig, _healthOrig, _integOrig, _stockOrig, activeMerchantSlug, animateNumber, benchByVenue, curUnit, currentRange, demoRole, dutyBand, effRange, emptyBlockBody, emptyListBody, escTxt, fmtHeures, fmtSettleAmount, frInt, frMoney, getCurrentVenue, getLang, growBars, healthByVenue, merchantDayBounds, merchantDayKey, mixByVenue, ownData, parseAmountFromEl, parseIntFromEl, productsByVenue, realLowStock, realMixRows, realPairs, realRefundList, realRoster, realSalesList, realSalesTotals, realTopProducts, renderMixPlan, renderPairs, retailBand, settleByVenue, staffByVenue, tenderAmounts, tenderBucket, timelineWeekTotalByVenue, trStr, tradeStr, vData.\n * Reads globalThis: KiwiZoneLaw.\n * Reads window: KiwiBoutiqueCatalog, KiwiBoutiqueVenueKey, KiwiConfig, KiwiEnv, KiwiI18n, KiwiReservations, KiwiRestaurantStock, KiwiSales, KiwiVenue, matchMedia. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['cards'] = function (__state) {\n  function rangeBounds(...args) { return __state.rangeBounds.apply(this, args); }\n",
+      "suffix": "    return Object.freeze({ renderMix, renderMixPlan, renderSettle, renderPairs, renderInteg, renderNotifBadge, renderEvening, renderStock, renderTimeline, renderHealth, renderBench, renderProducts, renderStaff, realMixRows, realLowStock, realTopProducts, realPairs, growBars });\n  };\n})();\n",
+      "exports": [
+        "renderMix",
+        "renderMixPlan",
+        "renderSettle",
+        "renderPairs",
+        "renderInteg",
+        "renderNotifBadge",
+        "renderEvening",
+        "renderStock",
+        "renderTimeline",
+        "renderHealth",
+        "renderBench",
+        "renderProducts",
+        "renderStaff",
+        "realMixRows",
+        "realLowStock",
+        "realTopProducts",
+        "realPairs",
+        "growBars"
+      ],
+      "reads": [
+        "BENCH_CITY",
+        "BENCH_EMPTY",
+        "BENCH_LBL",
+        "BENCH_PEER",
+        "BENCH_RANK_SUB",
+        "BENCH_SUB",
+        "BENCH_TITLE_FALLBACK",
+        "EVENING_EMPTY",
+        "HEALTH_CHIP",
+        "HEALTH_EMPTY",
+        "HEALTH_SUB",
+        "INTEG_LIST",
+        "INTEG_NOTCONN",
+        "INTEG_SUB",
+        "INTEG_TITLE",
+        "LOWSTK_STR",
+        "LOW_STOCK_SEUIL",
+        "MIX_CENTER_ALL",
+        "MIX_EMPTY",
+        "PAIRS_MAX_KEYS",
+        "PAIRS_MIN_BASKETS",
+        "PAIRS_MIN_TOGETHER",
+        "PAIRS_STR",
+        "PLAN_ACTIVE",
+        "PLAN_NAME",
+        "PLAN_PENDING",
+        "PRODUCTS_COVERAGE",
+        "PRODUCTS_EMPTY",
+        "PRODUCTS_MANAGE",
+        "PRODUCTS_NO_LINES",
+        "PRODUCTS_SUB",
+        "PRODUCTS_TITLE",
+        "PRODUCT_SOLD",
+        "RANGE_STR",
+        "REAL_MIX",
+        "RUPTURE_STR",
+        "SETTLE_DETAIL_LBL",
+        "SETTLE_LBL",
+        "STAFF_EMPTY",
+        "STAFF_ONDUTY_STR",
+        "STAFF_SUB",
+        "STAFF_TITLE",
+        "STOCK_EMPTY",
+        "STOCK_NO_THRESHOLDS",
+        "STOCK_OK_STR",
+        "STOCK_SUB_STR",
+        "STOCK_TITLE_STR",
+        "_benchOrig",
+        "_eveningOrig",
+        "_healthOrig",
+        "_integOrig",
+        "_stockOrig",
+        "activeMerchantSlug",
+        "animateNumber",
+        "benchByVenue",
+        "curUnit",
+        "currentRange",
+        "demoRole",
+        "dutyBand",
+        "effRange",
+        "emptyBlockBody",
+        "emptyListBody",
+        "escTxt",
+        "fmtHeures",
+        "fmtSettleAmount",
+        "frInt",
+        "frMoney",
+        "getCurrentVenue",
+        "getLang",
+        "growBars",
+        "healthByVenue",
+        "merchantDayBounds",
+        "merchantDayKey",
+        "mixByVenue",
+        "ownData",
+        "parseAmountFromEl",
+        "parseIntFromEl",
+        "productsByVenue",
+        "rangeBounds",
+        "realLowStock",
+        "realMixRows",
+        "realPairs",
+        "realRefundList",
+        "realRoster",
+        "realSalesList",
+        "realSalesTotals",
+        "realTopProducts",
+        "renderMixPlan",
+        "renderPairs",
+        "retailBand",
+        "settleByVenue",
+        "staffByVenue",
+        "tenderAmounts",
+        "tenderBucket",
+        "timelineWeekTotalByVenue",
+        "trStr",
+        "tradeStr",
+        "vData"
+      ],
+      "globals": [
+        "KiwiBoutiqueCatalog",
+        "KiwiBoutiqueVenueKey",
+        "KiwiConfig",
+        "KiwiEnv",
+        "KiwiI18n",
+        "KiwiReservations",
+        "KiwiRestaurantStock",
+        "KiwiSales",
+        "KiwiVenue",
+        "matchMedia"
+      ],
+      "fragments": [
+        {
+          "name": "renderMix",
+          "start": 79304,
+          "length": 7041,
+          "offset": 2177
+        },
+        {
+          "name": "renderMixPlan",
+          "start": 86345,
+          "length": 1634,
+          "offset": 9218
+        },
+        {
+          "name": "renderSettle",
+          "start": 97804,
+          "length": 1030,
+          "offset": 10852
+        },
+        {
+          "name": "renderPairs",
+          "start": 98834,
+          "length": 1198,
+          "offset": 11882
+        },
+        {
+          "name": "renderInteg",
+          "start": 100032,
+          "length": 1529,
+          "offset": 13080
+        },
+        {
+          "name": "renderNotifBadge",
+          "start": 101561,
+          "length": 169,
+          "offset": 14609
+        },
+        {
+          "name": "renderEvening",
+          "start": 101730,
+          "length": 5873,
+          "offset": 14778
+        },
+        {
+          "name": "renderStock",
+          "start": 107603,
+          "length": 3987,
+          "offset": 20651
+        },
+        {
+          "name": "renderTimeline",
+          "start": 111590,
+          "length": 935,
+          "offset": 24638
+        },
+        {
+          "name": "renderHealth",
+          "start": 112525,
+          "length": 1714,
+          "offset": 25573
+        },
+        {
+          "name": "renderBench",
+          "start": 114239,
+          "length": 3558,
+          "offset": 27287
+        },
+        {
+          "name": "renderProducts",
+          "start": 117797,
+          "length": 2917,
+          "offset": 30845
+        },
+        {
+          "name": "renderStaff",
+          "start": 120714,
+          "length": 3126,
+          "offset": 33762
+        },
+        {
+          "name": "realMixRows",
+          "start": 173105,
+          "length": 1778,
+          "offset": 36888
+        },
+        {
+          "name": "realLowStock",
+          "start": 186268,
+          "length": 1849,
+          "offset": 38666
+        },
+        {
+          "name": "realTopProducts",
+          "start": 188117,
+          "length": 1045,
+          "offset": 40515
+        },
+        {
+          "name": "realPairs",
+          "start": 189162,
+          "length": 1698,
+          "offset": 41560
+        },
+        {
+          "name": "growBars",
+          "start": 190860,
+          "length": 646,
+          "offset": 43258
+        }
+      ],
+      "bridges": [
+        "rangeBounds"
+      ],
+      "globalThis": [
+        "KiwiZoneLaw"
+      ]
+    },
+    {
+      "name": "ledger",
+      "file": "assets/daterange/ledger.js",
+      "prefix": "/* Owner: dashboard ledger. Exports: aggFusion, zeroClone, vData, priorLedgerRows, demoLedgerProjection, demoPreviousAt, demoRole, merchantTimeZone, merchantParts, merchantBoundary, merchantDayKey, calendarStartKey, calendarBounds, rangeBounds, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec, screenBook, realClosedTips, realClientMix, openDays, realDeltaPct, deltaTenths, operatorLedgerPending, buildHeatmap.\n * Sibling calls via live owner: none.\n * Reads live owner: DEFAULT_MERCHANT_TZ, DEMO_ROLE, FUSION_AVG_KEYS, HH_COVERS_BY_VENUE, HH_HOURS, HH_RAW_BY_VENUE, RANGE_DAYS, REAL_MIX, TENDER_NAME, activeMerchantSlug, addMerchantDays, closedBounds, currentRange, customRange, dateToIso, dayCutoffH, deliveryDue, effRange, frInt, getCurrentVenue, getLang, goalByVenue, halfUpDiv, heroDataByVenue, isPlainObj, kpiByVenue, ledgerSum, merchantDayBounds, mixByVenue, ownData, realRefundList, realSalesList, realWindowStats, revChartByVenue, saleHour, salesMath, shiftedBusinessBounds, tenderAmounts, tenderBucket.\n * Reads globalThis: KiwiZoneLaw.\n * Reads window: KiwiClients, KiwiConfig, KiwiDayReport, KiwiDemoClock, KiwiLive, KiwiSalesHistory, KiwiSalesMath, KiwiSalesReconcile, KiwiVenue. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['ledger'] = function (__state) {\n",
+      "suffix": "    return Object.freeze({ aggFusion, zeroClone, vData, priorLedgerRows, demoLedgerProjection, demoPreviousAt, demoRole, merchantTimeZone, merchantParts, merchantBoundary, merchantDayKey, calendarStartKey, calendarBounds, rangeBounds, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec, screenBook, realClosedTips, realClientMix, openDays, realDeltaPct, deltaTenths, operatorLedgerPending, buildHeatmap });\n  };\n})();\n",
+      "exports": [
+        "aggFusion",
+        "zeroClone",
+        "vData",
+        "priorLedgerRows",
+        "demoLedgerProjection",
+        "demoPreviousAt",
+        "demoRole",
+        "merchantTimeZone",
+        "merchantParts",
+        "merchantBoundary",
+        "merchantDayKey",
+        "calendarStartKey",
+        "calendarBounds",
+        "rangeBounds",
+        "realInsightSummary",
+        "buildRealHeroRec",
+        "buildRealHeatmapRec",
+        "screenBook",
+        "realClosedTips",
+        "realClientMix",
+        "openDays",
+        "realDeltaPct",
+        "deltaTenths",
+        "operatorLedgerPending",
+        "buildHeatmap"
+      ],
+      "reads": [
+        "DEFAULT_MERCHANT_TZ",
+        "DEMO_ROLE",
+        "FUSION_AVG_KEYS",
+        "HH_COVERS_BY_VENUE",
+        "HH_HOURS",
+        "HH_RAW_BY_VENUE",
+        "RANGE_DAYS",
+        "REAL_MIX",
+        "TENDER_NAME",
+        "activeMerchantSlug",
+        "addMerchantDays",
+        "closedBounds",
+        "currentRange",
+        "customRange",
+        "dateToIso",
+        "dayCutoffH",
+        "deliveryDue",
+        "effRange",
+        "frInt",
+        "getCurrentVenue",
+        "getLang",
+        "goalByVenue",
+        "halfUpDiv",
+        "heroDataByVenue",
+        "isPlainObj",
+        "kpiByVenue",
+        "ledgerSum",
+        "merchantDayBounds",
+        "mixByVenue",
+        "ownData",
+        "realRefundList",
+        "realSalesList",
+        "realWindowStats",
+        "revChartByVenue",
+        "saleHour",
+        "salesMath",
+        "shiftedBusinessBounds",
+        "tenderAmounts",
+        "tenderBucket"
+      ],
+      "globals": [
+        "KiwiClients",
+        "KiwiConfig",
+        "KiwiDayReport",
+        "KiwiDemoClock",
+        "KiwiLive",
+        "KiwiSalesHistory",
+        "KiwiSalesMath",
+        "KiwiSalesReconcile",
+        "KiwiVenue"
+      ],
+      "fragments": [
+        {
+          "name": "aggFusion",
+          "start": 123840,
+          "length": 1630,
+          "offset": 1402
+        },
+        {
+          "name": "zeroClone",
+          "start": 125470,
+          "length": 312,
+          "offset": 3032
+        },
+        {
+          "name": "vData",
+          "start": 125782,
+          "length": 1761,
+          "offset": 3344
+        },
+        {
+          "name": "priorLedgerRows",
+          "start": 127543,
+          "length": 541,
+          "offset": 5105
+        },
+        {
+          "name": "demoLedgerProjection",
+          "start": 128084,
+          "length": 4761,
+          "offset": 5646
+        },
+        {
+          "name": "demoPreviousAt",
+          "start": 132845,
+          "length": 728,
+          "offset": 10407
+        },
+        {
+          "name": "demoRole",
+          "start": 133573,
+          "length": 678,
+          "offset": 11135
+        },
+        {
+          "name": "merchantTimeZone",
+          "start": 139065,
+          "length": 654,
+          "offset": 11813
+        },
+        {
+          "name": "merchantParts",
+          "start": 139719,
+          "length": 448,
+          "offset": 12467
+        },
+        {
+          "name": "merchantBoundary",
+          "start": 140167,
+          "length": 475,
+          "offset": 12915
+        },
+        {
+          "name": "merchantDayKey",
+          "start": 140642,
+          "length": 342,
+          "offset": 13390
+        },
+        {
+          "name": "calendarStartKey",
+          "start": 140984,
+          "length": 415,
+          "offset": 13732
+        },
+        {
+          "name": "calendarBounds",
+          "start": 141399,
+          "length": 628,
+          "offset": 14147
+        },
+        {
+          "name": "rangeBounds",
+          "start": 142027,
+          "length": 1292,
+          "offset": 14775
+        },
+        {
+          "name": "realInsightSummary",
+          "start": 143319,
+          "length": 2273,
+          "offset": 16067
+        },
+        {
+          "name": "buildRealHeroRec",
+          "start": 145592,
+          "length": 2026,
+          "offset": 18340
+        },
+        {
+          "name": "buildRealHeatmapRec",
+          "start": 147618,
+          "length": 1000,
+          "offset": 20366
+        },
+        {
+          "name": "screenBook",
+          "start": 148618,
+          "length": 471,
+          "offset": 21366
+        },
+        {
+          "name": "realClosedTips",
+          "start": 149089,
+          "length": 1712,
+          "offset": 21837
+        },
+        {
+          "name": "realClientMix",
+          "start": 150801,
+          "length": 700,
+          "offset": 23549
+        },
+        {
+          "name": "openDays",
+          "start": 151501,
+          "length": 345,
+          "offset": 24249
+        },
+        {
+          "name": "realDeltaPct",
+          "start": 151846,
+          "length": 1479,
+          "offset": 24594
+        },
+        {
+          "name": "deltaTenths",
+          "start": 153325,
+          "length": 436,
+          "offset": 26073
+        },
+        {
+          "name": "operatorLedgerPending",
+          "start": 159031,
+          "length": 552,
+          "offset": 26509
+        },
+        {
+          "name": "buildHeatmap",
+          "start": 159583,
+          "length": 3928,
+          "offset": 27061
+        }
+      ],
+      "bridges": [],
+      "globalThis": [
+        "KiwiZoneLaw"
+      ]
+    },
+    {
+      "name": "presentation",
+      "file": "assets/daterange/presentation.js",
+      "prefix": "/* Owner: dashboard presentation. Exports: homeSet, paintNumber, animateNumber, fitHeroAmount, hookI18n, tickLiveRevenue.\n * Sibling calls via live owner: operatorLedgerPending.\n * Reads live owner: effRange, fmtHeroAmount, getCurrentVenue, goalByVenue, heroDataByVenue, homeStore, kpiByVenue, numberShape, renderBench, renderEvening, renderFeed, renderGoal, renderHealth, renderHeatmap, renderHero, renderHeroAi, renderInteg, renderKpiBand, renderMix, renderProducts, renderRevChart, renderSelector, renderSettle, renderStaff, renderStock, textNodesOf.\n * Reads globalThis: none.\n * Reads window: KiwiDemoClock, KiwiI18n, dispatchEvent, matchMedia. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['presentation'] = function (__state) {\n  function operatorLedgerPending(...args) { return __state.operatorLedgerPending.apply(this, args); }\n",
+      "suffix": "    return Object.freeze({ homeSet, paintNumber, animateNumber, fitHeroAmount, hookI18n, tickLiveRevenue });\n  };\n})();\n",
+      "exports": [
+        "homeSet",
+        "paintNumber",
+        "animateNumber",
+        "fitHeroAmount",
+        "hookI18n",
+        "tickLiveRevenue"
+      ],
+      "reads": [
+        "effRange",
+        "fmtHeroAmount",
+        "getCurrentVenue",
+        "goalByVenue",
+        "heroDataByVenue",
+        "homeStore",
+        "kpiByVenue",
+        "numberShape",
+        "operatorLedgerPending",
+        "renderBench",
+        "renderEvening",
+        "renderFeed",
+        "renderGoal",
+        "renderHealth",
+        "renderHeatmap",
+        "renderHero",
+        "renderHeroAi",
+        "renderInteg",
+        "renderKpiBand",
+        "renderMix",
+        "renderProducts",
+        "renderRevChart",
+        "renderSelector",
+        "renderSettle",
+        "renderStaff",
+        "renderStock",
+        "textNodesOf"
+      ],
+      "globals": [
+        "KiwiDemoClock",
+        "KiwiI18n",
+        "dispatchEvent",
+        "matchMedia"
+      ],
+      "fragments": [
+        {
+          "name": "homeSet",
+          "start": 135505,
+          "length": 276,
+          "offset": 957
+        },
+        {
+          "name": "paintNumber",
+          "start": 135781,
+          "length": 867,
+          "offset": 1233
+        },
+        {
+          "name": "animateNumber",
+          "start": 136648,
+          "length": 897,
+          "offset": 2100
+        },
+        {
+          "name": "fitHeroAmount",
+          "start": 137545,
+          "length": 1020,
+          "offset": 2997
+        },
+        {
+          "name": "hookI18n",
+          "start": 196361,
+          "length": 833,
+          "offset": 4017
+        },
+        {
+          "name": "tickLiveRevenue",
+          "start": 217273,
+          "length": 1321,
+          "offset": 4850
+        }
+      ],
+      "bridges": [
+        "operatorLedgerPending"
+      ],
+      "globalThis": []
+    }
+  ],
+  "order": [
+    "renderHero",
+    "renderHeroAi",
+    "renderHeatmapAi",
+    "renderGoal",
+    "renderHeatmap",
+    "renderKpiBand",
+    "renderRevChart",
+    "renderMix",
+    "renderMixPlan",
+    "renderFeed",
+    "renderSettle",
+    "renderPairs",
+    "renderInteg",
+    "renderNotifBadge",
+    "renderEvening",
+    "renderStock",
+    "renderTimeline",
+    "renderHealth",
+    "renderBench",
+    "renderProducts",
+    "renderStaff",
+    "aggFusion",
+    "zeroClone",
+    "vData",
+    "priorLedgerRows",
+    "demoLedgerProjection",
+    "demoPreviousAt",
+    "demoRole",
+    "setDateRange",
+    "commitCustomRange",
+    "setShowComparison",
+    "homeSet",
+    "paintNumber",
+    "animateNumber",
+    "fitHeroAmount",
+    "revealDayPill",
+    "merchantTimeZone",
+    "merchantParts",
+    "merchantBoundary",
+    "merchantDayKey",
+    "calendarStartKey",
+    "calendarBounds",
+    "rangeBounds",
+    "realInsightSummary",
+    "buildRealHeroRec",
+    "buildRealHeatmapRec",
+    "screenBook",
+    "realClosedTips",
+    "realClientMix",
+    "openDays",
+    "realDeltaPct",
+    "deltaTenths",
+    "hourlyCumul",
+    "dailyTotals",
+    "realRevSeries",
+    "operatorLedgerPending",
+    "buildHeatmap",
+    "hotelPerfEntry",
+    "hotelTilesFrom",
+    "tableTimeEntry",
+    "openKpiCustomizer",
+    "realMixRows",
+    "buildOrder",
+    "buildLiveFeed",
+    "buildCustomFeed",
+    "realLowStock",
+    "realTopProducts",
+    "realPairs",
+    "growBars",
+    "dutyBand",
+    "retailBand",
+    "hookI18n",
+    "fmtHumanRange",
+    "closeCustomPicker",
+    "openCustomPicker",
+    "mountDaySelector",
+    "registerHandler",
+    "tickLiveRevenue",
+    "heroDataByVenue",
+    "kpiByVenue",
+    "revChartByVenue"
+  ],
+  "head": "/* Owner: daterange dashboard renderers.\n * Registers functions on KiwiDateRange.__internal; needs its live private-state accessors.\n * No merchant data, DOM work or requests run at registration. */\n(function () {\n  'use strict';\n  window.__kiwiDateRangeParts = function (__state) {\n",
+  "tail": "    return { renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, renderKpiBand, renderRevChart, renderMix, renderMixPlan, renderFeed, renderSettle, renderPairs, renderInteg, renderNotifBadge, renderEvening, renderStock, renderTimeline, renderHealth, renderBench, renderProducts, renderStaff, aggFusion, zeroClone, vData, priorLedgerRows, demoLedgerProjection, demoPreviousAt, demoRole, setDateRange, commitCustomRange, setShowComparison, homeSet, paintNumber, animateNumber, fitHeroAmount, revealDayPill, merchantTimeZone, merchantParts, merchantBoundary, merchantDayKey, calendarStartKey, calendarBounds, rangeBounds, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec, screenBook, realClosedTips, realClientMix, openDays, realDeltaPct, deltaTenths, hourlyCumul, dailyTotals, realRevSeries, operatorLedgerPending, buildHeatmap, hotelPerfEntry, hotelTilesFrom, tableTimeEntry, openKpiCustomizer, realMixRows, buildOrder, buildLiveFeed, buildCustomFeed, realLowStock, realTopProducts, realPairs, growBars, dutyBand, retailBand, hookI18n, fmtHumanRange, closeCustomPicker, openCustomPicker, mountDaySelector, registerHandler, tickLiveRevenue, kpiByVenue, revChartByVenue, heroDataByVenue };\n  };\n})();\n"
+}

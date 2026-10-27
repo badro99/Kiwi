@@ -23,6 +23,7 @@ const serveurTestSource = require('./serveur-test-source.cjs');
  * kiwi-serveur.html) plutôt que contre une copie : c'est la copie qui dérive.
  * ═════════════════════════════════════════════════════════════════════════════ */
 'use strict';
+const menuCatalogSource = require('./menu-catalog-test-source.cjs');
 
 const caisseTestSource = require('./caisse-test-source.cjs');
 
@@ -36,7 +37,7 @@ const eq = (a, b, m) => ok(a === b, `${m} — attendu ${JSON.stringify(b)}, obte
 
 const caisse  = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
 const serveur = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
-const menuCatalogSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
+const menuCatalogSrc = menuCatalogSource();
 
 /* ── 1. la frontière démo / réel est posée, et sur TOUT ────────────────────── */
 
@@ -98,7 +99,7 @@ ok(!loadsMenuCatalog(caisse),
 ok(!loadsMenuCatalog(serveur),
   'le serveur ne charge PAS menu-catalog.js');
 ok(/<script[^>]+src=["']assets\/menu-catalog\.js/.test(
-  fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8')),
+  require('./dashboard-dependencies.cjs').eager(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'))),
   'c\'est bien le tableau de bord qui le charge — le contrôle ci-dessus a donc un sens');
 /* Les deux pages ne doivent parler à /api/menu qu'en lecture. */
 [['caisse', caisse], ['serveur', serveur]].forEach(([name, src]) => {

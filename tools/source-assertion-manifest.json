@@ -42,7 +42,11 @@
     "dynamic-i18n-test.mjs": "AST translation completeness and literal copy rules",
     "hotel-stays-group-guards-test.mjs": "Source ownership and recovery wiring guards only. Browser behavior is separately tested; no per-assertion execution proof is claimed here.",
     "booking-split-test.mjs": "Token-identical formatting and byte-exact live split reconstruction; structural identity only",
-    "onboarding-split-test.mjs": "Byte-for-byte reconstruction of the controller from live split fragments and frozen SHA-256 fixtures."
+    "onboarding-split-test.mjs": "Byte-for-byte reconstruction of the controller from live split fragments and frozen SHA-256 fixtures.",
+    "orderpro-boundary-test.mjs": "AST capability contracts for private OrderPro modules, with rejected sibling-state mutations.",
+    "home-boundary-test.mjs": "AST ownership contract: each renderer reads only its explicit live owner and declared window interface.",
+    "pressing-boundary-test.mjs": "AST boundary contract: declared custody contexts and window reads, no sibling imports or private window state; mutation witnesses reject violations",
+    "clients-split-test.mjs": "byte-exact concatenation of the client store and client book parts, plus the names each part owns"
   },
   "style": {
     "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",
@@ -71,7 +75,8 @@
     "till-scroll-test.mjs": "layout, contrast or copy in CSS/markup",
     "token-contrast-test.js": "layout, contrast or copy in CSS/markup",
     "vexel-insights-card-dna-test.mjs": "layout, contrast or copy in CSS/markup",
-    "vexel-startup-test.mjs": "layout, contrast or copy in CSS/markup"
+    "vexel-startup-test.mjs": "layout, contrast or copy in CSS/markup",
+    "home-sparkline-a11y-test.mjs": "decorative markup on the KPI sparklines (aria-hidden, focusable=false); the trend stays in the delta chip text"
   },
   "twin": {
     "discount-policy-test.mjs": "discount-policy-api-test.mjs"

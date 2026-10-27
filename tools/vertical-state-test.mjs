@@ -1,10 +1,11 @@
+import pressingSource from './pressing-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const venueStoreSource = fs.readFileSync(new URL('../assets/venue-store.js', import.meta.url), 'utf8');
-const verticalSource = fs.readFileSync(new URL('../assets/vertical-state.js', import.meta.url), 'utf8');
-const dispatchSource = fs.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
+const venueStoreSource = pressingSource.readFileSync(new URL('../assets/venue-store.js', import.meta.url), 'utf8');
+const verticalSource = pressingSource.readFileSync(new URL('../assets/vertical-state.js', import.meta.url), 'utf8');
+const dispatchSource = pressingSource.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
 
 function events() {
   const listeners = new Map();
@@ -164,7 +165,7 @@ const verticalFiles = [
   'pos-coiffure.js', 'pos-gym.js',
 ];
 for (const file of verticalFiles) {
-  const body = fs.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
+  const body = pressingSource.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
   assert.match(body, /KiwiVerticalState/, `${file} registers durable operational state`);
   assert.match(body, /\.hydrate(?:\?\.)?\(\)/, `${file} hydrates before rendering`);
   assert.match(body, /\.save(?:\?\.)?\(/, `${file} persists operational changes`);

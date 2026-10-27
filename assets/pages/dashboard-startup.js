@@ -3,6 +3,21 @@
  * Keep the proven shell order; optional workspace owners stay in dashboard-loader. */
 (() => {
   'use strict';
+  if (document.currentScript?.dataset.startup === 'menu') {
+    if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
+    const menuScripts = [
+      'assets/menu-catalog/state.js?v=5',
+      'assets/menu-catalog/modifiers.js?v=3',
+      'assets/menu-catalog/item-list.js?v=3',
+      'assets/menu-catalog/formulas.js?v=3',
+      'assets/menu-catalog/item-editor.js?v=3',
+      'assets/menu-catalog/media.js?v=3',
+      'assets/menu-catalog/availability.js?v=3',
+      'assets/menu-catalog.js?v=39',
+    ];
+    document.write(menuScripts.map(url => '<script src="' + url + '" defer fetchpriority="low"><\/script>').join('\n'));
+    return;
+  }
   const scripts = [
     'assets/pages-pro-office.js?v=2',
     'assets/pages-pro.js?v=2187',
@@ -29,13 +44,14 @@
     'assets/day-report-export.js?v=13',
     'assets/day-report-dash.js?v=38',
     'assets/stock/strings.js?v=2',
-    'assets/stock.js?v=86',
+    'assets/stock/state.js?v=4',
+    'assets/stock.js?v=90',
     'assets/catalog-workspace.js?v=5',
-    'assets/planning-core.js?v=9',
+    'assets/planning-core.js?v=11',
     'assets/team/catalog.js?v=2',
-    'assets/team.js?v=325',
-    'assets/team/profile-ui.js?v=4',
-    'assets/team-hours.js?v=7',
+    'assets/team.js?v=332',
+    'assets/team/profile-ui.js?v=6',
+    'assets/team-hours.js?v=12',
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=8',
     'assets/weather.js?v=1',
@@ -52,10 +68,10 @@
     'assets/liquid-glass.js?v=1',
     'assets/hotel-language.js?v=2',
     'assets/hotel-housekeeping.js?v=1',
-    'assets/hotel/model.js?v=4',
-    'assets/hotel.js?v=87',
+    'assets/hotel/model.js?v=8',
+    'assets/hotel.js?v=91',
   ];
   if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
   const normalPriority = new Set(['assets/kiwi-select.js', 'assets/catalog-workspace.js', 'assets/staff-roles.js', 'assets/design-vexel-layout.js']);
-  document.write(scripts.map(url => '<script src="' + url + '" defer' + (normalPriority.has(url.split('?')[0]) ? '' : ' fetchpriority="low"') + '><\/script>').join('\n'));
+  document.write(scripts.map(url => '<script' + (['assets/team.js', 'assets/team-hours.js'].includes(url.split('?')[0]) ? ' type="module"' : '') + ' src="' + url + '" defer' + (normalPriority.has(url.split('?')[0]) ? '' : ' fetchpriority="low"') + '><\/script>').join('\n'));
 })();

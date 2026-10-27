@@ -36,6 +36,7 @@ try {
     });
     await page.evaluateOnNewDocument(() => {
       localStorage.setItem('kiwiLang','fr');
+      try { performance.setResourceTimingBufferSize(2000); } catch (_) {}
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
     // coverage: surface=dashboard locale=fr viewport=desktop
@@ -90,6 +91,7 @@ try {
     });
     await page.evaluateOnNewDocument(() => {
       localStorage.setItem('kiwiLang','fr');
+      try { performance.setResourceTimingBufferSize(2000); } catch (_) {}
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
     // coverage: surface=dashboard locale=fr viewport=desktop
@@ -139,6 +141,7 @@ try {
     });
     await page.evaluateOnNewDocument(() => {
       localStorage.setItem('kiwiLang','fr');
+      try { performance.setResourceTimingBufferSize(2000); } catch (_) {}
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
     // coverage: surface=dashboard locale=fr viewport=desktop
@@ -202,6 +205,7 @@ try {
     });
     await page.evaluateOnNewDocument(() => {
       localStorage.setItem('kiwiLang','fr');
+      try { performance.setResourceTimingBufferSize(2000); } catch (_) {}
       try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
     });
     // coverage: surface=dashboard locale=fr viewport=desktop

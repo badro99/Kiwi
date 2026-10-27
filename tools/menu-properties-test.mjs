@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 /* Stored restaurant documents only: real Pages handlers, local SQLite D1, no browser. */
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -45,7 +46,7 @@ function clientCleanFormula() {
   const w = { console, setTimeout: () => 0, localStorage: { getItem: () => null }, KiwiStore: { define: () => store }, Kiwi: {},
     document: { readyState: 'loading', documentElement: {}, addEventListener() {} }, addEventListener() {} };
   w.window = w;
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8'), vm.createContext(w), { filename: 'menu-catalog.js' });
+  vm.runInContext(menuCatalogSource.runtimeSource(), vm.createContext(w), { filename: 'menu-catalog.js' });
   // Ramené dans ce royaume-ci : deepStrictEqual compare aussi les prototypes.
   return (formula, items) => JSON.parse(JSON.stringify(w.KiwiMenuStore.cleanFormula(formula, items)));
 }

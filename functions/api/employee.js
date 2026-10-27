@@ -16,6 +16,7 @@ import { storeOperationalState } from './_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from './_business-day.js';
 import { handleAttendance, ACTION_ROLES as ATTENDANCE_ACTION_ROLES } from './employee/_attendance.js';
 import { handleLeave, ACTION_ROLES as LEAVE_ACTION_ROLES } from './employee/_leave.js';
+import { handleNoticesPage } from './employee/_planning.js';
 import { hoursByDay } from './_worked-hours.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
@@ -390,6 +391,9 @@ export async function onRequestPost({ request, env }) {
     safeProgress, planningDay, roleKey, validISODate, validTime };
   if (Object.hasOwn(LEAVE_ACTION_ROLES, action)) {
     return handleLeave({ actor, store, request, action, body });
+  }
+  if (action === 'planning-notices-page') {
+    return handleNoticesPage({ actor, store, body });
   }
   if (Object.hasOwn(ATTENDANCE_ACTION_ROLES, action)) {
     return handleAttendance({ actor, store, request, action, body });

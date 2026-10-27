@@ -248,9 +248,13 @@
     onAction: { get: () => onAction },
     onCompareToggle: { get: () => onCompareToggle },
     GLOVO_TOAST: { get: () => GLOVO_TOAST },
+    /* Sibling calls between parts go through this owner too. */
+    merchantParts: { get: () => merchantParts },
+    operatorLedgerPending: { get: () => operatorLedgerPending },
+    openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=5';
+  const partUrl = 'assets/daterange/renderers.js?v=13';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;

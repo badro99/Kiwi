@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 /* Kiwi · God Mode tab isolation
  *
  * 2026-09-26: two God Mode tabs in one browser, one on Amira Café, one on
@@ -17,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const storeSrc = fs.readFileSync(path.join(ROOT, 'assets/venue-store.js'), 'utf8');
-const menuSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
+const menuSrc = menuCatalogSource();
 const cloudSrc = fs.readFileSync(path.join(ROOT, 'assets/cloud-doc.js'), 'utf8');
 
 let passed = 0;

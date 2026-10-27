@@ -4,6 +4,13 @@
   let lastData = null;
   let busy = false;
   let renderedDay = '';
+  /* Archive des notices antérieures au fil du planning (les notices cotées
+   * "read page by page" côté serveur). items/next survivent aux re-rendus. */
+  let older = { items: [], next: null, opened: false, busy: false, failed: false };
+
+  function resetOlderNotices() {
+    older = { items: [], next: null, opened: false, busy: false, failed: false };
+  }
 
   const css = `
     /* Une accolade manquante après « .kep-count{…font-weight:700 » avalait TOUT
@@ -49,6 +56,8 @@
     .kep-status.approved,.kep-status.assigned{background:var(--tint);color:var(--forest-ink)}
     .kep-status.rejected,.kep-status.cancelled{background:var(--surface-2);color:var(--ink-3)}
     .kep-notice{border-inline-start:3px solid var(--forest-edge);padding:8px 10px;background:var(--tint);border-radius:0 var(--r-md) var(--r-md) 0;font-size:12px}
+    .kep-older{margin-top:10px}
+    .kep-older .kep-btn{min-height:40px}
     .kep-overlay{position:fixed;inset:0;z-index:10050;background:rgba(5,12,9,.6);display:grid;place-items:center;padding:18px}
     .kep-sheet{width:min(540px,100%);max-height:min(760px,92dvh);overflow:auto;background:var(--surface);color:var(--ink);border-radius:var(--r-xl);padding:22px;box-shadow:var(--shadow-2)}
     .kep-sheet-head{display:flex;justify-content:space-between;gap:16px}
@@ -73,9 +82,9 @@
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char])); }
   function copy() {
     const lang=document.documentElement.lang;
-    if (lang === 'en') return { eyebrow:'My schedule', title:'Schedule & requests', sub:'Your published shifts, opportunities and requests in one place.', shifts:'My upcoming shifts', open:'Open shifts', swaps:'Shift exchanges', requests:'My requests', history:'Earlier updates', notices:'Updates', availability:'My availability', leave:'Request leave', exchange:'Exchange', claim:'Request this shift', offer:'Propose an exchange', cancel:'Cancel', empty:'Nothing to show.', chooseShift:'Choose one of your shifts', send:'Send request', close:'Close', scheduled:'Shifts', opportunities:'Opportunities', pending:'Pending', availabilityTitle:'Set my availability', leaveTitle:'Request leave', startDate:'Start date', endDate:'End date', concernedDays:'Days concerned', availableCheck:'I am available on these days', from:'From', until:'Until', note:'Note to manager (optional)', dayNames:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], dayShorts:['S','M','T','W','T','F','S'], errorRole:'This shift does not match your role.', errorConflict:'You already have a shift that day.', errorSwap:'Choose one of your published shifts.', errorChanged:'This opportunity changed. Refresh and try again.', errorDate:'Check the dates.', errorAvailability:'Choose at least one day and valid hours.', errorGeneric:'The request could not be sent. Try again.' };
-    if (lang === 'ar') return { eyebrow:'جدولي', title:'الجدول والطلبات', sub:'وردياتك المنشورة والفرص والطلبات في مكان واحد.', shifts:'وردياتي القادمة', open:'ورديات شاغرة', swaps:'تبادل الورديات', requests:'طلباتي', history:'التحديثات السابقة', notices:'آخر التحديثات', availability:'أوقات توفري', leave:'طلب إجازة', exchange:'طلب تبديل', claim:'طلب هذه الوردية', offer:'اقتراح تبادل', cancel:'إلغاء', empty:'لا توجد عناصر حالياً.', chooseShift:'اختر إحدى وردياتك', send:'إرسال الطلب', close:'إغلاق', scheduled:'ورديات', opportunities:'فرص', pending:'معلقة', availabilityTitle:'تحديد أوقات التوفر', leaveTitle:'طلب إجازة', startDate:'تاريخ البداية', endDate:'تاريخ النهاية', concernedDays:'الأيام المعنية', availableCheck:'أنا متاح في هذه الأيام', from:'من', until:'إلى', note:'ملاحظة للمسؤول (اختياري)', dayNames:['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'], dayShorts:['ح','ن','ث','ر','خ','ج','س'], errorRole:'هذه الوردية لا تطابق وظيفتك.', errorConflict:'لديك وردية أخرى في هذا اليوم.', errorSwap:'اختر وردية منشورة لاقتراحها.', errorChanged:'تغيّرت هذه الفرصة. حدّث الصفحة وحاول مجدداً.', errorDate:'تحقق من التواريخ.', errorAvailability:'اختر يوماً واحداً على الأقل وساعات صحيحة.', errorGeneric:'تعذر إرسال الطلب. حاول مجدداً.' };
-    return { eyebrow:'Mon planning', title:'Planning & demandes', sub:'Vos services publiés, les opportunités et vos demandes au même endroit.', shifts:'Mes prochains services', open:'Services à pourvoir', swaps:'Échanges de service', requests:'Mes demandes', history:'Mises à jour précédentes', notices:'Mises à jour', availability:'Mes disponibilités', leave:'Demander un congé', exchange:'Échanger', claim:'Demander ce service', offer:'Proposer un échange', cancel:'Annuler', empty:'Aucun élément pour le moment.', chooseShift:'Choisissez l’un de vos services', send:'Envoyer la demande', close:'Fermer', scheduled:'Services', opportunities:'Opportunités', pending:'En attente', availabilityTitle:'Indiquer mes disponibilités', leaveTitle:'Demander un congé', startDate:'Date de début', endDate:'Date de fin', concernedDays:'Jours concernés', availableCheck:'Je suis disponible ces jours', from:'À partir de', until:'Jusqu’à', note:'Note au responsable (facultatif)', dayNames:['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'], dayShorts:['D','L','M','M','J','V','S'], errorRole:'Ce service ne correspond pas à votre fonction.', errorConflict:'Vous avez déjà un service ce jour-là.', errorSwap:'Choisissez un service publié à proposer.', errorChanged:'Cette opportunité vient de changer. Actualisez puis réessayez.', errorDate:'Vérifiez les dates.', errorAvailability:'Choisissez au moins un jour et des heures valides.', errorGeneric:'La demande n’a pas pu être envoyée. Réessayez.' };
+    if (lang === 'en') return { eyebrow:'My schedule', title:'Schedule & requests', sub:'Your published shifts, opportunities and requests in one place.', shifts:'My upcoming shifts', open:'Open shifts', swaps:'Shift exchanges', requests:'My requests', history:'Earlier updates', notices:'Updates', availability:'My availability', leave:'Request leave', exchange:'Exchange', claim:'Request this shift', offer:'Propose an exchange', cancel:'Cancel', empty:'Nothing to show.', chooseShift:'Choose one of your shifts', send:'Send request', close:'Close', scheduled:'Shifts', opportunities:'Opportunities', pending:'Pending', availabilityTitle:'Set my availability', leaveTitle:'Request leave', startDate:'Start date', endDate:'End date', concernedDays:'Days concerned', availableCheck:'I am available on these days', from:'From', until:'Until', note:'Note to manager (optional)', dayNames:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], dayShorts:['S','M','T','W','T','F','S'], errorRole:'This shift does not match your role.', errorConflict:'You already have a shift that day.', errorSwap:'Choose one of your published shifts.', errorChanged:'This opportunity changed. Refresh and try again.', errorDate:'Check the dates.', errorAvailability:'Choose at least one day and valid hours.', errorGeneric:'The request could not be sent. Try again.', olderNotices:'Older notices', olderMore:'Show more', olderNone:'No earlier notices.', olderError:'Could not load more.' };
+    if (lang === 'ar') return { eyebrow:'جدولي', title:'الجدول والطلبات', sub:'وردياتك المنشورة والفرص والطلبات في مكان واحد.', shifts:'وردياتي القادمة', open:'ورديات شاغرة', swaps:'تبادل الورديات', requests:'طلباتي', history:'التحديثات السابقة', notices:'آخر التحديثات', availability:'أوقات توفري', leave:'طلب إجازة', exchange:'طلب تبديل', claim:'طلب هذه الوردية', offer:'اقتراح تبادل', cancel:'إلغاء', empty:'لا توجد عناصر حالياً.', chooseShift:'اختر إحدى وردياتك', send:'إرسال الطلب', close:'إغلاق', scheduled:'ورديات', opportunities:'فرص', pending:'معلقة', availabilityTitle:'تحديد أوقات التوفر', leaveTitle:'طلب إجازة', startDate:'تاريخ البداية', endDate:'تاريخ النهاية', concernedDays:'الأيام المعنية', availableCheck:'أنا متاح في هذه الأيام', from:'من', until:'إلى', note:'ملاحظة للمسؤول (اختياري)', dayNames:['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'], dayShorts:['ح','ن','ث','ر','خ','ج','س'], errorRole:'هذه الوردية لا تطابق وظيفتك.', errorConflict:'لديك وردية أخرى في هذا اليوم.', errorSwap:'اختر وردية منشورة لاقتراحها.', errorChanged:'تغيّرت هذه الفرصة. حدّث الصفحة وحاول مجدداً.', errorDate:'تحقق من التواريخ.', errorAvailability:'اختر يوماً واحداً على الأقل وساعات صحيحة.', errorGeneric:'تعذر إرسال الطلب. حاول مجدداً.', olderNotices:'إشعارات أقدم', olderMore:'عرض المزيد', olderNone:'لا إشعار سابق.', olderError:'تعذر تحميل المزيد.' };
+    return { eyebrow:'Mon planning', title:'Planning & demandes', sub:'Vos services publiés, les opportunités et vos demandes au même endroit.', shifts:'Mes prochains services', open:'Services à pourvoir', swaps:'Échanges de service', requests:'Mes demandes', history:'Mises à jour précédentes', notices:'Mises à jour', availability:'Mes disponibilités', leave:'Demander un congé', exchange:'Échanger', claim:'Demander ce service', offer:'Proposer un échange', cancel:'Annuler', empty:'Aucun élément pour le moment.', chooseShift:'Choisissez l’un de vos services', send:'Envoyer la demande', close:'Fermer', scheduled:'Services', opportunities:'Opportunités', pending:'En attente', availabilityTitle:'Indiquer mes disponibilités', leaveTitle:'Demander un congé', startDate:'Date de début', endDate:'Date de fin', concernedDays:'Jours concernés', availableCheck:'Je suis disponible ces jours', from:'À partir de', until:'Jusqu’à', note:'Note au responsable (facultatif)', dayNames:['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'], dayShorts:['D','L','M','M','J','V','S'], errorRole:'Ce service ne correspond pas à votre fonction.', errorConflict:'Vous avez déjà un service ce jour-là.', errorSwap:'Choisissez un service publié à proposer.', errorChanged:'Cette opportunité vient de changer. Actualisez puis réessayez.', errorDate:'Vérifiez les dates.', errorAvailability:'Choisissez au moins un jour et des heures valides.', errorGeneric:'La demande n’a pas pu être envoyée. Réessayez.', olderNotices:'Notices plus anciennes', olderMore:'Afficher la suite', olderNone:'Aucune notice antérieure.', olderError:'Suite indisponible. Réessayez.' };
   }
   function todayKey() { try { return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA',{timeZone:lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); } catch (_) { return new Date().toISOString().slice(0,10); } }
   function futureSchedule() {
@@ -116,12 +125,25 @@
     const historyOpen=card.querySelector?.('details')?.open;
     const allNotices=(planning.notices || []).slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))), notices=allNotices.slice(-3).reverse();
     const noticeText=(notice)=>esc(notice.type==='schedule-published' ? `${C.scheduled} · ${notice.periodKey||''}` : notice.type==='swap-approved' ? `${C.exchange} · ${prettyDay(notice.day)} ↔ ${prettyDay(notice.otherDay)}` : `${C.claim} · ${prettyDay(notice.day)}`);
+    /* Le fil du serveur plafonne à 20 notices : quand le fil est plein, le
+     * passé de l'employé (débord de la liste, puis archive) se relit page
+     * par page dans /api/employee, action planning-notices-page. */
+    const feedFull=allNotices.length>=20;
+    const olderBlock=()=>{
+      if(!older.opened) return feedFull?`<div class="kep-older"><button class="kep-btn" type="button" data-kep-older${older.busy?' disabled':''}>${esc(C.olderNotices)}</button></div>`:'';
+      const olderIds=new Set(allNotices.map((item)=>String(item.id||'')));
+      const list=older.items.filter((item)=>!olderIds.has(String(item.id||''))).map((item)=>`<div class="kep-notice">${noticeText(item)}</div>`).join('');
+      const tail=older.failed?`<div class="kep-older"><button class="kep-btn" type="button" data-kep-older${older.busy?' disabled':''}>${esc(C.olderError)}</button></div>`
+        :older.next!==null?`<div class="kep-older"><button class="kep-btn" type="button" data-kep-older${older.busy?' disabled':''}>${esc(C.olderMore)}</button></div>`
+        :(older.items.length?'':`<div class="kep-older kep-empty">${esc(C.olderNone)}</div>`);
+      return list?`<div class="kep-list">${list}</div>${tail}`:tail;
+    };
     const pending=requests.filter((item)=>item.status==='pending').length + open.filter((item)=>item.mine&&item.status==='claimed').length + swaps.filter((item)=>item.mine&&['open','claimed'].includes(item.status)).length;
     const statusLabel=(value)=>({pending:C.pending,approved:'✓',rejected:'×',cancelled:'×',open:C.open,claimed:C.pending,assigned:'✓'}[value] || value);
     card.innerHTML = `<div class="kep-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><div class="kep-title">${esc(C.title)}</div><div class="kep-sub">${esc(C.sub)}</div></div></div>
       <div class="kep-metrics"><div class="kep-metric"><b>${shifts.length}</b><span>${esc(C.scheduled)}</span></div><div class="kep-metric"><b>${open.filter((item)=>item.status==='open').length+swaps.filter((item)=>item.status==='open'&&!item.mine).length}</b><span>${esc(C.opportunities)}</span></div><div class="kep-metric"><b>${pending}</b><span>${esc(C.pending)}</span></div></div>
       <div class="kep-actions"><button class="kep-btn" type="button" data-kep="availability">${esc(C.availability)}</button><button class="kep-btn primary" type="button" data-kep="leave">${esc(C.leave)}</button></div>
-      ${notices.length?`<section class="kep-section"><div class="kep-section-head"><b>${esc(C.notices)}</b><span class="kep-count">${notices.length}</span></div><div class="kep-list">${notices.map((notice)=>`<div class="kep-notice">${esc(notice.type==='schedule-published' ? `${C.scheduled} · ${notice.periodKey||''}` : notice.type==='swap-approved' ? `${C.exchange} · ${prettyDay(notice.day)} ↔ ${prettyDay(notice.otherDay)}` : `${C.claim} · ${prettyDay(notice.day)}`)}</div>`).join('')}</div>${allNotices.length>3?`<details><summary>${esc(C.history)} (${allNotices.length-3})</summary><div class="kep-list">${allNotices.slice(0,-3).map(n=>`<div class="kep-notice">${noticeText(n)}</div>`).join('')}</div></details>`:''}</section>`:''}
+      ${notices.length?`<section class="kep-section"><div class="kep-section-head"><b>${esc(C.notices)}</b><span class="kep-count">${notices.length}</span></div><div class="kep-list">${notices.map((notice)=>`<div class="kep-notice">${esc(notice.type==='schedule-published' ? `${C.scheduled} · ${notice.periodKey||''}` : notice.type==='swap-approved' ? `${C.exchange} · ${prettyDay(notice.day)} ↔ ${prettyDay(notice.otherDay)}` : `${C.claim} · ${prettyDay(notice.day)}`)}</div>`).join('')}</div>${allNotices.length>3?`<details><summary>${esc(C.history)} (${allNotices.length-3})</summary><div class="kep-list">${allNotices.slice(0,-3).map(n=>`<div class="kep-notice">${noticeText(n)}</div>`).join('')}</div>${olderBlock()}</details>`:''}</section>`:''}
       <section class="kep-section"><div class="kep-section-head"><b>${esc(C.shifts)}</b><span class="kep-count">${shifts.length}</span></div>${shifts.length?`<div class="kep-list">${shifts.map((shift)=>`<div class="kep-row"><div class="kep-row-main"><b>${esc(prettyDay(shift.day))}</b><span>${esc(shift.start)}–${esc(shift.end)}</span></div><div class="kep-row-actions"><button class="kep-btn" type="button" data-kep-swap="${esc(shift.day)}">${esc(C.exchange)}</button></div></div>`).join('')}</div>`:`<div class="kep-empty">${esc(C.empty)}</div>`}</section>
       ${open.length?`<section class="kep-section"><div class="kep-section-head"><b>${esc(C.open)}</b><span class="kep-count">${open.length}</span></div><div class="kep-list">${open.map((item)=>`<div class="kep-row"><div class="kep-row-main"><b>${esc(prettyDay(item.day))} · ${esc(item.start)}–${esc(item.end)}</b><span>${esc([item.role,item.note].filter(Boolean).join(' · '))}</span></div><div class="kep-row-actions">${item.mine?`<em class="kep-status ${esc(item.status)}">${esc(statusLabel(item.status))}</em>${item.status==='claimed'?`<button class="kep-btn" data-kep-op-cancel="${esc(item.id)}">${esc(C.cancel)}</button>`:''}`:`<button class="kep-btn primary" data-kep-open="${esc(item.id)}">${esc(C.claim)}</button>`}</div></div>`).join('')}</div></section>`:''}
       ${swaps.length?`<section class="kep-section"><div class="kep-section-head"><b>${esc(C.swaps)}</b><span class="kep-count">${swaps.length}</span></div><div class="kep-list">${swaps.map((item)=>`<div class="kep-row"><div class="kep-row-main"><b>${esc(prettyDay(item.day))} · ${esc(item.shift.start||'')}–${esc(item.shift.end||'')}</b><span>${esc((lastData.colleagues||[]).find((person)=>person.id===item.memberId)?.name||'')}</span></div><div class="kep-row-actions">${item.mine||item.claimantId?`<em class="kep-status ${esc(item.status)}">${esc(statusLabel(item.status))}</em>${['open','claimed'].includes(item.status)?`<button class="kep-btn" data-kep-op-cancel="${esc(item.id)}">${esc(C.cancel)}</button>`:''}`:`<button class="kep-btn primary" data-kep-swap-claim="${esc(item.id)}">${esc(C.offer)}</button>`}</div></div>`).join('')}</div></section>`:''}
@@ -184,7 +206,34 @@
     overlay.querySelector('form').addEventListener('submit', submit);
     focusSheet(overlay);
   }
+  /* Une page de l'archive se demande uniquement au toucher du bouton (le fil
+   * du GET reste léger) ; deux touches rapprochées n'en chargent qu'une. Sans
+   * re-rendu pendant l'envoi : reconstruire la carte ici avalerait la suite
+   * des clics. */
+  async function loadOlderNotices(button) {
+    if (older.busy || !api() || !api().planningNoticesPage) return;
+    older.busy = true;
+    if (button && button.isConnected) button.disabled = true;
+    const offset = older.next == null ? 0 : older.next;
+    try {
+      const data = await api().planningNoticesPage(offset);
+      if (!data || !Array.isArray(data.items)) throw new Error('planning-notices-page');
+      const seen = new Set(older.items.concat((lastData && lastData.planning && lastData.planning.notices) || []).map((item) => String(item.id || '')));
+      data.items.forEach((item) => {
+        if (!item || seen.has(String(item.id || ''))) return;
+        seen.add(String(item.id || ''));
+        older.items.push(item);
+      });
+      older.next = data.next === null || data.next === undefined ? null : data.next;
+      older.opened = true;
+      older.failed = false;
+    } catch (_) { older.failed = true; }
+    older.busy = false;
+    render();
+  }
   async function onCardClick(event) {
+    const olderBtn=event.target.closest('[data-kep-older]');
+    if(olderBtn){void loadOlderNotices(olderBtn);return;}
     const cancel=event.target.closest('[data-kep-cancel]');
     if (cancel && !busy) { busy=true; cancel.disabled=true; try { await api().cancelPlanningRequest(cancel.dataset.kepCancel); await refresh(); } catch (_) { cancel.disabled=false; } finally { busy=false; } return; }
     const cancelOpportunity=event.target.closest('[data-kep-op-cancel]');

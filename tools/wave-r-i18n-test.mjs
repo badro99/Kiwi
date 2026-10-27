@@ -1,8 +1,9 @@
+import pressingSource from './pressing-test-source.cjs';
 import { bookingTestSource } from './booking-test-source.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-const read=p=>fs.readFileSync('assets/'+p,'utf8');
+const read=p=>pressingSource.readFileSync('assets/'+p,'utf8');
 const cases={
  'i18n#0':()=>{const s=read('clients-book.js');for(const text of ['Aucun avoir','Les crédits boutique émis à ce client apparaîtront ici.','Avoirs · solde'])assert.ok(s.includes("tr('"+text+"')"));const dict=read('caisse-lang.js');assert.ok(dict.includes('Store credits · balance'));assert.ok(dict.includes('الأرصدة الدائنة · الرصيد'))},
  'i18n#1 returns#1':()=>{const s=read('pages-pro/boutique-promos-returns.js');assert.ok(!s.includes("toLocaleDateString('fr-FR'"));assert.equal((s.match(/toLocaleDateString\(_rL\('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'\)/g)||[]).length,3)},

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProSplit from './orderpro-split-source.cjs';
 // Icons: Material Symbols Outlined from assets/icons/material/, and nothing else.
 // Guards the five things that slipped before 2026-10-12 (see
 // docs/audits/2026-10-12-icon-migration.md): a retouched or non-Material file in
@@ -212,10 +213,11 @@ let total = 0;
 const caisseParts = new Set(JSON.parse(read('tools/fixtures/caisse-app/workflows.json')).files);
 const serveurParts = new Set([...serveurSource.fragments().map(m => m.file), JSON.parse(read('tools/fixtures/serveur/split.json')).bundle]);
 // Count extracted caisse and core code at its original owner.
-const coreParts = new Set(['assets/daterange/renderers.js', 'assets/agent/ui.js',
+const pressingSplit = JSON.parse(read('tools/fixtures/pressing/split.json'));
+const coreParts = new Set([pressingSplit.owner.file, ...pressingSplit.parts.map(part => part.file), ...JSON.parse(read('tools/fixtures/home-split/split.json')).parts.map(p => p.file), 'assets/orderpro/session.js', 'assets/orderpro/table.js', 'assets/orderpro/menu.js', 'assets/orderpro/cart.js', 'assets/orderpro/payment.js', 'assets/daterange/renderers.js', 'assets/agent/ui.js',
   ...JSON.parse(read('tools/fixtures/venues-split/split.json')).parts]);
 for (const f of files.filter(file => !serveurParts.has(file) && !caisseParts.has(file) && !coreParts.has(file))) {
-  const n = countDataLucide(f === 'assets/serveur-app.js' ? serveurSource() : f === 'assets/caisse-app.js' ? caisseWorkflowSource.appSource() : coreTestSource.readFileSync(path.join(ROOT, f), 'utf8'));
+  const n = countDataLucide(f === 'assets/orderpro-page.js' ? orderProSplit.orderProScriptSource() : f === 'assets/serveur-app.js' ? serveurSource() : f === 'assets/caisse-app.js' ? caisseWorkflowSource.appSource() : coreTestSource.readFileSync(path.join(ROOT, f), 'utf8'));
   total += n;
   const was = baseline[f] || 0;
   if (n > was) grew.push(`${f} ${was} → ${n}`);

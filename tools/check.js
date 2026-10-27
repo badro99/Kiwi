@@ -109,7 +109,7 @@ const list = (dir, ext) => fs.readdirSync(dir)
   .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
-const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/interactive', 'assets/daterange', 'assets/agent', 'assets/pos-maison', 'assets/pos-boutique', 'assets/team', 'assets/printer', 'assets/serveur', 'assets/stock', 'assets/pages-pro'].map(dir => list(path.join(ROOT, dir), '.js')));
+const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/interactive', 'assets/daterange', 'assets/agent', 'assets/pos-maison', 'assets/pos-boutique', 'assets/team', 'assets/planning', 'assets/printer', 'assets/serveur', 'assets/stock', 'assets/pages-pro', 'assets/menu-catalog', 'assets/pressing'].map(dir => list(path.join(ROOT, dir), '.js')));
 const CSS_FILES = list(path.join(ROOT, 'assets'), '.css');
 const HTML_FILES = list(ROOT, '.html');
 
@@ -650,7 +650,10 @@ for (const test of [
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',
   'queue-open-visit-unpaid-test.mjs',
+  'planning-split-test.mjs',
   'planning-core-test.mjs',
+  /* Notices au-delà du plafond de 200 : archivées, relues page par page. */
+  'planning-notices-archive-test.mjs',
   'wave-p-merge-test.mjs',
   'planning-layout-test.mjs',
   /* Le planning sur un téléphone (390 × 844) : un jour à la fois, une ligne
@@ -729,6 +732,7 @@ for (const test of [
   'team-properties-test.mjs',
   'team-split-test.mjs',
   'team-catalog-split-test.mjs',
+  'team-owners-split-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
   'source-assertion-ratchet-test.mjs',
@@ -763,6 +767,8 @@ for (const test of [
   'service-interconnectivity-test.mjs',
   /* Un employé non pointé ne peut écrire ni commande ni paiement : refus serveur. */
   'team-offshift-server-test.mjs',
+  'pressing-split-test.mjs',
+  'pressing-boundary-test.mjs',
   'pressing-workspace-test.js',
   'pressing-auto-ready-test.mjs',
   /* Pressing et hôtel : un bouton d'espèces règle le montant reçu, il ne l'ajoute plus au dû. */
@@ -1564,6 +1570,7 @@ section('Whole-project regressions');
     'takeout-kds-ready-test.mjs',
     'caisse-godmode-toggles-test.mjs',
     'kitchen-print-queue-test.mjs',
+    'kitchen-recovery-test.mjs',
     'kitchen-void-slip-test.mjs',
     'course-firing-browser-test.mjs',
     'close-open-tables-browser-test.mjs',
@@ -1603,6 +1610,9 @@ section('Whole-project regressions');
     'resto-carte-test.js',
     'restaurant-menu-route-test.js',
     'menu-workspace-split-test.mjs',
+    'menu-catalog-split-test.mjs',
+    'menu-merge-properties-test.mjs',
+    'menu-catalog-boundary-test.mjs',
     'menu-pull-route-test.js',
     'restaurant-menu-performance-test.js',
     'menu-pairs-test.js',
@@ -1715,12 +1725,17 @@ section('Whole-project regressions');
     'boutique-ticket-owner-test.mjs',
     'caisse-app-split-test.mjs',
     'core-split-test.mjs',
+    'home-split-test.mjs',
+    'home-boundary-test.mjs',
+    'home-sparkline-a11y-test.mjs',
     'dashboard-first-use-test.mjs',
     'serveur-split-test.mjs',
+    'serveur-notice-archive-test.mjs',
     'serveur-identity-test.mjs',
     'stock-split-test.mjs',
+    'stock-controller-split-test.mjs',
     'stock-strings-split-test.mjs',
-    'hotel-split-test.mjs',
+    'hotel-split-test.mjs', 'hotel-reception-split-test.mjs',
     'interactive-split-test.mjs',
     'venues-split-test.mjs',
     'venues-split-browser-test.mjs',
@@ -1738,6 +1753,7 @@ section('Whole-project regressions');
     'payroll-properties-test.mjs',
     'customer-balance-properties-test.mjs',
     'credit-book-properties-test.mjs',
+    'credit-book-store-test.mjs',
     'clients-properties-test.mjs',
     'queues-wave-n-test.mjs',
     'clients-display-properties-test.mjs',
@@ -1829,6 +1845,8 @@ section('Whole-project regressions');
     'formula-protocol-test.mjs',
     'formula-child-options-test.mjs',
     'formula-kitchen-paper-test.mjs',
+    'orderpro-split-test.mjs',
+    'orderpro-boundary-test.mjs',
     'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',
     'orderpro-invalid-options-test.mjs',
@@ -1989,6 +2007,7 @@ section('Whole-project regressions');
     'register-phone-tickets-test.mjs',
     'order-queue-tenant-test.mjs',
     'clients-sync-tenant-test.mjs',
+    'clients-split-test.mjs',
     'clients-book-contrast-test.mjs',
     'card-confirm-center-test.mjs',
     'scan-view-test.mjs',
@@ -2223,6 +2242,7 @@ section('Whole-project regressions');
     'intake-storage-fault-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
+    'admin-api-owner-test.mjs',
     'legacy-scan-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les

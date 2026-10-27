@@ -26,6 +26,7 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import orderProSplit from './orderpro-split-source.cjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,10 +43,10 @@ export const DOC = 'docs/audits/2026-10-12-icon-migration.md';
 export const SUBSETS = {
   ordering: {
     out: 'assets/material-icons.ordering.js',
-    from: ['OrderPro.html', 'assets/orderpro-page.js', 'assets/orderpro-guest.js', 'assets/orderpro-menu.js', 'assets/orderpro-demo.js', 'assets/orderpro-boutique.js'],
+    from: ['OrderPro.html', 'assets/orderpro-page.js', 'assets/orderpro/session.js', 'assets/orderpro/table.js', 'assets/orderpro/menu.js', 'assets/orderpro/cart.js', 'assets/orderpro/payment.js', 'assets/orderpro-guest.js', 'assets/orderpro-menu.js', 'assets/orderpro-demo.js', 'assets/orderpro-boutique.js'],
     /* A dish's icon comes from the merchant's menu: the ones the page gives a
        tile colour (ICON_CLASS), and the fallback glyph. */
-    also: ['coffee', 'croissant', 'cookie', 'sandwich', 'glass-water', 'utensils', 'help'],
+    also: ['coffee', 'croissant', 'cookie', 'sandwich', 'glass-water', 'utensils', 'help', 'moon'],
   },
 };
 const GENERATED = (rel) => rel === RUNTIME || Object.values(SUBSETS).some((x) => x.out === rel);
@@ -356,7 +357,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
     const base = JSON.parse(read(BASELINE_FILE));
     const next = {};
     for (const f of Object.keys(base).sort()) {
-      const now = files.includes(f) ? countDataLucide(read(f)) : 0;
+      const now = files.includes(f) ? countDataLucide(f === 'assets/orderpro-page.js' ? orderProSplit.orderProScriptSource() : read(f)) : 0;
       if (now > 0) next[f] = Math.min(now, base[f]);
     }
     writeFileSync(path.join(ROOT, BASELINE_FILE), JSON.stringify(next, null, 2) + '\n');

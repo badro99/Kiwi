@@ -205,7 +205,7 @@ function scan() {
     }
   }
 
-  for (const file of ['assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js']) {
+  for (const file of ['assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js']) {
     if (exists(file)) for (const m of read(file).matchAll(SHELL_RE()))
       note(m[1], m[2], { file, kind: 'lazy', stamp: m[2] });
   }
@@ -244,9 +244,15 @@ function scan() {
       note(m[1], m[2], { file: 'assets/dashboard-extra.js', kind: 'lazy', stamp: m[2] });
   }
 
+  // OrderPro's ordered private registry has literal, ordered asset URLs.
+  if (exists('assets/orderpro-page.js')) {
+    for (const m of read('assets/orderpro-page.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/orderpro-page.js', kind: 'registry', stamp: m[2] });
+  }
+
   // Explicit ES module entries: static and dynamic import URLs are stamp sites.
-  const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js'];
-  for (const dir of ['assets/pos-maison', 'assets/pos-boutique']) {
+  const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js', 'assets/team-hours.js', 'assets/team.js', 'assets/pressing-caisse.js'];
+  for (const dir of ['assets/pos-maison', 'assets/pos-boutique', 'assets/pressing']) {
     if (exists(dir)) retail.push(...fs.readdirSync(path.join(ROOT, dir)).filter(f => f.endsWith('.js')).map(f => dir + '/' + f));
   }
   for (const file of retail.filter(exists)) {

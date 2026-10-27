@@ -1,3 +1,7 @@
+/* Private OrderPro boutique bridge. Reads: $, escapeHtml, money, t, toCents.
+ * Browser capabilities: tools/fixtures/orderpro/interfaces.json. Original bodies below are unchanged. */
+KiwiOrderMenu.orderProParts.run('boutique', function (scope) {
+  with (scope) {
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · assets/orderpro-boutique.js · OrderPro's boutique vertical: the
  * product list and the barcode lookup, consultation only.
@@ -239,3 +243,7 @@ function resolveScan(code) {
     if (e.key === 'Enter') { e.preventDefault(); resolveScan(manual.value); }
   });
 })();
+
+    return Object.freeze({ bootBoutique, stockOf, stockPill, renderBoutique, openBoutiqueItem, openSheet, closeSheet, openScanner, closeScanner, resolveScan });
+  }
+});

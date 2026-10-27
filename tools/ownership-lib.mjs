@@ -11,6 +11,10 @@ export function analyse(source, file) {
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   if (ast.parseDiagnostics.length) throw new Error(`${file}: cannot parse JavaScript`);
   const definitions = new Set(), reads = new Map();
+  /* An ES module's top-level bindings are private to the module, not page
+     globals: only window/globalThis writes define names there. */
+  const isModule = ast.statements.some(s => ts.isImportDeclaration(s) || ts.isExportDeclaration(s) || ts.isExportAssignment(s)
+    || (ts.canHaveModifiers(s) && (ts.getModifiers(s) || []).some(m => m.kind === ts.SyntaxKind.ExportKeyword)));
   const scopes = new Map(), functions = new Map(), pending = [], invoked = new Set();
   const isFunction = n => ts.isFunctionLike(n);
   const bind = (name, scope) => {
@@ -38,9 +42,9 @@ export function analyse(source, file) {
       let target = current;
       if (!(n.parent.flags & ts.NodeFlags.BlockScoped)) while (target.parent && !target.fn) target = target.parent;
       bind(n.name, target);
-      if (target === root && ts.isIdentifier(n.name)) definitions.add(n.name.text);
+      if (target === root && !isModule && ts.isIdentifier(n.name)) definitions.add(n.name.text);
     }
-    if ((ts.isFunctionDeclaration(n) || ts.isClassDeclaration(n)) && n.name && scope === root) definitions.add(n.name.text);
+    if ((ts.isFunctionDeclaration(n) || ts.isClassDeclaration(n)) && n.name && scope === root && !isModule) definitions.add(n.name.text);
     ts.forEachChild(n, child => collect(child, current));
   }
   collect(ast, root);
@@ -94,7 +98,7 @@ export function analyse(source, file) {
         ((ts.isVariableDeclaration(p) || ts.isParameter(p) || isFunction(p) || ts.isClassDeclaration(p)) && p.name === n) ||
         ts.isBindingElement(p) || ts.isLabeledStatement(p) || ts.isBreakStatement(p) || ts.isContinueStatement(p);
       let local = false;
-      for (let s = scope; s && s !== root; s = s.parent) if (s.locals.has(n.text)) { local = true; break; }
+      for (let s = scope; s && (s !== root || isModule); s = s.parent) if (s.locals.has(n.text)) { local = true; break; }
       if (!excluded && !local && !hosts.has(n.text) && !write) addRead(n.text, eager);
     }
     ts.forEachChild(n, child => visit(child, scope, eager));

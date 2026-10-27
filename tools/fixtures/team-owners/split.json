@@ -1,0 +1,958 @@
+{
+  "files": [
+    "assets/team.js",
+    "assets/team/profile-ui.js",
+    "assets/team-hours.js"
+  ],
+  "parts": [
+    {
+      "name": "memberState",
+      "file": "assets/team/member-state.js",
+      "prefix": "/* Owner: memberState. Exports create() through KiwiTeamParts.memberState.\n * Window reads: Kiwi, KiwiCloudDoc, KiwiConfig, KiwiPlanningCore, KiwiVenue, __kiwiTeamV2, __kiwiTenantPurging, dispatchEvent.\n * Instance exports: isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current, setPageActive, resetReadFailure.\n * lexical imports: fetchDeadline, teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey, memberFullName, restorePeriodLock, buildPeriod, render, trLang, toast, seedFor, seedHours.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.memberState = Object.freeze({ create(deps) {\n  const {\n    fetchDeadline,\n    teamKey,\n    teamVenueKey,\n    teamSlug,\n    memberBelongsToStore,\n    scopeTeamDoc,\n    persistableTeamKey,\n    memberFullName,\n    restorePeriodLock,\n    buildPeriod,\n    render,\n    trLang,\n    toast,\n    seedFor,\n    seedHours,\n  } = deps;\n  let pageActive = false;\n  /* ═══════════════ LES CODES NE RESTENT PAS SUR LE DISQUE ═══════════════════\n   * Chaque salarié porte le code à quatre chiffres qui lui ouvre la caisse et\n   * l'app employé (`pinCode` / `password`). Il était écrit EN CLAIR dans\n   * localStorage (kiwiTeamV2:custom) : lisible dans n'importe quel navigateur où\n   * le patron a ouvert Équipe (CLAUDE.md §6). Le patron, lui, doit continuer de\n   * le LIRE ici — c'est voulu, voir functions/api/store.js › stripTeamCodes.\n   *\n   * La règle : le disque ne garde un code que tant que le serveur ne l'a pas.\n   *   · le code vit en mémoire (memberState.current()), comme avant ;\n   *   · persistTeams() l'ôte de la copie locale d'un salarié SEULEMENT si le\n   *     serveur a confirmé ce code (`serverCodes` : lu par hydrateCodes(), ou\n   *     accepté par une remontée réussie). Un code que le serveur n'a pas ne\n   *     quitte jamais le disque : jamais de perte ;\n   *   · un salarié dont le code a été ôté porte `hasCode: true` (jamais le code),\n   *     et le patron le retrouve au chargement depuis la copie serveur.\n   *\n   * ⚠ Le danger n'est pas la lecture, c'est le RENVOI. La remontée du roster\n   * (staff_pins, le document `team`, d'où l'app employé tire ses accès)\n   * REMPLACE ce que le serveur porte par ce que le navigateur envoie : un\n   * navigateur qui a oublié des codes les effacerait chez le serveur, et les\n   * caissières se retrouveraient devant un pavé qui n'ouvre plus. Donc, tant\n   * qu'un salarié a `hasCode` sans code en mémoire (« non résolu »), RIEN ne part :\n   * ni publishPins(), ni la remontée du document (canPush de cloud-doc.js). */\n  /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════\n   * The till does not read this roster: it asks /api/config for the store's\n   * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the\n   * onboarding wizard ever wrote there, so a cashier hired afterwards had a code\n   * on their profile that the till had never heard of — the owner typed it and\n   * got \"Code incorrect\". Every roster change now republishes.\n   *\n   * /api/config REPLACES the store's whole code list, so we always send the FULL\n   * roster — sending only the new hire would silently revoke everyone else,\n   * including the owner's own code from onboarding. Real (custom, onboarded)\n   * venues only: a demo venue has no session, and pushing seeded demo staff into\n   * a real merchant's row is exactly the leak the venue split exists to prevent.\n   * Fail-soft — no endpoint, no session, offline: the roster is still saved\n   * locally and this is a no-op. */\n  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════\n   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs\n   * taux horaires, et quatre semaines de planning ne vivaient que dans le\n   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi\n   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale\n   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il\n   * faut le ressaisir à chaque appareil.\n   *\n   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte\n   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais\n   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.\n   *\n   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue\n   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge\n   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant\n   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.\n   *\n   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde\n   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster\n   * là où il a toujours été. */\n",
+      "suffix": "  return Object.freeze({ isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current() { return window.__kiwiTeamV2; }, setPageActive(value) { pageActive = value; }, resetReadFailure() { teamReadFailed = false; } });\n  } });\n})();\n",
+      "fragments": [
+        {
+          "start": 4674,
+          "end": 4746,
+          "offset": 5315,
+          "length": 72,
+          "replacement": "  function isCode(...args) { return memberState.isCode(...args); }\n",
+          "sha256": "2ceb78879ae8a23dc1fea1f1a236d7b53b524a881746cb15353a024949aee4c8"
+        },
+        {
+          "start": 6370,
+          "end": 6548,
+          "offset": 5388,
+          "length": 178,
+          "replacement": "  function memberCode(...args) { return memberState.memberCode(...args); }\n",
+          "sha256": "d97fef568c7d2d14a37e01cf93f7e39ea9afdc4cfe1fb09dc2622196463ce812"
+        },
+        {
+          "start": 6548,
+          "end": 6626,
+          "offset": 5567,
+          "length": 78,
+          "replacement": "  function codeUnresolved(...args) { return memberState.codeUnresolved(...args); }\n",
+          "sha256": "d8e05670532f5f914edff3162f7010f00105f6e1e561455c9baa6f5aa47d6703"
+        },
+        {
+          "start": 6626,
+          "end": 6739,
+          "offset": 5646,
+          "length": 113,
+          "replacement": "  function rosterHasUnresolved(...args) { return memberState.rosterHasUnresolved(...args); }\n",
+          "sha256": "a9ca4ac8fa9d870459cca04c6d04287d8f85592dbdfab14cbd583da2289f26a0"
+        },
+        {
+          "start": 6823,
+          "end": 7172,
+          "offset": 5760,
+          "length": 349,
+          "replacement": "  function diskMembers(...args) { return memberState.diskMembers(...args); }\n",
+          "sha256": "9a0e3c510bea1c4c215dd21b234471f66e166d76363a4ef52cfc8d5e5331b643"
+        },
+        {
+          "start": 7261,
+          "end": 7477,
+          "offset": 6110,
+          "length": 216,
+          "replacement": "  function outboundMembers(...args) { return memberState.outboundMembers(...args); }\n",
+          "sha256": "ac5d79c67daf4ebccd5e385b75786b8cd9414ee631ac62020f500240d8367504"
+        },
+        {
+          "start": 7596,
+          "end": 7993,
+          "offset": 6327,
+          "length": 397,
+          "replacement": "  function fillCodes(...args) { return memberState.fillCodes(...args); }\n",
+          "sha256": "882d4223b856ad774daabab72032fd8dede13e3fab064777b6fcefbf96890655"
+        },
+        {
+          "start": 8457,
+          "end": 9245,
+          "offset": 6725,
+          "length": 788,
+          "replacement": "  function applyServerCodes(...args) { return memberState.applyServerCodes(...args); }\n",
+          "sha256": "408f6d3624bac2c70d16bf0730dbd6a7ae41aa8d88cf3d902f2b47ec0c184aec"
+        },
+        {
+          "start": 9245,
+          "end": 9287,
+          "offset": 7514,
+          "length": 42,
+          "replacement": "  /* team-owner:memberState:serverCodes */\n",
+          "sha256": "2506885b7ea1c62798fffc970edcbfeb5271ba8967374939ddc1c72991427531"
+        },
+        {
+          "start": 10329,
+          "end": 11552,
+          "offset": 7557,
+          "length": 1223,
+          "replacement": "  function publishPins(...args) { return memberState.publishPins(...args); }\n",
+          "sha256": "791e45628cad1d04e70ec61b08086cdc31dadfee100dbed9395e8729f734804c"
+        },
+        {
+          "start": 24785,
+          "end": 24880,
+          "offset": 8781,
+          "length": 95,
+          "replacement": "  function getShifts(...args) { return memberState.getShifts(...args); }\n",
+          "sha256": "73b3609d74703bebf6a6dd625634078302d677f77ef95facb62c58e82f20940d"
+        },
+        {
+          "start": 27040,
+          "end": 27079,
+          "offset": 8877,
+          "length": 39,
+          "replacement": "  /* team-owner:memberState:LS_TEAM */\n",
+          "sha256": "01e27585065faaeacc2ec4a8a4c60f7e0a862f00ce93349b74d49630d7968230"
+        },
+        {
+          "start": 27754,
+          "end": 27898,
+          "offset": 8917,
+          "length": 144,
+          "replacement": "  function teamAccount(...args) { return memberState.teamAccount(...args); }\n",
+          "sha256": "ed3a097e8a48a4b8647f870b309595229f0437963ceebc7f264b586055da328c"
+        },
+        {
+          "start": 27898,
+          "end": 27936,
+          "offset": 9062,
+          "length": 38,
+          "replacement": "  /* team-owner:memberState:ROSTER_ACCOUNT */\n",
+          "sha256": "76ef2e177a55d8590adb19665d8ff3b34ff229412213c693325d96e59251038f"
+        },
+        {
+          "start": 27936,
+          "end": 28121,
+          "offset": 9101,
+          "length": 185,
+          "replacement": "  function rosterWriteBlocked(...args) { return memberState.rosterWriteBlocked(...args); }\n",
+          "sha256": "a0d3f42b3ce3337855e6a56e70dd92f34247b50ac8f483ed980115762d01f63e"
+        },
+        {
+          "start": 28121,
+          "end": 29201,
+          "offset": 9287,
+          "length": 1080,
+          "replacement": "  function loadCustomTeams(...args) { return memberState.loadCustomTeams(...args); }\n",
+          "sha256": "b0beb3159b593a6a657af25719183d539d52120f37520eb89cf4a2ffb5c21501"
+        },
+        {
+          "start": 29201,
+          "end": 29228,
+          "offset": 10368,
+          "length": 27,
+          "replacement": "  /* team-owner:memberState:REMOVED_CAP */\n",
+          "sha256": "1ec800b7b06a58357ffea32d6ca50714fea5d11d894086c87a641213cf4798f4"
+        },
+        {
+          "start": 29228,
+          "end": 29660,
+          "offset": 10396,
+          "length": 432,
+          "replacement": "  function cleanRemoved(...args) { return memberState.cleanRemoved(...args); }\n",
+          "sha256": "b33c729279f875e4e8449ca55705d41d4620025394fa0266f706b04e004e5ba5"
+        },
+        {
+          "start": 29660,
+          "end": 29744,
+          "offset": 10829,
+          "length": 84,
+          "replacement": "  function mergeRemoved(...args) { return memberState.mergeRemoved(...args); }\n",
+          "sha256": "8fb507f372dd3e269287861f5ee4e57291944aaa794c8f5c6a042f3016f1c3d1"
+        },
+        {
+          "start": 29744,
+          "end": 29830,
+          "offset": 10914,
+          "length": 86,
+          "replacement": "  /* team-owner:memberState:LOCK_KEY_RE */\n",
+          "sha256": "51c764b88d593ee619bea479a1892015a468bd5226c95f459f5feaaa3eb908c1"
+        },
+        {
+          "start": 29830,
+          "end": 30116,
+          "offset": 11001,
+          "length": 286,
+          "replacement": "  function cleanLocks(...args) { return memberState.cleanLocks(...args); }\n",
+          "sha256": "916d70e0d3d5be58e9e0e83be9704c64bcee83b5ee578897bbf65effc326936e"
+        },
+        {
+          "start": 30116,
+          "end": 30354,
+          "offset": 11288,
+          "length": 238,
+          "replacement": "  function mergeLocks(...args) { return memberState.mergeLocks(...args); }\n",
+          "sha256": "d66144c48389348afbd2036ba889bc718effec7662a6d6bb078c0c8e14c5b6ae"
+        },
+        {
+          "start": 30594,
+          "end": 31532,
+          "offset": 11527,
+          "length": 938,
+          "replacement": "  function persistTeams(...args) { return memberState.persistTeams(...args); }\n",
+          "sha256": "421d0891879d7a96face0b8fe0e61d4a03638165aa2d9886a4746602a1ab5dff"
+        },
+        {
+          "start": 31532,
+          "end": 32095,
+          "offset": 12466,
+          "length": 563,
+          "replacement": "  function afterTeamChange(...args) { return memberState.afterTeamChange(...args); }\n",
+          "sha256": "a1fea2ea026702b8cc5620a3c5313e106153e6c14ba49def2c15c257c3908158"
+        },
+        {
+          "start": 32095,
+          "end": 32386,
+          "offset": 13030,
+          "length": 291,
+          "replacement": "  function saveCustomTeams(...args) { return memberState.saveCustomTeams(...args); }\n",
+          "sha256": "0606cdb352bad5167fcaad882405f69b4b567ff21fdf75796f58144d2afc7eda"
+        },
+        {
+          "start": 36721,
+          "end": 37222,
+          "offset": 13322,
+          "length": 501,
+          "replacement": "  function mergeByDay(...args) { return memberState.mergeByDay(...args); }\n",
+          "sha256": "23bbfda7ce869bbd87fbe31ad7fb47d63432fcd08f4d92ada6c4ae92b406c8ad"
+        },
+        {
+          "start": 37222,
+          "end": 38545,
+          "offset": 13824,
+          "length": 1323,
+          "replacement": "  function mergeTeamDoc(...args) { return memberState.mergeTeamDoc(...args); }\n",
+          "sha256": "c9cd97e92d4169ab5d8062b16a3bea63c57c22ddbc88bab96f825562b2143e3c"
+        },
+        {
+          "start": 38546,
+          "end": 38570,
+          "offset": 15148,
+          "length": 24,
+          "replacement": "  /* team-owner:memberState:teamCloud */\n",
+          "sha256": "42bb234034a84995cf9fb65ab44068cf8a051ef7c74da983fe75d61db9179652"
+        },
+        {
+          "start": 38570,
+          "end": 41424,
+          "offset": 15173,
+          "length": 2854,
+          "replacement": "  function teamCloudInit(...args) { return memberState.teamCloudInit(...args); }\n",
+          "sha256": "cc1a31f5b1d1e2bcd9dfc93745c26c7ba5c746546b5f56c85eecbbf2f92fc813"
+        },
+        {
+          "start": 41424,
+          "end": 41447,
+          "offset": 18028,
+          "length": 23,
+          "replacement": "  /* team-owner:memberState:heldPush */\n",
+          "sha256": "4a5e5e5547b523c58e783c5a6f82920bb174f145d5a6460ec1b49c2905b8b2af"
+        },
+        {
+          "start": 41980,
+          "end": 42010,
+          "offset": 18052,
+          "length": 30,
+          "replacement": "  /* team-owner:memberState:teamReadFailed */\n",
+          "sha256": "1fd7e1c6b0b7c93b88a4811f242e99cd074c50e21f31dc02b34d9c59c6ca6daf"
+        },
+        {
+          "start": 42010,
+          "end": 42373,
+          "offset": 18083,
+          "length": 363,
+          "replacement": "  function teamReadTimedOut(...args) { return memberState.teamReadTimedOut(...args); }\n",
+          "sha256": "c8e690f0d80750e0fdffa94c9a3cbec25cd7c08aabb5e658f29c24b8725918ca"
+        },
+        {
+          "start": 42373,
+          "end": 43492,
+          "offset": 18447,
+          "length": 1119,
+          "replacement": "  function hydrateCodes(...args) { return memberState.hydrateCodes(...args); }\n",
+          "sha256": "fd855bb6a8244f2e51148e1a0cd6494feab595506d117da726b9c6f44af44c3e"
+        },
+        {
+          "start": 43492,
+          "end": 43663,
+          "offset": 19567,
+          "length": 171,
+          "replacement": "  function teamCloudBind(...args) { return memberState.teamCloudBind(...args); }\n",
+          "sha256": "058f571d1da430c7159b02cd06d5a56a3455d0dbc89db29dbad14008997a2ac1"
+        },
+        {
+          "start": 43663,
+          "end": 43748,
+          "offset": 19739,
+          "length": 85,
+          "replacement": "  function teamCloudPush(...args) { return memberState.teamCloudPush(...args); }\n",
+          "sha256": "b8c2572dc8193af718b5ee1c30c0037f95f82629a03d8f462962d22b8a4e8bfe"
+        },
+        {
+          "start": 43749,
+          "end": 45523,
+          "offset": 19825,
+          "length": 1774,
+          "replacement": "  function ensureVenueData(...args) { return memberState.ensureVenueData(...args); }\n",
+          "sha256": "0ca64d00b799180f01e9eb4794b789fe9584b45eceb067b75ff59ad1b064dc2f"
+        },
+        {
+          "start": 45523,
+          "end": 45613,
+          "offset": 21600,
+          "length": 90,
+          "replacement": "  function getMembers(...args) { return memberState.getMembers(...args); }\n",
+          "sha256": "8098ad1188994d9f908907b67df5a243c7264f892f55935fc7226c36d06bc0db"
+        },
+        {
+          "start": 45613,
+          "end": 45706,
+          "offset": 21691,
+          "length": 93,
+          "replacement": "  function getHours(...args) { return memberState.getHours(...args); }\n",
+          "sha256": "5e78e80966244c390c84c802a652689db07310f76683611eaab3e38331fa42e4"
+        },
+        {
+          "start": 19447,
+          "end": 21028,
+          "offset": 21785,
+          "length": 1581,
+          "replacement": "  const periodOffsets = memberState.periodOffsets;",
+          "sha256": "c1c4f223211a22923ad2e0b1c10719424ec211500e65c94ebf5626789703c2f5"
+        }
+      ],
+      "globals": [
+        "Kiwi",
+        "KiwiCloudDoc",
+        "KiwiConfig",
+        "KiwiPlanningCore",
+        "KiwiVenue",
+        "__kiwiTeamV2",
+        "__kiwiTenantPurging",
+        "dispatchEvent"
+      ],
+      "exports": [
+        "isCode",
+        "memberCode",
+        "codeUnresolved",
+        "rosterHasUnresolved",
+        "diskMembers",
+        "outboundMembers",
+        "fillCodes",
+        "applyServerCodes",
+        "publishPins",
+        "teamAccount",
+        "rosterWriteBlocked",
+        "loadCustomTeams",
+        "cleanRemoved",
+        "mergeRemoved",
+        "cleanLocks",
+        "mergeLocks",
+        "persistTeams",
+        "afterTeamChange",
+        "saveCustomTeams",
+        "mergeByDay",
+        "mergeTeamDoc",
+        "teamCloudInit",
+        "teamReadTimedOut",
+        "hydrateCodes",
+        "teamCloudBind",
+        "teamCloudPush",
+        "ensureVenueData",
+        "getMembers",
+        "getHours",
+        "getShifts",
+        "periodOffsets",
+        "current",
+        "setPageActive",
+        "resetReadFailure"
+      ],
+      "windowPaths": [
+        "window.Kiwi",
+        "window.Kiwi.__teamMerge",
+        "window.Kiwi.__teamMerge.merge",
+        "window.Kiwi.__teamMerge.notice",
+        "window.Kiwi.__teamMerge.remember",
+        "window.Kiwi.__teamMerge.stamp",
+        "window.KiwiCloudDoc",
+        "window.KiwiCloudDoc.attach",
+        "window.KiwiConfig",
+        "window.KiwiConfig.syncPins",
+        "window.KiwiPlanningCore",
+        "window.KiwiPlanningCore.blank",
+        "window.KiwiPlanningCore.merge",
+        "window.KiwiPlanningCore.normalize",
+        "window.KiwiTeamParts",
+        "window.KiwiVenue",
+        "window.KiwiVenue.getCurrentVenueData",
+        "window.__kiwiTeamV2",
+        "window.__kiwiTeamV2.byVenue",
+        "window.__kiwiTeamV2.hoursByVenue",
+        "window.__kiwiTeamV2.locksByVenue",
+        "window.__kiwiTeamV2.planningByVenue",
+        "window.__kiwiTeamV2.removedByVenue",
+        "window.__kiwiTeamV2.shiftsByVenue",
+        "window.__kiwiTenantPurging",
+        "window.dispatchEvent"
+      ]
+    },
+    {
+      "name": "venueScope",
+      "file": "assets/team/venue-scope.js",
+      "prefix": "/* Owner: venueScope. Exports create() through KiwiTeamParts.venueScope.\n * Window reads: KiwiCloudDoc, KiwiPlanningCore, KiwiVenue.\n * Instance exports: teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey.\n * lexical imports: cleanRemoved, mergeByDay, cleanLocks.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.venueScope = Object.freeze({ create(deps) {\n  const {\n    cleanRemoved,\n    mergeByDay,\n    cleanLocks,\n  } = deps;\n",
+      "suffix": "  return Object.freeze({ teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey });\n  } });\n})();\n",
+      "fragments": [
+        {
+          "start": 25721,
+          "end": 26448,
+          "offset": 604,
+          "length": 727,
+          "replacement": "  function teamKey(...args) { return venueScope.teamKey(...args); }\n",
+          "sha256": "e0bc47dd955e04453bb81c35aeda4be0badbeb51daee158bd21db33065c577a6"
+        },
+        {
+          "start": 26448,
+          "end": 26526,
+          "offset": 1332,
+          "length": 78,
+          "replacement": "  /* team-owner:venueScope:DEMO_TYPE_KEYS */\n",
+          "sha256": "376d960c02901395402d7cbda6e2fe56e77766f42e3d4709836903db9bb11822"
+        },
+        {
+          "start": 26901,
+          "end": 26954,
+          "offset": 1411,
+          "length": 53,
+          "replacement": "  /* team-owner:venueScope:TRANSIENT_KEYS */\n",
+          "sha256": "cfc5f3d11c80cf884573b2b6ebfa6af6f40a04b63a210d47054aa958a8f5d88d"
+        },
+        {
+          "start": 26954,
+          "end": 27040,
+          "offset": 1465,
+          "length": 86,
+          "replacement": "  const persistableTeamKey = (...args) => venueScope.persistableTeamKey(...args);\n",
+          "sha256": "4745d226e9f5cb18f3a5e45d99996845906e7135d57e60e3781eb7d7761a07c2"
+        },
+        {
+          "start": 33718,
+          "end": 34117,
+          "offset": 1552,
+          "length": 399,
+          "replacement": "  function teamVenueKey(...args) { return venueScope.teamVenueKey(...args); }\n",
+          "sha256": "7bcab8fa810424831124bcb27dafae67712af7cca2e3f37cd47249b96f3f7130"
+        },
+        {
+          "start": 34583,
+          "end": 35034,
+          "offset": 1952,
+          "length": 451,
+          "replacement": "  function teamSlug(...args) { return venueScope.teamSlug(...args); }\n",
+          "sha256": "c68377b1b5024c18130b4793a961e978468ebc9c0615dcce81c3c037a2ab72cc"
+        },
+        {
+          "start": 35034,
+          "end": 35400,
+          "offset": 2404,
+          "length": 366,
+          "replacement": "  function memberBelongsToStore(...args) { return venueScope.memberBelongsToStore(...args); }\n",
+          "sha256": "99c68cfe02edc5fa45b9aca1db8730e9985b2e48282b28c1e392a99bce9b9e8a"
+        },
+        {
+          "start": 35400,
+          "end": 36168,
+          "offset": 2771,
+          "length": 768,
+          "replacement": "  function scopeTeamDoc(...args) { return venueScope.scopeTeamDoc(...args); }\n",
+          "sha256": "f4bd216b83304f21443124a0d0d46e3dd78e004cc43ad8d0d3d0b39c3a807475"
+        }
+      ],
+      "globals": [
+        "KiwiCloudDoc",
+        "KiwiPlanningCore",
+        "KiwiVenue"
+      ],
+      "exports": [
+        "teamKey",
+        "teamVenueKey",
+        "teamSlug",
+        "memberBelongsToStore",
+        "scopeTeamDoc",
+        "persistableTeamKey"
+      ],
+      "windowPaths": [
+        "window.KiwiCloudDoc",
+        "window.KiwiCloudDoc.slugFor",
+        "window.KiwiPlanningCore",
+        "window.KiwiPlanningCore.normalize",
+        "window.KiwiTeamParts",
+        "window.KiwiVenue",
+        "window.KiwiVenue.getCurrentVenueData"
+      ]
+    },
+    {
+      "name": "invitations",
+      "file": "assets/team/invitations.js",
+      "prefix": "/* Owner: invitations. Exports create() through KiwiTeamParts.invitations.\n * Window reads: __kiwiTeamV2, crypto, msCrypto.\n * Instance exports: makeCode, importMembers, setPageActive.\n * lexical imports: ensureVenueData, teamKey, teamSlug, saveCustomTeams, render, AVATAR_TONES.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.invitations = Object.freeze({ create(deps) {\n  const {\n    ensureVenueData,\n    teamKey,\n    teamSlug,\n    saveCustomTeams,\n    render,\n    AVATAR_TONES,\n  } = deps;\n  let pageActive = false;\n",
+      "suffix": "  return Object.freeze({ makeCode, importMembers, setPageActive(value) { pageActive = value; } });\n  } });\n})();\n",
+      "fragments": [
+        {
+          "start": 4358,
+          "end": 4674,
+          "offset": 659,
+          "length": 316,
+          "replacement": "  function makeCode(...args) { return invitations.makeCode(...args); }\n",
+          "sha256": "b23d73af8f8aa25607af7bdb2c80752cd1c304415159787c8b40a5691d6eb29c"
+        },
+        {
+          "start": 104188,
+          "end": 104384,
+          "offset": 976,
+          "length": 196,
+          "replacement": "  /* team-owner:invitations:ONB_ROLE_FN */\n",
+          "sha256": "147b60f12d7623b29f458591c372fce11819d132219791e661ec06f983a03d4b"
+        },
+        {
+          "start": 104384,
+          "end": 106356,
+          "offset": 1173,
+          "length": 1972,
+          "replacement": "  function importMembers(...args) { return invitations.importMembers(...args); }\n",
+          "sha256": "28aaf2741854aae648f51d710977019a1c03e733792cd59e4c0c3a3827e413cb"
+        }
+      ],
+      "globals": [
+        "__kiwiTeamV2",
+        "crypto",
+        "msCrypto"
+      ],
+      "exports": [
+        "makeCode",
+        "importMembers",
+        "setPageActive"
+      ],
+      "windowPaths": [
+        "window.KiwiTeamParts",
+        "window.__kiwiTeamV2",
+        "window.__kiwiTeamV2.byVenue",
+        "window.__kiwiTeamV2.hoursByVenue",
+        "window.crypto",
+        "window.msCrypto"
+      ]
+    },
+    {
+      "name": "rosterList",
+      "file": "assets/team/roster-list.js",
+      "prefix": "/* Owner: rosterList. Exports create() through KiwiTeamParts.rosterList.\n * Window reads: KiwiRoles, KiwiVenue, __kiwiTeamV2.\n * Instance exports: memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab.\n * lexical imports: memberFullName, jobName, t, teamKey, getMembers, getHours, getShifts, toISO, memberDutyStatus, liveMember, normShift, hhmmToMin, addDays, fromISO, payrollFigures, renderMembersTable, esc, trLang, tradeKey, todayLongLabel, svgIcon, activeFilters, IC.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.rosterList = Object.freeze({ create(deps) {\n  const {\n    memberFullName,\n    jobName,\n    t,\n    teamKey,\n    getMembers,\n    getHours,\n    getShifts,\n    toISO,\n    memberDutyStatus,\n    liveMember,\n    normShift,\n    hhmmToMin,\n    addDays,\n    fromISO,\n    payrollFigures,\n    renderMembersTable,\n    esc,\n    trLang,\n    tradeKey,\n    todayLongLabel,\n    svgIcon,\n    activeFilters,\n    IC,\n  } = deps;\n  let activeTab = 'profiles';\n",
+      "suffix": "  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });\n  } });\n})();\n",
+      "fragments": [
+        {
+          "start": 57266,
+          "end": 57820,
+          "offset": 1173,
+          "length": 554,
+          "replacement": "  function memberMatchesFilters(...args) { return rosterList.memberMatchesFilters(...args); }\n",
+          "sha256": "d72181b3ad3e6db9ae3c456e22ad8c4fcc9f286e8037086692335536ed24a676"
+        },
+        {
+          "start": 63198,
+          "end": 64158,
+          "offset": 1728,
+          "length": 960,
+          "replacement": "  function rerenderProfilesGrid(...args) { return rosterList.rerenderProfilesGrid(...args); }\n",
+          "sha256": "c59257951f423732d947f4b742687e701a0196110175a63a0b86d2df9bd8f970"
+        },
+        {
+          "start": 64206,
+          "end": 65280,
+          "offset": 2689,
+          "length": 1074,
+          "replacement": "  function renderHeader(...args) { return rosterList.renderHeader(...args); }\n",
+          "sha256": "93795f265b4c6908b37ae2c0de7344984469e9efcbebf24ae50fce11b84fa977"
+        },
+        {
+          "start": 106787,
+          "end": 107679,
+          "offset": 3764,
+          "length": 892,
+          "replacement": "  function roster(...args) { return rosterList.roster(...args); }\n",
+          "sha256": "3002fc2fd3b75eec03b3e6959820b9fc33597d2c0069612123e5583457869e2d"
+        },
+        {
+          "start": 108080,
+          "end": 109268,
+          "offset": 4657,
+          "length": 1188,
+          "replacement": "  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }\n",
+          "sha256": "075576c0691e02bff94e07de818934512521758447fccb55306144b9062b93d7"
+        },
+        {
+          "start": 109580,
+          "end": 110904,
+          "offset": 5846,
+          "length": 1324,
+          "replacement": "  function planningDay(...args) { return rosterList.planningDay(...args); }\n",
+          "sha256": "303f5f571b4cdd91548146425a2fabe5d73456a704dec562064152b2ede24081"
+        },
+        {
+          "start": 111253,
+          "end": 112842,
+          "offset": 7171,
+          "length": 1589,
+          "replacement": "  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }\n",
+          "sha256": "8b19f706b76bc08cd8a3280a05229b692ed5dac6f497e0cb000d5b1c49362b82"
+        },
+        {
+          "start": 113279,
+          "end": 113865,
+          "offset": 8761,
+          "length": 586,
+          "replacement": "  function labour(...args) { return rosterList.labour(...args); }\n",
+          "sha256": "14ca803bb4e9386c89a4805fd12ab6b1e3a09520ba52449bf428c00ee72e4637"
+        }
+      ],
+      "globals": [
+        "KiwiRoles",
+        "KiwiVenue",
+        "__kiwiTeamV2"
+      ],
+      "exports": [
+        "memberMatchesFilters",
+        "rerenderProfilesGrid",
+        "renderHeader",
+        "roster",
+        "daySnapshot",
+        "planningDay",
+        "bookingCoverage",
+        "labour",
+        "setActiveTab"
+      ],
+      "windowPaths": [
+        "window.KiwiRoles",
+        "window.KiwiRoles.isService",
+        "window.KiwiTeamParts",
+        "window.KiwiVenue",
+        "window.KiwiVenue.getCurrentVenueData",
+        "window.__kiwiTeamV2",
+        "window.__kiwiTeamV2.planningByVenue"
+      ]
+    }
+  ],
+  "edits": [
+    {
+      "file": "assets/team.js",
+      "replacement": "  function isCode(...args) { return memberState.isCode(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function memberCode(...args) { return memberState.memberCode(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function codeUnresolved(...args) { return memberState.codeUnresolved(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function rosterHasUnresolved(...args) { return memberState.rosterHasUnresolved(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function diskMembers(...args) { return memberState.diskMembers(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function outboundMembers(...args) { return memberState.outboundMembers(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function fillCodes(...args) { return memberState.fillCodes(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function applyServerCodes(...args) { return memberState.applyServerCodes(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:serverCodes */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function publishPins(...args) { return memberState.publishPins(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function getShifts(...args) { return memberState.getShifts(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:LS_TEAM */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamAccount(...args) { return memberState.teamAccount(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:ROSTER_ACCOUNT */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function rosterWriteBlocked(...args) { return memberState.rosterWriteBlocked(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function loadCustomTeams(...args) { return memberState.loadCustomTeams(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:REMOVED_CAP */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function cleanRemoved(...args) { return memberState.cleanRemoved(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function mergeRemoved(...args) { return memberState.mergeRemoved(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:LOCK_KEY_RE */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function cleanLocks(...args) { return memberState.cleanLocks(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function mergeLocks(...args) { return memberState.mergeLocks(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function persistTeams(...args) { return memberState.persistTeams(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function afterTeamChange(...args) { return memberState.afterTeamChange(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function saveCustomTeams(...args) { return memberState.saveCustomTeams(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function mergeByDay(...args) { return memberState.mergeByDay(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function mergeTeamDoc(...args) { return memberState.mergeTeamDoc(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:teamCloud */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamCloudInit(...args) { return memberState.teamCloudInit(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:heldPush */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:memberState:teamReadFailed */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamReadTimedOut(...args) { return memberState.teamReadTimedOut(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function hydrateCodes(...args) { return memberState.hydrateCodes(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamCloudBind(...args) { return memberState.teamCloudBind(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamCloudPush(...args) { return memberState.teamCloudPush(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function ensureVenueData(...args) { return memberState.ensureVenueData(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function getMembers(...args) { return memberState.getMembers(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function getHours(...args) { return memberState.getHours(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  const periodOffsets = memberState.periodOffsets;"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamKey(...args) { return venueScope.teamKey(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:venueScope:DEMO_TYPE_KEYS */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:venueScope:TRANSIENT_KEYS */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  const persistableTeamKey = (...args) => venueScope.persistableTeamKey(...args);\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamVenueKey(...args) { return venueScope.teamVenueKey(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function teamSlug(...args) { return venueScope.teamSlug(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function memberBelongsToStore(...args) { return venueScope.memberBelongsToStore(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function scopeTeamDoc(...args) { return venueScope.scopeTeamDoc(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function makeCode(...args) { return invitations.makeCode(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  /* team-owner:invitations:ONB_ROLE_FN */\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function importMembers(...args) { return invitations.importMembers(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function memberMatchesFilters(...args) { return rosterList.memberMatchesFilters(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function rerenderProfilesGrid(...args) { return rosterList.rerenderProfilesGrid(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function renderHeader(...args) { return rosterList.renderHeader(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function roster(...args) { return rosterList.roster(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function planningDay(...args) { return rosterList.planningDay(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "replacement": "  function labour(...args) { return rosterList.labour(...args); }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  /* ═══════════════ ROOT STATE ═══════════════ */\n",
+      "replacement": "  /* ═══════════════ ROOT STATE ═══════════════ */\n  const venueScope = window.KiwiTeamParts.venueScope.create({\n    cleanRemoved: (...args) => cleanRemoved(...args),\n    mergeByDay: (...args) => mergeByDay(...args),\n    cleanLocks: (...args) => cleanLocks(...args),\n  });\n  const invitations = window.KiwiTeamParts.invitations.create({\n    ensureVenueData: (...args) => ensureVenueData(...args),\n    teamKey: (...args) => teamKey(...args),\n    teamSlug: (...args) => teamSlug(...args),\n    saveCustomTeams: (...args) => saveCustomTeams(...args),\n    render: (...args) => render(...args),\n    AVATAR_TONES,\n  });\n  const memberState = window.KiwiTeamParts.memberState.create({\n    fetchDeadline: (...args) => fetchDeadline(...args),\n    teamKey: (...args) => teamKey(...args),\n    teamVenueKey: (...args) => teamVenueKey(...args),\n    teamSlug: (...args) => teamSlug(...args),\n    memberBelongsToStore: (...args) => memberBelongsToStore(...args),\n    scopeTeamDoc: (...args) => scopeTeamDoc(...args),\n    persistableTeamKey: (...args) => persistableTeamKey(...args),\n    memberFullName: (...args) => memberFullName(...args),\n    restorePeriodLock: (...args) => restorePeriodLock(...args),\n    buildPeriod: (...args) => buildPeriod(...args),\n    render: (...args) => render(...args),\n    trLang: (...args) => trLang(...args),\n    toast: (...args) => toast(...args),\n    seedFor: (...args) => seedFor(...args),\n    seedHours: (...args) => seedHours(...args),\n  });\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  /* ═══════════════ PAGE SHOW / HIDE ═══════════════ */\n",
+      "replacement": "  /* ═══════════════ PAGE SHOW / HIDE ═══════════════ */\n  const rosterList = window.KiwiTeamParts.rosterList.create({\n    memberFullName: (...args) => memberFullName(...args),\n    jobName: (...args) => jobName(...args),\n    t: (...args) => t(...args),\n    teamKey: (...args) => teamKey(...args),\n    getMembers: (...args) => getMembers(...args),\n    getHours: (...args) => getHours(...args),\n    getShifts: (...args) => getShifts(...args),\n    toISO: (...args) => toISO(...args),\n    memberDutyStatus: (...args) => memberDutyStatus(...args),\n    liveMember: (...args) => liveMember(...args),\n    normShift: (...args) => normShift(...args),\n    hhmmToMin: (...args) => hhmmToMin(...args),\n    addDays: (...args) => addDays(...args),\n    fromISO: (...args) => fromISO(...args),\n    payrollFigures: (...args) => payrollFigures(...args),\n    renderMembersTable: (...args) => renderMembersTable(...args),\n    esc: (...args) => esc(...args),\n    trLang: (...args) => trLang(...args),\n    tradeKey: (...args) => tradeKey(...args),\n    todayLongLabel: (...args) => todayLongLabel(...args),\n    svgIcon: (...args) => svgIcon(...args),\n    activeFilters,\n    IC,\n  });\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "function noteProfileState() { profileStateListeners",
+      "replacement": "function noteProfileState() { memberState.setPageActive(pageActive); invitations.setPageActive(pageActive); profileStateListeners"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "      teamReadFailed = false;",
+      "replacement": "      memberState.resetReadFailure();"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "      activeTab = kind;",
+      "replacement": "      activeTab = kind; rosterList.setActiveTab(kind);"
+    },
+    {
+      "file": "assets/team.js",
+      "routeState": true
+    },
+    {
+      "file": "assets/team/profile-ui.js",
+      "original": "  'use strict';",
+      "replacement": "  'use strict';\n  const memberState = window.Kiwi?.__teamMemberState;"
+    },
+    {
+      "file": "assets/team/profile-ui.js",
+      "routeState": true
+    },
+    {
+      "file": "assets/team-hours.js",
+      "original": "  'use strict';",
+      "replacement": "  'use strict';\n  const memberState = window.Kiwi?.__teamMemberState;"
+    },
+    {
+      "file": "assets/team-hours.js",
+      "routeState": true
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  const periodOffsets = memberState.periodOffsets;",
+      "replacement": "  const periodOffsets = memberState.periodOffsets;\n  Kiwi.__teamMemberState = memberState;"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  /* ═══════════════ LES CODES NE RESTENT PAS SUR LE DISQUE ═══════════════════\n   * Chaque salarié porte le code à quatre chiffres qui lui ouvre la caisse et\n   * l'app employé (`pinCode` / `password`). Il était écrit EN CLAIR dans\n   * localStorage (kiwiTeamV2:custom) : lisible dans n'importe quel navigateur où\n   * le patron a ouvert Équipe (CLAUDE.md §6). Le patron, lui, doit continuer de\n   * le LIRE ici — c'est voulu, voir functions/api/store.js › stripTeamCodes.\n   *\n   * La règle : le disque ne garde un code que tant que le serveur ne l'a pas.\n   *   · le code vit en mémoire (memberState.current()), comme avant ;\n   *   · persistTeams() l'ôte de la copie locale d'un salarié SEULEMENT si le\n   *     serveur a confirmé ce code (`serverCodes` : lu par hydrateCodes(), ou\n   *     accepté par une remontée réussie). Un code que le serveur n'a pas ne\n   *     quitte jamais le disque : jamais de perte ;\n   *   · un salarié dont le code a été ôté porte `hasCode: true` (jamais le code),\n   *     et le patron le retrouve au chargement depuis la copie serveur.\n   *\n   * ⚠ Le danger n'est pas la lecture, c'est le RENVOI. La remontée du roster\n   * (staff_pins, le document `team`, d'où l'app employé tire ses accès)\n   * REMPLACE ce que le serveur porte par ce que le navigateur envoie : un\n   * navigateur qui a oublié des codes les effacerait chez le serveur, et les\n   * caissières se retrouveraient devant un pavé qui n'ouvre plus. Donc, tant\n   * qu'un salarié a `hasCode` sans code en mémoire (« non résolu »), RIEN ne part :\n   * ni publishPins(), ni la remontée du document (canPush de cloud-doc.js). */\n",
+      "replacement": "  /* Persistence documentation: assets/team/member-state.js (memberCode). */ "
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════\n   * The till does not read this roster: it asks /api/config for the store's\n   * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the\n   * onboarding wizard ever wrote there, so a cashier hired afterwards had a code\n   * on their profile that the till had never heard of — the owner typed it and\n   * got \"Code incorrect\". Every roster change now republishes.\n   *\n   * /api/config REPLACES the store's whole code list, so we always send the FULL\n   * roster — sending only the new hire would silently revoke everyone else,\n   * including the owner's own code from onboarding. Real (custom, onboarded)\n   * venues only: a demo venue has no session, and pushing seeded demo staff into\n   * a real merchant's row is exactly the leak the venue split exists to prevent.\n   * Fail-soft — no endpoint, no session, offline: the roster is still saved\n   * locally and this is a no-op. */\n",
+      "replacement": "  /* Persistence documentation: assets/team/member-state.js (publishPins). */ "
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════\n   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs\n   * taux horaires, et quatre semaines de planning ne vivaient que dans le\n   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi\n   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale\n   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il\n   * faut le ressaisir à chaque appareil.\n   *\n   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte\n   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais\n   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.\n   *\n   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue\n   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge\n   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant\n   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.\n   *\n   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde\n   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster\n   * là où il a toujours été. */\n",
+      "replacement": "  /* Persistence documentation: assets/team/member-state.js (teamVenueKey). */ "
+    }
+  ],
+  "scriptsBefore": {
+    "dashboard.html": 121,
+    "kiwi-caisse.html": 89,
+    "kiwi-serveur.html": 26,
+    "booking.html": 4
+  },
+  "sha256": "b64caef26c1736c49c89c57d3f1b02cf0d74268925146e2b81da82971f4b4c05",
+  "imports": [
+    "./team/member-state.js",
+    "./team/venue-scope.js",
+    "./team/invitations.js",
+    "./team/roster-list.js"
+  ]
+}

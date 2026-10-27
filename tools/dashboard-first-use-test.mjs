@@ -14,9 +14,10 @@ const startupCode = read('assets/pages/dashboard-startup.js');
 let emitted = '';
 vm.runInNewContext(startupCode, { document: { readyState: 'loading', write: html => { emitted += html; } } });
 assert.throws(() => vm.runInNewContext(startupCode, { document: { readyState: 'complete', write() { assert.fail('late parser write'); } } }), /requires the HTML parser/);
-const startupTags = [...emitted.matchAll(/<script src="([^"]+)"([^>]*)><\/script>/g)];
-// 45, then the stock strings, the team catalogue and three menu parts (26 Oct 2026 splits).
-assert.equal(startupTags.length, 50, 'startup providers retain one classic deferred execution each');
+const startupTags = [...emitted.matchAll(/<script (?:type="module" )?src="([^"]+)"([^>]*)><\/script>/g)];
+// 45, then the stock strings, the team catalogue, three menu parts (26 Oct 2026 splits) and the stock state owner.
+assert.equal(startupTags.length, 51, 'startup providers retain one ordered deferred execution each');
+assert.match(emitted, /<script type="module" src="assets\/team\.js\?/, 'team entry imports its pieces as a parser-ordered module');
 for (const [, url, attributes] of startupTags) {
   assert.match(attributes, /\bdefer\b/);
   assert.ok(fs.existsSync(url.split('?')[0]));

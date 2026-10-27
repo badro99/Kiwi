@@ -105,6 +105,8 @@ async function inspect(source, present) {
       return { ok: true, async json() { return { tickets: [], articles: [] }; } };
     }
   });
+  // The console's one client owner of /api/admin, loaded first as on kiwi-admin.html.
+  vm.runInContext(fs.readFileSync(new URL('../assets/admin-api.js', import.meta.url), 'utf8'), context);
   vm.runInContext(source, context);
   const startup = {
     globals: Object.keys(context).sort(), window: Object.keys(window).sort(),

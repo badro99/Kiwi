@@ -301,6 +301,8 @@
     requestShiftSwap: function (day) { return call('POST', { action: 'planning-swap-request', day: day }); },
     claimShiftSwap: function (requestId, offeredDay) { return call('POST', { action: 'planning-swap-claim', requestId: requestId, offeredDay: offeredDay }); },
     cancelPlanningOpportunity: function (id) { return call('POST', { action: 'planning-opportunity-cancel', requestId: id, shiftId: id }); },
+    // Archive des notices antérieures au fil du planning, page par page.
+    planningNoticesPage: function (offset) { return call('POST', { action: 'planning-notices-page', offset: Number(offset) || 0 }); },
     /* Avant de fermer la session, on vide la file. Hors ligne avec des
        pointages en attente, la session reste ouverte côté serveur : c'est elle
        qui les enverra au retour du réseau. */

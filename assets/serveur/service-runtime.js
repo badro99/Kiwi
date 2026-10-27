@@ -33,6 +33,22 @@
 
     function saveServiceHistory() {
       if (!serviceHistoryKey) return;
+      /* Au-delà des 100 dernières, les plus anciennes ne disparaissent plus :
+         elles passent dans l'archive de cet appareil, même cloison marchand +
+         employé que l'historique, 500 au plus, plus récentes d'abord. Le
+         centre de notifications les relit avec « Voir plus ». */
+      if (serviceNotifications.length > 100) {
+        const overflow = serviceNotifications.splice(100);
+        try {
+          const archiveKey = serviceHistoryKey + ':archive';
+          const saved = JSON.parse(localStorage.getItem(archiveKey) || '[]');
+          const kept = (Array.isArray(saved) ? saved : []).filter((item) => item && item.id);
+          const seen = new Set(kept.map((item) => item.id));
+          const moved = overflow.filter((item) => item && item.id && !seen.has(item.id))
+            .map((item) => ({ ...item, unread: false }));
+          localStorage.setItem(archiveKey, JSON.stringify(moved.concat(kept).slice(0, 500)));
+        } catch (_) {}
+      }
       try { localStorage.setItem(serviceHistoryKey, JSON.stringify(serviceNotifications.slice(0, 100))); } catch (_) {}
     }
 
@@ -115,8 +131,8 @@
         table: String(meta && meta.table || ''), type: String(meta && meta.type || 'service'),
         ts: Number(meta && meta.ts) || Date.now(), unread: currentTab !== 'notifications',
       });
-      if (serviceNotifications.length > 100) serviceNotifications.length = 100;
       saveServiceHistory();
+      if (serviceNotifications.length > 100) serviceNotifications.length = 100;
       if (currentTab !== 'notifications') serviceUnread++;
       try { renderNotifications(); } catch (_) {}
       updateNotificationBadge();

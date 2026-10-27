@@ -8,7 +8,7 @@ const sharedRules = require('./shared-rules-source.cjs');
 const { declaration } = require('./js-declarations.cjs');
 const caisse = require('./caisse-test-source.cjs');
 const root = path.resolve(__dirname, '..');
-const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const read = file => file === 'assets/daterange/renderers.js' ? require('./home-test-source.cjs').source() : fs.readFileSync(path.join(root, file), 'utf8');
 function decl(file, name) {
   const source = read(file);
   const match = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(|(?:var|const|let)\\s+' + name + '\\s*=').exec(source);

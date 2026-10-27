@@ -2736,7 +2736,21 @@
     function renderNotifications() {
       const list = $('#notification-list');
       if (!list) return;
-      if (!serviceNotifications.length) {
+      /* Les 100 dernières d'abord, puis l'archive de cet appareil (voir
+         saveServiceHistory), 50 de plus à chaque « Voir plus ». Le compte
+         affiché repart de zéro quand l'employé ou le marchand change. */
+      let archived = [];
+      try {
+        const saved = serviceHistoryKey ? JSON.parse(localStorage.getItem(serviceHistoryKey + ':archive') || '[]') : [];
+        archived = (Array.isArray(saved) ? saved : []).filter((item) => item && item.id);
+      } catch (_) {}
+      if (list.dataset.archiveFor !== serviceHistoryKey) {
+        list.dataset.archiveFor = serviceHistoryKey;
+        list.dataset.archiveShown = '0';
+      }
+      const archiveShown = Math.min(archived.length, Number(list.dataset.archiveShown) || 0);
+      const notices = serviceNotifications.concat(archived.slice(0, archiveShown));
+      if (!notices.length) {
         list.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon"><i data-lucide="bell"></i></div>
@@ -2744,7 +2758,7 @@
             <p>Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.</p>
           </div>`;
       } else {
-        list.innerHTML = serviceNotifications.map((item) => `
+        list.innerHTML = notices.map((item) => `
           <button class="notification-card${item.unread ? ' is-unread' : ''}" type="button" data-notification-table="${esc(item.table)}">
             <div class="notif-header">
               <div class="notif-origin">
@@ -2760,13 +2774,21 @@
               <div class="notification-title">${esc(item.title)}</div>
               <div class="notification-body">${esc(item.body)}</div>
             </div>
-          </button>`).join('');
+          </button>`).join('')
+          + (archived.length > archiveShown
+            ? `<button class="notification-more" type="button" data-notification-more>${employeePick('Voir plus', 'Show more', 'عرض المزيد')} · ${archived.length - archiveShown} ${employeePick('plus anciennes', 'older', 'أقدم')}</button>`
+            : '');
         list.querySelectorAll('[data-notification-table]').forEach((button) => {
           button.addEventListener('click', () => {
             const id = serviceTableId(button.dataset.notificationTable);
             setTab('tables');
             if (id && tables[id]) { openTableDetail(id); }
           });
+        });
+        const more = list.querySelector('[data-notification-more]');
+        if (more) more.addEventListener('click', () => {
+          list.dataset.archiveShown = String(archiveShown + 50);
+          renderNotifications();
         });
       }
       if (window.lucide) lucide.createIcons();

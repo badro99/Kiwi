@@ -160,8 +160,8 @@
       get esc() { return esc; },
       get fmt() { return fmt; },
       get folioTotal() { return folioTotal; },
-      get hotelCloud() { return hotelCloud; },
-      set hotelCloud(value) { hotelCloud = value; },
+      get hotelCloud() { return hotelSection('receptionState').cloud(); },
+      set hotelCloud(value) { hotelSection('receptionState').setCloud(value); },
       get hxColon() { return hxColon; },
       get hxLang() { return hxLang; },
       get hxLocale() { return hxLocale; },
@@ -185,6 +185,9 @@
       get txk() { return txk; },
       get txn() { return txn; },
       get typeOf() { return typeOf; },
+      get cuDocument() { return cuDocument; },
+      get cuHydrate() { return cuHydrate; },
+      get cuSeed() { return cuSeed; },
     }));
   }
 
@@ -666,47 +669,24 @@
       || (paired && (paired.subtype || paired.type));
     return own && type === 'hotel';
   };
-  const CUSTOM_HX = {}; // venueId → hydrated operating state
-  const HX_STORE_PREFIX = 'kiwi:hotel-rooms:v2:';
-  let hotelCloud = null;
 
   function cuVenueId() {
     try { return String(window.KiwiVenue?.getVenue?.() || ''); } catch (_) { return ''; }
   }
-  const cuD1Stays = new Map();
-  const cuStayLoads = new Map();
-  const cuInHouseSnapshots = new Map();
-  const cuReceptionFilters = new Map();
+  const cuStayLoads = hotelSection('receptionState').stayLoads();
+  const cuInHouseSnapshots = hotelSection('receptionState').inHouseSnapshots();
+  const cuReceptionFilters = hotelSection('receptionState').receptionFilters();
   function cuStayScope() {
     return String(window.KiwiStore?.slugFor?.(cuVenueId()) || cuStateId());
   }
-  function cuStayCache() {
-    const scope = cuStayScope();
-    if (!cuD1Stays.has(scope)) cuD1Stays.set(scope, new Map());
-    return cuD1Stays.get(scope);
-  }
+  function cuStayCache() { return hotelSection('receptionState').cuStayCache.apply(this, arguments); }
 
   async function cuFetchStaysForWindow() { return hotelSection('model').cuFetchStaysForWindow.apply(this, arguments); }
 
-  function cuAllStays() {
-    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
-    const all = new Map();
-    (doc.bookings || []).forEach((b) => { if (b && b.id) all.set(b.id, b); });
-    cuStayCache().forEach((b, id) => {
-      if (b && (+b.updatedAt || 0) >= (+all.get(id)?.updatedAt || 0)) all.set(id, b);
-    });
-    return all;
-  }
+  function cuAllStays() { return hotelSection('receptionState').cuAllStays.apply(this, arguments); }
 
-  function cuStateId() {
-    const id = cuVenueId();
-    if (id !== 'scoped' && id !== 'own') return id;
-    try {
-      const slug = String(window.KiwiVenue?.getCurrentVenueData?.()?.slug || '').trim();
-      return slug ? id + ':' + slug : id + ':unresolved';
-    } catch (_) { return id + ':unresolved'; }
-  }
-  function cuStoreKey(id) { return HX_STORE_PREFIX + String(id || cuStateId() || 'unknown'); }
+  function cuStateId() { return hotelSection('receptionState').cuStateId.apply(this, arguments); }
+  function cuStoreKey() { return hotelSection('receptionState').cuStoreKey.apply(this, arguments); }
   function cuStamp() { return Date.now(); }
   function cuTypeId(name, stamp) {
     const slug = String(name || 'type').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -732,70 +712,22 @@
   function cuSeed() { return hotelSection('model').cuSeed.apply(this, arguments); }
   function cuHydrate() { return hotelSection('model').cuHydrate.apply(this, arguments); }
   function cuDocument() { return hotelSection('model').cuDocument.apply(this, arguments); }
-  function cuWriteLocal(st, id) {
-    try {
-      localStorage.setItem(cuStoreKey(id), JSON.stringify(cuDocument(st)));
-      return true;
-    } catch (err) {
-      console.warn('cuWriteLocal storage failed', err);
-      return false;
-    }
-  }
-  function cuReadLocal(id) {
-    try {
-      const raw = JSON.parse(localStorage.getItem(cuStoreKey(id)) || 'null');
-      return raw ? cuHydrate(raw) : null;
-    } catch (_) { return null; }
-  }
+  function cuWriteLocal() { return hotelSection('receptionState').cuWriteLocal.apply(this, arguments); }
+  function cuReadLocal() { return hotelSection('receptionState').cuReadLocal.apply(this, arguments); }
   function cuMerge() { return hotelSection('model').cuMerge.apply(this, arguments); }
-  function cuState() {
-    cuEnsureFilterVenue();
-    const id = cuStateId();
-    if (!CUSTOM_HX[id]) {
-      CUSTOM_HX[id] = cuReadLocal(id) || cuSeed();
-      cuWriteLocal(CUSTOM_HX[id], id);
-    }
-    CUSTOM_HX[id].count = Object.keys(CUSTOM_HX[id].rooms || {}).length;
-    return CUSTOM_HX[id];
-  }
-  function cuSave(st) {
-    st = st || cuState();
-    st.count = Object.keys(st.rooms || {}).length;
-    st.updatedAt = cuStamp();
-    const localOk = cuWriteLocal(st, cuStateId());
-    if (hotelCloud) hotelCloud.push();
-    return localOk;
-  }
-  async function cuSaveCloud(st) {
-    if (!hotelCloud || typeof hotelCloud.save !== 'function') return { ok: false, status: 503, error: 'cloud-unavailable' };
-    const scope = cuStateId();
-    const payload = cuDocument(st || cuState());
-    const result = await hotelCloud.save(payload);
-    if (scope !== cuStateId()) return { ok: false, status: 409, error: 'tenant-switched' };
-    return result || { ok: false, status: 503, error: 'unconfirmed' };
-  }
-  async function cuCommitDraft(st) {
-    const scope = cuStateId();
-    st.updatedAt = cuStamp();
-    const result = await cuSaveCloud(st);
-    if (!result.ok) throw new Error(result.status === 409
-      ? trL({fr:'Actualisez le plan puis réessayez. Aucune modification confirmée.',en:'Refresh the room plan and retry. No change confirmed.',ar:'حدّث مخطط الغرف وأعد المحاولة. لم يتم تأكيد أي تعديل.'})
-      : trL({fr:'Enregistrement non confirmé. Vérifiez la connexion et réessayez.',en:'Save not confirmed. Check your connection and retry.',ar:'لم يتم تأكيد الحفظ. تحقق من الاتصال وأعد المحاولة.'}));
-    if (scope !== cuStateId()) throw new Error(tx('Établissement changé'));
-    const next = result.data ? cuHydrate(result.data) : st;
-    CUSTOM_HX[scope] = next;
-    const cached = cuWriteLocal(next, scope);
-    if (!cached) toast(trL({fr:'Confirmé au serveur, cache local indisponible',en:'Saved on server; local cache unavailable',ar:'حُفظ في الخادم؛ التخزين المحلي غير متاح'}), {type:'warn'});
-    return next;
-  }
+  function cuState() { return hotelSection('receptionState').cuState.apply(this, arguments); }
+  function cuSave() { return hotelSection('receptionState').cuSave.apply(this, arguments); }
+  async function cuSaveCloud() { return hotelSection('receptionState').cuSaveCloud.apply(this, arguments); }
+  async function cuCommitDraft() { return hotelSection('receptionState').cuCommitDraft.apply(this, arguments); }
   function cuCloudWrite(doc) {
     const id = cuStateId();
     if (!id) return;
-    CUSTOM_HX[id] = cuHydrate(doc);
-    cuWriteLocal(CUSTOM_HX[id], id);
+    hotelSection('receptionState').replaceState(id, cuHydrate(doc));
+    cuWriteLocal(hotelSection('receptionState').stateFor(id), id);
     if (openDrawer && isCustomHotel()) rerender();
   }
   function bindCuCloud() {
+    let hotelCloud = hotelSection('receptionState').cloud();
     if (!window.KiwiCloudDoc || !window.KiwiVenue) return;
     if (!hotelCloud) hotelCloud = window.KiwiCloudDoc.attach({
       feature: 'rooms',
@@ -807,6 +739,7 @@
       isEmpty: (d) => !d || (!d.rooms?.length && !d.floors?.length && !d.roomTypes?.length),
       onPulled: () => { if (openDrawer && isCustomHotel()) rerender(); },
     });
+    hotelSection('receptionState').setCloud(hotelCloud);
     hotelCloud.bind();
   }
   /* Venue-routed accessors — the shared folio/rack/walk-in engine reads
@@ -838,19 +771,7 @@
    * espèces ou carte. Avant, chaque départ et chaque walk-in partaient en
    * « carte », et le Z déclarait en terminal de l'argent qui dormait dans le
    * tiroir. */
-  function recordSale(amount, identity, label, method) {
-    if (!isCustomHotel() || !(amount > 0)) return false;
-    if (method !== 'cash' && method !== 'card') return false;
-    const live = window.KiwiLive;
-    if (!live?.isOn?.() || !live?.postSale) return false;
-    const key = String(identity || ('hotel-' + Date.now())).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 54);
-    const result = live.postSale({
-      id: 'hotel-' + key, amount: Math.round(amount * 100) / 100, method,
-      label: String(label || 'Encaissement hôtel').slice(0, 80), ref: key,
-      time: new Date(), channel: 'hotel'
-    });
-    return result?.ok === true;
-  }
+  function recordSale() { return hotelSection('folioActions').recordSale.apply(this, arguments); }
 
   /* Title and subtitle may be functions: a language switch re-reads them
    * (see the kiwi:langchange listener in register). */
@@ -905,12 +826,7 @@
   function roomModal() { return hotelSection('editors').roomModal.apply(this, arguments); }
 
   /* ═══════════════ PAGE · RÉSERVATIONS (TAPE CHART) ═══════════════ */
-  function occupancyByDay() {
-    return TAPE_DAYS.map((_, di) => {
-      const cnt = STAYS.filter((s) => di >= s.s && di < s.s + s.n).length;
-      return Math.min(cnt, 23);
-    });
-  }
+  function occupancyByDay() { return hotelSection('rateActions').occupancyByDay.apply(this, arguments); }
   function tapeBody() { return hotelSection('views').tapeBody.apply(this, arguments); }
 
   /* ═══════════════ PAGE · MÉNAGE ═══════════════ */
@@ -920,11 +836,7 @@
   function tarifsBody() { return hotelSection('editors').tarifsBody.apply(this, arguments); }
 
   /* ═══════════════ PAGE · CLIENTS & FIDÉLITÉ ═══════════════ */
-  function donutCss(parts) {
-    let acc = 0;
-    const stops = parts.map((p) => { const s = `${p.color} ${acc}% ${acc + p.pct}%`; acc += p.pct; return s; }).join(', ');
-    return `background: conic-gradient(${stops});`;
-  }
+  function donutCss() { return hotelSection('rateActions').donutCss.apply(this, arguments); }
   function hotesBody() { return hotelSection('views').hotesBody.apply(this, arguments); }
   function guestModal() { return hotelSection('editors').guestModal.apply(this, arguments); }
 
@@ -966,20 +878,7 @@
     if (!cuReceptionFilters.has(key)) cuReceptionFilters.set(key, { date: '', view: 'arrivals', q: '' });
     return cuReceptionFilters.get(key);
   }
-  function cuReceptionBuckets(stays, day, today) {
-    const buckets = { arrivals: [], departures: [], inhouse: [], attention: [] };
-    stays.forEach((b) => {
-      if (!b?.hotel || ['cancelled', 'no_show'].includes(b.status)) return;
-      const h = b.hotel;
-      if (h.checkIn === day) buckets.arrivals.push(b);
-      if (h.checkOut === day) buckets.departures.push(b);
-      // This is current presence, not a forecast inferred from booking dates.
-      if (b.status === 'checked_in') buckets.inhouse.push(b);
-      if ((b.status === 'checked_in' && h.checkOut < today) ||
-          (['requested', 'confirmed'].includes(b.status) && h.checkIn < today)) buckets.attention.push(b);
-    });
-    return buckets;
-  }
+  function cuReceptionBuckets() { return hotelSection('arrivals').cuReceptionBuckets.apply(this, arguments); }
   function cuReceptionJournal() { return hotelSection('views').cuReceptionJournal.apply(this, arguments); }
   async function cuRefreshReception() {
     const scope = cuStayScope();
@@ -1003,29 +902,9 @@
   function cuRoomBatchEditor() { return hotelSection('editors').cuRoomBatchEditor.apply(this, arguments); }
   function cuRoomEditor() { return hotelSection('editors').cuRoomEditor.apply(this, arguments); }
   function cuTypesManager() { return hotelSection('editors').cuTypesManager.apply(this, arguments); }
-  function cuPhotoEditorMarkup(photos) {
-    return photos.length ? photos.map((p, i) => `<div class="hx-type-photo"><img src="${esc(p.url)}" alt="${esc(p.alt || '')}"><span>${i === 0 ? tx('PHOTO PRINCIPALE') : ltr((i + 1) + ' / ' + photos.length)}</span><div><button type="button" data-action="hx-type-photo-move" data-arg="${i}:-1" ${i === 0 ? 'disabled' : ''} aria-label="${tx('Déplacer avant')}">←</button><button type="button" data-action="hx-type-photo-move" data-arg="${i}:1" ${i === photos.length - 1 ? 'disabled' : ''} aria-label="${tx('Déplacer après')}">→</button><button type="button" data-action="hx-type-photo-remove" data-arg="${i}" aria-label="${tx('Retirer la photo')}">×</button></div></div>`).join('') : `<div class="hx-type-photo-empty"><b>${tx('Aucune photo')}</b><span>${tx('Le visuel Kiwi reste affiché tant que vous n’ajoutez rien.')}</span></div>`;
-  }
-  function cuRenderPhotoEditor(root) {
-    const host = root?.querySelector('[data-hx-type-photos]');
-    if (host) host.innerHTML = cuPhotoEditorMarkup(root.__hxPhotos || []);
-    const add = root?.querySelector('[data-action="hx-type-photo-pick"]');
-    if (add) add.disabled = (root.__hxPhotos || []).length >= 8;
-  }
-  function cuShrinkHotelPhoto(file) {
-    if (!file || !/^image\/(jpeg|png|webp|avif)$/i.test(file.type || '') || file.size < 900 * 1024 || typeof createImageBitmap !== 'function') return Promise.resolve(file);
-    return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file)).then((image) => {
-      const scale = Math.min(1, 1800 / Math.max(image.width, image.height));
-      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
-      const ctx = canvas.getContext('2d'); if (!ctx) return file;
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height); try { image.close(); } catch (_) {}
-      return new Promise((resolve) => canvas.toBlob((blob) => {
-        if (!blob || blob.size >= file.size) return resolve(file);
-        const name = String(file.name || 'chambre').replace(/\.[a-z0-9]{1,6}$/i, '') + '.jpg';
-        try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); } catch (_) { resolve(blob); }
-      }, 'image/jpeg', .84));
-    }).catch(() => file);
-  }
+  function cuPhotoEditorMarkup() { return hotelSection('roomBoard').cuPhotoEditorMarkup.apply(this, arguments); }
+  function cuRenderPhotoEditor() { return hotelSection('roomBoard').cuRenderPhotoEditor.apply(this, arguments); }
+  function cuShrinkHotelPhoto() { return hotelSection('roomBoard').cuShrinkHotelPhoto.apply(this, arguments); }
   async function cuUploadTypePhotos() { return hotelSection('views').cuUploadTypePhotos.apply(this, arguments); }
   function cuTypeEditor() { return hotelSection('editors').cuTypeEditor.apply(this, arguments); }
   function cuFloorRows() {
@@ -1034,19 +913,7 @@
   function cuFloorsManager() { return hotelSection('editors').cuFloorsManager.apply(this, arguments); }
   function cuViewsAndCharsManager() { return hotelSection('editors').cuViewsAndCharsManager.apply(this, arguments); }
   function cuUpdateFloorsManagerModal() { return hotelSection('views').cuUpdateFloorsManagerModal.apply(this, arguments); }
-  function cuRefreshFloorSelectors() {
-    if (typeof document === 'undefined' || !document.querySelectorAll) return;
-    const floors = cuFloorRows();
-    document.querySelectorAll('select[data-hx-room-floor-id], select[data-hx-bulk-floor-id]').forEach((sel) => {
-      const currentVal = sel.value;
-      const isBulk = sel.hasAttribute('data-hx-bulk-floor-id');
-      const prefix = isBulk ? `<option value="">${tx('Ne pas modifier')}</option>` : '';
-      sel.innerHTML = prefix + floors.map((f) => `<option value="${esc(f.id)}" ${f.id === currentVal ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
-      if (currentVal && floors.some((f) => f.id === currentVal)) {
-        sel.value = currentVal;
-      }
-    });
-  }
+  function cuRefreshFloorSelectors() { return hotelSection('roomBoard').cuRefreshFloorSelectors.apply(this, arguments); }
   function cuFloorEditor() { return hotelSection('editors').cuFloorEditor.apply(this, arguments); }
   function cuFloors() {
     const st = cuState();
@@ -1103,31 +970,10 @@
    * envoi perdu se rejoue sans créer un second séjour. Échec ou délai : null,
    * la vente se fait quand même (le plan compte la chambre occupée). */
   async function cuRegisterWalkin() { return hotelSection('views').cuRegisterWalkin.apply(this, arguments); }
-  async function cuStayStatus(id, status, force = false) {
-    const slug = cuMerchantSlug();
-    if (!slug || !id) return false;
-    try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force }) });
-      const data = await res.json().catch(() => ({}));
-      if (cuMerchantSlug() !== slug) return false;
-      if (res.status === 409 && data.error === 'stay-unpaid' && !force && confirm(tx('Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?', { amount: cuDraftMoney(data.owedCents) }))) return cuStayStatus(id, status, true);
-      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
-    } catch (_) {}
-    return false;
-  }
+  async function cuStayStatus() { return hotelSection('arrivals').cuStayStatus.apply(this, arguments); }
   /* Le règlement du walk-in a échoué après son inscription : le séjour est
      défait par le chemin tracé (en maison → confirmé → annulé), jamais effacé. */
-  async function cuStayCancel(id) {
-    const slug = cuMerchantSlug();
-    if (!slug || !id) return false;
-    await cuStayStatus(id, 'confirmed');
-    try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
-    } catch (_) {}
-    return false;
-  }
+  async function cuStayCancel() { return hotelSection('arrivals').cuStayCancel.apply(this, arguments); }
   function cuTonight() {
     const today = cuToday();
     const rooms = Object.values(R() || {}).filter((r) => r && r.id);
@@ -1187,20 +1033,7 @@
       cuBulkStaged = null;
     }
   }
-  function cuLinkConnectingRooms(st, roomA, roomB) {
-    if (!roomA || !roomB || roomA.id === roomB.id) return;
-    const now = cuStamp();
-    if (!Array.isArray(roomA.connectingRoomIds)) roomA.connectingRoomIds = [];
-    if (!Array.isArray(roomB.connectingRoomIds)) roomB.connectingRoomIds = [];
-    if (!roomA.connectingRoomIds.includes(roomB.id)) roomA.connectingRoomIds.push(roomB.id);
-    if (!roomB.connectingRoomIds.includes(roomA.id)) roomB.connectingRoomIds.push(roomA.id);
-    roomA.connectingMeta = { ...(roomA.connectingMeta || {}) };
-    roomB.connectingMeta = { ...(roomB.connectingMeta || {}) };
-    roomA.connectingMeta[roomB.id] = { at: now, linked: true };
-    roomB.connectingMeta[roomA.id] = { at: now, linked: true };
-    roomA.updatedAt = now;
-    roomB.updatedAt = now;
-  }
+  function cuLinkConnectingRooms() { return hotelSection('roomBoard').cuLinkConnectingRooms.apply(this, arguments); }
   function cuUnlinkConnectingRooms() { return hotelSection('views').cuUnlinkConnectingRooms.apply(this, arguments); }
   function cuSetConnectingRooms() { return hotelSection('views').cuSetConnectingRooms.apply(this, arguments); }
   function cuHasActiveFilters() {
@@ -3121,7 +2954,7 @@
             localStorage.setItem(draftKey, JSON.stringify(plan));
             const back = openModal?.el?.querySelector('[data-action="hx-bulk-back"]');
             if (back) back.disabled = false;
-            if (hotelCloud?.pull) Promise.resolve(hotelCloud.pull(true)).catch(() => {});
+            if (hotelSection('receptionState').cloud()?.pull) Promise.resolve(hotelSection('receptionState').cloud().pull(true)).catch(() => {});
           }
           throw new Error(conflict
             ? trL({fr:'Conflit serveur · actualisez les chambres et vérifiez à nouveau les modifications.',en:'Server conflict · refresh rooms and review the changes again.',ar:'تعارض بالخادم · حدّث الغرف وراجع التعديلات.'})
@@ -3131,11 +2964,11 @@
         }
         // The reply belongs to its original property even if navigation changed.
         const acknowledged = cuHydrate(result.data);
-        CUSTOM_HX[stateId] = acknowledged;
+        hotelSection('receptionState').replaceState(stateId, acknowledged);
         const cached = cuWriteLocal(acknowledged, stateId);
         if (cached) localStorage.removeItem(draftKey);
         if (stateId !== cuStateId() || plan.merchant !== cuMerchantSlug()) return;
-        if (hotelCloud?.pull) hotelCloud.pull(true);
+        if (hotelSection('receptionState').cloud()?.pull) hotelSection('receptionState').cloud().pull(true);
         cuSelectedRooms.clear();
         cuSelectionMode = false;
         cuBulkStaged = null;
@@ -3569,9 +3402,9 @@
     hydrate: (doc) => {
       const id = cuStateId();
       if (id) {
-        CUSTOM_HX[id] = cuHydrate(doc);
-        cuWriteLocal(CUSTOM_HX[id], id);
-        return CUSTOM_HX[id];
+        hotelSection('receptionState').replaceState(id, cuHydrate(doc));
+        cuWriteLocal(hotelSection('receptionState').stateFor(id), id);
+        return hotelSection('receptionState').stateFor(id);
       }
       return cuHydrate(doc);
     },

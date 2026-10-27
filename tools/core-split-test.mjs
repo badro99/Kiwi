@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import source from './core-test-source.cjs';
+import sourceHome from './home-test-source.cjs';
 import { precached } from './split-live-checks.mjs';
 const sha = value => createHash('sha256').update(value).digest('hex');
 for (const area of ['daterange', 'agent']) {
@@ -13,11 +14,11 @@ for (const area of ['daterange', 'agent']) {
   const original = gunzipSync(fs.readFileSync(dir + 'original.js.gz')).toString();
   assert.equal(sha(original), map.sha256, 'frozen original digest');
   assert.equal(source.source(map.file), original, 'every live function reconstructs its original body and order');
-  const part = fs.readFileSync(map.part, 'utf8');
+  const part = area === 'daterange' ? sourceHome.source() : fs.readFileSync(map.part, 'utf8');
   assert.equal(sha(part), map.partHash, 'no unreviewed changes to moved bodies');
   const window = {};
-  vm.runInNewContext(part, { window });
-  const register = Object.values(window);
+  vm.runInNewContext(area === 'daterange' ? sourceHome.live() : part, { window });
+  const register = Object.entries(window).filter(([key]) => key !== '__kiwiHomeRenderers').map(([, value]) => value);
   assert.equal(register.length, 1, 'one registration factory and no load-time side effects');
   const accessed = [];
   const state = new Proxy({}, { get: (_, key) => { accessed.push(key); throw new Error('eager state read'); } });

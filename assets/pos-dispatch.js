@@ -54,7 +54,7 @@
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '66', label: 'Pressing · Pressing Marshan' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '71', module: true, module: true, module: true, label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '118', module: true, label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '11', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '25', label: 'Hôtel / Riad' },

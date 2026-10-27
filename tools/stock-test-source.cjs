@@ -6,7 +6,7 @@ const path = require('path');
 const map = require('./fixtures/stock/split.json');
 const root = path.resolve(__dirname, '..');
 function functions(base = root) {
-  const parts = Object.fromEntries(map.groups.map(g => [g, fs.readFileSync(path.join(base, `assets/stock/${g}.js`), 'utf8')]));
+  const parts = Object.fromEntries(map.groups.map(g => [g, require('./stock-controller-test-source.cjs')(`assets/stock/${g}.js`, base)]));
   return map.moved.map(m => {
     // Les limites nommées survivent aux modifications ultérieures du corps.
     const source = parts[m.group];
@@ -25,7 +25,7 @@ function functions(base = root) {
   });
 }
 function stockSource(base = root) {
-  let core = fs.readFileSync(path.join(base, 'assets/stock.js'), 'utf8');
+  let core = require('./stock-controller-test-source.cjs')('assets/stock.js', base);
   /* Second stage: the FR/EN/AR string pack lives in assets/stock/strings.js. */
   const stage2 = require('./fixtures/stock-strings/split.json');
   for (const seg of stage2.segments) {

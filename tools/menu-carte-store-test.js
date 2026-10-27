@@ -32,6 +32,7 @@
  * elle-même.
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
+const menuCatalogSource = require('./menu-catalog-test-source.cjs');
 
 const fs = require('fs');
 const path = require('path');
@@ -70,7 +71,7 @@ function stubDom() {
   });
   return {
     readyState: 'loading',
-    documentElement: { lang: 'fr', dir: 'ltr' },
+    documentElement: { lang: 'fr', dir: 'ltr', getAttribute: (name) => (name === 'lang' ? 'fr' : null) },
     head: { appendChild() {} },
     body: node(),
     getElementById: () => null,
@@ -209,7 +210,7 @@ function load(world) {
   ctx.window.fetch = world.fetch;
   ctx.window.setTimeout = setTimeout;
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(SRC, 'utf8'), ctx, { filename: 'menu-catalog.js' });
+  vm.runInContext(process.env.KIWI_MENU_CATALOG_ORIGINAL === '1' ? menuCatalogSource() : menuCatalogSource.runtimeSource(), ctx, { filename: 'menu-catalog.js' });
   // le module s'amorce sur 'load'
   (world.onLoad || []).filter((h) => h.evt === 'load').forEach((h) => h.fn());
   return ctx.window.KiwiMenuStore;
@@ -444,6 +445,74 @@ const suite = [
     API.saveFormulaTemplate('Boisson petit déjeuner', {slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:0}]}]});
     eq('un modèle de formule est persisté séparément', API.data('v-cf').formulaTemplates.length, 1);
     eq('le modèle garde ses articles sélectionnables', API.data('v-cf').formulaTemplates[0].formula.slots[0].choices[0].itemId, juice);
+  })(),
+
+  /* 8 — DEUX APPAREILS, UNE CARTE. Le patron change un prix sur son téléphone
+   *     pendant que le gérant renomme un autre plat sur la tablette. La
+   *     tablette publie la première ; le téléphone reçoit « stale-menu ». Il
+   *     jetait sa modification et reprenait la carte du serveur. Il fusionne
+   *     maintenant les deux et republie une fois, avec la bonne révision. */
+  (async () => {
+    const server = CARTE('srv');
+    server.items.push({ id: 'it_2', name: 'Thé', price: 8, catId: 'cat_1', avail: true });
+    const w = makeWorld([CAFE], { serverMenus: { 'amira-cafe': server } });
+    const toasts = [];
+    w.window.Kiwi.toast = (title, opts) => toasts.push({ title, desc: (opts && opts.desc) || '' });
+    const elsewhere = JSON.parse(JSON.stringify(server));
+    elsewhere.items[1].name = 'Thé à la menthe';
+    let posts = 0;
+    const base = w.fetch;
+    w.fetch = w.window.fetch = function (url, init) {
+      if (!init || init.method !== 'POST') return base(url, init);
+      w.calls.push({ url: String(url), method: 'POST', body: JSON.parse(init.body) });
+      posts++;
+      if (posts === 1) return Promise.resolve({ ok: false, status: 409,
+        json: () => Promise.resolve({ error: 'stale-menu', data: elsewhere, updatedTs: 5678 }) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, updatedTs: 9999 }) });
+    };
+    const API = load(w);
+    await sleep(1600);
+    API.updateItem('it_1', { price: 14 });
+    API.publish('v-cf');
+    await sleep(400);
+    const sent = menuPosts(w);
+    eq('un refus « stale-menu » relance une seule publication', sent.length, 2);
+    const retry = sent[1] && sent[1].body;
+    eq('la relance porte la révision du serveur', retry && retry.expectedUpdatedTs, 5678);
+    const it = (id) => ((retry && retry.data.items) || []).find((x) => x.id === id) || {};
+    eq('le prix changé ici est gardé', it('it_1').price, 14);
+    eq('le nom changé ailleurs est gardé', it('it_2').name, 'Thé à la menthe');
+    eq('ce navigateur garde la carte fusionnée', (w.mem['v-cf'].items.find((x) => x.id === 'it_2') || {}).name, 'Thé à la menthe');
+    eq('deux modifications qui ne se touchent pas n’affichent rien', toasts.length, 0);
+  })(),
+
+  /* 9 — Le même plat changé des deux côtés : la version enregistrée ailleurs
+   *     gagne, et le patron voit lequel. */
+  (async () => {
+    const server = CARTE('srv');
+    const w = makeWorld([CAFE], { serverMenus: { 'amira-cafe': server } });
+    const toasts = [];
+    w.window.Kiwi.toast = (title, opts) => toasts.push({ title, desc: (opts && opts.desc) || '' });
+    const elsewhere = JSON.parse(JSON.stringify(server));
+    elsewhere.items[0].price = 12;
+    let posts = 0;
+    const base = w.fetch;
+    w.fetch = w.window.fetch = function (url, init) {
+      if (!init || init.method !== 'POST') return base(url, init);
+      w.calls.push({ url: String(url), method: 'POST', body: JSON.parse(init.body) });
+      posts++;
+      if (posts === 1) return Promise.resolve({ ok: false, status: 409,
+        json: () => Promise.resolve({ error: 'stale-menu', data: elsewhere, updatedTs: 5678 }) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, updatedTs: 9999 }) });
+    };
+    const API = load(w);
+    await sleep(1600);
+    API.updateItem('it_1', { price: 15 });
+    API.publish('v-cf');
+    await sleep(400);
+    const retry = menuPosts(w)[1];
+    eq('le même prix changé des deux côtés : la version d’ailleurs gagne', retry && retry.body.data.items[0].price, 12);
+    ok('le patron voit quel plat a été tranché', toasts.length === 1 && toasts[0].desc.indexOf('Café srv') !== -1);
   })(),
 ];
 

@@ -30,9 +30,7 @@
   }
   async function load() {
     try {
-      var r = await fetch('/api/admin/origin-devices', { cache: 'no-store', credentials: 'same-origin' });
-      if (!r.ok) throw new Error('unavailable');
-      rows = (await r.json()).devices || []; unavailable = false;
+      rows = (await window.KiwiAdminApi.request('/origin-devices', { cache: 'no-store' })).devices || []; unavailable = false;
     } catch (_) { unavailable = true; }
     render();
   }

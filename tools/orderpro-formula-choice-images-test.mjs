@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
@@ -27,7 +28,7 @@ assert.equal(sanitized.items.find((item) => item.id === 'penne').showPhotoInForm
 assert.equal(sanitized.items.find((item) => item.id === 'legacy').showPhotoInFormulas, false,
   'existing menu items default to text-only formula choices');
 
-const catalog = read('assets/menu-catalog.js');
+const catalog = menuCatalogSource();
 const workspace = menuWorkspaceSource();
 const orderPro = orderProTestSource(ROOT);
 const dashboard = dashboardDependencies(read('dashboard.html'));

@@ -10,6 +10,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { analyse, inspect } from './ownership-lib.mjs';
+import { concatParts } from './concat-parts.mjs';
 const tracked = ['assets/caisse/table-settlement.js', 'dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', ...['caisse-app', 'pages-pro', 'hotel', 'dateRange', 'agent', 'venues', 'interactive', 'serveur-app', 'stock'].map(n => `assets/${n}.js`)];
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.join(root, 'tools/ownership-manifest.json');
@@ -23,6 +24,9 @@ export function inventory(root) {
     }
   }
   walk('assets');
+  /* Concatenation splits: each part is a slice of one closure and is scanned
+     through its bundle, the file the pages load. */
+  for (const part of concatParts(root)) sources.delete(part);
   for (const shell of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']) {
     const html = fs.readFileSync(path.join(root, shell), 'utf8'), sequence = [], deferred = [];
     let i = 0;

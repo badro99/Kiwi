@@ -68,7 +68,8 @@ await strict('advance refunds require the owner, exact available cents and immut
  ok(await creditRefund('owner','owner-refund',paid));
  assert.equal((await creditRefund('owner','owner-refund',paid+1)).status,409);
  const b=ok(await call('owner')),erase=clone(b.data);hist(erase).splice(0,1);
- assert.equal((await call('owner',{data:erase,baseRev:b.rev})).status,409);
+ // Le carnet est en ajout seul (functions/api/_credit-book-store.js) : un carnet amputé n'efface rien.
+ await call('owner',{data:erase,baseRev:b.rev});assert.deepEqual(hist(ok(await call('owner')).data),hist(b.data));
  const tamper=clone(b.data);hist(tamper).at(-1).amt=0;
  assert.equal((await call(0,{data:tamper,baseRev:b.rev})).status,409);
  assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM sale_audit WHERE action='credit-book-refund'").get().n,1);

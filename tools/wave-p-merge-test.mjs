@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import teamOwners from './team-owners-test-source.cjs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -15,7 +16,7 @@ let failures = 0;
 function test(name, fn) { try { fn(); console.log('✓ ' + name); } catch(e) { failures++; console.error('✗ ' + name + ': ' + (e.cause || e).message.slice(0,600)); } }
 function property(fn) { fc.assert(fc.property(fc.integer({min:1,max:500}), fc.integer({min:501,max:1000}), fn), {seed:20261026,numRuns:60}); }
 // Extract the shipped team merge with its pure dependencies, not a rewritten model.
-const team = read('assets/team.js');
+const team = teamOwners.originalFile('assets/team.js');
 function grab(name) { const start=team.indexOf('  function '+name+'('); let d=0; for(let i=team.indexOf('{',start);i<team.length;i++){if(team[i]==='{')d++;if(team[i]==='}'&&!--d)return team.slice(start,i+1);} throw Error(name); }
 vm.runInContext('const REMOVED_CAP=200; const LOCK_KEY_RE=/^(week|fortnight|month):\\d{4}-\\d{2}-\\d{2}:\\d{4}-\\d{2}-\\d{2}$/; function teamSlug(){return "";} function fillCodes(m){return m;} '+['cleanRemoved','mergeRemoved','cleanLocks','mergeLocks','memberBelongsToStore','scopeTeamDoc','mergeByDay','mergeTeamDoc'].map(grab).join('\n')+'; globalThis.teamMerge=mergeTeamDoc;',ctx);
 test('team#0 profile fields retain independent edits and converge',()=>property((x,y)=>{

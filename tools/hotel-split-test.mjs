@@ -1,3 +1,4 @@
+import { hotelC1Source, hotelC1Normalize } from './hotel-c1-source.mjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 /* Preuve de découpe : reconstruction exacte et exécution des fichiers réels. */
 import assert from 'node:assert/strict';
@@ -37,7 +38,7 @@ for (const part of hotelSections.parts) {
     }
     expected += body + '\n\n';
   }
-  assert.equal(read(part.file), expected + part.suffix, part.file + ': only explicit live state access changes');
+  assert.equal(hotelC1Source(part.file), expected + part.suffix, part.file + ': only explicit live state access changes');
 }
 const mergedOriginals = JSON.parse(gunzipSync(fs.readFileSync('tools/fixtures/hotel/merged-originals.json.gz')));
 for (const [parent, children] of [
@@ -112,7 +113,7 @@ function run(parts, lang) {
   const { window, data, handlers } = realm.result;
   const state = JSON.stringify(window.KiwiHotelRooms.current());
   const effects = JSON.stringify([...data]);
-  const functions = Object.fromEntries(Object.entries(handlers).map(([k, v]) => [k, String(v)]));
+  const functions = Object.fromEntries(Object.entries(handlers).map(([k, v]) => [k, hotelC1Normalize(String(v))]));
   window.KiwiI18n = { getLang: () => lang };
   return { state, effects, functions, window };
 }
@@ -161,7 +162,8 @@ console.log('✓ hotel-split: exact reconstruction, ordered deferred loading, st
   assert.equal(requests.length,0,'hotel UI does not load at first paint');
   const self = {}, args = ['one'];
   const first = H['nav-reception'].apply(self,args), second = H['nav-reception'].apply(self,args);
-  for (let i=0;i<5;i++) {
+  const hotelScriptCount = (lazyLoader.match(/hotel: \{ dependencies: \[\], scripts: \[([\s\S]*?)\]/)[1].match(/assets\//g) || []).length;
+  for (let i=0;i<hotelScriptCount;i++) {
     for(let spin=0;spin<40 && requests.length<=i;spin++) await Promise.resolve();
     assert.equal(requests.length,i+1,'one dependency at a time, shared by concurrent opens');
     requests[i].onload();
@@ -169,11 +171,11 @@ console.log('✓ hotel-split: exact reconstruction, ordered deferred loading, st
   assert.equal(await first,'opened'); assert.equal(await second,'opened');
   assert.equal(calls.length,2); assert.equal(calls[0][0],self); assert.deepEqual(calls[0][1],args);
   const group=H['hx-group-new']();
-  for(let spin=0;spin<40 && requests.length<6;spin++) await Promise.resolve();
-  assert.match(requests[5].src,/hotel\/groups.js/);
-  requests[5].onerror(); await assert.rejects(group);
+  for(let spin=0;spin<40 && requests.length<hotelScriptCount+1;spin++) await Promise.resolve();
+  assert.match(requests[hotelScriptCount].src,/hotel\/groups.js/);
+  requests[hotelScriptCount].onerror(); await assert.rejects(group);
   const retry=H['hx-group-new']();
-  for(let spin=0;spin<40 && requests.length<7;spin++) await Promise.resolve();
-  requests[6].onload(); assert.equal(await retry,'group');
+  for(let spin=0;spin<40 && requests.length<hotelScriptCount+2;spin++) await Promise.resolve();
+  requests[hotelScriptCount+1].onload(); assert.equal(await retry,'group');
   console.log('✓ hotel lazy loader: first use, ordered dependencies, concurrency, live handler context and retry');
 }

@@ -1,3 +1,4 @@
+import planningSourceHelper from './planning-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -47,7 +48,7 @@ await run('planning', () => {
  const src=fs.readFileSync('assets/team/profile-ui.js','utf8');
  const hints=[...src.matchAll(/plHint: ('[^\n]+'),/g)].map(m=>vm.runInNewContext(m[1]));
  assert.equal(hints.length,3);
- assert.match(fs.readFileSync('assets/team-hours.js','utf8'),/esc\(T.precisionHint\)/);
+ assert.match(planningSourceHelper.planningTestSource(),/esc\(T.precisionHint\)/);
  for(const h of hints) {assert.match(h,/0[.,]01/);assert.match(h,/36/);}
 });
 await run('pairing', async () => {

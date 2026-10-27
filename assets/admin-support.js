@@ -145,23 +145,7 @@
   async function req(url, opts) {
     if (state.merchant && !opts && /^\/api\/admin\/support(?:\?|$)/.test(url))
       url += (url.includes('?') ? '&' : '?') + 'merchant=' + encodeURIComponent(state.merchant);
-    var r = await fetch(
-        url,
-        Object.assign(
-          {
-            credentials: 'same-origin',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          },
-          opts || {}
-        )
-      ),
-      j = await r.json().catch(function () {
-        return {};
-      });
-    if (!r.ok) throw new Error(j.error || 'http-' + r.status);
-    return j;
+    return window.KiwiAdminApi.request(url, opts);
   }
 
   // Errors.

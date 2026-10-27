@@ -178,11 +178,14 @@ const countScope = new Proxy(countState, { get(target, key) {
   return key in target ? target[key] : (value) => String(value ?? '');
 } });
 class CountClock extends Date { static now() { return countNow; } }
-vm.runInNewContext(fs.readFileSync('assets/stock/counts.js', 'utf8'), {
+const countRealm = {
   window: { KiwiStockInternal: { install(_name, factory) { countApi = factory(countScope); } } },
   Date: CountClock, localStorage: { getItem: () => null },
   fetch: async () => { countReads++; throw new Error('Read paused by device poll policy'); }
-});
+};
+vm.runInNewContext(fs.readFileSync('assets/stock/state.js', 'utf8'), countRealm);
+countState.stockState = countRealm.window.KiwiStockState(() => ({}));
+vm.runInNewContext(fs.readFileSync('assets/stock/counts.js', 'utf8'), countRealm);
 countApi.renderCountsHistory();
 for (let i = 0; i < 20; i++) await Promise.resolve();
 assert.equal(countReads, 1, 'paused stock history performs one attempt, not a render/request loop');

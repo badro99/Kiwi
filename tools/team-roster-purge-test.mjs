@@ -22,7 +22,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TEAM = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+const TEAM = (await import('./team-owners-test-source.cjs')).default.originalFile('assets/team.js');
 const PURGE = fs.readFileSync(path.join(ROOT, 'assets/tenant-purge.js'), 'utf8');
 const IDENT = fs.readFileSync(path.join(ROOT, 'assets/identity.js'), 'utf8');
 

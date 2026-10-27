@@ -20,8 +20,10 @@
   var QUEUE_PREFIX = 'kiwiKitchenPrintQueueV1:';
   var DONE_PREFIX = 'kiwiKitchenPrintDoneV1:';
   var REPRINT_PREFIX = 'kiwiReceiptReprintsV1:';
+  var RECOVER_PREFIX = 'kiwiKitchenPrintRecoverV1:';
   var MAX_JOBS = 120;
   var MAX_DONE = 500;
+  var MAX_RECOVER = 60;
   var MAX_AGE = 30 * 60 * 1000;
   var RETRY_MS = 1200;
   var RETRY_MAX_MS = 15000;
@@ -63,6 +65,7 @@
   function qKey() { return QUEUE_PREFIX + (merchant() || 'unpaired'); }
   function dKey() { return DONE_PREFIX + (merchant() || 'unpaired'); }
   function rKey() { return REPRINT_PREFIX + (merchant() || 'unpaired'); }
+  function rkKey() { return RECOVER_PREFIX + (merchant() || 'unpaired'); }
   function hubConfig() { return json(HUB_KEY, {}) || {}; }
   function deviceId() {
     try {
@@ -223,17 +226,94 @@
          et la file se purgeait SANS UN MOT : le bon le plus ancien disparaissait
          pendant que la caisse affichait toujours « en attente ». La purge reste
          nécessaire — un stockage n'est pas infini — mais elle se journalise, et
-         elle prévient, parce que ce qui part ici est un plat qui ne sortira pas. */
+         elle prévient, parce que ce qui part ici est un plat qui ne sortira pas.
+         Le texte complet du bon évincé entre aussi dans la liste de récupération :
+         l'historique ne se contente plus d'un diagnostic, il garde le papier. */
+      var drops = [];
       q.forEach(function (job) {
         if (fresh.indexOf(job) >= 0) return;
         if (!job || !job.id || !job.payload) return;
-        record(kept.indexOf(job) >= 0 ? 'dropped-overflow' : 'dropped-expired', job);
+        var state = kept.indexOf(job) >= 0 ? 'dropped-overflow' : 'dropped-expired';
+        record(state, job);
+        drops.push({ job: job, state: state });
       });
+      if (drops.length) bookRecoveries(drops);
       lastError = kept.length < q.length ? 'ticket-expired' : 'queue-overflow';
-      notifyWaiting(lastError);
+      warnDropped(lastError, drops.map(function (d) { return String(d.job.id); }));
       writeQueue(fresh);
     }
     return fresh;
+  }
+  /* ── CE QUI TOMBE DE LA FILE RETOMBE DANS LA LISTE DE RÉCUPÉRATION ─────
+   * La purge ne disait qu'une chose : quel bon est parti, et pourquoi. Un
+   * patron prévenu n'avait pourtant aucun moyen de le reprendre : la commande
+   * n'était que dans le localStorage de CET appareil, le serveur n'en sait
+   * rien. La liste de récupération garde donc le PAYLOAD ENTIER de chaque bon
+   * évincé, sous une clé à part, avec sa propre borne (60, indépendante des
+   * 120 de la file : une purge peut évincer d'un coup les deux tiers d'une
+   * file). Un geste « Réimprimer » renvoie le bon dans la FILE DURABLE, sous
+   * une identité neuve : registre `done` intact, doublon impossible, et le
+   * même chemin réseau, relais et pont que l'original. L'entrée n'est retirée
+   * de la liste que si la file a réellement ACCEPTÉ le bon : refusé (file
+   * pleine), il reste reprisable. */
+  function readRecover() {
+    var r = json(rkKey(), []);
+    if (!Array.isArray(r)) return [];
+    return r.filter(function (x) { return x && x.id && x.payload && (x.type === 'receipt' || x.type === 'kitchen'); });
+  }
+  function bookRecoveries(drops) {
+    var r = readRecover();
+    drops.forEach(function (drop) {
+      var job = drop.job;
+      r = r.filter(function (x) { return x && x.id !== job.id; });
+      r.push({
+        id: job.id,
+        type: job.type === 'receipt' ? 'receipt' : 'kitchen',
+        payload: job.payload,
+        station: job.station || (job.payload && job.payload.station) || '',
+        createdAt: Number(job.createdAt || 0) || Date.now(),
+        at: Date.now(),
+        reason: safeReason(drop.state)
+      });
+    });
+    var body = JSON.stringify(r.slice(-MAX_RECOVER));
+    var written = put(rkKey(), body);
+    if (!written) { trimDone(50); written = put(rkKey(), body); }
+    return written;
+  }
+  function reprintDropped(id) {
+    var entries = readRecover();
+    if (!entries.length) return null;
+    var entry = null;
+    if (id) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i] && entries[i].id === String(id)) { entry = entries[i]; break; }
+      }
+    } else {
+      entry = entries[entries.length - 1];
+    }
+    if (!entry) return null;
+    /* `force: true` donne au bon repris une identité fraîche : le registre
+       anti-doublon protège le chemin automatique, pas ce geste humain. Le
+       contenu du papier vit dans le payload ; la date du travail, elle,
+       repart de maintenant, sinon la péremption de trente minutes effacerait
+       de la file le bon qu'on vient tout juste de reprendre (et le temps du
+       ticket affiché reste celui du payload, d'origine). */
+    var reply = enqueue([{
+      id: entry.id,
+      type: entry.type,
+      payload: entry.payload,
+      station: entry.station,
+      createdAt: Date.now(),
+    }], { force: true });
+    if (reply && reply.accepted) {
+      var rest = entries.filter(function (x) { return x !== entry; });
+      var body = JSON.stringify(rest.slice(-MAX_RECOVER));
+      if (!put(rkKey(), body)) { trimDone(50); put(rkKey(), body); }
+      record('recovered-reprint', { id: entry.id, type: entry.type }, { via: 'recovery' });
+      emit();
+    }
+    return reply;
   }
   /* ── UNE ÉCRITURE QUI ÉCHOUE N'EST PAS UNE ÉCRITURE ───────────────────
    * `put` avale l'exception et rend `false` ; personne ne lisait ce `false`.
@@ -301,6 +381,7 @@
       uncertain: q.filter(function (job) { return !!job.uncertain; }).length,
       awaitingRelay: q.filter(function (job) { return !!job.relayId && !job.uncertain; }).length,
       leaseExpiresAt: Number(hubConfig().expiresAt || 0),
+      recoverable: readRecover().length,
       lastSuccess: lastSuccess, lastError: lastError || (q[0] && q[0].lastError) || '',
     };
   }
@@ -330,6 +411,80 @@
       var b = document.getElementById('kitchen-print-count');
       if (b) b.classList.add('warn');
     }
+  }
+  function tr(value) {
+    try {
+      var lang = window.KiwiCaisseLang;
+      if (lang && typeof lang.tr === 'function') return String(lang.tr(value));
+    } catch (_) {}
+    return value;
+  }
+  /* ── L'AVEU DU BON DROPPÉ CHANGE DE MAIN ──────────────────────────────
+   * La purge se disait avec le message des simples file d'attente :
+   * « le ticket reste dans la file », alors que le bon venait d'en SORTIR.
+   * Ce qui part a désormais son propre avertissement, avec le geste qui
+   * répare : un bouton « Réimprimer » posé sur le même empilement que les
+   * toasts de la caisse. Là où la pile n'existe pas (signal, écran nu), le
+   * toast registre reste la voix de repli, comme avant. */
+  function warnDropped(lastError, ids) {
+    var desc = tr('Le bon n’a pas pu être imprimé. Réimprimez-le d’un geste.');
+    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-recovery', { detail: { recoverable: readRecover().length, reason: safeReason(lastError) } })); } catch (_) {}
+    if (mountRecoveryToast(desc, ids)) return;
+    try {
+      if (window.KiwiCaisseToast) window.KiwiCaisseToast(
+        tr('Ticket cuisine tombé de la file'), 9000, 'warn', desc
+      );
+    } catch (_) {}
+  }
+  function mountRecoveryToast(desc, ids) {
+    try {
+      var stack = document.getElementById('toast-stack');
+      if (!stack || typeof document.createElement !== 'function') return false;
+      if (typeof stack.querySelector !== 'function' || stack.querySelector('[data-kiwi-recover]')) return false;
+      var el = document.createElement('div');
+      el.className = 'toast is-warn';
+      el.setAttribute('data-kiwi-recover', '');
+      el.setAttribute('role', 'alert');
+      var copy = document.createElement('span');
+      copy.className = 'toast-copy';
+      var title = document.createElement('span');
+      title.className = 'toast-title';
+      title.textContent = tr('Ticket cuisine tombé de la file');
+      copy.appendChild(title);
+      var detail = document.createElement('span');
+      detail.className = 'toast-desc';
+      detail.textContent = desc;
+      copy.appendChild(detail);
+      copy.appendChild(buildRecoveryButton(ids));
+      el.appendChild(copy);
+      stack.appendChild(el);
+      setTimeout(function () {
+        try { if (el.parentNode) el.parentNode.removeChild(el); } catch (_) {}
+      }, 12000);
+      return true;
+    } catch (_) { return false; }
+  }
+  /* Le bouton reprend TOUS les bons de cette purge (une saturation peut en
+   * évincer plusieurs d'un coup), puis s'éteint : un second appui ne lance
+   * rien. Si la file en refuse un (pleine), il se rallume pour ceux-là. */
+  function buildRecoveryButton(ids) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = tr('Réimprimer');
+    try { btn.style.cssText = 'margin-top:8px;width:100%;min-height:40px;'; } catch (_) {}
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      var refused = [];
+      (ids && ids.length ? ids : [null]).forEach(function (id) {
+        var reply = null;
+        try { reply = reprintDropped(id); } catch (_) {}
+        if (!reply || !reply.accepted) { if (id && readRecover().some(function (x) { return x.id === id; })) refused.push(id); }
+      });
+      if (refused.length) { ids = refused; btn.disabled = false; }
+    });
+    return btn;
   }
   function schedule() {
     var q = readQueue();
@@ -627,7 +782,7 @@
   }
   function ledgerName() { return 'print-ledger-' + cleanId(merchant() || 'unpaired').toLowerCase().slice(0, 70); }
   function nativeSnapshot() {
-    return JSON.stringify({ version: 1, merchant: merchant(), queue: json(qKey(), []), done: json(dKey(), []), reprints: json(rKey(), {}), hub: hubConfig(), records: records.slice(-MAX_RECORDS) });
+    return JSON.stringify({ version: 1, merchant: merchant(), queue: json(qKey(), []), done: json(dKey(), []), reprints: json(rKey(), {}), recover: json(rkKey(), []), hub: hubConfig(), records: records.slice(-MAX_RECORDS) });
   }
   function persistNative() {
     var plugin = nativePlugin(); if (!plugin || typeof plugin.ledgerWrite !== 'function') return;
@@ -644,6 +799,7 @@
       put(qKey(), JSON.stringify(Array.isArray(saved.queue) ? saved.queue : []));
       put(dKey(), JSON.stringify(Array.isArray(saved.done) ? saved.done : []));
       put(rKey(), JSON.stringify(saved.reprints && typeof saved.reprints === 'object' ? saved.reprints : {}));
+      put(rkKey(), JSON.stringify(Array.isArray(saved.recover) ? saved.recover.slice(-MAX_RECOVER) : []));
       if (saved.hub && saved.hub.deviceId === deviceId()) put(HUB_KEY, JSON.stringify(saved.hub));
       records = Array.isArray(saved.records) ? saved.records.slice(-MAX_RECORDS) : [];
       record('native-restored', null);
@@ -677,9 +833,11 @@
     enqueue: enqueue, flush: flush, retryNow: retryNow, status: status,
     enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
+    reprintDropped: reprintDropped,
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */
     _readQueue: readQueue, _alreadyDone: alreadyDone, _remote: remote, _claimRemote: claimRemote,
+    _readRecover: readRecover,
   };
   window.KiwiKitchenPrint.ready = restoreNative().then(function () { emit(); if (readQueue().length) { schedule(); flush(); } });
 })();

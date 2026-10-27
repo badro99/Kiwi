@@ -457,3 +457,114 @@ function cuRoomStatus(room) {
 
 return Object.freeze({ cuActiveActor, cuFetchStaysForWindow, cuSeed, cuHydrate, cuDocument, cuMerge, cuFetchInHouseStays, cuRoomOccupancy, cuRoomStatus });
 };
+
+/* Owner: hotel receptionState. Exports named methods below. Reads only the declared scope and browser globals in tools/fixtures/hotel/reception-interfaces.json. */
+(window.__kiwiHotelSections ||= {}).receptionState = (scope) => {
+'use strict';
+function cuDocument(...args) { return scope.cuDocument.apply(this, args); }
+function cuEnsureFilterVenue(...args) { return scope.cuEnsureFilterVenue.apply(this, args); }
+function cuHydrate(...args) { return scope.cuHydrate.apply(this, args); }
+function cuSeed(...args) { return scope.cuSeed.apply(this, args); }
+function cuStamp(...args) { return scope.cuStamp.apply(this, args); }
+function cuStayScope(...args) { return scope.cuStayScope.apply(this, args); }
+function cuVenueId(...args) { return scope.cuVenueId.apply(this, args); }
+function toast(...args) { return scope.toast.apply(this, args); }
+function trL(...args) { return scope.trL.apply(this, args); }
+function tx(...args) { return scope.tx.apply(this, args); }
+const CUSTOM_HX = {};
+const HX_STORE_PREFIX = 'kiwi:hotel-rooms:v2:';
+let hotelCloud = null;
+const cuD1Stays = new Map();
+const cuStayLoads = new Map();
+const cuInHouseSnapshots = new Map();
+const cuReceptionFilters = new Map();
+function cuStayCache() {
+    const scope = cuStayScope();
+    if (!cuD1Stays.has(scope)) cuD1Stays.set(scope, new Map());
+    return cuD1Stays.get(scope);
+  }
+
+function cuAllStays() {
+    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+    const all = new Map();
+    (doc.bookings || []).forEach((b) => { if (b && b.id) all.set(b.id, b); });
+    cuStayCache().forEach((b, id) => {
+      if (b && (+b.updatedAt || 0) >= (+all.get(id)?.updatedAt || 0)) all.set(id, b);
+    });
+    return all;
+  }
+
+function cuStateId() {
+    const id = cuVenueId();
+    if (id !== 'scoped' && id !== 'own') return id;
+    try {
+      const slug = String(window.KiwiVenue?.getCurrentVenueData?.()?.slug || '').trim();
+      return slug ? id + ':' + slug : id + ':unresolved';
+    } catch (_) { return id + ':unresolved'; }
+  }
+
+function cuStoreKey(id) { return HX_STORE_PREFIX + String(id || cuStateId() || 'unknown'); }
+
+function cuWriteLocal(st, id) {
+    try {
+      localStorage.setItem(cuStoreKey(id), JSON.stringify(cuDocument(st)));
+      return true;
+    } catch (err) {
+      console.warn('cuWriteLocal storage failed', err);
+      return false;
+    }
+  }
+
+function cuReadLocal(id) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(cuStoreKey(id)) || 'null');
+      return raw ? cuHydrate(raw) : null;
+    } catch (_) { return null; }
+  }
+
+function cuState() {
+    cuEnsureFilterVenue();
+    const id = cuStateId();
+    if (!CUSTOM_HX[id]) {
+      CUSTOM_HX[id] = cuReadLocal(id) || cuSeed();
+      cuWriteLocal(CUSTOM_HX[id], id);
+    }
+    CUSTOM_HX[id].count = Object.keys(CUSTOM_HX[id].rooms || {}).length;
+    return CUSTOM_HX[id];
+  }
+
+function cuSave(st) {
+    st = st || cuState();
+    st.count = Object.keys(st.rooms || {}).length;
+    st.updatedAt = cuStamp();
+    const localOk = cuWriteLocal(st, cuStateId());
+    if (hotelCloud) hotelCloud.push();
+    return localOk;
+  }
+
+async function cuSaveCloud(st) {
+    if (!hotelCloud || typeof hotelCloud.save !== 'function') return { ok: false, status: 503, error: 'cloud-unavailable' };
+    const scope = cuStateId();
+    const payload = cuDocument(st || cuState());
+    const result = await hotelCloud.save(payload);
+    if (scope !== cuStateId()) return { ok: false, status: 409, error: 'tenant-switched' };
+    return result || { ok: false, status: 503, error: 'unconfirmed' };
+  }
+
+async function cuCommitDraft(st) {
+    const scope = cuStateId();
+    st.updatedAt = cuStamp();
+    const result = await cuSaveCloud(st);
+    if (!result.ok) throw new Error(result.status === 409
+      ? trL({fr:'Actualisez le plan puis réessayez. Aucune modification confirmée.',en:'Refresh the room plan and retry. No change confirmed.',ar:'حدّث مخطط الغرف وأعد المحاولة. لم يتم تأكيد أي تعديل.'})
+      : trL({fr:'Enregistrement non confirmé. Vérifiez la connexion et réessayez.',en:'Save not confirmed. Check your connection and retry.',ar:'لم يتم تأكيد الحفظ. تحقق من الاتصال وأعد المحاولة.'}));
+    if (scope !== cuStateId()) throw new Error(tx('Établissement changé'));
+    const next = result.data ? cuHydrate(result.data) : st;
+    CUSTOM_HX[scope] = next;
+    const cached = cuWriteLocal(next, scope);
+    if (!cached) toast(trL({fr:'Confirmé au serveur, cache local indisponible',en:'Saved on server; local cache unavailable',ar:'حُفظ في الخادم؛ التخزين المحلي غير متاح'}), {type:'warn'});
+    return next;
+  }
+
+return Object.freeze({ cuStayCache, cuAllStays, cuStateId, cuStoreKey, cuWriteLocal, cuReadLocal, cuState, cuSave, cuSaveCloud, cuCommitDraft, cloud: () => hotelCloud, setCloud: value => { hotelCloud = value; }, stateFor: id => CUSTOM_HX[id], replaceState: (id, value) => { CUSTOM_HX[id] = value; return value; }, stayLoads: () => cuStayLoads, inHouseSnapshots: () => cuInHouseSnapshots, receptionFilters: () => cuReceptionFilters });
+};

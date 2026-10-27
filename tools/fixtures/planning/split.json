@@ -1,0 +1,300 @@
+{
+  "sha256": "7abd20e557a043e69c2656d306aaff77a369004468538b4adcce8aeb22af458c",
+  "imports": "import { createCorrections } from './planning/corrections.js';\nimport { createPayrollView } from './planning/payroll-view.js';\nimport { createOptimiser } from './planning/optimiser.js';\nimport { createCsvImport } from './planning/csv-import.js';\nimport { createShiftEditor } from './planning/shift-editor.js';\n",
+  "bindings": "  const corrections = createCorrections({ Kiwi: Kiwi, dateLocale: dateLocale, esc: esc, fetchDeadline: fetchDeadline, handlers: handlers, pad: pad, render: render, toast: toast, trLang: trLang });\n  const payrollView = createPayrollView({ AVATAR_COLORS: AVATAR_COLORS, IC: IC, Kiwi: Kiwi, buildPeriod: buildPeriod, correctionsHtml: (...args) => corrections.correctionsHtml(...args), deferredMark: (...args) => corrections.deferredMark(...args), esc: esc, fmtHours: fmtHours, fmtMad: fmtMad, getHours: getHours, getMembers: getMembers, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, pad: pad, payrollFigures: payrollFigures, periodNavigatorHtml: periodNavigatorHtml, periodPillsHtml: periodPillsHtml, render: render, renderPlanningPane: renderPlanningPane, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, svgIcon: svgIcon, t: t, teamKey: teamKey, toISO: toISO, trLang: trLang });\n  const optimiser = createOptimiser({ esc: esc, handlers: handlers, memberFullName: memberFullName, modal: modal, planningContext: planningContext, planningCopy: planningCopy, planningHolidaysByDay: planningHolidaysByDay, planningHoursKey: planningHoursKey, render: render, saveCustomTeams: saveCustomTeams, t: t, toast: toast, trLang: trLang });\n  const csvImport = createCsvImport({ Kiwi: Kiwi, esc: esc, getMembers: getMembers, handlers: handlers, live: live, lockBucket: lockBucket, memberFullName: memberFullName, modal: modal, pad: pad, render: render, saveCustomTeams: saveCustomTeams, teamKey: teamKey, trLang: trLang });\n  const shiftEditor = createShiftEditor({ AVATAR_COLORS: AVATAR_COLORS, HHMM_RE: HHMM_RE, addDays: addDays, applyLiveTeam: applyLiveTeam, buildPeriod: buildPeriod, compactPeriods: compactPeriods, dateLocale: dateLocale, esc: esc, fmtDur: fmtDur, fmtHours: fmtHours, fromISO: fromISO, getMembers: getMembers, getShifts: getShifts, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, normShift: normShift, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, shiftIsNextDay: shiftIsNextDay, shiftMinutes: shiftMinutes, t: t, teamKey: teamKey, toISO: toISO, toast: toast, trLang: trLang, visibleDays: visibleDays });\n  function deferredMark(...args) { return corrections.deferredMark(...args); }\n  function correctionsHtml(...args) { return corrections.correctionsHtml(...args); }\n  function renderHoursPane(...args) { return payrollView.renderHoursPane(...args); }\n  function updateHourTotals(...args) { return payrollView.updateHourTotals(...args); }\n  function payTiles(...args) { return payrollView.payTiles(...args); }\n  function payrollAccess(...args) { return payrollView.payrollAccess(...args); }\n  function renderPayrollBody(...args) { return payrollView.renderPayrollBody(...args); }\n  function fairScheduleCopy(...args) { return optimiser.fairScheduleCopy(...args); }\n  function optimizationCopy(...args) { return optimiser.optimizationCopy(...args); }\n  function closeShiftPop(...args) { return shiftEditor.closeShiftPop(...args); }\n  function planCellHtml(...args) { return shiftEditor.planCellHtml(...args); }\n  function planDaysHtml(...args) { return shiftEditor.planDaysHtml(...args); }\n  function shiftCellInner(...args) { return shiftEditor.shiftCellInner(...args); }\n  function shiftCellTitle(...args) { return shiftEditor.shiftCellTitle(...args); }\n\n",
+  "anchor": "  /* Paie & planning ouvre sur le PLANNING",
+  "old": "    isShiftPopOpen: () => !!shiftPop,",
+  "replacement": "    isShiftPopOpen: () => shiftEditor.isShiftPopOpen(),",
+  "parts": [
+    {
+      "name": "corrections",
+      "file": "assets/planning/corrections.js",
+      "create": "createCorrections",
+      "deps": [
+        "Kiwi",
+        "dateLocale",
+        "esc",
+        "fetchDeadline",
+        "handlers",
+        "pad",
+        "render",
+        "toast",
+        "trLang"
+      ],
+      "exports": [
+        "deferredMark",
+        "correctionsHtml"
+      ],
+      "windows": [
+        "__kiwiTeamV2"
+      ],
+      "prefix": "/* Planning corrections. Exports: deferredMark, correctionsHtml.\n * Reads injected helpers: Kiwi, dateLocale, esc, fetchDeadline, handlers, pad, render, toast, trLang.\n * Reads window: __kiwiTeamV2. Mutable UI state is private to this factory. */\nexport function createCorrections({ Kiwi, dateLocale, esc, fetchDeadline, handlers, pad, render, toast, trLang }) {\n",
+      "suffix": "\n  return Object.freeze({ deferredMark, correctionsHtml });\n}\n",
+      "fragments": [
+        {
+          "start": 3623,
+          "end": 7414,
+          "marker": "  /* planning-part:corrections:0 */\n",
+          "offset": 363,
+          "length": 3791
+        }
+      ]
+    },
+    {
+      "name": "payroll-view",
+      "file": "assets/planning/payroll-view.js",
+      "create": "createPayrollView",
+      "deps": [
+        "AVATAR_COLORS",
+        "IC",
+        "Kiwi",
+        "buildPeriod",
+        "correctionsHtml",
+        "deferredMark",
+        "esc",
+        "fmtHours",
+        "fmtMad",
+        "getHours",
+        "getMembers",
+        "handlers",
+        "hourlyPayFor",
+        "initials",
+        "jobName",
+        "live",
+        "memberFullName",
+        "pad",
+        "payrollFigures",
+        "periodNavigatorHtml",
+        "periodPillsHtml",
+        "render",
+        "renderPlanningPane",
+        "saveCustomTeams",
+        "shiftHours",
+        "svgIcon",
+        "t",
+        "teamKey",
+        "toISO",
+        "trLang"
+      ],
+      "exports": [
+        "renderHoursPane",
+        "updateHourTotals",
+        "payTiles",
+        "payrollAccess",
+        "renderPayrollBody"
+      ],
+      "windows": [
+        "KiwiConfig",
+        "KiwiNumber",
+        "KiwiVenue",
+        "__kiwiRole",
+        "__kiwiTeamV2"
+      ],
+      "prefix": "/* Planning payroll-view. Exports: renderHoursPane, updateHourTotals, payTiles, payrollAccess, renderPayrollBody.\n * Reads injected helpers: AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, deferredMark, esc, fmtHours, fmtMad, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang.\n * Reads window: KiwiConfig, KiwiNumber, KiwiVenue, __kiwiRole, __kiwiTeamV2. Mutable UI state is private to this factory. */\nexport function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, deferredMark, esc, fmtHours, fmtMad, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang }) {\n",
+      "suffix": "\n  return Object.freeze({ renderHoursPane, updateHourTotals, payTiles, payrollAccess, renderPayrollBody });\n}\n",
+      "fragments": [
+        {
+          "start": 3261,
+          "end": 3288,
+          "marker": "  /* planning-part:payroll-view:0 */\n",
+          "offset": 969,
+          "length": 27
+        },
+        {
+          "start": 7465,
+          "end": 14197,
+          "marker": "  /* planning-part:payroll-view:1 */\n",
+          "offset": 997,
+          "length": 6732
+        },
+        {
+          "start": 57992,
+          "end": 62508,
+          "marker": "  /* planning-part:payroll-view:2 */\n",
+          "offset": 7730,
+          "length": 4516
+        },
+        {
+          "start": 81307,
+          "end": 82004,
+          "marker": "  /* planning-part:payroll-view:3 */\n",
+          "offset": 12247,
+          "length": 697
+        },
+        {
+          "start": 114809,
+          "end": 117900,
+          "marker": "  /* planning-part:payroll-view:4 */\n",
+          "offset": 12945,
+          "length": 3091
+        }
+      ]
+    },
+    {
+      "name": "optimiser",
+      "file": "assets/planning/optimiser.js",
+      "create": "createOptimiser",
+      "deps": [
+        "esc",
+        "handlers",
+        "memberFullName",
+        "modal",
+        "planningContext",
+        "planningCopy",
+        "planningHolidaysByDay",
+        "planningHoursKey",
+        "render",
+        "saveCustomTeams",
+        "t",
+        "toast",
+        "trLang"
+      ],
+      "exports": [
+        "fairScheduleCopy",
+        "optimizationCopy"
+      ],
+      "windows": [
+        "KiwiHours",
+        "KiwiHoursUI",
+        "KiwiNumber",
+        "KiwiPlanningCore",
+        "__kiwiPlanningFair",
+        "__kiwiPlanningOptimize",
+        "__kiwiTeamV2"
+      ],
+      "prefix": "/* Planning optimiser. Exports: fairScheduleCopy, optimizationCopy.\n * Reads injected helpers: esc, handlers, memberFullName, modal, planningContext, planningCopy, planningHolidaysByDay, planningHoursKey, render, saveCustomTeams, t, toast, trLang.\n * Reads window: KiwiHours, KiwiHoursUI, KiwiNumber, KiwiPlanningCore, __kiwiPlanningFair, __kiwiPlanningOptimize, __kiwiTeamV2. Mutable UI state is private to this factory. */\nexport function createOptimiser({ esc, handlers, memberFullName, modal, planningContext, planningCopy, planningHolidaysByDay, planningHoursKey, render, saveCustomTeams, t, toast, trLang }) {\n",
+      "suffix": "\n  return Object.freeze({ fairScheduleCopy, optimizationCopy });\n}\n",
+      "fragments": [
+        {
+          "start": 19397,
+          "end": 32079,
+          "marker": "  /* planning-part:optimiser:0 */\n",
+          "offset": 616,
+          "length": 12682
+        },
+        {
+          "start": 95048,
+          "end": 96595,
+          "marker": "  /* planning-part:optimiser:1 */\n",
+          "offset": 13299,
+          "length": 1547
+        }
+      ]
+    },
+    {
+      "name": "csv-import",
+      "file": "assets/planning/csv-import.js",
+      "create": "createCsvImport",
+      "deps": [
+        "Kiwi",
+        "esc",
+        "getMembers",
+        "handlers",
+        "live",
+        "lockBucket",
+        "memberFullName",
+        "modal",
+        "pad",
+        "render",
+        "saveCustomTeams",
+        "teamKey",
+        "trLang"
+      ],
+      "exports": [],
+      "windows": [
+        "KiwiVenue",
+        "__kiwiTeamV2"
+      ],
+      "prefix": "/* Planning csv-import. Exports: handler registration.\n * Reads injected helpers: Kiwi, esc, getMembers, handlers, live, lockBucket, memberFullName, modal, pad, render, saveCustomTeams, teamKey, trLang.\n * Reads window: KiwiVenue, __kiwiTeamV2. Mutable UI state is private to this factory. */\nexport function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBucket, memberFullName, modal, pad, render, saveCustomTeams, teamKey, trLang }) {\n",
+      "suffix": "\n  return Object.freeze({  });\n}\n",
+      "fragments": [
+        {
+          "start": 70591,
+          "end": 79405,
+          "marker": "  /* planning-part:csv-import:0 */\n",
+          "offset": 452,
+          "length": 8814
+        }
+      ]
+    },
+    {
+      "name": "shift-editor",
+      "file": "assets/planning/shift-editor.js",
+      "create": "createShiftEditor",
+      "deps": [
+        "AVATAR_COLORS",
+        "HHMM_RE",
+        "addDays",
+        "applyLiveTeam",
+        "buildPeriod",
+        "compactPeriods",
+        "dateLocale",
+        "esc",
+        "fmtDur",
+        "fmtHours",
+        "fromISO",
+        "getMembers",
+        "getShifts",
+        "handlers",
+        "hourlyPayFor",
+        "initials",
+        "jobName",
+        "live",
+        "memberFullName",
+        "normShift",
+        "saveCustomTeams",
+        "shiftHours",
+        "shiftIsNextDay",
+        "shiftMinutes",
+        "t",
+        "teamKey",
+        "toISO",
+        "toast",
+        "trLang",
+        "visibleDays"
+      ],
+      "exports": [
+        "closeShiftPop",
+        "planCellHtml",
+        "planDaysHtml",
+        "shiftCellInner",
+        "shiftCellTitle"
+      ],
+      "windows": [
+        "KiwiNumber",
+        "KiwiVenue",
+        "__kiwiTeamV2",
+        "addEventListener",
+        "innerHeight",
+        "innerWidth",
+        "matchMedia",
+        "removeEventListener"
+      ],
+      "prefix": "/* Planning shift-editor. Exports: closeShiftPop, planCellHtml, planDaysHtml, shiftCellInner, shiftCellTitle.\n * Reads injected helpers: AVATAR_COLORS, HHMM_RE, addDays, applyLiveTeam, buildPeriod, compactPeriods, dateLocale, esc, fmtDur, fmtHours, fromISO, getMembers, getShifts, handlers, hourlyPayFor, initials, jobName, live, memberFullName, normShift, saveCustomTeams, shiftHours, shiftIsNextDay, shiftMinutes, t, teamKey, toISO, toast, trLang, visibleDays.\n * Reads window: KiwiNumber, KiwiVenue, __kiwiTeamV2, addEventListener, innerHeight, innerWidth, matchMedia, removeEventListener. Mutable UI state is private to this factory. */\nexport function createShiftEditor({ AVATAR_COLORS, HHMM_RE, addDays, applyLiveTeam, buildPeriod, compactPeriods, dateLocale, esc, fmtDur, fmtHours, fromISO, getMembers, getShifts, handlers, hourlyPayFor, initials, jobName, live, memberFullName, normShift, saveCustomTeams, shiftHours, shiftIsNextDay, shiftMinutes, t, teamKey, toISO, toast, trLang, visibleDays }) {\n",
+      "suffix": "\n  return Object.freeze({ closeShiftPop, planCellHtml, planDaysHtml, shiftCellInner, shiftCellTitle, isShiftPopOpen: () => !!shiftPop, });\n}\n",
+      "fragments": [
+        {
+          "start": 45075,
+          "end": 45288,
+          "marker": "  /* planning-part:shift-editor:0 */\n",
+          "offset": 1007,
+          "length": 213
+        },
+        {
+          "start": 45490,
+          "end": 57991,
+          "marker": "  /* planning-part:shift-editor:1 */\n",
+          "offset": 1221,
+          "length": 12501
+        },
+        {
+          "start": 82723,
+          "end": 89058,
+          "marker": "  /* planning-part:shift-editor:2 */\n",
+          "offset": 13723,
+          "length": 6335
+        }
+      ]
+    }
+  ]
+}

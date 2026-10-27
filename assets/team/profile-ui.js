@@ -2,6 +2,7 @@
  * Shared scalar copies are updated synchronously by the private core. */
 (function (core) {
   'use strict';
+  const memberState = window.Kiwi?.__teamMemberState;
   if (!core) return;
   var Kiwi = core.Kiwi;
   var handlers = core.handlers;
@@ -798,7 +799,7 @@
     const salaried = members.filter((m) => (+m.baseSalary || 0) > 0).length;
     const payrollSub = !salaried ? T.statPayrollNone
       : (salaried < totalMembers ? T.statPayrollPartial(salaried, totalMembers) : T.statPayrollSub);
-    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
+    const period = buildPeriod(memberState.current().periodKind || 'week');
     const hours = getHours(venueType);
     // Summary and individual rows must describe the same demo roster.
     const todayKey = toISO(new Date());
@@ -1477,7 +1478,7 @@
       Kiwi.toast(T.tUpdated(memberFullName(member)), { type: 'success' });
     } else {
       members.unshift(member);
-      const h = window.__kiwiTeamV2.hoursByVenue[venueType] || (window.__kiwiTeamV2.hoursByVenue[venueType] = {});
+      const h = memberState.current().hoursByVenue[venueType] || (memberState.current().hoursByVenue[venueType] = {});
       h[member.id] = {};
       // Ni le code ni le mot de passe dans un toast : il reste à l'écran, souvent
       // celui du comptoir. Le code se lit et se copie sur la fiche du membre.
@@ -1668,9 +1669,9 @@
     const idx = members.findIndex(x => x.id === id);
     if (idx < 0) return;
     const removed = members.splice(idx, 1)[0];
-    const h = window.__kiwiTeamV2.hoursByVenue[venueType] || {};
+    const h = memberState.current().hoursByVenue[venueType] || {};
     delete h[id];
-    const root = window.__kiwiTeamV2;
+    const root = memberState.current();
     root.removedByVenue[venueType] = mergeRemoved(root.removedByVenue[venueType], [{ id, ts: Date.now() }]);
     saveCustomTeams();
     if (window.__kiwiTeamConfirmModal) { try { window.__kiwiTeamConfirmModal.close(); } catch (_) {} window.__kiwiTeamConfirmModal = null; }

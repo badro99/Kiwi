@@ -191,7 +191,7 @@ function load(options = {}) {
     'mais son départ est journalisé : il ne disparaît plus sans trace');
   ok(diag.transitions.some((t) => t.state === 'dropped-expired' && t.id === 'order:vieux'),
     'et le journal nomme le bon perdu');
-  ok(toasts.some((t) => /attente/.test(t.title)), 'le comptoir est prévenu');
+  ok(toasts.some((t) => /file/.test(t.title)), 'le comptoir est prévenu');
 }
 
 {

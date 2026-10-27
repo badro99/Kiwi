@@ -52,6 +52,7 @@
       "source": "functions/api/_rules-loyalty.js",
       "targets": [
         "assets/clients-store.js",
+        "assets/clients-store/loyalty.js",
         "assets/pos-boutique.js",
         "assets/pos-librairie.js"
       ]
@@ -64,6 +65,13 @@
         "assets/menu-promos.js",
         "assets/pos-boutique.js",
         "assets/promos.js"
+      ]
+    },
+    {
+      "name": "KiwiMenuMerge",
+      "source": "functions/api/_rules-menu-merge.js",
+      "targets": [
+        "assets/menu-catalog/state.js"
       ]
     }
   ]

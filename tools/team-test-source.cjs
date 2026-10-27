@@ -3,10 +3,11 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
+const { originalFile } = require('./team-owners-test-source.cjs');
 const FILES = ['assets/team.js', 'assets/team/profile-ui.js', 'assets/team-hours.js', 'assets/team/catalog.js'];
 module.exports = function teamSource() {
-  let source = fs.readFileSync(path.join(root, FILES[0]), 'utf8');
-  const part = fs.readFileSync(path.join(root, FILES[1]), 'utf8');
+  let source = originalFile(FILES[0]);
+  const part = originalFile(FILES[1]);
   const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/team/split.json'), 'utf8'));
   for (const segment of map.segments) {
     const start = '  /* team-part:' + segment.name + ' */\n';
@@ -23,6 +24,6 @@ module.exports = function teamSource() {
     const body = file.slice(file.indexOf(start) + start.length, file.indexOf(end));
     source = source.replace(segment.relay, () => body);
   }
-  return source + '\n' + fs.readFileSync(path.join(root, FILES[2]), 'utf8');
+  return source + '\n' + require('./planning-test-source.cjs').planningTestSource();
 };
 module.exports.FILES = FILES;

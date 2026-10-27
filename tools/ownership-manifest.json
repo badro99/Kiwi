@@ -2534,6 +2534,14 @@
     "serveur": {
       "parent": "assets/serveur-app.js",
       "parts": "assets/serveur/"
+    },
+    "pressing": {
+      "parent": "assets/pressing-caisse.js",
+      "parts": "assets/pressing/"
+    },
+    "menu-catalog": {
+      "parent": "assets/menu-catalog.js",
+      "parts": "assets/menu-catalog/"
     }
   }
 }

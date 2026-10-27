@@ -1,9 +1,10 @@
+import pressingSource from './pressing-test-source.cjs';
 import { ticketsTestSource } from './tickets-test-source.mjs';
 import { bookingTestSource } from './booking-test-source.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-const read = p => fs.readFileSync(p, 'utf8');
+const read = p => pressingSource.readFileSync(p, 'utf8');
 const sources = Object.fromEntries(['booking.js', 'floorplan-live.js', 'hotel/model.js', 'hotel-economat-requests.js', 'pressing-caisse.js', 'tickets.js'].map(p => [p, p === 'booking.js' ? bookingTestSource() : p === 'tickets.js' ? ticketsTestSource() : read('assets/' + p)]));
 function extract(file, name) {
   const source = sources[file];

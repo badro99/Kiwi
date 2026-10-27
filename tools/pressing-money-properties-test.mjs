@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import pressingSource from './pressing-test-source.cjs';
 // Local generated pressing checks. No browser, network or hosted records.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -18,7 +19,7 @@ const RUNS=+process.env.KIWI_PROPERTY_RUNS||300,SEED=+process.env.KIWI_PROPERTY_
 let passed=0,failed=0,known=0;
 async function check(label,p,examples=[],issue=false){if(process.env.KIWI_PROPERTY_ONLY&&!label.includes(process.env.KIWI_PROPERTY_ONLY))return;const r=await fc.check(p,{numRuns:RUNS,seed:SEED,examples});if(r.failed){if(issue&&r.errorInstance?.message==='Property failed by returning false'){known++;console.log('◦ known '+label,fc.stringify(r.counterexample),`seed=${r.seed}; path=${r.counterexamplePath}`);}else{failed++;console.error('✗ '+label,fc.stringify(r.counterexample),r.errorInstance||r.error);}}else if(issue){failed++;console.error('! known holds now, promote to strict: '+label);}else{passed++;console.log('✓ '+label);}}
 const strict=(l,p,e=[])=>check(l,p,e),knownIssue=(l,p,e=[])=>check(l,p,e,true);
-const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8'),C=n=>Math.round(n*100),sum=a=>a.reduce((s,n)=>s+n,0);
+const read=p=>pressingSource.readFileSync(path.join(ROOT,p),'utf8'),C=n=>Math.round(n*100),sum=a=>a.reduce((s,n)=>s+n,0);
 // The parser requires a top-level declaration; isolate each named IIFE declaration first.
 function decl(source,name){const m=new RegExp('(?:^|\\n)\\s*(?:function '+name+'\\s*\\(|(?:const|let|var) '+name+'\\s*=)').exec(source);if(!m)throw Error(name);return scan(source.slice(m.index).trimStart(),name);}
 function load(file,names,extra={}){const c=vm.createContext({console,Date,Math,...extra});vm.runInContext(names.map(n=>decl(read(file),n)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c);return c;}

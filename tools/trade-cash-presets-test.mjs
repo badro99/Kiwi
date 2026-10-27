@@ -1,3 +1,4 @@
+import pressingSource from './pressing-test-source.cjs';
 // Pressing et hôtel : les boutons d'espèces RÈGLENT le montant reçu, comme la
 // caisse principale. Avant le 22 octobre ils AJOUTAIENT au dû déjà inscrit :
 // pour 40 MAD dus, un caissier qui tapait « +100 » pour un billet de 100 lisait
@@ -12,7 +13,7 @@ let n = 0;
 const ok = (label, cond) => { assert.ok(cond, label); n++; };
 
 for (const [file, input] of [['assets/pressing-caisse.js', 'px-cash-in'], ['assets/pos-hotel.js', 'ht-cash-in']]) {
-  const src = fs.readFileSync(file, 'utf8');
+  const src = pressingSource.readFileSync(file, 'utf8');
   const m = src.match(/function cashSuggestions\(due\) \{[\s\S]*?\n  \}/);
   ok(file + ': cashSuggestions exists', !!m);
   const ctx = {}; vm.runInNewContext(m[0] + '; this.f = cashSuggestions;', ctx);
@@ -30,11 +31,11 @@ for (const [file, input] of [['assets/pressing-caisse.js', 'px-cash-in'], ['asse
   ok(file + ': a tap sets the amount received', /received = \+b\.dataset\.set;/.test(cash));
 }
 
-const css = fs.readFileSync('assets/pressing-caisse.css', 'utf8');
+const css = pressingSource.readFileSync('assets/pressing-caisse.css', 'utf8');
 ok('pickup card: the phone-line style no longer catches the name inside <b>', /\.px-rt-who > span \{/.test(css) && !/\.px-rt-who span \{/.test(css));
 ok('item sheet: total and per-unit line stack', /\.px-sheet-price \.val \{ display: block;/.test(css) && /\.px-sheet-price \.per \{ display: block;/.test(css));
 ok('item sheet: header leaves room for the close button', /\.px-sheet-head \{[^}]*padding-inline-end: 28px/.test(css));
-const px = fs.readFileSync('assets/pressing-caisse.js', 'utf8');
+const px = pressingSource.readFileSync('assets/pressing-caisse.js', 'utf8');
 ok('recognised customer: name and text share one flex item', px.includes('<span>${dataText(c.name)}, client reconnu</span>'));
 
 console.log('✓ trade-cash-presets · ' + n + ' contrôles');

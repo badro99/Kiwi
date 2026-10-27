@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { concatParts } from './concat-parts.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8');
@@ -123,11 +124,13 @@ const queued = (d, kind) => JSON.parse(d.storage.get('kiwi:clients-' + kind + ':
   ok(direct.length === 0 && writes.filter((w) => w === 'key').length === 1 && /localStorage\.setItem\(key,/.test(owner), 'only outboxWrite writes a loyalty queue: ' + JSON.stringify(direct));
   const reads = [...SOURCE.matchAll(/ls\((outKey|purchaseKey|redemptionKey)\(|ls\('kiwi:clients-refused/g)];
   ok(reads.length === 0, 'queue reads go through outboxRead');
+  /* The store's concatenation parts are slices of SOURCE, checked above. */
+  const PARTS = concatParts(ROOT);
   for (const other of ['assets', 'app/src']) {
     const walk = (dir) => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
       const rel = dir + '/' + e.name;
       if (e.isDirectory()) return e.name === 'vendor' ? [] : walk(rel);
-      return /\.js$/.test(e.name) && rel !== 'assets/clients-store.js' ? [rel] : [];
+      return /\.js$/.test(e.name) && rel !== 'assets/clients-store.js' && !PARTS.has(rel) ? [rel] : [];
     });
     let dirs = [];
     try { dirs = walk(other); } catch (_) {}

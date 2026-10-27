@@ -14,12 +14,13 @@ import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import stockSource from './stock-test-source.cjs';
+import stockControllerSource from './stock-controller-test-source.cjs';
 
 const read = (f) => fs.readFileSync(f, 'utf8');
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/stock-strings/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/stock-strings/split.json'));
-const core = read('assets/stock.js'), part = read('assets/stock/strings.js');
+const core = stockControllerSource(), part = read('assets/stock/strings.js');
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 

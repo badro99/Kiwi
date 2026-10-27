@@ -47,6 +47,7 @@ function load({ menu = [], opt = {}, lang = 'fr' } = {}) {
     document: { getElementById: () => null, querySelector: () => null, addEventListener() {} },
   });
   ctx.window = ctx; ctx.globalThis = ctx;
+  ctx.KiwiOrderMenu = { orderProParts: { run(name, factory) { factory(ctx); } } };
   vm.runInContext(src, ctx, { filename: 'orderpro-guest.js' });
   return { ctx, api: ctx.KiwiGuest, x: ctx.KiwiGuest._test, I18N };
 }

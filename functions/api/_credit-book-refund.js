@@ -37,23 +37,36 @@ export async function refundCreditBook(request, env, merchant, body) {
   if (!session || owner?.account_id !== session.aid) return json({error:'owner-required'},403);
   const id = String(body.id || ''), clientId = String(body.clientId || ''), amount = Number(body.amountCents);
   if (!/^[A-Za-z0-9_:.-]{6,64}$/.test(id) || !clientId || !Number.isSafeInteger(amount) || amount < 1 || amount > 20000000 || body.method !== 'transfer') return json({error:'bad-credit-refund'},400);
+  /* The book lives in its own document (_credit-book-store.js). Until the
+     first verticalops write moves it there, a refund reads the legacy copy and
+     creates that document itself (INSERT ... DO NOTHING: a racing write makes
+     this attempt start over). */
   for (let attempt=0; attempt<5; attempt++) {
-    const row = await env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'verticalops'").bind(merchant).first();
-    let doc; try { doc = JSON.parse(row?.data); } catch (_) { return json({error:'credit-book-unavailable'},503); }
-    const book = creditBook(doc), customer = book.find(c => c.id === clientId);
+    const row = await env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'creditbook'").bind(merchant).first();
+    let book;
+    if (row) {
+      try { book = JSON.parse(row.data).carnet; } catch (_) { book = null; }
+    } else {
+      const legacy = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'verticalops'").bind(merchant).first();
+      try { book = creditBook(JSON.parse(legacy?.data)); } catch (_) { book = null; }
+    }
+    if (!Array.isArray(book)) return json({error:'credit-book-unavailable'},503);
+    const customer = book.find(c => c.id === clientId);
     const prior = book.flatMap(c => (c.hist || []).map(h => ({c,h}))).find(x => x.h.refundId === id);
     if (prior) return prior.c.id === clientId && cents(prior.h) === amount
-      ? json({ok:true,already:true,id,rev:row.rev}) : json({error:'refund-id-conflict'},409);
+      ? json({ok:true,already:true,id,rev:Number(row?.rev)||0}) : json({error:'refund-id-conflict'},409);
     if (!customer) return json({error:'client-not-found'},404);
     const hist = customer.hist || [], balance = hist.reduce((n,h) => n + (h.type === 'debt' ? 1 : -1)*cents(h),0);
     if (!Number.isSafeInteger(balance) || amount > -balance) return json({error:'refund-exceeds-advance',availableCents:Math.max(0,-balance)},409);
     const now = Date.now(), saleId = 'crb-' + id;
     hist.push({id:saleId,type:'debt',kind:'advance-refund',refundId:id,amt:amount/100,label:'Remboursement avance',at:new Date(now).toISOString(),method:'transfer'});
     customer.hist = hist;
-    const text = JSON.stringify(doc), rev = Number(row.rev)+1;
+    const text = JSON.stringify({carnet: book}), rev = row ? Number(row.rev)+1 : 1;
     try {
       const result = await env.DB.batch([
-        env.DB.prepare("UPDATE store_docs SET data=?, rev=?, updated_ts=? WHERE merchant=? AND feature='verticalops' AND rev=?").bind(text,rev,now,merchant,row.rev),
+        row
+          ? env.DB.prepare("UPDATE store_docs SET data=?, rev=?, updated_ts=? WHERE merchant=? AND feature='creditbook' AND rev=?").bind(text,rev,now,merchant,row.rev)
+          : env.DB.prepare("INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?, 'creditbook', ?, 1, ?) ON CONFLICT(merchant,feature) DO NOTHING").bind(merchant,text,now),
         env.DB.prepare(`INSERT INTO sales (id,merchant,amount,amount_cents,method,label,ts,channel)
           SELECT ?,?, ?,?,'transfer','Remboursement avance',?,'credit-book' WHERE changes()=1`)
           .bind(saleId,merchant,-Math.round(amount/100),-amount,now),

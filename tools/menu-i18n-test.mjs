@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 import orderProTestSource from './orderpro-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
@@ -140,7 +141,7 @@ const tr = read('functions/api/ai/menu-translate.js');
 assert(/DÉJÀ dans la langue cible est recopié tel quel/.test(tr) && /exactement les mêmes identifiants/.test(tr), 'menu-translate : recopie l’identique, aucune omission');
 
 /* ── store ───────────────────────────────────────────────────────────── */
-const cat = read('assets/menu-catalog.js');
+const cat = menuCatalogSource();
 assert(/function setI18n\(lang, res, opts\)/.test(cat) && /function setI18nEntry\(kind, id, subId, lang, patch\)/.test(cat) && /function clearI18n\(lang, keepManual\)/.test(cat), 'menu-catalog : setI18n / setI18nEntry / clearI18n');
 assert(/setI18n, setI18nEntry, clearI18n,/.test(cat), 'menu-catalog : exportés sur window.KiwiMenuStore');
 
@@ -251,7 +252,7 @@ assert(ws.includes('nutritionCardPill(x)') && ws.includes('catalog-item-meta') &
       addEventListener() {},
     };
     w.window = w;
-    vm.runInContext(read('assets/menu-catalog.js'), vm.createContext(w), { filename: 'menu-catalog.js' });
+    vm.runInContext(menuCatalogSource.runtimeSource(), vm.createContext(w), { filename: 'menu-catalog.js' });
     const S = w.KiwiMenuStore;
     S.render();                                        // page vide
     S.promptAddCategory();

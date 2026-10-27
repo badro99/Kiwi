@@ -36,9 +36,7 @@
   }
 
   async function get(path) {
-    var r = await fetch('/api/admin/' + path, { headers: { Accept: 'application/json' }, cache: 'no-store', credentials: 'same-origin' });
-    if (!r.ok) { var e = new Error('http-' + r.status); e.status = r.status; throw e; }
-    return r.json();
+    return window.KiwiAdminApi.request(path, { headers: { Accept: 'application/json' }, cache: 'no-store' });
   }
 
   async function load() {

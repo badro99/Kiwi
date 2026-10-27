@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import pressingSource from './pressing-test-source.cjs';
 /* Focused regression coverage for A10, I06 and I07.
  *
  * The pressing operations bridge is executed as shipped. The caisse merge and
@@ -19,7 +20,7 @@ import { onRequest as middleware } from '../functions/_middleware.js';
 import { tillToken } from '../functions/auth/_lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = (rel) => pressingSource.readFileSync(path.join(ROOT, rel), 'utf8');
 let passed = 0;
 function check(value, label) { assert(value, label); passed++; console.log('  + ' + label); }
 

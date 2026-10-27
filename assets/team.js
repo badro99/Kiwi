@@ -1,3 +1,7 @@
+import {} from './team/member-state.js?v=7';
+import {} from './team/venue-scope.js?v=6';
+import {} from './team/invitations.js?v=6';
+import {} from './team/roster-list.js?v=6';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · ÉQUIPE — team & profile management (full-page surface)
  *
@@ -22,7 +26,7 @@
  *                   never sees "Serveur". Reactive — switching the
  *                   venue refreshes all dropdowns.
  *
- * State is in-memory (window.__kiwiTeamV2) and wipes on page reload.
+ * State is in-memory (memberState.current()) and wipes on page reload.
  * Loads AFTER venues.js, so this file's nav-equipe handler wins.
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
@@ -82,145 +86,30 @@
    * used to generate a 12-character password, so the value the owner read on a
    * staff profile was one a cashier could not physically type. It is a 4-digit
    * code now, and publishPins() below sends it to the till. */
-  function makeCode() {
-    try {
-      const c = window.crypto || window.msCrypto;
-      if (c && c.getRandomValues) {
-        const a = new Uint32Array(1); c.getRandomValues(a);
-        return String(1000 + (a[0] % 9000));
-      }
-    } catch (_) {}
-    return String(1000 + Math.floor(Math.random() * 9000));
-  }
-  function isCode(v) { return /^\d{4}$/.test(String(v || '').trim()); }
+  function makeCode(...args) { return invitations.makeCode(...args); }
+  function isCode(...args) { return memberState.isCode(...args); }
 
-  /* ═══════════════ LES CODES NE RESTENT PAS SUR LE DISQUE ═══════════════════
-   * Chaque salarié porte le code à quatre chiffres qui lui ouvre la caisse et
-   * l'app employé (`pinCode` / `password`). Il était écrit EN CLAIR dans
-   * localStorage (kiwiTeamV2:custom) : lisible dans n'importe quel navigateur où
-   * le patron a ouvert Équipe (CLAUDE.md §6). Le patron, lui, doit continuer de
-   * le LIRE ici — c'est voulu, voir functions/api/store.js › stripTeamCodes.
-   *
-   * La règle : le disque ne garde un code que tant que le serveur ne l'a pas.
-   *   · le code vit en mémoire (window.__kiwiTeamV2), comme avant ;
-   *   · persistTeams() l'ôte de la copie locale d'un salarié SEULEMENT si le
-   *     serveur a confirmé ce code (`serverCodes` : lu par hydrateCodes(), ou
-   *     accepté par une remontée réussie). Un code que le serveur n'a pas ne
-   *     quitte jamais le disque : jamais de perte ;
-   *   · un salarié dont le code a été ôté porte `hasCode: true` (jamais le code),
-   *     et le patron le retrouve au chargement depuis la copie serveur.
-   *
-   * ⚠ Le danger n'est pas la lecture, c'est le RENVOI. La remontée du roster
-   * (staff_pins, le document `team`, d'où l'app employé tire ses accès)
-   * REMPLACE ce que le serveur porte par ce que le navigateur envoie : un
-   * navigateur qui a oublié des codes les effacerait chez le serveur, et les
-   * caissières se retrouveraient devant un pavé qui n'ouvre plus. Donc, tant
-   * qu'un salarié a `hasCode` sans code en mémoire (« non résolu »), RIEN ne part :
-   * ni publishPins(), ni la remontée du document (canPush de cloud-doc.js). */
-  function memberCode(m) {
-    if (!m) return '';
-    if (isCode(m.pinCode)) return String(m.pinCode).trim();
-    return isCode(m.password) ? String(m.password).trim() : '';
-  }
-  function codeUnresolved(m) { return !!(m && m.hasCode && !memberCode(m)); }
-  function rosterHasUnresolved(members) { return (Array.isArray(members) ? members : []).some(codeUnresolved); }
+  /* Persistence documentation: assets/team/member-state.js (memberCode). */   function memberCode(...args) { return memberState.memberCode(...args); }
+  function codeUnresolved(...args) { return memberState.codeUnresolved(...args); }
+  function rosterHasUnresolved(...args) { return memberState.rosterHasUnresolved(...args); }
   /* La copie qui va sur le disque : sans le code des salariés que le serveur a. */
-  function diskMembers(members, serverCodes) {
-    const known = serverCodes || {};
-    return (Array.isArray(members) ? members : []).map((m) => {
-      const code = memberCode(m);
-      if (!m || !code || !m.id || known[m.id] !== code) return m;
-      const { pinCode, password, ...rest } = m;
-      return { ...rest, hasCode: true };
-    });
-  }
+  function diskMembers(...args) { return memberState.diskMembers(...args); }
   /* La copie qui part sur le réseau : `hasCode` est un fait local, il ne voyage pas. */
-  function outboundMembers(members) {
-    return (Array.isArray(members) ? members : []).map((m) => {
-      if (!m || !('hasCode' in m)) return m;
-      const { hasCode, ...rest } = m;
-      return rest;
-    });
-  }
+  function outboundMembers(...args) { return memberState.outboundMembers(...args); }
   /* La fusion garde « le nôtre d'abord » ; elle n'oublie pas pour autant un code
      que seul l'autre côté porte. */
-  function fillCodes(members, theirs) {
-    const byId = Object.create(null);
-    (Array.isArray(theirs) ? theirs : []).forEach((t) => { if (t && t.id) byId[t.id] = t; });
-    return (Array.isArray(members) ? members : []).map((m) => {
-      if (!m || memberCode(m)) return m;
-      const code = memberCode(byId[m.id]);
-      return code ? { ...m, pinCode: code, password: code } : m;
-    });
-  }
+  function fillCodes(...args) { return memberState.fillCodes(...args); }
   /* Ce que dit la copie serveur du patron : note ce que le serveur détient
      (`serverCodes`), rend les codes aux salariés qui l'attendent, et lâche le
      drapeau de ceux dont la copie serveur est lue en clair et n'a PAS de code
      (elle seule fait foi : sinon ils bloqueraient la remontée pour toujours).
      Une copie sans AUCUN code lisible est une copie expurgée (compte non patron) :
      on n'en conclut rien. Résultat : { members, serverCodes }. */
-  function applyServerCodes(members, serverMembers, serverCodes) {
-    const known = { ...(serverCodes || {}) };
-    const theirs = Array.isArray(serverMembers) ? serverMembers : [];
-    const readable = theirs.some((t) => memberCode(t));
-    const byId = Object.create(null);
-    theirs.forEach((t) => {
-      if (!t || !t.id) return;
-      byId[t.id] = t;
-      const c = memberCode(t);
-      if (c) known[t.id] = c;
-    });
-    const out = (Array.isArray(members) ? members : []).map((m) => {
-      if (!m || memberCode(m)) return m;
-      const c = m.id && known[m.id];
-      if (c) return { ...m, pinCode: c, password: c };
-      if (m.hasCode && readable) { const { hasCode, ...rest } = m; return rest; }
-      return m;
-    });
-    return { members: out, serverCodes: known };
-  }
-  const serverCodes = Object.create(null);   // id → code que le serveur détient (jamais écrit sur le disque)
+  function applyServerCodes(...args) { return memberState.applyServerCodes(...args); }
+  /* team-owner:memberState:serverCodes */
+   // id → code que le serveur détient (jamais écrit sur le disque)
 
-  /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════
-   * The till does not read this roster: it asks /api/config for the store's
-   * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the
-   * onboarding wizard ever wrote there, so a cashier hired afterwards had a code
-   * on their profile that the till had never heard of — the owner typed it and
-   * got "Code incorrect". Every roster change now republishes.
-   *
-   * /api/config REPLACES the store's whole code list, so we always send the FULL
-   * roster — sending only the new hire would silently revoke everyone else,
-   * including the owner's own code from onboarding. Real (custom, onboarded)
-   * venues only: a demo venue has no session, and pushing seeded demo staff into
-   * a real merchant's row is exactly the leak the venue split exists to prevent.
-   * Fail-soft — no endpoint, no session, offline: the roster is still saved
-   * locally and this is a no-op. */
-  function publishPins() {
-    try {
-      const venue = window.KiwiVenue?.getCurrentVenueData?.();
-      if (!venue || !venue.custom) return;                  // demo seed never leaves the browser
-      if (!window.KiwiConfig || !window.KiwiConfig.syncPins) return;
-      const seen = Object.create(null);
-      const pins = [];
-      const roster = getMembers(teamKey(venue));
-      /* Un salarié dont le code n'est pas encore revenu du serveur : publier
-         maintenant REMPLACERAIT staff_pins sans lui, et sa caisse ne l'ouvrirait
-         plus. On attend que le roster soit complet (hydrateCodes). */
-      if (rosterHasUnresolved(roster)) return;
-      roster.forEach((m) => {
-        const code = memberCode(m);
-        if (!code || seen[code]) return;                    // no code yet, or a duplicate
-        seen[code] = 1;
-        pins.push({
-          memberId: m.id || '', code, name: memberFullName(m),
-          firstName: m.firstName || '', lastName: m.lastName || '',
-          email: m.email || '', role: m.function || m.department || 'staff',
-          department: m.department || '', venueSlug: m.venueSlug || '',
-        });
-      });
-      window.KiwiConfig.syncPins(pins);
-    } catch (_) {}
-  }
+  /* Persistence documentation: assets/team/member-state.js (publishPins). */   function publishPins(...args) { return memberState.publishPins(...args); }
 
   function initials(first, last) {
     const a = (first || '').trim().charAt(0).toUpperCase() || '?';
@@ -336,25 +225,38 @@
   }
 
   /* ═══════════════ ROOT STATE ═══════════════ */
-  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, periodKind: 'week', periodLocked: false };
-  if (!window.__kiwiTeamV2.shiftsByVenue) window.__kiwiTeamV2.shiftsByVenue = {};
-  if (!window.__kiwiTeamV2.planningByVenue) window.__kiwiTeamV2.planningByVenue = {};
-  /* Period navigation is intentionally UI state: it never changes or copies
-   * the saved shifts until the manager edits the newly displayed dates. */
-  const periodOffsets = { week:0, fortnight:0, month:0 };
-  /* Validated periods, per venue: { 'week:2026-10-05:2026-10-11': { locked, at } }.
-   * They used to live in a plain object in this closure. « Période verrouillée ·
-   * heures envoyées au planning » was announced, and the lock vanished on reload
-   * or simply did not exist on the counter's iPad. They now travel with the
-   * team document (locks), and `at` decides between two devices: the later
-   * validate or unlock wins, so an unlock is never undone by a merge. */
-  if (!window.__kiwiTeamV2.locksByVenue) window.__kiwiTeamV2.locksByVenue = {};
-  /* Salariés supprimés, par établissement : [{ id, ts }]. La fusion est une
-   * UNION de membres, donc sans pierre tombale un salarié retiré ici revenait
-   * dès qu'une autre copie (le serveur, l'iPad du comptoir) le portait encore,
-   * et le serveur, qui refuse un document vide, ne pouvait jamais enregistrer la
-   * suppression du dernier salarié : il gardait son accès à l'app employé. */
-  if (!window.__kiwiTeamV2.removedByVenue) window.__kiwiTeamV2.removedByVenue = {};
+  const venueScope = window.KiwiTeamParts.venueScope.create({
+    cleanRemoved: (...args) => cleanRemoved(...args),
+    mergeByDay: (...args) => mergeByDay(...args),
+    cleanLocks: (...args) => cleanLocks(...args),
+  });
+  const invitations = window.KiwiTeamParts.invitations.create({
+    ensureVenueData: (...args) => ensureVenueData(...args),
+    teamKey: (...args) => teamKey(...args),
+    teamSlug: (...args) => teamSlug(...args),
+    saveCustomTeams: (...args) => saveCustomTeams(...args),
+    render: (...args) => render(...args),
+    AVATAR_TONES,
+  });
+  const memberState = window.KiwiTeamParts.memberState.create({
+    fetchDeadline: (...args) => fetchDeadline(...args),
+    teamKey: (...args) => teamKey(...args),
+    teamVenueKey: (...args) => teamVenueKey(...args),
+    teamSlug: (...args) => teamSlug(...args),
+    memberBelongsToStore: (...args) => memberBelongsToStore(...args),
+    scopeTeamDoc: (...args) => scopeTeamDoc(...args),
+    persistableTeamKey: (...args) => persistableTeamKey(...args),
+    memberFullName: (...args) => memberFullName(...args),
+    restorePeriodLock: (...args) => restorePeriodLock(...args),
+    buildPeriod: (...args) => buildPeriod(...args),
+    render: (...args) => render(...args),
+    trLang: (...args) => trLang(...args),
+    toast: (...args) => toast(...args),
+    seedFor: (...args) => seedFor(...args),
+    seedHours: (...args) => seedHours(...args),
+  });
+  const periodOffsets = memberState.periodOffsets;
+  Kiwi.__teamMemberState = memberState;
 
   /* ── PLANNING ────────────────────────────────────────────────────────────
    * La page s'appelle « Paie & planning » et ne savait que constater : une
@@ -427,11 +329,11 @@
     return new Date(p[0], (p[1] || 1) - 1, p[2] || 1);
   }
   const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-  function getShifts(venueType) { return window.__kiwiTeamV2.shiftsByVenue[venueType] || {}; }
+  function getShifts(...args) { return memberState.getShifts(...args); }
   /* Les deux grilles — planifié et réalisé — partagent le même sélecteur de
    * période : elles doivent toujours parler de la même semaine. */
   function periodPillsHtml(T) {
-    const kind = window.__kiwiTeamV2.periodKind || 'week';
+    const kind = memberState.current().periodKind || 'week';
     return [
       ['week',      T.hPeriodWeek],
       ['fortnight', T.hPeriodFort],
@@ -443,29 +345,16 @@
      demo seed (unchanged). A REAL (custom/onboarded) venue is keyed by its own
      id, starts EMPTY, and persists to localStorage — so a new store builds its
      own team and it survives a reload, with no demo staff leaking in. */
-  function teamKey(venue) {
-    if (venue && venue.custom) {
-      /* God Mode uses one synthetic venue id (`scoped`) for every client. Using
-       * that id as the Team key made the roster transient on purpose — and also
-       * meant an employee visibly created from an operator-opened dashboard was
-       * never written to that store's cloud document. Namespace the local key
-       * with the server-confirmed slug instead: every client remains isolated,
-       * while Équipe behaves like the same dashboard regardless of who opened
-       * it. */
-      if (venue.id === 'scoped' && venue.slug) return `scoped:${String(venue.slug)}`;
-      return venue.id;
-    }
-    return (venue && venue.type) || 'restaurant';
-  }
-  const DEMO_TYPE_KEYS = new Set(['restaurant', 'boutique', 'spa', 'hotel']);
+  function teamKey(...args) { return venueScope.teamKey(...args); }
+  /* team-owner:venueScope:DEMO_TYPE_KEYS */
   /* venues.js les déclare transitoires et « never persisted » : 'scoped' est la
    * vue opérateur sur le client de quelqu'un d'autre, 'own' un placeholder de
    * session. Ils arrivaient pourtant dans kiwiTeamV2:custom — de l'état
    * opérateur écrit dans le stockage d'un commerçant. On ne les lit ni ne les
    * écrit plus, ce qui purge aussi les seaux déjà déposés. */
-  const TRANSIENT_KEYS = new Set(['scoped', 'own']);
-  const persistableTeamKey = (k) => !DEMO_TYPE_KEYS.has(k) && !TRANSIENT_KEYS.has(k);
-  const LS_TEAM = 'kiwiTeamV2:custom';
+  /* team-owner:venueScope:TRANSIENT_KEYS */
+  const persistableTeamKey = (...args) => venueScope.persistableTeamKey(...args);
+  /* team-owner:memberState:LS_TEAM */
   /* Le roster en mémoire appartient à UN compte. loadCustomTeams() le lit à
    * l'exécution du script, avant que /api/me ait répondu : si c'est un AUTRE
    * compte qui se connecte, identity.js purge puis recharge, et c'est
@@ -475,134 +364,26 @@
    *     AVANT de toucher au stockage) rend toute écriture muette ;
    *   · le disque est estampillé du compte (`account`) : un roster qui n'est pas
    *     celui du compte courant n'est ni lu ni réécrit. */
-  function teamAccount() { try { return String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) { return ''; } }
-  let ROSTER_ACCOUNT = teamAccount();
-  function rosterWriteBlocked() {
-    if (window.__kiwiTenantPurging === true) return true;
-    const a = teamAccount();
-    return !!(ROSTER_ACCOUNT && a && a !== ROSTER_ACCOUNT);
-  }
-  function loadCustomTeams() {
-    try {
-      ROSTER_ACCOUNT = teamAccount();
-      const raw = JSON.parse(localStorage.getItem(LS_TEAM) || '{}');
-      if (raw && raw.account && ROSTER_ACCOUNT && String(raw.account).toLowerCase() !== ROSTER_ACCOUNT) return;
-      const root = window.__kiwiTeamV2;
-      Object.keys(raw.byVenue || {}).forEach((k) => {
-        if (persistableTeamKey(k)) {
-          root.byVenue[k] = raw.byVenue[k];
-          (root.mergeByVenue || (root.mergeByVenue = {}))[k] = (raw.mergeByVenue || {})[k];
-          root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {};
-          root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
-          root.planningByVenue[k] = window.KiwiPlanningCore?.normalize?.((raw.planningByVenue || {})[k], root.byVenue[k]) || (raw.planningByVenue || {})[k] || {};
-          root.locksByVenue[k] = cleanLocks((raw.locksByVenue || {})[k]);
-          root.removedByVenue[k] = cleanRemoved((raw.removedByVenue || {})[k]);
-          window.Kiwi?.__teamMerge?.remember(root, k);
-        }
-      });
-    } catch (_) {}
-  }
-  const REMOVED_CAP = 200;
-  function cleanRemoved(src) {
-    const byId = Object.create(null);
-    (Array.isArray(src) ? src : []).forEach((r) => {
-      const id = r && typeof r.id === 'string' ? r.id.slice(0, 96) : '';
-      if (!id) return;
-      const ts = Number(r.ts) || 0;
-      if (!byId[id] || ts > byId[id].ts) byId[id] = { id, ts };
-    });
-    return Object.keys(byId).map((id) => byId[id]).sort((a, b) => b.ts - a.ts).slice(0, REMOVED_CAP);
-  }
-  function mergeRemoved(a, b) { return cleanRemoved([].concat(a || [], b || [])); }
-  const LOCK_KEY_RE = /^(week|fortnight|month):\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$/;
-  function cleanLocks(src) {
-    const out = {};
-    Object.keys(src || {}).forEach((key) => {
-      const v = src[key];
-      if (!LOCK_KEY_RE.test(key) || !v || typeof v !== 'object') return;
-      out[key] = { locked: !!v.locked, at: Number(v.at) || 0 };
-    });
-    return out;
-  }
-  function mergeLocks(mine, theirs) {
-    const out = cleanLocks(theirs);
-    const own = cleanLocks(mine);
-    Object.keys(own).forEach((key) => { if (!out[key] || own[key].at >= out[key].at) out[key] = own[key]; });
-    return out;
-  }
+  function teamAccount(...args) { return memberState.teamAccount(...args); }
+  /* team-owner:memberState:ROSTER_ACCOUNT */
+  function rosterWriteBlocked(...args) { return memberState.rosterWriteBlocked(...args); }
+  function loadCustomTeams(...args) { return memberState.loadCustomTeams(...args); }
+  /* team-owner:memberState:REMOVED_CAP */
+  function cleanRemoved(...args) { return memberState.cleanRemoved(...args); }
+  function mergeRemoved(...args) { return memberState.mergeRemoved(...args); }
+  /* team-owner:memberState:LOCK_KEY_RE */
+  function cleanLocks(...args) { return memberState.cleanLocks(...args); }
+  function mergeLocks(...args) { return memberState.mergeLocks(...args); }
   /* L'écriture locale, et rien d'autre. Séparée de saveCustomTeams() parce que
    * la copie serveur, en redescendant, doit pouvoir se poser sans redéclencher
    * une remontée : sinon deux appareils se renvoient la balle indéfiniment. */
-  function persistTeams() {
-    if (rosterWriteBlocked()) return;
-    try {
-      const root = window.__kiwiTeamV2;
-      const out = { mergeByVenue: {}, account: teamAccount() || ROSTER_ACCOUNT, byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
-      Object.keys(root.byVenue).forEach((k) => {
-        if (persistableTeamKey(k)) {
-          out.byVenue[k] = diskMembers(root.byVenue[k], serverCodes);
-          out.mergeByVenue[k] = (root.mergeByVenue || {})[k];
-          out.hoursByVenue[k] = root.hoursByVenue[k] || {};
-          out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
-          out.planningByVenue[k] = root.planningByVenue[k] || {};
-          out.locksByVenue[k] = root.locksByVenue[k] || {};
-          out.removedByVenue[k] = root.removedByVenue[k] || [];
-        }
-      });
-      localStorage.setItem(LS_TEAM, JSON.stringify(out));
-    } catch (_) {}
-  }
-  function afterTeamChange() {
-    // Every roster change reaches the till from here — one place, so a future
-    // mutation path can't forget to publish and quietly leave a cashier locked out.
-    publishPins();
-    /* La carte Équipe de l'accueil lit ce roster. Sans ce signal elle gardait
-     * l'état du chargement : on saisissait les heures sur Paie, on revenait à
-     * l'accueil, et elle annonçait encore « 0 sur 3 en service » jusqu'au
-     * prochain rechargement. */
-    try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
-  }
-  function saveCustomTeams() {
-    if (rosterWriteBlocked()) return;
-    const state = window.__kiwiTeamV2;
-    Object.keys(state.byVenue).filter(persistableTeamKey).forEach(k => window.Kiwi?.__teamMerge?.stamp(state, k));
-    persistTeams();
-    afterTeamChange();
-    teamCloudPush();
-  }
+  function persistTeams(...args) { return memberState.persistTeams(...args); }
+  function afterTeamChange(...args) { return memberState.afterTeamChange(...args); }
+  function saveCustomTeams(...args) { return memberState.saveCustomTeams(...args); }
   loadCustomTeams();
   window.addEventListener('pagehide', saveCustomTeams);
 
-  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════
-   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs
-   * taux horaires, et quatre semaines de planning ne vivaient que dans le
-   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi
-   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale
-   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il
-   * faut le ressaisir à chaque appareil.
-   *
-   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte
-   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais
-   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.
-   *
-   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue
-   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge
-   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant
-   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.
-   *
-   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde
-   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster
-   * là où il a toujours été. */
-  function teamVenueKey() {
-    try {
-      const v = window.KiwiVenue?.getCurrentVenueData?.();
-      // Un magasin de démonstration garde son équipe semée en mémoire : elle
-      // n'appartient à aucun compte et ne doit jamais quitter ce navigateur.
-      if (!v || !v.custom) return '';
-      const k = teamKey(v);
-      return persistableTeamKey(k) ? k : '';
-    } catch (_) { return ''; }
-  }
+  /* Persistence documentation: assets/team/member-state.js (teamVenueKey). */   function teamVenueKey(...args) { return venueScope.teamVenueKey(...args); }
 
   /* A member belongs to one store, never to the whole account. Older records
    * only carry `venueType` (the browser-local venue id); newer ones also carry
@@ -610,45 +391,9 @@
    * resolve them — but reject an id we can positively resolve to another store.
    * This heals rosters that were merged before team documents became per-store
    * without guessing about records whose origin cannot be proved. */
-  function teamSlug() {
-    const k = teamVenueKey();
-    try {
-      const v = window.KiwiVenue?.getCurrentVenueData?.();
-      // `v.slug` only exists after /api/me authenticated the God Mode scope.
-      // Never derive this from the visible store name or the URL.
-      if (v && v.id === 'scoped' && v.slug) return String(v.slug);
-      return k && window.KiwiCloudDoc ? window.KiwiCloudDoc.slugFor(k) : '';
-    }
-    catch (_) { return ''; }
-  }
-  function memberBelongsToStore(member, slug) {
-    if (!member || !slug) return true;
-    if (member.venueSlug) return String(member.venueSlug) === slug;
-    try {
-      const legacy = member.venueType && window.KiwiCloudDoc
-        ? window.KiwiCloudDoc.slugFor(member.venueType) : '';
-      return !legacy || legacy === slug;
-    } catch (_) { return true; }
-  }
-  function scopeTeamDoc(doc, slug) {
-    const src = doc || {};
-    const removed = cleanRemoved(src.removed);
-    const gone = Object.create(null);
-    removed.forEach((r) => { gone[r.id] = 1; });
-    const members = (Array.isArray(src.members) ? src.members : [])
-      .filter((m) => memberBelongsToStore(m, slug) && !(m && gone[m.id]));
-    const alive = Object.create(null);
-    members.forEach((m) => { if (m && m.id) alive[m.id] = 1; });
-    return {
-      fieldEdits: src.fieldEdits,
-      members,
-      removed,
-      hours: mergeByDay(src.hours, null, alive),
-      shifts: mergeByDay(src.shifts, null, alive),
-      planning: window.KiwiPlanningCore?.normalize?.(src.planning, members) || src.planning || {},
-      locks: cleanLocks(src.locks),
-    };
-  }
+  function teamSlug(...args) { return venueScope.teamSlug(...args); }
+  function memberBelongsToStore(...args) { return venueScope.memberBelongsToStore(...args); }
+  function scopeTeamDoc(...args) { return venueScope.scopeTeamDoc(...args); }
 
   /* Fusion. Union des membres, cet appareil prioritaire sur un id connu des deux
    * côtés. Un salarié supprimé ici et présent là-bas REVIENT — c'est assumé :
@@ -658,185 +403,28 @@
    * Heures et plannings sont fusionnés case par case (salarié × jour), pas en
    * bloc : deux responsables qui remplissent deux semaines différentes du même
    * planning doivent obtenir les deux semaines, pas la dernière enregistrée. */
-  function mergeByDay(mine, theirs, alive) {
-    const out = {};
-    const put = (src) => Object.keys(src || {}).forEach((mid) => {
-      if (alive && !alive[mid]) return;               // salarié disparu des deux côtés
-      const days = src[mid] || {};
-      const dst = out[mid] || (out[mid] = {});
-      Object.keys(days).forEach((d) => { if (!(d in dst)) dst[d] = days[d]; });
-    });
-    put(mine); put(theirs);                            // le nôtre pose sa case en premier
-    return out;
-  }
-  function mergeTeamDoc(mine, theirs) {
-    const slug = teamSlug();
-    mine = scopeTeamDoc(mine, slug);
-    theirs = scopeTeamDoc(theirs, slug);
-    const seen = Object.create(null);
-    const members = [];
-    /* Une suppression EST enregistrée : l'union ne ressuscite plus un salarié
-     * dont l'un des deux côtés porte la pierre tombale. */
-    const removed = mergeRemoved(mine && mine.removed, theirs && theirs.removed);
-    if (window.Kiwi?.__teamMerge) return window.Kiwi.__teamMerge.merge(mine, theirs, removed, fillCodes);
-    const gone = Object.create(null);
-    removed.forEach((r) => { gone[r.id] = 1; });
-    const take = (m) => { const id = m && m.id; if (!id || seen[id] || gone[id]) return; seen[id] = 1; members.push(m); };
-    ((mine && mine.members) || []).forEach(take);
-    ((theirs && theirs.members) || []).forEach(take);
-    return {
-      members: fillCodes(members, theirs && theirs.members),
-      removed,
-      hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
-      shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
-      planning: window.KiwiPlanningCore?.merge?.(mine && mine.planning, theirs && theirs.planning, members) || mine.planning || theirs.planning || {},
-      locks: mergeLocks(mine && mine.locks, theirs && theirs.locks),
-    };
-  }
+  function mergeByDay(...args) { return memberState.mergeByDay(...args); }
+  function mergeTeamDoc(...args) { return memberState.mergeTeamDoc(...args); }
 
-  let teamCloud = null;
-  function teamCloudInit() {
-    if (teamCloud || !window.KiwiCloudDoc) return teamCloud;
-    teamCloud = window.KiwiCloudDoc.attach({
-      feature: 'team',
-      slug: () => teamSlug(),
-      read: () => {
-        const k = teamVenueKey();
-        const root = window.__kiwiTeamV2;
-        if (!k) return { members: [], removed: [], hours: {}, shifts: {}, planning: {}, locks: {} };
-        return scopeTeamDoc({
-          fieldEdits: (root.mergeByVenue || {})[k],
-          members: outboundMembers(root.byVenue[k] || []),
-          removed: root.removedByVenue[k] || [],
-          hours: root.hoursByVenue[k] || {},
-          shifts: root.shiftsByVenue[k] || {},
-          planning: root.planningByVenue[k] || {},
-          locks: root.locksByVenue[k] || {},
-        }, teamSlug());
-      },
-      write: (doc) => {
-        const k = teamVenueKey();
-        if (!k || !doc) return;
-        const root = window.__kiwiTeamV2;
-        const clean = scopeTeamDoc(doc, teamSlug());
-        root.byVenue[k] = clean.members;
-        (root.mergeByVenue || (root.mergeByVenue = {}))[k] = clean.fieldEdits;
-        root.removedByVenue[k] = clean.removed;
-        root.hoursByVenue[k] = clean.hours;
-        root.shiftsByVenue[k] = clean.shifts;
-        root.planningByVenue[k] = clean.planning;
-        root.locksByVenue[k] = clean.locks;
-        window.Kiwi?.__teamMerge?.remember(root, k);
-        window.Kiwi?.__teamMerge?.notice(clean);
-        restorePeriodLock(root, root.periodKind, buildPeriod(root.periodKind));
-        persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
-        afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
-      },
-      merge: mergeTeamDoc,
-      /* Voir « LES CODES NE RESTENT PAS SUR LE DISQUE » : un roster qui a oublié des
-         codes ne remonte pas (il les effacerait chez le serveur). */
-      canPush: () => {
-        const k = teamVenueKey();
-        const ok = !k || !rosterHasUnresolved(window.__kiwiTeamV2.byVenue[k]);
-        if (!ok) heldPush = true;
-        return ok;
-      },
-      onPushed: (doc) => {
-        let changed = false;
-        ((doc && doc.members) || []).forEach((m) => {
-          const c = memberCode(m);
-          if (c && m.id && serverCodes[m.id] !== c) { serverCodes[m.id] = c; changed = true; }
-        });
-        if (changed) persistTeams();           // le serveur l'a : le disque peut le lâcher
-      },
-      isEmpty: (d) => !d || !((d.members && d.members.length) || (d.removed && d.removed.length)),
-      // Le roster vient d'arriver du serveur : la page ouverte doit le montrer,
-      // sinon le commerçant regarde une équipe vide qui n'existe plus.
-      onPullError: teamReadTimedOut,
-      onPulled: () => { teamReadFailed = false; if (pageActive) { try { render(); } catch (_) {} } },
-    });
-    return teamCloud;
-  }
-  let heldPush = false;   // une remontée a été retenue faute de codes : à relancer une fois le roster complet
+  /* team-owner:memberState:teamCloud */
+  function teamCloudInit(...args) { return memberState.teamCloudInit(...args); }
+  /* team-owner:memberState:heldPush */
+   // une remontée a été retenue faute de codes : à relancer une fois le roster complet
   /* Rend aux salariés leur code depuis la copie serveur du patron (le disque ne
    * le garde plus), et note ce que le serveur détient. Lecture directe : un
    * `pull` conclut « déjà à jour » dès que la révision est connue, donc il ne
    * rendrait jamais un code que la copie locale n'a plus. Une panne ne change
    * rien : les salariés restent « non résolus », et RIEN ne part (canPush /
    * publishPins), donc le serveur ne perd rien. */
-  let teamReadFailed = false;
-  function teamReadTimedOut(error) {
-    if (!error || error.code !== 'timeout' || !pageActive || teamReadFailed) return;
-    teamReadFailed = true;
-    const copy = { fr: 'Le réseau ne répond pas. Réessayez.', en: 'The network is not responding. Please retry.', ar: 'الشبكة لا تستجيب. حاول مرة أخرى.' };
-    toast(copy[trLang()] || copy.fr, {type: 'pend'});
-  }
-  function hydrateCodes() {
-    const c = teamCloudInit();
-    const slug = teamSlug();
-    const k = teamVenueKey();
-    if (!c || !slug || !k || !c.enabled()) return Promise.resolve(false);
-    return fetchDeadline('/api/store?feature=team&merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
-      .then((r) => (r && r.ok ? r.json() : null))
-      .then((res) => {
-        if (!res || slug !== teamSlug() || k !== teamVenueKey()) return false;
-        teamReadFailed = false;
-        const root = window.__kiwiTeamV2;
-        const applied = applyServerCodes(root.byVenue[k] || [], res.data && res.data.members, serverCodes);
-        Object.assign(serverCodes, applied.serverCodes);
-        root.byVenue[k] = applied.members;
-        persistTeams();                       // ce que le serveur a confirmé quitte le disque
-        if (!rosterHasUnresolved(applied.members) && heldPush) { heldPush = false; c.push(0, true); }
-        if (pageActive) { try { render(); } catch (_) {} }
-        return true;
-      })
-      .catch((error) => { teamReadTimedOut(error); return false; });
-  }
-  function teamCloudBind() {
-    const c = teamCloudInit();
-    if (c) Promise.resolve(c.bind()).then(() => hydrateCodes()).then(() => publishPins()).catch(() => {});
-  }
-  function teamCloudPush() {
-    const c = teamCloudInit();
-    if (c) c.push();
-  }
+  /* team-owner:memberState:teamReadFailed */
+  function teamReadTimedOut(...args) { return memberState.teamReadTimedOut(...args); }
+  function hydrateCodes(...args) { return memberState.hydrateCodes(...args); }
+  function teamCloudBind(...args) { return memberState.teamCloudBind(...args); }
+  function teamCloudPush(...args) { return memberState.teamCloudPush(...args); }
 
-  function ensureVenueData(venue) {
-    const root = window.__kiwiTeamV2;
-    const key = teamKey(venue);
-    if (!root.byVenue[key]) root.byVenue[key] = (venue && venue.custom) ? [] : seedFor((venue && venue.type) || 'restaurant');
-    if (venue && venue.custom) {
-      const slug = teamSlug();
-      if (slug) {
-        const before = root.byVenue[key];
-        const kept = before.filter((m) => memberBelongsToStore(m, slug));
-        if (kept.length !== before.length) {
-          root.byVenue[key] = kept;
-          const alive = Object.create(null);
-          kept.forEach((m) => { if (m && m.id) alive[m.id] = 1; });
-          root.hoursByVenue[key] = mergeByDay(root.hoursByVenue[key], null, alive);
-          root.shiftsByVenue[key] = mergeByDay(root.shiftsByVenue[key], null, alive);
-          persistTeams();
-          setTimeout(() => { afterTeamChange(); teamCloudPush(); }, 0);
-        }
-      }
-    }
-    // seedHours() invents 4–8 h a day so the pitch demo looks staffed. A REAL
-    // store must never be handed hours nobody worked: those hours are now money
-    // on Paie & planning ("à payer · période" = base salaries + hours × rate), so
-    // seeding one would quote the owner a wage bill for a shift that never
-    // happened. A real store starts at zero and fills in from the planning grid.
-    if (!root.hoursByVenue[key]) {
-      root.hoursByVenue[key] = (venue && venue.custom)
-        ? {}
-        : seedHours(root.byVenue[key], buildPeriod(root.periodKind).days);
-    }
-    if (!root.planningByVenue[key]) root.planningByVenue[key] = window.KiwiPlanningCore?.blank?.() || {};
-    root.planningByVenue[key] = window.KiwiPlanningCore?.normalize?.(root.planningByVenue[key], root.byVenue[key]) || root.planningByVenue[key];
-    return root;
-  }
-  function getMembers(venueType) { return window.__kiwiTeamV2.byVenue[venueType] || []; }
-  function getHours(venueType) { return window.__kiwiTeamV2.hoursByVenue[venueType] || {}; }
+  function ensureVenueData(...args) { return memberState.ensureVenueData(...args); }
+  function getMembers(...args) { return memberState.getMembers(...args); }
+  function getHours(...args) { return memberState.getHours(...args); }
 
   /* ═══════════════ PERIOD UTILS ═══════════════ */
   function pad(n) { return String(n).padStart(2, '0'); }
@@ -866,7 +454,7 @@
   }
 
   function periodNavigatorHtml(T, period) {
-    const kind = window.__kiwiTeamV2.periodKind || 'week';
+    const kind = memberState.current().periodKind || 'week';
     const shifted = (periodOffsets[kind] || 0) !== 0;
     return `<nav class="kt-period-nav" aria-label="${esc(T.hPeriodLabel(period.startFr, period.endFr))}">
       <button class="kt-period-arrow" type="button" data-action="kt-period-nav" data-arg="prev" aria-label="${esc(T.plPrevPeriod)}" title="${esc(T.plPrevPeriod)}">‹</button>
@@ -906,7 +494,7 @@
   let activeFilters = { search: '', dept: '', contract: '', lang: '' };
   let pageActive = false;
   const profileStateListeners = [];
-  function noteProfileState() { profileStateListeners.forEach(fn => fn(pageActive, liveTeam)); }
+  function noteProfileState() { memberState.setPageActive(pageActive); invitations.setPageActive(pageActive); profileStateListeners.forEach(fn => fn(pageActive, liveTeam)); }
   // Which of this module's two pages is on screen: 'equipe' | 'payroll' | null.
   // Every handler already re-renders through `if (pageActive) render()`, so
   // routing inside render() is what lets editing hours from Paie repaint Paie
@@ -957,7 +545,7 @@
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then((response) => response.ok ? response.json() : null).then((data) => {
       if (!data || !data.ok || data.merchant !== merchant) { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); return; }
-      teamReadFailed = false;
+      memberState.resetReadFailure();
       const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}, data.pendingCorrections || []]);
       /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
          La fusion des heures pointées se faisait à CHAQUE réponse, donc
@@ -969,7 +557,7 @@
       liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] }; noteProfileState();
       const venueKey = teamVenueKey();
       if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
-        const root = window.__kiwiTeamV2;
+        const root = memberState.current();
         const venueHours = root.hoursByVenue[venueKey] || (root.hoursByVenue[venueKey] = {});
         // Un membre retiré ne récupère pas ses heures à la réponse suivante.
         const gone = new Set((root.removedByVenue[venueKey] || []).map((r) => String(r && r.id || '')));
@@ -1041,18 +629,7 @@
     return (window.KiwiNumber?.number(Math.round(n || 0)) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0))) + ' MAD';
   }
 
-  function memberMatchesFilters(m) {
-    const { search, dept, contract, lang } = activeFilters;
-    if (search) {
-      const q = search.toLowerCase();
-      const hay = `${memberFullName(m)} ${m.function} ${m.department} ${jobName(m.function)} ${jobName(m.department, 'dept')} ${m.email}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    if (dept && m.department !== dept) return false;
-    if (contract && m.contract !== contract) return false;
-    if (lang && !(m.languages || []).includes(lang)) return false;
-    return true;
-  }
+  function memberMatchesFilters(...args) { return rosterList.memberMatchesFilters(...args); }
 
   /* ═══════════════ SVG ICONS ═══════════════ */
   const svgIcon = (name, sz = 14) => `<i data-lucide="${name}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
@@ -1065,6 +642,31 @@
   };
 
   /* ═══════════════ PAGE SHOW / HIDE ═══════════════ */
+  const rosterList = window.KiwiTeamParts.rosterList.create({
+    memberFullName: (...args) => memberFullName(...args),
+    jobName: (...args) => jobName(...args),
+    t: (...args) => t(...args),
+    teamKey: (...args) => teamKey(...args),
+    getMembers: (...args) => getMembers(...args),
+    getHours: (...args) => getHours(...args),
+    getShifts: (...args) => getShifts(...args),
+    toISO: (...args) => toISO(...args),
+    memberDutyStatus: (...args) => memberDutyStatus(...args),
+    liveMember: (...args) => liveMember(...args),
+    normShift: (...args) => normShift(...args),
+    hhmmToMin: (...args) => hhmmToMin(...args),
+    addDays: (...args) => addDays(...args),
+    fromISO: (...args) => fromISO(...args),
+    payrollFigures: (...args) => payrollFigures(...args),
+    renderMembersTable: (...args) => renderMembersTable(...args),
+    esc: (...args) => esc(...args),
+    trLang: (...args) => trLang(...args),
+    tradeKey: (...args) => tradeKey(...args),
+    todayLongLabel: (...args) => todayLongLabel(...args),
+    svgIcon: (...args) => svgIcon(...args),
+    activeFilters,
+    IC,
+  });
   function showPage() {
     pageActive = true; noteProfileState();
     pageMode = 'equipe';
@@ -1140,7 +742,7 @@
     closeShiftPop();
     /* The validated-period lock is stored, not remembered: re-read it for the
        venue and period on screen (first open, store switch, cloud pull). */
-    { const root = window.__kiwiTeamV2; restorePeriodLock(root, root.periodKind || 'week', buildPeriod(root.periodKind || 'week')); }
+    { const root = memberState.current(); restorePeriodLock(root, root.periodKind || 'week', buildPeriod(root.periodKind || 'week')); }
     if (pageMode === 'payroll') {
       const payrollNav = document.querySelector('.sidebar nav a[data-nav="payroll"]');
       if (!payrollNav?.classList.contains('active') && document.body.classList.contains('page-genpage')) {
@@ -1173,43 +775,10 @@
     });
   }
 
-  function rerenderProfilesGrid() {
-    if (activeTab !== 'profiles') return;
-    const root = document.querySelector('[data-equipe-root]');
-    if (!root) return;
-    const T = t();
-    const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
-    const venueType = teamKey(venue);
-    const members = getMembers(venueType);
-    const target = root.querySelector('[data-kt-grid-host]');
-    if (!target) return;
-    const visible = members.filter(memberMatchesFilters);
-    target.innerHTML = visible.length === 0
-      ? `<div class="eq-section" style="text-align:center; color:var(--n-500); padding:36px 14px;">${esc(members.length ? T.noMatch : T.noMembersYet)}</div>`
-      : renderMembersTable(T, visible, venueType);
-    /* Also keep the badge count fresh */
-    const badge = root.querySelector('[data-kt-count-badge]');
-    if (badge) badge.textContent = T.secAllMembersBadge(visible.length);
-  }
+  function rerenderProfilesGrid(...args) { return rosterList.rerenderProfilesGrid(...args); }
 
   /* ═══════════════ HEADER ═══════════════ */
-  function renderHeader(T, venue, members) {
-    const employeeAppLabel = trLang() === 'ar' ? 'تطبيق الموظفين' : trLang() === 'en' ? 'Employee app' : 'App employés';
-    const showEmployeeApp = venue && venue.custom && (tradeKey(venue) === 'restaurant' || tradeKey(venue) === 'cafe');
-    return `
-      <div class="eq-head">
-        <div>
-          <div class="eq-title">${esc(T.title)}</div>
-          <div class="eq-date">${esc(T.subDate(todayLongLabel()))}</div>
-        </div>
-        <div class="eq-head-acts">
-          ${showEmployeeApp ? `<button class="btn-slim" type="button" data-action="kt-employee-app">${svgIcon(IC.users, 13)}<span>${esc(employeeAppLabel)}</span></button>` : ''}
-          <button data-activation=money class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
-          <button data-activation=write class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
-        </div>
-      </div>
-    `;
-  }
+  function renderHeader(...args) { return rosterList.renderHeader(...args); }
 
   /* ═══════════════ TABS ═══════════════ */
   function renderTabs(T) {
@@ -1246,7 +815,7 @@
   /* ═══════════════ DELEGATED HANDLERS ═══════════════ */
   handlers['kt-tab'] = (_el, kind) => {
     if (kind === 'profiles' || kind === 'hours') {
-      activeTab = kind;
+      activeTab = kind; rosterList.setActiveTab(kind);
       render();
     }
   };
@@ -1345,7 +914,7 @@
     ensureVenueData(venue);
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
-    { const root = window.__kiwiTeamV2; restorePeriodLock(root, root.periodKind || 'week', buildPeriod(root.periodKind || 'week')); }
+    { const root = memberState.current(); restorePeriodLock(root, root.periodKind || 'week', buildPeriod(root.periodKind || 'week')); }
     pageActive = true; noteProfileState();
     scheduleLiveTeam();          // la paie lit le pointage : cadence rapide
     pageMode = 'payroll';
@@ -1739,178 +1308,40 @@
      bridges those people into the REAL per-venue roster the page reads
      (byVenue[venue.id] → 'kiwiTeamV2:custom'), so they persist and are editable.
      Idempotent: dedupes by PIN code / full name so a re-run can't duplicate. */
-  const ONB_ROLE_FN = {
-    owner:   { fn: 'Propriétaire', dept: 'Direction' },
-    manager: { fn: 'Manager',      dept: 'Management' },
-    staff:   { fn: 'Équipier',     dept: 'Service' },
-  };
-  function importMembers(venue, people) {
-    if (!venue || !Array.isArray(people) || !people.length) return 0;
-    ensureVenueData(venue);
-    const key = teamKey(venue);
-    const list = window.__kiwiTeamV2.byVenue[key] || (window.__kiwiTeamV2.byVenue[key] = []);
-    const hours = window.__kiwiTeamV2.hoursByVenue[key] || (window.__kiwiTeamV2.hoursByVenue[key] = {});
-    let added = 0;
-    people.forEach((p) => {
-      const name = String((p && p.name) || '').trim();
-      if (!name) return;
-      const code = /^\d{4}$/.test((p && p.code) || '') ? p.code : '';
-      const dupe = list.some((m) =>
-        (code && m.pinCode === code) ||
-        `${m.firstName || ''} ${m.lastName || ''}`.trim().toLowerCase() === name.toLowerCase());
-      if (dupe) return;
-      const sp = name.indexOf(' ');
-      const role = (p && p.role) || 'staff';
-      const rm = ONB_ROLE_FN[role] || ONB_ROLE_FN.staff;
-      const id = 'mem-' + Math.random().toString(36).slice(2, 10);
-      list.push({
-        id,
-        firstName: sp >= 0 ? name.slice(0, sp) : name,
-        lastName: sp >= 0 ? name.slice(sp + 1).trim() : '',
-        // One code per person: what onboarding collected IS their till code, so
-        // the profile shows the same value the cashier types (it used to show a
-        // separate generated password, which opened nothing).
-        email: '', phone: '', password: code || makeCode(), pinCode: code || '',
-        function: rm.fn, department: rm.dept, contract: 'CDI',
-        startDate: '', endDate: '', baseSalary: 0, hourlyRate: 0,
-        languages: [], address: '', cin: '', emergencyName: '', emergencyPhone: '', notes: '',
-        avatarTone: AVATAR_TONES[list.length % AVATAR_TONES.length],
-        role, venueType: key,
-        venueSlug: teamSlug(),
-        createdAt: Date.now(),
-      });
-      hours[id] = {};
-      added++;
-    });
-    if (added) { saveCustomTeams(); if (pageActive) { try { render(); } catch (_) {} } }
-    return added;
-  }
+  /* team-owner:invitations:ONB_ROLE_FN */
+  function importMembers(...args) { return invitations.importMembers(...args); }
   /* L'accueil du tableau de bord veut afficher « qui est là aujourd'hui », mais
    * dateRange.js s'exécute AVANT ce fichier. Il lit donc le roster par cette API
    * et se repeint sur l'événement plus bas, plutôt que d'aller fouiller
    * __kiwiTeamV2 — un global privé qu'un refactor d'ici casserait en silence.
    * Les heures du jour viennent de la même grille que Paie, donc les trois
    * surfaces content la même chose. */
-  function roster() {
-    try {
-      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
-      const vt = teamKey(venue);
-      const members = getMembers(vt) || [];
-      const hours = getHours(vt) || {};
-      const todayKey = toISO(new Date());
-      return members.map((m) => ({
-        id: m.id,
-        name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '·',
-        role: m.function ? jobName(m.function) : jobName(m.department || '', 'dept'),
-        avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
-        status: memberDutyStatus(m, hours, todayKey),
-        hoursToday: liveMember(m.id)
-          && ['on-duty', 'on-pause'].includes(liveMember(m.id).status)
-          ? Math.max(0.01, +((hours[m.id] || {})[todayKey]) || 0.01)
-          : (+((hours[m.id] || {})[todayKey]) || 0),
-      }));
-    } catch (_) { return []; }
-  }
+  function roster(...args) { return rosterList.roster(...args); }
   /* Public, read-only day snapshot for reports and the assistant.  Historical
    * reports must not reuse `roster().hoursToday`: that would quietly attach
    * today's hours to an older Z report.  This adapter reads the same realised
    * hours and published/draft planning grids as the Planning page, for the
    * requested calendar day, and says exactly which source each figure came
    * from. */
-  function daySnapshot(dayKey) {
-    try {
-      dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(dayKey || '')) ? String(dayKey) : toISO(new Date());
-      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
-      const key = teamKey(venue), members = getMembers(key) || [];
-      const realised = getHours(key) || {}, shifts = getShifts(key) || {};
-      return members.map((m) => {
-        const shift = normShift((shifts[m.id] || {})[dayKey]);
-        let plannedHours = 0;
-        if (shift && !shift.off) {
-          const from = hhmmToMin(shift.start), to = hhmmToMin(shift.end);
-          plannedHours = Math.max(0, (to > from ? to - from : 1440 - from + to) / 60);
-        }
-        return {
-          id: m.id,
-          name: memberFullName(m) || '·',
-          role: m.function || m.department || m.role || '',
-          plannedStart: shift && !shift.off ? shift.start : '',
-          plannedEnd: shift && !shift.off ? shift.end : '',
-          plannedHours: Math.round(plannedHours * 100) / 100,
-          workedHours: Math.max(0, +((realised[m.id] || {})[dayKey]) || 0),
-          dayOff: !!(shift && shift.off),
-        };
-      });
-    } catch (_) { return []; }
-  }
+  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }
   /* Read-only planning evidence for the morning briefing. A draft is not a
    * promise to the team: only the frozen published grid may prove that an open
    * service is staffed. Names are reduced to first names at this boundary so
    * the briefing never receives contracts, pay, codes or full identities. */
-  function planningDay(dayKey) {
-    try {
-      dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(dayKey || '')) ? String(dayKey) : toISO(new Date());
-      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
-      const key = teamKey(venue), members = getMembers(key) || [];
-      const planning = window.__kiwiTeamV2.planningByVenue[key] || {};
-      const published = planning.publishingEnabled === true && planning.publishedShifts && typeof planning.publishedShifts === 'object';
-      const shifts = published ? planning.publishedShifts : {};
-      const configured = published && members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m.id] || {}, dayKey));
-      return {
-        day: dayKey, configured: !!configured, published: !!published,
-        members: members.map((m) => {
-          const shift = normShift((shifts[m.id] || {})[dayKey]);
-          return {
-            id: String(m.id || ''),
-            firstName: String(m.firstName || memberFullName(m) || '').trim().split(/\s+/)[0].slice(0, 40),
-            start: shift && !shift.off ? shift.start : '', end: shift && !shift.off ? shift.end : '', off: !!(shift && shift.off)
-          };
-        }).filter((m) => m.id)
-      };
-    } catch (_) { return { day: String(dayKey || ''), configured: false, published: false, members: [] }; }
-  }
+  function planningDay(...args) { return rosterList.planningDay(...args); }
   /* Reservations consume the SAME planning grid as Paie, never a second staff
    * calendar.  A slot is covered only when a floor-capable team member's
    * planned shift spans the whole booking.  `configured` stays false when the
    * owner has not filled that day yet, so an incomplete planning cannot close
    * the public diary by accident. */
-  function bookingCoverage(startAt, endAt) {
-    try {
-      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
-      const key = teamKey(venue), members = getMembers(key) || [], shifts = getShifts(key) || {};
-      const start = new Date(+startAt || 0), currentDay = toISO(start), previousDay = toISO(addDays(fromISO(currentDay), -1));
-      const days = [previousDay, currentDay], currentConfigured = members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m.id] || {}, currentDay));
-      const floor = members.filter((m) => {
-        const role = m.role || m.function || m.department || '';
-        return window.KiwiRoles?.isService ? window.KiwiRoles.isService(role) : /serveur|service|salle|rang|ma[iî]tre|barista|barman|accueil|h[oô]te|manager|propri[eé]taire|staff|[eé]quipier/i.test(role);
-      });
-      const covered = floor.filter((m) => days.some((day) => {
-        const shift = normShift((shifts[m.id] || {})[day]);
-        if (!shift || shift.off) return false;
-        const a = fromISO(day), from = hhmmToMin(shift.start), to = hhmmToMin(shift.end);
-        a.setHours(Math.floor(from / 60), from % 60, 0, 0);
-        const z = new Date(a); z.setMinutes(z.getMinutes() + (to > from ? to - from : 1440 - from + to));
-        return a.getTime() <= +startAt && z.getTime() >= +endAt;
-      })).map((m) => ({ id: m.id, name: memberFullName(m), role: m.function || m.department || m.role || '' }));
-      return { configured: currentConfigured || covered.length > 0, members: covered };
-    } catch (_) { return { configured: false, members: [] }; }
-  }
+  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }
   /* La masse salariale d'une liste de journées, pour le résultat net de
    * Marges (assets/charges.js). Exactement le calcul de Paie & planning, sur
    * le même roster et les mêmes heures : un salaire saisi une fois dans Équipe
    * n'est jamais ressaisi ailleurs, et les deux pages ne peuvent pas diverger.
    * null quand personne n'a ni salaire ni taux horaire : « pas de personnel
    * connu » n'est pas « personnel gratuit ». */
-  function labour(days) {
-    const venue = window.KiwiVenue?.getCurrentVenueData?.() || null;
-    if (!venue) return null;
-    const members = getMembers(teamKey(venue));
-    const list = (Array.isArray(days) ? days : []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
-    const f = payrollFigures(members, teamKey(venue), { days: list });
-    if (!f.salaried && !f.rated) return null;
-    return { baseDue: f.baseDue, variablePay: f.variablePay, baseMass: f.baseMass, share: f.share,
-      salaried: f.salaried, rated: f.rated, members: members.length, totalHours: f.totalHours };
-  }
+  function labour(...args) { return rosterList.labour(...args); }
   window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, planningDay, bookingCoverage, labour });
 
   /* ═══════════════ PONT VERS assets/team-hours.js ═══════════════

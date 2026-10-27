@@ -1,3 +1,4 @@
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -11,7 +12,7 @@ test('employee/serveur modal containment',()=>{
   assert.match(planning,/back.focus/);
 });
 test('earlier chronological notices',()=>{assert.match(planning,/<details>/);assert.match(planning,/if \(historyOpen\)[^\n]*history\.open = true/);assert.match(planning,/allNotices.slice\(0,-3\).map/);});
-test('menu native switch',()=>{assert.match(read('menu-catalog.js'),/<button type="button" class="sw /);});
+test('menu native switch',()=>{assert.match(menuCatalogSource(),/<button type="button" class="sw /);});
 test('onboarding semantic handoff',()=>{
  const s=read('onboarding.js');assert.doesNotMatch(s,/setTimeout\(enterApp/);assert.doesNotMatch(s,/setTimeout\([^\n]*first.focus/);assert.match(s,/destination.focus/);
 });

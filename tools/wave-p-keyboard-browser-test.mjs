@@ -1,3 +1,4 @@
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 // assets/employee-planning.js assets/menu-catalog.js assets/onboarding.js
 // assets/pages-pro/boutique-promos-returns.js assets/pos-epicerie.js assets/admin-workspace.js
 import assert from 'node:assert/strict';
@@ -36,7 +37,7 @@ try {
  });
  await h.S.run('catalog switch works with Enter and Space',async t=>{
   const page=await h.browser.newPage();t.defer(()=>page.close());t.watch(page);
-  const source=fs.readFileSync('assets/menu-catalog.js','utf8');
+  const source=menuCatalogSource();
   const markup=source.match(/<button type="button" class="sw [^\n]+<\/button>/)[0];
   const html=Function('it','esc','tr','T','return `'+markup+'`;')({id:'synthetic',name:'Synthetic item',avail:true},String,x=>x,{avail:'Available',unavail:'Unavailable'});
   await page.setContent('<html lang="en"><body>'+html+'</body></html>');

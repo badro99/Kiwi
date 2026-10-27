@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import planningSourceHelper from './planning-test-source.cjs';
+import teamOwners from './team-owners-test-source.cjs';
 import caisseWorkflowSource from './caisse-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
@@ -1075,7 +1077,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     && (liveState.recentAttendance || []).some((e) => e.memberId === 'mem-sara' && (e.inDeferredMs > 0 || e.outDeferredMs > 0)),
   'la caisse et le tableau de bord reçoivent les pointages envoyés plus tard, avec le délai déclaré');
 
-  const hoursSource = fs.readFileSync(path.join(ROOT, 'assets/team-hours.js'), 'utf8');
+  const hoursSource = planningSourceHelper.planningTestSource();
   function renderHours(lang, deferredByVenue) {
     const fn = () => '';
     const base = {
@@ -1102,7 +1104,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     && ar.includes('أُرسل لاحقاً من الهاتف') && ar.includes('2 س 10 د')
     && !cell(fr, '2026-10-20').includes('data-kt-deferred') && !none.includes('data-kt-deferred'),
   'la grille des heures marque le jour du pointage envoyé plus tard, délai déclaré compris, en français, anglais et arabe');
-  const teamSourceNow = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+  const teamSourceNow = teamOwners.originalFile('assets/team.js');
   ok(/deferredByVenue[\s\S]{0,80}\[venueKey\] = data\.deferredPunches/.test(teamSourceNow)
     && teamSourceNow.includes('data.deferredPunches || {}, data.pendingCorrections || []]);'),
   'le tableau de bord range les pointages envoyés plus tard du magasin pour la grille des heures');
@@ -1115,7 +1117,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
 
 // Review controls use the existing hours surface and the audited server route.
 {
-  const src = fs.readFileSync(path.join(ROOT,'assets/team-hours.js'),'utf8');
+  const src = planningSourceHelper.planningTestSource();
   const block = src.slice(src.indexOf('  function correctionCopy()'),src.indexOf('  /* ═══════════════ HOURS PANE'));
   for (const lang of ['fr','en','ar']) {
     const handlers={},requests=[],notices=[];

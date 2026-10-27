@@ -1,9 +1,10 @@
+import pressingSource from './pressing-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const phoneSource = fs.readFileSync(new URL('../assets/phone.js', import.meta.url), 'utf8');
-const source = fs.readFileSync(new URL('../assets/pressing-caisse.js', import.meta.url), 'utf8');
+const phoneSource = pressingSource.readFileSync(new URL('../assets/phone.js', import.meta.url), 'utf8');
+const source = pressingSource.runtimeSource();
 let registered = null;
 const local = new Map();
 const fixtureServices = ['sec', 'lavage', 'repassage', 'detache', 'retouche'].map((id) => ({ id, code: id.toUpperCase(), short: id, label: id }));
@@ -165,7 +166,7 @@ const tillContext = {
 tillContext.KiwiCloudDoc = tillWindow.KiwiCloudDoc;   /* dans un navigateur, window est l'objet global */
 tillWindow.window = tillWindow; tillWindow.localStorage = tillContext.localStorage; tillWindow.navigator = tillContext.navigator; tillWindow.document = context.document;
 vm.createContext(tillContext);
-vm.runInContext(fs.readFileSync(new URL('../assets/pressing-ops.js', import.meta.url), 'utf8'), tillContext, { filename: 'pressing-ops.js' });
+vm.runInContext(pressingSource.readFileSync(new URL('../assets/pressing-ops.js', import.meta.url), 'utf8'), tillContext, { filename: 'pressing-ops.js' });
 vm.runInContext(phoneSource, tillContext, { filename: 'phone.js' });
 vm.runInContext(source, tillContext, { filename: 'pressing-caisse.js' });
 const till = tillWindow.KiwiPressing.rules;

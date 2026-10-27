@@ -41,6 +41,8 @@ entries.forEach(({base}) => moduleClosure('assets/' + base + '.js'));
 moduleClosure('assets/live-link.js');
 moduleClosure('assets/tickets.js');
 moduleClosure('assets/invoicing.js');
+moduleClosure('assets/team-hours.js');
+moduleClosure('assets/team.js');
 
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);
 /* « Le fichier est là » ne veut pas dire « l'URL répond ». Pages sert une page
@@ -64,11 +66,11 @@ shell.forEach((url) => ok(`${url} exists`, onDisk(url.split('?')[0].slice(1))));
    script au premier chargement après un déploiement.
    reset.html (mot de passe oublié, derrière kiwiSkin2027:access) est le
    document qui demande sprite.access.svg et access-reset.js : même règle. */
-const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'booking.html', 'reset.html']
+const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'booking.html', 'reset.html', 'OrderPro.html']
   .map(read).join('\n');
 /* Files a shell script loads only when needed (the iPhone barcode decoder,
    fetched by retail-scan.js when the camera opens) keep their stamp there. */
-const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js'].map(read).join('\n');
+const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/orderpro-page.js'].map(read).join('\n');
 // Public booking modules share their import URL with the offline shell.
 for (const m of read('assets/booking.js').matchAll(/import\('(\/assets\/booking-[a-z]+\.js\?v=\d+)'\)/g)) {
   ok(m[1] + ' is pre-cached', shell.includes(m[1]));
@@ -94,7 +96,7 @@ const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
   const m = url.match(/^\/assets\/([^?]+)\?v=([^&]+)$/);
   const dynamic = m && entries.some((e) => (`${e.base}.js` === m[1] || `${e.base}.css` === m[1]) && e.rev === m[2]);
-  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || moduleUrls.has(url) || onDemand.includes(`'assets/${url.slice(8)}'`) || onDemand.includes(`'${url}'`));
+  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || moduleUrls.has(url) || onDemand.includes(`'assets/${url.slice(8)}'`) || onDemand.includes(`'${url}'`) || onDemand.includes(`"assets/${url.slice(8)}"`));
 });
 
 if (failed.length) {

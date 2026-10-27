@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 /* Compte en attente · un geste retenu dit toujours pourquoi, une écriture de
  * fond n'ouvre rien. Conduit dans un vrai navigateur, avec de vrais clics et
  * de vraies frappes, sur assets/entitlements-v2.js tel qu'il est livré.
@@ -198,7 +199,7 @@ try {
 
 /* D · la carte qui se synchronise ne montre pas le code du serveur */
 {
-  const mc = fs.readFileSync(path.join(root, 'assets/menu-catalog.js'), 'utf8');
+  const mc = menuCatalogSource();
   check(/if \(r && r\.status === 402\) return null;/.test(mc), 'a menu sync refused for a pending account stays silent (the gesture was already explained)');
   check(!/desc: \(err && err\.error\)/.test(mc), 'a refused menu sync never prints the server code');
   check((mc.match(/syncSay\('Échec de synchronisation de la carte', 'The menu could not be synced', 'تعذّرت مزامنة القائمة'\)/g) || []).length === 3, 'every menu sync failure reads FR, EN and AR');

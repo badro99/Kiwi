@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import menuCatalogSource from './menu-catalog-test-source.cjs';
 /* No store may publish another store's records (functions/api/_tenant-guard.js).
  *
  * Replays, through the real /api/store and /api/menu routes, the three leaks
@@ -241,13 +242,28 @@ const publish = async (acc, merchant, data) => {
 
 /* ── 11. The browsers drop a refused copy instead of retrying it ───────── */
 {
-  const menuSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
+  const menuSrc = menuCatalogSource();
   ok('the carte editor adopts the server carte on foreign-document', /err\.error === 'stale-menu' \|\| err\.error === 'foreign-document'\) && err\.data\)/.test(menuSrc));
   const docSrc = fs.readFileSync(path.join(ROOT, 'assets/cloud-doc.js'), 'utf8');
   ok('store documents adopt the server copy on foreign-document', /error === 'foreign-document'[\s\S]{0,200}opts\.write\(/.test(docSrc));
   const storeSrc = fs.readFileSync(path.join(ROOT, 'functions/api/store.js'), 'utf8');
   ok('the store route judges before its first write statement',
     storeSrc.indexOf('foreignCopy(env') > 0 && storeSrc.indexOf('foreignCopy(env') < storeSrc.indexOf("'UPDATE store_docs SET data=?"));
+}
+
+/* ── 12. The credit book, moved to its own document ──────────────────────
+ * functions/api/_credit-book-store.js writes the book under 'creditbook'. A
+ * store whose book was never moved still holds it inside verticalops, so the
+ * guard must look in both places. */
+{
+  const ardoises = [1, 2, 3].map((i) => ({ id: 'cli-est-' + i, name: 'Client Est ' + i, phone: '+21260000000' + i,
+    hist: [{ id: 'est' + i, type: 'debt', amt: 10 * i, ts: now - 5e8 + i, label: 'Ardoise Est' }], creditAlerts: [] }));
+  const vo = (carnet) => ({ verticals: { epicerie: { schema: 1, device: 'x', updatedAt: now, data: { v: 2, carnet, day: {} } } }, commands: [], seq: 0 });
+  db.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)')
+    .run('shop-est', 'verticalops', JSON.stringify(vo(ardoises)), now);
+  const r = await put('acc-sud', 'resto-sud', 'verticalops', vo(ardoises));
+  ok('a credit book copied from a store whose book is still inside verticalops is refused', r.status === 409 && r.body.error === 'foreign-document', JSON.stringify(r));
+  ok('…and no credit book is created for the copying store', doc('resto-sud', 'creditbook') === null);
 }
 
 console.log(`\n${fails ? '\x1b[31m' : '\x1b[32m'}cross-store-copy: ${passed} passed, ${fails} failed\x1b[0m`);

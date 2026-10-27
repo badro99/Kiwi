@@ -59,6 +59,7 @@ function realm(source, real) {
   });
   context.window = context;
   vm.runInContext(read('assets/stock/strings.js'), context);   // second stage: string pack loads first
+  vm.runInContext(read('assets/stock/state.js'), context);
   vm.runInContext(source, context);
   listeners.get('DOMContentLoaded')();
   return { context, calls, scripts, storage };
@@ -75,13 +76,13 @@ for (const real of [false, true]) {
   assert.deepEqual(Object.keys(after.context).filter(k => k !== 'KiwiStockInternal').sort(), Object.keys(before.context).sort(), 'un seul namespace global ajouté');
   assert.deepEqual(Object.keys(after.context.Kiwi.handlers), Object.keys(before.context.Kiwi.handlers));
   assert.equal(JSON.stringify(after.context.KiwiRestaurantStock.rows()), JSON.stringify(before.context.KiwiRestaurantStock.rows()), 'pont recettes disponible avant les parties');
-  assert.equal(after.scripts.length, 5, 'les cinq parties se préchargent au démarrage, un premier clic n’attend pas le réseau');
+  assert.equal(after.scripts.length, 8, 'les huit parties se préchargent au démarrage, un premier clic n’attend pas le réseau');
   let scope;
   const install = after.context.KiwiStockInternal.install;
   after.context.KiwiStockInternal.install = (name, factory) => install(name, s => { scope = s; return factory(s); });
   const one = after.context.Kiwi.handlers['stock-tab']({ dataset: { tab: 'orders' } });
   const two = after.context.Kiwi.handlers['stock-tab']({ dataset: { tab: 'suppliers' } });
-  assert.equal(after.scripts.length, 5, 'appels concurrents : un seul chargement par partie');
+  assert.equal(after.scripts.length, 8, 'appels concurrents : un seul chargement par partie');
   for (const script of [...after.scripts].reverse()) {
     vm.runInContext(read(script.src.split('?')[0]), after.context, { filename: script.src });
     script.onload();
@@ -120,7 +121,7 @@ for (const real of [false, true]) {
   }
   await first;
   const retry = H['stock-tab']({ dataset: { tab: 'overview' } });
-  assert.equal(r.scripts.length, 6, 'seule la partie en échec est retentée');
+  assert.equal(r.scripts.length, 9, 'seule la partie en échec est retentée');
   const script = r.scripts.at(-1);
   vm.runInContext(read(script.src.split('?')[0]), r.context); script.onload();
   await retry;

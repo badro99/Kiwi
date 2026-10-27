@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+const menuCatalogSource = require('./menu-catalog-test-source.cjs');
 
 /* La lecture réseau de la carte ne doit jamais décider de la page affichée.
  *
@@ -18,7 +19,7 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 
-const source = fs.readFileSync(process.argv[2] || 'assets/menu-catalog.js', 'utf8');
+const source = process.argv[2] ? fs.readFileSync(process.argv[2], 'utf8') : menuCatalogSource();
 
 const CARTE = {
   merchant: 'amira-cafe',

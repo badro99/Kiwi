@@ -1,0 +1,169 @@
+{
+  "assets/hotel/model.js": {
+    "globals": [
+      "KiwiCurrentStaff",
+      "KiwiCurrentStaff.id",
+      "KiwiCurrentStaff.name",
+      "KiwiCurrentStaff.role",
+      "KiwiIdentity",
+      "KiwiIdentity.state",
+      "KiwiIdentity.state.authenticated",
+      "KiwiIdentity.state.operator",
+      "KiwiMe",
+      "KiwiMe.business",
+      "KiwiMe.email",
+      "KiwiMe.id",
+      "KiwiMe.name",
+      "KiwiMe.operator",
+      "KiwiMe.role",
+      "KiwiReservations",
+      "KiwiReservations.get",
+      "KiwiStore",
+      "KiwiStore.slugFor",
+      "KiwiVenue",
+      "KiwiVenue.getCurrentVenueData",
+      "__kiwiHotelSections"
+    ],
+    "scope": [
+      "cuDocument",
+      "cuDocument.apply",
+      "cuEnsureFilterVenue",
+      "cuEnsureFilterVenue.apply",
+      "cuHydrate",
+      "cuHydrate.apply",
+      "cuOccupancyMemo",
+      "cuOccupancyMemo.completed",
+      "cuOccupancyMemo.completed.get",
+      "cuOccupancyMemo.map",
+      "cuOccupancyMemo.signature",
+      "cuSeed",
+      "cuSeed.apply",
+      "cuStamp",
+      "cuStamp.apply",
+      "cuStayScope",
+      "cuStayScope.apply",
+      "cuVenueId",
+      "cuVenueId.apply",
+      "toast",
+      "toast.apply",
+      "trL",
+      "trL.apply",
+      "tx",
+      "tx.apply"
+    ]
+  },
+  "assets/hotel/arrivals.js": {
+    "globals": [
+      "__kiwiHotelSections"
+    ],
+    "scope": [
+      "cuDraftMoney",
+      "cuDraftMoney.apply",
+      "cuMerchantSlug",
+      "cuMerchantSlug.apply",
+      "cuStayCache",
+      "cuStayCache.apply",
+      "cuStaysChanged",
+      "cuStaysChanged.apply",
+      "tx",
+      "tx.apply"
+    ]
+  },
+  "assets/hotel/room-board.js": {
+    "globals": [
+      "__kiwiHotelSections"
+    ],
+    "scope": [
+      "cuFloorRows",
+      "cuFloorRows.apply",
+      "cuStamp",
+      "cuStamp.apply",
+      "esc",
+      "esc.apply",
+      "ltr",
+      "ltr.apply",
+      "tx",
+      "tx.apply"
+    ]
+  },
+  "assets/hotel/folio-actions.js": {
+    "globals": [
+      "KiwiLive",
+      "__kiwiHotelSections"
+    ],
+    "scope": [
+      "isCustomHotel",
+      "isCustomHotel.apply"
+    ]
+  },
+  "assets/hotel/rate-actions.js": {
+    "globals": [
+      "__kiwiHotelSections"
+    ],
+    "scope": [
+      "STAYS",
+      "TAPE_DAYS"
+    ]
+  },
+  "assets/hotel/groups.js": {
+    "globals": [
+      "KiwiReservations",
+      "KiwiReservations.get",
+      "KiwiReservations.set",
+      "__kiwiHotelSections"
+    ],
+    "scope": [
+      "openModal",
+      "openModal.el"
+    ]
+  },
+  "assets/hotel/editors.js": {
+    "globals": [
+      "KiwiNumber",
+      "KiwiNumber.number",
+      "KiwiReservations",
+      "KiwiReservations.get",
+      "KiwiReservations.set",
+      "__kiwiHotelSections",
+      "scrollTo",
+      "scrollX",
+      "scrollY"
+    ],
+    "scope": [
+      "aiApplied",
+      "cuBulkPlan",
+      "cuBulkStaged",
+      "cuDispoCat",
+      "cuOccupancyMemo",
+      "cuSelectionMode",
+      "cuStayView",
+      "cuStripUnknown",
+      "cuTapeOffset",
+      "hotelCloud",
+      "hotelCloud.flush",
+      "openDrawer",
+      "openDrawer.bodyFn",
+      "openDrawer.el",
+      "openDrawer.el.querySelector",
+      "openDrawer.page",
+      "openModal",
+      "openModal.close",
+      "openModal.el"
+    ]
+  },
+  "assets/hotel/views.js": {
+    "globals": [
+      "KiwiNumber",
+      "KiwiNumber.number",
+      "KiwiPlatformOps",
+      "KiwiPlatformOps.uploads",
+      "KiwiReservations",
+      "KiwiReservations.get",
+      "KiwiReservations.resourceFree",
+      "KiwiStore",
+      "KiwiStore.slugFor",
+      "__kiwiHotelSections"
+    ],
+    "scope": []
+  }
+}

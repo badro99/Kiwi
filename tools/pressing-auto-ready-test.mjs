@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import pressingSource from './pressing-test-source.cjs';
 'use strict';
 
 import fs from 'node:fs';
@@ -9,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p) => pressingSource.readFileSync(path.join(root, p), 'utf8');
 
 let n = 0;
 function check(name, condition, extra = '') {
