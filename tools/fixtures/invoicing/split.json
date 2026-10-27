@@ -1,5 +1,5 @@
 {
-  "sha256": "28532e6e84c7ad683e333c1012735c313868456bd6368ea6b4b4b2455966b4ee",
+  "sha256": "e1fbc1d6f3d0bffcea3042d45bb36ded7c5689421a6de2da54858bd9434fb426",
   "parts": [
     {
       "file": "assets/invoicing/transport.js",
@@ -16,8 +16,8 @@
         },
         {
           "name": "apiError",
-          "start": 38184,
-          "end": 38310,
+          "start": 40597,
+          "end": 40723,
           "deps": [],
           "offset": 1502,
           "replacement": "/* Private transport declaration: apiError. */",
@@ -25,8 +25,8 @@
         },
         {
           "name": "api",
-          "start": 39161,
-          "end": 40133,
+          "start": 41574,
+          "end": 42546,
           "deps": [
             "apiError",
             "demo",
@@ -40,8 +40,8 @@
         },
         {
           "name": "demo",
-          "start": 40218,
-          "end": 52591,
+          "start": 42631,
+          "end": 55004,
           "deps": [
             "apiError",
             "computeTotals",
@@ -59,8 +59,8 @@
         },
         {
           "name": "cache",
-          "start": 52698,
-          "end": 52754,
+          "start": 55111,
+          "end": 55167,
           "deps": [],
           "offset": 14979,
           "replacement": "const cache = transport.rows();",
@@ -68,8 +68,8 @@
         },
         {
           "name": "nextCursor",
-          "start": 52962,
-          "end": 53029,
+          "start": 55375,
+          "end": 55442,
           "deps": [],
           "offset": 15037,
           "replacement": "const nextCursor = transport.cursors();",
@@ -77,8 +77,8 @@
         },
         {
           "name": "cacheKey",
-          "start": 53981,
-          "end": 54041,
+          "start": 56394,
+          "end": 56454,
           "deps": [
             "venueId"
           ],
@@ -88,8 +88,8 @@
         },
         {
           "name": "loadCache",
-          "start": 54044,
-          "end": 54272,
+          "start": 56457,
+          "end": 56685,
           "deps": [
             "TYPES",
             "cache",
@@ -103,8 +103,8 @@
         },
         {
           "name": "saveCache",
-          "start": 54275,
-          "end": 54380,
+          "start": 56688,
+          "end": 56793,
           "deps": [
             "cache",
             "cacheKey",
@@ -137,8 +137,8 @@
       "entries": [
         {
           "name": "clientBook",
-          "start": 54465,
-          "end": 54787,
+          "start": 56878,
+          "end": 57200,
           "deps": [],
           "offset": 420,
           "replacement": "function clientBook(...args) { return composerModule.clientBook({}, this, args); }",
@@ -146,8 +146,8 @@
         },
         {
           "name": "vatOptions",
-          "start": 76773,
-          "end": 77070,
+          "start": 79216,
+          "end": 79513,
           "deps": [
             "T",
             "VAT_RATES",
@@ -159,8 +159,8 @@
         },
         {
           "name": "lineRowHtml",
-          "start": 77073,
-          "end": 78135,
+          "start": 79516,
+          "end": 80578,
           "deps": [
             "ICON",
             "T",
@@ -174,8 +174,8 @@
         },
         {
           "name": "blankLine",
-          "start": 78138,
-          "end": 78230,
+          "start": 80581,
+          "end": 80673,
           "deps": [
             "DEFAULT_VAT"
           ],
@@ -185,8 +185,8 @@
         },
         {
           "name": "F",
-          "start": 78233,
-          "end": 78303,
+          "start": 80676,
+          "end": 80746,
           "deps": [
             "overlay"
           ],
@@ -196,8 +196,8 @@
         },
         {
           "name": "fv",
-          "start": 78306,
-          "end": 78363,
+          "start": 80749,
+          "end": 80806,
           "deps": [
             "F"
           ],
@@ -207,8 +207,8 @@
         },
         {
           "name": "readLines",
-          "start": 78366,
-          "end": 78741,
+          "start": 80809,
+          "end": 81184,
           "deps": [
             "overlay"
           ],
@@ -218,8 +218,8 @@
         },
         {
           "name": "apiLines",
-          "start": 78744,
-          "end": 78966,
+          "start": 81187,
+          "end": 81409,
           "deps": [
             "num",
             "toCents"
@@ -230,8 +230,8 @@
         },
         {
           "name": "paintLines",
-          "start": 78969,
-          "end": 79090,
+          "start": 81412,
+          "end": 81533,
           "deps": [
             "lineRowHtml",
             "overlay"
@@ -242,8 +242,8 @@
         },
         {
           "name": "termsOptions",
-          "start": 79093,
-          "end": 79394,
+          "start": 81536,
+          "end": 81837,
           "deps": [
             "T",
             "TERMS_CHOICES",
@@ -255,8 +255,8 @@
         },
         {
           "name": "formState",
-          "start": 79488,
-          "end": 80639,
+          "start": 81931,
+          "end": 83082,
           "deps": [
             "TERMS_CHOICES",
             "blankLine",
@@ -270,8 +270,8 @@
         },
         {
           "name": "draftKey",
-          "start": 80642,
-          "end": 80747,
+          "start": 83085,
+          "end": 83190,
           "deps": [
             "cmp",
             "venueId"
@@ -282,8 +282,8 @@
         },
         {
           "name": "composerPayload",
-          "start": 87715,
-          "end": 88424,
+          "start": 90158,
+          "end": 90867,
           "deps": [
             "apiLines",
             "cmp",
@@ -299,8 +299,8 @@
         },
         {
           "name": "formSnapshot",
-          "start": 88427,
-          "end": 88797,
+          "start": 90870,
+          "end": 91240,
           "deps": [
             "cmp",
             "fv",
@@ -312,8 +312,8 @@
         },
         {
           "name": "checkIce",
-          "start": 89251,
-          "end": 89761,
+          "start": 91694,
+          "end": 92204,
           "deps": [
             "F",
             "T",
@@ -327,8 +327,8 @@
         },
         {
           "name": "updateComposer",
-          "start": 89764,
-          "end": 91091,
+          "start": 92207,
+          "end": 93544,
           "deps": [
             "F",
             "T",
@@ -349,12 +349,12 @@
           ],
           "offset": 7848,
           "replacement": "function updateComposer(...args) { return composerModule.updateComposer({F, T, apiLines, computeTotals, currentView, esc, fv, lineHT, money, num, overlay, readLines, shift, toCents, today, tpl}, this, args); }",
-          "length": 1327
+          "length": 1337
         },
         {
           "name": "validateComposer",
-          "start": 91095,
-          "end": 91591,
+          "start": 93548,
+          "end": 94044,
           "deps": [
             "F",
             "T",
@@ -362,15 +362,15 @@
             "composerPayload",
             "toast"
           ],
-          "offset": 9308,
+          "offset": 9318,
           "replacement": "function validateComposer(...args) { return composerModule.validateComposer({F, T, checkIce, composerPayload, toast}, this, args); }",
           "length": 496
         },
         {
           "name": "renderComposerForm",
           "fragment": true,
-          "start": 81877,
-          "end": 87482,
+          "start": 84320,
+          "end": 89925,
           "deps": [
             "overlay",
             "cmp",
@@ -392,7 +392,7 @@
           ],
           "length": 5605,
           "replacement": "composerModule.renderComposerForm({overlay, cmp, st, locked, isQuote, title, book, t, dis, showIssue, issueLabel, termsOptions, METHODS, renderSellerLogo, esc, ICON, seller});",
-          "offset": 10105
+          "offset": 10115
         }
       ],
       "windowReads": [
@@ -406,8 +406,8 @@
       "entries": [
         {
           "name": "getSaleInvoices",
-          "start": 54872,
-          "end": 55603,
+          "start": 57285,
+          "end": 58016,
           "deps": [
             "dayIn",
             "today"
@@ -418,8 +418,8 @@
         },
         {
           "name": "rowsFor",
-          "start": 65626,
-          "end": 65674,
+          "start": 68039,
+          "end": 68087,
           "deps": [
             "cache"
           ],
@@ -429,8 +429,8 @@
         },
         {
           "name": "stats",
-          "start": 65677,
-          "end": 66333,
+          "start": 68090,
+          "end": 68746,
           "deps": [
             "rowsFor",
             "today"
@@ -441,8 +441,8 @@
         },
         {
           "name": "paintStats",
-          "start": 66336,
-          "end": 67555,
+          "start": 68749,
+          "end": 69998,
           "deps": [
             "T",
             "TYPES",
@@ -455,25 +455,25 @@
           ],
           "offset": 2160,
           "replacement": "function paintStats(...args) { return historyModule.paintStats({T, TYPES, esc, getSaleInvoices, money, overlay, rowsFor, stats}, this, args); }",
-          "length": 1219
+          "length": 1249
         },
         {
           "name": "legacyDocs",
-          "start": 67558,
-          "end": 67830,
+          "start": 70001,
+          "end": 70273,
           "deps": [
             "lsGet",
             "ownData",
             "venueId"
           ],
-          "offset": 3487,
+          "offset": 3517,
           "replacement": "function legacyDocs(...args) { return historyModule.legacyDocs({lsGet, ownData, venueId}, this, args); }",
           "length": 272
         },
         {
           "name": "paintNotices",
-          "start": 67833,
-          "end": 68683,
+          "start": 70276,
+          "end": 71126,
           "deps": [
             "T",
             "authBlocked",
@@ -483,39 +483,39 @@
             "overlay",
             "tpl"
           ],
-          "offset": 3900,
+          "offset": 3930,
           "replacement": "function paintNotices(...args) { return historyModule.paintNotices({T, authBlocked, esc, legacyDocs, offline, overlay, tpl}, this, args); }",
           "length": 850
         },
         {
           "name": "tabsHtml",
-          "start": 68686,
-          "end": 69051,
+          "start": 71129,
+          "end": 71494,
           "deps": [
             "T",
             "esc",
             "tab"
           ],
-          "offset": 4846,
+          "offset": 4876,
           "replacement": "function tabsHtml(...args) { return historyModule.tabsHtml({T, esc, tab}, this, args); }",
           "length": 365
         },
         {
           "name": "newLabel",
-          "start": 69054,
-          "end": 69133,
+          "start": 71497,
+          "end": 71576,
           "deps": [
             "T",
             "tab"
           ],
-          "offset": 5298,
+          "offset": 5328,
           "replacement": "function newLabel(...args) { return historyModule.newLabel({T, tab}, this, args); }",
           "length": 79
         },
         {
           "name": "visibleRows",
-          "start": 69137,
-          "end": 69956,
+          "start": 71580,
+          "end": 72399,
           "deps": [
             "filter",
             "getSaleInvoices",
@@ -523,14 +523,14 @@
             "rowsFor",
             "tab"
           ],
-          "offset": 5505,
+          "offset": 5535,
           "replacement": "function visibleRows(...args) { return historyModule.visibleRows({filter, getSaleInvoices, query, rowsFor, tab}, this, args); }",
           "length": 819
         },
         {
           "name": "paintRegister",
-          "start": 69959,
-          "end": 74036,
+          "start": 72402,
+          "end": 76479,
           "deps": [
             "ICON",
             "NO_OF",
@@ -550,14 +550,14 @@
             "tpl",
             "visibleRows"
           ],
-          "offset": 6557,
+          "offset": 6587,
           "replacement": "function paintRegister(...args) { return historyModule.paintRegister({ICON, NO_OF, T, esc, filter, fmtDate, loadingList, loadingMore, money, newLabel, nextCursor, overlay, rowsFor, statusHtml, tab, tpl, visibleRows}, this, args); }",
           "length": 4077
         },
         {
           "name": "paintAll",
-          "start": 74738,
-          "end": 74856,
+          "start": 77181,
+          "end": 77299,
           "deps": [
             "currentView",
             "overlay",
@@ -565,14 +565,14 @@
             "paintRegister",
             "paintStats"
           ],
-          "offset": 10781,
+          "offset": 10811,
           "replacement": "function paintAll(...args) { return historyModule.paintAll({currentView, overlay, paintNotices, paintRegister, paintStats}, this, args); }",
           "length": 118
         },
         {
           "name": "renderList",
-          "start": 74860,
-          "end": 75946,
+          "start": 77303,
+          "end": 78389,
           "deps": [
             "ICON",
             "T",
@@ -585,23 +585,23 @@
             "show",
             "tabsHtml"
           ],
-          "offset": 11055,
+          "offset": 11085,
           "replacement": "function renderList(...args) { return historyModule.renderList({ICON, T, esc, newLabel, overlay, ownData, paintAll, query, show, tabsHtml}, this, args); }",
           "length": 1086
         },
         {
           "name": "csvCell",
-          "start": 120283,
-          "end": 120641,
+          "start": 123421,
+          "end": 123779,
           "deps": [],
-          "offset": 12223,
+          "offset": 12253,
           "replacement": "function csvCell(...args) { return historyModule.csvCell({}, this, args); }",
           "length": 358
         },
         {
           "name": "exportCsv",
-          "start": 120644,
-          "end": 122500,
+          "start": 123782,
+          "end": 125638,
           "deps": [
             "NO_OF",
             "T",
@@ -613,7 +613,7 @@
             "today",
             "visibleRows"
           ],
-          "offset": 12734,
+          "offset": 12764,
           "replacement": "function exportCsv(...args) { return historyModule.exportCsv({NO_OF, T, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, this, args); }",
           "length": 1856
         }
@@ -628,8 +628,8 @@
       "entries": [
         {
           "name": "termsText",
-          "start": 111453,
-          "end": 111922,
+          "start": 114185,
+          "end": 114654,
           "deps": [
             "T",
             "tpl"
@@ -640,8 +640,8 @@
         },
         {
           "name": "printable",
-          "start": 111925,
-          "end": 119064,
+          "start": 114657,
+          "end": 122202,
           "deps": [
             "T",
             "businessName",
@@ -658,12 +658,12 @@
           ],
           "offset": 922,
           "replacement": "function printable(...args) { return printModule.printable({T, businessName, computeTotals, dmy, esc, getSeller, lang, lineHT, money, renderSellerLogo, termsText, tpl}, this, args); }",
-          "length": 7139
+          "length": 7545
         },
         {
           "name": "printDocument",
-          "start": 119085,
-          "end": 120035,
+          "start": 122223,
+          "end": 123173,
           "deps": [
             "T",
             "detail",
@@ -671,13 +671,14 @@
             "printable",
             "toast"
           ],
-          "offset": 8181,
+          "offset": 8587,
           "replacement": "function printDocument(...args) { return printModule.printDocument({T, detail, pick, printable, toast}, this, args); }",
           "length": 950
         }
       ],
       "windowReads": [
-        "open"
+        "open",
+        "KiwiInvoice"
       ]
     }
   ],

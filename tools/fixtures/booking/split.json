@@ -1,6 +1,6 @@
 {
-  "sha256": "badae91ff58cc063f813679c6e9fef1bf45fe375cec4ebaaa57063214db88dfc",
-  "formattedSha256": "ffa0da2c49fd420cf9260c2a56dbb15eaec3ad408177faf623a11b1c7f997e53",
+  "sha256": "95263ea3fc33db6d1392d89870ea0d9fec2abd54bb0e4aad5517bbb07a156d34",
+  "formattedSha256": "7ce7ee1a283157d29cfe45b169a01c57d7bb1d3131a7bc35635093eb2c80623b",
   "counter": "  var slotSeq=0,hotelSeq=0;",
   "bootstrap": "  const owner = Object.freeze({ getState() { return state; } });\n  const parts = {};\n  await Promise.all([\n    import('/assets/booking-service.js').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),\n    import('/assets/booking-hotel.js').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),\n    import('/assets/booking-submission.js').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),\n    import('/assets/booking-manage.js').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),\n    import('/assets/booking-view.js').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })\n  ]);\n",
   "parts": [
@@ -210,71 +210,71 @@
       ],
       "fragments": [
         {
-          "start": 34356,
-          "end": 34478,
+          "start": 34373,
+          "end": 34495,
           "offset": 533,
           "length": 122,
           "replacement": "\n  function plusDays(...args) { return parts.hotel.plusDays(...args); }"
         },
         {
-          "start": 34478,
-          "end": 34634,
+          "start": 34495,
+          "end": 34651,
           "offset": 656,
           "length": 156,
           "replacement": "\n  function hotelNights(...args) { return parts.hotel.hotelNights(...args); }"
         },
         {
-          "start": 34634,
-          "end": 34876,
+          "start": 34651,
+          "end": 34893,
           "offset": 813,
           "length": 242,
           "replacement": "\n  function hotelDates(...args) { return parts.hotel.hotelDates(...args); }"
         },
         {
-          "start": 34876,
-          "end": 36736,
+          "start": 34893,
+          "end": 36753,
           "offset": 1056,
           "length": 1860,
           "replacement": "\n  function hotelSearch(...args) { return parts.hotel.hotelSearch(...args); }"
         },
         {
-          "start": 36736,
-          "end": 37862,
+          "start": 36753,
+          "end": 37879,
           "offset": 2917,
           "length": 1126,
           "replacement": "\n  function loadHotelRooms(...args) { return parts.hotel.loadHotelRooms(...args); }"
         },
         {
-          "start": 37862,
-          "end": 38220,
+          "start": 37879,
+          "end": 38237,
           "offset": 4044,
           "length": 358,
           "replacement": "\n  function hotelFacts(...args) { return parts.hotel.hotelFacts(...args); }"
         },
         {
-          "start": 38220,
-          "end": 38418,
+          "start": 38237,
+          "end": 38435,
           "offset": 4403,
           "length": 198,
           "replacement": "\n  function hotelPhotoUrl(...args) { return parts.hotel.hotelPhotoUrl(...args); }"
         },
         {
-          "start": 38418,
-          "end": 39502,
+          "start": 38435,
+          "end": 39519,
           "offset": 4602,
           "length": 1084,
           "replacement": "\n  function hotelVisual(...args) { return parts.hotel.hotelVisual(...args); }"
         },
         {
-          "start": 39502,
-          "end": 42412,
+          "start": 39519,
+          "end": 42429,
           "offset": 5687,
           "length": 2910,
           "replacement": "\n  function hotelRoomList(...args) { return parts.hotel.hotelRoomList(...args); }"
         },
         {
-          "start": 42412,
-          "end": 42959,
+          "start": 42429,
+          "end": 42976,
           "offset": 8598,
           "length": 547,
           "replacement": "\n  function hotelSummary(...args) { return parts.hotel.hotelSummary(...args); }"
@@ -358,36 +358,36 @@
         },
         {
           "start": 26144,
-          "end": 28107,
+          "end": 28124,
           "offset": 3793,
-          "length": 1963,
+          "length": 1980,
           "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }"
         },
         {
-          "start": 33561,
-          "end": 34356,
-          "offset": 5757,
+          "start": 33578,
+          "end": 34373,
+          "offset": 5774,
           "length": 795,
           "replacement": "\n  function success(...args) { return parts.submission.success(...args); }"
         },
         {
-          "start": 42959,
-          "end": 44134,
-          "offset": 6553,
+          "start": 42976,
+          "end": 44151,
+          "offset": 6570,
           "length": 1175,
           "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }"
         },
         {
-          "start": 44134,
-          "end": 46628,
-          "offset": 7729,
-          "length": 2494,
+          "start": 44151,
+          "end": 46662,
+          "offset": 7746,
+          "length": 2511,
           "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }"
         },
         {
-          "start": 46628,
-          "end": 47111,
-          "offset": 10224,
+          "start": 46662,
+          "end": 47145,
+          "offset": 10258,
           "length": 483,
           "replacement": "\n  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }"
         }
@@ -423,78 +423,78 @@
       ],
       "fragments": [
         {
-          "start": 28107,
-          "end": 29231,
+          "start": 28124,
+          "end": 29248,
           "offset": 496,
           "length": 1124,
           "replacement": "\n  function rememberManage(...args) { return parts.manage.rememberManage(...args); }"
         },
         {
-          "start": 29231,
-          "end": 29447,
+          "start": 29248,
+          "end": 29464,
           "offset": 1621,
           "length": 216,
           "replacement": "\n  function manageHref(...args) { return parts.manage.manageHref(...args); }"
         },
         {
-          "start": 29447,
-          "end": 29812,
+          "start": 29464,
+          "end": 29829,
           "offset": 1838,
           "length": 365,
           "replacement": "\n  function manageBlock(...args) { return parts.manage.manageBlock(...args); }"
         },
         {
-          "start": 29812,
-          "end": 31125,
+          "start": 29829,
+          "end": 31142,
           "offset": 2204,
           "length": 1313,
           "replacement": "\n  function wireManageBlock(...args) { return parts.manage.wireManageBlock(...args); }"
         },
         {
-          "start": 31125,
-          "end": 33499,
+          "start": 31142,
+          "end": 33516,
           "offset": 3518,
           "length": 2374,
           "replacement": "\n  /* booking manage declaration 4 */"
         },
         {
-          "start": 33499,
-          "end": 33561,
+          "start": 33516,
+          "end": 33578,
           "offset": 5893,
           "length": 62,
           "replacement": "\n  function mt(...args) { return parts.manage.mt(...args); }"
         },
         {
-          "start": 47111,
-          "end": 47614,
+          "start": 47145,
+          "end": 47648,
           "offset": 5956,
           "length": 503,
           "replacement": "\n  function statusLabel(...args) { return parts.manage.statusLabel(...args); }"
         },
         {
-          "start": 47614,
-          "end": 48458,
+          "start": 47648,
+          "end": 48492,
           "offset": 6460,
           "length": 844,
           "replacement": "\n  function manageRows(...args) { return parts.manage.manageRows(...args); }"
         },
         {
-          "start": 48458,
-          "end": 50291,
+          "start": 48492,
+          "end": 50325,
           "offset": 7305,
           "length": 1833,
           "replacement": "\n  function renderManage(...args) { return parts.manage.renderManage(...args); }"
         },
         {
-          "start": 50291,
-          "end": 51118,
+          "start": 50325,
+          "end": 51152,
           "offset": 9139,
           "length": 827,
           "replacement": "\n  function cancelBooking(...args) { return parts.manage.cancelBooking(...args); }"
         },
         {
-          "start": 51118,
-          "end": 51800,
+          "start": 51152,
+          "end": 51834,
           "offset": 9967,
           "length": 682,
           "replacement": "\n  function openManage(...args) { return parts.manage.openManage(...args); }"
@@ -671,15 +671,15 @@
           "replacement": "\n  function head(...args) { return parts.view.head(...args); }"
         },
         {
-          "start": 52454,
-          "end": 53521,
+          "start": 52488,
+          "end": 53555,
           "offset": 12326,
           "length": 1067,
           "replacement": "\n  function wireGlobal(...args) { return parts.view.wireGlobal(...args); }"
         },
         {
-          "start": 53521,
-          "end": 55000,
+          "start": 53555,
+          "end": 55034,
           "offset": 13394,
           "length": 1479,
           "replacement": "\n  function closed(...args) { return parts.view.closed(...args); }"
