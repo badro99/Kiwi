@@ -68,6 +68,35 @@ function envFor(task) {
     NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' ' + req).trim(),
   }) };
 }
+/* Browser suites that carry `// coverage:` annotations run with the coverage
+   probe (tools/coverage-probe.mjs): each annotation reached appends its cell to
+   a ledger, kept with the result and with the cached pass. */
+const PROBE = path.join(__dirname, 'coverage-probe.mjs');
+const probeOn = process.env.KIWI_COVERAGE_PROBE !== '0' && fs.existsSync(PROBE);
+const ledgerDir = probeOn ? fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-cells-')) : null;
+let ledgerN = 0;
+const annotatedMemo = new Map();
+function annotated(file) {
+  if (!annotatedMemo.has(file)) {
+    let hit = false;
+    try { hit = /\.mjs$/.test(file) && fs.readFileSync(file, 'utf8').includes('// coverage: surface='); } catch (_) {}
+    annotatedMemo.set(file, hit);
+  }
+  return annotatedMemo.get(file);
+}
+function withProbe(task, env) {
+  const script = path.resolve(task.cwd || process.cwd(), String(task.args[task.args.length - 1]));
+  if (!probeOn || !annotated(script)) return { env, ledger: null };
+  const ledger = path.join(ledgerDir, (ledgerN++) + '.txt');
+  return { ledger, env: Object.assign({}, env, {
+    KIWI_COVERAGE_LEDGER: ledger,
+    NODE_OPTIONS: ((env.NODE_OPTIONS || '') + ' --import=' + require('url').pathToFileURL(PROBE).href).trim(),
+  }) };
+}
+function readCells(ledger) {
+  if (!ledger) return undefined;
+  try { return [...new Set(fs.readFileSync(ledger, 'utf8').split('\n').filter(Boolean))].sort(); } catch (_) { return []; }
+}
 function saveDeps() {
   if (!tracing) return;
   try { fs.rmSync(traceDir, { recursive: true, force: true }); } catch (_) {}
@@ -113,7 +142,7 @@ function contentHash(rel) {
   return h;
 }
 const SALT = sha(JSON.stringify([
-  new Date().toDateString(), process.version, contentHash('app/package-lock.json'), contentHash('tools/dep-trace.cjs'), process.env.KIWI_CHROMIUM_BIN || '',
+  new Date().toDateString(), process.version, contentHash('app/package-lock.json'), contentHash('tools/dep-trace.cjs'), contentHash('tools/coverage-probe.mjs'), contentHash('tools/coverage-hooks.mjs'), process.env.KIWI_CHROMIUM_BIN || '',
   Object.keys(process.env).filter((k) => /^KIWI_/.test(k) && !/^KIWI_(DEP_|CHECK_|PASS_CACHE)/.test(k)).sort().map((k) => k + '=' + process.env[k]),
 ]));
 /* A program other than node reads files the tracer cannot see (git reads the
@@ -140,15 +169,15 @@ if (cacheOn) {
     const task = tasks[i], own = relOf(task.args[task.args.length - 1]), hit = passCache[own];
     if (!hit || Date.now() - hit.at > MAX_AGE_MS || !Array.isArray(hit.deps)) continue;
     if (passKey(task, own, hit.deps) !== hit.key) continue;
-    results[task.key] = { status: 0, signal: null, stdout: hit.stdout || '', stderr: hit.stderr || '', cpuMs: null, wallMs: 0, cached: true };
+    results[task.key] = { status: 0, signal: null, stdout: hit.stdout || '', stderr: hit.stderr || '', cpuMs: null, wallMs: 0, cached: true, cells: hit.cells };
     tasks.splice(i, 1); reused++;
   }
 }
-function remember(task, own, list, stdout, stderr) {
+function remember(task, own, list, stdout, stderr, cells) {
   if (!cacheOn) return;
   const all = [own, ...list];
   if (callsGit(all) || stdout.length + stderr.length > 512 * 1024) { delete passCache[own]; return; }
-  passCache[own] = { key: passKey(task, own, list), deps: list, at: Date.now(), stdout, stderr };
+  passCache[own] = { key: passKey(task, own, list), deps: list, at: Date.now(), stdout, stderr, cells };
 }
 function savePassCache() {
   if (!cacheOn) return;
@@ -164,7 +193,8 @@ function next() {
 function start(task) {
   running++; if (task.slow) runningSlow++;
   const trace = envFor(task);
-  const child = cp.spawn(process.execPath, task.args, { cwd: task.cwd || undefined, env: trace.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const probe = withProbe(task, trace.env);
+  const child = cp.spawn(process.execPath, task.args, { cwd: task.cwd || undefined, env: probe.env, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = '';
   child.stdout.on('data', (d) => { stdout += d; });
   child.stderr.on('data', (d) => { stderr += d; });
@@ -172,6 +202,7 @@ function start(task) {
   const began = Date.now();
   child.on('close', (status, signal) => {
     clearTimeout(timer);
+    const cells = readCells(probe.ledger);
     if (status === 0) times[nameOf(task)] = Date.now() - began;
     let cpuMs = null;
     if (trace.file) {
@@ -183,13 +214,13 @@ function start(task) {
           const list = new Set(lines.filter((l) => !l.startsWith('#')));
           list.delete(own);
           deps[own] = [...list].sort();
-          remember(task, own, deps[own], stdout, stderr);
+          remember(task, own, deps[own], stdout, stderr, cells);
         }
       } catch (_) {}
     }
     running--; if (task.slow) runningSlow--;
     done++;
-    results[task.key] = { status, signal, stdout, stderr, cpuMs, wallMs: Date.now() - began };
+    results[task.key] = { status, signal, stdout, stderr, cpuMs, wallMs: Date.now() - began, cells };
     if (status !== 0) {
       if (cacheOn) delete passCache[relOf(task.args[task.args.length - 1])];
       const name = String(task.args[task.args.length - 1]).replace(/^.*\//, '');
@@ -210,6 +241,7 @@ function pump() {
     try { fs.writeFileSync(TIMES, JSON.stringify(times)); } catch (_) {}
     saveDeps();
     savePassCache();
+    if (ledgerDir) { try { fs.rmSync(ledgerDir, { recursive: true, force: true }); } catch (_) {} }
     if (reused) console.log(`  ✓ ${reused} test files reused from the pass cache (same inputs as their last pass, under 24 h; KIWI_PASS_CACHE=0 runs them)`);
     console.log(`  ✓ ${done} test files run in parallel in ${Math.round((Date.now() - t0) / 1000)}s (${jobs} at a time, ${browserJobs} browsers)`);
   }

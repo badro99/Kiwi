@@ -60,18 +60,22 @@ if (process.env.KIWI_CHECK_TIER === 'changed') {
 /* The money, payroll, books and accessibility suites need fast-check and
  * axe-core from app/node_modules; without them each one prints "○ skip" and
  * exits 0, so a fresh worktree passed the gate with no money property run
- * (found 22 October). The full gate refuses to start without them; the fast
- * tier only says so. KIWI_ALLOW_PROPERTY_SKIP=1 lets a full run go on anyway. */
+ * (found 22 October). Every tier refuses to start without them (the fast tier
+ * used to only warn, and its green then held no property). KIWI_ALLOW_PROPERTY_SKIP=1
+ * runs the rest anyway, knowingly, and the run ends red: a run with properties
+ * left unexecuted is never a pass. */
+const MISSING_TEST_DEPS = [];
 {
   const missing = ['fast-check', 'axe-core', 'puppeteer-core']
     .filter((m) => !fs.existsSync(path.join(ROOT, 'app', 'node_modules', m, 'package.json')));
   if (missing.length) {
     const fix = `npm --prefix app ci, or in a worktree: ln -s <main checkout>/app/node_modules app/node_modules`;
-    if ((process.env.KIWI_CHECK_TIER || 'full') === 'full' && process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
-      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money and accessibility suites would skip and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs anyway, knowingly.)`);
+    if (process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
+      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money and accessibility suites would skip and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs the rest anyway, knowingly; that run ends red.)`);
       process.exit(1);
     }
-    console.log(`⚠ app/node_modules lacks ${missing.join(', ')}: money and accessibility properties will skip (${fix})`);
+    MISSING_TEST_DEPS.push(...missing);
+    console.log(`⚠ app/node_modules lacks ${missing.join(', ')}: money and accessibility properties will skip, so this run cannot pass (${fix})`);
   }
 }
 /* …and puppeteer-core on disk is not a browser. Without a Chromium that starts,
@@ -2379,18 +2383,36 @@ section('Money properties (tools/money-properties-test.mjs)');
 /* A test file the gate does not name guards nothing (the stock and hotel split
  * proofs sat unwired for a day and broke unseen). Every tools/*test* file must be
  * named in this file, or listed here with the reason it cannot run offline. */
+const OFFLINE_TESTS = {
+  'seo-live-test.mjs': 'reads the live site over the network',
+  'supabase-tenancy-test.mjs': 'needs a Supabase project configured',
+};
 section('Every test file is wired');
 {
-  const offline = {
-    'seo-live-test.mjs': 'reads the live site over the network',
-    'supabase-tenancy-test.mjs': 'needs a Supabase project configured',
-  };
+  const offline = OFFLINE_TESTS;
   const self = fs.readFileSync(__filename, 'utf8');
   const unwired = fs.readdirSync(path.join(ROOT, 'tools'))
     .filter((f) => /test\.(?:m?js|cjs)$/.test(f) && !offline[f])
     .filter((f) => !self.includes("'" + f + "'") && !self.includes('"' + f + '"') && !self.includes('`' + f + '`') && !self.includes('/' + f));
   if (unwired.length) unwired.forEach((f) => fail(`tools/${f} is not named in tools/check.js: wire it or list it as offline-only`));
   else ok('every tools/*test* file is named by the gate (' + Object.keys(offline).length + ' network-only exceptions)');
+  /* Discovery only looks in tools/: a test written anywhere else (functions/,
+     app/, a tools/ subfolder) would never be found, so it is refused. */
+  let elsewhere = [];
+  try {
+    elsewhere = require('child_process').execSync('git -c core.quotepath=false ls-files --cached --others --exclude-standard', { cwd: ROOT, encoding: 'utf8' })
+      .split('\n').map((l) => l.trim()).filter(Boolean)
+      .filter((f) => /(?:^|[-_.])(?:test|spec)\.(?:m?js|cjs|ts)$/.test(path.basename(f)) && !/^tools\/[^/]+$/.test(f) && !/(^|\/)node_modules\//.test(f));
+  } catch (_) { elsewhere = []; }
+  if (elsewhere.length) elsewhere.forEach((f) => fail(`${f} is a test outside tools/: move it to tools/ so the gate finds and runs it`));
+  else ok('no test file outside tools/');
+}
+
+section('Coverage probe (tools/coverage-probe-test.mjs)');
+{
+  const r = require('child_process').spawnSync(process.execPath, [path.join(ROOT, 'tools', 'coverage-probe-test.mjs')], { encoding: 'utf8' });
+  if (r.status !== 0) fail('coverage-probe-test: ' + ((r.stdout || '') + (r.stderr || '')).trim().split('\n').slice(-4).join(' | '));
+  else ok('a coverage cell counts when its annotation is reached, not when it is written');
 }
 
 section('Coverage manifest (tools/coverage-manifest-test.mjs)');
@@ -3027,6 +3049,40 @@ section('Wave R locale and accessibility');
   else ok('Wave R locale and accessibility regressions');
 }
 
+/* Named is not run: a file mentioned only in a comment, or in a list no loop
+ * reaches, passes the wiring check above and guards nothing. On the full gate,
+ * every tools/*test* file must have been started (or replayed from the pool)
+ * by this very run. The other tiers leave suites out by design. */
+section('Every test file ran');
+if (guard.tier() !== 'full') console.log('  ○ checked on the full gate only (this tier leaves suites out by design)');
+else {
+  const ran = guard.ranTests();
+  const never = fs.readdirSync(path.join(ROOT, 'tools'))
+    .filter((f) => /test\.(?:m?js|cjs)$/.test(f) && !OFFLINE_TESTS[f] && !guard.networkOnly(path.join(ROOT, 'tools', f)))
+    .filter((f) => !ran.has(f));
+  if (never.length) never.forEach((f) => fail(`tools/${f} is named in tools/check.js but this full run never started it: call it from a section`));
+  else ok(`every tools/*test* file ran in this full gate (${ran.size} started or replayed)`);
+}
+
+/* A `// coverage:` comment is a declaration; the coverage probe
+ * (tools/coverage-probe.mjs) records the annotations a suite really reached.
+ * On the full gate every mandatory French cell (tools/coverage-required.json,
+ * minus its blocked list) must have been reached by a passing suite in this run,
+ * or by a cached pass with the same inputs. */
+section('Coverage cells reached (tools/coverage-probe.mjs)');
+if (guard.tier() !== 'full') console.log('  ○ checked on the full gate only (this tier leaves browser suites out)');
+else if (process.env.KIWI_COVERAGE_PROBE === '0') fail('KIWI_COVERAGE_PROBE=0: the full gate cannot tell which coverage cells ran');
+else {
+  const reached = guard.reachedCells();
+  const required = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'coverage-required.json'), 'utf8'));
+  const blocked = new Set((required.blocked || []).map((b) => b.cell));
+  const need = [];
+  for (const row of required.required) for (const v of row.viewports) need.push(`${row.surface}|${row.locale}|${v}`);
+  const unreached = need.filter((k) => !blocked.has(k) && !reached.has(k));
+  if (unreached.length) unreached.forEach((k) => fail(`coverage cell ${k} is required and declared, but no passing suite reached its annotation in this run`));
+  else ok(`${need.length - blocked.size} required French cells reached at run time (${reached.size} annotated cells reached in all)`);
+}
+
 section('Suite CPU time (tools/suite-cpu-baseline.json)');
 {
   guard.takeSkip();   // a skip flag left by the last child test is not this section's
@@ -3041,6 +3097,11 @@ section('Suite CPU time (tools/suite-cpu-baseline.json)');
   }
 }
 
+{
+  const skipped = guard.dependencySkips();
+  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules`);
+}
+if (MISSING_TEST_DEPS.length) fail(`KIWI_ALLOW_PROPERTY_SKIP=1 with ${MISSING_TEST_DEPS.join(', ')} missing: the property and accessibility suites did not run, so this run is not a pass (${guard.tier()} tier)`);
 console.log('\n' + '─'.repeat(60));
 if (guard.tier() === 'full') {
   const verdict = require('./check-verdict.cjs')({ failures, warnings });

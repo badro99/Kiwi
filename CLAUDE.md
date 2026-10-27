@@ -204,7 +204,11 @@ every `data-action` in HTML is handled, that every `data-i18n` key exists in EN 
 bans `background:var(--ink)` and secret-shaped strings — then runs every test file
 it names (about 900: i18n, live-link, agent, stock, orderpro, KPI ledger, RTL
 numbers, PWA shell, D1 schema, …). **A test file on disk that `check.js` doesn't name guards
-nothing.** If you add a suite, wire it in. And a red run isn't automatically yours —
+nothing.** If you add a suite, wire it in, and put it in `tools/` (a test anywhere else
+is refused). On the full gate, naming is not enough: every `tools/*test*` file must
+actually be started by that run (or replayed from a pass with the same inputs), and every
+mandatory French coverage cell must be *reached*: `tools/coverage-probe.mjs` turns each
+`// coverage:` annotation into a run-time record (2026-10-27). And a red run isn't automatically yours —
 prove a failure is pre-existing by running it in a detached worktree at the untouched
 base before you chase it.
 
@@ -306,7 +310,9 @@ stays dependency-free: `npm --prefix app ci` once per clone. Without them
 every property suite prints `○ skip` and exits 0, so the full gate now refuses
 to start (a fresh worktree passed it with no money property run, 22 October):
 in a worktree, `ln -s <main checkout>/app/node_modules app/node_modules`.
-`--fast` only warns; `KIWI_ALLOW_PROPERTY_SKIP=1` overrides, knowingly. The money suite keeps a short list of **known** properties, defects
+Every tier now refuses (the fast tier used to only warn, 2026-10-27);
+`KIWI_ALLOW_PROPERTY_SKIP=1` runs the rest knowingly, and that run ends red, as does
+any run where a suite printed `○ skip … unavailable`. The money suite keeps a short list of **known** properties, defects
 already logged and awaiting a decision or fix: they print their counterexample
 without failing, and say `! known … tient maintenant` once they hold. When you
 see that, move the property to `strict()`, or the guarantee is lost. The a11y

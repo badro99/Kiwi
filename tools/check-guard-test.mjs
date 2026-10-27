@@ -375,5 +375,42 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
   });
 }
 
+{
+  /* Named is not run: the gate compares the files it really started with tools/. */
+  const slow = path.join(dir, 'slow-ui-test.mjs');
+  writeFileSync(slow, "import 'puppeteer-core';\n");
+  const skips = path.join(dir, 'skip-props-test.mjs');
+  const fine = path.join(dir, 'fine-props-test.mjs');
+  const answers = { [skips]: '  ○ skip  fast-check unavailable (npm --prefix app ci), money properties not executed\n', [fine]: '  ✓ 12 properties\n' };
+  const fake = (c, a) => ({ status: 0, stdout: answers[a[a.length - 1]] || 'ok\n', stderr: '' });
+  ok('a test the run started is recorded; one the fast tier left out is not', () => {
+    const before = process.env.KIWI_CHECK_TIER;
+    process.env.KIWI_CHECK_TIER = 'fast';
+    try {
+      const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: fake });
+      spy(process.execPath, [fine], { encoding: 'utf8' });
+      spy(process.execPath, [slow], { encoding: 'utf8' });
+    } finally { if (before === undefined) delete process.env.KIWI_CHECK_TIER; else process.env.KIWI_CHECK_TIER = before; }
+    const ran = guard.ranTests();
+    assert.ok(ran.has('fine-props-test.mjs'));
+    assert.ok(!ran.has('slow-ui-test.mjs'), 'a suite the tier skipped did not run');
+  });
+  ok('a suite that skipped on a missing library is reported, a green one is not', () => {
+    const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: fake });
+    spy(process.execPath, [skips], { encoding: 'utf8' });
+    spy(process.execPath, [fine], { encoding: 'utf8' });
+    assert.deepEqual(guard.dependencySkips(), ['skip-props-test.mjs']);
+  });
+  ok('check.js fails the run on those skips and on KIWI_ALLOW_PROPERTY_SKIP, in every tier, before its verdict', () => {
+    const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
+    const verdict = src.lastIndexOf("console.log('\\n' + '─'.repeat(60));");
+    assert.ok(verdict > 0);
+    assert.ok(src.indexOf('guard.dependencySkips()') > 0 && src.indexOf('guard.dependencySkips()') < verdict);
+    assert.ok(src.indexOf('if (MISSING_TEST_DEPS.length) fail(') > 0 && src.indexOf('if (MISSING_TEST_DEPS.length) fail(') < verdict);
+    assert.ok(!/KIWI_CHECK_TIER \|\| 'full'\) === 'full' && process\.env\.KIWI_ALLOW_PROPERTY_SKIP/.test(src), 'the refusal is no longer full-tier only');
+    assert.ok(src.indexOf('guard.ranTests()') > 0 && src.indexOf('guard.ranTests()') < verdict, 'the "every test file ran" check runs before the verdict');
+  });
+}
+
 console.log(`\ncheck-guard: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

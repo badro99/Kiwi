@@ -99,6 +99,54 @@ function takeSkip() { const s = skipFlag; skipFlag = null; return s; }
 function sleep(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
 function alive(pid) { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } }
 
+/* Every test file this run started a child for, or replayed from the parallel
+   pool (a tier that leaves a suite out does not count it). check.js compares it
+   with tools/ on the full gate: a file only mentioned in check.js (a comment, a
+   list nobody loops over) is named, yet never runs, and the name check alone
+   cannot see that. */
+const ran = new Set();
+function noteRan(args) {
+  if (Array.isArray(args)) for (const a of args) { const s = String(a); if (/test\.(?:m?js|cjs)$/.test(s)) ran.add(path.basename(s)); }
+}
+function ranTests() { return new Set(ran); }
+/* A property or accessibility suite that cannot load its library prints
+   "○ skip … unavailable" and exits 0. check.js fails the run on any of them,
+   whatever the tier: a suite that did not execute is not a pass. */
+const depSkips = [];
+const DEP_SKIP = /○ skip[: ]+(?:fast-check|axe-core|puppeteer-core) unavailable/;
+function noteDepSkip(args, stdout) {
+  const text = Buffer.isBuffer(stdout) ? stdout.toString('utf8') : String(stdout || '');
+  if (!DEP_SKIP.test(text)) return;
+  const script = Array.isArray(args) && args.length ? path.basename(String(args[args.length - 1])) : '?';
+  if (!depSkips.includes(script)) depSkips.push(script);
+}
+function dependencySkips() { return depSkips.slice(); }
+/* Coverage cells reached (tools/coverage-probe.mjs): from the pool's results,
+   cached passes included, and from the suites this process runs itself. */
+const reached = new Map();   // "surface|locale|viewport" → Set of suites
+const PROBE = path.join(__dirname, 'coverage-probe.mjs');
+function noteCells(args, cells) {
+  if (!Array.isArray(cells)) return;
+  const script = Array.isArray(args) && args.length ? path.basename(String(args[args.length - 1])) : '?';
+  for (const c of cells) { if (!reached.has(c)) reached.set(c, new Set()); reached.get(c).add(script); }
+}
+function reachedCells() { return new Map(reached); }
+function probeEnv(script, o) {
+  if (process.env.KIWI_COVERAGE_PROBE === '0' || !/\.mjs$/.test(script) || !fs.existsSync(PROBE)) return null;
+  let src = '';
+  try { src = fs.readFileSync(path.resolve(o.cwd || process.cwd(), script), 'utf8'); } catch (_) { return null; }
+  if (!src.includes('// coverage: surface=')) return null;
+  const ledger = path.join(os.tmpdir(), `kiwi-cells-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+  const base = o.env || process.env;
+  return { ledger, env: Object.assign({}, base, {
+    KIWI_COVERAGE_LEDGER: ledger,
+    NODE_OPTIONS: ((base.NODE_OPTIONS || '') + ' --import=' + require('url').pathToFileURL(PROBE).href).trim(),
+  }) };
+}
+function takeLedger(ledger) {
+  try { const cells = [...new Set(fs.readFileSync(ledger, 'utf8').split('\n').filter(Boolean))]; fs.rmSync(ledger, { force: true }); return cells; } catch (_) { return []; }
+}
+
 function install(opts) {
   opts = opts || {};
   const timeout = Number(process.env.KIWI_CHECK_TIMEOUT_MS) || opts.timeoutMs || DEFAULT_TIMEOUT_MS;
@@ -126,11 +174,14 @@ function install(opts) {
       out.output = [null, out.stdout, out.stderr];
       return out;
     }
+    noteRan(args);
     if (cmd === process.execPath && Array.isArray(args) && !o.input && !o.env) {
       const key = keyOf(cmd, args, o);
       const hit = replay && replay[key];
       if (hit && hit.status === 0) {
         reused++;
+        noteDepSkip(args, hit.stdout);
+        noteCells(args, hit.cells);
         const out = { status: 0, signal: null, stdout: hit.stdout, stderr: hit.stderr, pid: 0, kiwiReplayed: true };
         if (o.encoding) { out.output = [null, out.stdout, out.stderr]; return out; }
         out.stdout = Buffer.from(out.stdout); out.stderr = Buffer.from(out.stderr);
@@ -140,6 +191,8 @@ function install(opts) {
     }
     if (!o.timeout) o.timeout = timeout;
     if (!o.killSignal) o.killSignal = 'SIGKILL';
+    const probe = cmd === process.execPath ? probeEnv(script, o) : null;
+    if (probe) o.env = probe.env;
     const t0 = Date.now();
     let r = real.call(cp, cmd, args, o);
     const name = (Array.isArray(args) && args.length ? String(args[args.length - 1]) : String(cmd)).replace(/^.*\//, '');
@@ -149,6 +202,8 @@ function install(opts) {
       if (r && r.status === ENV_EXIT) r.stderr = (r.stderr || '') + `\n  ✗ ${name} failed on the environment twice (exit ${ENV_EXIT}: Chromium, the server or the machine, not an assertion). Check the load, then rerun it alone.`;
       else if (r) r.stdout = `(first run exited ${ENV_EXIT} on the environment, second run below)\n` + (r.stdout || '');
     }
+    if (r) noteDepSkip(args, r.stdout);
+    if (probe) { const cells = takeLedger(probe.ledger); if (r && r.status === 0) noteCells(args, cells); }
     const dt = Date.now() - t0;
     if (r && (r.error && r.error.code === 'ETIMEDOUT' || (r.status === null && r.signal === 'SIGKILL' && dt >= o.timeout - 50))) {
       r.stderr = (r.stderr || '') + `\n  ✗ ${name} TIMED OUT after ${Math.round(o.timeout / 1000)}s and was killed (hung, or the machine is overloaded: raise KIWI_CHECK_TIMEOUT_MS only after checking load)`;
@@ -469,4 +524,4 @@ function browserPreflight(opts) {
   }
 }
 
-module.exports = { install, acquireLock, prefetch, reusedCount, cpuTimes, cpuRatchet, CPU_BUDGET_MS, isSlow, tier, skipped, takeSkip, selection, isSelected, runsBrowsers, namedTests, stampNorm, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
+module.exports = { install, ranTests, networkOnly, dependencySkips, reachedCells, acquireLock, prefetch, reusedCount, cpuTimes, cpuRatchet, CPU_BUDGET_MS, isSlow, tier, skipped, takeSkip, selection, isSelected, runsBrowsers, namedTests, stampNorm, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
