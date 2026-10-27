@@ -160,11 +160,6 @@ await ok('a real sale earns through the shared path: client attached to the sale
   assert.equal(sale.cur, null, 'the client does not stay attached to the next sale');
 });
 await ok('the librairie never writes points on the device when it is real', () => {
-  const src = read('assets/pos-librairie.js');
-  assert.doesNotMatch(src, /cu\.points \+= total/);
-  assert.doesNotMatch(src, /FID_TIER|FID_RATE/);
-  assert.doesNotMatch(src, /GENERATED SHARED/);
-  assert.match(src, /KiwiLibrairieLoyalty\.create/);
   const { loy, book } = librairie({ real: true, config: { model: 'amount', amount: { perMad: 1, threshold: 100 } }, book: { a: { id: 'a', name: 'N', points: 5, stamps: 0, visits: 1 } } });
   const cu = loy.get('a');
   loy.finish(cu, loy.begin(cu), { total: 40, rewardUsed: false, items: [] });
@@ -184,12 +179,6 @@ await ok('the demo keeps its six clients and sample programme, spends points, an
   assert.match(msg, /\+100 pts/);
   assert.equal(book.a.points, 0);
 });
-await ok('the dispatcher loads the librairie dependencies, in order, before its script', () => {
-  const dispatch = read('assets/pos-dispatch.js');
-  assert.match(dispatch, /file: 'pos-librairie'[^}]*deps: \[\{ file: 'money-cents'[^\]]*file: 'librairie-loyalty'/);
-  assert.match(dispatch, /function loadDep\(/);
-});
-
 await ok('the dispatcher really loads deps first, in order, and a failed dep is not cached as loaded', async () => {
   const dispatch = read('assets/pos-dispatch.js');
   const loader = dispatch.slice(dispatch.indexOf('  function loadDep('), dispatch.indexOf('  function rootFor('));

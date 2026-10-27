@@ -184,8 +184,7 @@ await check('the receipt carries the same label as the journal', () => {
   const receipt = fs.readFileSync(new URL('../assets/receipt.js', import.meta.url), 'utf8');
   /* Le ticket part du même libellé ; seule la mention « · part N » est dite dans
    * la langue du papier (tools/split-language-test.mjs). */
-  assert.match(receipt, /var shown = str\(sale\.label, 60\)/);
-  assert.match(receipt, /label: shown,/);
+  assert.match(receipt, /var shown = str\(sale\.label, 60\)[\s\S]*label: shown,/);
   assert.match(receipt, /if \(doc\.meta\.label\) row\('', doc\.meta\.label\);/);
 });
 

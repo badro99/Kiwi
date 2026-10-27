@@ -123,7 +123,7 @@ async function markRefunded(env, merchant, order, refundId, amount) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const row = attempt ? await env.DB.prepare('SELECT id, status, total, customer FROM orders WHERE id = ? AND merchant = ?').bind(order.id, merchant).first() : order;
     if (!row) return;
-    let cust = {};
+    /** @type {Record<string, any>} */ let cust = {};
     try { cust = row.customer ? JSON.parse(row.customer) || {} : {}; } catch (_) { cust = {}; }
     const refunds = Array.isArray(cust.refunds) ? cust.refunds.slice(0, 19) : [];
     if (refunds.some((r) => r && r.id === refundId)) return;
