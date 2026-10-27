@@ -9,7 +9,7 @@
 
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
-import { settleServiceTable, serviceVisitGuard } from './service/events.js';
+import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases } from './service/events.js';
 import { quarantineGuard } from './_quarantine-guard.js';
 import { poke } from './_live.js';
 import { settleCoveredOrders } from './_visit-cover.js';
@@ -302,17 +302,17 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
            opening the visit at payment time and ordinary clock drift. */
         : await env.DB.prepare(
             `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
-              WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+              WHERE merchant = ? AND table_no IN (${tableAliases(employeeTable).map(() => '?').join(',')}) AND mode = 'table' AND status = 'open'
                 AND opened_ts <= ?
               ORDER BY opened_ts DESC LIMIT 1`
-          ).bind(merchant, employeeTable, paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
+          ).bind(merchant, ...tableAliases(employeeTable), paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
     } catch (_) { return json({ error: 'visit-lookup-unavailable' }, 503); }
     if (requestedSession && (!serviceSession || !serviceSession.id)) {
       visitLinkWarning ||= 'table-session-missing';
     }
     if (!serviceSession || !serviceSession.id) {
       if (employee) visitLinkWarning ||= 'open-service-session-missing';
-    } else if (employeeTable && String(serviceSession.table_no) !== employeeTable) {
+    } else if (employeeTable && tableKey(serviceSession.table_no) !== employeeTable) {
       visitLinkWarning = 'service-session-table-mismatch';
       serviceSession = null; // Never close or pay orders on a different table.
     }

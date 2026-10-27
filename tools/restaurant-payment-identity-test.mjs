@@ -152,5 +152,15 @@ assert.equal(wrongTable.status, 200, JSON.stringify(wrongTable));
 assert.equal(wrongTable.body.visitLinkWarning, 'service-session-table-mismatch');
 assert.equal(sqlite.prepare('SELECT session_id FROM sales WHERE merchant=? AND id=?')
   .get(merchant, 'paid-with-wrong-table')?.session_id, null);
+// A visit stored as "T4" (the floor plan's name) is the same table as the "4"
+// the payment route reads: the payment links to it instead of a false mismatch.
+sqlite.prepare("INSERT INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts) VALUES (?,?,?,?,?,?,?)")
+  .run('visit-named-t4', merchant, 'table', 'T4', 'open', at, at);
+const named = await post(sale.onRequestPost, { merchant, table: 'T4', session: 'visit-named-t4', id: 'paid-on-named-table',
+  ref: 'paid-ticket-3', ts: at + 30000, amount: 52, amountCents: 5200, method: 'cash', lines: [{ n: 'Penne', q: 1, t: 52 }] });
+assert.equal(named.status, 200, JSON.stringify(named));
+assert.notEqual(named.body.visitLinkWarning, 'service-session-table-mismatch', JSON.stringify(named.body));
+assert.equal(sqlite.prepare('SELECT session_id FROM sales WHERE merchant=? AND id=?')
+  .get(merchant, 'paid-on-named-table')?.session_id, 'visit-named-t4');
 sqlite.close();
 console.log('✓ restaurant payment identity and paid receipts with missing table visits');
