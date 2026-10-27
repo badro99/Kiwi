@@ -10,7 +10,7 @@
       'assets/menu-catalog/modifiers.js?v=3',
       'assets/menu-catalog/item-list.js?v=3',
       'assets/menu-catalog/formulas.js?v=3',
-      'assets/menu-catalog/item-editor.js?v=3',
+      'assets/menu-catalog/item-editor.js?v=4',
       'assets/menu-catalog/media.js?v=3',
       'assets/menu-catalog/availability.js?v=3',
       'assets/menu-catalog.js?v=40',

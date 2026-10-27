@@ -1,5 +1,5 @@
 {
-  "sha256": "a8508d406f412fe65a4c3ee6c49acf5e487ed803d7a098de47816362ca4e19a4",
+  "sha256": "8aac4dbc2a00bcf8623b1f66d54282164f50a0fd7a438aa76f12e8fb3f852b8f",
   "dataSha256": "117ec5415d36bdeec430121dd6cdc9562c01a5f8f2be9b3338d9cafda2183438",
   "fragments": [
     {
@@ -15,44 +15,44 @@
       "offset": 9909
     },
     {
-      "start": 25472,
-      "end": 25632,
+      "start": 25447,
+      "end": 25607,
       "replacement": "  const TYPE_HINT = session.typeHint;",
       "offset": 9994
     },
     {
-      "start": 33679,
-      "end": 34243,
+      "start": 33641,
+      "end": 34205,
       "replacement": "  const fitPinsToTeam = session.fitPinsToTeam;",
       "offset": 10156
     },
     {
-      "start": 39865,
-      "end": 40228,
+      "start": 39827,
+      "end": 40190,
       "replacement": "  const parsedDailyGoal = session.parsedDailyGoal;",
       "offset": 10722
     },
     {
-      "start": 40309,
-      "end": 42094,
+      "start": 40271,
+      "end": 42056,
       "replacement": "  const validate = session.validate;",
       "offset": 11087
     },
     {
-      "start": 67738,
-      "end": 68230,
+      "start": 67608,
+      "end": 68100,
       "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
       "offset": 12874
     },
     {
-      "start": 68231,
-      "end": 68622,
+      "start": 68101,
+      "end": 68492,
       "replacement": "  const kitProblem = session.kitProblem;",
       "offset": 13368
     },
     {
-      "start": 44475,
-      "end": 44499,
+      "start": 44437,
+      "end": 44461,
       "replacement": "  // Submission activity belongs to the session owner.",
       "offset": 13761
     }

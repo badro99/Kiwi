@@ -2,10 +2,10 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: .
  */
-import { root } from './custody.js?v=5';
+import { root } from './custody.js?v=7';
 export function create(owner) {
   'use strict';
-  const { $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, findOrder, icons, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast } = owner.rackContext();
+  const { $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, esc, findOrder, icons, notifyLine, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast } = owner.rackContext();
 function renderRack() {
     const panel = $('[data-px-panel="rangement"]', root);
     const queue = ORDERS.filter((o) => orderStatus(o) === 'pret' && !o.rack);
@@ -19,7 +19,7 @@ function renderRack() {
             <button class="px-qcard ${sel === o.id ? 'on' : ''}" data-px-q="${o.id}">
               <div class="num">${publicOrderNo(o)}</div>
               <div class="who">${dataText(custOf(o).name)}</div>
-              <div class="sub">${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · ${o.notified ? 'client notifié' : 'pas encore notifié'}</div>
+              <div class="sub">${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · ${o.notified ? esc(notifyLine(o)) : 'pas encore notifié'}</div>
             </button>`).join('') || '<div class="px-rack-hint">Rien à ranger.<br>Quand une commande passe « prête », elle arrive ici.</div>'}
           ${queue.length ? `<div class="px-rack-hint">${sel ? 'Touchez un emplacement libre →' : 'Sélectionnez une commande, puis son emplacement.'}</div>` : ''}
         </div>

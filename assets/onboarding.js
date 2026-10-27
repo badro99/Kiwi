@@ -211,7 +211,7 @@
         </div>`,
       foot: `
         <button class="kob-btn primary" data-go="next">${tr({ fr: 'Commencer', en: 'Get started', ar: 'لنبدأ' })}</button>
-        <div class="kob-explore" style="flex-basis:100%;">
+        <div class="kob-explore">
           ${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) ? '' : `<button class="kob-skip" data-explore>${tr({ fr: "Explorer la démo d'abord", en: 'Explore the demo first', ar: 'استكشاف العرض أولاً' })}</button><span class="kob-sep" aria-hidden="true">·</span>`}
           <a class="kob-skip" href="/auth/logout" data-signin>${tr({ fr: "J'ai déjà un compte", en: 'I already have an account', ar: 'لدي حساب بالفعل' })}</a>
         </div>`,
@@ -326,7 +326,7 @@
     return `
       <div class="kob-acc${filled ? ' filled' : ''}" data-acc="${i}">
         <div class="kob-acc-hd">${head}</div>
-        ${isOwner ? '' : `<div class="kob-acc-perm" style="margin:-4px 0 10px;">${esc(tr(a.perm))}</div>`}
+        ${isOwner ? '' : `<div class="kob-acc-perm kob-perm-tight">${esc(tr(a.perm))}</div>`}
         <div class="kob-acc-row">
           <input class="kob-field kob-name" type="text" data-pin-name="${i}" value="${esc(nameVal)}" maxlength="20" aria-label="${isOwner ? tr({ fr: 'Votre prénom', en: 'Your name', ar: 'اسمك' }) : tr({ fr: 'Prénom du membre ' + i, en: 'Member ' + i + ' name', ar: 'اسم العضو ' + i })}" placeholder="${isOwner ? tr({ fr: 'Votre prénom', en: 'Your name', ar: 'اسمك' }) : tr({ fr: 'Prénom (ex. Salma)', en: 'Name (e.g. Salma)', ar: 'الاسم' })}"/>
           <input class="kob-field kob-code" data-pin-code="${i}" value="${esc(p.code)}" inputmode="numeric" maxlength="4" placeholder="&bull;&bull;&bull;&bull;" aria-label="${tr({ fr: 'Code à 4 chiffres', en: '4-digit code', ar: 'رمز من 4 أرقام' })}"/>
@@ -526,10 +526,10 @@
     root.querySelector('.kob-card').innerHTML = `
       <div class="kob-top"><span class="kob-brand">${brandMark()}</span></div>
       <div class="kob-body"><div class="kob-celebrate">
-        <div class="kob-hero-mark" style="color:var(--mint)">${mi('M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z')}</div>
-        <h1 class="kob-h" style="text-align:center;">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>
-        <p class="kob-sub" style="margin:0 auto;text-align:center;">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
-        ${teamImportFailed ? `<p class="kob-sub" role="status" style="margin:12px auto 0;text-align:center;">${tr({ fr: "Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}
+        <div class="kob-hero-mark kob-mint">${mi('M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z')}</div>
+        <h1 class="kob-h kob-center">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>
+        <p class="kob-sub kob-sub-center">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
+        ${teamImportFailed ? `<p class="kob-sub kob-sub-note" role="status">${tr({ fr: "Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}
       </div></div>
       <div class="kob-foot"><button class="kob-btn primary" data-enter>${tr({ fr: 'Entrer dans mon espace →', en: 'Enter my space →', ar: 'ادخل مساحتي ←' })}</button></div>`;
     root.querySelector('[data-enter]').focus({ preventScroll: true });

@@ -155,7 +155,7 @@ const NOT_UI = new Map([
 ["Amal Berrada", "Youssef El Khattabi", "Hôtel Bab El Bahr", "Mme Rkia", "Fatima-Zahra Lamrani", "Mehdi Bennani", "Khadija Tazi", "Omar Sefrioui", "Naima Bouziane", "Fatiha Zerouali", "Hind & Omar Bennani", "Karim Bennis", "Ahmed & Leila El Fassi", "Awa Diallo", "Sophie Marceau", "Famille Rossi", "Marta & Diego Gómez", "Lucía Marín", "Claire Dubois"].forEach(s => NOT_UI.set(s, "Demo customer identity"));
 ["Repassage sur cintre", "Sans amidon", "Costumes pliés en housse", "Remise –15 % négociée", "Gouvernante", "Caftans, nettoyage main", "Pas de perchlo (allergie)", "Rideaux par panneau", "10 chemises chaque lundi", "Lot du lundi", "Col élimé", "Sfifa fragile, nettoyage main", "Salon, 4 panneaux", "Départ 12h00, en retard", "Lucía Marín arrive 18h30", "Réservée ce soir, Marta & Diego Gómez", "Allergie arachide, cuisine prévenue", "Ménage en cours, Famille Rossi arrive 15h30", "Airbnb, nuitées", "Étage terrasse, petit-déjeuner 8h30", "Fuite SDB, plombier vendredi", "Lit bébé demandé, 2 adultes, 2 enfants", "Client fidèle ×2", "thé sans sucre", "Étage calme demandé", "ce matin 09h20", "j2 20h45", "j1 14h50", "j2 23h10"].forEach(s => NOT_UI.set(s, "Demo merchant note, stored as free text"));
 
-const files = ['pressing-caisse', 'pressing-catalog', 'pressing-ops', 'pos-hotel'];
+const files = ['pressing-caisse', 'pressing/custody', 'pressing/deposit', 'pressing/workshop', 'pressing/pickup', 'pressing/rack', 'pressing-catalog', 'pressing-ops', 'pos-hotel'];
 const placeholders = s => (s.match(/\{[nx]\}/g) || []).sort().join(',');
 let failed = 0;
 for (const name of files) {

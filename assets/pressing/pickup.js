@@ -2,10 +2,10 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: BarcodeDetector, KiwiCaissePairing, KiwiPressingOps, KiwiStaff.
  */
-import { ITEMS, root } from './custody.js?v=5';
+import { ITEMS, root } from './custody.js?v=7';
 export function create(owner) {
   'use strict';
-  const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
+  const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
 function renderRetrait() {
     const panel = $('[data-px-panel="retrait"]', root);
     const q = state.rtQuery;
@@ -72,7 +72,7 @@ function rtCard(o) {
     const early = st !== 'pret';
     return `<div class="px-rt-card">
       <div class="px-rt-top">
-        <div class="px-rt-who"><b>${publicOrderNo(o)} · ${dataText(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
+        <div class="px-rt-who"><b>${publicOrderNo(o)} · ${dataText(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ` · ${esc(notifyLine(o))}` : ''}</span></div>
         ${early ? `<span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>` : `<div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>·</b><span>non rangé</span>'}</div>`}
       </div>
       <div class="px-rt-pieces">

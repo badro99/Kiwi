@@ -59,6 +59,7 @@
   },
   "style": {
     "admin-crm-layout-test.mjs": "layout, contrast or copy in CSS/markup",
+    "boutique-rtl-css-test.mjs": "layout, contrast or copy in CSS/markup",
     "caisse-color-picker-language-test.mjs": "layout, contrast or copy in CSS/markup",
     "caisse-dna-test.js": "layout, contrast or copy in CSS/markup",
     "caisse-floor-gap-test.mjs": "layout, contrast or copy in CSS/markup",

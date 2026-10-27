@@ -1,12 +1,12 @@
 /* Custody owner exports custody (named domain methods and UI context readers),
  * plus live root/catalog presentation bindings. Owns orders, garments, deposits,
  * rack allocation, numbering, persistence and existing centime calculations.
- * Browser reads: KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
+ * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=4';
-import { create as createWorkshop } from './workshop.js?v=4';
-import { create as createPickup } from './pickup.js?v=4';
-import { create as createRack } from './rack.js?v=4';
+import { create as createDeposit } from './deposit.js?v=6';
+import { create as createWorkshop } from './workshop.js?v=6';
+import { create as createPickup } from './pickup.js?v=6';
+import { create as createRack } from './rack.js?v=6';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
  * ---------------------------------------------------------------------------
@@ -130,6 +130,8 @@ import { create as createRack } from './rack.js?v=4';
     return new Date(guess);
   }
   const fmtDT   = (d) => { const w = storeWall(d); return `${DAYS[w.getUTCDay()]} ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]} · ${pad2(w.getUTCHours())}:${pad2(w.getUTCMinutes())}`; };
+  /* « Marqué prévenu · qui · quand · canal » (voir pressing-ops.js), à l'heure du magasin. */
+  const notifyLine = (o) => window.KiwiPressingOps.notificationLine(o, { tr: (t) => (window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(t) : t), fmt: fmtDT });
   const fmtDay  = (d) => { const w = storeWall(d); return `${DAYS[w.getUTCDay()]} ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]}`; };
   const H = 3600 * 1000;
   const MAX_QTY = 99;
@@ -2231,8 +2233,8 @@ import { create as createRack } from './rack.js?v=4';
   const custody = Object.freeze({
     depositContext() { return Object.freeze({ $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket }); },
     workshopContext() { return Object.freeze({ $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone }); },
-    pickupContext() { return Object.freeze({ $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast }); },
-    rackContext() { return Object.freeze({ $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, findOrder, icons, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast }); },
+    pickupContext() { return Object.freeze({ $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast }); },
+    rackContext() { return Object.freeze({ $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, esc, findOrder, icons, notifyLine, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast }); },
     orderTotals, saleLines, buildPieces, orderStatus, findOrder, assignSlot, releaseSlot,
     deliverOrder, setWholeOrderStatus, freshTicket, persistPressing,
   });
