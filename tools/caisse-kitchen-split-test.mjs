@@ -3,8 +3,8 @@
  * The page still loads assets/caisse-kitchen.js, the exact concatenation of its parts, so
  * no page and no stamp moves; a change is made in the part that owns the
  * concern, then the file is rebuilt (cat, recorded in the fixture).
- * The file is a classic script of top-level function declarations only, so
- * each part must be one too. The proof: byte equality, every part parses on
+ * The file is a classic script of top-level function declarations (and at
+ * most a window.X assignment), so each part must be one too. The proof: byte equality, every part parses on
  * its own, each part declares exactly the functions recorded for it (moving a
  * function between concerns is a reviewed change of
  * tools/fixtures/caisse-kitchen/split.json), and no name is declared twice. */
@@ -21,7 +21,8 @@ const map = JSON.parse(read('tools/fixtures/caisse-kitchen/split.json'));
 function declared(text, file) {
   const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   return ast.statements.map((s) => {
-    assert.ok(ts.isFunctionDeclaration(s) && s.name, file + ' : seulement des déclarations de fonction au premier niveau');
+    if (ts.isExpressionStatement(s) && ts.isBinaryExpression(s.expression) && /^window\.\w+$/.test(s.expression.left.getText(ast))) return s.expression.left.getText(ast);
+    assert.ok(ts.isFunctionDeclaration(s) && s.name, file + ' : seulement des déclarations de fonction (ou une affectation window.X) au premier niveau');
     return s.name.text;
   });
 }

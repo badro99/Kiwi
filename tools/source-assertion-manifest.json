@@ -49,7 +49,9 @@
     "simple-food-cost-split-test.mjs": "byte-exact concatenation of the food-cost parts, the names each part owns, and a pure calculation part",
     "hotel-core-split-test.mjs": "byte-exact concatenation of the hotel core parts and the names each part owns",
     "caisse-pairing-split-test.mjs": "byte-exact concatenation of the till pairing parts and the names each part owns",
-    "caisse-kitchen-split-test.mjs": "byte-exact concatenation of the till kitchen parts and the functions each part owns"
+    "caisse-kitchen-split-test.mjs": "byte-exact concatenation of the till kitchen parts and the functions each part owns",
+    "caisse-floor-split-test.mjs": "byte-exact concatenation of the till floor parts and the functions each part owns",
+    "caisse-accounting-split-test.mjs": "byte-exact concatenation of the till accounting parts and the functions each part owns"
   },
   "style": {
     "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",

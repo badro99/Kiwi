@@ -1,0 +1,170 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/caisse-floor.js, and move its stamp (node tools/bump-stamp.js assets/caisse-floor.js).",
+  "bundles": [
+    {
+      "file": "assets/caisse-floor.js",
+      "sha256AtSplit": "a69eba51bed20c6baf62d00694a5c9f3115696559239841e4a3bbf3c06c563cd",
+      "parts": [
+        {
+          "file": "assets/caisse-floor/plan-drawing.js",
+          "concern": "dessin du plan de salle et de son miroir, clair et sombre",
+          "lines": [
+            1,
+            405
+          ],
+          "declares": [
+            "caisseJour",
+            "caisseRing",
+            "caisseNoirTick",
+            "caisseNoirChairs",
+            "caisseNoirTableBody",
+            "caisseNoirFixture",
+            "caisseNoirElHTML",
+            "caisseRoomShellNoir",
+            "caisseNoirDefs",
+            "caisseNoirCellHTML",
+            "initDemoPlanes",
+            "tableHTML",
+            "renderSalle",
+            "designedCovers",
+            "caisseFloorPlan",
+            "emptyPlanHTML",
+            "designedTableHTML",
+            "caisseNoirC",
+            "caisseJourC"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/table-state.js",
+          "concern": "état d'une table : sessions téléphone, visites réglées, table sélectionnée",
+          "lines": [
+            406,
+            529
+          ],
+          "declares": [
+            "tableKey",
+            "phoneBadgeHTML",
+            "phoneSessionOf",
+            "locallySettledVisit",
+            "settledVisitsFor",
+            "billBelongsToOtherVisit",
+            "locallySettledOrder",
+            "paidReceiptForCurrentTable",
+            "releasePhoneTable",
+            "markSelectedTable",
+            "planTableOf"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/floors-modes.js",
+          "concern": "grille réelle de la salle, étages et modes",
+          "lines": [
+            530,
+            867
+          ],
+          "declares": [
+            "cplanTableHTML",
+            "renderRealGrid",
+            "setupRealSalle",
+            "setFloor",
+            "isFeatureOff",
+            "syncActiveMode",
+            "setMode"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/bill-panel.js",
+          "concern": "panneau de l'addition, ouverture d'une table, marquer payé",
+          "lines": [
+            868,
+            1249
+          ],
+          "declares": [
+            "toast",
+            "setCaisseTableLock",
+            "renderRightPanel",
+            "openTable",
+            "showEmpty",
+            "closeRightPanel",
+            "refreshTableNode",
+            "updateFloorCount",
+            "updateZoneCount",
+            "markPaid",
+            "showPayButtons"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/new-table-waitlist.js",
+          "concern": "nouvelle table et liste d'attente",
+          "lines": [
+            1250,
+            1430
+          ],
+          "declares": [
+            "openNewTableModal",
+            "renderNewTableChips",
+            "confirmNewTable",
+            "openWaitlistModal",
+            "renderWaitlistChips",
+            "confirmWaitlistAdd",
+            "wlWaitMins",
+            "renderWaitlist",
+            "startSeating",
+            "markSeatTables",
+            "endSeating",
+            "seatPartyAt",
+            "removeWaitlist"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/transfer-merge.js",
+          "concern": "transferts et fusions de tables",
+          "lines": [
+            1431,
+            1750
+          ],
+          "declares": [
+            "caisseTableKitchenLocked",
+            "caisseMobilityIntent",
+            "applyCaisseMovedVisit",
+            "openCaisseTransferModal",
+            "renderCaisseTransferGrid",
+            "confirmCaisseTransfer",
+            "openCaisseMergeModal",
+            "renderCaisseMergeGrid",
+            "confirmCaisseMerge"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/cancellations.js",
+          "concern": "annulations de lignes et bon d'annulation cuisine",
+          "lines": [
+            1751,
+            1891
+          ],
+          "declares": [
+            "postCaisseCancellation",
+            "printKitchenVoid",
+            "cancelCaisseLineImmediately"
+          ]
+        },
+        {
+          "file": "assets/caisse-floor/table-order.js",
+          "concern": "commande d'une table : lignes, quantités, validation",
+          "lines": [
+            1892,
+            2115
+          ],
+          "declares": [
+            "pushTableOrderLine",
+            "addToTableOrder",
+            "changeTableOrderLineQty",
+            "tableOrderMinusMenu",
+            "renderOrderPanel",
+            "validateOrder"
+          ]
+        }
+      ]
+    }
+  ]
+}

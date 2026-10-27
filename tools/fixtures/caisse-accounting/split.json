@@ -1,0 +1,255 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/caisse-accounting.js, and move its stamp (node tools/bump-stamp.js assets/caisse-accounting.js).",
+  "bundles": [
+    {
+      "file": "assets/caisse-accounting.js",
+      "sha256AtSplit": "cc01775416fe46c890b3ccc8e7b376c839f7749a34f3bf9da67dc6971a74fc7e",
+      "parts": [
+        {
+          "file": "assets/caisse-accounting/cash-identity.js",
+          "concern": "session de caisse, terminal, caissier et références",
+          "lines": [
+            1,
+            35
+          ],
+          "declares": [
+            "cashSessionId",
+            "cashTerminalId",
+            "cashActorId",
+            "cashActorRef",
+            "emitCashSession",
+            "genRef"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/journal.js",
+          "concern": "journal : totaux, annulations rapprochées, journal de démonstration",
+          "lines": [
+            36,
+            465
+          ],
+          "declares": [
+            "isReportableJournalEntry",
+            "rollupLedger",
+            "journalTotals",
+            "refreshOpenReconciliationModals",
+            "reconcileVoids",
+            "seedJournal"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/discounts.js",
+          "concern": "remise active et son motif",
+          "lines": [
+            466,
+            519
+          ],
+          "declares": [
+            "accountActiveDiscount",
+            "discountReasonCode",
+            "activeSaleDiscount"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/held-sales.js",
+          "concern": "ventes en attente d'accusé du serveur",
+          "lines": [
+            520,
+            657
+          ],
+          "declares": [
+            "heldSalesKey",
+            "heldSaleRows",
+            "saveHeldSales",
+            "holdSaleLocally",
+            "releaseHeldSale",
+            "adoptHeldSalesIntoJournal",
+            "retryHeldSales",
+            "retryHeldSalesSafely",
+            "paintHeldSales",
+            "saleRecordConfirmed",
+            "warnSaleHeld"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/record-sale.js",
+          "concern": "enregistrement d'une vente",
+          "lines": [
+            658,
+            902
+          ],
+          "declares": [
+            "recordSale"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/cloud-sales.js",
+          "concern": "ventes du serveur rapprochées dans le journal",
+          "lines": [
+            903,
+            1139
+          ],
+          "declares": [
+            "cloudSaleJournalEntry",
+            "journalEntryMatchesCloudSale",
+            "reconcileCloudSaleInJournal",
+            "ingestSettledCloudSales",
+            "syncSettledBusinessDay",
+            "startEmployeeSaleJournalSync"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/sale-client.js",
+          "concern": "client attaché à la note",
+          "lines": [
+            1140,
+            1300
+          ],
+          "declares": [
+            "saleContextKey",
+            "clientsOn",
+            "clientInitials",
+            "clientProgressLabel",
+            "renderSaleClient",
+            "creditSaleToClient",
+            "clRows",
+            "clPaint",
+            "openClientModal",
+            "closeClientModal",
+            "attachClient",
+            "window.KiwiCaisseSaleClient",
+            "hookClientBook"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/receipt.js",
+          "concern": "identité du commerce, ticket, tiroir",
+          "lines": [
+            1301,
+            1688
+          ],
+          "declares": [
+            "storePaired",
+            "storeIsReal",
+            "storeName",
+            "storeCity",
+            "demoIdentity",
+            "receiptSaleFrom",
+            "receiptOpts",
+            "attachReceipt",
+            "reconcileReceiptOrderNumber",
+            "receiptDocFor",
+            "lastSaleEntry",
+            "printSaleTicket",
+            "ticketPrintedWord",
+            "openCashDrawer",
+            "sendSaleTicket",
+            "applyStoreIdentity",
+            "renderReceipt",
+            "openReceipt",
+            "closeReceipt"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/service-open.js",
+          "concern": "ouverture du service et horaires",
+          "lines": [
+            1689,
+            1896
+          ],
+          "declares": [
+            "renderShiftStats",
+            "fmtDur",
+            "hoursAllowOpening",
+            "askHoursOverride",
+            "openService",
+            "doOpenService",
+            "runEntrySequence"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/closing.js",
+          "concern": "clôture : écarts, rapport du jour, Z",
+          "lines": [
+            1897,
+            2502
+          ],
+          "declares": [
+            "updateEcart",
+            "updateCardEcart",
+            "openCloture",
+            "openTableBills",
+            "renderOpenTableBills",
+            "renderCloture",
+            "dayReportSession",
+            "currentBusinessDay",
+            "buildDayReport",
+            "reconcileJournalSales",
+            "saveProvisional",
+            "dayReportPrintOpts",
+            "doPrintDayReport",
+            "tillKitZNumber",
+            "showPostClose",
+            "finishClose",
+            "closeStepWithin",
+            "setCloseBusy",
+            "closeRegister",
+            "closeRegisterSteps"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/journal-view.js",
+          "concern": "consultation du journal et rapports imprimés",
+          "lines": [
+            2503,
+            2795
+          ],
+          "declares": [
+            "rpReport",
+            "rpVocab",
+            "rpEsc",
+            "rpHour",
+            "renderResume",
+            "renderItems",
+            "renderJournalList",
+            "renderJournal",
+            "renderRapportFoot",
+            "printItemSales",
+            "printLiveReport",
+            "reprintLastTicket",
+            "openJournal",
+            "closeJournal"
+          ]
+        },
+        {
+          "file": "assets/caisse-accounting/drawer.js",
+          "concern": "tiroir : attendu, mouvements de caisse, fonds de caisse",
+          "lines": [
+            2796,
+            3147
+          ],
+          "declares": [
+            "handoverGapCents",
+            "drawerExpected",
+            "paintCmTypeLabels",
+            "updateCmCustomVisibility",
+            "renderCmReasons",
+            "renderCmList",
+            "openCashMove",
+            "closeCashMove",
+            "confirmCashMove",
+            "openDrawerNoSale",
+            "floatMemKey",
+            "syncFloatGate",
+            "readFloatInput",
+            "rememberFloat",
+            "markFloatChip",
+            "showFloatCustom",
+            "restoreFloat",
+            "routeAccessPin"
+          ]
+        }
+      ]
+    }
+  ]
+}

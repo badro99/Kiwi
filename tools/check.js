@@ -1572,6 +1572,8 @@ section('Whole-project regressions');
     'caisse-pairing-kdf-test.mjs',
     'caisse-pairing-split-test.mjs',
     'caisse-kitchen-split-test.mjs',
+    'caisse-floor-split-test.mjs',
+    'caisse-accounting-split-test.mjs',
     'takeaway-history-timestamps-test.mjs',
     'takeaway-stale-archive-test.mjs',
     'floorplan-sync-test.js',
