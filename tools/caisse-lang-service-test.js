@@ -57,6 +57,8 @@ const CASES = [
   ['Bon de cuisine non imprimé', 'Kitchen ticket not printed', 'لم يُطبع'],
   ['3 bons de cuisine non imprimés', '3 kitchen tickets not printed', 'لم تُطبع'],
   ['Réimprimez depuis les réglages Imprimante.', 'Reprint from the Printer settings.', 'أعد الطباعة'],
+  ['Costume +2 pièces', 'Costume +2 pieces', 'قطع'],
+  ['Chemise +1 pièce', 'Chemise +1 piece', 'قطعة'],
   ['Part égale', 'Equal share', 'حصة متساوية'],
   ['Part égale + pourboire 10%', 'Equal share + 10% tip', 'بقشيش 10%'],
   ['Part équilibrée', 'Balanced share', 'حصة'],

@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: .
  */
-import { root } from './custody.js?v=4';
+import { root } from './custody.js?v=5';
 export function create(owner) {
   'use strict';
   const { $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, findOrder, icons, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast } = owner.rackContext();
@@ -14,7 +14,7 @@ function renderRack() {
     panel.innerHTML = `
       <div class="px-rack">
         <div class="px-rack-queue">
-          <div class="px-rack-queue-head"><i data-lucide="archive"></i>À ranger <span class="ct">${queue.length}</span></div>
+          <div class="px-rack-queue-head"><i data-icon="archive"></i>À ranger <span class="ct">${queue.length}</span></div>
           ${queue.map((o) => `
             <button class="px-qcard ${sel === o.id ? 'on' : ''}" data-px-q="${o.id}">
               <div class="num">${publicOrderNo(o)}</div>
@@ -27,7 +27,7 @@ function renderRack() {
           ${RAILS.map((r) => {
             const free = Array.from({ length: RAIL_SIZE }, (_, i) => `${r}-${pad2(i + 1)}`).filter((s) => !rackSlots[s]).length;
             return `<div class="px-rail-row">
-              <div class="px-rail-lbl"><i data-lucide="move-horizontal"></i>RAIL ${r}<span class="free">${free} libres</span></div>
+              <div class="px-rail-lbl"><i data-icon="swap_horiz"></i>RAIL ${r}<span class="free">${free} libres</span></div>
               <div class="px-slots">
                 ${Array.from({ length: RAIL_SIZE }, (_, i) => {
                   const slot = `${r}-${pad2(i + 1)}`;

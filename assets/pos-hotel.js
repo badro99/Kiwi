@@ -500,16 +500,16 @@
           <div class="ht-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Kasbah'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
         </div>
         <nav class="ht-nav" id="ht-nav">
-          <button class="ht-nav-it on" data-ht-view="reception"><i data-lucide="layout-dashboard"></i><span>Réception</span><b class="ht-nav-badge" id="ht-badge-rec"></b></button>
-          <button class="ht-nav-it" data-ht-view="chambres"><i data-lucide="building-2"></i><span>Chambres</span><b class="ht-nav-badge" id="ht-badge-rooms"></b></button>
-          <button class="ht-nav-it" data-ht-view="folios"><i data-lucide="clipboard-list"></i><span>Folios</span><b class="ht-nav-badge" id="ht-badge-folios"></b></button>
-          <button class="ht-nav-it" data-ht-view="clients"><i data-lucide="heart-handshake"></i><span>Hospitality+</span></button>
+          <button class="ht-nav-it on" data-ht-view="reception"><i data-icon="dashboard"></i><span>Réception</span><b class="ht-nav-badge" id="ht-badge-rec"></b></button>
+          <button class="ht-nav-it" data-ht-view="chambres"><i data-icon="apartment"></i><span>Chambres</span><b class="ht-nav-badge" id="ht-badge-rooms"></b></button>
+          <button class="ht-nav-it" data-ht-view="folios"><i data-icon="assignment"></i><span>Folios</span><b class="ht-nav-badge" id="ht-badge-folios"></b></button>
+          <button class="ht-nav-it" data-ht-view="clients"><i data-icon="volunteer_activism"></i><span>Hospitality+</span></button>
         </nav>
         <div class="ht-rail-foot">
           <button class="ht-net" id="ht-net" title="${pvReal() ? 'État du réseau' : 'Simuler une coupure réseau'}">
             <i class="ht-net-dot"></i><span class="ht-net-label">En ligne</span>
           </button>
-          <button class="ht-lock" id="ht-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
+          <button class="ht-lock" id="ht-lock"><i data-icon="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
       <main class="ht-main">
@@ -595,23 +595,23 @@
       <div class="ht-arr-time"><b>${a.t}</b><span>${a.done ? 'arrivé' : 'ETA'}</span></div>
       <div class="ht-arr-mid">
         <div class="ht-arr-name">${dataText(a.guest)}
-          ${a.repeat ? '<span class="ht-pill mint"><i data-lucide="heart"></i>fidèle</span>' : ''}
+          ${a.repeat ? '<span class="ht-pill mint"><i data-icon="favorite"></i>fidèle</span>' : ''}
         </div>
         <div class="ht-arr-meta">
           <span class="ht-pill dark">Ch. ${a.room}</span>
           <span class="ht-pill">${esc(roomName(a.room))}</span>
           ${srcPill(a.src)}
-          <span class="ht-pill"><i data-lucide="calendar"></i>${a.nights} nuit${a.nights > 1 ? 's' : ''}</span>
-          <span class="ht-pill"><i data-lucide="users"></i>${a.pax}</span>
+          <span class="ht-pill"><i data-icon="calendar_month"></i>${a.nights} nuit${a.nights > 1 ? 's' : ''}</span>
+          <span class="ht-pill"><i data-icon="groups"></i>${a.pax}</span>
           ${a.acompte ? `<span class="ht-pill ok">acompte ${fmtMAD(a.acompte)}</span>` : ''}
         </div>
-        ${a.note ? `<div class="ht-arr-note"><i data-lucide="sticky-note"></i>${dataText(a.note)}</div>` : ''}
-        ${!a.done && blocked ? `<div class="ht-arr-note"><i data-lucide="clock"></i>${esc(blockReason(a.room))}</div>` : ''}
+        ${a.note ? `<div class="ht-arr-note"><i data-icon="sticky_note_2"></i>${dataText(a.note)}</div>` : ''}
+        ${!a.done && blocked ? `<div class="ht-arr-note"><i data-icon="schedule"></i>${esc(blockReason(a.room))}</div>` : ''}
       </div>
       <div class="ht-arr-right">
         ${a.done
-          ? `<span class="ht-done-chip"><i data-lucide="check-circle-2"></i>En maison · ${a.doneAt || ''}</span>`
-          : `<button class="ht-cta ${blocked ? 'line' : ''}" data-ht-checkin="${a.id}"><i data-lucide="user-check"></i>Check-in</button>`}
+          ? `<span class="ht-done-chip"><i data-icon="check_circle"></i>En maison · ${a.doneAt || ''}</span>`
+          : `<button class="ht-cta ${blocked ? 'line' : ''}" data-ht-checkin="${a.id}"><i data-icon="how_to_reg"></i>Check-in</button>`}
       </div>
     </div>`;
   }
@@ -633,13 +633,13 @@
               ? `<span class="ht-pill due">solde ${fmtMAD(due)}</span>`
               : '<span class="ht-pill ok">folio soldé</span>')}
         </div>
-        ${!d.done && arrivalForRoom(d.room) ? `<div class="ht-arr-note"><i data-lucide="clock"></i>${esc(arrivalForRoom(d.room).guest)} arrive ${arrivalForRoom(d.room).t} sur cette chambre</div>` : ''}
+        ${!d.done && arrivalForRoom(d.room) ? `<div class="ht-arr-note"><i data-icon="schedule"></i>${esc(arrivalForRoom(d.room).guest)} arrive ${arrivalForRoom(d.room).t} sur cette chambre</div>` : ''}
       </div>
       <div class="ht-arr-right">
         ${d.done
-          ? `<span class="ht-done-chip"><i data-lucide="check-circle-2"></i>Parti · ${d.doneAt || ''}</span>`
-          : `<button class="ht-cta ${due > 0 ? 'due' : ''}" data-ht-checkout="${d.room}"><i data-lucide="hand-coins"></i>Check-out${due > 0 ? ` · ${fmtMAD(due)}` : ''}</button>
-             <button class="ht-cta line" data-ht-folio="${d.room}"><i data-lucide="clipboard-list"></i>Folio</button>`}
+          ? `<span class="ht-done-chip"><i data-icon="check_circle"></i>Parti · ${d.doneAt || ''}</span>`
+          : `<button class="ht-cta ${due > 0 ? 'due' : ''}" data-ht-checkout="${d.room}"><i data-icon="payments"></i>Check-out${due > 0 ? ` · ${fmtMAD(due)}` : ''}</button>
+             <button class="ht-cta line" data-ht-folio="${d.room}"><i data-icon="assignment"></i>Folio</button>`}
       </div>
     </div>`;
   }
@@ -749,7 +749,7 @@
         ${FLOORS.length ? FLOORS.map((f) => `
           <div class="ht-floor-lbl">${esc(f.lbl)}</div>
           <div class="ht-rooms">${f.rooms.map((n) => roomCard(n, i++)).join('')}</div>`).join('') : `<div class="ht-room-empty">
-            <i data-lucide="cloud-download"></i><b>Aucune chambre synchronisée</b>
+            <i data-icon="cloud_download"></i><b>Aucune chambre synchronisée</b>
             <span>Ajoutez vos chambres dans le tableau de bord, puis touchez Rafraîchir. Kiwi n’affiche aucune donnée fictive.</span>
           </div>`}
       </div>`;
@@ -774,22 +774,22 @@
     if (r.status === 'menage') {
       info = `<div class="ht-rs-info warn"><b>Ménage en cours</b>, ${esc(HOUSEKEEPERS[n % HOUSEKEEPERS.length])}.${arr ? `<br>${dataText(arr.guest)} attendu·e à ${arr.t}.` : ''}</div>`;
       actions = `
-        <button class="ht-btn primary" data-ht-rs="clean"><i data-lucide="sparkles"></i>Ménage terminé, chambre propre</button>
+        <button class="ht-btn primary" data-ht-rs="clean"><i data-icon="auto_awesome"></i>Ménage terminé, chambre propre</button>
         <button class="ht-btn ghost" data-ht-rs="hs">Signaler hors service</button>`;
     } else if (r.status === 'hs') {
       info = `<div class="ht-rs-info warn"><b>Hors service.</b> ${esc(r.note || 'Maintenance en cours.')}</div>`;
-      actions = `<button class="ht-btn primary" data-ht-rs="enable"><i data-lucide="check"></i>Remettre en service</button>`;
+      actions = `<button class="ht-btn primary" data-ht-rs="enable"><i data-icon="check"></i>Remettre en service</button>`;
     } else { /* libre */
       info = arr
         ? `<div class="ht-rs-info mint"><b>Réservée ce soir</b>, ${dataText(arr.guest)} · arrivée ${arr.t} · ${SRC[arr.src].label} · ${arr.nights} nuit${arr.nights > 1 ? 's' : ''}.</div>`
         : `<div class="ht-rs-info">Libre ce soir, propre, prête à vendre. ${fmtMAD(roomRate(n))} / nuit.</div>`;
       actions = `
-        ${arr ? `<button class="ht-btn primary" data-ht-rs="checkin"><i data-lucide="user-check"></i>Check-in maintenant, ${esc(arr.guest.split(' ')[0])}</button>` : ''}
-        <button class="ht-btn secondary" data-ht-rs="menage"><i data-lucide="sparkles"></i>Passer en ménage</button>
+        ${arr ? `<button class="ht-btn primary" data-ht-rs="checkin"><i data-icon="how_to_reg"></i>Check-in maintenant, ${esc(arr.guest.split(' ')[0])}</button>` : ''}
+        <button class="ht-btn secondary" data-ht-rs="menage"><i data-icon="auto_awesome"></i>Passer en ménage</button>
         <button class="ht-btn ghost" data-ht-rs="hs">Hors service</button>`;
     }
     el.innerHTML = `
-      <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="ht-rs-head">
         <span class="ht-rs-art">${ART.porte}</span>
         <span class="ht-rs-title"><h3>Ch. ${n} · ${esc(roomName(n))}</h3><span class="sub">${fmtMAD(roomRate(n))} / nuit · ${ST_META[r.status].label.toLowerCase()}</span></span>
@@ -881,7 +881,7 @@
       <div class="ht-ci-guest">
         <span class="ava">${esc(initialsOf(a.guest))}</span>
         <span class="mid">
-          <span class="nm">${dataText(a.guest)} ${a.repeat ? '<span class="ht-pill mint"><i data-lucide="heart"></i>fidèle ×2</span>' : ''}</span>
+          <span class="nm">${dataText(a.guest)} ${a.repeat ? '<span class="ht-pill mint"><i data-icon="favorite"></i>fidèle ×2</span>' : ''}</span>
           <span class="sb">Ch. ${a.room} · ${esc(roomName(a.room))} · ${a.nights} nuit${a.nights > 1 ? 's' : ''} · ${a.pax} pers. · ${SRC[a.src].label}${a.acompte ? ` · acompte ${fmtMAD(a.acompte)} réglé` : ''}</span>
         </span>
       </div>`;
@@ -894,12 +894,12 @@
 
     const step1 = () => {
       el.innerHTML = `
-        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Check-in, Ch. ${a.room}</h3>
         <p class="modal-subtle">Arrivée ${a.t} · ${SRC[a.src].label} · la fiche de police est obligatoire, le scan la pré-remplit.</p>
         ${steps(1)}
         ${guestCard()}
-        ${a.note ? `<div class="ht-arr-note" style="margin:-4px 0 10px;"><i data-lucide="sticky-note"></i>${dataText(a.note)}</div>` : ''}
+        ${a.note ? `<div class="ht-arr-note" style="margin:-4px 0 10px;"><i data-icon="sticky_note_2"></i>${dataText(a.note)}</div>` : ''}
         <div class="ht-ci-f">
           <div class="ht-ci-lbl">Hospitality+ <span class="opt">· informations utiles pendant et après le séjour</span></div>
           <div class="ht-ci-profile-grid">
@@ -924,13 +924,13 @@
             <div class="ht-scan-hint" id="ht-scan-hint">Joignez une photo lisible de la pièce</div>
           </div>
           <div id="ht-scan-result">
-            <label class="ht-scan-cta" for="ht-id-file"><i data-lucide="camera"></i>Prendre ou choisir une photo</label>
+            <label class="ht-scan-cta" for="ht-id-file"><i data-icon="photo_camera"></i>Prendre ou choisir une photo</label>
             <input id="ht-id-file" type="file" accept="image/*" capture="environment" hidden />
           </div>
         </div>
         <div class="ht-ci-foot">
           <button class="ht-btn secondary" data-ht-close>Plus tard</button>
-          <button class="ht-btn primary" id="ht-ci-next" disabled><i data-lucide="shield-check"></i>Continuer, caution</button>
+          <button class="ht-btn primary" id="ht-ci-next" disabled><i data-icon="verified_user"></i>Continuer, caution</button>
         </div>`;
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkin-veil'); });
@@ -939,7 +939,7 @@
         const file = e.target.files && e.target.files[0]; if (!file) return;
         ci.scanned = true; ci.police = `FP-${new Date().getFullYear()}-${policeSeq++}`;
         $('#ht-scan-hint', el).textContent = 'Photo sélectionnée · vérifiez la pièce';
-        $('#ht-scan-result', el).innerHTML = `<div class="ht-scan-ok"><i data-lucide="check-circle-2"></i>Vérification locale · fiche ${ci.police}<span>Kiwi ne conserve pas la photo et n’effectue aucun envoi DGSN.</span></div>`;
+        $('#ht-scan-result', el).innerHTML = `<div class="ht-scan-ok"><i data-icon="check_circle"></i>Vérification locale · fiche ${ci.police}<span>Kiwi ne conserve pas la photo et n’effectue aucun envoi DGSN.</span></div>`;
         hotelOps?.save?.('identity-document-checked'); icons(); refreshNext();
       };
       $('#ht-ci-next', el).onclick = () => { if (ci.scanned) { readGuestProfile(); step2(); } };
@@ -948,7 +948,7 @@
 
     const step2 = () => {
       el.innerHTML = `
-        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Caution &amp; accueil</h3>
         <p class="modal-subtle">${dataText(a.guest)} · Ch. ${a.room} · fiche ${ci.police}</p>
         ${steps(2)}
@@ -963,10 +963,10 @@
           <label class="ht-ci-lbl" style="margin-top:12px;">Montant de caution (MAD)</label>
           <input class="ht-in" id="ht-caution-amount" type="number" min="0" step="1" placeholder="À définir" value="${ci.cautionAmount || ''}" />
         </div>
-        <div class="ht-welcome"><i data-lucide="sparkles"></i><span><b>Accueil de l’hôtel</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
+        <div class="ht-welcome"><i data-icon="auto_awesome"></i><span><b>Accueil de l’hôtel</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
         <div class="ht-ci-foot">
           <button class="ht-btn secondary" id="ht-ci-back">Retour</button>
-          <button class="ht-btn primary" id="ht-ci-done"><i data-lucide="check"></i>Terminer le check-in</button>
+          <button class="ht-btn primary" id="ht-ci-done"><i data-icon="check"></i>Terminer le check-in</button>
         </div>`;
       icons();
       if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {}
@@ -989,11 +989,11 @@
     /* empreinte carte — lecteur partenaire, montant non débité */
     const stepCautionReader = () => {
       el.innerHTML = `
-        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Empreinte carte · ${fmtMAD(ci.cautionAmount)}</h3>
         <p class="modal-subtle">Caution, pré-autorisation, rien n'est débité</p>
         <div class="reader-stage">
-          <div class="reader-disc is-pulsing" id="ht-caution-disc"><i data-lucide="credit-card"></i></div>
+          <div class="reader-disc is-pulsing" id="ht-caution-disc"><i data-icon="credit_card"></i></div>
           <div class="reader-status" id="ht-caution-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
           <div class="reader-method">Lecteur CMI partenaire · paiement sur votre terminal</div>
         </div>`;
@@ -1092,12 +1092,12 @@
             </div>
           </button>`;
         }).join('') || `<div class="ht-empty ht-folio-empty">
-          <span class="ht-folio-empty-icon"><i data-lucide="clipboard-list"></i></span>
+          <span class="ht-folio-empty-icon"><i data-icon="assignment"></i></span>
           <b>Aucun folio ouvert</b>
           <p>Un folio s’ouvre automatiquement au check-in et regroupe la chambre, les extras et la taxe de séjour jusqu’au départ.</p>
           <div class="ht-folio-empty-actions">
-            <button class="ht-btn primary" data-ht-empty-view="reception"><i data-lucide="layout-dashboard"></i>Aller à la réception</button>
-            <button class="ht-btn secondary" data-ht-empty-view="chambres"><i data-lucide="building-2"></i>Voir les chambres</button>
+            <button class="ht-btn primary" data-ht-empty-view="reception"><i data-icon="dashboard"></i>Aller à la réception</button>
+            <button class="ht-btn secondary" data-ht-empty-view="chambres"><i data-icon="apartment"></i>Voir les chambres</button>
           </div>
         </div>`}
       </div>`;
@@ -1141,7 +1141,7 @@
       <div class="ht-folio-view">
         <div class="ht-fo-left">
           <header class="ht-head" style="align-items:flex-start;flex-direction:column;gap:4px;">
-            <button class="ht-fo-back" id="ht-fo-back"><i data-lucide="x"></i>Tous les folios</button>
+            <button class="ht-fo-back" id="ht-fo-back"><i data-icon="close"></i>Tous les folios</button>
             <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;width:100%;">
               <div><h1>Folio · Ch. ${n}</h1><div class="ht-head-sub">${dataText(st.guest)} · ${esc(roomName(n))} · touchez un extra pour le poster sur la note</div></div>
             </div>
@@ -1164,11 +1164,11 @@
             <div class="ht-fp-row1"><span class="ht-fp-title" data-nolang>${dataText(st.guest)}</span><span class="ht-fp-room">Ch. ${n}</span></div>
             <div class="ht-fp-sub">
               ${srcPill(st.src)}
-              <span class="ht-pill"><i data-lucide="calendar"></i>${fmtDay(st.inAt)} → ${fmtDay(st.outAt)}</span>
-              <span class="ht-pill"><i data-lucide="users"></i>${st.pax} pers.</span>
+              <span class="ht-pill"><i data-icon="calendar_month"></i>${fmtDay(st.inAt)} → ${fmtDay(st.outAt)}</span>
+              <span class="ht-pill"><i data-icon="groups"></i>${st.pax} pers.</span>
               ${departing ? '<span class="ht-pill due">départ aujourd’hui</span>' : `<span class="ht-pill ok">j${st.day}/${st.nights}</span>`}
             </div>
-            ${st.prefs ? `<div class="ht-fp-sub"><i data-lucide="sticky-note" style="width:11px;height:11px;color:var(--ht-warn);"></i>${esc(st.prefs)}</div>` : ''}
+            ${st.prefs ? `<div class="ht-fp-sub"><i data-icon="sticky_note_2" style="width:11px;height:11px;color:var(--ht-warn);"></i>${esc(st.prefs)}</div>` : ''}
           </div>
           <div class="ht-fp-lines" id="ht-fp-lines">
             ${folioLine({
@@ -1209,8 +1209,8 @@
               <span class="val ${t.due > 0 ? 'due' : 'ok'}">${fmtMAD(t.due > 0 ? t.due : t.total)}</span>
             </div>
             <div class="ht-fp-actions">
-              <button class="ht-btn secondary" id="ht-fp-facture"><i data-lucide="printer"></i>Facture</button>
-              <button class="ht-btn primary" id="ht-fp-checkout"><i data-lucide="hand-coins"></i>Check-out${t.due > 0 ? ` · ${fmtMAD(t.due)}` : ''}</button>
+              <button class="ht-btn secondary" id="ht-fp-facture"><i data-icon="print"></i>Facture</button>
+              <button class="ht-btn primary" id="ht-fp-checkout"><i data-icon="payments"></i>Check-out${t.due > 0 ? ` · ${fmtMAD(t.due)}` : ''}</button>
             </div>
           </div>
         </aside>
@@ -1256,25 +1256,25 @@
     const close = () => { veil.classList.remove('ht-identity-veil'); closeVeil(veil); };
     const render = () => {
       if (sheet.stage === 'ask') {
-        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
-          <div class="ht-verify-mark"><i data-lucide="shield-check"></i></div>
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
+          <div class="ht-verify-mark"><i data-icon="verified_user"></i></div>
           <div class="ht-verify-kicker">Vérification · chambre ${roomN}</div>
           <h3 class="ht-verify-title">Demandez au client de dire son nom.</h3>
           <p class="ht-verify-copy">Ne proposez aucun nom et ne montrez pas la fiche. La réponse vient d’abord.</p>
           <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-reveal">Le client a répondu · révéler</button></div>`;
       } else if (sheet.stage === 'reveal') {
-        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
           <div class="ht-verify-kicker">Nom attendu · chambre ${roomN}</div>
           <div class="ht-verify-name" data-nolang>${dataText(st.guest)}</div>
           <p class="ht-verify-copy">Comparez exactement avec la réponse donnée, sans lire le nom à voix haute.</p>
-          <div class="ht-ci-foot"><button class="ht-btn secondary" id="ht-ch-mismatch">Le nom ne correspond pas</button><button class="ht-btn primary" id="ht-ch-match"><i data-lucide="check"></i>Le nom correspond</button></div>`;
+          <div class="ht-ci-foot"><button class="ht-btn secondary" id="ht-ch-mismatch">Le nom ne correspond pas</button><button class="ht-btn primary" id="ht-ch-match"><i data-icon="check"></i>Le nom correspond</button></div>`;
       } else {
-        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
           <div class="ht-ch-head"><span class="ht-ch-art">${ART[cid] || ''}</span><span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">Ch. ${roomN} · identité vérifiée · ${esc(def.per)}</span></span><span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(sheetTotal())}</span><span class="per">${sheet.unit > 0 ? sheet.unit : '?'} MAD × <span id="ht-ch-qn">${sheet.qty}</span></span></span></div>
           ${DEMO_HOTEL ? '' : `<div class="ht-ci-f"><div class="ht-ci-lbl">Prix unitaire <span class="opt">· en MAD, ${esc(def.per)}</span></div><input class="ht-note-free" id="ht-ch-unit" inputmode="decimal" autocomplete="off" value="${sheet.unit > 0 ? sheet.unit : ''}" placeholder="saisir le tarif de la maison" /></div>`}
           <div class="ht-ci-f"><div class="ht-ci-lbl">Quantité</div><div class="ht-stepper"><button id="ht-ch-minus" aria-label="Moins">−</button><b id="ht-ch-qty">${sheet.qty}</b><button id="ht-ch-plus" aria-label="Plus">+</button></div></div>
           <div class="ht-ci-f"><div class="ht-ci-lbl">Note <span class="opt">· optionnel, visible sur la facture</span></div><input class="ht-note-free" id="ht-ch-note" value="${esc(sheet.note)}" placeholder="ex. « sans sucre », « chambre à 19h »…" /></div>
-          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-add" ${sheet.busy || !(sheet.unit > 0) ? 'disabled' : ''}><i data-lucide="plus"></i>${sheet.busy ? 'Enregistrement…' : 'Poster sur le folio · ' + fmtMAD(sheetTotal())}</button></div>`;
+          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-add" ${sheet.busy || !(sheet.unit > 0) ? 'disabled' : ''}><i data-icon="add"></i>${sheet.busy ? 'Enregistrement…' : 'Poster sur le folio · ' + fmtMAD(sheetTotal())}</button></div>`;
       }
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = close; });
@@ -1354,7 +1354,7 @@
 
     const step1 = () => {
       el.innerHTML = `
-        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Check-out, Ch. ${n}</h3>
         <p class="modal-subtle">${dataText(st.guest)} · ${fmtDay(st.inAt)} → ${fmtDay(st.outAt)} · ${st.nights} nuit${st.nights > 1 ? 's' : ''}</p>
         ${recapRows()}
@@ -1362,24 +1362,24 @@
           <div class="modal-amount size-md">${fmtMAD(t.due)}</div>
           <div class="ht-pay-opts">
             <button class="ht-pay-opt" data-ht-pm="carte">
-              <span class="ic"><i data-lucide="credit-card"></i></span>
+              <span class="ic"><i data-icon="credit_card"></i></span>
               <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
               <span class="amt">${fmtMAD(t.due)}</span>
             </button>
             <button class="ht-pay-opt" data-ht-pm="especes">
-              <span class="ic"><i data-lucide="banknote"></i></span>
+              <span class="ic"><i data-icon="payments"></i></span>
               <span class="l"><b>Espèces</b><span>Rendu calculé</span></span>
               <span class="amt">${fmtMAD(t.due)}</span>
             </button>
             ${online ? `
             <button class="ht-pay-opt" data-ht-pm="online">
-              <span class="ic"><i data-lucide="check-check"></i></span>
+              <span class="ic"><i data-icon="done_all"></i></span>
               <span class="l"><b>Déjà payé en ligne</b><span>Solde collecté par ${online}, versement OTA</span></span>
             </button>` : ''}
           </div>` : `
           <div class="ht-pay-opts">
             <button class="ht-pay-opt" data-ht-pm="zero">
-              <span class="ic"><i data-lucide="check"></i></span>
+              <span class="ic"><i data-icon="check"></i></span>
               <span class="l"><b>Folio soldé, confirmer le départ</b><span>Facture imprimée, chambre en ménage</span></span>
             </button>
           </div>`}
@@ -1400,7 +1400,7 @@
     const stepCash = () => {
       let received = t.due;
       el.innerHTML = `
-        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD(t.due)}</h3>
         <p class="modal-subtle">Ch. ${n} · ${dataText(st.guest)}</p>
         <div class="cash-grid">
@@ -1435,11 +1435,11 @@
 
     const stepCard = () => {
       el.innerHTML = `
-        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Carte · ${fmtMAD(t.due)}</h3>
         <p class="modal-subtle">Ch. ${n} · lecteur partenaire, Kiwi affiche, le lecteur encaisse</p>
         <div class="reader-stage">
-          <div class="reader-disc is-pulsing" id="ht-reader-disc"><i data-lucide="credit-card"></i></div>
+          <div class="reader-disc is-pulsing" id="ht-reader-disc"><i data-icon="credit_card"></i></div>
           <div class="reader-status" id="ht-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
           <div class="reader-method">Lecteur CMI partenaire · paiement sur votre terminal</div>
         </div>`;
@@ -1538,13 +1538,13 @@
     const provisional = !!(ctx && ctx.provisional);
     const el = $('#ht-facturem', root);
     el.innerHTML = `
-      <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">${provisional ? 'Note provisoire' : 'Facture'}, Ch. ${st.room}</h3>
       <p class="modal-subtle">${provisional ? 'Le séjour est encore ouvert, la note suit le folio en direct.' : 'Séjour clôturé, la chambre est passée en ménage.'}</p>
       ${factureHTML(st, provisional)}
       <div class="ht-facture-foot">
-        <button class="ht-btn secondary" id="ht-fact-print"><i data-lucide="printer"></i>Imprimer (80 mm)</button>
-        <button class="ht-btn primary" data-ht-close><i data-lucide="check"></i>Fermer</button>
+        <button class="ht-btn secondary" id="ht-fact-print"><i data-icon="print"></i>Imprimer (80 mm)</button>
+        <button class="ht-btn primary" data-ht-close><i data-icon="check"></i>Fermer</button>
       </div>`;
     if (!provisional) factureSeq++;
     openVeil('#ht-facture-veil');

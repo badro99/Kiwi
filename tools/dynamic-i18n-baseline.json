@@ -129,7 +129,7 @@
     "assets/pages-pro-office.js": 40,
     "assets/pages-pro-spa-starter.js": 23,
     "assets/pages-pro.js": 24,
-    "assets/pages-pro/boutique-promos-returns.js": 37,
+    "assets/pages-pro/boutique-promos-returns.js": 26,
     "assets/pages-pro/restaurant-stations.js": 34,
     "assets/pages-pro/spa-appointments.js": 24,
     "assets/pages-pro/spa-practitioners.js": 12,
@@ -222,6 +222,7 @@
     "liquid.html": 1,
     "printer.html": 1,
     "reset.html": 2,
-    "wallet.html": 22
+    "wallet.html": 22,
+    "assets/pages-pro/boutique-promos-demo.js": 11
   }
 }

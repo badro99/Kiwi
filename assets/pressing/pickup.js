@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: BarcodeDetector, KiwiCaissePairing, KiwiPressingOps, KiwiStaff.
  */
-import { ITEMS, root } from './custody.js?v=4';
+import { ITEMS, root } from './custody.js?v=5';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
@@ -22,11 +22,11 @@ function renderRetrait() {
             <div><h1>Retrait</h1><div class="px-head-sub">${prets.length} commande${prets.length > 1 ? 's' : ''} prête${prets.length > 1 ? 's' : ''} · recherchez, scannez, encaissez si nécessaire, puis confirmez la remise</div></div>
           </header>
           <div class="px-rt-search">
-            <div class="px-phone-in"><i data-lucide="phone"></i>
+            <div class="px-phone-in"><i data-icon="call"></i>
               <input id="px-rt-q" inputmode="tel" placeholder="Téléphone, nom ou n° de ticket" value="${esc(q)}" autocomplete="off" /></div>
           </div>
           <div class="px-rt-or">ou</div>
-          <button class="px-rt-scan" id="px-rt-scan"><i data-lucide="scan-line"></i>Scanner ticket ou étiquette</button>
+          <button class="px-rt-scan" id="px-rt-scan"><i data-icon="document_scanner"></i>Scanner ticket ou étiquette</button>
           <div class="px-rt-results">
             ${prets.map(rtCard).join('')}
             ${others.map(rtCard).join('')}
@@ -78,7 +78,7 @@ function rtCard(o) {
       <div class="px-rt-pieces">
         ${o.pieces.map((p) => {
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
-          return `<div class="px-rt-piece"><i data-lucide="${early ? 'clock' : 'check-circle-2'}"></i><span>${catalogLabel({ ...ITEMS[p.itemId], label: p.label })} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
+          return `<div class="px-rt-piece"><i data-icon="${early ? 'schedule' : 'check_circle'}"></i><span>${catalogLabel({ ...ITEMS[p.itemId], label: p.label })} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
         }).join('')}
       </div>
       <div class="px-rt-balance ${due > 0 ? '' : 'paid'}">
@@ -86,10 +86,10 @@ function rtCard(o) {
         <span class="amt">${due > 0 ? fmtMAD(due) : '✓'}</span>
       </div>
       <div class="px-rt-actions">
-        ${due > 0 ? `<button class="px-btn secondary" style="flex:1;" data-px-rt-pay="${o.id}"><i data-lucide="banknote"></i>Encaisser ${fmtMAD(due)}</button>` : ''}
-        <button class="px-btn primary" style="flex:1;" data-px-rt-give="${o.id}" ${due > 0 ? 'disabled title="Encaissez le solde d’abord"' : ''}><i data-lucide="check"></i>Remettre au client</button>
-        ${!early && !o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-lucide="message-circle"></i></button>` : ''}
-        ${!early && o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Marquer prévenu</button>` : ''}
+        ${due > 0 ? `<button class="px-btn secondary" style="flex:1;" data-px-rt-pay="${o.id}"><i data-icon="payments"></i>Encaisser ${fmtMAD(due)}</button>` : ''}
+        <button class="px-btn primary" style="flex:1;" data-px-rt-give="${o.id}" ${due > 0 ? 'disabled title="Encaissez le solde d’abord"' : ''}><i data-icon="check"></i>Remettre au client</button>
+        ${!early && !o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-icon="chat_bubble"></i></button>` : ''}
+        ${!early && o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-icon="done_all"></i>Marquer prévenu</button>` : ''}
       </div>
     </div>`;
   }
@@ -160,16 +160,16 @@ function openScan(mode = 'pickup') {
     const el = $('#px-scanm', root);
     const workflow = state.scanMode === 'workflow';
     el.innerHTML = `
-      <button class="px-modal-x" id="px-scan-close" aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="px-modal-x" id="px-scan-close" aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">${workflow ? 'Avancer une commande' : 'Scanner ticket ou étiquette'}</h3>
       <p class="modal-subtle">${workflow ? 'Scannez depuis l’atelier : Kiwi ouvre la commande et propose l’action utile. Rien ne change sans votre validation.' : 'La douchette saisit le code automatiquement. Sur téléphone, utilisez la caméra si elle est disponible.'}</p>
-      <div class="px-scan-stage" id="px-scan-stage"><i data-lucide="scan-line" style="width:58px;height:58px;color:var(--mint)"></i></div>
+      <div class="px-scan-stage" id="px-scan-stage"><i data-icon="document_scanner" style="width:58px;height:58px;color:var(--mint)"></i></div>
       <div class="cash-input-row"><label class="cash-input-label" for="px-scan-input">N° commande ou étiquette</label>
         <input class="cash-input mono" id="px-scan-input" autocomplete="off" inputmode="numeric" placeholder="1054 ou 1054-1" />
       </div>
       <div class="px-sheet-foot" style="margin-top:12px">
-        <button class="px-btn secondary" id="px-scan-camera"><i data-lucide="camera"></i>Caméra</button>
-        <button class="px-btn primary" id="px-scan-accept"><i data-lucide="scan-line"></i>Lire le code</button>
+        <button class="px-btn secondary" id="px-scan-camera"><i data-icon="photo_camera"></i>Caméra</button>
+        <button class="px-btn primary" id="px-scan-accept"><i data-icon="document_scanner"></i>Lire le code</button>
       </div>`;
     openVeil('#px-scan-veil');
     icons();

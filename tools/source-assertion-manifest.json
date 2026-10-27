@@ -27,6 +27,7 @@
     "security-regression-test.js": "bans on known unsafe patterns",
     "skin-cloak-test.mjs": "each shell hides itself until its skin is ready",
     "staff-publication-split-test.mjs": "byte-exact split proof",
+    "promos-returns-split-test.mjs": "byte-exact split proof of the promotions and returns pages",
     "strings-coverage-test.mjs": "string-key coverage ratchet",
     "surface-parity-test.mjs": "shells share the same tokens and chrome",
     "type-policy-test.js": "typography ban over shipped files",

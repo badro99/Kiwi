@@ -1,0 +1,4 @@
+{
+  "description": "SHA-256 of the appPage options rendered by the Boutique promotions demo page (Maison Mansour), default French locale, Material icons. The page moved out of boutique-promos-returns.js on 27 October 2026 (wave 12, lot I); tools/promos-returns-split-test.mjs holds the byte proof of the move.",
+  "sha": "1467bc33bf0f3c2975b369f6d3758275842037c40cad9aa531bedfe6f5827bae"
+}

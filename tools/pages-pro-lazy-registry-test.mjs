@@ -14,6 +14,7 @@ const REFERENCES = {
   'assets/pages-pro/spa-appointments.js': ['nav-appointments', 'tools/pages-pro-spa-reference.json'],
   'assets/pages-pro/spa-practitioners.js': ['nav-practitioners', 'tools/pages-pro-spa-practitioners-reference.json'],
   'assets/pages-pro/boutique-promos-returns.js': ['nav-returns', 'tools/pages-pro-boutique-returns-reference.json'],
+  'assets/pages-pro/boutique-promos-demo.js': ['nav-promos', 'tools/pages-pro-boutique-promos-reference.json'],
   /* Its menu page is a full page; the kitchen display is checked painted, in the browser test. */
   'assets/pages-pro/restaurant-stations.js': ['nav-menu', 'tools/pages-pro-restaurant-stations-reference.json'],
 };

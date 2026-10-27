@@ -3091,7 +3091,7 @@ section('Wave R locale and accessibility');
  * Traductions des phrases à donnée, alertes de clôture, seuils, bons de cuisine
  * non imprimés, fonds papier, démos des métiers. */
 section('Vague 12 · lot I (traductions, alertes, seuils, marque)');
-for (const test of ['caisse-lang-service-test.js', 'day-report-conflicts-test.mjs', 'kitchen-unprinted-test.mjs', 'paper-surfaces-test.mjs', 'store-credit-role-rule-test.mjs']) {
+for (const test of ['caisse-lang-service-test.js', 'day-report-conflicts-test.mjs', 'kitchen-unprinted-test.mjs', 'paper-surfaces-test.mjs', 'store-credit-role-rule-test.mjs', 'promos-returns-split-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');

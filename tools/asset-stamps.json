@@ -164,8 +164,8 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "76",
-    "sha": "26f4c98f4ea1d418"
+    "v": "77",
+    "sha": "a48e3babedf4d53e"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -1316,12 +1316,16 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2189",
-    "sha": "555599b9c956deb6"
+    "v": "2190",
+    "sha": "495464afa4b4ef99"
+  },
+  "assets/pages-pro/boutique-promos-demo.js": {
+    "v": "2",
+    "sha": "5289fbda41f321d3"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "8",
-    "sha": "fca06149bab198b0"
+    "v": "9",
+    "sha": "9d0eb26f12ade5e1"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1344,8 +1348,8 @@
     "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "45",
-    "sha": "5d1178d0197e73e3"
+    "v": "46",
+    "sha": "3c0e29c50e84704f"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1468,8 +1472,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "185",
-    "sha": "76274491495bcb08"
+    "v": "187",
+    "sha": "35b14fc432317d88"
   },
   "assets/pos-epicerie.css": {
     "v": "26",
@@ -1512,12 +1516,12 @@
     "sha": "fa3a0f191f4fda55"
   },
   "assets/pos-hotel.css": {
-    "v": "25",
+    "v": "26",
     "sha": "8495613e7555777a"
   },
   "assets/pos-hotel.js": {
-    "v": "25",
-    "sha": "116d916ffdc12034"
+    "v": "26",
+    "sha": "ead78da9f846f79d"
   },
   "assets/pos-inventory-count.js": {
     "v": "11",
@@ -1608,12 +1612,12 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "71",
+    "v": "72",
     "sha": "493ee727572f7123"
   },
   "assets/pressing-caisse.js": {
-    "v": "71",
-    "sha": "c07f293dc783ca29"
+    "v": "72",
+    "sha": "1addf49c919da119"
   },
   "assets/pressing-catalog.css": {
     "v": "4",
@@ -1636,36 +1640,36 @@
     "sha": "f9231551880ee627"
   },
   "assets/pressing/custody.js": {
-    "v": "4",
-    "sha": "295788b2d6d86f27"
+    "v": "5",
+    "sha": "526f571efcea9b7a"
   },
   "assets/pressing/deposit.js": {
-    "v": "3",
-    "sha": "d4f8f552fa05716e"
+    "v": "4",
+    "sha": "6e88bc7083b567eb"
   },
   "assets/pressing/pickup.js": {
-    "v": "3",
-    "sha": "fa004b02ff05131f"
+    "v": "4",
+    "sha": "bc9152bd03334855"
   },
   "assets/pressing/rack.js": {
-    "v": "3",
-    "sha": "0ff0db50b734b1df"
+    "v": "4",
+    "sha": "c6588403f9533ca5"
   },
   "assets/pressing/workshop.js": {
-    "v": "3",
-    "sha": "fe7be36de415d139"
+    "v": "4",
+    "sha": "139197bcb9b47d0c"
   },
   "assets/print-paper.css": {
     "v": "1",
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "41",
-    "sha": "47489fabdb8e2616"
+    "v": "42",
+    "sha": "dbc23c9a5da80c17"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "3",
-    "sha": "52baa1eec4b2c7a7"
+    "v": "4",
+    "sha": "7336229b4653a7ac"
   },
   "assets/printer/pairing-ui.js": {
     "v": "9",

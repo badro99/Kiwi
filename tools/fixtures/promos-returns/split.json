@@ -1,0 +1,8 @@
+{
+  "note": "The promotions page moved out of boutique-promos-returns.js. original.js.gz is that file as it was before the move; the demo file carries section[start:end] byte for byte between its two markers.",
+  "sha256": "fca06149bab198b0bd66ac156c837c51af0f394ad065acc292fde0b13aba4898",
+  "start": 9127,
+  "end": 29732,
+  "begin": "/* ── moved section begins ── */\n",
+  "finish": "/* ── moved section ends ── */\n"
+}
