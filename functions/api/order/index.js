@@ -45,6 +45,8 @@ import { iftarAt } from './_guest.js';
 import { json } from '../../auth/_lib.js';
 import { merchantZone } from '../_business-day.js';
 import { storeSubscriptionPending } from '../_private.js';
+import { clientAddress, sourceKeys } from '../_net-source.js';
+import { spendBudget } from '../_rate-budget.js';
 import {
   startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, hoursClosed, SESSION_ID,
   floorPlanTables, servedTables, planTableKey,
@@ -59,6 +61,11 @@ const FTOUR_MIN_LEAD_MS = 2 * 60 * 1000;    // à deux minutes du ftour, on sert
 const FTOUR_MAX_LEAD_MS = 8 * 3600 * 1000;  // pas une commande du matin pour le soir    // all tables the floor plan does not know, together
 const MIN_SERVED_TABLES = 5;       // without a plan, the tables served before the budget applies
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
+/* Par SOURCE réseau, mais seulement quand la file se remplit : voir plus bas. */
+const SOURCE_PRESSURE = MAX_PENDING / 2;
+const SOURCE_WINDOW_MS = 10 * 60 * 1000;
+const SOURCE_BUDGET = 10;          // une adresse (IPv6 : son /64) par fenêtre
+const SOURCE_WIDE_BUDGET = 30;     // un réseau (IPv4 /24, IPv6 /48) par fenêtre
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -198,12 +205,38 @@ export async function onRequestPost(context) {
    * feu. Bornée AU JOUR : le compte portait sur toute l'histoire de la table,
    * si bien que soixante commandes jamais traitées la semaine dernière
    * condamnaient la boutique à répondre « queue-full » pour toujours. */
+  let pendingToday = 0;
   try {
     const pending = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND status = 'pending' AND created_ts >= ?"
     ).bind(merchant, today).first();
+    pendingToday = Number((pending && pending.n) || 0);
     if (pending && pending.n >= MAX_PENDING) return json({ error: 'queue-full' }, 429);
   } catch (_) { /* table not migrated yet → the insert below reports it */ }
+
+  /* ── …et par SOURCE, quand la file se remplit ──────────────────────────────
+   * Les plafonds par table et hors plan ne bornent pas le retrait au comptoir :
+   * chaque session « à emporter » s'ouvre sans table et reçoit ses propres huit
+   * commandes, si bien qu'un script avec le slug remplissait les soixante places
+   * du jour et que les vrais convives lisaient « file pleine ».
+   * Le plafond par adresse que l'on écartait plus bas reste faux en service
+   * normal (toute la salle sort par le wifi du café). Il ne s'applique donc
+   * qu'une fois la file à moitié pleine de commandes non acceptées : jusque-là
+   * rien ne change pour personne ; au-delà, une même adresse (IPv6 : son /64)
+   * ne dépose plus que dix commandes par dix minutes, un même réseau trente.
+   * Chaque commande est comptée dès la première, pour que la pression trouve
+   * le script déjà au-dessus de son budget. Compteur indisponible : les
+   * plafonds ci-dessous jouent seuls, une panne du compteur ne refuse personne. */
+  const { narrow: sourceNarrow, wide: sourceWide } = sourceKeys(clientAddress(request));
+  for (const [key, budget] of [[sourceNarrow, SOURCE_BUDGET], [sourceWide, SOURCE_WIDE_BUDGET]]) {
+    if (!key) continue;
+    let spent = null;
+    try { spent = await spendBudget(env, merchant, 'order-src:' + key, budget, SOURCE_WINDOW_MS, now); }
+    catch (_) { spent = null; }
+    if (spent && !spent.ok && pendingToday >= SOURCE_PRESSURE) {
+      return json({ error: 'table-queue-full', reason: 'source', retry_after: spent.retryAfter }, 429);
+    }
+  }
 
   /* ── …et le même plafond, par TABLE ────────────────────────────────────────
    * Le compte global ci-dessus borne la base, mais il ne protège pas le

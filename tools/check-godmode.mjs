@@ -1129,6 +1129,12 @@ G('15 · Révocation — supprimer un droit coupe vraiment la session');
     { headers:{ Cookie:AS.operator } }), env);
   ok(before === true, 'la session de l’opérateur vivant est reconnue');
 
+  /* Le dernier code opérateur ne part pas (409 last-operator, voir
+     wave11-security-test) : un second code existe avant la révocation. */
+  const alone = await call(R.operators, 'DELETE', '/api/admin/operators?id=op-1');
+  ok(alone.status === 409, 'le dernier code opérateur ne se révoque pas');
+  db.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
+    .bind('op-2', 'Partenaire', 'ff', 'ff', now).run();
   const removed = await call(R.operators, 'DELETE', '/api/admin/operators?id=op-1');
   ok(removed.status === 200, 'l’opérateur peut révoquer son code');
   const after = await lib.isSeniorOperator(new Request('https://kiwi.test/',

@@ -5,7 +5,7 @@
 // de la demande, et un opérateur nommé peut le relancer depuis la console.
 // Les vraies routes tournent : POST /api/support/tickets et PATCH
 // /api/admin/support, sur le schéma réel (schema.sql) en SQLite mémoire, avec
-// une vraie caisse appairée et un vrai cookie d'opérateur.
+// un vrai cookie d'opérateur (la caisse appairée ne dépose plus de demande).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
@@ -57,7 +57,7 @@ async function opCookie(env) {
 async function post(env, summary) {
   const waits = [];
   const res = await createTicket({ request: new Request('https://kiwi.test/api/support/tickets', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await tillCookie(env) },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await opCookie(env) },
     body: JSON.stringify({ merchant: MERCHANT, summary, channel: 'whatsapp', contact: '+212600000000', client: {} }),
   }), env, waitUntil: (p) => waits.push(p) });
   await Promise.all(waits);
