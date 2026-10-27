@@ -33,6 +33,22 @@ export function claimAnchors(root = path.resolve(HERE, '..')) {
   return byFile;
 }
 
+/* Where an anchor sits inside a string literal (an assertion's message), the
+   mark goes in front of the whole string: `ok(x, void mark() || 'message')`.
+   Put inside the quotes it would only change the message and never run. */
+export function stringStart(line, col) {
+  let quote = '', start = -1;
+  for (let i = 0; i < col; i++) {
+    const ch = line[i];
+    if (quote) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === quote) quote = '';
+    } else if (ch === "'" || ch === '"' || ch === '`') { quote = ch; start = i; }
+    else if (ch === '/' && line[i + 1] === '/') break;
+  }
+  return quote ? start : col;
+}
+
 export function mark(source, anchors = []) {
   let out = source.replace(ANNOTATION, (_, indent, comment, surface, locale, viewport) =>
     `${indent}${call(surface + '|' + locale + '|' + viewport)}${comment}`);
@@ -45,7 +61,7 @@ export function mark(source, anchors = []) {
   for (const a of anchors) {
     const at = lines.findIndex((l) => l.includes(a.assertion));
     if (at < 0) continue;
-    const col = lines[at].indexOf(a.assertion);
+    const col = stringStart(lines[at], lines[at].indexOf(a.assertion));
     lines[at] = lines[at].slice(0, col) + inline(a.key) + lines[at].slice(col);
   }
   return lines.join('\n');

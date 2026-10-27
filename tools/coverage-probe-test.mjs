@@ -77,6 +77,13 @@ check('a landing claim anchor is marked in front of its expression, even in a br
   const branch = mark('if (a) skip();\nelse ok(value === 2, "the claim holds for real");\n', anchors);
   assert.equal(branch.split('\n')[1], 'else void globalThis.__kiwiCoverageCell?.("claim:x#0") || ok(value === 2, "the claim holds for real");', 'still one expression: the else keeps its body');
   assert.doesNotThrow(() => new Function('a', 'skip', 'ok', 'value', branch), 'the marked branch parses');
+  /* An anchor that is the assertion's message lives inside a string: the mark
+     goes in front of the string, or it would be text and never run. */
+  const msg = mark("  ok(n === 2, 'le code existant scanne');\n", [{ assertion: 'le code existant scanne', key: 'claim:m#0' }]);
+  assert.equal(msg.split('\n')[0], "  ok(n === 2, void globalThis.__kiwiCoverageCell?.(\"claim:m#0\") || 'le code existant scanne');");
+  let hit = '';
+  new Function('ok', 'n', 'globalThis', msg)((c, m) => { assert.ok(c, m); }, 2, { __kiwiCoverageCell: (k) => { hit = k; } });
+  assert.equal(hit, 'claim:m#0', 'a message anchor is recorded when its assertion runs');
   const cjs = path.join(dir, 'tools', 'fixture-claim-test.js');
   fs.writeFileSync(cjs, 'const n = [1, 2].length;\nif (n > 5) {\n  console.log("never reached");\n}\nconsole.log("ran");\n');
   const r = spawnSync(process.execPath, ['-e', `
