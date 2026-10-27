@@ -5,6 +5,8 @@
  * with it off kiwi-serveur.html keeps its shipped form and code field.
  *
  *   KiwiTeamPin.signIn(screen, api)   two steps: the e-mail, then the pad.
+ *     api.request(email, code, opId) optional: signs in itself (the team
+ *                                    app's own login) → a reply
  *     api.signedIn() → Promise       after the server's yes (the host loads
  *                                    the session and opens it)
  *   KiwiTeamPin.reset()               back to step 1, the e-mail kept
@@ -12,6 +14,8 @@
  *     api.action                     'clock-in' | 'clock-out'
  *     api.body(code)                 the request body (clock-out carries the
  *                                    shift's progress)
+ *     api.request(code, opId)        optional: sends the punch itself (the
+ *                                    team app's offline queue) → a reply
  *     api.done(body)                 the server recorded it
  *     api.signIn()                   the session ended: back to the sign-in
  *
@@ -119,6 +123,7 @@
     S.flow = F.attach(pad, {
       use: 'team',
       email: email,
+      request: S.api && typeof S.api.request === 'function' ? function (code, opId) { return S.api.request(email, code, opId); } : undefined,
       onSuccess: function () {
         /* No haptic on a successful sign-in (§15.1): the new screen says it. */
         Promise.resolve(S.api && S.api.signedIn ? S.api.signedIn() : null).then(function () {
@@ -150,6 +155,7 @@
       use: 'clock',
       clockAction: api.action === 'clock-out' ? 'clock-out' : 'clock-in',
       body: typeof api.body === 'function' ? api.body : undefined,
+      request: typeof api.request === 'function' ? api.request : undefined,
       onSuccess: function (body) { if (api.done) api.done(body || {}); },
       onAction: function (id) { if (id === 'sign-in' && api.signIn) api.signIn(); }
     });

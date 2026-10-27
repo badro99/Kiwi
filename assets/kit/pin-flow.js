@@ -215,8 +215,9 @@
    * opts:
    *   use            one of USES
    *   body(code)     the request body (default per use)
-   *   request(code)  replaces send() entirely (the cancel-sale route carries
-   *                  the code in its own request); resolves to a reply
+   *   request(code, opId)  replaces send() entirely (the cancel-sale route
+   *                  carries the code in its own request; the team clock hands
+   *                  the punch to the shipped offline queue); resolves to a reply
    *   act            { kind, key, args, label?, needsConnection } (approvals;
  *                  label, when given, is the act already written out)
    *   incoming       { id, name, match(who)? } (the shift change: the host
@@ -330,7 +331,7 @@
       if (state.inflight || state.dead) return;
       state.inflight = true;
       var code = state.code;
-      var p = typeof opts.request === 'function' ? Promise.resolve(opts.request(code)) : send(spec.url, body(code), { fetch: opts.fetch });
+      var p = typeof opts.request === 'function' ? Promise.resolve(opts.request(code, state.opId)) : send(spec.url, body(code), { fetch: opts.fetch });
       return p.then(function (reply) { return reply || { kind: 'network' }; }, function () { return { kind: 'network' }; }).then(function (reply) {
         if (state.dead) return;
         var mine = !automatic || state.joined;

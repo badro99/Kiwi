@@ -889,18 +889,44 @@
 
     function mountTeamSignIn() {
       if (!teamKit()) return;
+      /* The pad only collects the code. The sign-in is the shipped form's
+         KiwiEmployeeLive.login, which also hands the phone's offline punches
+         to whoever signs in (owner, 2026-10-27: 2027 is a skin). */
+      let signedInData = null;
       window.KiwiTeamPin.signIn($('#screen-pin'), {
-        signedIn: () => window.KiwiEmployeeLive.refresh().then(openEmployeeSession),
+        request: (email, code) => {
+          signedInData = null;
+          return Promise.resolve().then(() => window.KiwiEmployeeLive.login(email, code)).then(
+            (data) => { signedInData = data; return { kind: 'answer', status: 200, json: true, body: Object.assign({ ok: true }, data || {}) }; },
+            (err) => (err && err.status
+              ? { kind: 'answer', status: err.status, json: true, body: { error: err.code || '' } }
+              : { kind: 'network' }));
+        },
+        signedIn: () => Promise.resolve(signedInData || window.KiwiEmployeeLive.refresh()).then(openEmployeeSession),
       });
     }
 
     function mountTeamClock() {
       window.KiwiTeamPin.clock($('#screen-clockin'), {
         action: attendanceAction,
-        body: attendanceAction === 'clock-out'
-          ? (code) => ({ action: 'clock-out', progress: window.__kiwiShiftProgress || null, attendanceCode: code })
-          : undefined,
+        /* The pad only collects the code. The punch goes through the same
+           KiwiEmployeeLive call as the shipped button, so a punch made without
+           a connection is kept on the phone and sent later (owner, 2026-10-27:
+           2027 is a skin, it must not behave differently). The pad's opId is
+           the punch's identity, so its retries cannot open a second shift. */
+        request: (code, opId) => {
+          const live = window.KiwiEmployeeLive;
+          const punch = attendanceAction === 'clock-out'
+            ? live.clockOut(window.__kiwiShiftProgress || null, code, opId)
+            : live.clockIn(code, opId);
+          return Promise.resolve(punch).then(
+            (saved) => ({ kind: 'answer', status: 200, json: true, body: Object.assign({ ok: true }, saved || {}) }),
+            (err) => (err && err.status
+              ? { kind: 'answer', status: err.status, json: true, body: { error: err.code || '' } }
+              : { kind: 'network' }));
+        },
         done: (saved) => {
+          if (saved && saved.queued) toast(PUNCH_SAVED, 3200);
           /* The answer is the session as the server now holds it. */
           window.KiwiEmployeeLive.refresh().catch(() => {});
           if (attendanceAction === 'clock-out') {

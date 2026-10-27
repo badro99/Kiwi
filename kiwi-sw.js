@@ -98,7 +98,7 @@ var SHELL = [
   '/assets/caisse/closing.js?v=1',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/catalogue.js?v=8',
-  '/assets/caisse/till-frame.js?v=9',
+  '/assets/caisse/till-frame.js?v=11',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=3',
   '/assets/caisse/split-tender.js?v=3',
@@ -119,7 +119,7 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=7',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/service.js?v=4',
+  '/assets/serveur/service.js?v=5',
   '/assets/serveur-app.js?v=21',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
@@ -468,7 +468,7 @@ var SHELL = [
   '/assets/kit/core.js?v=2',
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
-  '/assets/kit/pin-flow.js?v=3',
+  '/assets/kit/pin-flow.js?v=5',
   '/assets/kit/till-pin.js?v=7',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=9',
@@ -497,7 +497,7 @@ var SHELL = [
   '/assets/kit/strings/team.fr.js?v=1',
   '/assets/kit/strings/team.en.js?v=1',
   '/assets/kit/strings/team.ar.js?v=1',
-  '/assets/kit/team-pin.js?v=3',
+  '/assets/kit/team-pin.js?v=4',
   '/assets/kit/team-split.js?v=1',
   /* and the kitchen board's lanes, behind kiwiSkin2027:kds. */
   '/assets/icons/material/sprite.kds.svg?v=2',
@@ -515,7 +515,7 @@ var SHELL = [
   '/assets/kit/elements.js?v=4',
   '/assets/kit/layout.js?v=1',
   '/assets/kit/nav.js?v=8',
-  '/assets/kit/till.js?v=24',
+  '/assets/kit/till.js?v=26',
   '/assets/kit/till-frame.js?v=13',
   '/assets/kit/till-attendance.js?v=1',
   '/assets/kit/till-online.js?v=2',

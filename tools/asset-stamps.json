@@ -268,8 +268,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "9",
-    "sha": "8bf98630967f3042"
+    "v": "11",
+    "sha": "da2c55c8b68d08dc"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -896,8 +896,8 @@
     "sha": "11e20910aad27197"
   },
   "assets/kit/pin-flow.js": {
-    "v": "3",
-    "sha": "a9e3e4f27599c703"
+    "v": "5",
+    "sha": "004c754e191167bd"
   },
   "assets/kit/pin.js": {
     "v": "3",
@@ -984,8 +984,8 @@
     "sha": "fb5251708f8b9ce1"
   },
   "assets/kit/team-pin.js": {
-    "v": "3",
-    "sha": "ee432bd814e2c54f"
+    "v": "4",
+    "sha": "eb0c5bce3bcaf218"
   },
   "assets/kit/team-split.js": {
     "v": "1",
@@ -1012,8 +1012,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "24",
-    "sha": "4dfeae70d4b8b214"
+    "v": "26",
+    "sha": "3511f3f8ddebe029"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",
@@ -1796,8 +1796,8 @@
     "sha": "c230073272e0132c"
   },
   "assets/serveur/service.js": {
-    "v": "4",
-    "sha": "42daac6c1500a32b"
+    "v": "5",
+    "sha": "b71bd8ef604f43a5"
   },
   "assets/service-requests.js": {
     "v": "2",

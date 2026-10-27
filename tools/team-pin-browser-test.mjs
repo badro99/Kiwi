@@ -81,6 +81,7 @@ async function open(tr, ctx, { flag = true } = {}) {
         return req.respond(json(401, { error: 'bad-employee-code' }));
       }
       if (!st.session) return req.respond(json(401, { error: 'employee-session-required' }));
+      if ((b.action === 'clock-in' || b.action === 'clock-out') && st.offline) return req.abort('internetdisconnected');
       if (b.action === 'clock-in' || b.action === 'clock-out') {
         if (b.attendanceCode !== ATT) return req.respond(json(403, { error: 'attendance-code-invalid' }));
         if (b.action === 'clock-in') { st.open = { inTs: Date.now() }; return req.respond(json(200, Object.assign(payload(), { entry: st.open }))); }
@@ -176,9 +177,14 @@ try {
     check((await regions(page, SIGN)).keys === 'false', 'the keys stay enabled');
 
     tr.step('the right code');
+    /* 2027 is a skin (owner, 2026-10-27): the pad signs in through the shipped
+       form's KiwiEmployeeLive.login, which hands the phone's offline punches
+       to whoever signs in, never a request of its own. */
+    await page.evaluate(() => { const L = window.KiwiEmployeeLive, real = L.login; window.__logins = 0; L.login = function () { window.__logins++; return real.apply(this, arguments); }; });
     await type(page, SIGN, TEAM);
     await page.waitForFunction(() => (document.querySelector('.screen.is-active') || {}).id === 'screen-clockin', { timeout: 8000 });
     check(true, 'the session opens on the clock-in screen');
+    check(await page.evaluate(() => window.__logins) === 1, 'through the shipped KiwiEmployeeLive.login, once');
     await page.waitForSelector(CLOCK, { timeout: 5000 });
     check(await page.evaluate((s) => document.querySelector(s).getAttribute('length') === '6', CLOCK), 'with a six-digit pad');
     r = await regions(page, CLOCK);
@@ -210,6 +216,36 @@ try {
     await page.waitForFunction(() => (document.querySelector('.screen.is-active') || {}).id === 'screen-pin', { timeout: 8000 });
     check(!page.st.open && !page.st.session, 'the shift is closed and the session signed out');
     check(await page.evaluate(() => !document.querySelector('.k-team-signin k-pin-pad') && !document.querySelector('.k-team-step').hidden), 'back to the sign-in, step 1');
+  });
+
+  /* 2027 is a skin (owner, 2026-10-27): the pad hands the punch to the same
+     KiwiEmployeeLive call as the shipped button, so a clock-in typed without
+     a connection is kept on the phone and sent when the network is back. */
+  await S.run('flag on · a clock-in without a connection is kept and sent later', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    // coverage: surface=team-entry locale=en viewport=phone
+    const page = await open(tr, ctx);
+    await page.click('#k-team-email');
+    await page.keyboard.type(EMAIL, { delay: 5 });
+    await page.click('.k-team-next');
+    await page.waitForSelector(SIGN, { timeout: 5000 });
+    await type(page, SIGN, TEAM);
+    await page.waitForSelector(CLOCK, { timeout: 8000 });
+
+    tr.step('the right code, network down');
+    page.st.offline = true;
+    await type(page, CLOCK, ATT);
+    await page.waitForFunction(() => (document.querySelector('.screen.is-active') || {}).id === 'screen-main', { timeout: 10000 });
+    check(true, 'the shift opens on the phone, as with the shipped button');
+    check(!page.st.open, 'the server has not recorded it yet');
+    check(await page.evaluate(() => window.KiwiEmployeeLive.pendingPunches() === 1), 'one punch waits in the shipped queue');
+
+    tr.step('the network comes back');
+    page.st.offline = false;
+    await page.evaluate(() => window.KiwiEmployeeLive.flushPunches());
+    await page.waitForFunction(() => window.KiwiEmployeeLive.pendingPunches() === 0, { timeout: 8000 });
+    check(!!page.st.open, 'the kept clock-in reached the server');
+    check(page.st.posts.filter((a) => a === 'clock-in').length >= 2, 'by a second send of the same punch');
   });
 } finally {
   await browser.close().catch(() => {});

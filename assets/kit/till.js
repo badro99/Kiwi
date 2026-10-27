@@ -250,7 +250,10 @@
       var foot = '<footer class="ft">' + part(b.discount) + part(b.service) +
         '<div class="tot"><span class="k-body k-ink2">' + th('bill.total') + '</span><span class="k-title k-num" data-k-total>' + numHtml(money(b.total || 0)) + '</span></div>' +
         (b.plain ? '' : '<div class="sec2">' + C.button.render({ label: t('bill.split'), id: 'sp', attrs: ' data-w="split"', disabled: !lines.length || paying }) +
-        C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) + '</div>') +
+        C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) +
+        // The host's own send-to-kitchen, when the bill is paid later (takeaway, next course).
+        (b.sendLabel && !sendFirst ? C.button.render({ label: b.sendLabel, icon: 'send', id: 'sk', attrs: ' data-w="send"', disabled: paying }) : '') +
+        (b.addLabel ? C.button.render({ label: b.addLabel, icon: 'add', id: 'ai', attrs: ' data-w="add-items"', disabled: paying }) : '') + '</div>') +
         primary + '</footer>';
       var warn = st === 'error' ? '<p class="wn k-foot" role="status">' + icon('warning', 16) + th('bill.unsaved') + '</p>' : '';
       var prevLabel = this.__primary;
@@ -279,7 +282,7 @@
       '.wn{display:flex;align-items:center;gap:6px;margin:0 24px 8px;padding:8px 12px;border-radius:var(--k-r-1);background-color:var(--k-warning-tint);color:var(--k-ink-1)}' +
       '.ft{display:flex;flex-direction:column;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:inset 0 1px 0 var(--k-line);background-color:var(--k-surface-1)}' +
       '.pt,.tot{display:flex;justify-content:space-between;align-items:baseline;gap:12px}' +
-      '.sec2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sec2 .k-btn{width:100%}' +
+      '.sec2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sec2 .k-btn{width:100%}.sec2>:nth-child(n+3){grid-column:1/-1}' +
       /* A phone on its side has ~390px of height for the whole sheet: the
          roomy header and stacked footer left one bill line visible. There the
          header tightens, split / discount sit in the pay button's row, and the

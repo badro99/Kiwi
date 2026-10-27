@@ -134,8 +134,15 @@
       if (mode === 'vrap') {
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         const disc = vrapDiscountAmount(gross);
-        return { title, meta, lines: cart.map(tillKitLine), discount: tillKitDiscount(vrapDiscount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, more: tillKitOverflowRows().length > 0 };
+        /* A reopened takeaway order already went to the kitchen (unless it was
+           held): its lines are sent, as the shipped panel treats them. */
+        const open = vrapEditingNum != null ? kdsOrders.find((x) => x && x.num === vrapEditingNum) : null;
+        const wasSent = !!(open && open.status !== 'held' && open.sentAt);
+        const at = wasSent ? new Date(open.sentAt) : null;
+        const sentAt = at ? String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') : '';
+        const vrapLine = (l, i) => Object.assign(tillKitLine(l, i), wasSent ? { sent: true, sentAt, sentQty: 0 } : {});
+        return { title, meta, lines: cart.map(vrapLine), discount: tillKitDiscount(vrapDiscount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0 };
       }
       if (mode === 'order' && selectedId) {
         const order = tableOrders[selectedId] || [];
@@ -145,8 +152,13 @@
         const lines = generateOrder(selectedId, tables[selectedId]);
         const gross = lines.reduce((s, l) => s + l.total, 0);
         const disc = discountAmountFor(selectedId, gross);
-        return { title, meta, lines: lines.map(tillKitLine), discount: tillKitDiscount(tables[selectedId].discount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, more: tillKitOverflowRows().length > 0 };
+        /* « Envoyé à » + the time the table's first ticket left for the kitchen. */
+        const at = (typeof kdsOrders !== 'undefined' ? kdsOrders : [])
+          .filter((o) => o && String(o.table) === String(selectedId) && o.sentAt).map((o) => +new Date(o.sentAt)).filter(Boolean);
+        const first = at.length ? new Date(Math.min(...at)) : null;
+        const sentAt = first ? String(first.getHours()).padStart(2, '0') + ':' + String(first.getMinutes()).padStart(2, '0') : '';
+        return { title, meta, lines: lines.map((l, i) => Object.assign(tillKitLine(l, i), l.sent ? { sentAt } : {})), discount: tillKitDiscount(tables[selectedId].discount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0 };
       }
       return empty;
     }
@@ -378,6 +390,16 @@
     }
 
     
+    /* The shipped « Envoyer en cuisine » (or « Envoyer la suite ») next to
+       the bill: when it shows, the 2027 bill shows it too, with its words. */
+    const tillKitShippedLabel = (sel) => {
+      const b = $(sel);
+      if (!b || b.hidden) return '';
+      const lang = window.KiwiCaisseLang;
+      const txt = (b.textContent || '').replace(/\s+/g, ' ').trim();
+      return lang && lang.tr ? lang.tr(txt) : txt;
+    };
+    const tillKitShippedSend = () => tillKitShippedLabel('#rp-send-kitchen');
     const tillKitClientsOpen = () => { const r = document.getElementById('kcb-root'); return !!(r && r.style.display !== 'none'); };
     const tillKitLive = (sel) => { const el = sel && document.querySelector(sel); return el && !el.hasAttribute('hidden') ? el : null; };
     function tillKitRail() {
@@ -652,7 +674,13 @@
       switch (verb) {
         case 'add':
         case 'options':
-          addToCart(id);
+          /* The same destination as a tap on the shipped grid (caisse-app.js,
+             « Menu card body »): the open table's order, else the basket. Sending
+             every tap to the basket left tables empty (owner, 2026-10-27). */
+          if (mode === 'order') {
+            if (selectedId) addToTableOrder(selectedId, id);
+            else { toast(window.KiwiCaisseLang.tr('Aucune table sélectionnée')); backToSalle(); }
+          } else addToCart(id);
           return;
         case 'step':
         case 'remove': {
@@ -669,11 +697,14 @@
           else if (selectedId && line.sent) cancelCaisseLineImmediately(selectedId, line);
           return;
         case 'send':
-          if (mode === 'order' && selectedId) validateOrder(selectedId);
+          /* The shipped « Envoyer en cuisine » runs sendToKitchen() in every
+             mode (new table order, next course, takeaway): 2027 runs it too. */
+          sendToKitchen();
           return;
         case 'pay':
           tillKitOpenPay();
           return;
+        case 'add-items': click('#rp-add-items'); return;
         case 'split': tillKitOpenSplit(); return;
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
