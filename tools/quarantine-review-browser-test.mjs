@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { forLocales } from './test-locales.mjs';
 // Uses browser-trace through the shared harness (Chromium; run serially).
-// Refused till operations reach the owner as a card on the real dashboard:
-// each one says what it was and why it was refused, the owner approves or
+// Refused till operations reach the owner without covering the page: a count
+// on the bell, one toast, an entry in the bell's drawer, and the review list
+// in its own drawer. Each one says what it was and why it was refused, the
+// owner approves or
 // declines it with real clicks, and an approval the server refused (refund
 // over the sale's balance, usually because it was already redone) can still
 // be declined instead of staying stuck. Synthetic real session, no credentials.
@@ -12,7 +14,13 @@ import { harness, realPage, sleep, verify } from './surface-matrix-lib.mjs';
 
 const h = await harness('quarantine-review');
 const merchant = 'matrix-real';
-const REGION = 'section[aria-labelledby="quarantine-title"]';
+const REGION = '[data-quarantine-list]';
+const BELL = 'button[data-mobile-notifications], button[aria-label="Notifications"]';
+async function clickVisible(page, selector) {
+  const handle = await page.evaluateHandle((sel) => [...document.querySelectorAll(sel)].find((b) => b.getClientRects().length && getComputedStyle(b).visibility !== 'hidden'), selector);
+  const node = handle.asElement(); assert.ok(node, 'visible ' + selector);
+  await node.click();
+}
 const words = {
   fr: { title: 'Opérations à valider', decline: 'Déclarer non effectuée', approve: 'Valider', cap: 'déjà été refait' },
   en: { title: 'Operations to review', decline: 'Mark as not performed', approve: 'Approve', cap: 'already redone' },
@@ -68,8 +76,30 @@ async function scenario(t, locale, viewport) {
   // coverage: surface=dashboard locale=ar viewport=phone
   await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
   await unlock(page);
+  t.step('the page is not covered: a count on the bell, nothing in the page body');
+  await page.waitForFunction((b) => [...document.querySelectorAll(b)].some((x) => x.querySelector('[data-quarantine-badge]')?.textContent === '2'), { timeout: 20000 }, BELL);
+  const inPage = await page.$eval('#kw-main', (m) => [...m.querySelectorAll('section, [data-quarantine-list]')].some((x) => /16501|16502/.test(x.textContent)));
+  assert.equal(inPage, false, 'refused operations are not pinned on the page');
+  assert.ok(await page.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('kiwiQuarantineSeen@') && /rf-open/.test(localStorage.getItem(k)))), 'the toast is announced once per operation');
+
+  t.step('open the review from the bell drawer');
+  // The one-time toast sits over the bell for a few seconds; close it as the merchant would.
+  const toastClose = await page.$('.kiwi-toast .tx');
+  if (toastClose) { await toastClose.click().catch(() => {}); await page.waitForFunction(() => !document.querySelector('.kiwi-toast'), { timeout: 10000 }).catch(() => {}); }
+  // A phone draws its own navigation bar with a bell that mirrors the count.
+  if (viewport === 'phone') {
+    await page.waitForFunction(() => /2/.test(document.querySelector('[data-k="bell"]')?.textContent || ''), { timeout: 15000 });
+    await clickVisible(page, '[data-k="bell"]');
+  } else await clickVisible(page, BELL);
+  await page.waitForSelector('#kiwi-quarantine-alert [data-action="quarantine-open"]', { visible: true, timeout: 15000 });
+  await sleep(500); // the bell drawer slides in (a bottom sheet on phones)
+  const review = await page.$('#kiwi-quarantine-alert [data-action="quarantine-open"]');
+  await review.evaluate((b) => b.scrollIntoView({ block: 'center' }));
+  await sleep(200);
+  await review.click();
   await page.waitForSelector(REGION + ' li', { visible: true, timeout: 20000 });
-  const card = await page.$eval(REGION, (el) => ({ text: el.innerText, items: el.querySelectorAll('li').length, dir: getComputedStyle(el).direction }));
+  await sleep(700); // let the review drawer finish sliding in
+  const card = await page.$eval(REGION, (el) => ({ text: el.closest('.kiwi-drawer').innerText, items: el.querySelectorAll('li').length, dir: getComputedStyle(el).direction }));
   assert.equal(card.items, 2, 'both refused operations are listed');
   assert.ok(/16501/.test(card.text) && /16502/.test(card.text), 'receipt numbers are shown');
   const w = words[locale];
@@ -88,7 +118,8 @@ async function scenario(t, locale, viewport) {
   t.step('approve the remaining refund after its confirmation');
   const approve = await page.evaluateHandle((r) => document.querySelector(r + ' li button'), REGION);
   await approve.asElement().click();
-  await page.waitForFunction((r) => { const el = document.querySelector(r); return !el || el.hidden; }, { timeout: 15000 }, REGION);
+  await page.waitForFunction((r) => { const el = document.querySelector(r); return !el || !el.querySelector('li'); }, { timeout: 15000 }, REGION);
+  await page.waitForFunction((b) => ![...document.querySelectorAll(b)].some((x) => x.querySelector('[data-quarantine-badge]')), { timeout: 15000 }, BELL);
   assert.deepEqual(decisions, ['decline:rf-capped', 'approve:rf-open']);
   assert.equal(confirms.length, 2, 'each decision asks for confirmation first');
 }
@@ -107,12 +138,12 @@ async function unreachable(t) {
   const { ctx, page } = await realPage(h, 'fr', 'phone', routes);
   t.defer(() => ctx.close());
   t.watch(page);
-  t.step('an unreachable review endpoint with nothing known shows no card');
+  t.step('an unreachable review endpoint with nothing known shows no count');
   await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
   await unlock(page);
   await sleep(2500);
-  const shown = await page.$eval(REGION, (el) => !el.hidden && !!el.getClientRects().length).catch(() => false);
-  assert.equal(shown, false, 'no alarming card when the server is simply unreachable');
+  const shown = await page.evaluate((b) => [...document.querySelectorAll(b)].some((x) => x.querySelector('[data-quarantine-badge]')), BELL);
+  assert.equal(shown, false, 'no alarming count when the server is simply unreachable');
 }
 
 try {

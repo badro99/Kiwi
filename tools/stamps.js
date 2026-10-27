@@ -205,7 +205,7 @@ function scan() {
     }
   }
 
-  for (const file of ['assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js']) {
+  for (const file of ['assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/operations-ui.js']) {
     if (exists(file)) for (const m of read(file).matchAll(SHELL_RE()))
       note(m[1], m[2], { file, kind: 'lazy', stamp: m[2] });
   }

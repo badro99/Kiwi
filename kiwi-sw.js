@@ -199,7 +199,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=40',
+  '/assets/i18n.js?v=41',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -299,7 +299,7 @@ var SHELL = [
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=18',
-  '/assets/operations-ui.js?v=26',
+  '/assets/operations-ui.js?v=30',
   '/assets/live-link/queue-store.js?v=2',
   '/assets/live-link/sale-identity.js?v=1',
   '/assets/live-link.js?v=81',

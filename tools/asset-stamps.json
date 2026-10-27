@@ -660,8 +660,8 @@
     "sha": "e41f82cc7143441b"
   },
   "assets/i18n.js": {
-    "v": "40",
-    "sha": "2a7b9fd5fd5e83d8"
+    "v": "41",
+    "sha": "03fdb81e88f4a9f3"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -820,8 +820,8 @@
     "sha": "c5f9041dbdc5cea8"
   },
   "assets/kit/dash-phone.js": {
-    "v": "5",
-    "sha": "020d9b81a675b7bc"
+    "v": "6",
+    "sha": "e8b40885ab7eaa7d"
   },
   "assets/kit/dash-pin.js": {
     "v": "1",
@@ -1216,8 +1216,8 @@
     "sha": "32f3a9f871681c2c"
   },
   "assets/operations-ui.js": {
-    "v": "26",
-    "sha": "57d1f55018710082"
+    "v": "30",
+    "sha": "bb30a82b085b6df5"
   },
   "assets/operations.js": {
     "v": "18",
@@ -1690,6 +1690,10 @@
   "assets/qrcode.js": {
     "v": "1",
     "sha": "29a61f8a61cba6b3"
+  },
+  "assets/quarantine-ui.js": {
+    "v": "4",
+    "sha": "2246182a92333a9f"
   },
   "assets/ramadan.js": {
     "v": "3",

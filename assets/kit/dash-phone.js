@@ -97,10 +97,15 @@
     return n ? n.textContent.replace(/\s+/g, ' ').trim() : '';
   }
   function bellCount() {
-    var b = $('.topbar .icon-btn[data-mobile-notifications] .badge');
-    /* The shipped bell is not drawn on a phone now; its badge still counts. */
-    var v = b && !b.hidden && b.style.display !== 'none' ? b.textContent.trim() : '';
-    return /^\d+$/.test(v) ? v : '';
+    /* The shipped bell is not drawn on a phone now; its badges still count.
+       Several sources put one each (refused operations, closing check); the
+       first is often the hidden demo badge, so add up every visible one. */
+    var bell = $('.topbar .icon-btn[data-mobile-notifications]'), n = 0;
+    if (bell) bell.querySelectorAll('.badge').forEach(function (b) {
+      var v = !b.hidden && b.style.display !== 'none' ? b.textContent.trim() : '';
+      if (/^\d+$/.test(v)) n += Number(v);
+    });
+    return n ? String(n) : '';
   }
 
   function paint() {

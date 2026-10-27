@@ -744,7 +744,7 @@
     ]
   },
   "assets/operations-ui.js": {
-    "entryPoints": 67,
+    "entryPoints": 62,
     "owners": [
       "KiwiOperationsUI"
     ]
