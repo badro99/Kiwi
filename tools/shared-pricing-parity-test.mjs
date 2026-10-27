@@ -173,7 +173,7 @@ if (process.env.KIWI_A2_OLD_PROMO === '1') {
   assert.match(old,/GENERATED SHARED KiwiPromotionPricing BEGIN/, 'promotion pricing must have one owner');
 }
 // VM-executed generated copies and server exports see identical property inputs.
-const targets = ['assets/clients-store.js','assets/pos-boutique.js','assets/pos-librairie.js','assets/menu-promos.js','assets/promo-rules.js','assets/promos.js'];
+const targets = ['assets/clients-store.js','assets/pos-boutique.js','assets/librairie-loyalty.js','assets/menu-promos.js','assets/promo-rules.js','assets/promos.js'];
 for (const file of targets) {
   const ctx = vm.createContext({}); vm.runInContext(sharedRules(fs.readFileSync(file,'utf8')), ctx);
   await fc.assert(fc.property(fc.integer({min:0,max:1000000}), fc.integer({min:0,max:100}), (cents,pct) => {

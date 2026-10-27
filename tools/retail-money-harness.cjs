@@ -2,6 +2,7 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const sharedRules = require('./shared-rules-source.cjs');
 const { declaration } = require('./js-declarations.cjs');
+const KiwiMoney = require('../assets/money-cents.js');
 const ROOT = process.env.KIWI_ROOT || path.resolve(__dirname, '..');
 function source(file) {
   return fs.readFileSync(path.join(ROOT,file),'utf8').replace(/^(?:import .*;\n)+/,'').replace(/\nexport \{[^\n]+\};\n$/,'')
@@ -31,7 +32,7 @@ function world(vertical) {
   const $=s=>s===`#${prefix}-paym`?panel:s===`#${prefix}-exchm`?exchange:nodes.get(s.replace(/^#/,''))||null;
   const $$=s=>{const m=/^\[([\w-]+)\]$/.exec(s);return m?[...nodes.values()].filter(n=>Object.hasOwn(n,m[1])):[];};
   class Clock extends Date { constructor(...args){super(...(args.length?args:[TS]));} static now(){return TS;} }
-  const c=vm.createContext({console,Date:Clock,Math,Number,String,Array,Object,Map,Set,JSON,Promise,
+  const c=vm.createContext({console,Date:Clock,Math,Number,String,Array,Object,Map,Set,JSON,Promise,KiwiMoney,M:KiwiMoney,
     root:{},$, $$,setTimeout:fn=>{timers.push(fn);return 1;},clearTimeout:no,
     localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v))},navigator:{onLine:false},
     SALES:[],AVOIRS:[],P:{},state:{},STAFF:{caissiere:{name:'Test'}},bqOutstandingCents:0,
