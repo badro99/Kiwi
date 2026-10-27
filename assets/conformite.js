@@ -940,10 +940,9 @@
     kitPublish(real ? null : tabs.map((tb) => ({ key: tb.k, label: tb.label, status: tabStatus(tb.k, v) })));
   }
 
-  /* Design 2027 (§12, Compliance): each shipped tab is a row of the kit's
-     list (assets/kit/dash-compliance.js, behind the dashboard's flag), with a
-     status line read from the same data the tab draws. A real account has no
-     tabs, so no list. */
+  /* Each shipped tab's status line, read from the same data the tab draws. It
+     fed the 2027 dashboard's Compliance list, which was removed (owner,
+     2026-10-27); the shipped tabs are unaffected. */
   const plain = (s) => String(s).replace(/<[^>]+>/g, '');
   function tabStatus(k, v) {
     if (k === 'z') { const z = zHistoryData(v)[0]; return z ? `Z #${z.zNum} · ${z.date}` : ''; }

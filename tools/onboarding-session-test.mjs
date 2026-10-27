@@ -71,7 +71,6 @@ console.log('✓ onboarding owner: isolated boundary, explicit interface, six ol
 // global requires an explicit contract change, rather than silently passing.
 for (const [file, receiver, declared] of [
   ['assets/onboarding.js', 'window', ['Kiwi','KiwiCaisseLink','KiwiDashOnboarding','KiwiEnv','KiwiIdentity','KiwiMe','KiwiOnboarding','KiwiOnboardingData','KiwiStoreTemplates','KiwiTeam','KiwiTrades','KiwiVenue','__kiwiLock','__kiwiRole','dispatchEvent','requestIdleCallback']],
-  ['assets/kit/dash-onboarding.js', 'root', ['KiwiDashOnboarding','KiwiKit','__kiwiLock','document','fetch','location']],
 ]) {
   const source = fs.readFileSync(file, 'utf8');
   const reads = [...source.matchAll(new RegExp('\\b' + receiver + '\\.(\\w+)', 'g'))].map(m => m[1]);

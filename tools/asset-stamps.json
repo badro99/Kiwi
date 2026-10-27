@@ -671,10 +671,6 @@
     "v": "1",
     "sha": "9d905440a18ad956"
   },
-  "assets/icons/material/sprite.dashboard.svg": {
-    "v": "9",
-    "sha": "a7a25b352a311987"
-  },
   "assets/icons/material/sprite.kds.svg": {
     "v": "2",
     "sha": "34c777e2aa5a3716"
@@ -791,54 +787,6 @@
     "v": "2",
     "sha": "6506da2cef2c5cf6"
   },
-  "assets/kit/dash-ai.js": {
-    "v": "3",
-    "sha": "4f3fbfad7a3a7b28"
-  },
-  "assets/kit/dash-compliance.js": {
-    "v": "1",
-    "sha": "3ab3268b18c5c0be"
-  },
-  "assets/kit/dash-customers.js": {
-    "v": "1",
-    "sha": "9e0574e4df6e1a34"
-  },
-  "assets/kit/dash-desktop.css": {
-    "v": "14",
-    "sha": "744268d090d060ab"
-  },
-  "assets/kit/dash-desktop.js": {
-    "v": "9",
-    "sha": "4ac1d5b8391cb836"
-  },
-  "assets/kit/dash-home.js": {
-    "v": "8",
-    "sha": "c281a975deef9d8c"
-  },
-  "assets/kit/dash-onboarding.js": {
-    "v": "5",
-    "sha": "13be6a043ca9cdb7"
-  },
-  "assets/kit/dash-orders.js": {
-    "v": "4",
-    "sha": "c5f9041dbdc5cea8"
-  },
-  "assets/kit/dash-phone.js": {
-    "v": "6",
-    "sha": "e8b40885ab7eaa7d"
-  },
-  "assets/kit/dash-pin.js": {
-    "v": "1",
-    "sha": "b747e7886ce99de3"
-  },
-  "assets/kit/dash-report.js": {
-    "v": "3",
-    "sha": "1dd25f956485449c"
-  },
-  "assets/kit/dash-retention.js": {
-    "v": "1",
-    "sha": "72abac03095a3245"
-  },
   "assets/kit/dashboard.js": {
     "v": "8",
     "sha": "b4d788c7452ec0e1"
@@ -868,8 +816,8 @@
     "sha": "91fba1b73e21ba8a"
   },
   "assets/kit/kit.css": {
-    "v": "62",
-    "sha": "5323bcc5ec9ee970"
+    "v": "63",
+    "sha": "5647be6294ef47ed"
   },
   "assets/kit/layout.js": {
     "v": "1",

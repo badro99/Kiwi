@@ -76,7 +76,7 @@ import { fileURLToPath } from 'node:url';
 import { pinTradingHour } from './demo-clock.mjs';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_FILES = ['assets/dashboard-shell.css', 'assets/design-vexel.css', 'assets/kit/dash-desktop.css'];
+const DEFAULT_FILES = ['assets/dashboard-shell.css', 'assets/design-vexel.css'];
 const argv = process.argv.slice(2);
 const cmd = argv[0] || 'list';
 const opt = (name, dflt) => { const i = argv.indexOf('--' + name); return i < 0 ? dflt : argv[i + 1]; };

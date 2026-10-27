@@ -23,7 +23,7 @@ import { forLocales, LOCALES } from './test-locales.mjs';
  *
  * axe est injecté par le protocole DevTools (page.evaluate), que la CSP d'une
  * page ne bloque pas. Le service worker est tenu à l'écart et /api/ répond 503
- * (hors ligne), comme dans dash-desktop-browser-test.mjs. Aucun code saisi. */
+ * (hors ligne). Aucun code saisi. */
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';

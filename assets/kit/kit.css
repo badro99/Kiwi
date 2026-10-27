@@ -108,11 +108,6 @@ k-figure .k-fig__sr {
 /* The shipped offline-access note (offline-pin-coverage.js) is appended to the
    lock itself here, not to a card: it goes under the pad, never beside it. */
 .k-till-lock > [data-offline-coverage] { text-align: center; }
-/* The dashboard lock with the kit's pad (assets/kit/dash-pin.js): the pad
-   replaces the shipped cells, the hidden field and the help line; the brand,
-   the demo bypass and the two links stay. */
-.k-dash-lock [data-kiwi-pin], .k-dash-lock .kiwi-pin-input, .k-dash-lock .kiwi-lock-help,
-.k-dash-lock .kiwi-lock-title, .k-dash-lock .kiwi-lock-sub { display: none !important; }
 /* The team app with the kit's pad (assets/kit/team-pin.js, §18.10): the pad
    and the e-mail step replace the shipped form and keypad; the clock-in pad
    replaces the code field and its button. The brand and the browse link stay. */
@@ -498,134 +493,6 @@ html[data-k-till] #clockin-screen .clockin-float:not(.k-shown) { display: none !
 .k-z__t { font-weight: 600; border-top: 1px solid var(--k-line); }
 .k-z__ft { display: flex; gap: 12px; justify-content: flex-end; }
 
-/* The dashboard's Home on the kit (stage 5 (1), §18.1): the kit draws the
-   range presets, the key figure, its comparisons, the goal line, the tiles and
-   the latest orders over the shipped figures; the shipped nodes stay in the
-   DOM (assets/dateRange.js keeps filling them) and are not drawn. The chart,
-   the payment mix and the insights stay the shipped ones. */
-html[data-k-home] .dash-date-range,
-html[data-k-home] .kpi-band-head,
-html[data-k-home] [data-kpi-band],
-html[data-k-home] .vexel-kpi-section,
-html[data-k-home] .hero-left-today,
-html[data-k-home] .hero-view-toggle,
-html[data-k-home] .vexel-day-goal,
-html[data-k-home] .block:has([data-feed]),
-html[data-k-home] body.design-vexel .vexel-compose > .dash-date-range,
-html[data-k-home] .vexel-revenue-rail { display: none !important; }
-#kit-home { display: flex; flex-direction: column; gap: 16px; padding: 8px 0 24px; color: var(--k-ink-1); }
-#kit-home > k-segmented { max-width: 480px; }
-.k-dh__fig { display: flex; flex-direction: column; gap: 4px; }
-.k-dh__lb, .k-dh__kf, .k-dh__goal, .k-dh__lh { margin: 0; }
-.k-dh__kf { display: flex; align-items: baseline; flex-wrap: wrap; }
-.k-dh__goal { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.k-dh__mark { display: inline-block; width: 96px; height: 4px; border-radius: 2px; background: var(--k-line); overflow: hidden; }
-.k-dh__mark > i { display: block; height: 100%; background: var(--k-accent-ink); }
-.k-dh__cmp { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.k-dh__dl { display: inline-flex; align-items: center; gap: 2px; }
-.k-dh__dl[data-tone="good"] { color: var(--k-accent-ink); }
-.k-dh__dl[data-tone="bad"] { color: var(--k-danger); }
-.k-dh__dl[data-tone="neutral"] { color: var(--k-ink-2); }
-.k-dh__em { padding: 24px 16px; text-align: center; }
-.k-dh__em p { margin: 0; }
-
-/* The dashboard's Orders page on the kit (stage 5 (2), §18.2): the kit draws
-   the range, the key figure, the filter and the rows by hour over the shipped
-   render, which stays in the DOM and is not drawn, except its "show updated
-   orders" control. */
-.dash-genpage:has(#kit-orders) [data-tx-host] > :not([data-tx-refresh]) { display: none !important; }
-#kit-orders { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; color: var(--k-ink-1); }
-#kit-orders > k-segmented { max-width: 560px; }
-.k-do__fig, .k-do__rows { display: flex; flex-direction: column; gap: 4px; }
-.k-do__rows { gap: 8px; }
-.k-do__kf, .k-do__sum, .k-do__h { margin: 0; }
-.k-do__kf { display: flex; align-items: baseline; flex-wrap: wrap; }
-.k-do__h { padding-top: 8px; }
-.k-do__em, .k-do__more { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; text-align: center; }
-.k-do__em[hidden], .k-do__more[hidden] { display: none; }
-.k-do__em p, .k-do__more p { margin: 0; }
-
-/* The head of the dashboard's Report on the kit (stage 5 (3), §12): the day
-   and its status, the key figure, the tiles and Export. The shipped nav bar
-   keeps its day selector, the month report and Print; the strip and every
-   section below stay the shipped ones. */
-.dash-genpage:has(#kit-report) .kdr-kpis,
-.dash-genpage:has(#kit-report) .kdr-nav .kdr-day,
-.dash-genpage:has(#kit-report) .kdr-nav .kdr-chip,
-.dash-genpage:has(#kit-report) .kdr-nav [data-kdr="csv"],
-.dash-genpage:has(#kit-report) .kdr-empty { display: none !important; }
-#kit-report { display: flex; flex-direction: column; gap: 16px; padding: 8px 0 16px; color: var(--k-ink-1); }
-#kit-report [hidden] { display: none !important; }
-.k-dr__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.k-dr__fig { display: flex; flex-direction: column; gap: 4px; }
-.k-dr__day, .k-dr__lb, .k-dr__kf { margin: 0; }
-.k-dr__kf { display: flex; align-items: baseline; flex-wrap: wrap; }
-.k-dr__em { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; }
-.k-dr__em p { margin: 0; }
-
-/* The dashboard's Customers page on the kit (stage 5 (4), §18.5): the kit
-   draws the summary, the overflow and Add, the search, the segments and the
-   rows; the shipped page stays in the DOM and is not drawn. */
-.dash-genpage:has(#kit-customers) .cd { display: none !important; }
-#kit-customers { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; color: var(--k-ink-1); }
-#kit-customers [hidden] { display: none !important; }
-#kit-customers > k-field, #kit-customers > k-segmented { max-width: 560px; }
-.k-dc__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.k-dc__sum { margin: 0; }
-.k-dc__acts { display: inline-flex; gap: 8px; }
-.k-dc__em { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; }
-.k-dc__em p { margin: 0; }
-
-/* Retention on the kit (stage 5 (5)): the kit draws the tabs and the
-   Activity tab; the other tabs are the shipped panels, under the kit's tabs.
-   Off, the shipped invitation shows as is. */
-.dash-genpage:has(#kit-retention:not([hidden])) .cr-tabs,
-.dash-genpage:has(#kit-retention[data-tab="activity"]:not([hidden])) [data-cr-panel] { display: none !important; }
-#kit-retention { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 16px; color: var(--k-ink-1); }
-#kit-retention[hidden], #kit-retention [hidden] { display: none !important; }
-#kit-retention > k-segmented { max-width: 640px; }
-.k-drt__em { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; }
-.k-drt__em p { margin: 0; }
-
-/* Compliance on the kit (stage 5 (6), §12): a split view, the list of
-   obligations at 360 and the shipped screen beside it; one column on a
-   narrow window. */
-.cf-page:has(> #kit-compliance) { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 24px; align-items: start; }
-.cf-page:has(> #kit-compliance) > .cf-head { grid-column: 1 / -1; }
-.cf-page:has(> #kit-compliance) > .cf-tabs { display: none !important; }
-#kit-compliance { position: sticky; top: 16px; font-family: var(--k-font); }
-@media (max-width: 899px) { .cf-page:has(> #kit-compliance) { grid-template-columns: minmax(0, 1fr); } #kit-compliance { position: static; } }
-
-/* The dashboard's frame on the kit (stage 5 (9), §10.3, §10.18): every full
-   page's head (Kiwi.appPage) and every drawer (Kiwi.drawer) take the kit's
-   type steps, surfaces, line and close button. The page title is Heading, so
-   a page's key figure stays its largest text (Principle 1). What each page and
-   drawer holds stays the shipped content, reskinned one at a time (§12).
-   `body` outranks the skins' body.design-* rules, which load after kit.css. */
-html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head h1 { font-family: var(--k-font); font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); color: var(--k-ink-1); }
-html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head p { font-family: var(--k-font); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); letter-spacing: var(--k-track-footnote); color: var(--k-ink-2); margin-top: 4px; }
-html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head p .seg:first-child { color: var(--k-ink-2); }
-html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head p .dot { background: var(--k-ink-3); }
-/* The sheet keeps the shipped solid ground (design-2026.css, owner 2026-10-11),
-   the kit's --k-bg. */
-html[data-skin-2027="dashboard"] body .kiwi-drawer { color: var(--k-ink-1); font-family: var(--k-font); }
-html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-head { border-bottom-color: var(--k-line); }
-html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-head h3 { font-family: var(--k-font); font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); color: var(--k-ink-1); }
-html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-head p { font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); color: var(--k-ink-2); }
-html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-foot { border-top-color: var(--k-line); }
-html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-close { flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--k-surface-2); color: var(--k-ink-1); }
-html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-close:active { background: var(--k-surface-3); }
-
-/* The start of a Kiwi AI conversation on the kit (stage 5 (7), §18.6): drawn
-   inside the shipped hero, whose own content is not drawn. */
-[data-fa-hero]:has(> #kit-ai) > :not(#kit-ai) { display: none !important; }
-#kit-ai { display: flex; flex-direction: column; gap: 16px; color: var(--k-ink-1); font-family: var(--k-font); max-width: 640px; }
-#kit-ai p { margin: 0; }
-.k-ai__card:empty { display: none; }
-.k-ai__today { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 20px; background: var(--k-surface-2); }
-.k-ai__src { align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; padding-inline: 16px; border-radius: 22px; background: var(--k-surface-1); font-weight: var(--k-fw-callout-strong); }
-.k-ai__try { margin-top: 8px; }
-
 /* Forgot and reset password on the kit (stage 6, §18.8): reset.html's card
    on the kit's ground, surfaces and type; the flow draws inside #view. Dark
    follows the system through the tokens. */
@@ -666,31 +533,9 @@ html[data-skin-2027="access"] body .card { background: var(--k-surface-1); borde
   html[data-k-split="open"] body #screen-main .table-card[data-k-sel]::before { content: ""; position: absolute; inset-block: 8px; inset-inline-start: 0; width: 3px; border-radius: 2px; background: var(--k-accent-ink); }
 }
 
-/* The onboarding after the account (stage 6, §18.8; assets/kit/
-   dash-onboarding.js): a full page over the dashboard; Back 44 and the step
-   with its bar at the top, the primary pinned in the footer. */
-.k-ob { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; background: var(--k-bg); color: var(--k-ink-1); font-family: var(--k-font); }
-.k-ob__nav { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: max(8px, env(safe-area-inset-top)) 16px 0; }
-.k-ob__back { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--k-ink-1); }
-.k-ob__step { margin: 0; }
-.k-ob__bar { height: 4px; margin: 4px 16px 0; border-radius: 2px; background: var(--k-surface-2); overflow: hidden; }
-.k-ob__bar > i { display: block; height: 100%; background: var(--k-accent); }
-.k-ob__body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 560px; margin: 0 auto; padding: 24px 16px; }
-.k-ob__h, .k-ob__p, .k-ob__warn { margin: 0; }
-.k-ob__tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.k-ob__tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 88px; padding: 16px; border: 0; border-radius: var(--k-r-3); background: var(--k-surface-1); color: var(--k-ink-1); text-align: start; font-family: var(--k-font); cursor: pointer; }
-.k-ob__tile.on { background: var(--k-select); box-shadow: inset 0 0 0 2px var(--k-accent-ink); }
-.k-ob__ic { display: inline-flex; color: var(--k-accent-ink); }
-.k-ob__ic svg { width: 24px; height: 24px; }
-.k-ob__tl { font-weight: var(--k-fw-body-strong); }
-.k-ob__plain { align-self: flex-start; min-height: 44px; padding: 0; border: 0; background: none; color: var(--k-accent-ink); font-family: var(--k-font); cursor: pointer; }
-.k-ob__foot { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 560px; margin: 0 auto; padding: 12px 16px max(16px, env(safe-area-inset-bottom)); }
-.k-ob [data-step="code"] { align-items: center; justify-content: center; }
-
 /* The type steps for kit content drawn in the light DOM (the till's online
-   orders and Z sheet, the dashboard's Home, Orders, Report and Customers), the
-   same rules core.js gives every shadow root (§6.2). */
-#kit-home, #kit-orders, #kit-report, #kit-customers, #kit-retention, #kit-online, .k-z, .k-ac { font-family: var(--k-font); }
+   orders and Z sheet), the same rules core.js gives every shadow root (§6.2). */
+#kit-online, .k-z, .k-ac { font-family: var(--k-font); }
 .k-display { font-size: var(--k-fs-display); line-height: var(--k-lh-display); font-weight: var(--k-fw-display); letter-spacing: var(--k-track-display); }
 .k-title { font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title); }
 .k-heading { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
@@ -703,98 +548,9 @@ html[data-skin-2027="access"] body .card { background: var(--k-surface-1); borde
 .k-body-s { font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-fw-body-strong); letter-spacing: var(--k-track-body); }
 .k-callout-s { font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong); letter-spacing: var(--k-track-callout); }
 
-/* The dashboard on a phone (stage 5, §18.1, §10.18, §10.20): below 900 px,
-   html[data-k-phone] (dash-phone.js) swaps the shipped phone chrome for the
-   kit's, on the kit's ground: the nav bar inside the shipped header, the tab
-   capsule, the menu as a sheet of rows, a page's title in the nav bar, and
-   Home as §18.1 draws it. Nothing here applies wider or with the flag off. */
-k-tabbar.k-ptabs { display: none; }
-.k-dh__date, .k-dh__chart { display: none; }
-@media (max-width: 899px) {
-  html[data-k-phone] body, html[data-k-phone] body .app, html[data-k-phone] body #kw-main, html[data-k-phone] body #kw-main .container { background: var(--k-bg) !important; background-image: none !important; }
-  html[data-k-phone] body #kw-main > .topbar { background: var(--k-bg) !important; background-image: none !important; box-shadow: none !important; border: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: env(safe-area-inset-top, 0px) 16px 0 !important; }
-  html[data-k-phone] body #kw-main > .topbar > .topbar-inner { min-height: 52px; }
-  html[data-k-phone] body #kw-main > .topbar > .topbar-inner > :not(.k-pnav) { display: none !important; }
-  html[data-k-phone] body .kw-tabbar { display: none !important; }
-
-  .k-pnav { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding-block: 4px; color: var(--k-ink-1); font-family: var(--k-font); }
-  .k-pnav button { display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0; border: 0; background: none; color: inherit; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .k-pnav .k-ic { width: 24px; height: 24px; flex: none; fill: currentColor; }
-  .k-pnav .k-ic20 { width: 20px; height: 20px; }
-  .k-pnav__logo { display: inline-flex; flex: none; }
-  .k-pnav__logo .k-pnav__lg { display: block; width: auto; height: 22px; }
-  .k-pnav__logo .k-pnav__lg--dark { display: none; }
-  html[data-theme="dark"] .k-pnav__logo .k-pnav__lg--dark, body[data-vexel-mode="dark"] .k-pnav__logo .k-pnav__lg--dark { display: block; }
-  html[data-theme="dark"] .k-pnav__logo .k-pnav__lg:not(.k-pnav__lg--dark), body[data-vexel-mode="dark"] .k-pnav__logo .k-pnav__lg:not(.k-pnav__lg--dark) { display: none; }
-  .k-pnav__venue { flex: 1 1 auto; min-width: 0; gap: 2px; margin-inline-start: 8px; }
-  .k-pnav__vn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .k-pnav__ai { flex: none; gap: 8px; padding-inline: 12px !important; border-radius: 22px; background: var(--k-surface-2) !important; }
-  .k-pnav__ai:active, .k-pnav__ic:active, .k-pnav__venue:active { opacity: .7; }
-  .k-pnav__ic { position: relative; justify-content: center; flex: none; width: 44px; border-radius: 50%; }
-  .k-pnav__bd { position: absolute; top: 2px; inset-inline-end: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 20px; min-height: 20px; padding-inline: 5px; border-radius: 999px; background: var(--k-danger-solid); color: var(--k-on-danger); }
-  .k-pnav__title { flex: 1 1 auto; min-width: 0; margin: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--k-ink-1); }
-  .k-pnav button:focus-visible { outline: 2px solid transparent; box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus); }
-
-  html[data-k-phone] k-tabbar.k-ptabs { display: block; position: fixed; z-index: 1200; inset-inline: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
-  html[data-k-phone] body.kw-menu-open k-tabbar.k-ptabs { display: none; }
-  html[data-k-phone] body #kw-main .container { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 94px) !important; }
-
-  /* A page's title is in the nav bar (§10.18), so the page keeps no large title. */
-  html[data-k-phone] body .dash-genpage .genpage-head { display: none !important; }
-  html[data-k-phone] body .dash-genpage .tx-update-status { font-family: var(--k-font); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); color: var(--k-ink-2); }
-
-  /* Home is §18.1's screen; what the shipped Home shows below it is reached
-     from Report, Kiwi AI and the menu. */
-  html[data-k-phone] body #kw-main .dash-standard > :not(#kit-home) { display: none !important; }
-  html[data-k-phone] #kit-home { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
-  html[data-k-phone] #kit-home > k-segmented { margin-top: 8px; }
-  html[data-k-phone] #kit-home > .k-dh__chart:not([hidden]) { display: block; margin-top: 8px; }
-  html[data-k-phone] #kit-home > .k-dh__lh { margin-top: 8px; }
-  html[data-k-phone] .k-dh__date { display: flex; align-items: center; gap: 4px; min-height: 44px; margin: 0; }
-  html[data-k-phone] .k-dh__date .k-ic, html[data-k-phone] .k-dh__dl .k-ic { width: 16px; height: 16px; fill: currentColor; }
-  html[data-k-phone] .k-dh__pick { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  html[data-k-phone] .k-dh__pick:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; border-radius: var(--k-r-1); }
-  html[data-k-phone] body #kw-main > .container { padding-top: 8px !important; }
-  html[data-k-phone] .k-dh__lb { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-
-  /* The menu (More) as a sheet of rows on the kit's ground (§10.20, §12). */
-  html[data-k-phone] body #kw-sidebar { background: var(--k-bg) !important; background-image: none !important; color: var(--k-ink-1) !important; box-shadow: var(--k-shadow-2) !important; border: 0 !important; font-family: var(--k-font); }
-  html[data-k-phone] body #kw-sidebar::before, html[data-k-phone] body #kw-sidebar::after { display: none !important; }
-  html[data-k-phone] body #kw-sidebar .brand { display: none !important; }
-  html[data-k-phone] body #kw-sidebar .loc-switch { background: var(--k-surface-1) !important; background-image: none !important; border: 0 !important; box-shadow: none !important; border-radius: var(--k-r-3) !important; color: var(--k-ink-1) !important; }
-  html[data-k-phone] body #kw-sidebar .loc-switch::before, html[data-k-phone] body #kw-sidebar .loc-switch::after { display: none !important; }
-  html[data-k-phone] body #kw-sidebar .loc-switch .name { color: var(--k-ink-1) !important; }
-  html[data-k-phone] body #kw-sidebar .loc-switch .meta { color: var(--k-ink-2) !important; }
-  html[data-k-phone] body #kw-sidebar .loc-switch .badge { color: var(--k-accent-ink) !important; text-transform: none !important; letter-spacing: normal !important; }
-  html[data-k-phone] body #kw-sidebar nav a { min-height: 44px; color: var(--k-ink-1) !important; background: none !important; border: 0 !important; box-shadow: none !important; border-radius: var(--k-r-2) !important; font-family: var(--k-font); }
-  html[data-k-phone] body #kw-sidebar nav a::before, html[data-k-phone] body #kw-sidebar nav a::after { display: none !important; }
-  html[data-k-phone] body #kw-sidebar nav a svg { color: var(--k-ink-2) !important; fill: currentColor; }
-  html[data-k-phone] body #kw-sidebar nav a.active { background: var(--k-select) !important; box-shadow: inset 0 0 0 1px var(--k-line-strong) !important; font-weight: var(--k-fw-body-strong); }
-  html[data-k-phone] body #kw-sidebar nav a.active svg { color: var(--k-accent-ink) !important; }
-  html[data-k-phone] body #kw-sidebar nav .count, html[data-k-phone] body #kw-sidebar nav .tag { background: var(--k-surface-2) !important; color: var(--k-ink-2) !important; border: 0 !important; box-shadow: none !important; }
-  html[data-k-phone] body #kw-sidebar [data-vertical-section] > :not(a) { color: var(--k-ink-2) !important; text-transform: none !important; letter-spacing: normal !important; }
-  html[data-k-phone] body #kw-sidebar .merchant { background: var(--k-surface-1) !important; background-image: none !important; border: 0 !important; color: var(--k-ink-1) !important; border-radius: var(--k-r-3) !important; }
-  html[data-k-phone] body #kw-sidebar .merchant .r, html[data-k-phone] body #kw-sidebar .merchant-logout { color: var(--k-ink-2) !important; }
-
-  /* Kiwi AI as §18.6 draws it on a phone: the title alone in the head, the
-     intro 12 under it, the tools row above the composer, no keyboard hint. */
-  html[data-k-phone] body .fa-drawer .kiwi-drawer-head > div > p, html[data-k-phone] body .fa-drawer .kiwi-drawer-head .rlv-status { display: none !important; }
-  html[data-k-phone] body .fa-drawer .kiwi-drawer-head { align-items: center; padding-block: 12px !important; }
-  html[data-k-phone] body .fa-drawer .fa-thread { padding-top: 12px !important; }
-  html[data-k-phone] body .fa-drawer .fa-thread-in, html[data-k-phone] body .fa-drawer .fa-hero { padding-top: 0 !important; }
-  html[data-k-phone] body .fa-drawer #kit-ai { padding: 0 !important; }
-  html[data-k-phone] body .fa-drawer .fa-dock-in { display: flex; flex-direction: column; gap: 12px; }
-  html[data-k-phone] body .fa-drawer .fa-dock-in > .fa-toolbar { order: -1; justify-content: flex-start; gap: 8px; }
-  html[data-k-phone] body .fa-drawer .fa-toolbar .fa-tool { min-height: 44px; border-radius: 22px; background: var(--k-surface-2) !important; border: 0 !important; color: var(--k-ink-1) !important; font-family: var(--k-font); }
-  html[data-k-phone] body .fa-drawer .fa-hint { display: none !important; }
-
-  /* Drawers: script-moved focus draws no ring (§10.0). */
-  html[data-k-phone] body .kiwi-drawer .kiwi-drawer-close:focus:not(:focus-visible) { outline: none !important; box-shadow: none !important; }
-}
-
 /* 2027 frame clearance: sheets never cover the till rail; floating navigation
    reserves its full footprint in each surface's scrolling content. */
-html:is([data-skin-2027="till"], [data-skin-2027="dashboard"]) { --k-frame-label-min: 0; --k-frame-label-wrap: normal; --k-frame-label-break: anywhere; }
+html[data-skin-2027="till"] { --k-frame-label-min: 0; --k-frame-label-wrap: normal; --k-frame-label-break: anywhere; }
 @media (min-width: 768px) and (max-width: 900px) {
   html[data-skin-2027="till"]:not([data-k-tabs]) .rightpanel {
     left: auto; right: auto; inset-inline: 88px 0; width: auto;
@@ -803,22 +559,13 @@ html:is([data-skin-2027="till"], [data-skin-2027="dashboard"]) { --k-frame-label
 html[data-skin-2027="till"][data-k-tabs]:is([data-kcb-open], :has(.kds-screen.is-open)) .rightpanel { display: none; }
 html[data-skin-2027="till"][data-k-tabs] #kcb-root .kcb-page { padding-bottom: calc(var(--k-tab-zone) + 28px); }
 html[data-skin-2027="till"] .rightpanel:has(#kit-bill[data-paying]) #rp-peek { display: none; }
-@media (max-width: 899px) {
-  html[data-skin-2027="dashboard"][data-k-phone] { --k-frame-tab-h: 62px; --k-frame-tab-space: calc(var(--k-frame-tab-h) + 32px + env(safe-area-inset-bottom, 0px)); scroll-padding-bottom: var(--k-frame-tab-clearance, var(--k-frame-tab-space)); }
-  html[data-skin-2027="dashboard"][data-k-phone] body #kw-main .container { padding-bottom: var(--k-frame-tab-clearance, var(--k-frame-tab-space)) !important; min-height: calc(100dvh - 52px + var(--k-frame-tab-clearance, var(--k-frame-tab-space))); }
-  html[data-skin-2027="dashboard"][data-k-phone] body #kw-main { scroll-padding-bottom: var(--k-frame-tab-clearance, var(--k-frame-tab-space)); }
-  html[data-skin-2027="dashboard"] .k-pnav__vn { min-width: 0; }
-}
 @media (max-height: 500px) {
-  html:is([data-skin-2027="till"], [data-skin-2027="dashboard"]) { --k-frame-tab-h: 52px; --k-frame-tab-direction: row; --k-frame-tab-gap: 6px; }
+  html[data-skin-2027="till"] { --k-frame-tab-h: 52px; --k-frame-tab-direction: row; --k-frame-tab-gap: 6px; }
   html[data-skin-2027="till"][data-k-tabs] { --k-tab-zone: calc(52px + 8px + var(--k-tab-bottom)); --k-peek-h: 44px; }
   html[data-skin-2027="till"] .main-head { padding-block: 8px; gap: 6px; }
   html[data-skin-2027="till"] #kds-screen .kds-head { padding-block: 8px; }
   html[data-skin-2027="till"] #kcb-root .kcb-top { margin-bottom: 8px; }
   html[data-skin-2027="till"] #kcb-root .kcb-strip .kx-kpi { padding-block: 8px; }
-  html[data-skin-2027="dashboard"][data-k-phone] { --k-frame-tab-h: 52px; }
-  html[data-skin-2027="dashboard"][data-k-phone] body #kw-main > .topbar > .topbar-inner { min-height: 44px; }
-  html[data-skin-2027="dashboard"] .k-pnav { padding-block: 0; }
 }
 
 @media (min-width: 600px) and (max-height: 500px) {

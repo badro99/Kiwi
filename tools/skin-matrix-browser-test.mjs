@@ -155,7 +155,12 @@ function measure() {
 
 const short = (v) => crypto.createHash('sha1').update(v).digest('hex').slice(0, 8);
 const cells = [];
-for (const locale of forLocales(['fr', 'ar'])) for (const surface of SURFACES) for (const skin of SKINS) for (const theme of THEMES) for (const size of SIZES) cells.push({ locale, surface, skin, theme, size });
+/* The dashboard has one skin only: the 2027 dashboard was removed (owner,
+   2026-10-27), so there is no second cell to compare it against. */
+for (const locale of forLocales(['fr', 'ar'])) for (const surface of SURFACES) for (const skin of SKINS) for (const theme of THEMES) for (const size of SIZES) {
+  if (surface === 'dashboard' && skin === '2027') continue;
+  cells.push({ locale, surface, skin, theme, size });
+}
 const fresh = {};
 let drift = 0;
 

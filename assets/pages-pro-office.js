@@ -205,9 +205,9 @@ handlers['nav-transactions'] = () => {
   const RANGE_LABEL = RANGE_LABEL_STR[lang] || RANGE_LABEL_STR.fr;
   const FILTERS     = [T.all, T.cards, T.mobile, T.cash, T.refunds];
 
-  /* Design 2027 (§18.2): what render() drew, for the kit's Orders page behind
-     the dashboard's flag (assets/kit/dash-orders.js). The kit's filter Other
-     is the shipped Mobile filter, the same wallet orders. */
+  /* What render() drew, published for a reader. The 2027 dashboard's Orders
+     page was that reader and was removed (owner, 2026-10-27); the shipped rows
+     are unaffected. Other mapped to the shipped Mobile filter. */
   const KIT_FILTER = { all: T.all, card: T.cards, cash: T.cash, other: T.mobile, refunds: T.refunds };
   const KIT_RANGE  = { today: 'aujourdhui', yesterday: 'hier', d7: 'sept', d30: 'trente' };
   let kitModel = null;

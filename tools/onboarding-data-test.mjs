@@ -125,5 +125,4 @@ for (const lang of ['fr', 'en', 'ar']) {
   assert.ok(container.children.every(n => n.textContent));
 }
 assert.match(readFileSync('assets/onboarding.js', 'utf8'), /recovery:.*mountRecovery/);
-assert.match(readFileSync('assets/kit/dash-onboarding.js', 'utf8'), /api\.recovery\(recovery/);
 console.log('✓ shared FR/EN/AR export and first-step import controls');

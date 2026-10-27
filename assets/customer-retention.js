@@ -636,10 +636,9 @@
       document.querySelectorAll('.sidebar nav a[data-action="customer-retention"]').forEach(function (a) { a.classList.add('active'); });
     } catch (_) {}
     var root = page.el.querySelector('[data-cr-root]');
-    /* Design 2027 (§12, Customers › Retention): what the page shows, for the
-       kit's Retention page behind the dashboard's flag
-       (assets/kit/dash-retention.js). The Activity tab is drawn by the kit;
-       the offers form, the suggestions and the results stay the shipped ones. */
+    /* What the page shows, published for a reader. The 2027 dashboard's
+       Retention page was that reader and was removed (owner, 2026-10-27); the
+       offers form, the suggestions and the results are the shipped ones. */
     var kitModel = null;
     function kitPublish() {
       var counts = { new: 0, regular: 0, less: 0, inactive: 0 };
