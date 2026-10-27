@@ -523,7 +523,7 @@ section('Production split payment, authoritative void & menu resolution');
 section('Settlement recovery and durable pending commands');
 {
   const { spawnSync } = require('child_process');
-  for (const file of ['settlement-recovery-test.mjs', 'live-link-settlement-test.mjs', 'live-link-outbox-browser-test.mjs', 'live-link-crash-browser-test.mjs']) {
+  for (const file of ['settlement-recovery-test.mjs', 'live-link-settlement-test.mjs', 'live-link-outbox-browser-test.mjs', 'live-link-crash-browser-test.mjs', 'till-crash-ack-browser-test.mjs']) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8' });
     if (r.status === 0) ok(`${file} green`);
     else fail(`${file}: ${((r.stdout || '') + (r.stderr || '')).slice(-2000)}`);
@@ -2167,6 +2167,7 @@ section('Whole-project regressions');
     'foodcost-api-test.mjs',
     'simple-food-cost-test.mjs',
     'simple-food-cost-split-test.mjs',
+    'simple-food-cost-browser-test.mjs',
     'wave-r-errdash-test.mjs',
     'menu-insights-test.mjs',
     'restaurant-recipe-layout-test.mjs',
