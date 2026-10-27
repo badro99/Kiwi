@@ -1,0 +1,199 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/caisse-pairing.js, and move its stamp (node tools/bump-stamp.js assets/caisse-pairing.js).",
+  "bundles": [
+    {
+      "file": "assets/caisse-pairing.js",
+      "sha256AtSplit": "3473c9ea78c615895c897c0fab70ca78fb50937a97f7b4919dce2d03181c0268",
+      "parts": [
+        {
+          "file": "assets/caisse-pairing/head.js",
+          "concern": "header and the theme set before first paint",
+          "lines": [
+            1,
+            32
+          ],
+          "declares": []
+        },
+        {
+          "file": "assets/caisse-pairing/offline-codes.js",
+          "concern": "terminal id, local storage helpers and the offline staff-code cache (key derivation, digest comparison)",
+          "lines": [
+            33,
+            156
+          ],
+          "declares": [
+            "TERMINAL_KEY",
+            "OFFLINE_PIN_KEY",
+            "OFFLINE_PIN_TTL",
+            "terminalId",
+            "env",
+            "hosted",
+            "ls",
+            "set",
+            "del",
+            "readMap",
+            "offlinePinKey",
+            "offlinePinRows",
+            "bytesHex",
+            "PIN_ITERATIONS",
+            "hasSubtle",
+            "pinDigest",
+            "sameDigest",
+            "offlinePinEpoch",
+            "rememberOfflinePin",
+            "verifyOfflinePin"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/pairing-state.js",
+          "concern": "is the till paired, to which venue, the dashboard hand-off and the routing to the right vertical",
+          "lines": [
+            157,
+            260
+          ],
+          "declares": [
+            "isPaired",
+            "pairedVenue",
+            "purgeTenantData",
+            "wantsPair",
+            "wantsOperatorAccess",
+            "HANDOFF",
+            "takeHandoff",
+            "HANDOFF_RELOAD",
+            "reloadAsPaired",
+            "newestPending",
+            "SUB_ALIAS",
+            "registryIds",
+            "routeFor",
+            "bootVertical"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/pairing-transport.js",
+          "concern": "applying, redeeming, repairing, recovering and removing a pairing with the server",
+          "lines": [
+            261,
+            463
+          ],
+          "declares": [
+            "applyPairing",
+            "localRedeem",
+            "redeem",
+            "repairPromise",
+            "pairError",
+            "jsonOrEmpty",
+            "pairState",
+            "recoverFromTerminal",
+            "confirmTillProof",
+            "pairFromAccount",
+            "quarantineService",
+            "unpair"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/pairing-pad.js",
+          "concern": "the pairing code pad: dots, keys, styles, submit and its replies",
+          "lines": [
+            464,
+            706
+          ],
+          "declares": [
+            "buf",
+            "pairSubmitting",
+            "hideNativePin",
+            "dotsHtml",
+            "renderDots",
+            "key",
+            "injectCss",
+            "renderPairPad",
+            "repairWithCode",
+            "repair",
+            "showPad",
+            "hidePad",
+            "esc",
+            "feed",
+            "pairDone",
+            "lastPairCode",
+            "localReply",
+            "redeemReply",
+            "commitRedeem",
+            "submit",
+            "toast"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/staff-gate.js",
+          "concern": "who is at the till: staff session, the code pad, boot with a code or as an operator",
+          "lines": [
+            707,
+            1017
+          ],
+          "declares": [
+            "pinBuf",
+            "pinVenue",
+            "pinList",
+            "activeVenue",
+            "resetPinState",
+            "STAFF_KEY",
+            "lastManager",
+            "lastOperator",
+            "firstNameOf",
+            "setStaff",
+            "keyP",
+            "pinsFor",
+            "askStaff",
+            "bootWithPin",
+            "bootForOperator",
+            "hookPinReset",
+            "pinDotsHtml",
+            "renderPinDots",
+            "showPinPad",
+            "showPinLoadError",
+            "pinSubmitting",
+            "feedPin",
+            "submitPin"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/boot.js",
+          "concern": "the till proof check and the boot sequence",
+          "lines": [
+            1018,
+            1127
+          ],
+          "declares": [
+            "tillProofChecked",
+            "ensureTillProof",
+            "boot"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/verify.js",
+          "concern": "server verification of a staff or manager code and approvals",
+          "lines": [
+            1128,
+            1214
+          ],
+          "declares": [
+            "lastVerify",
+            "verifyCode",
+            "lastFailed",
+            "verifyReply",
+            "noteApproval"
+          ]
+        },
+        {
+          "file": "assets/caisse-pairing/api.js",
+          "concern": "window.KiwiCaissePairing and the start",
+          "lines": [
+            1215,
+            1285
+          ],
+          "declares": [
+            "window.KiwiCaissePairing"
+          ]
+        }
+      ]
+    }
+  ]
+}

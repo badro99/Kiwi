@@ -1570,6 +1570,7 @@ section('Whole-project regressions');
     'caisse-reconnect-test.mjs',
     'caisse-pairing-repair-test.mjs',
     'caisse-pairing-kdf-test.mjs',
+    'caisse-pairing-split-test.mjs',
     'takeaway-history-timestamps-test.mjs',
     'takeaway-stale-archive-test.mjs',
     'floorplan-sync-test.js',
