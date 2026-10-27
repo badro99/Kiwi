@@ -42,14 +42,27 @@ export function isArchivable(order, now = Date.now()) {
 export function archiveFeature(order) {
   return ARCHIVE_PREFIX + 'w' + Math.floor(orderStamp(order) / (7 * DAY));
 }
-export function archivableOrders(doc, now = Date.now()) {
-  return (doc && Array.isArray(doc.orders) ? doc.orders : []).filter((o) => isArchivable(o, now));
+/* Un bon n'est archivé que si la copie du SERVEUR est déjà remise et ancienne : un
+   appareil ne peut pas faire sortir un bon ouvert du document vivant en envoyant un
+   état « remis il y a 90 jours » inventé. C'est la copie serveur qui part en archive. */
+export function archivableOrders(doc, now = Date.now(), serverDoc = null) {
+  const server = new Map((serverDoc && Array.isArray(serverDoc.orders) ? serverDoc.orders : [])
+    .filter((o) => isArchivable(o, now)).map((o) => [String(o.id), o]));
+  return (doc && Array.isArray(doc.orders) ? doc.orders : [])
+    .filter((o) => isArchivable(o, now) && server.has(String(o.id)))
+    .map((o) => server.get(String(o.id)));
+}
+/* Bons qu'une caisse en retard renvoie alors que le serveur les a déjà sortis du
+   vivant : ils ne sont retirés que si leur copie d'archive existe DÉJÀ (confirmOnly). */
+export function replayedOrders(doc, now = Date.now(), serverDoc = null) {
+  const live = new Set((serverDoc && Array.isArray(serverDoc.orders) ? serverDoc.orders : []).map((o) => String(o && o.id)));
+  return (doc && Array.isArray(doc.orders) ? doc.orders : []).filter((o) => isArchivable(o, now) && !live.has(String(o.id)));
 }
 
 /* Écrit les bons dans leurs lignes d'archive et rend l'ensemble des ids dont la
    copie d'archive est CONFIRMÉE (nouvelle ou déjà là). Ne lève jamais : toute
    panne laisse simplement le bon dans le document vivant. */
-export async function archivePressingOrders(env, merchant, orders, now = Date.now()) {
+export async function archivePressingOrders(env, merchant, orders, now = Date.now(), { confirmOnly = false } = {}) {
   const confirmed = new Set();
   const shards = new Map();
   for (const order of orders) {
@@ -65,7 +78,8 @@ export async function archivePressingOrders(env, merchant, orders, now = Date.no
         if (row && row.data) { const parsed = JSON.parse(row.data); if (parsed && Array.isArray(parsed.orders)) doc = parsed; else throw new Error('corrupt-archive'); }
         const have = new Set(doc.orders.map((o) => String(o && o.id)));
         const add = rows.filter((o) => !have.has(String(o.id)));
-        if (!add.length) { rows.forEach((o) => confirmed.add(String(o.id))); break; }
+        rows.filter((o) => have.has(String(o.id))).forEach((o) => confirmed.add(String(o.id)));
+        if (!add.length || confirmOnly) break;
         const next = { v: 1, orders: doc.orders.concat(add) };
         const text = JSON.stringify(next);
         if (text.length > ARCHIVE_ROW_MAX) break;
@@ -74,7 +88,7 @@ export async function archivePressingOrders(env, merchant, orders, now = Date.no
             .bind(text, (+row.rev || 0) + 1, now, merchant, feature, row.rev).run()
           : await env.DB.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant, feature) DO NOTHING')
             .bind(merchant, feature, text, 1, now).run();
-        if (result?.meta?.changes === 1) { rows.forEach((o) => confirmed.add(String(o.id))); break; }
+        if (result?.meta?.changes === 1) { add.forEach((o) => confirmed.add(String(o.id))); break; }
       } catch (_) { break; }
     }
   }

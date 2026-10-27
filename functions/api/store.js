@@ -62,7 +62,7 @@ import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivat
 import { validateCommercialSync } from './hotel/_commercial.js';
 import { reservationOverlapConflict } from './hotel/_reservation-overlap.js';
 import { capBookings, BOOKING_CAP } from './_booking-cap.js';
-import { archivableOrders, archivePressingOrders, isArchivable } from './_pressing-archive.js';
+import { archivableOrders, archivePressingOrders, isArchivable, replayedOrders } from './_pressing-archive.js';
 import { preservePressingCancellations, validatePressingSnapshot } from './_pressing-snapshot.js';
 import { validateHubClaim } from './print/_hub-lease.js';
 import { validateRoomsDocument } from './hotel/_rooms.js';
@@ -992,9 +992,10 @@ export async function onRequestPost(context) {
     clean.value = freezePressingNotifications(mine, clean.value, now);
     /* Les bons remis depuis plus de 90 jours passent en archive (une ligne par semaine) avant la
        vérification de taille. Un bon n'est retiré qu'une fois sa copie d'archive confirmée. */
-    const aged = archivableOrders(clean.value, now);
-    if (aged.length) {
+    const aged = archivableOrders(clean.value, now, mine), replays = replayedOrders(clean.value, now, mine);
+    if (aged.length || replays.length) {
       const kept = await archivePressingOrders(env, merchant, aged, now);
+      for (const id of await archivePressingOrders(env, merchant, replays, now, { confirmOnly: true })) kept.add(id);
       if (kept.size) compacted = true;
       if (kept.size) clean.value = { ...clean.value, orders: clean.value.orders.filter((o) => !(o && kept.has(String(o.id)) && isArchivable(o, now))) };
     }

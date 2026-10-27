@@ -11,6 +11,10 @@
 //     variable d'environnement AI_GLOBAL_DAILY_CALLS ; il compte des appels, pas
 //     des neurones (un appel vision coûte bien plus qu'un appel texte), d'où une
 //     valeur par défaut volontairement basse. Au plafond, tout refuse (429 quota).
+//  3. une part du plafond global par établissement, tous types confondus (kind = 'all'
+//     sous le nom de l'établissement), comptée elle aussi sur le jour UTC : un seul
+//     établissement ne peut pas épuiser le budget de tous, et changer de fuseau ne
+//     lui rend aucun appel. Variable AI_MERCHANT_DAILY_CALLS, par défaut un quart du global.
 import { businessDate, validZone, DEFAULT_ZONE, DEFAULT_CUTOFF } from '../_business-day.js';
 
 export const GLOBAL_MERCHANT = '*global*';
@@ -40,6 +44,14 @@ export function globalDailyCap(env) {
   const raw = env && env.AI_GLOBAL_DAILY_CALLS;
   const n = Number(raw);
   return raw !== undefined && raw !== null && raw !== '' && Number.isSafeInteger(n) && n >= 1 ? n : DEFAULT_GLOBAL_DAILY_CALLS;
+}
+
+export function merchantDailyShare(env) {
+  const raw = env && env.AI_MERCHANT_DAILY_CALLS;
+  const n = Number(raw);
+  const global = globalDailyCap(env);
+  const share = raw !== undefined && raw !== null && raw !== '' && Number.isSafeInteger(n) && n >= 1 ? n : Math.ceil(global / 4);
+  return Math.min(share, global);
 }
 
 /* Le jour commercial de l'établissement : son fuseau et sa coupure, sinon
@@ -88,15 +100,19 @@ export async function quotaOk(env, merchant, kind, cap = 200) {
     const day = await merchantDay(env.DB, merchant);
     const row = await env.DB.prepare(bump).bind(merchant, day, kind, cap).first();
     if (!row) return false;
-    // Plafond global : s'il est atteint, l'appel du commerçant est rendu (il n'a rien consommé).
-    const shared = await env.DB.prepare(bump).bind(GLOBAL_MERCHANT, utcDay(), GLOBAL_KIND, globalDailyCap(env)).first();
-    if (!shared) {
+    // Part de l'établissement puis plafond global : si l'un est atteint, les compteurs
+    // déjà pris sont rendus (l'appel n'a rien consommé).
+    const undo = async (m, d, k) => {
       try {
         await env.DB.prepare('UPDATE ai_usage_kind SET calls = calls - 1 WHERE merchant = ? AND day = ? AND kind = ? AND calls > 0')
-          .bind(merchant, day, kind).run();
+          .bind(m, d, k).run();
       } catch (_) {}
-      return false;
-    }
+    };
+    const today = utcDay();
+    const mine = await env.DB.prepare(bump).bind(merchant, today, GLOBAL_KIND, merchantDailyShare(env)).first();
+    if (!mine) { await undo(merchant, day, kind); return false; }
+    const shared = await env.DB.prepare(bump).bind(GLOBAL_MERCHANT, today, GLOBAL_KIND, globalDailyCap(env)).first();
+    if (!shared) { await undo(merchant, today, GLOBAL_KIND); await undo(merchant, day, kind); return false; }
     return true;
   } catch (_) {
     // Unavailable accounting must not authorize unbounded paid requests.

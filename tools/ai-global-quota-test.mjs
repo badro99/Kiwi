@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { quotaOk, quotaDay, globalDailyCap, GLOBAL_MERCHANT, GLOBAL_KIND, DEFAULT_GLOBAL_DAILY_CALLS } from '../functions/api/ai/_quota.js';
+import { quotaOk, quotaDay, globalDailyCap, merchantDailyShare, GLOBAL_MERCHANT, GLOBAL_KIND, DEFAULT_GLOBAL_DAILY_CALLS } from '../functions/api/ai/_quota.js';
 
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n += 1; };
@@ -69,8 +69,24 @@ const used = (db, merchant, kind) => db.prepare('SELECT calls FROM ai_usage_kind
   const r = await Promise.all(Array.from({ length: 20 }, (_, i) => quotaOk(env, 'm' + (i % 4), 'ask', 100)));
   ok(r.filter(Boolean).length === 5, 'exactement 5 appels passent');
   ok(used(db, GLOBAL_MERCHANT, GLOBAL_KIND) === 5, 'le compteur global vaut 5');
-  const perMerchant = db.prepare("SELECT SUM(calls) AS s FROM ai_usage_kind WHERE merchant != ?").get(GLOBAL_MERCHANT).s;
+  const perMerchant = db.prepare("SELECT SUM(calls) AS s FROM ai_usage_kind WHERE merchant != ? AND kind != ?").get(GLOBAL_MERCHANT, GLOBAL_KIND).s;
   ok(perMerchant === 5, 'les compteurs établissement restent alignés sur le global (refus rendus)');
+}
+
+/* 5. Part par établissement : un seul ne peut pas épuiser le budget de tous, et
+   changer de fuseau ne lui rend rien (compté sur le jour UTC, tous types confondus). */
+{
+  const { db, env } = fresh({ AI_GLOBAL_DAILY_CALLS: '8' });
+  ok(merchantDailyShare(env) === 2, 'par défaut : un quart du plafond global');
+  ok(merchantDailyShare({ AI_GLOBAL_DAILY_CALLS: '8', AI_MERCHANT_DAILY_CALLS: '5' }) === 5, 'réglable par AI_MERCHANT_DAILY_CALLS');
+  ok(merchantDailyShare({ AI_GLOBAL_DAILY_CALLS: '8', AI_MERCHANT_DAILY_CALLS: '50' }) === 8, 'jamais au-dessus du global');
+  ok(await quotaOk(env, 'greedy', 'ask', 100) && await quotaOk(env, 'greedy', 'invoice', 100), 'deux appels de types différents');
+  ok(await quotaOk(env, 'greedy', 'resolve', 100) === false, 'troisième : part de l’établissement atteinte, quel que soit le type');
+  ok(used(db, 'greedy', 'resolve') === 0, 'l’appel refusé est rendu au compteur du type');
+  ok(used(db, GLOBAL_MERCHANT, GLOBAL_KIND) === 2, 'le global ne compte que les appels passés');
+  try { db.prepare("UPDATE merchant_config SET timezone = 'Pacific/Kiritimati' WHERE merchant = 'greedy'").run(); } catch (_) {}
+  ok(await quotaOk(env, 'greedy', 'ask', 100) === false, 'changer de fuseau ne rend aucun appel');
+  ok(await quotaOk(env, 'other', 'ask', 100), 'les autres établissements passent toujours');
 }
 
 console.log(`ok ${n} checks`);

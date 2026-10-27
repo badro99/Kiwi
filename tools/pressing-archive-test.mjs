@@ -128,4 +128,17 @@ async function setup(merchant, orders, cancellations = []) {
   ok(max < 1900000, 'chaque ligne d\'archive reste sous la limite D1 de 2 Mo (' + max + ')');
 }
 
+/* 6. Un appareil ne peut pas faire sortir un bon ouvert en inventant un état « remis il y a 100 jours ». */
+{
+  const t = await setup('press-arch-5', [open('O5', 2, { rack: 'A-05' })]);
+  const base = open('O5', 2, { rack: 'A-05' });
+  const forged = { ...base, rack: null, pieces: [{ pid: 'O5-1', status: 'livre' }], collectedAt: iso(100), updatedAt: now - 100 * DAY, pay: { mode: 'pickup', paid: 60 } };
+  const f = await t.push([forged]);
+  ok(f.status === 200, 'la sauvegarde passe (' + f.status + ')');
+  ok(t.archived().length === 0, 'état remis inventé : rien n\'est archivé');
+  ok(t.live().orders.some((o) => o.id === 'O5'), 'le bon reste dans le document vivant');
+  const ghost = await t.push([...t.live().orders, delivered('Z9', 100)]);
+  ok(ghost.status === 200 && t.archived().length === 0 && t.live().orders.some((o) => o.id === 'Z9'), 'un bon inconnu daté de 100 jours n\'entre pas dans l\'archive sur la seule parole de l\'appareil');
+}
+
 console.log(`pressing-archive-test: ${controls} controls passed`);
