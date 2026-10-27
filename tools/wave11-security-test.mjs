@@ -113,8 +113,20 @@ console.log('\nconsole#0 · codes d’équipe ajoutés depuis la console');
   const statuses = [];
   for (const pin of ['1001', '1002', '1003', '1004', '1005', '1006', '1007']) statuses.push((await add(pin)).status);
   const after = await add('7731');
-  ok('après huit « existe déjà » l’opérateur est arrêté', statuses.every((s) => s === 409) && after.status === 429, statuses.join(',') + ' puis ' + after.status);
+  // Chaque ajout compte aussi au budget de l'établissement : l'arrêt vient au plus tard au huitième refus.
+  ok('l’opérateur qui sonde est arrêté', statuses.every((s) => s === 409 || s === 429) && statuses.includes(429) && after.status === 429, statuses.join(',') + ' puis ' + after.status);
   ok('et ne peut plus sonder, même un code libre', !f.sql.prepare('SELECT 1 FROM staff_pins WHERE pin = ?').get('7731'));
+  f.close();
+}
+{
+  // Une création réussie dit aussi « ce code était libre » : chaque ajout compte.
+  const f = await fixture(ROOT);
+  const op = `kiwi_op=${await operatorToken(f.env.AUTH_SECRET)}; kiwi_op_id=${await operatorIdToken(f.env.AUTH_SECRET, 'money-operator')}`;
+  const add = (merchant, pin) => pinsPost({ request: req('/api/admin/pins', { cookie: op, body: { merchant, pin, name: 'X', role: 'caisse' } }), env: f.env });
+  const statuses = [];
+  for (let i = 0; i < 9; i++) statuses.push((await add(f.merchant, String(2100 + i))).status);
+  ok('huit ajouts réussis puis l’opérateur est arrêté sur cet établissement', statuses.slice(0, 8).every((s) => s === 200) && statuses[8] === 429, statuses.join(','));
+  ok('le neuvième code n’est pas créé', !f.sql.prepare('SELECT 1 FROM staff_pins WHERE merchant = ? AND pin = ?').get(f.merchant, '2108'));
   f.close();
 }
 
@@ -235,10 +247,10 @@ console.log('\nbooking#1 · carnet de réservations et caisse appairée');
     services: [{ id: 'svc', name: 'Coupe', duration: 30, capacity: 1, resourceIds: ['r1'], active: true }],
     resources: [{ id: 'r1', name: 'Amal', kind: 'person', capacity: 1, active: true }],
     blocked: [],
-    bookings: [{ id: 'bk1', code: 'K1', customer: { name: 'Salma', phone: '+212600000001', email: 'salma@example.test' },
+    bookings: [{ id: 'bk1', code: 'K1', customer: { name: 'Salma', phone: '+212600000001', email: 'salma@example.test', address: 'Rue des Synthèses 1' },
       serviceId: 'svc', resourceId: 'r1', startAt: start, endAt: start + 1800000, status: 'confirmed', source: 'public',
       manageToken: 'synthetic-manage-token-0001', publicRef: 'pub-0001',
-      guests: [{ id: 'g1', name: 'Salma', idDocNumber: 'SYN123456', birthDate: '1990-01-01' }] }],
+      guests: [{ id: 'g1', name: 'Salma', idDocNumber: 'SYN123456', birthDate: '1990-01-01', nationality: 'SYN-NAT' }] }],
   };
   f.sql.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").run(f.merchant, JSON.stringify(doc), Date.now());
   const read = async (cookie) => { const r = await storeGet({ request: req('/api/store?feature=reservations&merchant=' + f.merchant, { method: 'GET', cookie }), env: f.env }); return { status: r.status, etag: r.headers.get('ETag'), body: await r.json() }; };
@@ -248,6 +260,7 @@ console.log('\nbooking#1 · carnet de réservations et caisse appairée');
   ok('sans le jeton « gérer ma réservation »', !seen.includes('synthetic-manage-token-0001') && !seen.includes('pub-0001'));
   ok('sans téléphone ni courriel', !seen.includes('+212600000001') && !seen.includes('salma@example.test'));
   ok('sans pièce d’identité', !seen.includes('SYN123456') && !seen.includes('1990-01-01'));
+  ok('ni aucun autre champ personnel, même nouveau', !seen.includes('Rue des Synthèses') && !seen.includes('SYN-NAT'));
   ok('et sans ETag', !tillView.etag);
   const ownerView = await read(owner);
   ok('le propriétaire lit tout', JSON.stringify(ownerView.body.data).includes('synthetic-manage-token-0001') && JSON.stringify(ownerView.body.data).includes('SYN123456'));
@@ -264,6 +277,7 @@ console.log('\nbooking#1 · carnet de réservations et caisse appairée');
   ok('sans effacer le jeton ni les contacts', b1 && b1.manageToken === 'synthetic-manage-token-0001' && b1.publicRef === 'pub-0001'
     && b1.customer.phone === '+212600000001' && b1.customer.email === 'salma@example.test');
   ok('ni les pièces des voyageurs', b1 && b1.guests[0].idDocNumber === 'SYN123456' && b1.guests[0].birthDate === '1990-01-01');
+  ok('ni l’adresse ni la nationalité', b1 && b1.customer.address === 'Rue des Synthèses 1' && b1.guests[0].nationality === 'SYN-NAT');
   ok('et sans fabriquer de jeton', b2 && b2.manageToken === '');
   f.close();
 }

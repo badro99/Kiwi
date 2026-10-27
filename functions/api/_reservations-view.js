@@ -12,18 +12,30 @@
 // que cette vue réécrit le document : sans lui, elle effacerait les contacts
 // et les liens de tous les clients (la règle de team-doc-redaction-test).
 
-const CONTACT = ['phone', 'email'];
-const GUEST_IDENTITY = ['idDocNumber', 'birthDate'];
+/* Une liste de ce que la caisse peut voir, pas de ce qu'il faut cacher : un
+   champ ajouté demain à une fiche client ou voyageur (adresse, nationalité,
+   numéro de pièce sous un autre nom) reste caché sans qu'on y pense. */
+const PERSON_VISIBLE = ['id', 'name', 'firstName', 'lastName'];
 const LINKS = ['manageToken', 'publicRef'];
 
 function bookingsOf(doc) {
   return doc && typeof doc === 'object' && Array.isArray(doc.bookings) ? doc.bookings : null;
 }
 
-function hideGuest(g) {
-  if (!g || typeof g !== 'object') return g;
-  const out = { ...g };
-  GUEST_IDENTITY.forEach((k) => { if (k in out) out[k] = ''; });
+function visiblePerson(p) {
+  if (!p || typeof p !== 'object') return p;
+  const out = {};
+  PERSON_VISIBLE.forEach((k) => { if (k in p) out[k] = p[k]; });
+  return out;
+}
+/* Ce que la vue a retiré revient de la copie du serveur ; un champ que la
+   caisse a rempli elle-même (non vide) est gardé. */
+function restorePerson(was, now) {
+  const out = { ...(now && typeof now === 'object' ? now : {}) };
+  Object.keys(was).forEach((k) => {
+    if (PERSON_VISIBLE.includes(k)) return;
+    if (out[k] === undefined || out[k] === null || out[k] === '') out[k] = was[k];
+  });
   return out;
 }
 
@@ -31,12 +43,8 @@ function hideBooking(b) {
   if (!b || typeof b !== 'object') return b;
   const out = { ...b };
   LINKS.forEach((k) => { if (k in out) out[k] = ''; });
-  if (out.customer && typeof out.customer === 'object') {
-    const customer = { ...out.customer };
-    CONTACT.forEach((k) => { if (k in customer) customer[k] = ''; });
-    out.customer = customer;
-  }
-  if (Array.isArray(out.guests)) out.guests = out.guests.map(hideGuest);
+  if (out.customer && typeof out.customer === 'object') out.customer = visiblePerson(out.customer);
+  if (Array.isArray(out.guests)) out.guests = out.guests.map(visiblePerson);
   return out;
 }
 
@@ -61,11 +69,7 @@ export function keepReservations(prev, next) {
       const kept = old && typeof old[k] === 'string' ? old[k] : '';
       if (kept || k in out) out[k] = kept;
     });
-    if (old && old.customer && typeof old.customer === 'object') {
-      const customer = { ...(out.customer && typeof out.customer === 'object' ? out.customer : {}) };
-      CONTACT.forEach((k) => { if (!customer[k] && old.customer[k]) customer[k] = old.customer[k]; });
-      out.customer = customer;
-    }
+    if (old && old.customer && typeof old.customer === 'object') out.customer = restorePerson(old.customer, out.customer);
     if (old && Array.isArray(old.guests) && Array.isArray(out.guests)) {
       // Un voyageur sans id se retrouve par sa place dans la liste.
       const slot = (g, i) => (g && g.id ? 'id:' + g.id : 'at:' + i);
@@ -73,9 +77,7 @@ export function keepReservations(prev, next) {
       out.guests = out.guests.map((g, i) => {
         const was = g && typeof g === 'object' ? guests.get(slot(g, i)) : null;
         if (!was || typeof was !== 'object') return g;
-        const kept = { ...g };
-        GUEST_IDENTITY.forEach((k) => { if (!kept[k] && was[k]) kept[k] = was[k]; });
-        return kept;
+        return restorePerson(was, g);
       });
     }
     return out;

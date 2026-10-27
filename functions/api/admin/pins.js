@@ -25,6 +25,12 @@ const VALID_PIN = /^\d{4}$/;
  * sans le code. Un opérateur qui tombe sur un doublon par hasard n'en voit
  * jamais la limite. */
 const DUPE_SCOPE = 'pin-dupe';
+/* Une création réussie répond aussi à la question « ce code était-il libre ? ».
+ * Toute tentative d'ajout compte donc, pour cet opérateur et cet établissement,
+ * au même limiteur : huit par quart d'heure suffisent à saisir une équipe depuis
+ * la console (le propriétaire, lui, passe par le tableau de bord), et sonder les
+ * 10 000 codes prendrait des semaines, chaque essai laissé au journal. */
+const CREATE_SCOPE = 'pin-create';
 
 async function guard(context, senior) {
   const ok = await isOperator(context.request, context.env);
@@ -60,8 +66,12 @@ export async function onRequestPost(context) {
 
   const id = 'pin-' + crypto.randomUUID();
   const actor = await operatorActor(context.request, context.env), ts = Date.now();
-  const limited = await limitCheck(context.request, context.env, DUPE_SCOPE, actor.id);
+  const limited = await limitCheck(context.request, context.env, DUPE_SCOPE, actor.id)
+    || await limitCheck(context.request, context.env, CREATE_SCOPE, actor.id + '@' + merchant);
   if (limited) return limited;
+  if (!await limitFail(context.request, context.env, CREATE_SCOPE, actor.id + '@' + merchant)) {
+    return json({ error: 'rate-limit-unavailable' }, 503);
+  }
   /* L'unicité se décide DANS l'insertion : un SELECT puis un INSERT laissaient
    * deux ajouts simultanés du même code passer tous les deux. Le relevé ne
    * s'écrit que si la ligne existe bien (même batch, même transaction). */
