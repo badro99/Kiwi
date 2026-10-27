@@ -12,14 +12,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { harness, demoPage, sleep, root } from './surface-matrix-lib.mjs';
+import { tradingHourMs } from './demo-clock.mjs';
+
+/* Every page reads the demo at the same frozen instant, so the live figures
+   (pay accruing, stock drawn down) cannot differ by the time a page opened. */
+const FROZEN = tradingHourMs(15);
 
 const argv = process.argv.slice(2);
 const arg = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : null; };
 const ONLY = arg('--only');
+const SHOW = argv.includes('--show');
+/* --control opens the shipped design twice: what still differs is the demo's clock, not 2027. */
+const CONTROL = argv.includes('--control');
 const VPS = (arg('--vp') || 'desktop,phone').split(',');
 
 async function openDash(h, vp, on) {
   const { ctx, page } = await demoPage(h, 'fr', vp, { 'kiwiSkin2027:dashboard': on ? '1' : '0' });
+  await page.evaluateOnNewDocument((ms) => {
+    const RealDate = Date;
+    function Frozen(...a) { if (!new.target) return new RealDate(ms).toString(); return a.length ? new RealDate(...a) : new RealDate(ms); }
+    Frozen.prototype = RealDate.prototype; Frozen.now = () => ms; Frozen.UTC = RealDate.UTC; Frozen.parse = RealDate.parse;
+    Object.defineProperty(Frozen, 'name', { value: 'Date' });
+    globalThis.Date = Frozen;
+  }, FROZEN);
   await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
   await sleep(1500);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d/.test(x.textContent)); if (b) b.click(); });
@@ -35,13 +50,18 @@ const figures = (page) => page.evaluate(() => {
   const vis = (el) => { for (let e = el; e && e.nodeType === 1; e = e.parentElement || (e.parentNode && e.parentNode.host)) { const s = getComputedStyle(e); if (s.display === 'none' || s.visibility === 'hidden') return false; } const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   (function walk(n) {
     for (const el of n.querySelectorAll('*')) {
-      if (el.shadowRoot) walk(el.shadowRoot);
+      /* A chart's axis ticks are drawn from its series, not figures of their own. */
+      if (el.shadowRoot && el.localName !== 'k-chart') walk(el.shadowRoot);
       for (const t of el.childNodes) if (t.nodeType === 3 && t.textContent.trim()) out.push([el, t.textContent]);
     }
   })(document);
-  const text = out.filter(([el]) => vis(el)).map(([, t]) => t).join(' ').replace(/[⁦-⁩]/g, '');
+  /* One text node per figure: a row number in its own cell is not glued to the
+     amount beside it, but a unit set in its own element rejoins its number. */
+  const text = out.filter(([el]) => vis(el)).map(([, t]) => t.replace(/[⁦-⁩]/g, '')).reduce((s, t) => s + (/^\s*(MAD|DH|درهم|%)/.test(t) ? ' ' : ' | ') + t, '');
   const nums = new Set();
-  for (const m of text.matchAll(/(-?\d[\d\s  ]*(?:[.,]\d+)?)\s*(MAD|DH|درهم|%)/g)) {
+  /* Thousands are grouped by threes; a lone number before an amount (a row
+     number, a count) is not part of it. */
+  for (const m of text.matchAll(/(-?\d{1,3}(?:[\s\u00a0\u202f]\d{3})+(?:[.,]\d+)?|-?\d+(?:[.,]\d+)?)\s*(MAD|DH|درهم|%)/g)) {
     const v = Number(m[1].replace(/[\s  ]/g, '').replace(',', '.'));
     if (Number.isFinite(v)) nums.add((m[2] === '%' ? '%' : '') + Math.round(v * 100) / 100);
   }
@@ -58,18 +78,23 @@ const h = await harness('parity-2027-dash');
 const results = [];
 try {
   for (const vp of VPS) {
-    const off = await openDash(h, vp, false), on = await openDash(h, vp, true);
+    /* A second shipped page: a figure that differs between two shipped pages
+       moves with the demo's clock (live pay, stock), and says nothing about 2027. */
+    const off = await openDash(h, vp, false), on = await openDash(h, vp, !CONTROL), twin = await openDash(h, vp, false);
     const pages = ['home', ...(await navs(off.page)).filter((n) => n !== 'home' && n !== 'dashboard')].filter((n) => !ONLY || n.includes(ONLY));
     for (const nav of pages) {
-      if (nav !== 'home') { await go(off.page, nav); await go(on.page, nav); await sleep(1500); }
-      const [a, b] = await Promise.all([figures(off.page), figures(on.page)]);
-      const extra = b.filter((x) => !a.includes(x));
-      results.push({ vp, nav, ok: !extra.length, extra, shipped: a.length, k2027: b.length });
-      console.log(`${extra.length ? '✗' : '✓'} ${vp} · ${nav} (${b.length} figures on 2027, ${a.length} shipped)`);
+      if (nav !== 'home') { await go(off.page, nav); await go(on.page, nav); await go(twin.page, nav); await sleep(1500); }
+      const [a, b, c] = await Promise.all([figures(off.page), figures(on.page), figures(twin.page)]);
+      const clock = c.some((x) => !a.includes(x)) || a.some((x) => !c.includes(x));
+      const extra = b.filter((x) => !a.includes(x) && !c.includes(x));
+      const ok = !extra.length || clock;
+      results.push({ vp, nav, ok, clock, extra, shipped: a.length, k2027: b.length });
+      console.log(`${ok ? '✓' : '✗'} ${vp} · ${nav} (${b.length} figures on 2027, ${a.length} shipped)${clock ? ' · moves with the clock on the shipped page too' : ''}`);
       if (extra.length) console.log('    only on 2027: ' + extra.slice(0, 12).join(' · '));
-      if (nav !== 'home') { await go(off.page, 'home'); await go(on.page, 'home'); await sleep(600); }
+      if (SHOW) console.log('    shipped: ' + a.join(' · ') + '\n    2027:    ' + b.join(' · '));
+      if (nav !== 'home') { await go(off.page, 'home'); await go(on.page, 'home'); await go(twin.page, 'home'); await sleep(600); }
     }
-    await off.ctx.close(); await on.ctx.close();
+    await off.ctx.close(); await on.ctx.close(); await twin.ctx.close();
   }
 } finally { await h.close(); }
 fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(results, null, 1));

@@ -62,11 +62,37 @@
     if (back) back.click();
   }
 
+  /* The shipped renderer keeps MAD literals. Localize its amount-only nodes
+     with the same formatter as the till, without changing the flag-off path. */
+  var amounts = new WeakMap();
+  function currency() {
+    if (!root.KiwiFormat) return;
+    var lang = doc.documentElement.lang || 'fr';
+    var f = root.KiwiFormat.for(lang);
+    doc.querySelectorAll('.tc-amount, .td-item-price, .td-summary .mono, .td-total-row .val').forEach(function (node) {
+      if (node.children.length) return;
+      var saved = amounts.get(node);
+      var text = node.textContent.replace(/[\u2066-\u2069]/g, '');
+      var m = text.match(/^([\d\s\u00a0\u202f]+)(?:[,.](\d+))?\s*(?:MAD|درهم)$/);
+      if (!saved || saved.text !== node.textContent) {
+        if (!m) return;
+        saved = { value: Number(m[1].replace(/\s/g, '') + (m[2] ? '.' + m[2] : '')), digits: m[2] ? m[2].length : 0 };
+      }
+      var next = f.money(saved.value, saved.digits);
+      saved.text = next;
+      amounts.set(node, saved);
+      if (node.textContent !== next) node.textContent = next;
+    });
+  }
+
   function start() {
     main = doc.getElementById('screen-main');
     table = doc.getElementById('screen-table');
     if (!main || !table) return;
     doc.documentElement.setAttribute('data-k-team-split', '');
+    new root.MutationObserver(currency).observe(doc.querySelector('.app'), { childList: true, subtree: true, characterData: true });
+    new root.MutationObserver(currency).observe(doc.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    currency();
     new root.MutationObserver(sync).observe(table, { attributes: true, attributeFilter: ['class'] });
     new root.MutationObserver(function () { if (doc.documentElement.hasAttribute('data-k-split')) sync(); }).observe(main, { attributes: true, attributeFilter: ['aria-hidden'] });
     var zones = doc.getElementById('tables-zones');

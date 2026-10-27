@@ -24,7 +24,10 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   // Libellés de la caisse : passent par son dictionnaire quand il est chargé.
   function tr(s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; }
-  function fmt(n) {
+  function fmt(n, withUnit) {
+    if (withUnit && document.documentElement.hasAttribute('data-k-till') && window.KiwiKit) {
+      return window.KiwiKit.numHtml(window.KiwiKit.fmt().money(n, Number.isInteger(Number(n)) ? 0 : 2));
+    }
     var v = Math.round((Number(n) || 0) * 100) / 100, d = Number.isInteger(v) ? 0 : 2;
     return window.KiwiNumber?.format ? window.KiwiNumber.format(v, { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/[\u202f\u00a0]/g, '\u00a0') : window.KiwiClientNumbers.money(v);
   }

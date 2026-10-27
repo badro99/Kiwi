@@ -56,3 +56,6 @@ html[data-skin-2027="access"] body code { background: var(--k-surface-2); border
 html[data-skin-2027="access"] body code.code-block { background: var(--k-inverse); color: var(--k-inverse-accent); }
 html[data-skin-2027="access"] body details.adv { background: var(--k-surface-2); border: 0; border-radius: var(--k-r-2); }
 html[data-skin-2027="access"] body .others a, html[data-skin-2027="access"] body .adv-note a { color: var(--k-accent-ink); }
+
+/* Isolate mixed Arabic/Latin phrases and keep each emphasized phrase in its own wrapping box. */
+html[data-skin-2027="access"] body .os-body ol.run :is(i, b) { display: inline-block; max-width: 100%; vertical-align: baseline; font-style: normal; unicode-bidi: isolate; }

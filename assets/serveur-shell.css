@@ -4233,3 +4233,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
       html[data-skin-2027="team"][data-theme="dark"] .modal { border-color: rgba(255, 255, 255, 0.12); }
     }
+
+/* Sweep fixes: status copy and actions retain space on short displays. */
+html[data-skin-2027="team"] .tc-line2 { white-space: normal; overflow: visible; }
+html[data-skin-2027="team"] .cat-pill.is-active .count { opacity: 1; color: var(--k-on-accent); }
+html[data-skin-2027="team"] .table-card[data-status="bgha-ykhlass"] .tc-num { background: var(--k-accent); color: var(--k-on-accent); }
+html[data-skin-2027="team"] .td-btn[data-action="cancel-table"] { background: var(--k-danger-tint); color: var(--k-danger); }
+@media (max-height: 500px) {
+  html[data-skin-2027="team"] .td-footer { flex-direction: row; overflow-x: auto; padding: 8px 16px; gap: 8px; }
+  html[data-skin-2027="team"] .td-footer :is(.td-btn-row, .td-extra-row) { display: contents; }
+  html[data-skin-2027="team"] .td-footer :is(.td-btn, .td-extra-btn) { flex: 0 0 auto; width: auto; height: 44px; margin: 0; padding-inline: 14px; white-space: nowrap; }
+  html[data-skin-2027="team"] .td-body { min-height: 0; }
+}

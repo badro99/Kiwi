@@ -312,8 +312,8 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "49",
-    "sha": "eac036eac6dcbce5"
+    "v": "50",
+    "sha": "3ab09900176d860e"
   },
   "assets/clients-directory.js": {
     "v": "28",
@@ -800,16 +800,16 @@
     "sha": "9e0574e4df6e1a34"
   },
   "assets/kit/dash-desktop.css": {
-    "v": "13",
-    "sha": "7b43bbc52565c9e2"
+    "v": "14",
+    "sha": "744268d090d060ab"
   },
   "assets/kit/dash-desktop.js": {
     "v": "9",
     "sha": "4ac1d5b8391cb836"
   },
   "assets/kit/dash-home.js": {
-    "v": "7",
-    "sha": "fe0458c2c840a960"
+    "v": "8",
+    "sha": "c281a975deef9d8c"
   },
   "assets/kit/dash-onboarding.js": {
     "v": "5",
@@ -820,16 +820,16 @@
     "sha": "c5f9041dbdc5cea8"
   },
   "assets/kit/dash-phone.js": {
-    "v": "4",
-    "sha": "9122f28596238ba3"
+    "v": "5",
+    "sha": "020d9b81a675b7bc"
   },
   "assets/kit/dash-pin.js": {
     "v": "1",
     "sha": "b747e7886ce99de3"
   },
   "assets/kit/dash-report.js": {
-    "v": "2",
-    "sha": "7a65e5cf67c59902"
+    "v": "3",
+    "sha": "1dd25f956485449c"
   },
   "assets/kit/dash-retention.js": {
     "v": "1",
@@ -864,8 +864,8 @@
     "sha": "91fba1b73e21ba8a"
   },
   "assets/kit/kit.css": {
-    "v": "60",
-    "sha": "fbc5bfa93c15faef"
+    "v": "61",
+    "sha": "2625647a7f9bfb45"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -884,12 +884,12 @@
     "sha": "950320329471314e"
   },
   "assets/kit/nav.js": {
-    "v": "8",
-    "sha": "f78124849fbc66ba"
+    "v": "9",
+    "sha": "0f075e069977cc0e"
   },
   "assets/kit/ordering.css": {
-    "v": "5",
-    "sha": "8867653bc2962df1"
+    "v": "6",
+    "sha": "cdaecd1fc62aa0db"
   },
   "assets/kit/overlays.js": {
     "v": "2",
@@ -904,8 +904,8 @@
     "sha": "e3d6b97a0c8d4614"
   },
   "assets/kit/printer.css": {
-    "v": "1",
-    "sha": "b9652b0853e2464e"
+    "v": "2",
+    "sha": "6e24f251423e6184"
   },
   "assets/kit/strings.js": {
     "v": "2",
@@ -984,12 +984,12 @@
     "sha": "fb5251708f8b9ce1"
   },
   "assets/kit/team-pin.js": {
-    "v": "4",
-    "sha": "eb0c5bce3bcaf218"
+    "v": "5",
+    "sha": "35326c1ec13bd467"
   },
   "assets/kit/team-split.js": {
-    "v": "1",
-    "sha": "8df34267c0b69134"
+    "v": "2",
+    "sha": "31f1839425f6f47f"
   },
   "assets/kit/till-attendance.js": {
     "v": "1",
@@ -1792,8 +1792,8 @@
     "sha": "874c34e6680bc60e"
   },
   "assets/serveur-shell.css": {
-    "v": "7",
-    "sha": "c230073272e0132c"
+    "v": "8",
+    "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
     "v": "5",

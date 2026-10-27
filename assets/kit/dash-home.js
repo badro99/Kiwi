@@ -129,7 +129,10 @@
     var key = s ? JSON.stringify(s) : '';
     if (key === csig) return;
     csig = key;
-    if (s) chart.series = s;
+    if (s) {
+      chart.series = s;
+      chart.setAttribute('aria-label', chart.summary());
+    }
   }
 
   /* Phone order (§18.1): the figure first, then the presets; wider, the

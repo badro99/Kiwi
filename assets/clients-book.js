@@ -24,7 +24,10 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   // Libellés de la caisse : passent par son dictionnaire quand il est chargé.
   function tr(s) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; }
-  function fmt(n) {
+  function fmt(n, withUnit) {
+    if (withUnit && document.documentElement.hasAttribute('data-k-till') && window.KiwiKit) {
+      return window.KiwiKit.numHtml(window.KiwiKit.fmt().money(n, Number.isInteger(Number(n)) ? 0 : 2));
+    }
     var v = Math.round((Number(n) || 0) * 100) / 100, d = Number.isInteger(v) ? 0 : 2;
     return window.KiwiNumber?.format ? window.KiwiNumber.format(v, { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/[\u202f\u00a0]/g, '\u00a0') : window.KiwiClientNumbers.money(v);
   }
@@ -630,8 +633,9 @@
     function kpi(label, value, unit) {
       return '<div class="kx-kpi"><div class="l">' + label + '</div><div class="v">' + value + (unit ? '<span class="u">' + unit + '</span>' : '') + '</div></div>';
     }
+    var kitSpend = document.documentElement.hasAttribute('data-k-till');
     host.innerHTML = kpi('Clients', fmt(all.length)) + kpi('Joignables', fmt(reachable)) +
-      kpi('Récompenses prêtes', fmt(ready)) + kpi('Dépensé', fmt(spend), 'MAD');
+      kpi('Récompenses prêtes', fmt(ready)) + kpi('Dépensé', fmt(spend, kitSpend), kitSpend ? '' : 'MAD');
   }
   function renderSegs(all) {
     var host = document.getElementById('kcb-segs'); if (!host) return;
@@ -703,7 +707,7 @@
           '<div class="kcb-c-seg"><span class="kcb-seg ' + s + '">' + SEG_LBL[s] + '</span></div>' +
           '<div class="kcb-c-visits r kcb-num">' + (c.visits || 0) + '</div>' +
           '<div class="kcb-c-last r kcb-num kcb-muted">' + lastSeenTxt(c) + '</div>' +
-          '<div class="kcb-c-spend r kcb-num">' + fmt(c.spend) + '<small>MAD</small></div>' +
+          '<div class="kcb-c-spend r kcb-num">' + (document.documentElement.hasAttribute('data-k-till') ? fmt(c.spend, true) : fmt(c.spend) + '<small>MAD</small>') + '</div>' +
           '<div class="kcb-fid">' + (prog >= 1 ? '<span class="kcb-ready">Récompense prête</span>' : '<span class="kcb-num">' + ptsTxt + '</span>') +
             '<span class="kcb-minibar"><i style="width:' + Math.round(Math.min(1, prog) * 100) + '%"></i></span></div></div>';
       }).join('');

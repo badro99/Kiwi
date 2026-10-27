@@ -317,6 +317,27 @@ try {
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ' · ' + page.errors.join(' | ') : ''));
   });
 
+  await S.run('2027 floating tabs reserve their measured footprint', async (tr) => {
+    for (const lang of ['fr', 'ar']) {
+      const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+      const page = await open(tr, ctx, { width: 844, height: 390, lang });
+      for (const [width, height] of [[844, 390], [820, 1180]]) {
+        await page.setViewport({ width, height, isMobile: true, hasTouch: true });
+        await sleep(400);
+        const room = await page.evaluate(() => {
+          const bar = document.querySelector('k-tabbar.k-ptabs').getBoundingClientRect();
+          const c = document.querySelector('#kw-main .container');
+          const pad = parseFloat(getComputedStyle(c).paddingBottom);
+          return { height: bar.height, pad, footprint: innerHeight - bar.top,
+            scroll: document.scrollingElement.scrollHeight - innerHeight };
+        });
+        check(room.pad >= room.footprint + 15, lang + ': content reserves the entire floating bar and safe area');
+        check(room.scroll > 0, lang + ': even a short page can scroll content above the bar');
+        if (height === 390) check(room.height <= 52, lang + ': short dashboard uses the compact capsule');
+      }
+    }
+  });
+
   await S.run('flag off · phone', async (tr) => {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     // coverage: surface=dashboard locale=fr viewport=phone

@@ -115,7 +115,7 @@
     box = doc.createElement('section');
     box.id = 'kit-report';
     box.innerHTML = '<div class="k-dr__top"><p class="k-foot k-ink2 k-dr__day"></p>' +
-      '<k-button variant="secondary" size="S" icon="download" data-do="export" label="' + esc(t('report.export')) + '"></k-button></div>' +
+      '<k-button variant="secondary" size="M" icon="download" data-do="export" label="' + esc(t('report.export')) + '"></k-button></div>' +
       '<div class="k-dr__fig"></div><k-kpi-grid></k-kpi-grid><div class="k-dr__em" hidden></div>' +
       '<k-popover heading="' + esc(t('report.export')) + '"><k-list data-do="exports" selectable label="' + esc(t('report.export')) + '"></k-list></k-popover>';
     box.querySelector('k-list').rows = EXPORTS.map(function (k) { return { id: k, title: t('export.' + k) }; });

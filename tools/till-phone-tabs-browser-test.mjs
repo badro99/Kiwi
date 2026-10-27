@@ -340,6 +340,47 @@ try {
     check(errors.length === 0, 'AR: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 
+  await S.run('2027 short frame and portrait sheet clearance', async (tr) => {
+    for (const lang of ['fr', 'ar']) {
+      const { page } = await open(tr, { width: 844, height: 390, lang });
+      const compact = await page.evaluate(() => {
+        const bar = document.querySelector('k-tabbar');
+        const r = bar.getBoundingClientRect();
+        return { height: r.height, hits: [...bar.shadowRoot.querySelectorAll('.it')].every((b) => b.getBoundingClientRect().height >= 44) };
+      });
+      check(compact.height <= 52 && compact.hits, lang + ': compact capsule keeps 44px touch targets');
+      await tapTab(page, 'clients', false);
+      const tools = await page.evaluate(() => {
+        const search = document.querySelector('#kcb-root .kcb-search');
+        const r = search.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return r.bottom <= document.querySelector('k-tabbar').getBoundingClientRect().top && hit === search;
+      });
+      check(tools, lang + ': customer search is immediately visible and usable in landscape');
+      await page.setViewport({ width: 820, height: 1180, isMobile: false, hasTouch: false });
+      await sleep(400);
+      await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="takeaway"]').click());
+      await sleep(400);
+      const beside = await page.evaluate(() => {
+        const rail = document.querySelector('#kit-rail').getBoundingClientRect();
+        const sheet = document.querySelector('.rightpanel').getBoundingClientRect();
+        return sheet.left >= rail.right || sheet.right <= rail.left;
+      });
+      check(beside, lang + ': portrait bill sheet clears the entire rail');
+      await page.evaluate(() => {
+        document.querySelector('#rp-peek').click();
+        window.KiwiTillFrame.openPay({ due: 100, bill: 'TEST', method: null });
+      });
+      await sleep(400);
+      const pay = await page.evaluate(() => {
+        const rail = document.querySelector('#kit-rail').getBoundingClientRect();
+        const pane = document.querySelector('k-pay').getBoundingClientRect();
+        return (pane.left >= rail.right || pane.right <= rail.left) && getComputedStyle(document.querySelector('#rp-peek')).display === 'none';
+      });
+      check(pay, lang + ': payment clears the rail and has no peek over its controls');
+    }
+  });
+
   await S.run('1180 × 820 · nothing changes on the iPad', async (tr) => {
     // coverage: surface=caisse-restaurant locale=fr viewport=tablet
     const { page, errors } = await open(tr, { width: 1180, height: 820 });

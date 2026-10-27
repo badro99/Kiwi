@@ -193,6 +193,16 @@
     tabs.addEventListener('kiwi:action', onTab);
     doc.body.appendChild(tabs);
 
+    /* Measure the real capsule, including larger type and the safe-area gap. */
+    function clearance() {
+      var html = doc.documentElement;
+      if (html.getAttribute('data-skin-2027') !== 'dashboard') return;
+      var r = tabs.getBoundingClientRect();
+      if (r.height) html.style.setProperty('--k-frame-tab-clearance', Math.ceil(root.innerHeight - r.top + 16) + 'px');
+    }
+    if (root.ResizeObserver) new root.ResizeObserver(clearance).observe(tabs);
+    root.addEventListener('resize', clearance);
+
     var c = $('#kw-main .container');
     if (c && root.MutationObserver) new root.MutationObserver(soon).observe(c, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
     var n = $('.sidebar [data-loc-name]');

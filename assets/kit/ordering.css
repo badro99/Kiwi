@@ -443,3 +443,14 @@ html[data-skin-2027="ordering"] .custom-sheet-panel {
   html[data-skin-2027="ordering"] #screen-menu.is-active ~ .cart-sheet .cart-sheet-panel { padding-top: calc(var(--safe-top) + var(--k-space-2)); padding-bottom: calc(var(--k-space-3) + var(--safe-bottom)); }
   html[data-skin-2027="ordering"] .cart-subtitle { margin-bottom: var(--k-space-2); }
 }
+
+/* A sheet's body yields to its footer instead of painting underneath it. */
+html[data-skin-2027="ordering"] :is(.custom-scroll, .cart-items) { min-height: 0; }
+html[data-skin-2027="ordering"] .custom-sheet-panel > :not(.custom-scroll),
+html[data-skin-2027="ordering"] .cart-sheet-panel > :not(.cart-items) { flex-shrink: 0; }
+html[data-skin-2027="ordering"] .cart-items { grid-auto-rows: max-content; }
+@media (min-width: 768px) {
+  html[data-skin-2027="ordering"] .service-bar { flex-wrap: wrap; flex-shrink: 0; overflow: visible; }
+  html[data-skin-2027="ordering"] #screen-menu.is-active { left: env(safe-area-inset-left, 0px); right: calc(340px + env(safe-area-inset-right, 0px)); }
+  html[data-skin-2027="ordering"][dir="rtl"] #screen-menu.is-active { left: calc(340px + env(safe-area-inset-left, 0px)); right: env(safe-area-inset-right, 0px); }
+}

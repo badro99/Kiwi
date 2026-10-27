@@ -57,8 +57,10 @@
       var h = el('h1', 'k-heading k-team-title', t('team.signin.title'));
       var label = el('label', 'k-foot-s k-ink2 k-team-label', t('team.email.label'));
       label.setAttribute('for', 'k-team-email');
+      label.id = 'k-team-email-label';
       S.input = el('input', 'k-body k-team-email');
       S.input.id = 'k-team-email';
+      S.input.setAttribute('aria-labelledby', 'k-team-email-label');
       S.input.type = 'email';
       S.input.setAttribute('inputmode', 'email');
       S.input.setAttribute('autocomplete', 'username');

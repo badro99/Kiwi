@@ -857,3 +857,7 @@ html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .status-bar {
   font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
 }
 html[data-skin-2027="dashboard"][data-k-phone] body:not(#k-dd) .status-bar a { color: var(--k-accent-ink); }
+
+/* Tables retain their shipped layout; only caption contrast and rail button fit. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .pds-page .pds-kpis .kx-kpi > .d { color: var(--k-ink-2); }
+html[data-skin-2027="dashboard"] body .pds-page .pds-zone-tools .kb[data-pds-action="rename-zone"] { white-space: normal; overflow-wrap: anywhere; height: auto; min-height: 34px; padding-block: 6px; }
