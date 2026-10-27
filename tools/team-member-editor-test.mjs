@@ -112,7 +112,8 @@ ok('typing in a flagged field clears its error', () => {
 });
 ok('the four-digit and duplicate-code rules survive', () => {
   assert.match(submit, /if \(code && !isCode\(code\)\) errs\.push\(\['password', T\.vCode\]\);/);
-  assert.match(submit, /errs\.push\(\['password', T\.vDuplicateCode\]\);/);
+  assert.match(submit, /errs\.push\(\['password', T\.vDuplicateCodeNamed\(who, memberFullName\(holder\)\)\]\);/);
+  assert.match(submit, /memberState\.reservedCode\(effectiveCode\)\) errs\.push\(\['password', T\.vReservedCode\]\);/);
 });
 
 console.log('member profile · says what is on file, nothing else');
