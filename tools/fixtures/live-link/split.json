@@ -1,0 +1,163 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/live-link.js, and move its stamp (node tools/bump-stamp.js assets/live-link.js).",
+  "bundles": [
+    {
+      "file": "assets/live-link.js",
+      "module": true,
+      "sha256AtSplit": "e693a6b677ec08bd32f3a96f0391ce5b97a8ec809fdadf6371ffa73dcc046ee9",
+      "parts": [
+        {
+          "file": "assets/live-link/parts/merchant.js",
+          "concern": "allumage, mode et commerçant résolu",
+          "lines": [
+            1,
+            178
+          ],
+          "declares": [
+            "LS",
+            "urlFlag",
+            "opMode",
+            "realEnv",
+            "on",
+            "slugify",
+            "scopeConfirmed",
+            "pin",
+            "merchant"
+          ]
+        },
+        {
+          "file": "assets/live-link/parts/signals.js",
+          "concern": "affichage, réveil entre onglets, signal d'argent",
+          "lines": [
+            179,
+            241
+          ],
+          "declares": [
+            "METHOD_LABEL",
+            "fmtMAD",
+            "el",
+            "PING_KEY",
+            "chan",
+            "requestWake",
+            "pingLocal",
+            "canonicalSaleId",
+            "moneySignal"
+          ]
+        },
+        {
+          "file": "assets/live-link/parts/outbox.js",
+          "concern": "file d'envoi des ventes : statut, identité, reprise, requêtes d'argent",
+          "lines": [
+            242,
+            537
+          ],
+          "declares": [
+            "saleQueue",
+            "window.KiwiSaleQueue",
+            "quarantineRows",
+            "quarantineUpdate",
+            "queueStatus",
+            "refreshOutboxStatus",
+            "initOutbox",
+            "uid",
+            "stableId",
+            "serverSession",
+            "recoveryTimer",
+            "terminalRecoveryAt",
+            "recoverTillProof",
+            "scheduleRecovery",
+            "refundApprovalRefused",
+            "paymentCompletion",
+            "xhrMoneyRequest",
+            "moneyRequest",
+            "flushQueue",
+            "flushQueueNow",
+            "retrySale",
+            "retryBlockedSales",
+            "enqueueMoneyBody",
+            "tenantHold",
+            "moneyStorageReady",
+            "postSale",
+            "postRefund"
+          ]
+        },
+        {
+          "file": "assets/live-link/parts/feed.js",
+          "concern": "lecture du flux et instantanés",
+          "lines": [
+            538,
+            871
+          ],
+          "declares": [
+            "FAST_MS",
+            "SLOW_MS",
+            "operatorSnapshot",
+            "lastFeedError",
+            "readFeed",
+            "publishSnapshot",
+            "validateSnapshotPage",
+            "publishTill",
+            "watchFeed",
+            "notifySale"
+          ]
+        },
+        {
+          "file": "assets/live-link/parts/ledger-bridge.js",
+          "concern": "annulations, cumul du flux, pont vers les ventes du tableau de bord",
+          "lines": [
+            872,
+            1124
+          ],
+          "declares": [
+            "lastSync",
+            "feedSales",
+            "feedSeen",
+            "feedComplete",
+            "voidedRefs",
+            "voidedIds",
+            "voidedEvents",
+            "voided",
+            "voidedSaleIds",
+            "voidedEventList",
+            "applyVoids",
+            "accumulateFeed",
+            "bridgeToStore"
+          ]
+        },
+        {
+          "file": "assets/live-link/parts/operator.js",
+          "concern": "pompe et bandeau de la vue opérateur, surveillance des annulations",
+          "lines": [
+            1125,
+            1340
+          ],
+          "declares": [
+            "pumping",
+            "snapshotVenue",
+            "verifySnapshotLedger",
+            "initPump",
+            "paintSnapshot",
+            "initOperatorBanner",
+            "opSkipLock",
+            "VOID_MS",
+            "watchVoids"
+          ]
+        },
+        {
+          "file": "assets/live-link/parts/boot.js",
+          "concern": "démarrage et interface publique",
+          "lines": [
+            1341,
+            1525
+          ],
+          "declares": [
+            "boot",
+            "startBoot",
+            "window.KiwiLive",
+            "window.KiwiLiveLink"
+          ]
+        }
+      ]
+    }
+  ]
+}

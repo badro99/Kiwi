@@ -1763,6 +1763,7 @@ section('Whole-project regressions');
     'receivables-properties-test.mjs',
     'trades-money-properties-test.mjs',
     'live-link-queue-properties-test.mjs',
+    'live-link-split-test.mjs',
     'live-link-queue-ownership-test.mjs',
     'invoice-vat-properties-test.mjs',
     'payroll-properties-test.mjs',
