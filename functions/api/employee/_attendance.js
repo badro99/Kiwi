@@ -10,6 +10,8 @@ const PROGRESS_FEATURE = 'employee-progress';
 const MAX_ATTENDANCE = 5000;
 // Automatic replay is limited to 12 h; older punches await an audited decision.
 const CAPTURE_MAX_AGE_MS = 12 * 3600000;
+// Combien de temps team.hoursCredited garde la marque d'un service crédité.
+const MARK_KEEP_MS = 3 * 86400000;
 // Même plafond par défaut que le planning (planning-core.js, settings.maxDailyHours).
 const DEFAULT_MAX_DAILY_HOURS = 12;
 // Délai d'acheminement toléré après la fin de vie du code, pour un pointage différé seulement.
@@ -177,22 +179,31 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       });
       if (shiftId) {
         marks[shiftId] = Number(changedEntry.outTs) || now;
-        // Borné : seuls les rejeux récents (12 h au plus) ont besoin de la marque.
-        doc.hoursCredited = Object.fromEntries(Object.entries(marks).sort((a, b) => b[1] - a[1]).slice(0, 500));
+        /* Bornée par l'ÂGE, jamais par le nombre : un téléphone ne renvoie pas un
+         * pointage de plus de 12 h (CAPTURE_MAX_AGE_MS), donc une marque de plus
+         * de trois jours ne protège plus rien. Une borne en nombre pouvait, un
+         * jour chargé, chasser la marque d'un service encore « pending » et le
+         * laisser créditer deux fois. Le plafond de 5 000 ne garde que la taille. */
+        const keepAfter = now - MARK_KEEP_MS;
+        doc.hoursCredited = Object.fromEntries(Object.entries(marks)
+          .filter(([, ts]) => Number(ts) >= keepAfter).sort((a, b) => b[1] - a[1]).slice(0, 5000));
       }
       return doc;
     });
     if (!team && !already) return json({ error: 'attendance-hours-pending' }, 503);
     creditedNow = !already;
-    // Best effort: the team mark already prevents a second credit.
+    /* Le service passe à « done ». La marque de `team` empêche déjà un second
+       crédit (et /api/store la garde quand un appareil réécrit l'équipe) ; on
+       réessaie tout de même une fois, pour qu'un rejeu ne dépende pas d'elle. */
     if (shiftId) {
-      await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
+      const markDone = () => mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
         const entries = Array.isArray(doc.entries) ? doc.entries : [];
         const entry = entries.find((e) => e && e.id === shiftId);
         if (!entry || entry.hoursCredit !== 'pending') return null;
         entry.hoursCredit = 'done';
         return { ...doc, entries };
       });
+      try { if (!await markDone()) await markDone(); } catch (_) { /* la marque de team tient */ }
       changedEntry.hoursCredit = 'done';
     }
   }

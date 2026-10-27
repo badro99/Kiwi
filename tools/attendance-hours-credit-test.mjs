@@ -83,4 +83,27 @@ const done = await punch('clock-out', 'op-out-2');
 ok(done.status === 200 && Math.abs(credited() - hours - 1) < 0.01, 'a clean clock-out credits its hour once');
 const replayed = await punch('clock-out', 'op-out-2');
 ok(replayed.status === 200 && Math.abs(credited() - hours - 1) < 0.01, 'its replay after a lost answer credits nothing more');
+
+// A crowded fortnight of other credits must not push a fresh mark out.
+const team = docs.get('team').data;
+const crowd = {}; for (let i = 0; i < 800; i++) crowd['other-' + i] = Date.now() + i;
+team.hoursCredited = { ...crowd, ...team.hoursCredited };
+assert.equal((await punch('clock-in', 'op-in-3')).status, 200);
+const third = entries().find((e) => !e.outTs);
+third.inTs -= 3600000;
+docs.get('attendance').data.entries = entries().map((e) => (e.id === third.id ? third : e));
+const before3 = credited();
+assert.equal((await punch('clock-out', 'op-out-3')).status, 200);
+ok(third.id in docs.get('team').data.hoursCredited, 'a fresh mark is kept however many shifts were credited after it');
+// The attendance write to 'done' lost: the entry stays pending, the team mark protects it.
+docs.get('attendance').data.entries = entries().map((e) => (e.id === third.id ? { ...e, hoursCredit: 'pending' } : e));
+const replay3 = await punch('clock-out', 'op-out-3');
+ok(replay3.status === 200 && Math.abs(credited() - before3 - 1) < 0.01, 'a pending shift replayed is still paid once');
+const old = Date.now() - 4 * 86400000;
+docs.get('team').data.hoursCredited = { ...docs.get('team').data.hoursCredited, 'ancient-shift': old };
+assert.equal((await punch('clock-in', 'op-in-4')).status, 200);
+const fourth = entries().find((e) => !e.outTs); fourth.inTs -= 600000;
+docs.get('attendance').data.entries = entries().map((e) => (e.id === fourth.id ? fourth : e));
+assert.equal((await punch('clock-out', 'op-out-4')).status, 200);
+ok(!('ancient-shift' in docs.get('team').data.hoursCredited), 'marks older than three days are dropped (no phone replays them)');
 console.log(`✓ attendance-hours-credit-test · ${checks} checks`);
