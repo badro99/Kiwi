@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/printer/pairing-lang.js?v=2',
   '/assets/planning/shift-editor.js?v=3',
   '/assets/planning/csv-import.js?v=3',
   '/assets/planning/optimiser.js?v=3',
@@ -84,7 +85,7 @@ var SHELL = [
   '/assets/pages-pro.js?v=2189',
   '/assets/pages-pro-spa-starter.js?v=2',
   '/assets/cash-sessions.js?v=8',
-  '/assets/simple-food-cost.js?v=14',
+  '/assets/simple-food-cost.js?v=15',
   '/assets/finance.js?v=14',
   '/assets/conformite.js?v=7',
   '/dashboard.html',
@@ -119,7 +120,7 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/service.js?v=5',
+  '/assets/serveur/service.js?v=6',
   '/assets/serveur-app.js?v=21',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
@@ -170,7 +171,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=41',
+  '/assets/pages/dashboard-startup.js?v=42',
   '/assets/pages/dashboard-loader.js?v=21',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -199,7 +200,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=40',
+  '/assets/i18n.js?v=41',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -354,8 +355,8 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=15',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=36',
-  '/assets/printer/pairing-ui.js?v=5',
+  '/assets/printer-bridge.js?v=39',
+  '/assets/printer/pairing-ui.js?v=7',
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
@@ -370,7 +371,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=21',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=72',
+  '/assets/caisse-lang.js?v=73',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=6',
@@ -402,9 +403,9 @@ var SHELL = [
   '/assets/clients-book.js?v=50',
   '/assets/clients-directory.js?v=28',
   '/assets/customer-retention.js?v=11',
-  '/assets/menu-catalog.js?v=39',
+  '/assets/menu-catalog.js?v=40',
   '/assets/stock-identity.js?v=3',
-  '/assets/restaurant-recipes.js?v=11',
+  '/assets/restaurant-recipes.js?v=12',
   '/assets/restaurant-units.js?v=2',
   '/assets/employee-live.js?v=622',
   '/assets/employee-planning.js?v=21',

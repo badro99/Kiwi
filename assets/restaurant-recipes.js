@@ -71,7 +71,9 @@
     const quantityInStockUnit = units()?.convert
       ? units().convert(number(ingredient.qty), recipeUnit, stockUnit)
       : (recipeUnit === stockUnit ? number(ingredient.qty) : null);
-    return { stock, cost, stockUnit, recipeUnit, quantityInStockUnit, lineCost: cost == null || quantityInStockUnit == null ? null : round(cost * quantityInStockUnit) };
+    /* Kept at fine precision: the dish cost is rounded once, after the sum,
+     * like the Coût simple sheet. Ten pinches at 0.4 centime are 4 centimes. */
+    return { stock, cost, stockUnit, recipeUnit, quantityInStockUnit, lineCost: cost == null || quantityInStockUnit == null ? null : fine(cost * quantityInStockUnit) };
   }
   function salesFor(itemId, itemName, id, days) {
     const since = Date.now() - Math.max(1, days || 7) * 864e5;

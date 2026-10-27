@@ -164,8 +164,8 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "72",
-    "sha": "6f2d5983207c35e8"
+    "v": "73",
+    "sha": "7aa7ff432f78f27b"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -660,8 +660,8 @@
     "sha": "e41f82cc7143441b"
   },
   "assets/i18n.js": {
-    "v": "40",
-    "sha": "2a7b9fd5fd5e83d8"
+    "v": "41",
+    "sha": "647c7659c226a5a3"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -1124,8 +1124,8 @@
     "sha": "afe2f50832ba5aa8"
   },
   "assets/menu-catalog.js": {
-    "v": "39",
-    "sha": "cb4bfc8182eef584"
+    "v": "40",
+    "sha": "aaeabc69cfae84a5"
   },
   "assets/menu-catalog/availability.js": {
     "v": "3",
@@ -1340,8 +1340,8 @@
     "sha": "944d1ca9686b4326"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "41",
-    "sha": "75096bd1ad8c8b51"
+    "v": "42",
+    "sha": "e2e14d6ca45b9a2b"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1656,12 +1656,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "36",
-    "sha": "f69921bb66237e3a"
+    "v": "39",
+    "sha": "00be0ee01385a334"
+  },
+  "assets/printer/pairing-lang.js": {
+    "v": "2",
+    "sha": "820c3e8bb65bdbf9"
   },
   "assets/printer/pairing-ui.js": {
-    "v": "5",
-    "sha": "da5afe0a219dc038"
+    "v": "7",
+    "sha": "76b37ed41687a2ab"
   },
   "assets/printer/transports.js": {
     "v": "2",
@@ -1740,8 +1744,8 @@
     "sha": "022653544779b1d0"
   },
   "assets/restaurant-recipes.js": {
-    "v": "11",
-    "sha": "b22b4ef60dee5a6e"
+    "v": "12",
+    "sha": "1213193cbcddd9c9"
   },
   "assets/restaurant-units.js": {
     "v": "2",
@@ -1796,16 +1800,16 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "5",
-    "sha": "b71bd8ef604f43a5"
+    "v": "6",
+    "sha": "426a4d7c2fb3954a"
   },
   "assets/service-requests.js": {
     "v": "2",
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "14",
-    "sha": "1bdd749b5ef87fad"
+    "v": "15",
+    "sha": "43eb6bc34570b9e0"
   },
   "assets/simple.js": {
     "v": "12",

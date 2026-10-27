@@ -43,6 +43,16 @@ function publicTarget(t) {
   const { _pin, _refused, ...rest } = t;
   return rest;
 }
+/* Someone has to fetch the ticket: an unrevoked bridge of the store seen in
+   the last 45 s, or the one bridge the ticket is pinned to. */
+async function bridgeOnline(env, merchant, t, bridgeId) {
+  const seen = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM print_bridges
+      WHERE merchant = ? AND revoked_ts IS NULL AND last_seen_ts > ?` + (bridgeId ? ' AND id = ?' : '')
+  ).bind(...(bridgeId ? [merchant, t - BRIDGE_ONLINE_MS, bridgeId] : [merchant, t - BRIDGE_ONLINE_MS])).first();
+  return !!(seen && Number(seen.n));
+}
+const RECOVERABLE = "('expired', 'failed', 'uncertain')";
 const RETRY_DELAY_MS = 10000;
 const CLAIM_LEASE_MS = 30000;
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000, ACTIVE_POLL_MS = 1000, IDLE_POLL_MS = 5000;
@@ -131,7 +141,11 @@ export async function onRequestGet(context) {
   try {
     await env.DB.prepare("UPDATE print_jobs SET status = 'expired', done_ts = expires_ts WHERE merchant = ? AND status = 'queued' AND expires_ts <= ?").bind(merchant, t).run();
     if (!id) {
-      const rows = await env.DB.prepare("SELECT id, kind, status, created_ts, expires_ts FROM print_jobs WHERE merchant = ? AND status = 'expired' AND expires_ts > ? ORDER BY created_ts DESC").bind(merchant, t - EXPIRED_RETENTION_MS).all();
+      /* Not printed, for sure or maybe: expired, refused for good, or left
+       * uncertain by a lost acknowledgement. Each is offered for 24 h with its
+       * state, so nothing ends silently (owner ruling, 26 October). */
+      const rows = await env.DB.prepare(`SELECT id, kind, status, created_ts, expires_ts FROM print_jobs
+        WHERE merchant = ? AND status IN ${RECOVERABLE} AND expires_ts > ? ORDER BY created_ts DESC`).bind(merchant, t - EXPIRED_RETENTION_MS).all();
       // A recovery owns its own lifecycle. Hide its source even for recoveries
       // created before this filter existed; an expired replacement remains recoverable.
       const pending = await Promise.all((rows.results || []).map(async (job) => {
@@ -254,11 +268,15 @@ export async function onRequestPost(context) {
   if (body.action === 'reprint-expired') {
     const sourceId = String(body.id || '').slice(0, 40);
     try {
-      const source = await env.DB.prepare("SELECT * FROM print_jobs WHERE id = ? AND merchant = ? AND status IN ('queued', 'expired') AND expires_ts <= ? AND expires_ts > ?").bind(sourceId, merchant, t, t - EXPIRED_RETENTION_MS).first();
+      const source = await env.DB.prepare(`SELECT * FROM print_jobs WHERE id = ? AND merchant = ? AND expires_ts > ?
+          AND ((status IN ('queued', 'expired') AND expires_ts <= ?) OR status IN ('failed', 'uncertain'))`).bind(sourceId, merchant, t - EXPIRED_RETENTION_MS, t).first();
       if (!source) return relayJson({ ok: false, error: 'not-found' }, 404, request);
       const id = 'pj_' + await refDigest(merchant, 'reprint:' + sourceId);
       const target = safeJsonParse(source.target, {});
       delete target._refused;
+      /* The same rule as a deposit: a copy nobody will fetch would expire
+       * again in silence, so say relay-offline now and keep the ticket offered. */
+      if (!await bridgeOnline(env, merchant, t, target._pin || null)) return relayJson({ ok: false, error: 'relay-offline' }, 409, request);
       await env.DB.batch([
         env.DB.prepare("UPDATE print_jobs SET status = 'expired', done_ts = expires_ts WHERE id = ? AND merchant = ? AND status = 'queued'").bind(sourceId, merchant),
         env.DB.prepare("INSERT OR IGNORE INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)").bind(id, merchant, target._pin || null, source.kind, JSON.stringify(target), source.data_b64, t, t + JOB_TTL_MS)
@@ -309,11 +327,7 @@ export async function onRequestPost(context) {
   try {
     // Quelqu'un doit venir chercher le ticket : sans pont en ligne, dire non tout
     // de suite vaut mieux qu'un reçu qui « part » et ne sort jamais.
-    const seen = await env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM print_bridges
-        WHERE merchant = ? AND revoked_ts IS NULL AND last_seen_ts > ?` + (bridgeId ? ' AND id = ?' : '')
-    ).bind(...(bridgeId ? [merchant, t - BRIDGE_ONLINE_MS, bridgeId] : [merchant, t - BRIDGE_ONLINE_MS])).first();
-    if (!seen || !Number(seen.n)) return relayJson({ ok: false, error: 'relay-offline' }, 409, request);
+    if (!await bridgeOnline(env, merchant, t, bridgeId)) return relayJson({ ok: false, error: 'relay-offline' }, 409, request);
 
     const written = await env.DB.batch([
       env.DB.prepare(
