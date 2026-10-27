@@ -171,7 +171,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=46',
+  '/assets/pages/dashboard-startup.js?v=47',
   '/assets/pages/dashboard-loader.js?v=22',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -226,7 +226,7 @@ var SHELL = [
   '/assets/venues/helpers.js?v=2',
   '/assets/venues.js?v=69',
   '/assets/phone.js?v=1',
-  '/assets/trade-workspace-schema.js?v=10',
+  '/assets/trade-workspace-schema.js?v=11',
   '/assets/trade-workspaces.js?v=16',
   '/assets/delivery-receivables.js?v=2',
   '/assets/reservations.js?v=35',
@@ -263,7 +263,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
   '/assets/sales-history.js?v=7',
-  '/assets/dateRange.js?v=113',
+  '/assets/dateRange.js?v=114',
   '/assets/daterange/renderers.js?v=13',
   '/assets/agent/ui.js?v=3',
   '/assets/mobile-nav.js?v=9',
@@ -341,7 +341,7 @@ var SHELL = [
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
-  '/assets/pairing-commit.js?v=2',
+  '/assets/pairing-commit.js?v=3',
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
@@ -366,15 +366,15 @@ var SHELL = [
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promo-rules.js?v=5',
-  '/assets/promos.js?v=13',
-  '/assets/boutique-promos-dashboard.js?v=21',
+  '/assets/promo-rules.js?v=6',
+  '/assets/promos.js?v=14',
+  '/assets/boutique-promos-dashboard.js?v=22',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=74',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
-  '/assets/menu-promos.js?v=6',
+  '/assets/menu-promos.js?v=7',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=6',
   '/assets/repeat-sale-guard.js?v=3',
@@ -405,7 +405,7 @@ var SHELL = [
   '/assets/customer-retention.js?v=11',
   '/assets/menu-catalog.js?v=40',
   '/assets/stock-identity.js?v=3',
-  '/assets/restaurant-recipes.js?v=12',
+  '/assets/restaurant-recipes.js?v=13',
   '/assets/restaurant-units.js?v=2',
   '/assets/employee-live.js?v=622',
   '/assets/employee-planning.js?v=21',
@@ -424,7 +424,7 @@ var SHELL = [
   '/assets/restaurant-menu/recipes.js?v=1',
   '/assets/restaurant-menu/styles.js?v=2',
   '/assets/restaurant-menu-workspace.js?v=124',
-  '/assets/menu-promos-dashboard.js?v=3',
+  '/assets/menu-promos-dashboard.js?v=4',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=13',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
@@ -439,14 +439,14 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=14',
+  '/assets/kitchen-relay.js?v=15',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=21',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=17',
-  '/assets/pos-dispatch.js?v=185',
+  '/assets/pos-dispatch.js?v=186',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -469,7 +469,7 @@ var SHELL = [
   '/assets/kit/core.js?v=2',
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
-  '/assets/kit/pin-flow.js?v=5',
+  '/assets/kit/pin-flow.js?v=6',
   '/assets/kit/till-pin.js?v=7',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=9',
@@ -530,17 +530,17 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=118',
-  '/assets/pos-boutique/sales.js?v=24',
+  '/assets/pos-boutique.css?v=119',
+  '/assets/pos-boutique/sales.js?v=25',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=24',
-  '/assets/pos-boutique/inventory.js?v=24',
-  '/assets/pos-boutique.js?v=118',
+  '/assets/pos-boutique/checkout.js?v=25',
+  '/assets/pos-boutique/inventory.js?v=25',
+  '/assets/pos-boutique.js?v=119',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
-  '/assets/pos-spa.css?v=11',
-  '/assets/pos-spa.js?v=11',
+  '/assets/pos-spa.css?v=12',
+  '/assets/pos-spa.js?v=12',
   '/assets/pos-hotel.css?v=25',
   '/assets/pos-hotel.js?v=25',
   '/assets/pos-fastfood.css?v=15',
@@ -573,7 +573,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=14',
   '/assets/pos-maison.js?v=96',
-  '/assets/caisse-pairing.js?v=49',
+  '/assets/caisse-pairing.js?v=50',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

@@ -29,6 +29,14 @@ fc.assert(fc.property(promo, time, fc.integer({ min: 0, max: 1000000 }), (p, now
     const raw = { ...p, from: surface === 'menu' ? '2026-10-16' : Date.UTC(2026, 9, 16), to: surface === 'menu' ? '2027-02-01' : Date.UTC(2027, 1, 1) };
     const a = surface === 'menu' ? old.KiwiMenuPromos.sanitize([raw]) : [old.KiwiPromos.normalize(raw)];
     const b = surface === 'menu' ? shared.KiwiMenuPromos.sanitize([raw]) : [shared.KiwiPromos.normalize(raw)];
+    /* Wave 12 (promos#1): a percentage keeps the merchant's own value to the centime, where both frozen
+       engines rounded it to a whole number. The oracle comparison stays for every whole percentage;
+       a fractional one is checked against the kept value and, below, against the hand-computed centimes. */
+    const kept = b.length ? b[0].value : null;
+    if (b.length && b[0].kind === 'percent' && !Number.isInteger(shared.KiwiPromoRules.money(p.value))) {
+      assert.equal(kept, Math.min(100, shared.KiwiPromoRules.money(p.value)), 'a percentage is kept to the centime');
+      continue;
+    }
     if (surface === 'menu') assert.deepEqual(plain(b), plain(a));
     else assert.equal(b[0].value, b[0].kind === 'percent' ? Math.min(100, Math.round(shared.KiwiPromoRules.money(p.value))) : shared.KiwiPromoRules.money(p.value));
     if (!a.length) continue;
@@ -49,7 +57,9 @@ console.log('✓ 2500 promotions générées : normalisation, calendrier et prix
 for (const [kind,value,base,want] of [
   ['percent',15,1.45,1.23], ['percent',50,.05,.03],
   ['amount',.27,1.34,1.07], ['fixed',1.23,2.99,1.23],
-  ['amount',10,1.34,0], ['fixed',10,1.34,1.34]
+  ['amount',10,1.34,0], ['fixed',10,1.34,1.34],
+  /* 12.5 % is 12.5 %, not 13 %: 99 MAD at -12.5 % is 86.625, half up to 86.63 (13 % gave 86.13). */
+  ['percent',12.5,99,86.63], ['percent',0.5,200,199], ['percent',100.456,10,0]
 ]) {
   const p = shared.KiwiPromoRules.normalize({kind,value},'menu');
   assert.equal(shared.KiwiPromoRules.price(p,base,'menu'),want,`centime oracle ${kind}/${base}`);

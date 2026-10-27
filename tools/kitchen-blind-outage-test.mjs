@@ -53,6 +53,7 @@ function pass(reply) {
   const S = { since: 42, live: true, orders, cooking, seen: { 'ord-1': 1 }, seenVoids: {}, muted: true };
   const ctx = vm.createContext({
     S, STALE_MS: 6 * 3600 * 1000,
+    clockNow: () => Date.now(), hm: () => '00:00',   /* the page's server-clock helpers (wave 12) */
     T: (k) => k,
     $: (id) => (id === 'link' ? linkEl : txtEl),
     KiwiKitchenRelay: { pullAll: () => Promise.resolve(reply) },

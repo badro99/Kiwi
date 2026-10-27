@@ -113,7 +113,7 @@
   {
     "file": "functions/api/order/queue.js",
     "fixture": "queue.js.gz",
-    "sha256": "7e63ade3afa280828a81c693b4154e2018bb128229259e195b63b187a9425ef9",
+    "sha256": "6c65a6a62e09c48cf1cf5f058e429e4ee0a1454a8087138dfcb436760577712e",
     "prefix": "import { pollQueue } from './_queue-poll.js';\nimport { serviceScope } from './_queue-service.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nexport { reopenedFloorBills } from './_queue-reopened.js';\n",
     "segments": [
       {
@@ -181,7 +181,7 @@
       {
         "file": "functions/api/order/_queue-poll.js",
         "start": 16891,
-        "end": 37175,
+        "end": 37376,
         "header": "import { json } from '../../auth/_lib.js';\nimport { startOfDay } from './_guest-clock.js';\nimport { normTable } from './_guest-tables.js';\nimport { CURSOR_LAG_MS, pollCursor } from './_lib.js';\nimport { merchantZone } from '../_business-day.js';\nimport { visitCredits } from '../_visit-cover.js';\nimport { displayMoney, MAX_LINES } from './_queue-shared.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nimport { COL_SETS, COL_SET_MISSING } from './_queue-columns.js';\nimport { MAX_ROWS, readPageCursor, PENDING_TTL_MS, KITCHEN_TTL_MS, OPEN_VISIT_RECOVERY_MS, ARCHIVED_TOMBSTONE_MS, EXPIRED_MS, SERVICE_TOUCH_MS } from './_queue-poll-policy.js';\n// Contrat : env, URL, marchand autorisé, rôle et périmètre déjà contrôlés ; sondage, expiration et présence des visites uniquement. La route garde les droits et le pointage du comptoir.\nexport async function pollQueue({ env, url, merchant, role, service }) {\n",
         "footer": "\n}\n",
         "marker": "  return pollQueue({ env, url, merchant, role, service });",

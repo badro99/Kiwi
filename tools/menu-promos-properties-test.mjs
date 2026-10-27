@@ -140,12 +140,13 @@ function covers(p, line, menu) {
 const cents = (mad) => Math.round(mad * 100);
 function promoCents(p, base) {
   const v = Math.max(0, cents(Number(p.value) || 0));
-  if (p.kind === 'percent') { const pct = Math.min(100, Math.round(Math.max(0, Number(p.value) || 0))); return Math.floor((base * (100 - pct) + 50) / 100); }
+  /* wave 12: a percentage keeps its centimes (12.5 % is 12.5 %), counted here in hundredths of a percent, exactly. */
+  if (p.kind === 'percent') { const pc = Math.round(Math.min(100, Math.max(0, Number(p.value) || 0)) * 100); return Math.floor((base * (10000 - pc) + 5000) / 10000); }
   if (p.kind === 'amount') return Math.max(0, base - v);
   return Math.min(base, v);
 }
 /* A promotion with nothing to take off (a zero percent or amount) never reaches the till. */
-const usable = (p) => p && p.id && p.name && (p.kind === 'fixed' || (p.kind === 'percent' ? Math.round(Math.min(100, Number(p.value) || 0)) > 0 : cents(Number(p.value) || 0) > 0));
+const usable = (p) => p && p.id && p.name && (p.kind === 'fixed' || (p.kind === 'percent' ? cents(Math.min(100, Number(p.value) || 0)) > 0 : cents(Number(p.value) || 0) > 0));
 function modelLine(line, menu, promos, t) {
   if (line.kind === 'formula-part') return { cents: 0, stamp: null };
   const item = menu.items.find((i) => i.id === line.id);

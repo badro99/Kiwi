@@ -119,3 +119,65 @@
 
   window.KiwiPairingCommit = { commit: commit, purgeTenantData: purgeTenantData };
 })();
+
+/* ── window.KiwiTrustedClock · une horloge que reculer l'heure de l'appareil ne trompe pas.
+ *
+ * Les identités du personnel gardées hors ligne (72 h, 24 h pour un acte de
+ * responsable, assets/caisse-pairing/offline-codes.js) se mesuraient avec le
+ * Date.now() de la caisse : reculer l'horloge de la tablette gardait un code
+ * révoqué valable aussi longtemps qu'on voulait.
+ *
+ *   now()         l'heure en ms, recalée sur le serveur à chaque contact, et qui ne
+ *                 recule jamais : jamais en dessous du plus haut point déjà vu ;
+ *   rolledBack()  vrai quand l'horloge de l'appareil est revenue de plus de 5 min
+ *                 en arrière depuis ce plus haut point : un code gardé hors ligne
+ *                 est alors refusé (échec fermé) jusqu'au prochain contact serveur ;
+ *   anchor(ms)    l'heure du serveur : recale l'horloge et lève l'alerte ;
+ *   observe(res)  lit l'en-tête Date d'une réponse du serveur et l'ancre.
+ *
+ * Limite connue : une tablette éteinte puis rallumée avec une horloge reculée ne se
+ * voit qu'au prochain contact serveur, qui recale tout.
+ *
+ * Aucun réseau, aucun code, aucune donnée de commerçant : deux nombres dans le
+ * navigateur de l'appareil.
+ *
+ * Ce bloc vit ici, avec l'appairage, parce que la caisse est au plafond de ses balises <script>
+ * (tools/file-size-ratchet-test.mjs) : un fichier de plus n'avait nulle part où se charger. */
+(function () {
+  'use strict';
+  var KEY = 'kiwi:caisse:clock:v1';
+  var TOLERANCE = 5 * 60 * 1000;  /* une horloge corrigée de quelques minutes n'est pas une triche */
+  var SAVE_EVERY = 60 * 1000;     /* le plus haut point s'écrit au plus une fois par minute */
+  var hw = 0, skew = 0, saved = 0;
+  try {
+    var s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s && isFinite(s.hw) && isFinite(s.skew)) { hw = Math.max(0, +s.hw); skew = +s.skew; saved = hw; }
+  } catch (_) {}
+  function save() {
+    saved = hw;
+    try { localStorage.setItem(KEY, JSON.stringify({ hw: hw, skew: skew })); } catch (_) {}
+  }
+  function raw() { return Date.now() + skew; }
+  function now() {
+    var t = raw();
+    if (t > hw) { hw = t; if (hw - saved >= SAVE_EVERY) save(); }
+    return hw;
+  }
+  function rolledBack() { return raw() < hw - TOLERANCE; }
+  function anchor(ms) {
+    ms = Number(ms);
+    if (!isFinite(ms) || ms < Date.UTC(2020, 0, 1)) return;
+    skew = ms - Date.now(); hw = ms; save();
+  }
+  function observe(res) {
+    try {
+      var d = res && res.headers && res.headers.get && res.headers.get('Date');
+      if (d) anchor(Date.parse(d));
+    } catch (_) {}
+  }
+  /* Un battement par minute tant que la caisse est ouverte : le plus haut point suit
+   * le temps réel, donc revenir en arrière après des heures d'activité se voit. */
+  try { if (typeof setInterval === 'function') setInterval(now, SAVE_EVERY); } catch (_) {}
+  try { window.addEventListener('pagehide', function () { now(); save(); }); } catch (_) {}
+  window.KiwiTrustedClock = { now: now, rolledBack: rolledBack, anchor: anchor, observe: observe };
+})();

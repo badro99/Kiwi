@@ -903,7 +903,7 @@
 <script src="assets/kiwi-env.js?v=9"></script>
 <script src="assets/err-reporter.js?v=2"></script>
 <script src="assets/menu-i18n.js?v=6" defer></script>
-<script src="assets/kitchen-relay.js?v=14" defer></script>
+<script src="assets/kitchen-relay.js?v=15" defer></script>
 <!-- L'appairage, partagé avec la caisse. Une tablette du passe change de
      commerçant sans que personne ne se connecte — exactement comme une caisse —
      et doit donc oublier le commerce précédent de la même façon. Ces deux-là
@@ -911,7 +911,7 @@
      réseau douteux, et absents, l'écran s'ouvrirait chez B avec l'état de A.
      tenant-purge AVANT pairing-commit : c'est la liste que la purge consomme. -->
 <script src="assets/tenant-purge.js?v=6" defer></script>
-<script src="assets/pairing-commit.js?v=2" defer></script>
+<script src="assets/pairing-commit.js?v=3" defer></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
  * KIWI CUISINE — l'écran du passe
@@ -1598,7 +1598,7 @@
          lorsqu'aucune nouvelle ligne ne revient pour eux. */
       Object.keys(S.orders).forEach(function (id) {
         var old = S.orders[id];
-        if (old && old.created_ts && (Date.now() - old.created_ts) > STALE_MS) {
+        if (old && old.created_ts && (clockNow() - old.created_ts) > STALE_MS) {
           delete S.orders[id]; delete S.cooking[id];
         }
       });
@@ -1617,7 +1617,7 @@
           delete S.orders[o.id]; delete S.cooking[o.id]; return;
         }
         /* Défense locale complémentaire à la borne de la file serveur. */
-        if (o.created_ts && (Date.now() - o.created_ts) > STALE_MS) { delete S.orders[o.id]; return; }
+        if (o.created_ts && (clockNow() - o.created_ts) > STALE_MS) { delete S.orders[o.id]; return; }
         if (!S.seen[o.id] && o.status === 'accepted') { if (!firstPass) fresh++; S.seen[o.id] = 1; }
         if (Array.isArray(o.lines)) {
           o.lines.forEach(function (l) {
@@ -1738,7 +1738,7 @@
     try {
       var snap = JSON.parse(localStorage.getItem(k) || 'null');
       if (!snap || !Array.isArray(snap.orders)) return false;
-      var now = Date.now(), n = 0;
+      var now = clockNow(), n = 0;
       snap.orders.forEach(function (o) {
         if (!o || !o.id || S.orders[o.id]) return;
         if (o.created_ts && now - o.created_ts > STALE_MS) return;
@@ -1853,10 +1853,10 @@
   }
 
   /* ── Rendu ───────────────────────────────────────────────────────────────── */
-  function elapsed(o) { return Math.max(0, Math.floor((Date.now() - (o.created_ts || Date.now())) / 1000)); }
+  function elapsed(o) { var n = clockNow(); return Math.max(0, Math.floor((n - (o.created_ts || n)) / 1000)); }
   function urgency(s) { return s < WARN_S ? 'ok' : s < LATE_S ? 'warn' : 'over'; }
   function mmss(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
-  function hm(ts) { var d = new Date(ts || Date.now()); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function hm(ts) { return window.KiwiKitchenRelay && KiwiKitchenRelay.hm ? KiwiKitchenRelay.hm(ts) : new Date(ts || Date.now()).toTimeString().slice(0, 5); } function clockNow() { return window.KiwiKitchenRelay && KiwiKitchenRelay.now ? KiwiKitchenRelay.now() : Date.now(); }
 
   function matches(o) {
     if (S.station === 'all') return true;
@@ -2249,7 +2249,7 @@
       if (v) v.textContent = mmss(s);
       el.classList.toggle('is-late', u === 'over');
     });
-    $('clock').textContent = hm(Date.now());
+    $('clock').textContent = hm();
   }
 
   /* ── Les gestes du passe ─────────────────────────────────────────────────── */
@@ -2343,7 +2343,7 @@
       o.status = 'ready';
       delete S.cooking[id];
     }
-    o.updated_ts = Date.now();
+    o.updated_ts = clockNow();
     saveCooking(); paint();
     sendBump(id, 'ready', station).then(afterBump);
   }
@@ -2361,7 +2361,7 @@
       else if (wasReady) line.stationReady = true;
     });
     ro.status = 'accepted';
-    ro.updated_ts = Date.now();
+    ro.updated_ts = clockNow();
     S.cooking[rid] = true;
     /* Le « Prête » n'est jamais parti (réseau tombé) : le serveur ne l'a pas
        vu, il n'y a rien à rappeler, il suffit de l'oublier. */

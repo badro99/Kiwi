@@ -19,6 +19,7 @@
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
     })
       .then(function (r) {
+        try { if (window.KiwiTrustedClock) window.KiwiTrustedClock.observe(r); } catch (_) {}
         if (r && r.status === 429) {
           lastVerify.status = 429;
           return r.json().catch(function () { return {}; }).then(function (d) {

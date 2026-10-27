@@ -25,7 +25,7 @@ export async function pollQueue({ env, url, merchant, role, service }) {
    * Date.now() in the same request burst. Include that small future margin,
    * while the completed client cursor still trails the ORIGINAL poll time. */
   const pageEnd = pageCursor ? pageCursor.end : now + CURSOR_LAG_MS;
-  const today = startOfDay(now, await merchantZone(env, merchant));
+  const zone = await merchantZone(env, merchant), today = startOfDay(now, zone);
   const kitchenCutoff = now - KITCHEN_TTL_MS;
 
   /* ── LE SONDAGE DU SERVEUR EST UN BATTEMENT DE CŒUR ────────────────────────
@@ -374,6 +374,8 @@ export async function pollQueue({ env, url, merchant, role, service }) {
      * clients drain `nextCursor` and use the full window cursor only at end. */
     now: hasMore ? Math.max(since, Number(lastRow.updated_ts) - 1) : pollCursor(pageEnd - CURSOR_LAG_MS),
     nextCursor, ordersAvailable: true,
+    /* The server's clock and the store's zone: a kitchen tablet ages tickets (created_ts is server time) and prints their hour with these, not its own clock. */
+    serverNow: now, zone,
     /* Refus récents (TTL ou comptoir), lecture seule : invalider les fantômes
        locaux et proposer la reprise. Absent = rien n'a été refusé récemment. */
     expired: expired.length ? expired : undefined,

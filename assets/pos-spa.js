@@ -259,9 +259,11 @@
     { id: 'CU-2057', clientId: 'c2', familyId: 'fm', size: 5,  used: 4, boughtDays: -88, expiresDays: 42 },
   ];
   const cureName = (cu) => `${FORFAIT[cu.familyId].name} × ${cu.size}`;
-  const curesOf = (clientId) => CURES.filter((cu) => cu.clientId === clientId && cu.used < cu.size);
+  /* Expirée : passé la fin de son dernier jour commercial (05:00 le lendemain, règle du tableau de bord). Une cure vendue avant que la date soit gardée n'en a pas : elle reste valable. */
+  const cureExpired = (cu) => { const left = window.KiwiTradeSchema?.cureDaysLeft?.(cu.expiresOn, Date.now()); return left != null && left < 0; };
+  const curesOf = (clientId) => CURES.filter((cu) => cu.clientId === clientId && cu.used < cu.size && !cureExpired(cu));
   const cureFor = (clientId, prestaId) =>
-    CURES.find((cu) => cu.clientId === clientId && FORFAIT[cu.familyId].presta === prestaId && cu.used < cu.size);
+    CURES.find((cu) => cu.clientId === clientId && FORFAIT[cu.familyId].presta === prestaId && cu.used < cu.size && !cureExpired(cu));
 
   /* ───────────────────────── planning du jour (seed mid-shift) ─────────────
      Journée simulée : il est 14:30. 10:00 → 20:00, ~60 % de remplissage. */
@@ -669,7 +671,7 @@
   function renderBadges() {
     const remaining = APPTS.filter((a) => a.status !== 'done').length;
     const due = dueAppts().length;
-    const actives = CURES.filter((cu) => cu.used < cu.size).length;
+    const actives = CURES.filter((cu) => cu.used < cu.size && !cureExpired(cu)).length;
     const lowStock = PRODUCTS.filter((p) => stockKnown(p) && p.stock <= 3).length;
     const set = (id, val, dueStyle) => {
       const el = $(id, root);
@@ -1488,7 +1490,7 @@
       closeVeil('#sp-pay-veil');
       if (isForfait) {
         cureSeq++;
-        const cu = { id: `CU-${cureSeq}`, clientId: ctx.clientId, familyId: ctx.familyId, size: ctx.size, used: 0, boughtDays: 0, expiresDays: 180 };
+        const cu = { id: `CU-${cureSeq}`, clientId: ctx.clientId, familyId: ctx.familyId, size: ctx.size, used: 0, boughtDays: 0, expiresDays: 180, expiresOn: window.KiwiTradeSchema?.cureExpiryOn?.(Date.now(), 180) };
         CURES.unshift(cu);
         /* Le forfait est encaissé en entier le jour de la vente : c'est une
            recette du jour, même si les séances seront consommées plus tard. */
@@ -1542,7 +1544,7 @@
   function cureCard(cu, opts) {
     const c = CL[cu.clientId];
     const f = FORFAIT[cu.familyId];
-    const full = cu.used >= cu.size;
+    const full = cu.used >= cu.size || cureExpired(cu);   /* expirée : plus de poinçon, on propose de renouveler */
     return `<div class="sp-cure" data-sp-cure="${cu.id}">
       <div class="sp-cure-in">
         <div class="sp-cure-top">
@@ -1558,7 +1560,7 @@
         </div>
         ${punchRow(cu, opts)}
         <div class="sp-cure-foot">
-          <span class="sp-cure-exp">${full ? '<b>Cure terminée</b>, proposez le renouvellement' : `Valable jusqu'au <b>${esc(inDays(cu.expiresDays))}</b>`}</span>
+          <span class="sp-cure-exp">${cu.used < cu.size && cureExpired(cu) ? `<b>Cure expirée</b>, valable jusqu'au ${esc(fmtDay(new Date(cu.expiresOn + 'T12:00:00')))}` : full ? '<b>Cure terminée</b>, proposez le renouvellement' : `Valable jusqu'au <b>${esc(cu.expiresOn ? fmtDay(new Date(cu.expiresOn + 'T12:00:00')) : inDays(cu.expiresDays))}</b>`}</span>
           <span class="sp-cure-bc">${barcode(cu.id, 20)}</span>
         </div>
         <div class="sp-cure-actions">
@@ -1573,8 +1575,8 @@
 
   function renderCures(opts) {
     const panel = $('[data-sp-panel="cures"]', root);
-    const actives = CURES.filter((cu) => cu.used < cu.size);
-    const fulls = CURES.filter((cu) => cu.used >= cu.size);
+    const actives = CURES.filter((cu) => cu.used < cu.size && !cureExpired(cu));
+    const fulls = CURES.filter((cu) => cu.used >= cu.size || cureExpired(cu));
     panel.innerHTML = `
       <div class="sp-cures">
         <header class="sp-head">
@@ -1635,7 +1637,7 @@
   /* ---------- décompte (confirmation puis poinçon) ---------- */
   function openPunch(cureId, ctx) {
     const cu = CURES.find((x) => x.id === cureId);
-    if (!cu || cu.used >= cu.size) return;
+    if (!cu || cu.used >= cu.size || cureExpired(cu)) return;
     const c = CL[cu.clientId];
     const el = $('#sp-punchm', root);
     el.innerHTML = `

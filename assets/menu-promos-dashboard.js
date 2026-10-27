@@ -193,7 +193,7 @@
         <div><label class="kf-label" for="mp-kind">${esc(tr('kind'))}</label>
           <select class="kf-input" id="mp-kind" data-mp-field="kind">${['percent', 'amount', 'fixed'].map((k) => `<option value="${k}"${draft.kind === k ? ' selected' : ''}>${esc(tr(k))}</option>`).join('')}</select></div>
         <div><label class="kf-label" for="mp-value">${esc(tr('value'))} <span data-mp-unit>${draft.kind === 'percent' ? '%' : 'MAD'}</span></label>
-          <input class="kf-input" id="mp-value" data-mp-field="value" type="number" inputmode="decimal" min="0" step="${draft.kind === 'percent' ? '1' : '0.5'}" value="${esc(draft.value)}"/></div>
+          <input class="kf-input" id="mp-value" data-mp-field="value" type="number" inputmode="decimal" min="0" step="${draft.kind === 'percent' ? 'any' : '0.5'}" value="${esc(draft.value)}"/></div>
       </div>
       <div class="kf-label">${esc(tr('scope'))}</div>
       <div class="mi-subchips" data-mp-scopes>${scopeChips()}</div>
@@ -223,7 +223,7 @@
     q('[data-mp-field="kind"]').addEventListener('change', (e) => {
       draft.kind = e.target.value;
       q('[data-mp-unit]').textContent = draft.kind === 'percent' ? '%' : 'MAD';
-      q('[data-mp-field="value"]').step = draft.kind === 'percent' ? '1' : '0.5';
+      q('[data-mp-field="value"]').step = draft.kind === 'percent' ? 'any' : '0.5';
     });
     q('[data-mp-scopes]').addEventListener('click', (e) => {
       const b = e.target.closest('[data-mp-scope]'); if (!b) return;

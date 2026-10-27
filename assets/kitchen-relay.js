@@ -321,8 +321,35 @@
       + (cursor ? '&cursor=' + encodeURIComponent(JSON.stringify(cursor)) : '');
     return withTimeout(KITCHEN_TIMEOUT_MS, function (signal) {
       return fetch(u, { headers: { Accept: 'application/json' }, cache: 'no-store', signal: signal })
-        .then(function (r) { return r.ok ? r.json() : null; });
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { learnClock(j); return j; });
     }).catch(function () { return null; });
+  }
+
+  /* L'horloge du serveur, apprise à chaque relevé. created_ts est l'heure du
+   * SERVEUR : mesurer l'âge d'un bon (et la purge de 6 h) avec l'horloge de la
+   * tablette, c'est se tromper de l'écart de cette horloge, et imprimer son
+   * heure avec le fuseau de la tablette plutôt que celui du magasin.
+   * now() = l'heure du serveur ; hm(ts) = HH:MM dans le fuseau du magasin.
+   * Rien appris (hors ligne depuis le départ) : l'horloge et le fuseau de la tablette. */
+  var clockOffset = 0, clockZone = '', hmFormats = {};
+  function learnClock(j) {
+    if (!j || j.ok === false) return;
+    var sn = Number(j.serverNow);
+    if (isFinite(sn) && sn > 1e12) clockOffset = sn - Date.now();
+    if (typeof j.zone === 'string' && j.zone) clockZone = j.zone;
+  }
+  function serverNow() { return Date.now() + clockOffset; }
+  function hm(ts) {
+    var t = ts || serverNow();
+    if (clockZone) {
+      try {
+        var f = hmFormats[clockZone] || (hmFormats[clockZone] = new (globalThis.KiwiZoneLaw && globalThis.KiwiZoneLaw.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: clockZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
+        return f.format(t);
+      } catch (_) { clockZone = ''; }
+    }
+    var d = new Date(t);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
   /* Advance the caller's `since` only after the whole window arrived. A
@@ -406,6 +433,8 @@
     bump: bump,
     pull: pull,
     pullAll: pullAll,
+    now: serverNow,
+    hm: hm,
     pending: pending,
     timeoutMs: KITCHEN_TIMEOUT_MS,
     voidLine: voidLine,

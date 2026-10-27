@@ -76,6 +76,7 @@ vm.runInContext([
   "const norm = (v) => clean(v).toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');",
   "const number = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };",
   "const venue = (id) => id || 'v1';",
+  grab(RECIPES, 'function windowStart('),   /* wave 12: the sales window is the business days, rolling without the day report */
   grab(RECIPES, 'function salesFor('),
   'this.salesFor = salesFor;',
 ].join('\n'), ctx);

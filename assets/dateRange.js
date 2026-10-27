@@ -1546,11 +1546,11 @@
     const h = dayCutoffH(slug);
     return { from: merchantBoundary(day, h, slug), to: merchantBoundary(addMerchantDays(day, 1), h, slug) };
   }
-  function dayCutoffH(slug) {
+  function dayCutoffH(slug) { /* repli = 05:00 comme la caisse, jamais minuit */
     try {
       const h = window.KiwiDayReport?.cutoff?.(slug);
-      return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
-    } catch (_) { return 0; }
+      return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 5;
+    } catch (_) { return 5; }
   }
   function dayStartMs(t) {
     const slug = activeMerchantSlug();

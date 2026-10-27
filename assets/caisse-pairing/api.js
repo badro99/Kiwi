@@ -1,7 +1,7 @@
 
   window.KiwiCaissePairing = {
     verifyReply: verifyReply, noteApproval: noteApproval,
-    offlineRow: function (code, opts) { var v = activeVenue(); return (v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null)).then(function (who) { return who && opts && opts.manager && Date.now() - who.provenAt >= 24 * 3600000 ? null : who; }); },
+    offlineRow: function (code, opts) { var v = activeVenue(); return (v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null)).then(function (who) { return who && opts && opts.manager && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 3600000 ? null : who; }); },
     lastRequestFailed: function () { return lastFailed; },
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
     repair: repair, recoverFromTerminal: recoverFromTerminal, terminalId: terminalId,
@@ -28,7 +28,7 @@
     },
     authorizeManager: function (code, action) {
       return verifyCode(code, action).then(function (who) {
-        if (who && who.offline && Date.now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
+        if (who && who.offline && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
         var role = String((who && who.role) || '').toLowerCase();
         if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
