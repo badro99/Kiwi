@@ -146,10 +146,10 @@ CREATE TABLE staff_pins (id TEXT PRIMARY KEY, merchant TEXT, pin TEXT, name TEXT
     assert.deepEqual(Object.keys(stored.settingsFieldsAt).sort(), ['salesDrop', 'share']);
     // The browser and the server hold the same bounds.
     const { BRIEFING_LIMITS } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_briefing-settings.js')).href);
-    const limits = vm.runInNewContext('(' + read('assets/briefing.js').match(/var LIMITS = (\{[\s\S]*?\n  \});/)[1] + ')');
+    const block = read('assets/briefing.js').match(/briefing-limits:begin[^\n]*\n([\s\S]*?)\n  \/\* briefing-limits:end/)[1];
+    const { limits, integer } = vm.runInNewContext('(function () {\n' + block + '\nreturn { limits: LIMITS, integer: INTEGER };\n})()');
     assert.deepEqual(Object.keys(BRIEFING_LIMITS).sort(), Object.keys(limits).sort());
-    const integer = vm.runInNewContext('(' + read('assets/briefing.js').match(/function integerLimit\(key\) \{[^\n]*\}/)[0] + ')');
-    for (const [k, spec] of Object.entries(limits)) assert.deepEqual([BRIEFING_LIMITS[k].min, BRIEFING_LIMITS[k].max, BRIEFING_LIMITS[k].integer], [spec[1], spec[2], integer(k)], k);
+    for (const [k, spec] of Object.entries(limits)) assert.deepEqual([BRIEFING_LIMITS[k].min, BRIEFING_LIMITS[k].max, BRIEFING_LIMITS[k].integer], [spec[1], spec[2], integer[k] === true], k);
     ok('briefing#1 the server drops settings outside the bounds the browser enforces');
   }
 }

@@ -132,8 +132,8 @@
     "sha": "fd42eade73417d7e"
   },
   "assets/briefing.js": {
-    "v": "31",
-    "sha": "72da20864e71030c"
+    "v": "32",
+    "sha": "e9738a53174f1fcd"
   },
   "assets/caisse-accounting.js": {
     "v": "14",
@@ -1356,8 +1356,8 @@
     "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "55",
-    "sha": "d80cf2bdb647f0fb"
+    "v": "56",
+    "sha": "50c50091b01fdfd8"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1448,24 +1448,24 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "134",
+    "v": "135",
     "sha": "903834fcdc1b2ab2"
   },
   "assets/pos-boutique.js": {
-    "v": "134",
-    "sha": "5e2a1db0a36816ad"
+    "v": "135",
+    "sha": "9deb7a5fbc665c2d"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "37",
-    "sha": "16d5a056eb6c423b"
+    "v": "38",
+    "sha": "c3a4daae5f004c16"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "37",
-    "sha": "0401163a3b4e9a6e"
+    "v": "38",
+    "sha": "a788d05d4d33a9b6"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "37",
-    "sha": "8ddc006ca9292037"
+    "v": "38",
+    "sha": "847793fdb0fc252b"
   },
   "assets/pos-boutique/ticket-owner.js": {
     "v": "1",
@@ -1480,8 +1480,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "203",
-    "sha": "d16879a2d5b5f183"
+    "v": "204",
+    "sha": "04c37d6f5907f875"
   },
   "assets/pos-epicerie.css": {
     "v": "27",
@@ -1852,8 +1852,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "92",
-    "sha": "78720590df7c176e"
+    "v": "93",
+    "sha": "d984cebf06f77e5f"
   },
   "assets/stock/alerts.js": {
     "v": "3",
@@ -1868,7 +1868,7 @@
     "sha": "0ab1c39ca244dea0"
   },
   "assets/stock/intake.js": {
-    "v": "9",
+    "v": "10",
     "sha": "1a526a65bc742459"
   },
   "assets/stock/loss.js": {
@@ -1892,7 +1892,7 @@
     "sha": "5d3e156921dc0e8d"
   },
   "assets/stock/strings.js": {
-    "v": "4",
+    "v": "5",
     "sha": "b978fa8a1d946106"
   },
   "assets/store-templates.js": {
