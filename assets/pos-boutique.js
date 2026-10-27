@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=25';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=25';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=25';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=26';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=26';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=26';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -1665,9 +1665,67 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
        l'ouverture de la caisse, et à chaque ouverture d'Échanges & avoirs. */
     if (!IS_DEMO) void refreshRemoteAvoirs();
 
+    bqKitRail();
+
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
     bqMaybeOpenScreen();
+  }
+
+  /* kiwiSkin2027:till · le rail du kit (§10.20) : quatre destinations et Plus,
+     comme la caisse restaurant. Le reste n'est pas SUPPRIMÉ, il est DÉPLACÉ
+     dans le panneau Plus — les mêmes nœuds, avec leurs propres écouteurs.
+     On ne reconstruit aucun bouton et on ne cherche aucun sélecteur : ce qui
+     était dans la barre y est encore, ailleurs. C'est la différence avec la
+     liste de sélecteurs écrits à la main du restaurant, où une ligne qui ne
+     correspond plus tombe sans bruit : ici il n'y a pas de liste à mentir.
+     Le panneau vit DANS #bq-nav, donc la délégation de clic du métier
+     (switchView) continue de voir les destinations déplacées. */
+  const BQ_RAIL_MAIN = ['vente', 'echanges', 'inventaire', 'clientes'];
+  function bqKitRail() {
+    if (!root || !bqKitSkin()) return false;
+    const nav = $('#bq-nav', root);
+    if (!nav || nav.querySelector('#bq-more')) return false;
+    const foot = root.querySelector('.bq-rail-foot');
+
+    const more = document.createElement('div');
+    more.className = 'bq-more';
+    more.id = 'bq-more';
+    more.hidden = true;
+    /* Ordre d'origine conservé : les destinations d'abord, le pied ensuite. */
+    [...nav.children].forEach((el) => {
+      if (el.dataset && BQ_RAIL_MAIN.indexOf(el.dataset.bqView) >= 0) return;
+      more.appendChild(el);
+    });
+    if (foot) [...foot.children].forEach((el) => more.appendChild(el));
+
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.className = 'bq-nav-it bq-plus';
+    plus.id = 'bq-plus';
+    plus.setAttribute('aria-expanded', 'false');
+    plus.setAttribute('aria-controls', 'bq-more');
+    plus.innerHTML = '<i data-lucide="ellipsis"></i><span>Plus</span>';
+    nav.appendChild(plus);
+    nav.appendChild(more);
+
+    const close = () => { more.hidden = true; plus.setAttribute('aria-expanded', 'false'); };
+    plus.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = more.hidden;
+      more.hidden = !open;
+      plus.setAttribute('aria-expanded', open ? 'true' : 'false');
+      icons();
+    });
+    /* Un geste dans Plus fait son travail puis referme : le panneau ne reste
+       pas par-dessus l'écran qu'il vient d'ouvrir. */
+    more.addEventListener('click', () => setTimeout(close, 0));
+    document.addEventListener('click', (e) => {
+      if (!more.hidden && !more.contains(e.target) && !plus.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    icons();
+    return true;
   }
 
   /* Pick the first two in-stock articles from the live catalogue for the
