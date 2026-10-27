@@ -106,7 +106,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
   const settings = (teamRow.data && teamRow.data.planning && teamRow.data.planning.settings) || {};
   const maxShiftMs = (settings.maxDailyHours == null ? DEFAULT_MAX_DAILY_HOURS : Math.max(0, Number(settings.maxDailyHours) || 0)) * 3600000;
   let refusal = '';
-  /** @type {{inTs: number, outTs: number} | null} Populated by the awaited document mutation. */
+  /** @type {{inTs: number, outTs: number, id?: string, hoursCredit?: string} | null} Populated by the awaited document mutation. */
   let changedEntry = null;
   let replay = false;
   const attendance = await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {

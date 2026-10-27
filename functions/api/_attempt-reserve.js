@@ -30,7 +30,7 @@ const RESERVE_SQL = `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_unt
 
 /** Réserve un essai sur chaque compteur. Lève si la base ne répond pas : à
  *  l'appelant de refuser (503), jamais de laisser passer.
- *  @returns {Promise<{ok: true} | {ok: false, retryAfter: number}>} */
+ *  @returns {Promise<{ok: boolean, retryAfter: number}>} retryAfter vaut 0 quand ok. */
 export async function reserveAttempt(env, keys, t, { windowMs, blockMs }) {
   let wait = 0;
   for (const { key, max } of keys) {
@@ -39,7 +39,7 @@ export async function reserveAttempt(env, keys, t, { windowMs, blockMs }) {
     const until = Number(row.blocked_until) || 0;
     if (Number(row.fails) > max || until > t) wait = Math.max(wait, Math.ceil((Math.max(until, t + 1000) - t) / 1000));
   }
-  return wait ? { ok: false, retryAfter: wait } : { ok: true };
+  return { ok: !wait, retryAfter: wait };
 }
 
 /** Un code juste : le compteur étroit repart de zéro ; le large rend l'essai
