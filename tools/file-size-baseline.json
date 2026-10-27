@@ -96,7 +96,7 @@
     "assets/pos-boutique/checkout.js": 1879,
     "functions/_middleware.js": 1631,
     "functions/auth/_lib.js": 1957,
-    "functions/api/store.js": 1214,
+    "functions/api/store.js": 1211,
     "functions/api/sale.js": 1151,
     "functions/api/operations.js": 2480,
     "functions/api/clients.js": 1043,
@@ -134,7 +134,7 @@
     "assets/caisse-accounting.js": 3146,
     "assets/serveur/service.js": 4485,
     "assets/serveur/service-runtime.js": 2725,
-    "functions/api/store.js": 1307
+    "functions/api/store.js": 1211
   },
   "cssLines": {
     "assets/admin-followups.css": 22,

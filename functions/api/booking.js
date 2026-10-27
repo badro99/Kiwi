@@ -1,4 +1,5 @@
 import { serviceCapacityAvailable } from './_booking-capacity.js';
+import { capBookings, BOOKING_CAP } from './_booking-cap.js';
 import { BOOKING_ACTIVE as ACTIVE, bookingOverlaps as overlaps, bookingResourceFree as free, bookingResourceCandidates as candidates, bookingConcurrent } from './_rules-booking.js';
 import { DateTimeFormat } from './_cached-clock.js';
 import { merchantZone } from './_business-day.js';
@@ -48,7 +49,7 @@ function safeDoc(raw) {
   out.services.forEach(x => { x.price = Math.round(x.price * 100) / 100; x.deposit = Math.min(x.price, Math.round(x.deposit * 100) / 100); });
   out.resources = (Array.isArray(d.resources) ? d.resources : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), kind: ['person','room','table'].includes(x?.kind) ? x.kind : 'person', capacity: num(x?.capacity, 1, 999, 1), active: x?.active !== false, week: x?.week && typeof x.week === 'object' ? x.week : null, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.blocked = (Array.isArray(d.blocked) ? d.blocked : []).slice(-500).map((x) => ({ id: str(x?.id, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, reason: str(x?.reason, 120), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.startAt && x.endAt > x.startAt);
-  out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0), channel:['direct','booking','airbnb','expedia','walkin','other'].includes(x.hotel.channel)?x.hotel.channel:(x.source==='public'?'direct':'other'), externalRef:str(x.hotel.externalRef,80), feedId:str(x.hotel.feedId,64), syncedAt:+x.hotel.syncedAt||0, conflict:!!x.hotel.conflict } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
+  out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0), channel:['direct','booking','airbnb','expedia','walkin','other'].includes(x.hotel.channel)?x.hotel.channel:(x.source==='public'?'direct':'other'), externalRef:str(x.hotel.externalRef,80), feedId:str(x.hotel.feedId,64), syncedAt:+x.hotel.syncedAt||0, conflict:!!x.hotel.conflict } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
   const originals = new Map((Array.isArray(d.bookings) ? d.bookings : []).map(x => [x?.id, x]));
   out.bookings.forEach(x => {
     const original = originals.get(x.id);
@@ -383,6 +384,9 @@ export async function onRequestDelete({ request, env }) {
           events:[{ previous, current:rec, action:'cancel' }] });
         if (next) { await poke(env, merchant, 'reservations'); return json({ ok:true, status:'cancelled' }); }
       } else {
+        /* Annuler ne refuse jamais : on retire du passé si le document dépasse, sinon on écrit tel quel. */
+        const capped = capBookings(doc.bookings, now);
+        if (!capped.full) doc.bookings = capped.bookings;
         const text = JSON.stringify(doc);
         const result = await env.DB.prepare(
           "UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?"
@@ -485,7 +489,13 @@ export async function onRequestPost({ request, env }) {
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');
     const rec={depositExpectation:{amountCents:Math.round(svc.deposit*100),status:'not-collected',policy:'arrange-with-venue'},id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:sid,resourceId:rid,startAt,endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,createdAt:now,updatedAt:now};
-    doc.bookings.push(rec);const text=JSON.stringify(doc),next=rev+1;
+    doc.bookings.push(rec);
+    /* Plafond du document : les plus anciennes réservations PASSÉES partent d'abord ;
+       s'il ne reste que des réservations à venir, la demande est refusée, jamais perdue. */
+    const capped=capBookings(doc.bookings,now);
+    if(capped.full)return json({error:'bookings-full',cap:BOOKING_CAP},409);
+    doc.bookings=capped.bookings;
+    const text=JSON.stringify(doc),next=rev+1;
     try{
       let result;
       if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}

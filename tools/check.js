@@ -618,6 +618,7 @@ section('Réservations, planning, livraison, encaissement, schéma');
 for (const test of [
   'fetch-b-deadline-test.mjs',
   'booking-api-test.mjs',
+  'booking-cap-test.mjs',
   'booking-split-test.mjs',
   'booking-boundary-test.mjs',
   'booking-properties-test.mjs',
@@ -2217,6 +2218,7 @@ section('Whole-project regressions');
     'hotel-i18n-test.mjs',
     'pressing-truth-test.mjs',
     'pressing-notification-freeze-test.mjs',
+    'pressing-archive-test.mjs',
     'support-triage-test.mjs',
     'support-triage-retry-test.mjs',
     'wave-n-server-test.mjs',
@@ -2330,6 +2332,7 @@ section('Whole-project regressions');
     'order-langs-test.mjs',
     'salle-scan-test.mjs',
     'ai-quota-order-test.mjs',
+    'ai-global-quota-test.mjs',
     'network-recovery-test.mjs',
     /* Le plan de salle du patron lit la salle que la caisse publie : statut,
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */

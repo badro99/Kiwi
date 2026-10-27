@@ -41,8 +41,10 @@ export async function onRequestPatch({request,env}){
   const actor=await supportActor(request,env), now=Date.now();
   if(action==='assign'){
     const assignee=cleanText(b.assignee,80);
-    await env.DB.prepare(`UPDATE support_tickets SET assignee=?,updated_ts=? WHERE id=?`).bind(assignee,now,id).run();
-    await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'assignment','internal',actor,assignee?'Assigné à '+assignee:'Non assigné','',now).run();
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE support_tickets SET assignee=?,updated_ts=? WHERE id=?`).bind(assignee,now,id),
+      env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'assignment','internal',actor,assignee?'Assigné à '+assignee:'Non assigné','',now),
+    ]);
   }else if(action==='status'){
     const status=['open','waiting-client','resolved','closed'].includes(b.status)?b.status:'';
     if(!status)return json({error:'bad-status'},400);
@@ -54,22 +56,31 @@ export async function onRequestPatch({request,env}){
     ]);
   }else if(action==='note'){
     const body=cleanText(b.body,5000); if(!body)return json({error:'body-required'},400);
-    await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'note','internal',actor,body,'',now).run();
-    await env.DB.prepare(`UPDATE support_tickets SET updated_ts=? WHERE id=?`).bind(now,id).run();
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'note','internal',actor,body,'',now),
+      env.DB.prepare(`UPDATE support_tickets SET updated_ts=? WHERE id=?`).bind(now,id),
+    ]);
   }else if(action==='reply'){
     const body=cleanText(b.body,5000); if(!body)return json({error:'body-required'},400);
     /** @type {{ok: boolean, reason?: string}} */
     let delivery={ok:false,reason:'manual-whatsapp-handoff'};
     if(ticket.channel==='email')delivery=await sendMail(env,{to:ticket.contact,subject:`Re: ${ticket.reference} · Kiwi Support`,text:`${body}\n\nRépondez à cet e-mail en gardant ${ticket.reference} dans l’objet.`});
-    await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'reply',ticket.channel,actor,body,delivery.ok?'sent':delivery.reason,now).run();
-    // A manual WhatsApp handoff or failed email has not reached the customer.
-    await env.DB.prepare(`UPDATE support_tickets SET status=?,updated_ts=? WHERE id=?`).bind(delivery.ok?'waiting-client':'open',now,id).run();
+    /* La réponse consignée et le statut qui en découle partent dans le même batch :
+       un message sans changement de statut (ou l'inverse) laisserait le fil et la
+       file de l'équipe en désaccord. Un renvoi WhatsApp manuel ou un courriel
+       échoué n'a pas atteint le client : la demande reste ouverte. */
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'reply',ticket.channel,actor,body,delivery.ok?'sent':delivery.reason,now),
+      env.DB.prepare(`UPDATE support_tickets SET status=?,updated_ts=? WHERE id=?`).bind(delivery.ok?'waiting-client':'open',now,id),
+    ]);
     return json({ok:true,delivery,whatsapp:ticket.channel==='whatsapp'?{contact:ticket.contact,text:`${ticket.reference} · ${body}`} : null});
   }else if(action==='retriage'){
     /* Relance du tri par un opérateur senior : l'issue (réussie ou non) est consignée dans le fil interne. */
     const result=await retriageTicket(env,ticket,now);
-    if(result.status==='triaged')await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'triage','internal',actor,'Tri relancé : '+(result.triage.verdict||'normal')+(result.triage.alert?' · alerte '+result.triage.alert.state:''),'',now).run();
-    await env.DB.prepare(`UPDATE support_tickets SET updated_ts=? WHERE id=?`).bind(now,id).run();
+    await env.DB.batch([
+      ...(result.status==='triaged'?[env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'triage','internal',actor,'Tri relancé : '+(result.triage.verdict||'normal')+(result.triage.alert?' · alerte '+result.triage.alert.state:''),'',now)]:[]),
+      env.DB.prepare(`UPDATE support_tickets SET updated_ts=? WHERE id=?`).bind(now,id),
+    ]);
   }else return json({error:'bad-action'},400);
   return json({ok:true,ticket:await hydrate(env,await env.DB.prepare(`SELECT * FROM support_tickets WHERE id=?`).bind(id).first())});
 }
