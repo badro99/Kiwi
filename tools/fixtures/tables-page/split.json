@@ -1,0 +1,320 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/pages/tables.js, and move its stamp (node tools/bump-stamp.js assets/pages/tables.js).",
+  "bundles": [
+    {
+      "file": "assets/pages/tables.js",
+      "sha256AtSplit": "58807c0272c55d4472dcda75626ba8875033197813b26d9e66faa55b04f6ec5d",
+      "parts": [
+        {
+          "file": "assets/pages/tables-page/bootstrap.js",
+          "concern": "démarrage : dépendances, fabriques de données, d'opérations et de dessin",
+          "lines": [
+            1,
+            83
+          ],
+          "declares": [
+            "Kiwi",
+            "handlers",
+            "drawer",
+            "fullpage",
+            "modal",
+            "toast",
+            "menu",
+            "confetti",
+            "trLang",
+            "wireDismiss",
+            "data",
+            "tableData",
+            "operations",
+            "tableOperations",
+            "drawing",
+            "tableDrawing"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/theme.js",
+          "concern": "clé du locataire, grille, couleurs clair et sombre",
+          "lines": [
+            84,
+            245
+          ],
+          "declares": [
+            "PDS_LS_KEY",
+            "PDS_TRANSIENT_IDS",
+            "pdsTenant",
+            "pdsKey",
+            "PDS_GRID",
+            "PDS_CANVAS_W",
+            "PDS_CANVAS_H",
+            "pdsNoir",
+            "pdsSetNoir",
+            "pdsNoirC",
+            "PDS_STATUS_RING_NOIR",
+            "pdsJourC",
+            "PDS_STATUS_RING_JOUR",
+            "pdsNoirTick",
+            "pdsNoirChairs",
+            "pdsNoirTableBody",
+            "pdsNoirFixture",
+            "pdsRoomShellNoir",
+            "pdsRoomShellJour"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/staff-scene.js",
+          "concern": "équipe de salle et types d'éléments du plan",
+          "lines": [
+            246,
+            353
+          ],
+          "declares": [
+            "PDS_STR",
+            "PDS_DEFAULT_STAFF",
+            "PDS_STAFF_COLORS",
+            "pdsStaffColor",
+            "PDS_MAX_TABLE_SERVERS",
+            "pdsServerIds",
+            "pdsSetServerIds",
+            "pdsHasServer",
+            "pdsIsFloorRole",
+            "pdsTeamStaff",
+            "pdsIsRealStore",
+            "pdsSyncStaff",
+            "PDS_EL_TYPES",
+            "PDS_SCENE_MIGRATION",
+            "PDS_EL_RENAME",
+            "PDS_SERVICE_STATUSES"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/persistence.js",
+          "concern": "chargement, sauvegarde, document partagé, plan par défaut",
+          "lines": [
+            354,
+            512
+          ],
+          "declares": [
+            "pdsBusinessDayStart",
+            "pdsNormalize",
+            "pdsLoad",
+            "pdsSerialize",
+            "pdsWriteLocal",
+            "pdsSave",
+            "pdsLive",
+            "pdsDoc",
+            "pdsRefreshLiveStaff",
+            "pdsRawState",
+            "pdsMerge",
+            "pdsCarryForward",
+            "pdsCloud",
+            "PDS_SEED_ZONES",
+            "pdsZoneName",
+            "pdsFixLabel",
+            "pdsDefaultState",
+            "pdsTemplate",
+            "pdsEnsureCss"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/phone-assign.js",
+          "concern": "attribution des tables depuis le téléphone",
+          "lines": [
+            513,
+            688
+          ],
+          "declares": [
+            "PDS_PHONE_STR",
+            "pdsPhoneWanted",
+            "pdsInitials",
+            "pdsTableNum",
+            "pdsPhoneLive",
+            "pdsPhoneBody",
+            "PDS_PHONE_CSS",
+            "pdsOpenPhoneAssign"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/page-shell.js",
+          "concern": "page : en-tête, chiffres, sélection, annuler et refaire, scène",
+          "lines": [
+            689,
+            1060
+          ],
+          "declares": [
+            "pdsSubtitle",
+            "pdsIndexBookings",
+            "pdsOnShift",
+            "pdsKpis",
+            "PDS_TILL_FRESH_MS",
+            "pdsLiveBadge",
+            "pdsRenderBody",
+            "PDS_SEL",
+            "pdsFind",
+            "pdsPlane",
+            "pdsPlaneOf",
+            "PDS_UNDO",
+            "pdsSnap",
+            "pdsApplySnap",
+            "pdsPush",
+            "pdsUndoKey",
+            "pdsUndoPersist",
+            "pdsUndoRestore",
+            "pdsUndo",
+            "pdsRedo",
+            "pdsFreeSpot",
+            "pdsMagnet",
+            "pdsRepaintCell",
+            "pdsSyncInspector",
+            "pdsAttachResize",
+            "pdsBindHandles",
+            "pdsRenderStage",
+            "PDS_ICONS",
+            "pdsIcon",
+            "PDS_ZOOM",
+            "pdsRoomSize",
+            "pdsFloorCount",
+            "pdsRenderLegend",
+            "pdsRenderHeatSwitch",
+            "pdsRenderEmpty",
+            "PDS_PAL_SEATS",
+            "PDS_SHAPES",
+            "PDS_SHAPE_MAX_SEATS",
+            "pdsPalSeats",
+            "pdsTypeFor",
+            "pdsNumKey",
+            "pdsDuplicateNums"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/layout-inspector.js",
+          "concern": "rail de mise en page et inspecteur",
+          "lines": [
+            1061,
+            1293
+          ],
+          "declares": [
+            "PDS_ZONE_COLORS",
+            "PDS_FOLD",
+            "pdsRenderLayoutRail",
+            "pdsFixMini",
+            "pdsPlanThumb",
+            "pdsRenderRoomCard",
+            "pdsRenderAssignRail",
+            "pdsRenderInspectorEmpty",
+            "pdsRenderLivePanel",
+            "pdsRenderAssignSummary",
+            "pdsRenderInspector",
+            "pdsManualStatuses",
+            "pdsRenderStatusRow",
+            "pdsRenderBulkInspector"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/service-status.js",
+          "concern": "statuts de service, réservations, rendu des tables",
+          "lines": [
+            1294,
+            1614
+          ],
+          "declares": [
+            "pdsHandles",
+            "pdsSweepGroups",
+            "pdsTodayKey",
+            "pdsSetStatus",
+            "pdsClearReservation",
+            "pdsSyncGroupService",
+            "pdsExpireReservations",
+            "pdsReservationLabel",
+            "pdsTableSnapshot",
+            "pdsRestoreTableSnapshot",
+            "pdsOfferTableUndo",
+            "pdsRenderGroups",
+            "PDS_LIVE",
+            "PDS_BOOK",
+            "PDS_FILTER",
+            "PDS_HEAT",
+            "PDS_LEGEND",
+            "pdsStatusKey",
+            "pdsStatusLabel",
+            "pdsEff",
+            "pdsSince",
+            "pdsClock",
+            "pdsFiltered",
+            "pdsStatsOf",
+            "pdsHeat",
+            "pdsSig",
+            "pdsRenderTable",
+            "pdsRenderElement"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/rotation.js",
+          "concern": "rotation des serveurs et actions",
+          "lines": [
+            1615,
+            1718
+          ],
+          "declares": [
+            "pdsRotationKey",
+            "pdsTablesInOrder",
+            "pdsHomeZones",
+            "pdsRotateStep",
+            "pdsApplyAssignment",
+            "pdsRecordRotation",
+            "pdsAutoRotate",
+            "pdsRotationPreview",
+            "pdsFairness",
+            "pdsPeriodLabel",
+            "pdsRenderRotateStage",
+            "pdsRenderActions",
+            "pdsSetSubtitle",
+            "pdsRememberFocus"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/attach.js",
+          "concern": "branchement des gestes et des contrôles",
+          "lines": [
+            1719,
+            2479
+          ],
+          "declares": [
+            "pdsAttach"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-page/zoom-versions.js",
+          "concern": "zoom, numérotation, versions, export et actions",
+          "lines": [
+            2480,
+            2711
+          ],
+          "declares": [
+            "pdsMeasureChrome",
+            "pdsZoomBy",
+            "PDS_CLIP",
+            "pdsK",
+            "pdsAttachDrag",
+            "pdsAttachElDrag",
+            "pdsAttachChipDrag",
+            "pdsNewZoneId",
+            "pdsNextNum",
+            "pdsReadingOrder",
+            "pdsRenumber",
+            "PDS_MAX_VERSIONS",
+            "pdsVersions",
+            "pdsSaveVersion",
+            "pdsApplyVersion",
+            "pdsOpenVersions",
+            "pdsPlaceBooking",
+            "pdsExportSvg",
+            "pdsExportPrint",
+            "pdsExportPng",
+            "pdsHandleAction",
+            "PDS_INLINE_CSS"
+          ]
+        }
+      ]
+    }
+  ]
+}

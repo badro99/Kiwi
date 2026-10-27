@@ -1,0 +1,146 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/pages/tables-operations.js, and move its stamp (node tools/bump-stamp.js assets/pages/tables-operations.js).",
+  "bundles": [
+    {
+      "file": "assets/pages/tables-operations.js",
+      "wrap": {
+        "firstClose": "\n};",
+        "midOpen": "const part = () => {\n",
+        "midClose": "\n};"
+      },
+      "sha256AtSplit": "0dd9587b849a8c1c6134cb86475d177f68696cfaaaae163c7e1e994032fdf7c7",
+      "parts": [
+        {
+          "file": "assets/pages/tables-operations/rails-inspector.js",
+          "concern": "rails, inspecteur et groupes",
+          "lines": [
+            1,
+            437
+          ],
+          "declares": [
+            "{ Kiwi, PDS_FOLD, PDS_GRID, PDS_MAX_TABLE_SERVERS, PDS_MAX_VERSIONS, PDS_SERVICE_STATUSES, handlers, pdsApplyAssignment, pdsApplyVersion, pdsBusinessDayStart, pdsClearReservation, pdsClock, pdsDefaultState, pdsDuplicateNums, pdsFind, pdsFixLabel, pdsFreeSpot, pdsHandleAction, pdsHasServer, pdsHomeZones, pdsIcon, pdsInitials, pdsK, pdsManualStatuses, pdsNewZoneId, pdsNextNum, pdsNoir, pdsNoirFixture, pdsNormalize, pdsNumKey, pdsOnShift, pdsPalSeats, pdsPeriodLabel, pdsPlane, pdsPlaneOf, pdsPush, pdsReadingOrder, pdsRecordRotation, pdsRedo, pdsRenderStatusRow, pdsRestoreTableSnapshot, pdsRotationPreview, pdsSave, pdsServerIds, pdsSetNoir, pdsSetServerIds, pdsSetStatus, pdsStaffColor, pdsStatusLabel, pdsSweepGroups, pdsTableNum, pdsTableSnapshot, pdsTablesInOrder, pdsTodayKey, pdsTypeFor, pdsUndo, pdsVersions, pdsZoneName, pdsZoomBy, toast, trLang, wireDismiss }",
+            "pdsFixMini",
+            "pdsPlanThumb",
+            "pdsRenderRoomCard",
+            "pdsRenderAssignRail",
+            "pdsRenderAssignSummary",
+            "pdsRenderInspector",
+            "pdsRenderBulkInspector",
+            "pdsSyncGroupService",
+            "pdsExpireReservations",
+            "pdsOfferTableUndo",
+            "pdsRenderGroups"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-operations/rotation.js",
+          "concern": "rotation des serveurs",
+          "lines": [
+            438,
+            663
+          ],
+          "declares": [
+            "pdsRotationKey",
+            "pdsRotateStep",
+            "pdsFairness",
+            "pdsRenderRotateStage",
+            "pdsRenderActions"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-operations/drag.js",
+          "concern": "glisser des tables, éléments et pastilles",
+          "lines": [
+            664,
+            1072
+          ],
+          "declares": [
+            "pdsAttachDrag",
+            "pdsAttachElDrag",
+            "pdsAttachChipDrag"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-operations/versions-export.js",
+          "concern": "numérotation, versions, réservation posée, export",
+          "lines": [
+            1073,
+            1286
+          ],
+          "declares": [
+            "pdsRenumber",
+            "pdsSaveVersion",
+            "pdsOpenVersions",
+            "pdsPlaceBooking",
+            "pdsExportSvg",
+            "pdsExportPrint",
+            "pdsExportPng"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-operations/actions-layout.js",
+          "concern": "actions de mise en page",
+          "lines": [
+            1287,
+            1934
+          ],
+          "declares": [
+            "tableAction26",
+            "tableAction27",
+            "tableAction28",
+            "tableAction29",
+            "tableAction30",
+            "tableAction31",
+            "tableAction32",
+            "tableAction33",
+            "tableAction34",
+            "tableAction35",
+            "tableAction36",
+            "tableAction37",
+            "tableAction38",
+            "tableAction39",
+            "tableAction40"
+          ]
+        },
+        {
+          "file": "assets/pages/tables-operations/actions-service.js",
+          "concern": "actions de service et interface publique",
+          "lines": [
+            1935,
+            2721
+          ],
+          "declares": [
+            "tableAction41",
+            "tableAction42",
+            "tableAction43",
+            "tableAction44",
+            "tableAction45",
+            "tableAction46",
+            "tableAction47",
+            "tableAction48",
+            "tableAction49",
+            "tableAction50",
+            "tableAction51",
+            "tableAction52",
+            "tableAction53",
+            "tableAction54",
+            "tableAction55",
+            "tableAction56",
+            "tableAction57",
+            "tableAction58",
+            "tableAction59",
+            "tableAction60",
+            "tableAction61",
+            "tableAction62",
+            "tableAction63",
+            "tableAction64",
+            "tableAction65",
+            "tableAction66",
+            "tableAction67",
+            "tableAction68"
+          ]
+        }
+      ]
+    }
+  ]
+}
