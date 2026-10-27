@@ -83,12 +83,13 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
-  const allowed = await quotaOk(env, who, 'expense', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
-
   const image = typeof b?.image === 'string' ? b.image.trim() : '';
   if (!image.startsWith('data:image/')) return json({ error: 'image-required' }, 400);
   if (image.length > MAX_IMAGE_DATAURL) return json({ error: 'image-too-large' }, 413);
+
+  /* Le quota après les contrôles locaux : une photo refusée ne brûle pas de place. */
+  const allowed = await quotaOk(env, who, 'expense', DAILY_CAP);
+  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
 
   let runRes;
   try {

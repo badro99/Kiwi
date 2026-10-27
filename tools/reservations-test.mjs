@@ -90,6 +90,9 @@ doc = base();
 doc.resources.push({ id: 'res-b', name: 'Sara', kind: 'person', capacity: 1, active: true, week: null, updatedAt: 1 });
 doc.bookings.push({ id: 'bk-1', code: 'R-1', customer: { name: 'Nora' }, serviceId: 'svc-cut', resourceId: 'res-a', startAt: future, endAt: future + 30 * 60000, partySize: 1, status: 'checked_in', source: 'staff', createdAt: 1, updatedAt: 1 });
 result = R.validate({ customer: { name: 'Mina' }, serviceId: 'svc-cut', startAt: future }, doc);
+ok(!result.ok && result.error === 'conflict', 'a service of capacity 1 is full even with a free resource (server rule, shared since wave 12)');
+doc.services[0].capacity = 2;
+result = R.validate({ customer: { name: 'Mina' }, serviceId: 'svc-cut', startAt: future }, doc);
 ok(result.ok && result.resource.id === 'res-b', 'simultaneous capacity uses another free resource');
 
 doc.services[0].resourceIds = ['res-a'];

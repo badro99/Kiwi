@@ -266,7 +266,7 @@ async function applyShopifyOrderStock(env, merchant, order) {
     // journal pieces Kiwi no longer has, including repeated variant lines.
     const left = new Map(data.variants.map((v) => [v.id, Math.max(0, Number(v.stock) || 0)]));
     const orderedAt = Date.parse(order.created_at);
-    let applied = 0, unmatched = 0, at = Date.now();
+    let applied = 0, unmatched = 0, short = 0, at = Date.now();
     for (const line of lines) {
       const shopifyVariantId = String(line && line.variant_id || '');
       const gid = shopifyVariantId.startsWith('gid://') ? shopifyVariantId : `gid://shopify/ProductVariant/${shopifyVariantId}`;
@@ -282,19 +282,22 @@ async function applyShopifyOrderStock(env, merchant, order) {
       // as in catch-up. Older retry payloads without a date retain the fallback.
       if (Number.isFinite(orderedAt) && Number(variant.baseAt || variant.stockAt || 0) >= orderedAt) continue;
       const take = Math.min(qty, left.get(kiwiVariantId) || 0);
+      // Kiwi had fewer pieces than Shopify sold: no negative move is journalled,
+      // but the shortfall is reported so the merchant can reconcile the count.
+      short += qty - take;
       if (!take) continue;
       left.set(kiwiVariantId, left.get(kiwiVariantId) - take);
       at = Number.isFinite(orderedAt) ? orderedAt : Math.max(at + 1, Number(variant.baseAt || variant.stockAt || 0) + 1);
       data.moves.push({ id: moveId, vid: kiwiVariantId, d: -take, at, why: 'vente', ref: `shopify:${ref}`.slice(0, 64) });
       existing.add(moveId); applied++;
     }
-    if (!applied) return { applied: 0, unmatched };
+    if (!applied) return { applied: 0, unmatched, short };
     catalogFns.materialize(data);
     const next = Number(row.rev || 0) + 1;
     const write = await env.DB.prepare(
       `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
     ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run().catch(() => null);
-    if (write && write.meta && Number(write.meta.changes) === 1) return { applied, unmatched };
+    if (write && write.meta && Number(write.meta.changes) === 1) return { applied, unmatched, short };
   }
   return { applied: 0, unmatched: lines.length };
 }

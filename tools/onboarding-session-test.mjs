@@ -39,6 +39,9 @@ async function run(source, kit, answers) {
     window: { KiwiVenue: { async createVenue(p) { payload = JSON.parse(JSON.stringify(p)); return 'test'; } } },
     document: { body: { classList: { remove() {}, add() {} } } },
   });
+  // finish() reports a team-roster seeding failure through trackTeamImport (declared dependency).
+  const tracker = source.indexOf('  function trackTeamImport(');
+  vm.runInContext(source.slice(tracker, source.indexOf('\n  }\n', tracker) + 5) + '\nlet teamImportFailed = false;', ctx);
   vm.runInContext(grab(source, 'finish'), ctx);
   const result = await ctx.finish({ kit });
   return { payload, rejected: !!(error || result?.error) };

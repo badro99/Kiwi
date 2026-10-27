@@ -1,4 +1,5 @@
 import { serviceCapacityAvailable } from './_booking-capacity.js';
+import { BOOKING_ACTIVE as ACTIVE, bookingOverlaps as overlaps, bookingResourceFree as free, bookingResourceCandidates as candidates, bookingConcurrent } from './_rules-booking.js';
 import { DateTimeFormat } from './_cached-clock.js';
 import { merchantZone } from './_business-day.js';
 import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
@@ -12,7 +13,6 @@ import { pruneReservationsDoc } from './hotel/stays.js';
 import { commercialSnapshot } from './hotel/_commercial.js';
 import { stayOptions } from './hotel/_stay-options.js';
 
-const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
 const REF = /^[A-Za-z0-9_-]{8,80}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -97,15 +97,6 @@ function periodsFor(date, resource, hours) {
   if (!resource?.week && exception) periods = exception.kind === 'hours' ? (exception.periods || []) : [];
   return periods.map((p) => ({ from: str(p?.from, 5), to: str(p?.to, 5) })).filter((p) => HHMM.test(p.from) && HHMM.test(p.to));
 }
-function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
-function free(doc, rid, startAt, endAt) {
-  if (doc.bookings.some((b) => ACTIVE.has(b.status) && b.resourceId === rid && overlaps(startAt, endAt, b.startAt, b.endAt))) return false;
-  return !doc.blocked.some((b) => (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt));
-}
-function candidates(doc, svc, asked, partySize) {
-  const allowed = svc.resourceIds.length ? new Set(svc.resourceIds) : null;
-  return doc.resources.filter((r) => r.active && r.capacity >= partySize && (!asked || r.id === asked) && (!allowed || allowed.has(r.id)));
-}
 /* The largest party this service can actually seat — the public page needs a
  * real number to draw its guest stepper. Reading it off the resources is the
  * only honest source: the seats live on the table, not on the service. */
@@ -134,7 +125,7 @@ function teamCoverage(team, startAt, endAt, zone = TZ) {
 function staffAllows(doc, team, startAt, endAt, zone = TZ) {
   if(!doc.settings.staffingEnabled)return true;
   const coverage=teamCoverage(team,startAt,endAt,zone);if(!coverage.configured)return true;
-  const concurrent=doc.bookings.filter((b)=>ACTIVE.has(b.status)&&overlaps(startAt,endAt,b.startAt,b.endAt)).length;
+  const concurrent=bookingConcurrent(doc,startAt,endAt);
   return coverage.count>0&&concurrent<coverage.count*doc.settings.tablesPerStaff;
 }
 function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(null), zone = TZ) {

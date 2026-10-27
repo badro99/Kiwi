@@ -1212,8 +1212,8 @@
     "sha": "164e9d8c308ea77e"
   },
   "assets/onboarding.js": {
-    "v": "2106",
-    "sha": "93ad6e2c8536970a"
+    "v": "2107",
+    "sha": "b200c6bb6a47b3c5"
   },
   "assets/operations-ui.js": {
     "v": "30",
@@ -1728,8 +1728,8 @@
     "sha": "4fd568c0b955146b"
   },
   "assets/reservations.js": {
-    "v": "34",
-    "sha": "283f8f1898621dd1"
+    "v": "35",
+    "sha": "bfc5af940172f94e"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "124",
