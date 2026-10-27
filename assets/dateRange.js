@@ -254,7 +254,7 @@
     openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=13';
+  const partUrl = 'assets/daterange/renderers.js?v=14';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;
@@ -1974,7 +1974,11 @@
                     if (ownData()) {
                       const real = realClosedTips(ctx.range);
                       if (!real) return null;
-                      if (real.partial) return { text: '…', value: 0, unit: '', delta: null };
+                      /* Plage à cheval sur l'historique ancien : tant que le résumé n'est pas là, la tuile
+                         montre ce que la caisse et les Z connaissent, et le dit (note), plutôt que rien. */
+                      if (real.partial) return real.days
+                        ? { value: real.sum, unit: 'MAD', fmt: 'int', delta: null, note: 'Partiel · historique ancien en chargement', noteKey: 'dash.kpi.tipsPartial' }
+                        : { text: '…', value: 0, unit: '', delta: null };
                       return real.days ? { value: real.sum, unit: 'MAD', fmt: 'int', delta: null } : { text: '·', value: 0, unit: '', fmt: 'int', delta: null };
                     }
                     const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0;

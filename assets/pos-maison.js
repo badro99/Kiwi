@@ -1,6 +1,6 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=17';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=17';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=17';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=18';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=18';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=18';
 
   'use strict';
 
@@ -1329,7 +1329,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
   const lineUnit  = (ln) => shelf(lineBase(ln) * (100 - ln.remise) / 100);
-  const lineTotal = (ln) => lineUnit(ln) * ln.qty;
+  const lineTotal = (ln) => Math.round(lineUnit(ln) * 100) * ln.qty / 100;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
      de s'appliquer d'elle-même, sans avoir à la retirer partout à la main. */
@@ -1382,22 +1382,25 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
   }
   const isConsigned = (ln) => { const p = P[ln.pid]; return depotOn() && !!p && p.ownership === 'consignment'; };
   const isConsignedProduct = (p) => depotOn() && !!p && p.ownership === 'consignment';
-  const consignedOf = (lines) => (lines || []).reduce((s, ln) => s + (isConsigned(ln) ? lineTotal(ln) : 0), 0);
+  const consignedOf = (lines) => (lines || []).reduce((s, ln) => s + (isConsigned(ln) ? Math.round(lineTotal(ln) * 100) : 0), 0) / 100;
   function ticketTotals(t) {
+    /* Tout en centimes entiers, puis redivisé : 249,90 + 0,10 fait 250, pas 249,99999. */
+    const c = (v) => Math.round(v * 100);
     const sub = t.lines.reduce((s, ln) => {
       const p = P[ln.pid];
       const orig = shelf((ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0));
-      return s + orig * ln.qty;
-    }, 0);
-    const afterPromo = t.lines.reduce((s, ln) => s + lineBase(ln) * ln.qty, 0);
-    const afterLines = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
-    const reward = rewardDiscount(t, afterLines);
-    const total = Math.max(0, afterLines - reward);
+      return s + c(orig) * ln.qty;
+    }, 0) / 100;
+    const afterPromo = t.lines.reduce((s, ln) => s + c(lineBase(ln)) * ln.qty, 0) / 100;
+    const afterLines = t.lines.reduce((s, ln) => s + c(lineTotal(ln)), 0) / 100;
+    const reward = c(rewardDiscount(t, afterLines)) / 100;
+    const total = Math.max(0, c(afterLines) - c(reward)) / 100;
     /* `consigned` ≤ `total` : la remise fidélité s'applique au ticket entier,
        donc on borne pour qu'un ticket très remisé ne doive jamais au déposant
        plus que ce que la cliente a réellement payé. */
     const consigned = Math.min(total, consignedOf(t.lines));
-    return { sub, promo: sub - afterPromo, remise: afterPromo - afterLines, reward, total, consigned, own: total - consigned };
+    const d = (x, y) => (c(x) - c(y)) / 100;
+    return { sub, promo: d(sub, afterPromo), remise: d(afterPromo, afterLines), reward, total, consigned, own: d(total, consigned) };
   }
   /* Le nom à écrire sur le reçu. Une seule promotion en jeu → son nom ; deux ou
      plus → le mot générique, parce qu'en nommer une seule laisserait croire que
@@ -1971,11 +1974,11 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
           offlineRef: isOfflineRef(t.num) || undefined,
           methods: parts.map((x) => x.m).join(' + '),
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
-          discount: Math.round(tot.remise + tot.reward),
+          discount: bqMoney(tot.remise + tot.reward),
           remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object')
-            ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: Math.round(tot.remise) }
+            ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: bqMoney(tot.remise) }
             : null,
-          promoOff: Math.round(tot.promo),
+          promoOff: bqMoney(tot.promo),
           giftWrap: !!t.giftWrap,
           delivery: t.delivery ? Object.assign({}, t.delivery) : null,
           lines: t.lines.map((ln) => ({
@@ -1997,8 +2000,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
              `consigned` = la part qui appartient aux déposants. `own` = la
              recette réelle du commerce. Les trois sont écrites : rien n'est
              retiré du journal, tout est attribué. */
-          consigned: Math.round(tot.consigned),
-          own: isAcompte ? receivedNow : Math.round(tot.own),
+          consigned: bqMoney(tot.consigned),
+          own: isAcompte ? receivedNow : bqMoney(tot.own),
         };
         const balanceId = isAcompte ? 'rb-' + sale.syncId : '';
         if (isAcompte) {
@@ -2042,7 +2045,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
                il n'est pas à elle. Le remonter gonflerait son chiffre d'affaires
                d'une somme qu'elle doit reverser. La vente reste enregistrée —
                c'est l'ATTRIBUTION qui change, pas l'existence de la vente. */
-            cashIn = Math.max(0, cashIn - Math.round(tot.consigned));
+            cashIn = Math.max(0, bqMoney(cashIn - bqMoney(tot.consigned)));
             /* LE PANIER, qui ne partait pas. On ne remontait que {montant,
                moyen, libellé}, et le libellé est un RÉSUMÉ de ticket
                (« Caftan +3 art. ») : le tableau de bord ne pouvait donc pas dire

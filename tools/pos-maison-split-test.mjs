@@ -55,9 +55,10 @@ async function modules(context) {
   const entry = get(url);
   await entry.link((specifier, owner) => get(new URL(specifier, owner.identifier)));
   await entry.evaluate();
-  /* Le cœur, ses trois modules, et assets/refund-split.js : la règle du
-     remboursement que checkout.js partage avec functions/api/sale/refund.js. */
-  assert.equal(cache.size, 5, 'exactly one instance per stamped module, including cyclic imports');
+  /* Le cœur, ses trois modules, assets/refund-split.js (la règle du
+     remboursement que checkout.js partage avec functions/api/sale/refund.js) et
+     assets/money-cents.js (les centimes, comme la caisse boutique). */
+  assert.equal(cache.size, 6, 'exactly one instance per stamped module, including cyclic imports');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

@@ -68,6 +68,17 @@ globalThis.window = {
 };
 globalThis.document = { addEventListener() {}, documentElement: { lang: 'fr' }, querySelector: () => null, querySelectorAll: () => [] };
 const { createPayrollView } = await import('../assets/planning/payroll-view.js');
+/* La paie en centimes (payCents, fmtPay) vit dans team.js et arrive dans la vue par injection : on prend les vraies fonctions. */
+const teamSrc = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
+const grabConst = (start) => {
+  const i = teamSrc.indexOf(start);
+  let d = 0;
+  for (let k = teamSrc.indexOf('{', i); k < teamSrc.length; k++) {
+    if (teamSrc[k] === '{') d++; else if (teamSrc[k] === '}' && --d === 0) return teamSrc.slice(i, k + 1);
+  }
+  throw new Error('unbalanced ' + start);
+};
+const { payCents, fmtPay } = vm.runInNewContext(`${grabConst('const payCents = ')};\n${grabConst('const fmtPay = ')};\n({ payCents, fmtPay })`, { window: globalThis.window, document: globalThis.document, Math, Number });
 const handlers = {};
 const fn = () => '';
 const minutes = (s) => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m; };
@@ -75,7 +86,7 @@ const member = { id: 'm1', firstName: 'Test', hourlyRate: 17.29 };
 const view = createPayrollView({
   AVATAR_COLORS: {}, IC: {}, Kiwi: { toast() {} }, handlers, live: {},
   buildPeriod: () => ({ days: ['2026-08-17'], startFr: '17/08', endFr: '17/08' }),
-  correctionsHtml: fn, deferredMark: fn, esc: (v) => String(v), fmtHours: (v) => String(v), fmtMad: (n) => String(Math.round(n)) + ' MAD',
+  correctionsHtml: fn, dateLocale: () => 'fr-FR', fmtPay, payCents, deferredMark: fn, esc: (v) => String(v), fmtHours: (v) => String(v), fmtMad: (n) => String(Math.round(n)) + ' MAD',
   getHours: () => window.__kiwiTeamV2.hoursByVenue.v || {}, getMembers: () => [member],
   hourlyPayFor: (m, h) => Math.round(h * m.hourlyRate * 100) / 100,
   initials: () => 'T', jobName: (v) => v, memberFullName: (m) => m.firstName, pad: (n) => String(n).padStart(2, '0'),

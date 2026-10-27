@@ -1,17 +1,19 @@
 #!/usr/bin/env node
-/* Caisse Maison · le prix en rayon, au dirham inférieur, de la grille au ticket.
+/* Caisse Maison · le prix en rayon, au centime inférieur, de la grille au ticket.
  *
- * Décision propriétaire (2026-10-19) : la caisse compte en dirhams entiers et
- * n'encaisse jamais plus que le prix affiché. tools/money-properties-test.mjs
- * le prouve sur les fonctions de prix ; cette suite le vérifie là où la
- * cliente le voit, par de vrais clics : la grille, la fiche variante, la ligne
- * du ticket et le bouton « Encaisser » doivent dire le même chiffre.
+ * Décision propriétaire (2026-10-26, wave Q) : la caisse garde le prix au centime
+ * (comme la caisse boutique) et n'encaisse jamais plus que le prix affiché.
+ * tools/money-properties-test.mjs le prouve sur les fonctions de prix ; cette
+ * suite le vérifie là où la cliente le voit, par de vrais clics : la grille, la
+ * fiche variante, la ligne du ticket et le bouton « Encaisser » doivent dire le
+ * même chiffre.
  *
  * Trois articles du catalogue de démo, repris au prix qui posait problème :
- *   · un vase à 249,90 : la caisse affichait et encaissait 250 ;
- *   · un service vendu à la pièce à 84,90 : 85 ;
+ *   · un vase à 249,90 : la caisse affichait et encaissait 249 (ou 250 avant) ;
+ *   · un service vendu à la pièce à 84,90 : 84 ;
  *   · un service dont le prix à la pièce est resté vide (null, 1 100 / 12) :
- *     la fiche annonçait « 0 MAD » la pièce, le ticket en encaissait 92.
+ *     la fiche annonçait « 0 MAD » la pièce, le ticket en encaissait 92 ;
+ *     elle dit maintenant 91,66 (1 100 / 12 descendu au centime).
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -68,7 +70,7 @@ const S = suite('maison-shelf-price', { browser });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const check = (yes, msg) => { assert.ok(yes, msg); console.log('  ✓ ' + msg); };
 const flat = (s) => String(s).replace(/[  \s]+/g, ' ').trim();
-const mad = (s) => +String(s).replace(/[^0-9]/g, '');
+const mad = (s) => Math.round(parseFloat(String(s).replace(/[  \s]/g, '').replace(',', '.').replace(/[^0-9.]/g, '')) * 100) / 100;
 
 try {
   await S.run('prix arrondis vers le bas, fiche = ticket', async (t) => {
@@ -105,34 +107,35 @@ try {
     };
     const lastLine = () => text('#mz-tk-lines .mz-line:last-child .mz-line-price');
 
-    check(await text(`[data-mz-item="${ids.vase}"] .mz-card-price`) === '249 MAD', 'grille : le vase à 249,90 affiche 249 MAD');
+    check(await text(`[data-mz-item="${ids.vase}"] .mz-card-price`) === '249,90 MAD', 'grille : le vase à 249,90 affiche 249,90 MAD');
     const before = mad(await text('.mz-tk-total .val'));
 
     t.step('vase 249,90 · sheet then ticket');
     await openItem(ids.vase);
-    check(await text('#mz-sheet-total') === '249 MAD' && await text('#mz-sheet-cta') === '249 MAD', 'fiche : 249 MAD');
+    check(await text('#mz-sheet-total') === '249,90 MAD' && await text('#mz-sheet-cta') === '249,90 MAD', 'fiche : 249,90 MAD');
     await addAndClose();
-    check(await lastLine() === '249 MAD', 'ticket : la ligne du vase encaisse 249 MAD, pas 250');
-    check(mad(await text('.mz-tk-total .val')) - before === 249, 'ticket : le total monte de 249');
+    check(await lastLine() === '249,90 MAD', 'ticket : la ligne du vase encaisse 249,90 MAD, ni 249 ni 250');
+    check(Math.round((mad(await text('.mz-tk-total .val')) - before) * 100) === 24990, 'ticket : le total monte de 249,90');
 
-    for (const [id, label, piece] of [[ids.fes, 'Fès Bleu, pièce à 84,90', 84], [ids.zel, 'Zellige, prix à la pièce vide (1 100 / 12)', 91]]) {
+    for (const [id, label, piece] of [[ids.fes, 'Fès Bleu, pièce à 84,90', 84.9], [ids.zel, 'Zellige, prix à la pièce vide (1 100 / 12)', 91.66]]) {
       t.step(label);
       await openItem(id);
       await page.click('#mz-format-seg [data-mz-format="piece"]');
       await page.waitForFunction(() => document.querySelector('#mz-format-seg [data-mz-format="piece"]')?.classList.contains('on'));
       const seg = await text('#mz-format-seg [data-mz-format="piece"] small');
-      check(seg === `${piece} MAD` && await text('#mz-sheet-total') === `${piece} MAD`, `${label} : la fiche annonce ${piece} MAD la pièce`);
+      const say = (n) => `${n.toFixed(2).replace('.', ',').replace(/,00$/, '')} MAD`;
+      check(seg === say(piece) && await text('#mz-sheet-total') === say(piece), `${label} : la fiche annonce ${say(piece)} la pièce`);
       await page.click('#mz-qty-plus');
       await sleep(80);
       const sheetTwo = await text('#mz-sheet-cta');
-      check(sheetTwo === `${piece * 2} MAD`, `${label} : deux pièces sur la fiche = ${piece * 2} MAD`);
+      check(sheetTwo === say(Math.round(piece * 200) / 100), `${label} : deux pièces sur la fiche = ${say(Math.round(piece * 200) / 100)}`);
       await addAndClose();
       check(await lastLine() === sheetTwo, `${label} : le ticket dit ce que la fiche a dit (${sheetTwo})`);
     }
 
     t.step('ticket total and pay button');
     const total = await text('.mz-tk-total .val');
-    check(mad(total) - before === 249 + 2 * 84 + 2 * 91, 'le total monte de 249 + 2 × 84 + 2 × 91 = 599 MAD');
+    check(Math.round((mad(total) - before) * 100) === 24990 + 2 * 8490 + 2 * 9166, 'le total monte de 249,90 + 2 × 84,90 + 2 × 91,66 = 603,02 MAD');
     check((await text('#mz-validate')).endsWith(total), '« Encaisser » annonce le même total');
     check(!errors.length, 'aucune erreur dans la page' + (errors.length ? ' : ' + errors.join(' | ') : ''));
   });

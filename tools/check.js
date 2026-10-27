@@ -663,6 +663,8 @@ for (const test of [
   'planning-core-test.mjs',
   /* Semaine et mois de planning sur le jour du magasin ; heures recopiées exactes, paie affichée au centime. */
   'planning-store-day-pay-test.mjs',
+  /* Une semaine, un seul total de paie : centimes entiers de payrollFigures à la grille de planning, jours en arabe. */
+  'planning-pay-cents-test.mjs',
   /* Notices au-delà du plafond de 200 : archivées, relues page par page. */
   'planning-notices-archive-test.mjs',
   'wave-p-merge-test.mjs',
