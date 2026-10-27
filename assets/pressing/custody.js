@@ -3,10 +3,10 @@
  * rack allocation, numbering, persistence and existing centime calculations.
  * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=8';
-import { create as createWorkshop } from './workshop.js?v=8';
-import { create as createPickup } from './pickup.js?v=8';
-import { create as createRack } from './rack.js?v=8';
+import { create as createDeposit } from './deposit.js?v=9';
+import { create as createWorkshop } from './workshop.js?v=9';
+import { create as createPickup } from './pickup.js?v=9';
+import { create as createRack } from './rack.js?v=9';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
  * ---------------------------------------------------------------------------

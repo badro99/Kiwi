@@ -2076,6 +2076,8 @@ section('Whole-project regressions');
     'printer-split-test.mjs',
     // La fenêtre d'imprimante parle la langue du tableau de bord (vague 11).
     'printer-lang-test.mjs',
+    // Les boîtes natives de la caisse, l'imprimante et la réimpression parlent la langue de la caisse (vague 15).
+    'till-print-lang-test.mjs',
     'printer-transports-split-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur

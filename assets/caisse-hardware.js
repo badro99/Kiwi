@@ -60,7 +60,7 @@
     var canMount = !!(status && status.parentNode && typeof status.parentNode.insertBefore === 'function'
       && typeof document !== 'undefined' && document.createElement);
     if (!canMount) {
-      try { if (typeof window.confirm === 'function') return Promise.resolve(window.confirm(label + ' ?') === true); } catch (_) {}
+      try { if (typeof window.confirm === 'function') return Promise.resolve(window.confirm(tr(label + ' ?')) === true); } catch (_) {}
       return Promise.resolve(false);
     }
     return new Promise(function (resolve) {

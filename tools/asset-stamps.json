@@ -132,7 +132,7 @@
     "sha": "fd42eade73417d7e"
   },
   "assets/briefing.js": {
-    "v": "33",
+    "v": "34",
     "sha": "e9738a53174f1fcd"
   },
   "assets/caisse-accounting.js": {
@@ -140,8 +140,8 @@
     "sha": "ee79f4ab111afe7b"
   },
   "assets/caisse-app.js": {
-    "v": "27",
-    "sha": "30fc68ca04c177ee"
+    "v": "28",
+    "sha": "5c0bd75d4c8b5cc2"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -160,16 +160,16 @@
     "sha": "619f614ab2c70d09"
   },
   "assets/caisse-hardware.js": {
-    "v": "7",
-    "sha": "20e955cffff89dd1"
+    "v": "8",
+    "sha": "a67300dab4d2644a"
   },
   "assets/caisse-kitchen.js": {
-    "v": "4",
-    "sha": "eafd27c59bfd4341"
+    "v": "5",
+    "sha": "334296b436a80886"
   },
   "assets/caisse-lang.js": {
-    "v": "77",
-    "sha": "a48e3babedf4d53e"
+    "v": "79",
+    "sha": "c0cd9f7ed3eb6d63"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -232,8 +232,8 @@
     "sha": "cfc633029756952a"
   },
   "assets/caisse/inventory.js": {
-    "v": "2",
-    "sha": "675af892f0fad8d3"
+    "v": "3",
+    "sha": "e75b19935db1e535"
   },
   "assets/caisse/offline.js": {
     "v": "3",
@@ -316,8 +316,8 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "50",
-    "sha": "3ab09900176d860e"
+    "v": "51",
+    "sha": "f447fe5fec5c0e1e"
   },
   "assets/clients-directory.js": {
     "v": "28",
@@ -420,15 +420,15 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "40",
+    "v": "41",
     "sha": "4c81a900e77658c8"
   },
   "assets/day-report-export.js": {
-    "v": "14",
+    "v": "15",
     "sha": "8e700d5b4656a322"
   },
   "assets/day-report.js": {
-    "v": "35",
+    "v": "36",
     "sha": "c0034abe72f8e09a"
   },
   "assets/delivery-collect.js": {
@@ -508,7 +508,7 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "16",
+    "v": "17",
     "sha": "b1b7afa27e7f11ad"
   },
   "assets/features.js": {
@@ -1356,8 +1356,8 @@
     "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "57",
-    "sha": "9d90ef5055d0b6d4"
+    "v": "58",
+    "sha": "f7ad82f21a33c0d2"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1448,24 +1448,24 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "136",
+    "v": "137",
     "sha": "903834fcdc1b2ab2"
   },
   "assets/pos-boutique.js": {
-    "v": "136",
-    "sha": "ee3b3b6ffe8b0955"
+    "v": "137",
+    "sha": "9a7829613b0e6a91"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "39",
-    "sha": "14513c730e9e5127"
+    "v": "40",
+    "sha": "3556b188c5d89f39"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "39",
-    "sha": "f1049681ce0323e9"
+    "v": "40",
+    "sha": "8759cc427f59318b"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "39",
-    "sha": "cce89e67a920d6a4"
+    "v": "40",
+    "sha": "bfc87213797e5fc3"
   },
   "assets/pos-boutique/ticket-owner.js": {
     "v": "1",
@@ -1480,8 +1480,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "205",
-    "sha": "935b6d41acb29786"
+    "v": "206",
+    "sha": "d2685c7392a6ad7e"
   },
   "assets/pos-epicerie.css": {
     "v": "27",
@@ -1544,24 +1544,24 @@
     "sha": "408b8bf1b9c44c89"
   },
   "assets/pos-maison.css": {
-    "v": "100",
+    "v": "101",
     "sha": "2e4232d4d3b2833e"
   },
   "assets/pos-maison.js": {
-    "v": "100",
-    "sha": "56520c08d0c0d4b3"
+    "v": "101",
+    "sha": "d3e24026314e7685"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "20",
-    "sha": "f93776b683e61dd0"
+    "v": "21",
+    "sha": "24d6fc4f0f4424d5"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "20",
-    "sha": "04f2fd0d3da49b6e"
+    "v": "21",
+    "sha": "1ce09f3d8a26fe81"
   },
   "assets/pos-maison/sales.js": {
-    "v": "20",
-    "sha": "57c395e04adcb745"
+    "v": "21",
+    "sha": "b3ee5e6ede559f49"
   },
   "assets/pos-mobile.css": {
     "v": "9",
@@ -1588,8 +1588,8 @@
     "sha": "e4f87f9b3e7a7628"
   },
   "assets/pos-reprint.js": {
-    "v": "14",
-    "sha": "8942f12af83f7541"
+    "v": "15",
+    "sha": "1f513cdf41ca0086"
   },
   "assets/pos-sale.js": {
     "v": "18",
@@ -1620,12 +1620,12 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "76",
+    "v": "77",
     "sha": "493ee727572f7123"
   },
   "assets/pressing-caisse.js": {
-    "v": "76",
-    "sha": "f7efe4843e9ba1d4"
+    "v": "77",
+    "sha": "17b5c48639cf1f2a"
   },
   "assets/pressing-catalog.css": {
     "v": "4",
@@ -1648,40 +1648,40 @@
     "sha": "6e1d43e850ca5238"
   },
   "assets/pressing/custody.js": {
-    "v": "9",
-    "sha": "a6090714be7dce84"
+    "v": "10",
+    "sha": "47d95ad19ea94ade"
   },
   "assets/pressing/deposit.js": {
-    "v": "8",
-    "sha": "26eeec1936e8b784"
+    "v": "9",
+    "sha": "25a750dbe1293d25"
   },
   "assets/pressing/pickup.js": {
-    "v": "8",
-    "sha": "fa4128c054994c77"
+    "v": "9",
+    "sha": "daf9e997faa1322b"
   },
   "assets/pressing/rack.js": {
-    "v": "8",
-    "sha": "ed6594f3b872def9"
+    "v": "9",
+    "sha": "afdd209af3a39695"
   },
   "assets/pressing/workshop.js": {
-    "v": "8",
-    "sha": "488c49389d8cb2c4"
+    "v": "9",
+    "sha": "9d94e4fdf82cf436"
   },
   "assets/print-paper.css": {
     "v": "1",
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "43",
-    "sha": "95521218b2503086"
+    "v": "46",
+    "sha": "f9c8bdeef53af208"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "4",
-    "sha": "7336229b4653a7ac"
+    "v": "7",
+    "sha": "b9ca452082141641"
   },
   "assets/printer/pairing-ui.js": {
-    "v": "9",
-    "sha": "14eeed9172eafd05"
+    "v": "12",
+    "sha": "2161277908d51848"
   },
   "assets/printer/transports.js": {
     "v": "2",
@@ -1852,8 +1852,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "94",
-    "sha": "c15338d0e67278cf"
+    "v": "95",
+    "sha": "d91e5779571094a7"
   },
   "assets/stock/alerts.js": {
     "v": "3",
@@ -1868,7 +1868,7 @@
     "sha": "0ab1c39ca244dea0"
   },
   "assets/stock/intake.js": {
-    "v": "11",
+    "v": "12",
     "sha": "1a526a65bc742459"
   },
   "assets/stock/loss.js": {
@@ -1892,7 +1892,7 @@
     "sha": "5d3e156921dc0e8d"
   },
   "assets/stock/strings.js": {
-    "v": "6",
+    "v": "7",
     "sha": "b978fa8a1d946106"
   },
   "assets/store-templates.js": {
@@ -2036,7 +2036,7 @@
     "sha": "e586c803c9e3e1e2"
   },
   "assets/z-reconciliation.js": {
-    "v": "27",
+    "v": "28",
     "sha": "b6a92cdbae71a645"
   }
 }

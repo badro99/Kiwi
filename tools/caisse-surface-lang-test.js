@@ -329,6 +329,8 @@ check(!/(^|[^\w.])confirm\(/m.test(pb) && !/window\.confirm\(/.test(pb), 'printe
     document: { createElement: node },
     esc: (v) => String(v),
     say: (fr) => '«' + tr('en', fr) + '»',
+    // pairing-ui.js lit say() sous le nom tr() (var tr = say) : même fonction.
+    tr: (fr) => '«' + tr('en', fr) + '»',
     relayRevoke: (id) => { calls.revoke.push(id); return { then: (fn) => fn(true) }; },
     toast: (m) => calls.toast.push(m), paintRelay: () => { calls.paint++; }, refreshStatus: () => {},
   });
@@ -349,7 +351,7 @@ check(!/(^|[^\w.])confirm\(/m.test(pb) && !/window\.confirm\(/.test(pb), 'printe
   box = open(); ctx.askRevoke(x);
   check(list.kids.length === 2, 'un second clic sur × n\'ouvre pas une seconde question');
   box.kids['data-relay-confirm'].fire('click');
-  check(calls.revoke.join() === 'b-7' && box.kids['data-relay-confirm'].disabled && calls.toast[0] === 'Pont dissocié' && calls.paint === 1, 'Dissocier : relayRevoke une fois sur ce pont, puis le relais se repeint');
+  check(calls.revoke.join() === 'b-7' && box.kids['data-relay-confirm'].disabled && calls.toast[0] === '«' + tr('en', 'Pont dissocié') + '»' && calls.paint === 1, 'Dissocier : relayRevoke une fois sur ce pont, puis le relais se repeint');
 }
 
 if (failed) { console.error(`\n✗ ${failed} vérification(s) en échec sur l'imprimante et la clôture.`); process.exit(1); }

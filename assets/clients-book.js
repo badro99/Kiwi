@@ -847,7 +847,7 @@
     var sh = document.getElementById('kcb-sheet');
     sh.querySelector('#kcb-f-cancel').onclick = closeSheet;
     if (editing) sh.querySelector('#kcb-f-del').onclick = function () {
-      if (confirm('Supprimer ' + (c.name || 'ce client') + ' ?')) { KC.remove(c.id); closeSheet(); renderList(); ensureChip(); toast('Client supprimé'); }
+      if (confirm((window.KiwiCaisseLang ? window.KiwiCaisseLang.tr : function (s) { return s; })(c.name ? 'Supprimer ' + c.name + ' ?' : 'Supprimer ce client ?'))) { KC.remove(c.id); closeSheet(); renderList(); ensureChip(); toast('Client supprimé'); }
     };
     var val = function (sel) { var e = sh.querySelector(sel); return e ? e.value.trim() : ''; };
     sh.querySelector('#kcb-f-save').onclick = function () {

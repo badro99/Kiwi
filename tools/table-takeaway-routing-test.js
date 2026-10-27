@@ -37,12 +37,12 @@ ok("table click opens order builder for a-commander or empty tables",
 const stepBtnIdx = CAISSE.indexOf("const stepBtn = e.target.closest('.step-btn');");
 const stepBtnHandler = stepBtnIdx !== -1 ? CAISSE.slice(stepBtnIdx, stepBtnIdx + 800) : "";
 ok("stepBtn handles order mode without falling back to addToCart on missing selectedId",
-  /if \(mode === .order.\)\s*\{\s*if \(selectedId\)\s*\{[\s\S]*?\}\s*else\s*\{\s*toast\(.Aucune table sélectionnée.\);\s*backToSalle\(\);\s*\}/.test(stepBtnHandler));
+  /if \(mode === .order.\)\s*\{\s*if \(selectedId\)\s*\{[\s\S]*?\}\s*else\s*\{\s*toast\(tr\(.Aucune table sélectionnée.\)\);\s*backToSalle\(\);\s*\}/.test(stepBtnHandler));
 
 const menuCardIdx = CAISSE.indexOf("const menuCard = e.target.closest('.menu-item');");
 const menuCardHandler = menuCardIdx !== -1 ? CAISSE.slice(menuCardIdx, menuCardIdx + 800) : "";
 ok("menuCard handles order mode without falling back to addToCart on missing selectedId",
-  /if \(mode === .order.\)\s*\{\s*if \(selectedId\)\s*\{[\s\S]*?addToTableOrder\(selectedId[\s\S]*?\}\s*else\s*\{\s*toast\(.Aucune table sélectionnée.\);\s*backToSalle\(\);\s*\}/.test(menuCardHandler));
+  /if \(mode === .order.\)\s*\{\s*if \(selectedId\)\s*\{[\s\S]*?addToTableOrder\(selectedId[\s\S]*?\}\s*else\s*\{\s*toast\(tr\(.Aucune table sélectionnée.\)\);\s*backToSalle\(\);\s*\}/.test(menuCardHandler));
 
 // 5. confirmNewTable stamps floor versions
 const confirmNewTableIdx = CAISSE.indexOf("function confirmNewTable()");

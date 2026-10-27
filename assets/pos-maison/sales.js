@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=100';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=20';
-import { invSetModal, offerRegister } from './inventory.js?v=20';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=101';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=21';
+import { invSetModal, offerRegister } from './inventory.js?v=21';
 import '../money-cents.js?v=4';
 
 
@@ -1850,7 +1850,7 @@ import '../money-cents.js?v=4';
       const del = e.target.closest('[data-mz-reg-delete]');
       if (del) {
         const reg = regs.find((r) => r.id === del.dataset.mzRegDelete);
-        if (reg && confirm(`Supprimer « ${reg.title} » ?`)) {
+        if (reg && confirm((window.KiwiCaisseLang ? window.KiwiCaisseLang.tr : function (s) { return s; })(`Supprimer « ${reg.title} » ?`))) {
           REGISTRIES = regs.filter((r) => r.id !== reg.id);
           saveRegistries(); renderRegistries(); renderBadges(); icons();
           toast('Liste supprimée');
@@ -1951,7 +1951,7 @@ import '../money-cents.js?v=4';
       const ret = e.target.closest('[data-mz-sup-return]'); if (ret) { openProcurementMove('return', ret.dataset.mzSupReturn); return; }
       const send = e.target.closest('[data-mz-po-send]'); if (send) { api.markSent(send.dataset.mzPoSend); renderSuppliers(); toast('Commande marquée envoyée'); return; }
       const receivePo = e.target.closest('[data-mz-po-receive]'); if (receivePo) { openProcurementMove('order', receivePo.dataset.mzPoReceive); return; }
-      const cancel = e.target.closest('[data-mz-po-cancel]'); if (cancel && confirm('Annuler ce bon de commande ?')) { api.cancelOrder(cancel.dataset.mzPoCancel, 'Annulé depuis la caisse'); renderSuppliers(); toast('Commande annulée'); }
+      const cancel = e.target.closest('[data-mz-po-cancel]'); if (cancel && confirm((window.KiwiCaisseLang ? window.KiwiCaisseLang.tr : function (s) { return s; })('Annuler ce bon de commande ?'))) { api.cancelOrder(cancel.dataset.mzPoCancel, 'Annulé depuis la caisse'); renderSuppliers(); toast('Commande annulée'); }
     };
     icons();
   }
