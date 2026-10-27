@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import maisonSource from './pos-maison-test-source.cjs';
+import { createRequire as __cr } from 'node:module';
+const KiwiMoney = __cr(import.meta.url)('../assets/money-cents.js');
 /* Loyalty truth (2026-10-20). Runs the real /api/clients handlers on node:sqlite
  * and the real assets/clients-store.js in a vm, and holds four rules that were
  * broken in production code:
@@ -212,7 +214,7 @@ for (const accepted of [true, false]) {
   const server = store(cfg);
   server.raw.prepare('UPDATE clients SET points=100 WHERE merchant=? AND id=?').run(MERCHANT,'c1');
   const docs = { clients: { list: [{ id:'c1', name:'Client', points:100, achats:0 }], seq:2 }, fidelity:cfg };
-  Object.assign(c, { IS_DEMO:false, addEventListener(){}, dispatchEvent(){}, setInterval(){},
+  Object.assign(c, { M: KiwiMoney, KiwiMoney, IS_DEMO:false, addEventListener(){}, dispatchEvent(){}, setInterval(){},
     document:{readyState:'loading',addEventListener(){}},
     KiwiStore:{currentVenue:()=>MERCHANT,define:(name,opts)=>({get:()=>docs[name] || opts.blank?.(),set:v=>{docs[name]=v;},subscribe(){}})},
     KiwiLive:{isOn:()=>true,merchant:()=>MERCHANT},

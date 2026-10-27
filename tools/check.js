@@ -1803,6 +1803,7 @@ section('Whole-project regressions');
     'server-money-properties-test.mjs',
     'receivables-properties-test.mjs',
     'trades-money-properties-test.mjs',
+    'device-money-loyalty-test.mjs',
     'live-link-queue-properties-test.mjs',
     'live-link-split-test.mjs',
     'live-link-queue-ownership-test.mjs',

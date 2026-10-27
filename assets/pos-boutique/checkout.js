@@ -1,7 +1,9 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=120';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=26';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=26';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=125';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=31';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=31';
 import { ticketOwner } from './ticket-owner.js?v=1';
+import '../money-cents.js?v=4';
+const M = globalThis.KiwiMoney;
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -275,12 +277,12 @@ import { ticketOwner } from './ticket-owner.js?v=1';
     try {
       /* L'avoir est inscrit au registre AVANT que le stock ou la vente bougent. */
       av = await issueAvoir(amount, c, `${motif}, retour ${sale.id}`, sale.serverId || sale.syncId || sale.id, {
-        requestId: stableCreditIssueId(sale, quantities, amount * 100),
+        requestId: stableCreditIssueId(sale, quantities, M.toCents(amount)),
         originalRef: sale.id, originalSale: sale, resellable: true,
         lines: idxs.map((i) => ({
           itemId: sale.lines[i].pid, variantId: [sale.lines[i].pid || '', sale.lines[i].size || '', sale.lines[i].color || ''].join(':'),
           name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
-          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round(paidUnit(sale, sale.lines[i]) * 100),
+          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: M.toCents(paidUnit(sale, sale.lines[i])),
         })),
       });
     } catch (error) {
@@ -407,7 +409,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Article de remplacement introuvable')); return; }
-    const diff = Math.round((shelf(newP.price) - paidUnit(sale, ln)) * 100) / 100;
+    const diff = M.toMad(M.toCents(shelf(newP.price)) - M.toCents(paidUnit(sale, ln)));
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
     el.innerHTML = `
@@ -510,7 +512,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
               const rec = {
                 id: exchangeNumber, syncId: newSaleId(), tenderVersion: 2, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
-                parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
+                parts: parts.map((x) => ({ m: x.m, amount: M.toMad(M.toCents(+x.amount || 0)) })),
                 lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
                 total: diff,
               };
@@ -531,9 +533,9 @@ import { ticketOwner } from './ticket-owner.js?v=1';
                     id: rec.syncId,
                     amount: cashIn,
                     method,
-                    paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(diff * 100),
+                    paymentParts: bqPaymentParts(parts), ticketAmountCents: M.toCents(diff),
                     ...(cashIn <= 0 ? { settlementKind: isDelivery ? 'receivable' : 'store-credit',
-                      creditAmountCents: Math.round((parts || []).filter(x => x.m === 'avoir').reduce((sum, x) => sum + (+x.amount || 0), 0) * 100) } : {}),
+                      creditAmountCents: M.sumCents((parts || []).filter(x => x.m === 'avoir').map(x => +x.amount || 0)) } : {}),
                     channel: isDelivery ? 'delivery' : 'counter',
                     label: `Différence échange ${sale.id}`,
                     ref: rec.id,
@@ -565,10 +567,10 @@ import { ticketOwner } from './ticket-owner.js?v=1';
           let av;
           try {
             av = await issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.serverId || sale.syncId || sale.id, {
-              requestId: stableCreditIssueId(sale, new Map([[ex.idx, 1]]), -diff * 100),
+              requestId: stableCreditIssueId(sale, new Map([[ex.idx, 1]]), -M.toCents(diff)),
               originalRef: sale.id, originalSale: sale, resellable: true,
               lines: [{ itemId: ln.pid, variantId: [ln.pid || '', ln.size || '', ln.color || ''].join(':'),
-                name: oldP.name || 'Article', size: ln.size || '', qty: 1, unitCents: Math.round(paidUnit(sale, ln) * 100) }],
+                name: oldP.name || 'Article', size: ln.size || '', qty: 1, unitCents: M.toCents(paidUnit(sale, ln)) }],
             });
           } catch (error) {
             if (reservation.ok && cat && cat.releaseSale) cat.releaseSale(stockRef);
@@ -759,7 +761,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
       onCollected: recordDeliveryCash,
       demo: IS_DEMO ? {
         list: () => SALES.filter((x) => x && !x.voided && (x.parts || []).some((p) => p && p.m === 'livraison')).map((x) => {
-          const owed = Math.round((x.parts || []).reduce((n, p) => n + (p && p.m === 'livraison' ? (+p.amount || 0) : 0), 0) * 100);
+          const owed = M.sumCents((x.parts || []).map((p) => (p && p.m === 'livraison' ? (+p.amount || 0) : 0)));
           return { saleId: x.id, ref: x.id, label: ((x.lines || [])[0] && ((x.lines[0].name) || (P[x.lines[0].pid] || {}).name)) || 'Vente', ts: +new Date(x.at),
             owedCents: owed, dueCents: Math.max(0, owed - (demoDelivery[x.id] || 0)), collections: demoDelivery[x.id] ? [{}] : [] };
         }),
@@ -794,7 +796,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
     let committed = false;                  /* double tap must never book twice */
     let share = 1;                          /* 1 = tout le reste ; 0.5 = la moitié */
     let custom = 0;                          /* un montant saisi à la main */
-    const r2 = (n) => Math.round((+n || 0) * 100) / 100;
+    const r2 = (n) => M.toMad(M.toCents(typeof n === 'string' ? n : (+n || 0)));
     const paid = () => settled.reduce((s, p) => s + (+p.amount || 0), 0);
     const due = () => r2(opts.amount - (avoirPart ? avoirPart.amount : 0) - paid());
     /* Ce que prend le prochain mode. Jamais plus que le reste : une part de 50 %
@@ -1074,7 +1076,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
         $('#bq-cash-rendu', el).textContent = fmtMAD(Math.max(0, received - amount));
         $('#bq-cash-ok', el).disabled = received < amount;
       };
-      $('#bq-cash-in', el).oninput = (e) => { received = +e.target.value || 0; refresh(); };
+      $('#bq-cash-in', el).oninput = (e) => { received = M.toMad(M.toCents(e.target.value)); refresh(); };
       $$('[data-add]', el).forEach((b) => {
         b.onclick = () => { received += +b.dataset.add; $('#bq-cash-in', el).value = received; refresh(); };
       });
@@ -1157,7 +1159,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
       committed = true;
       if (opts.beforePaid && !await opts.beforePaid()) { committed = false; return; }
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
-      const paidNow = Math.round(parts.reduce((sum, part) => sum + (+part.amount || 0), 0) * 100) / 100;
+      const paidNow = M.toMad(M.sumCents(parts.map((part) => +part.amount || 0)));
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
@@ -1179,7 +1181,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
               action: 'redeem-batch', id: creditCommitId,
               saleId: (opts.sale && opts.sale.id) || opts.ref || '',
               detail: opts.title || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente boutique'),
-              credits: [{ code: avp.code, amountCents: Math.round(avp.amount * 100) }],
+              credits: [{ code: avp.code, amountCents: M.toCents(avp.amount) }],
             });
             const row = ((remote && remote.credits) || []).find((r) => r.code === avp.code);
             saved = row ? creditFromServer(row) : null;

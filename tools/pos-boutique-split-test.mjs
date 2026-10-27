@@ -56,7 +56,7 @@ async function modules(context) {
   const entry = get(url);
   await entry.link((specifier, owner) => get(new URL(specifier, owner.identifier)));
   await entry.evaluate();
-  assert.equal(cache.size, 5, 'exactly one instance per stamped module, including cyclic imports');
+  assert.equal(cache.size, 6, 'exactly one instance per stamped module, including cyclic imports (the money module is the sixth)');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

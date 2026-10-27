@@ -50,7 +50,7 @@ for (const file of ['pos-boutique.js', 'pos-maison.js']) test(file + ' return hi
 test('returns voucher formatter keeps centimes and whole style', () => {
   const src = read('pos-boutique/sales.js');
   const line = src.split('\n').find(l => l.includes('const fmtMAD ='));
-  const fmt = vm.runInNewContext(line + '\nfmtMAD');
+  const fmt = vm.runInNewContext(fs.readFileSync(new URL('../assets/money-cents.js', import.meta.url), 'utf8') + '\n' + line + '\nfmtMAD');
   assert.equal(fmt(10.25), '10,25 MAD'); assert.equal(fmt(10), '10 MAD'); assert.equal(fmt(-1.005), '-1,01 MAD');
 });
 process.exitCode = failed ? 1 : 0;

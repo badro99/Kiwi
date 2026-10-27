@@ -1,7 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=120';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=26';
-import { offerRegister } from './inventory.js?v=26';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=125';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=31';
+import { offerRegister } from './inventory.js?v=31';
 import { ticketOwner } from './ticket-owner.js?v=1';
+import '../money-cents.js?v=4';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -9,7 +10,7 @@ import { ticketOwner } from './ticket-owner.js?v=1';
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Math.round(Number(Math.abs(n).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(n) + ' MAD';
+  const fmtMAD = (n) => globalThis.KiwiMoney.format(n) + ' MAD';
   /* Décision propriétaire, 2026-10-26 : préserver le prix catalogue au centime.
      Les remises descendent au centime, jamais au-dessus du prix configuré.
      Le petit epsilon absorbe les erreurs binaires, jamais un vrai centime. */

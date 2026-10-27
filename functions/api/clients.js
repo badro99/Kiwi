@@ -393,8 +393,8 @@ function declaredNoMoney(method) {
 }
 async function receivedOrDeclared(env, merchant, clientId, ref, saleRef, method) {
   const received = await receivedCentsFor(env, merchant, clientId, ref, saleRef).catch(() => null);
-  if (received != null) return received;
-  return declaredNoMoney(method) ? 0 : null;
+  if (received != null) return { cents: received, ledger: true };
+  return declaredNoMoney(method) ? { cents: 0, ledger: false } : null;
 }
 
 async function applyPurchase(env, merchant, raw, attempt = 0) {
@@ -422,7 +422,9 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
     const stored = Math.round(Number(previous.amount || 0) * 100);
     if (stored !== Math.round(claimed * 100)) {
       const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
-      if (received == null || stored !== Math.min(Math.round(claimed * 100), received)) {
+      /* Le livre des ventes fait foi (un montant plus bas annoncé par l'appareil
+       * reste une reprise, comme avant que le livre ne prime). */
+      if (received == null || (stored !== received.cents && stored !== Math.min(Math.round(claimed * 100), received.cents))) {
         return json({ error: 'ref-conflict' }, 409);
       }
     }
@@ -432,8 +434,14 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
     'SELECT id, srv_ts FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
   if (!client) return json({ error: 'client-not-found' }, 404);
+  /* Le montant qui compte est celui du livre des ventes, en centimes entiers :
+   * ni le montant annoncé par l'appareil (un flottant de dirhams), ni le plus
+   * bas des deux. L'appareil ne sert que de repli quand la vente n'est pas
+   * encore au serveur, et la réponse le dit (`amountSource: 'device'`). */
   const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
-  if (received != null) amount = Math.min(claimed, received / 100);
+  const amountCents = received != null ? received.cents : Math.round(claimed * 100);
+  const amountSource = received != null && received.ledger ? 'ledger' : 'device';
+  amount = amountCents / 100;
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
   const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
@@ -457,7 +465,7 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
       if (!/no such table/i.test(String(error && error.message || error))) throw error;
     }
   }
-  const points = !duplicate && on && cfg.model === 'amount' ? pointsFor(amount, cfg) : 0;
+  const points = !duplicate && on && cfg.model === 'amount' ? pointsFor(amountCents / 100, cfg) : 0;
   const stamps = duplicate ? 0 : stampsFor(cfg, purchase.items);
   const visits = duplicate ? 0 : 1, spend = duplicate ? 0 : amount;
   const now = Date.now();
@@ -490,7 +498,7 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) {
     return json({ error: 'purchase-write-failed' }, 503);
   }
-  return json({ ok: true, points, stamps, visits, spend });
+  return json({ ok: true, points, stamps, visits, spend, amountSource });
 }
 
 /* Un retour contre avoir rend l'argent à la cliente sous une autre forme : sans

@@ -61,7 +61,7 @@ for (const [label, file] of [['boutique', 'assets/pos-boutique.js'], ['maison', 
   const avoirFn = slice(src, 'async function doAvoir()', 'function restoreLines(');
   ok(/paidUnit\(sale, sale\.lines\[i\]\) \* quantities\.get\(i\)/.test(avoirFn) && !/\.unit \* quantities/.test(avoirFn),
     'l\'avoir est calculé sur le prix payé');
-  ok(/const diff = Math\.round\(\(.*paidUnit\(sale, ln\)\) \* 100\) \/ 100;/.test(src), 'l\'échange compare le remplacement au prix payé');
+  ok(/const diff = (?:Math\.round\(\(.*paidUnit\(sale, ln\)\) \* 100\) \/ 100|M\.toMad\(M\.toCents\(.*\) - M\.toCents\(paidUnit\(sale, ln\)\)\));/.test(src), 'l\'échange compare le remplacement au prix payé');
   ok(!/recordReturn\(sale, \[ex\.idx\], ln\.unit/.test(src), 'le registre des retours ne reprend plus le prix de ligne');
 
   /* 2 · acompte */
