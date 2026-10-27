@@ -125,7 +125,15 @@ export async function refundCreditBook(request, env, merchant, body) {
   return json({error:'credit-book-busy'},409);
 }
 
-// One durable alert per debt snapshot settled independently by offline tills.
+/* Une alerte durable par solde réglé séparément par des caisses hors ligne, et
+ * une par client resté en avance sans que la caisse l'ait déclaré. Les caisses
+ * marquaient `offline` + `settlementOf` seulement quand elles payaient tout le
+ * solde ET se croyaient hors ligne : deux règlements partiels qui dépassent la
+ * dette, ou une connexion bancale qui se dit en ligne, laissaient une avance
+ * silencieuse. Le solde de la fiche ne ment pas : tout ce qui est en avance et
+ * que les groupes déclarés n'expliquent pas devient une alerte, retirée dès que
+ * le propriétaire a remboursé l'avance (même alerte « soldé deux fois », même
+ * lien « Rembourser l'avance »). */
 export function creditSettlementAlerts(doc) {
   for (const c of creditBook(doc)) {
     const groups = new Map();
@@ -135,10 +143,26 @@ export function creditSettlementAlerts(doc) {
       g.set(h.id, h); groups.set(h.settlementOf, g);
     }
     const others = (c.creditAlerts || []).filter(a => a && a.kind !== 'offline-double-settlement');
-    c.creditAlerts = others.concat([...groups].filter(([, g]) => g.size > 1).map(([key, g]) => ({
+    const declared = [...groups].filter(([, g]) => g.size > 1).map(([key, g]) => ({
       id: 'offline-double:' + key, kind: 'offline-double-settlement',
       advanceCents: [...g.values()].reduce((n, h) => n + cents(h), 0) - Math.max(...[...g.values()].map(cents))
-    })));
+    }));
+    /* Un règlement qui dépasse ce qui restait dû est un état que la caisse ne
+     * sait pas produire (commitRepayment refuse un montant au-dessus du solde) :
+     * c'est le recouvrement de deux caisses. Un client sans aucune dette avant
+     * le règlement (reprise d'un acompte) n'en est pas un. */
+    const walk = (c.hist || []).map((h, i) => ({ h, i, t: Date.parse(h && h.at) || 0 }))
+      .sort((x, y) => x.t - y.t || x.i - y.i);
+    let balance = 0, excess = 0, hadDebt = false;
+    for (const { h } of walk) {
+      const amt = cents(h) || 0;
+      if (h.type === 'debt') { balance += amt; if (h.kind !== 'advance-refund') hadDebt = true; continue; }
+      if (hadDebt && amt > Math.max(0, balance)) excess += amt - Math.max(0, balance);
+      balance -= amt;
+    }
+    const unexplained = Math.min(excess, Math.max(0, -balance)) - declared.reduce((n, a) => n + a.advanceCents, 0);
+    if (unexplained > 0) declared.push({ id: 'overpay:' + c.id, kind: 'offline-double-settlement', advanceCents: unexplained });
+    c.creditAlerts = others.concat(declared);
   }
   return doc;
 }
