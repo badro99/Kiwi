@@ -2,13 +2,15 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { applyPricing, pricingCopy, pricingFlight } from './landing-pricing.mjs';
+import { rewrite } from './landing-rewrite.mjs';
 
 // Keep the hydrated CTA in sync with the generated HTML and selected period.
 const oldPricingChunk = fs.readdirSync('_next/static/chunks').find(name => /^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name));
 let pricingChunk = '_next/static/chunks/' + oldPricingChunk;
-fs.writeFileSync(pricingChunk, fs.readFileSync(pricingChunk, 'utf8').replace(
+fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
   'href:r.DEMO_HREF+(tier.name==="Plus"?"?text=plus":"")',
-  'href:tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly"):r.DEMO_HREF'
+  'href:tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly"):r.DEMO_HREF',
+  'pricing CTA href'
 ));
 
 const pricingCode = fs.readFileSync(pricingChunk);
@@ -142,15 +144,15 @@ for (const localePath of localePaths) {
   }
   dictionaries[locale] = Object.fromEntries(replacements);
 
-  const output = source
-    .replace('<html lang="en" dir="ltr">', `<html lang="${locale}" dir="ltr">`)
-    // React re-renders <html> from the Flight payload after a hydration
-    // mismatch; an English lang there undid the static one (23 Oct 2026).
-    .replace('\\"html\\",null,{\\"lang\\":\\"en\\"', `\\"html\\",null,{\\"lang\\":\\"${locale}\\"`)
+  // React re-renders <html> from the Flight payload after a hydration
+  // mismatch; an English lang there undid the static one (23 Oct 2026).
+  const output = rewrite(rewrite(source, '<html lang="en" dir="ltr">', `<html lang="${locale}" dir="ltr">`, 'html lang'),
+      '\\"html\\",null,{\\"lang\\":\\"en\\"', `\\"html\\",null,{\\"lang\\":\\"${locale}\\"`, 'Flight html lang')
     .split('https://kiwi-os.com/en/').join(`https://kiwi-os.com/${locale}/`)
     .replace(`hrefLang="en" href="https://kiwi-os.com/${locale}/"`, 'hrefLang="en" href="https://kiwi-os.com/en/"')
     .replace(`\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/${locale}/\\"`, `\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/en/\\"`)
     .replace('</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`);
+  if (!output.includes('landing-runtime-translations.js')) throw new Error('rebuild-landing-locales: </body> not found in ' + localePath);
   fs.writeFileSync(localePath, applyPricing(ogHead(output, locale), locale));
 }
 
@@ -227,7 +229,7 @@ async function buildStaticLocale(locale, dict, { cloneUnchanged = false, nutriti
     return translated ? `${attr}="${escape(translated)}"` : match;
   });
   if (nutrition) output = output.replace(/(<span class="kw-nut-lbl\b[^>]*>[\s\S]*?<\/span>)([PGL])(?=<!--)/g, (_, prefix, key) => prefix + dict['nutrition.' + key]);
-  output = output.replace('<html lang="en" dir="ltr">', `<html lang="${locale}" dir="ltr">`);
+  output = rewrite(output, '<html lang="en" dir="ltr">', `<html lang="${locale}" dir="ltr">`, 'html lang (' + locale + ')');
 
   // Flight is a JSON string containing line-delimited React records. Decode both
   // layers rather than substituting fragments of escaped source text.
@@ -287,8 +289,8 @@ async function buildStaticLocale(locale, dict, { cloneUnchanged = false, nutriti
     output = output.replaceAll(`https://kiwi-os.com/${locale}/opengraph-image`, 'https://kiwi-os.com/en/opengraph-image');
   }
   for (const [original, localized] of scriptPaths) output = output.replaceAll(original, localized);
-  output = output.replace('</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`);
-  if (stylesheet) output = output.replace('</head>', `<link rel="stylesheet" href="${assetUrl(stylesheet)}"/></head>`);
+  output = rewrite(output, '</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`, 'body end (' + locale + ')');
+  if (stylesheet) output = rewrite(output, '</head>', `<link rel="stylesheet" href="${assetUrl(stylesheet)}"/></head>`, 'head end (' + locale + ')');
   fs.writeFileSync(`${locale}/index.html`, applyPricing(ogHead(output, locale), locale));
 }
 await buildStaticLocale('es', esDictionary, { cloneUnchanged: true, nutrition: true, stylesheet: 'assets/landing-es.css' });

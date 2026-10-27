@@ -1698,6 +1698,7 @@ section('Whole-project regressions');
     'landing-es-test.mjs',
     /* DE/IT/NL servies dans leur langue (titre, H1, maquette), hreflang complet. */
     'landing-static-locale-test.mjs',
+    'landing-rewrite-test.mjs',
     'landing-es-browser-test.mjs',
     /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
        les tarifs montrent les quatre paliers de CLAUDE.md §7. */
