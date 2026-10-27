@@ -19,7 +19,7 @@
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=2',
+    'assets/pages-pro-office.js?v=3',
     'assets/pages-pro.js?v=2189',
     'assets/pages-pro-boutique.js?v=4',
     'assets/pages-pro-spa-starter.js?v=2',
@@ -42,7 +42,7 @@
     'assets/z-reconciliation.js?v=25',
     'assets/month-report.js?v=16',
     'assets/day-report-export.js?v=13',
-    'assets/day-report-dash.js?v=38',
+    'assets/day-report-dash.js?v=39',
     'assets/stock/strings.js?v=2',
     'assets/stock/state.js?v=4',
     'assets/stock.js?v=90',
@@ -58,7 +58,7 @@
     'assets/briefing.js?v=30',
     'assets/simple-food-cost.js?v=14',
     'assets/finance.js?v=14',
-    'assets/conformite.js?v=7',
+    'assets/conformite.js?v=8',
     'assets/production-action-guard.js?v=4',
     'assets/staff-roles.js?v=2',
     'assets/help-centre.js?v=7',

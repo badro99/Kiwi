@@ -716,6 +716,11 @@ for (const test of [
   'till-gate-test.mjs',
   'staff-skin-test.mjs',
   'skin-cloak-test.mjs',
+  /* La peau 2027 de la boutique est de la PEINTURE : aucune branche dans le JS
+     du métier, chaque règle portée par le drapeau, aucune couleur en dur, et
+     tout le blanc du rail livré repris — sans quoi on refait le blanc sur
+     blanc du fond d'ouverture (propriétaire, 2026-10-27). */
+  'boutique-2027-test.mjs',
   /* Les skins se rencontrent dans le navigateur : tableau de bord, caisse restaurant
      et boutique, dans chaque skin, thème et taille, peignent le thème annoncé,
      sans italique ni contrôle transparent, avec le style calculé revu. */

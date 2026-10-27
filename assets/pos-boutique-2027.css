@@ -1,0 +1,267 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kiwi · Design 2027 — la caisse BOUTIQUE (spec §18.3, « Business-type tills »)
+   ---------------------------------------------------------------------------
+   Chargée uniquement sous le drapeau de la caisse (data-skin-2027="till", posé
+   par kiwi-caisse.html). Drapeau éteint, ce fichier n'est pas chargé du tout et
+   la boutique garde exactement les écrans livrés.
+
+   CE FICHIER NE CONTIENT QUE DE LA PEINTURE. Aucun JavaScript, aucun nœud du
+   DOM, aucun identifiant, aucun data-action n'est touché : chaque bouton de la
+   boutique reste là où il est, avec le même gestionnaire. C'est la contrainte
+   du propriétaire (2026-10-27) : « sans changer ni enlever de boutons ou de
+   fonctionnalités ». Un bouton ne peut donc pas disparaître ici — la seule
+   chose qui change est sa couleur, son rayon et sa taille de touche.
+
+   Pourquoi une feuille et pas KiwiTillFrame : le cadre 2027 du restaurant
+   remplace la barre livrée et ré-expose ses commandes depuis une liste de
+   sélecteurs écrits à la main (TILL_KIT_MORE). Une ligne dont le sélecteur ne
+   correspond plus est retirée SANS ERREUR — c'est le mécanisme qui a fait
+   disparaître « envoyer en cuisine ». La boutique a sept vues, un ticket, les
+   échanges, les avoirs, les acomptes et l'inventaire : la ré-exposer de cette
+   façon, c'est précisément le risque qu'on refuse. On repeint donc le livré.
+
+   Le rail livré est SOMBRE (--ink-bg, encre blanche). On le passe au papier du
+   kit, donc toute déclaration qui portait du blanc en dur doit être reprise
+   ici, sinon on obtient du blanc sur blanc — exactement la panne du fond
+   d'ouverture (les pastilles .ci-float-chip, restées en encre blanche quand le
+   sol est passé au papier). Les onze règles concernées sont reprises une par
+   une dans « LE RAIL » ci-dessous, et un test les tient (boutique-2027-test).
+
+   Le mode sombre suit tout seul : les jetons --k-* se redéfinissent dans
+   tokens-2027.css, cette feuille n'écrit aucune couleur en dur.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-skin-2027="till"] #pos-boutique {
+  background-color: var(--k-bg);
+  color: var(--k-ink-1);
+  font-family: var(--k-font);
+}
+html[data-skin-2027="till"] #pos-boutique :is(h1, h2, h3, button, input, select, textarea) { font-family: inherit; }
+
+/* Le mono est réservé aux codes (propriétaire, 2026-10-24) : un numéro de
+   ticket, un code-barres, un code d'avoir. Les montants et les compteurs
+   repassent en Inter Tight à chiffres tabulaires. */
+html[data-skin-2027="till"] #pos-boutique :is(.bq-card-price, .bq-cat-ct, .bq-tk-total .val, .bq-head-sub b) {
+  font-family: var(--k-font);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════ LE RAIL — de la nuit au papier ═══════════════
+   Les onze règles livrées qui portaient du blanc en dur, reprises dans
+   l'ordre du fichier livré (pos-boutique.css : 64, 71, 81, 82, 83, 97, 104,
+   113, 116, 138, 1533). Aucune ne doit rester, sinon elle devient invisible. */
+html[data-skin-2027="till"] #pos-boutique > .bq-rail {
+  background-color: var(--k-surface-1);
+  border-right: 1px solid var(--k-line);                      /* 64 */
+  color: var(--k-ink-2);
+  scrollbar-color: var(--k-line-strong) transparent;          /* 71 */
+}
+html[data-skin-2027="till"] .kiwi-rtl #pos-boutique > .bq-rail,
+html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-rail {
+  border-right: 0; border-left: 1px solid var(--k-line);      /* 1533 */
+}
+html[data-skin-2027="till"] #pos-boutique .bq-venue {
+  border-bottom: 1px solid var(--k-line);                     /* 81 */
+}
+html[data-skin-2027="till"] #pos-boutique .bq-venue-name {
+  color: var(--k-ink-1);                                      /* 82 */
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-venue-sub {
+  color: var(--k-ink-3);                                      /* 83 */
+  font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-venue-sub b { color: var(--k-accent-ink); }
+
+/* Le logo inverse du rail sombre ne se voit plus sur le papier. */
+html[data-skin-2027="till"] #pos-boutique .bq-brand img { content: url("kiwi-newlogo.svg"); height: 30px; }
+
+html[data-skin-2027="till"] #pos-boutique .bq-nav-it {
+  min-height: 44px;                       /* cible tactile du kit */
+  border-radius: var(--k-r-2);
+  color: var(--k-ink-2);
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-nav-it:hover {
+  background-color: var(--k-surface-2); color: var(--k-ink-1);  /* 97 */
+}
+html[data-skin-2027="till"] #pos-boutique .bq-nav-it.on,
+html[data-skin-2027="till"] #pos-boutique .bq-nav-it.on svg {
+  background-color: var(--k-accent-tint); color: var(--k-accent-ink);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-nav-badge {
+  background-color: var(--k-surface-2); color: var(--k-ink-2);  /* 104 */
+  font-family: var(--k-font); font-variant-numeric: tabular-nums;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-nav-it.on .bq-nav-badge {
+  background-color: var(--k-accent); color: var(--k-on-accent);
+}
+
+html[data-skin-2027="till"] #pos-boutique .bq-net {
+  min-height: 44px; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2);                        /* 113 */
+  color: var(--k-ink-2); font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-net:hover { background-color: var(--k-surface-3); }  /* 116 */
+html[data-skin-2027="till"] #pos-boutique .bq-net.is-off { color: var(--k-warning); }
+html[data-skin-2027="till"] #pos-boutique .bq-net.is-off .bq-net-dot { background-color: var(--k-warning-solid); }
+
+html[data-skin-2027="till"] #pos-boutique .bq-lock {
+  min-height: 44px; border-radius: var(--k-r-2);
+  color: var(--k-ink-2); font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-lock:hover {
+  background-color: var(--k-surface-2); color: var(--k-ink-1);  /* 138 */
+}
+
+/* ═══════════════ L'EN-TÊTE ET LE SCAN ═══════════════ */
+html[data-skin-2027="till"] #pos-boutique .bq-head h1 {
+  font-size: var(--k-fs-title); font-weight: var(--k-fw-title);
+  letter-spacing: var(--k-track-title); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-boutique :is(.bq-head-sub, .bq-head-hint) {
+  color: var(--k-ink-3); font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-head-sub b { color: var(--k-accent-ink); }
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan {
+  min-height: 52px; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-1); border: 1px solid var(--k-line);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan input {
+  color: var(--k-ink-1); font-size: var(--k-fs-body);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan input::placeholder { color: var(--k-ink-3); }
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan-tag {
+  background-color: var(--k-surface-2); color: var(--k-ink-3);
+  border-radius: var(--k-r-1); font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-cam {
+  min-width: 44px; min-height: 44px; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+}
+
+/* ═══════════════ LES RAYONS ═══════════════ */
+html[data-skin-2027="till"] #pos-boutique .bq-cat {
+  min-height: 44px; border-radius: 999px;
+  border: 1px solid var(--k-line);
+  background-color: var(--k-surface-1);
+  color: var(--k-ink-2);
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-cat:hover { border-color: var(--k-line-strong); color: var(--k-ink-1); }
+/* Le rayon choisi : l'accent du kit, pas le noir livré. */
+html[data-skin-2027="till"] #pos-boutique :is(.bq-cat.on, .bq-cat.is-promo.on) {
+  background-color: var(--k-accent); border-color: var(--k-accent); color: var(--k-on-accent);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-cat-ct {
+  background-color: var(--k-surface-2); color: var(--k-ink-2);
+  font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-cat.on .bq-cat-ct {
+  background-color: var(--k-accent-pressed);
+  color: var(--k-on-accent);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-cat-head {
+  font-family: var(--k-font); letter-spacing: var(--k-track-footnote);
+  text-transform: none; font-size: var(--k-fs-footnote);
+  font-weight: var(--k-fw-footnote-strong); color: var(--k-ink-3);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-cat-head::after { background-color: var(--k-line); }
+
+/* ═══════════════ LA GRILLE ═══════════════ */
+html[data-skin-2027="till"] #pos-boutique .bq-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--k-grid-gap);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-card {
+  min-height: 132px;
+  padding: var(--k-space-4) var(--k-space-3) var(--k-space-3);
+  background-color: var(--k-surface-1);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-3);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-card:hover {
+  transform: none; box-shadow: var(--k-shadow-1); border-color: var(--k-line-strong);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-card-art {
+  background-color: var(--k-surface-2); border-radius: var(--k-r-2); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-card-name {
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-card-price {
+  font-size: var(--k-fs-footnote); color: var(--k-ink-2);
+}
+
+/* ═══════════════ LE TICKET ═══════════════ */
+html[data-skin-2027="till"] #pos-boutique .bq-ticket {
+  background-color: var(--k-surface-1); border-left: 1px solid var(--k-line);
+}
+html[data-skin-2027="till"] .kiwi-rtl #pos-boutique .bq-ticket { border-left: 0; border-right: 1px solid var(--k-line); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-title {
+  font-size: var(--k-fs-heading); font-weight: var(--k-fw-heading); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-tk-num { color: var(--k-ink-3); font-size: var(--k-fs-footnote); }
+html[data-skin-2027="till"] #pos-boutique :is(.bq-tk-meta, .bq-tk-foot) { border-color: var(--k-line); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-foot { background-color: var(--k-surface-1); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-row {
+  min-height: 56px; border-radius: var(--k-r-2);
+  border: 1px solid var(--k-line); background-color: var(--k-surface-1); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-tk-row:hover { background-color: var(--k-surface-2); border-color: var(--k-line-strong); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-row.is-set {
+  border-color: var(--k-accent); background-color: var(--k-accent-tint); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-boutique :is(.bq-tk-row.is-set svg, .bq-tk-row .edit) { color: var(--k-accent-ink); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-empty { color: var(--k-ink-3); font-size: var(--k-fs-callout); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-tot { color: var(--k-ink-3); font-size: var(--k-fs-footnote); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-tot .rem { color: var(--k-warning); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-tot .rem.rew { color: var(--k-accent-ink); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-total .lbl { color: var(--k-ink-2); font-size: var(--k-fs-callout); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-total .val {
+  font-size: var(--k-fs-title); font-weight: var(--k-fw-title);
+  letter-spacing: var(--k-track-title); color: var(--k-ink-1);
+}
+
+/* ═══════════════ ENCAISSER ═══════════════ */
+html[data-skin-2027="till"] #pos-boutique .bq-validate {
+  min-height: 56px; border-radius: var(--k-r-2);
+  background-color: var(--k-accent); color: var(--k-on-accent);
+  box-shadow: var(--k-shadow-1);
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
+  letter-spacing: var(--k-track-body);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-validate:hover { background-color: var(--k-accent-pressed); }
+html[data-skin-2027="till"] #pos-boutique .bq-validate:disabled { opacity: 0.4; box-shadow: none; }
+
+/* ═══════════════ PRIMITIVES PARTAGÉES (les six autres vues) ═══════════════ */
+html[data-skin-2027="till"] #pos-boutique .bq-btn {
+  min-height: 44px; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+  border-color: var(--k-line);
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="till"] #pos-boutique :is(.bq-btn.primary, .bq-btn.is-done) {
+  background-color: var(--k-accent); color: var(--k-on-accent); box-shadow: var(--k-shadow-1);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-chip {
+  min-height: 36px; border-radius: 999px;
+  background-color: var(--k-surface-2); color: var(--k-ink-2); border-color: var(--k-line);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-empty { color: var(--k-ink-3); font-size: var(--k-fs-callout); }
+html[data-skin-2027="till"] #pos-boutique :is(.bq-seg-it.on, .bq-split-c.is-on, .bq-reward-row.is-on, .bq-prc-scope.on) {
+  background-color: var(--k-accent); border-color: var(--k-accent); color: var(--k-on-accent);
+}
+html[data-skin-2027="till"] #pos-boutique :is(.bq-prc-scope.on svg) { color: var(--k-on-accent); }
+/* Pas de color-mix : le kit n'en emploie nulle part, et le WebKit des
+   tablettes en service ici n'est pas garanti. Une opacité fait le même ton. */
+html[data-skin-2027="till"] #pos-boutique .bq-reward-row.is-on .l span,
+html[data-skin-2027="till"] #pos-boutique .bq-seg-it.on small {
+  color: var(--k-on-accent); opacity: 0.78;
+}
+html[data-skin-2027="till"] #pos-boutique .modal { border-radius: var(--k-r-3); background-color: var(--k-surface-1); color: var(--k-ink-1); }
+
+/* Le focus visible du kit, sur tout ce qui se touche. */
+html[data-skin-2027="till"] #pos-boutique :is(button, input, select, textarea):focus-visible {
+  outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px;
+}

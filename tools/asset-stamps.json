@@ -64,8 +64,8 @@
     "sha": "b348ff5930ca5542"
   },
   "assets/agent.js": {
-    "v": "43",
-    "sha": "e1936e4166aa6508"
+    "v": "44",
+    "sha": "b004ba3f9433b586"
   },
   "assets/agent/ui.js": {
     "v": "3",
@@ -320,8 +320,8 @@
     "sha": "3ab09900176d860e"
   },
   "assets/clients-directory.js": {
-    "v": "28",
-    "sha": "1e6a13529d5fa500"
+    "v": "29",
+    "sha": "8b290f8690efdfd9"
   },
   "assets/clients-store.js": {
     "v": "27",
@@ -336,16 +336,16 @@
     "sha": "c5efe87aeb57b5d6"
   },
   "assets/conformite.js": {
-    "v": "7",
-    "sha": "f44739d00ba1717c"
+    "v": "8",
+    "sha": "95c88a129c038137"
   },
   "assets/cost.js": {
     "v": "11",
     "sha": "75a7be91584c812f"
   },
   "assets/customer-retention.js": {
-    "v": "11",
-    "sha": "65c7736a9647cd3c"
+    "v": "12",
+    "sha": "0af3693e57b628e0"
   },
   "assets/dark-fixes.js": {
     "v": "5",
@@ -368,8 +368,8 @@
     "sha": "eb1de027cb38b570"
   },
   "assets/dashboard-shell.css": {
-    "v": "6",
-    "sha": "82c1e457878f3dcc"
+    "v": "7",
+    "sha": "089b29c4edba3c07"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -416,8 +416,8 @@
     "sha": "5a0815b4defae865"
   },
   "assets/day-report-dash.js": {
-    "v": "38",
-    "sha": "19cbdc6ee15b031a"
+    "v": "39",
+    "sha": "52e643caaeece42b"
   },
   "assets/day-report-export.js": {
     "v": "13",
@@ -1164,8 +1164,8 @@
     "sha": "164e9d8c308ea77e"
   },
   "assets/onboarding.js": {
-    "v": "2105",
-    "sha": "32f3a9f871681c2c"
+    "v": "2106",
+    "sha": "b50bef07ca8cfd4b"
   },
   "assets/operations-ui.js": {
     "v": "30",
@@ -1252,8 +1252,8 @@
     "sha": "8a3364808a2a6288"
   },
   "assets/pages-pro-office.js": {
-    "v": "2",
-    "sha": "071701d8e95e37c4"
+    "v": "3",
+    "sha": "6093a89fe6c42e6c"
   },
   "assets/pages-pro-spa-starter.js": {
     "v": "2",
@@ -1292,8 +1292,8 @@
     "sha": "944d1ca9686b4326"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "41",
-    "sha": "75096bd1ad8c8b51"
+    "v": "42",
+    "sha": "99c5c43e51ead480"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1382,6 +1382,10 @@
   "assets/pos-boulangerie.js": {
     "v": "12",
     "sha": "abb9c37694ef9e6a"
+  },
+  "assets/pos-boutique-2027.css": {
+    "v": "1",
+    "sha": "5437b22987f228dd"
   },
   "assets/pos-boutique.css": {
     "v": "118",
