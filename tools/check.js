@@ -716,6 +716,10 @@ for (const test of [
   'till-gate-test.mjs',
   'staff-skin-test.mjs',
   'skin-cloak-test.mjs',
+  /* Les skins se rencontrent dans le navigateur : tableau de bord, caisse restaurant
+     et boutique, dans chaque skin, thème et taille, peignent le thème annoncé,
+     sans italique ni contrôle transparent, avec le style calculé revu. */
+  'skin-matrix-browser-test.mjs',
   'wave-p-polish-test.mjs',
   'employee-timezone-test.mjs',
   'wave-n-caps-test.mjs',
