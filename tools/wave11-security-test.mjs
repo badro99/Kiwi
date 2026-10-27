@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { fixture } from './server-money-fixture.mjs';
 import { operatorToken, operatorIdToken, makeSession, tillToken, SESS_COOKIE, TILL_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestPost as redeem } from '../functions/api/pair/redeem.js';
+import { onRequestPost as bridgesPost } from '../functions/api/print/bridges.js';
 import { onRequestPost as pinsPost } from '../functions/api/admin/pins.js';
 import { onRequestPost as opsPost, onRequestDelete as opsDelete } from '../functions/api/admin/operators.js';
 import { onRequestPost as ticketPost } from '../functions/api/support/tickets.js';
@@ -89,6 +90,33 @@ console.log('\npairing#0 · essais de code par réseau');
   addCode('550127');
   ok('IPv4 : deux erreurs puis le bon code passent', (await guess('203.0.113.9', '550127')).status === 200);
   ok('un autre réseau n’est pas touché', (await guess('192.0.2.44')).status === 422);
+  f.close();
+}
+
+/* ── pairing#0 bis · le code d'un pont d'impression ───────────────────── */
+console.log('\npairing#0 · code d’appairage d’un pont d’impression');
+{
+  const f = await fixture(ROOT);
+  const guess = (ip, code = '000001') => bridgesPost({ request: req('/api/print/bridges', { ip, body: { action: 'redeem', code } }), env: f.env });
+  let blockedAt = 0;
+  for (let i = 1; i <= 40 && !blockedAt; i++) {
+    const r = await guess(`2001:db8:dd:1::${i.toString(16)}`);
+    if (r.status === 429) blockedAt = i;
+  }
+  ok('pont · IPv6 tournant dans un /64 : bloqué au 11e essai', blockedAt === 11, 'bloqué à ' + blockedAt);
+  blockedAt = 0;
+  for (let i = 1; i <= 60 && !blockedAt; i++) {
+    const r = await guess(`2001:db8:ee:${i.toString(16)}::1`);
+    if (r.status === 429) blockedAt = i;
+  }
+  ok('pont · IPv6 tournant de /64 en /64 : bloqué au 31e essai', blockedAt === 31, 'bloqué à ' + blockedAt);
+  const burst = await Promise.all(Array.from({ length: 12 }, () => guess('198.51.100.20')));
+  const fails = f.sql.prepare('SELECT fails FROM pair_attempts WHERE ip = ?').get('print:198.51.100.20');
+  ok('pont · des essais simultanés sont tous comptés', fails && fails.fails === 12 || burst.some((r) => r.status === 429), JSON.stringify(fails));
+  ok('pont · un autre réseau n’est pas touché', (await guess('192.0.2.45')).status === 422);
+  const down = { ...f.env, DB: { prepare() { throw new Error('d1 down'); } } };
+  const r = await bridgesPost({ request: req('/api/print/bridges', { ip: '192.0.2.46', body: { action: 'redeem', code: '000001' } }), env: down });
+  ok('pont · limiteur injoignable : l’essai est refusé, pas accepté', r.status === 503, 'statut ' + r.status);
   f.close();
 }
 

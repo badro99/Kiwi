@@ -11,11 +11,12 @@
  * L'appairage suit exactement la caisse (/api/pair/*) : un code à 6 chiffres
  * émis côté commerce, à usage unique, 15 minutes, échangé UNE fois contre un
  * jeton que seul le pont détient. Le jeton n'est jamais renvoyé après coup ; un
- * pont qui le perd se ré-appaire. La redemption est limitée par IP comme
+ * pont qui le perd se ré-appaire. La redemption est limitée par réseau comme
  * /api/pair/redeem, et partage sa table de compteurs (clé préfixée).
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { tenantFor } from '../_private.js';
+import { clientAddress, sourceKeys } from '../_net-source.js';
 import {
   BRIDGE_ONLINE_MS, CODE_TTL_MS, code6, newBridgeToken, sha256Hex, randomHex,
   bridgeFromRequest, dbDown, relayJson, isMissingTable, now,
@@ -23,37 +24,46 @@ import {
 
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_FAILS = 10;
+const WIDE_MAX_FAILS = 30;
 const BLOCK_MS = 15 * 60 * 1000;
 
-function clientKey(request) {
-  const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
-  return ip ? ('print:' + ip) : '';
+/* Comme /api/pair/redeem : un code de pont est global, un essai les tente tous.
+ * On compte par réseau (IPv6 /64, IPv4 exacte) et, plus large, par opérateur
+ * de réseaux (IPv6 /48, IPv4 /24). Le compteur large n'est jamais remis à zéro
+ * par un appairage réussi, sinon appairer son propre pont le viderait. Un
+ * limiteur injoignable refuse l'essai au lieu de le laisser passer. */
+function clientKeys(request) {
+  const { narrow, wide } = sourceKeys(clientAddress(request));
+  return [narrow ? { key: 'print:' + narrow, max: MAX_FAILS } : null,
+          wide ? { key: 'printw:' + wide, max: WIDE_MAX_FAILS } : null].filter(Boolean);
 }
 
-async function blocked(env, key, t) {
-  if (!key) return 0;
-  try {
+async function blocked(env, keys, t) {
+  for (const { key } of keys) {
     const a = await env.DB.prepare('SELECT blocked_until FROM pair_attempts WHERE ip = ?').bind(key).first();
     if (a && a.blocked_until && a.blocked_until > t) return Math.ceil((a.blocked_until - t) / 1000);
-  } catch (_) {}
+  }
   return 0;
 }
 
-async function noteFail(env, key, t) {
-  if (!key) return;
+/* Une seule instruction SQLite porte l'incrément : lire puis écrire laissait
+   deux essais simultanés s'écraser et sous-compter. */
+async function noteFail(env, keys, t) {
   try {
-    const a = await env.DB.prepare('SELECT fails, first_ts FROM pair_attempts WHERE ip = ?').bind(key).first();
-    if (!a || (t - a.first_ts) > WINDOW_MS) {
+    for (const { key, max } of keys) {
       await env.DB.prepare(
         `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
-         ON CONFLICT(ip) DO UPDATE SET fails = 1, first_ts = excluded.first_ts, blocked_until = NULL`
-      ).bind(key, t).run();
-      return;
+         ON CONFLICT(ip) DO UPDATE SET
+           fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
+           first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
+           blocked_until = CASE
+             WHEN ? - pair_attempts.first_ts > ? THEN NULL
+             WHEN pair_attempts.fails + 1 >= ? THEN ?
+             ELSE pair_attempts.blocked_until END`
+      ).bind(key, t, t, WINDOW_MS, t, WINDOW_MS, t, t, WINDOW_MS, max, t + BLOCK_MS).run();
     }
-    const fails = (a.fails || 0) + 1;
-    await env.DB.prepare('UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?')
-      .bind(fails, fails >= MAX_FAILS ? (t + BLOCK_MS) : null, key).run();
-  } catch (_) { /* limiteur indisponible → on laisse passer, comme /api/pair/redeem */ }
+    return true;
+  } catch (_) { return false; }
 }
 
 function cleanName(s, fallback) {
@@ -111,11 +121,15 @@ export async function onRequestPost(context) {
 
   /* ── le PONT échange son code contre un jeton (aucune session) ───────────── */
   if (action === 'redeem') {
-    const key = clientKey(request);
-    const wait = await blocked(env, key, t);
+    const keys = clientKeys(request);
+    let wait = 0;
+    try { wait = await blocked(env, keys, t); } catch (_) { return relayJson({ ok: false, error: 'rate-limit-unavailable' }, 503, request); }
     if (wait) return relayJson({ ok: false, error: 'too_many_attempts', retry_after: wait }, 429, request);
+    const refuse = async () => (await noteFail(env, keys, t))
+      ? relayJson({ ok: false, error: 'invalid_or_expired' }, 422, request)
+      : relayJson({ ok: false, error: 'rate-limit-unavailable' }, 503, request);
     const code = String(body.code || '').replace(/\D/g, '').slice(0, 6);
-    if (code.length !== 6) { await noteFail(env, key, t); return relayJson({ ok: false, error: 'invalid_or_expired' }, 422, request); }
+    if (code.length !== 6) return refuse();
     let row = null;
     try {
       row = await env.DB.prepare(
@@ -125,8 +139,9 @@ export async function onRequestPost(context) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
       return relayJson({ ok: false, error: 'invalid_or_expired' }, 422, request);
     }
-    if (!row) { await noteFail(env, key, t); return relayJson({ ok: false, error: 'invalid_or_expired' }, 422, request); }
-    if (key) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(key).run(); } catch (_) {} }
+    if (!row) return refuse();
+    // Seul le compteur étroit repart à zéro ; le large garde la mémoire du réseau.
+    if (keys[0]) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(keys[0].key).run(); } catch (_) {} }
 
     const token = newBridgeToken();
     const id = 'pb_' + randomHex(8);
