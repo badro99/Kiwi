@@ -2046,6 +2046,7 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
     'invoicing-print-test.mjs',
+    'amount-words-test.mjs',
     'invoicing-pdf-pages-browser-test.mjs',
     'invoicing-v2-browser-test.mjs',
     'invoicing-v2-real-server-browser-test.mjs',
@@ -2185,6 +2186,7 @@ section('Whole-project regressions');
     'stock-count-history-language-test.mjs',
     'caisse-color-picker-language-test.mjs',
     'booking-truth-test.mjs',
+    'booking-mail-test.mjs',
     'booking-lens-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'onboarding-data-test.mjs',
@@ -2314,6 +2316,7 @@ section('Whole-project regressions');
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
     'invoice-server-truth-test.mjs',
+    'invoice-series-year-test.mjs',
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',

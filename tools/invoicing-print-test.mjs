@@ -42,10 +42,15 @@ const code = [
 
 let lang = 'fr';
 let sharedTemplateCalls = 0;
+// Le montant en lettres vit dans assets/invoice.js (KiwiInvoice.amountWords) : le vrai module, pas une copie.
+const invoiceSource = fs.readFileSync(path.join(ROOT, 'assets/invoice.js'), 'utf8');
+const amountWords = new Function('window', 'document', 'localStorage', `${invoiceSource}; return window.KiwiInvoice.amountWords;`)(
+  { KiwiReceipt: { business: () => ({}), config: () => ({}) }, document: {}, localStorage: { getItem: () => null, setItem() {} } }, {}, { getItem: () => null, setItem() {} });
 const window = {
   KiwiI18n: { getLang: () => lang },
   KiwiMe: { business: 'Atelier Test' },
   KiwiInvoice: {
+    amountWords,
     html() { sharedTemplateCalls++; return '<html>Statut : Payée · Vente acquittée</html>'; },
     getSellerBusiness: () => ({ name: 'Atelier Test', city: 'Casablanca', ice: '001234567000089', fiscal: '1234567', rc: '98765', patente: '4455', address: '12 rue des Tests', phone: '0522000000' }),
   },
@@ -126,6 +131,35 @@ ok('arabe : titre et colonnes en arabe', /<h1>فاتورة<\/h1>/.test(html) && 
 ok('arabe : les chiffres restent latins (2 000,00)', /2 000,00/.test(f));
 ok('arabe : le filigrane aussi', /مسودة · دون قيمة جبائية/.test(ctx.__printable(draft)));
 lang = 'fr';
+
+console.log('■ Montant en lettres');
+f = flat(ctx.__printable(invoice));
+ok('facture : « Arrêtée la présente facture à la somme de : … » sous les totaux, du TTC en centimes',
+  /Total TTC<\/span><span>3 195,00 MAD.*<div class="words" lang="fr" dir="ltr">Arrêtée la présente facture à la somme de : trois mille cent quatre-vingt-quinze dirhams\.<\/div>/.test(f));
+ok('avoir : « Arrêté le présent avoir … » (2 400,00 TTC, cents avec s en fin de nombre)',
+  /Arrêté le présent avoir à la somme de : deux mille quatre cents dirhams\./.test(flat(ctx.__printable(credit))));
+ok('devis : « Arrêté le présent devis … »', /Arrêté le présent devis à la somme de : trois mille cent quatre-vingt-quinze dirhams\./.test(flat(ctx.__printable(quote))));
+ok('centimes : 12,34 HT + 20 % = 14,81 TTC', /à la somme de : quatorze dirhams et quatre-vingt-un centimes\./.test(flat(ctx.__printable({ ...invoice, lines: [{ description: 'Pièce', qty: 1, unitHT: 1234, discountPct: 0, vatRate: 20 }], exemptionMention: '' }))));
+ok('arabe : la formule légale reste en français, de gauche à droite', (lang = 'ar', /<div class="words" lang="fr" dir="ltr">Arrêtée la présente facture/.test(ctx.__printable(invoice))));
+lang = 'fr';
+window.KiwiInvoice.amountWords = undefined;
+ok('sans le module, la ligne est omise et rien ne casse', !/class="words"/.test(ctx.__printable(invoice)) && /Total TTC/.test(ctx.__printable(invoice)));
+window.KiwiInvoice.amountWords = amountWords;
+
+console.log('■ ICE du vendeur manquant');
+const banner = (doc) => vm.runInContext('sellerIceBanner', ctx)(doc, vm.runInContext('T()', ctx));
+const noIce = { ...invoice, seller: { ...seller, ice: '' } };
+ok('une facture émise sans ICE vendeur affiche un bandeau d’alerte avec le lien vers la fiche', /role="alert" data-inv-seller-ice/.test(banner(noIce)) && /data-inv-act="set-ice"/.test(banner(noIce)) && /ICE du vendeur manquant/.test(banner(noIce)));
+ok('avec l’ICE, pas de bandeau', banner(invoice) === '');
+ok('un brouillon n’en affiche pas (rien n’est encore numéroté)', banner({ ...noIce, status: 'draft', number: '' }) === '');
+ok('un ancien document sans identité figée n’en affiche pas', banner({ ...invoice, seller: null }) === '');
+lang = 'en'; ok('anglais : bandeau en anglais', /Seller ICE missing/.test(banner(noIce))); lang = 'ar'; ok('arabe : bandeau en arabe', /ICE البائع مفقود/.test(banner(noIce))); lang = 'fr';
+const warned = vm.runInContext('sellerIceMissing', ctx);
+ok('l’avertissement du serveur est lu dans la réponse d’émission', warned({ ok: true, warnings: ['seller-ice-missing'] }) === true && warned({ ok: true, warnings: [] }) === false && warned(null) === false && warned({ ok: true }) === false);
+
+ok('les deux chemins d’émission (formulaire, détail) lisent l’avertissement et le disent dans le message',
+  (src.match(/tpl\(sellerIceMissing\((?:issuedRes|res)\) \? t\.issuedNoIce : t\.issuedOk/g) || []).length === 2);
+ok('le lien du bandeau ouvre la fiche de l’établissement', /case 'set-ice': return openSellerIce\(\)/.test(src) && /handlers\['account-edit-business'\]/.test(src));
 
 console.log('■ Textes');
 const keys = JSON.parse(vm.runInContext('JSON.stringify({fr:Object.keys(COPY.fr),en:Object.keys(COPY.en),ar:Object.keys(COPY.ar)})', ctx));

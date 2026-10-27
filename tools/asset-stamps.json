@@ -104,8 +104,8 @@
     "sha": "3866e9faba9da587"
   },
   "assets/booking-submission.js": {
-    "v": "2",
-    "sha": "5373a9318a640a22"
+    "v": "3",
+    "sha": "385e5f9c8a6e6c1d"
   },
   "assets/booking-view.js": {
     "v": "2",
@@ -116,8 +116,8 @@
     "sha": "37a32d31d15b2ec9"
   },
   "assets/booking.js": {
-    "v": "40",
-    "sha": "ba16f4a25ed44a2f"
+    "v": "41",
+    "sha": "b76bdfe6f6daf6cc"
   },
   "assets/boutique-catalog-parts.js": {
     "v": "11",
@@ -732,28 +732,28 @@
     "sha": "21223ad72de672f1"
   },
   "assets/invoice.js": {
-    "v": "20",
-    "sha": "b566d0ab27cf04d6"
+    "v": "22",
+    "sha": "2b2357a3499708f1"
   },
   "assets/invoicing.css": {
-    "v": "11",
-    "sha": "10c08d754c7b3b9f"
+    "v": "12",
+    "sha": "0fc3fe84387e04a4"
   },
   "assets/invoicing.js": {
-    "v": "30",
-    "sha": "40cc2e36eb25d97e"
+    "v": "32",
+    "sha": "12f877cf54dd1d94"
   },
   "assets/invoicing/composer.js": {
-    "v": "6",
-    "sha": "ae82132029f3d749"
+    "v": "7",
+    "sha": "ed4c954e2ebba564"
   },
   "assets/invoicing/history.js": {
-    "v": "4",
-    "sha": "1af6879be7a494f2"
+    "v": "5",
+    "sha": "62af7f0cc10f7f65"
   },
   "assets/invoicing/print.js": {
-    "v": "4",
-    "sha": "7195bdfc5afa335d"
+    "v": "6",
+    "sha": "701c83f0825ccdbe"
   },
   "assets/invoicing/transport.js": {
     "v": "3",

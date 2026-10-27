@@ -40,9 +40,9 @@ function paintStats() {
     const box = overlay?.querySelector('[data-inv-stats]'); if (!box) return;
     const t = T(), s = stats();
     const total = TYPES.reduce((n, ty) => n + rowsFor(ty).length, 0) + getSaleInvoices().length;
-    box.innerHTML = `<article class="inv-stat"><div class="inv-stat-label">${esc(t.outstanding)}</div><div class="inv-stat-value" data-stat="outstanding">${money(s.outstanding)} <small>MAD</small></div><div class="inv-stat-note">${s.waiting} ${esc(t.awaiting)}</div></article>
-      <article class="inv-stat alert"><div class="inv-stat-label">${esc(t.overdue)}</div><div class="inv-stat-value" data-stat="overdue">${money(s.late)} <small>MAD</small></div><div class="inv-stat-note">${s.lateCount} ${esc(t.needsFollowup)}</div></article>
-      <article class="inv-stat"><div class="inv-stat-label">${esc(t.paidMonth)}</div><div class="inv-stat-value" data-stat="paid">${money(s.paidMonth)} <small>MAD</small></div><div class="inv-stat-note">${esc(t.collected)}</div></article>
+    box.innerHTML = `<article class="inv-stat"><div class="inv-stat-label">${esc(t.outstanding)}</div><div class="inv-stat-value" data-stat="outstanding">${money(s.outstanding)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${s.waiting} ${esc(t.awaiting)}</div></article>
+      <article class="inv-stat alert"><div class="inv-stat-label">${esc(t.overdue)}</div><div class="inv-stat-value" data-stat="overdue">${money(s.late)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${s.lateCount} ${esc(t.needsFollowup)}</div></article>
+      <article class="inv-stat"><div class="inv-stat-label">${esc(t.paidMonth)}</div><div class="inv-stat-value" data-stat="paid">${money(s.paidMonth)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${esc(t.collected)}</div></article>
       <article class="inv-stat"><div class="inv-stat-label">${esc(t.documents)}</div><div class="inv-stat-value" data-stat="docs">${total}</div><div class="inv-stat-note">${esc(t.totalDocs)}</div></article>`;
   }
 return paintStats.apply(self, args);

@@ -416,6 +416,8 @@ html[data-theme="dark"] .inv-overlay {
 .inv-banner-copy { display: grid; gap: 3px; min-width: 0; }
 .inv-banner-copy span { color: var(--inv-muted); font-size: 11.5px; }
 .inv-banner.warn { justify-content: flex-start; border-color: color-mix(in srgb, #b43b2c 28%, var(--inv-line)); background: color-mix(in srgb, #b43b2c 6%, var(--inv-paper)); color: #8f2f23; }
+.inv-banner.warn[data-inv-seller-ice] { justify-content: space-between; font-weight: 600; }
+.inv-banner.warn[data-inv-seller-ice] .inv-btn { flex: none; }
 .inv-compose-title { margin: 0 0 14px; font-size: 22px; letter-spacing: -.035em; }
 .inv-pick { margin-bottom: 12px; }
 .inv-field-msg { min-height: 0; margin: 0; color: var(--inv-muted); font-size: 11px; line-height: 1.4; }

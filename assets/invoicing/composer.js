@@ -140,8 +140,8 @@ function updateComposer() {
       row.querySelector('[data-l="total"]').textContent = money(lineHT({qty: num(r.qty), unitHT: toCents(r.unit), discountPct: Math.min(100, num(r.disc))}));
     });
     const sums = computeTotals(lines);
-    overlay.querySelector('[data-sum="ht"]').textContent = money(sums.htCents) + ' MAD';
-    overlay.querySelector('[data-sum="ttc"]').textContent = money(sums.ttcCents) + ' MAD';
+    overlay.querySelector('[data-sum="ht"]').textContent = money(sums.htCents) + ' ' + t.cur;
+    overlay.querySelector('[data-sum="ttc"]').textContent = money(sums.ttcCents) + ' ' + t.cur;
     overlay.querySelector('[data-sum-rates]').innerHTML = sums.byRate.map(r => `<div class="inv-summary-row" data-rate="${r.rate}"><span>${esc(tpl(t.vatOn, {rate: r.rate, base: money(r.baseCents)}))}</span><strong>${money(r.vatCents)} MAD</strong></div>`).join('');
     const wrap = overlay.querySelector('[data-exempt-wrap]');
     if (wrap) wrap.hidden = !lines.some(l => l.vatRate === 0);

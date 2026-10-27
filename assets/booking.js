@@ -155,7 +155,7 @@
   await Promise.all([
     import('/assets/booking-service.js?v=2').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),
     import('/assets/booking-hotel.js?v=2').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),
-    import('/assets/booking-submission.js?v=2').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),
+    import('/assets/booking-submission.js?v=3').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),
     import('/assets/booking-manage.js?v=2').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),
     import('/assets/booking-view.js?v=2').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })
   ]);

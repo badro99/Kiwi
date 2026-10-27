@@ -15,8 +15,18 @@
 export const PREFIXES = { invoice: 'F', credit_note: 'AV', quote: 'D' };
 const MAX_ATTEMPTS = 8;
 
+/* L'année d'une série est TOUJOURS donnée par l'appelant : l'année civile de la
+ * date d'émission dans le fuseau de l'établissement (todayFor, merchantZone). Il
+ * n'y a pas de repli sur l'horloge du Worker (UTC) : autour du 1er janvier, il
+ * rangerait un document dans la mauvaise série annuelle sans rien dire. */
+export function seriesYear(year) {
+  const y = Number(year);
+  if (!Number.isInteger(y) || y < 2000 || y > 2999) throw new Error('invalid-series-year');
+  return y;
+}
+
 export function formatNumber(prefix, year, seq) {
-  const y = Number(year) || new Date().getFullYear();
+  const y = seriesYear(year);
   const s = Math.max(1, Math.floor(Number(seq)) || 1);
   return `${prefix}-${y}-${String(s).padStart(4, '0')}`;
 }
@@ -51,7 +61,8 @@ export function isNumberCollision(err) {
   return /invoice_series\./.test(m) || /sale_invoices\.(?:seq|number)/.test(m) || /invoice_docs\.number/.test(m);
 }
 
-export async function nextSeq(db, merchant, prefix, year = new Date().getFullYear()) {
+export async function nextSeq(db, merchant, prefix, year) {
+  year = seriesYear(year);
   const a = await db.prepare('SELECT COALESCE(MAX(seq), 0) AS m FROM invoice_series WHERE merchant = ? AND prefix = ? AND number LIKE ?')
     .bind(merchant, prefix, `${prefix}-${year}-%`).first();
   let max = Number(a && a.m) || 0;
@@ -79,6 +90,7 @@ const changesOf = (res) => Number(res && res.meta && res.meta.changes) || 0;
  * Rend { seq, number, applied, results }. */
 export async function allocateNumber(env, merchant, prefix, year, opts = {}) {
   if (!env || !env.DB) throw new Error('no-db');
+  year = seriesYear(year);
   const docRef = opts.docRef == null ? null : String(opts.docRef);
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const seq = await withSchema(env, () => nextSeq(env.DB, merchant, prefix, year));

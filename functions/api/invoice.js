@@ -37,7 +37,9 @@ export function validateCustomer(raw) {
 }
 
 export function formatInvoiceNumber(year, seq) {
-  const y = Number(year) || new Date().getFullYear();
+  // Pas de repli sur l'horloge du Worker : l'année vient du fuseau du commerce.
+  const y = Number(year);
+  if (!Number.isInteger(y) || y < 2000 || y > 2999) throw new Error('invalid-series-year');
   const s = Math.max(1, Number(seq) || 1);
   return `F-${y}-${String(s).padStart(4, '0')}`;
 }

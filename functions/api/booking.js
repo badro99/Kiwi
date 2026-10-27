@@ -4,6 +4,7 @@ import { BOOKING_ACTIVE as ACTIVE, bookingOverlaps as overlaps, bookingResourceF
 import { DateTimeFormat } from './_cached-clock.js';
 import { merchantZone } from './_business-day.js';
 import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
+import { bookingMail, mailLang } from './_booking-mail.js';
 // Public Kiwi booking surface. It exposes availability, never another client's details.
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
@@ -233,34 +234,10 @@ function manageExpired(rec, now = Date.now()) {
   const end = +rec?.endAt || +rec?.startAt || 0;
   return end > 0 && now > end + MANAGE_TTL_MS;
 }
-async function confirmationMail(env, request, merchant, meta, rec) {
+async function confirmationMail(env, request, merchant, meta, rec, lang, zone) {
   if (!rec.customer.email) return { ok: false, reason: 'no-recipient' };
-  const venue = str(meta?.name, 100) || 'Votre établissement';
-  const when = rec.hotel
-    ? `${rec.hotel.checkIn} → ${rec.hotel.checkOut} (${rec.hotel.nights} nuit${rec.hotel.nights > 1 ? 's' : ''})`
-    : new Date(rec.startAt).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  const requested = rec.status === 'requested';
-  const lines = [
-    `${venue}`,
-    '',
-    requested
-      ? 'Votre demande de réservation a bien été reçue. Elle vous sera confirmée par l\'établissement.'
-      : 'Votre réservation est confirmée.',
-    '',
-    `Référence : ${rec.code}`,
-    `Date : ${when}`,
-    rec.hotel ? `Chambre : ${rec.hotel.roomTypeName}` : `Personnes : ${rec.partySize}`,
-    '',
-    'Consulter ou annuler votre réservation :',
-    manageUrl(request, merchant, rec.manageToken),
-    '',
-    'Ce lien est personnel. Ne le transmettez pas.',
-  ];
-  return sendMail(env, {
-    to: rec.customer.email,
-    subject: `${venue} · ${requested ? 'demande reçue' : 'réservation confirmée'} · ${rec.code}`,
-    text: lines.join('\n'),
-  });
+  const mail = bookingMail({ lang, venue: str(meta?.name, 100), rec, zone, manageUrl: manageUrl(request, merchant, rec.manageToken) });
+  return sendMail(env, { to: rec.customer.email, subject: mail.subject, text: mail.text });
 }
 
 async function readRows(env, merchant) {
@@ -411,6 +388,8 @@ export async function onRequestPost({ request, env }) {
      l'écran que découvrir le jour de l'arrivée qu'elle est injoignable. */
   if(rawEmail&&!email){await limitFail(request,env,'booking');return json({error:'invalid-email'},400);}
   if(await storeSubscriptionPending(env,merchant))return json({error:'subscription-required'},402);
+  /* La langue de la page de réservation (FR, EN, AR) : celle du courriel de confirmation. */
+  const guestLang=mailLang(b?.lang,request.headers.get('Accept-Language'));
   for(let attempt=0;attempt<4;attempt++){
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
     const doc=safeDoc(rows.reservation?.data), rev=+rows.reservation?.rev||0;
@@ -473,7 +452,7 @@ export async function onRequestPost({ request, env }) {
         /* L'envoi ne conditionne JAMAIS la réservation : elle est écrite, elle
            existe. On dit seulement si la confirmation est partie, pour que la
            page n'annonce pas un e-mail qui n'a jamais quitté le serveur. */
-        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec);
+        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec,guestLang,rows.zone);
         return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}}catch(_){return json({error:'write-failed'},503);}
       continue;
     }
@@ -501,7 +480,7 @@ export async function onRequestPost({ request, env }) {
       if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}
       else{result=await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant,text,now).run();}
       if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');
-        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec);
+        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec,guestLang,rows.zone);
         return json({ok:true,id:rec.id,code,status:rec.status,startAt,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}
     }catch(_){return json({error:'write-failed'},503);}
   }
