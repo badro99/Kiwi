@@ -13,8 +13,14 @@ export function interfaceOwners(source) {
  for (const pattern of patterns) for (const match of source.matchAll(pattern)) owners.add(match[1]);
  return [...owners].sort();
 }
+/* A GENERATED SHARED block is a copy of a pure rule module under functions/
+ * (tools/shared-rules.json): its functions are that module's, checked by
+ * tools/shared-rules-test.mjs, not entry points of the file it is copied into. */
+export function withoutSharedCopies(source) {
+ return source.replace(/\/\* GENERATED SHARED (\w+) BEGIN \*\/[\s\S]*?\/\* GENERATED SHARED \1 END \*\//g, '');
+}
 export function entryPointCount(source) {
- return new Set([...source.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match => match[1])).size;
+ return new Set([...withoutSharedCopies(source).matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match => match[1])).size;
 }
 export function checkInterfaces(read, baseline) {
  const failures = [];

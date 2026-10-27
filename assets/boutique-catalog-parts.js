@@ -125,6 +125,147 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
       return materialize(data);
     }
 
+    /* ── Per-field clocks ────────────────────────────────────────────────────────
+     * The catalogue used to keep a whole record from the device with the newer
+     * metaAt: a price changed offline on one till was lost when another device
+     * renamed the same product later. A record edited through touchFields now
+     * carries one clock per field:
+     *   fieldRest  the clock of every field not listed in fieldAt
+     *   fieldAt    fields edited after fieldRest, each with its own clock
+     *   fieldBase  for each field in fieldAt, the clock of the value that edit replaced
+     *   fieldMeta  equal to metaAt while the map is current
+     * A device still running older code rewrites metaAt without the map; fieldMeta
+     * then differs and the record counts as edited whole at metaAt, exactly as
+     * before. Two devices that change DIFFERENT fields both keep their edit. Two
+     * devices that change the SAME field without having seen each other's edit
+     * keep the later value, and the other value is filed on the record under
+     * `conflicts` for the merchant to review. A later edit of that field resolves
+     * it, on every device. */
+    const CATEGORY_FIELDS = ['name', 'color', 'order'];
+    const PRODUCT_FIELDS = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad',
+      'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
+      'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived'];
+    const VARIANT_FIELDS = ['productId', 'colorId', 'colorFamily', 'colorSource', 'colorSourceHex', 'colorWas',
+      'colorLabel', 'colorHex', 'size', 'sku', 'note'];
+    /* Fields a merchant reviews when two devices disagree. The others follow
+       them (a colour's label and hex move with its colorId) or are bookkeeping. */
+    const REVIEWED_FIELDS = {
+      categories: ['name', 'color'],
+      products: ['name', 'categoryId', 'priceMAD', 'cost', 'piecePriceMAD', 'sku', 'archived', 'parLevel', 'reorderLevel', 'supplierId', 'marque'],
+      variants: ['colorId', 'size', 'sku', 'note'],
+    };
+    const CONFLICTS_MAX = 20;
+    const same = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
+    function current(rec) {
+      return !!rec && rec.fieldMeta != null && +rec.fieldMeta === (+rec.metaAt || 0) && rec.fieldAt && typeof rec.fieldAt === 'object';
+    }
+    /* The clock and base of one field. */
+    function fieldClock(rec, f) {
+      const meta = +(rec && rec.metaAt) || 0;
+      if (!current(rec)) return { at: meta, base: null };
+      const at = rec.fieldAt[f];
+      if (at == null) return { at: +rec.fieldRest || 0, base: null };
+      const base = rec.fieldBase && rec.fieldBase[f] != null ? +rec.fieldBase[f] : null;
+      return { at: +at, base };
+    }
+    /* Stamp an edit: every field whose value differs from `before` gets clock t. */
+    function touchFields(rec, before, fields, t, force) {
+      const clocks = {};
+      for (const f of fields) clocks[f] = fieldClock(before, f);
+      const changed = fields.filter((f) => !same(rec[f], before[f]) || (force && force.includes(f)));
+      const at = {}, base = {};
+      for (const f of fields) {
+        const c = clocks[f];
+        if (changed.includes(f)) { at[f] = t; base[f] = c.at; } else { at[f] = c.at; if (c.base != null) base[f] = c.base; }
+      }
+      writeClocks(rec, fields, at, base, t);
+      /* An edit of a field settles any disagreement filed about it. */
+      if (rec.conflicts) for (const f of changed) delete rec.conflicts[f];
+      if (rec.conflicts && !Object.keys(rec.conflicts).length) delete rec.conflicts;
+    }
+    /* "Keep this value": the merchant confirms the field as it stands, which is an
+       edit of it at t and settles its review on every device. */
+    function settleField(rec, f, fields, t) {
+      touchFields(rec, JSON.parse(JSON.stringify(rec)), fields, t, [f]);
+    }
+    function writeClocks(rec, fields, at, base, meta) {
+      let rest = Infinity;
+      for (const f of fields) rest = Math.min(rest, at[f]);
+      if (!isFinite(rest)) rest = meta;
+      const fieldAt = {}, fieldBase = {};
+      for (const f of fields) {
+        if (at[f] > rest) { fieldAt[f] = at[f]; if (base[f] != null) fieldBase[f] = base[f]; }
+      }
+      rec.metaAt = meta;
+      rec.fieldRest = rest;
+      rec.fieldAt = fieldAt;
+      rec.fieldBase = fieldBase;
+      rec.fieldMeta = meta;
+    }
+    /* Merge their copy of one record into ours, field by field. Returns which side
+       holds something the other lacks. */
+    function mergeRecord(kept, e, fields, reviewed) {
+      const r = { mine: false, theirs: false };
+      const legacy = !current(kept) && !current(e);
+      const mineMeta = +kept.metaAt || 0, theirMeta = +e.metaAt || 0;
+      if (legacy) {
+        /* Neither side knows per-field clocks: the record is one edit, as before. */
+        if (theirMeta > mineMeta) {
+          fields.forEach((f) => { if (e[f] === undefined) delete kept[f]; else kept[f] = e[f]; });
+          kept.metaAt = e.metaAt;
+          r.theirs = true;
+        } else if (mineMeta > theirMeta) r.mine = true;
+        return r;
+      }
+      const at = {}, base = {};
+      /* One filed value per field, chosen the same way on every device: the
+         latest kept edit, then the latest other edit, then the value itself. */
+      const filed = {};
+      const file = (f, c) => {
+        const b = filed[f];
+        const order = (x) => [+x.keptAt || 0, +x.otherAt || 0, JSON.stringify(x.other === undefined ? null : x.other)];
+        if (!b) { filed[f] = c; return; }
+        const [ka, oa, va] = order(c), [kb, ob, vb] = order(b);
+        if (ka > kb || (ka === kb && (oa > ob || (oa === ob && va > vb)))) filed[f] = c;
+      };
+      for (const side of [e.conflicts || {}, kept.conflicts || {}]) for (const f of Object.keys(side)) file(f, side[f]);
+      for (const f of fields) {
+        const m = fieldClock(kept, f), t = fieldClock(e, f);
+        const differ = !same(kept[f], e[f]);
+        if (t.at > m.at) {
+          /* Theirs is later. Ours was a concurrent edit if theirs started from a
+             value older than ours. */
+          if (differ && reviewed.includes(f) && t.base != null && m.base != null && t.base < m.at) {
+            file(f, { other: kept[f] === undefined ? null : kept[f], otherAt: m.at, keptAt: t.at });
+          }
+          if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
+          at[f] = t.at; if (t.base != null) base[f] = t.base;
+          r.theirs = true;
+        } else {
+          if (m.at > t.at) {
+            if (differ && reviewed.includes(f) && m.base != null && t.base != null && m.base < t.at) {
+              file(f, { other: e[f] === undefined ? null : e[f], otherAt: t.at, keptAt: m.at });
+            }
+            r.mine = true;
+          }
+          at[f] = m.at; if (m.base != null) base[f] = m.base;
+        }
+      }
+      writeClocks(kept, fields, at, base, Math.max(mineMeta, theirMeta));
+      /* A disagreement stays filed until the field is edited after it. */
+      const conflicts = {};
+      Object.keys(filed).filter((f) => fields.includes(f) && fieldClock(kept, f).at <= (+filed[f].keptAt || 0))
+        .sort((a, b) => (+filed[b].keptAt || 0) - (+filed[a].keptAt || 0)).slice(0, CONFLICTS_MAX)
+        .forEach((f) => { conflicts[f] = filed[f]; });
+      const before = JSON.stringify(kept.conflicts || {});
+      if (Object.keys(conflicts).length) kept.conflicts = conflicts; else delete kept.conflicts;
+      if (before !== JSON.stringify(kept.conflicts || {})) {
+        if (!same(kept.conflicts || {}, e.conflicts || {})) r.mine = true;
+        if (!same(kept.conflicts || {}, JSON.parse(before))) r.theirs = true;
+      }
+      return r;
+    }
+
     function mergeDocs(mine, theirs, time) {
       const ahead = { mine: false, theirs: false };
       /* Tout ce que l'autre côté porte a été VU, y compris ce que la fusion va
@@ -166,13 +307,9 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
              n'a pas à céder devant un chiffre d'hier. Les MOUVEMENTS ne sont
              arbitrés nulle part ici : ils sont réunis plus bas, tous. */
           const kept = seen[e.id];
-          const mineMetaAt = +(kept && kept.metaAt) || 0;
-          const theirMetaAt = +(e && e.metaAt) || 0;
+          const note = (r) => { if (r.theirs) ahead.theirs = true; if (r.mine) ahead.mine = true; };
           if (k === 'categories') {
-            if (theirMetaAt > mineMetaAt) {
-              ['name', 'color', 'order', 'metaAt'].forEach((f) => { kept[f] = e[f]; });
-              ahead.theirs = true;
-            } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+            note(mergeRecord(kept, e, CATEGORY_FIELDS, REVIEWED_FIELDS.categories));
             return;
           }
           if (k === 'products') {
@@ -188,15 +325,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
             const theirMedia = !!(e.photo || e.video);
             const differs = String(kept.photo || '') !== String(e.photo || '')
               || String(kept.video || '') !== String(e.video || '');
-            const fields = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad',
-              'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
-              'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived', 'metaAt'];
-            if (theirMetaAt > mineMetaAt) {
-              fields.forEach((f) => {
-                if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
-              });
-              ahead.theirs = true;
-            } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+            note(mergeRecord(kept, e, PRODUCT_FIELDS, REVIEWED_FIELDS.products));
             if (theirAt > mineAt || (!mineAt && !theirAt && !mineMedia && theirMedia)) {
               kept.photo = String(e.photo || '');
               kept.video = String(e.video || '');
@@ -208,14 +337,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
             return;
           }
           if (k !== 'variants') return;
-          const variantFields = ['productId', 'colorId', 'colorFamily', 'colorSource', 'colorSourceHex', 'colorWas',
-            'colorLabel', 'colorHex', 'size', 'sku', 'note', 'metaAt'];
-          if (theirMetaAt > mineMetaAt) {
-            variantFields.forEach((f) => {
-              if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
-            });
-            ahead.theirs = true;
-          } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+          note(mergeRecord(kept, e, VARIANT_FIELDS, REVIEWED_FIELDS.variants));
 
           /* Barcode additions are a union. Timestamped removals cross devices and
              beat older additions, so scanning a label on one till cannot be undone
@@ -294,7 +416,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
       materialize(out);
       return { doc: out, ahead };
     }
-    return { MOVE_MAX, materialize, compactForWrite, mergeDocs };
+    return { MOVE_MAX, materialize, compactForWrite, CATEGORY_FIELDS, PRODUCT_FIELDS, VARIANT_FIELDS, REVIEWED_FIELDS, fieldClock, touchFields, settleField, mergeRecord, mergeDocs };
   })();
   /* GENERATED SHARED KiwiCatalogRules END */
   var MOVE_MAX = KiwiCatalogRules.MOVE_MAX;
@@ -509,8 +631,18 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
     return result.doc;
   }
 
+  /* Stamp an edit field by field (see KiwiCatalogRules.touchFields): `before`
+     is a copy of the record taken before the edit. */
+  const FIELDS = { categories: KiwiCatalogRules.CATEGORY_FIELDS, products: KiwiCatalogRules.PRODUCT_FIELDS, variants: KiwiCatalogRules.VARIANT_FIELDS };
+  function touch(kind, rec, before) {
+    const t = now();
+    KiwiCatalogRules.touchFields(rec, before, FIELDS[kind], t);
+    return t;
+  }
+  function snap(rec) { return JSON.parse(JSON.stringify(rec || {})); }
+
   return {
-    MOVE_MAX, now, baseAtOf, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs,
+    MOVE_MAX, now, baseAtOf, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs, touch, snap,
     get ahead() { return ahead; },
   };
 };

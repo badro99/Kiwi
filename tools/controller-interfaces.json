@@ -338,7 +338,7 @@
     ]
   },
   "assets/clients-store.js": {
-    "entryPoints": 91,
+    "entryPoints": 87,
     "owners": [
       "KiwiCaisseToast",
       "KiwiClientNumbers",
@@ -625,7 +625,7 @@
     "owners": []
   },
   "assets/menu-catalog.js": {
-    "entryPoints": 83,
+    "entryPoints": 26,
     "owners": [
       "KiwiMenuRules",
       "KiwiMenuStore"

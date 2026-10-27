@@ -212,7 +212,7 @@
     variantsOf: (pid) => variantsOf(pid),
   };
   const ledger = part('ledger', 'assets/boutique-catalog-parts.js')(core);
-  const { MOVE_MAX, now, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs } = ledger;
+  const { MOVE_MAX, now, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs, touch, snap } = ledger;
 
   const well = part('well', 'assets/boutique-catalog-parts.js')();
   /* À qui appartient une copie de secours : le compte connecté et le magasin
@@ -739,12 +739,12 @@
     const cat = { id: nextId('cat'), name: String(name || 'Catégorie').trim() || 'Catégorie', color: color || 'atlas', order: db.categories.length, metaAt: now() };
     db.categories.push(cat); commit(); return cat;
   }
-  function renameCategory(id, name) { const c = catById(id); if (c) { c.name = String(name || c.name).trim() || c.name; c.metaAt = now(); commit(); } return c; }
-  function setCategoryColor(id, color) { const c = catById(id); if (c) { c.color = color; c.metaAt = now(); commit(); } return c; }
+  function renameCategory(id, name) { const c = catById(id); if (c) { const b = snap(c); c.name = String(name || c.name).trim() || c.name; touch('categories', c, b); commit(); } return c; }
+  function setCategoryColor(id, color) { const c = catById(id); if (c) { const b = snap(c); c.color = color; touch('categories', c, b); commit(); } return c; }
   function deleteCategory(id, opts) {
     opts = opts || {};
     const reassignTo = opts.reassignTo || null; // null → uncategorised
-    db.products.forEach((p) => { if (p.categoryId === id) { p.categoryId = reassignTo; p.metaAt = now(); } });
+    db.products.forEach((p) => { if (p.categoryId === id) { const b = snap(p); p.categoryId = reassignTo; touch('products', p, b); } });
     db.categories = db.categories.filter((c) => c.id !== id);
     tomb(id);
     commit();
@@ -819,6 +819,7 @@
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
+    const before = snap(p);
     const mediaPatch = patch.photo !== undefined || patch.video !== undefined;
     ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
      'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
@@ -840,10 +841,10 @@
       }
     });
     if (mediaPatch) p.mediaAt = now();
-    p.metaAt = now();
+    touch('products', p, before);
     commit(); return p;
   }
-  function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; p.metaAt = now(); commit(); } return p; }
+  function archiveProduct(id, val) { const p = prodById(id); if (p) { const b = snap(p); p.archived = val !== false; touch('products', p, b); commit(); } return p; }
   function deleteProduct(id) {
     /* Les déclinaisons AUSSI, nommément. Le nettoyage par parent absent existe
        plus bas dans mergeDocs, mais il ne peut agir que si le produit reste
@@ -913,6 +914,7 @@
   function updateVariant(id, patch) {
     if (patch.stock != null && !wholeQuantity(patch.stock)) return null;
     const v = varById(id); if (!v) return null;
+    const before = snap(v);
     if (patch.stock != null) setAbsolute(v, patch.stock);   // un champ de formulaire est un état, pas un delta
     if (patch.size != null) v.size = String(patch.size);
     if (patch.sku != null) v.sku = String(patch.sku);
@@ -934,7 +936,7 @@
       else delete v.colorSourceHex;
       if (!n.source) delete v.colorSource;
     }
-    if (patch.size != null || patch.sku != null || patch.note != null || patch.colorId) v.metaAt = now();
+    if (patch.size != null || patch.sku != null || patch.note != null || patch.colorId) touch('variants', v, before);
     commit(); return v;
   }
   /* Un nom de couleur personnalisee appartient a la couleur, pas a une taille.
@@ -945,15 +947,15 @@
     const id = String(colorId || '');
     const clean = String(label || '').trim().replace(/\s+/g, ' ').slice(0, 40);
     if (!/^custom-[0-9a-f]{6}$/i.test(id) || !clean) return 0;
-    const stamp = now();
     let matched = 0, changed = 0;
     db.variants.forEach((v) => {
       if (!v || String(v.colorId) !== id) return;
       matched++;
       if (v.colorLabel === clean && v.colorSource === clean) return;
+      const b = snap(v);
       v.colorLabel = clean;
       v.colorSource = clean;
-      v.metaAt = stamp;
+      touch('variants', v, b);
       changed++;
     });
     if (changed) commit();
@@ -1084,7 +1086,7 @@
     let code; let guard = 0;
     do { code = genEan(); } while (barcodeOwner(code) && guard++ < 50);
     v.barcodes.push({ code, type: 'ean13', primary: true, at: now() });
-    v.metaAt = now();
+    touch('variants', v, snap(v));
     ixAddCode(v, code);
     commit(); return code;
   }
@@ -1133,7 +1135,7 @@
     const owner = barcodeOwner(code);
     if (owner && owner.id === v.id) {
       // Fiche enregistrée avant ce correctif : ressaisir le code le remet en tête.
-      if (outrankGenerated(v.barcodes.find((b) => b.code === code))) { v.metaAt = now(); commit(); }
+      if (outrankGenerated(v.barcodes.find((b) => b.code === code))) { touch('variants', v, snap(v)); commit(); }
       return { ok: true, code, already: true };
     }
     if (owner) return { ok: false, reason: 'doublon', owner: { variant: owner, product: prodById(owner.productId) } };
@@ -1143,7 +1145,7 @@
     v.barcodes.push(entry);
     outrankGenerated(entry);
     if (v.barcodeRemoved) delete v.barcodeRemoved[code];
-    v.metaAt = now();
+    touch('variants', v, snap(v));
     ixAddCode(v, code);
     commit(); return { ok: true, code, sym };
   }
@@ -1154,7 +1156,7 @@
     if (wasPrimary && v.barcodes.length) v.barcodes[0].primary = true;
     if (!v.barcodeRemoved) v.barcodeRemoved = {};
     v.barcodeRemoved[c] = now();
-    v.metaAt = now();
+    touch('variants', v, snap(v));
     dropIndex();
     commit();
   }
