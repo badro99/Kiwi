@@ -321,8 +321,9 @@ baseline (`KIWI_UPDATE_A11Y_BASELINE=1`) when a fix brings a count down, never
 raise it to make a red go away.
 
 **The very large files stop growing** (2026-10-21). `tools/file-size-ratchet-test.mjs`
-pins each file listed in `tools/file-size-baseline.json` at its size there, plus 200
-lines of slack,
+pins each file listed in `tools/file-size-baseline.json` at its size there, plus 50
+lines of slack (200 until 2026-10-27; the files that had already used more are frozen
+at their size in `frozen`), each stylesheet the same way (`cssLines`, +50),
 and the three shells' `<script src>` counts plus 3. A bug fix fits; a new feature goes
 in its own file. The same suite pins each stylesheet's `!important` count (+10, a new
 stylesheet 25): they went from 573 to 1 182 in two months, every skin winning by force
