@@ -26,6 +26,7 @@ const mapPath = 'tools/landing-claims-map.json';
 ok(fs.existsSync(path.join(ROOT, mapPath)), 'bounded landing claims inventory exists');
 const inventory = fs.existsSync(path.join(ROOT, mapPath)) ? JSON.parse(read(mapPath)) : { claims: {} };
 const gate = read('tools/check.js');
+const marked = new Set();
 for (const [key, text] of sourceClaims) {
   const claim = inventory.claims[key];
   ok(claim?.fr === text, `${key}: exact French claim mapped`);
@@ -38,18 +39,36 @@ for (const [key, text] of sourceClaims) {
       ok(exists, `${key}: contract file exists`);
       ok(gate.includes("'" + path.basename(contract.file) + "'") || gate.includes("'" + contract.file + "'"), `${key}: contract named in gate`);
       ok(exists && typeof contract.assertion === 'string' && contract.assertion.length > 15 && read(contract.file).includes(contract.assertion), `${key}: exact assertion anchor exists`);
-      /* The full gate proves each anchor RAN (tools/coverage-probe.mjs puts a
-         call before it): it must be unique in its file and start a statement. */
+      /* The full gate proves each anchor RAN (tools/coverage-probe.mjs marks
+         it as `void mark() || <anchor>`): it must be unique in its file and be
+         an expression, not a declaration. Every marked file is parsed below. */
       if (exists && typeof contract.assertion === 'string') {
         const lines = read(contract.file).split('\n');
         const at = lines.flatMap((l, i) => l.includes(contract.assertion) ? [i] : []);
         ok(at.length === 1, `${key}: assertion anchor is unique in ${contract.file}`);
-        let prev = at[0] - 1;
-        while (prev >= 0 && /^\s*(?:\/\/.*)?$/.test(lines[prev])) prev--;
-        ok(at.length === 1 && (prev < 0 || /(?:[;{}]|\*\/)\s*$/.test(lines[prev])), `${key}: assertion anchor starts a statement (${contract.file}:${at[0] + 1}), so the gate can prove it ran`);
+        ok(!/^(?:const|let|var|return|if|for|while|throw|function|class|import|export|switch|try|do|else)\b/.test(contract.assertion.trim()), `${key}: assertion anchor is an expression (${contract.file}:${at[0] + 1}), so the gate can mark it`);
+        marked.add(contract.file);
       }
     }
   }
+}
+/* What the probe will run must still parse: mark each contract file the way
+   tools/coverage-hooks.mjs does under the full gate, then node --check it. */
+{
+  const { mark, claimAnchors } = await import('./coverage-hooks.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const os = await import('node:os');
+  const anchors = claimAnchors(ROOT);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-claims-'));
+  try {
+    for (const file of marked) {
+      const out = path.join(dir, path.basename(file));
+      const source = mark(read(file), anchors.get(file) || []);
+      fs.writeFileSync(out, source);
+      const r = spawnSync(process.execPath, ['--check', out], { encoding: 'utf8' });
+      ok(r.status === 0, `${file}: still parses once its claim anchors are marked (${(r.stderr || '').split('\n').find((l) => /Error/.test(l)) || ''})`);
+    }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 ok(Object.keys(inventory.claims).length === sourceClaims.length, 'no stale inventory entries');
 for (const [locale, copy] of Object.entries(pricingCopy)) ok(JSON.stringify(leaves(copy).map(([key]) => key).sort()) === JSON.stringify(sourceClaims.map(([key]) => key).sort()), `${locale}: every localized claim has a French inventory path`);

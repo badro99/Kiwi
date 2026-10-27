@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ANNOTATION = /^([ \t]*)(\/\/ coverage: surface=([\w-]+) locale=([a-z]+) viewport=(phone|tablet|desktop)[ \t]*)$/gm;
 const call = (key) => `globalThis.__kiwiCoverageCell?.(${JSON.stringify(key)}); `;
+const inline = (key) => `void globalThis.__kiwiCoverageCell?.(${JSON.stringify(key)}) || `;
 
 let claimsMemo = null;
 /* Anchors by repo-relative test file: [{ assertion, key }]. */
@@ -37,11 +38,15 @@ export function mark(source, anchors = []) {
     `${indent}${call(surface + '|' + locale + '|' + viewport)}${comment}`);
   if (!anchors.length) return out;
   const lines = out.split('\n');
+  /* An anchor is an expression (an assertion call). The mark goes right in
+     front of it as `void mark() || <assertion>`: still one expression, so it
+     stays valid as the body of a brace-less if/else, an arrow function or an
+     argument, and the line numbers do not move. */
   for (const a of anchors) {
     const at = lines.findIndex((l) => l.includes(a.assertion));
     if (at < 0) continue;
-    const indent = lines[at].match(/^[ \t]*/)[0];
-    lines[at] = indent + call(a.key) + lines[at].slice(indent.length);
+    const col = lines[at].indexOf(a.assertion);
+    lines[at] = lines[at].slice(0, col) + inline(a.key) + lines[at].slice(col);
   }
   return lines.join('\n');
 }

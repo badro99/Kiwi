@@ -24,6 +24,7 @@ check('each annotation gets a call on its own line; nothing else moves', () => {
 });
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-probe-'));
+process.on('exit', () => fs.rmSync(dir, { recursive: true, force: true }));
 fs.mkdirSync(path.join(dir, 'tools'));
 const suite = path.join(dir, 'tools', 'fixture-browser-test.mjs');
 fs.writeFileSync(suite, [
@@ -69,10 +70,13 @@ check('without a ledger the probe changes nothing', () => {
     NODE_OPTIONS: '--import=' + pathToFileURL(path.join(HERE, 'coverage-probe.mjs')).href } });
   assert.equal(r.status, 0, r.stderr);
 });
-check('a landing claim anchor is marked where it starts, and a CommonJS run records only the anchor it reached', () => {
-  const anchors = [{ assertion: 'the claim holds for real', key: 'claim:x#0' }];
+check('a landing claim anchor is marked in front of its expression, even in a brace-less else, and a CommonJS run records only the anchor it reached', () => {
+  const anchors = [{ assertion: 'ok(value === 2, "the claim holds for real")', key: 'claim:x#0' }];
   const out = mark('setup();\n  ok(value === 2, "the claim holds for real");\n', anchors);
-  assert.equal(out.split('\n')[1], '  globalThis.__kiwiCoverageCell?.("claim:x#0"); ok(value === 2, "the claim holds for real");');
+  assert.equal(out.split('\n')[1], '  void globalThis.__kiwiCoverageCell?.("claim:x#0") || ok(value === 2, "the claim holds for real");');
+  const branch = mark('if (a) skip();\nelse ok(value === 2, "the claim holds for real");\n', anchors);
+  assert.equal(branch.split('\n')[1], 'else void globalThis.__kiwiCoverageCell?.("claim:x#0") || ok(value === 2, "the claim holds for real");', 'still one expression: the else keeps its body');
+  assert.doesNotThrow(() => new Function('a', 'skip', 'ok', 'value', branch), 'the marked branch parses');
   const cjs = path.join(dir, 'tools', 'fixture-claim-test.js');
   fs.writeFileSync(cjs, 'const n = [1, 2].length;\nif (n > 5) {\n  console.log("never reached");\n}\nconsole.log("ran");\n');
   const r = spawnSync(process.execPath, ['-e', `
