@@ -182,6 +182,9 @@ export async function onRequestPost(context) {
   if (!validated) {
     const prose = rawText(aiRes);
     if (prose && prose.length > 20) {
+      /* Le repêchage est un deuxième appel de modèle : il se compte comme le
+       * premier, et le plafond du jour le borne aussi. */
+      if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
       try {
         const r2 = await runWithFallback(env, TEXT_MODEL, TEXT_FALLBACK_MODEL, {
           messages: [

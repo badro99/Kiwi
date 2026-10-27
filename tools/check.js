@@ -628,6 +628,7 @@ for (const test of [
   'economat-properties-test.mjs',
   'economat-split-test.mjs',
   'shopify-sync-properties-test.mjs',
+  'shopify-inbound-stock-limits-test.mjs',
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',
   'locale-booking-wave-n-test.mjs',
@@ -2293,6 +2294,7 @@ section('Whole-project regressions');
     'menu-i18n-test.mjs',
     'order-langs-test.mjs',
     'salle-scan-test.mjs',
+    'ai-quota-order-test.mjs',
     'network-recovery-test.mjs',
     /* Le plan de salle du patron lit la salle que la caisse publie : statut,
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */

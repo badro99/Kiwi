@@ -293,17 +293,31 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: 'unsupported-kind' }, 400);
   }
 
-  if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
-
   const targetLang = String(body.targetLang || body.lang || 'fr').toLowerCase();
+
+  /* Les contrôles locaux passent AVANT le quota : une photo trop grosse, un
+   * texte vide ou une URL refusée ne coûtent aucun appel de modèle et ne doivent
+   * pas non plus brûler une place du jour. */
+  const dataUrl = kind === 'image' ? String(body.image || '') : '';
+  let pageUrl = '';
+  let pastedText = '';
+  if (kind === 'image') {
+    if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return json({ ok: false, error: 'bad-image' }, 400);
+    if (dataUrl.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-big' }, 413);
+  } else if (kind === 'url') {
+    pageUrl = String(body.url || '').trim();
+    if (!urlAllowed(pageUrl)) return json({ ok: false, error: 'bad-url' }, 400);
+  } else {
+    pastedText = String(body.text || '').trim();
+    if (!pastedText) return json({ ok: false, error: 'empty-text' }, 400);
+  }
+
+  if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
 
   let aiRes;
   let usedModel = MODEL;
 
   if (kind === 'image') {
-    const dataUrl = String(body.image || '');
-    if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return json({ ok: false, error: 'bad-image' }, 400);
-    if (dataUrl.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-big' }, 413);
     try {
       const r = await runVision(env, dataUrl, targetLang);
       aiRes = r.result;
@@ -316,16 +330,11 @@ export async function onRequestPost(context) {
       return json({ ok: false, reason: 'model', detail }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
     }
   } else {
-    let text = '';
+    let text = pastedText;
     if (kind === 'url') {
-      const url = String(body.url || '').trim();
-      if (!urlAllowed(url)) return json({ ok: false, error: 'bad-url' }, 400);
-      const fetched = await fetchUrlText(url);
+      const fetched = await fetchUrlText(pageUrl);
       if (fetched.error) return json({ ok: false, reason: fetched.error }, 200);
       text = fetched.text;
-    } else {
-      text = String(body.text || '').trim();
-      if (!text) return json({ ok: false, error: 'empty-text' }, 400);
     }
     try {
       const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, textPayload(text, targetLang));
