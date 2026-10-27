@@ -68,6 +68,17 @@ const figures = (page) => page.evaluate(() => {
   return [...nums];
 });
 
+/* Where a figure is drawn: the innermost visible element whose text holds it. */
+const whereIs = (page, figs) => page.evaluate((figs) => figs.map((f) => {
+  const n = String(f).replace(/^%/, '').split('.')[0];
+  const all = []; (function walk(r) { for (const el of r.querySelectorAll('*')) { all.push(el); if (el.shadowRoot) walk(el.shadowRoot); } })(document);
+  const hit = all.filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && new RegExp('(^|[^\\d])' + n + '([^\\d]|$)').test(el.textContent || ''); });
+  const el = hit.filter((e) => !hit.some((o) => o !== e && e.contains(o)))[0];
+  if (!el) return f + ' (not found)';
+  const d = el.localName + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/)[0] : '');
+  return f + ' in ' + d + ' « ' + (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) + ' »';
+}), figs);
+
 const navs = (page) => page.evaluate(() => [...new Set([...document.querySelectorAll('[data-nav]')].map((b) => b.dataset.nav))]);
 const go = (page, nav) => page.evaluate((n) => { const b = document.querySelector('[data-nav="' + n + '"]'); if (b) b.click(); return !!b; }, nav);
 
@@ -90,7 +101,7 @@ try {
       const ok = !extra.length || clock;
       results.push({ vp, nav, ok, clock, extra, shipped: a.length, k2027: b.length });
       console.log(`${ok ? '✓' : '✗'} ${vp} · ${nav} (${b.length} figures on 2027, ${a.length} shipped)${clock ? ' · moves with the clock on the shipped page too' : ''}`);
-      if (extra.length) console.log('    only on 2027: ' + extra.slice(0, 12).join(' · '));
+      if (extra.length) console.log('    only on 2027: ' + (await whereIs(on.page, extra.slice(0, 6))).join(' · '));
       if (SHOW) console.log('    shipped: ' + a.join(' · ') + '\n    2027:    ' + b.join(' · '));
       if (nav !== 'home') { await go(off.page, 'home'); await go(on.page, 'home'); await go(twin.page, 'home'); await sleep(600); }
     }
