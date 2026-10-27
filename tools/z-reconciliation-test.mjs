@@ -214,5 +214,24 @@ const legacyRead = await endpoint.onRequestGet({ env, request: new Request(
 const legacySummary = (await legacyRead.json()).daySummary;
 assert.equal(legacySummary.cutoff, 5, 'old Z keeps the historical 05:00 boundary after the store changes hours');
 assert.equal(legacySummary.recordedCents, 0);
+// A till whose hours are stale still closes at 05:00 while the store publishes
+// 07:00 (merchantCutoff). The server compares on the STORE's day, as /api/sale
+// files a bill on it, never on the window the till sent; the Z cannot read as
+// matched, and the dashboard says why instead of showing a trusted gap.
+const staleDay = '2026-03-10';
+db.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,?,9,900,'cash',?)")
+  .run('stale-window-sale', merchant, businessBoundary('2026-03-11', 5) + 3600000);
+result = await post({ day: staleDay, terminalId: 'stale-till', cutoff: 5, sales: [], count: 0, totalCents: 0 });
+assert.equal(result.status, 200, JSON.stringify(result.body));
+assert.equal(result.body.cutoff, 7, 'the store cutoff, not the till-supplied one, decides the compared window');
+assert.equal(result.body.tillCutoff, 5, 'the window the till used stays on record');
+assert.deepEqual(result.body.omitted, ['stale-window-sale'], 'a 06:00 receipt belongs to the 07:00 store day');
+assert.equal(result.body.status, 'mismatch', 'a Z counted on another window never reads as matched');
+const staleRead = await endpoint.onRequestGet({ env, request: new Request(
+  `https://kiwi.test/api/z-reconciliation?merchant=${merchant}&day=${staleDay}`, { headers: { Cookie: owner } }) });
+const staleSummary = (await staleRead.json()).daySummary;
+assert.equal(staleSummary.cutoff, 7);
+assert.equal(staleSummary.ambiguousReason, 'cutoff-conflict', 'the dashboard names the stale boundary');
+assert.equal(staleSummary.gapCents, null, 'and offers no trusted numeric gap for it');
 db.close();
 console.log('✓ Z reconciliation: till auth, missing receipt, repair, idempotent upsert, winter boundary');

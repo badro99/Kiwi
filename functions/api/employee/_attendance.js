@@ -138,27 +138,66 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       open.clockOutCodeTs = codeTs;
       if (opId) open.clockOutOpId = opId;
       if (deferred) { open.deferred = true; open.outDeferredMs = capturedAgo; }
+      // Ses heures ne sont pas encore créditées dans `team` (voir plus bas).
+      open.hoursCredit = 'pending';
       changedEntry = { ...open };
     }
     return { entries: entries.slice(-MAX_ATTENDANCE) };
   });
   if (refusal) return json({ error: refusal }, 409);
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
-  if (action === 'clock-out' && !replay && changedEntry && changedEntry.outTs > changedEntry.inTs) {
+  /* Deux documents, deux écritures : le service est fermé dans `attendance`,
+   * ses heures sont créditées dans `team`. Le résultat de la seconde était
+   * ignoré : en cas d'échec la route répondait ok, et la nouvelle tentative du
+   * téléphone (même opId) passait pour un rejeu qui ne créditait rien. Les
+   * heures disparaissaient sans un mot. Maintenant le service porte
+   * hoursCredit = 'pending' jusqu'au crédit ; un échec répond 503 (la file du
+   * téléphone garde le pointage et le renvoie), le rejeu d'un service encore
+   * 'pending' crédite, et `team.hoursCredited` (id du service, dans la même
+   * écriture que les heures) empêche de créditer deux fois. */
+  let creditedNow = false;
+  if (action === 'clock-out' && changedEntry && changedEntry.outTs > changedEntry.inTs
+      && (!replay || changedEntry.hoursCredit === 'pending')) {
     /* Le service se crédite par le calcul même de la paie (_worked-hours.js),
      * à la seconde : arrondir chaque pointage au centième d'heure avant de les
      * additionner faisait dériver les heures, donc le salaire. */
     const credited = completedHours(changedEntry, memberId);
-    await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
+    const shiftId = String(changedEntry.id || '');
+    let already = false;
+    const team = await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
+      already = false;
       doc.members = Array.isArray(doc.members) ? doc.members : [];
       doc.hours = doc.hours && typeof doc.hours === 'object' ? doc.hours : {};
       doc.shifts = doc.shifts && typeof doc.shifts === 'object' ? doc.shifts : {};
+      const marks = doc.hoursCredited && typeof doc.hoursCredited === 'object' && !Array.isArray(doc.hoursCredited) ? doc.hoursCredited : {};
+      if (shiftId && marks[shiftId]) { already = true; return null; }
       if (!doc.hours[memberId]) doc.hours[memberId] = {};
       Object.keys(credited).forEach((day) => {
         doc.hours[memberId][day] = (Number(doc.hours[memberId][day]) || 0) + credited[day];
       });
+      if (shiftId) {
+        marks[shiftId] = Number(changedEntry.outTs) || now;
+        // Borné : seuls les rejeux récents (12 h au plus) ont besoin de la marque.
+        doc.hoursCredited = Object.fromEntries(Object.entries(marks).sort((a, b) => b[1] - a[1]).slice(0, 500));
+      }
       return doc;
     });
+    if (!team && !already) return json({ error: 'attendance-hours-pending' }, 503);
+    creditedNow = !already;
+    // Best effort: the team mark already prevents a second credit.
+    if (shiftId) {
+      await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
+        const entries = Array.isArray(doc.entries) ? doc.entries : [];
+        const entry = entries.find((e) => e && e.id === shiftId);
+        if (!entry || entry.hoursCredit !== 'pending') return null;
+        entry.hoursCredit = 'done';
+        return { ...doc, entries };
+      });
+      changedEntry.hoursCredit = 'done';
+    }
+  }
+  // La progression suit le crédit des heures : une fois par service, rejeu compris.
+  if (creditedNow) {
     const rawProgress = body.progress && typeof body.progress === 'object' ? body.progress : {};
     const paid = Math.min(200, Math.max(0, Math.floor(Number(rawProgress.paid) || 0)));
     const revenue = Math.min(1000000, Math.max(0, Number(rawProgress.revenue) || 0));

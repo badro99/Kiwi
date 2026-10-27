@@ -127,6 +127,40 @@ await check('une ligne déjà écrite ne se modifie pas (refus) et ne s’efface
   assert.deepEqual(storedBook()[0].hist.map((h) => [h.id, h.amt]), [['e0', 50]], 'un carnet amputé n’efface rien : la ligne enregistrée est intacte');
 });
 
+await check('une dette sur un client en avance est refusée pour CE client seulement : le reste de la caisse passe', async () => {
+  reset();
+  const at = '2026-10-27T08:00:00Z';
+  ok(await call('owner', { data: doc([
+    { id: 'advance', name: 'TEST KIWI A', hist: [{ id: 'a0', type: 'pay', amt: 30, at, label: 'TEST KIWI' }] },
+    { id: 'client', name: 'TEST KIWI', hist: [{ id: 'e0', type: 'debt', amt: 50, at, label: 'TEST KIWI' }] },
+  ]) }));
+  const base = ok(await call(0));
+  const till = clone(base.data);
+  const [adv, other] = till.verticals.epicerie.data.carnet;
+  adv.hist.push({ id: 'a1', type: 'debt', amt: 12, at: '2026-10-27T09:00:00Z', label: 'TEST KIWI' });
+  other.hist.push({ id: 'e1', type: 'debt', amt: 7, at: '2026-10-27T09:00:00Z', label: 'TEST KIWI' });
+  till.verticals.pressing.data.racks.push('C3'); till.verticals.pressing.updatedAt = 2;
+  const r = await call(0, { data: till, baseRev: base.rev });
+  assert.equal(r.status, 200, 'une avance ne bloque plus toute la caisse: ' + JSON.stringify(r.body));
+  const stored = Object.fromEntries(storedBook().map((c) => [c.id, c]));
+  assert.ok(stored.client.hist.some((h) => h.id === 'e1'), 'la dette de l’autre client est enregistrée');
+  assert.ok(!stored.advance.hist.some((h) => h.id === 'a1'), 'la dette sur l’avance reste refusée (règle de la vague D)');
+  assert.equal(balance(storedBook()).advance, -3000, 'l’avance est conservée au centime');
+  const alerts = stored.advance.creditAlerts || [];
+  assert.equal(alerts.length, 1, 'le client porte une alerte');
+  assert.equal(alerts[0].kind, 'debt-on-advance');
+  assert.equal(alerts[0].debtCents, 1200);
+  assert.deepEqual((r.body.creditConflicts || []).map((c) => c.clientId), ['advance'], 'la réponse nomme le client en conflit');
+  assert.ok(ok(await call(1)).data.verticals.pressing.data.racks.includes('C3'), 'le reste du document de la caisse est enregistré');
+  ok(await call(0, { data: till, baseRev: r.body.rev }));
+  assert.equal(Object.fromEntries(storedBook().map((c) => [c.id, c])).advance.creditAlerts.length, 1, 'un nouvel envoi ne double pas l’alerte');
+  ok(await refund('refund-advance-a', 3000, 'advance'));
+  ok(await call(0, { data: till, baseRev: r.body.rev }));
+  const settled = Object.fromEntries(storedBook().map((c) => [c.id, c])).advance;
+  assert.ok(settled.hist.some((h) => h.id === 'a1'), 'une fois l’avance remboursée, la même dette passe');
+  assert.equal((settled.creditAlerts || []).length, 0, 'et l’alerte disparaît');
+});
+
 await check('copie paresseuse : deux appareils qui écrivent en même temps créent un seul carnet, sans perte', async () => {
   reset();
   seedLegacy(book());

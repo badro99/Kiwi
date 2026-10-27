@@ -31,6 +31,26 @@ function accountOwnerRole(value) {
 
 export { accountOwnerRole };
 
+/* Deux personnes, un même code : la boucle de publication gardait la première
+ * et sautait la seconde sans un mot, puis la route répondait ok. La seconde
+ * perdait son code de caisse et son accès à l'app employé. Rend chaque
+ * personne qui partage un code avec une AUTRE (memberId, sinon le nom) ; la
+ * même personne listée deux fois reste une seule entrée. Le code ne sort pas
+ * d'ici : la réponse nomme les personnes, jamais leurs chiffres. */
+function sharedCodeHolders(pins) {
+  const holders = new Map();
+  for (const p of pins) {
+    const code = String((p && (p.code || p.pin)) || '').trim();
+    if (!VALID_PIN.test(code)) continue;
+    const memberId = String(p.memberId || '').trim().slice(0, 96);
+    const name = String(p.name || '').trim().slice(0, 60);
+    const people = holders.get(code) || new Map();
+    if (!people.has(memberId || 'name:' + name)) people.set(memberId || 'name:' + name, { memberId, name });
+    holders.set(code, people);
+  }
+  return [...holders.values()].filter((people) => people.size > 1).flatMap((people) => [...people.values()]);
+}
+
 export async function publishStaffCredentials(env, merchant, body) {
   const result = {};
   /* La liste s'arrêtait à vingt, sans un mot : le 21e membre et les suivants
@@ -39,6 +59,8 @@ export async function publishStaffCredentials(env, merchant, body) {
    * vingt. La borne reste (une liste de mille est une erreur, pas une
    * équipe) mais au-delà on refuse à voix haute, sans rien toucher. */
   if (body.pins.length > MAX_ROSTER) return json({ error: 'too-many-members', max: MAX_ROSTER }, 413);
+  const sharedCode = sharedCodeHolders(body.pins);
+  if (sharedCode.length) return json({ error: 'duplicate-staff-code', members: sharedCode }, 409);
   const seen = new Set();
   const clean = [];
   for (const p of body.pins) {

@@ -31,6 +31,51 @@ export function creditRefundEdit(oldDoc, newDoc) {
   return false;
 }
 
+/* A debt may not consume an advance: only the owner's refund pays one back
+ * (wave D, creditRefundEdit). That refusal used to answer 409 for the device's
+ * whole push, so one customer holding an advance (the double settlement of
+ * wave Q) blocked every other customer and every other trade on that till.
+ * This names, per customer, the NEW debts the rule refuses, so the caller can
+ * keep that customer's stored entries, alert on that customer, and accept the
+ * rest. Same walk as creditRefundEdit; a refused debt does not count. */
+export function advanceDebtConflicts(oldDoc, newDoc) {
+  const key = (c, h) => c.id + ':' + (h.id || JSON.stringify([h.type,h.amt,h.at,h.label]));
+  const old = new Set(creditBook(oldDoc).flatMap(c => (c.hist || []).map(h => key(c, h))));
+  const balances = new Map(creditBook(oldDoc).map(c => [c.id, (c.hist || []).reduce((n,h) => n + (h.type === 'debt' ? 1 : -1) * cents(h), 0)]));
+  const out = [];
+  for (const c of creditBook(newDoc)) {
+    let balance = balances.get(c.id) || 0;
+    const debts = [];
+    for (const h of c.hist || []) {
+      if (old.has(key(c, h))) continue;
+      if (h.type === 'debt' && balance < 0) { debts.push({ key: key(c, h), entryId: String(h.id || ''), debtCents: cents(h), at: String(h.at || '') }); continue; }
+      balance += (h.type === 'debt' ? 1 : -1) * cents(h);
+    }
+    if (debts.length) out.push({ clientId: c.id, debts });
+  }
+  return out;
+}
+
+// The customer keeps its stored entries; one alert per refused debt, and an
+// alert whose debt has since been accepted (advance refunded) goes away.
+export function keepAdvanceConflicts(stored, merged, conflicts) {
+  const byId = new Map(conflicts.map(x => [String(x.clientId), x]));
+  const was = new Map((Array.isArray(stored) ? stored : []).map(c => [String(c.id), c]));
+  for (const c of merged) {
+    const hit = byId.get(String(c.id));
+    if (hit) c.hist = JSON.parse(JSON.stringify((was.get(String(c.id)) || {}).hist || []));
+    const have = new Set((c.hist || []).map(h => c.id + ':' + (h.id || JSON.stringify([h.type,h.amt,h.at,h.label]))));
+    const alerts = (c.creditAlerts || []).filter(a => a && (a.kind !== 'debt-on-advance' || !have.has(a.entryKey)));
+    for (const d of hit ? hit.debts : []) {
+      if (!alerts.some(a => a.id === 'debt-on-advance:' + d.key))
+        alerts.push({ id: 'debt-on-advance:' + d.key, kind: 'debt-on-advance', entryKey: d.key, entryId: d.entryId, debtCents: d.debtCents, at: d.at });
+    }
+    const kept = alerts.filter(a => a.kind !== 'debt-on-advance').concat(alerts.filter(a => a.kind === 'debt-on-advance').slice(-20));
+    if (kept.length) c.creditAlerts = kept; else delete c.creditAlerts;
+  }
+  return merged;
+}
+
 export async function refundCreditBook(request, env, merchant, body) {
   const session = await activeAccountSession(request, env);
   const owner = session && await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?').bind(merchant).first();
@@ -89,10 +134,11 @@ export function creditSettlementAlerts(doc) {
       const g = groups.get(h.settlementOf) || new Map();
       g.set(h.id, h); groups.set(h.settlementOf, g);
     }
-    c.creditAlerts = [...groups].filter(([, g]) => g.size > 1).map(([key, g]) => ({
+    const others = (c.creditAlerts || []).filter(a => a && a.kind !== 'offline-double-settlement');
+    c.creditAlerts = others.concat([...groups].filter(([, g]) => g.size > 1).map(([key, g]) => ({
       id: 'offline-double:' + key, kind: 'offline-double-settlement',
       advanceCents: [...g.values()].reduce((n, h) => n + cents(h), 0) - Math.max(...[...g.values()].map(cents))
-    }));
+    })));
   }
   return doc;
 }

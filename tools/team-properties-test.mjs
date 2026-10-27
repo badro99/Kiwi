@@ -80,6 +80,22 @@ function expected(list) {
   const pins = new Map([[OWNER_CODE, 'Patron'], ...tillRows.map((e) => [e.code, e.p.firstName + ' ' + e.p.lastName])]);
   return { pins, logins: clean.filter((e) => e.p.email) };
 }
+/* Two different people on one valid code: the server refuses the whole save
+ * (409 duplicate-staff-code) and changes nothing, instead of silently dropping
+ * the second person's till code and login (wave 11). */
+function sharesCode(list) {
+  const owner = new Map();
+  return list.some((e) => /^\d{4}$/.test(e.code) && owner.has(e.code) && owner.get(e.code) !== e.p.id || (owner.set(e.code, e.p.id), false));
+}
+const snapshot = () => JSON.stringify([sql.prepare('SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY pin').all(merchant), access(), [...durable()]]);
+async function refusedUnchanged(list) {
+  const before = snapshot();
+  const r = await publish(list);
+  assert.equal(r.status, 409, JSON.stringify(r.body));
+  assert.equal(r.body.error, 'duplicate-staff-code');
+  assert.equal(snapshot(), before, 'a refused save changes nothing');
+}
+
 /* Every mirror entry must open the employee app with its own code. */
 async function everyLoginWorks() {
   for (const m of access()) {
@@ -98,6 +114,7 @@ try {
   await strict('a sequence of roster saves leaves exactly the published till codes, each opening the till as its own member, and the owner code untouched', fc.asyncProperty(fc.array(roster, { minLength: 1, maxLength: 5 }), async (saves) => {
     await reset();
     for (const list of saves) {
+      if (sharesCode(list)) { await refusedUnchanged(list); continue; }
       const r = await publish(list); assert.equal(r.status, 200, JSON.stringify(r.body));
       const want = expected(list);
       const rows = sql.prepare('SELECT pin, name FROM staff_pins WHERE merchant = ?').all(merchant);
@@ -109,6 +126,7 @@ try {
   await strict('every member with an e-mail logs in with the code just published, and only with it', fc.asyncProperty(fc.array(roster, { minLength: 1, maxLength: 5 }), async (saves) => {
     await reset();
     for (const list of saves) {
+      if (sharesCode(list)) { await refusedUnchanged(list); continue; }
       assert.equal((await publish(list)).status, 200);
       const want = expected(list);
       assert.deepEqual(access().map((m) => m.id).sort(), want.logins.map((e) => e.p.id).sort());
@@ -124,6 +142,7 @@ try {
     await reset();
     const last = new Map();
     for (const list of saves) {
+      if (sharesCode(list)) { await refusedUnchanged(list); continue; }
       const before = durable();
       assert.equal((await publish(list)).status, 200);
       const after = durable();
@@ -138,6 +157,7 @@ try {
   }));
 
   await strict('the Team document and the code publish of one save, landing together, leave every login working', fc.asyncProperty(crew, crew, async (first, next) => {
+    fc.pre(!sharesCode(first) && !sharesCode(next));
     await reset();
     assert.equal((await publish(first)).status, 200);
     assert.equal((await saveTeam(first)).status, 200);
@@ -153,6 +173,8 @@ try {
   await strict('two saves with different codes racing, whatever the route and the moment, never lock an employee out', fc.asyncProperty(
     crew, crew, fc.constantFrom('config', 'team'), fc.constantFrom('config', 'team'), fc.constantFrom('auth', 'batch'),
     async (a, b, ra, rb, at) => {
+      // A shared code is refused before any write, so it never reaches the hold.
+      fc.pre(!sharesCode(a) && !sharesCode(b));
       await reset();
       const base = PEOPLE.filter((p) => p.email).map((p, i) => ({ p, code: CODES[i] }));
       assert.equal((await publish(base)).status, 200);

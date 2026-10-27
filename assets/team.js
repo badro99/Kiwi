@@ -431,9 +431,11 @@ import {} from './team/roster-list.js?v=6';
   function fmtFr(d) { return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; }
   function toISO(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
   function buildPeriod(kind) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    /* Le jour du magasin (sa zone, sa bascule), pas la date de l'appareil. */
+    const storeDay = window.KiwiPlanningCore?.storeToday?.();
+    const today = storeDay ? fromISO(storeDay) : new Date(); today.setHours(0, 0, 0, 0);
     kind = ['week', 'fortnight', 'month'].includes(kind) ? kind : 'week';
-    const core = window.KiwiPlanningCore?.calendarPeriod?.(kind, toISO(today), periodOffsets[kind] || 0);
+    const core = window.KiwiPlanningCore?.calendarPeriod?.(kind, storeDay || toISO(today), periodOffsets[kind] || 0);
     if (core) {
       const start = fromISO(core.start), end = fromISO(core.end);
       return { start:core.start, end:core.end, startFr:fmtFr(start), endFr:fmtFr(end), days:core.days };

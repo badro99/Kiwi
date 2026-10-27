@@ -3,6 +3,15 @@
  * Reads window: KiwiConfig, KiwiNumber, KiwiVenue, __kiwiRole, __kiwiTeamV2. Mutable UI state is private to this factory. */
 export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, deferredMark, esc, fmtHours, fmtMad, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang }) {
   let payTab = 'planning';
+  /* La paie est calculée au centime (hourlyPayFor) : l'afficher arrondie au
+     dirham montrait 124 pour 123,91. Même règle que la caisse et le tableau
+     de bord (KiwiNumber.amount) : un montant entier reste entier, sinon les
+     deux décimales. */
+  function fmtPay(n) {
+    const c = Math.round((Number(n) || 0) * 100);
+    return window.KiwiNumber?.amount?.(c / 100) ?? (c / 100).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR',
+      { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+  }
 
   function renderHoursPane(T, venue, venueType, members) {
     const root = window.__kiwiTeamV2;
@@ -54,7 +63,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(total)}</b></td>
-          <td class="kt-h-pay mono">${rated ? `<b>${(window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
+          <td class="kt-h-pay mono">${rated ? `<b>${fmtPay(pay)}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
         </tr>
       `;
     }).join('');
@@ -99,7 +108,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
-                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${(window.KiwiNumber?.format(grandPay, { maximumFractionDigits: 0 }) ?? grandPay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
+                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${fmtPay(grandPay)}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
               </tr>
             </tfoot>
           </table>
@@ -131,9 +140,10 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
       period.days.forEach((d) => {
         if (!row[d]) return;
         if (!hours[m.id]) hours[m.id] = {};
-        // Deux décimales : une saisie libre tombe sur 7,25 ou 7,75, pas sur un
-        // 7,333333 qui s'afficherait tel quel dans la grille des heures.
-        hours[m.id][d] = Math.round(shiftHours(row[d]) * 100) / 100;
+        // Exact, à la minute : arrondir au centième d'heure payait 7,17 h pour
+        // 7 h 10 (_worked-hours.js). La grille affiche en heures et minutes
+        // (fmtHours) ; seul le calcul final de la paie arrondit, au centime.
+        hours[m.id][d] = shiftHours(row[d]);
         n++;
       });
     });
@@ -171,7 +181,8 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   document.addEventListener('focusin', (e) => {
     const input = e.target;
     if (!input.matches || !input.matches('[data-kt-hour]')) return;
-    input.value = String(Number(input.dataset.hoursValue) || 0);
+    // Lecture seule tant qu'on ne tape rien : l'heure exacte reste stockée.
+    input.value = String(Math.round((Number(input.dataset.hoursValue) || 0) * 100) / 100);
     input.select();
   });
 
@@ -208,12 +219,12 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
         const totalCell = tr.querySelector('.kt-h-total b');
         const payCell   = tr.querySelector('.kt-h-pay b');
         if (totalCell) totalCell.textContent = fmtHours(tot);
-        if (payCell && (+m.hourlyRate || 0) > 0) payCell.textContent = (window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+        if (payCell && (+m.hourlyRate || 0) > 0) payCell.textContent = fmtPay(pay);
       }
     });
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
     if (footTot[0]) footTot[0].textContent = fmtHours(grandH);
-    if (footTot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) footTot[1].textContent = (window.KiwiNumber?.format(grandP, { maximumFractionDigits: 0 }) ?? grandP.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+    if (footTot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) footTot[1].textContent = fmtPay(grandP);
 
     // On Paie & planning the band above the grid is the headline the owner reads
     // ("à payer · période"). Keep it in step with the cell they just typed in,
@@ -229,12 +240,12 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   function payTiles(T, f, period, count) {
     const whole = f.share >= 0.999;
     return [
-      { v: (f.salaried || f.rated) ? fmtMad(f.baseDue + f.variablePay) : '·',
+      { v: (f.salaried || f.rated) ? fmtPay(f.baseDue + f.variablePay) + ' MAD' : '·',
         sub: (f.salaried || f.rated)
           ? (whole || !f.salaried ? T.payStatDueSub(period.startFr, period.endFr) : T.payStatDueProrata(period.startFr, period.endFr, period.days.length))
           : T.payStatNone },
       { v: fmtHours(f.totalHours), sub: T.payStatHoursSub },
-      { v: f.rated ? fmtMad(f.variablePay) : '·', sub: f.rated ? T.payStatVarSub : T.noRate },
+      { v: f.rated ? fmtPay(f.variablePay) + ' MAD' : '·', sub: f.rated ? T.payStatVarSub : T.noRate },
       { v: f.salaried ? fmtMad(f.baseMass) : '·',
         sub: f.salaried ? T.payStatBaseMonthly(f.salaried, count) : T.statPayrollNone },
     ];

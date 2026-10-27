@@ -164,8 +164,8 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "73",
-    "sha": "7aa7ff432f78f27b"
+    "v": "74",
+    "sha": "191b554a52f921ed"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -1340,8 +1340,8 @@
     "sha": "944d1ca9686b4326"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "43",
-    "sha": "b293f5d242845c8f"
+    "v": "44",
+    "sha": "f0a0aea9d5a6a4f0"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1372,8 +1372,8 @@
     "sha": "14c90feed9cdcbd7"
   },
   "assets/planning-core.js": {
-    "v": "11",
-    "sha": "7f8846ef341945c5"
+    "v": "12",
+    "sha": "676546e6c0dba1db"
   },
   "assets/planning-ui.css": {
     "v": "13",
@@ -1392,8 +1392,8 @@
     "sha": "dffc940e84818744"
   },
   "assets/planning/payroll-view.js": {
-    "v": "3",
-    "sha": "98ea78ae0b40adcf"
+    "v": "4",
+    "sha": "af3f7ccd0edfd270"
   },
   "assets/planning/shift-editor.js": {
     "v": "3",
@@ -1464,16 +1464,16 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "184",
-    "sha": "cf44ed5f669128dd"
+    "v": "185",
+    "sha": "76274491495bcb08"
   },
   "assets/pos-epicerie.css": {
-    "v": "25",
+    "v": "26",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "25",
-    "sha": "ac67f56b1f3362de"
+    "v": "26",
+    "sha": "155f59c404aeb01a"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -1884,12 +1884,12 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "12",
-    "sha": "adc0df1c49ebb976"
+    "v": "13",
+    "sha": "cb5bc6f7ca7960c3"
   },
   "assets/team.js": {
-    "v": "332",
-    "sha": "711d1976baf853da"
+    "v": "333",
+    "sha": "9257629477075026"
   },
   "assets/team/catalog.js": {
     "v": "2",
@@ -1968,8 +1968,8 @@
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "15",
-    "sha": "1c8dc9bae37f7472"
+    "v": "16",
+    "sha": "084c78956d631eb9"
   },
   "assets/trades.js": {
     "v": "7",

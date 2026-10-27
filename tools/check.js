@@ -546,6 +546,8 @@ section('Shared platform kernel and adapters');
 for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'hotel-media-cleanup-test.mjs', 'operations-system-test.mjs', 'quarantine-settlement-test.mjs', 'quarantine-review-browser-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs', 'pos-sale-hold-test.mjs', 'store-credits-test.mjs',
+  /* Un avoir expiré qui reçoit un remboursement redevient utilisable ; l'historique d'un avoir ancien ne disparaît plus. */
+  'store-credit-restore-expiry-test.mjs',
   'caisse-opening-gate-test.mjs',
   'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-direct-pricing-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'request-headers-test.mjs', 'request-pollers-test.mjs', 'quiet-mode-test.mjs', 'quiet-demo-browser-test.mjs', 'load-test-suite-test.mjs',
@@ -656,6 +658,8 @@ for (const test of [
   'queue-open-visit-unpaid-test.mjs',
   'planning-split-test.mjs',
   'planning-core-test.mjs',
+  /* Semaine et mois de planning sur le jour du magasin ; heures recopiées exactes, paie affichée au centime. */
+  'planning-store-day-pay-test.mjs',
   /* Notices au-delà du plafond de 200 : archivées, relues page par page. */
   'planning-notices-archive-test.mjs',
   'wave-p-merge-test.mjs',
@@ -1653,6 +1657,9 @@ section('Whole-project regressions');
     'restaurant-units-test.js',
     'menu-nutrition-test.mjs',
     'employee-live-test.mjs',
+    /* Un départ dont les heures n'ont pas pu être créditées ne répond plus ok :
+       le rejeu du téléphone les crédite, une seule fois. */
+    'attendance-hours-credit-test.mjs',
     'employee-trade-shell-test.mjs',
     'locale-handoff-test.mjs',
     'canonical-origin-test.mjs',
