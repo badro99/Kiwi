@@ -380,6 +380,7 @@
         self.emit('method', m, { gestureId: g });
       });
       K.tap(R, '[data-tip]', function (el, e, g) { self.openTip(el, g); });
+      K.tap(R, '[data-client]', function (el, e, g) { self.emit('client', null, { gestureId: g }); });
       C.chip.bind(R, function (v, g) { self.__recv = String(v); self.render(); self.emit('quick', v, { gestureId: g }); });
       C.keypad.bind(R, function (id, key, g) {
         var tip = self.__tipEntry;
@@ -393,7 +394,7 @@
         var w = el.getAttribute('data-w');
         if (w === 'confirm') {
           self.__gat = K.now(); self.__gid = g;
-          self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: self.p().method === 'cash' ? C.keypad.value(self.__recv) : null, gestureId: g });
+          self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: self.p().method === 'cash' ? self.recv() : null, gestureId: g });
         } else if (w === 'leave') {                     /* the header's Back: out of the payment (§18.3) */
           self.__tipEntry = false;
           self.emit('leave', null, { gestureId: g });
@@ -409,6 +410,10 @@
     p: function () { return this.__pay || (this.__pay = {}); },
     tip: function () { var p = this.p(); if (p.noTip) return 0; return fromCents(Math.round(cents(p.due) * (p.tipPct || 0) / 100)); },
     owed: function () { return fromCents(cents(this.p().due) + cents(this.tip())); },
+    /* Cash received starts at the exact amount owed, as the shipped cash modal
+       does (#cash-received = total): the cashier confirms at once, and types
+       or picks a note only when the customer hands over more. */
+    recv: function () { return this.__recv === '' ? this.owed() : C.keypad.value(this.__recv); },
     openTip: function (row, g) {
       var self = this, p = this.p();
       var pop = this.__pop;
@@ -451,7 +456,7 @@
         if (d) d.innerHTML = '<span class="k-foot k-ink2">' + th('pay.tip.other_title') + '</span><span class="k-heading k-num">' + esc(this.__tipText || '0') + ' %</span>';
         return;
       }
-      var recv = C.keypad.value(this.__recv), owed = this.owed();
+      var recv = this.recv(), owed = this.owed();
       if (d) d.innerHTML = '<span class="k-heading k-num">' + th('pay.received', { amount: money(recv) }) + '</span>';
       if (ch) ch.textContent = recv >= owed ? t('pay.change', { amount: money(fromCents(cents(recv) - cents(owed))) }) : '';
       if (ft) ft.innerHTML = C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cf', attrs: ' data-w="confirm"', label: t('pay.cash.confirm'),
@@ -473,7 +478,7 @@
       var lower = '';
       if (this.__tipEntry || p.method === 'cash') {
         var chips = this.__tipEntry ? '<div class="chips" aria-hidden="true"></div>' : C.chip.group({ label: t('pay.received', { amount: '' }), options: [{ value: String(owed), label: t('pay.exact'), ariaLabel: t('pay.exact_a11y', { amount: money(owed) }) }]
-          .concat(roundUps(owed).map(function (v) { return { value: String(v), label: money(v) }; })), value: this.__recv });
+          .concat(roundUps(owed).map(function (v) { return { value: String(v), label: money(v) }; })), value: this.__recv === '' ? String(owed) : this.__recv });
         lower = '<div class="cash"><div class="disp" aria-live="polite"></div>' + chips + C.keypad.render({ form: form, short: lay === 'compact-short', label: t('pay.cash') }) +
           '<p class="k-heading k-num chg" aria-live="polite"></p>' +
           (this.__tipEntry ? C.button.render({ variant: 'primary', size: 'L', full: true, id: 'td', attrs: ' data-w="tip-done"', label: t('action.done') }) : '<div class="pri"></div>') + '</div>';
@@ -493,6 +498,7 @@
         '<div class="kf"><span class="k-foot k-ink2">' + th('pay.amount_due') + '</span>' +
         '<span class="k-title k-num" data-key-figure>' + numHtml(money(owed)) + '</span>' +
         '<span class="k-foot k-ink2 brk">' + (tip ? '<span data-k-part>' + th('pay.tip_breakdown', { bill: money(p.due), tip: money(tip) }) + '</span>' : '') + '</span></div>' +
+        (p.client ? '<button type="button" class="row k-body" data-client><span>' + esc(p.client) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>' : '') +
         (p.noTip ? '' : '<button type="button" class="row k-body" data-tip aria-haspopup="dialog"><span>' + th('pay.tip') + '</span><span class="k-ink2 tv">' + esc(tipVal) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>') +
         (this.__tipEntry ? '' : '<div class="ms" role="radiogroup" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' + methods + '</div>');
       /* The paid moment's line (§10.26): .pay.note, set by the host from the

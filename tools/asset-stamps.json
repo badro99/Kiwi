@@ -164,8 +164,8 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "72",
-    "sha": "6f2d5983207c35e8"
+    "v": "73",
+    "sha": "6968c93433106dd7"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -196,8 +196,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "15",
-    "sha": "ae53b0c9e4c53031"
+    "v": "16",
+    "sha": "6ec9441a4345a879"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -268,8 +268,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "12",
-    "sha": "a7364b17c90ee410"
+    "v": "13",
+    "sha": "c9745c4984c4f274"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -848,8 +848,8 @@
     "sha": "4355e280bf7ef751"
   },
   "assets/kit/gallery.js": {
-    "v": "1",
-    "sha": "7e500d14bed72e6b"
+    "v": "2",
+    "sha": "a1d58295f22706f6"
   },
   "assets/kit/haptics.js": {
     "v": "7",
@@ -996,8 +996,8 @@
     "sha": "b7e1f27be387dc47"
   },
   "assets/kit/till-frame.js": {
-    "v": "13",
-    "sha": "cbe5a44927f39955"
+    "v": "14",
+    "sha": "345fcbf4c735bbac"
   },
   "assets/kit/till-online.js": {
     "v": "2",
@@ -1012,8 +1012,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "26",
-    "sha": "3511f3f8ddebe029"
+    "v": "27",
+    "sha": "ce98962eee674d21"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

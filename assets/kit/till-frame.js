@@ -228,6 +228,10 @@
     if (!pay) return;
     Object.keys(panes).forEach(function (k) { if (k !== 'pay') panes[k].hidden = true; });
     pay.removeAttribute('state');
+    /* One <k-pay> serves every sale: what the last cashier typed (cash
+       received, a custom tip) must not open the next payment (associé,
+       2026-10-27). Empty means the exact amount owed (till.js › recv). */
+    pay.__recv = ''; pay.__tipText = ''; pay.__tipEntry = false;
     pay.pay = Object.assign({}, p);
     pay.hidden = false;
     bill.hidden = true;

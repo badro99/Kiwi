@@ -1,10 +1,14 @@
 /* Identity-only coverage notice. Never receives verifier material. */
 export function coverageText(names, tr, available = true, endsAt = null) {
-  if (!available) return tr('Accès hors ligne indisponible sur ce navigateur. Une connexion est nécessaire pour déverrouiller.');
-  return tr('Accès hors ligne sur cet appareil') + ' · ' +
-    (names.length ? names.join(', ') : tr('Aucun employé vérifié')) + '. ' +
-    tr('Validité maximale : 72 heures. Les autres employés doivent déverrouiller une fois avec une connexion.') +
-    (endsAt ? ' ' + tr('Accès hors ligne jusqu’au') + ' ' + new Date(endsAt).toLocaleString() : '');
+  if (!available) return tr('Ouverture sans internet indisponible sur ce navigateur. Une connexion est nécessaire.');
+  /* Plain words (owner, 2026-10-27): who can open this till without internet,
+     and what the others must do first. */
+  return (names.length
+    ? tr('Sans internet, ces employés peuvent ouvrir la caisse :') + ' ' + names.join(', ') + ' ' + tr('(72 heures au plus).') + ' ' +
+      tr('Les autres doivent entrer leur code une fois avec internet.')
+    : tr('Sans internet, personne ne peut encore ouvrir cette caisse.') + ' ' +
+      tr('Chaque employé doit d’abord entrer son code une fois avec internet.')) +
+    (endsAt ? ' ' + tr('Jusqu’au') + ' ' + new Date(endsAt).toLocaleString() : '');
 }
 export function showCoverage(screen, names, tr, available = true, endsAt = null) {
   if (!screen) return;

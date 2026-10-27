@@ -40,7 +40,7 @@
     'k.keypad.key', 'k.menu-grid.add', 'k.menu-grid.options',
     'k.bill.line-select', 'k.bill.step', 'k.bill.remove', 'k.bill.void', 'k.bill.edit-options', 'k.bill.print', 'k.bill.overflow',
     'k.bill.split', 'k.bill.discount', 'k.bill.send', 'k.bill.pay',
-    'k.options.add', 'k.pay.method', 'k.pay.tip', 'k.pay.tip-open', 'k.pay.quick', 'k.pay.confirm', 'k.pay.back',
+    'k.options.add', 'k.pay.method', 'k.pay.tip', 'k.pay.tip-open', 'k.pay.quick', 'k.pay.confirm', 'k.pay.back', 'k.pay.client',
     'k.cash-count.close', 'k.cash-count.open', 'k.cash-count.enter-total', 'k.split.pay-share', 'k.discount.apply',
     'k.bill-bar.open', 'k.code-display.replace', 'k.code-display.retry', 'k.code-display.pair',
     'k.lane.action', 'k.lane.retry', 'k.lane.newer'

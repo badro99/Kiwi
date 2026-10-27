@@ -223,7 +223,32 @@
       if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
       resetPayTip();
       const lang = window.KiwiCaisseLang, billName = $('#rp-table').textContent || '';
-      window.KiwiTillFrame.openPay({ bill: lang && lang.tr ? lang.tr(billName) : billName, due: currentTotal(), method: null, tipPct: 0 });
+      window.KiwiTillFrame.openPay({ bill: lang && lang.tr ? lang.tr(billName) : billName, due: currentTotal(), method: null, tipPct: 0, client: tillKitClientLabel() });
+      tillKitWatchClient();
+    }
+    /* « Client & fidélité » pendant l'encaissement : le bouton livré du volet
+       (#rp-client) ouvre le carnet pour attacher ou créer une fiche. 2027 le
+       montait nulle part, donc aucune carte client au moment de payer
+       (associé, 2026-10-27). La ligne du paiement presse ce bouton et reprend
+       son libellé (nom et points une fois attachée) ; masqué, pas de ligne. */
+    function tillKitClientLabel() {
+      const b = $('#rp-client');
+      if (!b || b.hidden) return '';
+      return (($('#rp-client-label') || {}).textContent || '').trim();
+    }
+    let tillKitClientObs = null;
+    function tillKitWatchClient() {
+      const b = $('#rp-client');
+      if (tillKitClientObs || !b || typeof MutationObserver !== 'function') return;
+      tillKitClientObs = new MutationObserver(() => {
+        const pay = window.KiwiTillFrame.pay();
+        if (!pay || pay.hidden || !pay.p) return;
+        const label = tillKitClientLabel();
+        if (pay.p().client === label) return;
+        pay.p().client = label;
+        pay.render();
+      });
+      tillKitClientObs.observe(b, { attributes: true, attributeFilter: ['hidden'], subtree: true, childList: true, characterData: true });
     }
     function tillKitTip(pct) {
       const p = Math.max(0, Math.min(100, Number(pct) || 0));
@@ -662,6 +687,7 @@
       switch (verb) {
         case 'pay.tip': tillKitTip(value.pct); return;
         case 'pay.confirm': tillKitConfirm(id, value); return;
+        case 'pay.client': { const b = $('#rp-client'); if (b && !b.hidden) b.click(); return; }
         case 'pay.leave':
           resetPayTip();
           window.KiwiTillFrame.closePay();

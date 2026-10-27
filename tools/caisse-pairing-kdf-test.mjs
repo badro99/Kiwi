@@ -120,7 +120,7 @@ assert.equal(await api.authorizeTill(code2), true, 'staff permitted before 72h')
 clock++;
 assert.equal(await api.authorizeTill(code2), false, 'staff denied at 72h');
 const {coverageText} = await import('../assets/offline-pin-coverage.js');
-assert.match(coverageText(['Fixture'], s => s, true, clock + 72 * 3600000), /72 heures.*Accès hors ligne jusqu’au/);
+assert.match(coverageText(['Fixture'], s => s, true, clock + 72 * 3600000), /72 heures.*Jusqu’au/);
 clock = provenClock;
 // The roster drops only the people who left it: the others keep offline access through an outage.
 storage.set(key, JSON.stringify(rows2));
