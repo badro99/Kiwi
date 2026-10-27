@@ -173,7 +173,7 @@ async function get(fn, qs, headers = {}) {
   ok('l\'écran cuisine affiche les initiales sur un ticket employé',
     /var employeePrefix = serverInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(kitchenPage));
   ok('le paiement employé envoie la référence commande au journal de caisse',
-    /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,2400}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
+    /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,3200}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
       serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'))));
   /* Le QR public est OrderPro depuis l'étape 3c (kiwi-order.html redirige
      vers lui) : ces garanties portent donc sur son code. */

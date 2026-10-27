@@ -104,7 +104,7 @@ var SHELL = [
   '/assets/caisse/till-frame.js?v=12',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=3',
-  '/assets/caisse/split-tender.js?v=3',
+  '/assets/caisse/split-tender.js?v=4',
   '/assets/caisse/shift.js?v=3',
   '/assets/caisse/settings.js?v=2',
   '/assets/caisse/held-sales.js?v=1',
@@ -122,7 +122,7 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/service.js?v=6',
+  '/assets/serveur/service.js?v=7',
   '/assets/serveur-app.js?v=21',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
@@ -326,7 +326,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=11',
+  '/assets/receipt.js?v=12',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=20',
   '/assets/merchant-config.js?v=284',

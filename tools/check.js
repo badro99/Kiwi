@@ -3150,6 +3150,17 @@ for (const test of ['caisse-lang-service-test.js', 'day-report-conflicts-test.mj
   }
 }
 
+/* ── Vague 13 · piste T · le partage d'addition dans la langue de l'écran ───
+ * Ticket imprimé, libellés de part du comptoir, toasts de paiement serveur. */
+section('Vague 13 · piste T (partage d\'addition FR/EN/AR)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'split-language-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`split-language-test.mjs green (${(out.match(/✓/g) || []).length} controls)`);
+  else fail(`split-language-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* Named is not run: a file mentioned only in a comment, or in a list no loop
  * reaches, passes the wiring check above and guards nothing. On the full gate,
  * every tools/*test* file must have been started (or replayed from the pool)
