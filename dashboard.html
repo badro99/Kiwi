@@ -128,11 +128,14 @@
      behind the dashboard's flag only (localStorage kiwiSkin2027:dashboard = '1',
      or ?skin=2027 for one load). Off, nothing below loads and the lock keeps its
      shipped cells. Written while the head is parsed, so these deferred scripts
-     run before DOMContentLoaded, when the lock controller adopts the pad. -->
+     run before DOMContentLoaded, when the lock controller adopts the pad.
+     A store's switch does NOT reach here (owner, 2026-10-27): unlike the till,
+     the dashboard keeps the screens it shipped with, so data-store-skin is not
+     read and no merchant lands on the kit without asking for it by hand. -->
 <script>
   (function () {
     var on = false;
-    try { on = document.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:dashboard') === '1'; } catch (_) { on = false; }
+    try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:dashboard') === '1'; } catch (_) { on = false; }
     if (!on) return;
     document.documentElement.setAttribute('data-skin-2027', 'dashboard');
       /* No flash of the shipped screens (owner, 2026-10-23): the page stays blank until the kit has drawn,

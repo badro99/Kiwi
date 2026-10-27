@@ -856,11 +856,15 @@ function secureResponse(response) {
  * switch on, so every device of that store gets it without anyone touching the
  * browser. Which store: the paired device's store (kiwi_till_store) for the
  * caisse and the kitchen screen, the signed-in employee's store for the team
- * app, otherwise any store of the signed-in owner's account (the dashboard is
- * account-wide). It is only a look: no access decision reads it, and anything
- * unreadable (no cookie, a database error) leaves the page as shipped. */
+ * app, otherwise any store of the signed-in owner's account (an unpaired till
+ * opened by the owner). It is only a look: no access decision reads it, and
+ * anything unreadable (no cookie, a database error) leaves the page as shipped.
+ *
+ * The dashboard is deliberately NOT in this map (owner, 2026-10-27): the 2027
+ * work is a till redesign, the dashboard keeps the screens it shipped with. Its
+ * kit is still reachable for testing by ?skin=2027 or kiwiSkin2027:dashboard,
+ * never from a store's switch, so no merchant is moved onto it by this flag. */
 const STAFF_SKIN_PAGES = new Map([
-  ['/dashboard', 'account'], ['/dashboard.html', 'account'],
   ['/kiwi-caisse', 'device'], ['/kiwi-caisse.html', 'device'],
   ['/kiwi-cuisine', 'device'], ['/kiwi-cuisine.html', 'device'],
   ['/kiwi-serveur', 'employee'], ['/kiwi-serveur.html', 'employee'],
