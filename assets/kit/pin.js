@@ -238,6 +238,40 @@
       '.act{min-height:44px;padding-inline:20px;border-radius:999px;background-color:var(--k-surface-2);color:var(--k-ink-1)}' +
       '.act[aria-busy="true"]{color:var(--k-ink-3)}' +
       '.plain{min-height:44px;padding-inline:12px;color:var(--k-accent-ink)}' +
+      /* Le verrou plein écran (§10.2, .k-till-lock) : une CARTE posée sur le
+         fond, pas une colonne qui flotte au milieu du vide. Sur une tablette
+         large, le pavé seul laissait l'écran aux trois quarts nu, les touches
+         étaient trop petites et trop pâles et les chiffres trop menus
+         (propriétaire, 2026-10-28). La carte donne un travail à l'espace, le
+         cercle garde un filet qui le détache, et le chiffre prend le pas
+         Display. Les paliers vivent ICI, dans l'ombre : une taille de police
+         ne traverse pas la frontière par variable (six pas, pas un de plus),
+         donc la touche ET son chiffre doivent rétrécir ensemble au même
+         endroit. Ce ton ne touche que le verrou et l'appairage ; le pavé de
+         l'équipe et la feuille d'autorisation gardent leur dessin. */
+      ':host([tone="lock"]){--key:88px}' +
+      ':host([tone="lock"]) .pad{gap:0;padding:40px 44px 32px;border-radius:var(--k-r-4);background-color:var(--k-surface-1);box-shadow:var(--k-shadow-2)}' +
+      ':host([tone="lock"]) .id{color:var(--k-ink-3)}' +
+      ':host([tone="lock"]) .ti{font-size:var(--k-fs-title);line-height:var(--k-lh-title);margin-block-start:4px}' +
+      ':host([tone="lock"]) .sub{margin-block-start:8px}' +
+      ':host([tone="lock"]) .dots{gap:20px;margin-block:28px 8px}' +
+      ':host([tone="lock"]) .dot{width:14px;height:14px;box-shadow:inset 0 0 0 2px var(--k-ink-3)}' +
+      ':host([tone="lock"]) .keys{column-gap:28px;row-gap:20px;margin-block-start:12px}' +
+      ':host([tone="lock"]) .key{box-shadow:inset 0 0 0 1px var(--k-line)}' +
+      ':host([tone="lock"]) .key.k-num{font-size:var(--k-fs-display);font-weight:var(--k-fw-body)}' +
+      ':host([tone="lock"]) .key.fn{box-shadow:none}' +
+      '@media (max-height:880px){:host([tone="lock"]){--key:76px}' +
+        ':host([tone="lock"]) .pad{padding:32px 36px 24px}' +
+        ':host([tone="lock"]) .dots{margin-block:20px 6px}' +
+        ':host([tone="lock"]) .keys{row-gap:14px}}' +
+      '@media (max-height:760px){:host([tone="lock"]){--key:64px}' +
+        ':host([tone="lock"]) .key.k-num{font-size:var(--k-fs-title)}' +
+        ':host([tone="lock"]) .pad{padding:24px 28px 18px}' +
+        ':host([tone="lock"]) .keys{column-gap:22px;row-gap:10px}' +
+        ':host([tone="lock"]) .dots{margin-block:14px 4px}}' +
+      '@media (max-height:620px){:host([tone="lock"]){--key:52px}' +
+        ':host([tone="lock"]) .pad{padding:16px 20px 12px}' +
+        ':host([tone="lock"]) .keys{column-gap:18px;row-gap:8px}}' +
       '@media (prefers-reduced-motion:reduce){.dots.wait{animation:none}}'
   });
 })(typeof window !== 'undefined' ? window : globalThis);

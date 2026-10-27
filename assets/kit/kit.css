@@ -103,32 +103,23 @@ k-figure .k-fig__sr {
 
 /* The till lock on the 2027 pad (assets/kit/till-pin.js): the whole screen,
    the pad centred on it, never inside a drawn phone (§10.2). */
-.k-till-lock { position: fixed; inset: 0; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: safe center;
-  overflow-y: auto; padding: 32px 24px; background-color: var(--k-surface-1); color: var(--k-ink-1); }
-/* Un cran plus petit que le pavé « ipad » du composant (pin.js : --key 84) :
-   sur une tablette posée à plat la colonne touchait le bord haut, et le nom du
-   magasin se collait à l'écran (propriétaire, 2026-10-28). Ici seulement — le
-   pavé de l'équipe et celui de l'appairage gardent leur taille. */
-.k-till-lock k-pin-pad { --key: 72px; }
-/* The shipped offline-access note (offline-pin-coverage.js) is appended to the
-   lock itself here, not to a card: it goes under the pad, never beside it. */
-.k-till-lock > [data-offline-coverage] { text-align: center; }
-/* Un écran plus court que le pavé. Les touches de <k-pin-pad> sont des pixels
-   fixes (pin.js : --key 76, 84 en « ipad », 96 en « kds ») : quatre rangées,
-   le titre, les points, le message et la note hors ligne dépassent la hauteur
-   d'une tablette posée à plat, et `justify-content:center` coupe par le HAUT,
-   là où rien ne peut défiler — le nom du magasin disparaissait au bord
-   (propriétaire, 2026-10-27, tablette de la boutique). `safe center` retombe
-   sur le début dès que ça déborde, et la touche rétrécit par paliers.
-   La propriété traverse la frontière d'ombre : elle se pose depuis ici. */
-@media (max-height: 760px) {
-  .k-till-lock { padding-block: 20px; }
-  .k-till-lock k-pin-pad { --key: 62px; }
-}
-@media (max-height: 620px) {
-  .k-till-lock { padding-block: 14px; }
-  .k-till-lock k-pin-pad { --key: 52px; }
-}
+.k-till-lock { position: fixed; inset: 0; z-index: 500; display: flex; flex-direction: column;
+  align-items: center; justify-content: safe center; gap: 24px;
+  overflow-y: auto; padding: 32px 24px; background-color: var(--k-bg); color: var(--k-ink-1); }
+/* Le fond porte la CARTE du pavé (pin.js, :host([tone="lock"])), il ne porte
+   plus le pavé nu : sur une tablette large la colonne flottait au milieu d'un
+   grand vide blanc, sans rien pour la tenir (propriétaire, 2026-10-28). Le
+   fond est le papier, la carte est la surface — l'espace devient une marge,
+   pas un trou. La taille des touches et celle des chiffres vivent ensemble
+   dans l'ombre du composant : une taille de police ne traverse pas la
+   frontière par variable, donc elles doivent rétrécir au même endroit.
+   `safe center` retombe sur le début dès que la carte dépasse, là où rien ne
+   pourrait défiler — c'est ce qui coupait le nom du magasin par le haut
+   (propriétaire, 2026-10-27, tablette de la boutique). */
+/* La note d'accès hors ligne (offline-pin-coverage.js) se pose sous la carte,
+   jamais à côté : une ligne de bas de page, pas un deuxième bloc. */
+.k-till-lock > [data-offline-coverage] { max-width: 42ch; text-align: center; color: var(--k-ink-3); }
+
 /* The team app with the kit's pad (assets/kit/team-pin.js, §18.10): the pad
    and the e-mail step replace the shipped form and keypad; the clock-in pad
    replaces the code field and its button. The brand and the browse link stay. */

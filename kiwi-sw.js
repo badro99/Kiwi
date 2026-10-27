@@ -446,17 +446,17 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=21',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=17',
-  '/assets/pos-dispatch.js?v=186',
+  '/assets/pos-dispatch.js?v=187',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/kit/haptics.js?v=7',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
-  '/assets/icons/material/sprite.till.svg?v=9',
+  '/assets/icons/material/sprite.till.svg?v=10',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=65',
-  '/assets/pos-boutique-2027.css?v=3',
+  '/assets/kit/kit.css?v=66',
+  '/assets/pos-boutique-2027.css?v=4',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -468,9 +468,9 @@ var SHELL = [
   '/assets/kit/business-day.js?v=4',
   '/assets/kit/core.js?v=2',
   '/assets/kit/overlays.js?v=2',
-  '/assets/kit/pin.js?v=3',
+  '/assets/kit/pin.js?v=4',
   '/assets/kit/pin-flow.js?v=5',
-  '/assets/kit/till-pin.js?v=8',
+  '/assets/kit/till-pin.js?v=9',
   /* and forgot and reset password, behind kiwiSkin2027:access. */
   '/assets/icons/material/sprite.access.svg?v=1',
   '/assets/kit/strings/onboarding.fr.js?v=1',
@@ -514,12 +514,12 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=120',
-  '/assets/pos-boutique/sales.js?v=26',
+  '/assets/pos-boutique.css?v=121',
+  '/assets/pos-boutique/sales.js?v=27',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=26',
-  '/assets/pos-boutique/inventory.js?v=26',
-  '/assets/pos-boutique.js?v=120',
+  '/assets/pos-boutique/checkout.js?v=27',
+  '/assets/pos-boutique/inventory.js?v=27',
+  '/assets/pos-boutique.js?v=121',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

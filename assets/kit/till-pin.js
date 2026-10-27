@@ -147,6 +147,10 @@
     scr.textContent = '';
     var pad = doc.createElement('k-pin-pad');
     pad.setAttribute('size', 'ipad');
+    /* Le ton du verrou plein écran (pin.js) : la carte, les grandes touches
+       et les chiffres au pas Display. Il ne s'applique qu'ici et à
+       l'appairage — les deux écrans qui occupent toute la tablette. */
+    pad.setAttribute('tone', 'lock');
     pad.setAttribute('identity', (venue && venue.name) || '');
     /* Pas de sous-titre ici : « Votre code personnel à 4 chiffres » ne dit rien
        que les quatre points et le pavé ne disent déjà, et il poussait l'écran
@@ -188,6 +192,7 @@
     scr.textContent = '';
     var pad = doc.createElement('k-pin-pad');
     pad.setAttribute('size', 'ipad');
+    pad.setAttribute('tone', 'lock');
     pad.setAttribute('identity', (o.venue && o.venue.name) || '');
     pad.setAttribute('heading', o.prompt || t('pair.title'));
     pad.setAttribute('sub', o.foot || t('pin.sub.pairing'));

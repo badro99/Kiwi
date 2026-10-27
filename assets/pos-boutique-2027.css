@@ -66,73 +66,7 @@ html[data-skin-2027="till"] #bq-clockin .clockin-btn {
 }
 html[data-skin-2027="till"] #bq-clockin .clockin-btn:hover { background: var(--k-accent-pressed); transform: none; }
 
-/* ═══════════════ LE RAIL — de la nuit au papier ═══════════════
-   Les onze règles livrées qui portaient du blanc en dur, reprises dans
-   l'ordre du fichier livré (pos-boutique.css : 64, 71, 81, 82, 83, 97, 104,
-   113, 116, 138, 1533). Aucune ne doit rester, sinon elle devient invisible. */
-html[data-skin-2027="till"] #pos-boutique > .bq-rail {
-  background-color: var(--k-surface-1);
-  border-right: 1px solid var(--k-line);                      /* 64 */
-  color: var(--k-ink-2);
-  scrollbar-color: var(--k-line-strong) transparent;          /* 71 */
-}
-html[data-skin-2027="till"] .kiwi-rtl #pos-boutique > .bq-rail,
-html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-rail {
-  border-right: 0; border-left: 1px solid var(--k-line);      /* 1533 */
-}
-html[data-skin-2027="till"] #pos-boutique .bq-venue {
-  border-bottom: 1px solid var(--k-line);                     /* 81 */
-}
-html[data-skin-2027="till"] #pos-boutique .bq-venue-name {
-  color: var(--k-ink-1);                                      /* 82 */
-  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
-}
-html[data-skin-2027="till"] #pos-boutique .bq-venue-sub {
-  color: var(--k-ink-3);                                      /* 83 */
-  font-size: var(--k-fs-footnote);
-}
-html[data-skin-2027="till"] #pos-boutique .bq-venue-sub b { color: var(--k-accent-ink); }
-
-/* Le logo inverse du rail sombre ne se voit plus sur le papier. */
-html[data-skin-2027="till"] #pos-boutique .bq-brand img { content: url("kiwi-newlogo.svg"); height: 30px; }
-
-html[data-skin-2027="till"] #pos-boutique .bq-nav-it {
-  min-height: 44px;                       /* cible tactile du kit */
-  border-radius: var(--k-r-2);
-  color: var(--k-ink-2);
-  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout);
-}
-html[data-skin-2027="till"] #pos-boutique .bq-nav-it:hover {
-  background-color: var(--k-surface-2); color: var(--k-ink-1);  /* 97 */
-}
-html[data-skin-2027="till"] #pos-boutique .bq-nav-it.on,
-html[data-skin-2027="till"] #pos-boutique .bq-nav-it.on svg {
-  background-color: var(--k-accent-tint); color: var(--k-accent-ink);
-}
-html[data-skin-2027="till"] #pos-boutique .bq-nav-badge {
-  background-color: var(--k-surface-2); color: var(--k-ink-2);  /* 104 */
-  font-family: var(--k-font); font-variant-numeric: tabular-nums;
-}
-html[data-skin-2027="till"] #pos-boutique .bq-nav-it.on .bq-nav-badge {
-  background-color: var(--k-accent); color: var(--k-on-accent);
-}
-
-html[data-skin-2027="till"] #pos-boutique .bq-net {
-  min-height: 44px; border-radius: var(--k-r-2);
-  background-color: var(--k-surface-2);                        /* 113 */
-  color: var(--k-ink-2); font-size: var(--k-fs-footnote);
-}
-html[data-skin-2027="till"] #pos-boutique .bq-net:hover { background-color: var(--k-surface-3); }  /* 116 */
-html[data-skin-2027="till"] #pos-boutique .bq-net.is-off { color: var(--k-warning); }
-html[data-skin-2027="till"] #pos-boutique .bq-net.is-off .bq-net-dot { background-color: var(--k-warning-solid); }
-
-html[data-skin-2027="till"] #pos-boutique .bq-lock {
-  min-height: 44px; border-radius: var(--k-r-2);
-  color: var(--k-ink-2); font-size: var(--k-fs-footnote);
-}
-html[data-skin-2027="till"] #pos-boutique .bq-lock:hover {
-  background-color: var(--k-surface-2); color: var(--k-ink-1);  /* 138 */
-}
+/* Le rail : voir « LE RAIL — remplacé, pas repeint », plus bas. */
 
 /* ═══════════════ L'EN-TÊTE ET LE SCAN ═══════════════ */
 html[data-skin-2027="till"] #pos-boutique .bq-head h1 {
@@ -287,57 +221,53 @@ html[data-skin-2027="till"] #pos-boutique :is(button, input, select, textarea):f
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LA STRUCTURE 2027 (§10.20, §18.3) — et pas seulement la couleur.
-   Le rail livré est une colonne de 212 px à sept entrées de texte ; le rail du
-   kit fait 88 px, porte l'icône au-dessus du mot, et garde QUATRE destinations
-   plus « Plus ». Les trois autres et tout le pied de barre descendent dans le
-   panneau Plus (pos-boutique.js › bqKitRail), qui reprend le fond sombre livré
-   — la même barre noire que le restaurant montre sous Plus. Rien n'est retiré.
+   LE RAIL — remplacé, pas repeint (§10.20, §18.3)
+
+   La caisse restaurant ne repeint jamais sa barre livrée : elle monte le rail
+   du kit dans une boîte neuve et éteint l'ancienne (assets/caisse/till-frame.js
+   › tillKitOn ; assets/kit/kit.css › `html[data-k-till] .sidebar{display:none}`).
+   La boutique fait exactement pareil, pour la même raison : la barre livrée
+   est SOMBRE, donc son logo est la version inverse et le nom du magasin est en
+   #fff. La repeindre en clair laissait le logo blanc sur blanc et le nom
+   invisible, et la colonne imposée aux libellés en ligne les faisait se
+   chevaucher (propriétaire, 2026-10-28). Une barre qui ne peint plus n'a aucun
+   de ces défauts, et il n'y a plus une seule couleur livrée à rattraper.
+
+   #bq-nav reste dans le DOM, sans pixels : la délégation de clic du métier
+   (pos-boutique.js › switchView) y vit, et le panneau Plus est son enfant.
    ═══════════════════════════════════════════════════════════════════════════ */
+html[data-skin-2027="till"] #pos-boutique > #bq-kit-rail {
+  position: absolute;
+  top: 0; bottom: 0; inset-inline-start: 0;
+  width: 88px;
+  z-index: 5;
+}
 html[data-skin-2027="till"] #pos-boutique > .bq-rail {
-  width: 88px; flex: 0 0 88px;
-  background-color: var(--k-surface-2);
-  padding: 8px 2px;
-  gap: 4px;
-  align-items: center;
+  width: 0; flex: 0 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
   overflow: visible;
 }
-html[data-skin-2027="till"] #pos-boutique > .bq-main { left: 88px; }
-html[data-skin-2027="till"] .kiwi-rtl #pos-boutique > .bq-main { left: 0; right: 88px; }
-/* L'enseigne et la ligne « Le même Kiwi » ne sont pas des destinations : le
-   rail du kit n'en porte pas, et le nom du magasin est sur l'écran
-   d'ouverture et dans Plus (l'état du réseau). */
-html[data-skin-2027="till"] #pos-boutique > .bq-rail > :is(.bq-brand, .bq-venue) { display: none; }
-html[data-skin-2027="till"] #pos-boutique .bq-nav { gap: 2px; width: 100%; flex: 0 0 auto; }
+html[data-skin-2027="till"] #pos-boutique > .bq-rail > :not(#bq-nav) { display: none; }
+html[data-skin-2027="till"] #pos-boutique #bq-nav {
+  display: block;
+  width: 0;
+  padding: 0;
+  gap: 0;
+}
+/* Les destinations livrées restent cliquables par programme (bqKitRail clique
+   le bouton d'origine) ; elles ne sont simplement plus dessinées. Seul le
+   panneau Plus, qui est leur nouveau foyer, se voit. */
+html[data-skin-2027="till"] #pos-boutique #bq-nav > :not(.bq-more) { display: none; }
+html[data-skin-2027="till"] #pos-boutique > .bq-main { left: 88px; right: 0; }
+html[data-skin-2027="till"] .kiwi-rtl #pos-boutique > .bq-main,
+html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-main { left: 0; right: 88px; }
 
-/* Une destination : pastille de 64–84 × 56, icône au-dessus du mot. */
-html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-nav-it {
-  position: relative;
-  flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 2px;
-  min-height: 72px; min-width: 64px; max-width: 84px;
-  margin-inline: auto;
-  padding: 6px 8px;
-  border-radius: var(--k-r-2);
-  text-align: center;
-  font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote);
-  line-height: 1.15;
-  color: var(--k-ink-2);
-}
-html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-nav-it > span { max-width: 68px; text-wrap: balance; }
-html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-nav-it svg { width: 22px; height: 22px; }
-html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-nav-it.on {
-  background-color: var(--k-surface-1); color: var(--k-ink-1);
-  box-shadow: var(--k-shadow-1);
-}
-html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-nav-it.on svg { color: var(--k-accent-ink); }
-html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-nav-it > .bq-nav-badge {
-  position: absolute; top: 4px; inset-inline-end: 4px;
-}
-
-/* Plus, et le panneau sombre qu'il ouvre. */
-html[data-skin-2027="till"] #pos-boutique .bq-rail-foot:empty { display: none; }
+/* Plus : le panneau sombre, la même barre noire que le restaurant montre.
+   Les commandes déplacées y gardent EXACTEMENT leur dessin livré — elles sont
+   nées pour un fond sombre et elles en retrouvent un. Pas une couleur écrite
+   ici, donc pas de blanc sur blanc à refaire. */
 html[data-skin-2027="till"] #pos-boutique .bq-more {
   position: fixed; top: 0; bottom: 0; inset-inline-start: 88px;
   width: 232px; z-index: 60;
@@ -348,12 +278,13 @@ html[data-skin-2027="till"] #pos-boutique .bq-more {
   box-shadow: var(--k-shadow-2);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more[hidden] { display: none; }
-/* Dans Plus, les commandes gardent EXACTEMENT leur dessin livré. Mes règles
-   claires ne portent que sur les enfants DIRECTS de #bq-nav, et les boutons
-   déplacés vivent dans .bq-more : la feuille livrée les peint donc encore,
-   sur le fond sombre, sans que j'écrive une seule couleur. C'est aussi ce qui
-   évite de refaire le blanc sur blanc — il n'y a rien à repeindre ici. */
-html[data-skin-2027="till"] #pos-boutique .bq-more > * { width: 100%; margin: 0; }
+/* La colonne flex étire DÉJÀ ses enfants en flux : écrire width:100% ici
+   touchait aussi un enfant volontairement masqué — #bq-net porte
+   .kcl-hidden-net (1 px, détouré, en position absolue) — qui reprenait alors
+   toute la largeur du panneau et venait se poser par-dessus sa première
+   ligne. Un helper « masqué visuellement » ne se contredit pas depuis une
+   autre feuille : l'étirement reste au flex, qui ignore le hors-flux. */
+html[data-skin-2027="till"] #pos-boutique .bq-more > * { margin: 0; }
 
 /* ═══════════════ LES CARTES, À LA GÉOMÉTRIE DU KIT ═══════════════
    k-menu-grid (till.js) : minmax(150px, 1fr), écart 16, pavé 112 de haut,

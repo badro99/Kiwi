@@ -119,24 +119,50 @@ for (const hit of skinCode.match(RAW) || []) {
   check(false, `couleur en dur « ${hit} » dans ${SKIN} : seuls les jetons --k-* gardent le mode sombre honnête`);
 }
 
-/* ── 4 · tout le blanc du rail est repris ─────────────────────────────────── */
-const RAIL_FAMILY = ['bq-rail', 'bq-brand', 'bq-venue', 'bq-venue-name', 'bq-venue-sub',
-  'bq-nav', 'bq-nav-it', 'bq-nav-badge', 'bq-rail-foot', 'bq-lock', 'bq-net',
+/* ── 4 · le rail livré est ÉTEINT, jamais repeint ──────────────────────────
+   La leçon de la tablette d'Amira (propriétaire, 2026-10-28). La barre livrée
+   est SOMBRE : son logo est la version inverse (kiwi-newlogo-inverse.svg) et
+   son enseigne est en #fff. Toute règle 2027 qui la rallume en clair laisse ce
+   blanc en place — blanc sur blanc, le logo et le nom du magasin disparaissent
+   — et toute règle qui impose une colonne à ses libellés en ligne les fait se
+   chevaucher. Les deux défauts étaient sur les captures du propriétaire.
+   La caisse restaurant ne l'a jamais fait : elle monte le rail du kit dans une
+   boîte NEUVE et éteint l'ancienne barre (till-frame.js › tillKitOn, puis
+   kit.css). Ce banc exige la même recette, et refuse le repeint qui a causé
+   le défaut — la version précédente de ce fichier EXIGEAIT le repeint, c'est
+   dire combien un banc peut garder la mauvaise invariante. */
+const RAIL_PAINTED = ['bq-brand', 'bq-venue', 'bq-venue-name', 'bq-venue-sub',
+  'bq-nav-it', 'bq-nav-badge', 'bq-rail-foot', 'bq-lock', 'bq-net',
   'bq-net-dot', 'bq-net-label', 'bq-net-queue'];
-const WHITE = /#fff\b|#ffffff\b|rgba?\(\s*255\s*,\s*255\s*,\s*255/i;
-const railWhite = new Set();
-for (const block of shipped.split('}')) {
-  const [sel, body] = block.split('{');
-  if (!sel || !body || !WHITE.test(body)) continue;
-  for (const cls of RAIL_FAMILY) {
-    if (new RegExp('\\.' + cls + '\\b').test(sel)) railWhite.add(cls);
-  }
+for (const cls of RAIL_PAINTED) {
+  check(!new RegExp('\\.' + cls + '\\b').test(skinCode),
+    `.${cls} est repeinte par ${SKIN} : la barre livrée s'éteint, elle ne se repeint pas (son logo inverse et son enseigne #fff resteraient blancs sur fond clair)`);
 }
-check(railWhite.size >= 8,
-  `seulement ${railWhite.size} classe(s) du rail portent du blanc : le rail livré a changé, relire ce banc`);
-for (const cls of railWhite) {
-  check(new RegExp('\\.' + cls + '\\b').test(skinCode),
-    `.${cls} porte du blanc en dur sur le rail sombre livré, et la peau 2027 ne la reprend pas : blanc sur blanc`);
+/* Et elle s'éteint vraiment. #bq-nav reste, sans pixels : la délégation de
+   clic du métier y vit et le panneau Plus est son enfant. */
+for (const need of [
+  '#pos-boutique > #bq-kit-rail',
+  '#pos-boutique > .bq-rail > :not(#bq-nav)',
+  '#pos-boutique #bq-nav > :not(.bq-more)',
+]) {
+  check(skinCode.includes(need), `${SKIN} ne porte pas « ${need} » : la barre livrée n'est pas éteinte`);
+}
+/* Le rail visible est le composant du kit, pas une copie faite à la main. */
+check(/createElement\('k-rail'\)/.test(bq),
+  'pos-boutique.js ne monte pas <k-rail> : le rail doit être le composant du kit, comme au restaurant');
+check(/customElements\.get\('k-rail'\)/.test(bq),
+  'bqKitRail ne vérifie pas que <k-rail> est défini avant de monter');
+check(/k\.rail\.select/.test(bq), "pos-boutique.js n'écoute pas k.rail.select");
+/* Et il CLIQUE le bouton livré : aucune destination n'est réimplémentée, donc
+   aucune ne peut perdre son écouteur en route. */
+check(/\bb\.click\(\)/.test(bq),
+  'le rail ne clique pas le bouton livré : une destination réimplémentée perdrait son écouteur');
+/* Chaque icône du rail existe dans le sprite de la caisse : une icône absente
+   dessine un vide, en silence (§21.3, l'URL du sprite est littérale). */
+const sprite = read('assets/icons/material/sprite.till.svg');
+for (const ic of ['shopping_bag', 'sync_alt', 'inventory_2', 'group', 'more_horiz', 'close']) {
+  check(new RegExp('id="' + ic + '"').test(sprite),
+    `l'icône « ${ic} » manque à sprite.till.svg : le rail dessinerait un vide`);
 }
 
 /* ── 5 · câblage et estampilles ───────────────────────────────────────────── */
@@ -160,4 +186,4 @@ check((html.match(/pos-boutique-2027\.css/g) || []).length === 1,
 
 for (const f of fails) console.log('  ✗ ' + f);
 if (fails.length) { console.log(`\n✗ ${fails.length} échec(s) · ${pass} vert(s)`); process.exit(1); }
-console.log(`✓ ${pass} contrôles verts · la boutique n'adopte pas le cadre, son fond d'ouverture se compte sur le kit, et tout le rail est repris`);
+console.log(`✓ ${pass} contrôles verts · la boutique n'adopte pas le cadre, son fond d'ouverture se compte sur le kit, et la barre livrée s'éteint au lieu de se repeindre`);

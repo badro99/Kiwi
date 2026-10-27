@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=26';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=26';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=26';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=27';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=27';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=27';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -1673,19 +1673,60 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   }
 
   /* kiwiSkin2027:till · le rail du kit (§10.20) : quatre destinations et Plus,
-     comme la caisse restaurant. Le reste n'est pas SUPPRIMÉ, il est DÉPLACÉ
-     dans le panneau Plus — les mêmes nœuds, avec leurs propres écouteurs.
-     On ne reconstruit aucun bouton et on ne cherche aucun sélecteur : ce qui
-     était dans la barre y est encore, ailleurs. C'est la différence avec la
-     liste de sélecteurs écrits à la main du restaurant, où une ligne qui ne
-     correspond plus tombe sans bruit : ici il n'y a pas de liste à mentir.
-     Le panneau vit DANS #bq-nav, donc la délégation de clic du métier
-     (switchView) continue de voir les destinations déplacées. */
-  const BQ_RAIL_MAIN = ['vente', 'echanges', 'inventaire', 'clientes'];
+     comme la caisse restaurant.
+
+     On REMPLACE la barre livrée, on ne la REPEINT pas. C'est la recette de la
+     caisse restaurant (assets/caisse/till-frame.js › tillKitOn : une boîte
+     neuve avant .sidebar, que kit.css éteint ensuite).
+     La repeindre était l'erreur : la barre livrée est sombre, donc son logo est
+     la version inverse (kiwi-newlogo-inverse.svg) et le nom du magasin est en
+     #fff — sur un fond clair ils devenaient blanc sur blanc, et les libellés
+     en ligne se chevauchaient une fois la colonne imposée (propriétaire,
+     2026-10-28, captures de la tablette). Aucun de ces défauts n'existe quand
+     la barre d'origine cesse simplement de peindre.
+
+     Ce qui n'est pas sur le rail n'est pas SUPPRIMÉ, il est DÉPLACÉ dans le
+     panneau Plus : les mêmes nœuds, avec leurs propres écouteurs. Le panneau
+     vit DANS #bq-nav, donc la délégation de clic du métier (switchView) voit
+     encore les destinations déplacées. Et le rail n'invente aucun bouton : il
+     CLIQUE celui que la boutique a livré, ce qui fait tourner son code à lui.
+     C'est la différence avec la liste de sélecteurs du restaurant, où une
+     ligne qui ne correspond plus tombe sans bruit : ici il n'y a pas de liste
+     à mentir — un libellé absent de #bq-nav ne donne pas de ligne de rail. */
+  const BQ_RAIL_MAIN = [
+    ['vente', 'shopping_bag'],
+    ['echanges', 'sync_alt'],
+    ['inventaire', 'inventory_2'],
+    ['clientes', 'group'],
+  ];
+  let bqRail = null, bqMore = null;
+
+  function bqKitRailPaint() {
+    if (!bqRail || !bqMore) return;
+    const items = [];
+    for (const [view, ic] of BQ_RAIL_MAIN) {
+      const b = $('#bq-nav .bq-nav-it[data-bq-view="' + view + '"]', root);
+      if (!b) continue;
+      const lab = b.querySelector('span');
+      const bad = b.querySelector('.bq-nav-badge');
+      const n = bad ? parseInt(String(bad.textContent).replace(/[^\d]/g, ''), 10) : 0;
+      items.push({ id: view, icon: ic, label: (lab ? lab.textContent : view).trim(), badge: n > 0 ? n : 0 });
+    }
+    const open = !bqMore.hidden;
+    items.push(open ? { id: 'more', icon: 'close', label: 'Moins' } : { id: 'more', icon: 'more_horiz', label: 'Plus' });
+    bqRail.items = items;
+    const who = (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '';
+    bqRail.footer = who ? { cashier: who } : {};
+    /* Plus n'est jamais la valeur : <k-rail> refuse de ré-émettre sur
+       l'élément qui porte déjà sa valeur, et Moins ne pourrait plus refermer. */
+    bqRail.setAttribute('value', state.view || 'vente');
+  }
+
   function bqKitRail() {
-    if (!root || !bqKitSkin()) return false;
+    if (!root || !bqKitSkin() || !customElements.get('k-rail')) return false;
     const nav = $('#bq-nav', root);
-    if (!nav || nav.querySelector('#bq-more')) return false;
+    const rail = root.querySelector('.bq-rail');
+    if (!nav || !rail || nav.querySelector('#bq-more')) return false;
     const foot = root.querySelector('.bq-rail-foot');
 
     const more = document.createElement('div');
@@ -1693,37 +1734,46 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     more.id = 'bq-more';
     more.hidden = true;
     /* Ordre d'origine conservé : les destinations d'abord, le pied ensuite. */
+    const main = BQ_RAIL_MAIN.map((r) => r[0]);
     [...nav.children].forEach((el) => {
-      if (el.dataset && BQ_RAIL_MAIN.indexOf(el.dataset.bqView) >= 0) return;
+      if (el.dataset && main.indexOf(el.dataset.bqView) >= 0) return;
       more.appendChild(el);
     });
     if (foot) [...foot.children].forEach((el) => more.appendChild(el));
-
-    const plus = document.createElement('button');
-    plus.type = 'button';
-    plus.className = 'bq-nav-it bq-plus';
-    plus.id = 'bq-plus';
-    plus.setAttribute('aria-expanded', 'false');
-    plus.setAttribute('aria-controls', 'bq-more');
-    plus.innerHTML = '<i data-lucide="ellipsis"></i><span>Plus</span>';
-    nav.appendChild(plus);
     nav.appendChild(more);
+    bqMore = more;
 
-    const close = () => { more.hidden = true; plus.setAttribute('aria-expanded', 'false'); };
-    plus.addEventListener('click', (e) => {
+    const box = document.createElement('div');
+    box.id = 'bq-kit-rail';
+    rail.parentNode.insertBefore(box, rail);
+    bqRail = document.createElement('k-rail');
+    bqRail.setAttribute('label', 'Plus');
+    box.appendChild(bqRail);
+
+    const close = () => { if (!more.hidden) { more.hidden = true; bqKitRailPaint(); } };
+    const toggle = () => { more.hidden = !more.hidden; bqKitRailPaint(); icons(); };
+
+    bqRail.addEventListener('kiwi:action', (e) => {
+      const d = e.detail || {};
+      if (d.action !== 'k.rail.select') return;
       e.stopPropagation();
-      const open = more.hidden;
-      more.hidden = !open;
-      plus.setAttribute('aria-expanded', open ? 'true' : 'false');
-      icons();
+      const id = d.id == null ? '' : String(d.id);
+      if (id === 'more') { toggle(); return; }
+      /* Le bouton livré, pas une copie : son écouteur, son switchView. */
+      const b = $('#bq-nav .bq-nav-it[data-bq-view="' + id + '"]', root);
+      if (b) b.click();
+      close();
+      bqKitRailPaint();
     });
+
     /* Un geste dans Plus fait son travail puis referme : le panneau ne reste
        pas par-dessus l'écran qu'il vient d'ouvrir. */
     more.addEventListener('click', () => setTimeout(close, 0));
     document.addEventListener('click', (e) => {
-      if (!more.hidden && !more.contains(e.target) && !plus.contains(e.target)) close();
+      if (!more.hidden && !more.contains(e.target) && !box.contains(e.target)) close();
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    bqKitRailPaint();
     icons();
     return true;
   }
@@ -1778,6 +1828,8 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     $$('.bq-view', root).forEach((p) => p.classList.toggle('is-on', p.dataset.bqPanel === view));
     renderView(view);
     icons();
+    /* La destination a bougé : la lentille du rail du kit la suit. */
+    bqKitRailPaint();
   }
   function renderView(view) {
     if (view === 'vente') { renderTicket(); renderGrid(); renderExchNote(); }
@@ -1809,6 +1861,8 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     set('#bq-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
     const invBadge = $('#bq-badge-inv', root);
     if (invBadge) { const st = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.stats() : null; const n = st ? st.ruptures + st.low : 0; invBadge.textContent = n || ''; invBadge.style.display = n ? '' : 'none'; }
+    /* Le rail du kit lit ses compteurs sur ces mêmes pastilles. */
+    bqKitRailPaint();
   }
   function headSubVente() {
     // Le compte de ventes suit la même règle que la recette : la journée, pas la
