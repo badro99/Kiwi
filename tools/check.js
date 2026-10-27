@@ -782,6 +782,8 @@ for (const test of [
   'shopify-direct-webhook-test.mjs',
   'shopify-shop-domain-test.mjs',
   'shopify-replay-orders-test.mjs',
+  /* Shopify : commande annulée ou remboursée, les pièces reviennent au stock une seule fois. */
+  'shopify-order-reversal-test.mjs',
   /* Quiz : une question sans réponse ne vaut jamais un point. */
   'quiz-unanswered-test.mjs',
   'service-interconnectivity-test.mjs',
@@ -1694,6 +1696,8 @@ section('Whole-project regressions');
     'locale-handoff-test.mjs',
     'canonical-origin-test.mjs',
     'landing-es-test.mjs',
+    /* DE/IT/NL servies dans leur langue (titre, H1, maquette), hreflang complet. */
+    'landing-static-locale-test.mjs',
     'landing-es-browser-test.mjs',
     /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
        les tarifs montrent les quatre paliers de CLAUDE.md §7. */

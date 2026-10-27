@@ -6,7 +6,7 @@ import { tenantFor } from '../_private.js';
 import { replayShopifyOrders, readReplayProgress } from './_replay-orders.js';
 import {
   buildExactVariantMapping, connectionFor, enqueueStockChanges,
-  flushShopifyOutbox, listLocations, listShopifyVariants,
+  flushShopifyOutbox, listLocations, listShopifyVariants, registerWebhooks,
 } from './_lib.js';
 
 const n = (v) => Math.max(0, Number(v) || 0);
@@ -391,6 +391,15 @@ export async function onRequestPost({ request, env, waitUntil }) {
       const sinceTs = Math.max(Number(connection.connected_ts) || 0, Number(body && body.since) || 0);
       const result = await replayShopifyOrders(env, merchant, { sinceTs, dryRun: !!(body && body.dryRun) });
       return json({ ok: true, action, result, ...(await health(env, merchant)) });
+    }
+
+    /* Les boutiques reliées avant l'annulation/remboursement n'ont pas ces deux
+     * abonnements : cette action les enregistre (idempotente). */
+    if (action === 'register-webhooks') {
+      const connection = await connectionFor(env, merchant);
+      if (!connection || !connection.channel_link_id) throw new Error('shopify-not-connected');
+      const failed = await registerWebhooks(env, merchant, connection.channel_link_id, request);
+      return json({ ok: !failed, action, failed: failed || undefined, ...(await health(env, merchant)) });
     }
 
     if (action === 'retry') {

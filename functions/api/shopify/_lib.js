@@ -215,7 +215,7 @@ export async function registerWebhooks(env, merchant, linkId, request) {
     }
   }`;
   const failures = [];
-  for (const topic of ['ORDERS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED']) {
+  for (const topic of ['ORDERS_CREATE', 'ORDERS_CANCELLED', 'REFUNDS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED']) {
     try {
       const out = await shopifyGraphQL(env, merchant, query, { topic, webhook: { uri } });
       const errors = (out.data.webhookSubscriptionCreate && out.data.webhookSubscriptionCreate.userErrors) || [];
