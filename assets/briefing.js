@@ -17,11 +17,11 @@
     "marginDrop": [5, 0.1, 100, "Baisse de marge (points)", "Margin drop (points)", "انخفاض الهامش (نقاط)"],
     "coverage": [80, 1, 100, "Couverture minimale (%)", "Minimum coverage (%)", "الحد الأدنى للتغطية (%)"],
     "coverageGap": [10, 0, 100, "Écart de couverture (%)", "Coverage gap (%)", "فرق التغطية (%)"],
-    "samples": [3, 1, 28, "Échantillons minimum", "Minimum samples", "الحد الأدنى للعينات"],
+    "samples": [3, 1, 4, "Échantillons minimum", "Minimum samples", "الحد الأدنى للعينات"],
     "events": [2, 1, 100, "Événements minimum", "Minimum events", "الحد الأدنى للأحداث"],
     "share": [5, 0.1, 100, "Part minimale (%)", "Minimum share (%)", "الحد الأدنى للنسبة (%)"],
     "multiple": [2, 1, 10, "Multiple de référence", "Baseline multiple", "مضاعف المرجع"],
-    "cashCents": [10000, 1, 10000000, "Écart caisse (centimes)", "Cash gap (centimes)", "فرق الصندوق (سنتيم)"],
+    "cashCents": [10000, 1, 10000000, "Écart de caisse (MAD)", "Cash gap (MAD)", "فرق الصندوق (درهم)"],
     "weatherEffect": [8, 1, 100, "Effet météo (%)", "Weather effect (%)", "تأثير الطقس (%)"],
     "lateMultiple": [1.5, 1, 10, "Multiple du délai", "Timing multiple", "مضاعف المدة"],
     "lateMinutes": [5, 1, 240, "Retard (minutes)", "Delay (minutes)", "التأخير (دقائق)"],
@@ -40,13 +40,29 @@
     return out;
   }
   function limit(key) { var v = own().settings; return v && v[key] != null ? v[key] : LIMITS[key][0]; }
+  /* Ce que voit le commerçant : l'écart de caisse se règle et se lit en
+   * dirhams, il reste rangé en centimes. Les « échantillons » s'arrêtent à 4,
+   * le nombre de mêmes jours de semaine que comparent ventes, annulations et
+   * remises : au-delà, ces trois règles se taisaient sans le dire. */
+  var SCALE = { cashCents: 100 };
+  var NUM = {};
+  function num(value, L) {
+    var loc = L === 'en' ? 'en-GB' : 'fr-FR';
+    if (!NUM[loc]) NUM[loc] = new Intl.NumberFormat(loc, { maximumFractionDigits: 2 });
+    return NUM[loc].format(value);
+  }
+  function shown(key, value) { return (value == null ? limit(key) : value) / (SCALE[key] || 1); }
   function setSettings(value) {
     if (!isReal() || !slug() || !/^(owner|manager)$/.test(tier()) || !value || typeof value !== 'object') return false;
     var clean = validSettings(value);
     if (Object.keys(value).some(function (k) { return !Object.prototype.hasOwnProperty.call(clean, k); })) return false;
-    own(); doc.settings = Object.assign({}, doc.settings, clean); doc.settingsAt = Date.now();
-    doc.settingsFieldsAt = doc.settingsFieldsAt || {};
-    Object.keys(clean).forEach(function (key) { doc.settingsFieldsAt[key] = doc.settingsAt; });
+    own(); doc.settingsFieldsAt = doc.settingsFieldsAt || {};
+    /* Horloge de Lamport par champ : une modification passe toujours après
+     * celle qu'elle remplace, même si un autre appareil avançait d'un mois. */
+    var at = Date.now();
+    Object.keys(clean).forEach(function (key) { at = Math.max(at, (Number(doc.settingsFieldsAt[key]) || 0) + 1); });
+    doc.settings = Object.assign({}, doc.settings, clean); doc.settingsAt = Math.max(at, Number(doc.settingsAt) || 0);
+    Object.keys(clean).forEach(function (key) { doc.settingsFieldsAt[key] = at; });
     compute(); return true;
   }
   function settingsHtml() {
@@ -55,13 +71,18 @@
     var title = { fr: 'Réglages des seuils', en: 'Threshold settings', ar: 'إعدادات العتبات' }[L];
     return '<details><summary>' + title + '</summary>' + Object.keys(LIMITS).map(function (key) {
       var spec = LIMITS[key];
-      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + spec[1] + '" max="' + spec[2] + '" step="' + (integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-error-' + key + '" value="' + limit(key) + '"><span id="briefing-error-' + key + '" role="status"></span></label>';
+      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + shown(key, spec[1]) + '" max="' + shown(key, spec[2]) + '" step="' + (SCALE[key] ? String(1 / SCALE[key]) : integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-error-' + key + '" value="' + shown(key) + '"><span id="briefing-error-' + key + '" role="status"></span></label>';
     }).join('') + '</details>';
   }
   function thresholdEvidence(line) {
     var keys = { 'sales-drop': ['salesDrop','samples'], 'low-stock': ['stockFactor'], 'margin-erosion': ['marginDrop','coverage','coverageGap'], 'cancellation-rate': ['share','multiple','events','samples'], 'discount-share': ['share','multiple','events','samples'], 'cash-gap': ['cashCents'], weather: ['weatherEffect','rainMm','weatherDays'], 'planning-gap': ['planningMinutes'], 'late-orders': ['lateMultiple','lateMinutes','samples','lateSamples'] };
     var used = keys[line.kind] || (/^late-orders-/.test(line.kind) ? keys['late-orders'] : []);
-    line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + used.map(function (k) { var spec = LIMITS[k]; return spec[lang() === 'ar' ? 5 : lang() === 'en' ? 4 : 3] + ' ' + limit(k); }).join(', ');
+    if (!used.length) return line;
+    var list = function (L) { return used.map(function (k) { return LIMITS[k][L === 'ar' ? 5 : L === 'en' ? 4 : 3] + ' ' + num(shown(k), L); }).join(', '); };
+    line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + list(lang());
+    if (line.evidence.text) ['fr', 'en', 'ar'].forEach(function (L) {
+      if (line.evidence.text[L]) line.evidence.text[L] = (line.evidence.text[L] + ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L)).slice(0, 400);
+    });
     return line;
   }
   var doc = { days: [] };
@@ -247,7 +268,26 @@
     var count = Number(value.count);
     var windowLabel = String(value.window || '').trim().slice(0, 120);
     var source = String(value.source || '').trim().slice(0, 120);
-    return Number.isFinite(count) && count >= 0 && windowLabel && source ? { count: count, window: windowLabel, source: source } : null;
+    if (!(Number.isFinite(count) && count >= 0 && windowLabel && source)) return null;
+    var out = { count: count, window: windowLabel, source: source };
+    if (value.text && typeof value.text === 'object') {
+      var text = {};
+      ['fr', 'en', 'ar'].forEach(function (L) { var v = String(value.text[L] || '').trim().slice(0, 400); if (v) text[L] = v; });
+      if (Object.keys(text).length) out.text = text;
+    }
+    return out;
+  }
+  /* Le pied de preuve lisible : le nombre mesuré, la période et d'où vient le
+   * chiffre, en mots du commerçant. `window` et `source` restent la trace
+   * interne (et ce qu'affiche encore un appareil qui n'a pas cette version). */
+  function said(count, win, src) {
+    var out = {};
+    ['fr', 'en', 'ar'].forEach(function (L) { out[L] = count + ' · ' + (typeof win === 'string' ? win : win[L]) + ' · ' + src[L]; });
+    return out;
+  }
+  function evidenceText(line, wanted) {
+    var e = line && line.evidence || {};
+    return (e.text && e.text[lang(wanted)]) || (e.count + ' · ' + e.window + ' · ' + e.source);
   }
   function normalizeLine(value) {
     if (!value || typeof value !== 'object') return null;
@@ -383,7 +423,8 @@
         en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -' + limit('salesDrop') + '%.',
         ar: 'انخفضت المبيعات بنسبة ' + drop + '٪: ' + cur + ' درهم حتى ' + time + '، مقابل ' + wd + ' درهم في الأيام المماثلة و' + tr7 + ' درهم خلال آخر 7 أيام. العتبة: -' + limit('salesDrop') + '٪.'
       },
-      evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet' }
+      evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet',
+        text: said(current.count, day + ' · 05:00-' + time, { fr: 'ventes de la caisse, historique complet', en: 'till sales, full history', ar: 'مبيعات الصندوق، السجل كاملا' }) }
     };
   }
   function stockItems() {
@@ -435,7 +476,16 @@
       evidence: {
         count: 2,
         window: String(currentDay || 'période') + ' vs ' + String(baselineDay || 'référence'),
-        source: 'KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré'
+        source: 'KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré',
+        text: said(2, {
+          fr: String(currentDay || 'période') + ' comparé à ' + String(baselineDay || 'la référence'),
+          en: String(currentDay || 'period') + ' versus ' + String(baselineDay || 'baseline'),
+          ar: String(currentDay || 'الفترة') + ' مقارنة ب' + String(baselineDay || 'المرجع')
+        }, {
+          fr: 'ventes avec un coût renseigné : ' + num(pct(currentCoverage), 'fr') + ' % contre ' + num(pct(baselineCoverage), 'fr') + ' %',
+          en: 'sales with a known cost: ' + num(pct(currentCoverage), 'en') + '% versus ' + num(pct(baselineCoverage), 'en') + '%',
+          ar: 'مبيعات بتكلفة مسجلة: ' + num(pct(currentCoverage), 'ar') + '٪ مقابل ' + num(pct(baselineCoverage), 'ar') + '٪'
+        })
       }
     };
   }
@@ -472,7 +522,8 @@
         en: low.length + ' item' + (low.length > 1 ? 's are' : ' is') + ' below reorder level: ' + names + extra + '. Coverage: ' + coverageEn + '.',
         ar: low.length + ' من الأصناف تحت عتبة إعادة الطلب: ' + names + extra + '. التغطية: ' + coverageAr + '.'
       },
-      evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance' }
+      evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance',
+        text: typeof said !== 'function' ? undefined : said(tracked.length, { fr: 'stock actuel · ' + businessDay(Date.now()), en: 'current stock · ' + businessDay(Date.now()), ar: 'المخزون الحالي · ' + businessDay(Date.now()) }, { fr: 'articles suivis en stock', en: 'tracked stock items', ar: 'أصناف المخزون المتابعة' }) }
     };
   }
   function minute(value) {
@@ -528,9 +579,15 @@
         en: 'The published schedule leaves part of an opening period uncovered.',
         ar: 'يترك الجدول المنشور جزءًا من فترة الافتتاح دون تغطية.'
       },
-      evidence: { count: openings.length, window: String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), source: 'planning publié + KiwiHours.periodsOn' },
+      evidence: { count: openings.length, window: String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), source: 'planning publié + KiwiHours.periodsOn',
+        text: said(openings.length, String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), { fr: 'planning publié et horaires d’ouverture', en: 'published schedule and opening hours', ar: 'الجدول المنشور وساعات الافتتاح' }) },
       action: { name: 'open-planning', args: {}, summary: 'Ouvrir le planning' }
     };
+  }
+  /* Le seuil que la règle vient d'appliquer, réglage du commerçant compris. */
+  function shareThreshold(L) {
+    var share = num(limit('share'), L), multiple = num(limit('multiple'), L);
+    return { fr: ' Seuil : au moins ' + share + ' % et ' + multiple + '× la référence.', en: ' Threshold: at least ' + share + '% and ' + multiple + '× baseline.', ar: ' العتبة: ' + share + '٪ على الأقل و' + multiple + '× المرجع.' }[L];
   }
   function cancellationRateRule(input) {
     input = input || {};
@@ -575,11 +632,12 @@
     return {
       id: 'cancellation-rate:' + String(day || 'day'), kind: 'cancellation-rate', tone: 'warn', roles: ['owner', 'manager'],
       copy: {
-        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + motive.fr + ' (' + top.count + ').' + by.fr + ' Seuil : au moins 5 % et 2× la référence.',
-        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + motive.en + ' (' + top.count + ').' + by.en + ' Threshold: at least 5% and 2× baseline.',
-        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + motive.ar + ' (' + top.count + ').' + by.ar + ' العتبة: 5٪ على الأقل وضعف المرجع.'
+        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + motive.fr + ' (' + top.count + ').' + by.fr + shareThreshold('fr'),
+        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + motive.en + ' (' + top.count + ').' + by.en + shareThreshold('en'),
+        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + motive.ar + ' (' + top.count + ').' + by.ar + shareThreshold('ar')
       },
-      evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list' }
+      evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list',
+        text: said(current.cancellations, { fr: String(day || '') + ' · comparé au même jour des 4 semaines précédentes', en: String(day || '') + ' · compared with the same weekday over the previous 4 weeks', ar: String(day || '') + ' · مقارنة بنفس اليوم خلال الأسابيع الأربعة السابقة' }, { fr: 'annulations et ventes de la caisse', en: 'till cancellations and sales', ar: 'إلغاءات ومبيعات الصندوق' }) }
     };
   }
   function discountShareRule(input) {
@@ -625,11 +683,12 @@
     return {
       id: 'discount-share:' + String(day || 'day'), kind: 'discount-share', tone: 'warn', roles: ['owner'],
       copy: {
-        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Surtout accordées par ' + actor.fr + '. Seuil : au moins 5 % et 2× la référence.',
-        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Mostly granted by ' + actor.en + '. Threshold: at least 5% and 2× baseline.',
-        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. منحها أساساً: ' + actor.ar + '. العتبة: 5٪ على الأقل وضعف المرجع.'
+        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Surtout accordées par ' + actor.fr + '.' + shareThreshold('fr'),
+        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Mostly granted by ' + actor.en + '.' + shareThreshold('en'),
+        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. منحها أساساً: ' + actor.ar + '.' + shareThreshold('ar')
       },
-      evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents' }
+      evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents',
+        text: said(current.discountedCount, { fr: String(day || '') + ' · comparé au même jour des 4 semaines précédentes', en: String(day || '') + ' · compared with the same weekday over the previous 4 weeks', ar: String(day || '') + ' · مقارنة بنفس اليوم خلال الأسابيع الأربعة السابقة' }, { fr: 'remises et ventes brutes de la caisse', en: 'till discounts and gross sales', ar: 'تخفيضات الصندوق والمبيعات الإجمالية' }) }
     };
   }
 
@@ -663,11 +722,12 @@
     return {
       id: 'cash-gap:' + day, kind: 'cash-gap', tone: 'warn', roles: ['owner'],
       copy: {
-        fr: 'Écart de caisse de ' + gapLabel + ' MAD, seuil visible ' + thresholdLabel + ' MAD.',
+        fr: 'Écart de caisse de ' + gapLabel.replace('.', ',') + ' MAD, seuil visible ' + thresholdLabel.replace('.', ',') + ' MAD.',
         en: 'Cash gap of ' + gapLabel + ' MAD, visible threshold ' + thresholdLabel + ' MAD.',
-        ar: 'فرق الصندوق ' + gapLabel + ' MAD، والحد الظاهر ' + thresholdLabel + ' MAD.'
+        ar: 'فرق الصندوق ' + gapLabel.replace('.', ',') + ' MAD، والحد الظاهر ' + thresholdLabel.replace('.', ',') + ' MAD.'
       },
-      evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD' }
+      evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD',
+        text: said(reconciliations.length, day, { fr: 'clôtures et passations de caisse', en: 'till closings and handovers', ar: 'إغلاقات الصندوق وعمليات التسليم' }) }
     };
   }
 
@@ -697,7 +757,8 @@
         en: 'Rain forecast ' + (tomorrow ? 'tomorrow' : 'today') + ' in ' + data.city + ' (' + mmEn + ' mm). On rainy days your takings have been ' + pct + '% ' + (down ? 'lower' : 'higher') + ' than on dry days.',
         ar: 'يُتوقع المطر ' + (tomorrow ? 'غدا' : 'اليوم') + ' في ' + data.city + ' (' + mm + ' مم). في الأيام الممطرة كان رقم معاملاتك ' + (down ? 'أقل' : 'أعلى') + ' بنسبة ' + pct + '٪ من الأيام الجافة.'
       },
-      evidence: { count: effect.rainDays + effect.dryDays, window: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', source: 'MET Norway · KiwiSales' }
+      evidence: { count: effect.rainDays + effect.dryDays, window: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', source: 'MET Norway · KiwiSales',
+        text: said(effect.rainDays + effect.dryDays, { fr: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', en: effect.rainDays + ' rainy days · ' + effect.dryDays + ' dry days', ar: effect.rainDays + ' أيام ممطرة · ' + effect.dryDays + ' أيام جافة' }, { fr: 'MET Norway et vos ventes', en: 'MET Norway and your sales', ar: 'MET Norway ومبيعاتك' }) }
     };
   }
   /* La prévision, dans l'en-tête du point du matin : aujourd'hui et demain. */
@@ -753,11 +814,13 @@
       return {
         id: 'late-orders:' + key + ':' + day, kind: 'late-orders-' + key, tone: 'warn', roles: ['owner', 'manager'],
         copy: {
-          fr: labelFr + ' médian ' + nowMin + ' min contre ' + baseMin + ' min, alerte à 1,5× et +5 min.',
-          en: labelEn + ' median ' + nowMin + ' min versus ' + baseMin + ' min, alert at 1.5x and +5 min.',
-          ar: labelAr + ' ' + nowMin + ' دقيقة مقابل ' + baseMin + ' دقيقة، التنبيه عند 1.5x و+5 دقائق.'
+          fr: labelFr + ' médian ' + nowMin + ' min contre ' + baseMin + ' min, alerte à ' + num(limit('lateMultiple'), 'fr') + '× et +' + limit('lateMinutes') + ' min.',
+          en: labelEn + ' median ' + nowMin + ' min versus ' + baseMin + ' min, alert at ' + num(limit('lateMultiple'), 'en') + 'x and +' + limit('lateMinutes') + ' min.',
+          ar: labelAr + ' ' + nowMin + ' دقيقة مقابل ' + baseMin + ' دقيقة، التنبيه عند ' + num(limit('lateMultiple'), 'ar') + 'x و+' + limit('lateMinutes') + ' دقائق.'
         },
-        evidence: { count: nowRows.length, window: day + ' · baseline 28 jours (' + baseRows.length + ')', source: 'order_course.' + key }
+        evidence: { count: nowRows.length, window: day + ' · baseline 28 jours (' + baseRows.length + ')', source: 'order_course.' + key,
+          text: said(nowRows.length, { fr: day + ' · référence sur 28 jours (' + baseRows.length + ')', en: day + ' · 28-day reference (' + baseRows.length + ')', ar: day + ' · مرجع 28 يوما (' + baseRows.length + ')' },
+            key === 'kitchen' ? { fr: 'commandes envoyées en cuisine', en: 'orders sent to the kitchen', ar: 'الطلبات المرسلة إلى المطبخ' } : { fr: 'commandes servies après préparation', en: 'orders served after preparation', ar: 'الطلبات المقدمة بعد التحضير' }) }
       };
     }
     return [
@@ -942,7 +1005,7 @@
     var t = tr(), lines = activeLines(tier());
     var body = lines.length ? lines.map(function (line) {
       return '<article class="briefing-line"><div class="hai-rec-title">' + esc(lineText(line)) + '</div><div class="briefing-evidence">' +
-        esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
+        esc(evidenceText(line)) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
     var failed = current() && current().unavailable || [];
     if (failed.length) {
@@ -970,7 +1033,7 @@
     var failed = current() && current().unavailable || [];
     if (failed.length) return { text: t.analysisFailed + ' · ' + failed.map(function (name) { var index = RULES.findIndex(function (rule) { return rule.name === name; }); return t.ruleNames[index] || t.analysisFailed; }).join(', ') };
     if (!lines.length) return { text: '<b>' + t.empty + '</b> ' + t.emptyNote };
-    return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source }; }) };
+    return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: evidenceText(line, opts && opts.lang) }; }) };
   }
   function attachCloud() {
     if (cloud || !isReal() || !slug() || !window.KiwiCloudDoc || !window.KiwiCloudDoc.attach) return;
@@ -1015,12 +1078,14 @@
   document.addEventListener('change', function (event) {
     var input = event.target;
     if (!input.getAttribute || !input.getAttribute('data-briefing-limit')) return;
-    var value = {}, key = input.getAttribute('data-briefing-limit');
-    value[key] = input.value.trim() === '' ? NaN : Number(input.value);
+    var value = {}, key = input.getAttribute('data-briefing-limit'), scale = SCALE[key] || 1;
+    var typed = input.value.trim() === '' ? NaN : Number(input.value) * scale;
+    /* Un réglage en dirhams s'arrête au centime : 1,234 MAD est refusé, pas arrondi en silence. */
+    value[key] = scale > 1 && Math.abs(typed - Math.round(typed)) > 1e-6 ? NaN : scale > 1 ? Math.round(typed) : typed;
     var ok = setSettings(value);
     input.setAttribute('aria-invalid', String(!ok));
     var message = document.getElementById('briefing-error-' + key);
-    if (message) message.textContent = ok ? '' : [tr().invalidLimit.replace('{min}', LIMITS[key][1]).replace('{max}', LIMITS[key][2]), integerLimit(key) ? tr().integerOnly : ''].filter(Boolean).join(' ');
+    if (message) message.textContent = ok ? '' : [tr().invalidLimit.replace('{min}', num(shown(key, LIMITS[key][1]), lang())).replace('{max}', num(shown(key, LIMITS[key][2]), lang())), integerLimit(key) && !SCALE[key] ? tr().integerOnly : ''].filter(Boolean).join(' ');
   });
   window.KiwiBriefing = {
     setSettings: setSettings, settings: function () { return clone(own().settings || {}); },

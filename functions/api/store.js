@@ -1,5 +1,6 @@
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 import { cleanFloorplan } from './_rules-floorplan-clean.js';
+import { cleanBriefingSettings } from './_briefing-settings.js';
 import { refundCreditBook } from './_credit-book-refund.js';
 import { BOOK_FEATURE, commitBook, getVerticalOps, legacyBook, readBook, withBook, withoutBook } from './_credit-book-store.js';
 import { serviceCapacityConflict } from './_booking-capacity.js';
@@ -1156,7 +1157,7 @@ export async function onRequestPost(context) {
     if (text.length > FEATURES[feature].max) return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
   }
   if (feature === 'briefing') {
-    clean.value = ownBriefingDays(clean.value, merchant);
+    clean.value = cleanBriefingSettings(ownBriefingDays(clean.value, merchant));
     text = JSON.stringify(clean.value);
   }
   if (feature === PRINT_HUB_FEATURE) {
