@@ -361,12 +361,18 @@ window.KiwiStockInternal.install('intake', (S) => {
     try {
       const raw = window.localStorage.getItem(stIntakeOutboxKey());
       const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr.filter((e) => e && typeof e.docId === 'string').slice(-50) : [];
+      return Array.isArray(arr) ? arr.filter((e) => e && typeof e.docId === 'string') : [];
     } catch (_) { return []; }
   }
 
+  /* Aucune borne : chaque réception non envoyée reste dans la file jusqu'à
+   * son marquage (une entrée pèse ~60 octets). Renvoie false si le stockage
+   * refuse l'écriture : l'appelant doit alors le dire à l'utilisateur. */
   function stIntakeOutboxWrite(list) {
-    try { window.localStorage.setItem(stIntakeOutboxKey(), JSON.stringify((list || []).slice(-50))); } catch (_) {}
+    try {
+      window.localStorage.setItem(stIntakeOutboxKey(), JSON.stringify(list || []));
+      return true;
+    } catch (_) { return false; }
   }
 
   function stIntakePostedKey() { return 'kiwi:intakePosted:v1:' + (stIntakeMerchant() || 'local'); }
@@ -1342,7 +1348,7 @@ window.KiwiStockInternal.install('intake', (S) => {
         stIntakePostedAdd(intakeDocId);
         try {
           const marked = await stIntakeMarkOnce(intakeDocId);
-          if (!marked) window.Kiwi.toast?.(t('mScanMarkRetry'), { type: 'warn' });
+          if (!marked) window.Kiwi.toast?.(t(stIntakeOutboxRead().some((e) => e.docId === intakeDocId) ? 'mScanMarkRetry' : 'mScanOutboxLost'), { type: 'warn', duration: 8000 });
         } catch (_) {}
       }
       closeTopModal();

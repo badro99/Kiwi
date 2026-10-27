@@ -175,7 +175,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=53',
+  '/assets/pages/dashboard-startup.js?v=55',
   '/assets/pages/dashboard-loader.js?v=23',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -389,12 +389,12 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=11',
-  '/assets/stock/strings.js?v=2',
-  '/assets/stock.js?v=90',
+  '/assets/stock/strings.js?v=4',
+  '/assets/stock.js?v=92',
   '/assets/stock/loss.js?v=1',
   '/assets/stock/counts.js?v=5',
   '/assets/stock/purchasing.js?v=2',
-  '/assets/stock/intake.js?v=7',
+  '/assets/stock/intake.js?v=9',
   '/assets/stock/catalog.js?v=3',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
@@ -450,7 +450,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=23',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=18',
-  '/assets/pos-dispatch.js?v=201',
+  '/assets/pos-dispatch.js?v=203',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -534,12 +534,12 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=132',
-  '/assets/pos-boutique/sales.js?v=35',
+  '/assets/pos-boutique.css?v=134',
+  '/assets/pos-boutique/sales.js?v=37',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=35',
-  '/assets/pos-boutique/inventory.js?v=35',
-  '/assets/pos-boutique.js?v=132',
+  '/assets/pos-boutique/checkout.js?v=37',
+  '/assets/pos-boutique/inventory.js?v=37',
+  '/assets/pos-boutique.js?v=134',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

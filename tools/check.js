@@ -2341,6 +2341,8 @@ section('Whole-project regressions');
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',
     'intake-slice1-test.mjs',
+    'stock-intake-outbox-test.mjs',
+    'exchange-promo-rule-test.mjs',
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',

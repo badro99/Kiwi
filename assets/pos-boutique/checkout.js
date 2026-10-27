@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=132';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=35';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=35';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=134';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=37';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=37';
 import { ticketOwner } from './ticket-owner.js?v=1';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
@@ -397,6 +397,11 @@ const M = globalThis.KiwiMoney;
   }
 
   /* ---------- exchange summary ---------- */
+  /* Le prix de la pièce de remplacement (newUnit, plus bas) suit la règle d'une vente : le meilleur
+     de la remise du rayon et de la promotion en vigueur, celle de la grille
+     (lineUnit, donc la règle partagée des promotions), jamais le prix de
+     rayon brut. Sans cela, l'étiquette promo lue par la cliente et la
+     différence encaissée à l'échange se contredisaient. */
   function openExchSummary(newPid, newSize, newColor) {
     const ex = state.exchange;
     if (!ex) return;
@@ -409,7 +414,8 @@ const M = globalThis.KiwiMoney;
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Article de remplacement introuvable')); return; }
-    const diff = M.toMad(M.toCents(shelf(newP.price)) - M.toCents(paidUnit(sale, ln)));
+    const newUnit = lineUnit({ pid: newPid, remise: 0 });
+    const diff = M.toMad(M.toCents(newUnit) - M.toCents(paidUnit(sale, ln)));
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
     el.innerHTML = `
@@ -424,7 +430,7 @@ const M = globalThis.KiwiMoney;
       <div class="bq-exch-row is-new">
         <span class="bq-line-art">${artOf(newP.art)}</span>
         <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
-        <span class="amt">+${fmtMAD(shelf(newP.price))}</span>
+        <span class="amt">+${fmtMAD(newUnit)}</span>
       </div>
       <div class="bq-exch-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero'}">
         <span>${diff > 0 ? 'Différence à encaisser' : diff < 0 ? 'Différence en faveur de la cliente, part en avoir' : 'Aucun écart, échange direct'}</span>
@@ -452,7 +458,7 @@ const M = globalThis.KiwiMoney;
       if (IS_DEMO || state.offline || !cat || !cat.reserveSale) return Promise.resolve({ ok: false, offline: true });
       /* le registre des mouvements écoute avant que la pièce de remplacement sorte */
       try { window.KiwiMaisonStock?.enable('boutique'); } catch (_) {}
-      return cat.reserveSale(stockRef, [{ pid: newPid, size: newSize, color: colorKey(newPid, newColor), qty: 1, price: shelf(newP.price) }]);
+      return cat.reserveSale(stockRef, [{ pid: newPid, size: newSize, color: colorKey(newPid, newColor), qty: 1, price: newUnit }]);
     };
     const apply = (reserved) => {
       if (applied) return true;
