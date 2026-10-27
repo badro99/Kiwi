@@ -10,6 +10,9 @@ import { tenantFor } from '../_private.js';
 import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
 
 const PAGE = 500;
+/* Même recul que la file des commandes (CURSOR_LAG_MS, order/_lib.js). Pas
+ * importé de là : ce module-là tire les règles de promotion du navigateur. */
+const CURSOR_LAG_MS = 2000;
 const REASONS = new Set([
   'opening', 'receipt', 'supplier-return', 'sale', 'sale-reversal',
   'production-input', 'production-output', 'transfer-out', 'transfer-in',
@@ -18,7 +21,7 @@ const REASONS = new Set([
 
 /* Deux familles de motifs, deux autorités.
  *
- * `sale`, `sale-reversal` et la production sont AUTOMATIQUES : c'est la caisse
+ * `sale` et `sale-reversal` sont AUTOMATIQUES : c'est la caisse
  * qui les écrit en encaissant, elle doit continuer à le faire sans rien demander.
  * Tous les autres sont DISCRÉTIONNAIRES — quelqu'un décide que de la marchandise
  * a été perdue, offerte, transférée ou reçue — et c'est par là que passait la
@@ -27,9 +30,14 @@ const REASONS = new Set([
  * collègue. Le système interdit pourtant déjà ce geste ailleurs : operations.js
  * refuse `write:inventory` au rôle caisse, et counts.js exige le propriétaire
  * pour valider un écart. C'était un chemin parallèle vers un état interdit. */
-const AUTOMATIC_REASONS = new Set([
-  'sale', 'sale-reversal', 'production-input', 'production-output',
-]);
+/* La production n'a aucun auteur automatique (aucun écran ne l'écrit) : la
+ * laisser passer depuis une caisse ouvrait une sortie sans contrôle. Elle
+ * suit donc la règle des motifs discrétionnaires. Et un motif automatique
+ * n'a qu'un sens : une vente sort du stock, son annulation y revient. Une
+ * « vente » positive ou une « annulation » négative n'est pas une vente, c'est
+ * un ajustement déguisé. */
+const AUTOMATIC_REASONS = new Set(['sale', 'sale-reversal']);
+const REASON_SIGN = { 'sale': -1, 'sale-reversal': 1, 'production-input': -1, 'production-output': 1 };
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const finite = (v) => Number.isFinite(Number(v)) ? Number(v) : null;
@@ -89,7 +97,8 @@ function sanitize(raw, now) {
 function valid(m) {
   return !!(m.id && m.itemId && REASONS.has(m.reason)
     && Number.isSafeInteger(m.qtyMilli) && m.qtyMilli !== 0
-    && Math.abs(m.qtyMilli) <= 1e12);
+    && Math.abs(m.qtyMilli) <= 1e12
+    && (!REASON_SIGN[m.reason] || Math.sign(m.qtyMilli) === REASON_SIGN[m.reason]));
 }
 
 /* Lecture du coût : le taux ×1e-4 prime ; les lignes historiques (taux NULL)
@@ -231,6 +240,13 @@ export async function onRequestGet({ request, env }) {
   }
 
   const since = Math.max(0, Math.round(Number(url.searchParams.get('since')) || 0));
+  /* Le curseur rendu reste CURSOR_LAG_MS derrière l'horloge, comme celui de la
+   * file des commandes (order/_lib.js). Une écriture prend son numéro
+   * (nextCursor) PUIS insère : entre les deux, une autre caisse peut insérer
+   * un numéro plus grand et un lecteur avancer au-delà. La ligne qui arrive
+   * ensuite, sous son curseur, n'était jamais relue. Les lignes récentes sont
+   * renvoyées quand même ; la caisse les dédoublonne par id. */
+  const settled = Date.now() - CURSOR_LAG_MS;
   try {
     const res = await env.DB.prepare(
       `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
@@ -243,7 +259,8 @@ export async function onRequestGet({ request, env }) {
     const rows = (res && res.results) || [];
     let cursor = since;
     const movements = rows.map((r) => {
-      cursor = Math.max(cursor, Number(r.srv_ts || 0));
+      const srv = Number(r.srv_ts || 0);
+      if (srv <= settled) cursor = Math.max(cursor, srv);
       let meta = null; try { meta = r.meta ? JSON.parse(r.meta) : null; } catch (_) {}
       return {
         id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: scope.projectLocation(r.location_id),
@@ -254,7 +271,12 @@ export async function onRequestGet({ request, env }) {
         reversalOf: r.reversal_of, meta,
       };
     });
-    return json({ merchant, movements, cursor, more: rows.length === PAGE, scope: scope.metadata() });
+    /* Page pleine : `next` est le numéro de sa dernière ligne, pour lire la
+     * page suivante dans le même tour ; `cursor` reste le seul qu'on garde.
+     * `more` ne vaut que si `cursor` avance : une caisse d'avant `next` ne
+     * relit donc jamais la même page en boucle. */
+    const next = rows.length === PAGE ? Number(rows[rows.length - 1].srv_ts || 0) : 0;
+    return json({ merchant, movements, cursor, next, more: rows.length === PAGE && cursor > since, scope: scope.metadata() });
   } catch (_) { return json({ error: 'db' }, 503); }
 }
 

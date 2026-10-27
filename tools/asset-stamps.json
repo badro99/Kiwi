@@ -116,12 +116,12 @@
     "sha": "ba16f4a25ed44a2f"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "10",
-    "sha": "fe6cdfc472bfbae3"
+    "v": "11",
+    "sha": "441163ea6fb676f1"
   },
   "assets/boutique-catalog.js": {
-    "v": "18",
-    "sha": "990fbf81aeefe5e0"
+    "v": "19",
+    "sha": "56acd490e9515a33"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "21",
@@ -284,8 +284,8 @@
     "sha": "4cb11e74a39c8216"
   },
   "assets/catalog-import.js": {
-    "v": "12",
-    "sha": "7a8f7b5d42e7faa0"
+    "v": "13",
+    "sha": "4a6e36e3db3be0ea"
   },
   "assets/catalog-workspace.css": {
     "v": "24",
@@ -720,8 +720,8 @@
     "sha": "fe4026ec50814736"
   },
   "assets/inventory-ledger.js": {
-    "v": "16",
-    "sha": "063ed65443bfff2a"
+    "v": "17",
+    "sha": "21223ad72de672f1"
   },
   "assets/invoice.js": {
     "v": "20",
@@ -1272,8 +1272,8 @@
     "sha": "60fa4371f8df388e"
   },
   "assets/orderpro-publish.js": {
-    "v": "7",
-    "sha": "169dccbf1fd09a74"
+    "v": "8",
+    "sha": "881cebc3175e461a"
   },
   "assets/orderpro/cart.js": {
     "v": "3",
@@ -1336,8 +1336,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "21",
-    "sha": "944d1ca9686b4326"
+    "v": "22",
+    "sha": "23513e703e69026f"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "44",

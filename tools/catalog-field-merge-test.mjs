@@ -148,6 +148,26 @@ check('a record written by older code merges whole, as before', () => {
 });
 
 /* 6 · property: three devices, random field edits and syncs, converge. */
+check('one barcode attached offline to two variants ends on one owner, the same on every device', () => {
+  let srv = shop();
+  srv.variants.push({ id: 'v1', productId: 'p0', size: 'L', colorId: 'noir', note: '', stock: 2, base: 2, baseAt: T0, metaAt: T0, barcodes: [], barcodeRemoved: {} });
+  let till = clone(srv), dash = clone(srv);
+  // The till scans an old label onto M, the dashboard onto L a minute later.
+  till.variants.find((v) => v.id === 'v0').barcodes.push({ code: '3100000000017', type: 'imported', primary: true, at: T0 + 1000 });
+  dash.variants.find((v) => v.id === 'v1').barcodes.push({ code: '3100000000017', type: 'imported', primary: true, at: T0 + 60000 });
+  [dash, srv] = sync(dash, srv, T0 + 61000);
+  [till, srv] = sync(till, srv, T0 + 62000);
+  [dash, srv] = sync(dash, srv, T0 + 63000);
+  for (const doc of [srv, till, dash]) {
+    const holders = doc.variants.filter((v) => (v.barcodes || []).some((b) => b.code === '3100000000017')).map((v) => v.id);
+    assert.deepEqual(holders, ['v0'], 'only the first assignment keeps the code');
+    assert.ok(doc.variants.find((v) => v.id === 'v1').barcodeRemoved['3100000000017'] >= T0 + 60000,
+      'the later assignment loses it by a dated removal');
+  }
+  const again = rules.mergeDocs(clone(srv), clone(till), T0 + 64000);
+  assert.ok(!again.ahead.mine && !again.ahead.theirs, 'once settled, a further merge has nothing to say');
+});
+
 let fc; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-check'); } catch { fc = null; }
 if (!fc) {
   if (process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1' && process.argv.includes('--require-properties')) { console.error('✗ fast-check absent'); process.exit(1); }

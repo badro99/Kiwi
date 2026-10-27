@@ -116,6 +116,23 @@ ok(/state\.checkoutBusy \|\| \(root && \$\$\('\.modal-veil\.is-open'/.test(pos),
         `${max + 1} ${field} : refus 413 explicite (catalog-too-large), pas de troncature — obtenu ${r.status} ${JSON.stringify(r.j).slice(0, 120)}`);
       eq(rows(), 0, `${field} hors borne : rien n'est écrit en ligne`);
     }
+    /* Décision wave Q : une quantité fractionnaire est refusée, pas arrondie,
+       par le serveur aussi (stock, socle, mouvement). */
+    for (const [label, data, field] of [
+      ['un stock 1,5', { ...doc({ p: 1 }), variants: [{ id: 'v0', productId: 'p0', colorId: 'noir', size: 'S', stock: 1.5 }] }, 'variants.stock'],
+      ['un socle 2,5', { ...doc({ p: 1 }), variants: [{ id: 'v0', productId: 'p0', colorId: 'noir', size: 'S', stock: 2, base: 2.5, baseAt: now }] }, 'variants.base'],
+      ['un mouvement de 0,5', { ...doc({ p: 1, v: 1 }), moves: [{ id: 'm1', vid: 'v0', d: -0.5, at: now + 1, why: 'vente' }] }, 'moves.d'],
+    ]) {
+      const r = await post(data);
+      ok(r.status === 422 && r.j.error === 'fractional-quantity' && r.j.field === field,
+        `${label} est refusé par le serveur (422 fractional-quantity), jamais arrondi — obtenu ${r.status} ${JSON.stringify(r.j).slice(0, 120)}`);
+      eq(rows(), 0, `${label} : rien n'est écrit en ligne`);
+    }
+    const fracReserve = T.stockMutation(T.sanitize(raw), {
+      stockAction: 'reserve', ref: 'sale-frac', lines: [{ pid: 'p', size: 'S', color: 'noir', qty: 0.5, price: 400 }],
+    }, now);
+    ok(!fracReserve.ok && fracReserve.error === 'fractional-quantity' && fracReserve.status === 400,
+      'une réservation de 0,5 pièce est refusée, pas arrondie à 1');
     const atMax = await post(doc({ p: 5000, v: 1, c: 200 }));
     ok(atMax.status === 200 && atMax.j.products === 5000, 'exactement 5 000 produits et 200 catégories passent, entiers');
   } finally { f.close(); }
