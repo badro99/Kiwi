@@ -49,9 +49,10 @@ async function mayCancelCredit(request, env, merchant) {
   try {
     const employee = await activeEmployee(request, env, merchant);
     const member = employee && employee.member;
-    const role = clean(member && (member.function || member.role || member.title), 80)
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    return /proprietaire|owner|gerant|manager|responsable|admin/.test(role);
+    /* Une seule règle de rôle, celle de /api/pin/verify et de issueAuthority :
+       les gabarits d'avant (« gerant|manager|admin… » cherchés dans le texte)
+       accordaient aussi « Assistant manager » et « Responsable de salle ». */
+    return employeeRoleOpensDashboard(clean(member && (member.function || member.role || member.title), 80));
   } catch (_) { return false; }
 }
 

@@ -164,8 +164,8 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "74",
-    "sha": "191b554a52f921ed"
+    "v": "76",
+    "sha": "26f4c98f4ea1d418"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -196,8 +196,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "15",
-    "sha": "ae53b0c9e4c53031"
+    "v": "16",
+    "sha": "69adc08fcab06085"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -411,9 +411,13 @@
     "v": "5",
     "sha": "5a0815b4defae865"
   },
+  "assets/day-report-conflicts.js": {
+    "v": "2",
+    "sha": "c280918a4865ae88"
+  },
   "assets/day-report-dash.js": {
-    "v": "38",
-    "sha": "19cbdc6ee15b031a"
+    "v": "39",
+    "sha": "d11c38feb5b76bbb"
   },
   "assets/day-report-export.js": {
     "v": "13",
@@ -452,8 +456,8 @@
     "sha": "f3caad37a4c63eed"
   },
   "assets/design-vexel.css": {
-    "v": "2126",
-    "sha": "93170fe8303d628a"
+    "v": "2127",
+    "sha": "a825cfb1f94a318e"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -592,8 +596,8 @@
     "sha": "52a6085dead7ab2b"
   },
   "assets/hotel-economat.js": {
-    "v": "16",
-    "sha": "85b970c21521808e"
+    "v": "17",
+    "sha": "1a6217a0324d486d"
   },
   "assets/hotel-folio.js": {
     "v": "1",
@@ -1020,8 +1024,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "21",
-    "sha": "b33214660404746f"
+    "v": "23",
+    "sha": "6d0fc0260ab81748"
   },
   "assets/kitchen-relay.js": {
     "v": "14",
@@ -1336,12 +1340,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "22",
-    "sha": "23513e703e69026f"
+    "v": "23",
+    "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "44",
-    "sha": "f0a0aea9d5a6a4f0"
+    "v": "45",
+    "sha": "5d1178d0197e73e3"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1656,16 +1660,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "39",
-    "sha": "00be0ee01385a334"
+    "v": "41",
+    "sha": "47489fabdb8e2616"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "2",
-    "sha": "820c3e8bb65bdbf9"
+    "v": "3",
+    "sha": "52baa1eec4b2c7a7"
   },
   "assets/printer/pairing-ui.js": {
-    "v": "7",
-    "sha": "76b37ed41687a2ab"
+    "v": "9",
+    "sha": "14eeed9172eafd05"
   },
   "assets/printer/transports.js": {
     "v": "2",

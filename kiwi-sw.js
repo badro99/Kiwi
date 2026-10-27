@@ -18,7 +18,8 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/printer/pairing-lang.js?v=2',
+  '/assets/day-report-conflicts.js?v=2',
+  '/assets/printer/pairing-lang.js?v=3',
   '/assets/planning/shift-editor.js?v=3',
   '/assets/planning/csv-import.js?v=3',
   '/assets/planning/optimiser.js?v=3',
@@ -142,7 +143,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=15',
+  '/assets/caisse-shell.css?v=16',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
@@ -171,14 +172,14 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=44',
-  '/assets/pages/dashboard-loader.js?v=22',
+  '/assets/pages/dashboard-startup.js?v=45',
+  '/assets/pages/dashboard-loader.js?v=23',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
   '/assets/hotel/groups.js?v=1',
   '/assets/hotel/editors.js?v=2',
   '/assets/hotel.js?v=91',
-  '/assets/hotel-economat.js?v=16',
+  '/assets/hotel-economat.js?v=17',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
   '/assets/sold-insights.js?v=15',
@@ -311,7 +312,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=34',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=38',
+  '/assets/day-report-dash.js?v=39',
   '/assets/day-report-export.js?v=13',
   '/assets/month-report.js?v=16',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -355,8 +356,8 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=15',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=39',
-  '/assets/printer/pairing-ui.js?v=7',
+  '/assets/printer-bridge.js?v=41',
+  '/assets/printer/pairing-ui.js?v=9',
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
@@ -371,7 +372,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=21',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=74',
+  '/assets/caisse-lang.js?v=76',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=6',
@@ -443,7 +444,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=21',
+  '/assets/kitchen-print-queue.js?v=23',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=17',
   '/assets/pos-dispatch.js?v=185',
