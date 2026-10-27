@@ -318,17 +318,17 @@
    * on the owner's screen. Backfill never toasts — see `backfill` in watchFeed. */
   function notifySale(s) {
     if (!s || !window.Kiwi || typeof window.Kiwi.toast !== 'function') return;
-    var mlabel = METHOD_LABEL[s.method] || (s.method || 'Vente');
+    var lang = 'fr';
+    try { lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+    var t = SALE_COPY[lang] || SALE_COPY.fr;
+    var mlabel = t.methods[s.method] || (s.method || t.other);
     try {
-      var cents = s.amountCents != null ? Number(s.amountCents) : Number(s.amount || 0) * 100;
+      var cents = s.amountCents != null ? Number(s.amountCents) : Math.round(Number(s.amount || 0) * 100);
+      var desc = mlabel + ' · ' + (s.label || t.live);
       if (cents < 0) {
-        window.Kiwi.toast('Remboursement enregistré · −' + fmtMAD(Math.abs(cents) / 100) + ' MAD', {
-          desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'info',
-        });
+        window.Kiwi.toast(t.refund + ' · −' + fmtMAD(Math.abs(cents) / 100) + ' MAD', { desc: desc, type: 'info' });
       } else {
-        window.Kiwi.toast('Vente encaissée · ' + fmtMAD(s.amount) + ' MAD', {
-          desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'success',
-        });
+        window.Kiwi.toast(t.sale + ' · ' + fmtMAD(cents / 100) + ' MAD', { desc: desc, type: 'success' });
       }
     } catch (_) {}
   }

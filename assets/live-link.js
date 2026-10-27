@@ -177,8 +177,21 @@ import {} from './live-link/sale-identity.js?v=1';
     } catch (_) { return 'cafe-atlas'; }
   }
 
-  var METHOD_LABEL = { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Partagée', credit: 'Crédit client', delivery: 'Livraison · à recevoir' };
-  function fmtMAD(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
+  /* Le toast d'une vente, dans la langue du patron et au centime près : une
+   * vente de 12,50 MAD s'annonçait « 13 MAD », en français pour tout le monde. */
+  var SALE_COPY = {
+    fr: { sale: 'Vente encaissée', refund: 'Remboursement enregistré', live: 'en direct', other: 'Vente',
+      methods: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Partagée', credit: 'Crédit client', delivery: 'Livraison · à recevoir' } },
+    en: { sale: 'Sale received', refund: 'Refund recorded', live: 'live', other: 'Sale',
+      methods: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Split', credit: 'Customer credit', delivery: 'Delivery · to collect' } },
+    ar: { sale: 'تم تحصيل بيع', refund: 'تم تسجيل استرداد', live: 'مباشر', other: 'بيع',
+      methods: { cash: 'نقدا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'دفع مقسم', credit: 'رصيد الزبون', delivery: 'توصيل · للتحصيل' } }
+  };
+  function fmtMAD(n) {
+    try { if (window.KiwiNumber && window.KiwiNumber.amount) return window.KiwiNumber.amount(n); } catch (_) {}
+    var c = Math.round(Number(n) * 100) || 0;
+    return (c / 100).toFixed(c % 100 ? 2 : 0);
+  }
 
   // Tiny DOM helper — no innerHTML anywhere (safe by construction).
   function el(tag, cls, text) {
@@ -855,17 +868,17 @@ import {} from './live-link/sale-identity.js?v=1';
    * on the owner's screen. Backfill never toasts — see `backfill` in watchFeed. */
   function notifySale(s) {
     if (!s || !window.Kiwi || typeof window.Kiwi.toast !== 'function') return;
-    var mlabel = METHOD_LABEL[s.method] || (s.method || 'Vente');
+    var lang = 'fr';
+    try { lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+    var t = SALE_COPY[lang] || SALE_COPY.fr;
+    var mlabel = t.methods[s.method] || (s.method || t.other);
     try {
-      var cents = s.amountCents != null ? Number(s.amountCents) : Number(s.amount || 0) * 100;
+      var cents = s.amountCents != null ? Number(s.amountCents) : Math.round(Number(s.amount || 0) * 100);
+      var desc = mlabel + ' · ' + (s.label || t.live);
       if (cents < 0) {
-        window.Kiwi.toast('Remboursement enregistré · −' + fmtMAD(Math.abs(cents) / 100) + ' MAD', {
-          desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'info',
-        });
+        window.Kiwi.toast(t.refund + ' · −' + fmtMAD(Math.abs(cents) / 100) + ' MAD', { desc: desc, type: 'info' });
       } else {
-        window.Kiwi.toast('Vente encaissée · ' + fmtMAD(s.amount) + ' MAD', {
-          desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'success',
-        });
+        window.Kiwi.toast(t.sale + ' · ' + fmtMAD(cents / 100) + ' MAD', { desc: desc, type: 'success' });
       }
     } catch (_) {}
   }

@@ -3053,7 +3053,7 @@ section('Politique typographique (tools/type-policy-test.js)');
  * coverage holds §10 to §18's quoted strings; sw holds the stamp layout;
  * bidi holds the isolation of every argument (its DOM half needs Chromium). */
 section('Chaînes à clé · design 2027 (strings-*-test, strings-lint)');
-for (const test of ['wave-p-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
+for (const test of ['wave-p-i18n-test.mjs', 'wave-11-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');

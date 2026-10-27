@@ -482,9 +482,10 @@
     if (!vid) {
       session.setSubmitting(false);
       if (finishButton) finishButton.disabled = false;
-      const reason = submitError && (submitError.status === 409 ? 'conflict' : submitError.status === 401 || submitError.status === 403 ? 'auth' : submitError.status === 400 || submitError.status === 422 ? 'validation' : /quota|storage/i.test(submitError.code || submitError.name || '') ? 'storage' : '');
+      const reason = submitError && (submitError.code === 'plan-limit-exceeded' || submitError.message === 'plan-limit-exceeded' ? 'plan' : submitError.status === 409 ? 'conflict' : submitError.status === 401 || submitError.status === 403 ? 'auth' : submitError.status === 400 || submitError.status === 422 ? 'validation' : /quota|storage/i.test(submitError.code || submitError.name || '') ? 'storage' : '');
       const reasons = {
         conflict: { fr: 'Cet établissement existe déjà. Vérifiez vos établissements avant de réessayer.', en: 'This business already exists. Check your businesses before retrying.', ar: 'هذه المؤسسة موجودة بالفعل. تحقق من مؤسساتك قبل إعادة المحاولة.' },
+        plan: { fr: 'Votre forfait couvre un seul établissement. Pour en ajouter un autre, passez à Kiwi Ultra.', en: 'Your plan covers one business. To add another, move to Kiwi Ultra.', ar: 'باقتك تشمل مؤسسة واحدة. لإضافة مؤسسة أخرى، انتقل إلى Kiwi Ultra.' },
         auth: { fr: 'Reconnectez-vous avec un compte autorisé à créer cet établissement.', en: 'Sign in again with an account allowed to create this business.', ar: 'سجّل الدخول مجدداً بحساب مخوّل لإنشاء هذه المؤسسة.' },
         validation: { fr: 'Vérifiez les informations saisies pour cet établissement.', en: 'Check the information entered for this business.', ar: 'تحقق من المعلومات المدخلة لهذه المؤسسة.' },
         storage: { fr: 'Le stockage est indisponible. Libérez de l’espace ou autorisez le stockage puis réessayez.', en: 'Storage is unavailable. Free space or allow storage, then retry.', ar: 'التخزين غير متاح. حرّر مساحة أو اسمح بالتخزين ثم أعد المحاولة.' },

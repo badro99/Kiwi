@@ -132,11 +132,13 @@
      * every second store is refused with "Création impossible". */
     const planExplicit = !!window.KiwiConfig?.planExplicit;
     const customCount = Object.keys(VENUES).filter(id => VENUES[id] && VENUES[id].custom && TRANSIENT_IDS.indexOf(id) < 0).length;
-    if (isRealMerchant() && planExplicit && (plan === 'basic' || plan === 'pro') && customCount >= 1) {
+    /* Basic, Plus et Pro : un établissement, comme le serveur (functions/api/config.js). */
+    if (isRealMerchant() && planExplicit && (plan === 'basic' || plan === 'plus' || plan === 'pro') && customCount >= 1) {
       if (window.Kiwi && window.Kiwi.toast) {
-        window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+        const L = window.KiwiI18n?.getLang?.() || 'fr';
+        window.Kiwi.toast({ fr: "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", en: 'Your plan covers one business. Kiwi Ultra covers as many as you need.', ar: 'باقتك تشمل مؤسسة واحدة. Kiwi Ultra تشمل عددا غير محدود.' }[L] || "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
       }
-      if (cfg.throwOnError) throw Object.assign(new Error('plan-limit-exceeded'), { status: 403 });
+      if (cfg.throwOnError) throw Object.assign(new Error('plan-limit-exceeded'), { status: 403, code: 'plan-limit-exceeded' });
       return null;
     }
     const type = ['restaurant', 'boutique', 'spa', 'hotel'].includes(cfg.type) ? cfg.type : 'restaurant';

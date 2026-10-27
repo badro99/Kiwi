@@ -1159,7 +1159,7 @@
      dans la liste de pré-cache de kiwi-sw.js. -->
 <script src="assets/venues/data.js?v=2" defer></script>
 <script src="assets/venues/helpers.js?v=2" defer></script>
-<script src="assets/venues.js?v=68" defer></script>
+<script src="assets/venues.js?v=69" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
 <script src="assets/pressing-ops.js?v=16" defer></script>
@@ -1186,11 +1186,11 @@
 <script defer src="assets/dashboard-pin-vault.js?v=4"></script>
 <script defer src="assets/identity.js?v=12"></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-<script type="module" defer src="assets/live-link.js?v=81"></script>
+<script type="module" defer src="assets/live-link.js?v=83"></script>
 <script defer src="assets/channel-sales.js?v=6"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=283"></script>
+<script defer src="assets/merchant-config.js?v=284"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=7">
@@ -1210,7 +1210,7 @@
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=11" defer></script>
 <script src="assets/onboarding-data.js?v=8" defer></script>
-<script src="assets/onboarding.js?v=2105" defer></script>
+<script src="assets/onboarding.js?v=2106" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -1311,7 +1311,7 @@
 
 <script src="assets/clients-directory.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=11" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=42" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=43" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1338,7 +1338,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=42"></script>
+<script src="assets/pages/dashboard-startup.js?v=43"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=13">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=21" defer fetchpriority="low"></script>

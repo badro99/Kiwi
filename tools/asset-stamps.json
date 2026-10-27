@@ -128,8 +128,8 @@
     "sha": "e1f2a27ec8b30d05"
   },
   "assets/briefing.js": {
-    "v": "30",
-    "sha": "859290e41499566e"
+    "v": "31",
+    "sha": "72da20864e71030c"
   },
   "assets/caisse-accounting.js": {
     "v": "11",
@@ -1092,8 +1092,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "81",
-    "sha": "e693a6b677ec08bd"
+    "v": "83",
+    "sha": "9fe8c344a804dc15"
   },
   "assets/live-link/queue-store.js": {
     "v": "2",
@@ -1176,8 +1176,8 @@
     "sha": "250909f62e2d5489"
   },
   "assets/merchant-config.js": {
-    "v": "283",
-    "sha": "494c4278ad87b58d"
+    "v": "284",
+    "sha": "ed4daeb2dfce0f31"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1212,8 +1212,8 @@
     "sha": "164e9d8c308ea77e"
   },
   "assets/onboarding.js": {
-    "v": "2105",
-    "sha": "32f3a9f871681c2c"
+    "v": "2106",
+    "sha": "93ad6e2c8536970a"
   },
   "assets/operations-ui.js": {
     "v": "30",
@@ -1340,8 +1340,8 @@
     "sha": "944d1ca9686b4326"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "42",
-    "sha": "e2e14d6ca45b9a2b"
+    "v": "43",
+    "sha": "b293f5d242845c8f"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1992,8 +1992,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "68",
-    "sha": "128b91e341f9f260"
+    "v": "69",
+    "sha": "8047865f346a9e63"
   },
   "assets/venues/data.js": {
     "v": "2",

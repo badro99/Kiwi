@@ -1,6 +1,19 @@
 
-  var METHOD_LABEL = { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Partagée', credit: 'Crédit client', delivery: 'Livraison · à recevoir' };
-  function fmtMAD(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
+  /* Le toast d'une vente, dans la langue du patron et au centime près : une
+   * vente de 12,50 MAD s'annonçait « 13 MAD », en français pour tout le monde. */
+  var SALE_COPY = {
+    fr: { sale: 'Vente encaissée', refund: 'Remboursement enregistré', live: 'en direct', other: 'Vente',
+      methods: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Partagée', credit: 'Crédit client', delivery: 'Livraison · à recevoir' } },
+    en: { sale: 'Sale received', refund: 'Refund recorded', live: 'live', other: 'Sale',
+      methods: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Split', credit: 'Customer credit', delivery: 'Delivery · to collect' } },
+    ar: { sale: 'تم تحصيل بيع', refund: 'تم تسجيل استرداد', live: 'مباشر', other: 'بيع',
+      methods: { cash: 'نقدا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'دفع مقسم', credit: 'رصيد الزبون', delivery: 'توصيل · للتحصيل' } }
+  };
+  function fmtMAD(n) {
+    try { if (window.KiwiNumber && window.KiwiNumber.amount) return window.KiwiNumber.amount(n); } catch (_) {}
+    var c = Math.round(Number(n) * 100) || 0;
+    return (c / 100).toFixed(c % 100 ? 2 : 0);
+  }
 
   // Tiny DOM helper — no innerHTML anywhere (safe by construction).
   function el(tag, cls, text) {
