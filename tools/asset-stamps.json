@@ -324,8 +324,8 @@
     "sha": "d443db736550a2e9"
   },
   "assets/cloud-doc.js": {
-    "v": "12",
-    "sha": "b5ec40cb17ae6257"
+    "v": "13",
+    "sha": "d46a972b4f7bbcb7"
   },
   "assets/color-palette.js": {
     "v": "6",
@@ -516,8 +516,8 @@
     "sha": "1b89e9b34cd03ac6"
   },
   "assets/floorplan-core.js": {
-    "v": "2059",
-    "sha": "e8697b791688b1d1"
+    "v": "2060",
+    "sha": "4cbb57e3ba5225e6"
   },
   "assets/floorplan-live.js": {
     "v": "8",
@@ -1312,8 +1312,8 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2188",
-    "sha": "64b4100169e89a82"
+    "v": "2189",
+    "sha": "555599b9c956deb6"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "8",
@@ -1340,24 +1340,24 @@
     "sha": "944d1ca9686b4326"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "40",
-    "sha": "f4e8a35e7be9a1b1"
+    "v": "41",
+    "sha": "75096bd1ad8c8b51"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
     "sha": "6474f5c90dfe0062"
   },
   "assets/pages/tables-drawing.js": {
-    "v": "2",
-    "sha": "8481935a72eabc60"
+    "v": "3",
+    "sha": "7a1721405c5baaac"
   },
   "assets/pages/tables-operations.js": {
     "v": "2",
     "sha": "0dd9587b849a8c1c"
   },
   "assets/pages/tables.js": {
-    "v": "3",
-    "sha": "bf7fc08bc7ab9bdf"
+    "v": "4",
+    "sha": "58807c0272c55d44"
   },
   "assets/pairing-commit.js": {
     "v": "2",

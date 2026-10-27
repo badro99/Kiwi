@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import serveurSource from './serveur-source.cjs';
 import caisseWorkflowSource from './caisse-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
+import { concatParts } from './concat-parts.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
@@ -216,7 +217,9 @@ const serveurParts = new Set([...serveurSource.fragments().map(m => m.file), JSO
 const pressingSplit = JSON.parse(read('tools/fixtures/pressing/split.json'));
 const coreParts = new Set([pressingSplit.owner.file, ...pressingSplit.parts.map(part => part.file), ...JSON.parse(read('tools/fixtures/home-split/split.json')).parts.map(p => p.file), 'assets/orderpro/session.js', 'assets/orderpro/table.js', 'assets/orderpro/menu.js', 'assets/orderpro/cart.js', 'assets/orderpro/payment.js', 'assets/daterange/renderers.js', 'assets/agent/ui.js',
   ...JSON.parse(read('tools/fixtures/venues-split/split.json')).parts]);
-for (const f of files.filter(file => !serveurParts.has(file) && !caisseParts.has(file) && !coreParts.has(file))) {
+// The parts of a concatenation split are counted once, through the bundle the page loads.
+const bundleParts = concatParts(ROOT);
+for (const f of files.filter(file => !serveurParts.has(file) && !caisseParts.has(file) && !coreParts.has(file) && !bundleParts.has(file))) {
   const n = countDataLucide(f === 'assets/orderpro-page.js' ? orderProSplit.orderProScriptSource() : f === 'assets/serveur-app.js' ? serveurSource() : f === 'assets/caisse-app.js' ? caisseWorkflowSource.appSource() : coreTestSource.readFileSync(path.join(ROOT, f), 'utf8'));
   total += n;
   const was = baseline[f] || 0;

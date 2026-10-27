@@ -321,9 +321,6 @@ function pdsBusinessDayStart(now) {
 
 function pdsNormalize(state) {
   if (!state || !Array.isArray(state.zones)) return state;
-  /* Ids and colours end up in attributes: keep only what an attribute can
-     carry (functions/api/_rules-floorplan-clean.js). */
-  if (window.KiwiFloorCore && window.KiwiFloorCore.cleanPlan) window.KiwiFloorCore.cleanPlan(state);
   if (!state.gone || typeof state.gone !== 'object' || Array.isArray(state.gone)) state.gone = {};
   const fresh = state.v !== 2;
   let nextEl = 1;

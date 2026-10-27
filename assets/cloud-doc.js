@@ -478,6 +478,16 @@
   function attach(opts) {
     opts = opts || {};
     var feature = opts.feature;
+    /* Un plan de salle peut venir d'une caisse appairée et se lit en HTML :
+       ses ids et couleurs sont nettoyés avant d'atteindre l'écran
+       (functions/api/_rules-floorplan-clean.js, copie dans floorplan-core.js). */
+    if (feature === 'floorplan' && typeof opts.write === 'function') {
+      var writePlan = opts.write;
+      opts.write = function (doc) {
+        try { if (doc && window.KiwiFloorCore && window.KiwiFloorCore.cleanPlan) window.KiwiFloorCore.cleanPlan(doc); } catch (_) {}
+        return writePlan.apply(this, arguments);
+      };
+    }
     var merge = opts.merge || mergeDefault;
     var empty = opts.isEmpty || emptyDefault;
     var slugOf = opts.slug || currentSlug;

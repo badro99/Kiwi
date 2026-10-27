@@ -1385,6 +1385,24 @@ var KiwiFloorplanClean = (function () {
 })();
 /* GENERATED SHARED KiwiFloorplanClean END */
 
+/* Plans already kept on this device (the editor's kiwiPlanDeSalle:<venue>,
+   the till's kiwiPlanDeSalle:slug:<slug>) were stored before the rule above:
+   cleaned once here, before any page reads them. */
+(function cleanStoredPlans() {
+  try {
+    const store = window.localStorage;
+    for (let i = 0; i < store.length; i++) {
+      const key = store.key(i);
+      if (!key || key.indexOf('kiwiPlanDeSalle') !== 0) continue;
+      const raw = store.getItem(key);
+      const doc = raw && JSON.parse(raw);
+      if (!doc || typeof doc !== 'object') continue;
+      const next = JSON.stringify(KiwiFloorplanClean.cleanFloorplan(doc));
+      if (next !== raw) store.setItem(key, next);
+    }
+  } catch (_) {}
+})();
+
 /* ─── Exposure ────────────────────────────────────────────────────────────
  *   pages-pro.js is an IIFE in the same global scope and picks these up by
  *   name. kiwi-caisse.html is not, so it goes through this namespace. */
