@@ -152,8 +152,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "9",
-    "sha": "ff99fd0b6ac906ec"
+    "v": "10",
+    "sha": "619f614ab2c70d09"
   },
   "assets/caisse-hardware.js": {
     "v": "7",
@@ -268,8 +268,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "11",
-    "sha": "da2c55c8b68d08dc"
+    "v": "12",
+    "sha": "a7364b17c90ee410"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",

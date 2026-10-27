@@ -165,4 +165,18 @@ ok(requested.cancelTable.expectedSession === 'ses-table-13' && screen.tables.T13
 ok(screen.kdsOrders.length === 0 && !screen.opTickets.has(ticket.opId),
   'whole-table cancellation removes the cashier kitchen card and its relay index');
 
+/* Merge: the target list renders when another table is open. It read an
+   undefined statusLabel, so the dialog threw before opening (27 Oct 2026). */
+{
+  const src = fs.readFileSync(new URL('../assets/caisse-floor/transfer-merge.js', import.meta.url), 'utf8');
+  const start = src.indexOf('    function renderCaisseMergeGrid()');
+  const body = src.slice(start, src.indexOf('\n    }\n', start) + 7);
+  const grid = { innerHTML: '' };
+  const ctx = { $: () => grid, cmrgSourceId: 'T7', cmrgSelectedTargetId: null,
+    tables: { T7: { status: 'ka-yaklo', covers: 2 }, T8: { status: 'ka-yaklo', covers: 4 }, T9: { status: 'khawya' } } };
+  vm.runInNewContext(body + '\nrenderCaisseMergeGrid();', ctx);
+  ok(/data-cmrg-target="T8"/.test(grid.innerHTML) && /4 cvts · En cours/.test(grid.innerHTML) && !/data-cmrg-target="T9"/.test(grid.innerHTML),
+    'merge dialog lists the other open table with its status');
+}
+
 console.log(`\n✓ ${checks} table-action regression checks green.`);

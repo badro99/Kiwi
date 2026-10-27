@@ -465,6 +465,16 @@
       on = !!on;
       if (on === tillKitMoreOpen) return;
       tillKitMoreOpen = on;
+      /* The panel is the shipped side menu. A row there opens its own dialog,
+         so the panel and its scrim step aside instead of covering it; the row's
+         shipped action runs untouched. */
+      const side = on && document.querySelector('.sidebar');
+      if (side && !side.dataset.kMoreCloses) {
+        side.dataset.kMoreCloses = '1';
+        side.addEventListener('click', (e) => {
+          if (tillKitMoreOpen && e.target.closest && e.target.closest('button,[role=button],a,.menu-item')) tillKitSetMore(false);
+        });
+      }
       const root = document.documentElement;
       if (on) root.setAttribute('data-k-till-more', ''); else root.removeAttribute('data-k-till-more');
       window.KiwiTillFrame.paint({ rail: tillKitRail() });

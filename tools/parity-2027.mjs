@@ -23,7 +23,7 @@ const VPS = (arg('--vp') || 'tablet,phone').split(',');
 /* ── Taps: find a visible control by selector or text (shadow DOM included)
    and press it with a real mouse click at its centre. ───────────────────── */
 async function tap(page, how, timeout = 4000) {
-  const alts = Array.isArray(how) ? how : [how];
+  const alts = Array.isArray(how) ? how : how.alt ? how.alt : [how];
   const t0 = Date.now();
   let found = null;
   while (Date.now() - t0 < timeout && !found) {
@@ -75,6 +75,7 @@ const outcome = (page, journalFrom) => page.evaluate((journalFrom) => {
     kitchen: typeof kdsOrders !== 'undefined' ? kdsOrders.map((o) => ({ table: o.table || o.tableId || '', mode: o.mode || '', status: o.status, lines: (o.items || o.lines || []).map((l) => (l.qty || 1) + '× ' + l.name).sort() }))
       .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : [],
     journal: journal.map((j) => ({ label: j.label, amount: j.amount, method: j.method, kind: j.kind || j.type || '', tip: j.tip || 0 })),
+    moves: typeof cashMovements !== 'undefined' ? cashMovements.map((m) => ({ type: m.type, amount: m.amount, reason: m.reason })) : [],
   };
 }, journalFrom);
 const journalLen = (page) => page.evaluate(() => { try { const s = JSON.parse(localStorage.getItem('kiwi-caisse-shift') || 'null'); return s && s.journal ? s.journal.length : 0; } catch (_) { return 0; } });
@@ -91,6 +92,15 @@ function diff(a, b, at = '') {
    when the two designs name the control differently. ────────────────────── */
 const S = (text) => ({ text });
 const CASH = { off: [S('^Encaisser'), S('^Exact$'), S('^Confirmer$|^Valider')], on: [S('^Encaisser'), S('^Espèces$'), S('^Exact$'), S('^Valider en espèces')] };
+/* A code pad, shipped or 2027: the demo accepts any code (the hint says so), so
+   this is no one's code. Four keys, two more if the 2027 pad wants six. */
+const KEY = (n, optional) => ({ alt: [{ sel: `.mgr-key[data-mgr="${n}"]` }, { sel: `[data-key="${n}"]` }], optional });
+const PAD = [KEY(5), KEY(5), KEY(5), KEY(5), KEY(5, true), KEY(5, true)];
+/* The shipped side menu: always on the rail. 2027 opens it with « Plus »: the
+   shipped menu itself on a tablet, a sheet with its own wording on a phone
+   (the sheet row presses the same shipped control). */
+const MENU = (label, sheet) => ({ off: [S(label)], on: [S('^Plus$'), { alt: [S(label), S(sheet)] }] });
+const T = (id) => ({ sel: `.cplan-tbl[data-table="${id}"]` });
 const DINE_OPEN = [S('^Salle$'), { sel: '.cplan-tbl[data-table="T7"]' }, S('^2$'), S('^Ouvrir la table$')];
 const FLOWS = [
   { name: 'dine-in · open a table, order two dishes, send to the kitchen',
@@ -123,6 +133,19 @@ const FLOWS = [
   { name: 'takeaway · 10 % tip, pay cash',
     steps: [S('^À emporter$'), S('Harira'), S('Zaalouk'),
       { off: [S('^Encaisser'), S('^10 %$'), S('^Exact$'), S('^Confirmer$|^Valider')], on: [S('^Encaisser'), S('^Pourboire'), S('^10 %'), S('^Espèces$'), S('^Exact$'), S('^Valider en espèces')] }] },
+  { name: 'dine-in · move a sent table to another table',
+    steps: [...DINE_OPEN, S('Harira'), S('^Envoyer'), { ...T('T7'), optional: true },
+      { off: [S('^Déplacer table$')], on: [S('^Plus d.actions'), S('^Changer de table$')] }, { sel: '[data-ctrf-to="T8"]' }, { sel: '#ctrf-confirm' }] },
+  { name: 'dine-in · merge two open tables',
+    steps: [...DINE_OPEN, S('Harira'), S('^Envoyer'), T('T8'), S('^2$'), S('^Ouvrir la table$'), S('Zaalouk'), S('^Envoyer'), T('T7'),
+      { off: [{ sel: '#rp-merge-table' }], on: [S('^Plus d.actions'), S('^Fusionner des tables$')] }, { sel: '[data-cmrg-target="T8"]' }, { sel: '#cmrg-confirm' }] },
+  { name: 'dine-in · cancel a sent table',
+    steps: [...DINE_OPEN, S('Harira'), S('^Envoyer'), { ...T('T7'), optional: true },
+      { off: [S('^Annuler la table$')], on: [S('^Plus d.actions'), S('^Annuler la table$')] }, { text: '^Annuler la table$|^Confirmer|^Oui', optional: true }, ...PAD] },
+  { name: 'drawer · cash in 100 MAD',
+    steps: [MENU('^Mouvement caisse', '^Entrée ou sortie d.espèces'), { sel: '[data-cm-type="in"]' }, { sel: '[data-cm-add="100"]' }, { sel: '#cm-confirm' }, ...PAD] },
+  { name: 'drawer · cash out 50 MAD',
+    steps: [MENU('^Mouvement caisse', '^Entrée ou sortie d.espèces'), { sel: '[data-cm-type="out"]' }, { sel: '[data-cm-add="50"]' }, { sel: '#cm-confirm' }, ...PAD] },
   { name: 'kitchen · start a ticket, then mark it ready',
     steps: [{ off: [S('^Écran cuisine')], on: [S('^Cuisine')] }, S('^Commencer|^Accepter'), S('^Prête?$|^Marquer prêt|^✓ Prête')] },
   { name: 'kitchen · open the kitchen view and start the first new ticket',
@@ -161,7 +184,7 @@ async function play(flow, on, vp) {
     let failed = null;
     const flat = flow.steps.flatMap((s) => (s.on || s.off ? (on ? s.on : s.off) : [s]));
     for (const s of flat) {
-      let r = await tap(page, s);
+      let r = await tap(page, s, s.optional ? 1500 : 4000);
       /* On a phone, controls live behind the menu button or the bill bar. Try
          each opener (as a person would), and close it again if it did not help. */
       if (!r.ok && vp === 'phone' && !s.optional) {
@@ -179,8 +202,17 @@ async function play(flow, on, vp) {
           await closeAll(page);
         }
       }
-      log.push((r.ok ? 'ok ' : 'FAIL ') + (s.sel || s.text || JSON.stringify(s)) + (r.label ? ' → ' + r.label : '') + (r.why ? ' · ' + r.why : ''));
-      if (!r.ok && !s.optional) { failed = r.why; break; }
+      log.push((r.ok ? 'ok ' : 'FAIL ') + (s.sel || s.text || (s.alt ? s.alt.map((a) => a.sel || a.text).join('|') : JSON.stringify(s))) + (r.label ? ' → ' + r.label : '') + (r.why ? ' · ' + r.why : ''));
+      if (!r.ok && !s.optional) {
+        failed = r.why;
+        /* What the screen showed when the step failed: the open dialog, else the table states. */
+        log.push('  at failure: ' + await page.evaluate(() => {
+          const m = document.querySelector('.modal-veil.is-open');
+          if (m) return 'dialog: ' + m.innerText.replace(/\s+/g, ' ').slice(0, 200);
+          return 'tables: ' + (typeof tables !== 'undefined' ? Object.entries(tables).filter(([, t]) => t && t.status !== 'khawya').map(([k, t]) => k + '=' + t.status).join(' ') : '?');
+        }));
+        break;
+      }
     }
     await sleep(800);
     const shot = `${flow.name.replace(/\W+/g, '-').slice(0, 50)}-${vp}-${on ? 'on' : 'off'}.jpg`;
@@ -190,7 +222,7 @@ async function play(flow, on, vp) {
 }
 
 const results = [];
-const flows = FLOWS.filter((f) => !ONLY || f.name.includes(ONLY));
+const flows = FLOWS.filter((f) => !ONLY || new RegExp(ONLY, "i").test(f.name));
 for (const vp of VPS) for (const flow of flows) {
   const [off, on] = await Promise.all([play(flow, false, vp), play(flow, true, vp)]);
   const problems = [];

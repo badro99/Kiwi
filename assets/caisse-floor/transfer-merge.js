@@ -214,7 +214,7 @@
         return `
           <div class="trf-target-card ${isSel ? 'is-selected' : ''}" data-cmrg-target="${id}">
             <div class="trf-tname">${id}</div>
-            <div class="trf-tmeta">${t.covers || 2} cvts · ${statusLabel[t.status] || t.status}</div>
+            <div class="trf-tmeta">${t.covers || 2} cvts · ${({ 'khawya': 'Libre', 'a-commander': 'À commander', 'ka-yaklo': 'En cours', 'bgha-ykhlass': 'Addition', 'khlass': 'Réglée' })[t.status] || t.status}</div>
           </div>
         `;
       }).join('');
