@@ -1542,6 +1542,7 @@ section('Whole-project regressions');
     'sales-ledger-cutoff-test.mjs',
     'home-cutoff-fallback-test.mjs',
     'day-report-export-test.mjs',
+    'day-report-vat-test.mjs',
     'month-report-test.mjs',
     'month-report-api-test.mjs',
     'month-report-browser-test.mjs',

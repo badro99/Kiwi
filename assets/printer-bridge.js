@@ -664,6 +664,13 @@
       return '<div class="kpr-ticket">' + out.join('') + '</div>';
     }
 
+    var vatBlock = r.vat && window.KiwiDayReportVat ? window.KiwiDayReportVat.ticketBlock(r.vat, o.lang, money) : null;
+    if (vatBlock) {
+      rule();
+      out.push('<div class="kpr-c kpr-b">' + esc(vatBlock.title) + '</div>');
+      vatBlock.lines.forEach(function (l) { R(l[0], l[1]); });
+    }
+
     var cash = r.cash || {};
     rule();
     out.push('<div class="kpr-c kpr-b">' + esc(o.drawerTitle || 'TIROIR-CAISSE') + '</div>');

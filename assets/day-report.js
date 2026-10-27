@@ -593,6 +593,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
           qty: num(l.qty != null ? l.qty : l.q) || 0,
           total: num(l.total != null ? l.total : l.t) || 0,
           cat: l.cat != null ? String(l.cat) : (l.c != null ? String(l.c) : ''),
+          rate: l.taxRate != null ? l.taxRate : l.vatRate,
         };
       }).filter(Boolean);
       if (!lines.length) lines = null;
@@ -654,12 +655,8 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     var amount = num(s.amount != null ? s.amount : s.total);
     var lines = (Array.isArray(s.lines) ? s.lines : []).map(function (l) {
       if (!l) return '';
-      return [
-        String(l.itemId != null ? l.itemId : (l.i != null ? l.i : '')),
-        String(l.name != null ? l.name : (l.n != null ? l.n : '')),
-        num(l.qty != null ? l.qty : l.q),
-        num(l.total != null ? l.total : l.t),
-      ].join('~');
+      return [String(l.itemId != null ? l.itemId : (l.i != null ? l.i : '')), String(l.name != null ? l.name : (l.n != null ? l.n : '')),
+        num(l.qty != null ? l.qty : l.q), num(l.total != null ? l.total : l.t)].join('~');
     }).join('|');
     return ref + '#' + ts + '#' + round2(amount) + '#' + lines;
   }
@@ -959,6 +956,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       revisions: [],
       builtAt: Date.now(),
       source: String(opts.source || 'caisse'),
+      vat: window.KiwiDayReportVat ? window.KiwiDayReportVat.compute(rows) : null,
       duplicates: dupN ? { count: dupN, amount: round2(dupAmt) } : null,
     };
   }
@@ -1263,7 +1261,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       categories: JSON.parse(JSON.stringify(r.categories || [])),
       hours: JSON.parse(JSON.stringify(r.hours || [])),
       cashiers: JSON.parse(JSON.stringify(r.cashiers || [])),
-      coverage: num(r.coverage), coverageBase: round2(r.gross),
+      coverage: num(r.coverage), coverageBase: round2(r.gross), vat: r.vat || null,
     };
   }
   function addCarried(report, carried) {
@@ -1279,6 +1277,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       outstanding: round2(num(own.acomptes && own.acomptes.outstanding)),
     };
     report.cancels = carried.cancels + own.cancels;
+    if (window.KiwiDayReportVat && (carried.vat || own.vat)) report.vat = window.KiwiDayReportVat.merge(carried.vat, own.vat);
     var dN = num(carried.duplicates && carried.duplicates.count) + num(own.duplicates && own.duplicates.count);
     report.duplicates = dN ? { count: dN, amount: round2(num(carried.duplicates && carried.duplicates.amount) + num(own.duplicates && own.duplicates.amount)) } : null;
     var methods = Object.assign({}, carried.methods);

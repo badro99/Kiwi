@@ -172,10 +172,10 @@ var SHELL = [
   '/assets/menu-nutrition.js?v=4',
   '/assets/kiwi-select.js?v=4',
   '/assets/food-trade-settings.js?v=2',
-  '/assets/z-reconciliation.js?v=25',
+  '/assets/z-reconciliation.js?v=27',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=56',
+  '/assets/pages/dashboard-startup.js?v=57',
   '/assets/pages/dashboard-loader.js?v=23',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -198,7 +198,7 @@ var SHELL = [
   '/assets/agent-action-center.js?v=4',
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
-  '/assets/briefing.js?v=32',
+  '/assets/briefing.js?v=33',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
@@ -313,10 +313,10 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=34',
+  '/assets/day-report.js?v=35',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=39',
-  '/assets/day-report-export.js?v=13',
+  '/assets/day-report-dash.js?v=40',
+  '/assets/day-report-export.js?v=14',
   '/assets/month-report.js?v=16',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
@@ -357,9 +357,9 @@ var SHELL = [
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=7',
   '/assets/live-socket.js?v=5',
-  '/assets/escpos.js?v=15',
+  '/assets/escpos.js?v=16',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=42',
+  '/assets/printer-bridge.js?v=43',
   '/assets/printer/pairing-ui.js?v=9',
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
@@ -389,12 +389,12 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=11',
-  '/assets/stock/strings.js?v=5',
-  '/assets/stock.js?v=93',
+  '/assets/stock/strings.js?v=6',
+  '/assets/stock.js?v=94',
   '/assets/stock/loss.js?v=1',
   '/assets/stock/counts.js?v=5',
   '/assets/stock/purchasing.js?v=2',
-  '/assets/stock/intake.js?v=10',
+  '/assets/stock/intake.js?v=11',
   '/assets/stock/catalog.js?v=3',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
@@ -450,7 +450,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=23',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=18',
-  '/assets/pos-dispatch.js?v=204',
+  '/assets/pos-dispatch.js?v=205',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -534,12 +534,12 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=135',
-  '/assets/pos-boutique/sales.js?v=38',
+  '/assets/pos-boutique.css?v=136',
+  '/assets/pos-boutique/sales.js?v=39',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=38',
-  '/assets/pos-boutique/inventory.js?v=38',
-  '/assets/pos-boutique.js?v=135',
+  '/assets/pos-boutique/checkout.js?v=39',
+  '/assets/pos-boutique/inventory.js?v=39',
+  '/assets/pos-boutique.js?v=136',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
