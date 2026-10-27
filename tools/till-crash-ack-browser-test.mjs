@@ -103,6 +103,8 @@ async function tillPage(ctx, routes, seed) {
 }
 
 async function openShift(t, page) {
+  // coverage: surface=caisse-boutique locale=fr viewport=tablet
+  // coverage: surface=boutique-checkout locale=fr viewport=tablet
   await page.goto(h.base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
   await page.waitForSelector('#cp-pin-screen k-pin-pad', { visible: true, timeout: 30000 });
   await fillSecret(page, '#cp-pin-screen k-pin-pad >>> [data-key="del"]', staff);
@@ -143,8 +145,6 @@ async function crash(page) {
 try {
   for (const kind of ['K1 · stored, answer lost', 'K2 · network down before sending']) {
     await h.S.run(`cash sale survives a killed tab · ${kind}`, async (t) => {
-      // coverage: surface=caisse-boutique locale=fr viewport=tablet
-      // coverage: surface=boutique-checkout locale=fr viewport=tablet
       const { sql, env } = database();
       const till = `${auth.TILL_COOKIE}=${await auth.tillToken(AUTH_SECRET, merchant)}`;
       const net = { mode: kind.startsWith('K1') ? 'lose-answer' : 'down', posts: [] };

@@ -16,7 +16,6 @@
     "haptics-plugin-test.mjs": "native plugin configuration",
     "kit-size-test.js": "kit bundle size budget",
     "known-issues-test.mjs": "accepted-defect list is reviewed",
-    "landing-claims-test.mjs": "landing copy agrees with the plan catalogue",
     "load-test-suite-test.mjs": "checks the load-test scripts' own shape",
     "native-pass4-test.mjs": "native shell configuration",
     "offline-foundation-test.mjs": "shells load the offline stack in order",
@@ -46,7 +45,10 @@
     "orderpro-boundary-test.mjs": "AST capability contracts for private OrderPro modules, with rejected sibling-state mutations.",
     "home-boundary-test.mjs": "AST ownership contract: each renderer reads only its explicit live owner and declared window interface.",
     "pressing-boundary-test.mjs": "AST boundary contract: declared custody contexts and window reads, no sibling imports or private window state; mutation witnesses reject violations",
-    "clients-split-test.mjs": "byte-exact concatenation of the client store and client book parts, plus the names each part owns"
+    "clients-split-test.mjs": "byte-exact concatenation of the client store and client book parts, plus the names each part owns",
+    "simple-food-cost-split-test.mjs": "byte-exact concatenation of the food-cost parts, the names each part owns, and a pure calculation part",
+    "hotel-core-split-test.mjs": "byte-exact concatenation of the hotel core parts and the names each part owns",
+    "caisse-pairing-split-test.mjs": "byte-exact concatenation of the till pairing parts and the names each part owns"
   },
   "style": {
     "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",

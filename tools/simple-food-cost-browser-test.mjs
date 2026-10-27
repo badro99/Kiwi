@@ -95,6 +95,7 @@ async function unlock(page) {
 }
 async function openCost(t, page) {
   t.step('load the dashboard, open the lock, then Analysis → Simple cost through the navigation');
+  // coverage: surface=dashboard-analysis locale=fr viewport=tablet
   await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
   await unlock(page);
   await page.waitForFunction(() => window.KiwiConfig?.features?.simple_food_cost === true && window.KiwiVenue?.getCurrentVenueData?.()?.slug === 'matrix-real', { timeout: 20000 });
@@ -110,7 +111,6 @@ async function openCost(t, page) {
 try {
   for (const locale of LOCALES.filter((l) => words[l] && words[l].saved)) {
     await h.S.run(`save, reload, history, export and conflict · ${locale} · tablet`, async (t) => {
-      // coverage: surface=dashboard-analysis locale=fr viewport=tablet
       const { sqlite, env } = database();
       const owner = auth.sessionCookie(await auth.makeSession('acc-sfc', SECRET)).split(';')[0];
       const calls = { get: 0, post: 0 };
