@@ -328,6 +328,7 @@ in its own file. The same suite pins each stylesheet's `!important` count (+10, 
 stylesheet 25): they went from 573 to 1 182 in two months, every skin winning by force
 over the one below, so new rules win by cascade instead. A pin only goes down: after a split, `KIWI_UPDATE_SIZE_BASELINE=1`
 lowers it. Never raise one to make a red go away.
+A file that is not pinned stays under 2 500 lines (5 000 until 2026-10-27).
 
 **Prod D1 changes through `wrangler d1 migrations`** (since 2026-10-19,
 `docs/ops/MIGRATIONS.md`). Changing `schema.sql` means adding the next

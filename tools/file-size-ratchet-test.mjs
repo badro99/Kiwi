@@ -15,7 +15,10 @@
  *     SLACK lines over its pin: a bug fix fits, a new feature belongs in a
  *     new file;
  *   · any other assets/*.js, functions/**.js or root *.html file stays
- *     under CAP lines;
+ *     under CAP lines (2 500 since 2026-10-27, was 5 000: the files split
+ *     out of the big controllers are all under it, and a new one should be);
+ *   · tools/global-ownership-test.mjs pins the second number that makes a
+ *     big file risky: how many other files' globals it reads;
  *   · the three shells may load at most SCRIPT_SLACK more <script src> than
  *     pinned;
  *   · each assets/**.css file may carry at most IMPORTANT_SLACK more
@@ -35,7 +38,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools', 'file-size-baseline.json');
-const CAP = 5000, SLACK = 200, SCRIPT_SLACK = 3, IMPORTANT_SLACK = 10, IMPORTANT_CAP = 25;
+const CAP = 2500, SLACK = 200, SCRIPT_SLACK = 3, IMPORTANT_SLACK = 10, IMPORTANT_CAP = 25;
 const SHELLS = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html'];
 const update = process.env.KIWI_UPDATE_SIZE_BASELINE === '1';
 const pinFiles = process.argv.slice(2);

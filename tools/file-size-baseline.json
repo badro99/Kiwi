@@ -101,7 +101,9 @@
     "functions/api/operations.js": 2480,
     "functions/api/clients.js": 1043,
     "assets/booking.js": 164,
-    "assets/onboarding.js": 928
+    "assets/onboarding.js": 928,
+    "kiwi-admin.html": 3833,
+    "kiwi-cuisine.html": 2561
   },
   "scripts": {
     "dashboard.html": 122,
