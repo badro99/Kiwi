@@ -319,6 +319,18 @@
       rows: rows, totalCents: number(raw.totalCents, 0, 10000000000, 0),
       taxBasis: 'inclusive', acceptedAt: +raw.acceptedAt || 0 };
   }
+  /* Plafond de 4000 réservations : les PASSÉES les plus anciennes partent d'abord, jamais
+     une réservation à venir (même règle que functions/api/_booking-cap.js, éprouvée par
+     tools/booking-cap-test.mjs). Au-delà, le serveur refuse l'écriture, il ne coupe rien. */
+  function capBookings(rows) {
+    var CAP = 4000, DAY = 86400000, now = Date.now();
+    if (rows.length <= CAP) return rows;
+    var drop = rows.map(function (x, i) { return { i: i, end: +x.endAt || 0, open: ['requested', 'confirmed', 'checked_in'].indexOf(x.status) >= 0 }; })
+      .filter(function (x) { return x.end < now - (x.open ? 7 * DAY : 0); })
+      .sort(function (a, b) { return a.end - b.end || a.i - b.i; })
+      .slice(0, rows.length - CAP).map(function (x) { return x.i; });
+    return rows.filter(function (x, i) { return drop.indexOf(i) < 0; });
+  }
   function normalize(raw) {
     var out = blank(), r = raw && typeof raw === 'object' ? raw : {};
     var s = r.settings || {};
@@ -328,7 +340,7 @@
     out.services.forEach(function (x) { x.price = Math.round(x.price * 100) / 100; x.deposit = Math.min(x.price, Math.round(x.deposit * 100) / 100); });
     out.resources = (Array.isArray(r.resources) ? r.resources : []).slice(0, 120).map(function (x) { var kind = ['person', 'room', 'table'].indexOf(x && x.kind) >= 0 ? x.kind : 'person'; return { id: cleanText(x && x.id, 64) || id('res'), name: cleanText(x && x.name, 100), kind: kind, capacity: number(x && x.capacity, 1, 999, 1), active: x && x.active !== false, week: x && typeof x.week === 'object' ? clone(x.week) : null, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
     out.blocked = (Array.isArray(r.blocked) ? r.blocked : []).slice(-500).map(function (x) { return { id: cleanText(x && x.id, 64) || id('blk'), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, reason: cleanText(x && x.reason, 120), updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.startAt && x.endAt > x.startAt; });
-    out.bookings = (Array.isArray(r.bookings) ? r.bookings : []).slice(-4000).map(function (x) {
+    out.bookings = (Array.isArray(r.bookings) ? r.bookings : []).map(function (x) {
       var status = ['requested','confirmed','checked_in','completed','cancelled','no_show'].indexOf(x && x.status) >= 0 ? x.status : 'requested';
       var hotel = x && x.hotel && typeof x.hotel === 'object' ? {
         roomTypeName: cleanText(x.hotel.roomTypeName, 100), checkIn: cleanText(x.hotel.checkIn, 10),
@@ -343,6 +355,7 @@
       } : null;
       return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, guests: normalizeGuests(x && x.guests), pricing: normalizePricing(x && x.pricing), pricingHistory: normalizeHistory(x && x.pricingHistory), roomSegments: normalizeRoomSegments(x && x.roomSegments, 20), createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
     }).filter(function (x) { return x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt; });
+    out.bookings = capBookings(out.bookings);
     var originalBookings = byId(r.bookings);
     out.bookings.forEach(function (b) { b.commercial = normalizeCommercial(originalBookings[b.id] && originalBookings[b.id].commercial); });
     return out;

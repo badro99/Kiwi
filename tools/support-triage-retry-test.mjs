@@ -44,7 +44,14 @@ async function fresh(overrides = {}) {
     async first() { return db.prepare(sql).get(...args) || null; },
     async all() { return { results: db.prepare(sql).all(...args) }; },
     async run() { return { meta: { changes: Number(db.prepare(sql).run(...args).changes || 0) } }; },
-  }; return st; } };
+    /* D1 batch: one transaction, all statements or none. */
+    _run() { return db.prepare(sql).run(...args); },
+  }; return st; },
+  async batch(statements) {
+    db.exec('BEGIN IMMEDIATE');
+    try { const out = statements.map((s) => ({ meta: { changes: Number(s._run().changes || 0) } })); db.exec('COMMIT'); return out; }
+    catch (e) { db.exec('ROLLBACK'); throw e; }
+  } };
   const env = { DB, AUTH_SECRET: 'support-retry-secret-0123456789abcdef', calls: 0,
     AI: { run: async () => { env.calls += 1; return env.reply(); } }, reply: () => clef(), ...overrides };
   return env;
@@ -162,6 +169,35 @@ try {
   eq(triageOutcomeNote({ status: 'triaged', triage: { verdict: 'normal' } }), null, 'tri réussi sans alerte : aucune trace');
   eq(triageOutcomeNote({ status: 'triaged', triage: { verdict: 'urgent', alert: { state: 'sent' } } }), null, 'alerte envoyée : aucune trace');
   eq(triageOutcomeNote({ status: 'skipped', reason: 'no-ticket' }), null, 'demande incomplète : pas de trace inventée');
+
+  /* 7. Réponse et statut partent en un seul batch (wave 13 K) : si le statut ne
+        peut pas être écrit, la réponse n'est pas consignée non plus. */
+  {
+    const env = await fresh({ MAIL_WEBHOOK: 'https://mail.test/hook' });
+    mails.length = 0; mailStatus = 200;
+    const id = await post(env, 'une question sur la facture');
+    env.DB.db.prepare("UPDATE support_tickets SET channel = 'email', contact = 'client@kiwi.test' WHERE id = ?").run(id);
+    const count = () => env.DB.db.prepare("SELECT COUNT(*) AS n FROM support_messages WHERE ticket_id = ? AND kind = 'reply'").get(id).n;
+    const send = async (action, extra) => {
+      try {
+        const res = await adminPatch({ request: new Request('https://kiwi.test/api/admin/support', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json', Cookie: await opCookie(env) },
+          body: JSON.stringify({ id, action, ...extra }) }), env });
+        return res.status;
+      } catch (_) { return 500; }
+    };
+    env.DB.db.exec("CREATE TRIGGER refuse_waiting BEFORE UPDATE ON support_tickets WHEN NEW.status = 'waiting-client' BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+    eq(await send('reply', { body: 'Voici la réponse.' }), 500, 'le statut ne peut pas être écrit : la route échoue');
+    eq(count(), 0, 'et la réponse n\'est pas consignée sans son statut');
+    env.DB.db.exec('DROP TRIGGER refuse_waiting');
+    eq(await send('reply', { body: 'Voici la réponse.' }), 200, 'sans panne la réponse passe');
+    eq(count(), 1, 'la réponse est consignée');
+    eq(row(env, id).status, 'waiting-client', 'et la demande attend le client');
+    /* Le changement de statut et sa trace ne se séparent pas non plus. */
+    env.DB.db.exec("CREATE TRIGGER refuse_trace BEFORE INSERT ON support_messages WHEN NEW.kind = 'status' BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+    eq(await send('status', { status: 'resolved' }), 500, 'la trace ne peut pas être écrite : la route échoue');
+    eq(row(env, id).status, 'waiting-client', 'et le statut n\'a pas bougé');
+  }
 } finally {
   globalThis.fetch = realFetch;
 }

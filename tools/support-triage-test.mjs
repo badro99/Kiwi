@@ -17,7 +17,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { ensureSupport, SUPPORT_TABLES } from '../functions/api/_support.js';
 import { TILL_COOKIE, tillToken, operatorToken, operatorIdToken } from '../functions/auth/_lib.js';
-import { DAILY_CAPS } from '../functions/api/ai/_quota.js';
+import { DAILY_CAPS, quotaDay } from '../functions/api/ai/_quota.js';
 import { GATEWAY_OPTS } from '../functions/api/ai/_run.js';
 import {
   ALERT_AT, CONFIDENT_AT, TRIAGE_MODEL, TRIAGE_QUESTIONS, WATCH_AT,
@@ -257,7 +257,7 @@ try {
     // quota épuisé : Clef n'est même pas appelé
     const env = freshEnv();
     await post(env, 'première demande pour créer la table de quota');
-    const day = new Date().toISOString().slice(0, 10);
+    const day = await quotaDay(env.DB, MERCHANT);
     env.DB.db.prepare(`UPDATE ai_usage_kind SET calls = ? WHERE merchant = ? AND day = ? AND kind = 'supporttriage'`).run(DAILY_CAPS.supporttriage, MERCHANT, day);
     const before = env.__calls.length;
     const { res, body } = await post(env, 'la caisse ne démarre plus du tout');
