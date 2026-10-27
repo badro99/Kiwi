@@ -142,6 +142,15 @@ function newId() {
   crypto.getRandomValues(a);
   return 'fc-' + [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+/* Une création porte la clé de son brouillon (`createId`, tirée une fois par
+ * le navigateur). Une réponse perdue puis renvoyée retombe sur la même ligne :
+ * jamais deux fiches pour un seul geste. Sans clé, comme avant. */
+const CREATE_ID = /^[A-Za-z0-9_-]{8,32}$/;
+function createdId(raw) {
+  const key = String(raw == null ? '' : raw);
+  if (!key) return { id: newId() };
+  return CREATE_ID.test(key) ? { id: 'fc-' + key, keyed: true } : { error: 'bad-create-id' };
+}
 
 const noStore = { 'Cache-Control': 'no-store' };
 
@@ -232,12 +241,23 @@ export async function onRequestPost(context) {
     return json({ sheet: rowOut(after) }, 200, noStore);
   }
 
+  async function create(key, data, baseVersion) {
+    const made = createdId(key);
+    if (made.error) return json({ error: made.error }, 400, noStore);
+    if (made.keyed) {
+      const row = await env.DB.prepare('SELECT * FROM foodcost_sheets WHERE merchant = ? AND id = ?').bind(merchant, made.id).first();
+      if (row && row.data === JSON.stringify(data)) return json({ sheet: rowOut(row), replayed: true }, 200, noStore);
+      if (row) return write(made.id, data, baseVersion, null);
+    }
+    return write(made.id, data, 0, null);
+  }
+
   try {
     if (action === 'save') {
       const data = cleanSheet(body.sheet);
       if (!data.name) return json({ error: 'name-required' }, 400, noStore);
       const id = str(body.sheet && body.sheet.id, 40);
-      if (!id) return write(newId(), data, 0, null);
+      if (!id) return create(body.sheet && body.sheet.createId, data, Math.round(Number(body.baseVersion)) || 0);
       if (!/^[a-zA-Z0-9_-]{1,40}$/.test(id)) return json({ error: 'bad-id' }, 400, noStore);
       const exists = await env.DB.prepare('SELECT 1 AS x FROM foodcost_sheets WHERE merchant = ? AND id = ?').bind(merchant, id).first();
       if (!exists) return json({ error: 'not-found' }, 404, noStore);
@@ -250,7 +270,7 @@ export async function onRequestPost(context) {
       const data = cleanSheet(parse(row.data) || {});
       data.name = str(body.name, 120) || `${data.name} (copie)`.slice(0, 120);
       if (body.kind === 'sheet' || body.kind === 'template') data.kind = body.kind;
-      return write(newId(), data, 0, null);
+      return create(body.createId, data, 0);
     }
     if (action === 'archive') {
       const id = str(body.id, 40);

@@ -666,7 +666,8 @@
           (r.j.jobs || []).forEach(function (job) {
             var row = document.createElement('div'); row.className = 'kpr-relay-row';
             var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
-            var words = dict ? [dict['print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say('Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
+            var unsure = job.status === 'uncertain';
+            var words = dict ? [dict[unsure ? 'print.uncertain' : 'print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say(unsure ? 'Impression incertaine' : 'Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
             row.innerHTML = '<span>' + esc(words[0] + ' · ' + job.kind + ' · ' + new Date(job.created_ts).toLocaleString()) + '</span><button type="button">' + words[1] + '</button>';
             row.querySelector('button').onclick = function () {
               var btn = this; btn.disabled = true;

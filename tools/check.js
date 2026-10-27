@@ -1603,6 +1603,8 @@ section('Whole-project regressions');
     'print-relay-properties-test.mjs',
     'print-pairing-recovery-test.mjs',
     'shared-rules-test.mjs',
+    // Les limites d'un groupe d'options (« 2 sauces au plus ») survivent à la publication (vague 11).
+    'menu-option-limits-test.mjs',
     'day-report-model-parity-test.mjs',
     'shared-pricing-parity-test.mjs',
     'order-pricing-properties-test.mjs',
@@ -2005,6 +2007,8 @@ section('Whole-project regressions');
     'station-printer-routing-test.mjs',
     'printer-station-unicode-test.mjs',
     'printer-split-test.mjs',
+    // La fenêtre d'imprimante parle la langue du tableau de bord (vague 11).
+    'printer-lang-test.mjs',
     'printer-transports-split-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur

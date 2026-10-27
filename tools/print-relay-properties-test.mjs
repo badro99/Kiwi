@@ -252,6 +252,47 @@ try {
     assert.ok(!(await listing()).body.jobs.some(j=>j.id===original));
   }));
 
+  /* Wave 11 · a ticket that ENDS failed or uncertain (a refused write, a lost
+   * acknowledgement) is as unprinted as an expired one: the ruling lists it
+   * for Reprint, with its state, instead of losing it silently. */
+  const listingOf = async () => { const r = await jobs.onRequestGet({env, request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{headers:{Cookie:till}})}); return (await r.json()).jobs || []; };
+  const reprintOf = async (id) => { const r = await jobs.onRequestPost({env,request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{method:'POST',headers:{Cookie:till,'Content-Type':'application/json'},body:JSON.stringify({action:'reprint-expired',id})})}); return {status:r.status, body:await r.json()}; };
+  await strict('R jobs ending failed or uncertain are listed for Reprint with their state, and one Reprint deposits one fresh job', fc.asyncProperty(fc.integer({min:0,max:20}), fc.constantFrom('uncertain', 'failed-late', 'failed-permanent'), async (k, end) => {
+    reset(); const original = (await deposit(k)).body.id;
+    const claimed = (await poll(BRIDGES[0])).jobs[0];
+    assert.equal(claimed.id, original);
+    if (end === 'uncertain') assert.equal((await ack(BRIDGES[0], original, 'uncertain')).updated, true);
+    else if (end === 'failed-permanent') {
+      sql.prepare('UPDATE print_bridges SET last_seen_ts = ? WHERE id <> ?').run(clock - 46000, BRIDGES[0].id);
+      assert.equal((await ack(BRIDGES[0], original, 'failed', 'printer-target-not-saved')).updated, true);
+    }
+    else { clock += 10 * 60000 + 1; assert.equal((await ack(BRIDGES[0], original, 'failed', 'printer-offline')).updated, true); }
+    clock += 10 * 60000 + 1;
+    await poll(BRIDGES[0]);
+    const offered = (await listingOf()).find((j) => j.id === original);
+    assert.ok(offered, end + ' ticket offered for Reprint');
+    assert.equal(offered.status, end === 'uncertain' ? 'uncertain' : 'failed');
+    const copy = await reprintOf(original);
+    assert.equal(copy.status, 200, JSON.stringify(copy.body));
+    assert.notEqual(copy.body.id, original);
+    assert.equal((await reprintOf(original)).body.id, copy.body.id);
+    assert.ok(!(await listingOf()).some((j) => j.id === original), 'recovered source no longer offered');
+    assert.equal((await poll(BRIDGES[0])).jobs[0].id, copy.body.id);
+  }));
+
+  await strict('R Reprint with no bridge online says relay-offline, deposits nothing and keeps the ticket offered', fc.asyncProperty(fc.integer({min:0,max:20}), async k => {
+    reset(); const original = (await deposit(k)).body.id;
+    clock += 10 * 60000 + 1;
+    sql.prepare('UPDATE print_bridges SET last_seen_ts = ?').run(clock - 46000);
+    const answer = await reprintOf(original);
+    assert.equal(answer.status, 409);
+    assert.equal(answer.body.error, 'relay-offline');
+    assert.equal(rows().length, 1, 'no copy queued for a bridge that is not there');
+    assert.ok((await listingOf()).some((j) => j.id === original), 'still offered');
+    sql.prepare('UPDATE print_bridges SET last_seen_ts = ?').run(clock);
+    assert.equal((await reprintOf(original)).status, 200);
+  }));
+
   console.log(`${failed ? '✗' : '✓'} print-relay-properties-test · ${passed} held, ${known} known, ${failed} failed`);
 } finally { f.close(); }
 process.exit(failed ? 1 : 0);

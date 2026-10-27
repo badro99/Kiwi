@@ -103,10 +103,30 @@
     }
     const validModifier = (choice) => { return !!(choice && choice.id && choice.name); }
 
-    const normalizeOptionGroup = (raw) => ({
-      id: str(raw && raw.id, 40), name: str(raw && raw.name, 60),
-      kind: raw && raw.kind === 'many' ? 'many' : 'one', required: !!(raw && raw.required),
-    });
+    /* A choice count: a whole number between `lo` and 40, or null for none. */
+    const optionCount = (value, lo) => {
+      if (value === null || value === undefined || value === '') return null;
+      const n = Math.round(Number(value));
+      return Number.isFinite(n) ? Math.max(lo, Math.min(40, n)) : null;
+    };
+    /* « Up to 2 sauces »: the order screens and order/_guest-pricing.js enforce
+     * min and max, so publishing keeps them. A group without limits stays as it
+     * was; a single-choice group never asks for more than one; a positive minimum
+     * is a required group. */
+    const normalizeOptionGroup = (raw) => {
+      const group = {
+        id: str(raw && raw.id, 40), name: str(raw && raw.name, 60),
+        kind: raw && raw.kind === 'many' ? 'many' : 'one', required: !!(raw && raw.required),
+      };
+      const max = group.kind === 'many' ? optionCount(raw && raw.max, 1) : null;
+      const min = optionCount(raw && raw.min, 0);
+      if (min !== null) {
+        group.min = Math.min(min, max !== null ? max : (group.kind === 'many' ? 40 : 1));
+        if (group.min > 0) group.required = true;
+      }
+      if (max !== null) group.max = max;
+      return group;
+    };
     return { OPTION_EMOJIS, optionEmoji, modifierAmount, normalizeModifier, validModifier, normalizeOptionGroup };
   })();
   /* GENERATED SHARED KiwiMenuSchema END */
@@ -191,10 +211,16 @@
   function patchGroup(group, patch) {
     const g = { ...group };
     if (patch.name != null) g.name = String(patch.name).trim() || g.name;
+    // Unticking « required » also clears a minimum, or the rule would tick it back.
+    const min = patch.min !== undefined ? patch.min : (patch.required === false && g.min > 0 ? 0 : g.min);
     const normalized = KiwiMenuSchema.normalizeOptionGroup({ ...g,
       kind: patch.kind != null ? patch.kind : g.kind,
-      required: patch.required != null ? patch.required : g.required });
-    return { ...g, ...normalized };
+      required: patch.required != null ? patch.required : g.required,
+      min, max: patch.max !== undefined ? patch.max : g.max });
+    const out = { ...g, ...normalized };
+    if (!('min' in normalized)) delete out.min;
+    if (!('max' in normalized)) delete out.max;
+    return out;
   }
   // New centime API, deliberately separate from legacy float screen pricing.
   // Chosen modifiers are resolved by the caller; prices are MAD. Tax is an

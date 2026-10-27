@@ -1108,7 +1108,7 @@
 <script src="assets/err-reporter.js?v=2" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=9" defer></script>
-<script src="assets/i18n.js?v=41" defer></script>
+<script src="assets/i18n.js?v=42" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -1244,7 +1244,7 @@
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=15" defer fetchpriority="low"></script>
 <script src="assets/printer/transports.js?v=2" defer></script>
-<script src="assets/printer-bridge.js?v=36" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=39" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
 <script src="assets/boutique-catalog-parts.js?v=10" defer fetchpriority="low"></script>
@@ -1311,7 +1311,7 @@
 
 <script src="assets/clients-directory.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=11" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=41" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=42" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1338,7 +1338,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=41"></script>
+<script src="assets/pages/dashboard-startup.js?v=42"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=13">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=21" defer fetchpriority="low"></script>

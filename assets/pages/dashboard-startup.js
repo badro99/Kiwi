@@ -13,7 +13,7 @@
       'assets/menu-catalog/item-editor.js?v=3',
       'assets/menu-catalog/media.js?v=3',
       'assets/menu-catalog/availability.js?v=3',
-      'assets/menu-catalog.js?v=39',
+      'assets/menu-catalog.js?v=40',
     ];
     document.write(menuScripts.map(url => '<script src="' + url + '" defer fetchpriority="low"><\/script>').join('\n'));
     return;
@@ -26,7 +26,7 @@
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
     'assets/menu-nutrition.js?v=4',
-    'assets/restaurant-recipes.js?v=11',
+    'assets/restaurant-recipes.js?v=12',
     'assets/menu-i18n.js?v=6',
     'assets/kiwi-select.js?v=4',
     'assets/food-trade-settings.js?v=2',
@@ -56,7 +56,7 @@
     'assets/cash-sessions.js?v=8',
     'assets/weather.js?v=1',
     'assets/briefing.js?v=30',
-    'assets/simple-food-cost.js?v=14',
+    'assets/simple-food-cost.js?v=15',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=7',
     'assets/production-action-guard.js?v=4',
