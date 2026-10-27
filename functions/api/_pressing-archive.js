@@ -94,3 +94,12 @@ export async function archivePressingOrders(env, merchant, orders, now = Date.no
   }
   return confirmed;
 }
+
+/* Ce que /api/store appelle : archive les copies serveur éligibles, confirme les
+   bons rejoués déjà archivés, et rend les ids qui peuvent quitter le vivant. */
+export async function archiveFromSnapshot(env, merchant, doc, serverDoc, now = Date.now()) {
+  const aged = archivableOrders(doc, now, serverDoc), replays = replayedOrders(doc, now, serverDoc);
+  const kept = aged.length ? await archivePressingOrders(env, merchant, aged, now) : new Set();
+  if (replays.length) for (const id of await archivePressingOrders(env, merchant, replays, now, { confirmOnly: true })) kept.add(id);
+  return kept;
+}
