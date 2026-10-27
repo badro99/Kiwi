@@ -2166,6 +2166,7 @@ section('Whole-project regressions');
     'menu-sales-test.mjs',
     'foodcost-api-test.mjs',
     'simple-food-cost-test.mjs',
+    'simple-food-cost-split-test.mjs',
     'wave-r-errdash-test.mjs',
     'menu-insights-test.mjs',
     'restaurant-recipe-layout-test.mjs',

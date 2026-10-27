@@ -1,0 +1,151 @@
+{
+  "note": "The shipped file is the exact concatenation of its parts. Edit a part, then rebuild with: cat <parts> > assets/simple-food-cost.js, and move its stamp (node tools/bump-stamp.js assets/simple-food-cost.js).",
+  "bundles": [
+    {
+      "file": "assets/simple-food-cost.js",
+      "sha256AtSplit": "1bdd749b5ef87fada5b5a2a9786e260f41b8aac821d1d9ca7d1b013f3d8e1c69",
+      "parts": [
+        {
+          "file": "assets/simple-food-cost/strings.js",
+          "concern": "header, the guard, FR/EN/AR strings and number, money and date formatting",
+          "lines": [
+            1,
+            172
+          ],
+          "declares": [
+            "STALE_DAYS",
+            "T",
+            "lang",
+            "tr",
+            "esc",
+            "locale",
+            "money",
+            "pct",
+            "when"
+          ]
+        },
+        {
+          "file": "assets/simple-food-cost/calc.js",
+          "concern": "the pure cost calculation (compute): unknown stays unknown, yield, VAT, stale prices",
+          "lines": [
+            173,
+            226
+          ],
+          "declares": [
+            "isNum",
+            "daysBetween",
+            "compute"
+          ]
+        },
+        {
+          "file": "assets/simple-food-cost/sheets.js",
+          "concern": "state, the local draft, the sheet model and the bridge to the menu recipe",
+          "lines": [
+            227,
+            321
+          ],
+          "declares": [
+            "S",
+            "units",
+            "convert",
+            "today",
+            "calc",
+            "merchant",
+            "online",
+            "draftKey",
+            "rememberDraft",
+            "forgetDraft",
+            "restoreDraft",
+            "available",
+            "editable",
+            "menuItems",
+            "menuItem",
+            "vatDefault",
+            "lineSeq",
+            "lineId",
+            "blankSheet",
+            "recipeSeed",
+            "recipeBridge",
+            "toRecipe"
+          ]
+        },
+        {
+          "file": "assets/simple-food-cost/network.js",
+          "concern": "the yes/no question, the foodcost API, history and snapshots, opening a sheet",
+          "lines": [
+            322,
+            450
+          ],
+          "declares": [
+            "ask",
+            "api",
+            "load",
+            "changed",
+            "replaceSheet",
+            "estimates",
+            "openSheet",
+            "save",
+            "action",
+            "loadHistory",
+            "loadSnapshot"
+          ]
+        },
+        {
+          "file": "assets/simple-food-cost/export.js",
+          "concern": "CSV export with formula-safe cells",
+          "lines": [
+            451,
+            478
+          ],
+          "declares": [
+            "cell",
+            "n2",
+            "download",
+            "sheetRows",
+            "exportSheet",
+            "exportAll",
+            "slugFile"
+          ]
+        },
+        {
+          "file": "assets/simple-food-cost/editor.js",
+          "concern": "rendering, input handling, leaving with unsaved changes, styles and the public surface",
+          "lines": [
+            479,
+            759
+          ],
+          "declares": [
+            "statusLabel",
+            "visibleSheets",
+            "banner",
+            "head",
+            "listView",
+            "unitOptions",
+            "inp",
+            "lineWho",
+            "lineLabel",
+            "named",
+            "relabelLine",
+            "numIn",
+            "lineCostCell",
+            "summary",
+            "editorView",
+            "snapshotView",
+            "inner",
+            "paint",
+            "panel",
+            "repaintFigures",
+            "readValue",
+            "onInput",
+            "leaveThen",
+            "onClick",
+            "bound",
+            "bind",
+            "style",
+            "window.KiwiSimpleFoodCost"
+          ]
+        }
+      ]
+    }
+  ]
+}
