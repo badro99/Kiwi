@@ -1991,6 +1991,7 @@ section('Whole-project regressions');
     'plan-catalog-test.mjs',
     'signup-plan-test.mjs',
     'signup-slug-scan-test.mjs',
+    'signup-renamed-slug-test.mjs',
     'starter-copy-test.mjs',
     'error-reporter-test.mjs',
     'tickets-retest-test.mjs',

@@ -546,6 +546,7 @@ export async function onRequestDelete(context) {
     }
   }
 
+  let renameAt = -1, renameOld = null;
   try {
     // Delete the mutation log after sales triggers have emitted their tombstones.
     const orderedTables = tables.filter((t) => t !== 'sale_changes').concat(tables.includes('sale_changes') ? ['sale_changes'] : []);
@@ -553,8 +554,16 @@ export async function onRequestDelete(context) {
       env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant));
     if (deleteSupportMessages) deletes.unshift(deleteSupportMessages);
     if (owner && nextStore && slugMerchant(owner.business) === merchant) {
-      deletes.push(env.DB.prepare('UPDATE accounts SET business = ? WHERE id = ?')
-        .bind(nextStore.name || nextStore.merchant, owner.id));
+      /* Le nom ET le slug réservé à l'inscription (signup.js) changent dans le
+       * MÊME lot : un nom qui bouge sans son slug laissait l'ancien slug réservé
+       * et le nouveau nom introuvable pour le contrôle d'unicité des
+       * inscriptions. Échec = suppression refusée (le lot est atomique). */
+      const newName = nextStore.name || nextStore.merchant;
+      const newSlug = slugMerchant(newName);
+      renameAt = deletes.length;
+      renameOld = env.DB.prepare('UPDATE accounts SET business = ? WHERE id = ?').bind(newName, owner.id);
+      deletes.push(env.DB.prepare('UPDATE accounts SET business = ?, business_slug = ? WHERE id = ?')
+        .bind(newName, newSlug && newSlug !== 'client' ? newSlug : null, owner.id));
     } else if (owner && !nextStore) {
       // Account-wide privacy requests intentionally have no merchant. Remove
       // their PII only with the last store/account, never with a sibling store.
@@ -567,21 +576,17 @@ export async function onRequestDelete(context) {
       deletes.push(env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(owner.id));
       removed.accounts = 1;
     }
-    await env.DB.batch(deletes);
+    try { await env.DB.batch(deletes); }
+    catch (e) {
+      /* Base pas encore migrée (0007) : sans colonne business_slug le lot est
+       * refusé en entier (atomique) ; on le rejoue avec l'ancienne écriture. */
+      if (renameAt < 0 || !/no such column|has no column/i.test(String((e && e.message) || e))) throw e;
+      deletes[renameAt] = renameOld;
+      await env.DB.batch(deletes);
+    }
   } catch (e) {
     return json({ error: 'delete-failed', detail: String(e) }, 500);
   }
-  /* Le compte a changé de nom : le slug réservé à son inscription (signup.js)
-   * ne doit pas garder pour toujours le nom d'un commerce supprimé. Hors du
-   * lot : une base pas encore migrée (0007) n'a pas la colonne, et la
-   * suppression ne doit pas en dépendre. */
-  if (owner && nextStore && slugMerchant(owner.business) === merchant) {
-    try {
-      await env.DB.prepare('UPDATE accounts SET business_slug = NULL WHERE id = ? AND business_slug = ?')
-        .bind(owner.id, merchant).run();
-    } catch (_) { /* colonne absente : rien à libérer */ }
-  }
-
   await logStoreAction(context, merchant, 'store-delete', 'deleted',
     'suppression définitive · ' + JSON.stringify(removed) + ' · r2 ' + JSON.stringify(r2));
 
