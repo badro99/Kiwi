@@ -3,6 +3,7 @@ import { cleanFloorplan } from './_rules-floorplan-clean.js';
 import { refundCreditBook } from './_credit-book-refund.js';
 import { BOOK_FEATURE, commitBook, getVerticalOps, legacyBook, readBook, withBook, withoutBook } from './_credit-book-store.js';
 import { serviceCapacityConflict } from './_booking-capacity.js';
+import { hideReservations, keepReservations } from './_reservations-view.js';
 // /api/store — les documents PRIVÉS d'un établissement, synchronisés entre
 // appareils. Le même filet que /api/catalog, généralisé.
 //
@@ -623,6 +624,9 @@ function unionById(older, newer) {
   return [...ids.values()].sort((a, b) => (+b.updatedAt || 0) - (+a.updatedAt || 0)).slice(0, 500);
 }
 const PARTIAL = {
+  /* Contacts des clients, pièces des voyageurs et liens « gérer ma réservation » :
+     voir functions/api/_reservations-view.js. */
+  reservations: { hide: hideReservations, keep: keepReservations },
   workspaces: {
     hide(doc) {
       if (!doc || typeof doc !== 'object' || !doc.records || typeof doc.records !== 'object') return doc;
@@ -855,7 +859,11 @@ export async function onRequestGet(context) {
      * without its data and the answer is a 304, so a 250 KB receipt logo is
      * neither read, parsed nor re-encoded. Redacted and partial documents
      * depend on who asks, so they keep a full answer every time. */
-    const cacheable = !redact;
+    /* Le carnet de réservations est relu à chaque sondage du tableau de bord :
+       son propriétaire garde la revalidation (la vue complète est la même pour
+       tous ceux qui le tiennent) ; la vue expurgée, elle, ne porte jamais d'ETag. */
+    const editor = redact ? await editsRoster(request, env, merchant) : true;
+    const cacheable = !redact || (feature === 'reservations' && editor);
     const known = cacheable ? storeTag(request.headers.get('If-None-Match')) : null;
     const row = known && known.merchant === merchant && known.feature === feature
       ? await env.DB.prepare(
@@ -873,7 +881,7 @@ export async function onRequestGet(context) {
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
     if (feature === 'briefing') data = ownBriefingDays(data, merchant);
-    const safe = (redact && !(await editsRoster(request, env, merchant))) ? redact(data) : data;
+    const safe = (redact && !editor) ? redact(data) : data;
     return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 }, 200, cacheHeaders);
   } catch (_) {
     // Table absente (migration pas encore passée) → neutre, surtout pas une

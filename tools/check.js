@@ -1473,6 +1473,9 @@ section('Whole-project regressions');
     'audit-remediation-serveur-test.mjs',
     'audit-remediation-pressing-test.mjs',
     'audit-remediation-auth-test.mjs',
+    /* Vague 11 : appairage par réseau, sondes de PIN console, journal des codes
+       opérateur, relais de support, file publique, carnet de réservations. */
+    'wave11-security-test.mjs',
     'forgot-password-test.mjs',
     'caisse-pairing-recovery-test.mjs',
     'caisse-handoff-demo-reload-test.mjs',

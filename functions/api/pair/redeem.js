@@ -20,6 +20,7 @@
 
 import { json, tillToken, tillDeviceToken, recordTillDevice, tillCookie, terminalToken, terminalCookie, tillEpoch, tillStoreCookie,
 } from '../../auth/_lib.js';
+import { clientAddress, sourceKeys } from '../_net-source.js';
 
 /* ── Brute-force cap ────────────────────────────────────────────────────────
  * This endpoint has no session to check — a till has no login — so a 6-digit
@@ -37,22 +38,38 @@ const WINDOW_MS = 10 * 60 * 1000;   // rolling window a burst is measured over
 const MAX_FAILS = 10;               // wrong codes tolerated in that window
 const BLOCK_MS  = 15 * 60 * 1000;   // lockout once the cap is passed
 
-function clientIp(request) {
-  return request.headers.get('CF-Connecting-IP')
-      || request.headers.get('X-Forwarded-For')
-      || '';
+/* ── …and per NETWORK, not only per address ─────────────────────────────────
+ * Codes are global: one guess tries every merchant's live codes at once. An
+ * IPv6 client owns a whole /64 and could take a fresh address per request, so
+ * the narrow counter is the /64 (IPv4 keeps the exact address, see
+ * _net-source.js). A second, wider counter (IPv6 /48, IPv4 /24) bounds a
+ * client that rotates whole /64s; it is NOT cleared by a successful pairing,
+ * otherwise redeeming a code from one's own Kiwi account would reset it every
+ * nine guesses. Thirty wrong codes from one network in ten minutes is never
+ * a shop fumbling its own code.
+ *
+ * No global budget: one would let any stranger switch pairing off for every
+ * merchant by spending it. */
+const WIDE_MAX_FAILS = 30;
+const WIDE_PREFIX = 'pairw|';
+
+function limiterKeys(request) {
+  const { narrow, wide } = sourceKeys(clientAddress(request));
+  return [narrow ? { key: narrow, max: MAX_FAILS } : null,
+          wide ? { key: WIDE_PREFIX + wide, max: WIDE_MAX_FAILS } : null].filter(Boolean);
 }
 
 function limiterUnavailable() { return json({ error: 'rate-limit-unavailable' }, 503); }
 
-async function pairLimitCheck(env, ip, now) {
-  if (!ip) return null;
+async function pairLimitCheck(env, keys, now) {
   try {
-    const a = await env.DB.prepare(
-      'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
-    ).bind(ip).first();
-    if (a && a.blocked_until && a.blocked_until > now) {
-      return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
+    for (const { key } of keys) {
+      const a = await env.DB.prepare(
+        'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
+      ).bind(key).first();
+      if (a && a.blocked_until && a.blocked_until > now) {
+        return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
+      }
     }
     return null;
   } catch (_) { return limiterUnavailable(); }
@@ -61,7 +78,14 @@ async function pairLimitCheck(env, ip, now) {
 /* Record one wrong guess atomically. Concurrent failures must each advance the
  * same SQLite row; a read-then-write pair loses increments under a wave of
  * guesses. */
-async function noteFail(env, ip, now) {
+async function noteFail(env, keys, now) {
+  for (const { key, max } of keys) {
+    if (!await noteOneFail(env, key, max, now)) return false;
+  }
+  return true;
+}
+
+async function noteOneFail(env, ip, maxFails, now) {
   if (!ip) return true;
   if (!env || !env.DB) return false;
   try {
@@ -75,7 +99,7 @@ async function noteFail(env, ip, now) {
            WHEN pair_attempts.fails + 1 >= ? THEN ?
            ELSE pair_attempts.blocked_until END`
     ).bind(ip, now, now, WINDOW_MS, now, WINDOW_MS, now,
-           now, WINDOW_MS, MAX_FAILS, now + BLOCK_MS).run();
+           now, WINDOW_MS, maxFails, now + BLOCK_MS).run();
     const changes = Number(result && result.meta && result.meta.changes);
     return Number.isFinite(changes) ? changes > 0 : true;
   } catch (_) { return false; }
@@ -92,17 +116,17 @@ export async function onRequestPost(context) {
     ? String(body.terminalId) : '';
 
   const now = Date.now();
-  const ip = clientIp(request);
+  const keys = limiterKeys(request);
 
   // Are we already locked out? Checked BEFORE the code is even shaped, so a
   // blocked source cannot use malformed input as a free probe.
-  if (ip) {
-    const limited = await pairLimitCheck(env, ip, now);
+  if (keys.length) {
+    const limited = await pairLimitCheck(env, keys, now);
     if (limited) return limited;
   }
 
   if (code.length !== 6) {
-    if (!await noteFail(env, ip, now)) return limiterUnavailable();
+    if (!await noteFail(env, keys, now)) return limiterUnavailable();
     return json({ error: 'invalid_or_expired' }, 422);
   }
 
@@ -154,13 +178,14 @@ export async function onRequestPost(context) {
   }
 
   if (!row) {
-    if (!await noteFail(env, ip, now)) return limiterUnavailable();
+    if (!await noteFail(env, keys, now)) return limiterUnavailable();
     return json({ error: 'invalid_or_expired' }, 422);
   }
 
-  // Genuine pairing — wipe the counter so an honest shop that mistyped twice
-  // starts clean again.
-  if (ip) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(ip).run(); } catch (_) {} }
+  // Genuine pairing — wipe the narrow counter so an honest shop that mistyped
+  // twice starts clean again. The network counter stays (see WIDE_MAX_FAILS).
+  const narrow = keys.find((k) => !k.key.startsWith(WIDE_PREFIX));
+  if (narrow) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(narrow.key).run(); } catch (_) {} }
 
   const res = json({
     ok: true,
