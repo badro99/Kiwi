@@ -74,6 +74,8 @@ function pagesCtx({ trade = 'boutique', real = true } = {}) {
     "function _bqxCopy(t){ const tr = t !== undefined ? String(t||'') : win2.KiwiStoreTemplates.currentTrade(); return { trade: tr }; }",
     'var win2 = window;',
     "function _mad(n){ return String(Math.round(n)); }",
+    "function _mad2(n){ return n.toFixed(2).replace('.', ','); }",
+    PAGES.match(/^function _bqxPrice\([\s\S]*?^}/m)[0],
     grab(PAGES, 'function _bqxN('),
     grab(PAGES, 'function _bqxTillCode('),
     grab(PAGES, 'function _bqxTillReads('),
@@ -132,7 +134,7 @@ ok('valeur du stock : trois cas, jamais coût et prix mélangés', () => {
   const c = pagesCtx({ real: true });
   const base = { products: 4, stockValue: 1000, stockCost: 700, stockCostKnown: 400 };
   assert.deepEqual(JSON.parse(JSON.stringify(run(c, `_bqxStockKPI(${JSON.stringify({ ...base, costed: 0 })})`))),
-    { amount: 1000, note: ' · au prix de vente, coûts non saisis' });
+    { amount: 1000, shown: '1000', note: ' · au prix de vente, coûts non saisis' });
   const partial = JSON.parse(JSON.stringify(run(c, `_bqxStockKPI(${JSON.stringify({ ...base, costed: 1 })})`)));
   assert.equal(partial.amount, 400);
   assert.equal(partial.note, ' · 1 produit sur 4 au coût d’achat');
@@ -141,6 +143,20 @@ ok('valeur du stock : trois cas, jamais coût et prix mélangés', () => {
   assert.match(full.note, /potentiel 1000 MAD/);
   // La démo garde le prix de vente, comme avant.
   assert.equal(run(pagesCtx({ real: false }), `_bqxStockKPI(${JSON.stringify({ ...base, costed: 4 })})`).amount, 1000);
+});
+
+ok('valeur du stock : les centimes restent affichés, comme sur les prix', () => {
+  const c = pagesCtx({ real: true });
+  const frac = { products: 4, stockValue: 1234.5, stockCost: 749.7, stockCostKnown: 399.9 };
+  const kpi = (costed) => JSON.parse(JSON.stringify(run(c, `_bqxStockKPI(${JSON.stringify({ ...frac, costed })})`)));
+  assert.equal(kpi(0).shown, '1234,50');
+  assert.equal(kpi(1).shown, '399,90');
+  assert.equal(kpi(4).shown, '749,70');
+  assert.match(kpi(4).note, /potentiel 1234,50 MAD/);
+  assert.equal(kpi(4).amount, 749.7, 'le montant reste le nombre exact');
+  assert.equal(run(pagesCtx({ real: false }), `_bqxStockKPI(${JSON.stringify({ ...frac, costed: 4 })})`).shown, '1234,50');
+  // Un stock entier reste entier : pas de « ,00 » ajouté.
+  assert.equal(run(c, `_bqxStockKPI(${JSON.stringify({ products: 2, stockValue: 500, stockCost: 500, stockCostKnown: 500, costed: 2 })})`).shown, '500');
 });
 
 /* ── boutique-catalog.js : stats() réel ─────────────────────────────────── */

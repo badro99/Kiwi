@@ -1,7 +1,7 @@
 /* Planning shift-editor. Exports: closeShiftPop, planCellHtml, planDaysHtml, shiftCellInner, shiftCellTitle.
- * Reads injected helpers: AVATAR_COLORS, HHMM_RE, addDays, applyLiveTeam, buildPeriod, compactPeriods, dateLocale, esc, fmtDur, fmtHours, fromISO, getMembers, getShifts, handlers, hourlyPayFor, initials, jobName, live, memberFullName, normShift, saveCustomTeams, shiftHours, shiftIsNextDay, shiftMinutes, t, teamKey, toISO, toast, trLang, visibleDays.
- * Reads window: KiwiNumber, KiwiVenue, __kiwiTeamV2, addEventListener, innerHeight, innerWidth, matchMedia, removeEventListener. Mutable UI state is private to this factory. */
-export function createShiftEditor({ AVATAR_COLORS, HHMM_RE, addDays, applyLiveTeam, buildPeriod, compactPeriods, dateLocale, esc, fmtDur, fmtHours, fromISO, getMembers, getShifts, handlers, hourlyPayFor, initials, jobName, live, memberFullName, normShift, saveCustomTeams, shiftHours, shiftIsNextDay, shiftMinutes, t, teamKey, toISO, toast, trLang, visibleDays }) {
+ * Reads injected helpers: AVATAR_COLORS, HHMM_RE, addDays, applyLiveTeam, buildPeriod, compactPeriods, dateLocale, esc, fmtDur, fmtHours, fmtPay, fromISO, getMembers, getShifts, handlers, hourlyPayFor, initials, jobName, live, memberFullName, normShift, payCents, saveCustomTeams, shiftHours, shiftIsNextDay, shiftMinutes, t, teamKey, toISO, toast, trLang, visibleDays.
+ * Reads window: KiwiVenue, __kiwiTeamV2, addEventListener, innerHeight, innerWidth, matchMedia, removeEventListener. Mutable UI state is private to this factory. */
+export function createShiftEditor({ AVATAR_COLORS, HHMM_RE, addDays, applyLiveTeam, buildPeriod, compactPeriods, dateLocale, esc, fmtDur, fmtHours, fmtPay, fromISO, getMembers, getShifts, handlers, hourlyPayFor, initials, jobName, live, memberFullName, normShift, payCents, saveCustomTeams, shiftHours, shiftIsNextDay, shiftMinutes, t, teamKey, toISO, toast, trLang, visibleDays }) {
   let shiftPop = null;
 
   const currentVenueKey = () => teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
@@ -244,23 +244,23 @@ export function createShiftEditor({ AVATAR_COLORS, HHMM_RE, addDays, applyLiveTe
     const shifts = getShifts(vt);
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     const rows = root.querySelectorAll('table.kt-h-table tbody tr');
-    let grandH = 0, grandC = 0;
+    let grandH = 0, grandCC = 0;
     members.forEach((m, idx) => {
       const row = shifts[m.id] || {};
       let h = 0;
       period.days.forEach((d) => { h += shiftHours(row[d]); });
       const cost = hourlyPayFor(m, h, period.days);
-      grandH += h; grandC += cost;
+      grandH += h; grandCC += payCents(cost);
       const tr = rows[idx];
       if (!tr) return;
       const tb = tr.querySelector('.kt-h-total b');
       if (tb) tb.textContent = fmtHours(h);
       const pb = tr.querySelector('.kt-h-pay b');
-      if (pb && (+m.hourlyRate || 0) > 0) pb.textContent = (window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+      if (pb && (+m.hourlyRate || 0) > 0) pb.textContent = fmtPay(cost);
     });
     const foot = root.querySelectorAll('tfoot .kt-h-foot-tot b');
     if (foot[0]) foot[0].textContent = fmtHours(grandH);
-    if (foot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) foot[1].textContent = (window.KiwiNumber?.format(grandC, { maximumFractionDigits: 0 }) ?? grandC.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+    if (foot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) foot[1].textContent = fmtPay(grandCC / 100);
   }
 
   function shiftCellInner(T, cur, locked) {

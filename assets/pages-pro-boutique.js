@@ -984,15 +984,18 @@ function _bqxN(n, one, many) { return n + ' ' + (Math.abs(n) < 2 ? one : (many |
    un repli sur le prix, on ne promet donc pas un potentiel qui serait le même
    nombre affiché deux fois. */
 function _bqxStockKPI(st) {
+  /* `shown` : le chiffre tel qu'on l'affiche. Les prix gardent leurs centimes,
+     la valeur de stock aussi (3 × 249,90 ne devient pas 750). */
+  const out = (amount, note) => ({ amount, shown: _bqxPrice(amount), note });
   const real = !!(window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.());
-  if (!real) return { amount: st.stockValue, note: '' };
+  if (!real) return out(st.stockValue, '');
   /* Trois cas, jamais un mélange sous le même libellé : aucun coût saisi (on le
      dit, le chiffre est au prix de vente), coûts partiels (le coût des seuls
      produits chiffrés, la part est annoncée), coûts complets (potentiel rappelé). */
   const t = _bqxInvT();
-  if (!st.costed) return { amount: st.stockValue, note: t.kNoCost };
-  if (st.costed < st.products) return { amount: st.stockCostKnown, note: t.kSomeCost(st.costed, st.products) };
-  return { amount: st.stockCost, note: _bqxPfFill(t.kPotential, { v: _mad(st.stockValue), cur: t.cur }) };
+  if (!st.costed) return out(st.stockValue, t.kNoCost);
+  if (st.costed < st.products) return out(st.stockCostKnown, t.kSomeCost(st.costed, st.products));
+  return out(st.stockCost, _bqxPfFill(t.kPotential, { v: _bqxPrice(st.stockValue), cur: t.cur }));
 }
 
 /* Les rayons tout prêts (assets/store-templates.js). Le bouton n'apparaît que
@@ -1032,7 +1035,7 @@ function _renderInventory() {
     body: `<div class="bqx-inv">
       <div class="kx-kpi-strip bqx-kpis">
         <div class="kx-kpi"><div class="l">${_esc(t.kProducts)}</div><div class="v">${st.products}</div><div class="d">${_esc(_bqxShT().variants(st.variants))}</div></div>
-        <div class="kx-kpi"><div class="l">${_esc(t.kValue)}</div><div class="v">${_mad(k.amount)}<span class="u">${_esc(t.cur)}</span></div><div class="d">${_esc(_bqxShT().pieces(st.totalStock) + k.note)}</div></div>
+        <div class="kx-kpi"><div class="l">${_esc(t.kValue)}</div><div class="v">${k.shown}<span class="u">${_esc(t.cur)}</span></div><div class="d">${_esc(_bqxShT().pieces(st.totalStock) + k.note)}</div></div>
         <button type="button" class="kx-kpi bqx-kpi-btn${need ? ' warn' : ''}${_bqxLowOnly ? ' is-on' : ''}" data-action="bqx-low" aria-pressed="${_bqxLowOnly}"${need ? '' : ' disabled'}>
           <div class="l">${_esc(t.kRestock)}</div><div class="v">${need}</div>
           <div class="d">${_esc(need ? (_bqxLowOnly ? t.kFilterOn : _bqxPfFill(t.kLowOut, { low: st.low, out: st.ruptures })) : t.kNone)}</div></button>
@@ -3521,7 +3524,7 @@ function _renderCategories() {
       <div class="kx-kpi-strip cols-3">
         <div class="kx-kpi"><div class="l">${_catL('CATÉGORIES', 'CATEGORIES', 'الفئات')}</div><div class="v">${cats.length}</div><div class="d">${_catL('Créez / supprimez librement', 'Create or delete freely', 'أنشئ أو احذف بحرية')}</div></div>
         <div class="kx-kpi"><div class="l">${_catL('PRODUITS RÉFÉRENCÉS', 'PRODUCTS LISTED', 'المنتجات المدرجة')}</div><div class="v">${st.products}</div><div class="d">${cat.listProducts({ categoryId: 'all' }).filter((p) => !p.categoryId).length} ${_catL('sans catégorie', 'uncategorised', 'بدون فئة')}</div></div>
-        <div class="kx-kpi"><div class="l">${_catL('VALEUR DE STOCK', 'STOCK VALUE', 'قيمة المخزون')}</div><div class="v">${_mad(_bqxStockKPI(st).amount)}<span class="u">MAD</span></div><div class="d">${_catL('Toutes catégories', 'All categories', 'جميع الفئات')}${_bqxStockKPI(st).note}</div></div>
+        <div class="kx-kpi"><div class="l">${_catL('VALEUR DE STOCK', 'STOCK VALUE', 'قيمة المخزون')}</div><div class="v">${_bqxStockKPI(st).shown}<span class="u">MAD</span></div><div class="d">${_catL('Toutes catégories', 'All categories', 'جميع الفئات')}${_bqxStockKPI(st).note}</div></div>
       </div>
 
       <div class="p-toolbar" style="margin-top:4px;">

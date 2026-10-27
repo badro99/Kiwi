@@ -1,8 +1,8 @@
 import { createCorrections } from './planning/corrections.js?v=3';
-import { createPayrollView } from './planning/payroll-view.js?v=4';
+import { createPayrollView } from './planning/payroll-view.js?v=5';
 import { createOptimiser } from './planning/optimiser.js?v=3';
 import { createCsvImport } from './planning/csv-import.js?v=3';
-import { createShiftEditor } from './planning/shift-editor.js?v=3';
+import { createShiftEditor } from './planning/shift-editor.js?v=4';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · ÉQUIPE · heures, planning et paie (team-hours.js)
  *
@@ -59,14 +59,14 @@ import { createShiftEditor } from './planning/shift-editor.js?v=3';
     periodPillsHtml, teamKey, saveCustomTeams, getMembers, getHours, pad, fmtFr, toISO, buildPeriod,
     periodNavigatorHtml, lockBucket, setPeriodLock, restorePeriodLock, applyLiveTeam, render,
     esc, memberFullName, isCustomVenue, fmtMad, svgIcon, IC, dateLocale, MODAL_CSS,
-    contractWeekHours, hourlyPayFor, payrollFigures,
+    contractWeekHours, hourlyPayFor, payrollFigures, payCents, fmtPay,
   } = core;
 
   const corrections = createCorrections({ Kiwi: Kiwi, dateLocale: dateLocale, esc: esc, fetchDeadline: fetchDeadline, handlers: handlers, pad: pad, render: render, toast: toast, trLang: trLang });
-  const payrollView = createPayrollView({ AVATAR_COLORS: AVATAR_COLORS, IC: IC, Kiwi: Kiwi, buildPeriod: buildPeriod, correctionsHtml: (...args) => corrections.correctionsHtml(...args), deferredMark: (...args) => corrections.deferredMark(...args), esc: esc, fmtHours: fmtHours, fmtMad: fmtMad, getHours: getHours, getMembers: getMembers, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, pad: pad, payrollFigures: payrollFigures, periodNavigatorHtml: periodNavigatorHtml, periodPillsHtml: periodPillsHtml, render: render, renderPlanningPane: renderPlanningPane, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, svgIcon: svgIcon, t: t, teamKey: teamKey, toISO: toISO, trLang: trLang });
+  const payrollView = createPayrollView({ AVATAR_COLORS: AVATAR_COLORS, IC: IC, Kiwi: Kiwi, buildPeriod: buildPeriod, correctionsHtml: (...args) => corrections.correctionsHtml(...args), deferredMark: (...args) => corrections.deferredMark(...args), esc: esc, dateLocale: dateLocale, fmtHours: fmtHours, fmtMad: fmtMad, fmtPay: fmtPay, getHours: getHours, getMembers: getMembers, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, pad: pad, payCents: payCents, payrollFigures: payrollFigures, periodNavigatorHtml: periodNavigatorHtml, periodPillsHtml: periodPillsHtml, render: render, renderPlanningPane: renderPlanningPane, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, svgIcon: svgIcon, t: t, teamKey: teamKey, toISO: toISO, trLang: trLang });
   const optimiser = createOptimiser({ esc: esc, handlers: handlers, memberFullName: memberFullName, modal: modal, planningContext: planningContext, planningCopy: planningCopy, planningHolidaysByDay: planningHolidaysByDay, planningHoursKey: planningHoursKey, render: render, saveCustomTeams: saveCustomTeams, t: t, toast: toast, trLang: trLang });
   const csvImport = createCsvImport({ Kiwi: Kiwi, esc: esc, getMembers: getMembers, handlers: handlers, live: live, lockBucket: lockBucket, memberFullName: memberFullName, modal: modal, pad: pad, render: render, saveCustomTeams: saveCustomTeams, teamKey: teamKey, trLang: trLang });
-  const shiftEditor = createShiftEditor({ AVATAR_COLORS: AVATAR_COLORS, HHMM_RE: HHMM_RE, addDays: addDays, applyLiveTeam: applyLiveTeam, buildPeriod: buildPeriod, compactPeriods: compactPeriods, dateLocale: dateLocale, esc: esc, fmtDur: fmtDur, fmtHours: fmtHours, fromISO: fromISO, getMembers: getMembers, getShifts: getShifts, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, normShift: normShift, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, shiftIsNextDay: shiftIsNextDay, shiftMinutes: shiftMinutes, t: t, teamKey: teamKey, toISO: toISO, toast: toast, trLang: trLang, visibleDays: visibleDays });
+  const shiftEditor = createShiftEditor({ AVATAR_COLORS: AVATAR_COLORS, HHMM_RE: HHMM_RE, addDays: addDays, applyLiveTeam: applyLiveTeam, buildPeriod: buildPeriod, compactPeriods: compactPeriods, dateLocale: dateLocale, esc: esc, fmtDur: fmtDur, fmtHours: fmtHours, fmtPay: fmtPay, fromISO: fromISO, getMembers: getMembers, getShifts: getShifts, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, normShift: normShift, payCents: payCents, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, shiftIsNextDay: shiftIsNextDay, shiftMinutes: shiftMinutes, t: t, teamKey: teamKey, toISO: toISO, toast: toast, trLang: trLang, visibleDays: visibleDays });
   function deferredMark(...args) { return corrections.deferredMark(...args); }
   function correctionsHtml(...args) { return corrections.correctionsHtml(...args); }
   function renderHoursPane(...args) { return payrollView.renderHoursPane(...args); }
@@ -609,7 +609,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=3';
      * à « 0 règles » le jour où le planning est enfin complet. */
     const coverageRuleCount=(planning.coverageRules||[]).filter((rule)=>rule&&rule.active!==false).length;
     const openOpportunities=(planning.openShifts||[]).filter((item)=>['open','claimed'].includes(item.status)).length+(planning.swapRequests||[]).filter((item)=>['open','claimed'].includes(item.status)).length;
-    let grandH = 0, grandCost = 0;
+    let grandH = 0, grandCostC = 0;
     let workedH=0;
     const realised=root.hoursByVenue[venueType]||{};
     members.forEach((member)=>period.days.forEach((day)=>{workedH+=Number(realised[member.id]&&realised[member.id][day])||0;}));
@@ -640,7 +640,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=3';
         return planCellHtml(T, m, d, row[d], locked, calendarMeta[d]);
       }).join('');
       const cost = hourlyPayFor(m, h, period.days);
-      grandH += h; grandCost += cost;
+      grandH += h; grandCostC += payCents(cost);
       const tone = m.avatarTone || 'a';
       return `
         <tr>
@@ -653,7 +653,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=3';
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(h)}</b></td>
-          ${showCosts ? ((+m.hourlyRate || 0) > 0 ? `<td class="kt-h-pay mono"><b>${(window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : `<td class="kt-h-pay mono"><b title="${esc(T.noRate)}">·</b></td>`) : ''}
+          ${showCosts ? ((+m.hourlyRate || 0) > 0 ? `<td class="kt-h-pay mono"><b>${fmtPay(cost)}</b><span>MAD</span></td>` : `<td class="kt-h-pay mono"><b title="${esc(T.noRate)}">·</b></td>`) : ''}
         </tr>`;
     }).join('');
 
@@ -738,7 +738,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=3';
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
                 <td colspan="${view.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandH)}</b></td>
-                ${showCosts ? (members.some((m) => (+m.hourlyRate || 0) > 0) ? `<td class="kt-h-foot-tot mono"><b>${(window.KiwiNumber?.format(grandCost, { maximumFractionDigits: 0 }) ?? grandCost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : `<td class="kt-h-foot-tot mono"><b title="${esc(T.noRate)}">·</b></td>`) : ''}
+                ${showCosts ? (members.some((m) => (+m.hourlyRate || 0) > 0) ? `<td class="kt-h-foot-tot mono"><b>${fmtPay(grandCostC / 100)}</b><span>MAD</span></td>` : `<td class="kt-h-foot-tot mono"><b title="${esc(T.noRate)}">·</b></td>`) : ''}
               </tr>
             </tfoot>
           </table>

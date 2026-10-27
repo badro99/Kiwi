@@ -508,16 +508,16 @@
           "sha256": "cddde440c7f6597afa345fa0bada1d59d8e26c3dcf86157b509203ee7762a4ab"
         },
         {
-          "start": 106045,
-          "end": 106241,
+          "start": 106586,
+          "end": 106782,
           "offset": 1506,
           "length": 196,
           "replacement": "  /* team-owner:invitations:ONB_ROLE_FN */\n",
           "sha256": "147b60f12d7623b29f458591c372fce11819d132219791e661ec06f983a03d4b"
         },
         {
-          "start": 106241,
-          "end": 108217,
+          "start": 106782,
+          "end": 108758,
           "offset": 1703,
           "length": 1976,
           "replacement": "  function importMembers(...args) { return invitations.importMembers(...args); }\n",
@@ -574,40 +574,40 @@
           "sha256": "93795f265b4c6908b37ae2c0de7344984469e9efcbebf24ae50fce11b84fa977"
         },
         {
-          "start": 108648,
-          "end": 109540,
+          "start": 109189,
+          "end": 110081,
           "offset": 3764,
           "length": 892,
           "replacement": "  function roster(...args) { return rosterList.roster(...args); }\n",
           "sha256": "3002fc2fd3b75eec03b3e6959820b9fc33597d2c0069612123e5583457869e2d"
         },
         {
-          "start": 109941,
-          "end": 111129,
+          "start": 110482,
+          "end": 111670,
           "offset": 4657,
           "length": 1188,
           "replacement": "  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }\n",
           "sha256": "075576c0691e02bff94e07de818934512521758447fccb55306144b9062b93d7"
         },
         {
-          "start": 111441,
-          "end": 112765,
+          "start": 111982,
+          "end": 113306,
           "offset": 5846,
           "length": 1324,
           "replacement": "  function planningDay(...args) { return rosterList.planningDay(...args); }\n",
           "sha256": "303f5f571b4cdd91548146425a2fabe5d73456a704dec562064152b2ede24081"
         },
         {
-          "start": 113114,
-          "end": 114703,
+          "start": 113655,
+          "end": 115244,
           "offset": 7171,
           "length": 1589,
           "replacement": "  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }\n",
           "sha256": "8b19f706b76bc08cd8a3280a05229b692ed5dac6f497e0cb000d5b1c49362b82"
         },
         {
-          "start": 115140,
-          "end": 115726,
+          "start": 115681,
+          "end": 116267,
           "offset": 8761,
           "length": 586,
           "replacement": "  function labour(...args) { return rosterList.labour(...args); }\n",
@@ -948,7 +948,7 @@
     "kiwi-serveur.html": 26,
     "booking.html": 4
   },
-  "sha256": "7fd644dca34894ddeb365733e08eef02bdd7a0c8123dc9a46332e02e2f9fb294",
+  "sha256": "7649167b27905c80af0e6abd7956462d1fdd18890469c4a447f9124be647fc97",
   "imports": [
     "./team/member-state.js",
     "./team/venue-scope.js",

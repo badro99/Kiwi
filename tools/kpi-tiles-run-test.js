@@ -117,6 +117,9 @@ ok('pourboires d\'un vrai commerçant : ceux déclarés à la clôture, un point
   assert.deepEqual(derive(load({ own: true, closedTips: { days: 3, sum: 412 } }), 'tips', REAL, ctx), { value: 412, unit: 'MAD', fmt: 'int', delta: null });
   assert.equal(derive(load({ own: true, closedTips: { days: 0, sum: 0 } }), 'tips', REAL, ctx).text, '·');
   assert.equal(derive(load({ own: true, closedTips: { partial: true } }), 'tips', REAL, ctx).text, '…');
+  const part = derive(load({ own: true, closedTips: { partial: true, days: 2, sum: 120.5 } }), 'tips', REAL, ctx);
+  assert.equal(part.value, 120.5, 'partiel : les pourboires connus restent affichés');
+  assert.equal(part.noteKey, 'dash.kpi.tipsPartial', 'partiel : la tuile porte sa note');
   assert.equal(derive(load({ own: true, closedTips: null }), 'tips', REAL, ctx), null);
   assert.ok(derive(load({ own: true, closedTips: { days: 1, sum: 5 } }), 'tips', REAL, ctx).value !== 4618 * 0.072, 'jamais le CA × 7,2 % inventé');
 });

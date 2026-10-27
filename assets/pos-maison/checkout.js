@@ -1,7 +1,8 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=97';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=17';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=17';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=100';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=20';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=20';
 import '../refund-split.js?v=2';
+import '../money-cents.js?v=4';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -1468,7 +1469,7 @@ import '../refund-split.js?v=2';
    * can still receive/adjust stock and register or print existing labels.
    * ─────────────────────────────────────────────────────────────────────────── */
   const catDB = () => window.KiwiBoutiqueCatalog;
-  const fmtNum = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0));
+  const fmtNum = (n) => globalThis.KiwiMoney.format(n || 0);
 
   function injectInvCss() {
     if (document.getElementById('mzi-css')) return;

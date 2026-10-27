@@ -1,6 +1,7 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=97';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=17';
-import { invSetModal, offerRegister } from './inventory.js?v=17';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=100';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=20';
+import { invSetModal, offerRegister } from './inventory.js?v=20';
+import '../money-cents.js?v=4';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -8,15 +9,16 @@ import { invSetModal, offerRegister } from './inventory.js?v=17';
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
-  /* La caisse Maison compte en dirhams entiers, et n'encaisse JAMAIS plus que
-     le prix affiché (décision propriétaire, 2026-10-19, la même que la caisse
-     boutique). Un prix de catalogue à 249,90, une pièce de service à 83,33,
-     une promotion ou une remise qui tombe sur 220,50 s'arrondissent donc vers
-     le bas, partout : grille, fiche, ticket, échange et reçu disent le même
-     chiffre. Arrondir au plus proche encaissait 250 pour 249,90. Le petit
-     epsilon absorbe 0,1 + 0,2 et ses cousins, jamais un vrai centime. */
-  const shelf = (n) => Math.max(0, Math.floor((+n || 0) + 1e-6));
+  const fmtMAD = (n) => globalThis.KiwiMoney.format(n) + ' MAD';
+  /* La caisse Maison garde le prix au centime, comme la caisse boutique
+     (décision propriétaire, 2026-10-26, docs/decisions/2026-10-26-wave-q.md :
+     un prix configuré est encaissé au centime, un prix entier reste entier).
+     Elle n'encaisse JAMAIS plus que le prix affiché : un prix de catalogue à
+     249,90, une pièce de service à 83,33, une promotion ou une remise qui tombe
+     sur 220,505 descendent au centime inférieur, partout : grille, fiche,
+     ticket, échange et reçu disent le même chiffre. Le petit epsilon absorbe
+     0,1 + 0,2 et ses cousins, jamais un vrai centime. */
+  const shelf = (n) => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];

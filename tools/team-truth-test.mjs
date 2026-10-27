@@ -118,7 +118,7 @@ ok('« Salaire calculé » sans taux horaire : « · », pas « 0 MAD »', () =>
 function payCtx(hours) {
   const c = vm.createContext({ getHours: () => hours });
   vm.runInContext([grabBlock('function periodMonthShare('), grabBlock('function contractWeekHours('),
-    grabBlock('function hourlyPayFor('), grabBlock('function payrollFigures(')].join('\n')
+    grabBlock('function hourlyPayFor('), grabBlock('const payCents = '), grabBlock('function payrollFigures(')].join('\n')
     + '\nthis.f = payrollFigures; this.share = periodMonthShare; this.pay = hourlyPayFor;', c);
   return c;
 }

@@ -276,15 +276,15 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   const saleBlock = jsSrc.slice(jsSrc.indexOf('          lines: t.lines.map((ln) => ({'), jsSrc.indexOf('          reward: rewardUsed'));
   ok(saleBlock.length > 0 && !/filter\s*\(/.test(saleBlock),
     'le journal des ventes enregistre toutes les lignes, sans filtrer le dépôt-vente');
-  ok(/consigned: Math\.round\(tot\.consigned\)/.test(jsSrc)
-    && /own: isAcompte \? receivedNow : Math\.round\(tot\.own\)/.test(jsSrc),
+  ok(/consigned: bqMoney\(tot\.consigned\)/.test(jsSrc)
+    && /own: isAcompte \? receivedNow : bqMoney\(tot\.own\)/.test(jsSrc),
     'la vente écrit la part des déposants et la recette propre, limitée au reçu pour un acompte');
 
   // b) la recette du jour exclut le dépôt-vente, avec repli pour l'historique
   ok(/const caToday = \(\) => salesToday\(\)\.reduce\(\(s, x\) => s \+ cashedOf\(x\), 0\)/.test(jsSrc)
     && /const cashedOf = [\s\S]{0,200}\(x\.own != null \? \+x\.own : \(\+x\.total \|\| 0\)\) - notCashedOf\(x\)/.test(jsSrc),
     'la recette du jour lit `own`, retombe sur `total` pour les ventes d’avant, et retire avoir et livraison');
-  ok(/cashIn = Math\.max\(0, cashIn - Math\.round\(tot\.consigned\)\)/.test(jsSrc),
+  ok(/cashIn = Math\.max\(0, bqMoney\(cashIn - bqMoney\(tot\.consigned\)\)\)/.test(jsSrc),
     'ce qui remonte au tableau de bord exclut la part des déposants');
 
   // c) la caisse ne tient AUCUN solde de reversement — décision explicite de la
@@ -458,7 +458,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     const sizesOf = (p) => Object.keys(p.sizes || {});
     const looseOf = () => 0;
     // eslint-disable-next-line no-new-func
-    /* le même arrondi que la caisse : au dirham inférieur (décision 2026-10-19) */
+    /* le même arrondi que la caisse : au centime inférieur (décision 2026-10-26) */
     const shelfSrc = (jsSrc.match(/  const shelf = [^\n]+\n/) || [''])[0];
     return new Function('P', 'window', 'stockOf', 'sizesOf', 'looseOf', shelfSrc + block + '\n; return { promoForLine, lineDeal, lineBase: (ln) => lineDeal(ln).price };')(P, fakeWindow || {}, stockOf, sizesOf, looseOf);
   };
@@ -476,8 +476,8 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(none.lineBase({ pid: 'svc1' }) === 1200, 'sans moteur promo, prix catalogue');
   ok(none.lineBase({ pid: 'svc1', isPiece: true, customPrice: 120 }) === 120, 'sans moteur, prix pièce catalogue');
   ok(pct.lineDeal({ pid: 'svc1', promo: { price: 100 } }).price === 100, 'estampille plus basse conservée');
-  ok(none.lineBase({ pid: 'svc1', isPiece: true, customPrice: 84.9 }) === 84, 'pièce à 84,90 → 84, jamais 85');
-  ok(pct.lineBase({ pid: 'svc1', isPiece: true, customPrice: 125 }) === 112, 'pièce 125 − 10 % = 112,50 → 112, jamais 113');
+  ok(none.lineBase({ pid: 'svc1', isPiece: true, customPrice: 84.9 }) === 84.9, 'pièce à 84,90 garde ses centimes (décision 2026-10-26)');
+  ok(pct.lineBase({ pid: 'svc1', isPiece: true, customPrice: 125 }) === 112.5, 'pièce 125 − 10 % = 112,50 garde ses centimes, jamais 113');
 }
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);

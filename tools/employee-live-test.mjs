@@ -1092,6 +1092,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
       fmtHours: (v) => String(v), buildPeriod: () => ({ days: ['2026-10-20', '2026-10-21'], startFr: '', endFr: '' }),
       getHours: () => ({}), memberFullName: (m) => m.firstName, initials: () => 'S', jobName: (v) => v,
       hourlyPayFor: () => 0, periodPillsHtml: fn, periodNavigatorHtml: fn, svgIcon: fn,
+      dateLocale: () => ({ fr: 'fr-FR', en: 'en-US', ar: 'ar-MA' }[lang]), fmtPay: (v) => String(v), payCents: (v) => Math.round(v * 100),
     };
     const core = new Proxy(base, { get: (t, k) => (k in t ? t[k] : fn) });
     const T = new Proxy({}, { get: () => Object.assign(() => '', { toString: () => '' }) });
