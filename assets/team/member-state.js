@@ -1,6 +1,6 @@
 /* Owner: memberState. Exports create() through KiwiTeamParts.memberState.
  * Window reads: Kiwi, KiwiCloudDoc, KiwiConfig, KiwiPlanningCore, KiwiVenue, __kiwiTeamV2, __kiwiTenantPurging, dispatchEvent.
- * Instance exports: isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current, setPageActive, resetReadFailure.
+ * Instance exports: isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current, setPageActive, resetReadFailure.
  * lexical imports: fetchDeadline, teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey, memberFullName, restorePeriodLock, buildPeriod, render, trLang, toast, seedFor, seedHours.
  * Mutable persistence and credential knowledge belong only to memberState. */
 (function () {
@@ -145,22 +145,39 @@
   }
 
   const serverCodes = Object.create(null);
+  /* Deux salariés, un code : refusé à voix haute (toast nommant les deux), jamais l'un des deux écarté en silence. */
+  const DUP_MSG = {
+    fr: (a, b) => `${a} et ${b} ont le même code de caisse. Rien n'a été envoyé à la caisse : changez l'un des deux.`,
+    en: (a, b) => `${a} and ${b} have the same till code. Nothing was sent to the till: change one of the two.`,
+    ar: (a, b) => `${a} و${b} لهما نفس رمز الصندوق. لم يُرسَل شيء إلى الصندوق: غيّر أحد الرمزين.`,
+  };
+  /* 0001 ouvre l'écran cuisine de la caisse avant tout code de salarié (routeAccessPin) : aucun salarié ne peut le porter. */
+  function reservedCode(code) { return String(code == null ? '' : code).trim() === '0001'; }
+  function duplicateCodeHolders(members) {
+    const holder = Object.create(null);
+    for (const m of members) {
+      const code = memberCode(m), other = code && holder[code];
+      if (other && other !== m && !(m.id && other.id === m.id)) return { a: other, b: m };
+      if (code) holder[code] = other || m;
+    }
+    return null;
+  }
   function publishPins() {
     try {
       const venue = window.KiwiVenue?.getCurrentVenueData?.();
       if (!venue || !venue.custom) return;                  // demo seed never leaves the browser
       if (!window.KiwiConfig || !window.KiwiConfig.syncPins) return;
-      const seen = Object.create(null);
       const pins = [];
       const roster = getMembers(teamKey(venue));
       /* Un salarié dont le code n'est pas encore revenu du serveur : publier
          maintenant REMPLACERAIT staff_pins sans lui, et sa caisse ne l'ouvrirait
          plus. On attend que le roster soit complet (hydrateCodes). */
       if (rosterHasUnresolved(roster)) return;
+      const clash = duplicateCodeHolders(roster);
+      if (clash) { toast((DUP_MSG[trLang()] || DUP_MSG.fr)(memberFullName(clash.a), memberFullName(clash.b)), { type: 'pend' }); return; }
       roster.forEach((m) => {
         const code = memberCode(m);
-        if (!code || seen[code]) return;                    // no code yet, or a duplicate
-        seen[code] = 1;
+        if (!code) return;                                  // no code yet
         pins.push({
           memberId: m.id || '', code, name: memberFullName(m),
           firstName: m.firstName || '', lastName: m.lastName || '',
@@ -483,6 +500,6 @@
    * et le serveur, qui refuse un document vide, ne pouvait jamais enregistrer la
    * suppression du dernier salarié : il gardait son accès à l'app employé. */
   if (!window.__kiwiTeamV2.removedByVenue) window.__kiwiTeamV2.removedByVenue = {};
-  return Object.freeze({ isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current() { return window.__kiwiTeamV2; }, setPageActive(value) { pageActive = value; }, resetReadFailure() { teamReadFailed = false; } });
+  return Object.freeze({ isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current() { return window.__kiwiTeamV2; }, setPageActive(value) { pageActive = value; }, resetReadFailure() { teamReadFailed = false; } });
   } });
 })();

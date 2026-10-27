@@ -745,6 +745,10 @@ for (const test of [
   'team-doc-redaction-test.mjs',
   'team-roster-cap-test.mjs',
   'team-properties-test.mjs',
+  /* Vague 14 : un code partagé est refusé à voix haute (jamais écarté en silence), un code généré évite le roster et 0001. */
+  'team-code-guard-test.mjs',
+  /* Vague 14 : la connexion employé ne lit que les magasins qui portent l'adresse. */
+  'employee-credential-scope-test.mjs',
   'team-split-test.mjs',
   'team-catalog-split-test.mjs',
   'team-owners-split-test.mjs',
@@ -1693,6 +1697,7 @@ section('Whole-project regressions');
     'attendance-hours-credit-test.mjs',
     'employee-progress-truth-test.mjs',
     'employee-trade-shell-test.mjs',
+    'employee-trade-i18n-test.mjs',
     'locale-handoff-test.mjs',
     'canonical-origin-test.mjs',
     'landing-es-test.mjs',

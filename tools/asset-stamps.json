@@ -488,8 +488,8 @@
     "sha": "bc35cedc6e7161f3"
   },
   "assets/employee-trade-shell.js": {
-    "v": "6",
-    "sha": "839064b69e1bc7cb"
+    "v": "7",
+    "sha": "91e84c47c7bd2296"
   },
   "assets/entitlements-v2.js": {
     "v": "5",
@@ -1352,8 +1352,8 @@
     "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "49",
-    "sha": "065a758754b93dbe"
+    "v": "50",
+    "sha": "de33df667194e220"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1900,28 +1900,28 @@
     "sha": "cb5bc6f7ca7960c3"
   },
   "assets/team.js": {
-    "v": "333",
-    "sha": "9257629477075026"
+    "v": "334",
+    "sha": "67e1297f6bf2d1e3"
   },
   "assets/team/catalog.js": {
     "v": "2",
     "sha": "350f4bd66643179f"
   },
   "assets/team/invitations.js": {
-    "v": "6",
-    "sha": "34498ec64505c6ee"
+    "v": "7",
+    "sha": "8d76057433b0d907"
   },
   "assets/team/member-state.js": {
-    "v": "7",
-    "sha": "8f4b16d43f6a9310"
+    "v": "8",
+    "sha": "5402837c65f0f72c"
   },
   "assets/team/merge.js": {
     "v": "2",
     "sha": "5fa184b6eea75f72"
   },
   "assets/team/profile-ui.js": {
-    "v": "6",
-    "sha": "45e63a2197c6f1a9"
+    "v": "7",
+    "sha": "1d566924abd12af8"
   },
   "assets/team/roster-list.js": {
     "v": "6",
