@@ -55,6 +55,16 @@ ok('IPv4 garde sa clé historique (l’adresse nue)', sourceKeys('198.51.100.7')
 ok('IPv4 vue par une pile IPv6 redevient IPv4', sourceKeys('::ffff:198.51.100.7').narrow === '198.51.100.7');
 ok('valeur illisible : un compteur à son nom, pas de clé large', sourceKeys('garbage').narrow === 'garbage' && sourceKeys('garbage').wide === '');
 
+/* Une rafale simultanée : combien d'essais atteignent vraiment la recherche du code ? */
+function countingEnv(env, lookup) {
+  let seen = 0;
+  const DB = new Proxy(env.DB, { get(target, prop) {
+    if (prop !== 'prepare') { const v = target[prop]; return typeof v === 'function' ? v.bind(target) : v; }
+    return (sql) => { if (lookup.test(sql)) seen++; return target.prepare(sql); };
+  } });
+  return { env: { ...env, DB }, seen: () => seen };
+}
+
 /* ── pairing#0 ──────────────────────────────────────────────────────────── */
 console.log('\npairing#0 · essais de code par réseau');
 {
@@ -90,6 +100,9 @@ console.log('\npairing#0 · essais de code par réseau');
   addCode('550127');
   ok('IPv4 : deux erreurs puis le bon code passent', (await guess('203.0.113.9', '550127')).status === 200);
   ok('un autre réseau n’est pas touché', (await guess('192.0.2.44')).status === 422);
+  const c = countingEnv(f.env, /UPDATE pairings SET used_ts/);
+  await Promise.all(Array.from({ length: 30 }, () => redeem({ request: req('/api/pair/redeem', { ip: '198.51.100.30', body: { code: '000001' } }), env: c.env })));
+  ok('rafale de 30 essais simultanés : 10 au plus atteignent le code', c.seen() <= 10, c.seen() + ' essais');
   f.close();
 }
 
@@ -114,6 +127,9 @@ console.log('\npairing#0 · code d’appairage d’un pont d’impression');
   const fails = f.sql.prepare('SELECT fails FROM pair_attempts WHERE ip = ?').get('print:198.51.100.20');
   ok('pont · des essais simultanés sont tous comptés', fails && fails.fails === 12 || burst.some((r) => r.status === 429), JSON.stringify(fails));
   ok('pont · un autre réseau n’est pas touché', (await guess('192.0.2.45')).status === 422);
+  const c = countingEnv(f.env, /UPDATE print_bridge_codes SET used_ts = \? WHERE code/);
+  await Promise.all(Array.from({ length: 30 }, () => bridgesPost({ request: req('/api/print/bridges', { ip: '198.51.100.31', body: { action: 'redeem', code: '000001' } }), env: c.env })));
+  ok('pont · rafale de 30 essais simultanés : 10 au plus atteignent le code', c.seen() <= 10, c.seen() + ' essais');
   const down = { ...f.env, DB: { prepare() { throw new Error('d1 down'); } } };
   const r = await bridgesPost({ request: req('/api/print/bridges', { ip: '192.0.2.46', body: { action: 'redeem', code: '000001' } }), env: down });
   ok('pont · limiteur injoignable : l’essai est refusé, pas accepté', r.status === 503, 'statut ' + r.status);

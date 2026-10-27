@@ -12,6 +12,9 @@ const MAX_ATTENDANCE = 5000;
 const CAPTURE_MAX_AGE_MS = 12 * 3600000;
 // Combien de temps team.hoursCredited garde la marque d'un service crédité.
 const MARK_KEEP_MS = 3 * 86400000;
+// Un rejeu ne crédite seul que tant que la marque existe encore, avec un jour
+// de marge : au-delà, le gérant décide (le service reste « pending »).
+const REPLAY_CREDIT_MAX_MS = MARK_KEEP_MS - 86400000;
 // Même plafond par défaut que le planning (planning-core.js, settings.maxDailyHours).
 const DEFAULT_MAX_DAILY_HOURS = 12;
 // Délai d'acheminement toléré après la fin de vie du code, pour un pointage différé seulement.
@@ -159,7 +162,8 @@ export async function handleAttendance({ actor, store, request, action, body }) 
    * écriture que les heures) empêche de créditer deux fois. */
   let creditedNow = false;
   if (action === 'clock-out' && changedEntry && changedEntry.outTs > changedEntry.inTs
-      && (!replay || changedEntry.hoursCredit === 'pending')) {
+      && (!replay || (changedEntry.hoursCredit === 'pending'
+        && now - (Number(changedEntry.outTs) || 0) < REPLAY_CREDIT_MAX_MS))) {
     /* Le service se crédite par le calcul même de la paie (_worked-hours.js),
      * à la seconde : arrondir chaque pointage au centième d'heure avant de les
      * additionner faisait dériver les heures, donc le salaire. */

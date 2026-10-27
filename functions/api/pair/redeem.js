@@ -21,6 +21,7 @@
 import { json, tillToken, tillDeviceToken, recordTillDevice, tillCookie, terminalToken, terminalCookie, tillEpoch, tillStoreCookie,
 } from '../../auth/_lib.js';
 import { clientAddress, sourceKeys } from '../_net-source.js';
+import { reserveAttempt, settleSuccess } from '../_attempt-reserve.js';
 
 /* ── Brute-force cap ────────────────────────────────────────────────────────
  * This endpoint has no session to check — a till has no login — so a 6-digit
@@ -61,50 +62,6 @@ function limiterKeys(request) {
 
 function limiterUnavailable() { return json({ error: 'rate-limit-unavailable' }, 503); }
 
-async function pairLimitCheck(env, keys, now) {
-  try {
-    for (const { key } of keys) {
-      const a = await env.DB.prepare(
-        'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
-      ).bind(key).first();
-      if (a && a.blocked_until && a.blocked_until > now) {
-        return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
-      }
-    }
-    return null;
-  } catch (_) { return limiterUnavailable(); }
-}
-
-/* Record one wrong guess atomically. Concurrent failures must each advance the
- * same SQLite row; a read-then-write pair loses increments under a wave of
- * guesses. */
-async function noteFail(env, keys, now) {
-  for (const { key, max } of keys) {
-    if (!await noteOneFail(env, key, max, now)) return false;
-  }
-  return true;
-}
-
-async function noteOneFail(env, ip, maxFails, now) {
-  if (!ip) return true;
-  if (!env || !env.DB) return false;
-  try {
-    const result = await env.DB.prepare(
-      `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
-       ON CONFLICT(ip) DO UPDATE SET
-         fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
-         first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
-         blocked_until = CASE
-           WHEN ? - pair_attempts.first_ts > ? THEN NULL
-           WHEN pair_attempts.fails + 1 >= ? THEN ?
-           ELSE pair_attempts.blocked_until END`
-    ).bind(ip, now, now, WINDOW_MS, now, WINDOW_MS, now,
-           now, WINDOW_MS, maxFails, now + BLOCK_MS).run();
-    const changes = Number(result && result.meta && result.meta.changes);
-    return Number.isFinite(changes) ? changes > 0 : true;
-  } catch (_) { return false; }
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB) return json({ error: 'not-configured' }, 503);
@@ -118,17 +75,18 @@ export async function onRequestPost(context) {
   const now = Date.now();
   const keys = limiterKeys(request);
 
-  // Are we already locked out? Checked BEFORE the code is even shaped, so a
-  // blocked source cannot use malformed input as a free probe.
+  // The attempt is COUNTED before the code is even shaped or looked up
+  // (_attempt-reserve.js): checking first and counting the failure afterwards
+  // let a burst of simultaneous guesses all pass the check. A blocked source
+  // cannot use malformed input as a free probe either.
   if (keys.length) {
-    const limited = await pairLimitCheck(env, keys, now);
-    if (limited) return limited;
+    let gate;
+    try { gate = await reserveAttempt(env, keys, now, { windowMs: WINDOW_MS, blockMs: BLOCK_MS }); }
+    catch (_) { return limiterUnavailable(); }
+    if (!gate.ok) return json({ error: 'too_many_attempts', retry_after: gate.retryAfter }, 429);
   }
 
-  if (code.length !== 6) {
-    if (!await noteFail(env, keys, now)) return limiterUnavailable();
-    return json({ error: 'invalid_or_expired' }, 422);
-  }
+  if (code.length !== 6) return json({ error: 'invalid_or_expired' }, 422);
 
   /* A paired till needs a current epoch-bound proof. Resolve the merchant before
    * consuming the one-time code so a revocation-read outage neither issues a v0
@@ -177,15 +135,14 @@ export async function onRequestPost(context) {
     return json({ error: 'invalid_or_expired' }, 422);
   }
 
-  if (!row) {
-    if (!await noteFail(env, keys, now)) return limiterUnavailable();
-    return json({ error: 'invalid_or_expired' }, 422);
-  }
+  if (!row) return json({ error: 'invalid_or_expired' }, 422);
 
   // Genuine pairing — wipe the narrow counter so an honest shop that mistyped
-  // twice starts clean again. The network counter stays (see WIDE_MAX_FAILS).
+  // twice starts clean again. The network counter only gets this attempt back
+  // (see WIDE_MAX_FAILS).
   const narrow = keys.find((k) => !k.key.startsWith(WIDE_PREFIX));
-  if (narrow) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(narrow.key).run(); } catch (_) {} }
+  const wide = keys.find((k) => k.key.startsWith(WIDE_PREFIX));
+  await settleSuccess(env, narrow && narrow.key, wide && wide.key);
 
   const res = json({
     ok: true,

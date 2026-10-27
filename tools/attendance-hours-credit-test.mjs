@@ -106,4 +106,14 @@ const fourth = entries().find((e) => !e.outTs); fourth.inTs -= 600000;
 docs.get('attendance').data.entries = entries().map((e) => (e.id === fourth.id ? fourth : e));
 assert.equal((await punch('clock-out', 'op-out-4')).status, 200);
 ok(!('ancient-shift' in docs.get('team').data.hoursCredited), 'marks older than three days are dropped (no phone replays them)');
+// The third shift, still 'pending', replayed after its mark was pruned (outTs moved
+// five days back): the server must not pay it again on its own.
+const stale = Date.now() - 5 * 86400000;
+docs.get('attendance').data.entries = entries().map((e) => (e.id === third.id
+  ? { ...e, inTs: stale - 3600000, outTs: stale, hoursCredit: 'pending' } : e));
+const marks = { ...docs.get('team').data.hoursCredited }; delete marks[third.id];
+docs.get('team').data.hoursCredited = marks;
+const beforeStale = credited();
+const staleReplay = await punch('clock-out', 'op-out-3');
+ok(staleReplay.status === 200 && credited() === beforeStale, 'a pending shift replayed after its mark expired is not paid again automatically');
 console.log(`✓ attendance-hours-credit-test · ${checks} checks`);

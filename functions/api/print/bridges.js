@@ -16,6 +16,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { tenantFor } from '../_private.js';
+import { reserveAttempt, settleSuccess } from '../_attempt-reserve.js';
 import { clientAddress, sourceKeys } from '../_net-source.js';
 import {
   BRIDGE_ONLINE_MS, CODE_TTL_MS, code6, newBridgeToken, sha256Hex, randomHex,
@@ -36,34 +37,6 @@ function clientKeys(request) {
   const { narrow, wide } = sourceKeys(clientAddress(request));
   return [narrow ? { key: 'print:' + narrow, max: MAX_FAILS } : null,
           wide ? { key: 'printw:' + wide, max: WIDE_MAX_FAILS } : null].filter(Boolean);
-}
-
-async function blocked(env, keys, t) {
-  for (const { key } of keys) {
-    const a = await env.DB.prepare('SELECT blocked_until FROM pair_attempts WHERE ip = ?').bind(key).first();
-    if (a && a.blocked_until && a.blocked_until > t) return Math.ceil((a.blocked_until - t) / 1000);
-  }
-  return 0;
-}
-
-/* Une seule instruction SQLite porte l'incrément : lire puis écrire laissait
-   deux essais simultanés s'écraser et sous-compter. */
-async function noteFail(env, keys, t) {
-  try {
-    for (const { key, max } of keys) {
-      await env.DB.prepare(
-        `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
-         ON CONFLICT(ip) DO UPDATE SET
-           fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
-           first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
-           blocked_until = CASE
-             WHEN ? - pair_attempts.first_ts > ? THEN NULL
-             WHEN pair_attempts.fails + 1 >= ? THEN ?
-             ELSE pair_attempts.blocked_until END`
-      ).bind(key, t, t, WINDOW_MS, t, WINDOW_MS, t, t, WINDOW_MS, max, t + BLOCK_MS).run();
-    }
-    return true;
-  } catch (_) { return false; }
 }
 
 function cleanName(s, fallback) {
@@ -122,12 +95,13 @@ export async function onRequestPost(context) {
   /* ── le PONT échange son code contre un jeton (aucune session) ───────────── */
   if (action === 'redeem') {
     const keys = clientKeys(request);
-    let wait = 0;
-    try { wait = await blocked(env, keys, t); } catch (_) { return relayJson({ ok: false, error: 'rate-limit-unavailable' }, 503, request); }
-    if (wait) return relayJson({ ok: false, error: 'too_many_attempts', retry_after: wait }, 429, request);
-    const refuse = async () => (await noteFail(env, keys, t))
-      ? relayJson({ ok: false, error: 'invalid_or_expired' }, 422, request)
-      : relayJson({ ok: false, error: 'rate-limit-unavailable' }, 503, request);
+    /* L'essai est compté AVANT de regarder le code (_attempt-reserve.js) :
+       une rafale simultanée ne peut plus dépasser le plafond. */
+    let gate;
+    try { gate = await reserveAttempt(env, keys, t, { windowMs: WINDOW_MS, blockMs: BLOCK_MS }); }
+    catch (_) { return relayJson({ ok: false, error: 'rate-limit-unavailable' }, 503, request); }
+    if (!gate.ok) return relayJson({ ok: false, error: 'too_many_attempts', retry_after: gate.retryAfter }, 429, request);
+    const refuse = () => relayJson({ ok: false, error: 'invalid_or_expired' }, 422, request);
     const code = String(body.code || '').replace(/\D/g, '').slice(0, 6);
     if (code.length !== 6) return refuse();
     let row = null;
@@ -141,7 +115,8 @@ export async function onRequestPost(context) {
     }
     if (!row) return refuse();
     // Seul le compteur étroit repart à zéro ; le large garde la mémoire du réseau.
-    if (keys[0]) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(keys[0].key).run(); } catch (_) {} }
+    const keyOf = (prefix) => (keys.find((k) => k.key.startsWith(prefix)) || {}).key;
+    await settleSuccess(env, keyOf('print:'), keyOf('printw:'));
 
     const token = newBridgeToken();
     const id = 'pb_' + randomHex(8);
