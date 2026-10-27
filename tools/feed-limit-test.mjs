@@ -49,6 +49,20 @@ for (const failures of [1, 2]) {
 }
 const byDay = await get('&from=1&limit=50');
 assert.equal(byDay.sales.length, 2000); assert.ok(!('limit' in byDay));
+/* A capped day says so, and the rest can be fetched: the 2000 newest rows were
+   taken for the whole day by every consumer that does not look at the count. */
+assert.equal(byDay.truncated, true, 'a day with more than 2000 rows is announced as truncated');
+assert.ok(byDay.before && byDay.before.ts > 0 && byDay.before.cursor > 0, 'with the key of the next page');
+const older = await get(`&from=1&bt=${byDay.before.ts}&bc=${byDay.before.cursor}`);
+assert.ok(!older.truncated && !('before' in older), 'the last page is complete');
+assert.equal(older.sales.length, 848);
+assert.equal(new Set([...byDay.sales, ...older.sales].map(r => r.id)).size, 2848, 'pages never overlap or skip a row');
+sqlite.prepare("UPDATE sales SET ts = 5000 WHERE id LIKE 'sale-1%'").run();
+const tied = []; let page = await get('&from=1'), guard = 0;
+while (true) { tied.push(...page.sales); if (!page.truncated || ++guard > 5) break; page = await get(`&from=1&bt=${page.before.ts}&bc=${page.before.cursor}`); }
+assert.equal(new Set(tied.map(r => r.id)).size, 2848, 'rows sharing one timestamp are paged by row id, none lost');
+const small = await get('&from=2800');
+assert.ok(!('truncated' in small) && !('before' in small), 'an ordinary day carries no mark: its answer is unchanged');
 let cursor = 0, rows = 0, pages = 0;
 while (true) {
   const data = await get(`&since=${cursor}&limit=500`);

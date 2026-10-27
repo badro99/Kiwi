@@ -1091,19 +1091,20 @@
       const requestTime = Date.now();
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       let timeoutId = null;
-      const read = fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
+      const read = (globalThis.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
         signal: controller ? controller.signal : undefined,
-      }).then((r) => r.ok ? r.json() : null)
+      })
         .then((data) => {
           if (!data || !Array.isArray(data.sales)) return { ok: false, complete: false, count: 0, reason: 'feed-unavailable' };
           ingestSettledCloudSales(data.sales, { requestTime, responseTime: Date.now() });
           refreshOpenReconciliationModals();
-          /* /api/feed?from= is bounded at 2,000 rows. Exactly that many rows
-             means the remote aggregate may still be truncated; never certify
-             such a Z as complete without an explicit continuation signal. */
-          return { ok: true, complete: data.sales.length < 2000, count: data.sales.length,
-            reason: data.sales.length < 2000 ? '' : 'feed-limit' };
+          /* /api/feed?from= is bounded at 2,000 rows a page. The server now says
+             `truncated` (and KiwiPosSale.feedDay follows the pages); an older
+             server has no flag, and exactly 2,000 rows may still be truncated.
+             Never certify a Z as complete without an explicit signal. */
+          const cut = data.truncated === true || (data.truncated === undefined && data.sales.length >= 2000);
+          return { ok: true, complete: !cut, count: data.sales.length, reason: cut ? 'feed-limit' : '' };
         }).catch((error) => ({ ok: false, complete: false, count: 0,
           reason: error && error.name === 'AbortError' ? 'feed-timeout' : 'feed-error' }));
       const timeout = new Promise((resolve) => {

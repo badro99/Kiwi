@@ -1,6 +1,6 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=14';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=14';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=14';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=17';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=17';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=17';
 
   'use strict';
 
@@ -822,9 +822,9 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     if (!merchant) return Promise.resolve(0);
     const start = new Date(); start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - (RETAIN_DAYS - 1));
-    return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
+    return (window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
-    }).then((r) => r.ok ? r.json() : null).then((data) => {
+    }).then((data) => {
       let added = 0;
       ((data && data.sales) || []).forEach((row) => {
         const ref = String(row.ref || '');

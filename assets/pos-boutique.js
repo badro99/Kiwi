@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=25';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=25';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=25';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=26';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=26';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=26';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -803,9 +803,9 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     if (!merchant) return Promise.resolve(0);
     const start = new Date(); start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - (RETAIN_DAYS - 1));
-    return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
+    return (window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
-    }).then((r) => r.ok ? r.json() : null).then((data) => {
+    }).then((data) => {
       let added = 0;
       ((data && data.sales) || []).forEach((row) => {
         const ref = String(row.ref || '');

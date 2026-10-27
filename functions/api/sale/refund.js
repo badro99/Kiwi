@@ -9,6 +9,7 @@ import {
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { quarantineGuard } from '../_quarantine-guard.js';
 import { poke } from '../_live.js';
+import { clockFlags, recordSaleFlag } from '../_sale-truth.js';
 import { ensureCreditEvents } from '../_store-credit-ledger.js';
 import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 /* La règle du partage argent / avoirs vit dans un seul fichier, que la caisse
@@ -298,6 +299,17 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     return json({ error: 'refund-id-conflict' }, 409);
   }
 
+  /* Le remboursement part dans la journée que l'horloge de l'appareil désigne :
+     une caisse mal réglée peut donc l'écrire dans un jour déjà clos par un Z,
+     ou avant la vente qu'il rembourse. Le remboursement est dû, il reste écrit
+     tel quel ; l'écart est noté une fois pour la console opérateur. */
+  try {
+    const receivedTs = Date.now();
+    const clock = await clockFlags(env, merchant, { rawTs: tsRaw, ts, sentAt: body && body.sentAt, now: receivedTs,
+      originalTs: Number(original.ts) || 0 });
+    await recordSaleFlag(env, merchant, refundId, 'clock-flag', clock,
+      { amountCents: -amountCents, method: refundMethod, ref: refundRef, ts, receivedTs });
+  } catch (_) { /* the refund stands; the flag is best effort */ }
   try { await poke(env, merchant, 'sale-refund'); } catch (_) {}
   /* Ce qui a réellement été fait, pour le reçu de la caisse : l'argent rendu
      dans son moyen, et chaque avoir recrédité avec son code. */

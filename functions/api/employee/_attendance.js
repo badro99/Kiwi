@@ -1,5 +1,6 @@
 import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
+import { servedDuring, verifiedProgress } from './_progress-truth.js';
 // Internal contract: actor is supplied only after liveEmployee authentication and
 // store operational checks. Access roles are distinct from free-form job titles.
 // Every listed action permits employee sessions only, never owner/till sessions.
@@ -213,10 +214,12 @@ export async function handleAttendance({ actor, store, request, action, body }) 
   }
   // La progression suit le crédit des heures : une fois par service, rejeu compris.
   if (creditedNow) {
-    const rawProgress = body.progress && typeof body.progress === 'object' ? body.progress : {};
-    const paid = Math.min(200, Math.max(0, Math.floor(Number(rawProgress.paid) || 0)));
-    const revenue = Math.min(1000000, Math.max(0, Number(rawProgress.revenue) || 0));
-    const turnMinutes = Math.min(100000, Math.max(0, Number(rawProgress.turnMinutes) || 0));
+    /* Ce que l'app affirme n'est qu'un plafond : le crédit ne dépasse ni les
+       ventes que la session de cet employé a écrites pendant son service, ni la
+       durée du service (_progress-truth.js). */
+    const served = await servedDuring(env, merchant, auth.pin.id, changedEntry.inTs, changedEntry.outTs);
+    const { paid, revenue, turnMinutes } = verifiedProgress(body.progress, served,
+      (Number(changedEntry.outTs) || 0) - (Number(changedEntry.inTs) || 0));
     const speed = paid > 0 && turnMinutes > 0 ? Math.round(turnMinutes / paid) : null;
     const earnedXP = Math.round(paid * 10 + revenue * 0.01);
     await mutateDoc(env, merchant, PROGRESS_FEATURE, { members: {} }, (doc) => {

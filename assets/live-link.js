@@ -437,7 +437,11 @@ import {} from './live-link/sale-identity.js?v=1';
 
   function moneyRequest(body, controller) {
     var url = body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale';
-    var payload = JSON.stringify(body);
+    /* `sentAt` : l'heure de l'appareil AU MOMENT D'ENVOYER. Une vente hors
+       ligne est légitimement ancienne (son `ts`), mais un appareil dont l'heure
+       d'envoi s'écarte de celle du serveur a une horloge fausse : le serveur
+       note l'écart pour l'opérateur sans refuser la vente (_sale-truth.js). */
+    var payload = JSON.stringify(Object.assign({}, body, { sentAt: Date.now() }));
     var signal = controller ? controller.signal : undefined;
     return fetch(url, {
       method: 'POST',

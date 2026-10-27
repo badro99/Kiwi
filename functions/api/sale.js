@@ -16,6 +16,7 @@ import { settleCoveredOrders } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
+import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -419,7 +420,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
    * both read, so it gets the same treatment as every other field — bounded
    * length, bounded count, coerced types. A malformed or oversized basket
    * costs the line detail, never the sale. */
-  let lines = null;
+  let lines = null, basketRows = null, basketFolded = false;
   try {
     const raw = b && b.lines;
     if (Array.isArray(raw) && raw.length) {
@@ -515,11 +516,14 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
         return o;
       }).filter((l) => l.q > 0);
       if (clean.length) {
-        const s = JSON.stringify(clean);
-        /* Le plafond monte avec la catégorie : 40 lignes × ~40 caractères de
-         * plus, sinon un gros panier catégorisé perdrait TOUT son détail au
-         * profit d'un `lines = null`. La colonne est un TEXT, elle s'en moque. */
-        if (s.length <= 24000) lines = s;
+        /* Un panier trop gros est réduit (détail facultatif retiré, queue
+         * repliée en « N autres articles » qui garde chaque centime), jamais
+         * jeté : un `lines = null` laissait le chiffre d'affaires sans panier
+         * et sans que personne le sache. */
+        const fit = fitBasket(clean);
+        lines = fit.text;
+        basketRows = fit.rows;
+        basketFolded = fit.folded;
       }
     }
   } catch (_) { lines = null; }
@@ -841,6 +845,27 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     }, 409);
   }
 
+  /* Ce que le serveur sait et que la caisse affirme : l'heure de l'appareil et
+   * le panier. Rien de tout cela ne refuse une vente encaissée ; chaque écart
+   * est écrit une fois dans sale_audit pour la console opérateur
+   * (functions/api/_sale-truth.js). */
+  const saleFlags = [];
+  try {
+    const receivedTs = Date.now();
+    const clock = await clockFlags(env, merchant, { rawTs, ts, sentAt: b && b.sentAt, now: receivedTs });
+    const gap = basketRows ? basketMismatch(basketRows, [
+      amountCents, ticketAmountCents, grossAmountCents,
+      storeCredit || consignment || receivable ? creditAmountCents : null,
+      ticketAmountCents != null ? ticketAmountCents + creditAmountCents : amountCents + creditAmountCents,
+    ].map((n) => (n == null || Number.isNaN(n) ? null : n))) : null;
+    const row = { amountCents, method, ref, ts, receivedTs };
+    if (await recordSaleFlag(env, merchant, id, 'clock-flag', clock, row)) saleFlags.push(...clock.map((f) => f.code));
+    const basket = [];
+    if (gap) basket.push({ code: 'basket-sum-mismatch', detail: gap });
+    if (basketFolded) basket.push({ code: 'basket-folded', detail: { limit: 24000 } });
+    if (await recordSaleFlag(env, merchant, id, 'basket-flag', basket, row)) saleFlags.push(...basket.map((f) => f.code));
+  } catch (_) { /* the sale stands; the flags are best effort */ }
+
   if (discountFlag) {
     /* One audit row per sale: a till retrying the same receipt must not add a
      * second one. A failed audit write never un-books the money. */
@@ -1089,6 +1114,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     remainingCents: billOpen ? billOpen.remainingCents : undefined,
     settledOrders: billOpen ? billOpen.settledOrders : undefined,
     visitLinkWarning: visitLinkWarning || undefined,
+    flags: saleFlags.length ? saleFlags : undefined,
   });
 }
 

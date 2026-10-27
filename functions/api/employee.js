@@ -18,6 +18,7 @@ import { handleAttendance, ACTION_ROLES as ATTENDANCE_ACTION_ROLES } from './emp
 import { handleLeave, ACTION_ROLES as LEAVE_ACTION_ROLES } from './employee/_leave.js';
 import { handleNoticesPage } from './employee/_planning.js';
 import { hoursByDay } from './_worked-hours.js';
+import { readDoc, mutateDoc } from './_doc-cas.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
 const TEAM_FEATURE = 'team';
@@ -87,13 +88,6 @@ function planningState(team, memberId, currentRole, zone) {
 function validISODate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) && !Number.isNaN(Date.parse(String(value) + 'T12:00:00Z')); }
 function validTime(value) { return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')); }
 function roleKey(value) { return String(value || '').trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-async function readDoc(env, merchant, feature, fallback) {
-  try {
-    const row = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?')
-      .bind(merchant, feature).first();
-    return { data: row ? parse(row.data, fallback) : fallback, rev: Number(row && row.rev) || 0 };
-  } catch (_) { return { data: fallback, rev: 0 }; }
-}
 async function liveEmployee(request, env) {
   const session = await readEmployee(request, env);
   if (!session || !env.DB) return null;
@@ -280,29 +274,6 @@ async function payloadFor(request, env) {
       .slice(-100),
     floor: sanitizedFloor(floorRow.data, members),
   };
-}
-
-async function mutateDoc(env, merchant, feature, fallback, change) {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const row = await readDoc(env, merchant, feature, fallback);
-    const next = change(row.data);
-    // Rien à écrire (pointage différé refusé) : on n'écrit rien.
-    if (!next) return null;
-    const text = JSON.stringify(next);
-    const now = Date.now();
-    try {
-      if (row.rev) {
-        const res = await env.DB.prepare('UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?')
-          .bind(text, row.rev + 1, now, merchant, feature, row.rev).run();
-        if (Number(res && res.meta && res.meta.changes) > 0) return next;
-      } else {
-        const res = await env.DB.prepare('INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)')
-          .bind(merchant, feature, text, now).run();
-        if (Number(res && res.meta && res.meta.changes) > 0) return next;
-      }
-    } catch (_) { return null; }
-  }
-  return null;
 }
 
 export async function onRequestGet({ request, env }) {

@@ -47,6 +47,7 @@ import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
+import { freezePressingNotifications } from './_pressing-notification.js';
 import { poke } from './_live.js';
 import {
   HOTEL_UNITS_FEATURE,
@@ -1099,6 +1100,7 @@ export async function onRequestPost(context) {
     if (tills.conflict) return json({ error: 'pressing-till-letter-taken', feature, letter: tills.conflict.letter, rev: serverRev, data: view(mine) }, 409);
     if (Object.keys(tills.tills).length || clean.value.tills !== undefined) clean.value.tills = tills.tills;
     clean.value = preservePressingCancellations(mine, clean.value);
+    clean.value = freezePressingNotifications(mine, clean.value, now);
     const conflict = pressingRackConflict(clean.value);
     if (conflict) return json({ error: 'rack-conflict', feature, ...conflict }, 409);
     text = JSON.stringify(clean.value);

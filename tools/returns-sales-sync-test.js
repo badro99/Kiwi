@@ -10,7 +10,7 @@ const dash = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pages-pro', '
 const feed = fs.readFileSync(path.join(__dirname, '..', 'functions', 'api', 'feed.js'), 'utf8');
 
 const checks = [
-  ['Échanges relit les sept jours réels du magasin', /start\.setDate\(start\.getDate\(\) - \(RETAIN_DAYS - 1\)\)[\s\S]*fetch\('\/api\/feed\?merchant='/.test(src)],
+  ['Échanges relit les sept jours réels du magasin', /start\.setDate\(start\.getDate\(\) - \(RETAIN_DAYS - 1\)\)[\s\S]*KiwiPosSale\?\.feedDay[\s\S]*'\/api\/feed\?merchant='/.test(src)],
   ['la requête garde le cookie de la caisse appairée', /syncReturnSales[\s\S]*credentials: 'same-origin'/.test(src)],
   ['une référence déjà locale gagne sur la copie serveur', /SALES\.some\(\(s\) => s && s\.id === ref\)/.test(src)],
   ['les tickets serveur sont fusionnés dans le journal des échanges', /serverId:[\s\S]*remote: true/.test(src)],
