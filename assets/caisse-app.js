@@ -2,7 +2,7 @@
       if (isFeatureOff('salle') || isFeatureOff('tables')) return false;
       return typeof tables === 'object' && tables !== null && Object.keys(tables).length > 1;
     }
-/* ---------- DAfr days ---------- */
+const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s);/* ---------- DAfr days ---------- */
     const dafrDays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const monthsEn = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];tickClock();
     setInterval(tickClock, 1000);
@@ -389,7 +389,7 @@
            elle se valide ou s'annule, jamais par inadvertance. */
         if (mode === 'order') {
           if (orderInProgressCount() > 0) {
-            toast('Valide ou annule la commande d\'abord');
+            toast(tr('Valide ou annule la commande d\'abord'));
             return;
           }
           cancelNewOrder();
@@ -824,7 +824,7 @@
         }
         if (wlSeating) {  // choosing a table for a waitlist party
           if (t.status === 'khawya') seatPartyAt(id);
-          else toast('Table occupée, choisis une table libre');
+          else toast(tr('Table occupée, choisis une table libre'));
           return;
         }
         if (t.status === 'khawya')  { openNewTableModal(id); return; }
@@ -857,7 +857,7 @@
             if (selectedId) {
               inc ? addToTableOrder(selectedId, mid) : tableOrderMinusMenu(selectedId, mid);
             } else {
-              toast('Aucune table sélectionnée');
+              toast(tr('Aucune table sélectionnée'));
               backToSalle();
             }
           } else {
@@ -885,13 +885,13 @@
 
       // Menu card body → add one (to table order or cart depending on mode)
       const menuCard = e.target.closest('.menu-item');
-      if (menuCard && menuCard.classList.contains('is-86')) { toast('Plat épuisé · retiré de la vente'); return; }
+      if (menuCard && menuCard.classList.contains('is-86')) { toast(tr('Plat épuisé · retiré de la vente')); return; }
       if (menuCard) {
         if (mode === 'order') {
           if (selectedId) {
             addToTableOrder(selectedId, menuCard.dataset.menuId);
           } else {
-            toast('Aucune table sélectionnée');
+            toast(tr('Aucune table sélectionnée'));
             backToSalle();
           }
         } else {
@@ -1069,7 +1069,7 @@
          les jette pas d'un doigt distrait · le panneau reste, et le serveur
          tranche lui-même entre envoyer et annuler. */
       if (mode === 'order') {
-        if (orderInProgressCount() > 0) { toast('Valide ou annule la commande d\'abord'); return; }
+        if (orderInProgressCount() > 0) { toast(tr('Valide ou annule la commande d\'abord')); return; }
         cancelNewOrder();
         return;
       }
@@ -1078,7 +1078,7 @@
     });
     $('#pay-split').addEventListener('click', () => {
       if (mode === 'vrap') {
-        if (!cart.length) { toast('Commande vide'); return; }
+        if (!cart.length) { toast(tr('Commande vide')); return; }
         openSplitModal(null);
         return;
       }
@@ -1114,14 +1114,14 @@
           const last = journal.slice().reverse().find((e) => e && e.kind !== 'refund' && e.amount > 0);
           const doc = last ? receiptDocFor(last, { copy: true }) : null;
           if (doc) {
-            toast('Impression du reçu…');
+            toast(tr('Impression du reçu…'));
             Promise.resolve(window.KiwiReceipt.print(doc)).then(
-              (r) => toast(r && r.ok ? 'Duplicata imprimé' : 'Impression échouée'),
-              () => toast('Impression échouée')
+              (r) => toast(tr(r && r.ok ? 'Duplicata imprimé' : 'Impression échouée')),
+              () => toast(tr('Impression échouée'))
             );
           }
           else if (window.__lastTicket) printHardwareTicket(window.__lastTicket);
-          else toast('Aucun ticket à réimprimer');
+          else toast(tr('Aucun ticket à réimprimer'));
         }
         else if (a === 'cancel-table') {
           if (mode === 'order') {
@@ -1161,7 +1161,7 @@
                 }
                 clearCart();
                 const by = who && who.name ? ` · ${who.name}` : '';
-                toast(`Commande vidée${by}`);
+                toast(tr(`Commande vidée${by}`));
               },
               /* Annuler une commande déjà partie est une écriture serveur sans
                  file d'attente : sans connexion, pas de code. Vider un panier
@@ -1176,7 +1176,7 @@
               window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: tid } });
               requireTillOperator(`Annuler la table ${tid} et prévenir la cuisine`, async (who) => {
                 try { await cancelSentTable(tid, who); }
-                catch (err) { toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`); }
+                catch (err) { toast(tr(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`)); }
               }, tableCancelNeedsServer(tid) ? TILL_NEEDS_SERVER : undefined);
               return;
             }
@@ -1197,7 +1197,7 @@
               requireTillOperator(`Annuler la table ${tid}`, (who) => {
                 cancelOpenTable(tid, who);
                 const by = who && who.name ? ` · ${who.name}` : '';
-                toast(`Table ${tid} annulée${by}`);
+                toast(tr(`Table ${tid} annulée${by}`));
               });
               return;
             }
@@ -1207,7 +1207,7 @@
               try {
                 await cancelSentTable(tid, who);
               } catch (err) {
-                toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`);
+                toast(tr(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`));
               }
             }, tableCancelNeedsServer(tid) ? TILL_NEEDS_SERVER : undefined);
           }
@@ -1310,7 +1310,7 @@
     if (payQrButton) payQrButton.addEventListener('click', function () {
       /* No QR provider/intent exists in the hardware bridge yet. Reusing the card
          authorizer painted a QR icon but charged the card path · a false success. */
-      toast('Paiement QR indisponible · configurez un fournisseur QR');
+      toast(tr('Paiement QR indisponible · configurez un fournisseur QR'));
     });
     cardModal.addEventListener('click', (e) => {
       /* Toucher le fond ne valide jamais l'encaissement : seule l'approbation
@@ -1334,15 +1334,15 @@
        le flux espèces ; en prise de commande il envoie d'abord les lignes en
        cuisine, puis ouvre le même flux. */
     $('#pay-charge').addEventListener('click', () => {
-      if (!(currentTotal() > 0)) { toast('Addition vide'); return; }
+      if (!(currentTotal() > 0)) { toast(tr('Addition vide')); return; }
       openCashModal();
     });
     $('#pay-charge-order').addEventListener('click', () => {
       if (!selectedId) return;
-      if (tableHasOpenSplit(selectedId)) { toast('Un split est en cours sur cette table : reprenez-le depuis l\'addition'); return; }
+      if (tableHasOpenSplit(selectedId)) { toast(tr('Un split est en cours sur cette table : reprenez-le depuis l\'addition')); return; }
       if (orderInProgressCount() > 0) validateOrder(selectedId);
       if (currentTotal() > 0) openCashModal();
-      else toast('Addition vide');
+      else toast(tr('Addition vide'));
     });
     /* Le total vit dans #rp-total ; on le recopie sur les deux boutons
        Encaisser (observer, pas de deuxième source de vérité). */
@@ -1377,17 +1377,17 @@
       tenderInFlight = true;
       let settled;
       try { settled = await finalizeTender('cash'); }
-      catch (_) { tenderInFlight = false; toast('Encaissement à vérifier dans le journal avant de réessayer'); return; }
+      catch (_) { tenderInFlight = false; toast(tr('Encaissement à vérifier dans le journal avant de réessayer')); return; }
       tenderInFlight = false;
       if (settled === 'split') {
-        if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
+        if (change > 0) toast(tr('Monnaie à rendre : ' + fmtMAD(change)));
         closeCashModal();
         return;
       }
       const sale = lastSaleEntry();
       closeCashModal();
       openCashDrawer();
-      if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
+      if (change > 0) toast(tr('Monnaie à rendre : ' + fmtMAD(change)));
       printSaleTicket(sale);
     });
     cashModal.addEventListener('click', (e) => {
@@ -1488,7 +1488,7 @@
         ctrfSelectedToId = card.dataset.ctrfTo;
         renderCaisseTransferGrid();
         const btnText = $('#ctrf-btn-text');
-        if (btnText) btnText.textContent = `Déplacer vers ${ctrfSelectedToId}`;
+        if (btnText) btnText.textContent = tr(`Déplacer vers ${ctrfSelectedToId}`);
         const confirmBtn = $('#ctrf-confirm');
         if (confirmBtn) confirmBtn.disabled = false;
         return;
@@ -1505,7 +1505,7 @@
         cmrgSelectedTargetId = card.dataset.cmrgTarget;
         renderCaisseMergeGrid();
         const btnText = $('#cmrg-btn-text');
-        if (btnText) btnText.textContent = `Fusionner avec ${cmrgSelectedTargetId}`;
+        if (btnText) btnText.textContent = tr(`Fusionner avec ${cmrgSelectedTargetId}`);
         const confirmBtn = $('#cmrg-confirm');
         if (confirmBtn) confirmBtn.disabled = false;
         return;
@@ -1539,7 +1539,7 @@
       try { persistShift(); } catch (_) {}
       /* Le papier, lui, est déjà sorti avec « L64 ». On le dit, une fois : le
          comptoir doit pouvoir rapprocher le ticket posé sur la planche. */
-      try { toast(`Bon ${was} · numéro définitif ${ticketNo(order)}`, 'ok'); } catch (_) {}
+      try { toast(tr(`Bon ${was} · numéro définitif ${ticketNo(order)}`), 'ok'); } catch (_) {}
     });
     document.getElementById('validate-order').addEventListener('click', () => {
       if (mode !== 'order') return;
@@ -1551,7 +1551,7 @@
          prochain passage en « À emporter ». */
       currentOrder().replaceCart([]);
       backToSalle();
-      toast('Aucune table en cours');
+      toast(tr('Aucune table en cours'));
     });
     document.getElementById('cancel-new-order').addEventListener('click', cancelNewOrder);
     $('#rp-add-items').addEventListener('click', () => {
@@ -1658,7 +1658,7 @@
         if (part && part.saleId) {
           const sale = journal.find(en => en && en.id === part.saleId);
           if (sale) printSaleTicket(sale, { copy: true });
-          else toast('Ticket introuvable');
+          else toast(tr('Ticket introuvable'));
         } else if (lastSaleEntry()) {
           printSaleTicket(lastSaleEntry(), { copy: true });
         }
@@ -1843,7 +1843,7 @@
           source: 'caisse',
         });
         attachClient(rec);
-      } catch (_) { toast('Enregistrement impossible'); }
+      } catch (_) { toast(tr('Enregistrement impossible')); }
     });
     clientModal.addEventListener('click', (e) => { if (e.target === clientModal) closeClientModal(); });
     /* Le carnet complet (fiches, historique, récompenses) reste celui de
@@ -1886,11 +1886,11 @@
        change pas : c'est le même achat. */
     $('#receipt-print').addEventListener('click', () => {
       const doc = receiptDocFor(receiptEntry, { copy: true });
-      if (!doc) { toast('Impression indisponible sur cet appareil'); return; }
-      toast('Impression du reçu…');
+      if (!doc) { toast(tr('Impression indisponible sur cet appareil')); return; }
+      toast(tr('Impression du reçu…'));
       Promise.resolve(window.KiwiReceipt.print(doc)).then(
-        (r) => toast(r && r.ok ? 'Reçu imprimé' : 'Impression échouée'),
-        () => toast('Impression échouée')
+        (r) => toast(tr(r && r.ok ? 'Reçu imprimé' : 'Impression échouée')),
+        () => toast(tr('Impression échouée'))
       );
       closeReceipt();
     });
@@ -2005,7 +2005,7 @@
       terminalCardTotal = Number.isFinite(cardValue) && cardValue >= 0 ? money(cardValue) : null;
       const raw = $('#clo-count') ? $('#clo-count').value : '';
       const r = buildDayReport((raw === '' || raw == null) ? null : parseFloat(raw), 0);
-      if (!r) { toast('Rapport indisponible'); return; }
+      if (!r) { toast(tr('Rapport indisponible')); return; }
       doPrintDayReport(r, 'AVANT CLÔTURE');
     });
     $('#clo-close').addEventListener('click', () => { window.KiwiAuthAct?.({ kind: 'close_till', key: 'act.close_till' }); requireTillOperator('Fermeture de caisse', closeRegister); });
@@ -2023,7 +2023,7 @@
              réimprimer ce qui n'a jamais été imprimé n'a pas de sens. */
           if (res?.ok) {
             if (reprint) reprint.hidden = false;
-            const lbl = print.querySelector('span'); if (lbl) lbl.textContent = 'Imprimer à nouveau';
+            const lbl = print.querySelector('span'); if (lbl) lbl.textContent = tr('Imprimer à nouveau');
           }
         });
       });
@@ -2242,7 +2242,7 @@
         return;
       }
       if (v === 'forgot') {
-        toast('SOS · contacte le manager');
+        toast(tr('SOS · contacte le manager'));
         return;
       }
       if (pinBuffer.length >= 4) return;
@@ -2307,7 +2307,7 @@
        de la personne. Il ne rejoue jamais un code et n'approuve rien ; si le
        réseau est revenu, le pavé reparaît vide, il faut retaper le code. */
     $('#mgr-needs-retry').addEventListener('click', () => {
-      if (!tillReachable()) { toast('Toujours sans connexion · rien n’a changé'); return; }
+      if (!tillReachable()) { toast(tr('Toujours sans connexion · rien n’a changé')); return; }
       mgrModal.classList.remove('is-needs-connection');
       $('#mgr-needs').hidden = true;
       mgrBuffer = ''; mgrBusy = false; renderMgrDots();
@@ -2363,12 +2363,12 @@
           }).then(async (response) => {
             let data = {}; try { data = await response.json(); } catch (_) {}
             if (!response.ok) throw new Error(data.error || 'pause-write-failed');
-            toast(`${member.name} · ${pausing ? 'pause démarrée' : 'fin de pause'}`);
+            toast(tr(`${member.name} · ${pausing ? 'pause démarrée' : 'fin de pause'}`));
             pollLiveTeam();
           }).catch((error) => {
-            toast(error && error.message === 'employee-not-clocked-in'
+            toast(tr(error && error.message === 'employee-not-clocked-in'
               ? `${member.name} n'est pas pointé en service`
-              : 'Pause non synchronisée · vérifiez la connexion');
+              : 'Pause non synchronisée · vérifiez la connexion'));
           }).finally(() => { card.disabled = false; });
         } else if (act === 'message') {
           openMsgModal(sid);
@@ -2387,7 +2387,7 @@
         const s = servers[card.dataset.teamCard];
         if (s && s.status === 'pause') {
           const tick = card.querySelector('.pause-tick');
-          if (tick) tick.textContent = `En pause · ${pauseElapsedMn(s)} mn`;
+          if (tick) tick.textContent = tr(`En pause · ${pauseElapsedMn(s)} mn`);
         }
       });
     }, 30000);
@@ -2405,7 +2405,7 @@
     });
     $('#msg-send').addEventListener('click', async () => {
       const text = $('#msg-input').value.trim();
-      if (!text) { toast('Écris un message d\'abord'); return; }
+      if (!text) { toast(tr('Écris un message d\'abord')); return; }
       const sentTo = activeServerCount();
       const target = msgTargetId === 'ALL'
         ? `équipe (${sentTo} serveur${sentTo > 1 ? 's' : ''} en service)`
@@ -2419,9 +2419,9 @@
       }).then(async (response) => {
         let data = {}; try { data = await response.json(); } catch (_) {}
         if (!response.ok) throw new Error(data.error || 'message-write-failed');
-        toast(`Message envoyé à ${target} ✓`);
+        toast(tr(`Message envoyé à ${target} ✓`));
         closeMsgModal();
-      }).catch(() => { toast('Message non envoyé · vérifiez la connexion'); })
+      }).catch(() => { toast(tr('Message non envoyé · vérifiez la connexion')); })
         .finally(() => { button.disabled = false; });
     });
     /* ===========================================================
@@ -2439,7 +2439,7 @@
         tableSettlement().project(t, { server: newSid });
         refreshTableNode(reassignTableId);
         if (selectedId === reassignTableId) renderRightPanel(reassignTableId);
-        toast(`Table ${reassignTableId} → ${servers[newSid].name}`);
+        toast(tr(`Table ${reassignTableId} → ${servers[newSid].name}`));
         closeReassignModal();
       }
     });
@@ -2460,7 +2460,7 @@
         refreshTableNode(splitState.tableId);
       }
       $('#split-modal').classList.remove('is-open');
-      toast('Split en pause · reprends quand tu veux');
+      toast(tr('Split en pause · reprends quand tu veux'));
       if (selectedId === splitState.tableId) renderRightPanel(selectedId);
     });
     // Patch markSplitPartPaid via wrapper · save on every payment, delete on done
@@ -2582,7 +2582,7 @@
           refreshTableNode(splitState.tableId);
         }
         $('#split-modal').classList.remove('is-open');
-        toast('Split en pause · reprends quand tu veux');
+        toast(tr('Split en pause · reprends quand tu veux'));
         if (selectedId === splitState.tableId) renderRightPanel(selectedId);
       }
     }, true);const remiseModal = $('#remise-modal');
@@ -2615,7 +2615,7 @@
       if (pctChip) {
         const next = parseFloat(pctChip.dataset.rmPct) || 0;
         if (window.KiwiDiscountPolicy?.configured() && !window.KiwiDiscountPolicy.allowed(next)) {
-          toast('Pourcentage non autorisé'); return;
+          toast(tr('Pourcentage non autorisé')); return;
         }
         remiseState.value = next;
         $$('#rm-pct-chips .rm-pct-chip').forEach(c => c.classList.toggle('is-active', c === pctChip));
@@ -2734,9 +2734,9 @@
     } catch (_) {}
     if (terminalIdButton) terminalIdButton.addEventListener('click', async () => {
       const id = window.KiwiCaisseContext.current().terminalId;
-      if (!id) { toast('Cette caisse doit d’abord être appairée'); return; }
-      try { await navigator.clipboard.writeText(id); toast('Identifiant de caisse copié'); }
-      catch (_) { window.prompt('Identifiant de cette caisse', id); }
+      if (!id) { toast(tr('Cette caisse doit d’abord être appairée')); return; }
+      try { await navigator.clipboard.writeText(id); toast(tr('Identifiant de caisse copié')); }
+      catch (_) { window.prompt(tr('Identifiant de cette caisse'), id); }
     });
     const handoverModal = $('#handover-modal');
     const handoverState = { expected: 0, counted: 0, incoming: null, verifyCount: 0 };/* Operational accounting API exposed for verification and cross-module inspection */
@@ -2764,17 +2764,17 @@
       if (e.target.closest('#ho-slip-print')) {
         const slip = document.getElementById('ho-slip');
         const KP = window.KiwiPrinter;
-        if (!slip || !KP || !KP.browserPrintHTML) { toast('Impression indisponible sur cet appareil'); return; }
+        if (!slip || !KP || !KP.browserPrintHTML) { toast(tr('Impression indisponible sur cet appareil')); return; }
         try {
           Promise.resolve(KP.browserPrintHTML(slip.innerHTML, '80', 'Bon de passation')).then(
             /* Ce chemin est l'impression du système (ou le PDF dans l'app) : rien
                n'est « envoyé à l'imprimante » tant que personne n'a confirmé. */
-            (r) => toast(!(r && r.ok) ? 'Impression échouée'
+            (r) => toast(tr(!(r && r.ok) ? 'Impression échouée'
               : r.via === 'pdf' ? 'Bon de passation prêt · imprimer ou partager le PDF'
-              : 'Bon de passation ouvert dans l\'impression système'),
-            () => toast('Impression échouée')
+              : 'Bon de passation ouvert dans l\'impression système')),
+            () => toast(tr('Impression échouée'))
           );
-        } catch (_) { toast('Impression échouée'); }
+        } catch (_) { toast(tr('Impression échouée')); }
         return;
       }
 
@@ -2792,7 +2792,7 @@
         return;
       }
       if (e.target.closest('#ho-count-next')) {
-        if ($('#ho-count').value === '') { toast('Compte le tiroir'); return; }
+        if ($('#ho-count').value === '') { toast(tr('Compte le tiroir')); return; }
         updateHandoverEcart();
         renderHandoverVerify();
         showHandoverStep('verify');
@@ -2809,7 +2809,7 @@
       }
       if (e.target.closest('#ho-verify-confirm')) {
         const inc = handoverState.incoming;
-        if (!inc) { toast('Choisis le caissier entrant'); return; }
+        if (!inc) { toast(tr('Choisis le caissier entrant')); return; }
         /* Le caissier ENTRANT confirme, personne d'autre : le pavé le dit, et un
            « oui » du serveur pour une autre personne est refusé sur le pavé.
            Sur un vrai commerce la preuve de l'acteur ne vient que du serveur. */
@@ -2851,7 +2851,7 @@
         } else if (selectedId) {
           openRemiseModal(selectedId);
         } else {
-          toast('Sélectionne une table');
+          toast(tr('Sélectionne une table'));
         }
       } else if (name === 'edit-discount') {
         if (mode === 'vrap') {
@@ -2864,12 +2864,12 @@
         tableSettlement().project(tables[selectedId], {}, ['discount']);
         renderRightPanel(selectedId);
         refreshTableNode(selectedId);
-        toast('Remise supprimée');
+        toast(tr('Remise supprimée'));
       } else if (name === 'remove-vrap-discount') {
         e.stopPropagation();
         currentOrder().setDiscount(null);
         renderCart();
-        toast('Remise supprimée');
+        toast(tr('Remise supprimée'));
       } else if (name === 'resume-split' && selectedId) {
         openSplitModal(selectedId);
       } else if (name === 'cancel-split' && selectedId) {
@@ -2878,10 +2878,10 @@
           /* Deleting the flow here kept the paid tenders in the ledger but put
              the full bill back on screen, so the remainder could be charged a
              second time. Once money has entered, the split must be completed. */
-          toast('Split déjà encaissé en partie · termine les parts restantes');
+          toast(tr('Split déjà encaissé en partie · termine les parts restantes'));
           return;
         }
-        if (!confirm('Annuler le split en cours ?')) return;
+        if (!confirm(tr('Annuler le split en cours ?'))) return;
         tableSplits.delete(selectedId);
         const t = tables[selectedId];
         if (t && t.status !== 'khlass') {
@@ -2889,7 +2889,7 @@
           refreshTableNode(selectedId);
         }
         renderRightPanel(selectedId);
-        toast('Split annulé');
+        toast(tr('Split annulé'));
       }
     });
     /* ---------- Bootstrap menu (vente rapida) ---------- */
@@ -3283,7 +3283,7 @@
         const order = kdsOrders.find(x => x && x.num === Number(send.dataset.vrapSend));
         if (order && dispatchHeldTakeaway(order, false, true)) {
           renderVrapBoard();
-          toast(`Commande ${ticketNo(order)} envoyée en cuisine · paiement en attente`);
+          toast(tr(`Commande ${ticketNo(order)} envoyée en cuisine · paiement en attente`));
         }
         return;
       }
@@ -3297,7 +3297,7 @@
       if (dismiss) {
         dismissExpired(dismiss.dataset.expDismiss);
         renderVrapBoard();
-        toast('Commande retirée des expirées');
+        toast(tr('Commande retirée des expirées'));
         return;
       }
       // Any other click on an order card opens it (unpaid → edit + checkout).
@@ -3378,7 +3378,7 @@
               if (!t || !t.opId || !dead.has(String(t.opId))) continue;
               const gone = (expired || []).find(e => e && String(e.id || '') === String(t.opId));
               retireRejectedKitchenTicket(t);
-              try { toast(`${ticketNo(t)} refusée ou annulée · retirée de la cuisine`); } catch (_) {}
+              try { toast(tr(`${ticketNo(t)} refusée ou annulée · retirée de la cuisine`)); } catch (_) {}
               void gone;
               touched = true;
             }
@@ -3506,7 +3506,7 @@
             if (!opUnmatchedTables.has(key)) {
               opUnmatchedTables.add(key);
               try { console.warn('[kiwi] commande sans table au plan de salle :', o.table, o.id); } catch (_) {}
-              try { toast(`Table « ${o.table} » absente du plan de salle · commande non rattachée`, 6000); } catch (_) {}
+              try { toast(tr(`Table « ${o.table} » absente du plan de salle · commande non rattachée`), 6000); } catch (_) {}
             }
             return;
           }
@@ -3560,7 +3560,7 @@
           remote = orders && orders[orderId];
         } catch (_) {}
         if (remote && (remote.paid || remote.status === 'rejected')) {
-          toast('Commande déjà réglée ou annulée'); return false;
+          toast(tr('Commande déjà réglée ou annulée')); return false;
         }
         if (remote) opIngest(remote);
         const local = opTickets.get(orderId);
@@ -3577,7 +3577,7 @@
              ferme la visite de cette table (settleVrapPayment). */
           if (!tableId) {
             if (!local || !kdsOrders.includes(local) || local.paid || !vrapFinancialItems(local).length) {
-              toast('Table absente du plan · envoyez d\'abord la commande en cuisine'); return false;
+              toast(tr('Table absente du plan · envoyez d\'abord la commande en cuisine')); return false;
             }
             local.offPlan = true;
             local.type = 'takeaway';
@@ -3586,11 +3586,11 @@
             return vrapEditingNum === local.num && cart.length > 0;
           }
           if (remote.session && phoneSessionOf(tableId) !== String(remote.session)) {
-            toast('Cette commande appartient à une autre visite'); return false;
+            toast(tr('Cette commande appartient à une autre visite')); return false;
           }
           const bill = generateOrder(tableId, tables[tableId]);
           if (!bill.length || !bill.every(l => Number.isFinite(l.total)) || bill.reduce((s, l) => s + l.total, 0) <= 0) {
-            toast('Addition non disponible · actualisez la commande'); return false;
+            toast(tr('Addition non disponible · actualisez la commande')); return false;
           }
           if (mode !== 'salle') setMode('salle');
           openTable(tableId);
@@ -3598,20 +3598,20 @@
         }
         if (local && local.type === 'takeaway') {
           if (!kdsOrders.includes(local) || local.paid || local.pickedUp || !vrapFinancialItems(local).length) {
-            toast('Commande indisponible pour encaissement'); return false;
+            toast(tr('Commande indisponible pour encaissement')); return false;
           }
           if (mode !== 'vrap') setMode('vrap');
           openVrapOrder(local.num);
           return vrapEditingNum === local.num && cart.length > 0;
         }
-        toast('Commande introuvable dans la caisse');
+        toast(tr('Commande introuvable dans la caisse'));
         return false;
       },
       printOrder(orderId) {
         const local = opTickets.get(orderId);
         if (local) {
           printKitchenTickets(local, local.items || [], { remote: false, force: true });
-          toast('Impression du bon envoyée');
+          toast(tr('Impression du bon envoyée'));
           return true;
         }
         let remote = null;
@@ -3624,11 +3624,11 @@
           const created = opTickets.get(orderId);
           if (created) {
             printKitchenTickets(created, created.items || [], { remote: false, force: true });
-            toast('Impression du bon envoyée');
+            toast(tr('Impression du bon envoyée'));
             return true;
           }
         }
-        toast('Commande introuvable pour impression');
+        toast(tr('Commande introuvable pour impression'));
         return false;
       },
       sessionOf: phoneSessionOf,
@@ -3794,14 +3794,14 @@
       let alreadyFailed = '';
       try { alreadyFailed = sessionStorage.getItem(RESTORE_FAIL_FLAG) || ''; } catch (_) {}
       if (alreadyFailed && alreadyFailed === restoreStamp) {
-        setTimeout(() => toast('Service non restauré · il est conservé, préviens le support', 'danger'), 800);
+        setTimeout(() => toast(tr('Service non restauré · il est conservé, préviens le support'), 'danger'), 800);
         return;
       }
       try {
         restoreShift(saved);
         try { adoptHeldSalesIntoJournal(); } catch (_) {}
         enterShellDirectly();
-        setTimeout(() => toast('Service restauré · ' + journal.length + ' transactions'), 500);
+        setTimeout(() => toast(tr('Service restauré · ' + journal.length + ' transactions')), 500);
       } catch (err) {
         try { console.error('[kiwi] reprise du service impossible', err); } catch (_) {}
         /* La copie de secours d'abord : elle doit exister AVANT que quoi que ce
@@ -3815,9 +3815,9 @@
         let flagged = false;
         try { sessionStorage.setItem(RESTORE_FAIL_FLAG, restoreStamp); flagged = true; } catch (_) {}
         if (flagged) { try { location.reload(); return; } catch (_) {} }
-        setTimeout(() => toast(stashed
+        setTimeout(() => toast(tr(stashed
           ? 'Service non restauré · il est conservé, préviens le support'
-          : 'Service non restauré · préviens le support', 'danger'), 800);
+          : 'Service non restauré · préviens le support'), 'danger'), 800);
       }
     })();
     /* Autosave · covers refresh, tab close and crashes.

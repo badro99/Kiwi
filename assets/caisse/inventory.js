@@ -594,7 +594,7 @@ function renderStock(){
       const qty = parseFloat($('#sk-w-qty').value) || 0;
       if (qty <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Indique une quantité valide')); return; }
       if (qty > it.stock) {
-        if (!confirm(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`)) {
+        if (!confirm((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`))) {
           return;
         }
       }

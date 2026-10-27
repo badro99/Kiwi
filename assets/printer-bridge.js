@@ -884,7 +884,7 @@
     if (pairingLoad) return pairingLoad;
     pairingLoad = new Promise(function (resolve, reject) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-ui.js?v=9';
+      script.src = '/assets/printer/pairing-ui.js?v=12';
       function failed() {
         pairingLoad = null;
         script.remove();
@@ -904,7 +904,7 @@
     if (langLoad) return langLoad;
     langLoad = new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-lang.js?v=4';
+      script.src = '/assets/printer/pairing-lang.js?v=7';
       script.onload = function () { resolve(); };
       script.onerror = function () { langLoad = null; script.remove(); resolve(); };
       document.head.appendChild(script);

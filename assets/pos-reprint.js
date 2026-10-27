@@ -43,10 +43,9 @@
 (function () {
   'use strict';
 
-  var ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
-    + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    + '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'
-    + '<rect x="6" y="14" width="12" height="8" rx="1"/></svg>';
+  /* Un seul littéral : le contrôle des écritures visibles lit un balisage
+     coupé en deux comme du texte. */
+  var ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>';
 
   /* ── les métiers qui tiennent leur propre journal ──
    * id du métier → fonction rendant ses ventes du jour. Sans entrée ici, on lit
@@ -61,6 +60,12 @@
       if (window.KiwiPosSale && window.KiwiPosSale.isReal) return !!window.KiwiPosSale.isReal();
       return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
     } catch (_) { return false; }
+  }
+
+  /* Les mots de ce module sont français ; la langue de la caisse vient de son
+     dictionnaire (assets/caisse-lang.js). Sans lui, le français reste. */
+  function tr(fr) {
+    try { return typeof fr === 'string' && window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(fr) : fr; } catch (_) { return fr; }
   }
 
   function toast(msg) {
@@ -259,7 +264,7 @@
    * seul effet est le papier. */
   function reprint(vertical, entry) {
     var K = window.KiwiReceipt;
-    if (!K || !K.print) { toast("Impression indisponible sur cet appareil"); return Promise.resolve(null); }
+    if (!K || !K.print) { toast(tr("Impression indisponible sur cet appareil")); return Promise.resolve(null); }
 
     var doc;
     try {
@@ -269,15 +274,15 @@
       if (entry && entry.rc && K.fromSnapshot) doc = K.fromSnapshot(entry.rc, { copy: true });
       else doc = K.build(docFrom(entry), { copy: true });
     } catch (_) { doc = null; }
-    if (!doc) { toast('Ticket introuvable'); return Promise.resolve(null); }
+    if (!doc) { toast(tr('Ticket introuvable')); return Promise.resolve(null); }
 
-    toast('Impression du reçu…');
+    toast(tr('Impression du reçu…'));
     return Promise.resolve(K.print(doc)).then(
       function (r) {
-        toast(r && r.ok ? 'Duplicata imprimé' : "Impression échouée, le ticket n'est pas sorti");
+        toast(tr(r && r.ok ? 'Duplicata imprimé' : "Impression échouée, le ticket n'est pas sorti"));
         return r;
       },
-      function () { toast("Impression échouée, le ticket n'est pas sorti"); return null; }
+      function () { toast(tr("Impression échouée, le ticket n'est pas sorti")); return null; }
     );
   }
 
@@ -292,8 +297,8 @@
    * nulle part — ni vente, ni numéro, ni stock. */
   function printList(list) {
     var K = window.KiwiReceipt;
-    if (!K || !K.buildSummary || !K.print) { toast("Impression indisponible sur cet appareil"); return Promise.resolve(null); }
-    if (!list || !list.length) { toast('Aucune vente à imprimer'); return Promise.resolve(null); }
+    if (!K || !K.buildSummary || !K.print) { toast(tr("Impression indisponible sur cet appareil")); return Promise.resolve(null); }
+    if (!list || !list.length) { toast(tr('Aucune vente à imprimer')); return Promise.resolve(null); }
     var doc;
     try {
       doc = K.buildSummary(list, {
@@ -303,15 +308,15 @@
         to: list[0].ts,
       });
     } catch (_) { doc = null; }
-    if (!doc) { toast('Récapitulatif indisponible'); return Promise.resolve(null); }
+    if (!doc) { toast(tr('Récapitulatif indisponible')); return Promise.resolve(null); }
 
-    toast('Impression de la liste…');
+    toast(tr('Impression de la liste…'));
     return Promise.resolve(K.print(doc)).then(
       function (r) {
-        toast(r && r.ok ? 'Liste imprimée' : "Impression échouée, la liste n'est pas sortie");
+        toast(tr(r && r.ok ? 'Liste imprimée' : "Impression échouée, la liste n'est pas sortie"));
         return r;
       },
-      function () { toast("Impression échouée, la liste n'est pas sortie"); return null; }
+      function () { toast(tr("Impression échouée, la liste n'est pas sortie")); return null; }
     );
   }
 
@@ -460,29 +465,34 @@
     });
   }
 
+  /* Seul le restaurant garde de quoi rouvrir la note : son instantané. */
+  function canReopen(vertical, entry) {
+    return vertical === 'restaurant' && !!entry.reopenSnapshot
+      && Array.isArray(entry.reopenSnapshot.lines) && entry.reopenSnapshot.lines.length > 0;
+  }
+
   function showTicket(vertical, entry) {
     var box = veil && veil.querySelector('.modal');
     if (!box || !entry) return;
     var lines = (entry.lines || []).map(function (l) {
-      return '<div class="kx-rp-ticket-line"><span>' + esc((l.qty || 1) + ' × ' + (l.name || 'Article'))
+      return '<div class="kx-rp-ticket-line"><span>' + esc((l.qty || 1) + ' × ' + (l.name || tr('Article')))
         + '</span><b>' + esc(mad(l.total || 0)) + '</b></div>';
     }).join('');
     var cancelling = mode === 'cancel';
-    var reopenBtn = vertical === 'restaurant' && entry.reopenSnapshot
-        && Array.isArray(entry.reopenSnapshot.lines) && entry.reopenSnapshot.lines.length
-        ? '<button type="button" class="ma-btn" data-kx-rp-reopen>Annuler et rouvrir la note</button>' : '';
-    var cancelBtn = '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button>';
+    var reopenBtn = canReopen(vertical, entry)
+        ? '<button type="button" class="ma-btn" data-kx-rp-reopen>' + tr('Annuler et rouvrir la note') + '</button>' : '';
+    var cancelBtn = '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>' + tr('Annuler la vente') + '</button>';
     /* Annuler une vente : l'annulation mène, on ne propose ni réimpression ni
        facture. Réimprimer : l'ordre d'origine, l'annulation en dernier. */
     var actions = cancelling
-      ? '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>' + cancelBtn + reopenBtn
-      : '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
-        + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
-        + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>' + cancelBtn + reopenBtn;
-    box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.label || entry.ref || 'Ticket') + '</h3>'
+      ? '<button type="button" class="ma-btn" data-kx-rp-back>' + tr('Retour') + '</button>' + cancelBtn + reopenBtn
+      : '<button type="button" class="ma-btn" data-kx-rp-back>' + tr('Retour') + '</button>'
+        + '<button type="button" class="ma-btn" data-kx-rp-print>' + tr('Réimprimer') + '</button>'
+        + '<button type="button" class="ma-btn" data-kx-rp-invoice>' + tr('Facture PDF') + '</button>' + cancelBtn + reopenBtn;
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.label || entry.ref || tr('Ticket')) + '</h3>'
       + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts) + ' · ' + methodLabel(entry.method))
-      + ' · ' + esc(mad(entry.total)) + '</p><p>Ticket ' + esc(ticketNo(entry) || 'identifiant indisponible') + '</p></div>'
-      + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">Détail indisponible</div>') + '</div>'
+      + ' · ' + esc(mad(entry.total)) + '</p><p>' + tr('Ticket') + ' ' + esc(ticketNo(entry) || tr('identifiant indisponible')) + '</p></div>'
+      + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">' + tr('Détail indisponible') + '</div>') + '</div>'
       + '<div class="kx-rp-ticket-actions">' + actions + '</div></div>';
     box.setAttribute('data-kx-rp-mode', mode);
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });
@@ -492,7 +502,7 @@
     if (invBtn) {
       invBtn.addEventListener('click', function () {
         if (!window.KiwiInvoice || typeof window.KiwiInvoice.generate !== 'function') {
-          toast('Module facture non disponible');
+          toast(tr('Module facture non disponible'));
           return;
         }
         var m = merchant();
@@ -513,7 +523,7 @@
     var cancel = box.querySelector('[data-kx-rp-cancel]');
     if (!entry.saleId) {
       cancel.disabled = true;
-      cancel.title = 'Synchronisation de la vente en cours';
+      cancel.title = tr('Synchronisation de la vente en cours');
     } else cancel.addEventListener('click', function () { showPin(vertical, entry, false); });
     var reopen = box.querySelector('[data-kx-rp-reopen]');
     if (reopen) {
@@ -533,39 +543,42 @@
     var tableOptions = candidates.map(function (table) {
       var occupied = free.indexOf(table) < 0;
       return '<option value="' + esc(table) + '"' + (table === originalTable && !occupied ? ' selected' : '')
-        + '>Table ' + esc(table) + (occupied ? ' · occupée / reprise existante' : '') + '</option>';
+        + '>' + esc(tr('Table ' + table + (occupied ? ' · occupée / reprise existante' : ''))) + '</option>';
     }).join('');
-    box.innerHTML = '<div class="kx-rp-head"><h3>' + (reopening ? 'Annuler et rouvrir la note' : 'Confirmer l’annulation') + '</h3>'
-      + '<p>' + esc((entry.label || entry.ref || 'Ticket') + ' · ' + methodLabel(entry.method) + ' · ' + mad(entry.total))
-      + '<br>Ticket ' + esc(entry.saleId ? ticketNo(entry) : 'identifiant indisponible')
-      + '<br>Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.</p></div>'
-      + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password" aria-label="Code manager à 4 chiffres">'
-      + (reopening ? '<p>Table pour la note rouverte</p><select data-kx-rp-table aria-label="Table pour la note rouverte">'
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + tr(reopening ? 'Annuler et rouvrir la note' : 'Confirmer l’annulation') + '</h3>'
+      + '<p>' + esc((entry.label || entry.ref || tr('Ticket')) + ' · ' + methodLabel(entry.method) + ' · ' + mad(entry.total))
+      + '<br>' + tr('Ticket') + ' ' + esc(entry.saleId ? ticketNo(entry) : tr('identifiant indisponible'))
+      + '<br>' + tr('Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.') + '</p></div>'
+      + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password">'
+      + (reopening ? '<p>' + tr('Table pour la note rouverte') + '</p><select data-kx-rp-table>'
         + tableOptions + '</select><p class="kx-rp-error" data-kx-rp-occupied>'
-        + (free.indexOf(originalTable) < 0 ? 'table occupée · rouvrir sur une autre table' : '') + '</p>' : '')
+        + (free.indexOf(originalTable) < 0 ? tr('table occupée · rouvrir sur une autre table') : '') + '</p>' : '')
       + '<div class="kx-rp-error" data-kx-rp-error></div><div class="kx-rp-ticket-actions">'
-      + '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
+      + '<button type="button" class="ma-btn" data-kx-rp-back>' + tr('Retour') + '</button>'
       + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-confirm>'
-      + (reopening ? 'Annuler et rouvrir' : 'Annuler définitivement') + '</button></div></div>';
+      + tr(reopening ? 'Annuler et rouvrir' : 'Annuler définitivement') + '</button></div></div>';
     var input = box.querySelector('[data-kx-rp-pin]');
+    input.setAttribute('aria-label', tr('Code manager à 4 chiffres'));
+    var tableSelect = box.querySelector('[data-kx-rp-table]');
+    if (tableSelect) tableSelect.setAttribute('aria-label', tr('Table pour la note rouverte'));
     var error = box.querySelector('[data-kx-rp-error]');
     var confirm = box.querySelector('[data-kx-rp-confirm]');
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { showTicket(vertical, entry); });
     function submit() {
-      if (!/^\d{4}$/.test(input.value)) { error.textContent = 'Entrez le code manager à 4 chiffres.'; return; }
+      if (!/^\d{4}$/.test(input.value)) { error.textContent = tr('Entrez le code manager à 4 chiffres.'); return; }
       var picked = reopening && box.querySelector('[data-kx-rp-table]');
-      if (reopening && (!picked || !picked.value)) { error.textContent = 'Choisissez une table libre.'; return; }
+      if (reopening && (!picked || !picked.value)) { error.textContent = tr('Choisissez une table libre.'); return; }
       confirm.disabled = true; error.textContent = '';
       cancelSale(entry, input.value, reopening ? { reopen: true, table: picked.value,
         covers: Number(entry.reopenSnapshot && entry.reopenSnapshot.covers) || 1 } : null).then(function (result) {
         if (reopening && result.floorPending) {
           confirm.disabled = false;
-          error.textContent = 'Vente annulée au serveur, mais la salle n’a pas confirmé la note rouverte. N’encaissez pas; réessayez la reprise.';
+          error.textContent = tr('Vente annulée au serveur, mais la salle n’a pas confirmé la note rouverte. N’encaissez pas; réessayez la reprise.');
           return;
         }
         if (reopening && !(bridge && bridge.apply && bridge.apply(result, entry))) {
           confirm.disabled = false;
-          error.textContent = 'Vente annulée au serveur, note non restaurée ici. N’encaissez pas à nouveau; réessayez la reprise.';
+          error.textContent = tr('Vente annulée au serveur, note non restaurée ici. N’encaissez pas à nouveau; réessayez la reprise.');
           return;
         }
         serverDay[String(vertical)] = (serverDay[String(vertical)] || []).filter(function (e) { return e.saleId !== entry.saleId; });
@@ -573,11 +586,11 @@
         try { document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [entry.ref], merchant: merchant() } })); } catch (_) {}
         if (reopening) {
           try { document.dispatchEvent(new CustomEvent('kiwi-sale-reopened', { detail: { ...result, entry: entry } })); } catch (_) {}
-          toast('Note rouverte · Table ' + result.table + ' · ' + mad(entry.total));
-        } else toast('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total));
+          toast(tr('Note rouverte · Table ' + result.table + ' · ' + mad(entry.total)));
+        } else toast(tr('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total)));
       }).catch(function (err) {
         confirm.disabled = false;
-        error.textContent = err && err.code === 'bad-pin' ? 'Code manager incorrect.'
+        error.textContent = tr(err && err.code === 'bad-pin' ? 'Code manager incorrect.'
           : err && err.code === 'manager-required' ? 'Code manager requis. Un manager doit valider l’annulation.'
           : err && err.code === 'table-occupied' ? 'table occupée · rouvrir sur une autre table'
           : err && err.code === 'sale-not-current-business-day' ? 'Seules les ventes du jour peuvent rouvrir une note.'
@@ -585,7 +598,7 @@
           : err && err.code === 'already-cancelled' ? 'Cette vente est déjà annulée.'
           : err && err.code === 'sale-has-collections' ? 'Cette livraison a déjà des encaissements. Remboursez les reçus concernés avant de demander une correction au gérant.'
           : err && err.code === 'sale-has-refunds' ? 'Cette vente a déjà été remboursée ou transformée en avoir : l’annuler retirerait cet argent deux fois.'
-          : 'Annulation impossible. Vérifiez la connexion et réessayez.';
+          : 'Annulation impossible. Vérifiez la connexion et réessayez.');
       });
     }
     confirm.addEventListener('click', submit);
@@ -609,7 +622,7 @@
       document.body.appendChild(veil);
     }
     var box = veil.querySelector('.modal');
-    box.setAttribute('aria-label', cancelling ? 'Annuler une vente' : 'Réimprimer un ticket');
+    box.setAttribute('aria-label', tr(cancelling ? 'Annuler une vente' : 'Réimprimer un ticket'));
     box.setAttribute('data-kx-rp-mode', mode);
     var list = rows(vertical);
 
@@ -638,19 +651,19 @@
         + 'le ticket a été gardé.</div>';
     }
 
-    box.innerHTML = '<div class="kx-rp-head"><h3>' + (cancelling ? 'Annuler une vente' : 'Réimprimer un ticket') + '</h3>'
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + tr(cancelling ? 'Annuler une vente' : 'Réimprimer un ticket') + '</h3>'
       + (cancelling
-        ? '<p>Choisissez la vente à annuler. Un code manager à 4 chiffres est demandé, et l’annulation est journalisée.</p>'
-        : '<p>Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
-          + 'et l\'heure d\'origine, et porte la mention « duplicata ».</p>') + '</div>'
+        ? '<p>' + tr('Choisissez la vente à annuler. Un code manager à 4 chiffres est demandé, et l’annulation est journalisée.') + '</p>'
+        : '<p>' + tr('Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
+          + 'et l\'heure d\'origine, et porte la mention « duplicata ».') + '</p>') + '</div>'
       + '<div class="kx-rp-list">' + body + '</div>'
       /* « Imprimer la liste » à gauche, « Fermer » à droite, et seulement quand
          il y a quelque chose à imprimer : un bouton qui sort une feuille vide
          est un bouton qu'on n'ose plus toucher. */
       + '<div class="kx-rp-foot">'
       + (list.length && !cancelling ? '<button type="button" class="ma-btn kx-rp-all" data-kx-rp-all>' + ICON
-        + '<span>Imprimer la liste</span></button>' : '')
-      + '<button type="button" class="ma-btn" data-kx-rp-close>Fermer</button></div>';
+        + '<span>' + tr('Imprimer la liste') + '</span></button>' : '')
+      + '<button type="button" class="ma-btn" data-kx-rp-close>' + tr('Fermer') + '</button></div>';
 
     box.querySelectorAll('[data-kx-rp]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -693,9 +706,9 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.className = ((lock.className || '').replace(/\bkx-reprint\b/g, '').trim() + ' kx-reprint').trim();
-    b.title = "Ressortir un ticket déjà encaissé, avec son numéro d'origine";
-    b.setAttribute('aria-label', 'Réimprimer un ticket');
-    b.innerHTML = ICON + '<span>Réimprimer</span>';
+    b.title = tr("Ressortir un ticket déjà encaissé, avec son numéro d'origine");
+    b.setAttribute('aria-label', tr('Réimprimer un ticket'));
+    b.innerHTML = ICON + '<span>' + tr('Réimprimer') + '</span>';
     b.addEventListener('click', function () { open(vertical); });
     lock.parentNode.insertBefore(b, lock);
     return b;
