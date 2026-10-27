@@ -11,7 +11,16 @@ import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cargo = spawnSync('cargo', ['--version'], { stdio: 'ignore' });
-if (cargo.error?.code === 'ENOENT') { console.log('○ skip · cargo absent'); process.exit(0); }
+if (cargo.error?.code === 'ENOENT') {
+  /* The Node, Rust and Win7 bridges must not drift unseen. A run without cargo
+     did not execute this suite: the gate reads that line as a skipped
+     dependency and ends red (tools/check-guard.js). KIWI_ALLOW_CARGO_SKIP=1
+     waives it knowingly, and the run ends INCOMPLETE, never green
+     (tools/check-verdict.cjs). */
+  if (process.env.KIWI_ALLOW_CARGO_SKIP === '1') console.log('  ! cargo absent, waived by KIWI_ALLOW_CARGO_SKIP=1: the Rust bridge parity was NOT executed');
+  else console.log('  ○ skip  cargo unavailable (install Rust, https://rustup.rs), Rust bridge parity not executed');
+  process.exit(0);
+}
 function run(cmd, args, env = process.env) {
   const r = spawnSync(cmd, args, { cwd: root, env, stdio: 'inherit' });
   assert.equal(r.status, 0, cmd + ' ' + args.join(' '));

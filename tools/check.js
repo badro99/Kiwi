@@ -66,12 +66,12 @@ if (process.env.KIWI_CHECK_TIER === 'changed') {
  * left unexecuted is never a pass. */
 const MISSING_TEST_DEPS = [];
 {
-  const missing = ['fast-check', 'axe-core', 'puppeteer-core']
+  const missing = ['fast-check', 'axe-core', 'puppeteer-core', 'typescript']
     .filter((m) => !fs.existsSync(path.join(ROOT, 'app', 'node_modules', m, 'package.json')));
   if (missing.length) {
     const fix = `npm --prefix app ci, or in a worktree: ln -s <main checkout>/app/node_modules app/node_modules`;
     if (process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
-      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money and accessibility suites would skip and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs the rest anyway, knowingly; that run ends red.)`);
+      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money, accessibility and schema suites would skip (or crash) and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs the rest anyway, knowingly; that run ends red.)`);
       process.exit(1);
     }
     MISSING_TEST_DEPS.push(...missing);
@@ -3146,6 +3146,15 @@ section('Suite CPU time (tools/suite-cpu-baseline.json)');
   }
 }
 
+{
+  /* A suite that failed beside the others in the pool and passed alone made the
+     run green. It is a flake: say so, and count it over the last week. */
+  const flaked = guard.flakes();
+  if (flaked.length) {
+    const counts = guard.recordFlakes();
+    for (const n of flaked) warn(`${n} FLAKED: it failed in the parallel pool, then passed alone (${counts[n]} time(s) in the last ${guard.FLAKE_DAYS} days, ledger ${path.join(require('os').tmpdir(), 'kiwi-flake-ledger.jsonl')}). Green, but not clean: find why before it hides a real red`);
+  }
+}
 {
   const skipped = guard.dependencySkips();
   if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules`);
