@@ -455,7 +455,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=9',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=64',
+  '/assets/kit/kit.css?v=65',
   '/assets/pos-boutique-2027.css?v=3',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
@@ -470,7 +470,7 @@ var SHELL = [
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=5',
-  '/assets/kit/till-pin.js?v=7',
+  '/assets/kit/till-pin.js?v=8',
   /* and forgot and reset password, behind kiwiSkin2027:access. */
   '/assets/icons/material/sprite.access.svg?v=1',
   '/assets/kit/strings/onboarding.fr.js?v=1',

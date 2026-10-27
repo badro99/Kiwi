@@ -148,7 +148,11 @@
     var pad = doc.createElement('k-pin-pad');
     pad.setAttribute('size', 'ipad');
     pad.setAttribute('identity', (venue && venue.name) || '');
-    pad.setAttribute('sub', t('pin.sub.personal'));
+    /* Pas de sous-titre ici : « Votre code personnel à 4 chiffres » ne dit rien
+       que les quatre points et le pavé ne disent déjà, et il poussait l'écran
+       contre le bord haut de la tablette (propriétaire, 2026-10-28). Le verrou
+       responsable et l'appairage gardent le leur : eux portent une consigne
+       (quel geste on autorise, où lire le code à six chiffres). */
     scr.appendChild(pad);
     lockFlow = F.attach(pad, {
       use: 'till',
