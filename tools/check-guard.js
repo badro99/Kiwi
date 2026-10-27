@@ -113,7 +113,7 @@ function ranTests() { return new Set(ran); }
    "○ skip … unavailable" and exits 0. check.js fails the run on any of them,
    whatever the tier: a suite that did not execute is not a pass. */
 const depSkips = [];
-const DEP_SKIP = /○ skip[: ]+(?:fast-check|axe-core|puppeteer-core|typescript|cargo) unavailable/;
+const DEP_SKIP = /○ skip[: ]+(?:fast-check|axe-core|puppeteer-core|typescript) unavailable/;
 function noteDepSkip(args, stdout) {
   const text = Buffer.isBuffer(stdout) ? stdout.toString('utf8') : String(stdout || '');
   if (!DEP_SKIP.test(text)) return;

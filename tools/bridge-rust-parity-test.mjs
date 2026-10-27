@@ -12,13 +12,12 @@ import { randomBytes } from 'node:crypto';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cargo = spawnSync('cargo', ['--version'], { stdio: 'ignore' });
 if (cargo.error?.code === 'ENOENT') {
-  /* The Node, Rust and Win7 bridges must not drift unseen. A run without cargo
-     did not execute this suite: the gate reads that line as a skipped
-     dependency and ends red (tools/check-guard.js). KIWI_ALLOW_CARGO_SKIP=1
-     waives it knowingly, and the run ends INCOMPLETE, never green
-     (tools/check-verdict.cjs). */
-  if (process.env.KIWI_ALLOW_CARGO_SKIP === '1') console.log('  ! cargo absent, waived by KIWI_ALLOW_CARGO_SKIP=1: the Rust bridge parity was NOT executed');
-  else console.log('  ○ skip  cargo unavailable (install Rust, https://rustup.rs), Rust bridge parity not executed');
+  /* The Node, Rust and Win7 bridges must not drift unseen, and a run without
+     cargo did not execute this suite. NOT RUN is never PASSED: it prints the
+     "not run" line the gate shows as a warning (tools/check.js), like the iOS
+     format vectors. Building the Rust bridge needs cargo, so every Rust bridge
+     release runs it. A red here would block every deploy from a Mac without Rust. */
+  console.log('○ bridge-rust-parity not run: cargo unavailable (install Rust, https://rustup.rs); the Rust bridge parity was NOT executed');
   process.exit(0);
 }
 function run(cmd, args, env = process.env) {

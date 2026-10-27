@@ -415,14 +415,13 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
 
 {
   /* Gate honesty (wave 12): a suite that failed in the pool and passed alone is a flake, and the
-     named skips of typescript and cargo are red like fast-check. */
+     named skip of typescript is red like fast-check; a missing cargo says « not run », a warning
+     like the iOS vectors (a red would block every deploy from a Mac without Rust). */
   const flaky = path.join(dir, 'flaky-pool-test.mjs');
   const steady = path.join(dir, 'steady-pool-test.mjs');
   const noTs = path.join(dir, 'no-typescript-test.mjs');
-  const noCargo = path.join(dir, 'no-cargo-test.mjs');
   const answers2 = {
     [noTs]: '  ○ skip  typescript unavailable (npm --prefix app ci), schema floor not executed\n',
-    [noCargo]: '  ○ skip  cargo unavailable (install Rust), Rust bridge parity not executed\n',
   };
   const fake2 = (c, a) => ({ status: 0, stdout: answers2[a[a.length - 1]] || 'ok\n', stderr: '' });
   ok('a suite that failed in the pool then passed alone is a flake; one that passed in the pool is not', () => {
@@ -448,14 +447,13 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
     assert.deepEqual(counts, { 'a-test.mjs': 2, 'b-test.mjs': 1 });
     assert.equal(readFileSync(file, 'utf8').trim().split('\n').length, 4, 'both flakes were appended');
   });
-  ok('a skip on typescript or cargo is a dependency skip, as fast-check is', () => {
+  ok('a skip on typescript is a dependency skip, as fast-check is', () => {
     const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: fake2 });
     spy(process.execPath, [noTs], { encoding: 'utf8' });
-    spy(process.execPath, [noCargo], { encoding: 'utf8' });
     const skips = guard.dependencySkips();
-    assert.ok(skips.includes('no-typescript-test.mjs') && skips.includes('no-cargo-test.mjs'), skips.join());
+    assert.ok(skips.includes('no-typescript-test.mjs'), skips.join());
   });
-  ok('check.js reports flakes before its verdict and checks typescript at start; the verdict waives cargo as INCOMPLETE', () => {
+  ok('check.js reports flakes before its verdict and checks typescript at start; a cargo waiver still ends INCOMPLETE', () => {
     const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
     const verdict = src.lastIndexOf("console.log('\\n' + '─'.repeat(60));");
     assert.ok(src.indexOf('guard.flakes()') > 0 && src.indexOf('guard.flakes()') < verdict);
@@ -464,11 +462,16 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
     assert.equal(v.code, 2);
     assert.ok(/rust bridge/.test(v.line));
   });
-  ok('the typescript and cargo suites print the named skip line, not a crash, when the tool is absent', () => {
-    for (const f of ['schema-minimum-test.mjs', 'runtime-ddl-test.mjs', 'bridge-rust-parity-test.mjs']) {
+  ok('the typescript suites print the named skip line, not a crash, when the tool is absent', () => {
+    for (const f of ['schema-minimum-test.mjs', 'runtime-ddl-test.mjs']) {
       const src = readFileSync(path.join(ROOT, 'tools', f), 'utf8');
-      assert.ok(/○ skip  (?:typescript|cargo) unavailable/.test(src), f);
+      assert.ok(/○ skip  typescript unavailable/.test(src), f);
     }
+  });
+  ok('without cargo the Rust bridge parity says « not run » (a gate warning), never green and never a crash', () => {
+    const src = readFileSync(path.join(ROOT, 'tools/bridge-rust-parity-test.mjs'), 'utf8');
+    assert.ok(/'○ bridge-rust-parity not run: cargo unavailable/.test(src));
+    assert.ok(/\/\^○ \.\* not run\//.test(readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8')), 'check.js turns « not run » into a warning');
   });
 }
 

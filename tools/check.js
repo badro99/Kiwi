@@ -3175,7 +3175,7 @@ section('Suite CPU time (tools/suite-cpu-baseline.json)');
 }
 {
   const skipped = guard.dependencySkips();
-  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library or tool that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules (fast-check, axe-core, puppeteer-core, typescript) or install the tool a skip line names (cargo for the Rust bridge: KIWI_ALLOW_CARGO_SKIP=1 waives it knowingly and the run ends INCOMPLETE)`);
+  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library or tool that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules (fast-check, axe-core, puppeteer-core, typescript)`);
 }
 if (MISSING_TEST_DEPS.length) fail(`KIWI_ALLOW_PROPERTY_SKIP=1 with ${MISSING_TEST_DEPS.join(', ')} missing: the property and accessibility suites did not run, so this run is not a pass (${guard.tier()} tier)`);
 console.log('\n' + '─'.repeat(60));
