@@ -636,6 +636,7 @@ for (const test of [
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',
   'reservation-overlap-test.mjs',
+  'booking-rules-shared-test.mjs',
   'store-credit-sale-test.mjs',
   /* Une vente ne se rend qu'une fois : remboursement + avoir + annulation, et l'accord d'un responsable pour un avoir. */
   'sale-return-ledger-test.mjs',

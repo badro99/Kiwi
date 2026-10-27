@@ -80,6 +80,13 @@
       "targets": [
         "assets/floorplan-core.js"
       ]
+    },
+    {
+      "name": "KiwiBookingRules",
+      "source": "functions/api/_rules-booking.js",
+      "targets": [
+        "assets/reservations.js"
+      ]
     }
   ]
 }
