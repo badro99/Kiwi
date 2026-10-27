@@ -70,7 +70,7 @@ export function basketMismatch(rows, figures) {
  * { code, detail }; empty = nothing to report. `sentAt` is the device clock at
  * the moment of sending (live-link.js adds it): an offline sale is legitimately
  * old, but a device whose send-time clock is off from the server's is wrong. */
-export async function clockFlags(env, merchant, { rawTs, ts, sentAt, now, originalTs }) {
+export async function clockFlags(env, merchant, { rawTs, ts, sentAt, now, originalTs = 0 }) {
   const flags = [];
   const sent = Number(sentAt);
   if (Number.isFinite(sent) && sent > 0 && Math.abs(now - sent) > CLOCK_TOLERANCE_MS) {

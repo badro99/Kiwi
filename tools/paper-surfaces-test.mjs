@@ -31,6 +31,8 @@ for (const file of FILES) {
 const tokens = fs.readFileSync(path.join(ROOT, 'assets/tokens.css'), 'utf8');
 if (!/--paper-elev:\s*#FFFDFA/i.test(tokens)) bad.push('assets/tokens.css · --paper-elev (#FFFDFA) doit exister');
 const vexel = fs.readFileSync(path.join(ROOT, 'assets/design-vexel.css'), 'utf8');
-if (!/\.vexel-rail-card[\s\S]{0,300}background-color:\s*var\(--paper-elev\)\s*!important/.test(vexel)) bad.push('design-vexel.css · les cartes du mode clair doivent prendre var(--paper-elev)');
+/* En dur : le mode clair de Vexel redéfinit --paper-elev en voile translucide (rgba 255,255,255,.86),
+   la variable y rendrait la pastille de période transparente. */
+if (!/\.vexel-rail-card[\s\S]{0,300}background-color:\s*#FFFDFA\s*!important/i.test(vexel)) bad.push('design-vexel.css · les cartes du mode clair doivent prendre #FFFDFA (papier éclairé, opaque)');
 if (bad.length) { console.error(bad.map((b) => '  ✗ ' + b).join('\n')); process.exit(1); }
 console.log(`  ✓ paper-surfaces: ${pass} feuilles sans fond blanc pur`);
