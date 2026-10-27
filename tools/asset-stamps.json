@@ -420,16 +420,16 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "39",
-    "sha": "d11c38feb5b76bbb"
+    "v": "40",
+    "sha": "4c81a900e77658c8"
   },
   "assets/day-report-export.js": {
-    "v": "13",
-    "sha": "10c4573f4f7f579c"
+    "v": "14",
+    "sha": "8e700d5b4656a322"
   },
   "assets/day-report.js": {
-    "v": "34",
-    "sha": "9a61f08bc0df62db"
+    "v": "35",
+    "sha": "c0034abe72f8e09a"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -508,8 +508,8 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "15",
-    "sha": "0eca6da65c9b4fe2"
+    "v": "16",
+    "sha": "b1b7afa27e7f11ad"
   },
   "assets/features.js": {
     "v": "16",
@@ -1356,8 +1356,8 @@
     "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "53",
-    "sha": "7bee5d7d69c1ffb0"
+    "v": "55",
+    "sha": "335d343cf5943e8d"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1672,8 +1672,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "42",
-    "sha": "dbc23c9a5da80c17"
+    "v": "43",
+    "sha": "95521218b2503086"
   },
   "assets/printer/pairing-lang.js": {
     "v": "4",
@@ -2036,7 +2036,7 @@
     "sha": "e586c803c9e3e1e2"
   },
   "assets/z-reconciliation.js": {
-    "v": "25",
-    "sha": "f31d47bbe933278f"
+    "v": "27",
+    "sha": "b6a92cdbae71a645"
   }
 }

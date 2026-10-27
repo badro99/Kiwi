@@ -550,6 +550,15 @@
       return b.bytes();
     }
 
+    /* La TVA par taux, pour que le comptable passe la journée en écriture. */
+    var vatBlock = r.vat && typeof window !== 'undefined' && window.KiwiDayReportVat
+      ? window.KiwiDayReportVat.ticketBlock(r.vat, o.lang, money) : null;
+    if (vatBlock) {
+      b.line(rule(paper));
+      b.align('center').bold(true).line(vatBlock.title).bold(false).align('left');
+      vatBlock.lines.forEach(function (l) { b.line(row(l[0], l[1], paper)); });
+    }
+
     /* Le tiroir — la partie qu'on compte et qu'on signe. */
     var cash = r.cash || {};
     b.line(rule(paper));

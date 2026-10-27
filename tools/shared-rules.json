@@ -87,6 +87,13 @@
       "targets": [
         "assets/reservations.js"
       ]
+    },
+    {
+      "name": "KiwiDayVatRules",
+      "source": "functions/api/_rules-day-vat.js",
+      "targets": [
+        "assets/z-reconciliation.js"
+      ]
     }
   ]
 }

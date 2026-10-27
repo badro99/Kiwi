@@ -172,10 +172,10 @@ var SHELL = [
   '/assets/menu-nutrition.js?v=4',
   '/assets/kiwi-select.js?v=4',
   '/assets/food-trade-settings.js?v=2',
-  '/assets/z-reconciliation.js?v=25',
+  '/assets/z-reconciliation.js?v=27',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=53',
+  '/assets/pages/dashboard-startup.js?v=55',
   '/assets/pages/dashboard-loader.js?v=23',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -313,10 +313,10 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=34',
+  '/assets/day-report.js?v=35',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=39',
-  '/assets/day-report-export.js?v=13',
+  '/assets/day-report-dash.js?v=40',
+  '/assets/day-report-export.js?v=14',
   '/assets/month-report.js?v=16',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
@@ -357,9 +357,9 @@ var SHELL = [
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=7',
   '/assets/live-socket.js?v=5',
-  '/assets/escpos.js?v=15',
+  '/assets/escpos.js?v=16',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=42',
+  '/assets/printer-bridge.js?v=43',
   '/assets/printer/pairing-ui.js?v=9',
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
