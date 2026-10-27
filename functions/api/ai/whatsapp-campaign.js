@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.3;
-const DAILY_CAP = 60;
+const DAILY_CAP = DAILY_CAPS.campaign;
 
 const SYSTEM_PROMPT = `Tu es un expert en marketing direct et fidélisation client pour restaurants et commerces au Maroc.
 Génère une campagne WhatsApp attractive, personnalisée et respectueuse, en français et en darija marocaine au format JSON :
@@ -53,7 +53,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'campaign', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('campaign', 'daily-quota-exceeded'), 429);
 
   const objective = typeof b?.objective === 'string' ? b.objective.trim().slice(0, 1000) : '';
   const offer = typeof b?.offer === 'string' ? b.offer.trim().slice(0, 500) : '';

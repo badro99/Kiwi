@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.2;
-const DAILY_CAP = 200;
+const DAILY_CAP = DAILY_CAPS.menurank;
 
 const SYSTEM_PROMPT = `Tu es un expert en ingénierie de menu (Menu Engineering) et yield management pour restaurants.
 Analyse les articles de la carte et les conditions de service (heure, météo, marges) pour optimiser le classement QR au format JSON :
@@ -70,7 +70,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'menurank', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('menurank', 'daily-quota-exceeded'), 429);
 
   const items = Array.isArray(b?.items) ? b.items.slice(0, 30) : [];
   const hour = typeof b?.hour === 'string' ? b.hour : '13:00';

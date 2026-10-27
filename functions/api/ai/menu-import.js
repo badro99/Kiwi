@@ -15,7 +15,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runWithFallback } from './_run.js';
 import { visionMessages, runVisionPair } from './_vision.js';
 // Une seule lecture des réponses Workers AI pour toutes les routes : la forme
@@ -49,7 +49,7 @@ const MAX_TOKENS = 4000;
 const MAX_VISION_TOKENS = 8000;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
-const DAILY_CAP = 60;
+const DAILY_CAP = DAILY_CAPS.menuimport;
 const MAX_TEXT_CHARS = 40000;
 const MAX_IMAGE_DATAURL = 2_600_000; // ~1,9 Mo binaire · le client réduit avant envoi
 const MAX_HTML_BYTES = 900_000;
@@ -312,7 +312,7 @@ export async function onRequestPost(context) {
     if (!pastedText) return json({ ok: false, error: 'empty-text' }, 400);
   }
 
-  if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
+  if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP))) return json(quotaBody('menuimport'), 429);
 
   let aiRes;
   let usedModel = MODEL;

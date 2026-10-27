@@ -20,7 +20,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk, DAILY_CAPS } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runAiWithGateway } from './_run.js';
 import { runWithPayloadFallback } from './_payload-fallback.js';
 
@@ -59,7 +59,7 @@ export async function onRequestPost(context) {
   }
 
   if (!(await quotaOk(env, who, 'transcribe', DAILY_CAPS.transcribe))) {
-    return json({ ok: false, error: 'quota' }, 429);
+    return json(quotaBody('transcribe'), 429);
   }
 
   const language = LANGS.has(body.lang) ? body.lang : '';

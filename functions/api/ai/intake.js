@@ -28,7 +28,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk, DAILY_CAPS } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 
 export const DAILY_CAP = DAILY_CAPS.intake;
 export const MAX_PDF_BYTES = 10 * 1024 * 1024; // comme annoncé dans le scan stock (« max 10 Mo »)
@@ -174,7 +174,7 @@ export async function onRequestPost(context) {
       }
     }
     if (!(await quotaOk(env, who, 'intake', DAILY_CAP))) {
-      return json({ error: 'daily-quota-exceeded' }, 429);
+      return json(quotaBody('intake', 'daily-quota-exceeded'), 429);
     }
     try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
     /* INSERT OR IGNORE puis lecture de la ligne canonique : deux dépôts

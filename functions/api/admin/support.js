@@ -1,6 +1,6 @@
 import { json, isOperator, isSeniorOperator, sendMail } from '../../auth/_lib.js';
 import { ensureSupport, cleanText, parseJson, supportActor } from '../_support.js';
-import { publicTriage, consoleRank, retriageTicket } from '../_support-triage.js';
+import { publicTriage, consoleRank, retriageTicket, escalationOf } from '../_support-triage.js';
 
 async function guard(request,env,write){
   const ok=write?await isSeniorOperator(request,env):await isOperator(request,env);
@@ -21,6 +21,12 @@ async function hydrate(env,row){
 export async function onRequestGet({request,env}){
   const bad=await guard(request,env,false); if(bad)return bad;
   const u=new URL(request.url), status=cleanText(u.searchParams.get('status')||'',24), merchant=cleanText(u.searchParams.get('merchant')||'',64);
+  /* La lecture légère du bandeau de la console : les demandes urgentes encore ouvertes
+     (tous établissements) et combien n'ont reçu aucune alerte courriel. */
+  if(u.searchParams.get('escalation')){
+    const rows=await env.DB.prepare(`SELECT id,reference,merchant,priority,status,created_ts,triage,triage_alert FROM support_tickets WHERE status='open' AND (priority='urgent' OR json_extract(triage,'$.verdict')='urgent') ORDER BY created_ts DESC LIMIT 200`).all();
+    return json({escalation:escalationOf(rows.results||[])});
+  }
   const where=[], binds=[];
   if(status&&status!=='all'){where.push('status=?');binds.push(status);}
   if(merchant){where.push('merchant=?');binds.push(merchant);}

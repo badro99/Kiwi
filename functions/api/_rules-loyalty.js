@@ -33,12 +33,9 @@ export const refundFor = (sale, amount, cfg, items, client) => {
     pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
     stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
 }
-export const rewardDiscount = (reward, clientId, base, units, policy = 'boutique') => {
+export const rewardDiscount = (reward, clientId, base, units) => {
   if (!reward || reward.clientId !== clientId) return 0;
-  const down = n => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
-  if (reward.kind === 'percent') {
-    if (policy === 'librairie') return Math.round(base * reward.value / 100 * 100 + 1e-9) / 100;
-    return base - down(base * (100 - Math.min(100, Math.max(0, reward.value || 0))) / 100);
-  }
-  return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+  if (reward.kind !== 'percent') return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+  const amount = Math.max(0, +base || 0), percent = Math.min(100, Math.max(0, +reward.value || 0));
+  return Math.min(amount, Math.round(amount * percent + 1e-9) / 100); // wave Q: nearest centime, every trade
 }

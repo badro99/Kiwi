@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/librairie-loyalty.js?v=3',
+  '/assets/librairie-loyalty.js?v=4',
   '/assets/money-cents.js?v=4',
   '/assets/pages-pro/boutique-promos-returns.js?v=10',
   '/assets/day-report-conflicts.js?v=2',
@@ -403,10 +403,10 @@ var SHELL = [
   '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
-  '/assets/clients-store.js?v=27',
+  '/assets/clients-store.js?v=28',
   '/assets/clients-book.js?v=50',
   '/assets/clients-directory.js?v=28',
-  '/assets/customer-retention.js?v=11',
+  '/assets/customer-retention.js?v=12',
   '/assets/menu-catalog.js?v=40',
   '/assets/stock-identity.js?v=3',
   '/assets/restaurant-recipes.js?v=13',
@@ -450,7 +450,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=23',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=18',
-  '/assets/pos-dispatch.js?v=195',
+  '/assets/pos-dispatch.js?v=196',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -534,12 +534,12 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=125',
-  '/assets/pos-boutique/sales.js?v=31',
+  '/assets/pos-boutique.css?v=126',
+  '/assets/pos-boutique/sales.js?v=32',
   '/assets/pos-boutique/ticket-owner.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=31',
-  '/assets/pos-boutique/inventory.js?v=31',
-  '/assets/pos-boutique.js?v=125',
+  '/assets/pos-boutique/checkout.js?v=32',
+  '/assets/pos-boutique/inventory.js?v=32',
+  '/assets/pos-boutique.js?v=126',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

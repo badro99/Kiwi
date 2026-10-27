@@ -45,7 +45,15 @@ ok(r.code === 0, 'a script frozen at its current size passes');
 r = run({ 'assets/b.js': 1181 }, { lines: { 'assets/b.js': 1000 }, frozen: { 'assets/b.js': 1180 }, cssLines: {} });
 ok(r.code !== 0 && /frozen at 1180/.test(r.out), 'a frozen script one line over its frozen size fails');
 
+r = run({ 'tools/check.js': 1100 }, { lines: {}, cssLines: {}, toolLines: { 'tools/check.js': 1000 } });
+ok(r.code !== 0 && /tools\/check\.js: 1100 lines, 100 over its pin of 1000/.test(r.out), 'the gate orchestration 100 lines over its pin fails');
+r = run({ 'tools/check.js': 1049 }, { lines: {}, cssLines: {}, toolLines: { 'tools/check.js': 1000 } });
+ok(r.code === 0, 'the gate orchestration within 50 lines of its pin passes');
+r = run({}, { lines: {}, cssLines: {}, toolLines: { 'tools/check.js': 1000 } });
+ok(r.code === 0, 'a pinned tool file that is gone does not fail the ratchet');
+
 const real = JSON.parse(fs.readFileSync(new URL('./file-size-baseline.json', import.meta.url), 'utf8'));
 for (const [rel, n] of Object.entries(real.frozen || {})) assert.ok(n <= real.lines[rel] + 200, rel + ': frozen above the old ceiling');
 ok(Object.keys(real.cssLines || {}).length > 50 && real.cssLines['assets/design-vexel.css'] > 5000, 'the real baseline pins every stylesheet, including the four largest');
+ok(real.toolLines && real.toolLines['tools/check.js'] >= 3000, 'the real baseline pins tools/check.js');
 console.log(`file-size-ratchet-rules: ${checks} checks passed`);

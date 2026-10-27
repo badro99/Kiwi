@@ -23,9 +23,13 @@
     "v": "5",
     "sha": "7cdc3556fabde39a"
   },
+  "assets/admin-support-escalation.js": {
+    "v": "1",
+    "sha": "947d99736ccf08c6"
+  },
   "assets/admin-support.css": {
-    "v": "2",
-    "sha": "a11e007869b4b084"
+    "v": "3",
+    "sha": "de679d055f5de61b"
   },
   "assets/admin-support.js": {
     "v": "11",
@@ -320,8 +324,8 @@
     "sha": "1e6a13529d5fa500"
   },
   "assets/clients-store.js": {
-    "v": "27",
-    "sha": "d443db736550a2e9"
+    "v": "28",
+    "sha": "14d47cee22086630"
   },
   "assets/cloud-doc.js": {
     "v": "13",
@@ -340,8 +344,8 @@
     "sha": "75a7be91584c812f"
   },
   "assets/customer-retention.js": {
-    "v": "11",
-    "sha": "65c7736a9647cd3c"
+    "v": "12",
+    "sha": "16842d840d3e4373"
   },
   "assets/dark-fixes.js": {
     "v": "5",
@@ -1088,8 +1092,8 @@
     "sha": "5829242ec789b552"
   },
   "assets/librairie-loyalty.js": {
-    "v": "3",
-    "sha": "76c43434d905067b"
+    "v": "4",
+    "sha": "33c696dc8d9760f1"
   },
   "assets/liquid-glass.js": {
     "v": "1",
@@ -1444,24 +1448,24 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "125",
+    "v": "126",
     "sha": "2149c77f6f533962"
   },
   "assets/pos-boutique.js": {
-    "v": "125",
-    "sha": "6a3d2f481decf0a1"
+    "v": "126",
+    "sha": "d7302d2bd5aa350b"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "31",
-    "sha": "f1b9fcaf24e146ff"
+    "v": "32",
+    "sha": "2c2b9734cc9f3dcc"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "31",
-    "sha": "b530ba4b7cd017ca"
+    "v": "32",
+    "sha": "3572401936b04b55"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "31",
-    "sha": "cb6a041bf903f221"
+    "v": "32",
+    "sha": "6a556b63ca4b203e"
   },
   "assets/pos-boutique/ticket-owner.js": {
     "v": "1",
@@ -1476,8 +1480,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "195",
-    "sha": "f196ab4f93fb2177"
+    "v": "196",
+    "sha": "cbd616db0608fcb8"
   },
   "assets/pos-epicerie.css": {
     "v": "27",

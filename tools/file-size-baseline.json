@@ -121,10 +121,10 @@
     "assets/mobile.css": 71
   },
   "frozen": {
-    "assets/pos-boutique.js": 2958,
+    "assets/pos-boutique.js": 2955,
     "kiwi-caisse.html": 2029,
     "assets/orderpro-page.js": 1781,
-    "assets/clients-store.js": 1191,
+    "assets/clients-store.js": 1188,
     "assets/caisse-pairing.js": 1284,
     "assets/day-report-dash.js": 1237,
     "assets/day-report.js": 1495,
@@ -220,5 +220,8 @@
     "assets/tokens.css": 260,
     "assets/trade-workspaces.css": 31,
     "assets/ux.css": 324
+  },
+  "toolLines": {
+    "tools/check.js": 3264
   }
 }

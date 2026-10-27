@@ -1,6 +1,6 @@
 import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
 import { tenantFor, storeOwner } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runWithFallback } from './_run.js';
 import { parseModelResponse } from './invoice.js';
 
@@ -10,7 +10,7 @@ const MAX_CATEGORIES = 80;
 const MAX_ITEMS = 400;
 /* Compteur propre : en partageant le kind 'menuimport', un gros import de
  * carte vidait le quota des opérations de menu pour le reste de la journée. */
-const DAILY_CAP = 60;
+const DAILY_CAP = DAILY_CAPS.menuoperations;
 
 function shortText(value, max) {
   return String(value == null ? '' : value).trim().slice(0, max);
@@ -114,7 +114,7 @@ export async function onRequestPost({ request, env }) {
   const merchant = await accountMerchant(request, env, shortText(body?.merchant, 100));
   if (!merchant) return json({ ok: false, error: 'forbidden' }, 403);
   const allowed = await quotaOk(env, merchant, 'menuoperations', DAILY_CAP);
-  if (!allowed) return json({ ok: false, error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('menuoperations', 'daily-quota-exceeded'), 429);
   const catalogue = cleanCatalogue(body?.catalogue);
   if (!catalogue.items.length) return json({ ok: false, error: 'empty-menu' }, 400);
   const instruction = shortText(body?.instruction, 700);
