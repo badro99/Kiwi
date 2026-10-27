@@ -28,14 +28,31 @@
 
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
   var money = function (n) { return new Intl.NumberFormat(loc(), { maximumFractionDigits: 2 }).format(+n || 0) + ' MAD'; };
-  var zone = 'Africa/Casablanca';
-  var wallFormat = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  function wall(d) { var p = {}; wallFormat.formatToParts(new Date(d)).forEach(function (x) { p[x.type] = x.value; }); return p; }
-  var fmtDay = function (d) { return new Intl.DateTimeFormat(loc(), { timeZone: zone, day: 'numeric', month: 'short', year: 'numeric' }).format(d); };
-  var fmtHM = function (d) { var p = wall(d); return p.hour + ':' + p.minute; };
-  var toInput = function (ms) { if (!ms) return ''; var p = wall(ms); return p.year + '-' + p.month + '-' + p.day; };
+  /* Les bornes d'une promotion suivent la JOURNÉE COMMERCIALE du magasin (bascule 05:00 dans son
+   * fuseau), comme les promotions du menu : « jusqu'au 31 » finit le 1er à 05:00, pas à 23:59:59.
+   * Le fuseau et la bascule viennent du rapport du jour ; sans lui, Casablanca et le jour civil. */
+  var FALLBACK_ZONE = 'Africa/Casablanca';
+  var wallFormats = {};
+  function dayReport() { try { var R = window.KiwiDayReport; return R && R.businessDay && R.dayBounds ? R : null; } catch (_) { return null; } }
+  function zoneOf() { try { var z = window.KiwiDayReport && window.KiwiDayReport.timezone && window.KiwiDayReport.timezone(); if (z) return String(z); } catch (_) {} return FALLBACK_ZONE; }
+  function wall(d) {
+    var z = zoneOf(), p = {};
+    var f = wallFormats[z] || (wallFormats[z] = new (globalThis.KiwiZoneLaw && globalThis.KiwiZoneLaw.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: z, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    f.formatToParts(new Date(d)).forEach(function (x) { p[x.type] = x.value; });
+    return p;
+  }
+  /* La journée commerciale (YYYY-MM-DD) d'un instant. */
+  function dayKey(d) { var R = dayReport(); if (R) { try { return R.businessDay(+d); } catch (_) {} } var p = wall(d); return p.year + '-' + p.month + '-' + p.day; }
+  var fmtDay = function (d) { return new Intl.DateTimeFormat(loc(), { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dayKey(d) + 'T12:00:00Z')); };
+  /* L'heure à laquelle la promotion s'arrête : `d` est sa dernière milliseconde, donc +1. */
+  var fmtHM = function (d) { var p = wall(+d + 1); return p.hour + ':' + p.minute; };
+  var toInput = function (ms) { return ms ? dayKey(ms) : ''; };
+  /* `d` : un instant, ou une date choisie 'YYYY-MM-DD'. Début = la bascule du jour, fin = la veille de la suivante. */
   function boundary(d, end) {
-    var p = wall(d), target = Date.UTC(+p.year, +p.month - 1, +p.day, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0), at = target;
+    var key = typeof d === 'string' ? d : dayKey(d), R = dayReport();
+    if (R) { try { var b = R.dayBounds(key); if (isFinite(b.from) && isFinite(b.to)) return end ? b.to - 1 : b.from; } catch (_) {} }
+    var y = +key.slice(0, 4), m = +key.slice(5, 7) - 1, dd = +key.slice(8, 10);
+    var target = Date.UTC(y, m, dd, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0), at = target;
     for (var i = 0; i < 4; i++) { var w = wall(at); at += target - Date.UTC(+w.year, +w.month - 1, +w.day, +w.hour, +w.minute, +w.second); }
     return at + (end ? 999 : 0);
   }
@@ -427,7 +444,7 @@
     return '<div class="bpd-modal" data-bpd-host><div class="bpd-compose"><div class="bpd-form">' +
       '<section class="bpd-step"><header><span>1</span><div><b>' + L('Définir l’offre', 'Define the offer', 'تحديد العرض') + '</b><small>' + L('Le nom et la baisse de prix', 'The name and the price drop', 'الاسم وقيمة تخفيض السعر') + '</small></div></header><div class="bpd-step-body">' +
       '<div class="bpd-field"><label for="bpd-name">' + L('Nom', 'Name', 'الاسم') + ' <span>' + L('· visible sur le reçu', '· shown on the receipt', '· يظهر على الإيصال') + '</span></label><input class="bpd-input" id="bpd-name" maxlength="80" placeholder="' + L('Soldes d’été, Déstockage…', 'Summer sale, Clearance…', 'تخفيضات الصيف، تصفية المخزون…') + '" value="' + esc(d.name) + '"></div>' +
-      '<div class="bpd-field"><label>' + L('Type de remise', 'Discount type', 'نوع الخصم') + '</label><div class="bpd-kinds">' + kinds.map(function (x) { return '<button class="bpd-choice ' + (d.kind === x[0] ? 'on' : '') + '" aria-pressed="' + (d.kind === x[0]) + '" data-prk="' + x[0] + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><div class="bpd-value"><span class="bpd-value-box"><input class="bpd-input" id="bpd-value" aria-label="' + L('Valeur de la remise', 'Discount value', 'قيمة الخصم') + '" type="number" min="0" value="' + d.value + '"><span class="bpd-unit">' + (d.kind === 'percent' ? '%' : 'MAD') + '</span></span><div class="bpd-chips">' + quick.map(function (n) { return '<button class="bpd-chip ' + (d.value === n ? 'on' : '') + '" data-prv="' + n + '">' + (d.kind === 'percent' ? pct(n) : d.kind === 'amount' ? '−' + n : n) + '</button>'; }).join('') + '</div></div></div></div></section>' +
+      '<div class="bpd-field"><label>' + L('Type de remise', 'Discount type', 'نوع الخصم') + '</label><div class="bpd-kinds">' + kinds.map(function (x) { return '<button class="bpd-choice ' + (d.kind === x[0] ? 'on' : '') + '" aria-pressed="' + (d.kind === x[0]) + '" data-prk="' + x[0] + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><div class="bpd-value"><span class="bpd-value-box"><input class="bpd-input" id="bpd-value" aria-label="' + L('Valeur de la remise', 'Discount value', 'قيمة الخصم') + '" type="number" min="0" step="any" value="' + d.value + '"><span class="bpd-unit">' + (d.kind === 'percent' ? '%' : 'MAD') + '</span></span><div class="bpd-chips">' + quick.map(function (n) { return '<button class="bpd-chip ' + (d.value === n ? 'on' : '') + '" data-prv="' + n + '">' + (d.kind === 'percent' ? pct(n) : d.kind === 'amount' ? '−' + n : n) + '</button>'; }).join('') + '</div></div></div></div></section>' +
       '<section class="bpd-step"><header><span>2</span><div><b>' + L('Choisir les articles', 'Choose the items', 'اختيار الأصناف') + '</b><small>' + L('Kiwi garde cette sélection à jour', 'Kiwi keeps this selection up to date', 'تُبقي Kiwi هذا الاختيار محدّثًا') + '</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-scopes">' + scopes().map(function (x) { return '<button class="bpd-choice ' + (sc.type === x.id ? 'on' : '') + '" aria-pressed="' + (sc.type === x.id) + '" data-prs="' + x.id + '"><i data-lucide="' + x.icon + '"></i><b>' + x.label + '</b></button>'; }).join('') + '</div><div class="bpd-scopebody">' + scopeControl(ctx, d) + '</div></div></div></section>' +
       '<section class="bpd-step"><header><span>3</span><div><b>' + L('Programmer la durée', 'Set the duration', 'تحديد المدة') + '</b><small>' + L('Démarrez maintenant ou planifiez', 'Start now or schedule', 'ابدأ الآن أو جدول') + '</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-chips">' + presets.map(function (x) { return '<button class="bpd-chip" data-prw="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div class="bpd-dates"><div><label for="bpd-from">' + L('Début', 'Start', 'البداية') + ' <span>' + L('· vide = maintenant', '· empty = now', '· فارغ = الآن') + '</span></label><input class="bpd-input" id="bpd-from" type="date" value="' + toInput(d.from) + '"></div><div><label for="bpd-to">' + L('Fin', 'End', 'النهاية') + ' <span>' + L('· vide = sans fin', '· empty = no end', '· فارغ = بلا نهاية') + '</span></label><input class="bpd-input" id="bpd-to" type="date" value="' + toInput(d.to) + '"></div></div></div>' +
         '<div class="bpd-field"><label>' + L('Jours', 'Days', 'الأيام') + ' <span>' + L('· aucun = tous les jours', '· none = every day', '· بلا اختيار = كل يوم') + '</span></label><div class="bpd-chips bpd-days" role="group" aria-label="' + L('Jours de la promotion', 'Promotion days', 'أيام العرض') + '">' + WEEK.map(function (wd) { var on = (d.days || []).indexOf(wd) >= 0; return '<button class="bpd-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-prd="' + wd + '">' + dayShort(wd) + '</button>'; }).join('') + '</div></div>' +
@@ -477,7 +494,7 @@
     var name = el.querySelector('#bpd-name');
     if (name) name.oninput = function () { d.name = name.value; };
     el.querySelectorAll('[data-prk]').forEach(function (b) { b.onclick = function () { d.kind = b.dataset.prk; fitPolicy(d); redraw(); }; });
-    var val = el.querySelector('#bpd-value'); if (val) val.onchange = function () { d.value = Math.max(0, Math.round(+val.value || 0)); redraw(); };
+    var val = el.querySelector('#bpd-value'); if (val) val.onchange = function () { d.value = Math.max(0, Math.round((+val.value || 0) * 100) / 100); redraw(); };
     el.querySelectorAll('[data-prv]').forEach(function (b) { b.onclick = function () { d.value = +b.dataset.prv; redraw(); }; });
     el.querySelectorAll('[data-prs]').forEach(function (b) { b.onclick = function () { d.scope = PRM().normalize({ scope:{type:b.dataset.prs} }).scope; redraw(); }; });
     el.querySelectorAll('[data-prr]').forEach(function (b) { b.onclick = function () { var ids = d.scope.ids || (d.scope.ids=[]); var i=ids.indexOf(b.dataset.prr); if(i>=0) ids.splice(i,1); else ids.push(b.dataset.prr); redraw(); }; });
@@ -489,12 +506,12 @@
       q.oninput = paint; q.onkeydown = function(e){if(e.key==='Enter'){e.preventDefault();paint();}};
     }
     el.querySelectorAll('[data-pra]').forEach(function(b){b.onclick=function(){d.scope.before=startOfDay(new Date(Date.now()-(+b.dataset.pra)*30*DAY));redraw();};});
-    var before=el.querySelector('#bpd-before');if(before)before.onchange=function(){d.scope.before=before.value?startOfDay(new Date(before.value+'T12:00:00Z')):0;redraw();};
+    var before=el.querySelector('#bpd-before');if(before)before.onchange=function(){d.scope.before=before.value?startOfDay(before.value):0;redraw();};
     el.querySelectorAll('[data-prm]').forEach(function(b){b.onclick=function(){d.scope.max=+b.dataset.prm;redraw();};});
     var max=el.querySelector('#bpd-max');if(max)max.onchange=function(){d.scope.max=Math.max(0,Math.round(+max.value||0));redraw();};
     el.querySelectorAll('[data-prw]').forEach(function(b){b.onclick=function(){var key=b.dataset.prw,now=new Date();if(key==='none')d.to=0;else if(key==='today')d.to=endOfDay(now);else if(key==='we')d.to=endOfDay(new Date(now.getTime()+((7-new Date(toInput(+now)+'T12:00:00Z').getUTCDay())%7)*DAY));else d.to=endOfDay(new Date(now.getTime()+(+key)*DAY));redraw();};});
-    var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(new Date(from.value+'T12:00:00Z')):0;redraw();};
-    var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(new Date(to.value+'T12:00:00Z')):0;redraw();};
+    var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(from.value):0;redraw();};
+    var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(to.value):0;redraw();};
     el.querySelectorAll('[data-prd]').forEach(function(b){b.onclick=function(){var wd=+b.dataset.prd,days=(d.days||[]).slice(),i=days.indexOf(wd);if(i>=0)days.splice(i,1);else days.push(wd);d.days=days.length===7?[]:days.sort(function(a,z){return a-z;});redraw();};});
     var hStart=el.querySelector('#bpd-start');if(hStart)hStart.onchange=function(){d.start=hStart.value||'';redraw();};
     var hEnd=el.querySelector('#bpd-end');if(hEnd)hEnd.onchange=function(){d.end=hEnd.value||'';redraw();};

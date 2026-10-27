@@ -147,8 +147,8 @@
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
-  <script src="assets/promo-rules.js?v=5" defer></script>
-<script src="assets/promos.js?v=13" defer></script>
+  <script src="assets/promo-rules.js?v=6" defer></script>
+<script src="assets/promos.js?v=14" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=10" />
   <link rel="stylesheet" href="assets/retail-balances.css?v=3" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
@@ -206,7 +206,7 @@
         js("assets/kit/core.js?v=2") +
         js("assets/kit/overlays.js?v=2") +
         js("assets/kit/pin.js?v=3") +
-        js("assets/kit/pin-flow.js?v=5") +
+        js("assets/kit/pin-flow.js?v=6") +
         js("assets/kit/till-pin.js?v=7") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/controls/chip.js?v=1") +
@@ -235,7 +235,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=185" defer></script>
+  <script src="assets/pos-dispatch.js?v=186" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -350,9 +350,9 @@
   <script src="assets/tenant-purge.js?v=6" defer></script>
   <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
-  <script src="assets/pairing-commit.js?v=2" defer></script>
+  <script src="assets/pairing-commit.js?v=3" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=49" defer></script>
+  <script src="assets/caisse-pairing.js?v=50" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -361,7 +361,7 @@
   <script src="assets/cloud-doc.js?v=13" defer></script>
   <!-- Shared trade boards: reads the same tenant document as the owner
        dashboard and grafts a compact operational entry into each exact POS. -->
-  <script src="assets/trade-workspace-schema.js?v=10" defer></script>
+  <script src="assets/trade-workspace-schema.js?v=11" defer></script>
   <script src="assets/pos-workspaces.js?v=9" defer></script>
   <!-- Le rapport journalier (« Z ») : calcul + classeur, partagé mot pour mot
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
@@ -373,7 +373,7 @@
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>
   <script src="assets/discount-policy.js?v=4" defer></script>
-  <script src="assets/menu-promos.js?v=6" defer></script>
+  <script src="assets/menu-promos.js?v=7" defer></script>
   <script src="assets/vertical-state.js?v=7" defer></script>
   <script src="assets/image-proof.js?v=2" defer></script>
   <script src="assets/inventory-ledger.js?v=17" defer></script>
@@ -413,7 +413,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=14" defer></script>
+  <script src="assets/kitchen-relay.js?v=15" defer></script>
   <script src="assets/kitchen-print-queue.js?v=21" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;

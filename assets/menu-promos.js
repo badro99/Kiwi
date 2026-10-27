@@ -111,7 +111,7 @@
     const normalize = (p, surface) => {
         var kind = ['percent', 'amount', 'fixed'].indexOf(p.kind) >= 0 ? p.kind : 'percent';
         var value = money(p.value);
-        if (kind === 'percent') value = Math.min(100, Math.round(value));
+        if (kind === 'percent') value = Math.min(100, value); /* kept to the centime (12.5 % stays 12.5 %), like every amount */
         var days = (Array.isArray(p.days) ? p.days : []).map(Number).filter(function (d, i, a) {
           return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i;
         }).sort(function (a, b) { return a - b; });

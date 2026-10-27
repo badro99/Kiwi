@@ -124,8 +124,8 @@
     "sha": "56acd490e9515a33"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "21",
-    "sha": "e1f2a27ec8b30d05"
+    "v": "22",
+    "sha": "fd42eade73417d7e"
   },
   "assets/briefing.js": {
     "v": "31",
@@ -180,8 +180,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "49",
-    "sha": "3473c9ea78c61589"
+    "v": "50",
+    "sha": "7db82035394c8447"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -372,8 +372,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "113",
-    "sha": "da8eef93de56b9fd"
+    "v": "114",
+    "sha": "c6dcf51d7a99bf16"
   },
   "assets/daterange/activity.js": {
     "v": "5",
@@ -896,8 +896,8 @@
     "sha": "11e20910aad27197"
   },
   "assets/kit/pin-flow.js": {
-    "v": "5",
-    "sha": "004c754e191167bd"
+    "v": "6",
+    "sha": "58e1209d6fe9935a"
   },
   "assets/kit/pin.js": {
     "v": "3",
@@ -1024,8 +1024,8 @@
     "sha": "b33214660404746f"
   },
   "assets/kitchen-relay.js": {
-    "v": "14",
-    "sha": "a436f63c3efda891"
+    "v": "15",
+    "sha": "8521b9aa2943dac1"
   },
   "assets/kiwi-env.js": {
     "v": "9",
@@ -1164,12 +1164,12 @@
     "sha": "4bef6c0bce3d1800"
   },
   "assets/menu-promos-dashboard.js": {
-    "v": "3",
-    "sha": "c5242d643d4a61f4"
+    "v": "4",
+    "sha": "9805d95032203a0b"
   },
   "assets/menu-promos.js": {
-    "v": "6",
-    "sha": "91bcd0fec52cb22a"
+    "v": "7",
+    "sha": "cca55badedec3e1f"
   },
   "assets/menu-scan.js": {
     "v": "7",
@@ -1340,8 +1340,8 @@
     "sha": "23513e703e69026f"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "44",
-    "sha": "f0a0aea9d5a6a4f0"
+    "v": "45",
+    "sha": "196c6208637a9d83"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1360,8 +1360,8 @@
     "sha": "58807c0272c55d44"
   },
   "assets/pairing-commit.js": {
-    "v": "2",
-    "sha": "80659153aaf8ad0f"
+    "v": "3",
+    "sha": "a3191a546388eafa"
   },
   "assets/phone.js": {
     "v": "1",
@@ -1432,24 +1432,24 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "118",
+    "v": "119",
     "sha": "2149c77f6f533962"
   },
   "assets/pos-boutique.js": {
-    "v": "118",
-    "sha": "5ae554a50ebd06cc"
+    "v": "119",
+    "sha": "cf32a98b835dfffd"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "24",
-    "sha": "1d836264dd9d0e40"
+    "v": "25",
+    "sha": "12b3354f5ff845d5"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "24",
-    "sha": "99829503d27f6d48"
+    "v": "25",
+    "sha": "0c7177a5cbc4b897"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "24",
-    "sha": "400715716b7cfc69"
+    "v": "25",
+    "sha": "eb9442ecdc538b13"
   },
   "assets/pos-boutique/ticket-owner.js": {
     "v": "1",
@@ -1464,8 +1464,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "185",
-    "sha": "76274491495bcb08"
+    "v": "186",
+    "sha": "b002a5be4bb02a76"
   },
   "assets/pos-epicerie.css": {
     "v": "26",
@@ -1580,12 +1580,12 @@
     "sha": "320928a3c41eba0f"
   },
   "assets/pos-spa.css": {
-    "v": "11",
+    "v": "12",
     "sha": "9d7374ff923841b1"
   },
   "assets/pos-spa.js": {
-    "v": "11",
-    "sha": "15cb90a1f1599798"
+    "v": "12",
+    "sha": "7b72de656c7450a7"
   },
   "assets/pos-traiteur.css": {
     "v": "13",
@@ -1680,12 +1680,12 @@
     "sha": "8fe99f62ce6934a8"
   },
   "assets/promo-rules.js": {
-    "v": "5",
-    "sha": "8a5a492ab6fec2b3"
+    "v": "6",
+    "sha": "0f4fc1ba2063b1de"
   },
   "assets/promos.js": {
-    "v": "13",
-    "sha": "5002dfb35118f4c3"
+    "v": "14",
+    "sha": "ce0ae673210dea8f"
   },
   "assets/pwa-update.js": {
     "v": "368",
@@ -1748,8 +1748,8 @@
     "sha": "022653544779b1d0"
   },
   "assets/restaurant-recipes.js": {
-    "v": "12",
-    "sha": "1213193cbcddd9c9"
+    "v": "13",
+    "sha": "c924aeb1fe098bb8"
   },
   "assets/restaurant-units.js": {
     "v": "2",
@@ -1960,8 +1960,8 @@
     "sha": "1b6492af602c690b"
   },
   "assets/trade-workspace-schema.js": {
-    "v": "10",
-    "sha": "eb4ac4ce02827cf8"
+    "v": "11",
+    "sha": "1113a4aa734c9b7b"
   },
   "assets/trade-workspaces.css": {
     "v": "6",
