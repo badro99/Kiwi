@@ -1388,7 +1388,7 @@ var KiwiFloorplanClean = (function () {
 /* Plans already kept on this device (the editor's kiwiPlanDeSalle:<venue>,
    the till's kiwiPlanDeSalle:slug:<slug>) were stored before the rule above:
    cleaned once here, before any page reads them. */
-(function cleanStoredPlans() {
+(function () {
   try {
     const store = window.localStorage;
     for (let i = 0; i < store.length; i++) {
