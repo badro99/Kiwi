@@ -87,6 +87,19 @@
     return { marked: true, at: iso(n.at), by: n.by ? { id: text(n.by.id, 80), name: text(n.by.name, 100) } : null,
       channel: ['call', 'sms', 'whatsapp', 'in-person'].indexOf(n.channel) >= 0 ? n.channel : '' };
   }
+  /* « Marqué prévenu · qui · quand · par quel canal » : la même phrase sur la
+     caisse (rack, retrait, atelier) et sur le tableau de bord. Kiwi ne dit
+     jamais « envoyé » ni « lu » : seulement qu'un membre de l'équipe a marqué
+     le client comme prévenu. tr traduit un libellé français, fmt met l'instant
+     à l'heure du magasin ; sans eux, le texte reste en français brut. */
+  var CHANNEL_LABELS = { call: 'Appel', sms: 'Par SMS', whatsapp: 'Par WhatsApp', 'in-person': 'En personne' };
+  function notificationLine(o, opt) {
+    var n = notification(o);
+    if (!n) return '';
+    var id = function (x) { return x; };
+    var tr = (opt && opt.tr) || id, fmt = (opt && opt.fmt) || id;
+    return [tr('Marqué prévenu'), n.by && n.by.name, n.at && fmt(n.at), n.channel && tr(CHANNEL_LABELS[n.channel])].filter(Boolean).join(' · ');
+  }
   function markNotified(o, actor, channel, at) {
     if (!o || !actor || !(actor.id || actor.name) || ['call', 'sms', 'whatsapp', 'in-person'].indexOf(channel) < 0) return false;
     o.notification = notification({ notification: { by: actor, channel: channel, at: at || new Date() } });
@@ -434,7 +447,7 @@
   /* `orderStatus` is exported so the owner dashboard derives readiness the same
      way `summary()` does. The snapshot's stored `status` is frozen at sync time;
      anything reading it after an order crosses `readyAt` gets a stale answer. */
-  window.KiwiPressingOps = { openNotification: openNotification, notification: notification, markNotified: markNotified, read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
+  window.KiwiPressingOps = { openNotification: openNotification, notification: notification, notificationLine: notificationLine, markNotified: markNotified, read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
 })();
 
 /* ── Garment product art (formerly assets/pressing-garment-icons.js) ──────────

@@ -17,7 +17,8 @@ export async function onRequest({ request, env }) {
     if (request.headers.get('X-Kiwi-Draft-Account') !== session.aid) return json({ error: 'account-changed' }, 409);
     const text = await request.text();
     if (text.length > 16384) return json({ error: 'size' }, 413);
-    const raw = JSON.parse(text);
+    let raw;
+    try { raw = JSON.parse(text); } catch (_) { return json({ error: 'format' }, 400); }
     if (raw === null) {
       await env.DB.prepare('DELETE FROM store_docs WHERE merchant = ? AND feature = ?').bind(key, FEATURE).run();
       return json({ ok: true });

@@ -15,7 +15,7 @@
     }
     .kob-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;min-height:24px;}
     .kob-brand{font-family:var(--sans);font-weight:600;font-size:19px;letter-spacing:-.03em;display:inline-flex;align-items:center;}
-    .kob-brand i{width:6px;height:6px;border-radius:50%;background:var(--mint);display:inline-block;margin-left:3px;transform:translateY(1px);}
+    .kob-brand i{width:6px;height:6px;border-radius:50%;background:var(--mint);display:inline-block;margin-inline-start:3px;transform:translateY(1px);}
     /* The real wordmark only rides in under the Vexel skin, which swaps the
        legacy text mark for it (design-vexel.css § 13). Hidden by default so the
        pre-Vexel presentation is untouched. */
@@ -61,7 +61,7 @@
     .kob-step .kob-num{min-width:96px;text-align:center;font-family:var(--sans);font-weight:600;font-size:46px;letter-spacing:-.03em;font-feature-settings:'tnum' 1;color:#fff;}
     .kob-step .kob-num small{display:block;font-size:12px;font-weight:500;letter-spacing:.02em;color:rgba(233,239,233,.5);margin-top:2px;}
     .kob-chips{display:flex;flex-wrap:wrap;gap:9px;}
-    .kob-chip{display:inline-flex;align-items:center;gap:8px;padding:11px 15px 11px 13px;cursor:pointer;
+    .kob-chip{display:inline-flex;align-items:center;gap:8px;padding-block:11px;padding-inline:13px 15px;cursor:pointer;
       background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);border-radius:13px;
       font-family:var(--sans);font-size:13.5px;font-weight:500;color:rgba(233,239,233,.85);transition:border-color .14s,background .14s;}
     .kob-chip svg{width:17px;height:17px;color:rgba(233,239,233,.6);transition:color .14s;}
@@ -82,12 +82,12 @@
     .kob-acc-row{display:flex;gap:9px;}
     .kob-acc-row .kob-field{padding:11px 13px;font-size:14px;}
     .kob-name{flex:1.3;}
-    .kob-code{flex:1;font-family:var(--mono);letter-spacing:.42em;text-align:center;font-size:17px;padding-right:8px;}
+    .kob-code{flex:1;font-family:var(--mono);letter-spacing:.42em;text-align:center;font-size:17px;padding-inline-end:8px;}
     .kob-code::placeholder{letter-spacing:.28em;}
-    .kob-role{flex:1;padding:10px 34px 10px 13px;font-size:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
+    .kob-role{flex:1;padding-block:10px;padding-inline:13px 34px;font-size:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e9efe9' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
     .kob-role option{color:#0A0F0D;}
-    .kob-acc-rm{background:none;border:0;cursor:pointer;color:rgba(233,239,233,.5);font-size:24px;line-height:1;width:34px;height:34px;border-radius:9px;flex:none;margin-left:8px;transition:color .14s,background .14s;}
+    .kob-acc-rm{background:none;border:0;cursor:pointer;color:rgba(233,239,233,.5);font-size:24px;line-height:1;width:34px;height:34px;border-radius:9px;flex:none;margin-inline-start:8px;transition:color .14s,background .14s;}
     .kob-acc-rm:hover{color:#ffb3a3;background:rgba(255,255,255,.07);}
     .kob-acc-add{margin-top:11px;width:100%;padding:12px;cursor:pointer;background:transparent;border:1.5px dashed rgba(255,255,255,.2);
       border-radius:13px;font-family:var(--sans);font-size:13.5px;font-weight:500;color:rgba(233,239,233,.72);transition:border-color .14s,color .14s;}
@@ -114,7 +114,7 @@
     .kob-recap .r{display:flex;justify-content:space-between;gap:14px;padding:12px 15px;font-size:13.5px;}
     .kob-recap .r+.r{border-top:1px solid rgba(255,255,255,.07);}
     .kob-recap .r span{color:rgba(233,239,233,.55);}
-    .kob-recap .r b{color:#fff;font-weight:600;text-align:right;}
+    .kob-recap .r b{color:#fff;font-weight:600;text-align:end;}
     .kob-hero-mark{width:60px;height:60px;border-radius:18px;background:linear-gradient(140deg,var(--atlas),var(--riad));
       display:flex;align-items:center;justify-content:center;margin:0 0 22px;box-shadow:0 12px 30px -10px rgba(11,110,79,.8);}
     .kob-hero-mark svg{width:32px;height:32px;}
@@ -128,5 +128,15 @@
       .kob-h{font-size:30px;}
     }
     html[dir="rtl"] .kob-sub{margin-left:auto;}
+    /* Le chevron du menu de rôle est une image de fond : seule sa position
+       est physique, elle passe à gauche en arabe (le rembourrage est logique). */
+    html[dir="rtl"] .kob-role{background-position:left 12px center;}
+    /* Ce qui était du style en ligne dans onboarding.js. */
+    .kob-foot .kob-explore{flex-basis:100%;}
+    .kob-acc-perm.kob-perm-tight{margin:-4px 0 10px;}
+    .kob-hero-mark.kob-mint{color:var(--mint);}
+    .kob-h.kob-center{text-align:center;}
+    .kob-sub.kob-sub-center{margin:0 auto;text-align:center;}
+    .kob-sub.kob-sub-note{margin:12px auto 0;text-align:center;}
     @media (prefers-reduced-motion:reduce){.kob-anim,.kob-celebrate .kob-hero-mark{animation:none;}.kob-root{transition:none;}}
 

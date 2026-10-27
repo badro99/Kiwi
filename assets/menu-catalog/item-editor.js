@@ -179,6 +179,7 @@
               ${si < formulaSlots.length - 1 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},1" title="${esc(tr(T.moveDown))}" aria-label="${esc(tr(T.moveDown))}">↓</button>` : ''}
               <button type="button" class="mx-slot-del-btn" data-f-slot-del="${si}" title="${esc(tr(T.formulaDelSlot))}">${TRASH}</button>
             </div>
+            <div class="mx-slot-note" data-f-slot-note="${si}" role="status" aria-live="polite" style="font-size:11.5px;line-height:1.4;color:var(--n-700,#344054);margin:6px 0 0;" hidden></div>
             <div class="mx-slot-choices-list">${choicesHtml || `<div style="font-size:11.5px;color:var(--n-500);padding:2px 0;">${esc(tr(T.formulaNoChoice))}</div>`}</div>
             ${addChBarHtml}
           </div>`;
@@ -203,6 +204,37 @@
         renderFormulaSlots();
       });
     }
+
+    /* Min et max d'une étape : un entier de 0 à 10 (1 à 10 pour le max). Ce que le
+       propriétaire tape et ce qui est enregistré doivent rester le même nombre : si
+       Kiwi le corrige, il le dit sous le champ au lieu de le changer en silence. */
+    function bound(raw, lo, hi, dflt) {
+      const typed = String(raw == null ? '' : raw).trim();
+      const n = Number(typed);
+      if (!typed || !Number.isFinite(n)) return { value: dflt, changed: false };
+      const value = Math.max(lo, Math.min(hi, Math.round(n)));
+      return { value, changed: value !== n };
+    }
+    function boundsNote(si, typedMin, typedMax) {
+      const slot = formulaSlots[si];
+      const note = slotsContainer && slotsContainer.querySelector(`[data-f-slot-note="${si}"]`);
+      if (!slot || !note) return;
+      const seen = note._seen = Object.assign(note._seen || {}, typedMin != null ? { min: typedMin } : {}, typedMax != null ? { max: typedMax } : {});
+      const lines = [];
+      if (seen.min != null && bound(seen.min, 0, 10, 0).changed) lines.push(tr({ fr: `Min ramené à ${slot.min} : un entier de 0 à 10.`, en: `Min changed to ${slot.min}: a whole number from 0 to 10.`, ar: `تم تعديل الحد الأدنى إلى ${slot.min}: عدد صحيح من 0 إلى 10.` }));
+      if (seen.max != null && bound(seen.max, 1, 10, 1).changed) lines.push(tr({ fr: `Max ramené à ${slot.max} : un entier de 1 à 10.`, en: `Max changed to ${slot.max}: a whole number from 1 to 10.`, ar: `تم تعديل الحد الأقصى إلى ${slot.max}: عدد صحيح من 1 إلى 10.` }));
+      if (slot.min > slot.max) lines.push(tr({ fr: `Le min (${slot.min}) dépasse le max (${slot.max}) : il sera enregistré à ${slot.max}.`, en: `Min (${slot.min}) is above max (${slot.max}): it will be saved as ${slot.max}.`, ar: `الحد الأدنى (${slot.min}) أكبر من الأقصى (${slot.max}): سيُحفظ ${slot.max}.` }));
+      note.textContent = lines.join(' ');
+      note.hidden = !lines.length;
+    }
+    /* Quand le champ est quitté, il affiche la valeur réellement enregistrée. */
+    slotsContainer && slotsContainer.addEventListener('change', (e) => {
+      const inp = e.target.closest('[data-f-slot-min],[data-f-slot-max]');
+      if (!inp) return;
+      const isMin = inp.hasAttribute('data-f-slot-min');
+      const slot = formulaSlots[Number(isMin ? inp.dataset.fSlotMin : inp.dataset.fSlotMax)];
+      if (slot) inp.value = String(isMin ? slot.min : slot.max);
+    });
 
     slotsContainer && slotsContainer.addEventListener('input', (e) => {
       const pickerSearch = e.target.closest('[data-f-picker-search]');
@@ -229,13 +261,13 @@
       const minInp = e.target.closest('[data-f-slot-min]');
       if (minInp) {
         const si = Number(minInp.dataset.fSlotMin);
-        if (formulaSlots[si]) formulaSlots[si].min = Math.max(0, Math.min(10, Math.round(Number(minInp.value) || 0)));
+        if (formulaSlots[si]) { formulaSlots[si].min = bound(minInp.value, 0, 10, 0).value; boundsNote(si, minInp.value, null); }
         return;
       }
       const maxInp = e.target.closest('[data-f-slot-max]');
       if (maxInp) {
         const si = Number(maxInp.dataset.fSlotMax);
-        if (formulaSlots[si]) formulaSlots[si].max = Math.max(1, Math.min(10, Math.round(Number(maxInp.value) || 1)));
+        if (formulaSlots[si]) { formulaSlots[si].max = bound(maxInp.value, 1, 10, 1).value; boundsNote(si, null, maxInp.value); }
         return;
       }
       const extInp = e.target.closest('[data-f-ch-extra]');

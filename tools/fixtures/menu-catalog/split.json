@@ -1,5 +1,5 @@
 {
-  "sha256": "2e6715ab75a79f3a676e1d0f62779feee1fe4cacabc0fa61068e1d78e22bf468",
+  "sha256": "bb5db3f2a8e6cff908ee78c9bf152decbdf172fffee04d2e80ea229a735886a6",
   "bind": "  const editor = window.KiwiMenuCatalogParts.item_editor({ store, tr, T, esc, catById, itemById, optsOf, optById, cleanFormula, fmt, fmtPct, venueName, promptText, render, addCategory, renameCategory, deleteCategory, addSubcategory, deleteItem, addItem, updateItem, confirmThen, categoryStationModal, stationsModal, optsModal, PLUS, TRASH, PICKER_SEARCH, PICKER_CHEVRON });\n",
   "parts": [
     {
@@ -23,8 +23,8 @@
           "replacement": "  /* menu-state: edits owned by state. */\n"
         },
         {
-          "start": 151401,
-          "end": 184936,
+          "start": 154007,
+          "end": 187542,
           "offset": 20889,
           "length": 33535,
           "replacement": "  /* menu-state: lifecycle owned by state. */\n"
@@ -182,15 +182,15 @@
         },
         {
           "start": 118694,
-          "end": 147349,
+          "end": 149955,
           "offset": 969,
-          "length": 28655,
+          "length": 31261,
           "replacement": "  function itemModal(existing) { return editor.itemModal(existing); }"
         },
         {
-          "start": 147404,
-          "end": 150688,
-          "offset": 29626,
+          "start": 150010,
+          "end": 153294,
+          "offset": 32232,
           "length": 3284,
           "replacement": "  function registerHandlers() { return editor.registerHandlers(); }"
         }
@@ -339,8 +339,8 @@
       "suffix": "\n    return { toggleAvailable };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 187804,
-          "end": 187946,
+          "start": 190410,
+          "end": 190552,
           "offset": 185,
           "length": 147,
           "replacement": "    toggleAvailable: window.KiwiMenuCatalogParts.availability({ store, updateItem, itemById }).toggleAvailable,",

@@ -97,6 +97,14 @@ if (process.env.KIWI_DRAFT_CASE !== 'export') {
   aid = 'account-a'; assert.equal((await transport()).bizName, 'Commerce');
   nextVisit.clear(); await nextVisit.sync(); await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(await transport(), null);
+  aid = 'account-a';
+  await transport({ ...original, bizName: 'Kept' });
+  for (const body of ['{"step":', 'not json', '<html>', '']) {
+    const bad = await routeContext.onRequest({ request: new Request('https://kiwi.test/api/account/onboarding-draft', { method: 'POST', headers: { 'X-Kiwi-Draft-Account': aid }, body }), env });
+    assert.equal(bad.status, 400, 'a malformed body is the caller\'s mistake (400), not an outage (503): ' + JSON.stringify(body));
+    assert.equal((await bad.json()).error, 'format');
+  }
+  assert.equal((await transport()).bizName, 'Kept', 'a refused body leaves the saved draft untouched');
   aid = null;
   assert.equal((await routeContext.onRequest({ request: new Request('https://kiwi.test/api/account/onboarding-draft'), env })).status, 401);
   console.log('✓ server round trip, account isolation, clear, unauthenticated refusal');
@@ -127,3 +135,16 @@ for (const lang of ['fr', 'en', 'ar']) {
 assert.match(readFileSync('assets/onboarding.js', 'utf8'), /recovery:.*mountRecovery/);
 assert.match(readFileSync('assets/kit/dash-onboarding.js', 'utf8'), /api\.recovery\(recovery/);
 console.log('✓ shared FR/EN/AR export and first-step import controls');
+// Arabic is a first-class language of the onboarding: layout properties are logical
+// (they flip with dir), the one physical value left is a background image position
+// that has its own RTL rule, and the markup carries no inline style.
+{
+  const css = readFileSync('assets/onboarding.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const physical = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].flatMap(([, selector, body]) => body.split(';')
+    .filter(d => /^\s*(margin-left|margin-right|padding-left|padding-right|border-left|border-right|left|right)\s*:|text-align\s*:\s*(left|right)\b/.test(d))
+    .map(d => selector.trim() + ' { ' + d.trim() + ' }'));
+  assert.deepEqual(physical.filter(d => !/html\[dir="rtl"\]/.test(d)), [], 'onboarding.css uses logical properties outside its RTL rules');
+  assert.match(css, /html\[dir="rtl"\] \.kob-role\{background-position:left/, 'the role chevron flips in Arabic');
+  assert.doesNotMatch(readFileSync('assets/onboarding.js', 'utf8'), /\sstyle="/, 'onboarding.js builds markup without inline style');
+  console.log('✓ onboarding.css logical properties, no inline style');
+}

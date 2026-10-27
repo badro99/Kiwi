@@ -677,6 +677,7 @@ for (const test of [
   'reservations-business-day-test.mjs',
   'serveur-menu-live-test.mjs',
   'menu-availability-test.mjs',
+  'menu-formula-bounds-test.mjs',
   /* « Épuisé jusqu'à 18 h » : la fin d'un 86 posée par la caisse, résolue par
      le serveur à chaque lecture, et le choix de durée au vrai clic. */
   'menu-86-until-test.mjs',
@@ -1710,6 +1711,7 @@ section('Whole-project regressions');
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'boutique-variant-stock-test.mjs',
+    'boutique-rtl-css-test.mjs',
     'boutique-existing-barcode-test.mjs',
     'scan-wedge-browser-test.mjs',
     'boutique-custom-color-test.js',
@@ -2227,6 +2229,7 @@ section('Whole-project regressions');
        français visible, montants isolés, la page ouverte suit la langue. */
     'hotel-i18n-test.mjs',
     'pressing-truth-test.mjs',
+    'pressing-notification-line-test.mjs',
     'pressing-notification-freeze-test.mjs',
     'pressing-archive-test.mjs',
     'support-triage-test.mjs',
