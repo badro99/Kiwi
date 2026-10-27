@@ -75,7 +75,7 @@
       offerText: { none: 'Simple message, sans remise', percent: function (v) { return '−' + v + ' % sur la prochaine visite'; }, fixed: function (v) { return '−' + v + ' MAD sur la prochaine visite'; }, item: function (n) { return n + ' offert à la prochaine visite'; }, reward: 'Récompense fidélité débloquée' },
       minSpend: function (v) { return 'dès ' + v + ' MAD'; }, until: function (d) { return 'jusqu’au ' + d; },
       suggestion: 'Kiwi suggère', suggestOffer: function (v) { return '−' + v + ' %, dans la limite de votre marge'; }, useSuggestion: 'Utiliser cette offre pour le groupe',
-      draftAi: 'Réécrire avec Kiwi AI', drafting: 'Rédaction…', draftFail: 'Kiwi AI indisponible · le modèle reste en place',
+      draftAi: 'Réécrire avec Kiwi AI', drafting: 'Rédaction…', draftFail: 'Kiwi AI indisponible · le modèle reste en place', draftQuota: 'Limite du jour atteinte pour Kiwi AI · le modèle reste en place, réessayez demain',
       approve: 'Approuver et ouvrir WhatsApp', noConsent: 'Pas de consentement WhatsApp/SMS', noPhone: 'Pas de numéro',
       alreadySent: 'Déjà préparé pour cette offre', budgetOut: 'Budget de l’offre atteint', expired: 'Offre hors de ses dates', sent: 'Message préparé dans WhatsApp',
       template: function (name, offerLine, shop) { return 'Bonjour ' + name + ', ça fait un moment ! Toute l’équipe de ' + shop + ' serait ravie de vous revoir. ' + offerLine + '. À très vite.'; },
@@ -112,7 +112,7 @@
       offerText: { none: 'Message only, no discount', percent: function (v) { return v + '% off the next visit'; }, fixed: function (v) { return v + ' MAD off the next visit'; }, item: function (n) { return 'Free ' + n + ' on the next visit'; }, reward: 'Loyalty reward unlocked' },
       minSpend: function (v) { return 'from ' + v + ' MAD'; }, until: function (d) { return 'until ' + d; },
       suggestion: 'Kiwi suggests', suggestOffer: function (v) { return v + '% off, within your margin'; }, useSuggestion: 'Use this offer for the group',
-      draftAi: 'Rewrite with Kiwi AI', drafting: 'Writing…', draftFail: 'Kiwi AI unavailable · the template stays',
+      draftAi: 'Rewrite with Kiwi AI', drafting: 'Writing…', draftFail: 'Kiwi AI unavailable · the template stays', draftQuota: 'Daily Kiwi AI limit reached · the template stays, try again tomorrow',
       approve: 'Approve and open WhatsApp', noConsent: 'No WhatsApp/SMS consent', noPhone: 'No phone number',
       alreadySent: 'Already prepared for this offer', budgetOut: 'Offer budget reached', expired: 'Offer outside its dates', sent: 'Message ready in WhatsApp',
       template: function (name, offerLine, shop) { return 'Hello ' + name + ', it has been a while! The whole team at ' + shop + ' would love to see you again. ' + offerLine + '. See you soon.'; },
@@ -149,7 +149,7 @@
       offerText: { none: 'رسالة فقط، بدون خصم', percent: function (v) { return 'خصم ' + v + ' % على الزيارة القادمة'; }, fixed: function (v) { return 'خصم ' + v + ' درهم على الزيارة القادمة'; }, item: function (n) { return n + ' مجاناً في الزيارة القادمة'; }, reward: 'تم فتح مكافأة الوفاء' },
       minSpend: function (v) { return 'ابتداءً من ' + v + ' درهم'; }, until: function (d) { return 'حتى ' + d; },
       suggestion: 'Kiwi يقترح', suggestOffer: function (v) { return 'خصم ' + v + ' % في حدود هامشك'; }, useSuggestion: 'استعمال هذا العرض للفئة',
-      draftAi: 'إعادة الصياغة مع Kiwi AI', drafting: 'جارٍ الكتابة…', draftFail: 'Kiwi AI غير متاح · يبقى النموذج',
+      draftAi: 'إعادة الصياغة مع Kiwi AI', drafting: 'جارٍ الكتابة…', draftFail: 'Kiwi AI غير متاح · يبقى النموذج', draftQuota: 'تم بلوغ الحد اليومي لـ Kiwi AI · يبقى النموذج، حاول غدًا',
       approve: 'الموافقة وفتح واتساب', noConsent: 'لا توجد موافقة واتساب/SMS', noPhone: 'لا يوجد رقم',
       alreadySent: 'تم تحضيره مسبقاً لهذا العرض', budgetOut: 'تم بلوغ ميزانية العرض', expired: 'العرض خارج تواريخه', sent: 'الرسالة جاهزة في واتساب',
       template: function (name, offerLine, shop) { return 'مرحباً ' + name + '، اشتقنا إليك! فريق ' + shop + ' سيسعد برؤيتك من جديد. ' + offerLine + '. إلى اللقاء قريباً.'; },
@@ -740,11 +740,11 @@
         fetch('/api/ai/whatsapp-campaign', {
           method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ objective: objective, offer: x.offer.type !== 'none' ? offerLine(x.offer) : '' }),
-        }).then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return r.ok ? j : null; }); })
+        }).then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return r.ok ? j : (r.status === 429 ? { quota: true } : null); }); })
           .then(function (j) {
             var text = j && j.ok && j.data && (lang() === 'ar' ? (j.data.darijaMessage || j.data.frenchMessage) : (j.data.frenchMessage || j.data.darijaMessage));
             if (text) msg.value = String(text).replace(/\{prenom\}/g, firstName(x.c.name));
-            else toast(T.draftFail, 'warning');
+            else toast(j && j.quota ? T.draftQuota : T.draftFail, 'warning');
           })
           .catch(function () { toast(T.draftFail, 'warning'); })
           .then(function () { aiBtn.disabled = false; aiBtn.textContent = label; });

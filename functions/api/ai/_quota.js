@@ -21,6 +21,9 @@ export const GLOBAL_MERCHANT = '*global*';
 export const GLOBAL_KIND = 'all';
 export const DEFAULT_GLOBAL_DAILY_CALLS = 1000;
 
+/* Le plafond du jour de chaque type d'appel. Une seule table : toute route AI
+ * lit son plafond ici (clé = le `kind` passé à quotaOk), jamais un nombre écrit
+ * dans le fichier de la route. */
 export const DAILY_CAPS = {
   ask: 200,
   intake: 100,
@@ -34,7 +37,40 @@ export const DAILY_CAPS = {
   image: 20,
   visioninspect: 150,
   supporttriage: 60,
+  campaign: 60,
+  product: 150,
+  reservation: 200,
+  prepforecast: 60,
+  menurank: 200,
+  audioorder: 150,
+  pressing: 150,
+  recipe: 100,
+  menuoperations: 60,
+  debrief: 100,
+  productenhance: 100,
+  tpe: 100,
+  expense: 200,
+  watchdog: 100,
+  invoicematch: 150,
+  planning: 60,
 };
+
+/* Le message d'un plafond atteint, dit simplement dans les trois langues de
+ * l'interface : c'est temporaire, le compteur repart au prochain jour commercial. */
+export const QUOTA_MESSAGES = {
+  fr: "Limite du jour atteinte pour Kiwi AI. Réessayez demain.",
+  en: 'Daily Kiwi AI limit reached. Try again tomorrow.',
+  ar: 'تم بلوغ الحد اليومي لـ Kiwi AI. حاول غدًا.',
+};
+
+/* Le corps JSON d'un plafond atteint (à servir avec le statut 429). `error`
+ * garde le code historique de la route (« quota » ou « daily-quota-exceeded »),
+ * pour que les clients déjà déployés lisent la même chose ; s'y ajoutent le
+ * plafond, le type d'appel et la phrase en FR/EN/AR que l'interface peut
+ * afficher telle quelle, au lieu d'un « quota » nu. */
+export function quotaBody(kind, error = 'quota') {
+  return { ok: false, error, kind, cap: DAILY_CAPS[kind] || null, message: { ...QUOTA_MESSAGES } };
+}
 
 function utcDay() {
   return new Date().toISOString().slice(0, 10);

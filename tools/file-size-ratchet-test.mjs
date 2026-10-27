@@ -22,6 +22,11 @@
  *   · any other assets/*.js, functions/**.js or root *.html file stays
  *     under CAP lines (2 500 since 2026-10-27, was 5 000: the files split
  *     out of the big controllers are all under it, and a new one should be);
+ *   · the gate's own orchestration, tools/check.js, is pinned in `toolLines` the
+ *     same way (slack 50). It is outside assets/, functions/ and the root .html
+ *     files above, grew to 3 255 lines, and had no size guard: a suite is wired in
+ *     with a few lines, anything bigger belongs in its own module (the way
+ *     check-pool.js, check-guard.js and dep-trace.cjs were split out of it);
  *   · tools/global-ownership-test.mjs pins the second number that makes a
  *     big file risky: how many other files' globals it reads;
  *   · the three shells may load at most SCRIPT_SLACK more <script src> than
@@ -99,6 +104,14 @@ for (const rel of SHELLS) {
   if (pin == null) fail.push(`${rel}: no script pin in tools/file-size-baseline.json`);
   else if (n > pin + SCRIPT_SLACK) fail.push(`${rel}: loads ${n} <script src>, ${n - pin} over its pin of ${pin} (slack ${SCRIPT_SLACK}). Load the new code lazily, or bundle it with a neighbour.`);
   else if (n < pin && updateFile(rel)) { base.scripts[rel] = n; lowered.push(`${rel} scripts ${pin} → ${n}`); }
+}
+base.toolLines = base.toolLines || {};
+for (const rel of Object.keys(base.toolLines)) {
+  checks++;
+  if (!fs.existsSync(path.join(ROOT, rel))) { if (updateFile(rel)) { delete base.toolLines[rel]; lowered.push(`${rel} removed`); } continue; }
+  const n = lines(rel), pin = base.toolLines[rel];
+  if (n > pin + SLACK) fail.push(`${rel}: ${n} lines, ${n - pin} over its pin of ${pin} (slack ${SLACK}). The gate's orchestration stops growing: put the new logic in its own module under tools/.`);
+  else if (n < pin && updateFile(rel)) { base.toolLines[rel] = n; lowered.push(`${rel} lines ${pin} → ${n}`); }
 }
 const css = walk('assets', (rel) => rel.endsWith('.css') && !/ 2\./.test(rel)).sort();
 base.important = base.important || {};

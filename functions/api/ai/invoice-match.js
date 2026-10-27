@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1400;
 const TEMPERATURE = 0.1;
-const DAILY_CAP = 150;
+const DAILY_CAP = DAILY_CAPS.invoicematch;
 
 const SYSTEM_PROMPT = `Tu es un contrôleur de gestion et acheteur pour restaurants et commerces au Maroc.
 Compare les lignes de la facture actuelle avec l'historique des prix d'achat et génère une analyse d'écart :
@@ -67,7 +67,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'invoicematch', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('invoicematch', 'daily-quota-exceeded'), 429);
 
   const currentLines = Array.isArray(b?.currentLines) ? b.currentLines.slice(0, 40) : [];
   const historicalItems = Array.isArray(b?.historicalItems) ? b.historicalItems.slice(0, 40) : [];

@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.1;
-const DAILY_CAP = 150;
+const DAILY_CAP = DAILY_CAPS.audioorder;
 
 const SYSTEM_PROMPT = `Tu es un serveur de restaurant et caissier expérimenté au Maroc.
 Analyse le message vocal ou textuel d'un client (en français, arabe ou darija marocaine) et structure la commande au format JSON strict :
@@ -71,7 +71,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'audioorder', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('audioorder', 'daily-quota-exceeded'), 429);
 
   const text = typeof b?.text === 'string' ? b.text.trim().slice(0, 3000) : '';
   if (!text) return json({ error: 'text-required' }, 400);

@@ -381,6 +381,36 @@ export function publicTriage(row) {
   return alert ? { ...triage, alert } : triage;
 }
 
+/* Les demandes ouvertes que l'équipe doit voir sans attendre qu'on ouvre le
+ * tableau : jugées urgentes par le tri (verdict « urgent ») ou par mots-clés
+ * (priority « urgent »). `unalerted` compte celles qu'aucun courriel n'a
+ * annoncées : pas de SUPPORT_ALERT_EMAIL ou de MAIL_WEBHOOK, envoi échoué ou
+ * non confirmé, ou demande jamais triée (aucune alerte n'a pu partir). C'est
+ * le chiffre que la console de l'opérateur affiche en permanence : sans canal
+ * courriel, un commerçant qui ne peut plus vendre ne doit pas attendre que
+ * quelqu'un ouvre le Support.
+ * `rows` : lignes brutes de support_tickets (triage et triage_alert en JSON). */
+export function escalationOf(rows) {
+  const tickets = [];
+  let urgent = 0;
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row || row.status !== 'open') continue;
+    const triage = parseJson(row.triage, null);
+    const verdict = triage && typeof triage === 'object' ? triage.verdict : '';
+    if (verdict !== 'urgent' && row.priority !== 'urgent') continue;
+    urgent++;
+    const alert = parseJson(row.triage_alert, null);
+    const state = alert && typeof alert === 'object' ? String(alert.state || '') : '';
+    if (state === 'sent') continue;
+    tickets.push({
+      id: String(row.id || ''), reference: String(row.reference || ''), merchant: String(row.merchant || ''),
+      created_ts: Number(row.created_ts) || 0,
+      reason: state || (triage ? 'none' : 'untriaged'),
+    });
+  }
+  return { urgent, unalerted: tickets.length, tickets: tickets.slice(0, 20) };
+}
+
 /* Rang d'affichage dans la console : 0 = alerte IA, 1 = urgence par mots-clés ou
  * « à vérifier », 1.5 = ouverte jamais triée, 2 = le reste. Seules les demandes encore ouvertes montent. */
 export function consoleRank(row) {

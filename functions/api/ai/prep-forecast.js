@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1500;
 const TEMPERATURE = 0.2;
-const DAILY_CAP = 60;
+const DAILY_CAP = DAILY_CAPS.prepforecast;
 
 const SYSTEM_PROMPT = `Tu es un chef de cuisine et gestionnaire des approvisionnements en restauration au Maroc.
 Génère la feuille de mise en place du matin (Prep List) au format JSON strict :
@@ -69,7 +69,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'prepforecast', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('prepforecast', 'daily-quota-exceeded'), 429);
 
   const dayOfWeek = typeof b?.dayOfWeek === 'string' ? b.dayOfWeek : 'Vendredi';
   const reservations = Number(b?.reservationsCount) || 0;

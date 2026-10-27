@@ -1505,6 +1505,8 @@ section('Whole-project regressions');
     /* Vague 11 : appairage par réseau, sondes de PIN console, journal des codes
        opérateur, relais de support, file publique, carnet de réservations. */
     'wave11-security-test.mjs',
+    /* Console : réinitialisation, codes d'équipe et codes opérateur au niveau du handler. */
+    'admin-console-handlers-test.mjs',
     'forgot-password-test.mjs',
     'caisse-pairing-recovery-test.mjs',
     'caisse-handoff-demo-reload-test.mjs',
@@ -1516,6 +1518,8 @@ section('Whole-project regressions');
     'wave-d-security-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
     'loyalty-truth-test.mjs',
+    /* Fidélité : une seule règle d'arrondi pour la remise en pourcentage, tous métiers. */
+    'loyalty-reward-rounding-test.mjs',
     'loyalty-refused-redemption-test.mjs',
     'loyalty-reserve-test.mjs',
     'repeat-sale-guard-test.mjs',
@@ -2227,6 +2231,8 @@ section('Whole-project regressions');
     'pressing-archive-test.mjs',
     'support-triage-test.mjs',
     'support-triage-retry-test.mjs',
+    /* Le bandeau « urgentes sans alerte » de la console : sans canal courriel, l'urgence se voit. */
+    'support-escalation-test.mjs',
     'wave-n-server-test.mjs',
     'menu-analysis-test.mjs',
     'ai-vision-models-test.mjs',
@@ -2339,6 +2345,8 @@ section('Whole-project regressions');
     'salle-scan-test.mjs',
     'ai-quota-order-test.mjs',
     'ai-global-quota-test.mjs',
+    /* Plafonds du jour : une seule table, la phrase FR/EN/AR d'un plafond atteint. */
+    'ai-daily-caps-test.mjs',
     'network-recovery-test.mjs',
     /* Le plan de salle du patron lit la salle que la caisse publie : statut,
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */

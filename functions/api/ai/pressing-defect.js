@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runVisionPair } from './_vision.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
@@ -17,7 +17,7 @@ export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.1;
-const DAILY_CAP = 150;
+const DAILY_CAP = DAILY_CAPS.pressing;
 const MAX_IMAGE_DATAURL = 2_600_000;
 
 const SYSTEM_PROMPT = `Tu es un maître teinturier et expert pressing / blanchisserie au Maroc.
@@ -72,7 +72,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'pressing', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('pressing', 'daily-quota-exceeded'), 429);
 
   const image = typeof b?.image === 'string' ? b.image.trim() : '';
   if (!image.startsWith('data:image/')) return json({ error: 'image-required' }, 400);

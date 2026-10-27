@@ -6,7 +6,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk, DAILY_CAPS } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 import { runVisionPair } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
@@ -234,7 +234,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ ok: false, error: 'auth' }, 401);
 
   if (!(await quotaOk(env, who, 'visioninspect', DAILY_CAP))) {
-    return json({ ok: false, error: 'quota' }, 429);
+    return json(quotaBody('visioninspect'), 429);
   }
 
   const image = b?.image;

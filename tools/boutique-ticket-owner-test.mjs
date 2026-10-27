@@ -68,7 +68,15 @@ assert.equal(next.reward.reservation,undefined);
 assert.equal(next.num,undefined);
 const { declaration } = require('./js-declarations.cjs');
 const core = fs.readFileSync('assets/pos-boutique.js', 'utf8').replace(/^(?:import .*;\n)+/, '');
-const old = require('node:zlib').gunzipSync(fs.readFileSync('tools/fixtures/boutique-ticket/pricing-before.js.gz')).toString();
+/* The fixture is the ticket pricing from before the owner split. The one rule that has since
+   been decided on purpose is the loyalty percent reward (wave Q, 26 Oct 2026): the discount is
+   the nearest centime in every trade, no longer "the total rounded down". The fixture takes that
+   one line so the rest of the pricing stays a regression proof. */
+const oldRewardLine = "if (r.kind === 'percent') return base - shelf(base * (100 - (r.value || 0)) / 100);";
+const ruledRewardLine = "if (r.kind === 'percent') return Math.min(base, Math.round(base * Math.min(100, Math.max(0, r.value || 0)) / 100 * 100 + 1e-9) / 100);";
+const fixture = require('node:zlib').gunzipSync(fs.readFileSync('tools/fixtures/boutique-ticket/pricing-before.js.gz')).toString();
+assert.ok(fixture.includes(oldRewardLine), 'the fixture still carries the pre-ruling percent reward line');
+const old = fixture.replace(oldRewardLine, ruledRewardLine);
 function pricing(source) {
   const ctx = vm.createContext({ P: { a: { price: 129.90 }, b: { price: 249.95 } }, shelf: n => Math.max(0, Math.floor(n * 100 + 1e-6) / 100), promoFor: () => null });
   vm.runInContext(sharedRules(source) + '\n' + ['lineDeal','linePromo','lineBase','lineUnit','lineTotal','rewardDiscount','ticketTotals'].map(n => declaration(source, n)).join('\n') + '\nthis.total = ticketTotals;', ctx);

@@ -7,7 +7,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runWithFallback } from './_run.js';
 import { parseModelResponse } from './invoice.js';
 import { canonicalMenuLang, isMenuLang, NATIVE_NAMES, RTL } from '../_menu-langs.js';
@@ -18,7 +18,7 @@ export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 const MAX_TOKENS = 4000;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
-const DAILY_CAP = 120;
+const DAILY_CAP = DAILY_CAPS.menutranslate;
 
 export const GLOSSARY = Object.freeze({
   halal: { fr:'halal',ar:'حلال',en:'halal',es:'halal',de:'halal',it:'halal',pt:'halal',nl:'halal',ru:'халяль','zh-Hans':'清真','zh-Hant':'清真',ja:'ハラール',ko:'할랄',tr:'helal',he:'חלאל',pl:'halal',sv:'halal',no:'halal',da:'halal',hi:'हलाल',id:'halal',el:'χαλάλ',uk:'халяль' },
@@ -218,7 +218,7 @@ export async function onRequestPost(context) {
   if (!env.AI) return json({ ok: false, error: 'unbound' }, 503);
 
   if (!(await quotaOk(env, who, 'menutranslate', DAILY_CAP))) {
-    return json({ ok: false, error: 'quota' }, 429);
+    return json(quotaBody('menutranslate'), 429);
   }
 
   const inputData = {

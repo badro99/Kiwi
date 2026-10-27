@@ -12,7 +12,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -27,7 +27,7 @@ export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 const MAX_TOKENS = 2500;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
-const DAILY_CAP = 200;
+const DAILY_CAP = DAILY_CAPS.invoice;
 const MAX_TEXT_CHARS = 40000;
 
 /* Validation et bornage strict des données extraites.
@@ -151,7 +151,7 @@ export async function onRequestPost(context) {
   const text = String(body.text || '').trim();
   if (!text) return json({ ok: false, error: 'empty-text' }, 400);
 
-  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
+  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP))) return json(quotaBody('invoice'), 429);
 
   const cleanText = text.slice(0, MAX_TEXT_CHARS);
 

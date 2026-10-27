@@ -86,7 +86,7 @@ const invQuotaCall = invSrc.match(/quotaOk\(\s*env,\s*who,\s*['"]invoice['"]/);
 ok(!!invQuotaCall, 'invoice.js calls quotaOk with kind "invoice"');
 
 const menuOperationsSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/menu-operations.js'), 'utf8');
-ok(/const DAILY_CAP = 60;/.test(menuOperationsSrc), 'menu-operations.js caps each merchant at 60 calls per day');
+ok(/const DAILY_CAP = DAILY_CAPS\.menuoperations;/.test(menuOperationsSrc) && /menuoperations:\s*60,/.test(coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8')), 'menu-operations.js caps each merchant at 60 calls per day (the shared table)');
 ok(/quotaOk\(\s*env,\s*merchant,\s*['"]menuoperations['"],\s*DAILY_CAP\s*\)/.test(menuOperationsSrc)
   && !/quotaOk\(\s*env,\s*merchant,\s*['"]menuimport['"]/.test(menuOperationsSrc),
   'menu-operations.js uses its own menuoperations quota bucket');

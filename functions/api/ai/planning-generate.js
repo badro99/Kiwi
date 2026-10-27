@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 2200;
 const TEMPERATURE = 0.2;
-const DAILY_CAP = 60;
+const DAILY_CAP = DAILY_CAPS.planning;
 
 const SYSTEM_PROMPT = `Tu es un gestionnaire de planning RH pour restaurants et commerces au Maroc.
 Génère le planning hebdomadaire (Lundi à Dimanche) respectant les consignes et les règles de repos hebdomadaire :
@@ -64,7 +64,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'planning', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('planning', 'daily-quota-exceeded'), 429);
 
   const prompt = typeof b?.prompt === 'string' ? b.prompt.trim().slice(0, 2000) : '';
   const staff = Array.isArray(b?.staff) ? b.staff.slice(0, 50) : [];

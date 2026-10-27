@@ -13,7 +13,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runWithFallback } from './_run.js';
 import { visionMessages, runVisionPair } from './_vision.js';
 import { parseModelResponse } from './invoice.js';
@@ -43,7 +43,7 @@ export const TEXT_FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
  * (reasoning_effort 'low' le borne, pas à zéro) : 2 200 laissait peu de marge. */
 const MAX_TOKENS = 3000;
 const TEMPERATURE = 0.1;
-const DAILY_CAP = 20;
+const DAILY_CAP = DAILY_CAPS.salleimport;
 const MAX_IMAGE_DATAURL = 2_600_000; // ~1,9 Mo binaire — le client réduit avant envoi
 
 /* ── Validation et bornage strict des faits extraits ─────────────────────────
@@ -156,7 +156,7 @@ export async function onRequestPost(context) {
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return json({ ok: false, error: 'bad-image' }, 400);
   if (dataUrl.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-big' }, 413);
 
-  if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
+  if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json(quotaBody('salleimport'), 429);
 
   let aiRes;
   let usedModel = VISION_MODEL;
@@ -184,7 +184,7 @@ export async function onRequestPost(context) {
     if (prose && prose.length > 20) {
       /* Le repêchage est un deuxième appel de modèle : il se compte comme le
        * premier, et le plafond du jour le borne aussi. */
-      if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
+      if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json(quotaBody('salleimport'), 429);
       try {
         const r2 = await runWithFallback(env, TEXT_MODEL, TEXT_FALLBACK_MODEL, {
           messages: [
