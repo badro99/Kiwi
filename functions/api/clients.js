@@ -422,9 +422,7 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
     const stored = Math.round(Number(previous.amount || 0) * 100);
     if (stored !== Math.round(claimed * 100)) {
       const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
-      /* Le livre des ventes fait foi (un montant plus bas annoncé par l'appareil
-       * reste une reprise, comme avant que le livre ne prime). */
-      if (received == null || (stored !== received.cents && stored !== Math.min(Math.round(claimed * 100), received.cents))) {
+      if (received == null || stored !== Math.min(Math.round(claimed * 100), received.cents)) {
         return json({ error: 'ref-conflict' }, 409);
       }
     }
@@ -434,12 +432,13 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
     'SELECT id, srv_ts FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
   if (!client) return json({ error: 'client-not-found' }, 404);
-  /* Le montant qui compte est celui du livre des ventes, en centimes entiers :
-   * ni le montant annoncé par l'appareil (un flottant de dirhams), ni le plus
-   * bas des deux. L'appareil ne sert que de repli quand la vente n'est pas
-   * encore au serveur, et la réponse le dit (`amountSource: 'device'`). */
+  /* Le montant compte en centimes entiers, plafonné par le livre des ventes :
+   * l'appareil ne peut que déclarer moins (une part d'addition, des articles
+   * exclus), jamais plus que la vente encaissée. Sans vente au serveur,
+   * l'appareil sert de repli et la réponse le dit (`amountSource: 'device'`). */
   const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
-  const amountCents = received != null ? received.cents : Math.round(claimed * 100);
+  const claimedCents = Math.round(claimed * 100);
+  const amountCents = received != null ? Math.min(claimedCents, received.cents) : claimedCents;
   const amountSource = received != null && received.ledger ? 'ledger' : 'device';
   amount = amountCents / 100;
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")

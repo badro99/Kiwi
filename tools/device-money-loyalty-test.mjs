@@ -82,14 +82,15 @@ const purchase = async (saleCents, claimedCents, { sale = true, ref = 'purchase:
   assert.equal(r.status, 200, JSON.stringify(r));
   return r.body;
 };
-await strict('points follow the sale ledger amount, whatever amount the device claims', fc.asyncProperty(fc.integer({ min: 100, max: 1999999 }), fc.integer({ min: 1, max: 1999999 }), async (ledger, claimed) => {
+await strict('points come from centimes capped by the sale ledger: a device can declare less, never more', fc.asyncProperty(fc.integer({ min: 100, max: 1999999 }), fc.integer({ min: 1, max: 1999999 }), async (ledger, claimed) => {
   const body = await purchase(ledger, claimed);
+  const expected = Math.min(ledger, claimed);
   assert.equal(body.amountSource, 'ledger');
-  assert.equal(Math.round(body.spend * 100), ledger);
-  assert.equal(body.points, Math.floor(ledger / 100));
+  assert.equal(Math.round(body.spend * 100), expected);
+  assert.equal(body.points, Math.floor(expected / 100));
   const row = f.rowClient();
-  assert.equal(Math.round(row.spend * 100), ledger);
-  assert.equal(row.points, Math.floor(ledger / 100));
+  assert.equal(Math.round(row.spend * 100), expected);
+  assert.equal(row.points, Math.floor(expected / 100));
 }));
 await ok('a sale not yet at the server falls back to the device amount and says so', async () => {
   const body = await purchase(0, 1299, { sale: false });
@@ -102,7 +103,7 @@ await ok('a replay of the same purchase is still a replay when the ledger differ
   const again = await f.clients({ purchase: { clientId: 'client-fixture', ref: 'purchase:client-fixture:s1', saleRef: 's1', amount: 5 } });
   assert.equal(again.status, 200);
   assert.equal(again.body.replayed, true);
-  assert.equal(f.rowClient().points, 10);
+  assert.equal(f.rowClient().points, 5);
 });
 
 /* ── 4. La librairie : le programme du commerçant, le chemin commun ───────── */
