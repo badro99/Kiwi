@@ -1312,12 +1312,12 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2189",
-    "sha": "555599b9c956deb6"
+    "v": "2190",
+    "sha": "010387e01aea3e74"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "8",
-    "sha": "fca06149bab198b0"
+    "v": "9",
+    "sha": "fe44c9a05ac97254"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1340,8 +1340,8 @@
     "sha": "23513e703e69026f"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "44",
-    "sha": "f0a0aea9d5a6a4f0"
+    "v": "46",
+    "sha": "b6bcfcd92d95c7da"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1676,8 +1676,8 @@
     "sha": "b64ceeca514afc2f"
   },
   "assets/production-action-guard.js": {
-    "v": "4",
-    "sha": "8fe99f62ce6934a8"
+    "v": "5",
+    "sha": "7b6c4471f6ac27a6"
   },
   "assets/promo-rules.js": {
     "v": "5",

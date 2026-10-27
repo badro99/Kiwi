@@ -20,7 +20,7 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=2',
-    'assets/pages-pro.js?v=2189',
+    'assets/pages-pro.js?v=2190',
     'assets/pages-pro-boutique.js?v=4',
     'assets/pages-pro-spa-starter.js?v=2',
     'assets/restaurant-units.js?v=2',
@@ -59,7 +59,7 @@
     'assets/simple-food-cost.js?v=15',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=7',
-    'assets/production-action-guard.js?v=4',
+    'assets/production-action-guard.js?v=5',
     'assets/staff-roles.js?v=2',
     'assets/help-centre.js?v=7',
     'assets/account.js?v=33',

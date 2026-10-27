@@ -82,7 +82,7 @@ var SHELL = [
   '/assets/growth-crm.js?v=7',
   '/assets/channel-link.js?v=202608272308',
   '/assets/marketing-suite-tease.js?v=1',
-  '/assets/pages-pro.js?v=2189',
+  '/assets/pages-pro.js?v=2190',
   '/assets/pages-pro-spa-starter.js?v=2',
   '/assets/cash-sessions.js?v=8',
   '/assets/simple-food-cost.js?v=15',
@@ -171,7 +171,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=44',
+  '/assets/pages/dashboard-startup.js?v=46',
   '/assets/pages/dashboard-loader.js?v=22',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -277,7 +277,7 @@ var SHELL = [
   '/assets/pages.js?v=13',
   '/assets/help-centre.js?v=7',
   '/assets/account.js?v=33',
-  '/assets/production-action-guard.js?v=4',
+  '/assets/production-action-guard.js?v=5',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.

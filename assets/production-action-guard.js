@@ -5,7 +5,6 @@
   'use strict';
 
   const GUARDED = new Set([
-    'promo-schedule', 'promo-pause', 'promo-end', 'promo-edit', 'promo-segment',
     'ret-approve', 'ret-refuse', 'ret-exchange', 'ret-block', 'ret-policy-save',
     'ret-refund-original', 'ret-refund-credit', 'ret-refund-whatsapp',
     'appt-export', 'appt-auto-toggle', 'appt-cancel-confirm',
