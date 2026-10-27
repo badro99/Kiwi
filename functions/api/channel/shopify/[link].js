@@ -41,6 +41,7 @@ import { startOfWeek } from '../../order/_lib.js';
 import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
 import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
+import { reverseShopifyOrder } from '../../shopify/_order-reversal.js';
 import { shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
 
 const MAX_LINES = 60;
@@ -57,6 +58,9 @@ const TOPICS = {
   'orders/paid': 1,
   'inventory_levels/update': 1,
   'app/uninstalled': 1,
+  // Annulation et remboursement rendent les pièces au stock (_order-reversal.js).
+  'orders/cancelled': 1,
+  'refunds/create': 1,
 };
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -389,7 +393,8 @@ export async function onRequestPost(context) {
   }
 
   const deliveryId = str(request.headers.get('X-Shopify-Webhook-Id'), 120);
-  if ((topic === 'app/uninstalled' || topic === 'inventory_levels/update')
+  if ((topic === 'app/uninstalled' || topic === 'inventory_levels/update'
+       || topic === 'orders/cancelled' || topic === 'refunds/create')
       && await webhookSeen(env, shop || known, deliveryId)) {
     return json({ ok: true, duplicate: true });
   }
@@ -410,6 +415,25 @@ export async function onRequestPost(context) {
     await rememberWebhook(env, shop || known, deliveryId, topic);
     await mark(env, link.id, true);
     return json({ ok: true });
+  }
+
+  if (topic === 'orders/cancelled' || topic === 'refunds/create') {
+    const out = await reverseShopifyOrder(env, String(link.merchant || '').toLowerCase(), topic, o);
+    if (!out.done) {
+      /* Rien de durable : 503, Shopify réessaie (jusqu'à 48 h). */
+      await mark(env, link.id, false, 'retour de stock non enregistré');
+      return json({ error: 'reversal-not-persisted' }, 503);
+    }
+    await rememberWebhook(env, shop || known, deliveryId, topic);
+    await mark(env, link.id, true);
+    return json({ ok: true, ...out });
+  }
+
+  /* Une commande déjà annulée (rejeu tardif de orders/paid) ne fabrique ni
+   * ticket ni mouvement de stock. */
+  if (o && o.cancelled_at) {
+    await mark(env, link.id, true);
+    return json({ ok: true, ignored: 'cancelled' });
   }
 
   /* La devise, avant tout le reste. Un ticket marocain affiche des dirhams ;

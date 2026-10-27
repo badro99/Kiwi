@@ -163,105 +163,136 @@ function pricingStrings(source, translated, dictionary) {
 }
 for (const locale of Object.keys(dictionaries)) pricingStrings(pricingCopy.en, pricingCopy[locale], dictionaries[locale]);
 const decode = value => value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&nbsp;/g, '\u00a0').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
-const lookup = value => esDictionary[decode(value).replace(/\u00a0/g, ' ').trim()];
+const normalizeKey = value => decode(value).replace(/\u00a0/g, ' ').trim();
 const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// The German, Italian and Dutch dictionaries are keyed by the raw text nodes
+// of the English page (entities undecoded) and hold machine-aligned raw text.
+// The static pass compares decoded text and escapes what it writes, so decode
+// both sides once. Templates ({total}) stay a runtime concern.
+const staticDictionary = locale => {
+  if (locale === 'es') return esDictionary;
+  const out = {};
+  for (const [english, localized] of Object.entries(dictionaries[locale])) {
+    if (english.includes('{total}')) continue;
+    const key = normalizeKey(english);
+    const value = decode(localized);
+    if (key && value && key !== value.trim()) out[key] = value;
+  }
+  return out;
+};
+
+// Serve each locale's own words in the HTML itself (title, meta, nav, H1, the
+// dashboard mock), not only through the runtime dictionary: crawlers and
+// no-JS readers got English for German, Italian and Dutch until now.
 // Clone only the landing's client components. Translate their exact string
 // literals too: static HTML alone disagrees with React on its first render.
 // Content-addressed URLs keep these locale-specific exports cache-safe.
-const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/' + pricingChunk];
-const scriptPaths = new Map();
-fs.mkdirSync('es/chunks', { recursive: true });
-for (const clientPath of clientPaths) {
-  const original = fs.readFileSync(clientPath.slice(1), 'utf8');
-  let localized = original.replace(/"(?:[^"\\]|\\.)*"/g, literal => {
-    let value;
-    try { value = JSON.parse(literal); } catch { return literal; }
-    const translated = lookup(value);
-    return translated ? JSON.stringify(value.replace(value.trim(), translated)) : literal;
-  });
-  if (clientPath.includes('2c2tj5hx4r2-w')) localized = localized.replace(/\{k:"([PGL])",v:(\d+),cls:/g, (_, key, amount) => `{k:${JSON.stringify(esDictionary['nutrition.' + key])},v:${amount},cls:`);
-  const { createHash } = await import('node:crypto');
-  const hash = createHash('sha256').update(localized).digest('hex').slice(0,16);
-  const outputPath = `/es/chunks/${clientPath.split('/').pop().replace('.js', '')}-${hash}.js`;
-  scriptPaths.set(clientPath, outputPath);
-  fs.writeFileSync(outputPath.slice(1), localized);
-}
-
-for (const name of fs.readdirSync('es/chunks')) {
-  if (/^(?:216g4fzfwrgwn|2c2tj5hx4r2-w(?:-[0-9a-f]{8})?)-[0-9a-f]{16}\.js$/.test(name) && ![...scriptPaths.values()].includes('/es/chunks/' + name)) fs.unlinkSync('es/chunks/' + name);
-}
-
-// Translate text, descriptive attributes and metadata, including French source
-// strings. Entity-decoded keys are shared by HTML, Flight and runtime DOM nodes.
-let esOutput = source.replace(/(<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>)|>([^<>]+)</gi, (match, runtime, text) => {
-  if (runtime) return runtime;
-  const trimmed = text.trim();
-  const translated = lookup(trimmed);
-  return translated ? '>' + text.replace(trimmed, escape(translated)) + '<' : match;
-});
-esOutput = esOutput.replace(/\b(aria-label|alt|placeholder|title|content)="([^"]*)"/g, (match, attr, value) => {
-  const translated = lookup(value);
-  return translated ? `${attr}="${escape(translated)}"` : match;
-});
-esOutput = esOutput.replace(/(<span class="kw-nut-lbl\b[^>]*>[\s\S]*?<\/span>)([PGL])(?=<!--)/g, (_, prefix, key) => prefix + esDictionary['nutrition.' + key]);
-esOutput = esOutput.replace('<html lang="en" dir="ltr">', '<html lang="es" dir="ltr">');
-
-// Flight is a JSON string containing line-delimited React records. Decode both
-// layers rather than substituting fragments of escaped source text.
-function translateRecord(value) {
-  if (typeof value === 'string') { const translated = lookup(value); return translated ? value.replace(value.trim(), translated) : value; }
-  if (Array.isArray(value)) return value.map(translateRecord);
-  if (value?.className?.includes('kw-nut-lbl') && Array.isArray(value.children)) value = { ...value, children: value.children.map(child => typeof child === 'string' && esDictionary['nutrition.' + child] ? esDictionary['nutrition.' + child] : child) };
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, key === 'lang' && child === 'en' ? 'es' : translateRecord(child)]));
-  return value;
-}
-const flightPattern = /self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g;
-const flight = [...esOutput.matchAll(flightPattern)].map(match => JSON.parse(match[1])).join('');
-// Flight also has length-prefixed T records with no trailing newline. Consume
-// their UTF-8 byte length before parsing the next JSON record.
-const flightBytes = Buffer.from(flight);
-let cursor = 0;
-let translatedFlight = '';
-while (cursor < flightBytes.length) {
-  const remaining = flightBytes.subarray(cursor).toString();
-  const textRecord = remaining.match(/^([0-9a-f]+):T([0-9a-f]+),/);
-  if (textRecord) {
-    const headerLength = Buffer.byteLength(textRecord[0]);
-    const length = parseInt(textRecord[2], 16);
-    const text = flightBytes.subarray(cursor + headerLength, cursor + headerLength + length).toString();
-    const localized = lookup(text) || text;
-    translatedFlight += `${textRecord[1]}:T${Buffer.byteLength(localized).toString(16)},${localized}`;
-    cursor += headerLength + length;
-    continue;
+async function buildStaticLocale(locale, dict, { cloneUnchanged = false, nutrition = false, stylesheet = '' } = {}) {
+  const lookup = value => dict[normalizeKey(value)];
+  const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/' + pricingChunk];
+  const scriptPaths = new Map();
+  fs.mkdirSync(`${locale}/chunks`, { recursive: true });
+  for (const clientPath of clientPaths) {
+    const original = fs.readFileSync(clientPath.slice(1), 'utf8');
+    let localized = original.replace(/"(?:[^"\\]|\\.)*"/g, literal => {
+      let value;
+      try { value = JSON.parse(literal); } catch { return literal; }
+      const translated = lookup(value);
+      return translated ? JSON.stringify(value.replace(value.trim(), translated)) : literal;
+    });
+    if (nutrition && clientPath.includes('2c2tj5hx4r2-w')) localized = localized.replace(/\{k:"([PGL])",v:(\d+),cls:/g, (_, key, amount) => `{k:${JSON.stringify(dict['nutrition.' + key])},v:${amount},cls:`);
+    if (localized === original && !cloneUnchanged) continue;
+    const { createHash } = await import('node:crypto');
+    const hash = createHash('sha256').update(localized).digest('hex').slice(0,16);
+    const outputPath = `/${locale}/chunks/${clientPath.split('/').pop().replace('.js', '')}-${hash}.js`;
+    scriptPaths.set(clientPath, outputPath);
+    fs.writeFileSync(outputPath.slice(1), localized);
   }
-  const newline = flightBytes.indexOf(10, cursor);
-  const end = newline < 0 ? flightBytes.length : newline;
-  const line = flightBytes.subarray(cursor, end).toString();
-  const record = line.match(/^([0-9a-f]+:)(.*)$/);
-  try { translatedFlight += record ? record[1] + JSON.stringify(translateRecord(JSON.parse(record[2]))) : line; }
-  catch { translatedFlight += line; }
-  if (newline >= 0) translatedFlight += '\n';
-  cursor = end + (newline < 0 ? 0 : 1);
+
+  for (const name of fs.readdirSync(`${locale}/chunks`)) {
+    if (/^(?:216g4fzfwrgwn|2c2tj5hx4r2-w(?:-[0-9a-f]{8})?)-[0-9a-f]{16}\.js$/.test(name) && ![...scriptPaths.values()].includes(`/${locale}/chunks/${name}`)) fs.unlinkSync(`${locale}/chunks/${name}`);
+  }
+
+  // Translate text, descriptive attributes and metadata, including French source
+  // strings. Entity-decoded keys are shared by HTML, Flight and runtime DOM nodes.
+  let output = source.replace(/(<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>)|>([^<>]+)</gi, (match, runtime, text) => {
+    if (runtime) return runtime;
+    const trimmed = text.trim();
+    const translated = lookup(trimmed);
+    return translated ? '>' + text.replace(trimmed, escape(translated)) + '<' : match;
+  });
+  output = output.replace(/\b(aria-label|alt|placeholder|title|content)="([^"]*)"/g, (match, attr, value) => {
+    const translated = lookup(value);
+    return translated ? `${attr}="${escape(translated)}"` : match;
+  });
+  if (nutrition) output = output.replace(/(<span class="kw-nut-lbl\b[^>]*>[\s\S]*?<\/span>)([PGL])(?=<!--)/g, (_, prefix, key) => prefix + dict['nutrition.' + key]);
+  output = output.replace('<html lang="en" dir="ltr">', `<html lang="${locale}" dir="ltr">`);
+
+  // Flight is a JSON string containing line-delimited React records. Decode both
+  // layers rather than substituting fragments of escaped source text.
+  function translateRecord(value) {
+    if (typeof value === 'string') { const translated = lookup(value); return translated ? value.replace(value.trim(), translated) : value; }
+    if (Array.isArray(value)) return value.map(translateRecord);
+    if (nutrition && value?.className?.includes('kw-nut-lbl') && Array.isArray(value.children)) value = { ...value, children: value.children.map(child => typeof child === 'string' && dict['nutrition.' + child] ? dict['nutrition.' + child] : child) };
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, key === 'lang' && child === 'en' ? locale : translateRecord(child)]));
+    return value;
+  }
+  const flightPattern = /self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g;
+  const flight = [...output.matchAll(flightPattern)].map(match => JSON.parse(match[1])).join('');
+  // Flight also has length-prefixed T records with no trailing newline. Consume
+  // their UTF-8 byte length before parsing the next JSON record.
+  const flightBytes = Buffer.from(flight);
+  let cursor = 0;
+  let translatedFlight = '';
+  while (cursor < flightBytes.length) {
+    const remaining = flightBytes.subarray(cursor).toString();
+    const textRecord = remaining.match(/^([0-9a-f]+):T([0-9a-f]+),/);
+    if (textRecord) {
+      const headerLength = Buffer.byteLength(textRecord[0]);
+      const length = parseInt(textRecord[2], 16);
+      const text = flightBytes.subarray(cursor + headerLength, cursor + headerLength + length).toString();
+      const localized = lookup(text) || text;
+      translatedFlight += `${textRecord[1]}:T${Buffer.byteLength(localized).toString(16)},${localized}`;
+      cursor += headerLength + length;
+      continue;
+    }
+    const newline = flightBytes.indexOf(10, cursor);
+    const end = newline < 0 ? flightBytes.length : newline;
+    const line = flightBytes.subarray(cursor, end).toString();
+    const record = line.match(/^([0-9a-f]+:)(.*)$/);
+    try { translatedFlight += record ? record[1] + JSON.stringify(translateRecord(JSON.parse(record[2]))) : line; }
+    catch { translatedFlight += line; }
+    if (newline >= 0) translatedFlight += '\n';
+    cursor = end + (newline < 0 ? 0 : 1);
+  }
+  let wroteFlight = false;
+  output = output.replace(flightPattern, () => {
+    if (wroteFlight) return '';
+    wroteFlight = true;
+    return `self.__next_f.push([1,${JSON.stringify(translatedFlight)}])`;
+  });
+  // Replace self-referential metadata only; EN guides remain an intentional fallback.
+  output = output.replace(/https:\/\/kiwi-os\.com\/en\/(?!(?:guides\/))/g, `https://kiwi-os.com/${locale}/`);
+  output = output.replace(`hrefLang="en" href="https://kiwi-os.com/${locale}/"`, 'hrefLang="en" href="https://kiwi-os.com/en/"');
+  output = output.replaceAll(`\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/${locale}/\\"`, '\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/en/\\"');
+  output = output.replaceAll('en_US', ogLocales[locale]);
+  if (locale === 'es') {
+    const { createHash: hashOG } = await import('node:crypto');
+    const spanishOGHash = hashOG('sha256').update(fs.readFileSync('es/opengraph-image')).digest('hex').slice(0,16);
+    output = output.replace(/(https:\/\/kiwi-os\.com\/es\/opengraph-image)\?[^"\\]+/g, '$1?' + spanishOGHash);
+  } else {
+    // Only es/, fr/, en/ and ar/ ship a rendered social image; the others
+    // pointed at a /<locale>/opengraph-image that does not exist.
+    output = output.replaceAll(`https://kiwi-os.com/${locale}/opengraph-image`, 'https://kiwi-os.com/en/opengraph-image');
+  }
+  for (const [original, localized] of scriptPaths) output = output.replaceAll(original, localized);
+  output = output.replace('</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`);
+  if (stylesheet) output = output.replace('</head>', `<link rel="stylesheet" href="${assetUrl(stylesheet)}"/></head>`);
+  fs.writeFileSync(`${locale}/index.html`, applyPricing(ogHead(output, locale), locale));
 }
-let wroteFlight = false;
-esOutput = esOutput.replace(flightPattern, () => {
-  if (wroteFlight) return '';
-  wroteFlight = true;
-  return `self.__next_f.push([1,${JSON.stringify(translatedFlight)}])`;
-});
-// Replace self-referential metadata only; EN guides remain an intentional fallback.
-esOutput = esOutput.replace(/https:\/\/kiwi-os\.com\/en\/(?!(?:guides\/))/g, 'https://kiwi-os.com/es/');
-esOutput = esOutput.replace('hrefLang="en" href="https://kiwi-os.com/es/"', 'hrefLang="en" href="https://kiwi-os.com/en/"');
-esOutput = esOutput.replaceAll('\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/es/\\"', '\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/en/\\"');
-esOutput = esOutput.replaceAll('en_US', 'es_ES');
-const { createHash: hashOG } = await import('node:crypto');
-const spanishOGHash = hashOG('sha256').update(fs.readFileSync('es/opengraph-image')).digest('hex').slice(0,16);
-esOutput = esOutput.replace(/(https:\/\/kiwi-os\.com\/es\/opengraph-image)\?[^"\\]+/g, '$1?' + spanishOGHash);
-for (const [original, localized] of scriptPaths) esOutput = esOutput.replaceAll(original, localized);
-esOutput = esOutput.replace('</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`);
-esOutput = esOutput.replace('</head>', `<link rel="stylesheet" href="${assetUrl('assets/landing-es.css')}"/></head>`);
-fs.writeFileSync('es/index.html', applyPricing(ogHead(esOutput, 'es'), 'es'));
+await buildStaticLocale('es', esDictionary, { cloneUnchanged: true, nutrition: true, stylesheet: 'assets/landing-es.css' });
+for (const locale of ['de', 'it', 'nl']) await buildStaticLocale(locale, staticDictionary(locale));
 
 // Text rendered from a template ("15 days free, then 1,800 MAD, billed once a
 // year.") never equals a dictionary key; match it by pattern and regroup the
