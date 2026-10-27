@@ -91,12 +91,12 @@ test('pre-comparison history uses only ledger even if a legacy Z exists',async()
  const s=await summary(d); assert.equal(s.source,'ledger-only'); assert.equal(s.referenceCents,1234); assert.equal(s.comparisonAvailable,false); assert.equal(s.reportedCents,null);
 });
 
-test('temporary visit-link schema failure preserves outbox retry and closes after recovery',async()=>{
+test('a visit-linked sale never reads the schema in-request (columns are in the 0016 floor), so a schema lookup outage cannot fail it',async()=>{
  const o=await post(queue.onRequestPost,{merchant,create:{id:'ord-link-test-001',mode:'table',table:'6',lines:[{id:'p1',name:'Penne',qty:1,unitPrice:12}],total:12}}); assert.equal(o.status,200);
  const visit=sqlite.prepare("SELECT id FROM table_sessions WHERE merchant=? AND table_no='6' AND status='open'").get(merchant).id;
  const payment={merchant,id:'release-schema',table:'6',session:visit,amount:12,amountCents:1200,method:'cash',ref:'Table 6 #1001',ts:at+2000};
  failSchema=true;let r;try{r=await post(sale.onRequestPost,payment);}finally{failSchema=false;}
- assert.equal(r.status,503);
+ assert.equal(r.status,200,'no PRAGMA table_info(sales) left on the sale path');
  assert.equal((await post(sale.onRequestPost,payment)).status,200);
  assert.equal(sqlite.prepare('SELECT status FROM table_sessions WHERE id=?').get(visit).status,'closed');
 });

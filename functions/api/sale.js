@@ -34,15 +34,6 @@ function orderNumber(ref) {
   return match ? match[1] : '';
 }
 
-async function ensureVisitLink(env) {
-  const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-  for (const name of ['session_id', 'split_flow_id']) {
-    if (!(columns.results || []).some(column => column.name === name)) {
-      try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN ' + name + ' TEXT').run(); }
-      catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
-    }
-  }
-}
 /* ── QUI A ÉCRIT LA VENTE (sales.written_by) ────────────────────────────────
  * Lu dans l'identité AUTHENTIFIÉE de la requête, jamais dans le corps : l'id, le
  * canal et le libellé sont choisis par le client, et cette route ré-identifie
@@ -64,22 +55,8 @@ async function writtenBy(request, env, merchant) {
   }
   return employee && employee.merchant === merchant ? 'employee' : 'account';
 }
-/* La colonne arrive par migrations/0010 ; tant que la production ne l'a pas,
- * la vente s'écrit sans elle (le Z garde alors son comportement d'avant). Une
- * présence constatée vaut pour toute la vie de l'isolat, une absence est
- * revérifiée au plus toutes les cinq minutes. */
-const writtenByColumn = new WeakMap();
-async function hasWrittenBy(env) {
-  const known = writtenByColumn.get(env.DB);
-  if (known && (known.ok || Date.now() - known.at < 300000)) return known.ok;
-  let ok = false;
-  try {
-    const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-    ok = ((columns && columns.results) || []).some(column => column.name === 'written_by');
-  } catch (_) { ok = false; }
-  writtenByColumn.set(env.DB, { ok, at: Date.now() });
-  return ok;
-}
+/* sales.written_by vient de migrations/0010, sous le minimum de production (0016) :
+ * l'auteur authentifié s'écrit toujours. */
 async function recordSaleConflict(env, merchant, id, amountCents, method) {
   try {
     const at = Date.now();
@@ -574,18 +551,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       'SELECT id, amount, amount_cents, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
     ).bind(id, merchant).first();
   } catch (err) {
-    const msg = String((err && err.message) || err);
-    if (msg.includes('no such column') || msg.includes('amount_cents')) {
-      try {
-        existing = await env.DB.prepare(
-          'SELECT id, amount, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
-        ).bind(id, merchant).first();
-      } catch (fallbackErr) {
-        preflightError = fallbackErr;
-      }
-    } else {
-      preflightError = err;
-    }
+    preflightError = err;
   }
   if (preflightError) {
     return json({
@@ -694,13 +660,9 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     }
   }
 
+  /* sales.session_id et split_flow_id sont dans le schéma minimum (0001 et suivants) :
+     plus de réparation de colonne dans la requête. */
   let hasVisitLink = !!(effectiveSessionId || splitFlowId);
-  if (hasVisitLink) {
-    try { await ensureVisitLink(env); }
-    catch (_) {
-      return json({ error: 'visit-link-unavailable' }, 503);
-    }
-  }
   // An unlinked bill still has a stable identity across waiter/till uploads.
   // This namespace can never be a real visit ID and never closes a table.
   const settlementSessionId = effectiveSessionId || (employeeTable ? 'unlinked-table:' + employeeTable : '');
@@ -750,7 +712,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   // ligne rangée sous un autre id que celui envoyé (id de visite ré-identifié,
   // part de partage reprise) ne figure pas telle quelle au manifeste de la
   // caisse : elle ne porte jamais l'auteur qui certifie, le Z la laisse informative.
-  const signed = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
+  const signed = await writtenBy(request, env, merchant);
   // Seul un id de visite que le serveur a réellement remplacé perd l'auteur qui certifie ;
   // une vente envoyée sans id reste à l'appareil qui l'a écrite (sinon une caisse se soustrairait au Z).
   const sellerId = employee ? String(employee.session.staffId) : null;
@@ -843,18 +805,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       'SELECT id, amount, amount_cents, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
     ).bind(id, merchant).first();
   } catch (err) {
-    const msg = String((err && err.message) || err);
-    if (msg.includes('no such column') || msg.includes('amount_cents')) {
-      try {
-        winning = await env.DB.prepare(
-          'SELECT id, amount, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
-        ).bind(id, merchant).first();
-      } catch (fallbackErr) {
-        verifyError = fallbackErr;
-      }
-    } else {
-      verifyError = err;
-    }
+    verifyError = err;
   }
 
   // If reading the winning row failed due to an unexpected DB error, fail safely with 503
@@ -911,11 +862,6 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
      ne s'écrit pas ne défait jamais une vente encaissée. */
   if (tipCents) {
     try {
-      const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-      if (!(columns.results || []).some(column => column.name === 'tip_cents')) {
-        try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN tip_cents INTEGER').run(); }
-        catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
-      }
       await env.DB.prepare('UPDATE sales SET tip_cents = ? WHERE merchant = ? AND id = ? AND tip_cents IS NULL')
         .bind(tipCents, merchant, id).run();
     } catch (_) { /* la vente reste ; le Z déclarera le pourboire */ }
@@ -923,11 +869,6 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
 
   if (paymentParts) {
     try {
-      const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-      if (!(columns.results || []).some(column => column.name === 'payment_parts')) {
-        try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN payment_parts TEXT').run(); }
-        catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
-      }
       const encoded = JSON.stringify(paymentParts);
       await env.DB.prepare('UPDATE sales SET payment_parts = ? WHERE merchant = ? AND id = ? AND payment_parts IS NULL')
         .bind(encoded, merchant, id).run();
