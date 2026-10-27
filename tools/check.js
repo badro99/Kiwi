@@ -1315,6 +1315,21 @@ section('CA au grand livre (tools/kpi-ledger-test.js)');
   }
 }
 
+/* Les tuiles elles-mêmes tournent (vague 12) : le catalogue réel de dateRange.js,
+ * évalué sur la période réelle, la démo, sans coût saisi. (tools/kpi-tiles-run-test.js) */
+section('Tuiles KPI exécutées (tools/kpi-tiles-run-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'kpi-tiles-run-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`kpi-tiles-run-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9ter · les pourboires sont ceux qui ont été déclarés ────────────────────
  * La tuile valait CA × 7,2 % chez un vrai commerçant : un montant inventé sous
  * « Pourboires ». Elle lit les pourboires déclarés à la clôture des journées
@@ -2339,6 +2354,7 @@ section('Whole-project regressions');
     'pressing-edge-test.mjs',
     'procurement-test.mjs',
     'promotions-dashboard-test.mjs',
+    'promotions-dashboard-run-test.mjs',
     'promo-window-browser-test.mjs',
     /* 2026-10-19 · la caisse boutique démo au téléphone : fiche, inventaire,
        Vendus après une vente encaissée au toucher. */
@@ -3159,7 +3175,7 @@ section('Suite CPU time (tools/suite-cpu-baseline.json)');
 }
 {
   const skipped = guard.dependencySkips();
-  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules`);
+  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library or tool that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules (fast-check, axe-core, puppeteer-core, typescript) or install the tool a skip line names (cargo for the Rust bridge: KIWI_ALLOW_CARGO_SKIP=1 waives it knowingly and the run ends INCOMPLETE)`);
 }
 if (MISSING_TEST_DEPS.length) fail(`KIWI_ALLOW_PROPERTY_SKIP=1 with ${MISSING_TEST_DEPS.join(', ')} missing: the property and accessibility suites did not run, so this run is not a pass (${guard.tier()} tier)`);
 console.log('\n' + '─'.repeat(60));
