@@ -1492,9 +1492,9 @@
     function renderTableDetailSplit(id) {
       const t = tables[id];
       const split = tableSplits.get(id);
-      const paidTotal = split.parts.reduce((s, p) => s + (p.paid ? p.amount : 0), 0);
+      const paidTotal = split.parts.reduce((s, p) => s + (p.paid ? p.amountCents : 0), 0) / 100;
       const remaining = split.parts.length - split.paidCount;
-      const remainingAmt = split.total - paidTotal;
+      const remainingAmt = (split.totalCents - Math.round(paidTotal * 100)) / 100;
       const pct = Math.round((split.paidCount / split.parts.length) * 100);
 
       $('#td-table-name').textContent = `${id} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
@@ -1522,7 +1522,7 @@
             <div class="td-split-banner-icon"><i data-lucide="split"></i></div>
             <div class="td-split-banner-text">
               <div class="td-split-banner-title">Split en cours · ${split.paidCount}/${split.parts.length}</div>
-              <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.total)} · reste ${fmtMAD(remainingAmt)}</div>
+              <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.totalCents / 100)} · reste ${fmtMAD(remainingAmt)}</div>
             </div>
           </div>
           <div class="td-split-progress">

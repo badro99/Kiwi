@@ -1642,6 +1642,8 @@ section('Whole-project regressions');
     'pairs-api-test.mjs',
     'pairs-caisse-browser-test.mjs',
     'pairs-serveur-browser-test.mjs',
+    // Une table, deux appareils : la caisse et le téléphone du serveur sur la même addition (vague 15 K).
+    'shared-table-two-devices-browser-test.mjs',
     'pairs-boutique-browser-test.mjs',
     'till-repair-lock-browser-test.mjs',
     'table-time-test.mjs',
