@@ -611,16 +611,16 @@
           <div class="ep-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Souk Dakhli'}<br>Le même Kiwi, <b>un seul compte.</b></div>
         </div>
         <nav class="ep-nav" id="ep-nav">
-          <button class="ep-nav-it on" data-ep-view="caisse"><i data-lucide="scan-line"></i><span>Caisse</span></button>
-          <button class="ep-nav-it" data-ep-view="carnet"><i data-lucide="notebook"></i><span>Carnet de crédit</span><b class="ep-nav-badge due" id="ep-badge-carnet"></b></button>
-          <button class="ep-nav-it" data-ep-view="stock"><i data-lucide="package"></i><span>Stock rapide</span><b class="ep-nav-badge" id="ep-badge-stock"></b></button>
-          <button class="ep-nav-it" data-ep-view="journee"><i data-lucide="trending-up"></i><span>Journée</span></button>
+          <button class="ep-nav-it on" data-ep-view="caisse"><i data-icon="document_scanner"></i><span>Caisse</span></button>
+          <button class="ep-nav-it" data-ep-view="carnet"><i data-icon="menu_book"></i><span>Carnet de crédit</span><b class="ep-nav-badge due" id="ep-badge-carnet"></b></button>
+          <button class="ep-nav-it" data-ep-view="stock"><i data-icon="inventory_2"></i><span>Stock rapide</span><b class="ep-nav-badge" id="ep-badge-stock"></b></button>
+          <button class="ep-nav-it" data-ep-view="journee"><i data-icon="trending_up"></i><span>Journée</span></button>
         </nav>
         <div class="ep-rail-foot">
           <button class="ep-net" id="ep-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="ep-net-dot"></i><span class="ep-net-label">En ligne</span>
           </button>
-          <button class="ep-lock" id="ep-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
+          <button class="ep-lock" id="ep-lock"><i data-icon="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
       <main class="ep-main">
@@ -632,13 +632,13 @@
           <div class="ep-caisse">
             <div class="ep-scanbar">
               <div class="ep-scan-field is-hot" id="ep-scan-field">
-                <i data-lucide="scan-line"></i>
+                <i data-icon="document_scanner"></i>
                 <input id="ep-scan-input" inputmode="numeric" autocomplete="off"
                   placeholder="Scannez ou tapez le code-barres…" />
                 <span class="ep-scan-kbd">Entrée</span>
               </div>
-              <button class="ep-scan-btn" id="ep-scan-mock"><i data-lucide="scan-line"></i>${pvReal() ? 'Activer la douchette' : 'Scanner (démo)'}</button>
-              <button class="ep-scan-btn" id="ep-search-open" style="background:var(--surface);color:var(--ink-2);border:1px solid var(--line);box-shadow:none;"><i data-lucide="search"></i>Chercher</button>
+              <button class="ep-scan-btn" id="ep-scan-mock"><i data-icon="document_scanner"></i>${pvReal() ? 'Activer la douchette' : 'Scanner (démo)'}</button>
+              <button class="ep-scan-btn" id="ep-search-open" style="background:var(--surface);color:var(--ink-2);border:1px solid var(--line);box-shadow:none;"><i data-icon="search"></i>Chercher</button>
             </div>
             <div class="ep-cats" id="ep-cats"></div>
             <div class="ep-grid-scroll" id="ep-gridwrap"></div>
@@ -884,7 +884,7 @@
         <span class="ep-line-name">${esc(it.label)}</span>
         <span class="ep-line-sub">
           ${weigh
-            ? `<span class="weigh"><i data-lucide="scale"></i>${fmtKg(ln.weight)} kg</span> × ${fmtMAD2(it.price)}/kg`
+            ? `<span class="weigh"><i data-icon="scale"></i>${fmtKg(ln.weight)} kg</span> × ${fmtMAD2(it.price)}/kg`
             : isUnit(it)
               ? `<span class="u">${ln.qty} × ${fmtMAD2(it.price).replace(' MAD', '')} MAD</span> · à l'unité`
               : `<span class="u">${ln.qty} × ${fmtMAD2(it.price)}</span>`}
@@ -922,16 +922,16 @@
       </div>
       <div class="ep-tk-foot">
         <div class="ep-tk-tot">
-          <span class="pcs"><i data-lucide="shopping-cart"></i> ${count} ${plu(count, 'article')}</span>
+          <span class="pcs"><i data-icon="shopping_cart"></i> ${count} ${plu(count, 'article')}</span>
           ${t.lines.length ? '<span>espèces · carte · ardoise</span>' : ''}
         </div>
         <div class="ep-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD2(total)}</span></div>
         <div class="ep-tk-actions">
           <button class="ep-pay" id="ep-pay" ${t.lines.length ? '' : 'disabled'}>
-            <i data-lucide="banknote"></i> Encaisser
+            <i data-icon="payments"></i> Encaisser
           </button>
           <button class="ep-credit-btn" id="ep-credit" ${t.lines.length ? '' : 'disabled'}>
-            <i data-lucide="notebook"></i>
+            <i data-icon="menu_book"></i>
             <span>Ardoise</span><small>mettre au carnet</small>
           </button>
         </div>
@@ -1010,10 +1010,10 @@
             (it.telco && it.telco.toLowerCase().includes(ql)) ||
             (it.ean && it.ean.includes(ql)));
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Chercher un produit</h3>
         <p class="modal-subtle">Quand le code ne passe pas, par nom, rayon ou télécom.</p>
-        <div class="ep-search-in"><i data-lucide="search"></i>
+        <div class="ep-search-in"><i data-icon="search"></i>
           <input id="ep-search-q" placeholder="Coca, lait, recharge inwi…" value="${esc(q || '')}" autocomplete="off" />
         </div>
         <div class="ep-search-results">
@@ -1047,7 +1047,7 @@
     const maxW = Math.max(3, presets[presets.length - 1]);
     const render = () => {
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <div class="ep-weigh-head">
           <span class="ep-weigh-art">${ART[it.art] || ''}</span>
           <span class="ep-weigh-title"><h3>${esc(it.label)}</h3><span class="sub">${fmtMAD2(it.price)} / ${it.weighUnit === 'l' ? 'L' : 'kg'}, sur la balance</span></span>
@@ -1066,7 +1066,7 @@
         </div>
         <div class="ep-weigh-foot">
           <button class="ep-btn secondary" data-ep-close>Annuler</button>
-          <button class="ep-btn primary" id="ep-weigh-ok"><i data-lucide="check"></i>${reweighIdx != null ? 'Mettre à jour' : 'Ajouter au ticket'} · <span id="ep-weigh-cta">${fmtMAD2(weighedTotal(it.price, weight))}</span></button>
+          <button class="ep-btn primary" id="ep-weigh-ok"><i data-icon="check"></i>${reweighIdx != null ? 'Mettre à jour' : 'Ajouter au ticket'} · <span id="ep-weigh-cta">${fmtMAD2(weighedTotal(it.price, weight))}</span></button>
         </div>`;
       icons();
       const refresh = () => {
@@ -1114,22 +1114,22 @@
 
     const step1 = () => {
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Encaissement</h3>
         <p class="modal-subtle">${t.num} · ${ticketCount(t)} article${ticketCount(t) > 1 ? 's' : ''}</p>
         <div class="modal-amount size-md">${fmtMAD2(total)}</div>
         <div class="ep-pay-opts">
           <button class="ep-pay-opt is-usual" data-ep-m="especes">
-            <span class="ic"><i data-lucide="banknote"></i></span>
+            <span class="ic"><i data-icon="payments"></i></span>
             <span class="l"><b>Espèces</b><span>Espèces, rendu calculé</span></span>
             <span class="amt">${fmtMAD2(total)}</span>
           </button>
           <button class="ep-pay-opt" data-ep-m="carte">
-            <span class="ic"><i data-lucide="credit-card"></i></span>
+            <span class="ic"><i data-icon="credit_card"></i></span>
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire</span></span>
           </button>
           <button class="ep-pay-opt" data-ep-m="ardoise">
-            <span class="ic"><i data-lucide="notebook"></i></span>
+            <span class="ic"><i data-icon="menu_book"></i></span>
             <span class="l"><b>Mettre à l'ardoise</b><span>Au carnet d'un voisin, réglé plus tard</span></span>
           </button>
         </div>`;
@@ -1148,7 +1148,7 @@
     const stepCash = () => {
       let received = Math.ceil(total);
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD2(total)}</h3>
         <p class="modal-subtle">${t.num}</p>
         <div class="cash-grid">
@@ -1188,11 +1188,11 @@
 
     const stepCard = () => {
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Carte · ${fmtMAD2(total)}</h3>
         <p class="modal-subtle">${t.num} · lecteur partenaire, Kiwi affiche, le lecteur encaisse</p>
         <div class="reader-stage">
-          <div class="reader-disc is-pulsing" id="ep-reader-disc"><i data-lucide="credit-card"></i></div>
+          <div class="reader-disc is-pulsing" id="ep-reader-disc"><i data-icon="credit_card"></i></div>
           <div class="reader-status" id="ep-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
           <div class="reader-method">Lecteur partenaire, paiement sur votre terminal</div>
         </div>`;
@@ -1300,7 +1300,7 @@
     };
     const render = () => {
       el.innerHTML = mode === 'pick' ? `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Mettre à l'ardoise</h3>
         <p class="modal-subtle">${fmtMAD2(total)} · ${esc(basketLabel())} · sur le carnet de quel voisin ?</p>
         <div class="ep-carnet-pick">
@@ -1316,9 +1316,9 @@
             </button>`;
           }).join('')}
         </div>
-        <button class="ep-cp-new" id="ep-cp-new"><i data-lucide="user-plus"></i>Nouveau voisin sur le carnet</button>`
+        <button class="ep-cp-new" id="ep-cp-new"><i data-icon="person_add"></i>Nouveau voisin sur le carnet</button>`
       : `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Nouveau voisin</h3>
         <p class="modal-subtle">On ouvre une ardoise, ${fmtMAD2(total)} dessus.</p>
         <div class="ep-cp-form">
@@ -1326,7 +1326,7 @@
           <input class="ep-in" id="ep-cp-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (rappel WhatsApp)" />
           <div class="ep-weigh-foot" style="margin-top:4px;">
             <button class="ep-btn secondary" id="ep-cp-back">Retour</button>
-            <button class="ep-btn primary" id="ep-cp-create"><i data-lucide="check"></i>Ouvrir l'ardoise</button>
+            <button class="ep-btn primary" id="ep-cp-create"><i data-icon="check"></i>Ouvrir l'ardoise</button>
           </div>
         </div>`;
       icons();
@@ -1390,12 +1390,12 @@
             <div><h1>Carnet de crédit</h1><div class="ep-head-sub">L'ardoise du quartier, fini le cahier sous le comptoir</div></div>
           </header>
           ${state.attachFrom ? `<div class="ep-attach-banner" id="ep-attach-banner">
-            <i data-lucide="notebook"></i>
+            <i data-icon="menu_book"></i>
             <span>Panier en attente, <b>${esc(state.attachFrom.label)}</b> · ${fmtMAD2(state.attachFrom.total)}. Touchez un voisin pour l'y mettre.</span>
-            <button class="x" id="ep-attach-cancel"><i data-lucide="x"></i></button>
+            <button class="x" id="ep-attach-cancel"><i data-icon="close"></i></button>
           </div>` : ''}
           <div class="ep-carnet-tools">
-            <div class="ep-carnet-search"><i data-lucide="search"></i>
+            <div class="ep-carnet-search"><i data-icon="search"></i>
               <input id="ep-carnet-q" placeholder="Nom ou téléphone du voisin…" value="${esc(state.carnetQuery)}" autocomplete="off" /></div>
             <div class="ep-carnet-total">
               <span>On nous doit, en tout</span>
@@ -1454,9 +1454,9 @@
       </div>
       <div class="ep-ard-foot">
         <span class="ep-ard-since-chip ${old ? 'old' : bal <= 0 ? 'zero' : ''}">
-          <i data-lucide="${bal < 0 ? 'hand-coins' : bal <= 0 ? 'check' : 'clock'}"></i>${esc(sinceTxt)}
+          <i data-icon="${bal < 0 ? 'payments' : bal <= 0 ? 'check' : 'schedule'}"></i>${esc(sinceTxt)}
         </span>
-        <span class="ep-ard-go">Ouvrir <i data-lucide="chevron-right"></i></span>
+        <span class="ep-ard-go">Ouvrir <i data-icon="chevron_right"></i></span>
       </div>
     </button>`;
   }
@@ -1475,7 +1475,7 @@
     const oldest = oldestDebt(c);
     const hist = c.hist.slice().sort((a, b) => b.at - a.at);
     el.innerHTML = `
-      <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="ep-dt-head">
         <span class="ep-dt-ava">${esc(initials(c.name))}</span>
         <span class="ep-dt-who">
@@ -1495,13 +1495,13 @@
         </div>
       </div>
       <div class="ep-dt-actions">
-        ${bal > 0 ? `<button class="ep-btn primary" id="ep-ard-settle"><i data-lucide="hand-coins"></i>Règlement · ${fmtMAD(bal)}</button>` : ''}
-        ${bal > 0 ? `<button class="ep-btn secondary" id="ep-ard-wa"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>` : ''}
-        <button class="ep-btn ghost" id="ep-ard-add"><i data-lucide="plus"></i>Ajouter une dette</button>
+        ${bal > 0 ? `<button class="ep-btn primary" id="ep-ard-settle"><i data-icon="payments"></i>Règlement · ${fmtMAD(bal)}</button>` : ''}
+        ${bal > 0 ? `<button class="ep-btn secondary" id="ep-ard-wa"><i data-icon="chat_bubble"></i>Rappel WhatsApp</button>` : ''}
+        <button class="ep-btn ghost" id="ep-ard-add"><i data-icon="add"></i>Ajouter une dette</button>
       </div>`;
     bindHistoryPages(el, hist, (h) => `
             <div class="ep-ht">
-              <span class="ep-ht-ic ${h.type}"><i data-lucide="${h.type === 'pay' ? 'hand-coins' : 'shopping-bag'}"></i></span>
+              <span class="ep-ht-ic ${h.type}"><i data-icon="${h.type === 'pay' ? 'payments' : 'shopping_bag'}"></i></span>
               <span class="ep-ht-mid">
                 <span class="ep-ht-label">${esc(h.label)}</span>
                 <span class="ep-ht-date">${fmtDT(h.at)}</span>
@@ -1525,7 +1525,7 @@
     const pv = $('#ep-paym', root);
     let amt = 20;
     pv.innerHTML = `
-      <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">Ajouter au carnet de ${esc(politeName(c.name))}</h3>
       <p class="modal-subtle">Un achat à crédit sans passer par la caisse (pain, lait…).</p>
       <div class="modal-amount size-md" id="ep-qd-val">${fmtMAD(amt)}</div>
@@ -1541,7 +1541,7 @@
       </div>
       <div class="ep-weigh-foot">
         <button class="ep-btn secondary" data-ep-close>Annuler</button>
-        <button class="ep-btn primary" id="ep-qd-ok"><i data-lucide="check"></i>Mettre au carnet</button>
+        <button class="ep-btn primary" id="ep-qd-ok"><i data-icon="check"></i>Mettre au carnet</button>
       </div>`;
     closeVeil('#ep-ard-veil');
     openVeil('#ep-pay-veil');
@@ -1569,18 +1569,18 @@
 
     const step1 = () => {
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Règlement, ${esc(politeName(c.name))}</h3>
         <p class="modal-subtle">Solde de l'ardoise · ${fmtMAD(bal)}</p>
         <div class="modal-amount size-md">${fmtMAD(bal)}</div>
         <div class="ep-pay-opts">
           <button class="ep-pay-opt is-usual" data-ep-settle="full">
-            <span class="ic"><i data-lucide="check-check"></i></span>
+            <span class="ic"><i data-icon="done_all"></i></span>
             <span class="l"><b>Tout régler</b><span>Solde le carnet, remis à zéro</span></span>
             <span class="amt">${fmtMAD(bal)}</span>
           </button>
           <button class="ep-pay-opt" data-ep-settle="partial">
-            <span class="ic"><i data-lucide="coins"></i></span>
+            <span class="ic"><i data-icon="toll"></i></span>
             <span class="l"><b>Règlement partiel</b><span>Le voisin donne ce qu'il peut aujourd'hui</span></span>
           </button>
         </div>`;
@@ -1595,7 +1595,7 @@
       let pay = amount;
       let received = Math.ceil(amount);
       el.innerHTML = `
-        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">${kind === 'full' ? 'Règlement total' : 'Règlement partiel'}</h3>
         <p class="modal-subtle">${esc(c.name)} · solde ${fmtMAD(bal)}</p>
         ${kind === 'partial' ? `
@@ -1697,10 +1697,10 @@
     const el = $('#ep-wam', root);
     const bal = balanceOf(c);
     el.innerHTML = `
-      <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">Rappel WhatsApp</h3>
       <p class="modal-subtle">${esc(c.name)} · ${esc(c.phone)} · solde ${fmtMAD(bal)}</p>
-      <div class="ep-wa-tone"><i data-lucide="heart"></i>Ton volontairement très poli, c'est un voisin, pas un débiteur.</div>
+      <div class="ep-wa-tone"><i data-icon="favorite"></i>Ton volontairement très poli, c'est un voisin, pas un débiteur.</div>
       <div class="ep-wa-bubblewrap">
         <div class="ep-wa-bubble">
           <textarea id="ep-wa-text">${esc(waMessage(c))}</textarea>
@@ -1709,7 +1709,7 @@
       </div>
       <div class="ep-weigh-foot">
         <button class="ep-btn ghost" data-ep-close>Plus tard</button>
-        <button class="ep-btn primary" id="ep-wa-send" ${c.phone ? '' : 'disabled'}><i data-lucide="send"></i>Envoyer sur WhatsApp</button>
+        <button class="ep-btn primary" id="ep-wa-send" ${c.phone ? '' : 'disabled'}><i data-icon="send"></i>Envoyer sur WhatsApp</button>
       </div>`;
     openVeil('#ep-wa-veil');
     icons();
@@ -1746,33 +1746,33 @@
           </header>
           <div class="ep-stock-scroll">
             ${out.length ? `
-              <div class="ep-stock-sec-head alert"><i data-lucide="package-open"></i>Rupture <span class="ct">${out.length}</span></div>
+              <div class="ep-stock-sec-head alert"><i data-icon="inventory_2"></i>Rupture <span class="ct">${out.length}</span></div>
               <div class="ep-stock-grid">${out.map(stkCard).join('')}</div>` : ''}
             ${low.length ? `
-              <div class="ep-stock-sec-head alert"><i data-lucide="package"></i>Bientôt épuisé <span class="ct">${low.length}</span></div>
+              <div class="ep-stock-sec-head alert"><i data-icon="inventory_2"></i>Bientôt épuisé <span class="ct">${low.length}</span></div>
               <div class="ep-stock-grid">${low.map(stkCard).join('')}</div>` : ''}
-            ${items.length ? `<div class="ep-stock-sec-head"><i data-lucide="check-circle-2"></i>Bien approvisionné <span class="ct">${ok.length}</span></div>
+            ${items.length ? `<div class="ep-stock-sec-head"><i data-icon="check_circle"></i>Bien approvisionné <span class="ct">${ok.length}</span></div>
             <div class="ep-stock-grid">${ok.map(stkCard).join('')}</div>` : ''}
-            ${untracked.length ? `<div class="ep-stock-sec-head"><i data-lucide="package"></i>Stock non suivi <span class="ct">${untracked.length}</span></div>
+            ${untracked.length ? `<div class="ep-stock-sec-head"><i data-icon="inventory_2"></i>Stock non suivi <span class="ct">${untracked.length}</span></div>
             <div class="ep-reassort-empty" style="margin:0 0 12px;"><div>Kiwi ne connaît pas encore vos quantités en rayon, rien n’est annoncé « bientôt épuisé ». Touchez « + » sur ce qu’il vous faut commander.</div></div>
             <div class="ep-stock-grid">${untracked.map(stkCard).join('')}</div>` : ''}
           </div>
         </div>
         <aside class="ep-reassort">
           <div class="ep-reassort-head">
-            <h2><i data-lucide="truck"></i>Liste de réassort</h2>
+            <h2><i data-icon="local_shipping"></i>Liste de réassort</h2>
             <div class="sub">${pvReal() ? 'Pour votre prochain passage chez le grossiste.' : 'Pour Si Brahim quand il va au grossiste du Souk.'} Ajoutez ce qui manque.</div>
           </div>
           <div class="ep-reassort-list" id="ep-reassort-list">
             ${reassortCount ? Object.keys(state.reassort).filter((k) => state.reassort[k] > 0).map(reassortRow).join('') : `
               <div class="ep-reassort-empty">
-                <i data-lucide="clipboard-check"></i>
+                <i data-icon="assignment_turned_in"></i>
                 <div>Liste vide.<br>Touchez « + » sur un produit qui manque.</div>
               </div>`}
           </div>
           <div class="ep-reassort-foot">
             <div class="ep-reassort-tot"><span>Références</span><b>${reassortCount}</b></div>
-            <button class="ep-btn primary" id="ep-reassort-send" ${reassortCount ? '' : 'disabled'} style="width:100%;flex:none;"><i data-lucide="file-plus-2"></i>Préparer le bon</button>
+            <button class="ep-btn primary" id="ep-reassort-send" ${reassortCount ? '' : 'disabled'} style="width:100%;flex:none;"><i data-icon="note_add"></i>Préparer le bon</button>
             ${reassortCount ? `<button class="ep-btn ghost" id="ep-reassort-clear" style="width:100%;">Vider la liste</button>` : ''}
           </div>
         </aside>
@@ -1840,7 +1840,7 @@
         <span class="ep-stk-reste ${out ? 'out' : low ? 'low' : ''}">${known ? 'reste ' : 'stock '}${esc(unitTxt)}${low && !out ? ` · seuil ${it.reorder}` : ''}</span>
       </span>
       <button class="ep-stk-add" data-ep-stk-add="${it.id}" title="${queued ? 'Déjà sur la liste' : 'Ajouter au réassort'}">
-        <i data-lucide="${queued ? 'check' : 'plus'}"></i>
+        <i data-icon="${queued ? 'check' : 'add'}"></i>
       </button>
     </div>`;
   }
@@ -1884,17 +1884,17 @@
           </header>
           <div class="ep-jr-stats">
             <div class="ep-jr-stat">
-              <div class="ep-jr-stat-lbl"><i data-lucide="banknote"></i>Recette encaissée</div>
+              <div class="ep-jr-stat-lbl"><i data-icon="payments"></i>Recette encaissée</div>
               <div class="ep-jr-stat-val">${fmtMAD(recette)}</div>
               <div class="ep-jr-stat-foot">${day.tickets} ${plu(day.tickets, 'ticket')} aujourd'hui</div>
             </div>
             <div class="ep-jr-stat hero">
-              <div class="ep-jr-stat-lbl"><i data-lucide="notebook"></i>Crédit en cours dehors</div>
+              <div class="ep-jr-stat-lbl"><i data-icon="menu_book"></i>Crédit en cours dehors</div>
               <div class="ep-jr-stat-val">${fmtMAD(credit)}</div>
               <div class="ep-jr-stat-foot">${debtors.length} ${plu(debtors.length, 'voisin')} · +${fmtMAD(day.creditAdded)} mis aujourd'hui</div>
             </div>
             <div class="ep-jr-stat">
-              <div class="ep-jr-stat-lbl"><i data-lucide="wallet"></i>Caisse + à recouvrer</div>
+              <div class="ep-jr-stat-lbl"><i data-icon="account_balance_wallet"></i>Caisse + à recouvrer</div>
               <div class="ep-jr-stat-val">${fmtMAD(recette + credit)}</div>
               <div class="ep-jr-stat-foot">si tout le carnet rentrait</div>
             </div>
@@ -1902,7 +1902,7 @@
 
           <div class="ep-jr-split">
             <div class="ep-jr-panel">
-              <h2><i data-lucide="star"></i>Top produits du jour <span class="ct">qté vendue</span></h2>
+              <h2><i data-icon="star"></i>Top produits du jour <span class="ct">qté vendue</span></h2>
               <div class="ep-top">
                 ${day.top.slice().sort((a, b) => b.qty - a.qty).filter((r) => ITEMS[r.id]).map((r) => {
                   const it = ITEMS[r.id];
@@ -1919,25 +1919,25 @@
             </div>
 
             <div class="ep-jr-panel">
-              <h2><i data-lucide="coins"></i>Comment on a été payé</h2>
+              <h2><i data-icon="toll"></i>Comment on a été payé</h2>
               <div class="ep-pm">
                 <div class="ep-pm-row">
-                  <span class="ep-pm-ic"><i data-lucide="banknote"></i></span>
+                  <span class="ep-pm-ic"><i data-icon="payments"></i></span>
                   <span class="ep-pm-mid"><span class="ep-pm-name">Espèces</span><span class="ep-pm-bar"><i style="width:${Math.round(day.especes / total * 100)}%"></i></span></span>
                   <span class="ep-pm-val">${fmtMAD(day.especes)}</span>
                 </div>
                 <div class="ep-pm-row">
-                  <span class="ep-pm-ic"><i data-lucide="credit-card"></i></span>
+                  <span class="ep-pm-ic"><i data-icon="credit_card"></i></span>
                   <span class="ep-pm-mid"><span class="ep-pm-name">Carte</span><span class="ep-pm-bar"><i style="width:${Math.round(day.carte / total * 100)}%"></i></span></span>
                   <span class="ep-pm-val">${fmtMAD(day.carte)}</span>
                 </div>
                 <div class="ep-pm-row">
-                  <span class="ep-pm-ic"><i data-lucide="notebook"></i></span>
+                  <span class="ep-pm-ic"><i data-icon="menu_book"></i></span>
                   <span class="ep-pm-mid"><span class="ep-pm-name">Mis à l'ardoise</span><span class="ep-pm-bar credit"><i style="width:${Math.round(day.creditAdded / total * 100)}%"></i></span></span>
                   <span class="ep-pm-val">${fmtMAD(day.creditAdded)}</span>
                 </div>
               </div>
-              <h2 style="margin-top:18px;"><i data-lucide="notebook"></i>À recouvrer <span class="ct">${fmtMAD(credit)}</span></h2>
+              <h2 style="margin-top:18px;"><i data-icon="menu_book"></i>À recouvrer <span class="ct">${fmtMAD(credit)}</span></h2>
               <div class="ep-jr-creditors">
                 ${debtors.slice(0, 4).map((c) => {
                   const oldest = oldestDebt(c);

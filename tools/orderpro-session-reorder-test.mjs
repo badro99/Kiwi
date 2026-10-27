@@ -40,7 +40,7 @@ ok('#thanks-reorder-btn button exists inside #screen-thanks',
   /<button class="thanks-reorder-btn" id="thanks-reorder-btn"[^>]*data-i18n="thanks_reorder"/.test(ORDERPRO_SRC));
 
 ok('.thanks-reorder-btn CSS styling is present',
-  /\.thanks-reorder-btn\s*\{[\s\S]*?background:\s*#fff;[\s\S]*?color:\s*var\(--forest\);/.test(ORDERPRO_SRC));
+  /\.thanks-reorder-btn\s*\{[\s\S]*?background:\s*var\(--paper\);[\s\S]*?color:\s*var\(--forest\);/.test(ORDERPRO_SRC));
 
 ok('French translation thanks_reorder is present',
   /thanks_reorder:\s*"Commander à nouveau"/.test(ORDERPRO_SRC));

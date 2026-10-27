@@ -1124,8 +1124,8 @@
     "sha": "dfe724489ae0c36a"
   },
   "assets/material-icons.ordering.js": {
-    "v": "4",
-    "sha": "afe2f50832ba5aa8"
+    "v": "5",
+    "sha": "6ec1737005782cd0"
   },
   "assets/menu-catalog.js": {
     "v": "40",
@@ -1264,8 +1264,8 @@
     "sha": "60b267fc3046f355"
   },
   "assets/orderpro-page.css": {
-    "v": "4",
-    "sha": "7d926d7892ddb13d"
+    "v": "5",
+    "sha": "565730a1fc3bccbe"
   },
   "assets/orderpro-page.js": {
     "v": "10",
@@ -1468,16 +1468,16 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "188",
-    "sha": "b1bb173dfd1b67ae"
+    "v": "189",
+    "sha": "f8b52603a2fc952c"
   },
   "assets/pos-epicerie.css": {
-    "v": "26",
+    "v": "27",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "26",
-    "sha": "155f59c404aeb01a"
+    "v": "27",
+    "sha": "2677c872f76dda13"
   },
   "assets/pos-fastfood.css": {
     "v": "15",

@@ -1,5 +1,4 @@
 {
-  "OrderPro.html": 24,
   "assets/agent-action-center.js": 1,
   "assets/agent.js": 5,
   "assets/boutique-promos-dashboard.js": 23,
@@ -23,7 +22,6 @@
   "assets/pos-boutique/inventory.js": 81,
   "assets/pos-boutique/sales.js": 39,
   "assets/pos-coiffure.js": 61,
-  "assets/pos-epicerie.js": 63,
   "assets/pos-fastfood.js": 50,
   "assets/pos-fleuriste.js": 70,
   "assets/pos-foodtruck.js": 37,
