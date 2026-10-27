@@ -54,5 +54,20 @@ try {
   ok(tooMany.status === 413 && tooMany.body.error === 'too-many-members',
     'past the bound (200) the save is refused out loud, not cut short');
   ok(tillCodes() === before[0] && logins() === before[1], 'and a refused save leaves the previous roster whole');
+  /* Deux personnes, un même code : le serveur gardait la première, sautait la
+   * seconde sans un mot et répondait ok. La seconde perdait sa caisse et son
+   * app employé. Refus à voix haute, qui nomme les personnes, jamais le code. */
+  const twins = roster(3);
+  twins[2].code = twins[0].code;
+  const dup = await publish(twins);
+  ok(dup.status === 409 && dup.body.error === 'duplicate-staff-code',
+    'two people sharing one code are refused out loud, not silently cut');
+  ok(Array.isArray(dup.body.members) && dup.body.members.map((m) => m.memberId).sort().join(',') === 'member-1,member-3',
+    'the refusal names both people who share the code');
+  ok(!JSON.stringify(dup.body).includes(twins[0].code), 'the refusal never carries the code itself');
+  ok(tillCodes() === before[0] && logins() === before[1], 'and the refused save leaves the previous roster whole');
+  const repeat = roster(2);
+  const same = await publish([...repeat, { ...repeat[0] }]);
+  ok(same.status === 200 && tillCodes() === 2 && logins() === 2, 'the same person listed twice is still one entry, not a refusal');
   console.log(`✓ team-roster-cap-test · ${checks} checks`);
 } finally { f.close(); }

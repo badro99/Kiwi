@@ -1487,7 +1487,7 @@
           <span class="lbl">${bal > 0 ? `dû ${oldest ? 'depuis ' + sinceLabel(oldest) : ''}` : bal < 0 ? 'payé en trop, à rendre ou à déduire de la prochaine dette' : 'à jour'}</span>
         </span>
       </div>
-      ${(c.creditAlerts || []).map(a => `<div role="alert"><span>${esc(window.KiwiCaisseLang?.tr('Soldé deux fois hors ligne') || 'Soldé deux fois hors ligne')} · ${fmtMAD(a.advanceCents / 100)} ${esc(window.KiwiCaisseLang?.tr('en avance') || 'en avance')}</span><a href="dashboard.html#/credit">${esc(window.KiwiCaisseLang?.tr('Rembourser l’avance') || 'Rembourser l’avance')}</a></div>`).join('')}
+      ${(c.creditAlerts || []).map(a => `<div role="alert"><span>${a.kind === 'debt-on-advance' ? `${esc(window.KiwiCaisseLang?.tr('Dette refusée, client en avance') || 'Dette refusée, client en avance')} · ${fmtMAD(a.debtCents / 100)}` : `${esc(window.KiwiCaisseLang?.tr('Soldé deux fois hors ligne') || 'Soldé deux fois hors ligne')} · ${fmtMAD(a.advanceCents / 100)} ${esc(window.KiwiCaisseLang?.tr('en avance') || 'en avance')}`}</span><a href="dashboard.html#/credit">${esc(window.KiwiCaisseLang?.tr('Rembourser l’avance') || 'Rembourser l’avance')}</a></div>`).join('')}
       <div class="ep-dt-hist" tabindex="0" role="region" aria-label="Historique du carnet">
         <div class="ep-dt-hist-head">Historique du carnet</div>
         <div class="ep-htl">

@@ -1064,7 +1064,7 @@ export async function onRequestPost(context) {
     /* Rien d'autre n'a bougé : pas de nouvelle révision de verticalops, sinon
      * chaque dette notée redeviendrait un conflit pour les autres appareils. */
     if (current && text === JSON.stringify(mine)) {
-      return json({ ok: true, feature, merchant, rev: serverRev, updated_ts: now, bytes: text.length });
+      return json({ ok: true, feature, merchant, rev: serverRev, updated_ts: now, bytes: text.length, ...(bookSaved.creditConflicts?.length ? { creditConflicts: bookSaved.creditConflicts } : {}) });
     }
   }
 
@@ -1285,5 +1285,5 @@ export async function onRequestPost(context) {
    * qu'on vient déjà de faire. */
   await poke(env, merchant, feature);
 
-  return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length });
+  return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length, ...(bookSaved?.creditConflicts?.length ? { creditConflicts: bookSaved.creditConflicts } : {}) });
 }

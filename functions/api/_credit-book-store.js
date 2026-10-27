@@ -22,7 +22,7 @@
 // verticalops.data.verticals.epicerie.data.carnet, then delete the creditbook
 // row (tools/credit-book-store-test.mjs shows both steps on a fixture).
 import { json } from '../auth/_lib.js';
-import { creditRefundEdit, creditSettlementAlerts } from './_credit-book-refund.js';
+import { advanceDebtConflicts, creditRefundEdit, creditSettlementAlerts, keepAdvanceConflicts } from './_credit-book-refund.js';
 import { storeEtag, storeTag } from './_store-etag.js';
 
 export const BOOK_FEATURE = 'creditbook';
@@ -127,15 +127,19 @@ export async function commitBook(env, merchant, legacyDoc, incoming, { guard, ke
     const book = await readBook(env, merchant, legacyDoc);
     const merged = unionBook(book.carnet, incoming);
     if (!merged.carnet) return { error: 'credit-refund-use-operation', status: 409 };
+    // One customer's debt on an advance is refused for that customer only.
+    const refused = advanceDebtConflicts(asDoc(book.carnet), asDoc(merged.carnet));
+    keepAdvanceConflicts(book.carnet, merged.carnet, refused);
+    const creditConflicts = refused.map((x) => ({ clientId: x.clientId, reason: 'debt-on-advance', debtCents: x.debts.reduce((n, d) => n + d.debtCents, 0) }));
     if (creditRefundEdit(asDoc(book.carnet), asDoc(merged.carnet))) return { error: 'credit-refund-use-operation', status: 409 };
     creditSettlementAlerts(asDoc(merged.carnet));
     const next = { carnet: merged.carnet };
     const text = JSON.stringify(next);
     if (text.length > BOOK_MAX) return { error: 'too-large', status: 413 };
-    if (book.exists && text === JSON.stringify({ carnet: book.carnet })) return { ok: true, exists: true, carnet: book.carnet, rev: book.rev, changed: false };
+    if (book.exists && text === JSON.stringify({ carnet: book.carnet })) return { ok: true, exists: true, carnet: book.carnet, rev: book.rev, changed: false, creditConflicts };
     // A merchant without any credit customer gets no row: the legacy path (an
     // empty list, or none) stays where the device wrote it.
-    if (!book.exists && !merged.carnet.length) return { ok: true, exists: false, carnet: merged.carnet, rev: 0, changed: false };
+    if (!book.exists && !merged.carnet.length) return { ok: true, exists: false, carnet: merged.carnet, rev: 0, changed: false, creditConflicts };
     if (guard) {
       const foreign = await guard(next, { carnet: book.carnet }, text);
       if (foreign) return { error: 'foreign-document', status: 409 };
@@ -150,7 +154,7 @@ export async function commitBook(env, merchant, legacyDoc, incoming, { guard, ke
         .bind(merchant, BOOK_FEATURE, text, 1, now).run();
     }
     if (Number(written && written.meta && written.meta.changes) === 1) {
-      return { ok: true, exists: true, carnet: merged.carnet, rev: book.exists ? book.rev + 1 : 1, changed: true };
+      return { ok: true, exists: true, carnet: merged.carnet, rev: book.exists ? book.rev + 1 : 1, changed: true, creditConflicts };
     }
   }
   return { error: 'credit-book-busy', status: 409 };

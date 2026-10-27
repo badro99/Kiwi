@@ -10,6 +10,7 @@ import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { quarantineGuard } from '../_quarantine-guard.js';
 import { poke } from '../_live.js';
 import { ensureCreditEvents } from '../_store-credit-ledger.js';
+import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 /* La règle du partage argent / avoirs vit dans un seul fichier, que la caisse
    Maison lit aussi pour annoncer le remboursement avant l'accord du responsable. */
 import RefundSplit from '../../../assets/refund-split.js';
@@ -95,10 +96,12 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       WHERE e.merchant = ? AND e.ref_id = ? AND e.action = 'redeem'
       GROUP BY e.credit_id ORDER BY MIN(e.code), e.credit_id`
   ).bind(merchant, originalSaleId).all()).results || [];
+  const creditExpiry = new Map();
   for (const redemption of redeemed) {
-    const credit = await env.DB.prepare('SELECT id FROM store_credits WHERE merchant = ? AND id = ?')
+    const credit = await env.DB.prepare('SELECT id, expires_ts FROM store_credits WHERE merchant = ? AND id = ?')
       .bind(merchant, redemption.credit_id).first();
     if (!credit) return json({ error: 'credit-not-found' }, 409);
+    creditExpiry.set(redemption.credit_id, Number(credit.expires_ts) || 0);
   }
   const moneyCents = original.amount_cents != null
     ? Math.round(Number(original.amount_cents)) : Math.round(Number(original.amount || 0) * 100);
@@ -242,22 +245,34 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
         AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND (method = 'delivery' OR payment_parts LIKE '%"delivery"%'))`)
       .bind(merchant, originalSaleId, refundId, actorId, ts, merchant, originalSaleId, refundId,
         merchant, originalSaleId, merchant, originalSaleId));
+    /* La valeur rendue à un avoir déjà expiré était perdue sans un mot : le
+       solde remontait, l'échéance restait passée, et chaque utilisation
+       (expires_ts >= maintenant) le refusait. Un avoir expiré reçoit donc la
+       validité d'un avoir neuf (182 jours, jusqu'à la fin de la journée
+       commerciale du magasin, comme /api/store-credits à l'émission) ; un
+       avoir encore valable garde la sienne. L'événement le dit. */
+    const restoring = actual.some(p => p.method === 'credit');
+    const [cutoff, zone] = restoring ? await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]) : [];
+    const renewedUntil = restoring ? businessBoundary(addBusinessDays(businessDate(now + 182 * 86400000, cutoff, zone), 1), cutoff, zone) : 0;
     for (const part of actual.filter(p => p.method === 'credit')) {
       const eventId = `refund:${merchant}:${refundId}:${part.creditId}`;
       statements.push(env.DB.prepare(
         `UPDATE store_credits SET balance_cents = balance_cents + ?,
           status = CASE WHEN status = 'consumed' THEN 'active' ELSE status END,
+          expires_ts = CASE WHEN expires_ts < ? THEN ? ELSE expires_ts END,
           updated_ts = ?, last_event_id = ?
          WHERE merchant = ? AND id = ?
            AND EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND note = ? AND action = 'refund')
            AND NOT EXISTS (SELECT 1 FROM store_credit_events WHERE merchant = ? AND id = ?)`
-      ).bind(part.amountCents, ts, eventId, merchant, part.creditId, merchant, originalSaleId, refundId, merchant, eventId));
+      ).bind(part.amountCents, now, renewedUntil, ts, eventId, merchant, part.creditId, merchant, originalSaleId, refundId, merchant, eventId));
       statements.push(env.DB.prepare(
         `INSERT OR IGNORE INTO store_credit_events
           (id, merchant, credit_id, code, action, amount_cents, balance_after_cents, ref_id, actor, detail, ts)
-         SELECT ?, merchant, id, code, 'adjust', ?, balance_cents, ?, ?, 'Restauration remboursement', ?
+         SELECT ?, merchant, id, code, 'adjust', ?, balance_cents, ?, ?, ?, ?
           FROM store_credits WHERE merchant = ? AND id = ? AND last_event_id = ?`
-      ).bind(eventId, part.amountCents, refundId, actor, ts, merchant, part.creditId, eventId));
+      ).bind(eventId, part.amountCents, refundId, actor,
+        (creditExpiry.get(part.creditId) ?? now) < now ? 'Restauration remboursement · validité prolongée' : 'Restauration remboursement',
+        ts, merchant, part.creditId, eventId));
     }
     await env.DB.batch(statements);
   } catch (error) {

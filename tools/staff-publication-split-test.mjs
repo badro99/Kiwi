@@ -20,7 +20,15 @@ const head = 'export async function publishStaffCredentials(env, merchant, body)
 const tail = '\n  return result;\n}\n';
 const fnAt = mod.indexOf(head);
 ok(fnAt > 0 && mod.endsWith(tail), 'module has one exported publish function');
-const inner = mod.slice(fnAt + head.length, mod.length - tail.length);
+/* One deliberate change since the move (wave 11): a code shared by two people
+ * is refused before anything is written, instead of the second one being
+ * skipped silently. Those two lines are the only text the rebuild sets aside;
+ * team-roster-cap-test runs the refusal. */
+const sharedGuard = "  const sharedCode = sharedCodeHolders(body.pins);\n"
+  + "  if (sharedCode.length) return json({ error: 'duplicate-staff-code', members: sharedCode }, 409);\n";
+const moved = mod.slice(fnAt + head.length, mod.length - tail.length);
+ok(moved.split(sharedGuard).length === 2, 'the shared-code refusal sits once in the publish function');
+const inner = moved.replace(sharedGuard, '');
 const helpers = mod.slice(mod.indexOf('const VALID_PIN'), mod.indexOf('\n}\n', mod.indexOf('function accountOwnerRole(')) + 3);
 
 const call = "  if (Array.isArray(body && body.pins)) {\n    const published = await publishStaffCredentials(env, merchant, body);\n"
