@@ -331,15 +331,18 @@
 
     function caisseFloorPlan() {
       if (!storeIsReal()) return null;                // demo uses the built-in plan
+      /* Ids and colours of the plan land in attributes: cleaned on read too,
+         for plans stored before the server cleaned them. */
+      const clean = (d) => { try { if (window.KiwiFloorCore && window.KiwiFloorCore.cleanPlan) window.KiwiFloorCore.cleanPlan(d); } catch (_) {} return d; };
       let slug = '';
       try { const p = storePaired(); slug = (p && p.merchant) || ''; } catch (_) {}
       // Cross-device: a server-fed plan (future /api/floorplan) lands here first.
-      try { if (window.KiwiFloorPlan && Array.isArray(window.KiwiFloorPlan.tables)) return window.KiwiFloorPlan; } catch (_) {}
+      try { if (window.KiwiFloorPlan && Array.isArray(window.KiwiFloorPlan.tables)) return clean(window.KiwiFloorPlan); } catch (_) {}
       // Same-browser: the dashboard designer's slug-keyed mirror.
       try {
         if (slug) {
           const raw = localStorage.getItem('kiwiPlanDeSalle:slug:' + slug);
-          if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.tables)) return d; }
+          if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.tables)) return clean(d); }
         }
       } catch (_) {}
       return null;

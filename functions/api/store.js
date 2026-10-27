@@ -1,4 +1,5 @@
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
+import { cleanFloorplan } from './_rules-floorplan-clean.js';
 import { refundCreditBook } from './_credit-book-refund.js';
 import { BOOK_FEATURE, commitBook, getVerticalOps, legacyBook, readBook, withBook, withoutBook } from './_credit-book-store.js';
 import { serviceCapacityConflict } from './_booking-capacity.js';
@@ -957,6 +958,10 @@ export async function onRequestPost(context) {
       || new Set(p).size !== p.length) return json({ error: 'bad-discount-policy' }, 400);
   }
 
+  /* Le plan de salle s'écrit aussi depuis une caisse appairée et se lit en HTML
+   * chez le propriétaire : ids et couleurs ramenés à ce qu'un attribut peut
+   * porter sans danger (functions/api/_rules-floorplan-clean.js). */
+  if (feature === 'floorplan') cleanFloorplan(raw);
   const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw) : raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.

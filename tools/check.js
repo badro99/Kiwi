@@ -2150,6 +2150,7 @@ section('Whole-project regressions');
     'live-link-merchant-identity-test.mjs',
     'account-scope-test.mjs',
     'floorplan-lww-test.mjs',
+    'floorplan-clean-test.mjs',
     'tables-page-split-test.mjs',
     'tables-operations-split-test.mjs',
     'serveur-kitchen-truth-test.mjs',

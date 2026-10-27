@@ -73,6 +73,13 @@
       "targets": [
         "assets/menu-catalog/state.js"
       ]
+    },
+    {
+      "name": "KiwiFloorplanClean",
+      "source": "functions/api/_rules-floorplan-clean.js",
+      "targets": [
+        "assets/floorplan-core.js"
+      ]
     }
   ]
 }

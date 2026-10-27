@@ -152,8 +152,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "8",
-    "sha": "a69eba51bed20c6b"
+    "v": "9",
+    "sha": "ff99fd0b6ac906ec"
   },
   "assets/caisse-hardware.js": {
     "v": "7",
@@ -516,8 +516,8 @@
     "sha": "1b89e9b34cd03ac6"
   },
   "assets/floorplan-core.js": {
-    "v": "2057",
-    "sha": "9960dec5de50e755"
+    "v": "2058",
+    "sha": "014cf96ff4a7055f"
   },
   "assets/floorplan-live.js": {
     "v": "8",
@@ -1312,8 +1312,8 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2187",
-    "sha": "ce98464f8ada65aa"
+    "v": "2188",
+    "sha": "64b4100169e89a82"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "8",
@@ -1340,24 +1340,24 @@
     "sha": "944d1ca9686b4326"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "39",
-    "sha": "f1148ca1bed52121"
+    "v": "40",
+    "sha": "f4e8a35e7be9a1b1"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
     "sha": "6474f5c90dfe0062"
   },
   "assets/pages/tables-drawing.js": {
-    "v": "1",
-    "sha": "7a1721405c5baaac"
+    "v": "2",
+    "sha": "8481935a72eabc60"
   },
   "assets/pages/tables-operations.js": {
     "v": "2",
     "sha": "0dd9587b849a8c1c"
   },
   "assets/pages/tables.js": {
-    "v": "2",
-    "sha": "58807c0272c55d44"
+    "v": "3",
+    "sha": "bf7fc08bc7ab9bdf"
   },
   "assets/pairing-commit.js": {
     "v": "2",

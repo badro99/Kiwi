@@ -440,6 +440,7 @@ function pdsCloud() {
     localKey: pdsKey,
     read: pdsRawState,
     write: function (d) {
+      if (window.KiwiFloorCore && window.KiwiFloorCore.cleanPlan) window.KiwiFloorCore.cleanPlan(d);
       d = pdsSyncStaff(d);
       pdsWriteLocal(d, true);
       /* La page est ouverte : on remplace le contenu de l'état VIVANT (les

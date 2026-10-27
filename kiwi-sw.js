@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/growth-crm.js?v=7',
   '/assets/channel-link.js?v=202608272308',
   '/assets/marketing-suite-tease.js?v=1',
-  '/assets/pages-pro.js?v=2187',
+  '/assets/pages-pro.js?v=2188',
   '/assets/pages-pro-spa-starter.js?v=2',
   '/assets/cash-sessions.js?v=8',
   '/assets/simple-food-cost.js?v=14',
@@ -92,7 +92,7 @@ var SHELL = [
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=11',
-  '/assets/caisse-floor.js?v=8',
+  '/assets/caisse-floor.js?v=9',
   '/assets/caisse-kitchen.js?v=4',
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=1',
@@ -170,7 +170,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=39',
+  '/assets/pages/dashboard-startup.js?v=40',
   '/assets/pages/dashboard-loader.js?v=21',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
@@ -269,9 +269,9 @@ var SHELL = [
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
   '/assets/liquid-lens.js?v=11',
-  '/assets/pages/tables.js?v=2',
+  '/assets/pages/tables.js?v=3',
   '/assets/pages/tables-data.js?v=1',
-  '/assets/pages/tables-drawing.js?v=1',
+  '/assets/pages/tables-drawing.js?v=2',
   '/assets/pages/tables-operations.js?v=2',
   '/assets/pages.js?v=13',
   '/assets/help-centre.js?v=7',
@@ -280,7 +280,7 @@ var SHELL = [
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
-  '/assets/floorplan-core.js?v=2057',
+  '/assets/floorplan-core.js?v=2058',
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=8',
   '/assets/oppo-cards.js?v=6',
