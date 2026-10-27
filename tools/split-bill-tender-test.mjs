@@ -219,7 +219,7 @@ function paymentHarness(source = paymentSource, overrides = {}) {
     empPayRefsRead: () => ({}), empPayRefKey: id => 'test-restaurant::' + id, servicePaymentTally() {},
     publishServiceTableState() {}, returnToFloor() {}, renderTables() {}, renderNotifications() {},
     renderSplitFlow() {}, renderProfil() {}, lucide: { createIcons() {} },
-    svBrowseMode: () => false, svBrowseGuard: () => false, toast: text => messages.push(text),
+    svBrowseMode: () => false, svBrowseGuard: () => false, employeePick: (fr) => fr, toast: text => messages.push(text),
     $: key => { if (!elements.has(key)) elements.set(key, { style: {}, hidden: true }); return elements.get(key); },
     fetch: (url, options) => new Promise((resolve, reject) => pending.push({
       url, body: JSON.parse(options.body), resolve, reject,

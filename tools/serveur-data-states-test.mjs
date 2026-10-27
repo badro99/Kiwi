@@ -308,7 +308,7 @@ function payer({ fetch, offline = false }) {
     liveEmployeeState: { merchant: 'test-resto' }, svSlug: () => 'test-resto',
     serviceCanonicalOrders: new Map(), serviceTableSessions: new Map([['3', 'visit-3']]),
     currentTab: 'tables', renderTables() {}, activeTableId: null, renderTableDetail() {},
-    svBrowseMode: () => false, svBrowseGuard: () => false, toast: (m) => toasts.push(m), svKnownOffline: () => offline,
+    svBrowseMode: () => false, svBrowseGuard: () => false, toast: (m) => toasts.push(m), svKnownOffline: () => offline, employeePick: (fr) => fr, 
     SV_PAY_OFFLINE_MSG: OFFLINE_PAY, SV_PAY_TIMEOUT_MS: 15000, SV_DEMO: false,
     AbortController, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout,
     fetch, JSON, Math, Number, Date, String, Array, Object, Error, Promise,
@@ -351,7 +351,7 @@ function payer({ fetch, offline = false }) {
     tables: { 3: { status: 'ka-tkhdam' } }, employeePaymentsInFlight: new Set(),
     liveEmployeeState: { merchant: 'test-resto' }, svSlug: () => '', serviceCanonicalOrders: new Map(),
     serviceTableSessions: new Map([['3', 'visit-3']]), serviceTableOrderRef: () => 'T-3',
-    employeePaymentId: (k) => k + '-emp', SV_DEMO: false, toast: (m) => toasts.push(m), svBrowseGuard: () => false,
+    employeePaymentId: (k) => k + '-emp', SV_DEMO: false, employeePick: (fr) => fr, toast: (m) => toasts.push(m), svBrowseGuard: () => false,
     navigator: { onLine: false }, fetch: () => { fetched++; return json(200, { ok: true }); },
   });
   vm.runInContext(src, ctx);

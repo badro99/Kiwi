@@ -39,7 +39,7 @@ function phone(storage=new Map()){
  const nodes=new Map(),node=s=>{if(!nodes.has(s))nodes.set(s,{hidden:false,style:{},textContent:'',innerHTML:'',classList:{add(){},remove(){}}});return nodes.get(s);};
  const c=vm.createContext({console,Math,Number,Date,Map,Set,JSON,Object,Array,String,Promise,AbortController,
   window:{crypto:{randomUUID:()=> 'test-flow-'+tag+'-'+(++nonce)}},navigator:{onLine:true},setTimeout:()=>1,clearTimeout(){},
-  $:node,$$:()=>[],fmtMADcents:v=>String(v),lucide:{createIcons(){}},toast(){},renderSplitFlow(){},renderTables(){},renderNotifications(){},
+  $:node,$$:()=>[],fmtMADcents:v=>String(v),lucide:{createIcons(){}},employeePick:(fr)=>fr,toast(){},renderSplitFlow(){},renderTables(){},renderNotifications(){},
   serviceCanonicalReady:true,serviceCanonicalOrders:new Map(),serviceVisitCredit:new Map(),tables:{'1':{}},tableOrders:{},buildInitialOrder:()=>[],
   serviceTableSessions:new Map([['1','visit']]),serviceTableOrderRef:()=> '1',svSlug:()=> 'shop',liveEmployeeState:{merchant:'shop'},
   EMP_PAY_REFS_KEY:'kiwiEmployeePaymentRefs',employeePaymentRefs:new Map(),employeePaymentsInFlight:new Set(),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},

@@ -260,8 +260,8 @@
     "sha": "44bc7f937197d581"
   },
   "assets/caisse/split-tender.js": {
-    "v": "3",
-    "sha": "265b9f694d70bd40"
+    "v": "4",
+    "sha": "7a19eaeb9327b4e6"
   },
   "assets/caisse/table-settlement.js": {
     "v": "2",
@@ -1712,8 +1712,8 @@
     "sha": "32a784d29a003d95"
   },
   "assets/receipt.js": {
-    "v": "11",
-    "sha": "1027d670500f0526"
+    "v": "12",
+    "sha": "6c0718584d9cbcf7"
   },
   "assets/refund-split.js": {
     "v": "2",
@@ -1808,8 +1808,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "6",
-    "sha": "426a4d7c2fb3954a"
+    "v": "7",
+    "sha": "170c493aeb1a11b4"
   },
   "assets/service-requests.js": {
     "v": "2",
