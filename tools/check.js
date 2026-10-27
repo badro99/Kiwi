@@ -749,6 +749,7 @@ for (const test of [
   'team-owners-split-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
+  'file-size-ratchet-rules-test.mjs',
   'source-assertion-ratchet-test.mjs',
   'wave-o-infra-test.mjs',
   'assertion-provenance-test.mjs',
