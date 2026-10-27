@@ -576,14 +576,18 @@ export async function onRequestDelete(context) {
       deletes.push(env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(owner.id));
       removed.accounts = 1;
     }
-    try { await env.DB.batch(deletes); }
-    catch (e) {
-      /* Base pas encore migrée (0007) : sans colonne business_slug le lot est
-       * refusé en entier (atomique) ; on le rejoue avec l'ancienne écriture. */
-      if (renameAt < 0 || !/no such column|has no column/i.test(String((e && e.message) || e))) throw e;
-      deletes[renameAt] = renameOld;
-      await env.DB.batch(deletes);
+    if (renameAt >= 0) {
+      /* Base pas encore migrée (0007) : sans colonne business_slug, l'écriture
+       * combinée refuserait tout le lot. On le sonde avant ; seule une erreur
+       * qui parle de la colonne autorise l'ancienne écriture, toute autre fait
+       * échouer la suppression (fermé, jamais un nom sans son slug). */
+      try { await env.DB.prepare('SELECT business_slug FROM accounts LIMIT 1').first(); }
+      catch (e) {
+        if (!/business_slug|column/i.test(String((e && e.message) || e))) throw e;
+        deletes[renameAt] = renameOld;
+      }
     }
+    await env.DB.batch(deletes);
   } catch (e) {
     return json({ error: 'delete-failed', detail: String(e) }, 500);
   }
