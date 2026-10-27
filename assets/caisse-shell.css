@@ -5551,3 +5551,7 @@
        code les remplit encore et le menu « Plus » 2027 presse l'identifiant
        caisse (#caisse-terminal-id). */
     .sidebar .cashier-card, .sidebar .stats-section .stat-row { display: none; }
+
+    /* La récompense fidélité prête : le même bouton que « Client & fidélité »,
+       trait plein pour qu'on la voie (assets/caisse-loyalty-reward.js). */
+    .rp-reward:not(.is-on) { border-style: solid; border-color: var(--atlas); color: var(--atlas); }

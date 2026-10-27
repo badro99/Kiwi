@@ -1328,6 +1328,8 @@
         paid: false, pickedUp: false, pickedUpAt: null, total,
       };
       kdsOrders.push(order);
+      /* The client on the note follows it onto the board (sale-client.js). */
+      try { if (window.KiwiCaisseSaleClient && window.KiwiCaisseSaleClient.carry) window.KiwiCaisseSaleClient.carry(order); } catch (_) {}
       /* Print only after the permanent queue number has had its first chance
          to land on the same object used by Caisse, KDS and the receipt. */
       /* Keep the allocation promise on the order. finalizeTender() awaits this

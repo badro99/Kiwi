@@ -1442,6 +1442,13 @@
       'Ne pas encaisser': ['Do not charge', 'عدم الدفع'],
       'Encaisser à nouveau': ['Charge again', 'الدفع مرة أخرى'],
       'Récompense indisponible. Confirmez le paiement au plein tarif.': ['Reward unavailable. Confirm payment at full price.', 'المكافأة غير متاحة. أكّد الدفع بالسعر الكامل.'],
+      'Attachez d’abord un client à la note': ['Attach a customer to the bill first', 'أرفق عميلاً بالفاتورة أولاً'],
+      'Pas encore de récompense pour ce client': ['No reward for this customer yet', 'لا توجد مكافأة لهذا العميل بعد'],
+      'Une remise est déjà sur la note': ['A discount is already on the bill', 'يوجد تخفيض على الفاتورة بالفعل'],
+      'Retirez-la pour appliquer la récompense.': ['Remove it to apply the reward.', 'أزله لتطبيق المكافأة.'],
+      'Ajoutez l’article de la récompense à la note': ['Add the reward item to the bill', 'أضف منتج المكافأة إلى الفاتورة'],
+      'Ajoutez des articles avant d’appliquer la récompense': ['Add items before applying the reward', 'أضف منتجات قبل تطبيق المكافأة'],
+      'Fidélité client': ['Loyal customer', 'عميل وفي'],
       'Récompense refusée par le serveur': ['Reward refused by the server', 'رفض الخادم المكافأة'],
       'Peut-être déjà utilisée sur une autre caisse. Vérifiez la fiche du client.': ['Possibly already used at another till. Check the customer record.', 'ربما استُخدمت بالفعل في صندوق آخر. تحقق من بطاقة العميل.'],
       /* ── modules coupés pour l'établissement (plus de « God Mode » devant le caissier) ── */

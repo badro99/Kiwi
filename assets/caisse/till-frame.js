@@ -112,7 +112,8 @@
         price: l.total != null ? l.total : l.price * l.qty, sent, sentAt: '', sentQty: sent ? l.qty : 0 };
     }
     const tillKitDiscount = (d, amt) => amt > 0
-      ? { label: d && d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise', amount: -amt } : null;
+      ? { label: d && d.reward && d.reward.label ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Récompense') + ' · ' + d.reward.label
+        : d && d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise', amount: -amt } : null;
     /* Ce que montre le volet livré, et rien d'autre : un volet fermé est une
        addition vide. */
     function tillKitBill() {
@@ -179,6 +180,9 @@
         return rows;
       }
       if (!selectedId || !tables[selectedId]) return rows;
+      /* The shipped « Changer » beside the waiter's name. */
+      const server = $('#rp-server-row');
+      if (server && !server.hidden && $('[data-action="reassign-server"]')) rows.push(['reassign', 'bill.reassign', '[data-action="reassign-server"]']);
       if (hasTables() && !isFeatureOff('tableTransfer') && !isFeatureOff('table-transfer') && $('#rp-transfer-table')) rows.push(['transfer', 'bill.transfer', '#rp-transfer-table']);
       if (hasTables() && !isFeatureOff('tableMerge') && !isFeatureOff('table-merge') && $('#rp-merge-table')) rows.push(['merge', 'bill.merge', '#rp-merge-table']);
       rows.push(['cancel_table', 'bill.cancel_table', cancel]);
@@ -223,8 +227,25 @@
       if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
       resetPayTip();
       const lang = window.KiwiCaisseLang, billName = $('#rp-table').textContent || '';
-      window.KiwiTillFrame.openPay({ bill: lang && lang.tr ? lang.tr(billName) : billName, due: currentTotal(), method: null, tipPct: 0, client: tillKitClientLabel() });
+      window.KiwiTillFrame.openPay({ bill: lang && lang.tr ? lang.tr(billName) : billName, due: currentTotal(), method: null, tipPct: 0, client: tillKitClientLabel(), reward: tillKitRewardLabel() });
       tillKitWatchClient();
+    }
+    /* The loyalty reward (assets/caisse-loyalty-reward.js) sits under
+       « Client & fidélité » on the shipped bill as #rp-reward: the payment
+       row shows its label and presses it, and the amount due follows. */
+    function tillKitRewardLabel() {
+      const b = $('#rp-reward');
+      if (!b || b.hidden) return '';
+      return (($('#rp-reward-label') || {}).textContent || '').trim();
+    }
+    function tillKitPayRefresh() {
+      const pay = window.KiwiTillFrame.pay();
+      if (!pay || pay.hidden || !pay.p || tillKitShare) return;
+      const p = pay.p();
+      p.due = currentTotal();
+      p.client = tillKitClientLabel();
+      p.reward = tillKitRewardLabel();
+      pay.render();
     }
     /* « Client & fidélité » pendant l'encaissement : le bouton livré du volet
        (#rp-client) ouvre le carnet pour attacher ou créer une fiche. 2027 le
@@ -243,12 +264,13 @@
       tillKitClientObs = new MutationObserver(() => {
         const pay = window.KiwiTillFrame.pay();
         if (!pay || pay.hidden || !pay.p) return;
-        const label = tillKitClientLabel();
-        if (pay.p().client === label) return;
-        pay.p().client = label;
-        pay.render();
+        const p = pay.p();
+        if (p.client === tillKitClientLabel() && (p.reward || '') === tillKitRewardLabel()) return;
+        tillKitPayRefresh();
       });
       tillKitClientObs.observe(b, { attributes: true, attributeFilter: ['hidden'], subtree: true, childList: true, characterData: true });
+      const r = $('#rp-reward');
+      if (r) tillKitClientObs.observe(r, { attributes: true, attributeFilter: ['hidden'], subtree: true, childList: true, characterData: true });
     }
     function tillKitTip(pct) {
       const p = Math.max(0, Math.min(100, Number(pct) || 0));
@@ -278,6 +300,7 @@
       try { settled = await finalizeTender(method); }
       catch (_) { tenderInFlight = false; pay.notRecorded(); toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Encaissement à vérifier dans le journal avant de réessayer')); return; }
       tenderInFlight = false;
+      if (settled === 'reward-refused') { tillKitPayRefresh(); return; }
       if (share && !share.paid) { pay.notRecorded(); return; }   // markSplitPartPaid a dit pourquoi
       const sale = settled === 'split' ? null : lastSaleEntry();
       /* §10.26 : la ligne du moment payé lit la sauvegarde du service telle
@@ -327,7 +350,9 @@
         splitState.flow = null;
         tillKitShareMap = null;
       }
-      window.KiwiTillFrame.openPane('split', { bill: tillKitSplitBill(), paidShares: tillKitPaidShares() });
+      const pane = window.KiwiTillFrame.openPane('split', { bill: tillKitSplitBill(), paidShares: tillKitPaidShares() });
+      /* A new split starts from the shipped defaults (covers at the table). */
+      if (!resume && pane && pane.fresh) pane.fresh(splitState.numParts);
     }
     function tillKitPayShare(n) {
       const el = window.KiwiTillFrame.pane('split');
@@ -399,10 +424,22 @@
       if (tg.tableId && typeof tableSplits !== 'undefined' && tableSplits.has(tg.tableId)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr("Termine le split d'abord")); return; }
       const P = window.KiwiDiscountPolicy;
       try { if (P && P.refresh) P.refresh(true); } catch (_) {}
-      window.KiwiTillFrame.openPane('discount', { bill: { total: money(tg.gross) }, policy: {
+      const pane = window.KiwiTillFrame.openPane('discount', { bill: { total: money(tg.gross) }, policy: {
         configured: !!(P && P.configured && P.configured()),
         percentages: (P && P.percentages && P.percentages()) || [5, 10, 15, 20],
       } });
+      const cur = tg.target === 'vrap' ? vrapDiscount : tables[tg.tableId].discount;
+      if (pane && pane.fresh) pane.fresh(cur ? { mode: cur.kind === 'amount' ? 'amount' : 'percent', value: Number(cur.value) || 0,
+        reason: Object.keys(TILL_KIT_REASON).find(k => TILL_KIT_REASON[k] === cur.reason) || (/fid|client/i.test(cur.reason || '') ? 'loyal-customer' : 'other') } : null);
+    }
+    /* « Retirer la remise » runs the shipped removal for this note. */
+    function tillKitRemoveDiscount() {
+      const tg = tillKitDiscountTarget();
+      window.KiwiTillFrame.closePane('discount');
+      if (!tg) { tillKitPaint(); return; }
+      Object.assign(remiseState, { target: tg.target, tableId: tg.tableId, gross: tg.gross });
+      removeRemise();
+      tillKitPaint();
     }
     function tillKitApplyDiscount(v) {
       const tg = tillKitDiscountTarget();
@@ -688,6 +725,7 @@
         case 'pay.tip': tillKitTip(value.pct); return;
         case 'pay.confirm': tillKitConfirm(id, value); return;
         case 'pay.client': { const b = $('#rp-client'); if (b && !b.hidden) b.click(); return; }
+        case 'pay.reward': { const b = $('#rp-reward'); if (b && !b.hidden) b.click(); tillKitPayRefresh(); return; }
         case 'pay.leave':
           resetPayTip();
           window.KiwiTillFrame.closePay();
@@ -702,6 +740,7 @@
         case 'split.leave': tillKitLeaveSplit(); return;
         case 'discount.apply': tillKitApplyDiscount(value); return;
         case 'discount.leave': window.KiwiTillFrame.closePane('discount'); tillKitPaint(); return;
+        case 'discount.remove': tillKitRemoveDiscount(); return;
       }
       const list = mode === 'vrap' ? cart : (selectedId ? (tableOrders[selectedId] || []) : []);
       const line = id ? list.find(l => String(l.uid) === id) : null;
