@@ -1552,6 +1552,9 @@ section('Whole-project regressions');
     'admin-report-test.mjs',
     'scoped-tab-isolation-test.mjs',
     'cross-store-copy-test.mjs',
+    /* La vitrine d'une boutique ne recule jamais : une projection d'un catalogue
+       plus ancien, ou dont la ligne a bougé, est refusée. */
+    'shop-publish-order-test.mjs',
     'admin-crm-layout-test.mjs',
     'maison-client-history-test.mjs',
     'client-history-browser-test.mjs',
@@ -1674,6 +1677,10 @@ section('Whole-project regressions');
     'inventory-ledger-test.mjs',
     'inventory-consumption-batch-test.mjs',
     'inventory-queue-unblock-test.mjs',
+    /* Le curseur de stock : une caisse ne saute jamais les mouvements d'une
+       autre, et une vente garde son sens (sortie) ; la production demande un
+       responsable. */
+    'inventory-cursor-integrity-test.mjs',
     'maison-stock-movements-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',

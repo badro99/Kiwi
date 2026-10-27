@@ -171,7 +171,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
   '/assets/pages/dashboard-startup.js?v=41',
-  '/assets/pages/dashboard-loader.js?v=21',
+  '/assets/pages/dashboard-loader.js?v=22',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
   '/assets/hotel/groups.js?v=1',
@@ -359,8 +359,8 @@ var SHELL = [
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=10',
-  '/assets/boutique-catalog.js?v=18',
+  '/assets/boutique-catalog-parts.js?v=11',
+  '/assets/boutique-catalog.js?v=19',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -380,7 +380,7 @@ var SHELL = [
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=16',
+  '/assets/inventory-ledger.js?v=17',
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=11',
@@ -425,13 +425,13 @@ var SHELL = [
   '/assets/restaurant-menu-workspace.js?v=124',
   '/assets/menu-promos-dashboard.js?v=3',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=12',
+  '/assets/catalog-import.js?v=13',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/ai-image-import.js?v=1',
   '/assets/menu-scan.js?v=7',
   '/assets/salle-scan.js?v=7',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
-  '/assets/orderpro-publish.js?v=7',
+  '/assets/orderpro-publish.js?v=8',
   '/assets/orderpro-panel.js?v=5',
   '/assets/orderpro-inbox.js?v=39',
   '/assets/service-requests.js?v=2',

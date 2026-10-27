@@ -312,7 +312,14 @@
       }
       if (owned) colorId = owned.colorId;
       const rawStock = cell(row, idx.stock);
-      const stockGiven = rawStock !== '';
+      /* Une quantité fractionnaire n'est pas arrondie : la boutique compte en
+         unités entières (décision wave Q). La ligne garde son stock actuel et le
+         dit, au lieu de faire de 1,5 un 2 sans un mot. */
+      const fractionStock = rawStock !== '' && isFinite(num(rawStock)) && !Number.isInteger(num(rawStock));
+      if (fractionStock) {
+        issues.push({ line, level: 'warn', code: 'stock-fraction', msg: tx('stock fractionnaire (« ' + rawStock + ' ») · refusé, la boutique compte en unités entières ; pour le poids, utilisez le module Épicerie ou Stock', 'fractional stock ("' + rawStock + '") · refused, the shop counts whole units; for weighed goods, use the Grocery or Stock module', 'مخزون كسري ("' + rawStock + '") · مرفوض، المتجر يعدّ وحدات كاملة؛ للمنتجات بالوزن استعمل وحدة البقالة أو المخزون') });
+      }
+      const stockGiven = rawStock !== '' && !fractionStock;
       const stock = stockGiven ? intOr(rawStock, 0) : null;
       if (stockGiven && !isFinite(num(rawStock))) {
         issues.push({ line, level: 'warn', msg: tx('stock illisible (« ' + rawStock + ' ») · compté 0', 'unreadable stock ("' + rawStock + '") · counted as 0', 'مخزون غير مقروء ("' + rawStock + '") · احتُسب 0') });

@@ -1367,6 +1367,7 @@
      * Le cache « autre boutique » repart aussi à zéro : son stock a pu changer
      * autant que le nôtre, et la réponse gardée en mémoire vaut 30 s. */
     sync: () => { crossReset(); load(); return pull(true); },
+    cloudRev: () => cloud.rev,   // la révision serveur sur laquelle cette copie repose
     // util
     stats: () => (load(), stats()), compat: () => (load(), compat()), exportCsv: () => (load(), exportCsv()),
     get _key() { return KEY; }, get _venue() { return VENUE; },

@@ -89,7 +89,7 @@
   var syncing = false;
   /* Les motifs qu'une caisse écrit sans autorisation : la même liste que
    * AUTOMATIC_REASONS dans functions/api/inventory/movements.js. */
-  var AUTOMATIC = { 'sale': 1, 'sale-reversal': 1, 'production-input': 1, 'production-output': 1 };
+  var AUTOMATIC = { 'sale': 1, 'sale-reversal': 1 };
   var cachedKey = '';
   var cachedRaw = null;
   var cachedDoc = null;
@@ -317,7 +317,9 @@
       if (!byId.has(m.id)) { d.rows.push(m); byId.set(m.id, m); added++; }
       else if (m.cursor) byId.get(m.id).cursor = m.cursor;
       d.queued = d.queued.filter(function (id) { return id !== m.id; });
-      d.cursor = Math.max(d.cursor, m.cursor || 0);
+      /* Le curseur de lecture n'avance pas ici : il ne bouge qu'avec pull().
+       * Le numéro d'une ligne qu'on vient d'écrire peut dépasser des lignes
+       * d'autres caisses pas encore lues ; y sauter les perdait pour toujours. */
     });
     if (added || rows.length) write(d);
     return added;
@@ -479,9 +481,12 @@
     health.lastError = '';
     return d;
   }
+  /* `since` pagine dans le tour ; seul `cursor`, que le serveur garde un peu
+   * derrière l'horloge, est conservé d'un tour à l'autre. */
   async function pull(d, m) {
+    var since = d.cursor;
     do {
-      var res = await fetch('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(d.cursor) + '&terminalId=' + encodeURIComponent(terminalId()), { credentials: 'same-origin', cache: 'no-store' });
+      var res = await fetch('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(since) + '&terminalId=' + encodeURIComponent(terminalId()), { credentials: 'same-origin', cache: 'no-store' });
       if (!res.ok) throw new Error('inventory-pull-' + res.status);
       var body = await res.json(); retainScope(d, body.scope);
       var byId = new Map(d.rows.map(function (r) { return [r.id, r]; }));
@@ -491,7 +496,9 @@
         else if (r.cursor) byId.get(r.id).cursor = r.cursor;
       });
       d.cursor = Math.max(d.cursor, +body.cursor || 0);
-      if (!body.more) break;
+      var next = Math.max(d.cursor, +body.next || 0);
+      if (!(next > since) || !(body.more || +body.next > 0)) break;
+      since = next;
     } while (true);
     return d;
   }

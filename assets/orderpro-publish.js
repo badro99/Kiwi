@@ -159,6 +159,9 @@
       // familles générales. Les variantes sont publiées sur leur famille (voir
       // plus haut), donc la table envoyée est celle des familles.
       colors: C.colors({ optional: true }),
+      // La révision du catalogue partagé dont ce stock est tiré : le serveur
+      // refuse une vitrine plus ancienne que celle déjà en ligne.
+      catalogRev: C.cloudRev ? C.cloudRev() : 0,
     };
   }
 
@@ -233,6 +236,11 @@
           return j;
         }
         state.lastError = (j && j.error) || ('http-' + r.status);
+        /* Un autre appareil a publié un catalogue plus récent : on relit le
+           catalogue partagé ; sa fusion notifie, et la publication repart. */
+        if (state.lastError === 'stale-shop') {
+          try { if (window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.sync) window.KiwiBoutiqueCatalog.sync(); } catch (_) {}
+        }
         return { ok: false, error: state.lastError };
       });
     }).catch(function () {
