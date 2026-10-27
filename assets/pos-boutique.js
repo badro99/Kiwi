@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=24';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=24';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=24';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=25';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=25';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=25';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -2523,6 +2523,61 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     return 'kiwi:openingFloat:v1:boutique';
   }
   let bqFloat = 0;
+  /* kiwiSkin2027:till · le fond d'ouverture sur le kit (§18.9), exactement comme
+     la caisse restaurant (assets/caisse/shift.js › tillKitOpenFloat). La
+     boutique dessine son PROPRE écran d'ouverture (#bq-clockin, même dessin,
+     mêmes classes), donc elle ne passait pas par openService() et gardait les
+     pastilles livrées : le patron voyait l'ancien écran alors que le
+     restaurant comptait son tiroir (propriétaire, 2026-10-27).
+     « Ouvrir la caisse » ouvre <k-cash-count mode="open"> : le fond est ce que
+     le caissier COMPTE, rien n'est prérempli, et le dernier fond n'est qu'une
+     puce à toucher — la même mémoire, par établissement, que les pastilles.
+     Drapeau éteint, ou éléments du kit absents : rien de tout cela ne part et
+     l'écran livré reste le seul parcours. */
+  function bqKitSkin() {
+    try {
+      return document.documentElement.getAttribute('data-skin-2027') === 'till'
+        && !!customElements.get('k-cash-count') && !!customElements.get('k-sheet');
+    } catch (_) { return false; }
+  }
+  let bqFloatSheet = null;
+  /* Rend true si la feuille s'est ouverte. onCounted reçoit le montant COMPTÉ. */
+  function bqKitFloat(screen, onCounted) {
+    if (!bqKitSkin()) return false;
+    if (bqFloatSheet) { try { bqFloatSheet.remove(); } catch (_) {} bqFloatSheet = null; }
+    const sheet = document.createElement('k-sheet');
+    sheet.setAttribute('size', 'count');
+    const cc = document.createElement('k-cash-count');
+    cc.setAttribute('mode', 'open');
+    sheet.appendChild(cc);
+    document.body.appendChild(sheet);
+    bqFloatSheet = sheet;
+    sheet.addEventListener('kiwi:action', (e) => {
+      const d = e.detail || {};
+      if (d.action === 'k.sheet.close') { sheet.removeAttribute('open'); return; }
+      /* « Saisir le total » : les pastilles livrées reprennent la main, et ce
+         sont elles qui portent alors le montant. */
+      if (d.action === 'k.cash-count.enter-total') {
+        sheet.removeAttribute('open');
+        const box = screen.querySelector('.clockin-float');
+        if (box) box.classList.add('k-shown');
+        const other = screen.querySelector('#bqci-chips [data-float="custom"]');
+        if (other) other.click();
+        return;
+      }
+      if (d.action !== 'k.cash-count.open') return;
+      try { cc.committed(); } catch (_) {}
+      sheet.removeAttribute('open');
+      setTimeout(() => { try { sheet.remove(); } catch (_) {} }, 400);
+      bqFloatSheet = null;
+      onCounted(Math.max(0, Number((d.value || {}).counted) || 0));
+    });
+    let last = NaN;
+    try { last = parseFloat(localStorage.getItem(bqFloatMemKey())); } catch (_) {}
+    cc.count = { lastFloat: Number.isFinite(last) && last > 0 ? last : null };
+    sheet.setAttribute('open', '');
+    return true;
+  }
   function bqMaybeOpenScreen() {
     if (IS_DEMO || bqShift) return;
     bqShowOpenScreen();
@@ -2595,7 +2650,11 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     const btnOpen = el.querySelector('#bqci-btn');
     const hint = el.querySelector('#bqci-hint');
     const last = el.querySelector('#bqci-last');
-    const gate = () => { if (btnOpen) btnOpen.disabled = !chosen; if (hint) hint.hidden = chosen; };
+    const gate = () => {
+      const kit = bqKitSkin();
+      if (btnOpen) btnOpen.disabled = !chosen && !kit;
+      if (hint) hint.hidden = chosen || kit;
+    };
 
     /* Restitution du dernier fond utilisé par CE magasin. */
     let saved = NaN;
@@ -2650,8 +2709,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     tick();
     const timer = setInterval(tick, 10000);
 
-    el.querySelector('#bqci-btn').addEventListener('click', () => {
-      if (!chosen) { gate(); return; }
+    const doOpen = () => {
       el.querySelector('#bqci-btn').classList.add('is-confirmed');
       icons();
       const openedAt = Date.now();
@@ -2662,6 +2720,15 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       bqSaveProvisional(true);
       setTimeout(() => el.classList.add('is-leaving'), 420);
       setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
+    };
+    el.querySelector('#bqci-btn').addEventListener('click', () => {
+      /* Sous la peau, le tiroir se compte dans la feuille du kit ; le montant
+         compté suit exactement le chemin livré (bqFloat, mémoire, bqShift). */
+      if (!chosen && bqKitFloat(el, (v) => {
+        bqFloat = v; chosen = true; remember(); gate(); doOpen();
+      })) return;
+      if (!chosen) { gate(); return; }
+      doOpen();
     });
 
     requestAnimationFrame(() => { el.classList.add('is-visible'); el.setAttribute('aria-hidden', 'false'); icons(); });

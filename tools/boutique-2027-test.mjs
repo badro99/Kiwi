@@ -49,18 +49,43 @@ const skin = read(SKIN);
 const skinCode = strip(skin);
 const shipped = strip(read('assets/pos-boutique.css'));
 
-/* ── 1 · aucun JS de la boutique ne connaît la peau ───────────────────────── */
+/* ── 1 · la boutique n'ADOPTE PAS le cadre 2027 ───────────────────────────── */
+/* C'est l'interdit qui compte. KiwiTillFrame masque la barre livrée et ré-expose
+ * ses commandes depuis une liste de sélecteurs écrits à la main qui laisse
+ * tomber une ligne SANS ERREUR : c'est comme ça qu'« envoyer en cuisine » a
+ * disparu. La boutique a sept vues ; elle garde les siennes.
+ * UNE seule chose est permise au JS du métier : ouvrir la feuille de comptage
+ * du kit pour le fond d'ouverture, parce que la boutique dessine son propre
+ * écran d'ouverture (#bq-clockin) et ne passe donc pas par openService(). Elle
+ * n'ajoute aucun bouton et n'en retire aucun — elle remplace un parcours de
+ * saisie par celui du restaurant. Le banc la borne. */
 const jsFiles = ['assets/pos-boutique.js',
   ...fs.readdirSync(path.join(ROOT, 'assets/pos-boutique')).map((f) => 'assets/pos-boutique/' + f)]
   .filter((p) => p.endsWith('.js'));
 check(jsFiles.length >= 4, `le dossier pos-boutique/ est introuvable ou vide (${jsFiles.length} fichier(s))`);
 for (const f of jsFiles) {
   const src = read(f);
-  for (const needle of ['data-skin-2027', 'kiwiSkin2027', 'KiwiTillFrame', 'data-k-till']) {
+  for (const needle of ['KiwiTillFrame', 'data-k-till', 'TILL_KIT_MORE']) {
     check(!src.includes(needle),
-      `${f} parle de « ${needle} » : la peau boutique doit rester de la peinture, sans branche dans le JS`);
+      `${f} parle de « ${needle} » : la boutique ne doit pas adopter le cadre 2027, elle garde ses sept vues`);
   }
 }
+/* La seule branche 2027 tolérée, et seulement dans le fichier du métier. */
+const bq = read('assets/pos-boutique.js');
+for (const f of jsFiles.filter((x) => x !== 'assets/pos-boutique.js')) {
+  check(!read(f).includes('data-skin-2027'), `${f} ne doit porter aucune branche 2027`);
+}
+check((bq.match(/data-skin-2027/g) || []).length === 1,
+  'la branche 2027 de la boutique doit tenir en UN test de drapeau (bqKitSkin), pas se répandre dans le métier');
+check(/function bqKitSkin\b/.test(bq) && /function bqKitFloat\b/.test(bq),
+  'bqKitSkin/bqKitFloat ont disparu : le fond d\'ouverture ne se compte plus sur le kit');
+check(/k-cash-count/.test(bq) && /mode', 'open'|mode", "open/.test(bq.replace(/\s/g, '')) || /setAttribute\('mode', 'open'\)/.test(bq),
+  'la feuille d\'ouverture doit être <k-cash-count mode="open">, la même que la caisse restaurant');
+/* Drapeau éteint, le parcours livré doit rester atteignable : la feuille rend
+   false et le bouton retombe sur les pastilles. */
+check(/if \(!bqKitSkin\(\)\) return false;/.test(bq),
+  'bqKitFloat doit rendre false quand le drapeau est éteint, sinon la boutique livrée perd son fond d\'ouverture');
+check(/bqKitFloat\(el,/.test(bq), 'bqKitFloat n\'est pas appelé par le bouton « Ouvrir la caisse »');
 
 /* ── 2 · chaque sélecteur est porté par le drapeau ────────────────────────── */
 const GATE = 'html[data-skin-2027="till"]';
@@ -135,4 +160,4 @@ check((html.match(/pos-boutique-2027\.css/g) || []).length === 1,
 
 for (const f of fails) console.log('  ✗ ' + f);
 if (fails.length) { console.log(`\n✗ ${fails.length} échec(s) · ${pass} vert(s)`); process.exit(1); }
-console.log(`✓ ${pass} contrôles verts · la peau boutique 2027 est de la peinture, et tout le rail est repris`);
+console.log(`✓ ${pass} contrôles verts · la boutique n'adopte pas le cadre, son fond d'ouverture se compte sur le kit, et tout le rail est repris`);
