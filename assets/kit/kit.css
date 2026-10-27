@@ -108,6 +108,22 @@ k-figure .k-fig__sr {
 /* The shipped offline-access note (offline-pin-coverage.js) is appended to the
    lock itself here, not to a card: it goes under the pad, never beside it. */
 .k-till-lock > [data-offline-coverage] { text-align: center; }
+/* Un écran plus court que le pavé. Les touches de <k-pin-pad> sont des pixels
+   fixes (pin.js : --key 76, 84 en « ipad », 96 en « kds ») : quatre rangées,
+   le titre, les points, le message et la note hors ligne dépassent la hauteur
+   d'une tablette posée à plat, et `justify-content:center` coupe par le HAUT,
+   là où rien ne peut défiler — le nom du magasin disparaissait au bord
+   (propriétaire, 2026-10-27, tablette de la boutique). `safe center` retombe
+   sur le début dès que ça déborde, et la touche rétrécit par paliers.
+   La propriété traverse la frontière d'ombre : elle se pose depuis ici. */
+@media (max-height: 760px) {
+  .k-till-lock { justify-content: safe center; padding-block: 16px; }
+  .k-till-lock k-pin-pad { --key: 64px; }
+}
+@media (max-height: 620px) {
+  .k-till-lock { padding-block: 12px; }
+  .k-till-lock k-pin-pad { --key: 52px; }
+}
 /* The team app with the kit's pad (assets/kit/team-pin.js, §18.10): the pad
    and the e-mail step replace the shipped form and keypad; the clock-in pad
    replaces the code field and its button. The brand and the browse link stay. */

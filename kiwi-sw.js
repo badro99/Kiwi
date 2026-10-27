@@ -142,7 +142,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=17',
+  '/assets/caisse-shell.css?v=18',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
@@ -455,7 +455,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=9',
   '/assets/kit/tokens-2027.css?v=2',
-  '/assets/kit/kit.css?v=63',
+  '/assets/kit/kit.css?v=64',
   '/assets/pos-boutique-2027.css?v=1',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
