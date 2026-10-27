@@ -1,0 +1,25 @@
+{
+  "note": "Covered-function floors for the money and auth files, measured by `npm run coverage` (V8, tools/coverage-report.mjs). A floor only moves up: `npm run coverage -- --update` raises it, never lowers it. A run below a floor exits 1. Not in the default tiers; tools/coverage-report-test.mjs is the cheap self-test in check.js.",
+  "files": {
+    "functions/api/sale.js": {
+      "coveredFunctions": 32,
+      "totalFunctions": 38
+    },
+    "functions/api/sale/refund.js": {
+      "coveredFunctions": 19,
+      "totalFunctions": 19
+    },
+    "functions/auth/_lib.js": {
+      "coveredFunctions": 106,
+      "totalFunctions": 109
+    },
+    "functions/api/store-credits.js": {
+      "coveredFunctions": 43,
+      "totalFunctions": 43
+    },
+    "functions/api/_store-credit-ledger.js": {
+      "coveredFunctions": 4,
+      "totalFunctions": 4
+    }
+  }
+}
