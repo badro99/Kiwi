@@ -18,7 +18,9 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/printer/pairing-lang.js?v=2',
+  '/assets/pages-pro/boutique-promos-returns.js?v=10',
+  '/assets/day-report-conflicts.js?v=2',
+  '/assets/printer/pairing-lang.js?v=4',
   '/assets/planning/shift-editor.js?v=3',
   '/assets/planning/csv-import.js?v=3',
   '/assets/planning/optimiser.js?v=3',
@@ -53,11 +55,11 @@ var SHELL = [
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
   '/assets/menu-catalog/state.js?v=5',
-  '/assets/pressing/custody.js?v=4',
-  '/assets/pressing/rack.js?v=3',
-  '/assets/pressing/pickup.js?v=3',
-  '/assets/pressing/workshop.js?v=3',
-  '/assets/pressing/deposit.js?v=3',
+  '/assets/pressing/custody.js?v=5',
+  '/assets/pressing/rack.js?v=4',
+  '/assets/pressing/pickup.js?v=4',
+  '/assets/pressing/workshop.js?v=4',
+  '/assets/pressing/deposit.js?v=4',
   '/assets/hotel/rate-actions.js?v=6',
   '/assets/hotel/folio-actions.js?v=4',
   '/assets/hotel/room-board.js?v=4',
@@ -82,7 +84,7 @@ var SHELL = [
   '/assets/growth-crm.js?v=7',
   '/assets/channel-link.js?v=202608272308',
   '/assets/marketing-suite-tease.js?v=1',
-  '/assets/pages-pro.js?v=2190',
+  '/assets/pages-pro.js?v=2191',
   '/assets/pages-pro-spa-starter.js?v=2',
   '/assets/cash-sessions.js?v=8',
   '/assets/simple-food-cost.js?v=15',
@@ -92,7 +94,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=6',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=13',
+  '/assets/caisse-accounting.js?v=14',
   '/assets/caisse-floor.js?v=10',
   '/assets/caisse-kitchen.js?v=4',
   '/assets/caisse/receipts.js?v=2',
@@ -142,7 +144,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=15',
+  '/assets/caisse-shell.css?v=16',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
@@ -171,14 +173,14 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=25',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=48',
-  '/assets/pages/dashboard-loader.js?v=22',
+  '/assets/pages/dashboard-startup.js?v=49',
+  '/assets/pages/dashboard-loader.js?v=23',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=2',
   '/assets/hotel/groups.js?v=1',
   '/assets/hotel/editors.js?v=2',
   '/assets/hotel.js?v=91',
-  '/assets/hotel-economat.js?v=16',
+  '/assets/hotel-economat.js?v=17',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
   '/assets/sold-insights.js?v=16',
@@ -311,7 +313,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=34',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=38',
+  '/assets/day-report-dash.js?v=39',
   '/assets/day-report-export.js?v=13',
   '/assets/month-report.js?v=16',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -355,8 +357,8 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=15',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=39',
-  '/assets/printer/pairing-ui.js?v=7',
+  '/assets/printer-bridge.js?v=42',
+  '/assets/printer/pairing-ui.js?v=9',
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
@@ -371,7 +373,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=22',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=74',
+  '/assets/caisse-lang.js?v=77',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=7',
@@ -443,10 +445,10 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=21',
+  '/assets/kitchen-print-queue.js?v=23',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=18',
-  '/assets/pos-dispatch.js?v=187',
+  '/assets/pos-dispatch.js?v=188',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -541,8 +543,8 @@ var SHELL = [
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=12',
   '/assets/pos-spa.js?v=12',
-  '/assets/pos-hotel.css?v=25',
-  '/assets/pos-hotel.js?v=25',
+  '/assets/pos-hotel.css?v=26',
+  '/assets/pos-hotel.js?v=26',
   '/assets/pos-fastfood.css?v=15',
   '/assets/pos-fastfood.js?v=15',
   '/assets/pos-boulangerie.css?v=12',
@@ -573,15 +575,15 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=17',
   '/assets/pos-maison.js?v=97',
-  '/assets/caisse-pairing.js?v=50',
+  '/assets/caisse-pairing.js?v=51',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=14',
-  '/assets/pressing-caisse.js?v=71',
-  '/assets/pressing-caisse.css?v=71',
+  '/assets/pressing-caisse.js?v=72',
+  '/assets/pressing-caisse.css?v=72',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

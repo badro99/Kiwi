@@ -1132,10 +1132,8 @@ export async function onRequestPost(context) {
 
   if ('team' === feature) {
     clean.value = keepTeamTombstones(mine, clean.value);
-    /* team.hoursCredited est tenu par le serveur (functions/api/employee/
-       _attendance.js) : la marque d'un service déjà crédité. Un appareil qui
-       réécrit l'équipe sans elle la perdrait, et le rejeu d'un départ encore
-       « pending » serait payé deux fois. Le serveur la garde, union comprise. */
+    /* team.hoursCredited (employee/_attendance.js) marque les services crédités : un appareil
+       qui réécrit l'équipe sans elle ferait payer deux fois un départ rejoué. Union gardée. */
     const serverMarks = mine && mine.hoursCredited && typeof mine.hoursCredited === 'object' && !Array.isArray(mine.hoursCredited) ? mine.hoursCredited : null;
     if (serverMarks && clean.value && typeof clean.value === 'object') {
       const sent = clean.value.hoursCredited && typeof clean.value.hoursCredited === 'object' && !Array.isArray(clean.value.hoursCredited) ? clean.value.hoursCredited : {};

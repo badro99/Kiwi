@@ -555,7 +555,7 @@
       /* La comptabilité de l'instantané suit : clôtures et révisions sont un
          historique, pas un calcul. */
       built.closedCount = snap.closedCount || 0;
-      built.revisions = snap.revisions || [];
+      built.revisions = snap.revisions || []; built.snapshotConflicts = snap.snapshotConflicts || [];
       if (d.inheritDrawers) d.inheritDrawers(built, snap);
     } else {
       built.live = true;   /* aucun instantané : le tiroir est inconnu */
@@ -951,7 +951,7 @@
       if (!(cash.movements || []).length) cr += '<div class="kdr-note">' + esc(T(L.movesNone)) + '</div>';
       return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span><em>'
         + esc(hm(drawer.openedAt) + (drawer.closedAt ? ' · ' + hm(drawer.closedAt) : '')) + '</em></div>' + cr + '</div>';
-      }).join('');
+      }).join('') + (window.KiwiDayReportConflicts ? window.KiwiDayReportConflicts.html(r, { LANG: LANG, esc: esc, hm: hm, money: money, CUR: CUR, row: row }) : '');
     }
 
     /* ── le détail par catégorie ── */

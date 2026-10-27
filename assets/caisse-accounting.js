@@ -1099,10 +1099,8 @@
           if (!data || !Array.isArray(data.sales)) return { ok: false, complete: false, count: 0, reason: 'feed-unavailable' };
           ingestSettledCloudSales(data.sales, { requestTime, responseTime: Date.now() });
           refreshOpenReconciliationModals();
-          /* /api/feed?from= is bounded at 2,000 rows a page. The server now says
-             `truncated` (and KiwiPosSale.feedDay follows the pages); an older
-             server has no flag, and exactly 2,000 rows may still be truncated.
-             Never certify a Z as complete without an explicit signal. */
+          /* /api/feed?from= is bounded at 2,000 rows a page: the server says `truncated` (KiwiPosSale.feedDay
+             follows the pages); an older server has no flag, so exactly 2,000 rows never certifies a Z. */
           const cut = data.truncated === true || (data.truncated === undefined && data.sales.length >= 2000);
           return { ok: true, complete: !cut, count: data.sales.length, reason: cut ? 'feed-limit' : '' };
         }).catch((error) => ({ ok: false, complete: false, count: 0,

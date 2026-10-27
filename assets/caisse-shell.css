@@ -1467,7 +1467,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: var(--surface, #FFFFFF);
+      background: var(--surface, #FFFDFA);
       border: 1px solid var(--line);
       border-radius: 999px;
       padding: 3px;
@@ -1537,7 +1537,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      background: var(--surface, #FFFFFF);
+      background: var(--surface, #FFFDFA);
       border: 1px solid var(--line-soft);
       border-radius: 6px;
       padding: 2px 7px;
@@ -1568,7 +1568,7 @@
     .or-note-input:focus {
       border-style: solid;
       border-color: var(--forest);
-      background: var(--surface, #FFFFFF);
+      background: var(--surface, #FFFDFA);
     }
     html[data-caisse-theme="dark"] .or-note-input:focus {
       background: #1B2420;
@@ -2007,7 +2007,7 @@
 
     .modal {
       width: 480px; max-width: calc(100vw - 48px);
-      background: var(--surface, #FFFFFF);
+      background: var(--surface, #FFFDFA);
       border-radius: 24px;
       border: 1px solid rgba(0, 0, 0, 0.08);
       box-shadow:
@@ -5244,7 +5244,7 @@
       transform: translateY(-1px);
     }
     .vrap-act.vrap-act-send {
-      background: var(--surface, #fff);
+      background: var(--surface, #FFFDFA);
       color: var(--forest, #0B6E4F);
       border: 1px solid rgba(11,110,79,0.28);
       box-shadow: none;

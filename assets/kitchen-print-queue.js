@@ -21,6 +21,8 @@
   var DONE_PREFIX = 'kiwiKitchenPrintDoneV1:';
   var REPRINT_PREFIX = 'kiwiReceiptReprintsV1:';
   var RECOVER_PREFIX = 'kiwiKitchenPrintRecoverV1:';
+  var LABEL_PREFIX = 'kiwiKitchenPrintLabelsV1:';
+  var SEEN_PREFIX = 'kiwiKitchenPrintUnprintedV1:';
   var MAX_JOBS = 120;
   var MAX_DONE = 500;
   var MAX_RECOVER = 60;
@@ -547,6 +549,7 @@
     var hit = q.find(function (x) { return x.id === job.id; });
     if (!hit) return;
     hit.relayId = String(relayId || '');
+    noteRelayLabel(hit.relayId, job);
     hit.awaitingUntil = Date.now() + RELAY_VERDICT_MS;
     hit.nextAt = hit.awaitingUntil;
     hit.lastError = '';
@@ -819,10 +822,60 @@
   window.addEventListener('storage', function (e) {
     if (e.key === HUB_KEY || (e.key && e.key.indexOf(QUEUE_PREFIX) === 0)) { emit(); flush(); }
   });
+
+  /* ── Le bon qui n'est jamais sorti ─────────────────────────────────────────
+   * Un bon déposé sur le relais appartient au serveur pendant dix minutes. Si
+   * le pont du comptoir est hors ligne, il expire : la liste « Non imprimé »
+   * des réglages Imprimante le garde 24 h, mais personne n'ouvre ces réglages
+   * en plein service, et rien ne disait au comptoir qu'un bon de cuisine ne
+   * sortirait jamais. Ce poste se souvient de la table ou de la commande de
+   * chaque bon qu'il a déposé (le serveur ne les connaît pas), puis demande
+   * toutes les trois minutes ce qui n'est pas sorti et le dit une fois par bon,
+   * avec la table. Il ne sonde que s'il dépose sur le relais. */
+  var LABEL_KEEP_MS = 48 * 3600 * 1000;
+  var UNPRINTED_EVERY_MS = 3 * 60 * 1000;
+  function lKey() { return LABEL_PREFIX + (merchant() || 'unpaired'); }
+  function sKey() { return SEEN_PREFIX + (merchant() || 'unpaired'); }
+  function noteRelayLabel(relayId, job) {
+    var p = (job && job.payload) || {};
+    var text = [p.table, p.order].filter(Boolean).join(' · ').slice(0, 60);
+    if (!relayId) return;
+    var memory = json(lKey(), {}), cutoff = Date.now() - LABEL_KEEP_MS;
+    Object.keys(memory).forEach(function (k) { if (!memory[k] || memory[k].t < cutoff) delete memory[k]; });
+    memory[relayId] = { l: text, t: Date.now() };
+    var keys = Object.keys(memory);
+    if (keys.length > 200) keys.sort(function (a, b) { return memory[a].t - memory[b].t; }).slice(0, keys.length - 200).forEach(function (k) { delete memory[k]; });
+    put(lKey(), JSON.stringify(memory));
+  }
+  function relayLabel(id) { var hit = json(lKey(), {})[String(id || '')]; return (hit && hit.l) || ''; }
+  function announceUnprinted(jobs) {
+    var seen = json(sKey(), []);
+    var fresh = (jobs || []).filter(function (j) { return j && j.kind === 'kitchen' && seen.indexOf(j.id) < 0; });
+    if (!fresh.length) return [];
+    put(sKey(), JSON.stringify(seen.concat(fresh.map(function (j) { return j.id; })).slice(-100)));
+    var names = fresh.map(function (j) { return relayLabel(j.id); }).filter(Boolean).join(', ');
+    var title = fresh.length > 1 ? tr(fresh.length + ' bons de cuisine non imprimés') : tr('Bon de cuisine non imprimé');
+    var desc = (names ? names + ' · ' : '') + tr('Réimprimez depuis les réglages Imprimante.');
+    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-unprinted', { detail: { count: fresh.length, labels: names } })); } catch (_) {}
+    try { if (window.KiwiCaisseToast) window.KiwiCaisseToast(title, 12000, 'warn', desc); } catch (_) {}
+    return fresh;
+  }
+  function pollUnprinted() {
+    var who = merchant();
+    if (!who || typeof fetch !== 'function' || !Object.keys(json(lKey(), {})).length) return Promise.resolve([]);
+    try { if (document.hidden) return Promise.resolve([]); } catch (_) {}
+    return fetch('/api/print/jobs?merchant=' + encodeURIComponent(who), { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { return j && j.ok ? announceUnprinted(j.jobs) : []; })
+      .catch(function () { return []; });
+  }
+  var lastPollAt = 0;
+  function pollSoon() { if (Date.now() - lastPollAt < 60000) return; lastPollAt = Date.now(); pollUnprinted(); }
+  setInterval(pollUnprinted, UNPRINTED_EVERY_MS);
   setInterval(renewHub, HUB_RENEW_MS);
   /* Au réveil, reprendre le bail AVANT que le prochain sondage des commandes
      ne livre les bons arrivés pendant le sommeil. */
-  function onWake() { try { if (!document.hidden) { renewHub(); emit(); flush(); } } catch (_) {} }
+  function onWake() { try { if (!document.hidden) { renewHub(); emit(); flush(); pollSoon(); } } catch (_) {} }
   try { document.addEventListener('visibilitychange', onWake); } catch (_) {}
   window.addEventListener('pageshow', onWake);
   window.addEventListener('focus', onWake);
@@ -834,6 +887,7 @@
     enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
     reprintDropped: reprintDropped,
+    relayLabel: relayLabel, pollUnprinted: pollUnprinted,
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */
     _readQueue: readQueue, _alreadyDone: alreadyDone, _remote: remote, _claimRemote: claimRemote,

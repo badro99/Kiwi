@@ -8,11 +8,9 @@
  * redeemed the device becomes that store, of the right trade, and every sale it
  * rings tags to that merchant so the owner's dashboard reacts live.
  *
- * Client-first + fail-soft: redeem tries POST /api/pair/redeem (cross-device,
- * once the partner deploys it) and falls back to the same-browser localStorage
- * pairing map (kiwiPairings) that the dashboard writes — so the whole flow works
- * in one browser today with zero backend. A 404/405/network on the endpoint is
- * the "backend absent" signal → localStorage; a 422 is a real "bad/expired code".
+ * Client-first + fail-soft: redeem tries POST /api/pair/redeem and falls back to the
+ * same-browser localStorage pairing map (kiwiPairings) the dashboard writes. A 404/405/
+ * network error means "backend absent" → localStorage; a 422 is a real bad/expired code.
  *
  * State (all localStorage, shared same-origin with the dashboard):
  *   kiwiPaired        '1' once this device is bound
@@ -135,8 +133,7 @@
   function verifyOfflinePin(merchant, code) {
     var epoch = offlinePinEpoch;
     if (!hasSubtle()) return Promise.resolve(null);
-    /* Clock moved back since last seen: no cached code until the server re-anchors it. */
-    if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null);
+    if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
     /* One derivation per (salt, rounds) pair, not per row. */
     var derived = {};
@@ -149,8 +146,7 @@
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
-        var nowMs = (window.KiwiTrustedClock || Date).now();
-        if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || nowMs >= row.expiresAt ||
+        var nowMs = (window.KiwiTrustedClock || Date).now(); if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || nowMs >= row.expiresAt ||
             nowMs - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;

@@ -90,7 +90,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2126" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2127" />
 <link rel="stylesheet" href="assets/merchant-health.css?v=3" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
@@ -1244,7 +1244,7 @@
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=15" defer fetchpriority="low"></script>
 <script src="assets/printer/transports.js?v=2" defer></script>
-<script src="assets/printer-bridge.js?v=39" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=42" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
 <script src="assets/boutique-catalog-parts.js?v=11" defer fetchpriority="low"></script>
@@ -1311,7 +1311,7 @@
 
 <script src="assets/clients-directory.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=11" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=48" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=49" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1338,10 +1338,10 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=48"></script>
+<script src="assets/pages/dashboard-startup.js?v=49"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=13">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
-<script src="assets/pages/dashboard-loader.js?v=22" defer fetchpriority="low"></script>
+<script src="assets/pages/dashboard-loader.js?v=23" defer fetchpriority="low"></script>
 <script src="assets/trade-workspace-schema.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/trade-workspaces.js?v=16" defer fetchpriority="low"></script>
 <script src="assets/delivery-receivables.js?v=2" defer fetchpriority="low"></script>

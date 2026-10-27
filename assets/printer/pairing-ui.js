@@ -638,6 +638,18 @@
       });
     }
     /* ── Le panneau du relais ─────────────────────────────────────────────── */
+    /* Ce que raconte un ticket non imprimé : son genre dans la langue de
+       l'écran, la table ou la commande quand CE poste l'a déposé (le serveur ne
+       les connaît pas), l'heure dans le format de la langue et non celui de
+       l'appareil. Avant : « kitchen · 10/27/2026, 2:14:03 PM ». */
+    var KIND_FR = { kitchen: 'Bon de cuisine', receipt: 'Ticket de caisse', label: 'Étiquette', other: 'Impression' };
+    function unprintedWhat(job) {
+      var lang = 'fr', label = '', when = '';
+      try { lang = (window.KiwiCaisseLang && window.KiwiCaisseLang.get && window.KiwiCaisseLang.get()) || (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+      try { label = (window.KiwiKitchenPrint && window.KiwiKitchenPrint.relayLabel && window.KiwiKitchenPrint.relayLabel(job.id)) || ''; } catch (_) {}
+      try { when = new Date(job.created_ts).toLocaleString(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) {}
+      return [say(KIND_FR[job.kind] || KIND_FR.other), label, when].filter(Boolean).join(' · ');
+    }
     function fmtAgo(ts) {
       if (!ts) return 'jamais vu';
       var sec = Math.round((Date.now() - ts) / 1000);
@@ -668,7 +680,7 @@
             var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
             var unsure = job.status === 'uncertain';
             var words = dict ? [dict[unsure ? 'print.uncertain' : 'print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say(unsure ? 'Impression incertaine' : 'Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
-            row.innerHTML = '<span>' + esc(words[0] + ' · ' + job.kind + ' · ' + new Date(job.created_ts).toLocaleString()) + '</span><button type="button">' + words[1] + '</button>';
+            row.innerHTML = '<span>' + esc(words[0] + ' · ' + unprintedWhat(job)) + '</span><button type="button">' + words[1] + '</button>';
             row.querySelector('button').onclick = function () {
               var btn = this; btn.disabled = true;
               function failed() {

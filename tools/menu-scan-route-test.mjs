@@ -123,7 +123,8 @@ await ok('un lien public est lu (texte extrait), une page JavaScript-only répon
 await ok('le quota est par établissement et par type : 60 appels « menuimport », le 61e est refusé, un autre établissement garde les siens', async () => {
   assert.equal(DAILY_CAPS.menuimport, 60);
   const used = sqlite.prepare("SELECT calls FROM ai_usage_kind WHERE merchant = ? AND kind = 'menuimport'").get(merchant).calls;
-  for (let i = used; i < 60; i++) assert.notEqual((await post({ kind: 'text', text: '' })).status, 429, 'appel ' + (i + 1));
+  // Un texte vide est refusé avant le quota (vision#1) : on le consomme avec de vrais appels.
+  for (let i = used; i < 60; i++) assert.notEqual((await post({ kind: 'text', text: 'x' })).status, 429, 'appel ' + (i + 1));
   const over = await post({ kind: 'text', text: 'x' });
   assert.equal(over.status, 429); assert.equal(over.body.error, 'quota');
   aiAnswer = () => items([{ name: 'Thé', price: 24 }]);

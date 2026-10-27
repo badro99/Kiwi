@@ -132,8 +132,8 @@
     "sha": "72da20864e71030c"
   },
   "assets/caisse-accounting.js": {
-    "v": "13",
-    "sha": "9b782ecf1f60d544"
+    "v": "14",
+    "sha": "ee79f4ab111afe7b"
   },
   "assets/caisse-app.js": {
     "v": "27",
@@ -164,8 +164,8 @@
     "sha": "eafd27c59bfd4341"
   },
   "assets/caisse-lang.js": {
-    "v": "74",
-    "sha": "191b554a52f921ed"
+    "v": "77",
+    "sha": "a48e3babedf4d53e"
   },
   "assets/caisse-link.js": {
     "v": "21",
@@ -180,8 +180,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "50",
-    "sha": "7db82035394c8447"
+    "v": "51",
+    "sha": "763fe3cd4edfe2d8"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -196,8 +196,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "15",
-    "sha": "ae53b0c9e4c53031"
+    "v": "16",
+    "sha": "69adc08fcab06085"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -411,9 +411,13 @@
     "v": "5",
     "sha": "5a0815b4defae865"
   },
+  "assets/day-report-conflicts.js": {
+    "v": "2",
+    "sha": "c280918a4865ae88"
+  },
   "assets/day-report-dash.js": {
-    "v": "38",
-    "sha": "19cbdc6ee15b031a"
+    "v": "39",
+    "sha": "d11c38feb5b76bbb"
   },
   "assets/day-report-export.js": {
     "v": "13",
@@ -452,8 +456,8 @@
     "sha": "f3caad37a4c63eed"
   },
   "assets/design-vexel.css": {
-    "v": "2126",
-    "sha": "93170fe8303d628a"
+    "v": "2127",
+    "sha": "a825cfb1f94a318e"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -592,8 +596,8 @@
     "sha": "52a6085dead7ab2b"
   },
   "assets/hotel-economat.js": {
-    "v": "16",
-    "sha": "85b970c21521808e"
+    "v": "17",
+    "sha": "1a6217a0324d486d"
   },
   "assets/hotel-folio.js": {
     "v": "1",
@@ -1020,8 +1024,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "21",
-    "sha": "b33214660404746f"
+    "v": "23",
+    "sha": "6d0fc0260ab81748"
   },
   "assets/kitchen-relay.js": {
     "v": "15",
@@ -1312,12 +1316,12 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2190",
-    "sha": "010387e01aea3e74"
+    "v": "2191",
+    "sha": "9e879b275583b927"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "9",
-    "sha": "fe44c9a05ac97254"
+    "v": "10",
+    "sha": "81c57783ee5b066e"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1336,12 +1340,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "22",
-    "sha": "23513e703e69026f"
+    "v": "23",
+    "sha": "1be5561a9c618578"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "48",
-    "sha": "942fbb25d16e8b9d"
+    "v": "49",
+    "sha": "065a758754b93dbe"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1464,8 +1468,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "187",
-    "sha": "02bb1b3c27781ef8"
+    "v": "188",
+    "sha": "b1bb173dfd1b67ae"
   },
   "assets/pos-epicerie.css": {
     "v": "26",
@@ -1508,12 +1512,12 @@
     "sha": "fa3a0f191f4fda55"
   },
   "assets/pos-hotel.css": {
-    "v": "25",
+    "v": "26",
     "sha": "8495613e7555777a"
   },
   "assets/pos-hotel.js": {
-    "v": "25",
-    "sha": "116d916ffdc12034"
+    "v": "26",
+    "sha": "ead78da9f846f79d"
   },
   "assets/pos-inventory-count.js": {
     "v": "11",
@@ -1604,12 +1608,12 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "71",
+    "v": "72",
     "sha": "493ee727572f7123"
   },
   "assets/pressing-caisse.js": {
-    "v": "71",
-    "sha": "c07f293dc783ca29"
+    "v": "72",
+    "sha": "1addf49c919da119"
   },
   "assets/pressing-catalog.css": {
     "v": "4",
@@ -1632,40 +1636,40 @@
     "sha": "f9231551880ee627"
   },
   "assets/pressing/custody.js": {
-    "v": "4",
-    "sha": "295788b2d6d86f27"
+    "v": "5",
+    "sha": "526f571efcea9b7a"
   },
   "assets/pressing/deposit.js": {
-    "v": "3",
-    "sha": "d4f8f552fa05716e"
+    "v": "4",
+    "sha": "6e88bc7083b567eb"
   },
   "assets/pressing/pickup.js": {
-    "v": "3",
-    "sha": "fa004b02ff05131f"
+    "v": "4",
+    "sha": "bc9152bd03334855"
   },
   "assets/pressing/rack.js": {
-    "v": "3",
-    "sha": "0ff0db50b734b1df"
+    "v": "4",
+    "sha": "c6588403f9533ca5"
   },
   "assets/pressing/workshop.js": {
-    "v": "3",
-    "sha": "fe7be36de415d139"
+    "v": "4",
+    "sha": "139197bcb9b47d0c"
   },
   "assets/print-paper.css": {
     "v": "1",
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "39",
-    "sha": "00be0ee01385a334"
+    "v": "42",
+    "sha": "dbc23c9a5da80c17"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "2",
-    "sha": "820c3e8bb65bdbf9"
+    "v": "4",
+    "sha": "7336229b4653a7ac"
   },
   "assets/printer/pairing-ui.js": {
-    "v": "7",
-    "sha": "76b37ed41687a2ab"
+    "v": "9",
+    "sha": "14eeed9172eafd05"
   },
   "assets/printer/transports.js": {
     "v": "2",

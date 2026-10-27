@@ -57,7 +57,6 @@
     "live-link-split-test.mjs": "byte-exact concatenation of the sales bridge parts and the names each part owns"
   },
   "style": {
-    "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",
     "admin-crm-layout-test.mjs": "layout, contrast or copy in CSS/markup",
     "caisse-color-picker-language-test.mjs": "layout, contrast or copy in CSS/markup",
     "caisse-dna-test.js": "layout, contrast or copy in CSS/markup",
@@ -69,9 +68,11 @@
     "card-confirm-center-test.mjs": "layout, contrast or copy in CSS/markup",
     "dashboard-analytics-toggle-test.mjs": "layout, contrast or copy in CSS/markup",
     "day-report-inset-test.mjs": "layout, contrast or copy in CSS/markup",
+    "home-sparkline-a11y-test.mjs": "decorative markup on the KPI sparklines (aria-hidden, focusable=false); the trend stays in the delta chip text",
     "install-card-icon-test.mjs": "layout, contrast or copy in CSS/markup",
     "kpi-card-layout-test.mjs": "layout, contrast or copy in CSS/markup",
     "lock-caisse-link-test.mjs": "layout, contrast or copy in CSS/markup",
+    "paper-surfaces-test.mjs": "brand: no pure white fills in the three shell stylesheets (layout and colour, read as text)",
     "planning-layout-test.mjs": "layout, contrast or copy in CSS/markup",
     "pos-mobile-test.mjs": "layout, contrast or copy in CSS/markup",
     "print-paper-test.mjs": "layout, contrast or copy in CSS/markup",
@@ -84,7 +85,7 @@
     "token-contrast-test.js": "layout, contrast or copy in CSS/markup",
     "vexel-insights-card-dna-test.mjs": "layout, contrast or copy in CSS/markup",
     "vexel-startup-test.mjs": "layout, contrast or copy in CSS/markup",
-    "home-sparkline-a11y-test.mjs": "decorative markup on the KPI sparklines (aria-hidden, focusable=false); the trend stays in the delta chip text"
+    "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium"
   },
   "twin": {
     "discount-policy-test.mjs": "discount-policy-api-test.mjs"

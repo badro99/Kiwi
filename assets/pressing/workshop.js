@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiApiBase, KiwiCaisseLang, KiwiCaissePairing, KiwiPressingOps, KiwiStaff, open.
  */
-import { ITEMS, root } from './custody.js?v=4';
+import { ITEMS, root } from './custody.js?v=5';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone } = owner.workshopContext();
@@ -52,22 +52,22 @@ function orderCard(o) {
         ? `remis ${fmtDay(o.collectedAt || o.readyAt)}`
       : `prêt ${fmtDT(o.readyAt)}`;
     const mainAction = st === 'recu' || st === 'trait'
-      ? `<button class="px-work-primary" data-px-ready="${o.id}"><i data-lucide="check-check"></i>Prête</button>`
+      ? `<button class="px-work-primary" data-px-ready="${o.id}"><i data-icon="done_all"></i>Prête</button>`
       : st === 'pret' && !o.rack
-        ? `<button class="px-work-primary" data-px-rack="${o.id}"><i data-lucide="archive"></i>Ranger</button>`
+        ? `<button class="px-work-primary" data-px-rack="${o.id}"><i data-icon="archive"></i>Ranger</button>`
         : st === 'pret'
-          ? `<button class="px-work-primary" data-px-pickup="${o.id}"><i data-lucide="package-check"></i>Retrait</button>`
+          ? `<button class="px-work-primary" data-px-pickup="${o.id}"><i data-icon="inventory"></i>Retrait</button>`
           : '';
     return `<article class="px-ocard ${late ? 'is-late' : ''} ${selected ? 'is-selected' : ''}" data-px-order="${o.id}">
       <div class="px-ocard-select">
-        ${boardBucket(o) === 'todo' ? `<button class="px-work-check" data-px-select="${o.id}" aria-label="${selected ? 'Retirer' : 'Ajouter'} ${o.id} de la sélection"><i data-lucide="${selected ? 'check' : 'circle'}"></i></button>` : '<span></span>'}
-        <button class="px-work-detail" data-px-detail="${o.id}">Détails <i data-lucide="chevron-right"></i></button>
+        ${boardBucket(o) === 'todo' ? `<button class="px-work-check" data-px-select="${o.id}" aria-label="${selected ? 'Retirer' : 'Ajouter'} ${o.id} de la sélection"><i data-icon="${selected ? 'check' : 'radio_button_unchecked'}"></i></button>` : '<span></span>'}
+        <button class="px-work-detail" data-px-detail="${o.id}">Détails <i data-icon="chevron_right"></i></button>
       </div>
       <div class="px-ocard-top"><span class="px-ocard-num">${publicOrderNo(o)}</span>
         <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN ATTENTE DE RETRAIT · ' : ''}${esc(when)}</span></div>
-      <div class="px-ocard-client" data-nolang><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${dataText(c.name)}</div>
+      <div class="px-ocard-client" data-nolang><i data-icon="${o.b2b ? 'apartment' : 'person'}"></i>${dataText(c.name)}</div>
       <div class="px-ocard-meta">
-        <span class="px-pill"><i data-lucide="tag"></i>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}</span>
+        <span class="px-pill"><i data-icon="sell"></i>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}</span>
         <span class="px-pill ${st === 'trait' ? 'warn' : st === 'pret' ? 'ok' : ''}">${STATUS[st].label}</span>
         ${payPill(o)}
         ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
@@ -76,7 +76,7 @@ function orderCard(o) {
       <div class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${effectiveStatus(o, p)}"></i>`).join('')}</div>
       <div class="px-work-actions">
         ${st === 'recu' ? `<button class="px-work-secondary" data-px-start="${o.id}">En cours <span>facultatif</span></button>` : ''}
-        ${st === 'pret' && !o.notified ? `<button class="px-work-secondary" data-px-notify="${o.id}"><i data-lucide="message-circle"></i>Prévenir</button>` : ''}
+        ${st === 'pret' && !o.notified ? `<button class="px-work-secondary" data-px-notify="${o.id}"><i data-icon="chat_bubble"></i>Prévenir</button>` : ''}
         ${mainAction}
       </div>
     </article>`;
@@ -95,8 +95,8 @@ function renderBoard() {
         <header class="px-head">
           <div><h1>File de travail</h1><div class="px-head-sub">Reçu automatiquement · « En cours » facultatif · une touche quand c’est prêt</div></div>
           <div class="px-work-head-actions">
-            <button class="px-btn secondary" id="px-board-scan"><i data-lucide="scan-line"></i>Scanner</button>
-            <div class="px-search"><i data-lucide="search"></i>
+            <button class="px-btn secondary" id="px-board-scan"><i data-icon="document_scanner"></i>Scanner</button>
+            <div class="px-search"><i data-icon="search"></i>
               <input id="px-board-q" placeholder="Téléphone, nom ou n° de commande…" value="${esc(q)}" /></div>
           </div>
         </header>
@@ -104,11 +104,11 @@ function renderBoard() {
           <div class="px-work-tabs" role="tablist">
             ${[['todo', 'À faire'], ['ready', 'Prêtes'], ['history', 'Historique']].map(([key, label]) => `<button class="${state.boardFilter === key ? 'on' : ''}" data-px-board-filter="${key}">${label}<span>${counts[key]}</span></button>`).join('')}
           </div>
-          <div class="px-work-legend"><i data-lucide="sparkles"></i>${state.boardFilter === 'todo' ? 'Les urgences et retards remontent en premier' : state.boardFilter === 'ready' ? 'À ranger, notifier ou remettre' : 'Les commandes remises restent consultables'}</div>
+          <div class="px-work-legend"><i data-icon="auto_awesome"></i>${state.boardFilter === 'todo' ? 'Les urgences et retards remontent en premier' : state.boardFilter === 'ready' ? 'À ranger, notifier ou remettre' : 'Les commandes remises restent consultables'}</div>
         </div>
-        ${state.boardSelected.length ? `<div class="px-work-batch"><span><b>${state.boardSelected.length}</b> sélectionnée${state.boardSelected.length > 1 ? 's' : ''}</span><button data-px-clear-selection>Annuler</button><button class="px-work-primary" data-px-batch-ready><i data-lucide="check-check"></i>Marquer prête${state.boardSelected.length > 1 ? 's' : ''}</button></div>` : ''}
+        ${state.boardSelected.length ? `<div class="px-work-batch"><span><b>${state.boardSelected.length}</b> sélectionnée${state.boardSelected.length > 1 ? 's' : ''}</span><button data-px-clear-selection>Annuler</button><button class="px-work-primary" data-px-batch-ready><i data-icon="done_all"></i>Marquer prête${state.boardSelected.length > 1 ? 's' : ''}</button></div>` : ''}
         <div class="px-work-list">
-          ${list.map(orderCard).join('') || `<div class="px-work-empty"><i data-lucide="${q ? 'search-x' : state.boardFilter === 'todo' ? 'check-circle-2' : 'archive'}"></i><b>${q ? 'Aucune commande trouvée' : state.boardFilter === 'todo' ? 'Le travail en attente apparaîtra ici' : state.boardFilter === 'ready' ? 'Aucune commande prête' : 'Aucune commande remise'}</b><span>${q ? 'Essayez un nom, un téléphone ou un numéro de commande.' : state.boardFilter === 'todo' ? 'Vous pouvez quitter cet écran : le compteur du menu vous prévient.' : ''}</span></div>`}
+          ${list.map(orderCard).join('') || `<div class="px-work-empty"><i data-icon="${q ? 'search_off' : state.boardFilter === 'todo' ? 'check_circle' : 'archive'}"></i><b>${q ? 'Aucune commande trouvée' : state.boardFilter === 'todo' ? 'Le travail en attente apparaîtra ici' : state.boardFilter === 'ready' ? 'Aucune commande prête' : 'Aucune commande remise'}</b><span>${q ? 'Essayez un nom, un téléphone ou un numéro de commande.' : state.boardFilter === 'todo' ? 'Vous pouvez quitter cet écran : le compteur du menu vous prévient.' : ''}</span></div>`}
         </div>
       </div>`;
     $('#px-board-q', panel).oninput = (e) => {
@@ -164,7 +164,7 @@ function openDetail(orderId) {
     const carePieces = o.pieces.map((p) => ({ p, care: [...(p.notes || []), p.freeNote].filter(Boolean) })).filter((x) => x.care.length);
 
     el.innerHTML = `
-      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="px-dt-head">
         <div>
           <h3>${publicOrderNo(o)}</h3>
@@ -179,8 +179,8 @@ function openDetail(orderId) {
         </div>
       </div>
       ${notificationDetail ? `<p class="px-dt-notification">${notificationDetail}</p>` : ''}
-      ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' · ')}</span></div></div>` : ''}
-      ${st === 'recu' || st === 'trait' ? `<div class="px-next-step"><div><b>Action habituelle</b><span>Quand tout est fini, marquez directement la commande prête. « En cours » reste facultatif.</span></div><button class="px-btn primary" id="px-dt-ready"><i data-lucide="check-check"></i>Commande prête</button></div>` : ''}
+      ${carePieces.length ? `<div class="px-dt-care-summary"><i data-icon="warning"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' · ')}</span></div></div>` : ''}
+      ${st === 'recu' || st === 'trait' ? `<div class="px-next-step"><div><b>Action habituelle</b><span>Quand tout est fini, marquez directement la commande prête. « En cours » reste facultatif.</span></div><button class="px-btn primary" id="px-dt-ready"><i data-icon="done_all"></i>Commande prête</button></div>` : ''}
       <details class="px-piece-exceptions" ${carePieces.length ? 'open' : ''}>
         <summary><span>Pièces et exceptions</span><span>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · suivi détaillé facultatif</span></summary>
       <div class="px-dt-grid">
@@ -191,8 +191,8 @@ function openDetail(orderId) {
             <span class="px-piece-art">${garmentIcon({ ...(ITEMS[p.itemId] || {}), variantId: p.variantId })}</span>
             <span class="px-piece-mid">
               <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${catalogLabel({ ...ITEMS[p.itemId], label: p.label })} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
-              <span class="px-piece-id">${publicPieceNo(o, p)}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
-              ${care.length ? `<span class="px-piece-care"><i data-lucide="triangle-alert"></i>${care.map(esc).join(' · ')}</span>` : ''}
+              <span class="px-piece-id">${publicPieceNo(o, p)}${p.photos ? `<span class="ph"><i data-icon="photo_camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
+              ${care.length ? `<span class="px-piece-care"><i data-icon="warning"></i>${care.map(esc).join(' · ')}</span>` : ''}
             </span>
             ${delivered || p.status === 'livre'
               ? '<span class="px-pill">Livré</span>'
@@ -204,15 +204,15 @@ function openDetail(orderId) {
       </div></details>
       <div class="px-dt-actions">
         ${delivered ? '' : `
-          ${st === 'recu' ? '<button class="px-btn ghost" data-px-all="trait"><i data-lucide="loader"></i>Noter en cours</button>' : ''}`}
-        <button class="px-btn secondary" id="px-dt-tags"><i data-lucide="printer"></i>Étiquettes</button>
-        ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${fmtMAD(due)}</button>` : ''}
-        ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Marqué prévenu' : 'Marquer prévenu'}</button>` : ''}
-        ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Marquer prévenu</button>' : ''}
-        ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
-        ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${fmtMAD(due)}` : 'Passer au retrait'}</button>` : ''}
+          ${st === 'recu' ? '<button class="px-btn ghost" data-px-all="trait"><i data-icon="progress_activity"></i>Noter en cours</button>' : ''}`}
+        <button class="px-btn secondary" id="px-dt-tags"><i data-icon="print"></i>Étiquettes</button>
+        ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-icon="payments"></i>Solde · ${fmtMAD(due)}</button>` : ''}
+        ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-icon="chat_bubble"></i>${o.notified ? 'Marqué prévenu' : 'Marquer prévenu'}</button>` : ''}
+        ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-icon="done_all"></i>Marquer prévenu</button>' : ''}
+        ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-icon="archive"></i>Ranger</button>' : ''}
+        ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-icon="check"></i>${due > 0 ? `Encaisser puis remettre · ${fmtMAD(due)}` : 'Passer au retrait'}</button>` : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
-        ${!delivered ? '<button class="px-btn ghost danger" id="px-dt-cancel" style="color:var(--danger,#b53b31);border-color:rgba(181,59,49,0.3);"><i data-lucide="ban"></i>Annuler</button>' : ''}
+        ${!delivered ? '<button class="px-btn ghost danger" id="px-dt-cancel" style="color:var(--danger,#b53b31);border-color:rgba(181,59,49,0.3);"><i data-icon="block"></i>Annuler</button>' : ''}
       </div>`;
     openVeil('#px-detail-veil');
     icons();
@@ -333,7 +333,7 @@ function openWa(o) {
     const photoPiece = o.pieces.find((p) => p.photos > 0) || o.pieces[0];
     let withPhoto = false;
     el.innerHTML = `
-      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">WhatsApp, c'est prêt</h3>
       <p class="modal-subtle">${dataText(c.name)} ${c.phone ? `· ${esc(c.phone)}` : '· numéro manquant (passage)'}</p>
       <div class="px-wa-bubblewrap">
@@ -345,11 +345,11 @@ function openWa(o) {
       <button class="px-wa-photo" id="px-wa-photo">
         <span class="th">${garmentIcon({ ...(ITEMS[photoPiece.itemId] || {}), variantId: photoPiece.variantId })}</span>
         <span class="l">Joindre une photo du vêtement fini, le client voit son linge avant de se déplacer</span>
-        <span class="tick"><i data-lucide="check"></i></span>
+        <span class="tick"><i data-icon="check"></i></span>
       </button>
       <div class="px-sheet-foot">
         <button class="px-btn ghost" data-px-close>Plus tard</button>
-        <button class="px-btn primary" id="px-wa-send" ${c.phone ? '' : 'disabled'}><i data-lucide="external-link"></i>Ouvrir WhatsApp</button>
+        <button class="px-btn primary" id="px-wa-send" ${c.phone ? '' : 'disabled'}><i data-icon="open_in_new"></i>Ouvrir WhatsApp</button>
       </div>`;
     openVeil('#px-wa-veil');
     icons();
@@ -393,7 +393,7 @@ function openWa(o) {
       const foot = $('.px-sheet-foot', el);
       foot.innerHTML = `
         <button class="px-btn ghost" data-px-close>Pas encore envoyé</button>
-        <button class="px-btn primary" id="px-wa-confirm"><i data-lucide="check"></i>Marquer prévenu</button>`;
+        <button class="px-btn primary" id="px-wa-confirm"><i data-icon="check"></i>Marquer prévenu</button>`;
       icons();
       $('[data-px-close]', foot).onclick = () => closeVeil('#px-wa-veil');
       $('#px-wa-confirm', foot).onclick = () => {

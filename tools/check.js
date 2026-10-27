@@ -3124,6 +3124,21 @@ section('Wave R locale and accessibility');
   else ok('Wave R locale and accessibility regressions');
 }
 
+/* ── Vague 12 · lot I · ce que voit le commerçant ───────────────────────────
+ * Traductions des phrases à donnée, alertes de clôture, seuils, bons de cuisine
+ * non imprimés, fonds papier, démos des métiers. */
+section('Vague 12 · lot I (traductions, alertes, seuils, marque)');
+for (const test of ['caisse-lang-service-test.js', 'day-report-conflicts-test.mjs', 'kitchen-unprinted-test.mjs', 'paper-surfaces-test.mjs']) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`${test} green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${test} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* Named is not run: a file mentioned only in a comment, or in a list no loop
  * reaches, passes the wiring check above and guards nothing. On the full gate,
  * every tools/*test* file must have been started (or replayed from the pool)

@@ -27,6 +27,9 @@
     }
   };
 
+  STR.fr.noThreshold = 'Seuil non défini'; STR.fr.noThresholdN = '{n} sans seuil défini';
+  STR.en.noThreshold = 'No reorder level set'; STR.en.noThresholdN = '{n} without a reorder level';
+  STR.ar.noThreshold = 'لم يُحدد حد إعادة الطلب'; STR.ar.noThresholdN = '{n} دون حد لإعادة الطلب';
   STR.fr.requestsFail = 'Chargement des demandes impossible.'; STR.fr.retry = 'Réessayer';
   STR.en.requestsFail = 'Could not load requests.'; STR.en.retry = 'Retry';
   STR.ar.requestsFail = 'تعذر تحميل الطلبات.'; STR.ar.retry = 'إعادة المحاولة';
@@ -39,9 +42,6 @@
   function qty(value) { var n = Number(value); return Number.isFinite(n) ? n : 0; }
   function fmt(value) { return qty(value).toLocaleString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits:3 }); }
 
-  /* Seuil de repli quand l'article n'a pas de seuil de réapprovisionnement
-   * renseigné dans le catalogue du stock. */
-  var LOW_FALLBACK = 5;
   /* Seule la liste affichée est bornée ; les compteurs lisent toutes les lignes. */
   var DISPLAY_LIMIT = 120;
 
@@ -57,9 +57,11 @@
     return map;
   }
   function reorderLevel(item) { var n = Number(item && item.reorderLevel); return Number.isFinite(n) && n > 0 ? n : null; }
-  /* Même règle que la page Stock (stockAlertState) : bas sous le seuil de
-   * l'article ; sans seuil, l'ancienne règle « 5 ou moins » s'applique. */
-  function isLow(row) { return row.threshold != null ? row.qty < row.threshold : row.qty <= LOW_FALLBACK; }
+  /* Même règle que la page Stock (stockAlertState) : rupture à zéro, bas sous
+   * le seuil de l'article. Sans seuil renseigné, l'Économat n'en invente pas
+   * (l'ancien « 5 ou moins » classait « bas » un linge qui se compte en
+   * centaines) : la ligne le dit, et un compteur dit combien en manquent. */
+  function isLow(row) { return row.qty <= 0 || (row.threshold != null && row.qty < row.threshold); }
 
   /* Recherche locale : chaque ajout affiche DISPLAY_LIMIT lignes, et la
    * recherche parcourt toutes les lignes (nom, référence, emplacement), sans
@@ -113,7 +115,7 @@
     var orders = Array.isArray(doc.orders) ? doc.orders : [];
     var receipts = Array.isArray(doc.receipts) ? doc.receipts : [];
     var found = matching(rows, query);
-    return { rows:rows, found:found, shown:found.slice(0, shownLimit), low:rows.filter(function (row) { return row.low; }).length, queued:inv && inv.pending ? qty(inv.pending()) : 0, orders:orders, receipts:receipts, openOrders:orders.filter(function (order) { return ['draft','sent','partial'].indexOf(order && order.status) >= 0; }).length, location:inv && inv.locationId ? String(inv.locationId() || '') : '' };
+    return { rows:rows, found:found, shown:found.slice(0, shownLimit), low:rows.filter(function (row) { return row.low; }).length, noThreshold:rows.filter(function (row) { return row.threshold == null && row.qty > 0; }).length, queued:inv && inv.pending ? qty(inv.pending()) : 0, orders:orders, receipts:receipts, openOrders:orders.filter(function (order) { return ['draft','sent','partial'].indexOf(order && order.status) >= 0; }).length, location:inv && inv.locationId ? String(inv.locationId() || '') : '' };
   }
 
   function pill(row, T) {
@@ -126,7 +128,7 @@
     if (!s.found.length) return '<div class="hx-eco-empty"><p>' + esc(T.noMatch) + '</p></div>';
     var hidden = s.found.length - s.shown.length;
     return '<div class="hx-eco-table">' + s.shown.map(function (row) {
-      return '<div class="hx-eco-row"><div class="hx-eco-item"><b>' + esc(row.name) + '</b><small>' + esc(row.id) + (row.unit ? ' · ' + esc(row.unit) : '') + (row.location ? ' · ' + esc(row.location) : '') + '</small></div><div class="hx-eco-qty">' + fmt(row.qty) + '</div>' + pill(row, T) + '</div>';
+      return '<div class="hx-eco-row"><div class="hx-eco-item"><b>' + esc(row.name) + '</b><small>' + esc(row.id) + (row.unit ? ' · ' + esc(row.unit) : '') + (row.location ? ' · ' + esc(row.location) : '') + (row.threshold == null && row.qty > 0 ? ' · ' + esc(T.noThreshold) : '') + '</small></div><div class="hx-eco-qty">' + fmt(row.qty) + '</div>' + pill(row, T) + '</div>';
     }).join('') + '</div>' + (hidden > 0 ? '<p class="hx-eco-more" role="note">' + esc(T.hidden.replace('{n}', fmt(hidden))) + '</p><button type="button" class="hx-btn ghost" data-action="eco-show-more">' + esc(T.showMore) + '</button>' : '');
   }
 
@@ -156,7 +158,7 @@
       subtitle:esc(v.name || T.eyebrow) + (s.location ? ' · ' + esc(T.location) + ' ' + esc(s.location) : ''),
       body:'<div class="hx-page hx-eco">' +
         '<section class="hx-eco-hero"><div><div class="eyebrow">' + esc(T.eyebrow) + '</div><h2>' + esc(T.title) + '</h2><p>' + esc(T.intro) + '</p></div><div class="hx-eco-actions"><button class="hx-btn ghost" data-action="nav-points-vente">' + esc(T.outlets) + '</button><button class="hx-btn ghost" data-action="eco-sync"' + (busy ? ' disabled aria-busy="true"' : '') + '>' + esc(T.sync) + '</button><button class="hx-btn atlas" data-action="eco-receive">' + esc(T.receive) + '</button></div></section>' +
-        '<div class="hx-strip" tabindex="0" role="region" aria-label="' + esc(T.title) + '"><div class="hx-kpi"><div class="l">' + esc(T.products) + '</div><div class="v">' + s.rows.length + '</div><div class="d">' + esc(T.stock) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.low) + '</div><div class="v">' + s.low + '</div><div class="d ' + (s.low ? 'warn' : 'up') + '">' + esc(s.low ? T.lowState : T.healthy) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.queued) + '</div><div class="v">' + s.queued + '</div><div class="d">' + esc(T.sync) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.orders) + '</div><div class="v">' + s.openOrders + '</div><div class="d">' + esc(T.activity) + '</div></div></div>' +
+        '<div class="hx-strip" tabindex="0" role="region" aria-label="' + esc(T.title) + '"><div class="hx-kpi"><div class="l">' + esc(T.products) + '</div><div class="v">' + s.rows.length + '</div><div class="d">' + esc(T.stock) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.low) + '</div><div class="v">' + s.low + '</div><div class="d ' + (s.low ? 'warn' : s.noThreshold ? '' : 'up') + '">' + esc(s.low ? T.lowState : s.noThreshold ? T.noThresholdN.replace('{n}', fmt(s.noThreshold)) : T.healthy) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.queued) + '</div><div class="v">' + s.queued + '</div><div class="d">' + esc(T.sync) + '</div></div><div class="hx-kpi"><div class="l">' + esc(T.orders) + '</div><div class="v">' + s.openOrders + '</div><div class="d">' + esc(T.activity) + '</div></div></div>' +
         '<div class="hx-eco-grid"><section class="hx-eco-card"><div class="hx-eco-card-head"><div><b>' + esc(T.stock) + '</b><span>' + esc(T.stockSub) + '</span></div><span class="hx-pill ' + (s.queued ? 'pend' : 'ok') + '">' + esc(s.queued ? T.pending : T.healthy) + '</span></div>' + stockHtml(s,T) + '</section><aside class="hx-eco-side"><section class="hx-eco-card"><div class="hx-eco-card-head"><div><b>' + esc(T.activity) + '</b><span>' + esc(T.activitySub) + '</span></div></div>' + activityHtml(s,T) + '</section></aside></div>' +
         '<div data-eco-requests-host></div>' +
       '</div>'

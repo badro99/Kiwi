@@ -103,8 +103,7 @@
   function verifyOfflinePin(merchant, code) {
     var epoch = offlinePinEpoch;
     if (!hasSubtle()) return Promise.resolve(null);
-    /* Clock moved back since last seen: no cached code until the server re-anchors it. */
-    if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null);
+    if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
     /* One derivation per (salt, rounds) pair, not per row. */
     var derived = {};
@@ -117,8 +116,7 @@
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
-        var nowMs = (window.KiwiTrustedClock || Date).now();
-        if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || nowMs >= row.expiresAt ||
+        var nowMs = (window.KiwiTrustedClock || Date).now(); if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || nowMs >= row.expiresAt ||
             nowMs - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;

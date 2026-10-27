@@ -8,11 +8,9 @@
  * redeemed the device becomes that store, of the right trade, and every sale it
  * rings tags to that merchant so the owner's dashboard reacts live.
  *
- * Client-first + fail-soft: redeem tries POST /api/pair/redeem (cross-device,
- * once the partner deploys it) and falls back to the same-browser localStorage
- * pairing map (kiwiPairings) that the dashboard writes — so the whole flow works
- * in one browser today with zero backend. A 404/405/network on the endpoint is
- * the "backend absent" signal → localStorage; a 422 is a real "bad/expired code".
+ * Client-first + fail-soft: redeem tries POST /api/pair/redeem and falls back to the
+ * same-browser localStorage pairing map (kiwiPairings) the dashboard writes. A 404/405/
+ * network error means "backend absent" → localStorage; a 422 is a real bad/expired code.
  *
  * State (all localStorage, shared same-origin with the dashboard):
  *   kiwiPaired        '1' once this device is bound
