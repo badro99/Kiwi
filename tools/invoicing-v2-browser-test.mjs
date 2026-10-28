@@ -147,6 +147,17 @@ function fakeServer() {
         return { status: 200, body: { ok: true, doc: full(d), payments: st.payments.filter((p) => p.doc_id === d.id).map((p) => ({ id: p.id, amountCents: p.amount_cents, date: p.date, method: p.method, reference: p.reference })),
           creditNotes: st.docs.filter((x) => x.type === 'credit_note' && x.original_id === d.id && x.status === 'issued').map((x) => ({ id: x.id, number: x.number, ttcCents: x.totals.ttcCents, issueDate: x.issue_date })), ...derive(d) } };
       }
+      if (q.has('summary')) {
+        const s = { outstanding: 0, late: 0, paidMonth: 0, waiting: 0, lateCount: 0, total: st.docs.length };
+        for (const d of st.docs) {
+          if (d.type !== 'invoice') continue;
+          const { displayStatus: ds, balanceCents } = derive(d);
+          if (ds === 'issued' || ds === 'partial' || ds === 'overdue') { s.outstanding += balanceCents; s.waiting++; }
+          if (ds === 'overdue') { s.late += balanceCents; s.lateCount++; }
+        }
+        s.paidMonth = st.payments.filter((x) => String(x.date).slice(0, 7) === today().slice(0, 7)).reduce((n, x) => n + x.amount_cents, 0);
+        return { status: 200, body: { ok: true, summary: s } };
+      }
       return { status: 200, body: { ok: true, docs: st.docs.filter((d) => !q.get('type') || d.type === q.get('type')).slice().reverse().map(row) } };
     }
     st.calls.push(body);
@@ -245,6 +256,11 @@ async function dashboard(tr, { lang = 'fr', real = false, fake = null, width = 1
         let out; try { out = await fake.handle(r.method(), u, body); } catch (e) { return r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'server', message: String(e) }) }); }
         if (!out) return r.abort('connectionfailed');
         return r.respond({ status: out.status, contentType: 'application/json', body: JSON.stringify(out.body) });
+      }
+      // Le registre lit aussi les factures de vente du comptoir (GET /api/invoice?type=sales) : une liste vide, sauf hors ligne.
+      if (u.pathname === '/api/invoice' && r.method() === 'GET' && u.searchParams.get('type') === 'sales' && real && fake) {
+        if (fake.st && fake.st.offline) return r.abort('connectionfailed');
+        return r.respond({ status: 200, contentType: 'application/json', body: '{"ok":true,"invoices":[],"nextCursor":null}' });
       }
       return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
     }
