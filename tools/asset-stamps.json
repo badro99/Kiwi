@@ -96,8 +96,8 @@
     "sha": "b1e7ee6fc75adc43"
   },
   "assets/booking-manage.js": {
-    "v": "2",
-    "sha": "20df08c8043b0122"
+    "v": "4",
+    "sha": "83a4567065245d47"
   },
   "assets/booking-service.js": {
     "v": "2",
@@ -116,8 +116,8 @@
     "sha": "37a32d31d15b2ec9"
   },
   "assets/booking.js": {
-    "v": "43",
-    "sha": "55d8f6c56e97bd90"
+    "v": "45",
+    "sha": "c74f64b950ddabed"
   },
   "assets/boutique-catalog-parts.js": {
     "v": "12",
@@ -132,8 +132,8 @@
     "sha": "fd42eade73417d7e"
   },
   "assets/briefing.js": {
-    "v": "35",
-    "sha": "e9738a53174f1fcd"
+    "v": "36",
+    "sha": "04d14f26241c3198"
   },
   "assets/caisse-accounting.js": {
     "v": "17",
@@ -168,8 +168,8 @@
     "sha": "788d5c89db606586"
   },
   "assets/caisse-lang.js": {
-    "v": "84",
-    "sha": "44bed38b3a0d3de1"
+    "v": "86",
+    "sha": "aee8617bee8821db"
   },
   "assets/caisse-link.js": {
     "v": "22",
@@ -188,8 +188,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "52",
-    "sha": "763fe3cd4edfe2d8"
+    "v": "54",
+    "sha": "8f497f8c5aa27a6e"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -320,8 +320,8 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "53",
-    "sha": "d4382801803c97dc"
+    "v": "55",
+    "sha": "ab7cc54b7776539c"
   },
   "assets/clients-directory.js": {
     "v": "30",
@@ -480,8 +480,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "622",
-    "sha": "33a77396ac4444a2"
+    "v": "623",
+    "sha": "e3a7f47415cf51f2"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -600,12 +600,12 @@
     "sha": "fc557f7a05367cf7"
   },
   "assets/hotel-economat-requests.js": {
-    "v": "5",
-    "sha": "52a6085dead7ab2b"
+    "v": "6",
+    "sha": "d2b3a21f1b62e0bd"
   },
   "assets/hotel-economat.js": {
-    "v": "18",
-    "sha": "1a6217a0324d486d"
+    "v": "19",
+    "sha": "9d75859c38eeea97"
   },
   "assets/hotel-folio.js": {
     "v": "1",
@@ -616,8 +616,8 @@
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "2",
-    "sha": "427dd4bd0f463db5"
+    "v": "3",
+    "sha": "41914e4ac2d03dc7"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -656,12 +656,12 @@
     "sha": "60f92ce20360e8ca"
   },
   "assets/hotel/room-board.js": {
-    "v": "4",
-    "sha": "6e269ec181007dfa"
+    "v": "6",
+    "sha": "0cb4fcbbdb2035d8"
   },
   "assets/hotel/views.js": {
-    "v": "2",
-    "sha": "4a94988d2b3f86d0"
+    "v": "3",
+    "sha": "da69250a81376029"
   },
   "assets/hours-ui.js": {
     "v": "4",
@@ -1056,8 +1056,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "89",
-    "sha": "906258d6cf130d8f"
+    "v": "90",
+    "sha": "54489dbc4153ed25"
   },
   "assets/live-link/queue-store.js": {
     "v": "2",
@@ -1128,8 +1128,8 @@
     "sha": "4bef6c0bce3d1800"
   },
   "assets/menu-promos-dashboard.js": {
-    "v": "5",
-    "sha": "9805d95032203a0b"
+    "v": "6",
+    "sha": "8193f0089d257f1e"
   },
   "assets/menu-promos.js": {
     "v": "8",
@@ -1304,12 +1304,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "24",
-    "sha": "f7920f5f149a1d63"
+    "v": "26",
+    "sha": "b0112a698d375ef7"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "65",
-    "sha": "cdc7153c2020a73e"
+    "v": "66",
+    "sha": "c50da85a207474f1"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1620,8 +1620,8 @@
     "sha": "b5ff2c8e372e1b69"
   },
   "assets/pressing-ops.js": {
-    "v": "20",
-    "sha": "6e1d43e850ca5238"
+    "v": "22",
+    "sha": "9d7d1578a9252a93"
   },
   "assets/pressing/custody.js": {
     "v": "11",
@@ -1796,8 +1796,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "9",
-    "sha": "ba7dd817d4c093d3"
+    "v": "10",
+    "sha": "2592142cd71764b1"
   },
   "assets/service-requests.js": {
     "v": "2",
@@ -1920,12 +1920,12 @@
     "sha": "33b98b92f2b103c3"
   },
   "assets/tickets-board.js": {
-    "v": "3",
-    "sha": "1d1e7e71b003c36d"
+    "v": "7",
+    "sha": "cc9bc8973b05fc6a"
   },
   "assets/tickets-composer.js": {
-    "v": "3",
-    "sha": "f02e3f07ff26ea2b"
+    "v": "5",
+    "sha": "d2b7eab24e47865b"
   },
   "assets/tickets-data.js": {
     "v": "3",
@@ -1940,8 +1940,8 @@
     "sha": "8eb51073cdac11c1"
   },
   "assets/tickets.js": {
-    "v": "14",
-    "sha": "1daf6289e636f57b"
+    "v": "19",
+    "sha": "e81343b6baccfafc"
   },
   "assets/till-tenant.js": {
     "v": "3",

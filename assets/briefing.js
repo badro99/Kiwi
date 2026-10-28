@@ -136,7 +136,7 @@
     var list = function (L) { return used.map(function (k) { return LIMITS[k][L === 'ar' ? 5 : L === 'en' ? 4 : 3] + ' ' + num(shown(k), L); }).join(', '); };
     line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + list(lang());
     if (line.evidence.text) ['fr', 'en', 'ar'].forEach(function (L) {
-      if (line.evidence.text[L]) line.evidence.text[L] = (line.evidence.text[L] + ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L)).slice(0, 400);
+      if (line.evidence.text[L]) { var suffix = ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L); line.evidence.text[L] = line.evidence.text[L].slice(0, Math.max(0, 400 - suffix.length)) + suffix; }
     });
     return line;
   }
@@ -288,7 +288,7 @@
     doc = safeDoc(value, venue); docSlug = venue;
     if (venue) {
       var ok = false;
-      try { localStorage.setItem(localKey(), JSON.stringify(doc)); ok = true; } catch (_) {}
+      try { localStorage.setItem(localKey(), JSON.stringify(doc)); ok = true; } catch (_) { console.warn("[briefing] writeLocal failed"); }
       var was = localKept;
       localKept = ok;
       if (!(ok && was)) {
@@ -296,14 +296,14 @@
           if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
             window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'briefing', key: localKey(), durable: ok } }));
           }
-        } catch (_) {}
+        } catch (_) { console.warn("[briefing] writeLocal failed"); }
       }
     }
     render();
   }
   function unsavedNote(t) {
     var failed = false;
-    try { failed = !!localStorage.getItem(localKey() + ':cloud-save'); } catch (_) {}
+    try { failed = !!localStorage.getItem(localKey() + ':cloud-save'); } catch (_) { console.warn("[briefing] unsavedNote failed"); }
     var note = failed ? '<button type="button" class="briefing-unsaved" data-briefing-cloud-retry>' + esc(t.cloudFailed) + '</button>' : '';
     return note + (localKept ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>');
   }
@@ -370,9 +370,9 @@
         var b = R.dayBounds(R.businessDay(ts));
         if (b && isFinite(b.from) && isFinite(b.to)) return { from: +b.from, to: +b.to };
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[briefing] dayBoundsAt failed"); }
     var cut = 5;
-    try { cut = Number(window.KiwiDayReport && window.KiwiDayReport.cutoff ? window.KiwiDayReport.cutoff() : 5); } catch (_) {}
+    try { cut = Number(window.KiwiDayReport && window.KiwiDayReport.cutoff ? window.KiwiDayReport.cutoff() : 5); } catch (_) { console.warn("[briefing] dayBoundsAt failed"); }
     if (!isFinite(cut)) cut = 5;
     var d = new Date(ts - cut * 3600000); d.setHours(0, 0, 0, 0);
     var from = d.getTime() + cut * 3600000;
@@ -897,7 +897,7 @@
     writeLocal(doc);
     var key = localKey() + ':cloud-save', handle = cloud, venue = slug();
     var id = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
-    try { localStorage.setItem(key, id); } catch (_) {}
+    try { localStorage.setItem(key, id); } catch (_) { console.warn("[briefing] save failed"); }
     render();
     return Promise.resolve().then(function () {
       if (!handle) throw new Error('cloud-unavailable');
@@ -907,7 +907,7 @@
       return handle.pushNow();
     }).then(function (result) {
       if (!result || !result.ok) throw new Error('cloud-unconfirmed');
-      try { if (localStorage.getItem(key) === id) localStorage.removeItem(key); } catch (_) {}
+      try { if (localStorage.getItem(key) === id) localStorage.removeItem(key); } catch (_) { console.warn("[briefing] save failed"); }
       render(); return { ok: true, id: id };
     }).catch(function () { render(); return { ok: false, id: id, error: 'cloud-unconfirmed' }; });
   }
@@ -959,7 +959,7 @@
     args.said = lineText(line, 'fr');
     var result = window.KiwiAgentActions.request(line.action.name, args);
     if (result && result.confirmationRequired) {
-      try { if (window.KiwiActionCenter && window.KiwiActionCenter.open) window.KiwiActionCenter.open(); } catch (_) {}
+      try { if (window.KiwiActionCenter && window.KiwiActionCenter.open) window.KiwiActionCenter.open(); } catch (_) { console.warn("[briefing] proposeLine failed"); }
     }
     return result || { ok: false, reason: 'refused' };
   }
@@ -1082,12 +1082,12 @@
     }
     var day = dayLabel();
     el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body + settingsHtml() + unsavedNote(t);
-    try { if (el.querySelector('[data-icon]') && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
+    try { if (el.querySelector('[data-icon]') && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) { console.warn("[briefing] render failed"); }
     statusBadge(el, t, lines.length);
   }
   function mode(raw) {
     var q = String(raw || '').toLowerCase();
-    try { q = q.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    try { q = q.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) { console.warn("[briefing] mode failed"); }
     if (/surveill|monitor|watch|coverage|couverture|katra9eb|كتراقب|تراقب/.test(q)) return 'coverage';
     if (/point du matin|morning brief|morning point|brief du matin|ملخص الصباح|نقطة الصباح|point dyal sbah|nokta dyal sbah|chno khasni n3ref lyoum|شنو خاصني نعرف اليوم/.test(q)) return 'briefing';
     return '';
@@ -1120,15 +1120,15 @@
     installStyle();
     if (!isReal()) return;
     doc = readLocal(); attachCloud();
-    Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () {}).then(function () { compute(); });
-    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) {}
+    Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () { console.warn("[briefing] boot failed"); }).then(function () { compute(); });
+    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) { console.warn("[briefing] boot failed"); }
     window.addEventListener('kiwi:langchange', function () { render(); });
     window.addEventListener('kiwi:cancellation-history', function () { compute(); });
     window.addEventListener('kiwi:cash-sessions', function () { compute(); });
     window.addEventListener('kiwi:order-course', function () { compute(); });
     window.addEventListener('kiwi:weather', function () { compute(); });
-    try { if (window.KiwiWeather) window.KiwiWeather.load(); } catch (_) {}
-    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { if (window.KiwiWeather) window.KiwiWeather.load(); }); } catch (_) {}
+    try { if (window.KiwiWeather) window.KiwiWeather.load(); } catch (_) { console.warn("[briefing] boot failed"); }
+    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { if (window.KiwiWeather) window.KiwiWeather.load(); }); } catch (_) { console.warn("[briefing] boot failed"); }
     document.addEventListener('kiwi:live-backfill-complete', function (event) {
       if (!event.detail || event.detail.merchant === slug()) compute();
     });

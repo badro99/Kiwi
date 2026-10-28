@@ -41,7 +41,7 @@
         queueOwner = owner;
         if (changed || (!retryTimer && readQueue(owner).length)) schedule(0);
       }
-      try { document.dispatchEvent(new CustomEvent('kiwi-employee-data', { detail: data })); } catch (_) {}
+      try { document.dispatchEvent(new CustomEvent('kiwi-employee-data', { detail: data })); } catch (_) { console.warn("[employee-live] remember failed"); }
     }
     return data;
   }
@@ -54,13 +54,13 @@
       body: body ? JSON.stringify(body) : undefined,
     }).then(async function (r) {
       let data = {};
-      try { data = await r.json(); } catch (_) {}
+      try { data = await r.json(); } catch (_) { console.warn("[employee-live] call failed"); }
       if (!r.ok) { var e = new Error(data.error || 'employee-request-failed'); e.code = data.error || ''; e.status = r.status; throw e; }
       return data;
     });
   }
   function newOpId() {
-    try { if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID(); } catch (_) {}
+    try { if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID(); } catch (_) { console.warn("[employee-live] newOpId failed"); }
     return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
@@ -82,7 +82,7 @@
   var saving = Promise.resolve();
   function saveTask(fn) {
     var task = saving.then(fn, fn);
-    saving = task.catch(function () {});
+    saving = task.catch(function () { console.warn("[employee-live] saveTask failed"); });
     return task;
   }
   function valid(items) {
@@ -118,9 +118,9 @@
   }
   function records(owner) {
     var local = [];
-    try { local = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner)) || '[]'); } catch (_) {}
+    try { local = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner)) || '[]'); } catch (_) { console.warn("[employee-live] records failed"); }
     var history = [];
-    try { history = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner + ':outcomes')) || '[]'); } catch (_) {}
+    try { history = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner + ':outcomes')) || '[]'); } catch (_) { console.warn("[employee-live] records failed"); }
     return merge(merge(local, history), copies[owner] || []);
   }
   function needsCorrection(i) { return !i.done && Date.now() - Number(i.at) > 12 * 3600000; }
@@ -175,7 +175,7 @@
       if (pending.length) store().setItem(QUEUE_PREFIX + owner, JSON.stringify(pending));
       else store().removeItem(QUEUE_PREFIX + owner);
       saved = true;
-    } catch (_) {}
+    } catch (_) { console.warn("[employee-live] writeQueue failed"); }
     return idb(owner, items).then(function (stored) {
       if (saved || stored) copies[owner] = items;
       return saved || !!stored;
@@ -198,7 +198,7 @@
   // Session absente ou trop d'essais : on garde aussi, sans perdre le geste.
   function keeps(err) { return transient(err) || err.status === 401 || err.status === 429; }
   function notify(detail) {
-    try { document.dispatchEvent(new CustomEvent('kiwi-employee-punch-queue', { detail: detail })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi-employee-punch-queue', { detail: detail })); } catch (_) { console.warn("[employee-live] notify failed"); }
   }
   function schedule(delay) {
     if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
@@ -231,7 +231,7 @@
     }
     return loadQueue(owner).then(step).then(function () {
       // The correction panel is display only: it must never stop a retry.
-      try { renderCorrections(); } catch (_) {}
+      try { renderCorrections(); } catch (_) { console.warn("[employee-live] step failed"); }
       var pending = readQueue(owner).length;
       if (pending && lastBlock && lastBlock.status !== 401) {
         retryDelay = Math.min(300000, retryDelay ? retryDelay * 2 : 15000);
@@ -242,11 +242,11 @@
         window.toast(lang === 'ar' ? 'تم حفظ تسجيل الحضور لموافقة المسؤول' : lang === 'en' ? 'Punch kept for manager approval' : 'Pointage conservé pour validation du responsable', 4200);
       }
       if (sent || rejected.length) notify({ pending: pending, sent: approvals ? 0 : sent, approvals: approvals, rejected: rejected });
-      if (sent && queueOwner === owner) call('GET').then(remember).catch(function () {});
+      if (sent && queueOwner === owner) call('GET').then(remember).catch(function () { console.warn("[employee-live] post-punch refresh failed"); });
     });
   }
   function flush() {
-    flushing = flushing.then(runOnce, runOnce).catch(function () {});
+    flushing = flushing.then(runOnce, runOnce).catch(function () { console.warn("[employee-live] flush failed"); });
     return flushing;
   }
   function punch(kind, attendanceCode, progress, opId) {
@@ -278,7 +278,7 @@
   try {
     window.addEventListener('online', function () { retryDelay = 0; schedule(0); });
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && queueOwner && readQueue(queueOwner).length) schedule(0); });
-  } catch (_) {}
+  } catch (_) { console.warn("[employee-live] punch failed"); }
 
   if (typeof MutationObserver === 'function') new MutationObserver(renderCorrections).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
@@ -326,9 +326,9 @@
   if (!nativeApp && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/kiwi-sw.js?v=674').then(function (reg) {
-        try { reg.update(); } catch (_) {}
+        try { reg.update(); } catch (_) { console.warn("[employee-live] punch failed"); }
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
-      }).catch(function () {});
+      }).catch(function () { console.warn("[employee-live] punch failed"); });
     });
   }
 })();

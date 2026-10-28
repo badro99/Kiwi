@@ -17,17 +17,17 @@
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel/arrivals.js?v=4',
-      'assets/hotel/room-board.js?v=4',
+      'assets/hotel/room-board.js?v=6',
       'assets/hotel/folio-actions.js?v=4',
       'assets/hotel/rate-actions.js?v=6',
       'assets/hotel-rates.js?v=1',
       'assets/hotel-folio.js?v=1',
       'assets/hotel-channels.js?v=1',
-      'assets/hotel/views.js?v=2',
+      'assets/hotel/views.js?v=3',
       'assets/hotel/editors.js?v=2',
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=1'] },
-    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=18'] },
+    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=19'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url) {

@@ -1837,6 +1837,7 @@ section('Whole-project regressions');
     'dashboard-money-properties-test.mjs',
     'dayreport-properties-test.mjs',
     'briefing-properties-test.mjs',
+    'r13-d-failsoft-test.mjs',
     'server-money-properties-test.mjs',
     'receivables-properties-test.mjs',
     'trades-money-properties-test.mjs',

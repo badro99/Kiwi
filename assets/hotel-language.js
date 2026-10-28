@@ -265,6 +265,7 @@
     "Le stockage photo n’est pas disponible sur cet appareil.": { en: "Photo storage is not available on this device.", ar: "تخزين الصور غير متاح على هذا الجهاز." },
     "Préparation de la photo {i} / {n}…": { en: "Preparing photo {i} / {n}…", ar: "جارٍ تجهيز الصورة {i} / {n}…" },
     "Envoi {i} / {n} · {pct} %": { en: "Uploading {i} / {n} · {pct} %", ar: "جارٍ الرفع {i} / {n} · {pct} %" },
+    "Conversion photo impossible. Essayez une autre image.": { en: "Photo conversion failed. Try another image.", ar: "تعذر تحويل الصورة. جرّب صورة أخرى." },
     "Photo trop lourde même après compression.": { en: "Photo still too large after compression.", ar: "الصورة ثقيلة جدًا حتى بعد الضغط." },
     "Format photo non accepté.": { en: "Photo format not accepted.", ar: "صيغة الصورة غير مقبولة." },
     "Envoi interrompu. Les autres photos restent intactes.": { en: "Upload interrupted. The other photos are untouched.", ar: "توقف الرفع. تبقى الصور الأخرى سليمة." },

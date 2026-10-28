@@ -427,8 +427,8 @@
     var merchant = creditMerchant();
     if (!merchant || typeof fetch !== 'function') { paint(null); return; }
     host.innerHTML = '<div role="status">' + esc(tr('Chargement des avoirs…')) + '</div>';
-    fetch('/api/store-credits?merchant=' + encodeURIComponent(merchant) + '&customerId=' + encodeURIComponent(clientId),
-      { headers: { Accept: 'application/json' } })
+    import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/store-credits?merchant=' + encodeURIComponent(merchant) + '&customerId=' + encodeURIComponent(clientId),
+      { headers: { Accept: 'application/json' } }); })
       .then(function (response) { if (!response || !response.ok) throw new Error('credit-read'); return response.json(); })
       .then(function (data) { if (!data || !Array.isArray(data.credits)) throw new Error('credit-read'); paint(data.credits); })
       .catch(function () { paint(null); });

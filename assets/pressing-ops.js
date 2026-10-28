@@ -159,7 +159,7 @@
       return sanitizeOrder(o, customer, total);
     }).filter(function (o) { return o.id; });
     var json = JSON.stringify(safe), previous = null;
-    try { previous = localStorage.getItem(k); localStorage.setItem(k, json); } catch (_) { return false; }
+    try { previous = localStorage.getItem(k); localStorage.setItem(k, json); } catch (_) { console.warn("pressing-ops:order-persistence-unavailable"); return false; }
     /* Une relecture périodique qui ne change rien ne doit pas reconstruire la
        page : on ne prévient les abonnés que si le contenu a bougé. */
     if (previous === json) return true;
@@ -336,7 +336,7 @@
       var doc = JSON.parse(localStorage.getItem(k) || 'null');
       return doc && Array.isArray(doc.customers) && Array.isArray(doc.orders)
         ? Object.assign({ cancellations: [] }, doc) : { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 };
-    } catch (_) { return { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 }; }
+    } catch (_) { console.warn("pressing-ops:archive-read-unavailable"); return { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 }; }
   }
 
   function projectFull(doc) {
@@ -364,7 +364,7 @@
   function writeFull(doc) {
     var k = storeKey();
     if (!k || !doc) return;
-    try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) { return; }
+    try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) { console.warn("pressing-ops:archive-persistence-unavailable"); return; }
     projectFull(doc);
   }
 
@@ -413,7 +413,7 @@
     });
     var k = key();
     if (k) {
-      try { localStorage.setItem(k, JSON.stringify(filtered)); } catch (_) {}
+      try { localStorage.setItem(k, JSON.stringify(filtered)); } catch (_) { console.warn("pressing-ops:archive-cleanup-persistence-unavailable"); }
     }
     listeners.forEach(function (fn) { try { fn(filtered); } catch (_) {} });
     try { window.dispatchEvent(new CustomEvent('kiwi:pressing-ops', { detail: { scope: scope() } })); } catch (_) {}

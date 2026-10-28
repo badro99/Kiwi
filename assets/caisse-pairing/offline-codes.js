@@ -8,14 +8,14 @@
     if (/^[A-Za-z0-9_-]{12,80}$/.test(current)) return current;
     try { current = 'term_' + crypto.randomUUID().replace(/-/g, ''); }
     catch (_) { current = 'term_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 18); }
-    try { localStorage.setItem(TERMINAL_KEY, current); } catch (_) {}
+    set(TERMINAL_KEY, current);
     return current;
   }
 
   function env() { return window.KiwiEnv || { demosAllowed: true }; }
   function hosted() { return env().demosAllowed === false; }
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
-  function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function set(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { console.warn("[pairing] offline identity storage unavailable"); toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return false; } }
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
   function readMap() { try { return JSON.parse(ls('kiwiPairings') || '{}') || {}; } catch (_) { return {}; } }
 

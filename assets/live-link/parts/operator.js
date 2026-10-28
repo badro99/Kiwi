@@ -54,7 +54,7 @@
       }
       publishSnapshot(state);
       if (state.phase === 'complete') {
-        try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: state.merchant } })); } catch (_) {}
+        try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: state.merchant } })); } catch (_) { console.warn("[live-link] bridgeSnapshot failed"); }
       }
     }
     if (!snapshot) flushQueue(); // a merchant device may still owe the server a sale
@@ -78,7 +78,7 @@
           else bridgeToStore();
         });
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] bridgeSnapshot failed"); }
   }
 
   /* ─── operator view banner ─── */
@@ -140,7 +140,7 @@
       function fitBanner() { document.body.style.paddingTop = (pt + (bar.offsetHeight || 34)) + 'px'; }
       fitBanner();
       if (window.ResizeObserver) new window.ResizeObserver(fitBanner).observe(bar);
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] fitBanner failed"); }
   }
 
   // In operator view, skip the client's PIN lock — the operator is not the staff
@@ -156,7 +156,7 @@
       // the lock actually reacts rather than clicking once into the void.
       if (!lock || lock.classList.contains('is-unlocking')) return;
       var skip = document.querySelector('[data-kiwi-skip]');
-      if (skip) { try { skip.click(); } catch (_) {} }
+      if (skip) { try { skip.click(); } catch (_) { console.warn("[live-link] attempt failed"); } }
       if (tries++ < 30) setTimeout(attempt, 120);
     })();
   }
@@ -211,6 +211,6 @@
       document.addEventListener('kiwi:request-wake', poke);
       window.addEventListener('focus', poke);
       window.addEventListener('online', poke);
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] poke failed"); }
     tick();
   }

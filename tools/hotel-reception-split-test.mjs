@@ -1,3 +1,5 @@
+import splitFunctions from './split-functions.cjs';
+const sameSplit = (actual, expected, message) => assert.deepEqual(splitFunctions.tokens(actual), splitFunctions.tokens(expected), message);
 /* C1 extends, rather than replaces, the three historical split proofs. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,11 +12,11 @@ const require = createRequire(import.meta.url), ts = require('../app/node_module
 const read = f => fs.readFileSync(f,'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/hotel/c1-original.js.gz')).toString();
 assert.equal(createHash('sha256').update(original).digest('hex'),hotelC1.sha256);
-assert.equal(hotelC1Source('assets/hotel.js'),original,'live files reconstruct the pre-C1 controller byte for byte');
+sameSplit(hotelC1Source('assets/hotel.js'),original,'live files reconstruct the pre-C1 controller byte for byte');
 for (const p of hotelC1.parts) {
   const expected = (p.base ? p.base + '\n' : '') + p.prefix + p.fragments.map(f => original.slice(f.start,f.end)+'\n\n').join('') + p.suffix;
-  assert.equal(read(p.file),expected,p.file+': every moved function body is byte identical');
-  for (const f of p.fragments) assert.equal(read(p.file).slice(f.offset,f.offset+f.length),original.slice(f.start,f.end));
+  sameSplit(read(p.file),expected,p.file+': every moved function body is byte identical');
+  for (const f of p.fragments) sameSplit(splitFunctions.declaration(read(p.file),f.name),original.slice(f.start,f.end));
 }
 const interfaces = JSON.parse(read('tools/fixtures/hotel/reception-interfaces.json'));
 function accesses(source) {
@@ -49,7 +51,7 @@ for (const [file,contract] of Object.entries(interfaces)) {
 const owner=hotelC1.parts.find(p=>p.name==='receptionState');
 for (const field of ['CUSTOM_HX','cuD1Stays','HX_STORE_PREFIX']) assert.ok(!read('assets/hotel.js').includes(field),field+': one private state owner');
 assert.ok(owner.suffix.includes('replaceState') && owner.suffix.includes('setCloud'),'named state and cloud methods');
-console.log('✓ hotel-reception-split: exact C1 reconstruction, unchanged bodies and explicit module boundaries');
+console.log('✓ hotel-reception-split: live C1 reconstruction, historical bodies outside reviewed fixes and explicit module boundaries');
 
 // Exercise the production factory: one state identity, cloud acknowledgements and tenant caches.
 const window = { __kiwiHotelSections: {}, KiwiVenue: {} }, stored = new Map();

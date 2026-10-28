@@ -38,7 +38,7 @@
   function publishSnapshot(state) {
     operatorSnapshot = Object.assign({}, state);
     paintSnapshot();
-    try { document.dispatchEvent(new CustomEvent('kiwi:operator-snapshot', { detail: Object.assign({}, state) })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi:operator-snapshot', { detail: Object.assign({}, state) })); } catch (_) { console.warn("[live-link] publishSnapshot failed"); }
   }
   /* A short page is evidence only when it is a valid response for this scope.
      Do not interpret a login page, missing DB response, or stuck cursor as zero. */
@@ -67,7 +67,7 @@
     var skew = (Number(serverNow) || at) - at;
     window.KiwiTillPresence = { merchant: tenant, seen: Number(seen) || 0, at: at, skew: skew,
       fresh: !!seen && (at + skew - seen) < 90 * 1000 };
-    try { document.dispatchEvent(new CustomEvent('kiwi:till-presence', { detail: window.KiwiTillPresence })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi:till-presence', { detail: window.KiwiTillPresence })); } catch (_) { console.warn("[live-link] publishTill failed"); }
   }
   function watchFeed(onSales, intervalMs, options) {
     if (!on()) return function () {};
@@ -180,7 +180,7 @@
             state.pending = Math.max(verified.pending, proof.pending); state.coverage = proof.from;
             state.fence = proof.fence; state.changeFence = proof.changeFence; state.error = null;
             report();
-            if (!oneShot) { try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant, proof: proof } })); } catch (_) {} }
+            if (!oneShot) { try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant, proof: proof } })); } catch (_) { console.warn("[live-link] tick failed"); } }
             return;
           }
           // A response started under the previous store cannot advance this
@@ -222,14 +222,14 @@
               var firstComplete = !feedComplete[tenant];
               feedComplete[tenant] = true;
               if (firstComplete && !oneShot) {
-                try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
+                try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) { console.warn("[live-link] tick failed"); }
               }
             }
             if (oneShot) {
               var applied = onSales(data.sales, backfill, tenant, data.voided);
               if (applied && applied.venue) state.venue = applied.venue;
             }
-            else { try { onSales(data.sales, backfill, tenant); } catch (_) {} }
+            else { try { onSales(data.sales, backfill, tenant); } catch (_) { console.warn("[live-link] tick failed"); } }
             if (!oneShot) followed = followChanges(tenant, data.changeFence);
             /* The feed is paginated at the negotiated page size. A full first page does NOT end
                startup history: every following page is still old ledger data
@@ -247,7 +247,7 @@
               if (!drainBackfill) {
                 state.phase = 'complete'; state.completedAt = Date.now();
                 if (!options.onState) {
-                  try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
+                  try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) { console.warn("[live-link] tick failed"); }
                 }
               }
               report();
@@ -284,11 +284,11 @@
     }
     function poke() { idleDelay = FAST_MS; if (stopped || document.hidden) return; if (busy) { again = true; return; } arm(0); }
     function listen(target, type, fn) {
-      try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) {}
+      try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) { console.warn("[live-link] listen failed"); }
     }
     if (!oneShot) {
       listen(document, 'visibilitychange', function () {
-        try { if (document.hidden) { arm(); return; } } catch (_) {}
+        try { if (document.hidden) { arm(); return; } } catch (_) { console.warn("[live-link] listen failed"); }
         poke();
       });
       listen(document, 'kiwi:request-wake', poke);
@@ -303,7 +303,7 @@
     function stop() {
       stopped = true;
       if (timer) clearTimeout(timer);
-      bound.forEach(function (b) { try { b[0].removeEventListener(b[1], b[2]); } catch (_) {} });
+      bound.forEach(function (b) { try { b[0].removeEventListener(b[1], b[2]); } catch (_) { console.warn("[live-link] stop failed"); } });
       bound = [];
     }
     return stop;
@@ -319,7 +319,7 @@
   function notifySale(s) {
     if (!s || !window.Kiwi || typeof window.Kiwi.toast !== 'function') return;
     var lang = 'fr';
-    try { lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+    try { lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { console.warn("[live-link] notifySale failed"); }
     var t = SALE_COPY[lang] || SALE_COPY.fr;
     var mlabel = t.methods[s.method] || (s.method || t.other);
     try {
@@ -330,5 +330,5 @@
       } else {
         window.Kiwi.toast(t.sale + ' · ' + fmtMAD(cents / 100) + ' MAD', { desc: desc, type: 'success' });
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] notifySale failed"); }
   }

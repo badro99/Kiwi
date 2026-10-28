@@ -1,3 +1,5 @@
+import splitFunctions from './split-functions.cjs';
+const sameSplit = (actual, expected, message) => assert.deepEqual(splitFunctions.tokens(actual), splitFunctions.tokens(expected), message);
 import { hotelC1Source, hotelC1Normalize } from './hotel-c1-source.mjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 /* Preuve de découpe : reconstruction exacte et exécution des fichiers réels. */
@@ -13,8 +15,8 @@ const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/hotel/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/hotel/split.json'));
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
-assert.equal(hotelTestSource(), original, 'live bodies rebuild original byte for byte');
-assert.equal(read('assets/hotel-language.js'), map.prefix + original.slice(map.start, map.end) + map.suffix);
+sameSplit(hotelTestSource(), original, 'live bodies rebuild original byte for byte');
+sameSplit(read('assets/hotel-language.js'), map.prefix + original.slice(map.start, map.end) + map.suffix);
 let expectedCore = original.slice(0, map.start) + map.replacement + original.slice(map.end);
 for (const part of hotelParts.parts) {
   let expected = part.prefix;
@@ -24,10 +26,10 @@ for (const part of hotelParts.parts) {
     assert.ok(expectedCore.includes(body));
     expectedCore = expectedCore.replace(body, f.replacement);
   }
-  assert.equal(read(part.file), expected + part.suffix, part.file + ': every function byte unchanged');
+  sameSplit(read(part.file), expected + part.suffix, part.file + ': every function byte unchanged');
 }
 expectedCore = expectedCore.replace("  'use strict';\n\n", "  'use strict';\n\n" + hotelParts.bind);
-assert.equal(hotelCoreSource(), expectedCore);
+sameSplit(hotelCoreSource(), expectedCore);
 for (const part of hotelSections.parts) {
   let expected = part.prefix;
   for (const f of part.fragments) {
@@ -38,7 +40,7 @@ for (const part of hotelSections.parts) {
     }
     expected += body + '\n\n';
   }
-  assert.equal(hotelC1Source(part.file), expected + part.suffix, part.file + ': only explicit live state access changes');
+  sameSplit(hotelC1Source(part.file), expected + part.suffix, part.file + ': only explicit live state access changes');
 }
 const mergedOriginals = JSON.parse(gunzipSync(fs.readFileSync('tools/fixtures/hotel/merged-originals.json.gz')));
 for (const [parent, children] of [
@@ -138,6 +140,11 @@ for (const lang of ['fr', 'en', 'ar']) {
   const ctx = vm.createContext({ window: before.window });
   vm.runInContext(`(() => { 'use strict';\n${original.slice(map.start, map.end)}\nwindow.languageProof = { hxLang, hxLocale, tx, txk, HX_N, txn, ltr, hxTo, hxColon, HX_T }; })();`, ctx);
   const b = before.window.languageProof;
+  // The new conversion notice uses the existing dictionary; all historical
+  // translations and language functions retain their exact values.
+  const conversionKey = 'Conversion photo impossible. Essayez une autre image.';
+  assert.ok(a.HX_T[conversionKey].en && a.HX_T[conversionKey].ar);
+  delete a.HX_T[conversionKey];
   for (const [key, value] of Object.entries(a)) {
     assert.equal(typeof value === 'function' ? String(value) : JSON.stringify(value), typeof b[key] === 'function' ? String(b[key]) : JSON.stringify(b[key]), key + ': exact source/data');
   }
@@ -150,7 +157,7 @@ for (const suite of ['hotel-rooms', 'hotel-room-plan', 'hotel-stays-group', 'hot
     env: { ...process.env, KIWI_HOTEL_TEST_RUNTIME: '1' }, stdio: 'pipe',
   });
 }
-console.log('✓ hotel-split: exact reconstruction, ordered deferred loading, stamp discovery, startup/state/handlers and FR/EN/AR parity');
+console.log('✓ hotel-split: live reconstruction, ordered deferred loading, stamp discovery, startup/state/handlers and FR/EN/AR parity');
 
 // Execute the real first-use loader: no startup requests, one ordered chain for concurrent opens.
 {

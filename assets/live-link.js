@@ -75,12 +75,12 @@ import {} from './live-link/sale-identity.js?v=1';
          * commerçant (session réelle, ou caisse appairée à un magasin) le refus
          * est ignoré et effacé ; il ne vaut que pour une démonstration locale. */
         var pv = null;
-        try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) {}
+        try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { console.warn("[live-link] on failed"); }
         if (realEnv() || (pv && pv.merchant)) {
-          try { localStorage.removeItem(LS); } catch (_) {}
+          try { localStorage.removeItem(LS); } catch (_) { console.warn("[live-link] on failed"); }
           try {
             if (window.KiwiReportError) window.KiwiReportError(new Error('kiwiLive=0 ignoré chez un vrai commerçant'), 'live:stale_off_flag_ignored');
-          } catch (_) {}
+          } catch (_) { console.warn("[live-link] on failed"); }
           return true;
         }
         return false;
@@ -110,7 +110,7 @@ import {} from './live-link/sale-identity.js?v=1';
         localStorage.setItem('kiwiLiveMerchantPrev', cur);
       }
       localStorage.setItem('kiwiLiveMerchant', v);
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] pin failed"); }
   }
   // Which tenant this dashboard is showing. Priority: an explicit ?merchant= (the
   // operator's "Ouvrir dashboard", pinned to localStorage) → the ACTIVE STORE's own
@@ -142,7 +142,7 @@ import {} from './live-link/sale-identity.js?v=1';
       try {
         var KV = window.KiwiVenue;
         if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) vd = KV.getCurrentVenueData();
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       if (vd && vd.name) {
         var vs = realEnv() && !opMode()
           ? (vd.slug || (KV.slugOf && KV.slugOf()) || slugify(vd.name))
@@ -170,7 +170,7 @@ import {} from './live-link/sale-identity.js?v=1';
         }
         var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         if (pv && pv.merchant) return pv.merchant;
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       /* The employee portal has neither KiwiMe (owner identity) nor a paired
        * till. Its authenticated login pins the exact store here. This value is
        * only routing metadata: /api/sale independently verifies the signed
@@ -179,9 +179,9 @@ import {} from './live-link/sale-identity.js?v=1';
       try {
         var employeeMerchant = String(localStorage.getItem('kiwiEmployeeMerchant') || '').trim();
         if (employeeMerchant) return employeeMerchant;
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       var real = false;
-      try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
+      try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { console.warn("[live-link] merchant failed"); }
       // A real session whose identity has NOT resolved yet polls NOTHING. The old
       // fallback to a bare kiwiLiveMerchant pin was a cross-tenant leak: the feed
       // poll starts at boot, before /api/me answers, so a pin left by a PREVIOUS
@@ -204,7 +204,7 @@ import {} from './live-link/sale-identity.js?v=1';
       methods: { cash: 'نقدا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'دفع مقسم', credit: 'رصيد الزبون', delivery: 'توصيل · للتحصيل' } }
   };
   function fmtMAD(n) {
-    try { if (window.KiwiNumber && window.KiwiNumber.amount) return window.KiwiNumber.amount(n); } catch (_) {}
+    try { if (window.KiwiNumber && window.KiwiNumber.amount) return window.KiwiNumber.amount(n); } catch (_) { console.warn("[live-link] fmtMAD failed"); }
     var c = Math.round(Number(n) * 100) || 0;
     return (c / 100).toFixed(c % 100 ? 2 : 0);
   }
@@ -231,17 +231,17 @@ import {} from './live-link/sale-identity.js?v=1';
    * into another tab's totals, and nothing can be double-counted. */
   var PING_KEY = 'kiwiSalePing';
   var chan = null;
-  try { if (window.BroadcastChannel) chan = new BroadcastChannel('kiwi-live'); } catch (_) {}
+  try { if (window.BroadcastChannel) chan = new BroadcastChannel('kiwi-live'); } catch (_) { console.warn("[live-link] el failed"); }
   function requestWake() {
-    try { document.dispatchEvent(new CustomEvent('kiwi:request-wake')); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi:request-wake')); } catch (_) { console.warn("[live-link] requestWake failed"); }
   }
   try {
     if (chan) chan.addEventListener('message', requestWake);
     window.addEventListener('storage', function (e) { if (e && e.key === PING_KEY) requestWake(); });
-  } catch (_) {}
+  } catch (_) { console.warn("[live-link] requestWake failed"); }
   function pingLocal() {
-    try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) {}
-    try { if (chan) chan.postMessage('sale'); } catch (_) {}
+    try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) { console.warn("[live-link] pingLocal failed"); }
+    try { if (chan) chan.postMessage('sale'); } catch (_) { console.warn("[live-link] pingLocal failed"); }
   }
   function canonicalSaleId(merchantId, requested) {
     try { return JSON.parse(localStorage.getItem('kiwi:sale-aliases:' + merchantId) || '{}')[requested] || requested; }
@@ -250,7 +250,7 @@ import {} from './live-link/sale-identity.js?v=1';
   function moneySignal(body, state, status, serverId) {
     if (!body || !body.id) return;
     if (state === 'accepted' && body.kind !== 'refund') {
-      try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) {}
+      try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     if (state === 'accepted' && body.kind !== 'refund' && serverId && serverId !== body.id) {
       try {
@@ -258,7 +258,7 @@ import {} from './live-link/sale-identity.js?v=1';
         var aliases = JSON.parse(localStorage.getItem(key) || '{}');
         aliases[body.id] = String(serverId).slice(0, 64);
         localStorage.setItem(key, JSON.stringify(aliases));
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     try {
       window.dispatchEvent(new CustomEvent('kiwi:money-sync', { detail: {
@@ -266,7 +266,7 @@ import {} from './live-link/sale-identity.js?v=1';
         state: String(state || ''), status: Number(status) || 0,
         serverId: String(serverId || body.id),
       } }));
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] moneySignal failed"); }
   }
 
   /* ─── caisse → server, with an offline queue ───
@@ -309,7 +309,7 @@ import {} from './live-link/sale-identity.js?v=1';
     try {
       var c = window.crypto || window.msCrypto;
       if (c && c.randomUUID) return 'sale-' + c.randomUUID();
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] uid failed"); }
     return 'sale-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
   }
   function stableId(merchantId, entry) {
@@ -359,7 +359,7 @@ import {} from './live-link/sale-identity.js?v=1';
     if (!cp || typeof cp.recoverFromTerminal !== 'function') return;
     if (terminalRecoveryAt && Date.now() - terminalRecoveryAt < 60000) return;
     terminalRecoveryAt = Date.now();
-    try { Promise.resolve(cp.recoverFromTerminal()).catch(function () {}); } catch (_) {}
+    try { Promise.resolve(cp.recoverFromTerminal()).catch(function () { console.warn("[live-link] recoverTillProof failed"); }); } catch (_) { console.warn("[live-link] recoverTillProof failed"); }
   }
   function scheduleRecovery() {
     if (recoveryTimer != null) return;
@@ -422,7 +422,7 @@ import {} from './live-link/sale-identity.js?v=1';
         fn(value);
       }
       function abort() {
-        try { xhr.abort(); } catch (_) {}
+        try { xhr.abort(); } catch (_) { console.warn("[live-link] abort failed"); }
         finish(reject, Object.assign(new Error('timeout'), { name: 'AbortError' }));
       }
       try {
@@ -509,7 +509,7 @@ import {} from './live-link/sale-identity.js?v=1';
      là. */
   function tenantHold(m, entries) {
     var locked = false;
-    try { locked = !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) {}
+    try { locked = !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) { console.warn("[live-link] tenantHold failed"); }
     for (var i = 0; !locked && i < entries.length; i++) {
       var e = entries[i];
       if (e && e.merchant && String(e.merchant) !== m) locked = true;
@@ -527,7 +527,7 @@ import {} from './live-link/sale-identity.js?v=1';
         if (localStorage.removeItem) localStorage.removeItem(key);
         return true;
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] moneyStorageReady failed"); }
     try {
       var offline = window.KiwiOffline;
       return !!(offline && offline.putMeta && await offline.putMeta(key, { checkedAt: Date.now() }));
@@ -608,7 +608,7 @@ import {} from './live-link/sale-identity.js?v=1';
   function publishSnapshot(state) {
     operatorSnapshot = Object.assign({}, state);
     paintSnapshot();
-    try { document.dispatchEvent(new CustomEvent('kiwi:operator-snapshot', { detail: Object.assign({}, state) })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi:operator-snapshot', { detail: Object.assign({}, state) })); } catch (_) { console.warn("[live-link] publishSnapshot failed"); }
   }
   /* A short page is evidence only when it is a valid response for this scope.
      Do not interpret a login page, missing DB response, or stuck cursor as zero. */
@@ -637,7 +637,7 @@ import {} from './live-link/sale-identity.js?v=1';
     var skew = (Number(serverNow) || at) - at;
     window.KiwiTillPresence = { merchant: tenant, seen: Number(seen) || 0, at: at, skew: skew,
       fresh: !!seen && (at + skew - seen) < 90 * 1000 };
-    try { document.dispatchEvent(new CustomEvent('kiwi:till-presence', { detail: window.KiwiTillPresence })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi:till-presence', { detail: window.KiwiTillPresence })); } catch (_) { console.warn("[live-link] publishTill failed"); }
   }
   function watchFeed(onSales, intervalMs, options) {
     if (!on()) return function () {};
@@ -750,7 +750,7 @@ import {} from './live-link/sale-identity.js?v=1';
             state.pending = Math.max(verified.pending, proof.pending); state.coverage = proof.from;
             state.fence = proof.fence; state.changeFence = proof.changeFence; state.error = null;
             report();
-            if (!oneShot) { try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant, proof: proof } })); } catch (_) {} }
+            if (!oneShot) { try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant, proof: proof } })); } catch (_) { console.warn("[live-link] tick failed"); } }
             return;
           }
           // A response started under the previous store cannot advance this
@@ -792,14 +792,14 @@ import {} from './live-link/sale-identity.js?v=1';
               var firstComplete = !feedComplete[tenant];
               feedComplete[tenant] = true;
               if (firstComplete && !oneShot) {
-                try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
+                try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) { console.warn("[live-link] tick failed"); }
               }
             }
             if (oneShot) {
               var applied = onSales(data.sales, backfill, tenant, data.voided);
               if (applied && applied.venue) state.venue = applied.venue;
             }
-            else { try { onSales(data.sales, backfill, tenant); } catch (_) {} }
+            else { try { onSales(data.sales, backfill, tenant); } catch (_) { console.warn("[live-link] tick failed"); } }
             if (!oneShot) followed = followChanges(tenant, data.changeFence);
             /* The feed is paginated at the negotiated page size. A full first page does NOT end
                startup history: every following page is still old ledger data
@@ -817,7 +817,7 @@ import {} from './live-link/sale-identity.js?v=1';
               if (!drainBackfill) {
                 state.phase = 'complete'; state.completedAt = Date.now();
                 if (!options.onState) {
-                  try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
+                  try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) { console.warn("[live-link] tick failed"); }
                 }
               }
               report();
@@ -854,11 +854,11 @@ import {} from './live-link/sale-identity.js?v=1';
     }
     function poke() { idleDelay = FAST_MS; if (stopped || document.hidden) return; if (busy) { again = true; return; } arm(0); }
     function listen(target, type, fn) {
-      try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) {}
+      try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) { console.warn("[live-link] listen failed"); }
     }
     if (!oneShot) {
       listen(document, 'visibilitychange', function () {
-        try { if (document.hidden) { arm(); return; } } catch (_) {}
+        try { if (document.hidden) { arm(); return; } } catch (_) { console.warn("[live-link] listen failed"); }
         poke();
       });
       listen(document, 'kiwi:request-wake', poke);
@@ -873,7 +873,7 @@ import {} from './live-link/sale-identity.js?v=1';
     function stop() {
       stopped = true;
       if (timer) clearTimeout(timer);
-      bound.forEach(function (b) { try { b[0].removeEventListener(b[1], b[2]); } catch (_) {} });
+      bound.forEach(function (b) { try { b[0].removeEventListener(b[1], b[2]); } catch (_) { console.warn("[live-link] stop failed"); } });
       bound = [];
     }
     return stop;
@@ -889,7 +889,7 @@ import {} from './live-link/sale-identity.js?v=1';
   function notifySale(s) {
     if (!s || !window.Kiwi || typeof window.Kiwi.toast !== 'function') return;
     var lang = 'fr';
-    try { lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+    try { lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { console.warn("[live-link] notifySale failed"); }
     var t = SALE_COPY[lang] || SALE_COPY.fr;
     var mlabel = t.methods[s.method] || (s.method || t.other);
     try {
@@ -900,7 +900,7 @@ import {} from './live-link/sale-identity.js?v=1';
       } else {
         window.Kiwi.toast(t.sale + ' · ' + fmtMAD(cents / 100) + ' MAD', { desc: desc, type: 'success' });
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] notifySale failed"); }
   }
 
   /* ─── bridge: real feed sales → the dashboard's sales store ───
@@ -1211,7 +1211,7 @@ import {} from './live-link/sale-identity.js?v=1';
       }
       publishSnapshot(state);
       if (state.phase === 'complete') {
-        try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: state.merchant } })); } catch (_) {}
+        try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: state.merchant } })); } catch (_) { console.warn("[live-link] bridgeSnapshot failed"); }
       }
     }
     if (!snapshot) flushQueue(); // a merchant device may still owe the server a sale
@@ -1235,7 +1235,7 @@ import {} from './live-link/sale-identity.js?v=1';
           else bridgeToStore();
         });
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] bridgeSnapshot failed"); }
   }
 
   /* ─── operator view banner ─── */
@@ -1297,7 +1297,7 @@ import {} from './live-link/sale-identity.js?v=1';
       function fitBanner() { document.body.style.paddingTop = (pt + (bar.offsetHeight || 34)) + 'px'; }
       fitBanner();
       if (window.ResizeObserver) new window.ResizeObserver(fitBanner).observe(bar);
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] fitBanner failed"); }
   }
 
   // In operator view, skip the client's PIN lock — the operator is not the staff
@@ -1313,7 +1313,7 @@ import {} from './live-link/sale-identity.js?v=1';
       // the lock actually reacts rather than clicking once into the void.
       if (!lock || lock.classList.contains('is-unlocking')) return;
       var skip = document.querySelector('[data-kiwi-skip]');
-      if (skip) { try { skip.click(); } catch (_) {} }
+      if (skip) { try { skip.click(); } catch (_) { console.warn("[live-link] attempt failed"); } }
       if (tries++ < 30) setTimeout(attempt, 120);
     })();
   }
@@ -1368,7 +1368,7 @@ import {} from './live-link/sale-identity.js?v=1';
       document.addEventListener('kiwi:request-wake', poke);
       window.addEventListener('focus', poke);
       window.addEventListener('online', poke);
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] poke failed"); }
     tick();
   }
 
@@ -1541,7 +1541,7 @@ import {} from './live-link/sale-identity.js?v=1';
         } catch (_) { /* Local custody remains intact until a verified response. */ }
         finally { if (timer != null) clearTimeout(timer); }
       }
-    }).catch(function () {}).finally(function () { running = null; });
+    }).catch(function () { console.warn("[live-link] sync failed"); }).finally(function () { running = null; });
     return running;
   }
   // No timers of its own: the till's send cycle (boot, reconnect, every feed

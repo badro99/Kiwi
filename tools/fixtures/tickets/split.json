@@ -360,7 +360,8 @@
         "Intl",
         "document",
         "window",
-        "undefined"
+        "undefined",
+        "console"
       ]
     },
     {

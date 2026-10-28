@@ -474,7 +474,7 @@ async function cuUploadTypePhotos(root, files) {
         cuRenderPhotoEditor(root);
       } catch (error) {
         const code = error?.code || error?.message;
-        if (status) status.textContent = code === 'too-large' ? tx('Photo trop lourde même après compression.') : code === 'bad-type' ? tx('Format photo non accepté.') : tx('Envoi interrompu. Les autres photos restent intactes.');
+        if (status) status.textContent = code === 'photo-conversion' ? tx('Conversion photo impossible. Essayez une autre image.') : code === 'too-large' ? tx('Photo trop lourde même après compression.') : code === 'bad-type' ? tx('Format photo non accepté.') : tx('Envoi interrompu. Les autres photos restent intactes.');
         return;
       }
     }
