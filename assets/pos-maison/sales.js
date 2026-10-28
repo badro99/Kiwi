@@ -1,7 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=104';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=25';
-import { invSetModal, offerRegister } from './inventory.js?v=25';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=106';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=26';
+import { invSetModal, offerRegister } from './inventory.js?v=26';
 import '../money-cents.js?v=4';
+import { photoImg } from '../retail-photos.js?v=1';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -61,99 +62,22 @@ import '../money-cents.js?v=4';
     return `<svg viewBox="0 0 ${x} ${h}" preserveAspectRatio="none" style="height:${h}px" fill="currentColor" aria-hidden="true">${bars}</svg>`;
   }
 
-  /* ───────────────────────── line-art ─────────────────────────
-     Same visual voice as the pressing ART dict: forest strokes, mint-tint
-     fills, 64×64 grid. These ARE the rayons — the grid sells by silhouette. */
-  const art = (inner) => `<svg class="mz-art" viewBox="0 0 64 64" aria-hidden="true">${inner}</svg>`;
-  const ART = {
-    assiette: art(`<ellipse class="fill" cx="32" cy="32" rx="22" ry="16"/><ellipse cx="32" cy="32" rx="22" ry="16"/><ellipse class="thin" cx="32" cy="32" rx="14" ry="9.5"/><ellipse class="thin" cx="32" cy="32" rx="7" ry="4.5"/>`),
-    bol: art(`<path class="fill" d="M12 24c0 14 9 22 20 22s20-8 20-22H12z"/><path d="M12 24c0 14 9 22 20 22s20-8 20-22H12z"/><ellipse class="thin" cx="32" cy="24" rx="20" ry="6"/><path class="thin" d="M26 46h12"/>`),
-    tasse: art(`<path class="fill" d="M16 22h24v16c0 6-5 10-12 10s-12-4-12-10V22z"/><path d="M16 22h24v16c0 6-5 10-12 10s-12-4-12-10V22z"/><path d="M40 26c5 0 8 3 8 7s-3 7-8 7"/><path class="thin" d="M12 50h32"/>`),
-    verre: art(`<path class="fill" d="M18 16h28l-4 32H22L18 16z"/><path d="M18 16h28l-4 32H22L18 16z"/><ellipse class="thin" cx="32" cy="16" rx="14" ry="4"/><ellipse class="thin" cx="32" cy="26" rx="13" ry="3.5"/><path class="thin" d="M21 44h22"/>`),
-    carafe: art(`<path class="fill" d="M28 14h8l2 8 8 16c2 4 0 10-6 12-2 .5-8 .5-16 0-6-2-8-8-6-12l8-16 2-8z"/><path d="M28 14h8l2 8 8 16c2 4 0 10-6 12-2 .5-8 .5-16 0-6-2-8-8-6-12l8-16 2-8z"/><ellipse class="thin" cx="32" cy="14" rx="4" ry="1.5"/><path class="thin" d="M38 24c6 2 8 8 6 14"/>`),
-    coupe: art(`<path class="fill" d="M14 18c0 12 8 18 18 18s18-6 18-18H14z"/><path d="M14 18c0 12 8 18 18 18s18-6 18-18H14z"/><path d="M32 36v12M22 48h20"/><ellipse class="thin" cx="32" cy="18" rx="18" ry="4"/>`),
-    bougie: art(`<rect class="fill" x="22" y="24" width="20" height="28" rx="3"/><rect x="22" y="24" width="20" height="28" rx="3"/><ellipse class="thin" cx="32" cy="24" rx="10" ry="3"/><path class="thin" d="M32 24v-4"/><path class="fill" d="M32 14c-2 2-3 4-1 6s4 1 3-2c-.5-1.5-1.5-3-2-4z"/><path d="M32 14c-2 2-3 4-1 6s4 1 3-2c-.5-1.5-1.5-3-2-4z"/>`),
-    diffuseur: art(`<rect class="fill" x="22" y="32" width="20" height="20" rx="4"/><rect x="22" y="32" width="20" height="20" rx="4"/><rect x="28" y="27" width="8" height="5" rx="1"/><path class="thin" d="M32 27L22 12M32 27L32 10M32 27L42 12M32 27L26 11M32 27L38 11"/>`),
-    vase: art(`<path class="fill" d="M26 14h12l-2 8 8 14c3 5 1 12-5 14-2 .5-9 .5-14 0-6-2-8-9-5-14l8-14-2-8z"/><path d="M26 14h12l-2 8 8 14c3 5 1 12-5 14-2 .5-9 .5-14 0-6-2-8-9-5-14l8-14-2-8z"/><ellipse class="thin" cx="32" cy="14" rx="6" ry="2"/>`),
-    plateau: art(`<ellipse class="fill" cx="32" cy="34" rx="26" ry="14"/><ellipse cx="32" cy="34" rx="26" ry="14"/><ellipse class="thin" cx="32" cy="34" rx="20" ry="10"/><path class="thin" d="M10 32c-3 0-4 3-2 5M54 32c3 0 4 3 2 5"/>`),
-    miroir: art(`<circle class="fill" cx="32" cy="32" r="14"/><circle cx="32" cy="32" r="14"/><circle class="thin" cx="32" cy="32" r="18"/><path class="thin" d="M32 8v4M32 52v4M8 32h4M52 32h4M15 15l3 3M46 46l3 3M15 49l3-3M46 18l3-3"/>`),
-    caftan: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v41"/><circle class="thin" cx="29.5" cy="20" r=".9"/><circle class="thin" cx="29.5" cy="26" r=".9"/><circle class="thin" cx="29.5" cy="32" r=".9"/><circle class="thin" cx="29.5" cy="38" r=".9"/><path class="thin" d="M20 48h24"/>`),
-    caftan_perle: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v41"/><circle class="thin" cx="26" cy="30" r=".8"/><circle class="thin" cx="38" cy="27" r=".8"/><circle class="thin" cx="27" cy="42" r=".8"/><circle class="thin" cx="37" cy="36" r=".8"/><circle class="thin" cx="35" cy="46" r=".8"/><circle class="thin" cx="29" cy="22" r=".8"/>`),
-    caftan_jawhara: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v18M32 36v18"/><rect class="fill" x="23" y="30" width="18" height="5.5" rx="2.5"/><rect x="23" y="30" width="18" height="5.5" rx="2.5"/><circle cx="32" cy="32.8" r="1.8"/><circle class="thin" cx="32" cy="16.5" r="1"/><path class="thin" d="M21 48h22"/>`),
-    caftan_ete: art(`<path class="fill" d="M26 9 17 14l2 8 4-2-3 33h24l-3-33 4 2 2-8-9-5c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 17 14l2 8 4-2-3 33h24l-3-33 4 2 2-8-9-5"/><path d="M28 10l4 6 4-6"/><path class="thin" d="M32 16v9"/><path class="thin" d="M22 46c7 3 13 3 20 0"/>`),
-    caftan_velours: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v41"/><path class="soft" d="M25 24l-2.5 26M39 24l2.5 26"/><path class="thin" d="M28.5 22 27 52M35.5 22 37 52"/>`),
-    takchita: art(`<path class="fill" d="M27 9 16 15l3 7 4-2-4 34h26l-4-34 4 2 3-7L37 9c-1.4 2.2-8.6 2.2-10 0z"/><path d="M27 9 16 15l3 7 4-2-4 34h26l-4-34 4 2 3-7L37 9"/><path d="M27 9c1.4 2.2 8.6 2.2 10 0"/><path d="M27 12l-3 42M37 12l3 42"/><rect x="25" y="30" width="14" height="4.5" rx="2"/><circle class="thin" cx="32" cy="32.2" r="1.2"/><path class="thin" d="M32 14v14"/>`),
-    takchita_mariage: art(`<path class="fill" d="M27 9 16 15l3 7 4-2-4 34h26l-4-34 4 2 3-7L37 9c-1.4 2.2-8.6 2.2-10 0z"/><path d="M27 9 16 15l3 7 4-2-4 34h26l-4-34 4 2 3-7L37 9"/><path d="M27 9c1.4 2.2 8.6 2.2 10 0"/><path d="M27 12l-3 42M37 12l3 42"/><rect x="25" y="29" width="14" height="4.5" rx="2"/><path class="thin" d="M21 48h22"/><circle class="thin" cx="29" cy="41" r=".8"/><circle class="thin" cx="35" cy="44" r=".8"/><circle class="thin" cx="32" cy="22" r=".8"/><circle class="thin" cx="33" cy="49" r=".8"/>`),
-    mdamma: art(`<rect class="fill" x="6" y="28" width="52" height="9" rx="4.5"/><rect x="6" y="28" width="52" height="9" rx="4.5"/><circle class="fill" cx="32" cy="32.5" r="7.5"/><circle cx="32" cy="32.5" r="7.5"/><circle class="thin" cx="32" cy="32.5" r="3.6"/><path class="thin" d="M13 32.5h8M43 32.5h8"/><circle class="thin" cx="18" cy="32.5" r="1"/><circle class="thin" cx="46" cy="32.5" r="1"/>`),
-    foulard: art(`<path d="M10 14h44"/><path class="fill" d="M21 14v25c0 6 4 9 7 5l3-4V14z"/><path d="M21 14v25c0 6 4 9 7 5l3-4V14z"/><path class="fill" d="M35 14v17c0 5 3.5 7 6.5 3.5l1.5-2V14z"/><path d="M35 14v17c0 5 3.5 7 6.5 3.5l1.5-2V14z"/><path class="thin" d="M24 45v5M27 47v5M30 43v5"/><path class="thin" d="M38 36v4M41 35v4"/>`),
-    chale: art(`<path class="fill" d="M10 18h44L32 50z"/><path d="M10 18h44L32 50z"/><path class="thin" d="M22 18l10 20M42 18 32 38"/><path class="thin" d="M15 25l-3 2M21 33l-3 2M27 41l-3 2M49 25l3 2M43 33l3 2M37 41l3 2"/>`),
-    broche: art(`<circle class="fill" cx="32" cy="29" r="13"/><circle cx="32" cy="29" r="13"/><circle class="thin" cx="32" cy="29" r="6.5"/><circle class="thin" cx="32" cy="18.5" r="1.4"/><circle class="thin" cx="42.5" cy="29" r="1.4"/><circle class="thin" cx="32" cy="39.5" r="1.4"/><circle class="thin" cx="21.5" cy="29" r="1.4"/><path d="M27 46h10"/><path class="thin" d="M37 46l4 5"/>`),
-    babouche: art(`<path class="fill" d="M8 43c0-2.4 2.4-4 6-4.4l20-2.6c9-1.2 15-5 17-11 2.6 7-1 15-9 17.8-3 1-6 1.6-10 1.6H12c-2.7 0-4-1-4-1.4z"/><path d="M8 43c0-2.4 2.4-4 6-4.4l20-2.6c9-1.2 15-5 17-11 2.6 7-1 15-9 17.8-3 1-6 1.6-10 1.6H12c-2.7 0-4-1-4-1.4z"/><path d="M9 46.5c15 2.5 31 2.5 46-1.5"/><path class="thin" d="M21 38c4 1.6 6.5 3.6 7.5 6.6"/>`),
-    babouche_brodee: art(`<path class="fill" d="M8 43c0-2.4 2.4-4 6-4.4l20-2.6c9-1.2 15-5 17-11 2.6 7-1 15-9 17.8-3 1-6 1.6-10 1.6H12c-2.7 0-4-1-4-1.4z"/><path d="M8 43c0-2.4 2.4-4 6-4.4l20-2.6c9-1.2 15-5 17-11 2.6 7-1 15-9 17.8-3 1-6 1.6-10 1.6H12c-2.7 0-4-1-4-1.4z"/><path d="M9 46.5c15 2.5 31 2.5 46-1.5"/><path class="thin" d="M28 39.5l2-2 2 2-2 2zM37 37.5l2-2 2 2-2 2z"/><path class="thin" d="M20 39c3.5 1.4 5.8 3.2 6.8 5.8"/>`),
-    cherbil: art(`<path class="fill" d="M8 41c0-2.4 2.4-4 6-4.4l20-2.6c9-1.2 15-5 17-11 2.6 7-1 15-9 17.8-3 1-6 1.6-10 1.6H12c-2.7 0-4-1-4-1.4z"/><path d="M8 41c0-2.4 2.4-4 6-4.4l20-2.6c9-1.2 15-5 17-11 2.6 7-1 15-9 17.8-3 1-6 1.6-10 1.6H12c-2.7 0-4-1-4-1.4z"/><path d="M13 42.6v5.4h8v-4.6"/><path class="thin" d="M30 38.5l1.5-1.5 1.5 1.5-1.5 1.5z"/><circle class="thin" cx="38" cy="36.5" r=".9"/><circle class="thin" cx="42" cy="35" r=".9"/>`),
-    babouche_enfant: art(`<path class="fill" d="M21 16l-5.5 13c0 8 2.2 17 5.5 17s5.5-9 5.5-17z"/><path d="M21 16l-5.5 13c0 8 2.2 17 5.5 17s5.5-9 5.5-17z"/><path class="fill" d="M43 16l-5.5 13c0 8 2.2 17 5.5 17s5.5-9 5.5-17z"/><path d="M43 16l-5.5 13c0 8 2.2 17 5.5 17s5.5-9 5.5-17z"/><path class="thin" d="M17 31c2.5 2 5.5 2 8 0M39 31c2.5 2 5.5 2 8 0"/>`),
-    sac: art(`<path d="M24 21c0-9 16-9 16 0"/><path class="fill" d="M15 21h34l-4 29H19z"/><path d="M15 21h34l-4 29H19z"/><path class="thin" d="M19.5 28h25M18.5 35h27M18 42h26"/><path class="thin" d="M24 22l-2 27M32 22v27M40 22l2 27"/>`),
-    cabas: art(`<path d="M23 21c0-7 5.5-7 5.5 0M35.5 21c0-7 5.5-7 5.5 0"/><rect class="fill" x="14" y="21" width="36" height="29" rx="2.5"/><rect x="14" y="21" width="36" height="29" rx="2.5"/><path class="thin" d="M14 31l6-4.5 6 4.5 6-4.5 6 4.5 6-4.5 6 4.5"/><path class="thin" d="M14 41l6-4.5 6 4.5 6-4.5 6 4.5 6-4.5 6 4.5"/>`),
-    pochette: art(`<rect class="fill" x="13" y="23" width="38" height="23" rx="5"/><rect x="13" y="23" width="38" height="23" rx="5"/><path d="M13 31h38"/><circle cx="32" cy="35.5" r="2"/><path class="thin" d="M47 23c5-3.5 7-8 3.5-11"/><circle class="thin" cx="20" cy="40" r=".8"/><circle class="thin" cx="26" cy="38" r=".8"/><circle class="thin" cx="40" cy="40" r=".8"/><circle class="thin" cx="44" cy="37" r=".8"/>`),
-    /* ── generic clothing / retail icons (any boutique, not just Moroccan wear) ── */
-    tshirt:     art(`<path class="fill" d="M23 15 13 21l4 8 5-3v24h20V26l5 3 4-8-10-6c-3 4-9 4-12 0z"/><path d="M23 15 13 21l4 8 5-3v24h20V26l5 3 4-8-10-6"/><path d="M23 15c3 4 9 4 12 0"/>`),
-    chemise:    art(`<path class="fill" d="M23 15 13 21l4 8 5-3v24h20V26l5 3 4-8-10-6-5 4-5-4z"/><path d="M23 15 13 21l4 8 5-3v24h20V26l5 3 4-8-10-6"/><path class="thin" d="M28 15l4 4 4-4"/><path class="thin" d="M32 19v27"/><circle class="thin" cx="32" cy="28" r=".8"/><circle class="thin" cx="32" cy="35" r=".8"/><circle class="thin" cx="32" cy="42" r=".8"/>`),
-    pull:       art(`<path class="fill" d="M23 16 12 22l3 17 5-2v13h24V37l5 2 3-17-11-6c-4 4-8 4-13 0z"/><path d="M23 16 12 22l3 17 5-2v13h24V37l5 2 3-17-11-6"/><path d="M23 16c5 4 9 4 13 0"/><path class="thin" d="M20 45h24"/>`),
-    robe:       art(`<path class="fill" d="M25 15 15 21l4 7 5-3-7 25h30l-7-25 5 3 4-7-10-6c-3 4-8 4-13 0z"/><path d="M25 15 15 21l4 7 5-3-7 25h30l-7-25 5 3 4-7-10-6"/><path d="M25 15c5 4 8 4 13 0"/><path class="thin" d="M27 33h10"/>`),
-    jupe:       art(`<path class="fill" d="M22 24h20l6 24H16z"/><path d="M22 24h20l6 24H16z"/><path d="M22 24h20"/><path class="thin" d="M28 26 25 48M36 26l3 22M32 26v22"/>`),
-    pantalon:   art(`<path class="fill" d="M22 15h20l-2 35h-7l-1-20-1 20h-7z"/><path d="M22 15h20l-2 35h-7l-1-20-1 20h-7z"/><path d="M22 21h20"/><path class="thin" d="M26 24v23"/>`),
-    veste:      art(`<path class="fill" d="M23 15 13 21l4 8 5-3v24h8V24h6v26h8V26l5 3 4-8-10-6-6 6-6-6z"/><path d="M23 15 13 21l4 8 5-3v24h8V24h6v26h8V26l5 3 4-8-10-6"/><path class="thin" d="M29 21l-3 10M35 21l3 10"/>`),
-    chaussures: art(`<path class="fill" d="M10 42c0-5 3-8 8-9l8 0 8 5 14 1c4 1 6 3 6 6v2H10z"/><path d="M10 42c0-5 3-8 8-9l8 0 8 5 14 1c4 1 6 3 6 6v2H10z"/><path class="thin" d="M20 34l2 6M25 34l2 6M10 45h44"/>`),
-    chapeau:    art(`<path class="fill" d="M24 37c0-15 16-15 16 0z"/><path d="M24 37c0-15 16-15 16 0"/><path class="fill" d="M13 37h38c0 3-8 4-19 4s-19-1-19-4z"/><path d="M13 37c0 3 8 4 19 4s19-1 19-4"/><path class="thin" d="M24 35h16"/>`),
-    ceinture:   art(`<path class="fill" d="M8 28h48v8H8z"/><path d="M8 28h48v8H8z"/><rect class="fill" x="27" y="25" width="12" height="14" rx="2"/><rect x="27" y="25" width="12" height="14" rx="2"/><path class="thin" d="M33 25v14"/>`),
-    lunettes:   art(`<circle class="fill" cx="20" cy="34" r="8"/><circle cx="20" cy="34" r="8"/><circle class="fill" cx="44" cy="34" r="8"/><circle cx="44" cy="34" r="8"/><path d="M28 33c2-2 6-2 8 0"/><path class="thin" d="M12 30l-4-3M52 30l4-3"/>`),
-    montre:     art(`<circle class="fill" cx="32" cy="33" r="11"/><circle cx="32" cy="33" r="11"/><path d="M27 23l1-8h8l1 8M27 43l1 7h8l1-7"/><path class="thin" d="M32 33v-6M32 33l5 2"/>`),
-    parfum:     art(`<rect class="fill" x="24" y="24" width="16" height="24" rx="3"/><rect x="24" y="24" width="16" height="24" rx="3"/><rect class="fill" x="28" y="16" width="8" height="8" rx="1"/><rect x="28" y="16" width="8" height="8" rx="1"/><path d="M28 16v-3h8v3"/><path class="thin" d="M28 33h8"/>`),
-    sac_main:   art(`<path d="M22 26c0-10 20-10 20 0"/><path class="fill" d="M16 26h32l-3 22H19z"/><path d="M16 26h32l-3 22H19z"/><path class="thin" d="M32 32a4 4 0 010 8"/>`),
-    tag:        art(`<path class="fill" d="M14 14h16l22 22-16 16-22-22z"/><path d="M14 14h16l22 22-16 16-22-22z"/><circle class="thin" cx="21" cy="21" r="2.6"/>`),
-    cintre:     art(`<path class="fill" d="M13 44 32 29l19 15z"/><path d="M13 44 32 29l19 15z"/><path d="M32 29v-4a3 3 0 10-3-3"/><path d="M12 44h40"/>`),
-    /* ── extended apparel ── */
-    debardeur:  art(`<path class="fill" d="M26 15v5c-2 1-4 3-4 6v22h20V26c0-3-2-5-4-6v-5c0 3-3 5-6 5s-6-2-6-5z"/><path d="M26 15v5c-2 1-4 3-4 6v22h20V26c0-3-2-5-4-6v-5"/><path d="M26 15c0 3 3 5 6 5s6-2 6-5"/>`),
-    sweat:      art(`<path class="fill" d="M23 17 12 23l3 16 5-2v13h24V37l5 2 3-16-11-6c-2 5-10 5-12 0z"/><path d="M23 17 12 23l3 16 5-2v13h24V37l5 2 3-16-11-6"/><path class="fill" d="M27 16c1 5 9 5 10 0l-2-2c-2 2-4 2-6 0z"/><path d="M27 16c1 5 9 5 10 0"/><path class="thin" d="M31 20v6M33 20v6"/><path class="thin" d="M23 42h18"/>`),
-    short:      art(`<path class="fill" d="M22 17h20l-2 20h-7l-1-12-1 12h-7z"/><path d="M22 17h20l-2 20h-7l-1-12-1 12h-7z"/><path d="M22 23h20"/>`),
-    combinaison:art(`<path class="fill" d="M23 15 13 21l4 8 5-3v10l-2 18h7l1-12 1 12h7l-2-18v-10l5 3 4-8-10-6c-2 4-8 4-10 0z"/><path d="M23 15 13 21l4 8 5-3v10l-2 18h7l1-12 1 12h7l-2-18v-10l5 3 4-8-10-6"/><path d="M23 15c2 4 8 4 10 0"/><path class="thin" d="M22 33h20"/>`),
-    cravate:    art(`<path class="fill" d="M27 15h10l-2 7 3 21-6 7-6-7 3-21z"/><path d="M27 15h10l-2 7 3 21-6 7-6-7 3-21z"/><path d="M29 22h6"/>`),
-    echarpe:    art(`<path class="fill" d="M23 16c3 4 15 4 18 0v5c0 2-1 3-3 4l1 23h-6l-1-20-1 20h-6l1-23c-2-1-3-2-3-4z"/><path d="M23 16c3 4 15 4 18 0v5c0 2-1 3-3 4l1 23h-6l-1-20-1 20h-6l1-23c-2-1-3-2-3-4z"/><path class="thin" d="M27 47v4M31 47v4M35 47v4M39 47v4"/>`),
-    gants:      art(`<path class="fill" d="M25 24c0-3 2-5 5-5h6c3 0 5 2 5 5v6c3 0 5 2 5 5s-2 5-5 5v3c0 2-1 3-3 3H28c-2 0-3-1-3-3z"/><path d="M25 24c0-3 2-5 5-5h6c3 0 5 2 5 5v6c3 0 5 2 5 5s-2 5-5 5v3c0 2-1 3-3 3H28c-2 0-3-1-3-3z"/><path class="thin" d="M25 44h16"/>`),
-    chaussettes:art(`<path class="fill" d="M27 14h9v16c0 2 1 3 3 4l5 4c2 2 3 3 3 6 0 3-2 5-5 5s-4-1-6-3l-8-7c-2-2-3-3-3-6V14z"/><path d="M27 14h9v16c0 2 1 3 3 4l5 4c2 2 3 3 3 6 0 3-2 5-5 5s-4-1-6-3l-8-7c-2-2-3-3-3-6V14z"/><path class="thin" d="M27 20h9"/>`),
-    /* ── footwear ── */
-    basket:     art(`<path class="fill" d="M11 41c0-3 1-5 3-7l6-6c1-1 2-1 3 0l3 4 5 3 14 2c3 0 5 2 5 5v3H11z"/><path d="M11 41c0-3 1-5 3-7l6-6c1-1 2-1 3 0l3 4 5 3 14 2c3 0 5 2 5 5v3H11z"/><path class="thin" d="M27 34l3-3M30 37l3-3M33 39l3-3"/><path class="thin" d="M11 46h39"/>`),
-    botte:      art(`<path class="fill" d="M25 14h10v18c0 2 1 4 3 5l8 4c3 1 4 3 4 6v3H25V14z"/><path d="M25 14h10v18c0 2 1 4 3 5l8 4c3 1 4 3 4 6v3H25V14z"/><path class="thin" d="M25 20h10"/><path class="thin" d="M25 44h25"/>`),
-    sandale:    art(`<path class="fill" d="M13 40c0-2 1-3 3-3h31c3 0 5 1 5 3s-2 3-5 3H16c-2 0-3-1-3-3z"/><path d="M13 40c0-2 1-3 3-3h31c3 0 5 1 5 3s-2 3-5 3H16c-2 0-3-1-3-3z"/><path class="thin" d="M22 37l8-8M30 37l6-8M38 37l4-6"/>`),
-    /* ── headwear ── */
-    casquette:  art(`<path class="fill" d="M17 37c0-9 7-16 15-16s15 6 15 15v1H17z"/><path d="M17 37c0-9 7-16 15-16s15 6 15 15"/><path class="fill" d="M46 37c6 0 11 1 12 3 1 1 0 2-1 2l-11 1z"/><path d="M46 37c6 0 11 1 12 3 1 1 0 2-1 2l-11 1"/><path d="M17 38h30"/><path class="thin" d="M32 21v16"/>`),
-    bonnet:     art(`<path class="fill" d="M18 40c0-12 6-20 14-20s14 8 14 20z"/><path d="M18 40c0-12 6-20 14-20s14 8 14 20"/><path class="fill" d="M16 40h32v5H16z"/><path d="M16 40h32v5H16z"/><path class="thin" d="M25 22v18M32 20v20M39 22v18"/>`),
-    /* ── jewellery & accessories ── */
-    collier:    art(`<path d="M19 16c0 15 6 25 13 25s13-10 13-25"/><path class="fill" d="M32 41l-4 6 4 5 4-5z"/><path d="M32 41l-4 6 4 5 4-5z"/><path class="thin" d="M23 27v1M27 33v1M41 27v1M37 33v1"/>`),
-    bracelet:   art(`<path class="fill" fill-rule="evenodd" d="M32 17a16 16 0 100 32 16 16 0 000-32zm0 7a9 9 0 110 18 9 9 0 010-18z"/><circle cx="32" cy="33" r="16"/><circle cx="32" cy="33" r="9"/><path class="fill" d="M32 12l5 6-5 6-5-6z"/><path d="M32 12l5 6-5 6-5-6z"/>`),
-    bague:      art(`<path class="fill" fill-rule="evenodd" d="M32 30a11 11 0 100 22 11 11 0 000-22zm0 6a5 5 0 110 10 5 5 0 010-10z"/><circle cx="32" cy="41" r="11"/><circle cx="32" cy="41" r="5"/><path class="fill" d="M32 12l6 9-6 8-6-8z"/><path d="M32 12l6 9-6 8-6-8z"/><path d="M26 21l6 6 6-6"/>`),
-    boucles:    art(`<path d="M24 16c-3 0-5 2-5 5"/><circle class="fill" cx="24" cy="30" r="6"/><circle cx="24" cy="30" r="6"/><path d="M40 18c-3 0-5 2-5 5"/><circle class="fill" cx="40" cy="34" r="6"/><circle cx="40" cy="34" r="6"/>`),
-    /* ── bags & leather ── */
-    sac_dos:    art(`<path class="fill" d="M19 26c0-7 6-12 13-12s13 5 13 12v22c0 2-1 3-3 3H22c-2 0-3-1-3-3z"/><path d="M19 26c0-7 6-12 13-12s13 5 13 12v22c0 2-1 3-3 3H22c-2 0-3-1-3-3z"/><path class="fill" d="M26 34h12v15H26z"/><path d="M26 34h12v15H26z"/><path class="thin" d="M28 26h8"/><path d="M27 15c2-3 8-3 10 0"/>`),
-    portefeuille:art(`<rect class="fill" x="12" y="22" width="40" height="22" rx="3"/><rect x="12" y="22" width="40" height="22" rx="3"/><path class="fill" d="M40 30h13v8H40a4 4 0 010-8z"/><path d="M40 30h13v8H40a4 4 0 010-8z"/><circle class="thin" cx="44" cy="34" r="1.6"/>`),
-    valise:     art(`<rect class="fill" x="16" y="24" width="32" height="26" rx="3"/><rect x="16" y="24" width="32" height="26" rx="3"/><path d="M26 24v-4c0-2 1-3 3-3h6c2 0 3 1 3 3v4"/><path class="thin" d="M24 24v26M40 24v26"/>`),
-    parapluie:  art(`<path class="fill" d="M11 35c0-12 9-21 21-21s21 9 21 21c-3 4-7 4-10 0-3 4-7 4-10 0-3 4-7 4-10 0-3 4-9 4-12 0z"/><path d="M11 35c0-12 9-21 21-21s21 9 21 21"/><path d="M11 35c3 4 7 4 10 0 3 4 7 4 10 0 3 4 7 4 10 0 3 4 9 4 12 0"/><path d="M32 35v13a4 4 0 01-8 0"/>`),
-    /* ── Moroccan traditional (extended) ── */
-    djellaba:   art(`<path class="fill" d="M26 14 13 20l4 8 5-3-4 25h28l-4-25 5 3 4-8-13-6c-2 3-6 3-8 0z"/><path d="M26 14 13 20l4 8 5-3-4 25h28l-4-25 5 3 4-8-13-6"/><path class="fill" d="M30 6l5 8-3 4-3-4z"/><path d="M30 6l5 8-3 4-3-4z"/><path d="M26 14c2 3 6 3 8 0"/><path d="M32 18v37"/><path class="thin" d="M22 32h20"/>`),
-    gandoura:   art(`<path class="fill" d="M22 16 12 22l4 7 4-2v27h24V27l4 2 4-7-10-6c-3 3-9 3-12 0z"/><path d="M22 16 12 22l4 7 4-2v27h24V27l4 2 4-7-10-6"/><path d="M26 16c1 3 11 3 12 0"/><path class="thin" d="M28 16v6h8v-6"/><path class="thin" d="M30 24v22M34 24v22"/>`),
-    jabador:    art(`<path class="fill" d="M23 15 13 21l4 8 5-3v24h22V26l5 3 4-8-10-6c-2 3-8 3-11 0z"/><path d="M23 15 13 21l4 8 5-3v24h22V26l5 3 4-8-10-6"/><path d="M27 15l5 3 6-3"/><path class="thin" d="M32 18v27"/><path class="thin" d="M29 24h6M29 30h6M29 36h6"/>`),
-    selham:     art(`<path class="fill" d="M32 14c-10 0-20 10-22 36h44c-2-26-12-36-22-36z"/><path d="M32 14c-10 0-20 10-22 36h44c-2-26-12-36-22-36z"/><path class="fill" d="M32 14l-4 8h8z"/><path d="M32 14l-4 8h8z"/><path class="thin" d="M32 22v28"/>`),
-    tarbouche:  art(`<path class="fill" d="M23 24c0-2 4-3 9-3s9 1 9 3l-1 20H24z"/><path d="M23 24c0-2 4-3 9-3s9 1 9 3l-1 20H24z"/><path class="thin" d="M23 24c0 2 4 3 9 3s9-1 9-3"/><path d="M32 21v-4"/><circle class="thin" cx="32" cy="15" r="2"/>`),
-  };
-
   /* Product-icon "database" for the create/edit picker — ordered + labelled.
-     artOf() renders a product's icon with a safe default so nothing is blank. */
-  const DEFAULT_ICON = 'cintre';
-  const artOf = (k) => ART[k] || ART[DEFAULT_ICON];
+     artOf() takes a product (its own photo, else a photo picked by its name, retail-photos.js)
+     or an icon key, and falls back to the price tag so nothing is blank. */
+  const artOf = (p) => (p && typeof p === 'object' && p.photo
+    ? `<img class="mz-product-photo" src="${esc(p.photo)}" alt="" loading="lazy" decoding="async">`
+    : photoImg(p, 'mz-art-photo', 'tag'));
   const ICON_LABELS = {
+    bougie: 'Bougie', diffuseur: 'Diffuseur', diffuseur_voiture: 'Diffuseur voiture', coffret: 'Coffret cadeau',
+    bougeoir: 'Bougeoir', cloche: 'Cloche', eteignoir: 'Éteignoir', coupe_meche: 'Coupe-mèche',
+    assiette: 'Assiette', bol: 'Bol', tasse: 'Tasse', verre: 'Verre', carafe: 'Carafe', coupe: 'Coupe',
+    plateau: 'Plateau', miroir: 'Miroir', vase: 'Vase', coussin: 'Coussin', plaid: 'Plaid',
+    polo: 'Polo', jean: 'Jean', manteau: 'Manteau', trench: 'Trench', cape: 'Cape', doudoune: 'Doudoune',
+    gilet_doudoune: 'Gilet doudoune', costume: 'Costume / Tailleur', ensemble: 'Ensemble', ensemble_jean: 'Ensemble jean', survetement: 'Survêtement',
     tshirt: 'T-shirt / Haut', chemise: 'Chemise', debardeur: 'Débardeur', pull: 'Pull', sweat: 'Sweat / Hoodie',
-    pantalon: 'Pantalon / Jean', short: 'Short', jupe: 'Jupe', robe: 'Robe', combinaison: 'Combinaison',
-    veste: 'Veste / Manteau', chaussures: 'Chaussures', basket: 'Basket', botte: 'Bottes', sandale: 'Sandales',
+    pantalon: 'Pantalon', short: 'Short', jupe: 'Jupe', robe: 'Robe', combinaison: 'Combinaison',
+    veste: 'Veste', chaussures: 'Chaussures', basket: 'Basket', botte: 'Bottes', sandale: 'Sandales',
     chapeau: 'Chapeau', casquette: 'Casquette', bonnet: 'Bonnet', ceinture: 'Ceinture', cravate: 'Cravate',
     echarpe: 'Écharpe', gants: 'Gants', chaussettes: 'Chaussettes', lunettes: 'Lunettes', montre: 'Montre',
     bracelet: 'Bracelet', bague: 'Bague', collier: 'Collier', boucles: 'Boucles d’oreille', broche: 'Broche / Bijou',
@@ -164,12 +88,18 @@ import '../money-cents.js?v=4';
     mdamma: 'Mdamma', babouche: 'Babouche',
   };
   const ICON_KEYS = [
+    // Bougies & parfum d'intérieur
+    'bougie', 'diffuseur', 'diffuseur_voiture', 'coffret', 'bougeoir', 'cloche', 'eteignoir', 'coupe_meche',
+    // Table & décoration
+    'assiette', 'bol', 'tasse', 'verre', 'carafe', 'coupe', 'plateau', 'miroir', 'vase', 'coussin', 'plaid',
     // Hauts
-    'tshirt', 'chemise', 'debardeur', 'pull', 'sweat',
+    'tshirt', 'polo', 'chemise', 'debardeur', 'pull', 'sweat',
     // Bas
-    'pantalon', 'short', 'jupe',
+    'pantalon', 'jean', 'short', 'jupe',
     // Pièces entières
-    'robe', 'combinaison', 'veste',
+    'robe', 'combinaison', 'ensemble', 'ensemble_jean', 'survetement', 'costume',
+    // Vestes & manteaux
+    'veste', 'manteau', 'trench', 'cape', 'doudoune', 'gilet_doudoune',
     // Traditionnel marocain
     'caftan', 'takchita', 'djellaba', 'gandoura', 'jabador', 'selham',
     // Chaussures
@@ -185,7 +115,7 @@ import '../money-cents.js?v=4';
     'parapluie', 'tag', 'cintre',
   ];
   function iconPickerHtml(sel) {
-    return `<div class="mzi-iconpick">${ICON_KEYS.map((k) => `<button type="button" class="mzi-icon${k === sel ? ' on' : ''}" data-icon-key="${k}" title="${esc(ICON_LABELS[k] || k)}">${ART[k]}</button>`).join('')}</div>`;
+    return `<div class="mzi-iconpick">${ICON_KEYS.map((k) => `<button type="button" class="mzi-icon${k === sel ? ' on' : ''}" data-icon-key="${k}" title="${esc(ICON_LABELS[k] || k)}">${artOf(k)}</button>`).join('')}</div>`;
   }
   function wireIconPicker(el, onPick) {
     el.querySelectorAll('.mzi-icon').forEach((b) => b.addEventListener('click', () => {
@@ -413,7 +343,7 @@ import '../money-cents.js?v=4';
         const pr = promoFor(p.id);
         return `
         <button class="mz-card ${(p.format === 'service' ? sellableStockOf(p) : stockOf(p)) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
-          <span class="mz-card-art">${artOf(p.art)}</span>
+          <span class="mz-card-art">${artOf(p)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
           ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
@@ -607,7 +537,7 @@ import '../money-cents.js?v=4';
     const pr = linePromo(ln);
     const origPrice = shelf((ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0));
     return `<div class="mz-line">
-      <span class="mz-line-art">${artOf(p.art)}</span>
+      <span class="mz-line-art">${artOf(p)}</span>
       <span class="mz-line-mid">
         ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
         ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}
@@ -826,7 +756,7 @@ import '../money-cents.js?v=4';
     el.innerHTML = `
       <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mz-sheet-head">
-        <span class="mz-sheet-art">${artOf(p.art)}</span>
+        <span class="mz-sheet-art">${artOf(p)}</span>
         <span class="mz-sheet-title">
           ${p.marque ? `<div class="mz-card-brand">${esc(p.marque)}</div>` : ''}
           ${isConsignedProduct(p) ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B">B</span> Catégorie B${p.consignor ? ` · ${esc(p.consignor)}` : ''}</div>` : ''}
@@ -1372,7 +1302,7 @@ import '../money-cents.js?v=4';
     return `
       <div class="mz-look">
         <div class="mz-look-top">
-          <span class="mz-look-art">${artOf(p.art)}</span>
+          <span class="mz-look-art">${artOf(p)}</span>
           <div class="mz-look-id">
             <b>${esc(p.name)}</b>
             <span>${ray ? esc(ray) + ' · ' : ''}EAN ${esc(lk.ean)} · ${fmtHM(lk.at)}</span>

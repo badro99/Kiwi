@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=184';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=86';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=86';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=187';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=88';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=88';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
@@ -180,7 +180,7 @@ const M = globalThis.KiwiMoney;
           if (!availableQty) {
             return `<button class="bq-sline is-locked" data-bq-locked="1">
               <span class="tick"></span>
-              <span class="bq-line-art">${artOf(p.art)}</span>
+              <span class="bq-line-art">${artOf(p)}</span>
               <span class="mid"><span class="bq-line-name">${esc(p.name)}</span>
                 <span class="bq-line-sub"><span class="sz">${esc(l.size)}</span> ${esc(l.note || 'retournée')}</span></span>
               <span class="bq-pill warn">retournée</span>
@@ -189,7 +189,7 @@ const M = globalThis.KiwiMoney;
           const chosenQty = sel.has(i) ? pickedQty(ret, i, l) : 1;
           return `<button class="bq-sline ${sel.has(i) ? 'on' : ''}" data-bq-pick="${s.id}:${i}">
             <span class="tick"><i data-lucide="check"></i></span>
-            <span class="bq-line-art">${artOf(p.art)}</span>
+            <span class="bq-line-art">${artOf(p)}</span>
             <span class="mid"><span class="bq-line-name">${esc(p.name)}</span>
               <span class="bq-line-sub">
                 ${colorDot(l.color)}
@@ -423,12 +423,12 @@ const M = globalThis.KiwiMoney;
       <h3 class="modal-title">Échange, ${sale.id}</h3>
       <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
       <div class="bq-exch-row is-ret">
-        <span class="bq-line-art">${artOf(oldP.art)}</span>
+        <span class="bq-line-art">${artOf(oldP)}</span>
         <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
         <span class="amt">−${fmtMAD(paidUnit(sale, ln))}</span>
       </div>
       <div class="bq-exch-row is-new">
-        <span class="bq-line-art">${artOf(newP.art)}</span>
+        <span class="bq-line-art">${artOf(newP)}</span>
         <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
         <span class="amt">+${fmtMAD(newUnit)}</span>
       </div>
@@ -1354,7 +1354,7 @@ const M = globalThis.KiwiMoney;
       .bqi-row { display: flex; align-items: center; gap: 14px; background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 14px; padding: 12px 16px; cursor: pointer; transition: border-color .15s; }
       .bqi-row:hover { border-color: var(--atlas); }
       .bqi-art { width: 40px; height: 40px; flex: 0 0 40px; color: var(--riad); }
-      .bqi-art svg { width: 40px; height: 40px; }
+      .bqi-art svg, .bqi-art img { width: 40px; height: 40px; }
       .bqi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
       .bqi-info b { font-size: 14.5px; }
       .bqi-info span { font-size: 12px; color: #5E6762; }
@@ -1425,7 +1425,7 @@ const M = globalThis.KiwiMoney;
       .bqi-icon { aspect-ratio: 1; border: 1.5px solid rgba(10,15,13,.10); border-radius: 10px; background: var(--paper); cursor: pointer; padding: 5px; color: var(--riad); display: flex; align-items: center; justify-content: center; }
       .bqi-icon:hover { border-color: rgba(11,110,79,.5); }
       .bqi-icon.on { border-color: var(--atlas); border-width: 2px; background: #EAF5EF; }
-      .bqi-icon .bq-art { width: 100%; height: 100%; }
+      .bqi-icon .bq-art-photo { width: 100%; height: 100%; }
       .bqi-help { font-size: 12px; color: #5E6762; margin-top: -6px; margin-bottom: 12px; }
       .bqi-help.is-good { color: var(--atlas); }
       .bqi-help.is-bad  { color: #9B2F22; }
@@ -1487,7 +1487,7 @@ const M = globalThis.KiwiMoney;
       .bqx-linklist { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
       .bqx-linkprod { background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 13px; padding: 11px 13px; }
       .bqx-linkhead { display: flex; align-items: center; gap: 11px; margin-bottom: 8px; }
-      .bqx-linkhead .bqi-art, .bqx-linkhead .bqi-art svg { width: 28px; height: 28px; flex: 0 0 28px; }
+      .bqx-linkhead .bqi-art, .bqx-linkhead .bqi-art svg, .bqx-linkhead .bqi-art img { width: 28px; height: 28px; flex: 0 0 28px; }
       .bqx-linkhead > div { flex: 1; min-width: 0; }
       .bqx-linkhead b { display: block; font-size: 14px; }
       .bqx-linkhead span { font-size: 11.5px; color: #5E6762; }

@@ -42,6 +42,7 @@
     "public-assets-test.js": "what the public shells may load",
     "pwa-shell-test.js": "service-worker precache list agrees with the shells",
     "request-headers-test.mjs": "ban on request headers that break caching",
+    "retail-photos-wiring-test.mjs": "the boutique and Maison tills import the shared product photos at a precached stamp, offer only photographed icons and size the photo in their stylesheets; what a product shows runs in retail-product-art-test.mjs",
     "schema-minimum-test.mjs": "SQL preparation against the repository migration floor, not a runtime schema health proof",
     "security-regression-test.js": "bans on known unsafe patterns",
     "serveur-split-test.mjs": "byte-exact split reconstruction and syntax only",

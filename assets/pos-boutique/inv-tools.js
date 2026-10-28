@@ -13,7 +13,7 @@
  *    complet : un nom tapé partait en « code inconnu » vers la reprise de
  *    stock. La douchette garde son chemin livré (Entrée sur un code). */
 import { bqKitScanBar } from './kit-2027.js?v=19';
-import { searchArticles } from './search.js?v=10';
+import { searchArticles } from './search.js?v=11';
 
 const LOW = 5;   // le seuil de stats() (boutique-catalog.js) et des lignes de l'Inventaire
 const seenKey = (k) => 'kiwiBqInvSeen:' + (k || 'local');
@@ -94,7 +94,7 @@ export function invSearch(bar, input, skin, d) {
     input, id: 'bqi-sgst', plain: !skin, enterFirst: true,
     commit: d.code, open: d.open, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => searchArticles(q, d.catalog()),
-    visual: (r) => (r.photo ? '<img class="bq-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r.art)),
+    visual: (r) => (r.photo ? '<img class="bq-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r)),
   });
   const list = bar.querySelector('.bq-sgst');
   if (list && !skin) list.classList.add('is-plain');

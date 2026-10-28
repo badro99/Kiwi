@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=104';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=25';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=25';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=106';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=26';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=26';
 import '../refund-split.js?v=2';
 import '../money-cents.js?v=4';
 
@@ -174,7 +174,7 @@ import '../money-cents.js?v=4';
           if (!availableQty) {
             return `<button class="mz-sline is-locked" data-mz-locked="1">
               <span class="tick"></span>
-              <span class="mz-line-art">${artOf(p.art)}</span>
+              <span class="mz-line-art">${artOf(p)}</span>
               <span class="mid"><span class="mz-line-name">${esc(p.name)}</span>
                 <span class="mz-line-sub"><span class="sz">${esc(l.size)}</span> ${esc(l.note || 'retournée')}</span></span>
               <span class="mz-pill warn">retournée</span>
@@ -183,7 +183,7 @@ import '../money-cents.js?v=4';
           const chosenQty = sel.has(i) ? pickedQty(ret, i, l) : 1;
           return `<button class="mz-sline ${sel.has(i) ? 'on' : ''}" data-mz-pick="${s.id}:${i}">
             <span class="tick"><i data-lucide="check"></i></span>
-            <span class="mz-line-art">${artOf(p.art)}</span>
+            <span class="mz-line-art">${artOf(p)}</span>
             <span class="mid"><span class="mz-line-name">${esc(p.name)}</span>
               <span class="mz-line-sub">
                 ${colorDot(l.color)}
@@ -577,12 +577,12 @@ import '../money-cents.js?v=4';
       <h3 class="modal-title">Échange, ${sale.id}</h3>
       <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
       <div class="mz-exch-row is-ret">
-        <span class="mz-line-art">${artOf(oldP.art)}</span>
+        <span class="mz-line-art">${artOf(oldP)}</span>
         <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
         <span class="amt">−${fmtMAD(paidUnit(sale, ln))}</span>
       </div>
       <div class="mz-exch-row is-new">
-        <span class="mz-line-art">${artOf(newP.art)}</span>
+        <span class="mz-line-art">${artOf(newP)}</span>
         <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)}${newIsPiece ? ' · à la pièce' : ''} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
         <span class="amt">+${fmtMAD(newEff)}</span>
       </div>
@@ -1493,7 +1493,7 @@ import '../money-cents.js?v=4';
       .mzi-row { display: flex; align-items: center; gap: 14px; background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 14px; padding: 12px 16px; cursor: pointer; transition: border-color .15s; }
       .mzi-row:hover { border-color: var(--atlas); }
       .mzi-art { width: 40px; height: 40px; flex: 0 0 40px; color: var(--riad); }
-      .mzi-art svg { width: 40px; height: 40px; }
+      .mzi-art svg, .mzi-art img { width: 40px; height: 40px; }
       .mzi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
       .mzi-info b { font-size: 14.5px; }
       .mzi-info span { font-size: 12px; color: #77807b; }
@@ -1600,7 +1600,7 @@ import '../money-cents.js?v=4';
       .mzi-icon { aspect-ratio: 1; border: 1.5px solid rgba(10,15,13,.10); border-radius: 10px; background: var(--paper); cursor: pointer; padding: 5px; color: var(--riad); display: flex; align-items: center; justify-content: center; }
       .mzi-icon:hover { border-color: rgba(11,110,79,.5); }
       .mzi-icon.on { border-color: var(--atlas); border-width: 2px; background: #EAF5EF; }
-      .mzi-icon .mz-art { width: 100%; height: 100%; }
+      .mzi-icon .mz-art-photo { width: 100%; height: 100%; }
       .mzi-help { font-size: 12px; color: #77807b; margin-top: -6px; margin-bottom: 12px; }
       .mzi-help.is-good { color: var(--atlas); }
       .mzi-help.is-bad  { color: #9B2F22; }
@@ -1662,7 +1662,7 @@ import '../money-cents.js?v=4';
       .bqx-linklist { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
       .bqx-linkprod { background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 13px; padding: 11px 13px; }
       .bqx-linkhead { display: flex; align-items: center; gap: 11px; margin-bottom: 8px; }
-      .bqx-linkhead .mzi-art, .bqx-linkhead .mzi-art svg { width: 28px; height: 28px; flex: 0 0 28px; }
+      .bqx-linkhead .mzi-art, .bqx-linkhead .mzi-art svg, .bqx-linkhead .mzi-art img { width: 28px; height: 28px; flex: 0 0 28px; }
       .bqx-linkhead > div { flex: 1; min-width: 0; }
       .bqx-linkhead b { display: block; font-size: 14px; }
       .bqx-linkhead span { font-size: 11.5px; color: #77807b; }

@@ -1602,6 +1602,8 @@ section('Whole-project regressions');
     'install-card-icon-test.mjs',
     'caisse-menu-add-contrast-test.mjs',
     'caisse-product-art-test.mjs',
+    'retail-product-art-test.mjs',
+    'retail-photos-wiring-test.mjs',
     'check-godmode.mjs',
     'operator-workspace-test.mjs',
     'admin-report-test.mjs',

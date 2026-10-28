@@ -267,10 +267,8 @@
 .bq-card-flag.out { color: var(--danger-mute); background: rgba(184,82,69,0.10); border-color: rgba(184,82,69,0.30); }
 
 /* product line-art — same visual voice as the pressing */
-.bq-art { fill: none; stroke: var(--forest); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
-.bq-art .fill { fill: var(--mint-tint); stroke: none; }
-.bq-art .soft { stroke: var(--mint-edge); }
-.bq-art .thin { stroke-width: 1.5; opacity: 0.75; }
+/* Product photo (pos-boutique/product-photos.js): fills whatever box holds it. */
+.bq-art-photo { width: 100%; height: 100%; display: block; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
 
 /* ---------- ticket panel ---------- */
 .bq-ticket {

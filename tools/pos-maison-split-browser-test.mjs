@@ -79,7 +79,11 @@ try {
         /* Le poste tire un identifiant d'appareil au hasard (« 6U », « KQ »), gardé dans
            kiwi:posDevice et imprimé sur le reçu : seul champ qui change d'un chargement à l'autre, découpé ou non. */
         const devId = (o) => JSON.parse(JSON.stringify(o).replace(/"terminal":"[^"]*"/g, '"terminal":"*"').replace(/"kiwi:posDevice":"[A-Z0-9]{2}"/g, '"kiwi:posDevice":"*"').replace(/\\"terminal\\":\\"[^\\"]*\\"/g, '\\"terminal\\":\\"*\\"'));
-        return devId({ initial, ...result });
+        /* Le fichier d'origine dessinait l'icône d'un produit au trait ; depuis le
+           28 octobre 2026 la caisse montre une photo (retail-photos.js). Ce test
+           prouve le découpage, pas l'image : les deux valent « une image produit ». */
+        const art = (h) => h.replace(/<svg class="mz-art"[\s\S]*?<\/svg>|<img class="mz-(?:art|product)-photo"[^>]*>/g, '<art/>');
+        return devId({ initial: art(initial), ...result, html: art(result.html) });
       } finally { await context.close(); }
     };
     const before = await capture(true), after = await capture(false);

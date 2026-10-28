@@ -1,0 +1,112 @@
+{
+  "b1": [
+    ["caftan", "an emerald green Moroccan kaftan with gold hand embroidery down the front"],
+    ["caftan_perle", "a midnight navy evening kaftan with fine pearl beadwork on the chest and cuffs"],
+    ["caftan_jawhara", "an ivory silk kaftan with heavy gold embroidery, a luxurious signature piece"],
+    ["caftan_ete", "a light ivory cotton summer kaftan with short wide sleeves and simple trim"],
+    ["caftan_velours", "a burgundy velvet kaftan with gold trim along the opening"],
+    ["takchita", "a two-layer emerald takchita with a sheer overlay and a gold belt at the waist"],
+    ["takchita_mariage", "an ivory and gold bridal takchita with a jewelled gold belt"],
+    ["djellaba", "a long beige wool djellaba with a pointed hood"],
+    ["gandoura", "a white men's gandoura with a simple embroidered neckline"]
+  ],
+  "b2": [
+    ["jabador", "a men's sand-coloured jabador tunic with matching embroidery at the collar"],
+    ["selham", "a cream wool burnous cape with a hood, shown open"],
+    ["tarbouche", "a red felt fez hat with a black silk tassel"],
+    ["mdamma", "a wide gold Moroccan jewelled belt with an ornate central buckle"],
+    ["foulard", "a neatly folded silk scarf with a soft paisley print"],
+    ["chale", "a folded terracotta wool shawl with fringed edges"],
+    ["broche", "an ornate gold brooch set with small green stones"],
+    ["babouche", "a pair of yellow leather Moroccan babouche slippers"],
+    ["babouche_brodee", "a pair of burgundy velvet babouche slippers with gold embroidery"]
+  ],
+  "b3": [
+    ["cherbil", "a pair of women's embroidered cherbil slippers with gold thread on green velvet"],
+    ["babouche_enfant", "a small pair of children's pink leather babouche slippers"],
+    ["chaussures", "a pair of brown leather lace-up derby shoes"],
+    ["basket", "a pair of clean white leather sneakers with no logo"],
+    ["botte", "a single tan leather ankle boot"],
+    ["sandale", "a pair of tan leather flat sandals"],
+    ["chaussettes", "a pair of folded grey knit socks"],
+    ["casquette", "a navy cotton baseball cap with no logo"],
+    ["bonnet", "a camel ribbed knit beanie"]
+  ],
+  "b4": [
+    ["tshirt", "a plain white crew-neck t-shirt"],
+    ["polo", "a navy pique polo shirt with no logo"],
+    ["chemise", "a light blue button-down cotton shirt"],
+    ["debardeur", "a black ribbed tank top"],
+    ["pull", "a beige cable-knit wool sweater"],
+    ["sweat", "a heather grey hooded sweatshirt"],
+    ["veste", "a navy tailored blazer"],
+    ["manteau", "a long camel wool coat"],
+    ["robe", "a sage green midi wrap dress"]
+  ],
+  "b5": [
+    ["jupe", "a cream pleated midi skirt"],
+    ["pantalon", "a pair of beige chino trousers"],
+    ["jean", "a pair of classic blue denim jeans"],
+    ["short", "a pair of light denim shorts"],
+    ["combinaison", "a black wide-leg jumpsuit"],
+    ["cravate", "a burgundy silk necktie, loosely rolled"],
+    ["echarpe", "a folded charcoal knit scarf"],
+    ["gants", "a pair of brown leather gloves"],
+    ["ceinture", "a coiled black leather belt with a silver buckle"]
+  ],
+  "b6": [
+    ["sac_main", "a structured tan leather handbag with a top handle"],
+    ["sac", "a soft brown leather shoulder bag"],
+    ["cabas", "a woven straw tote basket with leather handles"],
+    ["pochette", "a small gold evening clutch"],
+    ["sac_dos", "an olive canvas backpack"],
+    ["portefeuille", "a folded black leather wallet"],
+    ["valise", "a hard-shell beige cabin suitcase"],
+    ["parapluie", "a closed black umbrella with a wooden handle"],
+    ["chapeau", "a woven straw sun hat with a black band"]
+  ],
+  "b7": [
+    ["lunettes", "a pair of tortoiseshell sunglasses"],
+    ["montre", "a gold wristwatch with a white dial and leather strap"],
+    ["parfum", "a faceted glass perfume bottle with amber liquid and a gold cap, no label"],
+    ["collier", "a fine gold necklace with a small pendant, laid in a curve"],
+    ["bracelet", "a gold bangle bracelet"],
+    ["bague", "a gold ring set with a green stone"],
+    ["boucles", "a pair of gold drop earrings"],
+    ["tag", "a blank kraft paper price tag with a cotton string"],
+    ["cintre", "a wooden clothes hanger"]
+  ],
+  "b8": [
+    ["assiette", "a round white stoneware dinner plate with a thin gold rim, empty"],
+    ["bol", "a handmade ceramic bowl in a sand beige glaze, empty"],
+    ["tasse", "a cream ceramic coffee cup on its saucer, empty"],
+    ["verre", "a clear crystal tumbler glass, empty"],
+    ["carafe", "a clear glass carafe half filled with water"],
+    ["coupe", "a footed brass fruit bowl (compote dish), empty"],
+    ["plateau", "a round hammered brass Moroccan serving tray, empty"],
+    ["miroir", "a round wall mirror in a thin gold metal frame, reflecting a soft cream wall"],
+    ["vase", "a tall matte white ceramic vase, empty"]
+  ],
+  "b9": [
+    ["bougie", "a scented candle poured in a heavy white marble vessel, wick unlit"],
+    ["diffuseur", "a reed diffuser: an amber glass bottle with black rattan reeds"],
+    ["diffuseur_voiture", "a small car air-vent perfume diffuser: a gold metal clip holding a round glass perfume capsule"],
+    ["coffret", "a closed luxury gift box in matte black card tied with a satin ribbon"],
+    ["eteignoir", "a brass candle snuffer with a long handle and a small bell"],
+    ["coupe_meche", "black metal candle wick trimmer scissors with an angled blade"],
+    ["cloche", "a scented candle in a glass jar under a clear glass bell dome on a round wooden base"],
+    ["bougeoir", "a tall brass candlestick holding a white taper candle"],
+    ["coussin", "a square off-white linen cushion with a woven Berber pattern"]
+  ],
+  "b10": [
+    ["ensemble", "a matching two-piece knit set: a cream ribbed sweater above matching wide-leg knit trousers, together on one invisible mannequin"],
+    ["ensemble_jean", "a matching denim two-piece: a blue denim jacket above matching straight jeans, together on one invisible mannequin"],
+    ["survetement", "a black tracksuit: zip jacket above matching jogging trousers, together on one invisible mannequin"],
+    ["trench", "a classic beige double-breasted trench coat with its belt tied, on an invisible mannequin"],
+    ["cape", "a camel wool cape coat belted at the waist, on an invisible mannequin"],
+    ["costume", "a men's navy two-piece suit, jacket and trousers over a white shirt, on an invisible mannequin"],
+    ["doudoune", "a black quilted hooded puffer jacket, on an invisible mannequin"],
+    ["gilet_doudoune", "a navy quilted sleeveless puffer vest, on an invisible mannequin"],
+    ["plaid", "a folded chunky knit throw blanket in warm beige with fringes"]
+  ]
+}

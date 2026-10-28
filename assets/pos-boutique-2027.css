@@ -156,7 +156,7 @@ html[data-skin-2027="till"] #pos-boutique .bq-sgst-art {
   border-radius: var(--k-r-2); background-color: var(--k-bg); color: var(--k-ink-2); overflow: hidden;
 }
 html[data-skin-2027="till"] #pos-boutique .bq-sgst-art svg { width: 32px; height: 32px; }
-html[data-skin-2027="till"] #pos-boutique .bq-sgst-art .bq-product-photo { width: 48px; height: 48px; object-fit: contain; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-art :is(.bq-product-photo, .bq-art-photo) { width: 48px; height: 48px; object-fit: contain; }
 html[data-skin-2027="till"] #pos-boutique .bq-sgst-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 html[data-skin-2027="till"] #pos-boutique .bq-sgst-nm {
   font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong); color: var(--k-ink-1);
@@ -506,12 +506,10 @@ html[data-skin-2027="till"] #pos-boutique .bq-card-art {
   align-self: center;
   background: none; border-radius: 0;
 }
-/* Le dessin de repli, quand l'article n'a pas de photo. Il occupait 44 px
-   d'une boîte de 64 et portait l'encre la plus pâle : à côté des photos
-   pleines du restaurant, la carte paraissait délavée (propriétaire,
-   2026-10-28). Il prend donc sa boîte, et l'encre du prix — lisible, pas
-   criarde. La photo, elle, ne change pas : elle tenait déjà ses 64 px. */
-html[data-skin-2027="till"] #pos-boutique .bq-card-art svg { width: 56px; height: 56px; color: var(--k-ink-2); }
+/* Sans photo du commerçant, la carte montre une photo détourée choisie par le
+   nom (product-photos.js), à la taille des plats de la caisse restaurant :
+   64 px, sans fond (propriétaire, 2026-10-28). */
+html[data-skin-2027="till"] #pos-boutique .bq-card-art .bq-art-photo { width: 64px; height: 64px; }
 html[data-skin-2027="till"] #pos-boutique .bq-product-photo {
   width: 64px; height: 64px; object-fit: contain; display: block;
 }

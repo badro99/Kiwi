@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=184';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=86';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=187';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=88';
 import { openMoves } from './inv-moves.js?v=4';
-import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=14';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=86';
+import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=15';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=88';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -736,7 +736,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const nBc = d.variants.reduce((s, v) => s + ((v.barcodes && v.barcodes.length) ? 1 : 0), 0);
     const cls = d.stock === 0 ? 'rupture' : (d.stock <= 5 ? 'bas' : '');
     return `<div class="bqi-row" data-inv-open="${p.id}">
-      <span class="bqi-art">${artOf(p.art)}</span>
+      <span class="bqi-art">${artOf(p)}</span>
       <span class="bqi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
       <span class="bqi-stock ${cls}">${d.stock}</span>
       <span class="bqi-price">${fmtMAD(p.priceMAD)}</span>
@@ -776,7 +776,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh">
-        <span class="bqi-art">${artOf(p.art)}</span>
+        <span class="bqi-art">${artOf(p)}</span>
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
         <span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>
       </div>
@@ -1585,7 +1585,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       return `<div class="bqx-linklist">${hits.map((h) => `
         <div class="bqx-linkprod">
           <div class="bqx-linkhead">
-            <span class="bqi-art">${artOf(h.product.art)}</span>
+            <span class="bqi-art">${artOf(h.product)}</span>
             <div><b>${esc(h.product.name)}</b><span>${fmtMAD(h.product.priceMAD)}${h.product.cost ? ' · coût ' + fmtMAD(h.product.cost) : ''} · ${h.variants.length}/${h.total} sans code</span></div>
           </div>
           <div class="bqx-chips">${h.variants.map((v) => `
@@ -1666,7 +1666,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>
       </div>
       <div class="bqx-known-card">
-        <span class="bqi-art">${artOf(d.product.art)}</span>
+        <span class="bqi-art">${artOf(d.product)}</span>
         <div>
           <b>${esc(d.product.name)}</b>
           <span>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)} · ${d.stock} en stock au total</span>
