@@ -128,7 +128,7 @@ function preview(result, candidates, catalog) {
       unmatchedShopify: result.unmatchedShopify.length,
       importable: imports.filter((x) => x.eligible).length,
     },
-    matches: result.matches.slice(0, 100).map((x) => ({
+    matches: result.matches.map((x) => ({
       kiwiVariantId: x.kiwi.id,
       kiwiTitle: x.kiwi.title,
       shopifyVariantId: x.shopify.id,
@@ -137,8 +137,8 @@ function preview(result, candidates, catalog) {
       kiwiQuantity: x.kiwi.stock,
       shopifyQuantity: x.shopify.quantity,
     })),
-    unmatched: result.unmatched.slice(0, 100).map((x) => ({ id: x.id, title: x.title, sku: x.sku })),
-    ambiguous: result.ambiguous.slice(0, 100).map((x) => ({ id: x.id, title: x.title, sku: x.sku })),
+    unmatched: result.unmatched.map((x) => ({ id: x.id, title: x.title, sku: x.sku })),
+    ambiguous: result.ambiguous.map((x) => ({ id: x.id, title: x.title, sku: x.sku })),
     unmatchedShopify: imports.slice(0, 5000).map((x) => ({
       shopifyVariantId: x.id,
       title: x.title,

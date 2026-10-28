@@ -168,7 +168,7 @@
         } catch (_) { /* Local custody remains intact until a verified response. */ }
         finally { if (timer != null) clearTimeout(timer); }
       }
-    }).catch(function () {}).finally(function () { running = null; });
+    }).catch(function () { console.warn("[live-link] sync failed"); }).finally(function () { running = null; });
     return running;
   }
   // No timers of its own: the till's send cycle (boot, reconnect, every feed

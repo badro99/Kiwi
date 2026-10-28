@@ -20,16 +20,18 @@ function cuRenderPhotoEditor(root) {
 function cuShrinkHotelPhoto(file) {
     if (!file || !/^image\/(jpeg|png|webp|avif)$/i.test(file.type || '') || file.size < 900 * 1024 || typeof createImageBitmap !== 'function') return Promise.resolve(file);
     return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file)).then((image) => {
+      if (!(image.width > 0 && image.height > 0)) { try { image.close(); } catch (_) {} throw new Error('photo-conversion'); }
       const scale = Math.min(1, 1800 / Math.max(image.width, image.height));
       const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
-      const ctx = canvas.getContext('2d'); if (!ctx) return file;
+      const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('photo-conversion');
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height); try { image.close(); } catch (_) {}
-      return new Promise((resolve) => canvas.toBlob((blob) => {
-        if (!blob || blob.size >= file.size) return resolve(file);
+      return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error('photo-conversion'));
+        if (blob.size >= file.size) return resolve(file);
         const name = String(file.name || 'chambre').replace(/\.[a-z0-9]{1,6}$/i, '') + '.jpg';
         try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); } catch (_) { resolve(blob); }
       }, 'image/jpeg', .84));
-    }).catch(() => file);
+    }).catch(() => { console.warn('[hotel] photo conversion failed'); throw new Error('photo-conversion'); });
   }
 
 function cuRefreshFloorSelectors() {

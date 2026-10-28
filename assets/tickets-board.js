@@ -3,7 +3,8 @@
  * Mutable shared fields belong to the data owner; other modules receive its view. */
 export function createBoard({ $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t }) {
   function saveFilters() {
-    try { window.localStorage.setItem(FILTER_KEY, JSON.stringify(state.filters)); } catch (_) {}
+    const notice = $('filterSaveStatus');
+    try { window.localStorage.setItem(FILTER_KEY, JSON.stringify(state.filters)); if (notice) notice.textContent = ''; } catch (_) { console.warn("[tickets] filter persistence unavailable"); if (notice) notice.textContent = t('filter.saveFailed'); }
   }
 
   function labelOf(item) {

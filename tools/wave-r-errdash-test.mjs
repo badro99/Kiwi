@@ -1,6 +1,7 @@
 import invoicingSourceHelper from './invoicing-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import vm from 'node:vm';
 const read = f => f === 'assets/invoicing.js' ? invoicingSourceHelper.invoicingTestSource() : fs.readFileSync(f, 'utf8');
 const section = (s, a, b) => s.slice(s.indexOf(a), s.indexOf(b, s.indexOf(a)));
@@ -10,10 +11,10 @@ await test('clients#0 hotel#1 authoritative failure, malformed body, retry and r
   const source = read('assets/clients-book.js');
   let response = {ok:false}, calls = 0;
   const host = {isConnected:true, innerHTML:'', querySelector:()=>button}, button = {};
-  const ctx = {host, clientLocalCredits:()=>[{code:'local',balanceCents:900,status:'active'}],creditMerchant:()=> 'fixture',fmt:String,esc:String,tr:s=>s,encodeURIComponent,fetch:async()=>{calls++;return response;}};
+  const ctx = {AbortController,setTimeout,clearTimeout,host, clientLocalCredits:()=>[{code:'local',balanceCents:900,status:'active'}],creditMerchant:()=> 'fixture',fmt:String,esc:String,tr:s=>s,encodeURIComponent,fetch:async()=>{calls++;return response;}};
   vm.createContext(ctx);
-  vm.runInContext(section(source,'  function loadClientCredits(', '  /* ── launcher chip'),ctx);
-  const settle = async()=> { for(let i=0;i<10;i++) await Promise.resolve(); };
+  vm.runInContext(deadlineVmSource(section(source,'  function loadClientCredits(', '  /* ── launcher chip')),ctx);
+  const settle = async()=> { for(let i=0;i<40;i++) await Promise.resolve(); };
   ctx.loadClientCredits('customer',host); await settle();
   assert.match(host.innerHTML,/role="alert"/); assert.doesNotMatch(host.innerHTML,/Aucun avoir|900|solde 0/);
   response={ok:true,json:async()=>({})}; button.onclick(); await settle(); assert.match(host.innerHTML,/role="alert"/);

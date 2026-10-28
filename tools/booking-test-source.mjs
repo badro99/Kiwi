@@ -1,5 +1,6 @@
 // Rebuild the historical lexical layout from LIVE module bodies, never the archive.
 import fs from 'node:fs';
+import splitFunctions from './split-functions.cjs';
 const read = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 export const bookingSplit = JSON.parse(read('tools/fixtures/booking/split.json'));
 export function bookingReadableSource() {
@@ -13,15 +14,26 @@ export function bookingReadableSource() {
     if (!live.startsWith(part.prefix) || !live.endsWith(part.suffix)) throw new Error('Booking interface changed: ' + part.file);
     for (const fragment of part.fragments) {
       if (source.split(fragment.replacement).length !== 2) throw new Error('Booking forwarding changed');
-      source = source.replace(fragment.replacement, () => live.slice(fragment.offset, fragment.offset + fragment.length));
+      source = source.replace(fragment.replacement, () => part.file === 'assets/booking-manage.js' ? splitFunctions.fragment(live, fragment) : live.slice(fragment.offset, fragment.offset + fragment.length));
     }
   }
   return source;
 }
 export function bookingTestSource() {
   let source = bookingReadableSource();
+  const part = bookingSplit.parts.find(p => p.file.endsWith('booking-manage.js'));
+  const live = read(part.file);
+  const changed = part.fragments.map(f => ({ ...f, size: splitFunctions.fragment(live, f).length }));
   const edits = JSON.parse(read('tools/fixtures/booking/format.json'));
-  for (const edit of [...edits].reverse()) source = source.slice(0, edit.start) + edit.text + source.slice(edit.start + edit.length);
+  for (const edit of [...edits].reverse()) {
+    const inside = changed.find(f => edit.start >= f.start && edit.start < f.end);
+    // Changed declarations keep their live formatting. Reformat only the
+    // untouched spans, translating their old coordinates past changed bodies.
+    if (inside && inside.size !== inside.length) continue;
+    const delta = changed.filter(f => f.end <= edit.start).reduce((n,f) => n + f.size - f.length, 0);
+    const start = edit.start + delta;
+    source = source.slice(0, start) + edit.text + source.slice(start + edit.length);
+  }
   return source;
 }
 // VM harness: replace only module transport, execute the production factories and entry.

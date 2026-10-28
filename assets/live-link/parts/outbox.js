@@ -39,7 +39,7 @@
     try {
       var c = window.crypto || window.msCrypto;
       if (c && c.randomUUID) return 'sale-' + c.randomUUID();
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] uid failed"); }
     return 'sale-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
   }
   function stableId(merchantId, entry) {
@@ -89,7 +89,7 @@
     if (!cp || typeof cp.recoverFromTerminal !== 'function') return;
     if (terminalRecoveryAt && Date.now() - terminalRecoveryAt < 60000) return;
     terminalRecoveryAt = Date.now();
-    try { Promise.resolve(cp.recoverFromTerminal()).catch(function () {}); } catch (_) {}
+    try { Promise.resolve(cp.recoverFromTerminal()).catch(function () { console.warn("[live-link] recoverTillProof failed"); }); } catch (_) { console.warn("[live-link] recoverTillProof failed"); }
   }
   function scheduleRecovery() {
     if (recoveryTimer != null) return;
@@ -152,7 +152,7 @@
         fn(value);
       }
       function abort() {
-        try { xhr.abort(); } catch (_) {}
+        try { xhr.abort(); } catch (_) { console.warn("[live-link] abort failed"); }
         finish(reject, Object.assign(new Error('timeout'), { name: 'AbortError' }));
       }
       try {
@@ -239,7 +239,7 @@
      là. */
   function tenantHold(m, entries) {
     var locked = false;
-    try { locked = !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) {}
+    try { locked = !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) { console.warn("[live-link] tenantHold failed"); }
     for (var i = 0; !locked && i < entries.length; i++) {
       var e = entries[i];
       if (e && e.merchant && String(e.merchant) !== m) locked = true;
@@ -257,7 +257,7 @@
         if (localStorage.removeItem) localStorage.removeItem(key);
         return true;
       }
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] moneyStorageReady failed"); }
     try {
       var offline = window.KiwiOffline;
       return !!(offline && offline.putMeta && await offline.putMeta(key, { checkedAt: Date.now() }));

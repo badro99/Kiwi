@@ -2,6 +2,7 @@ import { hotelC1Source, hotelC1 } from './hotel-c1-source.mjs';
 /* Les anciens tests extraient des fonctions dans leur portée lexicale d'origine.
  * Toujours lire les corps de production, jamais l'archive de référence. */
 import fs from 'node:fs';
+import splitFunctions from './split-functions.cjs';
 const liveRead = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const read = hotelC1Source;
 export const hotelParts = JSON.parse(read('tools/fixtures/hotel/split-2.json'));
@@ -15,7 +16,7 @@ export function hotelCoreSource() {
     const source = read(part.file);
     if (!source.startsWith(part.prefix) || !source.endsWith(part.suffix)) throw new Error('Hotel section wrapper changed: ' + part.file);
     for (const f of part.fragments) {
-      let body = source.slice(f.offset, f.offset + f.length);
+      let body = part.file === 'assets/hotel/views.js' ? splitFunctions.declaration(source, f.name) : source.slice(f.offset, f.offset + f.length);
       let delta = 0;
       const inverse = [...f.mutations].sort((a,b) => a.start - b.start).map(m => { const start = m.start + delta; delta += m.replacement.length - m.original.length; return { ...m, start }; });
       for (const m of inverse.reverse()) {
@@ -41,7 +42,7 @@ export function hotelTestSource() {
     if (!source.startsWith(part.prefix) || !source.endsWith(part.suffix)) throw new Error('Hotel part wrapper changed: ' + part.file);
     for (const f of part.fragments) {
       if (!core.includes(f.replacement)) throw new Error('Hotel forwarding function changed: ' + f.name);
-      core = core.replace(f.replacement, source.slice(f.offset, f.offset + f.length));
+      core = core.replace(f.replacement, part.file === 'assets/hotel/views.js' ? splitFunctions.declaration(source, f.name) : source.slice(f.offset, f.offset + f.length));
     }
   }
   if (!core.includes(map.replacement)) throw new Error('Hotel language binding changed');

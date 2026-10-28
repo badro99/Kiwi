@@ -75,12 +75,12 @@ import {} from './live-link/sale-identity.js?v=1';
          * commerçant (session réelle, ou caisse appairée à un magasin) le refus
          * est ignoré et effacé ; il ne vaut que pour une démonstration locale. */
         var pv = null;
-        try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) {}
+        try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { console.warn("[live-link] on failed"); }
         if (realEnv() || (pv && pv.merchant)) {
-          try { localStorage.removeItem(LS); } catch (_) {}
+          try { localStorage.removeItem(LS); } catch (_) { console.warn("[live-link] on failed"); }
           try {
             if (window.KiwiReportError) window.KiwiReportError(new Error('kiwiLive=0 ignoré chez un vrai commerçant'), 'live:stale_off_flag_ignored');
-          } catch (_) {}
+          } catch (_) { console.warn("[live-link] on failed"); }
           return true;
         }
         return false;
@@ -110,7 +110,7 @@ import {} from './live-link/sale-identity.js?v=1';
         localStorage.setItem('kiwiLiveMerchantPrev', cur);
       }
       localStorage.setItem('kiwiLiveMerchant', v);
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] pin failed"); }
   }
   // Which tenant this dashboard is showing. Priority: an explicit ?merchant= (the
   // operator's "Ouvrir dashboard", pinned to localStorage) → the ACTIVE STORE's own
@@ -142,7 +142,7 @@ import {} from './live-link/sale-identity.js?v=1';
       try {
         var KV = window.KiwiVenue;
         if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) vd = KV.getCurrentVenueData();
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       if (vd && vd.name) {
         var vs = realEnv() && !opMode()
           ? (vd.slug || (KV.slugOf && KV.slugOf()) || slugify(vd.name))
@@ -170,7 +170,7 @@ import {} from './live-link/sale-identity.js?v=1';
         }
         var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         if (pv && pv.merchant) return pv.merchant;
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       /* The employee portal has neither KiwiMe (owner identity) nor a paired
        * till. Its authenticated login pins the exact store here. This value is
        * only routing metadata: /api/sale independently verifies the signed
@@ -179,9 +179,9 @@ import {} from './live-link/sale-identity.js?v=1';
       try {
         var employeeMerchant = String(localStorage.getItem('kiwiEmployeeMerchant') || '').trim();
         if (employeeMerchant) return employeeMerchant;
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       var real = false;
-      try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
+      try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { console.warn("[live-link] merchant failed"); }
       // A real session whose identity has NOT resolved yet polls NOTHING. The old
       // fallback to a bare kiwiLiveMerchant pin was a cross-tenant leak: the feed
       // poll starts at boot, before /api/me answers, so a pin left by a PREVIOUS

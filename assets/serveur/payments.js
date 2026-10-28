@@ -1,5 +1,5 @@
     function empPayRefsWrite(map) {
-      try { localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(map)); } catch (_) {}
+      try { localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(map)); } catch (_) { console.warn("[serveur] auxiliary payment-reference storage unavailable"); }
     }
 
     function empPayRefKey(tableId) {

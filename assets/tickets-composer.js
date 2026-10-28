@@ -73,22 +73,22 @@ export function createComposer({ $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft
   function addFiles(fileList) {
     const incoming = Array.from(fileList || []);
     const accepted = [];
-    let error = '';
+    const errors = [];
     for (const file of incoming) {
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-        error = t('error.bad-image-type');
+        errors.push(t('error.bad-image-type'));
         continue;
       }
       if (file.size > MAX_IMAGE_BYTES) {
-        error = file.name ? t('file.tooLarge', { name: file.name }) : t('error.image-too-large');
+        errors.push(file.name ? t('file.tooLarge', { name: file.name }) : t('error.image-too-large'));
         continue;
       }
       if (!state.files.concat(accepted).some((current) => fileKey(current) === fileKey(file))) accepted.push(file);
     }
     const before = state.files.length;
     state.files = state.files.concat(accepted).slice(0, MAX_IMAGES);
-    if (accepted.length + before > MAX_IMAGES) error = t('error.too-many-images');
-    $('formError').textContent = error;
+    if (accepted.length + before > MAX_IMAGES) errors.push(t('error.too-many-images'));
+    $('formError').textContent = errors.filter((message, index) => errors.indexOf(message) === index).join(' · ');
     fileInput.value = '';
     renderSelectedImages();
     draft.save();

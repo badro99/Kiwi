@@ -2896,7 +2896,7 @@
      pas devenir un mois parce qu'elle passe dans le même balayage. */
 
   (function () { var creditCopy = {"Avoirs · solde": ["Store credits · balance", "الأرصدة الدائنة · الرصيد"], "Aucun avoir": ["No store credits", "لا توجد أرصدة دائنة"], "Les crédits boutique émis à ce client apparaîtront ici.": ["Store credits issued to this customer will appear here.", "ستظهر هنا الأرصدة الدائنة الصادرة لهذا الزبون."], "Date inconnue": ["Unknown date", "تاريخ غير معروف"], "sans échéance": ["no expiry", "دون انتهاء"], "reste": ["remaining", "المتبقي"], "expire": ["expires", "تنتهي"], "Vente": ["Sale", "بيع"], "solde": ["balance", "الرصيد"], "annulé": ["cancelled", "ملغى"], "utilisé": ["used", "مستعمل"]}; Object.keys(creditCopy).forEach(function(k){DICT.en[k]=creditCopy[k][0];DICT.ar[k]=creditCopy[k][1];}); })();
-  var DATES = {
+  DICT.en['Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.'] = 'Offline access not saved. A connection will be required for the next unlock.'; DICT.ar['Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.'] = 'لم يُحفظ الدخول دون اتصال. سيلزم الاتصال عند فتح القفل مجدداً.'; var DATES = {
     en: {
       'lun.': 'Mon', 'mar.': 'Tue', 'mer.': 'Wed', 'jeu.': 'Thu',
       'ven.': 'Fri', 'sam.': 'Sat', 'dim.': 'Sun',

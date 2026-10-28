@@ -130,13 +130,13 @@
   }
 
   async function getJson(url) {
-    var r = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(url, { credentials:'same-origin', cache:'no-store' });
+    var r = await (await import('./request-deadline.mjs')).deadlineFetch(url, { credentials:'same-origin', cache:'no-store' });
     var body = {}; try { body = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; }
     if (!r.ok) { var e = new Error(body.error || ('http-' + r.status)); e.status = r.status; e.body = body; throw e; }
     return body;
   }
   async function post(body) {
-    var r = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/inventory/internal-requests', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ merchant:merchant() }, body)) });
+    var r = await (await import('./request-deadline.mjs')).deadlineFetch('/api/inventory/internal-requests', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ merchant:merchant() }, body)) });
     var out = {}; try { out = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; }
     if (!r.ok) { var e = new Error(out.error || ('http-' + r.status)); e.status = r.status; e.body = out; throw e; }
     return out;

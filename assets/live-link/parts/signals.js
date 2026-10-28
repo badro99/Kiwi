@@ -10,7 +10,7 @@
       methods: { cash: 'نقدا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'دفع مقسم', credit: 'رصيد الزبون', delivery: 'توصيل · للتحصيل' } }
   };
   function fmtMAD(n) {
-    try { if (window.KiwiNumber && window.KiwiNumber.amount) return window.KiwiNumber.amount(n); } catch (_) {}
+    try { if (window.KiwiNumber && window.KiwiNumber.amount) return window.KiwiNumber.amount(n); } catch (_) { console.warn("[live-link] fmtMAD failed"); }
     var c = Math.round(Number(n) * 100) || 0;
     return (c / 100).toFixed(c % 100 ? 2 : 0);
   }
@@ -37,17 +37,17 @@
    * into another tab's totals, and nothing can be double-counted. */
   var PING_KEY = 'kiwiSalePing';
   var chan = null;
-  try { if (window.BroadcastChannel) chan = new BroadcastChannel('kiwi-live'); } catch (_) {}
+  try { if (window.BroadcastChannel) chan = new BroadcastChannel('kiwi-live'); } catch (_) { console.warn("[live-link] el failed"); }
   function requestWake() {
-    try { document.dispatchEvent(new CustomEvent('kiwi:request-wake')); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi:request-wake')); } catch (_) { console.warn("[live-link] requestWake failed"); }
   }
   try {
     if (chan) chan.addEventListener('message', requestWake);
     window.addEventListener('storage', function (e) { if (e && e.key === PING_KEY) requestWake(); });
-  } catch (_) {}
+  } catch (_) { console.warn("[live-link] requestWake failed"); }
   function pingLocal() {
-    try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) {}
-    try { if (chan) chan.postMessage('sale'); } catch (_) {}
+    try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) { console.warn("[live-link] pingLocal failed"); }
+    try { if (chan) chan.postMessage('sale'); } catch (_) { console.warn("[live-link] pingLocal failed"); }
   }
   function canonicalSaleId(merchantId, requested) {
     try { return JSON.parse(localStorage.getItem('kiwi:sale-aliases:' + merchantId) || '{}')[requested] || requested; }
@@ -56,7 +56,7 @@
   function moneySignal(body, state, status, serverId) {
     if (!body || !body.id) return;
     if (state === 'accepted' && body.kind !== 'refund') {
-      try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) {}
+      try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     if (state === 'accepted' && body.kind !== 'refund' && serverId && serverId !== body.id) {
       try {
@@ -64,7 +64,7 @@
         var aliases = JSON.parse(localStorage.getItem(key) || '{}');
         aliases[body.id] = String(serverId).slice(0, 64);
         localStorage.setItem(key, JSON.stringify(aliases));
-      } catch (_) {}
+      } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     try {
       window.dispatchEvent(new CustomEvent('kiwi:money-sync', { detail: {
@@ -72,5 +72,5 @@
         state: String(state || ''), status: Number(status) || 0,
         serverId: String(serverId || body.id),
       } }));
-    } catch (_) {}
+    } catch (_) { console.warn("[live-link] moneySignal failed"); }
   }

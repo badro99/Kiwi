@@ -135,10 +135,10 @@ console.log('■ Réservation publique · gestion et joignabilité');
 /* ═══ La page publique porte le lien ══════════════════════════════════════ */
 {
   ok(/manageToken=String\(q\.get\('manage'\)/.test(UI), 'la page reconnaît un lien de gestion');
-  ok(/if\(manageToken\)\{openManage\(\);return\}/.test(UI), 'et l\'ouvre directement');
+  ok(/if\s*\(manageToken\)\s*\{\s*openManage\(\);\s*return\s*\}/.test(UI), 'et l\'ouvre directement');
   ok(/function renderManage/.test(UI) && /data-manage-do/.test(UI),
     'l\'écran de gestion propose l\'annulation');
-  ok(/method:'DELETE'/.test(UI), 'qui appelle bien la route d\'annulation');
+  ok(/method:\s*'DELETE'/.test(UI), 'qui appelle bien la route d\'annulation');
   ok(/data-manage-ask[\s\S]{0,400}data-manage-do/.test(UI),
     'l\'annulation demande confirmation avant d\'agir (geste irréversible)');
   ok(/function rememberManage/.test(UI) && /kiwiBookingManage/.test(UI),
@@ -155,7 +155,7 @@ console.log('■ Réservation publique · gestion et joignabilité');
   ok(/statusRequested|statusConfirmed|statusCancelled/.test(UI),
     'l\'écran de gestion dit l\'état réel de la réservation');
   ['fr', 'en', 'ar'].forEach((l) => {
-    ok(new RegExp(`${l}:\\{keep:`).test(UI), `l'écran de gestion est traduit en ${l}`);
+    ok(new RegExp(`${l}:\\s*\\{[^}]*keep:`).test(UI), `l'écran de gestion est traduit en ${l}`);
   });
   ok(/\.bk-manage-link\{/.test(CSS) && /\.bk-manage-note\{/.test(CSS),
     'le lien de gestion est dessiné, pas posé nu dans la page');

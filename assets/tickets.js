@@ -1,6 +1,6 @@
 import { createData, createTicketState } from './tickets-data.js?v=3';
-import { createBoard } from './tickets-board.js?v=3';
-import { createComposer } from './tickets-composer.js?v=3';
+import { createBoard } from './tickets-board.js?v=7';
+import { createComposer } from './tickets-composer.js?v=5';
 import { createThread } from './tickets-thread.js?v=3';
 (function () {
   'use strict';
@@ -16,6 +16,7 @@ import { createThread } from './tickets-thread.js?v=3';
      servent qu'aux pluriels arabes ; les autres langues retombent sur .other. */
   const COPY = {
     fr: {
+      'filter.saveFailed': 'Filtres non enregistrés sur cet appareil. Ils seront perdus au rechargement.',
       'draft.failed': 'Brouillon non sauvegardé sur cet appareil. Gardez cette page ouverte.',
       'draft.policy': 'Brouillon local : texte et 6 images maximum, 10 Mo chacune, conservés sur cet appareil jusqu’à l’envoi.',
       'doc.title': 'Kiwi Tickets',
@@ -140,6 +141,7 @@ import { createThread } from './tickets-thread.js?v=3';
       'toast.classified': '{number} classé',
     },
     en: {
+      'filter.saveFailed': 'Filters not saved on this device. They will be lost on reload.',
       'draft.failed': 'Draft not saved on this device. Keep this page open.',
       'draft.policy': 'Local draft: text and up to 6 images, 10 MB each, kept on this device until sent.',
       'doc.title': 'Kiwi Tickets',
@@ -264,6 +266,7 @@ import { createThread } from './tickets-thread.js?v=3';
       'toast.classified': '{number} classified',
     },
     ar: {
+      'filter.saveFailed': 'لم تُحفظ المرشحات على هذا الجهاز. ستُفقد عند إعادة التحميل.',
       'draft.failed': 'لم يتم حفظ المسودة على هذا الجهاز. أبقِ هذه الصفحة مفتوحة.',
       'draft.policy': 'مسودة محلية: النص وحتى 6 صور، 10 ميغابايت لكل صورة، محفوظة على هذا الجهاز حتى الإرسال.',
       'doc.title': 'Kiwi · التذاكر',
