@@ -328,7 +328,7 @@
     "sha": "8c8415f533a7c370"
   },
   "assets/clients-store.js": {
-    "v": "34",
+    "v": "35",
     "sha": "fd54134d5300404c"
   },
   "assets/cloud-doc.js": {
@@ -1460,7 +1460,7 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "242",
+    "v": "243",
     "sha": "6f8ffc2a8f944aea"
   },
   "assets/pos-epicerie.css": {
