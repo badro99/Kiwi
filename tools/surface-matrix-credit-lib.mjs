@@ -48,9 +48,41 @@ export async function openFloat(page, amount = 300) {
   }
   await page.waitForSelector('#bq-clockin', { hidden: true, timeout: 20000 });
 }
+/* Sous la peau 2027, les destinations sont sur le rail du kit : les boutons
+   livrés sont TOUJOURS là — c'est eux que le rail clique — mais ils ne
+   peignent plus (pos-boutique-2027.css éteint la barre livrée au lieu de la
+   repeindre). Les chercher à l'écran expirait ici. On touche donc le rail,
+   comme le ferait un doigt ; ce qui n'est pas sur le rail est dans Plus, et
+   Plus s'ouvre d'abord. Rendu true si le rail a pris la main. */
+async function viaKitRail(page, name) {
+  return page.evaluate(async (n) => {
+    const rail = document.querySelector('#bq-kit-rail k-rail');
+    if (!rail || !rail.shadowRoot) return false;
+    const tap = (el) => {
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      el.click();
+    };
+    const pick = (id) => rail.shadowRoot.querySelector(`.it[data-id="${id}"]`);
+    const direct = pick(n);
+    if (direct) { tap(direct); return true; }
+    const more = pick('more');
+    const panel = document.getElementById('bq-more');
+    if (!more || !panel) return false;
+    if (panel.hidden) { tap(more); await new Promise((r) => setTimeout(r, 250)); }
+    const btn = panel.querySelector(`[data-bq-view="${n}"]`);
+    if (!btn) return false;
+    btn.click();
+    return true;
+  }, name);
+}
 export async function view(page, name) {
   const peek = await page.$('#pos-boutique.vx-ticket-open .vx-peek');
   if (peek && await peek.isVisible()) await click(page, '#pos-boutique .vx-peek');
+  if (await viaKitRail(page, name)) {
+    await page.waitForSelector(`[data-bq-panel="${name}"].is-on`, { visible: true });
+    return;
+  }
   const sel = `[data-bq-view="${name}"]`;
   // On a phone the side menu may still be sliding from the last step; decide
   // whether to open it only once the tab has stopped moving.
