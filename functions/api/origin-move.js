@@ -2,8 +2,10 @@ import { json, tillDeviceToken, tillCookie, tillStoreCookie,
   terminalToken, terminalCookie, employeeToken, employeeCookie, activeEmployee } from '../auth/_lib.js';
 import { OLD_HOST, NEW_HOST, MOVE_PATHS, moveIdentity, digest, merchantActive } from '../_origin-move.js';
 
-export function queuesEmpty(q) {
-  return !!q && ['sales', 'prints', 'other', 'unknown'].every(k => q[k] === 0);
+/* Money and paper block a move; a non-financial command does not. An unreadable
+ * queue could hide either, so it blocks too. Mirrors movable() in the client. */
+export function queuesMovable(q) {
+  return !!q && ['sales', 'prints', 'unknown'].every(k => q[k] === 0);
 }
 // Explicit non-secret settings only. Never accept arbitrary localStorage buckets.
 export function safePreferences(input) {
@@ -57,7 +59,7 @@ export async function onRequestPost({ request, env }) {
       const identity = await moveIdentity(request, env, body.role, body.terminalId);
       if (!identity || Array.isArray(identity)) return json({ error: 'login-required' }, 403);
       const prints = await pendingPrints(env, identity.merchant);
-      if (!queuesEmpty(body.queues) || prints) return json({ error: 'queues-not-empty', prints }, 409);
+      if (!queuesMovable(body.queues) || prints) return json({ error: 'queues-not-empty', prints }, 409);
       const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
       const hash = await digest(token);
       await env.DB.prepare('DELETE FROM origin_handoffs WHERE expires_ts < ?').bind(Date.now() - 86400000).run();
@@ -68,7 +70,7 @@ export async function onRequestPost({ request, env }) {
       return json({ token }, 200, { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
     }
     if (body.action !== 'exchange' || url.hostname !== NEW_HOST) return json({ error: 'forbidden' }, 403);
-    if (!queuesEmpty(body.queues)) return json({ error: 'queues-not-empty' }, 409);
+    if (!queuesMovable(body.queues)) return json({ error: 'queues-not-empty' }, 409);
     if (!/^[a-f0-9]{64}$/.test(body.token || '')) return json({ error: 'invalid-or-expired' }, 422);
     const hash = await digest(body.token);
     const row = await env.DB.prepare('SELECT * FROM origin_handoffs WHERE token_hash = ? AND used_ts IS NULL AND expires_ts > ?')

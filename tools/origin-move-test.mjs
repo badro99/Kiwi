@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { visitorRedirect, recordOldOrigin, digest } from '../functions/_origin-move.js';
-import { onRequestPost as move, queuesEmpty, safePreferences } from '../functions/api/origin-move.js';
+import { onRequestPost as move, queuesMovable, safePreferences } from '../functions/api/origin-move.js';
 import { onRequestGet as devices } from '../functions/api/admin/origin-devices.js';
 import { onRequest as middleware } from '../functions/_middleware.js';
 import { tillDeviceToken, tillToken, tillCookie, tillStoreCookie, terminalToken, terminalCookie, employeeToken, employeeCookie,
@@ -100,14 +100,21 @@ const legacy = [tillCookie(await tillToken(secret, 'move-a')), tillStoreCookie('
 assert.equal((await call({ action: 'issue', role: 'till', queues: zero, terminalId: deviceId }, { cookie: legacy })).status, 200);
 console.log('✓ Handoffs are hashed, short-lived, tenant/role bound, single-use and revocation-safe, including concurrent replay');
 
-// Deterministic generative property, every debt dimension over many magnitudes.
-for (const field of Object.keys(zero)) {
+// Deterministic generative property, every blocking dimension over many magnitudes.
+for (const field of ['sales', 'prints', 'unknown']) {
   for (const count of [1, 2, 7, 100, 1000000, NaN, -1, '0', null]) {
     const q = { ...zero, [field]: count };
-    assert.equal(queuesEmpty(q), false);
+    assert.equal(queuesMovable(q), false);
     assert.equal((await call({ action: 'issue', role: 'till', queues: q })).status, 409);
   }
 }
+// A non-financial command is left behind, never a reason to hold a working shop shut.
+for (const count of [1, 2, 7, 100, 1000000]) {
+  assert.equal(queuesMovable({ ...zero, other: count }), true);
+  assert.equal((await call({ action: 'issue', role: 'till', queues: { ...zero, other: count } })).status, 200);
+}
+assert.equal((await call({ action: 'exchange', token: 'b'.repeat(64), queues: { ...zero, other: 3 } },
+  { origin: target, cookie: '' })).status, 422);
 token = await issue();
 assert.equal((await exchange(token, { queues: { ...zero, prints: 1 } })).status, 409);
 assert.equal((await exchange(token)).status, 200);
@@ -116,7 +123,7 @@ sql.prepare(`INSERT INTO print_jobs (id, merchant, kind, target, data_b64, statu
 assert.equal((await call({ action: 'issue', role: 'till', queues: zero })).status, 409);
 assert.equal((await (await call({ action: 'status', role: 'till' })).json()).prints, 1);
 sql.prepare('DELETE FROM print_jobs').run();
-console.log('✓ Queue non-emptiness property refuses movement and preserves the handoff for retry');
+console.log('✓ Money, paper and unreadable queues refuse movement and preserve the handoff for retry');
 
 // Settings cross through a fixed projection, with no queue or credential buckets.
 const preferences = safePreferences({ kiwiLang: 'ar', kiwiTheme: 'dark', kiwiSaleQueue: '[{}]',
@@ -201,17 +208,18 @@ function client(entries = {}, databases = [], factory = {}, options = {}) {
   vm.runInNewContext(source, context);
   return { context, location, posts, events, button: () => document.body.children[0].children.at(-1), run: () => domReady(), api: context.window.KiwiOriginMove };
 }
-let c = client(); assert.ok(c.api.empty(await c.api.queues())); c.run();
+let c = client(); assert.ok(c.api.movable(await c.api.queues())); c.run();
 await new Promise(resolve => setTimeout(resolve, 0)); assert.equal(c.location.replaced, target + '/kiwi-caisse?pair=1');
-for (const field of Object.keys(zero)) for (let n = 1; n < 100; n++) assert.equal(c.api.empty({ ...zero, [field]: n }), false);
+for (const field of ['sales', 'prints', 'unknown']) for (let n = 1; n < 100; n++) assert.equal(c.api.movable({ ...zero, [field]: n }), false);
+for (let n = 1; n < 100; n++) assert.ok(c.api.movable({ ...zero, other: n }));
 c = client({ kiwiSaleQueue: '[{}]', 'kiwiKitchenPrintQueueV1:other-tenant': '[{}]' });
-let queue = await c.api.queues(); assert.equal(queue.sales, 1); assert.equal(queue.prints, 1); assert.equal(c.api.empty(queue), false);
+let queue = await c.api.queues(); assert.equal(queue.sales, 1); assert.equal(queue.prints, 1); assert.equal(c.api.movable(queue), false);
 c = client({ kiwiSaleQueue: 'broken' }); assert.ok((await c.api.queues()).unknown > 0);
 c = client({}, [], { databases: undefined }); assert.ok((await c.api.queues()).unknown > 0);
 c = client({}, [{ name: 'kiwi-runtime-v1' }], { open() { const req = {}; queueMicrotask(() => req.onerror()); return req; } });
 assert.ok((await c.api.queues()).unknown > 0);
 // Exercise the actual Move handler, including programmatic clicks on disabled buttons.
-for (const key of ['kiwiSaleQueue', 'kiwiKitchenPrintQueueV1:move-a', 'kiwiEmployeePunchQueue:move-a']) {
+for (const key of ['kiwiSaleQueue', 'kiwiKitchenPrintQueueV1:move-a']) {
   for (const n of [1, 2, 10]) {
     c = client({ [key]: JSON.stringify(Array.from({ length: n }, () => ({}))) });
     c.run(); await new Promise(resolve => setTimeout(resolve, 0));
@@ -249,20 +257,31 @@ await c.button().handlers.click(); assert.ok(!c.posts.some(body => body.action =
 const heartbeat = state => ({ tenant: 'move-a', channel: 'operations', state, payload: { domain: 'device', action: 'heartbeat' } });
 c = client({ kiwiLang: 'en' }, [{ name: 'kiwi-runtime-v1' }], outbox([...Array.from({ length: 15 }, (_, i) => heartbeat(i % 2 ? 'blocked' : 'pending')),
   { tenant: 'move-a', channel: 'operations', state: 'blocked', payload: { domain: 'device', action: 'rename' } }]));
-queue = await c.api.queues(); assert.equal(queue.other, 0); assert.equal(queue.refused, 1); assert.ok(c.api.empty(queue));
+queue = await c.api.queues(); assert.equal(queue.other, 0); assert.equal(queue.refused, 1); assert.ok(c.api.movable(queue));
 c.run(); await new Promise(resolve => setTimeout(resolve, 0));
 assert.ok(!c.button().disabled);
-assert.match(c.context.document.body.children[0].children[2].textContent, /1 operations the server already refused stay on this device/);
+assert.match(c.context.document.body.children[0].children[2].textContent, /1 non-financial operations stay on this device/);
 await c.button().handlers.click(); assert.ok(c.location.assigned.startsWith(target + '/origin-move#kiwi-move='));
-// A refused sale and a pending operation still block: only telemetry and refusals step aside.
-for (const row of [{ tenant: 'move-a', channel: 'sale', state: 'blocked', payload: {} }, { tenant: 'move-a', channel: 'operations', state: 'pending', payload: { domain: 'device', action: 'rename' } }]) {
-  c = client({}, [{ name: 'kiwi-runtime-v1' }], outbox([row]));
-  assert.equal(c.api.empty(await c.api.queues()), false);
-  c.run(); await new Promise(resolve => setTimeout(resolve, 0)); assert.ok(c.button().disabled);
-}
+// A refused sale is money the ledger may not have seen: it still blocks.
+c = client({}, [{ name: 'kiwi-runtime-v1' }], outbox([{ tenant: 'move-a', channel: 'sale', state: 'blocked', payload: {} }]));
+assert.equal(c.api.movable(await c.api.queues()), false);
+c.run(); await new Promise(resolve => setTimeout(resolve, 0)); assert.ok(c.button().disabled);
+// Santos Store, 28 Oct: one pending non-financial command kept a selling shop on the old origin.
+c = client({ kiwiLang: 'en' }, [{ name: 'kiwi-runtime-v1' }], outbox([{ tenant: 'move-a', channel: 'operations', state: 'pending', payload: { domain: 'device', action: 'rename' } }]));
+queue = await c.api.queues(); assert.equal(queue.other, 1); assert.ok(c.api.movable(queue));
+c.run(); await new Promise(resolve => setTimeout(resolve, 0));
+assert.ok(!c.button().disabled);
+assert.match(c.context.document.body.children[0].children[2].textContent, /1 non-financial operations stay on this device/);
+await c.button().handlers.click(); assert.ok(c.location.assigned.startsWith(target + '/origin-move#kiwi-move='));
+// The notice can be put away so the counter keeps selling while the move waits.
+c = client({ kiwiSaleQueue: '[{}]' }); c.run(); await new Promise(resolve => setTimeout(resolve, 0));
+const notice = c.context.document.body.children[0];
+assert.ok(!notice.hidden);
+notice.children.find(node => node.className === 'origin-move-hide').handlers.click();
+assert.equal(notice.hidden, true);
 const iconHtml = source.slice(source.indexOf("icon.innerHTML"), source.indexOf("var title"));
 assert.ok(!/move_up|material-symbols/.test(source) && /<svg viewBox="0 -960 960 960"/.test(iconHtml), 'the banner icon is an inline SVG, never icon-font text');
-console.log('✓ Device heartbeats and server-refused operations never hold the Move button; sales and pending work still do');
+console.log('✓ Heartbeats, refusals and pending non-financial commands never hold the Move button; sales and prints still do');
 c = client({ kiwiLang: 'en' }); c.run(); await new Promise(resolve => setTimeout(resolve, 0));
 await c.button().handlers.click(); assert.ok(c.location.assigned.startsWith(target + '/origin-move#kiwi-move='));
 c = client({}, [], {}, { receiving: true, hash: '#kiwi-move=' + 'a'.repeat(64) });
@@ -277,5 +296,5 @@ for (const shell of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 
   assert.ok(html.indexOf('/assets/origin-move.js') < html.indexOf('</head>'));
 }
 assert.ok(source.indexOf('history.replaceState') < source.indexOf("action: 'exchange'"));
-console.log('✓ Real early client redirects empty origins, blocks all debt dimensions and fails closed on unreadable storage');
+console.log('✓ Real early client redirects empty origins, blocks on money, paper and unreadable storage, and can be put away');
 sql.close();
