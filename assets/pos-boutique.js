@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=27';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=27';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=27';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=28';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=28';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=28';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   'use strict';
@@ -2764,6 +2764,15 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     const last = el.querySelector('#bqci-last');
     const gate = () => {
       const kit = bqKitSkin();
+      /* Les pastilles livrées ne s'effacent QUE si la feuille du kit peut
+         vraiment prendre le relais. La feuille de peau est portée par le seul
+         drapeau de page, qui est posé en ligne dans kiwi-caisse.html ; si
+         assets/kit/*.js n'arrive pas (réseau, service worker), bqKitFloat()
+         rend false, le bouton reste désactivé et les pastilles étaient déjà
+         cachées : plus aucun chemin pour saisir le fond, caisse morte. Le
+         drapeau vit donc sur l'écran, pas sur la page, et il dit « le kit est
+         LÀ », pas « la peau est demandée ». */
+      el.classList.toggle('bq-float-kit', kit);
       if (btnOpen) btnOpen.disabled = !chosen && !kit;
       if (hint) hint.hidden = chosen || kit;
     };

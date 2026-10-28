@@ -140,13 +140,41 @@ async function openTill(lang, skin2027 = false) {
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.__kiwiCaisseBootedAsDemo === false, { timeout: 20000 });
   // La boutique a son propre écran d'ouverture (pos-boutique.js, #bq-clockin).
-  await page.waitForSelector('#bqci-chips .ci-float-chip[data-float="300"]', { visible: true, timeout: 30000 });
-  for (let k = 0; k < 20; k++) {
-    await sleep(600); // l'écran d'ouverture arrive en fondu
-    await page.click('#bqci-chips .ci-float-chip[data-float="300"]').catch(() => {});
-    if (await page.evaluate(() => !document.getElementById('bqci-btn').disabled)) break;
+  if (skin2027) {
+    /* Sous la peau 2027 le fond d'ouverture se compte sur la feuille du kit,
+       comme à la caisse restaurant (pos-boutique.js › bqKitFloat) : les
+       pastilles livrées sont remplacées, pas déplacées. Les chercher ici
+       faisait expirer ce banc pendant 30 s — c'est exactement ce qu'il doit
+       attraper, donc il suit le parcours, il ne le contourne pas. */
+    await page.waitForFunction(() => {
+      const b = document.getElementById('bqci-btn');
+      return b && !b.disabled;
+    }, { timeout: 30000 });
+    await sleep(600);                       // l'écran d'ouverture arrive en fondu
+    await page.click('#bqci-btn');          // c'est « Ouvrir » qui lève la feuille
+    await page.waitForFunction(() => {
+      const c = document.querySelector('k-sheet k-cash-count');
+      return c && c.shadowRoot && c.shadowRoot.querySelector('[data-kp-key="3"]');
+    }, { timeout: 30000 });
+    const tap = (sel) => page.evaluate((q) => {
+      const el = document.querySelector('k-sheet k-cash-count').shadowRoot.querySelector(q);
+      if (!el) return false;
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      el.click();
+      return true;
+    }, sel);
+    for (const k of ['3', '0', '0']) { await tap(`[data-kp-key="${k}"]`); await sleep(80); }
+    await tap('[data-w="commit"]');
+  } else {
+    await page.waitForSelector('#bqci-chips .ci-float-chip[data-float="300"]', { visible: true, timeout: 30000 });
+    for (let k = 0; k < 20; k++) {
+      await sleep(600); // l'écran d'ouverture arrive en fondu
+      await page.click('#bqci-chips .ci-float-chip[data-float="300"]').catch(() => {});
+      if (await page.evaluate(() => !document.getElementById('bqci-btn').disabled)) break;
+    }
+    await page.click('#bqci-btn');
   }
-  await page.click('#bqci-btn');
   await page.waitForSelector(`[data-bq-item="${ID.foulard}"]`, { visible: true, timeout: 20000 });
   await page.waitForFunction(() => window.KiwiPairs && Object.keys(KiwiPairs._state().pairs || {}).length > 0, { timeout: 15000 });
   return { ctx, page, errors };
@@ -224,14 +252,17 @@ try {
     check(errors.length === 0, 'no script error' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await ctx.close();
   }
-  /* Le drapeau 2027 de la caisse : le fond d'ouverture du kit est celui de
-     la caisse restaurant ; la boutique garde ses propres puces, que la règle
-     du kit ne doit pas cacher (sinon « Ouvrir la caisse » reste éteint). */
+  /* Le drapeau 2027 de la caisse : sous la peau, le fond d'ouverture se compte
+     sur la feuille du kit, celle de la caisse restaurant (pos-boutique.js ›
+     bqKitFloat) — les pastilles livrées sont remplacées, pas déplacées.
+     openTill() suit ce parcours en entier : « Ouvrir » lève la feuille, le
+     pavé compte 300, la validation ouvre le poste. Le banc attendait encore
+     les pastilles et expirait 30 s ici. */
   {
     console.log('■ The boutique opens with the 2027 till flag on');
     const { ctx, page, errors } = await openTill('fr', true);
     check(await page.evaluate(() => document.documentElement.getAttribute('data-skin-2027') === 'till'), 'the 2027 till flag is on');
-    check(await page.evaluate(() => !!document.querySelector('[data-bq-item]')), "its float chips show, a chip turns Open the till on, and the till opens on the boutique's grid");
+    check(await page.evaluate(() => !!document.querySelector('[data-bq-item]')), "the kit's count sheet opens the till on the boutique's grid");
     check(errors.length === 0, 'no script error' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await ctx.close();
   }

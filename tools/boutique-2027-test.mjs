@@ -165,6 +165,20 @@ for (const ic of ['shopping_bag', 'sync_alt', 'inventory_2', 'group', 'more_hori
     `l'icône « ${ic} » manque à sprite.till.svg : le rail dessinerait un vide`);
 }
 
+/* ── 4b · le fond d'ouverture tombe en marche ──────────────────────────────
+   La feuille de peau est portée par le SEUL drapeau de page, posé en ligne
+   dans kiwi-caisse.html. Si assets/kit/*.js n'arrive pas (réseau, service
+   worker), bqKitFloat() rend false et « Ouvrir la caisse » reste éteint — or
+   les pastilles livrées, elles, étaient déjà cachées par la feuille. Plus
+   aucun chemin pour saisir le fond : caisse morte au démarrage, le pire
+   défaut possible sur un comptoir. Les pastilles ne s'effacent donc que
+   derrière .bq-float-kit, que gate() pose d'après bqKitSkin() — « le kit est
+   LÀ », jamais « la peau est demandée ». */
+check(/#bq-clockin\.bq-float-kit .clockin-float/.test(skinCode),
+  `${SKIN} cache les pastilles du fond sur le drapeau de page seul : sans le kit, la caisse ne pourrait plus ouvrir`);
+check(/classList\.toggle\('bq-float-kit', kit\)/.test(bq),
+  "pos-boutique.js ne pose pas .bq-float-kit d'après bqKitSkin() : la feuille ne saurait pas si le kit est vraiment là");
+
 /* ── 5 · câblage et estampilles ───────────────────────────────────────────── */
 const html = read('kiwi-caisse.html');
 const sw = read('kiwi-sw.js');

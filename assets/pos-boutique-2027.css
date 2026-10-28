@@ -52,7 +52,10 @@ html[data-skin-2027="till"] #pos-boutique :is(.bq-card-price, .bq-cat-ct, .bq-tk
    pas dessinées — la même règle que kit.css:485 pour le restaurant, sur le
    drapeau de page puisque la boutique ne monte pas le cadre. « Saisir le
    total » les rend en posant .k-shown. */
-html[data-skin-2027="till"] #bq-clockin .clockin-float:not(.k-shown) { display: none; }
+/* .bq-float-kit est posé par pos-boutique.js › gate() et signifie « le kit est
+   chargé », pas « la peau est demandée » : sans lui les pastilles livrées
+   restent, parce qu'elles sont alors le seul moyen de saisir le fond. */
+html[data-skin-2027="till"] #bq-clockin.bq-float-kit .clockin-float:not(.k-shown) { display: none; }
 html[data-skin-2027="till"] #bq-clockin { background-color: var(--k-bg); color: var(--k-ink-1); font-family: var(--k-font); }
 html[data-skin-2027="till"] #bq-clockin .clockin-brand img { content: url("kiwi-newlogo.svg"); height: 32px; }
 html[data-skin-2027="till"] #bq-clockin :is(.clockin-tagline, .clockin-role, .clockin-date) { color: var(--k-ink-3); font-family: var(--k-font); }
