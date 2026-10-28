@@ -355,6 +355,20 @@ html[data-skin-2027="till"] #pos-boutique #bq-nav {
    panneau Plus, qui est leur nouveau foyer, se voit. */
 html[data-skin-2027="till"] #pos-boutique #bq-nav > :not(.bq-more) { display: none; }
 html[data-skin-2027="till"] #pos-boutique > .bq-main { left: 88px; right: 0; }
+/* La page FLOTTE sur le rail, comme le carnet clients (clients-book/base.js,
+   #kcb-root) : coin haut arrondi côté rail, ombre portée sur le rail, filet.
+   Les mêmes valeurs, pas une approximation — Clientes et les autres pages
+   doivent se lire comme une seule surface (propriétaire, 2026-10-28). Le
+   z-index la pose au-dessus de la boîte du rail (5) pour que l'ombre s'y
+   voie ; le tiroir Plus (60) et son voile (59) restent au-dessus. */
+html[data-skin-2027="till"] #pos-boutique > .bq-main {
+  z-index: 6;
+  border-inline-start: 1px solid var(--k-line);
+  border-start-start-radius: 16px;
+  /* L'ombre du carnet est à .55 ; le voile du kit à .32 — posé deux fois, il
+     y revient (1 − .68² ≈ .54) et suit le mode sombre avec le kit. */
+  box-shadow: -22px 0 55px -30px var(--k-scrim), -22px 0 55px -30px var(--k-scrim);
+}
 html[data-skin-2027="till"] .kiwi-rtl #pos-boutique > .bq-main,
 html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-main { left: 0; right: 88px; }
 
