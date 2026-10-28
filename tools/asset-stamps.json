@@ -320,8 +320,8 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "52",
-    "sha": "f447fe5fec5c0e1e"
+    "v": "53",
+    "sha": "d4382801803c97dc"
   },
   "assets/clients-directory.js": {
     "v": "30",
@@ -1492,8 +1492,8 @@
     "sha": "ead78da9f846f79d"
   },
   "assets/pos-inventory-count.js": {
-    "v": "11",
-    "sha": "08f0528ef49755b7"
+    "v": "12",
+    "sha": "e0a57a52138b2501"
   },
   "assets/pos-librairie.css": {
     "v": "17",

@@ -48,10 +48,21 @@
   function panelInset() {
     var res = { left: 0, top: 0, right: 0, bottom: 0 };
     try {
-      var rail = null, cands = document.querySelectorAll('#kit-rail, .sidebar, nav[class$="-nav"]');
+      /* `#bq-kit-rail` est le rail 2027 de la boutique, comme `#kit-rail` est
+         celui du restaurant : il DOIT être nommé ici. Sans lui, le seul
+         candidat restant était `<nav class="bq-nav">` — que la peau 2027
+         réduit à une largeur nulle pour éteindre la barre livrée. Une bande
+         de 0 px passait les deux tests (plus haute que large, collée au bord
+         gauche), le carnet héritait d'un retrait nul, s'ouvrait en plein
+         écran PAR-DESSUS le rail, et la caissière n'avait plus aucun moyen
+         de quitter la page Clientes (propriétaire, 2026-10-28). D'où aussi le
+         refus des rails sans largeur : une barre qui ne peint rien n'est pas
+         la barre, et mieux vaut le plein écran franc qu'un retrait faux. */
+      var rail = null, cands = document.querySelectorAll('#kit-rail, #bq-kit-rail, .sidebar, nav[class$="-nav"]');
       for (var i = 0; i < cands.length; i++) {
         var el = cands[i]; if (el.offsetParent === null) continue;
         var rr = railBox(el);
+        if (rr.width < 8) continue;                 // une barre éteinte n'est pas la barre
         // a vertical rail hugging a screen edge (taller than wide), not a top bar
         if (rr.height > rr.width * 1.4 && (rr.left < 60 || rr.right > window.innerWidth - 60)) { rail = rr; break; }
       }

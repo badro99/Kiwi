@@ -395,6 +395,10 @@
     }
 
     const modalHtml = `
+      <button type="button" data-cnt-close aria-label="Fermer le comptage" title="Fermer le comptage"
+        style="position:absolute;top:12px;inset-inline-end:12px;width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--n-100,#efece3);color:var(--ink,#0A0F0D);cursor:pointer;touch-action:manipulation;">
+        <i data-lucide="x"></i>
+      </button>
       <div class="split-badge" style="background:#e0f2fe;color:#0369a1;"><i data-lucide="clipboard-check"></i> Inventaire physique</div>
       <h3 class="modal-title" style="margin-bottom:4px;">Comptage de stock en caisse</h3>
       <p class="modal-subtle" style="margin:0 0 14px;">Saisie à l'aveugle des quantités réelles. La transmission sera soumise à la validation du propriétaire.</p>
@@ -412,9 +416,31 @@
         modal.classList.add('is-open');
       }
     }
+    const box = document.getElementById('sk-modal-box');
+    if (box && getComputedStyle(box).position === 'static') box.style.position = 'relative';
     if (window.lucide) lucide.createIcons();
     wireEvents();
   }
+
+  /* La seule sortie du comptage. `window.closeSkModal` n'a JAMAIS existé :
+     closeSkModal est une fonction locale de assets/caisse/inventory.js, donc
+     le `typeof window.closeSkModal === 'function'` d'ici était toujours faux
+     et même « Terminer » ne refermait rien. Et le gestionnaire que wireEvents
+     pose en `modal.onclick` ÉCRASE celui de la caisse, qui portait le clic sur
+     le voile — plus de croix, plus de voile, plus d'Échap : la caissière
+     restait enfermée dans le comptage (propriétaire, 2026-10-28, les deux
+     peaux). On ferme donc ici, sans dépendre de personne, et on enregistre le
+     brouillon avant : fermer ne doit jamais coûter une saisie. */
+  function closeCount() {
+    try { saveDraft(); } catch (_) {}
+    if (escHandler) { document.removeEventListener('keydown', escHandler, true); escHandler = null; }
+    const modal = document.getElementById('sk-modal');
+    if (!modal) return;
+    if (typeof window.closeSkModal === 'function') window.closeSkModal();
+    else modal.classList.remove('is-open');
+    modal.onclick = null; modal.oninput = null;
+  }
+  let escHandler = null;
 
   function wireEvents() {
     const searchInput = document.getElementById('pos-cnt-search-input');
@@ -446,7 +472,18 @@
     const modal = document.getElementById('sk-modal');
     if (!modal) return;
 
+    if (!escHandler) {
+      escHandler = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); closeCount(); } };
+      document.addEventListener('keydown', escHandler, true);
+    }
+
     modal.onclick = (e) => {
+      /* Le voile lui-même, puis la croix : les deux sorties que tout le reste
+         de la caisse offre déjà (`e.target === #sk-modal`, `[data-sk-cancel]`). */
+      if (e.target === modal || e.target.closest('[data-cnt-close]') || e.target.closest('[data-sk-cancel]')) {
+        closeCount();
+        return;
+      }
       const filterBtn = e.target.closest('[data-cnt-filter]');
       if (filterBtn) {
         countState.filter = filterBtn.dataset.cntFilter;
@@ -487,7 +524,7 @@
       }
 
       if (e.target.id === 'pos-cnt-finish-btn') {
-        if (typeof window.closeSkModal === 'function') window.closeSkModal();
+        closeCount();
         return;
       }
 
