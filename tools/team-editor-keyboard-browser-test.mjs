@@ -155,8 +155,29 @@ await S.run('fiche d\'un membre · création et correction au clavier seul', asy
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await sleep(300);
-  const fnVal = await page.$eval('.kt-ed-modal [name="function"]', (e) => e.value);
+  let fnVal = await page.$eval('.kt-ed-modal [name="function"]', (e) => e.value);
   check(!!fnVal, 'un poste est choisi au clavier');
+  let deptVal = await page.$eval('.kt-ed-modal [name="department"]', e => e.value);
+  check(!!deptVal, 'le poste choisi au clavier remplit le département du vrai formulaire');
+  const deptAx = await axOf(page, '.kt-ed-modal [data-f="department"] .kiwi-select-trigger, .kt-ed-modal [name="department"]');
+  check(!!deptAx?.name, 'le département a un nom accessible dans le formulaire');
+
+  t.step('les droits de caisse suivent le poste choisi au clavier');
+  for (const [job, department, till] of [['Caissier', 'Caisse', true], ['Vendeur conseil', 'Vente', false]]) {
+    await page.focus('.kt-ed-modal [data-f="function"] .kiwi-select-trigger');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.kiwi-select-option', { visible: true });
+    const focused = await page.evaluate(job => {
+      const option = [...document.querySelectorAll('.kiwi-select-option')].find(el => el.textContent.trim() === job);
+      option?.focus(); return !!option;
+    }, job);
+    check(focused, 'le poste existe dans la liste accessible');
+    await page.keyboard.press('Enter');
+    fnVal = await page.$eval('.kt-ed-modal [name="function"]', e => e.value);
+    deptVal = await page.$eval('.kt-ed-modal [name="department"]', e => e.value);
+    assert.equal(fnVal, job); assert.equal(deptVal, department);
+    assert.equal(await page.evaluate(job => window.KiwiRoles.opensTill(job), fnVal), till, 'la politique réelle de caisse suit le poste');
+  }
 
   t.step('e-mail manquant');
   await tabTo(page, (x) => x.action === 'kt-submit-member');
@@ -178,6 +199,11 @@ await S.run('fiche d\'un membre · création et correction au clavier seul', asy
   await sleep(500);
   const listed = await page.evaluate(() => Object.values(window.__kiwiTeamV2.byVenue || {}).flat().some((m) => m && m.firstName === 'Nadia' && m.lastName === 'Test'));
   check(listed, 'Nadia Test est au roster');
+  const savedRole = await page.evaluate(() => {
+    const member = Object.values(window.__kiwiTeamV2.byVenue || {}).flat().find(m => m?.firstName === 'Nadia');
+    return { function: member?.function, department: member?.department };
+  });
+  assert.deepEqual(savedRole, { function: fnVal, department: deptVal }, 'le poste et son département survivent à la sauvegarde');
   a = await active(page);
   const onNew = await page.evaluate(() => { const el = document.activeElement; const id = el && el.getAttribute('data-arg'); return !!id && Object.values(window.__kiwiTeamV2.byVenue || {}).flat().some((m) => m && m.id === id && m.firstName === 'Nadia'); });
   check(onNew || a.action === 'kt-add-member', `le focus ne se perd pas : il va sur le membre enregistré (${a.action || a.tag})`);

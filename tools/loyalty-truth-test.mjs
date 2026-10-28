@@ -111,6 +111,29 @@ console.log('\nCarte produit : un tampon par article choisi, pas par passage');
   check(Number(s.row().stamps) === 2, 'Arabic product return reverses the qualifying stamp');
 }
 
+// Full handler path: punctuation, renamed catalogue labels, partial and replayed returns.
+for (const [product, sold, renamed] of [
+  ['Café', '« CAFÉ » / crème', 'Expresso maison'],
+  ['Coffee', 'Coffee: black!', 'House espresso'],
+  ['قهوة', 'قَهْوَة، سوداء', 'مشروب البيت'],
+]) {
+  const s = store({ model: 'product', product: { item: product, target: 10 } });
+  const saleRef = 'punctuation-name-edit';
+  const buy = await s.post({ purchase: { clientId: 'c1', ref: 'name:buy', saleRef, amount: 36,
+    items: [{ name: sold, qty: 3, total: 36 }] } });
+  check(buy.status === 200 && Number(s.row().stamps) === 3, `${product}: punctuation earns through the purchase handler`);
+  await s.post({ refund: { clientId: 'c1', ref: 'refund:name:partial', saleRef, amount: 12,
+    items: [{ name: sold, qty: 1, total: 12 }] } });
+  check(Number(s.row().stamps) === 2, `${product}: partial return reverses one`);
+  const refund = { clientId: 'c1', ref: 'refund:name:rest', saleRef, amount: 24,
+    items: [{ name: renamed, qty: 2, total: 24 }] };
+  await s.post({ refund });
+  check(Number(s.row().stamps) === 0 && Number(s.row().spend) === 0, `${product}: renamed full remainder reverses all historical earning`);
+  await s.post({ refund });
+  check(Number(s.row().stamps) === 0, `${product}: replay cannot reverse twice`);
+  s.raw.close();
+}
+
 console.log('\nCarte passages : un retour complet reprend le tampon du passage');
 {
   const s = store({ model: 'visit', visit: { target: 10, reward: '1 offert' } });
@@ -187,6 +210,20 @@ console.log('\nCaisse : la même règle avant la réponse du serveur');
   const stamps = Number(KC.get(c.id, MERCHANT).stamps);
   KC.recordPurchase(c.id, { amount: 24, saleRef: 'AR2', eventRef: 'AR2', items: [{ name: 'قهوة سوداء', qty: 2, total: 24 }] }, MERCHANT);
   check(Number(KC.get(c.id, MERCHANT).stamps) === stamps + 2, 'offline client book also earns Arabic product stamps');
+  const clientStamps = () => Number(KC.get(c.id, MERCHANT).stamps);
+  for (const [item, name, renamed] of [['Café', '« CAFÉ » crème', 'Expresso'], ['Coffee', 'Coffee: black!', 'House espresso'], ['قهوة', 'قَهْوَة، سوداء', 'مشروب البيت']]) {
+    KC.setConfig({ model: 'product', product: { item, target: 10 } }, MERCHANT);
+    const before = clientStamps();
+    const saleRef = 'rename-' + item;
+    KC.recordPurchase(c.id, { amount: 36, saleRef, eventRef: saleRef, items: [{ name, qty: 3, total: 36 }] }, MERCHANT);
+    check(clientStamps() === before + 3, item + ': local sale matches punctuation');
+    KC.recordRefund(c.id, { amount: 12, saleRef, eventRef: saleRef + '-partial', items: [{ name, qty: 1, total: 12 }] }, MERCHANT);
+    const refund = { amount: 24, saleRef, eventRef: saleRef + '-rest', items: [{ name: renamed, qty: 2, total: 24 }] };
+    KC.recordRefund(c.id, refund, MERCHANT);
+    check(clientStamps() === before, item + ': local full remainder reverses historical stamps after rename');
+    KC.recordRefund(c.id, refund, MERCHANT);
+    check(clientStamps() === before, item + ': local refund replay is idempotent');
+  }
   KC.setConfig({ model: 'amount', amount: { perMad: 1, threshold: 100 } }, MERCHANT);
   const before = Number(KC.get(c.id, MERCHANT).points) || 0;
   KC.recordPurchase(c.id, { amount: 99.5, saleRef: 'A1', eventRef: 'A1' }, MERCHANT);

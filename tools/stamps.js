@@ -251,7 +251,7 @@ function scan() {
   }
 
   // Explicit ES module entries: static and dynamic import URLs are stamp sites.
-  const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js', 'assets/team-hours.js', 'assets/team.js', 'assets/pressing-caisse.js'];
+  const retail = ['assets/pos-epicerie.js', 'assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js', 'assets/team-hours.js', 'assets/team.js', 'assets/pressing-caisse.js'];
   for (const dir of ['assets/pos-maison', 'assets/pos-boutique', 'assets/pressing']) {
     if (exists(dir)) retail.push(...fs.readdirSync(path.join(ROOT, dir)).filter(f => f.endsWith('.js')).map(f => dir + '/' + f));
   }

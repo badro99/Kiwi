@@ -544,7 +544,10 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
   const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
-  const { take, pointsTake, stampsTake } = refundFor(sale, amount, cfg, refund.items, client);
+  // A fully returned ticket reverses its historical earning, even after a
+  // catalogue rename. Partial returns still qualify their individual lines.
+  const fullReturn = Number(sale?.paid) > 0 && Math.round(amount * 100) >= Math.round(Number(sale.paid) * 100) - Math.round(Number(sale.refunded || 0) * 100);
+  const { take, pointsTake, stampsTake } = refundFor(sale, amount, cfg, fullReturn ? [] : refund.items, client);
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }

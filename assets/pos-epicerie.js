@@ -1465,7 +1465,7 @@
   let bindHistoryPages, historyPagesReady;
   function openArdoise(id) {
     if (!bindHistoryPages) {
-      historyPagesReady ||= import('./credit-history-page.js').then(module => { bindHistoryPages = module.bindHistoryPages; });
+      historyPagesReady ||= import('./credit-history-page.js?v=3').then(module => { bindHistoryPages = module.bindHistoryPages; });
       return historyPagesReady.then(() => openArdoise(id));
     }
     const c = CRED[id];

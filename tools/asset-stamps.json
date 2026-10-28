@@ -328,8 +328,8 @@
     "sha": "8c8415f533a7c370"
   },
   "assets/clients-store.js": {
-    "v": "32",
-    "sha": "14d47cee22086630"
+    "v": "34",
+    "sha": "4d21d6e188d00aa9"
   },
   "assets/cloud-doc.js": {
     "v": "13",
@@ -346,6 +346,10 @@
   "assets/cost.js": {
     "v": "11",
     "sha": "75a7be91584c812f"
+  },
+  "assets/credit-history-page.js": {
+    "v": "3",
+    "sha": "2d7b6732612470e0"
   },
   "assets/customer-retention.js": {
     "v": "16",
@@ -1308,8 +1312,8 @@
     "sha": "f7920f5f149a1d63"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "65",
-    "sha": "cdc7153c2020a73e"
+    "v": "67",
+    "sha": "8949bbc63ba2a4f4"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1456,16 +1460,16 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "239",
-    "sha": "2fc1d06b7eaaa578"
+    "v": "240",
+    "sha": "02345669f583c1a1"
   },
   "assets/pos-epicerie.css": {
-    "v": "28",
+    "v": "29",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "28",
-    "sha": "2677c872f76dda13"
+    "v": "29",
+    "sha": "777781df34460d3a"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -1728,8 +1732,8 @@
     "sha": "49e73f76026a3733"
   },
   "assets/restaurant-menu/recipes.js": {
-    "v": "1",
-    "sha": "46b4ddee0c857f68"
+    "v": "3",
+    "sha": "a83af7c1066e3639"
   },
   "assets/restaurant-menu/strings.js": {
     "v": "2",

@@ -20,7 +20,6 @@
     "d1-restore-rehearsal-test.mjs": "restore rehearsal on local SQL files",
     "dynamic-i18n-test.mjs": "AST translation completeness and literal copy rules",
     "economat-custody-contract-test.mjs": "economat contract document agrees with routes",
-    "employee-language-test.js": "waiter shell declares its languages",
     "file-size-ratchet-test.mjs": "repository size ratchet",
     "global-ownership-test.mjs": "ownership ratchet over globals",
     "guest-copy-test.js": "guest-facing copy rules",
@@ -56,7 +55,8 @@
     "tables-operations-split-test.mjs": "byte-exact concatenation of the floor-plan editor operation parts and the names each part owns",
     "tables-page-split-test.mjs": "byte-exact concatenation of the floor-plan editor page parts and the names each part owns",
     "type-policy-test.js": "typography ban over shipped files",
-    "vertical-feature-parity-test.mjs": "each vertical declares the same features"
+    "vertical-feature-parity-test.mjs": "each vertical declares the same features",
+    "employee-shell-structure-test.js": "Employee shell identity, icons and offline metadata, separated from runtime language assertions"
   },
   "style": {
     "admin-crm-layout-test.mjs": "layout, contrast or copy in CSS/markup",

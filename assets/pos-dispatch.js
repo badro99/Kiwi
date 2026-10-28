@@ -63,7 +63,7 @@
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '7', label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '13', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '9', label: 'Food truck · Karavan' },
-    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '28', label: 'Épicerie · Si Brahim' },
+    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '29', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '9', label: 'Pharmacie · Ibn Batouta' },
     '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '17', deps: [{ file: 'money-cents', rev: '4' }, { file: 'librairie-loyalty', rev: '7' }], label: 'Librairie · Al Boughaz' },
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '15', label: 'Fleuriste · Fleurs du Détroit' },

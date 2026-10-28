@@ -21,7 +21,7 @@ import caisseTestSource from './caisse-test-source.cjs';
  *
  * Ce banc tient les contrats par lecture du code livré (le câblage) et, quand
  * c'est possible, par exécution du vrai module (stock, rapport journalier).
- * Il n'est pas branché dans tools/check.js : à l'intégrateur de le faire.
+ * Branché dans tools/check.js.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -136,6 +136,65 @@ ok('9 · l\'export du rapport ne perd pas non plus ces ventes', /s\.id \|\| s\.s
     const hits = (strip(R(f)).match(/[^\n]*God Mode[^\n]*/g) || []).map((l) => l.trim().slice(0, 80));
     ok('10 · aucun « God Mode » montré au caissier dans ' + f, !hits.length, hits.join(' | '));
   }
+}
+
+// Opening and accounting execute the production declarations with side effects observed.
+{
+  let opens = 0;
+  const error = { hidden: true };
+  const c = vm.createContext({ operatorCaisseRequested: () => false, floatChosen: false,
+    tillKitOpenFloat: () => false, document: { getElementById: () => error },
+    hoursAllowOpening: () => ({ ok: true }), doOpenService: () => { opens++; } });
+  vm.runInContext(caisseTestSource.declarations('openService'), c);
+  c.openService();
+  ok('1 execution · sans fond : erreur visible et aucune ouverture', opens === 0 && error.hidden === false);
+  c.floatChosen = true; c.openService();
+  ok('1 execution · fond explicitement choisi permet l’ouverture', opens === 1);
+}
+{
+  const c = vm.createContext({ mode: 'vrap', selectedId: null, cart: [],
+    vrapDiscount: { accounted: false }, shift: { discounts: 0, discountsCount: 0 },
+    vrapDiscountAmount: () => 0, money: n => Math.round(n * 100) / 100 });
+  // Supply the production order owner so its setDiscount projection is exercised.
+  vm.runInContext(caisseTestSource.orderDeclarations(), c);
+  vm.runInContext(caisseTestSource.declarations('accountActiveDiscount'), c);
+  c.accountActiveDiscount(null, { discountAmountCents: 235 });
+  ok('4 execution · panier vidé conserve 235 centimes de remise au Z', Math.round(c.shift.discounts * 100) === 235 && c.shift.discountsCount === 1);
+}
+
+/* Execution contract: external TPE, unavailable reader, approval, stale reply.
+ * Keep wiring checks above: they establish the confirm button exists. */
+async function cardScenario(source, external, authorize) {
+  const elements = new Map(), timers = [], pending = [];
+  const el = () => ({ hidden: true, textContent: '', innerHTML: '', style: {},
+    classList: { values: new Set(), add(...v) { v.forEach(x => this.values.add(x)); }, remove(...v) { v.forEach(x => this.values.delete(x)); }, contains(v) { return this.values.has(v); } } });
+  const $ = key => { if (!elements.has(key)) elements.set(key, el()); return elements.get(key); };
+  const c = vm.createContext({ $, window: { KiwiHardware: { externalCardTerminal: () => external, authorizeCard: authorize } },
+    reader: Object.fromEntries(['disc','status','method','foot','confirm'].map(k => [k, el()])),
+    cardModal: $('#card-modal'), cardAttemptSeq: 0, cardPaymentCommitted: false,
+    cardTenderMethod: '', resetPayTip() {}, renderPayTip() {}, currentTotal: () => 21.35,
+    payTipAmount: () => 0, fmtMADcents: n => String(n), lucide: { createIcons() {} },
+    setTimeout(fn) { timers.push(fn); }, triggerCardSuccess(result) { pending.push(result); } });
+  vm.runInContext(source, c);
+  c.openCardModal();
+  for (const fn of timers) await fn();
+  await Promise.resolve(); await Promise.resolve();
+  return { c, timers, pending };
+}
+{
+  const code = caisseTestSource.declarations('openCardModal');
+  const external = await cardScenario(code, true, () => { throw Error('external terminal must not authorize'); });
+  ok('2 execution · TPE externe attend sans minuteur, confirmation visible', external.timers.length === 0 && !external.c.reader.confirm.hidden && !external.pending.length);
+  const absent = await cardScenario(code, false, undefined);
+  ok('2 execution · lecteur absent ne valide jamais', !absent.pending.length && absent.c.reader.status.textContent.includes('non confirmé'));
+  const refused = await cardScenario(code, false, async () => ({ approved: false }));
+  ok('2 execution · refus ne valide jamais', !refused.pending.length);
+  const approved = await cardScenario(code, false, async () => ({ approved: true }));
+  ok('2 execution · accord matériel déclenche une seule validation', approved.pending.length === 1 && approved.pending[0].approved);
+  // Mutation preserves every old regex, but makes the return unreachable.
+  const mutant = code.replace('if (externalTerminal) return;', 'if (false) { if (externalTerminal) return; }');
+  const broken = await cardScenario(mutant, true, undefined);
+  ok('2 mutation · nouveau contrat détecte le garde TPE devenu mort', broken.timers.length !== 0);
 }
 
 if (fails.length) { console.error('\n✗ ' + fails.length + ' contrôle(s) rouge(s)\n  - ' + fails.join('\n  - ')); process.exit(1); }
