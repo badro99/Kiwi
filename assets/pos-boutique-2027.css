@@ -389,8 +389,10 @@ html[data-skin-2027="till"] #pos-boutique .bq-more > :not(k-sidebar, .bq-more-br
 html[data-skin-2027="till"] #pos-boutique .bq-more > k-sidebar { display: block; }
 
 /* Une seule ligne : le logo à sa vraie proportion (mot-symbole ~1,8:1, il
-   s'écrasait dans un carré de 28px), puis l'état de service juste à sa
-   droite (propriétaire, 2026-10-28). Sans nom d'enseigne, sa case se tait. */
+   s'écrasait dans un carré de 28px), et l'état de service poussé dans le coin
+   haut opposé (propriétaire, 2026-10-28 : collé au logo, il faisait bizarre).
+   margin-inline-start le renvoie à gauche en arabe. Sans nom d'enseigne, sa
+   case se tait. */
 html[data-skin-2027="till"] #pos-boutique .bq-more-brand {
   display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px;
   padding: 4px 12px 16px;
@@ -406,6 +408,7 @@ html[data-skin-2027="till"] #pos-boutique .bq-more-venue {
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more-live {
   display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  margin-inline-start: auto; align-self: flex-start;
   font-size: var(--k-fs-footnote); color: var(--k-ink-2);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more-live i {
@@ -440,6 +443,15 @@ html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl .kcl-it.on {
   background-color: var(--k-accent-tint); color: var(--k-accent-ink);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more[hidden] { display: none; }
+/* Plus ouvert depuis Clients : le carnet (#kcb-root, 940, posé sur <body>)
+   passait au-dessus de tout l'écran boutique (90), panneau compris, qui
+   s'ouvrait coupé derrière la page (propriétaire, 2026-10-28). Le temps que
+   Plus est ouvert, l'écran boutique monte au-dessus du carnet ; si le carnet
+   est ouvert, la vente sous lui s'efface et le fond devient transparent, pour
+   que le voile tombe sur la page Clients et pas sur l'écran de vente. */
+html[data-skin-2027="till"][data-bq-more] #pos-boutique { z-index: 950; }
+html[data-skin-2027="till"][data-bq-more][data-kcb-open] #pos-boutique { background-color: transparent; }
+html[data-skin-2027="till"][data-bq-more][data-kcb-open] #pos-boutique > .bq-main { visibility: hidden; }
 /* Le voile : celui du restaurant (#kit-more-scrim), même teinte, même
    entrée. Il n'existe que tant que le panneau est ouvert. */
 html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-more-scrim { display: none; }

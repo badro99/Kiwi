@@ -53,6 +53,22 @@ for (const skin of ['1', '0']) {
   ok(seen.w >= 8, `${label} · le rail a une largeur réelle (${seen.w}px)`);
   ok(seen.reachable, `${label} · Clientes ouvert, le rail reste cliquable (retrait ${seen.inset})`);
 
+  /* ── 1b · Plus ouvert depuis Clients passe AU-DESSUS du carnet (940) ──── */
+  if (skin === '1') {
+    await page.mouse.click(44, 330);
+    await sleep(700);
+    const over = await page.evaluate(() => {
+      const m = document.getElementById('bq-more');
+      const b = m.getBoundingClientRect();
+      return { open: !m.hidden, w: Math.round(b.width), hit: m.contains(document.elementFromPoint(Math.round(b.right) - 20, 300)) };
+    });
+    ok(over.open && over.hit, `${label} · Plus ouvert depuis Clients, le panneau est entier au-dessus de la page (${over.w}px)`);
+    await page.mouse.click(700, 300);
+    await sleep(600);
+    const back = await page.evaluate(() => ({ shut: document.getElementById('bq-more').hidden, onBook: document.getElementById('kcb-root').contains(document.elementFromPoint(600, 300)) }));
+    ok(back.shut && back.onBook, `${label} · le voile referme Plus et rend la page Clients`);
+  }
+
   /* ── 2 · le comptage physique a quatre sorties, et aucune ne coûte la saisie ── */
   await page.evaluate(() => document.querySelector('#bq-nav .bq-nav-it[data-bq-view="inventaire"]').click());
   await sleep(900);

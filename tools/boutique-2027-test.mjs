@@ -185,6 +185,17 @@ check(/\['#bq-close-day', 'power_settings_new'\]/.test(railSrc)
   && /\['\.kx-attendance-code', 'key'\]/.test(railSrc)
   && /\['\.kx-reprint', 'receipt'\]/.test(railSrc),
   'Fin de service, Code de pointage ou Réimprimer ne sont plus reconnus : le tiroir dessinerait « ••• »');
+/* L'ordre du tiroir (propriétaire, 2026-10-28) : Service puis Cet appareil,
+   la fin de service et Verrouiller chacun en dernier de son groupe, et chaque
+   rangée garde l'index LIVRÉ de son bouton (sinon elle cliquerait le voisin). */
+{
+  const rank = (sel) => { const m = railSrc.match(new RegExp("\\['" + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "[^']*', (\\d+)\\]")); return m ? +m[1] : NaN; };
+  const r = ['#bq-open-drawer', '.kx-reprint', '.kx-attendance-code', '#bq-close-day', '[data-action="printer-connect"]', '#bq-fs', '.kx-refresh', '#bq-lock'].map(rank);
+  check(r.every((n, i) => Number.isFinite(n) && (i === 0 || n > r[i - 1])) && r[3] < 10 && r[4] >= 10,
+    `le tiroir n'est plus rangé Service (tiroir, réimpression, pointage, fin de service) puis Cet appareil (imprimantes, plein écran, rafraîchir, verrouiller) : ${r.join(',')}`);
+  check(/id: 'act:' \+ i[^\n]*at: bqMoreRank\(el\), i \}/.test(railSrc) && /till\.more\.shift/.test(railSrc) && /till\.more\.device/.test(railSrc),
+    "le tri du tiroir ne garde plus l'index livré de chaque rangée, ou ses titres ne viennent plus des clés du kit");
+}
 
 /* ── 4b · le fond d'ouverture tombe en marche ──────────────────────────────
    La feuille de peau est portée par le SEUL drapeau de page, posé en ligne
