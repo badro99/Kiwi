@@ -1,8 +1,8 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=52';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=52';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=52';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=60';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=60';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=60';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=8';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=11';
 
   'use strict';
 
@@ -1515,6 +1515,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       sellEan.value = '';
       if (v) commitEan(v);
     });
+    wireSellSearch($('.bq-sell-scan', root), sellEan);   // peau 2027 : la liste qui répond au 1er chiffre
     /* Même barre, sans douchette : la caméra dépose l'article sur le ticket. */
     const sellCam = $('#bq-sell-cam', root);
     if (sellCam) sellCam.onclick = () => openCamScan(commitEan);
@@ -2591,20 +2592,9 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     /* Le bouton ne s'enfonce qu'une fois le fond indiqué : jamais de 500 présélectionné qu'un seul toucher enregistrerait tel quel. */
     let chosen = false;
     const btnOpen = el.querySelector('#bqci-btn'), hint = el.querySelector('#bqci-hint'), last = el.querySelector('#bqci-last');
-    const gate = () => {
-      const kit = bqKitSkin();
-      /* Les pastilles livrées ne s'effacent QUE si la feuille du kit peut
-         vraiment prendre le relais. La feuille de peau est portée par le seul
-         drapeau de page, posé en ligne dans kiwi-caisse.html ; si
-         assets/kit/*.js n'arrive pas (réseau, service worker), bqKitFloat()
-         rend false, « Ouvrir la caisse » reste éteint et les pastilles
-         étaient déjà cachées : plus aucun chemin pour saisir le fond, caisse
-         morte au comptoir. Le drapeau vit donc sur l'écran et dit « le kit
-         est LÀ », jamais « la peau est demandée ». */
-      el.classList.toggle('bq-float-kit', kit);
-      if (btnOpen) btnOpen.disabled = !chosen && !kit;
-      if (hint) hint.hidden = chosen || kit;
-    };
+    /* Les pastilles ne s'effacent que si le kit est LÀ (bqKitFloat), pas si la peau
+       est seulement demandée : kit absent, elles restent le seul moyen de saisir le fond. */
+    const gate = () => { const kit = bqKitSkin(); el.classList.toggle('bq-float-kit', kit); if (btnOpen) btnOpen.disabled = !chosen && !kit; if (hint) hint.hidden = chosen || kit; };
 
     /* Restitution du dernier fond utilisé par CE magasin. */
     let saved = NaN;

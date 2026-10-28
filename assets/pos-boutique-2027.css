@@ -80,6 +80,10 @@ html[data-skin-2027="till"] #pos-boutique :is(.bq-head-sub, .bq-head-hint) {
   color: var(--k-ink-3); font-size: var(--k-fs-footnote);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-head-sub b { color: var(--k-accent-ink); }
+/* La vente ne garde que son titre : la date, l'heure, le compte du jour et
+   la consigne « Scannez… » sont éteints (propriétaire, 2026-10-28). Le compte
+   continue d'être écrit dans #bq-today (headSubVente), seulement plus montré. */
+html[data-skin-2027="till"] #pos-boutique .bq-sell > .bq-head :is(.bq-head-sub, .bq-head-hint) { display: none; }
 html[data-skin-2027="till"] #pos-boutique .bq-sell-scan {
   min-height: 52px; border-radius: var(--k-r-3);
   background-color: var(--k-surface-1); border: 1px solid var(--k-line);
@@ -95,6 +99,77 @@ html[data-skin-2027="till"] #pos-boutique .bq-sell-scan-tag {
 html[data-skin-2027="till"] #pos-boutique .bq-sell-cam {
   min-width: 44px; min-height: 44px; border-radius: var(--k-r-2);
   background-color: var(--k-surface-2); color: var(--k-ink-1);
+}
+
+/* ── La barre de vente : le code-barres du rail, sans contour, et sa liste ── */
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan {
+  position: relative; z-index: 5;
+  min-height: 60px; gap: 14px; padding: 8px 8px 8px 16px;
+  border: 0; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-1);
+  transition: box-shadow var(--k-dur-2) var(--k-glide);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan:focus-within {
+  border: 0; box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus), var(--k-shadow-1);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan > svg {
+  width: 26px; height: 26px; color: var(--k-ink-1); flex-shrink: 0;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan input {
+  font-family: var(--k-font); font-size: var(--k-fs-body); letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan input::placeholder {
+  font-family: var(--k-font); font-size: var(--k-fs-body); letter-spacing: 0;
+}
+/* « Entrée » : la douchette le sait, la vendeuse n'a pas à le lire. */
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scan-tag { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst {
+  position: absolute; inset-inline: 0; top: calc(100% + 8px);
+  max-height: min(60vh, 520px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 8px; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-1); box-shadow: var(--k-shadow-2);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sgst[hidden] { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-it {
+  display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 14px;
+  width: 100%; min-height: 64px; padding: 8px 12px;
+  border: 0; border-radius: var(--k-r-2); background: none;
+  text-align: start; color: var(--k-ink-1); cursor: pointer;
+  touch-action: manipulation;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-it:hover,
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-it.on { background-color: var(--k-surface-2); }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-it:active { background-color: var(--k-surface-3); }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-art {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  border-radius: var(--k-r-2); background-color: var(--k-bg); color: var(--k-ink-2); overflow: hidden;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-art svg { width: 32px; height: 32px; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-art .bq-product-photo { width: 48px; height: 48px; object-fit: contain; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-nm {
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong); color: var(--k-ink-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-sub {
+  display: flex; align-items: baseline; gap: 10px; min-width: 0;
+  font-size: var(--k-fs-footnote); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-cd {
+  font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--k-ink-3);
+}
+html[data-skin-2027="till"] #pos-boutique :is(.bq-sgst-cd, .bq-sgst-nm) b { font-weight: var(--k-fw-body-strong); color: var(--k-ink-1); }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-end { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-pz {
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); color: var(--k-ink-1);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-pz s { color: var(--k-ink-3); font-weight: var(--k-fw-footnote); }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-st { font-size: var(--k-fs-footnote); color: var(--k-ink-3); white-space: nowrap; }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-st.out { color: var(--k-danger); }
+html[data-skin-2027="till"] #pos-boutique .bq-sgst-none {
+  padding: 20px 12px; text-align: center; font-size: var(--k-fs-callout); color: var(--k-ink-2);
 }
 
 /* ═══════════════ LES RAYONS ═══════════════ */
@@ -118,12 +193,15 @@ html[data-skin-2027="till"] #pos-boutique .bq-cat.on .bq-cat-ct {
   background-color: var(--k-accent-pressed);
   color: var(--k-on-accent);
 }
+/* Le titre de rayon du restaurant (till.js, .hd k-heading) : un titre, pas
+   de filet. Aucun trait ne sépare les rayons au restaurant. */
 html[data-skin-2027="till"] #pos-boutique .bq-cat-head {
-  font-family: var(--k-font); letter-spacing: var(--k-track-footnote);
-  text-transform: none; font-size: var(--k-fs-footnote);
-  font-weight: var(--k-fw-footnote-strong); color: var(--k-ink-3);
+  font-family: var(--k-font); letter-spacing: var(--k-track-heading);
+  text-transform: none; font-size: var(--k-fs-heading); line-height: var(--k-lh-heading);
+  font-weight: var(--k-fw-heading); color: var(--k-ink-1);
+  padding: 24px 0 12px;
 }
-html[data-skin-2027="till"] #pos-boutique .bq-cat-head::after { background-color: var(--k-line); }
+html[data-skin-2027="till"] #pos-boutique .bq-cat-head::after { display: none; }
 
 /* ═══════════════ LA GRILLE ═══════════════ */
 html[data-skin-2027="till"] #pos-boutique .bq-grid {
@@ -134,11 +212,14 @@ html[data-skin-2027="till"] #pos-boutique .bq-card {
   min-height: 132px;
   padding: var(--k-space-4) var(--k-space-3) var(--k-space-3);
   background-color: var(--k-surface-1);
-  border: 1px solid var(--k-line);
+  /* Le pavé du restaurant n'a AUCUN contour (till.js, .tile) : la carte se
+     détache du fond par sa seule couleur. Le filet gris faisait la carte
+     « dessinée » à côté de lui (propriétaire, 2026-10-28). */
+  border: 0;
   border-radius: var(--k-r-3);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-card:hover {
-  transform: none; box-shadow: var(--k-shadow-1); border-color: var(--k-line-strong);
+  transform: none; box-shadow: none; border: 0;
 }
 html[data-skin-2027="till"] #pos-boutique .bq-card-art {
   background-color: var(--k-surface-2); border-radius: var(--k-r-2); color: var(--k-ink-2);
@@ -423,7 +504,10 @@ html[data-skin-2027="till"] #pos-boutique .bq-tk-head:not(:has(button)) { displa
 html[data-skin-2027="till"] #pos-boutique .bq-tk-head:has(button) {
   justify-content: flex-end; padding: 12px 18px 0; border: 0;
 }
-html[data-skin-2027="till"] #pos-boutique .bq-tk-empty { padding-block: 48px; }
+/* Le ticket vide du restaurant (<k-bill> .em) : un titre, une ligne, centrés. */
+html[data-skin-2027="till"] #pos-boutique .bq-tk-empty { padding: 48px 16px; text-align: center; color: var(--k-ink-1); }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-empty p { margin: 4px 0; }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-empty .k-heading { color: var(--k-ink-1); }
 
 /* Le bouton livré porte toujours la logique ; c'est le primaire du kit qui
    le montre. On le sort du flux sans le masquer : un display:none le rendrait

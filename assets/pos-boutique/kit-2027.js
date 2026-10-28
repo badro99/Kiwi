@@ -202,10 +202,20 @@ function bqKitRail(root, $, icons, on, who) {
     brand.className = 'bq-more-brand';
     const logo = root.querySelector('.bq-brand img');
     const vname = root.querySelector('.bq-venue-name');
-    brand.innerHTML =
-      (logo ? '<img class="bq-more-logo" alt="" src="' + logo.getAttribute('src') + '">' : '') +
-      '<span class="bq-more-venue">' + ((vname && vname.textContent) || '').trim() + '</span>' +
-      '<span class="bq-more-live"><i></i>' + tr('En service') + '</span>';
+    /* Construit par nœuds : le nom de l'enseigne est un texte, jamais du HTML. */
+    if (logo) {
+      const img = document.createElement('img');
+      img.className = 'bq-more-logo'; img.alt = ''; img.src = logo.getAttribute('src');
+      brand.appendChild(img);
+    }
+    const vn = document.createElement('span');
+    vn.className = 'bq-more-venue';
+    vn.textContent = ((vname && vname.textContent) || '').trim();
+    const live = document.createElement('span');
+    live.className = 'bq-more-live';
+    live.appendChild(document.createElement('i'));
+    live.appendChild(document.createTextNode(tr('En service')));
+    brand.append(vn, live);
     more.insertBefore(brand, more.firstChild);
 
     bqSide = document.createElement('k-sidebar');
@@ -282,7 +292,9 @@ function bqKitRail(root, $, icons, on, who) {
    de la cliente attachée, puisque la rangée du haut est éteinte.
    Kit absent : on rend false, le pied livré reste tel quel. */
 function bqKitTicketFoot(ticketEl, $, icons, on, o) {
-  if (!ticketEl || !on || !customElements.get('k-button')) return false;
+  if (!ticketEl || !on) return false;
+  bqKitTicketEmpty(ticketEl);
+  if (!customElements.get('k-button')) return false;
   const foot = ticketEl.querySelector('.bq-tk-foot');
   const pay = ticketEl.querySelector('#bq-validate');
   if (!foot || !pay || foot.querySelector('#bq-kit-tkacts')) return false;
@@ -322,4 +334,136 @@ function bqKitTicketFoot(ticketEl, $, icons, on, o) {
   return true;
 }
 
-export { bqKitRail, bqKitRailPaint, bqKitOpenSheet, bqKitTicketFoot };
+/* Le ticket vide, avec les mots et le corps du restaurant (<k-bill>, .em :
+   un titre k-heading, une ligne k-foot, rien d'autre). L'icône livrée porte
+   son display EN LIGNE : une règle de feuille ne l'éteint pas, il faut
+   réécrire le bloc. Le bloc garde sa classe, donc tout ce qui le cherche le
+   trouve encore. */
+function bqKitTicketEmpty(ticketEl) {
+  const em = ticketEl.querySelector('.bq-tk-empty');
+  if (!em || em.dataset.bqKit) return;
+  em.dataset.bqKit = '1';
+  em.removeAttribute('style');
+  em.innerHTML = '<p class="k-heading">' + tr('Aucun article') + '</p>'
+    + '<p class="k-foot k-ink2">' + tr('Touchez un article.') + '</p>';
+}
+
+/* ═══════════ La barre de vente (peau 2027) ═══════════
+   Le code-barres du rail, et une liste qui répond dès le premier chiffre :
+   chaque chiffre de plus la resserre. La recherche elle-même vit dans
+   pos-boutique.js (o.search) ; ici on ne fait que dessiner et choisir.
+
+   La douchette ne doit rien sentir. Elle tape le code d'un trait puis Entrée,
+   et c'est l'écouteur livré qui l'ajoute. Une ligne n'est donc JAMAIS
+   présélectionnée : Entrée ne choisit une ligne que si on l'a désignée aux
+   flèches, sinon elle passe à l'écouteur livré comme avant. On écoute en
+   CAPTURE sur la barre (un ancêtre du champ) pour pouvoir, dans ce seul cas,
+   arrêter Entrée avant lui. Choisir une ligne passe par o.commit (commitEan,
+   le chemin de la douchette) ou, pour un article sans code, o.open (la fiche
+   de la tuile) : aucune logique de vente n'est copiée ici. */
+function bqKitScanBar(bar, o) {
+  if (!bar || !o || !o.input || bar.querySelector('#bq-sgst')) return false;
+  const input = o.input;
+  const old = bar.querySelector(':scope > svg, :scope > i');
+  if (old) {
+    const ic = document.createElement('i');
+    ic.setAttribute('data-icon', 'barcode_scanner');
+    ic.className = 'bq-sell-scan-ic';
+    old.replaceWith(ic);
+  }
+  input.setAttribute('placeholder', tr('Rechercher un article'));
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-controls', 'bq-sgst');
+  input.setAttribute('aria-expanded', 'false');
+  input.setAttribute('inputmode', 'search');
+  const list = document.createElement('div');
+  list.id = 'bq-sgst';
+  list.className = 'bq-sgst';
+  list.setAttribute('role', 'listbox');
+  list.hidden = true;
+  bar.appendChild(list);
+
+  let rows = [], at = -1, timer = 0;
+  const esc = o.esc;
+  const close = () => {
+    clearTimeout(timer);
+    list.hidden = true; list.innerHTML = ''; rows = []; at = -1;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+  };
+  const mark = (i) => {
+    at = i;
+    list.querySelectorAll('.bq-sgst-it').forEach((b, k) => b.classList.toggle('on', k === i));
+    const b = list.querySelector('[data-sgst="' + i + '"]');
+    if (b) { input.setAttribute('aria-activedescendant', b.id); b.scrollIntoView({ block: 'nearest' }); }
+  };
+  /* La partie tapée, en gras dans le code : on voit d'un coup d'œil ce qui reste. */
+  const hl = (text, q) => {
+    const k = text.toLowerCase().indexOf(q.toLowerCase());
+    if (k < 0 || !q) return esc(text);
+    return esc(text.slice(0, k)) + '<b>' + esc(text.slice(k, k + q.length)) + '</b>' + esc(text.slice(k + q.length));
+  };
+  const row = (r, i, q) => '<button type="button" class="bq-sgst-it" role="option" tabindex="-1" id="bq-sgst-' + i + '" data-sgst="' + i + '">'
+    + '<span class="bq-sgst-art">' + o.visual(r) + '</span>'
+    + '<span class="bq-sgst-txt"><span class="bq-sgst-nm">' + (r.why === 'nom' ? hl(r.name, q) : esc(r.name)) + '</span>'
+    + '<span class="bq-sgst-sub">' + (r.detail ? esc(r.detail) : '')
+    + (r.ean ? '<span class="bq-sgst-cd">' + (r.why === 'ean' ? hl(r.ean, q) : esc(r.ean)) + '</span>' : '') + '</span></span>'
+    + '<span class="bq-sgst-end"><span class="bq-sgst-pz">' + (r.was ? '<s>' + o.money(r.was) + '</s> ' : '') + o.money(r.price) + '</span>'
+    + (r.stock > 0 ? '<span class="bq-sgst-st">' + r.stock + ' ' + tr('en stock') + '</span>' : '<span class="bq-sgst-st out">' + tr('épuisé') + '</span>')
+    + '</span></button>';
+  const paint = () => {
+    const q = input.value.trim();
+    if (!q) { close(); return; }
+    rows = o.search(q) || [];
+    if (!rows.length) {
+      list.innerHTML = '<div class="bq-sgst-none">' + tr('Aucun article trouvé') + '</div>';
+      list.hidden = false; at = -1;
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    at = -1;
+    list.innerHTML = rows.map((r, i) => row(r, i, q)).join('');
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    input.removeAttribute('aria-activedescendant');
+    if (typeof o.icons === 'function') o.icons();
+  };
+  const choose = (i) => {
+    const r = rows[i];
+    if (!r) return;
+    input.value = '';
+    close();
+    try { input.focus(); } catch (_) {}
+    if (r.ean) o.commit(r.ean); else o.open(r.pid);
+  };
+
+  /* Une frappe humaine voit la liste « tout de suite » (moins d'une image) ;
+     une douchette finit son code avant, et ne fait qu'une recherche. */
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(paint, 60); });
+  input.addEventListener('focus', () => { if (input.value.trim()) paint(); });
+  input.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement !== input) close(); }, 150); });
+  bar.addEventListener('keydown', (e) => {
+    if (e.target !== input) return;
+    if (e.key === 'Escape') { if (!list.hidden) { e.preventDefault(); close(); } return; }
+    if (e.key === 'Enter') {
+      if (at >= 0 && rows[at]) { e.preventDefault(); e.stopPropagation(); choose(at); return; }
+      close();          // Entrée part à l'écouteur livré, qui vide le champ
+      return;
+    }
+    if (list.hidden || !rows.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); mark(at + 1 >= rows.length ? 0 : at + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); mark(at <= 0 ? rows.length - 1 : at - 1); }
+  }, true);
+  /* Le doigt sur une ligne ne doit pas faire perdre le focus au champ. */
+  list.addEventListener('pointerdown', (e) => { e.preventDefault(); });
+  list.addEventListener('mousedown', (e) => { e.preventDefault(); });
+  list.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sgst]');
+    if (b) choose(Number(b.dataset.sgst));
+  });
+  if (typeof o.icons === 'function') o.icons();
+  return true;
+}
+
+export { bqKitRail, bqKitRailPaint, bqKitOpenSheet, bqKitTicketFoot, bqKitScanBar };

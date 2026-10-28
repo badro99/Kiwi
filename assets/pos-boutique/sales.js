@@ -1,13 +1,15 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=150';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=52';
-import { offerRegister } from './inventory.js?v=52';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=158';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=60';
+import { offerRegister } from './inventory.js?v=60';
 import { ticketOwner } from './ticket-owner.js?v=2';
-import { bqKitTicketFoot } from './kit-2027.js?v=8';
+import { ticketRemise } from './ticket-remise.js?v=2';
+import { bqKitTicketFoot } from './kit-2027.js?v=11';
+import { sellSearch } from './search.js?v=2';
 import '../money-cents.js?v=4';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
-  const tr0 = (s) => (globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(s);
+  const tr = (s) => (globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(s);
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
@@ -514,13 +516,6 @@ import '../money-cents.js?v=4';
     icons();
   }
 
-  /* Le nom porté par le bouton « Clientes » du pied 2027. */
-  function ticketClientLabel(t) {
-    if (!t.client) return tr0('Clientes');
-    if (t.client === 'passage') return tr0('Cliente de passage');
-    const c = clById(t.client);
-    return c && c.name ? firstName(c.name) || c.name : tr0('Clientes');
-  }
 
   function lineRow(ln, i) {
     const p = P[ln.pid];
@@ -817,49 +812,26 @@ import '../money-cents.js?v=4';
     $('#bq-app-no', el).onclick = () => toast(`${STAFF.conseil.name} n'est pas habilitée, seule la gérante approuve une remise`);
   }
 
-  /* ---------- la remise de TICKET (pied 2027) ---------- */
-  /* Le restaurant a « Remise » au pied de l'addition ; la boutique ne l'avait
-     qu'à l'article, dans la feuille d'ajout, donc une ligne déjà au ticket ne
-     pouvait plus être remisée (propriétaire, 2026-10-28). Ce choisisseur ne
-     fabrique AUCUN chemin d'argent neuf : il repose le pourcentage sur chaque
-     ligne, là où il vivait déjà, derrière le même portier gérante
-     (openApprove) et la même liste de taux (KiwiDiscountPolicy).
+  /* La remise de ticket et le nom du bouton « Clientes » du pied 2027 :
+     assets/pos-boutique/ticket-remise.js. sales.js lui passe ses propres
+     fonctions (openApprove, le rendu), donc c'est son code qui tourne. */
+  /* Construit à l'appel, pas au chargement : sales.js s'évalue avant que
+     pos-boutique.js ait posé state et root (import circulaire). */
+  const remiseKit = () => ticketRemise({
+    state, root, $, $$, tr, icons, toast, clById, firstName, ticketOwner, renderBadges,
+    openVeil, closeVeil, bqKey: () => _bqKey, renderTicket, renderGrid, openApprove,
+  });
+  const ticketClientLabel = (t) => remiseKit().ticketClientLabel(t);
+  const openTicketRemise = () => remiseKit().openTicketRemise();
 
-     Le drapeau de peau ne se lit PAS ici : il appartient au fichier du métier
-     (pos-boutique.js, bqKitSkin) et descend par import — boutique-2027-test
-     l'exige, pour qu'une seule ligne au monde décide si la peau est là. */
-  function openTicketRemise() {
-    const t = state.ticket;
-    if (!t.lines.length) return;
-    const pcts = (window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20]).filter((p) => p > 0);
-    const cur = t.lines.length && t.lines.every((l) => l.remise === t.lines[0].remise) ? (t.lines[0].remise || 0) : null;
-    const apply = (pct) => {
-      ticketOwner.discountAllLines(t, pct);
-      renderTicket(); renderGrid(); renderBadges(); icons();
-      toast(pct ? `Remise −${pct} % sur tout le ticket` : 'Remise retirée');
-    };
-    const el = $('#bq-approvem', root);
-    el.innerHTML = `
-      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-icon="close"></i></button>
-      <h3 class="modal-title">Remise sur le ticket</h3>
-      <p class="modal-subtle">Le taux choisi s'applique à chaque ligne du ticket ${esc(t.num || '')}.</p>
-      <div class="bq-chips" id="bq-tkrem-chips">
-        <button class="bq-chip ${cur === 0 ? 'on' : ''}" data-bq-tkrem="0">Sans</button>
-        ${pcts.map((r) => `<button class="bq-chip ${cur === r ? 'on' : ''}" data-bq-tkrem="${r}">−${r} %</button>`).join('')}
-      </div>
-      <div class="bq-foot-note">Une remise s'applique avec l'accord de la gérante, tracé dans le journal.</div>`;
-    openVeil('#bq-approve-veil');
-    icons();
-    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-approve-veil'); });
-    $('#bq-tkrem-chips', el).onclick = (e) => {
-      const b = e.target.closest('[data-bq-tkrem]');
-      if (!b) return;
-      const pct = parseInt(b.dataset.bqTkrem, 10) || 0;
-      /* Retirer la remise n'a jamais demandé d'accord ; l'accorder, si. */
-      if (!pct || t.remiseAuth) { closeVeil('#bq-approve-veil'); apply(pct); return; }
-      openApprove(pct, () => { closeVeil('#bq-approve-veil'); apply(pct); });
-    };
-  }
+  /* Peau 2027 : la barre de vente répond dès le premier chiffre tapé
+     (search.js). sales.js ne fait que passer SES fonctions : la douchette
+     garde son chemin, commitEan, et la tuile le sien, openSheet. */
+  const wireSellSearch = (bar, input) => sellSearch(bar, input, bqKitSkin(), {
+    commit: commitEan, money: fmtMAD, esc, icons, artOf,
+    open: (pid) => openSheet(pid, state.exchange ? { exchange: true } : null),
+    catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, availableStock, colorLabel }),
+  });
 
   /* ═══════════════════════ CLIENTE — phone & name search (modal du ticket) ═══════ */
   function foldClientText(s) {
@@ -1587,4 +1559,4 @@ import '../money-cents.js?v=4';
       lookupScan(code);
     }, 620);
   }
-export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
+export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
