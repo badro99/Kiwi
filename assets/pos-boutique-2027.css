@@ -501,6 +501,17 @@ html[data-skin-2027="till"] #pos-boutique .bq-card-price { font-size: var(--k-fs
   html[data-skin-2027="till"] #pos-boutique .bq-card-art { display: none; }
 }
 
+/* ═══════════════ CLIENTES, À PLAT ═══════════════
+   Le carnet clients (clients-book/base.js) flotte sur le rail : coin
+   arrondi, filet, ombre. Les autres pages de la boutique sont à plat, le
+   carnet aussi (propriétaire, 2026-10-28). Portée : la boutique seulement
+   (body.is-pos-boutique) — le restaurant garde son carnet tel quel. */
+html[data-skin-2027="till"] body.is-pos-boutique > #kcb-root {
+  border-inline-start: 0;
+  border-start-start-radius: 0;
+  box-shadow: none;
+}
+
 /* ═══════════════ INVENTAIRE, PLEINE LARGEUR ═══════════════
    La vue est une rangée flex ; .bqi (checkout.js › injectInvCss) n'y
    demandait que la largeur de son contenu — ~930 px, le reste de l'écran
