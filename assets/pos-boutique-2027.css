@@ -273,12 +273,50 @@ html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-main { left: 0; right: 
    ici, donc pas de blanc sur blanc à refaire. */
 html[data-skin-2027="till"] #pos-boutique .bq-more {
   position: fixed; top: 0; bottom: 0; inset-inline-start: 88px;
-  width: 232px; z-index: 60;
+  width: 276px; z-index: 60;
   display: flex; flex-direction: column; gap: 4px;
-  padding: 12px 10px;
+  padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   background-color: var(--ink-bg);
   box-shadow: var(--k-shadow-2);
+}
+
+/* ─── Le tiroir est le rail DÉPLIÉ, pas une liste ───────────────────────
+   Le restaurant pose un vrai <k-sidebar> du kit sur le fond sombre, marque
+   en tête, destinations à pleine taille, commandes en section nommée
+   (assets/caisse/till-frame.js). La boutique fait pareil : les rangées
+   viennent du kit, chacune clique le bouton LIVRÉ — qui reste donc en place
+   mais n'a plus à se peindre. Pas un bouton retiré, pas un geste perdu. */
+/* Éteindre SANS nommer : le tiroir ne garde que le nav du kit, le bandeau de
+   marque et le sélecteur de langue ; tout le reste de ses enfants livrés
+   s'efface, quelle que soit sa classe. Citer .bq-nav-it ou .bq-lock ici
+   rouvrirait la porte au repeint que boutique-2027-test interdit — et la
+   règle a raison : une barre livrée s'éteint, elle ne se redessine pas. */
+html[data-skin-2027="till"] #pos-boutique .bq-more > :not(k-sidebar, .bq-more-brand, .kcl) { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-more > k-sidebar { display: block; }
+
+html[data-skin-2027="till"] #pos-boutique .bq-more-brand {
+  display: grid; grid-template-columns: auto 1fr; align-items: center;
+  column-gap: 10px; row-gap: 2px; padding: 4px 12px 16px;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-more-logo { width: 28px; height: 28px; grid-row: span 2; }
+html[data-skin-2027="till"] #pos-boutique .bq-more-venue {
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
+  color: var(--k-ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-more-live {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--k-fs-footnote); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-more-live i {
+  width: 7px; height: 7px; border-radius: 50%; background-color: var(--k-accent);
+}
+/* Ce qui n'est pas une rangée garde sa forme : la langue est un interrupteur
+   à trois voies, pas un lien. Elle tient le pied du tiroir — par `order`, et
+   non en la déplaçant : son module la réinsère après notre montage, et un
+   nœud déplacé serait remonté en tête au premier rendu. */
+html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl {
+  order: 99; margin-block-start: auto; padding-block-start: 16px;
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more[hidden] { display: none; }
 /* La colonne flex étire DÉJÀ ses enfants en flux : écrire width:100% ici

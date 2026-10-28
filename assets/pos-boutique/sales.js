@@ -1,8 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=147';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=49';
-import { offerRegister } from './inventory.js?v=49';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=150';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=52';
+import { offerRegister } from './inventory.js?v=52';
 import { ticketOwner } from './ticket-owner.js?v=2';
-import { bqKitTicketFoot } from './kit-2027.js?v=6';
+import { bqKitTicketFoot } from './kit-2027.js?v=8';
 import '../money-cents.js?v=4';
 
 
@@ -840,7 +840,7 @@ import '../money-cents.js?v=4';
     };
     const el = $('#bq-approvem', root);
     el.innerHTML = `
-      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">Remise sur le ticket</h3>
       <p class="modal-subtle">Le taux choisi s'applique à chaque ligne du ticket ${esc(t.num || '')}.</p>
       <div class="bq-chips" id="bq-tkrem-chips">

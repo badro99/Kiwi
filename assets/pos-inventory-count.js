@@ -397,7 +397,7 @@
     const modalHtml = `
       <button type="button" data-cnt-close aria-label="Fermer le comptage" title="Fermer le comptage"
         style="position:absolute;top:12px;inset-inline-end:12px;width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--n-100,#efece3);color:var(--ink,#0A0F0D);cursor:pointer;touch-action:manipulation;">
-        <i data-lucide="x"></i>
+        <i data-icon="close"></i>
       </button>
       <div class="split-badge" style="background:#e0f2fe;color:#0369a1;"><i data-lucide="clipboard-check"></i> Inventaire physique</div>
       <h3 class="modal-title" style="margin-bottom:4px;">Comptage de stock en caisse</h3>
