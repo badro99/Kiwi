@@ -28,7 +28,7 @@ export function searchArticles(raw, d, limit) {
       detail: [hit && hit.size, color ? colorLabel(color) : ''].filter(Boolean).join(' · '),
       price: pr ? pr.price : shelf(p.price), was: pr ? pr.was : 0,
       stock: hit && hit.size ? availableStock(pid, hit.size, color || p.colors[0]) : stockOf(p),   // ce qui reste, ticket déduit
-      art: p.art, photo: p.photo || '',
+      art: p.art, artPicked: !!p.artPicked, colors: p.colors, photo: p.photo || '',
     });
   };
   if (/^[0-9]+$/.test(q)) {

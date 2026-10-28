@@ -142,7 +142,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
      * `conflicts` for the merchant to review. A later edit of that field resolves
      * it, on every device. */
     const CATEGORY_FIELDS = ['name', 'color', 'order'];
-    const PRODUCT_FIELDS = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad',
+    const PRODUCT_FIELDS = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'artPicked', 'kind', 'flag', 'grad',
       'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
       'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived'];
     const VARIANT_FIELDS = ['productId', 'colorId', 'colorFamily', 'colorSource', 'colorSourceHex', 'colorWas',

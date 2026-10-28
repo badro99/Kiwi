@@ -152,6 +152,7 @@ function sanitize(raw) {
       priceMAD: num(p && p.priceMAD, 1e7),
       cost: num(p && p.cost, 1e7),
       art: str(p && p.art, 40),
+      artPicked: !!(p && p.artPicked),
       kind: str(p && p.kind, 24),
       flag: str(p && p.flag, 60),
       grad: p && typeof p.grad === 'string' ? str(p.grad, 200) : null,

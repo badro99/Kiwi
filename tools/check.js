@@ -1604,6 +1604,7 @@ section('Whole-project regressions');
     'caisse-product-art-test.mjs',
     'retail-product-art-test.mjs',
     'retail-photos-wiring-test.mjs',
+    'retail-icon-picker-test.mjs',
     'check-godmode.mjs',
     'operator-workspace-test.mjs',
     'admin-report-test.mjs',

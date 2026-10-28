@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/pos-boutique/drawer.js?v=9',
+  '/assets/pos-boutique/drawer.js?v=10',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=8',
   '/assets/money-cents.js?v=4',
@@ -171,14 +171,14 @@ var SHELL = [
   '/assets/hotel-folio.js?v=1',
   '/assets/hotel-channels.js?v=1',
   '/assets/pages-pro-office.js?v=3',
-  '/assets/pages-pro-boutique.js?v=12',
+  '/assets/pages-pro-boutique.js?v=15',
   '/assets/menu-nutrition.js?v=4',
   '/assets/kiwi-select.js?v=4',
   '/assets/food-trade-settings.js?v=2',
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=70',
+  '/assets/pages/dashboard-startup.js?v=73',
   '/assets/pages/dashboard-loader.js?v=26',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -367,8 +367,8 @@ var SHELL = [
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=12',
-  '/assets/boutique-catalog.js?v=20',
+  '/assets/boutique-catalog-parts.js?v=13',
+  '/assets/boutique-catalog.js?v=21',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -453,7 +453,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=24',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=20',
-  '/assets/pos-dispatch.js?v=259',
+  '/assets/pos-dispatch.js?v=260',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -521,18 +521,19 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=190',
-  '/assets/pos-boutique/sales.js?v=91',
-  '/assets/retail-photos.js?v=3',
+  '/assets/pos-boutique.css?v=191',
+  '/assets/pos-boutique/sales.js?v=92',
+  '/assets/retail-photos.js?v=4',
+  '/assets/retail-icon-picker.js?v=3',
   '/assets/pos-boutique/ticket-owner.js?v=2',
   '/assets/pos-boutique/ticket-remise.js?v=3',
-  '/assets/pos-boutique/search.js?v=11',
-  '/assets/pos-boutique/inv-tools.js?v=15',
+  '/assets/pos-boutique/search.js?v=12',
+  '/assets/pos-boutique/inv-tools.js?v=16',
   '/assets/pos-boutique/inv-moves.js?v=5',
   '/assets/pos-boutique/kit-2027.js?v=19',
-  '/assets/pos-boutique/checkout.js?v=91',
-  '/assets/pos-boutique/inventory.js?v=91',
-  '/assets/pos-boutique.js?v=190',
+  '/assets/pos-boutique/checkout.js?v=92',
+  '/assets/pos-boutique/inventory.js?v=92',
+  '/assets/pos-boutique.js?v=191',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -564,12 +565,12 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=108',
-  '/assets/pos-maison/sales.js?v=28',
-  '/assets/pos-maison/checkout.js?v=28',
+  '/assets/pos-maison.css?v=109',
+  '/assets/pos-maison/sales.js?v=29',
+  '/assets/pos-maison/checkout.js?v=29',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=28',
-  '/assets/pos-maison.js?v=108',
+  '/assets/pos-maison/inventory.js?v=29',
+  '/assets/pos-maison.js?v=109',
   '/assets/caisse-pairing.js?v=54',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
