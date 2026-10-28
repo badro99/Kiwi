@@ -2,6 +2,7 @@
  * le fond d'ouverture compté sur le kit. Sorti de pos-boutique.js tel quel ;
  * drapeau éteint ou éléments du kit absents, rien ici ne s'exécute. */
 let bqFloatSheet = null;
+const tr = (s) => (window.KiwiCaisseLang && typeof window.KiwiCaisseLang.tr === 'function' ? window.KiwiCaisseLang.tr(s) : s);
 /* La feuille de comptage du fond d'ouverture, une fois le drapeau vérifié par
    pos-boutique.js (bqKitFloat). Rend true ; onCounted reçoit le montant COMPTÉ. */
 function bqKitOpenSheet(screen, cc, onCounted, memKey) {
@@ -71,7 +72,10 @@ function bqKitRail(root, $, icons, on) {
   plus.id = 'bq-plus';
   plus.setAttribute('aria-expanded', 'false');
   plus.setAttribute('aria-controls', 'bq-more');
-  plus.innerHTML = '<i data-icon="more_horiz"></i><span>Plus</span>';
+  plus.innerHTML = '<i data-icon="more_horiz"></i>';
+  const plusLabel = document.createElement('span');
+  plusLabel.textContent = tr('Plus');   // the till's own dictionary (caisse-lang), French when absent
+  plus.appendChild(plusLabel);
   nav.appendChild(plus);
   nav.appendChild(more);
 
