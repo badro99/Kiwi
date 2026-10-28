@@ -21,6 +21,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
 // employeePick(fr, en, ar) is the waiter app's explicit per-language choice.
 const translated = /^(?:t|tr|dt|mt|translate|translateCore|i18n|L|text|formatMessage|employeePick)$/;
+// An icon helper takes a Material Symbols name (« storefront », « lock »), never text a person reads.
+const iconCall = /^(?:icon|materialIcon)$/;
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;
 const prop = n => ts.isPropertyAccessExpression(n) ? n.name.text : ts.isElementAccessExpression(n) && ts.isStringLiteral(n.argumentExpression) ? n.argumentExpression.text : '';
 const name = n => ts.isIdentifier(n) ? n.text : prop(n);
@@ -51,6 +53,7 @@ export function scan(source, filename = 'fixture.js') {
       return values?.length === 1 ? raw(values[0], html, next) : false;
     }
     if (ts.isCallExpression(n)) {
+      if (iconCall.test(name(n.expression))) return false;
       if (translated.test(name(n.expression)) || /^(?:KiwiStrings|KiwiCaisseLang|KiwiServeurLang)\./.test(n.expression.getText(tree))) return false;
       return n.arguments.some(a => raw(a, html, seen));
     }
@@ -81,7 +84,7 @@ export function scan(source, filename = 'fixture.js') {
 }
 // Cas de non-régression : attributs, gabarits, alias et mélange traduit/brut.
 for (const code of ["x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'"]) assert.equal(scan(code).length, 1, code);
-for (const code of ["x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'"]) assert.equal(scan(code).length, 0, code);
+for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'"]) assert.equal(scan(code).length, 0, code);
 function walk(dir) {
   return fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(e => {
     const rel = path.posix.join(dir, e.name);

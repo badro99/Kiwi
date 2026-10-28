@@ -236,14 +236,21 @@ console.log('— VII · ce que les écrans disent, et qui donne la remise');
   ok('la fiche lit la lecture partagée', /PS\.rewardRead\(c, cfg\)/.test(carnet));
   ok('les comptoirs qui la posent eux-mêmes n’ont pas de second bouton',
     /ownedByTill/.test(carnet) && /PS\.rewardTillOwns\(/.test(carnet));
-  ok('pos-sale nomme ces comptoirs', /is-pos-\(boutique\|maison\|librairie\)/.test(posSale));
-  ok('et refuse d’armer sur eux', /if \(OWNS_REWARD\.test\(\(document\.body/.test(posSale));
+  for (const kind of ['boutique', 'maison', 'librairie']) {
+    const b = bench(AMOUNT, [who({ points: 400 })], { bodyClass: 'screen is-pos-' + kind });
+    b.PS.attachClient({ id: 'c1' });
+    ok('pos-sale reconnaît le comptoir ' + kind, b.PS.rewardTillOwns(false));
+    eq('aucun second bouton armable pour ' + kind, b.PS.rewardOnSale('c1'), null);
+  }
   ok('la fiche arme, elle ne retire pas', /onSale\.arm\(!was\); renderList\(\)/.test(carnet));
 
-  ok('l’encaissement nomme la remise d’après la vente',
-    /KC\.redeem\(c\.id, null, \{ ref: KC\.redemptionRef\(c\.id, entry\.saleId \|\| entry\.ref\) \}\)/.test(posSale));
-  ok('l’achat est crédité avant la remise', posSale.indexOf('recordPurchase') < posSale.indexOf('KC.redeem'));
-
+  const earned = bench(AMOUNT, [who({ points: 300 })]);
+  earned.PS.attachClient({ id: 'c1' }); earned.PS.armReward(true);
+  const order = [];
+  for (const method of ['recordPurchase', 'redeem']) { const fn = earned.KC[method]; earned.KC[method] = function (...args) { order.push(method); return fn.apply(this, args); }; }
+  const entry = sale(earned, { saleId: 'sale-order-proof', ref: 'ticket-order-proof' });
+  eq('la remise porte exactement la vente', earned.queue()[0].ref, earned.KC.redemptionRef('c1', entry.saleId || entry.ref));
+  eq('achat crédité avant remise', order.join(','), 'recordPurchase,redeem');
   for (const f of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
     const t = src(f);
     ok(f + ' : sans réservation, la vente nomme la remise', /redemptionRef\(c\.id, sale\.syncId \|\| sale\.id\)/.test(t));
@@ -253,10 +260,13 @@ console.log('— VII · ce que les écrans disent, et qui donne la remise');
     !/kind: 'pct', value: 10/.test(src('assets/caisse-loyalty-reward.js')));
 
   const store = src('assets/clients-store.js');
-  ok('redeem refuse une référence déjà portée',
-    /seen\.indexOf\(ref\) !== -1 \|\| redemptionRead\(book\)\.some\(function \(e\) \{ return e\.ref === ref; \}\)\) return rec;/.test(store));
-  ok('le garde-fou passe avant tout calcul', store.indexOf('seen.indexOf(ref)') < store.indexOf('pointsDelta = thr'));
-  ok('la référence sait nommer sa vente', /function redemptionRef\(id, saleKey\)/.test(store));
+  const duplicate = bench(AMOUNT, [who({ points: 500 })]);
+  const saleRef = duplicate.KC.redemptionRef('c1', 'guard-sale');
+  duplicate.KC.redeem('c1', duplicate.book, { ref: saleRef });
+  duplicate.KC.redeem('c1', duplicate.book, { ref: saleRef });
+  eq('référence déjà portée refusée avant calcul', duplicate.client('c1').points, 200);
+  eq('le garde-fou ne crée pas de deuxième retrait', duplicate.queue().length, 1);
+  eq('la référence nomme sa vente', saleRef, 'redemption:c1:s:guard-sale');
   /* La lecture partagée vit dans pos-sale.js, chargé par la caisse comme par chaque
      métier : la coquille de la caisse est à son plafond de <script> (ratchet), et un
      quatrième relecteur de la phrase du commerçant est précisément ce qui a produit

@@ -507,7 +507,7 @@
       : '';
     /* Ce que la carte donne, ce qu'elle COÛTE, et qui la donne · assets/pos-sale.js › rewardRead */
     var PS = window.KiwiPosSale, rw = PS && PS.rewardRead && rewardReady ? PS.rewardRead(c, cfg) : null;
-    var cost = !rw ? '' : '−' + (rw.points ? fmt(rw.points) + ' pts' : rw.stamps + ' tampons');
+    var cost = !rw ? '' : '−' + (rw.points ? fmt(rw.points) + ' ' + tr('pts') : rw.stamps + ' ' + tr('tampons'));
     var onSale = rw && PS.rewardOnSale ? PS.rewardOnSale(c.id) : null, ownedByTill = !!rw && !onSale && PS.rewardTillOwns(!!(target && target.pos === false));
     /* The note the team should read before serving: under the name, not in
        the list of details at the bottom, and written from here. */
@@ -630,7 +630,7 @@
     if (rewardReady && onSale) sh.querySelector('#kcb-redeem').onclick = function () {
       var was = onSale.armed;
       onSale.arm(!was); renderList(); openDetail(c.id);   /* rien n'est retiré ici : l'encaissement le fera */
-      toast(tr(was ? 'Récompense retirée du ticket' : 'Récompense sur cette vente'), was ? '' : cost + tr(' à l\u2019encaissement'));
+      toast(tr(was ? 'Récompense retirée du ticket' : 'Récompense sur cette vente'), was ? '' : cost + ' ' + tr('à l\u2019encaissement'));
     };
     if (rewardReady && !onSale && !ownedByTill) sh.querySelector('#kcb-redeem').onclick = function () {
       var book = KC.bookId(), key = book + ':' + c.id;
@@ -654,7 +654,7 @@
         else if (queued) KC.redeem(c.id, book, { ref: request.ref });
         renderList(); openDetail(c.id);
         var took = cost + ' ' + tr('retirés');   /* et non « Carte réinitialisée » : le seuil part, le reste demeure */
-        toast(result.refused ? 'Récompense refusée' : 'Récompense offerte', result.refused ? 'La carte est conservée.'
+        toast(tr(result.refused ? 'Récompense refusée' : 'Récompense offerte'), result.refused ? tr('La carte est conservée.')
           : result.accepted ? took : took + ' · ' + tr('confirmation au retour du réseau'));
       });
     };

@@ -103,6 +103,21 @@ await test('a card already approved is never blocked; offline still queues the r
   assert.deepEqual(J(o.calls.redeem), [{ id: 'c1', r: { ref: 'redemption:c1:1' } }]);
 });
 
+await test('the paid sale detaches its client before the card burns, online and offline', async () => {
+  for (const online of [true, false]) {
+    const t = till({ cfg: PTS, rec: ready, cart: [{ name: 'Tajine', price: 90, qty: 2 }] });
+    t.ctx.navigator.onLine = online;
+    t.R.toggle();
+    assert.equal(await t.R.gate('cash'), true);
+    // creditSaleToClient: « une note = un passage », then the book repaints.
+    t.ctx.saleClient = null;
+    t.R.sync();
+    assert.equal(t.ctx.vrapDiscount.amount, 18, 'the recorded sale keeps its reward');
+    t.R.settle('c1');
+    assert.deepEqual(J(t.calls.redeem), [{ id: 'c1', r: online ? { ref: 'redemption:c1:1', accepted: true } : { ref: 'redemption:c1:1' } }]);
+  }
+});
+
 await test('backing out of the payment burns nothing', async () => {
   const t = till({ cfg: PTS, rec: ready, cart: [{ name: 'Tajine', price: 90, qty: 2 }] });
   t.R.toggle();

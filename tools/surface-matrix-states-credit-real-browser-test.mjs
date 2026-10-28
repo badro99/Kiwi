@@ -6,7 +6,7 @@ import { randomInt } from 'node:crypto';
 import { secret, fillSecret } from './browser-trace.mjs';
 import { harness, realPage, sleep } from './surface-matrix-lib.mjs';
 import { tradingHourMs } from './demo-clock.mjs';
-import { click, view, pickReturn, voucher, ticket, openFloat } from './surface-matrix-credit-lib.mjs';
+import { click, tkAct, view, pickReturn, voucher, ticket, openFloat } from './surface-matrix-credit-lib.mjs';
 const h = await harness('surface-matrix-states-credit-real');
 const code = String(randomInt(1000, 10000));
 const wrong = String((Number(code) + 1) % 10000).padStart(4, '0');
@@ -137,10 +137,13 @@ try {
       assert.equal((await voucher(page)).code, 'AV-MATRIX');
       await view(page, 'vente');
       await ticket(page);
-      await click(page, '#bq-tk-client');
+      await tkAct(page, 'client', '#bq-tk-client');
       await click(page, '[data-bq-cl="matrix-client"]');
-      await page.waitForSelector('[data-bq-tk-av]', { visible: true });
-      assert.match(await page.$eval('[data-bq-tk-av]', el => el.textContent.replace(/[⁦-⁩]/g, '')), /125/, 'the ticket shows the customer\'s total credit: 25 already held plus the 100 just issued');
+      // Under the 2027 skin the customer row is off and the kit's Clientes button carries the name and the credit (#105).
+      const kitClient = '#pos-boutique k-button[data-bq-tk-act="client"]';
+      const avSel = await page.$eval(kitClient, (e) => e.getClientRects().length > 0).catch(() => false) ? kitClient : '[data-bq-tk-av]';
+      await page.waitForFunction((q) => { const e = document.querySelector(q); return e && /125/.test((e.getAttribute('label') || e.textContent).replace(/[⁦-⁩\s\u202f\u00a0]/g, '')); }, { timeout: 15000 }, avSel);
+      assert.match(await page.$eval(avSel, el => (el.getAttribute('label') || el.textContent).replace(/[⁦-⁩]/g, '')), /125/, 'the ticket shows the customer\'s total credit: 25 already held plus the 100 just issued');
       assert.equal(await page.evaluate(() => document.documentElement.lang), locale);
       assert.equal(await page.evaluate(() => document.documentElement.dir), locale === 'ar' ? 'rtl' : 'ltr');
     });

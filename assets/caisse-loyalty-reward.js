@@ -164,6 +164,11 @@
     var c = null;
     try { c = saleClient; } catch (_) {}
     if (!isRewardOn(held.target)) { held = null; return; }
+    /* Paying detaches the client before the visit is recorded
+       (creditSaleToClient): that is the sale settling, not the cashier
+       letting the reward go. Dropping it here left settle() nothing to burn,
+       so an offline reward was given and never queued. */
+    if (!c && held.inSale) return;
     if (!c || c.id !== held.clientId || c.ctx !== held.ctx) drop(true);
   }
 

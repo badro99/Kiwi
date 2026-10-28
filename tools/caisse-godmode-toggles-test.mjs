@@ -60,8 +60,12 @@ check('Maison product creation persists the selected ownership in the shared cat
 check('God Mode offers the stock-value visibility switch as a default-on boutique option',
   /key:'caisseInventoryValue'[\s\S]{0,180}Allumé par défaut/.test(ADMIN) &&
   !/key:'caisseInventoryValue'[^\n]*off:true/.test(ADMIN));
+/* Run Maison's own rule, not its text: only an explicit boolean false hides the value. */
+const ivSrc = (MAISON.match(/function inventoryValueVisible\(\) \{[\s\S]*?\n  \}/) || [''])[0];
+const ivRun = (features) => new Function('window', ivSrc + '\nreturn inventoryValueVisible();')({ KiwiConfig: features === undefined ? undefined : { features } });
 check('Maison hides inventory value only for the explicit boolean false',
-  MAISON.includes('features.caisseInventoryValue === false') &&
+  !!ivSrc && ivRun({ caisseInventoryValue: false }) === false && ivRun({ caisseInventoryValue: 0 }) === true &&
+  ivRun({ caisseInventoryValue: true }) === true && ivRun({}) === true && ivRun(undefined) === true &&
   MAISON.includes('inventoryValueVisible() ? `<div class="mzi-kpi"'));
 /* La boutique ne montre plus du tout la valeur de stock à la caisse
    (propriétaire, 2026-10-28) : elle vit au tableau de bord. */

@@ -18,12 +18,13 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/pos-boutique/drawer.js?v=3',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=8',
   '/assets/money-cents.js?v=4',
   '/assets/pages-pro/boutique-promos-returns.js?v=11',
   '/assets/day-report-conflicts.js?v=2',
-  '/assets/printer/pairing-lang.js?v=7',
+  '/assets/printer/pairing-lang.js?v=8',
   '/assets/planning/shift-editor.js?v=5',
   '/assets/planning/csv-import.js?v=3',
   '/assets/planning/optimiser.js?v=5',
@@ -117,7 +118,7 @@ var SHELL = [
   '/assets/caisse/inventory.js?v=4',
   '/assets/caisse/offline.js?v=3',
   '/assets/caisse-app.js?v=32',
-  '/assets/caisse-loyalty-reward.js?v=5',
+  '/assets/caisse-loyalty-reward.js?v=6',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -350,7 +351,7 @@ var SHELL = [
   '/assets/pairing-commit.js?v=4',
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
-  '/assets/till-tenant.js?v=4',
+  '/assets/till-tenant.js?v=6',
   '/assets/identity.js?v=12',
   '/assets/caisse-link.js?v=22',
   '/assets/operator-access.js?v=1',
@@ -361,7 +362,7 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=18',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=47',
+  '/assets/printer-bridge.js?v=48',
   '/assets/printer/pairing-ui.js?v=13',
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
@@ -377,7 +378,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=23',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=87',
+  '/assets/caisse-lang.js?v=89',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=8',
@@ -406,7 +407,7 @@ var SHELL = [
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=36',
-  '/assets/clients-book.js?v=55',
+  '/assets/clients-book.js?v=57',
   '/assets/clients-directory.js?v=30',
   '/assets/customer-retention.js?v=17',
   '/assets/menu-catalog.js?v=41',
@@ -452,7 +453,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=24',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=20',
-  '/assets/pos-dispatch.js?v=249',
+  '/assets/pos-dispatch.js?v=252',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -520,17 +521,17 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=179',
-  '/assets/pos-boutique/sales.js?v=81',
+  '/assets/pos-boutique.css?v=182',
+  '/assets/pos-boutique/sales.js?v=84',
   '/assets/pos-boutique/ticket-owner.js?v=2',
   '/assets/pos-boutique/ticket-remise.js?v=3',
   '/assets/pos-boutique/search.js?v=8',
   '/assets/pos-boutique/inv-tools.js?v=12',
   '/assets/pos-boutique/inv-moves.js?v=4',
   '/assets/pos-boutique/kit-2027.js?v=17',
-  '/assets/pos-boutique/checkout.js?v=81',
-  '/assets/pos-boutique/inventory.js?v=81',
-  '/assets/pos-boutique.js?v=179',
+  '/assets/pos-boutique/checkout.js?v=84',
+  '/assets/pos-boutique/inventory.js?v=84',
+  '/assets/pos-boutique.js?v=182',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

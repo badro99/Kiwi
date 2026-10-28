@@ -92,7 +92,7 @@ check(L.tr('par Yasmine El Fassi') === 'by Yasmine El Fassi', 'un nom composé t
    doit RIEN inventer. */
 check(L.tr('Mot inconnu · valeur inconnue') === 'Mot inconnu · valeur inconnue', 'une phrase dont aucun morceau n\'est connu reste intacte');
 check(L.tr('Aïcha · Total') === 'Aïcha · Total', 'un prénom ne devient jamais un mot du dictionnaire');
-check(L.tr('12 400 pts') === '12 400 pts', 'un nombre suivi d\'un mot inconnu reste tel quel');
+check(L.tr('12 400 zorbs') === '12 400 zorbs', 'un nombre suivi d\'un mot inconnu reste tel quel');
 
 /* ── le gabarit à trous ──────────────────────────────────────────────────── */
 check(L.tr('20 articles concernés') === '20 items covered', 'un nombre AU MILIEU de la phrase est reconnu');

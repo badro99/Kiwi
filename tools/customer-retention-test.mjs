@@ -9,6 +9,7 @@ import dashboardDependencies from './dashboard-dependencies.cjs';
  *   node tools/customer-retention-test.mjs
  */
 import fs from 'node:fs';
+import { shippedFunction } from './shipped-function.mjs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
@@ -128,13 +129,21 @@ ok('one visit does not make a regular: a recent first visit is its own group', (
   assert.match(src, /group: \{ new: 'Première visite',/);
 });
 ok('no loyalty card on: the column says so instead of « 0 / 10 »', () => {
-  assert.match(src, /if \(window\.KiwiClients && KiwiClients\.loyaltyOn && !KiwiClients\.loyaltyOn\(\)\) return '·';/);
+  const KC = { loyaltyOn: () => false };
+  assert.equal(shippedFunction(src, 'loyaltyLabel', { window: { KiwiClients: KC }, KiwiClients: KC })({ stamps: 0 }), '·');
 });
 ok('the open page follows the shared customer book, never under the owner\'s hand', () => {
   assert.match(src, /KiwiClients\.pull\(function \(ch\) \{ if \(ch\) refreshClients\(\); \}\)/);
   assert.match(src, /offClients = KiwiClients\.subscribe\(function \(\) \{ refreshClients\(\); \}\)/);
-  assert.match(src, /if \(a && root\.contains\(a\) && \/\^\(INPUT\|TEXTAREA\|SELECT\)\$\/\.test\(a\.tagName\)\) return;/);
-  assert.match(src, /if \(state\.tab === 'groups'\) return;/);
+  let paints = 0;
+  const state = { tab: 'activity' }, document = { body: { contains: () => true }, activeElement: null };
+  const refresh = shippedFunction(src, 'refreshClients', {
+    root: { contains: () => true }, document, state, window: {}, data: [], rows: [], byId: {},
+    buildRows: () => [], rerender: () => paints++, Date,
+  });
+  for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT']) { document.activeElement = { tagName }; refresh(); assert.equal(paints, 0); }
+  document.activeElement = null; state.tab = 'groups'; refresh(); assert.equal(paints, 0);
+  state.tab = 'activity'; refresh(); assert.equal(paints, 1);
 });
 ok('the margin that caps suggested discounts shows what Kiwi measured, without overwriting the owner\'s figure', () => {
   assert.match(src, /var cov = C\.coverage\(S\.list\(\), to - 30 \* DAY, to\);/);
@@ -210,11 +219,20 @@ ok('un réglage déjà choisi ne bouge pas sous le commerçant', () => {
 });
 
 ok('l’écran ne propose plus qu’un champ, et dit ce qu’il veut dire', () => {
-  assert.match(src, /field\(T\.th2\.backEvery, input\('backEveryDays'/);
-  assert.doesNotMatch(src, /input\('regularDays'/);
-  assert.doesNotMatch(src, /input\('inactiveDays'/);
-  assert.doesNotMatch(src, /input\('rhythmFactor'/);
-  assert.match(src, /data-cr-derived/);
+  const T = new Proxy({}, { get: (_, key) => key === 'derived' ? (n, i) => `Régulier ${n}, inactif ${i}` : ['th2', 'f', 'group'].includes(key) ? new Proxy({}, { get: (_, k) => String(k) }) : String(key) });
+  const renderGroups = shippedFunction(src, 'groupsHtml', {
+    doc: { settings: R.cleanSettings({ backEveryDays: 7 }), offers: {} },
+    T, GROUPS: [], INACTIVE_FACTOR: 3, window: {}, tradeRhythm: () => 7,
+    field: (label, value) => `<label>${label}${value}</label>`,
+    input: (name, value) => `<input name="${name}" value="${value}">`,
+    esc: String, measuredMarginHtml: () => '',
+  });
+  const renderedGroups = vm.runInNewContext('renderGroups()', { renderGroups });
+  assert.match(renderedGroups, /<label>backEvery<input name="backEveryDays" value="7">/);
+  assert.doesNotMatch(renderedGroups, /name="regularDays"/);
+  assert.doesNotMatch(renderedGroups, /name="inactiveDays"/);
+  assert.doesNotMatch(renderedGroups, /name="rhythmFactor"/);
+  assert.match(renderedGroups, /data-cr-derived>Régulier 7, inactif 21/);
   // mis à jour pendant la frappe, sans repeindre la page sous le curseur
   assert.match(src, /getAttribute\('name'\) !== 'backEveryDays'\) return;/);
   assert.doesNotMatch(src, /\[data-cr-rhythm\][\s\S]{0,400}?persist\(/);

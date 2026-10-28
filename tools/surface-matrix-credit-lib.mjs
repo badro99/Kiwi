@@ -14,7 +14,16 @@ export async function click(page, selector) {
       return !!top && (top === e || e.contains(top));
     }, { timeout: 5000 }, selector);
     await page.locator(selector).setTimeout(15000).click();
-  } catch (e) { e.message = `${selector} · ${e.message}`; throw e; }
+  } catch (e) {
+    // Say what sits on top of the control, so a covered button reads as covered, not as missing.
+    const cover = await page.evaluate((sel) => {
+      const e = document.querySelector(sel); if (!e) return 'absent';
+      const r = e.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const d = (n) => n ? n.tagName.toLowerCase() + (n.id ? '#' + n.id : '') + (n.className && typeof n.className === 'string' ? '.' + n.className.trim().split(/\s+/).join('.') : '') : 'nothing';
+      return 'rect ' + [r.left, r.top, r.width, r.height].map(Math.round).join(',') + ' · on top: ' + d(top) + (top && top.parentElement ? ' in ' + d(top.parentElement) : '');
+    }, selector).catch(() => '');
+    e.message = `${selector} · ${e.message}${cover ? ' · ' + cover : ''}`; throw e;
+  }
 }
 /* The boutique's opening float. The shipped till offers chips; under the 2027
    skin the chips stay hidden and « Ouvrir la caisse » opens the kit's count
@@ -105,12 +114,26 @@ export async function ticket(page) {
     await click(page, '#pos-boutique .vx-peek');
   }
 }
+/* Under the 2027 skin the ticket foot shows the kit's buttons (Clientes,
+   Remise, Encaisser) and keeps the shipped ones out of sight: the kit button
+   presses the shipped one. Tap what a person sees; without the kit, the
+   shipped button is what shows. */
+export async function tkAct(page, act, shipped) {
+  const kit = `#pos-boutique k-button[data-bq-tk-act="${act}"]`;
+  const shown = await page.$eval(kit, (e) => e.getClientRects().length > 0).catch(() => false);
+  if (shown) {
+    await page.waitForFunction((q) => { const e = document.querySelector(q); return e && !e.hasAttribute('disabled'); }, { timeout: 15000 }, kit);
+    await click(page, kit);
+  } else {
+    await click(page, shipped);
+  }
+}
 export async function add(page) {
   await click(page, '[data-bq-item]:not(.is-out)');
   await click(page, '#bq-sheet-add:not([disabled])');
   await page.waitForSelector('#bq-sheet-veil.is-open', { hidden: true });
   await ticket(page);
-  await click(page, '#bq-validate:not([disabled])');
+  await tkAct(page, 'pay', '#bq-validate:not([disabled])');
 }
 export async function cash(page) {
   await add(page);

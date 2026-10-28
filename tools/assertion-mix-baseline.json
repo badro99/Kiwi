@@ -83,7 +83,7 @@
     },
     "briefing-properties-test.mjs": {
       "text": 29,
-      "total": 68
+      "total": 76
     },
     "browser-trace-test.mjs": {
       "text": 10,
@@ -119,7 +119,7 @@
     },
     "caisse-godmode-toggles-test.mjs": {
       "text": 35,
-      "total": 35
+      "total": 36
     },
     "caisse-link-success-test.js": {
       "text": 14,
@@ -230,8 +230,8 @@
       "total": 18
     },
     "customer-retention-test.mjs": {
-      "text": 28,
-      "total": 78
+      "text": 25,
+      "total": 115
     },
     "d1-schema-test.mjs": {
       "text": 11,
@@ -375,7 +375,7 @@
     },
     "hotel-split-test.mjs": {
       "text": 15,
-      "total": 44
+      "total": 46
     },
     "hotel-stay-editing-test.mjs": {
       "text": 76,
@@ -487,7 +487,7 @@
     },
     "loyalty-truth-test.mjs": {
       "text": 12,
-      "total": 31
+      "total": 38
     },
     "maison-client-history-test.mjs": {
       "text": 7,
@@ -611,7 +611,7 @@
     },
     "onboarding-truth-test.mjs": {
       "text": 14,
-      "total": 49
+      "total": 54
     },
     "operating-day-handover-test.mjs": {
       "text": 23,
@@ -890,8 +890,8 @@
       "total": 74
     },
     "serveur-kitchen-truth-test.mjs": {
-      "text": 31,
-      "total": 45
+      "text": 30,
+      "total": 49
     },
     "serveur-lang-coverage-test.mjs": {
       "text": 10,
@@ -942,7 +942,7 @@
       "total": 5
     },
     "stock-controller-split-test.mjs": {
-      "text": 13,
+      "text": 12,
       "total": 31
     },
     "stock-costing-migration-test.mjs": {
@@ -1049,17 +1049,13 @@
       "text": 9,
       "total": 9
     },
-    "tickets-split-test.mjs": {
-      "text": 9,
-      "total": 15
-    },
     "till-approval-server-writes-test.mjs": {
       "text": 27,
       "total": 70
     },
     "till-truth-test.mjs": {
       "text": 12,
-      "total": 18
+      "total": 26
     },
     "tokens-2027-browser-test.mjs": {
       "text": 11,
