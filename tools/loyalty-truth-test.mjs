@@ -122,8 +122,8 @@ console.log('\nCarte produit : un tampon par article choisi, pas par passage');
   check(Number(s.row().stamps) === 4, 'the restaurant line shape (itemId) is read as the product id');
   await s.post({ refund: { clientId: 'c1', ref: 'refund:id:1', amount: 24, saleRef: 'ID1', items: [{ name: 'Viennoiserie du matin', id: 'menu-12', qty: 2, total: 24 }] } });
   check(Number(s.row().stamps) === 2, 'returning the renamed croissants takes their two stamps back');
-  const stored = JSON.parse(s.raw.prepare("SELECT items FROM client_purchase_events WHERE ref='id:1'").get()?.items || '[]');
-  check(stored[0] && stored[0].id === 'menu-12', 'the recorded line keeps its product id for later returns');
+  const storedIds = () => s.raw.prepare("SELECT json_extract(items, '$[0].id') AS id FROM client_purchase_events WHERE ref = ?").get('id:1');
+  check(storedIds().id === 'menu-12', 'the recorded line keeps its product id for later returns');
   s.raw.close();
 }
 
