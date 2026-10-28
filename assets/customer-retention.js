@@ -61,8 +61,11 @@
       emptyBook: 'Aucun client identifié pour l’instant', emptyBookText: 'Attachez un client à une vente en caisse : ses visites apparaîtront ici.',
       loyaltyOff: 'carte de fidélité désactivée',
       marginMeasured: function (m, c) { return 'Mesurée par Kiwi sur vos 30 derniers jours : ' + m + ' (sur ' + c + ' de vos ventes, celles dont le coût est connu).'; },
-      th2: { regularDays: 'Régulier si venu depuis moins de', inactiveDays: 'Inactif après', rhythm: 'Vient moins souvent si l’absence dépasse', rhythmUnit: '× son rythme habituel', margin: 'Marge brute moyenne', marginUnit: '%', daysUnit: 'jours' },
-      thresholdsTitle: 'Seuils des groupes', thresholdsSub: 'Vous décidez à partir de quand un client est régulier, moins assidu ou inactif.',
+      th2: { backEvery: 'Je veux revoir mes clients tous les', margin: 'Marge brute moyenne', marginUnit: '%', daysUnit: 'jours' },
+      thresholdsTitle: 'Le rythme de vos clients', thresholdsSub: 'Un seul chiffre : à quelle fréquence vous voulez les revoir. Les trois groupes en découlent.',
+      tradeHint: function (trade, n) { return 'Pour un métier comme le vôtre (' + trade + '), Kiwi propose ' + n + ' jours.'; },
+      tradeUse: 'Reprendre la proposition',
+      derived: function (n, inact) { return 'Régulier : vu il y a ' + n + ' jours ou moins. Vient moins souvent : entre ' + n + ' et ' + inact + ' jours, ou plus de 1,5 fois son propre rythme. Inactif : plus de ' + inact + ' jours.'; },
       offersTitle: 'Offre par groupe', offersSub: 'Une offre par groupe, avec ses limites. Elle est proposée dans les suggestions, jamais envoyée seule.',
       offerType: { none: 'Aucune remise', percent: 'Pourcentage', fixed: 'Montant fixe', item: 'Article offert', reward: 'Récompense fidélité' },
       f: { type: 'Offre', value: 'Valeur', percentU: '%', madU: 'MAD', itemName: 'Article', itemCost: 'Coût de l’article (MAD)', from: 'Du', to: 'Au', minSpend: 'Achat minimum (MAD)', perClient: 'Utilisations par client', budget: 'Budget total (MAD)', none: 'Sans' },
@@ -98,8 +101,11 @@
       emptyBook: 'No identified customers yet', emptyBookText: 'Attach a customer to a sale at the till: their visits will appear here.',
       loyaltyOff: 'loyalty card is off',
       marginMeasured: function (m, c) { return 'Measured by Kiwi over your last 30 days: ' + m + ' (on ' + c + ' of your sales, those with a known cost).'; },
-      th2: { regularDays: 'Regular if seen within', inactiveDays: 'Inactive after', rhythm: 'Visiting less often if the absence exceeds', rhythmUnit: '× their usual rhythm', margin: 'Average gross margin', marginUnit: '%', daysUnit: 'days' },
-      thresholdsTitle: 'Group thresholds', thresholdsSub: 'You decide when a customer counts as regular, less frequent or inactive.',
+      th2: { backEvery: 'I want my customers back every', margin: 'Average gross margin', marginUnit: '%', daysUnit: 'days' },
+      thresholdsTitle: 'How often your customers come back', thresholdsSub: 'One number: how often you want to see them. The three groups follow from it.',
+      tradeHint: function (trade, n) { return 'For a trade like yours (' + trade + '), Kiwi suggests ' + n + ' days.'; },
+      tradeUse: 'Use the suggestion',
+      derived: function (n, inact) { return 'Regular: seen ' + n + ' days ago or less. Visiting less often: between ' + n + ' and ' + inact + ' days, or more than 1.5 times their own rhythm. Inactive: more than ' + inact + ' days.'; },
       offersTitle: 'Offer per group', offersSub: 'One offer per group, with its limits. It is proposed in suggestions, never sent on its own.',
       offerType: { none: 'No discount', percent: 'Percentage', fixed: 'Fixed amount', item: 'Free item', reward: 'Loyalty reward' },
       f: { type: 'Offer', value: 'Value', percentU: '%', madU: 'MAD', itemName: 'Item', itemCost: 'Item cost (MAD)', from: 'From', to: 'To', minSpend: 'Minimum spend (MAD)', perClient: 'Uses per customer', budget: 'Total budget (MAD)', none: 'None' },
@@ -135,8 +141,11 @@
       emptyBook: 'لا يوجد عملاء معرّفون بعد', emptyBookText: 'اربط عميلاً ببيع في الصندوق: ستظهر زياراته هنا.',
       loyaltyOff: 'بطاقة الولاء غير مفعلة',
       marginMeasured: function (m, c) { return 'قاسه Kiwi على آخر 30 يومًا: ' + m + ' (على ' + c + ' من مبيعاتك، تلك التي تُعرف تكلفتها).'; },
-      th2: { regularDays: 'دائم إذا زار خلال', inactiveDays: 'غير نشط بعد', rhythm: 'يأتي أقل إذا تجاوز الغياب', rhythmUnit: '× إيقاعه المعتاد', margin: 'متوسط الهامش الإجمالي', marginUnit: '%', daysUnit: 'يوم' },
-      thresholdsTitle: 'حدود الفئات', thresholdsSub: 'أنت من يحدد متى يكون العميل دائماً أو أقل حضوراً أو غير نشط.',
+      th2: { backEvery: 'أريد أن يعود زبنائي كل', margin: 'متوسط الهامش الإجمالي', marginUnit: '%', daysUnit: 'يوم' },
+      tradeHint: function (trade, n) { return 'لنشاط مثل نشاطك (' + trade + ')، يقترح Kiwi ' + n + ' يوماً.'; },
+      tradeUse: 'اعتماد الاقتراح',
+      derived: function (n, inact) { return 'دائم: زار منذ ' + n + ' يوماً أو أقل. يأتي أقل: بين ' + n + ' و' + inact + ' يوماً، أو أكثر من 1.5 ضعف إيقاعه الخاص. غير نشط: أكثر من ' + inact + ' يوماً.'; },
+      thresholdsTitle: 'إيقاع زبنائك', thresholdsSub: 'رقم واحد: كم مرة تريد أن تراهم. الفئات الثلاث تنبثق منه.',
       offersTitle: 'عرض لكل فئة', offersSub: 'عرض واحد لكل فئة مع حدوده. يُقترح في الاقتراحات ولا يُرسل وحده أبداً.',
       offerType: { none: 'بدون خصم', percent: 'نسبة مئوية', fixed: 'مبلغ ثابت', item: 'منتج مجاني', reward: 'مكافأة الوفاء' },
       f: { type: 'العرض', value: 'القيمة', percentU: '%', madU: 'درهم', itemName: 'المنتج', itemCost: 'تكلفة المنتج (درهم)', from: 'من', to: 'إلى', minSpend: 'الحد الأدنى للشراء (درهم)', perClient: 'مرات الاستعمال لكل عميل', budget: 'الميزانية الإجمالية (درهم)', none: 'بدون' },
@@ -165,18 +174,62 @@
   /* ── the store document ────────────────────────────────────────────────── */
   var GROUPS = ['regular', 'less', 'inactive'];
   var OFFER_TYPES = ['none', 'percent', 'fixed', 'item', 'reward'];
-  function defaultSettings() { return { enabled: false, regularDays: 30, inactiveDays: 90, rhythmFactor: 1.5, marginPct: 60 }; }
+  /* ═══════════════════════════════════════════════════════════════════════
+   * UN SEUL CHIFFRE · « je veux revoir mes clients tous les N jours »
+   *
+   * Le patron réglait trois seuils (régulier, inactif, et un multiplicateur du
+   * rythme personnel) et devait deviner ce qu'ils voulaient dire ensemble. Pire,
+   * ils partaient tous les trois à la même valeur pour tout le monde : trente
+   * jours. On vient chercher son pain tous les trois jours et ses vêtements deux
+   * fois l'an. À trente jours, la boulangerie n'avait jamais un seul client
+   * « qui vient moins souvent », et la boutique de vêtements les avait TOUS en
+   * « inactifs ». Un classement qui ne distingue personne ne sert à rien.
+   *
+   * Il n'y a donc plus qu'un chiffre, pré-rempli par le métier
+   * (assets/trades.js › rhythm) et modifiable à tout moment. Le reste en découle :
+   *
+   *   régulier              vu il y a N jours ou moins
+   *   vient moins souvent   entre N et 3 N, ou au-delà de 1,5 × SON propre rythme
+   *   inactif               plus de 3 N
+   *
+   * Le rythme personnel reste dans le calcul : un client qui passait toutes les
+   * semaines et qu'on n'a pas vu depuis douze jours est en train de partir, même
+   * si la moyenne du commerce dit trente. C'est le seul endroit où la page en
+   * sait plus que le réglage.
+   * ═══════════════════════════════════════════════════════════════════════ */
+  var INACTIVE_FACTOR = 3, RHYTHM_FACTOR = 1.5, RHYTHM_FALLBACK = 30;
+  /* Le métier de l'établissement ouvert, tel que la liste unique le nomme. */
+  function storeTrade() {
+    try {
+      var KV = window.KiwiVenue;
+      var d = KV && KV.getCurrentVenueData && KV.getCurrentVenueData();
+      var raw = d && (d.subtype || d.trade || d.type);
+      var TR = window.KiwiTrades;
+      return (TR && TR.resolve) ? (TR.resolve(raw) || '') : String(raw || '');
+    } catch (_) { return ''; }
+  }
+  function tradeRhythm() {
+    try { var TR = window.KiwiTrades; if (TR && TR.rhythm) return TR.rhythm(storeTrade()); } catch (_) {}
+    return RHYTHM_FALLBACK;
+  }
+  function defaultSettings() { return { enabled: false, backEveryDays: tradeRhythm(), marginPct: 60 }; }
   function defaultOffer(group) {
     return { type: group === 'regular' ? 'none' : 'percent', value: group === 'inactive' ? 15 : (group === 'less' ? 10 : 0),
       item: '', from: '', to: '', minSpend: 0, perClient: 1, budget: 0 };
   }
   function cleanSettings(s) {
     var d = defaultSettings(); s = s || {};
+    /* Les réglages d'avant portaient regularDays : il DEVIENT le rythme, pour
+       qu'un commerçant qui avait déjà choisi ne voie pas ses « réguliers »
+       changer du jour au lendemain. */
+    var n = Math.round(num(s.backEveryDays != null ? s.backEveryDays : s.regularDays, 1, 365, d.backEveryDays));
     return {
       enabled: s.enabled === true,
-      regularDays: Math.round(num(s.regularDays, 1, 365, d.regularDays)),
-      inactiveDays: Math.round(num(s.inactiveDays, 2, 730, d.inactiveDays)),
-      rhythmFactor: Math.round(num(s.rhythmFactor, 1, 5, d.rhythmFactor) * 10) / 10,
+      backEveryDays: n,
+      /* Dérivés, jamais réglés à la main : groupOf() et les bancs les lisent. */
+      regularDays: n,
+      inactiveDays: Math.min(730, n * INACTIVE_FACTOR),
+      rhythmFactor: RHYTHM_FACTOR,
       marginPct: Math.round(num(s.marginPct, 1, 100, d.marginPct)),
     };
   }
@@ -353,6 +406,7 @@
     '.cr-msg{width:100%;box-sizing:border-box;min-height:96px;padding:12px 14px;border:1px solid var(--n-200);border-radius:14px;font:inherit;font-size:14px;font-weight:400;line-height:1.5;background:var(--surface);color:var(--ink);resize:vertical;}',
     '.cr-msg:focus{outline:none;border-color:var(--atlas);}',
     '.cr-note{font-size:12.5px;color:var(--n-500);}',
+    '.cr-link{border:0;background:none;padding:0;font:inherit;color:var(--atlas);font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}',
     '.cr-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:48px 20px;border:1px dashed var(--n-200);border-radius:20px;background:var(--surface);}',
     '.cr-empty-ic{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--atlas) 10%,transparent);color:var(--atlas);}',
     '.cr-empty-ic svg{width:28px;height:28px;}',
@@ -488,12 +542,19 @@
     }
     function groupsHtml() {
       var s = doc.settings;
+      var suggest = tradeRhythm(), tradeName = '';
+      try { var TR = window.KiwiTrades; tradeName = (TR && TR.label) ? (TR.label(storeTrade()) || '') : ''; } catch (_) {}
       var thresholds = '<div class="cr-card"><h3>' + esc(T.thresholdsTitle) + '</h3><p class="cr-sub">' + esc(T.thresholdsSub) + '</p><div class="cr-grid">' +
-        field(T.th2.regularDays, input('regularDays', s.regularDays, 'type="number" inputmode="numeric" min="1" max="365"'), T.th2.daysUnit) +
-        field(T.th2.inactiveDays, input('inactiveDays', s.inactiveDays, 'type="number" inputmode="numeric" min="2" max="730"'), T.th2.daysUnit) +
-        field(T.th2.rhythm, input('rhythmFactor', s.rhythmFactor, 'type="number" inputmode="decimal" min="1" max="5" step="0.1"'), T.th2.rhythmUnit) +
+        field(T.th2.backEvery, input('backEveryDays', s.backEveryDays, 'type="number" inputmode="numeric" min="1" max="365"'), T.th2.daysUnit) +
         field(T.th2.margin, input('marginPct', s.marginPct, 'type="number" inputmode="numeric" min="1" max="100"'), T.th2.marginUnit) +
-        '</div>' + measuredMarginHtml() + '</div>';
+        '</div>' +
+        /* Ce que le chiffre veut dire, en toutes lettres et sous les yeux : le
+           patron ne doit pas avoir à déduire ses groupes de son réglage. */
+        '<p class="cr-note" data-cr-derived>' + esc(T.derived(s.backEveryDays, Math.min(730, s.backEveryDays * INACTIVE_FACTOR))) + '</p>' +
+        (tradeName && suggest !== s.backEveryDays
+          ? '<p class="cr-note">' + esc(T.tradeHint(tradeName, suggest)) + ' <button type="button" class="cr-link" data-cr-rhythm="' + suggest + '">' + esc(T.tradeUse) + '</button></p>'
+          : '') +
+        measuredMarginHtml() + '</div>';
       var offers = '<div class="cr-card"><h3>' + esc(T.offersTitle) + '</h3><p class="cr-sub">' + esc(T.offersSub) + '</p>' + GROUPS.map(function (g) {
         var o = doc.offers[g];
         var p = function (k) { return g + '.' + k; };
@@ -713,6 +774,14 @@
       doc = { settings: cleanSettings(draft.settings), offers: cleanOffers(draft.offers), sends: doc.sends };
       rerender();
     });
+    root.addEventListener('input', function (e) {
+      var el = e.target;
+      if (!el || !el.getAttribute || el.getAttribute('name') !== 'backEveryDays') return;
+      var node = root.querySelector('[data-cr-derived]');
+      if (!node) return;
+      var n = Math.round(num(el.value, 1, 365, doc.settings.backEveryDays));
+      node.textContent = T.derived(n, Math.min(730, n * INACTIVE_FACTOR));
+    });
     root.addEventListener('click', function (e) {
       var t = e.target;
       var tab = t.closest('[data-cr-tab]');
@@ -720,6 +789,14 @@
       if (t.closest('[data-cr-enable]')) { var n = readDoc(); n.settings.enabled = true; persist(n, T.enabled); return; }
       if (t.closest('[data-cr-disable]')) { var m = readDoc(); m.settings.enabled = false; persist(m, null); return; }
       if (t.closest('[data-cr-save]')) { persist(readForm(root), T.saved); return; }
+      var rh = t.closest('[data-cr-rhythm]');
+      if (rh) {
+        /* Brouillon, pas enregistrement : comme le changement de type d'offre
+           juste au-dessus, le patron garde la main sur « Enregistrer ». */
+        var dr = readForm(root); dr.settings.backEveryDays = rh.getAttribute('data-cr-rhythm');
+        doc = { settings: cleanSettings(dr.settings), offers: cleanOffers(dr.offers), sends: doc.sends };
+        rerender(); return;
+      }
       var adopt = t.closest('[data-cr-adopt]');
       if (adopt) {
         var nx = readDoc(); var g = adopt.getAttribute('data-cr-adopt');
@@ -775,5 +852,6 @@
     groupOf: groupOf, rhythmDays: rhythmDays, daysSinceLast: daysSinceLast, offerCost: offerCost,
     suggestPercent: suggestPercent, offerActive: offerActive, offerKey: offerKey, outcome: outcome,
     cleanSettings: cleanSettings, cleanOffer: cleanOffer, waPhone: waPhone,
+    defaultSettings: defaultSettings, tradeRhythm: tradeRhythm, storeTrade: storeTrade,
   };
 })();

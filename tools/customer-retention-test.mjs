@@ -77,8 +77,10 @@ ok('offers respect their dates', () => {
   assert.equal(R.offerActive({ from: '', to: '2026-10-08' }, '2026-10-09'), false);
 });
 ok('settings and offers are clamped to sane values', () => {
-  assert.deepEqual(JSON.parse(JSON.stringify(R.cleanSettings({ regularDays: -4, inactiveDays: 'x', rhythmFactor: 99, marginPct: 0, enabled: 'yes' }))),
-    { enabled: false, regularDays: 1, inactiveDays: 90, rhythmFactor: 5, marginPct: 1 });
+  /* Un seul chiffre est réglable : les trois seuils en découlent, et aucune
+     valeur aberrante venue d'un ancien document ne peut plus les tordre. */
+  assert.deepEqual(JSON.parse(JSON.stringify(R.cleanSettings({ backEveryDays: -4, inactiveDays: 'x', rhythmFactor: 99, marginPct: 0, enabled: 'yes' }))),
+    { enabled: false, backEveryDays: 1, regularDays: 1, inactiveDays: 3, rhythmFactor: 1.5, marginPct: 1 });
   const o = R.cleanOffer({ type: 'percent', value: 250, perClient: 0, from: 'soon' }, 'less');
   assert.equal(o.value, 100); assert.equal(o.perClient, 1); assert.equal(o.from, '');
   assert.equal(R.cleanOffer({ type: 'bogus' }, 'regular').type, 'none');
@@ -136,12 +138,86 @@ ok('the open page follows the shared customer book, never under the owner\'s han
 });
 ok('the margin that caps suggested discounts shows what Kiwi measured, without overwriting the owner\'s figure', () => {
   assert.match(src, /var cov = C\.coverage\(S\.list\(\), to - 30 \* DAY, to\);/);
-  assert.match(src, /'<\/div>' \+ measuredMarginHtml\(\) \+ '<\/div>'/);
+  assert.match(src, /measuredMarginHtml\(\) \+ '<\/div>'/);
   assert.doesNotMatch(src, /marginPct\s*=\s*cov\./);
 });
 ok('a loyalty reward cannot be offered while the loyalty card is off', () => {
   assert.match(src, /var off = t === 'reward' && loyaltyOff && o\.type !== t;/);
   assert.match(src, /loyaltyOff: 'carte de fidélité désactivée'/);
+});
+
+/* ── UN SEUL CHIFFRE, PRÉ-REMPLI PAR LE MÉTIER ─────────────────────────────
+ * Les trois seuils réglables partaient tous à trente jours, pour tout le monde.
+ * On vient chercher son pain tous les trois jours et ses vêtements deux fois
+ * l'an : à trente jours, la boulangerie n'avait jamais un client « qui vient
+ * moins souvent » et la boutique les avait tous en « inactifs ». */
+vm.runInContext(read('assets/trades.js'), context, { filename: 'trades.js' });
+const trade = (id) => { window.KiwiVenue = { getCurrentVenueData: () => ({ subtype: id }) }; };
+
+ok('le métier donne le rythme, et ce ne sont pas les mêmes', () => {
+  const TR = window.KiwiTrades;
+  assert.equal(TR.rhythm('bakery'), 3);
+  assert.equal(TR.rhythm('cafe'), 7);
+  assert.equal(TR.rhythm('restaurant'), 21);
+  assert.equal(TR.rhythm('boutique'), 90);
+  assert.equal(TR.rhythm('coiffure'), 35);
+  assert.equal(TR.rhythm('hotel'), 180);
+  // un métier inconnu ne casse rien : trente jours, comme avant
+  assert.equal(TR.rhythm('rien-du-tout'), 30);
+  // tous les métiers de la liste en ont un, et aucun n'est absurde
+  for (const t of TR.LIST) assert.ok(t.rhythm >= 1 && t.rhythm <= 365, t.id);
+});
+
+ok('un établissement neuf part sur le rythme de SON métier', () => {
+  trade('cafe');
+  assert.equal(R.defaultSettings().backEveryDays, 7);
+  trade('boutique');
+  assert.equal(R.defaultSettings().backEveryDays, 90);
+  // et sans métier connu, le repli de toujours
+  window.KiwiVenue = null;
+  assert.equal(R.defaultSettings().backEveryDays, 30);
+});
+
+ok('les trois groupes découlent du seul chiffre', () => {
+  const s7 = R.cleanSettings({ backEveryDays: 7 });
+  assert.equal(s7.regularDays, 7);
+  assert.equal(s7.inactiveDays, 21);
+  assert.equal(s7.rhythmFactor, 1.5);
+  const s90 = R.cleanSettings({ backEveryDays: 90 });
+  assert.equal(s90.inactiveDays, 270);
+  // le plafond tient : 365 × 3 dépasserait 730
+  assert.equal(R.cleanSettings({ backEveryDays: 365 }).inactiveDays, 730);
+});
+
+ok('le même client n’est pas classé pareil au café et à la boutique', () => {
+  /* Vu il y a 40 jours, deux visites espacées de 40 jours (son propre rythme
+     ne le trahit donc pas) : parti pour un café, régulier pour une boutique. */
+  const c = { visits: 2, history: visitsEvery(40, 2, 40) };
+  assert.equal(R.groupOf(c, R.cleanSettings({ backEveryDays: 7 }), NOW), 'inactive');
+  assert.equal(R.groupOf(c, R.cleanSettings({ backEveryDays: 90 }), NOW), 'regular');
+});
+
+ok('un réglage déjà choisi ne bouge pas sous le commerçant', () => {
+  /* Les documents d'avant portaient regularDays : il DEVIENT le rythme, donc
+     « régulier » veut dire exactement la même chose qu'hier. */
+  const migrated = R.cleanSettings({ enabled: true, regularDays: 45, inactiveDays: 120, rhythmFactor: 2, marginPct: 55 });
+  assert.equal(migrated.backEveryDays, 45);
+  assert.equal(migrated.regularDays, 45);
+  assert.equal(migrated.enabled, true);
+  assert.equal(migrated.marginPct, 55);
+  // backEveryDays l'emporte dès qu'il existe
+  assert.equal(R.cleanSettings({ backEveryDays: 12, regularDays: 45 }).backEveryDays, 12);
+});
+
+ok('l’écran ne propose plus qu’un champ, et dit ce qu’il veut dire', () => {
+  assert.match(src, /field\(T\.th2\.backEvery, input\('backEveryDays'/);
+  assert.doesNotMatch(src, /input\('regularDays'/);
+  assert.doesNotMatch(src, /input\('inactiveDays'/);
+  assert.doesNotMatch(src, /input\('rhythmFactor'/);
+  assert.match(src, /data-cr-derived/);
+  // mis à jour pendant la frappe, sans repeindre la page sous le curseur
+  assert.match(src, /getAttribute\('name'\) !== 'backEveryDays'\) return;/);
+  assert.doesNotMatch(src, /\[data-cr-rhythm\][\s\S]{0,400}?persist\(/);
 });
 
 console.log(`\ncustomer-retention: ${passed} passed, ${failed} failed`);

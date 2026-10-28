@@ -213,7 +213,7 @@ var SHELL = [
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
-  '/assets/trades.js?v=7',
+  '/assets/trades.js?v=8',
   '/assets/plan-catalog.js?v=1',
   '/assets/interactive/helpers.js?v=1',
   '/assets/interactive/handlers.js?v=1',
@@ -408,7 +408,7 @@ var SHELL = [
   '/assets/clients-store.js?v=36',
   '/assets/clients-book.js?v=55',
   '/assets/clients-directory.js?v=30',
-  '/assets/customer-retention.js?v=16',
+  '/assets/customer-retention.js?v=17',
   '/assets/menu-catalog.js?v=41',
   '/assets/stock-identity.js?v=3',
   '/assets/restaurant-recipes.js?v=14',
