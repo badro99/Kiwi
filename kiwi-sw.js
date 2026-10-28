@@ -140,7 +140,7 @@ var SHELL = [
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
   '/assets/booking.js?v=45',
-  '/assets/booking-recover.js?v=1',
+  '/assets/booking-recover.js?v=2',
   '/assets/booking.css?v=16',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=2',

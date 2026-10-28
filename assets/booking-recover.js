@@ -27,6 +27,7 @@ function strings() {
   const lang = String(document.documentElement.lang || 'fr').slice(0, 2);
   return S[lang] || S.fr;
 }
+const t = (key) => strings()[key];
 
 export function recoverMarkup(s = strings()) {
   const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -47,10 +48,10 @@ async function submit(e) {
   const form = e.target;
   if (!form || !form.matches || !form.matches('[data-recover]')) return;
   e.preventDefault();
-  const s = strings(), msg = form.querySelector('.bk-recover-msg'), btn = form.querySelector('button');
+  const msg = form.querySelector('.bk-recover-msg'), btn = form.querySelector('button');
   const code = form.elements.code.value.trim(), contact = form.elements.contact.value.trim();
-  if (!code || !contact) { msg.textContent = s.miss; return; }
-  btn.disabled = true; msg.textContent = s.busy;
+  if (!code || !contact) { msg.textContent = t('miss'); return; }
+  btn.disabled = true; msg.textContent = t('busy');
   try {
     const r = await deadlineFetch('/api/booking', {
       method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
@@ -61,7 +62,7 @@ async function submit(e) {
     location.assign('booking.html?merchant=' + encodeURIComponent(merchant) + '&manage=' + encodeURIComponent(j.manageToken));
   } catch (err) {
     btn.disabled = false;
-    msg.textContent = err.message === 'request-timeout' ? s.slow : err.message === 'rate-limited' ? s.busyServer : s.miss;
+    msg.textContent = t(err.message === 'request-timeout' ? 'slow' : err.message === 'rate-limited' ? 'busyServer' : 'miss');
   }
 }
 

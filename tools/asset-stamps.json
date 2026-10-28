@@ -40,8 +40,8 @@
     "sha": "606482db0d68d9bf"
   },
   "assets/admin-workspace.js": {
-    "v": "31",
-    "sha": "663df2b6a7fd5445"
+    "v": "32",
+    "sha": "ce1b53ffa20d121e"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -100,8 +100,8 @@
     "sha": "83a4567065245d47"
   },
   "assets/booking-recover.js": {
-    "v": "1",
-    "sha": "ce114247d94b10d5"
+    "v": "2",
+    "sha": "22356413287b46e3"
   },
   "assets/booking-service.js": {
     "v": "2",
