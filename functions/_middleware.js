@@ -1044,7 +1044,7 @@ function authPage(opts) {
   return `<!doctype html>
 <html lang="${lang}" dir="${dir}">
 <head>
-<script src="/assets/origin-move.js?r=2"></script>
+<script src="/assets/origin-move.js?r=3"></script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />

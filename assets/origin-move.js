@@ -11,6 +11,12 @@
   var old = location.hostname === 'kiwi-maroc.pages.dev';
   var receiving = location.hostname === 'kiwi-os.com' && /^\/origin-move(?:\.html)?$/.test(location.pathname);
   if (!old && !receiving) return;
+  /* Paused (owner, 28 Oct 2026): the notice sat over Santos Store's screens while
+   * they were adding products. Until MOVE_ON is true again the old origin runs as
+   * if this file did not exist: no notice, no redirect. The receiving page on
+   * kiwi-os.com stays on, so a move someone already started can still finish. */
+  var MOVE_ON = false;
+  if (old && !MOVE_ON) return;
   var initialState = true;
   try { initialState = document.currentScript && document.currentScript.dataset.hadState !== undefined
     ? document.currentScript.dataset.hadState === 'true' : Object.keys(localStorage).some(function (k) { return /^kiwi/i.test(k); }); } catch (_) {}
@@ -186,7 +192,7 @@
     finally { busy = false; panel.classList.remove('origin-moving'); await refresh(); }
   }
   function mount() {
-    var sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/assets/origin-move.css?r=2'; document.head.appendChild(sheet);
+    var sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/assets/origin-move.css?r=3'; document.head.appendChild(sheet);
     panel = document.createElement('aside'); panel.className = 'origin-move'; panel.setAttribute('aria-label', copy().title);
     // No icon font on these pages: the vendored Material path, drawn inline (open_in_new).
     var icon = document.createElement('span'); icon.className = 'origin-move-icon'; icon.setAttribute('aria-hidden', 'true');

@@ -177,7 +177,11 @@ assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM origin_devices WHERE role = 
 console.log('✓ Sightings throttle D1 writes to one/device/hour, require live auth, and project no secrets');
 
 // Execute the real early script in a minimal browser context, without a browser suite.
-const source = readFileSync(new URL('../assets/origin-move.js', import.meta.url), 'utf8');
+const shipped = readFileSync(new URL('../assets/origin-move.js', import.meta.url), 'utf8');
+// The move is paused on the old origin (owner, 28 Oct 2026). The rules below are
+// tested with the switch on, so they hold the day it is turned back on.
+assert.ok(shipped.includes('var MOVE_ON = false;'));
+const source = shipped.replace('var MOVE_ON = false;', 'var MOVE_ON = true;');
 function client(entries = {}, databases = [], factory = {}, options = {}) {
   const localStorage = { ...entries };
   Object.defineProperty(localStorage, 'getItem', { value: key => localStorage[key] || null });
@@ -205,8 +209,15 @@ function client(entries = {}, databases = [], factory = {}, options = {}) {
   const context = { document, location, localStorage, indexedDB, fetch, history,
     window: { indexedDB, addEventListener() {}, KiwiPairingCommit: { commit() { events.push('pair'); return { ok: true }; } } },
     setTimeout, clearTimeout, setInterval() {}, Promise, URLSearchParams };
-  vm.runInNewContext(source, context);
+  vm.runInNewContext(options.code || source, context);
   return { context, location, posts, events, button: () => document.body.children[0].children.at(-1), run: () => domReady(), api: context.window.KiwiOriginMove };
+}
+{
+  const paused = client({ kiwiSaleQueue: '[]' }, [], {}, { code: shipped });
+  assert.equal(paused.api, undefined); assert.equal(paused.context.document.body.children.length, 0);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(paused.location.replaced, undefined); assert.equal(paused.location.assigned, undefined); assert.equal(paused.posts.length, 0);
+  console.log('✓ Paused: the old origin shows no notice, posts nothing and redirects nowhere');
 }
 let c = client(); assert.ok(c.api.movable(await c.api.queues())); c.run();
 await new Promise(resolve => setTimeout(resolve, 0)); assert.equal(c.location.replaced, target + '/kiwi-caisse?pair=1');
