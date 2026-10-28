@@ -389,8 +389,10 @@ html[data-skin-2027="till"] #pos-boutique .bq-more > :not(k-sidebar, .bq-more-br
 html[data-skin-2027="till"] #pos-boutique .bq-more > k-sidebar { display: block; }
 
 /* Une seule ligne : le logo à sa vraie proportion (mot-symbole ~1,8:1, il
-   s'écrasait dans un carré de 28px), puis l'état de service juste à sa
-   droite (propriétaire, 2026-10-28). Sans nom d'enseigne, sa case se tait. */
+   s'écrasait dans un carré de 28px), et l'état de service poussé dans le coin
+   haut opposé (propriétaire, 2026-10-28 : collé au logo, il faisait bizarre).
+   margin-inline-start le renvoie à gauche en arabe. Sans nom d'enseigne, sa
+   case se tait. */
 html[data-skin-2027="till"] #pos-boutique .bq-more-brand {
   display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px;
   padding: 4px 12px 16px;
@@ -406,6 +408,7 @@ html[data-skin-2027="till"] #pos-boutique .bq-more-venue {
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more-live {
   display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  margin-inline-start: auto; align-self: flex-start;
   font-size: var(--k-fs-footnote); color: var(--k-ink-2);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more-live i {
