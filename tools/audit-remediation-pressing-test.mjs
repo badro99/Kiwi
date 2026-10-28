@@ -61,6 +61,7 @@ function runOpsTest() {
   );
   const context = vm.createContext({ window, localStorage: store, Date, JSON, Math, String, Number, Object, Array, Set, RegExp, CustomEvent: class {} });
   vm.runInContext(executable, context, { filename: 'assets/pressing-ops.js' });
+  vm.runInContext(read('assets/pressing-numbering.js'), context);
   const order = {
     id: 'P-AUDIT-1', custId: 'c1', guest: null,
     pieces: [{ pid: 'piece-1', label: 'Chemise', itemId: 'chemise', svcs: ['lavage'], status: 'trait', photos: 0 }],

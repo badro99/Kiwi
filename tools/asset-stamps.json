@@ -1480,8 +1480,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "260",
-    "sha": "951991f7f3f6379d"
+    "v": "263",
+    "sha": "446c648edfd6d3ec"
   },
   "assets/pos-epicerie.css": {
     "v": "29",
@@ -1643,9 +1643,13 @@
     "v": "26",
     "sha": "b5ff2c8e372e1b69"
   },
+  "assets/pressing-numbering.js": {
+    "v": "5",
+    "sha": "b1f62426f09e631e"
+  },
   "assets/pressing-ops.js": {
-    "v": "22",
-    "sha": "9d7d1578a9252a93"
+    "v": "24",
+    "sha": "cc960d5acba0dd7f"
   },
   "assets/pressing/custody.js": {
     "v": "11",

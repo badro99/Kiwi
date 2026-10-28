@@ -37,7 +37,7 @@ await strict('handover refuses unpaid and cancelled tickets and retries preserve
 // Full modules retain tenant namespace behavior when a till is paired again.
 const memory=new Map();let tenant='press-a';const window={addEventListener(){},dispatchEvent(){},KiwiPlatform:{pairedMerchant:()=>tenant},KiwiConfig:{timezone:'Africa/Casablanca'}};
 const browser=vm.createContext({window,localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,String(v))},console,Date,Intl,CustomEvent:class{},setInterval(){}});
-for(const file of ['assets/kit/haptics.js','assets/pressing-ops.js','assets/pressing-catalog.js','assets/day-report.js'])vm.runInContext(read(file),browser);
+for(const file of ['assets/kit/haptics.js','assets/pressing-ops.js','assets/pressing-numbering.js','assets/pressing-catalog.js','assets/day-report.js'])vm.runInContext(read(file),browser);
 const ops=window.KiwiPressingOps,D=window.KiwiDayReport;
 await strict('paired stores isolate customer and garment snapshots and catalogues',fc.property(money,n=>{tenant='press-a';ops.replace([{...order([{unit:n,qty:1}]),guest:{name:'Customer A'},total:n/100}]);window.KiwiPressingCatalog.updateItem('chemise',{label:'Store A garment'});const before=JSON.stringify([...memory]);tenant='press-b';assert.equal(ops.read().length,0);assert.ok(!JSON.stringify(window.KiwiPressingCatalog.read()).includes('Store A garment'));assert.equal(JSON.stringify([...memory]),before);tenant='press-a';assert.equal(ops.read()[0].customer.name,'Customer A');}));
 const f=await fixture(ROOT),{sql,merchant}=f;
