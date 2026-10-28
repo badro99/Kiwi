@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=173';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=75';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=174';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=76';
 import { openMoves } from './inv-moves.js?v=4';
-import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invKeepSearch, invRestoreSearch } from './inv-tools.js?v=8';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=75';
+import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=9';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=76';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -681,8 +681,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const cats = cat.listCategories();
     const filter = state.invFilter || 'all';
     const products = cat.listProducts({ categoryId: filter, q: state.invQuery || '' });
-    const keep = invKeepSearch(panel);   // la saisie en cours survit au repeint
-    panel.innerHTML = `
+    invPaint(panel, `
       <div class="bqi">
         <header class="bq-head" style="padding:22px 22px 0;">
           <div><h1>Inventaire</h1><div class="bq-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
@@ -713,12 +712,11 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
               <em>Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.</em>
             </div>`}
         </div>
-      </div>`;
+      </div>`);
     const scan = $('#bqi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
     invSearch($('.bqi-scan', panel), scan, bqKitSkin(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
       catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, availableStock: variantStock, colorLabel }) });
-    invRestoreSearch(scan, keep);
     invCountAsks(panel, { real: pvReal(), merchant: _bqKey, esc, recount: (o) => window.KiwiPosInventoryCount?.open?.({ engine: 'boutique', ...o }) });   // inventaire renvoyé par le propriétaire
     /* L'Inventaire est à l'écran : ses alertes sont vues, la pastille s'éteint. */
     if (state.view === 'inventaire') { invMarkSeen(_bqKey, invStockList()); renderBadges(); }
