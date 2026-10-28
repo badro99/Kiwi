@@ -297,18 +297,23 @@
     };
   }
 
-  function all() {
+  /* `module` est une LECTURE seule : un écran qui veut les lignes d'un autre
+   * vertical les nomme ici, sans toucher à `moduleType` et donc sans jamais
+   * poser le crochet d'écriture. C'est par là que le tableau de bord boutique
+   * lit ce que sa caisse a écrit. Sans argument, rien ne change. */
+  function all(module) {
     var L = LEDGER();
     if (!L) return [];
+    var want = module || moduleType;
     return L.history().filter(function (r) {
-      return r && r.meta && r.meta.module === moduleType;
+      return r && r.meta && r.meta.module === want;
     }).map(decorate);
   }
 
   function list(filter) {
     filter = filter || {};
     var q = String(filter.q || '').trim().toLowerCase();
-    return all().filter(function (m) {
+    return all(filter.module).filter(function (m) {
       if (filter.from && m.at < +filter.from) return false;
       if (filter.to && m.at > +filter.to) return false;
       if (filter.productId && m.productId !== filter.productId) return false;
@@ -327,15 +332,15 @@
     }).sort(function (a, b) { return b.at - a.at; });
   }
 
-  function productHistory(productId, limit) {
-    var rows = list({ productId: productId });
+  function productHistory(productId, limit, module) {
+    var rows = list({ productId: productId, module: module });
     return limit ? rows.slice(0, limit) : rows;
   }
 
   /* Les valeurs proposées par les filtres : celles qui existent VRAIMENT dans le
    * journal de ce magasin, jamais une liste théorique. */
-  function facets() {
-    var rows = all();
+  function facets(module) {
+    var rows = all(module);
     var out = { actors: [], suppliers: [], types: [], categories: [] };
     var seen = { actors: {}, suppliers: {}, types: {}, categories: {} };
     rows.forEach(function (m) {

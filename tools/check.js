@@ -1749,6 +1749,9 @@ section('Whole-project regressions');
        responsable. */
     'inventory-cursor-integrity-test.mjs',
     'maison-stock-movements-test.mjs',
+    /* Le même registre, lu par le tableau de bord boutique : chaque métier ne
+       voit que ses lignes, et lire ne pose aucun crochet d'écriture. */
+    'boutique-stock-movements-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',
     'maison-counter-truth-test.mjs',

@@ -1027,7 +1027,7 @@ function _renderInventory() {
     `<button data-activation=money type="button" data-action="bqx-export">${_ICN.upload}${_esc(t.export)}</button>`,
     _bqxTemplatesOn() ? `<button type="button" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}${_esc(t.templates)}</button>` : '',
     _orderProOn() ? `<button data-activation=write type="button" data-action="orderpro-tags">${_esc(t.nfc)}</button>` : '',
-    (window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button type="button" data-action="nav-stock-movements">${_esc(t.moves)}</button>` : '',
+    _mzReadable() ? `<button type="button" data-action="nav-stock-movements">${_esc(t.moves)}</button>` : '',
   ].join('');
   window.Kiwi.appPage('inventory', {
     title: t.title,
@@ -1675,6 +1675,25 @@ function _variantRow(v, kind) {
   </li>`;
 }
 
+/* QUEL REGISTRE CET ÉCRAN LIT.
+ * « maison » écrit ses mouvements des deux côtés, tableau de bord compris.
+ * « boutique » n'en écrit que depuis sa caisse — vente, retour, échange — et
+ * rien ici ne pose de crochet : le module est nommé à chaque LECTURE, ce qui
+ * laisse `moduleType` et le catalogue exactement où ils sont. */
+const _mzTrade = () => {
+  try {
+    const T = window.KiwiStoreTemplates;
+    if (T && T.currentTrade) { const v = String(T.currentTrade() || ''); if (v) return v; }
+  } catch (_) {}
+  try {
+    const v = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+    if (v && v.subtype) return String(v.subtype);
+  } catch (_) {}
+  try { return String(localStorage.getItem('kiwiBizType') || ''); } catch (_) { return ''; }
+};
+const _mzModule = () => (_mzTrade() === 'boutique' ? 'boutique' : 'maison');
+const _mzReadable = () => !!window.KiwiMaisonStock && (_mzModule() === 'boutique' || window.KiwiMaisonStock.isMaison());
+
 /* L'HISTORIQUE DE LA FICHE PRODUIT.
  * « Il en manque trois » se règle ici, sur la fiche elle-même : les vingt
  * derniers mouvements de ce produit, tous types confondus, avec qui et quand.
@@ -1682,9 +1701,9 @@ function _variantRow(v, kind) {
  * exactement ce qu'elle était. */
 function _bqxHistoryHtml(pid) {
   const M = window.KiwiMaisonStock;
-  if (!M || !M.isMaison()) return '';
+  if (!_mzReadable()) return '';
   _mzCss();
-  const rows = M.productHistory(pid, 20);
+  const rows = M.productHistory(pid, 20, _mzModule());
   if (!rows.length) {
     return `<div class="mzs-hist"><h4>Historique du stock</h4><div class="mzs-sub">Aucun mouvement enregistré pour ce produit.</div></div>`;
   }
@@ -1883,7 +1902,7 @@ const _mzSource = (s) => (s === 'caisse' ? 'Caisse' : s === 'dashboard' ? 'Table
 function _mzRows() {
   const M = MZS();
   if (!M) return [];
-  const f = Object.assign({}, _mzFilter);
+  const f = Object.assign({}, _mzFilter, { module: _mzModule() });
   if (f.days) f.from = Date.now() - f.days * 86400000;
   delete f.days;
   return M.list(f);
@@ -1924,7 +1943,7 @@ function _mzRenderPage() {
   _mzCss();
   const rows = _mzRows();
   const tot = M.totals(rows);
-  const fac = M.facets();
+  const fac = M.facets(_mzModule());
   const cats = (CAT() && CAT().listCategories()) || [];
   const opt = (v, label, cur) => `<option value="${_esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${_esc(label)}</option>`;
   window.Kiwi.appPage('stock-movements', {
@@ -1942,7 +1961,7 @@ function _mzRenderPage() {
         <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
           <input data-mz-search placeholder="Produit, catégorie, type, référence…" value="${_esc(_mzFilter.q)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
         <button data-activation=money class="kb ghost" data-action="mz-export">${_ICN.upload}Exporter CSV</button>
-        <button data-activation=write class="kb primary" data-action="mz-new">${_ICN.plus}Nouveau mouvement</button>
+        ${_mzModule() === 'boutique' ? '' : `<button data-activation=write class="kb primary" data-action="mz-new">${_ICN.plus}Nouveau mouvement</button>`}
       </div>
 
       <div class="mzs-filters">
@@ -1956,7 +1975,9 @@ function _mzRenderPage() {
 
       <div class="kx-foot-hint">
         <div class="lh">Registre</div>
-        <div class="rh">Un stock ne peut pas bouger sans mouvement : ventes et remboursements de la caisse s'écrivent ici tout seuls, et les saisies manuelles demandent un code responsable au comptoir.</div>
+        <div class="rh">${_mzModule() === 'boutique'
+          ? `Ces lignes viennent de la caisse : ventes, retours et échanges s'y écrivent tout seuls. Les changements de stock faits ici, au tableau de bord — un ±1 sur une fiche, un import CSV, un comptage — n'y figurent pas, et rien de cet écran ne touche au stock.`
+          : `Un stock ne peut pas bouger sans mouvement : ventes et remboursements de la caisse s'écrivent ici tout seuls, et les saisies manuelles demandent un code responsable au comptoir.`}</div>
       </div>
     `,
   });
@@ -1979,9 +2000,12 @@ function _mzRenderPage() {
   }, 0);
 }
 
+/* enable() pose window.KiwiStockJournal sur le catalogue : dès lors, chaque
+ * modification de stock faite au tableau de bord écrirait au registre. Pour la
+ * boutique c'est hors sujet · on lit, et le module voyage avec la lecture. */
 handlers['nav-stock-movements'] = () => {
   if (!_bqxReady() || !MZS()) { toast(dt("inventory.movementsUnavailable", "Mouvements de stock indisponibles"), { desc: dt("inventory.reloadRegister", "Le registre n’est pas chargé, rechargez la page."), type: 'warn' }); return; }
-  MZS().enable();
+  if (_mzModule() !== 'boutique') MZS().enable();
   _mzFilter.days = 0;
   _mzRenderPage();
 };
