@@ -501,6 +501,13 @@ html[data-skin-2027="till"] #pos-boutique .bq-card-price { font-size: var(--k-fs
   html[data-skin-2027="till"] #pos-boutique .bq-card-art { display: none; }
 }
 
+/* ═══════════════ INVENTAIRE, PLEINE LARGEUR ═══════════════
+   La vue est une rangée flex ; .bqi (checkout.js › injectInvCss) n'y
+   demandait que la largeur de son contenu — ~930 px, le reste de l'écran
+   vide, la barre de défilement au milieu (propriétaire, 2026-10-28).
+   Échanges et Clientes remplissent déjà la rangée : l'inventaire aussi. */
+html[data-skin-2027="till"] #pos-boutique .bq-view > .bqi { flex: 1 1 auto; min-width: 0; }
+
 /* ═══════════════ LE TICKET, PLUS LARGE ET PLUS CALME ═══════════════ */
 html[data-skin-2027="till"] #pos-boutique .bq-ticket { width: 400px; flex: 0 0 400px; }
 html[data-skin-2027="till"] #pos-boutique .bq-tk-lines { padding: 12px 18px; gap: 8px; }
