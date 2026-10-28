@@ -12,7 +12,7 @@
  * read in retail-photos-wiring-test.mjs. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { PHOTO_KEYS, DEFAULT_KEY, PHOTOS_V, photoKey, keyForName, photoImg, photoSrc, nameTokens } from '../assets/retail-photos.js';
+import { PHOTO_KEYS, PHOTO_FILES, COLOURS, COLOUR_KEYS, DEFAULT_KEY, PHOTOS_V, photoKey, photoFile, colourOf, keyForName, photoImg, photoSrc, nameTokens } from '../assets/retail-photos.js';
 
 let n = 0;
 const ok = (v, m) => { assert.ok(v, m); n++; };
@@ -20,7 +20,8 @@ const eq = (a, b, m) => { assert.equal(a, b, m); n++; };
 
 /* Files and keys, one for one. */
 const files = fs.readdirSync(new URL('../assets/retail-photos/', import.meta.url)).filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)).sort();
-eq(JSON.stringify(files), JSON.stringify([...PHOTO_KEYS].sort()), 'every photo key has its .webp and every .webp a key');
+eq(JSON.stringify(files), JSON.stringify([...PHOTO_FILES].sort()), 'every photo (each piece, and each piece in each of its colours) has its .webp, and every .webp is used');
+for (const k of COLOUR_KEYS) ok(PHOTO_KEYS.includes(k), k + ' is a piece before it is a colour');
 ok(PHOTO_KEYS.includes(DEFAULT_KEY) && PHOTO_KEYS.includes('tag'), 'both neutral photos exist');
 for (const f of files) ok(fs.statSync(new URL('../assets/retail-photos/' + f + '.webp', import.meta.url)).size < 16000, f + '.webp stays small');
 
@@ -70,6 +71,37 @@ const real = {
   'Black jean': 'jean', 'Normal Shirt': 'chemise', 'Hoodie Gris': 'sweat', 'costume noir': 'costume',
 };
 for (const [name, key] of Object.entries(real)) eq(keyForName(name), key, `« ${name} » → ${key}`);
+
+/* The colour (owner's partner, 28 October 2026: « no black hoodie, or black
+   jeans »). The sold colour first, then a word of the name, then the
+   product's colours; a lone grey is the catalogue's default, not a colour. */
+const colour = {
+  /* Amira Boutique, as the partner saw it */
+  'Black jean|noir': 'jean-noir', 'Jean White|marron': 'jean-blanc', 'Hoodie Blue|bleu': 'sweat-bleu',
+  'Hoodie Gris|gris': 'sweat-gris', 'costume noir|noir,blanc': 'costume-noir', 'Normal Shirt|blanc,violet': 'chemise-blanc',
+  /* Maison 121, the products without their own photo */
+  'POLO long sleeve|beige,marron': 'polo-beige', 'HUGO BOSS Casquette|noir': 'casquette-noir',
+  'Jackett Capuche Double Face|rouge,vert,bleu': 'veste-rouge', 'Pantalon 121|noir': 'pantalon-noir',
+  'Shorts PP|noir': 'short-noir', 'T shirt 121|beige,noir,gris': 'tshirt-beige', 'T Shirt Oversize|marron,beige': 'tshirt-marron',
+  'Gilet doudoune|marron,beige,bleu': 'gilet_doudoune-marron', 'Jacket PP|noir': 'veste-noir',
+  /* Santos Store: « multi » says nothing, a real colour does */
+  'survette|multi,blanc,rouge': 'survetement-blanc', 'jean|multi,bleu': 'jean-bleu', 'Trench|vert': 'trench-vert',
+  'Ensemble avec ceinture|bleu': 'ensemble-bleu', 'Manteau Cachemire|multi': 'manteau', 'manteau leopard|beige': 'manteau-beige',
+  'Ensemble jean raye|bleu': 'ensemble_jean', 'jupe daim|jaune': 'jupe', 'Top|multi': 'tshirt',
+  /* the catalogue's default grey, and names in other words */
+  'jean|gris': 'jean', 'Sweat capuche kahla|': 'sweat-noir', 'Pull bordeaux|': 'pull-rouge', 'Polo navy|': 'polo-bleu',
+  'Manteau camel|': 'manteau-marron', 'Bougie noire|noir': 'bougie',
+};
+for (const [spec, file] of Object.entries(colour)) {
+  const [name, cs] = spec.split('|');
+  eq(photoFile({ name, colors: cs ? cs.split(',') : [] }), file, `« ${name} » (${cs || 'no colour'}) → ${file}`);
+}
+eq(photoFile({ name: 'Hoodie', colors: ['gris'] }, 'cintre', 'noir'), 'sweat-noir', 'a ticket line shows the colour sold');
+eq(photoFile({ name: 'Hoodie Blue' }, 'cintre', 'violet'), 'sweat', 'a colour without its photo keeps the plain piece');
+eq(photoFile('jean'), 'jean', 'the picker shows the plain piece');
+eq(colourOf({ name: 'Robe', colors: ['emeraude', 'nuit'] }), 'vert', 'the demo shades fold into palette families');
+eq(COLOURS.length * COLOUR_KEYS.length + PHOTO_KEYS.length, PHOTO_FILES.length, 'one photo per piece and per colour');
+ok(photoImg({ name: 'Black jean' }).includes('retail-photos/jean-noir.webp'), 'the tile shows black jeans');
 
 /* A broad sample of shop names, French first. */
 const sample = {

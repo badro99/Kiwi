@@ -1,12 +1,12 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=188';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=89';
-import { offerRegister } from './inventory.js?v=89';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=189';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=90';
+import { offerRegister } from './inventory.js?v=90';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=19';
 import { sellSearch } from './search.js?v=11';
 import '../money-cents.js?v=4';
-import { photoImg } from '../retail-photos.js?v=1';
+import { photoImg } from '../retail-photos.js?v=2';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -65,9 +65,9 @@ import { photoImg } from '../retail-photos.js?v=1';
   /* Product-icon "database" for the create/edit picker — ordered + labelled.
      artOf() takes a product (its name can pick the photo) or an icon key and
      always renders a photo, the hanger when nothing matches (retail-photos.js). */
-  const artOf = (p) => (p && typeof p === 'object' && p.photo
+  const artOf = (p, colour) => (p && typeof p === 'object' && p.photo
     ? `<img class="bq-product-photo" src="${esc(p.photo)}" alt="" loading="lazy" decoding="async">`
-    : photoImg(p));
+    : photoImg(p, 'bq-art-photo', 'cintre', colour));
   const ICON_LABELS = {
     tshirt: 'T-shirt / Haut', chemise: 'Chemise', debardeur: 'Débardeur', pull: 'Pull', sweat: 'Sweat / Hoodie',
     pantalon: 'Pantalon', jean: 'Jean', polo: 'Polo', manteau: 'Manteau',
@@ -459,7 +459,7 @@ import { photoImg } from '../retail-photos.js?v=1';
        ajouté son propre geste par-dessus — et personne, au moment du retour,
        ne saurait plus démêler ce qui venait du magasin de ce qui venait d'elle. */
     return `<div class="bq-line">
-      <span class="bq-line-art">${artOf(p)}</span>
+      <span class="bq-line-art">${artOf(p, ln.color)}</span>
       <span class="bq-line-mid">
         <span class="bq-line-name" title="${esc(p.name)}">${esc(p.name)}</span>
         <span class="bq-line-sub">

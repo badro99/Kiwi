@@ -45,6 +45,12 @@ ghost-mannequin clothing, objects at a three-quarter angle.
    the product form, and the form's default T-shirt never counts as a choice.
    Bump `PHOTOS_V` there when a photo is redrawn.
 
+Colours: the pieces listed in `COLOUR_KEYS` also have one photo per colour
+in `COLOURS` (`<key>-<colour>.webp`, sheets `c1`…`c17`, the same item with
+only its colour changed). The colour comes from the ticket line, then a word
+of the name, then the product's colours. To give another piece its colours,
+add a sheet of nine `<key>-<colour>` cells and add the key to `COLOUR_KEYS`.
+
 `tools/retail-product-art-test.mjs` fails when a key has no photo, a photo
 has no key, or a real merchant's product name picks the wrong piece. When a
 merchant adds products, run their names through `keyForName` and add the

@@ -160,9 +160,63 @@ export function photoKey(p, fallback = DEFAULT_KEY) {
   return keyForName(p && p.name) || (art !== FORM_DEFAULT && KNOWN.has(art) ? art : neutral);
 }
 
-export const photoSrc = (key) => `assets/retail-photos/${KNOWN.has(key) ? key : DEFAULT_KEY}.webp?v=${PHOTOS_V}`;
+/* ── La couleur (owner, 28 octobre 2026 : « pas de hoodie noir, ni de jean
+   noir ») ── Les pièces que l'on vend dans plusieurs couleurs ont une photo
+   par famille de couleur de la palette (assets/color-palette.js), dans
+   assets/retail-photos/<clé>-<couleur>.webp. La couleur vient, dans l'ordre :
+   de la ligne du ticket (la couleur vendue), d'un mot du nom (« Black jean »,
+   « Hoodie Blue », « costume noir »), puis des couleurs du produit. Un gris
+   seul ne compte pas : le catalogue le met d'office quand rien n'est dit.
+   Sans couleur connue, ou dans une couleur qui n'a pas sa photo, la photo
+   de base reste. */
+export const COLOURS = ['noir', 'blanc', 'gris', 'bleu', 'rouge', 'vert', 'beige', 'marron', 'rose'];
+export const COLOUR_KEYS = ['tshirt', 'polo', 'chemise', 'sweat', 'pull', 'pantalon', 'jean', 'short', 'veste', 'manteau',
+  'trench', 'doudoune', 'gilet_doudoune', 'survetement', 'costume', 'casquette', 'ensemble'];
+const IN_COLOUR = new Set(COLOUR_KEYS);
+const COLOUR_WORDS = {
+  noir: 'noir|noire|black|nero|negro|k7al|kahla|كحل|أسود',
+  blanc: 'blanc|blanche|white|ivoire|ivory|bianco|blanco|byed|أبيض',
+  gris: 'gris|grise|grey|gray|anthracite|chine',
+  bleu: 'bleu|bleue|blue|navy|marine|nuit|indigo|azur|ciel|turquoise|أزرق',
+  rouge: 'rouge|red|bordeaux|burgundy|grenat|cerise|أحمر',
+  vert: 'vert|verte|green|kaki|khaki|olive|emeraude|sapin|أخضر',
+  beige: 'beige|sable|sand|creme|cream|ecru|nude|بيج',
+  marron: 'marron|brown|chocolat|cognac|camel|taupe|caramel|terracotta|بني',
+  rose: 'rose|pink|fuchsia|poudre|وردي',
+  /* Des familles de la palette sans photo : connues, pour qu'une ligne vendue
+     en jaune ne prenne pas le bleu du nom, mais la pièce reste sans couleur. */
+  jaune: 'jaune|yellow|moutarde|safran|dore|doree|gold',
+  orange: 'orange',
+  violet: 'violet|purple|mauve|lilas|prune',
+};
+const COLOUR_OF = new Map(Object.entries(COLOUR_WORDS).flatMap(([c, list]) => list.split('|').map((w) => [nameTokens(w)[0], c])));
+const colourWord = (word) => COLOUR_OF.get(nameTokens(word)[0]) || null;
+
+/* La famille de couleur d'un produit, ou null. */
+export function colourOf(p, colour) {
+  const given = colour && colourWord(colour);
+  if (given) return given;
+  if (!p || typeof p !== 'object') return null;
+  for (const t of nameTokens(p.name)) { const c = COLOUR_OF.get(t); if (c) return c; }
+  const list = (Array.isArray(p.colors) ? p.colors : []).map(colourWord).filter(Boolean);   // « multi » ne dit rien
+  if (list.length === 1 && list[0] === 'gris' && p.colors.length === 1) return null;
+  return list[0] || null;
+}
+
+/* Le fichier photo d'un produit : la pièce, dans sa couleur quand elle l'a. */
+export function photoFile(p, fallback = DEFAULT_KEY, colour) {
+  const key = photoKey(p, fallback);
+  if (!IN_COLOUR.has(key)) return key;
+  const c = colourOf(typeof p === 'string' ? null : p, colour);
+  return c && COLOURS.includes(c) ? `${key}-${c}` : key;
+}
+
+const FILES = new Set([...PHOTO_KEYS, ...COLOUR_KEYS.flatMap((k) => COLOURS.map((c) => `${k}-${c}`))]);
+export const PHOTO_FILES = [...FILES];
+export const photoSrc = (file) => `assets/retail-photos/${FILES.has(file) ? file : DEFAULT_KEY}.webp?v=${PHOTOS_V}`;
 
 /* L'image d'un produit, sans texte alternatif : le nom est écrit à côté.
-   `cls` est la classe de la caisse (bq-art-photo, mz-art-photo). */
-export const photoImg = (p, cls = 'bq-art-photo', fallback = DEFAULT_KEY) =>
-  `<img class="${cls}" src="${photoSrc(photoKey(p, fallback))}" alt="" loading="lazy" decoding="async" draggable="false">`;
+   `cls` est la classe de la caisse (bq-art-photo, mz-art-photo), `colour` la
+   couleur vendue quand on la connaît (une ligne de ticket). */
+export const photoImg = (p, cls = 'bq-art-photo', fallback = DEFAULT_KEY, colour) =>
+  `<img class="${cls}" src="${photoSrc(photoFile(p, fallback, colour))}" alt="" loading="lazy" decoding="async" draggable="false">`;
