@@ -943,10 +943,10 @@
     }
   ],
   "scriptsBefore": {
-    "dashboard.html": 121,
+    "dashboard.html": 122,
     "kiwi-caisse.html": 89,
     "kiwi-serveur.html": 26,
-    "booking.html": 4
+    "booking.html": 5
   },
   "sha256": "c278a52943aa2c19ee7c8957dc280b857b51fecbb1900813688cc287f997532f",
   "imports": [

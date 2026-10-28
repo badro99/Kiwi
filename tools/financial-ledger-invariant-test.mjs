@@ -28,7 +28,7 @@ const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
 let sales = [{ id: 'a', ts: 10, amount: 12.50 }, { id: 'a', ts: 10, amount: 12.50 },
   { id: 'r', ts: 11, kind: 'refund', amount: 2.25 }, { id: 'old', ts: 0, amount: 100 },
   { id: 'next', ts: 20, amount: 100 }];
-const ctx = vm.createContext({ DR: () => ({ dayBounds: () => ({ from: 10, to: 20 }), normSale: s => s }),
+const ctx = vm.createContext({ DR: () => ({ dayBounds: () => ({ from: 10, to: 20 }), normSale: s => s, model: ctx.KiwiDayReportModel }),
   dashSales: () => sales, archivedDay: () => false, window: { KiwiLive: { status: () => ({ on: true, backfillComplete: true }) } } });
 /* The dashboard report reads the till's model (day-report.js), its single browser copy. */
 vm.runInContext(read('assets/day-report.js').match(/\/\* GENERATED SHARED KiwiDayReportModel BEGIN \*\/[\s\S]*?\/\* GENERATED SHARED KiwiDayReportModel END \*\//)[0], ctx);

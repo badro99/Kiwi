@@ -48,16 +48,14 @@ const rows = [
     parts:[{method:'cash',amountCents:7000},{method:'card',amountCents:3000}]},
   {id:'refund', ts:from+1, amount:-20, method:'cash', kind:'refund', tip:0},
 ];
-const c = vm.createContext({Date, window: {KiwiDayReport: {model: contexts[0].KiwiDayReportModel}}});
-vm.runInContext(dashSource.slice(dashSource.indexOf('  var KiwiDayReportModel'), dashSource.indexOf('\n', dashSource.indexOf('  var KiwiDayReportModel'))), c);
+assert.ok(!/\bKiwiDayReportModel\b/.test(dashSource), 'the dashboard report names no model of its own, not even a forwarding one');
+const c = vm.createContext({Date});
 let ownerCalls = 0; const owner = contexts[0].KiwiDayReportModel.reportFigures;
-c.window.KiwiDayReport.model = { reportFigures: (r) => { ownerCalls++; return owner(r); } };
-assert.deepEqual(plain(c.KiwiDayReportModel.reportFigures(rows)), plain(server.reportFigures(rows)));
-assert.equal(ownerCalls, 1, 'the dashboard figures come from the till model');
-c.DR = () => ({dayBounds:()=>({from,to}), normSale:s=>s});
+c.DR = () => ({dayBounds:()=>({from,to}), normSale:s=>s, model:{reportFigures:(r)=>{ownerCalls++; return owner(r);}}});
 c.dashSales = () => [...rows, rows[0], {id:'before',ts:from-1,amount:999}, {id:'after',ts:to,amount:999}];
-vm.runInContext(declaration(fs.readFileSync('assets/day-report-dash.js','utf8').split('  function feedTotals')[1].replace(/^/, 'function feedTotals'), 'feedTotals'),c);
+vm.runInContext(declaration(dashSource.split('  function feedTotals')[1].replace(/^/, 'function feedTotals'), 'feedTotals'),c);
 assert.deepEqual(plain(c.feedTotals('2026-10-26')), {net:80,gross:100,txns:1});
+assert.equal(ownerCalls, 1, 'the dashboard figures come from the till model');
 const figures = server.reportFigures(rows);
 assert.deepEqual(plain(figures.methods), {cash:50,card:30});
 assert.equal(figures.cashTips,7);

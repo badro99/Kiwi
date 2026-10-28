@@ -14,6 +14,7 @@
     "caisse-pairing-split-test.mjs": "byte-exact concatenation of the till pairing parts and the names each part owns",
     "clients-split-test.mjs": "byte-exact concatenation of the client store and client book parts, plus the names each part owns",
     "config-pin-projection-test.mjs": "ban: no code list may reach the browser",
+    "coupling-ratchet-test.mjs": "how many globals each browser file shares with the others; the repository's own shape, like the size ratchet",
     "coverage-manifest-test.mjs": "coverage declarations ratchet",
     "current-order-source-test.mjs": "AST ownership ban on current order writes",
     "d1-migrations-test.mjs": "migrations replayed against schema.sql",

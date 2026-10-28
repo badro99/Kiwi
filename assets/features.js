@@ -1199,19 +1199,12 @@
       `
     });
     /* The products the word names today, by id, so a later rename keeps them
-       earning (note 13, loyalty#0). The same word keeps its earlier links. */
+       earning (note 13, loyalty#0; assets/loyalty-product-links.js reads the
+       catalogues). Without it, the same word keeps its earlier links. */
     const loyaltyLinkedIds = (word, prev) => {
-      const fold = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-      const want = fold(word), ids = new Set();
-      if (prev && fold(prev.item) === want && Array.isArray(prev.ids)) prev.ids.forEach((id) => id && ids.add(String(id)));
-      const items = [];
-      try { const M = window.KiwiMenuStore, vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue(); if (M && M.items) items.push(...(M.items(vid) || [])); } catch (_) {}
-      try {
-        const B = window.KiwiBoutiqueCatalog;
-        if (B && B.listProducts) { if (B.use && window.KiwiBoutiqueVenueKey) { const k = window.KiwiBoutiqueVenueKey(); if (k) B.use(k); } items.push(...(B.listProducts() || [])); }
-      } catch (_) {}
-      if (want) items.forEach((it) => { if (it && it.id && (' ' + fold(it.name) + ' ').includes(' ' + want + ' ')) ids.add(String(it.id)); });
-      return [...ids].slice(0, 200);
+      const L = window.KiwiLoyaltyLinks;
+      if (L) return L.linkedIds(word, prev);
+      return prev && prev.item === word && Array.isArray(prev.ids) ? prev.ids.slice() : [];
     };
     // Read the full programme back out of the form (with sane fallbacks).
     const readCfg = () => {

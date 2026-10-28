@@ -148,8 +148,8 @@
     "sha": "0774da441509f3ba"
   },
   "assets/caisse-accounting.js": {
-    "v": "17",
-    "sha": "211fa62376c752f0"
+    "v": "18",
+    "sha": "26628c9616ce75ec"
   },
   "assets/caisse-app.js": {
     "v": "32",
@@ -440,8 +440,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "43",
-    "sha": "dc26b011cc1fd5f8"
+    "v": "44",
+    "sha": "76f0fedd703196d4"
   },
   "assets/day-report-export.js": {
     "v": "18",
@@ -532,8 +532,8 @@
     "sha": "b1b7afa27e7f11ad"
   },
   "assets/features.js": {
-    "v": "17",
-    "sha": "e26caa7c7b64b8cc"
+    "v": "18",
+    "sha": "577870e65d8d502e"
   },
   "assets/field-merge.js": {
     "v": "1",
@@ -1091,6 +1091,10 @@
     "v": "5",
     "sha": "6eafebc8cf4650ee"
   },
+  "assets/loyalty-product-links.js": {
+    "v": "1",
+    "sha": "6f816661c3aafb8b"
+  },
   "assets/maison-stock-movements.js": {
     "v": "8",
     "sha": "8b5df3977d56f5ee"
@@ -1332,8 +1336,8 @@
     "sha": "3eaee9016797b178"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "74",
-    "sha": "42b5ce617a7168c1"
+    "v": "75",
+    "sha": "5ba22d03aeedb39c"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1596,8 +1600,8 @@
     "sha": "1f513cdf41ca0086"
   },
   "assets/pos-sale.js": {
-    "v": "21",
-    "sha": "e94f8ad3d184b2dd"
+    "v": "22",
+    "sha": "bc8de669031a3702"
   },
   "assets/pos-spa.css": {
     "v": "13",

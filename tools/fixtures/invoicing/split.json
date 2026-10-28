@@ -707,9 +707,9 @@
     }
   ],
   "scriptsBefore": {
-    "dashboard.html": 121,
+    "dashboard.html": 122,
     "kiwi-caisse.html": 89,
     "kiwi-serveur.html": 26,
-    "booking.html": 4
+    "booking.html": 5
   }
 }

@@ -50,11 +50,6 @@
   var NAV = 'rapport';
   var STRIP_DAYS = 14;      /* deux semaines : assez pour voir le rythme hebdo */
 
-  /* The day's money figures have ONE browser owner, day-report.js (loaded
-     before this file): the dashboard reads the till's model instead of
-     carrying a second copy of it (note 13, dayreport#2). */
-  var KiwiDayReportModel = { reportFigures: function (rows) { return window.KiwiDayReport.model.reportFigures(rows); } };
-
   function DR() { return window.KiwiDayReport; }
   var LANG = function () { try { return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
   var T = function (o) { return o == null ? '' : (o[LANG()] != null ? o[LANG()] : o.fr); };
@@ -387,7 +382,10 @@
       seen[k] = 1;
       rows.push(s);
     });
-    var figures = KiwiDayReportModel.reportFigures(rows);
+    /* The day's money figures have ONE browser owner, day-report.js (loaded
+       before this file): the dashboard reads the till's model instead of
+       carrying a second copy of it (note 13, dayreport#2). */
+    var figures = DR().model.reportFigures(rows);
     return { net: figures.net, gross: Math.round(figures.gross * 100) / 100, txns: figures.txns };
   }
 

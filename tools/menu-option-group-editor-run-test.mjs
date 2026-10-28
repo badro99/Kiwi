@@ -43,7 +43,11 @@ function harness({ group = null, rows = [], kind, required } = {}) {
   const state = { kind: kind || (group && group.kind === 'many' ? 'many' : 'one'), req: required != null ? (required ? '1' : '0') : (group && group.required ? '1' : '0') };
   const form = { rows: rows.length ? rows : [makeRow()], errs: {}, errEls: {}, rule: { textContent: '' }, nameEl: null, listeners: {}, focusedName: 0 };
   form.nameEl = { value: group ? group.name : '', attrs: {}, focus() { form.focusedName++; }, setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }, matches: () => false };
-  const wrap = { insertAdjacentHTML(_w, html) { wrap.added = (wrap.added || 0) + 1; wrap.lastHtml = html; form.rows.push(makeRow()); }, get lastElementChild() { return form.rows.at(-1); }, onclick: null };
+  // Rows know their live neighbours, like DOM siblings: deleting a choice hands the focus to the next one.
+  const sibling = (row, step) => { const live = form.rows.filter((r) => !r.removed), i = live.indexOf(row); return i < 0 ? null : live[i + step] || null; };
+  const link = (row) => Object.defineProperties(row, { nextElementSibling: { get: () => sibling(row, 1), configurable: true }, previousElementSibling: { get: () => sibling(row, -1), configurable: true } });
+  form.rows.forEach(link);
+  const wrap = { insertAdjacentHTML(_w, html) { wrap.added = (wrap.added || 0) + 1; wrap.lastHtml = html; form.rows.push(link(makeRow())); }, get lastElementChild() { return form.rows.at(-1); }, onclick: null };
   const button = {}, cancel = {}, add = {};
   const segEls = { kind: { classList: classList() }, req: { classList: classList() } };
   let closed = 0, rendered = 0, modalArgs = null;
@@ -168,15 +172,17 @@ await ok('typing a name clears its error; typing a choice name clears the choice
   h2.form.listeners.input({ target: flagged.name });
   assert.equal(flagged.name.attrs['aria-invalid'], undefined); assert.equal(h2.errEl('choices').hidden, true);
 });
-await ok('removing a choice drops its row, but the only choice is cleared in place and refocused', () => {
-  const h = harness({ rows: [makeRow('c1', 'Lait', '1'), makeRow('c2', 'Soja', '2')] });
-  const [first, second] = h.rows;
+await ok('removing a choice drops its row and hands the focus to its neighbour; the only choice is cleared in place and refocused', () => {
+  const h = harness({ rows: [makeRow('c1', 'Lait', '1'), makeRow('c2', 'Soja', '2'), makeRow('c3', 'Avoine', '3')] });
+  const [first, second, third] = h.rows;
   const del = (row) => ({ target: { closest: (s) => (s === '[data-choice-del]' ? { closest: () => row } : null) } });
+  h.wrap.onclick(del(third));
+  assert.equal(third.removed, true); assert.equal(second.name.focused, 1, 'the last row gone, the focus goes to the one above');
   h.wrap.onclick(del(first));
-  assert.equal(first.removed, true);
+  assert.equal(first.removed, true); assert.equal(second.name.focused, 2, 'the first row gone, the focus goes to the one below');
   h.wrap.onclick(del(second));
   assert.equal(second.removed, false); assert.equal(second.dataset.id, ''); assert.equal(second.name.value, ''); assert.equal(second.price.value, '');
-  assert.equal(second.name.focused, 1);
+  assert.equal(second.name.focused, 3);
 });
 await ok('adding a choice appends a blank row and focuses its name', () => {
   const h = harness();

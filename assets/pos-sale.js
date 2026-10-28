@@ -383,7 +383,7 @@
         amount: entry.total, method: entry.raw || entry.method,
         saleRef: entry.ref, saleId: entry.saleId || '', eventRef: entry.saleId || entry.ref,
         createdAt: entry.ts,
-        items: (entry.lines || []).map(function (l) { return { name: l.name, qty: l.qty, total: l.total, id: l.itemId || l.pid || '' }; }),
+        items: (entry.lines || []).map(function (l) { var it = { name: l.name, qty: l.qty, total: l.total }, id = l.itemId || l.pid; if (id) it.id = id; return it; }),
       });
       if (res && !res.replayed) entry.clientId = c.id;
     } catch (_) {}
