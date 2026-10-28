@@ -1,4 +1,4 @@
-import { bqKitScanBar, bqKitSellScroll } from './kit-2027.js?v=12';
+import { bqKitScanBar, bqKitSellScroll } from './kit-2027.js?v=13';
 /* La recherche de la barre de vente (peau 2027). Un code se lit de gauche à
  * droite : on répond par PRÉFIXE de code-barres d'abord, puis par fragment,
  * puis par nom d'article (sans accents ni casse). Chaque code est une
@@ -49,7 +49,7 @@ export function searchArticles(raw, d, limit) {
    seulement. d vient de sales.js : ses propres fonctions, rien de copié. */
 export function sellSearch(bar, input, on, d) {
   if (!bar || !input || !on) return false;
-  bqKitSellScroll(bar.parentNode);   // la barre des rayons défile avec la grille
+  bqKitSellScroll(bar.parentNode);   // recherche + rayons défilent avec la grille
   return bqKitScanBar(bar, {
     input, commit: d.commit, open: d.open, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => searchArticles(q, d.catalog()),

@@ -84,8 +84,9 @@ html[data-skin-2027="till"] #pos-boutique .bq-head-sub b { color: var(--k-accent
    la consigne « Scannez… » sont éteints (propriétaire, 2026-10-28). Le compte
    continue d'être écrit dans #bq-today (headSubVente), seulement plus montré. */
 html[data-skin-2027="till"] #pos-boutique .bq-sell > .bq-head :is(.bq-head-sub, .bq-head-hint) { display: none; }
-/* La barre des rayons défile avec les articles (bqKitSellScroll) : Vente et
-   la recherche restent, tout le reste rend sa hauteur à la grille. */
+/* La recherche et la barre des rayons défilent avec les articles
+   (bqKitSellScroll) : seul le titre Vente reste, tout le reste rend sa
+   hauteur à la grille. */
 html[data-skin-2027="till"] #pos-boutique .bq-sell-scroll {
   flex: 1; min-height: 0;
   overflow-y: auto; overscroll-behavior: contain;

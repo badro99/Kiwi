@@ -476,19 +476,22 @@ function bqKitScanBar(bar, o) {
   return true;
 }
 
-/* La barre des rayons défile AVEC les articles (propriétaire, 2026-10-28) :
-   fixe, elle mangeait la hauteur de la grille. Vente et la recherche restent
-   en place. Les deux nœuds livrés sont DÉPLACÉS dans une boîte qui défile,
-   jamais reconstruits : leurs id, leurs onclick et renderCats / renderGrid
-   (qui écrivent leur innerHTML) ne voient aucune différence. */
+/* La recherche et la barre des rayons défilent AVEC les articles
+   (propriétaire, 2026-10-28) : fixes, elles mangeaient la hauteur de la
+   grille. Seul le titre Vente (et le bandeau d'échange en cours) reste. Les
+   nœuds livrés sont DÉPLACÉS dans une boîte qui défile, jamais reconstruits :
+   leurs id, leurs écouteurs (douchette, liste de recherche) et renderCats /
+   renderGrid (qui écrivent leur innerHTML) ne voient aucune différence. */
 function bqKitSellScroll(sell) {
   if (!sell || sell.querySelector(':scope > .bq-sell-scroll')) return false;
+  const scan = sell.querySelector(':scope > .bq-sell-scan');
   const cats = sell.querySelector(':scope > #bq-cats');
   const grid = sell.querySelector(':scope > #bq-gridwrap');
-  if (!cats || !grid) return false;
+  if (!scan || !cats || !grid) return false;
   const box = document.createElement('div');
   box.className = 'bq-sell-scroll';
-  sell.insertBefore(box, cats);
+  sell.insertBefore(box, scan);
+  box.appendChild(scan);
   box.appendChild(cats);
   box.appendChild(grid);
   return true;
