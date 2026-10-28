@@ -1155,9 +1155,13 @@
     "v": "8",
     "sha": "cca55badedec3e1f"
   },
+  "assets/menu-scan-reader.js": {
+    "v": "1",
+    "sha": "f7c7bce19d69811a"
+  },
   "assets/menu-scan.js": {
-    "v": "7",
-    "sha": "250909f62e2d5489"
+    "v": "8",
+    "sha": "c3b4d4e1a0c753d4"
   },
   "assets/merchant-config.js": {
     "v": "285",
@@ -1324,8 +1328,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "29",
-    "sha": "24077ff0b85dbae5"
+    "v": "30",
+    "sha": "3eaee9016797b178"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "74",

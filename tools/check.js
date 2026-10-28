@@ -2382,6 +2382,7 @@ section('Whole-project regressions');
     'menu-scan-test.mjs',
     'menu-scan-route-test.mjs',
     'menu-scan-i18n-test.mjs',
+    'menu-scan-reader-test.mjs',
     'printer-i18n-test.mjs',
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',

@@ -20,6 +20,8 @@
   'use strict';
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  /* PDF reading and the CSV hand-off live in menu-scan-reader.js (vision#0). */
+  const reader = window.KiwiMenuScanReader;
   const toast = (t, o) => { try { window.Kiwi && Kiwi.toast && Kiwi.toast(t, o); } catch (_) {} };
 
   const COPY = {
@@ -152,7 +154,7 @@
 };
   function language() {
     try {
-      const l = (window.Kiwi && Kiwi.lang && Kiwi.lang()) || window.KiwiI18n?.getLang?.() || window.KiwiMenuI18n?.lang?.() || localStorage.getItem('kiwiLang') || document.documentElement.lang || 'fr';
+      const l = (window.Kiwi && Kiwi.lang && Kiwi.lang()) || window.KiwiI18n?.getLang?.() || localStorage.getItem('kiwiLang') || document.documentElement.lang || 'fr';
       return COPY[l] ? l : 'fr';
     } catch (_) { return COPY[document.documentElement.lang] ? document.documentElement.lang : 'fr'; }
   }
@@ -161,57 +163,6 @@
   }
 
   const MAX_FILES = 6;        // une carte fait rarement plus de 6 pages
-  const MAX_IMG_EDGE = 1600;  // px — assez pour lire les prix, léger à envoyer
-
-  /* ── CSV de sortie ──────────────────────────────────────────────────────────
-   * Colonnes exactes de l'import carte (catalog-import.js). Point-virgule et
-   * guillemets échappés : une description contenant « ; » ne casse pas la ligne. */
-  function csvField(v) {
-    const s = String(v == null ? '' : v).replace(/\r?\n/g, ' ').trim();
-    return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-  function toCsvText(items) {
-    const head = 'article;categorie;sous_categorie;prix_mad;description;disponible';
-    const lines = (items || []).map((it) => [
-      csvField(it.name), csvField(it.cat), csvField(it.sub),
-      String(Number.isFinite(+it.price) ? +it.price : 0), csvField(it.desc), 'oui',
-    ].join(';'));
-    return head + '\n' + lines.join('\n');
-  }
-
-  /* ── pdf.js à la demande (même vendored build que le scan de factures) ── */
-  let _pdfjsPromise = null;
-  function loadPdfJs() {
-    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-    if (_pdfjsPromise) return _pdfjsPromise;
-    _pdfjsPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'assets/vendor/pdfjs/pdf.min.js';
-      script.onload = () => {
-        if (window.pdfjsLib) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
-          resolve(window.pdfjsLib);
-        } else resolve(null);
-      };
-      script.onerror = () => reject(new Error('pdfjs'));
-      (document.head || document.documentElement).appendChild(script);
-    });
-    return _pdfjsPromise;
-  }
-
-  async function extractPdfText(file) {
-    const pdfjs = await loadPdfJs();
-    const ab = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: ab, isEvalSupported: false }).promise;
-    const maxPages = Math.min(pdf.numPages, 12);
-    let full = '';
-    for (let i = 1; i <= maxPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      full += (content.items || []).map((it) => it.str).join(' ') + '\n';
-    }
-    return full.trim();
-  }
 
   /* Une photo de carte en 4000×3000 n'apprend rien de plus au modèle qu'en
    * 1600 px de grand côté — mais coûte dix fois plus à envoyer. */
@@ -306,7 +257,7 @@
     function review(items) {
       if (!items.length) { failToast(new Error('unparsed')); render(); return; }
       m.close();
-      KiwiCatalogImport.openMenuWithCsv(toCsvText(items), { onDone: opts.onDone });
+      KiwiCatalogImport.openMenuWithCsv(reader.toCsvText(items), { onDone: opts.onDone });
     }
 
     async function runFiles(files) {
@@ -328,16 +279,16 @@
             ui('extract')
           );
           if (isPdf) {
-            const text = await extractPdfText(f);
+            const text = await reader.pdfText(f);
             /* Un PDF scanné (image pure) n'a pas de couche texte : on le rend
              * en image et on passe par le modèle vision plutôt que d'échouer. */
             if (text && text.length > 60) collected.push(...await callApi({ kind: 'text', text }, signal));
-            else collected.push(...await callApi({ kind: 'image', image: await pdfPageToImage(f) }, signal));
+            else collected.push(...await callApi({ kind: 'image', image: await reader.pdfFirstPageImage(f) }, signal));
           } else {
             collected.push(...await callApi({ kind: 'image', image: await downscaleImage(f) }, signal));
           }
         }
-        review(dedupe(collected));
+        review(reader.dedupe(collected));
       } catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
@@ -347,7 +298,7 @@
       busy = true;
       const signal = (operation = new AbortController()).signal;
       stage.innerHTML = busyHtml(ui('link'), ui('extract'));
-      try { review(dedupe(await callApi({ kind: 'url', url }, signal))); }
+      try { review(reader.dedupe(await callApi({ kind: 'url', url }, signal))); }
       catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
@@ -357,7 +308,7 @@
       busy = true;
       const signal = (operation = new AbortController()).signal;
       stage.innerHTML = busyHtml(ui('text'), ui('extract'));
-      try { review(dedupe(await callApi({ kind: 'text', text }, signal))); }
+      try { review(reader.dedupe(await callApi({ kind: 'text', text }, signal))); }
       catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
@@ -392,33 +343,5 @@
     return m;
   }
 
-  /* Deux pages d'une même carte répètent souvent l'en-tête ou un plat vedette :
-   * même nom + même catégorie = même article, on garde la première occurrence. */
-  function dedupe(items) {
-    const seen = new Set();
-    return (items || []).filter((it) => {
-      const k = String(it.name || '').toLowerCase().trim() + ' ' + String(it.cat || '').toLowerCase().trim();
-      if (!it.name || seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
-  }
-
-  /* PDF scanné → image JPEG de la première page (le vision lit le reste). */
-  async function pdfPageToImage(file) {
-    const pdfjs = await loadPdfJs();
-    const ab = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: ab, isEvalSupported: false }).promise;
-    const page = await pdf.getPage(1);
-    const base = page.getViewport({ scale: 1 });
-    const scale = Math.min(2, MAX_IMG_EDGE / Math.max(base.width, base.height));
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(viewport.width);
-    canvas.height = Math.round(viewport.height);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    return canvas.toDataURL('image/jpeg', 0.85);
-  }
-
-  window.KiwiMenuScan = { open, _toCsvText: toCsvText, _dedupe: dedupe };
+  window.KiwiMenuScan = { open, _toCsvText: (items) => reader.toCsvText(items), _dedupe: (items) => reader.dedupe(items) };
 })();

@@ -29,6 +29,7 @@ console.log('■ Menu scan test (tools/menu-scan-test.mjs)');
 
 const routeSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-import.js'), 'utf8');
 const scanSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-scan.js'), 'utf8');
+const readerSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-scan-reader.js'), 'utf8');
 const importSrc = fs.readFileSync(path.join(ROOT, 'assets/catalog-import.js'), 'utf8');
 const wsSrc = menuWorkspaceSource();
 const html = dashboardDependencies(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'));
@@ -78,7 +79,10 @@ const mkWin = () => {
   return { win, doc };
 };
 const s1 = mkWin();
-vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/menu-scan.js'), 'utf8'), vm.createContext({ window: s1.win, document: s1.doc, console, URL, Image: function () {}, setTimeout }));
+const scanCtx = vm.createContext({ window: s1.win, document: s1.doc, console, URL, Image: function () {}, setTimeout });
+// The reader (PDF and CSV) loads first, as in the dashboard loader (vision#0).
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/menu-scan-reader.js'), 'utf8'), scanCtx);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/menu-scan.js'), 'utf8'), scanCtx);
 const MS = s1.win.KiwiMenuScan;
 ok(!!MS && typeof MS.open === 'function', 'window.KiwiMenuScan.open existe');
 const csv = MS._toCsvText([
@@ -106,8 +110,8 @@ ok(/import \{ parseModelResponse \} from '\.\/invoice\.js'/.test(routeSrc), 'lec
 // ── 7. Client : un seul chemin d'écriture, repli propre ─────────────────────
 ok(/callApi\('\/api\/ai\/menu-import'/.test(scanSrc), 'le client appelle /api/ai/menu-import');
 ok(/kind: 'text'/.test(scanSrc) && /kind: 'url'/.test(scanSrc) && /kind: 'image'/.test(scanSrc), 'les trois formes (texte, lien, image) sont envoyées');
-ok(/toDataURL\('image\/jpeg', 0\.85\)/.test(scanSrc) && /MAX_IMG_EDGE/.test(scanSrc), 'les photos sont réduites côté client avant envoi');
-ok(/KiwiCatalogImport\.openMenuWithCsv\(toCsvText\(items\)/.test(scanSrc), 'le résultat AI entre dans la revue d\'import — rien n\'est écrit avant confirmation');
+ok(/toDataURL\('image\/jpeg', 0\.85\)/.test(readerSrc) && /MAX_IMG_EDGE/.test(readerSrc), 'les photos sont réduites côté client avant envoi');
+ok(/KiwiCatalogImport\.openMenuWithCsv\(reader\.toCsvText\(items\)/.test(scanSrc), 'le résultat AI entre dans la revue d\'import — rien n\'est écrit avant confirmation');
 ok(!/\.addItem\(|\.updateItem\(|\.addCategory\(/.test(scanSrc), 'menu-scan.js n\'écrit JAMAIS dans la carte directement');
 ok(/files.length > MAX_FILES/.test(scanSrc), 'au plus ' + (scanSrc.match(/MAX_FILES = (\d+)/) || [])[1] + ' fichiers par scan');
 

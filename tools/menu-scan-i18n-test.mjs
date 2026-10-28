@@ -42,6 +42,7 @@ const context = vm.createContext({
 });
 // Expose only lexical copy for exhaustive key coverage, keeping the shipped API unchanged.
 vm.runInContext(fs.readFileSync('assets/ai-image-import.js', 'utf8'), context);
+vm.runInContext(fs.readFileSync('assets/menu-scan-reader.js', 'utf8'), context);
 vm.runInContext(source.replace('window.KiwiMenuScan =', 'window.testCopy = typeof COPY === "undefined" ? null : COPY; window.testBusy = (key, params) => busyHtml(ui(key, params), ui("extract")); window.KiwiMenuScan ='), context);
 assert.ok(win.testCopy, 'FR/EN/AR dictionary must exist');
 const copy = win.testCopy;

@@ -181,7 +181,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
   '/assets/pages/dashboard-startup.js?v=74',
-  '/assets/pages/dashboard-loader.js?v=29',
+  '/assets/pages/dashboard-loader.js?v=30',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
   '/assets/hotel/groups.js?v=1',
@@ -440,7 +440,8 @@ var SHELL = [
   '/assets/catalog-import.js?v=16',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/ai-image-import.js?v=1',
-  '/assets/menu-scan.js?v=7',
+  '/assets/menu-scan-reader.js?v=1',
+  '/assets/menu-scan.js?v=8',
   '/assets/salle-scan.js?v=7',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=9',
