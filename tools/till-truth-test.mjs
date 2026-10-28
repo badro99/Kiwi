@@ -19,11 +19,12 @@ import caisseTestSource from './caisse-test-source.cjs';
  *      d'une même journée (identité de vente = libellé « À emporter · part 1 »)
  *      et le Z perdait ses remises au rechargement de la caisse
  *
- * Ce banc tient les contrats par lecture du code livré (le câblage) et, quand
- * c'est possible, par exécution du vrai module (stock, rapport journalier).
+ * Les fonctions livrées sont exécutées en VM ; les contrôles de balisage
+ * restants nécessitent le DOM du navigateur pour couvrir tout le câblage.
  * Branché dans tools/check.js.
  */
 import fs from 'node:fs';
+import declarations from './js-declarations.cjs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -34,57 +35,134 @@ let pass = 0; const fails = [];
 const ok = (label, cond, detail) => { if (cond) pass++; else fails.push(label + (detail ? ' · ' + detail : '')); };
 
 const CAISSE = caisseTestSource(R('kiwi-caisse.html'));
-const body = (name) => {
-  const start = CAISSE.indexOf('\n    function ' + name + '(');
-  if (start < 0) return '';
-  const next = CAISSE.indexOf('\n    function ', start + 1);
-  return CAISSE.slice(start, next < 0 ? CAISSE.length : next);
-};
+const run = (file, name, context) => vm.runInContext(declarations.declaration(R(file), name), context);
 
 /* 1 · fond d'ouverture */
 ok('1 · aucune pastille de fond n\'est présélectionnée dans le gabarit',
   !/class="ci-float-chip is-active"/.test(CAISSE));
-ok('1 · un vrai commerce ne peut pas ouvrir sans fond indiqué',
-  /if \(!floatChosen\)/.test(body('openService')));
 ok('1 · le dernier fond n\'est qu\'un raccourci, pas une valeur d\'office',
   /id="ci-float-last"/.test(CAISSE) && /Dernier fond : /.test(CAISSE));
 
 /* 2 · carte sans lecteur */
-const HW = R('assets/caisse-hardware.js');
-ok('2 · le matériel dit si « Carte » est une déclaration de TPE externe',
-  /externalCardTerminal:\s*function\s*\(\)\s*\{\s*return realTill\(\)/.test(HW));
-const openCard = body('openCardModal');
-ok('2 · pas de minuteur d\'encaissement automatique sur un TPE externe',
-  /if \(externalTerminal\) return;\s*cardSuccessTimer = setTimeout/.test(openCard));
-ok('2 · l\'encaissement attend la confirmation du caissier',
-  /id="card-confirm"/.test(CAISSE) && /reader\.confirm\.addEventListener\('click'/.test(CAISSE));
+for (const real of [true, false]) {
+  const window = { KiwiEnv: { isReal: () => real } };
+  vm.runInNewContext(R('assets/caisse-hardware.js'), { window, navigator: {}, localStorage: { getItem: () => null } });
+  ok('2 · le matériel identifie le TPE externe selon la session', window.KiwiHardware.externalCardTerminal() === real);
+}
+// The static button must still exist in the browser shell.
+ok('2 · la confirmation est présente dans le gabarit', /id="card-confirm"/.test(CAISSE));
+{
+  let click, approvals = 0, commits = 0;
+  const app = R('assets/caisse-app.js');
+  const start = app.indexOf("    if (reader.confirm) reader.confirm.addEventListener('click'");
+  const end = app.indexOf("    $('#pay-card').addEventListener", start);
+  const c = vm.createContext({ reader: { confirm: { addEventListener: (event, fn) => { if (event === 'click') click = fn; } } },
+    cardPaymentCommitted: false, tenderInFlight: false, cardAttemptSeq: 1,
+    cardModal: { classList: { contains: () => true } },
+    window: { KiwiHardware: { authorizeCard: async (amount, disc, status, options) => {
+      if (amount === 20 && options.cashierConfirmed) approvals++;
+      return { approved: true };
+    } } }, currentTotal: () => 20, payTipAmount: () => 0, triggerCardSuccess: () => { commits++; } });
+  vm.runInContext(app.slice(start, end), c);
+  ok('2 · enregistrer le clic ne déclenche aucune vente', typeof click === 'function' && approvals === 0 && commits === 0);
+  click(); await new Promise(resolve => setImmediate(resolve));
+  ok('2 · confirmer appelle le matériel puis valide une vente', approvals === 1 && commits === 1);
+  c.cardPaymentCommitted = true; click(); await Promise.resolve();
+  ok('2 · confirmer deux fois ne réencaisse pas', commits === 1 && approvals === 1);
+}
 
 /* 3 · objectif */
-const closeRender = CAISSE.slice(CAISSE.indexOf("Highlight · objectif d'lyoum progress"));
-ok('3 · le Z d\'un vrai commerce n\'invente pas d\'objectif',
-  /if \(storeIsReal\(\)\) \{[\s\S]{0,700}encaissés sur ce service[\s\S]{0,200}\} else if \(tot\.revenue >= DAILY_OBJECTIF\)/.test(closeRender));
+{
+  const nodes = new Map();
+  const $ = key => { if (!nodes.has(key)) nodes.set(key, { style: {}, value: '', innerHTML: '' }); return nodes.get(key); };
+  const c = vm.createContext({ $, window: {}, renderOpenTableBills() {}, shiftOpenedAt: new Date(),
+    storeName: () => 'Test', currentCashier: { name: 'Test' }, dafrDays: [], monthsEn: [],
+    journalTotals: () => ({ revenue: 200, txns: 2, card: 100, cash: 100 }),
+    shift: { tablesPaid: 1, discounts: 2 }, authorizations: [], handovers: [],
+    fmtDur: String, fmtMAD: String, money: Number, openingFloat: 0, drawerExpected: () => 100,
+    updateEcart() {}, updateCardEcart() {}, terminalCardTotal: null, DAILY_OBJECTIF: 18000, storeIsReal: () => true });
+  run('assets/caisse-accounting/closing.js', 'renderCloture', c);
+  c.renderCloture();
+  ok('3 · le Z réel affiche seulement les encaissements', $('#clo-highlight-text').innerHTML === '<em>200</em> encaissés sur ce service.');
+  ok('5 · le Z affiche le ticket moyen calculé par transaction', $('#clo-rows').innerHTML.includes('<span class="clo-row-label">Ticket moyen</span><span class="clo-row-value mono">100</span>'));
+}
 
 /* 4 · remise à emporter */
-ok('4 · la remise de la vente est comptée même si le panier est déjà vidé',
-  /function accountActiveDiscount\(settlementTable, saleDiscount\)/.test(CAISSE)
-  && /accountActiveDiscount\(settlementTable, split \? null : discount\)/.test(CAISSE));
-ok('4 · un service relu n\'est pas remis à zéro à la saisie du code',
-  /if \(!shiftOpenedAt\) \{ shift\.discounts = 0; shift\.discountsCount = 0; shift\.cancels = 0; \}/.test(CAISSE));
+{
+  const c = vm.createContext({ window: {}, storeIsReal: () => true, storeName: () => 'Test', storeCity: () => '',
+    document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
+    CASHIER_ROSTER: [], rebuildRealRoster() {}, shiftOpenedAt: new Date(),
+    shift: { discounts: 12, discountsCount: 2, cancels: 1 } });
+  run('assets/caisse-accounting/receipt.js', 'applyStoreIdentity', c);
+  c.applyStoreIdentity();
+  ok('4 · un service relu conserve remises et annulations', c.shift.discounts === 12 && c.shift.discountsCount === 2 && c.shift.cancels === 1);
+  c.shiftOpenedAt = null; c.applyStoreIdentity();
+  ok('4 · sans service ouvert le décor est effacé', c.shift.discounts === 0 && c.shift.discountsCount === 0 && c.shift.cancels === 0);
+}
+{
+  const split = vm.createContext({ window: {}, splitState: { total: 30, numParts: 3, splitMode: 'egal', isVrap: true,
+    itemTotals: { Plat: { totalQty: 1, unitPrice: 30, itemId: 'plat' } } },
+    minor: n => Math.round(n * 100), major: n => n / 100, money: Number, effectiveTipPct: () => 0,
+    lineCat: () => 'Plats', $: () => ({}), renderSplitFlow() {}, lucide: { createIcons() {} } });
+  for (const name of ['shareMoney', 'launchSplitFlow']) run('assets/caisse/split-tender.js', name, split);
+  split.launchSplitFlow();
+  const parts = split.splitState.flow.parts;
+  ok('6 · le partage produit trois fractions du plat', parts.length === 3 && parts.every(p => p.lines[0].shareDen === 3 && p.lines[0].total === 10));
+  const c = vm.createContext({ window: {}, mode: 'vrap', vrapEditingNum: null, journal: [],
+    money: n => Math.round((Number(n) || 0) * 100) / 100, activeSaleDiscount: () => ({ discountAmountCents: 235 }),
+    genRef: () => 'test', currentCashier: { name: 'Test' }, attachReceipt() {},
+    accountActiveDiscount(table, discount) { c.accounted = discount; } });
+  run('assets/caisse-accounting/record-sale.js', 'recordSale', c);
+  const sale = c.recordSale(10, 'cash', 'Test', 0, parts[0].lines, null);
+  ok('4 · la vente transmet sa remise après vidage du panier', c.accounted.discountAmountCents === 235);
+  ok('6 · chaque part compte un tiers de plat au journal', sale.lines[0].qty === 0.333 && !('shareDen' in sale.lines[0]));
+}
 
-/* 5 · libellé */
-ok('5 · « Moyenne table » devient « Ticket moyen », traduit', !/>Moyenne table</.test(CAISSE)
-  && />Ticket moyen</.test(CAISSE) && /'Ticket moyen': 'Average ticket'/.test(R('assets/caisse-lang.js')));
+{
+  const document = { readyState: 'loading', addEventListener() {} };
+  for (const [locale, expected] of [['fr', 'Ticket moyen'], ['en', 'Average ticket'], ['ar', 'متوسط التذكرة']]) {
+    const window = {};
+    vm.runInNewContext(R('assets/caisse-lang.js'), { window, document,
+      localStorage: { getItem: () => locale } });
+    ok('5 · le ticket moyen est traduit en ' + locale, window.KiwiCaisseLang.tr('Ticket moyen') === expected);
+  }
+}
 
-/* 6 · addition partagée */
-ok('6 · chaque part égale compte 1/N de plat au journal',
-  /shareDen: splitState\.numParts/.test(CAISSE)
-  && /l\.qty = Math\.round\(\(Number\(l\.qty\) \|\| 1\) \/ l\.shareDen \* 1000\) \/ 1000/.test(CAISSE));
+// Whole-shell retired label coverage requires rendering every browser surface.
+ok('5 · le gabarit conserve Ticket moyen et retire Moyenne table', !/>Moyenne table</.test(CAISSE) && />Ticket moyen</.test(CAISSE));
 
 /* 7 · 86 */
-ok('7 · un plat épuisé reste sur la grille, grisé et non vendable',
-  /carteState\.soldOut = allItems\.filter/.test(CAISSE)
-  && /menu-item is-86/.test(CAISSE)
-  && /menuCard\.classList\.contains\('is-86'\)\) \{ toast\(/.test(CAISSE));
+{
+  const grid = { innerHTML: '' };
+  const c = vm.createContext({ window: {}, caisseCarte: () => ({ cats: [{ id: 'plats', name: 'Plats' }], items: [
+    { id: 'out', name: 'Plat épuisé', catId: 'plats', price: 30, avail: false },
+    { id: 'in', name: 'Plat disponible', catId: 'plats', price: 20 },
+    { id: 'archived', name: 'Ancien plat', archived: true, avail: false },
+  ] }), carteState: {}, CAT_PALETTE: [], STATION_PALETTE: [], activeCat: 'all',
+    activeSub: null, mode: 'vrap', cart: [], $: () => grid, escTeam: String,
+    menuArt: () => '', subLabelL: () => '', catLabelL: () => 'Plats', menuName: m => m.name, fmtMAD: String });
+  run('assets/caisse/catalogue.js', 'rebuildCarte', c);
+  run('assets/caisse/catalogue.js', 'renderMenu', c);
+  c.rebuildCarte(); c.renderMenu();
+  ok('7 · la carte conserve seulement les plats épuisés non archivés', c.carteState.soldOut.length === 1 && c.carteState.soldOut[0].id === 'out' && c.menuItems.length === 1);
+  ok('7 · le rendu garde le plat épuisé grisé et désactivé', grid.innerHTML.includes('menu-item is-86') && grid.innerHTML.includes('aria-disabled="true"') && grid.innerHTML.includes('Plat épuisé'));
+}
+{
+  let click, added = 0;
+  const messages = [];
+  const app = R('assets/caisse-app.js');
+  const start = app.indexOf("    document.addEventListener('click', (e) => {");
+  const end = app.indexOf("    document.addEventListener('input', (e) => {", start);
+  const c = vm.createContext({ document: { addEventListener: (event, fn) => { if (event === 'click') click = fn; } },
+    TBL_SEL: '.table', mode: 'vrap', tr: s => s, toast: s => messages.push(s), addToCart: () => { added++; } });
+  vm.runInContext(app.slice(start, end), c);
+  for (const soldOut of [true, false]) {
+    const card = { dataset: { menuId: 'plat' }, classList: { contains: name => soldOut && name === 'is-86' } };
+    click({ target: { closest: selector => selector === '.menu-item' ? card : null } });
+    if (soldOut) ok('7 · toucher un plat épuisé refuse la vente et explique pourquoi', added === 0 && messages[0] === 'Plat épuisé · retiré de la vente');
+    else ok('7 · un plat disponible reste vendable', added === 1);
+  }
+}
 
 /* 8 · stock : exécution du vrai moteur */
 {
@@ -126,7 +204,18 @@ ok('7 · un plat épuisé reste sur la grille, grisé et non vendable',
   ok('9 · deux additions partagées du même libellé comptent toutes leurs parts', rep.txns === 3, 'txns=' + rep.txns);
   ok('9 · normSale retient l\'identifiant serveur', DR.normSale(sales[0]).id === 'sale-a-split-0');
 }
-ok('9 · l\'export du rapport ne perd pas non plus ces ventes', /s\.id \|\| s\.saleId \|\| s\.ref/.test(R('assets/day-report-export.js')));
+{
+  const t = Date.parse('2026-10-11T15:00:00Z');
+  const window = { KiwiDayReport: { dayBounds: () => ({ from: t - 1, to: t + 100 }) },
+    KiwiSales: { list: () => [
+      { saleId: 'a', ref: 'Part 1', ts: t, amount: 10 },
+      { saleId: 'b', ref: 'Part 1', ts: t + 1, amount: 10 },
+      { saleId: 'a', ref: 'Part 1', ts: t, amount: 10 },
+    ] } };
+  vm.runInNewContext(R('assets/day-report-export.js'), { window });
+  const rows = window.KiwiDayReportExport.context({ day: '2026-10-11' }).sales;
+  ok('9 · export conserve les ventes distinctes et dédoublonne leur écho', rows.length === 2 && rows[0].id === 'a' && rows[1].id === 'b');
+}
 
 /* 10 · « God Mode » est le nom interne de la console opérateur : le caissier ne
    le voit jamais, un module coupé l'est « pour cet établissement ». */
@@ -163,7 +252,7 @@ ok('9 · l\'export du rapport ne perd pas non plus ces ventes', /s\.id \|\| s\.s
 }
 
 /* Execution contract: external TPE, unavailable reader, approval, stale reply.
- * Keep wiring checks above: they establish the confirm button exists. */
+ * The click registration above is also executed before authorization. */
 async function cardScenario(source, external, authorize) {
   const elements = new Map(), timers = [], pending = [];
   const el = () => ({ hidden: true, textContent: '', innerHTML: '', style: {},

@@ -2239,6 +2239,7 @@ section('Whole-project regressions');
     'module-gate-test.mjs',
     'terminaux-truth-test.mjs',
     'till-truth-test.mjs',
+    'gate2-behaviour-test.mjs',
     'r13-e-structure-test.mjs',
     'r13-e-language-browser-test.mjs',
     /* « Carte » sans lecteur : le caissier confirme, aucun minuteur n'écrit la vente. */

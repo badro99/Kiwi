@@ -15,9 +15,9 @@ function ok(condition, message) {
   if (!condition) throw new Error('Employee language: ' + message);
 }
 
-// Copy bans complement execution: dynamically generated strings must also
-// remain free of the retired dialect, including unreachable copy.
-ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page + lang), 'Darija wording cannot return');
+// Static page copy still needs a browser to enumerate every rendered surface.
+// Dictionary copy is checked below after executing its owner and translator.
+ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page), 'Darija wording cannot return');
 ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(page), 'Latin Darija and Spanish labels cannot return');
 
 // Execute the shipped translation owner and its registered live observer.
@@ -57,6 +57,18 @@ ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(page), 'Latin Darija and
   label.children.push(input); body.children.push(label);
   for (const [locale, expected] of [['en', 'Amount received'], ['ar', 'المبلغ المستلم'], ['fr', 'Montant reçu']]) {
     c.setEmployeeLanguage(locale);
+    // Evaluate every shipped phrase through the real translator, including
+    // escaped literals that a scan of the JavaScript source cannot decode.
+    for (const key of new Set(Object.values(c.KiwiServeurLang.translations).flatMap(dict => Object.keys(dict)))) {
+      const rendered = c.employeeTranslation(key);
+      ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(rendered), locale + ': translated phrase uses standard wording');
+      ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(rendered), locale + ': translated phrase has no retired Latin labels');
+    }
+    for (const [, en, ar] of c.KiwiServeurLang.patterns) {
+      for (const replacement of [en, ar]) {
+        ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(replacement), 'loaded dynamic translation uses standard wording');
+      }
+    }
     const rank = c.kgRankName({ name: 'Apprenti' });
     ok(rank === ({ fr: 'Apprenti', en: 'Apprentice', ar: 'متدرّب' })[locale], locale + ': rank is generated in context');
     const challenge = c.kgChallengeText({ metric: 'tables', target: 3, text: 'Réglez 3 tables' });
