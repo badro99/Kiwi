@@ -125,7 +125,7 @@ t('a catalogue redraw never rebuilds the Inventaire toolbar, so the search bar k
 });
 t('the boutique opens the cash drawer like the restaurant: manager code on a real store, logged as a no-sale movement', () => {
   const bq = readFileSync(new URL('../assets/pos-boutique.js', import.meta.url), 'utf8');
-  const sales = readFileSync(new URL('../assets/pos-boutique/sales.js', import.meta.url), 'utf8');
+  const sales = readFileSync(new URL('../assets/pos-boutique/drawer.js', import.meta.url), 'utf8');
   assert.ok(/id="bq-open-drawer"[^>]*>.*Ouvrir le tiroir/.test(bq), 'the rail carries « Ouvrir le tiroir »');
   assert.ok(/openDrawerNoSale\(\(m\) => bqCashEvent\('movement', m\)\)/.test(bq), 'the click logs into the shift');
   const events = []; let approval;

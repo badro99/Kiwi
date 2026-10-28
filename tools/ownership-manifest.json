@@ -2489,6 +2489,8 @@
     "kiwi-caisse.html:assets/orderpro-inbox.js:KiwiConfig:assets/merchant-config.js",
     "kiwi-caisse.html:assets/sold-insights.js:KiwiDayReport:assets/day-report.js",
     "kiwi-caisse.html:assets/sold-insights.js:KiwiLive:assets/live-link.js",
+    "kiwi-caisse.html:assets/till-tenant.js:KiwiCaisseLang:assets/caisse-lang.js",
+    "kiwi-caisse.html:assets/till-tenant.js:KiwiIcon:assets/material-icons.js",
     "kiwi-caisse.html:kiwi-caisse.html#inline-4:KiwiCaisseRefresh:assets/caisse-refresh.js",
     "kiwi-serveur.html:assets/serveur-app.js:KiwiMenuI18n:assets/menu-i18n.js",
     "kiwi-serveur.html:assets/serveur-app.js:KiwiMenuPromos:assets/menu-promos.js",
