@@ -520,17 +520,17 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=174',
-  '/assets/pos-boutique/sales.js?v=76',
+  '/assets/pos-boutique.css?v=175',
+  '/assets/pos-boutique/sales.js?v=77',
   '/assets/pos-boutique/ticket-owner.js?v=2',
   '/assets/pos-boutique/ticket-remise.js?v=2',
   '/assets/pos-boutique/search.js?v=5',
   '/assets/pos-boutique/inv-tools.js?v=9',
   '/assets/pos-boutique/inv-moves.js?v=4',
   '/assets/pos-boutique/kit-2027.js?v=14',
-  '/assets/pos-boutique/checkout.js?v=76',
-  '/assets/pos-boutique/inventory.js?v=76',
-  '/assets/pos-boutique.js?v=174',
+  '/assets/pos-boutique/checkout.js?v=77',
+  '/assets/pos-boutique/inventory.js?v=77',
+  '/assets/pos-boutique.js?v=175',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
