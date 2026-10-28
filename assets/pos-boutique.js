@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=76';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=76';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=76';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=77';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=77';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=77';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=14';
 
@@ -1748,7 +1748,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     set('#bq-badge-vente', items);
     set('#bq-badge-scan', state.scanLog.length);
     set('#bq-badge-ret', avs);
-    set('#bq-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
+    set('#bq-badge-cl', 0);   // le carnet n'est pas une alerte : son total ne ferait que grandir
     const invBadge = $('#bq-badge-inv', root);
     if (invBadge) { const n = window.KiwiBoutiqueCatalog ? invUnseen() : 0; invBadge.textContent = n || ''; invBadge.style.display = n ? '' : 'none'; }   // les alertes NON VUES (inv-tools.js)
     /* Le rail du kit lit ses compteurs sur ces mêmes pastilles. */

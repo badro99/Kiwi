@@ -77,4 +77,8 @@ t('a catalogue redraw never rebuilds the Inventaire toolbar, so the search bar k
   const tools = readFileSync(new URL('../assets/pos-boutique/inv-tools.js', import.meta.url), 'utf8');
   assert.ok(/forEach\(\(k\) => \{ if \(k !== tools\) k\.remove\(\); \}\)/.test(tools), 'everything but the mounted toolbar is replaced');
 });
+t('the Clientes tab carries no count: the customer book is not an alert', () => {
+  const bq = readFileSync(new URL('../assets/pos-boutique.js', import.meta.url), 'utf8');
+  assert.ok(/set\('#bq-badge-cl', 0\);/.test(bq) && !/set\('#bq-badge-cl', \(window\.KiwiClients/.test(bq));
+});
 console.log(`✓ boutique-inv-alerts · ${ok} contrôles : la pastille Inventaire compte ce qui n'a pas été vu`);
