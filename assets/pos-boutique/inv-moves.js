@@ -10,11 +10,18 @@
  * Rien ici n'écrit. Pas d'enable(), pas d'attach(), pas de record(), aucune
  * écriture au catalogue : ouvrir cet écran ne peut pas faire bouger un stock.
  * Le registre est relu au serveur à l'ouverture (KiwiInventory.sync), pour
- * voir aussi ce que les autres appareils de la boutique ont écrit. */
+ * voir aussi ce que les autres appareils de la boutique ont écrit.
+ *
+ * LE MIROIR DU TABLEAU DE BORD (propriétaire, 2026-10-28) : les deux écrans
+ * lisent le même registre (D1), avec la même lecture `{ module: 'boutique',
+ * shared: true }`, et s'ouvrent sur la même période (« Tout »). `shared` écarte
+ * les lignes que le serveur a refusées : elles restent sur cette tablette et
+ * n'arriveraient jamais au tableau de bord. tools/boutique-stock-movements-test
+ * tient les deux côtés. */
 const MODULE = 'boutique';
 const MAX_ROWS = 300;
 const tr = (s) => (window.KiwiCaisseLang && typeof window.KiwiCaisseLang.tr === 'function' ? window.KiwiCaisseLang.tr(s) : s);
-const f = { q: '', days: 30, type: '', cat: '' };
+const f = { q: '', days: 0, type: '', cat: '' };
 const IO = { in: 'in', out: 'out', flat: '' };   // classes de couleur des tuiles   // le dernier filtre, le temps de la session
 
 function source(s) {
@@ -24,7 +31,7 @@ function source(s) {
   return s || '·';
 }
 function rowsFor(MZ) {
-  const q = { module: MODULE, q: f.q, type: f.type, categoryId: f.cat };
+  const q = { module: MODULE, shared: true, q: f.q, type: f.type, categoryId: f.cat };
   if (f.days) q.from = Date.now() - f.days * 86400000;
   return MZ.list(q);
 }
@@ -116,7 +123,8 @@ export function openMoves(d) {
   const esc = d.esc;
   const cat = d.catDB && d.catDB();
   const cats = (cat && cat.listCategories && cat.listCategories()) || [];
-  const fac = MZ.facets(MODULE);
+  f.days = 0;   // comme le tableau de bord : chaque ouverture repart de « Tout »
+  const fac = MZ.facets(MODULE, true);
   const opt = (v, l, cur) => '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + esc(l) + '</option>';
   const types = MZ.types().filter((t) => !fac.types.length || fac.types.indexOf(t.id) >= 0);
   const html = '<button class="bq-modal-x" data-inv-x aria-label="' + esc(tr('Fermer')) + '"><i data-icon="close"></i></button>'

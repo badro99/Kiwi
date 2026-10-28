@@ -70,16 +70,17 @@ t('the till « Mouvements de stock » screen only reads, and only boutique rows'
   const ctx = { window: { KiwiMaisonStock: { list: (q) => { query = q; return []; }, facets: (m) => { facet = m; return { types: [] }; }, types: () => [], totals: () => ({ entries: 0, exits: 0, count: 0 }) } }, document: { getElementById: () => true } };
   vm.runInNewContext(mv.replace(/export /g, '') + '\nopenMoves({esc: String, icons(){}, setModal(html, wire){ wire({style:{}, querySelector(){return {addEventListener(){}};}}); }});', ctx);
   assert.equal(query.module, 'boutique');
+  assert.equal(query.shared, true, 'the till reads the rows the dashboard sees too (mirror)');
   assert.equal(facet, 'boutique');
   const renderedInventory = inventoryHtml();
   assert.ok(/id="bqi-count"[\s\S]{0,260}id="bqi-moves"/.test(renderedInventory), 'the button sits right after « Inventaire physique »');
   let historyArgs;
   shippedFunction(inventorySource, 'openInvProduct', {
     catDB: () => ({ getProduct: () => ({ product: {}, variants: [] }) }),
-    window: { KiwiMaisonStock: { productHistory: (...args) => { historyArgs = args; return []; } } },
+    window: { KiwiMaisonStock: { list: (q) => { historyArgs = q; return []; } } },
     esc: String, fmtMAD: String, artOf: String, invSetModal() {},
   })('product-7');
-  assert.deepEqual(historyArgs, ['product-7', 8, 'boutique']);
+  assert.equal(JSON.stringify(historyArgs), JSON.stringify({ productId: 'product-7', module: 'boutique', shared: true }));
 });
 t('the physical count reaches the right store, signed by the person at the till, with a reason per gap', () => {
   const c = readFileSync(new URL('../assets/pos-inventory-count.js', import.meta.url), 'utf8');

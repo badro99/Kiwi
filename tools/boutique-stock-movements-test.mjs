@@ -156,7 +156,7 @@ const navHandler = (src.match(/handlers\['nav-stock-movements'\][\s\S]*?\n\};/) 
 ok('ouvrir les mouvements n\'appelle enable() que hors boutique',
   /_mzModule\(\)\s*!==\s*'boutique'\s*\)\s*MZS\(\)\.enable\(\)/.test(navHandler), navHandler.slice(0, 160));
 ok('les lignes de la page sont lues avec le module du métier',
-  /Object\.assign\(\{\}, _mzFilter, \{ module: _mzModule\(\) \}\)/.test(src));
+  /Object\.assign\(\{\}, _mzFilter, \{ module: _mzModule\(\),/.test(src));
 ok('l\'historique de la fiche produit aussi',
   /productHistory\(pid, 20, _mzModule\(\)\)/.test(src));
 ok('la saisie manuelle n\'est pas rendue pour la boutique',
@@ -165,6 +165,49 @@ ok('le bouton des mouvements s\'affiche pour les deux métiers qui ont un regist
   /_mzReadable\(\) \? `<button type="button" data-action="nav-stock-movements">/.test(src));
 ok('le pied de page boutique ne promet pas un historique exhaustif',
   /n'y figurent pas, et rien de cet écran ne touche au stock/.test(src));
+
+/* ── V bis · LE MIROIR : la caisse et le tableau de bord montrent la même chose ──
+ * Propriétaire, 2026-10-28 : « they need to be a mirror of each other ». Les
+ * deux écrans lisent le même registre (D1). Ce qui pouvait encore les séparer :
+ *   · une ligne refusée par le serveur reste sur la tablette, « en attente »
+ *     pour toujours, et n'arrive jamais au tableau de bord ;
+ *   · la caisse s'ouvrait sur 30 jours, le tableau de bord sur « Tout » ;
+ *   · le tableau de bord ne relisait pas le serveur à l'ouverture.
+ * La lecture `shared` écarte la ligne refusée ; les deux sources la passent. */
+{
+  const KEY = 'kiwi:inventoryLedger:v1:boutique-test';
+  const doc = JSON.parse(win.localStorage.getItem(KEY));
+  const victim = doc.rows.find((r) => r.meta && r.meta.module === 'boutique' && r.meta.type === 'remboursement');
+  victim.blocked = 1; victim.refused = 'reason-forbidden';
+  win.localStorage.setItem(KEY, JSON.stringify(doc));
+  const everything = MZ.list({ module: 'boutique' });
+  const mirror = MZ.list({ module: 'boutique', shared: true });
+  ok('sans `shared`, la lecture ne change pas (la ligne refusée y est encore)',
+    everything.length === 5 && everything.some((m) => m.id === victim.id && m.refused));
+  ok('avec `shared`, la ligne refusée par le serveur n\'est pas montrée',
+    mirror.length === 4 && !mirror.some((m) => m.id === victim.id), `${mirror.length} ligne(s)`);
+  ok('les facettes partagées ne proposent pas un type qui n\'existe que refusé',
+    MZ.facets('boutique', true).types.indexOf('remboursement') < 0
+    && MZ.facets('boutique').types.indexOf('remboursement') >= 0, JSON.stringify(MZ.facets('boutique', true).types));
+  victim.blocked = 0; delete victim.refused;
+  win.localStorage.setItem(KEY, JSON.stringify(doc));
+
+  const caisse = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/inv-moves.js'), 'utf8');
+  const fiche = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/inventory.js'), 'utf8');
+  ok('caisse · la page lit la boutique en miroir', /\{ module: MODULE, shared: true,/.test(caisse));
+  ok('caisse · ses filtres aussi', /MZ\.facets\(MODULE, true\)/.test(caisse));
+  ok('caisse · la fiche article aussi', /list\?\.\(\{ productId: pid, module: 'boutique', shared: true \}\)/.test(fiche));
+  ok('caisse · elle s\'ouvre sur « Tout », comme le tableau de bord',
+    /const f = \{ q: '', days: 0,/.test(caisse) && /f\.days = 0;/.test(caisse));
+  ok('caisse · elle relit le serveur à l\'ouverture', /L\.sync\(\)/.test(caisse));
+  ok('tableau de bord · la page lit la boutique en miroir',
+    /\{ module: _mzModule\(\), shared: _mzModule\(\) === 'boutique' \}/.test(src));
+  ok('tableau de bord · ses filtres aussi', /M\.facets\(_mzModule\(\), _mzModule\(\) === 'boutique'\)/.test(src));
+  ok('tableau de bord · il s\'ouvre sur « Tout »', /_mzFilter\.days = 0;/.test(navHandler));
+  ok('tableau de bord · il relit le serveur à l\'ouverture', /L\.sync\(\)/.test(navHandler));
+  ok('les deux côtés lisent le même module',
+    /const MODULE = 'boutique';/.test(caisse) && /_mzTrade\(\)\.trim\(\)\.toLowerCase\(\) === 'boutique' \? 'boutique'/.test(src));
+}
 
 /* ── VI · le métier maison n'a pas bougé d'un bit ────────────────────────── */
 const { MZ: MZm, cat: catm } = boot('maison');

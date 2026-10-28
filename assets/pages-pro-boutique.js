@@ -1711,7 +1711,7 @@ const _mzTrade = () => {
   } catch (_) {}
   try { return String(localStorage.getItem('kiwiBizType') || ''); } catch (_) { return ''; }
 };
-const _mzModule = () => (_mzTrade() === 'boutique' ? 'boutique' : 'maison');
+const _mzModule = () => (_mzTrade().trim().toLowerCase() === 'boutique' ? 'boutique' : 'maison');
 const _mzReadable = () => !!window.KiwiMaisonStock && (_mzModule() === 'boutique' || window.KiwiMaisonStock.isMaison());
 
 /* L'HISTORIQUE DE LA FICHE PRODUIT.
@@ -1922,7 +1922,7 @@ const _mzSource = (s) => (s === 'caisse' ? 'Caisse' : s === 'dashboard' ? 'Table
 function _mzRows() {
   const M = MZS();
   if (!M) return [];
-  const f = Object.assign({}, _mzFilter, { module: _mzModule() });
+  const f = Object.assign({}, _mzFilter, { module: _mzModule(), shared: _mzModule() === 'boutique' });   // la lecture de la caisse (inv-moves.js) : un miroir
   if (f.days) f.from = Date.now() - f.days * 86400000;
   delete f.days;
   return M.list(f);
@@ -1963,7 +1963,7 @@ function _mzRenderPage() {
   _mzCss();
   const rows = _mzRows();
   const tot = M.totals(rows);
-  const fac = M.facets(_mzModule());
+  const fac = M.facets(_mzModule(), _mzModule() === 'boutique');
   const cats = (CAT() && CAT().listCategories()) || [];
   const opt = (v, label, cur) => `<option value="${_esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${_esc(label)}</option>`;
   window.Kiwi.appPage('stock-movements', {
@@ -2028,6 +2028,8 @@ handlers['nav-stock-movements'] = () => {
   if (_mzModule() !== 'boutique') MZS().enable();
   _mzFilter.days = 0;
   _mzRenderPage();
+  const L = window.KiwiInventory;   // comme la caisse : relire le serveur à l'ouverture ; repeindre si la page est là, sans voler le curseur
+  if (_mzModule() === 'boutique' && L && typeof L.sync === 'function') Promise.resolve(L.sync()).then(() => { const t = document.getElementById('mz-table'); if (!t) return; if (document.activeElement && document.activeElement.hasAttribute('data-mz-search')) t.innerHTML = _mzTableHtml(_mzRows()); else _mzRenderPage(); }).catch(() => {});
 };
 handlers['mz-clear-product'] = () => { _mzFilter.productId = ''; _mzRenderPage(); };
 handlers['mz-export'] = () => {

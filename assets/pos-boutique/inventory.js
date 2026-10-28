@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=187';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=88';
-import { openMoves } from './inv-moves.js?v=4';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=188';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=89';
+import { openMoves } from './inv-moves.js?v=5';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=15';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=88';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=89';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -769,7 +769,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
   function openInvProduct(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const p = d.product;
-    const movements = window.KiwiMaisonStock?.productHistory?.(pid, 8, 'boutique') || [];   // les lignes BOUTIQUE, pas celles du module par défaut (maison)
+    const movements = (window.KiwiMaisonStock?.list?.({ productId: pid, module: 'boutique', shared: true }) || []).slice(0, 8);   // les lignes BOUTIQUE que le tableau de bord voit aussi
     const rows = d.variants.length
       ? d.variants.map((v) => invVarRow(v)).join('')
       : '<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">Aucune variante, ajoutez une couleur × taille.</td></tr>';

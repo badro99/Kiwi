@@ -294,6 +294,7 @@
       actor: row.actor || '', source: meta.source || '', supplier: meta.supplier || '',
       ref: row.refId || '', note: row.note || '', reason: row.reason,
       pending: !(+row.cursor > 0),
+      refused: !!row.blocked,   // le serveur l'a refusée : elle ne quittera jamais cet appareil
     };
   }
 
@@ -314,6 +315,10 @@
     filter = filter || {};
     var q = String(filter.q || '').trim().toLowerCase();
     return all(filter.module).filter(function (m) {
+      /* `shared` · LE MIROIR. Une ligne que le serveur a refusée reste sur la
+       * tablette qui l'a écrite et n'atteindra jamais le tableau de bord : un
+       * écran qui doit montrer la même chose des deux côtés ne la compte pas. */
+      if (filter.shared && m.refused) return false;
       if (filter.from && m.at < +filter.from) return false;
       if (filter.to && m.at > +filter.to) return false;
       if (filter.productId && m.productId !== filter.productId) return false;
@@ -339,8 +344,8 @@
 
   /* Les valeurs proposées par les filtres : celles qui existent VRAIMENT dans le
    * journal de ce magasin, jamais une liste théorique. */
-  function facets(module) {
-    var rows = all(module);
+  function facets(module, shared) {
+    var rows = all(module).filter(function (m) { return !(shared && m.refused); });
     var out = { actors: [], suppliers: [], types: [], categories: [] };
     var seen = { actors: {}, suppliers: {}, types: {}, categories: {} };
     rows.forEach(function (m) {
