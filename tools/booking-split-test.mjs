@@ -39,5 +39,8 @@ for (const part of map.parts) {
 }
 sameSplit(bookingTestSource(), original, 'complete original rebuilt byte for byte from live files');
 const html = fs.readFileSync('booking.html', 'utf8');
-assert.equal((html.match(/<script\b/g) || []).length, 4, 'public script count unchanged');
+// 4 from the split, plus booking-recover.js (28 Oct, note 13 booking#2): a standalone
+// module kept outside this map on purpose, so the split bodies stay byte-identical.
+assert.equal((html.match(/<script\b/g) || []).length, 5, 'public script count: the split four plus booking-recover.js');
+assert.ok(html.includes('<script type="module" src="assets/booking-recover.js?v='), 'the recovery form is its own module');
 console.log('✓ booking split: token-identical formatting, historical bodies outside reviewed fixes, live reconstruction and reviewed fail-soft behaviour');

@@ -186,7 +186,7 @@ export function hydrateReservation(row) {
  * 404 le lien de gestion d'une cliente et laissait un nouvel essai réserver une
  * seconde fois la même chambre. */
 export async function findStayByKey(env, merchant, key, value) {
-  if (key !== 'manageToken' && key !== 'publicRef') return null;
+  if (key !== 'manageToken' && key !== 'publicRef' && key !== 'code') return null;
   const wanted = text(value, 80);
   if (!wanted) return null;
   if (!(await hotelReservationsTableExists(env))) return null;

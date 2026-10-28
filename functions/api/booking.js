@@ -375,10 +375,35 @@ export async function onRequestDelete({ request, env }) {
   return json({ error:'write-failed' },503);
 }
 
+/* « Retrouver ma réservation » (note 13, booking#2). La page ne garde que les
+ * vingt derniers liens de ce navigateur ; une cliente qui a perdu le sien donne
+ * son code de réservation et le téléphone ou l'e-mail de la réservation. Le lien
+ * ne repart que si les deux concordent. Toute absence répond pareil (rien à
+ * énumérer) et compte contre la limite de débit, comme un jeton inconnu. */
+const BOOKING_CODE = /^[RH]-[0-9A-F]{8}$/;
+async function recoverBooking(request, env, b) {
+  const merchant = str(b?.merchant, 64).toLowerCase();
+  const code = str(b?.code, 24).toUpperCase().replace(/\s+/g, '');
+  const contact = str(b?.contact, 160), key = phoneKey(contact), email = normalizeEmail(contact);
+  const miss = async () => { await limitFail(request, env, 'booking'); return json({ error:'not-found' }, 404); };
+  if (!ID.test(merchant) || !BOOKING_CODE.test(code) || (!key && !email)) return miss();
+  let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' }, 503); }
+  const doc = safeDoc(rows.reservation?.data);
+  let rec = doc.bookings.find((x) => x && x.code === code) || null;
+  if (!rec) { try { rec = await findStayByKey(env, merchant, 'code', code); } catch (_) { return json({ error:'unavailable' }, 503); } }
+  if (!rec || !rec.manageToken || manageExpired(rec)) return miss();
+  const c = rec.customer || {};
+  const same = (key && c.phone && phoneKey(c.phone) === key) || (email && c.email && normalizeEmail(c.email) === email);
+  if (!same) return miss();
+  await limitClear(request, env, 'booking');
+  return json({ ok:true, code:rec.code, manageToken:rec.manageToken, manageUrl:manageUrl(request, merchant, rec.manageToken) });
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
   const limited = await limitCheck(request,env,'booking'); if (limited) return limited;
   let b; try { b=await request.json(); } catch (_) { await limitFail(request,env,'booking'); return json({error:'bad-json'},400); }
+  if (b && b.action === 'recover') return recoverBooking(request, env, b);
   const merchant=str(b?.merchant,64).toLowerCase(), ref=str(b?.ref,80), sid=str(b?.serviceId||b?.roomTypeId,64), asked=str(b?.resourceId,64), startAt=+b?.startAt||0;
   const name=str(b?.customer?.name,100), rawPhone=str(b?.customer?.phone,32), phone=normalizePhone(rawPhone);
   const rawEmail=str(b?.customer?.email,160), email=normalizeEmail(rawEmail), partySize=num(b?.partySize,1,999,1);

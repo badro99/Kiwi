@@ -99,6 +99,10 @@
     "v": "4",
     "sha": "83a4567065245d47"
   },
+  "assets/booking-recover.js": {
+    "v": "1",
+    "sha": "ce114247d94b10d5"
+  },
   "assets/booking-service.js": {
     "v": "2",
     "sha": "3866e9faba9da587"
@@ -112,8 +116,8 @@
     "sha": "1f9bd88ee50ee8a7"
   },
   "assets/booking.css": {
-    "v": "15",
-    "sha": "37a32d31d15b2ec9"
+    "v": "16",
+    "sha": "a6fa0557430482db"
   },
   "assets/booking.js": {
     "v": "45",

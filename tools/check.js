@@ -2221,6 +2221,7 @@ section('Whole-project regressions');
     'booking-truth-test.mjs',
     'booking-mail-test.mjs',
     'booking-lens-browser-test.mjs',
+    'booking-recover-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'lane-c-labels-test.mjs',
     'onboarding-data-test.mjs',

@@ -97,3 +97,6 @@
 .bk-empty[data-stale]{opacity:.4;transition:opacity 160ms}
 
 #booking-app :focus-visible{outline:2px solid var(--atlas);outline-offset:-2px}
+/* Retrouver ma réservation (note 13, booking#2) : sous le message de confiance, dans le panneau sombre. */
+.bk-recover{position:relative;z-index:1;margin-top:18px;font-size:13px;color:var(--inverse-ink)}.bk-recover summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--mint)}.bk-recover summary:focus-visible{outline:2px solid var(--mint);outline-offset:2px;border-radius:6px}.bk-recover form{display:grid;gap:10px;margin-top:6px}.bk-recover label{display:grid;gap:5px;font-size:12px;opacity:.86}.bk-recover input{height:44px;border-radius:10px;border:1px solid var(--inverse-line);background:transparent;color:var(--inverse-ink);padding:0 12px;font:inherit}.bk-recover input:focus-visible{outline:2px solid var(--mint);outline-offset:1px}.bk-recover button{height:44px;border:0;border-radius:999px;background:var(--mint);color:var(--riad);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}.bk-recover button:disabled{opacity:.6}.bk-recover-msg{min-height:1em;margin:0;font-size:12px;opacity:.86;max-width:none}
+@media(max-width:760px){.bk-recover{margin-top:14px}}
