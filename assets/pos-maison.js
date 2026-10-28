@@ -1,6 +1,6 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=22';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=22';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=22';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=25';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=25';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=25';
 
   'use strict';
 
@@ -2115,11 +2115,11 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
               amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
             }); if (res && res.client && !res.replayed) pts = Math.max(0, (Number(res.client.points) || 0) - ptsBefore); } catch (_) {}
-            // La récompense est portée : on brûle les points (KiwiClients.redeem
-            // retire le seuil / réinitialise la carte). Après recordPurchase, pour
-            // que l'achat compte d'abord, la récompense se déduise ensuite.
+            // La récompense est portée : on retire le seuil (KiwiClients.redeem),
+            // après recordPurchase pour que l'achat compte d'abord. Sans réservation,
+            // LA VENTE nomme la remise · assets/loyalty-reward.js
             if (rewardUsed && window.KiwiClients.redeem) {
-              try { window.KiwiClients.redeem(c.id, null, t.reward && t.reward.reservation); } catch (_) {}
+              try { window.KiwiClients.redeem(c.id, null, (t.reward && t.reward.reservation) || { ref: window.KiwiClients.redemptionRef(c.id, sale.syncId || sale.id) }); } catch (_) {}
             }
           }
           if (!useKiwiCl()) {

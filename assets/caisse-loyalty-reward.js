@@ -76,7 +76,11 @@
       if (pct) return { ready: ready, kind: 'pct', value: Number(pct[1].replace(',', '.')), label: txt };
       var mad = txt.match(/(\d+(?:[.,]\d+)?)\s*(?:MAD|DH|dh|درهم)/);
       if (mad) return { ready: ready, kind: 'amount', value: Number(mad[1].replace(',', '.')), label: txt };
-      return { ready: ready, kind: 'pct', value: 10, label: txt };
+      /* Ni pourcentage ni montant : le commerçant a écrit un cadeau (« un thé
+         offert »). On rendait 10 % — un chiffre qu'il n'a jamais écrit, sur
+         toute l'addition. C'est « offert » qu'il a écrit : une unité de la note,
+         la moins chère, comme une carte à tampons. */
+      return { ready: ready, kind: 'free', label: txt, item: '' };
     }
     var product = cfg.model === 'product';
     var label = String((product ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward)) || '1 offert');

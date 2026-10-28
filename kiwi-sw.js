@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/librairie-loyalty.js?v=7',
+  '/assets/librairie-loyalty.js?v=8',
   '/assets/money-cents.js?v=4',
   '/assets/pages-pro/boutique-promos-returns.js?v=11',
   '/assets/day-report-conflicts.js?v=2',
@@ -116,7 +116,7 @@ var SHELL = [
   '/assets/caisse/inventory.js?v=4',
   '/assets/caisse/offline.js?v=3',
   '/assets/caisse-app.js?v=32',
-  '/assets/caisse-loyalty-reward.js?v=4',
+  '/assets/caisse-loyalty-reward.js?v=5',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -376,7 +376,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=23',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=84',
+  '/assets/caisse-lang.js?v=85',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=8',
@@ -404,8 +404,8 @@ var SHELL = [
   '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
-  '/assets/clients-store.js?v=32',
-  '/assets/clients-book.js?v=53',
+  '/assets/clients-store.js?v=34',
+  '/assets/clients-book.js?v=54',
   '/assets/clients-directory.js?v=30',
   '/assets/customer-retention.js?v=16',
   '/assets/menu-catalog.js?v=41',
@@ -450,8 +450,8 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=24',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=19',
-  '/assets/pos-dispatch.js?v=239',
+  '/assets/pos-sale.js?v=20',
+  '/assets/pos-dispatch.js?v=241',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -519,17 +519,17 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=170',
-  '/assets/pos-boutique/sales.js?v=72',
+  '/assets/pos-boutique.css?v=172',
+  '/assets/pos-boutique/sales.js?v=74',
   '/assets/pos-boutique/ticket-owner.js?v=2',
   '/assets/pos-boutique/ticket-remise.js?v=2',
   '/assets/pos-boutique/search.js?v=5',
   '/assets/pos-boutique/inv-tools.js?v=7',
   '/assets/pos-boutique/inv-moves.js?v=4',
   '/assets/pos-boutique/kit-2027.js?v=14',
-  '/assets/pos-boutique/checkout.js?v=72',
-  '/assets/pos-boutique/inventory.js?v=72',
-  '/assets/pos-boutique.js?v=170',
+  '/assets/pos-boutique/checkout.js?v=74',
+  '/assets/pos-boutique/inventory.js?v=74',
+  '/assets/pos-boutique.js?v=172',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -551,8 +551,8 @@ var SHELL = [
   '/assets/pos-epicerie.js?v=28',
   '/assets/pos-pharmacie.css?v=9',
   '/assets/pos-pharmacie.js?v=9',
-  '/assets/pos-librairie.css?v=17',
-  '/assets/pos-librairie.js?v=17',
+  '/assets/pos-librairie.css?v=18',
+  '/assets/pos-librairie.js?v=18',
   '/assets/pos-fleuriste.css?v=15',
   '/assets/pos-fleuriste.js?v=15',
   '/assets/pos-coiffure.css?v=10',
@@ -561,12 +561,12 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=102',
-  '/assets/pos-maison/sales.js?v=22',
-  '/assets/pos-maison/checkout.js?v=22',
+  '/assets/pos-maison.css?v=104',
+  '/assets/pos-maison/sales.js?v=25',
+  '/assets/pos-maison/checkout.js?v=25',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=22',
-  '/assets/pos-maison.js?v=102',
+  '/assets/pos-maison/inventory.js?v=25',
+  '/assets/pos-maison.js?v=104',
   '/assets/caisse-pairing.js?v=52',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

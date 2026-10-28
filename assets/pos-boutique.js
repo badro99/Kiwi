@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=72';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=72';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=72';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=74';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=74';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=74';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=14';
 
@@ -2038,11 +2038,11 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
               amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
             }); if (res && res.client && !res.replayed) pts = Math.max(0, (Number(res.client.points) || 0) - ptsBefore); } catch (_) {}
-            // La récompense est portée : on brûle les points (KiwiClients.redeem
-            // retire le seuil / réinitialise la carte). Après recordPurchase, pour
-            // que l'achat compte d'abord, la récompense se déduise ensuite.
+            // La récompense est portée : on retire le seuil (KiwiClients.redeem),
+            // après recordPurchase pour que l'achat compte d'abord. Sans réservation,
+            // LA VENTE nomme la remise · assets/pos-sale.js › rewardRead
             if (rewardUsed && window.KiwiClients.redeem) {
-              try { window.KiwiClients.redeem(c.id, null, t.reward && t.reward.reservation); } catch (_) {}
+              try { window.KiwiClients.redeem(c.id, null, (t.reward && t.reward.reservation) || { ref: window.KiwiClients.redemptionRef(c.id, sale.syncId || sale.id) }); } catch (_) {}
             }
           }
           if (!useKiwiCl()) {

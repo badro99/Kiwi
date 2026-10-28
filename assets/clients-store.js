@@ -604,6 +604,9 @@
     var rec = d.list.filter(function (c) { return c.id === id; })[0];
     if (!rec) return null;
     if (!loyaltyOn(book)) return rec;       // aucun programme : rien à remettre
+    /* UNE VENTE, UNE RÉCOMPENSE · le récit est dans assets/pos-sale.js › rewardRead */
+    var ref = (reservation && reservation.ref) || redemptionRef(id), seen = rec.rewardRefs || [];
+    if (seen.indexOf(ref) !== -1 || redemptionRead(book).some(function (e) { return e.ref === ref; })) return rec;
     var cfg = config(book);
     var pointsDelta = 0, stampsDelta = 0;
     if (cfg.model === 'amount') {
@@ -619,7 +622,6 @@
     }
     rec.updated = now();
     writeBook(d, book);
-    var ref = reservation ? reservation.ref : redemptionRef(id);
     var event = { ref: ref, clientId: id, points: pointsDelta, stamps: stampsDelta, created: rec.updated };
     if (!reservation || !reservation.accepted) {
       redemptionAdd(book, event);
@@ -883,9 +885,7 @@
       }
     } catch (_) {}
   }
-  function redemptionRef(id) {
-    return 'redemption:' + id + ':' + now() + ':' + Math.abs(hash(String(Math.random()))).toString(36);
-  }
+  function redemptionRef(id, saleKey) { var k = String(saleKey == null ? '' : saleKey).replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56); return (k ? 'redemption:' + id + ':s:' + k : 'redemption:' + id + ':' + now() + ':' + Math.abs(hash(String(Math.random()))).toString(36)).slice(0, 96); }
   function reserveRedemption(id, book, event) {
     book = book || bookId();
     event = event || { ref: redemptionRef(id), clientId: id };

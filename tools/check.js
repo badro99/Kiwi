@@ -1534,6 +1534,9 @@ section('Whole-project regressions');
     'loyalty-reward-rounding-test.mjs',
     'loyalty-refused-redemption-test.mjs',
     'loyalty-reserve-test.mjs',
+    /* Une vente, une récompense : la référence porte la vente, et les douze
+       comptoirs qui encaissent par KiwiPosSale la donnent sans geste à la main. */
+    'loyalty-one-sale-one-reward-test.mjs',
     'repeat-sale-guard-test.mjs',
     'shift-age-nudge-test.mjs',
     'audit-remediation-dashboard-test.mjs',

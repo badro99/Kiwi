@@ -168,7 +168,13 @@
       try { const ps = window.KiwiPosSale; if (ps && ps.attachedClient && ps.attachedClient()) ps.attachClient(null); } catch (_) {}
       const fresh = kc.get(cu.id) || {};
       const n = Math.max(0, (p.amount ? fresh.points : fresh.stamps) - (mark ? (p.amount ? mark.points : mark.stamps) : 0)) || 0;
-      if (sale.rewardUsed && kc.redeem) { try { kc.redeem(cu.id); } catch (_) {} }
+      /* Nommée d'après le ticket : deux passages sur la même vente ne retirent
+         les points qu'une fois (voir clients-store › redemptionRef). */
+      if (sale.rewardUsed && kc.redeem) {
+        try {
+          kc.redeem(cu.id, null, kc.redemptionRef ? { ref: kc.redemptionRef(cu.id, sale.ref) } : null);
+        } catch (_) {}
+      }
       return n ? ` · +${n} ${p.amount ? 'pts' : plural(n, 'tampon', 'tampons')} fidélité` : '';
     }
 

@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync('assets/clients-book.js', 'utf8');
-const handler = source.match(/if \(rewardReady\) sh\.querySelector\('#kcb-redeem'\)\.onclick = (function \(\) \{[\s\S]*?\n    \});/)[1];
+/* Le bouton manuel ne s'affiche plus que LOIN d'une vente : les douze comptoirs
+ * KiwiPosSale arment la remise sur leur vente, et boutique, maison, librairie et
+ * la caisse restaurant la posent sur leur ticket (assets/loyalty-reward.js). Son
+ * flux — réservation, refus, mise en file — est celui que ce banc tient. */
+const handler = source.match(/if \(rewardReady && !onSale && !ownedByTill\) sh\.querySelector\('#kcb-redeem'\)\.onclick = (function \(\) \{[\s\S]*?\n    \});/)[1];
 const languageSource = fs.readFileSync('assets/caisse-lang.js', 'utf8');
 const element = () => ({ style: {}, dataset: {}, classList: { add() {}, toggle() {}, contains() { return false; } },
   attributes: [], childNodes: [], children: [], setAttribute() {}, getAttribute() { return null; },
@@ -18,8 +22,10 @@ vm.runInNewContext(languageSource, { window: langWindow, document, localStorage:
 const language = langWindow.KiwiCaisseLang;
 for (const locale of ['fr', 'en', 'ar']) {
   language.set(locale);
-  for (const text of ['Confirmation en cours…', 'Récompense refusée',
-    'Récompense offerte', 'Carte réinitialisée.', 'La carte est conservée.', 'Carte réinitialisée. Confirmation au retour du réseau.']) {
+  /* « Carte réinitialisée » a disparu : le seuil est retiré, le reste des points
+     demeure, et le message dit le chiffre exact (« −300 points retirés »). */
+  for (const text of ['Confirmation en cours…', 'Récompense refusée', 'Récompense offerte',
+    'retirés', 'La carte est conservée.', 'confirmation au retour du réseau']) {
     if (locale !== 'fr') assert.notEqual(language.tr(text), text, locale + ': translated redemption state');
   }
 }
@@ -45,6 +51,9 @@ for (const outcome of ['accepted', 'refused', 'retry', 'network']) {
         burns++;
       } },
     window: { KiwiCaisseLang: { tr: x => x } },
+    /* Le gestionnaire lit la récompense de la fermeture : son libellé, son prix,
+       et le mot que la fiche emploie pour le dire. */
+    tr: x => x, rw: { label: '−10 %', points: 300 }, cost: '−300 pts',
     renderList() {}, openDetail() {}, toast: (...args) => messages.push(args),
   });
   const click = vm.runInContext('(' + handler + ')', context);

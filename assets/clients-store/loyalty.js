@@ -170,6 +170,9 @@
     var rec = d.list.filter(function (c) { return c.id === id; })[0];
     if (!rec) return null;
     if (!loyaltyOn(book)) return rec;       // aucun programme : rien à remettre
+    /* UNE VENTE, UNE RÉCOMPENSE · le récit est dans assets/pos-sale.js › rewardRead */
+    var ref = (reservation && reservation.ref) || redemptionRef(id), seen = rec.rewardRefs || [];
+    if (seen.indexOf(ref) !== -1 || redemptionRead(book).some(function (e) { return e.ref === ref; })) return rec;
     var cfg = config(book);
     var pointsDelta = 0, stampsDelta = 0;
     if (cfg.model === 'amount') {
@@ -185,7 +188,6 @@
     }
     rec.updated = now();
     writeBook(d, book);
-    var ref = reservation ? reservation.ref : redemptionRef(id);
     var event = { ref: ref, clientId: id, points: pointsDelta, stamps: stampsDelta, created: rec.updated };
     if (!reservation || !reservation.accepted) {
       redemptionAdd(book, event);

@@ -263,6 +263,8 @@
       '.kcb-progtxt{font-size:.82rem;color:rgba(10,15,13,.6);}',
       '.kcb-reward{display:flex;align-items:center;gap:10px;background:var(--mint-soft,#E6FbEF);border:1px solid var(--atlas,#0B6E4F);border-radius:14px;padding:13px 15px;margin-bottom:14px;color:#075238;font-weight:600;font-size:.9rem;}',
       '.kcb-reward svg{width:20px;height:20px;color:var(--atlas,#0B6E4F);flex:none;}',
+      '.kcb-reward .cost{margin-inline-start:auto;flex:none;font-variant-numeric:tabular-nums;font-size:.82rem;padding:3px 9px;border-radius:999px;background:rgba(7,82,56,.1);}',
+      '.kcb-reward-where{margin-top:8px;padding:11px 14px;border-radius:14px;border:1px dashed var(--n-300,#D8D3C8);color:var(--n-600,#5B5A53);font-size:.84rem;font-weight:500;}',
       '.kcb-kpis{display:flex;gap:10px;margin-bottom:14px;}',
       '.kcb-kpi{flex:1;background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:14px;padding:13px 14px;text-align:center;}',
       '.kcb-kpi .v{font-size:1.25rem;font-weight:700;}.kcb-kpi .l{font-size:.72rem;color:rgba(10,15,13,.64);margin-top:2px;}',
@@ -941,6 +943,10 @@
       ? '<button class="kcb-btn ' + (isAttached ? 'ghost' : 'primary') + '" id="kcb-attach" style="display:block;width:100%;margin:0 0 14px">' +
           esc(isAttached ? target.off : target.on) + '</button>'
       : '';
+    /* Ce que la carte donne, ce qu'elle COÛTE, et qui la donne · assets/pos-sale.js › rewardRead */
+    var PS = window.KiwiPosSale, rw = PS && PS.rewardRead && rewardReady ? PS.rewardRead(c, cfg) : null;
+    var cost = !rw ? '' : '−' + (rw.points ? fmt(rw.points) + ' pts' : rw.stamps + ' tampons');
+    var onSale = rw && PS.rewardOnSale ? PS.rewardOnSale(c.id) : null, ownedByTill = !!rw && !onSale && PS.rewardTillOwns(!!(target && target.pos === false));
     /* The note the team should read before serving: under the name, not in
        the list of details at the bottom, and written from here. */
     var noteBlock = '<div class="kcb-note" id="kcb-note"><div class="rl"><span>' + tr('Note pour l’équipe') + '</span>' +
@@ -984,7 +990,7 @@
         '<button class="kcb-x" id="kcb-d-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
       /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
          du commerçant, elle doit traverser telle quelle. */
-      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
+      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((rw && rw.label) || (cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + (cost ? '<span class="cost">' + esc(cost) + '</span>' : '') + '</div>' : '') +
       attachBlock +
       noteBlock +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
@@ -999,7 +1005,13 @@
       historyBlock +
       '<div id="kcb-credit-history"><div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Chargement du registre…</div></div>' +
       recordBlock +
-      (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="display:block;width:100%;margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
+      /* « Offrir la récompense · réinitialiser » mentait deux fois, et sur les douze
+         comptoirs KiwiPosSale c'était le seul chemin. La vente la porte désormais. */
+      (!rewardReady ? ''
+        : ownedByTill ? '<div class="kcb-reward-where"><span>' + tr('À donner sur le ticket, au paiement') + '</span> · ' + esc(cost) + '</div>'
+        : '<button class="kcb-btn ' + (onSale && onSale.armed ? 'ghost' : 'primary') + '" id="kcb-redeem" style="display:block;width:100%;margin-top:8px">' +
+          (onSale && onSale.armed ? tr('Retirer de cette vente')
+            : tr(onSale ? 'Utiliser sur cette vente' : 'Utiliser la récompense') + ' · ' + esc(cost)) + '</button>') +
       '<div class="kcb-actions"><button data-activation=write class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +
         '<button class="kcb-btn ghost" id="kcb-d-back">Retour</button></div>'
     );
@@ -1049,11 +1061,16 @@
       toast('Achat enregistré', res && res.rewardReady ? '🎁 Récompense atteinte !' : (amt ? fmt(amt) + ' MAD' : '+1 tampon'));
     };
     var activeRedemption = redemptionRequests[KC.bookId() + ':' + c.id];
-    if (rewardReady && activeRedemption && activeRedemption.pending) {
+    if (rewardReady && !onSale && !ownedByTill && activeRedemption && activeRedemption.pending) {
       sh.querySelector('#kcb-redeem').disabled = true;
       sh.querySelector('#kcb-redeem').textContent = window.KiwiCaisseLang ? window.KiwiCaisseLang.tr('Confirmation en cours…') : 'Confirmation en cours…';
     }
-    if (rewardReady) sh.querySelector('#kcb-redeem').onclick = function () {
+    if (rewardReady && onSale) sh.querySelector('#kcb-redeem').onclick = function () {
+      var was = onSale.armed;
+      onSale.arm(!was); renderList(); openDetail(c.id);   /* rien n'est retiré ici : l'encaissement le fera */
+      toast(tr(was ? 'Récompense retirée du ticket' : 'Récompense sur cette vente'), was ? '' : cost + tr(' à l\u2019encaissement'));
+    };
+    if (rewardReady && !onSale && !ownedByTill) sh.querySelector('#kcb-redeem').onclick = function () {
       var book = KC.bookId(), key = book + ':' + c.id;
       var request = redemptionRequests[key];
       if (request && request.pending) return;
@@ -1074,8 +1091,9 @@
         if (result.accepted) KC.redeem(c.id, book, result);
         else if (queued) KC.redeem(c.id, book, { ref: request.ref });
         renderList(); openDetail(c.id);
-        toast(result.refused ? 'Récompense refusée' : 'Récompense offerte',
-          result.accepted ? 'Carte réinitialisée.' : result.refused ? 'La carte est conservée.' : 'Carte réinitialisée. Confirmation au retour du réseau.');
+        var took = cost + ' ' + tr('retirés');   /* et non « Carte réinitialisée » : le seuil part, le reste demeure */
+        toast(result.refused ? 'Récompense refusée' : 'Récompense offerte', result.refused ? 'La carte est conservée.'
+          : result.accepted ? took : took + ' · ' + tr('confirmation au retour du réseau'));
       });
     };
   }

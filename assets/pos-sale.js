@@ -267,14 +267,114 @@
   }
   function attachClient(c) {
     saleClient = c && c.id ? { id: String(c.id).slice(0, 80), name: String(c.name || c.phone || '').slice(0, 80) } : null;
+    /* Changer de client — ou le détacher — désarme la récompense : elle est
+       demandée pour une personne et pour une vente, jamais héritée. */
+    armed = null;
     announceClient();
     return saleClient;
   }
   function attachedClient() { return saleClient; }
+  /* ── LA RÉCOMPENSE SUR LES DOUZE AUTRES COMPTOIRS ───────────────────────
+   * Boutique, maison et la caisse restaurant posent la remise sur le ticket et
+   * brûlent la carte toutes seules. Les douze métiers qui encaissent par
+   * record() n'avaient rien : une carte pleine ne pouvait être remise qu'en
+   * ouvrant la fiche du client et en appuyant sur « Offrir la récompense ·
+   * réinitialiser ». Un geste à la main, oublié la moitié du temps, et le seul
+   * chemin qui pouvait retirer les points deux fois.
+   *
+   * Ici la récompense s'ARME sur le client attaché : rien n'est retiré tant que
+   * l'argent n'est pas rentré. La vente encaissée la brûle, nommée d'après elle
+   * — donc une vente, une récompense, quoi qu'il arrive ensuite. Un client
+   * détaché désarme : on ne retire jamais des points pour une remise qui n'a
+   * pas été donnée.
+   *
+   * Ce que ces comptoirs ne savent pas encore faire : baisser leur propre
+   * total. Aucun n'a de remise (pos-epicerie.js ne connaît pas le mot). Le
+   * montant est donc ANNONCÉ au caissier, qui l'applique à la main ; leur
+   * donner une vraie ligne de remise est un chantier à part. */
+  var armed = null;   /* { clientId, label, kind, value, points, stamps } */
+  var OWNS_REWARD = /(^|\s)is-pos-(boutique|maison|librairie)(\s|$)/;
+
+  /* CE QUE LA CARTE DONNE, CE QU'ELLE COÛTE.
+   * La récompense est une phrase écrite par le commerçant — « −12 % », « 1
+   * offert », « 50 MAD de remise » — que chaque écran relisait à sa façon : la
+   * caisse restaurant rendait même 10 % quand la phrase ne portait aucun chiffre
+   * (« un thé offert »), une remise que personne n'avait écrite. Et le COÛT en
+   * points n'était dit nulle part, alors que c'est lui que le commerçant cherche
+   * au moment de donner la remise : la fiche annonçait « réinitialiser » quand le
+   * moteur retire le seuil, si bien qu'un client à 1 289 points croyait tout
+   * perdre au lieu d'en garder 289.
+   * `kind: 'gift'` existe pour ça : on n'invente pas de chiffre là où il n'y en
+   * a pas. Lecture pure, lue aussi par la fiche client (clients-book.js). */
+  function rewardRead(c, cfg) {
+    if (!c || !cfg || !cfg.model || cfg.auto) return null;
+    var n = function (v, d) { var x = Math.round(Number(v)); return x > 0 ? x : d; };
+    var out = { ready: false, kind: 'gift', value: 0, label: '', item: '', points: 0, stamps: 0 };
+    if (cfg.model === 'amount') {
+      out.points = n(cfg.amount && cfg.amount.threshold, 100);
+      out.ready = (Number(c.points) || 0) >= out.points;
+      out.label = String((cfg.amount && cfg.amount.reward) || '−10 %');
+      var pct = out.label.match(/(\d+(?:[.,]\d+)?)\s*%/);
+      if (pct) { out.kind = 'percent'; out.value = Number(pct[1].replace(',', '.')); return out; }
+      var mad = out.label.match(/(\d+(?:[.,]\d+)?)\s*(?:MAD|DH|dh|درهم)/);
+      if (mad) { out.kind = 'amount'; out.value = Number(mad[1].replace(',', '.')); }
+      return out;
+    }
+    var product = cfg.model === 'product';
+    out.kind = 'free';
+    out.stamps = n(product ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target), 10);
+    out.ready = (Number(c.stamps) || 0) >= out.stamps;
+    out.label = String((product ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward)) || '1 offert');
+    out.item = product ? String((cfg.product && cfg.product.item) || '') : '';
+    return out;
+  }
+  /* QUI DONNE LA REMISE. Boutique, maison, librairie et la caisse restaurant la
+     posent sur leur ticket ; la fiche client ne doit pas offrir un second bouton
+     pour les mêmes points, sinon deux chemins retirent deux fois (Amira Café,
+     28/10/2026). `hasNote` est vrai quand la caisse restaurant tient une note. */
+  function rewardTillOwns(hasNote) {
+    try {
+      if (window.KiwiSaleReward || hasNote) return true;
+      return OWNS_REWARD.test((document.body && document.body.className) || '');
+    } catch (_) { return false; }
+  }
+  /* La vente en cours, quand c'est bien CE client qui y est attaché. */
+  function rewardOnSale(id) {
+    try {
+      if (OWNS_REWARD.test((document.body && document.body.className) || '')) return null;
+      var a = attachedClient();
+      if (!a || a.id !== id || !rewardOf(id)) return null;
+      return { armed: !!armedReward(), arm: function (on) { return armReward(on); } };
+    } catch (_) { return null; }
+  }
+  function rewardOf(id) {
+    var KC = window.KiwiClients;
+    if (!KC || !KC.get || !KC.config || !id) return null;
+    try { var rw = rewardRead(KC.get(id), KC.config()); return rw && rw.ready ? rw : null; } catch (_) { return null; }
+  }
+  /* Ce que le comptoir peut proposer pour le client de la vente en cours. */
+  function readyReward() {
+    var c = saleClient;
+    return c ? rewardOf(c.id) : null;
+  }
+  function armedReward() {
+    var c = saleClient;
+    return (armed && c && armed.clientId === c.id) ? armed : null;
+  }
+  function armReward(on) {
+    var c = saleClient;
+    var rw = on && c ? rewardOf(c.id) : null;
+    armed = rw ? { clientId: c.id, label: rw.label, kind: rw.kind, value: rw.value,
+      points: rw.points, stamps: rw.stamps } : null;
+    announceClient();
+    return armed;
+  }
   function creditClient(entry) {
     var c = saleClient;
     if (!c) return;
+    var give = armedReward();
     saleClient = null;
+    armed = null;
     announceClient();
     var KC = window.KiwiClients;
     if (!entry || !KC || typeof KC.recordPurchase !== 'function') return;
@@ -286,6 +386,13 @@
         items: (entry.lines || []).map(function (l) { return { name: l.name, qty: l.qty, total: l.total }; }),
       });
       if (res && !res.replayed) entry.clientId = c.id;
+    } catch (_) {}
+    /* L'achat d'abord, la remise ensuite : la visite doit compter avant que la
+       carte ne reparte, sinon le passage qui la remplit se perd. */
+    if (!give || typeof KC.redeem !== 'function' || typeof KC.redemptionRef !== 'function') return;
+    try {
+      KC.redeem(c.id, null, { ref: KC.redemptionRef(c.id, entry.saleId || entry.ref) });
+      entry.rewardLabel = give.label;
     } catch (_) {}
   }
 
@@ -817,6 +924,8 @@
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
     attachClient: attachClient, attachedClient: attachedClient,
+    readyReward: readyReward, armReward: armReward, armedReward: armedReward,
+    rewardRead: rewardRead, rewardTillOwns: rewardTillOwns, rewardOnSale: rewardOnSale,
     ingest: ingest, sync: sync, activate: activate, deactivate: deactivate,
     replayHeld: replayHeld, heldCount: heldCount,
   };

@@ -1200,7 +1200,7 @@
       const rewardUsed = !!cu && cartRemise(c) > 0;
       const mark = cu ? LOY.begin(cu) : null;
       postDay(total, method, cartLabel(c), c.num, saleLines(c, total));
-      const earnMsg = cu ? LOY.finish(cu, mark, { total, rewardUsed, items: c.lines.map((l) => ({ name: ITEM[l.key].title, qty: l.qty })) }) : '';
+      const earnMsg = cu ? LOY.finish(cu, mark, { total, rewardUsed, ref: c.num, items: c.lines.map((l) => ({ name: ITEM[l.key].title, qty: l.qty })) }) : '';
       if (pvReal() && WS()) c.lines.forEach((l) => { try { WS().catalog.sell(l.key, l.qty, c.num); } catch (_) {} });
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;

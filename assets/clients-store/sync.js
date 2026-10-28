@@ -216,9 +216,7 @@
       }
     } catch (_) {}
   }
-  function redemptionRef(id) {
-    return 'redemption:' + id + ':' + now() + ':' + Math.abs(hash(String(Math.random()))).toString(36);
-  }
+  function redemptionRef(id, saleKey) { var k = String(saleKey == null ? '' : saleKey).replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56); return (k ? 'redemption:' + id + ':s:' + k : 'redemption:' + id + ':' + now() + ':' + Math.abs(hash(String(Math.random()))).toString(36)).slice(0, 96); }
   function reserveRedemption(id, book, event) {
     book = book || bookId();
     event = event || { ref: redemptionRef(id), clientId: id };

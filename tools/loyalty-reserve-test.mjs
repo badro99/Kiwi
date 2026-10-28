@@ -75,6 +75,8 @@ for (const name of ['boutique','maison']) {
   const paymentProceeds = beforePaid ? await beforePaid() : true;
   assert.equal(paymentProceeds, false, `${name}: final refusal must prevent sale commitment`);
   assert.match(source, /opts.beforePaid && !await opts.beforePaid\(\)/);
-  assert.match(source, /redeem\(c.id, null, t.reward && t.reward.reservation\)/);
+  /* La réservation acquittée garde sa référence ; sans réservation c'est LA VENTE
+     qui nomme la remise, pour qu'un rejeu ne retire pas les points deux fois. */
+  assert.match(source, /redeem\(c\.id, null, \(t\.reward && t\.reward\.reservation\) \|\| \{ ref: window\.KiwiClients\.redemptionRef\(c\.id, sale\.syncId \|\| sale\.id\) \}\)/);
 }
 console.log('PASS: loyalty reservation acceptance, final refusals, transient failures, timeout, offline, demo, stable queue ref and both till gates');

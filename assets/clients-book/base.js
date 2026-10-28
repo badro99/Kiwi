@@ -263,6 +263,8 @@
       '.kcb-progtxt{font-size:.82rem;color:rgba(10,15,13,.6);}',
       '.kcb-reward{display:flex;align-items:center;gap:10px;background:var(--mint-soft,#E6FbEF);border:1px solid var(--atlas,#0B6E4F);border-radius:14px;padding:13px 15px;margin-bottom:14px;color:#075238;font-weight:600;font-size:.9rem;}',
       '.kcb-reward svg{width:20px;height:20px;color:var(--atlas,#0B6E4F);flex:none;}',
+      '.kcb-reward .cost{margin-inline-start:auto;flex:none;font-variant-numeric:tabular-nums;font-size:.82rem;padding:3px 9px;border-radius:999px;background:rgba(7,82,56,.1);}',
+      '.kcb-reward-where{margin-top:8px;padding:11px 14px;border-radius:14px;border:1px dashed var(--n-300,#D8D3C8);color:var(--n-600,#5B5A53);font-size:.84rem;font-weight:500;}',
       '.kcb-kpis{display:flex;gap:10px;margin-bottom:14px;}',
       '.kcb-kpi{flex:1;background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:14px;padding:13px 14px;text-align:center;}',
       '.kcb-kpi .v{font-size:1.25rem;font-weight:700;}.kcb-kpi .l{font-size:.72rem;color:rgba(10,15,13,.64);margin-top:2px;}',
