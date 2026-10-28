@@ -2,30 +2,11 @@
  * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.
  * Classic lexical adapter intentionally preserves original function bodies, including assignments. */
 KiwiOrderMenu.orderProParts.define('cart', ["$","cart","describeOptions","escapeHtml","money","nameOf","showToast","t"], function (scope) {
+  const draft = KiwiOrderMenu.orderProParts.extension('draft', 'create')(scope);
   with (scope) {
-    function lineKey(id, options, note) {
-      const parts = [id];
-      const keys = Object.keys(options || {}).sort();
-      for (const k of keys) {
-        const v = options[k];
-        if (Array.isArray(v)) {
-          if (v.length) parts.push(`${k}=${v.slice().sort().join('+')}`);
-        } else if (v != null && v !== '') {
-          parts.push(`${k}=${v}`);
-        }
-      }
-      if (note) parts.push(`note=${note}`);
-      return parts.join('|');
-    }
+    function lineKey(id, options, note) { return draft.lineKey(id, options, note); }
 
-    function totals() {
-      let count = 0, total = 0;
-      cart.forEach(line => {
-        count += line.qty;
-        total += line.qty * line.unitPrice;
-      });
-      return { count, total };
-    }
+    function totals() { return draft.totals(); }
 
     function refreshCartUI() {
       const { count, total } = totals();
@@ -68,13 +49,7 @@ KiwiOrderMenu.orderProParts.define('cart', ["$","cart","describeOptions","escape
 
     function addLineToCart(line) {
       if (globalThis.KiwiOrderMenu && !KiwiOrderMenu.ordering()) return;
-      const key = lineKey(line.id, line.options, line.note);
-      const addQty = Math.max(1, Number(line && line.qty) || 1);
-      if (cart.has(key)) {
-        cart.get(key).qty += addQty;
-      } else {
-        cart.set(key, { ...line, qty: addQty });
-      }
+      draft.addDraftLine(line);
       refreshCartUI();
       showToast(`${nameOf(line.id)} · ${t('toast_added')}`);
       if (globalThis.KiwiGuest) globalThis.KiwiGuest.onAdded(line);
@@ -82,15 +57,13 @@ KiwiOrderMenu.orderProParts.define('cart', ["$","cart","describeOptions","escape
 
     function decFromCart(key) {
       if (!cart.has(key)) return;
-      const line = cart.get(key);
-      line.qty -= 1;
-      if (line.qty <= 0) cart.delete(key);
+      draft.decDraftLine(key);
       refreshCartUI();
     }
 
     function incFromCart(key) {
       if (!cart.has(key)) return;
-      cart.get(key).qty += 1;
+      draft.incDraftLine(key);
       refreshCartUI();
     }
 

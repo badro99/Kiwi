@@ -19,7 +19,7 @@
     "assets/serveur-app.js": 3372,
     "assets/restaurant-menu-workspace.js": 1354,
     "assets/live-link.js": 1519,
-    "assets/orderpro-page.js": 1716,
+    "assets/orderpro-page.js": 1703,
     "assets/boutique-catalog.js": 1366,
     "assets/features.js": 1447,
     "assets/clients-store.js": 1101,
@@ -124,7 +124,6 @@
   "frozen": {
     "assets/pos-boutique.js": 2955,
     "kiwi-caisse.html": 2029,
-    "assets/orderpro-page.js": 1781,
     "assets/clients-store.js": 1188,
     "assets/caisse-pairing.js": 1284,
     "assets/day-report-dash.js": 1237,
