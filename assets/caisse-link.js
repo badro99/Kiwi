@@ -291,6 +291,10 @@
       'body.design-2026 #kcl-chip[data-docked]{color:var(--riad,#053B2C);background:color-mix(in srgb,var(--riad,#053B2C) 5%,transparent);border-color:color-mix(in srgb,var(--riad,#053B2C) 16%,transparent);}' +
       'body.design-2026 #kcl-chip[data-docked]:hover{background:color-mix(in srgb,var(--riad,#053B2C) 9%,transparent);}' +
       'body.design-2026 #kcl-chip[data-docked][data-state="on"] .kcl-dot{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas,#0B6E4F) 18%,transparent);}' +
+      /* The iOS 27 layer keeps the sidebar opaque black in both themes (design-ios27.css), so there the docked chip goes back to paper on black. */
+      'body.design-2026.design-ios27 #kcl-chip[data-docked]{color:var(--paper,#F7F5F0);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);}' +
+      'body.design-2026.design-ios27 #kcl-chip[data-docked]:hover{background:rgba(255,255,255,.10);}' +
+      'body.design-2026.design-ios27 #kcl-chip[data-docked][data-state="on"] .kcl-dot{background:var(--mint,#7DF2B0);box-shadow:0 0 0 3px rgba(125,242,176,.18);}' +
       '@media (max-width:420px){.kcl-status{padding:13px}.kcl-route{gap:7px}.kcl-node{min-width:50px;font-size:.62rem}.kcl-node-ico{width:34px;height:34px}.kcl-track{min-width:28px}.kcl-state{gap:8px}}' +
       '@media (prefers-reduced-motion:reduce){.kcl-status.kcl-arrive .kcl-track::before{animation:none;right:0}.kcl-status.kcl-arrive .kcl-track-dot{animation:none;left:100%}.kcl-status.kcl-arrive .kcl-node:last-child .kcl-node-ico{animation:none}.kcl-pulse{animation:none}}';
     document.head.appendChild(s);

@@ -1,8 +1,11 @@
 /* Planning payroll-view. Exports: renderHoursPane, updateHourTotals, payTiles, payrollAccess, renderPayrollBody.
- * Reads injected helpers: AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, deferredMark, esc, fmtHours, fmtMad, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang.
- * Reads window: KiwiConfig, KiwiNumber, KiwiVenue, __kiwiRole, __kiwiTeamV2. Mutable UI state is private to this factory. */
-export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, deferredMark, esc, fmtHours, fmtMad, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang }) {
+ * Reads injected helpers: AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, dateLocale, deferredMark, esc, fmtHours, fmtMad, fmtPay, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payCents, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang.
+ * Reads window: KiwiConfig, KiwiVenue, __kiwiRole, __kiwiTeamV2. Mutable UI state is private to this factory. */
+export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, dateLocale, deferredMark, esc, fmtHours, fmtMad, fmtPay, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payCents, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang }) {
   let payTab = 'planning';
+  /* La paie est calculée au centime (hourlyPayFor) et affichée au centime par
+     fmtPay (équipe, centimes entiers), comme la grille de planning : une
+     semaine, un seul total. */
 
   function renderHoursPane(T, venue, venueType, members) {
     const root = window.__kiwiTeamV2;
@@ -16,11 +19,11 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
     });
 
     const locked = root.periodLocked;
-    let grandHours = 0, grandPay = 0, anyRated = false;
+    let grandHours = 0, grandCents = 0, anyRated = false;
 
     const headDays = period.days.map(d => {
       const dt = new Date(d);
-      const dayLbl = dt.toLocaleDateString(trLang() === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short' });
+      const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
       return `<th class="kt-day-head"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span></th>`;
     }).join('');
 
@@ -40,7 +43,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
       const rated = (+m.hourlyRate || 0) > 0;
       const pay = rated ? hourlyPayFor(m, total, period.days) : 0;
       grandHours += total;
-      grandPay += pay;
+      grandCents += payCents(pay);
       if (rated) anyRated = true;
       const tone = m.avatarTone || 'a';
       return `
@@ -54,7 +57,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(total)}</b></td>
-          <td class="kt-h-pay mono">${rated ? `<b>${(window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
+          <td class="kt-h-pay mono">${rated ? `<b>${fmtPay(pay)}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
         </tr>
       `;
     }).join('');
@@ -99,7 +102,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
-                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${(window.KiwiNumber?.format(grandPay, { maximumFractionDigits: 0 }) ?? grandPay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
+                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${fmtPay(grandCents / 100)}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
               </tr>
             </tfoot>
           </table>
@@ -131,9 +134,10 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
       period.days.forEach((d) => {
         if (!row[d]) return;
         if (!hours[m.id]) hours[m.id] = {};
-        // Deux décimales : une saisie libre tombe sur 7,25 ou 7,75, pas sur un
-        // 7,333333 qui s'afficherait tel quel dans la grille des heures.
-        hours[m.id][d] = Math.round(shiftHours(row[d]) * 100) / 100;
+        // Exact, à la minute : arrondir au centième d'heure payait 7,17 h pour
+        // 7 h 10 (_worked-hours.js). La grille affiche en heures et minutes
+        // (fmtHours) ; seul le calcul final de la paie arrondit, au centime.
+        hours[m.id][d] = shiftHours(row[d]);
         n++;
       });
     });
@@ -171,7 +175,8 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   document.addEventListener('focusin', (e) => {
     const input = e.target;
     if (!input.matches || !input.matches('[data-kt-hour]')) return;
-    input.value = String(Number(input.dataset.hoursValue) || 0);
+    // Lecture seule tant qu'on ne tape rien : l'heure exacte reste stockée.
+    input.value = String(Math.round((Number(input.dataset.hoursValue) || 0) * 100) / 100);
     input.select();
   });
 
@@ -197,23 +202,23 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
        taper 8 h un mardi faisait sauter le total de la ligne à la somme de
        toutes les semaines passées. */
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
-    let grandH = 0, grandP = 0;
+    let grandH = 0, grandPC = 0;
     members.forEach((m, idx) => {
       const row = hours[m.id] || {};
       const tot = period.days.reduce((a, d) => a + (+row[d] || 0), 0);
       const pay = hourlyPayFor(m, tot, period.days);
-      grandH += tot; grandP += pay;
+      grandH += tot; grandPC += payCents(pay);
       const tr = root.querySelectorAll('table.kt-h-table tbody tr')[idx];
       if (tr) {
         const totalCell = tr.querySelector('.kt-h-total b');
         const payCell   = tr.querySelector('.kt-h-pay b');
         if (totalCell) totalCell.textContent = fmtHours(tot);
-        if (payCell && (+m.hourlyRate || 0) > 0) payCell.textContent = (window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+        if (payCell && (+m.hourlyRate || 0) > 0) payCell.textContent = fmtPay(pay);
       }
     });
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
     if (footTot[0]) footTot[0].textContent = fmtHours(grandH);
-    if (footTot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) footTot[1].textContent = (window.KiwiNumber?.format(grandP, { maximumFractionDigits: 0 }) ?? grandP.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+    if (footTot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) footTot[1].textContent = fmtPay(grandPC / 100);
 
     // On Paie & planning the band above the grid is the headline the owner reads
     // ("à payer · période"). Keep it in step with the cell they just typed in,
@@ -229,13 +234,13 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   function payTiles(T, f, period, count) {
     const whole = f.share >= 0.999;
     return [
-      { v: (f.salaried || f.rated) ? fmtMad(f.baseDue + f.variablePay) : '·',
+      { v: (f.salaried || f.rated) ? fmtPay(f.baseDue + f.variablePay) + ' MAD' : '·',
         sub: (f.salaried || f.rated)
           ? (whole || !f.salaried ? T.payStatDueSub(period.startFr, period.endFr) : T.payStatDueProrata(period.startFr, period.endFr, period.days.length))
           : T.payStatNone },
       { v: fmtHours(f.totalHours), sub: T.payStatHoursSub },
-      { v: f.rated ? fmtMad(f.variablePay) : '·', sub: f.rated ? T.payStatVarSub : T.noRate },
-      { v: f.salaried ? fmtMad(f.baseMass) : '·',
+      { v: f.rated ? fmtPay(f.variablePay) + ' MAD' : '·', sub: f.rated ? T.payStatVarSub : T.noRate },
+      { v: f.salaried ? fmtPay(f.baseMass) + ' MAD' : '·',
         sub: f.salaried ? T.payStatBaseMonthly(f.salaried, count) : T.statPayrollNone },
     ];
   }

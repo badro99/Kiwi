@@ -41,7 +41,8 @@ import { startOfWeek } from '../../order/_lib.js';
 import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
 import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
-import { shopPermanentDomain } from '../../shopify/_lib.js';
+import { reverseShopifyOrder } from '../../shopify/_order-reversal.js';
+import { shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -57,6 +58,9 @@ const TOPICS = {
   'orders/paid': 1,
   'inventory_levels/update': 1,
   'app/uninstalled': 1,
+  // Annulation et remboursement rendent les pièces au stock (_order-reversal.js).
+  'orders/cancelled': 1,
+  'refunds/create': 1,
 };
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -67,24 +71,8 @@ const money = (value) => {
   return Math.round(amount * 100) / 100;
 };
 
-/* Comparaison à temps constant — même raison que dans order.js : comparer avec
- * === laisse fuir, par le temps de réponse, combien de tête est juste. */
-function sameStr(a, b) {
-  a = String(a || ''); b = String(b || '');
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
-
-async function hmacB64(secret, raw) {
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw));
-  return btoa(String.fromCharCode(...new Uint8Array(sig)));
-}
+/* La signature se vérifie avec verifyWebhookHmac (shopify/_lib.js) : une seule
+ * implémentation, à temps constant, pour le connecteur et ce point d'entrée. */
 
 async function mark(env, id, ok, err) {
   try {
@@ -215,6 +203,13 @@ async function observeInventoryLevel(env, merchant, payload) {
   const locationRaw = str(payload && payload.location_id, 80);
   const locationId = locationRaw.startsWith('gid://') ? locationRaw : `gid://shopify/Location/${locationRaw}`;
   const available = Math.max(0, Math.round(Number(payload && payload.available) || 0));
+  /* Shopify ne garantit pas l'ordre des livraisons : un niveau plus ancien,
+   * réessayé, peut arriver après un plus récent. `updated_ts` du lien porte
+   * l'instant de l'état que last_shopify_quantity décrit (le `updated_at` du
+   * webhook, ou l'heure de notre dernier envoi réussi) ; une livraison plus
+   * ancienne n'écrase plus rien. Sans cela, le changeFromQuantity de l'envoi
+   * suivant était faux et la variante tombait en écart. */
+  const levelTs = Date.parse(str(payload && payload.updated_at, 40)) || 0;
   if (!inventoryItemId) return;
   const itemId = inventoryItemId.startsWith('gid://') ? inventoryItemId : `gid://shopify/InventoryItem/${inventoryItemId}`;
   try {
@@ -229,16 +224,15 @@ async function observeInventoryLevel(env, merchant, payload) {
     ).bind(merchant, link.kiwi_variant_id).first();
     const expected = pending ? Number(pending.target_quantity) : Number(link.last_shopify_quantity);
     const drift = Number.isFinite(expected) && expected !== available;
-    await env.DB.batch([
-      env.DB.prepare(
-        `UPDATE shopify_variant_links
-            SET last_shopify_quantity = ?, status = ?, updated_ts = ?
-          WHERE merchant = ? AND kiwi_variant_id = ?`
-      ).bind(available, drift ? 'drift' : 'active', Date.now(), merchant, link.kiwi_variant_id),
-      env.DB.prepare(
-        `UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`
-      ).bind(drift ? 'Stock modifié directement dans Shopify · réconciliation requise' : '', Date.now(), merchant),
-    ]);
+    const written = await env.DB.prepare(
+      `UPDATE shopify_variant_links
+          SET last_shopify_quantity = ?, status = ?, updated_ts = ?
+        WHERE merchant = ? AND kiwi_variant_id = ? AND (? = 0 OR updated_ts <= ?)`
+    ).bind(available, drift ? 'drift' : 'active', levelTs || Date.now(), merchant, link.kiwi_variant_id, levelTs, levelTs).run();
+    if (!written || !written.meta || !Number(written.meta.changes)) return;   // livraison périmée
+    await env.DB.prepare(
+      `UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`
+    ).bind(drift ? 'Stock modifié directement dans Shopify · réconciliation requise' : '', Date.now(), merchant).run();
   } catch (_) {}
 }
 
@@ -276,7 +270,7 @@ async function applyShopifyOrderStock(env, merchant, order) {
     // journal pieces Kiwi no longer has, including repeated variant lines.
     const left = new Map(data.variants.map((v) => [v.id, Math.max(0, Number(v.stock) || 0)]));
     const orderedAt = Date.parse(order.created_at);
-    let applied = 0, unmatched = 0, at = Date.now();
+    let applied = 0, unmatched = 0, short = 0, at = Date.now();
     for (const line of lines) {
       const shopifyVariantId = String(line && line.variant_id || '');
       const gid = shopifyVariantId.startsWith('gid://') ? shopifyVariantId : `gid://shopify/ProductVariant/${shopifyVariantId}`;
@@ -292,19 +286,22 @@ async function applyShopifyOrderStock(env, merchant, order) {
       // as in catch-up. Older retry payloads without a date retain the fallback.
       if (Number.isFinite(orderedAt) && Number(variant.baseAt || variant.stockAt || 0) >= orderedAt) continue;
       const take = Math.min(qty, left.get(kiwiVariantId) || 0);
+      // Kiwi had fewer pieces than Shopify sold: no negative move is journalled,
+      // but the shortfall is reported so the merchant can reconcile the count.
+      short += qty - take;
       if (!take) continue;
       left.set(kiwiVariantId, left.get(kiwiVariantId) - take);
       at = Number.isFinite(orderedAt) ? orderedAt : Math.max(at + 1, Number(variant.baseAt || variant.stockAt || 0) + 1);
       data.moves.push({ id: moveId, vid: kiwiVariantId, d: -take, at, why: 'vente', ref: `shopify:${ref}`.slice(0, 64) });
       existing.add(moveId); applied++;
     }
-    if (!applied) return { applied: 0, unmatched };
+    if (!applied) return { applied: 0, unmatched, short };
     catalogFns.materialize(data);
     const next = Number(row.rev || 0) + 1;
     const write = await env.DB.prepare(
       `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
     ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run().catch(() => null);
-    if (write && write.meta && Number(write.meta.changes) === 1) return { applied, unmatched };
+    if (write && write.meta && Number(write.meta.changes) === 1) return { applied, unmatched, short };
   }
   return { applied: 0, unmatched: lines.length };
 }
@@ -369,7 +366,7 @@ export async function onRequestPost(context) {
   }
 
   const sent = str(request.headers.get('X-Shopify-Hmac-Sha256'), 100);
-  if (!sent || !sameStr(sent, await hmacB64(secret, raw))) {
+  if (!sent || !(await verifyWebhookHmac(raw, sent, secret))) {
     await mark(env, link.id, false, 'signature Shopify invalide');
     return json({ error: 'bad-signature' }, 401);
   }
@@ -396,7 +393,8 @@ export async function onRequestPost(context) {
   }
 
   const deliveryId = str(request.headers.get('X-Shopify-Webhook-Id'), 120);
-  if ((topic === 'app/uninstalled' || topic === 'inventory_levels/update')
+  if ((topic === 'app/uninstalled' || topic === 'inventory_levels/update'
+       || topic === 'orders/cancelled' || topic === 'refunds/create')
       && await webhookSeen(env, shop || known, deliveryId)) {
     return json({ ok: true, duplicate: true });
   }
@@ -417,6 +415,25 @@ export async function onRequestPost(context) {
     await rememberWebhook(env, shop || known, deliveryId, topic);
     await mark(env, link.id, true);
     return json({ ok: true });
+  }
+
+  if (topic === 'orders/cancelled' || topic === 'refunds/create') {
+    const out = await reverseShopifyOrder(env, String(link.merchant || '').toLowerCase(), topic, o);
+    if (!out.done) {
+      /* Rien de durable : 503, Shopify réessaie (jusqu'à 48 h). */
+      await mark(env, link.id, false, 'retour de stock non enregistré');
+      return json({ error: 'reversal-not-persisted' }, 503);
+    }
+    await rememberWebhook(env, shop || known, deliveryId, topic);
+    await mark(env, link.id, true);
+    return json({ ok: true, ...out });
+  }
+
+  /* Une commande déjà annulée (rejeu tardif de orders/paid) ne fabrique ni
+   * ticket ni mouvement de stock. */
+  if (o && o.cancelled_at) {
+    await mark(env, link.id, true);
+    return json({ ok: true, ignored: 'cancelled' });
   }
 
   /* La devise, avant tout le reste. Un ticket marocain affiche des dirhams ;

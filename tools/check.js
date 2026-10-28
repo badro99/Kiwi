@@ -66,12 +66,12 @@ if (process.env.KIWI_CHECK_TIER === 'changed') {
  * left unexecuted is never a pass. */
 const MISSING_TEST_DEPS = [];
 {
-  const missing = ['fast-check', 'axe-core', 'puppeteer-core']
+  const missing = ['fast-check', 'axe-core', 'puppeteer-core', 'typescript']
     .filter((m) => !fs.existsSync(path.join(ROOT, 'app', 'node_modules', m, 'package.json')));
   if (missing.length) {
     const fix = `npm --prefix app ci, or in a worktree: ln -s <main checkout>/app/node_modules app/node_modules`;
     if (process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
-      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money and accessibility suites would skip and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs the rest anyway, knowingly; that run ends red.)`);
+      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money, accessibility and schema suites would skip (or crash) and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs the rest anyway, knowingly; that run ends red.)`);
       process.exit(1);
     }
     MISSING_TEST_DEPS.push(...missing);
@@ -546,6 +546,8 @@ section('Shared platform kernel and adapters');
 for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'hotel-media-cleanup-test.mjs', 'operations-system-test.mjs', 'quarantine-settlement-test.mjs', 'quarantine-review-browser-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs', 'pos-sale-hold-test.mjs', 'store-credits-test.mjs',
+  /* Un avoir expiré qui reçoit un remboursement redevient utilisable ; l'historique d'un avoir ancien ne disparaît plus. */
+  'store-credit-restore-expiry-test.mjs',
   'caisse-opening-gate-test.mjs',
   'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-direct-pricing-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'request-headers-test.mjs', 'request-pollers-test.mjs', 'quiet-mode-test.mjs', 'quiet-demo-browser-test.mjs', 'load-test-suite-test.mjs',
@@ -616,6 +618,7 @@ section('Réservations, planning, livraison, encaissement, schéma');
 for (const test of [
   'fetch-b-deadline-test.mjs',
   'booking-api-test.mjs',
+  'booking-cap-test.mjs',
   'booking-split-test.mjs',
   'booking-boundary-test.mjs',
   'booking-properties-test.mjs',
@@ -626,6 +629,7 @@ for (const test of [
   'economat-properties-test.mjs',
   'economat-split-test.mjs',
   'shopify-sync-properties-test.mjs',
+  'shopify-inbound-stock-limits-test.mjs',
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',
   'locale-booking-wave-n-test.mjs',
@@ -633,6 +637,7 @@ for (const test of [
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',
   'reservation-overlap-test.mjs',
+  'booking-rules-shared-test.mjs',
   'store-credit-sale-test.mjs',
   /* Une vente ne se rend qu'une fois : remboursement + avoir + annulation, et l'accord d'un responsable pour un avoir. */
   'sale-return-ledger-test.mjs',
@@ -656,6 +661,10 @@ for (const test of [
   'queue-open-visit-unpaid-test.mjs',
   'planning-split-test.mjs',
   'planning-core-test.mjs',
+  /* Semaine et mois de planning sur le jour du magasin ; heures recopiées exactes, paie affichée au centime. */
+  'planning-store-day-pay-test.mjs',
+  /* Une semaine, un seul total de paie : centimes entiers de payrollFigures à la grille de planning, jours en arabe. */
+  'planning-pay-cents-test.mjs',
   /* Notices au-delà du plafond de 200 : archivées, relues page par page. */
   'planning-notices-archive-test.mjs',
   'wave-p-merge-test.mjs',
@@ -670,6 +679,7 @@ for (const test of [
   'reservations-business-day-test.mjs',
   'serveur-menu-live-test.mjs',
   'menu-availability-test.mjs',
+  'menu-formula-bounds-test.mjs',
   /* « Épuisé jusqu'à 18 h » : la fin d'un 86 posée par la caisse, résolue par
      le serveur à chaque lecture, et le choix de durée au vrai clic. */
   'menu-86-until-test.mjs',
@@ -743,12 +753,21 @@ for (const test of [
   'team-doc-redaction-test.mjs',
   'team-roster-cap-test.mjs',
   'team-properties-test.mjs',
+  /* Vague 14 : un code partagé est refusé à voix haute (jamais écarté en silence), un code généré évite le roster et 0001. */
+  'team-code-guard-test.mjs',
+  /* Vague 14 : la connexion employé ne lit que les magasins qui portent l'adresse. */
+  'employee-credential-scope-test.mjs',
   'team-split-test.mjs',
   'team-catalog-split-test.mjs',
   'team-owners-split-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
+  'file-size-ratchet-rules-test.mjs',
   'source-assertion-ratchet-test.mjs',
+  /* Per assertion, not per suite: a suite that runs one handler and greps 35 lines is mostly text. Pinned, only down. */
+  'assertion-mix-test.mjs',
+  /* Real code coverage (V8) of functions/ and assets/: the tool's cheap self-test; `npm run coverage` is the minutes-long measurement. */
+  'coverage-report-test.mjs',
   'wave-o-infra-test.mjs',
   'assertion-provenance-test.mjs',
   /* TypeScript reads functions/ as plain JS (checkJs): type errors per file pinned, only ever down. */
@@ -775,6 +794,8 @@ for (const test of [
   'shopify-direct-webhook-test.mjs',
   'shopify-shop-domain-test.mjs',
   'shopify-replay-orders-test.mjs',
+  /* Shopify : commande annulée ou remboursée, les pièces reviennent au stock une seule fois. */
+  'shopify-order-reversal-test.mjs',
   /* Quiz : une question sans réponse ne vaut jamais un point. */
   'quiz-unanswered-test.mjs',
   'service-interconnectivity-test.mjs',
@@ -1316,6 +1337,21 @@ section('CA au grand livre (tools/kpi-ledger-test.js)');
   }
 }
 
+/* Les tuiles elles-mêmes tournent (vague 12) : le catalogue réel de dateRange.js,
+ * évalué sur la période réelle, la démo, sans coût saisi. (tools/kpi-tiles-run-test.js) */
+section('Tuiles KPI exécutées (tools/kpi-tiles-run-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'kpi-tiles-run-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`kpi-tiles-run-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9ter · les pourboires sont ceux qui ont été déclarés ────────────────────
  * La tuile valait CA × 7,2 % chez un vrai commerçant : un montant inventé sous
  * « Pourboires ». Elle lit les pourboires déclarés à la clôture des journées
@@ -1478,16 +1514,24 @@ section('Whole-project regressions');
     'audit-remediation-serveur-test.mjs',
     'audit-remediation-pressing-test.mjs',
     'audit-remediation-auth-test.mjs',
+    /* Vague 11 : appairage par réseau, sondes de PIN console, journal des codes
+       opérateur, relais de support, file publique, carnet de réservations. */
+    'wave11-security-test.mjs',
+    /* Console : réinitialisation, codes d'équipe et codes opérateur au niveau du handler. */
+    'admin-console-handlers-test.mjs',
     'forgot-password-test.mjs',
     'caisse-pairing-recovery-test.mjs',
     'caisse-handoff-demo-reload-test.mjs',
     'caisse-terminal-recovery-test.mjs',
     'caisse-offline-pin-test.mjs',
+    'offline-clock-rollback-test.mjs',
     'caisse-repair-pin-venue-test.mjs',
     'audit-remediation-money-test.mjs',
     'wave-d-security-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
     'loyalty-truth-test.mjs',
+    /* Fidélité : une seule règle d'arrondi pour la remise en pourcentage, tous métiers. */
+    'loyalty-reward-rounding-test.mjs',
     'loyalty-refused-redemption-test.mjs',
     'loyalty-reserve-test.mjs',
     'repeat-sale-guard-test.mjs',
@@ -1501,7 +1545,9 @@ section('Whole-project regressions');
     'channel-percentage-test.mjs',
     'sales-day-contrast-test.mjs',
     'sales-ledger-cutoff-test.mjs',
+    'home-cutoff-fallback-test.mjs',
     'day-report-export-test.mjs',
+    'day-report-vat-test.mjs',
     'month-report-test.mjs',
     'month-report-api-test.mjs',
     'month-report-browser-test.mjs',
@@ -1536,6 +1582,7 @@ section('Whole-project regressions');
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',
     'feed-limit-test.mjs',
+    'feed-day-client-test.mjs',
     'feed-window-test.mjs',
     'feed-voids-test.mjs',
     'feed-changes-test.mjs',
@@ -1557,6 +1604,9 @@ section('Whole-project regressions');
     'admin-report-test.mjs',
     'scoped-tab-isolation-test.mjs',
     'cross-store-copy-test.mjs',
+    /* La vitrine d'une boutique ne recule jamais : une projection d'un catalogue
+       plus ancien, ou dont la ligne a bougé, est refusée. */
+    'shop-publish-order-test.mjs',
     'admin-crm-layout-test.mjs',
     'maison-client-history-test.mjs',
     'client-history-browser-test.mjs',
@@ -1598,6 +1648,8 @@ section('Whole-project regressions');
     'pairs-api-test.mjs',
     'pairs-caisse-browser-test.mjs',
     'pairs-serveur-browser-test.mjs',
+    // Une table, deux appareils : la caisse et le téléphone du serveur sur la même addition (vague 15 K).
+    'shared-table-two-devices-browser-test.mjs',
     'pairs-boutique-browser-test.mjs',
     'till-repair-lock-browser-test.mjs',
     'table-time-test.mjs',
@@ -1605,6 +1657,8 @@ section('Whole-project regressions');
     'print-relay-properties-test.mjs',
     'print-pairing-recovery-test.mjs',
     'shared-rules-test.mjs',
+    // Les limites d'un groupe d'options (« 2 sauces au plus ») survivent à la publication (vague 11).
+    'menu-option-limits-test.mjs',
     'day-report-model-parity-test.mjs',
     'shared-pricing-parity-test.mjs',
     'order-pricing-properties-test.mjs',
@@ -1653,10 +1707,18 @@ section('Whole-project regressions');
     'restaurant-units-test.js',
     'menu-nutrition-test.mjs',
     'employee-live-test.mjs',
+    /* Un départ dont les heures n'ont pas pu être créditées ne répond plus ok :
+       le rejeu du téléphone les crédite, une seule fois. */
+    'attendance-hours-credit-test.mjs',
+    'employee-progress-truth-test.mjs',
     'employee-trade-shell-test.mjs',
+    'employee-trade-i18n-test.mjs',
     'locale-handoff-test.mjs',
     'canonical-origin-test.mjs',
     'landing-es-test.mjs',
+    /* DE/IT/NL servies dans leur langue (titre, H1, maquette), hreflang complet. */
+    'landing-static-locale-test.mjs',
+    'landing-rewrite-test.mjs',
     'landing-es-browser-test.mjs',
     /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
        les tarifs montrent les quatre paliers de CLAUDE.md §7. */
@@ -1664,6 +1726,7 @@ section('Whole-project regressions');
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'boutique-variant-stock-test.mjs',
+    'boutique-rtl-css-test.mjs',
     'boutique-existing-barcode-test.mjs',
     'scan-wedge-browser-test.mjs',
     'boutique-custom-color-test.js',
@@ -1679,6 +1742,10 @@ section('Whole-project regressions');
     'inventory-ledger-test.mjs',
     'inventory-consumption-batch-test.mjs',
     'inventory-queue-unblock-test.mjs',
+    /* Le curseur de stock : une caisse ne saute jamais les mouvements d'une
+       autre, et une vente garde son sens (sortie) ; la production demande un
+       responsable. */
+    'inventory-cursor-integrity-test.mjs',
     'maison-stock-movements-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',
@@ -1767,6 +1834,7 @@ section('Whole-project regressions');
     'server-money-properties-test.mjs',
     'receivables-properties-test.mjs',
     'trades-money-properties-test.mjs',
+    'device-money-loyalty-test.mjs',
     'live-link-queue-properties-test.mjs',
     'live-link-split-test.mjs',
     'live-link-queue-ownership-test.mjs',
@@ -1775,6 +1843,7 @@ section('Whole-project regressions');
     'customer-balance-properties-test.mjs',
     'credit-book-properties-test.mjs',
     'credit-book-store-test.mjs',
+    'credit-book-overpay-alert-test.mjs',
     'clients-properties-test.mjs',
     'queues-wave-n-test.mjs',
     'clients-display-properties-test.mjs',
@@ -1820,6 +1889,7 @@ section('Whole-project regressions');
     'discount-policy-api-test.mjs',
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',
+    'sale-server-truth-test.mjs',
     'discount-policy-live-browser-test.mjs',
     'caisse-viewport-guard-test.mjs',
     'boutique-printer-settings-test.mjs',
@@ -1976,6 +2046,8 @@ section('Whole-project regressions');
     'plan-tier-test.mjs',
     'plan-catalog-test.mjs',
     'signup-plan-test.mjs',
+    'signup-slug-scan-test.mjs',
+    'signup-renamed-slug-test.mjs',
     'starter-copy-test.mjs',
     'error-reporter-test.mjs',
     'tickets-retest-test.mjs',
@@ -1986,6 +2058,7 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
     'invoicing-print-test.mjs',
+    'amount-words-test.mjs',
     'invoicing-pdf-pages-browser-test.mjs',
     'invoicing-v2-browser-test.mjs',
     'invoicing-v2-real-server-browser-test.mjs',
@@ -2005,10 +2078,15 @@ section('Whole-project regressions');
     'order-line-cap-test.mjs',
     'kitchen-reprint-test.mjs',
     'kitchen-blind-outage-test.mjs',
+    'kitchen-clock-test.mjs',
     'relay-print-verdict-test.mjs',
     'station-printer-routing-test.mjs',
     'printer-station-unicode-test.mjs',
     'printer-split-test.mjs',
+    // La fenêtre d'imprimante parle la langue du tableau de bord (vague 11).
+    'printer-lang-test.mjs',
+    // Les boîtes natives de la caisse, l'imprimante et la réimpression parlent la langue de la caisse (vague 15).
+    'till-print-lang-test.mjs',
     'printer-transports-split-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur
@@ -2108,6 +2186,7 @@ section('Whole-project regressions');
     'team-member-editor-test.mjs',
     'team-editor-keyboard-browser-test.mjs',
     'menu-option-group-editor-test.mjs',
+    'menu-option-group-editor-run-test.mjs',
     'legacy-venue-modals-test.mjs',
     'pin-lockout-truth-test.mjs',
     'boutique-product-form-test.mjs',
@@ -2121,6 +2200,7 @@ section('Whole-project regressions');
     'stock-count-history-language-test.mjs',
     'caisse-color-picker-language-test.mjs',
     'booking-truth-test.mjs',
+    'booking-mail-test.mjs',
     'booking-lens-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'onboarding-data-test.mjs',
@@ -2128,6 +2208,7 @@ section('Whole-project regressions');
     'onboarding-session-test.mjs',
     'onboarding-alignment-properties-test.mjs',
     'onboarding-team-recap-test.mjs',
+    'onboarding-team-import-test.mjs',
     'onboarding-business-type-test.mjs',
     'menu-truth-test.mjs',
     'stock-truth-test.mjs',
@@ -2169,8 +2250,13 @@ section('Whole-project regressions');
        français visible, montants isolés, la page ouverte suit la langue. */
     'hotel-i18n-test.mjs',
     'pressing-truth-test.mjs',
+    'pressing-notification-line-test.mjs',
+    'pressing-notification-freeze-test.mjs',
+    'pressing-archive-test.mjs',
     'support-triage-test.mjs',
     'support-triage-retry-test.mjs',
+    /* Le bandeau « urgentes sans alerte » de la console : sans canal courriel, l'urgence se voit. */
+    'support-escalation-test.mjs',
     'wave-n-server-test.mjs',
     'menu-analysis-test.mjs',
     'ai-vision-models-test.mjs',
@@ -2226,6 +2312,7 @@ section('Whole-project regressions');
     'briefing-discounts-test.mjs',
     'briefing-cash-sessions-test.mjs',
     'briefing-late-orders-test.mjs',
+    'briefing-settings-ui-test.mjs',
     'weather-test.mjs',
     'briefing-card-placement-test.mjs',
     'dark-fixes-gradient-test.mjs',
@@ -2243,6 +2330,8 @@ section('Whole-project regressions');
     'receipt-voucher-print-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
+    'invoice-server-truth-test.mjs',
+    'invoice-series-year-test.mjs',
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',
@@ -2259,11 +2348,14 @@ section('Whole-project regressions');
     'inventory-count-review-test.mjs',
     'ai-image-import-test.mjs',
     'menu-scan-test.mjs',
+    'menu-scan-route-test.mjs',
     'menu-scan-i18n-test.mjs',
     'printer-i18n-test.mjs',
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',
     'intake-slice1-test.mjs',
+    'stock-intake-outbox-test.mjs',
+    'exchange-promo-rule-test.mjs',
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',
@@ -2279,6 +2371,10 @@ section('Whole-project regressions');
     'menu-i18n-test.mjs',
     'order-langs-test.mjs',
     'salle-scan-test.mjs',
+    'ai-quota-order-test.mjs',
+    'ai-global-quota-test.mjs',
+    /* Plafonds du jour : une seule table, la phrase FR/EN/AR d'un plafond atteint. */
+    'ai-daily-caps-test.mjs',
     'network-recovery-test.mjs',
     /* Le plan de salle du patron lit la salle que la caisse publie : statut,
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */
@@ -2323,6 +2419,8 @@ section('Whole-project regressions');
     'pressing-edge-test.mjs',
     'procurement-test.mjs',
     'promotions-dashboard-test.mjs',
+    'promotions-dashboard-run-test.mjs',
+    'promo-business-day-test.mjs', 'promo-percent-precision-test.mjs',
     'promo-window-browser-test.mjs',
     /* 2026-10-19 · la caisse boutique démo au téléphone : fiche, inventaire,
        Vendus après une vente encaissée au toucher. */
@@ -2349,6 +2447,7 @@ section('Whole-project regressions');
     'trades-ledger-retail-browser-test.mjs',
     'trades-ledger-care-browser-test.mjs',
     'restaurant-recipes-test.js',
+    'recipe-business-day-test.mjs',
     'wave-p-limits-test.mjs',
     'tickets-draft-test.mjs',
     'recipe-refund-feed-test.mjs',
@@ -2358,6 +2457,7 @@ section('Whole-project regressions');
     'subscription-privacy-test.mjs',
     'takeout-confirmation-test.js',
     'trade-workspaces-test.js',
+    'spa-cure-expiry-test.mjs',
     'vertical-state-test.mjs',
     'credit-book-refund-browser-test.mjs',
     'credit-book-refund-ui-test.mjs', 'credit-book-test.mjs',
@@ -3014,7 +3114,7 @@ section('Politique typographique (tools/type-policy-test.js)');
  * coverage holds §10 to §18's quoted strings; sw holds the stamp layout;
  * bidi holds the isolation of every argument (its DOM half needs Chromium). */
 section('Chaînes à clé · design 2027 (strings-*-test, strings-lint)');
-for (const test of ['wave-p-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
+for (const test of ['wave-p-i18n-test.mjs', 'wave-11-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');
@@ -3032,6 +3132,32 @@ section('Wave R locale and accessibility');
   const r = require('child_process').spawnSync(process.execPath, [require('path').join(__dirname, 'wave-r-i18n-test.mjs')], { encoding: 'utf8' });
   if (r.status !== 0) fail('wave-r-i18n-test: ' + (r.stdout || '') + (r.stderr || ''));
   else ok('Wave R locale and accessibility regressions');
+}
+
+/* ── Vague 12 · lot I · ce que voit le commerçant ───────────────────────────
+ * Traductions des phrases à donnée, alertes de clôture, seuils, bons de cuisine
+ * non imprimés, fonds papier, démos des métiers. */
+section('Vague 12 · lot I (traductions, alertes, seuils, marque)');
+for (const test of ['caisse-lang-service-test.js', 'day-report-conflicts-test.mjs', 'kitchen-unprinted-test.mjs', 'paper-surfaces-test.mjs']) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`${test} green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${test} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+/* ── Vague 13 · piste T · le partage d'addition dans la langue de l'écran ───
+ * Ticket imprimé, libellés de part du comptoir, toasts de paiement serveur. */
+section('Vague 13 · piste T (partage d\'addition FR/EN/AR)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'split-language-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`split-language-test.mjs green (${(out.match(/✓/g) || []).length} controls)`);
+  else fail(`split-language-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
 /* Named is not run: a file mentioned only in a comment, or in a list no loop
@@ -3094,8 +3220,17 @@ section('Suite CPU time (tools/suite-cpu-baseline.json)');
 }
 
 {
+  /* A suite that failed beside the others in the pool and passed alone made the
+     run green. It is a flake: say so, and count it over the last week. */
+  const flaked = guard.flakes();
+  if (flaked.length) {
+    const counts = guard.recordFlakes();
+    for (const n of flaked) warn(`${n} FLAKED: it failed in the parallel pool, then passed alone (${counts[n]} time(s) in the last ${guard.FLAKE_DAYS} days, ledger ${path.join(require('os').tmpdir(), 'kiwi-flake-ledger.jsonl')}). Green, but not clean: find why before it hides a real red`);
+  }
+}
+{
   const skipped = guard.dependencySkips();
-  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules`);
+  if (skipped.length && !MISSING_TEST_DEPS.length) fail(`${skipped.length} suite(s) skipped on a library or tool that would not load (${skipped.join(', ')}): they did not run, so this run is not a pass. Check app/node_modules (fast-check, axe-core, puppeteer-core, typescript)`);
 }
 if (MISSING_TEST_DEPS.length) fail(`KIWI_ALLOW_PROPERTY_SKIP=1 with ${MISSING_TEST_DEPS.join(', ')} missing: the property and accessibility suites did not run, so this run is not a pass (${guard.tier()} tier)`);
 console.log('\n' + '─'.repeat(60));

@@ -81,7 +81,8 @@ await strict('actual wire preserves displayed cents, split parts, discount facts
 }));
 const cf=load('assets/pos-coiffure.js',['lineUnit','ticketTotal','passTotal'],{ITEMS:{a:{price:0}},ADDON:{x:{price:0}},priceOf:item=>item.price});
 await strict('coiffure passage and ticket include each service and addon once',fc.property(money,money,fc.integer({min:1,max:60}),(price,addon,n)=>{cf.ITEMS.a.price=price/100;cf.ADDON.x.price=addon/100;const p={lines:Array.from({length:n},()=>({itemId:'a',addons:['x']}))};assert.equal(C(cf.passTotal(p)),n*(price+addon));assert.equal(C(cf.ticketTotal(p)),n*(price+addon));}));
-const lib=load('assets/pos-librairie.js',['cartSub','cartRemise','cartTotal','saleLines'],{ITEM:{a:{price:0}},CUST:{a:{points:1000}},FID_RATE:.05,fidTier:()=>true});
+const libWindow={};vm.runInNewContext(read('assets/money-cents.js'),{globalThis:libWindow,Intl});libWindow.window=libWindow;vm.runInNewContext(read('assets/librairie-loyalty.js'),{window:libWindow,Intl});
+const lib=load('assets/pos-librairie.js',['cartSub','cartRemise','cartTotal','saleLines'],{ITEM:{a:{price:0}},custOf:id=>({id,points:1000}),LOY:libWindow.KiwiLibrairieLoyalty.create({real:()=>false})});
 await strict('librairie declared centime loyalty amount is subtracted exactly once',fc.property(money,fc.integer({min:1,max:60}),(price,q)=>{lib.ITEM.a.price=price/100;const cart={lines:[{key:'a',qty:q}],client:{type:'known',id:'a'}},gross=price*q,remise=Math.round(gross*5/100+1e-9);assert.equal(C(lib.cartTotal(cart)),gross-remise);}));
 await strict('librairie loyalty rounds to the nearest centime',fc.property(fc.integer({min:1,max:10000}),price=>{lib.ITEM.a.price=price/100;return C(lib.cartRemise({lines:[{key:'a',qty:1}],client:{type:'known',id:'a'}}))===Math.round(price*5/100+1e-9);}),[[10]]);
 // Confirm every shared-journal caller uses the same entry point, not an invented roster.

@@ -43,8 +43,8 @@ function loadRoute(src, names, prelude) {
     .replace(/^export\s+/gm, '');
   return new Function(bare + '\nreturn { ' + names.join(', ') + ' };')();
 }
-const intake = loadRoute(intakeSrc, ['containsIdentityHints', 'containsMrzZone', 'validateCommitBody', 'isPdfBytes', 'publicDoc', 'DOC_TYPES_V1', 'DOC_STATUSES_V1', 'MAX_PDF_BYTES'], 'const DAILY_CAPS = { intake: 100 };');
-const invoice = loadRoute(invoiceSrc, ['validateInvoiceData']);
+const intake = loadRoute(intakeSrc, ['containsIdentityHints', 'containsMrzZone', 'validateCommitBody', 'isPdfBytes', 'publicDoc', 'DOC_TYPES_V1', 'DOC_STATUSES_V1', 'MAX_PDF_BYTES'], 'const DAILY_CAPS = { intake: 100 };\nconst quotaBody = (kind, error) => ({ ok: false, error, kind });');
+const invoice = loadRoute(invoiceSrc, ['validateInvoiceData'], 'const DAILY_CAPS = { invoice: 200 };');
 
 await check('identity pre-screen catches passports, CIN and police sheets', () => {
   assert.equal(intake.containsIdentityHints('Passeport marocain N° X123'), true);
@@ -187,6 +187,7 @@ const json = (body, status) => ({ status: status || 200, body });
 const tenantFor = async (req, env, asked) => (asked ? String(asked) : null);
 const quotaOk = async () => true;
 const DAILY_CAPS = { intake: 100 };
+const quotaBody = (kind, error) => ({ ok: false, error, kind });
 `;
 const harness = new Function(harnessPrelude + harnessSrc + '\nreturn { onRequestPost, onRequestPut, onRequestGet };')();
 

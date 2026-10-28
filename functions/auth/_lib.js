@@ -711,11 +711,27 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
   const pin = String(pinValue || '').trim();
   if (!env || !env.DB || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) return null;
 
+  /* Ne lire que les magasins qui portent cette adresse. Avant, chaque connexion
+   * employé chargeait et analysait (JSON.parse) les documents `team` et
+   * `employee-access` de TOUS les commerçants : le coût suivait la base
+   * entière. On filtre d'abord en SQL sur le texte du document (instr sur la
+   * copie minuscule), puis on ne rapporte que les deux documents des magasins
+   * touchés (la paire sert à comparer les dates et lire les pierres tombales).
+   * Sans changement de schéma : le balayage reste dans SQLite, mais plus rien
+   * ne remonte ni n'est analysé pour les autres magasins.
+   * Repli sur le balayage complet quand le texte stocké pourrait différer de
+   * l'adresse normalisée (échappements JSON, minuscules non ASCII). */
+  const narrowable = /^[a-z0-9._%+@-]+$/.test(email);
   let docs;
   try {
-    docs = await env.DB.prepare(
-      "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team')"
-    ).all();
+    docs = narrowable
+      ? await env.DB.prepare(
+        "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team') " +
+        "AND merchant IN (SELECT merchant FROM store_docs WHERE feature IN ('employee-access', 'team') AND instr(lower(data), ?) > 0)"
+      ).bind(email).all()
+      : await env.DB.prepare(
+        "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team')"
+      ).all();
   } catch (_) { return null; }
 
   const rows = (docs && docs.results) || [];

@@ -80,6 +80,14 @@
   async function save(force) {
     if (!S.draft || S.saving) return;
     if (!String(S.draft.name || '').trim()) { S.message = tr('nameRequired'); S.messageKind = 'warn'; paint(); return; }
+    /* Une nouvelle fiche garde sa clé de création, même hors ligne et après un
+       rechargement : un second envoi après une réponse perdue retombe sur la
+       même fiche côté serveur (functions/api/foodcost.js), jamais sur un double. */
+    if (!S.openId && !S.draft.createId) {
+      let key = '';
+      try { key = window.crypto.randomUUID().replace(/-/g, ''); } catch (_) { key = Date.now().toString(36) + Math.random().toString(36).slice(2, 12); }
+      S.draft.createId = key; rememberDraft();
+    }
     if (!online()) { S.pendingSave = true; S.message = tr('offline'); S.messageKind = 'warn'; paint(); return; }
     S.pendingSave = false;
     S.saving = true; S.message = ''; paint();

@@ -227,11 +227,17 @@
       return '<div class="pxd-stage"><div class="pxd-stage-num">' + num(x[1]) + '</div><div class="pxd-stage-name">' + x[0] + '</div><div class="pxd-stage-sub">' + x[2] + '</div><div class="pxd-stage-bar"><i style="width:' + Math.max(3, Math.round(x[1] / mx * 100)) + '%"></i></div></div>';
     }).join('') + '</div>';
   }
+  /* « Marqué prévenu · qui · quand · canal » : jamais un instant ISO brut. */
+  function notifiedLine(o) {
+    var words = { 'Marqué prévenu': L('Marqué prévenu', 'Marked notified', 'تم وضع علامة تم الإبلاغ'), 'Appel': L('Appel', 'Call', 'مكالمة'), 'Par SMS': L('Par SMS', 'By SMS', 'عبر رسالة نصية'),
+      'Par WhatsApp': L('Par WhatsApp', 'By WhatsApp', 'عبر واتساب'), 'En personne': L('En personne', 'In person', 'شخصيًا') };
+    return KiwiPressingOps.notificationLine(o, { tr: function (t) { return words[t] || t; }, fmt: when });
+  }
   function rackBody(s) {
     var ready = s.orders.filter(function (o) { return !isCancelled(o); }).filter(function (o) { return effStatus(o) === 'pret'; }).sort(function (a,b) { return new Date(a.readyAt || 0) - new Date(b.readyAt || 0); });
     if (!ready.length) return empty('rack', L('Rien de prêt pour le moment', 'Nothing ready yet', 'لا شيء جاهز حاليًا'), L('Les commandes prêtes et leur emplacement apparaîtront ici.', 'Ready orders and their location will appear here.', 'ستظهر هنا الطلبات الجاهزة ومكانها.'), L('Ouvrir le rangement', 'Open the rack', 'فتح التعليق'), 'rangement');
     return '<div class="pxd-rack">' + ready.slice(0,5).map(function (o) {
-      return '<div class="pxd-rack-row"><div><b>' + esc(o.customer && o.customer.name || o.id) + '</b><span>' + esc(o.id) + (o.notified ? ' · ' + L('marqué prévenu', 'marked notified', 'تم وضع علامة تم الإبلاغ') + ' · ' + esc([o.notification && o.notification.by && o.notification.by.name, o.notification && o.notification.at, o.notification && ({ call: L('appel', 'call', 'مكالمة'), sms: L('SMS', 'SMS', 'رسالة نصية'), whatsapp: L('WhatsApp', 'WhatsApp', 'واتساب'), 'in-person': L('en personne', 'in person', 'شخصيًا') }[o.notification.channel] || '')].filter(Boolean).join(' · ')) : ' · ' + L('à prévenir', 'to notify', 'للإبلاغ')) + '</span></div><span class="pxd-rack-slot">' + esc(o.rack || L('À ranger', 'To rack', 'للتعليق')) + '</span></div>';
+      return '<div class="pxd-rack-row"><div><b>' + esc(o.customer && o.customer.name || o.id) + '</b><span>' + esc(o.id) + (o.notified ? ' · ' + esc(notifiedLine(o)) : ' · ' + L('à prévenir', 'to notify', 'للإبلاغ')) + '</span></div><span class="pxd-rack-slot">' + esc(o.rack || L('À ranger', 'To rack', 'للتعليق')) + '</span></div>';
     }).join('') + '</div>' + (s.unnotified ? '<div class="pxd-callout"><b>' + num(s.unnotified) + ' ' + plural(s.unnotified, ['client à prévenir', 'clients à prévenir'], ['customer to notify', 'customers to notify'], ['زبون للإبلاغ', 'زبائن للإبلاغ', 'زبونان للإبلاغ']) + '</b><span>' + L('Depuis la fiche de la commande sur la caisse, ouvrez WhatsApp pour envoyer le message « c’est prêt ». Kiwi ne l’envoie pas tout seul.', 'From the order sheet on the till, open WhatsApp to send the “it’s ready” message. Kiwi does not send it by itself.', 'من بطاقة الطلب في الصندوق افتح واتساب لإرسال رسالة «جاهز». لا يرسلها Kiwi تلقائيًا.') + '</span></div>' : '');
   }
 

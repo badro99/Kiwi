@@ -6,7 +6,13 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { ROOT, MIGRATIONS_DIR, listMigrations, freshDb } from './d1-migrations.mjs';
 const require = createRequire(import.meta.url);
-const ts = require('../app/node_modules/typescript');
+let ts;
+try { ts = require('../app/node_modules/typescript'); }
+catch (e) {
+  if (e && e.code !== 'MODULE_NOT_FOUND') throw e;
+  console.log('  ○ skip  typescript unavailable (npm --prefix app ci, or in a worktree ln -s <main checkout>/app/node_modules app/node_modules), schema floor not executed');
+  process.exit(0);
+}
 const files = readdirSync(join(ROOT, 'functions'), { recursive: true }).filter(f => f.endsWith('.js')).sort();
 const db = freshDb();
 // Wrangler owns this deployment ledger, outside schema.sql.

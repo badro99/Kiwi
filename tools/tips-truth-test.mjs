@@ -41,8 +41,9 @@ const bounds = {
   hier: [Date.parse('2026-10-12T05:00:00Z'), Date.parse('2026-10-13T05:00:00Z')],
 };
 const asked = [];
-function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noBook = false, venue = { slug: 'cafe-test', name: 'Café Test' }, custom = true, sales = [] }) {
+function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noBook = false, venue = { slug: 'cafe-test', name: 'Café Test' }, custom = true, sales = [], history = null }) {
   const window = {
+    ...(history ? { KiwiSalesReconcile: { coverage: () => history.coverage }, KiwiSalesHistory: { oldTips: () => history.oldTips } } : {}),
     KiwiDayReport: noBook ? undefined : { list: (slug) => { asked.push(slug); return slug === 'cafe-test' ? book.slice() : [{ day: '2026-10-12', closed: true, tips: 5000 }]; } },
     KiwiVenue: { isCustom: () => custom, getCurrentVenueData: () => venue },
   };
@@ -105,6 +106,20 @@ check('7 days: closed days as declared, never added to what was entered (200,40 
 const quiet = run({ real: true, book: [], range: 'aujourdhui', sales: [{ ts: ts(TODAY), amount: 90 }] });
 check('an open day with sales but no tip entered stays « · », not an invented 0', quiet && quiet.text === '·', JSON.stringify(quiet));
 
+/* Une plage qui touche l'historique ancien (avant la couverture des ventes locales) :
+   le résumé serveur peut tarder. Les pourboires déjà connus ne sont plus tus. */
+const COVER = ts('2026-10-11');
+const partial = run({ real: true, book, range: 'septJours', sales: SALES, history: { coverage: COVER, oldTips: { partial: true } } });
+check('range across the history window, summary not here yet: the known tips stay, flagged partial (200,40 + 35,50 + 7)',
+  partial && partial.value === 242.9 && partial.unit === 'MAD' && partial.text == null && partial.noteKey === 'dash.kpi.tipsPartial' && /Partiel/.test(partial.note), JSON.stringify(partial));
+const partialEmpty = run({ real: true, book: [], range: 'septJours', sales: [], history: { coverage: COVER, oldTips: { partial: true } } });
+check('partial with nothing known yet: « … », as before', partialEmpty && partialEmpty.text === '…' && partialEmpty.note == null, JSON.stringify(partialEmpty));
+const complete = run({ real: true, book, range: 'septJours', sales: SALES, history: { coverage: COVER, oldTips: { sum: 50.25, days: 2 } } });
+check('summary available: old tips are added to the total (242,90 + 50,25), no partial note', complete && complete.value === 293.15 && complete.note == null, JSON.stringify(complete));
+const cents = run({ real: true, book: [{ day: '2026-10-12', closed: true, tips: 0.1 }, { day: '2026-10-10', closed: true, tips: 0.2 }], range: 'septJours',
+  sales: [{ ts: ts(TODAY), amount: 1, tipCents: 30 }, { ts: ts(TODAY), amount: 1, tipCents: 7 }], history: { coverage: COVER, oldTips: { sum: 0.15, days: 1 } } });
+check('tips are summed in centimes, not as floats (0,10 + 0,20 + 0,30 + 0,07 + 0,15 = 0,82)', cents && cents.value === 0.82 && cents.note == null, JSON.stringify(cents));
+
 const LL = coreTestSource.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
 const SALE = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
 const FEED = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
@@ -127,6 +142,13 @@ check('the tooltips say where they come from, in three languages',
 
 check('the band repaints when the day-report book changes (it arrives after the first render)',
   /KiwiDayReport\?\.subscribe\)\s*\{\s*window\.KiwiDayReport\.subscribe\(\(\) => \{ try \{ renderKpiBand\(\)/.test(SRC));
+
+const KPI = fs.readFileSync(path.join(ROOT, 'assets/daterange/kpi.js'), 'utf8');
+const I18N = fs.readFileSync(path.join(ROOT, 'assets/i18n.js'), 'utf8');
+check('the partial note has an English and an Arabic wording',
+  /'dash\.kpi\.tipsPartial': 'Partial/.test(I18N) && /'dash\.kpi\.tipsPartial': '[\u0600-\u06ff]/.test(I18N));
+check('the KPI band prints a tile note on its delta line, in the language on screen (no em dash)',
+  /tileSpec\.note \? \(\(window\.KiwiI18n\?\.T\?\.\[lang\] \|\| \{\}\)\[tileSpec\.noteKey\] \|\| tileSpec\.note\)/.test(KPI) && !/\u2014/.test(SRC.slice(SRC.indexOf("noteKey: 'dash.kpi.tipsPartial'") - 200, SRC.indexOf("noteKey: 'dash.kpi.tipsPartial'") + 100)));
 
 console.log(failures ? `\n✗ ${failures} check(s) failed` : `\n✓ ${passed} tips checks green`);
 process.exit(failures ? 1 : 0);

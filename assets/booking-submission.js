@@ -67,7 +67,7 @@ export function createBookingSubmission(context) {
           'Content-Type': 'application/json'
         }
         ,body: JSON.stringify({
-          merchant: merchant,ref: ref,serviceId: state.service.id,startAt: state.slot,partySize: party(),customer: {
+          merchant: merchant,ref: ref,lang: state.lang,serviceId: state.service.id,startAt: state.slot,partySize: party(),customer: {
             name: name,phone: phone,email: email
           }
           ,note: fd.get('note')
@@ -134,7 +134,7 @@ export function createBookingSubmission(context) {
           'Content-Type': 'application/json'
         }
         ,body: JSON.stringify({
-          merchant: merchant,ref: ref,roomTypeId: state.service.id,checkIn: state.checkIn,checkOut: state.checkOut,partySize: state.partySize,expectedTotal: state.service.total,customer: {
+          merchant: merchant,ref: ref,lang: state.lang,roomTypeId: state.service.id,checkIn: state.checkIn,checkOut: state.checkOut,partySize: state.partySize,expectedTotal: state.service.total,customer: {
             name: name,phone: phone,email: email
           }
           ,note: fd.get('note')

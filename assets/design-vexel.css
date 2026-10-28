@@ -3261,7 +3261,7 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-compose .dash-date-range .dr-pi
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-pill.on {
-  background: #FFFFFF;
+  background: #FFFDFA; /* --paper-elev de tokens.css ; ce mode redéfinit --paper-elev en voile translucide */
   color: #0B1210 !important;
   font-weight: 600;
   border-color: rgba(0, 0, 0, 0.08);
@@ -4218,7 +4218,7 @@ body.design-vexel[data-vexel-mode] .vexel-rail-card {
 body.design-vexel[data-vexel-mode="light"] .vexel-rail-card,
 body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > *,
 body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols > * {
-  background-color: #fff !important;
+  background-color: #FFFDFA !important; /* papier éclairé (tokens.css --paper-elev), jamais #fff */
 }
 
 /* Ambient emerald light is reserved for cards that carry momentum or a

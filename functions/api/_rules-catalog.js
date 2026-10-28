@@ -338,6 +338,32 @@ export function mergeDocs(mine, theirs, time) {
   out.products.forEach((p) => { alive[p.id] = 1; });
   out.variants = out.variants.filter((v) => alive[v.productId]);
 
+  /* Un code-barres n'a qu'UN propriétaire. Deux appareils hors ligne peuvent
+     attacher le même code à deux déclinaisons ; en ligne, la seconde aurait été
+     refusée (attachBarcode : « doublon »). L'union ci-dessus les gardait toutes
+     les deux, et le scan vendait celle qui venait en premier dans le tableau,
+     pas la même d'un appareil à l'autre. La fusion rend maintenant la même
+     réponse partout : la première attribution (plus ancien `at`, puis l'id)
+     garde le code ; les autres le perdent par une suppression datée, qui
+     voyage comme toute suppression. */
+  const owners = Object.create(null);
+  for (const v of out.variants) {
+    for (const b of v.barcodes || []) {
+      if (!b || !b.code) continue;
+      const at = +b.at || 0, id = String(v.id), prev = owners[b.code];
+      if (!prev || at < prev.at || (at === prev.at && id < prev.id)) owners[b.code] = { at, id };
+    }
+  }
+  for (const v of out.variants) {
+    const lost = (v.barcodes || []).filter((b) => b && b.code && owners[b.code].id !== String(v.id));
+    if (!lost.length) continue;
+    v.barcodes = v.barcodes.filter((b) => !lost.includes(b));
+    v.barcodeRemoved = Object.assign({}, v.barcodeRemoved || {});
+    lost.forEach((b) => { v.barcodeRemoved[b.code] = Math.max(+v.barcodeRemoved[b.code] || 0, +b.at || 0, 1); });
+    if (lost.some((b) => b.primary) && v.barcodes.length && !v.barcodes.some((b) => b.primary)) v.barcodes[0].primary = true;
+    ahead.mine = true; ahead.theirs = true;
+  }
+
   /* Replier le vieux, puis recalculer : le stock affiché est TOUJOURS le socle
      plus les mouvements postérieurs, jamais un nombre qu'on se serait
      transmis. C'est ce qui rend la fusion reproductible — deux appareils

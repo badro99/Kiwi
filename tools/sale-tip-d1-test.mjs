@@ -4,9 +4,10 @@
  * La table `sales` n'avait pas de colonne pourboire : le tableau de bord ne
  * l'apprenait qu'à la clôture (le Z), donc une journée ouverte n'en montrait
  * aucun. Ce banc passe par le vrai POST /api/sale et le vrai GET /api/feed, sur
- * une base construite depuis schema.sql, colonne retirée (la base de production
- * retarde toujours sur le fichier) : c'est sale.js qui la pose au premier
- * pourboire, comme payment_parts.
+ * une base construite depuis schema.sql. La colonne tip_cents est dans le
+ * schéma minimum de production (migration 0001, plancher 0016) : sale.js ne la
+ * répare plus en cours de requête (ni PRAGMA ni ALTER TABLE sur le chemin de
+ * l'argent, vague 12).
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -17,9 +18,6 @@ import { onRequestGet } from '../functions/api/feed.js';
 
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
-/* La base de production retarde sur schema.sql : on retire la colonne pour
-   prouver que sale.js la pose lui-même au premier pourboire. */
-sqlite.exec('ALTER TABLE sales DROP COLUMN tip_cents');
 const DB = { prepare(sql) { let args = []; return {
   bind(...values) { args = values.map(value => value === undefined ? null : value); return this; },
   first() { return sqlite.prepare(sql).get(...args) || null; },
@@ -50,9 +48,17 @@ const ok = (label, fn) => { fn(); n++; console.log('  ✓ ' + label); };
 
 console.log('■ Pourboire en base (tools/sale-tip-d1-test.mjs)');
 const plain = await post('tip-none', 4500);
-ok('une vente sans pourboire n\'ajoute rien, pas même la colonne', () => { assert.equal(plain.status, 200, JSON.stringify(plain)); assert.equal(col(), false); });
+ok('une vente sans pourboire n\'écrit aucun pourboire (colonne présente, valeur nulle)', () => {
+  assert.equal(plain.status, 200, JSON.stringify(plain));
+  assert.equal(col(), true, 'la colonne est dans le schéma minimum');
+  assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-none').tip_cents, null);
+});
+ok('sale.js ne répare plus le schéma en cours de requête : ni PRAGMA table_info, ni ALTER TABLE, ni repli no such column', () => {
+  const src = fs.readFileSync(new URL('../functions/api/sale.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /table_info|ALTER\s+TABLE|no such column|ensureVisitLink|hasWrittenBy/i);
+});
 const tipped = await post('tip-one', 12000, 1550);
-ok('une vente avec pourboire : 200, la colonne est posée, le pourboire écrit à part du montant', () => {
+ok('une vente avec pourboire : 200, le pourboire écrit à part du montant', () => {
   assert.equal(tipped.status, 200, JSON.stringify(tipped));
   const row = sqlite.prepare('SELECT amount_cents, tip_cents FROM sales WHERE id = ?').get('tip-one');
   assert.equal(row.amount_cents, 12000); assert.equal(row.tip_cents, 1550);

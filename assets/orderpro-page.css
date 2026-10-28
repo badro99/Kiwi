@@ -2675,7 +2675,7 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 100%;
       padding: 16px 22px;
       margin-bottom: 14px;
-      background: #fff;
+      background: var(--paper);
       color: var(--forest);
       border: none;
       border-radius: 14px;
@@ -2989,7 +2989,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background-image: conic-gradient(from 210deg, #C62828, #E8720C, #F2C230, #2E7D46, #1F5FA8, #7B4BA8, #E489AE, #C62828) !important;
     }
     .bq-swatch[data-pat="clear"] {
-      background-color: #fff !important;
+      background-color: var(--paper) !important;
       background-image:
         linear-gradient(45deg, #c6c9c7 25%, transparent 25%, transparent 75%, #c6c9c7 75%),
         linear-gradient(45deg, #c6c9c7 25%, transparent 25%, transparent 75%, #c6c9c7 75%) !important;

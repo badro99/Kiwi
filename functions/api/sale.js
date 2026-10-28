@@ -9,13 +9,14 @@
 
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
-import { settleServiceTable, serviceVisitGuard } from './service/events.js';
+import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases } from './service/events.js';
 import { quarantineGuard } from './_quarantine-guard.js';
 import { poke } from './_live.js';
 import { settleCoveredOrders } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
+import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -34,15 +35,6 @@ function orderNumber(ref) {
   return match ? match[1] : '';
 }
 
-async function ensureVisitLink(env) {
-  const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-  for (const name of ['session_id', 'split_flow_id']) {
-    if (!(columns.results || []).some(column => column.name === name)) {
-      try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN ' + name + ' TEXT').run(); }
-      catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
-    }
-  }
-}
 /* ── QUI A ÉCRIT LA VENTE (sales.written_by) ────────────────────────────────
  * Lu dans l'identité AUTHENTIFIÉE de la requête, jamais dans le corps : l'id, le
  * canal et le libellé sont choisis par le client, et cette route ré-identifie
@@ -64,22 +56,8 @@ async function writtenBy(request, env, merchant) {
   }
   return employee && employee.merchant === merchant ? 'employee' : 'account';
 }
-/* La colonne arrive par migrations/0010 ; tant que la production ne l'a pas,
- * la vente s'écrit sans elle (le Z garde alors son comportement d'avant). Une
- * présence constatée vaut pour toute la vie de l'isolat, une absence est
- * revérifiée au plus toutes les cinq minutes. */
-const writtenByColumn = new WeakMap();
-async function hasWrittenBy(env) {
-  const known = writtenByColumn.get(env.DB);
-  if (known && (known.ok || Date.now() - known.at < 300000)) return known.ok;
-  let ok = false;
-  try {
-    const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-    ok = ((columns && columns.results) || []).some(column => column.name === 'written_by');
-  } catch (_) { ok = false; }
-  writtenByColumn.set(env.DB, { ok, at: Date.now() });
-  return ok;
-}
+/* sales.written_by vient de migrations/0010, sous le minimum de production (0016) :
+ * l'auteur authentifié s'écrit toujours. */
 async function recordSaleConflict(env, merchant, id, amountCents, method) {
   try {
     const at = Date.now();
@@ -324,17 +302,17 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
            opening the visit at payment time and ordinary clock drift. */
         : await env.DB.prepare(
             `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
-              WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+              WHERE merchant = ? AND table_no IN (${tableAliases(employeeTable).map(() => '?').join(',')}) AND mode = 'table' AND status = 'open'
                 AND opened_ts <= ?
               ORDER BY opened_ts DESC LIMIT 1`
-          ).bind(merchant, employeeTable, paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
+          ).bind(merchant, ...tableAliases(employeeTable), paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
     } catch (_) { return json({ error: 'visit-lookup-unavailable' }, 503); }
     if (requestedSession && (!serviceSession || !serviceSession.id)) {
       visitLinkWarning ||= 'table-session-missing';
     }
     if (!serviceSession || !serviceSession.id) {
       if (employee) visitLinkWarning ||= 'open-service-session-missing';
-    } else if (employeeTable && String(serviceSession.table_no) !== employeeTable) {
+    } else if (employeeTable && tableKey(serviceSession.table_no) !== employeeTable) {
       visitLinkWarning = 'service-session-table-mismatch';
       serviceSession = null; // Never close or pay orders on a different table.
     }
@@ -442,7 +420,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
    * both read, so it gets the same treatment as every other field — bounded
    * length, bounded count, coerced types. A malformed or oversized basket
    * costs the line detail, never the sale. */
-  let lines = null;
+  let lines = null, basketRows = null, basketFolded = false;
   try {
     const raw = b && b.lines;
     if (Array.isArray(raw) && raw.length) {
@@ -538,11 +516,14 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
         return o;
       }).filter((l) => l.q > 0);
       if (clean.length) {
-        const s = JSON.stringify(clean);
-        /* Le plafond monte avec la catégorie : 40 lignes × ~40 caractères de
-         * plus, sinon un gros panier catégorisé perdrait TOUT son détail au
-         * profit d'un `lines = null`. La colonne est un TEXT, elle s'en moque. */
-        if (s.length <= 24000) lines = s;
+        /* Un panier trop gros est réduit (détail facultatif retiré, queue
+         * repliée en « N autres articles » qui garde chaque centime), jamais
+         * jeté : un `lines = null` laissait le chiffre d'affaires sans panier
+         * et sans que personne le sache. */
+        const fit = fitBasket(clean);
+        lines = fit.text;
+        basketRows = fit.rows;
+        basketFolded = fit.folded;
       }
     }
   } catch (_) { lines = null; }
@@ -574,18 +555,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       'SELECT id, amount, amount_cents, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
     ).bind(id, merchant).first();
   } catch (err) {
-    const msg = String((err && err.message) || err);
-    if (msg.includes('no such column') || msg.includes('amount_cents')) {
-      try {
-        existing = await env.DB.prepare(
-          'SELECT id, amount, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
-        ).bind(id, merchant).first();
-      } catch (fallbackErr) {
-        preflightError = fallbackErr;
-      }
-    } else {
-      preflightError = err;
-    }
+    preflightError = err;
   }
   if (preflightError) {
     return json({
@@ -694,13 +664,9 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     }
   }
 
+  /* sales.session_id et split_flow_id sont dans le schéma minimum (0001 et suivants) :
+     plus de réparation de colonne dans la requête. */
   let hasVisitLink = !!(effectiveSessionId || splitFlowId);
-  if (hasVisitLink) {
-    try { await ensureVisitLink(env); }
-    catch (_) {
-      return json({ error: 'visit-link-unavailable' }, 503);
-    }
-  }
   // An unlinked bill still has a stable identity across waiter/till uploads.
   // This namespace can never be a real visit ID and never closes a table.
   const settlementSessionId = effectiveSessionId || (employeeTable ? 'unlinked-table:' + employeeTable : '');
@@ -750,7 +716,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   // ligne rangée sous un autre id que celui envoyé (id de visite ré-identifié,
   // part de partage reprise) ne figure pas telle quelle au manifeste de la
   // caisse : elle ne porte jamais l'auteur qui certifie, le Z la laisse informative.
-  const signed = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
+  const signed = await writtenBy(request, env, merchant);
   // Seul un id de visite que le serveur a réellement remplacé perd l'auteur qui certifie ;
   // une vente envoyée sans id reste à l'appareil qui l'a écrite (sinon une caisse se soustrairait au Z).
   const sellerId = employee ? String(employee.session.staffId) : null;
@@ -843,18 +809,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       'SELECT id, amount, amount_cents, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
     ).bind(id, merchant).first();
   } catch (err) {
-    const msg = String((err && err.message) || err);
-    if (msg.includes('no such column') || msg.includes('amount_cents')) {
-      try {
-        winning = await env.DB.prepare(
-          'SELECT id, amount, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
-        ).bind(id, merchant).first();
-      } catch (fallbackErr) {
-        verifyError = fallbackErr;
-      }
-    } else {
-      verifyError = err;
-    }
+    verifyError = err;
   }
 
   // If reading the winning row failed due to an unexpected DB error, fail safely with 503
@@ -890,6 +845,27 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     }, 409);
   }
 
+  /* Ce que le serveur sait et que la caisse affirme : l'heure de l'appareil et
+   * le panier. Rien de tout cela ne refuse une vente encaissée ; chaque écart
+   * est écrit une fois dans sale_audit pour la console opérateur
+   * (functions/api/_sale-truth.js). */
+  const saleFlags = [];
+  try {
+    const receivedTs = Date.now();
+    const clock = await clockFlags(env, merchant, { rawTs, ts, sentAt: b && b.sentAt, now: receivedTs });
+    const gap = basketRows ? basketMismatch(basketRows, [
+      amountCents, ticketAmountCents, grossAmountCents,
+      storeCredit || consignment || receivable ? creditAmountCents : null,
+      ticketAmountCents != null ? ticketAmountCents + creditAmountCents : amountCents + creditAmountCents,
+    ].map((n) => (n == null || Number.isNaN(n) ? null : n))) : null;
+    const row = { amountCents, method, ref, ts, receivedTs };
+    if (await recordSaleFlag(env, merchant, id, 'clock-flag', clock, row)) saleFlags.push(...clock.map((f) => f.code));
+    const basket = [];
+    if (gap) basket.push({ code: 'basket-sum-mismatch', detail: gap });
+    if (basketFolded) basket.push({ code: 'basket-folded', detail: { limit: 24000 } });
+    if (await recordSaleFlag(env, merchant, id, 'basket-flag', basket, row)) saleFlags.push(...basket.map((f) => f.code));
+  } catch (_) { /* the sale stands; the flags are best effort */ }
+
   if (discountFlag) {
     /* One audit row per sale: a till retrying the same receipt must not add a
      * second one. A failed audit write never un-books the money. */
@@ -911,11 +887,6 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
      ne s'écrit pas ne défait jamais une vente encaissée. */
   if (tipCents) {
     try {
-      const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-      if (!(columns.results || []).some(column => column.name === 'tip_cents')) {
-        try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN tip_cents INTEGER').run(); }
-        catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
-      }
       await env.DB.prepare('UPDATE sales SET tip_cents = ? WHERE merchant = ? AND id = ? AND tip_cents IS NULL')
         .bind(tipCents, merchant, id).run();
     } catch (_) { /* la vente reste ; le Z déclarera le pourboire */ }
@@ -923,11 +894,6 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
 
   if (paymentParts) {
     try {
-      const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
-      if (!(columns.results || []).some(column => column.name === 'payment_parts')) {
-        try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN payment_parts TEXT').run(); }
-        catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
-      }
       const encoded = JSON.stringify(paymentParts);
       await env.DB.prepare('UPDATE sales SET payment_parts = ? WHERE merchant = ? AND id = ? AND payment_parts IS NULL')
         .bind(encoded, merchant, id).run();
@@ -1148,6 +1114,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     remainingCents: billOpen ? billOpen.remainingCents : undefined,
     settledOrders: billOpen ? billOpen.settledOrders : undefined,
     visitLinkWarning: visitLinkWarning || undefined,
+    flags: saleFlags.length ? saleFlags : undefined,
   });
 }
 

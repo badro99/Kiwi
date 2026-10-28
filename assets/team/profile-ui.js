@@ -145,6 +145,7 @@
       vInvalidEmail: 'Email invalide',
       vDuplicateEmail: 'Cet email est déjà utilisé par un autre membre',
       vDuplicateCode: 'Ce code est déjà utilisé par un autre membre',
+      vDuplicateCodeNamed: (a, b) => `Le code de ${a} est déjà celui de ${b}. Choisissez-en un autre.`, vReservedCode: 'Le code 0001 ouvre l\'écran cuisine de la caisse. Choisissez-en un autre.',
       vEndAfterStart: "La date de fin doit être après la date de début",
       vCode: "Le code personnel doit faire 4 chiffres",
       payTitle: 'Planning',
@@ -340,6 +341,7 @@
       vInvalidEmail: 'Invalid email',
       vDuplicateEmail: 'Another member already uses this email',
       vDuplicateCode: 'Another member already uses this code',
+      vDuplicateCodeNamed: (a, b) => `${a}'s code is already ${b}'s code. Choose another one.`, vReservedCode: 'The code 0001 opens the till\'s kitchen screen. Choose another one.',
       vEndAfterStart: 'End date must be after the start date',
       vCode: 'The personal code must be 4 digits',
       payTitle: 'Planning',
@@ -534,6 +536,7 @@
       vInvalidEmail: 'بريد إلكتروني غير صالح',
       vDuplicateEmail: 'هذا البريد مستعمل من طرف موظف آخر',
       vDuplicateCode: 'هذا الرمز مستعمل من طرف موظف آخر',
+      vDuplicateCodeNamed: (a, b) => `رمز ${a} هو نفسه رمز ${b}. اختر رمزاً آخر.`, vReservedCode: 'الرمز 0001 يفتح شاشة المطبخ في الصندوق. اختر رمزاً آخر.',
       vEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
       vCode: 'يجب أن يكون الرمز الشخصي من 4 أرقام',
       payTitle: 'التخطيط',
@@ -1138,7 +1141,7 @@
     const m = existing || {
       id: 'mem-' + Math.random().toString(36).slice(2, 9),
       firstName: '', lastName: '', email: '', phone: '',
-      password: makeCode(),
+      password: makeCode(getMembers(venueType)),
       /* Nothing chosen on their behalf: a member saved without touching the
          role was filed as the catalogue's first post (« Chef de cuisine »). */
       function: '',
@@ -1326,7 +1329,7 @@
   handlers['kt-pwd-gen'] = () => {
     const mdl = window.__kiwiTeamModal; if (!mdl || !mdl.el) return;
     const input = mdl.el.querySelector('[data-kt-pwd]');
-    if (input) input.value = makeCode();
+    if (input) input.value = makeCode(getMembers((mdl.el.__ktState || {}).venueType));
     edError(mdl.el, 'password', '');
     Kiwi.toast(t().tPwdGen, { type: 'success' });
   };
@@ -1421,9 +1424,10 @@
       errs.push(['email', T.vDuplicateEmail]);
     }
     const effectiveCode = code || KiwiStaffCredential.canonicalCode(prev);
-    if (effectiveCode && members.some((x) => x.id !== st.memberId && KiwiStaffCredential.canonicalCode(x) === effectiveCode)) {
-      errs.push(['password', T.vDuplicateCode]);
-    }
+    const holder = effectiveCode && members.find((x) => x.id !== st.memberId && KiwiStaffCredential.canonicalCode(x) === effectiveCode);
+    const who = (String(data.firstName || '') + ' ' + String(data.lastName || '')).trim() || '?';
+    if (holder) errs.push(['password', T.vDuplicateCodeNamed(who, memberFullName(holder))]);
+    else if (effectiveCode && memberState.reservedCode(effectiveCode)) errs.push(['password', T.vReservedCode]);
     ['firstName', 'lastName', 'email', 'function', 'endDate', 'password'].forEach((n) => edError(root, n, ''));
     if (errs.length) {
       const seen = {};
@@ -1434,7 +1438,7 @@
       Kiwi.toast(T.edCheck, { type: 'pend' });
       return;
     }
-    const savedCode = code || KiwiStaffCredential.canonicalCode(prev) || (prev && prev.hasCode ? '' : makeCode());
+    const savedCode = code || KiwiStaffCredential.canonicalCode(prev) || (prev && prev.hasCode ? '' : makeCode(members));
     const member = {
       id: st.memberId,
       firstName: data.firstName.trim(),

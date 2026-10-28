@@ -76,13 +76,37 @@
     return Number.isNaN(value) ? "" : new Date(value + amount * DAY_MS).toISOString().slice(0, 10);
   }
 
+  /* Le jour du MAGASIN, pas celui de l'appareil ni celui d'UTC : sa zone et
+   * sa bascule (05:00 par défaut, CLAUDE.md « Two clocks »). team.js prenait
+   * la date locale de l'appareil, calendarPeriod la date UTC : semaine et mois
+   * glissaient d'un jour pour un gérant à l'étranger ou entre minuit et la
+   * bascule. KiwiDayReport (day-report.js) est la règle livrée du navigateur ;
+   * sans lui, la même règle partagée (kit/business-day.js) sur la
+   * configuration du magasin ; UTC seulement en tout dernier recours. */
+  function storeToday() {
+    const g = typeof globalThis !== "undefined" ? globalThis : {};
+    try {
+      const day = g.KiwiDayReport && typeof g.KiwiDayReport.today === "function" ? isoDay(g.KiwiDayReport.today()) : "";
+      if (day) return day;
+    } catch (_) { /* day report not ready */ }
+    try {
+      const B = g.KiwiBusinessDay;
+      if (B && typeof B.businessDate === "function") {
+        const rule = typeof B.resolve === "function" ? B.resolve(g.KiwiConfig) : { cutoff: B.DEFAULT_CUTOFF, zone: B.DEFAULT_ZONE };
+        const day = isoDay(B.businessDate(Date.now(), rule.cutoff, rule.zone));
+        if (day) return day;
+      }
+    } catch (_) { /* fall through */ }
+    return new Date().toISOString().slice(0, 10);
+  }
+
   /* Calendar ranges are product logic, not a rendering detail. Keeping them
    * here makes coverage, fair allocation, templates and publishing agree on
    * the exact dates being viewed. A fortnight starts this Monday and includes
    * the NEXT week; the old UI started one week in the past. */
   function calendarPeriod(kind, anchor, offset) {
     kind = kind === "fortnight" || kind === "month" ? kind : "week";
-    const anchorDay = isoDay(anchor) || new Date().toISOString().slice(0, 10);
+    const anchorDay = isoDay(anchor) || storeToday();
     const shift = Number.isFinite(Number(offset)) ? Math.trunc(Number(offset)) : 0;
     const anchorDate = new Date(anchorDay + "T12:00:00Z");
     let start;
@@ -864,5 +888,5 @@
     return { ok: !issues.some((issue) => issue.severity === 'blocker'), shifts, assignments:candidates.filter((x) => !x.unresolved), unresolved:candidates.filter((x) => x.unresolved), issues };
   }
 
-  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, calendarPeriod, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, noticeArchivePage, publish, employeeSchedule, hash, minutes, isoDay, NOTICE_PAGE_SIZE };
+  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, calendarPeriod, storeToday, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, noticeArchivePage, publish, employeeSchedule, hash, minutes, isoDay, NOTICE_PAGE_SIZE };
 });

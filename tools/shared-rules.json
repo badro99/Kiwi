@@ -54,7 +54,7 @@
         "assets/clients-store.js",
         "assets/clients-store/loyalty.js",
         "assets/pos-boutique.js",
-        "assets/pos-librairie.js"
+        "assets/librairie-loyalty.js"
       ]
     },
     {
@@ -79,6 +79,20 @@
       "source": "functions/api/_rules-floorplan-clean.js",
       "targets": [
         "assets/floorplan-core.js"
+      ]
+    },
+    {
+      "name": "KiwiBookingRules",
+      "source": "functions/api/_rules-booking.js",
+      "targets": [
+        "assets/reservations.js"
+      ]
+    },
+    {
+      "name": "KiwiDayVatRules",
+      "source": "functions/api/_rules-day-vat.js",
+      "targets": [
+        "assets/z-reconciliation.js"
       ]
     }
   ]

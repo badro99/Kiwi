@@ -63,7 +63,8 @@ check(dur('ar', 450) === '7 س 30 د' && dur('ar', 0) === '0 س', 'under Arabic 
 check(dur('fr', 450) === '7 h 30' && dur('en', 480) === '8 h', 'French and English read exactly as before');
 dctx.LANG = 'ar';
 check(dctx.fmtHours(0.5) === '0 س 30 د', 'decimal attendance hours go through the same words (0,5 h → 30 minutes)');
-check(/input\.value = String\(Number\(input\.dataset\.hoursValue\) \|\| 0\);/.test(team), 'an hour cell still shows the plain decimal while it is edited, so no one has to type the unit');
+// Plain decimal, rounded to the hundredth for reading only: a copied 7 h 10 is stored exactly (wave 11).
+check(/input\.value = String\(Math\.round\(\(Number\(input\.dataset\.hoursValue\) \|\| 0\) \* 100\) \/ 100\);/.test(team), 'an hour cell still shows the plain decimal while it is edited, so no one has to type the unit');
 
 /* 4 · Chaque rubrique de métier a son anglais et son arabe.
  * La section Hôtel citait des clés (sidebar.section.hotel, sidebar.hotel.*)

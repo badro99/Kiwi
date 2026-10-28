@@ -1,5 +1,5 @@
 {
-  "sha256": "88cf680dda66b8fbe013b406664d9cb62a9f15a9a7b637dc7d476d60886ca16b",
+  "sha256": "33fe9366b9ed4544f0e1e035bd8eeabafb9332e284eb9cca525679503b0da7c9",
   "dataSha256": "117ec5415d36bdeec430121dd6cdc9562c01a5f8f2be9b3338d9cafda2183438",
   "fragments": [
     {
@@ -15,44 +15,44 @@
       "offset": 9909
     },
     {
-      "start": 25472,
-      "end": 25632,
+      "start": 25447,
+      "end": 25607,
       "replacement": "  const TYPE_HINT = session.typeHint;",
       "offset": 9994
     },
     {
-      "start": 33436,
-      "end": 34000,
+      "start": 33641,
+      "end": 34205,
       "replacement": "  const fitPinsToTeam = session.fitPinsToTeam;",
       "offset": 10156
     },
     {
-      "start": 39622,
-      "end": 39985,
+      "start": 39827,
+      "end": 40190,
       "replacement": "  const parsedDailyGoal = session.parsedDailyGoal;",
       "offset": 10722
     },
     {
-      "start": 40066,
-      "end": 41851,
+      "start": 40271,
+      "end": 42056,
       "replacement": "  const validate = session.validate;",
       "offset": 11087
     },
     {
-      "start": 65674,
-      "end": 66166,
+      "start": 67512,
+      "end": 68004,
       "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
       "offset": 12874
     },
     {
-      "start": 66167,
-      "end": 66558,
+      "start": 68005,
+      "end": 68396,
       "replacement": "  const kitProblem = session.kitProblem;",
       "offset": 13368
     },
     {
-      "start": 43491,
-      "end": 43515,
+      "start": 44437,
+      "end": 44461,
       "replacement": "  // Submission activity belongs to the session owner.",
       "offset": 13761
     }
@@ -65,8 +65,8 @@
       "replacement": "const finishErr = session.finalProblem();"
     },
     {
-      "original": "vid = await data.submit({ S, t: TYPES.find((x) => x.id === S.typeId) || TYPES[0],\n        goal: parsedDailyGoal(), tr, storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });",
-      "replacement": "vid = await session.submit({ storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });"
+      "original": "vid = await data.submit({ S, t: TYPES.find((x) => x.id === S.typeId) || TYPES[0],\n        goal: parsedDailyGoal(), tr, storage: LS, venueApi: window.KiwiVenue, teamApi: teamTrack.api });",
+      "replacement": "vid = await session.submit({ storage: LS, venueApi: window.KiwiVenue, teamApi: teamTrack.api });"
     },
     {
       "original": "    state: S,",

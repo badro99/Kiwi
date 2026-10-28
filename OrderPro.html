@@ -61,9 +61,9 @@
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
-  <script src="assets/material-icons.ordering.js?v=4" data-full="assets/material-icons.js?v=4" defer></script>
+  <script src="assets/material-icons.ordering.js?v=6" data-full="assets/material-icons.js?v=4" defer></script>
 
-  <link rel="stylesheet" href="assets/orderpro-page.css?v=4" />
+  <link rel="stylesheet" href="assets/orderpro-page.css?v=6" />
 </head>
 
 <body>
@@ -90,7 +90,7 @@
          carte. Every failure has an honest screen; none of them invent a menu. -->
     <section class="screen screen-boot is-active" id="screen-boot">
       <div class="boot-spinner" id="boot-spinner"></div>
-      <div class="boot-icon" id="boot-icon" hidden><i data-lucide="nfc"></i></div>
+      <div class="boot-icon" id="boot-icon" hidden><i data-icon="nfc"></i></div>
       <h1 class="boot-title" id="boot-title" data-i18n="boot_loading">Connexion à l'établissement…</h1>
       <p class="boot-body" id="boot-body"></p>
       <button class="boot-retry" id="boot-retry" type="button" hidden data-i18n="boot_retry">Réessayer</button>
@@ -110,20 +110,20 @@
 
       <div class="mode-cards">
         <button class="mode-card" type="button" data-mode="table">
-          <span class="mode-icon"><i data-lucide="utensils"></i></span>
+          <span class="mode-icon"><i data-icon="restaurant"></i></span>
           <span class="mode-body">
             <span class="mode-label" data-i18n="mode_table_label">Je suis à table</span>
             <span class="mode-desc" data-i18n="mode_table_desc">Commande envoyée au serveur · paiement à la table</span>
           </span>
-          <span class="mode-chev"><i data-lucide="chevron-right"></i></span>
+          <span class="mode-chev"><i data-icon="chevron_right"></i></span>
         </button>
         <button class="mode-card" type="button" data-mode="takeout">
-          <span class="mode-icon"><i data-lucide="shopping-bag"></i></span>
+          <span class="mode-icon"><i data-icon="shopping_bag"></i></span>
           <span class="mode-body">
             <span class="mode-label" data-i18n="mode_takeout_label">À emporter</span>
             <span class="mode-desc" data-i18n="mode_takeout_desc">Paiement à la caisse · on vous prévient quand c'est prêt</span>
           </span>
-          <span class="mode-chev"><i data-lucide="chevron-right"></i></span>
+          <span class="mode-chev"><i data-icon="chevron_right"></i></span>
         </button>
       </div>
 
@@ -133,7 +133,7 @@
     <!-- ============ TABLE-NUMBER ENTRY ============ -->
     <section class="screen screen-table" id="screen-table">
       <button class="back-affordance" type="button" data-back="screen-mode" aria-label="Retour">
-        <i data-lucide="chevron-left"></i>
+        <i data-icon="chevron_left"></i>
       </button>
       <div class="table-top">
         <div class="brand-mark">Établissement<i aria-hidden="true"></i></div>
@@ -161,13 +161,13 @@
         <span class="num-key key-empty" aria-hidden="true"></span>
         <button class="num-key" data-key="0">0</button>
         <button class="num-key key-back" data-key="back" aria-label="Effacer">
-          <i data-lucide="delete"></i>
+          <i data-icon="backspace"></i>
         </button>
       </div>
 
       <button class="continue-btn" id="continue-btn" type="button">
         <span data-i18n="btn_continue">Continuer</span>
-        <i data-lucide="arrow-right"></i>
+        <i data-icon="arrow_forward"></i>
       </button>
     </section>
 
@@ -183,15 +183,15 @@
 
       <div class="service-bar" id="service-bar">
         <span class="table-badge" id="menu-badge">
-          <i data-lucide="utensils"></i>
+          <i data-icon="restaurant"></i>
           <span id="menu-badge-text">Table,</span>
         </span>
         <button class="service-pill" type="button" data-service="call-server">
-          <i data-lucide="bell-ring"></i>
+          <i data-icon="notifications_active"></i>
           <span data-i18n="service_call">Appeler l’équipe</span>
         </button>
         <button class="service-pill" type="button" data-service="ask-bill">
-          <i data-lucide="receipt"></i>
+          <i data-icon="receipt"></i>
           <span data-i18n="service_bill">Addition</span>
         </button>
       </div>
@@ -234,7 +234,7 @@
       <div class="success-bottom">
         <p class="success-note" data-i18n="success_note">Le paiement se fait à votre table. Vous pouvez ajouter d'autres articles si vous voulez.</p>
         <button class="success-cta" id="restart-btn" type="button">
-          <i data-lucide="plus"></i>
+          <i data-icon="add"></i>
           <span data-i18n="success_cta">Ajouter à ma commande</span>
         </button>
       </div>
@@ -263,7 +263,7 @@
 
       <div class="cashier-bottom">
         <button class="cashier-confirm-btn" type="button" id="cashier-confirm-btn">
-          <i data-lucide="check"></i>
+          <i data-icon="check"></i>
           <span data-i18n="cashier_confirm">Paiement confirmé à la caisse</span>
         </button>
         <p class="cashier-hint" data-i18n="cashier_hint">Le caissier valide votre paiement. Une fois validé, vous pouvez sortir, on vous prévient quand c'est prêt.</p>
@@ -290,7 +290,7 @@
           <div class="prep-bar" aria-hidden="true"><div class="prep-bar-fill" id="prep-bar-fill"></div></div>
         </div>
         <div class="prep-perm" id="prep-perm">
-          <span class="perm-icon"><i data-lucide="bell"></i></span>
+          <span class="perm-icon"><i data-icon="notifications"></i></span>
           <span class="perm-body" id="prep-perm-body">Recevez une notification quand c'est prêt, gardez votre téléphone à côté.</span>
           <button class="prep-perm-btn" type="button" id="prep-perm-btn" data-i18n="prep_perm_btn">Activer</button>
         </div>
@@ -316,7 +316,7 @@
       </div>
       <div class="ready-bottom">
         <button class="ready-cta" type="button" id="ready-cta">
-          <i data-lucide="arrow-right"></i>
+          <i data-icon="arrow_forward"></i>
           <span data-i18n="ready_cta">Récupérer au comptoir</span>
         </button>
       </div>
@@ -357,7 +357,7 @@
           <input class="bq-search" id="bq-search" type="search" autocomplete="off"
                  data-i18n-placeholder="bq_search_ph" placeholder="Rechercher un produit" />
           <button class="bq-scan-btn" type="button" id="bq-scan-open">
-            <i data-lucide="scan-barcode"></i>
+            <i data-icon="barcode_scanner"></i>
             <span data-i18n="bq_scan">Scanner un produit</span>
           </button>
         </div>
@@ -401,7 +401,7 @@
 
     <!-- ============ Toast ============ -->
     <div class="toast" id="toast" aria-live="polite">
-      <i data-lucide="check"></i>
+      <i data-icon="check"></i>
       <span id="toast-text">Ajouté</span>
     </div>
 
@@ -413,7 +413,7 @@
         <button class="sheet-x" type="button" data-close-custom data-i18n-aria="bq_close" aria-label="Fermer" hidden><i data-icon="close"></i></button>
         <div class="custom-header">
           <div class="custom-img" id="custom-img">
-            <i data-lucide="coffee"></i>
+            <i data-icon="local_cafe"></i>
           </div>
           <div class="custom-info">
             <div class="custom-name" id="custom-name"></div>
@@ -443,7 +443,7 @@
             <div class="custom-price-value" id="custom-price-value">0 MAD</div>
           </div>
           <button class="custom-add-btn" type="button" id="custom-add-btn">
-            <i data-lucide="plus"></i>
+            <i data-icon="add"></i>
             <span data-i18n="btn_add">Ajouter</span>
           </button>
         </div>
@@ -536,11 +536,11 @@
           <span class="val" id="bill-total-value">0 MAD</span>
         </div>
         <button class="bill-confirm-btn" type="button" id="bill-confirm-btn">
-          <i data-lucide="hand-platter"></i>
+          <i data-icon="room_service"></i>
           <span data-i18n="bill_confirm">Demander l'addition</span>
         </button>
         <button class="bill-split-btn" type="button" id="open-split-btn">
-          <i data-lucide="split-square-vertical"></i>
+          <i data-icon="vertical_split"></i>
           <span data-i18n="split_open">Diviser l'addition</span>
         </button>
       </div>
@@ -556,12 +556,12 @@
 
         <div class="split-mode-tabs">
           <button class="split-mode-tab is-active" type="button" data-split-mode="egal">
-            <span class="icon"><i data-lucide="users"></i></span>
+            <span class="icon"><i data-icon="groups"></i></span>
             <span class="title" data-i18n="split_mode_egal">Parts égales</span>
             <span class="desc" data-i18n="split_mode_egal_desc">Tout le monde paie la même somme</span>
           </button>
           <button class="split-mode-tab" type="button" data-split-mode="article">
-            <span class="icon"><i data-lucide="list"></i></span>
+            <span class="icon"><i data-icon="list"></i></span>
             <span class="title" data-i18n="split_mode_article">Par article</span>
             <span class="desc" data-i18n="split_mode_article_desc">Chacun paie ce qu'il a pris</span>
           </button>
@@ -613,7 +613,7 @@
         </div>
 
         <button class="split-confirm-btn" type="button" id="split-confirm-btn">
-          <i data-lucide="check"></i>
+          <i data-icon="check"></i>
           <span data-i18n="split_confirm">Confirmer le partage</span>
         </button>
       </div>

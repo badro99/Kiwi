@@ -57,7 +57,7 @@
       if (currentTab === 'tables') renderTables();
       if (activeTableId === tableId) renderTableDetail();
       const rest = Math.max(0, Number(saved.remainingCents) || 0) / 100;
-      toast(`Table ${tableId} · reste ${fmtMADcents(rest)} : une commande est arrivée pendant l'encaissement`, 6500);
+      toast(employeePick( `Table ${tableId} · reste ${fmtMADcents(rest)} : une commande est arrivée pendant l'encaissement`, `Table ${tableId} · ${fmtMADcents(rest)} left: an order arrived during payment`, `الطاولة ${tableId} · المتبقي ${fmtMADcents(rest)} : وصل طلب أثناء الدفع`), 6500);
     }
 
     function employeePaymentRefsForgetAll() {
@@ -385,7 +385,7 @@ cashModal.addEventListener('click', (e) => {
       const hasUnsent = (tableOrders[id] || []).some((line) =>
         Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
       if (hasUnsent || dirtyOrders.has(id)) {
-        toast(`Table ${id} · envoyez d'abord la commande en cuisine`, 4800);
+        toast(employeePick(`Table ${id} · envoyez d'abord la commande en cuisine`, `Table ${id} · send the order to the kitchen first`, `الطاولة ${id} · أرسل الطلب إلى المطبخ أولاً`), 4800);
         return false;
       }
       const paidAmount = getTableTotal(id);
@@ -405,7 +405,7 @@ cashModal.addEventListener('click', (e) => {
         && String(order.table) === String(id) && order.session);
       const session = serviceTableSessions.get(id) || (canonical && String(canonical.session)) || '';
       if (!merchant || !session || paidAmount <= 0) {
-        toast(`Table ${id} · paiement impossible`, 4200);
+        toast(employeePick(`Table ${id} · paiement impossible`, `Table ${id} · payment failed`, `الطاولة ${id} · تعذّر الدفع`), 4200);
         return false;
       }
       /* Hors ligne connu : échec immédiat, la table revient à « addition
@@ -457,11 +457,11 @@ cashModal.addEventListener('click', (e) => {
            on ne dit pas « non enregistré »), ou réseau tombé avant l'envoi. */
         /* Une carte a peut-être déjà été débitée au terminal : la relance rejoue
            la même vente (identifiant stable), repasser la carte la débiterait deux fois. */
-        if (payCtl && payCtl.signal.aborted) toast((method || 'card') === 'card'
-          ? `Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`
-          : `Table ${id} · paiement non confirmé, réessayez`, 6000);
-        else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
-        else toast(`Table ${id} · paiement non enregistré, réessayez`, 5200);
+        if (payCtl && payCtl.signal.aborted) {
+          if ((method || 'card') === 'card') toast(employeePick(`Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`, `Table ${id} · payment not confirmed, do not run the card again, just retry`, `الطاولة ${id} · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
+          else toast(employeePick(`Table ${id} · paiement non confirmé, réessayez`, `Table ${id} · payment not confirmed, try again`, `الطاولة ${id} · لم يتأكد الدفع، أعد المحاولة`), 6000);
+        } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
+        else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
         return false;
       } finally {
         if (payTimer) clearTimeout(payTimer);
@@ -477,7 +477,7 @@ cashModal.addEventListener('click', (e) => {
             saleId: String((saved && saved.id) || paymentId),
             ref: 'employee-payment:' + id + ':' + Date.now() }),
         }).then((r) => r.ok ? r.json() : null).then((data) => {
-          if (data && data.ok && !data.replayed) toast(`${paidClient.name} · fidélité mise à jour`);
+          if (data && data.ok && !data.replayed) toast(employeePick(`${paidClient.name} · fidélité mise à jour`, `${paidClient.name} · loyalty updated`, `${paidClient.name} · تم تحديث الوفاء`));
         }).catch(() => {});
       }
       if (saved && saved.billOpen) {
@@ -511,7 +511,7 @@ cashModal.addEventListener('click', (e) => {
       if (currentTab === 'tables')   renderTables();
       if (currentTab === 'notifications') renderNotifications();
       if (currentTab === 'profil')   renderProfil();
-      toast(`Table ${id} · réglée ✓`);
+      toast(employeePick(`Table ${id} · réglée ✓`, `Table ${id} · paid ✓`, `الطاولة ${id} · مدفوعة ✓`));
       return true;
     }
 
@@ -530,8 +530,9 @@ cashModal.addEventListener('click', (e) => {
     function saveSplitFlow(state = splitState) {
       if (!state.tableId || !state.flow) return;
       const saved = {
+        v: 2,
         mode: state.splitMode,
-        total: state.total,
+        totalCents: state.totalCents,
         parts: state.flow.parts,
         paidCount: state.flow.paidCount,
         id: state.flow.id,
@@ -558,13 +559,15 @@ cashModal.addEventListener('click', (e) => {
       if (!saved && !SV_DEMO) {
         const session = serviceTableSessions.get(tableId);
         saved = session && empPayRefsRead()['split:' + empPayRefKey('visit') + ':' + session];
-        if (saved && (!Array.isArray(saved.parts) || !saved.id || !saved.parts.length
-          || saved.parts.some(p => !p || !Number.isFinite(p.amount) || p.amount < 0))) saved = null;
+        /* Enregistré avant les centimes (v absent) : montants en dirhams, convertis une fois à la lecture. */
+        if (saved && saved.v !== 2) saved = { ...saved, v: 2, totalCents: Math.round(saved.total * 100), parts: Array.isArray(saved.parts) ? saved.parts.map(p => p && { ...p, amountCents: Math.round(p.amount * 100) }) : saved.parts };
+        if (saved && (!Array.isArray(saved.parts) || !saved.id || !saved.parts.length || !Number.isInteger(saved.totalCents)
+          || saved.parts.some(p => !p || !Number.isInteger(p.amountCents) || p.amountCents < 0))) saved = null;
         if (saved) tableSplits.set(tableId, saved);
       }
       if (!saved) return false;
       splitState.tableId  = tableId;
-      splitState.total    = saved.total;
+      splitState.totalCents = saved.totalCents;
       splitState.splitMode = saved.mode;
       splitState.flow = {
         parts: saved.parts,
@@ -603,9 +606,9 @@ cashModal.addEventListener('click', (e) => {
       // dish with its remaining count, not one card per unit)
       const itemTotals = splitItemTotals(order);
       // Le reste dû : un acompte déjà encaissé sur la visite n'est pas repartagé.
-      const total = getTableTotal(tableId);
+      const totalCents = Math.round(getTableTotal(tableId) * 100);
       Object.assign(splitState, {
-        tableId, total, itemTotals,
+        tableId, totalCents, itemTotals,
         splitMode: 'egal',
         numParts: Math.max(2, t.covers || 2),
         tipMode: '0', customTipPct: 0,
@@ -823,15 +826,14 @@ cashModal.addEventListener('click', (e) => {
 
     function updateSplitSummary() {
       const tipPct = effectiveTipPct();
-      const tipAmt = splitState.total * tipPct / 100;
-      const withTip = splitState.total + tipAmt;
-      const perPerson = withTip / splitState.numParts;
-      $('#split-total-display').textContent = fmtMADcents(splitState.total);
+      const tipCents = Math.round(splitState.totalCents * tipPct / 100 + 1e-9);
+      const perPerson = Math.round((splitState.totalCents + tipCents) / splitState.numParts) / 100;
+      $('#split-total-display').textContent = fmtMADcents(splitState.totalCents / 100);
       const tipRow = $('#split-tip-row');
       if (tipPct > 0) {
         tipRow.style.display = '';
         $('#split-tip-label').textContent = `+ pourboire ${tipPct}%`;
-        $('#split-tip-display').textContent = `+ ${fmtMADcents(tipAmt)}`;
+        $('#split-tip-display').textContent = `+ ${fmtMADcents(tipCents / 100)}`;
       } else tipRow.style.display = 'none';
       $('#split-per-person').textContent = fmtMADcents(perPerson);
       $('#split-egal-desc').textContent = `${splitState.numParts} parts · ${fmtMADcents(perPerson)} chacun`;
@@ -895,7 +897,7 @@ cashModal.addEventListener('click', (e) => {
          déjà encaissé sur la visite, il ferait payer ces plats une seconde
          fois. Le reste se partage à parts égales. */
       if (splitState.splitMode !== 'egal' && Number(serviceVisitCredit.get(splitState.tableId)) > 0) {
-        toast('Un acompte est déjà réglé sur cette table · partagez le reste à parts égales');
+        toast(employeePick('Un acompte est déjà réglé sur cette table · partagez le reste à parts égales', 'A deposit is already paid on this table · split the rest in equal shares', 'تم دفع عربون على هذه الطاولة · قسّم المتبقي بحصص متساوية'));
         return;
       }
       if (splitState.splitMode !== 'egal') {
@@ -904,11 +906,11 @@ cashModal.addEventListener('click', (e) => {
       }
       const parts = [];
       if (splitState.splitMode === 'egal') {
-        const cents = Math.round(splitState.total * 100), n = splitState.numParts;
-        if (!Number.isInteger(n) || n < 1 || cents < n) { toast('Montant insuffisant pour ces parts'); return; }
+        const cents = splitState.totalCents, n = splitState.numParts;
+        if (!Number.isInteger(n) || n < 1 || !Number.isInteger(cents) || cents < n) { toast(employeePick('Montant insuffisant pour ces parts', 'Amount too small for these shares', 'المبلغ غير كافٍ لهذه الحصص')); return; }
         // Le dernier convive reçoit le reliquat, le pourboire reste hors recette.
         const pct = effectiveTipPct();
-        if (!Number.isFinite(pct) || pct < 0 || pct > 100) { toast('Pourboire invalide (0 à 100 %)'); return; }
+        if (!Number.isFinite(pct) || pct < 0 || pct > 100) { toast(employeePick('Pourboire invalide (0 à 100 %)', 'Invalid tip (0 to 100 %)', 'بقشيش غير صالح (0 إلى 100 %)')); return; }
         const tips = Math.round(cents * pct / 100 + 1e-9);
         const items = Object.entries(splitState.itemTotals);
         const allocate = (total, weights) => {
@@ -921,7 +923,7 @@ cashModal.addEventListener('click', (e) => {
           return values;
         };
         const weights = items.map(([, info]) => Math.round(info.totalQty * info.unitPrice * 100));
-        if (!weights.length || !weights.some(w => w > 0)) { toast('Addition sans article'); return; }
+        if (!weights.length || !weights.some(w => w > 0)) { toast(employeePick('Addition sans article', 'Bill without items', 'فاتورة بلا أصناف')); return; }
         let remaining = allocate(cents, weights);
         const bases = Array.from({ length: n }, (_, i) => i === n - 1 ? cents - Math.floor(cents / n) * (n - 1) : Math.floor(cents / n));
         const tipShares = allocate(tips, bases);
@@ -933,18 +935,15 @@ cashModal.addEventListener('click', (e) => {
             return { name: `${name} · 1/${n}`, qty: info.totalQty, unit: shares[j] / 100 / info.totalQty,
               price: shares[j] / 100 / info.totalQty, total: shares[j] / 100 };
           });
-          parts.push({ amount: base / 100, tipCents, label: tips ? 'Part égale · pourboire inclus' : 'Part égale', lines, paid: false, payMethod: null });
+          parts.push({ amountCents: base, tipCents, label: tips ? 'Part égale · pourboire inclus' : 'Part égale', lines, paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
 
         for (let c = 1; c <= n; c++) {
           const cart = splitState.perConvive[c] || {};
-          const amt = Object.entries(cart).reduce((s, [name, qty]) => {
-            return s + qty * (splitState.itemTotals[name]?.unitPrice || 0);
-          }, 0);
-
-          if (amt < 0.01) continue; // skip empty convives
+          const amtCents = Object.entries(cart).reduce((s, [name, qty]) => s + qty * Math.round((splitState.itemTotals[name]?.unitPrice || 0) * 100), 0);
+          if (amtCents < 1) continue; // skip empty convives
 
           const items = Object.entries(cart)
             .map(([name, qty]) => qty > 1 ? `${qty}× ${name}` : name)
@@ -957,12 +956,12 @@ cashModal.addEventListener('click', (e) => {
               qty,
               unit: unitPrice,
               price: unitPrice,
-              total: Math.round(qty * unitPrice * 100) / 100,
+              total: (qty * Math.round(unitPrice * 100)) / 100,
             };
           });
           const partLines = assignedLines;
           parts.push({
-            amount: amt,
+            amountCents: amtCents,
             label: items || 'Part équilibrée',
             lines: partLines,
             paid: false, payMethod: null,
@@ -985,7 +984,7 @@ cashModal.addEventListener('click', (e) => {
           return `<div class="split-part-card is-paid">
             <div class="split-part-num"><i data-lucide="check"></i></div>
             <div class="split-part-info">
-              <div class="split-part-amount">${fmtMADcents(p.amount + (p.tipCents || 0) / 100)}</div>
+              <div class="split-part-amount">${fmtMADcents((p.amountCents + (p.tipCents || 0)) / 100)}</div>
               <div class="split-part-paid-label">Réglé · ${p.payMethod === 'carte' ? 'Carte' : 'Espèces'}</div>
             </div>
           </div>`;
@@ -993,7 +992,7 @@ cashModal.addEventListener('click', (e) => {
         return `<div class="split-part-card">
           <div class="split-part-num">${idx + 1}</div>
           <div class="split-part-info">
-            <div class="split-part-amount">${fmtMADcents(p.amount + (p.tipCents || 0) / 100)}</div>
+            <div class="split-part-amount">${fmtMADcents((p.amountCents + (p.tipCents || 0)) / 100)}</div>
             <div class="split-part-label">${esc(p.label)}</div>
           </div>
           <div class="split-part-btns">
@@ -1019,7 +1018,7 @@ cashModal.addEventListener('click', (e) => {
       $('#split-modal').classList.remove('is-open');
 
       if (method === 'carte') {
-        $('#card-amount').textContent = fmtMADcents(part.amount + (part.tipCents || 0) / 100);
+        $('#card-amount').textContent = fmtMADcents((part.amountCents + (part.tipCents || 0)) / 100);
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
         splitPayCallback = () => {
           markSplitPartPaid(partIdx, 'carte');
@@ -1038,7 +1037,7 @@ cashModal.addEventListener('click', (e) => {
         lucide.createIcons();
         cardReaderArm(payTableId);
       } else {
-        cashAmountOverride = part.amount + (part.tipCents || 0) / 100;
+        cashAmountOverride = (part.amountCents + (part.tipCents || 0)) / 100;
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
         cashPay = () => markSplitPartPaid(partIdx, 'cash');
         cashSettled = false;
@@ -1048,7 +1047,7 @@ cashModal.addEventListener('click', (e) => {
         cashStepInput.hidden = false;
         cashStepSuccess.hidden = true;
         cashInput.value = cashAmountOverride;
-        $('#cash-amount').textContent = fmtMADcents(part.amount + (part.tipCents || 0) / 100);
+        $('#cash-amount').textContent = fmtMADcents((part.amountCents + (part.tipCents || 0)) / 100);
         updateRendu();
         cashModal.classList.add('is-open');
         lucide.createIcons();
@@ -1075,7 +1074,7 @@ cashModal.addEventListener('click', (e) => {
         && String(order.table) === String(tableId) && order.session);
       const session = (tableId && serviceTableSessions.get(tableId)) || (canonical && String(canonical.session)) || '';
       if (!SV_DEMO && (!merchant || !session)) {
-        toast('Session de service expirée · reconnectez-vous', 5200);
+        toast(employeePick('Session de service expirée · reconnectez-vous', 'Service session expired · sign in again', 'انتهت جلسة الخدمة · أعد تسجيل الدخول'), 5200);
         return false;
       }
       const orderRef = tableId ? serviceTableOrderRef(tableId) : '';
@@ -1084,7 +1083,7 @@ cashModal.addEventListener('click', (e) => {
       /* Hors ligne connu : échec immédiat, la part reste due, la feuille
          reste ouverte avec son montant. (navigator absent hors navigateur.) */
       if (!SV_DEMO && typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
-        toast("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 6000);
+        toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);
         return false;
       }
 
@@ -1092,7 +1091,7 @@ cashModal.addEventListener('click', (e) => {
       let payTimer = null;
       const payCtl = (typeof AbortController === 'function' && typeof setTimeout === 'function') ? new AbortController() : null;
       if (!SV_DEMO && saveSplitFlow(state) === false) {
-        toast('Stockage indisponible : paiement non envoyé, gardez cette addition ouverte', 6000);
+        toast(employeePick('Stockage indisponible : paiement non envoyé, gardez cette addition ouverte', 'Storage unavailable: payment not sent, keep this bill open', 'التخزين غير متاح: لم يُرسَل الدفع، أبقِ هذه الفاتورة مفتوحة'), 6000);
         return false;
       }
       employeePaymentsInFlight.add(partFlightKey);
@@ -1111,8 +1110,8 @@ cashModal.addEventListener('click', (e) => {
               table: tableId,
               session,
               split: { index: partIdx, count: flow.parts.length, flowId: flow.id },
-              amount: Math.round(p.amount * 100) / 100,
-              amountCents: Math.round(p.amount * 100),
+              amount: p.amountCents / 100,
+              amountCents: p.amountCents,
               tipCents: p.tipCents || 0,
               method: payMethod,
               ts: Date.now(),
@@ -1121,7 +1120,7 @@ cashModal.addEventListener('click', (e) => {
               lines: (Array.isArray(p.lines) && p.lines.length) ? p.lines : [{
                 name: (tableId ? `Table ${tableId}` : 'Table') + ` · part ${partIdx + 1}`,
                 qty: 1,
-                total: Math.round(p.amount * 100) / 100,
+                total: p.amountCents / 100,
                 cat: '',
               }],
             }),
@@ -1134,11 +1133,11 @@ cashModal.addEventListener('click', (e) => {
           }
         }
       } catch (err) {
-        if (payCtl && payCtl.signal.aborted) toast(payMethod === 'card'
-          ? `Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`
-          : `Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, 6000);
-        else if (err && !err.refused) toast("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 6000);
-        else toast(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, 5200);
+        if (payCtl && payCtl.signal.aborted) {
+          if (payMethod === 'card') toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, do not run the card again, just retry`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
+          else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, try again`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، أعد المحاولة`), 6000);
+        } else if (err && !err.refused) toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);
+        else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not saved, try again`, `الطاولة ${tableId || ''} · لم يُسجَّل الجزء ${partIdx + 1}، أعد المحاولة`), 5200);
         return false;
       } finally {
         if (payTimer) clearTimeout(payTimer);
@@ -1150,7 +1149,7 @@ cashModal.addEventListener('click', (e) => {
       if (partPaymentId) p.saleId = (saved && saved.id) || partPaymentId;
       flow.paidCount = flow.parts.filter(part => part.paid).length;
       const completesTable = Boolean(tableId && flow.parts.every(part => part.paid));
-      try { servicePaymentTally(p.amount, completesTable ? (t && t.elapsed) || 0 : 0); } catch (_) {}
+      try { servicePaymentTally(p.amountCents / 100, completesTable ? (t && t.elapsed) || 0 : 0); } catch (_) {}
       const visibleFlow = splitState.flow && splitState.flow.parts === flow.parts;
       if (visibleFlow) splitState.flow.paidCount = flow.paidCount;
 
@@ -1181,11 +1180,11 @@ cashModal.addEventListener('click', (e) => {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              merchant, clientId: paidClient.id, amount: state.total,
+              merchant, clientId: paidClient.id, amount: state.totalCents / 100,
               ref: 'employee-payment:' + tableId + ':' + Date.now(),
             }),
           }).then((r) => r.ok ? r.json() : null).then((data) => {
-            if (data && data.ok && !data.replayed) toast(`${paidClient.name} · fidélité mise à jour`);
+            if (data && data.ok && !data.replayed) toast(employeePick(`${paidClient.name} · fidélité mise à jour`, `${paidClient.name} · loyalty updated`, `${paidClient.name} · تم تحديث الوفاء`));
           }).catch(() => {});
         }
 
@@ -1218,7 +1217,7 @@ cashModal.addEventListener('click', (e) => {
           if (currentTab === 'tables') renderTables();
           if (currentTab === 'notifications') renderNotifications();
           if (currentTab === 'profil') renderProfil();
-          toast(`Table ${tableId} · réglée ✓`);
+          toast(employeePick(`Table ${tableId} · réglée ✓`, `Table ${tableId} · paid ✓`, `الطاولة ${tableId} · مدفوعة ✓`));
         }
         lucide.createIcons();
       }

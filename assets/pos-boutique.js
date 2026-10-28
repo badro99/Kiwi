@@ -1,7 +1,8 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=28';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=28';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=28';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=47';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=47';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=47';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=5';
 
   'use strict';
 
@@ -803,9 +804,9 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     if (!merchant) return Promise.resolve(0);
     const start = new Date(); start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - (RETAIN_DAYS - 1));
-    return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
+    return (window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
-    }).then((r) => r.ok ? r.json() : null).then((data) => {
+    }).then((data) => {
       let added = 0;
       ((data && data.sales) || []).forEach((row) => {
         const ref = String(row.ref || '');
@@ -1139,7 +1140,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     const normalize = (p, surface) => {
         var kind = ['percent', 'amount', 'fixed'].indexOf(p.kind) >= 0 ? p.kind : 'percent';
         var value = money(p.value);
-        if (kind === 'percent') value = Math.min(100, Math.round(value));
+        if (kind === 'percent') value = Math.min(100, value); /* kept to the centime (12.5 % stays 12.5 %), like every amount */
         var days = (Array.isArray(p.days) ? p.days : []).map(Number).filter(function (d, i, a) {
           return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i;
         }).sort(function (a, b) { return a - b; });
@@ -1286,14 +1287,11 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
         pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
         stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
     }
-    const rewardDiscount = (reward, clientId, base, units, policy = 'boutique') => {
+    const rewardDiscount = (reward, clientId, base, units) => {
       if (!reward || reward.clientId !== clientId) return 0;
-      const down = n => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
-      if (reward.kind === 'percent') {
-        if (policy === 'librairie') return Math.round(base * reward.value / 100 * 100 + 1e-9) / 100;
-        return base - down(base * (100 - Math.min(100, Math.max(0, reward.value || 0))) / 100);
-      }
-      return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+      if (reward.kind !== 'percent') return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+      const amount = Math.max(0, +base || 0), percent = Math.min(100, Math.max(0, +reward.value || 0));
+      return Math.min(amount, Math.round(amount * percent + 1e-9) / 100); // wave Q: nearest centime, every trade
     }
     return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
   })();
@@ -1665,121 +1663,12 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
        l'ouverture de la caisse, et à chaque ouverture d'Échanges & avoirs. */
     if (!IS_DEMO) void refreshRemoteAvoirs();
 
-    bqKitRail();
-
-    /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
-       d'ouverture d'abord, la vente ensuite. La démo entre directement. */
-    bqMaybeOpenScreen();
+    bqKitRail(root, $, icons, bqKitSkin(), (STAFF.caissiere && STAFF.caissiere.name) || '');
+    /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond d'ouverture d'abord, la vente ensuite. La démo entre directement. */
+    if (!IS_DEMO && !bqShift) bqShowOpenScreen();
   }
 
-  /* kiwiSkin2027:till · le rail du kit (§10.20) : quatre destinations et Plus,
-     comme la caisse restaurant.
-
-     On REMPLACE la barre livrée, on ne la REPEINT pas. C'est la recette de la
-     caisse restaurant (assets/caisse/till-frame.js › tillKitOn : une boîte
-     neuve avant .sidebar, que kit.css éteint ensuite).
-     La repeindre était l'erreur : la barre livrée est sombre, donc son logo est
-     la version inverse (kiwi-newlogo-inverse.svg) et le nom du magasin est en
-     #fff — sur un fond clair ils devenaient blanc sur blanc, et les libellés
-     en ligne se chevauchaient une fois la colonne imposée (propriétaire,
-     2026-10-28, captures de la tablette). Aucun de ces défauts n'existe quand
-     la barre d'origine cesse simplement de peindre.
-
-     Ce qui n'est pas sur le rail n'est pas SUPPRIMÉ, il est DÉPLACÉ dans le
-     panneau Plus : les mêmes nœuds, avec leurs propres écouteurs. Le panneau
-     vit DANS #bq-nav, donc la délégation de clic du métier (switchView) voit
-     encore les destinations déplacées. Et le rail n'invente aucun bouton : il
-     CLIQUE celui que la boutique a livré, ce qui fait tourner son code à lui.
-     C'est la différence avec la liste de sélecteurs du restaurant, où une
-     ligne qui ne correspond plus tombe sans bruit : ici il n'y a pas de liste
-     à mentir — un libellé absent de #bq-nav ne donne pas de ligne de rail. */
-  const BQ_RAIL_MAIN = [
-    ['vente', 'shopping_bag'],
-    ['echanges', 'sync_alt'],
-    ['inventaire', 'inventory_2'],
-    ['clientes', 'group'],
-  ];
-  let bqRail = null, bqMore = null;
-
-  function bqKitRailPaint() {
-    if (!bqRail || !bqMore) return;
-    const items = [];
-    for (const [view, ic] of BQ_RAIL_MAIN) {
-      const b = $('#bq-nav .bq-nav-it[data-bq-view="' + view + '"]', root);
-      if (!b) continue;
-      const lab = b.querySelector('span');
-      const bad = b.querySelector('.bq-nav-badge');
-      const n = bad ? parseInt(String(bad.textContent).replace(/[^\d]/g, ''), 10) : 0;
-      items.push({ id: view, icon: ic, label: (lab ? lab.textContent : view).trim(), badge: n > 0 ? n : 0 });
-    }
-    const open = !bqMore.hidden;
-    items.push(open ? { id: 'more', icon: 'close', label: 'Moins' } : { id: 'more', icon: 'more_horiz', label: 'Plus' });
-    bqRail.items = items;
-    const who = (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '';
-    bqRail.footer = who ? { cashier: who } : {};
-    /* Plus n'est jamais la valeur : <k-rail> refuse de ré-émettre sur
-       l'élément qui porte déjà sa valeur, et Moins ne pourrait plus refermer. */
-    bqRail.setAttribute('value', state.view || 'vente');
-  }
-
-  function bqKitRail() {
-    if (!root || !bqKitSkin() || !customElements.get('k-rail')) return false;
-    const nav = $('#bq-nav', root);
-    const rail = root.querySelector('.bq-rail');
-    if (!nav || !rail || nav.querySelector('#bq-more')) return false;
-    const foot = root.querySelector('.bq-rail-foot');
-
-    const more = document.createElement('div');
-    more.className = 'bq-more';
-    more.id = 'bq-more';
-    more.hidden = true;
-    /* Ordre d'origine conservé : les destinations d'abord, le pied ensuite. */
-    const main = BQ_RAIL_MAIN.map((r) => r[0]);
-    [...nav.children].forEach((el) => {
-      if (el.dataset && main.indexOf(el.dataset.bqView) >= 0) return;
-      more.appendChild(el);
-    });
-    if (foot) [...foot.children].forEach((el) => more.appendChild(el));
-    nav.appendChild(more);
-    bqMore = more;
-
-    const box = document.createElement('div');
-    box.id = 'bq-kit-rail';
-    rail.parentNode.insertBefore(box, rail);
-    bqRail = document.createElement('k-rail');
-    bqRail.setAttribute('label', 'Plus');
-    box.appendChild(bqRail);
-
-    const close = () => { if (!more.hidden) { more.hidden = true; bqKitRailPaint(); } };
-    const toggle = () => { more.hidden = !more.hidden; bqKitRailPaint(); icons(); };
-
-    bqRail.addEventListener('kiwi:action', (e) => {
-      const d = e.detail || {};
-      if (d.action !== 'k.rail.select') return;
-      e.stopPropagation();
-      const id = d.id == null ? '' : String(d.id);
-      if (id === 'more') { toggle(); return; }
-      /* Le bouton livré, pas une copie : son écouteur, son switchView. */
-      const b = $('#bq-nav .bq-nav-it[data-bq-view="' + id + '"]', root);
-      if (b) b.click();
-      close();
-      bqKitRailPaint();
-    });
-
-    /* Un geste dans Plus fait son travail puis referme : le panneau ne reste
-       pas par-dessus l'écran qu'il vient d'ouvrir. */
-    more.addEventListener('click', () => setTimeout(close, 0));
-    document.addEventListener('click', (e) => {
-      if (!more.hidden && !more.contains(e.target) && !box.contains(e.target)) close();
-    });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-    bqKitRailPaint();
-    icons();
-    return true;
-  }
-
-  /* Pick the first two in-stock articles from the live catalogue for the
-     mid-day demo ticket (ids are the DB's, not the old hard-coded literals). */
+  /* Pick the first two in-stock articles from the live catalogue for the mid-day demo ticket (ids are the DB's, not the old hard-coded literals). */
   function seedDemoTicket() {
     const picks = [];
     for (const r of RAYONS) {
@@ -1810,7 +1699,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   function onShow() {
     if (!root) return;
     syncTillStaff();                      // a new shift may have unlocked the till
-    bqMaybeOpenScreen();                  // re-unlock without a poste open → fond d'ouverture
+    if (!IS_DEMO && !bqShift) bqShowOpenScreen();                  // re-unlock without a poste open → fond d'ouverture
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
@@ -2624,75 +2513,19 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     }, () => { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible · le rapport reste dans le tableau de bord')); return { ok: false }; });
   }
 
-  /* ── l'écran d'ouverture (fond de caisse) ──
-     Même dessin que le clock-in restaurant, mêmes classes ; seul le conteneur
-     porte .bq-clockin, que pos-boutique.css ré-affiche par-dessus le masquage
-     body.is-pos. Le fond retenu est mémorisé PAR ÉTABLISSEMENT, sous la même
-     clé que la caisse restaurant : un appareil qui sert deux commerces retient
-     deux montants. */
+  /* ── l'écran d'ouverture (fond de caisse) ── même dessin et mêmes classes que le clock-in restaurant ; seul le conteneur porte .bq-clockin,
+     que pos-boutique.css ré-affiche par-dessus body.is-pos. Le fond retenu est mémorisé PAR ÉTABLISSEMENT (clé de la caisse restaurant). */
   function bqFloatMemKey() {
     try { const p = pvPaired(); if (p && p.merchant) return 'kiwi:openingFloat:v1:' + p.merchant; } catch (_) {}
     return 'kiwi:openingFloat:v1:boutique';
   }
   let bqFloat = 0;
-  /* kiwiSkin2027:till · le fond d'ouverture sur le kit (§18.9), exactement comme
-     la caisse restaurant (assets/caisse/shift.js › tillKitOpenFloat). La
-     boutique dessine son PROPRE écran d'ouverture (#bq-clockin, même dessin,
-     mêmes classes), donc elle ne passait pas par openService() et gardait les
-     pastilles livrées : le patron voyait l'ancien écran alors que le
-     restaurant comptait son tiroir (propriétaire, 2026-10-27).
-     « Ouvrir la caisse » ouvre <k-cash-count mode="open"> : le fond est ce que
-     le caissier COMPTE, rien n'est prérempli, et le dernier fond n'est qu'une
-     puce à toucher — la même mémoire, par établissement, que les pastilles.
-     Drapeau éteint, ou éléments du kit absents : rien de tout cela ne part et
-     l'écran livré reste le seul parcours. */
-  function bqKitSkin() {
-    try {
-      return document.documentElement.getAttribute('data-skin-2027') === 'till'
-        && !!customElements.get('k-cash-count') && !!customElements.get('k-sheet');
-    } catch (_) { return false; }
-  }
-  let bqFloatSheet = null;
-  /* Rend true si la feuille s'est ouverte. onCounted reçoit le montant COMPTÉ. */
+  /* kiwiSkin2027:till · le fond d'ouverture compté sur le kit (§18.9, comme caisse/shift.js), seule branche 2027 du métier ; drapeau éteint, l'écran livré. */
+  function bqKitSkin() { try { return document.documentElement.getAttribute('data-skin-2027') === 'till' && !!customElements.get('k-cash-count') && !!customElements.get('k-sheet'); } catch (_) { return false; } }
   function bqKitFloat(screen, onCounted) {
     if (!bqKitSkin()) return false;
-    if (bqFloatSheet) { try { bqFloatSheet.remove(); } catch (_) {} bqFloatSheet = null; }
-    const sheet = document.createElement('k-sheet');
-    sheet.setAttribute('size', 'count');
-    const cc = document.createElement('k-cash-count');
-    cc.setAttribute('mode', 'open');
-    sheet.appendChild(cc);
-    document.body.appendChild(sheet);
-    bqFloatSheet = sheet;
-    sheet.addEventListener('kiwi:action', (e) => {
-      const d = e.detail || {};
-      if (d.action === 'k.sheet.close') { sheet.removeAttribute('open'); return; }
-      /* « Saisir le total » : les pastilles livrées reprennent la main, et ce
-         sont elles qui portent alors le montant. */
-      if (d.action === 'k.cash-count.enter-total') {
-        sheet.removeAttribute('open');
-        const box = screen.querySelector('.clockin-float');
-        if (box) box.classList.add('k-shown');
-        const other = screen.querySelector('#bqci-chips [data-float="custom"]');
-        if (other) other.click();
-        return;
-      }
-      if (d.action !== 'k.cash-count.open') return;
-      try { cc.committed(); } catch (_) {}
-      sheet.removeAttribute('open');
-      setTimeout(() => { try { sheet.remove(); } catch (_) {} }, 400);
-      bqFloatSheet = null;
-      onCounted(Math.max(0, Number((d.value || {}).counted) || 0));
-    });
-    let last = NaN;
-    try { last = parseFloat(localStorage.getItem(bqFloatMemKey())); } catch (_) {}
-    cc.count = { lastFloat: Number.isFinite(last) && last > 0 ? last : null };
-    sheet.setAttribute('open', '');
-    return true;
-  }
-  function bqMaybeOpenScreen() {
-    if (IS_DEMO || bqShift) return;
-    bqShowOpenScreen();
+    const cc = document.createElement('k-cash-count'); cc.setAttribute('mode', 'open');
+    return bqKitOpenSheet(screen, cc, onCounted, bqFloatMemKey());
   }
   function bqShowOpenScreen() {
     if (document.getElementById('bq-clockin')) return;
@@ -2729,8 +2562,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
                    aria-label="Fond d'ouverture, montant libre en dirhams">
             <span class="ci-float-cur" aria-hidden="true">MAD</span>
           </div>
-          <!-- Rien n'est présélectionné : le fond est ce que le caissier a COMPTÉ.
-               Le dernier fond n'est qu'un raccourci à toucher. -->
+          <!-- Rien n'est présélectionné : le fond est ce que le caissier a COMPTÉ. Le dernier fond n'est qu'un raccourci à toucher. -->
           <button type="button" class="ci-float-last" id="bqci-last" hidden></button>
           <div class="ci-float-err" id="bqci-hint" role="status">Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.</div>
         </div>
@@ -2756,22 +2588,19 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       if (on && focus) { input.focus(); input.select(); }
     };
     const remember = () => { try { localStorage.setItem(bqFloatMemKey(), String(bqFloat)); } catch (_) {} };
-    /* Le bouton ne s'enfonce qu'une fois le fond indiqué : jamais de 500
-       présélectionné qu'un seul toucher enregistrerait tel quel. */
+    /* Le bouton ne s'enfonce qu'une fois le fond indiqué : jamais de 500 présélectionné qu'un seul toucher enregistrerait tel quel. */
     let chosen = false;
-    const btnOpen = el.querySelector('#bqci-btn');
-    const hint = el.querySelector('#bqci-hint');
-    const last = el.querySelector('#bqci-last');
+    const btnOpen = el.querySelector('#bqci-btn'), hint = el.querySelector('#bqci-hint'), last = el.querySelector('#bqci-last');
     const gate = () => {
       const kit = bqKitSkin();
       /* Les pastilles livrées ne s'effacent QUE si la feuille du kit peut
          vraiment prendre le relais. La feuille de peau est portée par le seul
-         drapeau de page, qui est posé en ligne dans kiwi-caisse.html ; si
+         drapeau de page, posé en ligne dans kiwi-caisse.html ; si
          assets/kit/*.js n'arrive pas (réseau, service worker), bqKitFloat()
-         rend false, le bouton reste désactivé et les pastilles étaient déjà
-         cachées : plus aucun chemin pour saisir le fond, caisse morte. Le
-         drapeau vit donc sur l'écran, pas sur la page, et il dit « le kit est
-         LÀ », pas « la peau est demandée ». */
+         rend false, « Ouvrir la caisse » reste éteint et les pastilles
+         étaient déjà cachées : plus aucun chemin pour saisir le fond, caisse
+         morte au comptoir. Le drapeau vit donc sur l'écran et dit « le kit
+         est LÀ », jamais « la peau est demandée ». */
       el.classList.toggle('bq-float-kit', kit);
       if (btnOpen) btnOpen.disabled = !chosen && !kit;
       if (hint) hint.hidden = chosen || kit;
@@ -2827,27 +2656,20 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       if (tEl) tEl.textContent = pad2(n.getHours()) + ':' + pad2(n.getMinutes());
       if (dEl) dEl.textContent = DDAYS[n.getDay()] + ' ' + n.getDate() + ' ' + DMONTHS[n.getMonth()];
     };
-    tick();
-    const timer = setInterval(tick, 10000);
+    tick(); const timer = setInterval(tick, 10000);
 
     const doOpen = () => {
-      el.querySelector('#bqci-btn').classList.add('is-confirmed');
-      icons();
+      el.querySelector('#bqci-btn').classList.add('is-confirmed'); icons();
       const openedAt = Date.now();
       bqShift = { openedAt, openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat, sid: 'bq-' + openedAt, openSent: false };
       bqShiftPersist();
       /* Le fond d'ouverture est le premier chiffre du rapprochement. */
-      bqAnnounceOpen();
-      bqSaveProvisional(true);
-      setTimeout(() => el.classList.add('is-leaving'), 420);
-      setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
+      bqAnnounceOpen(); bqSaveProvisional(true);
+      setTimeout(() => el.classList.add('is-leaving'), 420); setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
     };
     el.querySelector('#bqci-btn').addEventListener('click', () => {
-      /* Sous la peau, le tiroir se compte dans la feuille du kit ; le montant
-         compté suit exactement le chemin livré (bqFloat, mémoire, bqShift). */
-      if (!chosen && bqKitFloat(el, (v) => {
-        bqFloat = v; chosen = true; remember(); gate(); doOpen();
-      })) return;
+      /* Sous la peau, le tiroir se compte dans la feuille du kit ; le montant compté suit le chemin livré. */
+      if (!chosen && bqKitFloat(el, (v) => { bqFloat = v; chosen = true; remember(); gate(); doOpen(); })) return;
       if (!chosen) { gate(); return; }
       doOpen();
     });
@@ -2857,10 +2679,6 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   /* ── la clôture ── */
   let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null;
-  function bqFmtDur(min) {
-    if (min < 60) return `${min} mn`;
-    return `${Math.floor(min / 60)}h${pad2(min % 60)}`;
-  }
   function bqUpdateEcart() {
     const v = bqCloVeil; if (!v) return;
     const line = v.querySelector('#bqclo-ecart-line'), out = v.querySelector('#bqclo-ecart'), inp = v.querySelector('#bqclo-count');
@@ -2897,7 +2715,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
-      ['Durée du service', bqFmtDur(durMin), false, ''],
+      ['Durée du service', (durMin < 60 ? `${durMin} mn` : `${Math.floor(durMin / 60)}h${pad2(durMin % 60)}`), false, ''],
       ['Transactions', String(t.txns), false, ''],
       ['Articles vendus', String(t.items), false, ''],
       ['Total encaissé', fmtMAD(t.moneyIn), true, 'total'],

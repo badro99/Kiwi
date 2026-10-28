@@ -426,6 +426,11 @@ const replacementCode = await replacementCodeResponse.json();
 const staleCodeOut = await post({ action: 'clock-out', attendanceCode: generatedCode.code }, cookie);
 ok(replacementCode.code !== generatedCode.code && staleCodeOut.status === 403,
   'chaque clic caisse remplace immédiatement le code précédent');
+// XP and records are capped by what this employee's own session wrote during the shift (sales.seller_id).
+for (let i = 0; i < 9; i++) {
+  put('INSERT INTO sales (id, merchant, amount, amount_cents, method, ts, seller_id) VALUES (?,?,?,?,?,?,?)',
+    `xp-ledger-${i}`, 'amira-cafe', 133, 13334, 'cash', Date.now() - 1000 - i, 'mem-sara');
+}
 const cout = await post({ action: 'clock-out', attendanceCode: replacementCode.code, progress: { paid: 9, revenue: 1200, turnMinutes: 270 } }, cookie);
 ok(cout.status === 200, 'le pointage de sortie ferme le service');
 const teamAfter = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
@@ -1087,6 +1092,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
       fmtHours: (v) => String(v), buildPeriod: () => ({ days: ['2026-10-20', '2026-10-21'], startFr: '', endFr: '' }),
       getHours: () => ({}), memberFullName: (m) => m.firstName, initials: () => 'S', jobName: (v) => v,
       hourlyPayFor: () => 0, periodPillsHtml: fn, periodNavigatorHtml: fn, svgIcon: fn,
+      dateLocale: () => ({ fr: 'fr-FR', en: 'en-US', ar: 'ar-MA' }[lang]), fmtPay: (v) => String(v), payCents: (v) => Math.round(v * 100),
     };
     const core = new Proxy(base, { get: (t, k) => (k in t ? t[k] : fn) });
     const T = new Proxy({}, { get: () => Object.assign(() => '', { toString: () => '' }) });

@@ -27,7 +27,7 @@ const fmtMAD = v => v+' MAD', fmtMADcents = fmtMAD, lineCat = () => 'meal', phon
 const effectiveTipPct = () => 0, lucide = {createIcons(){}}, toast = s => window.lastToast = s;
 const splitState = {splitMode:'article', numConvives:2, numParts:2, activeConvive:1, total:90, tableId:'T7', flow:null,
 itemTotals:{Pasta:{totalQty:1,unitPrice:60,itemId:'pasta'},Water:{totalQty:2,unitPrice:15,itemId:'water'}},perConvive:{}};
-${['remainingQty','conviveTotal','assignUnit','unassignUnit','splitArticleAllocation','renderSplitSetup','renderArticleMode','renderConvivesChips','renderConvivesTabs','renderPool','renderConviveCart','renderPartsChips','renderTipChips','updateSplitSummary','shareMoney','shareWeighted','launchSplitFlow','renderSplitFlow'].map(fn).join('\n')}
+${['remainingQty','conviveTotal','assignUnit','unassignUnit','splitArticleAllocation','renderSplitSetup','renderArticleMode','renderConvivesChips','renderConvivesTabs','renderPool','renderConviveCart','renderPartsChips','renderTipChips','updateSplitSummary','shareMoney','shareWeighted','launchSplitFlow','renderSplitFlow','splitPartLabel'].map(fn).join('\n')}
 ${between("    $('#split-modal').addEventListener('click'", '    // Custom tip percentage input')}
 document.querySelector('#split-modal').classList.add('is-open');
 renderSplitSetup();window.testState = splitState;

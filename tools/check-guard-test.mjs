@@ -412,5 +412,68 @@ ok('check.js: the full run refuses to start without a working browser; the fast 
   });
 }
 
+
+{
+  /* Gate honesty (wave 12): a suite that failed in the pool and passed alone is a flake, and the
+     named skip of typescript is red like fast-check; a missing cargo says « not run », a warning
+     like the iOS vectors (a red would block every deploy from a Mac without Rust). */
+  const flaky = path.join(dir, 'flaky-pool-test.mjs');
+  const steady = path.join(dir, 'steady-pool-test.mjs');
+  const noTs = path.join(dir, 'no-typescript-test.mjs');
+  const answers2 = {
+    [noTs]: '  ○ skip  typescript unavailable (npm --prefix app ci), schema floor not executed\n',
+  };
+  const fake2 = (c, a) => ({ status: 0, stdout: answers2[a[a.length - 1]] || 'ok\n', stderr: '' });
+  ok('a suite that failed in the pool then passed alone is a flake; one that passed in the pool is not', () => {
+    const key = (f) => JSON.stringify([process.execPath, [f], '']);
+    guard.notePoolResults({ [key(flaky)]: { status: 1 }, [key(steady)]: { status: 0 } });
+    const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: fake2 });
+    spy(process.execPath, [flaky], { encoding: 'utf8' });
+    spy(process.execPath, [steady], { encoding: 'utf8' });
+    assert.deepEqual(guard.flakes(), ['flaky-pool-test.mjs']);
+  });
+  ok('a suite that fails in the pool and fails alone again is a red, not a flake', () => {
+    const key = JSON.stringify([process.execPath, [quick], '']);
+    guard.notePoolResults({ [key]: { status: 1 } });
+    const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: () => ({ status: 1, stdout: '', stderr: '' }) });
+    spy(process.execPath, [quick], { encoding: 'utf8' });
+    assert.ok(!guard.flakes().includes('quick-test.mjs'));
+  });
+  ok('the ledger counts a suite over the last week and forgets older flakes', () => {
+    const file = path.join(dir, 'flakes.jsonl');
+    const day = 86400000, now = Date.now();
+    writeFileSync(file, [{ at: now - 10 * day, suite: 'a-test.mjs' }, { at: now - 2 * day, suite: 'a-test.mjs' }].map((e) => JSON.stringify(e)).join('\n') + '\n');
+    const counts = guard.recordFlakes({ file, now, names: ['a-test.mjs', 'b-test.mjs'] });
+    assert.deepEqual(counts, { 'a-test.mjs': 2, 'b-test.mjs': 1 });
+    assert.equal(readFileSync(file, 'utf8').trim().split('\n').length, 4, 'both flakes were appended');
+  });
+  ok('a skip on typescript is a dependency skip, as fast-check is', () => {
+    const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: fake2 });
+    spy(process.execPath, [noTs], { encoding: 'utf8' });
+    const skips = guard.dependencySkips();
+    assert.ok(skips.includes('no-typescript-test.mjs'), skips.join());
+  });
+  ok('check.js reports flakes before its verdict and checks typescript at start; a cargo waiver still ends INCOMPLETE', () => {
+    const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
+    const verdict = src.lastIndexOf("console.log('\\n' + '─'.repeat(60));");
+    assert.ok(src.indexOf('guard.flakes()') > 0 && src.indexOf('guard.flakes()') < verdict);
+    assert.ok(/\['fast-check', 'axe-core', 'puppeteer-core', 'typescript'\]/.test(src));
+    const v = require(path.join(ROOT, 'tools/check-verdict.cjs'))({ env: { KIWI_ALLOW_CARGO_SKIP: '1' } });
+    assert.equal(v.code, 2);
+    assert.ok(/rust bridge/.test(v.line));
+  });
+  ok('the typescript suites print the named skip line, not a crash, when the tool is absent', () => {
+    for (const f of ['schema-minimum-test.mjs', 'runtime-ddl-test.mjs']) {
+      const src = readFileSync(path.join(ROOT, 'tools', f), 'utf8');
+      assert.ok(/○ skip  typescript unavailable/.test(src), f);
+    }
+  });
+  ok('without cargo the Rust bridge parity says « not run » (a gate warning), never green and never a crash', () => {
+    const src = readFileSync(path.join(ROOT, 'tools/bridge-rust-parity-test.mjs'), 'utf8');
+    assert.ok(/'○ bridge-rust-parity not run: cargo unavailable/.test(src));
+    assert.ok(/\/\^○ \.\* not run\//.test(readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8')), 'check.js turns « not run » into a warning');
+  });
+}
+
 console.log(`\ncheck-guard: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

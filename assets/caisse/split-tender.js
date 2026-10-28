@@ -31,6 +31,17 @@
       };
     }
     
+    /* « Part égale » et « Part équilibrée » se garderont en français dans l'état
+       du partage (repris tel quel après un rechargement), mais se disent dans la
+       langue du comptoir à l'écran. Seules ces formes-là passent par le
+       dictionnaire : quand une part est nommée par ses articles, ce sont les mots
+       du commerçant, qu'on ne traduit jamais. */
+    function splitPartLabel(label) {
+      const text = String(label == null ? '' : label);
+      const lang = globalThis.window && globalThis.window.KiwiCaisseLang;
+      if (!lang || !/^Part (égale( \+ pourboire \d+(?:[.,]\d+)?%)?|équilibrée)$/.test(text)) return text;
+      return lang.tr(text);
+    }
     function setPayBindings(table, covers) {
       if (!payBindingsBackup) payBindingsBackup = readPayMeta();
       payMeta({ prefix: false, table, covers, unit: '' });
@@ -526,7 +537,7 @@
           <div class="split-part-num">${idx + 1}</div>
           <div class="split-part-info">
             <div class="split-part-amount">${fmtMADcents(p.amount)}</div>
-            <div class="split-part-label">${p.label}</div>
+            <div class="split-part-label">${splitPartLabel(p.label)}</div>
           </div>
           <div class="split-part-btns">
             <button class="split-part-btn carte" data-pay-part="${idx}" data-pay-method="carte" aria-label="Payer par carte">

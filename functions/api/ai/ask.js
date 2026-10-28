@@ -34,7 +34,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -79,7 +79,7 @@ const TEMPERATURE = 0.7;
 const TOP_P = 0.8;
 
 /* Le quota journalier par établissement pour le copilote. */
-const DAILY_CAP = 200;
+const DAILY_CAP = DAILY_CAPS.ask;
 
 /* Bornes d'entrée. La fenêtre du modèle est large, la facture ne l'est pas :
  * l'historique côté navigateur est déjà coupé à 8 tours, on refuse simplement
@@ -192,7 +192,7 @@ export async function onRequestPost(context) {
   const messages = cleanMessages(body.messages);
   if (!messages) return json({ ok: false, error: 'messages' }, 400);
 
-  if (!(await quotaOk(env, who, 'ask', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
+  if (!(await quotaOk(env, who, 'ask', DAILY_CAP))) return json(quotaBody('ask'), 429);
 
   const tools = cleanTools(body.tools);
   const round = body.round === 'tools' && tools ? 'tools' : 'answer';

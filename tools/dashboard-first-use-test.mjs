@@ -15,8 +15,9 @@ let emitted = '';
 vm.runInNewContext(startupCode, { document: { readyState: 'loading', write: html => { emitted += html; } } });
 assert.throws(() => vm.runInNewContext(startupCode, { document: { readyState: 'complete', write() { assert.fail('late parser write'); } } }), /requires the HTML parser/);
 const startupTags = [...emitted.matchAll(/<script (?:type="module" )?src="([^"]+)"([^>]*)><\/script>/g)];
-// 45, then the stock strings, the team catalogue, three menu parts (26 Oct 2026 splits) and the stock state owner.
-assert.equal(startupTags.length, 51, 'startup providers retain one ordered deferred execution each');
+// 45, then the stock strings, the team catalogue, three menu parts (26 Oct 2026 splits), the stock state owner
+// and the day report's two-closures notice (wave 12, 27 Oct).
+assert.equal(startupTags.length, 52, 'startup providers retain one ordered deferred execution each');
 assert.match(emitted, /<script type="module" src="assets\/team\.js\?/, 'team entry imports its pieces as a parser-ordered module');
 for (const [, url, attributes] of startupTags) {
   assert.match(attributes, /\bdefer\b/);

@@ -24,18 +24,13 @@ const TTL_MS = 30 * 60 * 1000;
 const cache = new Map();
 
 export async function recentBaskets(env, merchant, since) {
-  const run = (sql) => env.DB.prepare(sql).bind(merchant, since).all();
-  let rs;
-  try {
-    rs = await run(`SELECT lines FROM sales
+  /* Une seule requête, toujours filtrée sur void_ts (colonne de la base 0001) :
+   * si elle échoue, la route répond 503. L'ancien repli sans ce filtre
+   * comptait les ventes annulées dans les suggestions dès qu'une erreur
+   * passagère touchait la première requête. */
+  const rs = await env.DB.prepare(`SELECT lines FROM sales
                      WHERE merchant = ? AND ts >= ? AND lines IS NOT NULL AND void_ts IS NULL
-                     ORDER BY ts DESC LIMIT ${MAX_ROWS}`);
-  } catch (_) {
-    /* La base de production peut ne pas avoir la colonne void_ts. */
-    rs = await run(`SELECT lines FROM sales
-                     WHERE merchant = ? AND ts >= ? AND lines IS NOT NULL
-                     ORDER BY ts DESC LIMIT ${MAX_ROWS}`);
-  }
+                     ORDER BY ts DESC LIMIT ${MAX_ROWS}`).bind(merchant, since).all();
   return ((rs && rs.results) || []).map((r) => {
     try { const v = JSON.parse(r.lines || 'null'); return Array.isArray(v) ? v : null; } catch (_) { return null; }
   }).filter(Boolean);

@@ -57,7 +57,7 @@ ok('recordSale preserves unit and price on saved entry lines',
 
 // 3. Static Guards: Cash modal & change handling on split
 ok('cashConfirm handles settled === split and toasts change if positive',
-  /if \(settled === 'split'\) \{[\s\S]{0,100}if \(change > 0\) toast\('Monnaie à rendre : '\s*\+\s*fmtMAD\(change\)\);[\s\S]{0,50}closeCashModal\(\);/.test(CAISSE_SRC));
+  /if \(settled === 'split'\) \{[\s\S]{0,100}if \(change > 0\) toast\(tr\('Monnaie à rendre : '\s*\+\s*fmtMAD\(change\)\)\);[\s\S]{0,50}closeCashModal\(\);/.test(CAISSE_SRC));
 
 ok('closeCashModal resets cashPaymentCommitted and cashConfirm.disabled',
   /function closeCashModal\(\) \{[\s\S]{0,100}cashPaymentCommitted = false;[\s\S]{0,100}cashConfirm\.disabled = false;/.test(CAISSE_SRC));
@@ -219,7 +219,7 @@ function paymentHarness(source = paymentSource, overrides = {}) {
     empPayRefsRead: () => ({}), empPayRefKey: id => 'test-restaurant::' + id, servicePaymentTally() {},
     publishServiceTableState() {}, returnToFloor() {}, renderTables() {}, renderNotifications() {},
     renderSplitFlow() {}, renderProfil() {}, lucide: { createIcons() {} },
-    svBrowseMode: () => false, svBrowseGuard: () => false, toast: text => messages.push(text),
+    svBrowseMode: () => false, svBrowseGuard: () => false, employeePick: (fr) => fr, toast: text => messages.push(text),
     $: key => { if (!elements.has(key)) elements.set(key, { style: {}, hidden: true }); return elements.get(key); },
     fetch: (url, options) => new Promise((resolve, reject) => pending.push({
       url, body: JSON.parse(options.body), resolve, reject,

@@ -1926,7 +1926,7 @@
       const o = kdsOrders.find(x => x.num === num);
       if (!o || !o.opId || !o.paid || o.pickedUp) return;
       const label = ticketNo(o);
-      if (!window.confirm(`Retirer ${label} du suivi à emporter ?\n\nLa vente et le paiement restent enregistrés. Cette action ne signifie PAS « remise au client ». Elle ne crée aucune transaction aujourd'hui.`)) return;
+      if (!window.confirm((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`Retirer ${label} du suivi à emporter ?\n\nLa vente et le paiement restent enregistrés. Cette action ne signifie PAS « remise au client ». Elle ne crée aucune transaction aujourd'hui.`))) return;
       window.KiwiAuthAct?.({ kind: 'untrack_order', key: 'act.untrack_order', args: { order: label } });
       requireTillOperator(`Retirer ${label} du suivi`, (who) => {
         Promise.resolve(opPush(o, 'archived', { actorProof: who && who.actorProof || '' })).then((result) => {

@@ -4,6 +4,7 @@ import {
   PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
   limitCheck, limitFail, passwordProblem, slugMerchant, rateLimitUnavailable,
 } from './_lib.js';
+import { legacyNameTaken } from './_slug-backfill.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -75,13 +76,22 @@ export async function onRequestPost(context) {
       ).bind(wantedSlug).first();
       if (claimed && claimed.account_id) taken = true;
     } catch (_) { return json({ error: 'signup-unavailable' }, 503); }
+    /* Les comptes récents portent leur slug (index unique) : une lecture
+     * indexée, de coût constant. Seuls les comptes d'avant la réservation
+     * (business_slug NULL, un ensemble qui ne grossit plus) se balaient encore ;
+     * relire le nom de chaque compte à chaque inscription coûtait de plus en
+     * plus de CPU à mesure que la base grossissait. */
     if (!taken) {
       try {
-        const rs = await env.DB.prepare(
-          "SELECT business FROM accounts WHERE business IS NOT NULL AND business <> ''"
-        ).all();
-        taken = (rs.results || []).some((r) => slugMerchant(r.business) === wantedSlug);
+        const reserved = await env.DB.prepare(
+          'SELECT 1 AS hit FROM accounts WHERE business_slug = ? LIMIT 1'
+        ).bind(wantedSlug).first();
+        if (reserved) taken = true;
       } catch (_) { return json({ error: 'signup-unavailable' }, 503); }
+    }
+    if (!taken) {
+      try { taken = await legacyNameTaken(env, wantedSlug); }
+      catch (_) { return json({ error: 'signup-unavailable' }, 503); }
     }
     if (taken) {
       if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();

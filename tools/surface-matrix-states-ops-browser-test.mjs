@@ -39,15 +39,12 @@ async function open(t, surface, locale, viewport) {
     const cell = await dashboards.open(t, 'dashboard-finance', locale, viewport);
     const { page } = cell;
     if (surface === 'loyalty-setup') {
-      t.step('open Clients from the sidebar, then More, then the loyalty programme');
+      t.step('open Clients from the sidebar, then the loyalty programme');
       // Same entry as dashboardWalker: the sidebar link, which sits off screen
       // behind the menu on tablet and phone. Every later step is a real click,
-      // through the kit Customers page (Design 2027 is on in the demo).
+      // through the shipped Clients drawer (the dashboard has no 2027 skin).
       await page.evaluate(() => document.querySelector('[data-action="clients-directory"]').click());
-      await click(page, 'k-button[data-do="more"]');
-      await page.waitForSelector('k-popover[open]', { timeout: 5000 });
-      const item = await page.waitForSelector('k-list[data-do="more"] >>> li[data-id="loyalty"] button', { visible: true, timeout: 5000 });
-      await item.click();
+      await click(page, '#cd-loyalty');
       await click(page, '[data-mopt="visit"]');
       await page.waitForSelector('[data-mgroup="visit"]:not([hidden]) [data-loy="visit.reward"]', { visible: true, timeout: 5000 });
       return { page, region: '.kiwi-backdrop .kiwi-modal' };

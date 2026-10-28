@@ -33,7 +33,7 @@ const cases = {
   'onboarding#1': () => {
     const source = read('assets/onboarding.js').split('  function celebrate()')[1].split('  function enterApp()')[0];
     const path = read('assets/icons/material/check.svg').match(/d="([^"]+)"/)[1];
-    assert.ok(source.includes("mi('" + path + "')")); assert.match(source,/var\(--mint\)/); assert.doesNotMatch(source,/#7DF2B0|stroke=/);
+    assert.ok(source.includes("mi('" + path + "')")); assert.match(source,/kob-hero-mark kob-mint/); assert.match(read('assets/onboarding.css'),/\.kob-hero-mark\.kob-mint\{color:var\(--mint\);\}/); assert.doesNotMatch(source,/#7DF2B0|stroke=/);
   },
   'employee#1': () => {
     const saved = new Map();

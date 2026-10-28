@@ -32,7 +32,7 @@
   function offlinePinRows(merchant, keep) {
     try {
       var rows = JSON.parse(ls(offlinePinKey(merchant)) || '[]');
-      var at = Date.now();
+      var at = (window.KiwiTrustedClock || Date).now(); /* horloge ancrée sur le serveur (pairing-commit.js) */
       var kept = Array.isArray(rows) ? rows.filter(function (row) {
         return row && (row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at && at - Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)) < OFFLINE_PIN_TTL;
       }) : [];
@@ -72,7 +72,7 @@
   }
   var offlinePinEpoch = 0;
   function rememberOfflinePin(merchant, code, staff, expiresAt) {
-    var epoch = offlinePinEpoch, provenAt = Date.now();
+    var epoch = offlinePinEpoch, provenAt = (window.KiwiTrustedClock || Date).now();
     if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
     // In an insecure context subtle is absent: retain the existing behaviour
     // (no local verification or new cache entry), never a JS PBKDF2 fallback.
@@ -103,6 +103,7 @@
   function verifyOfflinePin(merchant, code) {
     var epoch = offlinePinEpoch;
     if (!hasSubtle()) return Promise.resolve(null);
+    if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
     /* One derivation per (salt, rounds) pair, not per row. */
     var derived = {};
@@ -115,8 +116,8 @@
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
-        if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || Date.now() >= row.expiresAt ||
-            Date.now() - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
+        var nowMs = (window.KiwiTrustedClock || Date).now(); if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || nowMs >= row.expiresAt ||
+            nowMs - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });

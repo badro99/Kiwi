@@ -253,6 +253,15 @@ section('Aucune perte silencieuse');
   IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
     'produit,couleur,taille,stock\nPull,Noir,M,0\n')), {});
   eq(CAT.productStock(pull.id), 0, 'stock 0 explicite appliqué');
+
+  // A fractional quantity is refused with a message, never rounded (wave Q).
+  IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,stock\nPull,Noir,M,3\n')), {});
+  const frac = IMP.analyseBoutique(IMP.parse('produit,couleur,taille,stock\nPull,Noir,M,"1,5"\n'));
+  truthy(frac.issues.some((i) => i.code === 'stock-fraction' && /Épicerie ou Stock/.test(i.msg)),
+    'stock fractionnaire signalé, avec le module à utiliser');
+  IMP.applyBoutique(frac, {});
+  eq(CAT.productStock(pull.id), 3, 'stock fractionnaire refusé : le stock compté reste 3, pas 2');
 }
 
 /* ── 9 · a code-barres already owned is reported, never reassigned ── */

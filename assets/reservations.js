@@ -3,7 +3,67 @@
   'use strict';
 
   var VERSION = 1;
-  var ACTIVE = { requested: 1, confirmed: 1, checked_in: 1 };
+  /* GENERATED SHARED KiwiBookingRules BEGIN */
+  /* Copy of functions/api/_rules-booking.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiBookingRules = (function () {
+    /* Règles de réservation : une seule source (piste A, une règle, un propriétaire).
+     *
+     * Quel statut occupe une place, quand deux créneaux se chevauchent, quelle
+     * ressource convient à un groupe, combien de réservations simultanées un
+     * service accepte : ces règles étaient écrites deux fois, dans
+     * functions/api/booking.js et dans assets/reservations.js, et la copie du
+     * navigateur ne connaissait pas la capacité d'un service (le serveur la refusait
+     * à l'enregistrement). Module pur : le serveur l'importe, le navigateur en
+     * reçoit une copie générée par tools/build-shared-rules.mjs (KiwiBookingRules). */
+
+    const BOOKING_ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
+
+    const ignored = (b, ignoreId) => ignoreId != null && ignoreId !== '' && b.id === ignoreId;
+
+    function bookingOverlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
+
+    // Une ressource est libre quand aucune réservation active ni aucun blocage ne la chevauche.
+    function bookingResourceFree(doc, rid, startAt, endAt, ignoreId) {
+      const busy = (doc.bookings || []).some((b) => !ignored(b, ignoreId) && b.resourceId === rid
+        && BOOKING_ACTIVE.has(b.status) && bookingOverlaps(startAt, endAt, b.startAt, b.endAt));
+      if (busy) return false;
+      return !(doc.blocked || []).some((b) => (!b.resourceId || b.resourceId === rid)
+        && bookingOverlaps(startAt, endAt, b.startAt, b.endAt));
+    }
+
+    // Les ressources actives assez grandes, limitées à celles du service quand il en liste.
+    function bookingResourceCandidates(doc, svc, asked, partySize) {
+      const allowed = svc && svc.resourceIds && svc.resourceIds.length ? svc.resourceIds : null;
+      return (doc.resources || []).filter((r) => r.active && (Number(r.capacity) || 1) >= partySize
+        && (!asked || r.id === asked) && (!allowed || allowed.indexOf(r.id) >= 0));
+    }
+
+    // Réservations actives simultanées sur la plage, toutes ressources confondues.
+    function bookingConcurrent(doc, startAt, endAt, ignoreId) {
+      return (doc.bookings || []).filter((b) => !ignored(b, ignoreId) && BOOKING_ACTIVE.has(b.status)
+        && bookingOverlaps(startAt, endAt, b.startAt, b.endAt)).length;
+    }
+
+    // Occupation d'un service : une réservation consomme une place simultanée quelle
+    // que soit la ressource qui la sert. Intervalles demi-ouverts, annulées exclues.
+    function bookingServiceCapacityAvailable(doc, service, startAt, endAt, ignoreId) {
+      const events = [];
+      for (const b of doc.bookings || []) {
+        if (ignored(b, ignoreId) || b.serviceId !== service.id || !BOOKING_ACTIVE.has(b.status)
+          || b.startAt >= endAt || b.endAt <= startAt) continue;
+        events.push([Math.max(startAt, b.startAt), 1], [Math.min(endAt, b.endAt), -1]);
+      }
+      events.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      let occupied = 0;
+      for (const [, delta] of events) {
+        occupied += delta;
+        if (occupied >= Math.max(1, Number(service.capacity) || 1)) return false;
+      }
+      return true;
+    }
+    return { BOOKING_ACTIVE, bookingOverlaps, bookingResourceFree, bookingResourceCandidates, bookingConcurrent, bookingServiceCapacityAvailable };
+  })();
+  /* GENERATED SHARED KiwiBookingRules END */
   var DONE = { completed: 1, cancelled: 1, no_show: 1 };
   var store = null;
   var open = false;
@@ -259,6 +319,18 @@
       rows: rows, totalCents: number(raw.totalCents, 0, 10000000000, 0),
       taxBasis: 'inclusive', acceptedAt: +raw.acceptedAt || 0 };
   }
+  /* Plafond de 4000 réservations : les PASSÉES les plus anciennes partent d'abord, jamais
+     une réservation à venir (même règle que functions/api/_booking-cap.js, éprouvée par
+     tools/booking-cap-test.mjs). Au-delà, le serveur refuse l'écriture, il ne coupe rien. */
+  function capBookings(rows) {
+    var CAP = 4000, DAY = 86400000, now = Date.now();
+    if (rows.length <= CAP) return rows;
+    var drop = rows.map(function (x, i) { return { i: i, end: +x.endAt || 0, open: ['requested', 'confirmed', 'checked_in'].indexOf(x.status) >= 0 }; })
+      .filter(function (x) { return x.end < now - (x.open ? 7 * DAY : 0); })
+      .sort(function (a, b) { return a.end - b.end || a.i - b.i; })
+      .slice(0, rows.length - CAP).map(function (x) { return x.i; });
+    return rows.filter(function (x, i) { return drop.indexOf(i) < 0; });
+  }
   function normalize(raw) {
     var out = blank(), r = raw && typeof raw === 'object' ? raw : {};
     var s = r.settings || {};
@@ -268,7 +340,7 @@
     out.services.forEach(function (x) { x.price = Math.round(x.price * 100) / 100; x.deposit = Math.min(x.price, Math.round(x.deposit * 100) / 100); });
     out.resources = (Array.isArray(r.resources) ? r.resources : []).slice(0, 120).map(function (x) { var kind = ['person', 'room', 'table'].indexOf(x && x.kind) >= 0 ? x.kind : 'person'; return { id: cleanText(x && x.id, 64) || id('res'), name: cleanText(x && x.name, 100), kind: kind, capacity: number(x && x.capacity, 1, 999, 1), active: x && x.active !== false, week: x && typeof x.week === 'object' ? clone(x.week) : null, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
     out.blocked = (Array.isArray(r.blocked) ? r.blocked : []).slice(-500).map(function (x) { return { id: cleanText(x && x.id, 64) || id('blk'), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, reason: cleanText(x && x.reason, 120), updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.startAt && x.endAt > x.startAt; });
-    out.bookings = (Array.isArray(r.bookings) ? r.bookings : []).slice(-4000).map(function (x) {
+    out.bookings = (Array.isArray(r.bookings) ? r.bookings : []).map(function (x) {
       var status = ['requested','confirmed','checked_in','completed','cancelled','no_show'].indexOf(x && x.status) >= 0 ? x.status : 'requested';
       var hotel = x && x.hotel && typeof x.hotel === 'object' ? {
         roomTypeName: cleanText(x.hotel.roomTypeName, 100), checkIn: cleanText(x.hotel.checkIn, 10),
@@ -283,6 +355,7 @@
       } : null;
       return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, guests: normalizeGuests(x && x.guests), pricing: normalizePricing(x && x.pricing), pricingHistory: normalizeHistory(x && x.pricingHistory), roomSegments: normalizeRoomSegments(x && x.roomSegments, 20), createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
     }).filter(function (x) { return x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt; });
+    out.bookings = capBookings(out.bookings);
     var originalBookings = byId(r.bookings);
     out.bookings.forEach(function (b) { b.commercial = normalizeCommercial(originalBookings[b.id] && originalBookings[b.id].commercial); });
     return out;
@@ -319,16 +392,9 @@
   }
   function service(doc, sid) { return doc.services.find(function (x) { return x.id === sid && x.active; }); }
   function resourceCandidates(doc, svc, rid, partySize) {
-    var allowed = svc && svc.resourceIds && svc.resourceIds.length ? svc.resourceIds : null;
-    partySize = number(partySize, 1, 999, 1);
-    return doc.resources.filter(function (r) { return r.active && (+r.capacity || 1) >= partySize && (!rid || r.id === rid) && (!allowed || allowed.indexOf(r.id) >= 0); });
+    return KiwiBookingRules.bookingResourceCandidates(doc, svc, rid, number(partySize, 1, 999, 1));
   }
-  function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
-  function resourceFree(doc, rid, startAt, endAt, ignoreId) {
-    var busy = doc.bookings.some(function (b) { return b.id !== ignoreId && b.resourceId === rid && ACTIVE[b.status] && overlaps(startAt, endAt, b.startAt, b.endAt); });
-    if (busy) return false;
-    return !doc.blocked.some(function (b) { return (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt); });
-  }
+  function resourceFree(doc, rid, startAt, endAt, ignoreId) { return KiwiBookingRules.bookingResourceFree(doc, rid, startAt, endAt, ignoreId); }
   function withinHours(resource, startAt, endAt) {
     var H = window.KiwiHours, configured = !!(resource && resource.week) || !!(H && H.isConfigured && H.isConfigured(venueId()));
     if (!configured) return true;
@@ -361,7 +427,7 @@
     if (!doc.settings.staffingEnabled || !window.KiwiTeam || !window.KiwiTeam.bookingCoverage) return true;
     var coverage = window.KiwiTeam.bookingCoverage(startAt, endAt);
     if (!coverage || !coverage.configured) return true;
-    var concurrent = doc.bookings.filter(function (b) { return b.id !== ignoreId && ACTIVE[b.status] && overlaps(startAt, endAt, b.startAt, b.endAt); }).length;
+    var concurrent = KiwiBookingRules.bookingConcurrent(doc, startAt, endAt, ignoreId);
     return coverage.members.length > 0 && concurrent < coverage.members.length * doc.settings.tablesPerStaff;
   }
   function validate(input, doc, ignoreId) {
@@ -370,7 +436,7 @@
     if (!cleanText(input.customer && input.customer.name, 100) || !svc || !startAt) return { ok: false, error: 'invalid' };
     var endAt = startAt + svc.duration * 60000;
     var res = chooseResource(doc, svc, input.resourceId, startAt, endAt, ignoreId, input.partySize);
-    if (!res || !staffingAllows(doc, startAt, endAt, ignoreId)) return { ok: false, error: 'conflict' };
+    if (!res || !KiwiBookingRules.bookingServiceCapacityAvailable(doc, svc, startAt, endAt, ignoreId) || !staffingAllows(doc, startAt, endAt, ignoreId)) return { ok: false, error: 'conflict' };
     var now = Date.now();
     if (!ignoreId && startAt < now + doc.settings.minNoticeMinutes * 60000) return { ok: false, error: 'invalid' };
     if (startAt > now + doc.settings.windowDays * 86400000) return { ok: false, error: 'invalid' };

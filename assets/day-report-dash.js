@@ -555,7 +555,7 @@
       /* La comptabilité de l'instantané suit : clôtures et révisions sont un
          historique, pas un calcul. */
       built.closedCount = snap.closedCount || 0;
-      built.revisions = snap.revisions || [];
+      built.revisions = snap.revisions || []; built.snapshotConflicts = snap.snapshotConflicts || [];
       if (d.inheritDrawers) d.inheritDrawers(built, snap);
     } else {
       built.live = true;   /* aucun instantané : le tiroir est inconnu */
@@ -919,6 +919,7 @@
        affichait 500 au-dessus de lignes qui font 450 dès qu'on remboursait. */
     var mSum = Object.keys(r.methods || {}).reduce(function (s, k) { return s + (+r.methods[k] || 0); }, 0);
     var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' ' + CUR() + '</em></div>' + mRows + '</div>' : '';
+    payBlock += window.KiwiDayReportVat ? window.KiwiDayReportVat.html(r, { LANG: LANG, esc: esc, money: money, CUR: CUR, row: row }) : '';
     var acompteBlock = r.acomptes && (r.acomptes.received || r.acomptes.outstanding)
       ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
         + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' ' + CUR())
@@ -951,7 +952,7 @@
       if (!(cash.movements || []).length) cr += '<div class="kdr-note">' + esc(T(L.movesNone)) + '</div>';
       return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span><em>'
         + esc(hm(drawer.openedAt) + (drawer.closedAt ? ' · ' + hm(drawer.closedAt) : '')) + '</em></div>' + cr + '</div>';
-      }).join('');
+      }).join('') + (window.KiwiDayReportConflicts ? window.KiwiDayReportConflicts.html(r, { LANG: LANG, esc: esc, hm: hm, money: money, CUR: CUR, row: row }) : '');
     }
 
     /* ── le détail par catégorie ── */
@@ -1057,8 +1058,7 @@
     kitModel = m;
     try { window.dispatchEvent(new CustomEvent('kiwi:report-model')); } catch (_) {}
   }
-  /* Les trois exports du menu Exporter (§12) : le rapport imprimable et le
-     CSV des ventes de dashboard-extra.js, le CSV détaillé de cette page. */
+  /* Les trois exports du menu Exporter (§12) : le rapport imprimable et le CSV des ventes de dashboard-extra.js, le CSV détaillé de cette page. */
   window.KiwiReportPage = {
     model: function () { return kitModel; },
     exportPrintable: function () { var h = window.Kiwi && window.Kiwi.handlers; if (h && h['export']) h['export'](); },
@@ -1091,10 +1091,8 @@
     });
   }
 
-  /* Imprimer depuis le tableau de bord. Le patron n'a pas d'imprimante
-     thermique dans son bureau : printDayReport retombe tout seul sur le pilote
-     du système, donc « Enregistrer en PDF » — un archivage parfaitement valable
-     pour une pièce qu'on classe. Même mise en page que le ticket de la caisse. */
+  /* Imprimer depuis le tableau de bord. Le patron n'a pas d'imprimante thermique dans son bureau : printDayReport retombe
+     tout seul sur le pilote du système, donc « Enregistrer en PDF » — un archivage valable. Même mise en page que la caisse. */
   function printReport(r) {
     if (!r || !window.KiwiPrinter || !window.KiwiPrinter.printDayReport) return;
     var d = DR(); var V = d ? d.vocab() : { items: 'articles', cat: 'catégorie' };
@@ -1146,6 +1144,7 @@
     if (r.discounts && r.discounts.amount) out.push(q([T(L.discounts), raw2(r.discounts.amount), 'MAD', r.discounts.count || '']));
     if (r.tips) out.push(q([LANG() === 'en' ? 'Tips' : 'Pourboires', raw2(r.tips), 'MAD']));
     out.push('');
+    if (window.KiwiDayReportVat) window.KiwiDayReportVat.csvRows(r.vat, LANG()).forEach(function (x) { out.push(q(x)); }), out.push('');
     out.push(q([T(L.payments), 'MAD']));
     Object.keys(r.methods || {}).forEach(function (k) {
       if (r.methods[k]) out.push(q([methodLabel(k), raw2(r.methods[k])]));

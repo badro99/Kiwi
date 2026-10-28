@@ -107,6 +107,11 @@ db.prepare("INSERT INTO sale_audit (merchant,sale_id,action,reason,note,amount_c
 {const d=(await call(workspace,'GET')).sources.discountPolicy.rows;
 check('out-of-policy discounts listed from sale_audit, other audit actions excluded',d.length===1&&d[0].id==='sale-disc'&&d[0].note.includes('20 %'));
 check('out-of-policy discounts stay in their store dossier',!(await call(workspace,'GET',{},'?merchant=shop-b')).sources.discountPolicy.rows.length);}
+for(const [id,action,reason,note,ts] of [['sale-bk','basket-flag','basket-mismatch','basket-mismatch',now-1000],['sale-ck','clock-flag','clock-skew','clock-skew',now-2000],['sale-old','basket-flag','basket-mismatch','basket-mismatch',now-20*86400000]])
+  db.prepare("INSERT INTO sale_audit (merchant,sale_id,action,reason,note,amount_cents,method,ref,sale_ts,ts) VALUES (?,?,?,?,?,?,?,?,?,?)").run('shop-a',id,action,reason,note,1200,'cash','T-'+id,now-5000,ts);
+{const f=(await call(workspace,'GET')).sources.saleFlags.rows;
+check('basket and clock flags from sale_audit are listed for the operator, 14 days, newest first',f.length===2&&f[0].id==='sale-bk'&&f[0].action==='basket-flag'&&f[1].action==='clock-flag'&&!f.some(r=>r.action==='discount-policy'||r.id==='sale-old'));
+check('sale flags stay in their store dossier',!(await call(workspace,'GET',{},'?merchant=shop-b')).sources.saleFlags.rows.length);}
 check('product board loaded fleet-wide only',ws.sources.board.rows.length===1&&!(await call(workspace,'GET',{},'?merchant=shop-a')).sources.board);
 const health=policy.storeHealth({merchant:'shop-a',last_ts:now},{caisseSync:tills,zChecks:ws.sources.zChecks.rows,activity:[{active_days_7d:5,last_ts:now}],errors:[]},now);
 check('blocked sale and Z gap make the store « à traiter »',health.level==='bad'&&health.problems.some(p=>p.includes('bloquée'))&&health.problems.some(p=>p.includes('écart 45 MAD')));

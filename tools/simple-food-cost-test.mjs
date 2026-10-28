@@ -323,6 +323,28 @@ ok(named.ok && !!arT('lPackPrice'), `AR : chaque champ de ligne dit l’ingrédi
   ok(/aria-label="Ligne 1 · Prix du lot"/.test(root.innerHTML) && /aria-label="Produit · Ligne 1"/.test(root.innerHTML), 'une ligne sans nom se dit « Ligne 1 · Prix du lot »');
 }
 
+/* ── vague 11 · une nouvelle fiche renvoyée après une réponse perdue ──
+   Le second envoi porte la même clé de création : le serveur retombe sur la
+   fiche déjà créée au lieu d'en faire une seconde. */
+{
+  disk.delete(DKEY);
+  let sent = 0;
+  const fresh = await reboot('owner@resto.ma', (url, body) => {
+    if (body && body.action === 'save') { if (++sent === 1) throw new Error('réponse perdue'); return { status: 200, body: { sheet: { ...SHEET, id: 'fc-new', version: 1, data: body.sheet } } }; }
+    return { status: 200, body: { enabled: true, canEdit: true, sheets: [] } };
+  });
+  const tap = async (attrs) => { const el = { getAttribute: (k) => attrs[k], closest: (s) => (s === '[data-sfc]' ? el : s === '[data-sfc-root]' ? fresh.root : null) }; for (const fn of fresh.L.click) await fn({ target: el }); await flush(); await flush(); };
+  await tap({ 'data-sfc': 'new' });
+  await tap({ 'data-sfc': 'save' });
+  const kept = JSON.parse(disk.get(DKEY) || 'null');
+  await tap({ 'data-sfc': 'save' });
+  const saves = fresh.calls.filter((x) => x.body && x.body.action === 'save').map((x) => x.body.sheet);
+  ok(saves.length === 2 && !saves[0].id && /^[A-Za-z0-9_-]{8,32}$/.test(saves[0].createId || '') && saves[1].createId === saves[0].createId,
+    'nouvelle fiche : le renvoi après une réponse perdue porte la même clé de création', JSON.stringify(saves.map((x) => x.createId)));
+  ok(kept && kept.draft.createId === saves[0].createId, 'la clé survit au rechargement avec le brouillon');
+  disk.delete(DKEY);
+}
+
 /* ── finance.js : l'onglet suit l'option ── */
 const fin = R('assets/finance.js');
 ok(/const tabsNow = \(\) => FIN_TABS\.filter\(\(k\) => k !== 'cost' \|\| costOn\(\)\)/.test(fin) && /if \(finTab === 'cost' && !costOn\(\)\) finTab = 'overview';/.test(fin), 'finance.js : onglet « Coût simple » seulement si l’option est allumée, sinon retour à la vue d’ensemble');

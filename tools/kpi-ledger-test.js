@@ -111,17 +111,13 @@ ok('sa comparaison survit au nettoyage des deltas hérités de la démo',
   /REAL_DELTAS = new Set\(\[[^\]]*'revenue'/.test(SRC));
 
 /* ── 5. PLUS AUCUNE TUILE NE RECOMBINE ventes × panier ─────────────────────
- * C'est la règle qui empêche la panne de revenir par une sixième tuile ajoutée
- * plus tard : tout ce qui dérive du CA passe par revDelta(). */
+ * Ce contrôle lisait la source (« la tuile passe par revDelta »). Les cinq tuiles
+ * dérivées du CA sont désormais calculées pour de bon, valeurs et variations,
+ * dans tools/kpi-tiles-run-test.js. */
 const KPI = SRC.slice(to);
 ok('aucune tuile ne recompose la variation du CA à la main',
   !/withDelta\(\[d\.tx\.delta,\s*d\.panier\.delta/.test(KPI),
   'une tuile additionne encore les variations de ventes et de panier');
-['revenue', 'revPerDay', 'profit', 'cogs', 'tips'].forEach((k) => {
-  const m = new RegExp('\\n\\s*' + k + ':\\s*\\{[\\s\\S]*?\\n(?=\\s*[a-zA-Z]+:\\s*\\{)').exec(KPI);
-  ok(`la tuile « ${k} » passe par revDelta`, !!m && /revDelta\(d\)/.test(m[0]),
-    m ? 'trouvée, mais sans revDelta' : 'tuile introuvable');
-});
 
 /* ── 6. OÙ COMMENCE « AUJOURD'HUI » ────────────────────────────────────────
  * Le tableau de bord coupait la journée à minuit ; le rapport Z la coupe à la

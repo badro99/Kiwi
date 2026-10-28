@@ -1492,9 +1492,9 @@
     function renderTableDetailSplit(id) {
       const t = tables[id];
       const split = tableSplits.get(id);
-      const paidTotal = split.parts.reduce((s, p) => s + (p.paid ? p.amount : 0), 0);
+      const paidTotal = split.parts.reduce((s, p) => s + (p.paid ? p.amountCents : 0), 0) / 100;
       const remaining = split.parts.length - split.paidCount;
-      const remainingAmt = split.total - paidTotal;
+      const remainingAmt = (split.totalCents - Math.round(paidTotal * 100)) / 100;
       const pct = Math.round((split.paidCount / split.parts.length) * 100);
 
       $('#td-table-name').textContent = `${id} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
@@ -1522,7 +1522,7 @@
             <div class="td-split-banner-icon"><i data-lucide="split"></i></div>
             <div class="td-split-banner-text">
               <div class="td-split-banner-title">Split en cours · ${split.paidCount}/${split.parts.length}</div>
-              <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.total)} · reste ${fmtMAD(remainingAmt)}</div>
+              <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.totalCents / 100)} · reste ${fmtMAD(remainingAmt)}</div>
             </div>
           </div>
           <div class="td-split-progress">
@@ -1891,6 +1891,16 @@
       if (!fromT || !toT) return;
 
       if (!SV_DEMO) {
+        /* Un geste, une opération : renvoyé après une réponse perdue, le même
+           identifiant fait rejouer au serveur le déplacement déjà fait au lieu
+           de répondre « table vide ». Oublié après un refus net (4xx). */
+        let intent = confirmTransferTable.pendingIntent;
+        if (!intent || intent.merchant !== svSlug() || intent.from !== from || intent.to !== to) {
+          intent = confirmTransferTable.pendingIntent = { merchant: svSlug(), from, to,
+            operationId: 'ui-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+            expectedSession: serviceTableSessions.get(from) || '',
+            expectedRevision: serviceTableSessionRevisions.get(from) || 0 };
+        }
         try {
           const res = await fetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
@@ -1898,13 +1908,17 @@
             body: JSON.stringify({
               merchant: svSlug(),
               transferTable: { from, to, covers: fromT.covers, server: activeRole.fullName || activeRole.name || '',
-                operationId: 'ui-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
-                expectedSession: serviceTableSessions.get(from) || '',
-                expectedRevision: serviceTableSessionRevisions.get(from) || 0 }
+                operationId: intent.operationId,
+                expectedSession: intent.expectedSession,
+                expectedRevision: intent.expectedRevision }
             })
           });
           const data = await res.json().catch(() => null);
-          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'transfer-failed');
+          if (!res.ok || !data || !data.ok) {
+            if (res.status >= 400 && res.status < 500) delete confirmTransferTable.pendingIntent;
+            throw new Error((data && data.error) || 'transfer-failed');
+          }
+          delete confirmTransferTable.pendingIntent;
           serviceTableSessionRevisions.set(to, Number(data.revision) || (serviceTableSessionRevisions.get(from) || 0));
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
@@ -2008,6 +2022,14 @@
 
       let merged = null;
       if (!SV_DEMO) {
+        // Même règle que le transfert : une seule opération par geste.
+        let intent = confirmMergeTable.pendingIntent;
+        if (!intent || intent.merchant !== svSlug() || intent.from !== source || intent.to !== target) {
+          intent = confirmMergeTable.pendingIntent = { merchant: svSlug(), from: source, to: target,
+            operationId: 'ui-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+            expectedSession: serviceTableSessions.get(source) || '',
+            expectedRevision: serviceTableSessionRevisions.get(source) || 0 };
+        }
         try {
           const res = await fetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
@@ -2015,13 +2037,17 @@
             body: JSON.stringify({
               merchant: svSlug(),
               mergeTables: { targetTable: target, sourceTable: source, server: activeRole.fullName || activeRole.name || '',
-                operationId: 'ui-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
-                expectedSession: serviceTableSessions.get(source) || '',
-                expectedRevision: serviceTableSessionRevisions.get(source) || 0 }
+                operationId: intent.operationId,
+                expectedSession: intent.expectedSession,
+                expectedRevision: intent.expectedRevision }
             })
           });
           const data = await res.json().catch(() => null);
-          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'merge-failed');
+          if (!res.ok || !data || !data.ok) {
+            if (res.status >= 400 && res.status < 500) delete confirmMergeTable.pendingIntent;
+            throw new Error((data && data.error) || 'merge-failed');
+          }
+          delete confirmMergeTable.pendingIntent;
           merged = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;

@@ -254,7 +254,7 @@
     openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=13';
+  const partUrl = 'assets/daterange/renderers.js?v=15';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;
@@ -1546,11 +1546,11 @@
     const h = dayCutoffH(slug);
     return { from: merchantBoundary(day, h, slug), to: merchantBoundary(addMerchantDays(day, 1), h, slug) };
   }
-  function dayCutoffH(slug) {
+  function dayCutoffH(slug) { /* repli = 05:00 comme la caisse, jamais minuit */
     try {
       const h = window.KiwiDayReport?.cutoff?.(slug);
-      return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
-    } catch (_) { return 0; }
+      return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 5;
+    } catch (_) { return 5; }
   }
   function dayStartMs(t) {
     const slug = activeMerchantSlug();
@@ -1974,7 +1974,11 @@
                     if (ownData()) {
                       const real = realClosedTips(ctx.range);
                       if (!real) return null;
-                      if (real.partial) return { text: '…', value: 0, unit: '', delta: null };
+                      /* Plage à cheval sur l'historique ancien : tant que le résumé n'est pas là, la tuile
+                         montre ce que la caisse et les Z connaissent, et le dit (note), plutôt que rien. */
+                      if (real.partial) return real.days
+                        ? { value: real.sum, unit: 'MAD', fmt: 'int', delta: null, note: 'Partiel · historique ancien en chargement', noteKey: 'dash.kpi.tipsPartial' }
+                        : { text: '…', value: 0, unit: '', delta: null };
                       return real.days ? { value: real.sum, unit: 'MAD', fmt: 'int', delta: null } : { text: '·', value: 0, unit: '', fmt: 'int', delta: null };
                     }
                     const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0;

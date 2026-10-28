@@ -41,6 +41,78 @@
     return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MAD';
   }
 
+  /* ── Le montant en lettres ─────────────────────────────────────────────────
+   * Une facture marocaine porte, sous ses totaux, « Arrêtée la présente facture à
+   * la somme de : … dirhams et … centimes ». Le montant s'écrit à partir de
+   * centimes entiers (jamais d'un flottant), en orthographe traditionnelle :
+   * trait d'union entre dizaines et unités, « et » pour 21, 31, 41, 51, 61 et 71,
+   * « quatre-vingts » et « cents » seulement quand rien ne suit, « mille »
+   * invariable, « million(s) » et « milliard(s) » accordés. Au-delà de
+   * 999 999 999 999 ou pour ce qui n'est pas un entier positif, on rend '' :
+   * l'appelant omet la ligne plutôt que d'imprimer une somme fausse.
+   * Exporté pour les gabarits de assets/invoicing/print.js : KiwiInvoice.amountWords. */
+  const UNITS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze',
+    'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+  const TENS = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
+  const MAX = 999999999999;
+
+  /* `last` : rien ne s'accorde après ce nombre (« quatre-vingts » en fin de
+     phrase, « quatre-vingt » devant un autre mot). */
+  function below100(n, last) {
+    if (n < 20) return UNITS[n];
+    const t = Math.floor(n / 10), u = n % 10;
+    if (t <= 6) return u === 0 ? TENS[t] : u === 1 ? TENS[t] + ' et un' : TENS[t] + '-' + UNITS[u];
+    if (t === 7) return u === 1 ? 'soixante et onze' : 'soixante-' + UNITS[10 + u];
+    if (t === 8) return u === 0 ? (last ? 'quatre-vingts' : 'quatre-vingt') : 'quatre-vingt-' + UNITS[u];
+    return 'quatre-vingt-' + UNITS[10 + u];
+  }
+
+  function below1000(n, last) {
+    const h = Math.floor(n / 100), r = n % 100;
+    if (h === 0) return below100(r, last);
+    const head = h === 1 ? 'cent' : UNITS[h] + ' cent';
+    if (r === 0) return h === 1 ? 'cent' : (last ? head + 's' : head);
+    return head + ' ' + below100(r, last);
+  }
+
+  function valid(n) { return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= MAX; }
+
+  function numberToWordsFr(n) {
+    if (!valid(n)) return '';
+    if (n === 0) return UNITS[0];
+    const milliards = Math.floor(n / 1e9), millions = Math.floor(n / 1e6) % 1000, milliers = Math.floor(n / 1e3) % 1000, rest = n % 1000;
+    const out = [];
+    if (milliards) out.push(below1000(milliards, true) + ' milliard' + (milliards > 1 ? 's' : ''));
+    if (millions) out.push(below1000(millions, true) + ' million' + (millions > 1 ? 's' : ''));
+    if (milliers) out.push(milliers === 1 ? 'mille' : below1000(milliers, false) + ' mille');
+    if (rest) out.push(below1000(rest, true));
+    return out.join(' ');
+  }
+
+  /* « deux cent vingt-trois dirhams et quarante-cinq centimes ». Les centimes
+     ne s'écrivent que s'il y en a ; « un million de dirhams » prend « de ». */
+  function amountInWordsFr(cents) {
+    const c = typeof cents === 'string' && /^\d+$/.test(cents) ? Number(cents) : cents;
+    if (!valid(c)) return '';
+    const dh = Math.floor(c / 100), ct = c % 100;
+    const de = dh >= 1e6 && dh % 1e6 === 0 ? ' de' : '';
+    const words = numberToWordsFr(dh) + de + ' dirham' + (dh > 1 ? 's' : '');
+    return ct ? words + ' et ' + numberToWordsFr(ct) + ' centime' + (ct > 1 ? 's' : '') : words;
+  }
+
+  /* La formule de clôture, accordée au document. */
+  const FORMULA = { invoice: 'Arrêtée la présente facture', credit_note: 'Arrêté le présent avoir', quote: 'Arrêté le présent devis' };
+  function arreteFr(type, cents) {
+    const words = amountInWordsFr(cents);
+    return words ? (FORMULA[type] || FORMULA.invoice) + ' à la somme de : ' + words + '.' : '';
+  }
+
+  /* La ligne légale sous les totaux d'une vente de comptoir : le TTC passe en
+     centimes entiers avant d'être écrit en lettres ; illisible, la ligne est omise. */
+  function amountWordsLine(ttc) {
+    return arreteFr('invoice', Math.round(round2(ttc) * 100));
+  }
+
   function fmtDate(ts) {
     if (!ts) return '·';
     const d = new Date(ts);
@@ -226,6 +298,9 @@
     return 0; // Mode 'none' par défaut dans Kiwi
   }
 
+  /* Les genres de notification, nommés une fois : un type n'est pas un libellé. */
+  const TOAST = Object.freeze({ warning: 'warning', error: 'error' });
+
   function toast(msg, type) {
     try {
       if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
@@ -375,6 +450,7 @@
     const cust = doc.customer || null;
     const totals = doc.totals || { ht: 0, tva: 0, ttc: 0 };
     const tvaRate = doc.tvaRate || 0;
+    const arrete = amountWordsLine(totals.ttc);
 
     const sellerLogo = seller.logo || '';
     const initials = (String(biz).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
@@ -448,6 +524,7 @@
     .totals { width: 260px; }
     .tot-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; color: #475569; }
     .tot-row.grand { border-top: 2px solid #087653; margin-top: 6px; padding-top: 10px; font-size: 16px; font-weight: 800; color: #087653; }
+    .amount-words { margin: 14px 0 0; font-size: 12px; line-height: 1.5; color: #1e293b; }
     .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end; color: #94a3b8; font-size: 9.5px; border-top: 1px solid #e2e8f0; padding-top: 8px; background: #fff; }
     .footer-legal { max-width: 68%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; padding-bottom: 2px; }
     .footer-powered { display: inline-flex; align-items: flex-end; gap: 5px; color: #64748b; font-size: 9.5px; }
@@ -525,6 +602,7 @@
       <div class="tot-row grand"><span>Total TTC</span><span>${esc(fmtMoney(totals.ttc))}</span></div>
     </div>
   </div>
+  ${arrete ? `<p class="amount-words">${esc(arrete)}</p>` : ''}
 
   <div class="footer">
     <div class="footer-legal">
@@ -582,7 +660,7 @@
     frame.style.cssText = 'flex:1;width:100%;border:0;min-height:0;';
     frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
     frame.srcdoc = html(doc, { autoPrint: false });
-    print.onclick = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) { toast(L('printUnavailable', 'Impression indisponible sur cet appareil.'), 'warning'); } };
+    print.onclick = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) { toast(L('printUnavailable', 'Impression indisponible sur cet appareil.'), TOAST.warning); } };
     const previousFocus = document.activeElement;
     const dismiss = () => { overlay.remove(); previousFocus?.focus?.(); };
     close.onclick = dismiss;
@@ -598,7 +676,7 @@
     const native = nativeInvoice();
     if (native) {
       return native.exportInvoice({ html: html(doc, { autoPrint: false }), name: num }).then(() => true).catch(() => {
-        toast(L('exportRetry', 'La facture est créée. Réessayez son export PDF.'), 'warning');
+        toast(L('exportRetry', 'La facture est créée. Réessayez son export PDF.'), TOAST.warning);
         return preview(doc);
       });
     }
@@ -629,7 +707,7 @@
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div>
               <label for="inv-cust-name" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${esc(L('custName', 'Nom ou Raison sociale'))}</label>
-              <input id="inv-cust-name" data-inv-cust-name class="st-mb-input" placeholder="${esc(L('custNameEx', 'Ex. Société Maghreb Tech'))}" maxlength="80" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <input id="inv-cust-name" data-inv-cust-name class="st-mb-input" maxlength="80" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
             </div>
             <div>
               <label for="inv-cust-ice" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${esc(L('custIce', 'ICE (15 chiffres)'))}</label>
@@ -638,7 +716,7 @@
             </div>
             <div>
               <label for="inv-cust-if" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${esc(L('custIf', 'Identifiant Fiscal (IF)'))}</label>
-              <input id="inv-cust-if" data-inv-cust-if class="st-mb-input mono" placeholder="${esc(L('custIfEx', 'Ex. 12345678'))}" maxlength="30" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <input id="inv-cust-if" data-inv-cust-if class="st-mb-input mono" maxlength="30" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
             </div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
@@ -653,6 +731,8 @@
       const iceInp = overlay.querySelector('[data-inv-cust-ice]');
       const ifInp = overlay.querySelector('[data-inv-cust-if]');
       const iceErr = overlay.querySelector('[data-inv-ice-error]');
+      nameInp.setAttribute('placeholder', L('custNameEx', 'Ex. Société Maghreb Tech'));
+      ifInp.setAttribute('placeholder', L('custIfEx', 'Ex. 12345678'));
 
       const finish = (cust) => {
         if (beforeResolve) beforeResolve();
@@ -723,7 +803,7 @@
     const saleId = String(sale.saleId || sale.id || '').trim();
 
     if (!saleId) {
-      toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), 'warning');
+      toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), TOAST.warning);
       return null;
     }
 
@@ -773,12 +853,12 @@
         const err = data;
         if (err?.error === 'invalid-ice') {
           abandon();
-          toast(err.detail ? L('iceClient', 'ICE client') + ' · ' + err.detail : L('iceInvalid', 'ICE client invalide (15 chiffres requis).'), 'error');
+          toast(err.detail ? L('iceClient', 'ICE client') + ' · ' + err.detail : L('iceInvalid', 'ICE client invalide (15 chiffres requis).'), TOAST.error);
           return null;
         }
         if (err?.error === 'unknown-sale' || res.status === 404) {
           abandon();
-          toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), 'warning');
+          toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), TOAST.warning);
           return null;
         }
         throw new Error(err?.detail || err?.error || 'server-refusal');
@@ -811,7 +891,7 @@
       return finalDoc;
     } catch (e) {
       abandon();
-      toast(L('needConnection', 'Connexion requise pour numéroter la facture'), 'warning');
+      toast(L('needConnection', 'Connexion requise pour numéroter la facture'), TOAST.warning);
       return null;
     }
   }
@@ -842,5 +922,6 @@
     setCachedInvoice,
     promptCustomer,
     getSellerBusiness,
+    amountWords: Object.freeze({ numberToWordsFr, amountInWordsFr, arreteFr }),
   };
 })();

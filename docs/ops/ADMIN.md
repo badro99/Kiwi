@@ -457,9 +457,12 @@ enable the console in production:
    `/exec` URL. Unset, the console refuses the send **honestly** and creates no
    token — a "sent ✓" over a mail that never left is worse than no button at all.
 4. Deploy (push, or Create deployment — not "Retry").
-5. First entry: staff bypass → `/kiwi-admin.html` → Opérateurs → add your codes.
-   **Then reopen the console with a code**: the staff bypass is read-only for
-   test sales, addresses and resets (see *Two levels of operator*).
+5. First entry: seed the first operator code offline (an `INSERT INTO operators`
+   in D1 with a PBKDF2 hash, as `hashPassword` makes it). The staff bypass no
+   longer opens the console, so there is no in-console bootstrap. Further codes
+   are added from Opérateurs by a named operator; each creation and removal is
+   written to `account_audit` (`operator-create` / `operator-delete`), and the
+   last code cannot be removed (`409 last-operator`).
 
 Besides `MAIL_WEBHOOK` no new secret is needed — the operator cookie and the
 reset tokens both key off `AUTH_SECRET`.

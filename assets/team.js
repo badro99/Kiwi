@@ -1,6 +1,6 @@
-import {} from './team/member-state.js?v=7';
+import {} from './team/member-state.js?v=10';
 import {} from './team/venue-scope.js?v=6';
-import {} from './team/invitations.js?v=6';
+import {} from './team/invitations.js?v=9';
 import {} from './team/roster-list.js?v=6';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · ÉQUIPE — team & profile management (full-page surface)
@@ -431,9 +431,11 @@ import {} from './team/roster-list.js?v=6';
   function fmtFr(d) { return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; }
   function toISO(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
   function buildPeriod(kind) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    /* Le jour du magasin (sa zone, sa bascule), pas la date de l'appareil. */
+    const storeDay = window.KiwiPlanningCore?.storeToday?.();
+    const today = storeDay ? fromISO(storeDay) : new Date(); today.setHours(0, 0, 0, 0);
     kind = ['week', 'fortnight', 'month'].includes(kind) ? kind : 'week';
-    const core = window.KiwiPlanningCore?.calendarPeriod?.(kind, toISO(today), periodOffsets[kind] || 0);
+    const core = window.KiwiPlanningCore?.calendarPeriod?.(kind, storeDay || toISO(today), periodOffsets[kind] || 0);
     if (core) {
       const start = fromISO(core.start), end = fromISO(core.end);
       return { start:core.start, end:core.end, startFr:fmtFr(start), endFr:fmtFr(end), days:core.days };
@@ -884,20 +886,22 @@ import {} from './team/roster-list.js?v=6';
     const denominator = 42000n * scale;
     return Number((excess * rateCents * 2n + denominator) / (denominator * 2n)) / 100;
   }
+  const payCents = (n) => { const x = +n || 0, c = Math.round(Number(Math.abs(x).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))); return x < 0 ? -c : c; }; // paie en centimes entiers, un seul total par semaine partout
+  const fmtPay = (n) => { const c = payCents(n); return window.KiwiNumber?.amount?.(c / 100) ?? (c / 100).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 }); };
   function payrollFigures(members, venueType, period) {
     const hours = getHours(venueType);
-    let totalHours = 0, variablePay = 0, baseMass = 0, onDuty = 0, salaried = 0, rated = 0;
+    let totalHours = 0, variableC = 0, baseC = 0, onDuty = 0, salaried = 0, rated = 0;
     members.forEach((m) => {
       const row = hours[m.id] || {};
       let h = 0;
       period.days.forEach((d) => { h += (+row[d] || 0); });
       if (h > 0) onDuty++;
       totalHours += h;
-      if ((+m.hourlyRate || 0) > 0) { rated++; variablePay += hourlyPayFor(m, h, period.days); }
-      if ((+m.baseSalary || 0) > 0) { salaried++; baseMass += (+m.baseSalary); }
+      if ((+m.hourlyRate || 0) > 0) { rated++; variableC += payCents(hourlyPayFor(m, h, period.days)); }
+      if ((+m.baseSalary || 0) > 0) { salaried++; baseC += payCents(m.baseSalary); }
     });
     const share = Math.min(1, periodMonthShare(period.days));
-    return { totalHours, variablePay, baseMass, onDuty, salaried, rated, share, baseDue: baseMass * share };
+    return { totalHours, variablePay: variableC / 100, baseMass: baseC / 100, onDuty, salaried, rated, share, baseDue: Math.round(baseC * share) / 100 };
   }
   const dateLocale = () => (trLang() === 'en' ? 'en-US' : trLang() === 'ar' ? 'ar-MA' : 'fr-FR');
 
@@ -1362,7 +1366,7 @@ import {} from './team/roster-list.js?v=6';
     periodPillsHtml, teamKey, saveCustomTeams, getMembers, getHours, pad, fmtFr, toISO, buildPeriod,
     periodNavigatorHtml, lockBucket, setPeriodLock, restorePeriodLock, applyLiveTeam, render,
     esc, memberFullName, isCustomVenue, fmtMad, svgIcon, IC, dateLocale, MODAL_CSS,
-    contractWeekHours, hourlyPayFor, payrollFigures,
+    contractWeekHours, hourlyPayFor, payrollFigures, payCents, fmtPay,
   };
 
   /* Private profile bridge: helpers and stable objects, with scalar updates. */

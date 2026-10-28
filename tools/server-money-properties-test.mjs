@@ -124,13 +124,7 @@ await strict('SM-3 · a device till sale sent without an id keeps its certifying
  const sent=body('',cents,{ts});delete sent.id;sent.ref='Comptoir';const r=await f.call('sale',sent,'deviceA');ok(r);assert.equal(f.row(r.body.id).written_by,'till:'+A);
  sql.exec('DELETE FROM z_reconciliations');const z=await f.call('z',{day,cutoff:5,terminalId:A,sales:[],count:0,totalCents:0},'deviceA');ok(z);assert.deepEqual(z.body.unreported,[r.body.id]);assert.equal(z.body.status,'mismatch');
 }));
-/* La production n'a pas encore migrations/0010 : sans la colonne, la vente s'écrit quand même et le Z garde son comportement d'avant (informatif). */
-const g=await fixture(ROOT);try{g.sql.exec('ALTER TABLE sales DROP COLUMN written_by');
-await strict('SM-3 · without the written_by column (prod before migration 0010) sales still write and the Z stays informational',fc.asyncProperty(positive,positive,async(kept,dropped)=>{
- await g.reset();const day='2026-02-14';g.sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',g.merchant);const from=businessBoundary(day,5,'UTC'),A=g.devices.a;
- ok(await g.call('sale',body('kept',kept,{ts:from}),'deviceA'));ok(await g.call('sale',body('dropped',dropped,{ts:from+1}),'deviceA'));assert.equal(g.row('dropped').amount_cents,dropped);
- const r=await g.call('z',{day,cutoff:5,terminalId:A,sales:[{id:'kept',amountCents:kept,method:'cash'}],count:1,totalCents:kept},'deviceA');ok(r);assert.equal(r.body.status,'matched');assert.deepEqual(r.body.unreported,[]);assert.deepEqual(r.body.omitted,['dropped']);assert.equal(r.body.serverCents,kept);
-}));}finally{g.close();}
+/* Plus de cas « sans la colonne written_by » : migrations/0010 est sous le plancher de production (0016) et sale.js ne répare plus le schéma en cours de requête (vague 12). Les lignes d'avant la colonne, elles, restent couvertes plus haut : l'auteur NULL de 'history' reste informatif au Z. */
 await strict('SM-4 (corrigé 22/10) · Z represents a valid day whose individually bounded refunds exceed 200000 MAD in aggregate',fc.asyncProperty(fc.integer({min:2,max:10}),async(n)=>{
  await f.reset();sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',f.merchant);const day=businessDate(Date.now(),5,'UTC'),from=businessBoundary(day,5,'UTC'),sales=[];
  for(let i=0;i<n;i++){f.insert('original-'+i,5000000,{ts:from-1000});ok(await f.refund('refund-'+i,'original-'+i,5000000));sales.push({id:'refund-'+i,amountCents:-5000000,method:'cash',kind:'refund'});}

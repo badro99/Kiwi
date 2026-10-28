@@ -33,9 +33,17 @@ function parse(raw) {
   catch (_) { return {}; }
 }
 
-async function all(env, sql, args) {
+/* A failed query still degrades to null (one missing statistic must not blank
+ * the room), but never silently: the failure is logged with its label (never
+ * the SQL arguments, which carry the merchant) and pushed on `errors`, which
+ * the response returns so the plan can say the picture is incomplete. */
+async function all(env, sql, args, label, errors) {
   try { const r = await env.DB.prepare(sql).bind(...args).all(); return r.results || []; }
-  catch (_) { return null; }
+  catch (err) {
+    if (errors) errors.push(label);
+    try { console.error('[floor/live] query failed: ' + label + ': ' + String((err && err.message) || err).slice(0, 200)); } catch (_) {}
+    return null;
+  }
 }
 
 /* Builds the per-table picture from already-fetched rows. Pure, so the test
@@ -125,16 +133,22 @@ export async function onRequestGet({ request, env }) {
   const [zone, cutoff] = await Promise.all([merchantZone(env, merchant), merchantCutoff(env, merchant)]);
   const dayStart = businessDayStart(now, cutoff, zone);
 
+  const errors = [];
   let doc = {};
   try {
     const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'service-events'")
       .bind(merchant).first();
     doc = parse(row && row.data);
-  } catch (_) { doc = {}; }
+  } catch (err) {
+    doc = {}; errors.push('states');
+    try { console.error('[floor/live] query failed: states: ' + String((err && err.message) || err).slice(0, 200)); } catch (_) {}
+  }
 
-  const sessions = await all(env,
+  const sessions0 = await all(env,
     `SELECT id, table_no, opened_ts FROM table_sessions
-      WHERE merchant = ? AND status = 'open' AND mode = 'table' AND table_no <> ''`, [merchant]) || [];
+      WHERE merchant = ? AND status = 'open' AND mode = 'table' AND table_no <> ''`, [merchant], 'sessions', errors);
+  const sessionsFailed = !sessions0;
+  const sessions = sessions0 || [];
 
   /* Open bill per table: unpaid, not-rejected orders of the open visit. Older
      bases have no session_id/paid_ts; they fall back to "orders on this table
@@ -147,19 +161,19 @@ export async function onRequestGet({ request, env }) {
          FROM orders o JOIN table_sessions s ON s.id = o.session_id AND s.merchant = o.merchant
         WHERE o.merchant = ? AND o.session_id IN (${ids.map(() => '?').join(',')})
           AND o.paid_ts IS NULL AND o.status IN ${OPEN_ORDER}
-        GROUP BY s.table_no`, [merchant, ...ids]);
+        GROUP BY s.table_no`, [merchant, ...ids], 'bills');
     if (!bills) {
       const since = Math.min(...sessions.map((s) => Number(s.opened_ts) || now));
       bills = await all(env,
         `SELECT table_no, SUM(total) AS total, COUNT(*) AS n FROM orders
           WHERE merchant = ? AND mode = 'table' AND status IN ${OPEN_ORDER} AND created_ts >= ?
-          GROUP BY table_no`, [merchant, since]);
+          GROUP BY table_no`, [merchant, since], 'bills-fallback', errors);
     }
   }
 
   const turns = await all(env,
     `SELECT table_no, opened_ts, closed_ts FROM table_sessions
-      WHERE merchant = ? AND mode = 'table' AND table_no <> '' AND opened_ts >= ?`, [merchant, dayStart]);
+      WHERE merchant = ? AND mode = 'table' AND table_no <> '' AND opened_ts >= ?`, [merchant, dayStart], 'turns', errors);
 
   /* Revenue per table today, through the visit that produced the sale. A base
      without sales.session_id or void_ts answers nothing here, which is a
@@ -168,13 +182,13 @@ export async function onRequestGet({ request, env }) {
     `SELECT s.table_no AS table_no, SUM(COALESCE(x.amount_cents, x.amount * 100)) AS cents
        FROM sales x JOIN table_sessions s ON s.id = x.session_id AND s.merchant = x.merchant
       WHERE x.merchant = ? AND x.ts >= ? AND x.void_ts IS NULL
-      GROUP BY s.table_no`, [merchant, dayStart]);
+      GROUP BY s.table_no`, [merchant, dayStart], 'sales', errors);
 
   /* Whether a till is actually on: the register polls /api/order/queue every
      few seconds with its pairing proof and that poll stamps order_desk. The
      plan used to say "Caisse en direct" whenever THIS endpoint answered, even
      with no till ever paired. 0 = never seen (or a base without the table). */
-  const desk = await all(env, 'SELECT seen_ts FROM order_desk WHERE merchant = ?', [merchant]);
+  const desk = await all(env, 'SELECT seen_ts FROM order_desk WHERE merchant = ?', [merchant], 'desk', errors);
   const tillSeen = Math.max(0, Number(desk && desk[0] && desk[0].seen_ts) || 0);
 
   const body = assemble({
@@ -183,5 +197,6 @@ export async function onRequestGet({ request, env }) {
     sessions, bills: bills || [], turns: turns || [], sales: sales || [], now,
   });
   return json({ ok: true, merchant, dayStart, tillSeen, ...body,
-    partial: { bills: sessions.length > 0 && !bills, stats: !turns, revenue: !sales } });
+    errors,
+    partial: { bills: sessions.length > 0 && !bills, stats: !turns, revenue: !sales, sessions: sessionsFailed } });
 }

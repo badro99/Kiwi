@@ -100,6 +100,12 @@ export async function workspace(env, merchant = '') {
      * books; the signal is about who applied it and whether a till is stale. */
     discountPolicy:[`SELECT merchant,sale_id AS id,reason,note,amount_cents,method,ref,sale_ts,ts AS updated_ts
       FROM sale_audit WHERE action='discount-policy' AND ts>=?${where} ORDER BY ts DESC LIMIT 201`,[now-14*86400000,...binds]],
+    /* Sales whose amount disagreed with their basket, or whose till clock was
+     * off (functions/api/_sale-truth.js writes one row per sale, action
+     * 'basket-flag' / 'clock-flag'). The money is booked either way; this is
+     * the only place a till that sends inconsistent tickets becomes visible. */
+    saleFlags:[`SELECT merchant,sale_id AS id,action,reason,note,amount_cents,method,ref,sale_ts,ts AS updated_ts
+      FROM sale_audit WHERE action IN ('basket-flag','clock-flag') AND ts>=?${where} ORDER BY ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     /* A table closed from the till or by a server while its orders were never
      * paid. Closing is free on purpose (colleagues cover each other) and the
      * till says what stayed unpaid at that moment; this is the day after view.

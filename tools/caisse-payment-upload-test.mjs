@@ -331,8 +331,16 @@ test('rejected IndexedDB enqueue plus offline fallback stays visible and flush r
   assert.equal(f.count(), 1); assert.equal(f.queue().length, 0);
 });
 
-test('explicit Live Link off and unresolved tenant each leave journal-only receipts; full replay heals later', async t => {
-  for (const cause of ['off', 'tenant']) {
+test('a stale kiwiLive=0 on a paired till does not stop the sale leaving the tablet', async t => {
+  const f = await fixture(t);
+  f.values.set('kiwiLive', '0');
+  f.record(); await drain();
+  assert.equal(f.count(), 1, 'the sale reached the server despite the stale flag');
+  assert.equal(f.values.has('kiwiLive'), false, 'the stale flag is cleared');
+});
+
+test('unresolved tenant leaves journal-only receipts; full replay heals later', async t => {
+  for (const cause of ['tenant']) {
     const f = await fixture(t);
     if (cause === 'off') f.values.set('kiwiLive', '0'); else f.values.delete('kiwiPairedVenue');
     f.record(); await drain();

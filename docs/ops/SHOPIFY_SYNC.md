@@ -29,9 +29,14 @@ pilot runs. The app can remain API-only; there is no embedded Shopify UI.
 - Scopes: `read_products,read_inventory,write_inventory,read_orders,read_locations`
 - Use expiring offline tokens.
 
-The OAuth callback creates shop-specific `orders/create`,
-`inventory_levels/update`, and `app/uninstalled` webhook subscriptions pointing
-to the existing narrow `/api/channel/shopify/<link>` receiver.
+The OAuth callback creates shop-specific `orders/create`, `orders/cancelled`,
+`refunds/create`, `inventory_levels/update`, and `app/uninstalled` webhook
+subscriptions pointing to the existing narrow `/api/channel/shopify/<link>`
+receiver. A cancelled order puts back the pieces `orders/create` took (and
+rejects the ticket); a refund puts back the lines Shopify restocks and marks
+the ticket. Both are capped at what Kiwi actually deducted
+(`functions/api/shopify/_order-reversal.js`). Shops connected before this
+change need `POST /api/shopify/status {"action":"register-webhooks"}` once.
 
 ## Cloudflare Pages configuration
 

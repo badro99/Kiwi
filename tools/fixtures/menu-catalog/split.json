@@ -1,5 +1,5 @@
 {
-  "sha256": "f34cb7d4f5d9e62c01810be6b52c4a39b25d25d03250edc983a1af9f6e0ce67f",
+  "sha256": "bb5db3f2a8e6cff908ee78c9bf152decbdf172fffee04d2e80ea229a735886a6",
   "bind": "  const editor = window.KiwiMenuCatalogParts.item_editor({ store, tr, T, esc, catById, itemById, optsOf, optById, cleanFormula, fmt, fmtPct, venueName, promptText, render, addCategory, renameCategory, deleteCategory, addSubcategory, deleteItem, addItem, updateItem, confirmThen, categoryStationModal, stationsModal, optsModal, PLUS, TRASH, PICKER_SEARCH, PICKER_CHEVRON });\n",
   "parts": [
     {
@@ -9,22 +9,22 @@
       "suffix": "    const { saveFormulaTemplate, deleteFormulaTemplate } = createFormulas({ store, cleanFormula, nid });\n    return { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 32333,
-          "end": 36320,
+          "start": 33699,
+          "end": 37686,
           "offset": 967,
           "length": 3987,
           "replacement": "  const { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot } = window.KiwiMenuCatalogParts.state({ rules, tr, T, STATION_COLORS, render: (...args) => render(...args), registerHandlers: () => registerHandlers(), createFormulas: window.KiwiMenuCatalogParts.formulas });\n"
         },
         {
-          "start": 37103,
-          "end": 53034,
+          "start": 38469,
+          "end": 54400,
           "offset": 4956,
           "length": 15931,
           "replacement": "  /* menu-state: edits owned by state. */\n"
         },
         {
-          "start": 150035,
-          "end": 183570,
+          "start": 154007,
+          "end": 187542,
           "offset": 20889,
           "length": 33535,
           "replacement": "  /* menu-state: lifecycle owned by state. */\n"
@@ -109,8 +109,8 @@
       "suffix": "    return { optsModal };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 109140,
-          "end": 117326,
+          "start": 110506,
+          "end": 118692,
           "offset": 607,
           "length": 8186,
           "replacement": "  function optsModal() { return window.KiwiMenuCatalogParts.modifiers({ store, optsOf, optById, tr, T, esc, venueName, PLUS, TRASH, OPT_EMOJIS, cleanOptEmoji, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, confirmThen, render }).optsModal(); }"
@@ -152,8 +152,8 @@
       "suffix": "    return { injectCss };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 53034,
-          "end": 84659,
+          "start": 54400,
+          "end": 86025,
           "offset": 201,
           "length": 31625,
           "replacement": "  function injectCss() { return window.KiwiMenuCatalogParts.media({  }).injectCss(); }"
@@ -174,23 +174,23 @@
       "suffix": "    const selection = () => ({ activeCat, activeSub });\n    const setSelection = (next) => { activeCat = next.activeCat; activeSub = next.activeSub; };\n    return { itemModal, registerHandlers, selection, setSelection };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 87404,
-          "end": 87495,
+          "start": 88770,
+          "end": 88861,
           "offset": 876,
           "length": 91,
           "replacement": "  /* menu-editor: selection owned by editor. */\n"
         },
         {
-          "start": 117328,
-          "end": 145983,
+          "start": 118694,
+          "end": 149955,
           "offset": 969,
-          "length": 28655,
+          "length": 31261,
           "replacement": "  function itemModal(existing) { return editor.itemModal(existing); }"
         },
         {
-          "start": 146038,
-          "end": 149322,
-          "offset": 29626,
+          "start": 150010,
+          "end": 153294,
+          "offset": 32232,
           "length": 3284,
           "replacement": "  function registerHandlers() { return editor.registerHandlers(); }"
         }
@@ -248,15 +248,15 @@
       "suffix": "    return { renderEmpty, renderLegacy, selection: () => ({ activeCat, activeSub }) };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 95896,
-          "end": 97551,
+          "start": 97262,
+          "end": 98917,
           "offset": 501,
           "length": 1655,
           "replacement": "  function renderEmpty() { return window.KiwiMenuCatalogParts.item_list({ injectCss, tr, T, esc, venueName, SPARK, PLUS, orderProOn }).renderEmpty(); }"
         },
         {
-          "start": 88173,
-          "end": 95483,
+          "start": 89539,
+          "end": 96849,
           "offset": 2158,
           "length": 7310,
           "replacement": "  function renderLegacy() {\n    const view = window.KiwiMenuCatalogParts.item_list({ injectCss, tr, T, esc, venueName, SPARK, PLUS, orderProOn, store, catById, itemsIn, optById, stationById, kitchenIdOf, fmt, fmtPct, EDIT, TRASH, LIST, BELL, DOWNLOAD, ...editor.selection() });\n    try { return view.renderLegacy(); }\n    finally { editor.setSelection(view.selection()); }\n  }"
@@ -305,15 +305,15 @@
       "suffix": "    return { saveFormulaTemplate, deleteFormulaTemplate };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 36320,
-          "end": 36932,
+          "start": 37686,
+          "end": 38298,
           "offset": 288,
           "length": 612,
           "replacement": "  /* menu-formulas: saveFormulaTemplate owned by formulas. */"
         },
         {
-          "start": 36933,
-          "end": 37103,
+          "start": 38299,
+          "end": 38469,
           "offset": 902,
           "length": 170,
           "replacement": "  /* menu-formulas: deleteFormulaTemplate owned by formulas. */"
@@ -339,8 +339,8 @@
       "suffix": "\n    return { toggleAvailable };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 186438,
-          "end": 186580,
+          "start": 190410,
+          "end": 190552,
           "offset": 185,
           "length": 147,
           "replacement": "    toggleAvailable: window.KiwiMenuCatalogParts.availability({ store, updateItem, itemById }).toggleAvailable,",

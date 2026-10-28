@@ -282,6 +282,17 @@ export async function onRequestGet({ request, env }) {
   const from = Number(url.searchParams.get('from')) || 0;
   const byDay = from > 0;
   const DAY_LIMIT = 2000;
+  /* A day read is capped at DAY_LIMIT rows. It used to answer with the newest
+     DAY_LIMIT and no sign that older rows existed: every consumer then took the
+     capped list for the whole day. One extra row is read to know the truth, the
+     answer says `truncated`, and `bt`/`bc` (the last row's ts and rowid) ask for
+     the next, older page. */
+  const beforeTs = Number(url.searchParams.get('bt'));
+  const beforeRow = Number(url.searchParams.get('bc'));
+  const paged = byDay && Number.isFinite(beforeTs) && beforeTs > 0 && Number.isSafeInteger(beforeRow) && beforeRow > 0;
+  const dayMore = paged ? ' AND (ts < ? OR (ts = ? AND rowid < ?))' : '';
+  const dayMoreBinds = paged ? [beforeTs, beforeTs, beforeRow] : [];
+  let truncated = false;
   const requestedLimit = Number(url.searchParams.get('limit'));
   const limit = Number.isInteger(requestedLimit) ? Math.max(50, Math.min(500, requestedLimit)) : 50;
   let replay, changeResult;
@@ -344,9 +355,9 @@ export async function onRequestGet({ request, env }) {
       const rs = byDay
         ? await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
-          'FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL ' +
-          `ORDER BY ts DESC LIMIT ${DAY_LIMIT}`
-        ).bind(merchant, legacy || merchant, from).all()
+          `FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL${dayMore} ` +
+          `ORDER BY ts DESC, rowid DESC LIMIT ${DAY_LIMIT + 1}`
+        ).bind(merchant, legacy || merchant, from, ...dayMoreBinds).all()
         : await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
           `FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT ${limit}`
@@ -380,25 +391,29 @@ export async function onRequestGet({ request, env }) {
       + (noDiscount ? '' : ', gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id')
       + ', method, label, ref, ts'
       + (noLines ? '' : ', lines') + (noChannel ? '' : ', channel');
-    const where = byDay ? 'ts >= ?' : 'rowid > ?';
-    const order = byDay ? `ts DESC LIMIT ${DAY_LIMIT}` : `rowid ASC LIMIT ${limit}`;
-    const bound = byDay ? from : since;
+    const where = byDay ? 'ts >= ?' + dayMore : 'rowid > ?';
+    const order = byDay ? `ts DESC, rowid DESC LIMIT ${DAY_LIMIT + 1}` : `rowid ASC LIMIT ${limit}`;
+    const bound = byDay ? [from, ...dayMoreBinds] : [since];
     try {
       const rs = await env.DB.prepare(
         `SELECT ${cols} FROM sales WHERE merchant IN (?, ?) AND ${where} ORDER BY ${order}`
-      ).bind(merchant, legacy || merchant, bound).all();
+      ).bind(merchant, legacy || merchant, ...bound).all();
       rows = (rs && rs.results) || [];
     } catch (e2) {
       try {
         const rs = await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
           `FROM sales WHERE merchant IN (?, ?) AND ${where} ORDER BY ${order}`
-        ).bind(merchant, legacy || merchant, bound).all();
+        ).bind(merchant, legacy || merchant, ...bound).all();
         rows = (rs && rs.results) || [];
       } catch (_) {
         return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
       }
     }
+  }
+  if (byDay && !windowRead && !changeRead && rows.length > DAY_LIMIT) {
+    truncated = true;
+    rows = rows.slice(0, DAY_LIMIT);
   }
   /* Hand the basket back as an array, in the shape the till sent it and the
    * dashboard's own journal already uses ({name, qty, total}). Parsing here
@@ -567,5 +582,9 @@ export async function onRequestGet({ request, env }) {
     const desk = await env.DB.prepare('SELECT seen_ts FROM order_desk WHERE merchant = ?').bind(merchant).first();
     tillSeen = Math.max(0, Number(desk && desk.seen_ts) || 0);
   } catch (_) {}
-  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now(), ...(changeFence !== null ? { changeFence } : {}), ...(!byDay ? { limit } : {}) });
+  /* Only a capped day carries the mark (and the key of the older page): the
+     answer for an ordinary day stays byte for byte what it was. */
+  const tail = truncated && rows.length ? rows[rows.length - 1] : null;
+  const capped = tail ? { truncated: true, before: { ts: Number(tail.ts), cursor: Number(tail.cursor) } } : {};
+  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now(), ...capped, ...(changeFence !== null ? { changeFence } : {}), ...(!byDay ? { limit } : {}) });
 }

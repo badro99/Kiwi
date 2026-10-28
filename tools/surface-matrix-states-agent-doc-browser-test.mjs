@@ -63,8 +63,8 @@ async function open(t, locale, viewport) {
     .find((el) => /Explorer la d|Explore the d|استكشف/.test(el.textContent)) || null);
   if (explore.asElement()) await explore.asElement().click();
   await explore.dispose(); await page.keyboard.press('Escape');
-  // A phone reaches the assistant from the 2027 top bar; wider screens from the header button.
-  const selector = viewport === 'phone' ? 'pierce/.k-pnav__ai[data-k="ai"]' : '[data-action="open-assistant"]';
+  // A phone reaches the assistant from the bottom tab bar; wider screens from the header button.
+  const selector = viewport === 'phone' ? '.kw-tab[data-kw-tab="ai"]' : '[data-action="open-assistant"]';
   await page.waitForSelector(selector);
   await click(page, selector);
   await page.waitForSelector('.fa-drawer .kv-attach', { visible: true });

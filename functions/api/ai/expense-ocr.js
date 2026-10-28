@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 import { runVisionPair } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
@@ -18,7 +18,7 @@ export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
-const DAILY_CAP = 200;
+const DAILY_CAP = DAILY_CAPS.expense;
 const MAX_IMAGE_DATAURL = 2_600_000;
 
 const SYSTEM_PROMPT = `Tu es un assistant comptable pour commerces et restaurants au Maroc.
@@ -83,12 +83,13 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
-  const allowed = await quotaOk(env, who, 'expense', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
-
   const image = typeof b?.image === 'string' ? b.image.trim() : '';
   if (!image.startsWith('data:image/')) return json({ error: 'image-required' }, 400);
   if (image.length > MAX_IMAGE_DATAURL) return json({ error: 'image-too-large' }, 413);
+
+  /* Le quota après les contrôles locaux : une photo refusée ne brûle pas de place. */
+  const allowed = await quotaOk(env, who, 'expense', DAILY_CAP);
+  if (!allowed) return json(quotaBody('expense', 'daily-quota-exceeded'), 429);
 
   let runRes;
   try {

@@ -1,7 +1,36 @@
-import { json, readSession, readCookie, SESS_COOKIE, sendMail } from '../../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE, sendMail, entitledMerchant } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { ensureSupport, cleanText, classify, SUPPORT_WHATSAPP_PHONE } from '../_support.js';
 import { triageAndRecord } from '../_support-triage.js';
+import { spendBudget } from '../_rate-budget.js';
+
+/* ── Une demande de support envoie un courriel : elle a un débit ─────────────
+ * Le courriel de confirmation part à l'adresse que l'appelant écrit. Sans
+ * plafond, sans dédoublonnage et avec le texte de l'appelant recopié dedans,
+ * cette route était un relais de courrier. Trois verrous :
+ *   · seuls le compte propriétaire et un opérateur nommé déposent une demande
+ *     (le Centre d'aide n'existe que dans le tableau de bord ; une caisse
+ *     appairée, appareil de comptoir, n'en dépose pas) ;
+ *   · un renvoi identique (même établissement, même contact, même texte) dans
+ *     les dix minutes rend la demande déjà enregistrée, sans second courriel ;
+ *   · dix demandes par heure et par établissement, et le courriel ne recopie
+ *     plus le texte saisi : la référence suffit à poursuivre l'échange. */
+const TICKET_BUDGET = 10;
+const TICKET_WINDOW_MS = 60 * 60 * 1000;
+const REPLAY_WINDOW_MS = 10 * 60 * 1000;
+
+async function recentTwin(env, merchant, contact, summary, now) {
+  return env.DB.prepare(`SELECT id,reference,category,priority,channel FROM support_tickets
+    WHERE merchant=? AND contact=? AND summary=? AND created_ts>? ORDER BY created_ts DESC LIMIT 1`)
+    .bind(merchant, contact, summary, now - REPLAY_WINDOW_MS).first();
+}
+function replay(twin) {
+  const confirmation = { ok: true, channel: twin.channel, reason: 'already-recorded' };
+  if (twin.channel === 'whatsapp') confirmation.handoff = { phone: SUPPORT_WHATSAPP_PHONE, text: twin.reference };
+  return json({ ok: true, replayed: true,
+    ticket: { id: twin.id, reference: twin.reference, category: twin.category, priority: twin.priority, channel: twin.channel },
+    confirmation });
+}
 
 async function diagnostics(env, merchant, client) {
   const out = { captured_ts: Date.now(), client: client || {} };
@@ -41,6 +70,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   let merchant = cleanText(body && body.merchant, 64);
   merchant = await tenantFor(request, env, merchant, { strict: true });
   if (!merchant) return json({ error: 'forbidden' }, 403);
+  if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'forbidden' }, 403);
   await ensureSupport(env);
   const summary = cleanText(body.summary, 5000);
   const channel = body.channel === 'whatsapp' ? 'whatsapp' : 'email';
@@ -48,6 +78,12 @@ export async function onRequestPost({ request, env, waitUntil }) {
   if (summary.length < 12) return json({ error: 'summary-too-short' }, 400);
   if (!validContact(channel, contact)) return json({ error: 'contact-invalid' }, 400);
   const now = Date.now(), id = 'ticket-' + crypto.randomUUID();
+  const twin = await recentTwin(env, merchant, contact, summary, now);
+  if (twin) return replay(twin);
+  let budget;
+  try { budget = await spendBudget(env, merchant, 'support-ticket', TICKET_BUDGET, TICKET_WINDOW_MS, now); }
+  catch (_) { return json({ error: 'rate-limit-unavailable' }, 503); }
+  if (!budget.ok) return json({ error: 'too-many-tickets', retry_after: budget.retryAfter }, 429);
   const day = new Date(now).toISOString().slice(2,10).replaceAll('-', '');
   const reference = 'K-' + day + '-' + crypto.randomUUID().slice(0,4).toUpperCase();
   const routed = classify(summary);
@@ -61,10 +97,19 @@ export async function onRequestPost({ request, env, waitUntil }) {
   };
   const diag = await diagnostics(env, merchant, safeClient);
   let cfg = diag.configuration || {};
-  await env.DB.prepare(`INSERT INTO support_tickets
+  /* Le dédoublonnage se tranche DANS l'insertion : deux envois simultanés du
+     même texte passaient tous deux la lecture ci-dessus. */
+  const inserted = await env.DB.prepare(`INSERT INTO support_tickets
     (id,reference,merchant,store_type,category,priority,status,channel,contact,summary,diagnostics,assignee,created_ts,updated_ts,closed_ts)
-    VALUES (?,?,?,?,?,?,'open',?,?,?,?,?, ?,?,NULL)`)
-    .bind(id,reference,merchant,cleanText(cfg.type || body.store_type || '',40),routed.category,routed.priority,channel,contact,summary,JSON.stringify(diag),'',now,now).run();
+    SELECT ?,?,?,?,?,?,'open',?,?,?,?,?, ?,?,NULL
+    WHERE NOT EXISTS (SELECT 1 FROM support_tickets WHERE merchant=? AND contact=? AND summary=? AND created_ts>?)`)
+    .bind(id,reference,merchant,cleanText(cfg.type || body.store_type || '',40),routed.category,routed.priority,channel,contact,summary,JSON.stringify(diag),'',now,now,
+      merchant,contact,summary,now - REPLAY_WINDOW_MS).run();
+  if (!Number(inserted && inserted.meta && inserted.meta.changes)) {
+    const raced = await recentTwin(env, merchant, contact, summary, now + 1);
+    if (raced) return replay(raced);
+    return json({ error: 'ticket-storage-unavailable' }, 503);
+  }
   await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`)
     .bind('msg-' + crypto.randomUUID(),id,'client',channel,'client',summary,'received',now).run();
 
@@ -82,7 +127,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     confirmation = await sendMail(env, {
       to: contact,
       subject: `${reference} · Kiwi Support`,
-      text: `Votre demande ${reference} a bien été enregistrée.\n\n${summary}\n\nRépondez à cet e-mail en gardant la référence dans l’objet pour poursuivre l’échange.`,
+      text: `Votre demande ${reference} a bien été enregistrée.\n\nRépondez à cet e-mail en gardant la référence dans l’objet pour poursuivre l’échange.`,
     });
   } else {
     confirmation.handoff = {

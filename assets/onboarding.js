@@ -211,7 +211,7 @@
         </div>`,
       foot: `
         <button class="kob-btn primary" data-go="next">${tr({ fr: 'Commencer', en: 'Get started', ar: 'لنبدأ' })}</button>
-        <div class="kob-explore" style="flex-basis:100%;">
+        <div class="kob-explore">
           ${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) ? '' : `<button class="kob-skip" data-explore>${tr({ fr: "Explorer la démo d'abord", en: 'Explore the demo first', ar: 'استكشاف العرض أولاً' })}</button><span class="kob-sep" aria-hidden="true">·</span>`}
           <a class="kob-skip" href="/auth/logout" data-signin>${tr({ fr: "J'ai déjà un compte", en: 'I already have an account', ar: 'لدي حساب بالفعل' })}</a>
         </div>`,
@@ -326,10 +326,10 @@
     return `
       <div class="kob-acc${filled ? ' filled' : ''}" data-acc="${i}">
         <div class="kob-acc-hd">${head}</div>
-        ${isOwner ? '' : `<div class="kob-acc-perm" style="margin:-4px 0 10px;">${esc(tr(a.perm))}</div>`}
+        ${isOwner ? '' : `<div class="kob-acc-perm kob-perm-tight">${esc(tr(a.perm))}</div>`}
         <div class="kob-acc-row">
-          <input class="kob-field kob-name" type="text" data-pin-name="${i}" value="${esc(nameVal)}" maxlength="20" placeholder="${isOwner ? tr({ fr: 'Votre prénom', en: 'Your name', ar: 'اسمك' }) : tr({ fr: 'Prénom (ex. Salma)', en: 'Name (e.g. Salma)', ar: 'الاسم' })}"/>
-          <input class="kob-field kob-code" data-pin-code="${i}" value="${esc(p.code)}" inputmode="numeric" maxlength="4" placeholder="&bull;&bull;&bull;&bull;" aria-label="Code"/>
+          <input class="kob-field kob-name" type="text" data-pin-name="${i}" value="${esc(nameVal)}" maxlength="20" aria-label="${isOwner ? tr({ fr: 'Votre prénom', en: 'Your name', ar: 'اسمك' }) : tr({ fr: 'Prénom du membre ' + i, en: 'Member ' + i + ' name', ar: 'اسم العضو ' + i })}" placeholder="${isOwner ? tr({ fr: 'Votre prénom', en: 'Your name', ar: 'اسمك' }) : tr({ fr: 'Prénom (ex. Salma)', en: 'Name (e.g. Salma)', ar: 'الاسم' })}"/>
+          <input class="kob-field kob-code" data-pin-code="${i}" value="${esc(p.code)}" inputmode="numeric" maxlength="4" placeholder="&bull;&bull;&bull;&bull;" aria-label="${tr({ fr: 'Code à 4 chiffres', en: '4-digit code', ar: 'رمز من 4 أرقام' })}"/>
         </div>
       </div>`;
   }
@@ -461,6 +461,19 @@
     try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg, { type: 'warn', force: true }); } catch (_) {}
   }
 
+  /* The team roster is seeded locally from what was typed (importMembers) and a
+     failure there used to vanish: the codes were saved, the Équipe page stayed
+     empty and nobody was told. trackTeamImport wraps the API handed to submit:
+     it records whether the seeding ran and whether it threw. */
+  function trackTeamImport(team) {
+    const seen = { called: false, threw: false };
+    const api = team && team.importMembers ? { importMembers(venue, people) {
+      seen.called = true;
+      try { return team.importMembers(venue, people); } catch (error) { seen.threw = true; throw error; }
+    } } : team;
+    return { api, failed: (expected) => expected > 0 && (!seen.called || seen.threw) };
+  }
+  let teamImportFailed = false;
   /* ── Finish · persist + create venue + celebrate ─────────────────────── */
   // Submission activity belongs to the session owner.
   /* kit: the 2027 steps called this with { kit: true }; that kit was removed
@@ -476,16 +489,18 @@
     const finishButton = root ? root.querySelector('[data-finish]') : null;
     if (finishButton) finishButton.disabled = true;
     let vid = null, submitError = null;
+    const teamTrack = trackTeamImport(window.KiwiTeam);
     try {
       const data = await loadData();
-      vid = await session.submit({ storage: LS, venueApi: window.KiwiVenue, teamApi: window.KiwiTeam });
+      vid = await session.submit({ storage: LS, venueApi: window.KiwiVenue, teamApi: teamTrack.api });
     } catch (error) { submitError = error; }
     if (!vid) {
       session.setSubmitting(false);
       if (finishButton) finishButton.disabled = false;
-      const reason = submitError && (submitError.status === 409 ? 'conflict' : submitError.status === 401 || submitError.status === 403 ? 'auth' : submitError.status === 400 || submitError.status === 422 ? 'validation' : /quota|storage/i.test(submitError.code || submitError.name || '') ? 'storage' : '');
+      const reason = submitError && (submitError.code === 'plan-limit-exceeded' || submitError.message === 'plan-limit-exceeded' ? 'plan' : submitError.status === 409 ? 'conflict' : submitError.status === 401 || submitError.status === 403 ? 'auth' : submitError.status === 400 || submitError.status === 422 ? 'validation' : /quota|storage/i.test(submitError.code || submitError.name || '') ? 'storage' : '');
       const reasons = {
         conflict: { fr: 'Cet établissement existe déjà. Vérifiez vos établissements avant de réessayer.', en: 'This business already exists. Check your businesses before retrying.', ar: 'هذه المؤسسة موجودة بالفعل. تحقق من مؤسساتك قبل إعادة المحاولة.' },
+        plan: { fr: 'Votre forfait couvre un seul établissement. Pour en ajouter un autre, passez à Kiwi Ultra.', en: 'Your plan covers one business. To add another, move to Kiwi Ultra.', ar: 'باقتك تشمل مؤسسة واحدة. لإضافة مؤسسة أخرى، انتقل إلى Kiwi Ultra.' },
         auth: { fr: 'Reconnectez-vous avec un compte autorisé à créer cet établissement.', en: 'Sign in again with an account allowed to create this business.', ar: 'سجّل الدخول مجدداً بحساب مخوّل لإنشاء هذه المؤسسة.' },
         validation: { fr: 'Vérifiez les informations saisies pour cet établissement.', en: 'Check the information entered for this business.', ar: 'تحقق من المعلومات المدخلة لهذه المؤسسة.' },
         storage: { fr: 'Le stockage est indisponible. Libérez de l’espace ou autorisez le stockage puis réessayez.', en: 'Storage is unavailable. Free space or allow storage, then retry.', ar: 'التخزين غير متاح. حرّر مساحة أو اسمح بالتخزين ثم أعد المحاولة.' },
@@ -501,8 +516,9 @@
       document.body.classList.add('role-owner');
     } catch (_) {}
 
+    teamImportFailed = teamTrack.failed(S.pins.filter((p) => (p.name || '').trim() || (p.role === 'owner' && S.ownerName.trim())).length);
     if (draft) draft.clear();
-    if (kit) return { vid: vid };
+    if (kit) return { vid: vid, teamImportFailed: teamImportFailed };
     celebrate(vid);
   }
 
@@ -511,9 +527,10 @@
     root.querySelector('.kob-card').innerHTML = `
       <div class="kob-top"><span class="kob-brand">${brandMark()}</span></div>
       <div class="kob-body"><div class="kob-celebrate">
-        <div class="kob-hero-mark" style="color:var(--mint)">${mi('M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z')}</div>
-        <h1 class="kob-h" style="text-align:center;">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>
-        <p class="kob-sub" style="margin:0 auto;text-align:center;">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
+        <div class="kob-hero-mark kob-mint">${mi('M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z')}</div>
+        <h1 class="kob-h kob-center">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>
+        <p class="kob-sub kob-sub-center">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
+        ${teamImportFailed ? `<p class="kob-sub kob-sub-note" role="status">${tr({ fr: "Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}
       </div></div>
       <div class="kob-foot"><button class="kob-btn primary" data-enter>${tr({ fr: 'Entrer dans mon espace →', en: 'Enter my space →', ar: 'ادخل مساحتي ←' })}</button></div>`;
     root.querySelector('[data-enter]').focus({ preventScroll: true });
@@ -714,7 +731,6 @@
     opts = opts || {};
     if (opened) return;
     opened = true;
-    if (window.KiwiDashOnboarding && window.KiwiDashOnboarding.open(KIT)) return;
     if (typeof opts.startStep === 'number') S.step = opts.startStep;
     if (!root) build();
     try { if (window.__kiwiLock && window.__kiwiLock.hide) window.__kiwiLock.hide(); } catch (_) {}

@@ -33,17 +33,13 @@ const importSrc = fs.readFileSync(path.join(ROOT, 'assets/catalog-import.js'), '
 const wsSrc = menuWorkspaceSource();
 const html = dashboardDependencies(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
-const quotaSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');
 
-/* Fonctions exportées au niveau module de la route — ferment par `\n}` colonne 0. */
-function extractFn(src, name) {
-  const m = src.match(new RegExp('export function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'));
-  if (!m) throw new Error('cannot extract ' + name);
-  return m[0].replace(/^export /, '');
-}
+/* Les fonctions pures de la route sont importées telles quelles ; la route elle-même
+ * (auth, quota, modèles, bornes, js-only) tourne dans tools/menu-scan-route-test.mjs. */
+const route = await import('../functions/api/ai/menu-import.js');
 
 // ── 1. Garde SSRF sur les liens — exécutée ───────────────────────────────────
-const urlAllowed = new Function(extractFn(routeSrc, 'urlAllowed') + '; return urlAllowed;')();
+const { urlAllowed } = route;
 ok(urlAllowed('https://oddmenu.com/p/browse-coffee-brunch') === true, 'un lien https public passe');
 ok(urlAllowed('http://oddmenu.com/menu') === false, 'http refusé — https uniquement');
 ok(urlAllowed('https://localhost/menu') === false, 'localhost refusé');
@@ -54,7 +50,7 @@ ok(urlAllowed('https://imprimante.local/menu') === false && urlAllowed('https://
 ok(urlAllowed('pas-une-url') === false && urlAllowed('') === false, 'entrée illisible refusée');
 
 // ── 2. HTML → texte — exécuté ────────────────────────────────────────────────
-const htmlToText = new Function(extractFn(routeSrc, 'htmlToText') + '; return htmlToText;')();
+const { htmlToText } = route;
 const sample = '<head><title>x</title></head><style>.a{color:red}</style><script>var secret=1;</script><div><h1>CARTE</h1><p>Tajine &amp; l&eacute;gumes</p><li>Th&#233; 24 MAD</li></div>';
 const textOut = htmlToText(sample);
 ok(!/secret|color:red/.test(textOut), 'scripts et styles retirés du texte');
@@ -62,7 +58,7 @@ ok(/Tajine & /.test(textOut) && /Thé 24 MAD/.test(textOut.normalize('NFC')) || 
 ok(/CARTE\n/.test(textOut), 'les blocs produisent des retours de ligne');
 
 // ── 3. Validation bornée des articles — exécutée ─────────────────────────────
-const validateMenuItems = new Function(extractFn(routeSrc, 'validateMenuItems') + '; return validateMenuItems;')();
+const { validateMenuItems } = route;
 ok(validateMenuItems(null) === null && validateMenuItems({}) === null && validateMenuItems({ items: [] }) === null, 'vide → null (repli côté client)');
 ok(validateMenuItems({ items: [{ price: 45 }] }) === null, 'un article sans nom ne compte pas');
 const v1 = validateMenuItems({ currency: 'MAD', items: [{ name: 'Tajine', price: '95.567', cat: 'Plats', sub: 'Four', desc: 'Bon' }] });
@@ -104,15 +100,8 @@ const plan = KCI.analyseMenu(KCI.parse(csv));
 ok(plan.ok && plan.counts.rows === 2 && plan.counts.newItems === 2 && plan.counts.newCategories === 2 && plan.counts.newSubs === 1, 'le CSV du scan traverse parse() + analyseMenu() : 2 articles, 2 catégories, 1 sous-catégorie');
 ok(plan.rows[0].desc === 'Avec citron; confit', 'la description survit à l\'aller-retour CSV');
 
-// ── 6. Route : sécurité et contrats statiques ────────────────────────────────
-ok(/quotaOk\(env,\s*who,\s*'menuimport',\s*DAILY_CAP\)/.test(routeSrc), 'quota par établissement, kind "menuimport"');
-ok(/menuimport:\s*60/.test(quotaSrc), '_quota.js déclare le plafond menuimport');
-ok(/const who = await tenantFor\(request, env, body\.merchant\)/.test(routeSrc) && /if \(!who\) return json\(\{ ok: false, error: 'auth' \}, 401\)/.test(routeSrc), 'tenantFor obligatoire — 401 sans session/appairage');
+// ── 6. Route : sécurité, quota, modèles, bornes, js-only → tools/menu-scan-route-test.mjs (la route tourne) ──
 ok(/import \{ parseModelResponse \} from '\.\/invoice\.js'/.test(routeSrc), 'lecture des réponses modèle partagée avec invoice.js (pas de copie)');
-ok(/export const MODEL = '@cf\/qwen\/qwen3-30b-a3b-fp8'/.test(routeSrc) && /export const FALLBACK_MODEL = '@cf\/zai-org\/glm-4.7-flash'/.test(routeSrc) && /export const VISION_MODEL = '@cf\/zai-org\/glm-5\.3-flash'/.test(routeSrc) && /export const VISION_FALLBACK_MODEL = '@cf\/google\/gemma-4-26b-a4b-it'/.test(routeSrc), 'les modèles texte et vision (GLM 5.3 Flash, secours Gemma 4) sont hébergés Cloudflare (@cf/)');
-ok(!/console\.(log|info|warn|error)/.test(routeSrc), 'la route ne journalise jamais le contenu d\'un menu');
-ok(/\^data:image\\\/\(jpeg\|png\|webp\);base64,/.test(routeSrc) && /MAX_IMAGE_DATAURL/.test(routeSrc), 'les images sont typées et bornées avant le modèle vision');
-ok(/reason: fetched\.error/.test(routeSrc) && /'js-only'/.test(routeSrc), 'une page JavaScript-only répond js-only (le client propose la photo)');
 
 // ── 7. Client : un seul chemin d'écriture, repli propre ─────────────────────
 ok(/callApi\('\/api\/ai\/menu-import'/.test(scanSrc), 'le client appelle /api/ai/menu-import');
@@ -129,7 +118,7 @@ ok(tagOf(html, 'assets/menu-scan.js') != null && tagOf(html, 'assets/menu-scan.j
 ok(tagOf(html, 'assets/catalog-import.js') != null && tagOf(html, 'assets/catalog-import.js') === tagOf(sw, 'assets/catalog-import.js'), 'catalog-import.js : estampille identique entre dashboard.html et kiwi-sw.js');
 
 // ── 9. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 42;
+const EXPECTED_COUNT = 35;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

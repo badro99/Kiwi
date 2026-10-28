@@ -164,6 +164,18 @@
     const t = (k) => Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10));
     return Math.round((t(b) - t(a)) / 86400000);
   }
+  /* La journée commerciale du magasin (bascule 05:00) : avant 05:00 c'est encore la veille. Une cure de spa
+     vendue à la caisse ou saisie au tableau de bord expire avec la même règle (décision vague Q) : elle sert
+     jusqu'à la fin de son dernier jour commercial, 05:00 le lendemain, dans le fuseau du magasin. */
+  function businessDayKey(ts) {
+    const p = zoneParts(ts);
+    return +p.hour < 5 ? addDays(p.year + '-' + p.month + '-' + p.day, -1) : dateKey(ts);
+  }
+  function addDays(key, n) { return new Date(Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1, +key.slice(8, 10) + n)).toISOString().slice(0, 10); }
+  /* Date (AAAA-MM-JJ) du dernier jour de validité d'une cure vendue à `soldTs` pour `days` jours. */
+  function cureExpiryOn(soldTs, days) { return addDays(businessDayKey(soldTs), Math.max(0, Math.round(+days) || 0)); }
+  /* Jours restant (0 = dernier jour, < 0 = expirée) ; null si la cure n'a pas de date (ancienne vente). */
+  function cureDaysLeft(expiresOn, now) { return /^\d{4}-\d{2}-\d{2}$/.test(String(expiresOn || '')) ? dayDiff(businessDayKey(now), String(expiresOn)) : null; }
 
   /* ── Le catalogue du commerçant, vu depuis le tableau de bord ET depuis la caisse ──
      Même clé que l'inventaire (dashboard : KiwiBoutiqueVenueKey ; caisse : le commerce appairé),
@@ -254,12 +266,8 @@
       /* Jours calendaires : un lot périmé le 10 reste valable toute la journée du 10 (0 jour) et
          est périmé dès le 11 (−1). L'ancien calcul sur 23:59:59 laissait « bientôt périmé » un
          lot déjà périmé pendant 24 h, et comptait 1 jour le jour même. */
-      const p = zoneParts(clock);
-      let today = dateKey(clock);
       // Une cure reste valable jusqu’à 05:00 après son dernier jour commercial.
-      if (schema.trade === 'spa' && schema.nav === 'packages' && +p.hour < 5) {
-        today = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - 1)).toISOString().slice(0, 10);
-      }
+      const today = schema.trade === 'spa' && schema.nav === 'packages' ? businessDayKey(clock) : dateKey(clock);
       out.daysToExpiry = dayDiff(today, String(v[schema.expiry]).slice(0, 10));
       /* Un lot sorti (épuisé, rendu, détruit) n'est plus à surveiller. */
       out.expired = !final && out.daysToExpiry < 0;
@@ -290,5 +298,5 @@
     return ((allRecords && allRecords[field.relation]) || []).filter((r) => !r.deletedAt).map((r) => ({ value: r.id, label: normalize(get(schema.trade, field.relation) || schema, r).title || r.id }));
   }
 
-  window.KiwiTradeSchema = { L, defs, get, normalize, validate, derived, summary, relationOptions, catalog, catalogKey, productOptions, productName, dateKey, wallNow, dayDiff, venueZone };
+  window.KiwiTradeSchema = { L, defs, get, normalize, validate, derived, summary, relationOptions, catalog, catalogKey, productOptions, productName, dateKey, wallNow, dayDiff, venueZone, businessDayKey, cureExpiryOn, cureDaysLeft };
 })();

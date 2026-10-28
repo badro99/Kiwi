@@ -61,17 +61,17 @@ await test('briefing#0 failing rule records unavailable analysis and render supp
 });
 await test('briefing#1 concurrent edits to different fields merge and converge',()=>{
  const {B}=briefing(), T=B._test;
- const base={days:[],settings:{samples:10,stockFactor:1},settingsAt:1};
- const a={...base,settings:{samples:20,stockFactor:1},settingsAt:3,settingsFieldsAt:{samples:3,stockFactor:1}};
- const b={...base,settings:{samples:10,stockFactor:2},settingsAt:4,settingsFieldsAt:{samples:1,stockFactor:4}};
- const merged=T.mergeDocs(a,b);assert.equal(merged.settings.samples,20);assert.equal(merged.settings.stockFactor,2);assert.equal(JSON.stringify(merged),JSON.stringify(T.mergeDocs(b,a)));
- const zero=T.mergeDocs({...a,settingsFieldsAt:{samples:3,stockFactor:0}}, {...b,settingsFieldsAt:{samples:0,stockFactor:4}});assert.equal(zero.settings.samples,20);assert.equal(zero.settings.stockFactor,2);
- B.setSettings({samples:25});assert.ok(T.read().settingsFieldsAt.samples>0);
+ const base={days:[],settings:{samples:2,stockFactor:1},settingsAt:1};
+ const a={...base,settings:{samples:4,stockFactor:1},settingsAt:3,settingsFieldsAt:{samples:3,stockFactor:1}};
+ const b={...base,settings:{samples:2,stockFactor:2},settingsAt:4,settingsFieldsAt:{samples:1,stockFactor:4}};
+ const merged=T.mergeDocs(a,b);assert.equal(merged.settings.samples,4);assert.equal(merged.settings.stockFactor,2);assert.equal(JSON.stringify(merged),JSON.stringify(T.mergeDocs(b,a)));
+ const zero=T.mergeDocs({...a,settingsFieldsAt:{samples:3,stockFactor:0}}, {...b,settingsFieldsAt:{samples:0,stockFactor:4}});assert.equal(zero.settings.samples,4);assert.equal(zero.settings.stockFactor,2);
+ B.setSettings({samples:4});assert.ok(T.read().settingsFieldsAt.samples>0);
 });
 await test('briefing#2 real change handler explains invalid integer and keeps input',()=>{
  const {listeners,message}=briefing();const attrs={};const input={value:'1.5',getAttribute:k=>k==='data-briefing-limit'?'samples':null,setAttribute:(k,v)=>attrs[k]=v};
  listeners.change.forEach(f=>f({target:input}));assert.equal(attrs['aria-invalid'],'true');assert.equal(input.value,'1.5');assert.match(message.textContent,/whole number/);
- input.value='20';listeners.change.forEach(f=>f({target:input}));assert.equal(attrs['aria-invalid'],'false');assert.equal(message.textContent,'');
+ input.value='4';listeners.change.forEach(f=>f({target:input}));assert.equal(attrs['aria-invalid'],'false');assert.equal(message.textContent,'');
  assert.match(read('assets/briefing.js'),/integerLimit\(key\) \? '1' : 'any'/);
 });
 await test('invoices#0 selector includes customers after 400 with stable indices',()=>{

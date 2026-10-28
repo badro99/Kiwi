@@ -147,16 +147,26 @@ for (const need of [
 ]) {
   check(skinCode.includes(need), `${SKIN} ne porte pas « ${need} » : la barre livrée n'est pas éteinte`);
 }
-/* Le rail visible est le composant du kit, pas une copie faite à la main. */
-check(/createElement\('k-rail'\)/.test(bq),
-  'pos-boutique.js ne monte pas <k-rail> : le rail doit être le composant du kit, comme au restaurant');
-check(/customElements\.get\('k-rail'\)/.test(bq),
+/* Le rail visible est le composant du kit, pas une copie faite à la main.
+   Il vit dans son propre module depuis la vague 11 ; si ce fichier repart
+   ailleurs, ce banc doit le dire tout haut plutôt que de passer au vert sur
+   un fichier qui n'existe plus. */
+const RAILJS = 'assets/pos-boutique/kit-2027.js';
+const railSrc = fs.existsSync(path.join(ROOT, RAILJS)) ? read(RAILJS) : '';
+check(railSrc !== '', `${RAILJS} est introuvable : le rail 2027 a changé de fichier, relire ce banc`);
+check(/createElement\('k-rail'\)/.test(railSrc),
+  `${RAILJS} ne monte pas <k-rail> : le rail doit être le composant du kit, comme au restaurant`);
+check(/customElements\.get\('k-rail'\)/.test(railSrc),
   'bqKitRail ne vérifie pas que <k-rail> est défini avant de monter');
-check(/k\.rail\.select/.test(bq), "pos-boutique.js n'écoute pas k.rail.select");
+check(/k\.rail\.select/.test(railSrc), `${RAILJS} n'écoute pas k.rail.select`);
 /* Et il CLIQUE le bouton livré : aucune destination n'est réimplémentée, donc
    aucune ne peut perdre son écouteur en route. */
-check(/\bb\.click\(\)/.test(bq),
+check(/\bb\.click\(\)/.test(railSrc),
   'le rail ne clique pas le bouton livré : une destination réimplémentée perdrait son écouteur');
+/* Les libellés du rail passent par le dictionnaire de la caisse (vague 15) :
+   « Plus » et « Moins » ne sont pas écrits en dur. */
+check(/tr\('Plus'\)/.test(railSrc) && /tr\('Moins'\)/.test(railSrc),
+  `${RAILJS} écrit « Plus » ou « Moins » en dur : les libellés passent par tr()`);
 /* Chaque icône du rail existe dans le sprite de la caisse : une icône absente
    dessine un vide, en silence (§21.3, l'URL du sprite est littérale). */
 const sprite = read('assets/icons/material/sprite.till.svg');

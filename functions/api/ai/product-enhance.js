@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runVisionPair } from './_vision.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
@@ -17,7 +17,7 @@ export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1400;
 const TEMPERATURE = 0.3;
-const DAILY_CAP = 100;
+const DAILY_CAP = DAILY_CAPS.productenhance;
 const MAX_IMAGE_DATAURL = 2_600_000;
 
 const SYSTEM_PROMPT = `Tu es un directeur artistique et copywriter pour boutiques de mode et artisanat d'art au Maroc.
@@ -66,7 +66,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'productenhance', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('productenhance', 'daily-quota-exceeded'), 429);
 
   const image = typeof b?.image === 'string' ? b.image.trim() : '';
   const productName = typeof b?.name === 'string' ? b.name.trim() : '';

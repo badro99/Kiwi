@@ -58,7 +58,14 @@ export async function onRequestPost({ request, env }) {
   // Jobs queued before this protocol carried no cutoff and were compared at
   // 05:00 by the old server. Do not reinterpret a durable old Z after the
   // merchant changes trading hours. New tills always send report.cutoff.
-  const cutoff = body.cutoff == null ? 5 : body.cutoff;
+  // A new Z is compared on the STORE's day (merchantCutoff, the boundary
+  // /api/sale and the dashboard count on), never on the window the till
+  // sent: a till with stale hours would otherwise reconcile its own window
+  // and read as matched. The till's cutoff stays on record; when it differs
+  // the Z counted another window, so it cannot match (see tillCutoff below).
+  const tillCutoff = body.cutoff == null ? null : body.cutoff;
+  const cutoff = tillCutoff == null ? 5 : await merchantCutoff(env, merchant);
+  const staleCutoff = tillCutoff != null && tillCutoff !== cutoff;
   const from = businessBoundary(day, cutoff, zone);
   const to = businessBoundary(addBusinessDays(day, 1), cutoff, zone);
   let remote;
@@ -147,12 +154,13 @@ export async function onRequestPost({ request, env }) {
       status: row.status, comparisonId, comparedAt, merchant, changed: 'visit-rule-relaxed' }));
   const result = { comparisonId, blocked, retryable,
     manifest: sales.map(row => ({ id: row.id, amountCents: row.amountCents, method: row.method })), day, terminalId, cutoff,
+    ...(tillCutoff != null ? { tillCutoff } : {}), staleCutoff,
     unqueuedCount, unqueuedCents, reportedCount: body.count, reportedCents: body.totalCents,
     serverCount, serverCents, missing, missingCents, mismatched, extra, omitted, omittedCents,
     unreported, unreportedCents,
     closed: closedReport,
     gapCents: body.totalCents - serverCents,
-    status: missing.length || mismatched.length || unreported.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
+    status: staleCutoff || missing.length || mismatched.length || unreported.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
   try {
     await schema(env.DB);
     await env.DB.prepare(`INSERT INTO z_reconciliations
@@ -205,7 +213,12 @@ export async function onRequestGet({ request, env }) {
     // historical document under a newer merchant setting, or union it with
     // a 07:00 report as though the two tills described the same interval.
     const legacyCutoff = reportedCutoffs.some(value => !Number.isInteger(value) || value < 0 || value > 12);
-    const cutoffConflict = cutoffs.length > 1 || legacyCutoff && cutoffs.some(value => value !== 5);
+    // A Z the till counted on another boundary than the store's (stale hours).
+    const staleTill = dayRows.some(row => {
+      try { const r = JSON.parse(row.result_json || '{}'); return Number.isInteger(r.tillCutoff) && r.tillCutoff !== r.cutoff; }
+      catch (_) { return false; }
+    });
+    const cutoffConflict = staleTill || cutoffs.length > 1 || legacyCutoff && cutoffs.some(value => value !== 5);
     const cutoff = cutoffs.length === 1 ? cutoffs[0] : dayRows.length ? 5 : configuredCutoff;
     const ledger = (await env.DB.prepare(`SELECT id, amount, amount_cents, method FROM sales
       WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL`)

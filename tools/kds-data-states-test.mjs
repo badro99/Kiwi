@@ -244,7 +244,7 @@ function pass({ S: extra = {}, pullAll, seed = {} } = {}) {
   const notices = [];
   const S = { since: 0, live: null, orders: {}, cooking: {}, seen: {}, seenVoids: {}, pendingBumps: {}, ...extra };
   const ctx = vm.createContext({
-    S, STALE_MS, T: (k) => k, $, hm: () => '21:07', ticketNo: (o) => '#' + o.number,
+    S, STALE_MS, T: (k) => k, $, hm: () => '21:07', clockNow: () => Date.now(), ticketNo: (o) => '#' + o.number,
     showNotice: (m) => notices.push(m),
     localStorage: ls,
     KiwiKitchenRelay: {

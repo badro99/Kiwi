@@ -27,7 +27,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { secret, fillSecret } from './browser-trace.mjs';
 import { harness, sleep, SIZES, root } from './surface-matrix-lib.mjs';
 import { pinTradingHour } from './demo-clock.mjs';
-import { click, cash } from './surface-matrix-credit-lib.mjs';
+import { click, cash, openFloat } from './surface-matrix-credit-lib.mjs';
 
 const saleApi = await import(pathToFileURL(path.join(root, 'functions/api/sale.js')).href);
 const auth = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')).href);
@@ -111,14 +111,12 @@ async function openShift(t, page) {
   /* A new shift shows the opening float; a shift still open after a restart does not. */
   await page.waitForFunction(() => {
     const vis = (sel) => { const e = document.querySelector(sel); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden'; };
-    return vis('#bqci-chips [data-float="300"]') || (vis('#pos-boutique.is-on') && !vis('#bq-clockin.is-visible'));
+    return vis('#bqci-btn') || (vis('#pos-boutique.is-on') && !document.getElementById('bq-clockin'));
   }, { timeout: 30000 });
-  if (await page.$eval('#bqci-chips [data-float="300"]', (e) => e.getClientRects().length > 0).catch(() => false)) {
+  await sleep(700);   // the opening screen is built a moment after the shelf
+  if (await page.$('#bq-clockin')) {
     t.step('count the opening float');
-    await sleep(700);
-    await click(page, '#bqci-chips [data-float="300"]');
-    await click(page, '#bqci-btn:not([disabled])');
-    await page.waitForSelector('#bq-clockin.is-visible', { hidden: true, timeout: 20000 });
+    await openFloat(page);
   }
   await page.waitForSelector('#pos-boutique.is-on', { visible: true, timeout: 20000 });
   assert.equal(await page.evaluate(() => KiwiEnv.isReal()), true, 'a paired real till, not the demo');

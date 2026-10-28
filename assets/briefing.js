@@ -11,26 +11,53 @@
   // One year plus five days for month-end review. Financial books live in their own ledgers.
   var MAX_DAYS = 370;
   var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
+  /* briefing-limits:begin · copie générée de functions/api/_briefing-limits.js par tools/build-briefing-limits.mjs : ne pas modifier ici */
+  /* clé : [réglage d'usine, minimum, maximum, nom fr, nom en, nom ar] */
   var LIMITS = {
-    "salesDrop": [20, 1, 100, "Baisse des ventes (%)", "Sales drop (%)", "انخفاض المبيعات (%)"],
-    "stockFactor": [1, 0.1, 10, "Multiplicateur du seuil stock", "Stock threshold multiplier", "مضاعف عتبة المخزون"],
-    "marginDrop": [5, 0.1, 100, "Baisse de marge (points)", "Margin drop (points)", "انخفاض الهامش (نقاط)"],
-    "coverage": [80, 1, 100, "Couverture minimale (%)", "Minimum coverage (%)", "الحد الأدنى للتغطية (%)"],
-    "coverageGap": [10, 0, 100, "Écart de couverture (%)", "Coverage gap (%)", "فرق التغطية (%)"],
-    "samples": [3, 1, 28, "Échantillons minimum", "Minimum samples", "الحد الأدنى للعينات"],
-    "events": [2, 1, 100, "Événements minimum", "Minimum events", "الحد الأدنى للأحداث"],
-    "share": [5, 0.1, 100, "Part minimale (%)", "Minimum share (%)", "الحد الأدنى للنسبة (%)"],
-    "multiple": [2, 1, 10, "Multiple de référence", "Baseline multiple", "مضاعف المرجع"],
-    "cashCents": [10000, 1, 10000000, "Écart caisse (centimes)", "Cash gap (centimes)", "فرق الصندوق (سنتيم)"],
-    "weatherEffect": [8, 1, 100, "Effet météo (%)", "Weather effect (%)", "تأثير الطقس (%)"],
-    "lateMultiple": [1.5, 1, 10, "Multiple du délai", "Timing multiple", "مضاعف المدة"],
-    "lateMinutes": [5, 1, 240, "Retard (minutes)", "Delay (minutes)", "التأخير (دقائق)"],
-    "lateSamples": [5, 1, 100, "Historique délais minimum", "Minimum timing history", "الحد الأدنى لسجل المدد"],
-    "planningMinutes": [1, 1, 1440, "Absence de couverture (minutes)", "Uncovered period (minutes)", "فترة بدون تغطية (دقائق)"],
-    "rainMm": [1, 0.1, 500, "Pluie prévue (mm)", "Forecast rain (mm)", "المطر المتوقع (مم)"],
-    "weatherDays": [5, 1, 100, "Jours météo minimum", "Minimum weather days", "الحد الأدنى لأيام الطقس"]
+    "salesDrop": [20,1,100,"Baisse des ventes (%)","Sales drop (%)","انخفاض المبيعات (%)"],
+    "stockFactor": [1,0.1,10,"Multiplicateur du seuil stock","Stock threshold multiplier","مضاعف عتبة المخزون"],
+    "marginDrop": [5,0.1,100,"Baisse de marge (points)","Margin drop (points)","انخفاض الهامش (نقاط)"],
+    "coverage": [80,1,100,"Couverture minimale (%)","Minimum coverage (%)","الحد الأدنى للتغطية (%)"],
+    "coverageGap": [10,0,100,"Écart de couverture (%)","Coverage gap (%)","فرق التغطية (%)"],
+    "samples": [3,1,4,"Repères minimum","Minimum reference points","الحد الأدنى للمراجع"],
+    "events": [2,1,100,"Cas minimum dans la journée","Minimum cases in the day","الحد الأدنى للحالات في اليوم"],
+    "share": [5,0.1,100,"Part d’alerte (%)","Alert share (%)","نسبة التنبيه (%)"],
+    "multiple": [2,1,10,"Fois la normale","Times the usual","مرات المعتاد"],
+    "cashCents": [10000,1,10000000,"Écart de caisse (MAD)","Cash gap (MAD)","فرق الصندوق (درهم)"],
+    "weatherEffect": [8,1,100,"Effet météo (%)","Weather effect (%)","تأثير الطقس (%)"],
+    "lateMultiple": [1.5,1,10,"Délai : fois la normale","Timing: times the usual","المدة: مرات المعتاد"],
+    "lateMinutes": [5,1,240,"Retard (minutes)","Delay (minutes)","التأخير (دقائق)"],
+    "lateSamples": [5,1,100,"Commandes de référence (min.)","Reference orders (min.)","الطلبات المرجعية (الحد الأدنى)"],
+    "planningMinutes": [1,1,1440,"Absence de couverture (minutes)","Uncovered period (minutes)","فترة بدون تغطية (دقائق)"],
+    "rainMm": [1,0.1,500,"Pluie prévue (mm)","Forecast rain (mm)","المطر المتوقع (مم)"],
+    "weatherDays": [5,1,100,"Jours météo minimum","Minimum weather days","الحد الأدنى لأيام الطقس"]
   };
-  function integerLimit(key) { return /^(samples|events|cashCents|lateSamples|planningMinutes|weatherDays)$/.test(key); }
+  /* clé : [aide fr, aide en, aide ar], une phrase pour le réglage */
+  var HELP = {
+    "salesDrop": ["Alerte quand les ventes du jour sont inférieures d’autant à celles des mêmes jours des semaines passées.","Alerts when today’s sales are this far below the same weekdays in past weeks.","تنبيه عندما تقل مبيعات اليوم بهذه النسبة عن نفس الأيام في الأسابيع الماضية."],
+    "stockFactor": ["1 alerte quand un article atteint son seuil minimum ; 2 alerte deux fois plus tôt.","1 alerts when an item reaches its minimum level; 2 alerts twice as early.","1 ينبه عند بلوغ الحد الأدنى للمنتج، و2 ينبه أبكر بمرتين."],
+    "marginDrop": ["Alerte quand la marge brute perd autant de points par rapport à d’habitude.","Alerts when gross margin loses this many points compared with usual.","تنبيه عندما يفقد الهامش الإجمالي هذا العدد من النقاط مقارنة بالمعتاد."],
+    "coverage": ["Part des ventes dont le coût d’achat est connu. En dessous, Kiwi ne juge pas la marge.","Share of sales whose purchase cost is known. Below it, Kiwi does not judge the margin.","نسبة المبيعات المعروفة التكلفة. دون ذلك لا يحكم Kiwi على الهامش."],
+    "coverageGap": ["Si la part de coûts connus change trop entre aujourd’hui et d’habitude, la comparaison est ignorée.","If the share of known costs differs too much from usual, the comparison is skipped.","إذا اختلفت نسبة التكاليف المعروفة كثيرا عن المعتاد، يتم تجاهل المقارنة."],
+    "samples": ["Repères exigés avant d’alerter : semaines comparables (ventes, annulations, remises) ou commandes du jour (délais). De 1 à 4.","Reference points required before alerting: comparable weeks (sales, cancellations, discounts) or today’s orders (timing). From 1 to 4.","عدد المراجع المطلوبة قبل التنبيه: أسابيع قابلة للمقارنة (المبيعات، الإلغاءات، التخفيضات) أو طلبات اليوم (المدد). من 1 إلى 4."],
+    "events": ["Nombre d’annulations (ou de ventes remisées) à atteindre aujourd’hui avant d’alerter.","Number of cancellations (or discounted sales) to reach today before alerting.","عدد الإلغاءات (أو المبيعات المخفضة) المطلوب بلوغه اليوم قبل التنبيه."],
+    "share": ["Kiwi ne parle jamais sous cette part du chiffre, même si c’est plus que d’habitude.","Kiwi never speaks below this share of sales, even if it is above usual.","لا ينبه Kiwi دون هذه النسبة من المبيعات حتى لو تجاوزت المعتاد."],
+    "multiple": ["Alerte quand la part du jour atteint ce multiple de votre part habituelle.","Alerts when today’s share reaches this multiple of your usual share.","تنبيه عندما تبلغ نسبة اليوم هذا المضاعف من نسبتك المعتادة."],
+    "cashCents": ["Un écart à la clôture de caisse au-delà de ce montant, en plus ou en moins, déclenche l’alerte.","A gap at register close beyond this amount, over or short, triggers the alert.","فرق عند إغلاق الصندوق يتجاوز هذا المبلغ، زيادة أو نقصانا، يطلق التنبيه."],
+    "weatherEffect": ["Alerte quand la pluie a déjà changé vos ventes d’au moins ce pourcentage.","Alerts when rain has already moved your sales by at least this percentage.","تنبيه عندما غيّر المطر مبيعاتك سابقا بهذه النسبة على الأقل."],
+    "lateMultiple": ["Alerte quand le délai du jour atteint ce multiple de votre délai habituel.","Alerts when today’s wait reaches this multiple of your usual wait.","تنبيه عندما تبلغ مدة اليوم هذا المضاعف من مدتك المعتادة."],
+    "lateMinutes": ["Et le délai doit aussi s’allonger d’au moins ce nombre de minutes, pour ignorer les petits écarts.","The wait must also grow by at least this many minutes, to ignore small gaps.","ويجب أيضا أن تطول المدة بهذا العدد من الدقائق على الأقل لتجاهل الفروق الصغيرة."],
+    "lateSamples": ["Nombre de commandes passées nécessaires pour connaître votre délai habituel.","Number of past orders needed to know your usual wait.","عدد الطلبات السابقة اللازمة لمعرفة مدتك المعتادة."],
+    "planningMinutes": ["Alerte quand le planning laisse l’établissement sans personne au moins cette durée pendant l’ouverture.","Alerts when the schedule leaves the venue unstaffed for at least this long while open.","تنبيه عندما يترك الجدول المحل بلا أحد هذه المدة على الأقل أثناء الفتح."],
+    "rainMm": ["Pluie prévue à partir de laquelle une journée compte comme pluvieuse (1 mm est le réglage de base).","Forecast rain from which a day counts as rainy (1 mm is the standard setting).","كمية المطر المتوقعة التي يعد اليوم عندها ممطرا (1 مم هو الإعداد الأساسي)."],
+    "weatherDays": ["Nombre de jours de pluie passés à observer avant que Kiwi parle d’un effet.","Number of past rainy days to observe before Kiwi reports an effect.","عدد أيام المطر السابقة التي تُرصد قبل أن يتحدث Kiwi عن تأثير."]
+  };
+  /* les clés qui doivent rester entières */
+  var INTEGER = {"samples":true,"events":true,"cashCents":true,"lateSamples":true,"planningMinutes":true,"weatherDays":true};
+  /* par règle, dans l'ordre de RULES : les clés qu'elle lit */
+  var GROUPS = [["salesDrop","samples"],["stockFactor"],["marginDrop","coverage","coverageGap"],["planningMinutes"],["share","multiple","events","samples"],["share","multiple","events","samples"],["cashCents"],["lateMultiple","lateMinutes","samples","lateSamples"],["weatherEffect","rainMm","weatherDays"]];
+  /* briefing-limits:end */
+  function integerLimit(key) { return INTEGER[key] === true; }
   function validSettings(value) {
     var out = {};
     Object.keys(LIMITS).forEach(function (key) {
@@ -40,28 +67,77 @@
     return out;
   }
   function limit(key) { var v = own().settings; return v && v[key] != null ? v[key] : LIMITS[key][0]; }
+  /* Ce que voit le commerçant : l'écart de caisse se règle et se lit en
+   * dirhams, il reste rangé en centimes. Les « échantillons » s'arrêtent à 4,
+   * le nombre de mêmes jours de semaine que comparent ventes, annulations et
+   * remises : au-delà, ces trois règles se taisaient sans le dire. */
+  var SCALE = { cashCents: 100 };
+  var NUM = {};
+  function num(value, L) {
+    var loc = L === 'en' ? 'en-GB' : 'fr-FR';
+    if (!NUM[loc]) NUM[loc] = new Intl.NumberFormat(loc, { maximumFractionDigits: 2 });
+    return NUM[loc].format(value);
+  }
+  function shown(key, value) { return (value == null ? limit(key) : value) / (SCALE[key] || 1); }
   function setSettings(value) {
     if (!isReal() || !slug() || !/^(owner|manager)$/.test(tier()) || !value || typeof value !== 'object') return false;
     var clean = validSettings(value);
     if (Object.keys(value).some(function (k) { return !Object.prototype.hasOwnProperty.call(clean, k); })) return false;
-    own(); doc.settings = Object.assign({}, doc.settings, clean); doc.settingsAt = Date.now();
-    doc.settingsFieldsAt = doc.settingsFieldsAt || {};
-    Object.keys(clean).forEach(function (key) { doc.settingsFieldsAt[key] = doc.settingsAt; });
+    own(); doc.settingsFieldsAt = doc.settingsFieldsAt || {};
+    /* Horloge de Lamport par champ : une modification passe toujours après
+     * celle qu'elle remplace, même si un autre appareil avançait d'un mois. */
+    var at = Date.now();
+    Object.keys(clean).forEach(function (key) { at = Math.max(at, (Number(doc.settingsFieldsAt[key]) || 0) + 1); });
+    doc.settings = Object.assign({}, doc.settings, clean); doc.settingsAt = Math.max(at, Number(doc.settingsAt) || 0);
+    Object.keys(clean).forEach(function (key) { doc.settingsFieldsAt[key] = at; });
     compute(); return true;
+  }
+  /* Quels pavés de réglages sont ouverts : le point du matin se redessine
+   * après chaque saisie, sans cela le commerçant retrouvait tout replié. */
+  var openState = {};
+  function atFactory(key) { return Number(limit(key)) === LIMITS[key][0]; }
+  function sharedWith(key, index, t) {
+    var names = [];
+    GROUPS.forEach(function (keys, i) { if (i !== index && keys.indexOf(key) >= 0 && t.ruleNames[i]) names.push(t.ruleNames[i]); });
+    return names.length ? t.alsoUsed.replace('{names}', names.join(', ')) : '';
+  }
+  function fieldHtml(key, index, idx, t) {
+    var spec = LIMITS[key], id = index + '-' + key, help = HELP[key][idx - 3];
+    var note = [help, sharedWith(key, index, t), t.usual.replace('{value}', num(shown(key, spec[0]), lang()))].filter(Boolean).join(' ');
+    return '<div class="briefing-set-field"><label class="briefing-set-name" for="briefing-in-' + id + '">' + esc(spec[idx]) + '</label><input type="number" id="briefing-in-' + id + '" data-briefing-limit="' + key + '" data-briefing-error="briefing-error-' + id + '" min="' + shown(key, spec[1]) + '" max="' + shown(key, spec[2]) + '" step="' + (SCALE[key] ? String(1 / SCALE[key]) : integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-help-' + id + ' briefing-error-' + id + '" value="' + shown(key) + '"><small class="briefing-set-help" id="briefing-help-' + id + '">' + esc(note) + '</small><span class="briefing-set-error" id="briefing-error-' + id + '" role="status"></span></div>';
+  }
+  function ruleHtml(index, idx, t) {
+    var keys = GROUPS[index], pristine = keys.every(atFactory);
+    return '<details class="briefing-rule" data-briefing-open="rule-' + index + '"' + (openState['rule-' + index] ? ' open' : '') + '><summary>' + esc(t.ruleNames[index]) + '</summary>' +
+      keys.map(function (key) { return fieldHtml(key, index, idx, t); }).join('') +
+      '<button type="button" class="briefing-reset" data-briefing-reset="' + index + '"' + (pristine ? ' disabled' : '') + '>' + esc(t.resetRule) + '</button></details>';
   }
   function settingsHtml() {
     if (!/^(owner|manager)$/.test(tier())) return '';
-    var L = lang(), idx = L === 'ar' ? 5 : L === 'en' ? 4 : 3;
-    var title = { fr: 'Réglages des seuils', en: 'Threshold settings', ar: 'إعدادات العتبات' }[L];
-    return '<details><summary>' + title + '</summary>' + Object.keys(LIMITS).map(function (key) {
-      var spec = LIMITS[key];
-      return '<label>' + esc(spec[idx]) + ' <input type="number" data-briefing-limit="' + key + '" min="' + spec[1] + '" max="' + spec[2] + '" step="' + (integerLimit(key) ? '1' : 'any') + '" aria-describedby="briefing-error-' + key + '" value="' + limit(key) + '"><span id="briefing-error-' + key + '" role="status"></span></label>';
-    }).join('') + '</details>';
+    var L = lang(), idx = L === 'ar' ? 5 : L === 'en' ? 4 : 3, t = tr(L);
+    return '<details class="briefing-settings" data-briefing-open="all"' + (openState.all ? ' open' : '') + '><summary>' + esc(t.settings) + '</summary><p class="briefing-set-intro">' + esc(t.settingsIntro) + '</p>' +
+      GROUPS.map(function (keys, index) { return ruleHtml(index, idx, t); }).join('') + '</details>';
+  }
+  /* Rétablit les valeurs d'usine des seuils d'UNE règle. La valeur d'usine est
+   * rangée comme un réglage (pas effacée) : l'effacement ne survivrait pas à la
+   * fusion entre appareils. Un seuil que la règle partage avec une autre revient
+   * aussi chez celle-ci, la ligne d'aide le dit. */
+  function resetRule(index) {
+    var keys = GROUPS[index], value = {};
+    if (!keys) return false;
+    keys.forEach(function (key) { value[key] = LIMITS[key][0]; });
+    return setSettings(value);
   }
   function thresholdEvidence(line) {
-    var keys = { 'sales-drop': ['salesDrop','samples'], 'low-stock': ['stockFactor'], 'margin-erosion': ['marginDrop','coverage','coverageGap'], 'cancellation-rate': ['share','multiple','events','samples'], 'discount-share': ['share','multiple','events','samples'], 'cash-gap': ['cashCents'], weather: ['weatherEffect','rainMm','weatherDays'], 'planning-gap': ['planningMinutes'], 'late-orders': ['lateMultiple','lateMinutes','samples','lateSamples'] };
-    var used = keys[line.kind] || (/^late-orders-/.test(line.kind) ? keys['late-orders'] : []);
-    line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + used.map(function (k) { var spec = LIMITS[k]; return spec[lang() === 'ar' ? 5 : lang() === 'en' ? 4 : 3] + ' ' + limit(k); }).join(', ');
+    var RULE_OF = { 'sales-drop': 0, 'low-stock': 1, 'margin-erosion': 2, 'planning-gap': 3, 'cancellation-rate': 4, 'discount-share': 5, 'cash-gap': 6, 'late-orders': 7, weather: 8 };
+    var rule = Object.prototype.hasOwnProperty.call(RULE_OF, line.kind) ? RULE_OF[line.kind] : /^late-orders-/.test(line.kind) ? 7 : -1;
+    var used = rule >= 0 ? GROUPS[rule] : [];
+    if (!used.length) return line;
+    var list = function (L) { return used.map(function (k) { return LIMITS[k][L === 'ar' ? 5 : L === 'en' ? 4 : 3] + ' ' + num(shown(k), L); }).join(', '); };
+    line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + list(lang());
+    if (line.evidence.text) ['fr', 'en', 'ar'].forEach(function (L) {
+      if (line.evidence.text[L]) line.evidence.text[L] = (line.evidence.text[L] + ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L)).slice(0, 400);
+    });
     return line;
   }
   var doc = { days: [] };
@@ -76,7 +152,7 @@
 
   var COPY = {
     fr: {
-      ruleNames: ["Ventes", "Stock", "Marge", "Planning", "Annulations", "Remises", "Caisse", "Délais de service", "Météo"], analysisFailed: 'Analyse indisponible', retryAnalysis: 'Réessayer', invalidLimit: 'Saisissez une valeur entre {min} et {max}.', integerOnly: 'Un nombre entier est requis.', eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
+      ruleNames: ["Ventes", "Stock", "Marge", "Planning", "Annulations", "Remises", "Caisse", "Délais de service", "Météo"], analysisFailed: 'Analyse indisponible', retryAnalysis: 'Réessayer', invalidLimit: 'Saisissez une valeur entre {min} et {max}.', integerOnly: 'Un nombre entier est requis.', settings: 'Réglages des seuils', settingsIntro: 'Chaque règle a ses seuils. Les valeurs d’usine conviennent à la plupart des établissements.', resetRule: 'Rétablir les valeurs d’usine', alsoUsed: 'Aussi utilisé par : {names}.', usual: 'Valeur d’usine : {value}', eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
       emptyNote: 'Kiwi surveille uniquement les données mesurées de cet établissement.', ask: 'Voir le point du matin',
       coverage: 'Je surveille les signaux déjà mesurables, sans inventer les données manquantes.',
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
@@ -89,7 +165,7 @@
       wKinds: { clear: 'beau temps', cloudy: 'nuageux', rain: 'pluie', storm: 'orage', snow: 'neige', fog: 'brouillard' }
     },
     en: {
-      ruleNames: ["Sales", "Stock", "Margin", "Staffing", "Cancellations", "Discounts", "Cash", "Service timing", "Weather"], analysisFailed: 'Analysis unavailable', retryAnalysis: 'Retry', invalidLimit: 'Enter a value between {min} and {max}.', integerOnly: 'A whole number is required.', eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
+      ruleNames: ["Sales", "Stock", "Margin", "Staffing", "Cancellations", "Discounts", "Cash", "Service timing", "Weather"], analysisFailed: 'Analysis unavailable', retryAnalysis: 'Retry', invalidLimit: 'Enter a value between {min} and {max}.', integerOnly: 'A whole number is required.', settings: 'Threshold settings', settingsIntro: 'Each rule has its own thresholds. The factory values suit most venues.', resetRule: 'Restore factory values', alsoUsed: 'Also used by: {names}.', usual: 'Factory value: {value}', eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
       emptyNote: 'Kiwi monitors only measured data from this venue.', ask: 'Open morning briefing',
       coverage: 'I monitor the signals that are already measurable, without inventing missing data.',
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
@@ -102,7 +178,7 @@
       wKinds: { clear: 'fair', cloudy: 'cloudy', rain: 'rain', storm: 'thunderstorm', snow: 'snow', fog: 'fog' }
     },
     ar: {
-      ruleNames: ["المبيعات", "المخزون", "الهامش", "جدول العمل", "الإلغاءات", "التخفيضات", "الصندوق", "مدة الخدمة", "الطقس"], analysisFailed: 'التحليل غير متاح', retryAnalysis: 'أعد المحاولة', invalidLimit: 'أدخل قيمة بين {min} و{max}.', integerOnly: 'يجب إدخال عدد صحيح.', eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
+      ruleNames: ["المبيعات", "المخزون", "الهامش", "جدول العمل", "الإلغاءات", "التخفيضات", "الصندوق", "مدة الخدمة", "الطقس"], analysisFailed: 'التحليل غير متاح', retryAnalysis: 'أعد المحاولة', invalidLimit: 'أدخل قيمة بين {min} و{max}.', integerOnly: 'يجب إدخال عدد صحيح.', settings: 'إعدادات العتبات', settingsIntro: 'لكل قاعدة عتباتها. القيم الأصلية تناسب معظم المحلات.', resetRule: 'استرجاع القيم الأصلية', alsoUsed: 'تُستعمل أيضا في: {names}.', usual: 'القيمة الأصلية: {value}', eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
       emptyNote: 'يراقب Kiwi فقط البيانات المقاسة لهذا المحل.', ask: 'عرض ملخص الصباح',
       coverage: 'أراقب الإشارات القابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
@@ -247,7 +323,26 @@
     var count = Number(value.count);
     var windowLabel = String(value.window || '').trim().slice(0, 120);
     var source = String(value.source || '').trim().slice(0, 120);
-    return Number.isFinite(count) && count >= 0 && windowLabel && source ? { count: count, window: windowLabel, source: source } : null;
+    if (!(Number.isFinite(count) && count >= 0 && windowLabel && source)) return null;
+    var out = { count: count, window: windowLabel, source: source };
+    if (value.text && typeof value.text === 'object') {
+      var text = {};
+      ['fr', 'en', 'ar'].forEach(function (L) { var v = String(value.text[L] || '').trim().slice(0, 400); if (v) text[L] = v; });
+      if (Object.keys(text).length) out.text = text;
+    }
+    return out;
+  }
+  /* Le pied de preuve lisible : le nombre mesuré, la période et d'où vient le
+   * chiffre, en mots du commerçant. `window` et `source` restent la trace
+   * interne (et ce qu'affiche encore un appareil qui n'a pas cette version). */
+  function said(count, win, src) {
+    var out = {};
+    ['fr', 'en', 'ar'].forEach(function (L) { out[L] = count + ' · ' + (typeof win === 'string' ? win : win[L]) + ' · ' + src[L]; });
+    return out;
+  }
+  function evidenceText(line, wanted) {
+    var e = line && line.evidence || {};
+    return (e.text && e.text[lang(wanted)]) || (e.count + ' · ' + e.window + ' · ' + e.source);
   }
   function normalizeLine(value) {
     if (!value || typeof value !== 'object') return null;
@@ -383,7 +478,8 @@
         en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -' + limit('salesDrop') + '%.',
         ar: 'انخفضت المبيعات بنسبة ' + drop + '٪: ' + cur + ' درهم حتى ' + time + '، مقابل ' + wd + ' درهم في الأيام المماثلة و' + tr7 + ' درهم خلال آخر 7 أيام. العتبة: -' + limit('salesDrop') + '٪.'
       },
-      evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet' }
+      evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet',
+        text: said(current.count, day + ' · 05:00-' + time, { fr: 'ventes de la caisse, historique complet', en: 'till sales, full history', ar: 'مبيعات الصندوق، السجل كاملا' }) }
     };
   }
   function stockItems() {
@@ -435,7 +531,16 @@
       evidence: {
         count: 2,
         window: String(currentDay || 'période') + ' vs ' + String(baselineDay || 'référence'),
-        source: 'KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré'
+        source: 'KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré',
+        text: said(2, {
+          fr: String(currentDay || 'période') + ' comparé à ' + String(baselineDay || 'la référence'),
+          en: String(currentDay || 'period') + ' versus ' + String(baselineDay || 'baseline'),
+          ar: String(currentDay || 'الفترة') + ' مقارنة ب' + String(baselineDay || 'المرجع')
+        }, {
+          fr: 'ventes avec un coût renseigné : ' + num(pct(currentCoverage), 'fr') + ' % contre ' + num(pct(baselineCoverage), 'fr') + ' %',
+          en: 'sales with a known cost: ' + num(pct(currentCoverage), 'en') + '% versus ' + num(pct(baselineCoverage), 'en') + '%',
+          ar: 'مبيعات بتكلفة مسجلة: ' + num(pct(currentCoverage), 'ar') + '٪ مقابل ' + num(pct(baselineCoverage), 'ar') + '٪'
+        })
       }
     };
   }
@@ -472,7 +577,8 @@
         en: low.length + ' item' + (low.length > 1 ? 's are' : ' is') + ' below reorder level: ' + names + extra + '. Coverage: ' + coverageEn + '.',
         ar: low.length + ' من الأصناف تحت عتبة إعادة الطلب: ' + names + extra + '. التغطية: ' + coverageAr + '.'
       },
-      evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance' }
+      evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance',
+        text: typeof said !== 'function' ? undefined : said(tracked.length, { fr: 'stock actuel · ' + businessDay(Date.now()), en: 'current stock · ' + businessDay(Date.now()), ar: 'المخزون الحالي · ' + businessDay(Date.now()) }, { fr: 'articles suivis en stock', en: 'tracked stock items', ar: 'أصناف المخزون المتابعة' }) }
     };
   }
   function minute(value) {
@@ -528,9 +634,15 @@
         en: 'The published schedule leaves part of an opening period uncovered.',
         ar: 'يترك الجدول المنشور جزءًا من فترة الافتتاح دون تغطية.'
       },
-      evidence: { count: openings.length, window: String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), source: 'planning publié + KiwiHours.periodsOn' },
+      evidence: { count: openings.length, window: String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), source: 'planning publié + KiwiHours.periodsOn',
+        text: said(openings.length, String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), { fr: 'planning publié et horaires d’ouverture', en: 'published schedule and opening hours', ar: 'الجدول المنشور وساعات الافتتاح' }) },
       action: { name: 'open-planning', args: {}, summary: 'Ouvrir le planning' }
     };
+  }
+  /* Le seuil que la règle vient d'appliquer, réglage du commerçant compris. */
+  function shareThreshold(L) {
+    var share = num(limit('share'), L), multiple = num(limit('multiple'), L);
+    return { fr: ' Seuil : au moins ' + share + ' % et ' + multiple + '× la référence.', en: ' Threshold: at least ' + share + '% and ' + multiple + '× baseline.', ar: ' العتبة: ' + share + '٪ على الأقل و' + multiple + '× المرجع.' }[L];
   }
   function cancellationRateRule(input) {
     input = input || {};
@@ -575,11 +687,12 @@
     return {
       id: 'cancellation-rate:' + String(day || 'day'), kind: 'cancellation-rate', tone: 'warn', roles: ['owner', 'manager'],
       copy: {
-        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + motive.fr + ' (' + top.count + ').' + by.fr + ' Seuil : au moins 5 % et 2× la référence.',
-        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + motive.en + ' (' + top.count + ').' + by.en + ' Threshold: at least 5% and 2× baseline.',
-        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + motive.ar + ' (' + top.count + ').' + by.ar + ' العتبة: 5٪ على الأقل وضعف المرجع.'
+        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + motive.fr + ' (' + top.count + ').' + by.fr + shareThreshold('fr'),
+        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + motive.en + ' (' + top.count + ').' + by.en + shareThreshold('en'),
+        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + motive.ar + ' (' + top.count + ').' + by.ar + shareThreshold('ar')
       },
-      evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list' }
+      evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list',
+        text: said(current.cancellations, { fr: String(day || '') + ' · comparé au même jour des 4 semaines précédentes', en: String(day || '') + ' · compared with the same weekday over the previous 4 weeks', ar: String(day || '') + ' · مقارنة بنفس اليوم خلال الأسابيع الأربعة السابقة' }, { fr: 'annulations et ventes de la caisse', en: 'till cancellations and sales', ar: 'إلغاءات ومبيعات الصندوق' }) }
     };
   }
   function discountShareRule(input) {
@@ -625,11 +738,12 @@
     return {
       id: 'discount-share:' + String(day || 'day'), kind: 'discount-share', tone: 'warn', roles: ['owner'],
       copy: {
-        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Surtout accordées par ' + actor.fr + '. Seuil : au moins 5 % et 2× la référence.',
-        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Mostly granted by ' + actor.en + '. Threshold: at least 5% and 2× baseline.',
-        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. منحها أساساً: ' + actor.ar + '. العتبة: 5٪ على الأقل وضعف المرجع.'
+        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Surtout accordées par ' + actor.fr + '.' + shareThreshold('fr'),
+        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Mostly granted by ' + actor.en + '.' + shareThreshold('en'),
+        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. منحها أساساً: ' + actor.ar + '.' + shareThreshold('ar')
       },
-      evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents' }
+      evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents',
+        text: said(current.discountedCount, { fr: String(day || '') + ' · comparé au même jour des 4 semaines précédentes', en: String(day || '') + ' · compared with the same weekday over the previous 4 weeks', ar: String(day || '') + ' · مقارنة بنفس اليوم خلال الأسابيع الأربعة السابقة' }, { fr: 'remises et ventes brutes de la caisse', en: 'till discounts and gross sales', ar: 'تخفيضات الصندوق والمبيعات الإجمالية' }) }
     };
   }
 
@@ -663,11 +777,12 @@
     return {
       id: 'cash-gap:' + day, kind: 'cash-gap', tone: 'warn', roles: ['owner'],
       copy: {
-        fr: 'Écart de caisse de ' + gapLabel + ' MAD, seuil visible ' + thresholdLabel + ' MAD.',
+        fr: 'Écart de caisse de ' + gapLabel.replace('.', ',') + ' MAD, seuil visible ' + thresholdLabel.replace('.', ',') + ' MAD.',
         en: 'Cash gap of ' + gapLabel + ' MAD, visible threshold ' + thresholdLabel + ' MAD.',
-        ar: 'فرق الصندوق ' + gapLabel + ' MAD، والحد الظاهر ' + thresholdLabel + ' MAD.'
+        ar: 'فرق الصندوق ' + gapLabel.replace('.', ',') + ' MAD، والحد الظاهر ' + thresholdLabel.replace('.', ',') + ' MAD.'
       },
-      evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD' }
+      evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD',
+        text: said(reconciliations.length, day, { fr: 'clôtures et passations de caisse', en: 'till closings and handovers', ar: 'إغلاقات الصندوق وعمليات التسليم' }) }
     };
   }
 
@@ -697,7 +812,8 @@
         en: 'Rain forecast ' + (tomorrow ? 'tomorrow' : 'today') + ' in ' + data.city + ' (' + mmEn + ' mm). On rainy days your takings have been ' + pct + '% ' + (down ? 'lower' : 'higher') + ' than on dry days.',
         ar: 'يُتوقع المطر ' + (tomorrow ? 'غدا' : 'اليوم') + ' في ' + data.city + ' (' + mm + ' مم). في الأيام الممطرة كان رقم معاملاتك ' + (down ? 'أقل' : 'أعلى') + ' بنسبة ' + pct + '٪ من الأيام الجافة.'
       },
-      evidence: { count: effect.rainDays + effect.dryDays, window: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', source: 'MET Norway · KiwiSales' }
+      evidence: { count: effect.rainDays + effect.dryDays, window: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', source: 'MET Norway · KiwiSales',
+        text: said(effect.rainDays + effect.dryDays, { fr: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', en: effect.rainDays + ' rainy days · ' + effect.dryDays + ' dry days', ar: effect.rainDays + ' أيام ممطرة · ' + effect.dryDays + ' أيام جافة' }, { fr: 'MET Norway et vos ventes', en: 'MET Norway and your sales', ar: 'MET Norway ومبيعاتك' }) }
     };
   }
   /* La prévision, dans l'en-tête du point du matin : aujourd'hui et demain. */
@@ -753,11 +869,13 @@
       return {
         id: 'late-orders:' + key + ':' + day, kind: 'late-orders-' + key, tone: 'warn', roles: ['owner', 'manager'],
         copy: {
-          fr: labelFr + ' médian ' + nowMin + ' min contre ' + baseMin + ' min, alerte à 1,5× et +5 min.',
-          en: labelEn + ' median ' + nowMin + ' min versus ' + baseMin + ' min, alert at 1.5x and +5 min.',
-          ar: labelAr + ' ' + nowMin + ' دقيقة مقابل ' + baseMin + ' دقيقة، التنبيه عند 1.5x و+5 دقائق.'
+          fr: labelFr + ' médian ' + nowMin + ' min contre ' + baseMin + ' min, alerte à ' + num(limit('lateMultiple'), 'fr') + '× et +' + limit('lateMinutes') + ' min.',
+          en: labelEn + ' median ' + nowMin + ' min versus ' + baseMin + ' min, alert at ' + num(limit('lateMultiple'), 'en') + 'x and +' + limit('lateMinutes') + ' min.',
+          ar: labelAr + ' ' + nowMin + ' دقيقة مقابل ' + baseMin + ' دقيقة، التنبيه عند ' + num(limit('lateMultiple'), 'ar') + 'x و+' + limit('lateMinutes') + ' دقائق.'
         },
-        evidence: { count: nowRows.length, window: day + ' · baseline 28 jours (' + baseRows.length + ')', source: 'order_course.' + key }
+        evidence: { count: nowRows.length, window: day + ' · baseline 28 jours (' + baseRows.length + ')', source: 'order_course.' + key,
+          text: said(nowRows.length, { fr: day + ' · référence sur 28 jours (' + baseRows.length + ')', en: day + ' · 28-day reference (' + baseRows.length + ')', ar: day + ' · مرجع 28 يوما (' + baseRows.length + ')' },
+            key === 'kitchen' ? { fr: 'commandes envoyées en cuisine', en: 'orders sent to the kitchen', ar: 'الطلبات المرسلة إلى المطبخ' } : { fr: 'commandes servies après préparation', en: 'orders served after preparation', ar: 'الطلبات المقدمة بعد التحضير' }) }
       };
     }
     return [
@@ -915,6 +1033,19 @@
       '.briefing-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}',
       '.briefing-status.is-alert{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 40%,transparent);background:color-mix(in srgb,var(--atlas) 7%,transparent)}',
       '.briefing-status.is-alert::before{background:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 18%,transparent)}',
+      /* Réglages : un pavé par règle, un champ = nom, saisie, une phrase d'aide. */
+      '.briefing-settings,.briefing-rule{font:500 12.5px/1.4 var(--sans);color:var(--n-700)}',
+      '.briefing-settings>summary,.briefing-rule>summary{cursor:pointer;font-weight:600;color:var(--n-600)}',
+      '.briefing-rule{margin-top:8px;padding:8px 12px;border:1px solid var(--n-200);border-radius:12px}',
+      '.briefing-set-intro{margin:8px 0 0;color:var(--n-500)}',
+      '.briefing-set-field{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--n-200)}',
+      '.briefing-set-name{font-weight:600;color:var(--n-700)}',
+      '.briefing-set-field input{width:7.5em;padding:6px 8px;border:1px solid var(--n-300);border-radius:8px;background:transparent;color:inherit;font:inherit}',
+      '.briefing-set-field input[aria-invalid="true"]{border-color:var(--atlas)}',
+      '.briefing-set-help,.briefing-set-error{grid-column:1/-1;font:500 11.5px/1.4 var(--sans);color:var(--n-500)}',
+      '.briefing-set-error:empty{display:none}',
+      '.briefing-reset{margin-top:8px;border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);cursor:pointer}',
+      '.briefing-reset:hover:not(:disabled){border-color:var(--atlas);color:var(--atlas)}.briefing-reset:disabled{opacity:.5;cursor:default}',
       /* Rien n'a pris sur cet appareil : une ligne posée, pas une alerte rouge. */
       '.briefing-unsaved{margin:0;font:500 12px/1.4 var(--sans);color:var(--n-600)}',
       '@keyframes briefing-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
@@ -942,7 +1073,7 @@
     var t = tr(), lines = activeLines(tier());
     var body = lines.length ? lines.map(function (line) {
       return '<article class="briefing-line"><div class="hai-rec-title">' + esc(lineText(line)) + '</div><div class="briefing-evidence">' +
-        esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
+        esc(evidenceText(line)) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
     var failed = current() && current().unavailable || [];
     if (failed.length) {
@@ -970,7 +1101,7 @@
     var failed = current() && current().unavailable || [];
     if (failed.length) return { text: t.analysisFailed + ' · ' + failed.map(function (name) { var index = RULES.findIndex(function (rule) { return rule.name === name; }); return t.ruleNames[index] || t.analysisFailed; }).join(', ') };
     if (!lines.length) return { text: '<b>' + t.empty + '</b> ' + t.emptyNote };
-    return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source }; }) };
+    return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: evidenceText(line, opts && opts.lang) }; }) };
   }
   function attachCloud() {
     if (cloud || !isReal() || !slug() || !window.KiwiCloudDoc || !window.KiwiCloudDoc.attach) return;
@@ -1007,23 +1138,33 @@
     var handled = event.target.closest && event.target.closest('[data-briefing-handled]');
     var dismissed = event.target.closest && event.target.closest('[data-briefing-dismiss]');
     var proposed = event.target.closest && event.target.closest('[data-briefing-propose]');
+    var reset = event.target.closest && event.target.closest('[data-briefing-reset]');
+    if (reset && !reset.disabled) resetRule(Number(reset.getAttribute('data-briefing-reset')));
     if (proposed) proposeLine(proposed.getAttribute('data-briefing-propose'));
     if (handled) setState(handled.getAttribute('data-briefing-handled'), 'handled');
     if (dismissed) setState(dismissed.getAttribute('data-briefing-dismiss'), 'dismissed');
   });
 
+  /* « toggle » ne remonte pas : on l'écoute à la capture pour retenir ce qui est ouvert. */
+  document.addEventListener('toggle', function (event) {
+    var box = event.target, key = box && box.getAttribute && box.getAttribute('data-briefing-open');
+    if (key) openState[key] = !!box.open;
+  }, true);
+
   document.addEventListener('change', function (event) {
     var input = event.target;
     if (!input.getAttribute || !input.getAttribute('data-briefing-limit')) return;
-    var value = {}, key = input.getAttribute('data-briefing-limit');
-    value[key] = input.value.trim() === '' ? NaN : Number(input.value);
+    var value = {}, key = input.getAttribute('data-briefing-limit'), scale = SCALE[key] || 1;
+    var typed = input.value.trim() === '' ? NaN : Number(input.value) * scale;
+    /* Un réglage en dirhams s'arrête au centime : 1,234 MAD est refusé, pas arrondi en silence. */
+    value[key] = scale > 1 && Math.abs(typed - Math.round(typed)) > 1e-6 ? NaN : scale > 1 ? Math.round(typed) : typed;
     var ok = setSettings(value);
     input.setAttribute('aria-invalid', String(!ok));
-    var message = document.getElementById('briefing-error-' + key);
-    if (message) message.textContent = ok ? '' : [tr().invalidLimit.replace('{min}', LIMITS[key][1]).replace('{max}', LIMITS[key][2]), integerLimit(key) ? tr().integerOnly : ''].filter(Boolean).join(' ');
+    var message = document.getElementById(input.getAttribute('data-briefing-error') || 'briefing-error-' + key);
+    if (message) message.textContent = ok ? '' : [tr().invalidLimit.replace('{min}', num(shown(key, LIMITS[key][1]), lang())).replace('{max}', num(shown(key, LIMITS[key][2]), lang())), integerLimit(key) && !SCALE[key] ? tr().integerOnly : ''].filter(Boolean).join(' ');
   });
   window.KiwiBriefing = {
-    setSettings: setSettings, settings: function () { return clone(own().settings || {}); },
+    setSettings: setSettings, resetRule: resetRule, settings: function () { return clone(own().settings || {}); },
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
     durable: function () { return localKept; },

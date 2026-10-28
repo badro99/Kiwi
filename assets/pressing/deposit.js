@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiImageProof, KiwiLens.
  */
-import { CATALOG, ITEMS, root } from './custody.js?v=4';
+import { CATALOG, ITEMS, root } from './custody.js?v=11';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket } = owner.depositContext();
@@ -49,7 +49,7 @@ function renderGrid() {
           <span class="px-card-price">dès ${fmtMAD(minPrice(it))}${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
         </button>`).join('')}
-      </div>` : `<div class="px-grid-empty"><i data-lucide="search-x"></i><b>Aucun article trouvé</b><span>Essayez un autre nom ou choisissez une autre catégorie.</span></div>`;
+      </div>` : `<div class="px-grid-empty"><i data-icon="search_off"></i><b>Aucun article trouvé</b><span>Essayez un autre nom ou choisissez une autre catégorie.</span></div>`;
     $('#px-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-px-item]');
       if (b) openSheet(b.dataset.pxItem);
@@ -74,18 +74,18 @@ function ticketTotals(t) {
   }
 function customerRow(t) {
     if (!t.customer) {
-      return `<button class="px-tk-row" id="px-tk-client"><i data-lucide="user-plus"></i>
+      return `<button class="px-tk-row" id="px-tk-client"><i data-icon="person_add"></i>
         <span class="l"><b>Attacher un client</b><span>Recherche par téléphone, jamais par ticket</span></span>
         <span class="edit">Chercher</span></button>`;
     }
     if (t.customer.type === 'guest') {
-      return `<button class="px-tk-row is-set" id="px-tk-client"><i data-lucide="user"></i>
+      return `<button class="px-tk-row is-set" id="px-tk-client"><i data-icon="person"></i>
         <span class="l"><b>Client de passage</b><span>Sans fiche, retrouvable par n° de ticket</span></span>
         <span class="edit">Changer</span></button>`;
     }
     const c = t.customer.type === 'known' ? CUST[t.customer.id] : t.customer;
     const prefs = (c.prefs && c.prefs.length) ? ` · ${c.prefs[0]}` : '';
-    return `<button class="px-tk-row is-set" id="px-tk-client"><i data-lucide="user-check"></i>
+    return `<button class="px-tk-row is-set" id="px-tk-client"><i data-icon="how_to_reg"></i>
       <span class="l"><b>${dataText(c.name)}</b><span>${esc(c.phone || 'sans téléphone')}${c.orders ? ` · ${c.orders} commandes` : ' · nouveau'}${esc(prefs)}</span></span>
       ${c.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}
       <span class="edit">Changer</span></button>`;
@@ -102,25 +102,25 @@ function renderTicket() {
       </div>
       <div class="px-tk-meta">
         ${customerRow(t)}
-        <button class="px-tk-row ${t.ready ? 'is-set' : ''}" id="px-tk-date"><i data-lucide="calendar-clock"></i>
+        <button class="px-tk-row ${t.ready ? 'is-set' : ''}" id="px-tk-date"><i data-icon="calendar_clock"></i>
           <span class="l"><b>Prêt le ${esc(fmtDT(t.ready))}</b><span>Date de retrait, modifiable</span></span>
           <span class="edit">Modifier</span></button>
       </div>
       <div class="px-tk-lines" id="px-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
           <div class="px-tk-empty">
-            <i data-lucide="shirt"></i>
+            <i data-icon="checkroom"></i>
             <div>Le ticket est vide.<br>Touchez un vêtement dans la grille, chaque pièce recevra son étiquette.</div>
           </div>`}
       </div>
       <div class="px-tk-foot">
         <div class="px-tk-tot">
-          <span class="pcs"><i data-lucide="tag"></i> ${count} pièce${count > 1 ? 's' : ''} · ${count} étiquette${count > 1 ? 's' : ''}</span>
+          <span class="pcs"><i data-icon="sell"></i> ${count} pièce${count > 1 ? 's' : ''} · ${count} étiquette${count > 1 ? 's' : ''}</span>
           ${remise ? `<span>Remise B2B –15 % · −${fmtMAD(remise).replace(' MAD', '')} MAD</span>` : ''}
         </div>
         <div class="px-tk-total"><span class="lbl">Total${b2b ? ' (remisé)' : ''}</span><span class="val">${fmtMAD(total)}</span></div>
         <button class="px-validate" id="px-validate" ${t.lines.length ? '' : 'disabled'}>
-          <i data-lucide="tags"></i> Valider · étiquettes &amp; ticket
+          <i data-icon="sell"></i> Valider · étiquettes &amp; ticket
         </button>
       </div>`;
     const reset = $('#px-tk-reset', el);
@@ -154,8 +154,8 @@ function lineRow(ln, i) {
         <span class="px-line-sub">
           <i class="dot" style="background:${COLOR[ln.color] ? COLOR[ln.color].hex : '#ccc'}"></i>
           <span class="svc">${svcCodes(ln.services)}</span> ${esc(svcShorts(ln.services))}
-          ${notesCt ? `<span class="meta"><i data-lucide="sticky-note"></i>${notesCt}</span>` : ''}
-          ${ln.photos ? `<span class="meta"><i data-lucide="camera"></i>${ln.photos}</span>` : ''}
+          ${notesCt ? `<span class="meta"><i data-icon="sticky_note_2"></i>${notesCt}</span>` : ''}
+          ${ln.photos ? `<span class="meta"><i data-icon="photo_camera"></i>${ln.photos}</span>` : ''}
         </span>
       </span>
       <span class="px-line-right">
@@ -197,7 +197,7 @@ function renderSheet() {
     const unit = sheetUnit();
     const el = $('#px-sheet', root);
     el.innerHTML = `
-      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="px-sheet-head">
         <span class="px-sheet-art">${garmentIcon({ ...item, variantId: sheet.variantId })}</span>
         <span class="px-sheet-title"><h3>${catalogLabel(item)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
@@ -245,7 +245,7 @@ function renderSheet() {
 
       <div class="px-sheet-foot">
         <button class="px-btn secondary" data-px-close>Annuler</button>
-        <button class="px-btn primary" id="px-sheet-add"><i data-lucide="plus"></i>Ajouter au ticket · <span id="px-sheet-cta-price">${fmtMAD(unit * sheet.qty)}</span></button>
+        <button class="px-btn primary" id="px-sheet-add"><i data-icon="add"></i>Ajouter au ticket · <span id="px-sheet-cta-price">${fmtMAD(unit * sheet.qty)}</span></button>
       </div>`;
 
     const refreshPrice = () => {
@@ -374,17 +374,17 @@ function openClient(options = {}) {
         (digits && phoneDigits(c.phone).includes(digits)) ||
         (!digits && c.name.toLowerCase().includes(ql)));
       el.innerHTML = `
-        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Client</h3>
         <p class="modal-subtle">Au pressing on cherche par téléphone, le client n'a jamais son ticket.</p>
-        <div class="px-phone-in"><i data-lucide="phone"></i>
+        <div class="px-phone-in"><i data-icon="call"></i>
           <input id="px-cl-q" inputmode="tel" placeholder="06… ou nom du client" value="${esc(q || '')}" autocomplete="off" />
         </div>
         ${mode === 'search' ? `
           <div class="px-cl-results" id="px-cl-results">
             ${hits.map((c) => `
               <button class="px-cl-row" data-px-cl="${c.id}">
-                <span class="px-cl-ava ${c.b2b ? 'b2b' : ''}">${c.b2b ? '<i data-lucide="building-2"></i>' : esc(initials(c.name))}</span>
+                <span class="px-cl-ava ${c.b2b ? 'b2b' : ''}">${c.b2b ? '<i data-icon="apartment"></i>' : esc(initials(c.name))}</span>
                 <span class="px-cl-mid">
                   <span class="px-cl-name" data-nolang>${dataText(c.name)} ${c.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}</span>
                   <span class="px-cl-sub">${esc(c.phone)}</span>
@@ -393,7 +393,7 @@ function openClient(options = {}) {
               </button>`).join('') || `<div class="px-bempty">Aucun client pour « ${esc(q)} »</div>`}
           </div>
           ${hits.length === 1 ? recoPanel(hits[0]) : ''}
-          <button class="px-cl-new" id="px-cl-new"><i data-lucide="user-plus"></i>Nouveau client${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
+          <button class="px-cl-new" id="px-cl-new"><i data-icon="person_add"></i>Nouveau client${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
           <div class="px-sheet-foot" style="margin-top:10px;">
             <button class="px-btn ghost" id="px-cl-guest">Client de passage, sans fiche</button>
           </div>` : `
@@ -402,7 +402,7 @@ function openClient(options = {}) {
             <input class="px-in" id="px-cl-tel" inputmode="tel" autocomplete="tel" placeholder="Téléphone · 06…, +212…, +33…, +49…" value="${esc(/^[\d\s().+-]+$/.test(q || '') ? q : '')}" />
             <div class="px-sheet-foot" style="margin-top:4px;">
               <button class="px-btn secondary" id="px-cl-back">Retour</button>
-              <button class="px-btn primary" id="px-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
+              <button class="px-btn primary" id="px-cl-create"><i data-icon="check"></i>Créer la fiche</button>
             </div>
           </div>`}`;
       $('#px-cl-q', el).oninput = (e) => { render(e.target.value); icons(); $('#px-cl-q', el).focus(); moveCaretEnd($('#px-cl-q', el)); };
@@ -458,11 +458,11 @@ function dueOf(c) {
 function recoPanel(c) {
     const hist = ORDERS.filter((o) => o.custId === c.id).slice(0, 2);
     return `<div class="px-reco">
-      <div class="px-reco-head"><i data-lucide="sparkles"></i><span>${dataText(c.name)}, client reconnu</span></div>
+      <div class="px-reco-head"><i data-icon="auto_awesome"></i><span>${dataText(c.name)}, client reconnu</span></div>
       <div class="px-reco-rows">
-        ${(c.prefs || []).map((p) => `<div class="px-reco-row"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}
-        ${c.contact ? `<div class="px-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
-        ${hist.map((o) => `<div class="px-reco-row"><i data-lucide="history"></i><b>${publicOrderNo(o)}</b> · ${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</div>`).join('')}
+        ${(c.prefs || []).map((p) => `<div class="px-reco-row"><i data-icon="favorite"></i>${esc(p)}</div>`).join('')}
+        ${c.contact ? `<div class="px-reco-row"><i data-icon="person"></i>${esc(c.contact)}</div>` : ''}
+        ${hist.map((o) => `<div class="px-reco-row"><i data-icon="history"></i><b>${publicOrderNo(o)}</b> · ${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</div>`).join('')}
       </div>
     </div>`;
   }
@@ -481,13 +481,13 @@ function openDate(options = {}) {
     const now = new Date();
     const opts = readyOptions(now);
     el.innerHTML = `
-      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="px-date-kicker">PROMESSE CLIENT</div>
       <h3 class="modal-title" id="px-date-title">Prêt pour quand ?</h3>
       <p class="modal-subtle">Choisissez un créneau réaliste. Il sera imprimé sur le ticket et suivi par l'atelier.</p>
       <div class="px-date-chips">
         ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}">
-          <span class="px-date-day">${esc(o.day)}</span><b>${esc(o.time)}</b><span class="px-date-meta">${esc(o.sub)}</span>${o.recommended ? '<em>RECOMMANDÉ</em>' : ''}<i data-lucide="check"></i>
+          <span class="px-date-day">${esc(o.day)}</span><b>${esc(o.time)}</b><span class="px-date-meta">${esc(o.sub)}</span>${o.recommended ? '<em>RECOMMANDÉ</em>' : ''}<i data-icon="check"></i>
         </button>`).join('')}
       </div>
       <div class="px-date-divider"><span>Autre date</span></div>

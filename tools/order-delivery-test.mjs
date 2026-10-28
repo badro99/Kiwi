@@ -121,11 +121,11 @@ function extractReconciliation() {
 function runReconciliation(body, world) {
   const fn = new Function(
     'all', 'tableOrders', 'tableKey', 'caisseTableId', 'opUnmatchedTables',
-    'attachOrderProTable', 'canRecoverCaisseTable', 'toast', 'console',
+    'attachOrderProTable', 'canRecoverCaisseTable', 'toast', 'tr', 'console',
     `let touched = false;\n${body}\nreturn touched;`,
   );
   return fn(world.all, world.tableOrders, world.tableKey, world.caisseTableId,
-    world.opUnmatchedTables, world.attachOrderProTable, world.canRecoverCaisseTable, world.toast, world.console);
+    world.opUnmatchedTables, world.attachOrderProTable, world.canRecoverCaisseTable, world.toast, world.tr, world.console);
 }
 
 async function main() {
@@ -215,7 +215,7 @@ async function main() {
     tableKey: (v) => String(v || '').toUpperCase().replace(/\s+/g, ''),
     caisseTableId: (v) => ({ 3: 'T3', 4: 'T4' }[String(v)] || ''), // la table 9 n'est pas au plan
     opUnmatchedTables: new Set(),
-    toast: (m) => warned.push(m),
+    toast: (m) => warned.push(m), tr: (fr) => fr,
     console: { warn() {} },
     all: [
       order('ord-known'),

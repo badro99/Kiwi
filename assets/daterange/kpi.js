@@ -387,7 +387,10 @@ function renderKpiBand() {
          * (.kpi-m .d:empty) pour que les tuiles restent alignées. */
         if (d == null) {
           deltaEl.className = 'd neutral';
-          deltaEl.innerHTML = '';
+          /* Une tuile partielle (pourboires d'une plage qui touche l'historique
+             ancien) le dit ici, dans la langue de l'écran. */
+          const note = tileSpec.note ? ((window.KiwiI18n?.T?.[lang] || {})[tileSpec.noteKey] || tileSpec.note) : '';
+          deltaEl.textContent = note;
         } else {
           deltaEl.className = `d${d < 0 ? ' dn' : d === 0 ? ' neutral' : ''}`;
           deltaEl.innerHTML = `${__state.arrowSvg(d >= 0)}${__state.fmtPct(d)} ${suffix}`;

@@ -180,7 +180,8 @@ function syncDB(connection) {
           }
           if (q.startsWith('UPDATE shopify_connections SET last_error')) { state.connection.last_error = a[0]; return { meta: { changes: 1 } }; }
           if (q.startsWith('UPDATE shopify_variant_links SET status')) {
-            const row = state.links.find((x) => x.merchant === a[2] && x.kiwi_variant_id === a[3]);
+            // status, merchant, variant: a refusal leaves updated_ts (the level's instant) alone.
+            const row = state.links.find((x) => x.merchant === a[1] && x.kiwi_variant_id === a[2]);
             if (row) row.status = a[0];
             return { meta: { changes: row ? 1 : 0 } };
           }

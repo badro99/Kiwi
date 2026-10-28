@@ -321,7 +321,8 @@ function sanitizeShop(raw) {
       productId: str(v && v.productId, 40),
       colorId: str(v && v.colorId, 40),
       size: str(v && v.size, 12),
-      stock: Math.max(0, Math.min(1e6, Number(v && v.stock) || 0)),
+      // La boutique compte en unités entières : on n'annonce jamais 0,5 pièce.
+      stock: Math.floor(Math.max(0, Math.min(1e6, Number(v && v.stock) || 0))),
       barcodes: (Array.isArray(v && v.barcodes) ? v.barcodes.slice(0, 8) : [])
         .map((b) => str((b && b.code) != null ? b.code : b, 40)).filter(Boolean),
     }))
@@ -330,6 +331,8 @@ function sanitizeShop(raw) {
     .map((c) => ({ id: str(c && c.id, 40), label: str(c && c.label, 40), hex: str(c && c.hex, 9) }))
     .filter((c) => c.id);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
+  // La révision du catalogue partagé (/api/catalog) dont cette vitrine est tirée.
+  out.catalogRev = Math.max(0, Math.min(1e12, Math.floor(Number(raw.catalogRev) || 0)));
   return out;
 }
 
@@ -613,6 +616,28 @@ export async function onRequestPost(context) {
     if (currentUpdatedTs && expected !== currentUpdatedTs) {
       return json({ error: 'stale-menu', merchant, data: currentMenu, updatedTs: currentUpdatedTs }, 409);
     }
+  } else {
+    /* La vitrine d'une boutique est une PROJECTION du catalogue privé
+     * (/api/catalog), publiée par chaque tableau de bord ouvert. Sans garde, la
+     * dernière arrivée gagnait : un onglet resté hors ligne republiait son vieux
+     * stock par-dessus celui d'un appareil à jour. Chaque publication dit donc
+     * de quelle révision du catalogue elle est tirée ; plus ancienne que le
+     * catalogue partagé, elle est refusée et l'appareil relit avant de
+     * republier. L'écriture elle-même est conditionnée à la ligne lue
+     * (updated_ts), comme pour la carte. */
+    try {
+      let sharedRev = 0;   // pas de catalogue partagé (table absente) : rien à comparer
+      try {
+        const catalog = await env.DB.prepare('SELECT rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+        sharedRev = Number(catalog && catalog.rev) || 0;
+      } catch (_) { sharedRev = 0; }
+      if (data.catalogRev < sharedRev) {
+        return json({ error: 'stale-shop', merchant, catalogRev: sharedRev }, 409);
+      }
+      const row = await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
+      currentRow = row;
+      if (row) currentUpdatedTs = +row.updated_ts || 0;
+    } catch (_) { return json({ error: 'read-before-write-failed' }, 500); }
   }
 
   /* ═══ NE JAMAIS EFFACER UNE CARTE PUBLIÉE PAR DU VIDE ═══════════════════════
@@ -665,7 +690,7 @@ export async function onRequestPost(context) {
   }
   await keepHistory(env, 'menu', merchant, 'menu');
 
-  const updatedTs = shop ? Date.now() : Math.max(Date.now(), currentUpdatedTs + 1);
+  const updatedTs = Math.max(Date.now(), currentUpdatedTs + 1);
   try {
     if (!shop) {
       const result = currentRow
@@ -679,13 +704,18 @@ export async function onRequestPost(context) {
         const latest = await env.DB.prepare('SELECT data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
         return json({ error: 'stale-menu', merchant, data: latest && latest.data ? sanitizeMenu(JSON.parse(latest.data)) : null, updatedTs: +(latest && latest.updated_ts) || 0 }, 409);
       }
-    } else await env.DB.prepare(
-      `INSERT INTO menus (merchant, name, type, data, updated_ts)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(merchant) DO UPDATE SET
-         name = excluded.name, type = excluded.type,
-         data = excluded.data, updated_ts = excluded.updated_ts`
-    ).bind(merchant, name, type, text, updatedTs).run();
+    } else {
+      const result = currentRow
+        ? await env.DB.prepare(
+          'UPDATE menus SET name = ?, type = ?, data = ?, updated_ts = ? WHERE merchant = ? AND updated_ts = ?'
+        ).bind(name, type, text, updatedTs, merchant, currentUpdatedTs).run()
+        : await env.DB.prepare(
+          'INSERT INTO menus (merchant, name, type, data, updated_ts) VALUES (?, ?, ?, ?, ?) ON CONFLICT(merchant) DO NOTHING'
+        ).bind(merchant, name, type, text, updatedTs).run();
+      if (!result || !result.meta || result.meta.changes !== 1) {
+        return json({ error: 'stale-shop', merchant, updatedTs: currentUpdatedTs }, 409);
+      }
+    }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
   return shop

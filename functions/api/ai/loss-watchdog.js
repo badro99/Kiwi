@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.1;
-const DAILY_CAP = 100;
+const DAILY_CAP = DAILY_CAPS.watchdog;
 
 const SYSTEM_PROMPT = `Tu es un auditeur interne et expert en prévention des pertes (loss prevention) pour la restauration et le commerce au Maroc.
 Analyse les logs de service et identifie les anomalies statistiques selon ce format JSON strict :
@@ -71,7 +71,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'watchdog', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('watchdog', 'daily-quota-exceeded'), 429);
 
   const metrics = b?.metrics || {};
   const logs = Array.isArray(b?.logs) ? b.logs.slice(0, 50) : [];

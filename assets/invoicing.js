@@ -18,9 +18,9 @@
   window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
   const ready = Promise.all([
   import('./invoicing/transport.js?v=3'),
-  import('./invoicing/composer.js?v=6'),
-  import('./invoicing/history.js?v=4'),
-  import('./invoicing/print.js?v=4'),
+  import('./invoicing/composer.js?v=9'),
+  import('./invoicing/history.js?v=7'),
+  import('./invoicing/print.js?v=8'),
 ]).then(([transportModule, composerModule, historyModule, printModule]) => {
   // invoicing:entry-body
 
@@ -98,6 +98,9 @@
       issueCreditTitle: 'Émettre cet avoir ?', issueCreditBody: 'Le numéro d’avoir est attribué maintenant. Un avoir émis ne peut plus être modifié.',
       issueQuoteTitle: 'Envoyer ce devis ?', issueQuoteBody: 'Le numéro de devis est attribué maintenant. Le devis reste modifiable jusqu’à sa facturation.',
       iceMissing: 'Attention : ce client n’a pas d’ICE, obligatoire pour une facture à une entreprise.',
+      sellerIceNotice: 'Votre établissement n’a pas d’ICE : il manquera sur ce document, alors que c’est une mention obligatoire.',
+      sellerIceMissing: 'ICE du vendeur manquant : ce document est numéroté sans l’ICE de votre établissement, mention obligatoire. Renseignez-le dans la fiche de l’établissement.',
+      sellerIceSet: 'Renseigner l’ICE', issuedNoIce: 'Émis : {n}. ICE du vendeur manquant, mention obligatoire.', cur: 'MAD',
       deleteTitle: 'Supprimer ce brouillon ?', deleteBody: 'Le brouillon est supprimé définitivement. Aucun numéro n’avait été attribué.',
       convertTitle: 'Convertir en facture ?', convertBody: 'Un brouillon de facture est créé avec le client et les lignes du devis. Le devis passe à « Facturé ».',
       paymentTitle: 'Enregistrer un paiement', payAmount: 'Montant (MAD)', payDate: 'Date', payMethod: 'Mode', payRef: 'Référence', payRefPh: 'N° de chèque, de virement…', payRecord: 'Enregistrer le paiement',
@@ -174,6 +177,9 @@
       issueCreditTitle: 'Issue this credit note?', issueCreditBody: 'The credit note number is assigned now. An issued credit note can no longer be modified.',
       issueQuoteTitle: 'Send this quote?', issueQuoteBody: 'The quote number is assigned now. The quote stays editable until it is invoiced.',
       iceMissing: 'Heads up: this customer has no ICE, which is required for an invoice to a business.',
+      sellerIceNotice: 'Your business has no ICE: it will be missing from this document, although it is a mandatory mention.',
+      sellerIceMissing: 'Seller ICE missing: this document was numbered without your business ICE, a mandatory mention. Set it in the business profile.',
+      sellerIceSet: 'Set the ICE', issuedNoIce: 'Issued: {n}. Seller ICE missing, a mandatory mention.', cur: 'MAD',
       deleteTitle: 'Delete this draft?', deleteBody: 'The draft is deleted for good. No number had been assigned.',
       convertTitle: 'Convert to invoice?', convertBody: 'A draft invoice is created with the quote’s customer and lines. The quote becomes “Invoiced”.',
       paymentTitle: 'Record a payment', payAmount: 'Amount (MAD)', payDate: 'Date', payMethod: 'Method', payRef: 'Reference', payRefPh: 'Cheque or transfer number…', payRecord: 'Record payment',
@@ -248,6 +254,9 @@
       issueCreditTitle: 'إصدار هذا الإشعار الدائن؟', issueCreditBody: 'يُمنح رقم الإشعار الآن. لا يمكن تعديل إشعار دائن صادر.',
       issueQuoteTitle: 'إرسال عرض السعر هذا؟', issueQuoteBody: 'يُمنح رقم عرض السعر الآن. يبقى العرض قابلاً للتعديل إلى حين فوترته.',
       iceMissing: 'تنبيه: ليس لهذا العميل ICE، وهو إلزامي لفاتورة موجهة لمقاولة.',
+      sellerIceNotice: 'ليس لمؤسستك ICE: سيغيب عن هذا المستند رغم أنه بيان إلزامي.',
+      sellerIceMissing: 'ICE البائع مفقود: تم ترقيم هذا المستند دون ICE مؤسستك، وهو بيان إلزامي. أضفه في بطاقة المؤسسة.',
+      sellerIceSet: 'إضافة ICE', issuedNoIce: 'تم الإصدار: {n}. ICE البائع مفقود، وهو بيان إلزامي.', cur: 'MAD',
       deleteTitle: 'حذف هذه المسودة؟', deleteBody: 'تُحذف المسودة نهائياً. لم يكن قد مُنح لها أي رقم.',
       convertTitle: 'التحويل إلى فاتورة؟', convertBody: 'تُنشأ مسودة فاتورة بعميل عرض السعر وبنوده. يصبح العرض «مفوتراً».',
       paymentTitle: 'تسجيل دفعة', payAmount: 'المبلغ (درهم)', payDate: 'التاريخ', payMethod: 'الطريقة', payRef: 'المرجع', payRefPh: 'رقم الشيك أو التحويل…', payRecord: 'تسجيل الدفعة',
@@ -386,6 +395,25 @@
 
   /* Le document que renvoie une écriture : le contrat dit `doc`; on tolère les noms voisins. */
   const docFrom = (res) => (res && (res.doc || res.draft || res.invoice || res.creditNote || res.credit_note)) || null;
+  /* Les avertissements que le serveur joint à une écriture réussie (`warnings`) :
+     l'écriture n'est pas refusée, mais l'écran ne doit jamais les taire. */
+  const warned = (res, code) => !!(res && Array.isArray(res.warnings) && res.warnings.indexOf(code) >= 0);
+  const sellerIceMissing = (res) => warned(res, 'seller-ice-missing');
+  const sellerHasNoIce = () => !String((getSeller() || {}).ice || '').trim();
+  const isQuoteDoc = (d) => !!d && d.type === 'quote';
+  const isBusinessKind = (v) => v === 'business';
+  /* Bandeau d'un document émis sans l'ICE du vendeur, avec le chemin vers la fiche. */
+  function sellerIceBanner(doc, t) {
+    const s = doc && doc.status !== 'draft' && doc.number ? doc.seller : null;
+    if (!s || String(s.ice || '').trim()) return '';
+    return `<div class="inv-banner warn" role="alert" data-inv-seller-ice><span>${esc(t.sellerIceMissing)}</span><button class="inv-btn small" type="button" data-inv-act="set-ice">${esc(t.sellerIceSet)}</button></div>`;
+  }
+  function openSellerIce() {
+    const edit = window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['account-edit-business'];
+    if (typeof edit !== 'function') { toast(T().sellerIceMissing); return; }
+    close();
+    edit(null, 'primary');
+  }
 
   /* ── erreurs d'API ─────────────────────────────────────────────────────── */
   /* Private transport declaration: apiError. */
@@ -712,7 +740,7 @@
     const t = T(), p = validateComposer(thenIssue); if (!p) return;
     if (thenIssue) {
       const kindBody = cmp.type === 'quote' ? [t.issueQuoteTitle, t.issueQuoteBody] : cmp.type === 'credit_note' ? [t.issueCreditTitle, t.issueCreditBody] : [t.issueInvoiceTitle, t.issueInvoiceBody];
-      const warn = fv('kind') === 'business' && !p.customer.ice && cmp.type !== 'quote' ? t.iceMissing : '';
+      const warn = [fv('kind') === 'business' && !p.customer.ice && cmp.type !== 'quote' ? t.iceMissing : '', sellerHasNoIce() ? t.sellerIceNotice : ''].filter(Boolean).join(' ');
       const yes = await openSheet({title: kindBody[0], body: kindBody[1], notice: warn, confirm: cmp.type === 'quote' ? t.sendQuote : cmp.type === 'credit_note' ? t.issueCredit : t.issueInvoice});
       if (!yes) return;
     }
@@ -721,18 +749,19 @@
     setBusy(true);
     try {
       /* Un document émis ne se réécrit pas : seul un devis reste modifiable. */
-      let doc;
+      let doc, issuedRes = null;
       if (!(cmp.id && cmp.status !== 'draft' && cmp.type !== 'quote')) {
         const res = await api('POST', Object.assign({action: 'save'}, p));
         doc = normDoc(docFrom(res)); cmp.id = doc.id; cmp.status = doc.status;
       }
       if (thenIssue) {
         const res = await api('POST', {action: 'issue', id: cmp.id});
+        issuedRes = res;
         doc = normDoc(docFrom(res) || doc);
       }
       clearTimeout(autosaveTimer); lsDel(staleKey); lsDel(draftKey());
       cmp.id = doc.id;
-      toast(thenIssue ? tpl(t.issuedOk, {n: doc.number}) : (cmp.type === 'quote' && doc.number ? t.quoteUpdated : t.savedDraft));
+      toast(thenIssue ? tpl(sellerIceMissing(issuedRes) ? t.issuedNoIce : t.issuedOk, {n: doc.number}) : (isQuoteDoc(cmp) && doc.number ? t.quoteUpdated : t.savedDraft));
       refreshAll();
       await openDetail(doc.id);
     } catch (err) { toast(errText(err)); }
@@ -826,6 +855,7 @@
     const paidBlock = type === 'invoice' && issued ? `<div class="inv-summary-row"><span>${esc(t.paid)}</span><strong>${money(Math.max(0, (doc.totals?.ttcCents || 0) - d.balanceCents))} MAD</strong></div><div class="inv-summary-row"><span>${esc(t.balance)}</span><strong>${money(d.balanceCents)} MAD</strong></div>` : '';
     const timeline = `${doc.createdTs ? `<div class="inv-time"><strong>${esc(t.createdOn)}</strong>${esc(fmtDate(dayIn(doc.createdTs)))}</div>` : ''}${doc.sentTs ? `<div class="inv-time"><strong>${esc(t.sentOn)}</strong>${esc(fmtDate(dayIn(doc.sentTs)))}</div>` : ''}${doc.legacyRef ? `<div class="inv-time"><strong>${esc(tpl(t.legacyRef, {ref: doc.legacyRef}))}</strong></div>` : ''}`;
     overlay.querySelector('[data-inv-detail]').innerHTML = `<div class="inv-composer-head"><button class="inv-btn small" type="button" data-inv-act="back">${ICON.back}${esc(t.back)}</button><div>${statusHtml(type, ds)}</div></div>
+      ${sellerIceBanner(doc, t)}
       <div class="inv-detail-grid"><article class="inv-preview${draft ? ' is-draft' : ''}" data-doc-type="${esc(type)}" data-doc-id="${esc(doc.id)}">${draft ? `<div class="inv-watermark" aria-hidden="true">${esc(t.draftNo.toUpperCase())}</div>` : ''}
         <div class="inv-preview-top"><div><div class="inv-preview-logo">${renderSellerLogo(seller, 40)}</div><div class="inv-preview-meta"><strong>${esc(biz)}</strong></div></div><div class="inv-preview-head"><h3 class="inv-preview-title" data-doc-number>${esc(docWord(type))} ${esc(draft ? t.draftNo : doc.number)}</h3><div class="inv-preview-meta">${dateMeta}</div></div></div>
         ${creditRef}
@@ -856,9 +886,9 @@
   async function actIssueDetail() {
     const t = T(), doc = detail.doc;
     const body = doc.type === 'quote' ? [t.issueQuoteTitle, t.issueQuoteBody, t.sendQuote] : doc.type === 'credit_note' ? [t.issueCreditTitle, t.issueCreditBody, t.issueCredit] : [t.issueInvoiceTitle, t.issueInvoiceBody, t.issueInvoice];
-    const yes = await openSheet({title: body[0], body: body[1], confirm: body[2]});
+    const yes = await openSheet({title: body[0], body: body[1], confirm: body[2], notice: sellerHasNoIce() ? t.sellerIceNotice : ''});
     if (!yes) return;
-    await run(() => post({action: 'issue', id: doc.id}), null, async (res) => { toast(tpl(t.issuedOk, {n: normDoc(docFrom(res)).number})); await openDetail(doc.id); });
+    await run(() => post({action: 'issue', id: doc.id}), null, async (res) => { toast(tpl(sellerIceMissing(res) ? t.issuedNoIce : t.issuedOk, {n: normDoc(docFrom(res)).number})); await openDetail(doc.id); });
   }
   async function actDelete() {
     const t = T(), doc = detail.doc;
@@ -1007,6 +1037,7 @@
       case 'open-original': return detail?.doc?.originalId && openDoc(detail.doc.originalId);
       case 'save-internal': return actSaveInternal();
       case 'import-legacy': return actImportLegacy();
+      case 'set-ice': return openSellerIce();
     }
   }
   function onInput(e) {
@@ -1030,7 +1061,7 @@
         cmp.clientId = c.id || ''; cmp.clientName = c.name; checkIce();
       }
     }
-    if (e.target.matches('[data-f="kind"]')) { const t = T(); overlay.querySelector('[data-ice-label]').textContent = e.target.value === 'business' ? t.iceRequired : t.ice; }
+    if (e.target.matches('[data-f="kind"]')) { const t = T(); overlay.querySelector('[data-ice-label]').textContent = isBusinessKind(e.target.value) ? t.iceRequired : t.ice; }
     updateComposer(); scheduleAutosave();
   }
   function onKeydown(e) {

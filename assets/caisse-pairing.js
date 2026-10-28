@@ -8,11 +8,9 @@
  * redeemed the device becomes that store, of the right trade, and every sale it
  * rings tags to that merchant so the owner's dashboard reacts live.
  *
- * Client-first + fail-soft: redeem tries POST /api/pair/redeem (cross-device,
- * once the partner deploys it) and falls back to the same-browser localStorage
- * pairing map (kiwiPairings) that the dashboard writes — so the whole flow works
- * in one browser today with zero backend. A 404/405/network on the endpoint is
- * the "backend absent" signal → localStorage; a 422 is a real "bad/expired code".
+ * Client-first + fail-soft: redeem tries POST /api/pair/redeem and falls back to the
+ * same-browser localStorage pairing map (kiwiPairings) the dashboard writes. A 404/405/
+ * network error means "backend absent" → localStorage; a 422 is a real bad/expired code.
  *
  * State (all localStorage, shared same-origin with the dashboard):
  *   kiwiPaired        '1' once this device is bound
@@ -64,7 +62,7 @@
   function offlinePinRows(merchant, keep) {
     try {
       var rows = JSON.parse(ls(offlinePinKey(merchant)) || '[]');
-      var at = Date.now();
+      var at = (window.KiwiTrustedClock || Date).now(); /* horloge ancrée sur le serveur (pairing-commit.js) */
       var kept = Array.isArray(rows) ? rows.filter(function (row) {
         return row && (row.v === 2 && row.hash) && Number(row.expiresAt || 0) > at && at - Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)) < OFFLINE_PIN_TTL;
       }) : [];
@@ -104,7 +102,7 @@
   }
   var offlinePinEpoch = 0;
   function rememberOfflinePin(merchant, code, staff, expiresAt) {
-    var epoch = offlinePinEpoch, provenAt = Date.now();
+    var epoch = offlinePinEpoch, provenAt = (window.KiwiTrustedClock || Date).now();
     if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
     // In an insecure context subtle is absent: retain the existing behaviour
     // (no local verification or new cache entry), never a JS PBKDF2 fallback.
@@ -135,6 +133,7 @@
   function verifyOfflinePin(merchant, code) {
     var epoch = offlinePinEpoch;
     if (!hasSubtle()) return Promise.resolve(null);
+    if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
     /* One derivation per (salt, rounds) pair, not per row. */
     var derived = {};
@@ -147,8 +146,8 @@
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
-        if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || Date.now() >= row.expiresAt ||
-            Date.now() - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
+        var nowMs = (window.KiwiTrustedClock || Date).now(); if (epoch !== offlinePinEpoch || !sameDigest(digest, row.hash) || nowMs >= row.expiresAt ||
+            nowMs - Number(row.provenAt || (row.expiresAt - 7 * 86400000)) >= OFFLINE_PIN_TTL) return null;
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });
@@ -1146,6 +1145,7 @@
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
     })
       .then(function (r) {
+        try { if (window.KiwiTrustedClock) window.KiwiTrustedClock.observe(r); } catch (_) {}
         if (r && r.status === 429) {
           lastVerify.status = 429;
           return r.json().catch(function () { return {}; }).then(function (d) {
@@ -1215,7 +1215,7 @@
 
   window.KiwiCaissePairing = {
     verifyReply: verifyReply, noteApproval: noteApproval,
-    offlineRow: function (code, opts) { var v = activeVenue(); return (v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null)).then(function (who) { return who && opts && opts.manager && Date.now() - who.provenAt >= 24 * 3600000 ? null : who; }); },
+    offlineRow: function (code, opts) { var v = activeVenue(); return (v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null)).then(function (who) { return who && opts && opts.manager && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 3600000 ? null : who; }); },
     lastRequestFailed: function () { return lastFailed; },
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
     repair: repair, recoverFromTerminal: recoverFromTerminal, terminalId: terminalId,
@@ -1242,7 +1242,7 @@
     },
     authorizeManager: function (code, action) {
       return verifyCode(code, action).then(function (who) {
-        if (who && who.offline && Date.now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
+        if (who && who.offline && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
         var role = String((who && who.role) || '').toLowerCase();
         if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où

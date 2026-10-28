@@ -32,12 +32,12 @@
 }
 #pos-boutique > .bq-rail {
   position: absolute;
-  top: 0; bottom: 0; left: 0;
+  inset-block: 0; inset-inline-start: 0;
   height: auto; min-height: 0;
 }
 #pos-boutique > .bq-main {
   position: absolute;
-  top: 0; right: 0; bottom: 0; left: 212px;
+  inset-block: 0; inset-inline: 212px 0;
   width: auto; height: auto; min-height: 0;
   /* The sale panel used to be a flex item whose block size could still be
      resolved from its contents by tablet WebKit. The root and rail then filled
@@ -61,7 +61,7 @@
 .bq-rail {
   width: 212px; flex: 0 0 212px;
   background: var(--ink-bg);
-  border-right: 1px solid rgba(255,255,255,0.06);
+  border-inline-end: 1px solid rgba(255,255,255,0.06);
   color: #b5b9b6;
   display: flex; flex-direction: column;
   padding: 20px 14px 14px;
@@ -90,7 +90,7 @@
   border-radius: 11px;
   font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em;
   color: #b5b9b6;
-  text-align: left;
+  text-align: start;
   transition: background 140ms ease, color 140ms ease;
 }
 .bq-nav-it svg { width: 17px; height: 17px; flex-shrink: 0; }
@@ -98,7 +98,7 @@
 .bq-nav-it.on { background: rgba(125,242,176,0.13); color: var(--mint); }
 .bq-nav-it.on svg { color: var(--mint); }
 .bq-nav-badge {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--mono); font-style: normal; font-weight: 600; font-size: 10.5px;
   line-height: 1; padding: 3px 7px; border-radius: 999px;
   background: rgba(255,255,255,0.10); color: #d5d9d6;
@@ -124,7 +124,7 @@
 .bq-net.is-off .bq-net-dot { background: #D99A2B; animation: none; box-shadow: none; }
 .bq-net.is-off { color: #E8C685; }
 .bq-net-queue {
-  margin-left: auto; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+  margin-inline-start: auto; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
   padding: 3px 7px; border-radius: 999px;
   background: var(--bq-warn-bg); color: #E8C685;
 }
@@ -147,7 +147,7 @@
   color: var(--bq-warn);
   font-size: 12.5px; font-weight: 500;
 }
-.bq-offline-note b { font-family: var(--mono); font-weight: 600; margin-left: auto; }
+.bq-offline-note b { font-family: var(--mono); font-weight: 600; margin-inline-start: auto; }
 .bq-offline-note[hidden] { display: none; }
 .bq-view { display: none; flex: 1; min-height: 0; }
 .bq-view.is-on { display: flex; }
@@ -276,7 +276,7 @@
 .bq-ticket {
   width: 356px; flex: 0 0 356px;
   background: var(--paper-elev);
-  border-left: 1px solid var(--line);
+  border-inline-start: 1px solid var(--line);
   display: flex; flex-direction: column;
   min-height: 0;
 }
@@ -300,7 +300,7 @@
   border: 1px dashed var(--line);
   border-radius: 11px;
   font-size: 12.5px; color: var(--ink-2);
-  text-align: left;
+  text-align: start;
   transition: border-color 140ms, background 140ms;
   width: 100%;
 }
@@ -317,7 +317,7 @@
    « Prête » = liseré mint, invitant ; « appliquée » (.is-on) = plein forest. */
 .bq-reward-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 11px; border-radius: 11px; width: 100%; text-align: left;
+  padding: 10px 11px; border-radius: 11px; width: 100%; text-align: start;
   border: 1px solid var(--mint-edge); background: var(--mint-tint); color: var(--ink);
   font-size: 12.5px; transition: border-color 140ms, background 140ms, transform 120ms;
 }
@@ -373,7 +373,7 @@
 }
 .bq-line-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 .bq-line-price { font-family: var(--mono); font-size: 12px; font-weight: 600; }
-.bq-line-price .was { font-size: 9.5px; color: var(--ink-4); text-decoration: line-through; font-weight: 500; margin-right: 4px; }
+.bq-line-price .was { font-size: 9.5px; color: var(--ink-4); text-decoration: line-through; font-weight: 500; margin-inline-end: 4px; }
 .bq-line-qty { display: inline-flex; align-items: center; gap: 7px; }
 .bq-line-qty button {
   width: 21px; height: 21px; border-radius: 7px;
@@ -426,7 +426,7 @@
 .bq-sheet-title { flex: 1; min-width: 0; }
 .bq-sheet-title h3 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
 .bq-sheet-title .sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
-.bq-sheet-price { text-align: right; flex-shrink: 0; }
+.bq-sheet-price { text-align: end; flex-shrink: 0; }
 .bq-sheet-price .val { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -0.02em; }
 .bq-sheet-price .per { font-size: 10.5px; color: var(--ink-3); }
 .bq-sheet-price .per.rem { color: var(--bq-warn); font-weight: 600; }
@@ -459,7 +459,7 @@
 .bq-seg-it:disabled small { color: var(--danger-mute); opacity: 0.8; }
 .bq-seg .kw-lens { border-radius: 10px; }
 .bq-seg-usual {
-  position: absolute; top: -7px; right: 6px;
+  position: absolute; top: -7px; inset-inline-end: 6px;
   font-size: 8px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--forest); background: var(--mint-tint);
   border: 1px solid var(--mint-edge);
@@ -516,8 +516,8 @@
   /* Le prix passait à côté du nom et l'écrasait mot par mot : il descend sous
      l'en-tête, et le bouton garde « 2 400 MAD » d'un seul tenant. */
   .bq-sheet-head { flex-wrap: wrap; row-gap: 10px; }
-  .bq-sheet-price { flex: 1 0 100%; display: flex; align-items: baseline; gap: 8px; text-align: left; }
-  .bq-sheet-foot .bq-btn.secondary { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+  .bq-sheet-price { flex: 1 0 100%; display: flex; align-items: baseline; gap: 8px; text-align: start; }
+  .bq-sheet-foot .bq-btn.secondary { flex: 0 0 auto; padding-inline: 14px; }
   .bq-sheet-foot .bq-btn.primary { flex: 1 1 auto; min-width: 0; text-align: center; }
 }
 .bq-btn {
@@ -548,7 +548,7 @@
   display: flex; align-items: center; gap: 13px;
   padding: 13px 14px;
   border: 1px solid var(--line); border-radius: 13px;
-  text-align: left; width: 100%;
+  text-align: start; width: 100%;
   transition: border-color 130ms, background 130ms, transform 130ms;
   margin-bottom: 8px;
 }
@@ -591,7 +591,7 @@
   display: flex; align-items: center; gap: 12px;
   padding: 11px 12px;
   border: 1px solid var(--line-soft); border-radius: 12px;
-  text-align: left; width: 100%;
+  text-align: start; width: 100%;
   transition: border-color 130ms, background 130ms;
 }
 .bq-cl-row:hover { border-color: var(--mint-edge); background: var(--mint-tint); }
@@ -609,7 +609,7 @@
   padding: 2.5px 7px; border-radius: 999px; flex-shrink: 0;
 }
 .bq-cl-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; font-family: var(--mono); }
-.bq-cl-right { text-align: right; flex-shrink: 0; font-size: 10.5px; color: var(--ink-3); }
+.bq-cl-right { text-align: end; flex-shrink: 0; font-size: 10.5px; color: var(--ink-3); }
 .bq-cl-right b { display: block; color: var(--forest); font-size: 11px; }
 /* #105 · a customer's store credit is the first thing the cashier needs at
    checkout, so it reads as a chip, not as a footnote under the points. */
@@ -653,7 +653,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px;
-  text-align: left;
+  text-align: start;
   transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
   animation: bq-card-in 320ms ease-out both;
 }
@@ -700,7 +700,7 @@
   display: flex; align-items: center; gap: 10px;
   border: 1px solid var(--mint-edge); background: var(--mint-tint);
   border-radius: 12px; padding: 10px 12px;
-  width: 100%; text-align: left;
+  width: 100%; text-align: start;
   font-size: 12.5px; color: var(--ink-2);
   margin-bottom: 12px;
   transition: border-color 130ms;
@@ -708,7 +708,7 @@
 .bq-favoir:hover { border-color: var(--emerald); }
 .bq-favoir svg { width: 16px; height: 16px; color: var(--forest); flex-shrink: 0; }
 .bq-favoir b { font-family: var(--mono); color: var(--forest); }
-.bq-favoir .see { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--forest); }
+.bq-favoir .see { margin-inline-start: auto; font-size: 11px; font-weight: 600; color: var(--forest); }
 .bq-fhist { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
 .bq-fhist-row {
   display: flex; align-items: baseline; gap: 9px;
@@ -796,7 +796,7 @@
 .bq-scan-log-row svg { width: 13px; height: 13px; color: var(--emerald); flex-shrink: 0; }
 .bq-scan-log-row.is-err svg { color: var(--danger-mute); }
 .bq-scan-log-row .when { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
-.bq-scan-log-row .ean { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-4); }
+.bq-scan-log-row .ean { margin-inline-start: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-4); }
 .bq-scan-log-h { margin: 18px 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
 
 /* ═══════════════ VENTE — barre scan (ajout au ticket) ═══════════════ */
@@ -951,7 +951,7 @@
 .bq-sale-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .bq-sale-num { font-family: var(--mono); font-size: 14.5px; font-weight: 700; }
 .bq-sale-when { font-size: 11px; color: var(--ink-3); }
-.bq-sale-who { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.bq-sale-who { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-inline-start: auto; display: inline-flex; align-items: center; gap: 6px; }
 .bq-sale-who svg { width: 12px; height: 12px; color: var(--ink-3); }
 .bq-pill {
   display: inline-flex; align-items: center; gap: 4px;
@@ -968,7 +968,7 @@
   display: flex; align-items: center; gap: 10px;
   padding: 9px 11px;
   border: 1px solid var(--line-soft); border-radius: 12px;
-  text-align: left; width: 100%;
+  text-align: start; width: 100%;
   transition: border-color 130ms, background 130ms;
 }
 .bq-sline:not(.is-locked):hover { border-color: var(--ink-4); }
@@ -1002,10 +1002,10 @@
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--mono); font-size: 10px; font-weight: 600;
   letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .bq-ret-date-input {
-  margin-left: 6px;
+  margin-inline-start: 6px;
   padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -1092,7 +1092,7 @@ button.bq-pill.ok {
   display: flex; align-items: center; gap: 13px;
   padding: 14px 15px;
   border: 1px solid var(--line); border-radius: 13px;
-  text-align: left; width: 100%;
+  text-align: start; width: 100%;
   transition: border-color 130ms, background 130ms, transform 130ms;
 }
 .bq-pay-opt:hover { border-color: var(--mint-edge); background: var(--mint-tint); }
@@ -1126,9 +1126,9 @@ button.bq-pill.ok {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.bq-split-l { font-size: 11.5px; color: var(--ink-3); margin-right: 2px; }
+.bq-split-l { font-size: 11.5px; color: var(--ink-3); margin-inline-end: 2px; }
 .bq-split-c {
-  border: 1px solid var(--line); background: var(--surface, #fff);
+  border: 1px solid var(--line); background: var(--surface, var(--paper-elev));
   border-radius: 999px; padding: 5px 11px;
   font: inherit; font-size: 12px; color: var(--ink-2); cursor: pointer;
   transition: background .16s ease, border-color .16s ease, color .16s ease;
@@ -1138,7 +1138,7 @@ button.bq-pill.ok {
 .bq-split-in {
   width: 92px; border: 1px solid var(--line); border-radius: 999px;
   padding: 5px 11px; font-size: 12px; color: var(--ink);
-  background: var(--surface, #fff);
+  background: var(--surface, var(--paper-elev));
 }
 .bq-split-note { font-size: 11.5px; color: var(--ink-3); margin: -4px 0 10px; }
 .bq-split-note b { font-family: var(--mono); color: var(--ink-2); }
@@ -1149,7 +1149,7 @@ button.bq-pill.ok {
 
 /* ═══════════════ misc ═══════════════ */
 .bq-modal-x {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute; top: 14px; inset-inline-end: 14px;
   width: 32px; height: 32px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   color: var(--ink-3);
@@ -1520,17 +1520,15 @@ body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
 .bq-prl-d .note { font-size: 11.5px; color: var(--ink-3); }
 .bq-promom .bq-prc-warn { margin: 10px 24px 0; }
 
-/* ── Arabe · ce que le retournement automatique ne fait pas ──────────────────
-   `dir="rtl"` retourne les dispositions en flex et en grille tout seul, mais
-   pas ce qui est posé en coordonnées PHYSIQUES. La coquille du métier tient le
-   rail et la zone de travail en absolu (`left: 0` / `inset: 0 0 0 212px`) :
-   sans ces deux règles, tout l'intérieur passait à droite pendant que le rail
-   restait collé à gauche — une caisse à moitié retournée, ce qui est pire que
-   pas retournée du tout. La bordure suit le même raisonnement : elle sépare le
-   rail de la zone de travail, donc elle change de côté avec lui. */
-.kiwi-rtl #pos-boutique > .bq-rail { left: auto; right: 0; }
-.kiwi-rtl #pos-boutique > .bq-main { inset: 0 212px 0 0; }
-.kiwi-rtl .bq-rail { border-right: 0; border-left: 1px solid rgba(255,255,255,0.06); }
+/* ── Arabe · la coquille suit `dir` ───────────────────────────────────────────
+   `dir="rtl"` retourne tout seul les dispositions en flex et en grille. Ce qui
+   était posé en coordonnées physiques (`left` / `right`, `text-align: left`,
+   `margin-left: auto`, les bordures du rail et du ticket) est écrit en
+   propriétés logiques (`inset-inline`, `text-align: start`, `margin-inline`,
+   `border-inline`) : le rail, la zone de travail et leurs bordures changent de
+   côté ensemble, sans règle `.kiwi-rtl` pour les rattraper. Il ne reste en
+   physique que ce qui est symétrique (remplir de bord à bord) ou un décor
+   (coins du cadre de la caméra, encoche du ticket d'avoir). */
 /* Le prix barré d'une promotion. Chaque montant est déjà tenu à l'endroit un
    par un, dans son propre îlot (assets/caisse-lang.js) : « 4 200 MAD » ne peut
    plus se relire « MAD 4 200 ». Il ne reste donc qu'à laisser la PAIRE suivre

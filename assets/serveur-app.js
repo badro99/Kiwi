@@ -3273,9 +3273,13 @@
        au prix du premier : chacun payait la moyenne et les lignes mentaient.
        Un autre prix garde sa propre carte et son nom de base. */
 
+    /* Argent en centimes entiers, comme le serveur et table-settlement.js :
+       totalCents ici, amountCents / tipCents sur chaque part. Seuls les prix
+       unitaires du menu (itemTotals) et les lignes de ticket restent en
+       dirhams, et chaque passage de l'un à l'autre se fait à un seul endroit. */
     const splitState = {
       tableId: null,
-      total: 0,
+      totalCents: 0,
       itemTotals: {},     // { itemName: { totalQty, unitPrice } }
       splitMode: 'egal',
       numParts: 2,

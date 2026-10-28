@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
-const EXPECTED = 20;
+const EXPECTED = 21;
 let checks = 0;
 async function check(name, fn) { await fn(); checks += 1; process.stdout.write(`  ok ${checks} - ${name}\n`); }
 
@@ -112,33 +112,48 @@ function renderEconomat({ snapshot, catalogue = [], doc = {} }) {
 await check('counts read every storeroom row; only the list is bounded and says how many it hides', async () => {
   const snapshot = {};
   for (let i = 0; i < 150; i += 1) snapshot[`item-${String(i).padStart(3, '0')}||u-economat`] = i < 130 ? 2 : 50;
-  const view = renderEconomat({ snapshot });
+  const catalogue = Array.from({ length: 150 }, (_, i) => ({ id: `item-${String(i).padStart(3, '0')}`, name: `Item ${i}`, unit: 'unite', reorderLevel: 10 }));
+  const view = renderEconomat({ snapshot, catalogue });
   assert.equal(view.tracked, 150);
   assert.equal(view.low, 130);
   assert.equal(view.rows, 120);
   assert.match(view.body, /30 autres lignes non affichées/);
   assert.doesNotMatch(renderEconomat({ snapshot: { 'a||u-economat': 1 } }).body, /non affichées/);
 });
-await check('low stock follows the item reorder level, the old 5 only when none is set', async () => {
+await check('low stock follows the item reorder level and never invents one', async () => {
   const view = renderEconomat({
-    snapshot: { 'draps||u-economat': 30, 'serviettes||u-economat': 8, 'savon||u-economat': 3, 'eau||u-economat': 4 },
+    snapshot: { 'draps||u-economat': 30, 'serviettes||u-economat': 8, 'savon||u-economat': 3, 'eau||u-economat': 4, 'vide||u-economat': 0 },
     catalogue: [
       { id: 'draps', name: 'Draps', unit: 'unite', reorderLevel: 40 },
       { id: 'serviettes', name: 'Serviettes', unit: 'unite', reorderLevel: 10 },
       { id: 'savon', name: 'Savon', unit: 'unite', reorderLevel: 2 },
     ],
   });
-  // draps 30 < 40 et serviettes 8 < 10 : bas ; savon 3 ≥ 2 : disponible ; eau sans seuil, 4 ≤ 5 : bas.
+  // draps 30 < 40 et serviettes 8 < 10 : bas ; savon 3 ≥ 2 : disponible ; eau n'a pas de seuil : on n'en invente pas
+  // (l'ancien « 5 ou moins » la classait basse) ; vide est à zéro : rupture, donc à commander.
   assert.equal(view.low, 3);
   assert.match(view.body, /<b>Draps<\/b>[^]*?À commander/);
   assert.match(view.body, /<b>Savon<\/b><small>[^<]*<\/small><\/div><div class="hx-eco-qty">3<\/div><span class="hx-pill ok/);
+  assert.match(view.body, /<b>eau<\/b><small>eau[^<]*Seuil non défini<\/small><\/div><div class="hx-eco-qty">4<\/div><span class="hx-pill ok/, 'a row with no reorder level is available and says the level is missing');
+  assert.doesNotMatch(view.body, /<b>Savon<\/b><small>[^<]*Seuil non défini/, 'a row with a level does not say it is missing');
+  assert.match(view.body, /<b>vide<\/b>[^]*?Rupture/);
+  const quiet = renderEconomat({ snapshot: { 'eau||u-economat': 4, 'sel||u-economat': 9 } });
+  assert.equal(quiet.low, 0, 'with no level anywhere, nothing is called low');
+  assert.match(quiet.body, /2 sans seuil défini/, 'the count of rows without a level is on the low-stock card');
+});
+await check('the missing-level wording exists in French, English and Arabic', async () => {
+  for (const key of ['noThreshold', 'noThresholdN']) {
+    const found = [...economatSource.matchAll(new RegExp(`STR\\.(fr|en|ar)\\.${key} = '([^']+)'`, 'g'))];
+    assert.deepEqual(found.map((m) => m[1]).sort(), ['ar', 'en', 'fr'], key + ' in three languages');
+    found.forEach((m) => assert.ok(!/\u2014/.test(m[2]), key + ' has no em dash'));
+  }
 });
 await check('rows show the catalogue name, unit and ledger location, not the bare id', async () => {
   const view = renderEconomat({
     snapshot: { 'it-7f3a||u-bar': 12 },
     catalogue: [{ id: 'it-7f3a', name: 'Eau minérale 1,5 L', unit: 'bouteille' }],
   });
-  assert.match(view.body, /<b>Eau minérale 1,5 L<\/b><small>it-7f3a · bouteille · u-bar<\/small>/);
+  assert.match(view.body, /<b>Eau minérale 1,5 L<\/b><small>it-7f3a · bouteille · u-bar · Seuil non défini<\/small>/);
 });
 
 await check('every storeroom item can be found by search, beyond the first 120 rows', async () => {

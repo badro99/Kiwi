@@ -30,6 +30,11 @@ const quarantineGuard = async () => ({ sql: '', args: [] });
 // retail tender validator has its own end-to-end D1 test in check.js.
 const validateRetailTenders = () => null;
 const retailTenderMethod = () => '';
+// The server-truth helpers run for real; only the business-day lookups they import are fixed.
+const businessDate = () => '2026-01-01';
+const merchantCutoff = async () => 5;
+const merchantZone = async () => 'Africa/Casablanca';
+${read('functions/api/_sale-truth.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
 
 const MAX_AMOUNT_CENTS`);
 const mod = await import('data:text/javascript;base64,' + Buffer.from(api).toString('base64'));

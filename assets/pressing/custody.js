@@ -1,12 +1,12 @@
 /* Custody owner exports custody (named domain methods and UI context readers),
  * plus live root/catalog presentation bindings. Owns orders, garments, deposits,
  * rack allocation, numbering, persistence and existing centime calculations.
- * Browser reads: KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
+ * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=3';
-import { create as createWorkshop } from './workshop.js?v=3';
-import { create as createPickup } from './pickup.js?v=3';
-import { create as createRack } from './rack.js?v=3';
+import { create as createDeposit } from './deposit.js?v=10';
+import { create as createWorkshop } from './workshop.js?v=10';
+import { create as createPickup } from './pickup.js?v=10';
+import { create as createRack } from './rack.js?v=10';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
  * ---------------------------------------------------------------------------
@@ -130,6 +130,8 @@ import { create as createRack } from './rack.js?v=3';
     return new Date(guess);
   }
   const fmtDT   = (d) => { const w = storeWall(d); return `${DAYS[w.getUTCDay()]} ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]} · ${pad2(w.getUTCHours())}:${pad2(w.getUTCMinutes())}`; };
+  /* « Marqué prévenu · qui · quand · canal » (voir pressing-ops.js), à l'heure du magasin. */
+  const notifyLine = (o) => window.KiwiPressingOps.notificationLine(o, { tr: (t) => (window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(t) : t), fmt: fmtDT });
   const fmtDay  = (d) => { const w = storeWall(d); return `${DAYS[w.getUTCDay()]} ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]}`; };
   const H = 3600 * 1000;
   const MAX_QTY = 99;
@@ -1306,16 +1308,16 @@ import { create as createRack } from './rack.js?v=3';
             <i class="px-net-dot"></i><span class="px-net-label">En ligne</span>
           </button>
           <button class="px-lock" id="px-theme" type="button" aria-pressed="false">
-            <i data-lucide="moon" data-px-theme="dark"></i>
-            <i data-lucide="sun" data-px-theme="light" style="display:none"></i>
+            <i data-icon="dark_mode" data-px-theme="dark"></i>
+            <i data-icon="light_mode" data-px-theme="light" style="display:none"></i>
             <span>Mode nuit</span>
           </button>
           <button class="px-lock" id="px-fullscreen" type="button" aria-pressed="false">
-            <i data-lucide="maximize" data-px-fs="enter"></i>
-            <i data-lucide="minimize" data-px-fs="exit" style="display:none"></i>
+            <i data-icon="fullscreen" data-px-fs="enter"></i>
+            <i data-icon="fullscreen_exit" data-px-fs="exit" style="display:none"></i>
             <span>Plein écran</span>
           </button>
-          <button class="px-lock" id="px-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
+          <button class="px-lock" id="px-lock"><i data-icon="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
       <main class="px-main">
@@ -1330,7 +1332,7 @@ import { create as createRack } from './rack.js?v=3';
               <div class="px-head-tools">
                 <div class="px-head-hint"><b id="px-catalog-count"></b> articles · touchez pour ajouter</div>
                 <label class="px-catalog-search">
-                  <i data-lucide="search" aria-hidden="true"></i>
+                  <i data-icon="search" aria-hidden="true"></i>
                   <input id="px-catalog-search" type="search" autocomplete="off" placeholder="Trouver un article" aria-label="Rechercher un article">
                 </label>
               </div>
@@ -1708,19 +1710,19 @@ import { create as createRack } from './rack.js?v=3';
     const el = $('#px-tagsm', root);
     const fresh = ctx && ctx.fresh;
     el.innerHTML = `
-      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${publicOrderNo(order)}</h3>
       <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible au nom du client.</p>
       <div class="px-tags-grid" tabindex="0" role="region" aria-label="Ticket, duplicata &amp; étiquettes">
         <div class="px-receipts-preview">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>
         <div class="px-tags-list">${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>
       </div>
-      <div class="px-tags-note"><i data-lucide="shield-check"></i>Sur chaque étiquette : nom du client, commande, pièce, article et service. Rien d'autre.</div>
+      <div class="px-tags-note"><i data-icon="verified_user"></i>Sur chaque étiquette : nom du client, commande, pièce, article et service. Rien d'autre.</div>
       <div class="px-tags-foot">
-        <button class="px-btn secondary" id="px-tags-print"><i data-lucide="printer"></i>Imprimer 2 tickets + ${order.pieces.length} étiq.</button>
+        <button class="px-btn secondary" id="px-tags-print"><i data-icon="print"></i>Imprimer 2 tickets + ${order.pieces.length} étiq.</button>
         ${fresh
-          ? `<button class="px-btn primary" id="px-tags-pay"><i data-lucide="banknote"></i>Encaissement</button>`
-          : `<button class="px-btn primary" data-px-close><i data-lucide="check"></i>Fermer</button>`}
+          ? `<button class="px-btn primary" id="px-tags-pay"><i data-icon="payments"></i>Encaissement</button>`
+          : `<button class="px-btn primary" data-px-close><i data-icon="check"></i>Fermer</button>`}
       </div>`;
     openVeil('#px-tags-veil');
     icons();
@@ -1756,38 +1758,38 @@ import { create as createRack } from './rack.js?v=3';
 
     const step1 = () => {
       el.innerHTML = `
-        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">${settle ? 'Encaisser le solde' : 'Encaissement'}</h3>
         <p class="modal-subtle">${order.id} · ${dataText(cust.name)}</p>
         <div class="modal-amount size-md">${fmtMAD(amountBase)}</div>
         <div class="px-pay-opts">
           ${settle ? '' : `
           <button class="px-pay-opt" data-px-paymode="now">
-            <span class="ic"><i data-lucide="banknote"></i></span>
+            <span class="ic"><i data-icon="payments"></i></span>
             <span class="l"><b>Payer maintenant</b><span>Espèces ou carte à la dépose</span></span>
             <span class="amt">${fmtMAD(total)}</span>
           </button>
           <button class="px-pay-opt" data-px-paymode="acompte" ${total < 10 ? 'disabled' : ''}>
-            <span class="ic"><i data-lucide="coins"></i></span>
+            <span class="ic"><i data-icon="toll"></i></span>
             <span class="l"><b>Acompte à la dépose</b><span>${total < 10 ? 'Minimum 10 MAD · indisponible pour ce ticket' : 'Le reste au retrait'}</span></span>
           </button>
           <button class="px-pay-opt is-usual" data-px-paymode="pickup">
-            <span class="ic"><i data-lucide="hand-coins"></i></span>
+            <span class="ic"><i data-icon="payments"></i></span>
             <span class="l"><b>Payer au retrait</b><span>Le classique du pressing, solde sur le ticket</span></span>
             <span class="amt">${fmtMAD(total)}</span>
           </button>
           ${cust.b2b ? `
           <button class="px-pay-opt" data-px-paymode="compte">
-            <span class="ic"><i data-lucide="building-2"></i></span>
+            <span class="ic"><i data-icon="apartment"></i></span>
             <span class="l"><b>Sur compte B2B</b><span>${dataText(cust.name)}, facture fin de mois</span></span>
           </button>` : ''}`}
           ${settle ? `
           <button class="px-pay-opt" data-px-method="especes">
-            <span class="ic"><i data-lucide="banknote"></i></span>
+            <span class="ic"><i data-icon="payments"></i></span>
             <span class="l"><b>Espèces</b><span>Rendu calculé</span></span>
           </button>
           <button class="px-pay-opt" data-px-method="carte">
-            <span class="ic"><i data-lucide="credit-card"></i></span>
+            <span class="ic"><i data-icon="credit_card"></i></span>
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire</span></span>
           </button>` : ''}
         </div>`;
@@ -1818,7 +1820,7 @@ import { create as createRack } from './rack.js?v=3';
     const stepAcompte = () => {
       let acompte = Math.min(total, Math.max(10, Math.round(total / 2 / 10) * 10));
       el.innerHTML = `
-        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Acompte</h3>
         <p class="modal-subtle">${order.id} · total ${fmtMAD(total)}</p>
         <div class="modal-amount size-md" id="px-ac-val">${fmtMAD(acompte)}</div>
@@ -1870,16 +1872,16 @@ import { create as createRack } from './rack.js?v=3';
 
     const stepMethod = (amount, mode) => {
       el.innerHTML = `
-        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">${mode === 'acompte' ? 'Acompte' : 'Paiement'} · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${order.id} · ${dataText(cust.name)}</p>
         <div class="px-pay-opts" style="margin-top:8px;">
           <button class="px-pay-opt" data-m="especes">
-            <span class="ic"><i data-lucide="banknote"></i></span>
+            <span class="ic"><i data-icon="payments"></i></span>
             <span class="l"><b>Espèces</b><span>Rendu calculé</span></span>
           </button>
           <button class="px-pay-opt" data-m="carte">
-            <span class="ic"><i data-lucide="credit-card"></i></span>
+            <span class="ic"><i data-icon="credit_card"></i></span>
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
         </div>`;
@@ -1893,7 +1895,7 @@ import { create as createRack } from './rack.js?v=3';
     const stepCash = (amount, mode) => {
       let received = amount;
       el.innerHTML = `
-        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${order.id} · ${dataText(cust.name)}</p>
         <div class="cash-grid">
@@ -1924,11 +1926,11 @@ import { create as createRack } from './rack.js?v=3';
 
     const stepCard = (amount, mode) => {
       el.innerHTML = `
-        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Carte · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${order.id} · lecteur partenaire, Kiwi affiche, le lecteur encaisse</p>
         <div class="reader-stage">
-          <div class="reader-disc is-pulsing" id="px-reader-disc"><i data-lucide="credit-card"></i></div>
+          <div class="reader-disc is-pulsing" id="px-reader-disc"><i data-icon="credit_card"></i></div>
           <div class="reader-status" id="px-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
           <div class="reader-method">Lecteur CMI partenaire · paiement sur votre terminal</div>
         </div>`;
@@ -2231,8 +2233,8 @@ import { create as createRack } from './rack.js?v=3';
   const custody = Object.freeze({
     depositContext() { return Object.freeze({ $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket }); },
     workshopContext() { return Object.freeze({ $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone }); },
-    pickupContext() { return Object.freeze({ $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast }); },
-    rackContext() { return Object.freeze({ $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, findOrder, icons, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast }); },
+    pickupContext() { return Object.freeze({ $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast }); },
+    rackContext() { return Object.freeze({ $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, esc, findOrder, icons, notifyLine, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast }); },
     orderTotals, saleLines, buildPieces, orderStatus, findOrder, assignSlot, releaseSlot,
     deliverOrder, setWholeOrderStatus, freshTicket, persistPressing,
   });

@@ -29,7 +29,7 @@ await test('refused and network reprints announce retry and retain the row', asy
   for (const answer of [{status:0,j:null},{status:409,j:{ok:false}},null]) {
     let removed=false; const btn={}, messages=[];
     const row={querySelector:selector=>selector==='button'?btn:null,remove:()=>{removed=true;},appendChild:node=>messages.push(node)};
-    vm.runInNewContext(ui.slice(start,end), {row,job:{id:'fixture'},relayMerchantQS:()=>'',relayFetch:()=>answer===null?Promise.reject(Error('offline')):Promise.resolve(answer),say:s=>s,esc:String,window:{},document:{createElement:()=>({setAttribute(){}})}});
+    vm.runInNewContext(ui.slice(start,end), {row,job:{id:'fixture'},relayMerchantQS:()=>'',relayFetch:()=>answer===null?Promise.reject(Error('offline')):Promise.resolve(answer),say:s=>s,unprintedWhat:()=>'',esc:String,window:{},document:{createElement:()=>({setAttribute(){}})}});
     btn.onclick.call(btn); await new Promise(resolve=>setImmediate(resolve));
     assert.equal(btn.disabled,false); assert.equal(removed,false);
     assert.ok(messages.some(node=>node.textContent && /réessayez/.test(node.textContent)));

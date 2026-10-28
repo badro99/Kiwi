@@ -398,7 +398,10 @@ function realClosedTips(range) {
     const coverage = window.KiwiSalesReconcile?.coverage();
     const first = merchantDayKey(from + 1, slug);
     const last = to === Infinity ? merchantDayKey(Date.now(), slug) : merchantDayKey(to - 1, slug);
-    let sum = 0, days = 0;
+    /* Tout en centimes entiers : des dirhams flottants (le Z) et des centimes
+       (la caisse, le résumé) s'additionnaient en flottants et s'arrondissaient
+       une fois à la fin. */
+    let cents = 0, days = 0;
     let reports = [];
     try { reports = DR.list(book) || []; } catch (_) { return null; }
     const closed = new Set();
@@ -406,26 +409,31 @@ function realClosedTips(range) {
       if (!r || !r.closed || !r.day || r.day < first || r.day > last) return;
       const t = Number(r.tips);
       days++; closed.add(r.day);
-      if (Number.isFinite(t) && t > 0) sum += t;
+      if (Number.isFinite(t) && t > 0) cents += Math.round(t * 100);
     });
     const live = new Set();
     let sales = [];
     try { sales = typeof __state.realSalesList === 'function' ? __state.realSalesList() : []; } catch (_) { sales = []; }
     (sales || []).forEach((e) => {
-      const cents = Math.round(Number(e && e.tipCents));
-      if (!(cents > 0)) return;
+      const tipCents = Math.round(Number(e && e.tipCents));
+      if (!(tipCents > 0)) return;
       const ts = +e.ts || 0;
       if (ts < from || ts >= to || (coverage != null && ts < coverage)) return;
       const day = merchantDayKey(ts, slug);
       if (closed.has(day)) return;
       live.add(day);
-      sum += cents / 100;
+      cents += tipCents;
     });
     const old = window.KiwiSalesHistory?.oldTips(from, to, closed);
-    if (old?.partial) return { partial: true };
-    sum += old?.sum || 0; days += old?.days || 0;
+    /* L'historique ancien (avant la couverture des ventes locales) vient du
+       résumé serveur, qui peut tarder ou échouer. Les pourboires déjà connus
+       (Z clos et caisse) restent comptés et la tuile le DIT (partial), au lieu
+       de les taire. */
+    if (!old?.partial) { cents += Math.round((old?.sum || 0) * 100); days += old?.days || 0; }
     days += live.size;
-    return { sum: Math.round(sum * 100) / 100, days, liveDays: live.size };
+    const out = { sum: cents / 100, days, liveDays: live.size };
+    if (old?.partial) out.partial = true;
+    return out;
   }
 
 function realClientMix(from, to) {

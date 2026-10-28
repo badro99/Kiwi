@@ -1,5 +1,12 @@
 // Inbound stock retries are separate from the outbound Shopify stock outbox.
 // No customer/address data is necessary to replay an inventory movement.
+/* Une commande dont une ligne ne se résout jamais (variante retirée du lien,
+ * catalogue illisible) ne tourne pas pour toujours : après ce nombre d'essais,
+ * avec l'attente qui monte jusqu'à une heure (≈ 14 h au total), elle passe en
+ * « dead » et le panneau de santé du connecteur la signale pour un traitement
+ * manuel. Le stock n'a jamais été touché pour la ligne en cause. */
+export const INBOUND_MAX_ATTEMPTS = 20;
+
 async function ensure(db) {
   // Schema owned by migrations 0001–0010.
 }
@@ -31,23 +38,28 @@ export async function flushInboundStock(env, apply, merchant = '', ref = '', lim
     const done = !!result && !result.unmatched;
     if (!done && !error) error = 'inventory-mapping-or-write-pending';
     const attempts = Number(row.attempts || 0) + 1;
+    const dead = !done && attempts >= INBOUND_MAX_ATTEMPTS;
     await env.DB.prepare(`UPDATE shopify_inbound_stock
       SET status = ?, attempts = ?, next_ts = ?, last_error = ?, updated_ts = ?
       WHERE merchant = ? AND order_ref = ? AND status = 'pending'`)
-      .bind(done ? 'done' : 'pending', attempts,
+      .bind(done ? 'done' : dead ? 'dead' : 'pending', attempts,
         done ? 0 : Date.now() + Math.min(3600000, 15000 * Math.pow(2, Math.min(attempts, 8))),
         error, Date.now(), row.merchant, row.order_ref).run();
     // Expose the outstanding reconciliation in the existing merchant connector
     // health panel; never erase an unrelated outbound/provider error.
     try {
-      if (!done) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
+      if (dead) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
+        .bind('Stock Shopify abandonné après ' + attempts + ' essais : commande ' + row.order_ref + ', à traiter à la main', Date.now(), row.merchant).run();
+      else if (!done) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
         .bind('Stock Shopify à synchroniser : commande ' + row.order_ref, Date.now(), row.merchant).run();
+      else if (result.short) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
+        .bind('Survente Shopify : commande ' + row.order_ref + ', stock Kiwi insuffisant (' + result.short + ' pièce' + (result.short > 1 ? 's' : '') + ' non décomptée' + (result.short > 1 ? 's' : '') + ')', Date.now(), row.merchant).run();
       else await env.DB.prepare(`UPDATE shopify_connections SET last_error = '', updated_ts = ?
         WHERE merchant = ? AND last_error = ? AND NOT EXISTS
           (SELECT 1 FROM shopify_inbound_stock WHERE merchant = ? AND status = 'pending')`)
         .bind(Date.now(), row.merchant, 'Stock Shopify à synchroniser : commande ' + row.order_ref, row.merchant).run();
     } catch (_) { /* Retry ownership is durable even if the health projection fails. */ }
-    if (done) completed++; else pending++;
+    if (done) completed++; else if (!dead) pending++;
   }
   return { completed, pending };
 }

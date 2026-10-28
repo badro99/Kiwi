@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import * as ICE from '../functions/api/_ice.js';
 import * as SERIES from '../functions/api/_invoice-series.js';
+import * as RECONCILE from '../functions/api/_invoice-reconcile.js';
 import pagesProText from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const __filename = fileURLToPath(import.meta.url);
@@ -195,7 +196,7 @@ if (custValMatch && fmtNumMatch && schemaMatch && getOrCreateMatch) {
   /* validateCustomer lit la règle ICE partagée (functions/api/_ice.js). */
   /* …et l'allocateur de numéros commun à la caisse et à la saisie
    * (functions/api/_invoice-series.js). */
-  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', 'allocateNumber', 'businessDate', 'merchantZone', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL, SERIES.allocateNumber, businessDate, merchantZone);
+  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', 'allocateNumber', 'businessDate', 'merchantZone', 'reconcileInvoiceSnapshot', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL, SERIES.allocateNumber, businessDate, merchantZone, RECONCILE.reconcileInvoiceSnapshot);
   validateCustomer = helpers.validateCustomer;
   formatInvoiceNumber = helpers.formatInvoiceNumber;
   getOrCreateSaleInvoice = helpers.getOrCreateSaleInvoice;

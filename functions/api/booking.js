@@ -1,7 +1,10 @@
 import { serviceCapacityAvailable } from './_booking-capacity.js';
+import { capBookings, BOOKING_CAP } from './_booking-cap.js';
+import { BOOKING_ACTIVE as ACTIVE, bookingOverlaps as overlaps, bookingResourceFree as free, bookingResourceCandidates as candidates, bookingConcurrent } from './_rules-booking.js';
 import { DateTimeFormat } from './_cached-clock.js';
 import { merchantZone } from './_business-day.js';
 import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
+import { bookingMail, mailLang } from './_booking-mail.js';
 // Public Kiwi booking surface. It exposes availability, never another client's details.
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
@@ -12,7 +15,6 @@ import { pruneReservationsDoc } from './hotel/stays.js';
 import { commercialSnapshot } from './hotel/_commercial.js';
 import { stayOptions } from './hotel/_stay-options.js';
 
-const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
 const REF = /^[A-Za-z0-9_-]{8,80}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -48,7 +50,7 @@ function safeDoc(raw) {
   out.services.forEach(x => { x.price = Math.round(x.price * 100) / 100; x.deposit = Math.min(x.price, Math.round(x.deposit * 100) / 100); });
   out.resources = (Array.isArray(d.resources) ? d.resources : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), kind: ['person','room','table'].includes(x?.kind) ? x.kind : 'person', capacity: num(x?.capacity, 1, 999, 1), active: x?.active !== false, week: x?.week && typeof x.week === 'object' ? x.week : null, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.blocked = (Array.isArray(d.blocked) ? d.blocked : []).slice(-500).map((x) => ({ id: str(x?.id, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, reason: str(x?.reason, 120), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.startAt && x.endAt > x.startAt);
-  out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0), channel:['direct','booking','airbnb','expedia','walkin','other'].includes(x.hotel.channel)?x.hotel.channel:(x.source==='public'?'direct':'other'), externalRef:str(x.hotel.externalRef,80), feedId:str(x.hotel.feedId,64), syncedAt:+x.hotel.syncedAt||0, conflict:!!x.hotel.conflict } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
+  out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0), channel:['direct','booking','airbnb','expedia','walkin','other'].includes(x.hotel.channel)?x.hotel.channel:(x.source==='public'?'direct':'other'), externalRef:str(x.hotel.externalRef,80), feedId:str(x.hotel.feedId,64), syncedAt:+x.hotel.syncedAt||0, conflict:!!x.hotel.conflict } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
   const originals = new Map((Array.isArray(d.bookings) ? d.bookings : []).map(x => [x?.id, x]));
   out.bookings.forEach(x => {
     const original = originals.get(x.id);
@@ -97,15 +99,6 @@ function periodsFor(date, resource, hours) {
   if (!resource?.week && exception) periods = exception.kind === 'hours' ? (exception.periods || []) : [];
   return periods.map((p) => ({ from: str(p?.from, 5), to: str(p?.to, 5) })).filter((p) => HHMM.test(p.from) && HHMM.test(p.to));
 }
-function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
-function free(doc, rid, startAt, endAt) {
-  if (doc.bookings.some((b) => ACTIVE.has(b.status) && b.resourceId === rid && overlaps(startAt, endAt, b.startAt, b.endAt))) return false;
-  return !doc.blocked.some((b) => (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt));
-}
-function candidates(doc, svc, asked, partySize) {
-  const allowed = svc.resourceIds.length ? new Set(svc.resourceIds) : null;
-  return doc.resources.filter((r) => r.active && r.capacity >= partySize && (!asked || r.id === asked) && (!allowed || allowed.has(r.id)));
-}
 /* The largest party this service can actually seat — the public page needs a
  * real number to draw its guest stepper. Reading it off the resources is the
  * only honest source: the seats live on the table, not on the service. */
@@ -134,7 +127,7 @@ function teamCoverage(team, startAt, endAt, zone = TZ) {
 function staffAllows(doc, team, startAt, endAt, zone = TZ) {
   if(!doc.settings.staffingEnabled)return true;
   const coverage=teamCoverage(team,startAt,endAt,zone);if(!coverage.configured)return true;
-  const concurrent=doc.bookings.filter((b)=>ACTIVE.has(b.status)&&overlaps(startAt,endAt,b.startAt,b.endAt)).length;
+  const concurrent=bookingConcurrent(doc,startAt,endAt);
   return coverage.count>0&&concurrent<coverage.count*doc.settings.tablesPerStaff;
 }
 function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(null), zone = TZ) {
@@ -241,34 +234,10 @@ function manageExpired(rec, now = Date.now()) {
   const end = +rec?.endAt || +rec?.startAt || 0;
   return end > 0 && now > end + MANAGE_TTL_MS;
 }
-async function confirmationMail(env, request, merchant, meta, rec) {
+async function confirmationMail(env, request, merchant, meta, rec, lang, zone) {
   if (!rec.customer.email) return { ok: false, reason: 'no-recipient' };
-  const venue = str(meta?.name, 100) || 'Votre établissement';
-  const when = rec.hotel
-    ? `${rec.hotel.checkIn} → ${rec.hotel.checkOut} (${rec.hotel.nights} nuit${rec.hotel.nights > 1 ? 's' : ''})`
-    : new Date(rec.startAt).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  const requested = rec.status === 'requested';
-  const lines = [
-    `${venue}`,
-    '',
-    requested
-      ? 'Votre demande de réservation a bien été reçue. Elle vous sera confirmée par l\'établissement.'
-      : 'Votre réservation est confirmée.',
-    '',
-    `Référence : ${rec.code}`,
-    `Date : ${when}`,
-    rec.hotel ? `Chambre : ${rec.hotel.roomTypeName}` : `Personnes : ${rec.partySize}`,
-    '',
-    'Consulter ou annuler votre réservation :',
-    manageUrl(request, merchant, rec.manageToken),
-    '',
-    'Ce lien est personnel. Ne le transmettez pas.',
-  ];
-  return sendMail(env, {
-    to: rec.customer.email,
-    subject: `${venue} · ${requested ? 'demande reçue' : 'réservation confirmée'} · ${rec.code}`,
-    text: lines.join('\n'),
-  });
+  const mail = bookingMail({ lang, venue: str(meta?.name, 100), rec, zone, manageUrl: manageUrl(request, merchant, rec.manageToken) });
+  return sendMail(env, { to: rec.customer.email, subject: mail.subject, text: mail.text });
 }
 
 async function readRows(env, merchant) {
@@ -392,6 +361,9 @@ export async function onRequestDelete({ request, env }) {
           events:[{ previous, current:rec, action:'cancel' }] });
         if (next) { await poke(env, merchant, 'reservations'); return json({ ok:true, status:'cancelled' }); }
       } else {
+        /* Annuler ne refuse jamais : on retire du passé si le document dépasse, sinon on écrit tel quel. */
+        const capped = capBookings(doc.bookings, now);
+        if (!capped.full) doc.bookings = capped.bookings;
         const text = JSON.stringify(doc);
         const result = await env.DB.prepare(
           "UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?"
@@ -416,6 +388,8 @@ export async function onRequestPost({ request, env }) {
      l'écran que découvrir le jour de l'arrivée qu'elle est injoignable. */
   if(rawEmail&&!email){await limitFail(request,env,'booking');return json({error:'invalid-email'},400);}
   if(await storeSubscriptionPending(env,merchant))return json({error:'subscription-required'},402);
+  /* La langue de la page de réservation (FR, EN, AR) : celle du courriel de confirmation. */
+  const guestLang=mailLang(b?.lang,request.headers.get('Accept-Language'));
   for(let attempt=0;attempt<4;attempt++){
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
     const doc=safeDoc(rows.reservation?.data), rev=+rows.reservation?.rev||0;
@@ -478,7 +452,7 @@ export async function onRequestPost({ request, env }) {
         /* L'envoi ne conditionne JAMAIS la réservation : elle est écrite, elle
            existe. On dit seulement si la confirmation est partie, pour que la
            page n'annonce pas un e-mail qui n'a jamais quitté le serveur. */
-        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec);
+        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec,guestLang,rows.zone);
         return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}}catch(_){return json({error:'write-failed'},503);}
       continue;
     }
@@ -494,13 +468,19 @@ export async function onRequestPost({ request, env }) {
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');
     const rec={depositExpectation:{amountCents:Math.round(svc.deposit*100),status:'not-collected',policy:'arrange-with-venue'},id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:sid,resourceId:rid,startAt,endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,createdAt:now,updatedAt:now};
-    doc.bookings.push(rec);const text=JSON.stringify(doc),next=rev+1;
+    doc.bookings.push(rec);
+    /* Plafond du document : les plus anciennes réservations PASSÉES partent d'abord ;
+       s'il ne reste que des réservations à venir, la demande est refusée, jamais perdue. */
+    const capped=capBookings(doc.bookings,now);
+    if(capped.full)return json({error:'bookings-full',cap:BOOKING_CAP},409);
+    doc.bookings=capped.bookings;
+    const text=JSON.stringify(doc),next=rev+1;
     try{
       let result;
       if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}
       else{result=await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant,text,now).run();}
       if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');
-        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec);
+        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec,guestLang,rows.zone);
         return json({ok:true,id:rec.id,code,status:rec.status,startAt,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}
     }catch(_){return json({error:'write-failed'},503);}
   }

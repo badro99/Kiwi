@@ -79,6 +79,8 @@ async function issueAuthority(request, env, merchant, { approval, requestId, ori
   return { ok: await mayCancelCredit(request, env, merchant), approver: '' };
 }
 
+const HISTORY_KEEP = 100;
+
 function view(row, events = []) {
   return {
     id: clean(row.id, 96), code: clean(row.code, 40), customerId: clean(row.customer_id, 96),
@@ -144,21 +146,32 @@ export async function onRequestGet({ request, env }) {
   if (code) { clauses.push(`${FOLDED_CODE_SQL} = ?`); binds.push(foldedCode(code)); }
   if (customerId) { clauses.push('customer_id = ?'); binds.push(customerId); }
   if (active) { clauses.push("status = 'active' AND balance_cents > 0 AND expires_ts >= ?"); binds.push(now()); }
+  const selected = `SELECT id FROM store_credits WHERE ${clauses.join(' AND ')} ORDER BY updated_ts DESC LIMIT 500`;
   const rows = await env.DB.prepare(
     `SELECT * FROM store_credits WHERE ${clauses.join(' AND ')} ORDER BY updated_ts DESC LIMIT 500`
   ).bind(...binds).all();
   const credits = (rows && rows.results) || [];
-  let byCredit = new Map();
+  /* L'historique de CHAQUE avoir rendu, ses HISTORY_KEEP derniers événements.
+     On lisait les 5000 derniers événements du commerce : derrière eux, un avoir
+     plus ancien affichait un historique vide sans le dire. Au-delà de la
+     borne, l'avoir porte historyTruncated. */
+  const byCredit = new Map();
   if (credits.length) {
     const events = await env.DB.prepare(
-      'SELECT * FROM store_credit_events WHERE merchant = ? ORDER BY ts DESC LIMIT 5000'
-    ).bind(merchant).all();
+      `SELECT * FROM (
+         SELECT e.*, ROW_NUMBER() OVER (PARTITION BY e.credit_id ORDER BY e.ts DESC, e.id DESC) AS rn
+           FROM store_credit_events e WHERE e.merchant = ? AND e.credit_id IN (${selected})
+       ) WHERE rn <= ? ORDER BY ts DESC, id DESC`
+    ).bind(merchant, ...binds, HISTORY_KEEP + 1).all();
     ((events && events.results) || []).forEach((row) => {
       const list = byCredit.get(row.credit_id) || [];
       list.push(eventView(row)); byCredit.set(row.credit_id, list);
     });
   }
-  return json({ merchant, credits: credits.map((row) => view(row, byCredit.get(row.id) || [])) });
+  return json({ merchant, credits: credits.map((row) => {
+    const events = byCredit.get(row.id) || [];
+    return { ...view(row, events.slice(0, HISTORY_KEEP)), historyTruncated: events.length > HISTORY_KEEP };
+  }) });
 }
 
 export async function onRequestPost({ request, env }) {

@@ -1,5 +1,6 @@
 import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
+import { servedDuring, verifiedProgress } from './_progress-truth.js';
 // Internal contract: actor is supplied only after liveEmployee authentication and
 // store operational checks. Access roles are distinct from free-form job titles.
 // Every listed action permits employee sessions only, never owner/till sessions.
@@ -10,6 +11,11 @@ const PROGRESS_FEATURE = 'employee-progress';
 const MAX_ATTENDANCE = 5000;
 // Automatic replay is limited to 12 h; older punches await an audited decision.
 const CAPTURE_MAX_AGE_MS = 12 * 3600000;
+// Combien de temps team.hoursCredited garde la marque d'un service crédité.
+const MARK_KEEP_MS = 3 * 86400000;
+// Un rejeu ne crédite seul que tant que la marque existe encore, avec un jour
+// de marge : au-delà, le gérant décide (le service reste « pending »).
+const REPLAY_CREDIT_MAX_MS = MARK_KEEP_MS - 86400000;
 // Même plafond par défaut que le planning (planning-core.js, settings.maxDailyHours).
 const DEFAULT_MAX_DAILY_HOURS = 12;
 // Délai d'acheminement toléré après la fin de vie du code, pour un pointage différé seulement.
@@ -101,7 +107,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
   const settings = (teamRow.data && teamRow.data.planning && teamRow.data.planning.settings) || {};
   const maxShiftMs = (settings.maxDailyHours == null ? DEFAULT_MAX_DAILY_HOURS : Math.max(0, Number(settings.maxDailyHours) || 0)) * 3600000;
   let refusal = '';
-  /** @type {{inTs: number, outTs: number} | null} Populated by the awaited document mutation. */
+  /** @type {{inTs: number, outTs: number, id?: string, hoursCredit?: string} | null} Populated by the awaited document mutation. */
   let changedEntry = null;
   let replay = false;
   const attendance = await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
@@ -138,31 +144,82 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       open.clockOutCodeTs = codeTs;
       if (opId) open.clockOutOpId = opId;
       if (deferred) { open.deferred = true; open.outDeferredMs = capturedAgo; }
+      // Ses heures ne sont pas encore créditées dans `team` (voir plus bas).
+      open.hoursCredit = 'pending';
       changedEntry = { ...open };
     }
     return { entries: entries.slice(-MAX_ATTENDANCE) };
   });
   if (refusal) return json({ error: refusal }, 409);
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
-  if (action === 'clock-out' && !replay && changedEntry && changedEntry.outTs > changedEntry.inTs) {
+  /* Deux documents, deux écritures : le service est fermé dans `attendance`,
+   * ses heures sont créditées dans `team`. Le résultat de la seconde était
+   * ignoré : en cas d'échec la route répondait ok, et la nouvelle tentative du
+   * téléphone (même opId) passait pour un rejeu qui ne créditait rien. Les
+   * heures disparaissaient sans un mot. Maintenant le service porte
+   * hoursCredit = 'pending' jusqu'au crédit ; un échec répond 503 (la file du
+   * téléphone garde le pointage et le renvoie), le rejeu d'un service encore
+   * 'pending' crédite, et `team.hoursCredited` (id du service, dans la même
+   * écriture que les heures) empêche de créditer deux fois. */
+  let creditedNow = false;
+  if (action === 'clock-out' && changedEntry && changedEntry.outTs > changedEntry.inTs
+      && (!replay || (changedEntry.hoursCredit === 'pending'
+        && now - (Number(changedEntry.outTs) || 0) < REPLAY_CREDIT_MAX_MS))) {
     /* Le service se crédite par le calcul même de la paie (_worked-hours.js),
      * à la seconde : arrondir chaque pointage au centième d'heure avant de les
      * additionner faisait dériver les heures, donc le salaire. */
     const credited = completedHours(changedEntry, memberId);
-    await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
+    const shiftId = String(changedEntry.id || '');
+    let already = false;
+    const team = await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
+      already = false;
       doc.members = Array.isArray(doc.members) ? doc.members : [];
       doc.hours = doc.hours && typeof doc.hours === 'object' ? doc.hours : {};
       doc.shifts = doc.shifts && typeof doc.shifts === 'object' ? doc.shifts : {};
+      const marks = doc.hoursCredited && typeof doc.hoursCredited === 'object' && !Array.isArray(doc.hoursCredited) ? doc.hoursCredited : {};
+      if (shiftId && marks[shiftId]) { already = true; return null; }
       if (!doc.hours[memberId]) doc.hours[memberId] = {};
       Object.keys(credited).forEach((day) => {
         doc.hours[memberId][day] = (Number(doc.hours[memberId][day]) || 0) + credited[day];
       });
+      if (shiftId) {
+        marks[shiftId] = Number(changedEntry.outTs) || now;
+        /* Bornée par l'ÂGE, jamais par le nombre : un téléphone ne renvoie pas un
+         * pointage de plus de 12 h (CAPTURE_MAX_AGE_MS), donc une marque de plus
+         * de trois jours ne protège plus rien. Une borne en nombre pouvait, un
+         * jour chargé, chasser la marque d'un service encore « pending » et le
+         * laisser créditer deux fois. Le plafond de 5 000 ne garde que la taille. */
+        const keepAfter = now - MARK_KEEP_MS;
+        doc.hoursCredited = Object.fromEntries(Object.entries(marks)
+          .filter(([, ts]) => Number(ts) >= keepAfter).sort((a, b) => b[1] - a[1]).slice(0, 5000));
+      }
       return doc;
     });
-    const rawProgress = body.progress && typeof body.progress === 'object' ? body.progress : {};
-    const paid = Math.min(200, Math.max(0, Math.floor(Number(rawProgress.paid) || 0)));
-    const revenue = Math.min(1000000, Math.max(0, Number(rawProgress.revenue) || 0));
-    const turnMinutes = Math.min(100000, Math.max(0, Number(rawProgress.turnMinutes) || 0));
+    if (!team && !already) return json({ error: 'attendance-hours-pending' }, 503);
+    creditedNow = !already;
+    /* Le service passe à « done ». La marque de `team` empêche déjà un second
+       crédit (et /api/store la garde quand un appareil réécrit l'équipe) ; on
+       réessaie tout de même une fois, pour qu'un rejeu ne dépende pas d'elle. */
+    if (shiftId) {
+      const markDone = () => mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
+        const entries = Array.isArray(doc.entries) ? doc.entries : [];
+        const entry = entries.find((e) => e && e.id === shiftId);
+        if (!entry || entry.hoursCredit !== 'pending') return null;
+        entry.hoursCredit = 'done';
+        return { ...doc, entries };
+      });
+      try { if (!await markDone()) await markDone(); } catch (_) { /* la marque de team tient */ }
+      changedEntry.hoursCredit = 'done';
+    }
+  }
+  // La progression suit le crédit des heures : une fois par service, rejeu compris.
+  if (creditedNow) {
+    /* Ce que l'app affirme n'est qu'un plafond : le crédit ne dépasse ni les
+       ventes que la session de cet employé a écrites pendant son service, ni la
+       durée du service (_progress-truth.js). */
+    const served = await servedDuring(env, merchant, auth.pin.id, changedEntry.inTs, changedEntry.outTs);
+    const { paid, revenue, turnMinutes } = verifiedProgress(body.progress, served,
+      (Number(changedEntry.outTs) || 0) - (Number(changedEntry.inTs) || 0));
     const speed = paid > 0 && turnMinutes > 0 ? Math.round(turnMinutes / paid) : null;
     const earnedXP = Math.round(paid * 10 + revenue * 0.01);
     await mutateDoc(env, merchant, PROGRESS_FEATURE, { members: {} }, (doc) => {

@@ -29,7 +29,7 @@ function harness(overrides = {}) {
     splitState: state, money, minor: v => Math.round(v * 100), major: v => v / 100,
     effectiveTipPct: () => overrides.tipPct || 0, phoneSessionOf: () => 'existing-visit',
     activeSaleDiscount: () => null, recordSale: () => null, markPaid() {}, selectedId: 'T7',
-    lineCat: () => 'meal', toast: s => calls.toast.push(s),
+    lineCat: () => 'meal', employeePick: (fr) => fr, toast: s => calls.toast.push(s),
     $: id => { if (!elements.has(id)) elements.set(id, { hidden: false, disabled: false, textContent: '', title: '' }); return elements.get(id); },
     renderSplitFlow: () => calls.render++, lucide: { createIcons() {} },
     renderConvivesChips() {}, renderConvivesTabs() {}, renderPool() {}, renderConviveCart() {},
@@ -90,7 +90,7 @@ check('Employee split also blocks unassigned dishes and preserves whole-item pay
   h.context.renderArticleMode(); assert.equal(h.elements.get('#split-launch').disabled, true);
   h.context.launchSplitFlow(); assert.equal(h.state.flow, null);
   h.context.assignUnit('Pasta'); h.context.renderArticleMode(); assert.equal(h.elements.get('#split-launch').disabled, false);
-  h.context.launchSplitFlow(); assert.deepEqual(Array.from(h.state.flow.parts, p => p.amount), [75,15]);
+  h.context.launchSplitFlow(); assert.deepEqual(Array.from(h.state.flow.parts, p => p.amountCents), [7500,1500]);
   assert.ok(h.state.flow.parts.flatMap(p => p.lines).every(l => Number.isInteger(l.qty) && !l.name.includes('1/')));
 });
 check('Employee whole-item split is refused once a deposit is already paid on the visit (no dish paid twice)', () => {
@@ -100,6 +100,6 @@ check('Employee whole-item split is refused once a deposit is already paid on th
   h.context.serviceVisitCredit.set('T7', 2000);
   h.context.launchSplitFlow(); assert.equal(h.state.flow, null); assert.match(h.calls.toast.at(-1), /parts égales/);
   h.context.serviceVisitCredit.delete('T7');
-  h.context.launchSplitFlow(); assert.deepEqual(Array.from(h.state.flow.parts, p => p.amount), [75,15]);
+  h.context.launchSplitFlow(); assert.deepEqual(Array.from(h.state.flow.parts, p => p.amountCents), [7500,1500]);
 });
 console.log(`Whole-item split: ${checks} production-function checks passed.`);

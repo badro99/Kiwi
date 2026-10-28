@@ -5,7 +5,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { quotaOk } from './_quota.js';
+import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -14,7 +14,7 @@ export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 800;
 const TEMPERATURE = 0.1;
-const DAILY_CAP = 200;
+const DAILY_CAP = DAILY_CAPS.reservation;
 
 const SYSTEM_PROMPT = `Tu es un réceptionniste de restaurant au Maroc.
 Analyse le message de réservation (WhatsApp, SMS ou DM en français, arabe ou darija) et extrais les faits au format JSON strict :
@@ -56,7 +56,7 @@ export async function onRequestPost(context) {
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'reservation', DAILY_CAP);
-  if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
+  if (!allowed) return json(quotaBody('reservation', 'daily-quota-exceeded'), 429);
 
   const text = typeof b?.text === 'string' ? b.text.trim().slice(0, 2000) : '';
   if (!text) return json({ error: 'text-required' }, 400);

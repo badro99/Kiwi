@@ -30,8 +30,8 @@ const dayOf = () => day;
 
 let line = B.cashGapRule({ ready: true, merchant: 'venue-a', day, businessDay: dayOf, events: [row(10000)] });
 ok(line && line.kind === 'cash-gap', 'emits at exact 100 MAD threshold');
-ok(line.copy.fr.includes('100.00 MAD'), 'line exposes measured gap');
-ok(line.copy.fr.includes('seuil visible 100.00 MAD'), 'line exposes threshold');
+ok(line.copy.fr.includes('100,00 MAD') && line.copy.en.includes('100.00 MAD'), 'line exposes measured gap in each language number style');
+ok(line.copy.fr.includes('seuil visible 100,00 MAD'), 'line exposes threshold');
 ok(line.evidence.count === 1, 'evidence count');
 ok(line.evidence.window === day, 'evidence window');
 ok(line.evidence.source.includes('cash_session_events'), 'evidence source');

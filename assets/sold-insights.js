@@ -294,8 +294,7 @@
     var from = bounds(tillRange || tillDays).previousFrom;
     if (tillFetched && tillLoadedFrom <= from) return;
     tillLoading = true; renderTillNoFetch(panel);
-    fetch('/api/feed?merchant='+encodeURIComponent(m)+'&from='+from,{credentials:'same-origin',headers:{Accept:'application/json'}})
-      .then(function(r){return r.ok?r.json():null;})
+    (window.KiwiPosSale&&window.KiwiPosSale.feedDay||function(u,o){return fetch(u,o).then(function(r){return r.ok?r.json():null;});})('/api/feed?merchant='+encodeURIComponent(m)+'&from='+from,{credentials:'same-origin',headers:{Accept:'application/json'}})
       .then(function(j){tillSales=(j&&j.sales)||[];tillLoadedFrom=from;tillFetched=true;})
       .catch(function(){}).finally(function(){tillLoading=false;renderTillNoFetch(panel);});
   }

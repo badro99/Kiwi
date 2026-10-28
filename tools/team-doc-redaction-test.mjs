@@ -143,6 +143,19 @@ ok('le magasin du banc n’est pas un slug de démo (sinon tout passe)', !DEMO_M
     body: JSON.stringify({ feature: 'team', merchant: SHOP, data: TEAM, baseRev: 1 }) }), env });
   ok('le patron écrit son équipe comme avant', res.status === 200);
 }
+{
+  // team.hoursCredited est tenu par le serveur (marques des services déjà payés) :
+  // un appareil qui réécrit l'équipe sans elles ne doit pas les effacer.
+  const cur = db.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'team'").get(SHOP);
+  const doc = JSON.parse(cur.data); doc.hoursCredited = { 'shift-paid': Date.now() };
+  db.prepare("UPDATE store_docs SET data = ? WHERE merchant = ? AND feature = 'team'").run(JSON.stringify(doc), SHOP);
+  const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: owner },
+    body: JSON.stringify({ feature: 'team', merchant: SHOP, data: TEAM, baseRev: cur.rev }) }), env });
+  const after = JSON.parse(db.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").get(SHOP).data);
+  ok('une équipe réécrite sans les marques de paie les garde (pas de double crédit au rejeu)',
+    res.status === 200 && after.hoursCredited && after.hoursCredited['shift-paid'] > 0, String(res.status));
+}
 
 /* ── 3. Les actions IA restent hors de la caisse appairée ────────────────── */
 {

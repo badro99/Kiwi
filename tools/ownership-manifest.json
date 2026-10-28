@@ -1023,8 +1023,8 @@
     ],
     "__kiwiRole": [
       "assets/onboarding.js",
-      "dashboard.html#inline-5",
-      "dashboard.html#inline-7"
+      "dashboard.html#inline-4",
+      "dashboard.html#inline-6"
     ],
     "stockOf": [
       "assets/orderpro-boutique.js",
@@ -2459,13 +2459,13 @@
     "dashboard.html:assets/venues.js:KiwiMe:assets/identity.js",
     "dashboard.html:assets/venues.js:KiwiPlatform:assets/platform-kernel.js",
     "dashboard.html:assets/view-link.js:KiwiDateRange:assets/dateRange.js",
-    "dashboard.html:dashboard.html#inline-6:Kiwi:assets/interactive.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiConfig:assets/merchant-config.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiDashPinVault:assets/dashboard-pin-vault.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiEnv:assets/kiwi-env.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiHours:assets/hours.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiMe:assets/identity.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiVenue:assets/venues.js",
+    "dashboard.html:dashboard.html#inline-5:Kiwi:assets/interactive.js",
+    "dashboard.html:dashboard.html#inline-6:KiwiConfig:assets/merchant-config.js",
+    "dashboard.html:dashboard.html#inline-6:KiwiDashPinVault:assets/dashboard-pin-vault.js",
+    "dashboard.html:dashboard.html#inline-6:KiwiEnv:assets/kiwi-env.js",
+    "dashboard.html:dashboard.html#inline-6:KiwiHours:assets/hours.js",
+    "dashboard.html:dashboard.html#inline-6:KiwiMe:assets/identity.js",
+    "dashboard.html:dashboard.html#inline-6:KiwiVenue:assets/venues.js",
     "kiwi-caisse.html:assets/caisse-app.js:CaisseFx:assets/caisse-motion.js",
     "kiwi-caisse.html:assets/caisse-app.js:KiwiCaisseLang:assets/caisse-lang.js",
     "kiwi-caisse.html:assets/caisse-app.js:KiwiCaissePairing:assets/caisse-pairing.js",

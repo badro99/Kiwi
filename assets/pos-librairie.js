@@ -28,7 +28,7 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  const fmtMAD = (n) => LOY.money.format(n) + ' MAD';
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -174,60 +174,11 @@
   /* Français : 0 et 1 au singulier. */
   const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
 
-  /* ───────────────────────── fidélité — 1 MAD = 1 point, palier –5 % ────────
-     Le palier « fidèle » s'ouvre à 500 points : –5 % sur l'achat du jour. */
-  /* GENERATED SHARED KiwiLoyaltyRules BEGIN */
-  /* Copy of functions/api/_rules-loyalty.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
-  var KiwiLoyaltyRules = (function () {
-    // Loyalty earning, word matching, historical reversals and explicit reward policies.
-    const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
-    const pointsFor = (amount, cfg) => Math.max(0,
-      Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
-    const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-    const qualifyingQty = (cfg, items) => {
-      const want = foldName(cfg && cfg.product && cfg.product.item);
-      if (!want) return 0;
-      return (Array.isArray(items) ? items : []).reduce((n, item) => {
-        const name = ' ' + foldName(item && item.name) + ' ';
-        return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
-      }, 0);
-    }
-    const stampsFor = (cfg, items) => {
-      if (!loyaltyOn(cfg)) return 0;
-      if (cfg.model === 'visit') return 1;
-      if (cfg.model !== 'product') return 0;
-      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
-    }
-    const refundFor = (sale, amount, cfg, items, client) => {
-      const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
-      const refunded = Number(sale && sale.refunded || 0), clawed = Number(sale && sale.clawed || 0);
-      const take = Math.max(0, Math.min(amount, Math.round((paid - refunded) * 100) / 100));
-      const claw = paid > 0 && earned > 0
-        ? Math.max(0, Math.min(Math.round(earned * (refunded + take) / paid) - clawed, earned - clawed)) : 0;
-      const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
-      const lines = Array.isArray(items) ? items : [];
-      const whole = paid > 0 && take >= Math.round((paid - refunded) * 100) / 100 - 0.004;
-      const unstamp = cfg.model === 'product' && lines.length
-        ? Math.min(stampsLeft, qualifyingQty(cfg, lines)) : (whole ? stampsLeft : 0);
-      return { take, claw, unstamp,
-        pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
-        stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
-    }
-    const rewardDiscount = (reward, clientId, base, units, policy = 'boutique') => {
-      if (!reward || reward.clientId !== clientId) return 0;
-      const down = n => Math.max(0, Math.floor((+n || 0) * 100 + 1e-6) / 100);
-      if (reward.kind === 'percent') {
-        if (policy === 'librairie') return Math.round(base * reward.value / 100 * 100 + 1e-9) / 100;
-        return base - down(base * (100 - Math.min(100, Math.max(0, reward.value || 0))) / 100);
-      }
-      return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
-    }
-    return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
-  })();
-  /* GENERATED SHARED KiwiLoyaltyRules END */
-  const FID_TIER = 500, FID_RATE = 0.05;
-  const fidTier = (pts) => pts >= FID_TIER;
+  /* ───────────────────────── fidélité : le programme du commerçant ──────────
+     Réel : KiwiClients.config et le carnet partagé. Démo : un programme
+     d'exemple. Voir assets/librairie-loyalty.js (chargé par le répartiteur). */
+  const LOY = window.KiwiLibrairieLoyalty.create({ real: () => pvReal() });
+  const fidTier = (cu) => LOY.ready(cu);
 
   /* ───────────────────────── clients (Tanger) ─────────────────────────────── */
   /* Demo people never surface for a real, paired bookshop — the seeded client
@@ -241,6 +192,9 @@
     { id: 'c5', name: 'Hind Berrada',       phone: '0668 03 55 41', points: 260, visits: 7, school: false, note: '' },
   ];
   const CUST = Object.fromEntries(CUSTOMERS.map((c) => [c.id, c]));
+  /* Réel : le carnet partagé ; démo : les six clients d'ici. */
+  const customers = () => LOY.list() || CUSTOMERS;
+  const custOf = (id) => LOY.get(id) || CUST[id] || { id, name: 'Client introuvable', phone: '', points: 0, stamps: 0, visits: 0, school: false, note: '' };
 
   /* ───────────────────────── commandes spéciales (seed) ─────────────────────
      Statuts : commande → arrivee → retiree. Une commande déjà arrivée et PAS
@@ -713,7 +667,7 @@
   function renderBadges() {
     const openCmd = CMDS.filter((c) => c.status !== 'retiree').length;
     const toNotify = CMDS.filter((c) => c.status === 'arrivee' && !c.notified).length;
-    const fideles = CUSTOMERS.filter((c) => fidTier(c.points)).length;
+    const fideles = customers().filter(fidTier).length;
     const bc = $('#lb-badge-cmd', root);
     bc.textContent = openCmd || '';
     bc.style.display = openCmd ? '' : 'none';
@@ -810,13 +764,12 @@
 
   /* ═══════════════════════ PANIER ═══════════════════════ */
   function cartCount(c) { return c.lines.reduce((s, l) => s + l.qty, 0); }
-  function cartSub(c) { return c.lines.reduce((s, l) => s + ITEM[l.key].price * l.qty, 0); }
+  function cartSub(c) { return LOY.money.toMad(c.lines.reduce((s, l) => s + LOY.money.toCents(ITEM[l.key].price) * l.qty, 0)); }
   function cartRemise(c) {
     if (!c.client || c.client.type !== 'known') return 0;
-    const cu = CUST[c.client.id];
-    return cu && fidTier(cu.points) ? KiwiLoyaltyRules.rewardDiscount({ kind: 'percent', value: FID_RATE * 100, clientId: cu.id }, cu.id, cartSub(c), [], 'librairie') : 0;
+    return LOY.discount(custOf(c.client.id), cartSub(c), c.lines.map((l) => ITEM[l.key].price));
   }
-  function cartTotal(c) { return cartSub(c) - cartRemise(c); }
+  function cartTotal(c) { return LOY.money.toMad(LOY.money.toCents(cartSub(c)) - LOY.money.toCents(cartRemise(c))); }
   function addToCart(itemId, qty) {
     qty = qty || 1;
     const line = state.cart.lines.find((l) => l.key === itemId);
@@ -826,7 +779,7 @@
   function clientRow(c) {
     if (!c.client) {
       return `<button class="lb-pn-client" id="lb-pn-client"><i data-lucide="user-plus"></i>
-        <span class="l"><b>Attacher un client</b><span>Fidélité : 1 MAD = 1 point</span></span>
+        <span class="l"><b>Attacher un client</b><span>Fidélité : ${esc(LOY.rule())}</span></span>
         <span class="edit">Chercher</span></button>`;
     }
     if (c.client.type === 'guest') {
@@ -834,11 +787,11 @@
         <span class="l"><b>Client de passage</b><span>Sans fidélité</span></span>
         <span class="edit">Changer</span></button>`;
     }
-    const cu = CUST[c.client.id];
-    const tier = fidTier(cu.points);
+    const cu = custOf(c.client.id);
+    const tier = fidTier(cu);
     return `<button class="lb-pn-client is-set" id="lb-pn-client"><i data-lucide="${cu.school ? 'building-2' : 'user-check'}"></i>
-      <span class="l"><b>${esc(cu.name)}</b><span>${esc(cu.phone)} · ${cu.points} pts</span></span>
-      ${tier ? '<span class="lb-fid-chip">−5 %</span>' : ''}
+      <span class="l"><b>${esc(cu.name)}</b><span>${esc(cu.phone)} · ${LOY.balance(cu)}</span></span>
+      ${tier ? `<span class="lb-fid-chip">${esc(LOY.gauge(cu).label)}</span>` : ''}
       <span class="edit">Changer</span></button>`;
   }
 
@@ -986,7 +939,7 @@
     const render = (q) => {
       const digits = (q || '').replace(/\D/g, '');
       const ql = (q || '').toLowerCase();
-      const hits = !q ? CUSTOMERS : CUSTOMERS.filter((c) =>
+      const hits = !q ? customers() : customers().filter((c) =>
         (digits && c.phone.replace(/\D/g, '').includes(digits)) ||
         (!digits && c.name.toLowerCase().includes(ql)));
       el.innerHTML = `
@@ -1002,10 +955,10 @@
               <button class="lb-cl-row" data-lb-cl="${c.id}">
                 <span class="lb-cl-ava ${c.school ? 'school' : ''}">${c.school ? '<i data-lucide="building-2"></i>' : esc(initials(c.name))}</span>
                 <span class="lb-cl-mid">
-                  <span class="lb-cl-name">${esc(c.name)} ${fidTier(c.points) ? '<span class="lb-fid-chip">−5 %</span>' : ''}</span>
+                  <span class="lb-cl-name">${esc(c.name)} ${fidTier(c) ? `<span class="lb-fid-chip">${esc(LOY.gauge(c).label)}</span>` : ''}</span>
                   <span class="lb-cl-sub">${esc(c.phone)}</span>
                 </span>
-                <span class="lb-cl-right"><b>${c.points} pts</b>${c.visits} ${plu(c.visits, 'achat')}</span>
+                <span class="lb-cl-right"><b>${LOY.balance(c)}</b>${c.visits} ${plu(c.visits, 'achat')}</span>
               </button>`).join('') || `<div class="lb-cempty">Aucun client pour « ${esc(q)} »</div>`}
           </div>
           ${hits.length === 1 ? recoPanel(hits[0]) : ''}
@@ -1027,10 +980,10 @@
         b.onclick = () => {
           state.cart.client = { type: 'known', id: b.dataset.lbCl };
           closeVeil('#lb-client-veil');
-          const c = CUST[b.dataset.lbCl];
-          toast(fidTier(c.points)
-            ? `${c.name}, client fidèle, remise −5 % appliquée`
-            : `${c.name}, ${c.points} points fidélité`);
+          const c = custOf(b.dataset.lbCl);
+          toast(fidTier(c)
+            ? `${c.name}, client fidèle, récompense ${LOY.gauge(c).label} appliquée`
+            : `${c.name}, ${LOY.balance(c)} de fidélité`);
           renderPanier(); icons();
         };
       });
@@ -1049,10 +1002,9 @@
         const name = $('#lb-cl-name', el).value.trim();
         const tel = $('#lb-cl-tel', el).value.trim();
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
-        const id = 'cx' + Date.now().toString(36);
-        const c = { id, name, phone: tel, points: 0, visits: 0, school: false, note: '' };
-        CUSTOMERS.unshift(c); CUST[id] = c;
-        state.cart.client = { type: 'known', id };
+        let c = LOY.add(name, tel);
+        if (!c) { c = { id: 'cx' + Date.now().toString(36), name, phone: tel, points: 0, visits: 0, school: false, note: '' }; CUSTOMERS.unshift(c); CUST[c.id] = c; }
+        state.cart.client = { type: 'known', id: c.id };
         closeVeil('#lb-client-veil');
         toast(`Fiche créée, ${name}`);
         renderPanier(); renderBadges(); icons();
@@ -1064,10 +1016,7 @@
     setTimeout(() => { const i = $('#lb-cl-q', el); if (i) i.focus(); }, 60);
   }
   function recoPanel(c) {
-    const pts = c.points;
-    const tier = fidTier(pts);
-    const pct = Math.min(100, Math.round((pts % FID_TIER) / FID_TIER * 100));
-    const toNext = tier ? 0 : FID_TIER - pts;
+    const g = LOY.gauge(c), tier = g.ready;
     const openCmds = CMDS.filter((x) => x.custId === c.id && x.status !== 'retiree');
     return `<div class="lb-reco">
       <div class="lb-reco-head"><i data-lucide="sparkles"></i>${esc(c.name)}, ${tier ? 'client fidèle' : 'client reconnu'}</div>
@@ -1075,11 +1024,11 @@
         ${c.note ? `<div class="lb-reco-row"><i data-lucide="heart"></i>${esc(c.note)}</div>` : ''}
         ${c.contact ? `<div class="lb-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
         ${openCmds.map((x) => `<div class="lb-reco-row"><i data-lucide="truck"></i><b>${x.id}</b> · ${esc(x.title)}, ${CMD_STATUS[x.status].label}</div>`).join('')}
-        <div class="lb-reco-row"><i data-lucide="star"></i><b>${pts} ${plu(pts, 'point')}</b> · ${c.visits} ${plu(c.visits, 'achat')}</div>
+        <div class="lb-reco-row"><i data-lucide="star"></i><b>${LOY.balance(c)}</b> · ${c.visits} ${plu(c.visits, 'achat')}</div>
       </div>
       <div class="lb-fid-gauge">
-        <div class="lb-fid-bar"><i style="width:${tier ? 100 : pct}%"></i></div>
-        <div class="lb-fid-meta"><span>${tier ? 'Palier −5 % atteint' : 'Vers le palier −5 %'}</span><span>${tier ? '<b>actif</b>' : `<b>${toNext} pts</b> restants`}</span></div>
+        <div class="lb-fid-bar"><i style="width:${g.pct}%"></i></div>
+        <div class="lb-fid-meta"><span>${tier ? `Récompense ${esc(g.label)} atteinte` : `Vers la récompense ${esc(g.label)}`}</span><span>${tier ? '<b>active</b>' : `<b>${g.toGo} ${g.unit}</b> restants`}</span></div>
       </div>
     </div>`;
   }
@@ -1101,8 +1050,8 @@
 
   function receiptHTML(c) {
     const sub = cartSub(c), remise = cartRemise(c), total = cartTotal(c);
-    const cu = c.client && c.client.type === 'known' ? CUST[c.client.id] : null;
-    const earned = total;          /* 1 MAD payé = 1 point */
+    const cu = c.client && c.client.type === 'known' ? custOf(c.client.id) : null;
+    const loy = cu ? LOY.preview(cu, total, c.lines.map((l) => ({ name: ITEM[l.key].title, qty: l.qty })), remise > 0) : null;
     return `<div class="lb-receipt">
       <div class="c b lg">${esc((pvName('Librairie Al Boughaz') || 'Librairie').toUpperCase())}</div>
       <div class="c mut">${pvReal() ? (pvCity('') ? esc(pvCity('')) + ' · ' : '') + 'propulsé par Kiwi' : 'Petit Socco, Tanger<br>05 39 93 XX XX · propulsé par Kiwi'}</div>
@@ -1113,14 +1062,14 @@
       <hr>
       ${c.lines.map((l) => {
         const it = ITEM[l.key];
-        return `<div class="row"><span class="nm">${l.qty} × ${esc(it.title)}</span><span>${it.price * l.qty}</span></div>`;
+        return `<div class="row"><span class="nm">${l.qty} × ${esc(it.title)}</span><span>${LOY.money.format(LOY.money.toMad(LOY.money.toCents(it.price) * l.qty))}</span></div>`;
       }).join('')}
       <hr>
-      <div class="row"><span>Sous-total</span><span>${sub} MAD</span></div>
-      ${remise ? `<div class="row"><span>Fidélité −5 %</span><span>−${remise} MAD</span></div>` : ''}
-      <div class="row tot"><span>TOTAL</span><span>${total} MAD</span></div>
-      ${cu ? `<div class="row fid"><span>POINTS GAGNÉS</span><span>+${earned}</span></div>
-              <div class="row mut"><span>Solde fidélité</span><span>${cu.points + earned} pts</span></div>` : ''}
+      <div class="row"><span>Sous-total</span><span>${fmtMAD(sub)}</span></div>
+      ${remise ? `<div class="row"><span>Fidélité ${esc(LOY.gauge(cu).label)}</span><span>−${fmtMAD(remise)}</span></div>` : ''}
+      <div class="row tot"><span>TOTAL</span><span>${fmtMAD(total)}</span></div>
+      ${loy && loy.earn ? `<div class="row fid"><span>FIDÉLITÉ GAGNÉE</span><span>${loy.earn}</span></div>` : ''}
+      ${loy ? `<div class="row mut"><span>Solde fidélité</span><span>${loy.balance}</span></div>` : ''}
       <hr>
       <div class="c">${barcode(c.num, 26)}</div>
       <div class="c mut">${c.num} · choukran, l'lah ihennik</div>
@@ -1165,7 +1114,7 @@
       el.innerHTML = `
         <button class="lb-modal-x" data-lb-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Encaissement</h3>
-        <p class="modal-subtle">${c.num}${c.client && c.client.type === 'known' ? ' · ' + esc(CUST[c.client.id].name) : ''}</p>
+        <p class="modal-subtle">${c.num}${c.client && c.client.type === 'known' ? ' · ' + esc(custOf(c.client.id).name) : ''}</p>
         <div class="modal-amount size-md">${fmtMAD(total)}</div>
         <div class="lb-pay-opts">
           <button class="lb-pay-opt" data-m="especes">
@@ -1195,7 +1144,7 @@
         <div class="cash-grid">
           <div class="cash-input-row">
             <label class="cash-input-label" for="lb-cash-in">Espèces reçues</label>
-            <input class="cash-input mono" id="lb-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${total}" />
+            <input class="cash-input mono" id="lb-cash-in" type="number" inputmode="decimal" min="0" step="0.01" value="${total}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
             <button class="cash-preset" data-add="20">+20</button>
@@ -1212,7 +1161,7 @@
         $('#lb-cash-ok', el).disabled = received < total;
       };
       $$('[data-lb-close]', el).forEach((b) => { b.onclick = () => closeVeil('#lb-pay-veil'); });
-      $('#lb-cash-in', el).oninput = (e) => { received = +e.target.value || 0; refresh(); };
+      $('#lb-cash-in', el).oninput = (e) => { received = LOY.money.toMad(LOY.money.toCents(e.target.value)); refresh(); };
       $$('[data-add]', el).forEach((b) => {
         b.onclick = () => { received += +b.dataset.add; $('#lb-cash-in', el).value = received; refresh(); };
       });
@@ -1247,14 +1196,11 @@
 
     const done = (method, rendu) => {
       closeVeil('#lb-pay-veil');
-      let earnMsg = '';
-      if (c.client && c.client.type === 'known') {
-        const cu = CUST[c.client.id];
-        cu.points += total;
-        cu.visits += 1;
-        earnMsg = ` · +${total} pts fidélité`;
-      }
+      const cu = c.client && c.client.type === 'known' ? custOf(c.client.id) : null;
+      const rewardUsed = !!cu && cartRemise(c) > 0;
+      const mark = cu ? LOY.begin(cu) : null;
       postDay(total, method, cartLabel(c), c.num, saleLines(c, total));
+      const earnMsg = cu ? LOY.finish(cu, mark, { total, rewardUsed, items: c.lines.map((l) => ({ name: ITEM[l.key].title, qty: l.qty })) }) : '';
       if (pvReal() && WS()) c.lines.forEach((l) => { try { WS().catalog.sell(l.key, l.qty, c.num); } catch (_) {} });
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;
@@ -1269,7 +1215,7 @@
 
   /* ═══════════════════════ COMMANDES SPÉCIALES — board ═══════════════════════ */
   function cmdCust(c) {
-    if (c.custId) return CUST[c.custId];
+    if (c.custId) return custOf(c.custId);
     return c.guest || { name: 'Client de passage', phone: '' };
   }
   function cmdDue(c) { return Math.max(0, c.price * c.qty - c.acompte); }
@@ -1592,7 +1538,7 @@
     const render = (q) => {
       const digits = (q || '').replace(/\D/g, '');
       const ql = (q || '').toLowerCase();
-      const hits = !q ? CUSTOMERS : CUSTOMERS.filter((c) =>
+      const hits = !q ? customers() : customers().filter((c) =>
         (digits && c.phone.replace(/\D/g, '').includes(digits)) ||
         (!digits && c.name.toLowerCase().includes(ql)));
       el.innerHTML = `
@@ -1614,7 +1560,7 @@
       $$('[data-lb-close]', el).forEach((b) => { b.onclick = () => closeVeil('#lb-client-veil'); });
       $$('[data-lb-pc]', el).forEach((b) => {
         b.onclick = () => {
-          const c = CUST[b.dataset.lbPc];
+          const c = custOf(b.dataset.lbPc);
           closeVeil('#lb-client-veil');
           onPick({ id: c.id, name: c.name, phone: c.phone, school: c.school });
         };
@@ -1877,13 +1823,13 @@
     const q = state.clientQuery.trim();
     const ql = q.toLowerCase();
     const digits = q.replace(/\D/g, '');
-    const list = !q ? CUSTOMERS : CUSTOMERS.filter((c) =>
+    const list = !q ? customers() : customers().filter((c) =>
       c.name.toLowerCase().includes(ql) || (digits.length >= 2 && c.phone.replace(/\D/g, '').includes(digits)));
-    const fideles = CUSTOMERS.filter((c) => fidTier(c.points)).length;
+    const fideles = customers().filter(fidTier).length;
     panel.innerHTML = `
       <div class="lb-clients">
         <header class="lb-head">
-          <div><h1>Clients</h1><div class="lb-head-sub">Fidélité, 1 MAD dépensé = 1 point · palier −5 % dès ${FID_TIER} points · ${fideles} fidèle${fideles > 1 ? 's' : ''}</div></div>
+          <div><h1>Clients</h1><div class="lb-head-sub">Fidélité, ${esc(LOY.rule())} · ${fideles} fidèle${fideles > 1 ? 's' : ''}</div></div>
         </header>
         <div class="lb-clients-bar">
           <div class="lb-search" style="max-width:340px;"><i data-lucide="search"></i>
@@ -1903,7 +1849,7 @@
     panel.querySelectorAll('[data-lb-cwa]').forEach((b) => {
       b.onclick = (e) => {
         e.stopPropagation();
-        const c = CUST[b.dataset.lbCwa];
+        const c = custOf(b.dataset.lbCwa);
         const cmd = CMDS.find((x) => x.custId === c.id && x.status === 'arrivee');
         if (cmd) openWa(cmd);
         else toast(`${c.name}, aucune commande à notifier`);
@@ -1913,9 +1859,7 @@
   }
 
   function clientCardHTML(c) {
-    const tier = fidTier(c.points);
-    const pct = tier ? 100 : Math.round((c.points % FID_TIER) / FID_TIER * 100);
-    const toNext = tier ? 0 : FID_TIER - c.points;
+    const g = LOY.gauge(c), tier = g.ready;
     const openCmds = CMDS.filter((x) => x.custId === c.id && x.status !== 'retiree').length;
     const arrived = CMDS.some((x) => x.custId === c.id && x.status === 'arrivee' && !x.notified);
     return `<div class="lb-ccard">
@@ -1925,12 +1869,12 @@
           <span class="lb-ccard-name">${esc(c.name)}</span>
           <span class="lb-ccard-tel">${esc(c.phone)}</span>
         </span>
-        <span class="lb-ccard-tier ${tier ? 'gold' : ''}">${tier ? 'Fidèle · −5 %' : 'Standard'}</span>
+        <span class="lb-ccard-tier ${tier ? 'gold' : ''}">${tier ? `Fidèle · ${esc(g.label)}` : 'Standard'}</span>
       </div>
-      <div class="lb-ccard-pts"><span class="big">${c.points}</span><span class="lbl">points fidélité</span></div>
+      <div class="lb-ccard-pts"><span class="big">${g.have}</span><span class="lbl">${g.unit === 'pts' ? 'points' : g.unit} fidélité</span></div>
       <div class="lb-ccard-gauge">
-        <div class="lb-ccard-bar"><i style="width:${pct}%"></i></div>
-        <div class="lb-ccard-next">${tier ? '<b>Palier −5 % actif</b> sur chaque achat' : `<b>${toNext} pts</b> avant le palier −5 %`}</div>
+        <div class="lb-ccard-bar"><i style="width:${g.pct}%"></i></div>
+        <div class="lb-ccard-next">${tier ? `<b>Récompense ${esc(g.label)} prête</b>` : `<b>${g.toGo} ${g.unit}</b> avant la récompense ${esc(g.label)}`}</div>
       </div>
       <div class="lb-ccard-foot">
         <span class="lb-ccard-stat"><i data-lucide="shopping-bag"></i>${c.visits} ${plu(c.visits, 'achat')}</span>

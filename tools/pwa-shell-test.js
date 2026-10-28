@@ -16,8 +16,11 @@ const entries = [...dispatch.matchAll(/file:\s*'([^']+)'(?:,\s*rev:\s*'([^']+)')
   .map((m) => ({ base: m[1], rev: m[2] || '' }));
 const files = entries.map((e) => e.base);
 ok('the dispatcher declares POS verticals', entries.length >= 10);
+/* `deps` are classic scripts a vertical needs first (no stylesheet of their own). */
+const depNames = new Set([...dispatch.matchAll(/deps:\s*\[([^\]]*)\]/g)].flatMap((m) => [...m[1].matchAll(/file:\s*'([^']+)'/g)].map((x) => x[1])));
 entries.forEach(({ base, rev }) => {
   ['js', 'css'].forEach((ext) => {
+    if (ext === 'css' && depNames.has(base)) return;
     const rel = `assets/${base}.${ext}`;
     ok(`${rel} exists`, fs.existsSync(path.join(ROOT, rel)));
     ok(`${rel} is pre-cached`, sw.includes(`'/${rel}${rev ? `?v=${rev}` : ''}'`));

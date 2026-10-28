@@ -157,6 +157,25 @@ ok('le propriétaire de A ne lit pas les fiches de B', r.status === 403);
 r = await get(`merchant=${OTHER}`, stranger);
 ok('B ne voit aucune fiche de A', r.status === 200 && r.body.sheets.length === 0 && r.body.enabled === false);
 
+/* ── 7 · une création rejouée (vague 11) ──
+   La réponse d'une création se perd, le navigateur renvoie la même fiche :
+   la clé de création du brouillon retombe sur la même ligne, jamais deux. */
+const count = (name) => sqlite.prepare('SELECT COUNT(*) AS n FROM foodcost_sheets WHERE merchant = ? AND name = ?').get(SHOP, name).n;
+const DRAFT = { ...SHEET, name: 'Couscous', createId: 'draft-couscous-0001' };
+const made = await post({ merchant: SHOP, action: 'save', sheet: DRAFT, baseVersion: 0 }, owner);
+const replay = await post({ merchant: SHOP, action: 'save', sheet: DRAFT, baseVersion: 0 }, owner);
+ok('création rejouée : la même fiche, une seule ligne, une seule version', made.status === 201 && replay.status === 200
+  && replay.body.sheet.id === made.body.sheet.id && count('Couscous') === 1 && replay.body.sheet.version === 1, JSON.stringify(replay.body).slice(0, 200));
+const changed = await post({ merchant: SHOP, action: 'save', sheet: { ...DRAFT, name: 'Couscous royal' }, baseVersion: 0 }, owner);
+ok('la même clé avec un autre contenu : conflit, rien d’écrasé', changed.status === 409 && changed.body.sheet.id === made.body.sheet.id && changed.body.sheet.name === 'Couscous');
+const forced = await post({ merchant: SHOP, action: 'save', sheet: { ...DRAFT, name: 'Couscous royal' }, baseVersion: 1 }, owner);
+ok('forcer sur la version lue : version 2 de la même fiche', forced.status === 200 && forced.body.sheet.id === made.body.sheet.id && forced.body.sheet.version === 2 && count('Couscous') === 0);
+const bad = await post({ merchant: SHOP, action: 'save', sheet: { ...DRAFT, createId: 'x y' } }, owner);
+ok('une clé de création mal formée est refusée', bad.status === 400 && bad.body.error === 'bad-create-id');
+const copyA = await post({ merchant: SHOP, action: 'duplicate', id: made.body.sheet.id, name: 'Copie rejouée', createId: 'dup-couscous-0001' }, owner);
+const copyB = await post({ merchant: SHOP, action: 'duplicate', id: made.body.sheet.id, name: 'Copie rejouée', createId: 'dup-couscous-0001' }, owner);
+ok('copie rejouée : une seule copie', copyA.status === 201 && copyB.status === 200 && copyB.body.sheet.id === copyA.body.sheet.id && count('Copie rejouée') === 1);
+
 /* ── 6 · pas d'inventaire ── */
 const src = fs.readFileSync(path.join(ROOT, 'functions/api/foodcost.js'), 'utf8');
 ok('la route n’écrit ni le stock ni le document `costs`', !/stock_|inventory|store_docs|'costs'/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')));

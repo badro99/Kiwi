@@ -6,23 +6,74 @@
   var currentTrade = '';
   var renderedDay = '';
 
+  /* Un métier = libellé + quatre repères, en français (la clé), anglais et
+     arabe. Les icônes sont des noms Google Material Symbols, dessinés par
+     assets/material-icons.js (data-icon) : rien d'autre dans l'app. */
   var TRADES = {
-    fastfood:      { label: 'Restauration rapide', icon: 'sandwich', steps: ['Comptoir', 'Préparation', 'Remise', 'Nettoyage'] },
-    pizzeria:      { label: 'Pizzeria', icon: 'pizza', steps: ['Commandes', 'Préparation', 'Four', 'Livraison'] },
-    bakery:        { label: 'Boulangerie', icon: 'croissant', steps: ['Comptoir', 'Fournil', 'Commandes', 'Invendus'] },
-    traiteur:      { label: 'Traiteur', icon: 'cooking-pot', steps: ['Préparation', 'Conditionnement', 'Chargement', 'Service'] },
-    foodtruck:     { label: 'Food truck', icon: 'truck', steps: ['Mise en place', 'Service', 'Remise', 'Fermeture'] },
-    boutique:      { label: 'Boutique', icon: 'shopping-bag', steps: ['Vente', 'Réassort', 'Réservations', 'Retours'] },
-    epicerie:      { label: 'Épicerie', icon: 'shopping-basket', steps: ['Caisse', 'Réassort', 'Crédit', 'Inventaire'] },
-    pharmacie:     { label: 'Pharmacie', icon: 'cross', steps: ['Ordonnances', 'Comptoir', 'Lots', 'Garde'] },
-    librairie:     { label: 'Librairie', icon: 'book-open', steps: ['Vente', 'Commandes', 'Réception', 'Inventaire'] },
-    fleuriste:     { label: 'Fleuriste', icon: 'flower-2', steps: ['Bouquets', 'Commandes', 'Fraîcheur', 'Livraison'] },
-    pressing:      { label: 'Pressing', icon: 'shirt', steps: ['Réception', 'Atelier', 'Rangement', 'Retrait'] },
-    spa:           { label: 'Spa', icon: 'sparkles', steps: ['Accueil', 'Rendez-vous', 'Cabines', 'Prestations'] },
-    coiffure:      { label: 'Salon de coiffure', icon: 'scissors', steps: ['Accueil', 'Rendez-vous', 'Postes', 'Encaissement'] },
-    hotel:         { label: 'Hôtel / Riad', icon: 'hotel', steps: ['Arrivées', 'Chambres', 'Ménage', 'Départs'] },
-    gym:           { label: 'Salle de sport', icon: 'dumbbell', steps: ['Accueil', 'Cours', 'Coaching', 'Adhérents'] },
-    autre:         { label: 'Établissement', icon: 'briefcase-business', steps: ['Accueil', 'Opérations', 'Suivi', 'Clôture'] },
+    fastfood: { icon: 'lunch_dining',
+      fr: ['Restauration rapide', 'Comptoir', 'Préparation', 'Remise', 'Nettoyage'],
+      en: ['Fast food', 'Counter', 'Preparation', 'Handover', 'Cleaning'],
+      ar: ['الوجبات السريعة', 'الكاونتر', 'التحضير', 'التسليم', 'التنظيف'] },
+    pizzeria: { icon: 'local_pizza',
+      fr: ['Pizzeria', 'Commandes', 'Préparation', 'Four', 'Livraison'],
+      en: ['Pizzeria', 'Orders', 'Preparation', 'Oven', 'Delivery'],
+      ar: ['بيتزيريا', 'الطلبات', 'التحضير', 'الفرن', 'التوصيل'] },
+    bakery: { icon: 'bakery_dining',
+      fr: ['Boulangerie', 'Comptoir', 'Fournil', 'Commandes', 'Invendus'],
+      en: ['Bakery', 'Counter', 'Bakehouse', 'Orders', 'Unsold items'],
+      ar: ['مخبزة', 'الكاونتر', 'غرفة الخبز', 'الطلبات', 'المنتجات غير المباعة'] },
+    traiteur: { icon: 'skillet',
+      fr: ['Traiteur', 'Préparation', 'Conditionnement', 'Chargement', 'Service'],
+      en: ['Catering', 'Preparation', 'Packing', 'Loading', 'Service'],
+      ar: ['متعهد الحفلات', 'التحضير', 'التعبئة', 'التحميل', 'الخدمة'] },
+    foodtruck: { icon: 'local_shipping',
+      fr: ['Food truck', 'Mise en place', 'Service', 'Remise', 'Fermeture'],
+      en: ['Food truck', 'Setup', 'Service', 'Handover', 'Closing'],
+      ar: ['فود تروك', 'التجهيز', 'الخدمة', 'التسليم', 'الإغلاق'] },
+    boutique: { icon: 'shopping_bag',
+      fr: ['Boutique', 'Vente', 'Réassort', 'Réservations', 'Retours'],
+      en: ['Boutique', 'Sales', 'Restocking', 'Reservations', 'Returns'],
+      ar: ['متجر', 'البيع', 'تجديد المخزون', 'الحجوزات', 'المرتجعات'] },
+    epicerie: { icon: 'shopping_basket',
+      fr: ['Épicerie', 'Caisse', 'Réassort', 'Crédit', 'Inventaire'],
+      en: ['Grocery', 'Till', 'Restocking', 'Credit', 'Inventory'],
+      ar: ['بقالة', 'الصندوق', 'تجديد المخزون', 'الائتمان', 'الجرد'] },
+    pharmacie: { icon: 'medical_services',
+      fr: ['Pharmacie', 'Ordonnances', 'Comptoir', 'Lots', 'Garde'],
+      en: ['Pharmacy', 'Prescriptions', 'Counter', 'Batches', 'On-call duty'],
+      ar: ['صيدلية', 'الوصفات الطبية', 'الكاونتر', 'الدفعات', 'الحراسة'] },
+    librairie: { icon: 'menu_book',
+      fr: ['Librairie', 'Vente', 'Commandes', 'Réception', 'Inventaire'],
+      en: ['Bookshop', 'Sales', 'Orders', 'Receiving', 'Inventory'],
+      ar: ['مكتبة', 'البيع', 'الطلبات', 'الاستلام', 'الجرد'] },
+    fleuriste: { icon: 'local_florist',
+      fr: ['Fleuriste', 'Bouquets', 'Commandes', 'Fraîcheur', 'Livraison'],
+      en: ['Florist', 'Bouquets', 'Orders', 'Freshness', 'Delivery'],
+      ar: ['بائع الزهور', 'باقات الورد', 'الطلبات', 'النضارة', 'التوصيل'] },
+    pressing: { icon: 'checkroom',
+      fr: ['Pressing', 'Réception', 'Atelier', 'Rangement', 'Retrait'],
+      en: ['Dry cleaner', 'Drop-off', 'Workshop', 'Storage', 'Collection'],
+      ar: ['مصبنة', 'الاستلام', 'الورشة', 'الترتيب', 'تسلم الزبون'] },
+    spa: { icon: 'auto_awesome',
+      fr: ['Spa', 'Accueil', 'Rendez-vous', 'Cabines', 'Prestations'],
+      en: ['Spa', 'Reception', 'Appointments', 'Treatment rooms', 'Treatments'],
+      ar: ['سبا', 'الاستقبال', 'المواعيد', 'غرف العلاج', 'الخدمات'] },
+    coiffure: { icon: 'content_cut',
+      fr: ['Salon de coiffure', 'Accueil', 'Rendez-vous', 'Postes', 'Encaissement'],
+      en: ['Hair salon', 'Reception', 'Appointments', 'Stations', 'Payment'],
+      ar: ['صالون الحلاقة', 'الاستقبال', 'المواعيد', 'المقاعد', 'الأداء'] },
+    hotel: { icon: 'hotel',
+      fr: ['Hôtel / Riad', 'Arrivées', 'Chambres', 'Ménage', 'Départs'],
+      en: ['Hotel / Riad', 'Arrivals', 'Rooms', 'Housekeeping', 'Departures'],
+      ar: ['فندق / رياض', 'الوصول', 'الغرف', 'التنظيف', 'المغادرة'] },
+    gym: { icon: 'fitness_center',
+      fr: ['Salle de sport', 'Accueil', 'Cours', 'Coaching', 'Adhérents'],
+      en: ['Gym', 'Reception', 'Classes', 'Coaching', 'Members'],
+      ar: ['قاعة رياضة', 'الاستقبال', 'الحصص', 'التدريب', 'المشتركون'] },
+    autre: { icon: 'business_center',
+      fr: ['Établissement', 'Accueil', 'Opérations', 'Suivi', 'Clôture'],
+      en: ['Establishment', 'Reception', 'Operations', 'Follow-up', 'Closing'],
+      ar: ['مؤسسة', 'الاستقبال', 'العمليات', 'المتابعة', 'الإغلاق'] },
   };
   var ALIASES = {
     'fast-food': 'fastfood', fast_food: 'fastfood', restauration_rapide: 'fastfood',
@@ -36,6 +87,16 @@
   function canonical(value) {
     var key = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
     return ALIASES[key] || (TRADES[key] ? key : 'autre');
+  }
+  /* Libellé et repères du métier dans la langue de la page (français si la
+     langue n'a pas de liste). */
+  function tradeText(trade) {
+    var lang = locale();
+    var list = trade[lang === 'ar-MA' ? 'ar' : lang === 'en-GB' ? 'en' : 'fr'] || trade.fr;
+    return { label: list[0], steps: list.slice(1) };
+  }
+  function drawIcons() {
+    if (window.KiwiIcon && typeof window.KiwiIcon.render === 'function') window.KiwiIcon.render(document);
   }
   function isDining(value) {
     return ['restaurant', 'cafe', 'café'].indexOf(String(value || '').trim().toLowerCase()) !== -1;
@@ -184,7 +245,7 @@
     if (first) {
       first.setAttribute('aria-label', copy().service);
       first.title = copy().service;
-      first.innerHTML = '<i data-lucide="' + esc(trade.icon) + '"></i>';
+      first.innerHTML = '<i data-icon="' + esc(trade.icon) + '"></i>';
     }
     if (menu) menu.hidden = true;
   }
@@ -198,10 +259,10 @@
     if (first) {
       first.setAttribute('aria-label', 'Tables');
       first.title = 'Tables';
-      first.innerHTML = '<i data-lucide="utensils-crossed"></i>';
+      first.innerHTML = '<i data-icon="restaurant"></i>';
     }
     if (menu) menu.hidden = false;
-    if (window.lucide) window.lucide.createIcons();
+    drawIcons();
   }
   function mount(data) {
     if (!usesTradeWorkspace(data)) {
@@ -225,10 +286,11 @@
     }
     render(root, data, trade);
     renderedDay = dateKey();
-    if (window.lucide) window.lucide.createIcons();
+    drawIcons();
   }
   function render(root, data, trade) {
     var C = copy();
+    var text = tradeText(trade);
     var work = status(data);
     var next = nextShift(data);
     var team = activeColleagues(data);
@@ -236,21 +298,21 @@
     var pending = pendingCount(data);
     var stateLabel = work.key === 'live' ? C.live : work.key === 'pause' ? C.pause : C.off;
     var role = data.employee.role || data.employee.department || '';
-    root.innerHTML = '<header class="ets-hero"><div class="ets-hero-icon"><i data-lucide="' + esc(trade.icon) + '"></i></div>'
-      + '<div class="ets-hero-copy"><span class="ets-eyebrow">' + esc(C.eyebrow) + ' · ' + esc(trade.label) + '</span>'
+    root.innerHTML = '<header class="ets-hero"><div class="ets-hero-icon"><i data-icon="' + esc(trade.icon) + '"></i></div>'
+      + '<div class="ets-hero-copy"><span class="ets-eyebrow">' + esc(C.eyebrow) + ' · ' + esc(text.label) + '</span>'
       + '<h1>' + esc(data.employee.firstName || data.employee.name || 'Kiwi') + '</h1><p>' + esc([role, data.store.name].filter(Boolean).join(' · ')) + '</p></div>'
-      + '<button class="ets-icon-btn" data-ets-action="refresh" type="button" aria-label="' + esc(C.refresh) + '"><i data-lucide="refresh-cw"></i></button></header>'
+      + '<button class="ets-icon-btn" data-ets-action="refresh" type="button" aria-label="' + esc(C.refresh) + '"><i data-icon="refresh"></i></button></header>'
       + '<div class="ets-live-card ' + esc(work.key) + '"><div><span class="ets-status-dot"></span><b>' + esc(stateLabel) + '</b>'
       + (work.since ? '<small>' + esc(C.since) + ' ' + esc(work.since) + '</small>' : '') + '</div>'
       + '<div class="ets-next"><span>' + esc(C.next) + '</span><strong>' + (next ? esc(dateLabel(next.day) + ' · ' + next.start + '–' + next.end) : esc(C.none)) + '</strong></div></div>'
-      + '<section class="ets-flow"><div class="ets-section-head"><div><span>' + esc(C.landmarks) + '</span><b>' + esc(trade.label) + '</b></div></div>'
-      + '<div class="ets-flow-grid">' + trade.steps.map(function (step, index) { return '<div class="ets-flow-step"><em>' + (index + 1) + '</em><span>' + esc(step) + '</span></div>'; }).join('') + '</div></section>'
+      + '<section class="ets-flow"><div class="ets-section-head"><div><span>' + esc(C.landmarks) + '</span><b>' + esc(text.label) + '</b></div></div>'
+      + '<div class="ets-flow-grid">' + text.steps.map(function (step, index) { return '<div class="ets-flow-step"><em>' + (index + 1) + '</em><span>' + esc(step) + '</span></div>'; }).join('') + '</div></section>'
       + '<div class="ets-metrics"><article><span>' + esc(C.team) + '</span><strong>' + team.length + '</strong><small>' + (team.length ? esc(team.map(function (person) { return person.firstName || person.name; }).filter(Boolean).join(', ')) : esc(C.alone)) + '</small></article>'
       + '<article><span>' + esc(C.requests) + '</span><strong>' + pending + '</strong><small>' + esc(C.planning) + '</small></article></div>'
-      + '<div class="ets-actions"><button type="button" data-ets-action="planning"><i data-lucide="calendar-days"></i><span>' + esc(C.planning) + '</span></button>'
-      + '<button type="button" data-ets-action="availability"><i data-lucide="calendar-check"></i><span>' + esc(C.availability) + '</span></button>'
-      + '<button type="button" data-ets-action="leave"><i data-lucide="calendar-off"></i><span>' + esc(C.leave) + '</span></button>'
-      + '<button type="button" data-ets-action="messages"><i data-lucide="message-square-text"></i><span>' + esc(C.notifications) + '</span></button></div>'
+      + '<div class="ets-actions"><button type="button" data-ets-action="planning"><i data-icon="calendar_month"></i><span>' + esc(C.planning) + '</span></button>'
+      + '<button type="button" data-ets-action="availability"><i data-icon="event_available"></i><span>' + esc(C.availability) + '</span></button>'
+      + '<button type="button" data-ets-action="leave"><i data-icon="event_busy"></i><span>' + esc(C.leave) + '</span></button>'
+      + '<button type="button" data-ets-action="messages"><i data-icon="chat"></i><span>' + esc(C.notifications) + '</span></button></div>'
       + '<section class="ets-messages"><div class="ets-section-head"><div><span>' + esc(C.messages) + '</span><b>' + (messages.length || 0) + '</b></div></div>'
       + (messages.length ? '<div class="ets-message-list">' + messages.map(function (message) {
         return '<article><div><b>' + esc(message.sender || data.store.name) + '</b><time>' + esc(timeLabel(message.ts)) + '</time></div><p>' + esc(message.text || '') + '</p></article>';
@@ -268,5 +330,7 @@
   window.KiwiEmployeeTradeShell = {
     canonical: canonical, isDining: isDining, isRestaurantService: isRestaurantService,
     usesTradeWorkspace: usesTradeWorkspace, trades: Object.keys(TRADES), mount: mount,
+    tradeText: function (id) { return tradeText(TRADES[canonical(id)] || TRADES.autre); },
+    tradeIcon: function (id) { return (TRADES[canonical(id)] || TRADES.autre).icon; },
   };
 })();

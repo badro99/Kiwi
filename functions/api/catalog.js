@@ -48,6 +48,21 @@ const signed = (v, max) => Math.max(-max, Math.min(max, Number(v) || 0));
  * il ressortait donc en une date arbitraire. C'est ce qui arrivait déjà à
  * `createdAt`, en silence, depuis toujours. */
 const ts = (v) => Math.max(0, Math.min(1e15, Math.round(Number(v) || 0)));
+/* La boutique compte en unités entières (décision wave Q, 26 octobre) : une
+ * quantité fractionnaire est REFUSÉE, jamais arrondie en silence. Le navigateur
+ * refuse déjà ; le serveur tient la même règle pour tout autre écrivain. */
+const fractional = (v) => v != null && v !== '' && Number.isFinite(Number(v)) && !Number.isInteger(Number(v));
+function fractionalQuantity(raw) {
+  for (const v of Array.isArray(raw && raw.variants) ? raw.variants : []) {
+    for (const field of ['stock', 'base']) {
+      if (v && fractional(v[field])) return { field: `variants.${field}`, id: str(v.id, 40) };
+    }
+  }
+  for (const m of Array.isArray(raw && raw.moves) ? raw.moves : []) {
+    if (m && fractional(m.d)) return { field: 'moves.d', id: str(m.id, 64) };
+  }
+  return null;
+}
 
 /* Bornage du document. On fait confiance au commerçant (c'est son propre stock)
  * mais un client qui déraille ne doit pas pouvoir gonfler la ligne. Toute forme
@@ -270,6 +285,7 @@ function stockMutation(data, body, now) {
   const grouped = new Map();
   for (const raw of lines) {
     const pid = str(raw && raw.pid, 40), size = str(raw && raw.size, 12), color = str(raw && raw.color, 40);
+    if (fractional(raw && raw.qty)) return { error: 'fractional-quantity', status: 400, issue: { pid, size, color } };
     const qty = Math.max(0, Math.min(1e6, Math.round(Number(raw && raw.qty) || 0)));
     if (!pid || !size || !color || !qty) return { error: 'bad-stock-line', status: 400 };
     const key = JSON.stringify([pid, size, color]);
@@ -420,6 +436,9 @@ export async function onRequestPost(context) {
       return json({ error: 'catalog-too-large', field, max, count: raw[field].length }, 413);
     }
   }
+
+  const fraction = fractionalQuantity(raw);
+  if (fraction) return json({ error: 'fractional-quantity', ...fraction }, 422);
 
   const data = sanitize(raw);
   const baseRev = Math.max(0, Number(body && body.baseRev) || 0);

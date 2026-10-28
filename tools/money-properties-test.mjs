@@ -287,8 +287,11 @@ await strict('un avoir ne passe jamais sous zéro, et émis = solde + consommé'
 sqlite.close();
 
 /* ── la caisse Maison (assets/pos-maison.js), fork de la boutique ───────── */
-/* Même décision propriétaire (2026-10-19) : des dirhams entiers, arrondis vers
-   le bas, jamais au-dessus du prix affiché. La Maison ajoute ce que la boutique
+/* Décision propriétaire du 2026-10-26 (docs/decisions/2026-10-26-wave-q.md), la
+   même que la caisse boutique : le prix garde ses centimes, arrondi vers le bas
+   au centime, jamais au-dessus du prix affiché (249,90 s'encaisse 249,90, pas
+   249 : l'ancienne règle au dirham entier était un défaut connu, pas une
+   garantie). La Maison ajoute ce que la boutique
    n'a pas : les services vendus à la pièce (servicePieces / piecePriceMAD), dont
    le prix et la promotion se recalculent à l'unité. */
 console.log('■ Prix d’une ligne de caisse Maison');
@@ -350,13 +353,14 @@ console.log('■ Prix d’une ligne de caisse Maison');
   }
   /* ce que la grille, la fiche et l'étiquette annoncent, avant tout arrondi */
   const shownWhole = (s, rule) => (rule ? ruleRaw(rule, s / 100) : s / 100);
+  const isCents = (x) => Number.isFinite(x) && Math.abs(x * 100 - Math.round(x * 100)) < 1e-6;
 
   await strict('Maison · une ligne n’est jamais encaissée plus cher que son prix affiché, promotion et remise comprises',
     fc.property(shelfCents, ruleArb, remise, qty, (s, rule, r, q) => {
       const api = maisonTill({ price: s / 100 }, rule);
       const ln = { pid: 'p1', qty: q, remise: r, promo: null };
       const t = api.lineTotal(ln);
-      return Number.isInteger(t) && t <= shownWhole(s, rule) * (100 - r) / 100 * q + 1e-9;
+      return isCents(t) && t <= shownWhole(s, rule) * (100 - r) / 100 * q + 1e-9;
     }));
   await strict('Maison · une remise plus forte ne fait jamais payer plus',
     fc.property(shelfCents, ruleArb, qty, fc.boolean(), (s, rule, q, piece) => {
@@ -365,15 +369,22 @@ console.log('■ Prix d’une ligne de caisse Maison');
         customPrice: piece ? api.pieceUnitPrice({ price: s / 100, servicePieces: 6, piecePriceMAD: null }) : undefined }));
       return totals.every((t, i) => i === 0 || t <= totals[i - 1]);
     }));
-  await strict('Maison · l’arrondi au dirham descend toujours, de moins d’un dirham',
+  await strict('Maison · l’arrondi descend toujours au centime, de moins d’un centime',
     fc.property(shelfCents, ruleArb, remise, qty, (s, rule, r, q) => {
       const api = maisonTill({ price: s / 100 }, rule);
       const ln = { pid: 'p1', qty: q, remise: r, promo: null };
       const base = api.lineBase(ln);
       const exact = base * (100 - r) / 100;
       const unit = api.lineUnit(ln);
-      return base <= shownWhole(s, rule) + 1e-9 && shownWhole(s, rule) - base < 1
-        && unit <= exact + 1e-9 && exact - unit < 1;
+      return isCents(base) && isCents(unit)
+        && base <= shownWhole(s, rule) + 1e-9 && shownWhole(s, rule) - base < 0.01 + 1e-9
+        && unit <= exact + 1e-9 && exact - unit < 0.01 + 1e-9;
+    }));
+  await strict('Maison · un prix de catalogue garde ses centimes (249,90 s’encaisse 249,90), un prix entier reste entier',
+    fc.property(shelfCents, qty, (s, q) => {
+      const api = maisonTill({ price: s / 100 }, null);
+      const ln = { pid: 'p1', qty: q, remise: 0, promo: null };
+      return api.lineUnit(ln) === s / 100 && Math.abs(api.lineTotal(ln) * 100 - s * q) < 1e-6;
     }));
   await strict('Maison · un prix estampillé au scan (249,90) s’encaisse aussi vers le bas',
     fc.property(shelfCents, fc.integer({ min: 1, max: 500000 }), remise, (s, stampCents, r) => {
@@ -395,12 +406,12 @@ console.log('■ Prix d’une ligne de caisse Maison');
       /* ce que la fiche affiche pour « À la pièce (1 unité) », avant arrondi */
       const pieceShown = pieceCents != null ? pieceCents / 100 : priceCents / 100 / pieces;
       const unitPrice = api.pieceUnitPrice(product);
-      if (!Number.isInteger(unitPrice) || unitPrice > pieceShown + 1e-9 || pieceShown - unitPrice >= 1) return false;
+      if (!isCents(unitPrice) || unitPrice > pieceShown + 1e-9 || pieceShown - unitPrice >= 0.01 + 1e-9) return false;
       const ln = { pid: 'p1', qty: q, remise: r, promo: null, isPiece: true, customPrice: unitPrice, servicePieces: pieces };
       const pr = api.promoForLine(ln);
-      if (pr && (!Number.isInteger(pr.price) || pr.price < 0 || pr.price > unitPrice)) return false;
+      if (pr && (!isCents(pr.price) || pr.price < 0 || pr.price > unitPrice + 1e-9)) return false;
       const t = api.lineTotal(ln);
-      return Number.isInteger(t) && t >= 0 && t <= unitPrice * (100 - r) / 100 * q + 1e-9;
+      return isCents(t) && t >= 0 && t <= unitPrice * (100 - r) / 100 * q + 1e-9;
     }));
   /* L'en-tête « N ventes · X MAD aujourd'hui » de la Maison = ce que le serveur
      enregistre (originalSalePayload().amount) : avoir et livraison n'y entrent

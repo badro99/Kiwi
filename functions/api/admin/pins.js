@@ -6,7 +6,7 @@
 //
 // Staff codes are credentials. Operators manage replacements without reading codes.
 
-import { isOperator, isSeniorOperator, json, operatorActor } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, json, limitCheck, limitFail, operatorActor } from '../../auth/_lib.js';
 
 /* Le journal d'un geste sur un code d'équipe. Il nomme l'opérateur (session
  * opérateur, jamais un code), l'établissement, le geste et l'heure ; il ne porte
@@ -16,6 +16,21 @@ import { isOperator, isSeniorOperator, json, operatorActor } from '../../auth/_l
 const AUDIT_INSERT = `INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)`;
 
 const VALID_PIN = /^\d{4}$/;
+
+/* « Ce PIN existe déjà » est un oracle : un opérateur qui l'essaie sur les
+ * 10 000 codes apprend ceux d'un commerçant sans jamais les lire, contre la règle
+ * « gérer sans lire les codes ». Le refus reste (deux salariés sur un même code
+ * rendraient la caisse ambiguë), mais chaque refus est compté contre l'opérateur
+ * qui l'obtient (le limiteur commun, 8 par quart d'heure) et laissé au journal,
+ * sans le code. Un opérateur qui tombe sur un doublon par hasard n'en voit
+ * jamais la limite. */
+const DUPE_SCOPE = 'pin-dupe';
+/* Une création réussie répond aussi à la question « ce code était-il libre ? ».
+ * Toute tentative d'ajout compte donc, pour cet opérateur et cet établissement,
+ * au même limiteur : huit par quart d'heure suffisent à saisir une équipe depuis
+ * la console (le propriétaire, lui, passe par le tableau de bord), et sonder les
+ * 10 000 codes prendrait des semaines, chaque essai laissé au journal. */
+const CREATE_SCOPE = 'pin-create';
 
 async function guard(context, senior) {
   const ok = await isOperator(context.request, context.env);
@@ -49,22 +64,40 @@ export async function onRequestPost(context) {
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   if (!VALID_PIN.test(pin)) return json({ error: 'bad-pin' }, 400);
 
-  const dupe = await context.env.DB.prepare(
-    `SELECT id FROM staff_pins WHERE merchant = ? AND pin = ?`
-  ).bind(merchant, pin).first();
-  if (dupe) return json({ error: 'pin-exists' }, 409);
-
   const id = 'pin-' + crypto.randomUUID();
   const actor = await operatorActor(context.request, context.env), ts = Date.now();
+  const limited = await limitCheck(context.request, context.env, DUPE_SCOPE, actor.id)
+    || await limitCheck(context.request, context.env, CREATE_SCOPE, actor.id + '@' + merchant);
+  if (limited) return limited;
+  if (!await limitFail(context.request, context.env, CREATE_SCOPE, actor.id + '@' + merchant)) {
+    return json({ error: 'rate-limit-unavailable' }, 503);
+  }
+  /* L'unicité se décide DANS l'insertion : un SELECT puis un INSERT laissaient
+   * deux ajouts simultanés du même code passer tous les deux. Le relevé ne
+   * s'écrit que si la ligne existe bien (même batch, même transaction). */
+  let created = 0;
   try {
-    await context.env.DB.batch([
+    const results = await context.env.DB.batch([
       context.env.DB.prepare(
-        `INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)`
-      ).bind(id, merchant, pin, name, role, ts),
-      context.env.DB.prepare(`${AUDIT_INSERT} VALUES ('', ?, 'staff-pin-create', '', ?, '', ?, ?, ?, ?)`)
-        .bind(merchant, name, actor.label, actor.id, JSON.stringify({ id, role }), ts),
+        `INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts)
+         SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin = ?)`
+      ).bind(id, merchant, pin, name, role, ts, merchant, pin),
+      context.env.DB.prepare(`${AUDIT_INSERT} SELECT '', ?, 'staff-pin-create', '', ?, '', ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM staff_pins WHERE id = ?)`)
+        .bind(merchant, name, actor.label, actor.id, JSON.stringify({ id, role }), ts, id),
     ]);
+    created = Number(results && results[0] && results[0].meta && results[0].meta.changes) || 0;
   } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
+  if (!created) {
+    if (!await limitFail(context.request, context.env, DUPE_SCOPE, actor.id)) {
+      return json({ error: 'rate-limit-unavailable' }, 503);
+    }
+    try {
+      await context.env.DB.prepare(`${AUDIT_INSERT} VALUES ('', ?, 'staff-pin-duplicate', '', '', '', ?, ?, ?, ?)`)
+        .bind(merchant, actor.label, actor.id, JSON.stringify({ role }), ts).run();
+    } catch (_) { /* le refus tient sans sa trace ; le compteur, lui, est passé */ }
+    return json({ error: 'pin-exists' }, 409);
+  }
   return json({ ok: true, pin: { id, name, role } });
 }
 

@@ -73,4 +73,15 @@ assert.equal(R.theoreticalUsage('tomato', 'restaurant-1', 7), 14, 'voids exclude
 const reversed = R.metrics({id:'dish-1', price:100}, R.get('dish-1'), 'restaurant-1');
 assert.equal(reversed.sold, 6);
 assert.equal(reversed.actualCost, 21.43, 'menu analysis allocates physical cost using net quantities');
+// Wave 11 (analysis#0): ten pinches of 0.4 centime each are still 4 centimes.
+// Each line used to be rounded to the centime before the sum (0 + 0 + … = 0),
+// so menu analysis showed a cheaper dish than the Coût simple sheet, which sums
+// first. Lines keep their precision; the dish cost is rounded once.
+context.window.KiwiRestaurantStock = { items: () => Array.from({ length: 10 }, (_, i) => ({ id: 'spice-' + i, name: 'Épice ' + i, unit: 'kg', costPerUnit: 4 })) };
+const pinches = { itemName: 'Harira', portions: 1, ingredients: Array.from({ length: 10 }, (_, i) => ({ stockId: 'spice-' + i, name: 'Épice ' + i, qty: 0.001, unit: 'kg' })) };
+const pinched = R.metrics({ id: 'harira', price: 20 }, pinches, 'restaurant-1');
+assert.equal(pinched.theoreticalCost, 0.04, 'sub-centime lines are summed before the dish is rounded');
+assert.equal(pinched.theoreticalProfit, 19.96, 'the margin carries the pinches');
+const halves = R.metrics({ id: 'harira', price: 20 }, { ...pinches, portions: 3, ingredients: pinches.ingredients.map((l) => ({ ...l, qty: 0.1 })) }, 'restaurant-1');
+assert.equal(halves.theoreticalCost, 1.33, 'one rounding, after the division by portions (4 / 3)');
 console.log('✓ restaurant recipes (stock quantities, shared-ingredient allocation, costs and margins)');

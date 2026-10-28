@@ -8,6 +8,7 @@ import { storeOperationalState } from '../_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 import { correctionList, decideCorrection } from '../_attendance-corrections.js';
 import { hoursByDay } from '../_worked-hours.js';
+import { readDoc, mutateDoc } from '../_doc-cas.js';
 
 const TEAM = 'team';
 const ACCESS = 'employee-access';
@@ -24,35 +25,6 @@ function parse(raw, fallback) {
 function nameOf(member) {
   return [member && member.firstName, member && member.lastName].filter(Boolean).join(' ').trim()
     || String(member && member.name || '').trim() || 'Employé';
-}
-async function readDoc(env, merchant, feature, fallback) {
-  try {
-    const row = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?')
-      .bind(merchant, feature).first();
-    return { data: row ? parse(row.data, fallback) : fallback, rev: Number(row && row.rev) || 0 };
-  } catch (_) { return { data: fallback, rev: 0 }; }
-}
-async function mutateDoc(env, merchant, feature, fallback, change) {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const row = await readDoc(env, merchant, feature, fallback);
-    const next = change(row.data);
-    if (!next) return null;
-    const text = JSON.stringify(next), now = Date.now();
-    try {
-      if (row.rev) {
-        const result = await env.DB.prepare(
-          'UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?'
-        ).bind(text, row.rev + 1, now, merchant, feature, row.rev).run();
-        if (Number(result && result.meta && result.meta.changes) > 0) return next;
-      } else {
-        const result = await env.DB.prepare(
-          'INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)'
-        ).bind(merchant, feature, text, now).run();
-        if (Number(result && result.meta && result.meta.changes) > 0) return next;
-      }
-    } catch (_) { return null; }
-  }
-  return null;
 }
 function rosterFor(team, access) {
   const primary = Array.isArray(team && team.members) && team.members.length ? team.members : (access && access.members);

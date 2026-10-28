@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import maisonSource from './pos-maison-test-source.cjs';
+import { createRequire as __cr } from 'node:module';
+const KiwiMoney = __cr(import.meta.url)('../assets/money-cents.js');
 /* Loyalty truth (2026-10-20). Runs the real /api/clients handlers on node:sqlite
  * and the real assets/clients-store.js in a vm, and holds four rules that were
  * broken in production code:
@@ -197,8 +199,11 @@ console.log('\nMaison : la remise fidélité et le toast');
   for (const f of ['assets/pos-maison.js']) {
     const src = read(f);
     const fn = src.slice(src.indexOf('function rewardDiscount('), src.indexOf('function rewardDiscount(') + 900);
-    check(f === 'assets/pos-boutique.js' ? /base - shelf/.test(fn) : /base - shelf\(base \* \(100 - \(r\.value \|\| 0\)\) \/ 100\)/.test(fn) && !/Math\.round\(base \*/.test(fn),
-      `${f}: a percent reward leaves the total rounded down, never up to 0,50 over`);
+    /* Décision 2026-10-26 : la remise en pourcentage au centime le plus proche, la même règle
+       que functions/api/_rules-loyalty.js (au dirham, l'ancien arrondi vers le bas évitait
+       0,50 de trop ; au centime, l'écart est d'au plus un centime). */
+    check(/Math\.round\(base \* Math\.min\(100, Math\.max\(0, \+r\.value \|\| 0\)\) \+ 1e-9\) \/ 100/.test(fn) && !/base - shelf\(/.test(fn),
+      `${f}: a percent reward is rounded to the nearest centime, the rule every trade shares`);
     check(!/Math\.round\(receivedNow \* \(\(cfg\.amount/.test(src) && !/Math\.round\(receivedNow \/ 10\)/.test(src),
       `${f}: the points toast never rounds up nor assumes one point per 10 MAD`);
   }
@@ -212,7 +217,7 @@ for (const accepted of [true, false]) {
   const server = store(cfg);
   server.raw.prepare('UPDATE clients SET points=100 WHERE merchant=? AND id=?').run(MERCHANT,'c1');
   const docs = { clients: { list: [{ id:'c1', name:'Client', points:100, achats:0 }], seq:2 }, fidelity:cfg };
-  Object.assign(c, { IS_DEMO:false, addEventListener(){}, dispatchEvent(){}, setInterval(){},
+  Object.assign(c, { M: KiwiMoney, KiwiMoney, IS_DEMO:false, addEventListener(){}, dispatchEvent(){}, setInterval(){},
     document:{readyState:'loading',addEventListener(){}},
     KiwiStore:{currentVenue:()=>MERCHANT,define:(name,opts)=>({get:()=>docs[name] || opts.blank?.(),set:v=>{docs[name]=v;},subscribe(){}})},
     KiwiLive:{isOn:()=>true,merchant:()=>MERCHANT},

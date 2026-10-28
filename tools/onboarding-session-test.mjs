@@ -39,6 +39,9 @@ async function run(source, kit, answers) {
     window: { KiwiVenue: { async createVenue(p) { payload = JSON.parse(JSON.stringify(p)); return 'test'; } } },
     document: { body: { classList: { remove() {}, add() {} } } },
   });
+  // finish() reports a team-roster seeding failure through trackTeamImport (declared dependency).
+  const tracker = source.indexOf('  function trackTeamImport(');
+  vm.runInContext(source.slice(tracker, source.indexOf('\n  }\n', tracker) + 5) + '\nlet teamImportFailed = false;', ctx);
   vm.runInContext(grab(source, 'finish'), ctx);
   const result = await ctx.finish({ kit });
   return { payload, rejected: !!(error || result?.error) };
@@ -70,7 +73,7 @@ console.log('✓ onboarding owner: isolated boundary, explicit interface, six ol
 // Declared browser dependencies of each renderer. Adding a sibling's private
 // global requires an explicit contract change, rather than silently passing.
 for (const [file, receiver, declared] of [
-  ['assets/onboarding.js', 'window', ['Kiwi','KiwiCaisseLink','KiwiDashOnboarding','KiwiEnv','KiwiIdentity','KiwiMe','KiwiOnboarding','KiwiOnboardingData','KiwiStoreTemplates','KiwiTeam','KiwiTrades','KiwiVenue','__kiwiLock','__kiwiRole','dispatchEvent','requestIdleCallback']],
+  ['assets/onboarding.js', 'window', ['Kiwi','KiwiCaisseLink','KiwiEnv','KiwiIdentity','KiwiMe','KiwiOnboarding','KiwiOnboardingData','KiwiStoreTemplates','KiwiTeam','KiwiTrades','KiwiVenue','__kiwiLock','__kiwiRole','dispatchEvent','requestIdleCallback']],
 ]) {
   const source = fs.readFileSync(file, 'utf8');
   const reads = [...source.matchAll(new RegExp('\\b' + receiver + '\\.(\\w+)', 'g'))].map(m => m[1]);

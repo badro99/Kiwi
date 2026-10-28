@@ -199,7 +199,7 @@ ok('la fusion rend les codes (fillCodes) et l\'hydratation passe par une lecture
   assert.match(grab(TEAM, 'function teamCloudBind('), /c\.bind\(\)\)\.then\(\(\) => hydrateCodes\(\)\)\.then\(\(\) => publishPins\(\)\)/);
 });
 ok('modifier un salarié dont le code n\'est pas revenu ne lui en invente pas un nouveau', () => {
-  assert.match(TEAM, /\(prev && prev\.hasCode \? '' : makeCode\(\)\)/);
+  assert.match(TEAM, /\(prev && prev\.hasCode \? '' : makeCode\(members\)\)/);
   assert.match(TEAM, /\.\.\.\(\(!code && prev && prev\.hasCode && !memberCode\(prev\)\) \? \{ hasCode: true \} : \{\}\)/);
 });
 ok('aucun autre endroit de team.js n\'écrit le roster brut dans localStorage', () => {

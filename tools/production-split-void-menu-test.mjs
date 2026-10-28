@@ -499,7 +499,15 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       void_reason TEXT,
       void_note TEXT,
       void_actor TEXT,
-      void_actor_id TEXT
+      void_actor_id TEXT,
+      -- Colonnes du schéma minimum de production (0001 à 0016) : /api/sale ne les crée plus en cours de requête.
+      session_id TEXT,
+      split_flow_id TEXT,
+      seller_id TEXT,
+      seller_name TEXT,
+      payment_parts TEXT,
+      tip_cents INTEGER,
+      written_by TEXT
     );
 
     CREATE TABLE table_sessions (
@@ -1466,7 +1474,15 @@ console.log('\n--- Section 4: Feed Split Label Consistency ---');
       void_reason TEXT,
       void_note TEXT,
       void_actor TEXT,
-      void_actor_id TEXT
+      void_actor_id TEXT,
+      -- Colonnes du schéma minimum de production (0001 à 0016) : /api/sale ne les crée plus en cours de requête.
+      session_id TEXT,
+      split_flow_id TEXT,
+      seller_id TEXT,
+      seller_name TEXT,
+      payment_parts TEXT,
+      tip_cents INTEGER,
+      written_by TEXT
     );
 
     CREATE TABLE orders (

@@ -12,11 +12,21 @@
  * the stage before it: they stop getting bigger.
  *
  *   · a file pinned in tools/file-size-baseline.json may grow by at most
- *     SLACK lines over its pin: a bug fix fits, a new feature belongs in a
- *     new file;
+ *     SLACK (50) lines over its pin: a bug fix fits, a new feature belongs in a
+ *     new file. It was 200 until wave 12, and the files that had already spent
+ *     more than 50 are frozen at their size in `frozen` (never above the old
+ *     ceiling, only lowered), so the slack is not a second budget;
+ *   · each stylesheet is pinned in `cssLines` the same way (slack 50, a new
+ *     one stays under CAP lines): design-vexel.css, caisse-shell.css and
+ *     dashboard-shell.css had no limit at all;
  *   · any other assets/*.js, functions/**.js or root *.html file stays
  *     under CAP lines (2 500 since 2026-10-27, was 5 000: the files split
  *     out of the big controllers are all under it, and a new one should be);
+ *   · the gate's own orchestration, tools/check.js, is pinned in `toolLines` the
+ *     same way (slack 50). It is outside assets/, functions/ and the root .html
+ *     files above, grew to 3 255 lines, and had no size guard: a suite is wired in
+ *     with a few lines, anything bigger belongs in its own module (the way
+ *     check-pool.js, check-guard.js and dep-trace.cjs were split out of it);
  *   · tools/global-ownership-test.mjs pins the second number that makes a
  *     big file risky: how many other files' globals it reads;
  *   · the three shells may load at most SCRIPT_SLACK more <script src> than
@@ -36,9 +46,10 @@ import { checkInterfaces } from './controller-interfaces.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+/* KIWI_RATCHET_ROOT lets tools/file-size-ratchet-rules-test.mjs run these rules on a small fake tree. */
+const ROOT = process.env.KIWI_RATCHET_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools', 'file-size-baseline.json');
-const CAP = 2500, SLACK = 200, SCRIPT_SLACK = 3, IMPORTANT_SLACK = 10, IMPORTANT_CAP = 25;
+const CAP = 2500, SLACK = 50, CSS_SLACK = 50, SCRIPT_SLACK = 3, IMPORTANT_SLACK = 10, IMPORTANT_CAP = 25;
 const SHELLS = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html'];
 const update = process.env.KIWI_UPDATE_SIZE_BASELINE === '1';
 const pinFiles = process.argv.slice(2);
@@ -64,23 +75,29 @@ const files = [
 ].sort();
 
 const base = JSON.parse(fs.readFileSync(BASE, 'utf8'));
+base.frozen = base.frozen || {}; base.cssLines = base.cssLines || {};
 const fail = checkInterfaces(rel => fs.readFileSync(path.join(ROOT, rel), 'utf8'),
   JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/controller-interfaces.json'), 'utf8'))), lowered = [];
 let checks = 0;
 for (const rel of files) {
   const n = lines(rel);
   const pin = base.lines[rel];
+  const allowed = pin == null ? CAP : (base.frozen[rel] != null ? Math.min(base.frozen[rel], pin + 200) : pin + SLACK);
   checks++;
   if (pin == null) {
     if (updateFile(rel) && pinFiles.includes(rel) && n <= CAP) { base.lines[rel] = n; lowered.push(`${rel} newly pinned at ${n}`); }
     if (n > CAP) fail.push(`${rel}: ${n} lines, over the ${CAP} cap for a file that is not pinned. Put the new code in its own file.`);
-  } else if (n > pin + SLACK) {
-    fail.push(`${rel}: ${n} lines, ${n - pin} over its pin of ${pin} (slack ${SLACK}). Put the new code in its own file.`);
-  } else if (n < pin && updateFile(rel)) {
-    base.lines[rel] = n; lowered.push(`${rel} ${pin} → ${n}`);
+  } else if (n > allowed) {
+    fail.push(`${rel}: ${n} lines, ${n - pin} over its pin of ${pin} (${base.frozen[rel] != null ? 'frozen at ' + allowed : 'slack ' + SLACK}). Put the new code in its own file.`);
+  } else {
+    if (n < pin && updateFile(rel)) { base.lines[rel] = n; lowered.push(`${rel} ${pin} → ${n}`); }
+    if (base.frozen[rel] != null && n < base.frozen[rel] && updateFile(rel)) {
+      if (n <= Math.min(pin, base.lines[rel]) + SLACK) delete base.frozen[rel]; else base.frozen[rel] = n;
+      lowered.push(`${rel} frozen → ${n}`);
+    }
   }
 }
-for (const rel of Object.keys(base.lines)) if (!files.includes(rel)) { if (updateFile(rel)) { delete base.lines[rel]; lowered.push(`${rel} removed`); } }
+for (const rel of Object.keys(base.lines)) if (!files.includes(rel)) { if (updateFile(rel)) { delete base.lines[rel]; delete base.frozen[rel]; lowered.push(`${rel} removed`); } }
 for (const rel of SHELLS) {
   const n = scripts(rel), pin = base.scripts[rel];
   checks++;
@@ -88,8 +105,24 @@ for (const rel of SHELLS) {
   else if (n > pin + SCRIPT_SLACK) fail.push(`${rel}: loads ${n} <script src>, ${n - pin} over its pin of ${pin} (slack ${SCRIPT_SLACK}). Load the new code lazily, or bundle it with a neighbour.`);
   else if (n < pin && updateFile(rel)) { base.scripts[rel] = n; lowered.push(`${rel} scripts ${pin} → ${n}`); }
 }
+base.toolLines = base.toolLines || {};
+for (const rel of Object.keys(base.toolLines)) {
+  checks++;
+  if (!fs.existsSync(path.join(ROOT, rel))) { if (updateFile(rel)) { delete base.toolLines[rel]; lowered.push(`${rel} removed`); } continue; }
+  const n = lines(rel), pin = base.toolLines[rel];
+  if (n > pin + SLACK) fail.push(`${rel}: ${n} lines, ${n - pin} over its pin of ${pin} (slack ${SLACK}). The gate's orchestration stops growing: put the new logic in its own module under tools/.`);
+  else if (n < pin && updateFile(rel)) { base.toolLines[rel] = n; lowered.push(`${rel} lines ${pin} → ${n}`); }
+}
 const css = walk('assets', (rel) => rel.endsWith('.css') && !/ 2\./.test(rel)).sort();
 base.important = base.important || {};
+for (const rel of css) {
+  const total = lines(rel), cssPin = base.cssLines[rel];
+  checks++;
+  if (cssPin == null) { if (total > CAP) fail.push(`${rel}: ${total} lines, over the ${CAP} cap for a stylesheet that is not pinned. Split it by surface.`); }
+  else if (total > cssPin + CSS_SLACK) fail.push(`${rel}: ${total} lines, ${total - cssPin} over its pin of ${cssPin} (slack ${CSS_SLACK}). Put the new rules in their own stylesheet.`);
+  else if (total < cssPin && updateFile(rel)) { base.cssLines[rel] = total; lowered.push(`${rel} lines ${cssPin} → ${total}`); }
+}
+for (const rel of Object.keys(base.cssLines)) if (!css.includes(rel) && updateFile(rel)) { delete base.cssLines[rel]; lowered.push(`${rel} removed`); }
 for (const rel of css) {
   const n = (fs.readFileSync(path.join(ROOT, rel), 'utf8').match(/!important/g) || []).length;
   const pin = base.important[rel];

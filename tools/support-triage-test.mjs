@@ -8,15 +8,16 @@
 // illisible, exception synchrone).
 //
 // Les vraies fonctions tournent : onRequestPost de /api/support/tickets et de
-// /api/support/attachments, sur un SQLite en mémoire, avec une vraie caisse appairée.
+// /api/support/attachments, sur un SQLite en mémoire, avec une vraie caisse appairée
+// (lecture, pièces jointes) et un vrai opérateur nommé (dépôt : la caisse ne dépose pas).
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { ensureSupport, SUPPORT_TABLES } from '../functions/api/_support.js';
-import { TILL_COOKIE, tillToken } from '../functions/auth/_lib.js';
-import { DAILY_CAPS } from '../functions/api/ai/_quota.js';
+import { TILL_COOKIE, tillToken, operatorToken, operatorIdToken } from '../functions/auth/_lib.js';
+import { DAILY_CAPS, quotaDay } from '../functions/api/ai/_quota.js';
 import { GATEWAY_OPTS } from '../functions/api/ai/_run.js';
 import {
   ALERT_AT, CONFIDENT_AT, TRIAGE_MODEL, TRIAGE_QUESTIONS, WATCH_AT,
@@ -74,6 +75,9 @@ function freshEnv(overrides = {}) {
   DB.db.exec(`CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, name TEXT, type TEXT, plan TEXT, status TEXT, till_epoch INTEGER NOT NULL DEFAULT 0, updated_ts INTEGER)`);
   DB.db.prepare(`INSERT INTO merchant_config (merchant,name,type,plan,status,till_epoch,updated_ts) VALUES (?,?,?,?,?,?,?)`)
     .run(MERCHANT, 'Cafe Triage Test', 'restaurant', 'basic', 'active', 0, Date.now());
+  DB.db.exec(`CREATE TABLE operators (id TEXT PRIMARY KEY, label TEXT, salt TEXT NOT NULL, hash TEXT NOT NULL, created_ts INTEGER NOT NULL);
+    INSERT INTO operators VALUES ('op-triage', 'Triage', '', '', 1);
+    CREATE TABLE operational_rate (merchant TEXT NOT NULL, bucket TEXT NOT NULL, window_ts INTEGER NOT NULL, hits INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (merchant, bucket, window_ts));`);
   const media = new Map();
   const calls = [];
   const env = {
@@ -88,12 +92,14 @@ function freshEnv(overrides = {}) {
 }
 
 async function cookie() { return `${TILL_COOKIE}=${await tillToken(SECRET, MERCHANT, 0)}`; }
+/* Déposer une demande est réservé au compte et aux opérateurs nommés. */
+async function filer() { return `kiwi_op=${await operatorToken(SECRET)}; kiwi_op_id=${await operatorIdToken(SECRET, 'op-triage')}`; }
 
 async function post(env, summary, extra = {}) {
   const waits = [];
   const res = await createTicket({
     request: new Request('https://kiwi.test/api/support/tickets', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await cookie() },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await filer() },
       body: JSON.stringify({ merchant: MERCHANT, summary, channel: 'whatsapp', contact: '+212600000000', client: {}, ...extra }),
     }),
     env, waitUntil: (p) => waits.push(p),
@@ -251,7 +257,7 @@ try {
     // quota épuisé : Clef n'est même pas appelé
     const env = freshEnv();
     await post(env, 'première demande pour créer la table de quota');
-    const day = new Date().toISOString().slice(0, 10);
+    const day = await quotaDay(env.DB, MERCHANT);
     env.DB.db.prepare(`UPDATE ai_usage_kind SET calls = ? WHERE merchant = ? AND day = ? AND kind = 'supporttriage'`).run(DAILY_CAPS.supporttriage, MERCHANT, day);
     const before = env.__calls.length;
     const { res, body } = await post(env, 'la caisse ne démarre plus du tout');
@@ -263,7 +269,7 @@ try {
     const env2 = freshEnv();
     env2.AI.run = () => { throw new Error('boom'); };
     const res2 = await createTicket({
-      request: new Request('https://kiwi.test/api/support/tickets', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await cookie() },
+      request: new Request('https://kiwi.test/api/support/tickets', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await filer() },
         body: JSON.stringify({ merchant: MERCHANT, summary: 'caisse bloquée depuis ce matin', channel: 'whatsapp', contact: '+212600000000' }) }),
       env: env2,
     });

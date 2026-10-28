@@ -215,7 +215,7 @@ export async function registerWebhooks(env, merchant, linkId, request) {
     }
   }`;
   const failures = [];
-  for (const topic of ['ORDERS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED']) {
+  for (const topic of ['ORDERS_CREATE', 'ORDERS_CANCELLED', 'REFUNDS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED']) {
     try {
       const out = await shopifyGraphQL(env, merchant, query, { topic, webhook: { uri } });
       const errors = (out.data.webhookSubscriptionCreate && out.data.webhookSubscriptionCreate.userErrors) || [];
@@ -526,8 +526,10 @@ export async function flushShopifyOutbox(env, merchant, limit = 10) {
         const writes = [
           env.DB.prepare(`UPDATE shopify_sync_outbox SET id = ?, status = ?, attempts = attempts + 1, next_attempt_ts = ?, last_error = ?, updated_ts = ? WHERE id = ?`)
             .bind(crypto.randomUUID(), outStatus, Date.now() + retryDelay(Number(row.attempts) + 1), message, Date.now(), row.id),
-          env.DB.prepare(`UPDATE shopify_variant_links SET status = ?, updated_ts = ? WHERE merchant = ? AND kiwi_variant_id = ?`)
-            .bind(linkStatus, Date.now(), row.merchant, row.kiwi_variant_id),
+          /* `updated_ts` reste l'instant de la quantité connue (voir
+             observeInventoryLevel) : un refus ne dit rien de l'état Shopify. */
+          env.DB.prepare(`UPDATE shopify_variant_links SET status = ? WHERE merchant = ? AND kiwi_variant_id = ?`)
+            .bind(linkStatus, row.merchant, row.kiwi_variant_id),
         ];
         /* Un souci d'une seule variante se lit dans les compteurs : il ne
            recouvre pas l'erreur de la connexion. */

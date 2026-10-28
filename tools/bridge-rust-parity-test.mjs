@@ -11,7 +11,15 @@ import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cargo = spawnSync('cargo', ['--version'], { stdio: 'ignore' });
-if (cargo.error?.code === 'ENOENT') { console.log('○ skip · cargo absent'); process.exit(0); }
+if (cargo.error?.code === 'ENOENT') {
+  /* The Node, Rust and Win7 bridges must not drift unseen, and a run without
+     cargo did not execute this suite. NOT RUN is never PASSED: it prints the
+     "not run" line the gate shows as a warning (tools/check.js), like the iOS
+     format vectors. Building the Rust bridge needs cargo, so every Rust bridge
+     release runs it. A red here would block every deploy from a Mac without Rust. */
+  console.log('○ bridge-rust-parity not run: cargo unavailable (install Rust, https://rustup.rs); the Rust bridge parity was NOT executed');
+  process.exit(0);
+}
 function run(cmd, args, env = process.env) {
   const r = spawnSync(cmd, args, { cwd: root, env, stdio: 'inherit' });
   assert.equal(r.status, 0, cmd + ' ' + args.join(' '));

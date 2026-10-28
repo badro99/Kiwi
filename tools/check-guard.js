@@ -113,7 +113,7 @@ function ranTests() { return new Set(ran); }
    "○ skip … unavailable" and exits 0. check.js fails the run on any of them,
    whatever the tier: a suite that did not execute is not a pass. */
 const depSkips = [];
-const DEP_SKIP = /○ skip[: ]+(?:fast-check|axe-core|puppeteer-core) unavailable/;
+const DEP_SKIP = /○ skip[: ]+(?:fast-check|axe-core|puppeteer-core|typescript) unavailable/;
 function noteDepSkip(args, stdout) {
   const text = Buffer.isBuffer(stdout) ? stdout.toString('utf8') : String(stdout || '');
   if (!DEP_SKIP.test(text)) return;
@@ -121,6 +121,49 @@ function noteDepSkip(args, stdout) {
   if (!depSkips.includes(script)) depSkips.push(script);
 }
 function dependencySkips() { return depSkips.slice(); }
+/* Flake ledger. check-pool.js runs a test beside seven others, and a test that
+   fails there is run again alone at its usual place. When that second run
+   passes the run is green, and until now nothing said the suite had failed
+   first: a flaky suite stayed invisible. The pool's failures are noted here,
+   and a suite that fails in the pool then passes alone is a flake: listed for
+   check.js, which warns and appends it to a ledger in the temp dir. */
+const poolFailed = new Set();
+const flaked = [];
+const scriptOf = (args) => (Array.isArray(args) && args.length ? path.basename(String(args[args.length - 1])) : '?');
+function notePoolResults(results) {
+  for (const [key, r] of Object.entries(results || {})) {
+    if (!r || r.status === 0) continue;
+    try { poolFailed.add(scriptOf(JSON.parse(key)[1])); } catch (_) {}
+  }
+}
+function noteAlonePass(args, status) {
+  if (status !== 0) return;
+  const name = scriptOf(args);
+  if (poolFailed.has(name) && !flaked.includes(name)) flaked.push(name);
+}
+const flakes = () => flaked.slice();
+const FLAKE_LEDGER = path.join(os.tmpdir(), 'kiwi-flake-ledger.jsonl');
+const FLAKE_DAYS = 7;
+/* Appends this run's flakes and returns, per suite, how many times it flaked
+   in the last FLAKE_DAYS days (this run included). */
+function recordFlakes(opts) {
+  opts = opts || {};
+  const file = opts.file || FLAKE_LEDGER, now = opts.now || Date.now();
+  const names = opts.names || flaked;
+  const since = now - FLAKE_DAYS * 86400000;
+  const counts = {};
+  try {
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      if (!line) continue;
+      try { const e = JSON.parse(line); if (e.at >= since) counts[e.suite] = (counts[e.suite] || 0) + 1; } catch (_) {}
+    }
+  } catch (_) {}
+  for (const n of names) {
+    counts[n] = (counts[n] || 0) + 1;
+    try { fs.appendFileSync(file, JSON.stringify({ at: now, suite: n }) + '\n'); } catch (_) {}
+  }
+  return Object.fromEntries(names.map((n) => [n, counts[n]]));
+}
 /* Coverage cells reached (tools/coverage-probe.mjs): from the pool's results,
    cached passes included, and from the suites this process runs itself. */
 const reached = new Map();   // "surface|locale|viewport" → Set of suites
@@ -211,6 +254,7 @@ function install(opts) {
       else if (r) r.stdout = `(first run exited ${ENV_EXIT} on the environment, second run below)\n` + (r.stdout || '');
     }
     if (r) noteDepSkip(args, r.stdout);
+    if (r) noteAlonePass(args, r.status);
     if (probe) { const cells = takeLedger(probe.ledger); if (r && r.status === 0) noteCells(args, cells); }
     const dt = Date.now() - t0;
     if (r && (r.error && r.error.code === 'ETIMEDOUT' || (r.status === null && r.signal === 'SIGKILL' && dt >= o.timeout - 50))) {
@@ -277,6 +321,7 @@ function prefetch(opts) {
     });
     if (pool.error) throw pool.error;
     replay = JSON.parse(fs.readFileSync(results, 'utf8'));
+    notePoolResults(replay);
     for (const [key, r] of Object.entries(replay)) {
       if (!r || r.status !== 0 || !(r.cpuMs > 0)) continue;
       try { const args = JSON.parse(key)[1]; cpu[path.basename(String(args[args.length - 1]))] = r.cpuMs; } catch (_) {}
@@ -532,4 +577,4 @@ function browserPreflight(opts) {
   }
 }
 
-module.exports = { install, ranTests, networkOnly, dependencySkips, reachedCells, acquireLock, prefetch, reusedCount, cpuTimes, cpuRatchet, CPU_BUDGET_MS, isSlow, tier, skipped, takeSkip, selection, isSelected, runsBrowsers, namedTests, stampNorm, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
+module.exports = { install, ranTests, networkOnly, dependencySkips, flakes, recordFlakes, notePoolResults, FLAKE_DAYS, reachedCells, acquireLock, prefetch, reusedCount, cpuTimes, cpuRatchet, CPU_BUDGET_MS, isSlow, tier, skipped, takeSkip, selection, isSelected, runsBrowsers, namedTests, stampNorm, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };

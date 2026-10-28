@@ -54,23 +54,23 @@
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '71', module: true, module: true, module: true, label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '122', module: true, label: 'Boutique · Maison Mansour' },
-    '0003': { id: 'spa',         file: 'pos-spa',         rev: '11', label: 'Spa · Spa Bahia' },
-    '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '25', label: 'Hôtel / Riad' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '78', module: true, module: true, module: true, label: 'Pressing · Pressing Marshan' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '145', module: true, label: 'Boutique · Maison Mansour' },
+    '0003': { id: 'spa',         file: 'pos-spa',         rev: '13', label: 'Spa · Spa Bahia' },
+    '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '27', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '15', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '12', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '7', label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '13', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '9', label: 'Food truck · Karavan' },
-    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '25', label: 'Épicerie · Si Brahim' },
+    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '28', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '9', label: 'Pharmacie · Ibn Batouta' },
-    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '14', label: 'Librairie · Al Boughaz' },
+    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '17', deps: [{ file: 'money-cents', rev: '4' }, { file: 'librairie-loyalty', rev: '7' }], label: 'Librairie · Al Boughaz' },
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '15', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '10', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '9', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '9', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '96', module: true, label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '102', module: true, label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -172,11 +172,25 @@
   }
 
   /* ---------- lazy loading ---------- */
+  /* A vertical may list classic scripts it needs first (`deps`), in order. */
+  function loadDep(dep) {
+    const key = `dep:${dep.file}`;
+    if (!loading[key]) {
+      loading[key] = new Promise((resolve, reject) => {
+        const el = document.createElement('script');
+        el.src = `assets/${dep.file}.js?v=${encodeURIComponent(dep.rev)}`;
+        el.onload = resolve;
+        el.onerror = () => { delete loading[key]; el.remove(); reject(new Error(`assets/${dep.file}.js introuvable`)); };
+        document.head.appendChild(el);
+      });
+    }
+    return loading[key];
+  }
   function ensureLoaded(entry) {
     if (apps[entry.id]) return Promise.resolve();
     if (loading[entry.file]) return loading[entry.file];
     let sc = null, link = null;
-    loading[entry.file] = new Promise((resolve, reject) => {
+    const start = () => new Promise((resolve, reject) => {
       const rev = entry.rev ? `?v=${encodeURIComponent(entry.rev)}` : '';
       link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -189,6 +203,10 @@
       sc.onerror = () => reject(new Error(`assets/${entry.file}.js introuvable`));
       document.head.appendChild(sc);
     });
+    /* Without deps the tag is created at once; with deps, once they are in. */
+    loading[entry.file] = entry.deps && entry.deps.length
+      ? entry.deps.reduce((chain, dep) => chain.then(() => loadDep(dep)), Promise.resolve()).then(start)
+      : start();
     /* Ticket #0021 · a failed load must not poison the cache: drop the
      * rejected promise and its dead tags so the next unlock retries cleanly
      * instead of looping on the same rejection until full reload. */

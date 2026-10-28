@@ -201,6 +201,7 @@
           body: JSON.stringify(body)
         });
       }).then(function (r) {
+        try { if (root.KiwiTrustedClock) root.KiwiTrustedClock.observe(r); } catch (_) {}
         return r.text().then(function (txt) {
           var parsed = null, json = false;
           try { parsed = JSON.parse(txt); json = parsed !== null && typeof parsed === 'object'; } catch (_) {}

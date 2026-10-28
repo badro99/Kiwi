@@ -139,7 +139,24 @@ r = await get(owner);
 ok(r.status === 200 && r.body.tables && r.body.tables['4'] && r.body.tables['4'].status === 'ka-yaklo', 'an old base without paid_ts/void_ts still returns the room');
 ok(r.body.partial && r.body.partial.revenue === true, 'and says which statistic it could not compute');
 ok(r.body.tables['4'].billCents > 0, 'the bill falls back to orders on the table since the visit opened');
+ok(Array.isArray(r.body.errors) && r.body.errors.includes('sales'), 'a failed query is reported in `errors`, not swallowed');
 breakOn = null;
+
+/* A broken query must be reported (logged + flagged in the response), not turned
+   into an empty picture nobody can tell from a quiet room. */
+{
+  const logged = [], realError = console.error;
+  console.error = (...a) => { logged.push(a.join(' ')); };
+  breakOn = /FROM table_sessions\s+WHERE merchant = \? AND status = 'open'/;
+  try { r = await get(owner); } finally { console.error = realError; breakOn = null; }
+  ok(r.status === 200 && r.body.ok === true, 'a broken sessions query still answers');
+  ok(Array.isArray(r.body.errors) && r.body.errors.includes('sessions') && r.body.partial.sessions === true,
+    'and flags the failure in the response (errors + partial.sessions)');
+  ok(logged.some((l) => /floor\/live.*sessions/.test(l)) && !logged.some((l) => l.includes(merchant)),
+    'and logs it without the merchant or any argument');
+  r = await get(owner);
+  ok(Array.isArray(r.body.errors) && r.body.errors.length === 0 && r.body.partial.sessions === false, 'a healthy read reports no error');
+}
 
 const pure = assemble({ states: {}, requests: [], sessions: [], bills: [], turns: [], sales: [], now });
 ok(pure && Object.keys(pure.tables).length === 0, 'an empty room is an empty answer');

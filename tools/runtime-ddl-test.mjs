@@ -3,8 +3,15 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { join } from 'node:path';
-import { scan } from './runtime-ddl-parser.cjs';
+import { createRequire } from 'node:module';
 import { ROOT, MIGRATIONS_DIR, freshDb, applySchema, applyMigrations, shapeOf, listMigrations } from './d1-migrations.mjs';
+let scan;
+try { ({ scan } = createRequire(import.meta.url)('./runtime-ddl-parser.cjs')); }
+catch (e) {
+  if (e && e.code !== 'MODULE_NOT_FOUND') throw e;
+  console.log('  ○ skip  typescript unavailable (npm --prefix app ci, or in a worktree ln -s <main checkout>/app/node_modules app/node_modules), runtime DDL not executed');
+  process.exit(0);
+}
 const canonical = applySchema(freshDb()), expected = shapeOf(canonical);
 const applied = freshDb();
 for (const file of listMigrations().filter(f => Number(f.slice(0, 4)) <= 10)) applied.exec(fs.readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));

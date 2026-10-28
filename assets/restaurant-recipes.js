@@ -71,10 +71,26 @@
     const quantityInStockUnit = units()?.convert
       ? units().convert(number(ingredient.qty), recipeUnit, stockUnit)
       : (recipeUnit === stockUnit ? number(ingredient.qty) : null);
-    return { stock, cost, stockUnit, recipeUnit, quantityInStockUnit, lineCost: cost == null || quantityInStockUnit == null ? null : round(cost * quantityInStockUnit) };
+    /* Kept at fine precision: the dish cost is rounded once, after the sum,
+     * like the Coût simple sheet. Ten pinches at 0.4 centime are 4 centimes. */
+    return { stock, cost, stockUnit, recipeUnit, quantityInStockUnit, lineCost: cost == null || quantityInStockUnit == null ? null : fine(cost * quantityInStockUnit) };
+  }
+  /* « 7 jours » = les 7 journées commerciales (aujourd'hui et les six d'avant, bascule 05:00 dans
+   * le fuseau du magasin), comme partout ailleurs : pas 7 x 24 h glissantes sur l'horloge de l'appareil.
+   * Sans le rapport du jour (page qui ne le charge pas), la fenêtre glissante d'avant. */
+  function windowStart(id, days) {
+    const n = Math.max(1, days || 7);
+    try {
+      const R = window.KiwiDayReport, slug = venue(id);
+      if (R?.businessDay && R.dayBounds && R.shiftDay) {
+        const from = R.dayBounds(R.shiftDay(R.businessDay(Date.now(), slug), -(n - 1), slug), slug)?.from;
+        if (Number.isFinite(from)) return from;
+      }
+    } catch (_) {}
+    return Date.now() - n * 864e5;
   }
   function salesFor(itemId, itemName, id, days) {
-    const since = Date.now() - Math.max(1, days || 7) * 864e5;
+    const since = windowStart(id, days);
     let qty = 0;
     try {
       const seen = new Set();

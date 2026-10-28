@@ -1,4 +1,5 @@
-/* Continuous day snapshot comparison. Full local receipts remain in the
+/* Two modules ship here, both loaded wherever the day report is built: the continuous day snapshot comparison, then (below) the day report's VAT by rate (KiwiDayReportVat).
+   Continuous day snapshot comparison. Full local receipts remain in the
    durable Z job so missing IDs can replay through the normal sale endpoint. */
 (function () {
   'use strict';
@@ -322,4 +323,243 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
+})();
+
+/* Rapport journalier · la TVA par taux.
+ *
+ * Un comptable ne peut pas passer la journée en écriture avec un seul total
+ * TTC : il lui faut, par taux, le HT, la TVA et le TTC. Ce module les calcule
+ * à partir des lignes que le rapport compte déjà (build() dans day-report.js),
+ * en centimes entiers, et les met à disposition de l'écran, des exports et du
+ * ticket Z.
+ *
+ * Le taux d'une ligne est celui qu'elle porte (`rate`), sinon le taux par
+ * défaut du commerçant (le réglage TVA du ticket). Sans l'un ni l'autre, la
+ * vente reste sous « taux non renseigné » : Kiwi ne devine jamais un taux.
+ *
+ * La règle de calcul est partagée avec le serveur
+ * (functions/api/_rules-day-vat.js, copiée ici par tools/build-shared-rules.mjs).
+ *
+ *   compute(rows, opts)  → { rows, totals, ... } ou null si rien à ventiler
+ *   merge(a, b)          → deux services de la même journée
+ *   html(report, ui)     → le bloc de l'écran (ui = { LANG, esc, money, CUR, row })
+ *   csvRows(vat, lang)   → lignes de tableur (tableaux de cellules)
+ *   tableRows(vat, lang) → { title, headers, rows, note } pour l'export PDF
+ *   ticketBlock(vat, lang, fmt) → { title, lines: [[libellé, valeur]] } pour le ticket Z */
+(function () {
+  'use strict';
+  /* GENERATED SHARED KiwiDayVatRules BEGIN */
+  /* Copy of functions/api/_rules-day-vat.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiDayVatRules = (function () {
+    /* VAT by rate for one business day. Callers supply the day's normalised rows
+     * (the ones the day report already counts) and the merchant's default rate.
+     * Money stays in integer centimes. A line without a rate takes the merchant's
+     * default rate; with no default it lands under "rate unknown" (rate: null) and
+     * is never guessed. Pure: no clock, no storage, no DOM.
+     *
+     * Row: { amount (MAD, signed), kind, lines: [{ total, rate? }] | null }
+     * opts: { defaultRate: number|null, included: boolean (prices carry the VAT) }
+     * Result: { v, included, defaultRate, rows: [{ rate, baseC, htC, vatC, ttcC }],
+     *           totals: { htC, vatC, ttcC, unknownC, allC } }
+     * `baseC` is the amount the till recorded for that rate: it is what merges. */
+    const toC = function (n) { return Math.round(((Number(n) || 0) + Number.EPSILON) * 100); }
+    const goodRate = function (v) {
+      if (v == null || v === '' || typeof v === 'boolean') return null;
+      const r = Number(v);
+      return Number.isFinite(r) && r >= 0 && r <= 100 ? Math.round(r * 100) / 100 : null;
+    }
+    /* Half up on the magnitude, so a refund mirrors its sale to the centime. */
+    const divRound = function (num, den) {
+      const sign = num < 0 ? -1 : 1;
+      return sign * Math.floor((Math.abs(num) * 2 + den) / (2 * den));
+    }
+    /* Largest remainder: the parts add up to `total` exactly. */
+    const split = function (total, weights) {
+      const sum = weights.reduce(function (a, b) { return a + b; }, 0);
+      if (!(sum > 0)) return null;
+      const sign = total < 0 ? -1 : 1, mag = Math.abs(total);
+      const parts = weights.map(function (w, i) {
+        const exact = mag * w;
+        return { i: i, v: Math.floor(exact / sum), rem: exact % sum };
+      });
+      let left = mag - parts.reduce(function (a, p) { return a + p.v; }, 0);
+      parts.slice().sort(function (a, b) { return b.rem - a.rem || a.i - b.i; }).forEach(function (p) {
+        if (left > 0) { p.v++; left--; }
+      });
+      return parts.map(function (p) { return p.v * sign; });
+    }
+    const settle = function (rate, baseC, included) {
+      if (rate == null) return { rate: null, baseC: baseC, htC: null, vatC: null, ttcC: baseC };
+      const bp = Math.round(rate * 100);
+      if (included) {
+        const htC = divRound(baseC * 10000, 10000 + bp);
+        return { rate: rate, baseC: baseC, htC: htC, vatC: baseC - htC, ttcC: baseC };
+      }
+      const vatC = divRound(baseC * bp, 10000);
+      return { rate: rate, baseC: baseC, htC: baseC, vatC: vatC, ttcC: baseC + vatC };
+    }
+    const finish = function (byRate, included, defaultRate) {
+      const keys = Object.keys(byRate).filter(function (k) { return k !== 'unknown'; })
+        .sort(function (a, b) { return Number(a) - Number(b); });
+      if (byRate.unknown) keys.push('unknown');
+      const rows = keys.map(function (k) {
+        return settle(k === 'unknown' ? null : Number(k), byRate[k], included);
+      });
+      const totals = { htC: 0, vatC: 0, ttcC: 0, unknownC: 0, allC: 0 };
+      rows.forEach(function (r) {
+        if (r.rate == null) { totals.unknownC += r.ttcC; } else {
+          totals.htC += r.htC; totals.vatC += r.vatC; totals.ttcC += r.ttcC;
+        }
+        totals.allC += r.ttcC;
+      });
+      return { v: 1, included: included, defaultRate: defaultRate, rows: rows, totals: totals };
+    }
+    const keyOf = function (rate) { return rate == null ? 'unknown' : String(rate); }
+    const dayVat = function (rows, opts) {
+      const o = opts || {};
+      const included = o.included !== false;
+      const defaultRate = goodRate(o.defaultRate);
+      const byRate = Object.create(null);
+      const put = function (rate, c) { const k = keyOf(rate); byRate[k] = (byRate[k] || 0) + c; };
+      (rows || []).forEach(function (row) {
+        if (!row) return;
+        const magC = Math.abs(toC(row.amount));
+        if (!magC) return;
+        const neg = row.kind === 'refund' || Number(row.amount) < 0;
+        const totalC = neg ? -magC : magC;
+        const lines = (row.lines || []).filter(function (l) { return l && Number(l.total) > 0; });
+        const weights = lines.map(function (l) { return toC(l.total); });
+        const parts = lines.length ? split(totalC, weights) : null;
+        if (!parts) { put(defaultRate, totalC); return; }
+        lines.forEach(function (l, i) {
+          const own = goodRate(l.rate);
+          put(own != null ? own : defaultRate, parts[i]);
+        });
+      });
+      return finish(byRate, included, defaultRate);
+    }
+    /* Two services of the same business day: add the recorded amounts per rate and
+     * settle again, so rounding never accumulates. */
+    const mergeDayVat = function (a, b) {
+      if (!a || !b) return a || b || null;
+      const byRate = Object.create(null);
+      [a, b].forEach(function (v) {
+        (v.rows || []).forEach(function (r) { const k = keyOf(r.rate); byRate[k] = (byRate[k] || 0) + (Number(r.baseC) || 0); });
+      });
+      return finish(byRate, a.included !== false, a.defaultRate != null ? a.defaultRate : b.defaultRate);
+    }
+    return { dayVat, mergeDayVat };
+  })();
+  /* GENERATED SHARED KiwiDayVatRules END */
+
+  var TXT = {
+    title: { fr: 'TVA par taux', en: 'VAT by rate', ar: 'الضريبة حسب النسبة' },
+    rate: { fr: 'Taux', en: 'Rate', ar: 'النسبة' },
+    ht: { fr: 'HT', en: 'Excl. VAT', ar: 'خارج الضريبة' },
+    vat: { fr: 'TVA', en: 'VAT', ar: 'الضريبة' },
+    ttc: { fr: 'TTC', en: 'Incl. VAT', ar: 'شامل الضريبة' },
+    total: { fr: 'Total', en: 'Total', ar: 'المجموع' },
+    unknown: { fr: 'Taux non renseigné', en: 'Rate not set', ar: 'النسبة غير محددة' },
+    unknownNote: {
+      fr: 'Aucun taux de TVA n’est réglé pour ces ventes, et Kiwi n’en devine pas. Réglez le taux par défaut dans les réglages du ticket.',
+      en: 'No VAT rate is set for these sales, and Kiwi does not guess one. Set the default rate in the receipt settings.',
+      ar: 'لا توجد نسبة ضريبة محددة لهذه المبيعات ولا يخمّنها كيوي. حدّد النسبة الافتراضية في إعدادات الوصل.'
+    },
+    missing: {
+      fr: 'Ventilation de la TVA non enregistrée pour cette journée.',
+      en: 'The VAT breakdown was not recorded for this day.',
+      ar: 'لم يتم تسجيل تفصيل الضريبة لهذا اليوم.'
+    },
+    excl: {
+      fr: 'Prix saisis hors taxe : la TVA s’ajoute au HT.',
+      en: 'Prices are entered excluding VAT: VAT is added on top.',
+      ar: 'الأسعار مدخلة دون ضريبة: تُضاف الضريبة فوقها.'
+    }
+  };
+  function pick(lang) { return lang === 'en' || lang === 'ar' ? lang : 'fr'; }
+  function T(key, lang) { var o = TXT[key]; return o[pick(lang)] != null ? o[pick(lang)] : o.fr; }
+  function curLang() { try { return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } }
+  function pct(rate) { return String(rate).replace('.', ',') + ' %'; }
+
+  /* Le réglage TVA du commerçant, tel que le ticket l'applique. `mode:'none'`
+     veut dire « pas de TVA affichée » : ce n'est pas un taux, donc inconnu. */
+  function merchantBasis() {
+    var v = null;
+    try { var cfg = window.KiwiReceipt && window.KiwiReceipt.config && window.KiwiReceipt.config(); v = cfg && cfg.vat; } catch (_) { v = null; }
+    if (!v || v.mode !== 'rate' || !(+v.rate > 0)) return { defaultRate: null, included: true };
+    return { defaultRate: +v.rate, included: v.included !== false };
+  }
+
+  function compute(rows, opts) {
+    var b = merchantBasis(), o = opts || {};
+    var vat = KiwiDayVatRules.dayVat(rows, {
+      defaultRate: o.defaultRate !== undefined ? o.defaultRate : b.defaultRate,
+      included: o.included !== undefined ? o.included : b.included
+    });
+    return vat.rows.length ? vat : null;
+  }
+  function merge(a, b) { return KiwiDayVatRules.mergeDayVat(a, b); }
+
+  function mad(c) { return (c || 0) / 100; }
+  function cells(vat, lang, fmt) {
+    var out = vat.rows.map(function (r) {
+      return r.rate == null
+        ? [T('unknown', lang), '', '', fmt(r.ttcC)]
+        : [pct(r.rate), fmt(r.htC), fmt(r.vatC), fmt(r.ttcC)];
+    });
+    var t = vat.totals;
+    out.push([T('total', lang), fmt(t.htC), fmt(t.vatC), fmt(t.ttcC)]);
+    return out;
+  }
+
+  function html(r, ui) {
+    var L = ui.LANG(), money = function (c) { return ui.money(mad(c)) + ' ' + ui.CUR(); };
+    var vat = r && r.vat;
+    if (!vat || !vat.rows || !vat.rows.length) {
+      if (!r || !(+r.txns > 0) || r.historical || r.detailsUnavailable) return '';
+      return '<div class="kdr-sec" data-kdr-vat><div class="kdr-h"><span>' + ui.esc(T('title', L)) + '</span></div>'
+        + '<div class="kdr-note">' + ui.esc(T('missing', L)) + '</div></div>';
+    }
+    var body = vat.rows.map(function (x) {
+      if (x.rate == null) return ui.row(T('unknown', L), money(x.ttcC), 'sub');
+      return ui.row(pct(x.rate) + ' · ' + T('ht', L) + ' ' + money(x.htC), T('vat', L) + ' ' + money(x.vatC));
+    }).join('');
+    var t = vat.totals;
+    body += ui.row(T('total', L) + ' · ' + T('ht', L) + ' ' + money(t.htC), T('vat', L) + ' ' + money(t.vatC), 'total');
+    body += ui.row(T('ttc', L), money(t.ttcC + t.unknownC), 'sub');
+    var notes = (t.unknownC ? '<div class="kdr-note">' + ui.esc(T('unknownNote', L)) + '</div>' : '')
+      + (vat.included === false ? '<div class="kdr-note">' + ui.esc(T('excl', L)) + '</div>' : '');
+    return '<div class="kdr-sec" data-kdr-vat><div class="kdr-h"><span>' + ui.esc(T('title', L)) + '</span><em>'
+      + ui.esc(money(t.vatC)) + '</em></div>' + body + notes + '</div>';
+  }
+
+  function plain(c) { return (c / 100).toFixed(2); }
+  function csvRows(vat, lang) {
+    var L = lang || curLang();
+    if (!vat || !vat.rows || !vat.rows.length) return [[T('title', L)], [T('missing', L)]];
+    return [[T('title', L), 'MAD'], [T('rate', L), T('ht', L), T('vat', L), T('ttc', L)]].concat(cells(vat, L, plain))
+      .concat(vat.totals.unknownC ? [[T('unknownNote', L)]] : []);
+  }
+  function tableRows(vat, lang) {
+    var L = lang || curLang();
+    var money = function (c) { return new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(mad(c)) + ' MAD'; };
+    if (!vat || !vat.rows || !vat.rows.length) return { title: T('title', L), headers: [], rows: [], note: T('missing', L) };
+    return { title: T('title', L), headers: [T('rate', L), T('ht', L), T('vat', L), T('ttc', L)], rows: cells(vat, L, money),
+      note: vat.totals.unknownC ? T('unknownNote', L) : '' };
+  }
+  /* Le ticket Z : un titre, puis un libellé et une valeur par ligne. */
+  function ticketBlock(vat, lang, fmt) {
+    var L = lang || curLang(), f = fmt || function (c) { return plain(c); };
+    if (!vat || !vat.rows || !vat.rows.length) return null;
+    var lines = [];
+    vat.rows.forEach(function (x) {
+      if (x.rate == null) { lines.push([T('unknown', L), f(mad(x.ttcC))]); return; }
+      lines.push([T('vat', L) + ' ' + pct(x.rate), f(mad(x.vatC))]);
+      lines.push(['  ' + T('ht', L), f(mad(x.htC))]);
+    });
+    lines.push([T('total', L) + ' ' + T('vat', L), f(mad(vat.totals.vatC))]);
+    return { title: T('title', L).toUpperCase(), lines: lines };
+  }
+
+  window.KiwiDayReportVat = { compute: compute, merge: merge, html: html, csvRows: csvRows, tableRows: tableRows, ticketBlock: ticketBlock };
 })();

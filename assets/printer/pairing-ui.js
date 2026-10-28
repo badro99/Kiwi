@@ -1,7 +1,7 @@
 /* Pairing UI, loaded on demand by assets/printer-bridge.js. The core hands
  * over its helpers on one private object; the two values bridge discovery
- * changes later (mode, capability) arrive through onBridgeState. Moved
- * function bodies are byte-identical to the original (tools/printer-split-test.mjs). */
+ * changes later (mode, capability) arrive through onBridgeState. The split is
+ * proven in tools/printer-split-test.mjs (bodies sealed at split time). */
 (function (core) {
   'use strict';
   var BRIDGE_DOWNLOAD = core.BRIDGE_DOWNLOAD,
@@ -46,12 +46,16 @@
   var initial = core.bridgeState();
   var bridgeMode = initial.mode, bridgeCapability = initial.capability;
   core.onBridgeState(function (mode, capability) { bridgeMode = mode; bridgeCapability = capability; });
+  /* Même mécanisme que core.say : les phrases passent par le dictionnaire de
+   * la caisse, ou par assets/printer/pairing-lang.js hors caisse (tableau de
+   * bord). Le français reste la source ; EN/AR viennent du dictionnaire. */
+  var tr = say;
 
   // ── the pairing modal ───────────────────────────────────────────────────────
   function injectCss() {
     if (document.getElementById('kpr-style')) return;
-    var s = document.createElement('style'); s.id = 'kpr-style';
-    s.textContent =
+    var cssEl = document.createElement('style'); cssEl.id = 'kpr-style';
+    cssEl.textContent =
       '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:max(20px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}' +
       '.kpr-code{margin:10px 0 4px;padding:14px 16px;border:1px dashed #0B6E4F;border-radius:12px;background:rgba(11,110,79,.06);}' +
       '.kpr-code-num{font:600 34px/1.1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#0B6E4F;text-align:center;}' +
@@ -128,7 +132,7 @@
       '[dir="rtl"] .kpr-x{float:left;}' +
       '[dir="rtl"] #kpr-card .kpr-field label,[dir="rtl"] #kpr-card h2{letter-spacing:0;}' +
       '[dir="rtl"] #kpr-ip,[dir="rtl"] #kpr-port,[dir="rtl"] #kpr-prof-ip,[dir="rtl"] #kpr-prof-port{direction:ltr;text-align:right;}';
-    document.head.appendChild(s);
+    document.head.appendChild(cssEl);
   }
 
   function openSetup(context) {
@@ -136,7 +140,7 @@
     injectCss();
     var cfg = getConfig();
     var ov = document.createElement('div'); ov.id = 'kpr-ov';
-    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Connecter une imprimante');
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', tr('Connecter une imprimante'));
     var opts = MODELS.map(function (m) { return '<option value="' + m.id + '"' + (m.id === cfg.model ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
     var btLive = btConnected();
     var usbLive = usbConnected();
@@ -152,9 +156,9 @@
     var showBt = !!navigator.bluetooth || !inApp;
     ov.innerHTML =
       '<div id="kpr-card">' +
-        '<button class="kpr-x" type="button" id="kpr-close" aria-label="Fermer">×</button>' +
-        '<h2>' + (fromPrint ? (isLabel ? 'Imprimer l’étiquette' : 'Imprimer le reçu') : 'Connecter une imprimante') + '</h2>' +
-        '<p class="kpr-sub">' + (inApp && !showBt ? (fromPrint
+        '<button class="kpr-x" type="button" id="kpr-close" aria-label="' + esc(tr('Fermer')) + '">×</button>' +
+        '<h2>' + tr(fromPrint ? (isLabel ? 'Imprimer l’étiquette' : 'Imprimer le reçu') : 'Connecter une imprimante') + '</h2>' +
+        '<p class="kpr-sub">' + tr(inApp && !showBt ? (fromPrint
           ? (isLabel
             ? 'Imprimez tout de suite, ou connectez une imprimante réseau (Wi-Fi ou Ethernet) pour imprimer directement la prochaine fois.'
             : 'Aucune imprimante n’est connectée à Kiwi. Préparez le PDF du ticket tout de suite, ou connectez une imprimante réseau (Wi-Fi ou Ethernet) pour imprimer directement la prochaine fois.')
@@ -164,113 +168,113 @@
             : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
           : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
-          (context.onBrowserPrint ? '<button data-activation=write class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + (inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
-          (context.onSavePdf ? '<button data-activation=write class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">Enregistrer en PDF</button>' : '') +
+          (context.onBrowserPrint ? '<button data-activation=write class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + tr(inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
+          (context.onSavePdf ? '<button data-activation=write class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">' + tr('Enregistrer en PDF') + '</button>' : '') +
         '</div>' : '') +
         (showBt ? '<div class="kpr-bt">' +
-          '<h3>Imprimante Bluetooth</h3>' +
-          '<p>Sans installation. Kiwi imprime le reçu directement.</p>' +
-          '<div class="kpr-status ' + (btLive ? 'on' : 'off') + '" id="kpr-bt-status"><span class="kpr-d"></span><span id="kpr-bt-status-t">' + (btLive ? esc('Connectée · ' + bt.name) : 'Aucune imprimante connectée.') + '</span></div>' +
-          '<button data-activation=write class="kpr-btc" type="button" id="kpr-bt-connect">' + (btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
-          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
+          '<h3>' + tr('Imprimante Bluetooth') + '</h3>' +
+          '<p>' + tr('Sans installation. Kiwi imprime le reçu directement.') + '</p>' +
+          '<div class="kpr-status ' + (btLive ? 'on' : 'off') + '" id="kpr-bt-status"><span class="kpr-d"></span><span id="kpr-bt-status-t">' + (btLive ? esc(tr('Connectée · ' + bt.name)) : tr('Aucune imprimante connectée.')) + '</span></div>' +
+          '<button data-activation=write class="kpr-btc" type="button" id="kpr-bt-connect">' + tr(btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
+          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
         '</div>' : '') +
         (usbSupported() ? '<div class="kpr-bt">' +
-          '<h3>Imprimante USB</h3>' +
-          '<p>Branchée en USB sur la caisse. Sans installation, sans adresse IP.</p>' +
-          '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc('Connectée · ' + usb.name) : 'Aucune imprimante USB connectée.') + '</span></div>' +
-          '<button data-activation=write class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
-          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
+          '<h3>' + tr('Imprimante USB') + '</h3>' +
+          '<p>' + tr('Branchée en USB sur la caisse. Sans installation, sans adresse IP.') + '</p>' +
+          '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc(tr('Connectée · ' + usb.name)) : tr('Aucune imprimante USB connectée.')) + '</span></div>' +
+          '<button data-activation=write class="kpr-btc" type="button" id="kpr-usb-connect">' + tr(usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
+          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
         '</div>' : '') +
         (window.KiwiKitchenPrint ? '<div class="kpr-bt" id="kpr-kitchen">' +
-          '<h3>Tickets de production automatiques</h3>' +
-          '<p>Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app employé et les autres terminaux. Activez cette option sur un seul ordinateur par établissement.</p>' +
+          '<h3>' + tr('Tickets de production automatiques') + '</h3>' +
+          '<p>' + tr('Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app employé et les autres terminaux. Activez cette option sur un seul ordinateur par établissement.') + '</p>' +
           '<label class="kpr-hub"><input type="checkbox" id="kpr-hub"' + (KiwiKitchenPrint.isHub() ? ' checked' : '') + '>' +
-            '<span><b>Faire de ce poste le hub d’impression</b><small id="kpr-hub-status"></small></span></label>' +
+            '<span><b>' + tr('Faire de ce poste le hub d’impression') + '</b><small id="kpr-hub-status"></small></span></label>' +
         '</div>' : '') +
         '<div class="kpr-bt" id="kpr-os" style="display:none;">' +
-          '<h3>Imprimante déjà installée</h3>' +
-          '<p>Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.</p>' +
-          '<div class="kpr-status ' + (cfg.osPrinter ? 'on' : 'off') + '" id="kpr-os-status"><span class="kpr-d"></span><span id="kpr-os-status-t">' + (cfg.osPrinter ? esc('Choisie · ' + cfg.osPrinter) : 'Aucune imprimante choisie.') + '</span></div>' +
-          '<div class="kpr-field"><label for="kpr-os-sel">Imprimante</label><select id="kpr-os-sel"></select></div>' +
+          '<h3>' + tr('Imprimante déjà installée') + '</h3>' +
+          '<p>' + tr('Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.') + '</p>' +
+          '<div class="kpr-status ' + (cfg.osPrinter ? 'on' : 'off') + '" id="kpr-os-status"><span class="kpr-d"></span><span id="kpr-os-status-t">' + (cfg.osPrinter ? esc(tr('Choisie · ' + cfg.osPrinter)) : tr('Aucune imprimante choisie.')) + '</span></div>' +
+          '<div class="kpr-field"><label for="kpr-os-sel">' + tr('Imprimante') + '</label><select id="kpr-os-sel"></select></div>' +
           '<div class="kpr-actions">' +
-            '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-os-test">Imprimer un ticket test</button>' +
-            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-os-save">Utiliser cette imprimante</button>' +
+            '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-os-test">' + tr('Imprimer un ticket test') + '</button>' +
+            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-os-save">' + tr('Utiliser cette imprimante') + '</button>' +
           '</div>' +
         '</div>' +
         '<div class="kpr-bt" id="kpr-stations-box">' +
           '<div class="kpr-st-hdr">' +
             '<div>' +
-              '<h3>Imprimantes par poste</h3>' +
-              '<p class="kpr-st-sub">Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.</p>' +
+              '<h3>' + tr('Imprimantes par poste') + '</h3>' +
+              '<p class="kpr-st-sub">' + tr('Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.') + '</p>' +
             '</div>' +
-            '<button data-activation=write type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">+ Nouvelle imprimante</button>' +
+            '<button data-activation=write type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">' + tr('+ Nouvelle imprimante') + '</button>' +
           '</div>' +
           '<div id="kpr-profile-form" class="kpr-profile-card" style="display:none;">' +
-            '<h4 id="kpr-prof-form-title">Ajouter une imprimante</h4>' +
-            '<div class="kpr-field"><label for="kpr-prof-name">Nom de l’imprimante</label><input id="kpr-prof-name" type="text" placeholder="ex. Cuisine, Bar, Fournil…"></div>' +
+            '<h4 id="kpr-prof-form-title">' + tr('Ajouter une imprimante') + '</h4>' +
+            '<div class="kpr-field"><label for="kpr-prof-name">' + tr('Nom de l’imprimante') + '</label><input id="kpr-prof-name" type="text" placeholder="' + esc(tr('ex. Cuisine, Bar, Fournil…')) + '"></div>' +
             '<div class="kpr-two">' +
-              '<div class="kpr-field"><label for="kpr-prof-type">Type</label><select id="kpr-prof-type">' +
-                '<option value="ip">Réseau (IP · Wi-Fi / Ethernet)</option>' +
-                '<option value="os">Imprimante système (installée)</option>' +
-                '<option value="usb">USB direct</option>' +
-                (showBt ? '<option value="bt">Bluetooth</option>' : '') +
+              '<div class="kpr-field"><label for="kpr-prof-type">' + tr('Type') + '</label><select id="kpr-prof-type">' +
+                '<option value="ip">' + tr('Réseau (IP · Wi-Fi / Ethernet)') + '</option>' +
+                '<option value="os">' + tr('Imprimante système (installée)') + '</option>' +
+                '<option value="usb">' + tr('USB direct') + '</option>' +
+                (showBt ? '<option value="bt">' + tr('Bluetooth') + '</option>' : '') +
               '</select></div>' +
-              '<div class="kpr-field"><label for="kpr-prof-paper">Papier</label><select id="kpr-prof-paper"><option value="80">80 mm (standard)</option><option value="58">58 mm</option></select></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-paper">' + tr('Papier') + '</label><select id="kpr-prof-paper"><option value="80">' + tr('80 mm (standard)') + '</option><option value="58">' + tr('58 mm') + '</option></select></div>' +
             '</div>' +
             '<div id="kpr-prof-ip-box" class="kpr-two">' +
-              '<div class="kpr-field"><label for="kpr-prof-ip">Adresse IP</label><input id="kpr-prof-ip" type="text" placeholder="192.168.1.50" inputmode="decimal"></div>' +
-              '<div class="kpr-field"><label for="kpr-prof-port">Port</label><input id="kpr-prof-port" type="text" value="9100" inputmode="numeric"></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-ip">' + tr('Adresse IP') + '</label><input id="kpr-prof-ip" type="text" placeholder="192.168.1.50" inputmode="decimal"></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-port">' + tr('Port') + '</label><input id="kpr-prof-port" type="text" value="9100" inputmode="numeric"></div>' +
             '</div>' +
             '<div id="kpr-prof-os-box" class="kpr-field" style="display:none;">' +
-              '<label for="kpr-prof-os-sel">Imprimante du système</label><select id="kpr-prof-os-sel"></select>' +
+              '<label for="kpr-prof-os-sel">' + tr('Imprimante du système') + '</label><select id="kpr-prof-os-sel"></select>' +
             '</div>' +
             '<div class="kpr-actions" style="margin-top:12px;">' +
-              '<button class="kpr-btn kpr-test" type="button" id="kpr-prof-test-btn">Tester</button>' +
-              '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-prof-save-btn">Enregistrer</button>' +
-              '<button class="kpr-btn" type="button" id="kpr-prof-cancel-btn" style="background:#e5e7eb;color:#1f2937;">Annuler</button>' +
+              '<button class="kpr-btn kpr-test" type="button" id="kpr-prof-test-btn">' + tr('Tester') + '</button>' +
+              '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-prof-save-btn">' + tr('Enregistrer') + '</button>' +
+              '<button class="kpr-btn" type="button" id="kpr-prof-cancel-btn" style="background:#e5e7eb;color:#1f2937;">' + tr('Annuler') + '</button>' +
             '</div>' +
           '</div>' +
           '<div id="kpr-profiles-list" class="kpr-profiles-chip-row"></div>' +
           '<div id="kpr-station-tbody" class="kpr-st-cards"></div>' +
           '<div class="kpr-actions" style="margin-top:12px;">' +
-            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
+            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">' + tr('Enregistrer le routage par poste') + '</button>' +
           '</div>' +
         '</div>' +
         '<div class="kpr-bt" id="kpr-relay">' +
-          '<h3>Imprimer depuis un iPad ou une tablette · relais Kiwi</h3>' +
-          '<p>Sans pont sur cet appareil, Kiwi envoie les tickets au pont de l’ordinateur du comptoir, qui les imprime sur votre imprimante réseau. Une association suffit, puis tout est automatique.</p>' +
-          '<div class="kpr-status off" id="kpr-relay-status"><span class="kpr-d"></span><span id="kpr-relay-status-t">Vérification du relais…</span></div>' +
+          '<h3>' + tr('Imprimer depuis un iPad ou une tablette · relais Kiwi') + '</h3>' +
+          '<p>' + tr('Sans pont sur cet appareil, Kiwi envoie les tickets au pont de l’ordinateur du comptoir, qui les imprime sur votre imprimante réseau. Une association suffit, puis tout est automatique.') + '</p>' +
+          '<div class="kpr-status off" id="kpr-relay-status"><span class="kpr-d"></span><span id="kpr-relay-status-t">' + tr('Vérification du relais…') + '</span></div>' +
           '<div id="kpr-relay-list" class="kpr-note"></div>' +
           '<div id="kpr-relay-code" class="kpr-code" style="display:none;"></div>' +
           '<div class="kpr-actions">' +
-            '<button class="kpr-btc" type="button" id="kpr-relay-pair">Associer un pont</button>' +
-            '<button class="kpr-btc" type="button" id="kpr-relay-pair-local" style="display:none;">Associer ce pont maintenant</button>' +
+            '<button class="kpr-btc" type="button" id="kpr-relay-pair">' + tr('Associer un pont') + '</button>' +
+            '<button class="kpr-btc" type="button" id="kpr-relay-pair-local" style="display:none;">' + tr('Associer ce pont maintenant') + '</button>' +
           '</div>' +
         '</div>' +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
-          '<summary>Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)</summary>' +
-          '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">' + (socket ? 'Impression directe disponible dans l’app Kiwi.' : 'Vérification du pont…') + '</span></div>' +
+          '<summary>' + tr('Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)') + '</summary>' +
+          '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">' + tr(socket ? 'Impression directe disponible dans l’app Kiwi.' : 'Vérification du pont…') + '</span></div>' +
           '<p class="kpr-note" id="kpr-target"></p>' +
-          '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
-          '<button data-activation=write class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
+          '<div class="kpr-field"><label for="kpr-ip">' + tr('Adresse IP de l’imprimante') + '</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
+          '<button data-activation=write class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + tr(socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
           '<div id="kpr-scan-out" class="kpr-note" style="display:none;"></div>' +
-          '<button data-activation=money class="kpr-btc" type="button" id="kpr-diagnostics">Exporter le diagnostic d’impression</button>' +
+          '<button data-activation=money class="kpr-btc" type="button" id="kpr-diagnostics">' + tr('Exporter le diagnostic d’impression') + '</button>' +
           '<div class="kpr-two">' +
-            '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
-            '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
-            '<div class="kpr-field"><label for="kpr-label">Format d\'étiquette</label><select id="kpr-label">' + labelOptions(cfg.label) + '</select></div>' +
+            '<div class="kpr-field"><label for="kpr-port">' + tr('Port') + '</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
+            '<div class="kpr-field"><label for="kpr-paper">' + tr('Largeur papier') + '</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
+            '<div class="kpr-field"><label for="kpr-label">' + tr('Format d\'étiquette') + '</label><select id="kpr-label">' + labelOptions(cfg.label) + '</select></div>' +
           '</div>' +
-          '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select>' +
+          '<div class="kpr-field"><label for="kpr-model">' + tr('Modèle') + '</label><select id="kpr-model">' + opts + '</select>' +
             '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p>' +
             '<p class="kpr-note" id="kpr-model-driver" style="margin-top:6px;' + (modelDriver(cfg.model) ? '' : 'display:none;') + '">' +
-              'Pilote Windows (utile seulement pour les étiquettes ou si l\'USB est refusé) : ' +
-              '<a data-activation=money id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
+              tr('Pilote Windows (utile seulement pour les étiquettes ou si l\'USB est refusé) :') + ' ' +
+              '<a data-activation=money id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">' + tr('page de téléchargement') + '</a>' +
             '</p></div>' +
           '<div class="kpr-actions">' +
-            '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-test"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Tester' : 'Imprimer un ticket test') + '</button>' +
-            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
+            '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-test"' + (socket ? '' : ' disabled') + '>' + tr(socket ? 'Tester' : 'Imprimer un ticket test') + '</button>' +
+            '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save">' + tr('Enregistrer') + '</button>' +
           '</div>' +
-          '<p class="kpr-note">Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale. <a data-activation=money href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a></p>' +
+          '<p class="kpr-note">' + tr('Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale.') + ' <a data-activation=money href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">' + tr('Télécharger le pont') + '</a></p>' +
         '</details>' +
       '</div>';
     document.body.appendChild(ov);
@@ -324,23 +328,23 @@
     function paintTarget() {
       var el = $('#kpr-target'); if (!el) return;
       var c = getConfig();
-      el.textContent = c.osPrinter
+      el.textContent = tr(c.osPrinter
         ? 'Cible actuelle : imprimante système « ' + c.osPrinter + ' ». Enregistrer une IP ici la remplacera.'
-        : (c.ip ? 'Cible actuelle : réseau · ' + c.ip + ':' + (c.port || 9100) : 'Aucune cible réseau enregistrée.');
+        : (c.ip ? 'Cible actuelle : réseau · ' + c.ip + ':' + (c.port || 9100) : 'Aucune cible réseau enregistrée.'));
     }
     function paintHubStatus() {
       var el = $('#kpr-hub-status');
       if (!el || !window.KiwiKitchenPrint) return;
       var s = KiwiKitchenPrint.status();
-      el.textContent = s.pending
-        ? s.pending + ' ticket' + (s.pending > 1 ? 's' : '') + ' en attente · nouvelle tentative automatique'
-        : (s.hub ? (s.printerReady ? 'Prêt · aucune impression en attente' : 'Hub actif · connectez une imprimante') : 'Les commandes de ce poste continuent à s’imprimer localement.');
+      el.textContent = tr(s.pending
+        ? (s.pending > 1 ? s.pending + ' tickets en attente · nouvelle tentative automatique' : s.pending + ' ticket en attente · nouvelle tentative automatique')
+        : (s.hub ? (s.printerReady ? 'Prêt · aucune impression en attente' : 'Hub actif · connectez une imprimante') : 'Les commandes de ce poste continuent à s’imprimer localement.'));
     }
     var hub = $('#kpr-hub');
     if (hub) hub.addEventListener('change', function () {
       KiwiKitchenPrint.setHub(this.checked);
       paintHubStatus();
-      toast(this.checked ? 'Hub d’impression cuisine activé' : 'Hub d’impression désactivé');
+      toast(tr(this.checked ? 'Hub d’impression cuisine activé' : 'Hub d’impression désactivé'));
     });
     paintHubStatus();
 
@@ -352,7 +356,7 @@
       var chipRow = $('#kpr-profiles-list');
       if (!chipRow) return;
       if (!stConfig.profiles.length) {
-        chipRow.innerHTML = '<span class="kpr-note" style="margin:0 0 6px;display:block;">Aucune imprimante additionnelle enregistrée. Ajoutez-en une pour router par poste.</span>';
+        chipRow.innerHTML = '<span class="kpr-note" style="margin:0 0 6px;display:block;">' + tr('Aucune imprimante additionnelle enregistrée. Ajoutez-en une pour router par poste.') + '</span>';
         return;
       }
       chipRow.innerHTML = stConfig.profiles.map(function (p) {
@@ -373,7 +377,7 @@
           setStationConfig(stConfig);
           renderProfilesChips();
           renderStationRows();
-          toast('Imprimante retirée');
+          toast(tr('Imprimante retirée'));
         });
       });
     }
@@ -423,16 +427,16 @@
           var prof = profId ? stConfig.profiles.find(function (p) { return p.id === profId; }) : null;
           var paper = (prof && prof.paper) || getConfig().paper || '80';
           var bTest = this;
-          bTest.disabled = true; var origText = bTest.textContent; bTest.textContent = 'Impression…';
+          bTest.disabled = true; var origText = bTest.textContent; bTest.textContent = tr('Impression…');
           var slipBytes = (sid === 'caisse')
             ? window.KiwiEscPos.receipt({ shop: 'TEST CAISSE', lines: [{ name: 'Test reçu client', price: '0.00' }], total: '0.00', paper: paper })
             : window.KiwiEscPos.kitchenTicket({ title: 'TEST ' + stTitle.toUpperCase(), order: '#TEST', time: '12:00', items: [{ name: 'Article test ' + stTitle, qty: 1 }], paper: paper });
           (prof ? printBytesToTarget(slipBytes, prof) : printBytes(slipBytes)).then(function (res) {
             bTest.textContent = origText; bTest.disabled = false;
-            toast(res.ok ? ('Ticket test envoyé (' + stTitle + ')') : ('Échec · ' + frReason(res.reason)));
+            toast(tr(res.ok ? ('Ticket test envoyé (' + stTitle + ')') : ('Échec · ' + frReason(res.reason))));
           }, function () {
             bTest.textContent = origText; bTest.disabled = false;
-            toast('Échec d’impression');
+            toast(tr('Échec d’impression'));
           });
         });
       });
@@ -445,16 +449,16 @@
         var rowSel = tbody.querySelector('.kpr-st-sel[data-station-id="caisse"]');
         var profId = rowSel ? rowSel.value : '';
         var prof = profId ? stConfig.profiles.find(function (p) { return p.id === profId; }) : null;
-        var bd = this; bd.disabled = true; var orig = bd.textContent; bd.textContent = 'Envoi…';
+        var bd = this; bd.disabled = true; var orig = bd.textContent; bd.textContent = tr('Envoi…');
         var kick = window.KiwiEscPos.builder().init().drawer().bytes();
         (prof ? printBytesToTarget(kick, prof) : printBytes(kick)).then(function (res) {
           bd.textContent = orig; bd.disabled = false;
-          toast(res.ok
+          toast(tr(res.ok
             ? 'Impulsion envoyée · tiroir fermé ? Vérifiez le câble RJ11 sur le port DK de l\'imprimante et la clé en position verticale'
-            : ('Échec · ' + frReason(res.reason)));
+            : ('Échec · ' + frReason(res.reason))));
         }, function () {
           bd.textContent = orig; bd.disabled = false;
-          toast('Échec de l\'impulsion tiroir');
+          toast(tr('Échec de l\'impulsion tiroir'));
         });
       });
     }
@@ -496,19 +500,19 @@
         var osPrinter = $('#kpr-prof-os-sel') ? $('#kpr-prof-os-sel').value : '';
         var paper = $('#kpr-prof-paper').value || '80';
         if (type === 'ip') {
-          if (!ip) { toast('Saisissez une adresse IP'); return; }
-          if (!validIp(ip)) { toast('Adresse IP invalide'); return; }
-          if (!validPort(port)) { toast('Port invalide'); return; }
+          if (!ip) { toast(tr('Saisissez une adresse IP')); return; }
+          if (!validIp(ip)) { toast(tr('Adresse IP invalide')); return; }
+          if (!validPort(port)) { toast(tr('Port invalide')); return; }
         }
         var target = { type: type, name: name, ip: ip, port: port, osPrinter: osPrinter, paper: paper };
-        var btn = this; btn.disabled = true; var origText = btn.textContent; btn.textContent = 'Impression…';
+        var btn = this; btn.disabled = true; var origText = btn.textContent; btn.textContent = tr('Impression…');
         var slipBytes = window.KiwiEscPos.testSlip({ title: 'TEST ' + name.toUpperCase(), ip: ip, paper: paper });
         printBytesToTarget(slipBytes, target).then(function (res) {
           btn.textContent = origText; btn.disabled = false;
-          toast(res.ok ? ('Ticket test envoyé à ' + name) : ('Échec · ' + frReason(res.reason)));
+          toast(tr(res.ok ? ('Ticket test envoyé à ' + name) : ('Échec · ' + frReason(res.reason))));
         }, function () {
           btn.textContent = origText; btn.disabled = false;
-          toast('Échec d’impression');
+          toast(tr('Échec d’impression'));
         });
       });
     }
@@ -522,14 +526,14 @@
         var osPrinter = $('#kpr-prof-os-sel') ? $('#kpr-prof-os-sel').value : '';
         var paper = $('#kpr-prof-paper').value || '80';
 
-        if (!name) { toast('Donnez un nom à cette imprimante (ex. Cuisine, Bar)'); $('#kpr-prof-name').focus(); return; }
+        if (!name) { toast(tr('Donnez un nom à cette imprimante (ex. Cuisine, Bar)')); $('#kpr-prof-name').focus(); return; }
         if (type === 'ip') {
-          if (!ip) { toast('Saisissez une adresse IP'); $('#kpr-prof-ip').focus(); return; }
-          if (!validIp(ip)) { toast('Adresse IP invalide'); $('#kpr-prof-ip').focus(); return; }
-          if (!validPort(port)) { toast('Port invalide'); $('#kpr-prof-port').focus(); return; }
+          if (!ip) { toast(tr('Saisissez une adresse IP')); $('#kpr-prof-ip').focus(); return; }
+          if (!validIp(ip)) { toast(tr('Adresse IP invalide')); $('#kpr-prof-ip').focus(); return; }
+          if (!validPort(port)) { toast(tr('Port invalide')); $('#kpr-prof-port').focus(); return; }
         }
         if (type === 'os' && !osPrinter) {
-          toast('Sélectionnez une imprimante système'); return;
+          toast(tr('Sélectionnez une imprimante système')); return;
         }
 
         var newProf = {
@@ -546,7 +550,7 @@
         renderProfilesChips();
         renderStationRows();
         if (profForm) profForm.style.display = 'none';
-        toast('Imprimante « ' + name + ' » enregistrée');
+        toast(tr('Imprimante « ' + name + ' » enregistrée'));
       });
     }
 
@@ -560,7 +564,7 @@
         });
         stConfig.bindings = newBindings;
         setStationConfig(stConfig);
-        toast('Routage des imprimantes par poste enregistré');
+        toast(tr('Routage des imprimantes par poste enregistré'));
       });
     }
 
@@ -594,13 +598,13 @@
       if (socket) {
         bridgeUp = true;
         st.className = 'kpr-status on';
-        t.textContent = 'Connexion directe à l’imprimante depuis l’app Kiwi.';
+        t.textContent = tr('Connexion directe à l’imprimante depuis l’app Kiwi.');
         test.disabled = false;
         if (scan) scan.disabled = false;
         paintRelay();
         return Promise.resolve({ ok: true, via: 'socket' });
       }
-      t.textContent = 'Vérification du pont…'; st.className = 'kpr-status off';
+      t.textContent = tr('Vérification du pont…'); st.className = 'kpr-status off';
       return ping().then(function (j) {
         localPing = j;
         bridgeUp = !!j;
@@ -608,14 +612,14 @@
         if (j) {
           if (!bridgeCapability && bridgeMode !== 'legacy') {
             st.className = 'kpr-status off';
-            t.textContent = 'Pont détecté · mettez à jour Kiwi Printer Bridge pour sécuriser cette caisse.';
+            t.textContent = tr('Pont détecté · mettez à jour Kiwi Printer Bridge pour sécuriser cette caisse.');
             test.disabled = true;
             if (scan) scan.disabled = true;
             return { ok: false, reason: 'bridge-capability-required' };
           }
           st.className = 'kpr-status on';
-          t.textContent = 'Pont connecté · v' + (j.version || '?')
-            + (bridgeMode === 'legacy' ? ' · impression maintenue, mise à jour de sécurité recommandée' : '');
+          t.textContent = tr('Pont connecté · v' + (j.version || '?')
+            + (bridgeMode === 'legacy' ? ' · impression maintenue, mise à jour de sécurité recommandée' : ''));
           test.disabled = false;
           loadOsPrinters();
           paintRelay();
@@ -632,12 +636,24 @@
           if (!ov.isConnected || !rs || !rs.online) return;
           var names = rs.bridges.filter(function (b) { return b.online; }).map(function (b) { return b.name || 'pont'; });
           st.className = 'kpr-status on';
-          t.textContent = 'Relais Kiwi · ' + (names.length > 1 ? names.length + ' ponts en ligne' : 'pont « ' + names[0] + ' » en ligne') + ' · l’imprimante réseau s’imprime via ce pont';
+          t.textContent = tr('Relais Kiwi · ' + (names.length > 1 ? names.length + ' ponts en ligne' : 'pont « ' + names[0] + ' » en ligne') + ' · l’imprimante réseau s’imprime via ce pont');
           test.disabled = false; bridgeUp = true;
         });
       });
     }
     /* ── Le panneau du relais ─────────────────────────────────────────────── */
+    /* Ce que raconte un ticket non imprimé : son genre dans la langue de
+       l'écran, la table ou la commande quand CE poste l'a déposé (le serveur ne
+       les connaît pas), l'heure dans le format de la langue et non celui de
+       l'appareil. Avant : « kitchen · 10/27/2026, 2:14:03 PM ». */
+    var KIND_FR = { kitchen: 'Bon de cuisine', receipt: 'Ticket de caisse', label: 'Étiquette', other: 'Impression' };
+    function unprintedWhat(job) {
+      var lang = 'fr', label = '', when = '';
+      try { lang = (window.KiwiCaisseLang && window.KiwiCaisseLang.get && window.KiwiCaisseLang.get()) || (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+      try { label = (window.KiwiKitchenPrint && window.KiwiKitchenPrint.relayLabel && window.KiwiKitchenPrint.relayLabel(job.id)) || ''; } catch (_) {}
+      try { when = new Date(job.created_ts).toLocaleString(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) {}
+      return [say(KIND_FR[job.kind] || KIND_FR.other), label, when].filter(Boolean).join(' · ');
+    }
     function fmtAgo(ts) {
       if (!ts) return 'jamais vu';
       var sec = Math.round((Date.now() - ts) / 1000);
@@ -648,12 +664,12 @@
       if (!st) return Promise.resolve(null);
       return relayProbe(true).then(function (rs) {
         if (!ov.isConnected) return rs;
-        if (!rs.provisioned) { st.className = 'kpr-status off'; t.textContent = 'Relais pas encore activé côté serveur.'; return rs; }
-        if (rs.authed === false) { st.className = 'kpr-status off'; t.textContent = 'Cet appareil n’est pas reconnu comme la caisse d’un commerce · appairez-le d’abord.'; return rs; }
+        if (!rs.provisioned) { st.className = 'kpr-status off'; t.textContent = tr('Relais pas encore activé côté serveur.'); return rs; }
+        if (rs.authed === false) { st.className = 'kpr-status off'; t.textContent = tr('Cet appareil n’est pas reconnu comme la caisse d’un commerce · appairez-le d’abord.'); return rs; }
         var on = rs.bridges.filter(function (b) { return b.online; }).length;
         st.className = 'kpr-status ' + (on ? 'on' : 'off');
-        t.textContent = !rs.bridges.length ? 'Aucun pont associé à ce commerce.'
-          : on ? (on + ' pont' + (on > 1 ? 's' : '') + ' en ligne') : 'Pont associé mais hors ligne · lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.';
+        t.textContent = tr(!rs.bridges.length ? 'Aucun pont associé à ce commerce.'
+          : on ? (on + ' pont' + (on > 1 ? 's' : '') + ' en ligne') : 'Pont associé mais hors ligne · lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.');
         list.innerHTML = rs.bridges.map(function (b) {
           return '<div class="kpr-relay-row"><span class="kpr-d ' + (b.online ? 'on' : '') + '"></span><b>' + esc(b.name || 'Pont') + '</b> <small>' + esc((b.platform ? b.platform + ' · ' : '') + (b.online ? 'en ligne' : fmtAgo(b.last_seen_ts))) + '</small>' +
             '<button type="button" class="kpr-prof-del" data-relay-revoke="' + esc(b.id) + '" aria-label="Dissocier">×</button></div>';
@@ -666,8 +682,9 @@
           (r.j.jobs || []).forEach(function (job) {
             var row = document.createElement('div'); row.className = 'kpr-relay-row';
             var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
-            var words = dict ? [dict['print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say('Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
-            row.innerHTML = '<span>' + esc(words[0] + ' · ' + job.kind + ' · ' + new Date(job.created_ts).toLocaleString()) + '</span><button type="button">' + words[1] + '</button>';
+            var unsure = job.status === 'uncertain';
+            var words = dict ? [dict[unsure ? 'print.uncertain' : 'print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say(unsure ? 'Impression incertaine' : 'Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
+            row.innerHTML = '<span>' + esc(words[0] + ' · ' + unprintedWhat(job)) + '</span><button type="button">' + words[1] + '</button>';
             row.querySelector('button').onclick = function () {
               var btn = this; btn.disabled = true;
               function failed() {
@@ -723,7 +740,7 @@
       var yes = box.querySelector('[data-relay-confirm]');
       yes.addEventListener('click', function () {
         yes.disabled = true;
-        relayRevoke(id).then(function (ok) { toast(ok ? 'Pont dissocié' : 'Échec'); paintRelay(); refreshStatus(); });
+        relayRevoke(id).then(function (ok) { toast(tr(ok ? 'Pont dissocié' : 'Échec')); paintRelay(); refreshStatus(); });
       });
       try { box.querySelector('[data-relay-keep]').focus(); } catch (_) {}
     }
@@ -739,20 +756,20 @@
       var b = this; b.disabled = true;
       relayPairCode().then(function (j) {
         b.disabled = false;
-        if (!j.ok) { toast('Impossible de générer le code · ' + frReason(j.reason)); return; }
+        if (!j.ok) { toast(tr('Impossible de générer le code · ' + frReason(j.reason))); return; }
         showPairCode(j);
       });
     });
     var pairLocal = $('#kpr-relay-pair-local');
     if (pairLocal) pairLocal.addEventListener('click', function () {
-      var b = this; b.disabled = true; var orig = b.textContent; b.textContent = 'Association…';
+      var b = this; b.disabled = true; var orig = b.textContent; b.textContent = tr('Association…');
       relayPairCode().then(function (j) {
-        if (!j.ok) { b.disabled = false; b.textContent = orig; toast('Impossible de générer le code · ' + frReason(j.reason)); return null; }
+        if (!j.ok) { b.disabled = false; b.textContent = orig; toast(tr('Impossible de générer le code · ' + frReason(j.reason))); return null; }
         return pairLocalBridge(j.code);
       }).then(function (r) {
         b.disabled = false; b.textContent = orig;
         if (r === null) return;
-        toast(r && r.ok ? 'Ce pont imprime désormais les tickets de vos tablettes' : ('Échec · ' + ((r && r.error) || 'pont injoignable')));
+        toast(tr(r && r.ok ? 'Ce pont imprime désormais les tickets de vos tablettes' : ('Échec · ' + ((r && r.error) || 'pont injoignable'))));
         setTimeout(function () { ping().then(function (j) { localPing = j; paintRelay(); }); }, 800);
       });
     });
@@ -761,11 +778,11 @@
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     $('#kpr-save').addEventListener('click', function () {
       var f = readForm();
-      if (!validIp(f.ip)) { toast('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
-      if (!validPort(f.port)) { toast('Port invalide · un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
+      if (!validIp(f.ip)) { toast(tr('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)')); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast(tr('Port invalide · un nombre entre 1 et 65535 (9100 en général)')); $('#kpr-port').focus(); return; }
       setConfig(Object.assign(f, { osPrinter: '' }));
       paintTarget();
-      toast('Imprimante enregistrée');
+      toast(tr('Imprimante enregistrée'));
       close();
     });
 
@@ -773,16 +790,16 @@
       var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
       setConfig({ osPrinter: sel.value, ip: '' });
       var t = $('#kpr-os-status-t'), st = $('#kpr-os-status');
-      if (t) t.textContent = 'Choisie · ' + sel.value;
+      if (t) t.textContent = tr('Choisie · ' + sel.value);
       if (st) st.className = 'kpr-status on';
-      toast('Imprimante enregistrée');
+      toast(tr('Imprimante enregistrée'));
       close();
     });
 
     $('#kpr-os-test').addEventListener('click', function () {
       var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
       var btn = this, orig = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Impression…';
+      btn.disabled = true; btn.textContent = tr('Impression…');
       var cfg2 = getConfig();
       var to = withTimeout(null, 12000);
       saveBridgeTarget({ osPrinter: sel.value }).then(function (saved) {
@@ -795,11 +812,11 @@
       })
         .then(function (j) {
           btn.textContent = orig; btn.disabled = false;
-          toast(j && j.ok ? 'Ticket test envoyé' : ('Échec · ' + ((j && j.error) || 'inconnu')));
+          toast(tr(j && j.ok ? 'Ticket test envoyé' : ('Échec · ' + ((j && j.error) || 'inconnu'))));
         })
         .catch(function () {
           to.done(); btn.textContent = orig; btn.disabled = false;
-          toast('Échec · pont injoignable');
+          toast(tr('Échec · pont injoignable'));
         });
     });
     if (context.onBrowserPrint) {
@@ -813,55 +830,55 @@
 
     if ($('#kpr-bt-connect')) $('#kpr-bt-connect').addEventListener('click', function () {
       var st = $('#kpr-bt-status'), t = $('#kpr-bt-status-t'), btn = this;
-      if (!navigator.bluetooth) { st.className = 'kpr-status off'; t.textContent = 'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).'; return; }
-      btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Recherche…';
+      if (!navigator.bluetooth) { st.className = 'kpr-status off'; t.textContent = tr('Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).'); return; }
+      btn.disabled = true; var orig = btn.textContent; btn.textContent = tr('Recherche…');
       connectBluetooth().then(function (r) {
-        btn.disabled = false; btn.textContent = 'Changer d’imprimante';
-        st.className = 'kpr-status on'; t.textContent = 'Connectée · ' + (r.name || 'Imprimante');
+        btn.disabled = false; btn.textContent = tr('Changer d’imprimante');
+        st.className = 'kpr-status on'; t.textContent = tr('Connectée · ' + (r.name || 'Imprimante'));
         $('#kpr-bt-test').disabled = false;
-        toast('Imprimante Bluetooth connectée');
+        toast(tr('Imprimante Bluetooth connectée'));
       }, function (e) {
         btn.disabled = false; btn.textContent = orig; st.className = 'kpr-status off';
         var m = (e && e.message) || '';
-        if (/no-web-bluetooth/.test(m)) t.textContent = 'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).';
-        else if (/cancel|NotFound|User|chooser/i.test(m)) t.textContent = 'Aucune imprimante sélectionnée.';
-        else if (/no-writable/.test(m)) t.textContent = 'Imprimante trouvée mais non compatible (aucun canal d’écriture).';
-        else t.textContent = 'Connexion impossible · ' + m;
+        if (/no-web-bluetooth/.test(m)) t.textContent = tr('Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).');
+        else if (/cancel|NotFound|User|chooser/i.test(m)) t.textContent = tr('Aucune imprimante sélectionnée.');
+        else if (/no-writable/.test(m)) t.textContent = tr('Imprimante trouvée mais non compatible (aucun canal d’écriture).');
+        else t.textContent = tr('Connexion impossible · ' + m);
       });
     });
     if ($('#kpr-bt-test')) $('#kpr-bt-test').addEventListener('click', function () {
-      var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
+      var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = tr('Impression…');
       printBytes(window.KiwiEscPos.testSlip({ paper: getConfig().paper })).then(function (res) {
         btn.textContent = orig; btn.disabled = !btConnected();
-        toast(res.ok ? 'Ticket test envoyé' : ('Échec · ' + (res.reason || 'inconnu')));
+        toast(tr(res.ok ? 'Ticket test envoyé' : ('Échec · ' + (res.reason || 'inconnu'))));
       });
     });
 
     if ($('#kpr-usb-connect')) {
       $('#kpr-usb-connect').addEventListener('click', function () {
         var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = this;
-        btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Recherche…';
+        btn.disabled = true; var orig = btn.textContent; btn.textContent = tr('Recherche…');
         connectUsb().then(function (r) {
-          btn.disabled = false; btn.textContent = 'Changer d’imprimante';
-          st.className = 'kpr-status on'; t.textContent = 'Connectée · ' + (r.name || 'Imprimante USB');
+          btn.disabled = false; btn.textContent = tr('Changer d’imprimante');
+          st.className = 'kpr-status on'; t.textContent = tr('Connectée · ' + (r.name || 'Imprimante USB'));
           $('#kpr-usb-test').disabled = false;
-          toast('Imprimante USB connectée');
+          toast(tr('Imprimante USB connectée'));
         }, function (e) {
           btn.disabled = false; btn.textContent = orig; st.className = 'kpr-status off';
           var m = (e && e.message) || '';
-          if (/no-webusb/.test(m)) t.textContent = 'USB indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).';
-          else if (/cancel|NotFound|chooser|No device selected/i.test(m)) t.textContent = 'Aucune imprimante sélectionnée.';
-          else if (/no-bulk-out/.test(m)) t.textContent = 'Appareil trouvé mais ce n’est pas une imprimante USB standard.';
-          else if (/SecurityError|NotAllowed/i.test(m)) t.textContent = 'Accès USB refusé par le navigateur.';
-          else if (/access denied|claim|busy|InvalidState/i.test(m)) t.textContent = 'Imprimante déjà utilisée par le système. Retirez-la des imprimantes installées (ou utilisez le port réseau), puis réessayez.';
-          else t.textContent = 'Connexion impossible · ' + m;
+          if (/no-webusb/.test(m)) t.textContent = tr('USB indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).');
+          else if (/cancel|NotFound|chooser|No device selected/i.test(m)) t.textContent = tr('Aucune imprimante sélectionnée.');
+          else if (/no-bulk-out/.test(m)) t.textContent = tr('Appareil trouvé mais ce n’est pas une imprimante USB standard.');
+          else if (/SecurityError|NotAllowed/i.test(m)) t.textContent = tr('Accès USB refusé par le navigateur.');
+          else if (/access denied|claim|busy|InvalidState/i.test(m)) t.textContent = tr('Imprimante déjà utilisée par le système. Retirez-la des imprimantes installées (ou utilisez le port réseau), puis réessayez.');
+          else t.textContent = tr('Connexion impossible · ' + m);
         });
       });
       $('#kpr-usb-test').addEventListener('click', function () {
-        var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
+        var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = tr('Impression…');
         printBytes(window.KiwiEscPos.testSlip({ paper: getConfig().paper })).then(function (res) {
           btn.textContent = orig; btn.disabled = !usbConnected();
-          toast(res.ok ? 'Ticket test envoyé' : ('Échec · ' + (res.reason || 'inconnu')));
+          toast(tr(res.ok ? 'Ticket test envoyé' : ('Échec · ' + (res.reason || 'inconnu'))));
         });
       });
     }
@@ -883,10 +900,10 @@
 
     $('#kpr-test').addEventListener('click', function () {
       var f = readForm();
-      if (!f.ip) { toast('Saisissez d’abord l’adresse IP de l’imprimante'); $('#kpr-ip').focus(); return; }
-      if (!validIp(f.ip)) { toast('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
-      if (!validPort(f.port)) { toast('Port invalide · un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
-      var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
+      if (!f.ip) { toast(tr('Saisissez d’abord l’adresse IP de l’imprimante')); $('#kpr-ip').focus(); return; }
+      if (!validIp(f.ip)) { toast(tr('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)')); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast(tr('Port invalide · un nombre entre 1 et 65535 (9100 en général)')); $('#kpr-port').focus(); return; }
+      var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = tr('Impression…');
       var target = { ip: f.ip, port: Number(f.port) || 9100 };
       var slip = window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper });
       var attempt = socket
@@ -896,15 +913,15 @@
         : bridgePrintBytes(slip, target);
       attempt.then(function (res) {
         btn.textContent = orig; btn.disabled = !(socket || bridgeUp);
-        toast(res.ok ? 'Ticket test envoyé' : ('Échec · ' + frReason(res.reason)));
+        toast(tr(res.ok ? 'Ticket test envoyé' : ('Échec · ' + frReason(res.reason))));
       });
     });
 
     var scanBtn = $('#kpr-scan');
     if (scanBtn) scanBtn.addEventListener('click', function () {
       var out = $('#kpr-scan-out');
-      if (!printQueueIdle()) { if (out) { out.style.display = ''; out.textContent = 'Une impression est en cours. La recherche démarrera une fois la file au repos.'; } return; }
-      scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = 'Recherche en cours…';
+      if (!printQueueIdle()) { if (out) { out.style.display = ''; out.textContent = tr('Une impression est en cours. La recherche démarrera une fois la file au repos.'); } return; }
+      scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = tr('Recherche en cours…');
       if (out) { out.style.display = ''; out.textContent = ''; }
       var scanAttempt;
       if (socket) {
@@ -922,18 +939,18 @@
         .then(function (j) {
           scanBtn.textContent = orig; scanBtn.disabled = !(socket || bridgeUp);
           if (!out) return;
-          if (!j) { out.textContent = 'Pont injoignable · relancez Kiwi Printer Bridge puis réessayez.'; return; }
-          if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont · installez la version 1.3 ou plus récente.'; return; }
-          if (!j.ok) { out.textContent = 'Recherche impossible · ' + frReason(j.error); return; }
-          if (!j.printers.length) { out.textContent = 'Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.'; return; }
-          out.innerHTML = 'Trouvée' + (j.printers.length > 1 ? 's' : '') + ' : ' + j.printers.map(function (p) {
+          if (!j) { out.textContent = tr('Pont injoignable · relancez Kiwi Printer Bridge puis réessayez.'); return; }
+          if (j.legacy) { out.textContent = tr('Détection indisponible sur ce pont · installez la version 1.3 ou plus récente.'); return; }
+          if (!j.ok) { out.textContent = tr('Recherche impossible · ' + frReason(j.error)); return; }
+          if (!j.printers.length) { out.textContent = tr('Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.'); return; }
+          out.innerHTML = tr(j.printers.length > 1 ? 'Trouvées :' : 'Trouvée :') + ' ' + j.printers.map(function (p) {
             return '<button type="button" class="kpr-btc kpr-scan-pick" data-ip="' + esc(p.ip) + '">' + esc(p.ip) + '</button>';
           }).join(' ');
           out.querySelectorAll('.kpr-scan-pick').forEach(function (b) {
             b.addEventListener('click', function () {
               $('#kpr-ip').value = this.getAttribute('data-ip');
               $('#kpr-port').value = '9100';
-              toast('Adresse remplie · imprimez un ticket test puis enregistrez');
+              toast(tr('Adresse remplie · imprimez un ticket test puis enregistrez'));
             });
           });
         });
@@ -942,13 +959,13 @@
     var diagnosticsBtn = $('#kpr-diagnostics');
     if (diagnosticsBtn) diagnosticsBtn.addEventListener('click', function () {
       var queue = window.KiwiKitchenPrint;
-      if (!queue || typeof queue.exportDiagnostics !== 'function') { toast('Diagnostic indisponible'); return; }
+      if (!queue || typeof queue.exportDiagnostics !== 'function') { toast(tr('Diagnostic indisponible')); return; }
       try {
         var blob = new Blob([queue.exportDiagnostics()], { type: 'application/json' });
         var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kiwi-print-diagnostic.json'; a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-        toast('Diagnostic exporté');
-      } catch (_) { toast('Export impossible'); }
+        toast(tr('Diagnostic exporté'));
+      } catch (_) { toast(tr('Export impossible')); }
     });
 
     refreshStatus();
@@ -959,8 +976,8 @@
       var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = $('#kpr-usb-connect');
       if (!st || !t) return;
       st.className = 'kpr-status on';
-      t.textContent = 'Connectée · ' + (r.name || 'Imprimante USB');
-      if (btn) btn.textContent = 'Changer d’imprimante';
+      t.textContent = tr('Connectée · ' + (r.name || 'Imprimante USB'));
+      if (btn) btn.textContent = tr('Changer d’imprimante');
       var test = $('#kpr-usb-test'); if (test) test.disabled = false;
     });
   }

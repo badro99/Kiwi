@@ -290,21 +290,21 @@
     if (opts.city) payload.city = String(opts.city).trim().slice(0, 120);
     if (Array.isArray(opts.pins)) payload.pins = opts.pins;
     return postRaw(payload).then(function (r) {
-      if (r && r.status === 403) {
-        try {
-          r.json().then(function (d) {
-            if (d && d.error === 'plan-limit-exceeded') {
-              if (window.Kiwi && window.Kiwi.toast) {
-                window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
-              }
-            }
-          }).catch(function () {});
-        } catch (_) {}
-      }
-      var ok = !!(r && r.ok);
-      if (!ok && opts.throwOnError) throw Object.assign(new Error('store-create-failed'), { status: r && r.status || 0 });
-      if (ok && slug) freshDrop(slug);
-      return ok;
+      /* Un refus de forfait n'est pas un problème de connexion : son code suit
+       * l'erreur jusqu'à l'assistant, qui l'explique au lieu de « Reconnectez-vous ». */
+      var why = r && r.status === 403 && typeof r.json === 'function'
+        ? Promise.resolve().then(function () { return r.json(); }).then(function (d) { return d && d.error; }, function () { return ''; })
+        : Promise.resolve('');
+      return why.then(function (code) {
+        if (code === 'plan-limit-exceeded' && window.Kiwi && window.Kiwi.toast) {
+          var L = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+          window.Kiwi.toast({ fr: "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", en: 'Your plan covers one business. Kiwi Ultra covers as many as you need.', ar: 'باقتك تشمل مؤسسة واحدة. Kiwi Ultra تشمل عددا غير محدود.' }[L] || "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+        }
+        var ok = !!(r && r.ok);
+        if (!ok && opts.throwOnError) throw Object.assign(new Error('store-create-failed'), { status: r && r.status || 0, code: code || '' });
+        if (ok && slug) freshDrop(slug);
+        return ok;
+      });
     }).catch(function (error) { if (opts.throwOnError) throw error; return false; });
   }
 

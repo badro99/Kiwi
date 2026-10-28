@@ -446,7 +446,12 @@
    * au même dictionnaire nous-mêmes, pour ne jamais s'afficher d'abord en
    * français. Sans caisse-lang.js, le français reste. */
   function say(fr) {
-    try { return window.KiwiCaisseLang && window.KiwiCaisseLang.tr ? window.KiwiCaisseLang.tr(fr) : fr; } catch (_) { return fr; }
+    try {
+      if (window.KiwiCaisseLang && window.KiwiCaisseLang.tr) return window.KiwiCaisseLang.tr(fr);
+      /* Le tableau de bord n'a pas caisse-lang.js : la fenêtre y prend ses mots
+       * dans assets/printer/pairing-lang.js, la même traduction en petit. */
+      return window.KiwiPrinterLang ? window.KiwiPrinterLang.tr(fr) : fr;
+    } catch (_) { return fr; }
   }
 
   function fallbackNotice(msg) {
@@ -657,6 +662,13 @@
     if (itemsOnly) {
       out.push('<div class="kpr-c kpr-foot">Kiwi · ' + esc(r.day || '') + '</div>');
       return '<div class="kpr-ticket">' + out.join('') + '</div>';
+    }
+
+    var vatBlock = r.vat && window.KiwiDayReportVat ? window.KiwiDayReportVat.ticketBlock(r.vat, o.lang, money) : null;
+    if (vatBlock) {
+      rule();
+      out.push('<div class="kpr-c kpr-b">' + esc(vatBlock.title) + '</div>');
+      vatBlock.lines.forEach(function (l) { R(l[0], l[1]); });
     }
 
     var cash = r.cash || {};
@@ -879,7 +891,7 @@
     if (pairingLoad) return pairingLoad;
     pairingLoad = new Promise(function (resolve, reject) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-ui.js?v=5';
+      script.src = '/assets/printer/pairing-ui.js?v=13';
       function failed() {
         pairingLoad = null;
         script.remove();
@@ -891,9 +903,30 @@
     });
     return pairingLoad;
   }
+  /* Sans caisse-lang.js (le tableau de bord), les mots de la fenêtre arrivent
+   * avec elle. Un échec de chargement laisse la fenêtre en français, jamais fermée. */
+  var langLoad = null;
+  function loadPrinterLang() {
+    if (window.KiwiCaisseLang || window.KiwiPrinterLang) return Promise.resolve();
+    if (langLoad) return langLoad;
+    langLoad = new Promise(function (resolve) {
+      var script = document.createElement('script');
+      script.src = '/assets/printer/pairing-lang.js?v=7';
+      script.onload = function () { resolve(); };
+      script.onerror = function () { langLoad = null; script.remove(); resolve(); };
+      document.head.appendChild(script);
+    });
+    return langLoad;
+  }
+  function translateSetup(result) {
+    try {
+      if (!window.KiwiCaisseLang && window.KiwiPrinterLang) window.KiwiPrinterLang.watch(document.getElementById('kpr-ov'));
+    } catch (_) {}
+    return result;
+  }
   function openSetup(context) {
-    if (pairingUi) return pairingUi.openSetup(context);
-    return loadPairingUi().then(function () { return pairingUi.openSetup(context); }, function () {
+    if (pairingUi && (window.KiwiCaisseLang || window.KiwiPrinterLang)) return translateSetup(pairingUi.openSetup(context));
+    return Promise.all([loadPairingUi(), loadPrinterLang()]).then(function () { return translateSetup(pairingUi.openSetup(context)); }, function () {
       fallbackNotice(say('Impossible de charger les réglages de l’imprimante. Réessayez.'));
     });
   }
