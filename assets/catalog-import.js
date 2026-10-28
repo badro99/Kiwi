@@ -57,21 +57,18 @@
      as the thousands separator, so a naive parseFloat("1 234,50") returns 1. */
   function num(s) {
     if (s == null) return NaN;
-    let t = String(s).replace(/[\s  ]/g, '').replace(/[^\d,.\-]/g, '');
-    if (!t) return NaN;
-    // If both separators appear, the LAST one is the decimal mark.
-    const lastComma = t.lastIndexOf(',');
-    const lastDot = t.lastIndexOf('.');
-    if (lastComma > -1 && lastDot > -1) {
-      const dec = Math.max(lastComma, lastDot);
-      t = t.slice(0, dec).replace(/[,.]/g, '') + '.' + t.slice(dec + 1);
-    } else if (lastComma > -1) {
-      // A single comma: decimal mark ("12,50") unless it groups ("1,234" → 1234).
-      t = /,\d{3}$/.test(t) ? t.replace(/,/g, '') : t.replace(',', '.');
-    }
-    const n = parseFloat(t);
-    return isFinite(n) ? n : NaN;
+    let t = String(s).trim().replace(/\s*MAD$/i, '').trim().replace(/[٠-٩۰-۹]/g, c => String(c.charCodeAt(0) - (c <= '٩' ? 0x660 : 0x6f0)))
+      .replace(/٫/g, '.').replace(/٬/g, ',');
+    // Validate the entire cell before removing valid grouping separators.
+    if (/^-?\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[,.]\d+)?$/.test(t)) t = t.replace(/[ \u00a0\u202f]/g, '');
+    if (/^-?\d{1,3}(?:\.\d{3})+,\d+$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+    else if (/^-?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(t)) t = t.replace(/,/g, '');
+    else if (/^-?\d+(?:[,.]\d+)?$/.test(t)) t = t.replace(',', '.');
+    else return NaN;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : NaN;
   }
+
   const intOr = (s, d) => { const n = num(s); return isFinite(n) ? Math.max(0, Math.round(n)) : d; };
 
   /* Prices go BACK to the merchant in the format they typed them in: 340,50 —
@@ -319,10 +316,10 @@
       if (fractionStock) {
         issues.push({ line, level: 'warn', code: 'stock-fraction', msg: tx('stock fractionnaire (« ' + rawStock + ' ») · refusé, la boutique compte en unités entières ; pour le poids, utilisez le module Épicerie ou Stock', 'fractional stock ("' + rawStock + '") · refused, the shop counts whole units; for weighed goods, use the Grocery or Stock module', 'مخزون كسري ("' + rawStock + '") · مرفوض، المتجر يعدّ وحدات كاملة؛ للمنتجات بالوزن استعمل وحدة البقالة أو المخزون') });
       }
-      const stockGiven = rawStock !== '' && !fractionStock;
+      const stockGiven = rawStock !== '' && !fractionStock && Number.isFinite(num(rawStock)) && num(rawStock) >= 0;
       const stock = stockGiven ? intOr(rawStock, 0) : null;
-      if (stockGiven && !isFinite(num(rawStock))) {
-        issues.push({ line, level: 'warn', msg: tx('stock illisible (« ' + rawStock + ' ») · compté 0', 'unreadable stock ("' + rawStock + '") · counted as 0', 'مخزون غير مقروء ("' + rawStock + '") · احتُسب 0') });
+      if (rawStock !== '' && (!Number.isFinite(num(rawStock)) || num(rawStock) < 0)) {
+        issues.push({ line, level: 'warn', msg: tx('stock illisible (« ' + rawStock + ' ») · ignoré', 'unreadable stock ("' + rawStock + '") · ignored', 'مخزون غير مقروء ("' + rawStock + '") · تم تجاهله') });
       }
 
       const vk = colorId + '\u0000' + keyName(size);

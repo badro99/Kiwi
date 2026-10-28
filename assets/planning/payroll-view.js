@@ -22,9 +22,9 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
     let grandHours = 0, grandCents = 0, anyRated = false;
 
     const headDays = period.days.map(d => {
-      const dt = new Date(d);
-      const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
-      return `<th class="kt-day-head"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span></th>`;
+      const dt = new Date(d + 'T12:00:00Z');
+      const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short', timeZone: 'UTC' });
+      return `<th class="kt-day-head"><span class="d">${pad(dt.getUTCDate())}</span><span class="m">${dayLbl}</span></th>`;
     }).join('');
 
     const rows = members.map(m => {
@@ -35,7 +35,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
         total += v;
         const isToday = (d === toISO(new Date()));
         return `<td class="kt-day-cell${isToday ? ' today' : ''}${locked ? ' locked' : ''}">
-          <input type="text" inputmode="decimal" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />${deferredMark(venueType, m.id, d)}
+          <input type="text" inputmode="decimal" aria-label="${esc(T.tabHours + ' · ' + memberFullName(m) + ' · ' + d)}" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />${deferredMark(venueType, m.id, d)}
         </td>`;
       }).join('');
       /* Sans taux horaire, Kiwi ne calcule rien : « 0 MAD » pour une semaine

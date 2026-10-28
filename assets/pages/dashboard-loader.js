@@ -10,7 +10,7 @@
       'assets/order-qr.js?v=6',
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
-      'assets/catalog-import.js?v=14',
+      'assets/catalog-import.js?v=16',
       'assets/ai-image-import.js?v=1',
       'assets/menu-scan.js?v=7',
       'assets/salle-scan.js?v=7',

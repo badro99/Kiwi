@@ -292,8 +292,8 @@
     "sha": "4cb11e74a39c8216"
   },
   "assets/catalog-import.js": {
-    "v": "14",
-    "sha": "4a6e36e3db3be0ea"
+    "v": "16",
+    "sha": "c21d82d30d248838"
   },
   "assets/catalog-workspace.css": {
     "v": "24",
@@ -1304,12 +1304,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "24",
-    "sha": "f7920f5f149a1d63"
+    "v": "26",
+    "sha": "76705532d32bf69e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "67",
-    "sha": "ebd2e8a8910887e3"
+    "v": "68",
+    "sha": "aed1fd353e664fb3"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1356,12 +1356,12 @@
     "sha": "206a24baae242814"
   },
   "assets/planning/optimiser.js": {
-    "v": "3",
-    "sha": "dffc940e84818744"
+    "v": "5",
+    "sha": "1fc06c1fb77ddb4b"
   },
   "assets/planning/payroll-view.js": {
-    "v": "6",
-    "sha": "f17596b4f42d58fc"
+    "v": "8",
+    "sha": "568a02f511c11c06"
   },
   "assets/planning/shift-editor.js": {
     "v": "5",
@@ -1804,8 +1804,8 @@
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "16",
-    "sha": "43eb6bc34570b9e0"
+    "v": "18",
+    "sha": "e5b03efe0e1b9f47"
   },
   "assets/simple.js": {
     "v": "12",
@@ -1876,8 +1876,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "15",
-    "sha": "74b6c23dc57c818f"
+    "v": "17",
+    "sha": "1c590bee799ecbf7"
   },
   "assets/team.js": {
     "v": "338",

@@ -1,5 +1,5 @@
   /* ── le calcul, pur ──────────────────────────────────────────────────── */
-  const isNum = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
+  const isNum = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0;
   function daysBetween(isoDay, today) {
     const a = Date.parse(isoDay + 'T00:00:00Z'), b = Date.parse(today + 'T00:00:00Z');
     return Number.isFinite(a) && Number.isFinite(b) ? Math.round((b - a) / 864e5) : null;
@@ -7,7 +7,10 @@
   function compute(sheet, opts) {
     const s = sheet || {}, o = opts || {};
     const convert = o.convert || ((q, a, b) => (a === b ? q : null));
-    const today = o.today || new Date().toISOString().slice(0, 10);
+    const currentDay = o.today || (typeof today === 'function' ? today() : (() => {
+      const d = new Date(); d.setHours(d.getHours() - 5);
+      return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+    })());
     const lines = (Array.isArray(s.lines) ? s.lines : []).map((l) => {
       const r = { id: l.id, name: l.name || '', type: l.type === 'packaging' ? 'packaging' : 'food', cost: null, reason: '', stale: false, undated: false, age: null };
       if (!isNum(l.packPrice)) r.reason = 'price';
@@ -22,7 +25,7 @@
           r.cost = (+l.packPrice / +l.packQty) * q / y;
         }
       }
-      if (l.priceDate) { r.age = daysBetween(l.priceDate, today); r.stale = r.age != null && r.age > STALE_DAYS; }
+      if (l.priceDate) { r.age = daysBetween(l.priceDate, currentDay); r.stale = r.age != null && r.age > STALE_DAYS; }
       else if (isNum(l.packPrice)) r.undated = true;
       return r;
     });
@@ -32,8 +35,8 @@
       if (r.cost == null) unknown.push(r); else { known += r.cost; if (r.type === 'packaging') pack += r.cost; else food += r.cost; }
       if (r.stale) stale.push(r);
     });
-    const complete = lines.length > 0 && !unknown.length;
-    const portions = isNum(s.portions) && +s.portions >= 1 ? Math.round(+s.portions) : 1;
+    const portions = isNum(s.portions) && +s.portions >= 1 && Number.isInteger(+s.portions) ? +s.portions : null;
+    const complete = lines.length > 0 && !unknown.length && portions != null;
     const vatOn = s.vatIncluded === true && isNum(s.vatRate) && +s.vatRate > 0;
     const price = isNum(s.sellingPrice) ? +s.sellingPrice : null;
     const priceHT = price == null ? null : (vatOn ? price / (1 + s.vatRate / 100) : price);
@@ -48,7 +51,7 @@
     return {
       lines, unknown, stale, complete, status, portions, vatOn, vatRate: vatOn ? +s.vatRate : null,
       known, food: complete ? food : null, packaging: complete ? pack : null, total, perPortion,
-      knownPerPortion: known / portions, price, priceHT, pct: pctOfPrice, contribution, target, suggested,
+      knownPerPortion: portions == null ? null : known / portions, price, priceHT, pct: pctOfPrice, contribution, target, suggested,
     };
   }
 

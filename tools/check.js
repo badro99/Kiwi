@@ -2269,6 +2269,7 @@ section('Whole-project regressions');
     'support-escalation-test.mjs',
     'wave-n-server-test.mjs',
     'menu-analysis-test.mjs',
+    'r13-b-regression-test.mjs',
     'ai-vision-models-test.mjs',
     'menu-ledger-test.mjs',
     'food-trades-truth-test.mjs',
