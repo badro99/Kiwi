@@ -177,6 +177,8 @@ function makeEditorEnv(roster, lang) {
     FormData: class { constructor(f) { this.f = f; } entries() { return Object.entries(this.f.data)[Symbol.iterator](); } },
     CSS: win.CSS,
   };
+  vm.runInNewContext(read('assets/team/access-rules.js'), sandbox);
+  sandbox.window.Kiwi.__teamProfileCore.accessRules = sandbox.window.KiwiTeamParts.accessRules;
   vm.runInNewContext(read('assets/team/profile-ui.js'), sandbox);
   return { handlers, toasts, saved, win, core };
 }

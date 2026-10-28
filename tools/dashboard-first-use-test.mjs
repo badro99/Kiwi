@@ -16,8 +16,9 @@ vm.runInNewContext(startupCode, { document: { readyState: 'loading', write: html
 assert.throws(() => vm.runInNewContext(startupCode, { document: { readyState: 'complete', write() { assert.fail('late parser write'); } } }), /requires the HTML parser/);
 const startupTags = [...emitted.matchAll(/<script (?:type="module" )?src="([^"]+)"([^>]*)><\/script>/g)];
 // 45, then the stock strings, the team catalogue, three menu parts (26 Oct 2026 splits), the stock state owner
-// and the day report's two-closures notice (wave 12, 27 Oct).
-assert.equal(startupTags.length, 52, 'startup providers retain one ordered deferred execution each');
+// and the day report's two-closures notice (wave 12, 27 Oct), then the briefing's rules and persistence owners
+// split out of briefing.js (note 13 briefing#1, 28 Oct).
+assert.equal(startupTags.length, 54, 'startup providers retain one ordered deferred execution each');
 assert.match(emitted, /<script type="module" src="assets\/team\.js\?/, 'team entry imports its pieces as a parser-ordered module');
 for (const [, url, attributes] of startupTags) {
   assert.match(attributes, /\bdefer\b/);
@@ -31,7 +32,8 @@ for (const [provider, consumer] of [['assets/team/merge.js', 'assets/team.js'], 
   const at = name => shell.findIndex(url => url.split('?')[0] === name);
   assert.ok(at(provider) >= 0 && at(provider) < at(consumer), provider + ' precedes its consumer');
 }
-assert.equal(urls.length, 7, 'only optional drawer owners leave the eager shell');
+// Eight since the menu scan's PDF reader left its controller (note 13 vision#0, 28 Oct).
+assert.equal(urls.length, 8, 'only optional drawer owners leave the eager shell');
 assert.equal(new Set(urls).size, urls.length);
 for (const surface of ['menu', 'salle']) { const at = (name) => urls.findIndex((u) => u.split('?')[0] === name); assert.ok(at('assets/ai-image-import.js') >= 0 && at('assets/ai-image-import.js') < at('assets/' + surface + '-scan.js'), 'shared import precedes consumers'); }
 assert.ok([...read('dashboard.html').matchAll(/<script\b[^>]*src=/g)].length <= 122);
@@ -134,4 +136,4 @@ for (const action of ['mx-import', 'bqx-import', 'rmw-menu-scan', 'clients-direc
   assert.equal(clicked, 1, action + ': replay once after owner registration');
 }
 assert.match(read('assets/view-link.js'), /load\('workspace'\)\)[\s\S]*?\.then\(\(\) => restoreReady\(target\)/, 'deep links await the same first-use owner graph');
-console.log('PASS dashboard dependencies: ordered deferred startup; 7 offline optional owners, single flight, retry and one intent replay');
+console.log('PASS dashboard dependencies: ordered deferred startup; 8 offline optional owners, single flight, retry and one intent replay');

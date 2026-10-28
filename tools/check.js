@@ -755,6 +755,7 @@ for (const test of [
   'team-properties-test.mjs',
   /* Vague 14 : un code partagé est refusé à voix haute (jamais écarté en silence), un code généré évite le roster et 0001. */
   'team-code-guard-test.mjs',
+  'team-access-rules-test.mjs',
   /* Vague 14 : la connexion employé ne lit que les magasins qui portent l'adresse. */
   'employee-credential-scope-test.mjs',
   'team-split-test.mjs',

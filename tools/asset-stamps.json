@@ -1336,8 +1336,8 @@
     "sha": "3eaee9016797b178"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "75",
-    "sha": "5ba22d03aeedb39c"
+    "v": "80",
+    "sha": "5b6c139e93efdf32"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1916,8 +1916,12 @@
     "sha": "1c590bee799ecbf7"
   },
   "assets/team.js": {
-    "v": "338",
-    "sha": "a0affa3f82ad7bc4"
+    "v": "343",
+    "sha": "fe3d475b50c77a0e"
+  },
+  "assets/team/access-rules.js": {
+    "v": "6",
+    "sha": "5fc1e726dcab73db"
   },
   "assets/team/catalog.js": {
     "v": "2",
@@ -1936,8 +1940,8 @@
     "sha": "5fa184b6eea75f72"
   },
   "assets/team/profile-ui.js": {
-    "v": "9",
-    "sha": "1d566924abd12af8"
+    "v": "13",
+    "sha": "102fe1044bfd2d48"
   },
   "assets/team/roster-list.js": {
     "v": "6",

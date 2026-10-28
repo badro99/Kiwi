@@ -9,7 +9,7 @@ import { findEmployeeCredential } from '../functions/auth/_lib.js';
 import { onRequestPost } from '../functions/api/store.js';
 import { publishStaffCredentials } from '../functions/api/_staff-publication.js';
 
-const ui = fs.readFileSync(new URL('../assets/team/profile-ui.js', import.meta.url), 'utf8');
+const ui = createRequire(import.meta.url)('./team-owners-test-source.cjs').originalFile('assets/team/profile-ui.js');
 const generated = ui.match(/var KiwiStaffCredential = [\s\S]*?\}\)\(\);/)[0];
 const browser = vm.runInNewContext(generated + '; KiwiStaffCredential');
 // Obviously fake fixtures. Numeric values needed by the actual route are derived,
