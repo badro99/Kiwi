@@ -188,6 +188,16 @@ function bqKitRail(root, $, icons, on, who) {
   if (foot) [...foot.children].forEach((el) => more.appendChild(el));
   nav.appendChild(more);
   bqMore = more;
+  /* Le voile du restaurant (#kit-more-scrim) : le panneau s'ouvre À LA PLACE
+     du rail, la page derrière s'assombrit, et toucher le voile referme
+     seulement — un article ne s'ajoute pas au ticket par un geste de
+     fermeture (propriétaire, 2026-10-28). Il suit `more.hidden` par la
+     feuille (.bq-more:not([hidden]) + .bq-more-scrim), sans état en double. */
+  const scrim = document.createElement('div');
+  scrim.className = 'bq-more-scrim';
+  scrim.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); close(); });
+  scrim.addEventListener('click', (e) => e.stopPropagation());
+  nav.appendChild(scrim);
 
   /* Le tiroir du restaurant n'est pas une LISTE : c'est le rail déplié
      (assets/caisse/till-frame.js, tillKitMoreNavEl). Il pose un vrai
@@ -466,4 +476,22 @@ function bqKitScanBar(bar, o) {
   return true;
 }
 
-export { bqKitRail, bqKitRailPaint, bqKitOpenSheet, bqKitTicketFoot, bqKitScanBar };
+/* La barre des rayons défile AVEC les articles (propriétaire, 2026-10-28) :
+   fixe, elle mangeait la hauteur de la grille. Vente et la recherche restent
+   en place. Les deux nœuds livrés sont DÉPLACÉS dans une boîte qui défile,
+   jamais reconstruits : leurs id, leurs onclick et renderCats / renderGrid
+   (qui écrivent leur innerHTML) ne voient aucune différence. */
+function bqKitSellScroll(sell) {
+  if (!sell || sell.querySelector(':scope > .bq-sell-scroll')) return false;
+  const cats = sell.querySelector(':scope > #bq-cats');
+  const grid = sell.querySelector(':scope > #bq-gridwrap');
+  if (!cats || !grid) return false;
+  const box = document.createElement('div');
+  box.className = 'bq-sell-scroll';
+  sell.insertBefore(box, cats);
+  box.appendChild(cats);
+  box.appendChild(grid);
+  return true;
+}
+
+export { bqKitRail, bqKitRailPaint, bqKitOpenSheet, bqKitTicketFoot, bqKitScanBar, bqKitSellScroll };

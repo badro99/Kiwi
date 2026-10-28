@@ -1400,36 +1400,36 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique-2027.css": {
-    "v": "11",
-    "sha": "11d827d5a4e99ae3"
+    "v": "12",
+    "sha": "eea00dc3823f83eb"
   },
   "assets/pos-boutique.css": {
-    "v": "158",
+    "v": "159",
     "sha": "903834fcdc1b2ab2"
   },
   "assets/pos-boutique.js": {
-    "v": "158",
-    "sha": "17278f0dda837fda"
+    "v": "159",
+    "sha": "ce36ec32cba5780c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "60",
-    "sha": "04edd6ebd64cc2d1"
+    "v": "61",
+    "sha": "2b0ba1a301059692"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "60",
-    "sha": "e9f4e5ca39a13b86"
+    "v": "61",
+    "sha": "aea6916f4b939171"
   },
   "assets/pos-boutique/kit-2027.js": {
-    "v": "11",
-    "sha": "a27db3661bae62ef"
+    "v": "12",
+    "sha": "db6dacd44f28f85c"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "60",
-    "sha": "5309d089977962b0"
+    "v": "61",
+    "sha": "9ae8285db7566a1d"
   },
   "assets/pos-boutique/search.js": {
-    "v": "2",
-    "sha": "f5f6fa9b26cae5b0"
+    "v": "3",
+    "sha": "cb101850540504c4"
   },
   "assets/pos-boutique/ticket-owner.js": {
     "v": "2",
@@ -1448,8 +1448,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "227",
-    "sha": "8bb2060c4f4d06db"
+    "v": "228",
+    "sha": "331b47ed3d05088d"
   },
   "assets/pos-epicerie.css": {
     "v": "28",

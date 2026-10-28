@@ -84,6 +84,15 @@ html[data-skin-2027="till"] #pos-boutique .bq-head-sub b { color: var(--k-accent
    la consigne « Scannez… » sont éteints (propriétaire, 2026-10-28). Le compte
    continue d'être écrit dans #bq-today (headSubVente), seulement plus montré. */
 html[data-skin-2027="till"] #pos-boutique .bq-sell > .bq-head :is(.bq-head-sub, .bq-head-hint) { display: none; }
+/* La barre des rayons défile avec les articles (bqKitSellScroll) : Vente et
+   la recherche restent, tout le reste rend sa hauteur à la grille. */
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-sell-scroll > .bq-grid-scroll {
+  flex: none; min-height: 0; overflow: visible;
+}
 html[data-skin-2027="till"] #pos-boutique .bq-sell-scan {
   min-height: 52px; border-radius: var(--k-r-3);
   background-color: var(--k-surface-1); border: 1px solid var(--k-line);
@@ -352,8 +361,10 @@ html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-main { left: 0; right: 
    Les commandes déplacées y gardent EXACTEMENT leur dessin livré — elles sont
    nées pour un fond sombre et elles en retrouvent un. Pas une couleur écrite
    ici, donc pas de blanc sur blanc à refaire. */
+/* Il s'ouvre À LA PLACE du rail blanc, bord gauche, comme le restaurant
+   (kit.css › html[data-k-till-more] .sidebar) — pas à côté de lui. */
 html[data-skin-2027="till"] #pos-boutique .bq-more {
-  position: fixed; top: 0; bottom: 0; inset-inline-start: 88px;
+  position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
   width: 276px; z-index: 60;
   display: flex; flex-direction: column; gap: 4px;
   padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
@@ -400,6 +411,28 @@ html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl {
   order: 99; margin-block-start: auto; padding-block-start: 16px;
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more[hidden] { display: none; }
+/* Le voile : celui du restaurant (#kit-more-scrim), même teinte, même
+   entrée. Il n'existe que tant que le panneau est ouvert. */
+html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-more-scrim { display: none; }
+html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-more:not([hidden]) + .bq-more-scrim {
+  display: block;
+  position: fixed; inset: 0; z-index: 59;
+  background-color: var(--k-scrim);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-more:not([hidden]) {
+    animation: bq-more-in var(--k-dur-4) var(--k-glide) both;
+  }
+  html[data-skin-2027="till"] #pos-boutique #bq-nav > .bq-more:not([hidden]) + .bq-more-scrim {
+    animation: bq-scrim-in var(--k-dur-4) var(--k-glide) both;
+  }
+  html[data-skin-2027="till"][dir="rtl"] #pos-boutique #bq-nav > .bq-more:not([hidden]),
+  html[data-skin-2027="till"] .kiwi-rtl #pos-boutique #bq-nav > .bq-more:not([hidden]),
+  html[data-skin-2027="till"] #pos-boutique.kiwi-rtl #bq-nav > .bq-more:not([hidden]) { animation-name: bq-more-in-rtl; }
+}
+@keyframes bq-more-in { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes bq-more-in-rtl { from { opacity: 0; transform: translateX(24px); } }
+@keyframes bq-scrim-in { from { opacity: 0; } }
 /* La colonne flex étire DÉJÀ ses enfants en flux : écrire width:100% ici
    touchait aussi un enfant volontairement masqué — #bq-net porte
    .kcl-hidden-net (1 px, détouré, en position absolue) — qui reprenait alors
