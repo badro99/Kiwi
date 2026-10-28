@@ -331,6 +331,14 @@ over the one below, so new rules win by cascade instead. A pin only goes down: a
 lowers it. Never raise one to make a red go away.
 A file that is not pinned stays under 2 500 lines (5 000 until 2026-10-27).
 
+**Coupling stops growing too** (2026-10-28). `tools/coupling-ratchet-test.mjs`
+pins, per file under `assets/`, how many globals defined by OTHER files it reads
+or writes (`window.X`, bare `Kiwi*` / `__kiwi*`), and the list of globals that
+more than one file assigns (`tools/coupling-baseline.json`). A new file may touch
+12; a pin only goes down (`KIWI_UPDATE_COUPLING_BASELINE=1` after a clean-up); a
+global never gains a second writer. Splitting a file without cutting what it
+shares does not lower anything here.
+
 **Prod D1 changes through `wrangler d1 migrations`** (since 2026-10-19,
 `docs/ops/MIGRATIONS.md`). Changing `schema.sql` means adding the next
 `migrations/NNNN_name.sql` in the same commit — `node tools/d1-migrations.mjs
