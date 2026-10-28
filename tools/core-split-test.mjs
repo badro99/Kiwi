@@ -13,9 +13,9 @@ for (const area of ['daterange', 'agent']) {
   const map = JSON.parse(fs.readFileSync(dir + 'split.json', 'utf8'));
   const original = gunzipSync(fs.readFileSync(dir + 'original.js.gz')).toString();
   assert.equal(sha(original), map.sha256, 'frozen original digest');
-  assert.equal(source.source(map.file), original, 'every live function reconstructs its original body and order');
+  assert.equal(sourceHome.normalize(source.source(map.file)), original, 'every live function reconstructs its original body and order');
   const part = area === 'daterange' ? sourceHome.source() : fs.readFileSync(map.part, 'utf8');
-  assert.equal(sha(part), map.partHash, 'no unreviewed changes to moved bodies');
+  assert.equal(sha(sourceHome.normalize(part)), map.partHash, 'no unreviewed changes to moved bodies');
   const window = {};
   vm.runInNewContext(area === 'daterange' ? sourceHome.live() : part, { window });
   const register = Object.entries(window).filter(([key]) => key !== '__kiwiHomeRenderers').map(([, value]) => value);

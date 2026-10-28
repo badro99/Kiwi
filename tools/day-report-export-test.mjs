@@ -15,7 +15,7 @@ vm.createContext(ctx);vm.runInContext(src,ctx);
 const X=ctx.KiwiDayReportExport;
 ok(X&&X.kinds.length===10,'ten selectable factual sections');
 ['sales','materials','margins','team','stock','reservations'].forEach(id=>ok(X.kinds.some(x=>x.id===id),'section '+id));
-ctx.KiwiDayReport={dayBounds:()=>({from:1000,to:2000})};
+ctx.KiwiDayReport={timezone:()=> 'Africa/Casablanca',dayBounds:()=>({from:1000,to:2000})};
 ctx.KiwiSales={list:()=>[{ts:1500,ref:'T-1',amount:100,method:'cash',channel:'salle',cashier:'Sara',lines:[{itemId:'p1',name:'Tajine',cat:'Plats',qty:2,total:100}]}]};
 ctx.KiwiCost={of:()=>({mad:20,src:'recipe'}),netOf:n=>n,basis:()=>({}),doc:()=>({recipes:{},ingredients:[]})};
 ctx.KiwiTeam={daySnapshot:()=>[{name:'Sara',role:'Serveuse',plannedStart:'12:00',plannedEnd:'20:00',plannedHours:8,workedHours:7.5}]};

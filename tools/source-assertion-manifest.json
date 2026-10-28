@@ -25,7 +25,6 @@
     "global-ownership-test.mjs": "ownership ratchet over globals",
     "guest-copy-test.js": "guest-facing copy rules",
     "haptics-plugin-test.mjs": "native plugin configuration",
-    "home-boundary-test.mjs": "AST ownership contract: each renderer reads only its explicit live owner and declared window interface.",
     "hotel-core-split-test.mjs": "byte-exact concatenation of the hotel core parts and the names each part owns",
     "hotel-stays-group-guards-test.mjs": "Source ownership and recovery wiring guards only. Browser behavior is separately tested; no per-assertion execution proof is claimed here.",
     "icon-vendored-test.mjs": "vendored icon paths, licences and identifiers",

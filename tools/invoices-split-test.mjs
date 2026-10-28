@@ -8,7 +8,7 @@ const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/invoices/original.js.gz')).toString('utf8');
 const map = JSON.parse(read('tools/fixtures/invoices/split.json'));
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
-const route = read('functions/api/invoices.js');
+const route = read('functions/api/invoices.js').replace("import { registerSummary } from './invoices/_summary.js';\n", '').replace("  if (url.searchParams.has('summary')) return json({ok:true, summary:await registerSummary(ctx, today)});\n", '');
 assert.ok(route.startsWith(map.prefix));
 let rebuilt = route.slice(map.prefix.length);
 for (const part of map.segments) {

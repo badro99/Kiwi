@@ -277,13 +277,21 @@ export async function onRequestGet({ request, env }) {
     });
   }
 
+  const rawCursor = url.searchParams.get('cursor');
+  let cursor = null;
+  if (rawCursor) {
+    try {
+      cursor = JSON.parse(atob(rawCursor));
+      if (!Array.isArray(cursor) || cursor.length !== 2 || !Number.isSafeInteger(cursor[0]) || typeof cursor[1] !== 'string' || cursor[1].length > 120) throw Error();
+    } catch (_) { return json({error:'bad-cursor'},400); }
+  }
   // Liste des factures pour ce merchant
   try {
     const { results } = await env.DB.prepare(
-      'SELECT merchant, seq, number, sale_id, customer, snapshot, created_ts FROM sale_invoices WHERE merchant = ? ORDER BY created_ts DESC, number DESC LIMIT 200'
-    ).bind(merchant).all();
+      `SELECT merchant, seq, number, sale_id, customer, snapshot, created_ts FROM sale_invoices WHERE merchant = ? ${cursor ? 'AND (created_ts < ? OR (created_ts = ? AND number < ?))' : ''} ORDER BY created_ts DESC, number DESC LIMIT 201`
+    ).bind(...(cursor ? [merchant,cursor[0],cursor[0],cursor[1]] : [merchant])).all();
 
-    const list = (results || []).map((row) => {
+    const list = (results || []).slice(0,200).map((row) => {
       let s = null, c = null;
       try { s = JSON.parse(row.snapshot); } catch (_) {}
       try { c = row.customer ? JSON.parse(row.customer) : null; } catch (_) {}
@@ -297,7 +305,9 @@ export async function onRequestGet({ request, env }) {
       };
     });
 
-    return json({ ok: true, invoices: list });
+    const last = list[list.length-1];
+    const nextCursor = results.length > 200 && last ? btoa(JSON.stringify([last.createdTs,last.number])) : null;
+    return json({ ok: true, invoices: list, nextCursor });
   } catch (e) {
     return json({ error: 'query-failed', detail: String(e?.message || e) }, 500);
   }

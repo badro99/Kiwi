@@ -1,3 +1,4 @@
+import { registerSummary } from './invoices/_summary.js';
 import { ensureInvoicingSchema } from './_invoice-series.js';
 import { fail, failResponse, str, parseJson, validDay, DOC_TYPES, MAX_LIST, MAX_BODY, DAY_RE } from './invoices/_shared.js';
 import { getRow, todayFor, presentFull, displayStatus, balanceOf } from './invoices/_documents.js';
@@ -85,6 +86,7 @@ async function withTables(ctx, fn) {
 
 async function read(ctx, url) {
   const today = await todayFor(ctx);
+  if (url.searchParams.has('summary')) return json({ok:true, summary:await registerSummary(ctx, today)});
   const id = url.searchParams.get('id');
   if (id) {
     const row = await getRow(ctx, id);

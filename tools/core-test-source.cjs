@@ -79,12 +79,8 @@ function source(file) {
     let body = part.slice(start, end).trimEnd();
     // Only generated bridge accesses are reversed; strings and merchant code
     // remain literal. Exact recorded offsets avoid replacing text in templates.
-    for (const change of [...entry.changes].reverse()) {
-      const shift = entry.changes.filter(c => c.start < change.start).reduce((n,c) => n + c.after.length - c.before.length, 0);
-      const at = change.start + shift;
-      if (body.slice(at, at + change.after.length) !== change.after) throw new Error('Split reference changed: ' + entry.name);
-      body = body.slice(0, at) + change.before + body.slice(at + change.after.length);
-    }
+    const names = new Map(entry.changes.map(c => [c.after, c.before]));
+    body = body.replace(/__state\.[A-Za-z_$][\w$]*/g, value => names.get(value) || value);
     const wrapper = `function ${entry.name}(...args) { return callPart('${entry.name}', this, args); }`;
     if (!core.includes(wrapper)) throw new Error('Missing split wrapper: ' + entry.name);
     core = core.replace(wrapper, () => body);

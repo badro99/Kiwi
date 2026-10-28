@@ -380,8 +380,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "116",
-    "sha": "2c43bf3fc64b26a5"
+    "v": "118",
+    "sha": "73078e36162e6275"
   },
   "assets/daterange/activity.js": {
     "v": "5",
@@ -400,8 +400,8 @@
     "sha": "6c36fd1beb9b0595"
   },
   "assets/daterange/kpi.js": {
-    "v": "8",
-    "sha": "9c9688373cad7028"
+    "v": "10",
+    "sha": "215868694e906d33"
   },
   "assets/daterange/ledger.js": {
     "v": "7",
@@ -412,8 +412,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "15",
-    "sha": "107a601e2954359e"
+    "v": "17",
+    "sha": "d91da92192a56603"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -428,8 +428,8 @@
     "sha": "1f11289e10c9c04d"
   },
   "assets/day-report-export.js": {
-    "v": "16",
-    "sha": "8e700d5b4656a322"
+    "v": "18",
+    "sha": "a24f79c0a7533715"
   },
   "assets/day-report.js": {
     "v": "37",
@@ -740,24 +740,24 @@
     "sha": "0fc3fe84387e04a4"
   },
   "assets/invoicing.js": {
-    "v": "34",
-    "sha": "bf53625872b1ca81"
+    "v": "36",
+    "sha": "9806f77a6e56e384"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
     "sha": "ed4c954e2ebba564"
   },
   "assets/invoicing/history.js": {
-    "v": "7",
-    "sha": "62af7f0cc10f7f65"
+    "v": "9",
+    "sha": "efaebe5bc1332054"
   },
   "assets/invoicing/print.js": {
     "v": "8",
     "sha": "701c83f0825ccdbe"
   },
   "assets/invoicing/transport.js": {
-    "v": "3",
-    "sha": "e66252928bf6494e"
+    "v": "4",
+    "sha": "56ea0700d1632c57"
   },
   "assets/kit/access-reset.js": {
     "v": "1",
@@ -1308,8 +1308,8 @@
     "sha": "f7920f5f149a1d63"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "65",
-    "sha": "cdc7153c2020a73e"
+    "v": "67",
+    "sha": "ebd2e8a8910887e3"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

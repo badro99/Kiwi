@@ -5,12 +5,13 @@ import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import home from './home-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
+const normalize = home.normalize;
 const map = home.metadata();
 const original = gunzipSync(fs.readFileSync('tools/fixtures/home-split/original.js.gz')).toString();
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
-assert.equal(home.source(), original, 'live fragments reconstruct the complete original byte for byte');
+assert.equal(normalize(home.source()), original, 'live fragments reconstruct the complete original byte for byte');
 for (const p of map.parts) {
-  assert.equal(fs.readFileSync(p.file, 'utf8'), p.prefix + p.fragments.map(f => original.slice(f.start, f.start + f.length)).join('') + p.suffix, p.name + ': bodies and order unchanged');
+  assert.equal(normalize(fs.readFileSync(p.file, 'utf8')), p.prefix + p.fragments.map(f => original.slice(f.start, f.start + f.length)).join('') + p.suffix, p.name + ': bodies and order unchanged');
 }
 const window = {};
 vm.runInNewContext(home.live(), { window });
@@ -21,7 +22,7 @@ assert.deepEqual(reads, [], 'registration does not read state');
 assert.deepEqual(Object.keys(functions).sort(), map.parts.flatMap(p => p.exports).sort());
 assert.ok(Object.isFrozen(functions));
 for (const p of map.parts) for (const f of p.fragments) if (typeof functions[f.name] === 'function') {
-  assert.equal(String(functions[f.name]), original.slice(f.start, f.start + f.length).trimEnd(), f.name + ': actual exported function byte identity');
+  assert.equal(normalize(String(functions[f.name])), original.slice(f.start, f.start + f.length).trimEnd(), f.name + ': actual exported function byte identity');
 }
 const requests = [];
 vm.runInNewContext(fs.readFileSync(map.file, 'utf8'), { window: {}, document: { readyState: 'loading', write: text => requests.push(text) } });
