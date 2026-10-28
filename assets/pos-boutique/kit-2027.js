@@ -148,6 +148,30 @@ function bqMoreActs() {
   ));
 }
 
+/* L'ordre du tiroir (propriétaire, 2026-10-28 : « ça semble mélangé »).
+   Service : ce que l'on fait au comptoir, la fin de service en dernier.
+   Cet appareil : la tablette elle-même, Verrouiller en dernier. Une commande
+   inconnue se range dans Service, avant la fin de service. */
+const BQ_MORE_ORDER = [
+  ['#bq-open-drawer', 1],
+  ['.kx-reprint, [data-bq-act="reprint"]', 2],
+  ['.kx-attendance-code, [data-bq-act="clock"]', 3],
+  ['#bq-close-day, [data-bq-act="endshift"]', 9],
+  ['[data-action="printer-connect"]', 11],
+  ['#bq-fs', 12],
+  ['.kx-refresh', 13],
+  ['#bq-lock, [data-bq-act="logout"]', 19],
+];
+const bqMoreRank = (el) => {
+  for (const [sel, n] of BQ_MORE_ORDER) { try { if (el.matches(sel)) return n; } catch (_) {} }
+  return 5;
+};
+/* Titres de section : les clés du kit, déjà traduites FR · EN · AR. */
+const bqKitT = (key, fb) => {
+  try { const K = window.KiwiKit; const v = K && typeof K.t === 'function' ? K.t(key) : ''; if (v && v !== key) return v; } catch (_) {}
+  return fb;
+};
+
 const bqIconFor = (el) => {
   for (const [sel, ic] of BQ_MORE_ICONS) { try { if (el.matches(sel)) return ic; } catch (_) {} }
   return 'more_horiz';
@@ -170,8 +194,17 @@ function bqKitMorePaint() {
     views.push({ id: view, icon: ic, label: label(b), badge: n > 0 ? n : 0 });
   }
   views.push({ id: 'more', icon: 'close', label: tr('Moins') });
-  const acts = bqMoreActs().map((el, i) => ({ id: 'act:' + i, icon: bqIconFor(el), label: label(el) }));
-  bqSide.sections = [{ items: views }].concat(acts.length ? [{ label: tr('La caisse'), items: acts }] : []);
+  /* Rangées triées en deux groupes, comme le Plus du restaurant
+     : Service, puis Cet appareil. L'id reste
+     l'index LIVRÉ, donc chaque rangée clique toujours son propre bouton. */
+  const acts = bqMoreActs().map((el, i) => ({ id: 'act:' + i, icon: bqIconFor(el), label: label(el), at: bqMoreRank(el), i }))
+    .sort((a, b) => (a.at - b.at) || (a.i - b.i));
+  const strip = (r) => ({ id: r.id, icon: r.icon, label: r.label });
+  const shift = acts.filter((r) => r.at < 10).map(strip);
+  const device = acts.filter((r) => r.at >= 10).map(strip);
+  bqSide.sections = [{ items: views }]
+    .concat(shift.length ? [{ label: bqKitT('till.more.shift', tr('Service')), items: shift }] : [])
+    .concat(device.length ? [{ label: bqKitT('till.more.device', tr('Cet appareil')), items: device }] : []);
   const cur = bqQ('#bq-nav .bq-nav-it.on', bqRoot);
   bqSide.setAttribute('value', (cur && cur.dataset.bqView) || 'vente');
 }
