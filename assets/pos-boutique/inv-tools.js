@@ -100,3 +100,57 @@ export function invSearch(bar, input, skin, d) {
   if (list && !skin) list.classList.add('is-plain');
   return ok;
 }
+
+/* 3. Un inventaire renvoyé par le propriétaire (« Demander des précisions »
+ *    au tableau de bord, statut correction_requested) s'affiche en tête de
+ *    l'Inventaire avec sa question, et « Recompter » rouvre le comptage en
+ *    REMPLAÇANT l'ancien document (supersedes). Boutiques réelles seulement :
+ *    la démo n'a pas de serveur. Lu au plus une fois par minute — l'Inventaire
+ *    se repeint souvent. */
+const trI = (s) => (window.KiwiCaisseLang && typeof window.KiwiCaisseLang.tr === 'function' ? window.KiwiCaisseLang.tr(s) : s);
+const asks = { key: '', at: 0, rows: [], busy: false };
+function paintAsks(panel, d) {
+  const tools = panel.querySelector('.bqi-tools');
+  let box = panel.querySelector('#bqi-asks');
+  if (!asks.rows.length) { if (box) box.remove(); return; }
+  if (!box && tools) {
+    box = document.createElement('div');
+    box.id = 'bqi-asks';
+    box.className = 'bqi-asks';
+    tools.after(box);
+  }
+  if (!box) return;
+  box.innerHTML = asks.rows.map((c) => '<div class="bqi-ask"><div class="bqi-ask-t"><b>' + d.esc(trI('Le propriétaire demande des précisions'))
+    + '</b><span>' + d.esc(trI('Inventaire de') + ' ' + (c.employeeName || '·') + ' · ' + new Date(c.submittedAt || Date.now()).toLocaleDateString('fr-FR'))
+    + '</span>' + (c.reviewNote ? '<q>' + d.esc(c.reviewNote) + '</q>' : '') + '</div>'
+    + '<button type="button" class="bq-btn" data-ask-recount="' + d.esc(c.id) + '">' + d.esc(trI('Recompter')) + '</button></div>').join('');
+  box.querySelectorAll('[data-ask-recount]').forEach((b) => b.addEventListener('click', () => {
+    const c = asks.rows.find((x) => x.id === b.dataset.askRecount);
+    if (c) d.recount({ supersedes: c.id, correctionNote: c.reviewNote || '' });
+  }));
+}
+export function invCountAsks(panel, d) {
+  if (!panel || !d || !d.real || !d.merchant) return;
+  if (!document.getElementById('bqi-asks-css')) {
+    const style = document.createElement('style');
+    style.id = 'bqi-asks-css';
+    style.textContent = '#pos-boutique .bqi-asks{display:flex;flex-direction:column;gap:8px;padding:6px 22px 0;}'
+      + '#pos-boutique .bqi-ask{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid #fde68a;background:#fffbeb;border-radius:12px;color:#92400e;}'
+      + '#pos-boutique .bqi-ask-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px;}'
+      + '#pos-boutique .bqi-ask-t q{color:#78350f;}'
+      + '#pos-boutique .bqi-ask .bq-btn{flex:0 0 auto;}';
+    document.head.appendChild(style);
+  }
+  paintAsks(panel, d);
+  if (asks.busy || (asks.key === d.merchant && Date.now() - asks.at < 60000)) return;
+  asks.busy = true;
+  fetch('/api/inventory/counts?status=correction_requested&merchant=' + encodeURIComponent(d.merchant))
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => {
+      asks.key = d.merchant; asks.at = Date.now();
+      asks.rows = (j && Array.isArray(j.counts) ? j.counts : []).filter((c) => c && c.status === 'correction_requested' && (!c.engine || c.engine === 'boutique'));
+      if (panel.isConnected) paintAsks(panel, d);
+    })
+    .catch(() => {})
+    .finally(() => { asks.busy = false; });
+}

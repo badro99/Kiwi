@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin } from '../pos-boutique.js?v=168';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=70';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=170';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=72';
 import { openMoves } from './inv-moves.js?v=4';
-import { invSearch, invUnseenCount, invMarkSeen } from './inv-tools.js?v=5';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=70';
+import { invSearch, invUnseenCount, invMarkSeen, invCountAsks } from './inv-tools.js?v=7';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=72';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -717,6 +717,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
     invSearch($('.bqi-scan', panel), scan, bqKitSkin(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
       catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, availableStock: variantStock, colorLabel }) });
+    invCountAsks(panel, { real: pvReal(), merchant: _bqKey, esc, recount: (o) => window.KiwiPosInventoryCount?.open?.({ engine: 'boutique', ...o }) });   // inventaire renvoyé par le propriétaire
     /* L'Inventaire est à l'écran : ses alertes sont vues, la pastille s'éteint. */
     if (state.view === 'inventaire') { invMarkSeen(_bqKey, invStockList()); renderBadges(); }
     const cb = $('#bqi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'boutique' });

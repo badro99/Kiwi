@@ -1123,7 +1123,7 @@
       thItemVariant: 'Article & Déclinaison', thBefore: 'Stock avant', thCounted: 'Compté', thDiff: 'Écart', thRemark: 'Remarque',
       dNoLines: 'Aucune ligne enregistrée.',
       dNoteLabel: 'Note ou commentaire de décision (optionnel)', dNotePh: 'Justification de la décision…',
-      dClose: 'Fermer', dReject: "Refuser l'inventaire", dApprove: 'Valider et appliquer le stock',
+      dClose: 'Fermer', dReject: "Refuser l'inventaire", dApprove: 'Valider et appliquer le stock', dAsk: 'Demander des précisions', dAskNeedNote: 'Écrivez votre question dans la note : l’employé la verra à la caisse.', toastAsked: 'Question envoyée à la caisse', dGaps: (n) => `${n} écart${n > 1 ? 's' : ''} en tête de liste`,
       toastApproved: 'Inventaire validé · stock mis à jour', toastRejected: 'Inventaire refusé',
       // Valeurs stockées, lues dans la langue de l'écran
       whoOwner: 'Propriétaire', whoEmployee: 'Employé', whoCashier: 'Caissier', whoUnknown: 'Inconnu',
@@ -1186,7 +1186,7 @@
       thItemVariant: 'Item & variant', thBefore: 'Stock before', thCounted: 'Counted', thDiff: 'Variance', thRemark: 'Remark',
       dNoLines: 'No line recorded.',
       dNoteLabel: 'Decision note or comment (optional)', dNotePh: 'Reason for the decision…',
-      dClose: 'Close', dReject: 'Reject the count', dApprove: 'Approve and apply to stock',
+      dClose: 'Close', dReject: 'Reject the count', dApprove: 'Approve and apply to stock', dAsk: 'Ask for details', dAskNeedNote: 'Write your question in the note: the employee will see it at the till.', toastAsked: 'Question sent to the till', dGaps: (n) => `${n} gap${n === 1 ? '' : 's'} listed first`,
       toastApproved: 'Count approved · stock updated', toastRejected: 'Count rejected',
       whoOwner: 'Owner', whoEmployee: 'Employee', whoCashier: 'Cashier', whoUnknown: 'Unknown',
       storeMain: 'Main store', storeRegister: 'Main register',
@@ -1247,7 +1247,7 @@
       thItemVariant: 'المنتج والصنف', thBefore: 'المخزون قبل العد', thCounted: 'المعدود', thDiff: 'الفرق', thRemark: 'ملاحظة',
       dNoLines: 'لا توجد أسطر مسجلة.',
       dNoteLabel: 'ملاحظة أو تعليق على القرار (اختياري)', dNotePh: 'مبرر القرار…',
-      dClose: 'إغلاق', dReject: 'رفض الجرد', dApprove: 'قبول الجرد وتطبيقه على المخزون',
+      dClose: 'إغلاق', dReject: 'رفض الجرد', dApprove: 'قبول الجرد وتطبيقه على المخزون', dAsk: 'طلب توضيحات', dAskNeedNote: 'اكتب سؤالك في الملاحظة: سيراه الموظف في الصندوق.', toastAsked: 'أُرسل السؤال إلى الصندوق', dGaps: (n) => `الفروقات في أعلى القائمة: ${n}`,
       toastApproved: 'قُبل الجرد · تم تحديث المخزون', toastRejected: 'رُفض الجرد',
       whoOwner: 'المالك', whoEmployee: 'موظف', whoCashier: 'أمين الصندوق', whoUnknown: 'غير معروف',
       storeMain: 'المتجر الرئيسي', storeRegister: 'الصندوق الرئيسي',
@@ -2182,7 +2182,7 @@
     H['stock-count-range'] = (el) => { stCountDateFilter = el.dataset.range; rerenderTabBody(); };
     H['stock-count-status'] = (el) => { stCountStatusFilter = el.dataset.status; rerenderTabBody(); };
     H['stock-count-tab'] = (el) => { stCountSubTab = el.dataset.tab; rerenderTabBody(); };
-    H['stock-count-detail'] = (el) => openCountDetailModal(el.dataset.countId);
+    H['stock-count-detail'] = (el) => openCountDetailModal(el.dataset.countId, el.dataset.merchant);
     H['stock-export-counts-csv'] = () => exportCountsCsv();
     H['stock-venue-filter'] = (el) => { stVenueFilter = el.dataset.venue; render(); };
     H['stock-cat-filter'] = (el) => { stCatFilter = el.dataset.cat; rerenderTabBody(); };
@@ -2435,7 +2435,7 @@
     'assets/stock/overview.js?v=3',
     'assets/stock/alerts.js?v=3',
     'assets/stock/loss.js?v=1',
-    'assets/stock/counts.js?v=5',
+    'assets/stock/counts.js?v=9',
     'assets/stock/purchasing.js?v=2',
     'assets/stock/intake.js?v=13',
     'assets/stock/catalog.js?v=3',

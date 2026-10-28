@@ -55,4 +55,20 @@ t('the till « Mouvements de stock » screen only reads, and only boutique rows'
   assert.ok(/id="bqi-count"[\s\S]{0,260}id="bqi-moves"/.test(inv), 'the button sits right after « Inventaire physique »');
   assert.ok(/productHistory\?\.\(pid, 8, 'boutique'\)/.test(inv), 'the product sheet reads boutique rows');
 });
+t('the physical count reaches the right store, signed by the person at the till, with a reason per gap', () => {
+  const c = readFileSync(new URL('../assets/pos-inventory-count.js', import.meta.url), 'utf8');
+  assert.ok(/const staff = window\.KiwiStaff;/.test(c), 'the boutique cashier is read from KiwiStaff');
+  assert.ok(/merchant: merchant,/.test(c) && /'\/api\/inventory\/counts' \+ \(merchant \? '\?merchant=' \+ encodeURIComponent\(merchant\)/.test(c), 'the store is named, so a paired till is recognised');
+  assert.ok(/supersedes: countState\.supersedes \|\| undefined/.test(c), 'a recount replaces the count sent back');
+  assert.ok(/hasGap\(it\) \?/.test(c) && /data-cnt-reason=/.test(c), 'only lines that differ ask for a reason');
+});
+t('the owner is told on the boutique Inventaire page and can ask for details', () => {
+  const b = readFileSync(new URL('../assets/pages-pro-boutique.js', import.meta.url), 'utf8');
+  assert.ok(/<div id="bqx-counts"><\/div>/.test(b) && /status=submitted&merchant=/.test(b) && /data-action="stock-count-detail"[^`]*data-merchant=/.test(b));
+  const r = readFileSync(new URL('../assets/stock/counts.js', import.meta.url), 'utf8');
+  assert.ok(/reviewCount\(count\.id, 'correction_requested', note\)/.test(r), 'asking goes through the one review path');
+  assert.ok(/decision === 'correction_requested' \? 'request-correction' : 'review'/.test(r));
+  const inv = readFileSync(new URL('../assets/pos-boutique/inv-tools.js', import.meta.url), 'utf8');
+  assert.ok(/status=correction_requested&merchant=/.test(inv) && /recount\(\{ supersedes: c\.id/.test(inv), 'the till shows the question and recounts in place');
+});
 console.log(`✓ boutique-inv-alerts · ${ok} contrôles : la pastille Inventaire compte ce qui n'a pas été vu`);

@@ -521,7 +521,7 @@ const _BQX_INV = {
     catB: 'Catégorie B', archived: 'Archivé', noCat: 'Sans catégorie', complete: 'Complets', out: 'Rupture',
     colorFilter: 'Filtrer par couleur', color: 'Couleur', seeAll: 'Tout voir',
     kNoCost: ' · au prix de vente, coûts non saisis', kPotential: ' · potentiel {v} {cur}',
-    import: 'Importer un CSV', export: 'Exporter en CSV', templates: 'Modèles de rayons', nfc: 'Tags NFC', moves: 'Mouvements de stock',
+    import: 'Importer un CSV', export: 'Exporter en CSV', templates: 'Modèles de rayons', nfc: 'Tags NFC', moves: 'Mouvements de stock', cntTitle: '{who} a transmis un inventaire physique', cntSub: '{n} articles comptés · écart net {d} · à valider', cntOpen: 'Examiner',
     kProducts: 'Produits', kValue: 'Valeur du stock', kRestock: 'À réassortir', kShelves: 'Rayons', kShelvesSub: 'Gérés dans Catégories',
     kFilterOn: 'Filtre actif · toucher pour tout revoir', kLowOut: '{low} stock bas · {out} en rupture', kNone: 'Rien sous 5 pièces',
     search: 'Rechercher un produit, un rayon, un code-barres', searchAria: 'Rechercher dans l’inventaire',
@@ -573,7 +573,7 @@ const _BQX_INV = {
     catB: 'Category B', archived: 'Archived', noCat: 'No category', complete: 'Complete', out: 'Out of stock',
     colorFilter: 'Filter by colour', color: 'Colour', seeAll: 'Show all',
     kNoCost: ' · at selling price, no costs entered', kPotential: ' · {v} {cur} at selling price',
-    import: 'Import a CSV', export: 'Export as CSV', templates: 'Shelf templates', nfc: 'NFC tags', moves: 'Stock movements',
+    import: 'Import a CSV', export: 'Export as CSV', templates: 'Shelf templates', nfc: 'NFC tags', moves: 'Stock movements', cntTitle: '{who} submitted a physical count', cntSub: '{n} items counted · net gap {d} · awaiting your review', cntOpen: 'Review',
     kProducts: 'Products', kValue: 'Stock value', kRestock: 'To restock', kShelves: 'Shelves', kShelvesSub: 'Managed in Categories',
     kFilterOn: 'Filter on · tap to see everything', kLowOut: '{low} low · {out} out of stock', kNone: 'Nothing under 5 pieces',
     search: 'Search a product, a shelf, a barcode', searchAria: 'Search the inventory',
@@ -625,7 +625,7 @@ const _BQX_INV = {
     catB: 'الفئة B', archived: 'مؤرشف', noCat: 'بدون فئة', complete: 'مكتملة', out: 'نفد',
     colorFilter: 'تصفية حسب اللون', color: 'اللون', seeAll: 'عرض الكل',
     kNoCost: ' · بسعر البيع، التكاليف غير مُدخلة', kPotential: ' · {v} {cur} بسعر البيع',
-    import: 'استيراد ملف CSV', export: 'تصدير بصيغة CSV', templates: 'نماذج الأقسام', nfc: 'وسوم NFC', moves: 'حركات المخزون',
+    import: 'استيراد ملف CSV', export: 'تصدير بصيغة CSV', templates: 'نماذج الأقسام', nfc: 'وسوم NFC', moves: 'حركات المخزون', cntTitle: 'أرسل {who} جرداً فعلياً', cntSub: 'أصناف معدودة: {n} · الفرق الصافي {d} · في انتظار مراجعتك', cntOpen: 'مراجعة',
     kProducts: 'المنتجات', kValue: 'قيمة المخزون', kRestock: 'لإعادة التزويد', kShelves: 'الأقسام', kShelvesSub: 'تُدار في الفئات',
     kFilterOn: 'التصفية مفعّلة · المس لرؤية الكل', kLowOut: 'منخفض: {low} · نفد: {out}', kNone: 'لا شيء تحت 5 قطع',
     search: 'ابحث عن منتج أو قسم أو رمز شريطي', searchAria: 'البحث في الجرد',
@@ -1032,7 +1032,7 @@ function _renderInventory() {
   window.Kiwi.appPage('inventory', {
     title: t.title,
     subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || t.store}${_bqxShared()}`,
-    body: `<div class="bqx-inv">
+    body: `<div class="bqx-inv"><div id="bqx-counts"></div>
       <div class="kx-kpi-strip bqx-kpis">
         <div class="kx-kpi"><div class="l">${_esc(t.kProducts)}</div><div class="v">${st.products}</div><div class="d">${_esc(_bqxShT().variants(st.variants))}</div></div>
         <div class="kx-kpi"><div class="l">${_esc(t.kValue)}</div><div class="v">${k.shown}<span class="u">${_esc(t.cur)}</span></div><div class="d">${_esc(_bqxShT().pieces(st.totalStock) + k.note)}</div></div>
@@ -1097,8 +1097,28 @@ function _renderInventory() {
       const g = document.getElementById('bqx-grid');
       if (g) g.innerHTML = _bqxGridHtml();
     });
+    _bqxCountsLoad();
   }, 0);
 }
+
+/* Les inventaires physiques que la caisse a transmis et qui attendent le
+   propriétaire (statut submitted) : un message en tête de l'Inventaire, et
+   « Examiner » ouvre la revue livrée (stock/counts.js) — écarts en tête,
+   Valider, Refuser, Demander des précisions. Magasin nommé : un compte à
+   deux établissements ne lit pas l'autre. Boutique réelle seulement. */
+const _bqxCnt = { at: 0, rows: [] };
+const _bqxCountsPaint = () => {
+  const box = document.getElementById('bqx-counts'); if (!box) return; const t = _bqxInvT();
+  box.innerHTML = _bqxCnt.rows.map((c) => `<div class="kx-card" style="display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:12px;border:1px solid #fde68a;background:#fffbeb;"><div style="flex:1;min-width:0;"><b>${_esc(_bqxPfFill(t.cntTitle, { who: c.employeeName || '·' }))}</b><div style="font-size:13px;color:var(--n-600);margin-top:2px;">${_esc(_bqxPfFill(t.cntSub, { n: c.totalLines || 0, d: (c.totalDiff > 0 ? '+' : '') + (c.totalDiff || 0) }))}</div></div><button type="button" class="kb primary" data-action="stock-count-detail" data-count-id="${_esc(c.id)}" data-merchant="${_esc(c.merchant || _bqxVenue())}">${_esc(t.cntOpen)}</button></div>`).join('');
+};
+const _bqxCountsLoad = (force) => {
+  _bqxCountsPaint();
+  if (!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || (!force && Date.now() - _bqxCnt.at < 30000)) return;
+  _bqxCnt.at = Date.now();
+  fetch('/api/inventory/counts?status=submitted&merchant=' + encodeURIComponent(_bqxVenue())).then((r) => (r.ok ? r.json() : null))
+    .then((j) => { _bqxCnt.rows = ((j && j.counts) || []).filter((c) => c && c.status === 'submitted'); _bqxCountsPaint(); }).catch(() => {});
+};
+document.addEventListener('kiwi:count-reviewed', () => _bqxCountsLoad(true));
 
 handlers['nav-inventory'] = () => {
   if (!_bqxReady()) { const t = _bqxInvT(); toast(t.unavailable, { desc: t.unavailableDesc, type: 'warn' }); return; }

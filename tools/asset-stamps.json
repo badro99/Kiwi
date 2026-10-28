@@ -1264,8 +1264,8 @@
     "sha": "bb858943c8b85f8d"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "8",
-    "sha": "3244009997c0cddf"
+    "v": "10",
+    "sha": "f3688426039586df"
   },
   "assets/pages-pro-office.js": {
     "v": "3",
@@ -1308,8 +1308,8 @@
     "sha": "f7920f5f149a1d63"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "61",
-    "sha": "cd7c1c0742cc3e6a"
+    "v": "65",
+    "sha": "cdc7153c2020a73e"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1404,36 +1404,36 @@
     "sha": "fbd4288ed0ffeb6a"
   },
   "assets/pos-boutique.css": {
-    "v": "168",
+    "v": "170",
     "sha": "903834fcdc1b2ab2"
   },
   "assets/pos-boutique.js": {
-    "v": "168",
-    "sha": "8803b797e4a1d462"
+    "v": "170",
+    "sha": "495151982b3dcfaa"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "70",
-    "sha": "7a6860f02bb1c053"
+    "v": "72",
+    "sha": "a8533ccbf1d8e93b"
   },
   "assets/pos-boutique/inv-moves.js": {
     "v": "4",
     "sha": "1e23dd862898f4fd"
   },
   "assets/pos-boutique/inv-tools.js": {
-    "v": "5",
-    "sha": "ffbbb208e88509ed"
+    "v": "7",
+    "sha": "5df607a17840078b"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "70",
-    "sha": "d8ba54881c90b26d"
+    "v": "72",
+    "sha": "132a4620e37d97e4"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "14",
     "sha": "000d42c8d3042b23"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "70",
-    "sha": "3b09dd84c811a5e0"
+    "v": "72",
+    "sha": "21152d1e8b60fd97"
   },
   "assets/pos-boutique/search.js": {
     "v": "5",
@@ -1456,8 +1456,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "237",
-    "sha": "051e9543db46d595"
+    "v": "239",
+    "sha": "2fc1d06b7eaaa578"
   },
   "assets/pos-epicerie.css": {
     "v": "28",
@@ -1508,8 +1508,8 @@
     "sha": "ead78da9f846f79d"
   },
   "assets/pos-inventory-count.js": {
-    "v": "13",
-    "sha": "034e0ff2048aa507"
+    "v": "15",
+    "sha": "04ee96c92d576f3d"
   },
   "assets/pos-librairie.css": {
     "v": "17",
@@ -1828,8 +1828,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "96",
-    "sha": "8720ed4dea252f50"
+    "v": "100",
+    "sha": "1e39414cd3171e95"
   },
   "assets/stock/alerts.js": {
     "v": "3",
@@ -1840,8 +1840,8 @@
     "sha": "12624b567ab58b61"
   },
   "assets/stock/counts.js": {
-    "v": "5",
-    "sha": "0ab1c39ca244dea0"
+    "v": "9",
+    "sha": "ea65ec2ca9c8fc75"
   },
   "assets/stock/intake.js": {
     "v": "13",

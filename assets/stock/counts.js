@@ -301,14 +301,23 @@ window.KiwiStockInternal.install('counts', (S) => {
     `;
   }
 
-  async function openCountDetailModal(countId) {
+  async function openCountDetailModal(countId, merchant) {
     if (!countId) return;
+    /* Le magasin à NOMMER : un compte à deux établissements (le café et la
+       boutique d'Amira) retombait sur son premier magasin quand la requête
+       n'en nommait aucun, et l'inventaire de la boutique devenait
+       introuvable. La page boutique le passe (data-merchant) ; sans lui, rien
+       ne change pour les autres métiers. Gardé sur la fonction même : la
+       revue et ses envois le relisent sans état partagé de plus. */
+    openCountDetailModal.merchant = String(merchant || '').slice(0, 64);
+    const cntM = openCountDetailModal.merchant;
+    const cntQs = (sep) => (cntM ? sep + 'merchant=' + encodeURIComponent(cntM) : '');
     let count = getAllCounts().find(c => c.id === countId);
     
     // Fetch full frozen details from server if missing lines
     if (!count || !count.lines || !count.lines.length) {
       try {
-        const resp = await fetch(`/api/inventory/counts?id=${encodeURIComponent(countId)}`);
+        const resp = await fetch(`/api/inventory/counts?id=${encodeURIComponent(countId)}${cntQs('&')}`);
         const data = await resp.json();
         if (data && data.count) count = data.count;
       } catch (_) {}
@@ -319,7 +328,10 @@ window.KiwiStockInternal.install('counts', (S) => {
       return;
     }
 
-    const lines = Array.isArray(count.lines) ? count.lines : [];
+    /* Les écarts d'abord : le propriétaire lit ce qui bouge, pas 200 lignes conformes. */
+    const lines = (Array.isArray(count.lines) ? count.lines : []).slice()
+      .sort((a, b) => (Number(b.diff) ? 1 : 0) - (Number(a.diff) ? 1 : 0));
+    const gapN = lines.filter((l) => Number(l.diff)).length;
     const submitted = ctWhen(count.submittedAt);
     const isSubmitted = count.status === 'submitted';
     const isApproved = count.status === 'applied' || count.status === 'approved';
@@ -328,7 +340,7 @@ window.KiwiStockInternal.install('counts', (S) => {
     const modal = window.Kiwi.modal({
       title: ct('dTitle', count.id),
       desc: esc(ct('dDesc', ctStore(count.storeName), ctWho(count.employeeName || 'Employé'), submitted.date, submitted.time)),
-      width: 820,
+      width: 940,   // le motif de l'employé doit se lire en entier, c'est lui qui fait la décision
       body: `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
@@ -336,6 +348,7 @@ window.KiwiStockInternal.install('counts', (S) => {
               ${esc(isSubmitted ? ct('dPending') : isApproved ? ct('dApplied') : ct('stRejected'))}
             </span>
             <span style="font-size:13px;color:var(--n-600);">${esc(ct('dLines', lines.length))}</span>
+            ${gapN ? `<span class="st-badge warn" style="font-size:12px;">${esc(ct('dGaps', gapN))}</span>` : ''}
           </div>
           <div style="font-size:14px;">
             ${esc(ct('dTotal'))} <b style="color:${(count.totalVarianceCostMAD || 0) < 0 ? '#b91c1c' : (count.totalVarianceCostMAD || 0) > 0 ? 'var(--atlas)' : 'inherit'};">${(count.totalVarianceCostMAD || 0) > 0 ? '+' : ''}${ctMad(count.totalVarianceCostMAD || 0)}</b>
@@ -368,7 +381,7 @@ window.KiwiStockInternal.install('counts', (S) => {
                 const cost = Number(l.varianceCost) || 0;
                 const diffColor = diff < 0 ? '#b91c1c' : diff > 0 ? 'var(--atlas)' : 'inherit';
                 return `
-                  <tr>
+                  <tr${diff ? '' : ' style="opacity:.55;"'}>
                     <td>
                       <b>${esc(label)}</b>
                       ${l.sku ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('sku', l.sku))}</div>` : ''}
@@ -377,7 +390,7 @@ window.KiwiStockInternal.install('counts', (S) => {
                     <td style="text-align:right;font-weight:700;" class="st-mono">${ctNum(l.countedQty)} ${esc(ctUnit(l.unit))}</td>
                     <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${ctNum(diff)} ${esc(ctUnit(l.unit))}</td>
                     <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${ctMad(cost)}</td>
-                    <td style="color:var(--n-600);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.explanation || l.note || '')}">
+                    <td style="color:var(--n-700);font-size:12px;min-width:170px;white-space:normal;" title="${esc(l.explanation || l.note || '')}">
                       ${esc(l.explanation || l.note || '·')}
                     </td>
                   </tr>
@@ -391,6 +404,7 @@ window.KiwiStockInternal.install('counts', (S) => {
           <div style="background:var(--paper-soft);border:1px solid var(--n-200);border-radius:12px;padding:12px;margin-bottom:12px;">
             <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">${esc(ct('dNoteLabel'))}</label>
             <input class="st-search" id="st-cnt-review-note" placeholder="${esc(ct('dNotePh'))}" style="width:100%;">
+            <div id="st-cnt-ask-hint" hidden style="margin-top:6px;font-size:12px;color:#b45309;">${esc(ct('dAskNeedNote'))}</div>
           </div>
         ` : ''}
       `,
@@ -398,6 +412,7 @@ window.KiwiStockInternal.install('counts', (S) => {
         <button class="st-btn" data-dismiss-modal>${esc(ct('dClose'))}</button>
         ${isSubmitted ? `
           <button class="st-btn" id="st-cnt-reject-btn" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);">${esc(ct('dReject'))}</button>
+          <button class="st-btn" id="st-cnt-ask-btn">${esc(ct('dAsk'))}</button>
           <button class="st-btn primary" id="st-cnt-approve-btn" style="background:#059669;border-color:#047857;">${esc(ct('dApprove'))}</button>
         ` : ''}
       `
@@ -414,6 +429,18 @@ window.KiwiStockInternal.install('counts', (S) => {
     scope?.querySelector('#st-cnt-reject-btn')?.addEventListener('click', () => {
       const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
       reviewCount(count.id, 'rejected', note);
+    });
+
+    /* Ni oui ni non : le propriétaire pose une question, l'inventaire repart à
+       la caisse (correction_requested) et l'employé recompte. La question est
+       obligatoire : le serveur la refuse vide, et l'employé doit savoir quoi
+       vérifier. Même chemin que Valider / Refuser (reviewCount). */
+    scope?.querySelector('#st-cnt-ask-btn')?.addEventListener('click', () => {
+      const input = scope?.querySelector('#st-cnt-review-note');
+      const note = String(input?.value || '').trim();
+      const hint = scope?.querySelector('#st-cnt-ask-hint');
+      if (!note) { if (hint) hint.hidden = false; input?.focus(); return; }
+      reviewCount(count.id, 'correction_requested', note);
     });
   }
 
@@ -433,11 +460,13 @@ window.KiwiStockInternal.install('counts', (S) => {
 
   async function stReviewCountSend({ countId, decision, note, fetchFn }) {
     const F = fetchFn || fetch;
-    const res = await F('/api/inventory/counts', {
+    const m = (typeof openCountDetailModal === 'function' && openCountDetailModal.merchant) || '';   // nommé par la page qui a ouvert la revue
+    const res = await F('/api/inventory/counts' + (m ? '?merchant=' + encodeURIComponent(m) : ''), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'review',
+        action: decision === 'correction_requested' ? 'request-correction' : 'review',
+        merchant: m || undefined,
         id: countId,
         decision: decision,
         reviewNote: note || '',
@@ -466,7 +495,7 @@ window.KiwiStockInternal.install('counts', (S) => {
     const approved = decision === 'approved';
     return {
       ok: true, err: null,
-      setStatus: approved ? 'applied' : 'rejected',
+      setStatus: approved ? 'applied' : (decision === 'correction_requested' ? 'correction_requested' : 'rejected'),
       overlay: !isReal && approved,
       close: true,
       sync: isReal && approved,
@@ -543,7 +572,8 @@ window.KiwiStockInternal.install('counts', (S) => {
 
       try { closeTopModal(); } catch (_) {}
       release();
-      window.Kiwi?.toast?.(decision === 'approved' ? ct('toastApproved') : ct('toastRejected'), { type: decision === 'approved' ? 'success' : 'info' });
+      window.Kiwi?.toast?.(ct(decision === 'approved' ? 'toastApproved' : decision === 'correction_requested' ? 'toastAsked' : 'toastRejected'), { type: decision === 'approved' ? 'success' : 'info' });
+      try { document.dispatchEvent(new CustomEvent('kiwi:count-reviewed', { detail: { id: countId, decision } })); } catch (_) {}
       if (S.stPageActive) render();
     } catch (_) {
       release();

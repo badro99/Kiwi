@@ -85,7 +85,9 @@ async function countReview(page, t, check) {
   }, { timeout: 5000 });
   await click(page, '#pos-cnt-review-btn');
   await page.waitForSelector('#sk-modal.is-open #pos-cnt-submit-btn', wait);
-  await page.waitForSelector('#sk-modal [data-cnt-note]', wait);
+  /* Each counted line shows either its reason fields (it differs from the
+     system) or « Conforme » (it matches): the review step is on screen. */
+  await page.waitForSelector('#sk-modal [data-cnt-note], #sk-modal [data-cnt-ok]', wait);
   await sleep(400);
   await check('#sk-modal.is-open #sk-modal-box');
   t.step('failed transmission keeps the frozen review, retry records a pending count');

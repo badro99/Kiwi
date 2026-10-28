@@ -39,6 +39,13 @@
   }
 
   function getCashier() {
+    /* La caisse boutique (et la maison) savent qui est au comptoir par
+       window.KiwiStaff (caisse-pairing.js) ; window.currentCashier n'est
+       jamais posé sur elles, et chaque inventaire partait signé « Caissier ». */
+    const staff = window.KiwiStaff;
+    if (staff && typeof staff === 'object' && staff.name) {
+      return { id: staff.id || 'caisse-1', name: staff.name, role: staff.role || 'Caissier' };
+    }
     if (window.currentCashier && typeof window.currentCashier === 'object') {
       return {
         id: window.currentCashier.id || 'caisse-1',
@@ -60,15 +67,40 @@
 
   function draftKey(engine) { return `kiwi:inventoryCountDraft:${merchantScope()}:${engine}`; }
 
+  /* Le magasin à NOMMER au serveur. Une caisse appairée n'est reconnue par son
+     cookie que si la requête nomme le magasin (functions/api/_private.js,
+     resolveTenant) : sans lui, l'envoi répondait 401 et l'inventaire ne
+     quittait jamais la tablette. Même source que le registre des stocks. */
+  function countMerchant() {
+    try {
+      const m = window.KiwiInventory && typeof window.KiwiInventory.merchant === 'function' && window.KiwiInventory.merchant();
+      if (m) return String(m).slice(0, 64);
+    } catch (_) {}
+    const s = merchantScope();
+    return s === 'local' ? '' : s;
+  }
+
+  /* Pourquoi un écart (revue avant envoi). Le code voyage dans le brouillon ;
+     le serveur reçoit le libellé dans `explanation`, que le tableau de bord
+     montre dans sa colonne Motif. */
+  const REASONS = [
+    ['casse', 'Cassé ou abîmé'],
+    ['perdu', 'Perdu ou volé'],
+    ['erreur', 'Erreur d’étiquette ou de saisie'],
+    ['autre', 'Autre'],
+  ];
+  const reasonLabel = (code) => { const r = REASONS.find((x) => x[0] === code); return r ? r[1] : ''; };
+  const hasGap = (it) => it.counted && Number(it.countedQty) !== Number(it.systemQty);
+
   function saveDraft() {
     if (!countState.isOpen || countState.step === 'submitted') return false;
     try {
       const counted = countState.items.filter((item) => item.counted).map((item) => ({
         key: item.key, itemId: item.itemId, variantId: item.variantId,
-        countedQty: item.countedQty, explanation: item.explanation || '', note: item.note || ''
+        countedQty: item.countedQty, explanation: item.explanation || '', note: item.note || '', reason: item.reason || ''
       }));
       localStorage.setItem(draftKey(countState.engine), JSON.stringify({
-        version: 1, engine: countState.engine, intentId: countState.intentId,
+        version: 1, engine: countState.engine, intentId: countState.intentId, supersedes: countState.supersedes || '',
         savedAt: Date.now(), counted
       }));
       countState.draftSavedAt = Date.now();
@@ -91,6 +123,7 @@
       item.counted = true; item.countedQty = qty;
       item.explanation = String(saved.explanation || '').slice(0, 300);
       item.note = String(saved.note || '').slice(0, 300);
+      item.reason = REASONS.some((r) => r[0] === saved.reason) ? saved.reason : '';
     });
     return draft;
   }
@@ -238,6 +271,12 @@
     });
 
     const countedCount = items.filter(i => i.counted).length;
+    const gaps = items.filter(hasGap).length;
+    /* Le propriétaire a renvoyé un inventaire avec une question : elle reste
+       sous les yeux de l'employé pendant tout le recomptage. */
+    const askBox = countState.correctionNote && countState.step !== 'submitted'
+      ? `<div style="margin-bottom:12px;padding:10px 12px;border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:10px;font-size:13px;"><b>Le propriétaire demande des précisions :</b> ${esc(countState.correctionNote)}</div>`
+      : '';
     const totalCount = items.length;
     const pct = totalCount ? Math.round((countedCount / totalCount) * 100) : 0;
 
@@ -265,7 +304,7 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div>
               <h3 style="margin:0 0 4px;font-size:18px;">Récapitulatif avant transmission</h3>
-              <p style="margin:0;font-size:13px;color:var(--n-600);">Vérifiez les quantités saisies par <b>${esc(cashier.name)}</b> avant l'envoi.</p>
+              <p style="margin:0;font-size:13px;color:var(--n-600);">Vérifiez les quantités saisies par <b>${esc(cashier.name)}</b> avant l'envoi.${gaps ? ` <b style="color:#92400e;">${gaps} écart${gaps > 1 ? 's' : ''}</b> : dites pourquoi si vous le savez.` : ''}</p>
             </div>
             <span class="sk-badge" style="background:#e0f2fe;color:#0369a1;font-size:13px;padding:4px 10px;">${countedCount} / ${totalCount} saisis</span>
           </div>
@@ -276,7 +315,7 @@
                 <tr>
                   <th>Article &amp; Déclinaison</th>
                   <th style="text-align:center;">Quantité comptée</th>
-                  <th>Remarque / Motif</th>
+                  <th>Écart · motif</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,7 +331,15 @@
                         ${it.countedQty} ${esc(it.unit)}
                       </td>
                       <td>
-                        <input class="sk-input" data-cnt-note="${esc(it.key)}" value="${esc(it.explanation || it.note || '')}" placeholder="Explication optionnelle…" style="font-size:12px;width:100%;padding:4px 8px;">
+                        ${hasGap(it) ? `
+                        <div style="display:flex;flex-direction:column;gap:6px;">
+                          <span style="align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#92400e;background:#fef3c7;border-radius:999px;padding:2px 8px;">Écart avec le système</span>
+                          <select class="sk-input" data-cnt-reason="${esc(it.key)}" aria-label="Motif de l’écart" style="font-size:13px;width:100%;padding:6px 8px;">
+                            <option value="">Motif (facultatif)…</option>
+                            ${REASONS.map(([v, l]) => `<option value="${v}"${it.reason === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}
+                          </select>
+                          <input class="sk-input" data-cnt-note="${esc(it.key)}" value="${esc(it.explanation || it.note || '')}" placeholder="Précisez si besoin…" style="font-size:12px;width:100%;padding:4px 8px;">
+                        </div>` : `<span data-cnt-ok="${esc(it.key)}" style="font-size:12px;color:var(--n-600);">Conforme</span>`}
                       </td>
                     </tr>
                   `;
@@ -402,6 +449,7 @@
       <div class="split-badge" style="background:#e0f2fe;color:#0369a1;"><i data-lucide="clipboard-check"></i> Inventaire physique</div>
       <h3 class="modal-title" style="margin-bottom:4px;">Comptage de stock en caisse</h3>
       <p class="modal-subtle" style="margin:0 0 14px;">Saisie à l'aveugle des quantités réelles. La transmission sera soumise à la validation du propriétaire.</p>
+      ${askBox}
       ${bodyHtml}
     `;
 
@@ -535,6 +583,12 @@
     };
 
     modal.oninput = (e) => {
+      const reason = e.target.closest('[data-cnt-reason]');
+      if (reason) {
+        const item = countState.items.find(i => i.key === reason.dataset.cntReason);
+        if (item) { item.reason = reason.value; saveDraft(); }
+        return;
+      }
       const dimension = e.target.closest('[data-cnt-dimension]');
       if (dimension) {
         countState.dimensions[dimension.dataset.cntDimension] = dimension.value;
@@ -574,9 +628,12 @@
     const engine = countState.engine;
     const items = countState.items.filter(i => i.counted);
 
+    const merchant = countMerchant();
     const payload = {
       id: countState.intentId,
       engine: engine,
+      merchant: merchant,
+      supersedes: countState.supersedes || undefined,
       terminalId: (window.KiwiInventory && window.KiwiInventory.terminalId)
         ? window.KiwiInventory.terminalId()
         : '',
@@ -600,13 +657,13 @@
         unitCost: i.unitCost,
         systemQty: i.systemQty,
         countedQty: i.countedQty,
-        explanation: i.explanation || '',
+        explanation: [reasonLabel(i.reason), i.explanation || ''].filter(Boolean).join(' · ').slice(0, 200),
         note: i.note || ''
       }))
     };
 
     try {
-      const resp = await fetch('/api/inventory/counts', {
+      const resp = await fetch('/api/inventory/counts' + (merchant ? '?merchant=' + encodeURIComponent(merchant) : ''), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -645,6 +702,10 @@
       submittedCountId: null,
       submitError: '',
       intentId: (draft && draft.intentId) || newCountIntentId(),
+      /* Un recomptage demandé par le propriétaire REMPLACE l'ancien document
+         (le serveur le passe « superseded ») au lieu de s'y ajouter. */
+      supersedes: String((opts && opts.supersedes) || (draft && draft.supersedes) || '').slice(0, 80),
+      correctionNote: String((opts && opts.correctionNote) || '').slice(0, 500),
       draftSavedAt: draft && Number(draft.savedAt) || 0
     };
     renderModal();
