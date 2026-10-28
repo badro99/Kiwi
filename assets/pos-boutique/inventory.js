@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=188';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=89';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=189';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=90';
 import { openMoves } from './inv-moves.js?v=5';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=15';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=89';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=90';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -379,6 +379,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const pr = PRM(); if (!pr) return;
     composer.editing = (seed && seed.id) ? seed.id : null;
     composer.draft = pr.normalize(seed || { name: '', kind: 'percent', value: 20, scope: { type: 'tout' } });
+    composer.valueText = null;
     if (!composer.editing) fitPolicy(composer.draft);
     if (!seed) composer.draft.name = '';
     renderPromoComposer();
@@ -424,19 +425,19 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div class="bq-prc-form">
 
           <div class="bq-f">
-            <div class="bq-f-lbl">Nom <span class="opt">· ce que la cliente lira sur son reçu</span></div>
+            <label class="bq-f-lbl" for="bq-prc-name">Nom <span class="opt">· ce que la cliente lira sur son reçu</span></label>
             <input class="bq-input" id="bq-prc-name" maxlength="80" placeholder="Soldes d'été, Déstockage caftans…" value="${esc(d.name)}" />
           </div>
 
           <div class="bq-f">
-            <div class="bq-f-lbl">De combien</div>
+            <label class="bq-f-lbl" for="bq-prc-value">De combien</label>
             <div class="bq-seg" data-lens-demo id="bq-prc-kind">
               <button class="bq-seg-it ${d.kind === 'percent' ? 'on' : ''}" data-lens-item data-prk="percent">En pourcentage<small>−20 %</small></button>
               <button class="bq-seg-it ${d.kind === 'amount' ? 'on' : ''}" data-lens-item data-prk="amount">En dirhams<small>−50 MAD</small></button>
               <button class="bq-seg-it ${d.kind === 'fixed' ? 'on' : ''}" data-lens-item data-prk="fixed">Prix fixe<small>tout à 99</small></button>
             </div>
             <div class="bq-prc-val">
-              <input class="bq-input" id="bq-prc-value" type="number" min="0" inputmode="numeric" value="${d.value}" />
+              <input class="bq-input" id="bq-prc-value" type="text" inputmode="decimal" autocomplete="off" value="${esc(composer.valueText != null ? composer.valueText : String(d.value))}" />
               <span class="unit">${d.kind === 'percent' ? '%' : 'MAD'}</span>
               <div class="bq-chips" id="bq-prc-quick">
                 ${(d.kind === 'percent' ? (window.KiwiDiscountPolicy?.percentages(_bqKey, [10, 20, 30, 50]) || [10, 20, 30, 50]) : d.kind === 'amount' ? [20, 50, 100, 200] : [49, 99, 149, 199]).map((v) =>
@@ -565,6 +566,12 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     return '';
   }
 
+  function promoValueOf(text) {
+    const n = Number(String(text || '').replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (c) => String(c.charCodeAt(0) & 15))
+      .replace(/[\s\u202f\u00a0]/g, '').replace(/[,\u066b]/, '.'));
+    return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0;
+  }
+
   function wirePromoComposer(el) {
     const pr = PRM();
     const d = composer.draft;
@@ -574,10 +581,19 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const nameEl = $('#bq-prc-name', el);
     if (nameEl) nameEl.oninput = () => { d.name = nameEl.value; const b = $('#bq-prc-save', el); if (b) b.disabled = !!promoDraftValid(d) || !pr.preview(d, promoItems(), { stockOf: (it) => stockOf(it) }).count; };
 
-    $$('[data-prk]', el).forEach((b) => b.onclick = () => { d.kind = b.dataset.prk; fitPolicy(d); redraw(); });
+    $$('[data-prk]', el).forEach((b) => b.onclick = () => { d.kind = b.dataset.prk; composer.valueText = null; fitPolicy(d); redraw(); });
+    /* Kept to the centime like the engine (49,90 MAD stays 49,90), and the
+       field keeps its cursor: the preview repaints, the typing goes on. */
     const val = $('#bq-prc-value', el);
-    if (val) val.oninput = () => { d.value = Math.max(0, Math.round(+val.value || 0)); redraw(); };
-    $$('[data-prv]', el).forEach((b) => b.onclick = () => { d.value = +b.dataset.prv; redraw(); });
+    if (val) val.oninput = () => {
+      composer.valueText = val.value;
+      d.value = promoValueOf(val.value);
+      const at = val.selectionStart;
+      redraw();
+      const again = document.getElementById('bq-prc-value');
+      if (again) { again.focus(); try { again.setSelectionRange(at, at); } catch (_) {} }
+    };
+    $$('[data-prv]', el).forEach((b) => b.onclick = () => { d.value = +b.dataset.prv; composer.valueText = null; redraw(); });
     $$('[data-prs]', el).forEach((b) => b.onclick = () => { d.scope = pr.normalize({ scope: { type: b.dataset.prs } }).scope; redraw(); });
 
     $$('[data-prr]', el).forEach((b) => b.onclick = () => {

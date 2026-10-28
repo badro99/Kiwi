@@ -2490,7 +2490,7 @@
       'Scannez le bon, ou choisissez-le, il se déduit du total': ['Scan the voucher or pick it, it comes off the total', 'امسح السند أو اختره، يُخصم من المجموع'],
       'Scanner ou saisir AV-…': ['Scan or type AV-…', 'امسح أو اكتب AV-…'],
       'Code de l’avoir': ['Credit note code', 'رمز سند الرصيد'],
-      'Partager le paiement': ['Split the payment', 'تقسيم الدفع'],
+      'Partager le paiement': ['Split the payment', 'تقسيم الدفع'], 'Montant de cette part': ['Amount of this share', 'مبلغ هذا الجزء'], 'Retirer une pièce': ['Remove one piece', 'إزالة قطعة'], 'Ajouter une pièce': ['Add one piece', 'إضافة قطعة'], 'Terminer': ['Done', 'إنهاء'],
       'Kiwi affiche, le lecteur encaisse': ['Kiwi shows the amount, the card reader takes the payment', 'يعرض Kiwi المبلغ، ويستخلص الجهاز الدفع'],
       'stock par taille en direct': ['live stock by size', 'المخزون حسب المقاس مباشرة'],
       'Valeur de stock': ['Stock value', 'قيمة المخزون'],

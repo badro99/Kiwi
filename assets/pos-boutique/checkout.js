@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=188';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=89';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=89';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=189';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=90';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=90';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
@@ -199,9 +199,9 @@ const M = globalThis.KiwiMoney;
           </button>${sel.has(i) && availableQty > 1 ? `
             <div class="bq-ret-qty" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:7px 12px 10px;">
               <span style="font-size:12px;color:var(--ink-3);">Quantité à retourner</span>
-              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:-1" aria-label="Retirer une pièce">−</button>
+              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:-1" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Retirer une pièce')}">−</button>
               <b>${chosenQty}</b>
-              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:1" aria-label="Ajouter une pièce">+</button>
+              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:1" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajouter une pièce')}">+</button>
               <strong>${fmtMAD(paidUnit(s, l) * chosenQty)}</strong>
             </div>` : ''}`;
         }).join('')}
@@ -368,14 +368,14 @@ const M = globalThis.KiwiMoney;
     const fresh = ctx && ctx.mode === 'fresh';
     const el = $('#bq-avoirmm', root);
     el.innerHTML = `
-      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
       <h3 class="modal-title">${fresh ? `Avoir émis, ${av.code}` : `Avoir ${av.code}`}</h3>
       <p class="modal-subtle">${esc(av.holderName)} · ${fmtMAD(av.balance)} ${av.balance > 0 ? 'disponibles' : 'consommé'}</p>
       ${voucherHTML(av)}
       <div class="bq-avoir-note"><i data-lucide="shield-check"></i>Le code-barres revient en caisse comme moyen de paiement, il se déduit tout seul à l'encaissement.</div>
       <div class="bq-sheet-foot">
         <button class="bq-btn secondary" id="bq-av-print"><i data-lucide="printer"></i>Imprimer l'avoir</button>
-        <button class="bq-btn primary" data-bq-close><i data-lucide="check"></i>${fresh ? 'Terminer' : 'Fermer'}</button>
+        <button class="bq-btn primary" data-bq-close><i data-lucide="check"></i>${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(fresh ? 'Terminer' : 'Fermer')}</button>
       </div>`;
     openVeil('#bq-avoir-veil');
     icons();
@@ -419,7 +419,7 @@ const M = globalThis.KiwiMoney;
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
     el.innerHTML = `
-      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Échange, ${sale.id}</h3>
       <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
       <div class="bq-exch-row is-ret">
@@ -845,21 +845,21 @@ const M = globalThis.KiwiMoney;
        au comptoir, « la moitié » est le cas qui revient, et tout le reste se
        saisit au montant. */
     const splitBar = () => `
-      <div class="bq-split" role="group" aria-label="Partager le paiement">
+      <div class="bq-split" role="group" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Partager le paiement')}">
         <span class="bq-split-l">Partager</span>
         <button class="bq-split-c${share >= 1 && !custom ? ' is-on' : ''}" data-bq-share="1">Tout</button>
         <button class="bq-split-c${share === 0.5 && !custom ? ' is-on' : ''}" data-bq-share="0.5">50 %</button>
         <button class="bq-split-c${share === 0.25 && !custom ? ' is-on' : ''}" data-bq-share="0.25">25 %</button>
         <button class="bq-split-c${custom ? ' is-on' : ''}" data-bq-share="x">Montant…</button>
         <input class="bq-split-in mono" id="bq-split-in" type="number" inputmode="decimal" min="0" step="1"
-               placeholder="MAD" value="${custom || ''}" ${custom ? '' : 'hidden'} aria-label="Montant de cette part" />
+               placeholder="MAD" value="${custom || ''}" ${custom ? '' : 'hidden'} aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Montant de cette part')}" />
       </div>
       <p class="bq-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
       const avs = ownAvoirs();
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${esc(opts.title)}</h3>
         <p class="modal-subtle">${settled.length ? `Reste à régler sur ${fmtMAD(opts.amount)}` : opts.subtitle}</p>
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
@@ -984,11 +984,11 @@ const M = globalThis.KiwiMoney;
     const stepAvoir = () => {
       const avs = ownAvoirs();
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Avoir en paiement</h3>
         <p class="modal-subtle">Scannez le bon, ou choisissez-le, il se déduit du total</p>
         <form id="bq-av-code-form" style="display:flex;gap:8px;margin:12px 0;">
-          <input class="bq-in mono" id="bq-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="Code de l’avoir" style="flex:1;min-width:0;" />
+          <input class="bq-in mono" id="bq-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code de l’avoir')}" style="flex:1;min-width:0;" />
           <button class="bq-btn secondary" type="submit">Utiliser</button>
         </form>
         <p class="bq-av-err" id="bq-av-err" role="alert" hidden></p>
@@ -1059,7 +1059,7 @@ const M = globalThis.KiwiMoney;
       const rest = r2(due() - amount);
       let received = amount;
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle}</p>
         ${appliedBanner()}
@@ -1068,7 +1068,7 @@ const M = globalThis.KiwiMoney;
             <label class="cash-input-label" for="bq-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="bq-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
-          <div class="cash-presets" aria-label="Ajout rapide">
+          <div class="cash-presets" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajout rapide')}">
             <button class="cash-preset" data-add="20">+20</button>
             <button class="cash-preset" data-add="50">+50</button>
             <button class="cash-preset" data-add="100">+100</button>
@@ -1096,7 +1096,7 @@ const M = globalThis.KiwiMoney;
       amount = amount > 0 ? amount : due();
       const rest = r2(due() - amount);
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Carte · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle} · Kiwi affiche, le lecteur encaisse</p>
         <div class="reader-stage">
@@ -1144,7 +1144,7 @@ const M = globalThis.KiwiMoney;
       const cheque = method === 'cheque';
       const label = cheque ? 'Chèque' : 'Virement / Versement';
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer">×</button>
+        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}">×</button>
         <h3 class="modal-title">${label} · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${cheque ? 'Le chèque a-t-il été remis au comptoir ?' : 'Les fonds sont-ils visibles sur le compte bancaire ?'} Aucun montant ne sera attendu dans le tiroir.</p>
         <div class="bq-sheet-foot">
@@ -1222,7 +1222,7 @@ const M = globalThis.KiwiMoney;
       const cash = parts.find((x) => x.m === 'espèces');
       const delivery = parts.some((x) => x.m === 'livraison');
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${delivery ? 'Livraison enregistrée' : "C'est encaissé"}</h3>
         <p class="modal-subtle">${res.line ? esc(res.line) : esc(opts.title)}</p>
         ${cash && cash.rendu > 0 ? `
@@ -1815,7 +1815,7 @@ const M = globalThis.KiwiMoney;
       const rows = b ? b.ev.filter((x) => x.key !== 'Enter').map((x) =>
         `<tr><td>${esc(x.code || '·')}</td><td>${esc(x.key)}</td><td>${esc(x.ch || '·')}</td></tr>`).join('') : '';
       invSetModal(`
-        <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="bq-modal-x" data-inv-x aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
         <div class="bqi-modh"><div><h3>Test de la douchette</h3><span>Scannez n'importe quel article. Rien n'est vendu, rien n'est modifié.</span></div></div>
         <div class="bqsd">
           ${!b ? `<div class="bqsd-wait"><i data-lucide="scan-line"></i>En attente d'un scan…</div>` : `

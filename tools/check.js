@@ -1658,6 +1658,8 @@ section('Whole-project regressions');
     'pairs-boutique-browser-test.mjs',
     // Aucune salle sans porte : Clientes et le comptage physique se quittent (les deux peaux).
     'boutique-escape-browser-test.mjs',
+    // Noms accessibles construits dans la langue de la caisse, et une promotion qui se tape au centime (note 13).
+    'boutique-a11y-names-browser-test.mjs',
     'till-repair-lock-browser-test.mjs',
     'table-time-test.mjs',
     'print-relay-idempotency-test.mjs',
