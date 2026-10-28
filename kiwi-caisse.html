@@ -83,7 +83,7 @@
        ligne : une caisse dépairée ou réappairée en plein service se verrouille,
        et aucun appel /api/* ne part ailleurs avec les données du service
        d'origine (assets/till-tenant.js). -->
-  <script src="assets/till-tenant.js?v=3"></script>
+  <script src="assets/till-tenant.js?v=4"></script>
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
@@ -337,7 +337,7 @@
   <script src="assets/pwa-update.js?v=368" defer></script>
   <script src="assets/caisse-pwa.js?v=631" defer></script>
   <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-  <script type="module" src="assets/live-link.js?v=90" defer></script>
+  <script type="module" src="assets/live-link.js?v=91" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <script src="assets/retail-sale-hold.js?v=6" defer></script>
   <script src="assets/repeat-sale-guard.js?v=3" defer></script>
@@ -405,7 +405,7 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=18" defer></script>
-  <script src="assets/clients-store.js?v=35" defer></script> <script src="assets/clients-book.js?v=55" defer></script>
+  <script src="assets/clients-store.js?v=36" defer></script> <script src="assets/clients-book.js?v=55" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module

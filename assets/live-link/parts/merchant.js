@@ -171,6 +171,18 @@ import {} from './live-link/sale-identity.js?v=1';
         var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         if (pv && pv.merchant) return pv.merchant;
       } catch (_) { console.warn("[live-link] merchant failed"); }
+      /* La caisse épingle son magasin une fois (assets/till-tenant.js). Sans
+       * ça il ne restait que kiwiLiveMerchant, tout en bas : un global que le
+       * tableau de bord déplace, et qui postait les ventes de la boutique sous
+       * le café du même compte. Tant que la question n'a pas de réponse, on ne
+       * poste rien plutôt que chez le voisin. */
+      try {
+        if (!window.KiwiVenue) {
+          var tsd = JSON.parse(localStorage.getItem('kiwiTillStore') || 'null');
+          if (tsd && tsd.slug) return tsd.slug;
+          if (tsd && tsd.pending) return '';
+        }
+      } catch (_) { console.warn("[live-link] merchant failed"); }
       /* The employee portal has neither KiwiMe (owner identity) nor a paired
        * till. Its authenticated login pins the exact store here. This value is
        * only routing metadata: /api/sale independently verifies the signed

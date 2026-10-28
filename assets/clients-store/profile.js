@@ -198,8 +198,8 @@
         }
       }
     } catch (_) {}
-    // 3) the merchant slug, written on both sides at pairing — the reliable spine.
-    var m = ls('kiwiLiveMerchant'); if (m) return m;
+    // 3) the merchant slug, written on both sides at pairing — the reliable spine. Mais sur une CAISSE son magasin épinglé passe d'abord : kiwiLiveMerchant est un global que le tableau de bord déplace · assets/till-tenant.js › settleStore
+    if (!window.KiwiVenue) { try { var tsd = JSON.parse(ls('kiwiTillStore') || 'null'); if (tsd && tsd.slug) { adoptLegacyBook(tsd.slug); return tsd.slug; } if (tsd && tsd.pending) return null; } catch (_) {} } var m = ls('kiwiLiveMerchant'); if (m) return m;
     // 4) caisse: paired venue fallback.
     var pvFallback = pairedVenueData();
     if (pvFallback && (pvFallback.merchant || pvFallback.venueId || pvFallback.slug)) {

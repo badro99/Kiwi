@@ -2250,6 +2250,10 @@ section('Whole-project regressions');
     'tenant-purge-sales-test.mjs',
     'merchant-config-stale-test.mjs',
     'live-link-merchant-identity-test.mjs',
+    /* La caisse choisit son établissement une fois : kiwiLiveMerchant est un
+       global que le tableau de bord déplace, et il a fait encaisser la boutique
+       sous le café du même compte. */
+    'till-store-identity-test.mjs',
     'account-scope-test.mjs',
     'floorplan-lww-test.mjs',
     'floorplan-clean-test.mjs',

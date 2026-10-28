@@ -309,7 +309,7 @@ var SHELL = [
   '/assets/operations-ui.js?v=30',
   '/assets/live-link/queue-store.js?v=2',
   '/assets/live-link/sale-identity.js?v=1',
-  '/assets/live-link.js?v=90',
+  '/assets/live-link.js?v=91',
   '/assets/channel-sales.js?v=6',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -350,7 +350,7 @@ var SHELL = [
   '/assets/pairing-commit.js?v=4',
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
-  '/assets/till-tenant.js?v=3',
+  '/assets/till-tenant.js?v=4',
   '/assets/identity.js?v=12',
   '/assets/caisse-link.js?v=22',
   '/assets/operator-access.js?v=1',
@@ -405,7 +405,7 @@ var SHELL = [
   '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
-  '/assets/clients-store.js?v=35',
+  '/assets/clients-store.js?v=36',
   '/assets/clients-book.js?v=55',
   '/assets/clients-directory.js?v=30',
   '/assets/customer-retention.js?v=16',
