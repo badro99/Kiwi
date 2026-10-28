@@ -97,8 +97,8 @@ var SHELL = [
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=17',
-  '/assets/caisse-floor.js?v=10',
-  '/assets/caisse-kitchen.js?v=6',
+  '/assets/caisse-floor.js?v=13',
+  '/assets/caisse-kitchen.js?v=7',
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=1',
   '/assets/caisse/workflows-loader.js?v=3',
@@ -376,7 +376,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=23',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=85',
+  '/assets/caisse-lang.js?v=87',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=8',
@@ -390,13 +390,13 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=7',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=15',
-  '/assets/stock/strings.js?v=8',
-  '/assets/stock.js?v=100',
+  '/assets/stock/strings.js?v=10',
+  '/assets/stock.js?v=101',
   '/assets/stock/loss.js?v=1',
   '/assets/stock/counts.js?v=9',
   '/assets/stock/purchasing.js?v=2',
   '/assets/stock/intake.js?v=13',
-  '/assets/stock/catalog.js?v=3',
+  '/assets/stock/catalog.js?v=4',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le

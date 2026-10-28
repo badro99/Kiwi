@@ -178,29 +178,29 @@ window.KiwiStockInternal.install('catalog', (S) => {
   function openItemMovement(itemId) {
     const it = getInv().find(x => x.id === itemId); if (!it) return;
     const m = window.Kiwi.modal({
-      title: `Mouvement · ${it.name}`,
-      desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,
+      title: `${esc(t('moveTitle'))} · ${it.name}`,
+      desc: `${esc(t('moveCurrent'))} : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,
       width: 560,
       body: `
         <div class="st-mb-row two">
-          <div class="st-mb-field"><label class="st-mb-label">Motif</label>
-            <select class="st-mb-input" data-stock-move-reason>
-              <option value="receipt">Réception fournisseur</option>
-              <option value="return">Retour client</option>
-              <option value="loss">Perte / casse</option>
-              <option value="expiry">Périmé</option>
-              <option value="gift">Offert</option>
-              <option value="staff-meal">Consommation équipe</option>
-              <option value="count">Comptage physique</option>
-              <option value="manual">Correction manuelle</option>
+          <div class="st-mb-field"><label for="st-move-reason" class="st-mb-label">${esc(t('moveReason'))}</label>
+            <select class="st-mb-input" id="st-move-reason" data-stock-move-reason>
+              <option value="receipt">${esc(t('moveReceipt'))}</option>
+              <option value="return">${esc(t('moveReturn'))}</option>
+              <option value="loss">${esc(t('moveLoss'))}</option>
+              <option value="expiry">${esc(t('moveExpired'))}</option>
+              <option value="gift">${esc(t('moveGift'))}</option>
+              <option value="staff-meal">${esc(t('moveStaff'))}</option>
+              <option value="count">${esc(t('moveCount'))}</option>
+              <option value="manual">${esc(t('moveManual'))}</option>
             </select>
           </div>
-          <div class="st-mb-field"><label class="st-mb-label" data-stock-move-qty-label>Quantité</label><input class="st-mb-input mono" data-stock-move-qty type="number" min="0" step="0.001" placeholder="0" /></div>
+          <div class="st-mb-field"><label for="st-move-qty" class="st-mb-label" data-stock-move-qty-label>${esc(t('moveQty'))}</label><input class="st-mb-input mono" id="st-move-qty" data-stock-move-qty type="number" min="0" step="0.001" placeholder="0" /></div>
         </div>
-        <div class="st-mb-field"><label class="st-mb-label">Référence / note</label><input class="st-mb-input" data-stock-move-note placeholder="Motif, document ou responsable" /></div>
-        <div class="st-mb-field" data-stock-move-dlc-wrap><label class="st-mb-label">DLC / DDM (optionnel)</label><input class="st-mb-input mono" data-stock-move-dlc type="date" /></div>
-        <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,
-      foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button data-activation=write class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
+        <div class="st-mb-field"><label for="st-move-note" class="st-mb-label">${esc(t('moveNote'))}</label><input class="st-mb-input" id="st-move-note" data-stock-move-note placeholder="${esc(t('movePlaceholder'))}" /></div>
+        <div class="st-mb-field" data-stock-move-dlc-wrap><label for="st-move-dlc" class="st-mb-label">${esc(t('moveExpiry'))}</label><input class="st-mb-input mono" id="st-move-dlc" data-stock-move-dlc type="date" /></div>
+        <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>${esc(t('moveIntro'))}</div></div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('btnCancel'))}</button><button data-activation=write class="st-btn primary" data-stock-move-save>${esc(t('addBackupSupConfirm'))}</button>`,
     });
     const scope = m?.el || topBackdrop();
     const reason = scope?.querySelector('[data-stock-move-reason]');
@@ -210,10 +210,10 @@ window.KiwiStockInternal.install('catalog', (S) => {
     const updateHelp = () => {
       const isCount = reason?.value === 'count';
       if (dlcWrap) dlcWrap.style.display = reason?.value === 'receipt' ? '' : 'none';
-      if (label) label.textContent = isCount ? `Quantité réellement comptée (${it.unit})` : `Quantité (${it.unit})`;
+      if (label) label.textContent = isCount ? `${t('moveCountQty')} (${it.unit})` : `${t('moveQty')} (${it.unit})`;
       if (help) help.textContent = isCount
-        ? 'Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.'
-        : ['receipt', 'return'].includes(reason?.value) ? 'Cette entrée augmente le stock et reste traçable.' : 'Cette sortie diminue le stock et reste traçable.';
+        ? t('moveCountHelp')
+        : ['receipt', 'return'].includes(reason?.value) ? t('moveInHelp') : t('moveOutHelp');
     };
     reason?.addEventListener('change', updateHelp); updateHelp();
     scope?.querySelector('[data-stock-move-save]')?.addEventListener('click', () => {

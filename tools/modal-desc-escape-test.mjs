@@ -39,7 +39,7 @@ hasNot(pages, '`"${c.name}" contains', 'plus de nom de catégorie brut (anglais)
 
 const stock = stockTestSource();
 has(stock, 'desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,', 'stock : article et catégorie échappés (fournisseur de secours)');
-has(stock, 'desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,', 'stock : unité échappée');
+has(stock, "desc: `${esc(t('moveCurrent'))} : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,", 'stock : unité échappée');
 has(stock, 'desc: `${esc(catLabel(it.category))} · ${st ===', 'stock : catégorie échappée (fiche article)');
 hasNot(stock, 'desc: `${it.name} · ${catLabel(it.category)}`', 'plus d\'article brut dans la description');
 

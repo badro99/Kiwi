@@ -815,36 +815,36 @@
     var hospitalityFields = hotel ?
       '<div class="kcb-section">Profil hôtelier</div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Type de pièce</label><select id="kcb-f-doc-type" class="kcb-select">' +
+        '<div class="kcb-field"><label for="kcb-f-doc-type">Type de pièce</label><select id="kcb-f-doc-type" class="kcb-select">' +
           ['', 'Passeport', 'CIN', 'Carte de séjour', 'Autre'].map(function (v) { return '<option value="' + esc(v) + '"' + (h.documentType === v ? ' selected' : '') + '>' + esc(v || 'Sélectionner') + '</option>'; }).join('') + '</select></div>' +
-        '<div class="kcb-field"><label>Numéro passeport / ID</label><input id="kcb-f-doc-number" value="' + esc(h.documentNumber || '') + '" placeholder="N° du document" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-doc-number">Numéro passeport / ID</label><input id="kcb-f-doc-number" value="' + esc(h.documentNumber || '') + '" placeholder="N° du document" autocomplete="off"></div>' +
       '</div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Nationalité</label><input id="kcb-f-nationality" value="' + esc(h.nationality || '') + '" placeholder="Marocaine, française…" autocomplete="off"></div>' +
-        '<div class="kcb-field"><label>Langue préférée</label><input id="kcb-f-language" value="' + esc(h.preferredLanguage || '') + '" placeholder="Français, العربية…" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-nationality">Nationalité</label><input id="kcb-f-nationality" value="' + esc(h.nationality || '') + '" placeholder="Marocaine, française…" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-language">Langue préférée</label><input id="kcb-f-language" value="' + esc(h.preferredLanguage || '') + '" placeholder="Français, العربية…" autocomplete="off"></div>' +
       '</div>' +
-      '<div class="kcb-field"><label>Préférences de chambre</label><input id="kcb-f-room" value="' + esc(h.roomPreferences || '') + '" placeholder="Étage calme, lit king, loin de l’ascenseur…" autocomplete="off"></div>' +
-      '<div class="kcb-field"><label>Préférences de repas</label><input id="kcb-f-food" value="' + esc(h.foodPreferences || '') + '" placeholder="Végétarien, petit-déjeuner salé, thé sans sucre…" autocomplete="off"></div>' +
-      '<div class="kcb-field"><label>Allergies</label><input id="kcb-f-allergies" value="' + esc(h.allergies || '') + '" placeholder="Arachides, gluten, aucune connue…" autocomplete="off"></div>' +
-      '<div class="kcb-field"><label>Besoins particuliers</label><input id="kcb-f-access" value="' + esc(h.accessibilityNeeds || '') + '" placeholder="Mobilité, lit bébé, accessibilité…" autocomplete="off"></div>' : '';
+      '<div class="kcb-field"><label for="kcb-f-room">Préférences de chambre</label><input id="kcb-f-room" value="' + esc(h.roomPreferences || '') + '" placeholder="Étage calme, lit king, loin de l’ascenseur…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label for="kcb-f-food">Préférences de repas</label><input id="kcb-f-food" value="' + esc(h.foodPreferences || '') + '" placeholder="Végétarien, petit-déjeuner salé, thé sans sucre…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label for="kcb-f-allergies">Allergies</label><input id="kcb-f-allergies" value="' + esc(h.allergies || '') + '" placeholder="Arachides, gluten, aucune connue…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label for="kcb-f-access">Besoins particuliers</label><input id="kcb-f-access" value="' + esc(h.accessibilityNeeds || '') + '" placeholder="Mobilité, lit bébé, accessibilité…" autocomplete="off"></div>' : '';
     sheet(
       '<h3>' + (editing ? (hotel ? 'Modifier le profil' : 'Modifier le client') : (hotel ? 'Nouveau profil client' : 'Nouveau client')) + '</h3>' +
       '<div class="kcb-sub">' + (editing ? esc(c.name || '') : (hotel ? 'Identité, préférences et attentions utiles pour le prochain séjour.' : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.')) + '</div>' +
-      '<div class="kcb-field"><label>Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label for="kcb-f-name">Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
-        '<div class="kcb-field"><label>Email</label><input id="kcb-f-email" type="email" inputmode="email" value="' + esc(c.email || '') + '" placeholder="nom@email.com" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-phone">Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-email">Email</label><input id="kcb-f-email" type="email" inputmode="email" value="' + esc(c.email || '') + '" placeholder="nom@email.com" autocomplete="off"></div>' +
       '</div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Anniversaire</label><input id="kcb-f-bday" type="date" value="' + esc(c.birthday || '') + '"></div>' +
-        '<div class="kcb-field"><label>Genre</label><select id="kcb-f-gender" class="kcb-select">' + genderOpts(c.gender || '') + '</select></div>' +
+        '<div class="kcb-field"><label for="kcb-f-bday">Anniversaire</label><input id="kcb-f-bday" type="date" value="' + esc(c.birthday || '') + '"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-gender">Genre</label><select id="kcb-f-gender" class="kcb-select">' + genderOpts(c.gender || '') + '</select></div>' +
       '</div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Ville</label><input id="kcb-f-city" value="' + esc(c.city || '') + '" placeholder="Casablanca" autocomplete="off"></div>' +
-        '<div class="kcb-field"><label>Adresse</label><input id="kcb-f-address" value="' + esc(c.address || '') + '" placeholder="Quartier, rue…" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-city">Ville</label><input id="kcb-f-city" value="' + esc(c.city || '') + '" placeholder="Casablanca" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label for="kcb-f-address">Adresse</label><input id="kcb-f-address" value="' + esc(c.address || '') + '" placeholder="Quartier, rue…" autocomplete="off"></div>' +
       '</div>' +
       hospitalityFields +
-      '<div class="kcb-field"><label>Notes internes</label><input id="kcb-f-notes" value="' + esc(c.notes || '') + '" placeholder="Informations utiles à l’équipe…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label for="kcb-f-notes">Notes internes</label><input id="kcb-f-notes" value="' + esc(c.notes || '') + '" placeholder="Informations utiles à l’équipe…" autocomplete="off"></div>' +
       '<div class="kcb-section">Communication</div>' +
       '<label class="kcb-consent"><input type="checkbox" id="kcb-f-consent" ' + (editing ? (c.consent ? 'checked' : '') : (hotel ? '' : 'checked')) + '>' +
         '<span>Accepte les messages <b>WhatsApp / SMS</b> (offres, fidélité).' + (hotel ? ' Optionnel et distinct de la fiche de séjour.' : ' Consentement requis · CNDP loi 09-08.') + '</span></label>' +

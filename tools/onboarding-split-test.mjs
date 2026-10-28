@@ -1,3 +1,4 @@
+import undoLabelEdits from './lane-c-historical.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -6,7 +7,7 @@ import { onboardingTestSource, onboardingSplit as map } from './onboarding-test-
 const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/onboarding/original.js.gz')).toString();
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
-assert.equal(onboardingTestSource(), original, 'live source rebuilds original byte for byte');
+assert.equal(undoLabelEdits(onboardingTestSource(), 'assets/onboarding.js'), original, 'live source rebuilds original byte for byte');
 const data = read('assets/onboarding-data.js');
 for (const f of map.fragments) assert.equal(data.slice(f.offset, f.offset + f.end - f.start), original.slice(f.start, f.end), 'each moved body unchanged');
 const oldData = gunzipSync(fs.readFileSync('tools/fixtures/onboarding/data-original.js.gz')).toString();

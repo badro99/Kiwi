@@ -12,7 +12,7 @@
       }
       $('#kit-bar').innerHTML = kdsStationBar();
       $('#kit-history-toggle').innerHTML =
-        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 2.5-6.2"/><path d="M3 4v4h4"/><path d="M12 8v4.5l3 1.8"/></svg><span>Historique</span><span class="kit-htg-ct">${kdsGroup('ready').length}</span>`;
+        `<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z"/></svg><span>Historique</span><span class="kit-htg-ct">${kdsGroup('ready').length}</span>`;
       const newList = kdsGroup('new'), cookList = kdsGroup('cooking'), readyList = kdsGroup('ready');
       if (kdsKitOn()) { kdsKitPaint(newList, cookList, readyList); updateKdsCount(); return; }
       $('#kit-new').innerHTML =
@@ -25,7 +25,7 @@
          « Prête 14:20 » : l'intitulé « Servies aujourd'hui » annonçait une
          remise au client que la caisse ne sait pas, elle, constater. */
       $('#kit-history-inner').innerHTML =
-        `<div class="kit-col-head"><span>Prêtes aujourd'hui</span><span class="kit-col-ct">${readyList.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
+        `<div class="kit-col-head"><span>Prêtes aujourd'hui</span><span class="kit-col-ct">${readyList.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="${kdsEsc((window.KiwiCaisseLang || { tr: s => s }).tr('Fermer'))}"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></button></div>`
         + `<div class="kit-history-rows">${readyList.length ? readyList.map(kdsHistoryRow).join('') : kdsEmpty('Aucune commande prête pour l\'instant')}</div>`;
       updateKdsCount();
     }
@@ -36,7 +36,7 @@
       const shell = (title, extra) => `<div class="kit-col-head"><span>${kdsEsc(title)}</span><span class="kit-col-ct" data-kit-ct>0</span>${extra || ''}</div><div class="kit-lane-box"></div>`;
       $('#kit-new').innerHTML = shell(kkt('kds.new'));
       $('#kit-cook').innerHTML = shell(kkt('kds.preparing'));
-      $('#kit-history-inner').innerHTML = shell(kkt('kds.ready'), `<button class="kit-history-x" data-kit-history-toggle aria-label="${kdsEsc(kkt('action.close'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`);
+      $('#kit-history-inner').innerHTML = shell(kkt('kds.ready'), `<button class="kit-history-x" data-kit-history-toggle aria-label="${kdsEsc(kkt('action.close'))}"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></button>`);
       kdsKit = !!window.KiwiKdsBoard.mount({
         stacks: { new: $('#kit-new .kit-lane-box'), cook: $('#kit-cook .kit-lane-box'), pass: $('#kit-history-inner .kit-lane-box') },
         columns: { new: '1', cook: 'auto', pass: '1' },
@@ -166,7 +166,14 @@
         if (o.type === 'takeaway') renderVrapBoard();
         if (!j) toast(`Rappel de ${ticketNo(o)} non confirmé · réessayez`);
         else if (j.httpStatus === 409 && j.error === 'bad-transition') toast(`${ticketNo(o)} est déjà servie`);
-      }).catch(() => { o.recallPendingUntil = 0; });
+      }).catch(() => {
+        o.recallPendingUntil = 0;
+        o.status = before.status; o.readyAt = before.readyAt;
+        o.items.forEach((i, k) => { i.stationReady = before.ready[k]; i.stationAccepted = before.accepted[k]; });
+        kdsPaint();
+        if (o.type === 'takeaway') renderVrapBoard();
+        toast((window.KiwiCaisseLang || { tr: s => s }).tr('Rappel non confirmé · réessayez'));
+      });
     }
 
     function kdsOpenZoom(o) {
@@ -241,7 +248,7 @@
               <div class="kit-recipe-eyebrow">Recette · par portion</div>
               <h3 id="kit-recipe-title" class="kit-recipe-title">${kdsEsc(dishName)}</h3>
             </div>
-            <button class="kit-recipe-close" data-kit-recipe-close aria-label="Fermer">${KDS_SVG.close}</button>
+            <button class="kit-recipe-close" data-kit-recipe-close aria-label="${kdsEsc((window.KiwiCaisseLang || { tr: s => s }).tr('Fermer'))}">${KDS_SVG.close}</button>
           </div>
           <div class="kit-recipe-body">${body}</div>
         </div>`;

@@ -74,7 +74,7 @@ function context() {
     'confirmCaisseTransfer', 'confirmCaisseMerge', 'lineHeld', 'generateOrder', 'resetTableTimer', 'startTableTimer',
     'currentTotal', 'tableSentCount', 'cancelOpenTable', 'attachOrderProTable', 'opRepairFormulaParents',
     'opIngest', 'canRecoverCaisseTable', 'retireRejectedKitchenTicket', 'sameMap', 'serverNameFor',
-    'staleQueuedServerTicket', 'kdsPaint', 'openVrapOrder', 'vrapFinancialItems',
+    'staleQueuedServerTicket', 'kdsEsc', 'kdsPaint', 'openVrapOrder', 'vrapFinancialItems',
     'savedTakeawaySplitFor', 'vrapSplitKey', 'currentVrapSplit', 'liveTableSplit', 'splitPaidCount', 'splitRemainingTotal', 'loadSplitFlow', 'openSplitModal',
     'vrapHandoverTimestamp', 'vrapHandoverTime', 'ticketNo', 'orderServerInitials'];
   vm.runInContext(caisseTestSource.withSettlement(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource), c);

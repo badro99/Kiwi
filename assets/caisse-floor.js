@@ -226,6 +226,11 @@
     /* LA cellule table · démo et plan réel confondus. x/y en px du plan
        (coin haut-gauche du plateau), la bande de chaises déborde de PAD. */
     function caisseNoirCellHTML(o) {
+      const caisseTableLabel = (id, status, covers) => {
+        const tr = (window.KiwiCaisseLang || { tr: s => s }).tr;
+        return `${tr('Table')} ${id}, ${tr(status)}, ${covers} ${tr('couverts')}`;
+      };
+
       const PAD = (window.KiwiFloorCore && window.KiwiFloorCore.PAD) || 19;
       const ring = caisseRing(o.status);
       const g = { w: o.w, h: o.h, seats: o.seats || 0, shape: o.shape || 'rect' };
@@ -233,7 +238,7 @@
       const urgent = o.status === 'bgha-ykhlass' ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
       return `<div class="cplan-tbl" data-table="${escTeam(String(o.id))}" role="button" tabindex="0"
              data-status="${o.status || 'khawya'}"
-             aria-label="Table ${escTeam(String(o.id))}, ${label}, ${o.covers} couverts"
+             aria-label="${escTeam(caisseTableLabel(String(o.id), label, o.covers))}"
              style="left:${o.x - PAD}px; top:${o.y - PAD}px;
                     width:${g.w + PAD * 2}px; height:${g.h + PAD * 2}px;
                     --pad:${PAD}px; transform:rotate(${o.rot || 0}deg);">
@@ -358,6 +363,11 @@
     }
 
     function designedTableHTML(id, t) {
+      const caisseTableLabel = (id, status, covers) => {
+        const tr = (window.KiwiCaisseLang || { tr: s => s }).tr;
+        return `${tr('Table')} ${id}, ${tr(status)}, ${covers} ${tr('couverts')}`;
+      };
+
       const label = ({ 'khawya': 'Libre', 'a-commander': 'À commander', 'ka-yaklo': 'En cours', 'bgha-ykhlass': 'Addition', 'khlass': 'Réglée' })[t.status] || 'Khawya';
       const dot = t.status === 'bgha-ykhlass' ? '<span class="urgent-dot" aria-hidden="true"></span>' : '';
       let sb = '';
@@ -365,7 +375,7 @@
         const s = servers[t.server];
         sb = `<span class="tbl-server" style="background:${s.color};--server-badge-ink:${serverBadgeInk(s.color)};" title="Section de ${escTeam(s.name)}">${serverInitials(s)}</span>`;
       }
-      return `<div class="tbl-cell is-designed" data-table="${escTeam(id)}" role="button" tabindex="0" aria-label="Table ${escTeam(id)}, ${label}, ${t.covers} couverts">` +
+      return `<div class="tbl-cell is-designed" data-table="${escTeam(id)}" role="button" tabindex="0" aria-label="${escTeam(caisseTableLabel(id, label, t.covers))}">` +
         `<div class="tbl" data-status="${t.status}">${dot}` +
           `<div class="tbl-head"><span class="tbl-num">${escTeam(id)}</span><span class="tbl-covers">${t.covers}p</span></div>` +
           `<div class="tbl-status">${label}</div>` +

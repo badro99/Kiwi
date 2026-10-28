@@ -7,6 +7,17 @@
   /* stock-part:strings */
   const STR = {
     fr: {
+      moveTitle: "Mouvement",       moveCurrent: "Stock actuel",
+      moveReason: "Motif",       moveReceipt: "Réception fournisseur",
+      moveReturn: "Retour client",       moveLoss: "Perte / casse",
+      moveExpired: "Périmé",       moveGift: "Offert",
+      moveStaff: "Consommation équipe",       moveCount: "Comptage physique",
+      moveManual: "Correction manuelle",       moveQty: "Quantité",
+      moveNote: "Référence / note",       movePlaceholder: "Motif, document ou responsable",
+      moveExpiry: "DLC / DDM (optionnel)",       moveIntro: "Une entrée augmente le stock. Le registre conserve la trace de l’opération.",
+      moveCountQty: "Quantité réellement comptée",       moveCountHelp: "Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.",
+      moveInHelp: "Cette entrée augmente le stock et reste traçable.",       moveOutHelp: "Cette sortie diminue le stock et reste traçable.",
+
       breadcrumb: 'Stock & approvisionnement',
       title: 'Stock & approvisionnement',
       sub: (n, sup, val) => `${n} ${n > 1 ? 'articles suivis' : 'article suivi'} · ${sup} ${sup > 1 ? 'fournisseurs actifs' : 'fournisseur actif'} · valeur stock ${val}`,
@@ -362,6 +373,17 @@
       venueAll: 'Tous', venueAtlas: 'Café Atlas', venueMaison: 'Maison Mansour', venueSpa: 'Spa Bahia',
     },
     en: {
+      moveTitle: "Movement",       moveCurrent: "Current stock",
+      moveReason: "Reason",       moveReceipt: "Supplier receipt",
+      moveReturn: "Customer return",       moveLoss: "Loss / breakage",
+      moveExpired: "Expired",       moveGift: "Gift",
+      moveStaff: "Staff meal",       moveCount: "Physical count",
+      moveManual: "Manual correction",       moveQty: "Quantity",
+      moveNote: "Reference / note",       movePlaceholder: "Reason, document or person responsible",
+      moveExpiry: "Expiry / best before (optional)",       moveIntro: "An entry increases stock. The ledger keeps a record.",
+      moveCountQty: "Actual counted quantity",       moveCountHelp: "Kiwi records only the difference between expected and counted stock.",
+      moveInHelp: "This entry increases stock and remains traceable.",       moveOutHelp: "This exit decreases stock and remains traceable.",
+
       breadcrumb: 'Stock & procurement',
       title: 'Stock & procurement',
       sub: (n, sup, val) => `${n} tracked ${n === 1 ? 'item' : 'items'} · ${sup} active ${sup === 1 ? 'supplier' : 'suppliers'} · stock value ${val}`,
@@ -686,6 +708,17 @@
       venueAll: 'All', venueAtlas: 'Café Atlas', venueMaison: 'Maison Mansour', venueSpa: 'Spa Bahia',
     },
     ar: {
+      moveTitle: "حركة",       moveCurrent: "المخزون الحالي",
+      moveReason: "السبب",       moveReceipt: "استلام من المورد",
+      moveReturn: "إرجاع الزبون",       moveLoss: "فقدان / كسر",
+      moveExpired: "منتهي الصلاحية",       moveGift: "هدية",
+      moveStaff: "استهلاك الفريق",       moveCount: "جرد فعلي",
+      moveManual: "تصحيح يدوي",       moveQty: "الكمية",
+      moveNote: "مرجع / ملاحظة",       movePlaceholder: "السبب أو الوثيقة أو المسؤول",
+      moveExpiry: "الصلاحية (اختياري)",       moveIntro: "الإدخال يزيد المخزون ويحفظ السجل العملية.",
+      moveCountQty: "الكمية المحسوبة فعليًا",       moveCountHelp: "يسجل كيوي الفرق فقط بين المخزون النظري والجرد.",
+      moveInHelp: "هذا الإدخال يزيد المخزون ويبقى قابلًا للتتبع.",       moveOutHelp: "هذا الإخراج ينقص المخزون ويبقى قابلًا للتتبع.",
+
       breadcrumb: 'المخزون والتموين',
       title: 'المخزون والتموين',
       sub: (n, sup, val) => `${n} منتجًا متابعًا · ${sup} موردًا نشطًا · قيمة المخزون ${val}`,

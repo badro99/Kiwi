@@ -1,0 +1,56 @@
+{
+  "assets/onboarding.js": [
+    {
+      "before": "          <input class=\"kob-field\" data-f=\"ownerName\" type=\"text\" value=\"${esc(S.ownerName)}\" maxlength=\"24\" placeholder=\"${tr({ fr: 'Ex. Rachid', en: 'e.g. Rachid', ar: 'مثال: رشيد' })}\" autocomplete=\"given-name\"/>\n",
+      "after": "          <input class=\"kob-field\" data-f=\"ownerName\" aria-label=\"${tr({ fr: 'Votre prénom', en: 'Your first name', ar: 'اسمك الأول' })}\" aria-describedby=\"kob-ownerName-limit\" type=\"text\" value=\"${esc(S.ownerName)}\" maxlength=\"24\" placeholder=\"${tr({ fr: 'Ex. Rachid', en: 'e.g. Rachid', ar: 'مثال: رشيد' })}\" autocomplete=\"given-name\"/>\n          <p class=\"kob-sub\" id=\"kob-ownerName-limit\">${tr({ fr: \"24 caractères maximum.\", en: \"Up to 24 characters.\", ar: \"24 حرفًا كحد أقصى.\" })}</p>\n"
+    },
+    {
+      "before": "          <input class=\"kob-field\" data-f=\"bizName\" type=\"text\" value=\"${esc(S.bizName)}\" maxlength=\"40\" placeholder=\"${tr({ fr: 'Ex. Café des Oudayas', en: 'e.g. Oudayas Café', ar: 'مثال: مقهى الأوداية' })}\"/>\n",
+      "after": "          <input class=\"kob-field\" data-f=\"bizName\" aria-label=\"${tr({ fr: 'Nom de l’établissement', en: 'Business name', ar: 'اسم النشاط' })}\" aria-describedby=\"kob-bizName-limit\" type=\"text\" value=\"${esc(S.bizName)}\" maxlength=\"40\" placeholder=\"${tr({ fr: 'Ex. Café des Oudayas', en: 'e.g. Oudayas Café', ar: 'مثال: مقهى الأوداية' })}\"/>\n          <p class=\"kob-sub\" id=\"kob-bizName-limit\">${tr({ fr: \"40 caractères maximum.\", en: \"Up to 40 characters.\", ar: \"40 حرفًا كحد أقصى.\" })}</p>\n"
+    },
+    {
+      "before": "          <input class=\"kob-field\" data-f=\"city\" type=\"text\" value=\"${esc(S.city)}\" maxlength=\"30\" placeholder=\"${tr({ fr: 'Ex. Rabat', en: 'e.g. Rabat', ar: 'مثال: الرباط' })}\"/>\n",
+      "after": "          <input class=\"kob-field\" data-f=\"city\" aria-label=\"${tr({ fr: 'Ville principale', en: 'Main city', ar: 'المدينة الرئيسية' })}\" type=\"text\" value=\"${esc(S.city)}\" maxlength=\"30\" placeholder=\"${tr({ fr: 'Ex. Rabat', en: 'e.g. Rabat', ar: 'مثال: الرباط' })}\"/>\n"
+    }
+  ],
+  "assets/stock/catalog.js": [
+    {
+      "before": "      title: `Mouvement · ${it.name}`,\n      desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,\n",
+      "after": "      title: `${esc(t('moveTitle'))} · ${it.name}`,\n      desc: `${esc(t('moveCurrent'))} : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,\n"
+    },
+    {
+      "before": "          <div class=\"st-mb-field\"><label class=\"st-mb-label\">Motif</label>\n            <select class=\"st-mb-input\" data-stock-move-reason>\n              <option value=\"receipt\">Réception fournisseur</option>\n              <option value=\"return\">Retour client</option>\n              <option value=\"loss\">Perte / casse</option>\n              <option value=\"expiry\">Périmé</option>\n              <option value=\"gift\">Offert</option>\n              <option value=\"staff-meal\">Consommation équipe</option>\n              <option value=\"count\">Comptage physique</option>\n              <option value=\"manual\">Correction manuelle</option>\n",
+      "after": "          <div class=\"st-mb-field\"><label for=\"st-move-reason\" class=\"st-mb-label\">${esc(t('moveReason'))}</label>\n            <select class=\"st-mb-input\" id=\"st-move-reason\" data-stock-move-reason>\n              <option value=\"receipt\">${esc(t('moveReceipt'))}</option>\n              <option value=\"return\">${esc(t('moveReturn'))}</option>\n              <option value=\"loss\">${esc(t('moveLoss'))}</option>\n              <option value=\"expiry\">${esc(t('moveExpired'))}</option>\n              <option value=\"gift\">${esc(t('moveGift'))}</option>\n              <option value=\"staff-meal\">${esc(t('moveStaff'))}</option>\n              <option value=\"count\">${esc(t('moveCount'))}</option>\n              <option value=\"manual\">${esc(t('moveManual'))}</option>\n"
+    },
+    {
+      "before": "          <div class=\"st-mb-field\"><label class=\"st-mb-label\" data-stock-move-qty-label>Quantité</label><input class=\"st-mb-input mono\" data-stock-move-qty type=\"number\" min=\"0\" step=\"0.001\" placeholder=\"0\" /></div>\n",
+      "after": "          <div class=\"st-mb-field\"><label for=\"st-move-qty\" class=\"st-mb-label\" data-stock-move-qty-label>${esc(t('moveQty'))}</label><input class=\"st-mb-input mono\" id=\"st-move-qty\" data-stock-move-qty type=\"number\" min=\"0\" step=\"0.001\" placeholder=\"0\" /></div>\n"
+    },
+    {
+      "before": "        <div class=\"st-mb-field\"><label class=\"st-mb-label\">Référence / note</label><input class=\"st-mb-input\" data-stock-move-note placeholder=\"Motif, document ou responsable\" /></div>\n        <div class=\"st-mb-field\" data-stock-move-dlc-wrap><label class=\"st-mb-label\">DLC / DDM (optionnel)</label><input class=\"st-mb-input mono\" data-stock-move-dlc type=\"date\" /></div>\n        <div class=\"st-notice ok\" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,\n      foot: `<button class=\"st-btn\" data-dismiss-modal>Annuler</button><button data-activation=write class=\"st-btn primary\" data-stock-move-save>Enregistrer</button>`,\n",
+      "after": "        <div class=\"st-mb-field\"><label for=\"st-move-note\" class=\"st-mb-label\">${esc(t('moveNote'))}</label><input class=\"st-mb-input\" id=\"st-move-note\" data-stock-move-note placeholder=\"${esc(t('movePlaceholder'))}\" /></div>\n        <div class=\"st-mb-field\" data-stock-move-dlc-wrap><label for=\"st-move-dlc\" class=\"st-mb-label\">${esc(t('moveExpiry'))}</label><input class=\"st-mb-input mono\" id=\"st-move-dlc\" data-stock-move-dlc type=\"date\" /></div>\n        <div class=\"st-notice ok\" data-stock-move-help>${svg('checkCircle', 14)}<div>${esc(t('moveIntro'))}</div></div>`,\n      foot: `<button class=\"st-btn\" data-dismiss-modal>${esc(t('btnCancel'))}</button><button data-activation=write class=\"st-btn primary\" data-stock-move-save>${esc(t('addBackupSupConfirm'))}</button>`,\n"
+    },
+    {
+      "before": "      if (label) label.textContent = isCount ? `Quantité réellement comptée (${it.unit})` : `Quantité (${it.unit})`;\n",
+      "after": "      if (label) label.textContent = isCount ? `${t('moveCountQty')} (${it.unit})` : `${t('moveQty')} (${it.unit})`;\n"
+    },
+    {
+      "before": "        ? 'Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.'\n        : ['receipt', 'return'].includes(reason?.value) ? 'Cette entrée augmente le stock et reste traçable.' : 'Cette sortie diminue le stock et reste traçable.';\n",
+      "after": "        ? t('moveCountHelp')\n        : ['receipt', 'return'].includes(reason?.value) ? t('moveInHelp') : t('moveOutHelp');\n"
+    }
+  ],
+  "assets/stock/strings.js": [
+    {
+      "before": "",
+      "after": "      moveTitle: \"Mouvement\",       moveCurrent: \"Stock actuel\",\n      moveReason: \"Motif\",       moveReceipt: \"Réception fournisseur\",\n      moveReturn: \"Retour client\",       moveLoss: \"Perte / casse\",\n      moveExpired: \"Périmé\",       moveGift: \"Offert\",\n      moveStaff: \"Consommation équipe\",       moveCount: \"Comptage physique\",\n      moveManual: \"Correction manuelle\",       moveQty: \"Quantité\",\n      moveNote: \"Référence / note\",       movePlaceholder: \"Motif, document ou responsable\",\n      moveExpiry: \"DLC / DDM (optionnel)\",       moveIntro: \"Une entrée augmente le stock. Le registre conserve la trace de l’opération.\",\n      moveCountQty: \"Quantité réellement comptée\",       moveCountHelp: \"Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.\",\n      moveInHelp: \"Cette entrée augmente le stock et reste traçable.\",       moveOutHelp: \"Cette sortie diminue le stock et reste traçable.\",\n\n"
+    },
+    {
+      "before": "",
+      "after": "      moveTitle: \"Movement\",       moveCurrent: \"Current stock\",\n      moveReason: \"Reason\",       moveReceipt: \"Supplier receipt\",\n      moveReturn: \"Customer return\",       moveLoss: \"Loss / breakage\",\n      moveExpired: \"Expired\",       moveGift: \"Gift\",\n      moveStaff: \"Staff meal\",       moveCount: \"Physical count\",\n      moveManual: \"Manual correction\",       moveQty: \"Quantity\",\n      moveNote: \"Reference / note\",       movePlaceholder: \"Reason, document or person responsible\",\n      moveExpiry: \"Expiry / best before (optional)\",       moveIntro: \"An entry increases stock. The ledger keeps a record.\",\n      moveCountQty: \"Actual counted quantity\",       moveCountHelp: \"Kiwi records only the difference between expected and counted stock.\",\n      moveInHelp: \"This entry increases stock and remains traceable.\",       moveOutHelp: \"This exit decreases stock and remains traceable.\",\n\n"
+    },
+    {
+      "before": "",
+      "after": "      moveTitle: \"حركة\",       moveCurrent: \"المخزون الحالي\",\n      moveReason: \"السبب\",       moveReceipt: \"استلام من المورد\",\n      moveReturn: \"إرجاع الزبون\",       moveLoss: \"فقدان / كسر\",\n      moveExpired: \"منتهي الصلاحية\",       moveGift: \"هدية\",\n      moveStaff: \"استهلاك الفريق\",       moveCount: \"جرد فعلي\",\n      moveManual: \"تصحيح يدوي\",       moveQty: \"الكمية\",\n      moveNote: \"مرجع / ملاحظة\",       movePlaceholder: \"السبب أو الوثيقة أو المسؤول\",\n      moveExpiry: \"الصلاحية (اختياري)\",       moveIntro: \"الإدخال يزيد المخزون ويحفظ السجل العملية.\",\n      moveCountQty: \"الكمية المحسوبة فعليًا\",       moveCountHelp: \"يسجل كيوي الفرق فقط بين المخزون النظري والجرد.\",\n      moveInHelp: \"هذا الإدخال يزيد المخزون ويبقى قابلًا للتتبع.\",       moveOutHelp: \"هذا الإخراج ينقص المخزون ويبقى قابلًا للتتبع.\",\n\n"
+    }
+  ]
+}

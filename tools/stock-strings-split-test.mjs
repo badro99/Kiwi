@@ -1,3 +1,4 @@
+import undoLabelEdits from './lane-c-historical.cjs';
 /* Kiwi · stock string pack split, second stage of the stock.js split.
  * The FR/EN/AR strings of the Stock & approvisionnement page (993 lines, 117
  * formatting closures) left assets/stock.js for assets/stock/strings.js. This
@@ -20,7 +21,7 @@ const read = (f) => fs.readFileSync(f, 'utf8');
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/stock-strings/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/stock-strings/split.json'));
-const core = stockControllerSource(), part = read('assets/stock/strings.js');
+const core = stockControllerSource(), part = undoLabelEdits(read('assets/stock/strings.js'), 'assets/stock/strings.js');
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 
@@ -35,7 +36,7 @@ ok(core.split(seg.relay).length === 2, 'core carries the relay exactly once');
 const at = core.indexOf(seg.relay);
 ok(original.slice(0, seg.start).endsWith(core.slice(Math.max(0, at - 2000), at)), 'text before the relay is unchanged');
 ok(original.slice(seg.end).startsWith(core.slice(at + seg.relay.length, at + seg.relay.length + 2000)), 'text after the relay is unchanged');
-ok(stockSource().includes(body), 'source-reading tests see the strings through stock-test-source');
+ok(undoLabelEdits(stockSource(), 'assets/stock/strings.js').includes(body), 'source-reading tests see the strings through stock-test-source');
 
 const graph = dashboardDependencies(read('dashboard.html'));
 const iS = graph.indexOf('src="assets/stock/strings.js?'), iC = graph.indexOf('src="assets/stock.js?');

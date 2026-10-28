@@ -1,3 +1,4 @@
+import undoLabelEdits from './lane-c-historical.cjs';
 /* C1-stock: strict live reconstruction, explicit factory boundaries and owner behaviour. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ const hash = s => createHash('sha256').update(s).digest('hex');
 for (const [file, fixture] of Object.entries(map.files)) {
   const original = gunzipSync(fs.readFileSync(fixture.fixture)).toString();
   assert.equal(hash(original), fixture.sha256, file + ': frozen original hash');
-  assert.equal(source(file), original, file + ': reconstructed byte for byte from live files');
+  assert.equal(file === 'assets/stock/catalog.js' ? undoLabelEdits(source(file), 'assets/stock/catalog.js') : source(file), original, file + ': reconstructed byte for byte from live files');
 }
 const platform = new Set(['window', 'document', 'localStorage', 'console', 'Date', 'Math', 'Object', 'Array', 'String', 'Number', 'Set', 'Map', 'JSON', 'Promise', 'Error', 'Uint8Array', 'TextEncoder', 'fetch', 'encodeURIComponent', 'requestAnimationFrame', 'Boolean', 'CustomEvent']);
 for (const part of map.parts) {
