@@ -265,7 +265,7 @@ try {
       const broken = grid && grid.shadowRoot ? [...grid.shadowRoot.querySelectorAll('.dl > span:not(.nt)')].filter((e) => e.getBoundingClientRect().height > lh(e) * 1.5).map((e) => e.textContent) : ['no grid'];
       const clipped = grid && grid.shadowRoot ? [...grid.shadowRoot.querySelectorAll('.vl')].filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent) : [];
       const caps = [...document.querySelectorAll('#kw-main .dash-genpage *')].filter((e) => e.children.length === 0 && e.getClientRects().length)
-        .map((e) => ({ t: e.textContent.replace(/\b(MAD|Z)\b/g, '').trim(), up: getComputedStyle(e).textTransform === 'uppercase' }))
+        .map((e) => ({ t: e.textContent.replace(/\b(MAD|TVA|TTC|Z)\b/g, '').trim(), up: getComputedStyle(e).textTransform === 'uppercase' }))
         .filter((x) => /[A-Za-zÀ-ÿ]{3}/.test(x.t) && (x.up || /[A-ZÀ-Þ]{3,}/.test(x.t) && x.t === x.t.toUpperCase())).map((x) => x.t);
       return { btns, broken, clipped, caps };
     });

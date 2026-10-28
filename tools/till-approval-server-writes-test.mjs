@@ -167,6 +167,7 @@ ${padHtml}
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
   const toast = (m) => { window.__toasts.push(String(m)); };
+  const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s); // the till's own translator (caisse-app.js), French here
   const currentCashier = { id: 'c0', name: 'Caissier', role: 'Caissier' };
   const storeIsReal = () => true;
   const handoverState = { incoming: { id: 'c1', name: 'Salma', role: 'Caissier' } };

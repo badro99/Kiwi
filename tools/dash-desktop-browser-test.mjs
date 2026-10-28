@@ -193,10 +193,10 @@ try {
     const { page } = await open(tr, ctx, { width: 1280, height: 900 });
     page.on('pageerror', (e) => errors.push(e.message));
     /* A label in capitals: a visible text with a word of three capitals or
-       more, written so or set so, currency codes aside. */
+       more, written so or set so, currency codes and tax abbreviations (TVA, TTC) aside. */
     const caps = (sel) => page.evaluate((sel) => [...document.querySelectorAll(sel)].flatMap((root) => [...root.querySelectorAll('*')].concat(root))
       .filter((e) => e.children.length === 0 && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden')
-      .map((e) => ({ t: e.textContent.replace(/\b(MAD|EUR|USD|AED|ICE|TVA|QR|ID|KPI|CSV|PDF|Z)\b/g, '').trim(), up: getComputedStyle(e).textTransform === 'uppercase' }))
+      .map((e) => ({ t: e.textContent.replace(/\b(MAD|EUR|USD|AED|ICE|TVA|TTC|QR|ID|KPI|CSV|PDF|Z)\b/g, '').trim(), up: getComputedStyle(e).textTransform === 'uppercase' }))
       .filter((x) => /[A-Za-zÀ-ÿ]{3}/.test(x.t) && (x.up || /[A-ZÀ-Þ]{3,}/.test(x.t) && x.t === x.t.toUpperCase())).map((x) => x.t.slice(0, 40)), sel);
     const home = await caps('#kit-home .k-dh__lb, #kit-home .k-dh__cmp, [data-goal-label], .sidebar .loc-switch .badge, #kit-dd-goal');
     check(home.length === 0, 'Home: the cashed label, the goal and the venue status are in sentence case' + (home.length ? ' · ' + home.join(' | ') : ''));
