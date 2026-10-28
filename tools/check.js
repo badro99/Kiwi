@@ -1651,6 +1651,8 @@ section('Whole-project regressions');
     // Une table, deux appareils : la caisse et le téléphone du serveur sur la même addition (vague 15 K).
     'shared-table-two-devices-browser-test.mjs',
     'pairs-boutique-browser-test.mjs',
+    // Aucune salle sans porte : Clientes et le comptage physique se quittent (les deux peaux).
+    'boutique-escape-browser-test.mjs',
     'till-repair-lock-browser-test.mjs',
     'table-time-test.mjs',
     'print-relay-idempotency-test.mjs',

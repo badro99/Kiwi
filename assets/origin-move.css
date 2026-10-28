@@ -6,7 +6,13 @@
   box-shadow: 0 4px 24px #053b2c26; font: 400 14px/1.5 var(--font-body, 'Inter Tight', sans-serif);
   font-style: normal;
 }
+.origin-move[hidden] { display: none; }
 .origin-move strong { font-weight: 600; }
+.origin-move-hide {
+  position: absolute; inset-inline-end: .5rem; inset-block-start: .5rem;
+  width: 2rem; height: 2rem; padding: 0; line-height: 1;
+  background: transparent; color: var(--ink, #0A0F0D); font-size: 20px;
+}
 .origin-move-icon { display: inline-flex; color: var(--atlas, #0B6E4F); margin-inline-end: .5rem; vertical-align: middle; }
 .origin-move p { margin-block: .5rem; }
 .origin-move button {

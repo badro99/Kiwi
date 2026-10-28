@@ -9,16 +9,20 @@
   try { initialState = document.currentScript && document.currentScript.dataset.hadState !== undefined
     ? document.currentScript.dataset.hadState === 'true' : Object.keys(localStorage).some(function (k) { return /^kiwi/i.test(k); }); } catch (_) {}
   var COPY = {
-    fr: { title: 'Kiwi déménage vers kiwi-os.com', move: 'Déplacer cet appareil', login: 'Se reconnecter', ready: 'Les files sont vides. Vous pouvez déplacer cet appareil.', waiting: 'En attente : {s} ventes, {p} impressions, {o} autres opérations.', unknown: 'Impossible de vérifier toutes les files. Réessayez avant de déplacer cet appareil.', error: 'Déplacement impossible. Réessayez sur cet appareil, ou reconnectez-vous sur kiwi-os.com.', owner: 'Votre compte propriétaire doit se reconnecter sur kiwi-os.com.', go: 'Ouvrir Kiwi', retry: 'Réessayer', refused: '{r} opérations déjà refusées par le serveur restent sur cet appareil. Elles ne bloquent pas le déplacement.' },
-    en: { title: 'Kiwi moves to kiwi-os.com', move: 'Move this device', login: 'Log in again', ready: 'The queues are empty. You can move this device.', waiting: 'Waiting: {s} sales, {p} print jobs, {o} other operations.', unknown: 'Unable to check every queue. Retry before moving this device.', error: 'Unable to move. Retry on this device, or log in again on kiwi-os.com.', owner: 'Your owner account needs to log in again on kiwi-os.com.', go: 'Open Kiwi', retry: 'Retry', refused: '{r} operations the server already refused stay on this device. They do not block the move.' },
-    ar: { title: 'ينتقل Kiwi إلى kiwi-os.com', move: 'نقل هذا الجهاز', login: 'تسجيل الدخول مجدداً', ready: 'قوائم الانتظار فارغة. يمكنك نقل هذا الجهاز.', waiting: 'قيد الانتظار: {s} مبيعات، {p} مهام طباعة، {o} عمليات أخرى.', unknown: 'تعذّر التحقق من جميع القوائم. أعد المحاولة قبل نقل الجهاز.', error: 'تعذّر النقل. أعد المحاولة على هذا الجهاز أو سجل الدخول على kiwi-os.com.', owner: 'يجب تسجيل دخول حساب المالك مجدداً على kiwi-os.com.', go: 'فتح Kiwi', retry: 'إعادة المحاولة', refused: '{r} عمليات رفضها الخادم مسبقاً تبقى على هذا الجهاز. لا تمنع النقل.' }
+    fr: { title: 'Kiwi déménage vers kiwi-os.com', move: 'Déplacer cet appareil', login: 'Se reconnecter', ready: 'Aucune vente en attente. Vous pouvez déplacer cet appareil.', waiting: 'En attente : {s} ventes, {p} impressions, {o} autres opérations.', unknown: 'Impossible de vérifier toutes les files. Réessayez avant de déplacer cet appareil.', error: 'Déplacement impossible. Réessayez sur cet appareil, ou reconnectez-vous sur kiwi-os.com.', owner: 'Votre compte propriétaire doit se reconnecter sur kiwi-os.com.', go: 'Ouvrir Kiwi', retry: 'Réessayer', stays: '{r} opérations non financières restent sur cet appareil. Elles ne bloquent pas le déplacement.', hide: 'Masquer cet avis' },
+    en: { title: 'Kiwi moves to kiwi-os.com', move: 'Move this device', login: 'Log in again', ready: 'No sale is waiting. You can move this device.', waiting: 'Waiting: {s} sales, {p} print jobs, {o} other operations.', unknown: 'Unable to check every queue. Retry before moving this device.', error: 'Unable to move. Retry on this device, or log in again on kiwi-os.com.', owner: 'Your owner account needs to log in again on kiwi-os.com.', go: 'Open Kiwi', retry: 'Retry', stays: '{r} non-financial operations stay on this device. They do not block the move.', hide: 'Hide this notice' },
+    ar: { title: 'ينتقل Kiwi إلى kiwi-os.com', move: 'نقل هذا الجهاز', login: 'تسجيل الدخول مجدداً', ready: 'لا توجد مبيعات قيد الانتظار. يمكنك نقل هذا الجهاز.', waiting: 'قيد الانتظار: {s} مبيعات، {p} مهام طباعة، {o} عمليات أخرى.', unknown: 'تعذّر التحقق من جميع القوائم. أعد المحاولة قبل نقل الجهاز.', error: 'تعذّر النقل. أعد المحاولة على هذا الجهاز أو سجل الدخول على kiwi-os.com.', owner: 'يجب تسجيل دخول حساب المالك مجدداً على kiwi-os.com.', go: 'فتح Kiwi', retry: 'إعادة المحاولة', stays: '{r} عمليات غير مالية تبقى على هذا الجهاز. لا تمنع النقل.', hide: 'إخفاء هذا الإشعار' }
   };
   function copy() {
     var lang = document.documentElement.lang || 'fr';
     try { lang = window.KiwiCaisseLang ? window.KiwiCaisseLang.get() : localStorage.getItem('kiwiLang') || lang; } catch (_) {}
     return COPY[lang] || COPY[lang.split('-')[0]] || COPY.fr;
   }
-  function empty(q) { return !!q && ['sales', 'prints', 'other', 'unknown'].every(function (k) { return q[k] === 0; }); }
+  /* What may NOT be left behind. A sale is money the ledger has not seen, a print
+   * job is paper the counter is still waiting for, and an unreadable queue could
+   * hide either. Everything else is a non-financial command: it stays on the old
+   * origin rather than holding a working shop shut. */
+  function movable(q) { return !!q && ['sales', 'prints', 'unknown'].every(function (k) { return q[k] === 0; }); }
   function localQueues() {
     // refused: rows the server turned down for good; they never leave any origin.
     var q = { sales: 0, prints: 0, other: 0, unknown: 0, refused: 0 };
@@ -96,7 +100,7 @@
     return q;
   }
   // Exposed for the deterministic queue safety property, no data projection.
-  window.KiwiOriginMove = { queues: queues, empty: empty };
+  window.KiwiOriginMove = { queues: queues, movable: movable };
   var panel, status, button, busy = false, serverPrints = 0, failure = false;
   var owner = /^\/dashboard(?:\.html)?$/.test(location.pathname);
   function terminalId() { try { return localStorage.getItem('kiwi:caisse:terminal-id:v1') || ''; } catch (_) { return ''; } }
@@ -106,8 +110,9 @@
     if (failure) return c.error;
     if (q.unknown) return c.unknown;
     var p = Math.max(q.prints, serverPrints);
-    var note = q.refused ? ' ' + c.refused.replace('{r}', q.refused) : '';
-    if (q.sales || p || q.other) return c.waiting.replace('{s}', q.sales).replace('{p}', p).replace('{o}', q.other) + note;
+    var left = (q.other || 0) + (q.refused || 0);
+    var note = left ? ' ' + c.stays.replace('{r}', left) : '';
+    if (q.sales || p) return c.waiting.replace('{s}', q.sales).replace('{p}', p).replace('{o}', q.other) + note;
     return (owner ? c.owner : c.ready) + note;
   }
   async function refresh() {
@@ -123,7 +128,7 @@
     panel.querySelector('strong').textContent = copy().title;
     status.textContent = text(q);
     button.textContent = receiving ? copy().retry : owner ? copy().login : copy().move;
-    button.disabled = busy || !empty(q) || serverPrints > 0;
+    button.disabled = busy || !movable(q) || serverPrints > 0;
     return q;
   }
   async function post(body) {
@@ -150,7 +155,7 @@
     panel.classList.add('origin-moving');
     try {
       var q = await queues();
-      if (!empty(q)) return;
+      if (!movable(q)) return;
       if (receiving) {
         var previous = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         if (!window.KiwiPairingCommit) throw new Error('pairing-unavailable');
@@ -168,7 +173,7 @@
       } else {
         var result = await post({ action: 'issue', role: role(), terminalId: terminalId(), queues: q, preferences: preferences() });
         // A second tab may have enqueued work while the server answered.
-        if (!empty(await queues())) return;
+        if (!movable(await queues())) return;
         location.assign('https://kiwi-os.com/origin-move#kiwi-move=' + result.token);
       }
     } catch (_) { failure = !serverPrints; }
@@ -184,7 +189,11 @@
     status = document.createElement('p'); status.setAttribute('role', 'status');
     button = document.createElement('button'); button.type = 'button'; button.disabled = true; button.textContent = copy().move;
     button.addEventListener('click', move);
-    panel.append(icon, title, status, button); document.body.appendChild(panel);
+    var hide = document.createElement('button'); hide.type = 'button'; hide.className = 'origin-move-hide';
+    hide.setAttribute('aria-label', copy().hide); hide.textContent = '\u00D7';
+    // The shop keeps selling while the move waits. Reloading brings the notice back.
+    hide.addEventListener('click', function () { if (panel) panel.hidden = true; panel = null; });
+    panel.append(icon, title, status, hide, button); document.body.appendChild(panel);
     if (window.KiwiCaisseLang) window.KiwiCaisseLang.subscribe(refresh);
     window.addEventListener('kiwi:langchange', refresh);
     refresh();
@@ -194,7 +203,7 @@
   var firstCheck = queues();
   function ready() {
     firstCheck.then(async function (q) {
-      if (old && !initialState && empty(q) && empty(await queues())) { location.replace('https://kiwi-os.com' + location.pathname + location.search); return; }
+      if (old && !initialState && movable(q) && movable(await queues())) { location.replace('https://kiwi-os.com' + location.pathname + location.search); return; }
       mount();
     });
   }

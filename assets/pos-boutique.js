@@ -1,8 +1,8 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=47';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=47';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=47';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=5';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=52';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=52';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=52';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=8';
 
   'use strict';
 
@@ -2961,4 +2961,4 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     onShow,
   });
 
-export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, availableStock, avoirExpired, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };
+export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };
