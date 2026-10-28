@@ -1119,7 +1119,7 @@
   "readyOriginal": "    document.addEventListener('DOMContentLoaded', () => {",
   "readyReplacement": "    onReady(() => {",
   "shellScripts": {
-    "dashboard.html": 122,
+    "dashboard.html": 123,
     "kiwi-caisse.html": 89,
     "kiwi-serveur.html": 26,
     "booking.html": 5,

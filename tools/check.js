@@ -808,6 +808,7 @@ for (const test of [
   'team-offshift-server-test.mjs',
   'pressing-split-test.mjs',
   'pressing-boundary-test.mjs',
+  'pressing-numbering-test.mjs',
   'pressing-workspace-test.js',
   'pressing-auto-ready-test.mjs',
   /* Pressing et hôtel : un bouton d'espèces règle le montant reçu, il ne l'ajoute plus au dû. */

@@ -36,7 +36,8 @@ for (const [provider, consumer] of [['assets/team/merge.js', 'assets/team.js'], 
 assert.equal(urls.length, 8, 'only optional drawer owners leave the eager shell');
 assert.equal(new Set(urls).size, urls.length);
 for (const surface of ['menu', 'salle']) { const at = (name) => urls.findIndex((u) => u.split('?')[0] === name); assert.ok(at('assets/ai-image-import.js') >= 0 && at('assets/ai-image-import.js') < at('assets/' + surface + '-scan.js'), 'shared import precedes consumers'); }
-assert.ok([...read('dashboard.html').matchAll(/<script\b[^>]*src=/g)].length <= 122);
+// 123 since note 13 (29 Oct): loyalty-product-links.js and pressing-numbering.js left features.js and pressing-ops.js.
+assert.ok([...read('dashboard.html').matchAll(/<script\b[^>]*src=/g)].length <= 123, 'dashboard shell script ceiling');
 const asset = url => url.split('?')[0];
 assert.deepEqual(before.filter(u => urls.includes(u)), urls, 'moved dependencies retain their proven relative order and versions');
 assert.deepEqual(shell.map(asset).filter(u => before.map(asset).includes(u)), before.filter(u => !urls.includes(u)).map(asset), 'remaining startup order is unchanged across restamps');
