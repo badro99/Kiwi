@@ -46,8 +46,10 @@ ghost-mannequin clothing, objects at a three-quarter angle.
    Bump `PHOTOS_V` there when a photo is redrawn.
 
 Colours: the pieces listed in `COLOUR_KEYS` also have one photo per colour
-in `COLOURS` (`<key>-<colour>.webp`, sheets `c1`…`c17`, the same item with
-only its colour changed). The colour comes from the ticket line, then a word
+in `COLOURS` (`<key>-<colour>.webp`, sheets `c1`…`c17` for everyday clothes
+and `mc1`…`mc9` for djellabas, gandoura, abaya, hijab, burkini, caftan,
+babouches and jabador, the same item with only its colour changed). Sheets
+`m1`…`m3` hold the modest-wear, souk and hammam pieces. The colour comes from the ticket line, then a word
 of the name, then the product's colours. To give another piece its colours,
 add a sheet of nine `<key>-<colour>` cells and add the key to `COLOUR_KEYS`.
 

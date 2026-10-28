@@ -91,6 +91,11 @@ const colour = {
   /* the catalogue's default grey, and names in other words */
   'jean|gris': 'jean', 'Sweat capuche kahla|': 'sweat-noir', 'Pull bordeaux|': 'pull-rouge', 'Polo navy|': 'polo-bleu',
   'Manteau camel|': 'manteau-marron', 'Bougie noire|noir': 'bougie',
+  /* the Moroccan pieces sold in many colours */
+  'Djellaba homme|bleu': 'djellaba-bleu', 'Jellaba femme brodée rose|': 'djellaba_femme-rose', 'Abaya noire|': 'abaya-noir',
+  'Hijab jersey|beige': 'hijab-beige', 'Burkini|marine': 'burkini-bleu', 'Caftan vert émeraude|': 'caftan-vert',
+  'Babouche cuir homme|marron': 'babouche-marron', 'Gandoura blanche|': 'gandoura-blanc', 'Jabador bordeaux|': 'jabador-rouge',
+  'Caftan velours|rouge': 'caftan_velours', 'Savon noir|': 'savon_noir', 'Djellaba|jaune': 'djellaba',
 };
 for (const [spec, file] of Object.entries(colour)) {
   const [name, cs] = spec.split('|');
@@ -112,9 +117,18 @@ const sample = {
   'Chemise en jean': 'chemise', 'Veste en jean': 'veste', 'Short en jean': 'short', 'Combinaison pantalon': 'combinaison',
   'Doudoune légère': 'doudoune', 'Sac à main cuir': 'sac_main', 'Sac à dos toile': 'sac_dos', 'Porte-monnaie cuir': 'portefeuille',
   'Boucles d\'oreilles dorées': 'boucles', 'Lunettes de soleil': 'lunettes', 'Eau de parfum 100 ml': 'parfum',
-  'Hijab jersey': 'foulard', 'Chaussettes coton x3': 'chaussettes', 'Escarpins vernis': 'chaussures',
+  'Hijab jersey': 'hijab', 'Chaussettes coton x3': 'chaussettes', 'Escarpins vernis': 'chaussures',
   'Carte cadeau 500': 'tag', 'Bougie parfumée ambre': 'bougie', 'Coffret cadeau': 'coffret', 'Plaid laine': 'plaid',
-  'Assiettes plates x6': 'assiette', 'Verres à thé': 'verre', 'Plateau laiton': 'plateau', 'Miroir rond': 'miroir',
+  'Assiettes plates x6': 'assiette', 'Verres à thé': 'verre_the', 'Verre à eau': 'verre', 'Plateau laiton': 'plateau', 'Miroir rond': 'miroir',
+  /* the souk and modest wear (owner, 28 October 2026: « djellabas, burkinis ») */
+  'Jellaba femme brodée': 'djellaba_femme', 'Djellaba enfant laine': 'djellaba_enfant', 'Caftan fille': 'caftan_enfant',
+  'Abaya Dubai': 'abaya', 'Voile mousseline': 'hijab', 'Burkini 3 pièces': 'burkini', 'Maillot de bain une pièce': 'maillot',
+  'Tunique longue lin': 'tunique', 'Seroual coton': 'sarwal', 'Kimono long': 'kimono', 'Gilet brodé homme': 'gilet_brode',
+  'Gilet laine': 'pull', 'Chèche touareg': 'chech', 'Melhfa sahraouie': 'melhfa', 'Fibule berbère argent': 'khlala',
+  'Kessa hammam': 'kessa', 'Gant de gommage': 'kessa', 'Ghassoul 250 g': 'ghassoul', 'Savon beldi eucalyptus': 'savon_noir',
+  'Henné naturel': 'henne', 'Huile d\'argan bio': 'argan', 'Bkhour oud': 'bkhour', 'Tapis Beni Ourain': 'tapis',
+  'Zarbia 2x3': 'tapis', 'Pouf cuir': 'pouf', 'Lanterne cuivre': 'lanterne', 'Théière argentée': 'theiere',
+  'Berrad 1 L': 'theiere', 'Plat à tajine': 'tajine', 'Panier doum': 'panier', 'Cabas plage': 'cabas',
   'Coussin berbère': 'coussin', 'Bougeoir laiton': 'bougeoir', 'Costume trois pièces': 'costume', 'قفطان مغربي': 'caftan',
 };
 for (const [name, key] of Object.entries(sample)) eq(keyForName(name), key, `« ${name} » → ${key}`);

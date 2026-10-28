@@ -31,18 +31,33 @@ const WORDS = {
   takchita: 'takchita|takshita|tekchita|تكشيطة',
   takchita_mariage: 'takchita mariage|tenue mariage|tenue mariee|robe mariee',
   djellaba: 'djellaba|jellaba|jalaba|djelaba|جلابة',
-  gandoura: 'gandoura|gandora|qamis|kamis|abaya',
+  gandoura: 'gandoura|gandora|qamis|kamis',
   jabador: 'jabador|jabadour',
   selham: 'selham|burnous|bournous',
   tarbouche: 'tarbouche|tarbouch|fez|chechia',
   mdamma: 'mdamma|mdama|ceinture caftan|ceinture doree',
-  foulard: 'foulard|hijab|voile|carre soie|bandana',
+  foulard: 'foulard|carre soie|bandana|sebniya|sabniya',
   chale: 'chale|etole|pashmina|shawl',
   broche: 'broche|brooch|epingle|bijou',
   babouche: 'babouche|belgha|balgha|bolgha|slipper|mule|بلغة',
   babouche_brodee: 'babouche brodee|babouche femme',
   cherbil: 'cherbil|charbil|chrabel',
   babouche_enfant: 'babouche enfant|babouche bebe',
+  djellaba_femme: 'djellaba femme|jellaba femme|djellaba brodee|jellaba brodee|jellaba sfifa|djellaba sfifa',
+  djellaba_enfant: 'djellaba enfant|jellaba enfant|djellaba bebe|jellaba bebe|djellaba garcon|jellaba garcon',
+  caftan_enfant: 'caftan enfant|caftan fille|caftan bebe|kaftan enfant',
+  gilet_brode: 'gilet brode|gilet traditionnel|gilet marocain|bdaia|bedaia',
+  sarwal: 'sarwal|seroual|sarouel|serwal|kandrissi|qandrissi',
+  chech: 'cheche|chech|chache|cheich|turban',
+  melhfa: 'melhfa|mlahfa|malhfa|haik',
+  khlala: 'khlala|fibule|tizerzai|bijou berbere',
+  /* ── Mode pudique, bain ── */
+  abaya: 'abaya|abaya femme|عباية',
+  hijab: 'hijab|voile|khimar|turban femme|حجاب',
+  burkini: 'burkini|burqini|maillot couvrant|maillot integral|maillot islamique|بوركيني',
+  tunique: 'tunique|tunic',
+  kimono: 'kimono',
+  maillot: 'maillot bain|swimsuit|bikini|monokini',
   /* ── Chaussures, couvre-chef ── */
   chaussures: 'chaussure|soulier|mocassin|derby|richelieu|escarpin|ballerine|talon|shoe|loafer|heel',
   basket: 'basket|sneaker|tennis|running|trainer',
@@ -54,7 +69,7 @@ const WORDS = {
   /* ── Vêtements ── */
   tshirt: 't shirt|tee shirt|tshirt|tee|top|haut|body',
   polo: 'polo',
-  chemise: 'chemise|chemisier|blouse|tunique|shirt',
+  chemise: 'chemise|chemisier|blouse|shirt',
   debardeur: 'debardeur|marcel|caraco|tank',
   pull: 'pull|pullover|sweater|tricot|gilet|cardigan|maille',
   sweat: 'sweat|sweat shirt|sweatshirt|hoodie|capuche|capuchon',
@@ -70,7 +85,7 @@ const WORDS = {
   survetement: 'survetement|survette|survet|jogging|tracksuit|ensemble jogging',
   robe: 'robe|dress|gown',
   jupe: 'jupe|skirt',
-  pantalon: 'pantalon|chino|jogger|legging|sarouel|cargo|trouser|pant',
+  pantalon: 'pantalon|chino|jogger|legging|cargo|trouser|pant',
   jean: 'jean|denim',
   short: 'short|bermuda',
   combinaison: 'combinaison|combi|salopette|jumpsuit',
@@ -81,7 +96,7 @@ const WORDS = {
   ceinture: 'ceinture|belt',
   sac_main: 'sac main|handbag',
   sac: 'sac|besace|bandouliere|bag',
-  cabas: 'cabas|panier|tote|shopping',
+  cabas: 'cabas|tote|shopping',
   pochette: 'pochette|clutch|minaudiere|trousse',
   sac_dos: 'sac dos|backpack|cartable',
   portefeuille: 'portefeuille|porte monnaie|porte carte|wallet|cardholder',
@@ -116,6 +131,20 @@ const WORDS = {
   vase: 'vase|soliflore',
   coussin: 'coussin|cushion',
   plaid: 'plaid|jete|throw|couverture',
+  /* ── Souk : hammam, beauté, maison marocaine ── */
+  kessa: 'kessa|kassa|gant hammam|gant gommage',
+  ghassoul: 'ghassoul|rhassoul|ghasoul',
+  savon_noir: 'savon noir|savon beldi|sabon beldi|savon',
+  henne: 'henne|henna|hena|حناء',
+  argan: 'argan|huile argan',
+  bkhour: 'bkhour|bakhour|bkhor|encens|encensoir|mbekhra',
+  tapis: 'tapis|zarbia|kilim|boucherouite|beni ourain|rug',
+  pouf: 'pouf|pouffe',
+  lanterne: 'lanterne|fanous|lampe marocaine|lantern',
+  theiere: 'theiere|berrad|brrad|teapot',
+  tajine: 'tajine|tagine|tajin|plat tajine',
+  verre_the: 'verre the|verre beldi|kass|tea glass',
+  panier: 'panier|doum|couffin|corbeille',
   /* ── Divers ── */
   tag: 'carte cadeau|bon achat|etiquette|gift card',
   cintre: 'cintre|hanger',
@@ -123,7 +152,7 @@ const WORDS = {
 
 export const PHOTO_KEYS = Object.keys(WORDS);
 const KNOWN = new Set(PHOTO_KEYS);
-const STOP = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'a', 'au', 'aux', 'd', 'l', 'en', 'et', 'pour', 'avec', 'sans', 'the', 'of', 'for', 'and', 'with']);
+const STOP = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'a', 'au', 'aux', 'd', 'l', 'en', 'et', 'pour', 'avec', 'sans', 'of', 'for', 'and', 'with']);
 
 /* Minuscules, sans accents ni ponctuation, pluriel simple retiré : « Boucles
    d'oreilles » et « boucle oreille » donnent les mêmes mots. */
@@ -171,7 +200,8 @@ export function photoKey(p, fallback = DEFAULT_KEY) {
    de base reste. */
 export const COLOURS = ['noir', 'blanc', 'gris', 'bleu', 'rouge', 'vert', 'beige', 'marron', 'rose'];
 export const COLOUR_KEYS = ['tshirt', 'polo', 'chemise', 'sweat', 'pull', 'pantalon', 'jean', 'short', 'veste', 'manteau',
-  'trench', 'doudoune', 'gilet_doudoune', 'survetement', 'costume', 'casquette', 'ensemble'];
+  'trench', 'doudoune', 'gilet_doudoune', 'survetement', 'costume', 'casquette', 'ensemble',
+  'djellaba', 'djellaba_femme', 'gandoura', 'abaya', 'hijab', 'burkini', 'caftan', 'babouche', 'jabador'];
 const IN_COLOUR = new Set(COLOUR_KEYS);
 const COLOUR_WORDS = {
   noir: 'noir|noire|black|nero|negro|k7al|kahla|كحل|أسود',
