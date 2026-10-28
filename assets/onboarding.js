@@ -731,7 +731,6 @@
     opts = opts || {};
     if (opened) return;
     opened = true;
-    if (window.KiwiDashOnboarding && window.KiwiDashOnboarding.open(KIT)) return;
     if (typeof opts.startStep === 'number') S.step = opts.startStep;
     if (!root) build();
     try { if (window.__kiwiLock && window.__kiwiLock.hide) window.__kiwiLock.hide(); } catch (_) {}

@@ -39,7 +39,7 @@
     "assets/tickets.js": 0,
     "assets/pos-pharmacie.js": 13,
     "assets/pages-pro-boutique.js": 16,
-    "assets/team-hours.js": 6,
+    "assets/team-hours.js": 5,
     "assets/day-report-dash.js": 16,
     "assets/caisse-floor.js": 7,
     "assets/pos-coiffure.js": 12,
@@ -103,6 +103,6 @@
     "assets/pos-boutique/inventory.js": 7,
     "assets/pos-boutique/checkout.js": 14,
     "assets/booking.js": 0,
-    "assets/onboarding.js": 10
+    "assets/onboarding.js": 9
   }
 }

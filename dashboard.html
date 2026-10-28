@@ -79,7 +79,7 @@
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
 <link rel="stylesheet" href="assets/dashboard-shell.css?v=7" />
-<link rel="stylesheet" href="assets/mobile.css?v=12" />
+<link rel="stylesheet" href="assets/mobile.css?v=13" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />
 <!-- Design 2026 · Liquid Glass preview · inert unless body.design-2026 (1111-gated, reversible) -->
@@ -322,7 +322,7 @@
          language switches. -->
     <div class="upsell" data-upsell></div>
 
-    <div class="merchant" role="button" tabindex="0" data-action="account-profile" aria-label="Mon profil">
+    <div class="merchant" role="button" tabindex="0" data-action="account-profile" title="Mon profil" data-i18n-attr="title:dash.profile.open">
       <div class="avatar" aria-hidden="true">·</div>
       <div class="m-info">
         <div class="n" aria-live="polite">·</div>
@@ -1138,11 +1138,11 @@
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=11" defer></script>
 <script src="assets/onboarding-data.js?v=8" defer></script>
-<script src="assets/onboarding.js?v=2111" defer></script>
+<script src="assets/onboarding.js?v=2112" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
-<script src="assets/caisse-link.js?v=21" defer></script>
+<script src="assets/caisse-link.js?v=22" defer></script>
 <!-- Below: user-triggered surfaces · not needed for first paint. -->
 <script src="assets/ai-telemetry.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-data.js?v=7" defer fetchpriority="low"></script>
@@ -1237,7 +1237,7 @@
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 
 
-<script src="assets/clients-directory.js?v=29" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=30" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=16" defer fetchpriority="low"></script>
 <script src="assets/pages/dashboard-startup.js?v=59" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au

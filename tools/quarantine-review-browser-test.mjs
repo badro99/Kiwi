@@ -28,13 +28,11 @@ const words = {
 };
 const OWNER = String(randomInt(1000, 10000));
 async function unlock(page) {
-  await page.waitForFunction(() => { const p = document.querySelector('[data-kiwi-lock] k-pin-pad'); return p && p.shadowRoot && p.shadowRoot.querySelector('[data-key="1"]'); }, { timeout: 30000 });
-  for (const d of OWNER) {
-    const key = await page.evaluateHandle((x) => document.querySelector('[data-kiwi-lock] k-pin-pad').shadowRoot.querySelector('[data-key="' + x + '"]'), d);
-    const box = await key.asElement().boundingBox();
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    await sleep(40);
-  }
+  // The shipped owner lock: four cells over one numeric field, typed on the keyboard.
+  await page.waitForSelector('[data-kiwi-lock] [data-kiwi-pin-input]', { timeout: 30000 });
+  await sleep(600);
+  await page.focus('[data-kiwi-lock] [data-kiwi-pin-input]');
+  for (const d of OWNER) { await page.keyboard.press(d); await sleep(60); }
   await page.waitForFunction(() => { const l = document.querySelector('[data-kiwi-lock]'); return !l || l.classList.contains('is-unlocking') || getComputedStyle(l).display === 'none' || l.hidden; }, { timeout: 15000 });
   await sleep(2600);
 }
@@ -86,11 +84,8 @@ async function scenario(t, locale, viewport) {
   // The one-time toast sits over the bell for a few seconds; close it as the merchant would.
   const toastClose = await page.$('.kiwi-toast .tx');
   if (toastClose) { await toastClose.click().catch(() => {}); await page.waitForFunction(() => !document.querySelector('.kiwi-toast'), { timeout: 10000 }).catch(() => {}); }
-  // A phone draws its own navigation bar with a bell that mirrors the count.
-  if (viewport === 'phone') {
-    await page.waitForFunction(() => /2/.test(document.querySelector('[data-k="bell"]')?.textContent || ''), { timeout: 15000 });
-    await clickVisible(page, '[data-k="bell"]');
-  } else await clickVisible(page, BELL);
+  // A phone shows its own header bell (data-mobile-notifications); BELL names both.
+  await clickVisible(page, BELL);
   await page.waitForSelector('#kiwi-quarantine-alert [data-action="quarantine-open"]', { visible: true, timeout: 15000 });
   await sleep(500); // the bell drawer slides in (a bottom sheet on phones)
   const review = await page.$('#kiwi-quarantine-alert [data-action="quarantine-open"]');

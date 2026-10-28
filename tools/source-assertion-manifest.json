@@ -3,6 +3,7 @@
   "structure": {
     "app-release-test.mjs": "native release configuration (plist, project)",
     "asset-stamp-coverage-test.mjs": "every shipped asset carries a stamp",
+    "boutique-2027-test.mjs": "the boutique keeps its own views under the 2027 skin; one flag check, in the business file",
     "bridge-win7-test.mjs": "printer bridge build targets Windows 7",
     "config-pin-projection-test.mjs": "ban: no code list may reach the browser",
     "coverage-manifest-test.mjs": "coverage declarations ratchet",

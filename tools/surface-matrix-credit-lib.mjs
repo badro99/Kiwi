@@ -16,6 +16,38 @@ export async function click(page, selector) {
     await page.locator(selector).setTimeout(15000).click();
   } catch (e) { e.message = `${selector} · ${e.message}`; throw e; }
 }
+/* The boutique's opening float. The shipped till offers chips; under the 2027
+   skin the chips stay hidden and « Ouvrir la caisse » opens the kit's count
+   sheet, where the amount is typed on its keypad (as on the restaurant till). */
+export async function openFloat(page, amount = 300) {
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  await page.waitForSelector('#bqci-btn', { visible: true, timeout: 30000 });
+  await pause(700);   // the screen fades in
+  const chip = `#bqci-chips [data-float="${amount}"]`;
+  const chips = await page.$eval(chip, (e) => e.getClientRects().length > 0).catch(() => false);
+  if (chips) {
+    for (let k = 0; k < 20; k++) {
+      await page.click(chip).catch(() => {});
+      if (await page.evaluate(() => !document.getElementById('bqci-btn').disabled)) break;
+      await pause(300);
+    }
+    await click(page, '#bqci-btn:not([disabled])');
+  } else {
+    await click(page, '#bqci-btn:not([disabled])');
+    await page.waitForFunction(() => { const c = document.querySelector('k-sheet k-cash-count'); return c && c.shadowRoot && c.shadowRoot.querySelector('[data-kp-key="0"]'); }, { timeout: 15000 });
+    const tap = (q) => page.evaluate((sel) => {
+      const el = document.querySelector('k-sheet k-cash-count').shadowRoot.querySelector(sel);
+      if (!el) return false;
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      el.click();
+      return true;
+    }, q);
+    for (const k of String(amount)) { assert.ok(await tap(`[data-kp-key="${k}"]`), `the count sheet has the key ${k}`); await pause(80); }
+    assert.ok(await tap('[data-w="commit"]'), 'the count sheet has its commit button');
+  }
+  await page.waitForSelector('#bq-clockin', { hidden: true, timeout: 20000 });
+}
 export async function view(page, name) {
   const peek = await page.$('#pos-boutique.vx-ticket-open .vx-peek');
   if (peek && await peek.isVisible()) await click(page, '#pos-boutique .vx-peek');

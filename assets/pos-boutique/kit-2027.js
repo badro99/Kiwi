@@ -71,7 +71,7 @@ function bqKitRail(root, $, icons, on) {
   plus.id = 'bq-plus';
   plus.setAttribute('aria-expanded', 'false');
   plus.setAttribute('aria-controls', 'bq-more');
-  plus.innerHTML = '<i data-lucide="ellipsis"></i><span>Plus</span>';
+  plus.innerHTML = '<i data-icon="more_horiz"></i><span>Plus</span>';
   nav.appendChild(plus);
   nav.appendChild(more);
 

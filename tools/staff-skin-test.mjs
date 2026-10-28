@@ -104,12 +104,11 @@ for (const [file, flag] of [['kiwi-caisse.html', 'till'], ['kiwi-cuisine.html', 
     `${file} turns the kit on for the store's mark, as for ?skin=2027`);
 }
 
-console.log('The dashboard keeps its gate, without the store\'s mark');
+console.log('The dashboard has no 2027 design (it left on 27 Oct 2026)');
 {
   const src = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
   check(!/getAttribute\('data-store-skin'\)/.test(src), 'dashboard.html does not read the store mark, so no switch can move it');
-  check(src.includes(`on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:dashboard') === '1'`),
-    'and keeps ?skin=2027 and its own flag, so the 2027 dashboard stays testable by hand');
+  check(!src.includes('kiwiSkin2027:dashboard') && !/setAttribute\('data-skin-2027'/.test(src), 'and loads no kit: no flag, no 2027 head loader');
 }
 
 console.log(`✓ staff-skin-test · ${n} checks`);

@@ -30,9 +30,11 @@ console.log('skin-cloak-test');
 const LOADER = /setAttribute\('data-skin-2027', '[a-z]+'\)/;
 const pages = fs.readdirSync(root).filter((f) => f.endsWith('.html') && !/ \d+\.html$/.test(f))
   .filter((f) => LOADER.test(read(f)));
-for (const f of ['OrderPro.html', 'dashboard.html', 'kiwi-caisse.html', 'kiwi-cuisine.html', 'kiwi-serveur.html', 'printer.html', 'reset.html']) {
+for (const f of ['OrderPro.html', 'kiwi-caisse.html', 'kiwi-cuisine.html', 'kiwi-serveur.html', 'printer.html', 'reset.html']) {
   check(pages.includes(f), `${f} has a 2027 head loader`);
 }
+/* The 2027 design left the dashboard (owner, 27 Oct 2026): it loads no kit. */
+check(!pages.includes('dashboard.html'), 'dashboard.html has no 2027 head loader');
 for (const f of pages) {
   const html = read(f);
   const at = html.search(LOADER);

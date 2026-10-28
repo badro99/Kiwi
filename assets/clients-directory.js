@@ -366,8 +366,8 @@
           '<label class="cd-field">' + ico('search') + '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '" aria-label="' + esc(T.search) + '"></label>' +
           '<button data-activation=money type="button" class="cd-exp" id="cd-exp" title="' + esc(T.export) + '">' + ico('download') + '<span>' + T.export + '</span></button>' +
           '<button type="button" class="cd-exp" id="cd-loyalty" data-feature="loyalty" title="' + esc(T.program) + '">' + ico('redeem') + '<span>' + T.loyalty + '</span></button>' +
-          (Kiwi.handlers['customer-retention'] ? '<button type="button" class="cd-exp" id="cd-retention" data-feature="crm">' + ico('group') + '<span>' + esc(T.retention) + '</span></button>' : '') +
-          (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
+          (Kiwi.handlers['customer-retention'] ? '<button type="button" class="cd-exp" id="cd-retention" data-feature="crm" aria-label="' + esc(T.retention) + '">' + ico('group') + '<span>' + esc(T.retention) + '</span></button>' : '') +
+          (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign" aria-label="' + esc(T.campaign) + '">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
           '<button type="button" class="cd-exp cd-new" id="cd-new">' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button>' +
         '</div>' +
         '<div class="cd-segs" id="cd-segs" data-lens-demo role="group" aria-label="' + esc(T.th.seg) + '">' + segChips() + '</div>' +

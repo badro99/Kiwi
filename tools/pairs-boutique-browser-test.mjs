@@ -26,6 +26,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as catalogApi from '../functions/api/catalog.js';
 import * as pairsApi from '../functions/api/pairs.js';
+import { openFloat } from './surface-matrix-credit-lib.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -139,14 +140,9 @@ async function openTill(lang, skin2027 = false) {
   // coverage: surface=caisse-entry locale=ar viewport=desktop
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.__kiwiCaisseBootedAsDemo === false, { timeout: 20000 });
-  // La boutique a son propre écran d'ouverture (pos-boutique.js, #bq-clockin).
-  await page.waitForSelector('#bqci-chips .ci-float-chip[data-float="300"]', { visible: true, timeout: 30000 });
-  for (let k = 0; k < 20; k++) {
-    await sleep(600); // l'écran d'ouverture arrive en fondu
-    await page.click('#bqci-chips .ci-float-chip[data-float="300"]').catch(() => {});
-    if (await page.evaluate(() => !document.getElementById('bqci-btn').disabled)) break;
-  }
-  await page.click('#bqci-btn');
+  // La boutique a son propre écran d'ouverture (pos-boutique.js, #bq-clockin) :
+  // des pastilles sur la caisse livrée, la feuille de comptage du kit en 2027.
+  await openFloat(page);
   await page.waitForSelector(`[data-bq-item="${ID.foulard}"]`, { visible: true, timeout: 20000 });
   await page.waitForFunction(() => window.KiwiPairs && Object.keys(KiwiPairs._state().pairs || {}).length > 0, { timeout: 15000 });
   return { ctx, page, errors };

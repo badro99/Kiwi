@@ -174,6 +174,8 @@ async function worker() {
     await h.S.run(id, async (t) => {
       const { page } = await open(t, c.surface, c.skin, c.theme, c.locale, c.size);
       t.step('measure the painted theme, direction and control styles');
+      // The last real click leaves the cursor over whatever slid under it; park it so no :hover is measured.
+      await page.mouse.move(0, 0);
       const m = await page.evaluate(measure);
       const shades = m.shades.filter((x) => x != null);
       const mean = shades.reduce((a, x) => a + x, 0) / Math.max(1, shades.length);

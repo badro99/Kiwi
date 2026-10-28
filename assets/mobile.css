@@ -212,6 +212,8 @@
     z-index: 2;
   }
   .kw-tab-badge[hidden] { display: none; }
+  /* Vexel light turns --mint into atlas green: the dark ink would vanish on it, so the count is set in paper there. */
+  :is(html[data-theme="light"][data-vexel-mode="light"], body[data-vexel-mode="light"]:not([data-vexel-mode="dark"])) .kw-tab-badge { color: var(--paper, #F7F5F0); }
 
   /* ─────────────── HOME · PAGE HEAD + DATE RANGE ─────────────── */
   .page-head { margin-bottom: 24px; }
