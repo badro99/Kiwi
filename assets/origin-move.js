@@ -1,5 +1,11 @@
 /* Origin retirement. Loaded before boot modules can create Kiwi preferences.
- * Fail closed on storage errors; never delete or export the old origin's data. */
+ * Fail closed on storage errors; never delete or export the old origin's data.
+ * This pair is served unstamped behind a one-hour max-age, so a counter kept
+ * running the old copy for an hour after a deploy · refreshing could not help
+ * it. Every tag that loads them carries ?r=N: the URL changes, the cache misses,
+ * and the shop gets the fix on the next reload. Move N in all of them together
+ * when either file changes. Not ?v= · that marks a URL immutable for the
+ * service worker, and these two are not. */
 (function () {
   'use strict';
   var old = location.hostname === 'kiwi-maroc.pages.dev';
@@ -180,7 +186,7 @@
     finally { busy = false; panel.classList.remove('origin-moving'); await refresh(); }
   }
   function mount() {
-    var sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/assets/origin-move.css'; document.head.appendChild(sheet);
+    var sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/assets/origin-move.css?r=2'; document.head.appendChild(sheet);
     panel = document.createElement('aside'); panel.className = 'origin-move'; panel.setAttribute('aria-label', copy().title);
     // No icon font on these pages: the vendored Material path, drawn inline (open_in_new).
     var icon = document.createElement('span'); icon.className = 'origin-move-icon'; icon.setAttribute('aria-hidden', 'true');
