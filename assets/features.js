@@ -1198,6 +1198,21 @@
         </div>
       `
     });
+    /* The products the word names today, by id, so a later rename keeps them
+       earning (note 13, loyalty#0). The same word keeps its earlier links. */
+    const loyaltyLinkedIds = (word, prev) => {
+      const fold = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+      const want = fold(word), ids = new Set();
+      if (prev && fold(prev.item) === want && Array.isArray(prev.ids)) prev.ids.forEach((id) => id && ids.add(String(id)));
+      const items = [];
+      try { const M = window.KiwiMenuStore, vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue(); if (M && M.items) items.push(...(M.items(vid) || [])); } catch (_) {}
+      try {
+        const B = window.KiwiBoutiqueCatalog;
+        if (B && B.listProducts) { if (B.use && window.KiwiBoutiqueVenueKey) { const k = window.KiwiBoutiqueVenueKey(); if (k) B.use(k); } items.push(...(B.listProducts() || [])); }
+      } catch (_) {}
+      if (want) items.forEach((it) => { if (it && it.id && (' ' + fold(it.name) + ' ').includes(' ' + want + ' ')) ids.add(String(it.id)); });
+      return [...ids].slice(0, 200);
+    };
     // Read the full programme back out of the form (with sane fallbacks).
     const readCfg = () => {
       const read = (k) => { const el = m.el.querySelector(`[data-loy="${k}"]`); return el ? el.value.trim() : ''; };
@@ -1207,7 +1222,7 @@
         model: (picked && picked.value) || cfg.model,
         visit:   { target: num('visit.target', 10), reward: read('visit.reward') || '1 offert' },
         amount:  { perMad: num('amount.perMad', 1), threshold: num('amount.threshold', 100), reward: read('amount.reward') || '−10 %' },
-        product: { item: read('product.item') || 'Café', target: num('product.target', 10), reward: read('product.reward') || '1 offert' },
+        product: { item: read('product.item') || 'Café', target: num('product.target', 10), reward: read('product.reward') || '1 offert', ids: loyaltyLinkedIds(read('product.item') || 'Café', cfg.product) },
       };
     };
     const refreshPreview = () => { const el = m.el.querySelector('[data-loy-preview]'); if (el) el.textContent = lineFor(readCfg()); };

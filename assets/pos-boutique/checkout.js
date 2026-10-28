@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=189';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=90';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=90';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=191';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=92';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=92';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
@@ -295,7 +295,7 @@ const M = globalThis.KiwiMoney;
     // La fiche client liste les pièces rendues sous l'avoir (#105).
     av.lines = idxs.map((i) => {
       const ln = sale.lines[i];
-      return ln ? { name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: Number(quantities.get(i)) || 1 } : null;
+      return ln ? { name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: Number(quantities.get(i)) || 1, pid: ln.pid || '' } : null;
     }).filter(Boolean);
     persistAvoirs();
     recordReturn(sale, idxs, amount, motif, 'avoir', av.code, quantities);
@@ -305,7 +305,7 @@ const M = globalThis.KiwiMoney;
     const holder = saleClient(sale);
     if (holder && useKiwiCl() && window.KiwiClients && window.KiwiClients.recordRefund) {
       try { window.KiwiClients.recordRefund(holder.id, { amount, saleRef: sale.id, eventRef: av.code,
-        items: av.lines.map((l) => ({ name: l.name, qty: l.qty })) }); } catch (_) {}
+        items: av.lines.map((l) => ({ name: l.name, qty: l.qty, id: l.pid || '' })) }); } catch (_) {}
     } else if (holder && !useKiwiCl()) {
       holder.spent = Math.max(0, (Number(holder.spent) || 0) - amount);
     }

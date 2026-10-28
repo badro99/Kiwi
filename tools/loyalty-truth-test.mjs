@@ -111,6 +111,22 @@ console.log('\nCarte produit : un tampon par article choisi, pas par passage');
   check(Number(s.row().stamps) === 2, 'Arabic product return reverses the qualifying stamp');
 }
 
+// Note 13, loyalty#0: a product linked by id keeps earning after a rename, and a
+// new product carrying the word still earns. Server handler first.
+{
+  const s = store({ model: 'product', product: { item: 'Croissant', target: 10, ids: ['menu-12'] } });
+  let r = await s.post({ purchase: { clientId: 'c1', ref: 'id:1', amount: 36, saleRef: 'ID1',
+    items: [{ name: 'Viennoiserie du matin', id: 'menu-12', qty: 2, total: 24 }, { name: 'Croissant amande', id: 'menu-40', qty: 1, total: 12 }, { name: 'Pain au chocolat', id: 'menu-13', qty: 4, total: 40 }] } });
+  check(r.status === 200 && Number(s.row().stamps) === 3, 'a renamed linked croissant (by id) and a new « Croissant amande » (by word) earn 3; the pain au chocolat earns none');
+  r = await s.post({ purchase: { clientId: 'c1', ref: 'id:2', amount: 12, saleRef: 'ID2', items: [{ itemId: 'menu-12', name: 'Le classique', qty: 1, total: 12 }] } });
+  check(Number(s.row().stamps) === 4, 'the restaurant line shape (itemId) is read as the product id');
+  await s.post({ refund: { clientId: 'c1', ref: 'refund:id:1', amount: 24, saleRef: 'ID1', items: [{ name: 'Viennoiserie du matin', id: 'menu-12', qty: 2, total: 24 }] } });
+  check(Number(s.row().stamps) === 2, 'returning the renamed croissants takes their two stamps back');
+  const stored = JSON.parse(s.raw.prepare("SELECT items FROM client_purchase_events WHERE ref='id:1'").get()?.items || '[]');
+  check(stored[0] && stored[0].id === 'menu-12', 'the recorded line keeps its product id for later returns');
+  s.raw.close();
+}
+
 // Full handler path: punctuation, renamed catalogue labels, partial and replayed returns.
 for (const [product, sold, renamed] of [
   ['Café', '« CAFÉ » / crème', 'Expresso maison'],
@@ -223,6 +239,14 @@ console.log('\nCaisse : la même règle avant la réponse du serveur');
     check(clientStamps() === before, item + ': local full remainder reverses historical stamps after rename');
     KC.recordRefund(c.id, refund, MERCHANT);
     check(clientStamps() === before, item + ': local refund replay is idempotent');
+  }
+  {
+    KC.setConfig({ model: 'product', product: { item: 'Croissant', target: 10, ids: ['prod_7'] } }, MERCHANT);
+    const before = clientStamps();
+    KC.recordPurchase(c.id, { amount: 30, saleRef: 'ID-L', eventRef: 'ID-L', items: [{ name: 'Viennoiserie du matin', id: 'prod_7', qty: 2, total: 24 }, { name: 'Thé', id: 'prod_9', qty: 1, total: 6 }] }, MERCHANT);
+    check(clientStamps() === before + 2, 'the till counts a renamed linked product by its id, as the server does');
+    KC.recordRefund(c.id, { amount: 12, saleRef: 'ID-L', eventRef: 'ID-L-r', items: [{ name: 'Viennoiserie du matin', id: 'prod_7', qty: 1, total: 12 }] }, MERCHANT);
+    check(clientStamps() === before + 1, 'the till takes the renamed product\'s stamp back on return');
   }
   KC.setConfig({ model: 'amount', amount: { perMad: 1, threshold: 100 } }, MERCHANT);
   const before = Number(KC.get(c.id, MERCHANT).points) || 0;

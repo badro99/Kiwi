@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=90';
-import { openDrawerNoSale } from './pos-boutique/drawer.js?v=8';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=90';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=90';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=92';
+import { openDrawerNoSale } from './pos-boutique/drawer.js?v=10';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=92';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=92';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
 
@@ -1259,12 +1259,12 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
     const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-    const qualifyingQty = (cfg, items) => {
-      const want = foldName(cfg && cfg.product && cfg.product.item);
-      if (!want) return 0;
+    const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
+      const want = foldName(cfg && cfg.product && cfg.product.item), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
+      if (!want && !ids.length) return 0;
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
-        const name = ' ' + foldName(item && item.name) + ' ';
-        return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+        const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {
@@ -2037,7 +2037,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
             try { const res = window.KiwiClients.recordPurchase(c.id, {
               amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
-              items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
+              items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty, id: ln.pid || '' })),
             }); if (res && res.client && !res.replayed) pts = Math.max(0, (Number(res.client.points) || 0) - ptsBefore); } catch (_) {}
             // La récompense est portée : on retire le seuil (KiwiClients.redeem),
             // après recordPurchase pour que l'achat compte d'abord. Sans réservation,

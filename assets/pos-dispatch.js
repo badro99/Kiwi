@@ -55,7 +55,7 @@
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '78', module: true, label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '189', module: true, label: 'Boutique · Maison Mansour' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '191', module: true, label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '13', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '27', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '15', label: 'Fast-food · Snack Chamal' },
@@ -65,12 +65,12 @@
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '9', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '29', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '9', label: 'Pharmacie · Ibn Batouta' },
-    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '18', deps: [{ file: 'money-cents', rev: '4' }, { file: 'librairie-loyalty', rev: '8' }], label: 'Librairie · Al Boughaz' },
+    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '18', deps: [{ file: 'money-cents', rev: '4' }, { file: 'librairie-loyalty', rev: '10' }], label: 'Librairie · Al Boughaz' },
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '15', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '10', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '9', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '9', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '106', module: true, label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '107', module: true, label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */

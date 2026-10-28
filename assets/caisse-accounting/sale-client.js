@@ -72,7 +72,7 @@
         const res = window.KiwiClients.recordPurchase(cid, {
           amount: entry.amount, method: entry.method, saleRef: entry.ref,
           saleId: entry.id, eventRef: entry.id, createdAt: +entry.time,
-          items: (entry.lines || []).map(l => ({ name: l.name, qty: l.qty, total: l.total })),
+          items: (entry.lines || []).map(l => ({ name: l.name, qty: l.qty, total: l.total, id: l.itemId || '' })),
         });
         /* A reward given on this note burns the card now that the sale and
            its visit exist (assets/caisse-loyalty-reward.js). */

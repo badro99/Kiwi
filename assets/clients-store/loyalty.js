@@ -7,12 +7,12 @@
       Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
     const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-    const qualifyingQty = (cfg, items) => {
-      const want = foldName(cfg && cfg.product && cfg.product.item);
-      if (!want) return 0;
+    const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
+      const want = foldName(cfg && cfg.product && cfg.product.item), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
+      if (!want && !ids.length) return 0;
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
-        const name = ' ' + foldName(item && item.name) + ' ';
-        return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+        const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {
@@ -76,7 +76,7 @@
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
-        return { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) };
+        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); return row;
       }),
     };
     rec.history = [detail].concat(rec.history.filter(function (row) {
@@ -156,7 +156,7 @@
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
-        return { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) };
+        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); return row;
       }) };
     purchaseAdd(book, event);
     purchasePush(book, event);

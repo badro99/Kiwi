@@ -408,6 +408,7 @@ async function applyPurchase(env, merchant, raw, attempt = 0) {
   const saleRef = str(purchase.saleRef || purchase.sale_ref, 80);
   const items = JSON.stringify((Array.isArray(purchase.items) ? purchase.items : []).slice(0, 100).map((item) => ({
     name: str(item && item.name, 120), qty: Math.max(0, Math.min(100000, Math.round((Number(item && item.qty) || 0) * 1000) / 1000)), total: money(item && item.total, 1e9),
+    ...(item && (item.id || item.itemId || item.pid) ? { id: str(item.id || item.itemId || item.pid, 80) } : {}),
   })));
   if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
   await ensurePurchaseEvents(env);
@@ -517,6 +518,7 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
   const saleRef = str(refund.saleRef || refund.sale_ref, 80);
   const items = JSON.stringify((Array.isArray(refund.items) ? refund.items : []).slice(0, 100).map((item) => ({
     name: str(item && item.name, 120), qty: Math.max(0, Math.min(100000, Math.round((Number(item && item.qty) || 0) * 1000) / 1000)), total: money(item && item.total, 1e9),
+    ...(item && (item.id || item.itemId || item.pid) ? { id: str(item.id || item.itemId || item.pid, 80) } : {}),
   })));
   if (!clientId || !ref.startsWith('refund:') || !saleRef || !(amount > 0)) return json({ error: 'refund-fields-required' }, 400);
   await ensurePurchaseEvents(env);
