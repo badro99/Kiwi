@@ -26,7 +26,7 @@ const S = h.S;
 const merchant = 'matrix-real';
 const check = (yes, msg) => { assert.ok(yes, msg); console.log('  ✓ ' + msg); };
 /* Codes fabriqués pour cette suite, jamais de vrais codes, jamais affichés. */
-const member = (id, first, code) => ({ id, firstName: first, lastName: 'Test', function: 'Cashier', department: 'Caisse', venueSlug: merchant, pinCode: code, password: code });
+const member = (id, first, code) => ({ id, firstName: first, lastName: 'Test', email: id + '.test@example.test', function: 'Cashier', department: 'Caisse', venueSlug: merchant, pinCode: code, password: code });
 const ROSTER = [member('m1', 'Sara', '4821'), member('m2', 'Omar', '7390')];
 /* Code de propriétaire synthétique, éphémère, saisi sur le pavé, jamais affiché. */
 const OWNER = String(randomInt(1000, 10000));
@@ -41,6 +41,8 @@ async function unlock(page) {
   await sleep(2600);
 }
 
+/* Le dernier document d'équipe reçu par le serveur simulé : ce qui a VRAIMENT été enregistré. */
+let lastDoc = null;
 async function open(t) {
   let doc = { members: ROSTER.map((m) => ({ ...m })), removed: [], hours: {}, shifts: {}, planning: {}, locks: {} }, rev = 5;
   const routes = {
@@ -48,7 +50,7 @@ async function open(t) {
     'GET /api/config': { name: 'Matrix Boutique', type: 'boutique', plan: 'pro', planExplicit: true, features: {}, pins: [{ name: 'TEST KIWI', role: 'owner' }] },
     'POST /api/pin/verify': (req) => ({ status: JSON.parse(req.postData()).pin === OWNER ? 200 : 401, body: { ok: true, staff: { id: 'st_owner', name: 'TEST KIWI', role: 'owner' }, merchant } }),
     'GET /api/store': (req) => new URL(req.url()).searchParams.get('feature') === 'team' ? { body: { rev, data: doc } } : { body: { rev: 0, data: null } },
-    'POST /api/store': (req) => { try { const body = JSON.parse(req.postData() || '{}'); if (body.feature === 'team' && body.data) { doc = body.data; rev += 1; } } catch (_) {} return { body: { ok: true, rev } }; },
+    'POST /api/store': (req) => { try { const body = JSON.parse(req.postData() || '{}'); if (body.feature === 'team' && body.data) { doc = body.data; lastDoc = doc; rev += 1; } } catch (_) {} return { body: { ok: true, rev } }; },
     'POST /api/config': { ok: true, pins: [] },
   };
   const { ctx, page } = await realPage(h, 'fr', 'desktop', routes);
@@ -226,6 +228,56 @@ await S.run('fiche d\'un membre · Échap ferme une modification et rend le focu
   await sleep(200);
   const a = await active(page);
   check(a.tag !== 'body', `Échap ferme la fiche et le focus ne se perd pas (${a.action || a.tag})`);
+});
+
+await S.run('fiche d\'un membre · un droit de caisse retiré puis rendu au clavier seul, et enregistré', async (t) => {
+  const page = await open(t);
+  /* Choisir un poste dans la liste accessible, flèches et Entrée seulement. */
+  async function pickJob(job) {
+    await page.focus('.kt-ed-modal [data-f="function"] .kiwi-select-trigger');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.kiwi-select-option', { visible: true });
+    for (let i = 0; i < 40; i++) {
+      const at = await page.evaluate(() => (document.activeElement?.classList.contains('kiwi-select-option') ? document.activeElement.textContent.trim() : ''));
+      if (at === job) break;
+      await page.keyboard.press('ArrowDown');
+      await sleep(40);
+    }
+    await page.keyboard.press('Enter');
+    await sleep(250);
+    return page.$eval('.kt-ed-modal [name="function"]', (e) => e.value);
+  }
+  async function editSara() {
+    const opener = await page.$('[data-action="kt-edit-member"][data-arg="m1"]');
+    check(!!opener, 'la fiche de Sara s\'ouvre depuis son bouton');
+    await opener.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.kt-ed-modal [data-kt-form]', { visible: true, timeout: 10000 });
+    await sleep(300);
+  }
+  async function save() {
+    await tabTo(page, (x) => x.action === 'kt-submit-member');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => !document.querySelector('.kt-ed-modal [data-kt-form]'), { timeout: 8000 });
+    const local = await page.evaluate(() => { const m = Object.values(window.__kiwiTeamV2.byVenue || {}).flat().find((x) => x && x.id === 'm1'); return m && { function: m.function, department: m.department }; });
+    /* The roster is pushed after a short debounce: wait for the server copy to agree, up to 6 s. */
+    for (let i = 0; i < 30; i++) {
+      const m = (lastDoc?.members || []).find((x) => x.id === 'm1');
+      if (m && local && m.function === local.function) break;
+      await sleep(200);
+    }
+    return (lastDoc?.members || []).find((m) => m.id === 'm1');
+  }
+  for (const [job, department, till] of [['Vendeur conseil', 'Vente', false], ['Caissier', 'Caisse', true]]) {
+    t.step(`Sara passe ${job} au clavier`);
+    await editSara();
+    const picked = await pickJob(job);
+    check(picked === job, `le poste ${job} est atteint aux flèches et validé à Entrée`);
+    const saved = await save();
+    check(!!saved && saved.function === job && saved.department === department, `le serveur reçoit Sara en ${job}, ${department} (${saved && saved.function} / ${saved && saved.department})`);
+    const opens = await page.evaluate((f) => window.KiwiRoles.opensTill(f), saved && saved.function);
+    check(opens === till, `Sara ${till ? 'ouvre de nouveau' : 'n\'ouvre plus'} la caisse après l'enregistrement`);
+  }
 });
 
 await h.close();
