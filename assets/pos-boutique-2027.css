@@ -405,13 +405,24 @@ html[data-skin-2027="till"] #pos-boutique .bq-tk-meta { padding: 12px 18px 14px;
    son écouteur, son modal et sa logique. Le pied livré et sa pastille verte
    s'effacent au profit des <k-button> du kit, pour que les couleurs soient
    CELLES du restaurant et non une imitation. */
-html[data-skin-2027="till"] #pos-boutique .bq-tk-head,
 html[data-skin-2027="till"] #pos-boutique #bq-tk-client,
 html[data-skin-2027="till"] #pos-boutique .bq-tk-empty-ic,
 html[data-skin-2027="till"] #pos-boutique .bq-tk-tot .pcs { display: none; }
 /* .bq-tk-meta ne porte plus que la récompense fidélité : sans elle, pas de
    bande vide au-dessus des lignes. */
 html[data-skin-2027="till"] #pos-boutique .bq-tk-meta:not(:has(> :not(#bq-tk-client))) { display: none; }
+/* L'en-tête perd son TEXTE, pas sa rangée. « Ticket · n° · par X » s'en va,
+   mais elle porte aussi deux boutons qu'on ne peut pas perdre : « Vider »,
+   et surtout « Réessayer » — le seul chemin pour rattraper un numéro de
+   ticket non attribué. Les éteindre laissait la caissière devant
+   « numéro indisponible » sans recours. La rangée ne disparaît donc que
+   lorsqu'elle ne porte plus rien d'actionnable. (Rattrapé par
+   skin-matrix-browser-test : « gone button#bq-tk-reset ».) */
+html[data-skin-2027="till"] #pos-boutique .bq-tk-head > div:first-child { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-head:not(:has(button)) { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-head:has(button) {
+  justify-content: flex-end; padding: 12px 18px 0; border: 0;
+}
 html[data-skin-2027="till"] #pos-boutique .bq-tk-empty { padding-block: 48px; }
 
 /* Le bouton livré porte toujours la logique ; c'est le primaire du kit qui
