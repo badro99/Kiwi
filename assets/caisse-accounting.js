@@ -1173,6 +1173,13 @@
       const btn = $('#rp-client');
       if (!btn) return;
       if (saleClient && saleClient.ctx && saleClient.ctx !== saleContextKey()) saleClient = null;
+      /* A takeaway sent to the kitchen keeps its client: reopening it from
+         the board to take payment brings the card back (partner, 27 Oct 2026:
+         the visit was never credited once the order had gone to the kitchen). */
+      if (!saleClient) {
+        const o = window.KiwiCaisseSaleClient.orderFor();
+        if (o && o.client && o.client.id && !o.paid) saleClient = { id: o.client.id, name: o.client.name || 'Client', phone: '', ctx: saleContextKey() };
+      }
       btn.hidden = !clientsOn();
       const lab = $('#rp-client-label');
       const x = $('#rp-client-clear');
@@ -1188,11 +1195,14 @@
         if (lab) lab.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Client & fidélité');
         if (x) x.hidden = true;
       }
+      try { if (window.KiwiSaleReward) { window.KiwiSaleReward.sync(); window.KiwiSaleReward.paint(); } } catch (_) {}
     }
 
     function creditSaleToClient(entry) {
       if (!saleClient || !clientsOn()) return;
       const id = saleClient.name, cid = saleClient.id;
+      const paidOrder = window.KiwiCaisseSaleClient.orderFor(saleClient.ctx);
+      if (paidOrder) delete paidOrder.client;
       saleClient = null;                       // une note = un passage
       try {
         /* #0168 · the client page shows what was eaten, on which ticket and
@@ -1202,6 +1212,9 @@
           saleId: entry.id, eventRef: entry.id, createdAt: +entry.time,
           items: (entry.lines || []).map(l => ({ name: l.name, qty: l.qty, total: l.total })),
         });
+        /* A reward given on this note burns the card now that the sale and
+           its visit exist (assets/caisse-loyalty-reward.js). */
+        try { if (window.KiwiSaleReward) window.KiwiSaleReward.settle(cid); } catch (_) {}
         renderSaleClient();
         if (!res) return;
         toast(res.rewardReady
@@ -1257,6 +1270,7 @@
     function attachClient(rec) {
       if (!rec) return;
       saleClient = { id: rec.id, name: rec.name || 'Client', phone: rec.phone || '', ctx: saleContextKey() };
+      window.KiwiCaisseSaleClient.pin(saleClient);
       renderSaleClient();
       closeClientModal();
       toast(`${saleClient.name} attaché à la note`);
@@ -1270,6 +1284,29 @@
          only once a table is open. */
       available() { try { return clientsOn() && (mode === 'vrap' || !!selectedId); } catch (_) { return false; } },
       current() { return saleClient && saleClient.ctx === saleContextKey() ? saleClient.id : null; },
+      /* The board order behind a note (the one in progress by default). */
+      orderFor(ctx) {
+        try {
+          const m = /^vrap:(\d+)$/.exec(ctx || saleContextKey());
+          return m ? kdsOrders.find(x => x && x.num === Number(m[1])) || null : null;
+        } catch (_) { return null; }
+      },
+      /* The client on a board order is kept on the order itself. */
+      pin(rec) {
+        const o = this.orderFor();
+        if (!o) return;
+        if (rec) o.client = { id: rec.id, name: rec.name || 'Client' };
+        else delete o.client;
+      },
+      /* A new takeaway becomes board order N (sent to the kitchen, or sent
+         on the way to payment): its client and reward follow it. */
+      carry(order) {
+        if (!order || order.num == null || !saleClient || saleClient.ctx !== 'vrap:new') return;
+        const to = 'vrap:' + order.num;
+        order.client = { id: saleClient.id, name: saleClient.name };
+        saleClient = Object.assign({}, saleClient, { ctx: to });
+        try { if (window.KiwiSaleReward && window.KiwiSaleReward.rekey) window.KiwiSaleReward.rekey('vrap:new', to); } catch (_) {}
+      },
       note() { try { return ($('#rp-table').textContent || '').trim(); } catch (_) { return ''; } },
       attach(rec) {
         if (!rec || !this.available()) return false;
@@ -1279,6 +1316,7 @@
       },
       detach() {
         saleClient = null;
+        this.pin(null);
         renderSaleClient();
         try { if (typeof tillKitPaint === 'function') tillKitPaint(); } catch (_) {}
       },
@@ -1290,6 +1328,25 @@
        ne proposait jamais d'attacher un client. On s'accroche une fois les
        scripts différés chargés. */
     function hookClientBook() {
+      /* The shipped « × » on the client button: the order forgets its client
+         too, or reopening it would bring the client back. Capture runs before
+         the till's own handler (caisse-app.js) empties the note. */
+      const btn = document.getElementById('rp-client');
+      if (btn && !btn.__kiwiPinClear) {
+        btn.__kiwiPinClear = true;
+        btn.addEventListener('click', (e) => {
+          if (e.target.closest && e.target.closest('#rp-client-clear')) window.KiwiCaisseSaleClient.pin(null);
+        }, true);
+      }
+      /* The loyalty reward (assets/caisse-loyalty-reward.js) is a lazy module
+         of the till's registry: it loads with the client book, once. */
+      const lazy = document.querySelector('[data-caisse-lazy="loyalty-reward"]');
+      if (lazy && !lazy.__kiwiLoaded) {
+        lazy.__kiwiLoaded = true;
+        const rewardScript = document.createElement('script');
+        rewardScript.src = lazy.getAttribute('href');
+        document.head.appendChild(rewardScript);
+      }
       try {
         if (!window.KiwiClients || !window.KiwiClients.subscribe) return false;
         window.KiwiClients.subscribe(renderSaleClient);

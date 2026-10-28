@@ -151,30 +151,9 @@ ok('chaque rendu de l’assistant repeint l’avertissement', () => {
   assert.match(grab(OB, 'function render('), /kob-foot">\$\{def\.foot\}<\/div>`;\s*paintDraftNote\(\);/);
 });
 
-ok('kit : un brouillon refusé par le navigateur est signalé dans les trois langues, puis effacé au succès suivant', () => {
-  const KIT = readFileSync(path.join(ROOT, 'assets/kit/dash-onboarding.js'), 'utf8');
-  const note = DATA.match(/const DRAFT_NOTE = \{[\s\S]*?\n  \};/)[0];
-  for (const lang of ['fr', 'en', 'ar']) {
-    const warning = { textContent: '', hidden: true };
-    const ctx = vm.createContext({ $: () => warning, lang, refuses: true });
-    vm.runInContext(`
-      ${note}
-      const tr = (o) => o[lang];
-      let draftKept = true;
-      const api = { save: () => (draftKept = !refuses), draftSaved: () => draftKept,
-        draftWarning: () => (draftKept ? '' : tr(DRAFT_NOTE)) };
-      ${grab(KIT, 'function save(')}
-      ${grab(KIT, 'function showDraftWarning(')}
-      save();
-    `, ctx);
-    assert.equal(warning.hidden, false);
-    assert.ok(warning.textContent.length > 20 && warning.textContent === vm.runInContext('DRAFT_NOTE[lang]', ctx));
-    ctx.refuses = false;
-    vm.runInContext('save()', ctx);
-    assert.equal(warning.hidden, true);
-    assert.equal(warning.textContent, '');
-  }
-  assert.ok(OB.includes("draftWarning: () => draft ? draft.warning(lang()) : ''"), 'le vrai assistant expose le message au kit');
+ok('le vrai assistant expose le message de brouillon refusé', () => {
+  assert.ok(OB.includes("draftWarning: () => draft ? draft.warning(lang()) : ''"), 'le vrai assistant expose le message');
+  assert.ok(/const DRAFT_NOTE = \{[\s\S]*?\n  \};/.test(DATA), 'et les trois langues du message restent dans les données');
 });
 
 console.log(`\nonboarding-truth: ${passed} passed, ${failed} failed`);

@@ -18,9 +18,9 @@
   window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
   const ready = Promise.all([
   import('./invoicing/transport.js?v=3'),
-  import('./invoicing/composer.js?v=8'),
-  import('./invoicing/history.js?v=6'),
-  import('./invoicing/print.js?v=7'),
+  import('./invoicing/composer.js?v=9'),
+  import('./invoicing/history.js?v=7'),
+  import('./invoicing/print.js?v=8'),
 ]).then(([transportModule, composerModule, historyModule, printModule]) => {
   // invoicing:entry-body
 

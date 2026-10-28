@@ -2997,6 +2997,37 @@
     }
     html[data-skin-2027="till"] #operator-service-notice { color: var(--k-accent-ink); }
     html[data-skin-2027="till"] .ci-float-err { color: var(--k-ink-2); }
+    /* Le fond d'ouverture, lisible sur le papier. kit.css masque ces pastilles
+       quand le cadre 2027 est monté (html[data-k-till]) parce que le restaurant
+       compte le tiroir dans une feuille du kit. Les métiers SANS cadre — la
+       boutique, le pressing, le dépôt-vente — les affichent toujours, et elles
+       gardaient l'encre blanche du vieil écran vert nuit : blanc sur blanc sur
+       la tablette d'Amira (propriétaire, 2026-10-27). Les voici au papier. Le
+       restaurant ne les voit pas, donc rien ne bouge pour lui. */
+    html[data-skin-2027="till"] .clockin-float-label { color: var(--k-ink-2); font-family: var(--k-font); }
+    html[data-skin-2027="till"] .ci-float-chip {
+      min-height: 44px; border-radius: 999px;
+      font-family: var(--k-font); font-variant-numeric: tabular-nums;
+      color: var(--k-ink-1);
+      background: var(--k-surface-2);
+      border: 1px solid var(--k-line);
+    }
+    html[data-skin-2027="till"] .ci-float-chip:hover { background: var(--k-surface-3); color: var(--k-ink-1); }
+    html[data-skin-2027="till"] .ci-float-chip.is-active {
+      background: var(--k-accent); color: var(--k-on-accent); border-color: var(--k-accent);
+    }
+    html[data-skin-2027="till"] .clockin-float-custom {
+      min-height: 44px; border-radius: 999px;
+      background: var(--k-surface-2); border: 1px solid var(--k-line);
+    }
+    html[data-skin-2027="till"] .clockin-float-custom:focus-within {
+      border-color: var(--k-accent); background: var(--k-surface-1);
+    }
+    html[data-skin-2027="till"] .ci-float-input { color: var(--k-ink-1); font-family: var(--k-font); }
+    html[data-skin-2027="till"] .ci-float-input::placeholder { color: var(--k-ink-3); }
+    html[data-skin-2027="till"] .ci-float-cur { color: var(--k-ink-3); font-family: var(--k-font); }
+    html[data-skin-2027="till"] .ci-float-last { color: var(--k-accent-ink); font-family: var(--k-font); }
+    html[data-skin-2027="till"] .ci-float-last:hover { color: var(--k-accent-pressed); }
     html[data-skin-2027="till"] .clockin-btn {
       height: 56px; border-radius: var(--k-r-2);
       background: var(--k-accent); color: var(--k-on-accent);
@@ -5544,3 +5575,14 @@
     /* Le plan de salle est une console noir permanent (langage éditeur du
        dashboard) : ses styles vivent dans la couche plan de base, plus haut.
        Aucune surcharge thème ici · la scène ne change pas avec le thème. */
+
+    /* Retirés de la barre latérale (associé, 2026-10-27 : « on n'en a pas
+       besoin ») : la carte du caissier (nom, rôle, heure, identifiant) et les
+       deux tuiles Ticket moyen / Tables réglées. Masqués, pas supprimés : le
+       code les remplit encore et le menu « Plus » 2027 presse l'identifiant
+       caisse (#caisse-terminal-id). */
+    .sidebar .cashier-card, .sidebar .stats-section .stat-row { display: none; }
+
+    /* La récompense fidélité prête : le même bouton que « Client & fidélité »,
+       trait plein pour qu'on la voie (assets/caisse-loyalty-reward.js). */
+    .rp-reward:not(.is-on) { border-style: solid; border-color: var(--atlas); color: var(--atlas); }

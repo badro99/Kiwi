@@ -9,6 +9,10 @@
 //   node tools/parity-2027.mjs                 every flow, tablet and phone
 //   node tools/parity-2027.mjs --only dine     flows whose name contains "dine"
 //   node tools/parity-2027.mjs --vp tablet
+//   node tools/parity-2027.mjs --only '^takeaway' --tag takeaway-tablet
+//
+// The gate runs it as five tools/parity-2027-*-test.mjs wrappers, split so each
+// stays inside check.js's per-suite timeout; --only is a case-insensitive regex.
 //
 // Writes .kiwi/parity-2027/<run>/report.json and a screenshot per failure.
 import fs from 'node:fs';
@@ -163,7 +167,10 @@ async function closeAll(page) {
 }
 
 /* ── Run ──────────────────────────────────────────────────────────────────── */
-const RUN = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+/* --tag separates the output of wrappers the gate runs side by side, so two
+   that start in the same second do not share one folder (parity-2027-*-test). */
+const TAG = (arg('--tag') || '').replace(/[^a-z0-9-]/gi, '');
+const RUN = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + (TAG ? '-' + TAG : '');
 const OUT = path.join(root, '.kiwi/parity-2027', RUN);
 fs.mkdirSync(OUT, { recursive: true });
 const h = await harness('parity-2027');

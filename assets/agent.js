@@ -861,8 +861,8 @@
   }
   function assistantUiCopy(...args) { return callPart('assistantUiCopy', this, args); }
 
-  /* Design 2027 (§18.6): the start of a conversation, for the kit's Kiwi AI
-     behind the dashboard's flag (assets/kit/dash-ai.js), drawn over the hero:
+  /* The start of a conversation. It was also the model for the 2027 dashboard's
+     Kiwi AI, which was removed (owner, 2026-10-27); nothing consumes it now:
      the business, the trade's three questions (null: the restaurant's), the
      questions the hero's cards ask, and today against yesterday at the same
      time from the ledger. A row asks through the conversation's ask(). */

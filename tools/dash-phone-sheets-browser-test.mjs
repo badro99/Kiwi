@@ -57,7 +57,6 @@ async function open(tr, ctx, { flag, lang }) {
   });
   await page.evaluateOnNewDocument((on, l) => {
     try {
-      if (on) localStorage.setItem('kiwiSkin2027:dashboard', '1');
       localStorage.setItem('kiwiSkipOnboard', '1');
       localStorage.setItem('kiwiLang', l);
     } catch (_) {}

@@ -115,7 +115,6 @@
     "assets/dashboard-shell.css": 323,
     "assets/design-2026.css": 43,
     "assets/design-vexel.css": 229,
-    "assets/kit/dash-desktop.css": 188,
     "assets/kit/kit.css": 86,
     "assets/landing-mobile.css": 88,
     "assets/mobile.css": 71
@@ -129,9 +128,9 @@
     "assets/day-report-dash.js": 1237,
     "assets/day-report.js": 1495,
     "assets/boutique-catalog-parts.js": 1315,
-    "assets/caisse-lang.js": 4242,
+    "assets/caisse-lang.js": 4253,
     "assets/floorplan-core.js": 1428,
-    "assets/caisse-accounting.js": 3145,
+    "assets/caisse-accounting.js": 3202,
     "assets/serveur/service.js": 4485,
     "assets/serveur/service-runtime.js": 2725
   },
@@ -161,7 +160,6 @@
     "assets/hotel.css": 1496,
     "assets/invoicing.css": 481,
     "assets/kit/access.css": 125,
-    "assets/kit/dash-desktop.css": 863,
     "assets/kit/kit.css": 825,
     "assets/kit/ordering.css": 456,
     "assets/kit/printer.css": 61,

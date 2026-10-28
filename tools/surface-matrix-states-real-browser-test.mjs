@@ -53,7 +53,7 @@ async function nav(page, selector) {
   await page.evaluate((sel) => document.querySelector(sel).click(), selector);
   await sleep(600);
 }
-/* The real dashboard opens on its owner lock. As in dash-pin-browser-test,
+/* The real dashboard opens on its owner lock. As in till-pin-browser-test,
    the stubbed server knows one value made up for this run only; it is never
    printed, logged or stored, and the pad is driven by real clicks. */
 const OWNER = String(randomInt(1000, 10000));

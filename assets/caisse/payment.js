@@ -223,6 +223,10 @@
        is later dismissed. A reload/Escape after cash was accepted or the reader
        approved must never leave the order due and invite a second charge. */
     async function finalizeTender(method) {
+      /* The loyalty reward approves first (caisse-loyalty-reward.js). */
+      const holds = [];
+      document.dispatchEvent(new CustomEvent('kiwi:tender-gate', { detail: { method, hold: (p) => holds.push(p) } }));
+      for (const h of holds) if (!(await h)) return 'reward-refused';
       /* Paiement = confirmation ferme. Avant d'écrire la vente ou de libérer
          la table, rattraper tout ce qui n'est pas encore parti en cuisine.
          Chaque chemin garde sa propre preuve durable (ligne.sent, statut held,

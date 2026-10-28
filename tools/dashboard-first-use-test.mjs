@@ -54,25 +54,9 @@ for (const url of [...shell, ...inlineBoot].filter(url => url.startsWith('assets
   for (const name of parsed.definitions) eagerDefinitions.add(name);
 }
 for (const [url, parsed] of retained) for (const [name, eager] of parsed.reads) {
-  const reactive = {
-    'assets/kit/dash-report.js': ['KiwiReportPage', 'report'],
-    'assets/kit/dash-customers.js': ['KiwiClientsPage', 'customers'],
-    'assets/kit/dash-retention.js': ['KiwiRetentionPage', 'retention'],
-    'assets/kit/dash-compliance.js': ['KiwiConformite', 'compliance'],
-  }[url.split('?')[0]];
-  if (reactive && name === reactive[0]) {
-    // This adapter rereads its provider on every model event, rather than
-    // capturing an absent API at startup. Prove both halves of that contract.
-    const source = read(url.split('?')[0]);
-    const getter = name === 'KiwiConformite' ? /function model\(\) \{\s*var C = root.KiwiConformite;/
-      : new RegExp('function api\\(\\) \\{ return root\\.' + name + ' \\|\\| null; \\}');
-    assert.match(source, getter);
-    assert.ok(source.includes("addEventListener('kiwi:" + reactive[1] + "-model', paint)"));
-    continue;
-  }
   assert.ok(!eager || !moved.has(name) || eagerDefinitions.has(name), `${url} captures deferred ${name} at startup`);
 }
-for (const file of ['assets/dateRange.js', 'assets/daterange/renderers.js', 'assets/design-vexel-layout.js', 'assets/kit/dash-home.js']) {
+for (const file of ['assets/dateRange.js', 'assets/daterange/renderers.js', 'assets/design-vexel-layout.js']) {
   for (const [name] of analyse(read(file), file).reads) {
     assert.ok(!moved.has(name) || eagerDefinitions.has(name), `${file} needs ${name} for unchanged home figures before drawer use`);
   }

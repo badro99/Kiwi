@@ -79,6 +79,6 @@ await run('classifier', async () => {
 await run('coverage', async () => {
  const {coverageText}=await import('../assets/offline-pin-coverage.js');
  assert.match(coverageText(['Alice','Bob'],s=>s),/Alice, Bob/);
- assert.match(coverageText([],s=>s),/Aucun employé vérifié/);
+ assert.match(coverageText([],s=>s),/personne ne peut encore/);
  assert.match(coverageText([],s=>'translated:'+s),/translated:/);
 });

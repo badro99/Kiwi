@@ -1050,9 +1050,9 @@
     return page;
   }
 
-  /* Design 2027 (§12, Report) : ce que render() vient de dessiner, pour
-     l'en-tête du rapport sur le kit derrière le drapeau du tableau de bord
-     (assets/kit/dash-report.js). Rien n'y est recalculé. */
+  /* Ce que render() vient de dessiner, publié pour un lecteur. C'était
+     l'en-tête du rapport du tableau de bord 2027, retiré (propriétaire,
+     2026-10-27). Rien n'y est recalculé, et le rapport livré ne change pas. */
   var kitModel = null;
   function kitPublish(m) {
     kitModel = m;

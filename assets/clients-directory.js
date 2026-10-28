@@ -386,8 +386,9 @@
     } catch (_) {}
     if (window.KiwiKit) KiwiKit.reveal(d.el.querySelector('.gk-reveal-root'));
     var root = d.el;
-    /* Design 2027 (§18.5): what the page draws, for the kit's Customers page
-       behind the dashboard's flag (assets/kit/dash-customers.js). */
+    /* What the page draws, published for a reader. The 2027 dashboard's
+       Customers page was that reader and was removed (owner, 2026-10-27), so
+       this publishes to nobody today; the shipped book is unaffected. */
     var kitModel = null;
     function kitPublish() {
       var rows = filtered();

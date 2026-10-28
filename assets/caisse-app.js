@@ -726,6 +726,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
         ['cancel_sale', 'till.more.cancel_sale', '[data-action="cancel-sale"]'],
         ['refund', 'till.more.refund', '[data-action="remboursement"]'],
         ['sales', 'till.more.sales', '#stat-txns-card'],
+        ['reprint', 'till.more.reprint', '[data-action="reprint-bill"]'],
         ['team', 'till.more.team', '#open-team'],
         ['attendance', 'attendance.show', '#open-attendance-code'],
         ['close', 'till.more.close', '[data-action="fin-service"]'],
@@ -1379,6 +1380,16 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       try { settled = await finalizeTender('cash'); }
       catch (_) { tenderInFlight = false; toast(tr('Encaissement à vérifier dans le journal avant de réessayer')); return; }
       tenderInFlight = false;
+      /* The loyalty reward was refused (used on another till): it came off the
+         note, the modal shows the full price, the cashier confirms again. */
+      if (settled === 'reward-refused') {
+        const due = Math.round((currentTotal() + payTipAmount()) * 100) / 100;
+        $('#cash-amount').textContent = fmtMADcents(due);
+        cashInput.value = money(due);
+        cashPaymentCommitted = false;
+        updateRendu();
+        return;
+      }
       if (settled === 'split') {
         if (change > 0) toast(tr('Monnaie à rendre : ' + fmtMAD(change)));
         closeCashModal();

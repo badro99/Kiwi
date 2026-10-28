@@ -2437,7 +2437,7 @@
     'assets/stock/loss.js?v=1',
     'assets/stock/counts.js?v=5',
     'assets/stock/purchasing.js?v=2',
-    'assets/stock/intake.js?v=12',
+    'assets/stock/intake.js?v=13',
     'assets/stock/catalog.js?v=3',
   ];
   const stockLoads = new Map();

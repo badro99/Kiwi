@@ -61,7 +61,6 @@ async function open(tr, ctx, { flag, lang }) {
   });
   await page.evaluateOnNewDocument((on, l) => {
     try {
-      if (on) localStorage.setItem('kiwiSkin2027:dashboard', '1');
       localStorage.setItem('kiwiSkipOnboard', '1');
       localStorage.setItem('kiwiLang', l);
     } catch (_) {}
@@ -110,7 +109,6 @@ const spills = (page) => page.evaluate(() => {
 const PASSES = [
   { id: 'fr', suite: 'dash-phone-pages', name: 'default skin · French', flag: false, lang: 'fr' },
   { id: 'ar', suite: 'dash-phone-pages-ar', name: 'default skin · Arabic', flag: false, lang: 'ar' },
-  { id: 'kit', suite: 'dash-phone-pages-kit', name: 'kit 2027 · Arabic', flag: true, lang: 'ar' },
 ];
 const PASS = PASSES.find((p) => p.id === (process.env.KIWI_PHONE_PASS || 'fr')) || PASSES[0];
 const S = suite(PASS.suite, { browser });

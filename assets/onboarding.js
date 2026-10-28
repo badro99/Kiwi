@@ -476,7 +476,8 @@
   let teamImportFailed = false;
   /* ── Finish · persist + create venue + celebrate ─────────────────────── */
   // Submission activity belongs to the session owner.
-  /* kit: the 2027 steps call this with { kit: true } (assets/kit/dash-onboarding.js):
+  /* kit: the 2027 steps called this with { kit: true }; that kit was removed
+     (owner, 2026-10-27) and no caller passes it today:
      no shipped card to read or write, the answer is returned instead. */
   async function finish(opts) {
     const kit = !!(opts && opts.kit);
@@ -894,11 +895,10 @@
     } catch (_) {}
   }
 
-  /* Design 2027 (§18.8), behind the dashboard's flag: assets/kit/dash-onboarding.js
-     draws the steps after the account (type, goals, personal code, this device)
-     over this state, these checks and finish(). The steps §18.8 removes (name
-     and business, asked once at sign-up; places; team size) are not asked; the
-     team's codes come later in Team. */
+  /* The 2027 kit drew the steps after the account (type, goals, personal code,
+     this device) over this state, these checks and finish(). That kit was
+     removed (owner, 2026-10-27), so the shipped assistant is the only one now;
+     the state and checks below are kept because it uses them too. */
   const kitCodeProblem = session.kitCodeProblem;
   const kitProblem = session.kitProblem;
   function setupPresentation() {

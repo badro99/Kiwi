@@ -5,12 +5,14 @@
  * (OrderPro) in the 2027 skin. functions/_middleware.js now marks the staff
  * apps the same way, <html data-store-skin="2027">, and each app's head reads
  * the mark as it reads ?skin=2027:
- *   · the dashboard, for any store of the signed-in owner's account;
  *   · the caisse and the kitchen screen, for the paired device's store;
  *   · the team app, for the signed-in employee's store.
- * Held here: the right store decides, a store without the switch stays as
- * shipped, a copy cached before the switch does not come back as a bare 304,
- * a database error leaves the page alone, and only these four pages move.
+ * The dashboard is deliberately excluded (owner, 2026-10-27): the 2027 work is
+ * a till redesign, so a store's switch must never move the dashboard off the
+ * screens it shipped with. Held here: the right store decides, a store without
+ * the switch stays as shipped, the dashboard stays as shipped for everyone, a
+ * copy cached before the switch does not come back as a bare 304, a database
+ * error leaves the page alone, and only these three pages move.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -64,10 +66,10 @@ const owner = async (aid) => [SESS_COOKIE, await makeSession(aid, SECRET)];
 const till = async (m) => [[TILL_COOKIE, await tillDeviceToken(SECRET, m, 0, 'term_staffskin00000001')], [TILL_STORE_COOKIE, m]];
 const employee = async (m) => [EMPLOYEE_COOKIE, await employeeToken(SECRET, { merchant: m, staffId: 'st-1', authVersion: 0 })];
 
-console.log('The dashboard follows the owner\'s account');
-check((await load('/dashboard', { cookie: cookies([await owner('acc-kit')]) })).marked, 'an account with one store switched on gets the 2027 dashboard');
-check((await load('/dashboard.html', { cookie: cookies([await owner('acc-kit')]) })).marked, 'and on /dashboard.html too');
-check(!(await load('/dashboard', { cookie: cookies([await owner('acc-plain')]) })).marked, 'an account with none keeps the shipped dashboard');
+console.log('The dashboard is never moved by a store\'s switch');
+check(!(await load('/dashboard', { cookie: cookies([await owner('acc-kit')]) })).marked, 'an account with a store switched on still gets the shipped dashboard');
+check(!(await load('/dashboard.html', { cookie: cookies([await owner('acc-kit')]) })).marked, 'and on /dashboard.html too');
+check(!(await load('/dashboard', { cookie: cookies([await owner('acc-plain')]) })).marked, 'an account with none, likewise');
 
 console.log('The caisse and the kitchen screen follow the paired device\'s store');
 check((await load('/kiwi-caisse', { cookie: cookies(await till('kit-cafe')) })).marked, 'a till paired to a switched-on store gets the 2027 caisse');
@@ -85,21 +87,29 @@ check(!(await load('/kiwi-serveur', { cookie: cookies([await employee('plain-sho
 check(!(await load('/kiwi-serveur')).marked, 'nobody signed in: the shipped page');
 
 console.log('Edges');
-const cached = await load('/dashboard', { cookie: cookies([await owner('acc-kit')]), status: 304 });
+const cached = await load('/kiwi-caisse', { cookie: cookies(await till('kit-cafe')), status: 304 });
 check(cached.res.status === 200 && cached.marked && !cached.res.headers.get('ETag'),
   'a copy cached before the switch comes back marked, not as a bare 304', `${cached.res.status} ${cached.res.headers.get('ETag')}`);
 check(cached.res.headers.get('Cache-Control') === 'no-cache', 'and a marked page is never served from a stale cache');
-check((await load('/dashboard', { cookie: cookies([await owner('acc-plain')]), status: 304 })).res.status === 304, 'an unmarked page keeps its 304');
+check((await load('/kiwi-caisse', { cookie: cookies(await till('plain-shop')), status: 304 })).res.status === 304, 'an unmarked page keeps its 304');
 const down = await load('/kiwi-serveur', { cookie: cookies([await employee('kit-cafe')]), e: { ...env, DB: makeD1({ broken: true }) } });
 check(down.res.status === 200 && !down.marked, 'a database error leaves the page as shipped');
 check(!(await load('/kiwi-serveur', { cookie: cookies([await employee('kit-cafe')]), type: 'application/json' })).marked, 'only an HTML page is touched');
-check(!(await load('/reset.html', { cookie: cookies([await owner('acc-kit')]) })).marked, 'and only the four staff pages');
+check(!(await load('/reset.html', { cookie: cookies([await owner('acc-kit')]) })).marked, 'and only the three staff pages');
 
 console.log('Each staff page reads the mark before its first paint');
-for (const [file, flag] of [['dashboard.html', 'dashboard'], ['kiwi-caisse.html', 'till'], ['kiwi-cuisine.html', 'kds'], ['kiwi-serveur.html', 'team']]) {
+for (const [file, flag] of [['kiwi-caisse.html', 'till'], ['kiwi-cuisine.html', 'kds'], ['kiwi-serveur.html', 'team']]) {
   const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
   check(src.includes(`on = document.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:${flag}') === '1'`),
     `${file} turns the kit on for the store's mark, as for ?skin=2027`);
+}
+
+console.log('The dashboard keeps its gate, without the store\'s mark');
+{
+  const src = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+  check(!/getAttribute\('data-store-skin'\)/.test(src), 'dashboard.html does not read the store mark, so no switch can move it');
+  check(src.includes(`on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:dashboard') === '1'`),
+    'and keeps ?skin=2027 and its own flag, so the 2027 dashboard stays testable by hand');
 }
 
 console.log(`✓ staff-skin-test · ${n} checks`);

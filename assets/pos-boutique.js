@@ -1,7 +1,8 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=40';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=40';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=40';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=44';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=44';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=44';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
+import { bqKitRail, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=2';
 
   'use strict';
 
@@ -1662,13 +1663,12 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
        l'ouverture de la caisse, et à chaque ouverture d'Échanges & avoirs. */
     if (!IS_DEMO) void refreshRemoteAvoirs();
 
-    /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
-       d'ouverture d'abord, la vente ensuite. La démo entre directement. */
-    bqMaybeOpenScreen();
+    bqKitRail(root, $, icons, bqKitSkin());
+    /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond d'ouverture d'abord, la vente ensuite. La démo entre directement. */
+    if (!IS_DEMO && !bqShift) bqShowOpenScreen();
   }
 
-  /* Pick the first two in-stock articles from the live catalogue for the
-     mid-day demo ticket (ids are the DB's, not the old hard-coded literals). */
+  /* Pick the first two in-stock articles from the live catalogue for the mid-day demo ticket (ids are the DB's, not the old hard-coded literals). */
   function seedDemoTicket() {
     const picks = [];
     for (const r of RAYONS) {
@@ -1699,7 +1699,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
   function onShow() {
     if (!root) return;
     syncTillStaff();                      // a new shift may have unlocked the till
-    bqMaybeOpenScreen();                  // re-unlock without a poste open → fond d'ouverture
+    if (!IS_DEMO && !bqShift) bqShowOpenScreen();                  // re-unlock without a poste open → fond d'ouverture
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
@@ -2509,20 +2509,19 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
     }, () => { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible · le rapport reste dans le tableau de bord')); return { ok: false }; });
   }
 
-  /* ── l'écran d'ouverture (fond de caisse) ──
-     Même dessin que le clock-in restaurant, mêmes classes ; seul le conteneur
-     porte .bq-clockin, que pos-boutique.css ré-affiche par-dessus le masquage
-     body.is-pos. Le fond retenu est mémorisé PAR ÉTABLISSEMENT, sous la même
-     clé que la caisse restaurant : un appareil qui sert deux commerces retient
-     deux montants. */
+  /* ── l'écran d'ouverture (fond de caisse) ── même dessin et mêmes classes que le clock-in restaurant ; seul le conteneur porte .bq-clockin,
+     que pos-boutique.css ré-affiche par-dessus body.is-pos. Le fond retenu est mémorisé PAR ÉTABLISSEMENT (clé de la caisse restaurant). */
   function bqFloatMemKey() {
     try { const p = pvPaired(); if (p && p.merchant) return 'kiwi:openingFloat:v1:' + p.merchant; } catch (_) {}
     return 'kiwi:openingFloat:v1:boutique';
   }
   let bqFloat = 0;
-  function bqMaybeOpenScreen() {
-    if (IS_DEMO || bqShift) return;
-    bqShowOpenScreen();
+  /* kiwiSkin2027:till · le fond d'ouverture compté sur le kit (§18.9, comme caisse/shift.js), seule branche 2027 du métier ; drapeau éteint, l'écran livré. */
+  function bqKitSkin() { try { return document.documentElement.getAttribute('data-skin-2027') === 'till' && !!customElements.get('k-cash-count') && !!customElements.get('k-sheet'); } catch (_) { return false; } }
+  function bqKitFloat(screen, onCounted) {
+    if (!bqKitSkin()) return false;
+    const cc = document.createElement('k-cash-count'); cc.setAttribute('mode', 'open');
+    return bqKitOpenSheet(screen, cc, onCounted, bqFloatMemKey());
   }
   function bqShowOpenScreen() {
     if (document.getElementById('bq-clockin')) return;
@@ -2559,8 +2558,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
                    aria-label="Fond d'ouverture, montant libre en dirhams">
             <span class="ci-float-cur" aria-hidden="true">MAD</span>
           </div>
-          <!-- Rien n'est présélectionné : le fond est ce que le caissier a COMPTÉ.
-               Le dernier fond n'est qu'un raccourci à toucher. -->
+          <!-- Rien n'est présélectionné : le fond est ce que le caissier a COMPTÉ. Le dernier fond n'est qu'un raccourci à toucher. -->
           <button type="button" class="ci-float-last" id="bqci-last" hidden></button>
           <div class="ci-float-err" id="bqci-hint" role="status">Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.</div>
         </div>
@@ -2586,13 +2584,10 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       if (on && focus) { input.focus(); input.select(); }
     };
     const remember = () => { try { localStorage.setItem(bqFloatMemKey(), String(bqFloat)); } catch (_) {} };
-    /* Le bouton ne s'enfonce qu'une fois le fond indiqué : jamais de 500
-       présélectionné qu'un seul toucher enregistrerait tel quel. */
+    /* Le bouton ne s'enfonce qu'une fois le fond indiqué : jamais de 500 présélectionné qu'un seul toucher enregistrerait tel quel. */
     let chosen = false;
-    const btnOpen = el.querySelector('#bqci-btn');
-    const hint = el.querySelector('#bqci-hint');
-    const last = el.querySelector('#bqci-last');
-    const gate = () => { if (btnOpen) btnOpen.disabled = !chosen; if (hint) hint.hidden = chosen; };
+    const btnOpen = el.querySelector('#bqci-btn'), hint = el.querySelector('#bqci-hint'), last = el.querySelector('#bqci-last');
+    const gate = () => { const kit = bqKitSkin(); if (btnOpen) btnOpen.disabled = !chosen && !kit; if (hint) hint.hidden = chosen || kit; };
 
     /* Restitution du dernier fond utilisé par CE magasin. */
     let saved = NaN;
@@ -2644,21 +2639,22 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
       if (tEl) tEl.textContent = pad2(n.getHours()) + ':' + pad2(n.getMinutes());
       if (dEl) dEl.textContent = DDAYS[n.getDay()] + ' ' + n.getDate() + ' ' + DMONTHS[n.getMonth()];
     };
-    tick();
-    const timer = setInterval(tick, 10000);
+    tick(); const timer = setInterval(tick, 10000);
 
-    el.querySelector('#bqci-btn').addEventListener('click', () => {
-      if (!chosen) { gate(); return; }
-      el.querySelector('#bqci-btn').classList.add('is-confirmed');
-      icons();
+    const doOpen = () => {
+      el.querySelector('#bqci-btn').classList.add('is-confirmed'); icons();
       const openedAt = Date.now();
       bqShift = { openedAt, openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat, sid: 'bq-' + openedAt, openSent: false };
       bqShiftPersist();
       /* Le fond d'ouverture est le premier chiffre du rapprochement. */
-      bqAnnounceOpen();
-      bqSaveProvisional(true);
-      setTimeout(() => el.classList.add('is-leaving'), 420);
-      setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
+      bqAnnounceOpen(); bqSaveProvisional(true);
+      setTimeout(() => el.classList.add('is-leaving'), 420); setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
+    };
+    el.querySelector('#bqci-btn').addEventListener('click', () => {
+      /* Sous la peau, le tiroir se compte dans la feuille du kit ; le montant compté suit le chemin livré. */
+      if (!chosen && bqKitFloat(el, (v) => { bqFloat = v; chosen = true; remember(); gate(); doOpen(); })) return;
+      if (!chosen) { gate(); return; }
+      doOpen();
     });
 
     requestAnimationFrame(() => { el.classList.add('is-visible'); el.setAttribute('aria-hidden', 'false'); icons(); });
@@ -2666,10 +2662,6 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
   /* ── la clôture ── */
   let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null;
-  function bqFmtDur(min) {
-    if (min < 60) return `${min} mn`;
-    return `${Math.floor(min / 60)}h${pad2(min % 60)}`;
-  }
   function bqUpdateEcart() {
     const v = bqCloVeil; if (!v) return;
     const line = v.querySelector('#bqclo-ecart-line'), out = v.querySelector('#bqclo-ecart'), inp = v.querySelector('#bqclo-count');
@@ -2706,7 +2698,7 @@ import { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';
 
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
-      ['Durée du service', bqFmtDur(durMin), false, ''],
+      ['Durée du service', (durMin < 60 ? `${durMin} mn` : `${Math.floor(durMin / 60)}h${pad2(durMin % 60)}`), false, ''],
       ['Transactions', String(t.txns), false, ''],
       ['Articles vendus', String(t.items), false, ''],
       ['Total encaissé', fmtMAD(t.moneyIn), true, 'total'],

@@ -113,10 +113,10 @@
   <script src="assets/caisse-motion.js?v=8" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=17" defer></script>
+  <script src="assets/escpos.js?v=18" defer></script>
   <script src="assets/printer/transports.js?v=2" defer></script>
-  <script src="assets/printer-bridge.js?v=46" defer></script>
-  <script src="assets/caisse-hardware.js?v=8" defer></script>
+  <script src="assets/printer-bridge.js?v=47" defer></script>
+  <script src="assets/caisse-hardware.js?v=9" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
        change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
@@ -124,11 +124,11 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=18" defer></script>
+  <script src="assets/pos-sale.js?v=19" defer></script>
   <!-- Garment workflow snapshot and garment product art, shared with the
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
-  <script src="assets/pressing-ops.js?v=19" defer></script>
+  <script src="assets/pressing-ops.js?v=20" defer></script>
   <script src="assets/pressing-catalog.js?v=10" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
@@ -141,14 +141,13 @@
   <script src="assets/color-palette.js?v=6" defer></script>
   <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et
        les échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-  <script src="assets/boutique-catalog-parts.js?v=11" defer></script>
-  <script src="assets/boutique-catalog.js?v=19" defer></script>
-  <script src="assets/sold-insights.js?v=16" defer></script>
+  <script src="assets/boutique-catalog-parts.js?v=12" defer></script> <script src="assets/boutique-catalog.js?v=20" defer></script>
+  <script src="assets/sold-insights.js?v=17" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
-  <script src="assets/promo-rules.js?v=6" defer></script>
-<script src="assets/promos.js?v=14" defer></script>
+  <script src="assets/promo-rules.js?v=7" defer></script>
+<script src="assets/promos.js?v=15" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=10" />
   <link rel="stylesheet" href="assets/retail-balances.css?v=3" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
@@ -190,13 +189,15 @@
         '<meta name="theme-color" content="#F7F5F0">' +
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=9">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=61">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=65">' +
+        /* La caisse boutique sur le kit (§18.3) : peinture seule, sous html[data-skin-2027="till"] #pos-boutique ; JS boutique intact. */
+        '<link rel="stylesheet" href="assets/pos-boutique-2027.css?v=3">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=13") +
-        js("assets/kit/strings/till.en.js?v=13") +
-        js("assets/kit/strings/till.ar.js?v=13") +
+        js("assets/kit/strings/till.fr.js?v=14") +
+        js("assets/kit/strings/till.en.js?v=14") +
+        js("assets/kit/strings/till.ar.js?v=14") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -206,8 +207,8 @@
         js("assets/kit/core.js?v=2") +
         js("assets/kit/overlays.js?v=2") +
         js("assets/kit/pin.js?v=3") +
-        js("assets/kit/pin-flow.js?v=6") +
-        js("assets/kit/till-pin.js?v=7") +
+        js("assets/kit/pin-flow.js?v=7") +
+        js("assets/kit/till-pin.js?v=8") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/controls/chip.js?v=1") +
         js("assets/kit/controls/keypad.js?v=3") +
@@ -216,8 +217,8 @@
         js("assets/kit/elements.js?v=4") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=9") +
-        js("assets/kit/till.js?v=26") +
-        js("assets/kit/till-frame.js?v=13") +
+        js("assets/kit/till.js?v=30") +
+        js("assets/kit/till-frame.js?v=14") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=2") +
         js("assets/kit/till-z.js?v=1") +
@@ -229,13 +230,13 @@
   <script src="assets/retail-scan.js?v=12" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=79" defer></script>
+  <script src="assets/caisse-lang.js?v=80" defer></script>
   <script src="assets/menu-i18n.js?v=6" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=206" defer></script>
+  <script src="assets/pos-dispatch.js?v=210" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -247,7 +248,7 @@
        are inherited from here. -->
   <link rel="stylesheet" href="assets/tokens.css?v=2053" />
 
-  <link rel="stylesheet" href="assets/caisse-shell.css?v=16" />
+  <link rel="stylesheet" href="assets/caisse-shell.css?v=19" />
   <link rel="stylesheet" href="assets/caisse-skin.css?v=4" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
@@ -336,7 +337,7 @@
   <script src="assets/pwa-update.js?v=368" defer></script>
   <script src="assets/caisse-pwa.js?v=631" defer></script>
   <link rel="modulepreload" href="assets/live-link/queue-store.js?v=2">
-  <script type="module" src="assets/live-link.js?v=88" defer></script>
+  <script type="module" src="assets/live-link.js?v=89" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <script src="assets/retail-sale-hold.js?v=6" defer></script>
   <script src="assets/repeat-sale-guard.js?v=3" defer></script>
@@ -350,9 +351,9 @@
   <script src="assets/tenant-purge.js?v=6" defer></script>
   <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
-  <script src="assets/pairing-commit.js?v=3" defer></script>
+  <script src="assets/pairing-commit.js?v=4" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=51" defer></script>
+  <script src="assets/caisse-pairing.js?v=52" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -361,22 +362,21 @@
   <script src="assets/cloud-doc.js?v=13" defer></script>
   <!-- Shared trade boards: reads the same tenant document as the owner
        dashboard and grafts a compact operational entry into each exact POS. -->
-  <script src="assets/trade-workspace-schema.js?v=11" defer></script>
+  <script src="assets/trade-workspace-schema.js?v=12" defer></script>
   <script src="assets/pos-workspaces.js?v=9" defer></script>
   <!-- Le rapport journalier (« Z ») : calcul + classeur, partagé mot pour mot
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=36" defer></script>
-  <script src="assets/z-reconciliation.js?v=28" defer></script>
+  <script src="assets/day-report.js?v=37" defer></script> <script src="assets/z-reconciliation.js?v=29" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>
   <script src="assets/discount-policy.js?v=4" defer></script>
-  <script src="assets/menu-promos.js?v=7" defer></script>
+  <script src="assets/menu-promos.js?v=8" defer></script>
   <script src="assets/vertical-state.js?v=7" defer></script>
   <script src="assets/image-proof.js?v=2" defer></script>
-  <script src="assets/inventory-ledger.js?v=17" defer></script>
+  <script src="assets/inventory-ledger.js?v=18" defer></script>
   <script src="assets/maison-stock-movements.js?v=6" defer></script>
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
@@ -396,7 +396,7 @@
        (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
-  <script src="assets/receipt.js?v=12" defer></script>
+  <script src="assets/receipt.js?v=13" defer></script>
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=11" defer></script>
@@ -405,16 +405,14 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=18" defer></script>
-  <script src="assets/clients-store.js?v=31" defer></script>
-  <script src="assets/clients-book.js?v=51" defer></script>
+  <script src="assets/clients-store.js?v=32" defer></script> <script src="assets/clients-book.js?v=52" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=15" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=23" defer></script>
+  <script src="assets/kitchen-relay.js?v=16" defer></script> <script src="assets/kitchen-print-queue.js?v=24" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -424,7 +422,7 @@
   <script src="assets/caisse-pairs.js?v=3" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=284" defer></script>
+  <script src="assets/merchant-config.js?v=285" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -434,8 +432,7 @@
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
-  <script src="assets/invoice.js?v=23" defer></script>
-  <script src="assets/pos-reprint.js?v=15" defer></script>
+  <script src="assets/invoice.js?v=24" defer></script> <script src="assets/pos-reprint.js?v=16" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -1069,6 +1066,8 @@
             <span class="lbl" id="rp-client-label">Client &amp; fidélité</span>
             <span class="rp-client-x" id="rp-client-clear" role="button" tabindex="0" aria-label="Détacher le client" hidden>×</span>
           </button>
+          <!-- Récompense fidélité du client attaché, carte pleine : remise « Fidélité client » (assets/caisse-loyalty-reward.js). -->
+          <button class="rp-client rp-reward" id="rp-reward" type="button" hidden><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l84 114-64 46-136-184-136 184-64-46 82-114H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z"/></svg><span class="lbl" id="rp-reward-label">Récompense prête</span></button>
           <button class="pay-btn pay-kitchen" id="rp-send-kitchen" hidden>
             <i data-lucide="send"></i>
             <span>Envoyer en cuisine</span>
@@ -2005,25 +2004,26 @@
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
   <link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=14" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=17" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=10" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=5" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=6" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=8" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=12" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=15" data-caisse-script>
   <link href="assets/caisse/orders.js?v=2" data-caisse-lazy="orders">
-  <link rel="preload" as="script" href="assets/caisse/payment.js?v=3" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=4" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/payment.js?v=6" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=5" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/shift.js?v=3" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/settings.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/held-sales.js?v=1" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/discounts.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/returns.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/handover.js?v=2" data-caisse-script>
-  <link href="assets/caisse/inventory.js?v=3" data-caisse-lazy="inventory">
+  <link href="assets/caisse-loyalty-reward.js?v=4" data-caisse-lazy="loyalty-reward">
+  <link href="assets/caisse/inventory.js?v=4" data-caisse-lazy="inventory">
   <link rel="preload" as="script" href="assets/caisse/offline.js?v=3" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/receipts.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/closing.js?v=1" data-caisse-script>
   <script src="assets/caisse/workflows-loader.js?v=3"></script>
-  <script src="assets/caisse-app.js?v=28"></script>
+  <script src="assets/caisse-app.js?v=32"></script>
 </body>
 </html>

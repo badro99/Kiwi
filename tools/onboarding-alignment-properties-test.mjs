@@ -6,7 +6,6 @@ import { createRequire } from 'node:module';
 import data from '../assets/onboarding-data.js';
 const fc = createRequire(new URL('../app/package.json', import.meta.url))('fast-check');
 const legacy = onboardingTestSource();
-const kit = fs.readFileSync('assets/kit/dash-onboarding.js', 'utf8');
 function grab(src, name) {
   const start = src.indexOf('function ' + name + '(');
   assert.ok(start >= 0);
@@ -30,12 +29,6 @@ for (const type of types) {
     const ctx = vm.createContext({ window: { KiwiOnboardingData: data }, S, TYPES: types, GOALS: [], esc, tr: o => o?.fr || '', unitFor: () => '', footNav: () => '' });
     vm.runInContext(grab(legacy, 'setupPresentation') + '\n' + grab(legacy, 'stepFinish'), ctx);
     const a = ctx.stepFinish().body.match(/<div data-onboarding-summary[\s\S]*?Action suivante : [\s\S]*?<\/p><\/div>/)[0];
-    let body;
-    const fields = { '[data-l="device"]': {}, '[data-warn]': {} };
-    const k = vm.createContext({ api: { presentation: () => ctx.setupPresentation() }, esc, t: s => s, device: S.device, $: s => fields[s], DEVICES: ['till', 'kds', 'team', 'dashboard'], primary: () => '', frame: html => { body = html; }, warn: () => {} });
-    vm.runInContext(grab(kit, 'setupPresentation') + '\n' + grab(kit, 'deviceStep'), k);
-    k.deviceStep();
-    assert.ok(body.includes(a));
     for (const step of model.steps) assert.ok(a.includes(`data-setup-step="${step.id}" data-done="${step.done}"`));
     for (const line of model.recap) assert.ok(a.includes(esc(line.value)));
     assert.equal(model.steps[0].done, true);
@@ -44,4 +37,4 @@ for (const type of types) {
   }), { numRuns: 50 });
   assert.equal(result.failed, false, 'Alignement du métier ' + type.id);
 }
-console.log(`✓ alignement des rendus : ${types.length} métiers × 50 états`);
+console.log(`✓ rendu livré de l'assistant : ${types.length} métiers × 50 états`);

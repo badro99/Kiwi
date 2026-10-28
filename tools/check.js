@@ -726,6 +726,11 @@ for (const test of [
   'till-gate-test.mjs',
   'staff-skin-test.mjs',
   'skin-cloak-test.mjs',
+  /* La peau 2027 de la boutique est de la PEINTURE : aucune branche dans le JS
+     du métier, chaque règle portée par le drapeau, aucune couleur en dur, et
+     tout le blanc du rail livré repris — sans quoi on refait le blanc sur
+     blanc du fond d'ouverture (propriétaire, 2026-10-27). */
+  'boutique-2027-test.mjs',
   /* Les skins se rencontrent dans le navigateur : tableau de bord, caisse restaurant
      et boutique, dans chaque skin, thème et taille, peignent le thème annoncé,
      sans italique ni contrôle transparent, avec le style calculé revu. */
@@ -1950,6 +1955,8 @@ section('Whole-project regressions');
     'field-orderpro-acceptance-test.mjs',
     'field-table-transfer-test.mjs',
     'caisse-table-actions-test.mjs',
+    'caisse-loyalty-reward-test.mjs',
+    'caisse-sale-client-carry-test.mjs',
     'caisse-item-cancel-browser-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
@@ -2736,16 +2743,11 @@ section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarit�
  *                                       hors ligne (verdict et provenAt au journal), l'état
  *                                       « connexion requise » ; drapeau éteint, aucun
  *                                       fichier du kit chargé
- *   dash-pin-browser-test               le verrou du tableau de bord derrière
- *                                       kiwiSkin2027:dashboard : le serveur d'abord, son
- *                                       non est final, les lignes salées seulement sans
- *                                       réponse, session morte, pause, aucun code patron,
- *                                       démo ; drapeau éteint, aucun fichier du kit
  *   team-pin-browser-test               l'app équipe derrière kiwiSkin2027:team : la
  *                                       connexion en deux étapes (e-mail, puis pavé),
  *                                       le pointage d'arrivée et de départ à six
  *                                       chiffres ; drapeau éteint, aucun fichier du kit */
-section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage, caisse, tableau de bord, équipe)');
+section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage, caisse, équipe)');
 {
   const { spawnSync } = require('child_process');
   const gates = [
@@ -2755,7 +2757,6 @@ section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appai
     ['clock-expiry-browser-test.mjs', 'clock-expiry-browser-test'],
     ['pair-redeem-timeout-browser-test.mjs', 'pair-redeem-timeout-browser-test'],
     ['till-pin-browser-test.mjs', 'till-pin-browser-test'],
-    ['dash-pin-browser-test.mjs', 'dash-pin-browser-test'],
     ['team-pin-browser-test.mjs', 'team-pin-browser-test'],
   ];
   for (const [file, label] of gates) {
@@ -2957,94 +2958,65 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
   }
 }
 
-/* ── 14h · Kiwi 2027, étape 5 : le tableau de bord ───────────────────────
- * Derrière kiwiSkin2027:dashboard, l'accueil se dessine sur le kit
- * (assets/kit/dash-home.js) avec les chiffres livrés : dateRange.js publie ce
- * qu'il vient d'écrire (KiwiDateRange.home(), kiwi:home-model). Décision du
- * propriétaire, 2026-10-15 : les chiffres livrés d'abord, le registre plus
- * tard (§21.2) ; la démo garde ses générateurs.
- *   dash-home-browser-test              drapeau éteint, rien n'est chargé ; allumé, le
- *                                       chiffre clé, l'objectif, la comparaison, les
- *                                       tuiles et les commandes sont ceux du rendu livré ;
- *                                       Hier déplace la période livrée ; une tuile et une
- *                                       commande ouvrent les livrées
- *   dash-orders-browser-test            les commandes (§18.2) : pages-pro.js publie son
- *                                       rendu (KiwiOrdersPage, kiwi:orders-model) ; le
- *                                       chiffre clé, le résumé et les lignes par heure
- *                                       sont ceux du rendu livré ; le filtre et la période
- *                                       déplacent les livrés ; une ligne ouvre la fiche
- *   dash-report-browser-test            l'en-tête du rapport (§12) : day-report-dash.js
- *                                       publie son rendu (KiwiReportPage,
- *                                       kiwi:report-model) ; le jour, le net et sa
- *                                       référence, les tuiles sont ceux du rendu livré ;
- *                                       Exporter est un menu des trois exports livrés ;
- *                                       un autre jour de la frise déplace l'en-tête
- *   dash-customers-browser-test         les clients (§18.5) : clients-directory.js
- *                                       publie son carnet (KiwiClientsPage,
- *                                       kiwi:customers-model) ; le résumé, les
- *                                       segments et les lignes sont ceux du livré ; le
- *                                       segment, la recherche, le menu, Ajouter et une
- *                                       ligne passent par les contrôles livrés
- *   dash-retention-browser-test         la fidélisation : customer-retention.js publie
- *                                       sa page (KiwiRetentionPage, kiwi:retention-model) ;
- *                                       les onglets, les groupes et les lignes de
- *                                       l'activité sont ceux du livré ; un autre onglet
- *                                       ouvre le panneau livré
- *   dash-compliance-browser-test        la conformité (§12) : chaque onglet livré est une
- *                                       ligne d'une liste à 360 à côté de son écran livré,
- *                                       avec un statut lu dans les données de l'onglet
- *   dash-ai-browser-test                le début d'une conversation Kiwi AI (§18.6) :
- *                                       l'intro, la carte du jour lue dans le registre
- *                                       (todayPace), les questions du métier puis celles
- *                                       du héros ; une ligne pose sa question
- *   dash-figures-agreement-test         un jour, un jeu de chiffres : le chiffre
- *                                       d'affaires, les commandes et le panier moyen de
- *                                       l'accueil, des commandes, du rapport et de Kiwi
- *                                       AI sont ceux du registre de démo du jour
- *   chart-legend-test                   la légende du graphique (§10.22) : la bande
- *                                       réservée, aucun point dedans, la grille du haut
- *                                       nommée par son maximum, le bord de début, 1,35,
- *                                       la droite en RTL
- *   dash-frame-browser-test             le cadre : la tête de chaque page (Heading,
- *                                       Footnote ink-2, le chiffre clé reste le plus
- *                                       grand) et de chaque tiroir (Heading, fermer 44
- *                                       rond sur surface-2)
- *   dash-desktop-browser-test           le bureau (900 et plus) : drapeau éteint, rien
- *                                       n'est chargé ; la barre latérale du kit liste
- *                                       les liens livrés dans leur ordre, un clic ouvre
- *                                       la page livrée ; l'accueil en grille (chiffre et
- *                                       courbe dans une carte, tuiles à côté, commandes
- *                                       à côté de l'objectif), aucun chevauchement ;
- *                                       900, 1024, 1920, sombre mesuré, arabe à droite,
- *                                       rien sous 900
- *   dash-phone-browser-test             le téléphone (390 × 844) : la barre de nav et la
- *                                       capsule d'onglets du kit à la place du bandeau
- *                                       sombre, l'accueil dans l'ordre du §18.1 (courbe,
- *                                       quatre tuiles, trois commandes et « Voir »), le
- *                                       titre d'une page dans la barre, Kiwi AI, l'arabe,
- *                                       et rien de tout cela drapeau éteint ou en large */
-section('Kiwi 2027 · le tableau de bord sur le kit');
+/* ── 14g bis · Parité 2027 : la peau change le regard, jamais les gestes ──
+ * Le chantier 2027 est une PEAU (propriétaire, 2026-10-27). Chaque parcours
+ * ci-dessous est joué deux fois par de vrais appuis, une fois sur le design
+ * livré et une fois en 2027, et ce qu'il laisse derrière lui est comparé :
+ * bons de cuisine, tables, commandes de table, panier à emporter et journal de
+ * service (ventes, remboursements, mouvements d'espèces). Toute différence, ou
+ * un geste que 2027 ne peut pas accomplir (bouton absent ou recouvert), est un
+ * échec de parité.
+ *
+ * C'est le filet de la seule classe de régression que ce chantier ait produite :
+ * un bouton livré que la peau n'a pas réexposé (« envoyer en cuisine »,
+ * « Client & fidélité », « Changer de serveur », « Réimprimer le dernier
+ * ticket »), ou un volet 2027 qui ne part pas du même état que la fenêtre
+ * livrée (espèces reçues, remise, partage). Le moteur, tools/parity-2027.mjs,
+ * ne finissait pas par « test » : aucune des deux gardes (« tout fichier de
+ * test est câblé », « tout fichier de test a tourné ») ne le voyait, et il ne
+ * tournait donc qu'à la main. Les cinq enveloppes ci-dessous le découpent par
+ * groupe et par taille d'écran pour tenir dans le délai d'une suite. */
+section('Kiwi 2027 · parité de la caisse (peau contre gestes)');
 {
   const { spawnSync } = require('child_process');
   const gates = [
-    ['dash-home-browser-test.mjs', 'dash-home-browser-test'],
-    ['dash-orders-browser-test.mjs', 'dash-orders-browser-test'],
-    ['dash-report-browser-test.mjs', 'dash-report-browser-test'],
-    ['dash-customers-browser-test.mjs', 'dash-customers-browser-test'],
-    ['dash-retention-browser-test.mjs', 'dash-retention-browser-test'],
-    ['dash-compliance-browser-test.mjs', 'dash-compliance-browser-test'],
-    ['dash-ai-browser-test.mjs', 'dash-ai-browser-test'],
-    ['dash-figures-agreement-test.mjs', 'dash-figures-agreement-test'],
+    ['parity-2027-dine-tablet-test.mjs', 'parity-2027-dine-tablet-test'],
+    ['parity-2027-dine-phone-test.mjs', 'parity-2027-dine-phone-test'],
+    ['parity-2027-takeaway-tablet-test.mjs', 'parity-2027-takeaway-tablet-test'],
+    ['parity-2027-takeaway-phone-test.mjs', 'parity-2027-takeaway-phone-test'],
+    ['parity-2027-drawer-kitchen-test.mjs', 'parity-2027-drawer-kitchen-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('\u25cb skip')) warn(`${label} sauté (pas de Chromium : la parité n'a pas été jouée)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => /^parity-2027:/.test(l)).pop() || 'vert').trim();
+      ok(`${label} · ${line}`);
+    } else {
+      const lines = out.split('\n').filter((l) => /^\s*\u2717/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*\u2717\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
+/* ── 14h · Le tableau de bord livré, au téléphone ───────────────────────
+ * Le chantier 2027 ne touche plus le tableau de bord (décision du
+ * propriétaire, 2026-10-27) : les suites qui mesuraient sa version sur le kit
+ * sont retirées avec elle. Reste ce qui juge les écrans livrés.
+ *   dash-phone-pages-browser-test       chaque page et ses sous-onglets à 390 de large :
+ *                                       rien ne dépasse l'écran (FR, AR)
+ *   dash-phone-sheets-browser-test      et chaque feuille, tiroir ou sélecteur qu'elles
+ *                                       ouvrent, à la même largeur (FR, AR) */
+section('Le tableau de bord livré, au téléphone');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
     ['chart-legend-test.mjs', 'chart-legend-test'],
-    ['dash-frame-browser-test.mjs', 'dash-frame-browser-test'],
-    ['dash-desktop-browser-test.mjs', 'dash-desktop-browser-test'],
-    ['dash-phone-browser-test.mjs', 'dash-phone-browser-test'],
-    /* Les finitions : pas de barre téléphone en large, l'unité espacée, les segments centrés ou défilants, Conformité au kit, la période depuis l'accueil, درهم sur Commandes. */
-    ['dash-polish-browser-test.mjs', 'dash-polish-browser-test'],
-    /* Chaque page du tableau de bord et ses sous-onglets, à 390 de large : rien ne dépasse l'écran (FR, AR, kit 2027 AR). */
+    /* Chaque page du tableau de bord et ses sous-onglets, à 390 de large : rien ne dépasse l'écran (FR, AR). */
     ['dash-phone-pages-browser-test.mjs', 'dash-phone-pages-browser-test'],
     ['dash-phone-pages-ar-browser-test.mjs', 'dash-phone-pages-ar-browser-test'],
-    ['dash-phone-pages-kit-browser-test.mjs', 'dash-phone-pages-kit-browser-test'],
     /* Et chaque feuille, tiroir ou sélecteur que ces pages ouvrent, à 390 de large (FR, AR). */
     ['dash-phone-sheets-browser-test.mjs', 'dash-phone-sheets-browser-test'],
     ['dash-phone-sheets-ar-browser-test.mjs', 'dash-phone-sheets-ar-browser-test'],
@@ -3093,11 +3065,8 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
  *                                       un 375 × 667, 44 de haut pour chaque puce, la
  *                                       barre de commande hors du rail, la feuille
  *                                       centrée sur iPad, l'arabe (drapeau, compteur,
- *                                       total, options, nom latin)
- *   dash-onboarding-browser-test        l'accueil après le compte (§18.8, étapes 2 à 5) :
- *                                       le type, les objectifs, le code deux fois sur le
- *                                       pavé, cet appareil ; finish() livré crée le
- *                                       commerce ; l'appareil d'équipe déconnecte */
+ *                                       total, options, nom latin) */
+
 section('Kiwi 2027 · l\'accès et le reste sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -3107,7 +3076,6 @@ section('Kiwi 2027 · l\'accès et le reste sur le kit');
     ['team-split-browser-test.mjs', 'team-split-browser-test'],
     ['team-polish-browser-test.mjs', 'team-polish-browser-test'],
     ['onboarding-recovery-browser-test.mjs', 'onboarding-recovery-browser-test'],
-    ['dash-onboarding-browser-test.mjs', 'dash-onboarding-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

@@ -380,6 +380,8 @@
         self.emit('method', m, { gestureId: g });
       });
       K.tap(R, '[data-tip]', function (el, e, g) { self.openTip(el, g); });
+      K.tap(R, '[data-client]', function (el, e, g) { self.emit('client', null, { gestureId: g }); });
+      K.tap(R, '[data-reward]', function (el, e, g) { self.emit('reward', null, { gestureId: g }); });
       C.chip.bind(R, function (v, g) { self.__recv = String(v); self.render(); self.emit('quick', v, { gestureId: g }); });
       C.keypad.bind(R, function (id, key, g) {
         var tip = self.__tipEntry;
@@ -393,7 +395,7 @@
         var w = el.getAttribute('data-w');
         if (w === 'confirm') {
           self.__gat = K.now(); self.__gid = g;
-          self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: self.p().method === 'cash' ? C.keypad.value(self.__recv) : null, gestureId: g });
+          self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: self.p().method === 'cash' ? self.recv() : null, gestureId: g });
         } else if (w === 'leave') {                     /* the header's Back: out of the payment (§18.3) */
           self.__tipEntry = false;
           self.emit('leave', null, { gestureId: g });
@@ -409,6 +411,10 @@
     p: function () { return this.__pay || (this.__pay = {}); },
     tip: function () { var p = this.p(); if (p.noTip) return 0; return fromCents(Math.round(cents(p.due) * (p.tipPct || 0) / 100)); },
     owed: function () { return fromCents(cents(this.p().due) + cents(this.tip())); },
+    /* Cash received starts at the exact amount owed, as the shipped cash modal
+       does (#cash-received = total): the cashier confirms at once, and types
+       or picks a note only when the customer hands over more. */
+    recv: function () { return this.__recv === '' ? this.owed() : C.keypad.value(this.__recv); },
     openTip: function (row, g) {
       var self = this, p = this.p();
       var pop = this.__pop;
@@ -451,7 +457,7 @@
         if (d) d.innerHTML = '<span class="k-foot k-ink2">' + th('pay.tip.other_title') + '</span><span class="k-heading k-num">' + esc(this.__tipText || '0') + ' %</span>';
         return;
       }
-      var recv = C.keypad.value(this.__recv), owed = this.owed();
+      var recv = this.recv(), owed = this.owed();
       if (d) d.innerHTML = '<span class="k-heading k-num">' + th('pay.received', { amount: money(recv) }) + '</span>';
       if (ch) ch.textContent = recv >= owed ? t('pay.change', { amount: money(fromCents(cents(recv) - cents(owed))) }) : '';
       if (ft) ft.innerHTML = C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cf', attrs: ' data-w="confirm"', label: t('pay.cash.confirm'),
@@ -473,7 +479,7 @@
       var lower = '';
       if (this.__tipEntry || p.method === 'cash') {
         var chips = this.__tipEntry ? '<div class="chips" aria-hidden="true"></div>' : C.chip.group({ label: t('pay.received', { amount: '' }), options: [{ value: String(owed), label: t('pay.exact'), ariaLabel: t('pay.exact_a11y', { amount: money(owed) }) }]
-          .concat(roundUps(owed).map(function (v) { return { value: String(v), label: money(v) }; })), value: this.__recv });
+          .concat(roundUps(owed).map(function (v) { return { value: String(v), label: money(v) }; })), value: this.__recv === '' ? String(owed) : this.__recv });
         lower = '<div class="cash"><div class="disp" aria-live="polite"></div>' + chips + C.keypad.render({ form: form, short: lay === 'compact-short', label: t('pay.cash') }) +
           '<p class="k-heading k-num chg" aria-live="polite"></p>' +
           (this.__tipEntry ? C.button.render({ variant: 'primary', size: 'L', full: true, id: 'td', attrs: ' data-w="tip-done"', label: t('action.done') }) : '<div class="pri"></div>') + '</div>';
@@ -493,6 +499,8 @@
         '<div class="kf"><span class="k-foot k-ink2">' + th('pay.amount_due') + '</span>' +
         '<span class="k-title k-num" data-key-figure>' + numHtml(money(owed)) + '</span>' +
         '<span class="k-foot k-ink2 brk">' + (tip ? '<span data-k-part>' + th('pay.tip_breakdown', { bill: money(p.due), tip: money(tip) }) + '</span>' : '') + '</span></div>' +
+        (p.client ? '<button type="button" class="row k-body" data-client><span>' + esc(p.client) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>' : '') +
+        (p.reward ? '<button type="button" class="row k-body" data-reward><span>' + esc(p.reward) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>' : '') +
         (p.noTip ? '' : '<button type="button" class="row k-body" data-tip aria-haspopup="dialog"><span>' + th('pay.tip') + '</span><span class="k-ink2 tv">' + esc(tipVal) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>') +
         (this.__tipEntry ? '' : '<div class="ms" role="radiogroup" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' + methods + '</div>');
       /* The paid moment's line (§10.26): .pay.note, set by the host from the
@@ -749,7 +757,7 @@
   var KSplit = K.make({
     setup: function () {
       var self = this, R = this.shadowRoot;
-      this.__mode = 'equal'; this.__n = 2; this.__assign = {}; this.__pick = 0;
+      this.fresh(2, true);
       R.addEventListener('kiwi:action', function (e) {
         var d = e.detail || {};
         if (d.action !== 'k.segmented.select') return;
@@ -783,6 +791,13 @@
       var gross = sums.reduce(function (a, c) { return a + c; }, 0);
       /* A discount comes off pro rata to the shares' sums (§10.30). */
       return gross > total ? shareWeighted(total, sums) : sums;
+    },
+    /* A new bill starts a new split: the sheet is built once and reused, so
+       the head count and the items given out stay from the last bill
+       unless they are put back here (the host calls it, assets/caisse/till-frame.js). */
+    fresh: function (n, quiet) {
+      this.__mode = 'equal'; this.__n = Math.max(2, Math.min(20, Number(n) || 2)); this.__assign = {}; this.__pick = 0;
+      if (!quiet) this.render();
     },
     render: function () {
       var b = this.bill || {}, self = this, paid = this.paidShares || [];
@@ -825,7 +840,7 @@
   var KDiscount = K.make({
     setup: function () {
       var self = this, R = this.shadowRoot;
-      this.__mode = 'percent'; this.__text = ''; this.__reason = null;
+      this.fresh(null, true);
       R.addEventListener('kiwi:action', function (e) {
         var d = e.detail || {};
         if (d.action !== 'k.segmented.select') return;
@@ -843,10 +858,21 @@
       });
       C.button.bind(R, function (el, g) {
         if (el.getAttribute('data-w') === 'leave') { self.emit('leave', null, { gestureId: g }); return; }   /* the header's Back (§10.31) */
+        if (el.getAttribute('data-w') === 'remove') { self.emit('remove', null, { gestureId: g }); return; }
         if (el.getAttribute('data-w') !== 'apply') return;
         /* The Apply tap fires nothing; the approval's answer does (§10.31). */
         self.emit('apply', null, { mode: self.__mode, value: C.keypad.value(self.__text), reason: self.__reason, amount: self.amount(), gestureId: g });
       }, '[data-w]');
+    },
+    /* Opening on a note: the discount already on it, as the shipped window
+       shows it (assets/caisse/discounts.js openRemiseModal), or a blank sheet.
+       The sheet is reused, so nothing typed for another note survives. */
+    fresh: function (cur, quiet) {
+      this.__mode = cur && cur.mode === 'amount' ? 'amount' : 'percent';
+      this.__text = cur && cur.value ? String(cur.value) : '';
+      this.__reason = (cur && cur.reason) || null;
+      this.__has = !!cur;
+      if (!quiet) this.render();
     },
     pols: function () { var p = this.policy || {}; return (p.percentages && p.percentages.length) ? p.percentages : [5, 10, 15, 20]; },
     amount: function () {
@@ -869,7 +895,8 @@
         (v ? '<p class="k-callout pv">' + th('discount.preview', { pct: pctText(b.total ? Math.round(amt / b.total * 1000) / 10 : 0), amount: money(amt), total: money(newTotal) }) + '</p>' : '') +
         (err ? '<p class="k-foot er" role="status">' + esc(err) + '</p>' : '') +
         '<p class="k-foot k-ink2">' + th('discount.manager') + '</p>' +
-        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ap', attrs: ' data-w="apply"', label: t('discount.apply', { amount: money(amt) }), disabled: !ready }) + '</div>';
+        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ap', attrs: ' data-w="apply"', label: t('discount.apply', { amount: money(amt) }), disabled: !ready }) +
+        (this.__has ? C.button.render({ variant: 'secondary', size: 'L', full: true, id: 'rm', attrs: ' data-w="remove"', label: t('discount.remove') }) : '') + '</div>';
       this.$('#mode').options = [{ value: 'percent', label: t('discount.percent') }, { value: 'amount', label: t('discount.amount') }];
     }
   });
