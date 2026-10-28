@@ -92,5 +92,14 @@ await strict('BK-2 manage link reads and cancels nothing once the booking ended 
 // code and the booking's phone or e-mail, written any usual way; every miss
 // answers the same 404, and nothing leaks without both.
 await strict('a booking is found again by its code and its phone or e-mail, and only then',fc.asyncProperty(fc.integer({min:0,max:15}),fc.constantFrom('local','spaced','intl','email'),async(i,form)=>{await reset();const b=payload(i);if(form==='email')b.customer.email='Guest.'+i+'@Example.test';const made=await request('POST',b);ok(made);const {code,manageToken}=made.body;const digits=b.customer.phone.replace(/\D/g,'');const contact=form==='local'?digits:form==='spaced'?digits.replace(/(\d{2})(?=\d)/g,'$1 '):form==='intl'?'+212 '+digits.slice(1):' guest.'+i+'@example.TEST ';const found=await request('POST',{action:'recover',code:code.toLowerCase(),contact});ok(found);assert.equal(found.body.manageToken,manageToken);assert.match(found.body.manageUrl,new RegExp('manage='+manageToken+'$'));for(const wrong of [{code,contact:'0699999999'},{code:code.slice(0,-1)+(code.endsWith('A')?'B':'A'),contact},{code,contact:''},{code:'',contact}]){const miss=await request('POST',{action:'recover',...wrong});assert.equal(miss.status,404,JSON.stringify(wrong));assert.deepEqual(miss.body,{error:'not-found'});}return true;}));
+// The recovery limiter: a success never clears it, and misses count against the
+// code itself (eight misses lock that code for everyone, other codes stay open).
+{await reset();const b=payload(1),other=payload(2);other.startAt+=3600e3;const one=(await request('POST',b)).body,two=(await request('POST',other)).body;const digits=b.customer.phone;
+for(let i=0;i<7;i++)assert.equal((await request('POST',{action:'recover',code:one.code,contact:'0600000000'})).status,404);
+assert.equal((await request('POST',{action:'recover',code:one.code,contact:digits})).status,200,'the right contact still works under the cap');
+assert.equal((await request('POST',{action:'recover',code:one.code,contact:'0600000000'})).status,404,'eighth miss');
+const locked=await request('POST',{action:'recover',code:one.code,contact:digits});assert.equal(locked.status,429,'a success did not reset the count: the code is locked');
+assert.equal((await request('POST',{action:'recover',code:two.code,contact:other.customer.phone})).status,200,'another booking is not locked');
+console.log('✓ recovery limiter: never cleared by a success, counted per booking code');}
 }finally{f.close();globalThis.Date=NativeDate;}
 console.log(`booking-properties: ${passed} strict passed, ${failed} failed, ${known} known; ${RUNS} cases/property; seed=${SEED}`);if(failed)process.exitCode=1;

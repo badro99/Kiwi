@@ -382,11 +382,22 @@ export async function onRequestDelete({ request, env }) {
  * énumérer) et compte contre la limite de débit, comme un jeton inconnu. */
 const BOOKING_CODE = /^[RH]-[0-9A-F]{8}$/;
 async function recoverBooking(request, env, b) {
+  /* Its own limiter, never cleared by a success: holding one real booking must
+     not reset the count between guesses at someone else's. Misses also count
+     against the code itself, so spreading guesses over many addresses does not
+     help either, and against the route's shared limiter. */
+  const ipLimited = await limitCheck(request, env, 'booking-recover'); if (ipLimited) return ipLimited;
   const merchant = str(b?.merchant, 64).toLowerCase();
   const code = str(b?.code, 24).toUpperCase().replace(/\s+/g, '');
   const contact = str(b?.contact, 160), key = phoneKey(contact), email = normalizeEmail(contact);
-  const miss = async () => { await limitFail(request, env, 'booking'); return json({ error:'not-found' }, 404); };
-  if (!ID.test(merchant) || !BOOKING_CODE.test(code) || (!key && !email)) return miss();
+  const codeKey = ID.test(merchant) && BOOKING_CODE.test(code) ? merchant + '|' + code : '';
+  if (codeKey) { const codeLimited = await limitCheck(request, env, 'booking-recover', codeKey); if (codeLimited) return codeLimited; }
+  const miss = async () => {
+    await limitFail(request, env, 'booking'); await limitFail(request, env, 'booking-recover');
+    if (codeKey) await limitFail(request, env, 'booking-recover', codeKey);
+    return json({ error:'not-found' }, 404);
+  };
+  if (!codeKey || (!key && !email)) return miss();
   let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' }, 503); }
   const doc = safeDoc(rows.reservation?.data);
   let rec = doc.bookings.find((x) => x && x.code === code) || null;
@@ -395,7 +406,6 @@ async function recoverBooking(request, env, b) {
   const c = rec.customer || {};
   const same = (key && c.phone && phoneKey(c.phone) === key) || (email && c.email && normalizeEmail(c.email) === email);
   if (!same) return miss();
-  await limitClear(request, env, 'booking');
   return json({ ok:true, code:rec.code, manageToken:rec.manageToken, manageUrl:manageUrl(request, merchant, rec.manageToken) });
 }
 
