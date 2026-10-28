@@ -6,10 +6,8 @@
 (function () {
   'use strict';
 
-  var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   // One year plus five days for month-end review. Financial books live in their own ledgers.
-  var MAX_DAYS = 370;
   var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
   /* briefing-limits:begin · copie générée de functions/api/_briefing-limits.js par tools/build-briefing-limits.mjs : ne pas modifier ici */
   /* clé : [réglage d'usine, minimum, maximum, nom fr, nom en, nom ar] */
@@ -83,7 +81,7 @@
     if (!isReal() || !slug() || !/^(owner|manager)$/.test(tier()) || !value || typeof value !== 'object') return false;
     var clean = validSettings(value);
     if (Object.keys(value).some(function (k) { return !Object.prototype.hasOwnProperty.call(clean, k); })) return false;
-    own(); doc.settingsFieldsAt = doc.settingsFieldsAt || {};
+    var doc = own(); doc.settingsFieldsAt = doc.settingsFieldsAt || {};
     /* Horloge de Lamport par champ : une modification passe toujours après
      * celle qu'elle remplace, même si un autre appareil avançait d'un mois. */
     var at = Date.now();
@@ -140,15 +138,26 @@
     });
     return line;
   }
-  var doc = { days: [] };
+
   /* The venue `doc` was loaded for. slug() follows the venue on screen the
    * moment it changes, while `doc` stayed whatever was last loaded: a compute()
    * fired between a venue switch and the subscriber's readLocal() prepended
    * the new venue's day to the OLD venue's days and pushed the lot to the new
    * store. An operator hopping between two stores filed each one's days in
    * the other's document (maison-121 <-> la-maison-en-vogue, 2026-09-26). */
-  var docSlug = '';
-  var cloud = null;
+
+  var rules = window.KiwiBriefingRules.createRules({ limit: limit, businessDay: businessDay, dayBoundsAt: dayBoundsAt, now: function () { return Date.now(); }, money: function (value) {
+    var opts = { maximumFractionDigits: 2 };
+    return window.KiwiNumber?.format(value, opts) ?? value.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', opts);
+  } });
+  var persistence = window.KiwiBriefingPersistence.createPersistence({ slug: slug, localKey: localKey, validSettings: validSettings, render: render, compute: compute, isReal: isReal, localStorage: { getItem: function (key) { return localStorage.getItem(key); }, setItem: function (key, value) { return localStorage.setItem(key, value); }, removeItem: function (key) { return localStorage.removeItem(key); } }, limits: LIMITS,
+    cloudDoc: function () { return window.KiwiCloudDoc; }, canDispatch: function () { return typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function'; }, dispatch: function (detail) { window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: detail })); }
+  });
+  function own() { return persistence.own(); }
+  function writeLocal(value) { return persistence.writeLocal(value); }
+  function mergeDocs(a, b) { return persistence.mergeDocs(a, b); }
+  function save() { return persistence.save(); }
+  function attachCloud() { return persistence.attachCloud(); }
 
   var COPY = {
     fr: {
@@ -233,48 +242,9 @@
    * in (local read, server pull, merge, write) goes through here, so a day
    * filed under another venue is dropped instead of carried. */
   // Stable tie-breaks make equal-clock local/cloud copies converge.
-  function stableJSON(value) {
-    if (!value || typeof value !== 'object') return JSON.stringify(value);
-    if (Array.isArray(value)) return '[' + value.map(stableJSON).join(',') + ']';
-    return '{' + Object.keys(value).sort().map(function (key) {
-      return JSON.stringify(key) + ':' + stableJSON(value[key]);
-    }).join(',') + '}';
-  }
-  function safeDoc(value, venue) {
-    value = value && typeof value === 'object' ? value : {};
-    venue = venue == null ? slug() : String(venue);
-    var days = Array.isArray(value.days) ? value.days.filter(function (x) {
-      return x && x.id && x.day && venue && x.venue === venue;
-    }) : [];
-    days.sort(function (a, b) {
-      var clock = (+b.updatedAt || 0) - (+a.updatedAt || 0);
-      if (clock) return clock;
-      var left = stableJSON(a), right = stableJSON(b);
-      return left < right ? -1 : left > right ? 1 : 0;
-    });
-    var seen = Object.create(null);
-    var settings = validSettings(value.settings), clocks = {};
-    Object.keys(settings).forEach(function (key) {
-      var at = value.settingsFieldsAt && value.settingsFieldsAt[key];
-      clocks[key] = typeof at === 'number' && Number.isFinite(at) ? at : Number(value.settingsAt) || 0;
-    });
-    return { settings: settings, settingsAt: Number(value.settingsAt) || 0, settingsFieldsAt: clocks, days: days.filter(function (row) {
-      if (seen[row.day]) return false;
-      seen[row.day] = true; return true;
-    }).slice(0, MAX_DAYS) };
-  }
-  function readLocal() {
-    var venue = slug();
-    docSlug = venue;
-    if (!venue) return { days: [] };
-    try { return safeDoc(JSON.parse(localStorage.getItem(localKey()) || 'null'), venue); }
-    catch (_) { return { days: [] }; }
-  }
+
   /* The in-memory doc, reloaded if the venue changed since it was read. */
-  function own() {
-    if (docSlug !== slug()) doc = readLocal();
-    return doc;
-  }
+
   /* La dernière écriture locale a-t-elle pris ? « Traité » ou « Masquer » sur
      un signal, c'est un choix du commerçant : si localStorage lève (quota
      plein, stockage refusé), la mémoire et la remontée serveur le gardent,
@@ -282,40 +252,12 @@
      était avalée sans rien dire ; désormais la carte affiche une ligne
      « Non enregistré sur cet appareil » jusqu'à la prochaine écriture qui
      prend, durable() le lit, et « kiwi:local-save » le signale. */
-  var localKept = true;
-  function writeLocal(value) {
-    var venue = slug();
-    doc = safeDoc(value, venue); docSlug = venue;
-    if (venue) {
-      var ok = false;
-      try { localStorage.setItem(localKey(), JSON.stringify(doc)); ok = true; } catch (_) { console.warn("[briefing] writeLocal failed"); }
-      var was = localKept;
-      localKept = ok;
-      if (!(ok && was)) {
-        try {
-          if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-            window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'briefing', key: localKey(), durable: ok } }));
-          }
-        } catch (_) { console.warn("[briefing] writeLocal failed"); }
-      }
-    }
-    render();
-  }
+
   function unsavedNote(t) {
     var failed = false;
-    try { failed = !!localStorage.getItem(localKey() + ':cloud-save'); } catch (_) { console.warn("[briefing] unsavedNote failed"); }
+    try { failed = persistence.cloudFailed(); } catch (_) { console.warn("[briefing] unsavedNote failed"); }
     var note = failed ? '<button type="button" class="briefing-unsaved" data-briefing-cloud-retry>' + esc(t.cloudFailed) + '</button>' : '';
-    return note + (localKept ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>');
-  }
-  function mergeDocs(a, b) {
-    var left = safeDoc(a), right = safeDoc(b);
-    var settings = {}, clocks = {};
-    Object.keys(LIMITS).forEach(function (key) {
-      var la = left.settingsFieldsAt[key], ra = right.settingsFieldsAt[key];
-      var chosen = la == null ? right : ra == null ? left : la > ra ? left : la < ra ? right : stableJSON(left.settings[key]) > stableJSON(right.settings[key]) ? left : right;
-      if (chosen.settings[key] != null) { settings[key] = chosen.settings[key]; clocks[key] = chosen.settingsFieldsAt[key]; }
-    });
-    return safeDoc({ days: left.days.concat(right.days), settings: settings, settingsFieldsAt: clocks, settingsAt: Math.max(left.settingsAt, right.settingsAt) });
+    return note + (persistence.durable() ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>');
   }
 
   function normalizeEvidence(value) {
@@ -378,23 +320,7 @@
     var from = d.getTime() + cut * 3600000;
     return { from: from, to: from + 86400000 };
   }
-  function windowStats(rows, from, to) {
-    var revenue = 0, count = 0;
-    rows.forEach(function (row) {
-      var ts = Number(row && row.ts) || 0;
-      if (ts < from || ts >= to || row.voided || row.void_ts) return;
-      var cents = row.amountCents != null ? Number(row.amountCents) : Math.round((Number(row.amount) || 0) * 100);
-      if (!Number.isFinite(cents)) return;
-      revenue += cents; if (cents >= 0) count++;
-    });
-    return { revenue: revenue / 100, count: count };
-  }
-  function median(values) {
-    var a = values.slice().sort(function (x, y) { return x - y; });
-    if (!a.length) return null;
-    var mid = Math.floor(a.length / 2);
-    return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
-  }
+
   /* Qui a fait le geste, en mots. La caisse enregistre l'identifiant de la
    * fiche équipe (remise : le responsable qui l'a validée ; annulation :
    * `staff:<id>`, `account:<id>` ou `operator:<id>`). « Acteur principal :
@@ -402,36 +328,11 @@
    * KiwiTeam.roster(), qui ne porte ni code ni mot de passe. Une fiche qui
    * n'est plus dans l'équipe garde une référence courte, pour qu'on puisse la
    * retrouver sans afficher l'identifiant entier. */
-  function actorName(id, roster) {
-    id = String(id || '');
-    var kind = /^(staff|account|operator):/.exec(id), raw = kind ? id.slice(kind[0].length) : id;
-    if (kind && kind[1] === 'account') return { fr: 'le compte propriétaire', en: 'the owner account', ar: 'حساب المالك' };
-    if (kind && kind[1] === 'operator') return { fr: 'un opérateur Kiwi', en: 'a Kiwi operator', ar: 'مشغّل من Kiwi' };
-    var list = roster;
-    if (!Array.isArray(list)) { try { list = window.KiwiTeam && window.KiwiTeam.roster ? window.KiwiTeam.roster() : []; } catch (_) { list = []; } }
-    var hit = raw && (list || []).filter(function (m) { return m && String(m.id) === raw; })[0];
-    var name = hit && String(hit.name || '').trim();
-    if (name && name !== '·') return { fr: name, en: name, ar: name };
-    var ref = raw ? raw.slice(-6) : '';
-    return ref
-      ? { fr: 'une personne absente de l’équipe actuelle (réf. ' + ref + ')', en: 'someone no longer in the team (ref. ' + ref + ')', ar: 'شخص لم يعد ضمن الفريق (مرجع ' + ref + ')' }
-      : { fr: 'une personne non identifiée', en: 'an unidentified person', ar: 'شخص غير معروف' };
-  }
+  function roster() { try { return window.KiwiTeam && window.KiwiTeam.roster ? window.KiwiTeam.roster() : []; } catch (_) { return []; } }
+  function actorName(id, list) { return rules.actorName(id, Array.isArray(list) ? list : roster()); }
   /* Le motif d'annulation, en mots. Sans motif saisi, le serveur enregistre
    * d'où vient l'annulation (functions/api/sale/cancel.js). */
-  var VOID_REASON = {
-    'employee-cancel': { fr: 'annulation à la caisse', en: 'cancelled at the till', ar: 'إلغاء من الصندوق' },
-    'dashboard-cancel': { fr: 'annulation depuis le tableau de bord', en: 'cancelled from the dashboard', ar: 'إلغاء من لوحة التحكم' },
-    'non-renseigne': { fr: 'sans motif', en: 'no reason given', ar: 'بدون سبب' },
-    'client-change': { fr: 'changement du client', en: 'customer changed their mind', ar: 'تغيير من الزبون' },
-    duplicate: { fr: 'doublon', en: 'duplicate', ar: 'تكرار' }
-  };
-  function reasonWords(key) {
-    var k = String(key || 'non-renseigne'), hit = VOID_REASON[k];
-    if (hit) return hit;
-    var plain = k.replace(/-+/g, ' ');
-    return { fr: plain, en: plain, ar: plain };
-  }
+
   function salesDropRule(input) {
     input = input || {};
     var ready = input.backfillComplete;
@@ -444,43 +345,7 @@
     if (!ready) return null;
     var now = Number(input.now) || Date.now();
     var rows = Array.isArray(input.rows) ? input.rows : salesRows();
-    var currentBounds = dayBoundsAt(now);
-    var elapsed = Math.max(0, Math.min(now - currentBounds.from, currentBounds.to - currentBounds.from));
-    if (!(elapsed > 0)) return null;
-    var current = windowStats(rows, currentBounds.from, currentBounds.from + elapsed);
-    function sample(daysBack) {
-      var b = dayBoundsAt(currentBounds.from - daysBack * 86400000 + 1000);
-      return windowStats(rows, b.from, Math.min(b.to, b.from + elapsed));
-    }
-    var sameWeekday = [7, 14, 21, 28].map(sample).filter(function (x) { return x.count > 0; });
-    var trailing = [1, 2, 3, 4, 5, 6, 7].map(sample).filter(function (x) { return x.count > 0; });
-    if (sameWeekday.length < limit('samples') || trailing.length < limit('samples')) return null;
-    var weekdayMedian = median(sameWeekday.map(function (x) { return x.revenue; }));
-    var trailingMedian = median(trailing.map(function (x) { return x.revenue; }));
-    var threshold = limit('salesDrop') / 100;
-    if (!(weekdayMedian > 0) || !(trailingMedian > 0)) return null;
-    if (current.revenue > weekdayMedian * (1 - threshold) || current.revenue > trailingMedian * (1 - threshold)) return null;
-    var weekdayDrop = 100 * (1 - current.revenue / weekdayMedian);
-    var trailingDrop = 100 * (1 - current.revenue / trailingMedian);
-    var drop = Math.max(0, Math.round(Math.min(weekdayDrop, trailingDrop)));
-    var day = businessDay(now);
-    var end = new Date(currentBounds.from + elapsed);
-    var time = String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
-    var money = function (value) {
-      var opts = { maximumFractionDigits: 2 };
-      return window.KiwiNumber?.format(value, opts) ?? value.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', opts);
-    };
-    var cur = money(current.revenue), wd = money(weekdayMedian), tr7 = money(trailingMedian);
-    return {
-      id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],
-      copy: {
-        fr: 'Ventes en baisse de ' + drop + ' % : ' + cur + ' MAD à ' + time + ', contre ' + wd + ' MAD les mêmes jours et ' + tr7 + ' MAD sur les 7 derniers jours. Seuil : -' + limit('salesDrop') + ' %.',
-        en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -' + limit('salesDrop') + '%.',
-        ar: 'انخفضت المبيعات بنسبة ' + drop + '٪: ' + cur + ' درهم حتى ' + time + '، مقابل ' + wd + ' درهم في الأيام المماثلة و' + tr7 + ' درهم خلال آخر 7 أيام. العتبة: -' + limit('salesDrop') + '٪.'
-      },
-      evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet',
-        text: said(current.count, day + ' · 05:00-' + time, { fr: 'ventes de la caisse, historique complet', en: 'till sales, full history', ar: 'مبيعات الصندوق، السجل كاملا' }) }
-    };
+    return rules.salesDropRule(Object.assign({}, input, { now: now, rows: rows }));
   }
   function stockItems() {
     try {
@@ -508,90 +373,16 @@
         baseline = C.coverage(rows, baselineBounds.from, baselineBounds.to);
       } catch (_) { return null; }
     }
-    var currentCoverage = +(current && current.pctCosted);
-    var baselineCoverage = +(baseline && baseline.pctCosted);
-    var currentMargin = +(current && current.marginPct);
-    var baselineMargin = +(baseline && baseline.marginPct);
-    if (!(current && baseline) || !(current.revenueCosted > 0) || !(baseline.revenueCosted > 0)
-      || !isFinite(currentCoverage) || !isFinite(baselineCoverage)
-      || currentCoverage < limit('coverage') || baselineCoverage < limit('coverage')
-      || Math.abs(currentCoverage - baselineCoverage) > limit('coverageGap')
-      || !isFinite(currentMargin) || !isFinite(baselineMargin)) return null;
-    var erosion = baselineMargin - currentMargin;
-    if (erosion < limit('marginDrop')) return null;
-    var pct = function (n) { return Math.round(n * 10) / 10; };
-    return {
-      id: 'margin-erosion:' + String(currentDay || 'period'),
-      kind: 'margin-erosion', roles: ['owner'],
-      copy: {
-        fr: 'La marge brute baisse de ' + pct(erosion) + ' points (alerte dès ' + limit('marginDrop') + ' points). Couverture des coûts : ' + pct(currentCoverage) + ' % contre ' + pct(baselineCoverage) + ' %.',
-        en: 'Gross margin fell by ' + pct(erosion) + ' points (alert from ' + limit('marginDrop') + ' points). Cost coverage: ' + pct(currentCoverage) + '% vs ' + pct(baselineCoverage) + '%.',
-        ar: 'انخفض الهامش الإجمالي بمقدار ' + pct(erosion) + ' نقاط (التنبيه من ' + limit('marginDrop') + ' نقاط). تغطية التكلفة: ' + pct(currentCoverage) + '% مقابل ' + pct(baselineCoverage) + '٪.'
-      },
-      evidence: {
-        count: 2,
-        window: String(currentDay || 'période') + ' vs ' + String(baselineDay || 'référence'),
-        source: 'KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré',
-        text: said(2, {
-          fr: String(currentDay || 'période') + ' comparé à ' + String(baselineDay || 'la référence'),
-          en: String(currentDay || 'period') + ' versus ' + String(baselineDay || 'baseline'),
-          ar: String(currentDay || 'الفترة') + ' مقارنة ب' + String(baselineDay || 'المرجع')
-        }, {
-          fr: 'ventes avec un coût renseigné : ' + num(pct(currentCoverage), 'fr') + ' % contre ' + num(pct(baselineCoverage), 'fr') + ' %',
-          en: 'sales with a known cost: ' + num(pct(currentCoverage), 'en') + '% versus ' + num(pct(baselineCoverage), 'en') + '%',
-          ar: 'مبيعات بتكلفة مسجلة: ' + num(pct(currentCoverage), 'ar') + '٪ مقابل ' + num(pct(baselineCoverage), 'ar') + '٪'
-        })
-      }
-    };
+    return rules.marginErosionRule(Object.assign({}, input, { currentDay: currentDay, baselineDay: baselineDay, current: current, baseline: baseline }));
   }
 
   function lowStockRule(input) {
     input = input || {};
     var items = Array.isArray(input.items) ? input.items : stockItems();
     if (!items.length) return null;
-    var tracked = items.filter(function (item) {
-      return item && item.tracked === true && Number.isFinite(+item.balance) && Number.isFinite(+item.threshold) && +item.threshold > 0;
-    });
-    var low = tracked.filter(function (item) { return +item.balance < +item.threshold * (typeof limit === 'function' ? limit('stockFactor') : 1); }).sort(function (a, b) {
-      return (+a.balance / +a.threshold) - (+b.balance / +b.threshold);
-    });
-    if (!low.length) return null;
-    var names = low.slice(0, 3).map(function (item) { return String(item.name || item.id); }).join(', ');
-    var extra = low.length > 3 ? ' +' + (low.length - 3) : '';
-    var coverageFr = tracked.length + ' articles suivis sur ' + items.length;
-    var coverageEn = tracked.length + ' tracked items out of ' + items.length;
-    var coverageAr = tracked.length + ' صنفاً متابعاً من أصل ' + items.length;
-    var first = low.find(function (item) { return String(item.supplier || '').trim(); });
-    var action = null;
-    if (first) {
-      var factor = typeof limit === 'function' ? limit('stockFactor') : 1;
-      var target = Number(first.par) > Number(first.balance) ? Number(first.par) : Number(first.threshold);
-      if (factor !== 1) target = Math.max(target, Number(first.threshold) * factor);
-      var qty = Number((target - Number(first.balance)).toPrecision(15));
-      action = { name: 'create-po', args: { supplierName: String(first.supplier), lines: [{ itemId: String(first.id), name: String(first.name || first.id), qty: qty, unit: String(first.unit || '') }], note: 'Proposition du point du matin · stock sous seuil' } };
-    }
-    return {
-      id: 'low-stock:' + businessDay(Date.now()), kind: 'low-stock', tone: 'warn', roles: ['owner', 'manager'], action: action,
-      copy: {
-        fr: low.length + ' article' + (low.length > 1 ? 's sont' : ' est') + ' sous le seuil : ' + names + extra + '. Couverture : ' + coverageFr + '.',
-        en: low.length + ' item' + (low.length > 1 ? 's are' : ' is') + ' below reorder level: ' + names + extra + '. Coverage: ' + coverageEn + '.',
-        ar: low.length + ' من الأصناف تحت عتبة إعادة الطلب: ' + names + extra + '. التغطية: ' + coverageAr + '.'
-      },
-      evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance',
-        text: typeof said !== 'function' ? undefined : said(tracked.length, { fr: 'stock actuel · ' + businessDay(Date.now()), en: 'current stock · ' + businessDay(Date.now()), ar: 'المخزون الحالي · ' + businessDay(Date.now()) }, { fr: 'articles suivis en stock', en: 'tracked stock items', ar: 'أصناف المخزون المتابعة' }) }
-    };
+    return rules.lowStockRule(Object.assign({}, input, { items: items }));
   }
-  function minute(value) {
-    var match = /^(\d{2}):(\d{2})$/.exec(String(value || ''));
-    if (!match) return null;
-    var out = (+match[1] * 60) + +match[2];
-    return out >= 0 && out < 1440 ? out : null;
-  }
-  function spans(from, to) {
-    var a = minute(from), b = minute(to);
-    if (a == null || b == null || a === b) return [];
-    return b > a ? [[a, b]] : [[a, 1440], [0, b]];
-  }
+
   function planningGapRule(input) {
     input = input || {};
     var day = input.day, plan = input.plan, periods = input.periods;
@@ -607,37 +398,7 @@
         periods = H.periodsOn(day, vid);
       } catch (_) { return null; }
     }
-    if (!plan || plan.configured !== true || plan.published !== true || !Array.isArray(periods) || !periods.length) return null;
-    var openings = [];
-    periods.forEach(function (p) { openings = openings.concat(spans(p && p.from, p && p.to)); });
-    if (!openings.length) return null;
-    var shifts = [];
-    (Array.isArray(plan.members) ? plan.members : []).forEach(function (m) {
-      if (!m || m.off) return;
-      spans(m.start, m.end).forEach(function (range) { shifts.push({ from: range[0], to: range[1], firstName: String(m.firstName || '').slice(0, 40) }); });
-    });
-    shifts.sort(function (a, b) { return a.from - b.from; });
-    var gap = openings.some(function (opening) {
-      var coveredTo = opening[0];
-      for (var i = 0; i < shifts.length && coveredTo < opening[1]; i++) {
-        if (shifts[i].to <= coveredTo) continue;
-        if (Math.min(shifts[i].from, opening[1]) - coveredTo >= limit('planningMinutes')) return true;
-        coveredTo = Math.max(coveredTo, shifts[i].to);
-      }
-      return opening[1] - coveredTo >= limit('planningMinutes');
-    });
-    if (!gap) return null;
-    return {
-      id: 'planning-gap:' + String(day || 'day'), kind: 'planning-gap', tone: 'warn', roles: ['owner', 'manager'],
-      copy: {
-        fr: 'Le planning publié laisse une partie des horaires d’ouverture sans couverture.',
-        en: 'The published schedule leaves part of an opening period uncovered.',
-        ar: 'يترك الجدول المنشور جزءًا من فترة الافتتاح دون تغطية.'
-      },
-      evidence: { count: openings.length, window: String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), source: 'planning publié + KiwiHours.periodsOn',
-        text: said(openings.length, String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), { fr: 'planning publié et horaires d’ouverture', en: 'published schedule and opening hours', ar: 'الجدول المنشور وساعات الافتتاح' }) },
-      action: { name: 'open-planning', args: {}, summary: 'Ouvrir le planning' }
-    };
+    return rules.planningGapRule(Object.assign({}, input, { day: day, plan: plan, periods: periods }));
   }
   /* Le seuil que la règle vient d'appliquer, réglage du commerçant compris. */
   function shareThreshold(L) {
@@ -671,29 +432,7 @@
         if (comparable.total > 0) baselineRates.push((comparable.cancellations / comparable.total) * 100);
       }
     }
-    if (!current || baselineRates.length < limit('samples') || !(current.total > 0) || current.cancellations < limit('events')) return null;
-    var currentRate = (current.cancellations / current.total) * 100;
-    var baseline = median(baselineRates);
-    if (!Number.isFinite(baseline) || currentRate < Math.max(limit('share'), baseline * limit('multiple'))) return null;
-    var reasonRows = Object.keys(current.reasons || {}).map(function (key) { return { key: key, count: +current.reasons[key] || 0 }; }).sort(function (a, b) { return b.count - a.count; });
-    var top = reasonRows[0] || { key: 'non-renseigne', count: current.cancellations };
-    var rate = Math.round(currentRate * 10) / 10, base = Math.round(baseline * 10) / 10;
-    /* Une seule personne derrière au moins la moitié des annulations (et au
-     * moins deux) : on la nomme. Sinon, rien : l'écart est collectif. */
-    var who = Object.keys(current.actors || {}).map(function (id) { return { id: id, count: +current.actors[id] || 0 }; }).sort(function (a, b) { return b.count - a.count; })[0];
-    var motive = reasonWords(top.key);
-    var named = who && who.count >= 2 && who.count * 2 >= current.cancellations ? actorName(who.id, input.roster) : null;
-    var by = named ? { fr: ' Dont ' + who.count + ' par ' + named.fr + '.', en: ' ' + who.count + ' of them by ' + named.en + '.', ar: ' منها ' + who.count + ' بواسطة ' + named.ar + '.' } : { fr: '', en: '', ar: '' };
-    return {
-      id: 'cancellation-rate:' + String(day || 'day'), kind: 'cancellation-rate', tone: 'warn', roles: ['owner', 'manager'],
-      copy: {
-        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + motive.fr + ' (' + top.count + ').' + by.fr + shareThreshold('fr'),
-        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + motive.en + ' (' + top.count + ').' + by.en + shareThreshold('en'),
-        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + motive.ar + ' (' + top.count + ').' + by.ar + shareThreshold('ar')
-      },
-      evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list',
-        text: said(current.cancellations, { fr: String(day || '') + ' · comparé au même jour des 4 semaines précédentes', en: String(day || '') + ' · compared with the same weekday over the previous 4 weeks', ar: String(day || '') + ' · مقارنة بنفس اليوم خلال الأسابيع الأربعة السابقة' }, { fr: 'annulations et ventes de la caisse', en: 'till cancellations and sales', ar: 'إلغاءات ومبيعات الصندوق' }) }
-    };
+    return rules.cancellationRateRule(Object.assign({}, input, { current: current, baselineRates: baselineRates, day: day, roster: Array.isArray(input.roster) ? input.roster : roster() }));
   }
   function discountShareRule(input) {
     input = input || {};
@@ -729,22 +468,7 @@
         if (comparable.gross > 0) baselineShares.push((comparable.discount / comparable.gross) * 100);
       }
     }
-    if (!current || baselineShares.length < limit('samples') || !(current.gross > 0) || current.discountedCount < limit('events') || !(current.discount > 0)) return null;
-    var share = (current.discount / current.gross) * 100, baseline = median(baselineShares);
-    if (!Number.isFinite(baseline) || share < Math.max(limit('share'), baseline * limit('multiple'))) return null;
-    var actorRows = Object.keys(current.actors || {}).map(function (id) { return { id: id, amount: +current.actors[id] || 0 }; }).sort(function (a, b) { return b.amount - a.amount; });
-    var actor = actorName(actorRows[0] ? actorRows[0].id : '', input.roster);
-    var pct = Math.round(share * 10) / 10, base = Math.round(baseline * 10) / 10;
-    return {
-      id: 'discount-share:' + String(day || 'day'), kind: 'discount-share', tone: 'warn', roles: ['owner'],
-      copy: {
-        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Surtout accordées par ' + actor.fr + '.' + shareThreshold('fr'),
-        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Mostly granted by ' + actor.en + '.' + shareThreshold('en'),
-        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. منحها أساساً: ' + actor.ar + '.' + shareThreshold('ar')
-      },
-      evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents',
-        text: said(current.discountedCount, { fr: String(day || '') + ' · comparé au même jour des 4 semaines précédentes', en: String(day || '') + ' · compared with the same weekday over the previous 4 weeks', ar: String(day || '') + ' · مقارنة بنفس اليوم خلال الأسابيع الأربعة السابقة' }, { fr: 'remises et ventes brutes de la caisse', en: 'till discounts and gross sales', ar: 'تخفيضات الصندوق والمبيعات الإجمالية' }) }
-    };
+    return rules.discountShareRule(Object.assign({}, input, { current: current, baselineShares: baselineShares, day: day, roster: Array.isArray(input.roster) ? input.roster : roster() }));
   }
 
   function cashGapRule(input) {
@@ -758,32 +482,7 @@
     var day = String(input.day || businessDay(Date.now() - 86400000));
     var threshold = Number(input.thresholdCents == null ? limit('cashCents') : input.thresholdCents);
     var dayOf = typeof input.businessDay === 'function' ? input.businessDay : businessDay;
-    var reconciliations = rows.filter(function (row) {
-      if (!row || (wantedMerchant && String(row.merchant || '') !== wantedMerchant)) return false;
-      if (row.event_type !== 'close' && row.eventType !== 'close' && row.event_type !== 'handover' && row.eventType !== 'handover') return false;
-      var opened = Number(row.opened_ts == null ? row.openedAt : row.opened_ts);
-      var gap = Number(row.gap_cents == null ? row.gapCents : row.gap_cents);
-      return opened > 0 && dayOf(opened) === day && Number.isFinite(gap);
-    });
-    if (!Number.isFinite(threshold) || threshold < 0 || !reconciliations.length) return null;
-    var worst = reconciliations.slice().sort(function (a, b) {
-      var ga = Number(a.gap_cents == null ? a.gapCents : a.gap_cents);
-      var gb = Number(b.gap_cents == null ? b.gapCents : b.gap_cents);
-      return Math.abs(gb) - Math.abs(ga);
-    })[0];
-    var gapCents = Number(worst.gap_cents == null ? worst.gapCents : worst.gap_cents);
-    if (Math.abs(gapCents) < threshold) return null;
-    var gapLabel = (gapCents / 100).toFixed(2), thresholdLabel = (threshold / 100).toFixed(2);
-    return {
-      id: 'cash-gap:' + day, kind: 'cash-gap', tone: 'warn', roles: ['owner'],
-      copy: {
-        fr: 'Écart de caisse de ' + gapLabel.replace('.', ',') + ' MAD, seuil visible ' + thresholdLabel.replace('.', ',') + ' MAD.',
-        en: 'Cash gap of ' + gapLabel + ' MAD, visible threshold ' + thresholdLabel + ' MAD.',
-        ar: 'فرق الصندوق ' + gapLabel.replace('.', ',') + ' MAD، والحد الظاهر ' + thresholdLabel.replace('.', ',') + ' MAD.'
-      },
-      evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD',
-        text: said(reconciliations.length, day, { fr: 'clôtures et passations de caisse', en: 'till closings and handovers', ar: 'إغلاقات الصندوق وعمليات التسليم' }) }
-    };
+    return rules.cashGapRule(Object.assign({}, input, { rows: rows, wantedMerchant: wantedMerchant, day: day, threshold: threshold, dayOf: dayOf }));
   }
 
   /* ── LA PLUIE, MESURÉE SUR CE COMMERCE ─────────────────────────────────────
@@ -801,20 +500,7 @@
     var target = data.days.find(function (d) { return d && d.day >= today && W && (limit('rainMm') === 1 ? W.isRain(d) : (Number(d.precip) || 0) >= limit('rainMm') || d.kind === 'storm'); });
     if (!target) return null;
     var effect = W.rainEffect(Array.isArray(input.rows) ? input.rows : salesRows(), data.log, { today: today, minDays: limit('weatherDays') });
-    if (!effect || Math.abs(effect.change) < limit('weatherEffect') / 100) return null;
-    var pct = Math.round(Math.abs(effect.change) * 100), down = effect.change < 0;
-    var tomorrow = target.day > today, mm = String(target.precip).replace('.', ',');
-    var mmEn = String(target.precip);
-    return {
-      id: 'weather-rain:' + target.day, kind: 'weather', tone: down ? 'warn' : 'info', roles: ['owner', 'manager'],
-      copy: {
-        fr: 'Pluie annoncée ' + (tomorrow ? 'demain' : 'aujourd’hui') + ' à ' + data.city + ' (' + mm + ' mm). Les jours de pluie, votre chiffre a été ' + pct + ' % ' + (down ? 'plus bas' : 'plus haut') + ' que les jours secs.',
-        en: 'Rain forecast ' + (tomorrow ? 'tomorrow' : 'today') + ' in ' + data.city + ' (' + mmEn + ' mm). On rainy days your takings have been ' + pct + '% ' + (down ? 'lower' : 'higher') + ' than on dry days.',
-        ar: 'يُتوقع المطر ' + (tomorrow ? 'غدا' : 'اليوم') + ' في ' + data.city + ' (' + mm + ' مم). في الأيام الممطرة كان رقم معاملاتك ' + (down ? 'أقل' : 'أعلى') + ' بنسبة ' + pct + '٪ من الأيام الجافة.'
-      },
-      evidence: { count: effect.rainDays + effect.dryDays, window: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', source: 'MET Norway · KiwiSales',
-        text: said(effect.rainDays + effect.dryDays, { fr: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', en: effect.rainDays + ' rainy days · ' + effect.dryDays + ' dry days', ar: effect.rainDays + ' أيام ممطرة · ' + effect.dryDays + ' أيام جافة' }, { fr: 'MET Norway et vos ventes', en: 'MET Norway and your sales', ar: 'MET Norway ومبيعاتك' }) }
-    };
+    return rules.weatherRule(Object.assign({}, input, { effect: effect, target: target, today: today, data: data }));
   }
   /* La prévision, dans l'en-tête du point du matin : aujourd'hui et demain. */
   var WEATHER_ICON = { clear: 'light_mode', cloudy: 'thermometer', fog: 'thermometer', rain: 'water_drop', storm: 'bolt', snow: 'ac_unit' };
@@ -845,43 +531,7 @@
     var dayOf = typeof input.businessDay === 'function' ? input.businessDay : businessDay;
     var dayMs = Number(input.dayMs) || 86400000;
     var end = Number(input.endAt) || Date.now();
-    function ts(row, snake, camel) { return Number(row[snake] == null ? row[camel] : row[snake]); }
-    function durations(row) {
-      var sent = ts(row, 'sent_ts', 'sentAt'), readyAt = ts(row, 'ready_ts', 'readyAt'), served = ts(row, 'served_ts', 'servedAt');
-      return {
-        kitchen: sent > 0 && readyAt > sent && readyAt - sent <= 4 * 3600000 ? readyAt - sent : null,
-        service: readyAt > 0 && served > readyAt && served - readyAt <= 4 * 3600000 ? served - readyAt : null,
-        sent: sent
-      };
-    }
-    var scoped = rows.filter(function (row) { return row && (!wantedMerchant || String(row.merchant || '') === wantedMerchant); });
-    var current = scoped.filter(function (row) { var d = durations(row); return d.sent > 0 && dayOf(d.sent) === day; }).map(durations);
-    var baseline = scoped.filter(function (row) {
-      var d = durations(row); return d.sent > 0 && dayOf(d.sent) !== day && d.sent >= end - 28 * dayMs && d.sent < end;
-    }).map(durations);
-    function stage(key, labelFr, labelEn, labelAr) {
-      var nowRows = current.map(function (d) { return d[key]; }).filter(Number.isFinite);
-      var baseRows = baseline.map(function (d) { return d[key]; }).filter(Number.isFinite);
-      if (nowRows.length < limit('samples') || baseRows.length < limit('lateSamples')) return null;
-      var nowMedian = median(nowRows), baseMedian = median(baseRows);
-      if (!(baseMedian > 0) || nowMedian < baseMedian * limit('lateMultiple') || nowMedian - baseMedian < limit('lateMinutes') * 60000) return null;
-      var nowMin = Math.round(nowMedian / 60000), baseMin = Math.round(baseMedian / 60000);
-      return {
-        id: 'late-orders:' + key + ':' + day, kind: 'late-orders-' + key, tone: 'warn', roles: ['owner', 'manager'],
-        copy: {
-          fr: labelFr + ' médian ' + nowMin + ' min contre ' + baseMin + ' min, alerte à ' + num(limit('lateMultiple'), 'fr') + '× et +' + limit('lateMinutes') + ' min.',
-          en: labelEn + ' median ' + nowMin + ' min versus ' + baseMin + ' min, alert at ' + num(limit('lateMultiple'), 'en') + 'x and +' + limit('lateMinutes') + ' min.',
-          ar: labelAr + ' ' + nowMin + ' دقيقة مقابل ' + baseMin + ' دقيقة، التنبيه عند ' + num(limit('lateMultiple'), 'ar') + 'x و+' + limit('lateMinutes') + ' دقائق.'
-        },
-        evidence: { count: nowRows.length, window: day + ' · baseline 28 jours (' + baseRows.length + ')', source: 'order_course.' + key,
-          text: said(nowRows.length, { fr: day + ' · référence sur 28 jours (' + baseRows.length + ')', en: day + ' · 28-day reference (' + baseRows.length + ')', ar: day + ' · مرجع 28 يوما (' + baseRows.length + ')' },
-            key === 'kitchen' ? { fr: 'commandes envoyées en cuisine', en: 'orders sent to the kitchen', ar: 'الطلبات المرسلة إلى المطبخ' } : { fr: 'commandes servies après préparation', en: 'orders served after preparation', ar: 'الطلبات المقدمة بعد التحضير' }) }
-      };
-    }
-    return [
-      stage('kitchen', 'Préparation', 'Preparation', 'مدة التحضير'),
-      stage('service', 'Service après préparation', 'Service after ready', 'مدة التقديم بعد الجاهزية')
-    ].filter(Boolean);
+    return rules.lateOrdersRule(Object.assign({}, input, { rows: rows, wantedMerchant: wantedMerchant, day: day, dayOf: dayOf, dayMs: dayMs, end: end }));
   }
   function visibleLines(lines, role) {
     role = role || tier();
@@ -893,24 +543,7 @@
     var id = scopeKey();
     return own().days.find(function (x) { return x.id === id; }) || null;
   }
-  function save() {
-    writeLocal(doc);
-    var key = localKey() + ':cloud-save', handle = cloud, venue = slug();
-    var id = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
-    try { localStorage.setItem(key, id); } catch (_) { console.warn("[briefing] save failed"); }
-    render();
-    return Promise.resolve().then(function () {
-      if (!handle) throw new Error('cloud-unavailable');
-      return handle.bind();
-    }).then(function () {
-      if (venue !== slug()) throw new Error('venue-changed');
-      return handle.pushNow();
-    }).then(function (result) {
-      if (!result || !result.ok) throw new Error('cloud-unconfirmed');
-      try { if (localStorage.getItem(key) === id) localStorage.removeItem(key); } catch (_) { console.warn("[briefing] save failed"); }
-      render(); return { ok: true, id: id };
-    }).catch(function () { render(); return { ok: false, id: id, error: 'cloud-unconfirmed' }; });
-  }
+
   function compute(rules) {
     if (!isReal() || !slug()) return null;
     var lines = [], unavailable = [];
@@ -928,6 +561,7 @@
       id: id, accountId: accountId(), venue: slug(), day: businessDay(now), generatedAt: now,
       updatedAt: now, lines: lines, unavailable: unavailable, dismissed: clone(old && old.dismissed) || {}, handled: clone(old && old.handled) || {}
     };
+    var doc = own();
     doc.days = [row].concat(own().days.filter(function (x) { return x.id !== id; }));
     save();
     return row;
@@ -1103,15 +737,7 @@
     if (!lines.length) return { text: '<b>' + t.empty + '</b> ' + t.emptyNote };
     return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: evidenceText(line, opts && opts.lang) }; }) };
   }
-  function attachCloud() {
-    if (cloud || !isReal() || !slug() || !window.KiwiCloudDoc || !window.KiwiCloudDoc.attach) return;
-    cloud = window.KiwiCloudDoc.attach({
-      feature: FEATURE, slug: slug, localKey: localKey,
-      read: function () { return safeDoc(own()); }, write: writeLocal, merge: mergeDocs,
-      isEmpty: function (x) { return !x || (!(x.days || []).length && !Object.keys(x.settings || {}).length); },
-      onPulled: function () { compute(); }
-    });
-  }
+
   function retryCloud() { return save(); }
   document.addEventListener('click', function (event) {
     if (event.target.closest && event.target.closest('[data-briefing-cloud-retry]')) retryCloud();
@@ -1119,9 +745,9 @@
   function boot() {
     installStyle();
     if (!isReal()) return;
-    doc = readLocal(); attachCloud();
-    Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () { console.warn("[briefing] boot failed"); }).then(function () { compute(); });
-    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) { console.warn("[briefing] boot failed"); }
+    persistence.reload(); attachCloud();
+    Promise.resolve(persistence.bind()).catch(function () { console.warn("[briefing] boot failed"); }).then(function () { compute(); });
+    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { persistence.reload(); attachCloud(); compute(); }); } catch (_) { console.warn("[briefing] boot failed"); }
     window.addEventListener('kiwi:langchange', function () { render(); });
     window.addEventListener('kiwi:cancellation-history', function () { compute(); });
     window.addEventListener('kiwi:cash-sessions', function () { compute(); });
@@ -1167,7 +793,7 @@
     setSettings: setSettings, resetRule: resetRule, settings: function () { return clone(own().settings || {}); },
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    durable: function () { return localKept; },
+    durable: function () { return persistence.durable(); },
     _test: { save: save, retryCloud: retryCloud, unsavedNote: unsavedNote, copy: function () { return tr(); }, businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();

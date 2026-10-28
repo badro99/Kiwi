@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
+const source = briefingSource();
 const callbacks = {};
 const memory = {};
 const storage = { getItem: (k) => memory[k] || null, setItem: (k, v) => { memory[k] = String(v); } };

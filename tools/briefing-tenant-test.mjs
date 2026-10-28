@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 /* A store's morning briefing carries that store's days, never another's.
  *
  * Found in prod D1 on 2026-09-26: maison-121's briefing document held 34 days,
@@ -18,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(path.join(ROOT, 'assets/briefing.js'), 'utf8');
+const source = briefingSource();
 
 let passed = 0;
 const ok = (cond, label, detail) => { assert.ok(cond, label + (detail ? '\n      ' + detail : '')); passed++; console.log('  \x1b[32m✓\x1b[0m ' + label); };

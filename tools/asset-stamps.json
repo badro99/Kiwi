@@ -135,9 +135,17 @@
     "v": "23",
     "sha": "fd42eade73417d7e"
   },
+  "assets/briefing-persistence.js": {
+    "v": "2",
+    "sha": "20eb6af5d93fd900"
+  },
+  "assets/briefing-rules.js": {
+    "v": "2",
+    "sha": "0d2b0207bcc4b401"
+  },
   "assets/briefing.js": {
-    "v": "36",
-    "sha": "04d14f26241c3198"
+    "v": "38",
+    "sha": "0774da441509f3ba"
   },
   "assets/caisse-accounting.js": {
     "v": "17",
@@ -1316,8 +1324,8 @@
     "sha": "0e74f0e681a2bf17"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "72",
-    "sha": "0b6c3da17ce926fc"
+    "v": "74",
+    "sha": "42b5ce617a7168c1"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

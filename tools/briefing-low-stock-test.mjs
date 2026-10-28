@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 import stockTestSource from './stock-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const briefing = readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
+const briefing = briefingSource();
 const stock = stockTestSource();
 const actions = readFileSync(new URL('../assets/agent-truth.js', import.meta.url), 'utf8');
 const memory = {}, callbacks = {};

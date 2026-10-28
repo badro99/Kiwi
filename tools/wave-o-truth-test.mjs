@@ -1,3 +1,4 @@
+import briefingSource from './briefing-test-source.cjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -64,7 +65,7 @@ test('sync#2 consumer update failures identify operation and stay actionable', (
  assert.match(section,/consumer/);
 });
 test('briefing#1 saves await actual push and persist scoped cloud result', () => {
- const src=read('assets/briefing.js');
+ const src=briefingSource();
  const section=src.slice(src.indexOf('function save()'),src.indexOf('function compute('));
  assert.match(section,/pushNow/); assert.match(section,/localStorage.setItem/);
  assert.match(src,/cloudFailed:/); assert.match(src,/retryCloud/);
@@ -108,13 +109,13 @@ test('briefing#1 failed cloud save survives reload, retry clears only confirmed 
  const context=vm.createContext({window:host,document,localStorage:storage,console,setTimeout,clearTimeout});
  // Boot attaches the real save adapter, without needing a DOM surface.
  document.readyState='complete';document.head={appendChild(){}};document.createElement=()=>({setAttribute(){}});
- vm.runInContext(read('assets/briefing.js'),context);
+ vm.runInContext(briefingSource(),context);
  await new Promise(r=>setTimeout(r,0));
  const result=await host.KiwiBriefing._test.save(); assert.equal(result.ok,false);
  assert.ok([...memory.keys()].some(k=>k.endsWith(':cloud-save')));
  assert.match(host.KiwiBriefing._test.unsavedNote(host.KiwiBriefing._test.copy()),/Retry/);
  const reloaded={...host};delete reloaded.KiwiBriefing;
- vm.runInContext(read('assets/briefing.js'),vm.createContext({window:reloaded,document,localStorage:storage,console,setTimeout,clearTimeout}));
+ vm.runInContext(briefingSource(),vm.createContext({window:reloaded,document,localStorage:storage,console,setTimeout,clearTimeout}));
  await new Promise(r=>setTimeout(r,0));
  assert.match(reloaded.KiwiBriefing._test.unsavedNote(reloaded.KiwiBriefing._test.copy()),/Retry/);
  bindFails=true;assert.equal((await reloaded.KiwiBriefing._test.save()).ok,false);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 /* Garde : la carte « Le point du matin » ne doit jamais vivre dans
  * .vexel-revenue-row (rangée flex à hauteur fixe de la peau Vexel) — elle y
  * comprimait le graphe et faisait déborder la colonne objectif/clients sur
@@ -12,7 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(path.join(ROOT, 'assets/briefing.js'), 'utf8');
+const source = briefingSource();
 
 /* Mini-DOM : juste assez pour parentNode / nextSibling / insertBefore / closest. */
 function node(cls) {

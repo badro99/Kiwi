@@ -1,3 +1,4 @@
+import briefingSource from './briefing-test-source.cjs';
 import invoicingSourceHelper from './invoicing-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -48,7 +49,7 @@ function briefing() {
  const listeners={},message={textContent:''};const document={readyState:'loading',documentElement:{lang:'en'},addEventListener:(k,f)=>(listeners[k]||=[]).push(f),querySelector:sel=>sel==='[data-briefing-card]'?card:null,getElementById:()=>message,createElement:()=>({setAttribute(){}})};
  const memory=new Map(),localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
  const window={KiwiEnv:{isReal:()=>true},KiwiAgentTier:()=> 'owner',KiwiCloudDoc:{currentSlug:()=> 'fixture'},addEventListener(){}};
- vm.runInNewContext(read('assets/briefing.js'),{window,document,localStorage,console,Date,setTimeout,clearTimeout});
+ vm.runInNewContext(briefingSource(),{window,document,localStorage,console,Date,setTimeout,clearTimeout});
  return {B:window.KiwiBriefing,listeners,message,card,document};
 }
 await test('briefing#0 failing rule records unavailable analysis and render suppresses calm',()=>{
@@ -73,7 +74,7 @@ await test('briefing#2 real change handler explains invalid integer and keeps in
  const {listeners,message}=briefing();const attrs={};const input={value:'1.5',getAttribute:k=>k==='data-briefing-limit'?'samples':null,setAttribute:(k,v)=>attrs[k]=v};
  listeners.change.forEach(f=>f({target:input}));assert.equal(attrs['aria-invalid'],'true');assert.equal(input.value,'1.5');assert.match(message.textContent,/whole number/);
  input.value='4';listeners.change.forEach(f=>f({target:input}));assert.equal(attrs['aria-invalid'],'false');assert.equal(message.textContent,'');
- assert.match(read('assets/briefing.js'),/integerLimit\(key\) \? '1' : 'any'/);
+ assert.match(briefingSource(),/integerLimit\(key\) \? '1' : 'any'/);
 });
 await test('invoices#0 selector includes customers after 400 with stable indices',()=>{
  const s=read('assets/invoicing.js');const template=section(s,s.includes('${book.slice')?'${book.slice':'${book.map',"</select></div>");

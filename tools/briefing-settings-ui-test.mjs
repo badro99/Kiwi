@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 /* Réglages du point du matin (vague 15, voie J).
  *   briefing#0 · les 17 seuils sont rangés par règle, en mots simples, avec une
  *                phrase d'aide FR/EN/AR et un « rétablir » par règle ;
@@ -29,7 +30,7 @@ function briefing(lang = 'fr', tier = 'owner') {
   };
   const memory = new Map(), localStorage = { getItem: (k) => memory.get(k) || null, setItem: (k, v) => memory.set(k, v), removeItem: (k) => memory.delete(k) };
   const window = { KiwiEnv: { isReal: () => true }, KiwiAgentTier: () => tier, KiwiCloudDoc: { currentSlug: () => 'fixture' }, addEventListener() {} };
-  vm.runInNewContext(read('assets/briefing.js'), { window, document, localStorage, console, Date, Intl, setTimeout, clearTimeout });
+  vm.runInNewContext(briefingSource(), { window, document, localStorage, console, Date, Intl, setTimeout, clearTimeout });
   return { B: window.KiwiBriefing, T: window.KiwiBriefing._test, listeners, card, asked, message };
 }
 const html = (ctx) => { ctx.T.render(); return ctx.card.innerHTML; };
@@ -45,7 +46,7 @@ const generator = await importModule('tools/build-briefing-limits.mjs');
 /* ── briefing#1 · une seule table ─────────────────────────────────────────── */
 {
   // La copie du navigateur est exactement ce que le générateur écrirait.
-  const source = read('assets/briefing.js');
+  const source = briefingSource();
   assert.equal(generator.splice(source, await generator.renderBlock()), source, 'assets/briefing.js : lancez node tools/build-briefing-limits.mjs');
   // Le navigateur (copie évaluée) et le serveur donnent les mêmes bornes que la table pour chaque champ.
   const block = vm.runInNewContext('(function () {\n' + (await generator.renderBlock()) + '\nreturn LIMITS;\n})()');

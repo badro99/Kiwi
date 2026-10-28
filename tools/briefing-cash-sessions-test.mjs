@@ -1,3 +1,4 @@
+import briefingSource from './briefing-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,7 +22,7 @@ const context = {
 };
 context.window.window = context.window;
 context.window.document = context.document;
-vm.runInNewContext(source('assets/briefing.js'), context, { filename: 'assets/briefing.js' });
+vm.runInNewContext(briefingSource(), context, { filename: 'assets/briefing.js' });
 const B = context.window.KiwiBriefing._test;
 const day = '2026-08-20';
 const at = Date.UTC(2026, 7, 20, 10, 0, 0);

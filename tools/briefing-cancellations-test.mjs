@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import mergedPart from './merged-source.cjs';
 
-const briefing = fs.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
+const briefing = briefingSource();
 // cancellation-history.js porte aussi order-course.js depuis le 22 octobre 2026 : seul le lecteur d'annulations.
 const reader = mergedPart('assets/cancellation-history.js');
 const endpoint = fs.readFileSync(new URL('../functions/api/sale/cancel.js', import.meta.url), 'utf8');

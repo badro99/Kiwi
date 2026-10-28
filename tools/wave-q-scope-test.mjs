@@ -1,3 +1,4 @@
+import briefingSource from './briefing-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -8,7 +9,7 @@ if (!part || part === 'briefing') {
   const localStorage = { getItem: k => memory.get(k) || null, setItem: (k,v) => memory.set(k,v), removeItem: k => memory.delete(k) };
   const document = { readyState:'loading', documentElement:{lang:'en'}, addEventListener(){}, querySelector(){return null;}, createElement(){return {setAttribute(){}};} };
   const window = { KiwiEnv:{isReal:()=>true}, KiwiAgentTier:()=> 'owner', KiwiCloudDoc:{currentSlug:()=> 'fixture'}, addEventListener(){} };
-  vm.runInNewContext(read('assets/briefing.js'), {window,document,localStorage,console,Date,setTimeout,clearTimeout});
+  vm.runInNewContext(briefingSource(), {window,document,localStorage,console,Date,setTimeout,clearTimeout});
   const B = window.KiwiBriefing, T = B._test;
   const items = [{id:'x',name:'X',tracked:true,balance:6,threshold:5}];
   assert.equal(T.lowStockRule({items}),null);

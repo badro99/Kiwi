@@ -1,3 +1,4 @@
+import briefingSource from './briefing-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +14,7 @@ const document = { readyState: 'loading', documentElement: { lang: 'fr' }, addEv
 const window = { KiwiEnv: { isReal: () => true }, KiwiAgentTier: () => 'owner', KiwiCloudDoc: { currentSlug: () => 'venue-a' }, addEventListener() {} };
 const context = { console, Date, Math, JSON, Number, String, Array, Object, Promise, document, window, localStorage: { getItem() { return null; }, setItem() {} } };
 window.window = window; window.document = document;
-vm.runInNewContext(src('assets/briefing.js'), context, { filename: 'assets/briefing.js' });
+vm.runInNewContext(briefingSource(), context, { filename: 'assets/briefing.js' });
 const B = window.KiwiBriefing._test;
 const DAY = '2026-08-20';
 const currentAt = Date.UTC(2026, 7, 20, 12);

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 import coreTestSource from './core-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const briefing = coreTestSource.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
+const briefing = briefingSource();
 const sale = coreTestSource.readFileSync(new URL('../functions/api/sale.js', import.meta.url), 'utf8');
 const feed = coreTestSource.readFileSync(new URL('../functions/api/feed.js', import.meta.url), 'utf8');
 const live = coreTestSource.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');

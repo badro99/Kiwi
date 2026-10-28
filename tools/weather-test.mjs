@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 /* La météo du commerce : functions/api/_weather.js, functions/api/weather.js,
  * assets/weather.js et la ligne du point du matin (assets/briefing.js).
@@ -226,7 +227,7 @@ function briefingWith(weather) {
   const document = { readyState: 'loading', documentElement: { lang: 'fr' }, addEventListener() {}, querySelector() { return null; }, getElementById() { return null }, head: { appendChild() {} }, createElement() { return { setAttribute() {}, appendChild() {}, addEventListener() {} }; } };
   const window = { document, console, setTimeout, clearTimeout, addEventListener() {}, KiwiEnv: { isReal: () => true }, KiwiWeather: Object.assign({}, KW, { cached: () => weather }), localStorage: { getItem() { return null; }, setItem() {} } };
   window.window = window;
-  vm.runInContext(fs.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8'), vm.createContext({ window, document, localStorage: window.localStorage, console, setTimeout, clearTimeout, Date, Math, JSON, isFinite }), { filename: 'briefing.js' });
+  vm.runInContext(briefingSource(), vm.createContext({ window, document, localStorage: window.localStorage, console, setTimeout, clearTimeout, Date, Math, JSON, isFinite }), { filename: 'briefing.js' });
   return window.KiwiBriefing._test;
 }
 {
@@ -248,7 +249,7 @@ function briefingWith(weather) {
   ok(briefingWith({ ok: false, reason: 'no-city' }).weatherRule({ today: '2026-10-13', rows: h.rows }) === null, 'no city: silent');
 }
 
-const brief = fs.readFileSync(new URL('../assets/briefing.js', import.meta.url), 'utf8');
+const brief = briefingSource();
 ok(/weatherRule\]/.test(brief) && /'kiwi:weather'/.test(brief), 'the rule is registered and recomputed when the weather arrives');
 const dash = dashboardDependencies(fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8'));
 ok(dash.indexOf('assets/weather.js') > 0 && dash.indexOf('assets/weather.js') < dash.indexOf('assets/briefing.js'), 'the dashboard loads weather.js before briefing.js');

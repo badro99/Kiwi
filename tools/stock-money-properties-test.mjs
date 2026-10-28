@@ -54,7 +54,7 @@ await strict('dashboard cost coverage keeps exact frozen line costs, refunds and
 // Extract the actual dashboard entry point; no alternate food-cost algorithm.
 const source=read('assets/dateRange.js'),at=source.indexOf('function realLowStock('),low=vm.runInNewContext(declaration(source.slice(at),'realLowStock')+';realLowStock',{window:{KiwiVenue:{getVenueType:()=> 'restaurant'},KiwiRestaurantStock:{items:()=>stockItems}}});let stockItems=[];
 await strict('dashboard preserves the negative restaurant stock level from the ledger',fc.property(fc.integer({min:1,max:1000}),m=>{stockItems=[{id:'item',currentStock:-m/1000,reorderLevel:1}];assert.equal(low().rows[0].stock,-m/1000);}),[[1]]);
-const briefingSource=read('assets/briefing.js'),briefingAt=briefingSource.indexOf('function lowStockRule('),briefing=vm.runInNewContext(declaration(briefingSource.slice(briefingAt),'lowStockRule')+';lowStockRule',{businessDay:()=> '2026-10-22'});
+const briefing=createRequire(import.meta.url)('../assets/briefing-rules.js').createRules({limit:()=>1,now:()=>0,businessDay:()=> '2026-10-22'}).lowStockRule;
 await strict('morning briefing and dashboard alert agree at negative, zero and threshold stock levels',fc.property(fc.integer({min:-10000,max:10000}),qty,(m,t)=>{stockItems=[{id:'item',currentStock:m/1000,reorderLevel:t/1000}];const b=briefing({items:[{id:'item',tracked:true,balance:m/1000,threshold:t/1000}]});assert.equal(Boolean(b),low().rows.length>0);}),[[0,1],[-1,1],[1,1]]);
 // Coverage is read-only; reuse its VM rather than allocating 3,000 native contexts.
 const windowCost=loadCost(world());

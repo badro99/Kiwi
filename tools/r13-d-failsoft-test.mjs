@@ -55,7 +55,7 @@ for(const [id,file,name,extra,args] of [
   ['serveur#1','assets/serveur/payments.js','empPayRefsWrite',{EMP_PAY_REFS_KEY:'refs'},[{}]],
   ['pressing#0','assets/pressing-ops.js','writeFull',{storeKey:()=> 'archive',projectFull:()=>assert.fail('no projection')},[{}]],
   ['sync#1','assets/live-link.js','requestWake',{document:{dispatchEvent(){throw Error();}},CustomEvent:class{}},[]],
-  ['briefing#2','assets/briefing.js','writeLocal',{slug:()=> 'fixture',safeDoc:x=>x,localKey:()=> 'briefing',render(){},localKept:true,window:{}},[{}]],
+  ['briefing#2','assets/briefing-persistence.js','writeLocal',{slug:()=> 'fixture',safeDoc:x=>x,localKey:()=> 'briefing',render(){},localKept:true,deps:{canDispatch:()=>false}},[{}]],
 ])await test(id,()=>{
   const r=realm({localStorage:{setItem(){throw Error('private');}},...extra});
   r.run('('+fn(file,name)+')')(...args);assert.ok(r.warnings.length,'failure needs diagnostic');

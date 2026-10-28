@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 import dashboardDependencies from './dashboard-dependencies.cjs';
 import assert from 'node:assert/strict';
 import coreTestSource from './core-test-source.cjs';
@@ -10,7 +11,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
-const source = read('assets/briefing.js');
+const source = briefingSource();
 const shell = dashboardDependencies(read('dashboard.html'));
 const sw = read('kiwi-sw.js');
 const agent = read('assets/agent.js');

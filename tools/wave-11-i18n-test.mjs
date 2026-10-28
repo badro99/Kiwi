@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import briefingSource from './briefing-test-source.cjs';
 /* Vague 11 · groupe E : la langue et les mots que lit le commerçant.
  *   node tools/wave-11-i18n-test.mjs [sync|briefing|onboarding]
  * Chaque cas exécute le vrai code (vm ou route), jamais une regex seule. */
@@ -55,7 +56,7 @@ function briefing(lang = 'en') {
     querySelector: (sel) => sel === '[data-briefing-card]' ? card : null, getElementById: () => message, createElement: () => ({ setAttribute() {} }) };
   const memory = new Map(), localStorage = { getItem: (k) => memory.get(k) || null, setItem: (k, v) => memory.set(k, v), removeItem: (k) => memory.delete(k) };
   const window = { KiwiEnv: { isReal: () => true }, KiwiAgentTier: () => 'owner', KiwiCloudDoc: { currentSlug: () => 'fixture' }, addEventListener() {} };
-  vm.runInNewContext(read('assets/briefing.js'), { window, document, localStorage, console, Date, Intl, setTimeout, clearTimeout });
+  vm.runInNewContext(briefingSource(), { window, document, localStorage, console, Date, Intl, setTimeout, clearTimeout });
   return { B: window.KiwiBriefing, T: window.KiwiBriefing._test, listeners, message, card, document };
 }
 if (!job || job === 'briefing') {
@@ -146,7 +147,7 @@ CREATE TABLE staff_pins (id TEXT PRIMARY KEY, merchant TEXT, pin TEXT, name TEXT
     assert.deepEqual(Object.keys(stored.settingsFieldsAt).sort(), ['salesDrop', 'share']);
     // The browser and the server hold the same bounds.
     const { BRIEFING_LIMITS } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_briefing-settings.js')).href);
-    const block = read('assets/briefing.js').match(/briefing-limits:begin[^\n]*\n([\s\S]*?)\n  \/\* briefing-limits:end/)[1];
+    const block = briefingSource().match(/briefing-limits:begin[^\n]*\n([\s\S]*?)\n  \/\* briefing-limits:end/)[1];
     const { limits, integer } = vm.runInNewContext('(function () {\n' + block + '\nreturn { limits: LIMITS, integer: INTEGER };\n})()');
     assert.deepEqual(Object.keys(BRIEFING_LIMITS).sort(), Object.keys(limits).sort());
     for (const [k, spec] of Object.entries(limits)) assert.deepEqual([BRIEFING_LIMITS[k].min, BRIEFING_LIMITS[k].max, BRIEFING_LIMITS[k].integer], [spec[1], spec[2], integer[k] === true], k);
