@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=172';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=74';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=173';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=75';
 import { openMoves } from './inv-moves.js?v=4';
-import { invSearch, invUnseenCount, invMarkSeen, invCountAsks } from './inv-tools.js?v=7';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=74';
+import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invKeepSearch, invRestoreSearch } from './inv-tools.js?v=8';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=75';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -681,6 +681,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const cats = cat.listCategories();
     const filter = state.invFilter || 'all';
     const products = cat.listProducts({ categoryId: filter, q: state.invQuery || '' });
+    const keep = invKeepSearch(panel);   // la saisie en cours survit au repeint
     panel.innerHTML = `
       <div class="bqi">
         <header class="bq-head" style="padding:22px 22px 0;">
@@ -717,6 +718,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
     invSearch($('.bqi-scan', panel), scan, bqKitSkin(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
       catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, availableStock: variantStock, colorLabel }) });
+    invRestoreSearch(scan, keep);
     invCountAsks(panel, { real: pvReal(), merchant: _bqKey, esc, recount: (o) => window.KiwiPosInventoryCount?.open?.({ engine: 'boutique', ...o }) });   // inventaire renvoyé par le propriétaire
     /* L'Inventaire est à l'écran : ses alertes sont vues, la pastille s'éteint. */
     if (state.view === 'inventaire') { invMarkSeen(_bqKey, invStockList()); renderBadges(); }

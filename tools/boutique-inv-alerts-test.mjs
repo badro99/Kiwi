@@ -71,4 +71,9 @@ t('the owner is told on the boutique Inventaire page and can ask for details', (
   const inv = readFileSync(new URL('../assets/pos-boutique/inv-tools.js', import.meta.url), 'utf8');
   assert.ok(/status=correction_requested&merchant=/.test(inv) && /recount\(\{ supersedes: c\.id/.test(inv), 'the till shows the question and recounts in place');
 });
+t('a catalogue redraw of the Inventaire keeps what is being typed in its search bar', () => {
+  const inv = readFileSync(new URL('../assets/pos-boutique/inventory.js', import.meta.url), 'utf8');
+  const i = inv.indexOf('const keep = invKeepSearch(panel);'), j = inv.indexOf('panel.innerHTML = `', i), k = inv.indexOf('invRestoreSearch(scan, keep);');
+  assert.ok(i > 0 && j > i && k > j, 'kept before the panel is rewritten, restored after the bar is rebuilt');
+});
 console.log(`✓ boutique-inv-alerts · ${ok} contrôles : la pastille Inventaire compte ce qui n'a pas été vu`);

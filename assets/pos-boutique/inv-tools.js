@@ -154,3 +154,25 @@ export function invCountAsks(panel, d) {
     .catch(() => {})
     .finally(() => { asks.busy = false; });
 }
+
+/* 4. L'Inventaire se redessine en entier quand le catalogue change (la
+ *    synchronisation du magasin, une promotion, une vente sur une autre
+ *    caisse) : la barre de recherche était refaite avec, et ce qu'on venait
+ *    de taper disparaissait une seconde plus tard (propriétaire, 2026-10-28).
+ *    On relève la saisie avant le repeint et on la repose après : texte,
+ *    curseur, focus, et la liste si elle était ouverte. */
+export function invKeepSearch(panel) {
+  const el = panel && panel.querySelector('#bqi-scan');
+  if (!el || !el.value) return null;
+  const list = panel.querySelector('#bqi-sgst');
+  return { value: el.value, focus: document.activeElement === el, at: el.selectionStart, open: !!(list && !list.hidden) };
+}
+export function invRestoreSearch(input, keep) {
+  if (!input || !keep) return;
+  input.value = keep.value;
+  if (keep.focus) {
+    try { input.focus({ preventScroll: true }); } catch (_) { input.focus(); }
+    try { input.setSelectionRange(keep.at, keep.at); } catch (_) {}
+  }
+  if (keep.open) input.dispatchEvent(new Event('input', { bubbles: true }));
+}
