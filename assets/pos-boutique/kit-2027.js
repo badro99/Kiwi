@@ -110,6 +110,8 @@ function bqKitRailPaint() {
     items.push({ id: view, icon: ic, label: (lab ? lab.textContent : view).trim(), badge: n > 0 ? n : 0 });
   }
   const open = !bqMore.hidden;
+  /* La feuille en a besoin pour passer Plus au-dessus du carnet clients. */
+  try { document.documentElement.toggleAttribute('data-bq-more', open); } catch (_) {}
   items.push(open ? { id: 'more', icon: 'close', label: tr('Moins') } : { id: 'more', icon: 'more_horiz', label: tr('Plus') });
   bqRail.items = items;
   bqRail.footer = bqWho ? { cashier: bqWho } : {};
