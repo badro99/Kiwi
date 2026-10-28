@@ -350,14 +350,35 @@ html[data-skin-2027="till"] #pos-boutique .bq-card-art {
   align-self: center;
   background: none; border-radius: 0;
 }
-html[data-skin-2027="till"] #pos-boutique .bq-card-art svg { width: 44px; height: 44px; color: var(--k-ink-3); }
+/* Le dessin de repli, quand l'article n'a pas de photo. Il occupait 44 px
+   d'une boîte de 64 et portait l'encre la plus pâle : à côté des photos
+   pleines du restaurant, la carte paraissait délavée (propriétaire,
+   2026-10-28). Il prend donc sa boîte, et l'encre du prix — lisible, pas
+   criarde. La photo, elle, ne change pas : elle tenait déjà ses 64 px. */
+html[data-skin-2027="till"] #pos-boutique .bq-card-art svg { width: 56px; height: 56px; color: var(--k-ink-2); }
 html[data-skin-2027="till"] #pos-boutique .bq-product-photo {
   width: 64px; height: 64px; object-fit: contain; display: block;
 }
 html[data-skin-2027="till"] #pos-boutique .bq-card.is-out .bq-card-art { opacity: 0.45; }
+/* La pression du pavé du kit (.tile:active, till.js) : sur une tablette c'est
+   la moitié de la sensation de qualité, et elle ne coûte rien. */
+html[data-skin-2027="till"] #pos-boutique .bq-card {
+  transition: transform var(--k-dur-4) var(--k-spring);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-card:active:not([aria-disabled="true"]) {
+  transform: scale(0.97);
+  transition-duration: var(--k-dur-1); transition-timing-function: var(--k-glide);
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin-2027="till"] #pos-boutique .bq-card,
+  html[data-skin-2027="till"] #pos-boutique .bq-card:active { transition: none; transform: none; }
+}
+/* Le nom du restaurant est au pas Body (17 px), pas Callout (15) : mesurés
+   côte à côte, c'était la SEULE différence de texte entre les deux grilles —
+   coussin, rayon, fond, écart, colonnes et prix étaient déjà identiques. */
 html[data-skin-2027="till"] #pos-boutique .bq-card-name {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
-  font-size: var(--k-fs-callout); font-weight: var(--k-fw-body-strong);
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-card-price { font-size: var(--k-fs-callout); color: var(--k-ink-2); }
 /* Un téléphone couché a la place d'une rangée de pavés, pas de photos (kit). */
