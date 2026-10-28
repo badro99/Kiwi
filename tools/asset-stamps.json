@@ -1252,8 +1252,8 @@
     "sha": "565730a1fc3bccbe"
   },
   "assets/orderpro-page.js": {
-    "v": "10",
-    "sha": "f8fad7d412a04fcf"
+    "v": "15",
+    "sha": "bf01efdca39ac652"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1264,24 +1264,32 @@
     "sha": "881cebc3175e461a"
   },
   "assets/orderpro/cart.js": {
+    "v": "6",
+    "sha": "33f48e19a23de128"
+  },
+  "assets/orderpro/draft.js": {
     "v": "3",
-    "sha": "adcddee7f09f7387"
+    "sha": "9578cdcaea03e656"
   },
   "assets/orderpro/menu.js": {
-    "v": "3",
-    "sha": "b252cf266be8b33c"
+    "v": "6",
+    "sha": "ad71d8b92c33e1d1"
   },
   "assets/orderpro/payment.js": {
-    "v": "3",
-    "sha": "6ea90760331b0b73"
+    "v": "5",
+    "sha": "5897949b2f2ab48f"
   },
   "assets/orderpro/session.js": {
-    "v": "3",
-    "sha": "f6783d104b7efcf7"
+    "v": "5",
+    "sha": "7763ced5e1751eb6"
   },
   "assets/orderpro/table.js": {
     "v": "3",
     "sha": "bb858943c8b85f8d"
+  },
+  "assets/orderpro/transport.js": {
+    "v": "3",
+    "sha": "2cfe4e7d2ca95ce5"
   },
   "assets/pages-pro-boutique.js": {
     "v": "12",

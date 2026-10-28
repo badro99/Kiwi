@@ -1957,6 +1957,7 @@ section('Whole-project regressions');
     'formula-child-options-test.mjs',
     'formula-kitchen-paper-test.mjs',
     'orderpro-split-test.mjs',
+    'orderpro-draft-transport-test.mjs',
     'orderpro-boundary-test.mjs',
     'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',

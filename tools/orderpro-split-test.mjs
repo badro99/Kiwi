@@ -18,7 +18,7 @@ for (const extension of map.extensions) {
 }
 const stampSites = stamps.scan();
 for (const part of map.parts) {
-  const source = read(part.file);
+  const source = sourceHelper.expandExtractions(read(part.file), part.file);
   assert.equal(source, part.header + part.fragments.map(f => original.slice(f.start, f.end) + '\n').join('') + part.footer, part.file + ': every moved byte retained');
   assert.ok(stampSites.has(part.file), part.file + ': stamped loader dependency');
   assert.ok(read('kiwi-sw.js').includes('/' + part.file + '?v='), part.file + ': offline shell');
@@ -58,10 +58,10 @@ function boot(split, lang) {
     vm.runInContext(original + proof, ctx);
   } else {
     vm.runInContext(read('assets/orderpro-page.js'), ctx);
-    assert.equal(effects.length, 5, 'only static dependency URLs emitted before initialization');
+    assert.equal(effects.length, 7, 'only static dependency URLs emitted before initialization');
     assert.ok(effects.every(e => e[1].async === false), 'classic dependencies execute in order');
     const urls = effects.map(e => e[1].src);
-    assert.deepEqual(urls.map(url => url.split('?')[0]), map.parts.map(p => p.file), 'ordered lazy dependencies');
+    assert.deepEqual(urls.map(url => url.split('?')[0]), ['assets/orderpro/draft.js', 'assets/orderpro/transport.js', ...map.parts.map(p => p.file)], 'ordered lazy dependencies');
     const create = ctx.KiwiOrderMenu.orderProParts.create;
     ctx.KiwiOrderMenu.orderProParts.create = function (name, scope) { return instances[name] = create(name, scope); };
     for (const url of urls) {
@@ -86,7 +86,7 @@ for (const lang of ['fr', 'en', 'ar']) {
   const before = boot(false, lang), after = boot(true, lang);
   assert.deepEqual(after.events.map(e => e.slice(0, 2)), before.events.map(e => e.slice(0, 2)), 'same listener order');
   assert.deepEqual(after.effects, before.effects, 'no added API requests');
-  for (const part of map.parts) for (const f of part.fragments) if (typeof after.api[f.name] === 'function') assert.equal(String(after.api[f.name]), String(before.api[f.name]), f.name + ': unchanged executable body');
+  for (const part of map.parts) for (const f of part.fragments) if (!['lineKey', 'totals', 'initialCustomizerSelections', 'unansweredRequiredOption', 'sendOrder', 'customizerUnitPrice', 'selectCustomizerChoice', 'addLineToCart', 'decFromCart', 'incFromCart'].includes(f.name) && typeof after.api[f.name] === 'function') assert.equal(String(after.api[f.name]), String(before.api[f.name]), f.name + ': unchanged executable body');
   for (const app of [before, after]) {
     const a = app.api;
     a.pressKey('7'); a.pressKey('2'); a.pressKey('del');

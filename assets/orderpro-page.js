@@ -98,85 +98,7 @@
     const $  = (s, c = document) => c.querySelector(s);
     const $$ = (s, c = document) => [...c.querySelectorAll(s)];
 
-    /* ═══════════════════════════════════════════════════════════════════════
-       NET — the only way this app learns anything.
-       ───────────────────────────────────────────────────────────────────────
-       OrderPro is a guest's phone: no account, no session, no shared storage
-       with the till. Every fact it shows (store name, menu, prices, stock) is
-       fetched over the network from the merchant's published catalogue, and
-       every order it sends goes over the network to the caisse. Deliberately
-       NO localStorage read of catalogue/order state — the three brains
-       (OrderPro · caisse · dashboard) sync through the backend, not through a
-       browser.
-
-       Store identity = the `s` slug in the NFC link. That slug is the same
-       merchant key the caisse pairing spine uses, so a phone that tapped the
-       tag in store A can only ever see and order from store A.
-
-       Fail-soft contract: when the backend is absent (static host, not yet
-       deployed) fetches resolve to null and the UI says so honestly. It never
-       invents a menu and never fakes a sent order.
-       ═══════════════════════════════════════════════════════════════════════ */
-    const NET = (() => {
-      const qs = new URLSearchParams(location.search);
-      const clean = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
-      const slug = clean(qs.get('s') || qs.get('store') || '', 64).toLowerCase();
-      const table = clean(qs.get('t') || qs.get('table') || '', 4).replace(/\D/g, '');
-      const modeParam = clean(qs.get('m') || qs.get('mode') || '', 12).toLowerCase();
-
-      async function getJSON(url) {
-        try {
-          const r = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-          if (!r.ok) return null;
-          return await r.json();
-        } catch (_) { return null; }        // offline / no backend → caller decides
-      }
-      async function postJSON(url, body) {
-        try {
-          const r = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          const j = await r.json().catch(() => null);
-          if (!r.ok) return Object.assign({ ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status }, j || {});
-          return j || { ok: false, error: 'empty' };
-        } catch (_) { return { ok: false, error: 'network' }; }
-      }
-
-      /* ?s=demo is the pitch demo (assets/orderpro-demo.js): its menu and its
-         kitchen answer from the phone, and nothing reaches a server. */
-      const demo = () => (slug === 'demo' && globalThis.KiwiOrderDemo) || null;
-
-      return {
-        slug, table,
-        demo: slug === 'demo',
-        mode: modeParam === 'takeout' || modeParam === 'emporter' ? 'takeout'
-            : modeParam === 'table' || modeParam === 'sur-place' ? 'table' : '',
-        /* The store's published catalogue — the SAME endpoint the QR self-order
-           page reads (functions/api/menu.js), so a merchant publishes once and
-           both surfaces see it. → { name, type, menu, shop, orderpro } */
-        catalog: () => demo() ? demo().catalog() : getJSON('/api/menu?merchant=' + encodeURIComponent(slug)),
-        /* Send one order to the caisse queue → { ok, id, number, total, lines } */
-        placeOrder: (payload) => demo() ? demo().placeOrder(payload) : postJSON('/api/order', Object.assign({}, payload, { merchant: slug })),
-        /* Poll one order's live status → { ok, status, number } */
-        orderStatus: (id) => demo() ? demo().orderStatus(id) : getJSON('/api/order?merchant=' + encodeURIComponent(slug) +
-                                     '&id=' + encodeURIComponent(id)),
-        /* S'asseoir. La session lie CE téléphone à CETTE table, et la caisse
-           peut la fermer : encaisser l'addition coupe le robinet, et le client
-           qui aurait gardé le lien ne peut plus commander de chez lui.
-           → { ok, session, mode, table, status } */
-        openSession: (mode, table) => demo() ? demo().openSession(mode, table) : postJSON('/api/order/session',
-          { merchant: slug, mode: mode, table: table || '' }),
-        /* Suis-je encore le bienvenu ? C'est aussi le battement de cœur qui
-           allume la table sur le plan de salle du comptoir.
-           → { ok, status, closedBy, table, mode } */
-        sessionStatus: (id) => demo() ? demo().sessionStatus(id) : getJSON('/api/order/session?merchant=' + encodeURIComponent(slug) +
-                                       '&session=' + encodeURIComponent(id)),
-        serviceRequest: (session, action) => demo() ? demo().serviceRequest(session, action) : postJSON('/api/order/session',
-          { merchant: slug, session, action }),
-      };
-    })();
+    const NET = registry.extension('transport', 'create')({ location, fetch, demo: () => globalThis.KiwiOrderDemo });
 
     /* ============ i18n dictionary (Darija / EN / FR) ============ */
     const I18N = {
@@ -1771,7 +1693,7 @@
 
   }
   }
-  const scripts = ["assets/orderpro/session.js?v=3","assets/orderpro/table.js?v=3","assets/orderpro/menu.js?v=3","assets/orderpro/cart.js?v=3","assets/orderpro/payment.js?v=3"];
+  const scripts = ["assets/orderpro/draft.js?v=3","assets/orderpro/transport.js?v=3","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=3","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=5"];
   for (const src of scripts) {
     const script = document.createElement('script');
     script.async = false;

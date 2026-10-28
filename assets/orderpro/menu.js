@@ -2,6 +2,7 @@
  * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.
  * Classic lexical adapter intentionally preserves original function bodies, including assignments. */
 KiwiOrderMenu.orderProParts.define('menu', ["$","$$","I18N","ICON_CLASS","MENU","MENU_ALL","MENU_I18N","MENU_SUBTABS","OPT","addLineToCart","availabilitySignature","cart","currentLang","customizerEditingKey","customizerEditingQty","customizerItem","customizerNote","customizerSelections","escapeHtml","itemI18n","itemOf","menuTr","money","showToast","t","toCents"], function (scope) {
+  const draft = KiwiOrderMenu.orderProParts.extension('draft', 'create')(scope);
   with (scope) {
     const feedMedia = (() => {
       let io = null;
@@ -283,25 +284,9 @@ KiwiOrderMenu.orderProParts.define('menu', ["$","$$","I18N","ICON_CLASS","MENU",
       }
     }
 
-    function initialCustomizerSelections(options) {
-      const selections = {};
-      for (const opt of options || []) {
-        /* A published default is menu configuration, not customer consent.
-           Every OrderPro option starts empty and only an explicit tap may
-           select it, for ordinary modifiers and formula stages alike. */
-        selections[opt.key] = opt.type === 'single' ? '' : [];
-      }
-      return selections;
-    }
+    function initialCustomizerSelections(options) { return draft.initialCustomizerSelections(options); }
 
-    function unansweredRequiredOption(item, selections) {
-      return (item && item.options || []).find((opt) => {
-        const selected = selections[opt.key];
-        const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
-        const minimum = opt.formulaSlotId ? Math.max(0, Number(opt.min) || 0) : (opt.required ? 1 : 0);
-        return count < minimum;
-      }) || null;
-    }
+    function unansweredRequiredOption(item, selections) { return draft.unansweredRequiredOption(item, selections); }
 
     function syncCustomizerGate() {
       const btn = document.getElementById('custom-add-btn');
@@ -386,18 +371,7 @@ KiwiOrderMenu.orderProParts.define('menu', ["$","$$","I18N","ICON_CLASS","MENU",
     }
 
     function selectCustomizerChoice(optKey, choiceId, type) {
-      if (type === 'single') {
-        const definition = (customizerItem.options || []).find(opt => opt.key === optKey);
-        const mayClear = !definition || (!definition.required && !(definition.formulaSlotId && Math.max(0, Number(definition.min) || 0) > 0));
-        customizerSelections[optKey] = mayClear && customizerSelections[optKey] === choiceId ? '' : choiceId;
-      } else {
-        const arr = customizerSelections[optKey] || [];
-        const i = arr.indexOf(choiceId);
-        const def = (customizerItem.options || []).find(opt => opt.key === optKey);
-        if (i >= 0) arr.splice(i, 1);
-        else if (!def || !def.formulaSlotId || arr.length < Math.max(1, Number(def.max) || 1)) arr.push(choiceId);
-        customizerSelections[optKey] = arr;
-      }
+      draft.selectChoice(optKey, choiceId, type);
       // Update chip visuals
       const group = document.querySelector(`.option-group[data-opt="${CSS.escape(String(optKey))}"]`);
       if (!group) return;
@@ -416,23 +390,7 @@ KiwiOrderMenu.orderProParts.define('menu', ["$","$$","I18N","ICON_CLASS","MENU",
       syncCustomizerGate();
     }
 
-    function customizerUnitPrice() {
-      if (!customizerItem) return 0;
-      let p = customizerItem.price;
-      for (const opt of customizerItem.options || []) {
-        const sel = customizerSelections[opt.key];
-        if (opt.type === 'single' && sel) {
-          const c = opt.choices.find(c => c.id === sel);
-          if (c) p += (c.delta || 0);
-        } else if (opt.type === 'multi' && Array.isArray(sel)) {
-          for (const id of sel) {
-            const c = opt.choices.find(c => c.id === id);
-            if (c) p += (c.delta || 0);
-          }
-        }
-      }
-      return p;
-    }
+    function customizerUnitPrice() { return draft.customizerUnitPrice(); }
 
     function refreshCustomizerPrice() {
       $('#custom-price-value').textContent = `${money(customizerUnitPrice())}`;

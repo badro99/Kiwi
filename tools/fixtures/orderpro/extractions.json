@@ -1,0 +1,62 @@
+[
+  {
+    "file": "assets/orderpro-page.js",
+    "name": "NETcomment",
+    "replacement": "    const NET = registry.extension('transport', 'create')({ location, fetch, demo: () => globalThis.KiwiOrderDemo });"
+  },
+  {
+    "file": "assets/orderpro/cart.js",
+    "name": "lineKey",
+    "replacement": "    function lineKey(id, options, note) { return draft.lineKey(id, options, note); }\n\n"
+  },
+  {
+    "file": "assets/orderpro/cart.js",
+    "name": "totals",
+    "replacement": "    function totals() { return draft.totals(); }\n\n"
+  },
+  {
+    "file": "assets/orderpro/menu.js",
+    "name": "validation",
+    "replacement": "    function initialCustomizerSelections(options) { return draft.initialCustomizerSelections(options); }\n\n    function unansweredRequiredOption(item, selections) { return draft.unansweredRequiredOption(item, selections); }\n\n"
+  },
+  {
+    "file": "assets/orderpro/payment.js",
+    "name": "payload",
+    "replacement": "      const makeLinesPayload = ref => draft.create({ ...scope, linesCopy }).makeLinesPayload(ref);\n\n"
+  },
+  {
+    "file": "assets/orderpro-page.js",
+    "name": "NET",
+    "replacement": "    const NET = registry.extension('transport', 'create')({ location, fetch, demo: () => globalThis.KiwiOrderDemo });\n\n"
+  },
+  {
+    "file": "assets/orderpro/session.js",
+    "name": "retry",
+    "replacement": "      sendKey() { return retry.sendKey.call(this); },\n      sendScope() { return retry.sendScope.call(this); },\n      prepareSend(lines) { return retry.prepareSend.call(this, lines); },\n      clearPendingSend(...args) { return retry.clearPendingSend.apply(this, args); },\n"
+  },
+  {
+    "file": "assets/orderpro/menu.js",
+    "name": "price",
+    "replacement": "    function customizerUnitPrice() { return draft.customizerUnitPrice(); }\n\n"
+  },
+  {
+    "file": "assets/orderpro/menu.js",
+    "name": "selection",
+    "replacement": "      draft.selectChoice(optKey, choiceId, type);\n"
+  },
+  {
+    "file": "assets/orderpro/cart.js",
+    "name": "addDraftLine",
+    "replacement": "      draft.addDraftLine(line);\n"
+  },
+  {
+    "file": "assets/orderpro/cart.js",
+    "name": "decDraftLine",
+    "replacement": "      if (!cart.has(key)) return;\n      draft.decDraftLine(key);\n"
+  },
+  {
+    "file": "assets/orderpro/cart.js",
+    "name": "incDraftLine",
+    "replacement": "      if (!cart.has(key)) return;\n      draft.incDraftLine(key);\n"
+  }
+]

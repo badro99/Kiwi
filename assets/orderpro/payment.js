@@ -2,6 +2,7 @@
  * Reads/writes only the declared live scope below; browser capabilities are checked by orderpro-boundary-test.
  * Classic lexical adapter intentionally preserves original function bodies, including assignments. */
 KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE","ORDER_STATE_KEY","PREP_STAGE","SESSION","TIP_LEVELS","activeMenuFilter","cart","closeCart","cur","currentOrderId","describeOptionChoices","describeOptionVisuals","describeOptions","escapeHtml","fmtAmount","gotoScreen","groupLabel","itemOf","lastStatus","lineKey","money","nameOf","openCustomizer","orderMode","orderNumber","pendingRef","rebuildSent","refreshCartUI","reloadMenu","renderMenu","renderMenuSubtabs","saveSent","sentLines","sentOrders","serviceRequestPending","sessionTotal","showToast","splitState","t","tableNumber","tipPercent","toCents","totals"], function (scope) {
+  const draft = { create: KiwiOrderMenu.orderProParts.extension('draft', 'create') };
   with (scope) {
     async function sendServiceRequest(action) {
       if (serviceRequestPending || !SESSION.id || SESSION.closed) return false;
@@ -319,38 +320,7 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
          lit le prix et recalcule le total. Avant, une requête modifiée créait
          une commande à 1 MAD pour un plat à 250 et le ticket cuisine sortait
          avec le faux prix. */
-      const makeLinesPayload = ref => linesCopy.flatMap((l, lineIndex) => {
-        const item = itemOf(l.id);
-        const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
-        const formulaUid = formulaSlots.length ? `${ref}-${lineIndex}`.slice(0, 40) : '';
-        const parent = {
-          id: l.id, qty: l.qty,
-          options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
-          optionChoices: describeOptionChoices(l),
-          visuals: describeOptionVisuals(l, true),
-          note: l.note || '',
-        };
-        if (!formulaUid) return [parent];
-        Object.assign(parent, { kind: 'formula', formulaUid, formulaName: nameOf(l.id) });
-        const children = [];
-        formulaSlots.forEach(slot => {
-          const selected = l.options?.[slot.key];
-          /* Une étape facultative jamais touchée vaut '' (initialCustomizerSelections),
-             pas `undefined` : `== null` la laissait passer et on envoyait un
-             composant d'identifiant vide. Le serveur ne le trouvait dans aucun
-             choix du créneau et refusait TOUTE la formule — « Options à
-             rechoisir » sur un plat pourtant correctement composé. */
-          const ids = (slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
-            : (selected == null ? [] : [selected])).filter(Boolean);
-          ids.forEach((id, choiceIndex) => children.push({
-            id, qty: l.qty, kind: 'formula-part', formulaUid,
-            formulaName: nameOf(l.id), slotLabel: slot.label || '',
-            formulaSlotId: slot.formulaSlotId,
-            lineId: `${formulaUid}-${slot.formulaSlotId}-${choiceIndex}`.slice(0, 60),
-          }));
-        });
-        return [parent].concat(children);
-      });
+      const makeLinesPayload = ref => draft.create({ ...scope, linesCopy }).makeLinesPayload(ref);
 
       // Hash the exact payload with neutral formula IDs, then restore its ref
       // before deriving the real formulaUid/lineId values. No basket is stored.
