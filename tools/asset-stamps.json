@@ -1424,20 +1424,20 @@
     "sha": "0377d7489dd2a6b7"
   },
   "assets/pos-boutique.css": {
-    "v": "191",
+    "v": "192",
     "sha": "56a196b8e19951eb"
   },
   "assets/pos-boutique.js": {
-    "v": "191",
-    "sha": "e4654d57ff1f7120"
+    "v": "192",
+    "sha": "f5fdbfbb8b46143d"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "92",
-    "sha": "ccf17dc78d868eb5"
+    "v": "93",
+    "sha": "669b56f6e1d6e4df"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "10",
-    "sha": "a23ce0f22d85d3d6"
+    "v": "11",
+    "sha": "ccd23776247f5ec2"
   },
   "assets/pos-boutique/inv-moves.js": {
     "v": "5",
@@ -1448,16 +1448,16 @@
     "sha": "6475448a916bced8"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "92",
-    "sha": "be37ae29a5c5abc7"
+    "v": "93",
+    "sha": "0562210c1a2ef4fa"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "19",
     "sha": "2847ecce7d0a03b2"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "92",
-    "sha": "e501fd1f1b353362"
+    "v": "93",
+    "sha": "a65ac7d3e16d6b10"
   },
   "assets/pos-boutique/search.js": {
     "v": "11",
@@ -1480,8 +1480,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "260",
-    "sha": "951991f7f3f6379d"
+    "v": "261",
+    "sha": "5d1df6f0aa1f38a0"
   },
   "assets/pos-epicerie.css": {
     "v": "29",
@@ -1544,24 +1544,24 @@
     "sha": "a54a90047406afd0"
   },
   "assets/pos-maison.css": {
-    "v": "107",
+    "v": "109",
     "sha": "8734bf709f3aa11c"
   },
   "assets/pos-maison.js": {
-    "v": "107",
-    "sha": "ec636687e7d391ba"
+    "v": "109",
+    "sha": "2df20deeffeeb21e"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "27",
-    "sha": "e3c25e2a2ecba4b1"
+    "v": "29",
+    "sha": "cb41055f69c1b44f"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "27",
-    "sha": "75736dd0d8832054"
+    "v": "29",
+    "sha": "d71ad9fcc6227f11"
   },
   "assets/pos-maison/sales.js": {
-    "v": "27",
-    "sha": "21e4b6479907c12e"
+    "v": "29",
+    "sha": "1e723f90485fb1c5"
   },
   "assets/pos-mobile.css": {
     "v": "9",
@@ -1780,8 +1780,8 @@
     "sha": "21e7a85d7c96be09"
   },
   "assets/retail-photos.js": {
-    "v": "1",
-    "sha": "a24df55bc517a529"
+    "v": "3",
+    "sha": "931c2d6bfd5802b7"
   },
   "assets/retail-sale-hold.js": {
     "v": "6",

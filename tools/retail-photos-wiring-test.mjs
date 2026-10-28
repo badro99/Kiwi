@@ -30,7 +30,8 @@ for (const [till, dir] of [['boutique', 'pos-boutique'], ['maison', 'pos-maison'
   const artOf = sales.slice(sales.indexOf('const artOf'), sales.indexOf('const artOf') + 300);
   need(/p\.photo\s*\?/.test(artOf), till + ': a merchant photo wins over ours');
 }
-need(read('assets/pos-maison/sales.js').includes("photoImg(p, 'mz-art-photo', 'tag')"), 'the Maison falls back to the price tag, not a hanger');
+need(/photoImg\(p, 'mz-art-photo', 'tag'[,)]/.test(read('assets/pos-maison/sales.js')), 'the Maison falls back to the price tag, not a hanger');
+for (const dir of ['pos-boutique', 'pos-maison']) need(read(`assets/${dir}/sales.js`).includes('artOf(p, ln.color)'), dir + ': a ticket line shows the colour that was sold');
 for (const f of ['search.js', 'inv-tools.js']) need(!/artOf\(r\.art\)/.test(read('assets/pos-boutique/' + f)), 'boutique/' + f + ' passes the row');
 need(/\.bq-art-photo \{[^}]*object-fit: contain/.test(read('assets/pos-boutique.css')), 'the boutique stylesheet sizes the photo');
 need(read('assets/pos-boutique-2027.css').includes('.bq-card-art .bq-art-photo'), 'the 2027 tile sizes the photo like a restaurant dish');

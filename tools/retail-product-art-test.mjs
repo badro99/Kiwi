@@ -12,7 +12,7 @@
  * read in retail-photos-wiring-test.mjs. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { PHOTO_KEYS, DEFAULT_KEY, PHOTOS_V, photoKey, keyForName, photoImg, photoSrc, nameTokens } from '../assets/retail-photos.js';
+import { PHOTO_KEYS, PHOTO_FILES, COLOURS, COLOUR_KEYS, DEFAULT_KEY, PHOTOS_V, photoKey, photoFile, colourOf, keyForName, photoImg, photoSrc, nameTokens } from '../assets/retail-photos.js';
 
 let n = 0;
 const ok = (v, m) => { assert.ok(v, m); n++; };
@@ -20,7 +20,8 @@ const eq = (a, b, m) => { assert.equal(a, b, m); n++; };
 
 /* Files and keys, one for one. */
 const files = fs.readdirSync(new URL('../assets/retail-photos/', import.meta.url)).filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)).sort();
-eq(JSON.stringify(files), JSON.stringify([...PHOTO_KEYS].sort()), 'every photo key has its .webp and every .webp a key');
+eq(JSON.stringify(files), JSON.stringify([...PHOTO_FILES].sort()), 'every photo (each piece, and each piece in each of its colours) has its .webp, and every .webp is used');
+for (const k of COLOUR_KEYS) ok(PHOTO_KEYS.includes(k), k + ' is a piece before it is a colour');
 ok(PHOTO_KEYS.includes(DEFAULT_KEY) && PHOTO_KEYS.includes('tag'), 'both neutral photos exist');
 for (const f of files) ok(fs.statSync(new URL('../assets/retail-photos/' + f + '.webp', import.meta.url)).size < 16000, f + '.webp stays small');
 
@@ -71,6 +72,42 @@ const real = {
 };
 for (const [name, key] of Object.entries(real)) eq(keyForName(name), key, `« ${name} » → ${key}`);
 
+/* The colour (owner's partner, 28 October 2026: « no black hoodie, or black
+   jeans »). The sold colour first, then a word of the name, then the
+   product's colours; a lone grey is the catalogue's default, not a colour. */
+const colour = {
+  /* Amira Boutique, as the partner saw it */
+  'Black jean|noir': 'jean-noir', 'Jean White|marron': 'jean-blanc', 'Hoodie Blue|bleu': 'sweat-bleu',
+  'Hoodie Gris|gris': 'sweat-gris', 'costume noir|noir,blanc': 'costume-noir', 'Normal Shirt|blanc,violet': 'chemise-blanc',
+  /* Maison 121, the products without their own photo */
+  'POLO long sleeve|beige,marron': 'polo-beige', 'HUGO BOSS Casquette|noir': 'casquette-noir',
+  'Jackett Capuche Double Face|rouge,vert,bleu': 'veste-rouge', 'Pantalon 121|noir': 'pantalon-noir',
+  'Shorts PP|noir': 'short-noir', 'T shirt 121|beige,noir,gris': 'tshirt-beige', 'T Shirt Oversize|marron,beige': 'tshirt-marron',
+  'Gilet doudoune|marron,beige,bleu': 'gilet_doudoune-marron', 'Jacket PP|noir': 'veste-noir',
+  /* Santos Store: « multi » says nothing, a real colour does */
+  'survette|multi,blanc,rouge': 'survetement-blanc', 'jean|multi,bleu': 'jean-bleu', 'Trench|vert': 'trench-vert',
+  'Ensemble avec ceinture|bleu': 'ensemble-bleu', 'Manteau Cachemire|multi': 'manteau', 'manteau leopard|beige': 'manteau-beige',
+  'Ensemble jean raye|bleu': 'ensemble_jean', 'jupe daim|jaune': 'jupe', 'Top|multi': 'tshirt',
+  /* the catalogue's default grey, and names in other words */
+  'jean|gris': 'jean', 'Sweat capuche kahla|': 'sweat-noir', 'Pull bordeaux|': 'pull-rouge', 'Polo navy|': 'polo-bleu',
+  'Manteau camel|': 'manteau-marron', 'Bougie noire|noir': 'bougie',
+  /* the Moroccan pieces sold in many colours */
+  'Djellaba homme|bleu': 'djellaba-bleu', 'Jellaba femme brodée rose|': 'djellaba_femme-rose', 'Abaya noire|': 'abaya-noir',
+  'Hijab jersey|beige': 'hijab-beige', 'Burkini|marine': 'burkini-bleu', 'Caftan vert émeraude|': 'caftan-vert',
+  'Babouche cuir homme|marron': 'babouche-marron', 'Gandoura blanche|': 'gandoura-blanc', 'Jabador bordeaux|': 'jabador-rouge',
+  'Caftan velours|rouge': 'caftan_velours', 'Savon noir|': 'savon_noir', 'Djellaba|jaune': 'djellaba',
+};
+for (const [spec, file] of Object.entries(colour)) {
+  const [name, cs] = spec.split('|');
+  eq(photoFile({ name, colors: cs ? cs.split(',') : [] }), file, `« ${name} » (${cs || 'no colour'}) → ${file}`);
+}
+eq(photoFile({ name: 'Hoodie', colors: ['gris'] }, 'cintre', 'noir'), 'sweat-noir', 'a ticket line shows the colour sold');
+eq(photoFile({ name: 'Hoodie Blue' }, 'cintre', 'violet'), 'sweat', 'a colour without its photo keeps the plain piece');
+eq(photoFile('jean'), 'jean', 'the picker shows the plain piece');
+eq(colourOf({ name: 'Robe', colors: ['emeraude', 'nuit'] }), 'vert', 'the demo shades fold into palette families');
+eq(COLOURS.length * COLOUR_KEYS.length + PHOTO_KEYS.length, PHOTO_FILES.length, 'one photo per piece and per colour');
+ok(photoImg({ name: 'Black jean' }).includes('retail-photos/jean-noir.webp'), 'the tile shows black jeans');
+
 /* A broad sample of shop names, French first. */
 const sample = {
   'Caftan Velours': 'caftan_velours', 'Caftan soirée perlé': 'caftan_perle', 'Takchita Mariage': 'takchita_mariage',
@@ -80,9 +117,18 @@ const sample = {
   'Chemise en jean': 'chemise', 'Veste en jean': 'veste', 'Short en jean': 'short', 'Combinaison pantalon': 'combinaison',
   'Doudoune légère': 'doudoune', 'Sac à main cuir': 'sac_main', 'Sac à dos toile': 'sac_dos', 'Porte-monnaie cuir': 'portefeuille',
   'Boucles d\'oreilles dorées': 'boucles', 'Lunettes de soleil': 'lunettes', 'Eau de parfum 100 ml': 'parfum',
-  'Hijab jersey': 'foulard', 'Chaussettes coton x3': 'chaussettes', 'Escarpins vernis': 'chaussures',
+  'Hijab jersey': 'hijab', 'Chaussettes coton x3': 'chaussettes', 'Escarpins vernis': 'chaussures',
   'Carte cadeau 500': 'tag', 'Bougie parfumée ambre': 'bougie', 'Coffret cadeau': 'coffret', 'Plaid laine': 'plaid',
-  'Assiettes plates x6': 'assiette', 'Verres à thé': 'verre', 'Plateau laiton': 'plateau', 'Miroir rond': 'miroir',
+  'Assiettes plates x6': 'assiette', 'Verres à thé': 'verre_the', 'Verre à eau': 'verre', 'Plateau laiton': 'plateau', 'Miroir rond': 'miroir',
+  /* the souk and modest wear (owner, 28 October 2026: « djellabas, burkinis ») */
+  'Jellaba femme brodée': 'djellaba_femme', 'Djellaba enfant laine': 'djellaba_enfant', 'Caftan fille': 'caftan_enfant',
+  'Abaya Dubai': 'abaya', 'Voile mousseline': 'hijab', 'Burkini 3 pièces': 'burkini', 'Maillot de bain une pièce': 'maillot',
+  'Tunique longue lin': 'tunique', 'Seroual coton': 'sarwal', 'Kimono long': 'kimono', 'Gilet brodé homme': 'gilet_brode',
+  'Gilet laine': 'pull', 'Chèche touareg': 'chech', 'Melhfa sahraouie': 'melhfa', 'Fibule berbère argent': 'khlala',
+  'Kessa hammam': 'kessa', 'Gant de gommage': 'kessa', 'Ghassoul 250 g': 'ghassoul', 'Savon beldi eucalyptus': 'savon_noir',
+  'Henné naturel': 'henne', 'Huile d\'argan bio': 'argan', 'Bkhour oud': 'bkhour', 'Tapis Beni Ourain': 'tapis',
+  'Zarbia 2x3': 'tapis', 'Pouf cuir': 'pouf', 'Lanterne cuivre': 'lanterne', 'Théière argentée': 'theiere',
+  'Berrad 1 L': 'theiere', 'Plat à tajine': 'tajine', 'Panier doum': 'panier', 'Cabas plage': 'cabas',
   'Coussin berbère': 'coussin', 'Bougeoir laiton': 'bougeoir', 'Costume trois pièces': 'costume', 'قفطان مغربي': 'caftan',
 };
 for (const [name, key] of Object.entries(sample)) eq(keyForName(name), key, `« ${name} » → ${key}`);

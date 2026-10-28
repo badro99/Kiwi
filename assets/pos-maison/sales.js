@@ -1,8 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=107';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=27';
-import { invSetModal, offerRegister } from './inventory.js?v=27';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=109';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=29';
+import { invSetModal, offerRegister } from './inventory.js?v=29';
 import '../money-cents.js?v=4';
-import { photoImg } from '../retail-photos.js?v=1';
+import { photoImg } from '../retail-photos.js?v=3';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -65,9 +65,9 @@ import { photoImg } from '../retail-photos.js?v=1';
   /* Product-icon "database" for the create/edit picker — ordered + labelled.
      artOf() takes a product (its own photo, else a photo picked by its name, retail-photos.js)
      or an icon key, and falls back to the price tag so nothing is blank. */
-  const artOf = (p) => (p && typeof p === 'object' && p.photo
+  const artOf = (p, colour) => (p && typeof p === 'object' && p.photo
     ? `<img class="mz-product-photo" src="${esc(p.photo)}" alt="" loading="lazy" decoding="async">`
-    : photoImg(p, 'mz-art-photo', 'tag'));
+    : photoImg(p, 'mz-art-photo', 'tag', colour));
   const ICON_LABELS = {
     bougie: 'Bougie', diffuseur: 'Diffuseur', diffuseur_voiture: 'Diffuseur voiture', coffret: 'Coffret cadeau',
     bougeoir: 'Bougeoir', cloche: 'Cloche', eteignoir: 'Éteignoir', coupe_meche: 'Coupe-mèche',
@@ -537,7 +537,7 @@ import { photoImg } from '../retail-photos.js?v=1';
     const pr = linePromo(ln);
     const origPrice = shelf((ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0));
     return `<div class="mz-line">
-      <span class="mz-line-art">${artOf(p)}</span>
+      <span class="mz-line-art">${artOf(p, ln.color)}</span>
       <span class="mz-line-mid">
         ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
         ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}

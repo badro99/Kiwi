@@ -31,18 +31,33 @@ const WORDS = {
   takchita: 'takchita|takshita|tekchita|تكشيطة',
   takchita_mariage: 'takchita mariage|tenue mariage|tenue mariee|robe mariee',
   djellaba: 'djellaba|jellaba|jalaba|djelaba|جلابة',
-  gandoura: 'gandoura|gandora|qamis|kamis|abaya',
+  gandoura: 'gandoura|gandora|qamis|kamis',
   jabador: 'jabador|jabadour',
   selham: 'selham|burnous|bournous',
   tarbouche: 'tarbouche|tarbouch|fez|chechia',
   mdamma: 'mdamma|mdama|ceinture caftan|ceinture doree',
-  foulard: 'foulard|hijab|voile|carre soie|bandana',
+  foulard: 'foulard|carre soie|bandana|sebniya|sabniya',
   chale: 'chale|etole|pashmina|shawl',
   broche: 'broche|brooch|epingle|bijou',
   babouche: 'babouche|belgha|balgha|bolgha|slipper|mule|بلغة',
   babouche_brodee: 'babouche brodee|babouche femme',
   cherbil: 'cherbil|charbil|chrabel',
   babouche_enfant: 'babouche enfant|babouche bebe',
+  djellaba_femme: 'djellaba femme|jellaba femme|djellaba brodee|jellaba brodee|jellaba sfifa|djellaba sfifa',
+  djellaba_enfant: 'djellaba enfant|jellaba enfant|djellaba bebe|jellaba bebe|djellaba garcon|jellaba garcon',
+  caftan_enfant: 'caftan enfant|caftan fille|caftan bebe|kaftan enfant',
+  gilet_brode: 'gilet brode|gilet traditionnel|gilet marocain|bdaia|bedaia',
+  sarwal: 'sarwal|seroual|sarouel|serwal|kandrissi|qandrissi',
+  chech: 'cheche|chech|chache|cheich|turban',
+  melhfa: 'melhfa|mlahfa|malhfa|haik',
+  khlala: 'khlala|fibule|tizerzai|bijou berbere',
+  /* ── Mode pudique, bain ── */
+  abaya: 'abaya|abaya femme|عباية',
+  hijab: 'hijab|voile|khimar|turban femme|حجاب',
+  burkini: 'burkini|burqini|maillot couvrant|maillot integral|maillot islamique|بوركيني',
+  tunique: 'tunique|tunic',
+  kimono: 'kimono',
+  maillot: 'maillot bain|swimsuit|bikini|monokini',
   /* ── Chaussures, couvre-chef ── */
   chaussures: 'chaussure|soulier|mocassin|derby|richelieu|escarpin|ballerine|talon|shoe|loafer|heel',
   basket: 'basket|sneaker|tennis|running|trainer',
@@ -54,7 +69,7 @@ const WORDS = {
   /* ── Vêtements ── */
   tshirt: 't shirt|tee shirt|tshirt|tee|top|haut|body',
   polo: 'polo',
-  chemise: 'chemise|chemisier|blouse|tunique|shirt',
+  chemise: 'chemise|chemisier|blouse|shirt',
   debardeur: 'debardeur|marcel|caraco|tank',
   pull: 'pull|pullover|sweater|tricot|gilet|cardigan|maille',
   sweat: 'sweat|sweat shirt|sweatshirt|hoodie|capuche|capuchon',
@@ -70,7 +85,7 @@ const WORDS = {
   survetement: 'survetement|survette|survet|jogging|tracksuit|ensemble jogging',
   robe: 'robe|dress|gown',
   jupe: 'jupe|skirt',
-  pantalon: 'pantalon|chino|jogger|legging|sarouel|cargo|trouser|pant',
+  pantalon: 'pantalon|chino|jogger|legging|cargo|trouser|pant',
   jean: 'jean|denim',
   short: 'short|bermuda',
   combinaison: 'combinaison|combi|salopette|jumpsuit',
@@ -81,7 +96,7 @@ const WORDS = {
   ceinture: 'ceinture|belt',
   sac_main: 'sac main|handbag',
   sac: 'sac|besace|bandouliere|bag',
-  cabas: 'cabas|panier|tote|shopping',
+  cabas: 'cabas|tote|shopping',
   pochette: 'pochette|clutch|minaudiere|trousse',
   sac_dos: 'sac dos|backpack|cartable',
   portefeuille: 'portefeuille|porte monnaie|porte carte|wallet|cardholder',
@@ -116,6 +131,20 @@ const WORDS = {
   vase: 'vase|soliflore',
   coussin: 'coussin|cushion',
   plaid: 'plaid|jete|throw|couverture',
+  /* ── Souk : hammam, beauté, maison marocaine ── */
+  kessa: 'kessa|kassa|gant hammam|gant gommage',
+  ghassoul: 'ghassoul|rhassoul|ghasoul',
+  savon_noir: 'savon noir|savon beldi|sabon beldi|savon',
+  henne: 'henne|henna|hena|حناء',
+  argan: 'argan|huile argan',
+  bkhour: 'bkhour|bakhour|bkhor|encens|encensoir|mbekhra',
+  tapis: 'tapis|zarbia|kilim|boucherouite|beni ourain|rug',
+  pouf: 'pouf|pouffe',
+  lanterne: 'lanterne|fanous|lampe marocaine|lantern',
+  theiere: 'theiere|berrad|brrad|teapot',
+  tajine: 'tajine|tagine|tajin|plat tajine',
+  verre_the: 'verre the|verre beldi|kass|tea glass',
+  panier: 'panier|doum|couffin|corbeille',
   /* ── Divers ── */
   tag: 'carte cadeau|bon achat|etiquette|gift card',
   cintre: 'cintre|hanger',
@@ -123,7 +152,7 @@ const WORDS = {
 
 export const PHOTO_KEYS = Object.keys(WORDS);
 const KNOWN = new Set(PHOTO_KEYS);
-const STOP = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'a', 'au', 'aux', 'd', 'l', 'en', 'et', 'pour', 'avec', 'sans', 'the', 'of', 'for', 'and', 'with']);
+const STOP = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'a', 'au', 'aux', 'd', 'l', 'en', 'et', 'pour', 'avec', 'sans', 'of', 'for', 'and', 'with']);
 
 /* Minuscules, sans accents ni ponctuation, pluriel simple retiré : « Boucles
    d'oreilles » et « boucle oreille » donnent les mêmes mots. */
@@ -160,9 +189,64 @@ export function photoKey(p, fallback = DEFAULT_KEY) {
   return keyForName(p && p.name) || (art !== FORM_DEFAULT && KNOWN.has(art) ? art : neutral);
 }
 
-export const photoSrc = (key) => `assets/retail-photos/${KNOWN.has(key) ? key : DEFAULT_KEY}.webp?v=${PHOTOS_V}`;
+/* ── La couleur (owner, 28 octobre 2026 : « pas de hoodie noir, ni de jean
+   noir ») ── Les pièces que l'on vend dans plusieurs couleurs ont une photo
+   par famille de couleur de la palette (assets/color-palette.js), dans
+   assets/retail-photos/<clé>-<couleur>.webp. La couleur vient, dans l'ordre :
+   de la ligne du ticket (la couleur vendue), d'un mot du nom (« Black jean »,
+   « Hoodie Blue », « costume noir »), puis des couleurs du produit. Un gris
+   seul ne compte pas : le catalogue le met d'office quand rien n'est dit.
+   Sans couleur connue, ou dans une couleur qui n'a pas sa photo, la photo
+   de base reste. */
+export const COLOURS = ['noir', 'blanc', 'gris', 'bleu', 'rouge', 'vert', 'beige', 'marron', 'rose'];
+export const COLOUR_KEYS = ['tshirt', 'polo', 'chemise', 'sweat', 'pull', 'pantalon', 'jean', 'short', 'veste', 'manteau',
+  'trench', 'doudoune', 'gilet_doudoune', 'survetement', 'costume', 'casquette', 'ensemble',
+  'djellaba', 'djellaba_femme', 'gandoura', 'abaya', 'hijab', 'burkini', 'caftan', 'babouche', 'jabador'];
+const IN_COLOUR = new Set(COLOUR_KEYS);
+const COLOUR_WORDS = {
+  noir: 'noir|noire|black|nero|negro|k7al|kahla|كحل|أسود',
+  blanc: 'blanc|blanche|white|ivoire|ivory|bianco|blanco|byed|أبيض',
+  gris: 'gris|grise|grey|gray|anthracite|chine',
+  bleu: 'bleu|bleue|blue|navy|marine|nuit|indigo|azur|ciel|turquoise|أزرق',
+  rouge: 'rouge|red|bordeaux|burgundy|grenat|cerise|أحمر',
+  vert: 'vert|verte|green|kaki|khaki|olive|emeraude|sapin|أخضر',
+  beige: 'beige|sable|sand|creme|cream|ecru|nude|بيج',
+  marron: 'marron|brown|chocolat|cognac|camel|taupe|caramel|terracotta|بني',
+  rose: 'rose|pink|fuchsia|poudre|وردي',
+  /* Des familles de la palette sans photo : connues, pour qu'une ligne vendue
+     en jaune ne prenne pas le bleu du nom, mais la pièce reste sans couleur. */
+  jaune: 'jaune|yellow|moutarde|safran|dore|doree|gold',
+  orange: 'orange',
+  violet: 'violet|purple|mauve|lilas|prune',
+};
+const COLOUR_OF = new Map(Object.entries(COLOUR_WORDS).flatMap(([c, list]) => list.split('|').map((w) => [nameTokens(w)[0], c])));
+const colourWord = (word) => COLOUR_OF.get(nameTokens(word)[0]) || null;
+
+/* La famille de couleur d'un produit, ou null. */
+export function colourOf(p, colour) {
+  const given = colour && colourWord(colour);
+  if (given) return given;
+  if (!p || typeof p !== 'object') return null;
+  for (const t of nameTokens(p.name)) { const c = COLOUR_OF.get(t); if (c) return c; }
+  const list = (Array.isArray(p.colors) ? p.colors : []).map(colourWord).filter(Boolean);   // « multi » ne dit rien
+  if (list.length === 1 && list[0] === 'gris' && p.colors.length === 1) return null;
+  return list[0] || null;
+}
+
+/* Le fichier photo d'un produit : la pièce, dans sa couleur quand elle l'a. */
+export function photoFile(p, fallback = DEFAULT_KEY, colour) {
+  const key = photoKey(p, fallback);
+  if (!IN_COLOUR.has(key)) return key;
+  const c = colourOf(typeof p === 'string' ? null : p, colour);
+  return c && COLOURS.includes(c) ? `${key}-${c}` : key;
+}
+
+const FILES = new Set([...PHOTO_KEYS, ...COLOUR_KEYS.flatMap((k) => COLOURS.map((c) => `${k}-${c}`))]);
+export const PHOTO_FILES = [...FILES];
+export const photoSrc = (file) => `assets/retail-photos/${FILES.has(file) ? file : DEFAULT_KEY}.webp?v=${PHOTOS_V}`;
 
 /* L'image d'un produit, sans texte alternatif : le nom est écrit à côté.
-   `cls` est la classe de la caisse (bq-art-photo, mz-art-photo). */
-export const photoImg = (p, cls = 'bq-art-photo', fallback = DEFAULT_KEY) =>
-  `<img class="${cls}" src="${photoSrc(photoKey(p, fallback))}" alt="" loading="lazy" decoding="async" draggable="false">`;
+   `cls` est la classe de la caisse (bq-art-photo, mz-art-photo), `colour` la
+   couleur vendue quand on la connaît (une ligne de ticket). */
+export const photoImg = (p, cls = 'bq-art-photo', fallback = DEFAULT_KEY, colour) =>
+  `<img class="${cls}" src="${photoSrc(photoFile(p, fallback, colour))}" alt="" loading="lazy" decoding="async" draggable="false">`;
