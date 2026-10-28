@@ -25,6 +25,7 @@ function setup(extra = {}) {
     fetch(url, options) { calls.push({url, options}); return new Promise(() => {}); },
     messages, console, ...extra });
   vm.runInContext(read('assets/request-deadline.mjs').replace('export ', '') + '\nconst net = {deadlineFetch};', c);
+  vm.runInContext(fs.readFileSync('assets/hotel-economat-transport.js', 'utf8').replace(/import \{ deadlineFetch \} from '[^']+';/, '').replace(/export /g, '') + '\nconst economatNet = {getJson,post}; const transport = () => Promise.resolve(economatNet);', c);
   const run = text => vm.runInContext(text.replace(/import\('[^']*request-deadline.mjs'\)/g, 'Promise.resolve(net)'), c);
   async function expire(p) {
     for (let i = 0; i < 25; i++) await Promise.resolve();

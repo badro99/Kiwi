@@ -1940,6 +1940,7 @@ section('Whole-project regressions');
   'economat-v1-resolution-test.mjs',
   'economat-request-fields-test.mjs',
   'economat-review-test.mjs',
+  'economat-transport-test.mjs',
   'economat-handover-test.mjs',
   'economat-request-list-test.mjs',
   'hotel-transfer-test.mjs',

@@ -43,6 +43,7 @@ entries.forEach(({base}) => moduleClosure('assets/' + base + '.js'));
 // Live Link is a module in every shell: its imports must be precached at the stamp it imports.
 moduleClosure('assets/live-link.js');
 moduleClosure('assets/tickets.js');
+moduleClosure('assets/hotel-economat-requests.js');
 moduleClosure('assets/invoicing.js');
 moduleClosure('assets/team-hours.js');
 moduleClosure('assets/team.js');

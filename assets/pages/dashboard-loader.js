@@ -27,7 +27,7 @@
       'assets/hotel/editors.js?v=2',
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=1'] },
-    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=19'] },
+    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=22'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url) {

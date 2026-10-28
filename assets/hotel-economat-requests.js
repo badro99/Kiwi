@@ -14,7 +14,7 @@
  * commande au lieu d'en écrire deux.
  *
  * Monté par assets/hotel-economat.js dans [data-eco-requests-host]. */
-(function () {
+(function (transport) {
   'use strict';
 
   var Kiwi = window.Kiwi;
@@ -130,16 +130,10 @@
   }
 
   async function getJson(url) {
-    var r = await (await import('./request-deadline.mjs')).deadlineFetch(url, { credentials:'same-origin', cache:'no-store' });
-    var body = {}; try { body = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; }
-    if (!r.ok) { var e = new Error(body.error || ('http-' + r.status)); e.status = r.status; e.body = body; throw e; }
-    return body;
+    return (await transport()).getJson(url);
   }
   async function post(body) {
-    var r = await (await import('./request-deadline.mjs')).deadlineFetch('/api/inventory/internal-requests', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(Object.assign({ merchant:merchant() }, body)) });
-    var out = {}; try { out = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; }
-    if (!r.ok) { var e = new Error(out.error || ('http-' + r.status)); e.status = r.status; e.body = out; throw e; }
-    return out;
+    return (await transport()).post(body, merchant());
   }
 
   /* ─── Données ─── */
@@ -542,4 +536,4 @@
     reload: load,
     state: function () { return S; },
   };
-}());
+}(function () { return import('./hotel-economat-transport.js?v=2'); }));

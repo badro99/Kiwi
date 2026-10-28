@@ -35,7 +35,7 @@ for (const id of ['clients#1','returns#0','creditbook#0']) await test(id, async 
 for(const [id,file,names] of [['booking#0','assets/booking-manage.js',['openManage','cancelBooking']],['economat#0','assets/hotel-economat-requests.js',['getJson','post']]]) await test(id,async()=>{
   for(const name of names){
     let calls=0,settled=false;
-    const r=realm({merchant:'fixture',manageToken:'private',closed(){},t:x=>x,mt:x=>x,renderManage(){},fetch(){calls++;return new Promise(()=>{});}});
+    const r=realm({transport:()=>Promise.reject(new Error('module-unavailable')),merchant:'fixture',manageToken:'private',closed(){},t:x=>x,mt:x=>x,renderManage(){},fetch(){calls++;return new Promise(()=>{});}});
     const source=fn(file,name).replace(/import\('[^']+'\)/g,'Promise.reject(new Error("module-unavailable"))');
     r.run('('+source+')')({booking:{}}).then(()=>settled=true,()=>settled=true);
     for(let i=0;i<30;i++)await Promise.resolve();
