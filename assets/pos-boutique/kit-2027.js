@@ -185,6 +185,9 @@ function bqKitRail(root, $, icons, on, who) {
   more.className = 'bq-more';
   more.id = 'bq-more';
   more.hidden = true;
+  /* Tout le tiroir est sombre : la marque et la langue lisent le jeu sombre
+     du kit, comme le nav (§20.7, règle 5), sinon leur encre sort foncée. */
+  more.setAttribute('data-k-ground', 'inverse');
   /* Ordre d'origine conservé : les destinations d'abord, le pied ensuite. */
   const main = BQ_RAIL_MAIN.map((r) => r[0]);
   [...nav.children].forEach((el) => {

@@ -388,17 +388,24 @@ html[data-skin-2027="till"] #pos-boutique .bq-more {
 html[data-skin-2027="till"] #pos-boutique .bq-more > :not(k-sidebar, .bq-more-brand, .kcl) { display: none; }
 html[data-skin-2027="till"] #pos-boutique .bq-more > k-sidebar { display: block; }
 
+/* Une seule ligne : le logo à sa vraie proportion (mot-symbole ~1,8:1, il
+   s'écrasait dans un carré de 28px), puis l'état de service juste à sa
+   droite (propriétaire, 2026-10-28). Sans nom d'enseigne, sa case se tait. */
 html[data-skin-2027="till"] #pos-boutique .bq-more-brand {
-  display: grid; grid-template-columns: auto 1fr; align-items: center;
-  column-gap: 10px; row-gap: 2px; padding: 4px 12px 16px;
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px;
+  padding: 4px 12px 16px;
 }
-html[data-skin-2027="till"] #pos-boutique .bq-more-logo { width: 28px; height: 28px; grid-row: span 2; }
+html[data-skin-2027="till"] #pos-boutique .bq-more-logo { height: 34px; width: auto; flex: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-more-venue:empty { display: none; }
+/* Le nom de l'enseigne passe SOUS la ligne logo · état : à côté, il
+   coupait « En service » en deux. */
 html[data-skin-2027="till"] #pos-boutique .bq-more-venue {
+  order: 3; flex: 1 0 100%; min-width: 0;
   font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
   color: var(--k-ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more-live {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
   font-size: var(--k-fs-footnote); color: var(--k-ink-2);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more-live i {
@@ -408,8 +415,29 @@ html[data-skin-2027="till"] #pos-boutique .bq-more-live i {
    à trois voies, pas un lien. Elle tient le pied du tiroir — par `order`, et
    non en la déplaçant : son module la réinsère après notre montage, et un
    nœud déplacé serait remonté en tête au premier rendu. */
+/* L'écart au-dessus de la langue vient du nav, pas d'un rembourrage DANS la
+   pastille : celui-ci descendait les trois boutons et déséquilibrait la
+   boîte (propriétaire, 2026-10-28). Trois cases égales, une hauteur, le ع
+   sur la même ligne que FR et EN. */
+html[data-skin-2027="till"] #pos-boutique .bq-more > k-sidebar { margin-block-end: 16px; }
 html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl {
-  order: 99; margin-block-start: auto; padding-block-start: 16px;
+  order: 99; margin-block-start: auto; flex: none;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  padding: 4px; border: 0; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-2);
+}
+html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl .kcl-it {
+  display: flex; align-items: center; justify-content: center;
+  height: 40px; padding: 0; border-radius: var(--k-r-2);
+  font-family: var(--k-font); font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+  line-height: 1; letter-spacing: 0.04em;
+  color: var(--k-ink-2); box-shadow: none;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl .kcl-it[lang="ar"] {
+  font-size: var(--k-fs-body); letter-spacing: 0;
+}
+html[data-skin-2027="till"] #pos-boutique .bq-more > .kcl .kcl-it.on {
+  background-color: var(--k-accent-tint); color: var(--k-accent-ink);
 }
 html[data-skin-2027="till"] #pos-boutique .bq-more[hidden] { display: none; }
 /* Le voile : celui du restaurant (#kit-more-scrim), même teinte, même
