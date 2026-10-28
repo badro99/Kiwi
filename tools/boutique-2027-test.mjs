@@ -174,6 +174,17 @@ for (const ic of ['shopping_bag', 'sync_alt', 'inventory_2', 'group', 'more_hori
   check(new RegExp('id="' + ic + '"').test(sprite),
     `l'icône « ${ic} » manque à sprite.till.svg : le rail dessinerait un vide`);
 }
+/* Le tiroir aussi : chaque commande nommée dans BQ_MORE_ICONS doit exister
+   au sprite, et Fin de service, Code de pointage et Réimprimer sont reconnus
+   sur leurs vrais boutons, sinon ils retombent sur « more_horiz ». */
+for (const [, ic] of railSrc.matchAll(/\['[^']+', '([a-z_0-9]+)'\],/g)) {
+  check(new RegExp('id="' + ic + '"').test(sprite),
+    `l'icône « ${ic} » manque à sprite.till.svg : le tiroir dessinerait un vide`);
+}
+check(/\['#bq-close-day', 'power_settings_new'\]/.test(railSrc)
+  && /\['\.kx-attendance-code', 'key'\]/.test(railSrc)
+  && /\['\.kx-reprint', 'receipt'\]/.test(railSrc),
+  'Fin de service, Code de pointage ou Réimprimer ne sont plus reconnus : le tiroir dessinerait « ••• »');
 
 /* ── 4b · le fond d'ouverture tombe en marche ──────────────────────────────
    La feuille de peau est portée par le SEUL drapeau de page, posé en ligne

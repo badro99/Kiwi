@@ -81,6 +81,12 @@ const BQ_MORE_ICONS = [
   ['#bq-lock', 'lock'],
   ['.kx-refresh', 'refresh'],
   ['[data-action="printer-connect"]', 'print'],
+  /* Les trois que posent la boutique et les modules partagés : Fin de
+     service (pos-boutique.js), Code de pointage (caisse-refresh.js) et
+     Réimprimer (pos-reprint.js). */
+  ['#bq-close-day', 'power_settings_new'],
+  ['.kx-attendance-code', 'key'],
+  ['.kx-reprint', 'receipt'],
   ['[data-bq-act="reprint"]', 'print'],
   ['[data-bq-act="clock"]', 'schedule'],
   ['[data-bq-act="endshift"]', 'power_settings_new'],
