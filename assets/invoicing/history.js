@@ -1,10 +1,10 @@
 /* Exports: getSaleInvoices, rowsFor, stats, paintStats, legacyDocs, paintNotices, tabsHtml, newLabel, visibleRows, paintRegister, paintAll, renderList, csvCell, exportCsv.
  * Reads: explicit dependencies passed per call; window APIs declared in split.json.
  * The entry owns screen state. No sibling module or private global is read. */
-export function getSaleInvoices({dayIn, today}, self, args) {
+export function getSaleInvoices({cache, dayIn, ownData, today}, self, args) {
 function getSaleInvoices() {
     try {
-      const cached = window.KiwiInvoice?.getCachedInvoices?.() || {};
+      const cached = ownData() ? cache.sales : (window.KiwiInvoice?.getCachedInvoices?.() || {});
       return Object.values(cached).map((doc) => {
         const id = String(doc.number || (doc.seq ? ('F-' + doc.seq) : 'Facture'));
         const customer = (doc.customer && doc.customer.name) || 'Client de passage';
@@ -21,28 +21,18 @@ export function rowsFor({cache}, self, args) {
 function rowsFor(ty) { return cache[ty] || []; }
 return rowsFor.apply(self, args);
 }
-export function stats({rowsFor, today}, self, args) {
-function stats() {
-    let outstanding = 0, late = 0, paidMonth = 0, waiting = 0, lateCount = 0;
-    const month = today().slice(0, 7);
-    rowsFor('invoice').forEach(r => {
-      const ds = r.displayStatus;
-      if (ds === 'issued' || ds === 'partial' || ds === 'overdue') { outstanding += r.balanceCents; waiting += 1; }
-      if (ds === 'overdue') { late += r.balanceCents; lateCount += 1; }
-      if ((ds === 'paid' || ds === 'partial' || ds === 'overdue' || ds === 'issued') && String(r.issueDate).slice(0, 7) === month) paidMonth += Math.max(0, r.ttcCents - r.balanceCents);
-    });
-    return {outstanding, late, paidMonth, waiting, lateCount};
-  }
+export function stats({registerStats}, self, args) {
+function stats() { return registerStats; }
 return stats.apply(self, args);
 }
 export function paintStats({T, TYPES, esc, getSaleInvoices, money, overlay, rowsFor, stats}, self, args) {
 function paintStats() {
     const box = overlay?.querySelector('[data-inv-stats]'); if (!box) return;
-    const t = T(), s = stats();
-    const total = TYPES.reduce((n, ty) => n + rowsFor(ty).length, 0) + getSaleInvoices().length;
-    box.innerHTML = `<article class="inv-stat"><div class="inv-stat-label">${esc(t.outstanding)}</div><div class="inv-stat-value" data-stat="outstanding">${money(s.outstanding)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${s.waiting} ${esc(t.awaiting)}</div></article>
-      <article class="inv-stat alert"><div class="inv-stat-label">${esc(t.overdue)}</div><div class="inv-stat-value" data-stat="overdue">${money(s.late)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${s.lateCount} ${esc(t.needsFollowup)}</div></article>
-      <article class="inv-stat"><div class="inv-stat-label">${esc(t.paidMonth)}</div><div class="inv-stat-value" data-stat="paid">${money(s.paidMonth)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${esc(t.collected)}</div></article>
+    const t = T(), s = stats() || {outstanding:null, late:null, paidMonth:null, waiting:'·', lateCount:'·', total:'·'};
+    const total = s.total;
+    box.innerHTML = `<article class="inv-stat"><div class="inv-stat-label">${esc(t.outstanding)}</div><div class="inv-stat-value" data-stat="outstanding">${s.outstanding == null ? '·' : money(s.outstanding)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${s.waiting} ${esc(t.awaiting)}</div></article>
+      <article class="inv-stat alert"><div class="inv-stat-label">${esc(t.overdue)}</div><div class="inv-stat-value" data-stat="overdue">${s.late == null ? '·' : money(s.late)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${s.lateCount} ${esc(t.needsFollowup)}</div></article>
+      <article class="inv-stat"><div class="inv-stat-label">${esc(t.paidMonth)}</div><div class="inv-stat-value" data-stat="paid">${s.paidMonth == null ? '·' : money(s.paidMonth)} <small>${esc(t.cur)}</small></div><div class="inv-stat-note">${esc(t.collected)}</div></article>
       <article class="inv-stat"><div class="inv-stat-label">${esc(t.documents)}</div><div class="inv-stat-value" data-stat="docs">${total}</div><div class="inv-stat-note">${esc(t.totalDocs)}</div></article>`;
   }
 return paintStats.apply(self, args);
@@ -87,7 +77,7 @@ export function visibleRows({filter, getSaleInvoices, query, rowsFor, tab}, self
 function visibleRows() {
     const q = query.trim().toLowerCase();
     if (tab === 'sales') {
-      return getSaleInvoices().reverse().filter(r => !q || String(r.id).toLowerCase().includes(q) || String(r.customer).toLowerCase().includes(q));
+      return getSaleInvoices().sort((a,b) => Number(b.rawDoc.issuedTs) - Number(a.rawDoc.issuedTs) || b.id.localeCompare(a.id)).filter(r => !q || String(r.id).toLowerCase().includes(q) || String(r.customer).toLowerCase().includes(q));
     }
     return rowsFor(tab).filter(r => {
       if (tab === 'invoice') {
@@ -130,7 +120,7 @@ function paintRegister() {
       const msg = tab === 'sales' ? [t.salesSub, ''] : hasAny ? [t.emptyFilter, ''] : ({invoice: [t.emptyInvoice, t.emptyInvoiceSub], quote: [t.emptyQuote, t.emptyQuoteSub], credit_note: [t.emptyCredit, t.emptyCreditSub]}[tab]);
       html = `<div class="inv-empty"><div class="inv-empty-mark">${ICON.invoice}</div><h4>${esc(msg[0])}</h4><p>${esc(msg[1])}</p>${tab === 'credit_note' || hasAny ? '' : `<button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}${esc(newLabel())}</button>`}</div>`;
     }
-    if (tab !== 'sales' && nextCursor[tab] && !(loadingList && !rows.length)) {
+    if (nextCursor[tab] && !(loadingList && !rows.length)) {
       html += `<div class="inv-more"><button class="inv-btn" type="button" data-inv-act="more"${loadingMore ? ' disabled aria-busy="true"' : ''}>${esc(loadingMore ? t.loading : t.loadMore)}</button></div>`;
     }
     root.querySelector('[data-inv-table]').innerHTML = html;

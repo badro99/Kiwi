@@ -1823,6 +1823,7 @@ section('Whole-project regressions');
     'core-split-test.mjs',
     'home-split-test.mjs',
     'home-boundary-test.mjs',
+    'r13-a-test.mjs',
     'home-sparkline-a11y-test.mjs',
     'dashboard-first-use-test.mjs',
     'serveur-split-test.mjs',

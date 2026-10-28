@@ -231,7 +231,8 @@ function renderKpiBand() {
     const ctx = { venueType, range: __state.effRange(), nbDays: (__state.ownData() && window.KiwiSales) ? __state.openDays(__state.effRange()) : (__state.RANGE_DAYS[__state.effRange()] || 1) };
     const deriveTile = (k) => {
       const c = __state.KPI_CATALOG[k];
-      return c ? c.derive(data, ctx) : (data[k] || null);
+      try { return c ? c.derive(data, ctx) : (data[k] || null); }
+      catch (_) { return {text: '·', unit: '', delta: null}; }
     };
     const derived = {};
     layout.forEach((k) => {
@@ -423,7 +424,7 @@ function hotelPerfEntry(w) {
           e.data = next; e.error = next ? '' : String((b && b.error) || 'unavailable');
           e.changed = before !== JSON.stringify([e.data, e.error]);
         })
-        .catch(() => { if (!e.data) { e.error = 'unavailable'; e.changed = true; } })
+        .catch(() => { e.data = null; e.error = 'unavailable'; e.changed = true; })
         .finally(() => {
           e.loading = false; e.ts = Date.now();
           /* Repeindre seulement si quelque chose a bougé : le rafraîchissement

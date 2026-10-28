@@ -17,9 +17,9 @@
   window.Kiwi.handlers['invoicing'] = openWhenReady;
   window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
   const ready = Promise.all([
-  import('./invoicing/transport.js?v=3'),
+  import('./invoicing/transport.js?v=4'),
   import('./invoicing/composer.js?v=9'),
-  import('./invoicing/history.js?v=7'),
+  import('./invoicing/history.js?v=9'),
   import('./invoicing/print.js?v=8'),
 ]).then(([transportModule, composerModule, historyModule, printModule]) => {
   // invoicing:entry-body
@@ -454,7 +454,7 @@
   let query = '';
   let offline = false, authBlocked = false, loadingList = false;
   let priorFocus = null;
-  let refreshToken = 0;
+  let refreshToken = 0, registerStats = null;
   let detail = null;            // {doc, payments, creditNotes, displayStatus, balanceCents, original}
   let cmp = null;               // {id, type, number, originalId, originalNumber, reason, status, key}
   let autosaveTimer = null;
@@ -478,7 +478,7 @@
   function clientBook(...args) { return composerModule.clientBook({}, this, args); }
 
   /* ── factures de vente (comptoir) : inchangé ───────────────────────────── */
-  function getSaleInvoices(...args) { return historyModule.getSaleInvoices({dayIn, today}, this, args); }
+  function getSaleInvoices(...args) { return historyModule.getSaleInvoices({cache, dayIn, ownData, today}, this, args); }
   function syncServerInvoices() {
     const m = merchantSlug();
     if (!m || typeof fetch !== 'function') return;
@@ -635,7 +635,7 @@
 
   /* ── liste : synthèse, onglets, registre ──────────────────────────────── */
   function rowsFor(...args) { return historyModule.rowsFor({cache}, this, args); }
-  function stats(...args) { return historyModule.stats({rowsFor, today}, this, args); }
+  function stats(...args) { return historyModule.stats({registerStats}, this, args); }
   function paintStats(...args) { return historyModule.paintStats({T, TYPES, esc, getSaleInvoices, money, overlay, rowsFor, stats}, this, args); }
   function legacyDocs(...args) { return historyModule.legacyDocs({lsGet, ownData, venueId}, this, args); }
   function paintNotices(...args) { return historyModule.paintNotices({T, authBlocked, esc, legacyDocs, offline, overlay, tpl}, this, args); }
@@ -646,14 +646,15 @@
   function paintRegister(...args) { return historyModule.paintRegister({ICON, NO_OF, T, esc, filter, fmtDate, loadingList, loadingMore, money, newLabel, nextCursor, overlay, rowsFor, statusHtml, tab, tpl, visibleRows}, this, args); }
   async function loadMore() {
     const ty = tab, cursor = nextCursor[ty];
-    if (ty === 'sales' || !cursor || loadingMore) return;
+    if (!cursor || loadingMore) return;
     const token = refreshToken;
     loadingMore = true; paintRegister();
     try {
       const res = await api('GET', {type: ty, cursor});
       if (token !== refreshToken || !overlay) return;
-      const known = new Set(cache[ty].map(r => r.id));
-      cache[ty] = cache[ty].concat((res.docs || []).map(normRow).filter(r => !known.has(r.id)));
+      const key = r => ty === 'sales' ? r.saleId : r.id;
+      const known = new Set(cache[ty].map(key));
+      cache[ty] = cache[ty].concat((ty === 'sales' ? res.invoices.map(r => Object.assign({}, r.snapshot, {saleId:r.saleId})) : (res.docs || []).map(normRow)).filter(r => !known.has(key(r))));
       nextCursor[ty] = res.nextCursor || null;
     } catch (err) {
       if (token === refreshToken) toast(errText(err));
@@ -669,11 +670,13 @@
   async function refreshAll() {
     const token = ++refreshToken;
     loadingList = true; if (currentView === 'list') paintRegister();
-    const results = await Promise.allSettled(TYPES.map(ty => api('GET', {type: ty})));
+    registerStats = null;
+    const types = ownData() ? [...TYPES, 'sales'] : TYPES;
+    const results = await Promise.allSettled([...types.map(ty => api('GET', {type: ty})), api('GET', {summary:1})]);
     if (token !== refreshToken || !overlay) return;
     let failed = 0; authBlocked = false;
     results.forEach((r, i) => {
-      if (r.status === 'fulfilled') { cache[TYPES[i]] = (r.value.docs || []).map(normRow); nextCursor[TYPES[i]] = r.value.nextCursor || null; }
+      if (r.status === 'fulfilled') { if (i === types.length) registerStats = r.value.summary; else { cache[types[i]] = types[i] === 'sales' ? r.value.invoices.map(r => Object.assign({}, r.snapshot, {saleId:r.saleId})) : (r.value.docs || []).map(normRow); nextCursor[types[i]] = r.value.nextCursor || null; } }
       else { failed++; if (r.reason && (r.reason.code === 'unauthorized' || r.reason.code === 'forbidden')) authBlocked = true; }
     });
     offline = failed > 0 && !authBlocked;

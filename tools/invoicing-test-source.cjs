@@ -1,6 +1,7 @@
 /* Rebuild from live files only. The gzip is exclusively a split-test oracle. */
 const fs = require('node:fs');
 const path = require('node:path');
+const declaration = require('./live-declaration.cjs');
 function invoicingTestSource(root = process.env.KIWI_ROOT || path.resolve(__dirname, '..')) {
   const read = file => fs.readFileSync(path.join(root, file), 'utf8');
   const map = JSON.parse(read('tools/fixtures/invoicing/split.json'));
@@ -23,10 +24,11 @@ function invoicingTestSource(root = process.env.KIWI_ROOT || path.resolve(__dirn
   for (const part of map.parts) {
     const source = read(part.file);
     for (const e of part.entries) {
-      if (e.replacement && !core.includes(e.replacement)) throw Error('Invoice forwarding changed: ' + e.name);
-      const body = source.slice(e.offset, e.offset + e.length);
+      const forwarding = e.replacement && !e.fragment && !e.replacement.startsWith('/*') ? declaration(core, e.name) : e.replacement;
+      if (forwarding && !core.includes(forwarding)) throw Error('Invoice forwarding changed: ' + e.name);
+      const body = e.fragment ? source.slice(e.offset, e.offset + e.length) : declaration(source, e.name);
       // Empty replacements (private transport declarations) retain their source offsets.
-      if (e.replacement) core = core.replace(e.replacement, () => body);
+      if (e.replacement) core = core.replace(forwarding, () => body);
       else {
         const before = core.slice(0, e.start);
         core = before + body + core.slice(e.start);

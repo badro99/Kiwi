@@ -34,7 +34,7 @@ async function api(method, payload) {
     let res;
     try {
       if (method === 'GET') {
-        res = await fetchDeadline('/api/invoices?' + new URLSearchParams(Object.assign({merchant}, payload || {})).toString(), {credentials: 'same-origin'});
+        res = await fetchDeadline((payload?.type === 'sales' ? '/api/invoice?' : '/api/invoices?') + new URLSearchParams(Object.assign({merchant}, payload || {})).toString(), {credentials: 'same-origin'});
       } else {
         res = await fetchDeadline('/api/invoices', {method: 'POST', credentials: 'same-origin', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign({merchant}, payload || {}))});
       }
@@ -135,6 +135,12 @@ const demo = (() => {
     async function handle(method, p) {
       load();
       if (method === 'GET') {
+        if (p.summary) {
+          const summary = {outstanding:0, late:0, paidMonth:0, waiting:0, lateCount:0, total:S.docs.length};
+          S.docs.filter(d => d.type === 'invoice').map(rowOf).forEach(r => { if (['issued','partial','overdue'].includes(r.displayStatus)) { summary.outstanding += r.balanceCents; summary.waiting++; } if (r.displayStatus === 'overdue') { summary.late += r.balanceCents; summary.lateCount++; } });
+          summary.paidMonth = S.payments.filter(p => String(p.date).slice(0,7) === today().slice(0,7)).reduce((n,p) => n+p.amountCents,0);
+          return {ok:true,summary};
+        }
         if (p.id) {
           const d = find(p.id), dv = derive(d);
           return {ok: true, doc: clone(Object.assign({}, d, {originalNumber: d.originalId ? (S.docs.find(x => x.id === d.originalId)?.number || '') : ''})), payments: clone(S.payments.filter(x => x.docId === d.id)),
@@ -198,7 +204,7 @@ const demo = (() => {
     return {handle};
   })();
 
-const cache = {invoice: [], quote: [], credit_note: []};
+const cache = {invoice: [], quote: [], credit_note: [], sales: []};
 
 const nextCursor = {invoice: null, quote: null, credit_note: null};
 

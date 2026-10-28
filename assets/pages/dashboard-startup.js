@@ -41,7 +41,7 @@
     'assets/day-report.js?v=37',
     'assets/z-reconciliation.js?v=29',
     'assets/month-report.js?v=16',
-    'assets/day-report-export.js?v=16',
+    'assets/day-report-export.js?v=18',
     'assets/day-report-conflicts.js?v=2',
     'assets/day-report-dash.js?v=42',
     'assets/stock/strings.js?v=8',

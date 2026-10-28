@@ -40,3 +40,32 @@ for (const part of home.metadata().parts) {
   }
 }
 console.log('PASS home boundaries: every state and window access has an explicit per-module declaration, and the owner exposes each one');
+
+// Run the actual band, including each rendered value, when derivation throws.
+const { default: vm } = await import('node:vm');
+{
+  const values = {}, deltas = {};
+  const wrap = { style:{setProperty(){}}, dataset:{}, querySelectorAll:()=>[],
+    querySelector(selector) { const key=selector.match(/data-kpi="([^"]+)"/)[1];
+      values[key] ||= {}; deltas[key] ||= {};
+      return {querySelector:s=> s === '[data-kpi-val]' ? values[key] : deltas[key]};
+    }
+  };
+  const state = {
+    guardOperatorFigures:()=>false, getLang:()=> 'fr', currentRange:'aujourdhui',
+    vData:()=>({tx:{value:999,delta:8},panier:{value:21,delta:3}}),
+    KPI_DELTA_SUFFIX:{fr:{aujourdhui:'hier'}}, isLiveDemo:()=>false, ownData:()=>false,
+    getKpiLayout:()=>['tx','panier'], effRange:()=> 'aujourdhui', RANGE_DAYS:{aujourdhui:1},
+    KPI_CATALOG:{tx:{derive(){throw Error('unavailable ledger');}},panier:{derive:()=>({value:42,unit:'MAD',delta:null})}},
+    kpiLabel:k=>k, getCurrentVenue:()=> 'm', KPI_SPARKS:{tx:''}, KPI_MATERIAL_ICONS:{},
+    fmtKpiVal:(tile,value)=>tile.text ?? String(value), homeSet:(key,model)=>{state.model=model;}, curUnit:()=> 'MAD'
+  };
+  const window={};
+  vm.runInNewContext(fs.readFileSync('assets/daterange/kpi.js','utf8'),{window,document:{querySelector:()=>wrap}});
+  window.__kiwiHomeRenderers.kpi(state).renderKpiBand();
+  assert.equal(values.tx.innerHTML,'·','failed derive replaces the stale KPI');
+  assert.equal(values.panier.innerHTML,'42','the next KPI still renders its derived value');
+  assert.equal(deltas.tx.textContent,'','failed KPI has no invented comparison');
+  assert.deepEqual(Array.from(state.model.items,x=>[x.key,x.value,x.delta]),[['tx','·',null],['panier','42',null]],'published home model agrees with every rendered KPI');
+}
+console.log('PASS home derive failure: rendered KPI values and home model stay honest');
