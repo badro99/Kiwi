@@ -26,6 +26,7 @@
 
 import { __test as catalogFns } from '../catalog.js';
 import { shopifyGraphQL } from './_lib.js';
+import { saleMoveId } from './_move-ids.js';
 
 /* Bornes d'UN appel : un Worker a un plafond de CPU et de sous-requêtes. Au-delà,
  * l'appel s'arrête ENTRE deux commandes entières et garde sa position (le curseur
@@ -163,7 +164,7 @@ export function planReplay(data, links, orders) {
       const kiwiVariantId = links.get(String(line.variant && line.variant.id || ''));
       const variant = kiwiVariantId && byId.get(kiwiVariantId);
       if (!variant) { plan.unmatched++; plan.exceptions.push({ orderId: String(o.id || '').slice(0, 160), lineId: String(line.id || '').slice(0, 160), code: 'shopify-unmapped-line' }); continue; }
-      const moveId = `so-${ref.slice(-24)}-${tail(line.id).slice(-24)}`.slice(0, 64);
+      const moveId = saleMoveId(ref, line.id);
       if (existing.has(moveId)) { plan.already++; continue; }
       const row = { moveId, vid: kiwiVariantId, qty, at, order: String(o.name || ref).slice(0, 40), ref };
       if (Number(variant.baseAt || variant.stockAt || 0) >= at) { plan.counted.push(row); continue; }

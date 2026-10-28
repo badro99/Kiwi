@@ -20,9 +20,9 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { __test as catalogFns } from '../catalog.js';
+import { saleMoveId, reversalMoveId } from './_move-ids.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
-const keyOf = (ref, lineId) => `${str(ref, 64).slice(-24)}-${str(lineId, 64).slice(-24)}`;
 const CANCELLABLE = "('pending','accepted','ready')";
 
 /* Rend, ligne par ligne, ce que la commande avait retiré.
@@ -49,7 +49,7 @@ export async function restockShopifyOrder(env, merchant, ref, wanted, kind, refu
     const targets = [];     // { move, ask }
     if (wanted) {
       for (const [lineId, qty] of wanted) {
-        const move = deducted.find((m) => m.id === `so-${keyOf(ref, lineId)}`.slice(0, 64));
+        const move = deducted.find((m) => m.id === saleMoveId(ref, lineId));
         if (move) targets.push({ move, ask: qty });
       }
     } else {
@@ -67,7 +67,7 @@ export async function restockShopifyOrder(env, merchant, ref, wanted, kind, refu
       const countedAt = Number(variant.baseAt || variant.stockAt || 0);
       // Un comptage plus récent que la vente décrit l'étagère : la pièce y est déjà.
       if (countedAt >= move.at) { skipped++; continue; }
-      const id = (kind === 'refund' ? `sr-${str(refundId, 64).slice(-10)}-${key}` : `sx-${key}`).slice(0, 64);
+      const id = reversalMoveId(kind, key, refundId);
       if (ids.has(id)) continue;
       at = Math.max(at + 1, countedAt + 1);
       moves.push({ id, vid: move.vid, d: take, at, why: 'retour', ref: shopRef });

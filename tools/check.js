@@ -794,6 +794,8 @@ for (const test of [
   'shopify-direct-webhook-test.mjs',
   'shopify-shop-domain-test.mjs',
   'shopify-replay-orders-test.mjs',
+  // Les identifiants de mouvement Shopify n'ont qu'un constructeur, compatible avec les journaux stockés (note 13).
+  'shopify-move-ids-test.mjs',
   /* Shopify : commande annulée ou remboursée, les pièces reviennent au stock une seule fois. */
   'shopify-order-reversal-test.mjs',
   /* Quiz : une question sans réponse ne vaut jamais un point. */

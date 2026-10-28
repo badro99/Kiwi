@@ -42,6 +42,7 @@ import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
 import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
 import { reverseShopifyOrder } from '../../shopify/_order-reversal.js';
+import { saleMoveId } from '../../shopify/_move-ids.js';
 import { shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
 
 const MAX_LINES = 60;
@@ -278,7 +279,7 @@ async function applyShopifyOrderStock(env, merchant, order) {
       const qty = Math.max(0, Math.min(1000000, Math.round(Number(line && line.quantity) || 0)));
       if (!kiwiVariantId || !qty) { unmatched++; continue; }
       const lineId = String(line && (line.id || line.variant_id) || '');
-      const moveId = `so-${ref.slice(-24)}-${lineId.slice(-24)}`.slice(0, 64);
+      const moveId = saleMoveId(ref, lineId);
       if (existing.has(moveId)) continue;
       const variant = (data.variants || []).find((v) => v.id === kiwiVariantId);
       if (!variant) { unmatched++; continue; }
