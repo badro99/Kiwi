@@ -20,7 +20,6 @@
       "source": "functions/api/_rules-day-report.js",
       "targets": [
         "assets/day-report.js",
-        "assets/day-report-dash.js",
         "assets/caisse-accounting.js"
       ]
     },

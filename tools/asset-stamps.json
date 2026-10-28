@@ -428,16 +428,16 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "42",
-    "sha": "1f11289e10c9c04d"
+    "v": "43",
+    "sha": "dc26b011cc1fd5f8"
   },
   "assets/day-report-export.js": {
     "v": "18",
     "sha": "a24f79c0a7533715"
   },
   "assets/day-report.js": {
-    "v": "37",
-    "sha": "c0034abe72f8e09a"
+    "v": "38",
+    "sha": "e221f0a9238edccf"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -1312,8 +1312,8 @@
     "sha": "0e74f0e681a2bf17"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "70",
-    "sha": "4414c9164d4badf5"
+    "v": "71",
+    "sha": "1b04308e4ceb7577"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

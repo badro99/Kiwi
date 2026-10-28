@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const fc = require('../app/node_modules/fast-check');
 const { declaration } = require('./js-declarations.cjs');
 const plain = x => JSON.parse(JSON.stringify(x));
-const contexts = ['assets/day-report.js', 'assets/day-report-dash.js', 'assets/caisse-accounting.js'].map(file => {
+const contexts = ['assets/day-report.js', 'assets/caisse-accounting.js'].map(file => {
   const source = fs.readFileSync((process.env.KIWI_REPORT_SOURCE_ROOT || '.') + '/' + file, 'utf8');
   // This ownership assertion fails against the pre-extraction files.
   assert.match(source, /KiwiDayReportModel\.(?:reportFigures|ledgerFigures)\(/);
@@ -30,13 +30,17 @@ fc.assert(fc.property(fc.array(sale), fc.integer({min:0,max:100000}), (rows, sin
     assert.deepEqual(plain(c.KiwiDayReportModel.ledgerFigures(rows, [], since)), plain(server.ledgerFigures(rows, [], since)));
     assert.equal(c.KiwiDayReportModel.expectedCash(100, 10.12, 1.03, 5, 2, -.01), server.expectedCash(100,10.12,1.03,5,2,-.01));
   }
-  const till = contexts[2]; till.journal = rows; till.cashMovements = [];
+  const till = contexts[1]; till.journal = rows; till.cashMovements = [];
   assert.deepEqual(plain(till.rollupLedger(since)), plain(server.ledgerFigures(rows, [], since)));
   assert.equal(JSON.stringify(rows), original);
 }), {numRuns:300, seed:20261026});
 assert.equal(server.expectedCashCents(10000, 1012, 103, 500, 200, -1), 11414);
 assert.match(fs.readFileSync('functions/api/cash-sessions.js','utf8'), /import \{ expectedCashCents \} from '.\/_rules-day-report.js'/);
-console.log('day-report model: 300 parity cases, three browser copies and actual till rollup vs server module; pure inputs');
+console.log('day-report model: 300 parity cases, two browser copies and actual till rollup vs server module; pure inputs');
+// Note 13, dayreport#2: the dashboard report carries no copy of its own; its
+// figures are the till's model, read through window.KiwiDayReport.model.
+const dashSource = fs.readFileSync((process.env.KIWI_REPORT_SOURCE_ROOT || '.') + '/assets/day-report-dash.js', 'utf8');
+assert.ok(!/GENERATED SHARED KiwiDayReportModel/.test(dashSource), 'the dashboard report has no second copy of the day-report model');
 // Exercise the actual dashboard presenter with caller-supplied 05:00 bounds.
 const from = Date.parse('2026-10-26T05:00:00Z'), to = from + 86400000;
 const rows = [
@@ -44,7 +48,12 @@ const rows = [
     parts:[{method:'cash',amountCents:7000},{method:'card',amountCents:3000}]},
   {id:'refund', ts:from+1, amount:-20, method:'cash', kind:'refund', tip:0},
 ];
-const c = contexts[1];
+const c = vm.createContext({Date, window: {KiwiDayReport: {model: contexts[0].KiwiDayReportModel}}});
+vm.runInContext(dashSource.slice(dashSource.indexOf('  var KiwiDayReportModel'), dashSource.indexOf('\n', dashSource.indexOf('  var KiwiDayReportModel'))), c);
+let ownerCalls = 0; const owner = contexts[0].KiwiDayReportModel.reportFigures;
+c.window.KiwiDayReport.model = { reportFigures: (r) => { ownerCalls++; return owner(r); } };
+assert.deepEqual(plain(c.KiwiDayReportModel.reportFigures(rows)), plain(server.reportFigures(rows)));
+assert.equal(ownerCalls, 1, 'the dashboard figures come from the till model');
 c.DR = () => ({dayBounds:()=>({from,to}), normSale:s=>s});
 c.dashSales = () => [...rows, rows[0], {id:'before',ts:from-1,amount:999}, {id:'after',ts:to,amount:999}];
 vm.runInContext(declaration(fs.readFileSync('assets/day-report-dash.js','utf8').split('  function feedTotals')[1].replace(/^/, 'function feedTotals'), 'feedTotals'),c);

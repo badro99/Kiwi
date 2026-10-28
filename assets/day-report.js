@@ -1474,8 +1474,8 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     timezone: merchantTimezone,
     /* langue du métier */
     vocab: vocab, businessType: businessType,
-    /* calcul */
-    build: build, preview: preview, categoryIndex: categoryIndex, normSale: normSale, settlementKey: settlementKey,
+    /* calcul · model is the single browser copy of the shared figures */
+    model: KiwiDayReportModel, build: build, preview: preview, categoryIndex: categoryIndex, normSale: normSale, settlementKey: settlementKey,
     drawerSessions: drawerSessions, closureRevisions: closureRevisions, inheritDrawers: inheritDrawers,
     mergeDaySnapshots: mergeDaySnapshots,
     /* classeur */
