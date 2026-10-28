@@ -77,6 +77,15 @@ t('a catalogue redraw never rebuilds the Inventaire toolbar, so the search bar k
   const tools = readFileSync(new URL('../assets/pos-boutique/inv-tools.js', import.meta.url), 'utf8');
   assert.ok(/forEach\(\(k\) => \{ if \(k !== tools\) k\.remove\(\); \}\)/.test(tools), 'everything but the mounted toolbar is replaced');
 });
+t('the boutique opens the cash drawer like the restaurant: manager code on a real store, logged as a no-sale movement', () => {
+  const bq = readFileSync(new URL('../assets/pos-boutique.js', import.meta.url), 'utf8');
+  const sales = readFileSync(new URL('../assets/pos-boutique/sales.js', import.meta.url), 'utf8');
+  assert.ok(/id="bq-open-drawer"[^>]*>.*Ouvrir le tiroir/.test(bq), 'the rail carries « Ouvrir le tiroir »');
+  assert.ok(/openDrawerNoSale\(\(m\) => bqCashEvent\('movement', m\)\)/.test(bq), 'the click logs into the shift');
+  const fn = sales.slice(sales.indexOf('function openDrawerNoSale'), sales.indexOf('function renderClientes'));
+  assert.ok(/if \(!pvReal\(\)\) \{ kick\(\); return; \}/.test(fn) && /window\.requireManager\('Ouvrir le tiroir sans vente', kick\)/.test(fn), 'a real store asks the manager code first');
+  assert.ok(/movementKind: 'no-sale', movementAmountCents: 0/.test(fn) && /H\.openDrawer\(\)/.test(fn));
+});
 t('the Clientes tab carries no count: the customer book is not an alert', () => {
   const bq = readFileSync(new URL('../assets/pos-boutique.js', import.meta.url), 'utf8');
   assert.ok(/set\('#bq-badge-cl', 0\);/.test(bq) && !/set\('#bq-badge-cl', \(window\.KiwiClients/.test(bq));

@@ -1,4 +1,4 @@
-import { bqKitScanBar, bqKitSellScroll } from './kit-2027.js?v=16';
+import { bqKitScanBar, bqKitSellScroll } from './kit-2027.js?v=17';
 /* La recherche de la barre de vente (peau 2027). Un code se lit de gauche à
  * droite : on répond par PRÉFIXE de code-barres d'abord, puis par fragment,
  * puis par nom d'article (sans accents ni casse). Chaque code est une

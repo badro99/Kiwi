@@ -84,6 +84,7 @@ const BQ_MORE_ICONS = [
   /* Les trois que posent la boutique et les modules partagés : Fin de
      service (pos-boutique.js), Code de pointage (caisse-refresh.js) et
      Réimprimer (pos-reprint.js). */
+  ['#bq-open-drawer', 'point_of_sale'],
   ['#bq-close-day', 'power_settings_new'],
   ['.kx-attendance-code', 'key'],
   ['.kx-reprint', 'receipt'],

@@ -1,8 +1,8 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=80';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=80';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=80';
+import { $, openDrawerNoSale, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=81';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=81';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=81';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=16';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=17';
 
   'use strict';
 
@@ -1424,7 +1424,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
             <i class="bq-net-dot"></i><span class="bq-net-label">En ligne</span>
           </button>
           <button class="bq-lock" id="bq-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
-          ${IS_DEMO ? '' : '<button class="bq-lock" id="bq-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
+          <button class="bq-lock" id="bq-open-drawer"><i data-lucide="point_of_sale"></i><span>Ouvrir le tiroir</span></button>${IS_DEMO ? '' : '<button class="bq-lock" id="bq-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
           <button class="bq-lock" id="bq-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
@@ -1480,7 +1480,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       window.KiwiPosDispatch.lock();
     });
     const closeDay = $('#bq-close-day', root);
-    if (closeDay) closeDay.addEventListener('click', bqOpenCloture);
+    if (closeDay) closeDay.addEventListener('click', bqOpenCloture); $('#bq-open-drawer', root).addEventListener('click', () => openDrawerNoSale((m) => bqCashEvent('movement', m)));
     if (window.KiwiShiftNudge) window.KiwiShiftNudge.check({ host: root, scope: 'boutique@' + merchantSlug(),
       openedAt: () => bqShift && bqShift.openedAt, open: bqOpenCloture, isBusy: () => state.checkoutBusy });
     $('#bq-net', root).addEventListener('click', toggleOffline);

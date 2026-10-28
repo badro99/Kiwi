@@ -1,10 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=178';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=80';
-import { offerRegister } from './inventory.js?v=80';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=179';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=81';
+import { offerRegister } from './inventory.js?v=81';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import { ticketRemise } from './ticket-remise.js?v=3';
-import { bqKitTicketFoot } from './kit-2027.js?v=16';
-import { sellSearch } from './search.js?v=7';
+import { bqKitTicketFoot } from './kit-2027.js?v=17';
+import { sellSearch } from './search.js?v=8';
 import '../money-cents.js?v=4';
 
 
@@ -973,6 +973,30 @@ import '../money-cents.js?v=4';
   function moveCaretEnd(input) { const v = input.value; input.value = ''; input.value = v; }
 
   /* ═══════════════════════ VUE CLIENTES ═══════════════════════ */
+  /* Ouvrir le tiroir sans vente, le geste du restaurant
+     (caisse-accounting/drawer.js) porté à la boutique : code manager validé
+     par le serveur sur un vrai magasin, le coup part vers l'imprimante du
+     comptoir (le tiroir y est branché), et l'ouverture laisse une trace à
+     montant nul dans les mouvements du poste. `record` émet cette trace. */
+  function openDrawerNoSale(record) {
+    const tr = (x) => (window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(x) : x);
+    let off = false;
+    try { off = !!(window.KiwiConfig && typeof window.KiwiConfig.off === 'function' && (window.KiwiConfig.off('open-drawer') || window.KiwiConfig.off('openDrawer'))); } catch (_) {}
+    if (off) { toast(tr('Ouverture manuelle du tiroir désactivée pour cet établissement')); return; }
+    const kick = () => {
+      try { if (record) record({ movementKind: 'no-sale', movementAmountCents: 0, movementReason: 'Ouverture sans vente' }); } catch (_) {}
+      const H = window.KiwiHardware;
+      const fail = () => toast(tr("Tiroir injoignable · vérifiez l'imprimante du comptoir"));
+      const p = (H && H.openDrawer) ? Promise.resolve(H.openDrawer()) : Promise.resolve({ ok: false });
+      p.then((res) => { if (res && res.ok) toast(tr(res.mock ? 'Tiroir ouvert (démo)' : 'Tiroir ouvert')); else fail(); }, fail);
+    };
+    if (!pvReal()) { kick(); return; }
+    /* Un vrai magasin n'ouvre jamais le tiroir sans le portier. */
+    if (typeof window.requireManager !== 'function') return;
+    if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'open_drawer', key: 'act.open_drawer' });
+    window.requireManager('Ouvrir le tiroir sans vente', kick);
+  }
+
   function renderClientes() {
     const panel = $('[data-bq-panel="clientes"]', root);
     const q = state.clQuery;
@@ -1559,4 +1583,4 @@ import '../money-cents.js?v=4';
       lookupScan(code);
     }, 620);
   }
-export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
+export { $, $$, DAYS, openDrawerNoSale, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
