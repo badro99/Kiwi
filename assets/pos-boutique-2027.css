@@ -332,3 +332,39 @@ html[data-skin-2027="till"] #pos-boutique .bq-ticket { width: 400px; flex: 0 0 4
 html[data-skin-2027="till"] #pos-boutique .bq-tk-lines { padding: 12px 18px; gap: 8px; }
 html[data-skin-2027="till"] #pos-boutique .bq-tk-foot { padding: 16px 18px 20px; gap: 12px; }
 html[data-skin-2027="till"] #pos-boutique .bq-tk-meta { padding: 12px 18px 14px; }
+
+/* ═══════════ LE PIED DU TICKET, COMME AU RESTAURANT ═══════════
+   Le restaurant montre un ticket NU : pas d'en-tête « Ticket · n° · par X »,
+   pas de carte « Attacher une cliente » posée en haut, pas de pictogramme
+   dans l'état vide, pas de ligne « 0 article ». Juste les lignes, le total,
+   deux boutons secondaires et l'encaissement — et c'est ce que la
+   propriétaire a demandé (2026-10-28).
+
+   Rien n'est SUPPRIMÉ : le balisage livré reste en place, seul son affichage
+   s'éteint. « Attacher une cliente » redescend dans le bouton « Clientes » du
+   pied, qui clique ce même bouton livré (kit-2027.js) ; la rangée garde donc
+   son écouteur, son modal et sa logique. Le pied livré et sa pastille verte
+   s'effacent au profit des <k-button> du kit, pour que les couleurs soient
+   CELLES du restaurant et non une imitation. */
+html[data-skin-2027="till"] #pos-boutique .bq-tk-head,
+html[data-skin-2027="till"] #pos-boutique #bq-tk-client,
+html[data-skin-2027="till"] #pos-boutique .bq-tk-empty-ic,
+html[data-skin-2027="till"] #pos-boutique .bq-tk-tot .pcs { display: none; }
+/* .bq-tk-meta ne porte plus que la récompense fidélité : sans elle, pas de
+   bande vide au-dessus des lignes. */
+html[data-skin-2027="till"] #pos-boutique .bq-tk-meta:not(:has(> :not(#bq-tk-client))) { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-tk-empty { padding-block: 48px; }
+
+/* Le bouton livré porte toujours la logique ; c'est le primaire du kit qui
+   le montre. On le sort du flux sans le masquer : un display:none le rendrait
+   inatteignable au clavier des bancs qui le pilotent encore. */
+html[data-skin-2027="till"] #pos-boutique #bq-validate {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* La grille du restaurant : deux secondaires côte à côte (assets/kit/till.js,
+   .sec2), puis le primaire pleine largeur juste dessous. */
+html[data-skin-2027="till"] #pos-boutique #bq-kit-tkacts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+html[data-skin-2027="till"] #pos-boutique #bq-kit-tkacts k-button { width: 100%; }

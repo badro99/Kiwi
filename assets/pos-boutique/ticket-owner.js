@@ -18,6 +18,11 @@ const ticketOwner = {
   },
   setCustomer(ticket, client) { ticket.client = client; },
   applyDiscount(ticket, approval) { ticket.remiseAuth = approval; },
+  /* La remise de TICKET (peau 2027, bouton « Remise » du pied) descend sur
+     chaque ligne : le pourcentage vit déjà là, et ticketTotals l'y additionne.
+     Rien de neuf dans le calcul, rien de neuf dans la vente envoyée — c'est le
+     chemin de la remise par article, appliqué d'un geste. */
+  discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; }); },
   applyReward(ticket, reward) { ticket.reward = reward; },
   reserveReward(ticket, ref) { return ticket.reward.reservation || (ticket.reward.reservation = { ref }); },
   acceptReward(intent) { intent.accepted = true; },

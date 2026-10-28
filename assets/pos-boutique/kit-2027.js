@@ -147,4 +147,55 @@ function bqKitRail(root, $, icons, on, who) {
   return true;
 }
 
-export { bqKitRail, bqKitRailPaint, bqKitOpenSheet };
+/* ═══════════ Le pied du ticket, comme au restaurant (peau 2027) ═══════════
+   Le restaurant pose deux boutons secondaires côte à côte puis un primaire
+   pleine largeur (assets/kit/till.js, .sec2 + primary). La boutique n'a pas
+   de <k-bill> et n'en recevra pas un : on monte les MÊMES <k-button> du kit
+   dans le pied livré, et chacun clique le bouton d'origine. Les couleurs
+   viennent donc du kit, pas d'une copie — c'est la leçon du rail : remplacer,
+   jamais repeindre. « Diviser » n'a pas de sens en boutique (chaque cliente
+   paie la sienne), sa place revient à « Clientes » ; le bouton porte le nom
+   de la cliente attachée, puisque la rangée du haut est éteinte.
+   Kit absent : on rend false, le pied livré reste tel quel. */
+function bqKitTicketFoot(ticketEl, $, icons, on, o) {
+  if (!ticketEl || !on || !customElements.get('k-button')) return false;
+  const foot = ticketEl.querySelector('.bq-tk-foot');
+  const pay = ticketEl.querySelector('#bq-validate');
+  if (!foot || !pay || foot.querySelector('#bq-kit-tkacts')) return false;
+
+  const mk = (w, label, attrs) => {
+    const b = document.createElement('k-button');
+    b.dataset.bqTkAct = w;
+    b.setAttribute('label', label);
+    Object.keys(attrs || {}).forEach((k) => b.setAttribute(k, attrs[k]));
+    return b;
+  };
+
+  const sec = document.createElement('div');
+  sec.id = 'bq-kit-tkacts';
+  sec.appendChild(mk('client', o.clientLabel));
+  sec.appendChild(mk('remise', tr('Remise'), o.canRemise ? {} : { disabled: '' }));
+  foot.insertBefore(sec, pay);
+
+  /* Le primaire porte le libellé ET l'état du bouton livré : c'est lui qui
+     décide quand on peut encaisser, pas nous. */
+  const prim = mk('pay', pay.textContent.trim(), pay.disabled ? { variant: 'primary', size: 'L', full: '', disabled: '' } : { variant: 'primary', size: 'L', full: '' });
+  foot.insertBefore(prim, pay.nextSibling);
+
+  foot.addEventListener('kiwi:action', (e) => {
+    const d = e.detail || {};
+    if (d.action !== 'k.button.press') return;
+    const host = e.target && e.target.closest ? e.target.closest('[data-bq-tk-act]') : null;
+    if (!host) return;
+    e.stopPropagation();
+    const w = host.dataset.bqTkAct;
+    /* Le bouton livré, pas une copie : son écouteur, sa logique. */
+    if (w === 'pay') { pay.click(); return; }
+    if (w === 'client') { const c = ticketEl.querySelector('#bq-tk-client'); if (c) c.click(); return; }
+    if (w === 'remise' && typeof o.onRemise === 'function') o.onRemise();
+  });
+  icons();
+  return true;
+}
+
+export { bqKitRail, bqKitRailPaint, bqKitOpenSheet, bqKitTicketFoot };

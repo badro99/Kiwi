@@ -1,11 +1,13 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=145';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=47';
-import { offerRegister } from './inventory.js?v=47';
-import { ticketOwner } from './ticket-owner.js?v=1';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=147';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=49';
+import { offerRegister } from './inventory.js?v=49';
+import { ticketOwner } from './ticket-owner.js?v=2';
+import { bqKitTicketFoot } from './kit-2027.js?v=6';
 import '../money-cents.js?v=4';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
+  const tr0 = (s) => (globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(s);
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
@@ -423,7 +425,7 @@ import '../money-cents.js?v=4';
       <div class="bq-tk-lines" id="bq-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') + pairRow(t) : `
           <div class="bq-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
-            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+            <div class="bq-tk-empty-ic" style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
               <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
             </div>
             <div style="font-weight:600; font-size:14px; color:var(--ink);">Le ticket est vide.</div>
@@ -500,7 +502,24 @@ import '../money-cents.js?v=4';
       }
       renderTicket(); renderGrid(); renderBadges(); icons();
     };
+    /* Le pied du kit se remonte à CHAQUE rendu : renderTicket réécrit tout
+       #bq-ticket, donc les <k-button> partent avec. Le libellé du bouton des
+       clientes porte la cliente attachée, puisque la peau éteint la rangée du
+       haut : le bouton EST l'état. */
+    bqKitTicketFoot(el, $, icons, bqKitSkin(), {
+      clientLabel: ticketClientLabel(t),
+      canRemise: !!t.lines.length,
+      onRemise: openTicketRemise,
+    });
     icons();
+  }
+
+  /* Le nom porté par le bouton « Clientes » du pied 2027. */
+  function ticketClientLabel(t) {
+    if (!t.client) return tr0('Clientes');
+    if (t.client === 'passage') return tr0('Cliente de passage');
+    const c = clById(t.client);
+    return c && c.name ? firstName(c.name) || c.name : tr0('Clientes');
   }
 
   function lineRow(ln, i) {
@@ -796,6 +815,50 @@ import '../money-cents.js?v=4';
       onOk();
     };
     $('#bq-app-no', el).onclick = () => toast(`${STAFF.conseil.name} n'est pas habilitée, seule la gérante approuve une remise`);
+  }
+
+  /* ---------- la remise de TICKET (pied 2027) ---------- */
+  /* Le restaurant a « Remise » au pied de l'addition ; la boutique ne l'avait
+     qu'à l'article, dans la feuille d'ajout, donc une ligne déjà au ticket ne
+     pouvait plus être remisée (propriétaire, 2026-10-28). Ce choisisseur ne
+     fabrique AUCUN chemin d'argent neuf : il repose le pourcentage sur chaque
+     ligne, là où il vivait déjà, derrière le même portier gérante
+     (openApprove) et la même liste de taux (KiwiDiscountPolicy).
+
+     Le drapeau de peau ne se lit PAS ici : il appartient au fichier du métier
+     (pos-boutique.js, bqKitSkin) et descend par import — boutique-2027-test
+     l'exige, pour qu'une seule ligne au monde décide si la peau est là. */
+  function openTicketRemise() {
+    const t = state.ticket;
+    if (!t.lines.length) return;
+    const pcts = (window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20]).filter((p) => p > 0);
+    const cur = t.lines.length && t.lines.every((l) => l.remise === t.lines[0].remise) ? (t.lines[0].remise || 0) : null;
+    const apply = (pct) => {
+      ticketOwner.discountAllLines(t, pct);
+      renderTicket(); renderGrid(); renderBadges(); icons();
+      toast(pct ? `Remise −${pct} % sur tout le ticket` : 'Remise retirée');
+    };
+    const el = $('#bq-approvem', root);
+    el.innerHTML = `
+      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">Remise sur le ticket</h3>
+      <p class="modal-subtle">Le taux choisi s'applique à chaque ligne du ticket ${esc(t.num || '')}.</p>
+      <div class="bq-chips" id="bq-tkrem-chips">
+        <button class="bq-chip ${cur === 0 ? 'on' : ''}" data-bq-tkrem="0">Sans</button>
+        ${pcts.map((r) => `<button class="bq-chip ${cur === r ? 'on' : ''}" data-bq-tkrem="${r}">−${r} %</button>`).join('')}
+      </div>
+      <div class="bq-foot-note">Une remise s'applique avec l'accord de la gérante, tracé dans le journal.</div>`;
+    openVeil('#bq-approve-veil');
+    icons();
+    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-approve-veil'); });
+    $('#bq-tkrem-chips', el).onclick = (e) => {
+      const b = e.target.closest('[data-bq-tkrem]');
+      if (!b) return;
+      const pct = parseInt(b.dataset.bqTkrem, 10) || 0;
+      /* Retirer la remise n'a jamais demandé d'accord ; l'accorder, si. */
+      if (!pct || t.remiseAuth) { closeVeil('#bq-approve-veil'); apply(pct); return; }
+      openApprove(pct, () => { closeVeil('#bq-approve-veil'); apply(pct); });
+    };
   }
 
   /* ═══════════════════════ CLIENTE — phone & name search (modal du ticket) ═══════ */
