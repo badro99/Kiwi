@@ -179,7 +179,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2097',
-  '/assets/pages/dashboard-startup.js?v=71',
+  '/assets/pages/dashboard-startup.js?v=72',
   '/assets/pages/dashboard-loader.js?v=26',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -431,7 +431,7 @@ var SHELL = [
   '/assets/restaurant-menu/strings.js?v=2',
   '/assets/restaurant-menu/recipes.js?v=3',
   '/assets/restaurant-menu/styles.js?v=2',
-  '/assets/restaurant-menu-workspace.js?v=124',
+  '/assets/restaurant-menu-workspace.js?v=125',
   '/assets/menu-promos-dashboard.js?v=6',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=16',

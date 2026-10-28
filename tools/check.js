@@ -2036,6 +2036,7 @@ section('Whole-project regressions');
        et section qui tiennent après une modification et un tick. 390 et 1280. */
     'menu-shell-browser-test.mjs',
     'menu-formula-keyboard-browser-test.mjs',
+    'menu-options-keyboard-browser-test.mjs',
     'catalog-workspace-test.mjs',
     'native-store-readiness-test.mjs',
     'native-host-bridge-test.mjs',
