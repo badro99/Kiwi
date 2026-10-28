@@ -1,3 +1,4 @@
+import {} from './team/access-rules.js?v=6';
 import {} from './team/member-state.js?v=10';
 import {} from './team/venue-scope.js?v=6';
 import {} from './team/invitations.js?v=9';
@@ -1371,6 +1372,7 @@ import {} from './team/roster-list.js?v=6';
 
   /* Private profile bridge: helpers and stable objects, with scalar updates. */
   Object.defineProperty(Kiwi, '__teamProfileCore', { value: Object.freeze({
+    accessRules: window.KiwiTeamParts.accessRules,
     Kiwi, handlers, modal, toast, trLang, catalogFor, tradeKey,
     CONTRACT_TYPES, LANGS, AVATAR_TONES, AVATAR_COLORS, initials,
     esc, memberFullName, teamKey, getMembers, getHours, toISO, fmtMad, svgIcon, IC,
