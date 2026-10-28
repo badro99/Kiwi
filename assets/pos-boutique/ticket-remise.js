@@ -8,10 +8,10 @@ export function ticketRemise(d) {
 
   /* Le nom porté par le bouton « Clientes » du pied 2027. */
   function ticketClientLabel(t) {
-    if (!t.client) return tr('Clientes');
+    if (!t.client) return tr('Clients');
     if (t.client === 'passage') return tr('Cliente de passage');
     const c = clById(t.client);
-    return c && c.name ? firstName(c.name) || c.name : tr('Clientes');
+    return c && c.name ? firstName(c.name) || c.name : tr('Clients');
   }
 
   /* ---------- la remise de TICKET (pied 2027) ---------- */

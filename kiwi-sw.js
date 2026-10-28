@@ -452,7 +452,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=24',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=20',
-  '/assets/pos-dispatch.js?v=247',
+  '/assets/pos-dispatch.js?v=248',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -520,17 +520,17 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=177',
-  '/assets/pos-boutique/sales.js?v=79',
+  '/assets/pos-boutique.css?v=178',
+  '/assets/pos-boutique/sales.js?v=80',
   '/assets/pos-boutique/ticket-owner.js?v=2',
-  '/assets/pos-boutique/ticket-remise.js?v=2',
+  '/assets/pos-boutique/ticket-remise.js?v=3',
   '/assets/pos-boutique/search.js?v=7',
   '/assets/pos-boutique/inv-tools.js?v=11',
   '/assets/pos-boutique/inv-moves.js?v=4',
   '/assets/pos-boutique/kit-2027.js?v=16',
-  '/assets/pos-boutique/checkout.js?v=79',
-  '/assets/pos-boutique/inventory.js?v=79',
-  '/assets/pos-boutique.js?v=177',
+  '/assets/pos-boutique/checkout.js?v=80',
+  '/assets/pos-boutique/inventory.js?v=80',
+  '/assets/pos-boutique.js?v=178',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
