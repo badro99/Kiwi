@@ -2229,6 +2229,8 @@ section('Whole-project regressions');
     'module-gate-test.mjs',
     'terminaux-truth-test.mjs',
     'till-truth-test.mjs',
+    'r13-e-structure-test.mjs',
+    'r13-e-language-browser-test.mjs',
     /* « Carte » sans lecteur : le caissier confirme, aucun minuteur n'écrit la vente. */
     'card-confirm-test.mjs',
     /* Aucun fond d'ouverture présélectionné, démo comprise : le bouton reste éteint jusqu'au choix. */
@@ -2420,6 +2422,7 @@ section('Whole-project regressions');
     'dashboard-notification-isolation-test.js',
     'day-report-menu-group-test.mjs',
     'employee-language-test.js',
+    'employee-shell-structure-test.js',
     /* L'app serveur en anglais et en arabe : chaque texte du balisage et les
        phrases composées au rendu se traduisent, attributs compris. */
     'serveur-lang-coverage-test.mjs',

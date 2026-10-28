@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=8',
   '/assets/money-cents.js?v=4',
   '/assets/pages-pro/boutique-promos-returns.js?v=11',
@@ -426,7 +427,7 @@ var SHELL = [
   '/assets/team-hours.js?v=17',
   '/assets/menu-i18n.js?v=6',
   '/assets/restaurant-menu/strings.js?v=2',
-  '/assets/restaurant-menu/recipes.js?v=1',
+  '/assets/restaurant-menu/recipes.js?v=3',
   '/assets/restaurant-menu/styles.js?v=2',
   '/assets/restaurant-menu-workspace.js?v=124',
   '/assets/menu-promos-dashboard.js?v=6',
@@ -547,8 +548,8 @@ var SHELL = [
   '/assets/pos-traiteur.js?v=13',
   '/assets/pos-foodtruck.css?v=9',
   '/assets/pos-foodtruck.js?v=9',
-  '/assets/pos-epicerie.css?v=28',
-  '/assets/pos-epicerie.js?v=28',
+  '/assets/pos-epicerie.css?v=29',
+  '/assets/pos-epicerie.js?v=29',
   '/assets/pos-pharmacie.css?v=9',
   '/assets/pos-pharmacie.js?v=9',
   '/assets/pos-librairie.css?v=18',

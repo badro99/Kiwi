@@ -95,13 +95,43 @@ function grab(src, startRe, label) {
   ok(!d.sent.includes('ord-old:ready'), 'un geste d\'un service terminé n\'est pas rejoué', d.sent);
 }
 
-/* ── 2. Le serveur : la durée d'une table vient de l'heure serveur ─────────── */
+/* Runtime ingestion and suspended timer recovery, using the shipped owners. */
 {
-  ok(/tables\[id\]\.openedTs = Number\(session\.opened_ts\)/.test(serveur), 'la fiche lit `opened_ts` de la session de table');
-  ok(/t\.elapsed = t\.openedTs\s*\?\s*Math\.max\(0, Math\.floor\(\(Date\.now\(\) - t\.openedTs\) \/ 60000\)\)/.test(serveur),
-    'le tic d\'une minute recalcule depuis l\'heure d\'ouverture au lieu d\'ajouter 1');
-  ok(/Object\.keys\(tables\)\.forEach\(\(k\) => \{ delete tables\[k\]\.openedTs; \}\);/.test(serveur),
-    'une table sans session vivante n\'hérite pas d\'une heure périmée');
+  const c = vm.createContext({
+    serviceOrderSince: 0,
+    tables: { T1: { status: 'ka-yaklo', elapsed: 0 }, T2: { status: 'khawya', openedTs: 1 } },
+    serviceMineTables: new Set(), servicePausedTables: new Set(), serviceTableSessions: new Map(),
+    serviceTableSessionRevisions: new Map(), serviceVisitCredit: new Map(), serviceStateVersion: new Map(),
+    serviceReopenedBills: new Map(), serviceTableId: id => id,
+    reconcileCanonicalServiceBill() {}, renderAll() {}, Date: { now: () => 3600000 },
+  });
+  vm.runInContext(grab(serveur, /function ingestServiceOrders\(data\)/, 'ingestServiceOrders'), c);
+  c.ingestServiceOrders({ ok: true, sessions: [{ id: 's1', mode: 'table', table: 'T1', opened_ts: 60000 }] });
+  ok(c.tables.T1.elapsed === 59, 'ingestion réelle : la durée revient de la session serveur');
+  ok(!('openedTs' in c.tables.T2), 'ingestion réelle : une session disparue perd son ancienne heure');
+  const live = read('assets/serveur-app.js');
+  const start = live.indexOf('    /* Tick elapsed minutes');
+  const end = live.indexOf('    /* ---------- Payment Choice', start);
+  let tick;
+  Object.assign(c, { currentTab: '', activeTableId: null, svWhenIdle: (_key, fn) => fn(), setInterval: fn => { tick = fn; } });
+  vm.runInContext(live.slice(start, end), c);
+  c.Date.now = () => 7200000;
+  tick();
+  ok(c.tables.T1.elapsed === 119, 'après suspension : le vrai tic recalcule toute la durée écoulée');
+  c.Date.now = () => 0;
+  tick();
+  ok(c.tables.T1.elapsed === 0, 'une heure serveur future ne rend pas une durée négative');
+}
+{
+  const node = () => ({ hidden: true, textContent: '', style: {}, classList: { remove() {} } });
+  for (const demo of [false, true]) {
+    const timers = [], c = vm.createContext({ SV_DEMO: demo, cardConfirmBtn: node(), reader: { disc: node(), status: node(), method: node() },
+      setTimeout: fn => { timers.push(fn); }, triggerCardSuccess() { throw Error('timer must remain pending'); } });
+    vm.runInContext(grab(serveur, /function cardReaderArm\(tableId\)/, 'cardReaderArm'), c);
+    c.cardReaderArm('T1');
+    ok(timers.length === (demo ? 1 : 0) && c.cardConfirmBtn.hidden === demo,
+      demo ? 'démo : simulation explicite, confirmation cachée' : 'réel : confirmation visible, aucun accord automatique');
+  }
 }
 
 /* ── 3. Le décompte du service survit au rechargement ─────────────────────── */

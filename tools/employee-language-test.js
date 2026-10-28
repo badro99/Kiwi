@@ -8,8 +8,6 @@ const root = path.resolve(__dirname, '..');
 const page = serveurTestSource(fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8'));
 // Le dictionnaire et ses motifs vivent dans assets/serveur-lang.js.
 const lang = fs.readFileSync(path.join(root, 'assets', 'serveur-lang.js'), 'utf8');
-const sw = fs.readFileSync(path.join(root, 'kiwi-sw.js'), 'utf8');
-const manifest = fs.readFileSync(path.join(root, 'serveur.webmanifest'), 'utf8');
 let checks = 0;
 
 function ok(condition, message) {
@@ -17,31 +15,65 @@ function ok(condition, message) {
   if (!condition) throw new Error('Employee language: ' + message);
 }
 
-ok(/data-employee-language="fr"[^>]*>Français</.test(page), 'French selector is available in Profile');
-ok(/data-employee-language="en"[^>]*>English</.test(page), 'English selector is available in Profile');
-ok(/data-employee-language="ar"[^>]*[\s\S]*?العربية</.test(page), 'standard Arabic selector is available in Profile');
-ok(/kiwi-employee-language:/.test(page), 'preference is persisted per venue');
-ok(/localStorage\.setItem\(EMPLOYEE_LANGUAGE_KEY, language\)/.test(page), 'language changes are persisted');
-ok(/EMPLOYEE_TRANSLATIONS[\s\S]*?en:[\s\S]*?ar:/.test(lang) && /window\.KiwiServeurLang\.translations/.test(page), 'English and standard Arabic dictionaries exist');
-ok(/saved === 'ary'\) return 'ar'/.test(page), 'legacy Darija preference migrates to standard Arabic');
-ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page + lang), 'Darija wording no longer leaks into the Serveur app');
-ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(page), 'Latin Darija and Spanish labels no longer leak into French UI');
-ok(/document\.documentElement\.dir = employeeLanguage === 'ar' \? 'rtl' : 'ltr'/.test(page), 'standard Arabic uses the correct reading direction');
-ok(/function setEmployeeLanguage[\s\S]*?renderSchedule\(\)[\s\S]*?renderHours\(\)/.test(page), 'changing language immediately redraws schedule and hours');
-ok(/function kgRankName[\s\S]*?متدرّب[\s\S]*?مدير القاعة/.test(page), 'employee ranks have standard Arabic names');
-ok(/function kgChallengeText[\s\S]*?خلال هذه الوردية/.test(page), 'shift challenges are generated in standard Arabic');
-ok(/translateEmployeeElement\(document\.body\)/.test(page), 'the selector translates the app, not only its own label');
-ok(/MutationObserver[\s\S]*?characterData: true/.test(page), 'live content is translated after sync updates');
-ok(/employeeLocale\(\)/.test(page), 'dates and times follow the chosen language');
-ok(/id="kg-rec-empty"[^>]*>Vos records apparaîtront après votre première table réglée\.</.test(page), 'first-shift records use an explicit empty state');
-ok(!/id="kg-rec-(?:night|streak|speed)-num">—</.test(page), 'first-shift record tiles never render bare em-dashes');
-ok(/const hasRecords = snap\.paid > 0[\s\S]*?recGrid\.hidden = !hasRecords[\s\S]*?recEmpty\.hidden = hasRecords/.test(page), 'the record grid replaces the empty state after the first settlement');
-ok(/kiwi-newlogo\.svg\?v=2/.test(page), 'the current Serveur logo has a cache-busted asset URL');
-ok(/rel="icon" href="assets\/kiwi-favicon-new\.svg\?v=2"/.test(page), 'the browser tab uses the current Kiwi favicon');
-ok(/apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/.test(page), 'the iPhone home-screen card uses the current Kiwi mark');
-ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest)
-  && !/kiwi-mark-app-icon|kiwi-employee-k/.test(manifest), 'the install manifest cannot fall back to a legacy k icon');
-const swCacheVer = parseInt((sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1] || '0', 10);
-ok(swCacheVer >= 370 && !/kiwi-employee-k-/.test(sw), 'the shared PWA cache evicts every legacy employee icon');
+// Copy bans complement execution: dynamically generated strings must also
+// remain free of the retired dialect, including unreachable copy.
+ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page + lang), 'Darija wording cannot return');
+ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(page), 'Latin Darija and Spanish labels cannot return');
 
-console.log(`✓ employee language gate green (${checks} checks: profile selector, persistence, live UI, locale, PWA)`);
+// Execute the shipped translation owner and its registered live observer.
+// This DOM port models text/attribute mutations; the browser companion checks
+// native MutationObserver delivery and keyboard activation.
+{
+  const vm = require('node:vm');
+  const source = fs.readFileSync(path.join(root, 'assets/serveur-app.js'), 'utf8');
+  const code = source.slice(source.indexOf('    const EMPLOYEE_LANGUAGE_KEY'), source.indexOf('    /* ---------- Calendar'));
+  const listeners = {}, storage = new Map(); let observe;
+  function element(tag = 'LABEL') {
+    const attrs = new Map();
+    return { nodeType: 1, tagName: tag, texts: [], children: [], dataset: {},
+      querySelectorAll() { return this.children; },
+      hasAttribute: a => attrs.has(a), getAttribute: a => attrs.get(a), setAttribute: (a, v) => attrs.set(a, v),
+      classList: { toggle() {}, contains() { return false; } }, addEventListener() {} };
+  }
+  const body = element('BODY');
+  const document = { body, documentElement: {}, addEventListener: (name, fn) => { listeners[name] = fn; },
+    querySelector() { return null; }, querySelectorAll() { return []; },
+    createTreeWalker(root) { const nodes = [...root.texts, ...root.children.flatMap(e => e.texts)]; let i = 0; return { nextNode: () => nodes[i++] }; } };
+  const c = vm.createContext({ document, localStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v) },
+    Node: { TEXT_NODE: 3, ELEMENT_NODE: 1, DOCUMENT_NODE: 9 }, NodeFilter: { SHOW_TEXT: 4 },
+    MutationObserver: function (fn) { observe = fn; this.observe = () => {}; },
+    svMerchant: () => 'synthetic-language', navigator: {},
+    $: () => null, $$: () => [], renderSchedule() {}, renderHours() {}, renderProfil() {}, updateShiftMeta() {}, currentTab: 'profil' });
+  c.window = c;
+  vm.runInContext(lang + '\n' + code, c);
+  listeners.DOMContentLoaded();
+  const rankStart = page.indexOf('function kgRankName(');
+  const rankEnd = page.indexOf('function kgRankIdxFor(', rankStart);
+  vm.runInContext(page.slice(rankStart, rankEnd), c);
+  c.kgNum = String;
+  const label = element(), input = element('INPUT');
+  const node = { nodeType: 3, parentElement: label, nodeValue: ' Montant reçu ' }; label.texts.push(node);
+  for (const a of ['placeholder', 'aria-label', 'title']) input.setAttribute(a, 'Montant reçu');
+  label.children.push(input); body.children.push(label);
+  for (const [locale, expected] of [['en', 'Amount received'], ['ar', 'المبلغ المستلم'], ['fr', 'Montant reçu']]) {
+    c.setEmployeeLanguage(locale);
+    const rank = c.kgRankName({ name: 'Apprenti' });
+    ok(rank === ({ fr: 'Apprenti', en: 'Apprentice', ar: 'متدرّب' })[locale], locale + ': rank is generated in context');
+    const challenge = c.kgChallengeText({ metric: 'tables', target: 3, text: 'Réglez 3 tables' });
+    ok(challenge === ({ fr: 'Réglez 3 tables', en: 'Settle 3 tables during this shift', ar: 'سدّد 3 طاولات خلال هذه الوردية' })[locale], locale + ': challenge is generated in context');
+    // A fresh asynchronous render writes French after the language switch.
+    node.nodeValue = ' Montant reçu ';
+    observe([{ type: 'characterData', target: node, addedNodes: [] }]);
+    observe([{ type: 'childList', addedNodes: [label] }]);
+    ok(node.nodeValue === ` ${expected} `, locale + ': injected text translates with whitespace preserved');
+    for (const a of ['placeholder', 'aria-label', 'title']) {
+      input.setAttribute(a, 'Montant reçu');
+      observe([{ type: 'attributes', target: input, addedNodes: [] }]);
+      ok(input.getAttribute(a) === expected, locale + ': injected ' + a + ' translates');
+    }
+    ok(document.documentElement.dir === (locale === 'ar' ? 'rtl' : 'ltr'), locale + ': rendered reading direction');
+    ok(storage.get('kiwi-employee-language:synthetic-language') === locale, locale + ': venue preference persists');
+  }
+}
+
+console.log(`✓ employee language gate green (${checks} checks: persistence, injected text, accessible attributes, locale)`);

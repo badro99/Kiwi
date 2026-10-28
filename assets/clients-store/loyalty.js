@@ -67,7 +67,6 @@
         || (saleRef && Array.isArray(rec.history) && rec.history.some(function (row) { return row && row.ref === saleRef; }))) {
       return { client: rec, rewardReady: false, replayed: true };
     }
-
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
     if (!rec.firstSeen) rec.firstSeen = now();
@@ -142,7 +141,8 @@
       sale[refund ? 'clawed' : 'earned'] += refund ? -event.points : event.points;
       sale[refund ? 'unstamped' : 'stamped'] += refund ? -event.stamps : event.stamps;
     });
-    var reversal = KiwiLoyaltyRules.refundFor(sale, amount, cfg, opts.items, rec);
+    var fullReturn = sale.paid > 0 && Math.round(amount * 100) >= Math.round(sale.paid * 100) - Math.round(sale.refunded * 100);
+    var reversal = KiwiLoyaltyRules.refundFor(sale, amount, cfg, fullReturn ? [] : opts.items, rec);
     var take = reversal.take, claw = reversal.pointsTake, unstamp = reversal.stampsTake;
     rec.spend = Math.max(0, money((rec.spend || 0) - take));
     rec.points = Math.max(0, Number(rec.points || 0) - claw);

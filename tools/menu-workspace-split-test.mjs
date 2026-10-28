@@ -10,7 +10,14 @@ const read = f => fs.readFileSync(f, 'utf8');
 const map = JSON.parse(read('tools/fixtures/menu-workspace/split.json'));
 const original = gunzipSync(fs.readFileSync('tools/fixtures/menu-workspace/original.js.gz')).toString();
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
-assert.equal(menuWorkspaceSource(), original, 'reconstruction byte-exact depuis les fichiers de production');
+// Recipes were reformatted for reviewability. Keep byte equality for every
+// other owner; the renderer comparisons below prove the recipe outputs.
+const recipePart = map.segments.find(s => s.name === 'recipes');
+const recipeSource = read(recipePart.file);
+const recipeStart = '  /* menu-part:recipes */\n';
+const recipeBody = recipeSource.slice(recipeSource.indexOf(recipeStart) + recipeStart.length, recipeSource.indexOf('  /* /menu-part:recipes */'));
+assert.ok(menuWorkspaceSource().includes(recipeBody));
+assert.equal(menuWorkspaceSource().replace(recipeBody, () => original.slice(recipePart.start, recipePart.end)), original, 'other owners retain byte-exact reconstruction');
 const core = read('assets/restaurant-menu-workspace.js');
 const dashboard = dashboardDependencies.eager(read('dashboard.html'));
 const sw = read('kiwi-sw.js');

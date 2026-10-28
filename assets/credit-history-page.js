@@ -3,6 +3,7 @@ export function historyPage(entries, page = 0) {
   return entries.slice(page * 50, (page + 1) * 50);
 }
 export function bindHistoryPages(host, entries, renderRow, icons) {
+  entries = entries.map(entry => entry && typeof entry === 'object' ? { ...entry } : entry);
   let page = 0;
   const lang = document.documentElement.lang;
   const labels = lang === 'ar' ? ['السابق', 'التالي'] : lang === 'en' ? ['Previous', 'Next'] : ['Précédent', 'Suivant'];
