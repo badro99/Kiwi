@@ -887,7 +887,7 @@
           `
           : `<span class="menu-item-add" aria-hidden="true">+</span>`;
         return `
-          <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="0">
+          <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}"${qty > 0 ? '' : ' role="button" tabindex="0"' /* en panier, ses − et + portent le clavier : pas de bouton dans un bouton */}>
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
             <span class="menu-item-art">${menuArt(m.id, m.cat, m.name, m.subLabel)}</span>
             <span class="menu-item-cat">${m.formula ? '<span class="menu-item-optflag">Formule</span> · ' : ''}${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>

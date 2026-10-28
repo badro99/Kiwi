@@ -38,15 +38,10 @@ async function closeNav(page) {
   await page.mouse.click(at.x, at.y);
   await page.waitForFunction(() => !document.body.classList.contains('nav-open'));
 }
-/* The till screens carry three accessibility defects that predate the counter
-   reward and sit outside it: the menu cards and the client chip nest a control
-   inside a button, and the French « Détails » button is named otherwise. They
-   are pinned here so they can only go down; fixing them lowers these numbers. */
-const tillKnown = (locale) => ({ 'nested-interactive': 3, ...(locale === 'fr' ? { 'label-content-name-mismatch': 1 } : {}) });
 async function check(t, page, state, locale, viewport) {
   const key = `matrix-state-loyalty-till-${state}-${locale}-${viewport}`;
   await sleep(150);
-  await verify({ ...h, baseline: { ...h.baseline, [key]: state === 'card' ? {} : tillKnown(locale) } }, t,
+  await verify({ ...h, baseline: { ...h.baseline, [key]: {} } }, t,
     { page, region: state === 'card' ? '#kcb-sheet' : 'body' }, key, locale);
 }
 async function open(t, locale, viewport) {

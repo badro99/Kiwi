@@ -5141,7 +5141,8 @@
     .rp-client svg { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.9; }
     .rp-client .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rp-client.is-on { border-style: solid; border-color: var(--atlas); background: rgba(11,110,79,0.07); color: var(--atlas); }
-    .rp-client .rp-client-x { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; font-size: 15px; line-height: 1; color: var(--ink-3); flex: 0 0 22px; }
+    .rp-client .rp-client-open { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; align-self: stretch; padding: 0; margin: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
+    .rp-client .rp-client-x { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; font-size: 15px; line-height: 1; color: var(--ink-3); flex: 0 0 22px; }
     .rp-client .rp-client-x:hover { background: rgba(0,0,0,0.07); color: var(--ink); }
     .rp-client .rp-client-x[hidden] { display: none; }
     /* le sélecteur de client */
