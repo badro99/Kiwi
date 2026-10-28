@@ -66,6 +66,20 @@ L.set('en');
 check(L.t('Encaisser') === 'Take payment', 'une phrase connue est traduite');
 check(L.t('Caftan Fassi') === 'Caftan Fassi', 'un nom d\'article du commerçant traverse intact');
 
+/* Generated floor/recipe/recall labels must resolve through the real pack. */
+for (const [lang, table, covers, close, recall] of [
+  ['fr', 'Table', 'couverts', 'Fermer', 'Rappel non confirmé · réessayez'],
+  ['en', 'Table', 'covers', 'Close', 'Recall not confirmed · try again'],
+  ['ar', 'طاولة', 'أشخاص', 'إغلاق', 'لم يتم تأكيد الاسترجاع · أعد المحاولة'],
+]) {
+  L.set(lang);
+  check(L.tr('Table') === table, 'floor table name ' + lang);
+  check(L.tr('couverts') === covers, 'floor covers ' + lang);
+  check(L.tr('Fermer') === close, 'recipe close ' + lang);
+  check(L.tr('Rappel non confirmé · réessayez') === recall, 'recall failure ' + lang);
+}
+L.set('en');
+
 /* ── LA DÉCOUPE : ce qui rend le dictionnaire utilisable ─────────────────── */
 check(L.tr('Encaisser · 4 785 MAD') === 'Take payment · 4 785 MAD', 'le bouton d\'encaissement se traduit sans toucher au montant');
 check(L.tr('2 articles') === '2 items', 'un compte suivi d\'un mot connu se traduit, le nombre reste');
@@ -179,7 +193,7 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Correction',
+const IDENTICAL_OK = new Set(['Table', 'Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Correction',
   // Le dialogue d'imprimante et la clôture (2026-10-12) : l'arabe change, l'anglais non.
   'Type', 'Port', 'Transactions', '{n} mm', '{n} mm (standard)', '{n}h {n}', 'Terminal + {n} MAD', '{n} transaction', '{n} transactions',
   // Le rail et l'encaissement de la caisse restaurant (2026-10-13).

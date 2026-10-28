@@ -435,7 +435,7 @@
       'Impression cuisine': 'Kitchen printing', 'Clients & fidélité': 'Customers & loyalty', 'Mode nuit': 'Night mode',
       'Sortir': 'Leave', 'En service': 'On shift',
       'Plan de salle': 'Floor plan', 'Rez-de-chaussée': 'Ground floor', 'étage': 'floor', 'er': 'st', 'Table T{n} ouverte': 'Table T{n} opened',
-      'Libre': 'Free', 'À commander': 'To order', 'Addition': 'Bill', 'Réglée': 'Paid',
+      'Table': 'Table', 'Libre': 'Free', 'À commander': 'To order', 'Addition': 'Bill', 'Réglée': 'Paid',
       '· salle': '· dining room', 'CUISINE': 'KITCHEN', 'COMPTOIR': 'COUNTER', 'Terrasse': 'Terrace',
       '· extérieur': '· outdoor', '{n} / {n} occupées': '{n} / {n} occupied',
       'À emporter': 'Takeaway', 'Tout': 'All', 'Commande': 'Order', 'en cours': 'in progress',
@@ -1102,7 +1102,7 @@
       'Impression cuisine': 'طباعة المطبخ', 'Clients & fidélité': 'الزبناء والولاء', 'Mode nuit': 'الوضع الليلي',
       'Sortir': 'خروج', 'En service': 'في الخدمة',
       'Plan de salle': 'مخطط القاعة', 'Rez-de-chaussée': 'الطابق الأرضي', 'étage': 'طابق', 'er': '\u200c', 'Table T{n} ouverte': 'فُتحت الطاولة T{n}',
-      'Libre': 'فارغة', 'À commander': 'في انتظار الطلب', 'Addition': 'الحساب', 'Réglée': 'مدفوعة',
+      'Table': 'طاولة', 'Libre': 'فارغة', 'À commander': 'في انتظار الطلب', 'Addition': 'الحساب', 'Réglée': 'مدفوعة',
       '· salle': '· القاعة', 'CUISINE': 'المطبخ', 'COMPTOIR': 'الكونطوار', 'Terrasse': 'التراس',
       '· extérieur': '· خارجي', '{n} / {n} occupées': '{n} / {n} مشغولة',
       'À emporter': 'للأخذ', 'Tout': 'الكل', 'Commande': 'الطلب', 'en cours': 'جارٍ',
@@ -4233,7 +4233,7 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.KiwiCaisseLang = {
+  DICT.en['Rappel non confirmé · réessayez'] = 'Recall not confirmed · try again'; DICT.ar['Rappel non confirmé · réessayez'] = 'لم يتم تأكيد الاسترجاع · أعد المحاولة'; window.KiwiCaisseLang = {
     get: function () { return cur; },
     set: set,
     t: t,

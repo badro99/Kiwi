@@ -225,7 +225,8 @@
           <p class="kob-eyebrow">${tr({ fr: 'Faisons connaissance', en: "Let's meet", ar: 'لنتعارف' })}</p>
           <h1 class="kob-h">${tr({ fr: 'Comment vous appelez-vous ?', en: 'What should we call you?', ar: 'ما اسمك؟' })}</h1>
           <p class="kob-sub">${tr({ fr: 'Juste votre prénom, pour vous accueillir par votre nom chaque matin.', en: 'Just your first name, so we can greet you by name every morning.', ar: 'اسمك الأول فقط, لنرحّب بك كل صباح.' })}</p>
-          <input class="kob-field" data-f="ownerName" type="text" value="${esc(S.ownerName)}" maxlength="24" placeholder="${tr({ fr: 'Ex. Rachid', en: 'e.g. Rachid', ar: 'مثال: رشيد' })}" autocomplete="given-name"/>
+          <input class="kob-field" data-f="ownerName" aria-label="${tr({ fr: 'Votre prénom', en: 'Your first name', ar: 'اسمك الأول' })}" aria-describedby="kob-ownerName-limit" type="text" value="${esc(S.ownerName)}" maxlength="24" placeholder="${tr({ fr: 'Ex. Rachid', en: 'e.g. Rachid', ar: 'مثال: رشيد' })}" autocomplete="given-name"/>
+          <p class="kob-sub" id="kob-ownerName-limit">${tr({ fr: "24 caractères maximum.", en: "Up to 24 characters.", ar: "24 حرفًا كحد أقصى." })}</p>
         </div>`,
       foot: footNav({}),
     };
@@ -244,7 +245,8 @@
           <p class="kob-eyebrow">${tr({ fr: 'Votre affaire', en: 'Your business', ar: 'نشاطك' })}</p>
           <h1 class="kob-h">${tr({ fr: 'Parlez-nous de votre affaire.', en: 'Tell us about your business.', ar: 'حدّثنا عن نشاطك.' })}</h1>
           <label class="kob-lbl">${tr({ fr: "Nom de l'établissement", en: 'Business name', ar: 'اسم النشاط' })}</label>
-          <input class="kob-field" data-f="bizName" type="text" value="${esc(S.bizName)}" maxlength="40" placeholder="${tr({ fr: 'Ex. Café des Oudayas', en: 'e.g. Oudayas Café', ar: 'مثال: مقهى الأوداية' })}"/>
+          <input class="kob-field" data-f="bizName" aria-label="${tr({ fr: 'Nom de l’établissement', en: 'Business name', ar: 'اسم النشاط' })}" aria-describedby="kob-bizName-limit" type="text" value="${esc(S.bizName)}" maxlength="40" placeholder="${tr({ fr: 'Ex. Café des Oudayas', en: 'e.g. Oudayas Café', ar: 'مثال: مقهى الأوداية' })}"/>
+          <p class="kob-sub" id="kob-bizName-limit">${tr({ fr: "40 caractères maximum.", en: "Up to 40 characters.", ar: "40 حرفًا كحد أقصى." })}</p>
           <label class="kob-lbl">${tr({ fr: "Type d'activité", en: 'Type of business', ar: 'نوع النشاط' })}</label>
           <div class="kob-types">
             ${prim.map((t) => typeCard(t)).join('')}
@@ -266,7 +268,7 @@
           <p class="kob-sub">${tr({ fr: "Un seul aujourd'hui ? Parfait. Kiwi grandit avec vous quand vous en ouvrez d'autres.", en: 'Just one today? Perfect. Kiwi grows with you as you open more.', ar: 'واحد اليوم؟ ممتاز. ينمو كيوي معك.' })}</p>
           ${stepper('venueCount', 1, 60)}
           <label class="kob-lbl">${tr({ fr: 'Ville principale', en: 'Main city', ar: 'المدينة الرئيسية' })} <span class="opt">· ${tr({ fr: 'optionnel', en: 'optional', ar: 'اختياري' })}</span></label>
-          <input class="kob-field" data-f="city" type="text" value="${esc(S.city)}" maxlength="30" placeholder="${tr({ fr: 'Ex. Rabat', en: 'e.g. Rabat', ar: 'مثال: الرباط' })}"/>
+          <input class="kob-field" data-f="city" aria-label="${tr({ fr: 'Ville principale', en: 'Main city', ar: 'المدينة الرئيسية' })}" type="text" value="${esc(S.city)}" maxlength="30" placeholder="${tr({ fr: 'Ex. Rabat', en: 'e.g. Rabat', ar: 'مثال: الرباط' })}"/>
         </div>`,
       foot: footNav({}),
     };

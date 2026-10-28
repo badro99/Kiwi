@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
+const { DOMParser } = createRequire(import.meta.url)('../app/node_modules/@xmldom/xmldom');
 import { onboardingTestSource } from './onboarding-test-source.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * INSTALLATION · CE QUE L'ASSISTANT ET LA FIN DE L'ASSISTANT AFFIRMENT
@@ -155,6 +157,40 @@ ok('le vrai assistant expose le message de brouillon refusé', () => {
   assert.ok(OB.includes("draftWarning: () => draft ? draft.warning(lang()) : ''"), 'le vrai assistant expose le message');
   assert.ok(/const DRAFT_NOTE = \{[\s\S]*?\n  \};/.test(DATA), 'et les trois langues du message restent dans les données');
 });
+
+// Parse the live generator declarations, then execute them in their lexical scope.
+const ts = createRequire(import.meta.url)('../app/node_modules/typescript');
+const stepAst = ts.createSourceFile('onboarding.js', OB, ts.ScriptTarget.Latest, true);
+function stepBody(step, ctx) {
+  let source;
+  function visit(node) {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === step) source = node.getText(stepAst);
+    ts.forEachChild(node, visit);
+  }
+  visit(stepAst);
+  return vm.runInNewContext(source + ';' + step + '().body', ctx);
+}
+
+for (const locale of ['fr', 'en', 'ar']) {
+  for (const [step, field] of [['stepName', 'ownerName'], ['stepBusiness', 'bizName'], ['stepPlaces', 'city']]) {
+    ok(`generated ${field} accessible name (${locale})`, () => {
+      const ctx = { S: { ownerName: '', bizName: '', city: '' }, TYPES: [], TYPE_HINT: {}, tr: o => o[locale], esc: String, footNav: () => '', stepper: () => '' };
+      const html = stepBody(step, ctx);
+      const dom = new DOMParser().parseFromString(html, 'text/html');
+      const input = Array.from(dom.getElementsByTagName('input')).find(el => el.getAttribute('data-f') === field);
+      assert.ok(input.getAttribute('aria-label').trim());
+    });
+    if (field !== 'city') ok(`generated ${field} visible limit (${locale})`, () => {
+      const ctx = { S: { ownerName: '', bizName: '' }, TYPES: [], TYPE_HINT: {}, tr: o => o[locale], esc: String, footNav: () => '' };
+      const html = stepBody(step, ctx);
+      const dom = new DOMParser().parseFromString(html, 'text/html');
+      const input = dom.getElementsByTagName('input')[0];
+        const id = input.getAttribute('aria-describedby');
+      assert.ok(id && dom.getElementById(id).textContent.trim(), 'visible limit description');
+      assert.ok(dom.getElementById(id).textContent.includes(input.getAttribute('maxlength')), 'description gives the enforced limit');
+    });
+  }
+}
 
 console.log(`\nonboarding-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
