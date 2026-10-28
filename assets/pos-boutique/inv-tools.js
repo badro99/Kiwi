@@ -53,6 +53,13 @@ function invCss() {
   const P = '#pos-boutique .bq-sgst.is-plain';
   s.textContent = [
     '#pos-boutique .bqi-scan{position:relative;z-index:5;}',
+    /* « Inventaire physique » prenait flex:2 (la règle des boutons primaires du
+       ticket) et s'étirait sur la moitié de la barre : il garde sa largeur, la
+       recherche prend le reste (propriétaire, 2026-10-28). */
+    '#pos-boutique .bqi-tools > .bq-btn{flex:0 0 auto;}',
+    '#pos-boutique .bqi-tools{flex-wrap:wrap;row-gap:10px;}',
+    '#pos-boutique .bqi-tools > .bqi-scan{flex:1 1 240px;min-width:200px;}',
+    '#pos-boutique .bqi-tools > .bqi-scan input{min-width:0;width:100%;}',   // le champ ne déborde plus sur « Inventaire physique »
     '#pos-boutique #bqi-sgst{inset-inline-end:auto;width:max(100%,520px);max-width:calc(100vw - 140px);}',
     P + '{position:absolute;left:0;right:0;top:calc(100% + 6px);max-height:min(60vh,480px);overflow-y:auto;overscroll-behavior:contain;padding:6px;border-radius:12px;background:var(--paper-elev,#FFFDFA);border:1px solid var(--line,#E2DDD2);box-shadow:0 12px 32px rgba(10,15,13,.14);}',
     P + '[hidden]{display:none;}',

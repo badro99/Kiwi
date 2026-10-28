@@ -1,7 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin } from '../pos-boutique.js?v=163';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=65';
-import { invSearch, invUnseenCount, invMarkSeen } from './inv-tools.js?v=3';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=65';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin } from '../pos-boutique.js?v=168';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=70';
+import { openMoves } from './inv-moves.js?v=4';
+import { invSearch, invUnseenCount, invMarkSeen } from './inv-tools.js?v=5';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=70';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -688,6 +689,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div class="bqi-tools">
           <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
           <button class="bq-btn primary" id="bqi-count" style="background:var(--atlas,#0B6E4F);border-color:var(--riad,#053B2C);"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
+          <button class="bq-btn" id="bqi-moves"><i data-icon="history"></i>Mouvements de stock</button>
           <button class="bq-btn" id="bqi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
           <span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>
         </div>
@@ -719,6 +721,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     if (state.view === 'inventaire') { invMarkSeen(_bqKey, invStockList()); renderBadges(); }
     const cb = $('#bqi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'boutique' });
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
+    const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -749,6 +752,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
      * main et la douchette écrirait dans un formulaire qui n'existe plus — plus
      * aucun scan n'atteindrait jamais le ticket. */
     disarmScanCapture();
+    el.style.width = '';   // seul l'écran des mouvements s'élargit ; les autres gardent la largeur livrée
     el.innerHTML = html;
     if (!$('#bq-inv-veil', root).classList.contains('is-open')) openVeil('#bq-inv-veil');
     el.querySelectorAll('[data-inv-x]').forEach((b) => b.addEventListener('click', () => {
@@ -764,7 +768,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
   function openInvProduct(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const p = d.product;
-    const movements = window.KiwiMaisonStock?.productHistory?.(pid, 8) || [];
+    const movements = window.KiwiMaisonStock?.productHistory?.(pid, 8, 'boutique') || [];   // les lignes BOUTIQUE, pas celles du module par défaut (maison)
     const rows = d.variants.length
       ? d.variants.map((v) => invVarRow(v)).join('')
       : '<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">Aucune variante, ajoutez une couleur × taille.</td></tr>';

@@ -46,4 +46,13 @@ t('the boutique till renders no stock value and three single-purpose cards', () 
   assert.ok(/<span class="l">Stock bas<\/span>/.test(inv) && /<span class="l">Rupture de stock<\/span>/.test(inv) && /<span class="l">Pièces en stock<\/span>/.test(inv));
   assert.ok(!/st\.low\} \+ \$\{st\.ruptures/.test(inv));
 });
+t('the till « Mouvements de stock » screen only reads, and only boutique rows', () => {
+  const mv = readFileSync(new URL('../assets/pos-boutique/inv-moves.js', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const w of ['enable(', 'attach(', 'record(', 'requestManual', 'adjustStock', 'setStock', 'adjustVariantStock', 'receiveStock', '.add(']) assert.ok(!mv.includes(w), 'inv-moves.js must not call ' + w);
+  assert.ok(/module: MODULE/.test(mv) && /const MODULE = 'boutique'/.test(mv));
+  assert.ok(/MZ\.facets\(MODULE\)/.test(mv));
+  const inv = readFileSync(new URL('../assets/pos-boutique/inventory.js', import.meta.url), 'utf8');
+  assert.ok(/id="bqi-count"[\s\S]{0,260}id="bqi-moves"/.test(inv), 'the button sits right after « Inventaire physique »');
+  assert.ok(/productHistory\?\.\(pid, 8, 'boutique'\)/.test(inv), 'the product sheet reads boutique rows');
+});
 console.log(`✓ boutique-inv-alerts · ${ok} contrôles : la pastille Inventaire compte ce qui n'a pas été vu`);
