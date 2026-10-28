@@ -1,6 +1,7 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor } from '../pos-boutique.js?v=160';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=62';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=62';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin } from '../pos-boutique.js?v=163';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=65';
+import { invSearch, invUnseenCount, invMarkSeen } from './inv-tools.js?v=3';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=65';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -667,9 +668,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const msg = 'Articles et prix se gèrent dans le tableau de bord.';
     if (typeof toast === 'function') toast(msg);
   }
-  function inventoryValueVisible() {
-    return !(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryValue === false);
-  }
+  /* [[pid, stock]] des articles du rayonnage, pour la pastille (inv-tools.js). */
+  const invStockList = () => Object.keys(P).filter((k) => P[k] && P[k].id === k).map((k) => [k, stockOf(P[k])]);
+  const invUnseen = () => invUnseenCount(_bqKey, invStockList());
 
   function renderInventaire() {
     const cat = catDB();
@@ -695,11 +696,11 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           ${cats.map((c) => `<button class="bqi-pill ${filter === c.id ? 'on' : ''}" data-f="${c.id}">${esc(c.name)} · ${cat.categoryCount(c.id)}</button>`).join('')}
         </div>
         <div class="bqi-kpis">
-          <!-- boutique réelle : ce que le stock a COÛTÉ (chiffre de compta / assurance).
-               La démo garde sa valeur au prix de vente. Voir stats() dans boutique-catalog.js. -->
-          ${inventoryValueVisible() ? `<div class="bqi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>` : ''}
+          <!-- Pas de valeur de stock à la caisse (propriétaire, 2026-10-28) : elle est au
+               tableau de bord, l'équipe n'en a pas l'usage. Trois cases, une chose chacune. -->
           <div class="bqi-kpi"><span class="l">Pièces en stock</span><span class="v">${st.totalStock}</span></div>
-          <div class="bqi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">Stock bas / rupture</span><span class="v">${st.low} + ${st.ruptures}</span></div>
+          <div class="bqi-kpi ${st.low ? 'warn' : ''}"><span class="l">Stock bas</span><span class="v">${st.low}</span></div>
+          <div class="bqi-kpi ${st.ruptures ? 'warn' : ''}"><span class="l">Rupture de stock</span><span class="v">${st.ruptures}</span></div>
         </div>
         <div class="bqi-list">
           ${products.length ? products.map((p) => invRow(p)).join('') : `<div class="bq-empty bqi-first">
@@ -712,6 +713,10 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>`;
     const scan = $('#bqi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
+    invSearch($('.bqi-scan', panel), scan, bqKitSkin(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
+      catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, availableStock: variantStock, colorLabel }) });
+    /* L'Inventaire est à l'écran : ses alertes sont vues, la pastille s'éteint. */
+    if (state.view === 'inventaire') { invMarkSeen(_bqKey, invStockList()); renderBadges(); }
     const cb = $('#bqi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'boutique' });
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const pills = $('#bqi-pills', panel);
@@ -1941,4 +1946,4 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       if (res && res.ok && res.via) toast(`${what} envoyée à l'imprimante`);
     });
   }
-export { intake, intakeReset, intakeTake, invSetModal, offerRegister, openInvProduct, renderInventaire };
+export { intake, intakeReset, intakeTake, invSetModal, invUnseen, offerRegister, openInvProduct, renderInventaire };

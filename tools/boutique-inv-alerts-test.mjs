@@ -1,0 +1,49 @@
+/* La pastille « Inventaire » de la caisse boutique compte les alertes de stock
+ * NON VUES (assets/pos-boutique/inv-tools.js) : vues, elles s'éteignent ; un
+ * article qui passe de bas à épuisé avertit de nouveau ; un article réassorti
+ * puis redescendu avertit de nouveau. Propriétaire, 2026-10-28. */
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const store = new Map();
+globalThis.window = globalThis;
+globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+globalThis.document = { getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } };
+
+const src = readFileSync(new URL('../assets/pos-boutique/inv-tools.js', import.meta.url), 'utf8')
+  .replace(/^import .*$/gm, '');                       // la logique de la pastille ne dépend pas de la liste
+const mod = await import('data:text/javascript;base64,' + Buffer.from(src + '\nfunction bqKitScanBar(){} function searchArticles(){ return []; }').toString('base64'));
+const { invUnseenCount: unseen, invMarkSeen: seen } = mod;
+
+let ok = 0; const t = (name, fn) => { fn(); ok++; };
+const K = 'santos';
+t('every current alert counts before the page is opened', () => {
+  assert.equal(unseen(K, [['a', 3], ['b', 0], ['c', 12]]), 2);
+});
+t('opening the Inventaire clears the badge, and it stays cleared', () => {
+  seen(K, [['a', 3], ['b', 0], ['c', 12]]);
+  assert.equal(unseen(K, [['a', 3], ['b', 0], ['c', 12]]), 0);
+  assert.equal(unseen(K, [['a', 3], ['b', 0], ['c', 12]]), 0);
+});
+t('a seen low item that runs out alerts again', () => {
+  assert.equal(unseen(K, [['a', 0], ['b', 0], ['c', 12]]), 1);
+});
+t('a new low item alerts', () => {
+  seen(K, [['a', 0], ['b', 0], ['c', 12]]);
+  assert.equal(unseen(K, [['a', 0], ['b', 0], ['c', 4]]), 1);
+});
+t('a restocked item that drops again alerts again', () => {
+  seen(K, [['a', 0], ['b', 0], ['c', 4]]);
+  assert.equal(unseen(K, [['a', 20], ['b', 0], ['c', 4]]), 0);   // réassorti : sort de la liste vue
+  assert.equal(unseen(K, [['a', 2], ['b', 0], ['c', 4]]), 1);
+});
+t('two stores never share what was seen', () => {
+  assert.equal(unseen('amira', [['a', 2]]), 1);
+});
+t('the boutique till renders no stock value and three single-purpose cards', () => {
+  const inv = readFileSync(new URL('../assets/pos-boutique/inventory.js', import.meta.url), 'utf8');
+  assert.ok(!/Valeur de stock/.test(inv));
+  assert.ok(/<span class="l">Stock bas<\/span>/.test(inv) && /<span class="l">Rupture de stock<\/span>/.test(inv) && /<span class="l">Pièces en stock<\/span>/.test(inv));
+  assert.ok(!/st\.low\} \+ \$\{st\.ruptures/.test(inv));
+});
+console.log(`✓ boutique-inv-alerts · ${ok} contrôles : la pastille Inventaire compte ce qui n'a pas été vu`);

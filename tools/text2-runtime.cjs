@@ -89,7 +89,8 @@ const probes = {
     assert.equal(has(), false); ctx.tables = { a: {}, b: {} }; assert.equal(has(), true);
     ctx.isFeatureOff = () => true; assert.equal(has(), false);
     const window = { KiwiConfig: { features: {} } };
-    const visible = load('assets/pos-boutique/inventory.js', 'inventoryValueVisible', { window });
+    // La boutique ne montre plus la valeur de stock à la caisse (2026-10-28) ; la maison garde l'interrupteur.
+    const visible = load('assets/pos-maison/inventory.js', 'inventoryValueVisible', { window });
     for (const value of [undefined, true, 'false', 0, false]) { window.KiwiConfig.features.caisseInventoryValue = value; assert.equal(visible(), value !== false); }
   },
   'caisse-link-success'() {

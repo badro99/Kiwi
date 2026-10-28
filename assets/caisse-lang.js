@@ -2494,7 +2494,7 @@
       'Kiwi affiche, le lecteur encaisse': ['Kiwi shows the amount, the card reader takes the payment', 'يعرض Kiwi المبلغ، ويستخلص الجهاز الدفع'],
       'stock par taille en direct': ['live stock by size', 'المخزون حسب المقاس مباشرة'],
       'Valeur de stock': ['Stock value', 'قيمة المخزون'],
-      'Stock bas / rupture': ['Low / out of stock', 'مخزون منخفض / نافد'],
+      'Stock bas / rupture': ['Low / out of stock', 'مخزون منخفض / نافد'], 'Rupture de stock': ['Out of stock', 'نفاد المخزون'], 'Mouvements de stock': ['Stock movements', 'حركات المخزون'],
       '{n} coul.': ['{n} col.', 'ألوان: {n}'],
       '{n} taille': ['{n} size', 'مقاسات: {n}'],
       '{n} tailles': ['{n} sizes', 'مقاسات: {n}'],

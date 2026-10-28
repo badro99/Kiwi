@@ -372,23 +372,26 @@ function bqKitTicketEmpty(ticketEl) {
    le chemin de la douchette) ou, pour un article sans code, o.open (la fiche
    de la tuile) : aucune logique de vente n'est copiée ici. */
 function bqKitScanBar(bar, o) {
-  if (!bar || !o || !o.input || bar.querySelector('#bq-sgst')) return false;
+  /* o.id : deux barres (Vente, Inventaire) vivent dans le même écran, chacune
+     sa liste. o.plain : la livrée d'avant garde son icône et ses mots. */
+  const lid = o.id || 'bq-sgst';
+  if (!bar || !o || !o.input || bar.querySelector('.bq-sgst')) return false;
   const input = o.input;
-  const old = bar.querySelector(':scope > svg, :scope > i');
+  const old = o.plain ? null : bar.querySelector(':scope > svg, :scope > i');
   if (old) {
     const ic = document.createElement('i');
     ic.setAttribute('data-icon', 'barcode_scanner');
     ic.className = 'bq-sell-scan-ic';
     old.replaceWith(ic);
   }
-  input.setAttribute('placeholder', tr('Rechercher un article'));
+  if (!o.plain) input.setAttribute('placeholder', tr('Rechercher un article'));
   input.setAttribute('role', 'combobox');
   input.setAttribute('aria-autocomplete', 'list');
-  input.setAttribute('aria-controls', 'bq-sgst');
+  input.setAttribute('aria-controls', lid);
   input.setAttribute('aria-expanded', 'false');
   input.setAttribute('inputmode', 'search');
   const list = document.createElement('div');
-  list.id = 'bq-sgst';
+  list.id = lid;
   list.className = 'bq-sgst';
   list.setAttribute('role', 'listbox');
   list.hidden = true;
@@ -414,7 +417,7 @@ function bqKitScanBar(bar, o) {
     if (k < 0 || !q) return esc(text);
     return esc(text.slice(0, k)) + '<b>' + esc(text.slice(k, k + q.length)) + '</b>' + esc(text.slice(k + q.length));
   };
-  const row = (r, i, q) => '<button type="button" class="bq-sgst-it" role="option" tabindex="-1" id="bq-sgst-' + i + '" data-sgst="' + i + '">'
+  const row = (r, i, q) => '<button type="button" class="bq-sgst-it" role="option" tabindex="-1" id="' + lid + '-' + i + '" data-sgst="' + i + '">'
     + '<span class="bq-sgst-art">' + o.visual(r) + '</span>'
     + '<span class="bq-sgst-txt"><span class="bq-sgst-nm">' + (r.why === 'nom' ? hl(r.name, q) : esc(r.name)) + '</span>'
     + '<span class="bq-sgst-sub">' + (r.detail ? esc(r.detail) : '')
@@ -458,6 +461,13 @@ function bqKitScanBar(bar, o) {
     if (e.key === 'Escape') { if (!list.hidden) { e.preventDefault(); close(); } return; }
     if (e.key === 'Enter') {
       if (at >= 0 && rows[at]) { e.preventDefault(); e.stopPropagation(); choose(at); return; }
+      /* o.enterFirst (Inventaire) : un NOM tapé puis Entrée ouvre le premier
+         résultat ; un code (chiffres seuls) part toujours à la douchette. */
+      const q = input.value.trim();
+      if (o.enterFirst && q && !/^[0-9]+$/.test(q)) {
+        rows = o.search(q) || [];
+        if (rows.length) { e.preventDefault(); e.stopPropagation(); choose(0); return; }
+      }
       close();          // Entrée part à l'écouteur livré, qui vide le champ
       return;
     }

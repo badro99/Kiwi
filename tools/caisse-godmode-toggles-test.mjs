@@ -60,11 +60,13 @@ check('Maison product creation persists the selected ownership in the shared cat
 check('God Mode offers the stock-value visibility switch as a default-on boutique option',
   /key:'caisseInventoryValue'[\s\S]{0,180}Allumé par défaut/.test(ADMIN) &&
   !/key:'caisseInventoryValue'[^\n]*off:true/.test(ADMIN));
-check('Maison and Boutique hide inventory value only for the explicit boolean false',
+check('Maison hides inventory value only for the explicit boolean false',
   MAISON.includes('features.caisseInventoryValue === false') &&
-  BOUTIQUE.includes('features.caisseInventoryValue === false') &&
-  MAISON.includes('inventoryValueVisible() ? `<div class="mzi-kpi"') &&
-  BOUTIQUE.includes('inventoryValueVisible() ? `<div class="bqi-kpi"'));
+  MAISON.includes('inventoryValueVisible() ? `<div class="mzi-kpi"'));
+/* La boutique ne montre plus du tout la valeur de stock à la caisse
+   (propriétaire, 2026-10-28) : elle vit au tableau de bord. */
+check('Boutique till never shows the stock value',
+  !BOUTIQUE.includes('Valeur de stock') && !BOUTIQUE.includes('stockCost'));
 
 // Grouping clarity without confusing micro-switches
 check('modulesForType cleanly structures Modes de service and Actions rapides',
