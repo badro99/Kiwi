@@ -12,6 +12,8 @@
  *       float screen, no shift stored.
  *   B · the same link with an /api/me that does NOT prove it → the float
  *       screen, as for any staff.
+ *   D · a staff member signing in on that till (any setStaff that is not the
+ *       operator entry) ends the operator view at once.
  *   C · a plain paired load in the same tab after A → the float screen again:
  *       the operator view does not outlive the operator entry.
  * Local server, no real store, no code typed.
@@ -100,6 +102,11 @@ try {
   ok(!s.clockin, 'no opening-float screen', JSON.stringify(s));
   ok(s.shift === null, 'no shift stored for the merchant', String(s.shift));
   ok(s.flag === MERCHANT, 'the operator view is scoped to this store', String(s.flag));
+
+  console.log('■ D · a staff member signs in on the same till');
+  const after = await A.page.evaluate(() => { window.KiwiCaissePairing.setStaff({ name: 'Sara', role: 'Caissière' }); return sessionStorage.getItem('kiwi:tillOperator:v1'); });
+  ok(after === null, 'any real staff identity ends the operator view', String(after));
+  await A.page.evaluate((m) => sessionStorage.setItem('kiwi:tillOperator:v1', m), MERCHANT);
 
   console.log('■ C · a plain paired load in the same tab');
   await A.page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });

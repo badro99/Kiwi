@@ -1,9 +1,9 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=202';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=103';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=203';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=104';
 import { openMoves } from './inv-moves.js?v=5';
-import { tillFeature } from './drawer.js?v=21';
+import { tillFeature } from './drawer.js?v=22';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=17';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=103';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=104';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -708,7 +708,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           <div><h1>Inventaire</h1><div class="bq-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
           <!-- Dans l'en-tête, pas dans .bqi-tools : invPaint garde cette rangée d'une peinture à l'autre (le champ de
                recherche ne perd pas le curseur), et les réglages de l'établissement arrivent parfois après la première. -->
-          ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn" id="bqi-new"><i data-lucide="plus"></i>Nouvel article</button>' : '<span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>'}
+          ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn" id="bqi-new"><i data-icon="add"></i>Nouvel article</button>' : '<span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>'}
         </header>
         <div class="bqi-tools">
           <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
@@ -802,7 +802,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <div class="bqi-modh">
         <span class="bqi-art">${artOf(p)}</span>
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
-        ${tillFeature('caisseInventoryAdmin') ? `<button class="bq-btn secondary" data-inv-edit><i data-lucide="pencil"></i>Modifier</button>` : '<span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>'}
+        ${tillFeature('caisseInventoryAdmin') ? `<button class="bq-btn secondary" data-inv-edit><i data-icon="edit"></i>Modifier</button>` : '<span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>'}
       </div>
       <div class="bqi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="bqi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
@@ -814,9 +814,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>`).join('')}
       </div>` : ''}
       <div class="bqi-modfoot">
-        ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn secondary" data-inv-addvar><i data-lucide="plus"></i>Ajouter une variante</button>' : '<span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>'}
+        ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn secondary" data-inv-addvar><i data-icon="add"></i>Ajouter une variante</button>' : '<span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>'}
         <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
-        ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn danger" data-inv-delete><i data-lucide="trash-2"></i>Supprimer</button>' : '<span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>'}
+        ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn danger" data-inv-delete><i data-icon="delete"></i>Supprimer</button>' : '<span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>'}
       </div>`;
     invSetModal(html, (el) => {
       const cat2 = catDB();
@@ -845,7 +845,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <td>${tillFeature('caisseInventoryAdmin') ? `<button class="bqi-cbtn" data-vcolor="${v.id}">${colorDot(shown)} ${esc(shown.label)}</button>` : `<span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>`}${variantSource(v) ? `<em class="bqi-csrc">${esc(variantSource(v))}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
-      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button>${tillFeature('caisseInventoryAdmin') ? `<button class="bqi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button>` : '<span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span>'}</td>
+      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button>${tillFeature('caisseInventoryAdmin') ? `<button class="bqi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-icon="delete"></i></button>` : '<span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span>'}</td>
     </tr>`;
   }
 

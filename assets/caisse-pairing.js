@@ -754,7 +754,7 @@
       s = { id: String(p.id || '').slice(0, 80), name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
       if (p.offline) s.offline = true;   // proven against a cached verifier, not the server
     }
-    window.KiwiStaff = s;
+    window.KiwiStaff = s; if (!(p && p.operator)) try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {}   // seul bootForOperator garde la vue opérateur ; tout vrai poste l'efface
     try {
       if (s) sessionStorage.setItem(STAFF_KEY, JSON.stringify(s));
       else sessionStorage.removeItem(STAFF_KEY);
@@ -843,7 +843,7 @@
         if (!d || d.operator !== true || d.scoped !== true || String(d.slug || '') !== merchant) {
           bootWithPin(venue); return;
         }
-        try { sessionStorage.setItem('kiwi:tillOperator:v1', merchant); } catch (_) {} setStaff({ name: 'Kiwi Support', role: 'owner' });   // prouvé : pas de poste ouvert (pos-boutique/drawer.js)
+        try { sessionStorage.setItem('kiwi:tillOperator:v1', merchant); } catch (_) {} setStaff({ name: 'Kiwi Support', role: 'owner', operator: true });   // prouvé : pas de poste ouvert (pos-boutique/drawer.js)
         bootVertical(venue);
       })
       .catch(function () { bootWithPin(venue); });

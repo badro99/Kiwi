@@ -49,7 +49,7 @@
       s = { id: String(p.id || '').slice(0, 80), name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
       if (p.offline) s.offline = true;   // proven against a cached verifier, not the server
     }
-    window.KiwiStaff = s;
+    window.KiwiStaff = s; if (!(p && p.operator)) try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {}   // seul bootForOperator garde la vue opérateur ; tout vrai poste l'efface
     try {
       if (s) sessionStorage.setItem(STAFF_KEY, JSON.stringify(s));
       else sessionStorage.removeItem(STAFF_KEY);
@@ -122,7 +122,7 @@
     });
   }
   function bootWithPin(venue) {
-    askStaff(venue, function () { bootVertical(venue); });          // none configured → fail-soft
+    try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {} askStaff(venue, function () { bootVertical(venue); });   // un vrai poste : plus de vue opérateur · none configured → fail-soft
   }
 
   /* God mode may inspect a selected store's till without borrowing an employee
@@ -138,7 +138,7 @@
         if (!d || d.operator !== true || d.scoped !== true || String(d.slug || '') !== merchant) {
           bootWithPin(venue); return;
         }
-        setStaff({ name: 'Kiwi Support', role: 'owner' });
+        try { sessionStorage.setItem('kiwi:tillOperator:v1', merchant); } catch (_) {} setStaff({ name: 'Kiwi Support', role: 'owner', operator: true });   // prouvé : pas de poste ouvert (pos-boutique/drawer.js)
         bootVertical(venue);
       })
       .catch(function () { bootWithPin(venue); });

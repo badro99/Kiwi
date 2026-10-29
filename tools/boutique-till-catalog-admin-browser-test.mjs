@@ -21,9 +21,9 @@ let n = 0, bad = 0;
 const ok = (cond, msg, detail) => { if (cond) { n++; console.log('  ✓ ' + msg); } else { bad++; console.log('  ✗ ' + msg + (detail ? ' · ' + detail : '')); } };
 
 const { page } = await demoPage(h, 'fr', 'desktop', { 'kiwiSkin2027:dashboard': '0' });
-// coverage: surface=caisse-boutique locale=fr viewport=desktop
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
+// coverage: surface=caisse-boutique locale=fr viewport=desktop
 await page.goto(h.base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
 await page.waitForFunction(() => window.KiwiPosDispatch && window.KiwiCaisseLang, { timeout: 30000 });
 await sleep(500);
