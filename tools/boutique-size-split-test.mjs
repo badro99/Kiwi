@@ -169,15 +169,29 @@ ok(/n: -m\.d/.test(line) && !/reserve/.test(line), 'pieces counted positive; a h
 
 console.log('■ wiring');
 const sizes = fs.readFileSync(path.join(root, 'assets/boutique-sizes.js'), 'utf8');
-ok(/import \* as SPLIT from '\.\/boutique-size-split\.js\?v=\d+'/.test(sizes), 'the sizes screen imports the split module with a stamp');
 ok(/splitOn = rich && shown\.length > 1;/.test(sizes) && /const rich = !ro && sizeColorsOn\(\);/.test(sizes), 'never on a read-only till or a single box, and only with the merchant option');
-ok(/features\.boutiqueSizeColors === true/.test(sizes) && /env\.isReal\(\)\) return false/.test(sizes), 'the option comes from the console; the browser key only counts outside a real account');
-ok(/cellList = ro \? \[\] : rich \? COLORS\.cells\(.*\) : rows\(cat, pid\)/.test(sizes) && /const colorsHtml = !rich \? ''/.test(sizes), 'option off · the rows, the save and the screen are the ones from before');
+{
+  const Z = await import(pathToFileURL(path.join(root, 'assets/boutique-sizes.js')).href);
+  const keys = {};
+  const prev = { window: globalThis.window, localStorage: globalThis.localStorage };
+  globalThis.localStorage = { getItem: (k) => (k in keys ? keys[k] : null) };
+  globalThis.window = { KiwiConfig: { features: {} }, KiwiEnv: { isReal: () => true } };
+  const off = Z.sizeColorsOn();
+  keys.kiwiSizeColors = '1';
+  const keyOnReal = Z.sizeColorsOn();
+  window.KiwiConfig.features.boutiqueSizeColors = true;
+  const optionOn = Z.sizeColorsOn();
+  window.KiwiConfig.features = {}; window.KiwiEnv.isReal = () => false;
+  const keyOnDemo = Z.sizeColorsOn();
+  globalThis.window = prev.window; globalThis.localStorage = prev.localStorage;
+  ok(off === false && optionOn === true, 'off by default; the console option turns it on for that merchant');
+  ok(keyOnReal === false && keyOnDemo === true, 'the browser key only counts outside a real account (demo, local trial)');
+}
 {
   const admin = fs.readFileSync(path.join(root, "kiwi-admin.html"), 'utf8');
   ok(/key:'boutiqueSizeColors', label:'Tailles et couleurs rapides', off:true/.test(admin), 'the console offers the option under Boutique, off by default');
 }
-ok(/import \* as COLORS from '\.\/boutique-size-colors\.js\?v=\d+'/.test(sizes) && /r\.colorLabel \? \{ colorLabel: r\.colorLabel, colorHex: r\.colorHex \}/.test(sizes), 'a new colour cell is created with its colour name and swatch');
+ok(/import \* as SPLIT from '\.\/boutique-size-split\.js\?v=\d+'/.test(sizes) && /import \* as COLORS from '\.\/boutique-size-colors\.js\?v=\d+'/.test(sizes) && /r\.colorLabel \? \{ colorLabel: r\.colorLabel, colorHex: r\.colorHex \}/.test(sizes), 'both modules imported with a stamp; a new colour cell is created with its colour name and swatch');
 const sw = fs.readFileSync(path.join(root, 'kiwi-sw.js'), 'utf8');
 ok(/'\/assets\/boutique-size-split\.js\?v=\d+'/.test(sw) && /'\/assets\/boutique-size-colors\.js\?v=\d+'/.test(sw), 'both modules precached for the offline till');
 const mod = fs.readFileSync(path.join(root, 'assets/boutique-size-split.js'), 'utf8') + fs.readFileSync(path.join(root, 'assets/boutique-size-colors.js'), 'utf8');

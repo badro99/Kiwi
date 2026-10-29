@@ -24,9 +24,13 @@ try {
   files.add('tools/fixtures/caisse-app/before-workflows.js.gz');
   files.add('assets/caisse/workflows-loader.js');
   // Les modules découpés peuvent importer un voisin partagé (import '../refund-split.js?v=N') : on le copie aussi.
-  for (const file of [...files].filter(f=>f.endsWith('.js'))) {
-    for (const m of fs.readFileSync(path.join(root,file),'utf8').matchAll(/(?:from|import)\s+'(\.\.?\/[^'?]+\.js)(?:\?v=[0-9]+)?'/g))
-      files.add(path.posix.normalize(path.posix.join(path.posix.dirname(file),m[1])));
+  // Et les voisins de ces voisins (boutique-sizes.js importe ses deux modules de répartition) : jusqu'à ce que rien n'entre.
+  for (let seen = 0; seen !== files.size;) {
+    seen = files.size;
+    for (const file of [...files].filter(f=>f.endsWith('.js'))) {
+      for (const m of fs.readFileSync(path.join(root,file),'utf8').matchAll(/(?:from|import)\s+'(\.\.?\/[^'?]+\.js)(?:\?v=[0-9]+)?'/g))
+        files.add(path.posix.normalize(path.posix.join(path.posix.dirname(file),m[1])));
+    }
   }
   for (const file of files) {
     const target = path.join(temp,file); fs.mkdirSync(path.dirname(target),{recursive:true}); fs.copyFileSync(path.join(root,file),target);
