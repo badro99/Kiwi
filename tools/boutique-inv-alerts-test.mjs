@@ -51,7 +51,7 @@ function inventoryHtml() {
     catDB: () => ({ stats: () => ({ products: 0, variants: 0, totalStock: 91, low: 7, ruptures: 3 }), listCategories: () => [], listProducts: () => [] }),
     $: (q) => q.startsWith('[data-bq-panel') ? panel : null, root: {}, state: {},
     invPaint: (_, value) => { html = value; }, invSearch() {}, invCountAsks() {},
-    bqKitSkin() {}, pvReal: () => false, _bqKey: K, fmtMAD: String, esc: String, icons() {}, artOf() {},
+    bqKitSkin() {}, pvReal: () => false, _bqKey: K, fmtMAD: String, esc: String, icons() {}, artOf() {}, tillFeature: () => false,
   })();
   return html;
 }
@@ -78,7 +78,7 @@ t('the till « Mouvements de stock » screen only reads, and only boutique rows'
   shippedFunction(inventorySource, 'openInvProduct', {
     catDB: () => ({ getProduct: () => ({ product: {}, variants: [] }) }),
     window: { KiwiMaisonStock: { list: (q) => { historyArgs = q; return []; } } },
-    esc: String, fmtMAD: String, artOf: String, invSetModal() {},
+    esc: String, fmtMAD: String, artOf: String, invSetModal() {}, tillFeature: () => false,
   })('product-7');
   assert.equal(JSON.stringify(historyArgs), JSON.stringify({ productId: 'product-7', module: 'boutique', shared: true }));
 });
