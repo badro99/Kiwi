@@ -1,10 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=210';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=111';
-import { offerRegister } from './inventory.js?v=111';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=211';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=112';
+import { offerRegister } from './inventory.js?v=112';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
-import { bqKitTicketFoot } from './kit-2027.js?v=19';
-import { sellSearch } from './search.js?v=13';
+import { bqKitTicketFoot } from './kit-2027.js?v=20';
+import { sellSearch } from './search.js?v=14';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=4';
 

@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=111';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=29';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=111';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=111';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=112';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=30';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=112';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=112';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=1';
 
   'use strict';
 
@@ -1418,7 +1418,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
-          <button class="bq-nav-it" data-bq-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button>
+          <button class="bq-nav-it" data-bq-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button><button class="bq-nav-it" data-bq-view="livraisons"><i data-lucide="local_shipping"></i><span>Livraisons</span></button>
         </nav>
         <div class="bq-rail-foot">
           <button class="bq-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>
@@ -1460,7 +1460,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         <section class="bq-view" data-bq-panel="echanges"></section>
         <section class="bq-view" data-bq-panel="vendus"></section>
         <section class="bq-view" data-bq-panel="clientes"></section>
-        <section class="bq-view" data-bq-panel="acomptes"></section>
+        <section class="bq-view" data-bq-panel="acomptes"></section><section class="bq-view" data-bq-panel="livraisons"></section>
       </main>
       <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
       <div class="modal-veil" id="bq-approve-veil"><div class="modal bq-approve bq-rel" id="bq-approvem"></div></div>
@@ -1737,7 +1737,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       else panel.innerHTML = '<div class="bq-empty" style="margin:40px;">Analyse des ventes indisponible.</div>';
     }
     if (view === 'clientes') renderClientes();
-    if (view === 'acomptes') renderAcomptes();
+    if (view === 'acomptes') renderAcomptes(); if (view === 'livraisons') bqLivraisons($('[data-bq-panel="livraisons"]', root), { esc, icons, toast, fmtMAD, persistStock, slug: merchantSlug, demo: IS_DEMO });
   }
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;

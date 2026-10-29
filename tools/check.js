@@ -2513,7 +2513,7 @@ section('Whole-project regressions');
     'credit-book-refund-browser-test.mjs',
     'credit-book-refund-ui-test.mjs', 'credit-book-test.mjs',
     'credit-book-dashboard-browser-test.mjs',
-    'receivables-test.mjs',
+    'receivables-test.mjs', 'delivery-returns-test.mjs',
     'vexel-insights-card-dna-test.mjs',
   ];
   suites.forEach((name) => {

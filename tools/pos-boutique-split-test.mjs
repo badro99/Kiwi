@@ -56,7 +56,7 @@ async function modules(context) {
   const entry = get(url);
   await entry.link((specifier, owner) => get(new URL(specifier, owner.identifier)));
   await entry.evaluate();
-  assert.equal(cache.size, 19, 'exactly one instance per stamped module, including cyclic imports (the money module is the sixth, the 2027 kit module the seventh, the ticket-remise and search modules the eighth and ninth, the inventory tools the tenth, the stock-movements screen the eleventh, the no-sale drawer the twelfth, the shared product photos the thirteenth, the ticket-number module the fourteenth, the till inventory access the fifteenth, the size screen the sixteenth, the two-ticket Z split the seventeenth, the size split and the size colours the eighteenth and nineteenth)');
+  assert.equal(cache.size, 20, 'exactly one instance per stamped module, including cyclic imports (the money module is the sixth, the 2027 kit module the seventh, the ticket-remise and search modules the eighth and ninth, the inventory tools the tenth, the stock-movements screen the eleventh, the no-sale drawer the twelfth, the shared product photos the thirteenth, the ticket-number module the fourteenth, the till inventory access the fifteenth, the size screen the sixteenth, the two-ticket Z split the seventeenth, the size split and the size colours the eighteenth and nineteenth, the delivery returns screen the twentieth)');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

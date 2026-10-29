@@ -72,6 +72,7 @@ const BQ_MORE_VIEWS = [
   ['scan', 'barcode_scanner'],
   ['vendus', 'receipt_long'],
   ['acomptes', 'account_balance_wallet'],
+  ['livraisons', 'local_shipping'],
 ];
 /* Les commandes du tiroir, reconnues sur le bouton LIVRÉ : son identifiant,
    sa classe ou son action. Inconnue, elle garde « more_horiz » et sa place —
