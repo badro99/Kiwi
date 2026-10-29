@@ -170,7 +170,13 @@ ok(/n: -m\.d/.test(line) && !/reserve/.test(line), 'pieces counted positive; a h
 console.log('■ wiring');
 const sizes = fs.readFileSync(path.join(root, 'assets/boutique-sizes.js'), 'utf8');
 ok(/import \* as SPLIT from '\.\/boutique-size-split\.js\?v=\d+'/.test(sizes), 'the sizes screen imports the split module with a stamp');
-ok(/splitOn = !ro && shown\.length > 1;/.test(sizes), 'never on a read-only till or a single box');
+ok(/splitOn = rich && shown\.length > 1;/.test(sizes) && /const rich = !ro && sizeColorsOn\(\);/.test(sizes), 'never on a read-only till or a single box, and only with the merchant option');
+ok(/features\.boutiqueSizeColors === true/.test(sizes) && /env\.isReal\(\)\) return false/.test(sizes), 'the option comes from the console; the browser key only counts outside a real account');
+ok(/cellList = ro \? \[\] : rich \? COLORS\.cells\(.*\) : rows\(cat, pid\)/.test(sizes) && /const colorsHtml = !rich \? ''/.test(sizes), 'option off · the rows, the save and the screen are the ones from before');
+{
+  const admin = fs.readFileSync(path.join(root, "kiwi-admin.html"), 'utf8');
+  ok(/key:'boutiqueSizeColors', label:'Tailles et couleurs rapides', off:true/.test(admin), 'the console offers the option under Boutique, off by default');
+}
 ok(/import \* as COLORS from '\.\/boutique-size-colors\.js\?v=\d+'/.test(sizes) && /r\.colorLabel \? \{ colorLabel: r\.colorLabel, colorHex: r\.colorHex \}/.test(sizes), 'a new colour cell is created with its colour name and swatch');
 const sw = fs.readFileSync(path.join(root, 'kiwi-sw.js'), 'utf8');
 ok(/'\/assets\/boutique-size-split\.js\?v=\d+'/.test(sw) && /'\/assets\/boutique-size-colors\.js\?v=\d+'/.test(sw), 'both modules precached for the offline till');

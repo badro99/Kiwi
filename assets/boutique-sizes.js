@@ -118,6 +118,18 @@ export function variantWords(v, lang) {
    grille ; puis les tailles de la grille qui n'existent pas encore. Un ancien
    produit à plusieurs couleurs ne reçoit pas de lignes vides : on ne saurait
    pas de quelle couleur serait la nouvelle taille. */
+/* L'option du commerçant ; hors compte réel (démo, essai local), la clé
+   kiwiSizeColors = '1' de ce navigateur l'allume aussi. */
+export function sizeColorsOn() {
+  try {
+    const c = typeof window !== 'undefined' ? window.KiwiConfig : null;
+    if (c && c.features && c.features.boutiqueSizeColors === true) return true;
+    const env = typeof window !== 'undefined' ? window.KiwiEnv : null;
+    if (env && typeof env.isReal === 'function' && env.isReal()) return false;
+    return localStorage.getItem('kiwiSizeColors') === '1';
+  } catch (_) { return false; }
+}
+
 export function rows(cat, pid) {
   const d = cat.getProduct(pid);
   if (!d) return [];
@@ -230,17 +242,20 @@ export function mount(host, o) {
   let cols = null;
   let cellList = [];
   let carry = null;   // { values, quick } : ce qui était tapé, repris après un ajout de couleur
+  /* La répartition rapide et les couleurs s'allument par commerçant (option
+     « boutiqueSizeColors » de la console). Éteinte : l'écran d'avant, à l'identique. */
+  const rich = !ro && sizeColorsOn();
 
   const draw = () => {
     const d = cat.getProduct(pid);
     if (!d) { host.innerHTML = ''; return; }
     const creating = target > 0;
-    if (!ro && !cols) cols = COLORS.columns(cat, pid, o.lang, pal);
-    if (!ro) COLORS.css();
-    cellList = ro ? [] : COLORS.cells(cat, pid, cols, gridOf(d.product.kind));
-    const list = ro ? rows(cat, pid) : cellList.map((c) => Object.assign({ multi: false }, c));
+    if (rich && !cols) cols = COLORS.columns(cat, pid, o.lang, pal);
+    if (rich) COLORS.css();
+    cellList = ro ? [] : rich ? COLORS.cells(cat, pid, cols, gridOf(d.product.kind)) : rows(cat, pid);
+    const list = ro ? rows(cat, pid) : rich ? cellList.map((c) => Object.assign({ multi: false }, c)) : cellList;
     const shown = ro ? list.filter((r) => r.variant) : list;
-    const matrix = !ro && cols.length > 1;
+    const matrix = rich && cols.length > 1;
     const sizeList = [];
     shown.forEach((r) => { if (!sizeList.includes(r.size)) sizeList.push(r.size); });
     const rowsHtml = matrix ? '' : shown.map((r) => {
@@ -274,14 +289,14 @@ export function mount(host, o) {
       }).join('')}</tr>`;
     }).join('')}</tbody></table>`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
-    const colorsHtml = ro ? '' : `<div class="kbc" data-kbc>
+    const colorsHtml = !rich ? '' : `<div class="kbc" data-kbc>
       <div class="kbc-row"><span class="kbc-l">${esc(t.colors)}</span>${cols.filter((c) => !c.unique).map((c) => `<span class="kbc-chip">${dot(c)}${esc(c.label)}${used(c.key) ? '' : `<button type="button" data-kbc-del="${esc(c.key)}" aria-label="${esc(t.removeColor(c.label))}">${CLOSE_SVG}</button>`}</span>`).join('')}
         <button type="button" class="kbc-add" data-kbc-add aria-expanded="false">${PLUS_SVG}<span>${esc(cols.every((c) => c.unique) ? t.addColors : t.addColor)}</span></button></div>
       <div class="kbc-pal" data-kbc-pal hidden>${pal.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dot(COLORS.columnOf(c, o.lang))}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div>
     </div>`;
     const printable = printCount();
     /* Un carton à répartir : la bande de boutique-size-split.js au-dessus des cases. */
-    const splitOn = !ro && shown.length > 1;
+    const splitOn = rich && shown.length > 1;
     const page = () => `<div class="kbs" data-kbs>
       <div class="kbs-top">
         ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(d.stock))}</span>`}

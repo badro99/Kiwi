@@ -16,6 +16,9 @@
  *       typing « noir s-xl 2 bleu m3 l3 » adds a blue column on the spot and
  *       fills both; the bars stack in the colours; Enregistrer creates each
  *       colour + size with its colour, and the till label says « Bleu · M ».
+ * All of it sits behind the merchant option « boutiqueSizeColors » (off by
+ * default, switched on per merchant in the console); 0 checks the screen with
+ * it off is the one from before.
  * Demo till only: nothing reaches a server.
  *   node tools/boutique-size-split-browser-test.mjs
  */
@@ -38,7 +41,7 @@ await sleep(1200);
 const coreUrl = await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).find((u) => /\/assets\/pos-boutique\.js\?/.test(u)));
 await page.evaluate(async (u) => {
   window.KiwiConfig = window.KiwiConfig || {};
-  window.KiwiConfig.features = { ...(window.KiwiConfig.features || {}), caisseInventoryAdmin: true };
+  window.KiwiConfig.features = { ...(window.KiwiConfig.features || {}), caisseInventoryAdmin: true, boutiqueSizeColors: false };
   const m = await import(u);
   m.switchView('ventes');
   m.switchView('inventaire');
@@ -70,6 +73,23 @@ const close = async () => {
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^\s*Fermer\s*$/.test(x.textContent) && x.offsetParent); if (b) b.click(); });
   await sleep(500);
 };
+
+/* ── 0 · switched off (every merchant until the console turns it on) ──────── */
+const ZERO = 'TEST KIWI Pull sans option';
+await click('#bqi-new');
+await type('[data-bqx-name]', ZERO);
+await type('[data-bqi-price]', '390');
+await type('[data-kbs-total]', '6');
+await click('#bqi-n-save');
+await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
+await sleep(300);
+ok(!(await page.$('[data-kbsp-quick]')) && !(await page.$('.kbc')) && !(await page.$('table.kbm')), '0 · option off: the sizes screen is the one from before (no split, no colours)');
+await page.evaluate(() => { const i = document.querySelectorAll('[data-kbs-in]')[3]; i.value = '6'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+await click('[data-kbs-save]');
+await sleep(500);
+ok(await sizesOf(ZERO) === 'M:6', '0 · and it still saves as before', await sizesOf(ZERO));
+await close();
+await page.evaluate(() => { window.KiwiConfig.features.boutiqueSizeColors = true; });
 
 /* ── A · B · C : quick entry, remainder, save ─────────────────────────────── */
 const ONE = 'TEST KIWI Hoodie split';
