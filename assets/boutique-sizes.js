@@ -25,7 +25,7 @@
 
 import * as SPLIT from './boutique-size-split.js?v=4';
 import * as CODES from './boutique-size-codes.js?v=3';
-import * as COLORS from './boutique-size-colors.js?v=4';
+import * as COLORS from './boutique-size-colors.js?v=5';
 
 export const ONE_COLOR = 'unique';
 const GRID = {
