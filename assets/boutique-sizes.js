@@ -295,7 +295,7 @@ export function mount(host, o) {
       <div class="kbc-pal" data-kbc-pal hidden>${pal.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dot(COLORS.columnOf(c, o.lang))}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div>
     </div>`;
     const printable = printCount();
-    /* Un carton à répartir : la bande de boutique-size-split.js au-dessus des cases. */
+    /* Un carton à répartir : la bande de boutique-size-split.js sous les cases. */
     const splitOn = rich && shown.length > 1;
     const page = () => `<div class="kbs" data-kbs>
       <div class="kbs-top">
@@ -303,9 +303,9 @@ export function mount(host, o) {
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
       ${colorsHtml}
-      ${splitOn ? '<div data-kbs-split></div>' : ''}
       ${matrix ? matrixHtml : shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span></span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
       <ul class="kbs-list">${rowsHtml}</ul>` : `<p class="kbs-msg">${esc(t.empty)}</p>`}
+      ${splitOn ? '<div data-kbs-split></div>' : ''}
       <p class="kbs-msg" data-kbs-msg>${creating && list.length > 1 ? esc(t.hintCreate) : ''}</p>
       <div class="kbs-acts">
         <button type="button" class="kbs-btn" data-kbs-print${printable ? '' : ' disabled'}>${PRINT_SVG}<span>${esc(t.print(printable))}</span></button>
@@ -330,7 +330,7 @@ export function mount(host, o) {
       });
     }
     if (back && back.quick) return;
-    if (creating) { const first = host.querySelector(splitOn ? '[data-kbsp-quick]' : '[data-kbs-in]'); if (first) setTimeout(() => first.focus(), 40); }
+    if (creating) { const first = host.querySelector(splitOn ? '[data-kbsp-quick]' : '[data-kbs-in]'); if (first) setTimeout(() => first.focus({ preventScroll: true }), 40); }
   };
 
   /* Ajouter ou retirer une colonne de couleur, sans perdre ce qui est tapé. */
