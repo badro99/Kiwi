@@ -8,20 +8,31 @@ its §5 text, which still describes the removed More tab.
 
 ## Sign-in information (App Store Connect fields)
 
+Review account (owner, 2026-10-29): the **Amira Cafe** login, the
+owner-designated test account. That login holds four establishments (Amira
+Cafe, Amira Boutique, Pressing Amira, art de table by amira); the notes below
+send the reviewer to Amira Cafe only.
+
 | Field | Value |
 |-------|-------|
-| User name | `REVIEWER_LOGIN_EMAIL` (placeholder: the owner pastes the review account e-mail here and in App Store Connect) |
+| User name | The Amira login e-mail, typed by the owner in App Store Connect |
 | Password | Entered by the owner in App Store Connect only. Never in this repository, a message or a screenshot. |
+| Owner code | Added by the owner at the end of the Notes field in App Store Connect, never here |
 
-Before submitting, the owner signs in with that account on a clean install of the
-candidate build and walks the four paths below once. APP_STORE.md §2 lists what
-the account still needs (owner code, menu, staff).
+After the review, change the Amira password and owner code, and reverse any
+sale the reviewer rang up (CLAUDE.md §6: through the product, never by hand).
+
+**The reviewer may test Delete my account.** On this login that files a
+deletion request for all four establishments. Deletion is an operator step,
+never automatic: in the console, close that request without deleting anything.
 
 ## Notes to paste (App access)
 
 > Kiwi Pro is a business app for merchants who already have a Kiwi account,
 > created by Kiwi when they subscribe outside the app. Sign in with the account
-> in the Sign-In Information fields.
+> in the Sign-In Information fields. It is our test account and holds several
+> establishments: when the app asks which establishment to connect, choose
+> Amira Cafe. The owner code for the Dashboard is at the end of these notes.
 >
 > After sign-in the app asks what the device will be used for: Till, Kiwi Team,
 > Kitchen or Dashboard. Every role has a menu button (☰) at the top left. At the
@@ -72,7 +83,7 @@ the account still needs (owner code, menu, staff).
 | Kiwi Team | Lock › employee code | Yes (demo). Lock shows the venue, then "Hello {name}" with "Not you? Switch employee" |
 | Kitchen | Pairing keypad, Confirm enabled at six digits | Keypad only; pairing needs a live code |
 | Delete my account (demo) | ☰ › Delete my account | Yes, explains and offers Sign in |
-| Delete my account (signed in) | ☰ › Delete my account | **Not verified.** Needs the owner's password on a real test account (Amira Cafe). The owner runs this before submitting. |
+| Delete my account (signed in) | ☰ › Delete my account | Owner, on a real iPhone, 2026-10-29 |
 | Face ID | Lock › face key, or the offer after a real owner code | Browser with stubbed LocalAuthentication (`tools/native-face-entry-test.mjs`); needs one real device pass (E1) |
 | Forgot password | Sign-in › Forgot password? | Opens kiwi-os.com/support.html#mot-de-passe-oublie in an in-app Safari sheet |
 

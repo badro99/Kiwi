@@ -299,7 +299,8 @@ process.exitCode = failed ? 1 : 0;
     toast() {}, _rL: (fr, en) => en, document: { querySelector: () => true }, handlers: { 'nav-returns': () => { renders++; } },
     fetch: async () => { calls++; return reply; }, setTimeout: fn => { timer = fn; return 1; }, clearTimeout() {}, console };
   vm.createContext(context);
-  vm.runInContext(block + '\nthis.load = loadLiveCredits; this.rows = () => liveCredits; this.invalidate = () => { liveCreditsLoadedSlug = ""; };', context);
+  /* La relecture des 30 s relit aussi le registre des retours, déclaré juste au-dessus du bloc copié. */
+  vm.runInContext("let liveReturnsSlug = '', returnsState = '';\n" + block + '\nthis.load = loadLiveCredits; this.rows = () => liveCredits; this.invalidate = () => { liveCreditsLoadedSlug = ""; };', context);
   const flush = async () => { for (let i=0;i<12;i++) await Promise.resolve(); };
   reply = { ok: true, json: async () => ({ credits: [{ code: 'fixture', balance: 12.25 }] }) };
   context.load(); await flush();

@@ -153,10 +153,36 @@ ok('lire n\'ajoute aucune ligne au registre',
  * manuelle. Ce sont des interdictions de code, pas des goûts. */
 const src = pagesProSource(ROOT);
 const navHandler = (src.match(/handlers\['nav-stock-movements'\][\s\S]*?\n\};/) || [''])[0];
+const mzHelpers = (src.match(/const _mzTrade = \(\) => \{[\s\S]*?\nconst _mzReadable = [^\n]*\n/) || [''])[0];
+ok('le handler et les aides du tableau de bord se retrouvent dans la source', !!navHandler && !!mzHelpers);
+
+/* Le vrai handler « ouvrir les mouvements », avec les vraies aides de métier,
+ * exécuté contre un registre espion : ce qu'il APPELLE, pas ce qu'il contient. */
+function openDashboard(trade) {
+  const calls = { enable: 0, sync: 0, render: 0 };
+  const filter = { type: '', categoryId: '', days: 30, q: '', productId: '' };
+  const win = {
+    KiwiStoreTemplates: { currentTrade: () => trade },
+    KiwiMaisonStock: { enable() { calls.enable++; }, isMaison: () => trade === 'maison' },
+    KiwiInventory: { sync() { calls.sync++; return Promise.resolve(); } },
+  };
+  const sb = {
+    window: win, localStorage: { getItem: () => null }, handlers: {}, Promise, String,
+    MZS: () => win.KiwiMaisonStock, _mzFilter: filter, _mzRenderPage() { calls.render++; },
+    _bqxReady: () => true, toast() {}, dt: (k, f) => f,
+    document: { getElementById: () => null, activeElement: null },
+  };
+  vm.runInNewContext(mzHelpers + navHandler + '\nglobalThis.__module = _mzModule();', sb);
+  sb.handlers['nav-stock-movements']();
+  return { calls, days: filter.days, module: sb.__module };
+}
+const dashB = openDashboard('Boutique');
+const dashM = openDashboard('maison');
 ok('ouvrir les mouvements n\'appelle enable() que hors boutique',
-  /_mzModule\(\)\s*!==\s*'boutique'\s*\)\s*MZS\(\)\.enable\(\)/.test(navHandler), navHandler.slice(0, 160));
+  dashB.calls.enable === 0 && dashM.calls.enable === 1, JSON.stringify({ boutique: dashB.calls, maison: dashM.calls }));
+ok('la page est peinte dans les deux métiers', dashB.calls.render === 1 && dashM.calls.render === 1);
 ok('les lignes de la page sont lues avec le module du métier',
-  /Object\.assign\(\{\}, _mzFilter, \{ module: _mzModule\(\),/.test(src));
+  /Object\.assign\(\{\}, _mzFilter, \{ module: _mzModule\(\), shared: _mzModule\(\) === 'boutique' \}/.test(src));
 ok('l\'historique de la fiche produit aussi',
   /productHistory\(pid, 20, _mzModule\(\)\)/.test(src));
 ok('la saisie manuelle n\'est pas rendue pour la boutique',
@@ -194,19 +220,49 @@ ok('le pied de page boutique ne promet pas un historique exhaustif',
 
   const caisse = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/inv-moves.js'), 'utf8');
   const fiche = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/inventory.js'), 'utf8');
-  ok('caisse · la page lit la boutique en miroir', /\{ module: MODULE, shared: true,/.test(caisse));
-  ok('caisse · ses filtres aussi', /MZ\.facets\(MODULE, true\)/.test(caisse));
+
+  /* La vraie page « Mouvements de stock » de la caisse, ouverte contre un
+   * registre espion : on lit ce qu'elle demande au registre. */
+  const till = { list: [], facets: [], sync: 0 };
+  const listeners = {};
+  const fields = {};
+  const tillEl = {
+    style: {}, isConnected: true,
+    querySelector: (sel) => (fields[sel] ||= { value: '', innerHTML: '', addEventListener(t, fn) { listeners[sel] = fn; } }),
+  };
+  const tillWin = {
+    KiwiMaisonStock: {
+      list(q) { till.list.push(q); return []; },
+      facets(m, shared) { till.facets.push([m, shared]); return { types: [] }; },
+      types: () => [], totals: () => ({ count: 0, entries: 0, exits: 0 }),
+    },
+    KiwiInventory: { sync() { till.sync++; return Promise.resolve(); } },
+  };
+  const tillBox = {
+    window: tillWin, Date, Math, String, Promise, parseInt,
+    document: { getElementById: () => ({}), createElement: () => ({}), head: { appendChild() {} } },
+  };
+  vm.runInNewContext(caisse.replace(/^export function openMoves/m, 'function openMoves') + '\nglobalThis.__open = openMoves;', tillBox);
+  const tools = { esc: (x) => String(x), icons() {}, setModal: (html, cb) => cb(tillEl), catDB: () => null };
+  tillBox.__open(tools);
+  const first = till.list[0] || {};
+  ok('caisse · la page lit la boutique en miroir', first.module === 'boutique' && first.shared === true, JSON.stringify(first));
+  ok('caisse · ses filtres aussi', JSON.stringify(till.facets[0]) === JSON.stringify(['boutique', true]), JSON.stringify(till.facets));
   ok('caisse · la fiche article aussi', /list\?\.\(\{ productId: pid, module: 'boutique', shared: true \}\)/.test(fiche));
+  listeners['#bqm-days']({ target: { value: '30' } });
+  const narrowed = till.list[till.list.length - 1] || {};
+  tillBox.__open(tools);
+  const reopened = till.list[till.list.length - 1] || {};
   ok('caisse · elle s\'ouvre sur « Tout », comme le tableau de bord',
-    /const f = \{ q: '', days: 0,/.test(caisse) && /f\.days = 0;/.test(caisse));
-  ok('caisse · elle relit le serveur à l\'ouverture', /L\.sync\(\)/.test(caisse));
-  ok('tableau de bord · la page lit la boutique en miroir',
-    /\{ module: _mzModule\(\), shared: _mzModule\(\) === 'boutique' \}/.test(src));
+    first.from === undefined && typeof narrowed.from === 'number' && reopened.from === undefined,
+    JSON.stringify({ first: first.from, narrowed: narrowed.from, reopened: reopened.from }));
+  ok('caisse · elle relit le serveur à l\'ouverture', till.sync === 2, `${till.sync} relecture(s)`);
   ok('tableau de bord · ses filtres aussi', /M\.facets\(_mzModule\(\), _mzModule\(\) === 'boutique'\)/.test(src));
-  ok('tableau de bord · il s\'ouvre sur « Tout »', /_mzFilter\.days = 0;/.test(navHandler));
-  ok('tableau de bord · il relit le serveur à l\'ouverture', /L\.sync\(\)/.test(navHandler));
+  ok('tableau de bord · il s\'ouvre sur « Tout »', dashB.days === 0 && dashM.days === 0, JSON.stringify([dashB.days, dashM.days]));
+  ok('tableau de bord · il relit le serveur à l\'ouverture', dashB.calls.sync === 1, `${dashB.calls.sync} relecture(s)`);
   ok('les deux côtés lisent le même module',
-    /const MODULE = 'boutique';/.test(caisse) && /_mzTrade\(\)\.trim\(\)\.toLowerCase\(\) === 'boutique' \? 'boutique'/.test(src));
+    first.module === 'boutique' && dashB.module === 'boutique' && dashM.module === 'maison',
+    JSON.stringify({ caisse: first.module, boutique: dashB.module, maison: dashM.module }));
 }
 
 /* ── VI · le métier maison n'a pas bougé d'un bit ────────────────────────── */
