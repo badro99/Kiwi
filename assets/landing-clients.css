@@ -1,0 +1,118 @@
+/* « Ils tournent déjà sur Kiwi » (#clients) on every landing locale.
+ *
+ * The four logos sat in four bevelled glass boxes with 180 px of empty space
+ * above and below, and the heading's -0.06em tracking made "tournent" read as
+ * "tourment". The section is now one hairline-divided logo strip: logos in
+ * white at equal optical weight, their own colours on hover.
+ * The markup is the static export (fr/index.html and the six other locales),
+ * so this sheet only restyles it; hydration is untouched.
+ */
+#clients {
+  gap: 44px;
+  padding-top: 112px;
+  padding-bottom: 72px;
+  /* The page's green globe shows through this section. Dim it behind the
+     text and fade to the black of the next section, which used to cut the
+     glow off in a hard line. */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0.62) 96px, rgba(0, 0, 0, 0.8) 45%, #000 88%);
+}
+
+#clients h2 {
+  letter-spacing: -0.032em;
+}
+
+/* the feature section below starts closer, its own padding was sized for
+   the old 180 px gap */
+#clients + section {
+  padding-top: 40px;
+}
+
+#clients ul {
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  /* the 1 px gaps between cells show this as hairlines */
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 30px 80px -40px rgba(0, 255, 174, 0.18);
+}
+
+#clients li.kiwi-glass {
+  height: 148px;
+  border-radius: 0;
+  background: #040605;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: background-color 0.4s ease;
+}
+
+#clients li.kiwi-glass::before,
+#clients .kw-logo-sheen {
+  display: none;
+}
+
+#clients li img {
+  max-width: 78%;
+  /* every logo in plain white, so four brands read as one row */
+  filter: brightness(0) invert(1);
+  opacity: 0.84;
+  transition: opacity 0.35s ease, filter 0.35s ease;
+}
+
+/* Startoner keeps its own colours (owner, 29 Oct 2026). */
+#clients img[src*="startoner"] {
+  filter: none;
+  opacity: 1;
+}
+
+/* Equal optical weight: the boxy marks shorter, the thin ones taller. */
+#clients img[src*="mix-restaurant"] { height: 68px; }
+#clients img[src*="pasta-corner"]   { height: 64px; }
+#clients img[src*="claro"]          { height: 37px; }
+#clients img[src*="startoner"]      { height: 34px; }
+
+@media (hover: hover) {
+  #clients li.kiwi-glass:hover {
+    background:
+      radial-gradient(90% 80% at 50% 115%, rgba(0, 255, 174, 0.12), transparent 70%),
+      #040605;
+  }
+
+  #clients li.kiwi-glass:hover img {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  #clients {
+    gap: 32px;
+    padding-top: 72px;
+    padding-bottom: 48px;
+  }
+
+  #clients h2 {
+    letter-spacing: -0.03em;
+  }
+
+  #clients ul {
+    border-radius: 20px;
+  }
+
+  #clients li.kiwi-glass {
+    height: 112px;
+  }
+
+  #clients img[src*="mix-restaurant"] { height: 50px; }
+  #clients img[src*="pasta-corner"]   { height: 46px; }
+  #clients img[src*="claro"]          { height: 27px; }
+  #clients img[src*="startoner"]      { height: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #clients li.kiwi-glass,
+  #clients li img {
+    transition: none;
+  }
+}
