@@ -45,6 +45,7 @@ function world(vertical) {
   });c.window=c;c.KiwiLive={saleIdFor:({id})=>id};
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);
+  if(vertical==='boutique')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts']);
   load(c,core,['lineBase','lineUnit','lineTotal','rewardDiscount',...(vertical==='maison'?['isConsigned','consignedOf']:[]),'ticketTotals',
     'RETAIN_DAYS','srvMethod','remoteLine',...(vertical==='boutique'?['remoteMoney']:[]),'syncReturnSales','bqLineTotals','bqFoldBasket','BQ_SRV_METHOD','bqPaymentParts','bqPaymentMethod','originalSalePayload',
     'businessDayKey','isToday','salesToday','notCashedOf',...(vertical==='maison'?['cashedOf']:[]),'caToday','bqMoneyParts','bqDayTotals','bqZJournal']);

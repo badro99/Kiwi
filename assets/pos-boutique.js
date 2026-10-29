@@ -1,10 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=106';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=24';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=106';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=106';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=107';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=25';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=107';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=107';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1';
 
   'use strict';
 
@@ -2230,10 +2231,10 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     return methods.some((part) => part.method === 'delivery') ? 'delivery' : 'credit';
   }
 
-  function bqDayTotals() {
+  function bqDayTotals(only) {
     const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, itemsReturned: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0, acompteReceived: 0, outstanding: 0 };
-    salesToday().forEach((s) => {
-      let took = 0;
+    zSalesFor(salesToday(), only).forEach((s) => {
+      let took = 0; const away = only === 'store' && zIsDelivery(s);   /* livraison vue du Z magasin : l'argent du comptoir seul */
       /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
          raison, ce n'est pas de l'argent qui rentre — mais l'écarter du total
          ne dispense pas de le dire : la marchandise, elle, est bien sortie du
@@ -2241,8 +2242,8 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
          stock contre un avoir sans qu'aucun chiffre de la clôture ne bouge. */
       let onAvoir = 0;
       if (Array.isArray(s.parts)) s.parts.forEach((p) => { if (p && p.m === 'avoir') onAvoir += +p.amount || 0; });
-      if (onAvoir > 0) { t.avoirUsed += onAvoir; t.avoirUsedN++; }
-      bqMoneyParts(s).forEach((p) => {
+      if (onAvoir > 0 && !away) { t.avoirUsed += onAvoir; t.avoirUsedN++; }
+      zSplitParts(s, bqMoneyParts(s), only).forEach((p) => {
         if (p.m !== 'livraison') took += p.amount;
         if (p.m === 'espèces') t.cash += p.amount;
         else if (p.m === 'carte') t.card += p.amount;
@@ -2252,7 +2253,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
         else t.other += p.amount;
       });
       if (took > 0) { t.moneyIn += took; t.paidTxns++; }
-      if (s.kind === 'acompte' || s.kind === 'acompte-reglement') t.acompteReceived += took;
+      if (s.kind === 'acompte' || s.kind === 'acompte-reglement') t.acompteReceived += took; if (away) return;   /* le ticket, ses articles et sa remise partent sur le Z livraisons */
       /* DEUX compteurs, parce qu'il y a deux questions. `paidTxns` ne retient
          que les tickets qui ont fait entrer de l'argent — c'est le diviseur du
          ticket moyen. `txns` compte TOUS les tickets du jour, y compris celui
@@ -2273,12 +2274,12 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
        dette que le magasin vient de contracter) et ce qui a été CONSOMMÉ (une
        dette qu'il vient d'éteindre en marchandise). Les additionner serait un
        contresens ; les taire l'était aussi. */
-    AVOIRS.forEach((a) => {
+    if (only !== 'delivery') AVOIRS.forEach((a) => {
       if (!a || !a.at || !isToday(a.at)) return;
       const v = +a.amount || 0;
       if (v > 0) { t.avoirIssued += v; t.avoirIssuedN++; }
     });
-    t.outstanding = bqOutstandingCents / 100;
+    t.outstanding = only === 'delivery' ? 0 : bqOutstandingCents / 100;
     ['moneyIn', 'cash', 'card', 'transfer', 'cheque', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued', 'acompteReceived'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
     return t;
   }
@@ -2289,21 +2290,21 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
      rend le tiroir exact quand un ticket est réglé moitié carte moitié espèces.
      Le panier ne voyage qu'avec la première part, sinon le classement par
      rayon compterait chaque article deux fois. */
-  function bqReportSales() {
+  function bqReportSales(only) {
     const out = [];
-    salesToday().forEach((s) => {
-      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime();
-      const lines = (s.lines || []).filter((ln) => (+ln.qty || 0) > 0).map((ln) => ({
+    zSalesFor(salesToday(), only).forEach((s) => {
+      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime(), away = only === 'store' && zIsDelivery(s);
+      const lines = (away ? [] : s.lines || []).filter((ln) => (+ln.qty || 0) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
         qty: +ln.qty, /* brut, comme les lignes du serveur : les pièces rendues sortent à part (itemsReturned) */
         total: Math.round((+ln.unit || 0) * (+ln.qty) * 100) / 100,
         cat: rayonOf(ln.pid) || '',
       }));
-      const taken = bqMoneyParts(s);
+      const taken = zSplitParts(s, bqMoneyParts(s), only);
       if (s.syncId && (taken.length || lines.length)) { /* un ticket réglé sans argent (avoir) reste un ticket, comme au serveur */
         out.push({ id: s.syncId, ts: at,
           amount: taken.reduce((sum, part) => sum + part.amount, 0),
-          method: bqPaymentMethod(s.parts),
+          method: bqPaymentMethod(zSentParts(s, only)),
           parts: bqPaymentParts(taken),
           label: s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
           ref: s.id, cashier: s.by || '', lines: lines.length ? lines : null });
@@ -2327,29 +2328,29 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     return out;
   }
 
-  function bqReportSession(counted) {
-    const t = bqDayTotals();
+  function bqReportSession(counted, only) {
+    const t = bqDayTotals(only);
     return {
       openedAt: bqShift ? bqShift.openedAt : 0,
       openedBy: bqShift ? bqShift.openedBy : '',
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
-      openingFloat: bqShift ? bqShift.float : 0,
+      openingFloat: only !== 'delivery' && bqShift ? bqShift.float : 0,
       cashMovements: [], handovers: [],
       discounts: t.discounts, discountsCount: t.discountsN, cancels: 0, itemsReturned: t.itemsReturned,
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
-      countedCash: counted,
+      countedCash: only === 'delivery' ? null : counted,
     };
   }
   /* La journée commerciale d'un service est celle de son OUVERTURE (même règle
      que la caisse restaurant) : une boutique de souk ouverte jusqu'après minuit
      clôture UNE journée, pas deux. */
-  function bqBuildReport(counted, closedAt) {
+  function bqBuildReport(counted, closedAt, only) {
     const DR = window.KiwiDayReport;
     if (!DR) return null;
-    const sess = bqReportSession(counted);
+    const sess = bqReportSession(counted, only);
     if (closedAt) sess.closedAt = closedAt;
     const pv = pvPaired() || {};
     /* La journée commerciale EN COURS, comme closeRegister() côté restaurant :
@@ -2360,7 +2361,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
        ouvert le 17 octobre, 318 ventes en 30 jours pour 2 rapports). */
     return DR.build({
       day: DR.businessDay(Date.now()),
-      sales: bqReportSales(),
+      sales: bqReportSales(only),
       session: sess,
       store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },
       source: 'caisse',
@@ -2480,7 +2481,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     } catch (_) {}
   }
 
-  function bqPrintReport(report, copyLabel) {
+  function bqPrintReport(report, copyLabel, only) {
     if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) {
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Imprimante indisponible')); return Promise.resolve({ ok: false });
     }
@@ -2493,21 +2494,19 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       report: report,
       shop: pv.name || 'Kiwi',
       address: pv.location || '',
-      title: 'RAPPORT JOURNALIER',
       dateLabel: p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : report.day,
       copy: copyLabel || '',
       openedLabel: hm(report.openedAt),
       closedLabel: hm(report.closedAt || Date.now()),
       detailTitle: 'DÉTAIL PAR ' + String(V.cat || 'rayon').toUpperCase(),
       drawerTitle: 'TIROIR-CAISSE',
-      netLabel: 'NET DU JOUR',
       unitWord: V.items || 'articles',
       unitWordOne: V.item || '',
       notCounted: 'non compté',
       handoverWord: 'Passation',
       reopenWord: 'Clôture n°',
       methodLabels: { cash: 'Espèces', card: 'Carte', transfer: 'Virement / Versement', cheque: 'Chèque', wallet: 'Wallet', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
-      fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
+      fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''), ...zTicketOpts(only),   /* titre, net et tiroir du ticket : magasin ou livraisons */
     }).then((res) => {
       if (res && res.ok) toast(res.via === 'pdf' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport prêt · imprimer ou partager le PDF') : res.via === 'browser' ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport ouvert dans l\'impression système') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport imprimé'));
       else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression impossible · le rapport reste dans le tableau de bord'));
@@ -2669,7 +2668,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
   }
 
   /* ── la clôture ── */
-  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null;
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null;
   function bqUpdateEcart() {
     const v = bqCloVeil; if (!v) return;
     const line = v.querySelector('#bqclo-ecart-line'), out = v.querySelector('#bqclo-ecart'), inp = v.querySelector('#bqclo-count');
@@ -2796,9 +2795,9 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
        aucune écriture (même contrat que #clo-print côté restaurant). */
     v.querySelector('#bqclo-print').onclick = () => {
       const raw = v.querySelector('#bqclo-count').value;
-      const r = bqBuildReport(raw === '' || raw == null ? null : parseFloat(raw), 0);
-      if (!r) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
-      bqPrintReport(r, 'AVANT CLÔTURE');
+      const pair = zPair(bqBuildReport, raw === '' || raw == null ? null : parseFloat(raw), 0, null);
+      if (!pair) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
+      zPrintPair(bqPrintReport, pair, 'AVANT CLÔTURE');
     };
     v.querySelector('#bqclo-close').onclick = bqCloseRegister;
   }
@@ -2838,10 +2837,10 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       countedCents: bqCents(countedCash),
       gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
     });
-    bqZQueue(true);
+    bqZQueue(true); const pair = zPair(bqBuildReport, counted, report.closedAt, report);   /* les deux tickets du Z, avant d'effacer le poste */
     bqShift = null;
     bqShiftPersist();
-    if (report) bqShowPostClose(report); else bqFinishClose();
+    if (report) bqShowPostClose(report, pair); else bqFinishClose();
   }
   function bqFinishClose() {
     const z = document.getElementById('bq-zsheet');
@@ -2850,8 +2849,8 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     setTimeout(() => location.reload(), 640);
   }
   /* L'écran d'après-clôture : une décision, la trace papier. */
-  function bqShowPostClose(report) {
-    bqClosedReport = report;
+  function bqShowPostClose(report, pair) {
+    bqClosedReport = report; bqClosedPair = pair || null;
     const L = window.KiwiCaisseLang || { t: s => s };
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
@@ -2886,7 +2885,8 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     const doPrint = (btn) => {
       if (!bqClosedReport) return bqFinishClose();
       btn.disabled = true;
-      bqPrintReport(bqClosedReport, btn === reprint ? 'DUPLICATA' : '').then((res) => {
+      const copy = btn === reprint ? 'DUPLICATA' : '';
+      (bqClosedPair ? zPrintPair(bqPrintReport, bqClosedPair, copy) : bqPrintReport(bqClosedReport, copy)).then((res) => {
         btn.disabled = false;
         if (res?.ok && reprint) { reprint.hidden = false; icons(); }
       });

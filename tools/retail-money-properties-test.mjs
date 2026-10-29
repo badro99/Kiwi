@@ -126,6 +126,14 @@ for(const vertical of ['boutique','maison']){
    assert.equal(C(c.caToday()),want);const z=Array.from(c.bqZJournal('test-shop')).filter(r=>!r.voided);assert.equal(sum(z.map(r=>C(r.amount))),want);assert.equal(z.length,paid.length);
    const day=c.bqDayTotals();assert.equal(C(day.moneyIn),want);assert.equal(day.txns,live.length);assert.equal(C(day.delivery),sum(live.filter(r=>r.method==='livraison').map(r=>r.cents)));
  }));
+ // Boutique Z prints two tickets: the shop (no livraison) and the livraisons. Together they are the day; cash never leaves the shop ticket.
+ if(vertical==='boutique') await strict('boutique Z splits into shop and livraison tickets that add up to the day',fc.property(fc.array(fc.array(fc.record({cents:positive,method:fc.constantFrom('espèces','carte','virement','avoir','livraison')}),{minLength:1,maxLength:3}),{maxLength:40}),sales=>{
+   c.AVOIRS=[];c.SALES=sales.map((parts,i)=>({id:'s'+i,syncId:'sync'+i,at:new Date(TS),total:sum(parts.map(p=>p.cents))/100,parts:parts.map(p=>({m:p.method,amount:p.cents/100})),lines:[{pid:'p',qty:1}],discount:1}));
+   const all=c.bqDayTotals(),shop=c.bqDayTotals('store'),away=c.bqDayTotals('delivery'),isDel=parts=>parts.some(p=>p.method==='livraison');
+   assert.equal(C(shop.moneyIn)+C(away.moneyIn),C(all.moneyIn));assert.equal(C(shop.cash),C(all.cash));assert.equal(C(away.cash),0);
+   assert.equal(C(shop.delivery),0);assert.equal(C(away.delivery),C(all.delivery));assert.equal(C(shop.avoirUsed)+C(away.avoirUsed),C(all.avoirUsed));
+   assert.equal(away.txns,sales.filter(isDel).length);assert.equal(shop.txns,sales.length-away.txns);assert.equal(shop.items+away.items,all.items);
+ }));
 }
 for(const vertical of ['boutique','maison']){
  const w=world(vertical),c=w.c;

@@ -559,7 +559,9 @@
       vatBlock.lines.forEach(function (l) { b.line(row(l[0], l[1], paper)); });
     }
 
-    /* Le tiroir — la partie qu'on compte et qu'on signe. */
+    /* Le tiroir — la partie qu'on compte et qu'on signe. noDrawer : le Z des
+       livraisons de la boutique, où rien n'entre au tiroir ni au terminal. */
+    if (!o.noDrawer) {
     var cash = r.cash || {};
     b.line(rule(paper));
     b.align('center').bold(true).line(o.drawerTitle || 'TIROIR-CAISSE').bold(false).align('left');
@@ -593,6 +595,7 @@
       var cv = cg === 0 ? (o.cardMatched || 'RAPPROCHÉ')
         : (cg > 0 ? 'TERMINAL + ' : 'KIWI + ') + money(Math.abs(cg));
       b.bold(true).line(row('RÉSULTAT', cv, paper)).bold(false);
+    }
     }
 
     /* Le net ferme le ticket : c'est le chiffre qu'on reporte. */
