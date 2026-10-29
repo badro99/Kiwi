@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=96';
-import { openDrawerNoSale } from './pos-boutique/drawer.js?v=14';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=96';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=96';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=97';
+import { openDrawerNoSale } from './pos-boutique/drawer.js?v=15';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=97';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=97';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
 
@@ -2036,7 +2036,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
           const ptsBefore = Number(c.points) || 0;
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
             try { const res = window.KiwiClients.recordPurchase(c.id, {
-              amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
+              amount: Math.max(0, receivedNow - parts.filter((x) => x.m === 'avoir').reduce((sum, x) => sum + (+x.amount || 0), 0)), method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at, // argent neuf seulement, comme le serveur : l'avoir a déjà rapporté ses points
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty, id: ln.pid || '' })),
             }); if (res && res.client && !res.replayed) pts = Math.max(0, (Number(res.client.points) || 0) - ptsBefore); } catch (_) {}
             // La récompense est portée : on retire le seuil (KiwiClients.redeem),

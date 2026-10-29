@@ -1,8 +1,8 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=195';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=96';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=196';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=97';
 import { openMoves } from './inv-moves.js?v=5';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=16';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=96';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=97';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════

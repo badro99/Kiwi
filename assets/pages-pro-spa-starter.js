@@ -1013,9 +1013,9 @@
       ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund', origin: 'caisse',
     }));
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', delivery: 'Livraison', unknown: 'Non renseigné' },
-      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', delivery: 'Delivery', unknown: 'Not recorded' },
-      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', delivery: 'توصيل', unknown: 'غير مسجّل' },
+      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', delivery: 'Livraison', credit: 'Avoir', avoir: 'Avoir', unknown: 'Non renseigné' },
+      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', delivery: 'Delivery', credit: 'Store credit', avoir: 'Store credit', unknown: 'Not recorded' },
+      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', delivery: 'توصيل', credit: 'رصيد المتجر', avoir: 'رصيد المتجر', unknown: 'غير مسجّل' },
     };
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };

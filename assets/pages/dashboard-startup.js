@@ -22,7 +22,7 @@
     'assets/pages-pro-office.js?v=3',
     'assets/pages-pro.js?v=2193',
     'assets/pages-pro-boutique.js?v=17',
-    'assets/pages-pro-spa-starter.js?v=3',
+    'assets/pages-pro-spa-starter.js?v=4',
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
     'assets/menu-nutrition.js?v=4',

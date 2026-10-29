@@ -364,8 +364,8 @@
     "sha": "2d7b6732612470e0"
   },
   "assets/customer-retention.js": {
-    "v": "17",
-    "sha": "ef2368866bb2187c"
+    "v": "18",
+    "sha": "9fd40a7ac5b18c68"
   },
   "assets/dark-fixes.js": {
     "v": "5",
@@ -1308,8 +1308,8 @@
     "sha": "6093a89fe6c42e6c"
   },
   "assets/pages-pro-spa-starter.js": {
-    "v": "3",
-    "sha": "35075052696de3fe"
+    "v": "4",
+    "sha": "61cb80e652fb865d"
   },
   "assets/pages-pro.css": {
     "v": "4",
@@ -1344,8 +1344,8 @@
     "sha": "3eaee9016797b178"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "84",
-    "sha": "8e9bd1679636fc16"
+    "v": "85",
+    "sha": "01cf76216f574bce"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1440,20 +1440,20 @@
     "sha": "0377d7489dd2a6b7"
   },
   "assets/pos-boutique.css": {
-    "v": "195",
+    "v": "196",
     "sha": "56a196b8e19951eb"
   },
   "assets/pos-boutique.js": {
-    "v": "195",
-    "sha": "3d6f61f0f628f6c9"
+    "v": "196",
+    "sha": "40a9a0f2bce0238a"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "96",
-    "sha": "6d17e80f1345030f"
+    "v": "97",
+    "sha": "508809306a3c85db"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "14",
-    "sha": "5238c13bce3f7086"
+    "v": "15",
+    "sha": "17d1e3830166dc3a"
   },
   "assets/pos-boutique/inv-moves.js": {
     "v": "5",
@@ -1464,16 +1464,16 @@
     "sha": "b0c54660dd11c911"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "96",
-    "sha": "9674483ce5bf7d10"
+    "v": "97",
+    "sha": "df5c79adb6807577"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "19",
     "sha": "2847ecce7d0a03b2"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "96",
-    "sha": "a6461ed8535cac87"
+    "v": "97",
+    "sha": "bd2cee147c5092e2"
   },
   "assets/pos-boutique/search.js": {
     "v": "12",
@@ -1496,8 +1496,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "267",
-    "sha": "071cefcd5445084b"
+    "v": "268",
+    "sha": "9c076438aeeeeb4a"
   },
   "assets/pos-epicerie.css": {
     "v": "29",

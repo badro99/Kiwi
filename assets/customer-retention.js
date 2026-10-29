@@ -311,6 +311,9 @@
        qu'elle est récente. Passé regularDays sans retour, elle rejoint « vient
        moins souvent » comme avant. */
     if ((+c.visits || 0) < 2) return 'new';
+    /* Même règle que la page Clients (KiwiClients.segment) : deux visites dans
+       le premier mois, c'est encore une nouvelle cliente. */
+    if ((+c.visits || 0) <= 2 && c.firstSeenTs > 0 && (now - c.firstSeenTs) / DAY <= 30) return 'new';
     return 'regular';
   }
   function avgBasket(c) { var v = +c.visits || 0; return v ? (+c.spend || 0) / v : 0; }
