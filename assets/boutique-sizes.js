@@ -24,8 +24,8 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import * as SPLIT from './boutique-size-split.js?v=4';
-import * as CODES from './boutique-size-codes.js?v=1';
-import * as COLORS from './boutique-size-colors.js?v=3';
+import * as CODES from './boutique-size-codes.js?v=2';
+import * as COLORS from './boutique-size-colors.js?v=4';
 
 export const ONE_COLOR = 'unique';
 const GRID = {
@@ -55,7 +55,7 @@ const T = {
     newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
     colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
-    codeKey: 'Codes-barres : le 2e chiffre dit la couleur, l’avant-dernier la taille. Le même milieu pour tout l’article.',
+    codeKey: 'Codes-barres : après le 2, deux chiffres pour la couleur ; avant le dernier, deux pour la taille. Le milieu est celui de l’article.',
   },
   en: {
     total: 'Total quantity', totalHint: 'How many pieces came in. You split them by size right after.',
@@ -75,7 +75,7 @@ const T = {
     newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code',
     out: 'Sold out', empty: 'No sizes yet.',
     colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
-    codeKey: 'Barcodes: the 2nd digit is the colour, the second-to-last the size. The same middle for the whole item.',
+    codeKey: 'Barcodes: after the 2, two digits for the colour; before the last, two for the size. The middle is the item’s.',
   },
   ar: {
     total: 'الكمية الإجمالية', totalHint: 'عدد القطع المستلمة. ستوزّعها حسب المقاس مباشرة بعد ذلك.',
@@ -95,7 +95,7 @@ const T = {
     newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود',
     out: 'نفد', empty: 'لا مقاسات بعد.',
     colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
-    codeKey: 'الرموز الشريطية: الرقم الثاني هو اللون، وما قبل الأخير هو المقاس. الوسط نفسه لكل المنتج.',
+    codeKey: 'الرموز الشريطية: بعد الرقم 2، رقمان للون؛ وقبل الأخير، رقمان للمقاس. الوسط خاص بالمنتج.',
   },
 };
 export const words = (lang) => T[lang] || T.fr;
@@ -264,17 +264,17 @@ export function mount(host, o) {
     shown.forEach((r) => { if (!sizeList.includes(r.size)) sizeList.push(r.size); });
     const colName = (c) => (c.unique ? t.noColor : c.label);
     const dot = (c) => `<span class="kbc-dot" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}"></span>`;
-    /* Les codes qui se lisent (boutique-size-codes.js) : le chiffre de la couleur
+    /* Les codes qui se lisent (boutique-size-codes.js) : le code de la couleur
        dans sa pastille, celui de la taille à côté d'elle, et dans chaque case le
-       code avec ces deux chiffres en vert. */
+       code-barres avec ces deux codes en vert. */
+    const plan = rich ? CODES.planner(cat, pid, sizeList) : null;
     const famOf = (c) => (!c || c.unique ? 'unique' : (c.family || c.id));
-    const digDot = (c) => `<span class="kbc-dot kbm-dig${c.unique || c.light || !c.hex ? ' is-light' : ''}" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}">${CODES.colorDigit(famOf(c))}</span>`;
+    const digDot = (c) => `<span class="kbc-dot kbm-dig${c.unique || c.light || !c.hex ? ' is-light' : ''}" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}">${CODES.colorCode(famOf(c))}</span>`;
     const codeOf = (r) => {
       const code = r.variant ? o.primary(r.variant) : '';
       if (!code) return '';
-      const c = cols && cols.find((k) => k.key === r.col);
       const bits = CODES.parts(code);
-      if (!bits || code !== CODES.smartCode(pid, famOf(c), r.size)) return `<code class="kbm-code">${esc(code)}</code>`;
+      if (!bits) return `<code class="kbm-code">${esc(code)}</code>`;
       return `<code class="kbm-code">${bits[0]}<b>${bits[1]}</b>${bits[2]}<b>${bits[3]}</b>${bits[4]}</code>`;
     };
     const anySmart = rich && shown.some((r) => r.variant && /<b>/.test(codeOf(r)));
@@ -299,7 +299,7 @@ export function mount(host, o) {
     }).join('');
     const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${digDot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
       const sl = size === 'TU' ? t.tu : size;
-      return `<tr><th scope="row">${esc(sl)}<span class="kbm-sd">${CODES.sizeDigit(size)}</span></th>${cols.map((c) => {
+      return `<tr><th scope="row">${esc(sl)}<span class="kbm-sd">${esc(plan ? plan.sizeOf(size) : '')}</span></th>${cols.map((c) => {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
         const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
@@ -445,6 +445,7 @@ export function mount(host, o) {
     const got = {};
     let codes = 0;
     const run = () => {
+      const plan = rich ? CODES.planner(cat, pid, list.map((x) => x.size)) : null;
       out.forEach(({ key, n }) => {
         const r = list.find((x) => x.key === key);
         if (!r) return;
@@ -458,7 +459,7 @@ export function mount(host, o) {
         }
         if (!v) return;
         const fam = rich ? (() => { const c = cols.find((k) => k.key === r.col); return !c || c.unique ? 'unique' : (c.family || c.id); })() : '';
-        if (!o.primary(v) && cat.generateBarcode(v.id, rich ? CODES.smartCode(pid, fam, r.size) : undefined)) codes++;
+        if (!o.primary(v) && cat.generateBarcode(v.id, plan ? plan.code(fam, r.size) : undefined)) codes++;
         got[v.id] = (got[v.id] || 0) + n;
       });
     };
@@ -705,7 +706,7 @@ export function createProduct(cat, data, total) {
     p = cat.addProduct(data);
     if (p && !hasGrid(p.kind)) {
       const ev = cat.ensureVariant({ productId: p.id, colorId: ONE_COLOR, size: 'TU', stock: total });
-      if (ev && ev.variant) cat.generateBarcode(ev.variant.id, sizeColorsOn() ? CODES.smartCode(p.id, 'unique', 'TU') : undefined);
+      if (ev && ev.variant) cat.generateBarcode(ev.variant.id, sizeColorsOn() ? CODES.planner(cat, p.id, ['TU']).code('unique', 'TU') : undefined);
     }
   };
   if (cat.batch) cat.batch(run); else run();

@@ -1,6 +1,6 @@
 /* Le tiroir sans vente de la caisse boutique, sorti de sales.js (plafond de
  * taille, tools/file-size-ratchet-test.mjs). Mêmes octets de logique qu'avant. */
-import { toast, pvReal, pvPaired } from '../pos-boutique.js?v=212';
+import { toast, pvReal, pvPaired } from '../pos-boutique.js?v=213';
 
 /* Ouvrir le tiroir sans vente, le geste du restaurant
    (caisse-accounting/drawer.js) porté à la boutique : code manager validé

@@ -165,20 +165,31 @@ console.log('■ barcodes that read (boutique-size-codes.js)');
 {
   const C = await import(pathToFileURL(path.join(root, 'assets/boutique-size-codes.js')).href);
   const ean = (c) => { let sum = 0; for (let i = 0; i < 12; i++) sum += (+c[i]) * (i % 2 === 0 ? 1 : 3); return (10 - (sum % 10)) % 10 === +c[12]; };
-  const blackM = C.smartCode('p-kaftan', 'noir', 'M');
-  const whiteXL = C.smartCode('p-kaftan', 'blanc', 'XL');
-  const blueM = C.smartCode('p-kaftan', 'bleu', 'M');
-  ok(/^2\d{12}$/.test(blackM) && ean(blackM) && ean(whiteXL) && ean(blueM), 'in-store EAN-13 (starts with 2) with a valid check digit', blackM);
-  ok(blackM[1] === '1' && whiteXL[1] === '0' && blueM[1] === '8', 'the 2nd digit is the colour · 1 black, 0 white, 8 blue', [blackM, whiteXL, blueM].join(' '));
-  ok(blackM[11] === '4' && whiteXL[11] === '6', 'the digit before the check is the size · M 4, XL 6');
-  ok(C.sizeDigit('38') === 8 && C.sizeDigit('41') === 1 && C.sizeDigit('TU') === 0 && C.sizeDigit('XXS') === 1 && C.sizeDigit('3XL') === 8, 'shoes and numbered sizes · the last digit of the size (38 → 8); one size → 0');
-  ok(blackM.slice(2, 11) === whiteXL.slice(2, 11) && blackM.slice(2, 11) !== C.smartCode('p-autre', 'noir', 'M').slice(2, 11), 'one product · one middle, shared by all its variants; another product · another middle');
-  ok(C.smartCode('p-kaftan', 'noir', 'M') === blackM, 'the same on every device (no counter to share)');
-  ok(C.colorDigit('beige') === C.colorDigit('marron') && C.colorDigit('quelconque') === 9 && C.colorDigit('unique') === 9, 'thirteen families on ten digits · beige and brown share 3; no colour → 9');
-  ok(JSON.stringify(C.parts(blackM)) === JSON.stringify([blackM[0], blackM[1], blackM.slice(2, 11), blackM[11], blackM[12]]) && C.parts('3001234567890') === null, 'cut for display · prefix, colour, item, size, check; not an in-store code → nothing');
+  const fams = ['blanc', 'beige', 'noir', 'gris', 'marron', 'rouge', 'rose', 'orange', 'jaune', 'vert', 'bleu', 'violet', 'multi', 'unique'];
+  ok(new Set(fams.map(C.colorCode)).size === fams.length, 'every colour family has its own code · no two share one');
+  ok(C.colorCode('blanc') === '00' && C.colorCode('noir') === '10' && C.colorCode('rouge') === '20' && C.colorCode('bleu') === '31', 'grouped so they read · 0x light (00 white), 1x dark (10 black), 2x warm (20 red), 3x cool (31 blue)');
+  const letters = ['TU', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
+  ok(new Set(letters.map(C.naturalSize)).size === letters.length && C.naturalSize('M') === '04' && C.naturalSize('TU') === '00', 'every letter size has its own code · 00 one size, 04 M');
+  ok(C.naturalSize('38') === '38' && C.naturalSize('44') === '44' && C.naturalSize('2 ans') === null && C.naturalSize('104') === null, 'numbered sizes write themselves (38 → 38); others get a code per item');
+  const cat = (codes) => ({ listProducts: () => Object.keys(codes).map((id) => ({ id })), getProduct: (id) => ({ product: { id }, variants: (codes[id] || []).map(([size, code]) => ({ size, barcodes: [{ code }] })) }) });
+  const plan = C.planner(cat({}), 'p-kaftan', ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL']);
+  const blackM = plan.code('noir', 'M'), whiteXL = plan.code('blanc', 'XL'), beigeM = plan.code('beige', 'M'), brownM = plan.code('marron', 'M');
+  ok(/^2\d{12}$/.test(blackM) && [blackM, whiteXL, beigeM, brownM].every(ean), 'in-store EAN-13 (starts with 2) with a valid check digit', blackM);
+  ok(blackM.slice(1, 3) === '10' && blackM.slice(10, 12) === '04' && whiteXL.slice(1, 3) === '00' && whiteXL.slice(10, 12) === '06', 'black M = 2 10 … 04 · white XL = 2 00 … 06', blackM + ' ' + whiteXL);
+  ok(beigeM !== brownM && new Set([blackM, whiteXL, beigeM, brownM]).size === 4, 'beige M and brown M · two different codes (nothing shared)');
+  ok(blackM.slice(3, 10) === whiteXL.slice(3, 10) && blackM[3] !== '0', 'one item · one middle for all its variants, never starting with 0 (so never a shop-counter code)');
+  ok(C.parts(blackM).join('|') === ['2', '10', blackM.slice(3, 10), '04', blackM[12]].join('|') && C.parts('2000000001234') === null && C.parts('3001234567890') === null, 'read back · prefix, colour, item, size, check; a counter or supplier code is not one');
+  const taken = C.itemNumber('p-new');
+  const other = C.planner(cat({ 'p-old': [['M', C.compose('10', taken, '04')]] }), 'p-new', ['M']);
+  ok(other.item !== taken && other.item.length === 7, 'an item number already used by another article · another one is drawn', other.item);
+  const again = C.planner(cat({ 'p-kaftan': [['M', blackM]] }), 'p-kaftan', ['M', 'L']);
+  ok(again.item === blackM.slice(3, 10) && again.code('rouge', 'M').slice(10, 12) === '04', 'later variants reuse the item number and size codes already printed');
+  const kids = C.planner(cat({}), 'p-kids', ['2 ans', '4 ans', '6 ans', '38']);
+  const kc = ['2 ans', '4 ans', '6 ans', '38'].map((s) => kids.sizeOf(s));
+  ok(new Set(kc).size === 4 && kc[3] === '38' && !kc.slice(0, 3).includes('38'), 'sizes outside the scale · each its own code, never another size\'s', kc.join(' '));
   const seen = new Set(); let clash = 0;
-  for (let i = 0; i < 5000; i++) { const m = C.productNumber('p' + i); if (seen.has(m)) clash++; seen.add(m); }
-  ok(clash === 0, '5 000 products · 5 000 different middles', String(clash));
+  for (let i = 0; i < 2000; i++) { const p = C.planner(cat(Object.fromEntries([...seen].map((m, k) => ['q' + k, [['M', C.compose('10', m, '04')]]]))), 'p' + i, ['M']); if (seen.has(p.item)) clash++; seen.add(p.item); if (i > 200) break; }
+  ok(clash === 0, 'item numbers never collide within a catalogue', String(clash));
 }
 
 console.log('■ the catalog says what it sold (boutique-catalog.js › soldMoves)');

@@ -179,22 +179,23 @@ const codes = await page.evaluate((name) => {
   return by;
 }, THREE);
 const bm = codes['bleu:M'] || '', ns = codes['noir:S'] || '', nxl = codes['noir:XL'] || '';
-ok(bm[1] === '8' && bm[11] === '4' && ns[1] === '1' && ns[11] === '3' && nxl[11] === '6', 'E · readable barcodes · Bleu M = 2 8 … 4, Noir S = 2 1 … 3', JSON.stringify(codes));
-ok(new Set(Object.values(codes).map((c) => c.slice(2, 11))).size === 1, 'E · every variant of the dress shares the same middle');
-ok(await page.$$eval('table.kbm .kbm-code b', (b) => b.length) >= 12 && await page.$eval('.kbm-key', (p) => /2e chiffre/.test(p.textContent)), 'E · the grid shows each code with its colour and size digits in green, and says how to read them');
-ok(await page.$eval('table.kbm thead .kbm-dig', (d) => d.textContent.trim()) === '1', 'E · the black dot carries its digit, 1');
+ok(bm.slice(1, 3) === '31' && bm.slice(10, 12) === '04' && ns.slice(1, 3) === '10' && ns.slice(10, 12) === '03' && nxl.slice(10, 12) === '06', 'E · readable barcodes · Bleu M = 2 31 … 04, Noir S = 2 10 … 03', JSON.stringify(codes));
+ok(new Set(Object.values(codes).map((c) => c.slice(3, 10))).size === 1, 'E · every variant of the dress shares the same middle');
+ok(await page.$$eval('table.kbm .kbm-code b', (b) => b.length) >= 12 && await page.$eval('.kbm-key', (p) => /deux chiffres pour la couleur/.test(p.textContent)), 'E · the grid shows each code with its colour and size digits in green, and says how to read them');
+ok(await page.$eval('table.kbm thead .kbm-dig', (d) => d.textContent.trim()) === '10', 'E · the black dot carries its code, 10');
 const clash = await page.evaluate(async () => {
   const cat = window.KiwiBoutiqueCatalog;
   const C = await import('/assets/boutique-size-codes.js');
   const p = cat.addProduct({ name: 'TEST KIWI Pull beige marron', priceMAD: 100, kind: 'taille' });
   const a = cat.ensureVariant({ productId: p.id, colorId: 'beige', size: 'M', stock: 1 }).variant;
   const b = cat.ensureVariant({ productId: p.id, colorId: 'marron', size: 'M', stock: 1 }).variant;
-  const ca = cat.generateBarcode(a.id, C.smartCode(p.id, 'beige', 'M'));
-  const cb = cat.generateBarcode(b.id, C.smartCode(p.id, 'marron', 'M'));
+  const plan = C.planner(cat, p.id, ['M']);
+  const ca = cat.generateBarcode(a.id, plan.code('beige', 'M'));
+  const cb = cat.generateBarcode(b.id, plan.code('marron', 'M'));
   cat.deleteProduct && cat.deleteProduct(p.id);
-  return { ca, cb, smart: C.smartCode(p.id, 'marron', 'M') };
+  return { ca, cb, read: [C.parts(ca), C.parts(cb)].map((x) => x && x[1] + '/' + x[3]) };
 });
-ok(clash.ca === clash.smart && clash.cb !== clash.ca && /^2\d{12}$/.test(clash.cb), 'beige and brown M share a digit · the second gets a counter code, never the same code twice', JSON.stringify(clash));
+ok(clash.ca !== clash.cb && clash.read.join(' ') === '01/04 12/04', 'beige M and brown M · two readable codes of their own (01 and 12), nothing shared', JSON.stringify(clash));
 await close();
 
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));

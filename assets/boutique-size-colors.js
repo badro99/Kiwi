@@ -158,7 +158,7 @@ export function css() {
 .kbm .kbs-in { width: 100%; max-width: 74px; height: 38px; }
 .kbm td small { display: block; margin-top: 3px; font-size: 11px; color: var(--n-500, #77807B); font-variant-numeric: tabular-nums; }
 .kbm td small.is-out { color: var(--danger, #cb5238); }
-.kbm thead .kbm-dig { display: grid; place-items: center; width: 20px; height: 20px; font: 700 11px var(--mono, 'JetBrains Mono', ui-monospace, monospace); color: #fff; }
+.kbm thead .kbm-dig { display: grid; place-items: center; width: 24px; height: 24px; font: 700 10.5px var(--mono, 'JetBrains Mono', ui-monospace, monospace); color: #fff; }
 .kbm thead .kbm-dig.is-light { color: var(--ink, #0A0F0D); }
 .kbm-sd { margin-inline-start: 6px; font: 600 11px var(--mono, 'JetBrains Mono', ui-monospace, monospace); color: var(--n-500, #77807B); }
 .kbm-code { display: block; margin-top: 3px; font: 500 10.5px var(--mono, 'JetBrains Mono', ui-monospace, monospace); letter-spacing: .02em; color: var(--n-500, #77807B); direction: ltr; unicode-bidi: isolate; }
