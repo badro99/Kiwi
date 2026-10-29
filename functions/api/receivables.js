@@ -164,13 +164,20 @@ function view(row, collections, returns) {
  * simultanées n'encaissent jamais deux fois. */
 export const CONFIRM_DAYS = 15;
 const DAY_MS = 86400000;
+/* Le délai ne s'applique qu'aux livraisons vendues depuis le 14 octobre 2026
+ * (minuit, Maroc) : celles dont le quinzième jour tombe après la mise en
+ * service. Les plus anciennes, jamais marquées reçues, restent « à recevoir »
+ * jusqu'à ce que le propriétaire décide : les confirmer d'un coup réécrirait
+ * le chiffre d'affaires de journées déjà closes. */
+export const AUTO_FROM_TS = Date.UTC(2026, 9, 13, 23);
 const AUTO_BATCH = 25;
 async function autoConfirm(env, merchant, rows, bySale, returnsBySale, now) {
   let wrote = 0;
+  const from = Number(env && env.DELIVERY_AUTO_FROM_TS) || AUTO_FROM_TS;   // réglable pour les tests
   for (const row of rows) {
     if (wrote >= AUTO_BATCH) break;
     const ts = Number(row.ts) || 0;
-    if (!ts || now - ts < CONFIRM_DAYS * DAY_MS) continue;
+    if (!ts || ts < from || now - ts < CONFIRM_DAYS * DAY_MS) continue;
     if (row.delivery_written_off || row.delivery_returned) continue;
     const d = view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)));
     if (!(d.dueCents > 0)) continue;

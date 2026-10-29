@@ -68,6 +68,10 @@ sale('r-part', 135000, now - 2 * DAY);
 sale('r-full', 135000, now - 3 * DAY);
 sale('r-old', 135000, now - (CONFIRM_DAYS + 1) * DAY);
 sale('r-oldpart', 135000, now - (CONFIRM_DAYS + 2) * DAY);
+// La mise en service est simulée 20 jours en arrière : ce qui est vendu avant
+// reste à recevoir, jamais confirmé en bloc.
+env.DELIVERY_AUTO_FROM_TS = now - 20 * DAY;
+sale('r-backlog', 40000, now - 21 * DAY);
 sale('r-young', 50000, now - (CONFIRM_DAYS - 1) * DAY, [{ n: 'Sac', q: 1, t: 500, i: 'prod_9', v: 'prod_9:TU:noir' }]);
 
 const owner = `${SESS_COOKIE}=${await makeSession('acc-dlv-owner', SECRET)}`;
@@ -121,6 +125,7 @@ const open = Object.fromEntries(r.body.open.map((d) => [d.saleId, d]));
 ok(open['r-part'] && open['r-part'].dueCents === 90000 && open['r-part'].returnedCents === 45000, 'a partly returned order stays open for what is still out');
 ok(open['r-part'].lines[0].returnedQty === 1 && open['r-part'].lines[1].returnedQty === 0, 'its lines say what already came back');
 ok(open['r-young'] && !r.body.collected.some((d) => d.saleId === 'r-young'), 'an order younger than 15 days is not confirmed');
+ok(open['r-backlog'] && open['r-backlog'].dueCents === 40000, 'an order sold before the launch cutoff stays to receive: history is never confirmed in bulk');
 ok(r.body.returned.some((d) => d.saleId === 'r-full'), 'the fully returned order is listed as returned, not collected');
 const col = Object.fromEntries(r.body.collected.map((d) => [d.saleId, d]));
 ok(col['r-old'] && col['r-old'].collected.auto === true && col['r-old'].collected.amountCents === 135000, 'an order older than 15 days with no return is confirmed automatically for its whole amount');
