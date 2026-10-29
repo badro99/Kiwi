@@ -24,7 +24,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import * as SPLIT from './boutique-size-split.js?v=4';
-import * as CODES from './boutique-size-codes.js?v=2';
+import * as CODES from './boutique-size-codes.js?v=3';
 import * as COLORS from './boutique-size-colors.js?v=4';
 
 export const ONE_COLOR = 'unique';
@@ -269,7 +269,7 @@ export function mount(host, o) {
        code-barres avec ces deux codes en vert. */
     const plan = rich ? CODES.planner(cat, pid, sizeList) : null;
     const famOf = (c) => (!c || c.unique ? 'unique' : (c.family || c.id));
-    const digDot = (c) => `<span class="kbc-dot kbm-dig${c.unique || c.light || !c.hex ? ' is-light' : ''}" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}">${CODES.colorCode(famOf(c))}</span>`;
+    const digDot = (c) => `<span class="kbc-dot kbm-dig${c.unique || c.light || !c.hex ? ' is-light' : ''}" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}">${plan && plan.item ? CODES.colorCode(famOf(c)) : ''}</span>`;
     const codeOf = (r) => {
       const code = r.variant ? o.primary(r.variant) : '';
       if (!code) return '';

@@ -33,6 +33,12 @@
  * déclinaisons suivantes reprennent son numéro et ses codes de taille.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Les anciens articles gardent leurs codes, et leurs nouvelles déclinaisons
+   aussi : seuls les articles créés après la mise en service (29 octobre 2026,
+   22 h 15 UTC) et dont aucune déclinaison ne porte déjà un code du compteur
+   reçoivent des codes qui se lisent. Une étiquette déjà collée ne change jamais. */
+export const READABLE_SINCE = 1793312100000;
+
 export const COLOR_CODE = {
   blanc: '00', beige: '01',
   noir: '10', gris: '11', marron: '12',
@@ -82,7 +88,13 @@ export function parts(code) {
    tiré et libre dans le catalogue) et le code de chacune de ses tailles.
    `sizes` : toutes les tailles de l'article (grille comprise), pour qu'une
    taille hors famille ne prenne jamais le code naturel d'une autre. */
+const NONE = { item: '', sizeOf: () => '', code: () => '' };
+export function eligible(d) {
+  if (!d || !d.product || !(+d.product.createdAt >= READABLE_SINCE)) return false;
+  return !d.variants.some((v) => (v.barcodes || []).some((b) => b && b.type === 'ean13' && !parts(b.code)));
+}
 export function planner(cat, pid, sizes) {
+  if (!eligible(cat.getProduct(pid))) return NONE;
   const others = new Set();
   const sizeCode = {};
   let own = '';

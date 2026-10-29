@@ -147,6 +147,15 @@ const THREE = 'TEST KIWI Robe noire';
 await create(THREE, 14);
 const chips = () => page.$$eval('.kbc-chip', (all) => all.map((c) => c.textContent.trim()));
 ok(JSON.stringify(await chips()) === JSON.stringify(['Noir']), 'E · the colour in the name is picked: Noir', JSON.stringify(await chips()));
+/* The harness pins the page clock to 15:00 today; readable barcodes start with
+   products created after the switch-over, so this one is dated after it. */
+await page.evaluate(async (name) => {
+  const C = await import('/assets/boutique-size-codes.js');
+  const cat = window.KiwiBoutiqueCatalog;
+  cat.listProducts({ q: name }).find((x) => x.name === name);
+  const d = cat.getProduct(cat.listProducts({ q: name }).find((x) => x.name === name).id);
+  d.product.createdAt = C.READABLE_SINCE + 60000;
+}, THREE);
 await page.keyboard.type('noir s-xl 2 bleu m3 l3', { delay: 30 });
 await sleep(500);
 ok(JSON.stringify(await chips()) === JSON.stringify(['Noir', 'Bleu']), 'E · typing « bleu » adds the blue column', JSON.stringify(await chips()));
@@ -187,14 +196,21 @@ const clash = await page.evaluate(async () => {
   const cat = window.KiwiBoutiqueCatalog;
   const C = await import('/assets/boutique-size-codes.js');
   const p = cat.addProduct({ name: 'TEST KIWI Pull beige marron', priceMAD: 100, kind: 'taille' });
+  p.createdAt = C.READABLE_SINCE + 60000;
   const a = cat.ensureVariant({ productId: p.id, colorId: 'beige', size: 'M', stock: 1 }).variant;
   const b = cat.ensureVariant({ productId: p.id, colorId: 'marron', size: 'M', stock: 1 }).variant;
   const plan = C.planner(cat, p.id, ['M']);
   const ca = cat.generateBarcode(a.id, plan.code('beige', 'M'));
   const cb = cat.generateBarcode(b.id, plan.code('marron', 'M'));
+  const old = cat.addProduct({ name: 'TEST KIWI Ancien article', priceMAD: 100, kind: 'taille' });
+  old.createdAt = C.READABLE_SINCE - 60000;
+  const ov = cat.ensureVariant({ productId: old.id, colorId: 'noir', size: 'M', stock: 1 }).variant;
+  const oc = cat.generateBarcode(ov.id, C.planner(cat, old.id, ['M']).code('noir', 'M') || undefined);
+  cat.deleteProduct && cat.deleteProduct(old.id);
   cat.deleteProduct && cat.deleteProduct(p.id);
-  return { ca, cb, read: [C.parts(ca), C.parts(cb)].map((x) => x && x[1] + '/' + x[3]) };
+  return { oc, ca, cb, read: [C.parts(ca), C.parts(cb)].map((x) => x && x[1] + '/' + x[3]) };
 });
+ok(/^20\d{11}$/.test(clash.oc), 'a product created before the switch-over keeps the shop counter code', clash.oc);
 ok(clash.ca !== clash.cb && clash.read.join(' ') === '01/04 12/04', 'beige M and brown M · two readable codes of their own (01 and 12), nothing shared', JSON.stringify(clash));
 await close();
 
