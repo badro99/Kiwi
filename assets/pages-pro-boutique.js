@@ -3319,7 +3319,7 @@ function _bqxPfRead(b) {
   return {
     name, priceMAD: price.n, cost: cost.empty ? 0 : cost.n,
     categoryId: b.querySelector('[data-bqx-cat]').value || null,
-    kind: kind ? kind.value : undefined,
+    kind: kind ? kind.value : undefined, ...(b.__kiwiTillPhoto || {}),
   };
 }
 /* Focus the first field the merchant has to fix, in reading order. */
@@ -3418,7 +3418,7 @@ function _bqxPfWire(b, p) {
   photoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'photo'); e.target.value = ''; });
   videoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'video'); e.target.value = ''; });
 
-  _bqxWireAb(b);
+  _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=3', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
   paintMedia();
   paintGap();
 }
@@ -3473,7 +3473,7 @@ handlers['bqx-new-save'] = () => {
   if (_bqxAbOn() && !ab) { _bqxPfFail(b, 'ab'); return; }
   if (!f) { _bqxPfFail(b); return; }
   const p = CAT().addProduct({
-    name: f.name, categoryId: f.categoryId, kind: f.kind || _bqxCopy().defaultKind,
+    name: f.name, categoryId: f.categoryId, kind: f.kind || _bqxCopy().defaultKind, art: f.art, artPicked: f.artPicked,
     priceMAD: f.priceMAD,
     cost: f.cost,
     /* Option éteinte → `ab` est nul : addProduct retombe alors sur « achetée
@@ -3509,7 +3509,7 @@ handlers['bqx-prod-edit-save'] = (_el, arg) => {
     consignor: ab ? ab.consignor : undefined,
     name: f.name,
     categoryId: f.categoryId,
-    kind: f.kind,
+    kind: f.kind, art: f.art, artPicked: f.artPicked,
     priceMAD: f.priceMAD,
     cost: f.cost,
     photo: _bqxPhoto,

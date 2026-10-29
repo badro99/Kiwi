@@ -13,6 +13,9 @@
       qui ne dit rien (« A71030TA » n'est pas un T-shirt dans une boutique de
       bougies) ;
    3. sinon la photo neutre de la caisse (le cintre, l'étiquette à la Maison).
+   Une photo choisie à la main dans la fiche du tableau de bord (`artPicked`,
+   assets/retail-icon-picker.js) passe devant le nom : le commerçant l'a vue
+   et l'a voulue. Les fiches d'avant n'ont pas ce drapeau et gardent la règle.
    Un mot-clé de plusieurs mots passe devant un mot seul (« caftan velours »
    avant « caftan »), puis le mot le plus tôt dans le nom, qui en français est
    le nom de la pièce (« Veste en jean » est une veste). */
@@ -151,6 +154,8 @@ const WORDS = {
 };
 
 export const PHOTO_KEYS = Object.keys(WORDS);
+/* Les mots qui désignent une pièce, pour la recherche du sélecteur. */
+export const wordsOf = (key) => (WORDS[key] || '').split('|');
 const KNOWN = new Set(PHOTO_KEYS);
 const STOP = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'a', 'au', 'aux', 'd', 'l', 'en', 'et', 'pour', 'avec', 'sans', 'of', 'for', 'and', 'with']);
 
@@ -186,6 +191,7 @@ export function photoKey(p, fallback = DEFAULT_KEY) {
   const neutral = KNOWN.has(fallback) ? fallback : DEFAULT_KEY;
   if (typeof p === 'string') return KNOWN.has(p) ? p : neutral;
   const art = p && p.art;
+  if (p && p.artPicked && KNOWN.has(art)) return art;
   return keyForName(p && p.name) || (art !== FORM_DEFAULT && KNOWN.has(art) ? art : neutral);
 }
 

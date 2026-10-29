@@ -37,5 +37,12 @@ need(/\.bq-art-photo \{[^}]*object-fit: contain/.test(read('assets/pos-boutique.
 need(read('assets/pos-boutique-2027.css').includes('.bq-card-art .bq-art-photo'), 'the 2027 tile sizes the photo like a restaurant dish');
 need(/\.mz-art-photo \{[^}]*object-fit: contain/.test(read('assets/pos-maison.css')), 'the Maison stylesheet sizes the photo');
 
+/* The dashboard sheet's picker imports the photo module from its own folder
+   (./retail-photos.js), a form bump-stamp does not follow: hold its stamp to
+   the tills' by hand. */
+const tillStamp = (read('assets/pos-boutique/sales.js').match(/retail-photos\.js\?v=(\d+)/) || [])[1];
+need((read('assets/retail-icon-picker.js').match(/\.\/retail-photos\.js\?v=(\d+)/) || [])[1] === tillStamp, 'the dashboard picker imports the same photo module as the tills');
+const pickerStamp = (read('assets/pages-pro-boutique.js').match(/retail-icon-picker\.js\?v=(\d+)/) || [])[1];
+need(pickerStamp && sw.includes('/assets/retail-icon-picker.js?v=' + pickerStamp), 'the product sheet loads the picker at the stamp the offline shell holds (bump-stamp does not follow that import)');
 assert.deepEqual(problems, [], problems.join('\n'));
 console.log('✓ retail photos wiring: boutique and Maison');

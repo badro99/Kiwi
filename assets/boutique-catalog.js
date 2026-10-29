@@ -783,7 +783,7 @@
     const p = {
       id: nextId('prod'), name: String(data.name || 'Nouvel article').trim() || 'Nouvel article',
       categoryId: data.categoryId || null, priceMAD: +data.priceMAD || 0, cost: +data.cost || 0,
-      art: data.art || '', kind: data.kind || 'taille', flag: data.flag || '', grad: data.grad || null,
+      art: data.art || '', artPicked: !!data.artPicked, kind: data.kind || 'taille', flag: data.flag || '', grad: data.grad || null,
       marque: String(data.marque || '').trim(),
       format: (data.format === 'service' || data.format === 'piece') ? data.format : 'piece',
       servicePieces: data.servicePieces != null ? Math.max(1, parseInt(data.servicePieces, 10) || 1) : null,
@@ -821,7 +821,7 @@
     const p = prodById(id); if (!p) return null;
     const before = snap(p);
     const mediaPatch = patch.photo !== undefined || patch.video !== undefined;
-    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
+    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'artPicked', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
      'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
      'supplierId', 'parLevel', 'reorderLevel'].forEach((k) => {
       if (patch[k] !== undefined) {
@@ -829,7 +829,7 @@
           p[k] = patch[k] == null ? null : (+patch[k] || 0);
         } else if (k === 'servicePieces') {
           p[k] = patch[k] == null ? null : Math.max(1, parseInt(patch[k], 10) || 1);
-        } else if (k === 'fragile') {
+        } else if (k === 'fragile' || k === 'artPicked') {
           p[k] = !!patch[k];
         } else if (k === 'sku') {
           p[k] = skuNorm(patch[k]);
@@ -1075,7 +1075,7 @@
     const p = prodById(productId); if (!p) return null;
     return {
       productId: p.id, name: p.name, categoryId: p.categoryId, priceMAD: p.priceMAD,
-      cost: p.cost, kind: p.kind, art: p.art, flag: p.flag, sku: p.sku || '',
+      cost: p.cost, kind: p.kind, art: p.art, artPicked: !!p.artPicked, flag: p.flag, sku: p.sku || '',
     };
   }
 
@@ -1216,7 +1216,7 @@
       });
       const primaryV = vs.find((v) => v.barcodes && v.barcodes.length) || vs[0];
       const item = {
-        id: p.id, name: p.name, price: p.priceMAD, art: p.art, photo: p.photo || '', video: p.video || '', kind: p.kind, flag: p.flag, sku: p.sku || '',
+        id: p.id, name: p.name, price: p.priceMAD, art: p.art, artPicked: !!p.artPicked, photo: p.photo || '', video: p.video || '', kind: p.kind, flag: p.flag, sku: p.sku || '',
         marque: p.marque || '',
         format: p.format || 'piece',
         servicePieces: p.servicePieces || null,
