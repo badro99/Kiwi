@@ -78,7 +78,7 @@ t('the till « Mouvements de stock » screen only reads, and only boutique rows'
   shippedFunction(inventorySource, 'openInvProduct', {
     catDB: () => ({ getProduct: () => ({ product: {}, variants: [] }) }),
     window: { KiwiMaisonStock: { list: (q) => { historyArgs = q; return []; } } },
-    esc: String, fmtMAD: String, artOf: String, invSetModal() {}, tillInventoryAllowed: () => false,
+    esc: String, fmtMAD: String, artOf: String, invSetModal() {}, tillInventoryAllowed: () => false, invSub: () => '', szLang: () => 'fr',
   })('product-7');
   assert.equal(JSON.stringify(historyArgs), JSON.stringify({ productId: 'product-7', module: 'boutique', shared: true }));
 });

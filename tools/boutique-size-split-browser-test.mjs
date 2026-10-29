@@ -11,7 +11,11 @@
  *   C · Enregistrer creates exactly those four sizes, nothing at 0;
  *   D · a second product: the shape chip splits the whole total in one tap,
  *       Annuler empties it again, and Égal spreads it with the extra in the
- *       middle; the arrow keys add and remove one piece in a box.
+ *       middle; the arrow keys add and remove one piece in a box;
+ *   E · colours: « TEST KIWI Robe noire » starts with the black column;
+ *       typing « noir s-xl 2 bleu m3 l3 » adds a blue column on the spot and
+ *       fills both; the bars stack in the colours; Enregistrer creates each
+ *       colour + size with its colour, and the till label says « Bleu · M ».
  * Demo till only: nothing reaches a server.
  *   node tools/boutique-size-split-browser-test.mjs
  */
@@ -114,6 +118,38 @@ await page.keyboard.press('ArrowDown');
 await click('[data-kbs-save]');
 await sleep(500);
 ok(await sizesOf(TWO) === 'XXS:3 XS:3 S:4 M:4 L:4 XL:3 XXL:3', 'saved as the even split', await sizesOf(TWO));
+await close();
+
+/* ── E : colours ──────────────────────────────────────────────────────────── */
+const THREE = 'TEST KIWI Robe noire';
+await create(THREE, 14);
+const chips = () => page.$$eval('.kbc-chip', (all) => all.map((c) => c.textContent.trim()));
+ok(JSON.stringify(await chips()) === JSON.stringify(['Noir']), 'E · the colour in the name is picked: Noir', JSON.stringify(await chips()));
+await page.keyboard.type('noir s-xl 2 bleu m3 l3', { delay: 30 });
+await sleep(500);
+ok(JSON.stringify(await chips()) === JSON.stringify(['Noir', 'Bleu']), 'E · typing « bleu » adds the blue column', JSON.stringify(await chips()));
+ok(!!(await page.$('table.kbm')), 'two colours · the screen becomes a size × colour grid');
+ok(await page.$eval('[data-kbsp-quick]', (i) => i === document.activeElement && /BLEU M3 L3|bleu m3 l3/i.test(i.value)), 'the typing carries on in quick entry after the column appears');
+const col = (k) => page.$eval(`[data-kbm-tot="${k}"]`, (th) => th.textContent.trim());
+ok(await col('noir') === '8' && await col('bleu') === '6', 'column totals · Noir 8, Bleu 6', (await col('noir')) + ' / ' + (await col('bleu')));
+const segs = await page.$$eval('[data-kbsp-bar]', (bars) => bars.map((b) => [...b.querySelectorAll('.kbsp-stack i')].filter((i) => +i.style.flexGrow > 0).length));
+ok(segs[3] === 2 && segs[2] === 1, 'size M is stacked in two colours, S in one', JSON.stringify(segs));
+ok(await page.$eval('[data-kbs-count]', (el) => el.classList.contains('is-ok')), '14 of 14 split');
+await click('[data-kbs-save]');
+await sleep(500);
+const robe = await page.evaluate((name) => {
+  const cat = window.KiwiBoutiqueCatalog;
+  const p = cat.listProducts({ q: name }).find((x) => x.name === name);
+  const d = cat.getProduct(p.id);
+  return { list: d.variants.map((v) => v.colorId + ':' + v.size + '=' + v.stock).sort().join(' '), codes: d.variants.every((v) => !!cat.primaryBarcode(v)), blueLabel: (d.variants.find((v) => v.colorId === 'bleu') || {}).colorLabel };
+}, THREE);
+ok(robe.list === 'bleu:L=3 bleu:M=3 noir:L=2 noir:M=2 noir:S=2 noir:XL=2', 'E · saved as six colour + size variants', robe.list);
+ok(robe.codes && robe.blueLabel === 'Bleu', 'each has its barcode, and carries its colour name');
+const label = await page.evaluate(async (u) => {
+  const m = await import(u.replace(/pos-boutique\.js\?v=\d+$/, 'boutique-sizes.js'));
+  return m.variantWords({ colorId: 'bleu', colorLabel: 'Bleu', size: 'M' }, 'fr');
+}, coreUrl);
+ok(label === 'Bleu · M', 'the till and the label say « Bleu · M »', label);
 await close();
 
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));

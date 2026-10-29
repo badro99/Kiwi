@@ -23,7 +23,8 @@
  * tableau de bord (pages-pro-boutique.js) : même balisage, même CSS.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-import * as SPLIT from './boutique-size-split.js?v=2';
+import * as SPLIT from './boutique-size-split.js?v=4';
+import * as COLORS from './boutique-size-colors.js?v=2';
 
 export const ONE_COLOR = 'unique';
 const GRID = {
@@ -52,6 +53,7 @@ const T = {
     printDirty: 'Enregistrez avant d’imprimer.',
     newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
+    colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
   },
   en: {
     total: 'Total quantity', totalHint: 'How many pieces came in. You split them by size right after.',
@@ -70,6 +72,7 @@ const T = {
     printDirty: 'Save before printing.',
     newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code',
     out: 'Sold out', empty: 'No sizes yet.',
+    colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
   },
   ar: {
     total: 'الكمية الإجمالية', totalHint: 'عدد القطع المستلمة. ستوزّعها حسب المقاس مباشرة بعد ذلك.',
@@ -88,6 +91,7 @@ const T = {
     printDirty: 'احفظ قبل الطباعة.',
     newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود',
     out: 'نفد', empty: 'لا مقاسات بعد.',
+    colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
   },
 };
 export const words = (lang) => T[lang] || T.fr;
@@ -140,9 +144,9 @@ let cssDone = false;
 export function css() {
   if (cssDone || typeof document === 'undefined') return;
   cssDone = true;
-  const st = document.createElement('style');
-  st.id = 'kiwi-boutique-sizes-css';
-  st.textContent = `
+  const style = document.createElement('style');
+  style.id = 'kiwi-boutique-sizes-css';
+  style.textContent = `
 .kbs { --kbs-card: color-mix(in srgb, var(--paper, #F7F5F0) 55%, #fff); --kbs-field: var(--paper, #F7F5F0); --kbs-line: var(--n-200, #E2DED5);
   display: grid; gap: 12px; color: var(--ink, #0A0F0D); font-family: var(--sans, 'Inter Tight', system-ui, sans-serif); }
 html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #151C18; --kbs-field: #0B100E; --kbs-line: #2A332E; }
@@ -190,9 +194,11 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
   .kbs-in { font-size: 16px; }
   .kbs-acts .kbs-btn { flex: 1 1 100%; }
 }`;
-  document.head.appendChild(st);
+  document.head.appendChild(style);
 }
 
+const CLOSE_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>';
+const PLUS_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>';
 const PRINT_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z"/></svg>';
 
 /* Monte l'écran des tailles dans `host`.
@@ -219,14 +225,25 @@ export function mount(host, o) {
   let busy = false;
   const ro = !!o.readOnly;
   if (ro) target = 0;
+  /* Les couleurs (boutique-size-colors.js) : une colonne par couleur. */
+  const pal = COLORS.palette(cat);
+  let cols = null;
+  let cellList = [];
+  let carry = null;   // { values, quick } : ce qui était tapé, repris après un ajout de couleur
 
   const draw = () => {
     const d = cat.getProduct(pid);
     if (!d) { host.innerHTML = ''; return; }
-    const list = rows(cat, pid);
     const creating = target > 0;
+    if (!ro && !cols) cols = COLORS.columns(cat, pid, o.lang, pal);
+    if (!ro) COLORS.css();
+    cellList = ro ? [] : COLORS.cells(cat, pid, cols, gridOf(d.product.kind));
+    const list = ro ? rows(cat, pid) : cellList.map((c) => Object.assign({ multi: false }, c));
     const shown = ro ? list.filter((r) => r.variant) : list;
-    const rowsHtml = shown.map((r) => {
+    const matrix = !ro && cols.length > 1;
+    const sizeList = [];
+    shown.forEach((r) => { if (!sizeList.includes(r.size)) sizeList.push(r.size); });
+    const rowsHtml = matrix ? '' : shown.map((r) => {
       const v = r.variant;
       const stock = v ? Math.max(0, +v.stock || 0) : 0;
       const code = v ? o.primary(v) : '';
@@ -242,19 +259,37 @@ export function mount(host, o) {
         <span class="kbs-size">${esc(sizeLabel)}${colorLine}</span>
         <span class="kbs-mid">${have}${codeHtml}</span>
         ${ro ? '<span></span>' : `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0"
-          data-kbs-in="${esc(r.key)}" aria-label="${esc(t.add)} · ${esc(sizeLabel)}" />`}
+          data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(r.col || '')}" aria-label="${esc(t.add)} · ${esc(sizeLabel)}" />`}
       </li>`;
     }).join('');
+    const colName = (c) => (c.unique ? t.noColor : c.label);
+    const dot = (c) => `<span class="kbc-dot" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}"></span>`;
+    const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${dot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
+      const sl = size === 'TU' ? t.tu : size;
+      return `<tr><th scope="row">${esc(sl)}</th>${cols.map((c) => {
+        const r = shown.find((x) => x.size === size && x.col === c.key);
+        if (!r) return '<td></td>';
+        const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
+        return `<td><input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0" data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(c.key)}" aria-label="${esc(t.add)} · ${esc(sl)} · ${esc(colName(c))}" />${r.variant ? `<small class="${st ? '' : 'is-out'}">${esc(st ? t.have(st) : t.out)}</small>` : ''}</td>`;
+      }).join('')}</tr>`;
+    }).join('')}</tbody></table>`;
+    const used = (k) => shown.some((r) => r.col === k && r.variant);
+    const colorsHtml = ro ? '' : `<div class="kbc" data-kbc>
+      <div class="kbc-row"><span class="kbc-l">${esc(t.colors)}</span>${cols.filter((c) => !c.unique).map((c) => `<span class="kbc-chip">${dot(c)}${esc(c.label)}${used(c.key) ? '' : `<button type="button" data-kbc-del="${esc(c.key)}" aria-label="${esc(t.removeColor(c.label))}">${CLOSE_SVG}</button>`}</span>`).join('')}
+        <button type="button" class="kbc-add" data-kbc-add aria-expanded="false">${PLUS_SVG}<span>${esc(cols.every((c) => c.unique) ? t.addColors : t.addColor)}</span></button></div>
+      <div class="kbc-pal" data-kbc-pal hidden>${pal.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dot(COLORS.columnOf(c, o.lang))}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div>
+    </div>`;
     const printable = printCount();
     /* Un carton à répartir : la bande de boutique-size-split.js au-dessus des cases. */
-    const splitOn = !ro && shown.length > 1 && shown.every((r) => !r.multi);
-    host.innerHTML = `<div class="kbs" data-kbs>
+    const splitOn = !ro && shown.length > 1;
+    const page = () => `<div class="kbs" data-kbs>
       <div class="kbs-top">
         ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(d.stock))}</span>`}
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
+      ${colorsHtml}
       ${splitOn ? '<div data-kbs-split></div>' : ''}
-      ${shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span></span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
+      ${matrix ? matrixHtml : shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span></span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
       <ul class="kbs-list">${rowsHtml}</ul>` : `<p class="kbs-msg">${esc(t.empty)}</p>`}
       <p class="kbs-msg" data-kbs-msg>${creating && list.length > 1 ? esc(t.hintCreate) : ''}</p>
       <div class="kbs-acts">
@@ -262,16 +297,49 @@ export function mount(host, o) {
         ${ro ? '' : `<button type="button" class="kbs-btn is-main" data-kbs-save>${esc(t.save)}</button>`}
       </div>
     </div>`;
+    host.innerHTML = page();
+    const back = carry; carry = null;
+    if (back) host.querySelectorAll('[data-kbs-in]').forEach((i) => { const v = back.values[i.getAttribute('data-kbs-in')]; if (v) i.value = v; });
     wire();
     if (splitOn) {
       SPLIT.mountSplit(host.querySelector('[data-kbs-split]'), {
         root: host, target, lang: o.lang,
-        rows: shown.map((r) => ({ key: r.key, size: r.size, label: r.size === 'TU' ? t.tu : r.size })),
-        curve: () => SPLIT.curveFor(cat, pid, shown.map((r) => r.size)),
+        cells: shown.map((r) => ({ key: r.key, size: r.size, col: r.col })),
+        sizes: sizeList.map((size) => ({ size, label: size === 'TU' ? t.tu : size })),
+        cols,
+        curve: () => SPLIT.curveFor(cat, pid, sizeList),
+        colorShares: () => SPLIT.colorSharesFor(cat, cols),
+        parse: (text) => COLORS.parseColored(text, sizeList, cols, pal, SPLIT.parseQuick),
+        onAddColors: (fams, text) => addColors(fams, text),
+        quick: back && back.quick,
       });
     }
+    if (back && back.quick) return;
     if (creating) { const first = host.querySelector(splitOn ? '[data-kbsp-quick]' : '[data-kbs-in]'); if (first) setTimeout(() => first.focus(), 40); }
   };
+
+  /* Ajouter ou retirer une colonne de couleur, sans perdre ce qui est tapé. */
+  const keep = (quick) => {
+    const values = {};
+    host.querySelectorAll('[data-kbs-in]').forEach((i) => { if (String(i.value).trim()) values[i.getAttribute('data-kbs-in')] = i.value; });
+    carry = { values, quick: quick || '' };
+  };
+  function addColors(fams, quick) {
+    const fresh = fams.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => COLORS.columnOf(c, o.lang));
+    if (!fresh.length) return;
+    const d = cat.getProduct(pid);
+    const neutralUsed = d && d.variants.some((v) => String(v.colorId || COLORS.UNIQUE) === COLORS.UNIQUE);
+    if (!neutralUsed) cols = cols.filter((c) => !c.unique);
+    cols = cols.concat(fresh);
+    keep(quick);
+    draw();
+  }
+  function removeColor(key) {
+    cols = cols.filter((c) => c.key !== key);
+    if (!cols.length) cols = [COLORS.uniqueColumn()];
+    keep('');
+    draw();
+  }
 
   /* Étiquettes : la dernière réception si elle vient d'être enregistrée,
      sinon le stock de chaque taille. */
@@ -309,6 +377,12 @@ export function mount(host, o) {
     if (err) m.setAttribute('role', 'alert'); else m.removeAttribute('role');
   };
   const paintCount = () => {
+    host.querySelectorAll('[data-kbm-tot]').forEach((th) => {
+      const k = th.getAttribute('data-kbm-tot');
+      let n = 0;
+      host.querySelectorAll(`[data-kbs-col="${CSS.escape(k)}"]`).forEach((i) => { const r = pieces(i.value); if (r.n) n += r.n; });
+      th.textContent = n ? String(n) : '';
+    });
     const c = host.querySelector('[data-kbs-count]');
     const { sum } = read();
     if (c) {
@@ -334,7 +408,7 @@ export function mount(host, o) {
     busy = true;
     const btn = host.querySelector('[data-kbs-save]');
     if (btn) { btn.disabled = true; btn.textContent = t.saving; }
-    const list = rows(cat, pid);
+    const list = cellList;
     const got = {};
     let codes = 0;
     const run = () => {
@@ -344,7 +418,8 @@ export function mount(host, o) {
         let v = r.variant;
         if (v) cat.receiveStock(v.id, n);
         else {
-          const ev = cat.ensureVariant({ productId: pid, colorId: r.colorId, size: r.size, stock: n });
+          const ev = cat.ensureVariant(Object.assign({ productId: pid, colorId: r.colorId, size: r.size, stock: n },
+            r.colorLabel ? { colorLabel: r.colorLabel, colorHex: r.colorHex } : {}));
           v = ev && ev.variant;
           if (v && !ev.created) cat.receiveStock(v.id, n);
         }
@@ -381,6 +456,11 @@ export function mount(host, o) {
       labelPlan().forEach(([v, n]) => { const l = o.label(pid, v); if (l) for (let k = 0; k < n; k++) labels.push(l); });
       if (labels.length && o.print) o.print(labels);
     });
+    const add = host.querySelector('[data-kbc-add]');
+    const palEl = host.querySelector('[data-kbc-pal]');
+    if (add && palEl) add.addEventListener('click', () => { palEl.hidden = !palEl.hidden; add.setAttribute('aria-expanded', String(!palEl.hidden)); if (!palEl.hidden) { const f = palEl.querySelector('button'); if (f) f.focus(); } });
+    host.querySelectorAll('[data-kbc-pick]').forEach((b) => b.addEventListener('click', () => { const c = pal.find((x) => x.id === b.getAttribute('data-kbc-pick')); if (c) addColors([c], ''); }));
+    host.querySelectorAll('[data-kbc-del]').forEach((b) => b.addEventListener('click', () => removeColor(b.getAttribute('data-kbc-del'))));
     host.querySelectorAll('[data-kbs-reg]').forEach((b) => b.addEventListener('click', () => o.register && o.register(b.getAttribute('data-kbs-reg'))));
     paintCount();
     if (target <= 0) say('');
@@ -441,9 +521,9 @@ export function formCss() {
   if (formCssDone || typeof document === 'undefined') return;
   formCssDone = true;
   css();
-  const st = document.createElement('style');
-  st.id = 'kiwi-boutique-sizes-form-css';
-  st.textContent = `
+  const style = document.createElement('style');
+  style.id = 'kiwi-boutique-sizes-form-css';
+  style.textContent = `
 .kbs-form { --pf-card: color-mix(in srgb, var(--paper, #F7F5F0) 55%, #fff); --pf-field: var(--paper, #F7F5F0); padding: 4px 20px 8px; max-height: min(68vh, 720px); overflow-y: auto; }
 html[data-theme="dark"] .kbs-form, body[data-vexel-mode="dark"] .kbs-form { --pf-card: #151C18; --pf-field: #0B100E; }
 .kbs-form select.bqx-pf-in { appearance: auto; }
@@ -513,7 +593,7 @@ html[data-theme="dark"] .kbs-form, body[data-vexel-mode="dark"] .kbs-form { --pf
 .kbs-form .bqx-pf-sec { padding: 14px 14px 2px; }
 }
 `;
-  document.head.appendChild(st);
+  document.head.appendChild(style);
 }
 
 /* Le formulaire de création, pour la caisse : le même que celui du tableau de
