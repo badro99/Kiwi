@@ -2,6 +2,7 @@
   "note": "Gate suites that read source text and never run it. Text can stay green after the behaviour it describes breaks, so each one is declared: structure (the repository's own shape), style (layout, contrast, copy), twin (a named suite that runs the same behaviour), or unbacked. Unbacked only goes down: make the suite run the code, then KIWI_UPDATE_SOURCE_BASELINE=1. Checked by tools/source-assertion-ratchet-test.mjs. Classification is suite-level, never proof that every assertion is behavioral. Twins must declare individual structural/behavioral scope and an exact-target mutation witness.",
   "structure": {
     "app-release-test.mjs": "native release configuration (plist, project)",
+    "app-store-listing-test.mjs": "App Store listing document: Apple field lengths, no price, privacy answers match the shipped privacy manifest",
     "article-template-test.mjs": "article markup, content metadata and JavaScript syntax only",
     "asset-stamp-coverage-test.mjs": "every shipped asset carries a stamp",
     "booking-split-test.mjs": "Token-identical formatting and byte-exact live split reconstruction; structural identity only",
