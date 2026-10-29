@@ -264,6 +264,8 @@
     "Coût simple (fiches de coût)": ["Simple cost (cost sheets)", "التكلفة المبسطة (بطاقات التكلفة)"],
     "Catégories A / B": ["Categories A / B", "الفئات A / B"],
     "Gestion complète de l’inventaire sur la caisse": ["Full inventory management on the till", "إدارة المخزون الكاملة على الصندوق"],
+    "Tailles et couleurs rapides": ["Quick sizes and colours", "المقاسات والألوان السريعة"],
+    "Éteint par défaut. À la réception d’un article, répartit le carton sur les tailles en un geste (« S-XL 5 M3 »), et ouvre une colonne par couleur (« noir S-XL 4 bleu M3 ») : chaque taille de chaque couleur reçoit son code-barres. Éteint, l’écran des tailles reste celui d’avant.": ["Off by default. When an item comes in, splits the carton across its sizes in one go (“S-XL 5 M3”) and opens one column per colour (“black S-XL 4 blue M3”): every size of every colour gets its own barcode. Off, the sizes screen stays as it was.", "مُعطّل افتراضياً. عند استلام منتج، يوزّع الكرتونة على المقاسات دفعة واحدة (« S-XL 5 M3 »)، ويفتح عموداً لكل لون (« أسود S-XL 4 أزرق M3 »): كل مقاس من كل لون يحصل على رمزه الشريطي. عند تعطيله، تبقى شاشة المقاسات كما كانت."],
     "Afficher la valeur du stock sur la caisse": ["Show stock value on the till", "عرض قيمة المخزون على الصندوق"],
     "Mode Salle (service à table)": ["Dine-in mode (table service)", "وضع القاعة (خدمة الطاولة)"],
     "Mode À emporter": ["Takeaway mode", "وضع الطلبات الخارجية"],
