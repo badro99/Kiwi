@@ -1049,7 +1049,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=2"></script>
+  <script src="assets/admin-legacy.js?v=3"></script>
   <script src="assets/staff-roles.js?v=2"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1293,7 +1293,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       { key:'depotvente', label:'Catégories A / B', off:true,
         hint:'Fait choisir une catégorie à chaque article : A pour la marchandise du magasin, B pour le dépôt-vente. Le client ne voit que les lettres.' },
       { key:'caisseInventoryAdmin', label:'Gestion complète de l’inventaire sur la caisse', off:true,
-        hint:'Autorise l’équipe à créer, modifier et supprimer produits, catégories, variantes, codes-barres, coûts et quantités directement sur la caisse Maison.' },
+        hint:'Autorise l’équipe à créer, modifier et supprimer produits, catégories, variantes, codes-barres, coûts et quantités directement sur la caisse Maison ou Boutique.' },
       { key:'caisseInventoryValue', label:'Afficher la valeur du stock sur la caisse',
         hint:'Allumé par défaut. À couper pour masquer le montant total investi dans le stock sur les caisses Maison et Boutique. Les quantités restent visibles.' },
     ],
