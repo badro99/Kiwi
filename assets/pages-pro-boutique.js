@@ -257,7 +257,7 @@ function _bqxCss() {
     .bqx-card:focus-visible, .bqx-row:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
     .bqx-thumb { position: relative; display: grid; place-items: center; overflow: hidden; flex: none;
       background: color-mix(in srgb, var(--tint, #9AA09D) 14%, var(--surface, #fff)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint, #9AA09D) 10%, var(--n-200, #e7e3da)); }
-    .bqx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bqx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; } .bqx-thumb img.bqx-till { object-fit: contain; padding: 6%; box-sizing: border-box; }
     .bqx-ini { font: 600 15px/1 var(--sans); letter-spacing: -.01em; color: var(--ini, color-mix(in srgb, var(--tint, #9AA09D) 78%, var(--ink, #0A0F0D))); }
     html[data-theme="dark"] .bqx-ini { color: color-mix(in srgb, var(--tint, #9AA09D) 55%, #F7F5F0); }
     .bqx-thumb:has(img) { box-shadow: none; }
@@ -745,12 +745,12 @@ function _bqxPhotoSrc(p) {
   const src = String((p && p.photo) || '');
   return /^(https?:\/\/|\/)/.test(src) ? src : '';
 }
-function _bqxThumb(p) {
+let _bqxTill; function _bqxThumb(p) {   // sans photo à soi, la photo que la caisse dessine (retail-photos.js), comme sur la caisse
   const src = _bqxPhotoSrc(p);
   if (src) return `<img src="${_esc(src)}" alt="" loading="lazy" decoding="async" />`;
-  const words = String(p.name || '').trim().split(/\s+/).filter(Boolean);
-  const ini = ((words[0] || '·').charAt(0) + (words[1] ? words[1].charAt(0) : '')).toUpperCase();
-  return `<span class="bqx-ini" aria-hidden="true">${_esc(ini)}</span>`;
+  if (_bqxTill) return `<img class="bqx-till" src="${_esc(_bqxTill.photoSrc(_bqxTill.photoFile(p, _bqxCopy().trade === 'maison' ? 'tag' : 'cintre')))}" alt="" loading="lazy" decoding="async" />`;
+  if (_bqxTill === undefined) { _bqxTill = null; import(new URL('assets/retail-photos.js?v=4', document.baseURI).href).then((m) => { _bqxTill = m; const g = document.getElementById('bqx-grid'); if (g) g.innerHTML = _bqxGridHtml(); }).catch(() => {}); }
+  const words = String(p.name || '').trim().split(/\s+/).filter(Boolean), ini = ((words[0] || '·').charAt(0) + (words[1] ? words[1].charAt(0) : '')).toUpperCase(); return `<span class="bqx-ini" aria-hidden="true">${_esc(ini)}</span>`;
 }
 function _bqxStockTag(stock) {
   const t = _bqxInvT();
