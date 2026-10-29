@@ -827,7 +827,7 @@
     });
   }
   function bootWithPin(venue) {
-    askStaff(venue, function () { bootVertical(venue); });          // none configured → fail-soft
+    try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {} askStaff(venue, function () { bootVertical(venue); });   // un vrai poste : plus de vue opérateur · none configured → fail-soft
   }
 
   /* God mode may inspect a selected store's till without borrowing an employee
@@ -843,7 +843,7 @@
         if (!d || d.operator !== true || d.scoped !== true || String(d.slug || '') !== merchant) {
           bootWithPin(venue); return;
         }
-        setStaff({ name: 'Kiwi Support', role: 'owner' });
+        try { sessionStorage.setItem('kiwi:tillOperator:v1', merchant); } catch (_) {} setStaff({ name: 'Kiwi Support', role: 'owner' });   // prouvé : pas de poste ouvert (pos-boutique/drawer.js)
         bootVertical(venue);
       })
       .catch(function () { bootWithPin(venue); });

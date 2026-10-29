@@ -20,7 +20,7 @@ var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/team/access-rules.js?v=6',
   '/assets/hotel-economat-transport.js?v=2',
-  '/assets/pos-boutique/drawer.js?v=18',
+  '/assets/pos-boutique/drawer.js?v=21',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=10',
   '/assets/money-cents.js?v=4',
@@ -463,7 +463,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=24',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=22',
-  '/assets/pos-dispatch.js?v=271',
+  '/assets/pos-dispatch.js?v=275',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -531,8 +531,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=199',
-  '/assets/pos-boutique/sales.js?v=100',
+  '/assets/pos-boutique.css?v=202',
+  '/assets/pos-boutique/sales.js?v=103',
   '/assets/retail-photos.js?v=4',
   '/assets/retail-icon-picker.js?v=3',
   '/assets/pos-boutique/ticket-owner.js?v=3',
@@ -542,9 +542,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-tools.js?v=17',
   '/assets/pos-boutique/inv-moves.js?v=5',
   '/assets/pos-boutique/kit-2027.js?v=19',
-  '/assets/pos-boutique/checkout.js?v=100',
-  '/assets/pos-boutique/inventory.js?v=100',
-  '/assets/pos-boutique.js?v=199',
+  '/assets/pos-boutique/checkout.js?v=103',
+  '/assets/pos-boutique/inventory.js?v=103',
+  '/assets/pos-boutique.js?v=202',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -576,13 +576,13 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=110',
-  '/assets/pos-maison/sales.js?v=30',
-  '/assets/pos-maison/checkout.js?v=30',
+  '/assets/pos-maison.css?v=112',
+  '/assets/pos-maison/sales.js?v=32',
+  '/assets/pos-maison/checkout.js?v=32',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=30',
-  '/assets/pos-maison.js?v=110',
-  '/assets/caisse-pairing.js?v=54',
+  '/assets/pos-maison/inventory.js?v=32',
+  '/assets/pos-maison.js?v=112',
+  '/assets/caisse-pairing.js?v=57',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

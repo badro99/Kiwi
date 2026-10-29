@@ -1,8 +1,9 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=199';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=100';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=202';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=103';
 import { openMoves } from './inv-moves.js?v=5';
+import { tillFeature } from './drawer.js?v=21';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=17';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=100';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=103';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -685,9 +686,6 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
    * caisseInventoryAdmin) : éteint, articles et prix se gèrent au tableau de bord
    * (le verrou d'août) ; allumé, l'équipe crée, modifie et supprime ici, comme à
    * la caisse Maison. Le serveur (/api/catalog) accepte déjà la caisse appairée. */
-  function catalogueAdminEnabled() {
-    return !!(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryAdmin === true);
-  }
   function catalogDashboardOnly() {
     const msg = 'Articles et prix se gèrent dans le tableau de bord.';
     if (typeof toast === 'function') toast(msg);
@@ -710,7 +708,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           <div><h1>Inventaire</h1><div class="bq-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
           <!-- Dans l'en-tête, pas dans .bqi-tools : invPaint garde cette rangée d'une peinture à l'autre (le champ de
                recherche ne perd pas le curseur), et les réglages de l'établissement arrivent parfois après la première. -->
-          ${catalogueAdminEnabled() ? '<button class="bq-btn" id="bqi-new"><i data-lucide="plus"></i>Nouvel article</button>' : '<span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>'}
+          ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn" id="bqi-new"><i data-lucide="plus"></i>Nouvel article</button>' : '<span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>'}
         </header>
         <div class="bqi-tools">
           <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
@@ -734,7 +732,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
               <i data-lucide="scan-barcode"></i>
               <b>Votre stock porte déjà des codes-barres ?</b>
               <span>Touchez « Reprendre le stock » et scannez vos articles un par un : Kiwi garde le code du fournisseur tel quel. Aucune étiquette à réimprimer.</span>
-              ${catalogueAdminEnabled() ? '' : '<em>Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.</em>'}
+              ${tillFeature('caisseInventoryAdmin') ? '' : '<em>Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.</em>'}
             </div>`}
         </div>
       </div>`);
@@ -804,7 +802,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <div class="bqi-modh">
         <span class="bqi-art">${artOf(p)}</span>
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
-        ${catalogueAdminEnabled() ? `<button class="bq-btn secondary" data-inv-edit><i data-lucide="pencil"></i>Modifier</button>` : '<span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>'}
+        ${tillFeature('caisseInventoryAdmin') ? `<button class="bq-btn secondary" data-inv-edit><i data-lucide="pencil"></i>Modifier</button>` : '<span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>'}
       </div>
       <div class="bqi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="bqi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
@@ -816,9 +814,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>`).join('')}
       </div>` : ''}
       <div class="bqi-modfoot">
-        ${catalogueAdminEnabled() ? '<button class="bq-btn secondary" data-inv-addvar><i data-lucide="plus"></i>Ajouter une variante</button>' : '<span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>'}
+        ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn secondary" data-inv-addvar><i data-lucide="plus"></i>Ajouter une variante</button>' : '<span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>'}
         <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
-        ${catalogueAdminEnabled() ? '<button class="bq-btn danger" data-inv-delete><i data-lucide="trash-2"></i>Supprimer</button>' : '<span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>'}
+        ${tillFeature('caisseInventoryAdmin') ? '<button class="bq-btn danger" data-inv-delete><i data-lucide="trash-2"></i>Supprimer</button>' : '<span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>'}
       </div>`;
     invSetModal(html, (el) => {
       const cat2 = catDB();
@@ -844,10 +842,10 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     const shown = variantColor(v);
     return `<tr>
-      <td>${catalogueAdminEnabled() ? `<button class="bqi-cbtn" data-vcolor="${v.id}">${colorDot(shown)} ${esc(shown.label)}</button>` : `<span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>`}${variantSource(v) ? `<em class="bqi-csrc">${esc(variantSource(v))}</em>` : ''} · <b>${esc(v.size)}</b></td>
+      <td>${tillFeature('caisseInventoryAdmin') ? `<button class="bqi-cbtn" data-vcolor="${v.id}">${colorDot(shown)} ${esc(shown.label)}</button>` : `<span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>`}${variantSource(v) ? `<em class="bqi-csrc">${esc(variantSource(v))}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
-      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button>${catalogueAdminEnabled() ? `<button class="bqi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button>` : '<span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span>'}</td>
+      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button>${tillFeature('caisseInventoryAdmin') ? `<button class="bqi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button>` : '<span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span>'}</td>
     </tr>`;
   }
 
@@ -861,7 +859,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       .map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   }
   function openNewProduct() {
-    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    if (!tillFeature('caisseInventoryAdmin')) { catalogDashboardOnly(); return; }
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Nouvel article</h3><span>Créez le produit, puis ajoutez ses variantes couleur × taille</span></div></div>
@@ -1012,7 +1010,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
   }
 
   function openEditProduct(pid) {
-    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    if (!tillFeature('caisseInventoryAdmin')) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return; const p = d.product;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1043,7 +1041,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
   }
 
   function confirmDeleteProduct(pid) {
-    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    if (!tillFeature('caisseInventoryAdmin')) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1061,7 +1059,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
      rayon et l'historique de mouvements de cette déclinaison disparaissaient
      ensemble, et la ligne d'à côté est le bouton « −1 ». On nomme ce qui part. */
   function confirmDeleteVariant(vid, pid) {
-    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    if (!tillFeature('caisseInventoryAdmin')) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const v = d.variants.find((x) => x.id === vid); if (!v) return;
     const codes = (v.barcodes || []).length;
@@ -1094,7 +1092,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
   /* Changer la couleur d'une variante existante. La variante garde son stock,
      ses codes-barres et son identité : seule la famille affichée change. */
   function openVariantColor(vid, pid) {
-    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    if (!tillFeature('caisseInventoryAdmin')) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const v = d.variants.find((x) => x.id === vid); if (!v) return;
     const html = `
@@ -1120,7 +1118,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     });
   }
   function openAddVariant(pid) {
-    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    if (!tillFeature('caisseInventoryAdmin')) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const presets = cat.sizePresets(d.product.kind);
     const html = `

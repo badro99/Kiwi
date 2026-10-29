@@ -1,6 +1,6 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=30';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=30';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=30';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=32';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=32';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=32';
 
   'use strict';
 
@@ -2591,6 +2591,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     bqShowOpenScreen();
   }
   function bqShowOpenScreen() {
+    /* God Mode regarde la caisse sans ouvrir de poste : session opérateur prouvée par /api/me pour CE magasin (caisse-pairing.js). */
+    try { const o = sessionStorage.getItem('kiwi:tillOperator:v1'); const pv = pvPaired(); if (o && pv && pv.merchant === o) return; } catch (_) {}
     if (document.getElementById('mz-clockin')) return;
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';

@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=100';
-import { openDrawerNoSale } from './pos-boutique/drawer.js?v=18';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=100';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=100';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=103';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=21';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=103';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=103';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
@@ -2529,7 +2529,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     const cc = document.createElement('k-cash-count'); cc.setAttribute('mode', 'open');
     return bqKitOpenSheet(screen, cc, onCounted, bqFloatMemKey());
   }
-  function bqShowOpenScreen() {
+  function bqShowOpenScreen() { if (tillOperatorView()) return;   // God Mode regarde la caisse, sans ouvrir de poste (drawer.js)
     if (document.getElementById('bq-clockin')) return;
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';

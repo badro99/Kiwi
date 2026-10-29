@@ -1769,6 +1769,8 @@ section('Whole-project regressions');
     'boutique-stock-movements-test.mjs',
     /* « Gestion complète de l’inventaire sur la caisse » vaut aussi à la caisse boutique (Santos, 29 oct.) : éteint, le verrou d'août ; allumé, créer, modifier, supprimer en vrais clics. */
     'boutique-till-catalog-admin-browser-test.mjs',
+    /* God Mode entre dans la caisse boutique sans écran de fond ni poste ouvert ; sans preuve /api/me, l'écran revient (propriétaire, 29 oct.). */
+    'boutique-operator-entry-browser-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',
     'maison-counter-truth-test.mjs',

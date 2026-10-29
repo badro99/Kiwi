@@ -200,8 +200,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "54",
-    "sha": "8f497f8c5aa27a6e"
+    "v": "57",
+    "sha": "05441e4552df94eb"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -1440,20 +1440,20 @@
     "sha": "0377d7489dd2a6b7"
   },
   "assets/pos-boutique.css": {
-    "v": "199",
+    "v": "202",
     "sha": "56a196b8e19951eb"
   },
   "assets/pos-boutique.js": {
-    "v": "199",
-    "sha": "271edd6fb1f974fa"
+    "v": "202",
+    "sha": "cf9c51bdf69d9771"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "100",
-    "sha": "1e4e86a84480e56f"
+    "v": "103",
+    "sha": "b3a5bb8794a71ca5"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "18",
-    "sha": "f9905bd1148b772c"
+    "v": "21",
+    "sha": "b31757aa5e92db23"
   },
   "assets/pos-boutique/inv-moves.js": {
     "v": "5",
@@ -1464,16 +1464,16 @@
     "sha": "7f85f3ad8239d866"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "100",
-    "sha": "099d2779c8f7dc88"
+    "v": "103",
+    "sha": "e1307eabe6381d3d"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "19",
     "sha": "2847ecce7d0a03b2"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "100",
-    "sha": "8fddf67663ea2d34"
+    "v": "103",
+    "sha": "33c103e379ac2bd7"
   },
   "assets/pos-boutique/search.js": {
     "v": "13",
@@ -1500,8 +1500,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "271",
-    "sha": "edd2a0821341a1ad"
+    "v": "275",
+    "sha": "5957afaa100810d4"
   },
   "assets/pos-epicerie.css": {
     "v": "29",
@@ -1564,24 +1564,24 @@
     "sha": "a54a90047406afd0"
   },
   "assets/pos-maison.css": {
-    "v": "110",
+    "v": "112",
     "sha": "8734bf709f3aa11c"
   },
   "assets/pos-maison.js": {
-    "v": "110",
-    "sha": "eaf2488714ce6dd8"
+    "v": "112",
+    "sha": "fcdfb56acfaebab7"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "30",
-    "sha": "03b5801a1e813a45"
+    "v": "32",
+    "sha": "63f4d4a18ae8fc25"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "30",
-    "sha": "39411c0dc5a95b2a"
+    "v": "32",
+    "sha": "4d3758b0284d6543"
   },
   "assets/pos-maison/sales.js": {
-    "v": "30",
-    "sha": "fb52b1139af1bea8"
+    "v": "32",
+    "sha": "b08781461669381f"
   },
   "assets/pos-mobile.css": {
     "v": "9",
