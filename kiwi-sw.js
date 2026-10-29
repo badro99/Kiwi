@@ -588,7 +588,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=16',
+  '/assets/pos-reprint.js?v=17',
   '/assets/pressing-caisse.js?v=78',
   '/assets/pressing-caisse.css?v=78',
   '/assets/material-icons.js?v=4',

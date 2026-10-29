@@ -465,6 +465,10 @@
     });
   }
 
+  /* La boutique n'annule pas de vente : un retour passe par l'échange ou
+     l'avoir. « Réimprimer » ressort un ticket, rien de plus. */
+  function canCancel(vertical) { return String(vertical) !== 'boutique'; }
+
   /* Seul le restaurant garde de quoi rouvrir la note : son instantané. */
   function canReopen(vertical, entry) {
     return vertical === 'restaurant' && !!entry.reopenSnapshot
@@ -481,7 +485,7 @@
     var cancelling = mode === 'cancel';
     var reopenBtn = canReopen(vertical, entry)
         ? '<button type="button" class="ma-btn" data-kx-rp-reopen>' + tr('Annuler et rouvrir la note') + '</button>' : '';
-    var cancelBtn = '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>' + tr('Annuler la vente') + '</button>';
+    var cancelBtn = canCancel(vertical) ? '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>' + tr('Annuler la vente') + '</button>' : '';
     /* Annuler une vente : l'annulation mène, on ne propose ni réimpression ni
        facture. Réimprimer : l'ordre d'origine, l'annulation en dernier. */
     var actions = cancelling
@@ -521,7 +525,8 @@
       });
     }
     var cancel = box.querySelector('[data-kx-rp-cancel]');
-    if (!entry.saleId) {
+    if (!cancel) { /* boutique : pas d'annulation */ }
+    else if (!entry.saleId) {
       cancel.disabled = true;
       cancel.title = tr('Synchronisation de la vente en cours');
     } else cancel.addEventListener('click', function () { showPin(vertical, entry, false); });
@@ -533,6 +538,7 @@
   }
 
   function showPin(vertical, entry, reopening) {
+    if (!canCancel(vertical)) return;
     var box = veil && veil.querySelector('.modal');
     if (!box) return;
     var bridge = window.KiwiRestaurantReopen;
@@ -611,6 +617,7 @@
        ouverture venue d'un bouton le fixe : « cancel » ou, par défaut, « reprint ». */
     if (opts && opts.mode) mode = opts.mode === 'cancel' ? 'cancel' : 'reprint';
     else if (!opts || !opts.noFetch) mode = 'reprint';
+    if (!canCancel(vertical)) mode = 'reprint';
     var cancelling = mode === 'cancel';
     css();
     if (!veil) {

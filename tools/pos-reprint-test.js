@@ -287,6 +287,14 @@ const SALE = {
   ok('Réimprimer : la fiche garde réimpression, facture et annulation', ['data-kx-rp-print', 'data-kx-rp-invoice', 'data-kx-rp-cancel'].every((k) => box.innerHTML.includes(k)));
   RP.openCancel('restaurant');
   eq('openCancel ouvre le mode annulation', box.attrs['data-kx-rp-mode'], 'cancel');
+
+  /* La boutique n'annule pas de vente, ni depuis « Réimprimer » ni autrement. */
+  RP.open('boutique');
+  box.clicks['0']();
+  ok('Boutique : la fiche garde réimpression et facture', ['data-kx-rp-print', 'data-kx-rp-invoice'].every((k) => box.innerHTML.includes(k)));
+  ok('Boutique : aucun bouton « Annuler la vente »', !box.innerHTML.includes('data-kx-rp-cancel') && !box.innerHTML.includes('data-kx-rp-reopen'));
+  RP.openCancel('boutique');
+  eq('Boutique : openCancel retombe sur la réimpression', box.attrs['data-kx-rp-mode'], 'reprint');
 }
 
 /* L'entrée « Annuler une vente » de la caisse demande bien le mode annulation. */
