@@ -671,6 +671,8 @@
       vatBlock.lines.forEach(function (l) { R(l[0], l[1]); });
     }
 
+    /* noDrawer · le Z des livraisons de la boutique : rien n'entre au tiroir. */
+    if (!o.noDrawer) {
     var cash = r.cash || {};
     rule();
     out.push('<div class="kpr-c kpr-b">' + esc(o.drawerTitle || 'TIROIR-CAISSE') + '</div>');
@@ -701,6 +703,7 @@
       var cg = +card.gap || 0;
       R('RÉSULTAT', cg === 0 ? (o.cardMatched || 'RAPPROCHÉ')
         : (cg > 0 ? 'TERMINAL + ' : 'KIWI + ') + money(Math.abs(cg)), 'kpr-b');
+    }
     }
 
     rule();

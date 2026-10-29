@@ -472,6 +472,73 @@
     return built;
   }
 
+  /* BOUTIQUE · le Rapport journalier se lit en deux, comme le Z imprimé à la
+     caisse : le magasin hors livraisons, puis les livraisons seules. Calculé
+     depuis les ventes du serveur, où une livraison arrive avec channel
+     'delivery', un montant encaissé de 0 et sa part « delivery » dans
+     paymentParts. Les espèces prises au comptoir sur une livraison restent au
+     magasin (le tiroir ne bouge pas) ; ses articles et sa remise vont aux
+     livraisons. Le rapport classé, la frise et l'accueil ne changent pas. Si le
+     feed connaît moins de ventes que l'instantané, on ne coupe rien. */
+  var isDeliverySale = function (s) {
+    if (!s) return false;
+    if (s.channel === 'delivery' || String(s.method || '').toLowerCase() === 'delivery') return true;
+    return (Array.isArray(s.paymentParts) ? s.paymentParts : []).some(function (p) { return p && p.method === 'delivery'; });
+  };
+  var deliveryCents = function (s) {
+    var c = (Array.isArray(s.paymentParts) ? s.paymentParts : []).reduce(function (n, p) {
+      return n + (p && p.method === 'delivery' ? Math.max(0, Math.round(+p.amountCents || 0)) : 0); }, 0);
+    if (c > 0) return c;
+    return Math.round((s.lines || []).reduce(function (n, l) { return n + (+(l && (l.total != null ? l.total : l.t)) || 0); }, 0) * 100);
+  };
+  var splitBoutique = function (day, r) {
+    var d = DR();
+    if (!d || !r || r.historical || !r.txns) return null;
+    var type = String((r.store && r.store.type) || storeInfo().type || '').toLowerCase();
+    if (type !== 'boutique') return null;
+    var f = feedTotals(day);
+    if (!f || f.txns < (+r.txns || 0)) return null;
+    var sales = dashSales(), shop = [], away = [], disc = 0, discN = 0;
+    sales.forEach(function (s) {
+      if (!s || !isDeliverySale(s) || s.kind === 'refund') { shop.push(s); return; }
+      var cents = deliveryCents(s), off = Math.max(0, Math.round(+s.discountAmountCents || 0));
+      if (off) { disc += off; discN++; }
+      if ((+s.amount || 0) > 0) shop.push(Object.assign({}, s, { lines: null, channel: '', discountAmountCents: 0 }));
+      away.push(Object.assign({}, s, { amount: cents / 100, amountCents: cents, method: 'delivery', paymentParts: null, parts: [{ method: 'delivery', amountCents: cents }] }));
+    });
+    var sess = r.live ? {} : sessionOf(r);
+    var shopSess = Object.assign({}, sess, {
+      discounts: Math.max(0, Math.round((+sess.discounts || 0) * 100 - disc) / 100),
+      discountsCount: Math.max(0, (+sess.discountsCount || 0) - discN) });
+    var awaySess = { openedAt: sess.openedAt, closedAt: sess.closedAt, openedBy: sess.openedBy, closedBy: sess.closedBy, discounts: disc / 100, discountsCount: discN };
+    var opts = { day: day, sales: shop, session: shopSess, store: storeInfo(), source: 'dashboard', categoryIndex: catIndex() };
+    var store, delivery;
+    try {
+      store = d.build(opts);
+      delivery = d.build(Object.assign({}, opts, { sales: away, session: awaySess }));
+    } catch (_) { return null; }
+    if (!store || !delivery) return null;
+    if (r.live) store.live = true;
+    else if (d.inheritDrawers) d.inheritDrawers(store, r, opts);
+    store.closedCount = r.closedCount || 0; store.revisions = r.revisions || []; store.snapshotConflicts = r.snapshotConflicts || [];
+    store.store = r.store || store.store; delivery.closedAt = store.closedAt; delivery.closedCount = store.closedCount;
+    store.deliverySplit = delivery; store.fullReport = r;
+    return store;
+  };
+  var deliveryHtml = function (r) {
+    var cats = [];
+    (r.categories || []).forEach(function (c) { (c.products || []).forEach(function (p) {
+      cats.push(row(qty(p.qty) + '× ' + p.name, money(p.total) + ' ' + CUR(), 'sub')); }); });
+    return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({ fr: 'Livraisons', en: 'Deliveries', ar: 'التوصيلات' })) + '</span><em>'
+      + esc(T({ fr: 'hors des chiffres ci-dessus', en: 'not in the figures above', ar: 'خارج الأرقام أعلاه' })) + '</em></div>'
+      + (r.txns ? row(T({ fr: 'Ventes en livraison', en: 'Delivery sales', ar: 'مبيعات التوصيل' }), String(r.txns))
+        + row(T({ fr: 'À recevoir', en: 'Receivable', ar: 'مبلغ مستحق' }), money(r.receivable) + ' ' + CUR(), 'total')
+        + (r.discounts && r.discounts.amount ? row(T(L.discounts) + ' (' + (r.discounts.count || 0) + ')', '− ' + money(r.discounts.amount) + ' ' + CUR()) : '')
+        + row(T({ fr: 'Articles', en: 'Items', ar: 'المنتجات' }), qty(r.items || 0)) + cats.join('')
+        : '<div class="kdr-note">' + esc(T({ fr: 'Aucune livraison ce jour.', en: 'No deliveries this day.', ar: 'لا توجد توصيلات هذا اليوم.' })) + '</div>')
+      + '</div>';
+  };
+
   /* Le total d'une journée SANS la construire entièrement — la frise en demande
      quatorze et la comparaison deux ou trois, et aucune n'a besoin du détail
      produit ni du tiroir. Un build() complet par barre ferait payer le
@@ -709,6 +776,7 @@
     current = day || current || last;
     var todayD = d.today();
     var r = resolve(current);
+    r = splitBoutique(current, r) || r;   /* boutique : magasin ici, livraisons dans leur section */
     /* Le rapport est une PIÈCE D'ARCHIVE : il s'intitule avec le magasin qu'il
        décrit et parle la langue du métier de CE magasin — pas de celui qui se
        trouve sélectionné dans le sélecteur au moment où on l'ouvre. Sans ça, le
@@ -950,6 +1018,7 @@
       body: nav + strip + idBlock + kpis
         + hourlyHtml(r)
         + '<div class="kdr-two">' + payBlock + cashBlock + '</div>' + acompteBlock
+        + (r.deliverySplit ? deliveryHtml(r.deliverySplit) : '')
         + topHtml(r, V)
         + catBlock
         + '<div class="kdr-two">' + adj + cshBlock + '</div>'
@@ -1001,10 +1070,17 @@
         return;
       }
       if (a === 'month') { window.KiwiMonthReport?.open?.(); return; }
-      if (a === 'print') { printReport(report); return; }
-      if (a === 'csv') {
-        if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(report);
-        else exportCsv(report); /* cache partiel : conserver l'ancien filet */
+      if (a === 'print') {
+        /* Boutique : les deux tickets du Z, le magasin puis les livraisons, l'un après l'autre. */
+        var dl = report && report.deliverySplit;
+        var first = printReport(report, dl ? { title: T({ fr: 'Rapport Z · hors livraisons', en: 'Z report · excluding deliveries', ar: 'تقرير Z · بدون التوصيلات' }).toUpperCase() } : null);
+        if (dl) Promise.resolve(first).then(function () { printReport(dl, { title: T({ fr: 'Rapport Z · livraisons', en: 'Z report · deliveries', ar: 'تقرير Z · التوصيلات' }).toUpperCase(),
+          netLabel: T({ fr: 'Net livraisons', en: 'Deliveries net', ar: 'صافي التوصيلات' }).toUpperCase(), noDrawer: true, copy: isClosed(report) ? '' : 'PROVISOIRE' }); });
+        return;
+      }
+      if (a === 'csv') {   /* l'export garde la journée entière */
+        if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(report.fullReport || report);
+        else exportCsv(report.fullReport || report); /* cache partiel : conserver l'ancien filet */
         return;
       }
     });
@@ -1012,11 +1088,11 @@
 
   /* Imprimer depuis le tableau de bord. Le patron n'a pas d'imprimante thermique dans son bureau : printDayReport retombe
      tout seul sur le pilote du système, donc « Enregistrer en PDF » — un archivage valable. Même mise en page que la caisse. */
-  function printReport(r) {
+  function printReport(r, extra) {
     if (!r || !window.KiwiPrinter || !window.KiwiPrinter.printDayReport) return;
     var d = DR(); var V = d ? d.vocab() : { items: 'articles', cat: 'catégorie' };
     var st = storeInfo();
-    window.KiwiPrinter.printDayReport({
+    return window.KiwiPrinter.printDayReport(Object.assign({
       report: r,
       shop: st.name || (r.store && r.store.name) || 'Kiwi',
       address: st.location || (r.store && r.store.location) || '',
@@ -1033,7 +1109,7 @@
       notCounted: T(L.notCount),
       methodLabels: METHODS[LANG()] || METHODS.fr,
       fmt: money,
-    });
+    }, extra || {}));
   }
 
   /* Le CSV, pour le comptable — qui ne veut ni un PDF ni une capture d'écran.

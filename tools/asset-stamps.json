@@ -444,8 +444,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "45",
-    "sha": "1e805ef195779aa8"
+    "v": "46",
+    "sha": "3b8939a67c4785ae"
   },
   "assets/day-report-export.js": {
     "v": "19",
@@ -1352,8 +1352,8 @@
     "sha": "3eaee9016797b178"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "91",
-    "sha": "29842d6abb634727"
+    "v": "92",
+    "sha": "2636643df31e232f"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1708,8 +1708,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "49",
-    "sha": "139e8f84c6232db1"
+    "v": "50",
+    "sha": "7f15936762c24b86"
   },
   "assets/printer/pairing-lang.js": {
     "v": "9",
