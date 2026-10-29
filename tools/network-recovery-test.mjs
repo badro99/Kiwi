@@ -98,6 +98,8 @@ for (const name of ['salle', 'menu']) await test(name + ' modal timeout message,
       json: async () => ({ ok: true, items: [{ name: 'Fixture' }], tables: [{ shape: 'round', seats: 2, count: 1 }] }) } : new Promise(() => {}); }
   };
   vm.runInNewContext(fs.readFileSync('assets/ai-image-import.js', 'utf8'), c);
+  // The menu scan reads PDFs and builds its CSV through menu-scan-reader.js, loaded before it (dashboard-loader).
+  if (name === 'menu') vm.runInNewContext(fs.readFileSync('assets/menu-scan-reader.js', 'utf8'), c);
   vm.runInNewContext(fs.readFileSync('assets/' + name + '-scan.js', 'utf8'), c);
   const api = window[name === 'salle' ? 'KiwiSalleScan' : 'KiwiMenuScan'];
   const click = selector => events.click({ target: { closest: q => q === selector ? {} : null } });
