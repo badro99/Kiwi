@@ -1374,6 +1374,8 @@
     sync: () => { crossReset(); load(); return pull(true); },
     cloudRev: () => cloud.rev,   // la révision serveur sur laquelle cette copie repose
     // util
+    // Les ventes pièce par pièce (motif « vente ») : la forme des tailles que la boutique écoule (boutique-size-split.js).
+    soldMoves: () => (load(), (db.moves || []).filter((m) => m && m.why === 'vente' && m.d < 0).map((m) => ({ vid: m.vid, n: -m.d, at: m.at }))),
     stats: () => (load(), stats()), compat: () => (load(), compat()), exportCsv: () => (load(), exportCsv()),
     get _key() { return KEY; }, get _venue() { return VENUE; },
   };

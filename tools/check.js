@@ -1772,6 +1772,9 @@ section('Whole-project regressions');
     /* God Mode entre dans la caisse boutique sans écran de fond ni poste ouvert ; sans preuve /api/me, l'écran revient (propriétaire, 29 oct.). */
     'boutique-operator-entry-browser-test.mjs',
     'till-inventory-access-test.mjs',
+    /* Un carton réparti sur ses tailles en un geste : comme les ventes de la boutique, égal, saisie rapide « M3 L5 XL2 », le reste sur la dernière taille (propriétaire, 29 oct.). */
+    'boutique-size-split-test.mjs',
+    'boutique-size-split-browser-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',
     'maison-counter-truth-test.mjs',

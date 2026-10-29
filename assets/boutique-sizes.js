@@ -23,6 +23,8 @@
  * tableau de bord (pages-pro-boutique.js) : même balisage, même CSS.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+import * as SPLIT from './boutique-size-split.js?v=2';
+
 export const ONE_COLOR = 'unique';
 const GRID = {
   taille: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
@@ -244,11 +246,14 @@ export function mount(host, o) {
       </li>`;
     }).join('');
     const printable = printCount();
+    /* Un carton à répartir : la bande de boutique-size-split.js au-dessus des cases. */
+    const splitOn = !ro && shown.length > 1 && shown.every((r) => !r.multi);
     host.innerHTML = `<div class="kbs" data-kbs>
       <div class="kbs-top">
         ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(d.stock))}</span>`}
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
+      ${splitOn ? '<div data-kbs-split></div>' : ''}
       ${shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span></span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
       <ul class="kbs-list">${rowsHtml}</ul>` : `<p class="kbs-msg">${esc(t.empty)}</p>`}
       <p class="kbs-msg" data-kbs-msg>${creating && list.length > 1 ? esc(t.hintCreate) : ''}</p>
@@ -258,7 +263,14 @@ export function mount(host, o) {
       </div>
     </div>`;
     wire();
-    if (creating) { const first = host.querySelector('[data-kbs-in]'); if (first) setTimeout(() => first.focus(), 40); }
+    if (splitOn) {
+      SPLIT.mountSplit(host.querySelector('[data-kbs-split]'), {
+        root: host, target, lang: o.lang,
+        rows: shown.map((r) => ({ key: r.key, size: r.size, label: r.size === 'TU' ? t.tu : r.size })),
+        curve: () => SPLIT.curveFor(cat, pid, shown.map((r) => r.size)),
+      });
+    }
+    if (creating) { const first = host.querySelector(splitOn ? '[data-kbsp-quick]' : '[data-kbs-in]'); if (first) setTimeout(() => first.focus(), 40); }
   };
 
   /* Étiquettes : la dernière réception si elle vient d'être enregistrée,
