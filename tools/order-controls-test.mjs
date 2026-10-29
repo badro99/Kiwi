@@ -52,9 +52,9 @@ assert(alternate.includes('function addModal() { catalogDashboardOnly(); return;
 assert(boutique.includes('bqi-dashboard-only'), 'boutique caisse must show dashboard-owned catalogue copy');
 assert(boutique.includes('function catalogDashboardOnly()'), 'boutique caisse catalogue guard is missing');
 // Locked unless the operator switch « Gestion complète de l'inventaire sur la caisse » is on (Santos, 29 Oct).
-assert(/function openNewProduct\(\)\s*\{\s*if \(!tillFeature\('caisseInventoryAdmin'\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse new-product path must be locked');
-assert(/function openEditProduct\(pid\)\s*\{\s*if \(!tillFeature\('caisseInventoryAdmin'\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse edit-product path must be locked');
-assert(boutique.split('data-vcolor="${v.id}"').length === 2 && boutique.includes("${tillFeature('caisseInventoryAdmin') ? `<button class=\"bqi-cbtn\" data-vcolor=\"${v.id}\""), 'boutique caisse exposes the variant colour edit only behind the inventory switch');
+assert(/function openNewProduct\(\)\s*\{\s*if \(!tillInventoryAllowed\(\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse new-product path must be locked');
+assert(/function openEditProduct\(pid\)\s*\{\s*if \(!tillInventoryAllowed\(\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse edit-product path must be locked');
+assert(boutique.split('data-vcolor="${v.id}"').length === 2 && boutique.includes("${tillInventoryAllowed() ? `<button class=\"bqi-cbtn\" data-vcolor=\"${v.id}\""), 'boutique caisse exposes the variant colour edit only behind the inventory switch');
 assert(!boutique.includes('data-vdel="${v.id}"'), 'boutique caisse still exposes a variant deletion action');
 
 /* Run: mutation normalizedRole returns the unnormalized input; the existing

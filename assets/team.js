@@ -1,4 +1,4 @@
-import {} from './team/access-rules.js?v=6';
+import {} from './team/access-rules.js?v=7';
 import {} from './team/member-state.js?v=10';
 import {} from './team/venue-scope.js?v=6';
 import {} from './team/invitations.js?v=9';

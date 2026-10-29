@@ -110,6 +110,7 @@
       secContact:     'Contact',
       secAccess:      'Compte employé Kiwi',
       secRole:        'Rôle & affectation',
+      edTillInv: "Peut modifier l'inventaire sur la caisse", edTillInvHint: 'Créer, modifier ou supprimer des articles depuis la caisse. Le propriétaire et les managers le peuvent toujours.',
       secContract:    'Contrat',
       secComp:        'Rémunération',
       secSkills:      'Compétences',
@@ -306,6 +307,7 @@
       secContact:     'Contact',
       secAccess:      'Kiwi employee account',
       secRole:        'Role & assignment',
+      edTillInv: 'Can edit inventory on the till', edTillInvHint: 'Create, edit or delete items from the till. The owner and managers always can.',
       secContract:    'Contract',
       secComp:        'Compensation',
       secSkills:      'Skills',
@@ -501,6 +503,7 @@
       secContact:     'الاتصال',
       secAccess:      'حساب موظف Kiwi',
       secRole:        'المنصب والتكليف',
+      edTillInv: 'يمكنه تعديل المخزون من الصندوق', edTillInvHint: 'إنشاء الأصناف أو تعديلها أو حذفها من الصندوق. المالك والمديرون يمكنهم ذلك دائماً.',
       secContract:    'العقد',
       secComp:        'الراتب',
       secSkills:      'المهارات',
@@ -1069,6 +1072,7 @@
     .kt-ed-sec > h4 { margin: 0 0 12px; font: 600 14.5px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
     .kt-ed-sec > p { max-width: 58ch; margin: -6px 0 12px; font-size: 12px; line-height: 1.45; color: var(--n-500); }
     .kt-ed-sec > .kt-ed-f, .kt-ed-sec > .kt-ed-langs { margin-bottom: 14px; }
+    [data-kt-form] .kt-ed-check { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; cursor: pointer; } .kt-ed-check input { margin-top: 3px; accent-color: var(--atlas); } .kt-ed-check b { display: block; font: 600 13px var(--sans); color: var(--ink); } .kt-ed-check small { display: block; font-size: 12px; line-height: 1.45; color: var(--n-500); }
     .kt-ed-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
     .kt-ed-wide { grid-column: 1 / -1; }
     /* .kt-ed scope: MODAL_CSS sets « [data-kt-form] label { display: block } », which ran the hint and the error into one line. */
@@ -1219,6 +1223,7 @@
                 ${edField(T, 'function', T.function, `<select class="kt-ed-in" name="function" required data-kt-function data-depts="${esc(JSON.stringify(cat.departments))}">${editing ? '' : `<option value=""${m.function ? '' : ' selected'}>${esc(T.edChooseFn)}</option>`}${fnOpts}</select>`, { req: true })}
                 ${edField(T, 'department', T.department, `<select class="kt-ed-in" name="department">${editing ? '' : `<option value=""${m.department ? '' : ' selected'}>${esc(T.edChooseDept)}</option>`}${deptOpts}</select>`)}
               </div>
+              ${window.KiwiConfig?.features?.caisseInventoryAdmin === true ? `<label class="kt-ed-check"><input type="hidden" name="tillInventoryShown" value="1"><input type="checkbox" name="tillInventory" value="1"${m.tillInventory === true ? ' checked' : ''}><span><b>${esc(T.edTillInv)}</b><small>${esc(T.edTillInvHint)}</small></span></label>` : ''}
             </section>
 
             <section class="kt-ed-sec">

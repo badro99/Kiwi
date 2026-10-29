@@ -74,6 +74,9 @@
       emergencyName: (data.emergencyName || '').trim(),
       emergencyPhone: (data.emergencyPhone || '').trim(),
       notes: (data.notes || '').trim(),
+      /* Inventaire sur la caisse (pos-boutique/drawer.js › tillInventoryAllowed). Case absente
+         (interrupteur éteint) : on garde ce que le membre avait. */
+      tillInventory: data.tillInventoryShown ? data.tillInventory === '1' : !!(prev && prev.tillInventory === true),
       avatarTone: st.avatarTone || AVATAR_TONES[Math.floor(Math.random() * AVATAR_TONES.length)],
       venueType,
       venueSlug: teamSlug(),

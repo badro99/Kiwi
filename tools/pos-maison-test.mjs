@@ -345,7 +345,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   // a) l'édition caisse reste fermée par défaut, et ne s'ouvre que sur true
   ok(/function openNewProduct\(\)\s*\{\s*if \(!catalogueAdminEnabled\(\)\) \{ catalogDashboardOnly\(\); return; \}/.test(jsSrc),
     'la caisse bloque la création d’article tant que God Mode ne l’autorise pas');
-  ok(/features\.caisseInventoryAdmin === true/.test(jsSrc),
+  ok(/catalogueAdminEnabled = tillInventoryAllowed/.test(jsSrc) && /features\.caisseInventoryAdmin === true/.test(fs.readFileSync(path.join(path.dirname(jsPath), 'till-inventory-access.js'), 'utf8')),
     'seule la valeur booléenne true ouvre la gestion complète sur caisse');
 
   // b) le formulaire de création propose A et B, et n'en pré-coche aucune

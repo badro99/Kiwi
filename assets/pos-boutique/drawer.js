@@ -1,18 +1,12 @@
 /* Le tiroir sans vente de la caisse boutique, sorti de sales.js (plafond de
  * taille, tools/file-size-ratchet-test.mjs). Mêmes octets de logique qu'avant. */
-import { toast, pvReal, pvPaired } from '../pos-boutique.js?v=203';
+import { toast, pvReal, pvPaired } from '../pos-boutique.js?v=204';
 
 /* Ouvrir le tiroir sans vente, le geste du restaurant
    (caisse-accounting/drawer.js) porté à la boutique : code manager validé
    par le serveur sur un vrai magasin, le coup part vers l'imprimante du
    comptoir (le tiroir y est branché), et l'ouverture laisse une trace à
    montant nul dans les mouvements du poste. `record` émet cette trace. */
-/* Un interrupteur de la console allumé pour ce magasin (features[key] === true).
-   Ici parce que ce module lit déjà KiwiConfig : l'inventaire l'importe au lieu
-   d'ajouter une lecture de global (tools/coupling-ratchet-test.mjs). */
-export function tillFeature(key) {
-  try { return !!(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features[key] === true); } catch (_) { return false; }
-}
 
 /* God Mode : la console opérateur ouvre la caisse pour regarder, pas pour tenir
    un poste. Session opérateur prouvée par /api/me pour CE magasin

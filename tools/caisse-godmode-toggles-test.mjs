@@ -47,7 +47,8 @@ check('CAISSE_ACTIONS includes openDrawer (Bouton Ouvrir le tiroir)', /key:'open
 check('Maison full inventory control is an explicit God Mode opt-in',
   /key:'caisseInventoryAdmin'[\s\S]{0,120}off:true/.test(ADMIN));
 check('Maison treats only boolean true as inventory-admin authorization',
-  MAISON.includes('features.caisseInventoryAdmin === true'));
+  MAISON.includes('const catalogueAdminEnabled = tillInventoryAllowed;')
+  && fs.readFileSync(path.join(ROOT, 'assets/till-inventory-access.js'), 'utf8').includes('features.caisseInventoryAdmin === true'));
 check('Maison exposes product, category and variant tools only behind the authorization',
   MAISON.includes("id=\"mzi-category\"") && MAISON.includes("id=\"mzi-new\"") &&
   MAISON.includes('data-inv-addvar') && MAISON.includes('data-vdelete'));

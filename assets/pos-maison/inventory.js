@@ -1,6 +1,7 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=112';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=32';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=32';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=113';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=33';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=33';
+import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -809,15 +810,12 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerT
   }
 
   /* ─── the inventory panel ─── */
-  function catalogueAdminEnabled() {
-    return !!(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryAdmin === true);
-  }
+  const catalogueAdminEnabled = tillInventoryAllowed;   // interrupteur + qui est au pavé (till-inventory-access.js)
   function inventoryValueVisible() {
     return !(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryValue === false);
   }
   function catalogDashboardOnly() {
-    const msg = 'La gestion complète du catalogue sur la caisse n’est pas activée pour cet établissement.';
-    if (typeof toast === 'function') toast(msg);
+    if (typeof toast === 'function') toast(tillInventoryRefusal());
   }
 
   function renderInventaire() {
@@ -837,7 +835,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerT
           <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
           <button class="mz-btn primary" id="mzi-count" style="background:#059669;border-color:#047857;"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
           <button class="mz-btn" id="mzi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
-          ${catalogueAdminEnabled() ? '<button class="mz-btn" id="mzi-category"><i data-lucide="folders"></i>Catégories</button><button class="mz-btn primary" id="mzi-new"><i data-lucide="plus"></i>Nouvel article</button>' : '<span class="mzi-dashboard-only">Gestion complète désactivée pour cet établissement</span>'}
+          ${catalogueAdminEnabled() ? '<button class="mz-btn" id="mzi-category"><i data-lucide="folders"></i>Catégories</button><button class="mz-btn primary" id="mzi-new"><i data-lucide="plus"></i>Nouvel article</button>' : `<span class="mzi-dashboard-only">${esc(tillInventoryRefusal())}</span>`}
         </div>
         <div class="mzi-pills" id="mzi-pills">
           <button class="mzi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>

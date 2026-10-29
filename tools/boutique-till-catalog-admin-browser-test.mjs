@@ -9,6 +9,8 @@
  * into a "do it on the dashboard" label and its body unreachable.
  *
  * Off: the till shows the dashboard labels and no editing button.
+ * On, per worker (owner, 29 October): a cashier the owner did not tick in
+ * Équipe gets the labels; ticked, she edits; a manager always edits.
  * On: real clicks create an article, change its price, add a variant, delete
  * the variant and delete the article, through the real forms, with no page
  * error. Demo till only: nothing reaches a server.
@@ -105,6 +107,24 @@ ok(!!p && p.variants.length === 1 && p.variants[0].size === 'M', 'deleting a var
 await click('[data-inv-delete]');
 await click('#bqi-del-ok');
 ok(await product(NAME) === null, 'Supprimer removes the article after confirmation');
+
+/* ── on · the owner's per-worker choice (Équipe › « Peut modifier l'inventaire sur la caisse ») ── */
+await page.evaluate(() => {
+  window.KiwiConfig.pins = [{ id: 'p1', name: 'Sara Test', role: 'Caissière' }];
+  window.KiwiStaff = { name: 'Sara Test', role: 'Caissière' };
+});
+await showInventory(true);
+ok(await page.$('#bqi-new') === null && await page.$('[data-bq-panel="inventaire"] .bqi-dashboard-only') !== null, 'switch on · a cashier the owner did not tick gets no editing button');
+await page.evaluate(() => {
+  let slug = '';
+  try { const v = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); slug = String((v && v.merchant) || localStorage.getItem('kiwiLiveMerchant') || ''); } catch (_) {}
+  localStorage.setItem('kiwi:tillInvStaff:' + slug, JSON.stringify(['sara test']));
+});
+await showInventory(true);
+ok(await page.$('#bqi-new') !== null, 'once ticked in Équipe, the same cashier gets « Nouvel article »');
+await page.evaluate(() => { window.KiwiStaff = { name: 'Yassine Test', role: 'Manager' }; });
+await showInventory(true);
+ok(await page.$('#bqi-new') !== null, 'a manager edits without being ticked');
 
 ok(errors.length === 0, 'no page error during the whole cycle', errors.slice(0, 3).join(' | '));
 

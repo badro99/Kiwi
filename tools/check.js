@@ -1771,6 +1771,7 @@ section('Whole-project regressions');
     'boutique-till-catalog-admin-browser-test.mjs',
     /* God Mode entre dans la caisse boutique sans écran de fond ni poste ouvert ; sans preuve /api/me, l'écran revient (propriétaire, 29 oct.). */
     'boutique-operator-entry-browser-test.mjs',
+    'till-inventory-access-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',
     'maison-counter-truth-test.mjs',
