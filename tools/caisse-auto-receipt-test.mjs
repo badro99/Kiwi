@@ -65,7 +65,12 @@ assert.match(caisse, /const sale = lastSaleEntry\(\);\s*closeCardModal\(\);\s*pr
 assert.match(caisse, /printSaleTicket\(entry \|\| lastSaleEntry\(\)\)/, 'split payments keep their one-print path');
 for (const [file, prefix] of [['assets/pos-boutique.js', 'bq'], ['assets/pos-maison.js', 'mz']]) {
   const body = read(file);
-  assert.match(body, new RegExp("else \\{ closeVeil\\('#" + prefix + "-pay-veil'\\); printReceiptNow\\(opts, parts\\); \\}"), file + ' closes and prints after paid commit');
+  /* Boutique (play-test Amira, 2026-10-29) : sans imprimante, l'impression
+     automatique n'ouvre plus la boîte système ; la caisse revient à la vente et
+     le signale ; le ticket se réimprime depuis l'historique. */
+  if (prefix === 'bq') assert.match(body, /const printed = printReceiptNow\(opts, parts, \{ auto: true \}\);\s*closeVeil\('#bq-pay-veil'\);\s*if \(printed === false\) toast\(/, file + ' prints after paid commit, or just says so without a printer');
+  if (prefix === 'bq') assert.match(body, /if \(auto && !receiptPrinterReady\(KP\)\) return false;\s*toast\([^\n]*Impression du reçu…[^\n]*\);\s*Promise\.resolve\(K\.print\(doc\)\)/, file + ' never opens the system print dialog on its own without a printer');
+  else assert.match(body, new RegExp("else \\{ closeVeil\\('#" + prefix + "-pay-veil'\\); printReceiptNow\\(opts, parts\\); \\}"), file + ' closes and prints after paid commit');
   assert.match(body, /if \(res\.delivery \|\| parts\.some\(\(x\) => x\.m === 'livraison'\)\) stepSuccess/, file + ' preserves deferred delivery workflow');
 }
 assert.match(read('assets/pos-fastfood.js'), /postOrder\(order\);\s*closeVeil\('#ff-pay-veil'\);/, 'fast food paid checkout does not wait on a success screen');

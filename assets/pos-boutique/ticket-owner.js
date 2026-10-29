@@ -32,6 +32,7 @@ const ticketOwner = {
     ticket.num = num; ticket.period = period;
     ticket.numbering = false; ticket.numError = false;
   },
+  numberReady(ticket) { ticket.numbering = false; ticket.numError = false; },
   numberFailed(ticket) { ticket.numbering = false; ticket.numError = true; },
   renewPeriod(ticket, period) { ticket.num = ''; ticket.period = period; },
   startReturn(state, exchange) { state.exchange = exchange; state.ret = null; },

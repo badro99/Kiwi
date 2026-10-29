@@ -396,12 +396,12 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "121",
-    "sha": "8098585bbd6b6cca"
+    "v": "123",
+    "sha": "2bd85e75d9154553"
   },
   "assets/daterange/activity.js": {
-    "v": "5",
-    "sha": "b60f3298273d9920"
+    "v": "6",
+    "sha": "ff66f65e810de137"
   },
   "assets/daterange/cards.js": {
     "v": "8",
@@ -416,8 +416,8 @@
     "sha": "6c36fd1beb9b0595"
   },
   "assets/daterange/kpi.js": {
-    "v": "10",
-    "sha": "215868694e906d33"
+    "v": "12",
+    "sha": "a291a4e4af5b0e31"
   },
   "assets/daterange/ledger.js": {
     "v": "7",
@@ -428,8 +428,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "20",
-    "sha": "0051c8f34c330e93"
+    "v": "22",
+    "sha": "9698bc0258092939"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -440,16 +440,16 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "44",
-    "sha": "76f0fedd703196d4"
+    "v": "45",
+    "sha": "1e805ef195779aa8"
   },
   "assets/day-report-export.js": {
-    "v": "18",
-    "sha": "a24f79c0a7533715"
+    "v": "19",
+    "sha": "29354316e257d248"
   },
   "assets/day-report.js": {
-    "v": "38",
-    "sha": "e221f0a9238edccf"
+    "v": "39",
+    "sha": "c7d5ddd67f4b8dea"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -1300,8 +1300,8 @@
     "sha": "2cfe4e7d2ca95ce5"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "17",
-    "sha": "bf181022e5c1ae74"
+    "v": "18",
+    "sha": "dd24eb9c10a6b13f"
   },
   "assets/pages-pro-office.js": {
     "v": "3",
@@ -1316,12 +1316,12 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2193",
-    "sha": "671482e77449b8da"
+    "v": "2196",
+    "sha": "9f88c5f5a3999011"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "12",
-    "sha": "c9ae3db7297416a4"
+    "v": "15",
+    "sha": "c84e97f8a6bfbc14"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1344,8 +1344,8 @@
     "sha": "3eaee9016797b178"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "85",
-    "sha": "01cf76216f574bce"
+    "v": "88",
+    "sha": "a3222b5cd2ba9f8e"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1440,48 +1440,52 @@
     "sha": "0377d7489dd2a6b7"
   },
   "assets/pos-boutique.css": {
-    "v": "196",
+    "v": "198",
     "sha": "56a196b8e19951eb"
   },
   "assets/pos-boutique.js": {
-    "v": "196",
-    "sha": "40a9a0f2bce0238a"
+    "v": "198",
+    "sha": "a90d056f8540409f"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "97",
-    "sha": "508809306a3c85db"
+    "v": "99",
+    "sha": "f32276d5d9525706"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "15",
-    "sha": "17d1e3830166dc3a"
+    "v": "17",
+    "sha": "1ebb1aebd158f63b"
   },
   "assets/pos-boutique/inv-moves.js": {
     "v": "5",
     "sha": "329e120766c47387"
   },
   "assets/pos-boutique/inv-tools.js": {
-    "v": "16",
-    "sha": "b0c54660dd11c911"
+    "v": "17",
+    "sha": "7f85f3ad8239d866"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "97",
-    "sha": "df5c79adb6807577"
+    "v": "99",
+    "sha": "c555201ce71591ae"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "19",
     "sha": "2847ecce7d0a03b2"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "97",
-    "sha": "bd2cee147c5092e2"
+    "v": "99",
+    "sha": "2602875aa31cbc8d"
   },
   "assets/pos-boutique/search.js": {
-    "v": "12",
-    "sha": "64990390565f83e8"
+    "v": "13",
+    "sha": "d230b2727ea17bff"
+  },
+  "assets/pos-boutique/ticket-number.js": {
+    "v": "1",
+    "sha": "5fbda0929881f767"
   },
   "assets/pos-boutique/ticket-owner.js": {
-    "v": "2",
-    "sha": "2197bb1f7d45ca56"
+    "v": "3",
+    "sha": "254a30f6c8c001a3"
   },
   "assets/pos-boutique/ticket-remise.js": {
     "v": "3",
@@ -1496,8 +1500,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "268",
-    "sha": "9c076438aeeeeb4a"
+    "v": "270",
+    "sha": "16ecf2933eb1d316"
   },
   "assets/pos-epicerie.css": {
     "v": "29",
@@ -1864,8 +1868,8 @@
     "sha": "b08da8689e842159"
   },
   "assets/sold-insights.js": {
-    "v": "19",
-    "sha": "4f1d79ac5cd0e42f"
+    "v": "20",
+    "sha": "b5ec8044f1b088eb"
   },
   "assets/staff-roles.js": {
     "v": "2",

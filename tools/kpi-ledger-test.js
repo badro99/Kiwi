@@ -150,10 +150,11 @@ ok('les journées décalées ne soustraient plus 24 heures',
     new RegExp(k + ":\\s*data\\." + k + "\\s*\\?[^\\n]*text: '·'").test(SRC),
     'la tuile retombe encore sur le zéro du clone de démonstration');
 });
-ok('« tauxRetour » = remboursé ÷ vendu sur la période, en valeur',
-  /tauxRetour: data\.tauxRetour \? \(w\.gross > 0\s*\?[^\n]*value: Math\.round\(\(w\.refunds \/ w\.gross\) \* 1000\) \/ 10, unit: '%'/.test(SRC));
+ok('« tauxRetour » = (remboursé + crédité en avoir) ÷ vendu sur la période, en valeur',
+  /const returned = w\.refunds \+ creditStats\(wFrom, wTo\)\.credited;/.test(SRC)
+  && /tauxRetour: data\.tauxRetour \? \(w\.gross > 0\s*\?[^\n]*value: Math\.round\(\(returned \/ w\.gross\) \* 1000\) \/ 10, unit: '%'/.test(SRC));
 ok('« tauxRetour » compare le même taux à la période précédente',
-  /realDeltaPct\(rng, \(s\) => \(s\.gross \? \(s\.refunds \/ s\.gross\) \* 100 : 0\)\)/.test(SRC));
+  /realDeltaPct\(rng, \(s\) => \(s\.gross \? \(\(s\.refunds \+ s\.credited\) \/ s\.gross\) \* 100 : 0\), undefined, creditStats\)/.test(SRC));
 {
   /* La bande efface toute variation qu'elle n'a pas recalculée depuis les
      ventes réelles (REAL_DELTAS). Une tuile qui calcule la sienne doit y

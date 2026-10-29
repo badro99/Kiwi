@@ -1,8 +1,9 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=97';
-import { openDrawerNoSale } from './pos-boutique/drawer.js?v=15';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=97';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=97';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=99';
+import { openDrawerNoSale } from './pos-boutique/drawer.js?v=17';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=99';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=99';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
 
   'use strict';
@@ -907,16 +908,11 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     const cloud = ensureReturnCloud();
     if (cloud) cloud.push();
   }
-  /* ── LE NUMÉRO DE TICKET : DES CHIFFRES, ET RIEN D'AUTRE ──────────────────
-   * Une référence lisible (1000, 1001…) et un identifiant technique sont deux
-   * choses différentes. `syncId` est un UUID : deux ventes ne deviennent jamais
-   * le même INSERT OR IGNORE, même si un ancien client nous remet un jour une
-   * référence erronée. `num` vient d'une plage atomiquement réservée au serveur :
-   * deux comptoirs reçoivent des plages disjointes, puis peuvent les consommer
-   * hors ligne. Une plage perdue crée un trou ; elle ne revient jamais en vente. */
+  /* ── LE NUMÉRO DE TICKET : DES CHIFFRES, ET RIEN D'AUTRE ── `syncId` (UUID) identifie la vente ; `num` vient d'une
+   * plage réservée atomiquement au serveur (comptoirs disjoints, consommable hors ligne). Le numéro se tire à
+   * l'encaissement, et un numéro abandonné revient à la série : pos-boutique/ticket-number.js. */
   const TICKET_LEASE_KEY = 'kiwi:bqTicketLease';
-  /* 500 numbers = several busy offline days for a boutique, while staying well
-     below the five-digit annual ceiling. The range is persisted immediately. */
+  /* 500 numbers = several busy offline days, well below the five-digit annual ceiling. Persisted immediately. */
   const TICKET_LEASE_SIZE = 500;
   let ticketLease = null;
   let ticketLeaseRequest = null;
@@ -1075,6 +1071,10 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     if (IS_DEMO) return Promise.resolve(String(saleSeq++));
     return claimTicketNumber();
   }
+  const ticketIo = { demo: IS_DEMO, lock: withTicketLock, save: saveTicketLease, seq: () => saleSeq, setSeq: (n) => { saleSeq = n; }, sales: () => SALES,
+    lease: () => { ticketLease = null; return readTicketLease(); }, ensure: () => { ticketLease = null; return ensureTicketLease(); },
+    render: (t) => { if (state.ticket === t && root) { renderTicket(); icons(); } } };
+  const prepareTicketNumber = (t) => prepareNumber(t, ticketIo), releaseTicketNumber = (n) => releaseNumber(n, ticketIo);
 
   function freshTicket() {
     const ticket = {
@@ -1084,7 +1084,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       lines: [], client: null, remiseAuth: false, numbering: false, numError: false,
     };
     ticketOwner.clear(state, ticket);
-    if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {
+    if (!IS_DEMO) prepareTicketNumber(ticket).catch(() => {
       if (state.ticket !== ticket) return;
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Numéro de ticket indisponible'), state.ticketStorageError
         ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
@@ -2231,7 +2231,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
   }
 
   function bqDayTotals() {
-    const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0, acompteReceived: 0, outstanding: 0 };
+    const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, itemsReturned: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0, acompteReceived: 0, outstanding: 0 };
     salesToday().forEach((s) => {
       let took = 0;
       /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
@@ -2261,7 +2261,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
          articles, eux, étaient comptés sur sept tickets. Deux lignes voisines
          qui ne parlaient pas de la même journée. */
       t.txns++;
-      (s.lines || []).forEach((ln) => { t.items += lineAvailableQty(ln); });
+      (s.lines || []).forEach((ln) => { t.items += +ln.qty || 0; t.itemsReturned += lineReturnedQty(ln); });
       const d = +s.discount || 0;
       if (d > 0) { t.discounts += d; t.discountsN++; }
       /* Compté À PART des réductions. Une gérante qui voit « 4 200 MAD de
@@ -2293,14 +2293,14 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     const out = [];
     salesToday().forEach((s) => {
       const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime();
-      const lines = (s.lines || []).filter((ln) => lineAvailableQty(ln) > 0).map((ln) => ({
+      const lines = (s.lines || []).filter((ln) => (+ln.qty || 0) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
-        qty: lineAvailableQty(ln),
-        total: Math.round((+ln.unit || 0) * lineAvailableQty(ln) * 100) / 100,
+        qty: +ln.qty, /* brut, comme les lignes du serveur : les pièces rendues sortent à part (itemsReturned) */
+        total: Math.round((+ln.unit || 0) * (+ln.qty) * 100) / 100,
         cat: rayonOf(ln.pid) || '',
       }));
       const taken = bqMoneyParts(s);
-      if (s.syncId && taken.length) {
+      if (s.syncId && (taken.length || lines.length)) { /* un ticket réglé sans argent (avoir) reste un ticket, comme au serveur */
         out.push({ id: s.syncId, ts: at,
           amount: taken.reduce((sum, part) => sum + part.amount, 0),
           method: bqPaymentMethod(s.parts),
@@ -2335,7 +2335,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
       openingFloat: bqShift ? bqShift.float : 0,
       cashMovements: [], handovers: [],
-      discounts: t.discounts, discountsCount: t.discountsN, cancels: 0,
+      discounts: t.discounts, discountsCount: t.discountsN, cancels: 0, itemsReturned: t.itemsReturned,
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
@@ -2708,7 +2708,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
       ['Service ouvert à', fmtHM(openedAt), false, ''],
       ['Durée du service', (durMin < 60 ? `${durMin} mn` : `${Math.floor(durMin / 60)}h${pad2(durMin % 60)}`), false, ''],
       ['Transactions', String(t.txns), false, ''],
-      ['Articles vendus', String(t.items), false, ''],
+      ['Articles vendus', String(t.items), false, ''], ...(t.itemsReturned > 0 ? [['Articles rendus', '− ' + t.itemsReturned, false, '']] : []),
       ['Total encaissé', fmtMAD(t.moneyIn), true, 'total'],
       ['dont Carte', fmtMAD(t.card), true, 'sub'],
       ['dont Espèces', fmtMAD(t.cash), true, 'sub'],
@@ -2722,7 +2722,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
        recevoir. Nichée en sous-ligne du total, elle se lisait comme une de ses
        composantes — alors qu'aucun dirham correspondant n'est dans le tiroir. */
     if (t.delivery > 0) rows.push(['Livraisons · à recevoir', fmtMAD(t.delivery), true, '']);
-    if (t.paidTxns > 0) rows.push(['Ticket moyen', fmtMAD(t.moneyIn / t.paidTxns), true, '']);
+    if (t.txns > 0) rows.push(['Ticket moyen', fmtMAD(t.moneyIn / t.txns), true, '']); /* ÷ les transactions affichées, comme le tableau de bord */
     if (t.promoOff > 0) rows.push(['Promotions du magasin', fmtMAD(t.promoOff), true, '']);
     rows.push(['Réductions accordées', fmtMAD(t.discounts), true, '']);
     if (t.avoirIssued > 0) rows.push(['Avoirs émis', fmtMAD(t.avoirIssued), true, '']);
@@ -2742,12 +2742,12 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
 
     const nCats = (() => {
       const seen = {};
-      /* Une ligne intégralement reprise n'a rien vendu : compter son rayon
-         faisait dire « 3 rayons » à une clôture où deux seulement ont laissé de
-         la marchandise chez le client — la phrase contredisait le nombre de
-         pièces affiché juste à côté, qui, lui, est net des retours. */
+      /* Le même compte que les pièces affichées juste à côté et que le
+         rapport du tableau de bord : les ventes brutes. Les pièces rendues
+         sont dites à part (« Articles rendus »), elles ne retirent pas le
+         rayon où la vente a eu lieu. */
       salesToday().forEach((s) => (s.lines || []).forEach((ln) => {
-        if (lineAvailableQty(ln) <= 0) return;
+        if ((+ln.qty || 0) <= 0) return;
         const r = rayonOf(ln.pid); if (r) seen[r] = 1;
       }));
       return Object.keys(seen).length;
@@ -2952,4 +2952,4 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
     onShow,
   });
 
-export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };
+export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };

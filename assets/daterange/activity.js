@@ -144,7 +144,11 @@ function renderFeed() {
           try { sales = window.KiwiSales.list(__state.getCurrentVenue()) || []; } catch (_) { sales = []; }
           cumTx = sales.filter((s) => {
             const ts = +(s && s.ts) || 0;
-            return ts >= t0 && ts < t1 && String(s.kind || '') !== 'refund' && Number(s.amount) > 0;
+            /* Un ticket réglé entièrement par avoir (0 MAD, méthode credit) est
+             * une vente : la bande le compte, la page Ventes aussi. Il manquait
+             * ici, et l'accueil disait « 67 commandes » sous « 68 ventes ». */
+            return ts >= t0 && ts < t1 && String(s.kind || '') !== 'refund'
+              && (Number(s.amount) > 0 || (Number(s.amount) === 0 && /^(credit|avoir)/i.test(String(s.method || ''))));
           }).length;
         } else {
           const sim = window.KiwiDemoClock?.getSimState?.();

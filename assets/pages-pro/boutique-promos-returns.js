@@ -189,17 +189,8 @@
     if (!slug || returnsLoading || (returnsState && !again)) return;
     returnsLoading = true;
     try {
-      const { deadlineFetch } = await import('../request-deadline.mjs').catch(() => ({ deadlineFetch: (url, options) => fetch(url, options) }));
-      const list = [];
-      let offset = 0;
-      do {
-        const response = await deadlineFetch('/api/sale/refund?merchant=' + encodeURIComponent(slug) + '&offset=' + offset, { credentials: 'same-origin', cache: 'no-store' });
-        const data = await response.json();
-        if (!response.ok || !data.ok || !Array.isArray(data.list)) throw new Error('returns-read');
-        list.push(...data.list);
-        if (data.next !== null && (!Number.isSafeInteger(data.next) || data.next <= offset)) throw new Error('returns-page');
-        offset = data.next;
-      } while (offset !== null);
+      /* Même lecture que la tuile « Taux retour » de l'accueil (returns-ledger.js). */
+      const list = await (await import('../returns-ledger.js')).readReturnsLedger(slug);
       if (slug !== liveReturnsSlug) return;
       ledgerChanged = !returnsServer || JSON.stringify(list) !== JSON.stringify(liveReturns);
       liveReturns = list;
@@ -309,8 +300,10 @@
       toast(_rL('Avoir annulé', 'Store credit cancelled', 'تم إلغاء رصيد المتجر'), { type: 'success' });
     } catch (error) { el.disabled = false; toast(_rL('Annulation refusée', 'Cancellation refused', 'تم رفض الإلغاء'), { type: 'error', desc: error.message === 'manager-required' ? _rL('Compte propriétaire ou responsable requis.', 'Owner or manager account required.', 'يلزم حساب المالك أو المسؤول.') : _rL('Cet avoir ne peut plus être annulé.', 'This store credit can no longer be cancelled.', 'لم يعد بالإمكان إلغاء رصيد المتجر هذا.') }); }
   };
+  let rxView = null;
   handlers['nav-returns'] = () => {
     const real = realReturnsStore();
+    if (real && !rxView) { import('../returns-ledger.js').then((m) => { rxView = m; m.watchPeriod(() => document.querySelector('[data-live-returns]') && handlers['nav-returns']()); handlers['nav-returns'](); }, (e) => console.warn('[retours] module indisponible, nouvel essai à la prochaine ouverture', e)); return; }
     bindLiveReturns();
     loadLiveCredits();
     const demoPending = [
@@ -346,22 +339,8 @@
       local.forEach((l) => { if (l && l.kind === 'echange') out.push(l); });
       return out;
     };
-    const pending = real ? shownReturns().flatMap((ret) => {
-      const items = Array.isArray(ret && ret.items) ? ret.items : [{ name: _rL('Retour', 'Return', 'مرتجع'), qty: 1, amount: ret.amount }];
-      return items.map((item, i) => ({
-        id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
-        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(_rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        ts: Number(ret.ts) || 0,
-        name: `${ret.saleRef ? ret.saleRef + ' · ' : ''}${Number(item.qty) || 1} × ${item.name || _rL('Article', 'Item', 'منتج')}${item.size ? ' · ' + item.size : ''}`,
-        amt: Number(item.amount) || Number(ret.amount) || 0,
-        reason: ret.reason || (ret.kind === 'refund' ? _rL('Motif non renseigné', 'Reason not recorded', 'السبب غير مسجل') : ret.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Avoir', 'Store credit', 'رصيد المتجر')),
-        /* Le type de retour est une donnée, pas une chaîne d'affichage. La
-           pastille se lisait sur le motif : un échange dont le motif n'était pas
-           littéralement « Echange » s'affichait « Retourné ». On garde le kind. */
-        kind: ret.kind || 'avoir',
-        client: ret.client || _rL('Cliente de passage', 'Walk-in customer', 'زبون عابر'), status: 'ok', emoji: '', actor: ret.actor || _rL('Caisse', 'Till', 'الصندوق'),
-      }));
-    }).sort((a, b) => b.ts - a.ts) : demoPending;
+    /* Période du sélecteur, ticket d'origine, montant crédité : returns-ledger.js. */
+    const pending = real ? rxView.returnRows(shownReturns(), _rL) : demoPending;
 
     const flagged = real ? [] : [
       { name: 'Diana K. (US)',  reason: _rL('4 retours en 28 j · 2 sur articles soldés', '4 returns in 28 days · 2 on sale items', '4 مرتجعات في 28 يومًا · 2 منها على أصناف مخفّضة'), amt: '4 280 MAD', risk: _rL('Élevé', 'High', 'مرتفعة') },
@@ -371,7 +350,7 @@
 
     _rxCss();
     _rxRows = pending;
-    const sumAmt = pending.reduce((t, r) => t + (Number(r.amt) || 0), 0);
+    const sumAmt = pending.reduce((t, r) => t + (Number(r.amt) || 0), 0), nItems = pending.reduce((t, r) => t + (Number(r.qty) || 1), 0);
     const nExch = pending.filter((r) => r.kind === 'echange' || r.status === 'neutral').length;
     const activeCredits = creditRows.filter((c) => c.status === 'active');
     const creditBalance = activeCredits.reduce((t, c) => t + (Number(c.balanceCents) || 0), 0) / 100;
@@ -388,8 +367,8 @@
        décimales, sinon deux. */
     const fmtAmt = (n) => fmtMAD(n, Math.round(Number(n || 0) * 100) % 100 === 0 ? 0 : 2);
     const retRow = (r) => `
-      <div class="rx-row" data-ret-row data-ret-search="${esc([r.id, r.name, r.reason, r.client, r.actor].join(' ').toLowerCase())}" ${real ? '' : `data-action="ret-detail" data-arg="${esc(r.id)}"`}>
-        <span class="rx-when"><b>${esc(r.d)}</b><small title="${esc(r.id)}">${esc(r.id)}</small></span>
+      <div class="rx-row" data-ret-row data-ret-search="${esc([real ? r.ticket : r.id, r.name, r.reason, r.client, r.actor].join(' ').toLowerCase())}" ${real ? '' : `data-action="ret-detail" data-arg="${esc(r.id)}"`}>
+        <span class="rx-when"><b>${esc(r.d)}</b><small${real ? '' : ` title="${esc(r.id)}"`}>${esc(real ? r.ticket : r.id)}</small></span>
         <span class="rx-what"><b>${esc(r.name)}</b><small>${esc(r.reason)}</small></span>
         <span class="rx-who">${esc(r.client)}${real ? `<small>${esc(r.actor)}</small>` : ''}</span>
         <span class="rx-amt">${fmtAmt(r.amt)} MAD</span>
@@ -418,11 +397,11 @@
 
     window.Kiwi.appPage('returns', {
       title: _rL('Retours & échanges', 'Returns & exchanges', 'المرتجعات والاستبدال'),
-      subtitle: real ? `${(window.KiwiVenue?.getCurrentVenueData?.() || {}).fullDisplay || _rL('Boutique', 'Shop', 'المتجر')} · ${_rL('enregistrés depuis la caisse', 'recorded from the till', 'مسجّلة من الصندوق')}` : _rL('Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés', 'Maison Mansour · Gueliz · 5 requests pending · 2 flagged customers', 'Maison Mansour · غيليز · 5 طلبات قيد الانتظار · زبونان مُبلَّغ عنهما'),
+      subtitle: real ? `${(window.KiwiVenue?.getCurrentVenueData?.() || {}).fullDisplay || _rL('Boutique', 'Shop', 'المتجر')} · ${rxView.periodLabel(_rL)} · ${_rL('enregistrés depuis la caisse', 'recorded from the till', 'مسجّلة من الصندوق')}` : _rL('Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés', 'Maison Mansour · Gueliz · 5 requests pending · 2 flagged customers', 'Maison Mansour · غيليز · 5 طلبات قيد الانتظار · زبونان مُبلَّغ عنهما'),
       body: `<div class="rx-page" data-live-returns>
         <div class="kx-kpi-strip rx-kpis">
           ${real ? `
-          <div class="kx-kpi"><div class="l">${_rL('Articles retournés', 'Items returned', 'المنتجات المرتجعة')}</div><div class="v">${pending.length}</div><div class="d">${plural(pending.length - nExch, 'retour')} · ${plural(nExch, 'echange')}</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Articles retournés', 'Items returned', 'المنتجات المرتجعة')}</div><div class="v">${nItems}</div><div class="d">${plural(pending.length - nExch, 'retour')} · ${plural(nExch, 'echange')}</div></div>
           <div class="kx-kpi"><div class="l">${_rL('Montant retourné', 'Amount returned', 'المبلغ المرتجع')}</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">${_rL('Valeur des articles rendus', 'Value of items handed back', 'قيمة المنتجات المُعادة')}</div></div>
           <div class="kx-kpi"><div class="l">${_rL('Avoirs actifs', 'Active store credits', 'أرصدة المتجر النشطة')}</div><div class="v">${activeCredits.length}</div><div class="d">${plural(creditRows.length, 'bon')} ${_rL('émis au total', 'issued in total', 'صادرة في المجموع')}</div></div>
           <div class="kx-kpi"><div class="l">${_rL('Solde des avoirs', 'Store credit balance', 'رصيد المتجر')}</div><div class="v">${fmtAmt(creditBalance)}<span class="u">MAD</span></div><div class="d">${_rL('Encore utilisable en caisse', 'Still usable at the till', 'لا يزال قابلًا للاستخدام في الصندوق')}</div></div>` : `
@@ -778,7 +757,7 @@
     if (!rows.length) { toast(_rL('Aucun retour à exporter', 'No returns to export', 'لا توجد مرتجعات للتصدير'), { type: 'info' }); return; }
     const cell = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const csv = [[_rL('Date', 'Date', 'التاريخ'), _rL('Référence', 'Reference', 'المرجع'), _rL('Article', 'Item', 'المنتج'), _rL('Motif', 'Reason', 'السبب'), _rL('Type', 'Type', 'النوع'), _rL('Client', 'Customer', 'الزبون'), _rL('Employé', 'Employee', 'الموظف'), _rL('Montant MAD', 'Amount MAD', 'المبلغ MAD')].map(cell).join(';')]
-      .concat(rows.map((r) => [r.d, r.id, r.name, r.reason, r.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Retour', 'Return', 'مرتجع'), r.client, r.actor, String(Number(r.amt) || 0).replace('.', ',')].map(cell).join(';')))
+      .concat(rows.map((r) => [r.d, r.ticket || r.id, r.name, r.reason, r.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Retour', 'Return', 'مرتجع'), r.client, r.actor, String(Number(r.amt) || 0).replace('.', ',')].map(cell).join(';')))
       .join('\r\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');

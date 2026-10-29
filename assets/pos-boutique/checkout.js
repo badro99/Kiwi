@@ -1,7 +1,7 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=196';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=97';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=97';
-import { ticketOwner } from './ticket-owner.js?v=2';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=198';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=99';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=99';
+import { ticketOwner } from './ticket-owner.js?v=3';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
 
@@ -493,6 +493,9 @@ const M = globalThis.KiwiMoney;
         nextStandaloneTicketNumber().then((exchangeNumber) => {
           return reserveReplacement().then((reservation) => {
             if (!reservation.ok && !reservation.offline) {
+              /* Échange refusé avant tout paiement : le numéro tiré n'a rien
+                 couvert, il revient à la série au lieu de laisser un trou. */
+              releaseTicketNumber(exchangeNumber);
               if (go) go.disabled = false;
               if (reservation.issue) showStockIssue(reservation.issue);
               else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange suspendu'), 6000, 'warn', 'Impossible de réserver l’article de remplacement.');
@@ -516,7 +519,10 @@ const M = globalThis.KiwiMoney;
             subtotal: diff,
             doneLabel: 'Terminer',
             waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
-            onCancel: () => { if (reserved && cat && cat.releaseSale) cat.releaseSale(stockRef); },
+            onCancel: () => {
+              if (reserved && cat && cat.releaseSale) cat.releaseSale(stockRef);
+              releaseTicketNumber(exchangeNumber);   /* fenêtre fermée sans paiement */
+            },
             onPaid: (parts) => {
               if (!apply(reserved)) return { line: 'Échange non enregistré · stock insuffisant' };
               const rec = {
@@ -622,9 +628,27 @@ const M = globalThis.KiwiMoney;
      with nothing connected it told the merchant a receipt had printed that never
      did, every single time. It now actually prints, and when it cannot it says
      so and opens the printer setup instead of pretending. */
-  function printReceiptNow(opts, parts) {
+  /* L'impression AUTOMATIQUE qui suit un paiement ne part que vers une vraie
+     imprimante (ou la file d'impression du pont), ou vers l'impression système
+     si la propriétaire l'a choisie (browserFallback). Sans rien de tout ça, le
+     play-test Amira ouvrait la boîte d'impression de macOS après chaque vente
+     et la caisse restait figée jusqu'à Échap. On rend alors false : l'appelant
+     montre l'écran « C'est encaissé » avec son bouton « Imprimer le ticket ». */
+  function printReceiptNow(opts, parts, how) {
+    const auto = !!(how && how.auto);
     const KP = window.KiwiPrinter;
-    if (!KP || !KP.printReceipt) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return; }
+    const receiptPrinterReady = (KP) => {
+      try {
+        if (!KP) return false;
+        if (KP.isConnected ? KP.isConnected() : (KP.isConfigured && KP.isConfigured())) return true;
+        const cfg = (KP.getConfig && KP.getConfig()) || {};
+        return !!cfg.browserFallback;
+      } catch (_) { return false; }
+    };
+    if (!KP || !KP.printReceipt) {
+      if (auto) return false;
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return;
+    }
 
     /* Le ticket que la boutique imprime est celui que la propriétaire a réglé
        dans Réglages → Reçu : son enseigne, son adresse, son ICE, sa politique
@@ -668,9 +692,10 @@ const M = globalThis.KiwiMoney;
       if (opts.sale && queue && typeof queue.enqueueReceipt === 'function') {
         try {
           const queued = queue.enqueueReceipt('boutique:' + opts.sale.id, doc, 'original');
-          if (queued && (queued.accepted || queued.pending)) return;
+          if (queued && (queued.accepted || queued.pending)) return true;
         } catch (_) {}
       }
+      if (auto && !receiptPrinterReady(KP)) return false;
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression du reçu…'));
       Promise.resolve(K.print(doc)).then(
         (r) => toast(r && r.ok
@@ -678,7 +703,7 @@ const M = globalThis.KiwiMoney;
           : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée')),
         () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression échouée'))
       );
-      return;
+      return true;
     }
 
     /* Sans assets/receipt.js (navigateur où il n'a pas chargé) : l'ancien
@@ -703,6 +728,7 @@ const M = globalThis.KiwiMoney;
      * vers un écran de connexion qui ne peut rien pour lui — et on retient son
      * choix, sinon la caissière repasse par le modal à chaque ticket. */
     if (!KP.isConnected || !KP.isConnected()) {
+      if (auto && !receiptPrinterReady(KP)) return false;
       const cfg = (KP.getConfig && KP.getConfig()) || {};
       if (cfg.browserFallback && KP.browserReceipt) { KP.browserReceipt(doc); return; }
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune imprimante connectée'));
@@ -1219,7 +1245,13 @@ const M = globalThis.KiwiMoney;
         opts.title = partial ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Acompte') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Solde de l’acompte');
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
-      else { closeVeil('#bq-pay-veil'); printReceiptNow(opts, parts); }
+      else {
+        /* Sans imprimante : pas de boîte d'impression système, la vente suivante
+           reste à un geste ; le ticket se réimprime depuis l'historique. */
+        const printed = printReceiptNow(opts, parts, { auto: true });
+        closeVeil('#bq-pay-veil');
+        if (printed === false) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket non imprimé · aucune imprimante'), 4000);
+      }
     };
 
     const stepSuccess = (parts, res) => {

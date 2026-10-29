@@ -1,10 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=196';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=97';
-import { offerRegister } from './inventory.js?v=97';
-import { ticketOwner } from './ticket-owner.js?v=2';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=198';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=99';
+import { offerRegister } from './inventory.js?v=99';
+import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=19';
-import { sellSearch } from './search.js?v=12';
+import { sellSearch } from './search.js?v=13';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=4';
 
@@ -351,10 +351,13 @@ import { photoImg } from '../retail-photos.js?v=4';
     const t = state.ticket;
     const { promo, remise, reward, total } = ticketTotals(t);
     const count = ticketCount(t);
+    /* Le numéro se tire à l'encaissement : « prêt » veut dire qu'une série
+       attend sur la tablette, pas qu'un numéro est déjà pris. */
+    const numReady = !!t.num || (!t.numbering && !t.numError);
     const el = $('#bq-ticket', root);
     el.innerHTML = `
       <div class="bq-tk-head">
-        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num${t.num ? '' : t.numError ? ' err' : ''}">· ${t.num || (t.numError ? 'numéro indisponible' : 'attribution…')} · par ${esc(STAFF.caissiere.name)}</span></div>
+        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num${t.num ? '' : t.numError ? ' err' : ''}">· ${t.num || (t.numError ? 'numéro indisponible' : t.numbering ? 'attribution…' : 'nouveau')} · par ${esc(STAFF.caissiere.name)}</span></div>
         ${!t.num && t.numError ? '<button class="bq-tk-retry" id="bq-tk-retry">Réessayer</button>' : ''}
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
@@ -377,15 +380,15 @@ import { photoImg } from '../retail-photos.js?v=4';
           ${reward ? `<span class="rem rew">Récompense · −${fmtMAD(reward)}</span>` : ''}
         </div>
         <div class="bq-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
-        <button class="bq-validate" id="bq-validate" ${t.lines.length && t.num ? '' : 'disabled'}>
-          <i data-lucide="banknote"></i> ${t.num ? `Encaisser · ${fmtMAD(total)}` : t.numError ? 'Numéro de ticket indisponible' : 'Attribution du numéro…'}
+        <button class="bq-validate" id="bq-validate" ${t.lines.length && numReady ? '' : 'disabled'}>
+          <i data-lucide="banknote"></i> ${numReady ? `Encaisser · ${fmtMAD(total)}` : t.numError ? 'Numéro de ticket indisponible' : 'Attribution du numéro…'}
         </button>
       </div>`;
     const retry = $('#bq-tk-retry', el);
     if (retry) retry.onclick = () => {
       retry.disabled = true;
-      assignTicketNumber(t).then(
-        () => toast('Numéro attribué · ticket ' + t.num),
+      prepareTicketNumber(t).then(
+        () => toast('Série de tickets prête'),
         () => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Numéro de ticket toujours indisponible'), state.ticketStorageError
           ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
           : 'Reconnectez cette caisse pour réserver sa prochaine série.')
@@ -394,6 +397,8 @@ import { photoImg } from '../retail-photos.js?v=4';
     const reset = $('#bq-tk-reset', el);
     if (reset) reset.onclick = () => {
       t.lines.forEach((ln) => stockAdd(ln.pid, ln.size, ln.qty));
+      /* Un numéro déjà tiré (paiement ouvert puis abandonné) revient à la série. */
+      if (t.num) releaseTicketNumber(t.num);
       freshTicket();                      /* ticket ET cliente remis à zéro — pas d'attache auto */
       renderTicket(); renderGrid(); renderBadges(); icons();
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket vidé, articles remis en stock'));
@@ -710,7 +715,7 @@ import { photoImg } from '../retail-photos.js?v=4';
   function openApprove(pct, onOk) {
     if (pvReal() && typeof window.requireManager === 'function') {
       if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` } });
-      window.requireManager(`Remise −${pct} % sur le ticket ${state.ticket.num}`, () => {
+      window.requireManager(`Remise −${pct} % sur le ticket ${state.ticket.num || 'en cours'}`, () => {
         let mgr = null;
         try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
         markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role);
@@ -734,7 +739,7 @@ import { photoImg } from '../retail-photos.js?v=4';
         <span class="l"><b>${esc(STAFF.conseil.name)}</b><span>${esc(STAFF.conseil.role)}</span></span>
         <span class="ok">Non habilitée</span>
       </button>
-      <div class="bq-foot-note">L'accord vaut pour tout le ticket ${state.ticket.num}, tracé dans le journal.</div>`;
+      <div class="bq-foot-note">L'accord vaut pour tout le ticket ${state.ticket.num || 'en cours'}, tracé dans le journal.</div>`;
     openVeil('#bq-approve-veil');
     icons();
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-approve-veil'); });

@@ -94,6 +94,21 @@ function renderKpiBand() {
         return (from, to) => ops.dropoffStats(from, to);
       })();
       const txNow = pressingStats ? pressingStats(wFrom, wTo) : null;
+      /* Un retour réglé en AVOIR n'est pas de l'argent sorti : il n'entre pas
+       * au journal des remboursements, et « Taux retour » restait à 0,0 % un
+       * jour de retours. Les avoirs émis viennent du registre que lit la page
+       * « Retours & échanges » (/api/sale/refund, returns-ledger.js), relu au
+       * plus une fois par minute ; la bande se repeint s'ils ont changé. */
+      const creditStats = (f, to) => {
+        let credited = 0;
+        try {
+          const d = JSON.parse(localStorage.getItem('kiwi:returnsLedger') || 'null');
+          if (d && d.v === __state.activeMerchantSlug() && Array.isArray(d.list)) d.list.forEach((r) => { if (r.ts >= f && r.ts < to) credited += Number(r.amount) || 0; });
+        } catch (_) {}
+        return { ...__state.realWindowStats(f, to), credited };
+      };
+      if (data.tauxRetour) import('../returns-ledger.js').then((m) => m.warmCreditReturns()).then((changed) => { if (changed) __state.renderKpiBand(); }, () => {});
+      const returned = w.refunds + creditStats(wFrom, wTo).credited;
       data = {
         ...data,
         tx:     { ...(data.tx || {}),     value: txNow ? txNow.count : t.count,
@@ -148,14 +163,15 @@ function renderKpiBand() {
         tempsTable: data.tempsTable ? { ...data.tempsTable, text: '·', unit: '', delta: null } : data.tempsTable,
         /* Le taux de retour, lui, a une source : les remboursements passés à
          * la caisse (/api/sale/refund) arrivent dans le même journal que les
-         * ventes. C'est la part, en valeur, de ce qui a été vendu sur la
-         * période et remboursé sur la même période. Sans vente sur la
+         * ventes, et les avoirs émis sur retour viennent du registre (voir
+         * creditStats). C'est la part, en valeur, de ce qui a été vendu sur la
+         * période et rendu (remboursé ou crédité) sur la même période. Sans vente sur la
          * période : « · » (rien à rapporter) ; avec des ventes et aucun
          * remboursement : un vrai 0 %. Un remboursement d'une vente plus
          * ancienne compte le jour où il est fait, comme dans le CA. */
         tauxRetour: data.tauxRetour ? (w.gross > 0
-          ? { ...data.tauxRetour, text: undefined, value: Math.round((w.refunds / w.gross) * 1000) / 10, unit: '%', fmt: 'pct1',
-              delta: __state.realDeltaPct(rng, (s) => (s.gross ? (s.refunds / s.gross) * 100 : 0)) }
+          ? { ...data.tauxRetour, text: undefined, value: Math.round((returned / w.gross) * 1000) / 10, unit: '%', fmt: 'pct1',
+              delta: __state.realDeltaPct(rng, (s) => (s.gross ? ((s.refunds + s.credited) / s.gross) * 100 : 0), undefined, creditStats) }
           : { ...data.tauxRetour, text: '·', unit: '', delta: null }) : data.tauxRetour,
       };
 

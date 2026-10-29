@@ -624,7 +624,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       ref: String(s.ref || ''),
       kind: String(s.kind || ''),
       tip: num(s.tip), tipMethod: String(s.tipMethod || s.tip_method || '').toLowerCase(),
-      discount: num(s.discount),
+      discount: num(s.discount), creditCents: Array.isArray(s.paymentParts) ? s.paymentParts.reduce(function (n, p) { return n + (p && (p.method === 'credit' || p.method === 'avoir') ? Math.max(0, Math.round(num(p.amountCents))) : 0); }, 0) : 0,
       cashier: String(s.cashier || ''),
       lines: lines,
       voided: Boolean(s.voided || s.void_ts),
@@ -716,7 +716,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     (opts.sales || []).forEach(function (raw) {
       if (raw && (raw.voided || raw.void_ts)) return;
       var s = normSale(raw);
-      if (!s || s.voided || s.ts < b.from || s.ts >= b.to) return;
+      if (!s || s.voided || s.ts < Math.max(b.from, num(opts.since)) || s.ts >= b.to) return;
       /* /api/sale can acknowledge the same bill under an earlier server id
          when waiter and till settle concurrently. Use that canonical identity
          before the Z dedup, just as the reconciliation manifest does. */
@@ -746,7 +746,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     var acompteReceived = 0;
     var withLines = 0, totalForCoverage = 0;
     var cats = Object.create(null);
-    var first = 0, last = 0;
+    var first = 0, last = 0, itemsSold = 0;
     /* La courbe horaire, indexée sur l'OFFSET depuis le seuil de journée et non
        sur l'heure de l'horloge : à 5h de seuil, le coup de feu de minuit doit
        tomber APRÈS celui de 22h, pas dix-neuf cases avant lui. L'heure lisible
@@ -768,8 +768,6 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       if (!isRefund && /^(?:Acompte|Règlement acompte)/i.test(s.label)) acompteReceived += s.amount;
       if (!first || s.ts < first) first = s.ts;
       if (s.ts > last) last = s.ts;
-
-
       var off = Math.floor((s.ts - b.from) / 3600000);
       if (off >= 0 && off < 25) {
         if (slotOf[off] == null) {
@@ -801,7 +799,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
           var cat = l.cat || idx[name.trim().toLowerCase()] || UNCAT;
           var C = cats[cat] || (cats[cat] = { name: cat, qty: 0, total: 0, products: Object.create(null) });
           var P = C.products[name] || (C.products[name] = { name: name, qty: 0, total: 0 });
-          P.qty += sign * l.qty; P.total += sign * l.total;
+          P.qty += sign * l.qty; P.total += sign * l.total; if (!isRefund) itemsSold += l.qty;
           C.qty += sign * l.qty; C.total += sign * l.total;
         });
       }
@@ -862,16 +860,12 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
        n'est de l'argent encaissé, et aucun des deux ne doit disparaître du Z.
        Le bloc reste absent si la caisse ne renseigne rien — un rapport de
        restaurant ne doit pas se mettre à imprimer des zéros. */
-    var avoirs = null;
-    if (sess.avoirs) {
-      var avIss = round2(num(sess.avoirs.issued)), avUsed = round2(num(sess.avoirs.used));
-      if (avIss || avUsed) {
-        avoirs = {
-          issued: avIss, issuedCount: num(sess.avoirs.issuedCount) || 0,
-          used: avUsed, usedCount: num(sess.avoirs.usedCount) || 0,
-        };
-      }
-    }
+    /* « Réglé en avoir » relu des parts `credit` du feed (pas d'un instantané figé).
+       Boutique et maison seulement : ailleurs `credit` est l'ardoise. */
+    var avoirs = null, sa = sess.avoirs || {}, liveAv = { c: 0, n: 0 };
+    if (sess.avoirs || type === 'boutique' || type === 'maison') rows.forEach(function (s) { if (s.creditCents > 0 && !(s.kind === 'refund' || s.amount < 0)) { liveAv.c += s.creditCents; liveAv.n++; } });
+    var avIss = round2(num(sa.issued)), avUsed = liveAv.c ? round2(liveAv.c / 100) : round2(num(sa.used));
+    if (avIss || avUsed) avoirs = { issued: avIss, issuedCount: num(sa.issuedCount) || 0, used: avUsed, usedCount: liveAv.c ? liveAv.n : num(sa.usedCount) || 0 };
 
     var net = round2(gross - refundAmt);
     /* Ce qui est FACTURÉ mais pas ENCAISSÉ. Une livraison partie en compte et
@@ -911,7 +905,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       lastSaleAt: last || 0,
       openedBy: String(sess.openedBy || ''),
       closedBy: num(sess.closedAt) ? String(sess.closedBy || '') : '',
-      txns: txns,
+      txns: txns, items: round2(itemsSold), itemsReturned: num(sess.itemsReturned) || 0,
       gross: round2(gross),
       receivable: receivable,
       net: net,
@@ -1117,12 +1111,19 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       seen[key] = true; return true;
     });
   }
-  function inheritDrawers(built, snap) {
+  /* `opts` (celles du build) : le dernier tiroir encore OUVERT suit les ventes vivantes de sa fenêtre,
+     l'instantané a pu partir avant le dernier ticket. Fond, mouvements, comptage restent ; un tiroir clos reste figé. */
+  function inheritDrawers(built, snap, opts) {
     if (!built || !snap) return built;
     built.sessionId = snap.sessionId || '';
     built.terminalId = snap.terminalId || '';
     built.cash = snap.cash;
-    built.drawerSessions = drawerSessions(snap);
+    var rows = built.drawerSessions = drawerSessions(snap), open = rows[rows.length - 1], live, c;
+    if (opts && open && !open.closedAt && (live = build(Object.assign({}, opts, { since: open.openedAt, session: {} })))) {
+      c = Object.assign({}, open.cash); live = live.cash;
+      c.expected = round2(num(c.expected) - num(c.sales) - num(c.tips) + live.sales + live.tips); c.sales = live.sales; c.tips = live.tips; if (c.counted != null) c.ecart = round2(c.counted - c.expected);
+      rows[rows.length - 1] = Object.assign({}, open, { cash: c }); if (drawerKey(snap) === drawerKey(open)) built.cash = c;
+    }
     built.drawerRebuilt = true;
     built.closedCount = snap.closedCount || 0;
     built.revisions = snap.revisions || [];

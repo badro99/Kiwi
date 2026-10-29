@@ -442,6 +442,7 @@
       acomptes: snap.acomptes || null,
       cancels: snap.cancels,
       handovers: snap.handovers || [],
+      avoirs: snap.avoirs || null, itemsReturned: snap.itemsReturned,
     };
   }
 
@@ -455,18 +456,16 @@
     try { snap = d.load(day); } catch (_) {}
     if (archivedDay(day)) return snap || historicalReport(day);
     if (snap && !feedIsAuthoritative(day) && !snapMissesSales(snap, day)) return snap;
-    var built = null;
-    try {
-      built = d.build({ day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
-                        store: storeInfo(), source: 'dashboard', categoryIndex: catIndex() });
-    } catch (_) { return snap; }
+    var built = null, opts = { day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
+                               store: storeInfo(), source: 'dashboard', categoryIndex: catIndex() };
+    try { built = d.build(opts); } catch (_) { return snap; }
     if (!built) return snap;
     if (snap) {
       /* La comptabilité de l'instantané suit : clôtures et révisions sont un
          historique, pas un calcul. */
       built.closedCount = snap.closedCount || 0;
       built.revisions = snap.revisions || []; built.snapshotConflicts = snap.snapshotConflicts || [];
-      if (d.inheritDrawers) d.inheritDrawers(built, snap);
+      if (d.inheritDrawers) d.inheritDrawers(built, snap, opts);
     } else {
       built.live = true;   /* aucun instantané : le tiroir est inconnu */
     }
@@ -834,6 +833,12 @@
       ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
         + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' ' + CUR())
         + row(T({fr:'Soldes restant à régler',en:'Outstanding balances',ar:'الأرصدة المتبقية'}), money(r.acomptes.outstanding) + ' ' + CUR()) + '</div>' : '';
+    /* Les avoirs, comme sur le Z de la caisse : ni l'un ni l'autre n'est de l'argent encaissé,
+       mais un ticket réglé en avoir a fait sortir de la marchandise. */
+    var av = r.avoirs || {};
+    if (av.issued || av.used) acompteBlock += '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Avoirs',en:'Credit notes',ar:'سندات الاسترجاع'})) + '</span></div>'
+      + (av.issued ? row(T({fr:'Avoirs émis',en:'Credit notes issued',ar:'سندات استرجاع صادرة'}) + ' (' + (av.issuedCount || 0) + ')', money(av.issued) + ' ' + CUR()) : '')
+      + (av.used ? row(T({fr:'Réglé en avoir',en:'Paid with credit note',ar:'مدفوع بسند استرجاع'}) + ' (' + (av.usedCount || 0) + ')', money(av.used) + ' ' + CUR()) : '') + '</div>';
 
     /* ── le tiroir ── */
     var cashBlock = '';
@@ -894,8 +899,12 @@
       }).join('');
       var cover = (r.coverage != null && r.coverage < 100)
         ? '<div class="kdr-note">' + esc(T(L.coverage).replace('{p}', r.coverage)) + '</div>' : '';
+      /* Le même compte que le Z de la caisse : les pièces vendues (brut), et à part celles rendues. */
+      var sold = r.items != null ? r.items : r.categories.reduce(function (n, c) { return n + (+c.qty || 0); }, 0);
+      var itemRows = row(T({fr:'Articles vendus',en:'Items sold',ar:'المنتجات المباعة'}), qty(Math.round(sold * 100) / 100), 'total')
+        + (r.itemsReturned ? row(T({fr:'Articles rendus',en:'Items returned',ar:'المنتجات المرتجعة'}), '− ' + qty(r.itemsReturned)) : '');
       catBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(V.cats) + '</span><em>'
-        + esc(String(r.categories.length)) + '</em></div>' + cats + cover + '</div>';
+        + esc(String(r.categories.length)) + '</em></div>' + cats + cover + itemRows + '</div>';
     } else {
       catBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(V.cats) + '</span></div>'
         + '<div class="kdr-note">' + esc(T(L.noDetail)) + '</div></div>';
@@ -1107,10 +1116,16 @@
 
   /* ─────────────────────────── le câblage ─────────────────────────── */
 
+  /* Un lien `#/rapport?r=aujourdhui` (ou `hier`) dit quelle journée ouvrir, et l'adresse gagne sur la journée
+     déjà à l'écran ou sur le défaut « dernière journée terminée ». Sans `r`, rien ne change. */
   function install() {
     var K = window.Kiwi;
     if (!K || !K.handlers) return false;
-    K.handlers['nav-' + NAV] = function () { render(null); };
+    K.handlers['nav-' + NAV] = function () {
+      var d = DR(), m = /^#\/([^?]*)\?(?:.*&)?r=([^&]*)/.exec(String((window.location && window.location.hash) || ''));
+      var r = d && m && m[1] === NAV ? m[2] : '';
+      render(r === 'aujourdhui' ? d.today() : r === 'hier' ? d.lastClosedDay() : null);
+    };
     return true;
   }
   (function boot() {

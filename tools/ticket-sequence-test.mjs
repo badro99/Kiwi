@@ -139,7 +139,7 @@ const boutique = retailSource(fs.readFileSync(path.join(ROOT, 'assets', 'pos-bou
 const feed = retailSource(fs.readFileSync(path.join(ROOT, 'functions', 'api', 'feed.js'), 'utf8'));
 const schema = retailSource(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 ok('la caisse réserve une plage dédiée', boutique.includes("fetch('/api/ticket-sequence'") && boutique.includes('TICKET_LEASE_KEY'));
-ok('le ticket attend son numéro avant encaissement', boutique.includes('t.lines.length && t.num') && boutique.includes('assignTicketNumber(t)'));
+ok('le ticket attend sa série avant encaissement', boutique.includes('t.lines.length && numReady') && boutique.includes('assignTicketNumber(t)'));
 ok('la vente envoie un UUID distinct de sa référence',
   boutique.includes('syncId: t.syncId || newSaleId()')
     && /const payload = \{[\s\S]{0,160}id:\s*sale\.syncId,[\s\S]{0,3000}bqPost\(sale, payload\)/.test(boutique));

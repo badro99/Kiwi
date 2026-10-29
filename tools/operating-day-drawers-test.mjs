@@ -53,6 +53,26 @@ assert.equal(daily.cash.expected,585,'daily refresh must not invent725 expected'
 assert.equal(daily.cash.ecart,0);
 assert.deepEqual(Array.from(R.drawerSessions(daily),s=>s.cash.expected),[640,585]);
 assert.equal(R.closureRevisions({revisions:[{at:1,note:'en cours'},{at:2,note:'clôture'},{at:2,note:'clôture'},{at:3,note:'réouverture'}]}).length,2);
+/* The OPEN drawer follows the live sales of its own window (Amira, 29/10: the
+ * till's last snapshot left before the last cash sale, the dashboard drawer
+ * read 1 900 MAD short). A closed drawer keeps its frozen figures. */
+{
+  const fDay='2026-09-11', fts=h=>Date.parse('2026-09-11T'+h+':00Z'), fsale=(id,amount,h)=>({id,amount,ts:fts(h),method:'cash'});
+  const fbuild=(sales,session)=>R.build({day:fDay,store,sales,session});
+  const am=[fsale('m1',100,'10:05')], pm=[fsale('p1',60,'12:16')];
+  R.save(fbuild(am,{sessionId:'f1',openedAt:fts('10:00'),closedAt:fts('11:00'),openingFloat:500,countedCash:600,closedBy:'Owner'}));
+  R.save(fbuild(pm,{sessionId:'f2',openedAt:fts('12:15'),openingFloat:200,cashMovements:[{ts:fts('12:17'),type:'out',amount:20}]}),{reopen:false,note:'en cours'});
+  const openSnap=R.load(fDay,store.slug);
+  const liveOpts={day:fDay,store,sales:am.concat(pm,[fsale('late',100,'12:20'),{id:'cardlate',amount:50,ts:fts('12:21'),method:'card'}]),session:{}};
+  const followed=R.inheritDrawers(R.build(liveOpts),openSnap,liveOpts);
+  const rows=R.drawerSessions(followed);
+  assert.deepEqual(Array.from(rows,s=>s.cash.expected),[600,340],'closed drawer frozen; open drawer = 200 float + 160 cash − 20 out');
+  assert.equal(rows[1].cash.sales,160,'open drawer counts only cash sales of its own window, including the late one');
+  assert.equal(rows[1].cash.opening,200,'open drawer keeps the till float');
+  assert.equal(followed.cash.expected,340,'top-level drawer follows the open session');
+  assert.equal(R.drawerSessions(openSnap)[1].cash.expected,240,'the stored snapshot itself is not mutated');
+  assert.equal(R.inheritDrawers(R.build(liveOpts),openSnap).cash.expected,240,'without build options the snapshot drawer is kept');
+}
 const legacy={...two};delete legacy.drawerSessions;delete legacy.sessionId;
 const legacyDay=R.inheritDrawers(build(morning.concat(afternoon),{}),legacy);
 assert.equal(legacyDay.cash.ecart,0,'legacy drawer evidence survives feed rebuild');
@@ -164,4 +184,24 @@ ctx.window.Kiwi.handlers['nav-rapport']();
 assert.ok(dashPage && dashPage.body,'dashboard resolver rendered the open report');
 assert.match(dashPage.body,/175(?:[.,]00)?\s*MAD/,'open dashboard resolver keeps net 175');
 assert.doesNotMatch(dashPage.body,/Fermé par|Wrong current cashier/,'open dashboard resolver omits closed actor');
+/* « Réglé en avoir » is read from the feed's credit parts on a boutique; issued
+ * credit notes come from the till's snapshot. A credit-only ticket is a ticket. */
+const avoirDay=R.build({day,store:{slug:'qa-drawers',name:'QA',type:'boutique'},session:{avoirs:{issued:380,issuedCount:1,used:30,usedCount:1}},sales:[
+  {saleId:'c1',amount:0,ts:ts('11:00'),method:'credit',paymentParts:[{method:'credit',amountCents:35000}],lines:[{name:'Jean',qty:2,total:350}]},
+  {saleId:'c2',amount:380,ts:ts('11:10'),method:'split',paymentParts:[{method:'credit',amountCents:3000},{method:'cash',amountCents:38000}],lines:[{name:'Robe',qty:1,total:410}]},
+  {saleId:'c3',amount:820,ts:ts('11:20'),method:'card',lines:[{name:'Veste',qty:3,total:820}]}]});
+assert.equal(avoirDay.txns,3,'credit-only ticket is counted');
+assert.equal(avoirDay.basket,400,'basket = collected / transactions shown');
+assert.equal(avoirDay.items,6,'items sold = gross pieces');
+assert.deepEqual({...avoirDay.avoirs},{issued:380,issuedCount:1,used:380,usedCount:2},'used credit follows the feed');
+assert.equal(avoirDay.receivable,0,'a credit note is not a receivable');
+/* The address wins over the remembered day: #/rapport?r=aujourdhui opens today
+ * even when yesterday was on screen (Amira, 29/10). */
+R.lastClosedDay=()=>'2026-09-07';
+ctx.window.location={hash:'#/rapport?r=hier'}; ctx.window.Kiwi.handlers['nav-rapport']();
+dashPage=null; ctx.window.location={hash:'#/rapport?r=aujourdhui'};
+ctx.window.Kiwi.handlers['nav-rapport']();
+assert.match(dashPage.subtitle,/8 septembre/,'r=aujourdhui opens today');
+ctx.window.location={hash:'#/rapport?r=hier'}; ctx.window.Kiwi.handlers['nav-rapport']();
+assert.match(dashPage.subtitle,/7 septembre/,'r=hier opens the last closed day');
 console.log('✓ operating-day drawers: two services, refund, movement, reopen, close retries and legacy snapshot');

@@ -7,6 +7,7 @@ const path = require('path');
 const src = retailSource(fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-boutique.js'), 'utf8'));
 // La page Retours du tableau de bord vit dans sa section chargée au premier usage.
 const dash = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pages-pro', 'boutique-promos-returns.js'), 'utf8');
+const rxView = fs.readFileSync(path.join(__dirname, '..', 'assets', 'returns-ledger.js'), 'utf8');
 const feed = fs.readFileSync(path.join(__dirname, '..', 'functions', 'api', 'feed.js'), 'utf8');
 
 const checks = [
@@ -30,9 +31,9 @@ const checks = [
   ['seules les pièces réellement rendues reviennent au stock', /const restored = persistStock\(ln\.pid, ln\.size, ln\.color, qty,[\s\S]*markLineReturned\(ln, qty, restored/.test(src)],
   ['le journal propriétaire reçoit la quantité partielle exacte', /const motif = ret\.motif \|\| 'Non précisé'[\s\S]*recordReturn\(sale, idxs, amount, motif, 'avoir', av\.code, quantities\)/.test(src)],
   ['aucun motif n’est inventé quand la vendeuse n’en choisit pas', /state\.ret = \{ saleId, picks: new Set\(\), quantities: new Map\(\), motif: null \}/.test(src)],
-  ['la pastille du dashboard se lit sur le type, pas sur le libellé', /kind: ret\.kind \|\| 'avoir'/.test(dash) && /r\.kind === 'echange' \? '(?:<span[^>]*>)?Échangé(?:<\/span>)?' : '(?:<span[^>]*>)?Retourné(?:<\/span>)?'/.test(dash)],
-  ['le dashboard lit le même document de retours', /feature: 'returns'[\s\S]*liveReturnsCache[\s\S]*shownReturns\(\)\.flatMap/.test(dash)],
-  ['le dashboard réel n’affiche plus les exemples', /const pending = real \? shownReturns\(\)/.test(dash)],
+  ['la pastille du dashboard se lit sur le type, pas sur le libellé', /kind: ret\.kind \|\| 'avoir'/.test(rxView) && /r\.kind === 'echange' \? '(?:<span[^>]*>)?Échangé(?:<\/span>)?' : '(?:<span[^>]*>)?Retourné(?:<\/span>)?'/.test(dash)],
+  ['le dashboard lit le même document de retours', /feature: 'returns'[\s\S]*liveReturnsCache[\s\S]*rxView\.returnRows\(shownReturns\(\), _rL\)/.test(dash)],
+  ['le dashboard réel n’affiche plus les exemples', /const pending = real \? rxView\.returnRows\(shownReturns\(\)/.test(dash)],
   ['les échanges de la caisse entrent dans la liste du dashboard', /l\.kind === 'echange'\) out\.push\(l\)/.test(dash)],
   ['le serveur ne tronque pas une semaine active à 300 tickets', /const DAY_LIMIT = 2000/.test(feed)],
 ];
@@ -69,12 +70,17 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
   const assert = require('node:assert/strict'), vm = require('node:vm');
   const start = dash.indexOf('  const loadReturnsLedger =');
   assert.ok(start >= 0, 'server ledger reader exists');
-  const reader = dash.slice(start, dash.indexOf('  function loadLiveCredits', start));
+  /* La page et la tuile « Taux retour » lisent le registre par le même module :
+     on y branche le vrai returns-ledger.js (fetch du test en global). */
+  const view = await import(require('node:url').pathToFileURL(path.join(__dirname, '..', 'assets', 'returns-ledger.js')).href);
+  assert.ok(dash.includes("(await import('../returns-ledger.js')).readReturnsLedger(slug)"), 'the page reads the shared ledger module');
+  const reader = dash.slice(start, dash.indexOf('  function loadLiveCredits', start))
+    .replace("(await import('../returns-ledger.js'))", 'ledgerModule');
   async function run(fail) {
     const cache = [{ id: 'cached', items: [] }];
     const context = vm.createContext({ liveReturns: cache, liveReturnsSlug: 'shop', returnsLoading: false,
       returnsState: '', returnsServer: false, encodeURIComponent, Number, Error,
-      document: { querySelector: () => null }, calls: [],
+      document: { querySelector: () => null }, calls: [], ledgerModule: view,
       fetch: async (url, options) => {
         context.calls.push(url); assert.equal(options.credentials, 'same-origin');
         const offset = Number(new URL(url, 'https://kiwi.test').searchParams.get('offset'));
@@ -84,6 +90,7 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
           next: offset ? null : 500 }) };
       } });
     vm.runInContext(reader + ';this.readLedger = loadReturnsLedger;', context);
+    globalThis.fetch = context.fetch;
     await context.readLedger('shop');
     return context;
   }
@@ -112,12 +119,13 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
     const handlers = {};
     const source = dash.replace('let liveReturns = [];', 'let liveReturns = ' + JSON.stringify(rows) + ';')
       .replace("let liveReturnsSlug = '';", "let liveReturnsSlug = 'shop';")
-      .replace("let returnsState = ''", 'let returnsState = ' + JSON.stringify(state));
+      .replace("let returnsState = ''", 'let returnsState = ' + JSON.stringify(state))
+      .replace('let rxView = null;', 'let rxView = __rxView;');
     vm.runInNewContext(source, { window: { Kiwi: { handlers, appPage: (_, options) => { body = options.body; return { el: node() }; } },
       KiwiEnv: { isReal: () => true }, KiwiI18n: { getLang: () => lang },
       KiwiCloudDoc: { currentSlug: () => 'shop', attach: () => ({ bind() {} }) } },
       document: { getElementById: () => null, createElement: () => node(), head: { appendChild() {} }, querySelector: () => null },
-      setTimeout() {}, clearTimeout() {} });
+      setTimeout() {}, clearTimeout() {}, __rxView: view });
     handlers['nav-returns']();
     return body;
   }
@@ -130,4 +138,22 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
   }
 
   console.log('  ✓ Wave S: 600 server returns and explicit incomplete-cache fallback');
+
+  /* Play-test Amira (29/10) : période du sélecteur, montant crédité, ticket. */
+  const rL = (fr) => fr;
+  const ledger = [
+    { id: 'credit:credit-issue:sale-9ee00752:0-2:38000:issue', ts: 500, amount: 380, saleRef: '22503', kind: 'avoir', items: [{ name: 'Jean White', size: 'XS', qty: 2, amount: 380 }] },
+    { id: 'RET-22512-1793273943782', ts: 400, amount: 90, saleRef: '22512', kind: 'echange', items: [{ name: 'Normal Shirt', size: 'S', qty: 1, amount: 90 }] },
+    { id: 'credit:old', ts: 50, amount: 171, saleRef: '16501', kind: 'avoir', items: [{ name: 'Hoodie Gris', size: 'M', qty: 1, amount: 190 }] },
+  ];
+  const all = view.returnRows(ledger, rL);
+  assert.equal(all.find((r) => r.ticket === 'Ticket 16501').amt, 171, 'the row shows the credited 171, not the 190 line price');
+  assert.ok(all.every((r) => !/credit:|RET-/.test(r.ticket + r.name)), 'no internal id in the shown ticket or article');
+  assert.equal(view.returnRows([{ ts: 1, amount: 100, items: [{ name: 'A', amount: 60 }, { name: 'B', amount: 90 }] }], rL).reduce((t, r) => t + r.amt, 0), 100, 'a multi-item credit is split pro rata');
+  globalThis.window = { KiwiDateRange: { bounds: () => [100, Infinity], getDateRange: () => 'aujourdhui' } };
+  const today = view.returnRows(ledger, rL);
+  assert.deepEqual([today.length, today.reduce((t, r) => t + r.amt, 0), today.reduce((t, r) => t + r.qty, 0)], [2, 470, 3], 'Aujourd’hui leaves the 23/10 return out');
+  assert.equal(view.periodLabel(rL), "Aujourd'hui");
+  delete globalThis.window;
+  console.log('  ✓ retours : période du sélecteur, montant crédité, ticket d’origine');
 })().catch(error => { console.error(error); process.exitCode = 1; });

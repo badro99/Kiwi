@@ -13,7 +13,7 @@
  *    complet : un nom tapé partait en « code inconnu » vers la reprise de
  *    stock. La douchette garde son chemin livré (Entrée sur un code). */
 import { bqKitScanBar } from './kit-2027.js?v=19';
-import { searchArticles } from './search.js?v=12';
+import { searchArticles } from './search.js?v=13';
 
 const LOW = 5;   // le seuil de stats() (boutique-catalog.js) et des lignes de l'Inventaire
 const seenKey = (k) => 'kiwiBqInvSeen:' + (k || 'local');

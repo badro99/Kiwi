@@ -90,7 +90,7 @@ let _bqxSubbed = false;
    que la page entière se redessine à chaque synchronisation avec la caisse. */
 let _bqxSelecting = false;
 const _bqxSel = new Set();
-const _BQX_ARCHIVED = '__archived';
+const _BQX_ARCHIVED = '__archived', _BQX_NOCAT = '__divers';   // « Divers » : les produits sans rayon, comme à la caisse
 /* Liste ou grille : la liste par défaut (décision de la patronne, 2026-10-10),
    la grille reste un choix gardé sur cet appareil. */
 let _bqxView = (() => { try { return localStorage.getItem('kiwiInvView') === 'grid' ? 'grid' : 'list'; } catch (_) { return 'list'; } })();
@@ -690,7 +690,7 @@ function _bqxInvT() { return _BQX_INV[_bqxPfLang()]; }
 function _bqxVisibleProducts() {
   let products = _bqxFilter === _BQX_ARCHIVED
     ? CAT().listProducts({ includeArchived: true, q: _bqxQuery }).filter((p) => p.archived)
-    : CAT().listProducts({ categoryId: _bqxFilter, q: _bqxQuery });
+    : _bqxFilter === _BQX_NOCAT ? CAT().listProducts({ q: _bqxQuery }).filter((p) => !CAT().listCategories().some((c) => c.id === p.categoryId)) : CAT().listProducts({ categoryId: _bqxFilter, q: _bqxQuery });
   // Filtrer par couleur, c'est filtrer par FAMILLE : on cherche « du bleu », pas
   // « du bleu nuit ». Une variante marine et une variante turquoise répondent
   // toutes les deux, et restent malgré tout deux articles distincts.
@@ -1013,9 +1013,9 @@ function _renderInventory() {
   const cat = CAT();
   cat.use(_bqxVenue());
   const st = cat.stats();
-  const cats = cat.listCategories();
+  const cats = cat.listCategories(), noCatN = cat.listProducts({}).filter((p) => !cats.some((c) => c.id === p.categoryId)).length;   // rayon « Divers » (sans catégorie), compté et filtrable comme à la caisse
   const archivedN = cat.listProducts({ includeArchived: true }).filter((p) => p.archived).length;
-  if (_bqxFilter === _BQX_ARCHIVED && !archivedN) _bqxFilter = 'all';
+  if ((_bqxFilter === _BQX_ARCHIVED && !archivedN) || (_bqxFilter === _BQX_NOCAT && !noCatN)) _bqxFilter = 'all';
   const need = st.low + st.ruptures;
   if (!need) _bqxLowOnly = false;
   /* Une synchronisation a pu supprimer un produit coché ailleurs : il sort de
@@ -1040,7 +1040,7 @@ function _renderInventory() {
         <button type="button" class="kx-kpi bqx-kpi-btn${need ? ' warn' : ''}${_bqxLowOnly ? ' is-on' : ''}" data-action="bqx-low" aria-pressed="${_bqxLowOnly}"${need ? '' : ' disabled'}>
           <div class="l">${_esc(t.kRestock)}</div><div class="v">${need}</div>
           <div class="d">${_esc(need ? (_bqxLowOnly ? t.kFilterOn : _bqxPfFill(t.kLowOut, { low: st.low, out: st.ruptures })) : t.kNone)}</div></button>
-        <div class="kx-kpi"><div class="l">${_esc(t.kShelves)}</div><div class="v">${st.categories}</div><div class="d">${_esc(t.kShelvesSub)}</div></div>
+        <div class="kx-kpi"><div class="l">${_esc(t.kShelves)}</div><div class="v">${st.categories + (noCatN ? 1 : 0)}</div><div class="d">${_esc(t.kShelvesSub)}</div></div>
       </div>
 
       <div class="p-toolbar bqx-toolbar">
@@ -1059,7 +1059,7 @@ function _renderInventory() {
       <div class="bqx-filters">
         <div class="kx-pills" data-pill-group="bqx-cat">
           <button class="kx-pill ${_bqxFilter === 'all' ? 'on' : ''}" data-action="bqx-filter" data-arg="all">${_esc(t.all)} <span class="ct">${st.products}</span></button>
-          ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}
+          ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}${noCatN ? `<button class="kx-pill ${_bqxFilter === _BQX_NOCAT ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_NOCAT}">${_esc(t.noCat)} <span class="ct">${noCatN}</span></button>` : ''}
           ${archivedN || _bqxFilter === _BQX_ARCHIVED ? `<button class="kx-pill ${_bqxFilter === _BQX_ARCHIVED ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_ARCHIVED}">${_esc(t.archivedPill)} <span class="ct">${archivedN}</span></button>` : ''}
         </div>
         ${_bqxColorBar(cat)}
