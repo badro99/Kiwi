@@ -333,10 +333,26 @@ function buildCustomFeed(venue) {
      * mark here would invent a fact the sale does not carry. */
     const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', transfer: 'qr', cheque: 'qr', split: 'cmi', credit: 'qr', delivery: 'qr' };
     const L = ML[lang] || ML.fr;
+    const num = (n) => window.KiwiNumber?.number(Math.abs(n || 0), 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(n || 0));
+    /* A delivery (or customer credit) is stored at 0 MAD: no money came in that
+     * day. The amount owed rides on the sale, in its delivery parts or its
+     * basket, so the row shows what is to receive instead of 0. */
+    const basketOf = (s) => (Array.isArray(s.lines) ? s.lines : []).reduce((n, l) => n + (+(l && l.total) || 0), 0);
+    const owedOf = (s) => {
+      const parts = Array.isArray(s.paymentParts) ? s.paymentParts : [];
+      const cents = parts.reduce((n, p) => n + (p && p.method === s.method ? (+p.amountCents || 0) : 0), 0);
+      return cents > 0 ? cents / 100 : basketOf(s);
+    };
     return sales.map((s, i) => {
       const d = new Date(s.ts);
       const t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
+      const toReceive = !isRefund && (s.method === 'delivery' || s.method === 'credit');
+      const shown = toReceive ? Math.max(Math.abs(+s.amount || 0), owedOf(s)) : Math.abs(s.amount || 0);
+      const items = (Array.isArray(s.lines) ? s.lines : []).filter((l) => l && l.name).map((l) => {
+        const qty = Math.max(1, +l.qty || 1);
+        return { name: l.name, qty, price: (+l.total || 0) / qty };
+      });
       return {
         t,
         method: ICON_FOR[s.method] || 'cmi',
@@ -348,7 +364,9 @@ function buildCustomFeed(venue) {
         sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: s.label || '',
         // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
-        amt: (isRefund ? '− ' : '') + (window.KiwiNumber?.number(Math.abs(s.amount || 0), 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(s.amount || 0))),
+        amt: (isRefund ? '− ' : '') + num(shown),
+        /* Detail drawer: the basket and its total; a delivery reads « à recevoir ». */
+        items, subtotal: num(shown), total: num(shown), tva: num(0), tvaRate: 0, toReceive,
         tip: '·', neg: isRefund, isNew: i === 0,
         saleId: String(s.id || ''),
         ref: String(s.ref || s.receiptRef || s.id || '').trim(),
