@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=193';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=94';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=94';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=195';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=96';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=96';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
@@ -449,7 +449,11 @@ const M = globalThis.KiwiMoney;
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); });
 
     let applied = false;
-    const stockRef = `exch-${newSaleId()}`;
+    const stockRef = `exch-${newSaleId()}`;      // clé de réservation, jamais affichée
+    /* Ce que le registre des mouvements montre : le ticket d'origine et la
+       caissière, comme pour une vente ou un retour ordinaires. */
+    const moveRef = String(sale.id || '');
+    const moveActor = STAFF && STAFF.caissiere ? STAFF.caissiere.name : '';
     const cat = window.KiwiBoutiqueCatalog;
     const reserveReplacement = () => {
       if (variantStock(newPid, newSize, newColor) < 1) {
@@ -462,15 +466,15 @@ const M = globalThis.KiwiMoney;
     };
     const apply = (reserved) => {
       if (applied) return true;
-      if (!reserved && !persistStock(newPid, newSize, newColor, -1, stockRef, 'vente')) {
+      if (!reserved && !persistStock(newPid, newSize, newColor, -1, moveRef, 'vente')) {
         showStockIssue({ pid: newPid, size: newSize, color: newColor, needed: 1, onHand: variantStock(newPid, newSize, newColor) });
         return false;
       }
       applied = true;
-      if (reserved && cat && cat.confirmSale) cat.confirmSale(stockRef);
+      if (reserved && cat && cat.confirmSale) cat.confirmSale(stockRef, { ref: moveRef, actor: moveActor });
       stockAdd(newPid, newSize, -1);
       // Commit the swap to the shared inventory: returned piece back in, replacement out.
-      const oldRestored = persistStock(ln.pid, ln.size, ln.color, 1, `ret-${stockRef}`, 'retour');
+      const oldRestored = persistStock(ln.pid, ln.size, ln.color, 1, moveRef, 'retour');
       stockAdd(ln.pid, ln.size, 1);
       markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
       recordReturn(sale, [ex.idx], paidUnit(sale, ln), ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
@@ -478,7 +482,7 @@ const M = globalThis.KiwiMoney;
       persistDay();
       queueIfOffline(`Échange · ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();
-      if (!oldRestored) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange enregistré, retour à rapprocher'), 'La variante d’origine a été supprimée du catalogue.');
+      if (!oldRestored) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange enregistré, retour à rapprocher'), 6000, 'warn', 'La variante d’origine a été supprimée du catalogue.');
       return true;
     };
 
@@ -491,7 +495,7 @@ const M = globalThis.KiwiMoney;
             if (!reservation.ok && !reservation.offline) {
               if (go) go.disabled = false;
               if (reservation.issue) showStockIssue(reservation.issue);
-              else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange suspendu'), 'Impossible de réserver l’article de remplacement.');
+              else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange suspendu'), 6000, 'warn', 'Impossible de réserver l’article de remplacement.');
               return;
             }
             const reserved = !!reservation.ok;

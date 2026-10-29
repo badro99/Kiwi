@@ -1334,7 +1334,7 @@
     variantStock: (id, size, color) => (load(), variantStock(id, size, color)),
     adjustVariantStock: (id, size, color, delta, opts) => (load(), adjustVariantStock(id, size, color, delta, opts)),
     reserveSale: (ref, lines) => reserveSale(ref, lines),
-    confirmSale: (ref) => (load(), confirmSale(ref)),
+    confirmSale: (ref, shown) => (load(), confirmSale(ref, shown)),
     releaseSale: (ref) => (load(), releaseSale(ref)),
     // variants
     // .slice() : variantsOf() rend le tableau vivant de l'index (voir index()).

@@ -170,10 +170,13 @@
         feature: 'returns', slug: () => window.KiwiCloudDoc.currentSlug(),
         read: () => ({ list: liveReturnsCache }),
         write: (doc) => {
+          const before = JSON.stringify(liveReturnsCache);
           liveReturnsCache = Array.isArray(doc && doc.list) ? doc.list.slice(0, 500) : [];
-          if (returnsServer) return;
-          liveReturns = liveReturnsCache;
-          if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+          if (!returnsServer) liveReturns = liveReturnsCache;
+          /* Le journal de la caisse complète le registre serveur (articles,
+             cliente, échanges) : un retour fait pendant que la page est ouverte
+             doit s'y voir. On ne repeint que si quelque chose a changé. */
+          if (JSON.stringify(liveReturnsCache) !== before && document.querySelector('[data-live-returns]')) handlers['nav-returns']();
         },
         isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
       });
@@ -181,8 +184,9 @@
     liveReturnsCloud.bind();
     loadReturnsLedger(slug);
   }
-  const loadReturnsLedger = async (slug) => {
-    if (!slug || returnsLoading || returnsState) return;
+  let ledgerChanged = false;
+  const loadReturnsLedger = async (slug, again) => {
+    if (!slug || returnsLoading || (returnsState && !again)) return;
     returnsLoading = true;
     try {
       const { deadlineFetch } = await import('../request-deadline.mjs').catch(() => ({ deadlineFetch: (url, options) => fetch(url, options) }));
@@ -197,13 +201,17 @@
         offset = data.next;
       } while (offset !== null);
       if (slug !== liveReturnsSlug) return;
+      ledgerChanged = !returnsServer || JSON.stringify(list) !== JSON.stringify(liveReturns);
       liveReturns = list;
       returnsServer = true;
       returnsState = 'ready';
-    } catch (_) { if (slug === liveReturnsSlug) returnsState = 'failed'; }
+    } catch (_) { if (slug === liveReturnsSlug) { ledgerChanged = returnsState !== 'failed'; returnsState = 'failed'; } }
     finally {
       returnsLoading = false;
-      if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+      /* Relu toutes les 30 s avec les avoirs : une relecture identique ne
+         reconstruit pas la page sous le doigt du commerçant. */
+      if (ledgerChanged && document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+      ledgerChanged = false;
     }
   }
 
@@ -237,7 +245,10 @@
         clearTimeout(liveCreditsTimer);
         liveCreditsTimer = setTimeout(() => {
           liveCreditsLoadedSlug = '';
-          if (document.querySelector('[data-live-returns]')) loadLiveCredits();
+          if (document.querySelector('[data-live-returns]')) {
+            loadLiveCredits();
+            if (liveReturnsSlug && returnsState === 'ready') loadReturnsLedger(liveReturnsSlug, true);
+          }
         }, 30000);
         if (liveCreditsChanged && liveCreditsLoadedSlug === slug && document.querySelector('[data-live-returns]')) handlers['nav-returns']();
         liveCreditsChanged = false;
@@ -310,7 +321,32 @@
       { id: 'R-7825', d: '22/04', name: 'Coussin tissé Kilim',            amt: 290,   reason: 'Défaut · tache',        client: 'Hassan J. (MA)',   status: 'pend',  emoji: 'CO' },
       { id: 'R-7826', d: '21/04', name: 'Bracelet argent berbère',       amt: 1200,  reason: 'Taille',                client: 'Karima O. (MA)',   status: 'neutral', emoji: 'BR' },
     ];
-    const pending = real ? liveReturns.flatMap((ret) => {
+    /* Le registre serveur ne connaît que le montant, le motif et le ticket :
+       sans le journal de la caisse, chaque ligne disait « 1 × Retour » pour une
+       « Cliente de passage », et un échange (qui ne passe pas par le registre)
+       n'apparaissait jamais. On rapproche chaque ligne serveur de l'écriture de
+       la caisse au même ticket et au même montant, et on ajoute les échanges. */
+    const shownReturns = () => {
+      if (!returnsServer) return liveReturns;
+      const local = Array.isArray(liveReturnsCache) ? liveReturnsCache : [];
+      const cents = (v) => Math.round((Number(v) || 0) * 100);
+      const used = new Set();
+      const out = liveReturns.map((row) => {
+        if (!row || (Array.isArray(row.items) && row.items.length && row.client)) return row;
+        const k = local.findIndex((l, i) => !used.has(i) && l && l.kind !== 'echange'
+          && String(l.saleRef || '') === String(row.saleRef || '') && cents(l.amount) === cents(row.amount));
+        if (k < 0) return row;
+        used.add(k);
+        const l = local[k];
+        return Object.assign({}, row, {
+          items: Array.isArray(row.items) && row.items.length ? row.items : l.items,
+          client: row.client || l.client, reason: row.reason || l.reason, actor: row.actor || l.actor,
+        });
+      });
+      local.forEach((l) => { if (l && l.kind === 'echange') out.push(l); });
+      return out;
+    };
+    const pending = real ? shownReturns().flatMap((ret) => {
       const items = Array.isArray(ret && ret.items) ? ret.items : [{ name: _rL('Retour', 'Return', 'مرتجع'), qty: 1, amount: ret.amount }];
       return items.map((item, i) => ({
         id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),

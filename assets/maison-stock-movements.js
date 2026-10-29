@@ -413,7 +413,9 @@
     moduleType = vertical === 'boutique' ? 'boutique' : 'maison';
     return attach();
   }
-  function autoAttach() { if (isMaison()) attach(); }
+  /* Un tableau de bord peut passer d'une boutique (qui a branché le registre en
+     « boutique ») à une Maison : le registre doit alors reparler « maison ». */
+  function autoAttach() { if (isMaison()) { moduleType = 'maison'; attach(); } }
 
   /* ── LE COMPTOIR QUI DÉCLARE UNE CASSE ────────────────────────────────────
    * La file du registre (inventory-ledger.js) poste sans autorisation : un motif

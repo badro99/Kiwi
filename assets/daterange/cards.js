@@ -657,6 +657,15 @@ function realLowStock() {
 
 function realTopProducts(range) {
     const [from, to] = rangeBounds(range == null ? __state.currentRange : range);
+    /* Une ligne boutique porte la taille dans son nom (« Hoodie Blue M ») et une
+       variante `prod_7:M:bleu`. On nomme le produit, pas la première taille
+       vendue ; un plat de restaurant (sans variante de ce format) ne change pas. */
+    const productLabel = (line) => {
+      const name = String((line && line.name) || ''), item = String((line && line.itemId) || ''), variant = String((line && line.variantId) || '');
+      if (!item || variant.indexOf(item + ':') !== 0) return name;
+      const size = variant.slice(item.length + 1).split(':')[0];
+      return size && name.length > size.length + 1 && name.endsWith(' ' + size) ? name.slice(0, -(size.length + 1)) : name;
+    };
     const sales = __state.realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to);
     const by = new Map(); let covered = 0;
     sales.forEach((sale) => {
@@ -667,7 +676,7 @@ function realTopProducts(range) {
         const key = String(line.itemId || line.variantId || line.name).trim().toLowerCase();
         const qty = Math.max(0, Number(line.qty) || 0);
         const revenue = Math.max(0, Number(line.total) || ((Number(line.price) || 0) * qty));
-        const row = by.get(key) || { name: line.name, qty: 0, revenue: 0 };
+        const row = by.get(key) || { name: productLabel(line), qty: 0, revenue: 0 };
         row.qty += qty; row.revenue += revenue; by.set(key, row);
       });
     });
@@ -677,6 +686,15 @@ function realTopProducts(range) {
 
 function realPairs(range) {
     const [from, to] = rangeBounds(range == null ? __state.currentRange : range);
+    /* Une ligne boutique porte la taille dans son nom (« Hoodie Blue M ») et une
+       variante `prod_7:M:bleu`. On nomme le produit, pas la première taille
+       vendue ; un plat de restaurant (sans variante de ce format) ne change pas. */
+    const productLabel = (line) => {
+      const name = String((line && line.name) || ''), item = String((line && line.itemId) || ''), variant = String((line && line.variantId) || '');
+      if (!item || variant.indexOf(item + ':') !== 0) return name;
+      const size = variant.slice(item.length + 1).split(':')[0];
+      return size && name.length > size.length + 1 && name.endsWith(' ' + size) ? name.slice(0, -(size.length + 1)) : name;
+    };
     const seen = new Map(), names = new Map(), together = new Map();
     let baskets = 0;
     __state.realSalesList().forEach((sale) => {
@@ -688,7 +706,7 @@ function realPairs(range) {
         const k = String(l.itemId || l.variantId || l.name).trim().toLowerCase();
         if (!k || keys.size >= __state.PAIRS_MAX_KEYS) return;
         keys.add(k);
-        if (!names.has(k)) names.set(k, String(l.name));
+        if (!names.has(k)) names.set(k, productLabel(l));
       });
       keys.forEach((k) => seen.set(k, (seen.get(k) || 0) + 1));
       if (keys.size < 2) return;

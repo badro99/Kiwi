@@ -65,7 +65,8 @@ const _mad2 = (n) => (window.KiwiNumber?.format(n, {minimumFractionDigits: 2, ma
  * surfaces stay in sync (subscribe() same-page + the native `storage` event
  * cross-tab). A variant = product × colour × size is the atomic barcoded unit.
  * ─────────────────────────────────────────────────────────────────────────── */
-const CAT = () => window.KiwiBoutiqueCatalog;
+// Boutique : tout stock touché ici (création, réassort, ±1) entre au registre « Mouvements de stock ».
+const CAT = () => { try { const M = window.KiwiMaisonStock, T = window.KiwiStoreTemplates; if (M && M.enable && T && T.currentTrade && String(T.currentTrade()) === 'boutique') M.enable('boutique'); } catch (_) {} return window.KiwiBoutiqueCatalog; };
 const BC  = () => window.KiwiBarcode;
 const _bqxReady = () => !!(window.KiwiBoutiqueCatalog && window.KiwiBarcode);
 
@@ -503,7 +504,7 @@ function _kindOptions(sel, trade) {
  * ─────────────────────────────────────────────────────────────────────────── */
 /* La page, en trois langues. Elle était en français sous l'anglais et l'arabe,
    alors que la fiche qu'elle ouvre parlait déjà la langue de l'écran ; et sa
-   ligne disait « Divers » quand la fiche disait « Sans catégorie ». */
+   ligne disait « Divers » quand la fiche disait « Sans catégorie » : tout dit « Divers », comme la caisse. */
 const _bqxEnN = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const _arProducts = (n) => _bqxArCount(n, 'منتج واحد', 'منتجان', 'منتجات', 'منتجًا', 'منتج');
 const _BQX_INV = {
@@ -518,7 +519,7 @@ const _BQX_INV = {
     noColor: 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.',
     createTill: 'Créez un produit ici, ou depuis la caisse{hint} avec la douchette.', createFirst: 'Créez votre premier produit ici.',
     hProduct: 'Produit', hColors: 'Couleurs', hVariants: 'Variantes', hCodes: 'Codes-barres', hPrice: 'Prix', hStock: 'Stock',
-    catB: 'Catégorie B', archived: 'Archivé', noCat: 'Sans catégorie', complete: 'Complets', out: 'Rupture',
+    catB: 'Catégorie B', archived: 'Archivé', noCat: 'Divers', complete: 'Complets', out: 'Rupture',
     colorFilter: 'Filtrer par couleur', color: 'Couleur', seeAll: 'Tout voir',
     kNoCost: ' · au prix de vente, coûts non saisis', kPotential: ' · potentiel {v} {cur}',
     import: 'Importer un CSV', export: 'Exporter en CSV', templates: 'Modèles de rayons', nfc: 'Tags NFC', moves: 'Mouvements de stock', cntTitle: '{who} a transmis un inventaire physique', cntSub: '{n} articles comptés · écart net {d} · à valider', cntOpen: 'Examiner',
@@ -570,7 +571,7 @@ const _BQX_INV = {
     noColor: 'No items in this colour. Tap the swatch again to see everything.',
     createTill: 'Create a product here, or at the till{hint} with the scanner.', createFirst: 'Create your first product here.',
     hProduct: 'Product', hColors: 'Colours', hVariants: 'Variants', hCodes: 'Barcodes', hPrice: 'Price', hStock: 'Stock',
-    catB: 'Category B', archived: 'Archived', noCat: 'No category', complete: 'Complete', out: 'Out of stock',
+    catB: 'Category B', archived: 'Archived', noCat: 'Other', complete: 'Complete', out: 'Out of stock',
     colorFilter: 'Filter by colour', color: 'Colour', seeAll: 'Show all',
     kNoCost: ' · at selling price, no costs entered', kPotential: ' · {v} {cur} at selling price',
     import: 'Import a CSV', export: 'Export as CSV', templates: 'Shelf templates', nfc: 'NFC tags', moves: 'Stock movements', cntTitle: '{who} submitted a physical count', cntSub: '{n} items counted · net gap {d} · awaiting your review', cntOpen: 'Review',
@@ -622,7 +623,7 @@ const _BQX_INV = {
     noColor: 'لا منتجات بهذا اللون. المس الدائرة مرة أخرى لرؤية الكل.',
     createTill: 'أنشئ منتجًا هنا، أو من الصندوق{hint} بقارئ الرموز.', createFirst: 'أنشئ منتجك الأول هنا.',
     hProduct: 'المنتج', hColors: 'الألوان', hVariants: 'المتغيّرات', hCodes: 'الرموز الشريطية', hPrice: 'السعر', hStock: 'المخزون',
-    catB: 'الفئة B', archived: 'مؤرشف', noCat: 'بدون فئة', complete: 'مكتملة', out: 'نفد',
+    catB: 'الفئة B', archived: 'مؤرشف', noCat: 'متفرقات', complete: 'مكتملة', out: 'نفد',
     colorFilter: 'تصفية حسب اللون', color: 'اللون', seeAll: 'عرض الكل',
     kNoCost: ' · بسعر البيع، التكاليف غير مُدخلة', kPotential: ' · {v} {cur} بسعر البيع',
     import: 'استيراد ملف CSV', export: 'تصدير بصيغة CSV', templates: 'نماذج الأقسام', nfc: 'وسوم NFC', moves: 'حركات المخزون', cntTitle: 'أرسل {who} جرداً فعلياً', cntSub: 'أصناف معدودة: {n} · الفرق الصافي {d} · في انتظار مراجعتك', cntOpen: 'مراجعة',
@@ -1315,7 +1316,7 @@ const _arVariants = (n) => _bqxArCount(n, 'متغيّر واحد', 'متغيّر
 const _BQX_SH = {
   fr: {
     close: 'Fermer', edit: 'Modifier le produit', delete: 'Supprimer', cancel: 'Annuler',
-    notFound: 'Produit introuvable.', noCat: 'Sans catégorie', cur: 'MAD', inStock: '{n} en stock',
+    notFound: 'Produit introuvable.', noCat: 'Divers', cur: 'MAD', inStock: '{n} en stock',
     tPrice: 'Prix de vente', costGap: 'Coût {cost} MAD · écart {gap} MAD', costOver: 'Coût {cost} MAD, au-dessus du prix',
     costNone: 'Coût d’achat non renseigné',
     tStock: 'En stock', noVariant: 'Aucune variante',
@@ -1391,7 +1392,7 @@ const _BQX_SH = {
   },
   en: {
     close: 'Close', edit: 'Edit product', delete: 'Delete', cancel: 'Cancel',
-    notFound: 'Product not found.', noCat: 'No category', cur: 'MAD', inStock: '{n} in stock',
+    notFound: 'Product not found.', noCat: 'Other', cur: 'MAD', inStock: '{n} in stock',
     tPrice: 'Selling price', costGap: 'Cost {cost} MAD · gap {gap} MAD', costOver: 'Cost {cost} MAD, above the price',
     costNone: 'Purchase cost not entered',
     tStock: 'In stock', noVariant: 'No variants',
@@ -1467,7 +1468,7 @@ const _BQX_SH = {
   },
   ar: {
     close: 'إغلاق', edit: 'تعديل المنتج', delete: 'حذف', cancel: 'إلغاء',
-    notFound: 'المنتج غير موجود.', noCat: 'بدون فئة', cur: 'درهم', inStock: '{n} في المخزون',
+    notFound: 'المنتج غير موجود.', noCat: 'متفرقات', cur: 'درهم', inStock: '{n} في المخزون',
     tPrice: 'سعر البيع', costGap: 'التكلفة {cost} درهم · الفرق {gap} درهم', costOver: 'التكلفة {cost} درهم، أعلى من السعر',
     costNone: 'تكلفة الشراء غير مُدخلة',
     tStock: 'في المخزون', noVariant: 'لا متغيّرات',

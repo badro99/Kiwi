@@ -76,7 +76,7 @@ try {
     await p.click('[data-kc-apply]');
     await pause(60);
     const custom = await p.evaluate(() => ({ s: KiwiColors.selection(document.getElementById('host')), d: __changes[__changes.length - 1], t: document.querySelector('[data-kc-color="custom-4a67d6"]').getAttribute('title') }));
-    check(custom.t === 'Custom colour #4A67D6', 'an unnamed custom colour reads « Custom colour #4A67D6 »');
+    check(custom.t === 'Custom blue', 'an unnamed custom colour reads as its family (« Custom blue »), not as a hex code');
     check(custom.s.label === 'Couleur personnalisée #4A67D6' && custom.d.label === 'Couleur personnalisée #4A67D6', 'and is stored under its French generic name, as before');
     const api = await p.evaluate(() => ({ name: KiwiColors.name('noir'), label: KiwiColors.label('noir') }));
     check(api.name === 'Black' && api.label === 'Noir', 'KiwiColors.name reads, KiwiColors.label stays the stored key');

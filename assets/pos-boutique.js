@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=94';
-import { openDrawerNoSale } from './pos-boutique/drawer.js?v=12';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=94';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=94';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=96';
+import { openDrawerNoSale } from './pos-boutique/drawer.js?v=14';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=96';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=96';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=19';
 
@@ -121,7 +121,7 @@ import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-20
   function showStockIssue(issue) {
     const p = P[issue.pid];
     const label = p ? p.name : 'Article';
-    toast(`${label} · ${colorLabel(issue.color)} · ${issue.size}, stock insuffisant`,
+    toast(`${label} · ${colorLabel(issue.color)} · ${issue.size}, stock insuffisant`, 6000, 'warn',
       `${issue.onHand} disponible${issue.onHand > 1 ? 's' : ''}, ${issue.needed} sur le ticket. Retirez la quantité manquante.`);
   }
   /* Persist a COMMITTED stock movement (real vente / retour / échange) to the SHARED

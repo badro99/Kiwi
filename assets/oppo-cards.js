@@ -15,7 +15,8 @@
   const SLOTS = 3;
   const setHtml = (el, html) => { el['inner' + 'HTML'] = html; };
 
-  const lang = () => (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+  // setLang (i18n.js) pose <html lang> et kiwiLang ensemble : on lit la page, sans dépendre du module.
+  const lang = () => { const ok = (l) => (l === 'fr' || l === 'en' || l === 'ar') ? l : ''; let s = ''; try { s = localStorage.getItem('kiwiLang'); } catch (_) {} return ok(String(document.documentElement.lang || '').slice(0, 2)) || ok(s) || 'fr'; };
   const pick = (o) => o[lang()] ?? o.fr;
 
   /* ─── Illustrations — pure SVG ───
@@ -229,6 +230,16 @@
     catch (_) { return false; }
   }
 
+  /* Une offre pour un module qui TOURNE déjà n'a rien à vendre : « Activer la
+   * fidélité » restait à l'accueil d'une boutique dont le programme distribuait
+   * des points depuis des semaines. Vrai magasin seulement · la démo garde sa
+   * carte, c'est une vitrine. */
+  function alreadyLive(c, real) {
+    if (!real || !c || c.id !== 'loyalty') return false;
+    try { return !!(window.KiwiClients && window.KiwiClients.loyaltyOn && window.KiwiClients.loyaltyOn()); }
+    catch (_) { return false; }
+  }
+
   function render() {
     const band = document.querySelector('[data-oppo-band]');
     if (!band) return;
@@ -240,7 +251,7 @@
     const mh = window.KiwiMerchantHealth;
     const health = !!(mh && typeof mh.shows === 'function' && mh.shows());
     const cards = POOL
-      .filter((c) => !gone.includes(c.id) && !(real && PHASE_2[c.id]) && !moduleOff(c.feat))
+      .filter((c) => !gone.includes(c.id) && !(real && PHASE_2[c.id]) && !moduleOff(c.feat) && !alreadyLive(c, real))
       .slice(0, SLOTS - (health ? 1 : 0));
     if (!cards.length && !health) { setHtml(band, ''); band.style.display = 'none'; return; }
     band.style.display = '';
@@ -272,4 +283,13 @@
   document.addEventListener('kiwi-config', render);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
   else render();
+  /* Le programme de fidélité arrive du nuage après le premier rendu : on
+   * redistribue quand il change, pour que la carte parte d'elle-même. */
+  function hookLoyalty(left) {
+    const K = window.KiwiClients;
+    if (K && typeof K.subscribeConfig === 'function') { try { K.subscribeConfig(render); } catch (_) {} return; }
+    if (left > 0) setTimeout(() => hookLoyalty(left - 1), 250);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => hookLoyalty(40));
+  else setTimeout(() => hookLoyalty(40), 0);
 })();

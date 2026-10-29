@@ -1124,7 +1124,11 @@
     const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(Number(s.amount || 0) * 100)), 0) / 100;
     const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(Number(s.amount || 0) * 100)), 0) / 100;
     const total = Math.round((collected - returned) * 100) / 100;
-    const count = financialWindow.filter((s) => s.kind !== 'refund' && Number(s.amount) > 0).length;
+    /* Un ticket réglé entièrement par avoir vaut 0 MAD encaissé, mais c'est une
+       vente : la liste le montre, l'en-tête doit le compter. Un ticket offert à
+       0 MAD (restaurant) reste hors du compte, comme avant. */
+    const count = financialWindow.filter((s) => s.kind !== 'refund' && (Number(s.amount) > 0
+      || (Number(s.amount) === 0 && /^(credit|avoir)/i.test(String(s.method || ''))))).length;
     const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());

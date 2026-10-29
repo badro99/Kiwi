@@ -31,8 +31,9 @@ const checks = [
   ['le journal propriétaire reçoit la quantité partielle exacte', /const motif = ret\.motif \|\| 'Non précisé'[\s\S]*recordReturn\(sale, idxs, amount, motif, 'avoir', av\.code, quantities\)/.test(src)],
   ['aucun motif n’est inventé quand la vendeuse n’en choisit pas', /state\.ret = \{ saleId, picks: new Set\(\), quantities: new Map\(\), motif: null \}/.test(src)],
   ['la pastille du dashboard se lit sur le type, pas sur le libellé', /kind: ret\.kind \|\| 'avoir'/.test(dash) && /r\.kind === 'echange' \? '(?:<span[^>]*>)?Échangé(?:<\/span>)?' : '(?:<span[^>]*>)?Retourné(?:<\/span>)?'/.test(dash)],
-  ['le dashboard lit le même document de retours', /feature: 'returns'[\s\S]*liveReturns\.flatMap/.test(dash)],
-  ['le dashboard réel n’affiche plus les exemples', /const pending = real \? liveReturns/.test(dash)],
+  ['le dashboard lit le même document de retours', /feature: 'returns'[\s\S]*liveReturnsCache[\s\S]*shownReturns\(\)\.flatMap/.test(dash)],
+  ['le dashboard réel n’affiche plus les exemples', /const pending = real \? shownReturns\(\)/.test(dash)],
+  ['les échanges de la caisse entrent dans la liste du dashboard', /l\.kind === 'echange'\) out\.push\(l\)/.test(dash)],
   ['le serveur ne tronque pas une semaine active à 300 tickets', /const DAY_LIMIT = 2000/.test(feed)],
 ];
 

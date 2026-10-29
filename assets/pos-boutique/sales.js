@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=193';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=94';
-import { offerRegister } from './inventory.js?v=94';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=195';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=96';
+import { offerRegister } from './inventory.js?v=96';
 import { ticketOwner } from './ticket-owner.js?v=2';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=19';
@@ -128,7 +128,9 @@ import { photoImg } from '../retail-photos.js?v=4';
   const KC = () => window.KiwiColors || null;
   const KC_MISS = { id: 'gris', label: 'Gris', hex: '#9AA0A6' };
   function colorOf(id) { const k = KC(); return (k && (k.display ? k.display(id) : k.normalize(id))) || KC_MISS; }
-  function colorLabel(id) { return colorOf(id).label; }
+  // Une couleur personnalisée sans nom se lit par sa famille (« Bleu
+  // personnalisé »), jamais par son code hexadécimal.
+  function colorLabel(id) { const c = colorOf(id); const k = KC(); return (c.custom && k && k.nameOf) ? k.nameOf(c) : c.label; }
   function colorHex(id) { return colorOf(id).hex; }
   // Une pastille non cliquable (ligne de ticket, retour, tableau) — même dessin
   // que dans le tableau de bord, nom porté par title/aria plutôt qu'écrit.
@@ -426,7 +428,7 @@ import { photoImg } from '../retail-photos.js?v=4';
       const ln = t.lines[idx];
       if (plus) {
         if (availableStock(ln.pid, ln.size, ln.color, t) <= 0) {
-          toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`);
+          toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`, undefined, 'warn');
           return;
         }
         stockAdd(ln.pid, ln.size, -1);
@@ -513,7 +515,7 @@ import { photoImg } from '../retail-photos.js?v=4';
     const p = P[pid];
     const available = availableStock(pid, cfg.size, cfg.color, state.ticket);
     if (available < cfg.qty) {
-      toast(`${p.name} · ${colorLabel(cfg.color)} · ${cfg.size}, stock insuffisant`,
+      toast(`${p.name} · ${colorLabel(cfg.color)} · ${cfg.size}, stock insuffisant`, undefined, 'warn',
         `${available} disponible${available > 1 ? 's' : ''}`);
       return false;
     }
@@ -661,7 +663,7 @@ import { photoImg } from '../retail-photos.js?v=4';
     const qPlus = $('#bq-qty-plus', el);
     if (qPlus) qPlus.onclick = () => {
       const available = availableStock(p.id, sheet.size, sheet.color);
-      if (sheet.qty >= available) { toast(`${p.name} · ${colorLabel(sheet.color)} · ${sheet.size}, ${available} en stock, pas plus`); return; }
+      if (sheet.qty >= available) { toast(`${p.name} · ${colorLabel(sheet.color)} · ${sheet.size}, ${available} en stock, pas plus`, undefined, 'warn'); return; }
       sheet.qty++; refreshPrice();
     };
     const remRow = $('#bq-remise', el);
@@ -1390,7 +1392,7 @@ import { photoImg } from '../retail-photos.js?v=4';
       const p = P[lk.pid];
       const color = lk.color || p.colors[0];
       const size = availableStock(lk.pid, lk.size, color) > 0 ? lk.size : firstFreeFor(p, color);
-      if (!size) { toast(`${p.name} · ${colorLabel(color)}, épuisé dans toutes les tailles`); return; }
+      if (!size) { toast(`${p.name} · ${colorLabel(color)}, épuisé dans toutes les tailles`, undefined, 'warn'); return; }
       switchView('vente');
       addToTicket(lk.pid, { size, color, qty: 1, remise: 0 });
     };
@@ -1428,7 +1430,7 @@ import { photoImg } from '../retail-photos.js?v=4';
       : (c && p.kind === 'taille' && availableStock(pid, c.taille, color) > 0) ? c.taille
       : firstFreeFor(p, color);
     if (!size || availableStock(pid, size, color) <= 0) {
-      toast(`${p.name} · ${colorLabel(color)}${size ? ' · ' + size : ''}, épuisé`);
+      toast(`${p.name} · ${colorLabel(color)}${size ? ' · ' + size : ''}, épuisé`, undefined, 'warn');
       return;
     }
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
@@ -1470,7 +1472,7 @@ import { photoImg } from '../retail-photos.js?v=4';
     state.lookup = { pid, size, color, ean: code, at: new Date() };
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
-    toast(tot > 0 ? `${p.name} · ${tot} en stock` : `${p.name}, épuisé`);
+    toast(tot > 0 ? `${p.name} · ${tot} en stock` : `${p.name}, épuisé`, undefined, tot > 0 ? '' : 'warn');
     askCross(code, pid);
     if (state.view === 'scan') renderScan();
     renderBadges();

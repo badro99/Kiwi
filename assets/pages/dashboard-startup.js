@@ -20,9 +20,9 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=3',
-    'assets/pages-pro.js?v=2192',
-    'assets/pages-pro-boutique.js?v=15',
-    'assets/pages-pro-spa-starter.js?v=2',
+    'assets/pages-pro.js?v=2193',
+    'assets/pages-pro-boutique.js?v=17',
+    'assets/pages-pro-spa-starter.js?v=3',
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
     'assets/menu-nutrition.js?v=4',
@@ -36,7 +36,7 @@
     'assets/restaurant-menu/recipes.js?v=3',
     'assets/restaurant-menu/styles.js?v=2',
     'assets/restaurant-menu-workspace.js?v=125',
-    'assets/sold-insights.js?v=17',
+    'assets/sold-insights.js?v=19',
     'assets/boutique-promos-dashboard.js?v=23',
     'assets/day-report.js?v=38',
     'assets/z-reconciliation.js?v=29',

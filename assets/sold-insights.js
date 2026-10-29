@@ -21,6 +21,22 @@
   var dashboardDays = 30;
   var tillDays = 7;
   var dashboardRange = null;
+  /* Tant que le patron n'a pas choisi de période SUR cette page, « Vendus » suit
+     la période du tableau de bord (Aujourd'hui, 7 jours…). Elle partait sur ses
+     propres 30 jours : un ticket d'hier y apparaissait quand l'accueil disait
+     « aujourd'hui », et les deux écrans ne tombaient jamais d'accord. */
+  var dashboardPicked = false;
+  function sharedPeriod() {
+    var k = '';
+    try { k = String(localStorage.getItem('kiwiDateRange') || ''); } catch (_) { return null; }   // la période du sélecteur
+    if (!k) k = 'aujourdhui';                       // le défaut du tableau de bord
+    if (k === 'septJours') return 7;
+    if (k === 'trenteJours') return 30;
+    var today = parseDateKey(businessToday());
+    if (!today || (k !== 'aujourdhui' && k !== 'hier')) return null;
+    if (k === 'hier') today = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    return { from: dateKey(today), to: dateKey(today) };
+  }
   var tillRange = null;
 
   function dateKey(d) {
@@ -94,7 +110,7 @@
     var cats = {}, products = [];
     if (!api) return { cats: cats, products: products };
     var byId = {};
-    try { (api.listCategories() || []).forEach(function (c) { cats[String(c.id)] = String(c.name || L('Sans catégorie', 'Uncategorised', 'بدون فئة')); }); } catch (_) {}
+    try { (api.listCategories() || []).forEach(function (c) { cats[String(c.id)] = String(c.name || L('Divers', 'Other', 'متفرقات')); }); } catch (_) {}
     try { products = api.listProducts({}) || []; } catch (_) { try { products = api.listProducts() || []; } catch (__) {} }
     products.forEach(function (p) {
       try { p._soldStock = (api.listVariants(p.id) || []).reduce(function(n,v){return n + Math.max(0,Number(v.stock)||0);},0); }
@@ -129,7 +145,7 @@
       var total = Number(l && l.total);
       if (!Number.isFinite(total)) total = (Number(l && (l.unit || l.unitPrice)) || 0) * qty;
       var cid = String((l && (l.cat || l.category || l.categoryId)) || (p && p.categoryId) || '');
-      return { name: String((p && p.name) || (l && l.name) || L('Article', 'Item', 'صنف')), qty: qty, total: Math.max(0, total || 0), cat: cat.cats[cid] || String((l && (l.cat || l.category)) || L('Sans catégorie', 'Uncategorised', 'بدون فئة')), stock: p && p._soldStock };
+      return { name: String((p && p.name) || (l && l.name) || L('Article', 'Item', 'صنف')), qty: qty, total: Math.max(0, total || 0), cat: cat.cats[cid] || String((l && (l.cat || l.category)) || L('Divers', 'Other', 'متفرقات')), stock: p && p._soldStock };
     }).filter(function (l) { return l.name; }) : [];
     return { ts: ts, amount: Math.max(0, Number(raw && (raw.amount || raw.total)) || 0), ref: String(raw && (raw.ref || raw.id) || ''), lines: lines };
   }
@@ -301,7 +317,7 @@
   function renderTillNoFetch(panel){ if(!panel)return;panel.innerHTML=shell(analyze(localTill().concat(tillSales),tillRange || tillDays),false,tillLoading);wire(panel,true); }
   function dashboardSales() { try { return (window.KiwiSales && KiwiSales.list && KiwiSales.list()) || []; } catch (_) { return []; } }
   function renderDashboard() {
-    ensureStyle(); var a = analyze(dashboardSales(),dashboardRange || dashboardDays);
+    ensureStyle(); var a = analyze(dashboardSales(), (!dashboardPicked && sharedPeriod()) || dashboardRange || dashboardDays);
     if (!window.Kiwi || !Kiwi.appPage) return;
     Kiwi.appPage('sold',{title:L('Vendus','Sold','المباع'),subtitle:L('Analyse de vos produits vendus · ventes brutes, les retours ne sont pas déduits','Analysis of your products sold · gross sales, returns are not deducted','تحليل منتجاتك المباعة · مبيعات إجمالية، لا تُخصم المرتجعات'),body:shell(a,true,false)});
     wire(document, false);
@@ -309,7 +325,7 @@
   function wire(root, till) {
     var rerender = function(fetchMore){ if(till){renderTillNoFetch(root);if(fetchMore)fetchTill(root);}else{renderDashboard();} };
     var picker = till ? tillPicker : dashboardPicker;
-    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-days]'),function(b){ b.onclick=function(){ var d=Number(b.dataset.ksoldDays)||7;picker.open=false;picker.error='';if(till){tillDays=d;tillRange=null;}else{dashboardDays=d;dashboardRange=null;}rerender(true); }; });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-days]'),function(b){ b.onclick=function(){ var d=Number(b.dataset.ksoldDays)||7;picker.open=false;picker.error='';if(till){tillDays=d;tillRange=null;}else{dashboardDays=d;dashboardRange=null;dashboardPicked=true;}rerender(true); }; });
     Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-custom]'),function(b){ b.onclick=function(){picker.open=!picker.open;picker.error='';if(picker.open&&!picker.picked){picker.day=picker.from=picker.to=businessToday();}rerender(false);}; });
     Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-mode]'),function(b){ b.onclick=function(){picker.mode=b.dataset.ksoldMode;picker.error='';rerender(false);}; });
     var cancel = root.querySelector('[data-ksold-cancel]'); if(cancel) cancel.onclick=function(){picker.open=false;picker.error='';rerender(false);};
@@ -321,7 +337,7 @@
       if(!a||!z){picker.error=L('Choisissez la date.','Choose a date.','اختر التاريخ.');rerender(false);return;}
       if(a>z){picker.error=L('La fin doit venir après le début.','The end must come after the start.','يجب أن تأتي النهاية بعد البداية.');rerender(false);return;}
       if(z>today){picker.error=L('La période ne peut pas finir dans le futur.','The period cannot end in the future.','لا يمكن أن تنتهي الفترة في المستقبل.');rerender(false);return;}
-      var selected={from:dateKey(a),to:dateKey(z)};picker.picked=true;picker.open=false;picker.error='';if(till)tillRange=selected;else dashboardRange=selected;rerender(true);
+      var selected={from:dateKey(a),to:dateKey(z)};picker.picked=true;picker.open=false;picker.error='';if(till)tillRange=selected;else{dashboardRange=selected;dashboardPicked=true;}rerender(true);
     };
   }
   function installDashboard() {

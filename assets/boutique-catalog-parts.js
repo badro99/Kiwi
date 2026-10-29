@@ -1041,7 +1041,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
   }
 
   function reserveSale(ref, lines) { return saleStockAction('reserve', ref, lines); }
-  function confirmSale(ref) {
+  function confirmSale(ref, shown) {   // shown : { ref, actor } affichés au registre (échange : clé ≠ ticket)
     /* Confirm locally first. If the network disappears after the card terminal
        approves, the next catalogue push carries `vente`, never an ambiguous hold. */
     let touched = false;
@@ -1056,7 +1056,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
         if (v) {
           const d = +m.d || 0, after = Math.max(0, +v.stock || 0);
           journal({ id: m.id, variant: v, at: +m.at || now(), delta: d, before: Math.max(0, after - d), after,
-            why: 'vente', actor: m.actor || '', ref: m.ref || '' });
+            why: 'vente', actor: m.actor || (shown && shown.actor) || '', ref: (shown && shown.ref) || m.ref || '' });
         }
       }
     });

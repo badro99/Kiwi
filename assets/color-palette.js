@@ -59,9 +59,9 @@
      « Bleu », « Couleur personnalisée #4A67D6 », and the caption told a
      phone to « survolez » a swatch it cannot hover. */
   const UI = {
-    fr: { custom: (h) => `Couleur personnalisée ${h}`, more: 'Plus de couleurs', moreAria: 'Choisir une couleur personnalisée', native: 'Sélecteur de couleur', hex: 'Code hexadécimal', namePh: 'Nom, ex. Bleu clair', nameAria: 'Nom affiché de la couleur', apply: 'Choisir', group: 'Couleur', hover: 'Survolez une pastille pour lire son nom', touch: 'Touchez une pastille pour la choisir' },
-    en: { custom: (h) => `Custom colour ${h}`, more: 'More colours', moreAria: 'Choose a custom colour', native: 'Colour picker', hex: 'Hex code', namePh: 'Name, e.g. Light blue', nameAria: 'Colour display name', apply: 'Choose', group: 'Colour', hover: 'Hover a swatch to read its name', touch: 'Tap a swatch to choose it' },
-    ar: { custom: (h) => `لون مخصّص ${h}`, more: 'ألوان أخرى', moreAria: 'اختر لونًا مخصّصًا', native: 'منتقي الألوان', hex: 'الرمز الست عشري', namePh: 'الاسم، مثل أزرق فاتح', nameAria: 'اسم اللون المعروض', apply: 'اختيار', group: 'اللون', hover: 'مرّر المؤشر على لون لقراءة اسمه', touch: 'المس لونًا لاختياره' },
+    fr: { custom: (h) => `Couleur personnalisée ${h}`, shade: (n) => `${n} personnalisé`, more: 'Plus de couleurs', moreAria: 'Choisir une couleur personnalisée', native: 'Sélecteur de couleur', hex: 'Code hexadécimal', namePh: 'Nom, ex. Bleu clair', nameAria: 'Nom affiché de la couleur', apply: 'Choisir', group: 'Couleur', hover: 'Survolez une pastille pour lire son nom', touch: 'Touchez une pastille pour la choisir' },
+    en: { custom: (h) => `Custom colour ${h}`, shade: (n) => `Custom ${String(n).toLowerCase()}`, more: 'More colours', moreAria: 'Choose a custom colour', native: 'Colour picker', hex: 'Hex code', namePh: 'Name, e.g. Light blue', nameAria: 'Colour display name', apply: 'Choose', group: 'Colour', hover: 'Hover a swatch to read its name', touch: 'Tap a swatch to choose it' },
+    ar: { custom: (h) => `لون مخصّص ${h}`, shade: (n) => `${n} مخصّص`, more: 'ألوان أخرى', moreAria: 'اختر لونًا مخصّصًا', native: 'منتقي الألوان', hex: 'الرمز الست عشري', namePh: 'الاسم، مثل أزرق فاتح', nameAria: 'اسم اللون المعروض', apply: 'اختيار', group: 'اللون', hover: 'مرّر المؤشر على لون لقراءة اسمه', touch: 'المس لونًا لاختياره' },
   };
   function lang() {
     let l = '';
@@ -76,7 +76,13 @@
     const l = lang();
     if (f.custom) {
       const m = GENERIC.exec(String(f.label || ''));
-      return m ? ui().custom(m[1].toUpperCase()) : String(f.label || '');
+      if (!m) return String(f.label || '');
+      /* No name was typed: read it as its nearest family (« Bleu
+         personnalisé »), not as a hex code nobody at the counter can read.
+         The stored label is untouched; only the reading changes. */
+      const fam = familyFromHex(m[1]);
+      const famName = fam && ((l !== 'fr' && fam[l]) || fam.label);
+      return famName ? ui().shade(famName) : ui().custom(m[1].toUpperCase());
     }
     /* A bare {id, label, hex} (what selection() returns) is resolved through
        the palette, so a family reads its name wherever it came from. */
