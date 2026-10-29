@@ -423,18 +423,11 @@ function _bqxCopy(trade) {
 
   if (isBoutique) {
     return {
-      trade: 'boutique',
-      modalDesc: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+      trade: 'boutique',   // les tailles se saisissent sur la fiche produit (boutique-sizes.js)
       namePlaceholder: 'Ex. Caftan brodé main',
       pricePlaceholder: '1890',
       catPlaceholder: 'Ex. Caftans de mariée',
       defaultKind: 'taille',
-      varTag: 'COULEUR × TAILLE',
-      varCreatedDesc: 'Ajoutez maintenant ses variantes couleur × taille.',
-      varEmpty: 'Aucune variante. Ajoutez une couleur × taille ci-dessous.',
-      gridHint: 'Cliquez un produit pour ouvrir sa matrice couleur × taille : stock par variante, génération et impression d\'étiquettes EAN-13, ou enregistrement d\'un ancien code-barres.',
-      sizeColHeader: (_kind) => 'Taille',
-      sizeInputLabel: (kind) => (kind === 'pointure' ? 'Pointure' : 'Taille'),
       kindList: (_sel) => [
         ['taille', 'Vêtement (tailles S-XL)'],
         ['pointure', 'Chaussure (pointures)'],
@@ -1797,12 +1790,19 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-function _bqxOpenProduct(pid) {
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=5', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
   if (!data) { toast(t.notFound, { type: 'warn' }); return; }
   _bqxCss();
   _bqxShCss();
+  const foot = `<button class="kb ghost" data-dismiss>${_esc(t.close)}</button><button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button><button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`;
+  if (!drawerOnly && _bqxCopy().trade === 'boutique') {   // boutique : au centre, sur ses tailles (assets/boutique-sizes.js, comme à la caisse) ; les autres métiers gardent le tiroir
+    _bqxSz().then((S) => { _bqxPfCss(); _bqxDrawerPid = pid; _bqxSzView = S.openDashboard({ modal, modalClass: 'bqx-pf-modal', foot, extraHtml: _bqxHistoryHtml(pid), heading: () => { const d = CAT().getProduct(pid); return d && [d.product.name, _bqxSheetSub(d)]; },
+      onClose: (v) => { if (_bqxSzView === v) { _bqxSzView = null; _bqxDrawerPid = null; } if (document.querySelector('.sidebar nav a.active[data-nav="inventory"]')) _renderInventory(); },
+      mount: { cat: CAT(), pid, lang: _bqxPfLang(), target, label: _bqxLabelFor, register: (vid) => handlers['bqx-var-reg'](null, vid), toast: (title, desc) => toast(title, { desc, type: 'success' }) } }); }).catch(() => _bqxOpenProduct(pid, 0, true)); return;
+  }
   _bqxDrawerPid = pid;
   const p = data.product;
   drawer({
@@ -1810,10 +1810,7 @@ function _bqxOpenProduct(pid) {
     subtitle: _bqxSheetSub(data),
     width: 640,
     body: _bqxProductBody(pid),
-    foot: `
-      <button class="kb ghost" data-dismiss>${_esc(t.close)}</button>
-      <button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button>
-      <button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`,
+    foot,
   });
   _bqxMountDrawer(pid);
   /* re-render the grid behind once the drawer is dismissed */
@@ -1856,6 +1853,7 @@ function _bqxMountDrawer(pid) {
 }
 
 function _bqxRefreshDrawer() {
+  if (_bqxSzView && _bqxSzView.alive()) { _bqxSzView.refresh(); return; }
   if (!_bqxDrawerPid) return;
   const back = document.querySelector('.kiwi-drawer-backdrop');
   if (!back) return;
@@ -2434,7 +2432,7 @@ function _bqxLabelFor(pid, v) {
   const code = CAT().primaryBarcode(v);
   if (!code) return null;
   const fmt = BC().isValidEan13(code) ? 'ean13' : 'code128';
-  return { title: p.name, sub: `${v.colorLabel} · ${v.size}`, price: _bqxPrice(p.priceMAD), code, format: fmt };
+  return { title: p.name, sub: _bqxSzMod ? _bqxSzMod.variantWords(v, _bqxPfLang()) : `${v.colorLabel} · ${v.size}`, price: _bqxPrice(p.priceMAD), code, format: fmt };
 }
 function _bqxPrintVariant(vid) {
   const t = _bqxShT();
@@ -2876,7 +2874,7 @@ let _bqxVideo = '';
 const _BQX_PF = {
   fr: {
     titleNew: 'Nouveau produit', titleEdit: 'Modifier le produit', tagInv: 'INVENTAIRE',
-    descBoutique: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+    descBoutique: 'Créez le produit avec la quantité reçue, puis répartissez-la par taille.',
     descOther: 'Créez le produit, puis ajoutez ses déclinaisons et leurs codes-barres.',
     descEdit: 'Les variantes, le stock et les codes-barres se gèrent sur la fiche du produit.',
     secItem: 'Article', secPrice: 'Prix', secAb: 'Catégorie A / B',
@@ -2884,7 +2882,7 @@ const _BQX_PF = {
     phBoutique: 'Ex. Caftan brodé main', phMaison: 'Ex. Vase en terre cuite 30 cm', phOther: 'Ex. Article',
     cat: 'Catégorie', catNone: 'Sans catégorie', catTill: 'Elle devient le rayon de la caisse.',
     kind: 'Déclinaison',
-    kindsBoutique: { taille: ['Vêtement', 'Tailles S à XL'], pointure: ['Chaussure', 'Pointures'], tu: ['Taille unique', 'Sans taille'] },
+    kindsBoutique: { taille: ['Vêtement', 'Tailles XXS à XXL'], pointure: ['Chaussure', 'Pointures'], tu: ['Taille unique', 'Sans taille'] },
     kindsOther: { tu: ['Pièce unique', 'Sans taille'], taille: ['Formats', 'S · M · L'], pointure: ['Pointure', 'Pointures'] },
     price: 'Prix de vente', priceErr: 'Indiquez le prix de vente.', priceZero: 'Le prix de vente doit être supérieur à 0.',
     moneyBad: 'Écrivez un montant, par exemple 149,90.',
@@ -2908,12 +2906,12 @@ const _BQX_PF = {
     mediaOff: 'Le stockage des photos n’est pas encore activé sur votre compte.',
     sending: 'Envoi…', sendFail: 'Envoi impossible, réessayez.',
     cancel: 'Annuler', create: 'Créer le produit', save: 'Enregistrer',
-    created: 'Produit créé', createdBoutique: 'Ajoutez maintenant ses variantes couleur × taille.', createdOther: 'Ajoutez maintenant ses déclinaisons.',
+    created: 'Produit créé', createdBoutique: 'Répartissez maintenant les pièces par taille.', createdOne: 'Stock et code-barres enregistrés.', createdOther: 'Ajoutez maintenant ses déclinaisons.',
     updated: 'Produit mis à jour',
   },
   en: {
     titleNew: 'New product', titleEdit: 'Edit product', tagInv: 'INVENTORY',
-    descBoutique: 'Create the product, then add its colour × size variants and their barcodes.',
+    descBoutique: 'Create the product with the quantity received, then split it by size.',
     descOther: 'Create the product, then add its variants and their barcodes.',
     descEdit: 'Variants, stock and barcodes are managed on the product sheet.',
     secItem: 'Item', secPrice: 'Price', secAb: 'Category A / B',
@@ -2921,7 +2919,7 @@ const _BQX_PF = {
     phBoutique: 'E.g. Hand-embroidered caftan', phMaison: 'E.g. Terracotta vase 30 cm', phOther: 'E.g. Item',
     cat: 'Category', catNone: 'No category', catTill: 'It becomes the till’s shelf.',
     kind: 'Variants by',
-    kindsBoutique: { taille: ['Clothing', 'Sizes S to XL'], pointure: ['Shoes', 'Shoe sizes'], tu: ['One size', 'No size'] },
+    kindsBoutique: { taille: ['Clothing', 'Sizes XXS to XXL'], pointure: ['Shoes', 'Shoe sizes'], tu: ['One size', 'No size'] },
     kindsOther: { tu: ['Single piece', 'No size'], taille: ['Formats', 'S · M · L'], pointure: ['Shoe size', 'Shoe sizes'] },
     price: 'Selling price', priceErr: 'Enter the selling price.', priceZero: 'The selling price must be above 0.',
     moneyBad: 'Enter an amount, for example 149.90.',
@@ -2945,12 +2943,12 @@ const _BQX_PF = {
     mediaOff: 'Photo storage isn’t switched on for your account yet.',
     sending: 'Uploading…', sendFail: 'Upload failed, try again.',
     cancel: 'Cancel', create: 'Create product', save: 'Save',
-    created: 'Product created', createdBoutique: 'Now add its colour × size variants.', createdOther: 'Now add its variants.',
+    created: 'Product created', createdBoutique: 'Now split the pieces by size.', createdOne: 'Stock and barcode saved.', createdOther: 'Now add its variants.',
     updated: 'Product updated',
   },
   ar: {
     titleNew: 'منتج جديد', titleEdit: 'تعديل المنتج', tagInv: 'المخزون',
-    descBoutique: 'أنشئ المنتج، ثم أضف متغيّرات اللون × المقاس ورموزها الشريطية.',
+    descBoutique: 'أنشئ المنتج بالكمية المستلمة، ثم وزّعها حسب المقاس.',
     descOther: 'أنشئ المنتج، ثم أضف متغيّراته ورموزها الشريطية.',
     descEdit: 'تُدار المتغيّرات والمخزون والرموز الشريطية من بطاقة المنتج.',
     secItem: 'السلعة', secPrice: 'السعر', secAb: 'الفئة A / B',
@@ -2958,7 +2956,7 @@ const _BQX_PF = {
     phBoutique: 'مثال: قفطان مطرّز يدوياً', phMaison: 'مثال: مزهرية فخارية 30 سم', phOther: 'مثال: سلعة',
     cat: 'الفئة', catNone: 'بدون فئة', catTill: 'تصبح رفّاً في الصندوق.',
     kind: 'التنويع حسب',
-    kindsBoutique: { taille: ['ملابس', 'المقاسات من S إلى XL'], pointure: ['أحذية', 'مقاسات الأحذية'], tu: ['مقاس واحد', 'بدون مقاس'] },
+    kindsBoutique: { taille: ['ملابس', 'المقاسات من XXS إلى XXL'], pointure: ['أحذية', 'مقاسات الأحذية'], tu: ['مقاس واحد', 'بدون مقاس'] },
     kindsOther: { tu: ['قطعة واحدة', 'بدون مقاس'], taille: ['أحجام', 'S · M · L'], pointure: ['مقاس الحذاء', 'مقاسات الأحذية'] },
     price: 'سعر البيع', priceErr: 'أدخل سعر البيع.', priceZero: 'يجب أن يكون سعر البيع أكبر من 0.',
     moneyBad: 'أدخل مبلغاً، مثلاً 149,90.',
@@ -2982,7 +2980,7 @@ const _BQX_PF = {
     mediaOff: 'تخزين الصور غير مفعّل في حسابك بعد.',
     sending: 'جارٍ الإرسال…', sendFail: 'تعذّر الإرسال، أعد المحاولة.',
     cancel: 'إلغاء', create: 'إنشاء المنتج', save: 'حفظ',
-    created: 'تم إنشاء المنتج', createdBoutique: 'أضف الآن متغيّرات اللون × المقاس.', createdOther: 'أضف الآن متغيّراته.',
+    created: 'تم إنشاء المنتج', createdBoutique: 'وزّع الآن القطع حسب المقاس.', createdOne: 'تم حفظ المخزون والرمز الشريطي.', createdOther: 'أضف الآن متغيّراته.',
     updated: 'تم تحديث المنتج',
   },
 };
@@ -3276,7 +3274,7 @@ function _bqxPfBody(p, catSel) {
           <p class="bqx-pf-gap" data-bqx-pf-gap aria-live="polite"></p>
           ${p ? _bqxSkuField(p.sku) : ''}
         </section>
-        ${p ? _bqxAbField(p) : _bqxAbField(null)}
+        ${(!p && boutique && _bqxSzMod) ? _bqxSzMod.totalFieldHtml(_bqxPfLang(), kindSel) : ''}${p ? _bqxAbField(p) : _bqxAbField(null)}
       </div>
       <aside class="bqx-pf-side">
         <div class="bqx-pf-card" data-bqx-pf-card>
@@ -3419,12 +3417,12 @@ function _bqxPfWire(b, p) {
   photoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'photo'); e.target.value = ''; });
   videoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'video'); e.target.value = ''; });
 
-  _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=3', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
+  if (_bqxSzMod) _bqxSzMod.wireTotal(b, _bqxPfLang()); _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=3', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
   paintMedia();
   paintGap();
 }
 function _bqxPfOpen(p) {
-  const t = _bqxPfT();
+  if (!p && _bqxCopy().trade === 'boutique' && !_bqxSzMod && !_bqxPfOpen.tried) { _bqxPfOpen.tried = true; _bqxSz().catch(() => null).then(() => _bqxPfOpen(p)); return; } const t = _bqxPfT();   // boutique : « Quantité totale » vient de boutique-sizes.js
   _bqxCss();
   _bqxPfCss();
   const copy = _bqxCopy();
@@ -3472,8 +3470,9 @@ handlers['bqx-new-save'] = () => {
      éteinte, la question n'est pas posée et rien n'est exigé. */
   const ab = _bqxAbRead(b);
   if (_bqxAbOn() && !ab) { _bqxPfFail(b, 'ab'); return; }
+  const S = b.querySelector('[data-kbs-total]') ? _bqxSzMod : null, total = S && S.readTotal(b); if (f && S && total == null) { _bqxPfFail(b); return; }   // boutique : la quantité du carton
   if (!f) { _bqxPfFail(b); return; }
-  const p = CAT().addProduct({
+  const data = {
     name: f.name, categoryId: f.categoryId, kind: f.kind || _bqxCopy().defaultKind, art: f.art, artPicked: f.artPicked,
     priceMAD: f.priceMAD,
     cost: f.cost,
@@ -3483,11 +3482,12 @@ handlers['bqx-new-save'] = () => {
     consignor: ab ? ab.consignor : '',
     photo: _bqxPhoto,
     video: _bqxVideo,
-  });
+  };
+  const made = S ? S.createProduct(CAT(), data, total) : { product: CAT().addProduct(data) }, p = made.product;
   if (_bqxModal) _bqxModal.close();
   const t = _bqxPfT();
-  toast(t.created, { desc: _bqxCopy().trade === 'boutique' ? t.createdBoutique : t.createdOther, type: 'success' });
-  setTimeout(() => _bqxOpenProduct(p.id), 260);
+  toast(t.created, { desc: S ? (made.needsGrid ? t.createdBoutique : t.createdOne) : t.createdOther, type: 'success' });
+  setTimeout(() => _bqxOpenProduct(p.id, made.needsGrid ? total : 0), 260);
 };
 
 /* edit / delete product */
@@ -3545,7 +3545,7 @@ handlers['bqx-prod-del'] = (_el, arg) => {
 handlers['bqx-prod-del-ok'] = (_el, arg) => {
   const t = _bqxShT();
   CAT().deleteProduct(arg);
-  if (_bqxModal) _bqxModal.close();
+  if (_bqxModal) _bqxModal.close(); if (_bqxSzView) _bqxSzView.close();
   const back = document.querySelector('.kiwi-drawer-backdrop');
   if (back && back.__kiwiClose) back.__kiwiClose();
   _bqxDrawerPid = null;

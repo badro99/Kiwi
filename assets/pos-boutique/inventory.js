@@ -1,9 +1,10 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=204';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=105';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=205';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=106';
 import { openMoves } from './inv-moves.js?v=5';
+import * as SZ from '../boutique-sizes.js?v=5';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=17';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=105';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=106';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -760,7 +761,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const cls = d.stock === 0 ? 'rupture' : (d.stock <= 5 ? 'bas' : '');
     return `<div class="bqi-row" data-inv-open="${p.id}">
       <span class="bqi-art">${artOf(p)}</span>
-      <span class="bqi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
+      <span class="bqi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length ? `${d.colors.length} coul. · ` : ''}${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
       <span class="bqi-stock ${cls}">${d.stock}</span>
       <span class="bqi-price">${fmtMAD(p.priceMAD)}</span>
       <button class="bqi-mini" data-inv-print="${p.id}" title="Imprimer toutes les étiquettes"><i data-lucide="printer"></i></button>
@@ -789,23 +790,26 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     lens();
   }
 
-  function openInvProduct(pid) {
+  /* La langue de la caisse, pour l'écran des tailles (boutique-sizes.js). */
+  const szLang = () => { try { const l = globalThis.window?.KiwiCaisseLang?.get?.(); return l === 'en' || l === 'ar' ? l : 'fr'; } catch (_) { return 'fr'; } };
+  const invSub = (d) => `${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(d.product.priceMAD)} · ${d.stock} en stock`;
+
+  /* La fiche d'un produit : ses tailles, leur stock, leur code-barres, et une
+     case par taille pour ajouter les pièces reçues. `target` = la quantité
+     totale annoncée à la création ; les tailles doivent y arriver. */
+  function openInvProduct(pid, target) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const p = d.product;
+    const admin = tillInventoryAllowed();
     const movements = (window.KiwiMaisonStock?.list?.({ productId: pid, module: 'boutique', shared: true }) || []).slice(0, 8);   // les lignes BOUTIQUE que le tableau de bord voit aussi
-    const rows = d.variants.length
-      ? d.variants.map((v) => invVarRow(v)).join('')
-      : '<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">Aucune variante, ajoutez une couleur × taille.</td></tr>';
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh">
         <span class="bqi-art">${artOf(p)}</span>
-        <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
-        ${tillInventoryAllowed() ? `<button class="bq-btn secondary" data-inv-edit><i data-icon="edit"></i>Modifier</button>` : '<span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>'}
+        <div><h3>${esc(p.name)}</h3><span data-bqi-sub>${invSub(d)}</span></div>
+        ${admin ? `<button class="bq-btn secondary" data-inv-edit><i data-icon="edit"></i>Modifier</button>` : '<span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>'}
       </div>
-      <div class="bqi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="bqi-vtable">
-        <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table></div>
+      <div class="bqi-sizes" data-bqi-sizes style="padding:4px 20px 16px;"></div>
       ${movements.length ? `<div class="bqi-movements" style="padding:12px 20px;">
         <b>Mouvements de stock</b>
         ${movements.map(m => `<div class="bqi-movement" style="display:flex;gap:10px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--n-100);">
@@ -813,39 +817,27 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>`).join('')}
       </div>` : ''}
       <div class="bqi-modfoot">
-        ${tillInventoryAllowed() ? '<button class="bq-btn secondary" data-inv-addvar><i data-icon="add"></i>Ajouter une variante</button>' : '<span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>'}
-        <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
-        ${tillInventoryAllowed() ? '<button class="bq-btn danger" data-inv-delete><i data-icon="delete"></i>Supprimer</button>' : '<span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>'}
+        <button class="bq-btn secondary" data-inv-x>Fermer</button>
+        ${admin ? '<button class="bq-btn danger" data-inv-delete><i data-icon="delete"></i>Supprimer</button>' : ''}
       </div>`;
     invSetModal(html, (el) => {
       const cat2 = catDB();
-      $('[data-inv-printall]', el).addEventListener('click', () => printProductLabels(pid));
-      el.querySelectorAll('[data-vgen]').forEach((b) => b.addEventListener('click', () => { const code = cat2.generateBarcode(b.dataset.vgen); if (code) toast(`EAN-13 ${code} généré`); openInvProduct(pid); }));
-      el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
-      el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
       const edit = $('[data-inv-edit]', el); if (edit) edit.addEventListener('click', () => openEditProduct(pid));
-      const addvar = $('[data-inv-addvar]', el); if (addvar) addvar.addEventListener('click', () => openAddVariant(pid));
       const del = $('[data-inv-delete]', el); if (del) del.addEventListener('click', () => confirmDeleteProduct(pid));
-      el.querySelectorAll('[data-vcolor]').forEach((b) => b.addEventListener('click', () => openVariantColor(b.dataset.vcolor, pid)));
-      el.querySelectorAll('[data-vdelete]').forEach((b) => b.addEventListener('click', () => confirmDeleteVariant(b.dataset.vdelete, pid)));
+      SZ.mount($('[data-bqi-sizes]', el), {
+        cat: cat2, pid, lang: szLang(), target: admin ? target : 0, readOnly: !admin,
+        barcodeSvg: (code) => window.KiwiBarcode.svg(code, { height: 20, module: 1, showText: false }),
+        primary: (v) => cat2.primaryBarcode(v),
+        label: (id, v) => labelForVariant(id, v),
+        print: (labels) => labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`),
+        register: (vid) => openRegisterOnVariant(vid, pid),
+        toast: (title, desc) => toast(title, 3200, 'success', desc),
+        onSaved: () => {
+          const now = catDB().getProduct(pid);
+          const sub = $('[data-bqi-sub]', el); if (now && sub) sub.innerHTML = invSub(now);
+        },
+      });
     });
-  }
-
-  function invVarRow(v) {
-    const primary = (v.barcodes || []).find((b) => b.primary) || (v.barcodes || [])[0];
-    const bc = primary
-      ? `<div class="bqi-bc">${window.KiwiBarcode.svg(primary.code, { height: 26, module: 1.1, showText: false })}<span class="bqi-code">${esc(primary.code)}<em class="${primary.type === 'imported' ? 'imp' : 'gen'}">${primary.type === 'imported' ? 'importé' : 'généré'}</em></span></div>`
-      : '<span class="bqi-nocode">aucun code</span>';
-    const genOrPrint = primary
-      ? `<button class="bqi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
-      : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
-    const shown = variantColor(v);
-    return `<tr>
-      <td>${tillInventoryAllowed() ? `<button class="bqi-cbtn" data-vcolor="${v.id}">${colorDot(shown)} ${esc(shown.label)}</button>` : `<span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>`}${variantSource(v) ? `<em class="bqi-csrc">${esc(variantSource(v))}</em>` : ''} · <b>${esc(v.size)}</b></td>
-      <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
-      <td>${bc}</td>
-      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button>${tillInventoryAllowed() ? `<button class="bqi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-icon="delete"></i></button>` : '<span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span>'}</td>
-    </tr>`;
   }
 
   /* ─── new product ─── */
@@ -857,154 +849,114 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     return [['taille', 'Vêtement (S–XL)'], ['pointure', 'Chaussure (pointures)'], ['tu', 'Taille unique']]
       .map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   }
+  /* Le formulaire de création : le même que celui du tableau de bord (Article,
+     Prix, Stock et la photo de la caisse à droite). Après « Créer le produit »,
+     la même fenêtre passe aux tailles. */
   function openNewProduct() {
     if (!tillInventoryAllowed()) { catalogDashboardOnly(); return; }
+    const lang = szLang();
+    const f = SZ.formWords(lang);
+    const catSel = state.invFilter && state.invFilter !== 'all' ? state.invFilter : '';
+    const kinds = ['taille', 'pointure', 'tu'].map((k) => `<label class="bqx-pf-choice"><input type="radio" name="bqx-pf-kind" value="${k}"${k === 'taille' ? ' checked' : ''} />
+      <b>${esc(f.kinds[k][0])}</b><small>${esc(f.kinds[k][1])}</small></label>`).join('');
+    const cats = catDB().listCategories();
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="bqi-modh"><div><h3>Nouvel article</h3><span>Créez le produit, puis ajoutez ses variantes couleur × taille</span></div></div>
-      <div class="bqi-form">
-        <div class="bqi-fg"><label>Nom du produit</label><input id="bqi-n-name" placeholder="Ex. Caftan brodé main" /></div>
-        <div class="bqi-frow">
-          <div class="bqi-fg"><label>Catégorie</label><select id="bqi-n-cat">${catSelectOptions(state.invFilter && state.invFilter !== 'all' ? state.invFilter : '')}</select></div>
-          <div class="bqi-fg"><label>Type</label><select id="bqi-n-kind">${kindSelectOptions('taille')}</select></div>
+      <div class="bqi-modh"><div><h3>${esc(f.title)}</h3><span>${esc(f.desc)}</span></div></div>
+      <div class="kbs-form"><div class="bqx-pf" data-bqx-pf>
+        <div class="bqx-pf-main">
+          <section class="bqx-pf-sec">
+            <h4>${esc(f.secItem)}</h4>
+            <label class="bqx-pf-f">
+              <span class="bqx-pf-l">${esc(f.name)}</span>
+              <input class="bqx-pf-in" maxlength="120" autocomplete="off" placeholder="${esc(f.ph)}" data-bqx-name aria-describedby="bqi-n-e-name" />
+              <span class="bqx-pf-err" id="bqi-n-e-name" data-bqi-err="name" hidden>${esc(f.nameErr)}</span>
+            </label>
+            <label class="bqx-pf-f">
+              <span class="bqx-pf-l">${esc(f.cat)}</span>
+              <select class="bqx-pf-in" data-bqx-cat><option value="">${esc(f.catNone)}</option>${cats.map((c) => `<option value="${esc(c.id)}"${c.id === catSel ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+              <span class="bqx-pf-hint">${esc(f.catHint)}</span>
+            </label>
+            <div class="bqx-pf-f">
+              <span class="bqx-pf-l" id="bqi-n-kind-l">${esc(f.kind)}</span>
+              <div class="bqx-pf-choices" role="radiogroup" aria-labelledby="bqi-n-kind-l">${kinds}</div>
+            </div>
+          </section>
+          <section class="bqx-pf-sec">
+            <h4>${esc(f.secPrice)}</h4>
+            <div class="bqx-pf-grid">
+              <label class="bqx-pf-f">
+                <span class="bqx-pf-l">${esc(f.price)}</span>
+                <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" placeholder="1890" data-bqi-price aria-describedby="bqi-n-e-price" /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
+                <span class="bqx-pf-err" id="bqi-n-e-price" data-bqi-err="price" hidden>${esc(f.priceErr)}</span>
+              </label>
+              <label class="bqx-pf-f">
+                <span class="bqx-pf-l">${esc(f.cost)}<span class="bqx-pf-tag">${esc(f.optional)}</span></span>
+                <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" data-bqi-cost /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
+              </label>
+            </div>
+          </section>
+          ${SZ.totalFieldHtml(lang, 'taille')}
         </div>
-        <div class="bqi-fg"><label>Ou nouvelle catégorie (optionnel)</label><input id="bqi-n-newcat" placeholder="Laisser vide pour utiliser la catégorie ci-dessus" /></div>
-        <div class="bqi-frow">
-          <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqi-n-price" type="number" min="0" placeholder="1890" /></div>
-          <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqi-n-cost" type="number" min="0" placeholder="optionnel" /></div>
-        </div>
-
-        <!-- Le choix qui évite d'imprimer des milliers d'étiquettes pour rien :
-             l'article porte peut-être déjà un code du fournisseur. -->
-        <div class="bqi-fg"><label>Code-barres de cet article</label>
-          <div class="bqx-choice" id="bqi-n-bcpick" role="radiogroup" aria-label="Code-barres de cet article" data-lens-demo>
-            <button type="button" class="bqx-opt on" data-bc="existing" data-lens-item role="radio" aria-checked="true">
-              <i data-lucide="scan-line"></i><b>Il en a déjà un</b><span>Code fournisseur ou fabricant · conservé tel quel</span>
-            </button>
-            <button type="button" class="bqx-opt" data-bc="gen" data-lens-item role="radio" aria-checked="false">
-              <i data-lucide="sparkles"></i><b>Générer un code Kiwi</b><span>EAN-13 imprimable, pour un article non étiqueté</span>
-            </button>
-            <button type="button" class="bqx-opt" data-bc="later" data-lens-item role="radio" aria-checked="false">
-              <i data-lucide="clock"></i><b>Plus tard</b><span>Créer l'article maintenant, le code après</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="bqi-n-bcwrap">
-          <div class="bqi-fg"><label>Scannez ou tapez le code existant</label>
-            <div class="bqx-scanbox slim"><i data-lucide="scan-line"></i><input id="bqi-n-code" placeholder="Scannez l'étiquette de l'article…" autocomplete="off" spellcheck="false" /></div>
-            <div class="bqi-help" id="bqi-n-codehint">La douchette écrit ici directement. Rien n'est mis au ticket, rien n'est vendu.</div>
-          </div>
-        </div>
-
-        <div class="bqi-frow">
-          <div class="bqi-fg"><label>Couleur</label><div id="bqi-n-sw">${colorPicker('noir')}</div></div>
-        </div>
-        <div class="bqi-frow">
-          <div class="bqi-fg"><label>Taille</label><input id="bqi-n-size" list="bqi-n-sizes" placeholder="M" autocomplete="off" /><datalist id="bqi-n-sizes"></datalist></div>
-          <div class="bqi-fg"><label>Stock initial</label><input id="bqi-n-stock" type="number" min="0" step="1" inputmode="numeric" value="0" /></div>
-        </div>
-        <div class="bqi-fg"><label>Icône du produit</label>${iconPickerHtml('tshirt')}</div>
-      </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-x>Annuler</button><button class="bq-btn" id="bqi-n-save">Créer l'article</button></div>`;
+        <aside class="bqx-pf-side">
+          <div class="bqx-pf-card"><div class="bqx-pf-pn is-empty" data-bqi-pn>${esc(f.name)}</div><div class="bqx-pf-pm" data-bqi-pm>${esc(f.catNone)}</div><div class="bqx-pf-pp" data-bqi-pp hidden></div></div>
+        </aside>
+      </div></div>
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-x>${esc(f.cancel)}</button><button class="bq-btn" id="bqi-n-save">${esc(f.create)}</button></div>`;
     invSetModal(html, (el) => {
       const cat = catDB();
-      let icon = 'tshirt';
-      let mode = 'existing';
-      wireIconPicker(el, (k) => { icon = k; });
-      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqi-n-sw', el))) || 'noir'; };
-      const kindSel = $('#bqi-n-kind', el), sizeList = $('#bqi-n-sizes', el);
-      const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
-      kindSel.onchange = fillSizes; fillSizes();
-
-      const wrap = $('#bqi-n-bcwrap', el), codeIn = $('#bqi-n-code', el), codeHint = $('#bqi-n-codehint', el);
-      const setMode = (m) => {
-        mode = m;
-        el.querySelectorAll('#bqi-n-bcpick .bqx-opt').forEach((b) => {
-          const on = b.dataset.bc === m;
-          b.classList.toggle('on', on);
-          b.setAttribute('aria-checked', on ? 'true' : 'false');
-        });
-        wrap.style.display = m === 'existing' ? '' : 'none';
-        if (m === 'existing') setTimeout(() => codeIn.focus(), 20);
-        lens();
+      SZ.formCss();
+      el.style.width = 'min(860px, 96vw)';
+      const q = (sel) => el.querySelector(sel);
+      const nameIn = q('[data-bqx-name]'), catIn = q('[data-bqx-cat]'), priceIn = q('[data-bqi-price]'), costIn = q('[data-bqi-cost]');
+      const mark = (key, on) => {
+        const err = q(`[data-bqi-err="${key}"]`); if (err) err.hidden = !on;
+        const inp = key === 'name' ? nameIn : priceIn; inp.setAttribute('aria-invalid', on ? 'true' : 'false');
       };
-      el.querySelectorAll('#bqi-n-bcpick .bqx-opt').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.bc)));
-
-      /* Le code scanné remplit le champ, et RIEN d'autre ne se produit. */
-      const judgeInto = (raw) => {
-        const j = intakeJudge(raw);
-        if (j.kind === 'invalide') { codeHint.textContent = INVALID_MSG[j.reason] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code illisible.'); codeHint.className = 'bqi-help is-bad'; return j; }
-        if (j.kind === 'connu') {
-          codeHint.innerHTML = `Ce code est déjà porté par <b>${esc(j.hit.product.name)} · ${esc(j.hit.variant.colorLabel)} ${esc(j.hit.variant.size)}</b>. Un code ne peut désigner qu'un seul article.`;
-          codeHint.className = 'bqi-help is-bad'; return j;
-        }
-        const KB = window.KiwiBarcode;
-        codeHint.textContent = `Code lu · ${KB && KB.symLabel ? KB.symLabel(j.sym) : ''}${j.check === 'bad' ? ' · clé de contrôle inhabituelle, accepté tel quel' : ''}. Conservé sans réimpression.`;
-        codeHint.className = 'bqi-help is-good';
-        return j;
+      const paint = () => {
+        const name = nameIn.value.trim();
+        const pn = q('[data-bqi-pn]'); pn.textContent = name || f.name; pn.classList.toggle('is-empty', !name);
+        const c = catIn.value ? cats.find((x) => x.id === catIn.value) : null;
+        q('[data-bqi-pm]').textContent = c ? c.name : f.catNone;
+        const pr = bqMoney(priceIn.value); const pp = q('[data-bqi-pp]');
+        pp.hidden = !(pr > 0); pp.innerHTML = pr > 0 ? `${esc(fmtNum(pr))} <small>MAD</small>` : '';
       };
-      armScanCapture((c) => { codeIn.value = normScan(c); judgeInto(c); });
-      /* Même verdict à la douchette et au clavier — « input » et pas seulement
-         « change », sinon la saisie manuelle reste muette jusqu'à la validation. */
-      const liveJudge = () => { if (codeIn.value.trim()) judgeInto(codeIn.value); };
-      codeIn.addEventListener('input', liveJudge);
-      codeIn.addEventListener('change', liveJudge);
+      nameIn.addEventListener('input', () => { mark('name', false); paint(); });
+      priceIn.addEventListener('input', () => { mark('price', false); paint(); });
+      catIn.addEventListener('change', paint);
+      SZ.wireTotal(el, lang);
+      /* La photo de la caisse, choisie comme au tableau de bord. */
+      import('../retail-icon-picker.js?v=3').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false })).catch(() => {});
 
       const save = () => {
-        const name = $('#bqi-n-name', el).value.trim();
-        if (!name) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Nom requis')); $('#bqi-n-name', el).focus(); return; }
-        const raw = codeIn.value.trim();
-        if (mode === 'existing') {
-          if (!raw) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Scannez le code existant, ou choisissez « Générer » / « Plus tard »')); codeIn.focus(); return; }
-          const j = judgeInto(raw);
-          if (j.kind !== 'nouveau') {
-            toast(j.kind === 'connu' ? `Code déjà utilisé par ${j.hit.product.name}` : (INVALID_MSG[j.reason] || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code illisible')));
-            return;
-          }
+        const name = nameIn.value.trim();
+        const price = bqMoney(priceIn.value);
+        const total = SZ.readTotal(el);
+        mark('name', !name);
+        mark('price', !(price > 0));
+        if (!name || !(price > 0) || total == null) {
+          const bad = el.querySelector('.kbs-form [aria-invalid="true"]');
+          if (bad) bad.focus();
+          return;
         }
-        let catId = $('#bqi-n-cat', el).value || null;
-        const newCat = $('#bqi-n-newcat', el).value.trim();
-        if (newCat) catId = cat.addCategory(newCat).id;
-        const size = $('#bqi-n-size', el).value.trim() || 'TU';
-        const stock = Math.max(0, parseInt($('#bqi-n-stock', el).value, 10) || 0);
-        const saveBtn = $('#bqi-n-save', el);
-        const oldSave = saveBtn.innerHTML;
-        saveBtn.disabled = true;
-        saveBtn.classList.add('is-busy');
-        saveBtn.innerHTML = '<span class="bq-btn-spinner" aria-hidden="true"></span><span>Création…</span>';
-        const restoreSave = () => { saveBtn.disabled = false; saveBtn.classList.remove('is-busy', 'is-done'); saveBtn.innerHTML = oldSave; };
-        let p = null, ev = null, res = null, genCode = null;
-        cat.batch(() => {
-          p = cat.addProduct({ name, categoryId: catId, kind: kindSel.value, art: icon, priceMAD: bqMoney($('#bqi-n-price', el).value), cost: bqMoney($('#bqi-n-cost', el).value) });
-          ev = cat.ensureVariant({ productId: p.id, colorId: pickedColor(), size, stock });
-          if (mode === 'existing' && ev.variant) {
-            res = cat.attachBarcode(ev.variant.id, raw);
-            if (!res.ok) cat.deleteProduct(p.id);   // jamais d'article orphelin
-          } else if (mode === 'gen' && ev.variant) {
-            genCode = cat.generateBarcode(ev.variant.id);
-          }
-        });
-        if (mode === 'existing') {
-          if (!res || !res.ok) {
-            restoreSave();
-            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code refusé, rien n\'a été créé'), 3600, 'danger');
-            return;
-          }
-          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code fournisseur conservé`);
-        } else if (mode === 'gen') {
-          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size}${genCode ? ' · code Kiwi généré' : ''}`);
-        } else {
-          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code à ajouter plus tard`);
-        }
-        saveBtn.classList.remove('is-busy'); saveBtn.classList.add('is-done');
-        saveBtn.innerHTML = '<span aria-hidden="true">✓</span><span>Article créé</span>';
+        const kind = (q('input[name="bqx-pf-kind"]:checked') || {}).value || 'taille';
+        const ph = el.__kiwiTillPhoto || {};
+        const made = SZ.createProduct(cat, {
+          name, categoryId: catIn.value || null, kind, art: ph.art || '', artPicked: !!ph.artPicked,
+          priceMAD: price, cost: bqMoney(costIn.value),
+        }, total);
+        if (!made.product) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Création impossible')); return; }
         disarmScanCapture();
-        setTimeout(() => openInvProduct(p.id), 320);
+        toast(`${name} ajouté à l'inventaire`, 3200, 'success', made.needsGrid ? 'Répartissez maintenant les pièces par taille.' : `${total} pièce${total > 1 ? 's' : ''} · code-barres créé`);
+        openInvProduct(made.product.id, made.needsGrid ? total : 0);
       };
       $('#bqi-n-save', el).addEventListener('click', save);
-      setMode('existing');
-      setTimeout(() => { const i = $('#bqi-n-name', el); if (i) i.focus(); }, 40);
+      el.querySelector('.kbs-form').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.isComposing || !e.target.matches('input.bqx-pf-in')) return;
+        e.preventDefault(); save();
+      });
+      paint();
+      setTimeout(() => nameIn.focus(), 40);
     });
   }
 
@@ -1936,7 +1888,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const extra = v.note || variantSource(v) || '';
     const pr = promoFor(pid);
     return {
-      title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`,
+      title: p.name, sub: String(v.colorId) === SZ.ONE_COLOR ? SZ.variantWords(v, szLang()) : `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`,
       price: fmtNum(pr ? pr.price : p.priceMAD),
       was: pr ? fmtNum(pr.was) : null,
       code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128',

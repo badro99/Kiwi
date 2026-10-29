@@ -868,6 +868,10 @@
     const variants = variantsOf(id);
     const colors = []; const families = []; const sizes = [];
     variants.forEach((v) => {
+      if (!sizes.includes(v.size)) sizes.push(v.size);
+      // La couleur neutre d'un produit créé taille par taille n'est pas une
+      // couleur : ni pastille, ni filtre (boutique-sizes.js).
+      if (String(v.colorId) === 'unique') return;
       const f = famOf(v);
       if (!families.includes(f)) families.push(f);
       const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
@@ -878,7 +882,6 @@
           : (COLOR_BY_ID(f) || { id: f, label: v.colorLabel, hex: v.colorHex });
         colors.push({ id: shown.id, label: shown.label, hex: shown.hex, custom: !!shown.custom });
       }
-      if (!sizes.includes(v.size)) sizes.push(v.size);
     });
     return {
       // copie : `variants` vient de l'index, et cet objet sort du module.
@@ -1210,7 +1213,9 @@
       // pos-boutique.js persistStock(), preferring an exact id then stock on hand.
       vs.forEach((v) => {
         sizes[v.size] = (sizes[v.size] || 0) + (v.stock || 0);
-        const f = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || '')) ? v.colorId : famOf(v);
+        /* « unique » (boutique-sizes.js) passe tel quel : la caisse le tait, alors
+           que sa famille de repli (« gris ») s'écrirait sur le ticket. */
+        const f = (/^custom-[0-9a-f]{6}$/i.test(String(v.colorId || '')) || String(v.colorId) === 'unique') ? v.colorId : famOf(v);
         if (!colorSet.includes(f)) colorSet.push(f);
         (v.barcodes || []).forEach((b) => { BY_EAN[b.code] = p.id; });
       });

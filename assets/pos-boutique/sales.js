@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=204';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=105';
-import { offerRegister } from './inventory.js?v=105';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=205';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=106';
+import { offerRegister } from './inventory.js?v=106';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=19';
@@ -130,11 +130,16 @@ import { photoImg } from '../retail-photos.js?v=4';
   function colorOf(id) { const k = KC(); return (k && (k.display ? k.display(id) : k.normalize(id))) || KC_MISS; }
   // Une couleur personnalisée sans nom se lit par sa famille (« Bleu
   // personnalisé »), jamais par son code hexadécimal.
-  function colorLabel(id) { const c = colorOf(id); const k = KC(); return (c.custom && k && k.nameOf) ? k.nameOf(c) : c.label; }
+  /* La couleur neutre des produits créés taille par taille (boutique-sizes.js) :
+     un produit = une couleur, déjà dans son nom. Elle ne s'écrit ni ne se
+     dessine nulle part, sinon le ticket dirait « M Gris » d'un hoodie blanc. */
+  const NO_COLOR = 'unique';
+  function colorLabel(id) { if (String(id) === NO_COLOR) return ''; const c = colorOf(id); const k = KC(); return (c.custom && k && k.nameOf) ? k.nameOf(c) : c.label; }
   function colorHex(id) { return colorOf(id).hex; }
   // Une pastille non cliquable (ligne de ticket, retour, tableau) — même dessin
   // que dans le tableau de bord, nom porté par title/aria plutôt qu'écrit.
   function colorDot(id, size) {
+    if (String(id) === NO_COLOR) return '';
     const k = KC();
     if (k) return k.swatch(id, { size: size || 'sm' });
     return `<i class="kc-sw kc-sm" style="background-color:${KC_MISS.hex}" title="${KC_MISS.label}"></i>`;
@@ -601,7 +606,7 @@ import { photoImg } from '../retail-photos.js?v=4';
         </div>
       </div>
 
-      <div class="bq-f">
+      <div class="bq-f"${(p.colors || []).every((cid) => String(cid) === NO_COLOR) ? ' style="display:none"' : ''}>
         <div class="bq-f-lbl">Couleur</div>
         <div id="bq-colors">
           ${KC() ? KC().picker('bq-color', sheet.color, { ids: p.colors, size: 'lg' }) : ''}
@@ -1058,7 +1063,7 @@ import { photoImg } from '../retail-photos.js?v=4';
       const on = s === lk.size ? ' is-on' : '';
       return `<span class="bq-look-size ${cls}${on}"><b>${esc(s)}</b><i>${q}</i></span>`;
     }).join('');
-    const colors = (p.colors || []).map((cid) => {
+    const colors = (p.colors || []).filter((cid) => String(cid) !== NO_COLOR).map((cid) => {
       const on = cid === lk.color ? ' is-on' : '';
       return `<span class="bq-look-color${on}">${colorDot(cid)}${esc(colorLabel(cid))}</span>`;
     }).join('');

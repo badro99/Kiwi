@@ -214,6 +214,13 @@ function scan() {
       note(m[1], m[2], { file: 'assets/pages/dashboard-loader.js', kind: 'lazy', stamp: m[2] });
   }
 
+  // L'inventaire boutique du tableau de bord charge à la demande l'écran des
+  // tailles (boutique-sizes.js) et la photo de la caisse (retail-icon-picker.js).
+  if (exists('assets/pages-pro-boutique.js')) {
+    for (const m of read('assets/pages-pro-boutique.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/pages-pro-boutique.js', kind: 'lazy', stamp: m[2] });
+  }
+
   // Interface imprimante, chargée à la demande et préchauffée au repos.
   if (exists('assets/printer-bridge.js')) {
     for (const m of read('assets/printer-bridge.js').matchAll(SHELL_RE()))
