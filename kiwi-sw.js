@@ -223,7 +223,7 @@ var SHELL = [
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
-  '/assets/trades.js?v=8',
+  '/assets/trades.js?v=9',
   '/assets/plan-catalog.js?v=1',
   '/assets/interactive/helpers.js?v=1',
   '/assets/interactive/handlers.js?v=2',
@@ -322,7 +322,7 @@ var SHELL = [
   '/assets/live-link/queue-store.js?v=2',
   '/assets/live-link/sale-identity.js?v=1',
   '/assets/live-link.js?v=91',
-  '/assets/channel-sales.js?v=6',
+  '/assets/channel-sales.js?v=8',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit

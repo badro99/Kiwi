@@ -579,7 +579,7 @@
    * (comptoir · retrait · livraison) se répartissent chacun 100 %. */
   var DEMO_CHANNEL_WEIGHT = {
     dining: 100, terrace: 52, counter: 74, takeaway: 38, delivery: 27,
-    catering: 30, pickup: 22, store: 88, cabin: 96, home: 27,
+    catering: 30, pickup: 22, cheque: 18, store: 88, cabin: 96, home: 27,
     products: 19, club: 92, remote: 24, direct: 40, online: 26, onsite: 88,
     orderpro: 34
   };
@@ -636,8 +636,9 @@
       '<svg width="110" height="110" viewBox="0 0 110 110" aria-hidden="true"><circle class="track" cx="55" cy="55" r="' + radius + '"/>' +
       '<circle class="value ' + tone + '" cx="55" cy="55" r="' + radius + '" data-dash="' + dash.toFixed(1) + '" stroke-dasharray="0 ' + circumference.toFixed(1) + '" transform="rotate(-90 55 55)"/>' +
       '<text x="55" y="57">' + esc(pct) + '</text></svg>' +
-      (empty ? '' : '<strong>' + esc(serviceAmount(amount)) + '</strong>') + '<span>' + esc(label) + '</span>' +
-      (empty ? '' : '<small>' + esc(caption) + '</small>') +
+      /* Montant et unité sur une ligne, groupés par une espace insécable visible
+       * (« 301 850 MAD ») : l'espace fine de fr-FR disparaissait à cette taille. */
+      (empty ? '' : '<strong>' + esc(serviceAmount(amount).replace(/\u202f/g, '\u00a0') + (caption ? '\u00a0' + caption : '')) + '</strong>') + '<span>' + esc(label) + '</span>' +
     '</div>';
   }
 

@@ -72,6 +72,43 @@ assert.equal(boutiqueMixed.amounts.delivery, 30);
 assert.equal(boutiqueMixed.amounts.pickup, 20);
 assert.equal(boutiqueMixed.unknown, 0);
 
+/* Boutique, owner 29 Oct 2026: the middle ring is « Chèque ». The real trade
+ * registry names it; cheque money at the counter moves into it (whole ticket
+ * or its cheque part), a delivery stays a delivery, a cheque refund comes off it. */
+const tradesContext = { window: {}, document: { documentElement: { lang: 'fr' } }, localStorage: { getItem: () => 'fr' } };
+vm.runInNewContext(fs.readFileSync(new URL('../assets/trades.js', import.meta.url), 'utf8'), tradesContext);
+const registry = tradesContext.window.KiwiTrades;
+const shopIds = [...registry.channels('boutique').map((c) => c.id)];
+assert.deepEqual(shopIds, ['counter', 'cheque', 'delivery'], 'the boutique rings are Comptoir, Chèque, Livraison');
+assert.equal(registry.channels('boutique')[1].label, 'Chèque');
+const cheques = truth.breakdown([
+  { ts: 110, amount: 100, origin: 'caisse', channel: 'counter', method: 'cash' },
+  { ts: 120, amount: 60, origin: 'caisse', channel: 'counter', method: 'cheque' },
+  { ts: 130, amount: 50, origin: 'caisse', channel: 'counter', method: 'split', paymentParts: [{ method: 'cash', amountCents: 2000 }, { method: 'cheque', amountCents: 3000 }] },
+  { ts: 140, amount: 40, origin: 'caisse', channel: 'delivery', method: 'cheque' },
+], shopIds, 100, 200, boutique, 'boutique', [{ ts: 150, amount: 10, method: 'cheque', saleId: 'x' }]);
+assert.equal(cheques.amounts.cheque, 60 + 30 - 10, 'cheque tickets, cheque parts, minus a cheque refund');
+assert.equal(cheques.amounts.counter, 100 + 20, 'the cash part of a split ticket stays at the counter');
+assert.equal(cheques.amounts.delivery, 40, 'a delivery paid by cheque stays a delivery');
+assert.equal(cheques.total, 240);
+assert.equal(cheques.unknown, 0);
+/* Amira Boutique, 29 Oct: a delivery sold today is worth its ticket in
+ * Livraison today (0 MAD received, 190 owed); the courier's cash, written
+ * later as « Livraison reçue · … », is the same sale and does not count again. */
+const deliveries = truth.breakdown([
+  { ts: 110, amount: 100, origin: 'caisse', channel: 'counter', method: 'cash' },
+  { ts: 120, amount: 0, origin: 'caisse', channel: 'delivery', method: 'delivery', paymentParts: [{ method: 'delivery', amountCents: 19000 }] },
+  { ts: 130, amount: 50, origin: 'caisse', channel: 'delivery', method: 'split', paymentParts: [{ method: 'cash', amountCents: 5000 }, { method: 'delivery', amountCents: 7000 }] },
+  { ts: 140, amount: 190, channel: 'delivery', method: 'cash', label: 'Livraison reçue · Black jean S' },
+], shopIds, 100, 200, boutique, 'boutique');
+assert.equal(deliveries.amounts.delivery, 190 + 50 + 70, 'delivery tickets count at their full value on the day of sale');
+assert.equal(deliveries.amounts.counter, 100);
+assert.equal(deliveries.total, 410, 'the courier\'s collection is not counted a second time');
+assert.equal(deliveries.unknown, 0);
+
+const noCheque = truth.breakdown([{ ts: 120, amount: 60, origin: 'caisse', method: 'cheque' }], ids, 100, 200, restaurant, 'restaurant');
+assert.equal(noCheque.amounts.cheque, undefined, 'a trade without a Chèque ring keeps cheque money in its channel');
+
 const partial = truth.breakdown([
   { ts: 110, amount: 10, channel: 'dining' },
   { ts: 120, amount: 90 },

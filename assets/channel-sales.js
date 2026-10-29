@@ -79,19 +79,54 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  /* Boutique : « Chèque » est un anneau de règlement posé à côté des canaux
+   * (propriétaire, 29 octobre 2026). Seul l'argent d'un passage au comptoir y
+   * va : la part en chèque d'un ticket (paymentParts) ou tout le ticket payé
+   * par chèque. Une livraison reste une livraison, quel que soit son moyen. */
+  function chequeCents(sale, amount) {
+    if (text(sale.method) === 'cheque') return amount;
+    var parts = Array.isArray(sale.paymentParts) ? sale.paymentParts : [];
+    var sum = parts.reduce(function (n, p) {
+      return n + (p && text(p.method) === 'cheque' ? Math.max(0, Number.isSafeInteger(+p.amountCents) ? +p.amountCents : cents(p.amount)) : 0);
+    }, 0);
+    return Math.min(amount, sum);
+  }
+
+  /* Une vente partie en livraison vaut son ticket le jour de la vente, même si
+   * l'argent arrive plus tard (la part « livraison » de paymentParts, que le
+   * serveur garde à 0 MAD encaissé). L'encaissement du livreur, écrit ensuite
+   * par /api/receivables (« Livraison reçue · … », canal delivery), règle cette
+   * même vente : il ne compte pas une seconde fois. Amira Boutique, 29 octobre
+   * 2026 : une livraison du jour laissait l'anneau Livraison à 0 %. */
+  function deliveryOwedCents(sale) {
+    var parts = Array.isArray(sale.paymentParts) ? sale.paymentParts : [];
+    return parts.reduce(function (n, p) {
+      return n + (p && text(p.method) === 'delivery' ? Math.max(0, Number.isSafeInteger(+p.amountCents) ? +p.amountCents : cents(p.amount)) : 0);
+    }, 0);
+  }
+  function deliveryCollection(sale) {
+    return text(sale.channel) === 'delivery' && /^Livraison reçue · /.test(String(sale.label || ''));
+  }
+
   function breakdown(rows, channelIds, from, to, tradeRegistry, tradeId, refunds) {
     var amounts = Object.create(null);
     var total = 0;
     var classified = 0;
     var list = Array.isArray(rows) ? rows : [];
+    var cheque = Array.isArray(channelIds) && channelIds.indexOf('cheque') >= 0;
+    var delivery = Array.isArray(channelIds) && channelIds.indexOf('delivery') >= 0;
     list.forEach(function (sale) {
       var ts = +(sale && sale.ts) || 0;
       if (ts < from || ts >= to) return;
       var amount = Math.max(0, cents(sale && sale.amount));
-      if (!(amount > 0)) return;
+      var owed = delivery ? deliveryOwedCents(sale) : 0;
+      if (owed > 0) { total += owed; amounts.delivery = (amounts.delivery || 0) + owed; classified += owed; }
+      if (!(amount > 0) || (delivery && deliveryCollection(sale))) return;
       total += amount;
       var channel = key(sale, channelIds, tradeRegistry, tradeId);
-      if (!channel) return;
+      var byCheque = cheque && (channel === 'counter' || !channel) ? chequeCents(sale, amount) : 0;
+      if (byCheque > 0) { amounts.cheque = (amounts.cheque || 0) + byCheque; classified += byCheque; amount -= byCheque; }
+      if (!channel || !(amount > 0)) return;
       amounts[channel] = (amounts[channel] || 0) + amount;
       classified += amount;
     });
@@ -110,6 +145,7 @@
       }
       var sale = byId[String(refund.saleId || '')];
       var channel = sale ? key(sale, channelIds, tradeRegistry, tradeId) : key(refund, channelIds, tradeRegistry, tradeId);
+      if (cheque && text(refund.method) === 'cheque' && amounts.cheque > 0) channel = 'cheque';   // rendu par chèque : sort de l'anneau Chèque
       total -= amount;
       if (!channel || !(amounts[channel] > 0)) return;
       var take = Math.min(amount, amounts[channel]);

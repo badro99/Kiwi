@@ -324,8 +324,8 @@
     "sha": "a2cf28c5bfb4b970"
   },
   "assets/channel-sales.js": {
-    "v": "6",
-    "sha": "fabddf50d5731df1"
+    "v": "8",
+    "sha": "04648c791506f5f9"
   },
   "assets/charges-engine.js": {
     "v": "3",
@@ -480,8 +480,8 @@
     "sha": "4600d76604d8462a"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2097",
-    "sha": "f3caad37a4c63eed"
+    "v": "2098",
+    "sha": "563ff309b47fe0ed"
   },
   "assets/design-vexel.css": {
     "v": "2129",
@@ -1353,7 +1353,7 @@
   },
   "assets/pages/dashboard-startup.js": {
     "v": "92",
-    "sha": "2636643df31e232f"
+    "sha": "7a66996b648c7104"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -2040,8 +2040,8 @@
     "sha": "084c78956d631eb9"
   },
   "assets/trades.js": {
-    "v": "8",
-    "sha": "75db942c729c7924"
+    "v": "9",
+    "sha": "0c4a16236723bff2"
   },
   "assets/ux.js": {
     "v": "1",

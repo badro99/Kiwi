@@ -89,6 +89,7 @@
     delivery:  { fr: 'Livraison',             en: 'Delivery',             ar: 'التوصيل' },
     catering:  { fr: 'Événements',            en: 'Events',               ar: 'المناسبات' },
     pickup:    { fr: 'Réservation-retrait',   en: 'Reserve and collect',  ar: 'حجز واستلام' },
+    cheque:    { fr: 'Chèque',                en: 'Cheque',               ar: 'شيك' },
     store:     { fr: 'En boutique',           en: 'In store',             ar: 'في المتجر' },
     cabin:     { fr: 'En cabine',             en: 'Treatment room',       ar: 'في المقصورة' },
     home:      { fr: 'À domicile',            en: 'At home',              ar: 'في المنزل' },
@@ -103,7 +104,9 @@
   };
   var CHANNELS_BY_BASE = {
     restaurant: ['dining', 'takeaway', 'delivery', 'orderpro'],
-    boutique:   ['counter', 'pickup', 'delivery'],
+    /* Boutique : le troisième anneau dit la part payée par chèque (propriétaire,
+     * 29 octobre 2026) ; aucune caisse boutique n'écrit de réservation-retrait. */
+    boutique:   ['counter', 'cheque', 'delivery'],
     spa:        ['cabin', 'home', 'products'],
     hotel:      ['onsite', 'direct', 'online'],
   };
