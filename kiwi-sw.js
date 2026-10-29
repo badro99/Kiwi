@@ -20,6 +20,7 @@ var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/boutique-sizes.js?v=10',
   '/assets/boutique-size-split.js?v=4',
+  '/assets/boutique-size-codes.js?v=1',
   '/assets/boutique-size-colors.js?v=2',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=2',

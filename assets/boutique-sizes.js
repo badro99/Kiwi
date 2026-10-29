@@ -24,7 +24,8 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import * as SPLIT from './boutique-size-split.js?v=4';
-import * as COLORS from './boutique-size-colors.js?v=2';
+import * as CODES from './boutique-size-codes.js?v=1';
+import * as COLORS from './boutique-size-colors.js?v=3';
 
 export const ONE_COLOR = 'unique';
 const GRID = {
@@ -54,6 +55,7 @@ const T = {
     newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
     colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
+    codeKey: 'Codes-barres : le 2e chiffre dit la couleur, l’avant-dernier la taille. Le même milieu pour tout l’article.',
   },
   en: {
     total: 'Total quantity', totalHint: 'How many pieces came in. You split them by size right after.',
@@ -73,6 +75,7 @@ const T = {
     newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code',
     out: 'Sold out', empty: 'No sizes yet.',
     colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
+    codeKey: 'Barcodes: the 2nd digit is the colour, the second-to-last the size. The same middle for the whole item.',
   },
   ar: {
     total: 'الكمية الإجمالية', totalHint: 'عدد القطع المستلمة. ستوزّعها حسب المقاس مباشرة بعد ذلك.',
@@ -92,6 +95,7 @@ const T = {
     newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود',
     out: 'نفد', empty: 'لا مقاسات بعد.',
     colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
+    codeKey: 'الرموز الشريطية: الرقم الثاني هو اللون، وما قبل الأخير هو المقاس. الوسط نفسه لكل المنتج.',
   },
 };
 export const words = (lang) => T[lang] || T.fr;
@@ -258,6 +262,22 @@ export function mount(host, o) {
     const matrix = rich && cols.length > 1;
     const sizeList = [];
     shown.forEach((r) => { if (!sizeList.includes(r.size)) sizeList.push(r.size); });
+    const colName = (c) => (c.unique ? t.noColor : c.label);
+    const dot = (c) => `<span class="kbc-dot" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}"></span>`;
+    /* Les codes qui se lisent (boutique-size-codes.js) : le chiffre de la couleur
+       dans sa pastille, celui de la taille à côté d'elle, et dans chaque case le
+       code avec ces deux chiffres en vert. */
+    const famOf = (c) => (!c || c.unique ? 'unique' : (c.family || c.id));
+    const digDot = (c) => `<span class="kbc-dot kbm-dig${c.unique || c.light || !c.hex ? ' is-light' : ''}" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}">${CODES.colorDigit(famOf(c))}</span>`;
+    const codeOf = (r) => {
+      const code = r.variant ? o.primary(r.variant) : '';
+      if (!code) return '';
+      const c = cols && cols.find((k) => k.key === r.col);
+      const bits = CODES.parts(code);
+      if (!bits || code !== CODES.smartCode(pid, famOf(c), r.size)) return `<code class="kbm-code">${esc(code)}</code>`;
+      return `<code class="kbm-code">${bits[0]}<b>${bits[1]}</b>${bits[2]}<b>${bits[3]}</b>${bits[4]}</code>`;
+    };
+    const anySmart = rich && shown.some((r) => r.variant && /<b>/.test(codeOf(r)));
     const rowsHtml = matrix ? '' : shown.map((r) => {
       const v = r.variant;
       const stock = v ? Math.max(0, +v.stock || 0) : 0;
@@ -268,7 +288,7 @@ export function mount(host, o) {
         ? `<span class="kbs-have${stock ? '' : ' is-out'}">${esc(stock ? t.have(stock) : t.out)}</span>`
         : '';
       const codeHtml = code
-        ? `<span class="kbs-code">${o.barcodeSvg ? o.barcodeSvg(code) : ''}<code>${esc(code)}</code></span>`
+        ? `<span class="kbs-code">${o.barcodeSvg ? o.barcodeSvg(code) : ''}${rich ? codeOf(r) : `<code>${esc(code)}</code>`}</span>`
         : `<span class="kbs-code"><span class="kbs-pending">${esc(v ? t.noCode : t.newCode)}</span>${v && o.register ? `<button type="button" class="kbs-link" data-kbs-reg="${esc(v.id)}">${esc(t.reg)}</button>` : ''}</span>`;
       return `<li class="kbs-row" data-kbs-row="${esc(r.key)}">
         <span class="kbs-size">${esc(sizeLabel)}${colorLine}</span>
@@ -277,17 +297,15 @@ export function mount(host, o) {
           data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(r.col || '')}" aria-label="${esc(t.add)} · ${esc(sizeLabel)}" />`}
       </li>`;
     }).join('');
-    const colName = (c) => (c.unique ? t.noColor : c.label);
-    const dot = (c) => `<span class="kbc-dot" style="--dot:${esc(c.unique || !c.hex ? '#E2DED4' : c.hex)}"></span>`;
-    const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${dot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
+    const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${digDot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
       const sl = size === 'TU' ? t.tu : size;
-      return `<tr><th scope="row">${esc(sl)}</th>${cols.map((c) => {
+      return `<tr><th scope="row">${esc(sl)}<span class="kbm-sd">${CODES.sizeDigit(size)}</span></th>${cols.map((c) => {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
         const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
-        return `<td><input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0" data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(c.key)}" aria-label="${esc(t.add)} · ${esc(sl)} · ${esc(colName(c))}" />${r.variant ? `<small class="${st ? '' : 'is-out'}">${esc(st ? t.have(st) : t.out)}</small>` : ''}</td>`;
+        return `<td><input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0" data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(c.key)}" aria-label="${esc(t.add)} · ${esc(sl)} · ${esc(colName(c))}" />${r.variant ? `<small class="${st ? '' : 'is-out'}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}` : ''}</td>`;
       }).join('')}</tr>`;
-    }).join('')}</tbody></table>`;
+    }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
     const colorsHtml = !rich ? '' : `<div class="kbc" data-kbc>
       <div class="kbc-row"><span class="kbc-l">${esc(t.colors)}</span>${cols.filter((c) => !c.unique).map((c) => `<span class="kbc-chip">${dot(c)}${esc(c.label)}${used(c.key) ? '' : `<button type="button" data-kbc-del="${esc(c.key)}" aria-label="${esc(t.removeColor(c.label))}">${CLOSE_SVG}</button>`}</span>`).join('')}
@@ -439,7 +457,8 @@ export function mount(host, o) {
           if (v && !ev.created) cat.receiveStock(v.id, n);
         }
         if (!v) return;
-        if (!o.primary(v) && cat.generateBarcode(v.id)) codes++;
+        const fam = rich ? (() => { const c = cols.find((k) => k.key === r.col); return !c || c.unique ? 'unique' : (c.family || c.id); })() : '';
+        if (!o.primary(v) && cat.generateBarcode(v.id, rich ? CODES.smartCode(pid, fam, r.size) : undefined)) codes++;
         got[v.id] = (got[v.id] || 0) + n;
       });
     };
@@ -686,7 +705,7 @@ export function createProduct(cat, data, total) {
     p = cat.addProduct(data);
     if (p && !hasGrid(p.kind)) {
       const ev = cat.ensureVariant({ productId: p.id, colorId: ONE_COLOR, size: 'TU', stock: total });
-      if (ev && ev.variant) cat.generateBarcode(ev.variant.id);
+      if (ev && ev.variant) cat.generateBarcode(ev.variant.id, sizeColorsOn() ? CODES.smartCode(p.id, 'unique', 'TU') : undefined);
     }
   };
   if (cat.batch) cat.batch(run); else run();

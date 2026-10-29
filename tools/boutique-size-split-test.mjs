@@ -161,6 +161,26 @@ sh = S.colorSharesFor(soldCat([{ vid: 'n', n: 20 }]), shopCols);
 ok(sh.weights[1] > 0, 'a colour never sold still gets a share (it was just chosen)', JSON.stringify(sh));
 ok(S.colorSharesFor(soldCat([{ vid: 'n', n: 3 }]), shopCols).source === 'even', 'too few sales · equal shares');
 
+console.log('■ barcodes that read (boutique-size-codes.js)');
+{
+  const C = await import(pathToFileURL(path.join(root, 'assets/boutique-size-codes.js')).href);
+  const ean = (c) => { let sum = 0; for (let i = 0; i < 12; i++) sum += (+c[i]) * (i % 2 === 0 ? 1 : 3); return (10 - (sum % 10)) % 10 === +c[12]; };
+  const blackM = C.smartCode('p-kaftan', 'noir', 'M');
+  const whiteXL = C.smartCode('p-kaftan', 'blanc', 'XL');
+  const blueM = C.smartCode('p-kaftan', 'bleu', 'M');
+  ok(/^2\d{12}$/.test(blackM) && ean(blackM) && ean(whiteXL) && ean(blueM), 'in-store EAN-13 (starts with 2) with a valid check digit', blackM);
+  ok(blackM[1] === '1' && whiteXL[1] === '0' && blueM[1] === '8', 'the 2nd digit is the colour · 1 black, 0 white, 8 blue', [blackM, whiteXL, blueM].join(' '));
+  ok(blackM[11] === '4' && whiteXL[11] === '6', 'the digit before the check is the size · M 4, XL 6');
+  ok(C.sizeDigit('38') === 8 && C.sizeDigit('41') === 1 && C.sizeDigit('TU') === 0 && C.sizeDigit('XXS') === 1 && C.sizeDigit('3XL') === 8, 'shoes and numbered sizes · the last digit of the size (38 → 8); one size → 0');
+  ok(blackM.slice(2, 11) === whiteXL.slice(2, 11) && blackM.slice(2, 11) !== C.smartCode('p-autre', 'noir', 'M').slice(2, 11), 'one product · one middle, shared by all its variants; another product · another middle');
+  ok(C.smartCode('p-kaftan', 'noir', 'M') === blackM, 'the same on every device (no counter to share)');
+  ok(C.colorDigit('beige') === C.colorDigit('marron') && C.colorDigit('quelconque') === 9 && C.colorDigit('unique') === 9, 'thirteen families on ten digits · beige and brown share 3; no colour → 9');
+  ok(JSON.stringify(C.parts(blackM)) === JSON.stringify([blackM[0], blackM[1], blackM.slice(2, 11), blackM[11], blackM[12]]) && C.parts('3001234567890') === null, 'cut for display · prefix, colour, item, size, check; not an in-store code → nothing');
+  const seen = new Set(); let clash = 0;
+  for (let i = 0; i < 5000; i++) { const m = C.productNumber('p' + i); if (seen.has(m)) clash++; seen.add(m); }
+  ok(clash === 0, '5 000 products · 5 000 different middles', String(clash));
+}
+
 console.log('■ the catalog says what it sold (boutique-catalog.js › soldMoves)');
 const src = fs.readFileSync(path.join(root, 'assets/boutique-catalog.js'), 'utf8');
 const line = src.split('\n').find((l) => /^\s+soldMoves:/.test(l)) || '';

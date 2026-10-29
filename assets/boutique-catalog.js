@@ -1083,11 +1083,17 @@
   }
 
   /* ───────────────── barcodes ───────────────── */
-  function generateBarcode(variantId) {
+  /* `prefer` : un code proposé (boutique-size-codes.js : couleur, article,
+     taille). Pris s'il est un EAN-13 interne (« 2… ») valide et libre ; sinon
+     le compteur du magasin, comme toujours. */
+  function generateBarcode(variantId, prefer) {
     const v = varById(variantId); if (!v) return null;
     if (v.barcodes.some((b) => b.primary)) return primaryBarcode(v); // already has one
-    let code; let guard = 0;
-    do { code = genEan(); } while (barcodeOwner(code) && guard++ < 50);
+    const KB = window.KiwiBarcode;
+    const want = String(prefer || '');
+    let code = /^2\d{12}$/.test(want) && (!KB || !KB.isValidEan13 || KB.isValidEan13(want)) && !barcodeOwner(want) ? want : '';
+    let guard = 0;
+    if (!code) do { code = genEan(); } while (barcodeOwner(code) && guard++ < 50);
     v.barcodes.push({ code, type: 'ean13', primary: true, at: now() });
     touch('variants', v, snap(v));
     ixAddCode(v, code);
@@ -1360,7 +1366,7 @@
     listCodeless: (o) => (load(), listCodeless(o)),
     countCodeless: () => (load(), countCodeless()),
     // barcodes
-    generateBarcode: (id) => (load(), generateBarcode(id)), attachBarcode: (id, raw, o) => (load(), attachBarcode(id, raw, o)),
+    generateBarcode: (id, prefer) => (load(), generateBarcode(id, prefer)), attachBarcode: (id, raw, o) => (load(), attachBarcode(id, raw, o)),
     removeBarcode: (id, c) => (load(), removeBarcode(id, c)), findByBarcode: (c) => (load(), findByBarcode(c)),
     resolveScan: (c) => (load(), resolveScan(c)), barcodeExists: (c) => (load(), barcodeExists(c)), primaryBarcode,
     // Le stock du MÊME article dans les autres établissements du compte.

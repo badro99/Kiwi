@@ -88,6 +88,8 @@ await page.evaluate(() => { const i = document.querySelectorAll('[data-kbs-in]')
 await click('[data-kbs-save]');
 await sleep(500);
 ok(await sizesOf(ZERO) === 'M:6', '0 · and it still saves as before', await sizesOf(ZERO));
+const zeroCode = await page.evaluate((name) => { const cat = window.KiwiBoutiqueCatalog; const p = cat.listProducts({ q: name }).find((x) => x.name === name); return cat.primaryBarcode(cat.getProduct(p.id).variants[0]); }, ZERO);
+ok(/^20\d{11}$/.test(zeroCode), '0 · option off: the barcode comes from the shop counter, as before', zeroCode);
 await close();
 await page.evaluate(() => { window.KiwiConfig.features.boutiqueSizeColors = true; });
 
@@ -170,6 +172,29 @@ const label = await page.evaluate(async (u) => {
   return m.variantWords({ colorId: 'bleu', colorLabel: 'Bleu', size: 'M' }, 'fr');
 }, coreUrl);
 ok(label === 'Bleu · M', 'the till and the label say « Bleu · M »', label);
+const codes = await page.evaluate((name) => {
+  const cat = window.KiwiBoutiqueCatalog;
+  const p = cat.listProducts({ q: name }).find((x) => x.name === name);
+  const by = {}; cat.getProduct(p.id).variants.forEach((v) => { by[v.colorId + ':' + v.size] = cat.primaryBarcode(v); });
+  return by;
+}, THREE);
+const bm = codes['bleu:M'] || '', ns = codes['noir:S'] || '', nxl = codes['noir:XL'] || '';
+ok(bm[1] === '8' && bm[11] === '4' && ns[1] === '1' && ns[11] === '3' && nxl[11] === '6', 'E · readable barcodes · Bleu M = 2 8 … 4, Noir S = 2 1 … 3', JSON.stringify(codes));
+ok(new Set(Object.values(codes).map((c) => c.slice(2, 11))).size === 1, 'E · every variant of the dress shares the same middle');
+ok(await page.$$eval('table.kbm .kbm-code b', (b) => b.length) >= 12 && await page.$eval('.kbm-key', (p) => /2e chiffre/.test(p.textContent)), 'E · the grid shows each code with its colour and size digits in green, and says how to read them');
+ok(await page.$eval('table.kbm thead .kbm-dig', (d) => d.textContent.trim()) === '1', 'E · the black dot carries its digit, 1');
+const clash = await page.evaluate(async () => {
+  const cat = window.KiwiBoutiqueCatalog;
+  const C = await import('/assets/boutique-size-codes.js');
+  const p = cat.addProduct({ name: 'TEST KIWI Pull beige marron', priceMAD: 100, kind: 'taille' });
+  const a = cat.ensureVariant({ productId: p.id, colorId: 'beige', size: 'M', stock: 1 }).variant;
+  const b = cat.ensureVariant({ productId: p.id, colorId: 'marron', size: 'M', stock: 1 }).variant;
+  const ca = cat.generateBarcode(a.id, C.smartCode(p.id, 'beige', 'M'));
+  const cb = cat.generateBarcode(b.id, C.smartCode(p.id, 'marron', 'M'));
+  cat.deleteProduct && cat.deleteProduct(p.id);
+  return { ca, cb, smart: C.smartCode(p.id, 'marron', 'M') };
+});
+ok(clash.ca === clash.smart && clash.cb !== clash.ca && /^2\d{12}$/.test(clash.cb), 'beige and brown M share a digit · the second gets a counter code, never the same code twice', JSON.stringify(clash));
 await close();
 
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
