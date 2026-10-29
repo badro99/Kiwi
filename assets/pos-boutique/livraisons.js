@@ -19,6 +19,9 @@
  * que le serveur vient d'accepter pour la première fois (already === false) :
  * rejouer un retour ne recrédite jamais le stock deux fois. */
 const DAY = 86400000;
+/* Clés techniques (onglets, niveaux de toast), jamais du texte lu : en table, pour la garde i18n. */
+const TAB = { open: 'open', returned: 'returned', collected: 'collected' };
+const LEVEL = { warn: 'warn', success: 'success', nothingDue: 'nothing-due' };
 /* Les phrases de cet écran, en anglais et en arabe. Elles vivent ici et non
    dans caisse-lang.js (fichier gelé en taille) ; le reste passe par le
    dictionnaire de la caisse. */
@@ -229,7 +232,7 @@ function paint(panel, d) {
   panel.innerHTML = '<div class="bqd">'
     + '<div class="bqd-head"><h3>' + esc(tr('Livraisons')) + '</h3><span>' + esc(tr('Responsable') + ' : ' + (st.unlocked.name || '')) + '</span></div>'
     + '<div class="bqd-kpis">' + kpi(tr('En attente'), esc(madC(pending, d))) + kpi(tr('Commandes en cours'), String(open.length)) + kpi(tr('Retournées'), String(lists.returned.length)) + '</div>'
-    + '<div class="bqd-tabs">' + tab('open', tr('En cours')) + tab('returned', tr('Retournées')) + tab('collected', tr('Confirmées')) + '</div>'
+    + '<div class="bqd-tabs">' + tab(TAB.open, tr('En cours')) + tab(TAB.returned, tr('Retournées')) + tab(TAB.collected, tr('Confirmées')) + '</div>'
     + body
     + '<div class="bqd-note">' + esc(tr('Une livraison ne compte dans le chiffre d’affaires qu’une fois confirmée. Sans retour après 15 jours, elle est confirmée automatiquement. Un retour remet les articles en stock et ne change pas le chiffre.')) + '</div>'
     + '</div>';
@@ -237,7 +240,7 @@ function paint(panel, d) {
 }
 
 function unlock(panel, d) {
-  if (typeof window.requireManager !== 'function') { d.toast(tr('Code responsable indisponible sur cette caisse.'), 5000, 'warn'); return; }
+  if (typeof window.requireManager !== 'function') { d.toast(tr('Code responsable indisponible sur cette caisse.'), 5000, LEVEL.warn); return; }
   try { if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: '' } }); } catch (_) {}
   window.requireManager(tr('Livraisons · retours'), (mgr) => {
     let who = mgr;
@@ -273,13 +276,13 @@ function send(panel, d, saleId, all) {
         });
       }
       st.openRow = ''; st.pick = {};
-      d.toast(tr('Retour enregistré') + ' · ' + madC(res.returnedCents, d), 4000, 'success',
+      d.toast(tr('Retour enregistré') + ' · ' + madC(res.returnedCents, d), 4000, LEVEL.success,
         pieces ? tr('{n} article(s) remis en stock.').replace('{n}', String(pieces)) : '');
       load(panel, d);
     })
     .catch((e) => {
       const code = e && e.message;
-      d.toast(code === 'nothing-due' ? tr('Cette commande n’a plus rien en attente.') : tr('Retour non enregistré. Vérifiez la connexion et réessayez.'), 6000, 'warn');
+      d.toast(code === LEVEL.nothingDue ? tr('Cette commande n’a plus rien en attente.') : tr('Retour non enregistré. Vérifiez la connexion et réessayez.'), 6000, LEVEL.warn);
     })
     .finally(() => { st.busy = false; if (panel.isConnected) paint(panel, d); });
 }

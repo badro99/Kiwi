@@ -11,9 +11,9 @@
  * Off: the till shows the dashboard labels and no editing button.
  * On, per worker (owner, 29 October): a cashier the owner did not tick in
  * Équipe gets the labels; ticked, she edits; a manager always edits.
- * On: real clicks create an article, change its price, add a variant, delete
- * the variant and delete the article, through the real forms, with no page
- * error. Demo till only: nothing reaches a server.
+ * On: real clicks create an article (total, then the sizes grid), change its
+ * price, add a size and delete the article, through the real forms, with no
+ * page error. Demo till only: nothing reaches a server.
  *   node tools/boutique-till-catalog-admin-browser-test.mjs
  */
 import { harness, demoPage, sleep } from './surface-matrix-lib.mjs';
@@ -71,38 +71,44 @@ ok(await page.$('[data-bq-panel="inventaire"] .bqi-dashboard-only') !== null, 's
 await showInventory(true);
 ok(await page.$('#bqi-new') !== null, 'switch on · « Nouvel article » is offered');
 const NAME = 'TEST KIWI Robe lin';
+/* The form asks for the total; a « taille » article then opens its sizes grid
+   (boutique-sizes.js) to split the pieces, one box per size. */
+const sizeBox = (size) => page.evaluateHandle((size) => [...document.querySelectorAll('[data-kbs-in]')]
+  .find((i) => i.offsetParent && new RegExp('· ' + size + '$').test(i.getAttribute('aria-label') || '')) || null, size);
+const fill = async (size, value) => {
+  const box = (await sizeBox(size)).asElement();
+  if (!box) return false;
+  await box.click({ clickCount: 3 });
+  await box.type(value);
+  return true;
+};
 await click('#bqi-new');
-await type('#bqi-n-name', NAME);
-await type('#bqi-n-price', '450');
-await type('#bqi-n-size', 'M');
-await type('#bqi-n-stock', '3');
-await click('[data-bc="later"]');
+await type('[data-bqx-name]', NAME);
+await type('[data-bqi-price]', '450');
+await type('[data-kbs-total]', '3');
 await click('#bqi-n-save');
+await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
+ok(await fill('M', '3'), 'the sizes grid opens on the new article, with a box for M');
+await click('[data-kbs-save]');
 await sleep(500);
 let p = await product(NAME);
-ok(!!p && p.price === 450 && p.variants.length === 1 && p.variants[0].stock === 3, 'the article is created with its price, size and stock', JSON.stringify(p));
+ok(!!p && p.price === 450 && p.variants.length === 1 && p.variants[0].size === 'M' && p.variants[0].stock === 3, 'the article is created with its price, size and stock', JSON.stringify(p));
 
 await page.waitForSelector('[data-inv-edit]', { visible: true, timeout: 5000 }).catch(() => {});
-ok(await page.$('[data-inv-edit]') !== null && await page.$('[data-inv-addvar]') !== null && await page.$('[data-inv-delete]') !== null,
-  'its sheet offers Modifier, Ajouter une variante and Supprimer');
+ok(await page.$('[data-inv-edit]') !== null && await page.$('[data-inv-delete]') !== null,
+  'its sheet offers Modifier and Supprimer');
 await click('[data-inv-edit]');
 await type('#bqi-e-price', '480');
 await click('#bqi-e-save');
 p = await product(NAME);
 ok(!!p && p.price === 480, 'Modifier changes the price', JSON.stringify(p && p.price));
 
-await click('[data-inv-addvar]');
-await type('#bqi-av-size', 'L');
-await type('#bqi-av-stock', '2');
-await click('#bqi-av-save');
+await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 5000 }).catch(() => {});
+ok(await fill('L', '2'), 'the sheet keeps the sizes grid, with a box for L');
+await click('[data-kbs-save]');
+await sleep(500);
 p = await product(NAME);
-ok(!!p && p.variants.length === 2 && p.variants.some((v) => v.size === 'L' && v.stock === 2), 'Ajouter une variante adds size L', JSON.stringify(p && p.variants));
-
-const vL = p && p.variants.find((v) => v.size === 'L');
-await click(`[data-vdelete="${vL && vL.id}"]`);
-await click('#bqi-vdel-ok');
-p = await product(NAME);
-ok(!!p && p.variants.length === 1 && p.variants[0].size === 'M', 'deleting a variant asks, then removes only that one', JSON.stringify(p && p.variants));
+ok(!!p && p.variants.length === 2 && p.variants.some((v) => v.size === 'L' && v.stock === 2), 'typing into L adds size L', JSON.stringify(p && p.variants));
 
 await click('[data-inv-delete]');
 await click('#bqi-del-ok');
