@@ -41,7 +41,11 @@ app they cannot get into, or whose demo contradicts itself.
   reviewer: no lorem ipsum, no `TODO`, no raw i18n keys, no "beta". *(Claude)*
 - [ ] **B4 · Review account** with an owner code, a menu and one staff
   member, signed into once on a clean install of the candidate build.
-  Credentials go into App Store Connect only. *(Owner)*
+  Credentials go into App Store Connect only. *(Owner)* Chosen 2026-10-29:
+  the Amira Cafe login (the owner-designated test account, four
+  establishments); `app-review-notes.md` says what the reviewer sees and how
+  to undo a deletion request. Left: the owner types the e-mail, password and
+  owner code into App Store Connect.
 - [x] **B5 · Review notes** pasted from `docs/ops/app-review-notes.md`,
   updated for the candidate build. *(Claude writes · Owner pastes)*
 
@@ -74,23 +78,25 @@ app they cannot get into, or whose demo contradicts itself.
 ## E · Real device, before submitting
 
 Simulators do not prove these. *(Owner, on the TestFlight build from D2)*
+All seven done by the owner on a real iPhone, 2026-10-29, signed-in account
+deletion included.
 
-- [ ] **E1** Sign in, choose each role, sign out.
-- [ ] **E2** Pair a till; take a sale; it appears on the dashboard in under a minute.
-- [ ] **E3** Airplane mode mid-sale, then reconnect: the sale syncs once, not twice.
-- [ ] **E4** Print to a real thermal printer; first print asks for Local Network.
-- [ ] **E5** Camera barcode scan; microphone dictation to the assistant.
-- [ ] **E6** VoiceOver can reach the keypad, and largest text size does not clip the till.
-- [ ] **E7** Face ID: sign in with the owner code, accept "Open Kiwi with Face ID?", relaunch: the app opens with a glance. Sign out, sign back in: Face ID is asked for again, not reused.
+- [x] **E1** Sign in, choose each role, sign out.
+- [x] **E2** Pair a till; take a sale; it appears on the dashboard in under a minute.
+- [x] **E3** Airplane mode mid-sale, then reconnect: the sale syncs once, not twice.
+- [x] **E4** Print to a real thermal printer; first print asks for Local Network.
+- [x] **E5** Camera barcode scan; microphone dictation to the assistant.
+- [x] **E6** VoiceOver can reach the keypad, and largest text size does not clip the till.
+- [x] **E7** Face ID: sign in with the owner code, accept "Open Kiwi with Face ID?", relaunch: the app opens with a glance. Sign out, sign back in: Face ID is asked for again, not reused.
 
 ## F · App Store Connect listing *(Owner, with text from Claude)*
 
-- [ ] **F1** Name, subtitle, description, keywords in FR, EN, AR.
+- [ ] **F1** Name, subtitle, description, keywords in FR, EN, AR. Text ready in `docs/ops/app-store-listing.md` (lengths checked by `tools/app-store-listing-test.mjs`); owner pastes.
 - [ ] **F2** Screenshots from the D2 build: 6.9" iPhone (and 13" iPad if iPad is offered).
-- [ ] **F3** Privacy labels matching the privacy manifest.
-- [ ] **F4** Age rating questionnaire (business app, no user content shared publicly).
-- [ ] **F5** Support URL, privacy policy URL, contact e-mail.
-- [ ] **F6** Pricing: free (the subscription is sold outside the app).
+- [ ] **F3** Privacy labels matching the privacy manifest. The 21 types are listed in `app-store-listing.md`; owner ticks them.
+- [ ] **F4** Age rating questionnaire (business app, no user content shared publicly). Answers in `app-store-listing.md`.
+- [ ] **F5** Support URL, privacy policy URL, contact e-mail. URLs in `app-store-listing.md`; contact is the owner's.
+- [ ] **F6** Pricing: free (the subscription is sold outside the app). Same in `app-store-listing.md`.
 
 ---
 
@@ -212,3 +218,8 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   Built from a fresh worktree with its own `npm ci`, so the gate's browser
   suites ran instead of skipping. Full `node tools/check.js` green on the
   first cut. A 26.9 MB `.ipa`, build number 40, `com.kiwios.pro`.
+- **2026-10-29 · ready for build 42.** Owner ran E1 to E7 on a real iPhone.
+  `docs/ops/app-store-listing.md` holds every App Store Connect field in FR,
+  EN and AR, with Apple's limits under test. Review account: the Amira Cafe
+  login. Build 42 waits on the till fixes of the day (boutique inventory
+  switch, God Mode entry, per-worker inventory permission) reaching main.
