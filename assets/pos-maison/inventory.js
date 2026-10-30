@@ -1,8 +1,9 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=135';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=52';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=136';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=53';
 import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=52';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=53';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
+import { openMoves } from './inv-moves.js?v=1';
 /* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse : leurs écrans se redessinent souvent, on écoute donc une fois, au document. */
 try { document.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('[data-mz-back-inv]'); if (b && root && root.contains(b)) switchView('inventaire'); }); } catch (_) {}
 
@@ -900,7 +901,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, colorLabel, availableStock: (pid, size) => (P[pid] && P[pid].sizes && P[pid].sizes[size]) || 0 }) });   // peau 2027 : la liste de la boutique
     const cb = $('#mzi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'maison' });
     /* Mouvements et casse vivent DANS l'Inventaire (propriétaire, 2026-10-30) : plus de place à eux dans le rail. */
-    const mvb = $('#mzi-moves', panel); if (mvb) mvb.onclick = () => switchView('mouvements');
+    const mvb = $('#mzi-moves', panel); if (mvb) mvb.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast, onNew: openMovementPicker });   // la fenêtre de la boutique (inv-moves.js)
     const csb = $('#mzi-casse', panel); if (csb) csb.onclick = () => switchView('casse');
     const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#mzi-new', panel); if (nb) nb.onclick = openNewProduct;
@@ -935,6 +936,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
      * main et la douchette écrirait dans un formulaire qui n'existe plus — plus
      * aucun scan n'atteindrait jamais le ticket. */
     disarmScanCapture();
+    el.style.width = '';   // seul l'écran des mouvements s'élargit ; les autres gardent la largeur livrée
     el.innerHTML = html;
     if (!$('#mz-inv-veil', root).classList.contains('is-open')) openVeil('#mz-inv-veil');
     el.querySelectorAll('[data-inv-x]').forEach((b) => b.addEventListener('click', () => {

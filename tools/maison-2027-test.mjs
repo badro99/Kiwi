@@ -87,7 +87,8 @@ check(/\['fournisseurs', '[a-z_0-9]+'\]/.test(mzKit) && /\['livraisons', '[a-z_0
   'Fournisseurs ou Livraisons n\'ont plus de place dans Plus : la vue deviendrait injoignable sous la peau');
 /* Mouvements de stock et Déclarer casse s'ouvrent depuis l'Inventaire (propriétaire, 2026-10-30). */
 const inv = read('assets/pos-maison/inventory.js');
-check(/id="mzi-moves"/.test(inv) && /switchView\('mouvements'\)/.test(inv) && /id="mzi-casse"/.test(inv) && /switchView\('casse'\)/.test(inv),
+/* Mouvements de stock s'ouvre dans la fenêtre de la boutique (pos-maison/inv-moves.js, propriétaire, 2026-10-30). */
+check(/id="mzi-moves"/.test(inv) && /openMoves\(\{[^)]*onNew: openMovementPicker/.test(inv) && /id="mzi-casse"/.test(inv) && /switchView\('casse'\)/.test(inv),
   'Mouvements de stock ou Déclarer casse n\'ont plus leur bouton dans l\'Inventaire : la vue deviendrait injoignable');
 check(/MZ_PARENT = \{ mouvements: 'inventaire', casse: 'inventaire' \}/.test(mzKit), 'le rail ne reste plus sur Inventaire pendant Mouvements ou Déclarer casse');
 check(/data-mz-back-inv/.test(inv) && /data-mz-back-inv/.test(read('assets/pos-maison/sales.js')), 'Mouvements ou Déclarer casse ont perdu leur retour « ← Inventaire »');
