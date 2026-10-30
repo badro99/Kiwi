@@ -421,7 +421,9 @@ export function ozonOpenSend(o) {
     $('sum').innerHTML = (feeOn() ? custRows() : shopRows())
       + (guessed && city ? '<div class="ozs-hint">' + esc(tr('Ville trouvée dans l’adresse')) + '</div>' : '');
     $('sum').hidden = !o.dueCents && !city;
-    $('fee').textContent = city ? tr('Livraison') + ' ' + mad(city.deliveredCents) : '';
+    /* Les villes ne montrent plus les frais d'Ozon : le client paie 50 MAD
+       partout, et ce qu'Ozon garde se lit dans le résumé ci-dessous. */
+    $('fee').textContent = '';
   };
   const paintCities = () => {
     const q = fold($('city-q').value).trim();
@@ -431,7 +433,7 @@ export function ozonOpenSend(o) {
     const top = last ? list.filter((c) => c.id === last).concat(big.filter((c) => c.id !== last)) : big;
     const hits = (q ? list.filter((c) => fold(c.name).includes(q)) : top).slice(0, 8);
     $('cities').innerHTML = hits.length
-      ? hits.map((c) => '<button type="button" role="option" class="ozs-city' + (city && city.id === c.id ? ' on' : '') + '" aria-selected="' + (city && city.id === c.id) + '" data-ozs-city="' + c.id + '"><span>' + esc(c.name) + '</span><small>' + esc(mad(c.deliveredCents)) + '</small></button>').join('')
+      ? hits.map((c) => '<button type="button" role="option" class="ozs-city' + (city && city.id === c.id ? ' on' : '') + '" aria-selected="' + (city && city.id === c.id) + '" data-ozs-city="' + c.id + '"><span>' + esc(c.name) + '</span></button>').join('')
       : (q ? '<p>' + esc(tr('Aucune ville trouvée.')) + '</p>' : '');
   };
   /* La ville déjà écrite dans l'adresse est choisie d'office (le nom le plus
