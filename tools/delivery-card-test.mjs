@@ -107,6 +107,20 @@ ok(res.status === 200 && one && one.customer && one.customer.phone === '+212 6 1
 const two = (data.open || []).find((d) => d.saleId === 'dlv-card-2');
 ok(two && two.customer === null, 'an order without a card is still listed, with no recipient');
 
+/* Depuis le 30 octobre, la boutique ne saisit plus de fiche à l'encaissement :
+   le destinataire vient du colis Ozon, et il passe devant une ancienne fiche. */
+{
+  const parcel = (sale, receiver) => sqlite.prepare(`INSERT INTO ozon_parcels (merchant, tracking, sale_id, receiver, phone, city_id, city_name, address, price_cents, created_ts)
+    VALUES (?, ?, ?, ?, '0661234567', 1, 'Rabat', 'Agdal, rue 3', 50000, ?)`).run(MERCHANT, 'TRK-' + sale, sale, receiver, Date.now());
+  parcel('dlv-card-2', 'Yasmine Alaoui');
+  parcel('dlv-card-1', 'Salma B.');
+  const again = await (await receivablesGet({ request: new Request(`https://kiwi.test/api/receivables?merchant=${MERCHANT}`, { headers: { Cookie: till } }), env })).json();
+  const fromOzon = (again.open || []).find((d) => d.saleId === 'dlv-card-2');
+  ok(fromOzon && fromOzon.customer && fromOzon.customer.name === 'Yasmine Alaoui' && fromOzon.customer.city === 'Rabat' && fromOzon.customer.phone === '0661234567',
+    'a delivery with no card shows the recipient of its Ozon parcel');
+  ok((again.open || []).find((d) => d.saleId === 'dlv-card-1').customer.name === 'Salma B.', 'the Ozon parcel wins over an older card');
+}
+
 /* Ce n'est pas une cliente du carnet. */
 ok(sqlite.prepare('SELECT COUNT(*) AS n FROM clients').get().n === 0, 'the recipient never enters the client book (no loyalty, no points)');
 

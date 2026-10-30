@@ -18,15 +18,15 @@
  * vente, jamais par la tablette. La tablette ne remet en stock qu'un retour
  * que le serveur vient d'accepter pour la première fois (already === false) :
  * rejouer un retour ne recrédite jamais le stock deux fois. */
-import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=4';
+import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=5';
 /* translate : les phrases Ozon (ozon.js), en français, anglais ou arabe. */
 const DAY = 86400000;
 const OZON_EVERY = 15 * 60 * 1000;   // la caisse reste ouverte : le suivi Ozon se relit tout seul
 /* Clés techniques (onglets, niveaux de toast), jamais du texte lu : en table, pour la garde i18n. */
 const TAB = { open: 'open', returned: 'returned', collected: 'collected' };
 const LEVEL = { warn: 'warn', success: 'success', nothingDue: 'nothing-due' };
-/* Les filtres de la recherche (propriétaire, 30 octobre) : la fiche du
-   destinataire saisie à l'encaissement (assets/pos-boutique/delivery-card.js). */
+/* Les filtres de la recherche (propriétaire, 30 octobre) : le destinataire du
+   colis Ozon, ou la fiche d'une livraison d'avant (assets/pos-boutique/delivery-card.js). */
 const BY = { all: 'all', name: 'name', city: 'city', phone: 'phone' };
 /* Les phrases de cet écran, en anglais et en arabe. Elles vivent ici et non
    dans caisse-lang.js (fichier gelé en taille) ; le reste passe par le
@@ -113,7 +113,7 @@ const phoneDigits = (v) => { const n = String(v || '').replace(/\D/g, ''); retur
 function matches(x) {
   const q = fold(st.q);
   if (!q) return true;
-  const c = x.customer || {};
+  const c = who(x) || {};
   const name = () => fold(c.name).includes(q);
   const city = () => fold(c.city).includes(q);
   const phone = () => { const n = phoneDigits(q); return n.length >= 2 && phoneDigits(c.phone).includes(n.replace(/^0/, '')); };
@@ -126,7 +126,7 @@ function matches(x) {
    Une livraison d'avant la fiche garde son numéro de ticket en titre. */
 function title(x, esc) {
   const ticket = tr('Ticket') + ' ' + (x.ref || x.saleId);
-  const c = x.customer;
+  const c = who(x);
   return c ? '<b>' + esc(c.name) + '</b><small class="bqd-who">' + [ticket, c.city, c.phone].filter(Boolean).map((v) => '<span>' + esc(v) + '</span>').join(' · ') + '</small>'
     : '<b>' + esc(ticket) + '</b><small>' + esc(tr('Sans fiche client')) + '</small>';
 }
@@ -240,6 +240,13 @@ function loadOzon(panel, d, force) {
   }).catch(() => { /* Ozon absent ou hors ligne : la page reste celle d'avant */ });
 }
 function ozonOf(saleId) { return st.ozon && st.ozon.bySale ? st.ozon.bySale.get(saleId) : null; }
+/* Le destinataire : celui du colis Ozon dès qu'il existe (il se saisit là, une
+   fois), sinon la fiche d'une ancienne livraison. */
+function who(x) {
+  const p = ozonOf(x.saleId);
+  if (p && (p.receiver || p.phone)) return { name: p.receiver, phone: p.phone, city: p.city, address: p.address, note: (x.customer && x.customer.note) || '' };
+  return x.customer || null;
+}
 function ozonHead(esc) {
   if (!st.ozon || !st.ozon.connected) return '';
   return '<div class="bqd-acts"><button type="button" class="bqd-btn" data-bqd-ozon-refresh><i data-icon="refresh"></i>' + esc(translate('Actualiser le suivi')) + '</button>'
@@ -249,7 +256,7 @@ function ozonHead(esc) {
 /* Le formulaire Ozon reprend la fiche destinataire prise à l'encaissement :
    nom, téléphone, adresse, ville et commentaire sont déjà là. */
 function sendOzon(panel, d, x) {
-  const c = x.customer || {};
+  const c = who(x) || {};
   ozonOpenSend({ slug: d.slug(), saleId: x.saleId, title: tr('Ticket') + ' ' + (x.ref || x.saleId), dueCents: x.dueCents,
     receiver: c.name || '', phone: c.phone || '', address: c.address || '', cityHint: c.city || '', note: c.note || '',
     toast: d.toast, onDone: () => loadOzon(panel, d, false) });
@@ -264,8 +271,9 @@ function rowOpen(x, d, esc) {
   const sub = [tr('Vendue le') + ' ' + when(x.ts), tr('jour {d} sur {t}').replace('{d}', String(Math.min(days, total))).replace('{t}', String(total))];
   if (x.returnedCents > 0) sub.push(tr('déjà revenu') + ' ' + madC(x.returnedCents, d));
   let ret = '';
-  if (isOpen && x.customer) {
-    ret += '<div class="bqd-addr">' + esc(x.customer.address) + (x.customer.note ? '<span>' + esc(x.customer.note) + '</span>' : '') + '</div>';
+  const cu = isOpen ? who(x) : null;
+  if (cu) {
+    ret += '<div class="bqd-addr">' + esc(cu.address) + (cu.note ? '<span>' + esc(cu.note) + '</span>' : '') + '</div>';
   }
   if (isOpen) {
     const lines = (x.lines || []).filter((l) => l.qty - l.returnedQty > 0);

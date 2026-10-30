@@ -243,6 +243,17 @@ export async function onRequestGet({ request, env }) {
   const returnsBySale = await readReturns(env.DB, merchant);
   if (await autoConfirm(env, merchant, rows, bySale, returnsBySale, Date.now())) bySale = await readCollections(env.DB, merchant);
   const cards = await readDeliveryCards(env.DB, merchant);
+  /* Le destinataire vient du colis Ozon quand il y en a un : c'est là qu'il se
+     saisit, et c'est ce que le livreur a. Il passe devant une ancienne fiche. */
+  try {
+    const rs = await env.DB.prepare(`SELECT sale_id, receiver, phone, city_name, address FROM ozon_parcels
+      WHERE merchant = ? ORDER BY created_ts ASC`).bind(merchant).all();
+    (rs.results || []).forEach((p) => {
+      if (!p.receiver && !p.phone) return;
+      cards.set(String(p.sale_id), { name: String(p.receiver || ''), phone: String(p.phone || ''),
+        city: String(p.city_name || ''), address: String(p.address || ''), note: '', source: 'ozon' });
+    });
+  } catch (_) { /* pas de table Ozon : les fiches seules */ }
   const all = rows.map((row) => view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)), cards.get(String(row.id)))).filter((d) => d.owedCents > 0);
   /* Le stock retenu d'une livraison réglée qui n'a pas pu sortir (catalogue en
      écriture au même instant) sort ici, à la lecture suivante. La caisse lit

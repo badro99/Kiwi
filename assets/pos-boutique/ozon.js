@@ -535,5 +535,8 @@ export function ozonOffer(card, o) {
     const host = done && done.closest('.modal-actions');
     if (host) host.parentNode.insertBefore(row, host); else card.appendChild(row);
     row.firstElementChild.addEventListener('click', () => ozonOpenSend({ ...o, onDone: () => { row.remove(); if (o.onDone) o.onDone(); } }));
+    /* Le destinataire ne se saisit plus à l'encaissement : le colis s'ouvre
+       tout seul, c'est là qu'on l'écrit. Fermé, le bouton reste pour y revenir. */
+    if (o.auto) row.firstElementChild.click();
   });
 }
