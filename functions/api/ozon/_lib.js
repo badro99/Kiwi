@@ -130,8 +130,13 @@ const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-
 export function readStatus(label) {
   const f = fold(label);
   if (!f) return 'pending';
-  if (/\bnon paye\b|\bimpaye\b/.test(f)) return 'delivered';
-  if (/\bpaye\b|\bpayee\b|\bpaid\b|\bregle\b/.test(f)) return 'paid';
+  /* Une négation d'abord, sous toutes ses formes (« non payé », « pas encore
+     payé », « impayé », « unpaid », « not paid ») : de l'argent n'entre jamais
+     sur un mot qui le nie. */
+  if (/\b(?:non|pas|not|jamais)\s+(?:encore\s+|yet\s+)?(?:paye|payee|payes|payees|regle|reglee|paid|settled)\b|\bimpaye|\bunpaid\b|\ben attente de paiement\b|\bpaiement en attente\b/.test(f)) {
+    return /\blivre|\bdelivered\b/.test(f) ? 'delivered' : 'in_transit';
+  }
+  if (/\b(?:paye|payee|paid|regle|reglee)\b/.test(f)) return 'paid';
   if (/\brefus/.test(f)) return 'refused';
   if (/\bretour/.test(f)) return 'returned';
   if (/\bannul/.test(f)) return 'cancelled';

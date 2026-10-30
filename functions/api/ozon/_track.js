@@ -44,7 +44,7 @@ export async function refreshTracking(env, merchant, { force = false, now = Date
   let rows = [];
   try {
     const rs = await env.DB.prepare(`SELECT tracking, sale_id, status, checked_ts, paid_ts FROM ozon_parcels
-      WHERE merchant = ? AND tracking NOT LIKE 'pending:%' AND status NOT IN ('paid', 'cancelled')
+      WHERE merchant = ? AND tracking NOT LIKE 'pending:%' AND status != 'cancelled' AND NOT (status = 'paid' AND paid_ts > 0)
       ORDER BY checked_ts ASC LIMIT 200`).bind(merchant).all();
     rows = rs.results || [];
   } catch (_) { return { ok: false, error: 'no-table' }; }
@@ -75,9 +75,14 @@ export async function refreshTracking(env, merchant, { force = false, now = Date
           wrote = await confirmByCarrier(env, merchant, row.sale_id, {
             collectionId: 'dlv-ozon-' + String(row.sale_id), byId: 'ozon', byName: 'Ozon Express · Payé', ts: now,
           });
-        } catch (_) { wrote = null; }
-        /* paid_ts se pose même quand il n'y avait plus rien à recevoir (déjà
-           encaissée à la main) : on ne redemande pas à chaque passage. */
+        } catch (_) {
+          /* L'encaissement n'a pas eu lieu : paid_ts reste à 0 et le prochain
+             passage réessaie (l'écriture est idempotente par collectionId). */
+          errors.push('collect-failed');
+          continue;
+        }
+        /* Rendu normal, écrit ou rien à recevoir (déjà encaissée à la main) :
+           on ne redemande pas à chaque passage. */
         await env.DB.prepare('UPDATE ozon_parcels SET paid_ts = ? WHERE merchant = ? AND tracking = ?').bind(now, merchant, row.tracking).run();
         if (wrote) paid += 1;
       }
