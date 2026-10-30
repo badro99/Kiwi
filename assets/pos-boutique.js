@@ -5,7 +5,7 @@ import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=3'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=8';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=3'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=9';
 
   'use strict';
 
@@ -1957,7 +1957,12 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
         // next catalogue sync). Real/paired store only; the local demo stays in-memory.
-        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente'));
+        // Une livraison ne sort du stock qu'une fois confirmée (payée au retour du
+        // livreur, ou passée en perte) : le serveur s'en charge alors
+        // (functions/api/_delivery-stock.js). Hors Live, rien ne la rapporterait :
+        // le stock sort ici comme avant.
+        sale.stockHeld = !!(window.KiwiLive && window.KiwiLive.isOn()) && (parts || []).some((x) => x && x.m === 'livraison');
+        if (!sale.stockHeld) sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente'));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —
         // the main caisse does the same via recordSale(). No-op unless live is on;
@@ -2005,7 +2010,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
               method: method,
               paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(receivedNow * 100),
               discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
-              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card,
+              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card, stockHeld: sale.stockHeld === true,
               label: isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
               time: sale.at,

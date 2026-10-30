@@ -32,6 +32,7 @@
 // une reprise hors ligne ne compte jamais deux fois.
 import { entitledMerchant, isTillFor, activeAccountSession } from '../auth/_lib.js';
 import { readDeliveryCards } from './_delivery-card.js';
+import { heldStockSales, isStockHeld, takeHeldStock } from './_delivery-stock.js';
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -243,6 +244,21 @@ export async function onRequestGet({ request, env }) {
   if (await autoConfirm(env, merchant, rows, bySale, returnsBySale, Date.now())) bySale = await readCollections(env.DB, merchant);
   const cards = await readDeliveryCards(env.DB, merchant);
   const all = rows.map((row) => view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)), cards.get(String(row.id)))).filter((d) => d.owedCents > 0);
+  /* Le stock retenu d'une livraison réglée qui n'a pas pu sortir (catalogue en
+     écriture au même instant) sort ici, à la lecture suivante. La caisse lit
+     `stockHeld` pour ne pas remettre en stock un retour qui n'en était pas sorti. */
+  const held = await heldStockSales(env.DB, merchant);
+  let caught = 0;
+  for (const row of rows) {
+    const id = String(row.id);
+    if (!held.has(id) || caught >= 10) continue;
+    const d = all.find((x) => x.saleId === id);
+    if (!row.delivery_written_off && d && d.dueCents > 0) continue;
+    caught += 1;
+    await takeHeldStock(env, merchant, id);
+    held.delete(id);
+  }
+  all.forEach((d) => { d.stockHeld = held.has(d.saleId); });
   return json({
     confirmDays: CONFIRM_DAYS,
     open: all.filter((d) => d.dueCents > 0),
@@ -333,8 +349,11 @@ async function writeCollection(env, merchant, row, o) {
       .bind(o.collectionId, merchant, Math.round(o.amount / 100), o.amount, o.method, label, row.ref || null, ts, merchant, saleId, lines,
         merchant, o.collectionId, ts),
   ]);
-  return env.DB.prepare(`SELECT collection_sale_id, sale_id, method, amount_cents, ts FROM delivery_collections
+  const written = await env.DB.prepare(`SELECT collection_sale_id, sale_id, method, amount_cents, ts FROM delivery_collections
     WHERE merchant = ? AND collection_sale_id = ?`).bind(merchant, o.collectionId).first();
+  /* Payée en entier : le stock retenu sort maintenant (functions/api/_delivery-stock.js). */
+  if (written && !(await remainingFor(env.DB, merchant, saleId))) await takeHeldStock(env, merchant, saleId);
+  return written;
 }
 
 function saleBody(row) {
@@ -409,7 +428,12 @@ async function recordReturn(env, merchant, saleId, b) {
     if (again) return json({ ok: true, already: true, returnedCents: again.amountCents, lines: again.lines, dueCents: await remainingFor(env.DB, merchant, saleId) });
     return json({ error: 'nothing-due', dueCents: await remainingFor(env.DB, merchant, saleId) }, 409);
   }
-  return json({ ok: true, already: false, returnedCents: value, lines, dueCents: Math.max(0, due - value) });
+  /* Une livraison retenue n'est jamais sortie du stock : le retour n'y remet
+     rien (la caisse lit `stockHeld`). Si le retour solde la livraison, ce qui
+     reste chez le client sort maintenant. */
+  const stockHeld = await isStockHeld(env.DB, merchant, saleId);
+  if (stockHeld && !(due - value > 0)) await takeHeldStock(env, merchant, saleId);
+  return json({ ok: true, already: false, returnedCents: value, lines, dueCents: Math.max(0, due - value), stockHeld });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -441,6 +465,7 @@ export async function onRequestPost({ request, env }) {
         'delivery', ?, '{}', ? WHERE NOT EXISTS
         (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-writeoff')`)
       .bind(merchant, saleId, session.aid, owedCents(row), merchant, saleId, row.ts, Date.now(), merchant, saleId).run();
+    await takeHeldStock(env, merchant, saleId);   // l'article ne reviendra pas
     return json({ ok: true, dueCents: 0 });
   }
   if (b.action === 'return') return recordReturn(env, merchant, saleId, b);

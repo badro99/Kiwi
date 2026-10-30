@@ -410,7 +410,8 @@ function send(panel, d, saleId, all) {
       /* Le stock ne revient qu'une fois : sur un retour que le serveur vient
          d'accepter. Les lignes viennent de sa réponse, pas de la sélection. */
       let pieces = 0;
-      if (!res.already) {
+      /* Une livraison retenue n'a jamais quitté le stock : rien à y remettre. */
+      if (!res.already && !res.stockHeld) {
         (res.lines || []).forEach((l) => {
           const line = (x.lines || []).find((y) => y.i === l.i);
           const parts = String(line && line.variant || '').split(':');

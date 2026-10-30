@@ -18,6 +18,7 @@ import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js'
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
 import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
 import { saveDeliveryCard } from './_delivery-card.js';
+import { markStockHeld } from './_delivery-stock.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -897,6 +898,11 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
      au mieux et une seule fois : jamais une cliente du carnet. */
   if (channel === 'delivery' && b.deliveryCard) {
     try { await saveDeliveryCard(env.DB, merchant, id, b.deliveryCard, ts); } catch (_) { /* la vente reste */ }
+  }
+  /* La caisse n'a pas touché au stock : il sortira à la confirmation
+     (functions/api/_delivery-stock.js). Une seule fois, au mieux. */
+  if (channel === 'delivery' && b.stockHeld === true) {
+    try { await markStockHeld(env.DB, merchant, id, ts); } catch (_) { /* la vente reste */ }
   }
 
   if (paymentParts) {
