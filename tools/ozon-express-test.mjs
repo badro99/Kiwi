@@ -285,6 +285,12 @@ await ok('a delivery sale whose card names an Ozon city creates its parcel by it
   assert.equal(sent[sent.length - 1].body['parcel-price'], '250', 'the courier collects 200 + 50');
   await tillSale('dlv-auto-1', { name: 'Imane Instagram', phone: '0612345678', city: 'Agadir', cityId: 37, address: 'Hay Salam, rue 4' });
   assert.equal(calls.filter((c) => c.path === 'add-parcel').length, before + 1, 'a resent ticket never makes a second parcel');
+  /* « Imprimer l'étiquette » : un bon pour ce seul colis, puis son PDF public. */
+  const label = await call(notes, 'onRequestPost', '/api/ozon/notes', 'POST', till, { merchant: MERCHANT, trackings: [row.tracking] });
+  assert.equal(label.status, 200, JSON.stringify(label.body));
+  assert.equal(label.body.parcels, 1, 'the label note holds only that parcel');
+  assert.ok(/pdf-delivery-note-tickets-4-4\?dn-ref=/.test(label.body.pdf.labels10x10));
+  assert.equal(sqlite.prepare("SELECT bl_ref FROM ozon_parcels WHERE merchant = ? AND sale_id = 'dlv-auto-1'").get(MERCHANT).bl_ref, label.body.ref);
 });
 await ok('a card without an Ozon city creates no parcel; a refused one is shown on the delivery', async () => {
   const before = calls.filter((c) => c.path === 'add-parcel').length;

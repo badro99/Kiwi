@@ -20,6 +20,7 @@ import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-t
 import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
 import { autoParcel } from './ozon/parcels.js';
+import { exactMerchant } from './ozon/_lib.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -1126,7 +1127,10 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
      colis déjà créé). Hors du temps de réponse quand la plateforme le permet. */
   if (channel === 'delivery' && b.deliveryCard) {
     const card = cleanDeliveryCard(b.deliveryCard);
-    if (card && card.cityId) {
+    /* Même porte que « Envoyer avec Ozon » (functions/api/ozon/parcels.js) :
+       la caisse appairée, le propriétaire ou un opérateur. */
+    const allowed = card && card.cityId ? await exactMerchant(request, env, merchant, true).catch(() => '') : '';
+    if (allowed === merchant) {
       const job = autoParcel(env, merchant, id, card).catch(() => null);
       let later = false;
       try { if (typeof waitUntil === 'function') { waitUntil(job); later = true; } } catch (_) { later = false; }

@@ -48,7 +48,10 @@ const PHRASES = {
   'Étiquettes A4': ['A4 labels', 'ملصقات A4'],
   'Étiquettes 10 × 10 cm': ['10 × 10 cm labels', 'ملصقات 10 × 10 سم'],
   'Fermer': ['Close', 'إغلاق'],
-  'Les PDF s’ouvrent sur le site Ozon, connecté au compte de la boutique.': ['The PDFs open on the Ozon site, signed in to the shop account.', 'تُفتح ملفات PDF على موقع أوزون بحساب المتجر.'],
+  'Les étiquettes s’ouvrent en PDF, prêtes à imprimer.': ['The labels open as a PDF, ready to print.', 'تُفتح الملصقات بصيغة PDF، جاهزة للطباعة.'],
+  'Imprimer l’étiquette': ['Print label', 'طباعة الملصق'],
+  'Étiquette prête': ['Label ready', 'الملصق جاهز'],
+  'Étiquette non créée': ['Label not created', 'لم يُنشأ الملصق'],
   'En attente de ramassage': ['Waiting for pickup', 'في انتظار الاستلام'],
   'En route': ['On the way', 'في الطريق'],
   'Livré, en attente du paiement Ozon': ['Delivered, waiting for Ozon payment', 'سُلّم، في انتظار دفع أوزون'],
@@ -108,6 +111,10 @@ const mad = (cents) => {
 const KIND = { ok: 'ok', warn: 'warn', bad: 'bad', none: '' };
 
 const status = new Map();      // slug → Promise<{connected}>
+let labelSlug = '';            // la boutique dont la page Livraisons montre les colis
+/* L'étiquette 10 × 10 d'un bon de livraison : un PDF public d'Ozon, ouvert par
+   sa référence, sans connexion à TrackyOzon (vérifié le 30 oct. 2026). */
+const LABEL_PDF = 'https://client.ozoneexpress.ma/pdf-delivery-note-tickets-4-4?dn-ref=';
 let citiesP = null;
 
 async function getJSON(url) {
@@ -134,6 +141,7 @@ export function ozonConnected(slug) {
 /* Les colis de la boutique, par vente. `refresh` relit le suivi chez Ozon
    (au plus toutes les cinq minutes côté serveur), `force` sans délai. */
 export async function ozonParcels(slug, opts = {}) {
+  labelSlug = slug;
   const q = opts.force ? '&force=1' : opts.refresh ? '&refresh=1' : '';
   const data = await getJSON('/api/ozon/parcels?merchant=' + encodeURIComponent(slug) + q);
   const bySale = new Map((data.parcels || []).map((p) => [p.saleId, p]));
@@ -182,6 +190,7 @@ export function ozonLine(p) {
     + '<div class="ozs-lt"><button type="button" class="ozs-code" data-ozs-copy="' + esc(p.tracking) + '" title="' + esc(tr('Copier le numéro')) + '">Ozon <code>' + esc(p.tracking) + '</code><i data-icon="content_copy"></i></button>'
     + '<span>' + esc(tr(text) + ozonWords + (p.city ? ' · ' + p.city : '')) + '</span></div>'
     + '<div class="ozs-steps" aria-hidden="true">' + steps + '</div>'
+    + (rolling ? '<button type="button" class="ozs-wa" data-ozs-label="' + esc(p.tracking) + '" data-ozs-bl="' + esc(p.blRef || '') + '"><i data-icon="print"></i>' + esc(tr('Imprimer l’étiquette')) + '</button>' : '')
     + (rolling && wa ? '<a class="ozs-wa" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '"><i data-icon="chat"></i>' + esc(tr('Envoyer le suivi au client')) + '</a>' : '')
     + '</div>';
 }
@@ -335,12 +344,42 @@ function css() {
       if (host) { host.scrollIntoView({ behavior: 'smooth', block: 'center' }); host.classList.add('ozs-flash'); setTimeout(() => host.classList.remove('ozs-flash'), 1400); }
       return;
     }
+    const lab = e.target && e.target.closest && e.target.closest('[data-ozs-label]');
+    if (lab) { e.stopPropagation(); printLabel(lab); return; }
     const b = e.target && e.target.closest && e.target.closest('[data-ozs-copy]');
     if (!b) return;
     e.stopPropagation();
     const done = () => { b.classList.add('is-copied'); b.setAttribute('title', tr('Numéro copié')); };
     try { navigator.clipboard.writeText(b.getAttribute('data-ozs-copy')).then(done, () => {}); } catch (_) {}
   }, true);
+}
+
+/* « Imprimer l'étiquette » : l'étiquette officielle d'Ozon, en PDF. Un colis
+   pas encore sur un bon de livraison en reçoit un à lui seul (Ozon n'imprime
+   les étiquettes que par bon) ; ensuite le même bouton rouvre la même. La
+   fenêtre s'ouvre au toucher, avant l'appel, pour que le navigateur la laisse
+   passer. */
+function printLabel(btn) {
+  const tracking = btn.getAttribute('data-ozs-label'), bl = btn.getAttribute('data-ozs-bl');
+  const w = window.open('', '_blank');
+  const show = (ref) => {
+    const url = LABEL_PDF + encodeURIComponent(ref);
+    btn.setAttribute('data-ozs-bl', ref);
+    if (w && !w.closed) { w.location.href = url; return; }
+    veil('<h3>' + esc(tr('Étiquette prête')) + '</h3><div class="ozs-links"><a class="ozs-btn go" target="_blank" rel="noopener" href="' + esc(url) + '">' + esc(tr('Imprimer l’étiquette')) + '</a></div>'
+      + '<div class="ozs-acts"><button type="button" class="ozs-btn" data-ozs-close>' + esc(tr('Fermer')) + '</button></div>');
+  };
+  if (bl) { show(bl); return; }
+  if (!labelSlug) { if (w) w.close(); return; }
+  btn.disabled = true;
+  postJSON('/api/ozon/notes', { merchant: labelSlug, trackings: [tracking] })
+    .then((res) => show(res.ref))
+    .catch((e) => {
+      if (w) w.close();
+      veil('<h3>' + esc(tr('Étiquette non créée')) + '</h3><p>' + esc((e && e.body && e.body.message) || tr('Ozon ne répond pas. Réessayez dans un instant.')) + '</p>'
+        + '<div class="ozs-acts"><button type="button" class="ozs-btn" data-ozs-close>' + esc(tr('Fermer')) + '</button></div>');
+    })
+    .finally(() => { btn.disabled = false; });
 }
 
 /* La liste des villes Ozon, pour la fiche de livraison de la caisse
@@ -513,7 +552,7 @@ const noParcels = (e) => !!e && e.message === 'no-parcels';
 export function ozonMakeNote(slug, toast) {
   return postJSON('/api/ozon/notes', { merchant: slug }).then((res) => {
     const v = veil('<h3>' + esc(tr('Bon de livraison créé')) + ' · ' + esc(res.ref) + '</h3>'
-      + '<p>' + esc(tr('Les PDF s’ouvrent sur le site Ozon, connecté au compte de la boutique.')) + '</p>'
+      + '<p>' + esc(tr('Les étiquettes s’ouvrent en PDF, prêtes à imprimer.')) + '</p>'
       + '<div class="ozs-links">'
       + '<a class="ozs-btn go" target="_blank" rel="noopener" href="' + esc(res.pdf.labels10x10) + '">' + esc(tr('Étiquettes 10 × 10 cm')) + '</a>'
       + '<a class="ozs-btn" target="_blank" rel="noopener" href="' + esc(res.pdf.labelsA4) + '">' + esc(tr('Étiquettes A4')) + '</a>'
