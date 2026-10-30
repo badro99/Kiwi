@@ -33,6 +33,23 @@ function cleanLines(raw) {
   } catch (_) { return []; }
 }
 
+async function liveOriginalId(env, merchant, id) {
+  const live = "merchant = ? AND void_ts IS NULL AND COALESCE(amount_cents, amount * 100) >= 0";
+  try {
+    if (await env.DB.prepare(`SELECT 1 FROM sales WHERE ${live} AND id = ? LIMIT 1`).bind(merchant, id).first()) return id;
+    /* Only the till's own shapes are remapped: its local `sale-<uuid>` and the
+       server's `sale-ref-<hash>-<tail>` (assets/live-link.js › stableId). Any
+       other id must match exactly. The tail is 32 chars of a random id, the
+       store is the same, and refund-exceeds-sale still caps the target. */
+    if (!/^sale-(ref-[0-9a-f]{6,8}-|[0-9a-f]{8}-[0-9a-f]{4}-)/.test(id)) return id;
+    const tail = id.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
+    if (tail.length < 16) return id;
+    const rows = (await env.DB.prepare(`SELECT id FROM sales WHERE ${live} AND id != ? AND substr(id, -?) = ? LIMIT 2`)
+      .bind(merchant, id, tail.length, tail).all()).results || [];
+    return rows.length === 1 ? String(rows[0].id) : id;
+  } catch (_) { return id; }
+}
+
 export async function onRequestPost({ request, env, quarantineSettlement = '' }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
 
@@ -41,7 +58,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
 
   const asked = String((body && body.merchant) || '').slice(0, 64);
   const refundId = cleanId(body && body.id, 64);
-  const originalSaleId = cleanId(body && body.originalSaleId, 64);
+  let originalSaleId = cleanId(body && body.originalSaleId, 64);
   const amountCents = Math.round(Number(body && body.amountCents));
   const requestedMethod = String((body && body.refundMethod) || '').slice(0, 16);
   const approval = String((body && body.approval) || '').slice(0, 1400);
@@ -71,6 +88,12 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   }
   const actorId = cleanId(proof.staffId, 96);
   const actor = String(proof.staffName).trim().slice(0, 80);
+  /* The till may name the original sale under another id than the one the
+     server kept: its local `sale-<uuid>` (stored as sale-ref-<hash>-<tail>),
+     or a sale-ref twin later voided as a duplicate of `visit-…` (Pasta
+     Corner, Sept 2026). Same tail, same store, one live row = that sale. The
+     proof above was checked against the id the till signed. */
+  originalSaleId = await liveOriginalId(env, merchant, originalSaleId);
 
   let original;
   try {

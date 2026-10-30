@@ -93,6 +93,19 @@ sql.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES
 sql.prepare("INSERT INTO store_credit_events(id,merchant,credit_id,code,action,amount_cents,balance_after_cents,ref_id,actor,detail,ts) VALUES('synthetic-issue','fixture-a','synthetic-voucher','synthetic-voucher','issue',7000,7000,'synthetic-credit-cap','fixture','',?)").run(Date.now());
 await call({action:'upload',payload:{...payload,id:'synthetic-refund-credit-cap',originalSaleId:'synthetic-credit-cap',amountCents:4000}});
 assert.equal((await call({action:'approve',id:'synthetic-refund-credit-cap'},owner)).httpStatus,409,'issued credits reduce the actual refundable balance');
+// Pasta Corner, Sept 2026: the refund names a sale-ref twin that was later
+// voided as a duplicate; the live sale is visit-<same tail>. Same store, one
+// live row with that tail = the sale. A sale nobody has stays refused.
+sql.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts,void_ts) VALUES('sale-ref-aaaa1111-t-tsx-TwinTwinTwinTwinTwinTw-emp','fixture-a',50,5000,'cash',?,?)").run(Date.now(),Date.now());
+sql.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES('visit-tsx-TwinTwinTwinTwinTwinTw-emp','fixture-a',50,5000,'cash',?)").run(Date.now());
+await call({action:'upload',payload:{...payload,id:'synthetic-twin-refund',originalSaleId:'sale-ref-aaaa1111-t-tsx-TwinTwinTwinTwinTwinTw-emp',amountCents:1500},reason:'manager-required'});
+assert.equal((await call({action:'approve',id:'synthetic-twin-refund'},owner)).httpStatus,200,'a refund naming a voided twin settles on the live sale');
+assert.equal(sql.prepare("SELECT sale_id FROM sale_audit WHERE note='synthetic-twin-refund'").get().sale_id,'visit-tsx-TwinTwinTwinTwinTwinTw-emp');
+assert.equal((await call({action:'approve',id:'synthetic-twin-refund'},owner)).httpStatus,200,'approving again stays one refund');
+assert.equal(sql.prepare("SELECT count(*) n FROM sale_audit WHERE note='synthetic-twin-refund'").get().n,1);
+await call({action:'upload',payload:{...payload,id:'synthetic-gone-refund',originalSaleId:'visit-tsx-GoneGoneGoneGoneGoneGo-emp',amountCents:1500},reason:'manager-required'});
+assert.equal((await call({action:'approve',id:'synthetic-gone-refund'},owner)).error,'sale-not-found','a sale the server never received is not guessed');
+assert.equal((await call({action:'decline',id:'synthetic-gone-refund'},owner)).httpStatus,200,'the owner can still declare it not done');
 const refusedProof=await managerRefundProof(env.AUTH_SECRET,{merchant:'fixture-a',refundId:'synthetic-decline',originalSaleId:'synthetic-sale',amountCents:3000,refundMethod:'cash',staffId:'fixture',staffName:'Fixture',staffRole:'manager'});
 const direct=await refundPost({env,request:new Request('https://example.test/api/sale/refund',{method:'POST',headers:{cookie:till},body:JSON.stringify({...payload,id:'synthetic-decline',refundMethod:'cash',approval:refusedProof})})});
 assert.equal(direct.status,409,'normal till refund path cannot bypass owner decline');
