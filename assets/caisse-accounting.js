@@ -1264,7 +1264,7 @@
       clPaint();
       clientModal.classList.add('is-open');
       if (window.lucide) lucide.createIcons();
-      setTimeout(() => { try { $('#cl-search').focus(); } catch (_) {} }, 120);
+      // Pas de focus auto : sur tablette le clavier couvrait la liste. La recherche reste au toucher.
     }
     function closeClientModal() { clientModal.classList.remove('is-open'); }
     function attachClient(rec) {

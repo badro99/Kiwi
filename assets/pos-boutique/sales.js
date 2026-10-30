@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=225';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=126';
-import { offerRegister } from './inventory.js?v=126';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=226';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=127';
+import { offerRegister } from './inventory.js?v=127';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=20';
@@ -913,7 +913,7 @@ import { photoImg } from '../retail-photos.js?v=5';
     render('');
     openVeil('#bq-client-veil');
     icons();
-    setTimeout(() => { const i = $('#bq-cl-q', el); if (i) i.focus(); }, 60);
+    // Pas de focus auto : sur tablette le clavier couvrait la liste. La recherche reste au toucher.
   }
   function moveCaretEnd(input) { const v = input.value; input.value = ''; input.value = v; }
 
