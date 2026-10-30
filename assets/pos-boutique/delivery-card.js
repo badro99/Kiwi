@@ -69,7 +69,7 @@ function css() {
     '.bqdc-f{display:flex;flex-direction:column;gap:5px;min-width:0;}',
     '.bqdc-f.wide{grid-column:1 / -1;}',
     '.bqdc-f.combo{position:relative;}',
-    '.bqdc-sug{position:absolute;z-index:5;left:0;right:0;top:calc(100% - 2px);margin:0;padding:4px;list-style:none;max-height:244px;overflow:auto;background:var(--paper-elev,#FFFDFA);border:1px solid var(--line,#E2DDD2);border-radius:10px;box-shadow:0 10px 28px rgba(10,15,13,.12);}',
+    '.bqdc-sug{position:absolute;z-index:5;left:0;right:0;top:calc(100% - 2px);margin:0;padding:4px;list-style:none;max-height:300px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--paper-elev,#FFFDFA);border:1px solid var(--line,#E2DDD2);border-radius:10px;box-shadow:0 10px 28px rgba(10,15,13,.12);}',
     '.bqdc-sug[hidden]{display:none;}',
     '.bqdc-sug li{padding:10px 12px;border-radius:8px;font-size:15px;cursor:pointer;color:var(--ink,#0A0F0D);}',
     '.bqdc-sug li[aria-selected="true"],.bqdc-sug li:hover{background:var(--paper-soft,#F1EEE7);}',
@@ -162,8 +162,9 @@ export function bqDeliveryCard(el, o) {
     if (oc) { card.city = oc.name; card.cityId = oc.id; }
     o.done(card);
   };
-  /* La liste des villes : la nôtre, claire, sous le champ, six à la fois au
-     plus. Celles qui commencent par la frappe passent devant. */
+  /* La liste des villes : la nôtre, claire, sous le champ, et toute la liste
+     défile au doigt. Celles qui commencent par la frappe passent devant. Un
+     glissé fait défiler sans choisir ni fermer : on choisit au tap (click). */
   const cityIn = nodeOf('city');
   const sug = form.querySelector('#bqdc-sug');
   let hits = [];
@@ -184,10 +185,11 @@ export function bqDeliveryCard(el, o) {
     const starts = [];
     const has = [];
     for (const n of all) { const f = fold(n); if (!q || f.startsWith(q)) starts.push(n); else if (f.includes(q)) has.push(n); }
-    hits = starts.concat(has).slice(0, 6);
+    hits = starts.concat(has);
     if (q && hits.length === 1 && fold(hits[0]) === q) { closeSug(); return; }
     cur = hits.length ? 0 : -1;
     paint();
+    sug.scrollTop = 0;
     sug.hidden = false;
     cityIn.setAttribute('aria-expanded', 'true');
   };
@@ -201,7 +203,19 @@ export function bqDeliveryCard(el, o) {
   };
   cityIn.addEventListener('input', openSug);
   cityIn.addEventListener('focus', openSug);
-  cityIn.addEventListener('blur', () => setTimeout(closeSug, 120));
+  let inList = false;
+  cityIn.addEventListener('blur', () => setTimeout(() => { if (!inList) closeSug(); }, 150));
+  sug.addEventListener('pointerdown', (e) => {
+    inList = true;
+    if (e.pointerType === 'mouse') e.preventDefault();   // la souris garde le focus dans le champ
+  });
+  const release = () => setTimeout(() => { inList = false; }, 400);
+  sug.addEventListener('pointerup', release);
+  sug.addEventListener('pointercancel', release);
+  sug.addEventListener('scroll', () => { inList = true; release(); }, { passive: true });
+  el.addEventListener('pointerdown', (e) => {
+    if (!sug.hidden && !e.target.closest('.bqdc-f.combo')) closeSug();
+  });
   cityIn.addEventListener('keydown', (e) => {
     if (sug.hidden) { if (e.key === 'ArrowDown') { openSug(); e.preventDefault(); } return; }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -211,10 +225,9 @@ export function bqDeliveryCard(el, o) {
     } else if (e.key === 'Enter' && cur >= 0) { pick(cur); e.preventDefault(); }
     else if (e.key === 'Escape') { closeSug(); e.stopPropagation(); e.preventDefault(); }
   });
-  sug.addEventListener('pointerdown', (e) => {
+  sug.addEventListener('click', (e) => {
     const li = e.target.closest && e.target.closest('li[data-i]');
-    e.preventDefault();
-    if (li) pick(Number(li.dataset.i));
+    if (li) { inList = false; pick(Number(li.dataset.i)); }
   });
   /* Ozon relié : la liste de villes devient celle d'Ozon, et la fiche dit ce
      que le client paiera au livreur. Ozon absent ou muet : la fiche d'avant. */
