@@ -35,7 +35,7 @@ app they cannot get into, or whose demo contradicts itself.
 - [x] **B1 · Demo tells one story.** In "Enter the demo", Home, Orders,
   Report and Customers agree for the same day: same revenue, same order
   count, same payment mix. *(Claude)*
-- [ ] **B2 · No dead ends.** Every role (Till, Kiwi Team, Kitchen,
+- [x] **B2 · No dead ends.** Every role (Till, Kiwi Team, Kitchen,
   Dashboard) has a visible way back: Change role, Sign out. *(Claude, test)*
 - [x] **B3 · No placeholder, debug or "test" content** visible to a
   reviewer: no lorem ipsum, no `TODO`, no raw i18n keys, no "beta". *(Claude)*
@@ -223,3 +223,18 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   EN and AR, with Apple's limits under test. Review account: the Amira Cafe
   login. Build 42 waits on the till fixes of the day (boutique inventory
   switch, God Mode entry, per-worker inventory permission) reaching main.
+- **Build 42 uploaded** (`83f6251f`): "Upload succeeded", processing. A 32.3 MB
+  `.ipa`, build number 42, `com.kiwios.pro`. Ships the till fixes of 29
+  October: the boutique inventory switch per worker, the sizes grid at
+  creation (total, then one box per size), the Livraisons page and the Z
+  report in two tickets. Full `node tools/check.js` green on that commit (three
+  warnings: no booted simulator, no Rust toolchain, EN/AR leak sweep left to
+  `KIWI_LOCALES`). The first cut stopped on two things: the skin fingerprint
+  of the boutique till had not recorded the new Livraisons tab (only
+  `bq-nav-it:8` was added to the six French cells), and three suites passed
+  30 s of CPU at load average 14 (alone: 8 s, 8 s and green).
+- **B2 closed.** `native-pass3-gates-test.mjs` clicks the "Change role" exit
+  on every entry gate (dashboard lock, team code, kitchen pairing, till code,
+  till and waiter clock-in, table) in FR, EN and AR and checks it leaves
+  without a code; `native-account-scope-test.mjs` keeps Change role and Sign
+  out in the till and team menus. Both in the gate.
