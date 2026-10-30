@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=113';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=33';
-import { invSetModal, offerRegister } from './inventory.js?v=33';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=116';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=36';
+import { invSetModal, offerRegister } from './inventory.js?v=36';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=4';
 
@@ -2253,7 +2253,7 @@ import { photoImg } from '../retail-photos.js?v=4';
         </div>
         <div style="margin-bottom:14px; font-size:12.5px; line-height:1.5;">
           <div><b>Destinataire :</b> ${esc(del.name)} (${esc(del.phone || 'Non renseigné')})</div>
-          <div><b>Quartier :</b> ${esc(del.quartier)}</div>
+          <div><b>${del.city ? 'Ville' : 'Quartier'} :</b> ${esc([del.city, del.quartier].filter(Boolean).join(' · '))}</div>
           <div><b>Adresse :</b> ${esc(del.address || 'Au comptoir')}</div>
           <div><b>Créneau :</b> ${esc(del.slot || 'Standard')}</div>
           ${del.instructions ? `<div><b>Note :</b> <i>${esc(del.instructions)}</i></div>` : ''}

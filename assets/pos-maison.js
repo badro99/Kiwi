@@ -1,6 +1,7 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=33';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=33';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=33';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=36';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=36';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=36';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { mzLivraisons } from './pos-maison/delivery.js?v=1';
 
   'use strict';
 
@@ -1522,7 +1523,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
           <button class="mz-nav-it" data-mz-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="mz-nav-it" data-mz-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="mz-nav-badge" id="mz-badge-cl"></b></button>
-          <button class="mz-nav-it" data-mz-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button>
+          <button class="mz-nav-it" data-mz-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button><button class="mz-nav-it" data-mz-view="livraisons"><i data-lucide="local_shipping"></i><span>Livraisons</span></button>
         </nav>
         <div class="mz-rail-foot">
           <button class="mz-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>
@@ -1567,7 +1568,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
         <section class="mz-view" data-mz-panel="echanges"></section>
         <section class="mz-view" data-mz-panel="vendus"></section>
         <section class="mz-view" data-mz-panel="clientes"></section>
-        <section class="mz-view" data-mz-panel="acomptes"></section>
+        <section class="mz-view" data-mz-panel="acomptes"></section><section class="mz-view" data-mz-panel="livraisons"></section>
       </main>
       <div class="modal-veil" id="mz-sheet-veil"><div class="modal mz-sheet mz-rel" id="mz-sheetm"></div></div>
       <div class="modal-veil" id="mz-approve-veil"><div class="modal mz-approve mz-rel" id="mz-approvem"></div></div>
@@ -1823,7 +1824,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
       else panel.innerHTML = '<div class="mz-empty" style="margin:40px;">Analyse des ventes indisponible.</div>';
     }
     if (view === 'clientes') renderClientes();
-    if (view === 'acomptes') renderAcomptes();
+    if (view === 'acomptes') renderAcomptes(); if (view === 'livraisons') mzLivraisons($('[data-mz-panel="livraisons"]', root), { esc, icons, toast, fmtMAD, persistStock: (pid, size, color, delta, ref, why) => persistStock(pid, size, color, delta, { ref, why }), slug: merchantSlug, demo: IS_DEMO });
   }
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;
@@ -2079,7 +2080,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
               method: method,
               paymentParts: bqPaymentParts(parts),
               discountPercents: [...new Set(t.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
-              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
+              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card,
               label: isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
               time: sale.at,
@@ -2292,10 +2293,10 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     return methods.some((part) => part.method === 'delivery') ? 'delivery' : 'credit';
   }
 
-  function bqDayTotals() {
+  function bqDayTotals(only) {
     const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0, acompteReceived: 0, outstanding: 0 };
-    salesToday().forEach((s) => {
-      let took = 0;
+    zSalesFor(salesToday(), only).forEach((s) => {
+      let took = 0; const away = only === 'store' && zIsDelivery(s);   /* livraison vue du Z magasin : l'argent du comptoir seul */
       /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
          raison, ce n'est pas de l'argent qui rentre — mais l'écarter du total
          ne dispense pas de le dire : la marchandise, elle, est bien sortie du
@@ -2303,8 +2304,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
          stock contre un avoir sans qu'aucun chiffre de la clôture ne bouge. */
       let onAvoir = 0;
       if (Array.isArray(s.parts)) s.parts.forEach((p) => { if (p && p.m === 'avoir') onAvoir += +p.amount || 0; });
-      if (onAvoir > 0) { t.avoirUsed += onAvoir; t.avoirUsedN++; }
-      bqMoneyParts(s).forEach((p) => {
+      if (onAvoir > 0 && !away) { t.avoirUsed += onAvoir; t.avoirUsedN++; }
+      zSplitParts(s, bqMoneyParts(s), only).forEach((p) => {
         if (p.m !== 'livraison') took += p.amount;
         if (p.m === 'espèces') t.cash += p.amount;
         else if (p.m === 'carte') t.card += p.amount;
@@ -2314,7 +2315,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
         else t.other += p.amount;
       });
       if (took > 0) { t.moneyIn += took; t.paidTxns++; }
-      if (s.kind === 'acompte' || s.kind === 'acompte-reglement') t.acompteReceived += took;
+      if (s.kind === 'acompte' || s.kind === 'acompte-reglement') t.acompteReceived += took; if (away) return;   /* le ticket, ses articles et sa remise partent sur le Z livraisons */
       /* DEUX compteurs, parce qu'il y a deux questions. `paidTxns` ne retient
          que les tickets qui ont fait entrer de l'argent — c'est le diviseur du
          ticket moyen. `txns` compte TOUS les tickets du jour, y compris celui
@@ -2335,12 +2336,12 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
        dette que le magasin vient de contracter) et ce qui a été CONSOMMÉ (une
        dette qu'il vient d'éteindre en marchandise). Les additionner serait un
        contresens ; les taire l'était aussi. */
-    AVOIRS.forEach((a) => {
+    if (only !== 'delivery') AVOIRS.forEach((a) => {
       if (!a || !a.at || !isToday(a.at)) return;
       const v = +a.amount || 0;
       if (v > 0) { t.avoirIssued += v; t.avoirIssuedN++; }
     });
-    t.outstanding = bqOutstandingCents / 100;
+    t.outstanding = only === 'delivery' ? 0 : bqOutstandingCents / 100;
     ['moneyIn', 'cash', 'card', 'transfer', 'cheque', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued', 'acompteReceived'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
     return t;
   }
@@ -2351,21 +2352,21 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
      rend le tiroir exact quand un ticket est réglé moitié carte moitié espèces.
      Le panier ne voyage qu'avec la première part, sinon le classement par
      rayon compterait chaque article deux fois. */
-  function bqReportSales() {
+  function bqReportSales(only) {
     const out = [];
-    salesToday().forEach((s) => {
-      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime();
-      const lines = (s.lines || []).filter((ln) => lineAvailableQty(ln) > 0).map((ln) => ({
+    zSalesFor(salesToday(), only).forEach((s) => {
+      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime(), away = only === 'store' && zIsDelivery(s);
+      const lines = (away ? [] : s.lines || []).filter((ln) => lineAvailableQty(ln) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
         qty: lineAvailableQty(ln),
         total: Math.round((+ln.unit || 0) * lineAvailableQty(ln) * 100) / 100,
         cat: rayonOf(ln.pid) || '',
       }));
-      const taken = bqMoneyParts(s);
+      const taken = zSplitParts(s, bqMoneyParts(s), only);
       if (s.syncId && taken.length) {
         out.push({ id: s.syncId, ts: at,
           amount: taken.reduce((sum, part) => sum + part.amount, 0),
-          method: bqPaymentMethod(s.parts),
+          method: bqPaymentMethod(zSentParts(s, only)),
           parts: bqPaymentParts(taken),
           label: s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
           ref: s.id, cashier: s.by || '', lines: lines.length ? lines : null });
@@ -2389,20 +2390,20 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     return out;
   }
 
-  function bqReportSession(counted) {
-    const t = bqDayTotals();
+  function bqReportSession(counted, only) {
+    const t = bqDayTotals(only);
     return {
       openedAt: bqShift ? bqShift.openedAt : 0,
       openedBy: bqShift ? bqShift.openedBy : '',
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
-      openingFloat: bqShift ? bqShift.float : 0,
+      openingFloat: only !== 'delivery' && bqShift ? bqShift.float : 0,
       cashMovements: [], handovers: [],
       discounts: t.discounts, discountsCount: t.discountsN, cancels: 0,
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
-      countedCash: counted,
+      countedCash: only === 'delivery' ? null : counted,
     };
   }
   /* La journée commerciale EN COURS, comme closeRegister() côté restaurant.
@@ -2411,15 +2412,15 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
      poste resté ouvert depuis la veille classait les ventes du jour (salesToday)
      sous la date d'ouverture, où le calcul n'en gardait aucune : la veille était
      réécrite à 0 et le jour qui vendait n'avait pas de rapport. */
-  function bqBuildReport(counted, closedAt) {
+  function bqBuildReport(counted, closedAt, only) {
     const DR = window.KiwiDayReport;
     if (!DR) return null;
-    const sess = bqReportSession(counted);
+    const sess = bqReportSession(counted, only);
     if (closedAt) sess.closedAt = closedAt;
     const pv = pvPaired() || {};
     return DR.build({
       day: DR.businessDay(Date.now()),
-      sales: bqReportSales(),
+      sales: bqReportSales(only),
       session: sess,
       store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },
       source: 'caisse',
@@ -2540,7 +2541,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     } catch (_) {}
   }
 
-  function bqPrintReport(report, copyLabel) {
+  function bqPrintReport(report, copyLabel, only) {
     if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) {
       toast('Imprimante indisponible'); return Promise.resolve({ ok: false });
     }
@@ -2553,21 +2554,19 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
       report: report,
       shop: pv.name || 'Kiwi',
       address: pv.location || '',
-      title: 'RAPPORT JOURNALIER',
       dateLabel: p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : report.day,
       copy: copyLabel || '',
       openedLabel: hm(report.openedAt),
       closedLabel: hm(report.closedAt || Date.now()),
       detailTitle: 'DÉTAIL PAR ' + String(V.cat || 'rayon').toUpperCase(),
       drawerTitle: 'TIROIR-CAISSE',
-      netLabel: 'NET DU JOUR',
       unitWord: V.items || 'articles',
       unitWordOne: V.item || '',
       notCounted: 'non compté',
       handoverWord: 'Passation',
       reopenWord: 'Clôture n°',
       methodLabels: { cash: 'Espèces', card: 'Carte', transfer: 'Virement / Versement', cheque: 'Chèque', wallet: 'Wallet', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
-      fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
+      fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''), ...zTicketOpts(only),   /* titre, net et tiroir du ticket : magasin ou livraisons */
     }).then((res) => {
       if (res && res.ok) toast(res.via === 'pdf' ? 'Rapport prêt · imprimer ou partager le PDF' : res.via === 'browser' ? 'Rapport ouvert dans l\'impression système' : 'Rapport imprimé');
       else toast('Impression impossible · le rapport reste dans le tableau de bord');
@@ -2733,7 +2732,7 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
   }
 
   /* ── la clôture ── */
-  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null;
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null;
   function bqFmtDur(min) {
     if (min < 60) return `${min} mn`;
     return `${Math.floor(min / 60)}h${pad2(min % 60)}`;
@@ -2864,9 +2863,9 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
        aucune écriture (même contrat que #clo-print côté restaurant). */
     v.querySelector('#bqclo-print').onclick = () => {
       const raw = v.querySelector('#bqclo-count').value;
-      const r = bqBuildReport(raw === '' || raw == null ? null : parseFloat(raw), 0);
-      if (!r) { toast('Rapport indisponible'); return; }
-      bqPrintReport(r, 'AVANT CLÔTURE');
+      const pair = zPair(bqBuildReport, raw === '' || raw == null ? null : parseFloat(raw), 0, null);
+      if (!pair) { toast('Rapport indisponible'); return; }
+      zPrintPair(bqPrintReport, pair, 'AVANT CLÔTURE');
     };
     v.querySelector('#bqclo-close').onclick = bqCloseRegister;
   }
@@ -2908,10 +2907,10 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
       countedCents: bqCents(countedCash),
       gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
     });
-    bqZQueue(true);
+    bqZQueue(true); const pair = zPair(bqBuildReport, counted, report && report.closedAt, report);   /* les deux tickets du Z, avant d'effacer le poste */
     bqShift = null;
     bqShiftPersist();
-    if (report) bqShowPostClose(report); else bqFinishClose();
+    if (report) bqShowPostClose(report, pair); else bqFinishClose();
   }
   function bqFinishClose() {
     const z = document.getElementById('mz-zsheet');
@@ -2920,8 +2919,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     setTimeout(() => location.reload(), 640);
   }
   /* L'écran d'après-clôture : une décision, la trace papier. */
-  function bqShowPostClose(report) {
-    bqClosedReport = report;
+  function bqShowPostClose(report, pair) {
+    bqClosedReport = report; bqClosedPair = pair || null;
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
     const nCat = (report.categories || []).length;
@@ -2955,7 +2954,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     const doPrint = (btn) => {
       if (!bqClosedReport) return bqFinishClose();
       btn.disabled = true;
-      bqPrintReport(bqClosedReport, btn === reprint ? 'DUPLICATA' : '').then((res) => {
+      const copy = btn === reprint ? 'DUPLICATA' : '';
+      (bqClosedPair ? zPrintPair(bqPrintReport, bqClosedPair, copy) : bqPrintReport(bqClosedReport, copy)).then((res) => {
         btn.disabled = false;
         if (res?.ok && reprint) { reprint.hidden = false; icons(); }
       });

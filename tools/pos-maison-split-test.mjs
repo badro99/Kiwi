@@ -58,7 +58,9 @@ async function modules(context) {
   /* Le cœur, ses trois modules, assets/refund-split.js (la règle du
      remboursement que checkout.js partage avec functions/api/sale/refund.js) et
      assets/money-cents.js (les centimes, comme la caisse boutique). */
-  assert.equal(cache.size, 8, 'exactly one instance per stamped module, including cyclic imports (the shared product photos are the seventh, the till inventory access the eighth)');
+  /* Plus les livraisons partagées avec la boutique : la fiche destinataire
+     (Maison et boutique), le Z en deux tickets et la page Livraisons. */
+  assert.equal(cache.size, 12, 'exactly one instance per stamped module, including cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js)');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

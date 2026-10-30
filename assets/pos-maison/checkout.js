@@ -1,8 +1,9 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=113';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=33';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=33';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=116';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=36';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=36';
 import '../refund-split.js?v=2';
 import '../money-cents.js?v=4';
+import { mzDeliveryCard } from './delivery.js?v=1';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -1118,7 +1119,17 @@ import '../money-cents.js?v=4';
           if (m === 'especes') stepCash(portion());
           else if (m === 'carte') stepCard(portion());
           else if (m === 'virement' || m === 'cheque') stepExternal(m, portion());
-          else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
+          else if (m === 'livraison') {
+            /* La fiche destinataire est obligatoire, comme en boutique ; la livraison
+               fragile saisie sur le ticket la préremplit et en reçoit le résultat. */
+            const amount = portion(), t = state.ticket || {};
+            mzDeliveryCard(el, { amount, esc, fmtMAD, icons, closeBtns, prev: (settled.find((p) => p.card) || {}).card,
+              ticket: t.delivery || { reinforcedWrap: (t.lines || []).some((l) => l.fragile || (P[l.pid] && P[l.pid].fragile)) }, client: opts.customerId ? clById(opts.customerId) : null, back: stepMethods,
+              done: (card, fragile) => {
+                if (state.ticket && !opts.balanceExisting) state.ticket.delivery = Object.assign({}, t.delivery || {}, { name: card.name, phone: card.phone, city: card.city, address: card.address, quartier: '' }, fragile);
+                settle({ m: 'livraison', amount, card });
+              } });
+          }
           else if (m === 'avoir') stepAvoir();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
         };
