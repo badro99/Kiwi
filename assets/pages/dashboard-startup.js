@@ -63,7 +63,7 @@
     'assets/finance.js?v=14',
     'assets/conformite.js?v=8',
     'assets/production-action-guard.js?v=6',
-    'assets/staff-roles.js?v=2',
+    'assets/staff-roles.js?v=3',
     'assets/help-centre.js?v=7',
     'assets/account.js?v=33',
     'assets/design-2026.js?v=2',

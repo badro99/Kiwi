@@ -83,7 +83,9 @@
        * pour un magasin dont le tableau de bord n'écoute plus. */
       merchant: (custom && v.slug) || slugMerchant(name),
       venueId: (custom && v.id) || '',
-      type: (custom && v.type) || '',
+      /* An account without a custom venue still knows its trade (/api/me):
+       * without it an empty type routed a boutique to the restaurant till. */
+      type: (custom && v.type) || (me && me.type) || '',
       subtype: (custom && v.subtype) || ls(K.bizType) || '',
       name: name,
       location: (custom && v.location) || ls(K.city) || '',
@@ -626,6 +628,8 @@
   window.KiwiCaisseLink = {
     slugMerchant: slugMerchant, generateCode: generateCode, openPanel: openPanel,
     maybePrompt: maybePrompt, promptNewMerchant: promptNewMerchant, isPaired: isPaired,
+    /* assets/lock-till.js: « Ouvrir la caisse » on the dashboard lock. */
+    currentBiz: currentBiz, handOff: handOff,
   };
 
   function boot() {
