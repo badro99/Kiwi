@@ -245,10 +245,12 @@ export async function onRequestGet({ request, env }) {
   const cards = await readDeliveryCards(env.DB, merchant);
   /* Le destinataire vient du colis Ozon quand il y en a un : c'est là qu'il se
      saisit, et c'est ce que le livreur a. Il passe devant une ancienne fiche. */
+  const parcelSales = new Set();
   try {
     const rs = await env.DB.prepare(`SELECT sale_id, receiver, phone, city_name, address FROM ozon_parcels
       WHERE merchant = ? ORDER BY created_ts ASC`).bind(merchant).all();
     (rs.results || []).forEach((p) => {
+      parcelSales.add(String(p.sale_id));
       if (!p.receiver && !p.phone) return;
       cards.set(String(p.sale_id), { name: String(p.receiver || ''), phone: String(p.phone || ''),
         city: String(p.city_name || ''), address: String(p.address || ''), note: '', source: 'ozon' });
@@ -270,6 +272,18 @@ export async function onRequestGet({ request, env }) {
     held.delete(id);
   }
   all.forEach((d) => { d.stockHeld = held.has(d.saleId); });
+  /* Un colis qu'Ozon a refusé à la création automatique (téléphone, adresse) :
+     la caisse le dit sur la ligne, tant qu'aucun colis n'existe. */
+  try {
+    const rs = await env.DB.prepare(`SELECT sale_id, impact FROM sale_audit WHERE merchant = ? AND action = 'ozon-parcel-failed' ORDER BY id ASC`)
+      .bind(merchant).all();
+    const failed = new Map();
+    (rs.results || []).forEach((r) => { let x = {}; try { x = JSON.parse(r.impact || '{}') || {}; } catch (_) { x = {}; } failed.set(String(r.sale_id), x); });
+    all.forEach((d) => {
+      const f = failed.get(d.saleId);
+      if (f && !parcelSales.has(d.saleId)) d.ozonError = { error: String(f.error || ''), message: String(f.message || '') };
+    });
+  } catch (_) { /* pas de trace : rien à dire */ }
   return json({
     confirmDays: CONFIRM_DAYS,
     open: all.filter((d) => d.dueCents > 0),

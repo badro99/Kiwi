@@ -24,6 +24,7 @@ import * as account from '../functions/api/ozon/account.js';
 import * as parcels from '../functions/api/ozon/parcels.js';
 import * as notes from '../functions/api/ozon/notes.js';
 import { onRequestGet as receivablesGet } from '../functions/api/receivables.js';
+import { onRequestPost as salePost } from '../functions/api/sale.js';
 import { readStatus as ozonStatusOf, __resetCities } from '../functions/api/ozon/_lib.js';
 
 const MERCHANT = 'ozon-test-shop', OTHER = 'ozon-other-shop', SECRET = 'ozon-express-test-secret-0123456789';
@@ -260,6 +261,42 @@ await ok('the till\'s own sale id (sale-<uuid>) finds the row the server stored 
     receiver: 'Client Id', phone: '0612345678', cityId: 37, address: '3 rue Test', feeOnCustomer: true });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM ozon_parcels WHERE sale_id = 'sale-ref-fdbc450d-945e-a96b-4b8b-b947-5f02f05190ed'").get().n, 1);
+});
+
+/* Santos, 30 Oct 2026: an Instagram or WhatsApp order is typed once at the
+   till (name, phone, Ozon city, address) and the parcel leaves by itself. */
+const tillSale = async (id, card) => {
+  const body = { id, merchant: MERCHANT, amount: 0, amountCents: 0, method: 'delivery', channel: 'delivery', settlementKind: 'receivable',
+    paymentParts: [{ method: 'delivery', amountCents: 20000 }], ticketAmountCents: 20000, label: 'Ensemble', ref: id.toUpperCase(), ts: Date.now(),
+    lines: [{ itemId: 'prod_1', variantId: 'prod_1:TU:noir', name: 'Ensemble TU', qty: 1, total: 200, cat: 'Ensembles', unit: 'piece', kind: 'product' }],
+    deliveryCard: card };
+  const res = await salePost({ request: new Request('https://kiwi.test/api/sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: till }, body: JSON.stringify(body) }), env });
+  return { status: res.status, body: await res.json() };
+};
+await ok('a delivery sale whose card names an Ozon city creates its parcel by itself, 50 MAD on top', async () => {
+  const before = calls.filter((c) => c.path === 'add-parcel').length;
+  const r = await tillSale('dlv-auto-1', { name: 'Imane Instagram', phone: '06 12 34 56 78', city: 'Agadir', cityId: 37, address: 'Hay Salam, rue 4' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const row = sqlite.prepare("SELECT * FROM ozon_parcels WHERE merchant = ? AND sale_id = 'dlv-auto-1'").get(MERCHANT);
+  assert.ok(row && !String(row.tracking).startsWith('pending:'), 'parcel created');
+  assert.equal(row.receiver, 'Imane Instagram');
+  const sent = calls.filter((c) => c.path === 'add-parcel');
+  assert.equal(sent.length, before + 1);
+  assert.equal(sent[sent.length - 1].body['parcel-price'], '250', 'the courier collects 200 + 50');
+  await tillSale('dlv-auto-1', { name: 'Imane Instagram', phone: '0612345678', city: 'Agadir', cityId: 37, address: 'Hay Salam, rue 4' });
+  assert.equal(calls.filter((c) => c.path === 'add-parcel').length, before + 1, 'a resent ticket never makes a second parcel');
+});
+await ok('a card without an Ozon city creates no parcel; a refused one is shown on the delivery', async () => {
+  const before = calls.filter((c) => c.path === 'add-parcel').length;
+  await tillSale('dlv-auto-2', { name: 'Sans ville', phone: '0612345678', city: 'Agadir', address: 'Rue 1' });
+  assert.equal(calls.filter((c) => c.path === 'add-parcel').length, before, 'no Ozon city, no parcel');
+  ozon.refuseAdd = 'Adresse incomplète';
+  await tillSale('dlv-auto-3', { name: 'Refusée', phone: '0612345678', city: 'Agadir', cityId: 37, address: 'x' });
+  ozon.refuseAdd = '';
+  const list = await (await receivablesGet({ request: new Request(`https://kiwi.test/api/receivables?merchant=${MERCHANT}`, { headers: { Cookie: till } }), env })).json();
+  const d = (list.open || []).find((x) => x.saleId === 'dlv-auto-3');
+  assert.ok(d && d.ozonError && d.ozonError.error === 'ozon-refused', JSON.stringify(d && d.ozonError));
+  assert.ok(!(list.open || []).find((x) => x.saleId === 'dlv-auto-1').ozonError, 'a created parcel carries no error');
 });
 
 await ok('the key never appears in any reply or stored row, and every Ozon call used it', async () => {

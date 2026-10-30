@@ -18,7 +18,7 @@
  * vente, jamais par la tablette. La tablette ne remet en stock qu'un retour
  * que le serveur vient d'accepter pour la première fois (already === false) :
  * rejouer un retour ne recrédite jamais le stock deux fois. */
-import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=7';
+import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=8';
 /* translate : les phrases Ozon (ozon.js), en français, anglais ou arabe. */
 const DAY = 86400000;
 const OZON_EVERY = 15 * 60 * 1000;   // la caisse reste ouverte : le suivi Ozon se relit tout seul
@@ -73,6 +73,7 @@ const PHRASES = {
   'Aucune commande ne correspond à cette recherche.': ['No order matches this search.', 'لا يوجد طلب يطابق هذا البحث.'],
   'Effacer': ['Clear', 'مسح'],
   'Sans fiche client': ['No customer details', 'بدون بيانات الزبون'],
+  'Ozon a refusé le colis. Vérifiez le téléphone et l’adresse, puis Envoyer avec Ozon.': ['Ozon refused the parcel. Check the phone and address, then Send with Ozon.', 'رفضت أوزون الطرد. تحقق من الهاتف والعنوان ثم أرسل مع أوزون.'],
   'Vendue le': ['Sold on', 'بيع في'],
   'confirmée dans {n} j': ['confirmed in {n} d', 'يُؤكد بعد {n} ي'],
   'confirmée le': ['confirmed on', 'أُكد في'],
@@ -186,6 +187,7 @@ function css() {
     '#pos-boutique .bqd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 16px;text-align:center;color:var(--ink-2,#3D4441);}',
     '#pos-boutique .bqd-empty i,#pos-boutique .bqd-empty svg{width:30px;height:30px;color:var(--ink-3,#6F6C65);}',
     '#pos-boutique .bqd-note{font-size:12.5px;color:var(--ink-3,#6F6C65);}',
+    '#pos-boutique .bqd-refused{color:var(--danger,#B42318);margin:6px 0 0;}',
     '#pos-boutique .bqd-search{display:flex;flex-direction:column;gap:8px;}',
     '#pos-boutique .bqd-q{position:relative;}',
     '#pos-boutique .bqd-q input{width:100%;box-sizing:border-box;min-height:46px;padding:10px 44px 10px 40px;border:1px solid var(--line,#E2DDD2);border-radius:12px;background:var(--paper-elev,#FFFDFA);font:inherit;font-size:16px;color:inherit;}',
@@ -300,6 +302,7 @@ function rowOpen(x, d, esc) {
     + (isOpen ? '' : '<button type="button" class="bqd-btn" data-bqd-open="' + esc(x.saleId) + '"><i data-icon="undo"></i>' + esc(tr('Enregistrer un retour')) + '</button>')
     + '</div>'
     + (parcel ? ozonLine(parcel) : '<div class="bqd-bar"><i style="width:' + Math.min(100, Math.round(days / total * 100)) + '%"></i></div>')
+    + (!parcel && x.ozonError ? '<p class="bqd-note bqd-refused">' + esc(tr('Ozon a refusé le colis. Vérifiez le téléphone et l’adresse, puis Envoyer avec Ozon.')) + (x.ozonError.message ? ' ' + esc(x.ozonError.message) : '') + '</p>' : '')
     + (!parcel && st.ozon && st.ozon.connected && !isOpen ? '<div class="bqd-acts"><button type="button" class="bqd-btn" data-bqd-ozon="' + esc(x.saleId) + '"><i data-icon="local_shipping"></i>' + esc(translate('Envoyer avec Ozon')) + '</button></div>' : '')
     + ret + '</div>';
 }

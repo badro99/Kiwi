@@ -30,6 +30,12 @@ const PHRASES = {
   'Enregistrer la livraison': ['Save delivery', 'تسجيل التوصيل'],
   'Retour': ['Back', 'رجوع'],
   'Fermer': ['Close', 'إغلاق'],
+  'Choisissez une ville de la liste Ozon': ['Pick a city from the Ozon list', 'اختر مدينة من قائمة أوزون'],
+  'Numéro marocain attendu': ['Moroccan number expected', 'يجب إدخال رقم مغربي'],
+  'Tapez pour chercher une ville Ozon': ['Type to search an Ozon city', 'اكتب للبحث عن مدينة أوزون'],
+  '+ 50 MAD de livraison · le client paie': ['+ 50 MAD delivery · the customer pays', '+ 50 درهم توصيل · يدفع الزبون'],
+  'Enregistrer et envoyer à Ozon': ['Save and send to Ozon', 'تسجيل وإرسال إلى أوزون'],
+  'Le colis Ozon se crée tout seul à l’enregistrement, avec ces informations. Le client n’entre pas dans le carnet de fidélité.': ['The Ozon parcel is created automatically when you save, with these details. The customer is not added to the loyalty book.', 'يُنشأ طرد أوزون تلقائياً عند التسجيل بهذه المعلومات. لا يُضاف الزبون إلى دفتر الوفاء.'],
 };
 const tr = (s) => {
   const C = window.KiwiCaisseLang;
@@ -76,10 +82,19 @@ function css() {
 }
 
 const digits = (v) => String(v || '').replace(/\D/g, '');
+const fold = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+/* Le format qu'Ozon accepte (functions/api/ozon/parcels.js › PHONE_RE). */
+const OZON_PHONE = /^(?:\+?212|0)?[5-7]\d{8}$/;
+const CUSTOMER_FEE = 50;   // MAD, ce que le client paie pour la livraison, partout
 
-/* o : { amount, fmtMAD, esc, icons, closeBtns, prev, back, done(card) } */
+/* o : { amount, fmtMAD, esc, icons, closeBtns, prev, back, done(card),
+ *       ozon?: { connected: Promise<boolean>, cities: () => Promise<[{id, name}]> } }
+ * Avec Ozon relié (boutique, 30 oct. 2026) : la ville se choisit dans la liste
+ * Ozon, le téléphone doit être marocain, et le colis se crée tout seul quand
+ * la vente arrive au serveur (functions/api/ozon/parcels.js › autoParcel). */
 export function bqDeliveryCard(el, o) {
   css();
+  let ozonCities = null;
   const esc = o.esc;
   const prev = o.prev || {};
   const field = (f) => {
@@ -113,6 +128,8 @@ export function bqDeliveryCard(el, o) {
     let err = '';
     if (f.need && !v) err = tr('Champ obligatoire');
     else if (f.k === 'phone' && digits(v).length < 8) err = tr('Numéro incomplet');
+    else if (f.k === 'phone' && ozonCities && !OZON_PHONE.test(v.replace(/[\s.-]/g, ''))) err = tr('Numéro marocain attendu');
+    else if (f.k === 'city' && ozonCities && !ozonCities.find((c) => fold(c.name) === fold(v))) err = tr('Choisissez une ville de la liste Ozon');
     if (show) {
       node.setAttribute('aria-invalid', err ? 'true' : 'false');
       el.querySelector('#bqdc-' + f.k + '-err').textContent = err;
@@ -130,8 +147,27 @@ export function bqDeliveryCard(el, o) {
     if (bad.length) { form.elements[bad[0].k].focus(); return; }
     const card = {};
     FIELDS.forEach((f) => { card[f.k] = String(form.elements[f.k].value || '').replace(/\s+/g, ' ').trim(); });
+    const oc = ozonCities && ozonCities.find((c) => fold(c.name) === fold(card.city));
+    if (oc) { card.city = oc.name; card.cityId = oc.id; }
     o.done(card);
   };
+  /* Ozon relié : la liste de villes devient celle d'Ozon, et la fiche dit ce
+     que le client paiera au livreur. Ozon absent ou muet : la fiche d'avant. */
+  if (o.ozon && o.ozon.connected) {
+    Promise.resolve(o.ozon.connected).then((yes) => (yes ? o.ozon.cities() : null)).then((list) => {
+      if (!list || !list.length || !el.isConnected || !el.querySelector('#bqdc-form')) return;
+      ozonCities = list;
+      el.querySelector('#bqdc-cities').innerHTML = list.map((c) => '<option value="' + esc(c.name) + '"></option>').join('');
+      const city = form.elements.city;
+      if (city) city.placeholder = tr('Tapez pour chercher une ville Ozon');
+      const sub = el.querySelector('.modal-subtle');
+      if (sub) sub.textContent = o.fmtMAD(o.amount) + ' ' + tr('+ 50 MAD de livraison · le client paie') + ' ' + o.fmtMAD((Number(o.amount) || 0) + CUSTOMER_FEE);
+      const hint = el.querySelector('.bqdc-hint');
+      if (hint) hint.textContent = tr('Le colis Ozon se crée tout seul à l’enregistrement, avec ces informations. Le client n’entre pas dans le carnet de fidélité.');
+      const ok = el.querySelector('#bqdc-ok');
+      if (ok) ok.textContent = tr('Enregistrer et envoyer à Ozon') + ' · ' + o.fmtMAD(o.amount);
+    }).catch(() => { /* Ozon muet : la fiche reste celle d'avant */ });
+  }
   const first = FIELDS.find((f) => !String(prev[f.k] || '').trim());
   try { form.elements[(first || FIELDS[0]).k].focus(); } catch (_) {}
 }

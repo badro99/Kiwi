@@ -1,9 +1,10 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=236';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=134';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=134';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=237';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=135';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=135';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import '../money-cents.js?v=4';
-import { ozonOffer } from './ozon.js?v=7';
+import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=8';
+import { bqDeliveryCard } from './delivery-card.js?v=2';
 const M = globalThis.KiwiMoney;
 
 
@@ -994,10 +995,16 @@ const M = globalThis.KiwiMoney;
           if (m === 'especes') stepCash(portion());
           else if (m === 'carte') stepCard(portion());
           else if (m === 'virement' || m === 'cheque') stepExternal(m, portion());
-          /* Pas de fiche destinataire ici : nom, téléphone, ville et adresse se
-             saisissent une fois, dans le colis Ozon, et la page Livraisons les
-             relit chez Ozon (propriétaire, 30 octobre 2026). */
-          else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
+          /* Les commandes Instagram ou WhatsApp se saisissent ici, une fois :
+             nom, téléphone, ville Ozon et adresse. Le colis Ozon se crée tout
+             seul à partir de cette fiche quand la vente arrive au serveur
+             (functions/api/ozon/parcels.js › autoParcel ; Santos, 30 oct. 2026). */
+          else if (m === 'livraison') {
+            const amount = portion(), slug = merchantSlug();
+            bqDeliveryCard(el, { amount, esc, fmtMAD, icons, closeBtns, prev: (settled.find((p) => p.card) || {}).card, back: stepMethods,
+              ozon: slug ? { connected: ozonConnected(slug), cities: () => ozonCities(slug) } : null,
+              done: (card) => settle({ m: 'livraison', amount, card }) });
+          }
           else if (m === 'avoir') stepAvoir();
           else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun avoir actif, émettez-en un depuis Échanges & avoirs'));
         };
@@ -1281,7 +1288,8 @@ const M = globalThis.KiwiMoney;
         </div>`;
       icons(); closeBtns();
       const card = (parts.find((x) => x.card) || {}).card || {};
-      if (delivery && res.sale && res.sale.syncId) ozonOffer(el, { slug: merchantSlug(), saleId: res.sale.syncId, title: opts.ref ? 'Ticket ' + opts.ref : '', receiver: card.name || '', phone: card.phone || '', address: card.address || '', cityHint: card.city || '', note: card.note || '', dueCents: M.sumCents(parts.map((x) => (x.m === 'livraison' ? +x.amount || 0 : 0))), toast, auto: true });
+      if (delivery && card.cityId) toast(ozonLabel('Le colis part chez Ozon, suivi dans Livraisons'));
+      else if (delivery && res.sale && res.sale.syncId) ozonOffer(el, { slug: merchantSlug(), saleId: res.sale.syncId, title: opts.ref ? 'Ticket ' + opts.ref : '', receiver: card.name || '', phone: card.phone || '', address: card.address || '', cityHint: card.city || '', note: card.note || '', dueCents: M.sumCents(parts.map((x) => (x.m === 'livraison' ? +x.amount || 0 : 0))), toast });
       $('#bq-pay-print', el).onclick = () => printReceiptNow(opts, parts);
       /* Same problem as the 80 mm button: this claimed "Reçu envoyé sur WhatsApp"
          while sending nothing at all. WhatsApp cannot be sent silently from a web

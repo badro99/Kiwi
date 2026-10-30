@@ -54,7 +54,13 @@ export async function onRequestPost({ request, env }) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const account = await readAccount(env, merchant);
   if (!account) return json({ error: 'not-connected' }, 409);
+  return createParcel(env, merchant, account, b);
+}
 
+/* Le colis d'une vente, à partir de ses champs : la route ci-dessus (bouton
+ * « Envoyer avec Ozon ») et la vente elle-même quand la caisse a rempli la
+ * fiche de livraison (autoParcel, appelé par /api/sale). */
+export async function createParcel(env, merchant, account, b) {
   let saleId = clean(b.saleId, 128);
   const receiver = clean(b.receiver, 80);
   const phone = clean(b.phone, 20).replace(/[\s.-]/g, '');
@@ -132,4 +138,33 @@ export async function onRequestPost({ request, env }) {
       feeOr(['REFUSED-PRICE'], city.refusedCents), String(pick(res.data, ['CITY-NAME']) || city.name).slice(0, 80), now, now, merchant, hold).run();
   const row = await env.DB.prepare('SELECT * FROM ozon_parcels WHERE merchant = ? AND sale_id = ?').bind(merchant, saleId).first();
   return json({ ok: true, parcel: parcelView(row) });
+}
+
+/* La fiche de livraison remplie à la caisse crée le colis toute seule
+ * (Santos, 30 oct. 2026 : les commandes Instagram ou WhatsApp se saisissent
+ * à la caisse, ville choisie dans la liste Ozon). Appelé par /api/sale quand
+ * la vente arrive, donc aussi pour une vente partie plus tard de la file hors
+ * ligne. Un refus d'Ozon (téléphone, adresse) est noté sur la vente : la page
+ * Livraisons le dit et garde « Envoyer avec Ozon », la fiche préremplie. */
+const QUIET = new Set(['parcel-in-progress', 'nothing-due', 'not-a-delivery']);
+export async function autoParcel(env, merchant, saleId, card) {
+  if (!env || !env.DB || !card || !(Number(card.cityId) > 0)) return null;
+  const account = await readAccount(env, merchant);
+  if (!account) return null;
+  let body = null;
+  try {
+    const res = await createParcel(env, merchant, account, {
+      saleId, receiver: card.name, phone: card.phone, address: card.address, cityId: Number(card.cityId),
+      note: card.note, feeOnCustomer: true, open: 1,
+    });
+    body = await res.json();
+  } catch (e) { body = { error: 'ozon-unreachable', message: '' }; }
+  if (body && !body.ok && !QUIET.has(body.error)) {
+    try {
+      await env.DB.prepare(`INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
+        VALUES (?, ?, 'ozon-parcel-failed', ?, '', '', '', 0, 0, 'delivery', '', 0, ?, ?)`)
+        .bind(merchant, saleId, String(body.error || '').slice(0, 40), JSON.stringify({ error: body.error || '', message: String(body.message || '').slice(0, 200) }), Date.now()).run();
+    } catch (_) { /* la vente reste */ }
+  }
+  return body;
 }

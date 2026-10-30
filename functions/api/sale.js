@@ -17,8 +17,9 @@ import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
 import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
-import { saveDeliveryCard } from './_delivery-card.js';
+import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
+import { autoParcel } from './ozon/parcels.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -96,7 +97,7 @@ function json(obj, status) {
   });
 }
 
-export async function onRequestPost({ request, env, quarantineSettlement = '' }) {
+export async function onRequestPost({ request, env, waitUntil, quarantineSettlement = '' }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
 
   let b;
@@ -1120,6 +1121,18 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     catch (_) { return json({ error: 'retail-balance-confirm-pending', id }, 503); }
   }
   await poke(env, merchant, 'sales');
+  /* Une livraison dont la ville vient de la liste Ozon part chez Ozon d'elle-
+     même, une fois la vente et ce qu'elle doit écrits (un renvoi retrouve le
+     colis déjà créé). Hors du temps de réponse quand la plateforme le permet. */
+  if (channel === 'delivery' && b.deliveryCard) {
+    const card = cleanDeliveryCard(b.deliveryCard);
+    if (card && card.cityId) {
+      const job = autoParcel(env, merchant, id, card).catch(() => null);
+      let later = false;
+      try { if (typeof waitUntil === 'function') { waitUntil(job); later = true; } } catch (_) { later = false; }
+      if (!later) await job;
+    }
+  }
   return json({
     ok: true, id, lines: linesMode, table: employeeTable || (serviceSession && serviceSession.table_no) || undefined,
     settlementPending: settlementPending || undefined,

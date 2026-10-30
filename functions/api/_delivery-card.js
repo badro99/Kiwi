@@ -24,6 +24,10 @@ export function cleanDeliveryCard(raw) {
     name: text(raw.name, CAP.name), phone: text(raw.phone, CAP.phone), city: text(raw.city, CAP.city),
     address: text(raw.address, CAP.address), note: text(raw.note, CAP.note),
   };
+  /* La ville choisie dans la liste Ozon : le colis se crée tout seul
+     (functions/api/ozon/parcels.js › autoParcel). */
+  const cityId = Number(raw.cityId);
+  if (Number.isSafeInteger(cityId) && cityId > 0) card.cityId = cityId;
   if (!card.name || !card.city || !card.address) return null;
   if (card.phone.replace(/\D/g, '').length < 8) return null;
   return card;

@@ -28,6 +28,7 @@ const PHRASES = {
   'Échange (le livreur reprend un article)': ['Exchange (the courier takes an item back)', 'استبدال (يسترجع عامل التوصيل قطعة)'],
   'Ozon encaisse': ['Ozon collects', 'أوزون يحصّل'],
   'Frais de livraison Ozon': ['Ozon delivery fee', 'رسوم توصيل أوزون'],
+  'Le colis part chez Ozon, suivi dans Livraisons': ['The parcel is going to Ozon, track it in Deliveries', 'الطرد في طريقه إلى أوزون، تابعه في التوصيلات'],
   'Annuler': ['Cancel', 'إلغاء'],
   'Créer le colis': ['Create the parcel', 'إنشاء الطرد'],
   'Envoi…': ['Sending…', 'جارٍ الإرسال…'],
@@ -342,6 +343,9 @@ function css() {
   }, true);
 }
 
+/* La liste des villes Ozon, pour la fiche de livraison de la caisse
+   (delivery-card.js) : [{ id, name }]. */
+export const ozonCities = (slug) => loadCities(slug);
 function loadCities(slug) {
   if (!citiesP) citiesP = getJSON('/api/ozon/cities?merchant=' + encodeURIComponent(slug)).then((d) => d.cities || []).catch((e) => { citiesP = null; throw e; });
   return citiesP;
