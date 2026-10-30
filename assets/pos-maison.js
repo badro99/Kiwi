@@ -1,7 +1,7 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=37';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=37';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=37';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { mzLivraisons } from './pos-maison/delivery.js?v=1';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=38';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=38';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=38';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=3'; import { mzLivraisons } from './pos-maison/delivery.js?v=1';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=3';
 
   'use strict';
@@ -2773,7 +2773,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     const now = new Date();
     const openedAt = bqShift ? new Date(bqShift.openedAt) : now;
     const durMin = Math.max(0, Math.floor((now - openedAt) / 60000));
-    const t = bqDayTotals();
+    const t = bqDayTotals('store'), td = bqDayTotals('delivery');   /* l'écran comme le papier : la caisse hors livraisons, puis les livraisons */
     const pv = pvPaired() || {};
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
@@ -2781,7 +2781,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
       ['Durée du service', bqFmtDur(durMin), false, ''],
-      ['Transactions', String(t.txns), false, ''],
+      zStoreHead(), ['Transactions', String(t.txns), false, ''],
       ['Articles vendus', String(t.items), false, ''],
       ['Total encaissé', fmtMAD(t.moneyIn), true, 'total'],
       ['dont Carte', fmtMAD(t.card), true, 'sub'],
@@ -2795,7 +2795,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     /* HORS du bloc « dont » : une livraison n'est pas encaissée, elle est à
        recevoir. Nichée en sous-ligne du total, elle se lisait comme une de ses
        composantes — alors qu'aucun dirham correspondant n'est dans le tiroir. */
-    if (t.delivery > 0) rows.push(['Livraisons · à recevoir', fmtMAD(t.delivery), true, '']);
+    /* Les livraisons ont leur propre bloc, sous les chiffres de la caisse (zDeliveryRows). */
     if (t.paidTxns > 0) rows.push(['Ticket moyen', fmtMAD(t.moneyIn / t.paidTxns), true, '']);
     if (t.promoOff > 0) rows.push(['Promotions du magasin', fmtMAD(t.promoOff), true, '']);
     rows.push(['Réductions accordées', fmtMAD(t.discounts), true, '']);
@@ -2803,7 +2803,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     /* Réglé en avoir : la contrepartie du « Total encaissé ». Ces tickets ont
        vidé des rayons sans faire sonner le tiroir — les compter nulle part
        revenait à imprimer un Z où la marchandise partie ne figure pas. */
-    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']);
+    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']); rows.push(...zDeliveryRows(td, fmtMAD));
 
     /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
        caisse — les lignes qui n'existent pas ne s'affichent pas. */
@@ -2836,7 +2836,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
         <div class="clo-title">Clôture de caisse</div>
         <div class="clo-meta">${esc(pv.name || 'Boutique')} · ${esc((STAFF.caissiere && STAFF.caissiere.name) || '')} · ${fmtDay(now)}</div>
         <div class="clo-rows">${rows.map((r, i) => {
-          const cls = 'clo-row' + (r[3] === 'total' ? ' is-total' : (r[3] === 'sub' ? ' is-sub' : ''));
+          const cls = 'clo-row' + (r[3] === 'total' ? ' is-total' : (r[3] === 'sub' ? ' is-sub' : (r[3] === 'head' ? ' is-head' : '')));
           const vCls = 'clo-row-value' + (r[2] ? ' mono' : '');
           return `<div class="${cls}" style="animation-delay:${i * 70}ms"><span class="clo-row-label">${r[0]}</span><span class="${vCls}">${r[1]}</span></div>`;
         }).join('')}</div>
@@ -2946,7 +2946,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       <div class="cloture-card zs-card">
         <div class="clo-eyebrow">Journée clôturée</div>
         <div class="clo-title">Rapport journalier</div>
-        <div class="zs-total mono">${fmtMAD(report.net)}</div>
+        ${zCloseTotals(pair, report.net, fmtMAD, esc)}
         <div class="clo-meta">${bits.join(' · ')}</div>
         <div class="clo-actions">
           <button class="clo-btn primary" id="bqzs-print"><i data-lucide="printer"></i><span>Imprimer le rapport</span></button>

@@ -42,4 +42,39 @@ const zPair = (build, counted, closedAt, saved) => {
  * lancés ensemble se croisent sur une imprimante Bluetooth. */
 const zPrintPair = (print, pair, copy) => !pair ? Promise.resolve({ ok: false })
   : print(pair.store, copy, 'store').then((first) => (first && first.ok) ? print(pair.delivery, copy, 'delivery') : (first || { ok: false }));
-export { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair };
+/* L'écran de clôture dit la même chose que le papier (propriétaire, 30
+ * octobre) : le chiffre de la caisse hors livraisons, puis celui des
+ * livraisons. Ses phrases anglaises et arabes vivent ici, caisse-lang.js est
+ * gelé en taille. */
+const ZPH = {
+  'Caisse · hors livraisons': ['Till · excluding deliveries', 'الصندوق · بدون التوصيلات'],
+  'Livraisons': ['Deliveries', 'التوصيلات'],
+  'Ventes en livraison': ['Delivery sales', 'مبيعات التوصيل'],
+  'Articles en livraison': ['Items sent', 'المواد المرسلة'],
+  'Réductions sur les livraisons': ['Discounts on deliveries', 'التخفيضات على التوصيلات'],
+  'Montant à recevoir': ['Amount to collect', 'المبلغ المنتظر'],
+  'Livraisons · à recevoir': ['Deliveries · to collect', 'التوصيلات · قيد التحصيل'],
+};
+const ztr = (s) => {
+  const C = globalThis.window && window.KiwiCaisseLang;
+  let lang = 'fr';
+  try { lang = (C && C.get && C.get()) || 'fr'; } catch (_) { lang = 'fr'; }
+  if (ZPH[s] && (lang === 'en' || lang === 'ar')) return ZPH[s][lang === 'en' ? 0 : 1];
+  return C && typeof C.tr === 'function' ? C.tr(s) : s;
+};
+/* Lignes de l'écran de clôture : [libellé, valeur, mono, genre]. */
+const zStoreHead = () => [ztr('Caisse · hors livraisons'), '', false, 'head'];
+const zDeliveryRows = (td, fmt) => [
+  [ztr('Livraisons'), '', false, 'head'],
+  [ztr('Ventes en livraison'), String(td.txns), false, ''],
+  ...(td.items > 0 ? [[ztr('Articles en livraison'), String(td.items), false, '']] : []),
+  ...(td.discounts > 0 ? [[ztr('Réductions sur les livraisons'), fmt(td.discounts), true, '']] : []),
+  [ztr('Montant à recevoir'), fmt(td.delivery), true, 'total'],
+];
+/* L'écran d'après-clôture : deux chiffres quand les deux tickets existent. Le
+ * net du ticket livraisons vaut 0 (rien n'est encore encaissé) : on montre ce
+ * qui reste à recevoir. */
+const zSplitBlock = (label, value, esc) => '<div class="zs-split-it"><div class="zs-split-label">' + esc(label) + '</div><div class="zs-total mono">' + esc(value) + '</div></div>';
+const zCloseTotals = (pair, net, fmt, esc) => !pair ? '<div class="zs-total mono">' + esc(fmt(net)) + '</div>'
+  : '<div class="zs-split">' + zSplitBlock(ztr('Caisse · hors livraisons'), fmt(pair.store.net), esc) + zSplitBlock(ztr('Livraisons · à recevoir'), fmt(+pair.delivery.receivable || 0), esc) + '</div>';
+export { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals };

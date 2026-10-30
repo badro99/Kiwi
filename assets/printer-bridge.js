@@ -781,6 +781,7 @@
          * de page au milieu · sur une imprimante à feuilles, un rayon dont le
          * total atterrit seul sur la page suivante est illisible. */
         '.kpr-r{break-inside:avoid;}' +
+        '.kpr-break{break-before:page;page-break-before:always;height:0;}' +
       '}';
     document.head.appendChild(st);
   }
@@ -790,8 +791,17 @@
   function systemPrintVia() {
     return window.KiwiApiBase && window.KiwiApiBase.native ? 'pdf' : 'browser';
   }
+  /* Deux tickets demandés coup sur coup (le Z de la boutique : magasin, puis
+   * livraisons) partent dans la MÊME boîte d'impression, l'un sous l'autre.
+   * Avant, le second effaçait le premier avant que la boîte ne s'ouvre et
+   * seul le ticket livraisons sortait. */
+  var pendingPrint = null;
   function browserPrintHTML(html, paper, title) {
     var root = document.getElementById('kpr-print-root');
+    if (root && pendingPrint && pendingPrint.root === root && pendingPrint.paper === String(paper || '')) {
+      root.insertAdjacentHTML('beforeend', '<div class="kpr-break"></div>' + html);
+      return { ok: true, via: systemPrintVia() };
+    }
     if (root) root.remove();
     root = document.createElement('div');
     root.id = 'kpr-print-root';
@@ -800,7 +810,9 @@
     root.innerHTML = html;
     document.body.appendChild(root);
     ensureReceiptPrintCss(paper);
+    var batch = pendingPrint = { root: root, paper: String(paper || '') };
     setTimeout(function () {
+      if (pendingPrint === batch) pendingPrint = null;
       try { window.print(); } catch (_) {}
       setTimeout(function () { var r = document.getElementById('kpr-print-root'); if (r) r.remove(); }, 600);
     }, 60);

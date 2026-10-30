@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=119';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=37';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=119';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=119';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=121';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=39';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=121';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=121';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=3';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=3'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=3';
 
   'use strict';
 
@@ -2698,7 +2698,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     const now = new Date();
     const openedAt = bqShift ? new Date(bqShift.openedAt) : now;
     const durMin = Math.max(0, Math.floor((now - openedAt) / 60000));
-    const t = bqDayTotals();
+    const t = bqDayTotals('store'), td = bqDayTotals('delivery');   /* l'écran comme le papier : la caisse hors livraisons, puis les livraisons */
     const pv = pvPaired() || {};
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
@@ -2706,7 +2706,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
       ['Durée du service', (durMin < 60 ? `${durMin} mn` : `${Math.floor(durMin / 60)}h${pad2(durMin % 60)}`), false, ''],
-      ['Transactions', String(t.txns), false, ''],
+      zStoreHead(), ['Transactions', String(t.txns), false, ''],
       ['Articles vendus', String(t.items), false, ''], ...(t.itemsReturned > 0 ? [['Articles rendus', '− ' + t.itemsReturned, false, '']] : []),
       ['Total encaissé', fmtMAD(t.moneyIn), true, 'total'],
       ['dont Carte', fmtMAD(t.card), true, 'sub'],
@@ -2720,7 +2720,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     /* HORS du bloc « dont » : une livraison n'est pas encaissée, elle est à
        recevoir. Nichée en sous-ligne du total, elle se lisait comme une de ses
        composantes — alors qu'aucun dirham correspondant n'est dans le tiroir. */
-    if (t.delivery > 0) rows.push(['Livraisons · à recevoir', fmtMAD(t.delivery), true, '']);
+    /* Les livraisons ont leur propre bloc, sous les chiffres de la caisse (zDeliveryRows). */
     if (t.txns > 0) rows.push(['Ticket moyen', fmtMAD(t.moneyIn / t.txns), true, '']); /* ÷ les transactions affichées, comme le tableau de bord */
     if (t.promoOff > 0) rows.push(['Promotions du magasin', fmtMAD(t.promoOff), true, '']);
     rows.push(['Réductions accordées', fmtMAD(t.discounts), true, '']);
@@ -2728,7 +2728,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     /* Réglé en avoir : la contrepartie du « Total encaissé ». Ces tickets ont
        vidé des rayons sans faire sonner le tiroir — les compter nulle part
        revenait à imprimer un Z où la marchandise partie ne figure pas. */
-    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']);
+    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']); rows.push(...zDeliveryRows(td, fmtMAD));
 
     /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
        caisse — les lignes qui n'existent pas ne s'affichent pas. */
@@ -2761,7 +2761,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         <div class="clo-title">Clôture de caisse</div>
         <div class="clo-meta">${esc(pv.name || 'Boutique')} · ${esc((STAFF.caissiere && STAFF.caissiere.name) || '')} · ${fmtDay(now)}</div>
         <div class="clo-rows">${rows.map((r, i) => {
-          const cls = 'clo-row' + (r[3] === 'total' ? ' is-total' : (r[3] === 'sub' ? ' is-sub' : ''));
+          const cls = 'clo-row' + (r[3] === 'total' ? ' is-total' : (r[3] === 'sub' ? ' is-sub' : (r[3] === 'head' ? ' is-head' : '')));
           const vCls = 'clo-row-value' + (r[2] ? ' mono' : '');
           return `<div class="${cls}" style="animation-delay:${i * 70}ms"><span class="clo-row-label">${r[0]}</span><span class="${vCls}">${r[1]}</span></div>`;
         }).join('')}</div>
@@ -2870,7 +2870,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       <div class="cloture-card zs-card">
         <div class="clo-eyebrow">${esc(L.t('Journée clôturée'))}</div>
         <div class="clo-title">${esc(L.t('Rapport journalier'))}</div>
-        <div class="zs-total mono">${fmtMAD(report.net)}</div>
+        ${zCloseTotals(pair, report.net, fmtMAD, esc)}
         <div class="clo-meta">${bits.map(bit => esc(bit)).join(' · ')}</div>
         <div class="clo-actions">
           <button class="clo-btn primary" id="bqzs-print"><img src="assets/icons/material/print.svg" width="20" height="20" alt=""><span>${esc(L.t('Imprimer le rapport'))}</span></button>

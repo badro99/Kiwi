@@ -232,8 +232,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "20",
-    "sha": "eabd47ec0e29f3a9"
+    "v": "21",
+    "sha": "b8968e75f4b2a78c"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -1460,24 +1460,24 @@
     "sha": "0377d7489dd2a6b7"
   },
   "assets/pos-boutique.css": {
-    "v": "218",
+    "v": "220",
     "sha": "56a196b8e19951eb"
   },
   "assets/pos-boutique.js": {
-    "v": "218",
-    "sha": "422cbf0ad3976765"
+    "v": "220",
+    "sha": "9c4cadbd5ce5d4c5"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "119",
-    "sha": "0e8a3e2df980ef09"
+    "v": "121",
+    "sha": "dd0c1cbec8e608fc"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "1",
     "sha": "6fe072430398ad9e"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "37",
-    "sha": "0794c1c5cfbfb224"
+    "v": "39",
+    "sha": "f3f927389638a630"
   },
   "assets/pos-boutique/inv-moves.js": {
     "v": "5",
@@ -1488,8 +1488,8 @@
     "sha": "ae42ad06da0ddc4c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "119",
-    "sha": "db0de60862709c23"
+    "v": "121",
+    "sha": "1314b479755985e9"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "20",
@@ -1500,8 +1500,8 @@
     "sha": "e2fcd0a1b6fa85e5"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "119",
-    "sha": "69b6f6b9abcf937d"
+    "v": "121",
+    "sha": "40fab68d61180ea5"
   },
   "assets/pos-boutique/search.js": {
     "v": "14",
@@ -1520,8 +1520,8 @@
     "sha": "e6162143ee1205ff"
   },
   "assets/pos-boutique/z-split.js": {
-    "v": "1",
-    "sha": "a714158cbfb5beff"
+    "v": "3",
+    "sha": "5b927bb8459351b7"
   },
   "assets/pos-coiffure.css": {
     "v": "10",
@@ -1532,8 +1532,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "295",
-    "sha": "7eabed894f1086e6"
+    "v": "296",
+    "sha": "8e358379be733130"
   },
   "assets/pos-epicerie.css": {
     "v": "29",
@@ -1600,32 +1600,32 @@
     "sha": "6d3816d9334d98de"
   },
   "assets/pos-maison.css": {
-    "v": "117",
+    "v": "118",
     "sha": "8734bf709f3aa11c"
   },
   "assets/pos-maison.js": {
-    "v": "117",
-    "sha": "8d88fe5ea6d22ec4"
+    "v": "118",
+    "sha": "fe0323f575a5384e"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "37",
-    "sha": "dff20d13ee8619ad"
+    "v": "38",
+    "sha": "c10a3d9b7de965cb"
   },
   "assets/pos-maison/delivery.js": {
     "v": "1",
     "sha": "a4eeb03e828bf2c4"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "37",
-    "sha": "0808fbf0b1ba24a7"
+    "v": "38",
+    "sha": "5a4c7c83f892ef19"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "3",
     "sha": "11b36335a89334e7"
   },
   "assets/pos-maison/sales.js": {
-    "v": "37",
-    "sha": "34ae3b856f019ab5"
+    "v": "38",
+    "sha": "2e19d27296251b4f"
   },
   "assets/pos-mobile.css": {
     "v": "9",
@@ -1740,8 +1740,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "50",
-    "sha": "7f15936762c24b86"
+    "v": "51",
+    "sha": "3c914b18cefab052"
   },
   "assets/printer/pairing-lang.js": {
     "v": "9",

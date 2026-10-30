@@ -3228,6 +3228,9 @@
     .clo-row.is-total { border-bottom: 0; padding-top: 14px; }
     .clo-row.is-total .clo-row-label { font-size: 14px; color: #fff; font-weight: 600; }
     .clo-row.is-total .clo-row-value { font-size: 22px; color: var(--mint); }
+    /* Clôture boutique : un titre par bloc, la caisse hors livraisons puis les livraisons. */
+    .clo-row.is-head { border-bottom: 0; padding-top: 16px; }
+    .clo-row.is-head .clo-row-label { font-size: 12px; font-weight: 600; color: var(--mint); letter-spacing: 0.04em; }
     .clo-drawer-box {
       margin-top: 12px; padding: 12px 16px;
       background: rgba(255,255,255,0.04);
@@ -3302,6 +3305,9 @@
       font-size: 42px; line-height: 1; color: #fff;
       margin-top: 14px; letter-spacing: -0.02em;
     }
+    .zs-split { display: grid; gap: 12px; margin-top: 14px; }
+    .zs-split-label { font-size: 12px; color: rgba(247,245,240,0.55); }
+    .zs-split .zs-total { font-size: 32px; margin-top: 4px; }
     .zs-note {
       margin-top: 14px; padding-top: 13px;
       border-top: 1px solid rgba(255,255,255,0.07);

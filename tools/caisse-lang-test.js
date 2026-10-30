@@ -336,7 +336,7 @@ for (const [fr, en] of [
   let rendered;
   const savedCreate = document.createElement;
   document.createElement = () => (rendered = Object.assign(el(), { querySelector: () => ({}) }));
-  const ctx = { window, document, esc: s => String(s), fmtMAD: n => String(n), icons() {}, bqFinishClose() {}, bqPrintReport() {} };
+  const ctx = { window, document, esc: s => String(s), fmtMAD: n => String(n), icons() {}, bqFinishClose() {}, bqPrintReport() {}, zCloseTotals: (pair, net, fmt) => String(fmt(net)) };
   vm.createContext(ctx);
   vm.runInContext(declaration(fs.readFileSync('assets/pos-boutique.js', 'utf8').replace(/^(?:import .*;\n)+/, ''), 'bqShowPostClose'), ctx);
   for (const [lang, title, skip] of [['fr','Journée clôturée','Continuer sans imprimer'], ['en','Day closed','Continue without printing'], ['ar','تم إغلاق اليوم','المتابعة دون طباعة']]) {
