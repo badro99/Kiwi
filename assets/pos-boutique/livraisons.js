@@ -381,7 +381,11 @@ function paintResults(panel, d) {
 
 function unlock(panel, d) {
   if (typeof window.requireManager !== 'function') { d.toast(tr('Code responsable indisponible sur cette caisse.'), 5000, LEVEL.warn); return; }
-  try { if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: '' } }); } catch (_) {}
+  /* Pas d'acte « refund » ici : sur le pavé 2027 un remboursement exige la
+     preuve signée d'un remboursement précis (montant, ticket), que l'ouverture
+     de cette page n'envoie pas. Tout code responsable juste était refusé,
+     propriétaire compris. L'accord générique suffit : chaque retour envoie
+     ensuite son responsable au serveur. */
   window.requireManager(tr('Livraisons · retours'), (mgr) => {
     let who = mgr;
     if (!who || !who.name) { try { who = window.KiwiCaissePairing && window.KiwiCaissePairing.lastManager(); } catch (_) { who = null; } }

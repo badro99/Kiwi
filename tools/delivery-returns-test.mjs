@@ -142,4 +142,10 @@ ok(!('lines' in r.body.open[0]) || r.body.open[0].lines === undefined, 'the dash
 r = await post({ saleId: 'r-old', action: 'return', id: 'ret-old-late', all: true });
 ok(r.status === 409, 'a confirmed order is no longer a pending return (a late return is a refund)');
 
+/* Le pavé 2027 refuse un acte « refund » sans preuve signée d'un remboursement
+   précis : ouvrir la page Livraisons ne doit pas s'annoncer comme tel, sinon
+   aucun code responsable, propriétaire compris, ne passe. */
+const livraisonsSrc = coreTestSource.readFileSync(new URL('../assets/pos-boutique/livraisons.js', import.meta.url), 'utf8');
+ok(!/KiwiAuthAct\([^)]*kind:\s*'refund'/.test(livraisonsSrc), 'opening Livraisons asks a plain manager approval, not a refund act');
+
 console.log(`\n${controls} controls · delivery returns and 15-day confirmation hold.`);
