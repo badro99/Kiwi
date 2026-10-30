@@ -251,6 +251,200 @@
     return 'count:' + Date.now().toString(36) + ':' + Math.random().toString(36).slice(2, 14);
   }
 
+  /* ─── Peau 2027 (html[data-skin-2027="till"]) ───────────────────────────
+     Même état, mêmes crochets (data-cnt-*, #pos-cnt-*) : wireEvents ne sait
+     pas quelle mise en page il sert. La boîte partagée #sk-modal-box fait
+     480 px — le tableau y défilait de côté (propriétaire, 2026-10-30) : sous
+     la peau elle s'élargit (.kcnt-box) le temps du comptage, et la liste
+     devient des rangées à gros pas − / + au lieu d'un tableau. */
+  function kitOn() {
+    return document.documentElement.getAttribute('data-skin-2027') === 'till';
+  }
+  function kitModalHtml(v) {
+    kitCss();
+    const step = countState.step;
+    const head = `<header class="kcnt-hd">
+        <div class="kcnt-ttl">
+          <span class="kcnt-eyebrow">Inventaire physique</span>
+          <h3>${step === 'review' ? 'Récapitulatif avant transmission' : 'Comptage de stock'}</h3>
+          <p>${step === 'review'
+            ? `Vérifiez les quantités saisies par <b>${esc(v.cashier.name)}</b> avant l'envoi.${v.gaps ? ` <b class="kcnt-warn-ink">${v.gaps} écart${v.gaps > 1 ? 's' : ''}</b> : dites pourquoi si vous le savez.` : ''}`
+            : "Saisie à l'aveugle des quantités réelles. Le propriétaire valide avant que le stock ne bouge."}</p>
+        </div>
+        <button type="button" class="kcnt-x" data-cnt-close aria-label="Fermer le comptage" title="Fermer le comptage"><i data-icon="close"></i></button>
+      </header>`;
+    const ask = countState.correctionNote && step !== 'submitted'
+      ? `<div class="kcnt-note"><b>Le propriétaire demande des précisions :</b> ${esc(countState.correctionNote)}</div>` : '';
+    if (step === 'submitted') {
+      return `<div class="kcnt kcnt-done">
+        <button type="button" class="kcnt-x" data-cnt-close aria-label="Fermer le comptage"><i data-icon="close"></i></button>
+        <span class="kcnt-done-ic"><i data-icon="check"></i></span>
+        <h3>Inventaire transmis</h3>
+        <p>Votre comptage (${v.countedCount} article${v.countedCount > 1 ? 's' : ''}) est enregistré sous la référence <b class="kcnt-code">${esc(countState.submittedCountId)}</b>.</p>
+        <div class="kcnt-done-card"><b>Le stock ne bouge pas encore</b><span>Il sera ajusté quand le propriétaire aura validé cet inventaire depuis son tableau de bord.</span></div>
+        <button type="button" class="kcnt-btn primary" id="pos-cnt-finish-btn">Retour à la caisse</button>
+      </div>`;
+    }
+    if (step === 'review') {
+      const rows = v.items.filter((i) => i.counted).map((it) => {
+        const variant = [it.color, it.size].filter(Boolean).join(' · ');
+        return `<div class="kcnt-row kcnt-rv${hasGap(it) ? ' has-gap' : ''}">
+          <div class="kcnt-info"><b>${esc(it.productName)}</b><span>${variant ? `<span class="kcnt-chip">${esc(variant)}</span>` : ''}${it.sku ? `<span class="kcnt-code">${esc(it.sku)}</span>` : ''}</span></div>
+          <div class="kcnt-qty">${it.countedQty}<small>${esc(it.unit)}</small></div>
+          ${hasGap(it) ? `<div class="kcnt-gap">
+            <span class="kcnt-gap-tag">Écart avec le système</span>
+            <select data-cnt-reason="${esc(it.key)}" aria-label="Motif de l’écart" data-kiwi-native-select>
+              <option value="">Motif (facultatif)…</option>
+              ${REASONS.map(([val, l]) => `<option value="${val}"${it.reason === val ? ' selected' : ''}>${esc(l)}</option>`).join('')}
+            </select>
+            <input data-cnt-note="${esc(it.key)}" value="${esc(it.explanation || it.note || '')}" placeholder="Précisez si besoin…">
+          </div>` : `<span class="kcnt-ok" data-cnt-ok="${esc(it.key)}"><i data-icon="check"></i>Conforme</span>`}
+        </div>`;
+      }).join('');
+      return `<div class="kcnt">${head}${ask}
+        ${countState.submitError ? `<div class="kcnt-note is-err">${esc(countState.submitError)}</div>` : ''}
+        <div class="kcnt-list" tabindex="0" role="region" aria-label="Récapitulatif">${rows}</div>
+        <footer class="kcnt-ft">
+          <button type="button" class="kcnt-btn" id="pos-cnt-back-btn">Revenir au comptage</button>
+          <button type="button" class="kcnt-btn primary" id="pos-cnt-submit-btn">Transmettre au propriétaire</button>
+        </footer>
+      </div>`;
+    }
+    const seg = [['all', 'Tous', v.totalCount], ['counted', 'Comptés', v.countedCount], ['uncounted', 'Restants', v.totalCount - v.countedCount]]
+      .map(([f, l, n]) => `<button type="button" class="kcnt-seg-it${countState.filter === f ? ' on' : ''}" data-cnt-filter="${f}" aria-pressed="${countState.filter === f}">${l}<small>${n}</small></button>`).join('');
+    const dims = [['category', 'Catégorie'], ['brand', 'Marque'], ['collection', 'Collection'], ['supplier', 'Fournisseur'], ['locationId', 'Emplacement']]
+      .map(([field, label]) => {
+        const values = uniqueValues(v.items, field);
+        if (!values.length) return '';
+        return `<label class="kcnt-dim${countState.dimensions[field] ? ' on' : ''}"><span>${label}</span>
+          <select data-cnt-dimension="${field}" data-kiwi-native-select><option value="">Tous</option>${values.map((val) => `<option value="${esc(val)}"${countState.dimensions[field] === val ? ' selected' : ''}>${esc(val)}</option>`).join('')}</select></label>`;
+      }).join('');
+    const rows = v.filtered.length ? v.filtered.map((it) => {
+      const variant = [it.color, it.size].filter(Boolean).join(' · ');
+      return `<div class="kcnt-row${it.counted ? ' is-counted' : ''}">
+        <div class="kcnt-info"><b>${esc(it.productName)}</b><span>${variant ? `<span class="kcnt-chip">${esc(variant)}</span>` : ''}${it.sku ? `<span class="kcnt-code">${esc(it.sku)}</span>` : ''}${it.unit ? `<span>${esc(it.unit)}</span>` : ''}</span></div>
+        <div class="kcnt-step">
+          <button type="button" data-cnt-step="${esc(it.key)}" data-step="-1" aria-label="Retirer un"><i data-icon="remove"></i></button>
+          <input type="number" min="0" step="any" inputmode="decimal" data-cnt-input="${esc(it.key)}" value="${it.counted ? it.countedQty : ''}" placeholder="0" aria-label="Quantité comptée · ${esc(it.productName)}">
+          <button type="button" data-cnt-step="${esc(it.key)}" data-step="1" aria-label="Ajouter un"><i data-icon="add"></i></button>
+        </div>
+        <span class="kcnt-state" title="${it.counted ? 'Saisi' : 'À compter'}">${it.counted ? '<i data-icon="check"></i>' : ''}</span>
+      </div>`;
+    }).join('') : '<div class="kcnt-empty">Aucun article correspondant.</div>';
+    const saved = countState.draftSavedAt
+      ? `Brouillon sauvé à ${new Date(countState.draftSavedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+      : 'Sauvegarde locale, même hors ligne';
+    return `<div class="kcnt">${head}${ask}
+      <div class="kcnt-prog">
+        <div class="kcnt-prog-l"><span>Compté par <b>${esc(v.cashier.name)}</b></span><span class="kcnt-num">${v.countedCount} / ${v.totalCount} · ${v.pct} %</span></div>
+        <div class="kcnt-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v.pct}"><i style="width:${v.pct}%"></i></div>
+      </div>
+      <div class="kcnt-tools">
+        <div class="kcnt-seg" role="group" aria-label="Filtrer">${seg}</div>
+        <div class="kcnt-search"><i data-icon="search"></i><input id="pos-cnt-search-input" placeholder="Scanner un code-barres ou chercher un article…" value="${esc(countState.search)}" autocomplete="off" autofocus></div>
+      </div>
+      ${dims ? `<div class="kcnt-dims">${dims}</div>` : ''}
+      <div class="kcnt-list" tabindex="0" role="region" aria-label="Articles à compter">${rows}</div>
+      <footer class="kcnt-ft">
+        <div class="kcnt-ft-l"><button type="button" class="kcnt-btn" id="pos-cnt-save-btn">Enregistrer le brouillon</button><span>${saved}</span></div>
+        <button type="button" class="kcnt-btn primary" id="pos-cnt-review-btn" ${v.countedCount === 0 ? 'disabled' : ''}>Vérifier et transmettre · ${v.countedCount}</button>
+      </footer>
+    </div>`;
+  }
+  function kitCss() {
+    if (document.getElementById('kcnt-css')) return;
+    const st = document.createElement('style');
+    st.id = 'kcnt-css';
+    const S = 'html[data-skin-2027="till"] #sk-modal-box';
+    st.textContent = `
+${S}.kcnt-box{width:min(760px,calc(100vw - 32px));max-height:min(90vh,920px);padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:var(--k-r-4);background-color:var(--k-surface-1);color:var(--k-ink-1);box-shadow:var(--k-shadow-2);font-family:var(--k-font)}
+${S} .kcnt{display:flex;flex-direction:column;min-height:0;flex:1;font-variant-numeric:tabular-nums}
+${S} .kcnt :is(button,input,select){font-family:inherit}
+${S} .kcnt-hd{display:flex;align-items:flex-start;gap:16px;padding:24px 16px 4px 24px}
+${S} .kcnt-ttl{flex:1;min-width:0}
+${S} .kcnt-eyebrow{display:block;margin-bottom:4px;font-size:var(--k-fs-footnote);font-weight:var(--k-fw-footnote-strong);color:var(--k-accent-ink)}
+${S} .kcnt-ttl h3{margin:0;font-size:var(--k-fs-heading);font-weight:var(--k-fw-heading);letter-spacing:var(--k-track-heading);line-height:var(--k-lh-heading)}
+${S} .kcnt-ttl p{margin:6px 0 0;font-size:var(--k-fs-callout);line-height:var(--k-lh-callout);color:var(--k-ink-3)}
+${S} .kcnt-ttl p b{color:var(--k-ink-1)}
+${S} .kcnt-ttl p b.kcnt-warn-ink{color:var(--k-warning)}
+${S} .kcnt-x{flex:none;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background-color:var(--k-surface-2);color:var(--k-ink-1);cursor:pointer;touch-action:manipulation}
+${S} .kcnt-x svg{width:20px;height:20px}
+${S} .kcnt-note{margin:12px 24px 0;padding:12px 16px;border-radius:var(--k-r-2);background-color:var(--k-warning-tint);color:var(--k-ink-1);font-size:var(--k-fs-callout)}
+${S} .kcnt-note.is-err{background-color:var(--k-danger-tint);color:var(--k-danger)}
+${S} .kcnt-prog{padding:16px 24px 0}
+${S} .kcnt-prog-l{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
+${S} .kcnt-prog-l b{color:var(--k-ink-1);font-weight:var(--k-fw-footnote-strong)}
+${S} .kcnt-num{color:var(--k-ink-2);font-weight:var(--k-fw-footnote-strong)}
+${S} .kcnt-bar{height:6px;border-radius:999px;background-color:var(--k-surface-2);overflow:hidden}
+${S} .kcnt-bar i{display:block;height:100%;border-radius:inherit;background-color:var(--k-accent);transition:width var(--k-dur-4) var(--k-glide)}
+${S} .kcnt-tools{display:flex;flex-wrap:wrap;gap:12px;padding:16px 24px 0}
+${S} .kcnt-seg{display:flex;flex:none;gap:4px;padding:4px;border-radius:var(--k-r-2);background-color:var(--k-surface-2)}
+${S} .kcnt-seg-it{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:0;border-radius:calc(var(--k-r-2) - 4px);background:none;color:var(--k-ink-2);font-size:var(--k-fs-callout);font-weight:var(--k-fw-callout-strong);cursor:pointer}
+${S} .kcnt-seg-it small{font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
+${S} .kcnt-seg-it.on{background-color:var(--k-surface-1);color:var(--k-ink-1);box-shadow:var(--k-shadow-1)}
+${S} .kcnt-seg-it.on small{color:var(--k-accent-ink)}
+${S} .kcnt-search{flex:1 1 260px;display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-radius:var(--k-r-2);background-color:var(--k-surface-2);transition:box-shadow var(--k-dur-2) var(--k-glide),background-color var(--k-dur-2) var(--k-glide)}
+${S} .kcnt-search:focus-within{background-color:var(--k-surface-1);box-shadow:0 0 0 var(--k-focus-w) var(--k-focus)}
+${S} .kcnt-search svg{flex:none;width:22px;height:22px;color:var(--k-ink-2)}
+${S} .kcnt-search input{flex:1;min-width:0;height:48px;border:0;outline:0;background:none;color:var(--k-ink-1);font-size:var(--k-fs-body)}
+${S} .kcnt-search input::placeholder{color:var(--k-ink-3)}
+${S} .kcnt-dims{display:flex;flex-wrap:wrap;gap:8px;padding:12px 24px 0}
+${S} .kcnt-dim{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:999px;background-color:var(--k-surface-2);font-size:var(--k-fs-footnote);color:var(--k-ink-3);cursor:pointer}
+${S} .kcnt-dim.on{background-color:var(--k-accent-tint);color:var(--k-accent-ink)}
+${S} .kcnt-dim select{border:0;outline:0;background:none;color:var(--k-ink-1);font-size:var(--k-fs-footnote);font-weight:var(--k-fw-footnote-strong);cursor:pointer;max-width:180px}
+${S} .kcnt-list{flex:1;min-height:120px;margin:16px 24px 0;overflow-y:auto;overscroll-behavior:contain;border-radius:var(--k-r-3);background-color:var(--k-surface-2)}
+${S} .kcnt-row{display:grid;grid-template-columns:minmax(0,1fr) auto 28px;align-items:center;gap:16px;min-height:76px;padding:10px 12px 10px 16px}
+${S} .kcnt-row + .kcnt-row{box-shadow:inset 0 1px 0 var(--k-line)}
+${S} .kcnt-row.is-counted{background-color:var(--k-accent-tint)}
+${S} .kcnt-info{min-width:0}
+${S} .kcnt-info b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--k-fs-body);font-weight:var(--k-fw-body-strong);color:var(--k-ink-1)}
+${S} .kcnt-info > span{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:4px;font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
+${S} .kcnt-chip{padding:2px 8px;border-radius:999px;background-color:var(--k-surface-1);color:var(--k-ink-2);font-weight:var(--k-fw-footnote-strong)}
+${S} .kcnt-code{font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:0;color:var(--k-ink-3)}
+${S} .kcnt-step{display:flex;align-items:center;gap:6px;padding:4px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);box-shadow:var(--k-shadow-1)}
+${S} .kcnt-step button{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:calc(var(--k-r-2) - 4px);background-color:var(--k-surface-2);color:var(--k-ink-1);cursor:pointer;touch-action:manipulation;transition:transform var(--k-dur-4) var(--k-spring)}
+${S} .kcnt-step button:active{transform:scale(.94);transition-duration:var(--k-dur-1)}
+${S} .kcnt-step button svg{width:22px;height:22px}
+${S} .kcnt-step input{width:68px;height:44px;border:0;outline:0;border-radius:calc(var(--k-r-2) - 4px);background:none;text-align:center;color:var(--k-ink-1);font-size:var(--k-fs-heading);font-weight:var(--k-fw-heading);-moz-appearance:textfield}
+${S} .kcnt-step input::-webkit-outer-spin-button,${S} .kcnt-step input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+${S} .kcnt-step input:focus{box-shadow:0 0 0 var(--k-focus-w) var(--k-focus)}
+${S} .kcnt-step input::placeholder{color:var(--k-ink-3);font-weight:var(--k-fw-body)}
+${S} .kcnt-state{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--k-line-strong)}
+${S} .kcnt-row.is-counted .kcnt-state{box-shadow:none;background-color:var(--k-accent);color:var(--k-on-accent)}
+${S} .kcnt-state svg{width:18px;height:18px}
+${S} .kcnt-empty{padding:40px 16px;text-align:center;color:var(--k-ink-3);font-size:var(--k-fs-callout)}
+${S} .kcnt-ft{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;padding:16px 24px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:inset 0 1px 0 var(--k-line)}
+${S} .kcnt-ft-l{display:flex;align-items:center;gap:12px;min-width:0}
+${S} .kcnt-ft-l span{font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
+${S} .kcnt-btn{min-height:52px;padding:0 22px;border:0;border-radius:var(--k-r-2);background-color:var(--k-surface-2);color:var(--k-ink-1);font-size:var(--k-fs-callout);font-weight:var(--k-fw-callout-strong);cursor:pointer;touch-action:manipulation}
+${S} .kcnt-btn.primary{min-width:220px;background-color:var(--k-accent);color:var(--k-on-accent);box-shadow:var(--k-shadow-1)}
+${S} .kcnt-btn.primary:hover{background-color:var(--k-accent-pressed)}
+${S} .kcnt-btn:disabled{background-color:var(--k-surface-2);color:var(--k-ink-3);box-shadow:none;cursor:default}
+${S} .kcnt-rv{grid-template-columns:minmax(0,1fr) auto;row-gap:10px}
+${S} .kcnt-qty{font-size:var(--k-fs-heading);font-weight:var(--k-fw-heading);color:var(--k-accent-ink);text-align:end}
+${S} .kcnt-qty small{margin-inline-start:4px;font-size:var(--k-fs-footnote);font-weight:var(--k-fw-footnote);color:var(--k-ink-3)}
+${S} .kcnt-ok{grid-column:1/-1;display:inline-flex;align-items:center;gap:4px;font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
+${S} .kcnt-ok svg{width:16px;height:16px;color:var(--k-accent)}
+${S} .kcnt-gap{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px}
+${S} .kcnt-gap-tag{padding:4px 10px;border-radius:999px;background-color:var(--k-warning-tint);color:var(--k-warning);font-size:var(--k-fs-footnote);font-weight:var(--k-fw-footnote-strong);white-space:nowrap}
+${S} .kcnt-gap :is(select,input){min-height:44px;padding:0 12px;border:0;border-radius:calc(var(--k-r-2) - 2px);background-color:var(--k-surface-1);color:var(--k-ink-1);font-size:var(--k-fs-callout)}
+${S} .kcnt-gap select{-webkit-appearance:none;appearance:none;padding-inline-end:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath fill='%235A625E' d='M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-size:22px 22px;background-position:right 10px center}
+${S} .kcnt-gap :is(select,input):focus{outline:0;box-shadow:0 0 0 var(--k-focus-w) var(--k-focus)}
+${S} .kcnt-done{position:relative;align-items:center;text-align:center;padding:48px 32px 32px}
+${S} .kcnt-done > .kcnt-x{position:absolute;top:16px;inset-inline-end:16px}
+${S} .kcnt-done-ic{width:72px;height:72px;display:grid;place-items:center;margin-bottom:16px;border-radius:50%;background-color:var(--k-accent-tint);color:var(--k-accent-ink)}
+${S} .kcnt-done-ic svg{width:36px;height:36px}
+${S} .kcnt-done h3{margin:0 0 8px;font-size:var(--k-fs-title);font-weight:var(--k-fw-title);letter-spacing:var(--k-track-title)}
+${S} .kcnt-done p{max-width:460px;margin:0 0 20px;font-size:var(--k-fs-callout);color:var(--k-ink-2)}
+${S} .kcnt-done-card{max-width:460px;margin:0 0 24px;padding:16px;border-radius:var(--k-r-3);background-color:var(--k-surface-2);text-align:start}
+${S} .kcnt-done-card b{display:block;margin-bottom:4px;font-size:var(--k-fs-callout)}
+${S} .kcnt-done-card span{font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
+@media (max-width:640px){${S} .kcnt-hd{padding:20px 12px 4px 16px}${S} :is(.kcnt-prog,.kcnt-tools,.kcnt-dims){padding-inline:16px}${S} .kcnt-list{margin-inline:16px}${S} .kcnt-row{grid-template-columns:minmax(0,1fr) auto;gap:10px}${S} .kcnt-state{display:none}${S} .kcnt-seg{flex:1 1 100%}${S} .kcnt-seg-it{flex:1;justify-content:center}${S} .kcnt-ft{padding-inline:16px}${S} .kcnt-btn.primary{flex:1;min-width:0}${S} .kcnt-gap{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){${S} :is(.kcnt-bar i,.kcnt-step button){transition:none}}
+`;
+    document.head.appendChild(st);
+  }
+
   function renderModal() {
     const cashier = getCashier();
     const engine = countState.engine;
@@ -453,19 +647,28 @@
       ${bodyHtml}
     `;
 
+    /* Peau 2027 : la même logique, la mise en page du kit (pos-inventory-count-kit). */
+    const kit = kitOn();
+    const html = kit ? kitModalHtml({ cashier, items, filtered, countedCount, totalCount, pct, gaps }) : modalHtml;
+    const prevList = document.querySelector('#sk-modal-box .kcnt-list, #sk-modal-box .sk-tbl-wrap');
+    const keepScroll = prevList ? prevList.scrollTop : 0;
     // Render inside caisse modal
     if (typeof window.openSkModal === 'function') {
-      window.openSkModal(modalHtml);
+      window.openSkModal(html);
     } else {
       const modal = document.getElementById('sk-modal');
       const inner = document.getElementById('sk-modal-box');
       if (modal && inner) {
-        inner.innerHTML = modalHtml;
+        inner.innerHTML = html;
         modal.classList.add('is-open');
       }
     }
     const box = document.getElementById('sk-modal-box');
+    if (box) box.classList.toggle('kcnt-box', kit);
     if (box && getComputedStyle(box).position === 'static') box.style.position = 'relative';
+    /* Un + ou un − redessine la fiche : la liste reste là où on comptait. */
+    const nextList = document.querySelector('#sk-modal-box .kcnt-list, #sk-modal-box .sk-tbl-wrap');
+    if (nextList && keepScroll) nextList.scrollTop = keepScroll;
     if (window.lucide) lucide.createIcons();
     wireEvents();
   }
@@ -482,6 +685,8 @@
   function closeCount() {
     try { saveDraft(); } catch (_) {}
     if (escHandler) { document.removeEventListener('keydown', escHandler, true); escHandler = null; }
+    const kbox = document.getElementById('sk-modal-box');
+    if (kbox) kbox.classList.remove('kcnt-box');
     const modal = document.getElementById('sk-modal');
     if (!modal) return;
     if (typeof window.closeSkModal === 'function') window.closeSkModal();
@@ -539,7 +744,7 @@
         return;
       }
 
-      if (e.target.id === 'pos-cnt-save-btn') {
+      if (e.target.closest('#pos-cnt-save-btn')) {
         if (saveDraft() && window.toast) toast('Brouillon d’inventaire enregistré');
         renderModal();
         return;
@@ -559,24 +764,24 @@
         return;
       }
 
-      if (e.target.id === 'pos-cnt-review-btn') {
+      if (e.target.closest('#pos-cnt-review-btn')) {
         countState.step = 'review';
         renderModal();
         return;
       }
 
-      if (e.target.id === 'pos-cnt-back-btn') {
+      if (e.target.closest('#pos-cnt-back-btn')) {
         countState.step = 'counting';
         renderModal();
         return;
       }
 
-      if (e.target.id === 'pos-cnt-finish-btn') {
+      if (e.target.closest('#pos-cnt-finish-btn')) {
         closeCount();
         return;
       }
 
-      if (e.target.id === 'pos-cnt-submit-btn') {
+      if (e.target.closest('#pos-cnt-submit-btn')) {
         submitCount();
         return;
       }
@@ -607,6 +812,9 @@
           } else {
             item.counted = false;
           }
+          /* Peau 2027 : la rangée passe au vert dès la frappe, sans redessiner (le curseur reste). */
+          const row = cntInput.closest('.kcnt-row');
+          if (row) { row.classList.toggle('is-counted', item.counted); const mark = row.querySelector('.kcnt-state'); if (mark) mark.innerHTML = item.counted ? '<i data-icon="check"></i>' : ''; }
           saveDraft();
         }
         return;

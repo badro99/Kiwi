@@ -1,7 +1,7 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=131';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=49';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=132';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=50';
 import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=49';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=50';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 /* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse : leurs écrans se redessinent souvent, on écoute donc une fois, au document. */
 try { document.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('[data-mz-back-inv]'); if (b && root && root.contains(b)) switchView('inventaire'); }); } catch (_) {}
@@ -837,9 +837,19 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     const kids = fresh ? [...fresh.children] : [];
     const at = kids.findIndex((k) => k.classList.contains('mzi-tools'));
     if (at < 0) { panel.innerHTML = html; return false; }
-    [...box.children].forEach((k) => { if (k !== tools) k.remove(); });
-    kids.slice(0, at).forEach((k) => box.insertBefore(k, tools));
-    kids.slice(at + 1).forEach((k) => box.appendChild(k));
+    const mzKeepAround = (parent, keep, fresh, i) => {
+      [...parent.children].forEach((k) => { if (k !== keep) k.remove(); });
+      fresh.slice(0, i).forEach((k) => parent.insertBefore(k, keep));
+      fresh.slice(i + 1).forEach((k) => parent.appendChild(k));
+    };
+    mzKeepAround(box, tools, kids, at);
+    /* Dans la rangée aussi, seule la recherche reste : les boutons suivent le
+       droit de la personne au pavé (Catégories, Nouvel article), qui peut
+       arriver après le premier dessin. */
+    const scanBox = tools.querySelector(':scope > .mzi-scan');
+    const freshKids = [...kids[at].children];
+    const sAt = freshKids.findIndex((k) => k.classList.contains('mzi-scan'));
+    if (scanBox && sAt >= 0) mzKeepAround(tools, scanBox, freshKids, sAt);
     return true;
   }
 
@@ -1169,8 +1179,8 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
   function openNewProduct() {
     if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); if (!cat) return;
-    const html = `<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Nouvel article</h3><span>Produit, prix, coût et première variante.</span></div></div><div class="mzi-form">
-      <div class="mzi-fg"><label>Nom</label><input id="mzi-n-name"></div><div class="mzi-frow"><div class="mzi-fg"><label>Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label>Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01"></div><div class="mzi-fg"><label>Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Marque / fournisseur</label><input id="mzi-n-brand"></div><div class="mzi-fg"><label>Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label>Code-barres (facultatif)</label><input id="mzi-n-barcode"></div></div>${ownershipField(null, 'mzi-n')}${productPhotoField('')}</div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
+    const html = `<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Nouvel article</h3><span>Produit, prix, coût et première variante.</span></div></div><div class="mzi-form mzi-new-form">
+      ${productPhotoField('')}<div class="mzi-fg"><label for="mzi-n-name">Nom</label><input id="mzi-n-name" placeholder="Ex. Assiette plate en faïence 27 cm" autocomplete="off"></div><div class="mzi-frow"><div class="mzi-fg"><label for="mzi-n-cat">Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label for="mzi-n-kind">Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label for="mzi-n-price">Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div><div class="mzi-fg"><label for="mzi-n-cost">Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div></div><div class="mzi-frow mzi-frow3"><div class="mzi-fg"><label for="mzi-n-stock">Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0" inputmode="numeric"></div><div class="mzi-fg"><label for="mzi-n-size">Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label for="mzi-n-barcode">Code-barres (facultatif)</label><input id="mzi-n-barcode" autocomplete="off"></div></div><div class="mzi-fg"><label for="mzi-n-brand">Marque / fournisseur</label><input id="mzi-n-brand"></div>${ownershipField(null, 'mzi-n')}</div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
     invSetModal(html, (el) => { const save=$('#mzi-n-save',el); const media=wireProductPhoto(el,'',save); wireOwnershipField(el, 'mzi-n'); save.onclick = () => { if(media.busy)return; const name=$('#mzi-n-name',el).value.trim(); if(!name){toast('Le nom est requis');return;} const owner=readOwnershipField(el,'mzi-n'); if(!owner){toast('Choisissez la catégorie A ou B');return;} let p,v; cat.batch(()=>{p=cat.addProduct({name,categoryId:$('#mzi-n-cat',el).value||null,kind:$('#mzi-n-kind',el).value,priceMAD:bqMoney($('#mzi-n-price',el).value),cost:bqMoney($('#mzi-n-cost',el).value),marque:$('#mzi-n-brand',el).value.trim(),art:'tshirt',ownership:owner.ownership,consignor:owner.consignor,photo:media.photo});v=cat.addVariant({productId:p.id,colorId:'noir',size:$('#mzi-n-size',el).value.trim()||'TU',stock:Math.max(0,parseInt($('#mzi-n-stock',el).value,10)||0)});const code=$('#mzi-n-barcode',el).value.trim();if(code)cat.attachBarcode(v.id,code);}); rebuildCatalog(); toast('Article créé'); openInvProduct(p.id); renderInventaire(); }; });
   }
 
@@ -1178,26 +1188,23 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat=catDB(), cats=cat.listCategories();
     const html=`<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="mzi-modh"><div><h3>Catégories</h3><span>Rayons partagés avec le dashboard et la grille de vente.</span></div></div>
+      <div class="mzi-modh"><div><h3>Catégories</h3><span>Rayons partagés avec le dashboard et la grille de vente. Touchez un nom pour le modifier.</span></div></div>
       <div class="mzi-form mzi-cat-form">
         <div class="mzi-cat-create">
           <div class="mzi-fg"><label for="mzi-cat-name">Nouvelle catégorie</label><input id="mzi-cat-name" placeholder="Ex. Bougies, Vaisselle, Linge de maison" autocomplete="off"></div>
           <button class="mz-btn primary" id="mzi-cat-add"><i data-lucide="plus"></i>Ajouter</button>
         </div>
         <div class="mzi-cat-list">
-          ${cats.length ? cats.map((c)=>`<div class="mzi-cat-row">
-            <div class="mzi-cat-main">
-              <div class="mzi-cat-meta"><b>${esc(c.name)}</b><span class="mzi-cat-count">${cat.categoryCount(c.id)} article(s)</span></div>
-              <input data-mzi-cat-name="${c.id}" value="${esc(c.name)}" aria-label="Nom de la catégorie ${esc(c.name)}">
-            </div>
-            <div class="mzi-cat-actions">
-              <button class="mz-btn secondary" data-mzi-cat-save="${c.id}"><i data-lucide="check"></i>Enregistrer</button>
-              <button class="mz-btn danger" data-mzi-cat-delete="${c.id}" aria-label="Supprimer ${esc(c.name)}"><i data-lucide="trash-2"></i></button>
-            </div>
-          </div>`).join('') : '<div class="mzi-cat-empty">Aucune catégorie pour le moment.</div>'}
+          ${cats.length ? cats.map((c)=>{ const n=cat.categoryCount(c.id); return `<div class="mzi-cat-row">
+            <div class="mzi-cat-main"><input data-mzi-cat-name="${c.id}" value="${esc(c.name)}" aria-label="Nom de la catégorie ${esc(c.name)}" enterkeyhint="done"><span class="mzi-cat-count">${n} article${n>1?'s':''}</span></div>
+            <div class="mzi-cat-actions"><button class="mz-btn danger" data-mzi-cat-delete="${c.id}" aria-label="Supprimer ${esc(c.name)}" title="${n?'Videz d’abord la catégorie':'Supprimer'}"><i data-lucide="trash-2"></i></button></div>
+          </div>`; }).join('') : '<div class="mzi-cat-empty">Aucune catégorie pour le moment.</div>'}
         </div>
       </div>`;
-    invSetModal(html,(el)=>{ const add=()=>{const name=$('#mzi-cat-name',el).value.trim();if(!name){$('#mzi-cat-name',el).focus();return;}cat.addCategory(name);openCategories();renderInventaire();}; $('#mzi-cat-add',el).onclick=add; $('#mzi-cat-name',el).onkeydown=(event)=>{if(event.key==='Enter'){event.preventDefault();add();}}; el.querySelectorAll('[data-mzi-cat-save]').forEach((b)=>b.onclick=()=>{cat.renameCategory(b.dataset.mziCatSave,$(`[data-mzi-cat-name="${b.dataset.mziCatSave}"]`,el).value);openCategories();renderInventaire();});el.querySelectorAll('[data-mzi-cat-delete]').forEach((b)=>b.onclick=()=>{const res=cat.deleteCategory(b.dataset.mziCatDelete,{moveTo:null});if(res?.ok===false){toast('Déplacez d’abord les articles de cette catégorie');return;}openCategories();renderInventaire();});});
+    invSetModal(html,(el)=>{ const add=()=>{const name=$('#mzi-cat-name',el).value.trim();if(!name){$('#mzi-cat-name',el).focus();return;}cat.addCategory(name);openCategories();renderInventaire();}; $('#mzi-cat-add',el).onclick=add; $('#mzi-cat-name',el).onkeydown=(event)=>{if(event.key==='Enter'){event.preventDefault();add();}};
+      /* Le nom s'enregistre en quittant le champ ou sur Entrée : plus un bouton « Enregistrer » par rayon. */
+      el.querySelectorAll('[data-mzi-cat-name]').forEach((inp)=>{ inp.onkeydown=(e)=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}}; inp.onchange=()=>{const v=inp.value.trim();if(!v){openCategories();return;}cat.renameCategory(inp.dataset.mziCatName,v);toast('Catégorie renommée');openCategories();renderInventaire();}; });
+      el.querySelectorAll('[data-mzi-cat-delete]').forEach((b)=>b.onclick=()=>{const res=cat.deleteCategory(b.dataset.mziCatDelete,{moveTo:null});if(res?.ok===false){toast('Déplacez d’abord les articles de cette catégorie');return;}openCategories();renderInventaire();});});
   }
 
   function openEditProduct(pid) {

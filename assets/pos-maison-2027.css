@@ -608,3 +608,194 @@ html[data-skin-2027="till"] #pos-maison .mzi-tools { flex-wrap: wrap; row-gap: 1
 html[data-skin-2027="till"] #pos-maison .mzi-tools > .mzi-scan { flex: 1 1 240px; min-width: 200px; }
 html[data-skin-2027="till"] #pos-maison .mzi-tools > .mzi-scan input { min-width: 0; width: 100%; }
 html[data-skin-2027="till"] #pos-maison #mzi-sgst { inset-inline-end: auto; width: max(100%, 520px); max-width: calc(100vw - 140px); }
+
+/* ═══════════════ LES FICHES DE L'INVENTAIRE (Nouvel article, Catégories…) ═══════════════
+   La boîte unique de l'inventaire (#mz-invmm, inventory.js › invSetModal)
+   reçoit la géométrie des feuilles du kit (overlays.js) : coin r-4, en-tête
+   aéré, croix ronde de 44, corps à 24, pied collé en bas avec son filet. Les
+   champs sont ceux du kit : remplis, sans contour, 52 px, libellé en phrase
+   (plus de petites capitales grises), anneau de focus du kit. */
+html[data-skin-2027="till"] #pos-maison .mz-invm {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(88vh, 900px);
+  border-radius: var(--k-r-4);
+  background-color: var(--k-surface-1);
+  box-shadow: var(--k-shadow-2);
+  overscroll-behavior: contain;
+}
+html[data-skin-2027="till"] #pos-maison .mz-invm .mz-modal-x {
+  top: 16px; inset-inline-end: 16px; z-index: 3;
+  width: 44px; height: 44px; border-radius: 50%;
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison .mz-invm .mz-modal-x svg { width: 20px; height: 20px; }
+html[data-skin-2027="till"] #pos-maison .mzi-modh {
+  padding: 24px 76px 8px 24px;
+  border-bottom: 0;
+}
+html[data-skin-2027="till"] #pos-maison .mzi-modh h3 {
+  font-size: var(--k-fs-heading); font-weight: var(--k-fw-heading);
+  letter-spacing: var(--k-track-heading); line-height: var(--k-lh-heading);
+  color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-modh > div span {
+  display: block; margin-top: 4px;
+  font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); color: var(--k-ink-3);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-form { padding: 16px 24px 8px; }
+html[data-skin-2027="till"] #pos-maison .mzi-fg { margin-bottom: 16px; }
+html[data-skin-2027="till"] #pos-maison .mzi-fg > label {
+  margin-bottom: 8px;
+  font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+  letter-spacing: 0; text-transform: none; color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mzi-fg input, .mzi-fg select, .mzi-cat-main input) {
+  min-height: 52px; padding: 0 16px;
+  border: 0; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+  font-size: var(--k-fs-body); font-variant-numeric: tabular-nums;
+  transition: background-color var(--k-dur-2) var(--k-glide), box-shadow var(--k-dur-2) var(--k-glide);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mzi-fg input, .mzi-cat-main input)::placeholder { color: var(--k-ink-3); }
+html[data-skin-2027="till"] #pos-maison :is(.mzi-fg input, .mzi-fg select, .mzi-cat-main input):focus {
+  outline: 0; background-color: var(--k-surface-1);
+  box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus);
+}
+/* Pas de mini-flèches du navigateur dans un champ chiffré : on tape. */
+html[data-skin-2027="till"] #pos-maison .mzi-fg input[type="number"] { -moz-appearance: textfield; }
+html[data-skin-2027="till"] #pos-maison .mzi-fg input[type="number"]::-webkit-inner-spin-button,
+html[data-skin-2027="till"] #pos-maison .mzi-fg input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* La flèche du sélecteur : expand_more de Material, à la couleur de l'encre 2. */
+html[data-skin-2027="till"] #pos-maison .mzi-fg select {
+  -webkit-appearance: none; appearance: none;
+  padding-inline-end: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath fill='%235A625E' d='M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: 24px 24px;
+  background-position: right 14px center;
+}
+html[data-skin-2027="till"] .kiwi-rtl #pos-maison .mzi-fg select,
+html[data-skin-2027="till"] #pos-maison.kiwi-rtl .mzi-fg select { background-position: left 14px center; }
+/* Les listes déroulantes sont remplacées par le sélecteur Kiwi
+   (kiwi-select.js) : c'est son bouton qui se peint, au gabarit des champs. */
+html[data-skin-2027="till"] #pos-maison .mzi-fg .kiwi-select-trigger {
+  min-height: 52px; padding: 0 12px 0 16px;
+  border: 0; border-radius: var(--k-r-2);
+  background: var(--k-surface-2); box-shadow: none; color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-fg .kiwi-select-trigger:hover { background: var(--k-surface-3); }
+html[data-skin-2027="till"] #pos-maison .mzi-fg .kiwi-select-trigger:is(:focus-visible, [aria-expanded="true"]) {
+  background: var(--k-surface-1); box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-fg .kiwi-select-value-label {
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-fg .kiwi-select-chevron { color: var(--k-ink-2); }
+html[data-skin-2027="till"] #pos-maison .mzi-frow { gap: 12px; }
+/* Le pied reste visible quand la fiche défile : Créer ne se cherche pas. */
+html[data-skin-2027="till"] #pos-maison .mzi-modfoot {
+  position: sticky; bottom: 0; z-index: 2;
+  justify-content: flex-end; gap: 12px;
+  padding: 16px 24px calc(20px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--k-surface-1);
+  box-shadow: inset 0 1px 0 var(--k-line);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-modfoot .mz-btn { min-height: 52px; padding-inline: 24px; border: 0; }
+html[data-skin-2027="till"] #pos-maison .mzi-modfoot .mz-btn.primary { min-width: 180px; }
+html[data-skin-2027="till"] #pos-maison .mz-btn.secondary { background-color: var(--k-surface-2); border: 0; }
+html[data-skin-2027="till"] #pos-maison .mz-btn.danger { background-color: var(--k-danger-tint); color: var(--k-danger); border: 0; }
+
+/* ── Nouvel article : la photo en tête, comme une fiche produit ── */
+html[data-skin-2027="till"] #pos-maison .mzi-photo {
+  grid-template-columns: 96px minmax(0, 1fr); gap: 16px;
+  padding: 12px; border: 0; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-2);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-photo-preview {
+  width: 96px; height: 96px; border-radius: var(--k-r-2);
+  border: 1.5px dashed var(--k-line-strong);
+  background-color: var(--k-surface-1); color: var(--k-ink-3);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-photo-preview:has(img) { border: 0; }
+html[data-skin-2027="till"] #pos-maison .mzi-photo-preview svg { width: 28px; height: 28px; }
+html[data-skin-2027="till"] #pos-maison .mzi-photo-copy b { font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); color: var(--k-ink-1); }
+html[data-skin-2027="till"] #pos-maison .mzi-photo-status { font-size: var(--k-fs-footnote); color: var(--k-ink-3); }
+html[data-skin-2027="till"] #pos-maison .mzi-photo-actions .mz-btn {
+  min-height: 44px; padding: 0 16px; border: 0;
+  background-color: var(--k-surface-1); box-shadow: var(--k-shadow-1);
+}
+/* Catégorie A / B : deux cartes à toucher ; le rond natif s'efface, la carte
+   choisie prend la teinte de l'accent et son filet. */
+html[data-skin-2027="till"] #pos-maison .mzi-ab { gap: 12px; }
+html[data-skin-2027="till"] #pos-maison .mzi-ab label {
+  position: relative; min-height: 72px; padding: 14px 16px;
+  border: 0; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+  box-shadow: inset 0 0 0 1.5px transparent;
+  transition: background-color var(--k-dur-2) var(--k-glide), box-shadow var(--k-dur-2) var(--k-glide);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-ab input {
+  position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;
+}
+html[data-skin-2027="till"] #pos-maison .mzi-ab label:has(input:checked) {
+  background-color: var(--k-accent-tint);
+  box-shadow: inset 0 0 0 1.5px var(--k-accent);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-ab label:has(input:focus-visible) {
+  box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-ab b { font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); }
+html[data-skin-2027="till"] #pos-maison .mzi-ab span { margin-top: 4px; font-size: var(--k-fs-footnote); color: var(--k-ink-3); }
+html[data-skin-2027="till"] #pos-maison .mzi-ab label:has(input:checked) b { color: var(--k-accent-ink); }
+
+/* ── Catégories : une ligne par rayon, le nom une seule fois ── */
+html[data-skin-2027="till"] #pos-maison .mzi-cat-form { padding-bottom: 24px; }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-create {
+  grid-template-columns: minmax(0, 1fr) auto; gap: 12px;
+  padding: 0; border: 0; background: none;
+}
+html[data-skin-2027="till"] #pos-maison .mzi-cat-create .mz-btn { min-height: 52px; padding-inline: 20px; border: 0; }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-create .mzi-fg { margin: 0; }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-list {
+  gap: 0; margin-top: 8px;
+  border-radius: var(--k-r-3); background-color: var(--k-surface-2);
+  overflow: hidden;
+}
+html[data-skin-2027="till"] #pos-maison .mzi-cat-row {
+  grid-template-columns: minmax(0, 1fr) auto; gap: 8px;
+  padding: 6px 8px 6px 6px;
+  border: 0; border-radius: 0; background: none;
+}
+html[data-skin-2027="till"] #pos-maison .mzi-cat-row + .mzi-cat-row { box-shadow: inset 0 1px 0 var(--k-line); }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-main {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
+/* Le nom se lit comme du texte et s'édite sur place : pas de boîte tant
+   qu'on ne le touche pas. */
+html[data-skin-2027="till"] #pos-maison .mzi-cat-main input {
+  flex: 1; min-width: 0; padding: 0 12px;
+  background-color: transparent;
+  font-weight: var(--k-fw-body-strong);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-cat-main input:hover { background-color: var(--k-surface-1); }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-count {
+  flex: none; padding: 4px 10px; border-radius: 999px;
+  background-color: var(--k-surface-1); color: var(--k-ink-2);
+  font-size: var(--k-fs-footnote); font-variant-numeric: tabular-nums;
+}
+html[data-skin-2027="till"] #pos-maison .mzi-cat-actions .mz-btn {
+  width: 44px; min-height: 44px; padding: 0; justify-content: center;
+  background-color: transparent; color: var(--k-ink-3);
+}
+html[data-skin-2027="till"] #pos-maison .mzi-cat-actions .mz-btn:hover { background-color: var(--k-danger-tint); color: var(--k-danger); }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-actions .mz-btn svg { width: 20px; height: 20px; }
+html[data-skin-2027="till"] #pos-maison .mzi-cat-empty {
+  padding: 32px 16px; border: 0; border-radius: var(--k-r-3);
+  color: var(--k-ink-3); font-size: var(--k-fs-callout);
+}
+
+@media (max-width: 640px) {
+  html[data-skin-2027="till"] #pos-maison .mzi-frow { flex-direction: column; gap: 0; }
+  html[data-skin-2027="till"] #pos-maison .mzi-cat-create { grid-template-columns: 1fr; }
+  html[data-skin-2027="till"] #pos-maison .mzi-cat-row { grid-template-columns: minmax(0, 1fr) auto; }
+  html[data-skin-2027="till"] #pos-maison .mzi-modfoot .mz-btn { flex: 1; min-width: 0; }
+}
