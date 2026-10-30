@@ -4,7 +4,7 @@ import { openMoves } from './inv-moves.js?v=5';
 import * as SZ from '../boutique-sizes.js?v=17';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=129';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=130';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
