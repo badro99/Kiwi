@@ -283,7 +283,10 @@
   function kitThumb(it) {
     if (it.photo) return `<img src="${esc(it.photo)}" alt="" loading="lazy" decoding="async" draggable="false">`;
     if (photoMod && usesCatalog(countState.engine)) {
-      return photoMod.photoImg({ name: it.productName, art: it.art, artPicked: it.artPicked, colors: it.colorId ? [it.colorId] : [] }, 'kcnt-auto', 'tag', it.color);
+      /* La couleur passe par le produit, pas en force : le nom (« Hoodie noir »)
+         l'emporte, et le gris que le catalogue met d'office ne compte pas — la
+         même règle que la grille de vente (retail-photos.js › colourOf). */
+      return photoMod.photoImg({ name: it.productName, art: it.art, artPicked: it.artPicked, colors: it.color ? [it.color] : [] }, 'kcnt-auto', countState.engine === 'maison' ? 'tag' : 'cintre');
     }
     const letter = String(it.productName || '?').trim().charAt(0).toUpperCase();
     return `<span class="kcnt-mono">${esc(letter)}</span>`;

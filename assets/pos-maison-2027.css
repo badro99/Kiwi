@@ -597,6 +597,14 @@ html[data-skin-2027="till"] #pos-maison #mz-kit-tkacts {
 }
 html[data-skin-2027="till"] #pos-maison #mz-kit-tkacts k-button { width: 100%; }
 
+/* ═══════════════ LES COINS DES FICHES DE L'INVENTAIRE ═══════════════
+   La barre de défilement du navigateur (17 px, carrée) se dessinait au bord
+   droit de #mz-invmm et dépassait des coins arrondis (propriétaire,
+   2026-10-30, relevé sur la maison). Comme les feuilles du kit, la fiche
+   défile au doigt sans barre visible. */
+html[data-skin-2027="till"] #pos-maison .mz-invm { scrollbar-width: none; }
+html[data-skin-2027="till"] #pos-maison .mz-invm::-webkit-scrollbar { display: none; }
+
 /* ═══════════════ LA MAISON EN PLUS ═══════════════
    Ce que la boutique n'a pas, ou dessine ailleurs. */
 
@@ -623,11 +631,6 @@ html[data-skin-2027="till"] #pos-maison .mz-invm {
   box-shadow: var(--k-shadow-2);
   overscroll-behavior: contain;
 }
-/* Coins : la barre de défilement du navigateur (17 px, carrée) se dessinait
-   au bord droit et dépassait des coins arrondis (propriétaire, 2026-10-30).
-   Comme les feuilles du kit, la fiche défile au doigt sans barre visible. */
-html[data-skin-2027="till"] #pos-maison .mz-invm { scrollbar-width: none; }
-html[data-skin-2027="till"] #pos-maison .mz-invm::-webkit-scrollbar { display: none; }
 html[data-skin-2027="till"] #pos-maison .mz-invm .mz-modal-x {
   top: 16px; inset-inline-end: 16px; z-index: 3;
   width: 44px; height: 44px; border-radius: 50%;
