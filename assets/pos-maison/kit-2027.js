@@ -2,8 +2,8 @@
  * Copie de assets/pos-boutique/kit-2027.js, préfixe mz- : la maison est un
  * fork de la boutique, donc mêmes écrans, mêmes places (propriétaire,
  * 2026-10-30 : « fais-la ressembler à la boutique »). Ce qui ne diffère :
- * ses trois vues en plus (Mouvements de stock, Déclarer Casse, Fournisseurs)
- * vont dans Plus, pas de Remise au ticket, et son écran
+ * Fournisseurs va dans Plus ; Mouvements de stock et Déclarer Casse s'ouvrent
+ * depuis l'Inventaire, pas de Remise au ticket, et son écran
  * d'ouverture garde les identifiants bqci-* hérités de la boutique.
  * Drapeau éteint ou kit absent, rien ici ne s'exécute. */
 let mzFloatSheet = null;
@@ -78,11 +78,14 @@ const MZ_MORE_VIEWS = [
   ['vendus', 'receipt_long'],
   ['acomptes', 'account_balance_wallet'],
   ['livraisons', 'local_shipping'],
-  /* Les vues propres à la maison, après celles de la boutique. */
-  ['mouvements', 'history'],
-  ['casse', 'warning'],
+  /* La vue propre à la maison, après celles de la boutique. */
   ['fournisseurs', 'storefront'],
 ];
+/* Mouvements de stock et Déclarer casse s'ouvrent depuis l'Inventaire
+   (propriétaire, 2026-10-30 : « pas besoin d'un bouton à eux ») : ni rail ni
+   Plus, et pendant qu'ils sont ouverts le rail reste sur Inventaire. */
+const MZ_PARENT = { mouvements: 'inventaire', casse: 'inventaire' };
+const mzRailValue = (cur) => { const v = (cur && cur.dataset.mzView) || 'vente'; return MZ_PARENT[v] || v; };
 /* Les commandes du tiroir, reconnues sur le bouton LIVRÉ : son identifiant,
    sa classe ou son action. Inconnue, elle garde « more_horiz » et sa place —
    on n'écarte jamais un bouton qu'on n'a pas su nommer. */
@@ -128,7 +131,7 @@ function mzKitRailPaint() {
   /* Plus n'est jamais la valeur : <k-rail> refuse de ré-émettre sur
      l'élément qui porte déjà sa valeur, et Moins ne pourrait plus refermer. */
   const cur = mzQ('#mz-nav .mz-nav-it.on', mzRoot);
-  mzRail.setAttribute('value', (cur && cur.dataset.mzView) || 'vente');
+  mzRail.setAttribute('value', mzRailValue(cur));
   mzKitMorePaint();
 }
 
@@ -216,7 +219,7 @@ function mzKitMorePaint() {
     .concat(shift.length ? [{ label: mzKitT('till.more.shift', tr('Service')), items: shift }] : [])
     .concat(device.length ? [{ label: mzKitT('till.more.device', tr('Cet appareil')), items: device }] : []);
   const cur = mzQ('#mz-nav .mz-nav-it.on', mzRoot);
-  mzSide.setAttribute('value', (cur && cur.dataset.mzView) || 'vente');
+  mzSide.setAttribute('value', mzRailValue(cur));
 }
 
 function mzKitRail(root, $, icons, on, who) {

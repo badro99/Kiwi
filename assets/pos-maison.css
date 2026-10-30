@@ -2034,3 +2034,5 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
   #pos-maison .mz-form-grid { grid-template-columns: 1fr; }
   #pos-maison .mz-form-grid > :first-child { grid-column: auto; }
 }
+/* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse (ouverts depuis l'Inventaire). */
+.mz-btn.mz-back-inv { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px -6px; padding: 4px 10px 4px 6px; font-size: 13px; }

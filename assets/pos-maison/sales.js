@@ -1,9 +1,9 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=118';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=38';
-import { invSetModal, offerRegister } from './inventory.js?v=38';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=120';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=39';
+import { invSetModal, offerRegister } from './inventory.js?v=39';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=4';
-import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=3';
+import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=4';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -2049,7 +2049,7 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
       <div class="mz-casse-view mz-page">
         <header class="mz-head">
           <div>
-            <h1>Déclaration de Casse &amp; Pertes</h1>
+            <button class="mz-btn ghost mz-back-inv" data-mz-back-inv><i data-lucide="arrow-left"></i>Inventaire</button><h1>Déclaration de Casse &amp; Pertes</h1>
             <div class="mz-head-sub">Dépréciation immédiate, valorisation au coût d'achat et traçabilité inventaire</div>
           </div>
           <div class="mz-head-metric is-danger">

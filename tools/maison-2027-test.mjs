@@ -74,7 +74,8 @@ const fnBody = (src, name) => {
   return end < 0 ? '' : src.slice(at, end + 2);
 };
 for (const fn of ['mzKitRailPaint', 'mzMoreTarget', 'mzMoreActs', 'mzKitMorePaint', 'mzKitRail', 'mzKitTicketEmpty', 'mzKitScanBar', 'mzKitSellScroll']) {
-  const a = fnBody(bqKit, fn), b = fnBody(mzKit, fn);
+  /* Seul écart voulu : la valeur du rail passe par mzRailValue (Mouvements et casse restent sur Inventaire). */
+  const a = fnBody(bqKit, fn), b = fnBody(mzKit, fn).replace(/mzRailValue\(cur\)/g, "(cur && cur.dataset.mzView) || 'vente'");
   check(a !== '' && a === b, `${fn} de la maison ne suit plus celui de la boutique (pos-boutique/kit-2027.js) : reporter la correction`);
 }
 /* Deux écarts voulus, et seulement eux. */
@@ -82,9 +83,14 @@ check(fnBody(mzKit, 'mzKitOpenSheet') === fnBody(bqKit, 'mzKitOpenSheet').replac
   "la feuille du fond d'ouverture de la maison ne suit plus celle de la boutique (seul écart : les pastilles #bqci-chips héritées)");
 check(fnBody(mzKit, 'mzKitTicketFoot').replace(/\n\s*\/\*[^\n]*\*\/\n/, '\n').replace("  if (typeof o.onRemise === 'function') sec.appendChild(mk('remise'", "  sec.appendChild(mk('remise'") === fnBody(bqKit, 'mzKitTicketFoot'),
   'le pied du ticket de la maison ne suit plus celui de la boutique (seul écart : pas de Remise sans o.onRemise)');
-for (const v of ['mouvements', 'casse', 'fournisseurs']) {
-  check(new RegExp("\\['" + v + "', '[a-z_0-9]+'\\]").test(mzKit), `la vue « ${v} » de la maison n'a plus de place dans Plus : elle deviendrait injoignable sous la peau`);
-}
+check(/\['fournisseurs', '[a-z_0-9]+'\]/.test(mzKit) && /\['livraisons', '[a-z_0-9]+'\]/.test(mzKit),
+  'Fournisseurs ou Livraisons n\'ont plus de place dans Plus : la vue deviendrait injoignable sous la peau');
+/* Mouvements de stock et Déclarer casse s'ouvrent depuis l'Inventaire (propriétaire, 2026-10-30). */
+const inv = read('assets/pos-maison/inventory.js');
+check(/id="mzi-moves"/.test(inv) && /switchView\('mouvements'\)/.test(inv) && /id="mzi-casse"/.test(inv) && /switchView\('casse'\)/.test(inv),
+  'Mouvements de stock ou Déclarer casse n\'ont plus leur bouton dans l\'Inventaire : la vue deviendrait injoignable');
+check(/MZ_PARENT = \{ mouvements: 'inventaire', casse: 'inventaire' \}/.test(mzKit), 'le rail ne reste plus sur Inventaire pendant Mouvements ou Déclarer casse');
+check(/data-mz-back-inv/.test(inv) && /data-mz-back-inv/.test(read('assets/pos-maison/sales.js')), 'Mouvements ou Déclarer casse ont perdu leur retour « ← Inventaire »');
 const sprite = read('assets/icons/material/sprite.till.svg');
 for (const [, ic] of mzKit.matchAll(/\['[^']+', '([a-z_0-9]+)'\],/g)) {
   check(new RegExp('id="' + ic + '"').test(sprite), `l'icône « ${ic} » manque à sprite.till.svg : le rail ou le tiroir dessinerait un vide`);

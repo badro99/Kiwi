@@ -1,8 +1,10 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=118';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=38';
-import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=3';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=38';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=120';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=39';
+import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=4';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=39';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
+/* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse : leurs écrans se redessinent souvent, on écoute donc une fois, au document. */
+try { document.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('[data-mz-back-inv]'); if (b && root && root.contains(b)) switchView('inventaire'); }); } catch (_) {}
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -739,7 +741,7 @@ import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-ac
     const option = (value, label, current) => `<option value="${esc(value)}"${String(value) === String(current) ? ' selected' : ''}>${esc(label)}</option>`;
     panel.innerHTML = `<div class="mzm-view mz-page">
       <header class="mz-head mzm-head">
-        <div><h1>Mouvements de stock</h1><div class="mz-head-sub">Chaque entrée et chaque sortie, avec le stock avant et après${state.movementSyncing ? ' · synchronisation…' : ''}</div></div>
+        <div><button class="mz-btn ghost mz-back-inv" data-mz-back-inv><i data-lucide="arrow-left"></i>Inventaire</button><h1>Mouvements de stock</h1><div class="mz-head-sub">Chaque entrée et chaque sortie, avec le stock avant et après${state.movementSyncing ? ' · synchronisation…' : ''}</div></div>
         <button class="mz-btn primary" id="mzm-new"><i data-lucide="plus"></i>Nouveau mouvement</button>
       </header>
       <div class="mzm-kpis" id="mzm-kpis"></div>
@@ -835,6 +837,8 @@ import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-ac
         <div class="mzi-tools">
           <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
           <button class="mz-btn primary" id="mzi-count" style="background:#059669;border-color:#047857;"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
+          <button class="mz-btn" id="mzi-moves"><i data-lucide="history"></i>Mouvements de stock</button>
+          <button class="mz-btn" id="mzi-casse"><i data-lucide="shield-alert"></i>Déclarer casse</button>
           <button class="mz-btn" id="mzi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
           ${catalogueAdminEnabled() ? '<button class="mz-btn" id="mzi-category"><i data-lucide="folders"></i>Catégories</button><button class="mz-btn primary" id="mzi-new"><i data-lucide="plus"></i>Nouvel article</button>' : `<span class="mzi-dashboard-only">${esc(tillInventoryRefusal())}</span>`}
         </div>
@@ -863,6 +867,9 @@ import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-ac
     mzInvSearch($('.mzi-scan', panel), scan, mzSkinOn(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
       catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, colorLabel, availableStock: (pid, size) => (P[pid] && P[pid].sizes && P[pid].sizes[size]) || 0 }) });   // peau 2027 : la liste de la boutique
     const cb = $('#mzi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'maison' });
+    /* Mouvements et casse vivent DANS l'Inventaire (propriétaire, 2026-10-30) : plus de place à eux dans le rail. */
+    const mvb = $('#mzi-moves', panel); if (mvb) mvb.onclick = () => switchView('mouvements');
+    const csb = $('#mzi-casse', panel); if (csb) csb.onclick = () => switchView('casse');
     const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#mzi-new', panel); if (nb) nb.onclick = openNewProduct;
     const mb = $('#mzi-category', panel); if (mb) mb.onclick = openCategories;
