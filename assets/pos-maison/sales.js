@@ -1,9 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=126';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=44';
-import { invSetModal, offerRegister } from './inventory.js?v=44';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=128';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=46';
+import { invSetModal, offerRegister } from './inventory.js?v=46';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=4';
+import { mzTicketRemise } from './ticket-remise.js?v=1';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -429,12 +430,14 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
     return '';
   }
 
+  const openTicketRemise = () => mzTicketRemise({ state, root, $, $$, esc, icons, toast, openVeil, closeVeil, openApprove, renderTicket, renderGrid, renderBadges, policyKey: _bqKey });
+
   function renderTicket() {
     const t = state.ticket;
     const { promo, remise, reward, total } = ticketTotals(t);
     const count = ticketCount(t);
-    const hasFragile = t.lines.some((ln) => ln.fragile || (P[ln.pid] && P[ln.pid].fragile));
     const el = $('#mz-ticket', root);
+    const skin = mzSkinOn();
     el.innerHTML = `
       <div class="mz-tk-head">
         <div><span class="mz-tk-title">Ticket</span> <span class="mz-tk-num${t.num ? '' : t.numError ? ' err' : ''}">· ${t.num || (t.numError ? 'numéro indisponible' : 'attribution…')}${isOfflineRef(t.num) ? ' · hors-ligne' : ''} · par ${esc(STAFF.caissiere.name)}</span></div>
@@ -450,13 +453,10 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
           </div>`}
       </div>
       <div class="mz-tk-foot">
-        ${t.lines.length ? `
+        ${t.lines.length && !skin ? `
         <div class="mz-tk-opt-bar">
-          <button class="mz-tk-opt-btn ${t.giftWrap ? 'on' : ''}" id="mz-tk-giftwrap"><i data-lucide="gift"></i> ${t.giftWrap ? 'Emballage cadeau inclus' : '+ Emballage cadeau'}</button>
-          <button class="mz-tk-opt-btn ${t.delivery ? 'on' : ''}" id="mz-tk-delivery"><i data-lucide="truck"></i> ${t.delivery ? 'Livraison Tanger (' + esc(t.delivery.quartier || 'Prévue') + ')' : '+ Livraison à domicile'}</button>
-        </div>
-        ${hasFragile ? `<div class="mz-fragile-alert"><i data-lucide="shield-alert"></i> <span>Articles fragiles · Emballage renforcé automatique</span></div>` : ''}
-        ` : ''}
+          <button class="mz-tk-opt-btn ${remise ? 'on' : ''}" id="mz-tk-remise"><i data-lucide="percent"></i> ${remise ? 'Remise · −' + fmtMAD(remise) : 'Remise'}</button>
+        </div>` : ''}
         <div class="mz-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
           ${promo ? `<span class="rem promo">Promotions · −${fmtMAD(promo)}</span>` : ''}
@@ -499,14 +499,8 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
       }
       renderTicket(); icons();
     };
-    const gwBtn = $('#mz-tk-giftwrap', el);
-    if (gwBtn) gwBtn.onclick = () => {
-      t.giftWrap = !t.giftWrap;
-      renderTicket(); icons();
-      toast(t.giftWrap ? 'Option emballage cadeau activée' : 'Emballage standard');
-    };
-    const delBtn = $('#mz-tk-delivery', el);
-    if (delBtn) delBtn.onclick = openDeliveryModal;
+    const remBtn = $('#mz-tk-remise', el);
+    if (remBtn) remBtn.onclick = openTicketRemise;
     $('#mz-validate', el).onclick = checkout;
     $('#mz-tk-lines', el).onclick = (e) => {
       const minus = e.target.closest('[data-mz-minus]');
@@ -529,9 +523,12 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
       }
       renderTicket(); renderGrid(); renderBadges(); icons();
     };
-    /* Peau 2027 : le pied du ticket de la boutique (Clients, puis Encaisser
-       pleine largeur), remonté à CHAQUE rendu. Pas de remise de ticket ici. */
-    mzKitTicketFoot(el, $, icons, mzSkinOn(), { clientLabel: mzClientLabel(t, clById, firstName) });
+    /* Peau 2027 : le pied du ticket de la boutique (Clients et Remise, puis
+       Encaisser pleine largeur), remonté à CHAQUE rendu. */
+    mzKitTicketFoot(el, $, icons, skin, {
+      clientLabel: mzClientLabel(t, clById, firstName),
+      canRemise: !!t.lines.length, onRemise: openTicketRemise,
+    });
     icons();
   }
   /* Peau 2027 : la barre de vente répond dès le premier chiffre tapé, comme la

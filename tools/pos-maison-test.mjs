@@ -124,9 +124,12 @@ ok(jsSrc.includes('const swapped = apply()') && jsSrc.includes('markLineReturned
 ok(jsSrc.includes('*** TICKET CADEAU ***'), 'Gift receipt layout with no prices present');
 ok(jsSrc.includes('BON DE LIVRAISON SÉCURISÉ'), 'Fragile delivery note template present');
 ok(jsSrc.includes('printDeliveryNoteNow'), 'printDeliveryNoteNow function defined');
-ok(jsSrc.includes('mz-tk-giftwrap'), 'Gift wrap option toggle on ticket');
-ok(jsSrc.includes('mz-tk-delivery'), 'Delivery option on ticket');
-ok(jsSrc.includes('mz-fragile-alert'), 'Automatic fragile warning banner in ticket');
+/* Retirés du pied du ticket à la demande de la propriétaire (2026-10-30) :
+   emballage cadeau, livraison à domicile et bandeau « articles fragiles ».
+   À la place, la remise de ticket, comme la boutique. */
+ok(!jsSrc.includes('mz-tk-giftwrap'), 'No gift-wrap toggle on the ticket');
+ok(!jsSrc.includes('mz-fragile-alert'), 'No fragile banner on the ticket');
+ok(jsSrc.includes('mz-tk-remise') && jsSrc.includes('onRemise: openTicketRemise'), 'Ticket discount button on both skins');
 
 // 6. Check Gift & Wedding Registries (Listes de Mariage / Naissance)
 ok(jsSrc.includes('renderRegistries'), 'renderRegistries function defined');
