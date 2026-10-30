@@ -246,8 +246,8 @@ await ok('the customer pays delivery: Ozon collects price + fee, revenue on « P
     phone: '0612345678', cityId: 37, address: '2 rue Test', feeOnCustomer: true });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const add = calls.filter((c) => c.path === 'add-parcel').pop();
-  assert.equal(add.body['parcel-price'], '885', 'the courier collects 850 + 35 (Agadir fee)');
-  assert.equal(r.body.parcel.priceCents, 88500);
+  assert.equal(add.body['parcel-price'], '900', 'the courier collects 850 + 50, whatever the city');
+  assert.equal(r.body.parcel.priceCents, 90000);
   ozon.status[r.body.parcel.tracking] = 'Payé';
   const t = await call(parcels, 'onRequestGet', `/api/ozon/parcels?merchant=${MERCHANT}&force=1`, 'GET', till);
   assert.equal(t.body.refreshed.paid, 1);

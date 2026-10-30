@@ -4,7 +4,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { bqDeliveryCard } from './delivery-card.js?v=1';
 import '../money-cents.js?v=4';
-import { ozonOffer } from './ozon.js?v=3';
+import { ozonOffer } from './ozon.js?v=4';
 const M = globalThis.KiwiMoney;
 
 

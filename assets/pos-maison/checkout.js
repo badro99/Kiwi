@@ -3,7 +3,7 @@ import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releas
 import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=53';
 import '../refund-split.js?v=2';
 import '../money-cents.js?v=4';
-import { mzDeliveryCard } from './delivery.js?v=6';
+import { mzDeliveryCard } from './delivery.js?v=7';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */

@@ -5,7 +5,7 @@ import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=3'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=7';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=3'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=8';
 
   'use strict';
 

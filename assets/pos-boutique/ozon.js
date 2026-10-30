@@ -374,6 +374,7 @@ const REFUSAL = {
 export function ozonOpenSend(o) {
   /* Qui paie la livraison (Santos, 30 oct. 2026 : le client, en plus de
      l'article). Retenu par boutique, coché par défaut. */
+  const CUSTOMER_FEE = 5000;   // 50 MAD, en centimes
   const FEE_PREF = 'kiwiOzonFeeOnCustomer:' + (o && o.slug);
   let feeOnCustomer = true;
   try { feeOnCustomer = localStorage.getItem(FEE_PREF) !== '0'; } catch (_) {}
@@ -406,11 +407,14 @@ export function ozonOpenSend(o) {
   const feeOn = () => { const box = $('feeOnCustomer'); return box ? box.checked : feeOnCustomer; };
   const sum = () => {
     const fee = city ? city.deliveredCents : 0;
-
+    /* Le client paie toujours 50 MAD de livraison, quelle que soit la ville
+       (Santos, 30 oct. 2026) ; Ozon garde ses propres frais sur ce qu'il
+       encaisse. Même règle côté serveur : functions/api/ozon/parcels.js. */
     const custRows = () => (o.dueCents ? '<div><span>' + esc(tr('Articles')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
-        + (city ? '<div><span>' + esc(tr('Livraison')) + ' · ' + esc(city.name) + '</span><b class="plus">' + esc(mad(fee)) + '</b></div>' : '')
-        + (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents + fee)) + '</b></div>' : '')
-        + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '');
+        + '<div><span>' + esc(tr('Livraison')) + '</span><b class="plus">' + esc(mad(CUSTOMER_FEE)) + '</b></div>'
+        + (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents + CUSTOMER_FEE)) + '</b></div>' : '')
+        + (city ? '<div><span>' + esc(tr('Frais de livraison Ozon')) + ' · ' + esc(city.name) + '</span><b>\u2212' + esc(mad(fee)) + '</b></div>' : '')
+        + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents + CUSTOMER_FEE - fee))) + '</b></div>' : '');
     const shopRows = () => (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
         + (city ? '<div><span>' + esc(tr('Frais de livraison Ozon')) + ' · ' + esc(city.name) + '</span><b>\u2212' + esc(mad(fee)) + '</b></div>' : '')
         + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents - fee))) + '</b></div>' : '');

@@ -1500,12 +1500,12 @@
     "sha": "8b1b4c390bce30fe"
   },
   "assets/pos-boutique/livraisons.js": {
-    "v": "7",
-    "sha": "e46f14f1df8a6e6a"
+    "v": "8",
+    "sha": "b5dfc1a0b417bcc7"
   },
   "assets/pos-boutique/ozon.js": {
-    "v": "3",
-    "sha": "db24bf2d5581841e"
+    "v": "4",
+    "sha": "c73871609f49d691"
   },
   "assets/pos-boutique/sales.js": {
     "v": "129",
@@ -1620,8 +1620,8 @@
     "sha": "b1c8820201b51600"
   },
   "assets/pos-maison/delivery.js": {
-    "v": "6",
-    "sha": "6b4210794c0e8e0a"
+    "v": "7",
+    "sha": "cebb6ff88eb2d7cc"
   },
   "assets/pos-maison/inv-moves.js": {
     "v": "1",

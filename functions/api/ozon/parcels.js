@@ -13,6 +13,7 @@
 import { deliveryDue } from '../receivables.js';
 import { exactMerchant, json, readAccount, ozonCall, stepError, pick, cities, cents } from './_lib.js';
 import { listParcels, parcelView, refreshTracking } from './_track.js';
+const CUSTOMER_FEE_CENTS = 5000;   // ce que le client paie pour la livraison, partout
 
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
@@ -86,7 +87,9 @@ export async function onRequestPost({ request, env }) {
      2026). Le chiffre d'affaires, lui, reste ce qui est dû sur la vente
      (_track.js › confirmByCarrier) : les frais sont à Ozon. */
   const feeOnCustomer = b.feeOnCustomer === true || b.feeOnCustomer === 1 || b.feeOnCustomer === '1';
-  const codCents = due.dueCents + (feeOnCustomer ? Math.max(0, Number(city.deliveredCents) || 0) : 0);
+  /* Le client paie toujours 50 MAD, quelle que soit la ville (Santos, 30 oct.
+     2026) ; Ozon garde ses frais de ville sur ce qu'il encaisse. */
+  const codCents = due.dueCents + (feeOnCustomer ? CUSTOMER_FEE_CENTS : 0);
 
   /* La place de la vente est prise AVANT d'appeler Ozon : deux envois
      simultanés ne créent jamais deux colis. */

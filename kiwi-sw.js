@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/pos-boutique/ozon.js?v=3',
+  '/assets/pos-boutique/ozon.js?v=4',
   '/assets/lock-till.js?v=3',
   '/assets/boutique-sizes.js?v=17',
   '/assets/boutique-size-split.js?v=4',
@@ -547,7 +547,7 @@ var SHELL = [
   '/assets/pos-boutique/ticket-owner.js?v=3',
   '/assets/pos-boutique/ticket-number.js?v=1',
   '/assets/pos-boutique/z-split.js?v=3',
-  '/assets/pos-boutique/livraisons.js?v=7',
+  '/assets/pos-boutique/livraisons.js?v=8',
   '/assets/pos-boutique/delivery-card.js?v=1',
   '/assets/pos-boutique/ticket-remise.js?v=3',
   '/assets/pos-boutique/search.js?v=14',
