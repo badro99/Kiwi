@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=120';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=39';
-import { invSetModal, offerRegister } from './inventory.js?v=39';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=122';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=40';
+import { invSetModal, offerRegister } from './inventory.js?v=40';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=4';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=4';
@@ -2037,13 +2037,22 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
     return true;
   }
 
+  const CASSE_REASONS = [
+    ['Chute lors du déballage en réserve', 'Chute déballage'],
+    ['Manipulation client en rayon', 'Accident client en rayon'],
+    ["Défaut d'émail / fêlure découverte", "Fêlure / défaut d'émail"],
+    ['Casse lors de la livraison fragile', 'Casse transport / livraison'],
+    ['Autre incident magasin', 'Autre incident'],
+  ];
+
   function renderCasse() {
     const panel = $('[data-mz-panel="casse"]', root);
     if (!panel) return;
     const log = loadCasseLog();
-    const allProducts = [];
-    RAYONS.forEach((r) => r.items.forEach((p) => allProducts.push(p)));
     const totalCasseLoss = log.reduce((acc, row) => acc + (row.totalLoss || 0), 0);
+    // Choix en cours, gardé d'un rendu à l'autre (une casse enregistrée relance renderCasse).
+    const cs = state.casse || (state.casse = { pid: '', qty: 1, reason: CASSE_REASONS[0][0], rayon: 'tous', q: '' });
+    if (cs.pid && !P[cs.pid]) cs.pid = '';
 
     panel.innerHTML = `
       <div class="mz-casse-view mz-page">
@@ -2059,38 +2068,47 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
 
         <div class="mz-casse-box">
           <h2 class="mz-section-title">Déclarer un article cassé / détérioré</h2>
-          <div class="mz-form-grid">
-            <div class="mz-field">
-              <label>Article</label>
-              <select id="mz-casse-pid">
-                ${allProducts.map((p) => `<option value="${p.id}">${p.marque ? '[' + esc(p.marque) + '] ' : ''}${esc(p.name)} (${fmtMAD(p.price)})</option>`).join('')}
-              </select>
+          <div class="mz-casse-pick">
+            <div class="mz-casse-search">
+              <i data-lucide="search"></i>
+              <input id="mz-casse-q" type="search" placeholder="Rechercher un article, une marque, un motif…" value="${esc(cs.q)}" autocomplete="off" />
             </div>
-            <div class="mz-field">
-              <label>Quantité cassée</label>
-              <input id="mz-casse-qty" type="number" min="1" max="50" value="1" />
+            <div class="mz-casse-chips" id="mz-casse-rayons">
+              <button type="button" class="mz-casse-chip${cs.rayon === 'tous' ? ' on' : ''}" data-casse-rayon="tous">Tout</button>
+              ${RAYONS.filter((r) => r.items.length).map((r) => `<button type="button" class="mz-casse-chip${cs.rayon === r.id ? ' on' : ''}" data-casse-rayon="${esc(r.id)}">${esc(r.label)}</button>`).join('')}
             </div>
-            <div class="mz-field">
-              <label>Motif</label>
-              <select id="mz-casse-reason">
-                <option value="Chute lors du déballage en réserve">Chute déballage</option>
-                <option value="Manipulation client en rayon">Accident client en rayon</option>
-                <option value="Défaut d'émail / fêlure découverte">Fêlure / Défaut d'émail</option>
-                <option value="Casse lors de la livraison fragile">Casse transport / livraison</option>
-                <option value="Autre incident magasin">Autre incident</option>
-              </select>
-            </div>
+            <div class="mz-grid mz-casse-grid" id="mz-casse-grid"></div>
           </div>
 
-          <div class="mz-casse-cost-preview" id="mz-casse-preview">
-            <span>Coût d'achat imputé : <b id="mz-casse-preview-unit">0 MAD</b></span>
-            <span>Perte financière magasin : <b id="mz-casse-preview-total">0 MAD</b></span>
-          </div>
+          <div class="mz-casse-form">
+            <div class="mz-casse-sel" id="mz-casse-sel"></div>
+            <div class="mz-casse-row">
+              <div>
+                <div class="mz-casse-lbl">Quantité cassée</div>
+                <div class="mz-casse-step">
+                  <button type="button" data-casse-step="-1" aria-label="Moins"><i data-lucide="minus"></i></button>
+                  <input id="mz-casse-qty" type="number" min="1" inputmode="numeric" value="${cs.qty}" />
+                  <button type="button" data-casse-step="1" aria-label="Plus"><i data-lucide="plus"></i></button>
+                </div>
+              </div>
+              <div class="mz-casse-why">
+                <div class="mz-casse-lbl">Motif</div>
+                <div class="mz-casse-chips" id="mz-casse-reasons">
+                  ${CASSE_REASONS.map(([v, l]) => `<button type="button" class="mz-casse-chip${cs.reason === v ? ' on' : ''}" data-casse-reason="${esc(v)}">${esc(l)}</button>`).join('')}
+                </div>
+              </div>
+            </div>
 
-          <div class="mz-card-actions">
-            <button class="mz-btn primary is-danger" id="mz-casse-submit">
-              <i data-lucide="shield-alert"></i>Enregistrer la casse &amp; décrémenter le stock
-            </button>
+            <div class="mz-casse-cost-preview" id="mz-casse-preview">
+              <span>Coût d'achat imputé : <b id="mz-casse-preview-unit">0 MAD</b></span>
+              <span>Perte financière magasin : <b id="mz-casse-preview-total">0 MAD</b></span>
+            </div>
+
+            <div class="mz-card-actions">
+              <button class="mz-btn primary is-danger" id="mz-casse-submit">
+                <i data-lucide="shield-alert"></i>Enregistrer la casse &amp; décrémenter le stock
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2125,35 +2143,104 @@ import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-20
         </div>
       </div>`;
 
-    const pidSel = $('#mz-casse-pid', panel);
     const qtyIn = $('#mz-casse-qty', panel);
-    const reasonSel = $('#mz-casse-reason', panel);
+    const grid = $('#mz-casse-grid', panel);
+    const submitBtn = $('#mz-casse-submit', panel);
+    const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    let busy = false;
 
     const updatePreview = () => {
-      const p = P[pidSel.value];
-      const q = Math.max(1, parseInt(qtyIn.value, 10) || 1);
+      const p = P[cs.pid];
       const unit = p ? (+p.cost || Math.round(p.price * 0.55)) : 0;
       $('#mz-casse-preview-unit', panel).textContent = fmtMAD(unit);
-      $('#mz-casse-preview-total', panel).textContent = fmtMAD(unit * q);
+      $('#mz-casse-preview-total', panel).textContent = fmtMAD(unit * cs.qty);
+      submitBtn.disabled = busy || !p;
     };
 
-    if (pidSel) pidSel.onchange = updatePreview;
-    if (qtyIn) qtyIn.oninput = updatePreview;
-    updatePreview();
+    const renderSel = () => {
+      const p = P[cs.pid];
+      $('#mz-casse-sel', panel).innerHTML = p
+        ? `<span class="mz-casse-sel-art">${artOf(p)}</span>
+           <span class="mz-casse-sel-txt"><b>${esc(p.name)}</b><span>${p.marque ? esc(p.marque) + ' · ' : ''}${stockOf(p)} en stock · ${fmtMAD(shelf(p.price))}</span></span>
+           <button type="button" class="mz-casse-sel-x" data-casse-clear aria-label="Changer d'article"><i data-lucide="x"></i></button>`
+        : '<span class="mz-casse-sel-empty">Touchez l\u2019article cassé dans la liste ci-dessus.</span>';
+      icons();
+    };
 
-    const submitBtn = $('#mz-casse-submit', panel);
-    if (submitBtn) {
-      submitBtn.onclick = () => {
-        const pid = pidSel.value;
-        const q = Math.max(1, parseInt(qtyIn.value, 10) || 1);
-        const reason = reasonSel.value;
-        const p = P[pid];
-        if (!p) return;
-        submitBtn.disabled = true;   // le pavé du responsable peut rester ouvert : pas de double déclaration
-        Promise.resolve(recordCasse(pid, sizesOf(p)[0] || 'TU', p.colors[0] || 'defaut', q, reason))
-          .then(() => { submitBtn.disabled = false; renderCasse(); icons(); });
-      };
-    }
+    const renderPick = () => {
+      const q = norm(cs.q).trim();
+      const items = [];
+      RAYONS.forEach((r) => {
+        if (cs.rayon !== 'tous' && r.id !== cs.rayon) return;
+        r.items.forEach((p) => {
+          if (q && !norm([p.name, p.marque, p.motif, r.label].join(' ')).includes(q)) return;
+          items.push(p);
+        });
+      });
+      grid.innerHTML = items.length ? items.map((p) => {
+        const st = stockOf(p);
+        return `
+        <button type="button" class="mz-card${st === 0 ? ' is-out' : ''}${cs.pid === p.id ? ' is-picked' : ''}" data-casse-pid="${p.id}">
+          <span class="mz-card-art">${artOf(p)}</span>
+          ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
+          <span class="mz-card-name">${esc(p.name)}</span>
+          <span class="mz-card-price">${fmtMAD(shelf(p.price))} · ${st} en stock</span>
+        </button>`; }).join('')
+        : '<div class="mz-empty" style="grid-column:1/-1;">Aucun article ne correspond.</div>';
+    };
+
+    const setQty = (n) => {
+      cs.qty = Math.max(1, Math.min(999, parseInt(n, 10) || 1));
+      qtyIn.value = cs.qty;
+      updatePreview();
+    };
+
+    $('#mz-casse-q', panel).oninput = (e) => { cs.q = e.target.value; renderPick(); };
+    panel.onclick = (e) => {
+      const card = e.target.closest('[data-casse-pid]');
+      if (card) {
+        cs.pid = card.dataset.cassePid;
+        grid.querySelectorAll('.is-picked').forEach((b) => b.classList.remove('is-picked'));
+        card.classList.add('is-picked');
+        renderSel(); updatePreview();
+        return;
+      }
+      const ray = e.target.closest('[data-casse-rayon]');
+      if (ray) {
+        cs.rayon = ray.dataset.casseRayon;
+        $('#mz-casse-rayons', panel).querySelectorAll('.mz-casse-chip').forEach((b) => b.classList.toggle('on', b === ray));
+        renderPick();
+        return;
+      }
+      const why = e.target.closest('[data-casse-reason]');
+      if (why) {
+        cs.reason = why.dataset.casseReason;
+        $('#mz-casse-reasons', panel).querySelectorAll('.mz-casse-chip').forEach((b) => b.classList.toggle('on', b === why));
+        return;
+      }
+      const step = e.target.closest('[data-casse-step]');
+      if (step) { setQty(cs.qty + (+step.dataset.casseStep)); return; }
+      if (e.target.closest('[data-casse-clear]')) {
+        cs.pid = '';
+        grid.querySelectorAll('.is-picked').forEach((b) => b.classList.remove('is-picked'));
+        renderSel(); updatePreview();
+      }
+    };
+    qtyIn.oninput = () => { cs.qty = Math.max(1, parseInt(qtyIn.value, 10) || 1); updatePreview(); };
+    qtyIn.onblur = () => setQty(qtyIn.value);
+
+    submitBtn.onclick = () => {
+      const p = P[cs.pid];
+      if (!p) { toast('Choisissez d\u2019abord l\u2019article cassé'); return; }
+      busy = true; updatePreview();   // le pavé du responsable peut rester ouvert : pas de double déclaration
+      Promise.resolve(recordCasse(cs.pid, sizesOf(p)[0] || 'TU', p.colors[0] || 'defaut', cs.qty, cs.reason))
+        .then((ok) => { if (ok) { cs.pid = ''; cs.qty = 1; } })
+        .finally(() => { busy = false; renderCasse(); icons(); });
+    };
+
+    renderPick();
+    renderSel();
+    updatePreview();
     icons();
   }
 
