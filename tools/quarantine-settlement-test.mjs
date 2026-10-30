@@ -103,6 +103,11 @@ assert.equal((await call({action:'approve',id:'synthetic-twin-refund'},owner)).h
 assert.equal(sql.prepare("SELECT sale_id FROM sale_audit WHERE note='synthetic-twin-refund'").get().sale_id,'visit-tsx-TwinTwinTwinTwinTwinTw-emp');
 assert.equal((await call({action:'approve',id:'synthetic-twin-refund'},owner)).httpStatus,200,'approving again stays one refund');
 assert.equal(sql.prepare("SELECT count(*) n FROM sale_audit WHERE note='synthetic-twin-refund'").get().n,1);
+// Un paiement de table est enregistré sous l'id de la visite + un suffixe de paiement (Pasta Corner, 215 et 308 MAD).
+sql.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES('visit-tsx-PaidPaidPaidPaidPaidPa-emp-f0a61d650f78caf3ad036d31','fixture-a',50,5000,'cash',?)").run(Date.now());
+await call({action:'upload',payload:{...payload,id:'synthetic-paid-refund',originalSaleId:'visit-tsx-PaidPaidPaidPaidPaidPa-emp',amountCents:1500},reason:'manager-required'});
+assert.equal((await call({action:'approve',id:'synthetic-paid-refund'},owner)).httpStatus,200,'a refund naming the visit settles on its suffixed payment');
+assert.equal(sql.prepare("SELECT sale_id FROM sale_audit WHERE note='synthetic-paid-refund'").get().sale_id,'visit-tsx-PaidPaidPaidPaidPaidPa-emp-f0a61d650f78caf3ad036d31');
 await call({action:'upload',payload:{...payload,id:'synthetic-gone-refund',originalSaleId:'visit-tsx-GoneGoneGoneGoneGoneGo-emp',amountCents:1500},reason:'manager-required'});
 assert.equal((await call({action:'approve',id:'synthetic-gone-refund'},owner)).error,'sale-not-found','a sale the server never received is not guessed');
 assert.equal((await call({action:'decline',id:'synthetic-gone-refund'},owner)).httpStatus,200,'the owner can still declare it not done');

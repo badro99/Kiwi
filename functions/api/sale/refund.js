@@ -37,6 +37,15 @@ async function liveOriginalId(env, merchant, id) {
   const live = "merchant = ? AND void_ts IS NULL AND COALESCE(amount_cents, amount * 100) >= 0";
   try {
     if (await env.DB.prepare(`SELECT 1 FROM sales WHERE ${live} AND id = ? LIMIT 1`).bind(merchant, id).first()) return id;
+    /* Un paiement de table arrive sous l'id de la visite suivi d'un suffixe de
+       paiement (functions/api/sale.js › legacyPaymentId) : la caisse, elle,
+       garde l'id de la visite. Une seule vente vivante de ce suffixe, sinon rien. */
+    if (/^visit-[A-Za-z0-9_-]+$/.test(id)) {
+      const base = id.slice(0, 38) + '-';
+      const paid = (await env.DB.prepare(`SELECT id FROM sales WHERE ${live} AND substr(id, 1, ?) = ? AND length(id) = ? LIMIT 2`)
+        .bind(merchant, base.length, base, base.length + 24).all()).results || [];
+      if (paid.length === 1 && /^[0-9a-f]{24}$/.test(String(paid[0].id).slice(base.length))) return String(paid[0].id);
+    }
     /* Only the till's own shapes are remapped: its local `sale-<uuid>` and the
        server's `sale-ref-<hash>-<tail>` (assets/live-link.js › stableId). Any
        other id must match exactly. The tail is 32 chars of a random id, the
