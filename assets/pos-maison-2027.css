@@ -623,6 +623,11 @@ html[data-skin-2027="till"] #pos-maison .mz-invm {
   box-shadow: var(--k-shadow-2);
   overscroll-behavior: contain;
 }
+/* Coins : la barre de défilement du navigateur (17 px, carrée) se dessinait
+   au bord droit et dépassait des coins arrondis (propriétaire, 2026-10-30).
+   Comme les feuilles du kit, la fiche défile au doigt sans barre visible. */
+html[data-skin-2027="till"] #pos-maison .mz-invm { scrollbar-width: none; }
+html[data-skin-2027="till"] #pos-maison .mz-invm::-webkit-scrollbar { display: none; }
 html[data-skin-2027="till"] #pos-maison .mz-invm .mz-modal-x {
   top: 16px; inset-inline-end: 16px; z-index: 3;
   width: 44px; height: 44px; border-radius: 50%;
@@ -723,6 +728,10 @@ html[data-skin-2027="till"] #pos-maison .mzi-photo-actions .mz-btn {
   min-height: 44px; padding: 0 16px; border: 0;
   background-color: var(--k-surface-1); box-shadow: var(--k-shadow-1);
 }
+/* Nouvel article : plus d'envoi de photo, la photo que Kiwi choisit d'après
+   le nom (retail-photos.js), qui change pendant qu'on tape. */
+html[data-skin-2027="till"] #pos-maison .mzi-auto .mzi-photo-preview { border: 0; }
+html[data-skin-2027="till"] #pos-maison .mzi-auto .mzi-photo-preview img { width: 80px; height: 80px; object-fit: contain; }
 /* Catégorie A / B : deux cartes à toucher ; le rond natif s'efface, la carte
    choisie prend la teinte de l'accent et son filet. */
 html[data-skin-2027="till"] #pos-maison .mzi-ab { gap: 12px; }
