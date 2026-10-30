@@ -355,6 +355,14 @@ html[data-skin-2027="till"] #pos-boutique #bq-nav {
    panneau Plus, qui est leur nouveau foyer, se voit. */
 html[data-skin-2027="till"] #pos-boutique #bq-nav > :not(.bq-more) { display: none; }
 html[data-skin-2027="till"] #pos-boutique > .bq-main { left: 88px; right: 0; }
+/* Sur le gabarit téléphone (assets/pos-mobile.css, même requête), la grille
+   prend toute la largeur et le menu passe au bouton du haut : le rail du kit,
+   resté peint, couvrait la première colonne d'articles et prenait leurs
+   touchers (tablette 1024 × 600, 30 oct. 2026). */
+@media (max-width: 860px),
+       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  html[data-skin-2027="till"] #pos-boutique > #bq-kit-rail { display: none; }
+}
 html[data-skin-2027="till"] .kiwi-rtl #pos-boutique > .bq-main,
 html[data-skin-2027="till"] #pos-boutique.kiwi-rtl > .bq-main { left: 0; right: 88px; }
 
