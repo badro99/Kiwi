@@ -132,7 +132,10 @@ export async function onRequestPost({ request, env }) {
     for (const id of extra) {
       if (claimed.has(id)) continue;
       const stored = server.get(id);
-      if (ownAuthor && stored.author === ownAuthor) {
+      /* Un reçu à 0 MAD (livraison que le livreur encaisse plus tard, vente au
+         carnet de crédit) ne fait bouger aucun centime : le Z boutique l'écarte
+         exprès, il reste informatif au lieu de faire tomber toute la journée. */
+      if (ownAuthor && stored.author === ownAuthor && stored.amountCents !== 0) {
         unreported.push(id); unreportedCents += stored.amountCents;
         serverCount++; serverCents += stored.amountCents;
       } else { omitted.push(id); omittedCents += stored.amountCents; }

@@ -107,6 +107,17 @@ await strict('SM-3 (corrigé 22/10) · a device-proved till Z certifies exactly 
  for(const[role,terminalId]of[['till',A],['deviceB',A],['deviceA','terminal-other']]){sql.exec('DELETE FROM z_reconciliations');const legacy=await z(manifest,role,terminalId);ok(legacy);assert.deepEqual(legacy.body.unreported,[]);assert.equal(legacy.body.status,'matched');assert.deepEqual(legacy.body.omitted,[...gone,...informational]);}
  return true;
 }),[[[{cents:1,reported:true},{cents:1,reported:false}],1]]);
+/* Santos, 29 octobre : un bon de livraison (4 650 MAD encore chez le livreur) est écrit à 0 MAD par la caisse, que son Z boutique écarte exprès. Il ne fait bouger aucun centime : il reste informatif, la journée n'est pas déclarée fausse. Une vente oubliée qui porte de l'argent reste signalée. */
+await strict('SM-3c · a 0 MAD receipt of the till (delivery or credit book) left out of its Z stays informational; a forgotten paid one is still flagged',fc.asyncProperty(positive,positive,fc.constantFrom('delivery','credit'),async(paid,owed,tender)=>{
+ await f.reset();const day='2026-02-14';sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',f.merchant);const from=businessBoundary(day,5,'UTC'),A=f.devices.a;
+ ok(await f.call('sale',body('paid',paid,{ts:from+1}),'deviceA'));
+ const zero=await f.call('sale',body('owed',0,{ts:from+2,method:tender,settlementKind:'receivable',ticketAmountCents:owed,paymentParts:[{method:tender,amountCents:owed}],lines:[{name:'Article',qty:1,total:owed/100}]}),'deviceA');
+ assert.equal(zero.status,200,JSON.stringify(zero.body));assert.equal(f.row('owed').written_by,'till:'+A);
+ const z=(m)=>f.call('z',{day,cutoff:5,terminalId:A,sales:m,count:m.length,totalCents:sum(m.map(x=>x.amountCents))},'deviceA');
+ const r=await z([{id:'paid',amountCents:paid,method:'cash'}]);ok(r);assert.equal(r.body.status,'matched');assert.deepEqual(r.body.unreported,[]);assert.deepEqual(r.body.omitted,['owed']);
+ sql.exec('DELETE FROM z_reconciliations');const miss=await z([]);ok(miss);assert.equal(miss.body.status,'mismatch');assert.deepEqual(miss.body.unreported,['paid']);assert.deepEqual(miss.body.omitted,['owed']);
+ return true;
+}),[[1,1,'delivery']]);
 /* Un ancien id de visite (`visit-<session>-emp`) est ré-identifié par /api/sale : la ligne ne vit pas sous l'id que la caisse a envoyé, elle ne doit donc jamais porter l'auteur qui certifie. */
 await strict('SM-3 · two legacy visit-keyed payments from one device till are re-keyed and never become unreported receipts of its Z',fc.asyncProperty(positive,positive,async(first,second)=>{
  await f.reset();sql.exec('DELETE FROM table_sessions');const day='2026-02-14';sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',f.merchant);const ts=businessBoundary(day,5,'UTC')+3600000,A=f.devices.a,visit='tsx-fixture-visit',sent='visit-'+visit+'-emp';

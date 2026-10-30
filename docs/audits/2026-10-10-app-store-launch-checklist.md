@@ -238,3 +238,23 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   till and waiter clock-in, table) in FR, EN and AR and checks it leaves
   without a code; `native-account-scope-test.mjs` keeps Change role and Sign
   out in the till and team menus. Both in the gate.
+- **A4 measured, still open** (2026-10-30, production D1, read-only). The
+  boutique till now sends its Z to the server like the restaurant (`49576a73`).
+  Amira Boutique: 16 of 16 days matched since 12 October. Santos Store: 8 of
+  10 matched. The dashboard total is right on all of them; the two flags are
+  on the comparison side:
+  - 29 October: same money (6 000 MAD both sides), one receipt more on the
+    server. It is a delivery ticket the till books at 0 MAD (4 650 MAD still
+    with the courier); the boutique Z leaves it out on purpose, and the server
+    counted it as a receipt the Z forgot, which would flag every day with a
+    delivery or a credit-book sale. Fixed: a 0 MAD receipt stays informational
+    (`functions/api/z-reconciliation.js`, property SM-3c in
+    `tools/server-money-properties-test.mjs`, red without the fix).
+  - 23 October: the row says 11 sales and 9 700 MAD against 10 and 9 150 on
+    the server. The missing one is a 550 MAD sale an employee cancelled at the
+    till nine minutes after ringing it; the server is right. The till's own
+    close that night expected 9 150 MAD, so it knew. The row was rewritten on
+    29 October at 18:08 UTC by the same terminal with the old manifest. Left:
+    find what re-sent a past day (the outbox or the `kiwi:z-manifest` copy)
+    before closing A4.
+
