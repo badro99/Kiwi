@@ -173,6 +173,22 @@ vm.runInContext("salesMethodsByMerchant[auditMerchant()]=['card']", ctx); render
 check('method filter excludes unrecorded payment methods and recomputes summary', () => {
   assert.ok(html.includes('0 <small>MAD')); assert.ok(!html.includes('Table fermée / remise à zéro'));
 });
+/* Santos, 30 octobre : 2 virements n'apparaissaient sous aucun filtre (20 ventes, 18 en espèces) et la livraison montrait 0. */
+sales = [{ id: 's1', amount: 400, ts: now, method: 'cash', lines: [] }, { id: 's2', amount: 750, ts: now, method: 'transfer', lines: [] },
+  { id: 's3', amount: 0, ts: now, method: 'delivery', paymentParts: [{ method: 'delivery', amountCents: 85000 }], lines: [] }];
+refunds = []; vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]; salesKindByMerchant[auditMerchant()]='all'", ctx); render();
+check('every method of the day gets its filter, deliveries are counted and shown as receivable', () => {
+  assert.ok(html.includes('data-arg="transfer"')); assert.ok(html.includes('>Virement</button>')); assert.ok(html.includes('>VIREMENT<') || html.includes('rtx-m">Virement'));
+  assert.ok(!html.includes('data-arg="cheque"')); assert.ok(html.includes('3 ventes'));
+  assert.ok(html.includes('Livraisons · à recevoir')); assert.ok(html.includes('850 <small>MAD'));
+});
+vm.runInContext("salesMethodsByMerchant[auditMerchant()]=['transfer']", ctx); render();
+check('transfer filter isolates the transfer sales', () => { assert.ok(html.includes('1 vente')); assert.ok(html.includes('750 <small>MAD')); });
+vm.runInContext("salesMethodsByMerchant[auditMerchant()]=['delivery']", ctx); render();
+check('delivery filter counts its sales and keeps collected at zero', () => {
+  assert.ok(html.includes('1 vente')); assert.ok(html.includes('Encaissements</span><strong>0 <small>MAD')); assert.ok(html.includes('850 <small>MAD'));
+});
+vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]", ctx);
 tenant = 'empty-merchant'; sales = []; refunds = []; render(); await drain();
 check('merchant switch clears old history and supports empty real accounts', () => {
   assert.ok(!html.includes('101 MAD')); assert.ok(html.includes('Aucune activité'));

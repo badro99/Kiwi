@@ -845,9 +845,8 @@
     H['sales-activity-retry'] = () => { loadCancelAudit(true); };
     H['sales-method'] = (_el, method) => {
       const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
-      const allowed = ['cash', 'card', 'delivery'];
-      const current = (salesMethodsByMerchant[merchant] || []).filter((m) => allowed.includes(m));
-      if (method === 'all' || !allowed.includes(method)) {
+      const current = (salesMethodsByMerchant[merchant] || []).filter(salesMethodOk);   /* toute méthode vue ce jour-là : virement, chèque… */
+      if (method === 'all' || !salesMethodOk(method)) {
         salesMethodsByMerchant[merchant] = [];
       } else if (current.includes(method)) {
         salesMethodsByMerchant[merchant] = current.filter((m) => m !== method);
@@ -914,9 +913,9 @@
       '.rtx-void-row{display:grid;grid-template-columns:auto minmax(120px,1fr) minmax(150px,2fr) auto;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--n-100)}' +
       '.rtx-void-who{font-size:13px;font-weight:600}.rtx-void-lines{font-size:12px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
       '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}' +
-      '.rtx-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 24px}.rtx-summary>div{padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--surface)}.rtx-summary span{display:block;font-size:12px;color:var(--n-500)}.rtx-summary strong{display:block;font-size:26px;color:var(--g-700,#087454);margin-top:7px}.rtx-summary small{font-size:12px;font-weight:500}.rtx-summary .is-refund strong{color:#b44338}html[data-theme="dark"] .rtx-summary strong{color:var(--mint)}html[data-theme="dark"] .rtx-summary .is-refund strong{color:#FCA597}' +
+      '.rtx-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 24px}.rtx-summary.has4{grid-template-columns:repeat(4,minmax(0,1fr))}.rtx-summary .is-due strong{color:#81501a}.rtx-summary>div{padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--surface)}.rtx-summary span{display:block;font-size:12px;color:var(--n-500)}.rtx-summary strong{display:block;font-size:26px;color:var(--g-700,#087454);margin-top:7px}.rtx-summary small{font-size:12px;font-weight:500}.rtx-summary .is-refund strong{color:#b44338}html[data-theme="dark"] .rtx-summary strong{color:var(--mint)}html[data-theme="dark"] .rtx-summary .is-refund strong{color:#FCA597}' +
       '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-notice .rtx-method{background:#fffdfa;color:#81501a;border-color:#e6c99a}.rtx-method{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
-      '@media(max-width:600px){.rtx-summary{gap:6px}.rtx-summary>div{padding:12px 8px}.rtx-summary strong{font-size:19px}.rtx-summary span{font-size:11px}.rtx-activity-row{grid-template-columns:auto minmax(0,1fr);gap:10px}.rtx-activity-value{grid-column:2;text-align:start}.rtx-activity-value small{max-width:none}.rtx-identity{flex-wrap:wrap}.rtx-row{grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:18px 0}.rtx-row>.rtx-t{grid-column:1;grid-row:1}.rtx-row>.rtx-m{grid-column:2;grid-row:1;justify-self:start}.rtx-row>.rtx-a{grid-column:3;grid-row:1}.rtx-row>.rtx-products{grid-column:1/-1;grid-row:2;width:100%}.rtx-row>.rtx-actions{grid-column:3;grid-row:3}.rtx-product-name{white-space:normal}.rtx-product{gap:12px}}';
+      '@media(max-width:600px){.rtx-summary{gap:6px}.rtx-summary.has4{grid-template-columns:repeat(2,minmax(0,1fr))}.rtx-summary>div{padding:12px 8px}.rtx-summary strong{font-size:19px}.rtx-summary span{font-size:11px}.rtx-activity-row{grid-template-columns:auto minmax(0,1fr);gap:10px}.rtx-activity-value{grid-column:2;text-align:start}.rtx-activity-value small{max-width:none}.rtx-identity{flex-wrap:wrap}.rtx-row{grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:18px 0}.rtx-row>.rtx-t{grid-column:1;grid-row:1}.rtx-row>.rtx-m{grid-column:2;grid-row:1;justify-self:start}.rtx-row>.rtx-a{grid-column:3;grid-row:1}.rtx-row>.rtx-products{grid-column:1/-1;grid-row:2;width:100%}.rtx-row>.rtx-actions{grid-column:3;grid-row:3}.rtx-product-name{white-space:normal}.rtx-product{gap:12px}}';
     document.head.appendChild(s);
   }
 
@@ -940,8 +939,8 @@
   const salesKindByMerchant = Object.create(null);
   function salesMethodKey(s) {
     const raw = String((s && s.method) || '').toLowerCase();
-    return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery' })[raw] || raw;
-  }
+    return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery', virement: 'transfer', 'chèque': 'cheque' })[raw] || raw;
+  } const salesMethodOk = (m) => /^[a-z][a-z_-]{0,23}$/.test(String(m || '')) && m !== 'all';
   function auditMerchant() {
     try { return String(window.KiwiLive?.merchant?.() || ''); } catch (_) { return ''; }
   }
@@ -1013,9 +1012,9 @@
       ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund', origin: 'caisse',
     }));
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', delivery: 'Livraison', credit: 'Avoir', avoir: 'Avoir', unknown: 'Non renseigné' },
-      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', delivery: 'Delivery', credit: 'Store credit', avoir: 'Store credit', unknown: 'Not recorded' },
-      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', delivery: 'توصيل', credit: 'رصيد المتجر', avoir: 'رصيد المتجر', unknown: 'غير مسجّل' },
+      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', transfer: 'Virement', cheque: 'Chèque', delivery: 'Livraison', credit: 'Avoir', avoir: 'Avoir', unknown: 'Non renseigné' },
+      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', transfer: 'Transfer', cheque: 'Cheque', delivery: 'Delivery', credit: 'Store credit', avoir: 'Store credit', unknown: 'Not recorded' },
+      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', transfer: 'تحويل', cheque: 'شيك', delivery: 'توصيل', credit: 'رصيد المتجر', avoir: 'رصيد المتجر', unknown: 'غير مسجّل' },
     };
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };
@@ -1036,7 +1035,7 @@
      * au lieu de le dire. */
     const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
     const rememberedDay = String(salesDayByMerchant[merchant] || '');
-    const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
+    const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter(salesMethodOk);
     const now = Date.now();
     const R = window.KiwiDayReport;
     const addDay = (day, delta) => {
@@ -1116,10 +1115,10 @@
     const methodLabels = {
       all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
       cash: L.cash, card: L.card, delivery: L.delivery,
-    };
-    const methodButtons = ['all', 'cash', 'card', 'delivery'].map((method) => {
+    }; const seenMethods = daySales.filter((s) => s.kind !== 'refund').map(salesMethodKey).filter(salesMethodOk);   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres */
+    const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods].filter((m) => ['cash', 'card', 'delivery'].includes(m) || seenMethods.includes(m) || selectedMethods.includes(m)))].map((method) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
-      return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
+      return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method] || L[method] || method)}</button>`;
     }).join('');
     const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(Number(s.amount || 0) * 100)), 0) / 100;
     const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(Number(s.amount || 0) * 100)), 0) / 100;
@@ -1128,7 +1127,7 @@
        vente : la liste le montre, l'en-tête doit le compter. Un ticket offert à
        0 MAD (restaurant) reste hors du compte, comme avant. */
     const count = financialWindow.filter((s) => s.kind !== 'refund' && (Number(s.amount) > 0
-      || (Number(s.amount) === 0 && /^(credit|avoir)/i.test(String(s.method || ''))))).length;
+      || (Number(s.amount) === 0 && /^(credit|avoir|delivery|livraison)/i.test(String(s.method || ''))))).length; const receivable = financialWindow.reduce((a, s) => a + (s.kind === 'refund' ? 0 : (Array.isArray(s.paymentParts) ? s.paymentParts : []).reduce((b, p) => b + (p && /^(delivery|livraison)$/i.test(String(p.method || p.m || '')) ? Math.max(0, Math.round(Number(p.amountCents) || 0)) : 0), 0)), 0) / 100;   /* une livraison n'est pas encaissée : elle se lit à part, « à recevoir » */
     const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
@@ -1214,10 +1213,10 @@
             <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)} · ${escS(dayLabel)}</div>
             <div class="rtx-total">${voids.filter(v => v.kind !== 'restore' && v.kind !== 'takeout-handover').length} ${escS(T({ fr: 'annulations / fermetures', en: 'cancellations / closures', ar: 'إلغاءات / إغلاقات' }))}</div>
           </div>
-          <div class="rtx-summary">${[
+          <div class="rtx-summary${receivable > 0 ? ' has4' : ''}">${[
             [T({ fr: 'Encaissements', en: 'Collected', ar: 'المقبوضات' }), collected, ''],
             [T({ fr: 'Remboursements', en: 'Refunded', ar: 'المبالغ المستردة' }), -returned, 'is-refund'],
-            [T({ fr: 'Net encaissé', en: 'Net collected', ar: 'صافي المقبوضات' }), total, ''],
+            [T({ fr: 'Net encaissé', en: 'Net collected', ar: 'صافي المقبوضات' }), total, ''], ...(receivable > 0 ? [[T({ fr: 'Livraisons · à recevoir', en: 'Deliveries · to collect', ar: 'التوصيلات · قيد التحصيل' }), receivable, 'is-due']] : []),
           ].map(([label, value, cls]) => `<div class="${cls}"><span>${escS(label)}</span><strong>${fmt(value)} <small>MAD</small></strong></div>`).join('')}</div>
           <div class="rtx-day-host" data-rtx-day-selector></div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Activité', en: 'Activity', ar: 'النشاط' }))}">${kindButtons}</div>
