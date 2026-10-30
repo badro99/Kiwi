@@ -497,7 +497,11 @@
     // Un reçu imprimé avant par la même boîte laisse sa feuille de style
     // (« tout masquer sauf le reçu ») : elle masquerait nos étiquettes, page
     // blanche. Et la nôtre, laissée en place, masquerait le prochain reçu.
-    const kpr = document.getElementById('kpr-print-css'); if (kpr) kpr.remove();
+    // Le reçu Kiwi (receipt.js) laisse aussi la sienne, « kiwi-receipt-print-css »,
+    // qui masque tout sauf le reçu : après une seule vente imprimée, chaque
+    // impression d'étiquettes sortait blanche (Santos, 30/10). receipt.js la
+    // recrée à chaque reçu, on peut donc l'enlever ici sans rien casser.
+    ['kpr-print-css', 'kiwi-receipt-print-css'].forEach((id) => { const el = document.getElementById(id); if (el) el.remove(); });
     ensurePrintCss();
     setTimeout(() => {
       try { window.print(); } catch (e) {}
