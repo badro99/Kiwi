@@ -2115,9 +2115,6 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     var secondary = [
       h('button', { class:'mini', title:'Chiffres masqués, aucune écriture', onClick:function(e){ e.stopPropagation(); openPrivateDashboard(c.merchant); } }, 'Vue confidentielle'),
       h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder à la caisse'),
-      h('button', { class:'mini',
-        title:'Accès support : l’ouverture ou la reprise du service nécessite une confirmation dans la caisse.',
-        onClick:function(e){ e.stopPropagation(); openCaisse(c, { direct:true }); } }, 'Accès caisse'),
       // Named operator only: the key is imputable, capped at 7 days, and the
       // owner sees it on the same page (functions/api/agent/keys.js).
       h('button', { class:'mini', disabled: SENIOR === false,

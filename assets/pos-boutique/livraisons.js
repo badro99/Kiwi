@@ -162,7 +162,7 @@ function css() {
     '#pos-boutique .bqd-tab.on{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0);}',
     '#pos-boutique .bqd-list{display:flex;flex-direction:column;gap:8px;}',
     '#pos-boutique .bqd-row{border:1px solid var(--line,#E2DDD2);border-radius:12px;background:var(--paper-elev,#FFFDFA);padding:12px 14px;display:flex;flex-direction:column;gap:10px;}',
-    '#pos-boutique .bqd-top{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;}',
+    '#pos-boutique .bqd-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;}',
     '#pos-boutique .bqd-top b{font-size:15px;font-weight:600;}',
     '#pos-boutique .bqd-top small{display:block;margin-top:2px;font-size:12.5px;color:var(--ink-3,#6F6C65);}',
     '#pos-boutique .bqd-amt{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:end;}',
@@ -170,6 +170,9 @@ function css() {
     '#pos-boutique .bqd-bar{height:4px;border-radius:4px;background:var(--paper-soft,#F1EEE7);overflow:hidden;}',
     '#pos-boutique .bqd-bar i{display:block;height:100%;background:var(--atlas,#0B6E4F);}',
     '#pos-boutique .bqd-btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line,#E2DDD2);background:var(--paper-elev,#FFFDFA);font:inherit;font-size:14px;font-weight:600;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}',
+    '#pos-boutique .bqd-btn.sm{min-height:36px;padding:0 12px;border-radius:999px;font-size:13px;color:var(--ink-2,#3B3A36);}',
+    '#pos-boutique .bqd-btn.sm i,#pos-boutique .bqd-btn.sm svg{width:16px;height:16px;}',
+    '#pos-boutique .bqd-foot{gap:6px;margin-top:-2px;}',
     '#pos-boutique .bqd-btn.go{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0);}',
     '#pos-boutique .bqd-btn[disabled]{opacity:.45;cursor:default;}',
     '#pos-boutique .bqd-btn i,#pos-boutique .bqd-btn svg{width:18px;height:18px;}',
@@ -204,7 +207,7 @@ function css() {
     '#pos-boutique .bqd-who span{white-space:nowrap;}',
     '#pos-boutique .bqd-addr{font-size:13px;color:var(--ink-2,#3D4441);line-height:1.45;}',
     '#pos-boutique .bqd-addr span{display:block;color:var(--ink-3,#6F6C65);}',
-    '@media (max-width:760px){#pos-boutique .bqd-kpis{grid-template-columns:1fr;}#pos-boutique .bqd-top{grid-template-columns:1fr auto;}#pos-boutique .bqd-top .bqd-btn{grid-column:1 / -1;}}',
+    '@media (max-width:760px){#pos-boutique .bqd-kpis{grid-template-columns:1fr;}#pos-boutique .bqd-foot{justify-content:stretch;}#pos-boutique .bqd-foot .bqd-btn{flex:1 1 0;justify-content:center;}}',
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -299,11 +302,12 @@ function rowOpen(x, d, esc) {
   return '<div class="bqd-row" data-bqd-row="' + esc(x.saleId) + '">'
     + '<div class="bqd-top"><div>' + title(x, esc) + '<small>' + esc(sub.join(' · ')) + '</small></div>'
     + '<div class="bqd-amt">' + esc(madC(x.dueCents, d)) + '<small><br>' + esc(parcel ? ozonNote() : tr('confirmée dans {n} j').replace('{n}', String(left))) + '</small></div>'
-    + (isOpen ? '' : '<button type="button" class="bqd-btn" data-bqd-open="' + esc(x.saleId) + '"><i data-icon="undo"></i>' + esc(tr('Enregistrer un retour')) + '</button>')
     + '</div>'
     + (parcel ? ozonLine(parcel) : '<div class="bqd-bar"><i style="width:' + Math.min(100, Math.round(days / total * 100)) + '%"></i></div>')
     + (!parcel && x.ozonError ? '<p class="bqd-note bqd-refused">' + esc(tr('Ozon a refusé le colis. Vérifiez le téléphone et l’adresse, puis Envoyer avec Ozon.')) + (x.ozonError.message ? ' ' + esc(x.ozonError.message) : '') + '</p>' : '')
-    + (!parcel && st.ozon && st.ozon.connected && !isOpen ? '<div class="bqd-acts"><button type="button" class="bqd-btn" data-bqd-ozon="' + esc(x.saleId) + '"><i data-icon="local_shipping"></i>' + esc(translate('Envoyer avec Ozon')) + '</button></div>' : '')
+    + (isOpen ? '' : '<div class="bqd-acts bqd-foot">'
+      + (!parcel && st.ozon && st.ozon.connected ? '<button type="button" class="bqd-btn sm" data-bqd-ozon="' + esc(x.saleId) + '"><i data-icon="local_shipping"></i>' + esc(translate('Envoyer avec Ozon')) + '</button>' : '')
+      + '<button type="button" class="bqd-btn sm" data-bqd-open="' + esc(x.saleId) + '"><i data-icon="undo"></i>' + esc(tr('Enregistrer un retour')) + '</button></div>')
     + ret + '</div>';
 }
 

@@ -10,7 +10,7 @@
  * s'ouvre préremplie avec. Le créneau et l'emballage voyagent dans le
  * commentaire, pour que le livreur et la page Livraisons les voient. */
 import { bqDeliveryCard } from '../pos-boutique/delivery-card.js?v=2';
-import { bqLivraisons } from '../pos-boutique/livraisons.js?v=14';
+import { bqLivraisons } from '../pos-boutique/livraisons.js?v=15';
 
 const PHRASES = {
   'Livraison fragile': ['Fragile delivery', 'توصيل هش'],
