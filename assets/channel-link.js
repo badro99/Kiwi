@@ -826,6 +826,15 @@
     root.appendChild(how);
     var list = el('div', 'oz-list'); root.appendChild(list);
     root.appendChild(el('p', 'oz-safe', s.safe));
+    /* Operator view (?op=1&merchant=…): the store on screen is the client's,
+       not one of the operator's own. The server still checks the operator is
+       named on it before any read or write (functions/api/ozon/_lib.js). */
+    var opSlug = '';
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.get('op') === '1') opSlug = String(q.get('merchant') || '').slice(0, 64);
+    } catch (_) {}
+    if (opSlug) { list.appendChild(ozStore({ merchant: opSlug, name: opSlug }, s)); return Promise.resolve(true); }
     return ozJson('/api/me').then(function (me) {
       var stores = (me && Array.isArray(me.stores) ? me.stores : []).filter(function (x) { return x && x.merchant; });
       if (!stores.length) { list.appendChild(el('div', 'chl-once', s.none)); return false; }
