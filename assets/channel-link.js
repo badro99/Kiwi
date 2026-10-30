@@ -698,9 +698,146 @@
     return box;
   }
 
+
+  /* ── Ozon Express (propriétaire, 30 octobre 2026) ─────────────────────────
+   * Chaque commerce du compte se relie à SON compte Ozon : l'ID client et la
+   * clé API (client.ozoneexpress.ma › Compte › « Générer votre clé API »). Le
+   * serveur vérifie la clé auprès d'Ozon avant de la garder, chiffrée, et ne la
+   * renvoie jamais (functions/api/ozon/account.js). Les commerces viennent de
+   * /api/me : ce panneau ne lit aucun autre module du tableau de bord. */
+  var OZ = {
+    fr: { title: 'Ozon Express', intro: 'Les colis partent depuis la caisse, le suivi s’affiche sur chaque commande, et une vente entre dans le chiffre d’affaires quand Ozon indique « Payé ».',
+      how: 'Sur client.ozoneexpress.ma, ouvrez Compte puis « Générer votre clé API ». Recopiez ici votre ID client et la clé.',
+      steps: ['Connectez-vous sur client.ozoneexpress.ma.', 'Ouvrez Compte, puis « Générer votre clé API ».', 'Recopiez ici votre ID client et la clé.'], pickup: 'Ramassage',
+      customer: 'ID client Ozon', key: 'Clé API Ozon', pickup0: 'Ozon ramasse les colis à la boutique', pickup1: 'Les colis partent de mon stock chez Ozon',
+      connect: 'Relier ce commerce', checking: 'Vérification auprès d’Ozon…', connected: 'Relié', client: 'client', disconnect: 'Déconnecter', confirmOff: 'Déconnecter Ozon pour ce commerce ? Les colis déjà créés gardent leur suivi.',
+      saved: 'Ozon Express relié', off: 'Ozon Express déconnecté', safe: 'La clé est vérifiée auprès d’Ozon, puis gardée chiffrée sur le serveur. Elle ne s’affiche plus jamais, même à vous.',
+      none: 'Aucun commerce trouvé sur ce compte. Ouvrez ce panneau depuis le compte du commerçant.', load: 'Impossible de lire l’état Ozon. Vérifiez la connexion.',
+      err: { 'bad-customer-id': 'L’ID client Ozon est un nombre.', 'bad-api-key': 'Cette clé ne ressemble pas à une clé Ozon. Recopiez-la sans espace.', 'ozon-key-refused': 'Ozon refuse cette clé. Vérifiez l’ID client et la clé.', 'ozon-unreachable': 'Ozon ne répond pas. Réessayez dans un instant.', 'not-configured': 'Le serveur n’est pas prêt à garder la clé. Contactez le support Kiwi.', 'forbidden-merchant': 'Seul le propriétaire du commerce peut relier Ozon.', 'no-db': 'Service indisponible. Réessayez dans un instant.' } },
+    en: { title: 'Ozon Express', intro: 'Parcels leave from the till, tracking shows on every order, and a sale counts in revenue when Ozon says “Paid”.',
+      how: 'On client.ozoneexpress.ma, open Account then “Generate your API key”. Copy your customer ID and the key here.',
+      steps: ['Sign in on client.ozoneexpress.ma.', 'Open Account, then “Generate your API key”.', 'Copy your customer ID and the key here.'], pickup: 'Pickup',
+      customer: 'Ozon customer ID', key: 'Ozon API key', pickup0: 'Ozon picks parcels up at the shop', pickup1: 'Parcels leave from my stock at Ozon',
+      connect: 'Connect this business', checking: 'Checking with Ozon…', connected: 'Connected', client: 'customer', disconnect: 'Disconnect', confirmOff: 'Disconnect Ozon for this business? Parcels already created keep their tracking.',
+      saved: 'Ozon Express connected', off: 'Ozon Express disconnected', safe: 'The key is checked with Ozon, then kept encrypted on the server. It is never shown again, not even to you.',
+      none: 'No business found on this account. Open this panel from the merchant account.', load: 'Could not read the Ozon status. Check the connection.',
+      err: { 'bad-customer-id': 'The Ozon customer ID is a number.', 'bad-api-key': 'This does not look like an Ozon key. Copy it without spaces.', 'ozon-key-refused': 'Ozon refuses this key. Check the customer ID and the key.', 'ozon-unreachable': 'Ozon is not answering. Try again in a moment.', 'not-configured': 'The server is not ready to keep the key. Contact Kiwi support.', 'forbidden-merchant': 'Only the business owner can connect Ozon.', 'no-db': 'Service unavailable. Try again in a moment.' } },
+    ar: { title: 'Ozon Express', intro: 'تنطلق الطرود من الصندوق، ويظهر التتبع في كل طلب، وتُحتسب البيعة في رقم المعاملات عندما يشير أوزون إلى «مدفوع».',
+      how: 'على client.ozoneexpress.ma افتح الحساب ثم «إنشاء مفتاح API». انسخ رقم الزبون والمفتاح هنا.',
+      steps: ['سجّل الدخول على client.ozoneexpress.ma.', 'افتح الحساب ثم «إنشاء مفتاح API».', 'انسخ رقم الزبون والمفتاح هنا.'], pickup: 'الاستلام',
+      customer: 'رقم زبون أوزون', key: 'مفتاح API أوزون', pickup0: 'أوزون يستلم الطرود من المتجر', pickup1: 'الطرود تنطلق من مخزوني لدى أوزون',
+      connect: 'ربط هذا النشاط', checking: 'جارٍ التحقق لدى أوزون…', connected: 'مربوط', client: 'الزبون', disconnect: 'فصل', confirmOff: 'فصل أوزون عن هذا النشاط؟ تحتفظ الطرود المنشأة بتتبعها.',
+      saved: 'تم ربط أوزون إكسبريس', off: 'تم فصل أوزون إكسبريس', safe: 'يتم التحقق من المفتاح لدى أوزون ثم يُحفظ مشفراً على الخادم. لن يظهر مرة أخرى، ولا حتى لك.',
+      none: 'لم يُعثر على أي نشاط في هذا الحساب. افتح هذه اللوحة من حساب التاجر.', load: 'تعذرت قراءة حالة أوزون. تحقق من الاتصال.',
+      err: { 'bad-customer-id': 'رقم زبون أوزون عدد.', 'bad-api-key': 'هذا لا يشبه مفتاح أوزون. انسخه دون مسافات.', 'ozon-key-refused': 'أوزون يرفض هذا المفتاح. تحقق من رقم الزبون والمفتاح.', 'ozon-unreachable': 'أوزون لا يستجيب. أعد المحاولة بعد قليل.', 'not-configured': 'الخادم غير جاهز لحفظ المفتاح. اتصل بدعم Kiwi.', 'forbidden-merchant': 'صاحب النشاط وحده يمكنه ربط أوزون.', 'no-db': 'الخدمة غير متاحة. أعد المحاولة بعد قليل.' } },
+  };
+  function ozStr() { return OZ[LANG()] || OZ.fr; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function ozJson(url, init) {
+    return fetch(url, Object.assign({ credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' } }, init || {}))
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.error || 'http-' + r.status); throw e; } return j; }); });
+  }
+  function ozStore(store, s) {
+    var card = el('div', 'oz-store');
+    var head = el('div', 'oz-head');
+    head.appendChild(el('b', '', store.name || store.merchant));
+    var side = el('div', 'oz-side'); head.appendChild(side);
+    var chip = el('span', 'oz-chip'); side.appendChild(chip);
+    card.appendChild(head);
+    var body = el('div', 'oz-body'); card.appendChild(body);
+    function paint(state) {
+      body.textContent = '';
+      chip.textContent = '';
+      if (state && state.connected) { chip.appendChild(document.createTextNode(s.connected + ' · ' + s.client + ' ')); chip.appendChild(el('code', '', '••' + state.customerTail)); }
+      chip.hidden = !(state && state.connected);
+      var oldOff = side.querySelector('.oz-off'); if (oldOff) oldOff.remove();
+      if (state && state.connected) {
+        var modes = el('div', 'oz-modes'); modes.setAttribute('role', 'radiogroup'); modes.setAttribute('aria-label', s.pickup);
+        modes.appendChild(el('span', 'oz-glabel', s.pickup));
+        [0, 1].forEach(function (m) {
+          var lab = el('label', 'oz-mode'); var r = document.createElement('input');
+          r.type = 'radio'; r.name = 'oz-pick-' + store.merchant; r.checked = Number(state.pickupMode) === m;
+          r.addEventListener('change', function () {
+            ozJson('/api/ozon/account', { method: 'PATCH', body: JSON.stringify({ merchant: store.merchant, pickupMode: m }) })
+              .then(paint).catch(function (e) { toast((s.err[e.message] || s.load), { type: 'warn' }); });
+          });
+          lab.appendChild(r); lab.appendChild(document.createTextNode(m ? s.pickup1 : s.pickup0)); modes.appendChild(lab);
+        });
+        body.appendChild(modes);
+        var off = el('button', 'oz-off', s.disconnect); off.type = 'button';
+        off.addEventListener('click', function () {
+          if (!window.confirm(s.confirmOff)) return;
+          ozJson('/api/ozon/account?merchant=' + encodeURIComponent(store.merchant), { method: 'DELETE' })
+            .then(function () { toast(s.off, { type: 'success' }); paint({ connected: false }); })
+            .catch(function (e) { toast((s.err[e.message] || s.load), { type: 'warn' }); });
+        });
+        side.appendChild(off);
+        return;
+      }
+      var grid = el('div', 'oz-grid');
+      var idL = el('label', 'oz-f', s.customer), id = document.createElement('input');
+      id.inputMode = 'numeric'; id.autocomplete = 'off'; id.maxLength = 12; idL.appendChild(id);
+      var keyL = el('label', 'oz-f', s.key), key = document.createElement('input');
+      key.type = 'password'; key.autocomplete = 'off'; key.spellcheck = false; key.maxLength = 200; keyL.appendChild(key);
+      grid.appendChild(idL); grid.appendChild(keyL); body.appendChild(grid);
+      var modes = el('div', 'oz-modes'), pick = 0; modes.setAttribute('role', 'radiogroup'); modes.setAttribute('aria-label', s.pickup);
+      modes.appendChild(el('span', 'oz-glabel', s.pickup));
+      [0, 1].forEach(function (m) {
+        var lab = el('label', 'oz-mode'), r = document.createElement('input');
+        r.type = 'radio'; r.name = 'oz-new-' + store.merchant; r.checked = m === 0;
+        r.addEventListener('change', function () { pick = m; });
+        lab.appendChild(r); lab.appendChild(document.createTextNode(m ? s.pickup1 : s.pickup0)); modes.appendChild(lab);
+      });
+      body.appendChild(modes);
+      var err = el('div', 'oz-err'); err.setAttribute('role', 'alert'); body.appendChild(err);
+      var go = el('button', 'oz-go', s.connect); go.type = 'button';
+      go.addEventListener('click', function () {
+        err.textContent = '';
+        go.disabled = true; go.textContent = s.checking;
+        ozJson('/api/ozon/account', { method: 'POST', body: JSON.stringify({ merchant: store.merchant, customerId: id.value.trim(), apiKey: key.value.trim(), pickupMode: pick }) })
+          .then(function (j) { key.value = ''; toast(s.saved, { type: 'success' }); paint(j); })
+          .catch(function (e) { err.textContent = s.err[e.message] || s.load; go.disabled = false; go.textContent = s.connect; });
+      });
+      body.appendChild(go);
+    }
+    body.appendChild(el('div', 'oz-wait', '…'));
+    ozJson('/api/ozon/account?merchant=' + encodeURIComponent(store.merchant))
+      .then(paint).catch(function () { body.textContent = ''; body.appendChild(el('div', 'chl-once', s.load)); });
+    return card;
+  }
+  function openOzon() {
+    var s = ozStr(), m = window.Kiwi.modal({ title: s.title, width: 620, body: '' });
+    var slot = m && m.el && m.el.querySelector('.kiwi-modal-body');
+    if (!slot) { if (m && m.close) m.close(); return Promise.resolve(false); }
+    var root = el('div', 'chl oz'); slot.appendChild(root);
+    root.appendChild(el('p', 'chl-hdr', s.intro));
+    var how = el('ol', 'oz-how');
+    s.steps.forEach(function (step) {
+      var li = el('li'), line = el('span'), parts = step.split('client.ozoneexpress.ma');
+      li.appendChild(line);
+      line.appendChild(document.createTextNode(parts[0]));
+      if (parts.length > 1) {
+        var a = el('a', 'oz-link', 'client.ozoneexpress.ma');
+        a.href = 'https://client.ozoneexpress.ma/'; a.target = '_blank'; a.rel = 'noopener';
+        line.appendChild(a); line.appendChild(document.createTextNode(parts.slice(1).join('client.ozoneexpress.ma')));
+      }
+      how.appendChild(li);
+    });
+    root.appendChild(how);
+    var list = el('div', 'oz-list'); root.appendChild(list);
+    root.appendChild(el('p', 'oz-safe', s.safe));
+    return ozJson('/api/me').then(function (me) {
+      var stores = (me && Array.isArray(me.stores) ? me.stores : []).filter(function (x) { return x && x.merchant; });
+      if (!stores.length) { list.appendChild(el('div', 'chl-once', s.none)); return false; }
+      stores.forEach(function (x) { list.appendChild(ozStore(x, s)); });
+      return true;
+    }).catch(function () { list.appendChild(el('div', 'chl-once', s.load)); return false; });
+  }
+
   function connect(channel, label) {
     channel = String(channel || 'generic');
     if (channel === 'shopify') return openShopify();
+    if (channel === 'ozon') return openOzon();
     return fetch('/api/channel/keys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -807,7 +944,43 @@
   .shp-ack { display:flex; align-items:flex-start; gap:9px; padding:10px 12px; border:1px solid var(--n-200); border-radius:10px; color:var(--n-600); font-size:11.5px; line-height:1.45; cursor:pointer; }\
   .shp-ack input { width:17px; height:17px; flex:0 0 auto; accent-color:var(--atlas); }\
   @media(max-width:560px){.shp-setup-row{grid-template-columns:auto 1fr}.shp-setup-row>input[type="number"]{grid-column:2}}\
-  html[data-theme="dark"] .chl-f-v.is-key { color:var(--mint); }';
+  html[data-theme="dark"] .chl-f-v.is-key { color:var(--mint); }\
+  .oz-how { margin:0; padding:0; list-style:none; counter-reset:oz; display:flex; flex-direction:column; gap:6px; font-size:13px; line-height:1.45; color:var(--ink-2,var(--n-600)); }\
+  .oz-how li { counter-increment:oz; display:flex; gap:10px; align-items:baseline; }\
+  .oz-how li::before { content:counter(oz); flex:0 0 20px; height:20px; border-radius:50%; display:inline-grid; place-items:center; font-size:11.5px; font-weight:600; font-variant-numeric:tabular-nums; background:color-mix(in srgb,var(--atlas) 12%,transparent); color:var(--atlas); transform:translateY(-1px); }\
+  .oz-list { display:flex; flex-direction:column; gap:10px; }\
+  .oz-link { display:inline; margin:0; padding:0; background:none; color:var(--atlas); font-weight:600; text-decoration:underline; text-underline-offset:2px; }\
+  html[data-theme="dark"] .oz-link { color:var(--mint); }\
+  .oz-store { border:1px solid color-mix(in srgb,var(--ink) 10%,transparent); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:14px; background:var(--paper); }\
+  html[data-theme="dark"] .oz-store { background:color-mix(in srgb,var(--paper) 6%,transparent); }\
+  .oz-side { display:flex; align-items:center; gap:8px; }\
+  .oz-chip code { font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; font-weight:500; }\
+  .oz-off { min-height:32px; padding:0 8px; border:0; border-radius:8px; background:none; font:inherit; font-size:13px; font-weight:600; color:var(--danger,#C94A3A); cursor:pointer; }\
+  .oz-off:hover { background:color-mix(in srgb,var(--danger,#C94A3A) 8%,transparent); }\
+  .oz-off:focus-visible, .oz-go:focus-visible { outline:2px solid color-mix(in srgb,var(--atlas) 45%,transparent); outline-offset:2px; }\
+  .oz-glabel { font-size:12px; font-weight:600; color:var(--ink-3,var(--n-500)); margin-bottom:2px; }\
+  .oz-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }\
+  .oz-head b { font-size:15px; font-weight:600; }\
+  .oz-chip { font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:color-mix(in srgb,var(--atlas) 12%,transparent); color:var(--atlas); white-space:nowrap; }\
+  .oz-body { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }\
+  .oz-grid { display:grid; grid-template-columns:1fr 1.4fr; gap:10px; width:100%; }\
+  .oz-f { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:600; color:var(--n-600); min-width:0; }\
+  .oz-f input { min-height:44px; padding:0 12px; border:1px solid var(--n-200); border-radius:10px; background:color-mix(in srgb,var(--paper) 35%,#FFFDFA); color:var(--ink); font:inherit; font-size:14px; }\
+  .oz-f input:focus { border-color:var(--atlas); }\
+  html[data-theme="dark"] .oz-f input { background:color-mix(in srgb,var(--paper) 8%,transparent); }\
+  .oz-f input:focus-visible, .oz-mode input:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }\
+  .oz-modes { display:flex; flex-direction:column; gap:6px; }\
+  .oz-mode { display:flex; align-items:center; gap:9px; min-height:32px; font-size:13px; cursor:pointer; }\
+  .oz-mode input { width:17px; height:17px; accent-color:var(--atlas); }\
+  .oz-err { font-size:12.5px; font-weight:600; color:var(--danger,#C94A3A); }\
+  .oz-err:empty { display:none; }\
+  .oz-go { min-height:44px; padding:0 18px; border:0; border-radius:10px; background:var(--atlas); color:var(--paper); font:inherit; font-size:14px; font-weight:600; cursor:pointer; box-shadow:none; }\
+  .oz-go:hover { background:var(--riad); }\
+  .oz-go[disabled] { opacity:.6; cursor:default; }\
+  .oz-safe { margin:0; display:flex; gap:8px; align-items:flex-start; font-size:12px; line-height:1.45; color:var(--ink-3,var(--n-500)); }\
+  .oz-safe::before { content:""; flex:0 0 16px; height:16px; margin-top:1px; background:currentColor; -webkit-mask:url(assets/icons/material/lock.svg) center/contain no-repeat; mask:url(assets/icons/material/lock.svg) center/contain no-repeat; }\
+  html[data-theme="dark"] .oz-chip { color:var(--mint); }\
+  @media(max-width:560px){.oz-grid{grid-template-columns:1fr}}';
 
   try {
     var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);

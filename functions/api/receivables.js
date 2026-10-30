@@ -176,11 +176,18 @@ const AUTO_BATCH = 25;
 async function autoConfirm(env, merchant, rows, bySale, returnsBySale, now) {
   let wrote = 0;
   const from = Number(env && env.DELIVERY_AUTO_FROM_TS) || AUTO_FROM_TS;   // réglable pour les tests
+  /* Un colis confié à Ozon Express n'a pas de délai : c'est « Payé » chez
+     Ozon qui le confirme (confirmByCarrier, functions/api/ozon/track.js). */
+  const carried = new Set();
+  try {
+    const rs = await env.DB.prepare("SELECT sale_id FROM ozon_parcels WHERE merchant = ? AND status != 'cancelled'").bind(merchant).all();
+    (rs.results || []).forEach((r) => carried.add(String(r.sale_id)));
+  } catch (_) { /* table absente : aucun colis Ozon */ }
   for (const row of rows) {
     if (wrote >= AUTO_BATCH) break;
     const ts = Number(row.ts) || 0;
     if (!ts || ts < from || now - ts < CONFIRM_DAYS * DAY_MS) continue;
-    if (row.delivery_written_off || row.delivery_returned) continue;
+    if (row.delivery_written_off || row.delivery_returned || carried.has(String(row.id))) continue;
     const d = view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)));
     if (!(d.dueCents > 0)) continue;
     try {
@@ -193,6 +200,34 @@ async function autoConfirm(env, merchant, rows, bySale, returnsBySale, now) {
     } catch (_) { /* une autre lecture l'a écrite au même instant : rien à faire */ }
   }
   return wrote;
+}
+
+/* Le transporteur a payé (Ozon Express : « Payé »). Le reste dû entre dans le
+ * chiffre d'affaires par le même encaissement plafonné et idempotent que la
+ * confirmation automatique : `collectionId` est la clé, une relecture du suivi
+ * n'encaisse jamais deux fois. Rend la ligne écrite, ou null quand il n'y a
+ * plus rien à recevoir (retour, abandon, déjà réglée). */
+export async function confirmByCarrier(env, merchant, saleId, o) {
+  const row = (await readDeliveries(env.DB, merchant, String(saleId)))[0];
+  if (!row || row.delivery_written_off || row.delivery_returned) return null;
+  const bySale = await readCollections(env.DB, merchant);
+  const returns = (await readReturns(env.DB, merchant, String(saleId))).get(String(saleId));
+  const d = view(row, bySale.get(String(saleId)), returns);
+  if (!(d.dueCents > 0)) return null;
+  return writeCollection(env, merchant, row, {
+    collectionId: o.collectionId, method: 'transfer', amount: d.dueCents, owed: d.owedCents - d.returnedCents,
+    byId: o.byId || 'carrier', byName: o.byName || 'Transporteur', ts: o.ts, returns,
+  });
+}
+
+/* Ce qui reste à recevoir sur une livraison, pour le prix du colis. */
+export async function deliveryDue(env, merchant, saleId) {
+  const row = (await readDeliveries(env.DB, merchant, String(saleId)))[0];
+  if (!row) return null;
+  const bySale = await readCollections(env.DB, merchant);
+  const returns = (await readReturns(env.DB, merchant, String(saleId))).get(String(saleId));
+  const d = view(row, bySale.get(String(saleId)), returns);
+  return { dueCents: d.dueCents, label: d.label, ref: d.ref, ts: d.ts };
 }
 
 export async function onRequestGet({ request, env }) {
