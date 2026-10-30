@@ -1,10 +1,10 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=216';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=117';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=217';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=118';
 import { openMoves } from './inv-moves.js?v=5';
-import * as SZ from '../boutique-sizes.js?v=15';
+import * as SZ from '../boutique-sizes.js?v=16';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=117';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=118';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -831,6 +831,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         label: (id, v) => labelForVariant(id, v),
         print: (labels) => labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`),
         register: (vid) => openRegisterOnVariant(vid, pid),
+        remove: admin ? (vid) => confirmDeleteVariant(vid, pid) : null,
         toast: (title, desc) => toast(title, 3200, 'success', desc),
         onSaved: () => {
           const now = catDB().getProduct(pid);
@@ -1068,37 +1069,6 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       });
     });
   }
-  function openAddVariant(pid) {
-    if (!tillInventoryAllowed()) { catalogDashboardOnly(); return; }
-    const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
-    const presets = cat.sizePresets(d.product.kind);
-    const html = `
-      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="bqi-modh"><div><h3>Ajouter une variante</h3><span>${esc(d.product.name)}, couleur × taille</span></div></div>
-      <div class="bqi-form">
-        <div class="bqi-fg"><label>Couleur</label><div id="bqi-av-sw">${colorPicker('noir')}</div></div>
-        <div class="bqi-frow">
-          <div class="bqi-fg"><label>Taille</label><input id="bqi-av-size" list="bqi-av-sizes" value="${esc(presets[0] || 'TU')}" /><datalist id="bqi-av-sizes">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
-          <div class="bqi-fg"><label>Stock initial</label><input id="bqi-av-stock" type="number" min="0" value="0" /></div>
-        </div>
-        <div class="bqi-fg"><label>Code-barres</label><select id="bqi-av-bc"><option value="gen">Générer un EAN-13 (imprimable)</option><option value="none">Aucun pour l'instant</option></select></div>
-      </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-av-save">Ajouter la variante</button></div>`;
-    invSetModal(html, (el) => {
-      $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
-      $('#bqi-av-save', el).addEventListener('click', () => {
-        const k = KC();
-        const colorId = (k && k.value($('#bqi-av-sw', el))) || 'noir';
-        const size = $('#bqi-av-size', el).value.trim() || 'TU';
-        const stock = parseInt($('#bqi-av-stock', el).value, 10) || 0;
-        const v = cat.addVariant({ productId: pid, colorId, size, stock });
-        if (v && $('#bqi-av-bc', el).value === 'gen') cat.generateBarcode(v.id);
-        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Variante ajoutée'));
-        openInvProduct(pid);
-      });
-    });
-  }
-
   /* ─── register an EXISTING barcode on a variant (old POS code, no reprint) ─── */
   function openRegisterOnVariant(vid, pid) {
     const html = `

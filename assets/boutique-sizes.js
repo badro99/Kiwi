@@ -25,7 +25,7 @@
 
 import * as SPLIT from './boutique-size-split.js?v=4';
 import * as CODES from './boutique-size-codes.js?v=3';
-import * as COLORS from './boutique-size-colors.js?v=5';
+import * as COLORS from './boutique-size-colors.js?v=6';
 
 export const ONE_COLOR = 'unique';
 const GRID = {
@@ -52,7 +52,7 @@ const T = {
     saved: 'Stock enregistré', savedDesc: (n, c) => `${n} pièce${n > 1 ? 's' : ''} · ${c} code${c > 1 ? 's' : ''}-barres`,
     print: (n) => (n ? `Imprimer ${n} étiquette${n > 1 ? 's' : ''}` : 'Aucune étiquette à imprimer'),
     printDirty: 'Enregistrez avant d’imprimer.',
-    newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant',
+    newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant', del: 'Supprimer',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
     colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
     codeKey: 'Codes-barres : après le 2, deux chiffres pour la couleur ; avant le dernier, deux pour la taille. Le milieu est celui de l’article.',
@@ -72,7 +72,7 @@ const T = {
     saved: 'Stock saved', savedDesc: (n, c) => `${n} piece${n > 1 ? 's' : ''} · ${c} barcode${c > 1 ? 's' : ''}`,
     print: (n) => (n ? `Print ${n} label${n > 1 ? 's' : ''}` : 'No labels to print'),
     printDirty: 'Save before printing.',
-    newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code',
+    newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code', del: 'Delete',
     out: 'Sold out', empty: 'No sizes yet.',
     colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
     codeKey: 'Barcodes: after the 2, two digits for the colour; before the last, two for the size. The middle is the item’s.',
@@ -92,7 +92,7 @@ const T = {
     saved: 'تم حفظ المخزون', savedDesc: (n, c) => `${n} قطعة · ${c} رمز شريطي`,
     print: (n) => (n ? `طباعة ${n} ملصق` : 'لا ملصقات للطباعة'),
     printDirty: 'احفظ قبل الطباعة.',
-    newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود',
+    newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود', del: 'حذف',
     out: 'نفد', empty: 'لا مقاسات بعد.',
     colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
     codeKey: 'الرموز الشريطية: بعد الرقم 2، رقمان للون؛ وقبل الأخير، رقمان للمقاس. الوسط خاص بالمنتج.',
@@ -186,6 +186,7 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-code .kbs-pending { color: var(--n-500, #77807B); }
 .kbs-link { padding: 0; border: 0; background: none; color: var(--atlas, #0B6E4F); font: 600 11.5px var(--sans, inherit); cursor: pointer; }
 .kbs-link:hover { text-decoration: underline; }
+.kbs-del { justify-self: start; padding: 8px 0; margin: -8px 0; color: var(--danger, #B42318); font-weight: 500; }
 .kbs-in { box-sizing: border-box; width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--kbs-line); border-radius: 10px; background: var(--kbs-field);
   color: var(--ink, #0A0F0D); font: 600 15px var(--sans, inherit); text-align: center; font-variant-numeric: tabular-nums; }
 .kbs-in::placeholder { color: var(--n-400, #9AA09D); font-weight: 400; }
@@ -277,6 +278,10 @@ export function mount(host, o) {
       if (!bits) return `<code class="kbm-code">${esc(code)}</code>`;
       return `<code class="kbm-code">${bits[0]}<b>${bits[1]}</b>${bits[2]}<b>${bits[3]}</b>${bits[4]}</code>`;
     };
+    /* Supprimer une taille : la confirmation de la caisse (o.remove), jamais
+       pendant la création ni en lecture seule. */
+    const delOf = (r, label) => (!ro && !creating && o.remove && r.variant
+      ? `<button type="button" class="kbs-link kbs-del" data-kbs-del="${esc(r.variant.id)}" aria-label="${esc(t.del)} · ${esc(label)}">${esc(t.del)}</button>` : '');
     const anySmart = rich && shown.some((r) => r.variant && /<b>/.test(codeOf(r)));
     const rowsHtml = matrix ? '' : shown.map((r) => {
       const v = r.variant;
@@ -292,7 +297,7 @@ export function mount(host, o) {
         : `<span class="kbs-code"><span class="kbs-pending">${esc(v ? t.noCode : t.newCode)}</span>${v && o.register ? `<button type="button" class="kbs-link" data-kbs-reg="${esc(v.id)}">${esc(t.reg)}</button>` : ''}</span>`;
       return `<li class="kbs-row" data-kbs-row="${esc(r.key)}">
         <span class="kbs-size">${esc(sizeLabel)}${colorLine}</span>
-        <span class="kbs-mid">${have}${codeHtml}</span>
+        <span class="kbs-mid">${have}${codeHtml}${delOf(r, sizeLabel + (r.multi && v ? ' · ' + (v.colorLabel || '') : ''))}</span>
         ${ro ? '<span></span>' : `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0"
           data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(r.col || '')}" aria-label="${esc(t.add)} · ${esc(sizeLabel)}" />`}
       </li>`;
@@ -303,7 +308,7 @@ export function mount(host, o) {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
         const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
-        return `<td><input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0" data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(c.key)}" aria-label="${esc(t.add)} · ${esc(sl)} · ${esc(colName(c))}" />${r.variant ? `<small class="${st ? '' : 'is-out'}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}` : ''}</td>`;
+        return `<td><input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0" data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(c.key)}" aria-label="${esc(t.add)} · ${esc(sl)} · ${esc(colName(c))}" />${r.variant ? `<small class="${st ? '' : 'is-out'}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
       }).join('')}</tr>`;
     }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
@@ -497,6 +502,7 @@ export function mount(host, o) {
     host.querySelectorAll('[data-kbc-pick]').forEach((b) => b.addEventListener('click', () => { const c = pal.find((x) => x.id === b.getAttribute('data-kbc-pick')); if (c) addColors([c], ''); }));
     host.querySelectorAll('[data-kbc-del]').forEach((b) => b.addEventListener('click', () => removeColor(b.getAttribute('data-kbc-del'))));
     host.querySelectorAll('[data-kbs-reg]').forEach((b) => b.addEventListener('click', () => o.register && o.register(b.getAttribute('data-kbs-reg'))));
+    host.querySelectorAll('[data-kbs-del]').forEach((b) => b.addEventListener('click', () => o.remove && o.remove(b.getAttribute('data-kbs-del'))));
     paintCount();
     if (target <= 0) say('');
   }

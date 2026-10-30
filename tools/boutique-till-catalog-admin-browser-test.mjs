@@ -12,8 +12,8 @@
  * On, per worker (owner, 29 October): a cashier the owner did not tick in
  * Équipe gets the labels; ticked, she edits; a manager always edits.
  * On: real clicks create an article (total, then the sizes grid), change its
- * price, add a size and delete the article, through the real forms, with no
- * page error. Demo till only: nothing reaches a server.
+ * price, add a size, delete that size and delete the article, through the
+ * real forms, with no page error. Demo till only: nothing reaches a server.
  *   node tools/boutique-till-catalog-admin-browser-test.mjs
  */
 import { harness, demoPage, sleep } from './surface-matrix-lib.mjs';
@@ -109,6 +109,12 @@ await click('[data-kbs-save]');
 await sleep(500);
 p = await product(NAME);
 ok(!!p && p.variants.length === 2 && p.variants.some((v) => v.size === 'L' && v.stock === 2), 'typing into L adds size L', JSON.stringify(p && p.variants));
+
+const vL = p && p.variants.find((v) => v.size === 'L');
+await click(`[data-kbs-del="${vL && vL.id}"]`);
+await click('#bqi-vdel-ok');
+p = await product(NAME);
+ok(!!p && p.variants.length === 1 && p.variants[0].size === 'M', 'Supprimer on size L asks, then removes only that size', JSON.stringify(p && p.variants));
 
 await click('[data-inv-delete]');
 await click('#bqi-del-ok');

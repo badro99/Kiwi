@@ -176,6 +176,9 @@ const robe = await page.evaluate((name) => {
 }, THREE);
 ok(robe.list === 'bleu:L=3 bleu:M=3 noir:L=2 noir:M=2 noir:S=2 noir:XL=2', 'E · saved as six colour + size variants', robe.list);
 ok(robe.codes && robe.blueLabel === 'Bleu', 'each has its barcode, and carries its colour name');
+await page.waitForSelector('table.kbm', { visible: true, timeout: 5000 }).catch(() => {});
+const dels = await page.$$eval('table.kbm td [data-kbs-del]', (bs) => bs.map((b) => b.getAttribute('aria-label')));
+ok(dels.length === 6 && dels.includes('Supprimer · M · Bleu'), 'after saving, each cell of the size × colour grid offers « Supprimer » for its own variant', JSON.stringify(dels));
 const label = await page.evaluate(async (u) => {
   const m = await import(u.replace(/pos-boutique\.js\?v=\d+$/, 'boutique-sizes.js'));
   return m.variantWords({ colorId: 'bleu', colorLabel: 'Bleu', size: 'M' }, 'fr');
