@@ -386,6 +386,11 @@
       #kbl-print-root { display: none; }
       @media print {
         html, body { background: #fff !important; color: #0A0F0D !important; color-scheme: light !important; margin: 0 !important; padding: 0 !important; }
+        /* La caisse est un écran fixe : body en flex, haut de l'écran, débord
+           coupé. Imprimée telle quelle, Chrome ne sort que la PREMIÈRE page
+           (une seule étiquette, la première taille), et la boîte d'impression
+           propose ensuite de la copier N fois. On rend à la page un flux normal. */
+        html, body { display: block !important; height: auto !important; min-height: 0 !important; max-height: none !important; overflow: visible !important; position: static !important; }
         body > *:not(#kbl-print-root) { display: none !important; }
         #kbl-print-root { display: block !important; position: static; margin: 0; padding: 0; background: #fff !important; color: #0A0F0D !important; color-scheme: light !important; }
         .kbl-sheet { display: block; margin: 0; padding: 0; }
@@ -489,8 +494,15 @@
     root.id = 'kbl-print-root';
     root.innerHTML = `<div class="kbl-sheet">${flat.map(labelHTML).join('')}</div>`;
     document.body.appendChild(root);
+    // Un reçu imprimé avant par la même boîte laisse sa feuille de style
+    // (« tout masquer sauf le reçu ») : elle masquerait nos étiquettes, page
+    // blanche. Et la nôtre, laissée en place, masquerait le prochain reçu.
+    const kpr = document.getElementById('kpr-print-css'); if (kpr) kpr.remove();
     ensurePrintCss();
-    setTimeout(() => { try { window.print(); } catch (e) {} setTimeout(() => root.remove(), 600); }, 60);
+    setTimeout(() => {
+      try { window.print(); } catch (e) {}
+      setTimeout(() => { root.remove(); const css = document.getElementById('kbl-print-css'); if (css) css.remove(); }, 600);
+    }, 60);
   }
 
   /* ── real PDF (no library) ────────────────────────────────────────────────
