@@ -6,7 +6,8 @@
 // side only takes that side's value; a field changed identically on both sides
 // is kept; a field changed differently on both sides is a conflict, resolved to
 // the server's value and reported so the screen can name the item. Lists keep
-// the server's order, then append what only this device added.
+// the server's order (this device's when only it reordered), then append what
+// only this device added.
 
 export const MENU_LISTS = ['cats', 'items', 'stations', 'opts', 'formulaTemplates', 'promos'];
 // seq numbers new ids on each device: keep the higher one so ids never collide.
@@ -90,9 +91,14 @@ export const mergeList = (baseList, mineList, theirList) => {
     decided.set(id, r.value);
     if (r.fields.length) conflicts.push({ id, fields: r.fields });
   }
+  // Order: the server's, unless only this device reordered the list (dishes or
+  // sections moved by hand): then this device's order wins.
+  const seq = (from, other) => [...from.keys()].filter((id) => other.has(id)).join('\u0000');
+  const mineMoved = seq(M, B) !== seq(B, M), theirsMoved = seq(T, B) !== seq(B, T);
+  const [first, second] = mineMoved && !theirsMoved ? [M, T] : [T, M];
   const value = [];
-  for (const id of T.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
-  for (const id of M.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
+  for (const id of first.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
+  for (const id of second.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
   for (const [, entry] of decided) value.push(entry);
   return { value, conflicts };
 };

@@ -1,4 +1,4 @@
-/* Menu state. Exports: store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot.
+/* Menu state. Exports: store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot.
  * Reads injected: rules, tr, T, STATION_COLORS, render, registerHandlers, createFormulas. Window reads are declared in split.json. */
 (function (parts) {
   parts.state = function (context) {
@@ -277,6 +277,20 @@
       if (i < 0 || j < 0 || j >= d.cats.length) return d;
       const [category] = d.cats.splice(i, 1);
       d.cats.splice(j, 0, category);
+      return d;
+    });
+  }
+  /* Dishes show in the order of d.items. `ids` is the new order of ONE
+   * section's dishes: they take back the same slots in d.items, so every
+   * other dish keeps its place (Pasta Corner, 30 Oct 2026). */
+  function orderItems(ids) {
+    return store.update((d) => {
+      const want = (Array.isArray(ids) ? ids : []).map(String);
+      const slots = [], picked = [];
+      (d.items || []).forEach((it, i) => { if (it && want.includes(String(it.id))) slots.push(i); });
+      want.forEach((id) => { const it = (d.items || []).find((x) => x && String(x.id) === id); if (it && !picked.includes(it)) picked.push(it); });
+      if (slots.length !== picked.length) return d;
+      slots.forEach((slot, k) => { d.items[slot] = picked[k]; });
       return d;
     });
   }
@@ -744,7 +758,8 @@
     // side only takes that side's value; a field changed identically on both sides
     // is kept; a field changed differently on both sides is a conflict, resolved to
     // the server's value and reported so the screen can name the item. Lists keep
-    // the server's order, then append what only this device added.
+    // the server's order (this device's when only it reordered), then append what
+    // only this device added.
 
     const MENU_LISTS = ['cats', 'items', 'stations', 'opts', 'formulaTemplates', 'promos'];
     // seq numbers new ids on each device: keep the higher one so ids never collide.
@@ -828,9 +843,14 @@
         decided.set(id, r.value);
         if (r.fields.length) conflicts.push({ id, fields: r.fields });
       }
+      // Order: the server's, unless only this device reordered the list (dishes or
+      // sections moved by hand): then this device's order wins.
+      const seq = (from, other) => [...from.keys()].filter((id) => other.has(id)).join('\u0000');
+      const mineMoved = seq(M, B) !== seq(B, M), theirsMoved = seq(T, B) !== seq(B, T);
+      const [first, second] = mineMoved && !theirsMoved ? [M, T] : [T, M];
       const value = [];
-      for (const id of T.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
-      for (const id of M.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
+      for (const id of first.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
+      for (const id of second.keys()) if (decided.has(id)) { value.push(decided.get(id)); decided.delete(id); }
       for (const [, entry] of decided) value.push(entry);
       return { value, conflicts };
     };
@@ -1056,6 +1076,6 @@
 
 
     const { saveFormulaTemplate, deleteFormulaTemplate } = createFormulas({ store, cleanFormula, nid });
-    return { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot };
+    return { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot };
   };
 })(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});

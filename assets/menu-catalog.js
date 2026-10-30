@@ -454,7 +454,7 @@
   }
 
   /* ───────────────── example template (a small café/resto starter) ───────────────── */
-  const { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot } = window.KiwiMenuCatalogParts.state({ rules, tr, T, STATION_COLORS, render: (...args) => render(...args), registerHandlers: () => registerHandlers(), createFormulas: window.KiwiMenuCatalogParts.formulas });
+  const { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot } = window.KiwiMenuCatalogParts.state({ rules, tr, T, STATION_COLORS, render: (...args) => render(...args), registerHandlers: () => registerHandlers(), createFormulas: window.KiwiMenuCatalogParts.formulas });
   /* menu-formulas: saveFormulaTemplate owned by formulas. */
   /* menu-formulas: deleteFormulaTemplate owned by formulas. */  /* menu-state: edits owned by state. */
   function injectCss() { return window.KiwiMenuCatalogParts.media({  }).injectCss(); }
@@ -771,7 +771,7 @@
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
-    addItem, updateItem, deleteItem, renameCategory, moveCategory, deleteCategory,
+    addItem, updateItem, deleteItem, renameCategory, moveCategory, orderItems, deleteCategory,
     /* Les promotions de la carte — voir le bloc « promotions » plus haut. */
     promos: (vid) => promosOf(store.get(vid)),
     savePromo, deletePromo,

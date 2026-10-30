@@ -1273,12 +1273,42 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
   function openSectionActions(){
     const selected=filter==='all'?null:cat(filter);
     const actions=[{id:'new',icon:'category',label:ui('newSection').replace(/^\+\s*/,''),run:()=>openCategory(null)},
-      {id:'reorder',key:'reorder',icon:'swap_horiz',label:catalogText('reorder','Réordonner les sections'),run:openSectionReorder}];
+      {id:'reorder',key:'reorder',icon:'swap_horiz',label:catalogText('reorder','Réordonner les sections'),run:openSectionReorder},
+      {id:'reorder-dishes',icon:'swap_vert',label:ui('reorderDishes'),run:()=>openSectionReorder(selected?String(selected.id):'')}];
     if(selected)actions.push({id:'rename',icon:'tune',label:ui('renameSection'),run:()=>openCategory(selected)},
       {id:'delete',icon:'delete',label:ui('deleteSection'),danger:true,run:()=>window.Kiwi.handlers['rmw-cat-delete'](null,selected.id)});
     catalogSheet(catalogText('sectionActions','Actions des sections'),actions);
   }
-  function openSectionReorder(){
+  /* With a section id (even ''), the same window reorders that section's
+     dishes instead (Pasta Corner, 30 Oct 2026): d.items order is menu order. */
+  function openSectionReorder(cid,focusId){
+    if(typeof cid==='string'){
+    cid=cid||(D().cats[0]||{}).id||'';
+    const m=modal({title:ui('reorderDishes'),width:560,body:`<label class="rmw-dish-pick" style="display:flex;align-items:center;gap:10px;font-weight:600">${esc(ui('reorderPick'))}<select data-kiwi-native-select style="flex:1;min-height:44px;padding:0 12px;border:1px solid var(--n-200);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;font-weight:500">${D().cats.map(c=>`<option value="${esc(c.id)}"${c.id===cid?' selected':''}>${esc(t(c.name))}</option>`).join('')}</select></label><p class="rmw-dish-hint" style="margin:12px 0 14px;color:var(--n-500);font-size:13px;line-height:1.45">${esc(ui('reorderHint'))}</p><div class="catalog-reorder"></div>`,foot:`<button class="kb primary" data-catalog-done>${esc(ui('doneBtn'))}</button>`});
+    const list=m.el.querySelector('.catalog-reorder'),pick=m.el.querySelector('.rmw-dish-pick select');
+    const ids=()=>D().items.filter(x=>x.catId===cid).map(x=>String(x.id));
+    const move=(id,position)=>{const order=ids().filter(x=>x!==id);order.splice(position,0,id);S().orderItems(order);draw();};
+    const draw=()=>{
+      const top=list.scrollTop,dishes=D().items.filter(x=>x.catId===cid);
+      list.innerHTML=dishes.map((x,i)=>`<div class="catalog-reorder-row${String(x.id)===String(focusId)?' catalog-drop':''}" data-reorder-id="${esc(x.id)}"><button class="catalog-more catalog-drag" type="button" aria-label="${esc(ui('moveDish'))}: ${esc(t(x.name))}">${catalogIcon('menu')}</button><strong>${esc(t(x.name))}</strong><select data-kiwi-native-select aria-label="${esc(catalogText('position','Position'))}: ${esc(t(x.name))}">${dishes.map((_,j)=>`<option value="${j}"${i===j?' selected':''}>${j+1}</option>`).join('')}</select></div>`).join('');
+      list.scrollTop=top;focusId='';
+      list.querySelectorAll('[data-reorder-id]').forEach(row=>{
+        row.querySelector('select').onchange=e=>move(row.dataset.reorderId,+e.target.value);
+        const handle=row.querySelector('button');let destination=null;
+        handle.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();destination=null;handle.setPointerCapture(e.pointerId);};
+        handle.onpointermove=e=>{if(!handle.hasPointerCapture(e.pointerId))return;e.preventDefault();
+          const rows=[...list.children];const mid=r=>r.getBoundingClientRect().top+r.offsetHeight/2;const nearest=rows.reduce((best,r)=>Math.abs(e.clientY-mid(r))<Math.abs(e.clientY-mid(best))?r:best,rows[0]);
+          rows.forEach(r=>r.classList.toggle('catalog-drop',r===nearest));destination=rows.indexOf(nearest);
+          const bounds=list.getBoundingClientRect();if(e.clientY>bounds.bottom-35)list.scrollTop+=10;else if(e.clientY<bounds.top+35)list.scrollTop-=10;
+        };
+        handle.onpointerup=e=>{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);if(destination!==null)move(row.dataset.reorderId,destination);};
+        handle.onpointercancel=()=>{destination=null;list.querySelectorAll('.catalog-drop').forEach(r=>r.classList.remove('catalog-drop'));};
+      });
+    };
+    pick.onchange=()=>{cid=pick.value;list.scrollTop=0;draw();};
+    draw();m.el.querySelector('[data-catalog-done]').onclick=m.close;
+      return;
+    }
     const m=modal({title:catalogText('reorder','Réordonner les sections'),width:560,body:'<div class="catalog-reorder"></div>',foot:`<button class="kb primary" data-catalog-done>${esc(ui('doneBtn'))}</button>`});
     const list=m.el.querySelector('.catalog-reorder');
     const move=(id,position)=>{const at=D().cats.findIndex(c=>c.id===id),delta=position-at;for(let i=0;i<Math.abs(delta);i++)S().moveCategory(id,Math.sign(delta));draw();};
@@ -1304,6 +1334,7 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
   function openCardActions(x){
     catalogSheet(t(x.name),[
       {id:'edit',icon:'tune',label:ui('viewAndEdit'),run:()=>openItem(item(x.id))},
+      {id:'move',icon:'swap_vert',label:ui('moveDish'),run:()=>openSectionReorder(String(x.catId||''),x.id)},
       ...(!x.archived?[{id:'availability',icon:'visibility',label:x.avail===false?ui('reactivate'):ui('unavailableBadge'),run:()=>S().updateItem(x.id,{avail:x.avail===false})}]:[]),
       {id:'archive',icon:'inventory_2',label:x.archived?ui('restore'):ui('archive'),run:()=>S().updateItem(x.id,{archived:!x.archived})},
       ...(x.formula?[{id:'reuse',icon:'folder_copy',label:ui('reuse'),run:()=>window.Kiwi.handlers['rmw-formula-duplicate'](null,x.id)}]:[]),

@@ -6,14 +6,14 @@
   if (document.currentScript?.dataset.startup === 'menu') {
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
-      'assets/menu-catalog/state.js?v=5',
+      'assets/menu-catalog/state.js?v=6',
       'assets/menu-catalog/modifiers.js?v=3',
       'assets/menu-catalog/item-list.js?v=3',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
       'assets/menu-catalog/media.js?v=3',
       'assets/menu-catalog/availability.js?v=3',
-      'assets/menu-catalog.js?v=41',
+      'assets/menu-catalog.js?v=42',
     ];
     document.write(menuScripts.map(url => '<script src="' + url + '" defer fetchpriority="low"><\/script>').join('\n'));
     return;
@@ -32,10 +32,10 @@
     'assets/food-trade-settings.js?v=2',
     'assets/menu-promos.js?v=8',
     'assets/menu-promos-dashboard.js?v=6',
-    'assets/restaurant-menu/strings.js?v=2',
+    'assets/restaurant-menu/strings.js?v=3',
     'assets/restaurant-menu/recipes.js?v=3',
     'assets/restaurant-menu/styles.js?v=2',
-    'assets/restaurant-menu-workspace.js?v=125',
+    'assets/restaurant-menu-workspace.js?v=126',
     'assets/sold-insights.js?v=20',
     'assets/boutique-promos-dashboard.js?v=23',
     'assets/day-report.js?v=39',
