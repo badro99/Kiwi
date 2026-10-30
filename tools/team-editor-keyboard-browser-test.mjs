@@ -165,7 +165,7 @@ await S.run('fiche d\'un membre · création et correction au clavier seul', asy
   check(!!deptAx?.name, 'le département a un nom accessible dans le formulaire');
 
   t.step('les droits de caisse suivent le poste choisi au clavier');
-  for (const [job, department, till] of [['Caissier', 'Caisse', true], ['Vendeur conseil', 'Vente', false]]) {
+  for (const [job, department, till] of [['Caissier', 'Caisse', true], ['Vendeur conseil', 'Vente', true], ['Magasinier', 'Stock', false]]) {
     await page.focus('.kt-ed-modal [data-f="function"] .kiwi-select-trigger');
     await page.keyboard.press('Enter');
     await page.waitForSelector('.kiwi-select-option', { visible: true });
@@ -237,10 +237,11 @@ await S.run('fiche d\'un membre · un droit de caisse retiré puis rendu au clav
     await page.focus('.kt-ed-modal [data-f="function"] .kiwi-select-trigger');
     await page.keyboard.press('Enter');
     await page.waitForSelector('.kiwi-select-option', { visible: true });
-    for (let i = 0; i < 40; i++) {
+    /* Down first, then up: the job may sit above the one selected now. */
+    for (let i = 0; i < 80; i++) {
       const at = await page.evaluate(() => (document.activeElement?.classList.contains('kiwi-select-option') ? document.activeElement.textContent.trim() : ''));
       if (at === job) break;
-      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press(i < 40 ? 'ArrowDown' : 'ArrowUp');
       await sleep(40);
     }
     await page.keyboard.press('Enter');
@@ -268,7 +269,7 @@ await S.run('fiche d\'un membre · un droit de caisse retiré puis rendu au clav
     }
     return (lastDoc?.members || []).find((m) => m.id === 'm1');
   }
-  for (const [job, department, till] of [['Vendeur conseil', 'Vente', false], ['Caissier', 'Caisse', true]]) {
+  for (const [job, department, till] of [['Magasinier', 'Stock', false], ['Caissier', 'Caisse', true]]) {
     t.step(`Sara passe ${job} au clavier`);
     await editSara();
     const picked = await pickJob(job);

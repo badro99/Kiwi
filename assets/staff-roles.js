@@ -91,6 +91,11 @@
     coiffeuse:'coiffeur', coiffure:'coiffeur', maquilleuse:'esthetique',
     esthetique:'esthetique', massage:'masseur', masseuse:'masseur',
     'femme de chambre':'menage', 'valet de chambre':'menage',
+    'vendeuse conseil':'conseiller', conseillere:'conseiller', 'conseiller de vente':'conseiller',
+    'conseillere de vente':'conseiller', libraire:'vendeur', pharmacienne:'pharmacien',
+    'pharmacien titulaire':'titulaire', 'pharmacien assistant':'pharmacien',
+    'agent de reception':'reception', reception:'reception',
+    'equipier polyvalent':'equipier', 'equipier food truck':'equipier',
   };
 
   /* Compare on meaning, not on typography: "Maître d'hôtel", "maitre d’hotel"
@@ -159,12 +164,20 @@
    * manager or owner opens the caisse. An allow-list is essential here: a new
    * job title must not silently become a financial permission. `staff` is kept
    * solely for old onboarding rosters that predate explicit job assignments. */
-  var TILL = ['caisse', 'manager', 'proprietaire'];
+  var TILL = ['caisse', 'manager', 'proprietaire',
+    /* Counter sellers (owner report, 30 Oct 2026): a boutique's Vendeur
+     * conseil rings up the sale. Mirror of functions/auth/_lib.js ›
+     * employeeRoleOpensTill, held equal by tools/till-role-parity-test.mjs. */
+    'vendeur', 'conseiller', 'titulaire', 'pharmacien', 'fleuriste', 'reception', 'equipier', 'barista'];
   var TILL_SET = {};
   TILL.forEach(function (id) { TILL_SET[id] = true; });
 
   function opensTill(raw) {
     var token = norm(raw);
+    /* Responsable rayon (the console stores its id, « rayon »): the server
+       already let it in and the till refused it. Named here, not through the
+       id, so the « Rayons » department (shelf work) still opens nothing. */
+    if (token === 'responsable rayon' || token === 'rayon') return true;
     if (token === 'staff' || token === 'owner' || token === 'admin' || token === 'direction' || token === 'proprietaire' || token === 'manager' || token === 'gerant' || token === 'patron') return true;
     var id = idOf(raw);
     return !!(id && TILL_SET[id]);

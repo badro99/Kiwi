@@ -2327,6 +2327,9 @@ section('Whole-project regressions');
     'stock-alert-truth-test.mjs',
     'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
+    'lock-caisse-handoff-test.mjs',
+    'till-role-parity-test.mjs',
+    'operator-roster-route-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
     'check-verdict-test.mjs',
@@ -3126,6 +3129,8 @@ section('Kiwi 2027 · l\'accès et le reste sur le kit');
   const gates = [
     ['reset-states-test.mjs', 'reset-states-test'],
     ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
+    ['password-reveal-browser-test.mjs', 'password-reveal-browser-test'],
+    ['lock-till-browser-test.mjs', 'lock-till-browser-test'],
     ['team-split-browser-test.mjs', 'team-split-browser-test'],
     ['team-polish-browser-test.mjs', 'team-polish-browser-test'],
     ['onboarding-recovery-browser-test.mjs', 'onboarding-recovery-browser-test'],
