@@ -357,6 +357,10 @@ function _bqxCss() {
   document.head.appendChild(st);
 }
 
+/* La page Inventaire est-elle à l'écran ? Le lien du menu porte
+   data-action="nav-inventory", pas data-nav : on regarde la page elle-même. */
+const _bqxOnInv = () => !!document.querySelector('.bqx-inv');
+
 function _bqxSubscribe() {
   if (_bqxSubbed || !_bqxReady()) return;
   _bqxSubbed = true;
@@ -365,7 +369,7 @@ function _bqxSubscribe() {
     const navKey = nav && nav.getAttribute('data-nav');
     const drawerOpen = document.querySelector('.kiwi-drawer-backdrop');
     if (!drawerOpen) {
-      if (navKey === 'inventory') _renderInventory();
+      if (navKey === 'inventory' || _bqxOnInv()) _renderInventory();
       else if (navKey === 'categories') _renderCategories();
     }
     _bqxRefreshDrawer();
@@ -1790,7 +1794,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=16', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=17', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -1800,7 +1804,7 @@ function _bqxOpenProduct(pid, target, drawerOnly) {
   const foot = `<button class="kb ghost" data-dismiss>${_esc(t.close)}</button><button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button><button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`;
   if (!drawerOnly && _bqxCopy().trade === 'boutique') {   // boutique : au centre, sur ses tailles (assets/boutique-sizes.js, comme à la caisse) ; les autres métiers gardent le tiroir
     _bqxSz().then((S) => { _bqxPfCss(); _bqxDrawerPid = pid; _bqxSzView = S.openDashboard({ modal, modalClass: 'bqx-pf-modal', foot, extraHtml: _bqxHistoryHtml(pid), heading: () => { const d = CAT().getProduct(pid); return d && [d.product.name, _bqxSheetSub(d)]; },
-      onClose: (v) => { if (_bqxSzView === v) { _bqxSzView = null; _bqxDrawerPid = null; } if (document.querySelector('.sidebar nav a.active[data-nav="inventory"]')) _renderInventory(); },
+      onClose: (v) => { if (_bqxSzView === v) { _bqxSzView = null; _bqxDrawerPid = null; } if (_bqxOnInv()) _renderInventory(); },
       mount: { cat: CAT(), pid, lang: _bqxPfLang(), target, label: _bqxLabelFor, register: (vid) => handlers['bqx-var-reg'](null, vid), toast: (title, desc) => toast(title, { desc, type: 'success' }) } }); }).catch(() => _bqxOpenProduct(pid, 0, true)); return;
   }
   _bqxDrawerPid = pid;
@@ -1820,7 +1824,7 @@ function _bqxOpenProduct(pid, target, drawerOnly) {
       if (!document.body.contains(bd)) {
         mo.disconnect(); _bqxDrawerPid = null;
         const nav = document.querySelector('.sidebar nav a.active');
-        if (nav && nav.getAttribute('data-nav') === 'inventory') _renderInventory();
+        if ((nav && nav.getAttribute('data-nav') === 'inventory') || _bqxOnInv()) _renderInventory();
       }
     });
     mo.observe(document.body, { childList: true });

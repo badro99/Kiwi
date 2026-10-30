@@ -55,6 +55,8 @@ const T = {
     newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant', del: 'Supprimer',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
     colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
+    stockCol: 'En stock', after: (a, b) => `${a} → ${b} en stock`,
+    dropAsk: (c) => `Retirer ${c} et ses tailles ?`, dropOk: 'Retirer', cancel: 'Annuler', dropTip: (c) => `Retirer ${c} (épuisée)`,
     codeKey: 'Codes-barres : après le 2, deux chiffres pour la couleur ; avant le dernier, deux pour la taille. Le milieu est celui de l’article.',
   },
   en: {
@@ -75,6 +77,8 @@ const T = {
     newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code', del: 'Delete',
     out: 'Sold out', empty: 'No sizes yet.',
     colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
+    stockCol: 'In stock', after: (a, b) => `${a} → ${b} in stock`,
+    dropAsk: (c) => `Remove ${c} and its sizes?`, dropOk: 'Remove', cancel: 'Cancel', dropTip: (c) => `Remove ${c} (sold out)`,
     codeKey: 'Barcodes: after the 2, two digits for the colour; before the last, two for the size. The middle is the item’s.',
   },
   ar: {
@@ -95,6 +99,8 @@ const T = {
     newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود', del: 'حذف',
     out: 'نفد', empty: 'لا مقاسات بعد.',
     colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
+    stockCol: 'في المخزون', after: (a, b) => `${a} ← ${b} في المخزون`,
+    dropAsk: (c) => `إزالة ${c} ومقاساته؟`, dropOk: 'إزالة', cancel: 'إلغاء', dropTip: (c) => `إزالة ${c} (نفد)`,
     codeKey: 'الرموز الشريطية: بعد الرقم 2، رقمان للون؛ وقبل الأخير، رقمان للمقاس. الوسط خاص بالمنتج.',
   },
 };
@@ -189,6 +195,18 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-del { justify-self: start; padding: 8px 0; margin: -8px 0; color: var(--danger, #B42318); font-weight: 500; }
 .kbs-in { box-sizing: border-box; width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--kbs-line); border-radius: 10px; background: var(--kbs-field);
   color: var(--ink, #0A0F0D); font: 600 15px var(--sans, inherit); text-align: center; font-variant-numeric: tabular-nums; }
+.kbs-add { position: relative; display: block; }
+.kbs-add::before { content: '+'; position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); font: 700 16px var(--sans, inherit); color: var(--atlas, #0B6E4F); pointer-events: none; }
+.kbs-add .kbs-in { padding-inline-start: 26px; border-style: dashed; background: color-mix(in srgb, var(--atlas, #0B6E4F) 5%, var(--kbs-field)); }
+.kbs-add .kbs-in:focus, .kbs-add .kbs-in:not(:placeholder-shown) { border-style: solid; }
+.kbs.is-restock .kbs-have { font-size: 14px; font-weight: 600; color: var(--ink, #0A0F0D); }
+.kbs.is-restock .kbs-have.is-out { color: var(--danger, #cb5238); }
+.kbm .kbs-add { max-width: 74px; margin: 0 auto; }
+.kbm .kbs-add::before { inset-inline-start: 9px; }
+.kbm .kbs-add .kbs-in { padding-inline-start: 20px; }
+.kbs-have.is-up, .kbs.is-restock .kbs-have.is-up, .kbm td small.is-up { color: var(--atlas, #0B6E4F); font-weight: 600; }
+.kbc-chip.is-ask { border-color: var(--danger, #cb5238); color: var(--danger, #cb5238); }
+.kbc-chip.is-ask button.kbc-ok { width: auto; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--danger, #cb5238); color: #fff; font: 600 12px var(--sans, inherit); }
 .kbs-in::placeholder { color: var(--n-400, #9AA09D); font-weight: 400; }
 .kbs-in:focus { outline: 0; border-color: var(--atlas, #0B6E4F); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas, #0B6E4F) 16%, transparent); }
 .kbs-in[aria-invalid="true"] { border-color: var(--danger, #cb5238); }
@@ -282,6 +300,12 @@ export function mount(host, o) {
        pendant la création ni en lecture seule. */
     const delOf = (r, label) => (!ro && !creating && o.remove && r.variant
       ? `<button type="button" class="kbs-link kbs-del" data-kbs-del="${esc(r.variant.id)}" aria-label="${esc(t.del)} · ${esc(label)}">${esc(t.del)}</button>` : '');
+    /* Réassort : la case dit « + » et reste vide, pour qu'on ne la lise pas
+       comme le stock. À la création, c'est la quantité : « 0 » reste. */
+    const field = (key, col, aria) => {
+      const i = `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${creating ? '0' : ''}" data-kbs-in="${esc(key)}" data-kbs-col="${esc(col)}" aria-label="${esc(aria)}" />`;
+      return creating ? i : `<span class="kbs-add">${i}</span>`;
+    };
     const anySmart = rich && shown.some((r) => r.variant && /<b>/.test(codeOf(r)));
     const rowsHtml = matrix ? '' : shown.map((r) => {
       const v = r.variant;
@@ -290,7 +314,7 @@ export function mount(host, o) {
       const sizeLabel = r.size === 'TU' ? t.tu : r.size;
       const colorLine = r.multi && v ? `<small>${esc(v.colorLabel || '')}</small>` : '';
       const have = v
-        ? `<span class="kbs-have${stock ? '' : ' is-out'}">${esc(stock ? t.have(stock) : t.out)}</span>`
+        ? `<span class="kbs-have${stock ? '' : ' is-out'}" data-kbs-have="${esc(r.key)}" data-st="${stock}">${esc(stock ? t.have(stock) : t.out)}</span>`
         : '';
       const codeHtml = code
         ? `<span class="kbs-code">${o.barcodeSvg ? o.barcodeSvg(code) : ''}${rich ? codeOf(r) : `<code>${esc(code)}</code>`}</span>`
@@ -298,8 +322,7 @@ export function mount(host, o) {
       return `<li class="kbs-row" data-kbs-row="${esc(r.key)}">
         <span class="kbs-size">${esc(sizeLabel)}${colorLine}</span>
         <span class="kbs-mid">${have}${codeHtml}${delOf(r, sizeLabel + (r.multi && v ? ' · ' + (v.colorLabel || '') : ''))}</span>
-        ${ro ? '<span></span>' : `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0"
-          data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(r.col || '')}" aria-label="${esc(t.add)} · ${esc(sizeLabel)}" />`}
+        ${ro ? '<span></span>' : field(r.key, r.col || '', `${t.add} · ${sizeLabel}`)}
       </li>`;
     }).join('');
     const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${digDot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
@@ -308,25 +331,27 @@ export function mount(host, o) {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
         const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
-        return `<td><input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0" data-kbs-in="${esc(r.key)}" data-kbs-col="${esc(c.key)}" aria-label="${esc(t.add)} · ${esc(sl)} · ${esc(colName(c))}" />${r.variant ? `<small class="${st ? '' : 'is-out'}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
+        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`)}${r.variant ? `<small class="${st ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
       }).join('')}</tr>`;
     }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
+    /* Une couleur épuisée qu'on ne recommandera pas : on peut la retirer. */
+    const soldOut = (k) => !creating && used(k) && shown.every((r) => r.col !== k || !r.variant || !(+r.variant.stock > 0));
     const colorsHtml = !rich ? '' : `<div class="kbc" data-kbc>
-      <div class="kbc-row"><span class="kbc-l">${esc(t.colors)}</span>${cols.filter((c) => !c.unique).map((c) => `<span class="kbc-chip">${dot(c)}${esc(c.label)}${used(c.key) ? '' : `<button type="button" data-kbc-del="${esc(c.key)}" aria-label="${esc(t.removeColor(c.label))}">${CLOSE_SVG}</button>`}</span>`).join('')}
+      <div class="kbc-row"><span class="kbc-l">${esc(t.colors)}</span>${cols.filter((c) => !c.unique).map((c) => `<span class="kbc-chip">${dot(c)}${esc(c.label)}${!used(c.key) ? `<button type="button" data-kbc-del="${esc(c.key)}" aria-label="${esc(t.removeColor(c.label))}">${CLOSE_SVG}</button>` : soldOut(c.key) ? `<button type="button" data-kbc-drop="${esc(c.key)}" data-label="${esc(c.label)}" aria-label="${esc(t.dropTip(c.label))}" title="${esc(t.dropTip(c.label))}">${CLOSE_SVG}</button>` : ''}</span>`).join('')}
         <button type="button" class="kbc-add" data-kbc-add aria-expanded="false">${PLUS_SVG}<span>${esc(cols.every((c) => c.unique) ? t.addColors : t.addColor)}</span></button></div>
       <div class="kbc-pal" data-kbc-pal hidden>${pal.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dot(COLORS.columnOf(c, o.lang))}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div>
     </div>`;
     const printable = printCount();
     /* Un carton à répartir : la bande de boutique-size-split.js sous les cases. */
     const splitOn = rich && shown.length > 1;
-    const page = () => `<div class="kbs" data-kbs>
+    const page = () => `<div class="kbs${creating || ro ? '' : ' is-restock'}" data-kbs>
       <div class="kbs-top">
         ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(d.stock))}</span>`}
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
       ${colorsHtml}
-      ${matrix ? matrixHtml : shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span></span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
+      ${matrix ? matrixHtml : shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span>${creating ? '' : esc(t.stockCol)}</span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
       <ul class="kbs-list">${rowsHtml}</ul>` : `<p class="kbs-msg">${esc(t.empty)}</p>`}
       ${splitOn ? '<div data-kbs-split></div>' : ''}
       <p class="kbs-msg" data-kbs-msg>${creating && list.length > 1 ? esc(t.hintCreate) : ''}</p>
@@ -421,6 +446,16 @@ export function mount(host, o) {
       host.querySelectorAll(`[data-kbs-col="${CSS.escape(k)}"]`).forEach((i) => { const r = pieces(i.value); if (r.n) n += r.n; });
       th.textContent = n ? String(n) : '';
     });
+    host.querySelectorAll('[data-kbs-have]').forEach((h) => {
+      const k = h.getAttribute('data-kbs-have');
+      const i = host.querySelector(`[data-kbs-in="${CSS.escape(k)}"]`);
+      const st = +h.getAttribute('data-st') || 0;
+      const r = i ? pieces(i.value) : { n: 0 };
+      const up = !!(r.n > 0 && target <= 0);
+      h.textContent = up ? t.after(st, st + r.n) : st ? t.have(st) : t.out;
+      h.classList.toggle('is-up', up);
+      h.classList.toggle('is-out', !up && !st);
+    });
     const c = host.querySelector('[data-kbs-count]');
     const { sum } = read();
     if (c) {
@@ -501,6 +536,24 @@ export function mount(host, o) {
     if (add && palEl) add.addEventListener('click', () => { palEl.hidden = !palEl.hidden; add.setAttribute('aria-expanded', String(!palEl.hidden)); if (!palEl.hidden) { const f = palEl.querySelector('button'); if (f) f.focus(); } });
     host.querySelectorAll('[data-kbc-pick]').forEach((b) => b.addEventListener('click', () => { const c = pal.find((x) => x.id === b.getAttribute('data-kbc-pick')); if (c) addColors([c], ''); }));
     host.querySelectorAll('[data-kbc-del]').forEach((b) => b.addEventListener('click', () => removeColor(b.getAttribute('data-kbc-del'))));
+    /* Retirer une couleur épuisée : deux touches, la seconde efface ses tailles. */
+    host.querySelectorAll('[data-kbc-drop]').forEach((b) => b.addEventListener('click', () => {
+      const key = b.getAttribute('data-kbc-drop');
+      const chip = b.closest('.kbc-chip');
+      if (!chip || chip.classList.contains('is-ask')) return;
+      chip.classList.add('is-ask');
+      chip.innerHTML = `<span>${esc(t.dropAsk(b.getAttribute('data-label') || ''))}</span><button type="button" class="kbc-ok">${esc(t.dropOk)}</button><button type="button" aria-label="${esc(t.cancel)}">${CLOSE_SVG}</button>`;
+      const [ok, no] = chip.querySelectorAll('button');
+      no.addEventListener('click', () => { keep(''); draw(); });
+      ok.addEventListener('click', () => {
+        const ids = cellList.filter((r) => r.col === key && r.variant && !(+r.variant.stock > 0)).map((r) => r.variant.id);
+        const run = () => ids.forEach((id) => cat.deleteVariant(id));
+        if (cat.batch) cat.batch(run); else run();
+        removeColor(key);
+        if (o.onSaved) o.onSaved({ received: {}, codes: 0 });
+      });
+      ok.focus();
+    }));
     host.querySelectorAll('[data-kbs-reg]').forEach((b) => b.addEventListener('click', () => o.register && o.register(b.getAttribute('data-kbs-reg'))));
     host.querySelectorAll('[data-kbs-del]').forEach((b) => b.addEventListener('click', () => o.remove && o.remove(b.getAttribute('data-kbs-del'))));
     paintCount();
