@@ -41,7 +41,8 @@ const DB = {
     };
     return st;
   },
-  batch(list) { sqlite.exec('BEGIN IMMEDIATE'); try { const o = list.map((s) => s.run()); sqlite.exec('COMMIT'); return o; } catch (e) { sqlite.exec('ROLLBACK'); throw e; } },
+  failBatch: 0,
+  batch(list) { if (DB.failBatch) { DB.failBatch--; throw new Error('D1 blip (test)'); } sqlite.exec('BEGIN IMMEDIATE'); try { const o = list.map((s) => s.run()); sqlite.exec('COMMIT'); return o; } catch (e) { sqlite.exec('ROLLBACK'); throw e; } },
 };
 
 /* Ozon, simulated. Records every call (path and body) and answers from `ozon`. */
@@ -119,6 +120,10 @@ await ok('readStatus: « Payé » counts, « Livré » alone does not, returns a
   assert.equal(readStatus('Refusé'), 'refused');
   assert.equal(readStatus('Annulé'), 'cancelled');
   assert.equal(readStatus('En cours de livraison'), 'in_transit');
+  /* Money never enters on a word that denies it (security review, 30 Oct 2026). */
+  for (const label of ['Livré, pas encore payé', 'Livré en attente de paiement', 'Livré impayé']) assert.equal(readStatus(label), 'delivered', label);
+  for (const label of ['Impayé', 'Unpaid', 'not paid', 'Non réglé']) assert.notEqual(readStatus(label), 'paid', label);
+  assert.equal(readStatus('Réglé'), 'paid');
 });
 
 await ok('the till and a stranger cannot connect an account; a refused key is not stored', async () => {
@@ -189,6 +194,13 @@ await ok('« Livré » alone writes nothing; « Payé » writes one collection f
   assert.equal(r.body.parcels.find((p) => p.tracking === first.tracking).status, 'delivered');
   assert.equal(collections('dlv-2').length, 0);
   ozon.status[first.tracking] = 'Payé';
+  /* The revenue write fails once: the parcel is not marked as handled, so the
+     next refresh collects it (security review, 30 Oct 2026). */
+  DB.failBatch = 1;
+  r = await call(parcels, 'onRequestGet', `/api/ozon/parcels?merchant=${MERCHANT}&force=1`, 'GET', till);
+  assert.equal(r.body.refreshed.paid, 0);
+  assert.equal(collections('dlv-2').length, 0);
+  assert.equal(sqlite.prepare('SELECT paid_ts FROM ozon_parcels WHERE tracking = ?').get(first.tracking).paid_ts, 0, 'retried next time');
   r = await call(parcels, 'onRequestGet', `/api/ozon/parcels?merchant=${MERCHANT}&force=1`, 'GET', till);
   assert.equal(r.body.refreshed.paid, 1);
   const got = collections('dlv-2');
