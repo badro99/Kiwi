@@ -261,7 +261,8 @@ import { photoImg } from '../retail-photos.js?v=5';
       rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
     }
     let i = 0;
-    $('#bq-gridwrap', root).innerHTML = rayons.map((r) => `
+    const wrap = $('#bq-gridwrap', root);
+    const html = rayons.map((r) => `
       <div class="bq-cat-head">${esc(r.label)}</div>
       <div class="bq-grid">${r.items.map((p) => {
         /* Le prix promo se lit SUR LA CARTE, pas seulement au ticket. Une
@@ -278,7 +279,21 @@ import { photoImg } from '../retail-photos.js?v=5';
           ${pr ? `<span class="bq-card-promo" title="${esc(pr.promo.name)}">${esc(pr.badge)}</span>` : ''}
         </button>`; }).join('')}
       </div>`).join('');
-    $('#bq-gridwrap', root).onclick = (e) => {
+    /* Une grille identique n'est pas refaite : la refaire sous un doigt posé
+       avalait le toucher, remontait la liste en haut et rejouait l'apparition
+       des cartes (Amira Boutique, tablette, 30 oct.). Une grille qui a changé
+       garde sa position et ne rejoue l'apparition que pour un autre rayon. */
+    if (wrap.__bqHtml !== html) {
+      const same = wrap.__bqRayon === state.rayon;
+      let sc = wrap;   // la peau 2027 fait défiler un parent, pas la grille
+      while (sc && sc !== document.body && sc.scrollHeight <= sc.clientHeight) sc = sc.parentElement;
+      const top = sc ? sc.scrollTop : 0;
+      wrap.classList.toggle('bq-calm', same);
+      wrap.innerHTML = html;
+      if (same && sc) sc.scrollTop = top;
+      wrap.__bqHtml = html; wrap.__bqRayon = state.rayon;
+    }
+    wrap.onclick = (e) => {
       const b = e.target.closest('[data-bq-item]');
       if (b) openSheet(b.dataset.bqItem, state.exchange ? { exchange: true } : null);
     };
