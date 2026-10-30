@@ -749,7 +749,7 @@ let _bqxTill; function _bqxThumb(p) {   // sans photo à soi, la photo que la ca
   const src = _bqxPhotoSrc(p);
   if (src) return `<img src="${_esc(src)}" alt="" loading="lazy" decoding="async" />`;
   if (_bqxTill) return `<img class="bqx-till" src="${_esc(_bqxTill.photoSrc(_bqxTill.photoFile(p, _bqxCopy().trade === 'maison' ? 'tag' : 'cintre')))}" alt="" loading="lazy" decoding="async" />`;
-  if (_bqxTill === undefined) { _bqxTill = null; import(new URL('assets/retail-photos.js?v=4', document.baseURI).href).then((m) => { _bqxTill = m; const g = document.getElementById('bqx-grid'); if (g) g.innerHTML = _bqxGridHtml(); }).catch(() => {}); }
+  if (_bqxTill === undefined) { _bqxTill = null; import(new URL('assets/retail-photos.js?v=5', document.baseURI).href).then((m) => { _bqxTill = m; const g = document.getElementById('bqx-grid'); if (g) g.innerHTML = _bqxGridHtml(); }).catch(() => {}); }
   const words = String(p.name || '').trim().split(/\s+/).filter(Boolean), ini = ((words[0] || '·').charAt(0) + (words[1] ? words[1].charAt(0) : '')).toUpperCase(); return `<span class="bqx-ini" aria-hidden="true">${_esc(ini)}</span>`;
 }
 function _bqxStockTag(stock) {
@@ -3417,7 +3417,7 @@ function _bqxPfWire(b, p) {
   photoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'photo'); e.target.value = ''; });
   videoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'video'); e.target.value = ''; });
 
-  if (_bqxSzMod) _bqxSzMod.wireTotal(b, _bqxPfLang()); _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=3', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
+  if (_bqxSzMod) _bqxSzMod.wireTotal(b, _bqxPfLang()); _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=4', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
   paintMedia();
   paintGap();
 }

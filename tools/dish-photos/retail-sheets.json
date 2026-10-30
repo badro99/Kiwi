@@ -427,5 +427,170 @@
     ["jabador-beige", "the same men's Moroccan jabador set, tunic over matching trousers with braid trim, front view, in sand beige"],
     ["jabador-marron", "the same men's Moroccan jabador set, tunic over matching trousers with braid trim, front view, in chocolate brown"],
     ["jabador-rose", "the same men's Moroccan jabador set, tunic over matching trousers with braid trim, front view, in powder pink"]
+  ],
+  "n1": [
+    ["mocassin", "a pair of brown leather penny loafers / moccasins"],
+    ["derby", "a pair of black polished leather lace-up derby shoes"],
+    ["escarpin", "a pair of classic nude patent leather high-heel pumps (escarpins)"],
+    ["ballerine", "a pair of black leather ballet flats with a small bow"],
+    ["mule", "a pair of tan leather women's slip-on mules with a low block heel, open back"],
+    ["espadrille", "a pair of navy canvas espadrilles with jute rope soles"],
+    ["tong", "a pair of simple rubber flip-flops, turquoise"],
+    ["claquette", "a pair of black rubber slide sandals with one wide strap"],
+    ["bottine", "a pair of cognac suede ankle boots with a side zip and low heel"]
+  ],
+  "n2": [
+    ["sabot", "a pair of white medical-style clogs (sabots) with ventilation holes"],
+    ["running", "a single modern running shoe, mesh upper, grey with a coral accent, thick foam sole"],
+    ["compensee", "a pair of women's wedge-heel sandals with a cork wedge and beige straps"],
+    ["chausson", "a pair of soft grey felt house slippers with a fleece lining"],
+    ["chaussure_bebe", "a pair of tiny soft baby shoes in pale blue leather with a velcro strap"],
+    ["chemisier", "a women's ivory silk blouse with a soft collar and long sleeves, on an invisible mannequin"],
+    ["top", "a women's sleeveless summer top in sage green with thin straps, on an invisible mannequin"],
+    ["crop_top", "a white ribbed cropped top with short sleeves, on an invisible mannequin"],
+    ["body", "a black long-sleeve women's bodysuit, on an invisible mannequin"]
+  ],
+  "n3": [
+    ["cardigan", "a cream button-front knitted cardigan, on an invisible mannequin"],
+    ["gilet", "a men's grey sleeveless knitted vest with a V-neck, on an invisible mannequin"],
+    ["col_roule", "a camel fine-knit turtleneck sweater, on an invisible mannequin"],
+    ["legging", "a pair of black leggings laid flat"],
+    ["jogging", "a pair of heather grey jogging sweatpants with a drawstring and cuffed ankles, laid flat"],
+    ["salopette", "a denim dungarees overall with bib and straps, laid flat"],
+    ["cargo", "a pair of khaki cargo trousers with side pockets, laid flat"],
+    ["blazer", "a navy single-breasted blazer, on an invisible mannequin"],
+    ["blouson_cuir", "a black leather biker jacket with zips, on an invisible mannequin"]
+  ],
+  "n4": [
+    ["parka", "a dark olive winter parka with a fur-trimmed hood, on an invisible mannequin"],
+    ["pyjama", "a two-piece striped cotton pyjama set, light blue and white, folded neatly"],
+    ["chemise_nuit", "a long white cotton nightgown with lace trim, on an invisible mannequin"],
+    ["soutien_gorge", "a nude beige lace bra, laid flat"],
+    ["boxer", "a men's navy cotton boxer brief, laid flat"],
+    ["bikini", "a two-piece coral bikini, top and bottom laid side by side"],
+    ["peignoir", "a white terry cloth bathrobe with a belt, on an invisible mannequin"],
+    ["khimar", "a long dusty pink khimar head covering that drapes to the waist, shown on an invisible mannequin head and shoulders"],
+    ["body_bebe", "a white short-sleeve baby bodysuit (onesie) with snap buttons, laid flat"]
+  ],
+  "n5": [
+    ["grenouillere", "a baby footed sleepsuit in pale yellow with small stars, laid flat"],
+    ["ensemble_enfant", "a child's two-piece outfit: a striped t-shirt and denim shorts laid flat together"],
+    ["robe_fille", "a little girl's pink party dress with a tulle skirt, laid flat"],
+    ["noeud_papillon", "a black satin bow tie"],
+    ["bretelles", "a pair of brown leather and burgundy elastic trouser braces (suspenders), coiled"],
+    ["boutons_manchette", "a pair of silver cufflinks with onyx stones"],
+    ["pochette_costume", "a folded silk pocket square, navy with a fine pattern"],
+    ["sac_banane", "a black nylon belt bag / fanny pack with a zip"],
+    ["sac_bandouliere", "a small tan leather crossbody shoulder bag with a long strap"]
+  ],
+  "n6": [
+    ["cartable", "a child's school backpack / satchel in red with two straps"],
+    ["porte_cartes", "a slim black leather card holder"],
+    ["porte_cles", "a leather keyring with two keys on a brass ring"],
+    ["chouchou", "three velvet hair scrunchies in burgundy, black and beige"],
+    ["barrette", "a gold metal hair clip barrette with pearls"],
+    ["collants", "a pair of sheer black tights, folded in a loose curve"],
+    ["pendentif", "a fine gold chain necklace with a small round pendant"],
+    ["porte_documents", "a brown leather briefcase with a handle"],
+    ["sac_sport", "a black gym duffel bag with a shoulder strap"]
+  ],
+  "n7": [
+    ["plat", "an oval white porcelain serving platter"],
+    ["couvert", "a set of stainless steel cutlery: fork, knife and spoon side by side"],
+    ["sucrier", "a small white porcelain sugar bowl with a lid"],
+    ["seau", "a glass ice bucket with a few ice cubes"],
+    ["photophore", "a cut-glass candle holder (photophore) with a lit tea light inside"],
+    ["encens", "a brass incense holder with a thin incense stick and a wisp of smoke"],
+    ["nappe", "a folded white tablecloth with hand embroidery along the edge"],
+    ["serviette", "a stack of three folded linen table napkins, natural beige"],
+    ["set_table", "a round woven rattan placemat"]
+  ],
+  "n8": [
+    ["chemin_table", "a rolled linen table runner with a woven Moroccan pattern in terracotta"],
+    ["saladier", "a large wooden salad bowl"],
+    ["mug", "a white ceramic mug"],
+    ["pichet", "a glazed ceramic water jug / pitcher, blue"],
+    ["saliere", "a pair of matching salt and pepper shakers in white ceramic"],
+    ["corbeille", "a woven bread basket with a linen liner"],
+    ["cadre", "a cedar wood photo frame standing on a table, empty, with a cream mat"],
+    ["boite", "a small mother-of-pearl inlaid jewellery box, lid closed"],
+    ["suspension", "a woven raffia pendant lamp shade with its cord"]
+  ],
+  "n9": [
+    ["lampe", "a ceramic table lamp with a linen shade"],
+    ["tabouret", "a low round stool with a braided leather seat"],
+    ["gueridon", "a small round carved wooden side table (gueridon)"],
+    ["sous_assiette", "a gold-rimmed charger plate"],
+    ["assiette_creuse", "a white porcelain deep soup plate"],
+    ["assiette_dessert", "a small white porcelain dessert plate with a fine gold rim"],
+    ["ramequin", "a white ceramic ramekin"],
+    ["plat_four", "a white rectangular ceramic oven dish"],
+    ["soupiere", "a white porcelain soup tureen with a lid and ladle"]
+  ],
+  "n10": [
+    ["sauciere", "a white porcelain gravy boat"],
+    ["beurrier", "a glass butter dish with a lid"],
+    ["coquetier", "a white egg cup holding a brown egg"],
+    ["presentoir", "a white cake stand on a pedestal"],
+    ["fourchette", "a single stainless steel dinner fork"],
+    ["couteau", "a single stainless steel dinner knife"],
+    ["cuillere", "a single stainless steel tablespoon"],
+    ["petite_cuillere", "a single small stainless steel teaspoon"],
+    ["couverts_salade", "a pair of wooden salad servers crossed"]
+  ],
+  "n11": [
+    ["pelle_tarte", "a stainless steel cake server / pie slice"],
+    ["louche", "a stainless steel soup ladle"],
+    ["porte_couteau", "a pair of brass knife rests"],
+    ["cafetiere", "a glass French press coffee maker"],
+    ["cafetiere_italienne", "an aluminium Italian moka pot"],
+    ["bouilloire", "a cream retro electric kettle"],
+    ["boite_the", "a decorated metal tea tin with a lid"],
+    ["tasse_expresso", "a small white espresso cup on its saucer"],
+    ["soucoupe", "a single white porcelain saucer"]
+  ],
+  "n12": [
+    ["mijmar", "a traditional Moroccan brass incense burner (mbakhra / mijmar) with a domed pierced lid"],
+    ["samovar", "a polished brass samovar"],
+    ["flute", "a crystal champagne flute, empty"],
+    ["verre_pied", "a stemmed crystal wine glass, empty"],
+    ["gobelet", "a simple clear glass tumbler"],
+    ["bocal", "a glass storage jar with a hinged lid and rubber seal"],
+    ["huilier", "a glass olive oil cruet with a pouring spout"],
+    ["sous_verre", "a stack of four round cork coasters"],
+    ["pot_miel", "a glass honey pot with a wooden honey dipper"]
+  ],
+  "n13": [
+    ["casserole", "a stainless steel saucepan with a long handle"],
+    ["poele", "a black non-stick frying pan"],
+    ["couscoussier", "a traditional aluminium couscoussier (two-tier steamer pot)"],
+    ["planche", "a wooden chopping board"],
+    ["passoire", "a stainless steel colander"],
+    ["tablier", "a linen kitchen apron, sand colour, laid flat"],
+    ["gant_four", "a quilted cotton oven mitt, red"],
+    ["boite_conservation", "a glass food storage container with a clip lid"],
+    ["housse_couette", "a folded white duvet cover with a fine pattern"]
+  ],
+  "n14": [
+    ["drap", "a folded stack of white cotton bed sheets"],
+    ["oreiller", "a plump white pillow"],
+    ["serviette_bain", "a rolled stack of three soft bath towels in white, grey and sand"],
+    ["rideau", "a linen curtain panel hanging in soft folds, beige"],
+    ["torchon", "a folded striped cotton tea towel"],
+    ["tapis_bain", "a fluffy white bath mat"],
+    ["horloge", "a round wall clock with a wooden frame"],
+    ["statuette", "a small carved wooden figurine statuette"],
+    ["plante", "a potted green plant (monstera) in a terracotta pot"]
+  ],
+  "n15": [
+    ["cache_pot", "an empty woven seagrass plant pot cover"],
+    ["tableau", "a framed abstract painting in warm earth tones, leaning"],
+    ["vide_poche", "a small leather catch-all valet tray"],
+    ["coupe_fruits", "a ceramic fruit bowl filled with oranges and pomegranates"],
+    ["chauffe_plat", "a pack of white tea light candles, a few loose"],
+    ["cendrier", "a heavy round glass ashtray"],
+    ["zellige", "a single square Moroccan zellige tile with a green and white geometric pattern"],
+    ["boule_deco", "a set of three decorative woven rattan balls"],
+    ["boite_epices", "a round wooden spice box with small compartments of colourful spices"]
   ]
 }

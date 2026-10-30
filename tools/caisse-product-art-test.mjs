@@ -86,7 +86,17 @@ const traps = [
   ['Spaghetti carbonara', 'carbonara'], ['Penne au pesto', 'pesto'], ['Tagliatelle saumon', 'alfredo'],
   ['Spaghetti', 'pasta'], ['Penne poulet', 'pasta'], ['Sandwich falafel', 'falafel'], ['Sandwich shawarma', 'shawarma'],
   ['Soupe harira', 'harira'], ['Salade quinoa', 'quinoa'], ['Salade verte', 'salad'],
-  ['شاي', 'mint-tea'], ['طاجين دجاج', 'tajine-poulet'], ['طاجين', 'tajine-legumes']
+  ['شاي', 'mint-tea'], ['طاجين دجاج', 'tajine-poulet'], ['طاجين', 'tajine-legumes'],
+  // The world kitchens, café drinks and Moroccan street food added on 30 October 2026.
+  ['Café latte', 'latte'], ['Café au lait', 'cafe-au-lait'], ['Latte macchiato', 'macchiato'], ['Bubble tea taro', 'bubble-tea'],
+  ['Citronnade menthe', 'citronnade'], ['Jus d\'orange', 'orange-juice'], ['Kebbé', 'kebbe'], ['Assiette mezze', 'mezze'],
+  ['Manakish zaatar', 'manakish'], ['Moussaka', 'moussaka'], ['Gratin dauphinois', 'gratin'], ['Gyros poulet', 'gyros'],
+  ['Lahmacun', 'lahmacun'], ['Tapas variées', 'tapas'], ['Patatas bravas', 'patatas-bravas'], ['Churros chocolat', 'churros'],
+  ['Entrecôte frites', 'entrecote'], ['Steak haché', 'steak'], ['Dim sum vapeur', 'dim-sum'], ['Pad thaï crevettes', 'pad-thai'],
+  ['Bo bun boeuf', 'bo-bun'], ['Butter chicken', 'butter-chicken'], ['Biryani poulet', 'biryani'], ['Cheese naan', 'naan'],
+  ['Curry vert', 'curry-thai'], ['Curry de poulet', 'curry'], ['Karantika', 'karantika'], ['Sandwich merguez', 'merguez'],
+  ['Medfouna', 'medfouna'], ['Seffa medfouna', 'seffa'], ['Poulet tikka', 'tikka'], ['Berkoukes', 'berkoukes'],
+  ['Cordon bleu frites', 'cordon-bleu'], ['Escalope de poulet', 'escalope'], ['Oeufs brouillés', 'oeufs']
 ];
 for (const [name, want] of traps) eq(key('it_x', 'x', name), want, `« ${name} » shows ${want}`);
 
@@ -97,9 +107,9 @@ const shelved = [
   ['Mocca Cake', 'Black tea', 'the-noir'], ['Chocolat Banane', 'B Frappé', 'milkshake'],
   ['Coconut Kiss', 'Smoothies', 'smoothie'], ['Le Nordique', 'All Day Brunch', 'petit-dejeuner'],
   ['Smash Bacon', 'Smash Burgers', 'burger'], ['Rosa Pomodoro', 'Sauce', 'pasta'],
-  ['Tiramisu latte', 'Signatures', 'cafe-au-lait'], ['Kinder Bueno Crêpe', 'Crêpes', 'crepe'],
+  ['Tiramisu latte', 'Signatures', 'latte'], ['Kinder Bueno Crêpe', 'Crêpes', 'crepe'],
   ['Brownie Mini Pancakes', 'Mini Pancakes', 'pancakes'], ['Tacos Cordon Bleu', '', 'tacos'],
-  ['Œufs bénédicte', '', 'oeufs'], ['Spaghetti Fruits de Mer', '', 'pasta'],
+  ['Œufs bénédicte', '', 'oeufs-benedicte'], ['Spaghetti Fruits de Mer', '', 'pasta'],
   ['Crispy Fried Chicken Burger', 'Burger', 'chicken-burger'], ['Salmon Bagel', 'Sandwich', 'bagel'],
   ['Tiramisu', 'Desserts', 'tiramisu'], ['Cheese burger', 'Menu Enfants', 'cheeseburger']
 ];

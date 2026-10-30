@@ -1,10 +1,10 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=222';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=123';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=223';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=124';
 import { openMoves } from './inv-moves.js?v=5';
 import * as SZ from '../boutique-sizes.js?v=16';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=123';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=124';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -927,7 +927,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       catIn.addEventListener('change', paint);
       SZ.wireTotal(el, lang);
       /* La photo de la caisse, choisie comme au tableau de bord. */
-      import('../retail-icon-picker.js?v=3').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false })).catch(() => {});
+      import('../retail-icon-picker.js?v=4').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false })).catch(() => {});
 
       const save = () => {
         const name = nameIn.value.trim();
