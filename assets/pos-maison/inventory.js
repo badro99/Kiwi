@@ -1,7 +1,7 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=129';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=47';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=130';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=48';
 import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=47';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=48';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 /* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse : leurs écrans se redessinent souvent, on écoute donc une fois, au document. */
 try { document.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('[data-mz-back-inv]'); if (b && root && root.contains(b)) switchView('inventaire'); }); } catch (_) {}
@@ -821,6 +821,28 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     if (typeof toast === 'function') toast(tillInventoryRefusal());
   }
 
+  /* Le panneau est repeint à chaque changement du catalogue (synchronisation,
+     vente sur une autre caisse, retour sur l'onglet). Réécrire la barre d'outils
+     faisait perdre le curseur de la recherche au bout d'une seconde : on
+     cliquait, plus rien ne s'écrivait (propriétaire, 2026-10-30). Comme la
+     boutique (pos-boutique/inv-tools.js › invPaint) : la barre déjà montée ne
+     quitte jamais le document, on remplace seulement ce qui l'entoure. */
+  function mzInvPaint(panel, html) {
+    const box = panel.querySelector(':scope > .bqi');
+    const tools = box && box.querySelector(':scope > .mzi-tools');
+    if (!tools || !tools.querySelector('#mzi-scan')) { panel.innerHTML = html; return false; }
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const fresh = tmp.querySelector(':scope > .bqi');
+    const kids = fresh ? [...fresh.children] : [];
+    const at = kids.findIndex((k) => k.classList.contains('mzi-tools'));
+    if (at < 0) { panel.innerHTML = html; return false; }
+    [...box.children].forEach((k) => { if (k !== tools) k.remove(); });
+    kids.slice(0, at).forEach((k) => box.insertBefore(k, tools));
+    kids.slice(at + 1).forEach((k) => box.appendChild(k));
+    return true;
+  }
+
   function renderInventaire() {
     const cat = catDB();
     const panel = $('[data-mz-panel="inventaire"]', root);
@@ -829,7 +851,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     const cats = cat.listCategories();
     const filter = state.invFilter || 'all';
     const products = cat.listProducts({ categoryId: filter, q: state.invQuery || '' });
-    panel.innerHTML = `
+    mzInvPaint(panel, `
       <div class="bqi mz-page">
         <header class="mz-head">
           <div><h1>Inventaire</h1><div class="mz-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
@@ -861,7 +883,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
               <em>Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.</em>
             </div>`}
         </div>
-      </div>`;
+      </div>`);
     const scan = $('#mzi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
     mzInvSearch($('.mzi-scan', panel), scan, mzSkinOn(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
