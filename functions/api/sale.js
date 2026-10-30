@@ -17,6 +17,7 @@ import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
 import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
+import { saveDeliveryCard } from './_delivery-card.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -890,6 +891,12 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
       await env.DB.prepare('UPDATE sales SET tip_cents = ? WHERE merchant = ? AND id = ? AND tip_cents IS NULL')
         .bind(tipCents, merchant, id).run();
     } catch (_) { /* la vente reste ; le Z déclarera le pourboire */ }
+  }
+
+  /* La fiche du destinataire d'une livraison (functions/api/_delivery-card.js),
+     au mieux et une seule fois : jamais une cliente du carnet. */
+  if (channel === 'delivery' && b.deliveryCard) {
+    try { await saveDeliveryCard(env.DB, merchant, id, b.deliveryCard, ts); } catch (_) { /* la vente reste */ }
   }
 
   if (paymentParts) {

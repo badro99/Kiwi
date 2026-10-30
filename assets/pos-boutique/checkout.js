@@ -1,7 +1,8 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=217';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=118';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=118';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=218';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=119';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=119';
 import { ticketOwner } from './ticket-owner.js?v=3';
+import { bqDeliveryCard } from './delivery-card.js?v=1';
 import '../money-cents.js?v=4';
 const M = globalThis.KiwiMoney;
 
@@ -993,7 +994,7 @@ const M = globalThis.KiwiMoney;
           if (m === 'especes') stepCash(portion());
           else if (m === 'carte') stepCard(portion());
           else if (m === 'virement' || m === 'cheque') stepExternal(m, portion());
-          else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
+          else if (m === 'livraison') { const amount = portion(); bqDeliveryCard(el, { amount, esc, fmtMAD, icons, closeBtns, prev: (settled.find((p) => p.card) || {}).card, back: stepMethods, done: (card) => settle({ m: 'livraison', amount, card }) }); }
           else if (m === 'avoir') stepAvoir();
           else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun avoir actif, émettez-en un depuis Échanges & avoirs'));
         };

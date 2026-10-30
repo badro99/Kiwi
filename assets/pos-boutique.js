@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=118';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=36';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=118';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=118';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=119';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=37';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=119';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=119';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=2';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=3';
 
   'use strict';
 
@@ -2005,7 +2005,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
               method: method,
               paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(receivedNow * 100),
               discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
-              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
+              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card,
               label: isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
               time: sale.at,

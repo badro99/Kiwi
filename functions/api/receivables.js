@@ -31,6 +31,7 @@
 // 'dlv-<saleId>'. Rejouer le même `id` rend la même vente, 200, même corps :
 // une reprise hors ligne ne compte jamais deux fois.
 import { entitledMerchant, isTillFor, activeAccountSession } from '../auth/_lib.js';
+import { readDeliveryCards } from './_delivery-card.js';
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -133,7 +134,7 @@ function returnedQty(returns) {
   return by;
 }
 
-function view(row, collections, returns) {
+function view(row, collections, returns, card) {
   const owed = row.delivery_written_off ? 0 : owedCents(row);
   const got = (collections || []).reduce((n, c) => n + c.amountCents, 0);
   const back = (returns || []).reduce((n, r) => n + r.amountCents, 0);
@@ -147,6 +148,7 @@ function view(row, collections, returns) {
     collections: collections || [],
     collected: last ? { method: last.method, amountCents: got, ts: last.ts, auto: /^dlv-auto-/.test(last.id || '') } : null,
     returned: lastBack ? { amountCents: back, ts: lastBack.ts } : null,
+    customer: card || null,
     lines: row.lines === undefined ? undefined : parseLines(row).map((l, i) => ({
       i, name: String(l && l.n || ''), qty: Number(l && l.q) || 0, totalCents: Math.round(Number(l && l.t || 0) * 100),
       variant: String(l && l.v || ''), returnedQty: rq.get(i) || 0,
@@ -204,7 +206,8 @@ export async function onRequestGet({ request, env }) {
   let bySale = await readCollections(env.DB, merchant);
   const returnsBySale = await readReturns(env.DB, merchant);
   if (await autoConfirm(env, merchant, rows, bySale, returnsBySale, Date.now())) bySale = await readCollections(env.DB, merchant);
-  const all = rows.map((row) => view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)))).filter((d) => d.owedCents > 0);
+  const cards = await readDeliveryCards(env.DB, merchant);
+  const all = rows.map((row) => view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)), cards.get(String(row.id)))).filter((d) => d.owedCents > 0);
   return json({
     confirmDays: CONFIRM_DAYS,
     open: all.filter((d) => d.dueCents > 0),

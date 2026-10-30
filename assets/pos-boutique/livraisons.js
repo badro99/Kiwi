@@ -22,6 +22,9 @@ const DAY = 86400000;
 /* Clés techniques (onglets, niveaux de toast), jamais du texte lu : en table, pour la garde i18n. */
 const TAB = { open: 'open', returned: 'returned', collected: 'collected' };
 const LEVEL = { warn: 'warn', success: 'success', nothingDue: 'nothing-due' };
+/* Les filtres de la recherche (propriétaire, 30 octobre) : la fiche du
+   destinataire saisie à l'encaissement (assets/pos-boutique/delivery-card.js). */
+const BY = { all: 'all', name: 'name', city: 'city', phone: 'phone' };
 /* Les phrases de cet écran, en anglais et en arabe. Elles vivent ici et non
    dans caisse-lang.js (fichier gelé en taille) ; le reste passe par le
    dictionnaire de la caisse. */
@@ -55,6 +58,18 @@ const PHRASES = {
   'Toute la commande': ['Whole order', 'الطلب كاملاً'],
   'Une livraison ne compte dans le chiffre d’affaires qu’une fois confirmée. Sans retour après 15 jours, elle est confirmée automatiquement. Un retour remet les articles en stock et ne change pas le chiffre.': ['A delivery counts in revenue only once confirmed. With no return after 15 days, it is confirmed automatically. A return puts the items back in stock and does not change revenue.', 'لا يُحتسب التوصيل في رقم المعاملات إلا بعد تأكيده. إذا لم يُرجع بعد 15 يوماً، يُؤكد تلقائياً. الإرجاع يعيد المواد إلى المخزون ولا يغير رقم المعاملات.'],
   'Valider le retour': ['Confirm return', 'تأكيد الإرجاع'],
+  'Tout': ['All', 'الكل'],
+  'Nom': ['Name', 'الاسم'],
+  'Ville': ['City', 'المدينة'],
+  'Téléphone': ['Phone', 'الهاتف'],
+  'Nom, ville, téléphone ou ticket': ['Name, city, phone or ticket', 'الاسم أو المدينة أو الهاتف أو التذكرة'],
+  'Rechercher un nom': ['Search a name', 'ابحث عن اسم'],
+  'Rechercher une ville': ['Search a city', 'ابحث عن مدينة'],
+  'Rechercher un téléphone': ['Search a phone number', 'ابحث عن رقم هاتف'],
+  'Rechercher par': ['Search by', 'البحث حسب'],
+  'Aucune commande ne correspond à cette recherche.': ['No order matches this search.', 'لا يوجد طلب يطابق هذا البحث.'],
+  'Effacer': ['Clear', 'مسح'],
+  'Sans fiche client': ['No customer details', 'بدون بيانات الزبون'],
   'Vendue le': ['Sold on', 'بيع في'],
   'confirmée dans {n} j': ['confirmed in {n} d', 'يُؤكد بعد {n} ي'],
   'confirmée le': ['confirmed on', 'أُكد في'],
@@ -75,7 +90,7 @@ const tr = (s) => {
   return C && typeof C.tr === 'function' ? C.tr(s) : s;
 };
 
-const st = { unlocked: null, data: null, loading: false, error: '', tab: 'open', openRow: '', pick: {}, busy: false, asked: false, confirmAll: '' };
+const st = { unlocked: null, data: null, loading: false, error: '', tab: 'open', openRow: '', pick: {}, busy: false, asked: false, confirmAll: '', q: '', by: BY.all };
 let watched = null;
 
 function madC(cents, d) { return d.fmtMAD((Number(cents) || 0) / 100); }
@@ -85,6 +100,31 @@ function when(ts) {
 function retId() {
   try { if (crypto && crypto.randomUUID) return 'ret-' + crypto.randomUUID(); } catch (_) {}
   return 'ret-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+}
+
+/* La recherche ignore la casse et les accents ; un téléphone se compare en
+   chiffres, +212 6… comme 06…. */
+const fold = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const phoneDigits = (v) => { const n = String(v || '').replace(/\D/g, ''); return n.startsWith('212') ? '0' + n.slice(3) : n.startsWith('00212') ? '0' + n.slice(5) : n; };
+function matches(x) {
+  const q = fold(st.q);
+  if (!q) return true;
+  const c = x.customer || {};
+  const name = () => fold(c.name).includes(q);
+  const city = () => fold(c.city).includes(q);
+  const phone = () => { const n = phoneDigits(q); return n.length >= 2 && phoneDigits(c.phone).includes(n.replace(/^0/, '')); };
+  if (st.by === BY.name) return name();
+  if (st.by === BY.city) return city();
+  if (st.by === BY.phone) return phone();
+  return name() || city() || phone() || fold(x.ref || x.saleId).includes(q);
+}
+/* Le destinataire en titre, puis ticket, ville et téléphone sur une ligne.
+   Une livraison d'avant la fiche garde son numéro de ticket en titre. */
+function title(x, esc) {
+  const ticket = tr('Ticket') + ' ' + (x.ref || x.saleId);
+  const c = x.customer;
+  return c ? '<b>' + esc(c.name) + '</b><small class="bqd-who">' + [ticket, c.city, c.phone].filter(Boolean).map((v) => '<span>' + esc(v) + '</span>').join(' · ') + '</small>'
+    : '<b>' + esc(ticket) + '</b><small>' + esc(tr('Sans fiche client')) + '</small>';
 }
 
 /* En quittant la page, le verrou revient. La vue est un <section> qui perd
@@ -139,6 +179,22 @@ function css() {
     '#pos-boutique .bqd-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 16px;text-align:center;color:var(--ink-2,#3D4441);}',
     '#pos-boutique .bqd-empty i,#pos-boutique .bqd-empty svg{width:30px;height:30px;color:var(--ink-3,#6F6C65);}',
     '#pos-boutique .bqd-note{font-size:12.5px;color:var(--ink-3,#6F6C65);}',
+    '#pos-boutique .bqd-search{display:flex;flex-direction:column;gap:8px;}',
+    '#pos-boutique .bqd-q{position:relative;}',
+    '#pos-boutique .bqd-q input{width:100%;box-sizing:border-box;min-height:46px;padding:10px 44px 10px 40px;border:1px solid var(--line,#E2DDD2);border-radius:12px;background:var(--paper-elev,#FFFDFA);font:inherit;font-size:16px;color:inherit;}',
+    '#pos-boutique .bqd-q input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none;}',
+    '#pos-boutique .bqd-q input:focus{outline:2px solid var(--atlas,#0B6E4F);outline-offset:1px;border-color:var(--atlas,#0B6E4F);}',
+    '#pos-boutique .bqd-q > i,#pos-boutique .bqd-q > svg{position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--ink-3,#6F6C65);pointer-events:none;}',
+    '#pos-boutique .bqd-q button{position:absolute;inset-inline-end:4px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;border-radius:8px;background:none;color:var(--ink-3,#6F6C65);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}',
+    '#pos-boutique .bqd-q button[hidden]{display:none;}',
+    '#pos-boutique .bqd-q button i,#pos-boutique .bqd-q button svg{width:18px;height:18px;}',
+    '#pos-boutique .bqd-by{display:flex;gap:6px;flex-wrap:wrap;}',
+    '#pos-boutique .bqd-by button{min-height:36px;padding:0 12px;border:1px solid var(--line,#E2DDD2);border-radius:999px;background:var(--paper-elev,#FFFDFA);font:inherit;font-size:13.5px;color:inherit;cursor:pointer;}',
+    '#pos-boutique .bqd-by button.on{background:var(--ink,#0A0F0D);border-color:var(--ink,#0A0F0D);color:var(--paper,#F7F5F0);}',
+    '#pos-boutique .bqd-who{display:block;margin-top:2px;font-size:12.5px;color:var(--ink-2,#3D4441);}',
+    '#pos-boutique .bqd-who span{white-space:nowrap;}',
+    '#pos-boutique .bqd-addr{font-size:13px;color:var(--ink-2,#3D4441);line-height:1.45;}',
+    '#pos-boutique .bqd-addr span{display:block;color:var(--ink-3,#6F6C65);}',
     '@media (max-width:760px){#pos-boutique .bqd-kpis{grid-template-columns:1fr;}#pos-boutique .bqd-top{grid-template-columns:1fr auto;}#pos-boutique .bqd-top .bqd-btn{grid-column:1 / -1;}}',
   ].join('\n');
   document.head.appendChild(s);
@@ -164,11 +220,14 @@ function rowOpen(x, d, esc) {
   const sub = [tr('Vendue le') + ' ' + when(x.ts), tr('jour {d} sur {t}').replace('{d}', String(Math.min(days, total))).replace('{t}', String(total))];
   if (x.returnedCents > 0) sub.push(tr('déjà revenu') + ' ' + madC(x.returnedCents, d));
   let ret = '';
+  if (isOpen && x.customer) {
+    ret += '<div class="bqd-addr">' + esc(x.customer.address) + (x.customer.note ? '<span>' + esc(x.customer.note) + '</span>' : '') + '</div>';
+  }
   if (isOpen) {
     const lines = (x.lines || []).filter((l) => l.qty - l.returnedQty > 0);
     const pickedCents = lines.reduce((n, l) => n + (st.pick[l.i] ? Math.round(l.totalCents * st.pick[l.i] / (l.qty || 1)) : 0), 0);
     const any = Object.values(st.pick).some((q) => q > 0);
-    ret = '<div class="bqd-ret">'
+    ret += '<div class="bqd-ret">'
       + (lines.length ? lines.map((l) => {
         const out = l.qty - l.returnedQty;
         const q = st.pick[l.i] || 0;
@@ -184,7 +243,7 @@ function rowOpen(x, d, esc) {
       + '</div></div>';
   }
   return '<div class="bqd-row" data-bqd-row="' + esc(x.saleId) + '">'
-    + '<div class="bqd-top"><div><b>' + esc(tr('Ticket') + ' ' + (x.ref || x.saleId)) + '</b><small>' + esc(sub.join(' · ')) + '</small></div>'
+    + '<div class="bqd-top"><div>' + title(x, esc) + '<small>' + esc(sub.join(' · ')) + '</small></div>'
     + '<div class="bqd-amt">' + esc(madC(x.dueCents, d)) + '<small><br>' + esc(tr('confirmée dans {n} j').replace('{n}', String(left))) + '</small></div>'
     + (isOpen ? '' : '<button type="button" class="bqd-btn" data-bqd-open="' + esc(x.saleId) + '"><i data-icon="undo"></i>' + esc(tr('Enregistrer un retour')) + '</button>')
     + '</div>'
@@ -200,7 +259,7 @@ function rowDone(x, d, esc, kind) {
   const amt = kind === 'returned' ? x.returnedCents : (x.collected && x.collected.amountCents);
   const sub = [tr('Vendue le') + ' ' + when(x.ts), (kind === 'returned' ? tr('revenue le') : tr('confirmée le')) + ' ' + when(at)];
   if (kind !== 'returned' && x.returnedCents > 0) sub.push(tr('revenu en partie') + ' ' + madC(x.returnedCents, d));
-  return '<div class="bqd-row"><div class="bqd-top"><div><b>' + esc(tr('Ticket') + ' ' + (x.ref || x.saleId)) + '</b><small>' + esc(sub.join(' · ')) + '</small></div>'
+  return '<div class="bqd-row"><div class="bqd-top"><div>' + title(x, esc) + '<small>' + esc(sub.join(' · ')) + '</small></div>'
     + '<div class="bqd-amt">' + esc(madC(amt, d)) + '</div>' + tag + '</div></div>';
 }
 
@@ -218,24 +277,59 @@ function paint(panel, d) {
     d.icons(); return;
   }
   const data = st.data || { open: [], collected: [], returned: [] };
-  const open = (data.open || []).slice().sort((a, b) => a.ts - b.ts);
-  const lists = { open, returned: data.returned || [], collected: data.collected || [] };
+  const open = (data.open || []);
   const pending = open.reduce((n, x) => n + (x.dueCents || 0), 0);
   const kpi = (l, v) => '<div class="bqd-kpi"><span>' + esc(l) + '</span><b>' + v + '</b></div>';
+  const by = (id, l) => '<button type="button" data-lens-item data-bqd-by="' + id + '" aria-pressed="' + (st.by === id) + '"' + (st.by === id ? ' class="on"' : '') + '>' + esc(l) + '</button>';
+  panel.innerHTML = '<div class="bqd">'
+    + '<div class="bqd-head"><h3>' + esc(tr('Livraisons')) + '</h3><span>' + esc(tr('Responsable') + ' : ' + (st.unlocked.name || '')) + '</span></div>'
+    + '<div class="bqd-kpis">' + kpi(tr('En attente'), esc(madC(pending, d))) + kpi(tr('Commandes en cours'), String(open.length)) + kpi(tr('Retournées'), String((data.returned || []).length)) + '</div>'
+    + searchBar(esc, by)
+    + '<div data-bqd-results>' + results(d, esc) + '</div>'
+    + '<div class="bqd-note">' + esc(tr('Une livraison ne compte dans le chiffre d’affaires qu’une fois confirmée. Sans retour après 15 jours, elle est confirmée automatiquement. Un retour remet les articles en stock et ne change pas le chiffre.')) + '</div>'
+    + '</div>';
+  d.icons();
+}
+
+/* La recherche et ses filtres. Le champ n'est jamais repeint pendant la
+   frappe : seule la liste dessous l'est (paintResults). */
+function searchBar(esc, by) {
+  return '<div class="bqd-search" role="search">'
+    + '<div class="bqd-q"><i data-icon="search"></i><input type="search" data-bqd-q-in enterkeyhint="search" autocomplete="off" aria-label="' + esc(placeholder()) + '" placeholder="' + esc(placeholder()) + '" value="' + esc(st.q) + '">'
+    + '<button type="button" data-bqd-clear aria-label="' + esc(tr('Effacer')) + '"' + (st.q ? '' : ' hidden') + '><i data-icon="close"></i></button></div>'
+    + '<div class="bqd-by" data-lens-demo role="group" aria-label="' + esc(tr('Rechercher par')) + '">' + by(BY.all, tr('Tout')) + by(BY.name, tr('Nom')) + by(BY.city, tr('Ville')) + by(BY.phone, tr('Téléphone')) + '</div>'
+    + '</div>';
+}
+
+function placeholder() {
+  return st.by === BY.name ? tr('Rechercher un nom') : st.by === BY.city ? tr('Rechercher une ville')
+    : st.by === BY.phone ? tr('Rechercher un téléphone') : tr('Nom, ville, téléphone ou ticket');
+}
+
+/* Les onglets et la liste, filtrés par la recherche. Repeints seuls pendant
+   la frappe : le champ garde le curseur. */
+function results(d, esc) {
+  const data = st.data || { open: [], collected: [], returned: [] };
+  const lists = {
+    open: (data.open || []).slice().sort((a, b) => a.ts - b.ts).filter(matches),
+    returned: (data.returned || []).filter(matches),
+    collected: (data.collected || []).filter(matches),
+  };
   const tab = (id, l) => '<button type="button" class="bqd-tab' + (st.tab === id ? ' on' : '') + '" data-bqd-tab="' + id + '">' + esc(l) + ' · ' + lists[id].length + '</button>';
   const rows = lists[st.tab] || [];
   let body;
   if (st.error) body = '<div class="bqd-empty"><i data-icon="info"></i><span>' + esc(st.error) + '</span><button type="button" class="bqd-btn" data-bqd-reload>' + esc(tr('Réessayer')) + '</button></div>';
   else if (!st.data && st.loading) body = '<div class="bqd-empty"><span>' + esc(tr('Chargement…')) + '</span></div>';
+  else if (!rows.length && st.q.trim()) body = '<div class="bqd-empty"><i data-icon="search"></i><span>' + esc(tr('Aucune commande ne correspond à cette recherche.')) + '</span></div>';
   else if (!rows.length) body = '<div class="bqd-empty"><i data-icon="local_shipping"></i><span>' + esc(st.tab === 'open' ? tr('Aucune livraison en attente.') : st.tab === 'returned' ? tr('Aucune commande retournée.') : tr('Aucune livraison confirmée récemment.')) + '</span></div>';
   else body = '<div class="bqd-list">' + rows.map((x) => (st.tab === 'open' ? rowOpen(x, d, esc) : rowDone(x, d, esc, st.tab))).join('') + '</div>';
-  panel.innerHTML = '<div class="bqd">'
-    + '<div class="bqd-head"><h3>' + esc(tr('Livraisons')) + '</h3><span>' + esc(tr('Responsable') + ' : ' + (st.unlocked.name || '')) + '</span></div>'
-    + '<div class="bqd-kpis">' + kpi(tr('En attente'), esc(madC(pending, d))) + kpi(tr('Commandes en cours'), String(open.length)) + kpi(tr('Retournées'), String(lists.returned.length)) + '</div>'
-    + '<div class="bqd-tabs">' + tab(TAB.open, tr('En cours')) + tab(TAB.returned, tr('Retournées')) + tab(TAB.collected, tr('Confirmées')) + '</div>'
-    + body
-    + '<div class="bqd-note">' + esc(tr('Une livraison ne compte dans le chiffre d’affaires qu’une fois confirmée. Sans retour après 15 jours, elle est confirmée automatiquement. Un retour remet les articles en stock et ne change pas le chiffre.')) + '</div>'
-    + '</div>';
+  return '<div class="bqd-tabs">' + tab(TAB.open, tr('En cours')) + tab(TAB.returned, tr('Retournées')) + tab(TAB.collected, tr('Confirmées')) + '</div>' + body;
+}
+
+function paintResults(panel, d) {
+  const box = panel.querySelector('[data-bqd-results]');
+  if (!box) { paint(panel, d); return; }
+  box.innerHTML = results(d, d.esc);
   d.icons();
 }
 
@@ -256,7 +350,7 @@ function send(panel, d, saleId, all) {
   if (!x || st.busy) return;
   const lines = all ? null : Object.entries(st.pick).filter(([, q]) => q > 0).map(([i, q]) => ({ i: Number(i), q }));
   if (!all && !lines.length) return;
-  st.busy = true; paint(panel, d);
+  st.busy = true; paintResults(panel, d);
   const body = { merchant: d.slug(), saleId, action: 'return', id: retId(), returnedBy: st.unlocked };
   if (all) body.all = true; else body.lines = lines;
   fetch('/api/receivables', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) })
@@ -284,7 +378,7 @@ function send(panel, d, saleId, all) {
       const code = e && e.message;
       d.toast(code === LEVEL.nothingDue ? tr('Cette commande n’a plus rien en attente.') : tr('Retour non enregistré. Vérifiez la connexion et réessayez.'), 6000, LEVEL.warn);
     })
-    .finally(() => { st.busy = false; if (panel.isConnected) paint(panel, d); });
+    .finally(() => { st.busy = false; if (panel.isConnected) paintResults(panel, d); });
 }
 
 /* d : { esc, icons, toast, fmtMAD, persistStock, slug, demo } : les outils de
@@ -300,22 +394,42 @@ export function bqLivraisons(panel, d) {
       let b;
       if (t('[data-bqd-unlock]')) { unlock(panel, d); return; }
       if (t('[data-bqd-reload]')) { load(panel, d); return; }
-      if ((b = t('[data-bqd-tab]'))) { st.tab = b.dataset.bqdTab; st.openRow = ''; st.pick = {}; paint(panel, d); return; }
-      if ((b = t('[data-bqd-open]'))) { st.openRow = b.dataset.bqdOpen; st.pick = {}; st.confirmAll = ''; paint(panel, d); return; }
-      if (t('[data-bqd-cancel]')) { st.openRow = ''; st.pick = {}; st.confirmAll = ''; paint(panel, d); return; }
+      if ((b = t('[data-bqd-by]'))) {
+        st.by = b.dataset.bqdBy; st.openRow = ''; st.pick = {};
+        panel.querySelectorAll('[data-bqd-by]').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); });
+        const inp = panel.querySelector('[data-bqd-q-in]');
+        if (inp) { inp.placeholder = placeholder(); inp.setAttribute('aria-label', placeholder()); inp.focus(); }
+        paintResults(panel, d); return;
+      }
+      if (t('[data-bqd-clear]')) {
+        st.q = ''; st.openRow = ''; st.pick = {};
+        const inp = panel.querySelector('[data-bqd-q-in]');
+        if (inp) { inp.value = ''; inp.focus(); }
+        const x = panel.querySelector('[data-bqd-clear]'); if (x) x.hidden = true;
+        paintResults(panel, d); return;
+      }
+      if ((b = t('[data-bqd-tab]'))) { st.tab = b.dataset.bqdTab; st.openRow = ''; st.pick = {}; paintResults(panel, d); return; }
+      if ((b = t('[data-bqd-open]'))) { st.openRow = b.dataset.bqdOpen; st.pick = {}; st.confirmAll = ''; paintResults(panel, d); return; }
+      if (t('[data-bqd-cancel]')) { st.openRow = ''; st.pick = {}; st.confirmAll = ''; paintResults(panel, d); return; }
       if ((b = t('[data-bqd-q]'))) {
         const i = b.dataset.bqdQ, dir = Number(b.dataset.d), max = Number(b.dataset.max || Infinity);
         const next = Math.max(0, (st.pick[i] || 0) + dir);
         st.pick[i] = dir > 0 ? Math.min(next, max) : next;
-        paint(panel, d); return;
+        paintResults(panel, d); return;
       }
       /* Toute la commande : un second geste confirme, un doigt qui glisse ne
          renvoie pas un colis entier. */
       if ((b = t('[data-bqd-all]'))) {
-        if (st.confirmAll !== b.dataset.bqdAll) { st.confirmAll = b.dataset.bqdAll; paint(panel, d); return; }
+        if (st.confirmAll !== b.dataset.bqdAll) { st.confirmAll = b.dataset.bqdAll; paintResults(panel, d); return; }
         st.confirmAll = ''; send(panel, d, b.dataset.bqdAll, true); return;
       }
       if ((b = t('[data-bqd-send]'))) { send(panel, d, b.dataset.bqdSend, false); }
+    });
+    panel.addEventListener('input', (e) => {
+      if (!e.target || !e.target.matches('[data-bqd-q-in]')) return;
+      st.q = e.target.value; st.openRow = ''; st.pick = {}; st.confirmAll = '';
+      const x = panel.querySelector('[data-bqd-clear]'); if (x) x.hidden = !st.q;
+      paintResults(panel, d);
     });
   }
   paint(panel, d);

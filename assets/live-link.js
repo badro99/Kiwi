@@ -1,4 +1,4 @@
-import {} from './live-link/queue-store.js?v=2';
+import {} from './live-link/queue-store.js?v=3';
 import {} from './live-link/sale-identity.js?v=1';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *

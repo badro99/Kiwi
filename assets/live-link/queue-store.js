@@ -682,6 +682,12 @@ function postSale(entry) {
       });
     }
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
+    /* La fiche du destinataire d'une livraison (functions/api/_delivery-card.js). */
+    if (entry.deliveryCard && typeof entry.deliveryCard === 'object') {
+      var dc = entry.deliveryCard;
+      body.deliveryCard = { name: String(dc.name || '').slice(0, 80), phone: String(dc.phone || '').slice(0, 24),
+        city: String(dc.city || '').slice(0, 60), address: String(dc.address || '').slice(0, 200), note: String(dc.note || '').slice(0, 300) };
+    }
     /* Le pourboire, hors du montant (recordSale le garde à part). */
     if (+entry.tip > 0) body.tipCents = Math.round(+entry.tip * 100);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
