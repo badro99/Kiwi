@@ -1,9 +1,10 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=220';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=121';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=121';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=221';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=122';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=122';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { bqDeliveryCard } from './delivery-card.js?v=1';
 import '../money-cents.js?v=4';
+import { ozonOffer } from './ozon.js?v=2';
 const M = globalThis.KiwiMoney;
 
 
@@ -1277,6 +1278,8 @@ const M = globalThis.KiwiMoney;
           <button class="ma-btn primary" id="bq-pay-done"><i data-lucide="check"></i>${esc(opts.doneLabel || 'Nouvelle vente')}</button>
         </div>`;
       icons(); closeBtns();
+      const card = (parts.find((x) => x.card) || {}).card || {};
+      if (delivery && res.sale && res.sale.syncId) ozonOffer(el, { slug: merchantSlug(), saleId: res.sale.syncId, title: opts.ref ? 'Ticket ' + opts.ref : '', receiver: card.name || '', phone: card.phone || '', address: card.address || '', cityHint: card.city || '', note: card.note || '', dueCents: M.sumCents(parts.map((x) => (x.m === 'livraison' ? +x.amount || 0 : 0))), toast });
       $('#bq-pay-print', el).onclick = () => printReceiptNow(opts, parts);
       /* Same problem as the 80 mm button: this claimed "Reçu envoyé sur WhatsApp"
          while sending nothing at all. WhatsApp cannot be sent silently from a web

@@ -60,7 +60,7 @@ async function modules(context) {
      assets/money-cents.js (les centimes, comme la caisse boutique). */
   /* Plus les livraisons partagées avec la boutique : la fiche destinataire
      (Maison et boutique), le Z en deux tickets et la page Livraisons. */
-  assert.equal(cache.size, 13, 'exactly one instance per stamped module, including cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js, and the 2027 kit, pos-maison/kit-2027.js)');
+  assert.equal(cache.size, 14, 'exactly one instance per stamped module, including cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js, the 2027 kit, pos-maison/kit-2027.js, and Ozon Express, pos-boutique/ozon.js)');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

@@ -118,5 +118,17 @@
   "hotel_monthly_declarations": [
     {"merchant": "upgrade-synth-1", "month": "fixture-month-1", "revision": 137, "state": "fixture-state-1", "source_cursor": 137, "idempotency_key": "fixture-idempotency_key-1", "canonical_hash": "fixture-canonical_hash-1", "previous_hash": "fixture-previous_hash-1", "payload_json": "fixture-payload_json-1", "lineage_json": "fixture-lineage_json-1", "closed_at": 137, "closed_by_user_id": "fixture-closed_by_user_id-1", "closed_by_name": "fixture-closed_by_name-1", "rectification_reason": "fixture-rectification_reason-1", "created_at": 137},
     {"merchant": "upgrade-synth-2", "month": "fixture-month-2", "revision": 274, "state": "fixture-state-2", "source_cursor": 274, "idempotency_key": "fixture-idempotency_key-2", "canonical_hash": "fixture-canonical_hash-2", "previous_hash": "fixture-previous_hash-2", "payload_json": "fixture-payload_json-2", "lineage_json": "fixture-lineage_json-2", "closed_at": 274, "closed_by_user_id": "fixture-closed_by_user_id-2", "closed_by_name": "fixture-closed_by_name-2", "rectification_reason": "fixture-rectification_reason-2", "created_at": 274}
+  ],
+  "ozon_accounts": [
+    {"merchant": "upgrade-synth-1", "customer_id": "fixture-customer-1", "api_key_enc": "v1.fixture-iv-1.fixture-body-1", "pickup_mode": 0, "connected_ts": 138, "updated_ts": 139, "updated_by": "fixture-actor-1"},
+    {"merchant": "upgrade-synth-2", "customer_id": "fixture-customer-2", "api_key_enc": "v1.fixture-iv-2.fixture-body-2", "pickup_mode": 1, "connected_ts": 139, "updated_ts": 140, "updated_by": "fixture-actor-2"}
+  ],
+  "ozon_parcels": [
+    {"merchant": "upgrade-synth-1", "tracking": "FIXTURE-TRK-1", "sale_id": "sale-synth-1", "receiver": "fixture-receiver-1", "phone": "fixture-phone-1", "city_id": 38, "city_name": "fixture-city-1", "address": "fixture-address-1", "price_cents": 25001, "fee_delivered_cents": 2001, "fee_returned_cents": 1, "fee_refused_cents": 1001, "status": "fixture-status-1", "status_label": "fixture-label-1", "status_ts": 141, "checked_ts": 142, "paid_ts": 143, "bl_ref": "fixture-bl-1", "created_ts": 144, "created_by": "fixture-by-1"},
+    {"merchant": "upgrade-synth-2", "tracking": "FIXTURE-TRK-2", "sale_id": "sale-synth-2", "receiver": "fixture-receiver-2", "phone": "fixture-phone-2", "city_id": 39, "city_name": "fixture-city-2", "address": "fixture-address-2", "price_cents": 25002, "fee_delivered_cents": 2002, "fee_returned_cents": 2, "fee_refused_cents": 1002, "status": "fixture-status-2", "status_label": "fixture-label-2", "status_ts": 142, "checked_ts": 143, "paid_ts": 144, "bl_ref": "fixture-bl-2", "created_ts": 145, "created_by": "fixture-by-2"}
+  ],
+  "ozon_delivery_notes": [
+    {"merchant": "upgrade-synth-1", "ref": "fixture-bl-1", "parcels": 1, "created_ts": 151, "created_by": "fixture-by-1"},
+    {"merchant": "upgrade-synth-2", "ref": "fixture-bl-2", "parcels": 2, "created_ts": 152, "created_by": "fixture-by-2"}
   ]
 }
