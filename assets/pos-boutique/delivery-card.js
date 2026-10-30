@@ -33,6 +33,7 @@ const PHRASES = {
   'Choisissez une ville de la liste Ozon': ['Pick a city from the Ozon list', 'اختر مدينة من قائمة أوزون'],
   'Numéro marocain attendu': ['Moroccan number expected', 'يجب إدخال رقم مغربي'],
   'Tapez pour chercher une ville Ozon': ['Type to search an Ozon city', 'اكتب للبحث عن مدينة أوزون'],
+  'Aucune ville trouvée': ['No city found', 'لم يتم العثور على مدينة'],
   '+ 50 MAD de livraison · le client paie': ['+ 50 MAD delivery · the customer pays', '+ 50 درهم توصيل · يدفع الزبون'],
   'Enregistrer et envoyer à Ozon': ['Save and send to Ozon', 'تسجيل وإرسال إلى أوزون'],
   'Le colis Ozon se crée tout seul à l’enregistrement, avec ces informations. Le client n’entre pas dans le carnet de fidélité.': ['The Ozon parcel is created automatically when you save, with these details. The customer is not added to the loyalty book.', 'يُنشأ طرد أوزون تلقائياً عند التسجيل بهذه المعلومات. لا يُضاف الزبون إلى دفتر الوفاء.'],
@@ -54,7 +55,7 @@ const CITIES = ['Casablanca', 'Rabat', 'Salé', 'Témara', 'Marrakech', 'Fès', 
 const FIELDS = [
   { k: 'name', label: 'Nom du client', ph: 'Prénom et nom', need: true, ac: 'name' },
   { k: 'phone', label: 'Téléphone', ph: 'Ex. 06 12 34 56 78', need: true, ac: 'tel', type: 'tel' },
-  { k: 'city', label: 'Ville', ph: 'Ex. Casablanca', need: true, ac: 'address-level2', list: true },
+  { k: 'city', label: 'Ville', ph: 'Ex. Casablanca', need: true, list: true, area: 0, wide: true },
   { k: 'address', label: 'Adresse', ph: 'Quartier, rue, numéro, repère', need: true, ac: 'street-address', area: 2 },
   { k: 'note', label: 'Commentaire', ph: 'Heure de passage, étage, autre numéro…', need: false, area: 2 },
 ];
@@ -67,6 +68,12 @@ function css() {
     '.bqdc-form{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:14px 0 4px;text-align:start;}',
     '.bqdc-f{display:flex;flex-direction:column;gap:5px;min-width:0;}',
     '.bqdc-f.wide{grid-column:1 / -1;}',
+    '.bqdc-f.combo{position:relative;}',
+    '.bqdc-sug{position:absolute;z-index:5;left:0;right:0;top:calc(100% - 2px);margin:0;padding:4px;list-style:none;max-height:244px;overflow:auto;background:var(--paper-elev,#FFFDFA);border:1px solid var(--line,#E2DDD2);border-radius:10px;box-shadow:0 10px 28px rgba(10,15,13,.12);}',
+    '.bqdc-sug[hidden]{display:none;}',
+    '.bqdc-sug li{padding:10px 12px;border-radius:8px;font-size:15px;cursor:pointer;color:var(--ink,#0A0F0D);}',
+    '.bqdc-sug li[aria-selected="true"],.bqdc-sug li:hover{background:var(--paper-soft,#F1EEE7);}',
+    '.bqdc-sug li.none{color:var(--ink-3,#6F6C65);cursor:default;background:none;}',
     '.bqdc-f label{font-size:13px;font-weight:600;color:var(--ink-2,#3D4441);}',
     '.bqdc-f label small{font-weight:400;color:var(--ink-3,#6F6C65);}',
     '.bqdc-f input,.bqdc-f textarea{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;border:1px solid var(--line,#E2DDD2);border-radius:10px;background:var(--paper-elev,#FFFDFA);font:inherit;font-size:16px;color:inherit;resize:vertical;}',
@@ -99,13 +106,16 @@ export function bqDeliveryCard(el, o) {
   const prev = o.prev || {};
   const field = (f) => {
     const id = 'bqdc-' + f.k;
-    const attrs = ' id="' + id + '" name="' + f.k + '" autocomplete="' + (f.ac || 'off') + '" placeholder="' + esc(tr(f.ph)) + '"'
+    /* La ville ne porte pas name="city" : Chrome y collait sa propre liste
+       d'adresses par-dessus la nôtre (30 oct. 2026). */
+    const attrs = ' id="' + id + '" name="' + (f.list ? 'bqdc-ville' : f.k) + '" autocomplete="' + (f.ac || 'off') + '" placeholder="' + esc(tr(f.ph)) + '"'
+      + (f.list ? ' role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bqdc-sug"' : '')
       + (f.need ? ' aria-required="true"' : '') + ' aria-describedby="' + id + '-err"';
     const val = esc(prev[f.k] || '');
     const input = f.area
       ? '<textarea' + attrs + ' rows="' + f.area + '">' + val + '</textarea>'
-      : '<input' + attrs + ' type="' + (f.type || 'text') + '"' + (f.type === 'tel' ? ' inputmode="tel"' : '') + (f.list ? ' list="bqdc-cities"' : '') + ' value="' + val + '">';
-    return '<div class="bqdc-f' + (f.area ? ' wide' : '') + '"><label for="' + id + '">' + esc(tr(f.label))
+      : '<input' + attrs + ' type="' + (f.type || 'text') + '"' + (f.type === 'tel' ? ' inputmode="tel"' : '') + ' value="' + val + '">' + (f.list ? '<ul class="bqdc-sug" id="bqdc-sug" role="listbox" hidden></ul>' : '');
+    return '<div class="bqdc-f' + (f.area || f.wide ? ' wide' : '') + (f.list ? ' combo' : '') + '"><label for="' + id + '">' + esc(tr(f.label))
       + (f.need ? '' : ' <small>· ' + esc(tr('facultatif')) + '</small>') + '</label>' + input
       + '<span class="bqdc-err" id="' + id + '-err" role="alert"></span></div>';
   };
@@ -113,7 +123,7 @@ export function bqDeliveryCard(el, o) {
     + '<h3 class="modal-title">' + esc(tr('Livraison · destinataire')) + '</h3>'
     + '<p class="modal-subtle">' + esc(o.fmtMAD(o.amount)) + '</p>'
     + '<form class="bqdc-form" id="bqdc-form" novalidate>' + FIELDS.map(field).join('')
-    + '<datalist id="bqdc-cities">' + CITIES.map((c) => '<option value="' + esc(c) + '"></option>').join('') + '</datalist></form>'
+    + '</form>'
     + '<p class="bqdc-hint">' + esc(tr('Ces informations restent sur la commande pour la retrouver en cas de retour. Le client n’entre pas dans le carnet de fidélité.')) + '</p>'
     + '<div class="bq-sheet-foot"><button class="bq-btn secondary" type="button" id="bqdc-back">' + esc(tr('Retour')) + '</button>'
     + '<button class="cash-confirm" type="submit" form="bqdc-form" id="bqdc-ok">' + esc(tr('Enregistrer la livraison')) + ' · ' + esc(o.fmtMAD(o.amount)) + '</button></div>';
@@ -121,9 +131,10 @@ export function bqDeliveryCard(el, o) {
   if (o.icons) o.icons();
   if (o.closeBtns) o.closeBtns();
   const form = el.querySelector('#bqdc-form');
+  const nodeOf = (k) => form.querySelector('#bqdc-' + k);
   el.querySelector('#bqdc-back').onclick = () => o.back();
   const check = (f, show) => {
-    const node = form.elements[f.k];
+    const node = nodeOf(f.k);
     const v = String(node.value || '').trim();
     let err = '';
     if (f.need && !v) err = tr('Champ obligatoire');
@@ -138,27 +149,80 @@ export function bqDeliveryCard(el, o) {
   };
   /* Une erreur affichée s'efface dès que le champ devient juste. */
   form.addEventListener('input', (e) => {
-    const f = FIELDS.find((x) => x.k === (e.target && e.target.name));
+    const f = FIELDS.find((x) => e.target && e.target.id === 'bqdc-' + x.k);
     if (f && e.target.getAttribute('aria-invalid') === 'true') check(f, true);
   });
   form.onsubmit = (e) => {
     e.preventDefault();
     const bad = FIELDS.filter((f) => !check(f, true));
-    if (bad.length) { form.elements[bad[0].k].focus(); return; }
+    if (bad.length) { nodeOf(bad[0].k).focus(); return; }
     const card = {};
-    FIELDS.forEach((f) => { card[f.k] = String(form.elements[f.k].value || '').replace(/\s+/g, ' ').trim(); });
+    FIELDS.forEach((f) => { card[f.k] = String(nodeOf(f.k).value || '').replace(/\s+/g, ' ').trim(); });
     const oc = ozonCities && ozonCities.find((c) => fold(c.name) === fold(card.city));
     if (oc) { card.city = oc.name; card.cityId = oc.id; }
     o.done(card);
   };
+  /* La liste des villes : la nôtre, claire, sous le champ, six à la fois au
+     plus. Celles qui commencent par la frappe passent devant. */
+  const cityIn = nodeOf('city');
+  const sug = form.querySelector('#bqdc-sug');
+  let hits = [];
+  let cur = -1;
+  const names = () => (ozonCities ? ozonCities.map((c) => c.name) : CITIES);
+  const closeSug = () => { sug.hidden = true; cityIn.setAttribute('aria-expanded', 'false'); cur = -1; };
+  const paint = () => {
+    sug.innerHTML = hits.length
+      ? hits.map((n, i) => '<li role="option" id="bqdc-o' + i + '" data-i="' + i + '" aria-selected="' + (i === cur) + '">' + esc(n) + '</li>').join('')
+      : '<li class="none">' + esc(tr('Aucune ville trouvée')) + '</li>';
+    if (cur >= 0) cityIn.setAttribute('aria-activedescendant', 'bqdc-o' + cur); else cityIn.removeAttribute('aria-activedescendant');
+    const on = sug.querySelector('[aria-selected="true"]');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+  };
+  const openSug = () => {
+    const q = fold(cityIn.value);
+    const all = names();
+    const starts = [];
+    const has = [];
+    for (const n of all) { const f = fold(n); if (!q || f.startsWith(q)) starts.push(n); else if (f.includes(q)) has.push(n); }
+    hits = starts.concat(has).slice(0, 6);
+    if (q && hits.length === 1 && fold(hits[0]) === q) { closeSug(); return; }
+    cur = hits.length ? 0 : -1;
+    paint();
+    sug.hidden = false;
+    cityIn.setAttribute('aria-expanded', 'true');
+  };
+  const pick = (i) => {
+    if (hits[i] == null) return;
+    cityIn.value = hits[i];
+    closeSug();
+    if (cityIn.getAttribute('aria-invalid') === 'true') check(FIELDS.find((x) => x.k === 'city'), true);
+    const next = nodeOf('address');
+    if (next && !next.value) next.focus();
+  };
+  cityIn.addEventListener('input', openSug);
+  cityIn.addEventListener('focus', openSug);
+  cityIn.addEventListener('blur', () => setTimeout(closeSug, 120));
+  cityIn.addEventListener('keydown', (e) => {
+    if (sug.hidden) { if (e.key === 'ArrowDown') { openSug(); e.preventDefault(); } return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!hits.length) return;
+      cur = (cur + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length;
+      paint(); e.preventDefault();
+    } else if (e.key === 'Enter' && cur >= 0) { pick(cur); e.preventDefault(); }
+    else if (e.key === 'Escape') { closeSug(); e.stopPropagation(); e.preventDefault(); }
+  });
+  sug.addEventListener('pointerdown', (e) => {
+    const li = e.target.closest && e.target.closest('li[data-i]');
+    e.preventDefault();
+    if (li) pick(Number(li.dataset.i));
+  });
   /* Ozon relié : la liste de villes devient celle d'Ozon, et la fiche dit ce
      que le client paiera au livreur. Ozon absent ou muet : la fiche d'avant. */
   if (o.ozon && o.ozon.connected) {
     Promise.resolve(o.ozon.connected).then((yes) => (yes ? o.ozon.cities() : null)).then((list) => {
       if (!list || !list.length || !el.isConnected || !el.querySelector('#bqdc-form')) return;
       ozonCities = list;
-      el.querySelector('#bqdc-cities').innerHTML = list.map((c) => '<option value="' + esc(c.name) + '"></option>').join('');
-      const city = form.elements.city;
+      const city = nodeOf('city');
       if (city) city.placeholder = tr('Tapez pour chercher une ville Ozon');
       const sub = el.querySelector('.modal-subtle');
       if (sub) sub.textContent = o.fmtMAD(o.amount) + ' ' + tr('+ 50 MAD de livraison · le client paie') + ' ' + o.fmtMAD((Number(o.amount) || 0) + CUSTOMER_FEE);
@@ -169,5 +233,5 @@ export function bqDeliveryCard(el, o) {
     }).catch(() => { /* Ozon muet : la fiche reste celle d'avant */ });
   }
   const first = FIELDS.find((f) => !String(prev[f.k] || '').trim());
-  try { form.elements[(first || FIELDS[0]).k].focus(); } catch (_) {}
+  try { nodeOf((first || FIELDS[0]).k).focus(); } catch (_) {}
 }
