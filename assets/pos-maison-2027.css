@@ -1,0 +1,610 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kiwi · Design 2027 — la caisse MAISON (art de table)
+   ---------------------------------------------------------------------------
+   La maison est un fork de la boutique (préfixe mz- au lieu de bq-) : cette
+   feuille est pos-boutique-2027.css traduite, pour que les deux caisses
+   soient identiques (propriétaire, 2026-10-30 : « fais-la ressembler à la
+   boutique »). Ce que la maison a en plus (Mouvements de stock, Déclarer
+   Casse, Fournisseurs, emballage cadeau, livraison, récompense fidélité) est
+   repeint en bas, section « LA MAISON EN PLUS ».
+
+   Chargée seulement sous le drapeau (html[data-skin-2027="till"]), peinture
+   seule, jetons --k-* seulement. L'écran d'ouverture garde les
+   identifiants bqci-* hérités de la boutique ; son conteneur est #mz-clockin.
+   Une règle changée dans pos-boutique-2027.css se reporte ici.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-skin-2027="till"] #pos-maison {
+  background-color: var(--k-bg);
+  color: var(--k-ink-1);
+  font-family: var(--k-font);
+}
+html[data-skin-2027="till"] #pos-maison :is(h1, h2, h3, button, input, select, textarea) { font-family: inherit; }
+
+/* Le mono est réservé aux codes (propriétaire, 2026-10-24) : un numéro de
+   ticket, un code-barres, un code d'avoir. Les montants et les compteurs
+   repassent en Inter Tight à chiffres tabulaires. */
+html[data-skin-2027="till"] #pos-maison :is(.mz-card-price, .mz-cat-ct, .mz-tk-total .val, .mz-head-sub b) {
+  font-family: var(--k-font);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════ L'ÉCRAN D'OUVERTURE ═══════════════
+   La boutique dessine le sien (#mz-clockin, pos-boutique.js). Sous la peau, le
+   tiroir se compte dans la feuille du kit, donc les pastilles livrées ne sont
+   pas dessinées — la même règle que kit.css:485 pour le restaurant, sur le
+   drapeau de page puisque la boutique ne monte pas le cadre. « Saisir le
+   total » les rend en posant .k-shown. */
+/* .mz-float-kit est posé par pos-boutique.js › gate() et signifie « le kit est
+   chargé », pas « la peau est demandée » : sans lui les pastilles livrées
+   restent, parce qu'elles sont alors le seul moyen de saisir le fond. */
+html[data-skin-2027="till"] #mz-clockin.mz-float-kit .clockin-float:not(.k-shown) { display: none; }
+html[data-skin-2027="till"] #mz-clockin { background-color: var(--k-bg); color: var(--k-ink-1); font-family: var(--k-font); }
+html[data-skin-2027="till"] #mz-clockin .clockin-brand img { content: url("kiwi-newlogo.svg"); height: 32px; }
+html[data-skin-2027="till"] #mz-clockin :is(.clockin-tagline, .clockin-role, .clockin-date) { color: var(--k-ink-3); font-family: var(--k-font); }
+html[data-skin-2027="till"] #mz-clockin .clockin-greet em { font-family: var(--k-font); color: var(--k-accent-ink); }
+html[data-skin-2027="till"] #mz-clockin .clockin-clock { font-family: var(--k-font); font-variant-numeric: tabular-nums; color: var(--k-ink-1); }
+html[data-skin-2027="till"] #mz-clockin .clockin-foot { color: var(--k-ink-3); }
+html[data-skin-2027="till"] #mz-clockin .clockin-btn {
+  min-height: 56px; border-radius: var(--k-r-2);
+  background: var(--k-accent); color: var(--k-on-accent); box-shadow: var(--k-shadow-1);
+  font-family: var(--k-font); font-weight: var(--k-fw-body-strong);
+}
+html[data-skin-2027="till"] #mz-clockin .clockin-btn:hover { background: var(--k-accent-pressed); transform: none; }
+
+/* Le rail : voir « LE RAIL — remplacé, pas repeint », plus bas. */
+
+/* ═══════════════ L'EN-TÊTE ET LE SCAN ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-head h1 {
+  font-size: var(--k-fs-title); font-weight: var(--k-fw-title);
+  letter-spacing: var(--k-track-title); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mz-head-sub, .mz-head-hint) {
+  color: var(--k-ink-3); font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-maison .mz-head-sub b { color: var(--k-accent-ink); }
+/* La vente ne garde que son titre : la date, l'heure, le compte du jour et
+   la consigne « Scannez… » sont éteints (propriétaire, 2026-10-28). Le compte
+   continue d'être écrit dans #mz-today (headSubVente), seulement plus montré. */
+html[data-skin-2027="till"] #pos-maison .mz-sell > .mz-head :is(.mz-head-sub, .mz-head-hint) { display: none; }
+/* La recherche et la barre des rayons défilent avec les articles
+   (bqKitSellScroll) : seul le titre Vente reste, tout le reste rend sa
+   hauteur à la grille. */
+html[data-skin-2027="till"] #pos-maison .mz-sell-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scroll > .mz-grid-scroll {
+  flex: none; min-height: 0; overflow: visible;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan {
+  min-height: 52px; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-1); border: 1px solid var(--k-line);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan input {
+  color: var(--k-ink-1); font-size: var(--k-fs-body);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan input::placeholder { color: var(--k-ink-3); }
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan-tag {
+  background-color: var(--k-surface-2); color: var(--k-ink-3);
+  border-radius: var(--k-r-1); font-size: var(--k-fs-footnote);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-cam {
+  min-width: 44px; min-height: 44px; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+}
+
+/* ── La barre de vente : le code-barres du rail, sans contour, et sa liste ── */
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan {
+  position: relative; z-index: 5;
+  min-height: 60px; gap: 14px; padding: 8px 8px 8px 16px;
+  border: 0; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-1);
+  transition: box-shadow var(--k-dur-2) var(--k-glide);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan:focus-within {
+  border: 0; box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus), var(--k-shadow-1);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan > svg {
+  width: 26px; height: 26px; color: var(--k-ink-1); flex-shrink: 0;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan input {
+  font-family: var(--k-font); font-size: var(--k-fs-body); letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan input::placeholder {
+  font-family: var(--k-font); font-size: var(--k-fs-body); letter-spacing: 0;
+}
+/* « Entrée » : la douchette le sait, la vendeuse n'a pas à le lire. */
+html[data-skin-2027="till"] #pos-maison .mz-sell-scan-tag { display: none; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst {
+  position: absolute; inset-inline: 0; top: calc(100% + 8px);
+  max-height: min(60vh, 520px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 8px; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-1); box-shadow: var(--k-shadow-2);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sgst[hidden] { display: none; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-it {
+  display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 14px;
+  width: 100%; min-height: 64px; padding: 8px 12px;
+  border: 0; border-radius: var(--k-r-2); background: none;
+  text-align: start; color: var(--k-ink-1); cursor: pointer;
+  touch-action: manipulation;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sgst-it:hover,
+html[data-skin-2027="till"] #pos-maison .mz-sgst-it.on { background-color: var(--k-surface-2); }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-it:active { background-color: var(--k-surface-3); }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-art {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  border-radius: var(--k-r-2); background-color: var(--k-bg); color: var(--k-ink-2); overflow: hidden;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sgst-art svg { width: 32px; height: 32px; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-art :is(.mz-product-photo, .mz-art-photo) { width: 48px; height: 48px; object-fit: contain; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-nm {
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong); color: var(--k-ink-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sgst-sub {
+  display: flex; align-items: baseline; gap: 10px; min-width: 0;
+  font-size: var(--k-fs-footnote); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-maison .mz-sgst-cd {
+  font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--k-ink-3);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mz-sgst-cd, .mz-sgst-nm) b { font-weight: var(--k-fw-body-strong); color: var(--k-ink-1); }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-end { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-pz {
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); color: var(--k-ink-1);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+html[data-skin-2027="till"] #pos-maison .mz-sgst-pz s { color: var(--k-ink-3); font-weight: var(--k-fw-footnote); }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-st { font-size: var(--k-fs-footnote); color: var(--k-ink-3); white-space: nowrap; }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-st.out { color: var(--k-danger); }
+html[data-skin-2027="till"] #pos-maison .mz-sgst-none {
+  padding: 20px 12px; text-align: center; font-size: var(--k-fs-callout); color: var(--k-ink-2);
+}
+
+/* ═══════════════ LES RAYONS ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-cat {
+  min-height: 44px; border-radius: 999px;
+  border: 1px solid var(--k-line);
+  background-color: var(--k-surface-1);
+  color: var(--k-ink-2);
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout);
+}
+html[data-skin-2027="till"] #pos-maison .mz-cat:hover { border-color: var(--k-line-strong); color: var(--k-ink-1); }
+/* Le rayon choisi : l'accent du kit, pas le noir livré. */
+html[data-skin-2027="till"] #pos-maison :is(.mz-cat.on, .mz-cat.is-promo.on) {
+  background-color: var(--k-accent); border-color: var(--k-accent); color: var(--k-on-accent);
+}
+html[data-skin-2027="till"] #pos-maison .mz-cat-ct {
+  background-color: var(--k-surface-2); color: var(--k-ink-2);
+  font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+}
+html[data-skin-2027="till"] #pos-maison .mz-cat.on .mz-cat-ct {
+  background-color: var(--k-accent-pressed);
+  color: var(--k-on-accent);
+}
+/* Le titre de rayon du restaurant (till.js, .hd k-heading) : un titre, pas
+   de filet. Aucun trait ne sépare les rayons au restaurant. */
+html[data-skin-2027="till"] #pos-maison .mz-cat-head {
+  font-family: var(--k-font); letter-spacing: var(--k-track-heading);
+  text-transform: none; font-size: var(--k-fs-heading); line-height: var(--k-lh-heading);
+  font-weight: var(--k-fw-heading); color: var(--k-ink-1);
+  padding: 24px 0 12px;
+}
+html[data-skin-2027="till"] #pos-maison .mz-cat-head::after { display: none; }
+
+/* ═══════════════ LA GRILLE ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--k-grid-gap);
+}
+html[data-skin-2027="till"] #pos-maison .mz-card {
+  min-height: 132px;
+  padding: var(--k-space-4) var(--k-space-3) var(--k-space-3);
+  background-color: var(--k-surface-1);
+  /* Le pavé du restaurant n'a AUCUN contour (till.js, .tile) : la carte se
+     détache du fond par sa seule couleur. Le filet gris faisait la carte
+     « dessinée » à côté de lui (propriétaire, 2026-10-28). */
+  border: 0;
+  border-radius: var(--k-r-3);
+}
+html[data-skin-2027="till"] #pos-maison .mz-card:hover {
+  transform: none; box-shadow: none; border: 0;
+}
+html[data-skin-2027="till"] #pos-maison .mz-card-art {
+  background-color: var(--k-surface-2); border-radius: var(--k-r-2); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-maison .mz-card-name {
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison .mz-card-price {
+  font-size: var(--k-fs-footnote); color: var(--k-ink-2);
+}
+
+/* ═══════════════ LE TICKET ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-ticket {
+  background-color: var(--k-surface-1); border-left: 1px solid var(--k-line);
+}
+html[data-skin-2027="till"] .kiwi-rtl #pos-maison .mz-ticket { border-left: 0; border-right: 1px solid var(--k-line); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-title {
+  font-size: var(--k-fs-heading); font-weight: var(--k-fw-heading); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison .mz-tk-num { color: var(--k-ink-3); font-size: var(--k-fs-footnote); }
+html[data-skin-2027="till"] #pos-maison :is(.mz-tk-meta, .mz-tk-foot) { border-color: var(--k-line); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-foot { background-color: var(--k-surface-1); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-row {
+  min-height: 56px; border-radius: var(--k-r-2);
+  border: 1px solid var(--k-line); background-color: var(--k-surface-1); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-maison .mz-tk-row:hover { background-color: var(--k-surface-2); border-color: var(--k-line-strong); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-row.is-set {
+  border-color: var(--k-accent); background-color: var(--k-accent-tint); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mz-tk-row.is-set svg, .mz-tk-row .edit) { color: var(--k-accent-ink); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-empty { color: var(--k-ink-3); font-size: var(--k-fs-callout); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-tot { color: var(--k-ink-3); font-size: var(--k-fs-footnote); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-tot .rem { color: var(--k-warning); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-tot .rem.rew { color: var(--k-accent-ink); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-total .lbl { color: var(--k-ink-2); font-size: var(--k-fs-callout); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-total .val {
+  font-size: var(--k-fs-title); font-weight: var(--k-fw-title);
+  letter-spacing: var(--k-track-title); color: var(--k-ink-1);
+}
+
+/* ═══════════════ ENCAISSER ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-validate {
+  min-height: 56px; border-radius: var(--k-r-2);
+  background-color: var(--k-accent); color: var(--k-on-accent);
+  box-shadow: var(--k-shadow-1);
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
+  letter-spacing: var(--k-track-body);
+}
+html[data-skin-2027="till"] #pos-maison .mz-validate:hover { background-color: var(--k-accent-pressed); }
+html[data-skin-2027="till"] #pos-maison .mz-validate:disabled { opacity: 0.4; box-shadow: none; }
+
+/* ═══════════════ PRIMITIVES PARTAGÉES (les six autres vues) ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-btn {
+  min-height: 44px; border-radius: var(--k-r-2);
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+  border-color: var(--k-line);
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mz-btn.primary, .mz-btn.is-done) {
+  background-color: var(--k-accent); color: var(--k-on-accent); box-shadow: var(--k-shadow-1);
+}
+html[data-skin-2027="till"] #pos-maison .mz-chip {
+  min-height: 36px; border-radius: 999px;
+  background-color: var(--k-surface-2); color: var(--k-ink-2); border-color: var(--k-line);
+}
+html[data-skin-2027="till"] #pos-maison .mz-empty { color: var(--k-ink-3); font-size: var(--k-fs-callout); }
+html[data-skin-2027="till"] #pos-maison :is(.mz-seg-it.on, .mz-split-c.is-on, .mz-reward-row.is-on, .mz-prc-scope.on) {
+  background-color: var(--k-accent); border-color: var(--k-accent); color: var(--k-on-accent);
+}
+html[data-skin-2027="till"] #pos-maison :is(.mz-prc-scope.on svg) { color: var(--k-on-accent); }
+/* Pas de color-mix : le kit n'en emploie nulle part, et le WebKit des
+   tablettes en service ici n'est pas garanti. Une opacité fait le même ton. */
+html[data-skin-2027="till"] #pos-maison .mz-reward-row.is-on .l span,
+html[data-skin-2027="till"] #pos-maison .mz-seg-it.on small {
+  color: var(--k-on-accent); opacity: 0.78;
+}
+html[data-skin-2027="till"] #pos-maison .modal { border-radius: var(--k-r-3); background-color: var(--k-surface-1); color: var(--k-ink-1); }
+
+/* Le focus visible du kit, sur tout ce qui se touche. */
+html[data-skin-2027="till"] #pos-maison :is(button, input, select, textarea):focus-visible {
+  outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE RAIL — remplacé, pas repeint (§10.20, §18.3)
+
+   La caisse restaurant ne repeint jamais sa barre livrée : elle monte le rail
+   du kit dans une boîte neuve et éteint l'ancienne (assets/caisse/till-frame.js
+   › tillKitOn ; assets/kit/kit.css › `html[data-k-till] .sidebar{display:none}`).
+   La boutique fait exactement pareil, pour la même raison : la barre livrée
+   est SOMBRE, donc son logo est la version inverse et le nom du magasin est en
+   #fff. La repeindre en clair laissait le logo blanc sur blanc et le nom
+   invisible, et la colonne imposée aux libellés en ligne les faisait se
+   chevaucher (propriétaire, 2026-10-28). Une barre qui ne peint plus n'a aucun
+   de ces défauts, et il n'y a plus une seule couleur livrée à rattraper.
+
+   #mz-nav reste dans le DOM, sans pixels : la délégation de clic du métier
+   (pos-boutique.js › switchView) y vit, et le panneau Plus est son enfant.
+   ═══════════════════════════════════════════════════════════════════════════ */
+html[data-skin-2027="till"] #pos-maison > #mz-kit-rail {
+  position: absolute;
+  top: 0; bottom: 0; inset-inline-start: 0;
+  width: 88px;
+  z-index: 5;
+}
+html[data-skin-2027="till"] #pos-maison > .mz-rail {
+  width: 0; flex: 0 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: visible;
+}
+html[data-skin-2027="till"] #pos-maison > .mz-rail > :not(#mz-nav) { display: none; }
+html[data-skin-2027="till"] #pos-maison #mz-nav {
+  display: block;
+  width: 0;
+  padding: 0;
+  gap: 0;
+}
+/* Les destinations livrées restent cliquables par programme (bqKitRail clique
+   le bouton d'origine) ; elles ne sont simplement plus dessinées. Seul le
+   panneau Plus, qui est leur nouveau foyer, se voit. */
+html[data-skin-2027="till"] #pos-maison #mz-nav > :not(.mz-more) { display: none; }
+html[data-skin-2027="till"] #pos-maison > .mz-main { left: 88px; right: 0; }
+html[data-skin-2027="till"] .kiwi-rtl #pos-maison > .mz-main,
+html[data-skin-2027="till"] #pos-maison.kiwi-rtl > .mz-main { left: 0; right: 88px; }
+
+/* Plus : le panneau sombre, la même barre noire que le restaurant montre.
+   Les commandes déplacées y gardent EXACTEMENT leur dessin livré — elles sont
+   nées pour un fond sombre et elles en retrouvent un. Pas une couleur écrite
+   ici, donc pas de blanc sur blanc à refaire. */
+/* Il s'ouvre À LA PLACE du rail blanc, bord gauche, comme le restaurant
+   (kit.css › html[data-k-till-more] .sidebar) — pas à côté de lui. */
+html[data-skin-2027="till"] #pos-maison .mz-more {
+  position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
+  width: 276px; z-index: 60;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  background-color: var(--ink-bg);
+  box-shadow: var(--k-shadow-2);
+}
+
+/* ─── Le tiroir est le rail DÉPLIÉ, pas une liste ───────────────────────
+   Le restaurant pose un vrai <k-sidebar> du kit sur le fond sombre, marque
+   en tête, destinations à pleine taille, commandes en section nommée
+   (assets/caisse/till-frame.js). La boutique fait pareil : les rangées
+   viennent du kit, chacune clique le bouton LIVRÉ — qui reste donc en place
+   mais n'a plus à se peindre. Pas un bouton retiré, pas un geste perdu. */
+/* Éteindre SANS nommer : le tiroir ne garde que le nav du kit, le bandeau de
+   marque et le sélecteur de langue ; tout le reste de ses enfants livrés
+   s'efface, quelle que soit sa classe. Citer .mz-nav-it ou .mz-lock ici
+   rouvrirait la porte au repeint que boutique-2027-test interdit — et la
+   règle a raison : une barre livrée s'éteint, elle ne se redessine pas. */
+html[data-skin-2027="till"] #pos-maison .mz-more > :not(k-sidebar, .mz-more-brand, .kcl) { display: none; }
+html[data-skin-2027="till"] #pos-maison .mz-more > k-sidebar { display: block; }
+
+/* Une seule ligne : le logo à sa vraie proportion (mot-symbole ~1,8:1, il
+   s'écrasait dans un carré de 28px), et l'état de service poussé au bout de
+   la même ligne, aligné sur les lettres « kiwi » (le bas du logo, la feuille
+   au-dessus) — propriétaire, 2026-10-28 : collé au logo il faisait bizarre,
+   calé en haut il flottait au-dessus. margin-inline-start le renvoie à gauche
+   en arabe. Sans nom d'enseigne, sa case se tait. */
+html[data-skin-2027="till"] #pos-maison .mz-more-brand {
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 6px;
+  padding: 4px 12px 16px;
+}
+html[data-skin-2027="till"] #pos-maison .mz-more-logo { height: 34px; width: auto; flex: none; }
+html[data-skin-2027="till"] #pos-maison .mz-more-venue:empty { display: none; }
+/* Le nom de l'enseigne passe SOUS la ligne logo · état : à côté, il
+   coupait « En service » en deux. */
+html[data-skin-2027="till"] #pos-maison .mz-more-venue {
+  order: 3; flex: 1 0 100%; min-width: 0;
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
+  color: var(--k-ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-skin-2027="till"] #pos-maison .mz-more-live {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  margin-inline-start: auto; align-self: flex-end;
+  font-size: var(--k-fs-footnote); color: var(--k-ink-2);
+}
+html[data-skin-2027="till"] #pos-maison .mz-more-live i {
+  width: 7px; height: 7px; border-radius: 50%; background-color: var(--k-accent);
+}
+/* Ce qui n'est pas une rangée garde sa forme : la langue est un interrupteur
+   à trois voies, pas un lien. Elle tient le pied du tiroir — par `order`, et
+   non en la déplaçant : son module la réinsère après notre montage, et un
+   nœud déplacé serait remonté en tête au premier rendu. */
+/* L'écart au-dessus de la langue vient du nav, pas d'un rembourrage DANS la
+   pastille : celui-ci descendait les trois boutons et déséquilibrait la
+   boîte (propriétaire, 2026-10-28). Trois cases égales, une hauteur, le ع
+   sur la même ligne que FR et EN. */
+html[data-skin-2027="till"] #pos-maison .mz-more > k-sidebar { margin-block-end: 16px; }
+html[data-skin-2027="till"] #pos-maison .mz-more > .kcl {
+  order: 99; margin-block-start: auto; flex: none;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  padding: 4px; border: 0; border-radius: var(--k-r-3);
+  background-color: var(--k-surface-2);
+}
+html[data-skin-2027="till"] #pos-maison .mz-more > .kcl .kcl-it {
+  display: flex; align-items: center; justify-content: center;
+  height: 40px; padding: 0; border-radius: var(--k-r-2);
+  font-family: var(--k-font); font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+  line-height: 1; letter-spacing: 0.04em;
+  color: var(--k-ink-2); box-shadow: none;
+}
+html[data-skin-2027="till"] #pos-maison .mz-more > .kcl .kcl-it[lang="ar"] {
+  font-size: var(--k-fs-body); letter-spacing: 0;
+}
+html[data-skin-2027="till"] #pos-maison .mz-more > .kcl .kcl-it.on {
+  background-color: var(--k-accent-tint); color: var(--k-accent-ink);
+}
+html[data-skin-2027="till"] #pos-maison .mz-more[hidden] { display: none; }
+/* Plus ouvert depuis Clients : le carnet (#kcb-root, 940, posé sur <body>)
+   passait au-dessus de tout l'écran boutique (90), panneau compris, qui
+   s'ouvrait coupé derrière la page (propriétaire, 2026-10-28). Le temps que
+   Plus est ouvert, l'écran boutique monte au-dessus du carnet ; si le carnet
+   est ouvert, la vente sous lui s'efface et le fond devient transparent, pour
+   que le voile tombe sur la page Clients et pas sur l'écran de vente. */
+html[data-skin-2027="till"][data-mz-more] #pos-maison { z-index: 950; }
+html[data-skin-2027="till"][data-mz-more][data-kcb-open] #pos-maison { background-color: transparent; }
+html[data-skin-2027="till"][data-mz-more][data-kcb-open] #pos-maison > .mz-main { visibility: hidden; }
+/* Le voile : celui du restaurant (#kit-more-scrim), même teinte, même
+   entrée. Il n'existe que tant que le panneau est ouvert. */
+html[data-skin-2027="till"] #pos-maison #mz-nav > .mz-more-scrim { display: none; }
+html[data-skin-2027="till"] #pos-maison #mz-nav > .mz-more:not([hidden]) + .mz-more-scrim {
+  display: block;
+  position: fixed; inset: 0; z-index: 59;
+  background-color: var(--k-scrim);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-skin-2027="till"] #pos-maison #mz-nav > .mz-more:not([hidden]) {
+    animation: mz-more-in var(--k-dur-4) var(--k-glide) both;
+  }
+  html[data-skin-2027="till"] #pos-maison #mz-nav > .mz-more:not([hidden]) + .mz-more-scrim {
+    animation: mz-scrim-in var(--k-dur-4) var(--k-glide) both;
+  }
+  html[data-skin-2027="till"][dir="rtl"] #pos-maison #mz-nav > .mz-more:not([hidden]),
+  html[data-skin-2027="till"] .kiwi-rtl #pos-maison #mz-nav > .mz-more:not([hidden]),
+  html[data-skin-2027="till"] #pos-maison.kiwi-rtl #mz-nav > .mz-more:not([hidden]) { animation-name: mz-more-in-rtl; }
+}
+@keyframes mz-more-in { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes mz-more-in-rtl { from { opacity: 0; transform: translateX(24px); } }
+@keyframes mz-scrim-in { from { opacity: 0; } }
+/* La colonne flex étire DÉJÀ ses enfants en flux : écrire width:100% ici
+   touchait aussi un enfant volontairement masqué — #mz-net porte
+   .kcl-hidden-net (1 px, détouré, en position absolue) — qui reprenait alors
+   toute la largeur du panneau et venait se poser par-dessus sa première
+   ligne. Un helper « masqué visuellement » ne se contredit pas depuis une
+   autre feuille : l'étirement reste au flex, qui ignore le hors-flux. */
+html[data-skin-2027="till"] #pos-maison .mz-more > * { margin: 0; }
+
+/* ═══════════════ LES CARTES, À LA GÉOMÉTRIE DU KIT ═══════════════
+   k-menu-grid (till.js) : minmax(150px, 1fr), écart 16, pavé 112 de haut,
+   coussin 16, photo 64 × 64 « contain » centrée, nom en gras aligné au début
+   sur deux lignes, prix en encre 2. La carte livrée portait déjà la photo
+   (productVisual → .mz-product-photo) : c'est la géométrie qui manquait. */
+html[data-skin-2027="till"] #pos-maison .mz-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+html[data-skin-2027="till"] #pos-maison .mz-card {
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 112px;
+  padding: 16px;
+  border-radius: var(--k-r-3);
+  text-align: start;
+}
+html[data-skin-2027="till"] #pos-maison .mz-card-art {
+  width: 64px; height: 64px;
+  align-self: center;
+  background: none; border-radius: 0;
+}
+/* Sans photo du commerçant, la carte montre une photo détourée choisie par le
+   nom (product-photos.js), à la taille des plats de la caisse restaurant :
+   64 px, sans fond (propriétaire, 2026-10-28). */
+html[data-skin-2027="till"] #pos-maison .mz-card-art .mz-art-photo { width: 64px; height: 64px; }
+html[data-skin-2027="till"] #pos-maison .mz-product-photo {
+  width: 64px; height: 64px; object-fit: contain; display: block;
+}
+html[data-skin-2027="till"] #pos-maison .mz-card.is-out .mz-card-art { opacity: 0.45; }
+/* La pression du pavé du kit (.tile:active, till.js) : sur une tablette c'est
+   la moitié de la sensation de qualité, et elle ne coûte rien. */
+html[data-skin-2027="till"] #pos-maison .mz-card {
+  transition: transform var(--k-dur-4) var(--k-spring);
+}
+html[data-skin-2027="till"] #pos-maison .mz-card:active:not([aria-disabled="true"]) {
+  transform: scale(0.97);
+  transition-duration: var(--k-dur-1); transition-timing-function: var(--k-glide);
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin-2027="till"] #pos-maison .mz-card,
+  html[data-skin-2027="till"] #pos-maison .mz-card:active { transition: none; transform: none; }
+}
+/* Le nom du restaurant est au pas Body (17 px), pas Callout (15) : mesurés
+   côte à côte, c'était la SEULE différence de texte entre les deux grilles —
+   coussin, rayon, fond, écart, colonnes et prix étaient déjà identiques. */
+html[data-skin-2027="till"] #pos-maison .mz-card-name {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong);
+}
+html[data-skin-2027="till"] #pos-maison .mz-card-price { font-size: var(--k-fs-callout); color: var(--k-ink-2); }
+/* Un téléphone couché a la place d'une rangée de pavés, pas de photos (kit). */
+@media (max-height: 500px) {
+  html[data-skin-2027="till"] #pos-maison .mz-card-art { display: none; }
+}
+
+/* ═══════════════ CLIENTES, À PLAT ═══════════════
+   Le carnet clients (clients-book/base.js) flotte sur le rail : coin
+   arrondi, filet, ombre. Les autres pages de la boutique sont à plat, le
+   carnet aussi (propriétaire, 2026-10-28). Portée : la boutique seulement
+   (body.is-pos-boutique) — le restaurant garde son carnet tel quel. */
+html[data-skin-2027="till"] body.is-pos-boutique > #kcb-root {
+  border-inline-start: 0;
+  border-start-start-radius: 0;
+  box-shadow: none;
+}
+
+/* ═══════════════ INVENTAIRE, PLEINE LARGEUR ═══════════════
+   La vue est une rangée flex ; .bqi (checkout.js › injectInvCss) n'y
+   demandait que la largeur de son contenu — ~930 px, le reste de l'écran
+   vide, la barre de défilement au milieu (propriétaire, 2026-10-28).
+   Échanges et Clientes remplissent déjà la rangée : l'inventaire aussi. */
+html[data-skin-2027="till"] #pos-maison .mz-view > .bqi { flex: 1 1 auto; min-width: 0; }
+
+/* ═══════════════ LE TICKET, PLUS LARGE ET PLUS CALME ═══════════════ */
+html[data-skin-2027="till"] #pos-maison .mz-ticket { width: 400px; flex: 0 0 400px; }
+html[data-skin-2027="till"] #pos-maison .mz-tk-lines { padding: 12px 18px; gap: 8px; }
+html[data-skin-2027="till"] #pos-maison .mz-tk-foot { padding: 16px 18px 20px; gap: 12px; }
+html[data-skin-2027="till"] #pos-maison .mz-tk-meta { padding: 12px 18px 14px; }
+
+/* ═══════════ LE PIED DU TICKET, COMME AU RESTAURANT ═══════════
+   Le restaurant montre un ticket NU : pas d'en-tête « Ticket · n° · par X »,
+   pas de carte « Attacher une cliente » posée en haut, pas de pictogramme
+   dans l'état vide, pas de ligne « 0 article ». Juste les lignes, le total,
+   deux boutons secondaires et l'encaissement — et c'est ce que la
+   propriétaire a demandé (2026-10-28).
+
+   Rien n'est SUPPRIMÉ : le balisage livré reste en place, seul son affichage
+   s'éteint. « Attacher une cliente » redescend dans le bouton « Clientes » du
+   pied, qui clique ce même bouton livré (kit-2027.js) ; la rangée garde donc
+   son écouteur, son modal et sa logique. Le pied livré et sa pastille verte
+   s'effacent au profit des <k-button> du kit, pour que les couleurs soient
+   CELLES du restaurant et non une imitation. */
+html[data-skin-2027="till"] #pos-maison #mz-tk-client,
+html[data-skin-2027="till"] #pos-maison .mz-tk-empty-ic,
+html[data-skin-2027="till"] #pos-maison .mz-tk-tot .pcs { display: none; }
+/* .mz-tk-meta ne porte plus que la récompense fidélité : sans elle, pas de
+   bande vide au-dessus des lignes. */
+html[data-skin-2027="till"] #pos-maison .mz-tk-meta:not(:has(> :not(#mz-tk-client))) { display: none; }
+/* L'en-tête perd son TEXTE, pas sa rangée. « Ticket · n° · par X » s'en va,
+   mais elle porte aussi deux boutons qu'on ne peut pas perdre : « Vider »,
+   et surtout « Réessayer » — le seul chemin pour rattraper un numéro de
+   ticket non attribué. Les éteindre laissait la caissière devant
+   « numéro indisponible » sans recours. La rangée ne disparaît donc que
+   lorsqu'elle ne porte plus rien d'actionnable. (Rattrapé par
+   skin-matrix-browser-test : « gone button#mz-tk-reset ».) */
+html[data-skin-2027="till"] #pos-maison .mz-tk-head > div:first-child { display: none; }
+html[data-skin-2027="till"] #pos-maison .mz-tk-head:not(:has(button)) { display: none; }
+html[data-skin-2027="till"] #pos-maison .mz-tk-head:has(button) {
+  justify-content: flex-end; padding: 12px 18px 0; border: 0;
+}
+/* Le ticket vide du restaurant (<k-bill> .em) : un titre, une ligne, centrés. */
+html[data-skin-2027="till"] #pos-maison .mz-tk-empty { padding: 48px 16px; text-align: center; color: var(--k-ink-1); }
+html[data-skin-2027="till"] #pos-maison .mz-tk-empty p { margin: 4px 0; }
+html[data-skin-2027="till"] #pos-maison .mz-tk-empty .k-heading { color: var(--k-ink-1); }
+
+/* Le bouton livré porte toujours la logique ; c'est le primaire du kit qui
+   le montre. On le sort du flux sans le masquer : un display:none le rendrait
+   inatteignable au clavier des bancs qui le pilotent encore. */
+html[data-skin-2027="till"] #pos-maison #mz-validate {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* La grille du restaurant : deux secondaires côte à côte (assets/kit/till.js,
+   .sec2), puis le primaire pleine largeur juste dessous. */
+html[data-skin-2027="till"] #pos-maison #mz-kit-tkacts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+html[data-skin-2027="till"] #pos-maison #mz-kit-tkacts k-button { width: 100%; }
+
+/* ═══════════════ LA MAISON EN PLUS ═══════════════
+   Ce que la boutique n'a pas, ou dessine ailleurs. */
+
+/* La liste de recherche de l'Inventaire : la boutique la place depuis
+   inv-tools.js › invCss ; la maison la reçoit seulement sous la peau, donc
+   la place ici. La barre devient l'ancre, la liste prend au moins 520 px. */
+html[data-skin-2027="till"] #pos-maison .mzi-scan { position: relative; z-index: 5; }
+html[data-skin-2027="till"] #pos-maison .mzi-tools { flex-wrap: wrap; row-gap: 10px; }
+html[data-skin-2027="till"] #pos-maison .mzi-tools > .mzi-scan { flex: 1 1 240px; min-width: 200px; }
+html[data-skin-2027="till"] #pos-maison .mzi-tools > .mzi-scan input { min-width: 0; width: 100%; }
+html[data-skin-2027="till"] #pos-maison #mzi-sgst { inset-inline-end: auto; width: max(100%, 520px); max-width: calc(100vw - 140px); }

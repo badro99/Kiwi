@@ -1,7 +1,8 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=36';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=36';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=36';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=37';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=37';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=37';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair } from './pos-boutique/z-split.js?v=1'; import { mzLivraisons } from './pos-maison/delivery.js?v=1';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=3';
 
   'use strict';
 
@@ -1622,6 +1623,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       sellEan.value = '';
       if (v) commitEan(v);
     });
+    wireSellSearch($('.mz-sell-scan', root), sellEan);   // peau 2027 : la liste qui répond au 1er chiffre
     /* Même barre, sans douchette : la caméra dépose l'article sur le ticket. */
     const sellCam = $('#mz-sell-cam', root);
     if (sellCam) sellCam.onclick = () => openCamScan(commitEan);
@@ -1747,6 +1749,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
 
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
+    mzKitRail(root, $, icons, mzKitReady(), (STAFF.caissiere && STAFF.caissiere.name) || '');   // peau 2027 : le rail de la boutique
     bqMaybeOpenScreen();
   }
 
@@ -1800,6 +1803,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     $$('.mz-view', root).forEach((p) => p.classList.toggle('is-on', p.dataset.mzPanel === view));
     renderView(view);
     icons();
+    mzKitRailPaint();   // la lentille du rail du kit suit la destination
     /* Le registre local s'affiche tout de suite, puis se rapproche du serveur.
        Une synchronisation lente ne doit jamais bloquer l'ouverture du rayon. */
     if (view === 'mouvements' && !state.movementSyncing && window.KiwiInventory?.sync) {
@@ -1841,6 +1845,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     set('#mz-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
     const invBadge = $('#mz-badge-inv', root);
     if (invBadge) { const st = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.stats() : null; const n = st ? st.ruptures + st.low : 0; invBadge.textContent = n || ''; invBadge.style.display = n ? '' : 'none'; }
+    mzKitRailPaint();   // le rail du kit lit ses compteurs sur ces pastilles
   }
   function headSubVente() {
     // Le compte de ventes suit la même règle que la recette : la journée, pas la
@@ -2659,7 +2664,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     const btnOpen = el.querySelector('#bqci-btn');
     const hint = el.querySelector('#bqci-hint');
     const last = el.querySelector('#bqci-last');
-    const gate = () => { if (btnOpen) btnOpen.disabled = !chosen; if (hint) hint.hidden = chosen; };
+    const gate = () => { const kit = mzKitReady(); el.classList.toggle('mz-float-kit', kit); if (btnOpen) btnOpen.disabled = !chosen && !kit; if (hint) hint.hidden = chosen || kit; };
 
     /* Restitution du dernier fond utilisé par CE magasin. */
     let saved = NaN;
@@ -2715,6 +2720,8 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     const timer = setInterval(tick, 10000);
 
     el.querySelector('#bqci-btn').addEventListener('click', () => {
+      /* Sous la peau, le tiroir se compte dans la feuille du kit ; le montant compté suit le chemin livré. */
+      if (!chosen && mzKitFloat(el, bqFloatMemKey(), (v) => { bqFloat = v; chosen = true; remember(); gate(); el.querySelector('#bqci-btn').click(); })) return;
       if (!chosen) { gate(); return; }
       el.querySelector('#bqci-btn').classList.add('is-confirmed');
       icons();

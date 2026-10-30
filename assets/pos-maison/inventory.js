@@ -1,6 +1,7 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=116';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=36';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=36';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=117';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=37';
+import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=3';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=37';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 
 
@@ -859,6 +860,8 @@ import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-ac
       </div>`;
     const scan = $('#mzi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
+    mzInvSearch($('.mzi-scan', panel), scan, mzSkinOn(), { code: (c) => invScanHandle(c), open: (pid) => openInvProduct(pid), money: fmtMAD, esc, icons, artOf,
+      catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, colorLabel, availableStock: (pid, size) => (P[pid] && P[pid].sizes && P[pid].sizes[size]) || 0 }) });   // peau 2027 : la liste de la boutique
     const cb = $('#mzi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'maison' });
     const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#mzi-new', panel); if (nb) nb.onclick = openNewProduct;

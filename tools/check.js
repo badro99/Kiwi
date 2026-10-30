@@ -731,6 +731,8 @@ for (const test of [
      tout le blanc du rail livré repris — sans quoi on refait le blanc sur
      blanc du fond d'ouverture (propriétaire, 2026-10-27). */
   'boutique-2027-test.mjs',
+  /* La caisse maison (art de table) porte la même peau, traduite au préfixe mz- (propriétaire, 2026-10-30). */
+  'maison-2027-test.mjs',
   /* Les skins se rencontrent dans le navigateur : tableau de bord, caisse restaurant
      et boutique, dans chaque skin, thème et taille, peignent le thème annoncé,
      sans italique ni contrôle transparent, avec le style calculé revu. */

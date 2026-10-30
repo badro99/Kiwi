@@ -1,8 +1,9 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=116';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=36';
-import { invSetModal, offerRegister } from './inventory.js?v=36';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=117';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=37';
+import { invSetModal, offerRegister } from './inventory.js?v=37';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=4';
+import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=3';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -528,8 +529,18 @@ import { photoImg } from '../retail-photos.js?v=4';
       }
       renderTicket(); renderGrid(); renderBadges(); icons();
     };
+    /* Peau 2027 : le pied du ticket de la boutique (Clients, puis Encaisser
+       pleine largeur), remonté à CHAQUE rendu. Pas de remise de ticket ici. */
+    mzKitTicketFoot(el, $, icons, mzSkinOn(), { clientLabel: mzClientLabel(t, clById, firstName) });
     icons();
   }
+  /* Peau 2027 : la barre de vente répond dès le premier chiffre tapé, comme la
+     boutique. La douchette garde son chemin (commitEan), la tuile le sien. */
+  const wireSellSearch = (bar, input) => mzSellSearch(bar, input, mzSkinOn(), {
+    commit: commitEan, money: fmtMAD, esc, icons, artOf,
+    open: (pid) => openSheet(pid, state.exchange ? { exchange: true } : null),
+    catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, colorLabel, availableStock: (pid, size) => (P[pid] && P[pid].sizes && P[pid].sizes[size]) || 0 }),
+  });
 
   function lineRow(ln, i) {
     const p = P[ln.pid];
@@ -2447,4 +2458,4 @@ import { photoImg } from '../retail-photos.js?v=4';
       lookupScan(code);
     }, 620);
   }
-export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };
+export { wireSellSearch, $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };

@@ -123,7 +123,8 @@
         "two_wheeler",
         "upload",
         "warning",
-        "wifi_off"
+        "wifi_off",
+        "history"
       ]
     },
     "access": {
