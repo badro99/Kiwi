@@ -29,6 +29,8 @@
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=1'] },
     economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=22'] },
+    /* « Ouvrir la caisse » on the PIN lock: the store picker and the opening ticket. */
+    lock: { dependencies: [], scripts: ['assets/lock-till.js?v=3'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url) {
@@ -59,6 +61,18 @@
     return request;
   }
   window.KiwiDashboardLoader = Object.freeze({ load });
+  /* The lock is on screen at boot: fetch its picker now. A click that lands
+     first waits for it, then plays again (lock-till.js takes it from there,
+     or leaves the plain link on the demo). */
+  if (document.querySelector?.('.kiwi-lock-caisse')) load('lock').catch(() => {});
+  window.addEventListener('click', event => {
+    if (ready.has('lock')) return;
+    const a = event.target.closest?.('.kiwi-lock-caisse');
+    if (!a?.classList?.contains('kiwi-lock-caisse')) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    load('lock').then(() => { if (a.isConnected) a.click(); }, () => { location.href = a.href; });
+  }, true);
   let replaying = false;
   function firstUse(event, target, activate) {
     event.preventDefault();

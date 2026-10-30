@@ -200,8 +200,8 @@
     "sha": "a86d8fbc93277e43"
   },
   "assets/caisse-link.js": {
-    "v": "22",
-    "sha": "f1f66d079256cd91"
+    "v": "23",
+    "sha": "e79b945d05dec595"
   },
   "assets/caisse-loyalty-reward.js": {
     "v": "7",
@@ -1111,6 +1111,10 @@
     "v": "5",
     "sha": "6eafebc8cf4650ee"
   },
+  "assets/lock-till.js": {
+    "v": "3",
+    "sha": "d2e9f5cca84486b3"
+  },
   "assets/loyalty-product-links.js": {
     "v": "1",
     "sha": "6f816661c3aafb8b"
@@ -1188,8 +1192,8 @@
     "sha": "c3b4d4e1a0c753d4"
   },
   "assets/merchant-config.js": {
-    "v": "285",
-    "sha": "ed4daeb2dfce0f31"
+    "v": "286",
+    "sha": "d3a68d5645fc4975"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1360,12 +1364,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "30",
-    "sha": "3eaee9016797b178"
+    "v": "35",
+    "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "104",
-    "sha": "6083f7929ca9fb52"
+    "v": "105",
+    "sha": "e0ce44b19a5f0694"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1916,8 +1920,8 @@
     "sha": "b5ec8044f1b088eb"
   },
   "assets/staff-roles.js": {
-    "v": "2",
-    "sha": "82c6873cb372c635"
+    "v": "3",
+    "sha": "a682369cf53e1474"
   },
   "assets/starter-copy.js": {
     "v": "1",

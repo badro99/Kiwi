@@ -1514,9 +1514,20 @@ export function employeeRoleOpensTill(value) {
   const role = normEmployeeRole(value);
   return new Set([
     'caisse', 'caissier', 'caissiere', 'cashier',
-    'manager', 'management', 'gerant', 'gerante', 'responsable', 'responsable rayon',
+    'manager', 'management', 'gerant', 'gerante', 'responsable', 'responsable rayon', 'rayon',
     'proprietaire', 'owner', 'patron', 'patronne', 'direction', 'directeur', 'directrice', 'admin',
     'staff',
+    /* The people who SELL at the counter (owner report, 30 Oct 2026). A
+     * boutique's « Vendeur conseil » rings up the sale; leaving sales roles off
+     * this list silently dropped Santos's two sellers from staff_pins, and their
+     * codes opened nothing. Named roles only, same rule as above: kitchen,
+     * floor, stock and back-office titles still open no till. Mirror:
+     * assets/staff-roles.js › TILL, held equal by tools/till-role-parity-test.mjs. */
+    'vendeur', 'vendeuse', 'vente', 'vendeur conseil', 'vendeuse conseil', 'conseiller', 'conseillere',
+    'conseiller de vente', 'conseillere de vente', 'libraire', 'fleuriste',
+    'pharmacien titulaire', 'titulaire', 'pharmacien assistant', 'pharmacien', 'pharmacienne',
+    'receptionniste', 'reception', 'agent de reception',
+    'equipier', 'equipier polyvalent', 'equipier food truck', 'barista', 'comptoir',
   ]).has(role);
 }
 

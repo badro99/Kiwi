@@ -1120,7 +1120,7 @@
 <script defer src="assets/channel-sales.js?v=8"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=285"></script>
+<script defer src="assets/merchant-config.js?v=286"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=7">
@@ -1144,7 +1144,7 @@
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
-<script src="assets/caisse-link.js?v=22" defer></script>
+<script src="assets/caisse-link.js?v=23" defer></script>
 <!-- Below: user-triggered surfaces · not needed for first paint. -->
 <script src="assets/ai-telemetry.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-data.js?v=7" defer fetchpriority="low"></script>
@@ -1241,7 +1241,7 @@
 
 <script src="assets/clients-directory.js?v=30" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=18" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=104" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=105" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1268,10 +1268,10 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=104"></script>
+<script src="assets/pages/dashboard-startup.js?v=105"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=13">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
-<script src="assets/pages/dashboard-loader.js?v=30" defer fetchpriority="low"></script>
+<script src="assets/pages/dashboard-loader.js?v=35" defer fetchpriority="low"></script>
 <script src="assets/trade-workspace-schema.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/trade-workspaces.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/delivery-receivables.js?v=2" defer fetchpriority="low"></script>

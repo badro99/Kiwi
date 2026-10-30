@@ -325,9 +325,27 @@
    * stores, and is refused if it is not one of them. Fire-and-forget + fail-safe:
    * on a static host (GitHub Pages, local) or offline the POST just fails and
    * nothing changes. `pins` is the client's local shape [{ role, name, code }]. */
+  /* In operator view (God mode on a merchant, the 'scoped' venue) there is no
+   * owner session, so POST /api/config answers 401. The roster goes to the
+   * operator route instead, with the console's authority
+   * (functions/api/admin/roster.js). No confirmed slug, nothing is sent. */
+  function operatorView() {
+    try { var v = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); return !!(v && v.id === 'scoped'); }
+    catch (_) { return false; }
+  }
   function syncPins(pins) {
     if (!Array.isArray(pins)) return Promise.resolve(false);
-    return post({ pins: pins }).then(function (r) {
+    var send;
+    if (operatorView()) {
+      var scope = storeSlug();
+      if (!scope) return Promise.resolve(false);
+      send = fetch('/api/admin/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ merchant: scope, pins: pins }),
+      });
+    } else send = post({ pins: pins });
+    return send.then(function (r) {
       if (r && r.ok) { cfg.loaded = true; try { return r.json().then(function (d) { if (d && Array.isArray(d.pins)) cfg.pins = d.pins; return true; }).catch(function () { return true; }); } catch (_) { return true; } }
       return false;
     }).catch(function () { return false; });

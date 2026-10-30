@@ -992,7 +992,7 @@ function authPage(opts) {
       sub: 'Votre espace commerçant, en un seul lien.', login: 'Se connecter', signup: 'Créer un compte',
       email: 'E-mail', password: 'Mot de passe', forgot: 'Mot de passe oublié ?', name: 'Nom', business: 'Établissement',
       language: 'Langue', emailPlaceholder: 'vous@exemple.ma',
-      namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 10 caractères.',
+      namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 10 caractères.', showPassword: 'Afficher le mot de passe', hidePassword: 'Masquer le mot de passe',
       create: 'Créer mon compte', staff: 'Accès équipe', till: 'Caisse · appairer cette tablette avec un code', revoked: 'Votre session a été fermée. Reconnectez-vous.',
       encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
       operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
@@ -1004,7 +1004,7 @@ function authPage(opts) {
       sub: 'Your entire business, one secure sign-in.', login: 'Sign in', signup: 'Create an account',
       email: 'Email', password: 'Password', forgot: 'Forgot your password?', name: 'Name', business: 'Business',
       language: 'Language', emailPlaceholder: 'you@example.com',
-      namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 10 characters.',
+      namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 10 characters.', showPassword: 'Show password', hidePassword: 'Hide password',
       create: 'Create my account', staff: 'Team access', till: 'Till · pair this tablet with a code', revoked: 'Your session has ended. Please sign in again.',
       encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
       operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
@@ -1016,7 +1016,7 @@ function authPage(opts) {
       sub: 'كل ما تحتاجه لإدارة نشاطك، بحساب واحد.', login: 'تسجيل الدخول', signup: 'إنشاء حساب',
       email: 'البريد الإلكتروني', password: 'كلمة المرور', forgot: 'نسيت كلمة المرور؟', name: 'الاسم', business: 'اسم النشاط',
       language: 'اللغة', emailPlaceholder: 'name@example.com',
-      namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 10 أحرف على الأقل.',
+      namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 10 أحرف على الأقل.', showPassword: 'إظهار كلمة المرور', hidePassword: 'إخفاء كلمة المرور',
       create: 'إنشاء حسابي', staff: 'دخول فريق العمل', till: 'الصندوق · ربط هذا الجهاز برمز', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
       encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
       operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
@@ -1253,6 +1253,26 @@ function authPage(opts) {
     border-color: var(--atlas);
     box-shadow: 0 0 0 4px rgba(11,110,79,.14);
   }
+  /* Show / hide the password (eye, as in app/src/native-shell.css). */
+  .pw-field { position: relative; display: flex; flex-direction: column; }
+  .pw-field input { padding-inline-end: 52px; }
+  .pw-toggle {
+    position: absolute; inset-block: 0; inset-inline-end: 2px;
+    width: 46px; padding: 0; display: grid; place-items: center;
+    border: 0; border-radius: 9px; background: transparent;
+    color: var(--muted); cursor: pointer;
+  }
+  .pw-toggle:hover { color: var(--atlas); } .pw-toggle:focus-visible { outline: 2px solid var(--atlas); outline-offset: -4px; }
+  .pw-toggle span {
+    width: 20px; height: 20px; background: currentColor;
+    -webkit-mask: url(/assets/icons/material/visibility.svg) center / contain no-repeat;
+            mask: url(/assets/icons/material/visibility.svg) center / contain no-repeat;
+  }
+  .pw-toggle[aria-pressed="true"] span {
+    -webkit-mask-image: url(/assets/icons/material/visibility_off.svg);
+            mask-image: url(/assets/icons/material/visibility_off.svg);
+  }
+  html[data-theme="dark"] .pw-toggle:hover { color: var(--mint); } html[data-theme="dark"] .pw-toggle:focus-visible { outline-color: var(--mint); }
   .hint {
     margin: -6px 0 0;
     font-size: 12.5px;
@@ -1503,7 +1523,7 @@ function authPage(opts) {
         <input id="li-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
       <label>${t.password}
-        <input id="li-pass" type="password" autocomplete="current-password" placeholder="••••••••" required />
+        <span class="pw-field"><input id="li-pass" type="password" autocomplete="current-password" placeholder="••••••••" required /><button type="button" class="pw-toggle" aria-controls="li-pass" aria-pressed="false" aria-label="${t.showPassword}"><span aria-hidden="true"></span></button></span>
       </label>
       <a class="forgot" id="li-forgot" href="/reset.html?lang=${lang}">${t.forgot}</a>
       <p class="err" id="li-err" role="alert"></p>
@@ -1521,7 +1541,7 @@ function authPage(opts) {
         <input id="su-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
       <label>${t.password}
-        <input id="su-pass" type="password" autocomplete="new-password" placeholder="${t.passwordHint}" minlength="10" required />
+        <span class="pw-field"><input id="su-pass" type="password" autocomplete="new-password" placeholder="${t.passwordHint}" minlength="10" required /><button type="button" class="pw-toggle" aria-controls="su-pass" aria-pressed="false" aria-label="${t.showPassword}"><span aria-hidden="true"></span></button></span>
       </label>
       <p class="hint">${t.passwordHint}</p>
       <p class="err" id="su-err" role="alert"></p>
@@ -1546,12 +1566,31 @@ function authPage(opts) {
   var fSignup = document.getElementById('form-signup');
   function setMode(m){
     var login = m === 'login';
+    if (typeof hideAllPw === 'function') hideAllPw();
     tabs.setAttribute('data-mode', m);
     fLogin.classList.toggle('hidden', !login);
     fSignup.classList.toggle('hidden', login);
     tLogin.setAttribute('aria-selected', login ? 'true' : 'false');
     tSignup.setAttribute('aria-selected', login ? 'false' : 'true');
   }
+  // Eye button on both password fields. Back to hidden on submit and on a
+  // tab switch, so the browser saves a password field and nothing stays shown.
+  var PW = { show: ${JSON.stringify(t.showPassword)}, hide: ${JSON.stringify(t.hidePassword)} };
+  var pwToggles = Array.prototype.slice.call(document.querySelectorAll('.pw-toggle'));
+  var showPw = function(btn, on){
+    var input = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!input) return;
+    var a = input.selectionStart, b = input.selectionEnd;
+    input.type = on ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? PW.hide : PW.show);
+    if (document.activeElement === input && a != null) { try { input.setSelectionRange(a, b); } catch (_) {} }
+  };
+  var hideAllPw = function(){ pwToggles.forEach(function(btn){ showPw(btn, false); }); };
+  pwToggles.forEach(function(btn){
+    btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+    btn.addEventListener('click', function(){ showPw(btn, btn.getAttribute('aria-pressed') !== 'true'); });
+  });
   tLogin.addEventListener('click', function(){ setMode('login'); });
   tSignup.addEventListener('click', function(){ setMode('signup'); });
 
@@ -1585,6 +1624,7 @@ function authPage(opts) {
 
   fLogin.addEventListener('submit', function(e){
     e.preventDefault();
+    hideAllPw();
     // Un lien de vue (assets/view-link.js, « #/finance?r=trenteJours ») reçu
     // avant connexion survit à la connexion. Seule cette forme stricte est
     // gardée : une page et une période, jamais autre chose.
@@ -1594,6 +1634,7 @@ function authPage(opts) {
   });
   fSignup.addEventListener('submit', function(e){
     e.preventDefault();
+    hideAllPw();
     post('/auth/signup', { plan: requested.get('plan'), period: requested.get('period'), name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
          document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1&lang=${lang}');
   });

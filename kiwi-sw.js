@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/lock-till.js?v=3',
   '/assets/boutique-sizes.js?v=16',
   '/assets/boutique-size-split.js?v=4',
   '/assets/boutique-size-codes.js?v=3',
@@ -188,8 +189,8 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2098',
-  '/assets/pages/dashboard-startup.js?v=104',
-  '/assets/pages/dashboard-loader.js?v=30',
+  '/assets/pages/dashboard-startup.js?v=105',
+  '/assets/pages/dashboard-loader.js?v=35',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
   '/assets/hotel/groups.js?v=1',
@@ -348,10 +349,10 @@ var SHELL = [
   '/assets/receipt.js?v=13',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=24',
-  '/assets/merchant-config.js?v=285',
+  '/assets/merchant-config.js?v=286',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=5',
-  '/assets/staff-roles.js?v=2',
+  '/assets/staff-roles.js?v=3',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
@@ -367,7 +368,7 @@ var SHELL = [
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=6',
   '/assets/identity.js?v=12',
-  '/assets/caisse-link.js?v=22',
+  '/assets/caisse-link.js?v=23',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/serveur-lang.js?v=6',
