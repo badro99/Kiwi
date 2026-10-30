@@ -101,8 +101,11 @@ async function open(t, surface, skin, theme, locale, size) {
   t.step('open the boutique till');
   await page.evaluate(() => window.KiwiPosDispatch.unlockById('boutique'));
   await page.waitForSelector('#pos-boutique.is-on', { visible: true, timeout: 20000 });
-  await page.waitForFunction(() => !document.querySelector('.kiwi-greet.is-visible'), { timeout: 8000 });
-  await sleep(700);
+  /* The unlock flash leaves the DOM 3 s after it opens (pos-dispatch.js ›
+     entryFlash): measured while it fades, its « Bonjour … » h1 was counted or
+     not depending on a 150 ms race. Wait until it is gone. */
+  await page.waitForFunction(() => !document.querySelector('.kiwi-greet:not([data-kiwi-greet])'), { timeout: 8000 });
+  await sleep(300);
   return { page, region: 'body' };
 }
 
