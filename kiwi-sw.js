@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/pos-boutique/ozon.js?v=2',
+  '/assets/pos-boutique/ozon.js?v=3',
   '/assets/lock-till.js?v=3',
   '/assets/boutique-sizes.js?v=16',
   '/assets/boutique-size-split.js?v=4',
@@ -26,7 +26,7 @@ var SHELL = [
   '/assets/boutique-size-colors.js?v=6',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=2',
-  '/assets/pos-boutique/drawer.js?v=40',
+  '/assets/pos-boutique/drawer.js?v=41',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=10',
@@ -470,7 +470,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=24',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=22',
-  '/assets/pos-dispatch.js?v=299',
+  '/assets/pos-dispatch.js?v=300',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -540,23 +540,23 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=221',
-  '/assets/pos-boutique/sales.js?v=122',
+  '/assets/pos-boutique.css?v=222',
+  '/assets/pos-boutique/sales.js?v=123',
   '/assets/retail-photos.js?v=4',
   '/assets/retail-icon-picker.js?v=3',
   '/assets/pos-boutique/ticket-owner.js?v=3',
   '/assets/pos-boutique/ticket-number.js?v=1',
   '/assets/pos-boutique/z-split.js?v=3',
-  '/assets/pos-boutique/livraisons.js?v=4',
+  '/assets/pos-boutique/livraisons.js?v=5',
   '/assets/pos-boutique/delivery-card.js?v=1',
   '/assets/pos-boutique/ticket-remise.js?v=3',
   '/assets/pos-boutique/search.js?v=14',
   '/assets/pos-boutique/inv-tools.js?v=18',
   '/assets/pos-boutique/inv-moves.js?v=5',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=122',
-  '/assets/pos-boutique/inventory.js?v=122',
-  '/assets/pos-boutique.js?v=221',
+  '/assets/pos-boutique/checkout.js?v=123',
+  '/assets/pos-boutique/inventory.js?v=123',
+  '/assets/pos-boutique.js?v=222',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -588,13 +588,13 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=123',
-  '/assets/pos-maison/sales.js?v=41',
-  '/assets/pos-maison/checkout.js?v=41',
-  '/assets/pos-maison/delivery.js?v=3',
+  '/assets/pos-maison.css?v=124',
+  '/assets/pos-maison/sales.js?v=42',
+  '/assets/pos-maison/checkout.js?v=42',
+  '/assets/pos-maison/delivery.js?v=4',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=41',
-  '/assets/pos-maison.js?v=123',
+  '/assets/pos-maison/inventory.js?v=42',
+  '/assets/pos-maison.js?v=124',
   '/assets/caisse-pairing.js?v=58',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

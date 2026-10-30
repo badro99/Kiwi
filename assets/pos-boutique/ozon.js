@@ -80,6 +80,8 @@ const PHRASES = {
   'Modifier': ['Edit', 'تعديل'],
   'Repris de la fiche de livraison': ['From the delivery card', 'من بطاقة التوصيل'],
   'Le client paie au livreur': ['The customer pays the courier', 'يدفع الزبون لعامل التوصيل'],
+  'Le client paie la livraison': ['The customer pays for delivery', 'الزبون يدفع ثمن التوصيل'],
+  'Articles': ['Items', 'المنتجات'],
   'Livraison': ['Delivery', 'التوصيل'],
   'Refusé': ['Refused', 'مرفوض'],
   'Retourné': ['Returned', 'مُرجع'],
@@ -257,6 +259,7 @@ function css() {
     '.ozs-sum .net b{font-size:20px;font-weight:600;letter-spacing:-.01em;color:var(--atlas,#0B6E4F);}',
     '.ozs-sum div{display:flex;justify-content:space-between;gap:10px;}',
     '.ozs-sum b{font-variant-numeric:tabular-nums;}',
+    '.ozs-sum b.plus::before{content:"+";}',
     '.ozs-err{font-size:13px;color:var(--danger,#C94A3A);}',
     '.ozs-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:-22px;margin:0 -22px -22px;padding:12px 22px 22px;background:var(--paper,#F7F5F0);}',
     '.ozs-links~.ozs-acts{position:static;margin:0;padding:0;}',
@@ -369,6 +372,11 @@ const REFUSAL = {
 /* Le formulaire d'envoi. o : { slug, saleId, title, receiver, phone, address,
    dueCents, toast, onDone(parcel) } */
 export function ozonOpenSend(o) {
+  /* Qui paie la livraison (Santos, 30 oct. 2026 : le client, en plus de
+     l'article). Retenu par boutique, coché par défaut. */
+  const FEE_PREF = 'kiwiOzonFeeOnCustomer:' + (o && o.slug);
+  let feeOnCustomer = true;
+  try { feeOnCustomer = localStorage.getItem(FEE_PREF) !== '0'; } catch (_) {}
   const v = veil(
     '<h3>' + esc(tr('Colis Ozon Express')) + '</h3>'
     + (o.title ? '<p>' + esc(o.title) + '</p>' : '')
@@ -382,6 +390,7 @@ export function ozonOpenSend(o) {
     + '<label class="ozs-f full">' + esc(tr('Note pour le livreur')) + '<input data-ozs="note" maxlength="240" value="' + esc(o.note || '') + '"></label>'
     + '</div>'
     + '<div class="ozs-checks">'
+    + '<label><input type="checkbox" data-ozs="feeOnCustomer"' + (feeOnCustomer ? ' checked' : '') + '>' + esc(tr('Le client paie la livraison')) + '</label>'
     + '<label><input type="checkbox" data-ozs="open" checked>' + esc(tr('Le client peut ouvrir le colis')) + '</label>'
     + '<label><input type="checkbox" data-ozs="fragile">' + esc(tr('Fragile')) + '</label>'
     + '<label><input type="checkbox" data-ozs="replace">' + esc(tr('Échange (le livreur reprend un article)')) + '</label>'
@@ -394,10 +403,18 @@ export function ozonOpenSend(o) {
   let list = [], city = null, busy = false;
   let guessed = false;
   const LAST = 'kiwiOzonLastCity:' + o.slug;
+  const feeOn = () => { const box = $('feeOnCustomer'); return box ? box.checked : feeOnCustomer; };
   const sum = () => {
-    $('sum').innerHTML = (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
-      + (city ? '<div><span>' + esc(tr('Frais de livraison Ozon')) + ' · ' + esc(city.name) + '</span><b>\u2212' + esc(mad(city.deliveredCents)) + '</b></div>' : '')
-      + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents - city.deliveredCents))) + '</b></div>' : '')
+    const fee = city ? city.deliveredCents : 0;
+
+    const custRows = () => (o.dueCents ? '<div><span>' + esc(tr('Articles')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
+        + (city ? '<div><span>' + esc(tr('Livraison')) + ' · ' + esc(city.name) + '</span><b class="plus">' + esc(mad(fee)) + '</b></div>' : '')
+        + (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents + fee)) + '</b></div>' : '')
+        + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '');
+    const shopRows = () => (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
+        + (city ? '<div><span>' + esc(tr('Frais de livraison Ozon')) + ' · ' + esc(city.name) + '</span><b>\u2212' + esc(mad(fee)) + '</b></div>' : '')
+        + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents - fee))) + '</b></div>' : '');
+    $('sum').innerHTML = (feeOn() ? custRows() : shopRows())
       + (guessed && city ? '<div class="ozs-hint">' + esc(tr('Ville trouvée dans l’adresse')) + '</div>' : '');
     $('sum').hidden = !o.dueCents && !city;
     $('fee').textContent = city ? tr('Livraison') + ' ' + mad(city.deliveredCents) : '';
@@ -453,6 +470,10 @@ export function ozonOpenSend(o) {
     const b = e.target.closest('[data-ozs-city]');
     if (b) { city = list.find((c) => c.id === Number(b.dataset.ozsCity)) || null; guessed = false; $('city-q').value = city ? city.name : ''; paintCities(); $('cities').hidden = !!city; sum(); }
   });
+  $('feeOnCustomer').addEventListener('change', () => {
+    try { localStorage.setItem(FEE_PREF, $('feeOnCustomer').checked ? '1' : '0'); } catch (_) {}
+    sum();
+  });
   sum();
   $('send').addEventListener('click', () => {
     if (busy) return;
@@ -462,6 +483,7 @@ export function ozonOpenSend(o) {
     postJSON('/api/ozon/parcels', {
       merchant: o.slug, saleId: o.saleId, receiver, phone, address, cityId: city.id, note: $('note').value.trim(),
       open: $('open').checked ? 1 : 2, fragile: $('fragile').checked, replace: $('replace').checked,
+      feeOnCustomer: $('feeOnCustomer').checked,
     }).then((res) => {
       try { localStorage.setItem(LAST, String(city.id)); } catch (_) {}
       v.close();

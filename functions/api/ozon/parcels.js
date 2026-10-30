@@ -65,13 +65,20 @@ export async function onRequestPost({ request, env }) {
   try { city = (await cities(env)).find((c) => c.id === cityId) || null; } catch (_) { city = null; }
   if (!city) return json({ error: 'unknown-city' }, 400);
 
+  /* Ce que le livreur encaisse : ce qui reste dû sur la vente, plus les frais
+     de livraison quand la boutique les fait payer au client (Santos, 30 oct.
+     2026). Le chiffre d'affaires, lui, reste ce qui est dû sur la vente
+     (_track.js › confirmByCarrier) : les frais sont à Ozon. */
+  const feeOnCustomer = b.feeOnCustomer === true || b.feeOnCustomer === 1 || b.feeOnCustomer === '1';
+  const codCents = due.dueCents + (feeOnCustomer ? Math.max(0, Number(city.deliveredCents) || 0) : 0);
+
   /* La place de la vente est prise AVANT d'appeler Ozon : deux envois
      simultanés ne créent jamais deux colis. */
   const hold = 'pending:' + saleId;
   const now = Date.now();
   try {
     await env.DB.prepare(`INSERT INTO ozon_parcels (merchant, tracking, sale_id, receiver, phone, city_id, city_name, address, price_cents, created_ts, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(merchant, hold, saleId, receiver, phone, cityId, city.name, address, due.dueCents, now, 'kiwi').run();
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(merchant, hold, saleId, receiver, phone, cityId, city.name, address, codCents, now, 'kiwi').run();
   } catch (_) {
     const again = await env.DB.prepare('SELECT * FROM ozon_parcels WHERE merchant = ? AND sale_id = ?').bind(merchant, saleId).first();
     if (again && !String(again.tracking).startsWith('pending:')) return json({ ok: true, already: true, parcel: parcelView(again) });
@@ -83,7 +90,7 @@ export async function onRequestPost({ request, env }) {
   form.append('parcel-phone', phone);
   form.append('parcel-city', String(cityId));
   form.append('parcel-address', address);
-  form.append('parcel-price', String(Math.round(due.dueCents) / 100));
+  form.append('parcel-price', String(Math.round(codCents) / 100));
   form.append('parcel-stock', String(Number(account.pickup_mode) === 1 ? 1 : 0));
   form.append('parcel-nature', clean(b.nature, 120) || clean(due.label, 120) || 'Commande');
   const note = clean(b.note, 240);

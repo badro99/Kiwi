@@ -93,6 +93,7 @@ const sale = (id, cents, ts, deposit = 0) => {
 sale('dlv-1', 45000, now - 3600e3);
 sale('dlv-2', 25000, now - 1800e3, 10000);
 sale('dlv-old', 30000, now - 20 * 86400e3);
+sale('dlv-fee', 85000, now - 600e3);
 
 const owner = `${SESS_COOKIE}=${await makeSession('acc-ozon-owner', SECRET)}`;
 const stranger = `${SESS_COOKIE}=${await makeSession('acc-ozon-other', SECRET)}`;
@@ -237,6 +238,20 @@ await ok('a delivery note runs Ozon\'s three steps on open parcels and marks the
   assert.equal(add.body.Ref, 'BL261030001'); assert.equal(add.body['Codes[0]'], 'OZE-OPEN');
   assert.equal(sqlite.prepare("SELECT bl_ref FROM ozon_parcels WHERE tracking = 'OZE-OPEN'").get().bl_ref, 'BL261030001');
   assert.equal((await call(notes, 'onRequestPost', '/api/ozon/notes', 'POST', till, { merchant: MERCHANT })).body.error, 'no-parcels');
+});
+
+await ok('the customer pays delivery: Ozon collects price + fee, revenue on « Payé » is the price only', async () => {
+  const r = await call(parcels, 'onRequestPost', '/api/ozon/parcels', 'POST', till, { merchant: MERCHANT, saleId: 'dlv-fee', receiver: 'Client Frais',
+    phone: '0612345678', cityId: 37, address: '2 rue Test', feeOnCustomer: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const add = calls.filter((c) => c.path === 'add-parcel').pop();
+  assert.equal(add.body['parcel-price'], '885', 'the courier collects 850 + 35 (Agadir fee)');
+  assert.equal(r.body.parcel.priceCents, 88500);
+  ozon.status[r.body.parcel.tracking] = 'Payé';
+  const t = await call(parcels, 'onRequestGet', `/api/ozon/parcels?merchant=${MERCHANT}&force=1`, 'GET', till);
+  assert.equal(t.body.refreshed.paid, 1);
+  const got = collections('dlv-fee');
+  assert.equal(got.length, 1); assert.equal(got[0].amount_cents, 85000, 'the fee is Ozon\'s, never counted as a sale');
 });
 
 await ok('the key never appears in any reply or stored row, and every Ozon call used it', async () => {
