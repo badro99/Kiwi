@@ -30,6 +30,21 @@ export async function onRequestGet({ request, env }) {
 const PHONE_RE = /^(?:\+?212|0)?[5-7]\d{8}$/;
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 
+/* The till knows a sale by its own id (« sale-<uuid> »); the server stores it
+ * as « sale-ref-<hash>-<last 32 characters> » (assets/live-link.js › stableId).
+ * Same tail, same store, one row: that row is the sale. */
+async function serverSaleId(env, merchant, saleId) {
+  if (saleId.startsWith('sale-ref-')) return saleId;
+  const tail = saleId.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
+  if (tail.length < 16) return saleId;
+  try {
+    const rs = await env.DB.prepare("SELECT id FROM sales WHERE merchant = ? AND id LIKE 'sale-ref-%' AND substr(id, -?) = ? LIMIT 2")
+      .bind(merchant, tail.length, tail).all();
+    const rows = rs.results || [];
+    return rows.length === 1 ? String(rows[0].id) : saleId;
+  } catch (_) { return saleId; }
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
   let b;
@@ -39,7 +54,7 @@ export async function onRequestPost({ request, env }) {
   const account = await readAccount(env, merchant);
   if (!account) return json({ error: 'not-connected' }, 409);
 
-  const saleId = clean(b.saleId, 128);
+  let saleId = clean(b.saleId, 128);
   const receiver = clean(b.receiver, 80);
   const phone = clean(b.phone, 20).replace(/[\s.-]/g, '');
   const address = clean(b.address, 240);
@@ -50,6 +65,7 @@ export async function onRequestPost({ request, env }) {
   if (!address) return json({ error: 'address-required' }, 400);
   if (!Number.isSafeInteger(cityId) || cityId <= 0) return json({ error: 'city-required' }, 400);
 
+  saleId = await serverSaleId(env, merchant, saleId);
   const existing = await env.DB.prepare('SELECT * FROM ozon_parcels WHERE merchant = ? AND sale_id = ?').bind(merchant, saleId).first();
   if (existing && !String(existing.tracking).startsWith('pending:')) return json({ ok: true, already: true, parcel: parcelView(existing) });
   /* Une réservation de plus de deux minutes est celle d'un envoi mort en route

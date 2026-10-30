@@ -94,6 +94,7 @@ sale('dlv-1', 45000, now - 3600e3);
 sale('dlv-2', 25000, now - 1800e3, 10000);
 sale('dlv-old', 30000, now - 20 * 86400e3);
 sale('dlv-fee', 85000, now - 600e3);
+sale('sale-ref-fdbc450d-945e-a96b-4b8b-b947-5f02f05190ed', 85000, now - 300e3);
 
 const owner = `${SESS_COOKIE}=${await makeSession('acc-ozon-owner', SECRET)}`;
 const stranger = `${SESS_COOKIE}=${await makeSession('acc-ozon-other', SECRET)}`;
@@ -252,6 +253,13 @@ await ok('the customer pays delivery: Ozon collects price + fee, revenue on « P
   assert.equal(t.body.refreshed.paid, 1);
   const got = collections('dlv-fee');
   assert.equal(got.length, 1); assert.equal(got[0].amount_cents, 85000, 'the fee is Ozon\'s, never counted as a sale');
+});
+
+await ok('the till\'s own sale id (sale-<uuid>) finds the row the server stored as sale-ref-…', async () => {
+  const r = await call(parcels, 'onRequestPost', '/api/ozon/parcels', 'POST', till, { merchant: MERCHANT, saleId: 'sale-1d2c3b4a-945e-a96b-4b8b-b947-5f02f05190ed',
+    receiver: 'Client Id', phone: '0612345678', cityId: 37, address: '3 rue Test', feeOnCustomer: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM ozon_parcels WHERE sale_id = 'sale-ref-fdbc450d-945e-a96b-4b8b-b947-5f02f05190ed'").get().n, 1);
 });
 
 await ok('the key never appears in any reply or stored row, and every Ozon call used it', async () => {
