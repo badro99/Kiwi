@@ -87,16 +87,35 @@ await ok('with a printer set up, printVoucher sends thermal bytes to the till st
   assert.ok(printed[0].bytes && printed[0].bytes.length > 100);
 });
 
-await ok('the durable print queue is used first, and a second press is a reprint', async () => {
+await ok('the durable print queue is used first, and every press is its own print', async () => {
   const jobs = [];
   const queue = { enqueueReceipt(id, doc, intent) { jobs.push({ id, intent, kind: doc.kind }); return { accepted: 1 }; } };
   const q = realm({ queue });
   const a = await q.R.printVoucher(AV), b = await q.R.printVoucher(AV);
   assert.equal(a.queued, true); assert.equal(b.queued, true);
-  assert.deepEqual(jobs.map((j) => j.intent), ['original', 'manual-reprint']);
+  // A voucher only prints on a cashier's press. As « original », a press after a
+  // till reload hit the done ledger and nothing came out.
+  assert.deepEqual(jobs.map((j) => j.intent), ['manual-reprint', 'manual-reprint']);
   assert.equal(jobs[0].id, 'avoir:' + AV.code);
   assert.equal(jobs[0].kind, 'voucher');
   assert.equal(q.printed.length, 0, 'no direct print and no PDF when the queue took it');
+});
+
+await ok('a queue that takes nothing (other jobs pending) is not a print: it prints directly', async () => {
+  const queue = { enqueueReceipt() { return { accepted: 0, pending: 3 }; } };
+  const q = realm({ queue });
+  const r = await q.R.printVoucher(AV);
+  assert.equal(r.ok, true);
+  assert.notEqual(r.queued, true, 'the till must not say « envoyé à l’imprimante »');
+  assert.equal(q.printed.length, 1);
+  assert.ok(q.printed[0].bytes && q.printed[0].bytes.length > 100);
+});
+
+await ok('the voucher window keeps its print button on a 600 px screen', () => {
+  for (const [f, cls] of [['assets/pos-boutique.css', 'bq'], ['assets/pos-maison.css', 'mz']]) {
+    const css = read(f);
+    assert.ok(new RegExp('\\.modal\\.' + cls + '-avoirm \\.' + cls + '-sheet-foot \\{[^}]*position: sticky').test(css), f);
+  }
 });
 
 await ok('both retail tills print the voucher through KiwiReceipt, not the system print helper', () => {

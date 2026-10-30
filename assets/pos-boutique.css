@@ -1029,6 +1029,8 @@ button.bq-pill.ok {
 
 /* ═══════════════ AVOIR (voucher print preview) ═══════════════ */
 .modal.bq-avoirm { width: 480px; padding: 24px; }
+/* Sur un écran de 600 px, le bon dépasse : « Imprimer l'avoir » restait sous le bord. Le pied reste collé en bas. */
+.modal.bq-avoirm .bq-sheet-foot { position: sticky; bottom: -24px; z-index: 1; margin: 16px -24px -24px; padding: 12px 24px 24px; background: inherit; }
 .bq-avoir {
   background: var(--paper-elev);
   border: 1.5px solid var(--ink);

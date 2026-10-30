@@ -838,16 +838,18 @@
   }
   /* Comme le reçu de la boutique : d'abord la file d'impression durable (elle
    * relance si l'imprimante est éteinte et sert l'iPad par le relais), sinon le
-   * thermique direct, l'impression système en dernier recours. */
-  var vouchersSent = {};
+   * thermique direct, l'impression système en dernier recours.
+   * Le bon ne sort que sur un geste du caissier : chaque appui est une
+   * impression à part entière. En « original », un bon déjà sorti avant un
+   * rechargement de la caisse était reconnu comme fait et rien ne partait,
+   * alors que la caisse annonçait « Avoir envoyé à l'imprimante ». */
   function printVoucher(v, opts) {
     var doc = voucher(v, opts), key = 'avoir:' + doc.voucher.code;
     var queue = window.KiwiKitchenPrint;
     if (doc.voucher.code && queue && typeof queue.enqueueReceipt === 'function') {
       try {
-        var queued = queue.enqueueReceipt(key, doc, vouchersSent[key] ? 'manual-reprint' : 'original');
-        vouchersSent[key] = 1;
-        if (queued && (queued.accepted || queued.pending)) return Promise.resolve({ ok: true, queued: true });
+        var queued = queue.enqueueReceipt(key, doc, 'manual-reprint');
+        if (queued && queued.accepted) return Promise.resolve({ ok: true, queued: true });
       } catch (_) {}
     }
     return print(doc, opts);
