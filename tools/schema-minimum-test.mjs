@@ -19,7 +19,7 @@ const db = freshDb();
 db.exec('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY, name TEXT, applied_at TEXT)');
 const versionSource = readFileSync(join(ROOT, 'functions/_schema-version.js'), 'utf8');
 const minimum = Number(/MINIMUM_SCHEMA_VERSION\s*=\s*(\d+)/.exec(versionSource)?.[1]);
-assert.equal(minimum, 16, 'Le minimum de production est 0016 (d1_migrations lu en production le 26 octobre 2026).');
+assert.equal(minimum, 18, 'Le minimum de production est 0018 (0017 et 0018 appliquées par le propriétaire, d1_migrations lu en production le 30 octobre 2026).');
 const migrations = listMigrations().filter(f => Number(f.slice(0, 4)) <= minimum);
 assert.equal(Number(migrations.at(-1).slice(0, 4)), minimum);
 for (const file of migrations) db.exec(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));
@@ -27,7 +27,7 @@ let checked = 0, dynamic = 0;
 /* Diagnostics are keyed by file and message, without the line, so moving code
    does not churn the pin. Today's fallbacks are pinned in
    tools/schema-fallback-baseline.json: any new one, or a query that stops
-   preparing against migration 0016, fails the gate. The pin only goes down
+   preparing against the production minimum, fails the gate. The pin only goes down
    (KIWI_UPDATE_SCHEMA_BASELINE=1 after a fallback is removed). */
 const found = new Map();
 const fail = message => { const key = message.replace(/:\d+ : /, ' : '); found.set(key, (found.get(key) || 0) + 1); };
