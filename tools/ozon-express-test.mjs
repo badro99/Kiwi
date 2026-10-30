@@ -24,7 +24,7 @@ import * as account from '../functions/api/ozon/account.js';
 import * as parcels from '../functions/api/ozon/parcels.js';
 import * as notes from '../functions/api/ozon/notes.js';
 import { onRequestGet as receivablesGet } from '../functions/api/receivables.js';
-import { readStatus, __resetCities } from '../functions/api/ozon/_lib.js';
+import { readStatus as ozonStatusOf, __resetCities } from '../functions/api/ozon/_lib.js';
 
 const MERCHANT = 'ozon-test-shop', OTHER = 'ozon-other-shop', SECRET = 'ozon-express-test-secret-0123456789';
 const KEY = 'test-ozon-key-abcdef123456';
@@ -111,19 +111,19 @@ const collections = (saleId) => sqlite.prepare('SELECT * FROM delivery_collectio
 
 console.log('ozon-express');
 await ok('readStatus: « Payé » counts, « Livré » alone does not, returns and refusals are told apart', () => {
-  assert.equal(readStatus('Payé'), 'paid');
-  assert.equal(readStatus('Livré et payé'), 'paid');
-  assert.equal(readStatus('Livré'), 'delivered');
-  assert.equal(readStatus('Livré non payé'), 'delivered');
-  assert.equal(readStatus('Non livré'), 'in_transit');
-  assert.equal(readStatus('Retourné'), 'returned');
-  assert.equal(readStatus('Refusé'), 'refused');
-  assert.equal(readStatus('Annulé'), 'cancelled');
-  assert.equal(readStatus('En cours de livraison'), 'in_transit');
+  assert.equal(ozonStatusOf('Payé'), 'paid');
+  assert.equal(ozonStatusOf('Livré et payé'), 'paid');
+  assert.equal(ozonStatusOf('Livré'), 'delivered');
+  assert.equal(ozonStatusOf('Livré non payé'), 'delivered');
+  assert.equal(ozonStatusOf('Non livré'), 'in_transit');
+  assert.equal(ozonStatusOf('Retourné'), 'returned');
+  assert.equal(ozonStatusOf('Refusé'), 'refused');
+  assert.equal(ozonStatusOf('Annulé'), 'cancelled');
+  assert.equal(ozonStatusOf('En cours de livraison'), 'in_transit');
   /* Money never enters on a word that denies it (security review, 30 Oct 2026). */
-  for (const label of ['Livré, pas encore payé', 'Livré en attente de paiement', 'Livré impayé']) assert.equal(readStatus(label), 'delivered', label);
-  for (const label of ['Impayé', 'Unpaid', 'not paid', 'Non réglé']) assert.notEqual(readStatus(label), 'paid', label);
-  assert.equal(readStatus('Réglé'), 'paid');
+  for (const label of ['Livré, pas encore payé', 'Livré en attente de paiement', 'Livré impayé']) assert.equal(ozonStatusOf(label), 'delivered', label);
+  for (const label of ['Impayé', 'Unpaid', 'not paid', 'Non réglé']) assert.notEqual(ozonStatusOf(label), 'paid', label);
+  assert.equal(ozonStatusOf('Réglé'), 'paid');
 });
 
 await ok('the till and a stranger cannot connect an account; a refused key is not stored', async () => {
