@@ -36,35 +36,39 @@ body.standalone .kw-tabbar { bottom: calc(0px + env(safe-area-inset-bottom, 0px)
 .kw-toast span { font-size: 13px; opacity: .8; }
 .kw-toast.in { transform: translate(-50%, 0); }
 
-/* ── Pull-to-refresh spinner (injected by dashboard-native.js) ── */
+/* ── Pull-to-refresh (injected by dashboard-native.js) ──
+ * A small paper disc under the status bar; inside, a ring that fills with
+ * the pull, closes at the threshold, then turns as a short arc while the
+ * page re-reads. It follows the finger with no transition while dragging,
+ * and settles on the brand spring (la lentille liquide) when released. */
 .kw-ptr {
-  position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateY(-8px);
-  z-index: 9995; width: 30px; height: 30px; border-radius: 50%;
-  margin-top: env(safe-area-inset-top, 0px);
-  background: var(--paper-elev, #FBFAF6); opacity: 0;
-  box-shadow: 0 6px 16px -6px rgba(5, 59, 44, .4);
-  display: grid; place-items: center;
-  transition: opacity .2s ease, transform .2s ease;
+  position: fixed; top: 0; left: 50%; z-index: 9995;
+  width: 36px; height: 36px; border-radius: 50%;
+  margin-top: calc(env(safe-area-inset-top, 0px) + 6px);
+  display: grid; place-items: center; pointer-events: none;
+  color: var(--atlas, #0B6E4F);
+  background: var(--paper-elev, #FBFAF6);
+  box-shadow: 0 0 0 .5px rgba(10, 15, 13, .08), 0 8px 20px -10px rgba(5, 59, 44, .45);
+  opacity: 0; transform: translate(-50%, -20px) scale(.7);
+  transition: transform .31s cubic-bezier(0.34, 1.45, 0.5, 1), opacity .22s ease;
 }
-.kw-ptr i {
-  width: 16px; height: 16px; border-radius: 50%; display: block;
-  border: 2px solid rgba(11, 110, 79, .25); border-top-color: var(--atlas, #0B6E4F);
+.kw-ptr.drag { transition: none; }
+.kw-ptr svg { width: 20px; height: 20px; display: block; overflow: visible; transform: rotate(-90deg); }
+.kw-ptr circle { fill: none; stroke-width: 2; stroke-linecap: round; }
+.kw-ptr .kw-ptr-track { stroke: currentColor; opacity: .14; }
+.kw-ptr .kw-ptr-arc { stroke: currentColor; transition: stroke-dashoffset .12s linear; }
+.kw-ptr.drag .kw-ptr-arc { transition: none; }
+.kw-ptr.spin svg { animation: kw-ptr-turn .8s linear infinite; }
+.kw-ptr.spin .kw-ptr-arc { transition: stroke-dashoffset .25s ease; }
+@keyframes kw-ptr-turn { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+:is(html[data-theme="dark"], [data-vexel-mode="dark"]) .kw-ptr {
+  color: var(--mint, #7DF2B0); background: #141C19;
+  box-shadow: 0 0 0 .5px rgba(247, 245, 240, .1), 0 8px 20px -10px rgba(0, 0, 0, .7);
 }
-.kw-ptr.ready i { transform: scale(1.1); }
-.kw-ptr.spin i { animation: kw-spin .7s linear infinite; }
-@keyframes kw-spin { to { transform: rotate(360deg); } }
 
-/* ── Refresh shimmer: one sweeping sheen over the content while refreshing ── */
-@media (max-width: 860px) {
-  .container { position: relative; }
-  body.kw-refreshing .container::after {
-    content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
-    border-radius: 16px;
-    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .45) 50%, transparent 70%);
-    background-size: 200% 100%; animation: kw-shimmer 1s linear infinite;
-  }
-}
-@keyframes kw-shimmer { 0% { background-position: 180% 0; } 100% { background-position: -180% 0; } }
+/* Phone layout kept from the old refresh sheen: children of .container
+   may position against it. */
+@media (max-width: 860px) { .container { position: relative; } }
 
 /* ── Page-enter transition + tactile press (phone only) ── */
 @media (max-width: 860px) {
@@ -77,7 +81,7 @@ body.standalone .kw-tabbar { bottom: calc(0px + env(safe-area-inset-bottom, 0px)
 /* ── Reduced motion: kill every animation/transition in this layer ── */
 @media (prefers-reduced-motion: reduce) {
   .kw-toast { transition: none; }
-  .kw-ptr, .kw-ptr.spin i { animation: none; transition: none; }
-  body.kw-refreshing .container::after { animation: none; }
+  .kw-ptr, .kw-ptr .kw-ptr-arc { transition: none; }
+  .kw-ptr.spin svg { animation: none; }
   .kw-enter { animation: none; }
 }

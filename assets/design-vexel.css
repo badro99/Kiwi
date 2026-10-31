@@ -2046,8 +2046,8 @@ body.design-vexel .kob-btn.ghost:hover {
   background: var(--vx-hover-bg);
   color: var(--ink);
 }
-body.design-vexel :is(.kob-back, .kob-skip) { color: var(--n-500); }
-body.design-vexel :is(.kob-back, .kob-skip):hover { color: var(--ink); }
+body.design-vexel :is(.kob-back, .kob-skip, [data-draft-note] button, [data-draft-note] label) { color: var(--n-500); }
+body.design-vexel :is(.kob-back, .kob-skip, [data-draft-note] button, [data-draft-note] label):hover { color: var(--ink); }
 body.design-vexel .kob-explore .kob-sep { color: var(--n-300); }
 body.design-vexel .kob-err { color: var(--danger); }
 body.design-vexel .kob-recap .r + .r { border-color: var(--n-200); }
@@ -5913,3 +5913,8 @@ body.design-vexel .fa-kpdisplay {
 :is(html[data-theme="light"][data-vexel-mode="light"], body[data-vexel-mode="light"]:not([data-vexel-mode="dark"])) .p-hero .sub {
   color: #4C5A53;
 }
+
+/* A card title that already carries the live pulse ("Commandes en direct")
+   keeps that one dot: the skin's square marker made it two side by side.
+   :not(#kv) lifts the rule over the marker rules' :is() lists. */
+body.design-vexel .block-head .t:has(> .pulse-dot):not(#kv)::before { display: none; }

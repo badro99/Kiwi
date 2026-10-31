@@ -29,64 +29,94 @@
     if (nav) animateMain();
   }, true);
 
-  /* ── Refresh: re-emit the current date range so every subscriber re-renders,
-   *    with a brief shimmer for the "fetching" feel. Uses the real public API
-   *    window.KiwiDateRange.setDateRange(getDateRange()). ── */
+  /* ── Refresh: re-emit the current date range so every subscriber re-renders.
+   *    Uses the real public API window.KiwiDateRange.setDateRange(getDateRange()).
+   *    No sheen over the page: the numbers redrawing is the feedback. ── */
   function refresh() {
-    document.body.classList.add('kw-refreshing');
-    function done() {
-      try {
-        if (window.KiwiDateRange) window.KiwiDateRange.setDateRange(window.KiwiDateRange.getDateRange());
-      } catch (_) {}
-      document.body.classList.remove('kw-refreshing');
-    }
-    if (reduce) { done(); return Promise.resolve(); }
-    return new Promise(function (res) { setTimeout(function () { done(); res(); }, 620); });
+    try {
+      if (window.KiwiDateRange) window.KiwiDateRange.setDateRange(window.KiwiDateRange.getDateRange());
+    } catch (_) {}
+    return Promise.resolve();
   }
 
   /* ── Pull-to-refresh: engages ONLY at scroll-top; passive listeners never
-   *    call preventDefault, so native scrolling is never hijacked. The pull is
-   *    a cosmetic spinner; releasing past the threshold triggers refresh(). ── */
+   *    call preventDefault, so native scrolling (and the iOS rubber band) is
+   *    never hijacked. A thin ring fills with the pull, closes with one light
+   *    haptic at the threshold, spins while the page re-reads, then fades. ── */
   (function ptr() {
-    var startY = 0, pulling = false, dist = 0, spinner = null;
-    var THRESH = 72;
+    var startY = 0, pulling = false, dist = 0, ready = false, busy = false, el = null, arc = null;
+    var THRESH = 64, MAX = 96, R = 8, C = 2 * Math.PI * R;
     function atTop() { return (window.scrollY || document.documentElement.scrollTop || 0) <= 0; }
+    function damp(d) { return MAX * (1 - Math.exp(-d / (MAX * 1.6))); }
     function ensure() {
-      if (spinner) return spinner;
-      spinner = document.createElement('div');
-      spinner.className = 'kw-ptr';
-      spinner.appendChild(document.createElement('i'));
-      document.body.appendChild(spinner);
-      return spinner;
+      if (el) return el;
+      var NS = 'http://www.w3.org/2000/svg';
+      el = document.createElement('div');
+      el.className = 'kw-ptr';
+      el.setAttribute('aria-hidden', 'true');
+      var svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', '0 0 20 20');
+      var track = document.createElementNS(NS, 'circle');
+      arc = document.createElementNS(NS, 'circle');
+      [track, arc].forEach(function (c) { c.setAttribute('cx', '10'); c.setAttribute('cy', '10'); c.setAttribute('r', String(R)); });
+      track.setAttribute('class', 'kw-ptr-track');
+      arc.setAttribute('class', 'kw-ptr-arc');
+      arc.style.strokeDasharray = C.toFixed(2);
+      arc.style.strokeDashoffset = C.toFixed(2);
+      svg.appendChild(track); svg.appendChild(arc); el.appendChild(svg);
+      document.body.appendChild(el);
+      return el;
+    }
+    function place(pull) {
+      var p = Math.min(pull / THRESH, 1);
+      el.style.transform = 'translate(-50%,' + (pull * 0.7 - 20).toFixed(1) + 'px) scale(' + (0.7 + 0.3 * p).toFixed(3) + ')';
+      el.style.opacity = String(Math.min(pull / 28, 1));
+      arc.style.strokeDashoffset = (C * (1 - p * 0.92)).toFixed(2);
     }
     function hide() {
-      if (!spinner) return;
-      spinner.classList.remove('ready', 'spin');
-      spinner.style.opacity = '0';
-      spinner.style.transform = 'translateX(-50%) translateY(-8px)';
+      if (!el) return;
+      el.classList.remove('ready', 'spin', 'drag');
+      el.style.transform = 'translate(-50%,-20px) scale(.7)';
+      el.style.opacity = '0';
+      ready = false; busy = false;
     }
     window.addEventListener('touchstart', function (e) {
-      if (!phone() || !atTop() || e.touches.length !== 1) { pulling = false; return; }
-      startY = e.touches[0].clientY; pulling = true; dist = 0;
+      if (busy || !phone() || !atTop() || e.touches.length !== 1) { pulling = false; return; }
+      startY = e.touches[0].clientY; pulling = true; dist = 0; ready = false;
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
       if (!pulling) return;
       dist = e.touches[0].clientY - startY;
       if (dist <= 0) { pulling = false; hide(); return; }
-      var pull = Math.min(dist * 0.5, 96);
-      var s = ensure();
-      s.style.transform = 'translateX(-50%) translateY(' + (pull - 8) + 'px)';
-      s.style.opacity = String(Math.min(pull / THRESH, 1));
-      s.classList.toggle('ready', pull >= THRESH);
+      ensure().classList.add('drag');
+      var pull = damp(dist);
+      place(pull);
+      var now = pull >= THRESH;
+      if (now && !ready) {
+        try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'light' } })); } catch (_) {}
+      }
+      ready = now;
+      el.classList.toggle('ready', ready);
     }, { passive: true });
-    window.addEventListener('touchend', function () {
+    function release() {
       if (!pulling) return;
       pulling = false;
-      if (spinner && (dist * 0.5) >= THRESH) {
-        spinner.classList.add('spin');
-        refresh().then(hide);
-      } else { hide(); }
-    });
+      if (!el) return;
+      el.classList.remove('drag');
+      if (!ready) { hide(); return; }
+      busy = true;
+      el.classList.add('spin');
+      arc.style.strokeDashoffset = (C * 0.72).toFixed(2);
+      el.style.transform = 'translate(-50%,' + (THRESH * 0.7 - 20) + 'px) scale(1)';
+      el.style.opacity = '1';
+      var started = Date.now();
+      refresh().then(function () {
+        /* Long enough to read as "done", short enough not to feel staged. */
+        setTimeout(hide, reduce ? 0 : Math.max(0, 650 - (Date.now() - started)));
+      });
+    }
+    window.addEventListener('touchend', release);
+    window.addEventListener('touchcancel', release);
   })();
   /* ── Live-sale toasts: a native-style "Nouvelle vente" notification slides
    *    in at intervals while the app is foregrounded, on phones. SIMULATED

@@ -391,9 +391,13 @@
     "v": "20",
     "sha": "120e6738818d0bc4"
   },
+  "assets/dashboard-native.css": {
+    "v": "1",
+    "sha": "d10912c380a130a1"
+  },
   "assets/dashboard-native.js": {
-    "v": "4",
-    "sha": "144c89b983aea98e"
+    "v": "5",
+    "sha": "52cdd8ad3877070e"
   },
   "assets/dashboard-pin-vault.js": {
     "v": "4",
@@ -496,8 +500,8 @@
     "sha": "563ff309b47fe0ed"
   },
   "assets/design-vexel.css": {
-    "v": "2129",
-    "sha": "86ab4fc69ab71b87"
+    "v": "2130",
+    "sha": "b91635e160054482"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -1228,11 +1232,11 @@
     "sha": "2c399f6aa7be6fcb"
   },
   "assets/onboarding.css": {
-    "v": "5",
-    "sha": "66bb0417397399fc"
+    "v": "6",
+    "sha": "3bbfdb73103b33bf"
   },
   "assets/onboarding.js": {
-    "v": "2113",
+    "v": "2114",
     "sha": "76faa4073e55a576"
   },
   "assets/operations-ui.js": {

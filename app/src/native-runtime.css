@@ -353,6 +353,8 @@ html.kiwi-native .sidebar,html.kiwi-native .drawer-body{overscroll-behavior:cont
   html.kiwi-native body:not(#kno) .kob-explore .kob-sep{display:none}
   html.kiwi-native body:not(#kno) .kob-skip{min-height:44px;text-decoration:none!important;font-size:15px!important;font-weight:600!important;color:var(--ink,#0A0F0D)!important}
   html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body:not(#kno) .kob-skip{color:#F7F5F0!important}
+  html.kiwi-native body:not(#kno) [data-draft-note] :is(button,label){color:var(--ink,#0A0F0D)}
+  html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body:not(#kno) [data-draft-note] :is(button,label){color:#F7F5F0}
   /* Top-aligned: the code keyboard rises on open and used to cover the help and the demo link. */
   html.kiwi-native body:not(#kno) .kiwi-lock-inner{display:flex!important;flex-direction:column;justify-content:flex-start;padding-top:clamp(8px,6vh,56px)!important}
 }
@@ -891,7 +893,7 @@ html.kiwi-native :is(.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.sc-pill,.cf-tab,.ch
   html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat{padding:10px 8px 9px!important;border-radius:14px!important;min-height:0!important;text-align:center}
   html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .v{order:-1;font-size:22px!important;line-height:1.1!important;margin:0 0 3px!important;font-variant-numeric:tabular-nums}
   html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat{display:flex!important;flex-direction:column;align-items:center}
-  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .l{font-size:11px!important;line-height:1.2!important;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .l{font-size:11px!important;line-height:1.2!important;justify-content:center;text-align:center;white-space:normal;text-wrap:balance;max-width:100%} /* a long label (« Avec téléphone ») wraps on a narrow phone instead of losing its last letters */
   html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .l i{display:none!important}
   html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .h{display:none!important}
 }
@@ -1260,3 +1262,10 @@ html.kiwi-native body.kiwi-native-till .cloture-card{max-height:100%;box-sizing:
   html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .feed-row>:is(.method,.amt,.ctx,.t){grid-column:1!important;grid-row:auto!important;text-align:start!important;overflow-wrap:break-word}
   html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .feed-row>.ctx{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 }
+/* "Copy a link to this view" copies capacitor://localhost in the app: no one can open it,
+   and on a phone its 40px is what the page title needed ("Customers" was cut to "Custom…"). */
+html.kiwi-native body.kiwi-native-owner:not(#kno) .view-link-btn{display:none}
+/* tokens.css sets --mono to Arial so numbers avoid JetBrains Mono's dotted zero.
+   In the app that made the dashboard's figures and badges Arial next to Inter
+   Tight; Inter Tight's zero is plain too, so the owner app uses it for both. */
+html.kiwi-native body.kiwi-native-owner{--mono:"Inter Tight",-apple-system,system-ui,sans-serif}
