@@ -1,10 +1,10 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=243';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=141';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=244';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=142';
 import { openMoves } from './inv-moves.js?v=5';
-import * as SZ from '../boutique-sizes.js?v=17';
+import * as SZ from '../boutique-sizes.js?v=18';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=141';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=142';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -764,7 +764,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <span class="bqi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length ? `${d.colors.length} coul. · ` : ''}${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
       <span class="bqi-stock ${cls}">${d.stock}</span>
       <span class="bqi-price">${fmtMAD(p.priceMAD)}</span>
-      <button class="bqi-mini" data-inv-print="${p.id}" title="Imprimer toutes les étiquettes"><i data-lucide="printer"></i></button>
+      <button class="bqi-mini" data-inv-print="${p.id}" title="Imprimer les étiquettes"><i data-lucide="printer"></i></button>
     </div>`;
   }
 
@@ -1873,15 +1873,19 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     if (!label) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Générez d\'abord un EAN-13')); return; }
     labelToast(window.KiwiBarcode.printLabels([label], { copies: 1 }), 'Étiquette');
   }
+  /* Une réception pas encore imprimée : seulement ses pièces (SZ.lastReceipt),
+     sinon tout le stock. */
   function printProductLabels(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
+    const rec = SZ.lastReceipt(pid); const fresh = rec && !rec.printed ? rec.got : null;
     const labels = [];
     d.variants.forEach((v) => {
       const label = labelForVariant(pid, v);
       if (!label) return;
-      const stock = Math.max(0, Math.floor(Number(v.stock) || 0));
+      const stock = fresh ? (fresh[v.id] || 0) : Math.max(0, Math.floor(Number(v.stock) || 0));
       for (let i = 0; i < stock; i++) labels.push(label);
     });
+    if (fresh && labels.length) SZ.markReceiptPrinted(pid);
     if (!labels.length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune unité en stock avec un code-barres à imprimer')); return; }
     labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`);
   }

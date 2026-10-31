@@ -52,6 +52,8 @@ const T = {
     saved: 'Stock enregistré', savedDesc: (n, c) => `${n} pièce${n > 1 ? 's' : ''} · ${c} code${c > 1 ? 's' : ''}-barres`,
     print: (n) => (n ? `Imprimer ${n} étiquette${n > 1 ? 's' : ''}` : 'Aucune étiquette à imprimer'),
     printDirty: 'Enregistrez avant d’imprimer.',
+    printN: (n) => ['Imprimer', n > 1 ? 'étiquettes' : 'étiquette'], fresh: 'nouvelles pièces',
+    printAll: (n) => `Tout le stock · ${n}`, lastIn: (n) => `Dernière réception : +${n} pièce${n > 1 ? 's' : ''}`,
     newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant', del: 'Supprimer',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
     colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
@@ -74,6 +76,8 @@ const T = {
     saved: 'Stock saved', savedDesc: (n, c) => `${n} piece${n > 1 ? 's' : ''} · ${c} barcode${c > 1 ? 's' : ''}`,
     print: (n) => (n ? `Print ${n} label${n > 1 ? 's' : ''}` : 'No labels to print'),
     printDirty: 'Save before printing.',
+    printN: (n) => ['Print', n > 1 ? 'labels' : 'label'], fresh: 'new pieces',
+    printAll: (n) => `Whole stock · ${n}`, lastIn: (n) => `Last delivery: +${n} piece${n > 1 ? 's' : ''}`,
     newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code', del: 'Delete',
     out: 'Sold out', empty: 'No sizes yet.',
     colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
@@ -96,6 +100,8 @@ const T = {
     saved: 'تم حفظ المخزون', savedDesc: (n, c) => `${n} قطعة · ${c} رمز شريطي`,
     print: (n) => (n ? `طباعة ${n} ملصق` : 'لا ملصقات للطباعة'),
     printDirty: 'احفظ قبل الطباعة.',
+    printN: () => ['طباعة', 'ملصق'], fresh: 'القطع الجديدة',
+    printAll: (n) => `كل المخزون · ${n}`, lastIn: (n) => `آخر استلام: +${n} قطعة`,
     newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود', del: 'حذف',
     out: 'نفد', empty: 'لا مقاسات بعد.',
     colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
@@ -223,6 +229,8 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-btn.is-main:hover:not(:disabled) { color: #fff; background: var(--riad, #053B2C); }
 .kbs-btn:disabled { opacity: .5; cursor: not-allowed; }
 .kbs-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.kbs-btn .kbs-n { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kbs-top .kbs-last { font-weight: 700; color: var(--atlas, #0B6E4F); }
 .kbs-btn:focus-visible, .kbs-link:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
 @media (max-width: 560px) {
   .kbs-row, .kbs-colhead { grid-template-columns: 52px minmax(0, 1fr) 88px; gap: 10px; padding-inline: 12px; }
@@ -242,6 +250,28 @@ const PRINT_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M64
         print(labels), register(vid), toast(title, desc), onSaved(),
         readOnly (la caisse sans le droit d'inventaire : on lit, on imprime) }
    Rend { refresh(), dirty() }. */
+/* La dernière réception de chaque article, gardée après la fermeture de la
+   fiche : la rouvrir pour imprimer ne sort que les nouvelles pièces, pas tout
+   le stock (Santos, 31/10 : épuisé, +50, et 100 étiquettes sorties). Deux
+   réceptions avant d'imprimer s'additionnent ; après l'impression, la
+   suivante repart de zéro. */
+const RKEY = 'kiwiLabelReceipt:';
+const RECEIPTS = {};
+const storeReceipt = (pid, r) => { RECEIPTS[pid] = r; try { localStorage.setItem(RKEY + pid, JSON.stringify(r)); } catch (_) { /* mémoire seule */ } return r; };
+export function lastReceipt(pid) {
+  if (!pid) return null;
+  if (RECEIPTS[pid]) return RECEIPTS[pid];
+  try { const r = JSON.parse(localStorage.getItem(RKEY + pid) || 'null'); if (r && r.got && typeof r.got === 'object') return (RECEIPTS[pid] = r); } catch (_) { /* rien de gardé */ }
+  return null;
+}
+export function noteReceipt(pid, got) {
+  const prev = lastReceipt(pid);
+  const sum = Object.assign({}, prev && !prev.printed ? prev.got : {});
+  Object.keys(got || {}).forEach((k) => { if (got[k] > 0) sum[k] = (sum[k] || 0) + got[k]; });
+  return storeReceipt(pid, { at: Date.now(), printed: false, got: sum });
+}
+export function markReceiptPrinted(pid) { const r = lastReceipt(pid); if (r && !r.printed) storeReceipt(pid, Object.assign({}, r, { printed: true })); }
+
 export function mount(host, o) {
   if (!host || !o || !o.cat) return null;
   css();
@@ -256,7 +286,6 @@ export function mount(host, o) {
   }, o);
   const pid = o.pid;
   let target = o.target > 0 ? Math.floor(o.target) : 0;
-  let last = null;   // { vid: pièces } de la dernière réception, pour l'impression
   let busy = false;
   const ro = !!o.readOnly;
   if (ro) target = 0;
@@ -343,11 +372,15 @@ export function mount(host, o) {
       <div class="kbc-pal" data-kbc-pal hidden>${pal.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dot(COLORS.columnOf(c, o.lang))}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div>
     </div>`;
     const printable = printCount();
+    const rec = lastReceipt(pid);
+    const fresh = rec ? Object.keys(rec.got).reduce((s, k) => s + (rec.got[k] || 0), 0) : 0;
+    const allN = rec ? printCount(true) : 0;
     /* Un carton à répartir : la bande de boutique-size-split.js sous les cases. */
     const splitOn = rich && shown.length > 1;
     const page = () => `<div class="kbs${creating || ro ? '' : ' is-restock'}" data-kbs>
       <div class="kbs-top">
         ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(d.stock))}</span>`}
+        ${!creating && rec && fresh ? `<span class="kbs-last">${esc(t.lastIn(fresh))}</span>` : ''}
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
       ${colorsHtml}
@@ -356,7 +389,8 @@ export function mount(host, o) {
       ${splitOn ? '<div data-kbs-split></div>' : ''}
       <p class="kbs-msg" data-kbs-msg>${creating && list.length > 1 ? esc(t.hintCreate) : ''}</p>
       <div class="kbs-acts">
-        <button type="button" class="kbs-btn" data-kbs-print${printable ? '' : ' disabled'}>${PRINT_SVG}<span>${esc(t.print(printable))}</span></button>
+        ${rec && allN && allN !== printable ? `<button type="button" class="kbs-btn" data-kbs-print-all>${esc(t.printAll(allN))}</button>` : ''}
+        <button type="button" class="kbs-btn" data-kbs-print${printable ? '' : ' disabled'}>${PRINT_SVG}<span>${printHtml(printable, !!rec)}</span></button>
         ${ro ? '' : `<button type="button" class="kbs-btn is-main" data-kbs-save>${esc(t.save)}</button>`}
       </div>
     </div>`;
@@ -404,19 +438,21 @@ export function mount(host, o) {
     draw();
   }
 
-  /* Étiquettes : la dernière réception si elle vient d'être enregistrée,
-     sinon le stock de chaque taille. */
-  const labelPlan = () => {
+  /* Étiquettes : les pièces de la dernière réception (lastReceipt), sinon le
+     stock de chaque taille. « Tout le stock » reste à portée, à côté. */
+  const labelPlan = (all) => {
     const d = cat.getProduct(pid);
     if (!d) return [];
+    const rec = all ? null : lastReceipt(pid);
     const plan = [];
     d.variants.forEach((v) => {
-      const n = last ? (last[v.id] || 0) : Math.max(0, Math.floor(+v.stock || 0));
+      const n = rec ? (rec.got[v.id] || 0) : Math.max(0, Math.floor(+v.stock || 0));
       if (n > 0 && o.primary(v)) plan.push([v, n]);
     });
     return plan;
   };
-  function printCount() { return labelPlan().reduce((s, [, n]) => s + n, 0); }
+  function printCount(all) { return labelPlan(all).reduce((s, [, n]) => s + n, 0); }
+  const printHtml = (n, fresh) => { if (!n) return esc(t.print(0)); const [verb, noun] = t.printN(n); return `${esc(verb)} <b class="kbs-n">${n}</b> ${esc(noun)}${fresh ? ` · ${esc(t.fresh)}` : ''}`; };
 
   const read = () => {
     const out = []; let sum = 0; let bad = false;
@@ -470,6 +506,8 @@ export function mount(host, o) {
       pb.disabled = !n || block;
       pb.title = block && n ? t.printDirty : '';
     }
+    const pa = host.querySelector('[data-kbs-print-all]');
+    if (pa) { pa.disabled = dirty(); pa.title = pa.disabled ? t.printDirty : ''; }
   };
 
   const save = () => {
@@ -506,7 +544,7 @@ export function mount(host, o) {
     if (cat.batch) cat.batch(run); else run();
     busy = false;
     target = 0;
-    last = got;
+    noteReceipt(pid, got);
     draw();
     const total = Object.keys(got).reduce((s, k) => s + got[k], 0);
     if (o.toast) o.toast(t.saved, t.savedDesc(total, Object.keys(got).length));
@@ -524,13 +562,16 @@ export function mount(host, o) {
       });
     });
     const sb = host.querySelector('[data-kbs-save]'); if (sb) sb.addEventListener('click', save);
-    const pb = host.querySelector('[data-kbs-print]');
-    if (pb) pb.addEventListener('click', () => {
+    const printPlan = (all) => {
       if (dirty()) { say(t.printDirty, true); return; }
       const labels = [];
-      labelPlan().forEach(([v, n]) => { const l = o.label(pid, v); if (l) for (let k = 0; k < n; k++) labels.push(l); });
-      if (labels.length && o.print) o.print(labels);
-    });
+      labelPlan(all).forEach(([v, n]) => { const l = o.label(pid, v); if (l) for (let k = 0; k < n; k++) labels.push(l); });
+      if (labels.length && o.print) { o.print(labels); if (!all) markReceiptPrinted(pid); }
+    };
+    const pb = host.querySelector('[data-kbs-print]');
+    if (pb) pb.addEventListener('click', () => printPlan(false));
+    const pa = host.querySelector('[data-kbs-print-all]');
+    if (pa) pa.addEventListener('click', () => printPlan(true));
     const add = host.querySelector('[data-kbc-add]');
     const palEl = host.querySelector('[data-kbc-pal]');
     if (add && palEl) add.addEventListener('click', () => { palEl.hidden = !palEl.hidden; add.setAttribute('aria-expanded', String(!palEl.hidden)); if (!palEl.hidden) { const f = palEl.querySelector('button'); if (f) f.focus(); } });

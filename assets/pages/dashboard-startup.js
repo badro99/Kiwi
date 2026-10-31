@@ -21,7 +21,7 @@
   const scripts = [
     'assets/pages-pro-office.js?v=3',
     'assets/pages-pro.js?v=2203',
-    'assets/pages-pro-boutique.js?v=34',
+    'assets/pages-pro-boutique.js?v=35',
     'assets/pages-pro-spa-starter.js?v=5',
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
