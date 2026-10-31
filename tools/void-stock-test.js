@@ -20,6 +20,7 @@ const retailSource = require('./pos-retail-test-source.cjs');
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 
 let pass = 0, fail = 0;
@@ -217,47 +218,50 @@ console.log('\n── le stock rendu est bien celui du serveur, pas d’une proj
  * neuf minutes après l'encaissement ; le Z ouvert à 01:34 la recomptait (11 ventes,
  * 9 700 MAD au lieu de 10 et 9 150) et le serveur le rejouait six jours. */
 function realReconcile(file) {
-  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
-  const at = src.indexOf('  function reconcileVoids(');
-  ok(at >= 0, file + ' : reconcileVoids introuvable');
-  let i = src.indexOf('{', at), depth = 0, end = -1;
-  for (; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}' && --depth === 0) { end = i + 1; break; }
+  const rvSrc = retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+  const rvAt = rvSrc.indexOf('  function reconcileVoids(');
+  ok(rvAt >= 0, file + ' : reconcileVoids introuvable');
+  let rvDepth = 0, rvEnd = -1;
+  for (let rvK = rvSrc.indexOf('{', rvAt); rvK < rvSrc.length; rvK++) {
+    if (rvSrc[rvK] === '{') rvDepth++;
+    else if (rvSrc[rvK] === '}' && --rvDepth === 0) { rvEnd = rvK + 1; break; }
   }
-  const moves = [];
-  const factory = new Function('IS_DEMO', 'pvReal', 'window', 'SALES', 'persistStock', 'lineAvailableQty',
-    'persistDay', 'root', 'rebuildCatalog', 'pruneTicket', 'refreshOps', '$', 'headSubVente',
-    src.slice(at, end) + '\nreturn reconcileVoids;');
-  return (SALES) => ({ moves, run: factory(false, () => true, { KiwiPosSale: KP }, SALES,
+  const rvFactory = vm.runInNewContext('(function (IS_DEMO, pvReal, window, SALES, persistStock, lineAvailableQty, persistDay, root, rebuildCatalog, pruneTicket, refreshOps, $, headSubVente) {\n'
+    + rvSrc.slice(rvAt, rvEnd) + '\nreturn reconcileVoids; })', {});
+  return (sales) => { const moves = []; return { moves, run: rvFactory(false, () => true, { KiwiPosSale: KP }, sales,
     (pid, size, color, delta) => moves.push(delta), (ln) => (ln.returned ? 0 : +ln.qty || 0),
-    () => {}, null, () => {}, () => {}, () => {}, () => null, () => '') });
+    () => {}, null, () => {}, () => {}, () => {}, () => null, () => '') }; };
+}
+/* Runs one reconcile over a fresh journal and reports what it did. */
+function run(make, sales, refs, authoritative) {
+  const h = make(sales);
+  return { n: h.run(refs, authoritative), moves: h.moves.length };
 }
 for (const file of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
   console.log('\n── ' + file + ' · une liste vide ou partielle ne ressuscite rien ──');
-  const make = realReconcile(file);
+  const rvMake = realReconcile(file);
   const line = () => [{ pid: 'p', size: 'S', color: 'noir', qty: 1, returned: false }];
   {
     const SALES = [Object.assign(mkSale('T-301', line()), { voided: true })];
-    const r = make(SALES);
-    eq(r.run([]), 0, 'montage avant le premier sondage : rien à faire');
+    const rvOut = run(rvMake, SALES, []);
+    eq(rvOut.n, 0, 'montage avant le premier sondage : rien à faire');
     ok(SALES[0].voided === true, 'la vente annulée reste annulée');
-    eq(r.moves.length, 0, 'aucun stock ne repart');
+    eq(rvOut.moves, 0, 'aucun stock ne repart');
   }
   {
     const SALES = [Object.assign(mkSale('T-302', line()), { voided: true }), mkSale('T-303', line())];
-    const r = make(SALES);
-    eq(r.run(['T-303']), 1, 'annulation au comptoir : seule T-303 sort');
+    const rvOut = run(rvMake, SALES, ['T-303']);
+    eq(rvOut.n, 1, 'annulation au comptoir : seule T-303 sort');
     ok(SALES[0].voided === true && SALES[1].voided === true, 'T-302 reste annulée, T-303 l’est aussi');
   }
   {
     const SALES = [Object.assign(mkSale('T-304', line()), { voided: true })];
-    const r = make(SALES);
-    eq(r.run([], true), 1, 'liste complète du serveur sans T-304 : remise');
+    const rvOut = run(rvMake, SALES, [], true);
+    eq(rvOut.n, 1, 'liste complète du serveur sans T-304 : remise');
     ok(SALES[0].voided === false, '« Remettre » marche toujours');
   }
-  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
-  ok(/addEventListener\('kiwi-sales-voided'[\s\S]{0,200}source === 'live-link'/.test(src),
+  const rvWiring = retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+  ok(/addEventListener\('kiwi-sales-voided'[\s\S]{0,200}source === 'live-link'/.test(rvWiring),
     file + ' : seul le sondage live-link fait autorité');
 }
 
