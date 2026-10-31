@@ -441,15 +441,23 @@ function realClientMix(from, to) {
     const book = screenBook();
     let list = [];
     try { list = (book && KC && typeof KC.list === 'function' && KC.list(book)) || []; } catch (_) { list = []; }
-    let visitors = 0, regulars = 0;
+    /* Un client régulier est un client revenu : au moins deux passages à la fin
+       de la période. Il fallait un passage AVANT la période, si bien qu'une
+       cliente arrivée ce mois-ci et revenue cinq fois comptait zéro, et qu'une
+       boutique récente lisait « aucun régulier » pendant des semaines. Les
+       nouveaux clients restent ceux dont le tout premier passage tombe dans la
+       période. */
+    let visitors = 0, regulars = 0, newcomers = 0;
     list.forEach((c) => {
       const stamps = (Array.isArray(c && c.history) ? c.history : [])
         .map((h) => Number(h && h.ts)).filter((t) => Number.isFinite(t) && t > 0);
       if (!stamps.some((t) => t >= from && t < to)) return;
       visitors++;
-      if (stamps.some((t) => t < from) || Number(c.visits || 0) > stamps.length) regulars++;
+      const older = stamps.some((t) => t < from) || Number(c.visits || 0) > stamps.length;
+      if (older || stamps.filter((t) => t < to).length >= 2) regulars++;
+      if (!older) newcomers++;
     });
-    return { visitors, regulars, newcomers: visitors - regulars };
+    return { visitors, regulars, newcomers };
   }
 
 function openDays(range) {

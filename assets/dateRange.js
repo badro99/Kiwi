@@ -254,7 +254,7 @@
     openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=23';
+  const partUrl = 'assets/daterange/renderers.js?v=24';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;
@@ -2808,6 +2808,14 @@
     },
     getShowComparison, setShowComparison,
     bounds: (range) => rangeBounds(range == null ? currentRange : range),
+    /* Le carnet clients d'un vrai établissement sur la plage : { visitors, regulars,
+       newcomers }. La carte « Clients réguliers » le lit ici, qu'il y ait ou non
+       une tuile « réguliers » dans la bande (la boutique n'en a pas). */
+    clientMix: (range) => {
+      if (!ownData()) return null;
+      const [from, to] = closedBounds(range == null ? currentRange : range);
+      return realClientMix(from, to);
+    },
     /* L'accueil du kit (étape 5) : ce que les rendus viennent de dessiner. */
     home: () => Object.assign({ range: currentRange }, homeStore()),
     todayPace,

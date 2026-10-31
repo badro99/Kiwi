@@ -67,7 +67,7 @@
     'assets/help-centre.js?v=7',
     'assets/account.js?v=33',
     'assets/design-2026.js?v=2',
-    'assets/design-vexel-layout.js?v=2098',
+    'assets/design-vexel-layout.js?v=2099',
     'assets/liquid-glass.js?v=1',
     'assets/hotel-language.js?v=3',
     'assets/hotel-housekeeping.js?v=1',

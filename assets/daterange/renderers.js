@@ -11,7 +11,7 @@
     'assets/daterange/activity.js?v=7',
     'assets/daterange/date-picker.js?v=5',
     'assets/daterange/cards.js?v=8',
-    'assets/daterange/ledger.js?v=7',
+    'assets/daterange/ledger.js?v=8',
     'assets/daterange/presentation.js?v=5',
   ];
   if (typeof document !== 'undefined' && document.readyState === 'loading' && typeof document.write === 'function' && !window.__kiwiHomeRenderers) {

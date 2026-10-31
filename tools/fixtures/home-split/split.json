@@ -1,6 +1,6 @@
 {
   "file": "assets/daterange/renderers.js",
-  "sha256": "bf7c23a33483b33f17f23f86316457c0e5455747a88156567abd4a30ff50a33d",
+  "sha256": "d7c1fcf6c32147f7fca6638787dd6e36baace3a8924ded9e870d2c8ad9ba126e",
   "parts": [
     {
       "name": "hero",
@@ -93,7 +93,7 @@
         },
         {
           "name": "heroDataByVenue",
-          "start": 223535,
+          "start": 224044,
           "length": 2609,
           "offset": 17696
         }
@@ -189,43 +189,43 @@
         },
         {
           "name": "hotelPerfEntry",
-          "start": 165830,
+          "start": 166339,
           "length": 1346,
           "offset": 26495
         },
         {
           "name": "hotelTilesFrom",
-          "start": 167176,
+          "start": 167685,
           "length": 1364,
           "offset": 27841
         },
         {
           "name": "tableTimeEntry",
-          "start": 168540,
+          "start": 169049,
           "length": 1263,
           "offset": 29205
         },
         {
           "name": "openKpiCustomizer",
-          "start": 169803,
+          "start": 170312,
           "length": 5621,
           "offset": 30468
         },
         {
           "name": "dutyBand",
-          "start": 196447,
+          "start": 196956,
           "length": 2830,
           "offset": 36089
         },
         {
           "name": "retailBand",
-          "start": 199277,
+          "start": 199786,
           "length": 2025,
           "offset": 38919
         },
         {
           "name": "kpiByVenue",
-          "start": 226144,
+          "start": 226653,
           "length": 10257,
           "offset": 40944
         }
@@ -306,25 +306,25 @@
         },
         {
           "name": "hourlyCumul",
-          "start": 156080,
+          "start": 156589,
           "length": 503,
           "offset": 39852
         },
         {
           "name": "dailyTotals",
-          "start": 156583,
+          "start": 157092,
           "length": 520,
           "offset": 40355
         },
         {
           "name": "realRevSeries",
-          "start": 157103,
+          "start": 157612,
           "length": 4247,
           "offset": 40875
         },
         {
           "name": "revChartByVenue",
-          "start": 236401,
+          "start": 236910,
           "length": 9857,
           "offset": 45122
         }
@@ -387,19 +387,19 @@
         },
         {
           "name": "buildOrder",
-          "start": 177202,
+          "start": 177711,
           "length": 5590,
           "offset": 10979
         },
         {
           "name": "buildLiveFeed",
-          "start": 182792,
+          "start": 183301,
           "length": 1375,
           "offset": 16569
         },
         {
           "name": "buildCustomFeed",
-          "start": 184167,
+          "start": 184676,
           "length": 5648,
           "offset": 17944
         }
@@ -496,31 +496,31 @@
         },
         {
           "name": "fmtHumanRange",
-          "start": 202135,
+          "start": 202644,
           "length": 708,
           "offset": 2787
         },
         {
           "name": "closeCustomPicker",
-          "start": 202843,
+          "start": 203352,
           "length": 1011,
           "offset": 3495
         },
         {
           "name": "openCustomPicker",
-          "start": 203854,
+          "start": 204363,
           "length": 14403,
           "offset": 4506
         },
         {
           "name": "mountDaySelector",
-          "start": 218257,
+          "start": 218766,
           "length": 2406,
           "offset": 18909
         },
         {
           "name": "registerHandler",
-          "start": 220663,
+          "start": 221172,
           "length": 1551,
           "offset": 21315
         }
@@ -750,31 +750,31 @@
         },
         {
           "name": "realMixRows",
-          "start": 175424,
+          "start": 175933,
           "length": 1778,
           "offset": 36888
         },
         {
           "name": "realLowStock",
-          "start": 189815,
+          "start": 190324,
           "length": 1849,
           "offset": 38666
         },
         {
           "name": "realTopProducts",
-          "start": 191664,
+          "start": 192173,
           "length": 1746,
           "offset": 40515
         },
         {
           "name": "realPairs",
-          "start": 193410,
+          "start": 193919,
           "length": 2391,
           "offset": 42261
         },
         {
           "name": "growBars",
-          "start": 195801,
+          "start": 196310,
           "length": 646,
           "offset": 44652
         }
@@ -988,38 +988,38 @@
         {
           "name": "realClientMix",
           "start": 153120,
-          "length": 700,
+          "length": 1209,
           "offset": 24067
         },
         {
           "name": "openDays",
-          "start": 153820,
+          "start": 154329,
           "length": 345,
-          "offset": 24767
+          "offset": 25276
         },
         {
           "name": "realDeltaPct",
-          "start": 154165,
+          "start": 154674,
           "length": 1479,
-          "offset": 25112
+          "offset": 25621
         },
         {
           "name": "deltaTenths",
-          "start": 155644,
+          "start": 156153,
           "length": 436,
-          "offset": 26591
+          "offset": 27100
         },
         {
           "name": "operatorLedgerPending",
-          "start": 161350,
+          "start": 161859,
           "length": 552,
-          "offset": 27027
+          "offset": 27536
         },
         {
           "name": "buildHeatmap",
-          "start": 161902,
+          "start": 162411,
           "length": 3928,
-          "offset": 27579
+          "offset": 28088
         }
       ],
       "bridges": [],
@@ -1102,13 +1102,13 @@
         },
         {
           "name": "hookI18n",
-          "start": 201302,
+          "start": 201811,
           "length": 833,
           "offset": 4017
         },
         {
           "name": "tickLiveRevenue",
-          "start": 222214,
+          "start": 222723,
           "length": 1321,
           "offset": 4850
         }

@@ -1062,6 +1062,13 @@
      * legende, ou il se lit comme une phrase (« sur 653 clients vus ») plutot
      * que comme la moitie d'une fraction. */
     var read = parseClients(clientText);
+    /* Un vrai établissement lit son carnet directement : la carte ne dépend plus
+       d'une tuile de la bande, absente chez une boutique ou retirée par le
+       commerçant, et qui la laissait sur « · » malgré des clients venus. */
+    try {
+      var mix = window.KiwiDateRange && window.KiwiDateRange.clientMix && window.KiwiDateRange.clientMix();
+      if (mix && mix.visitors > 0) read = parseClients(mix.regulars + ' / ' + mix.visitors);
+    } catch (_) {}
     var clientCopy = CLIENT_STR[lang()] || CLIENT_STR.fr;
     setText(clientValue, read.known ? read.currentText : '·');
     setText(document.querySelector('[data-vexel-client-caption]'),

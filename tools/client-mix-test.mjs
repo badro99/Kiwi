@@ -54,8 +54,10 @@ const book = [
 const ctx = load(book);
 const mix = ctx.realClientMix(FROM, TO);
 check('identified clients who came in the window: a, b, c, d', mix.visitors === 4, JSON.stringify(mix));
-check('regulars: a (seen before) and d (more visits than its dated history)', mix.regulars === 2, JSON.stringify(mix));
-check('newcomers: b and c, even with two visits this week', mix.newcomers === 2, JSON.stringify(mix));
+check('regulars: a (seen before), b (came back this week) and d (more visits than its dated history)', mix.regulars === 3, JSON.stringify(mix));
+check('newcomers: b and c, first visit this week, even when b came back', mix.newcomers === 2, JSON.stringify(mix));
+check('a visit after the window does not make a one-time client regular',
+  load([{ id: 'y', visits: 2, history: [visit('2026-10-20'), visit('2026-10-09')] }]).realClientMix(FROM, TO).regulars === 0);
 check('a client created without a purchase did not come, nor an old card with no dated history',
   load([book[5], book[6]]).realClientMix(FROM, TO).visitors === 0);
 check('the window end is exclusive (a visit at « to » is not in it)',
