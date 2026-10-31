@@ -464,6 +464,35 @@
     const tillKitShippedSend = () => tillKitShippedLabel('#rp-send-kitchen');
     const tillKitClientsOpen = () => { const r = document.getElementById('kcb-root'); return !!(r && r.style.display !== 'none'); };
     const tillKitLive = (sel) => { const el = sel && document.querySelector(sel); return el && !el.hasAttribute('hidden') ? el : null; };
+    /* Le panneau Plus, rangé comme le tiroir de la boutique (propriétaire,
+       2026-10-31) : une seule liste du kit, les destinations puis Service,
+       Gestion et Cet appareil, icône et libellé par rangée, chacune cliquant
+       son bouton livré. Les cartes livrées ne s'y dessinent plus
+       (caisse-shell.css). Clients & fidélité est déjà en tête. */
+    const TILL_KIT_MORE_ICON = { open_drawer: 'point_of_sale', cash_in_out: 'sync_alt', shift_change: 'swap_horiz', cancel_sale: 'close',
+      refund: 'undo', sales: 'receipt_long', reprint: 'receipt', team: 'group', attendance: 'key', close: 'power_settings_new',
+      menu: 'menu_book', stock: 'inventory_2', printer: 'print', fullscreen: 'fullscreen', reload: 'refresh', device_id: 'tablet_mac' };
+    const TILL_KIT_DRAWER_EXTRA = [['theme', 'dark_mode', '#theme-toggle'], ['logout', 'logout', '.quick-actions a[href^="/auth/logout"]']];
+    const tillKitDrawerSections = () => TILL_KIT_MORE.map(([title, rows]) => {
+      /* Le libellé court du bouton livré (« Mouvement caisse », « Fin de
+         service »), comme la boutique : ceux du kit passaient sur deux lignes. */
+      const short = (el) => {
+        const sp = el && el.querySelector('span:not(.count)'), lang = window.KiwiCaisseLang;
+        const txt = ((sp || el || {}).textContent || '').replace(/\s+/g, ' ').trim();
+        return txt && lang && lang.tr ? lang.tr(txt) : txt;
+      };
+      const items = rows.filter((r) => r[0] !== 'loyalty' && (!r[2] || tillKitLive(r[2]))).map(([id, key, sel]) => {
+        const n = id === 'stock' ? parseInt(($('#stock-alert-count') || {}).textContent, 10) || 0 : 0;
+        const own = sel && !/^(sales|fullscreen|device_id)$/.test(id) ? short(tillKitLive(sel)) : '';
+        return { id: 'm:' + id, icon: TILL_KIT_MORE_ICON[id] || 'more_horiz', badge: n > 0 ? n : 0,
+          label: own || (id === 'fullscreen' && document.fullscreenElement ? kkt('till.more.exit_fullscreen') : kkt(key)) };
+      });
+      if (title === 'till.more.device') TILL_KIT_DRAWER_EXTRA.forEach(([id, icon, sel]) => {
+        const el = tillKitLive(sel);
+        if (el) items.push({ id: 'm:' + id, icon, label: short(el) });
+      });
+      return { label: kkt(title), items };
+    }).filter((s) => s.items.length);
     function tillKitRail() {
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
       const value = tillKitClientsOpen() ? 'clients' : kdsOpen ? 'kitchen' : mode === 'vrap' ? 'takeaway' : mode === 'waitlist' ? 'waiting' : 'floor';
@@ -495,7 +524,7 @@
       if (sync) { sync.a11y = kkt('till.nav.more_a11y', { status: sync.label }); footer.sync = sync; }
       /* La tête du panneau porte exactement les mêmes éléments que le rail. */
       const nav = tillKitMoreNavEl();
-      if (nav) { nav.sections = [{ items: items.map((it) => Object.assign({}, it)) }]; nav.setAttribute('value', value || ''); }
+      if (nav) { nav.sections = [{ items: items.map((it) => Object.assign({}, it)) }].concat(tillKitDrawerSections()); nav.setAttribute('value', value || ''); }
       /* Plus n'est pas une destination : la lentille reste sur le mode, et
          <k-rail> comme <k-sidebar> ne laissent pas toucher l'élément qui
          porte déjà leur valeur, ce qui empêcherait Moins de refermer. */
@@ -591,6 +620,13 @@
     }
     function tillKitRailSelect(id) {
       if (id === 'more') { tillKitToggleMore(); window.KiwiTillFrame.paint({ rail: tillKitRail() }); return; }
+      if (id && id.indexOf('m:') === 0) {
+        const k = id.slice(2), ex = TILL_KIT_DRAWER_EXTRA.find((r) => r[0] === k);
+        tillKitSetMore(false);
+        if (!ex) { tillKitMore(k); return; }
+        const el = tillKitLive(ex[2]); if (el) el.click();
+        return;
+      }
       tillKitSetMore(false);
       /* Another destination leaves the payment, as its back button does: the
          payment layer floated over the kitchen and the clients book while the

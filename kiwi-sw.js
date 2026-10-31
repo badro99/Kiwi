@@ -116,7 +116,7 @@ var SHELL = [
   '/assets/caisse/closing.js?v=1',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/catalogue.js?v=10',
-  '/assets/caisse/till-frame.js?v=15',
+  '/assets/caisse/till-frame.js?v=16',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=6',
   '/assets/caisse/split-tender.js?v=5',
@@ -477,11 +477,12 @@ var SHELL = [
   '/assets/kit/haptics.js?v=7',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
-  '/assets/icons/material/sprite.till.svg?v=15',
+  '/assets/icons/material/sprite.till.svg?v=16',
   '/assets/kit/tokens-2027.css?v=2',
   '/assets/kit/kit.css?v=68',
   '/assets/pos-boutique-2027.css?v=27',
   '/assets/pos-maison-2027.css?v=5',
+  '/assets/caisse-more-2027.css?v=1',
   '/assets/pos-maison/kit-2027.js?v=4',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',

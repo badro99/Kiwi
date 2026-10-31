@@ -211,6 +211,10 @@
     "v": "11",
     "sha": "18b0d6fedbf71be7"
   },
+  "assets/caisse-more-2027.css": {
+    "v": "1",
+    "sha": "676fc3c10df75c59"
+  },
   "assets/caisse-motion.js": {
     "v": "8",
     "sha": "4ed3cd5cbce10a75"
@@ -304,8 +308,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "15",
-    "sha": "cc1220b37728b5ce"
+    "v": "16",
+    "sha": "53245fe3639518ec"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -732,8 +736,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "15",
-    "sha": "8018a34835512455"
+    "v": "16",
+    "sha": "60ad3ded10f9e520"
   },
   "assets/identity.js": {
     "v": "12",
