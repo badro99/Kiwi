@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=140';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=58';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=140';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=140';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=141';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=59';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=141';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=141';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -198,7 +198,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
    * fait rien et on ne prétend rien. Rendre à l'aveugle le stock d'une vente de
    * trois semaines, alors que l'inventaire a été recompté depuis, ferait plus de
    * dégâts que le décalage qu'on prétend corriger. */
-  function reconcileVoids(refs) {
+  function reconcileVoids(refs, authoritative) {
     if (IS_DEMO || !pvReal()) return 0;
     const KP = window.KiwiPosSale;
     const hit = (KP && KP.refMatcher) ? KP.refMatcher(refs) : null;
@@ -218,7 +218,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     SALES.forEach((sale) => {
       if (!sale || !sale.id) return;
       const out = !!(hit && hit(sale.id));
-      if (out === !!sale.voided) return;         // rien à faire pour celle-ci
+      if (out === !!sale.voided || (!out && !authoritative)) return;   // remise : seulement sur la liste complète live-link (vide au montage, partielle au comptoir · A4)
       if (out) { move(sale, +1); sale.voided = true; }   // sortie : la marchandise revient
       else { move(sale, -1); sale.voided = false; }      // remise : elle repart
       touched++;
@@ -1626,7 +1626,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     if (!mount._voidsBound) {
       mount._voidsBound = true;
       document.addEventListener('kiwi-sales-voided', (e) => {
-        try { reconcileVoids((e && e.detail && e.detail.refs) || []); } catch (_) {}
+        try { reconcileVoids((e && e.detail && e.detail.refs) || [], !!(e && e.detail && e.detail.source === 'live-link')); } catch (_) {}
       });
     }
     try {

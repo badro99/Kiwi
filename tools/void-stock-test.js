@@ -211,5 +211,55 @@ console.log('\n── le stock rendu est bien celui du serveur, pas d’une proj
   eq(v.stock, stockOf(vNoirS.id), 'le disque et la mémoire disent la même chose');
 }
 
+/* ── la VRAIE fonction des deux caisses : une remise exige la liste du serveur ──
+ * A4 (Santos, 23 octobre) : la caisse rechargée lisait voidedRefs() avant le
+ * premier sondage, une liste vide, et remettait dans les livres la vente annulée
+ * neuf minutes après l'encaissement ; le Z ouvert à 01:34 la recomptait (11 ventes,
+ * 9 700 MAD au lieu de 10 et 9 150) et le serveur le rejouait six jours. */
+function realReconcile(file) {
+  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const at = src.indexOf('  function reconcileVoids(');
+  ok(at >= 0, file + ' : reconcileVoids introuvable');
+  let i = src.indexOf('{', at), depth = 0, end = -1;
+  for (; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) { end = i + 1; break; }
+  }
+  const moves = [];
+  const factory = new Function('IS_DEMO', 'pvReal', 'window', 'SALES', 'persistStock', 'lineAvailableQty',
+    'persistDay', 'root', 'rebuildCatalog', 'pruneTicket', 'refreshOps', '$', 'headSubVente',
+    src.slice(at, end) + '\nreturn reconcileVoids;');
+  return (SALES) => ({ moves, run: factory(false, () => true, { KiwiPosSale: KP }, SALES,
+    (pid, size, color, delta) => moves.push(delta), (ln) => (ln.returned ? 0 : +ln.qty || 0),
+    () => {}, null, () => {}, () => {}, () => {}, () => null, () => '') });
+}
+for (const file of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
+  console.log('\n── ' + file + ' · une liste vide ou partielle ne ressuscite rien ──');
+  const make = realReconcile(file);
+  const line = () => [{ pid: 'p', size: 'S', color: 'noir', qty: 1, returned: false }];
+  {
+    const SALES = [Object.assign(mkSale('T-301', line()), { voided: true })];
+    const r = make(SALES);
+    eq(r.run([]), 0, 'montage avant le premier sondage : rien à faire');
+    ok(SALES[0].voided === true, 'la vente annulée reste annulée');
+    eq(r.moves.length, 0, 'aucun stock ne repart');
+  }
+  {
+    const SALES = [Object.assign(mkSale('T-302', line()), { voided: true }), mkSale('T-303', line())];
+    const r = make(SALES);
+    eq(r.run(['T-303']), 1, 'annulation au comptoir : seule T-303 sort');
+    ok(SALES[0].voided === true && SALES[1].voided === true, 'T-302 reste annulée, T-303 l’est aussi');
+  }
+  {
+    const SALES = [Object.assign(mkSale('T-304', line()), { voided: true })];
+    const r = make(SALES);
+    eq(r.run([], true), 1, 'liste complète du serveur sans T-304 : remise');
+    ok(SALES[0].voided === false, '« Remettre » marche toujours');
+  }
+  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  ok(/addEventListener\('kiwi-sales-voided'[\s\S]{0,200}source === 'live-link'/.test(src),
+    file + ' : seul le sondage live-link fait autorité');
+}
+
 console.log(`\n${fail ? '✗' : '✓'} ventes sorties des livres — ${pass} contrôles, ${fail} échec(s)\n`);
 process.exit(fail ? 1 : 0);
