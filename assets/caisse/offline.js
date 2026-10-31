@@ -89,6 +89,47 @@
         serviceFloorSignature = signature;
       }).catch(() => {}).finally(() => { serviceFloorPublishing = false; });
     }
+    /* « Imprimer » sur le téléphone serveur. Le téléphone n'a pas d'imprimante :
+       il dépose une demande `bill-print`, et seule la caisse hub d'impression
+       sort l'addition (deux caisses ne doivent pas l'imprimer deux fois). Une
+       autre caisse prévient simplement le caissier. Une demande n'est servie
+       qu'une fois (registre local) et seulement si elle est récente : relire
+       le document au démarrage ne doit pas réimprimer l'après-midi. */
+    const BILL_PRINT_SEEN = 'kiwiBillPrintSeenV1:';
+    const caisseBillPrintBoot = Date.now();
+    function caissePrintRemoteBills(events, merchant) {
+      if (!Array.isArray(events) || !merchant) return;
+      const floor = Math.max(caisseBillPrintBoot - 120000, Date.now() - 300000);
+      const fresh = events.filter((e) => e && e.type === 'bill-print' && e.id && Number(e.ts) > floor);
+      if (!fresh.length) return;
+      let seen = [];
+      try { seen = JSON.parse(localStorage.getItem(BILL_PRINT_SEEN + merchant) || '[]'); } catch (_) { seen = []; }
+      if (!Array.isArray(seen)) seen = [];
+      fresh.forEach((e) => {
+        if (seen.includes(e.id)) return;
+        seen.push(e.id);
+        const label = 'Table ' + String(e.table || '');
+        const notify = () => toast(label + ' · addition demandée' + (e.actor ? ' par ' + e.actor : ''));
+        const print = () => {
+          const id = caisseTableId(e.table);
+          const t = id && tables[id];
+          const lines = t ? generateOrder(id, t) : [];
+          if (!lines.length) { toast(label + ' · addition demandée, aucune ligne à imprimer'); return; }
+          const gross = lines.reduce((sum, l) => sum + (Number(l.total) || 0), 0);
+          const disc = discountAmountFor(id, gross);
+          const out = lines.map((l) => ({ qty: String(l.qty), name: lineName(l), price: fmtMAD(l.total) }));
+          if (disc > 0) out.push({ qty: '', name: 'Remise', price: '−' + fmtMAD(disc) });
+          toast(label + ' · impression de l’addition' + (e.actor ? ' (' + e.actor + ')' : ''));
+          printHardwareTicket({ title: label, lines: out, total: fmtMAD(Math.max(0, gross - disc)) });
+        };
+        /* La file d'impression (kitchen-print-queue.js) sait si CETTE caisse
+           est le hub : elle imprime ou prévient. Sans file, seule caisse : on imprime. */
+        const request = { table: e.table, print, notify, handled: false };
+        window.dispatchEvent(new CustomEvent('kiwi:bill-print-request', { detail: request }));
+        if (!request.handled) print();
+      });
+      try { localStorage.setItem(BILL_PRINT_SEEN + merchant, JSON.stringify(seen.slice(-100))); } catch (_) {}
+    }
     function pollEmployeeFloor() {
       /* A socket poke can arrive while the previous HTTP read is still in
          flight. Dropping that poke made the caisse wait for the eight-second
@@ -114,6 +155,7 @@
           openTable: value => { const id = caisseTableId(value); if (id && tables[id]) openTable(id); },
         });
         else window.KiwiServiceRequests?.reset();
+        caissePrintRemoteBills(data.events, merchant);
         if (data.locks && typeof data.locks === 'object') caisseTableLocks = data.locks;
         let changed = false;
         Object.keys(data.states || {}).forEach((key) => {

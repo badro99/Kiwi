@@ -205,7 +205,11 @@
     var urgent = url.pathname === '/api/print/jobs'
       || (url.pathname === '/api/store' && url.searchParams.get('feature') === 'printhub');
     var identity = /^\/api\/(?:me|employee|auth)(?:\/|$)/.test(url.pathname);
-    if (!identity && Date.now() < refusedUntil && !urgent) {
+    /* The pause holds back READS only. A write is a person's action (send a
+       table, cancel a line) and reports its own refusal: blocking it here
+       made one refused background read silence every action on the server
+       phone for thirty minutes. */
+    if (!identity && method === 'GET' && Date.now() < refusedUntil && !urgent) {
       return Promise.reject(new Error('Authentication retry paused for thirty minutes'));
     }
     // A refused action reports its own failure; it must not suspend unrelated
@@ -237,7 +241,10 @@
     return original(input, options).then(function (response) {
       if (response.ok) bootRetries.delete(key);
       else if (demo() && !bootRetry) bootRetries.add(key);
-      if (response.status === 401 && !/^\/api\/(?:me|employee|auth|config)(?:\/|$)/.test(url.pathname)) refusedUntil = Date.now() + 1800000;
+      /* `whoami` is a role probe: a server phone signed in with a staff code
+         is legitimately unknown to it (401) and must not pause the device. */
+      var probe = url.pathname === '/api/operations' && url.searchParams.get('view') === 'whoami';
+      if (response.status === 401 && !probe && !/^\/api\/(?:me|employee|auth|config)(?:\/|$)/.test(url.pathname)) refusedUntil = Date.now() + 1800000;
       if (response.ok && (url.pathname === '/api/config' || url.pathname === '/api/me')) {
         response.clone().json().then(function (data) {
           if (!ticket || ticket === configTicket) hint(data.pollMode);

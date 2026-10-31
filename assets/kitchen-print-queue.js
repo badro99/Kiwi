@@ -398,6 +398,31 @@
       badge.setAttribute('aria-label', s.pending ? s.pending + ' ticket(s) en attente' : (s.hub ? 'Impression automatique prête' : 'Hub non activé'));
     }
   }
+  /* « Imprimer » sur le téléphone serveur (assets/caisse/offline.js) : seul le
+     hub sort l'addition, les autres caisses préviennent le caissier. */
+  window.addEventListener('kiwi:bill-print-request', function (e) {
+    var r = e && e.detail;
+    if (!r || r.handled) return;
+    r.handled = true;
+    try { (isHub() ? r.print : r.notify)(); } catch (_) {}
+  });
+  /* Une commande du téléphone serveur (ou d'OrderPro) arrive et AUCUNE caisse
+     n'est hub d'impression : elle n'existait jusqu'ici que sur l'écran, jamais
+     sur papier, sans un mot. On le dit au caissier, avec le geste qui répare.
+     Seulement pour une commande récente, et pas plus d'une fois par 5 minutes. */
+  var lastNoHubWarnAt = 0;
+  function warnNoHub(options) {
+    var now = Date.now(), at = Number(options && options.createdAt) || now;
+    if (now - at > 10 * 60 * 1000 || now - lastNoHubWarnAt < 5 * 60 * 1000) return;
+    if (remote.holder && remote.holder.deviceId && Number(remote.holder.expiresAt || 0) > now) return;
+    lastNoHubWarnAt = now;
+    try {
+      if (window.KiwiCaisseToast) window.KiwiCaisseToast(
+        'Commande serveur non imprimée', 9000, 'warn',
+        'Aucune caisse n’imprime les commandes des serveurs. Imprimante › « Faire de ce poste le hub d’impression ».'
+      );
+    } catch (_) {}
+  }
   function notifyWaiting(reason) {
     var now = Date.now();
     if (now - lastWarnAt < 60000) return;
@@ -692,6 +717,7 @@
   function enqueue(plan, options) {
     options = options || {};
     if ((options.remote === true || options.remote === 'connected') && !isHub()) {
+      warnNoHub(options);
       return { accepted: 0, skipped: 'not-print-hub' };
     }
     /* Turning a till into the hub during service must not empty the last half

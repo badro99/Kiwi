@@ -78,7 +78,7 @@
   <!-- Client error reporter & observability (fail-soft telemetry) -->
   <script src="assets/err-reporter.js?v=2"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
-  <script src="assets/kiwi-env.js?v=9"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <script src="assets/kiwi-env.js?v=10"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
   <!-- À qui appartient le service en mémoire. Sans defer, avant le script en
        ligne : une caisse dépairée ou réappairée en plein service se verrouille,
        et aucun appel /api/* ne part ailleurs avec les données du service
@@ -413,7 +413,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=16" defer></script> <script src="assets/kitchen-print-queue.js?v=24" defer></script>
+  <script src="assets/kitchen-relay.js?v=16" defer></script> <script src="assets/kitchen-print-queue.js?v=26" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -2020,7 +2020,7 @@
   <link rel="preload" as="script" href="assets/caisse/handover.js?v=2" data-caisse-script>
   <link href="assets/caisse-loyalty-reward.js?v=7" data-caisse-lazy="loyalty-reward">
   <link href="assets/caisse/inventory.js?v=4" data-caisse-lazy="inventory">
-  <link rel="preload" as="script" href="assets/caisse/offline.js?v=3" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/offline.js?v=6" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/receipts.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/closing.js?v=1" data-caisse-script>
   <script src="assets/caisse/workflows-loader.js?v=3"></script>

@@ -73,8 +73,10 @@ for (const active of [0, 1]) {
   await pollMode(env, 'shop', 1599999); assert.equal(env.probes, 1);
   await pollMode(env, 'shop', 1600000); assert.equal(env.probes, 2);
 }
-const test = db({ active: 1, test: 1 });
-assert.equal(await pollMode(test, 'amira-cafe'), 'quiet'); assert.equal(test.probes, 0);
+// A test account follows the same probe, over 30 minutes instead of 7 days:
+// quiet while idle, live while someone is testing it.
+assert.equal(await pollMode(db({ active: 1, test: 1 }), 'amira-cafe'), 'live');
+assert.equal(await pollMode(db({ active: 0, test: 1 }), 'amira-cafe'), 'quiet');
 console.log('quiet mode: read pacing, hidden pause, action wake, demo hour, money, 401 and server cache passed');
 // Execute the production query, including the exact seven-day boundary.
 const { DatabaseSync } = await import('node:sqlite');
@@ -108,7 +110,18 @@ for (let second = 0; second < 3600; second++) {
   await hour.advance(1000);
 }
 assert.equal(hour.hits(), 6, 'quiet resource including moving cursor: six requests/device-hour');
-await assert.rejects(denied.window.fetch('/api/operations', { method: 'POST' }));
+// A refused read pauses READS only: a person's action still reaches the server
+// (the server phone's cancel / send / table state were silenced for 30 min).
+{ const paused = device(true, 401);
+  await paused.window.fetch('/api/feed'); await paused.settle();
+  await assert.rejects(paused.window.fetch('/api/store?feature=team'));
+  await paused.window.fetch('/api/operations', { method: 'POST' });
+  assert.equal(paused.hits(), 2, 'writes pass through the read pause'); }
+// The role probe answers 401 to a staff-code session: it must not pause the device.
+{ const probe = device(true, 401);
+  await probe.window.fetch('/api/operations?view=whoami&merchant=shop'); await probe.settle();
+  await probe.window.fetch('/api/order/queue?merchant=shop');
+  assert.equal(probe.hits(), 2, 'whoami 401 does not pause the server phone'); }
 console.log('quiet budget: 6 HTTP/device-hour per read resource');
 
 // The hint says whether a business has been inactive: only callers allowed to

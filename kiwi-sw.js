@@ -127,7 +127,7 @@ var SHELL = [
   '/assets/caisse/returns.js?v=2',
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=4',
-  '/assets/caisse/offline.js?v=3',
+  '/assets/caisse/offline.js?v=6',
   '/assets/caisse-app.js?v=32',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
@@ -139,7 +139,7 @@ var SHELL = [
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/service.js?v=10',
-  '/assets/serveur-app.js?v=23',
+  '/assets/serveur-app.js?v=24',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/booking.css?v=16',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=2',
-  '/assets/kiwi-env.js?v=9',
+  '/assets/kiwi-env.js?v=10',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
   '/cuisine.webmanifest',
@@ -467,7 +467,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=24',
+  '/assets/kitchen-print-queue.js?v=26',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=22',
   '/assets/pos-dispatch.js?v=325',

@@ -268,8 +268,8 @@
     "sha": "e75b19935db1e535"
   },
   "assets/caisse/offline.js": {
-    "v": "3",
-    "sha": "17e5612025729260"
+    "v": "6",
+    "sha": "e144f727a5a8d2c0"
   },
   "assets/caisse/orders.js": {
     "v": "2",
@@ -1020,16 +1020,16 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "24",
-    "sha": "6d0fc0260ab81748"
+    "v": "26",
+    "sha": "894a429d511a3d60"
   },
   "assets/kitchen-relay.js": {
     "v": "16",
     "sha": "8521b9aa2943dac1"
   },
   "assets/kiwi-env.js": {
-    "v": "9",
-    "sha": "81658a75618730c5"
+    "v": "10",
+    "sha": "f043ce412d6fe07a"
   },
   "assets/kiwi-health.css": {
     "v": "2",
@@ -1908,8 +1908,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "23",
-    "sha": "bb6917370a64a020"
+    "v": "24",
+    "sha": "11190e04d55b2195"
   },
   "assets/serveur-lang.js": {
     "v": "6",

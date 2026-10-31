@@ -489,6 +489,22 @@ export async function onRequestPost({ request, env }) {
     await poke(env, merchant, FEATURE);
     return json({ ok: true, table, action, lock: action === 'acquire' ? { table, actor, actorId, ts: now } : null });
   }
+  /* « Imprimer l'addition » depuis le téléphone serveur. Le téléphone n'a pas
+     d'imprimante : il dépose une demande, et la caisse hub d'impression sort
+     l'addition de CETTE table (assets/caisse/offline.js · bill-print). */
+  if (body.printBill && employee) {
+    const table = tableKey(body.printBill.table);
+    const targets = await floorTargets(env, merchant);
+    if (!table || !targets[table]) return json({ error: 'floor-table-required' }, 403);
+    if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+    const myId = String(employee.member.id || employee.session.staffId || '');
+    const actor = memberName(employee.member) || 'Serveur';
+    const event = { id: 'evt-' + crypto.randomUUID(), type: 'bill-print', ts: Date.now(), table,
+      actor, serverIds: myId ? [myId] : [], servers: [actor] };
+    if (!(await append(env, merchant, event, null))) return json({ error: 'bill-print-failed' }, 503);
+    await poke(env, merchant, FEATURE);
+    return json({ ok: true, id: event.id });
+  }
   if (body.state && employee) {
     const table = tableKey(body.state.table);
     const status = String(body.state.status || '');

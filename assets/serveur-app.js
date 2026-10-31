@@ -2156,7 +2156,31 @@
         }
         openPayChoice(activeTableId);
       } else if (action === 'print-bill') {
-        toast('Impression de l\'addition…');
+        /* Le téléphone n'a pas d'imprimante : il demande à la caisse hub
+           d'impression de sortir l'addition de cette table. Ce bouton
+           affichait « Impression… » sans rien envoyer nulle part. */
+        const id = activeTableId;
+        if (SV_DEMO) { toast(`Table ${id} · addition envoyée à la caisse`); return; }
+        const unsent = (tableOrders[id] || []).some((line) =>
+          Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
+        if (unsent || dirtyOrders.has(id)) {
+          toast(`Table ${id} · envoyez d'abord la commande en cuisine`, 4800);
+          return;
+        }
+        if (svKnownOffline()) { toast("Pas de réseau. L'addition n'est pas imprimée, réessayez.", 5200); return; }
+        btn.disabled = true;
+        let sent = null;
+        try {
+          sent = await svFetchJson('/api/service/events', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: svSlug(), printBill: { table: id } }),
+          });
+        } catch (_) { sent = null; }
+        btn.disabled = false;
+        toast(sent && sent.ok && sent.data && sent.data.ok
+          ? `Table ${id} · addition envoyée à l'imprimante de la caisse`
+          : `Table ${id} · impression non transmise, réessayez`, 4200);
       } else if (action === 'cancel-table') {
         const id = activeTableId;
         const expectedSession = serviceTableSessions.get(id) || '';
