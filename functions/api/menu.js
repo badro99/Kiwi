@@ -313,6 +313,8 @@ function sanitizeShop(raw) {
       priceMAD: Math.max(0, Math.min(1e7, Number(p && p.priceMAD) || 0)),
       photo: mediaUrl(p && p.photo),
       video: mediaUrl(p && p.video),
+      // Retiré ou coché pour la boutique en ligne (Kiwi Commerce) ; absent = jamais réglé.
+      ...(p && typeof p.online === 'boolean' ? { online: p.online } : {}),
     }))
     .filter((p) => p.id && p.name);
   out.variants = (Array.isArray(raw.variants) ? raw.variants.slice(0, 6000) : [])

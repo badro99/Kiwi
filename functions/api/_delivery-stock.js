@@ -105,6 +105,9 @@ export async function takeHeldStock(env, merchant, saleId) {
       basket.forEach((line, i) => {
         let want = kept[i];
         if (!want) return;
+        /* Les frais de livraison d'une commande en ligne : une ligne de service,
+           pas une pièce (functions/api/shop/_lib.js › saleLines). */
+        if (line && line.kd === 'fee') return;
         const [pid, size, color] = String(line && line.v || '').split(':');
         if (!pid) { short += want; return; }
         const variants = (data.variants || []).filter((v) => v.productId === pid

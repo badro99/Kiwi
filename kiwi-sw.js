@@ -99,7 +99,7 @@ var SHELL = [
   '/assets/growth-crm.js?v=7',
   '/assets/channel-link.js?v=202608272312',
   '/assets/marketing-suite-tease.js?v=1',
-  '/assets/pages-pro.js?v=2196',
+  '/assets/pages-pro.js?v=2197',
   '/assets/pages-pro-spa-starter.js?v=5',
   '/assets/cash-sessions.js?v=8',
   '/assets/simple-food-cost.js?v=18',
@@ -190,7 +190,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2098',
-  '/assets/pages/dashboard-startup.js?v=109',
+  '/assets/pages/dashboard-startup.js?v=110',
   '/assets/pages/dashboard-loader.js?v=35',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -221,7 +221,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=44',
+  '/assets/i18n.js?v=45',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -244,7 +244,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues/data.js?v=3',
+  '/assets/venues/data.js?v=4',
   '/assets/venues/helpers.js?v=2',
   '/assets/venues.js?v=70',
   '/assets/phone.js?v=1',
@@ -350,7 +350,7 @@ var SHELL = [
   '/assets/receipt.js?v=15',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=24',
-  '/assets/merchant-config.js?v=286',
+  '/assets/merchant-config.js?v=287',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=5',
   '/assets/staff-roles.js?v=3',
@@ -383,8 +383,8 @@ var SHELL = [
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=7',
-  '/assets/boutique-catalog-parts.js?v=15',
-  '/assets/boutique-catalog.js?v=27',
+  '/assets/boutique-catalog-parts.js?v=16',
+  '/assets/boutique-catalog.js?v=28',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -456,7 +456,7 @@ var SHELL = [
   '/assets/menu-scan.js?v=8',
   '/assets/salle-scan.js?v=7',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
-  '/assets/orderpro-publish.js?v=9',
+  '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
   '/assets/orderpro-inbox.js?v=39',
   '/assets/service-requests.js?v=2',

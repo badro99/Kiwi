@@ -610,6 +610,7 @@ async function routeRequest(context) {
    * signature HMAC que le handler vérifie lui-même, et il refuse tout tant que
    * le commerçant n'a pas enregistré la clé de signature de sa boutique. */
   if (method === 'POST' && /^\/api\/channel\/shopify\/[A-Za-z0-9-]{6,64}$/.test(path)) return next();
+  if (method === 'POST' && path === '/api/shop/orders') return next(); // boutique en ligne : clé storefront vérifiée par le handler (GET et /api/shop/decide restent derrière la porte)
   /* Le relais d'impression (functions/api/print/*). Le Kiwi Printer Bridge du
    * comptoir n'est pas un navigateur : pas de cookie de porte, jamais. Il
    * échange son code d'appairage (POST /api/print/bridges — le handler exige un

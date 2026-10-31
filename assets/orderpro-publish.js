@@ -152,6 +152,8 @@
         return {
           id: p.id, name: p.name, categoryId: p.categoryId, priceMAD: p.priceMAD,
           photo: p.photo || '', video: p.video || '',
+          // La boutique en ligne lit ce choix ; absent = jamais réglé.
+          online: typeof p.online === 'boolean' ? p.online : undefined,
         };
       }),
       variants: variants,

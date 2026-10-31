@@ -142,8 +142,14 @@
     'open-drawer': ['openDrawer'],
   };
 
+  /* La boutique en ligne est un module payant, éteint tant qu'un opérateur
+     n'a pas écrit commerce: true (comme Order Pro côté serveur). */
+  function optInOff(key) {
+    return key === 'weborders' && !(cfg.features && cfg.features.commerce === true);
+  }
   function featureOff(key) {
     if (key === 'reservations' || key === 'payroll') return false;
+    if (optInOff(key)) return true;
     if (cfg.features && cfg.features[key] === false) return true;
     var aliases = HANDLER_ALIASES[key];
     if (aliases && cfg.features) {

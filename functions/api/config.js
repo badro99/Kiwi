@@ -55,6 +55,7 @@ const NEW_STORE_FEATURES = {
   conformite: false,
   depenses: false,
   orderpro: false,
+  commerce: false,
 };
 
 /* La date à partir de laquelle un COMPTE est « nouveau ».

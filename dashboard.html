@@ -1036,7 +1036,7 @@
 <script src="assets/err-reporter.js?v=2" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=9" defer></script>
-<script src="assets/i18n.js?v=44" defer></script>
+<script src="assets/i18n.js?v=45" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -1086,7 +1086,7 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues/data.js?v=3" defer></script>
+<script src="assets/venues/data.js?v=4" defer></script>
 <script src="assets/venues/helpers.js?v=2" defer></script>
 <script src="assets/venues.js?v=70" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
@@ -1120,7 +1120,7 @@
 <script defer src="assets/channel-sales.js?v=8"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=286"></script>
+<script defer src="assets/merchant-config.js?v=287"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=7">
@@ -1177,8 +1177,8 @@
 <script src="assets/printer-bridge.js?v=52" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-<script src="assets/boutique-catalog-parts.js?v=15" defer fetchpriority="low"></script>
-<script src="assets/boutique-catalog.js?v=27" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog-parts.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog.js?v=28" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
      articles ; il ne fait rien tant que personne ne l'ouvre. -->
@@ -1241,7 +1241,7 @@
 
 <script src="assets/clients-directory.js?v=30" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=18" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=109" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=110" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1254,7 +1254,7 @@
 
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
-<script src="assets/orderpro-publish.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/orderpro-publish.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/orderpro-panel.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/team/merge.js?v=2" defer></script>
 <script src="assets/field-merge.js?v=1" defer></script>
@@ -1268,7 +1268,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=109"></script>
+<script src="assets/pages/dashboard-startup.js?v=110"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=13">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=35" defer fetchpriority="low"></script>

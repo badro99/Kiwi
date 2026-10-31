@@ -790,6 +790,7 @@
       piecePriceMAD: data.piecePriceMAD != null ? (+data.piecePriceMAD || 0) : null,
       motif: String(data.motif || '').trim(),
       fragile: !!data.fragile,
+      online: typeof data.online === 'boolean' ? data.online : null,
       /* Voir le commentaire dans seed() : 'consignment' = dépôt-vente, la
        * marchandise est au déposant nommé par `consignor`. Toute autre valeur
        * retombe sur 'outright' — on ne devine pas une propriété tierce. */
@@ -823,7 +824,7 @@
     const mediaPatch = patch.photo !== undefined || patch.video !== undefined;
     ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'artPicked', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
      'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
-     'supplierId', 'parLevel', 'reorderLevel'].forEach((k) => {
+     'supplierId', 'parLevel', 'reorderLevel', 'online'].forEach((k) => {
       if (patch[k] !== undefined) {
         if (k === 'priceMAD' || k === 'cost' || k === 'piecePriceMAD' || k === 'parLevel' || k === 'reorderLevel') {
           p[k] = patch[k] == null ? null : (+patch[k] || 0);
@@ -831,6 +832,8 @@
           p[k] = patch[k] == null ? null : Math.max(1, parseInt(patch[k], 10) || 1);
         } else if (k === 'fragile' || k === 'artPicked') {
           p[k] = !!patch[k];
+        } else if (k === 'online') {
+          p[k] = patch[k] == null ? null : !!patch[k];
         } else if (k === 'sku') {
           p[k] = skuNorm(patch[k]);
         } else if (k === 'format') {

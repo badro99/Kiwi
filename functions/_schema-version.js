@@ -1,6 +1,6 @@
-// Production minimum: migrations 0017 and 0018 applied by the owner on 30 October
-// 2026, d1_migrations read in production the same day.
-export const MINIMUM_SCHEMA_VERSION = 18;
+// Production minimum: migration 0019 (web_orders, Kiwi Commerce) applied by the
+// owner on 31 October 2026, d1_migrations read in production the same day.
+export const MINIMUM_SCHEMA_VERSION = 19;
 // One shared in-flight check per D1 binding per isolate. Only a successful read
 // below the minimum refuses (503, rechecked after a minute so a migration can
 // recover a warm isolate); a failed read lets requests through.

@@ -16,11 +16,11 @@ await run('schema', async () => {
  let reached=0;
  assert.equal((await onRequest({env:{DB:db},next:()=>{reached++;}})).status,503);
  assert.equal(reached,0);
- const good={prepare:()=>({all:async()=>({results:[{name:'0018_current.sql'}]})})};
+ const good={prepare:()=>({all:async()=>({results:[{name:'0019_current.sql'}]})})};
  assert.equal(await schemaCompatibility(good),null);
  assert.equal(await onRequest({env:{DB:good},next:()=> 'route reached'}),'route reached');
  const originalNow=Date.now;
- try { version=18; Date.now=()=>originalNow()+61000; assert.equal(await schemaCompatibility(db),null); assert.equal(reads,2); } finally {Date.now=originalNow;}
+ try { version=19; Date.now=()=>originalNow()+61000; assert.equal(await schemaCompatibility(db),null); assert.equal(reads,2); } finally {Date.now=originalNow;}
  /* A failed read is not proof of an old schema: a D1 blip lets sales through and is read again soon. */
  let brokenReads=0; const broken={prepare(){brokenReads++; throw Error('unavailable');}};
  assert.equal(await schemaCompatibility(broken),null,'a failed read does not refuse requests');

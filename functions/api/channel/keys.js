@@ -19,7 +19,8 @@
 import { json, activeAccountSession, isOperator, TILL_COOKIE } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 
-const CHANNELS = { glovo: 1, yassir: 1, shopify: 1, generic: 1 };
+// `storefront` : la boutique en ligne Kiwi Commerce (/api/shop/orders).
+const CHANNELS = { glovo: 1, yassir: 1, shopify: 1, generic: 1, storefront: 1 };
 const MAX_KEYS = 12;              // par magasin : au-delà, c'est un oubli, pas un besoin
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 
@@ -165,7 +166,7 @@ export async function onRequestPost(context) {
     // La seule fois où il sort de la base. Le client doit l'afficher tout de
     // suite et prévenir qu'il ne reviendra pas.
     token: 'kwc.' + keyId + '.' + secret,
-    endpoint: new URL('/api/channel/order', request.url).toString(),
+    endpoint: new URL(channel === 'storefront' ? '/api/shop/orders' : '/api/channel/order', request.url).toString(),
     /* Shopify ne peut pas envoyer d'en-tête : son adresse porte donc l'identité
      * dans le chemin, et c'est la signature qui authentifie. L'identifiant de
      * lien n'est pas un secret — il ne vaut rien sans la clé de signature que

@@ -124,12 +124,12 @@
     "sha": "c74f64b950ddabed"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "15",
-    "sha": "61a81c839893c1df"
+    "v": "16",
+    "sha": "8a6ca1989da76595"
   },
   "assets/boutique-catalog.js": {
-    "v": "27",
-    "sha": "6ff6d1c68c95966c"
+    "v": "28",
+    "sha": "42bd74df49f8a10c"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "23",
@@ -708,8 +708,8 @@
     "sha": "e41f82cc7143441b"
   },
   "assets/i18n.js": {
-    "v": "44",
-    "sha": "72b31ed38e64fb51"
+    "v": "45",
+    "sha": "5f3c003c708cb1ae"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -1192,8 +1192,8 @@
     "sha": "c3b4d4e1a0c753d4"
   },
   "assets/merchant-config.js": {
-    "v": "286",
-    "sha": "d3a68d5645fc4975"
+    "v": "287",
+    "sha": "225f61543f12493d"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1292,8 +1292,8 @@
     "sha": "60fa4371f8df388e"
   },
   "assets/orderpro-publish.js": {
-    "v": "9",
-    "sha": "881cebc3175e461a"
+    "v": "10",
+    "sha": "847df8f03a1d2405"
   },
   "assets/orderpro/cart.js": {
     "v": "6",
@@ -1340,12 +1340,16 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2196",
-    "sha": "9f88c5f5a3999011"
+    "v": "2197",
+    "sha": "12da4a1e1e0c6795"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "15",
     "sha": "c84e97f8a6bfbc14"
+  },
+  "assets/pages-pro/boutique-web-orders.js": {
+    "v": "1",
+    "sha": "34bf6471fe1c74d6"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1368,8 +1372,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "109",
-    "sha": "3c1ba3eff84d28db"
+    "v": "110",
+    "sha": "91cb2b2dbae47561"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -2112,8 +2116,8 @@
     "sha": "8047865f346a9e63"
   },
   "assets/venues/data.js": {
-    "v": "3",
-    "sha": "9f7b0d72ee63a05c"
+    "v": "4",
+    "sha": "c62dabb90b2af89a"
   },
   "assets/venues/helpers.js": {
     "v": "2",

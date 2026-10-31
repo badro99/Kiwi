@@ -16,6 +16,8 @@ const REFERENCES = {
   'assets/pages-pro/boutique-promos-returns.js': ['nav-returns', 'tools/pages-pro-boutique-returns-reference.json'],
   /* Its menu page is a full page; the kitchen display is checked painted, in the browser test. */
   'assets/pages-pro/restaurant-stations.js': ['nav-menu', 'tools/pages-pro-restaurant-stations-reference.json'],
+  /* Born lazy (Kiwi Commerce, 31 October 2026): its reference is its own first render. */
+  'assets/pages-pro/boutique-web-orders.js': ['nav-weborders', 'tools/pages-pro-boutique-web-orders-reference.json'],
 };
 const entries = [...registry.matchAll(/url: '([^']+)', handlers: (\[[^\]]+\])/g)];
 assert.ok(entries.length >= 1, 'registry lists its chunks');

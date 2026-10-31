@@ -162,6 +162,8 @@ function sanitize(raw) {
       piecePriceMAD: p && p.piecePriceMAD != null ? num(p.piecePriceMAD, 1e7) : null,
       motif: str(p && p.motif, 80),
       fragile: !!(p && p.fragile),
+      // Boutique en ligne : false = retiré de la vitrine, true = coché, null = jamais réglé.
+      online: p && typeof p.online === 'boolean' ? p.online : null,
       ownership: p && p.ownership === 'consignment' ? 'consignment' : 'outright',
       consignor: str(p && p.consignor, 120),
       sku: str(p && p.sku, 48),

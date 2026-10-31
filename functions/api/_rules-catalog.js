@@ -77,7 +77,7 @@ export function compactForWrite(data) {
 export const CATEGORY_FIELDS = ['name', 'color', 'order'];
 export const PRODUCT_FIELDS = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'artPicked', 'kind', 'flag', 'grad',
   'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
-  'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived'];
+  'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived', 'online'];
 export const VARIANT_FIELDS = ['productId', 'colorId', 'colorFamily', 'colorSource', 'colorSourceHex', 'colorWas',
   'colorLabel', 'colorHex', 'size', 'sku', 'note'];
 /* Fields a merchant reviews when two devices disagree. The others follow

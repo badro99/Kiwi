@@ -149,11 +149,12 @@ ok('bénéfice brut sur une marge partiellement chiffrée : la tuile dit sur que
 });
 
 ok('la bande par défaut d\'une boutique montre ventes nettes et bénéfice brut', () => {
-  const data = coreTestSource.readFileSync(path.join(__dirname, '..', 'assets/venues/data.js'), 'utf8');
-  const at = data.indexOf('    boutique: [\n      { key: \'tx\'');
-  assert.ok(at > 0, 'bande boutique introuvable');
-  const keys = [...data.slice(at, data.indexOf('],', at)).matchAll(/key: '([a-zA-Z]+)'/g)].map((m) => m[1]);
-  assert.deepEqual(keys, ['tx', 'panier', 'revenue', 'profit', 'tauxRetour', 'ratio']);
+  // Le vrai registre des profils (assets/venues/data.js), exécuté dans un bac à sable.
+  const window = {};
+  require('node:vm').runInNewContext(coreTestSource.readFileSync(path.join(__dirname, '..', 'assets/venues/data.js'), 'utf8'), { window });
+  const band = window.__kiwiVenueParts.profiles({}).KPI_BY_TYPE.boutique;
+  assert.deepEqual([...band].map((k) => k.key), ['tx', 'panier', 'revenue', 'profit', 'tauxRetour', 'ratio']);
+  assert.equal(band.find((k) => k.key === 'revenue').label, undefined, 'ventes nettes : le libellé traduit du catalogue');
 });
 
 ok('toutes les tuiles du catalogue répondent sans lever sur une période vide et sur la période réelle', () => {
