@@ -39,7 +39,8 @@ const DB = {
     catch (error) { sqlite.exec('ROLLBACK'); throw error; }
   },
 };
-const env = { DB, AUTH_SECRET: SECRET };
+const OZON_CITIES = { CITIES: { a: { ID: 42, NAME: 'Rabat' }, b: { ID: 7, NAME: 'Fes' } } };
+const env = { DB, AUTH_SECRET: SECRET, __ozonFetch: async () => new Response(JSON.stringify(OZON_CITIES)) };
 const now = Date.now();
 for (const [m, features, acc] of [[SHOP, '{"commerce":true}', 'acc-web'], [OFF, '{}', 'acc-off']]) {
   sqlite.prepare(`INSERT INTO merchant_config (merchant, features, name, type, status, till_epoch, updated_ts)
@@ -183,7 +184,9 @@ ok(/^[a-f0-9]{32}$/.test(first.body.statusToken || '') && again.body.statusToken
 const track = (token, number, t) => shopGet(orderStatus, `https://kiwi.test/api/shop/status?number=${number}&t=${t}`, token);
 ok((await track('', first.body.number, first.body.statusToken)).status === 401, 'suivi : sans clé de boutique, refusé');
 ok((await track(STORE, first.body.number, '0'.repeat(32))).status === 404, 'suivi : un numéro sans sa clé n’ouvre rien');
-ok((await track(STORE_OFF, first.body.number, first.body.statusToken)).status === 404, 'suivi : la vitrine d’un autre commerçant ne la voit pas');
+ok((await track(STORE_OFF, first.body.number, first.body.statusToken)).status === 403, 'suivi : la vitrine d’un commerçant sans boutique en ligne ne lit rien');
+const replay = await post(STORE, { ...order('ref-1', [robe(2)]), customer: { ...customer, phone: '0699999999' } });
+ok(replay.body.number === first.body.number && !replay.body.statusToken, 'une ref rejouée avec un autre téléphone ne rend pas la clé de suivi');
 const seen = await track(STORE, first.body.number, first.body.statusToken);
 ok(seen.status === 200 && seen.body.order.status === 'confirmed' && seen.body.order.lines[0].quantity === 2, 'suivi : la cliente voit sa commande confirmée');
 ok(!JSON.stringify(seen.body).includes('+212') && !JSON.stringify(seen.body).includes('rue de test'), 'suivi : ni téléphone ni adresse dans la réponse');
@@ -199,6 +202,11 @@ ok(withCity.status === 200 && JSON.parse(cityRow.customer).cityId === 42, 'l’i
 const cityYes = await act(owner, { id: cityRow.id, action: 'confirm' });
 const cityCard = sqlite.prepare("SELECT impact FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-card'").get(SHOP, 'web-' + cityRow.id);
 ok(cityYes.status === 200 && cityCard && JSON.parse(cityCard.impact).cityId === 42, 'à la confirmation, la fiche de livraison porte la ville Ozon (le colis peut partir seul)');
+const wrongCity = await post(STORE, { ...order('ref-city3', [robe()]), customer: { ...customer, city: 'Rabat', cityId: 7 } });
+const wrongRow = sqlite.prepare('SELECT id FROM web_orders WHERE client_ref = ?').get('ref-city3');
+ok(wrongCity.status === 200 && (await act(owner, { id: wrongRow.id, action: 'confirm' })).status === 200, 'une ville Ozon qui ne correspond pas : la commande se confirme quand même');
+const wrongCard = sqlite.prepare("SELECT impact FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-card'").get(SHOP, 'web-' + wrongRow.id);
+ok(wrongCard && JSON.parse(wrongCard.impact).cityId === undefined, 'un identifiant de ville qui ne nomme pas la ville de la commande ne part pas chez Ozon');
 ok((await post(STORE, { ...order('ref-city2', [robe()]), customer: { ...customer, cityId: 'x' } })).status === 200
   && JSON.parse(sqlite.prepare('SELECT customer FROM web_orders WHERE client_ref = ?').get('ref-city2').customer).cityId === undefined, 'une ville illisible est ignorée, la commande passe');
 

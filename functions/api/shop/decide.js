@@ -15,6 +15,21 @@
 import { json, entitledMerchant, readCookie, TILL_COOKIE } from '../../auth/_lib.js';
 import { onRequestPost as recordSale } from '../sale.js';
 import { readCatalog, shapeOrder, shortLines, saleLines, str } from './_lib.js';
+import { cities as ozonCities } from '../ozon/_lib.js';
+
+/* The city id comes from the shopper's form. It only reaches the delivery
+ * card (and so the automatic Ozon parcel) when Ozon's own list names that id
+ * the city the order carries. Otherwise the parcel waits for « Envoyer avec
+ * Ozon » in Livraisons, as for any card without a city. */
+const sameCity = (a, b) => String(a || '').toLowerCase().replace(/\s+/g, ' ').trim() === String(b || '').toLowerCase().replace(/\s+/g, ' ').trim();
+async function checkedCityId(env, customer) {
+  const id = Number(customer && customer.cityId);
+  if (!Number.isSafeInteger(id) || id <= 0) return 0;
+  try {
+    const hit = (await ozonCities(env)).find((c) => c.id === id);
+    return hit && sameCity(hit.name, customer.city) ? id : 0;
+  } catch (_) { return 0; }
+}
 
 const STUCK_MS = 60 * 1000;   // a confirmation that died half-way may be retried after a minute
 
@@ -62,6 +77,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   ).bind(now, by, merchant, id, now - STUCK_MS).run();
   if (!claim.meta || Number(claim.meta.changes) !== 1) return json({ error: 'already-decided' }, 409);
 
+  const cityId = await checkedCityId(env, order.customer);
   const first = order.lines[0];
   const pieces = order.lines.reduce((n, l) => n + l.quantity, 0);
   const label = 'En ligne ' + order.number + ' · ' + (first ? first.title : 'Commande')
@@ -74,7 +90,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     channel: 'delivery', stockHeld: true,
     deliveryCard: {
       name: order.customer.name, phone: order.customer.phone, city: order.customer.city,
-      address: order.customer.address, ...(order.customer.cityId ? { cityId: order.customer.cityId } : {}), note: [order.number, order.customer.note].filter(Boolean).join(' · '),
+      address: order.customer.address, ...(cityId ? { cityId } : {}), note: [order.number, order.customer.note].filter(Boolean).join(' · '),
     },
     label: label.slice(0, 80), ref: order.number,
     lines: saleLines(order),

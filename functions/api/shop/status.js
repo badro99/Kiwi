@@ -9,13 +9,17 @@
 // (/api/shop/orders). A number alone opens nothing. The answer never carries
 // the phone, the address or the shop's reason for declining.
 import { json } from '../../auth/_lib.js';
-import { storefrontLink, statusToken, sameToken, shapeOrder, str } from './_lib.js';
+import { storeSuspended, storeSubscriptionPending } from '../_private.js';
+import { storefrontLink, commerceEnabled, statusToken, sameToken, shapeOrder, str } from './_lib.js';
 
 export async function onRequestGet({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   const link = await storefrontLink(request, env);
   if (!link) return json({ error: 'unauthorized' }, 401);
   const merchant = String(link.merchant || '').toLowerCase();
+  // Les mêmes portes que /api/shop/catalog et /api/shop/orders.
+  if (await storeSuspended(env, merchant) || await storeSubscriptionPending(env, merchant)) return json({ error: 'unauthorized' }, 401);
+  if (!await commerceEnabled(env, merchant)) return json({ error: 'commerce-off' }, 403);
   const url = new URL(request.url);
   const number = str(url.searchParams.get('number'), 12);
   const token = str(url.searchParams.get('t'), 64);

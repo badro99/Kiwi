@@ -287,7 +287,7 @@
     try {
       const r = await fetch('/api/channel/keys', {
         method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel: 'storefront', label: L('Boutique en ligne', 'Online shop', 'المتجر الإلكتروني') }),
+        body: JSON.stringify({ merchant: slug(), channel: 'storefront', label: L('Boutique en ligne', 'Online shop', 'المتجر الإلكتروني') }),
       });
       const j = await r.json().catch(() => null);
       if (!r.ok || !j || !j.token) throw new Error((j && j.error) || String(r.status));
