@@ -213,6 +213,14 @@ const texts = cleanStorefront({ pieces: {
 ok(Object.keys(texts).join() === 'prod_1' && texts.prod_1.about.startsWith('Coton lourd.\n\nLavable à 30°.') && texts.prod_1.about.length === 600
   && texts.prod_1.fabric === 'Coton bio' && texts.prod_1.fit === 'Ample' && !('extra' in texts.prod_1),
   'réglages : le texte d’une pièce garde ses paragraphes, matière et coupe nettoyées, entrées vides ou mal nommées jetées');
+const looks = cleanStorefront({ pieces: {
+  seen: { look: '/api/media/media/amira-boutique/lx9-ab12cd34.jpg' },
+  far: { look: 'https://evil.example/x.jpg' }, up: { look: '/api/media/../auth/x' }, js: { look: 'javascript:alert(1)' },
+  both: { fit: 'Droite', look: '/api/media/media/amira-boutique/a.webp' },
+} }, 0).pieces;
+ok(Object.keys(looks).sort().join() === 'both,seen' && looks.seen.look === '/api/media/media/amira-boutique/lx9-ab12cd34.jpg'
+  && looks.both.look === '/api/media/media/amira-boutique/a.webp' && looks.both.fit === 'Droite',
+  'réglages : « Vu dans la campagne » ne garde qu’une image du stockage Kiwi (/api/media/…), jamais une adresse extérieure ni un chemin qui remonte');
 const lots = cleanStorefront({ pieces: Object.fromEntries(Array.from({ length: 320 }, (_, i) => ['p' + i, { fit: 'Droite' }])) }, 0).pieces;
 ok(Object.keys(lots).length === 300, 'réglages : 300 pièces décrites au plus');
 const many = cleanStorefront({ coupons: Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['CODE' + i, 5])) }, 0);

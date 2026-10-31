@@ -404,7 +404,21 @@
 .ws-piece textarea{min-height:132px;resize:vertical;line-height:1.5}
 .ws-piece .ws-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ws-piece .ws-2>div{display:grid;gap:6px}
-@media (max-width:520px){.ws-piece .ws-2{grid-template-columns:1fr}.wo-prod{flex-wrap:wrap}.wo-prod .wo-txt{order:3}}
+.ws-look{display:grid;gap:10px;padding-top:14px;border-top:1px solid var(--line,rgba(10,15,13,.12))}
+.ws-look-lb{display:grid;gap:2px;font-size:13.5px;font-weight:600}
+.ws-look-lb small{font-weight:400;font-size:12px;color:var(--ink-3,#667)}
+.ws-look-row{display:flex;gap:14px;align-items:flex-start}
+.ws-look-img{flex:0 0 96px;width:96px;aspect-ratio:3/4;margin:0;border-radius:8px;overflow:hidden;background:rgba(10,15,13,.06);display:grid;place-items:center;color:var(--ink-3,#667)}
+.ws-look-img img{width:100%;height:100%;object-fit:cover;display:block}
+.ws-look-img svg{width:28px;height:28px;fill:currentColor}
+.ws-look-acts{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.ws-look-acts .kb{min-height:40px;padding:0 12px;font-size:13px}
+.ws-look-msg{flex-basis:100%;margin:0;font-size:12.5px;color:var(--ink-3,#667)}
+.ws-film{display:grid;gap:10px}
+.ws-film video{width:100%;max-height:52vh;border-radius:10px;background:#0A0F0D}
+.ws-film input[type=range]{width:100%;min-height:32px;accent-color:var(--atlas,#0B6E4F)}
+.ws-film-row{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--ink-3,#667)}
+@media (max-width:520px){.ws-look-row{flex-direction:column}.ws-look-img{flex-basis:auto;width:120px}.ws-piece .ws-2{grid-template-columns:1fr}.wo-prod{flex-wrap:wrap}.wo-prod .wo-txt{order:3}}
 .wo-switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;min-height:44px}
 .wo-switch input{width:20px;height:20px;accent-color:var(--atlas,#0B6E4F)}
 .wo-search{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.16));font:inherit;min-width:220px;background:var(--paper,#F7F5F0)}
@@ -569,12 +583,12 @@
     const on = list.filter((p) => p.online !== false).length;
     const texts = (state.settings && state.settings.pieces) || {};
     const rows = list.map((p) => {
-      const t = texts[p.id];
+      const t = hasText(texts[p.id]) ? texts[p.id] : null, seen = !!(texts[p.id] && texts[p.id].look);
       const clash = colourClash(p, C);
       return `<div class="wo-prod">
         ${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy">` : `<span class="wo-thumb" aria-hidden="true"${mainHex(p, C) ? ` style="background:${mainHex(p, C)}"` : ''}></span>`}
-        <div class="wo-pn">${esc(p.name)}<small>${esc(mad(Math.round((Number(p.priceMAD) || 0) * 100)))}${p.photo ? '' : ' · ' + esc(L('sans photo', 'no photo', 'بدون صورة'))}${t ? '' : ' · ' + esc(L('sans texte', 'no text', 'بدون نص'))}</small>${clash ? `<small class="wo-clash">${esc(clash)}</small>` : ''}</div>
-        <button type="button" class="kb ghost wo-txt" data-action="wo-piece" data-arg="${esc(p.id)}">${esc(t ? L('Modifier le texte', 'Edit text', 'تعديل النص') : L('Décrire', 'Describe', 'وصف'))}</button>
+        <div class="wo-pn">${esc(p.name)}<small>${esc(mad(Math.round((Number(p.priceMAD) || 0) * 100)))}${p.photo ? '' : ' · ' + esc(L('sans photo', 'no photo', 'بدون صورة'))}${t ? '' : ' · ' + esc(L('sans texte', 'no text', 'بدون نص'))}${seen ? ' · ' + esc(L('vu dans la campagne', 'seen in the campaign', 'ظاهرة في الحملة')) : ''}</small>${clash ? `<small class="wo-clash">${esc(clash)}</small>` : ''}</div>
+        <button type="button" class="kb ghost wo-txt" data-action="wo-piece" data-arg="${esc(p.id)}">${esc(t || seen ? L('Modifier', 'Edit', 'تعديل') : L('Décrire', 'Describe', 'وصف'))}</button>
         <label class="wo-switch"><input type="checkbox" data-action="wo-online" data-arg="${esc(p.id)}" ${p.online !== false ? 'checked' : ''}><span>${esc(L('En ligne', 'Online', 'متاح'))}</span></label>
       </div>`;
     }).join('');
@@ -602,7 +616,7 @@
       const list = productsList(), C = CAT(), texts = (state.settings && state.settings.pieces) || {};
       const live = list.filter((p) => p.online !== false);
       main = W ? W.overview({ orders: state.orders, enabled: state.enabled, settings: state.settings || {}, products: list,
-        withText: live.filter((p) => texts[p.id]).length, clashes: live.filter((p) => colourClash(p, C)).length }) : '';
+        withText: live.filter((p) => hasText(texts[p.id])).length, clashes: live.filter((p) => colourClash(p, C)).length }) : '';
     } else if (state.tab === 'settings') {
       main = W && state.draft ? W.settings({ draft: state.draft, shopName: shopName() }) : `<p class="wo-note">${esc(L('Chargement des réglages…', 'Loading settings…', 'جارٍ تحميل الإعدادات…'))}</p>`;
     } else if (state.tab === 'orders') {
@@ -852,6 +866,105 @@
     saveError(out);
   };
 
+  const hasText = (t) => !!(t && (t.about || t.fabric || t.fit));
+
+  /* ── « Vu dans la campagne » : l'image de campagne où l'on voit la pièce portée.
+     Une photo, ou une image prise dans un film : le film s'ouvre sur l'appareil
+     du commerçant, il choisit le moment, et seule cette image part dans le
+     stockage photo de Kiwi (KiwiOrderPro.uploadMedia). Le film ne quitte pas
+     l'appareil. La vitrine la montre au bout du rayon et sur la fiche. ── */
+  /* Material Symbols image.svg, Outlined 400 (assets/icons/material/), copié tel quel. */
+  const IMG_ICON = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z"/></svg>';
+  function lookBlock(url) {
+    return `<div class="ws-look">
+      <span class="ws-look-lb">${esc(L('Vu dans la campagne', 'Seen in the campaign', 'ظاهرة في الحملة'))}<small>${esc(L('une image de votre campagne où l’on voit la pièce portée. La boutique la montre au bout du rayon et sur la fiche de la pièce.', 'an image from your campaign showing the piece being worn. The shop shows it at the end of the rail and on the piece’s page.', 'صورة من حملتك تظهر فيها القطعة ملبوسة. يعرضها المتجر في آخر الرف وفي صفحة القطعة.'))}</small></span>
+      <div class="ws-look-row">
+        <figure class="ws-look-img" data-wp-look-img>${url ? `<img src="${esc(url)}" alt="">` : IMG_ICON}</figure>
+        <div class="ws-look-acts">
+          <button type="button" class="kb ghost" data-wp-look-pick="photo">${esc(L('Choisir une photo', 'Choose a photo', 'اختيار صورة'))}</button>
+          <button type="button" class="kb ghost" data-wp-look-pick="film">${esc(L('Prendre une image d’un film', 'Take a frame from a film', 'أخذ لقطة من فيديو'))}</button>
+          <button type="button" class="kb ghost" data-wp-look-clear${url ? '' : ' hidden'}>${esc(L('Retirer', 'Remove', 'إزالة'))}</button>
+          <input type="file" accept="image/*" hidden data-wp-look-file="photo">
+          <input type="file" accept="video/*" hidden data-wp-look-file="film">
+          <p class="ws-look-msg" data-wp-look-msg aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="ws-film" data-wp-film hidden>
+        <video playsinline muted preload="auto"></video>
+        <input type="range" min="0" max="1000" step="1" value="0" data-wp-film-at aria-label="${esc(L('Moment du film', 'Moment in the film', 'لحظة في الفيديو'))}">
+        <div class="ws-film-row"><span data-wp-film-t>0:00</span><span>
+          <button type="button" class="kb ghost" data-wp-film-cancel>${esc(L('Annuler', 'Cancel', 'إلغاء'))}</button>
+          <button type="button" class="kb atlas" data-wp-film-take>${esc(L('Garder cette image', 'Keep this frame', 'الاحتفاظ بهذه اللقطة'))}</button></span></div>
+      </div>
+    </div>`;
+  }
+  function lookWire(root, start, busy) {
+    let url = start;
+    const q = (sel) => root.querySelector(sel);
+    const msg = (text) => { const el = q('[data-wp-look-msg]'); if (el) el.textContent = text || ''; };
+    const paint = () => {
+      const fig = q('[data-wp-look-img]');
+      if (fig) fig.innerHTML = url ? `<img src="${esc(url)}" alt="">` : IMG_ICON;
+      const clear = q('[data-wp-look-clear]'); if (clear) clear.hidden = !url;
+    };
+    const film = q('[data-wp-film]'), video = film && film.querySelector('video'), at = q('[data-wp-film-at]');
+    let objectUrl = '';
+    const closeFilm = () => {
+      if (film) film.hidden = true;
+      if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = ''; }
+    };
+    const send = async (file) => {
+      const up = window.KiwiOrderPro && window.KiwiOrderPro.uploadMedia;
+      if (!up) { msg(L('L’envoi de photos n’est pas disponible ici.', 'Photo upload is not available here.', 'رفع الصور غير متاح هنا.')); return; }
+      busy(true); msg(L('Envoi de l’image…', 'Uploading the image…', 'جارٍ رفع الصورة…'));
+      let res = null;
+      try { res = await up(file); } catch (_) { res = null; }
+      busy(false);
+      const got = res && (typeof res === 'string' ? res : res.url);
+      if (got && /^\/api\/media\//.test(got)) {
+        url = got; paint();
+        msg(L('Image prête. Enregistrez pour la publier.', 'Image ready. Save to publish it.', 'الصورة جاهزة. احفظ لنشرها.'));
+      } else msg(window.KiwiOrderPro.uploadError ? window.KiwiOrderPro.uploadError(res) : L('L’envoi a échoué.', 'The upload failed.', 'فشل الرفع.'));
+    };
+    const clock = (sec) => { const s = Math.max(0, Math.floor(sec || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+    root.querySelectorAll('[data-wp-look-pick]').forEach((b) => b.addEventListener('click', () => {
+      const input = q('[data-wp-look-file="' + b.dataset.wpLookPick + '"]'); if (input) { input.value = ''; input.click(); }
+    }));
+    const photoIn = q('[data-wp-look-file="photo"]');
+    if (photoIn) photoIn.addEventListener('change', () => { const f = photoIn.files && photoIn.files[0]; if (f) { closeFilm(); send(f); } });
+    const filmIn = q('[data-wp-look-file="film"]');
+    if (filmIn && video) filmIn.addEventListener('change', () => {
+      const f = filmIn.files && filmIn.files[0]; if (!f) return;
+      closeFilm(); msg('');
+      objectUrl = URL.createObjectURL(f);
+      video.src = objectUrl; film.hidden = false;
+      video.onloadedmetadata = () => { at.max = String(Math.max(1, Math.floor(video.duration * 10))); at.value = '0'; video.currentTime = 0.05; try { film.scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (_) {} };
+      video.onerror = () => { closeFilm(); msg(L('Ce film ne s’ouvre pas dans ce navigateur. Exportez-le en MP4 ou choisissez une photo.', 'This film does not open in this browser. Export it as MP4 or choose a photo.', 'لا يفتح هذا الفيديو في هذا المتصفح. صدّره بصيغة MP4 أو اختر صورة.')); };
+    });
+    if (at && video) at.addEventListener('input', () => {
+      video.currentTime = Number(at.value) / 10;
+      const t = q('[data-wp-film-t]'); if (t) t.textContent = clock(video.currentTime);
+    });
+    const cancel = q('[data-wp-film-cancel]'); if (cancel) cancel.addEventListener('click', closeFilm);
+    const take = q('[data-wp-film-take]');
+    if (take && video) take.addEventListener('click', () => {
+      const w = video.videoWidth, h = video.videoHeight;
+      if (!w || !h) { msg(L('Le film n’est pas encore prêt.', 'The film is not ready yet.', 'الفيديو ليس جاهزًا بعد.')); return; }
+      const k = Math.min(1, 1600 / Math.max(w, h));
+      const cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+      cv.getContext('2d').drawImage(video, 0, 0, cv.width, cv.height);
+      cv.toBlob((blob) => {
+        if (!blob) { msg(L('Impossible de prendre cette image.', 'Could not take this frame.', 'تعذّر أخذ هذه اللقطة.')); return; }
+        closeFilm();
+        send(new File([blob], 'campagne.jpg', { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.86);
+    });
+    const clear = q('[data-wp-look-clear]');
+    if (clear) clear.addEventListener('click', () => { url = ''; paint(); msg(L('L’image sera retirée à l’enregistrement.', 'The image will be removed when you save.', 'ستُزال الصورة عند الحفظ.')); });
+    return { value: () => url };
+  }
+
   /* ── Articles: what the shop says about one piece ── */
   handlers['wo-piece'] = (el, arg) => {
     const id = typeof el === 'string' ? el : arg;
@@ -866,22 +979,26 @@
         <textarea id="wp-about" rows="6" maxlength="600" data-wp="about">${esc(t.about || '')}</textarea>
         <div class="ws-2"><div><label for="wp-fabric">${esc(L('Matière', 'Fabric', 'الخامة'))}</label><input id="wp-fabric" maxlength="60" data-wp="fabric" value="${esc(t.fabric || '')}" placeholder="${esc(L('Coton, lin, laine…', 'Cotton, linen, wool…', 'قطن، كتان، صوف…'))}"></div>
         <div><label for="wp-fit">${esc(L('Coupe', 'Fit', 'القَصّة'))}</label><input id="wp-fit" maxlength="60" data-wp="fit" value="${esc(t.fit || '')}" placeholder="${esc(L('Droite, ample, ajustée…', 'Straight, loose, slim…', 'مستقيمة، واسعة، ضيقة…'))}"></div></div>
+        ${lookBlock(t.look)}
       </div>`,
       foot: `<button class="kb ghost" data-dismiss>${esc(L('Annuler', 'Cancel', 'إلغاء'))}</button><button class="kb atlas" data-wp-save data-activation="write">${esc(L('Enregistrer', 'Save', 'حفظ'))}</button>`,
     });
     const go = m && m.el && m.el.querySelector('[data-wp-save]');
     if (!go) return;
+    const look = lookWire(m.el, t.look || '', (busy) => { go.disabled = busy; });
     go.addEventListener('click', async () => {
       go.disabled = true;
       const val = (k) => ((m.el.querySelector('[data-wp="' + k + '"]') || {}).value || '').trim();
       const pieces = Object.assign({}, (state.settings && state.settings.pieces) || {});
       const entry = { about: val('about'), fabric: val('fabric'), fit: val('fit') };
-      if (entry.about || entry.fabric || entry.fit) pieces[id] = entry; else delete pieces[id];
+      const seen = look.value();
+      if (seen) entry.look = seen;
+      if (entry.about || entry.fabric || entry.fit || entry.look) pieces[id] = entry; else delete pieces[id];
       const out = await postDoc(Object.assign({}, state.settings || {}, { pieces }));
       go.disabled = false;
       if (out.ok) {
         try { m.close(); } catch (_) {}
-        toast(L('Texte enregistré', 'Text saved', 'تم حفظ النص'), { type: 'success', desc: L('La fiche de la boutique le montre d’ici une minute.', 'The shop page shows it within a minute.', 'تعرضه صفحة المتجر خلال دقيقة.') });
+        toast(L('Fiche enregistrée', 'Piece saved', 'تم حفظ القطعة'), { type: 'success', desc: L('La boutique la montre d’ici une minute.', 'The shop shows it within a minute.', 'يعرضها المتجر خلال دقيقة.') });
         render();
       } else saveError(out);
     });

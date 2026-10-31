@@ -61,10 +61,19 @@ function shopUrl(v) {
   return u.protocol === 'https:' && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host) ? 'https://' + host : '';
 }
 
+/* « Vu dans la campagne » : une image de la campagne où l'on voit la pièce
+   portée, déposée par le commerçant dans le stockage photo de Kiwi
+   (POST /api/media). Seul un chemin /api/media/… est gardé : jamais une
+   adresse extérieure que la vitrine irait charger chez un tiers. */
+function look(v) {
+  const s = text(v, 200);
+  return /^\/api\/media\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+){1,4}$/.test(s) && !s.includes('..') ? s : '';
+}
+
 /* Ce que le commerçant écrit sur une pièce pour la boutique en ligne
    (Boutique en ligne › Articles) : un texte libre (les paragraphes gardent
-   leur saut de ligne), la matière et la coupe. Rangé par identifiant
-   d'article ; une entrée vide n'est pas gardée. */
+   leur saut de ligne), la matière, la coupe et l'image de campagne. Rangé
+   par identifiant d'article ; une entrée vide n'est pas gardée. */
 function pieces(v) {
   const out = {};
   let n = 0;
@@ -76,7 +85,9 @@ function pieces(v) {
       .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ').replace(/[ \t]+/g, ' ')
       .replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 600);
     const entry = { about, fabric: text(r.fabric, 60), fit: text(r.fit, 60) };
-    if (!entry.about && !entry.fabric && !entry.fit) continue;
+    const seen = look(r.look);
+    if (seen) entry.look = seen;
+    if (!entry.about && !entry.fabric && !entry.fit && !entry.look) continue;
     out[id] = entry;
     n++;
   }
