@@ -272,8 +272,8 @@
     "sha": "e75b19935db1e535"
   },
   "assets/caisse/offline.js": {
-    "v": "6",
-    "sha": "e144f727a5a8d2c0"
+    "v": "7",
+    "sha": "60b633e6f43429b8"
   },
   "assets/caisse/orders.js": {
     "v": "2",
@@ -1912,8 +1912,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "24",
-    "sha": "11190e04d55b2195"
+    "v": "25",
+    "sha": "9232973e08f419e4"
   },
   "assets/serveur-lang.js": {
     "v": "6",
@@ -1924,8 +1924,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "10",
-    "sha": "2592142cd71764b1"
+    "v": "11",
+    "sha": "9ea6e701ba880065"
   },
   "assets/service-requests.js": {
     "v": "2",

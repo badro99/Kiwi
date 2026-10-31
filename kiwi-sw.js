@@ -127,7 +127,7 @@ var SHELL = [
   '/assets/caisse/returns.js?v=2',
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=4',
-  '/assets/caisse/offline.js?v=6',
+  '/assets/caisse/offline.js?v=7',
   '/assets/caisse-app.js?v=32',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
@@ -138,8 +138,8 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/service.js?v=10',
-  '/assets/serveur-app.js?v=24',
+  '/assets/serveur/service.js?v=11',
+  '/assets/serveur-app.js?v=25',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau

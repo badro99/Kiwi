@@ -9,7 +9,7 @@
 
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
-import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases } from './service/events.js';
+import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases, publishReceiptPrint } from './service/events.js';
 import { quarantineGuard } from './_quarantine-guard.js';
 import { poke } from './_live.js';
 import { settleCoveredOrders } from './_visit-cover.js';
@@ -262,6 +262,9 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
       }
     }
   }
+  /* God mode › « Encaissement par les serveurs ». Coupé, seul le téléphone
+     serveur est refusé : la caisse et le propriétaire encaissent comme avant. */
+  if (employee && await serverPaymentsOff(env, merchant)) return json({ error: 'server-payments-off' }, 403);
 
   /* A visit links the payment to its table; it is never the payment key. */
   const rawSession = String((b && b.session) || '').trim().slice(0, 64);
@@ -994,6 +997,12 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
    * settled and the later ones stay payable on an open table; anything else
    * (a discount the till did not file, a payment never linked to the visit)
    * keeps the settlement below, unchanged. */
+  /* La vente est écrite : le reçu du paiement pris au téléphone part à la
+     caisse hub d'impression. Un échec ici ne touche jamais l'encaissement. */
+  if (employee && employeeTable) {
+    await publishReceiptPrint(env, merchant, { saleId: id, table: employeeTable,
+      lines: b && b.lines, amountCents, method, employee });
+  }
   let billOpen = null;
   if (serviceSession && serviceSession.id && splitComplete) {
     billOpen = await settleCoveredOrders(env, merchant, serviceSession.id, now);
@@ -1151,4 +1160,13 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
 // A stray GET shouldn't 405-noise the console — just report health.
 export function onRequestGet({ env }) {
   return json({ ok: true, db: !!(env && env.DB) });
+}
+
+/* Clé absente ⇒ allumé : seul un `false` explicite posé en God mode coupe. */
+async function serverPaymentsOff(env, merchant) {
+  try {
+    const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    const flags = row && row.features ? JSON.parse(row.features) : null;
+    return !!(flags && flags.serverPayments === false);
+  } catch (_) { return false; }
 }

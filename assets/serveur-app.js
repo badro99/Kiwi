@@ -2148,6 +2148,10 @@
         }
         toast(`Addition demandée pour ${id}`);
       } else if (action === 'pay') {
+        if (!svCanPay()) {
+          toast(`Table ${activeTableId} · l'encaissement se fait à la caisse`, 4800);
+          return;
+        }
         const pending = (tableOrders[activeTableId] || []).some((line) =>
           Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
         if (pending || dirtyOrders.has(activeTableId)) {

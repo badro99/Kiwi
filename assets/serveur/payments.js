@@ -378,6 +378,7 @@ cashModal.addEventListener('click', (e) => {
     });
 }
 
+    function svCanPay() { return !(liveEmployeeState && liveEmployeeState.store && liveEmployeeState.store.serverPayments === false); } /* God mode › « Encaissement par les serveurs » */
     async function markTablePaid(id, method) {
       if (svBrowseGuard()) return false;
       const t = tables[id];
@@ -461,7 +462,7 @@ cashModal.addEventListener('click', (e) => {
           if ((method || 'card') === 'card') toast(employeePick(`Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`, `Table ${id} · payment not confirmed, do not run the card again, just retry`, `الطاولة ${id} · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${id} · paiement non confirmé, réessayez`, `Table ${id} · payment not confirmed, try again`, `الطاولة ${id} · لم يتأكد الدفع، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
-        else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
+        else if (err.message === 'server-payments-off') toast(employeePick(`Table ${id} · l'encaissement se fait à la caisse`, `Table ${id} · payment is taken at the till`, `الطاولة ${id} · الدفع يتم في الصندوق`), 5200); else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
         return false;
       } finally {
         if (payTimer) clearTimeout(payTimer);

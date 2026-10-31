@@ -312,6 +312,34 @@ export async function settleServiceTable(env, merchant, rawTable, visit) {
   return { ok: true, table, events: result.events };
 }
 
+/* Un serveur encaisse depuis son téléphone, qui n'a pas d'imprimante : le reçu
+ * se perdait. `/api/sale` dépose ici, une fois la vente écrite, une demande
+ * d'impression que la caisse hub sort (assets/caisse/offline.js). L'id dérive
+ * de la vente : un rejeu du même paiement ne ressort pas un second reçu. */
+export async function publishReceiptPrint(env, merchant, { saleId, table, lines, amountCents, method, employee }) {
+  try {
+    const id = 'rcpt-' + String(saleId || '').slice(0, 80);
+    const row = await readDoc(env, merchant);
+    if (row.failed) return false;
+    if ((Array.isArray(row.data.events) ? row.data.events : []).some((e) => e && e.id === id)) return true;
+    const clean = (Array.isArray(lines) ? lines : []).slice(0, 40).map((l) => ({
+      name: String((l && (l.name ?? l.n)) || 'Article').slice(0, 60),
+      qty: Math.max(1, Math.min(1000, Math.round(Number(l && (l.qty ?? l.q)) || 1))),
+      total: Math.round(Math.max(0, Math.min(1e8, Number(l && (l.total ?? l.t)) || 0)) * 100) / 100,
+    }));
+    const member = employee && employee.member;
+    const actor = memberName(member) || 'Serveur';
+    const myId = String((member && member.id) || (employee && employee.session && employee.session.staffId) || '');
+    const event = { id, type: 'receipt-print', ts: Date.now(), table: tableKey(table), actor,
+      serverIds: myId ? [myId] : [], servers: [actor], saleId: String(saleId || ''),
+      lines: clean, totalCents: Math.max(0, Math.round(Number(amountCents) || 0)),
+      method: String(method || 'card').slice(0, 16) };
+    if (!(await append(env, merchant, event, null))) return false;
+    await poke(env, merchant, FEATURE);
+    return true;
+  } catch (_) { return false; }
+}
+
 /* A reopened payment is a new operational visit. Publish occupancy for the
  * waiter only while that precise visit is still open; an old retry must not
  * resurrect a table that has already been settled or reused. */

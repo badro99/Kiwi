@@ -1443,7 +1443,7 @@
               <button class="td-btn warn row-pair" data-action="ask-bill">
                 <i data-lucide="receipt"></i> Addition
               </button>
-              <button class="td-btn dark row-pair" data-action="pay">
+              <button class="td-btn dark row-pair" data-action="pay" ${svCanPay() ? '' : 'hidden'}>
                 <i data-lucide="credit-card"></i> Encaisser
               </button>
             </div>
@@ -1451,8 +1451,8 @@
         }
       } else if (t.status === 'bgha-ykhlass') {
         fHTML = lancerHTML + `
-          <button class="td-btn ${isDirty ? 'ghost' : 'primary'}" data-action="pay" ${isDirty ? 'disabled aria-disabled="true"' : ''}>
-            <i data-lucide="credit-card"></i> ${isDirty ? 'Envoyez d’abord les modifications' : 'Encaisser ' + fmtMAD(total)}
+          <button class="td-btn ${isDirty || !svCanPay() ? 'ghost' : 'primary'}" data-action="pay" ${isDirty || !svCanPay() ? 'disabled aria-disabled="true"' : ''}>
+            <i data-lucide="credit-card"></i> ${isDirty ? 'Envoyez d’abord les modifications' : (svCanPay() ? 'Encaisser ' : 'Encaissement à la caisse · ') + fmtMAD(total)}
           </button>
           <div class="td-btn-row">
             <button class="td-btn ghost row-pair" data-action="print-bill">

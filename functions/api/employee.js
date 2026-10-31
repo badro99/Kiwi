@@ -223,7 +223,7 @@ async function payloadFor(request, env) {
     readDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }),
     readDoc(env, merchant, MESSAGES_FEATURE, { messages: [] }),
     readDoc(env, merchant, PROGRESS_FEATURE, { members: {} }),
-    env.DB.prepare('SELECT name, type, status FROM merchant_config WHERE merchant = ?').bind(merchant).first().catch(() => null),
+    env.DB.prepare('SELECT name, type, status, features FROM merchant_config WHERE merchant = ?').bind(merchant).first().catch(() => null),
   ]);
   if (cfg && String(cfg.status || '') === 'suspended') return { suspended: true };
   const member = memberFor(teamRow.data, auth.pin);
@@ -249,7 +249,7 @@ async function payloadFor(request, env) {
     'SELECT COALESCE(SUM(COALESCE(amount_cents,amount*100)),0) AS amountCents, COUNT(*) AS receipts FROM sales WHERE merchant=? AND seller_id=? AND ts>=? AND ts<=? AND void_ts IS NULL'
   ).bind(merchant, String(auth.session.staffId), Number(shiftOpen.inTs), Date.now()).first() : {amountCents:0,receipts:0};
   return {
-    ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || ''), timezone: zone },
+    ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || ''), timezone: zone, serverPayments: serverPaymentsOn(cfg) },
     employee: me,
     shiftPayments,
     schedule: planning.schedule,
@@ -370,4 +370,10 @@ export async function onRequestPost({ request, env }) {
     return handleAttendance({ actor, store, request, action, body });
   }
   return json({ error: 'bad-action' }, 400);
+}
+
+/* God mode › « Encaissement par les serveurs » : clé absente ⇒ allumé. */
+function serverPaymentsOn(cfg) {
+  try { const f = cfg && cfg.features ? JSON.parse(cfg.features) : null; return !(f && f.serverPayments === false); }
+  catch (_) { return true; }
 }

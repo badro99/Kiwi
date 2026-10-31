@@ -100,7 +100,7 @@
     function caissePrintRemoteBills(events, merchant) {
       if (!Array.isArray(events) || !merchant) return;
       const floor = Math.max(caisseBillPrintBoot - 120000, Date.now() - 300000);
-      const fresh = events.filter((e) => e && e.type === 'bill-print' && e.id && Number(e.ts) > floor);
+      const fresh = events.filter((e) => e && (e.type === 'bill-print' || e.type === 'receipt-print') && e.id && Number(e.ts) > floor);
       if (!fresh.length) return;
       let seen = [];
       try { seen = JSON.parse(localStorage.getItem(BILL_PRINT_SEEN + merchant) || '[]'); } catch (_) { seen = []; }
@@ -109,8 +109,18 @@
         if (seen.includes(e.id)) return;
         seen.push(e.id);
         const label = 'Table ' + String(e.table || '');
-        const notify = () => toast(label + ' · addition demandée' + (e.actor ? ' par ' + e.actor : ''));
-        const print = () => {
+        /* Paiement pris au téléphone serveur : la table est déjà libre ici, le
+           reçu se compose des lignes que la vente a enregistrées. */
+        const receipt = e.type === 'receipt-print';
+        const notify = receipt
+          ? () => toast(label + ' · réglée' + (e.actor ? ' par ' + e.actor : ''))
+          : () => toast(label + ' · addition demandée' + (e.actor ? ' par ' + e.actor : ''));
+        const print = receipt ? () => {
+          const out = (Array.isArray(e.lines) ? e.lines : []).map((l) => ({ qty: String(l.qty || 1), name: String(l.name || 'Article'), price: fmtMAD(Number(l.total) || 0) }));
+          const method = { card: 'Carte', cash: 'Espèces' }[e.method] || e.method || '';
+          toast(label + ' · impression du reçu' + (e.actor ? ' (' + e.actor + ')' : ''));
+          printHardwareTicket({ title: 'Reçu · ' + label, lines: out, total: fmtMAD((Number(e.totalCents) || 0) / 100), method });
+        } : () => {
           const id = caisseTableId(e.table);
           const t = id && tables[id];
           const lines = t ? generateOrder(id, t) : [];
