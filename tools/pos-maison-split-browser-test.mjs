@@ -5,6 +5,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { suite } from './browser-trace.mjs';
 const root = path.resolve(import.meta.dirname, '..');
 let puppeteer;
@@ -13,6 +14,12 @@ catch { console.log('ENV: puppeteer-core unavailable'); process.exit(3); }
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium'].find(fs.existsSync);
 if (!bin) { console.log('ENV: Chromium unavailable'); process.exit(3); }
 let reference = true;
+/* Comme pos-maison-split-test : la parité avec le fichier d'avant le découpage
+   ne vaut que tant que les parties sont celles du découpage. Depuis, la caisse a
+   changé exprès (livraisons et Acomptes au rail, 30 oct. 2026) : la vente en
+   espèces de la caisse découpée reste prouvée, la comparaison est historique. */
+const splitMap = JSON.parse(fs.readFileSync(path.join(root, 'tools/fixtures/pos-maison/split.json'), 'utf8'));
+const pristine = Object.entries(splitMap.splitFiles).every(([file, hash]) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex') === hash);
 const original = file => gunzipSync(fs.readFileSync(path.join(root, 'tools/fixtures/pos-maison', file))).toString();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://local');
@@ -86,8 +93,9 @@ try {
         return devId({ initial: art(initial), ...result, html: art(result.html) });
       } finally { await context.close(); }
     };
-    const before = await capture(true), after = await capture(false);
-    assert.deepEqual(after, before, 'rendered till, cash receipt, sales and storage match original');
+    const after = await capture(false);
+    if (pristine) assert.deepEqual(after, await capture(true), 'rendered till, cash receipt, sales and storage match original');
+    else console.log('  · parts changed since the split: live cash sale proven, original parity is historical (as pos-maison-split-test)');
   });
 } finally { await browser.close(); server.close(); }
 await S.finish();

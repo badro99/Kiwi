@@ -97,6 +97,14 @@ await S.run('sur la démo, une livraison s’encaisse au retour du livreur', asy
   await tap(page, '.bq-validate');
   await sleep(700);
   await tap(page, '[data-bq-m="livraison"]');
+  /* Depuis le 30 oct. 2026 (725bfb73), la livraison passe par la fiche
+     destinataire : nom, téléphone, ville, adresse, puis « Enregistrer ». */
+  t.step('fill the delivery recipient card');
+  await page.waitForSelector('#bqdc-form', { visible: true, timeout: 5000 });
+  for (const [k, v] of [['name', 'Test Kiwi'], ['phone', '0612345678'], ['city', 'Casablanca'], ['address', 'Maarif, rue 1']]) {
+    await page.click('#bqdc-' + k); await page.keyboard.type(v);
+  }
+  await tap(page, '#bqdc-ok');
   await sleep(900);
   await page.keyboard.press('Escape');
   await page.evaluate(() => document.querySelectorAll('.modal-veil.is-open [data-bq-close]').forEach((b) => b.click()));

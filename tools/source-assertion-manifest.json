@@ -34,6 +34,7 @@
     "landing-static-locale-test.mjs": "generated landing pages: DE/IT/NL carry their language in the served HTML, every page lists its hreflang alternates",
     "live-link-split-test.mjs": "byte-exact concatenation of the sales bridge parts and the names each part owns",
     "load-test-suite-test.mjs": "checks the load-test scripts' own shape",
+    "maison-2027-test.mjs": "the maison till keeps the boutique 2027 skin: same stylesheet and kit at the mz- prefix, wired into the 2027 gate and precache at the same stamp",
     "native-pass4-test.mjs": "native shell configuration",
     "offline-foundation-test.mjs": "shells load the offline stack in order",
     "onboarding-split-test.mjs": "Byte-for-byte reconstruction of the controller from live split fragments and frozen SHA-256 fixtures.",

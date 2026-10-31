@@ -303,6 +303,7 @@ for (const accepted of [true, false]) {
     root:{dispatchEvent(){}},KiwiPrinter:{printReceipt:async()=>({ok:true})},
   });
   load(c,'assets/pos-boutique.js',['bqMoney','linePromo','promoLabelForTicket','checkout']);
+  load(c,'assets/pos-boutique/receipt-doc.js',['receiptPrinterReady','receiptDocInput']);
   load(c,'assets/pos-boutique/checkout.js',['printReceiptNow']);
   c.$=(selector,...args)=>selector==='#bq-today'?{textContent:''}:w.$(selector,...args);
   c.checkout();

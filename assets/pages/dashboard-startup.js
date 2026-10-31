@@ -20,8 +20,8 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=3',
-    'assets/pages-pro.js?v=2203',
-    'assets/pages-pro-boutique.js?v=35',
+    'assets/pages-pro.js?v=2204',
+    'assets/pages-pro-boutique.js?v=36',
     'assets/pages-pro-spa-starter.js?v=5',
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
@@ -32,7 +32,7 @@
     'assets/food-trade-settings.js?v=2',
     'assets/menu-promos.js?v=8',
     'assets/menu-promos-dashboard.js?v=6',
-    'assets/restaurant-menu/strings.js?v=3',
+    'assets/restaurant-menu/strings.js?v=5',
     'assets/restaurant-menu/recipes.js?v=3',
     'assets/restaurant-menu/styles.js?v=2',
     'assets/restaurant-menu-workspace.js?v=126',

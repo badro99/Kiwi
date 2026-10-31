@@ -9,7 +9,7 @@
  * renforcé. Si la caissière a déjà rempli la livraison sur le ticket, la fiche
  * s'ouvre préremplie avec. Le créneau et l'emballage voyagent dans le
  * commentaire, pour que le livreur et la page Livraisons les voient. */
-import { bqDeliveryCard } from '../pos-boutique/delivery-card.js?v=4';
+import { bqDeliveryCard } from '../pos-boutique/delivery-card.js?v=6';
 import { bqLivraisons } from '../pos-boutique/livraisons.js?v=15';
 
 const PHRASES = {
@@ -56,7 +56,7 @@ function fragileRow(esc, d) {
 
 function css() {
   if (document.getElementById('mzdc-css')) return;
-  const s = document.createElement('style');
+  const style = document.createElement('style');
   s.id = 'mzdc-css';
   s.textContent = [
     '.mzdc-fragile select{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;border:1px solid var(--line,#E2DDD2);border-radius:10px;background:var(--paper-elev,#FFFDFA);font:inherit;font-size:16px;color:inherit;}',
@@ -101,8 +101,8 @@ export function mzLivraisons(panel, d) {
   if (document.getElementById('mzd-css')) return;
   const src = document.getElementById('bqd-css');
   if (!src) return;
-  const s = document.createElement('style');
-  s.id = 'mzd-css';
-  s.textContent = src.textContent.split('#pos-boutique').join('#pos-maison');
-  document.head.appendChild(s);
+  const style = document.createElement('style');
+  style.id = 'mzd-css';
+  style.textContent = src.textContent.split('#pos-boutique').join('#pos-maison');
+  document.head.appendChild(style);
 }

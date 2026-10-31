@@ -10,6 +10,7 @@ function source(file) {
 }
 function load(c,file,names) { vm.runInContext(sharedRules(source(file))+'\n'+names.map(name=>declaration(source(file),name)).join('\n')+'\nObject.assign(globalThis,{'+names.join(',')+'});',c,{filename:file}); }
 const TS=Date.parse('2026-10-22T12:00:00Z');
+const DELIVERY_CARD={name:'Test',phone:'0600000000',city:'Casablanca',address:'Test'};
 function world(vertical) {
   const prefix=vertical==='maison'?'mz':'bq', nodes=new Map(), storage=new Map(), timers=[], events=[];
   const no=()=>{};
@@ -42,10 +43,14 @@ function world(vertical) {
     sizesOf:()=>['TU'],merchantSlug:()=> 'test-shop',rayonOf:()=>'',lineDeal:ln=>({price:ln.promoPrice}),
     depotOn:()=>false,artOf:()=>'',colorDot:()=>'',colorLabel:()=>'',saleClient:()=>({id:'customer',name:'Test'}),
     findSale:id=>c.SALES.find(s=>s.id===id),newSaleId:()=> 'new-sale',
+    // The recipient form of a delivery part is a browser edge: it submits a
+    // filled card at once, and the real done() → settle() books the money.
+    bqDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD}),mzDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD},{}),
+    ozonConnected:()=>false,ozonCities:()=>[],clById:id=>({id,name:'Test'}),
   });c.window=c;c.KiwiLive={saleIdFor:({id})=>id};
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);
-  if(vertical==='boutique'||vertical==='maison')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts']);
+  if(vertical==='boutique'||vertical==='maison')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts','zHoldsStock']);
   load(c,core,['lineBase','lineUnit','lineTotal','rewardDiscount',...(vertical==='maison'?['isConsigned','consignedOf']:[]),'ticketTotals',
     'RETAIN_DAYS','srvMethod','remoteLine',...(vertical==='boutique'?['remoteMoney']:[]),'syncReturnSales','bqLineTotals','bqFoldBasket','BQ_SRV_METHOD','bqPaymentParts','bqPaymentMethod','originalSalePayload',
     'businessDayKey','isToday','salesToday','notCashedOf',...(vertical==='maison'?['cashedOf']:[]),'caToday','bqMoneyParts','bqDayTotals','bqZJournal']);

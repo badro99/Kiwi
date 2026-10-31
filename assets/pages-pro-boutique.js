@@ -1720,7 +1720,6 @@ const _mzReadable = () => !!window.KiwiMaisonStock && (_mzModule() === 'boutique
 function _bqxHistoryHtml(pid) {
   const M = window.KiwiMaisonStock;
   if (!_mzReadable()) return '';
-  _mzCss();
   const rows = M.productHistory(pid, 20, _mzModule());
   if (!rows.length) {
     return `<div class="mzs-hist"><h4>Historique du stock</h4><div class="mzs-sub">Aucun mouvement enregistré pour ce produit.</div></div>`;
@@ -1794,7 +1793,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=18', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=19', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -1892,32 +1891,6 @@ handlers['bqx-open'] = (_el, arg) => { if (arg) _bqxOpenProduct(arg); };
 const MZS = () => window.KiwiMaisonStock;
 let _mzFilter = { type: '', categoryId: '', days: 0, q: '', productId: '' };
 
-function _mzCss() {
-  if (document.getElementById('mzs-css')) return;
-  const st = document.createElement('style');
-  st.id = 'mzs-css';
-  st.textContent = `
-    .mzs-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .mzs-table th { text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--n-500,#77807b); padding:8px 10px; background:var(--paper-soft,#f3f1ea); position:sticky; top:0; z-index:1; }
-    .mzs-table td { padding:10px; border-top:1px solid var(--line,#eee); vertical-align:middle; }
-    .mzs-table tr:hover td { background:rgba(11,110,79,0.035); }
-    .mzs-qty { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
-    .mzs-in { color:#0B6E4F; } .mzs-out { color:#9B2F22; }
-    .mzs-ba { font-variant-numeric:tabular-nums; color:var(--n-500,#77807b); white-space:nowrap; }
-    .mzs-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; border:1px solid var(--line,#e7e3da); white-space:nowrap; }
-    .mzs-chip.in { background:rgba(11,110,79,0.08); border-color:rgba(11,110,79,0.25); color:#0B6E4F; }
-    .mzs-chip.out { background:rgba(155,47,34,0.07); border-color:rgba(155,47,34,0.22); color:#9B2F22; }
-    .mzs-wrap { margin-top:10px; border:1px solid var(--line,#e7e3da); border-radius:12px; overflow:auto; max-height:62vh; }
-    .mzs-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
-    .mzs-filters select, .mzs-filters input { font:inherit; font-size:13px; padding:7px 9px; border:1px solid var(--line,#e7e3da); border-radius:9px; background:var(--paper,#F7F5F0); color:inherit; min-height:38px; }
-    .mzs-sub { color:var(--n-500,#77807b); font-size:11px; }
-    .mzs-pend { font-size:11px; color:#D99A2B; }
-    .mzs-hist { margin-top:14px; }
-    .mzs-hist h4 { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--n-500,#77807b); margin:0 0 6px; }
-    @media (max-width: 860px) { .mzs-table td, .mzs-table th { padding:8px 7px; } .mzs-hide-s { display:none; } }
-  `;
-  document.head.appendChild(st);
-}
 
 const _mzDate = (ts) => new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 const _mzSource = (s) => (s === 'caisse' ? 'Caisse' : s === 'dashboard' ? 'Tableau de bord' : s === 'import' ? 'Import' : (s || '·'));
@@ -1963,7 +1936,6 @@ function _mzTableHtml(rows, opts) {
 function _mzRenderPage() {
   const M = MZS();
   if (!M) { toast(dt("inventory.registerUnavailable", "Registre indisponible"), { type: 'warn' }); return; }
-  _mzCss();
   const rows = _mzRows();
   const tot = M.totals(rows);
   const fac = M.facets(_mzModule(), _mzModule() === 'boutique');

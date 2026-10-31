@@ -167,6 +167,7 @@ try {
         top: rect?.top || 0,
         fontSize: heading ? getComputedStyle(heading).fontSize : '',
         pageShell: name === 'vente' || !!panel?.querySelector('.mz-page, .ksold'),
+        backBottom: panel?.querySelector('[data-mz-back-inv]')?.getBoundingClientRect().bottom ?? null,
         overflow: panel ? Math.max(0, panel.scrollWidth - panel.clientWidth) : 999,
       };
     }, view);
@@ -180,11 +181,19 @@ try {
     && !(await page.$('#kcb-root:not([style*="display: none"])')),
   'Maison keeps Clients inside the shared workspace instead of opening the legacy fixed panel');
   const headingLefts = workspaceFrames.map((frame) => Math.round(frame.left));
-  const headingTops = workspaceFrames.map((frame) => Math.round(frame.top));
+  /* Mouvements de stock et Déclarer casse s'ouvrent depuis l'Inventaire, avec
+     « ← Inventaire » en tête (propriétaire, 30 oct. 2026, ea23cc7a) : leur titre
+     est sous ce lien, au même niveau l'un que l'autre. Les destinations du rail
+     gardent toutes la même ligne de titre. */
+  const SUB = new Set(['mouvements', 'casse']);
+  const spread = (frames) => { const tops = frames.map((frame) => Math.round(frame.top)); return Math.max(...tops) - Math.min(...tops); };
   ok(Math.max(...headingLefts) - Math.min(...headingLefts) <= 1,
     'every Maison destination keeps the same title gutter: ' + JSON.stringify(workspaceFrames));
-  ok(Math.max(...headingTops) - Math.min(...headingTops) <= 1,
+  ok(spread(workspaceFrames.filter((frame) => !SUB.has(frame.view))) <= 1,
     'every Maison destination keeps the same title baseline: ' + JSON.stringify(workspaceFrames));
+  const subFrames = workspaceFrames.filter((frame) => SUB.has(frame.view));
+  ok(spread(subFrames) <= 1 && subFrames.every((frame) => frame.backBottom != null && frame.backBottom <= frame.top + 1),
+    'Inventaire sub-screens share one title line, under their « ← Inventaire »: ' + JSON.stringify(subFrames));
   ok(workspaceFrames.every((frame) => frame.fontSize === '24px' && frame.pageShell),
     'every Maison destination uses the shared 24px workspace header and page shell');
   ok(workspaceFrames.every((frame) => frame.overflow <= 1),
@@ -253,7 +262,8 @@ try {
   await page.type('#mzi-cat-name', 'Catégorie test navigateur');
   await page.focus('#mzi-cat-name');
   await page.keyboard.press('Enter');
-  ok((await page.$eval('#mz-invmm', (el) => el.textContent)).includes('Catégorie test navigateur'),
+  /* Les noms de la liste sont des champs (on renomme sur place) : on lit leurs valeurs. */
+  ok((await page.$$eval('#mz-invmm [data-mzi-cat-name]', (els) => els.map((el) => el.value))).includes('Catégorie test navigateur'),
     'category creation works from the keyboard and refreshes the organized list');
   ok(await page.$eval('.mzi-cat-row', (el) => {
     const actions = el.querySelector('.mzi-cat-actions');
@@ -269,8 +279,16 @@ try {
   ok((await page.$$('input[name="mzi-n-ownership"]')).length === 2,
     'God Mode A/B option exposes both ownership choices in caisse product creation');
   await page.click('input[name="mzi-n-ownership"][value="outright"]');
+  /* Depuis 14bb1378 (30 oct. 2026), l'article neuf prend la photo que Kiwi
+     choisit d'après son nom ; la photo du commerçant s'ajoute ensuite depuis
+     « Modifier ». Le chemin d'envoi est donc prouvé sur la fiche de modification. */
+  ok(!!(await page.$('[data-mzi-auto]')) && !(await page.$('[data-mzi-photo-input]')),
+    'caisse product creation shows the photo Kiwi picks from the name');
+  await page.click('#mzi-n-save');
+  ok((await page.$eval('#mz-invmm', (el) => el.textContent)).includes('Produit test navigateur'), 'God Mode creates a Maison product and opens its inventory card');
+  await page.click('#mz-invmm [data-inv-edit]');
   ok(!!(await page.$('[data-mzi-photo-pick]')) && !!(await page.$('[data-mzi-photo-input]')),
-    'caisse product creation offers a real image picker');
+    'the product edit form offers a real image picker');
   await page.evaluate(() => {
     window.KiwiPlatformOps = window.KiwiPlatformOps || {};
     window.KiwiPlatformOps.uploads = { upload: async () => ({ ok: true, url: '/api/media/media/test/product.png' }) };
@@ -279,8 +297,7 @@ try {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await page.waitForFunction(() => /Photo prête/.test(document.querySelector('[data-mzi-photo-status]')?.textContent || ''));
-  await page.click('#mzi-n-save');
-  ok((await page.$eval('#mz-invmm', (el) => el.textContent)).includes('Produit test navigateur'), 'God Mode creates a Maison product and opens its inventory card');
+  await page.click('#mzi-e-save');
   ok(await page.evaluate(() => window.KiwiBoutiqueCatalog.listProducts().some((p) => p.name === 'Produit test navigateur' && p.ownership === 'outright' && p.photo === '/api/media/media/test/product.png')),
     'caisse product creation persists ownership and the uploaded photo in the shared catalogue');
   await page.click('#mz-invmm [data-inv-x]');

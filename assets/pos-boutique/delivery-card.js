@@ -119,7 +119,7 @@ export function bqDeliveryCard(el, o) {
       + (f.need ? '' : ' <small>· ' + esc(tr('facultatif')) + '</small>') + '</label>' + input
       + '<span class="bqdc-err" id="' + id + '-err" role="alert"></span></div>';
   };
-  const sheet = () => '<button class="bq-modal-x" data-bq-close aria-label="' + esc(tr('Fermer')) + '"><i data-lucide="x"></i></button>'
+  const sheet = () => '<button class="bq-modal-x" data-bq-close aria-label="' + esc(tr('Fermer')) + '"><i data-icon="close"></i></button>'
     + '<h3 class="modal-title">' + esc(tr('Livraison · destinataire')) + '</h3>'
     + '<p class="modal-subtle">' + esc(o.fmtMAD(o.amount)) + '</p>'
     + '<form class="bqdc-form" id="bqdc-form" novalidate>' + FIELDS.map(field).join('')

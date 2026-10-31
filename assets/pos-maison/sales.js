@@ -1,10 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=148';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=65';
-import { invSetModal, offerRegister } from './inventory.js?v=65';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=150';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=67';
+import { invSetModal, offerRegister } from './inventory.js?v=67';
 import '../money-cents.js?v=4';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=4';
-import { mzTicketRemise } from './ticket-remise.js?v=1';
+import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -455,7 +455,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
       <div class="mz-tk-foot">
         ${t.lines.length && !skin ? `
         <div class="mz-tk-opt-bar">
-          <button class="mz-tk-opt-btn ${remise ? 'on' : ''}" id="mz-tk-remise"><i data-lucide="percent"></i> ${remise ? 'Remise · −' + fmtMAD(remise) : 'Remise'}</button>
+          <button class="mz-tk-opt-btn ${remise ? 'on' : ''}" id="mz-tk-remise"><i data-icon="percent"></i> ${remise ? 'Remise · −' + fmtMAD(remise) : 'Remise'}</button>
         </div>` : ''}
         <div class="mz-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
@@ -762,7 +762,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
     const canAdd = canHoldStock(sheet.pid, sheet.size, 1, sheetPiece);
     const el = $('#mz-sheetm', root);
     el.innerHTML = `
-      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="mz-sheet-head">
         <span class="mz-sheet-art">${artOf(p)}</span>
         <span class="mz-sheet-title">
@@ -972,7 +972,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
     }
     const el = $('#mz-approvem', root);
     el.innerHTML = `
-      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">Remise −${pct} %</h3>
       <p class="modal-subtle">Une remise s'applique avec l'accord de la gérante, qui valide ?</p>
       <button class="mz-staff-row" id="mz-app-ok">
@@ -1047,7 +1047,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
       const namePrefill = isDigits ? '' : (q || '').trim();
       const phonePrefill = isDigits ? (q || '').trim() : '';
       el.innerHTML = `
-        <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
         <h3 class="modal-title">Cliente</h3>
         <p class="modal-subtle">Rechercher par nom ou par numéro de téléphone.</p>
         <div class="mz-phone-in"><i data-lucide="search"></i>
@@ -1232,7 +1232,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
        the fiche double its turnover. */
     const spent = c.spent || 0;
     el.innerHTML = `
-      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
       <div class="mz-fiche-head">
         <span class="mz-fiche-ava">${esc(initials(c.name))}</span>
         <div>
@@ -1689,7 +1689,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="mz-search">
-              <i data-lucide="search"></i>
+              <i data-icon="search"></i>
               <input id="mz-reg-q" placeholder="Nom ou téléphone…" value="${esc(state.registriesQuery || '')}" />
             </div>
             <button class="mz-btn primary" id="mz-reg-new"><i data-lucide="plus"></i>Nouvelle liste</button>
@@ -2055,7 +2055,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
       <div class="mz-casse-view mz-page">
         <header class="mz-head">
           <div>
-            <button class="mz-btn ghost mz-back-inv" data-mz-back-inv><i data-lucide="arrow-left"></i>Inventaire</button><h1>Déclaration de Casse &amp; Pertes</h1>
+            <button class="mz-btn ghost mz-back-inv" data-mz-back-inv><i data-icon="arrow_back"></i>Inventaire</button><h1>Déclaration de Casse &amp; Pertes</h1>
             <div class="mz-head-sub">Dépréciation immédiate, valorisation au coût d'achat et traçabilité inventaire</div>
           </div>
           <div class="mz-head-metric is-danger">
@@ -2067,7 +2067,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
           <h2 class="mz-section-title">Déclarer un article cassé / détérioré</h2>
           <div class="mz-casse-pick">
             <div class="mz-casse-search">
-              <i data-lucide="search"></i>
+              <i data-icon="search"></i>
               <input id="mz-casse-q" type="search" placeholder="Rechercher un article, une marque, un motif…" value="${esc(cs.q)}" autocomplete="off" />
             </div>
             <div class="mz-casse-chips" id="mz-casse-rayons">
@@ -2083,9 +2083,9 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
               <div>
                 <div class="mz-casse-lbl">Quantité cassée</div>
                 <div class="mz-casse-step">
-                  <button type="button" data-casse-step="-1" aria-label="Moins"><i data-lucide="minus"></i></button>
+                  <button type="button" data-casse-step="-1" aria-label="Moins"><i data-icon="remove"></i></button>
                   <input id="mz-casse-qty" type="number" min="1" inputmode="numeric" value="${cs.qty}" />
-                  <button type="button" data-casse-step="1" aria-label="Plus"><i data-lucide="plus"></i></button>
+                  <button type="button" data-casse-step="1" aria-label="Plus"><i data-icon="add"></i></button>
                 </div>
               </div>
               <div class="mz-casse-why">
@@ -2103,7 +2103,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
 
             <div class="mz-card-actions">
               <button class="mz-btn primary is-danger" id="mz-casse-submit">
-                <i data-lucide="shield-alert"></i>Enregistrer la casse &amp; décrémenter le stock
+                <i data-icon="gpp_maybe"></i>Enregistrer la casse &amp; décrémenter le stock
               </button>
             </div>
           </div>
@@ -2158,9 +2158,9 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
       const p = P[cs.pid];
       $('#mz-casse-sel', panel).innerHTML = p
         ? `<span class="mz-casse-sel-art">${artOf(p)}</span>
-           <span class="mz-casse-sel-txt"><b>${esc(p.name)}</b><span>${p.marque ? esc(p.marque) + ' · ' : ''}${stockOf(p)} en stock · ${fmtMAD(shelf(p.price))}</span></span>
-           <button type="button" class="mz-casse-sel-x" data-casse-clear aria-label="Changer d'article"><i data-lucide="x"></i></button>`
-        : '<span class="mz-casse-sel-empty">Touchez l\u2019article cassé dans la liste ci-dessus.</span>';
+           <span class="mz-casse-sel-txt"><b>${esc(p.name)}</b><span>${p.marque ? esc(p.marque) + ' · ' : ''}${stockOf(p)} ${esc(tr('en stock'))} · ${fmtMAD(shelf(p.price))}</span></span>
+           <button type="button" class="mz-casse-sel-x" data-casse-clear aria-label="${esc(tr("Changer d'article"))}"><i data-icon="close"></i></button>`
+        : '<span class="mz-casse-sel-empty">' + esc(tr('Touchez l\u2019article cassé dans la liste ci-dessus.')) + '</span>';
       icons();
     };
 
@@ -2181,9 +2181,9 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
           <span class="mz-card-art">${artOf(p)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
-          <span class="mz-card-price">${fmtMAD(shelf(p.price))} · ${st} en stock</span>
+          <span class="mz-card-price">${fmtMAD(shelf(p.price))} · ${st} ${esc(tr('en stock'))}</span>
         </button>`; }).join('')
-        : '<div class="mz-empty" style="grid-column:1/-1;">Aucun article ne correspond.</div>';
+        : '<div class="mz-empty" style="grid-column:1/-1;">' + esc(tr('Aucun article ne correspond.')) + '</div>';
     };
 
     const setQty = (n) => {
@@ -2228,7 +2228,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
 
     submitBtn.onclick = () => {
       const p = P[cs.pid];
-      if (!p) { toast('Choisissez d\u2019abord l\u2019article cassé'); return; }
+      if (!p) { toast(tr('Choisissez d\u2019abord l\u2019article cassé')); return; }
       busy = true; updatePreview();   // le pavé du responsable peut rester ouvert : pas de double déclaration
       Promise.resolve(recordCasse(cs.pid, sizesOf(p)[0] || 'TU', p.colors[0] || 'defaut', cs.qty, cs.reason))
         .then((ok) => { if (ok) { cs.pid = ''; cs.qty = 1; } })
@@ -2259,7 +2259,7 @@ import { mzTicketRemise } from './ticket-remise.js?v=1';
       'Mesnana / Boukhalef', 'Gzenaya', 'Zone Franche'
     ];
     el.innerHTML = `
-      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
       <h3 class="modal-title">Livraison Fragile · Tanger</h3>
       <p class="modal-subtle">Bon de livraison et emballage sécurisé</p>
       <div class="mz-delivery-form">

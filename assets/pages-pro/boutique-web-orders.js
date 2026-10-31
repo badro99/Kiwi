@@ -367,9 +367,9 @@
 
   function css() {
     if (document.getElementById('wo-css')) return;
-    const s = document.createElement('style');
-    s.id = 'wo-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'wo-css';
+    style.textContent = `
 .wo-page{display:grid;gap:18px}
 .wo-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .wo-seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--surface-2,rgba(10,15,13,.05))}
@@ -410,7 +410,7 @@
 .wo-search{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.16));font:inherit;min-width:220px;background:var(--paper,#F7F5F0)}
 .wo-token{font-family:var(--mono-code,'JetBrains Mono',monospace);font-size:12px;word-break:break-all;padding:10px 12px;border-radius:10px;background:var(--surface-2,rgba(10,15,13,.05))}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   async function load() {
@@ -751,7 +751,7 @@
       state.token = j.token;
       render();
     } catch (e) {
-      toast(L('Clé non créée', 'Key not created', 'لم يُنشأ المفتاح'), { type: 'error', desc: String(e && e.message) === 'too-many-keys' ? L('Ce magasin a déjà trop de clés. Supprimez-en une dans Intégrations.', 'This store already has too many keys. Remove one in Integrations.', 'لدى هذا المحل مفاتيح كثيرة. احذف واحدًا من التكاملات.') : L('Réessayez dans un instant.', 'Try again in a moment.', 'أعد المحاولة بعد قليل.') });
+      toast(L('Clé non créée', 'Key not created', 'لم يُنشأ المفتاح'), { type: 'error', desc: /^too-many-keys$/.test(String(e && e.message)) ? L('Ce magasin a déjà trop de clés. Supprimez-en une dans Intégrations.', 'This store already has too many keys. Remove one in Integrations.', 'لدى هذا المحل مفاتيح كثيرة. احذف واحدًا من التكاملات.') : L('Réessayez dans un instant.', 'Try again in a moment.', 'أعد المحاولة بعد قليل.') });
     }
   };
 

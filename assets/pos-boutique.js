@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=142';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=60';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=142';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=142';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=143';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=61';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=143';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=143';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=4'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=15';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=15';
 
   'use strict';
 
@@ -1954,14 +1954,8 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         persistDay();
         bqSaveProvisional(isAcompte);      // le Z provisoire suit la vente (voir day-report.js)
         if (IS_DEMO) saleSeq++;
-        // Draw the sold pieces down from the SHARED inventory — a real sale must move
-        // stock through to the base (the in-memory ticket holds alone evaporate on the
-        // next catalogue sync). Real/paired store only; the local demo stays in-memory.
-        // Une livraison ne sort du stock qu'une fois confirmée (payée au retour du
-        // livreur, ou passée en perte) : le serveur s'en charge alors
-        // (functions/api/_delivery-stock.js). Hors Live, rien ne la rapporterait :
-        // le stock sort ici comme avant.
-        sale.stockHeld = !!(window.KiwiLive && window.KiwiLive.isOn()) && (parts || []).some((x) => x && x.m === 'livraison');
+        // Les pièces vendues sortent du stock PARTAGÉ, sauf une livraison en Live (z-split.js › zHoldsStock).
+        sale.stockHeld = zHoldsStock(parts, window.KiwiLive && window.KiwiLive.isOn());
         if (!sale.stockHeld) sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente'));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —

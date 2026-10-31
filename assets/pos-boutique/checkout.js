@@ -1,10 +1,11 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=244';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=142';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=142';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=245';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=143';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=143';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import '../money-cents.js?v=4';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
-import { bqDeliveryCard } from './delivery-card.js?v=4';
+import { bqDeliveryCard } from './delivery-card.js?v=6';
+import { receiptPrinterReady, receiptDocInput } from './receipt-doc.js?v=1';
 const M = globalThis.KiwiMoney;
 
 
@@ -639,14 +640,6 @@ const M = globalThis.KiwiMoney;
   function printReceiptNow(opts, parts, how) {
     const auto = !!(how && how.auto);
     const KP = window.KiwiPrinter;
-    const receiptPrinterReady = (KP) => {
-      try {
-        if (!KP) return false;
-        if (KP.isConnected ? KP.isConnected() : (KP.isConfigured && KP.isConfigured())) return true;
-        const cfg = (KP.getConfig && KP.getConfig()) || {};
-        return !!cfg.browserFallback;
-      } catch (_) { return false; }
-    };
     if (!KP || !KP.printReceipt) {
       if (auto) return false;
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return;
@@ -659,28 +652,7 @@ const M = globalThis.KiwiMoney;
        boutique marocaine sans une seule mention légale. */
     const K = window.KiwiReceipt;
     if (K) {
-      const doc = K.build({
-        ref: opts.ref || '',
-        ts: (opts.sale && opts.sale.at) || Date.now(),
-        cashier: (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
-        lines: (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, total: l.amount, ref: l.ref, barcode: l.barcode })),
-        subtotal: opts.subtotal,
-        promo: opts.promo || null,
-        discount: opts.discount,
-        total: opts.amount,
-        acompte: opts.acompte || null,
-        customer: opts.customer || null,
-        pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
-        /* Le « reçu » du ticket, c'est ce que la main du client a posé sur le
-           comptoir — donc la PART espèces plus le rendu, pas le total de la
-           vente. Avec un paiement partagé (moitié carte, moitié espèces), le
-           total imprimait un billet que personne n'avait donné. */
-        received: (function () {
-          const c = (parts || []).find((x) => x.m === 'espèces' && x.rendu > 0);
-          return c ? (+c.amount || 0) + (+c.rendu || 0) : null;
-        })(),
-        change: (parts || []).reduce((r, x) => r || x.rendu || 0, 0) || null,
-      });
+      const doc = K.build(receiptDocInput(opts, parts, (STAFF && STAFF.caissiere && STAFF.caissiere.name) || ''));
       /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
          avec son numéro, même si l'enseigne change de pied de page demain.
          persistDay() À NOUVEAU, et c'est tout l'intérêt : la vente a été écrite

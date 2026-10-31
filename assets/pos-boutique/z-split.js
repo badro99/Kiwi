@@ -82,4 +82,11 @@ const zDeliveryRows = (td, fmt) => [
 const zSplitBlock = (label, value, esc) => '<div class="zs-split-it"><div class="zs-split-label">' + esc(label) + '</div><div class="zs-total mono">' + esc(value) + '</div></div>';
 const zCloseTotals = (pair, net, fmt, esc) => !pair ? '<div class="zs-total mono">' + esc(fmt(net)) + '</div>'
   : '<div class="zs-split">' + zSplitBlock(ztr('Caisse · hors livraisons'), fmt(pair.store.net), esc) + zSplitBlock(ztr('Livraisons · à recevoir'), fmt(+pair.delivery.receivable || 0), esc) + '</div>';
-export { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals };
+/* La vente boutique sort ses pièces du stock PARTAGÉ (une vraie vente doit
+ * atteindre la base : les réservations du ticket en mémoire s'évaporent à la
+ * prochaine synchro du catalogue). Une livraison, elle, ne sort du stock
+ * qu'une fois confirmée (payée au retour du livreur, ou passée en perte) : le
+ * serveur s'en charge alors (functions/api/_delivery-stock.js). Hors Live, rien
+ * ne la rapporterait : le stock sort à la vente comme avant. */
+const zHoldsStock = (parts, live) => !!live && (parts || []).some((x) => x && x.m === 'livraison');
+export { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock };

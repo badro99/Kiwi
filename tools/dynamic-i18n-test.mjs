@@ -20,9 +20,11 @@ const ts = require('../app/node_modules/typescript');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
 // employeePick(fr, en, ar) is the waiter app's explicit per-language choice.
-const translated = /^(?:t|tr|dt|mt|translate|translateCore|i18n|L|text|formatMessage|employeePick)$/;
+// ui(key) reads UI_I18N (menu workspace, menu scan; menu-i18n-test proves every
+// key has EN/AR); ozonLabel(fr) is the Ozon module's FR/EN/AR table.
+const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel)$/;
 // An icon helper takes a Material Symbols name (« storefront », « lock »), never text a person reads.
-const iconCall = /^(?:icon|materialIcon)$/;
+const iconCall = /^(?:icon|materialIcon|itSvg)$/;
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;
 const prop = n => ts.isPropertyAccessExpression(n) ? n.name.text : ts.isElementAccessExpression(n) && ts.isStringLiteral(n.argumentExpression) ? n.argumentExpression.text : '';
 const name = n => ts.isIdentifier(n) ? n.text : prop(n);

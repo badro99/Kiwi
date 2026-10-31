@@ -583,8 +583,11 @@ export function mount(host, o) {
       const chip = b.closest('.kbc-chip');
       if (!chip || chip.classList.contains('is-ask')) return;
       chip.classList.add('is-ask');
-      chip.innerHTML = `<span>${esc(t.dropAsk(b.getAttribute('data-label') || ''))}</span><button type="button" class="kbc-ok">${esc(t.dropOk)}</button><button type="button" aria-label="${esc(t.cancel)}">${CLOSE_SVG}</button>`;
+      chip.innerHTML = '<span></span><button type="button" class="kbc-ok"></button><button type="button">' + CLOSE_SVG + '</button>';
       const [ok, no] = chip.querySelectorAll('button');
+      chip.querySelector('span').textContent = t.dropAsk(b.dataset.label || '');
+      ok.textContent = t.dropOk;
+      no.setAttribute('aria-label', t.cancel);
       no.addEventListener('click', () => { keep(''); draw(); });
       ok.addEventListener('click', () => {
         const ids = cellList.filter((r) => r.col === key && r.variant && !(+r.variant.stock > 0)).map((r) => r.variant.id);

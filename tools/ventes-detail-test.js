@@ -13,7 +13,9 @@ const checks = [
   ['Array.isArray(s.lines)', 'sales render their recorded product lines'],
   ['${qty} × ${escS(l.name)}', 'product quantity and name are rendered'],
   ['${fmt(lineAmount)} MAD', 'each product line renders its amount'],
-  ["['all', 'cash', 'card', 'delivery']", 'Tout plus the three requested payment filters are rendered'],
+  // c436fc7c: cash, card and delivery always, plus every method seen that day
+  // (virement, chèque…); dashboard-activity-test runs it on real sales.
+  ["['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods]", 'Tout, the three standing filters and every method seen that day are rendered'],
   ['current.length >= 2', 'choosing a third payment type resets the filter'],
   ['selectedMethods.includes(salesMethodKey(s))', 'sale rows are filtered by payment type'],
   ['financialWindow.reduce(', 'the cash summary uses the payment-filtered rows independently of activity type'],
