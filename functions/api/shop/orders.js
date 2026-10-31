@@ -18,9 +18,9 @@
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
-import { linkFor, mark } from '../channel/_link.js';
+import { mark } from '../channel/_link.js';
 import {
-  commerceEnabled, readCatalog, cleanCustomer, checkLines, orderNumber, shapeOrder, str,
+  storefrontLink, statusToken, commerceEnabled, readCatalog, cleanCustomer, checkLines, orderNumber, shapeOrder, str,
   MAX_PENDING, MAX_DELIVERY_CENTS,
 } from './_lib.js';
 
@@ -44,11 +44,8 @@ async function readBody(request) {
 
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
-  const auth = request.headers.get('Authorization') || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  const link = token ? await linkFor(env, token) : null;
-  // One answer for no key, unknown key, paused key and a key of another kind.
-  if (!link || link.channel !== 'storefront') return json({ error: 'unauthorized' }, 401);
+  const link = await storefrontLink(request, env);
+  if (!link) return json({ error: 'unauthorized' }, 401);
   const merchant = String(link.merchant || '').toLowerCase();
   if (await storeSuspended(env, merchant) || await storeSubscriptionPending(env, merchant)) {
     return json({ error: 'unauthorized' }, 401);
@@ -66,9 +63,9 @@ export async function onRequestPost({ request, env }) {
   if (!ref) return json({ error: 'no-ref' }, 400);
 
   /* A storefront retries on timeout: the same ref is the same order. */
-  const existing = await env.DB.prepare('SELECT number FROM web_orders WHERE merchant = ? AND client_ref = ?')
+  const existing = await env.DB.prepare('SELECT id, number FROM web_orders WHERE merchant = ? AND client_ref = ?')
     .bind(merchant, ref).first().catch(() => null);
-  if (existing) return json({ ok: true, number: existing.number, duplicate: true });
+  if (existing) return json({ ok: true, number: existing.number, statusToken: await statusToken(env, merchant, existing.id), duplicate: true });
 
   const who = cleanCustomer(b.customer);
   if (who.error) return json({ ok: false, error: who.error, message: ERRORS[who.error] }, 400);
@@ -111,14 +108,14 @@ export async function onRequestPost({ request, env }) {
       checked.subtotalCents, discount, delivery, total, now).run();
   } catch (e) {
     /* Two retries can both pass the read above; the unique index decides. */
-    const raced = await env.DB.prepare('SELECT number FROM web_orders WHERE merchant = ? AND client_ref = ?')
+    const raced = await env.DB.prepare('SELECT id, number FROM web_orders WHERE merchant = ? AND client_ref = ?')
       .bind(merchant, ref).first().catch(() => null);
-    if (raced) return json({ ok: true, number: raced.number, duplicate: true });
+    if (raced) return json({ ok: true, number: raced.number, statusToken: await statusToken(env, merchant, raced.id), duplicate: true });
     await mark(env, link.id, false, 'écriture impossible');
     return json({ error: 'write-failed' }, 500);
   }
   await mark(env, link.id, true);
-  return json({ ok: true, number });
+  return json({ ok: true, number, statusToken: await statusToken(env, merchant, id) });
 }
 
 export async function onRequestGet({ request, env }) {

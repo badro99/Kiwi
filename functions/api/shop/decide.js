@@ -74,7 +74,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     channel: 'delivery', stockHeld: true,
     deliveryCard: {
       name: order.customer.name, phone: order.customer.phone, city: order.customer.city,
-      address: order.customer.address, note: [order.number, order.customer.note].filter(Boolean).join(' · '),
+      address: order.customer.address, ...(order.customer.cityId ? { cityId: order.customer.cityId } : {}), note: [order.number, order.customer.note].filter(Boolean).join(' · '),
     },
     label: label.slice(0, 80), ref: order.number,
     lines: saleLines(order),

@@ -6,6 +6,8 @@
  * catalogue (the `catalogs` row), the order waits `pending`, and only a
  * person in the shop turns it into a delivery sale. */
 import { __test as catalogFns } from '../catalog.js';
+import { linkFor } from '../channel/_link.js';
+import { hmacKey } from '../../auth/_crypto.js';
 
 export const MAX_LINES = 20;
 export const MAX_QTY = 10;
@@ -14,6 +16,31 @@ export const MAX_DELIVERY_CENTS = 50000;   // 500 MAD de livraison : au-delà, c
 
 export const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 const cents = (mad) => Math.round((Number(mad) || 0) * 100);
+
+/* The storefront's key (Authorization: Bearer kwc.<id>.<secret>), or null.
+ * One answer for no key, unknown key, paused key and a key of another kind. */
+export async function storefrontLink(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const link = token ? await linkFor(env, token) : null;
+  return link && link.channel === 'storefront' ? link : null;
+}
+
+/* The key to one order's "Suivre ma commande" page: handed once to the
+ * customer who placed it, recomputed on each visit, never stored. */
+export async function statusToken(env, merchant, id) {
+  if (!env.AUTH_SECRET) return '';
+  const key = await hmacKey(String(env.AUTH_SECRET || ''));
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('web-order:' + merchant + ':' + id));
+  return [...new Uint8Array(mac)].slice(0, 16).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export function sameToken(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (!a || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
 
 /* Off until an operator writes `true` (God Mode › modules). Missing row,
  * missing key, broken JSON, database down: off. */
@@ -51,6 +78,9 @@ export function cleanCustomer(raw) {
   if (!out.phone) return { error: 'phone' };
   if (!out.city) return { error: 'city' };
   if (!out.address) return { error: 'address' };
+  /* La ville choisie dans la liste Ozon de la vitrine : le colis part tout seul à la confirmation. */
+  const cityId = Number(c.cityId);
+  if (Number.isSafeInteger(cityId) && cityId > 0 && cityId < 1e7) out.cityId = cityId;
   return { customer: out };
 }
 

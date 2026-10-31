@@ -10,6 +10,8 @@ import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost as postOrder, onRequestGet as getOrders } from '../functions/api/shop/orders.js';
 import { onRequestPost as decide } from '../functions/api/shop/decide.js';
+import { onRequestGet as liveCatalog } from '../functions/api/shop/catalog.js';
+import { onRequestGet as orderStatus } from '../functions/api/shop/status.js';
 import { onRequestPost as channelOrder } from '../functions/api/channel/order.js';
 import { takeHeldStock } from '../functions/api/_delivery-stock.js';
 import { saleLines } from '../functions/api/shop/_lib.js';
@@ -161,6 +163,44 @@ ok(forced.status === 200 && forced.body.order.status === 'confirmed', '« Confir
 const other = `${SESS_COOKIE}=${await makeSession('acc-off', SECRET)}`;
 const foreign = await act(other, { id: id1, action: 'decline' });
 ok(foreign.status === 403 || foreign.status === 404, 'un autre commerçant ne décide pas des commandes de celui-ci');
+
+console.log('\nweb-orders · la vitrine lit le catalogue vivant');
+const shopGet = async (handler, url, token) => {
+  const r = await handler({ request: new Request(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} }), env });
+  return { status: r.status, body: await r.json() };
+};
+ok((await shopGet(liveCatalog, 'https://kiwi.test/api/shop/catalog', '')).status === 401, 'catalogue : sans clé, refusé');
+ok((await shopGet(liveCatalog, 'https://kiwi.test/api/shop/catalog', GENERIC)).status === 401, 'catalogue : une clé d’un autre canal ne le lit pas');
+ok((await shopGet(liveCatalog, 'https://kiwi.test/api/shop/catalog', STORE_OFF)).status === 403, 'catalogue : module non activé, refusé');
+const live = await shopGet(liveCatalog, 'https://kiwi.test/api/shop/catalog', STORE);
+const liveRobe = live.body.shop && live.body.shop.variants.find((v) => v.id === 'var_r');
+ok(live.status === 200 && live.body.shop.products.length === 3 && liveRobe && liveRobe.size === 'M', 'catalogue : les articles et leurs tailles, tels que la caisse les connaît');
+ok(live.body.shop.products.find((p) => p.id === 'prod_x').online === false, 'catalogue : une pièce retirée de la boutique en ligne le dit (la vitrine la cache)');
+ok(!JSON.stringify(live.body).includes('"cost'), 'catalogue : aucun prix d’achat ne sort');
+
+console.log('\nweb-orders · « Suivre ma commande »');
+ok(/^[a-f0-9]{32}$/.test(first.body.statusToken || '') && again.body.statusToken === first.body.statusToken, 'la commande rend sa clé de suivi, la même au renvoi');
+const track = (token, number, t) => shopGet(orderStatus, `https://kiwi.test/api/shop/status?number=${number}&t=${t}`, token);
+ok((await track('', first.body.number, first.body.statusToken)).status === 401, 'suivi : sans clé de boutique, refusé');
+ok((await track(STORE, first.body.number, '0'.repeat(32))).status === 404, 'suivi : un numéro sans sa clé n’ouvre rien');
+ok((await track(STORE_OFF, first.body.number, first.body.statusToken)).status === 404, 'suivi : la vitrine d’un autre commerçant ne la voit pas');
+const seen = await track(STORE, first.body.number, first.body.statusToken);
+ok(seen.status === 200 && seen.body.order.status === 'confirmed' && seen.body.order.lines[0].quantity === 2, 'suivi : la cliente voit sa commande confirmée');
+ok(!JSON.stringify(seen.body).includes('+212') && !JSON.stringify(seen.body).includes('rue de test'), 'suivi : ni téléphone ni adresse dans la réponse');
+sqlite.prepare(`INSERT INTO ozon_parcels (merchant, tracking, sale_id, city_id, price_cents, status, status_label, created_ts)
+  VALUES (?, 'OZ-TEST-1', ?, 1, 81900, 'shipped', 'Expédié', ?)`).run(SHOP, 'web-' + id1, now);
+const shipped = await track(STORE, first.body.number, first.body.statusToken);
+ok(shipped.body.order.parcel && shipped.body.order.parcel.tracking === 'OZ-TEST-1' && shipped.body.order.parcel.label === 'Expédié', 'suivi : le colis Ozon et son état apparaissent');
+
+console.log('\nweb-orders · la ville Ozon suit la commande');
+const withCity = await post(STORE, { ...order('ref-city', [robe()]), customer: { ...customer, cityId: 42 } });
+const cityRow = sqlite.prepare('SELECT id, customer FROM web_orders WHERE client_ref = ?').get('ref-city');
+ok(withCity.status === 200 && JSON.parse(cityRow.customer).cityId === 42, 'l’identifiant de ville Ozon est gardé avec la commande');
+const cityYes = await act(owner, { id: cityRow.id, action: 'confirm' });
+const cityCard = sqlite.prepare("SELECT impact FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-card'").get(SHOP, 'web-' + cityRow.id);
+ok(cityYes.status === 200 && cityCard && JSON.parse(cityCard.impact).cityId === 42, 'à la confirmation, la fiche de livraison porte la ville Ozon (le colis peut partir seul)');
+ok((await post(STORE, { ...order('ref-city2', [robe()]), customer: { ...customer, cityId: 'x' } })).status === 200
+  && JSON.parse(sqlite.prepare('SELECT customer FROM web_orders WHERE client_ref = ?').get('ref-city2').customer).cityId === undefined, 'une ville illisible est ignorée, la commande passe');
 
 console.log('\nweb-orders · la remise se répartit sans perdre un centime');
 const split = saleLines({ number: 'W-T', discountCents: 1001, deliveryCents: 0, lines: [

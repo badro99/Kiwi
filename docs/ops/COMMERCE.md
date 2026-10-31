@@ -7,8 +7,8 @@ Deux dépôts :
 
 - **kiwi-storefronts** (github.com/zaka33333-hash/kiwi-storefronts, privé) :
   le moteur de vitrine (Cloudflare Pages Functions + liquidjs) et un thème
-  par commerçant (`themes/<nom>`). Il lit le catalogue publié
-  (`GET /api/menu?merchant=`) et envoie les commandes ici.
+  par commerçant (`themes/<nom>`). Il lit le catalogue vivant
+  (`GET /api/shop/catalog`, avec la clé du magasin) et envoie les commandes ici.
 - **Kiwi** (ce dépôt) : reçoit les commandes, les garde en attente, et la
   boutique les confirme ou les refuse.
 
@@ -47,8 +47,8 @@ Dans l'ordre :
    `403 commerce-off` et l'entrée du menu reste cachée.
 3. **Catalogue** : dans Boutique en ligne › Articles en ligne, décocher ce
    qui ne doit pas être vendu en ligne. Ajouter les photos aux articles
-   dans le catalogue. Republier le catalogue pour que la vitrine voie les
-   changements.
+   dans le catalogue. La vitrine lit le catalogue de la caisse tel qu'il est
+   (une minute de cache) : prix, tailles et stock suivent sans republier.
 4. **Clé** : Boutique en ligne › Articles en ligne › « Relier la boutique en ligne » › Créer la clé. La clé
    (`kwc.<id>.<secret>`) ne s'affiche qu'une fois. Elle ne peut que déposer
    des commandes pour ce commerçant ; une clé Glovo ne dépose pas de
@@ -70,9 +70,20 @@ le marketing.
 ## Limites
 
 20 lignes par commande, 10 pièces par ligne, 200 commandes en attente par
-commerçant, corps de 64 Ko. Les commandes Ozon Express créées depuis une
-commande en ligne passent par Livraisons : la vitrine ne connaît pas encore
-l'identifiant de ville Ozon.
+commerçant, corps de 64 Ko.
+
+## Ozon Express et suivi
+
+La cliente choisit sa ville dans la liste Ozon (la vitrine la sert depuis
+`api.ozonexpress.ma/cities`). L'identifiant suit la commande ; à la
+confirmation, la fiche de livraison le porte et `/api/sale` crée le colis
+Ozon tout seul, comme pour une fiche remplie à la caisse.
+
+Après la commande, la vitrine affiche « Suivre ma commande »
+(`/commande/W-XXXXX?t=…`). La page lit `GET /api/shop/status` avec la clé
+du magasin et la clé de la commande (un HMAC d'`AUTH_SECRET`, rendu une
+fois à la cliente, jamais stocké). Elle montre l'état, les articles et le
+colis, jamais le téléphone ni l'adresse.
 
 ## Tests
 
