@@ -236,8 +236,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "22",
-    "sha": "7f1b9c18e37d088e"
+    "v": "23",
+    "sha": "5abe48aa0d256791"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -252,8 +252,8 @@
     "sha": "8ac2802f43addb30"
   },
   "assets/caisse/closing.js": {
-    "v": "1",
-    "sha": "d7b1e765f69078d4"
+    "v": "2",
+    "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/discounts.js": {
     "v": "4",
@@ -1912,8 +1912,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "25",
-    "sha": "9232973e08f419e4"
+    "v": "26",
+    "sha": "3c54eb135dfb623e"
   },
   "assets/serveur-lang.js": {
     "v": "6",
@@ -1924,8 +1924,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "11",
-    "sha": "9ea6e701ba880065"
+    "v": "12",
+    "sha": "142cbff9c882a288"
   },
   "assets/service-requests.js": {
     "v": "2",

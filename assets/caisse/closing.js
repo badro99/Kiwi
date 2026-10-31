@@ -39,6 +39,10 @@
         $('#clo-card-z').value = String(v.cardTotal == null ? clotureCardExpected : v.cardTotal);
         closeGapReason = v.reason || null;
         sheet.removeAttribute('open');
+        /* La clôture tourne encore quelques secondes (synchro du jour, Z) :
+           sans la fenêtre livrée et son « Clôture en cours… », la caisse
+           restait à l'écran comme si le bouton n'avait rien fait. */
+        $('#cloture-modal').classList.add('is-open');
         closeRegister();
       });
       cc.cardKiwi = clotureCardExpected;

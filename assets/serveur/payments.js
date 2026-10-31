@@ -378,7 +378,6 @@ cashModal.addEventListener('click', (e) => {
     });
 }
 
-    function svCanPay() { return !(liveEmployeeState && liveEmployeeState.store && liveEmployeeState.store.serverPayments === false); } /* God mode › « Encaissement par les serveurs » */
     async function markTablePaid(id, method) {
       if (svBrowseGuard()) return false;
       const t = tables[id];

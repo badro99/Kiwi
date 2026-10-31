@@ -2148,7 +2148,7 @@
         }
         toast(`Addition demandée pour ${id}`);
       } else if (action === 'pay') {
-        if (!svCanPay()) {
+        if (!(liveEmployeeState?.store?.serverPayments !== false)) {
           toast(`Table ${activeTableId} · l'encaissement se fait à la caisse`, 4800);
           return;
         }
