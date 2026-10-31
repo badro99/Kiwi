@@ -52,6 +52,15 @@ let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
 /* The demo till, unlocked, in the takeaway builder. */
+/* The Plus panel's Cash in or out row (26900e0e): on screen, and the tap lands on it. */
+const cashRowTakesTap = (page) => page.evaluate(() => {
+  const nav = document.querySelector('.sidebar > k-sidebar');
+  const row = nav && nav.shadowRoot.querySelector('[data-id="m:cash_in_out"]');
+  if (!row) return false;
+  const b = row.getBoundingClientRect();
+  const hit = nav.shadowRoot.elementFromPoint(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+  return b.width > 0 && b.height > 0 && !!hit && row.contains(hit);
+});
 async function till(tr, { flag, lang }) {
   const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
   const page = tr.watch(await ctx.newPage());
@@ -415,8 +424,11 @@ try {
     check(out.display === 'flex' && out.width === 260 && out.x === 0 && out.height === 1024 && out.railWidth === 88,
       `Plus puts the shipped sidebar in the rail's own place, 260 wide (${JSON.stringify(out)})`);
     check(out.railShown === 'hidden', 'the rail steps back under it, its 88 still in the layout so nothing reflows');
-    check(out.navIds && out.navIds.join() === 'floor,takeaway,waiting,kitchen,clients,more' && out.navValue === 'floor',
+    check(out.navIds && out.navIds.slice(0, 6).join() === 'floor,takeaway,waiting,kitchen,clients,more' && out.navValue === 'floor',
       `the panel's head carries the same destinations as the rail (${out.navIds && out.navIds.join(', ')})`);
+    /* 26900e0e : puis Service, Gestion et Cet appareil, une rangée par bouton livré, comme le tiroir de la boutique. */
+    check(out.navIds.length > 6 && out.navIds.slice(6).every((id) => id.startsWith('m:')) && out.navIds.includes('m:cash_in_out'),
+      `then the drawer's rows, each one a shipped button (${out.navIds.slice(6).join(', ')})`);
     check(out.pillsShown === 'hidden', "and the shipped mode pills, which repeat three of them, are not drawn twice");
     check(out.scrim === 'auto', 'the scrim takes the taps meant for elsewhere');
     const moinsOut = await railMore();
@@ -424,17 +436,11 @@ try {
     check(await page.evaluate(() => document.querySelector('k-rail').getAttribute('value') === 'floor'),
       'the lens stays on the destination, so Moins can be tapped again (Plus is not one)');
     /* Le panneau EST la barre livrée : ses contrôles sont ceux de la page. */
-    check(await page.evaluate(() => {
-      const el = document.querySelector('.sidebar [data-action="cash-move"]');
-      if (!el) return false;
-      const b = el.getBoundingClientRect();
-      const hit = document.elementFromPoint(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
-      return b.width > 0 && b.height > 0 && !!hit && el.contains(hit);
-    }), 'a shipped control inside it (Cash in or out) is on screen and takes the tap');
+    check(await cashRowTakesTap(page), 'its Cash in or out row is on screen and takes the tap');
     check(await page.evaluate(() => {
       const nav = document.querySelector('.sidebar > k-sidebar');
       return nav.shadowRoot.querySelector('[data-id="more"]').textContent.trim() === 'Moins';
-    }), 'the last of them reads Moins');
+    }), 'its More item reads Moins');
     await page.evaluate(() => document.querySelector('.sidebar > k-sidebar').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(700);
     check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'Moins puts it away again and the rail comes back');
@@ -647,13 +653,7 @@ try {
     check(v.modal === null && v.role === 'region', `the kitchen is a page, not a modal window (role ${v.role}, aria-modal ${v.modal})`);
     await tapRail('more');
     await sleep(700);
-    check(await page.evaluate(() => {
-      const el = document.querySelector('.sidebar [data-action="cash-move"]');
-      if (!el) return false;
-      const b = el.getBoundingClientRect();
-      const hit = document.elementFromPoint(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
-      return b.width > 0 && !!hit && el.contains(hit);
-    }), 'Plus still opens its panel over the kitchen');
+    check(await cashRowTakesTap(page), 'Plus still opens its panel over the kitchen');
     await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
     await sleep(700);
     await tapRail('floor');
