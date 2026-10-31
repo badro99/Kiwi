@@ -130,5 +130,9 @@
   "ozon_delivery_notes": [
     {"merchant": "upgrade-synth-1", "ref": "fixture-bl-1", "parcels": 1, "created_ts": 151, "created_by": "fixture-by-1"},
     {"merchant": "upgrade-synth-2", "ref": "fixture-bl-2", "parcels": 2, "created_ts": 152, "created_by": "fixture-by-2"}
+  ],
+  "web_orders": [
+    {"id": "wo-synth-1", "merchant": "upgrade-synth-1", "number": "W-FIX1", "client_ref": "fixture-ref-1", "link_id": "chl-fixture-1", "status": "pending", "customer": "{\"name\": \"fixture-name-1\", \"city\": \"fixture-city-1\"}", "lines": "[{\"variantId\": \"var_1\", \"quantity\": 1}]", "subtotal_cents": 10001, "discount_cents": 1, "delivery_cents": 1901, "total_cents": 11900, "created_ts": 151, "decided_ts": 161, "decided_by": "fixture-actor-1", "reason": "fixture-reason-1", "sale_id": "web-wo-synth-1"},
+    {"id": "wo-synth-2", "merchant": "upgrade-synth-2", "number": "W-FIX2", "client_ref": "fixture-ref-2", "link_id": "chl-fixture-2", "status": "confirmed", "customer": "{\"name\": \"fixture-name-2\", \"city\": \"fixture-city-2\"}", "lines": "[{\"variantId\": \"var_2\", \"quantity\": 2}]", "subtotal_cents": 20002, "discount_cents": 2, "delivery_cents": 1902, "total_cents": 21900, "created_ts": 152, "decided_ts": 162, "decided_by": "fixture-actor-2", "reason": "fixture-reason-2", "sale_id": "web-wo-synth-2"}
   ]
 }
