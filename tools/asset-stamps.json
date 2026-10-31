@@ -1344,16 +1344,16 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2198",
-    "sha": "c42acd782a44cb16"
+    "v": "2202",
+    "sha": "4d61790d8cc683fb"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "15",
     "sha": "c84e97f8a6bfbc14"
   },
   "assets/pages-pro/boutique-web-orders.js": {
-    "v": "2",
-    "sha": "c1b0e166c474e24e"
+    "v": "6",
+    "sha": "f7643e1a7ab99529"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1376,8 +1376,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "111",
-    "sha": "533cd41973c622f5"
+    "v": "115",
+    "sha": "7e8e9f44a465ec33"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

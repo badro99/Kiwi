@@ -195,11 +195,26 @@ ok(messy.whatsapp === '212612345678' && messy.instagram === 'santos.store_ma' &&
 ok(messy.shipping.feeMAD === 500 && messy.shipping.freeFromMAD === 500, 'réglages : livraison bornée à 500 MAD, seuil de gratuité lu comme un entier');
 ok(messy.bundles[2] === 10 && messy.bundles[3] === 50 && Object.keys(messy.bundles).join() === '2,3', 'réglages : packs 2 et 3 pièces seulement, remise bornée à 50 %');
 ok(JSON.stringify(messy.coupons) === JSON.stringify({ BIENVENUE: 10, TROP: 90 }), 'réglages : codes promo en majuscules, 3 à 20 caractères, 1 à 90 %');
-ok(Object.keys(messy).sort().join() === 'accent,announcement,bundles,coupons,instagram,name,shipping,tagline,updatedTs,whatsapp' && Object.keys(messy.shipping).join() === 'feeMAD,freeFromMAD' && messy.updatedTs === 1234,
+ok(Object.keys(messy).sort().join() === 'accent,announcement,bundles,coupons,instagram,name,pieces,shipping,tagline,updatedTs,url,whatsapp' && Object.keys(messy.shipping).join() === 'feeMAD,freeFromMAD' && messy.updatedTs === 1234,
   'réglages : toute clé inconnue est jetée, l’heure est celle du serveur');
 const bad = cleanStorefront({ whatsapp: '1234', instagram: 'a b', accent: 'red', shipping: { feeMAD: -3, freeFromMAD: null }, bundles: { 2: 'x' }, coupons: ['CODE1'] }, 0);
 ok(bad.whatsapp === '' && bad.instagram === '' && bad.accent === '' && bad.shipping.feeMAD === 0 && bad.shipping.freeFromMAD === null && bad.bundles[2] === 0 && Object.keys(bad.coupons).length === 0,
   'réglages : valeurs illisibles ramenées à vide, 0 ou null');
+ok(['0612345678', '00212 6 12 34 56 78', '07-12-34-56-78'].map((w) => cleanStorefront({ whatsapp: w }, 0).whatsapp).join() === '212612345678,212612345678,212712345678',
+  'réglages : un numéro marocain écrit 06…, 07… ou 00212… devient 2126…, 2127…');
+const urls = ['amira.kiwi-os.com', 'https://Amira.Kiwi-OS.com/collections/all?x=1', 'http://amira.kiwi-os.com', 'javascript:alert(1)', 'localhost', 'https://a b.com', 'x'.repeat(130) + '.com']
+  .map((u) => cleanStorefront({ url: u }, 0).url);
+ok(JSON.stringify(urls) === JSON.stringify(['https://amira.kiwi-os.com', 'https://amira.kiwi-os.com', '', '', '', '', '']),
+  'réglages : l’adresse de la boutique est un hôte https seul (pas de http, de javascript:, de localhost ni de chemin)');
+const texts = cleanStorefront({ pieces: {
+  prod_1: { about: '  Coton lourd.\r\n\r\n\r\nLavable à 30°. \u0007 ' + 'x'.repeat(700), fabric: 'Coton  bio', fit: 'Ample', extra: 1 },
+  prod_2: { about: '', fabric: '', fit: '' }, 'bad id': { about: 'non' }, prod_3: 'texte',
+} }, 0).pieces;
+ok(Object.keys(texts).join() === 'prod_1' && texts.prod_1.about.startsWith('Coton lourd.\n\nLavable à 30°.') && texts.prod_1.about.length === 600
+  && texts.prod_1.fabric === 'Coton bio' && texts.prod_1.fit === 'Ample' && !('extra' in texts.prod_1),
+  'réglages : le texte d’une pièce garde ses paragraphes, matière et coupe nettoyées, entrées vides ou mal nommées jetées');
+const lots = cleanStorefront({ pieces: Object.fromEntries(Array.from({ length: 320 }, (_, i) => ['p' + i, { fit: 'Droite' }])) }, 0).pieces;
+ok(Object.keys(lots).length === 300, 'réglages : 300 pièces décrites au plus');
 const many = cleanStorefront({ coupons: Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['CODE' + i, 5])) }, 0);
 ok(Object.keys(many.coupons).length === 20, 'réglages : 20 codes promo au plus');
 
