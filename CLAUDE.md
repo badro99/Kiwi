@@ -283,7 +283,9 @@ lockfile, the tracer and every `KIWI_*` setting. A later run with the same key
 replays that pass and its output instead of running the test, and prints
 `N test files reused`. Never reused: a pass from another day or over 24 h old,
 a test that starts a program other than node (git, sqlite3, a shell: their
-reads are invisible to the tracer), a test that just failed.
+reads are invisible to the tracer), a test that just failed, a run that exited
+0 but printed `○ skip` or `○ … not run` (why it skipped, such as Chromium not
+starting under load, is invisible to the tracer too).
 `KIWI_PASS_CACHE=0` runs everything. A reused pass has no CPU time, so the CPU
 ratchet only measures what ran. If a test reads something the tracer cannot
 see (a non-repo file, the network) and a stale pass is replayed, run with

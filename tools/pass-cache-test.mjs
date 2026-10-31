@@ -4,8 +4,9 @@
 // Builds a throwaway repo with the real pool, guard and tracer, runs a small
 // test through the pool twice, then changes one input at a time and checks the
 // test runs again: a file it read, a folder it listed, a file it probed and
-// found absent, a KIWI_ setting. A failing test, a test that starts git and
-// KIWI_PASS_CACHE=0 are never served from the cache. The cache lives in a
+// found absent, a KIWI_ setting. A failing test, a test that starts git, a run
+// that printed a skip ("○ skip", "○ … not run") and KIWI_PASS_CACHE=0 are never
+// served from the cache. The cache lives in a
 // private TMPDIR, so this suite never touches the machine's real cache.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -14,7 +15,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const box = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-pass-cache-'));
+// Real path: macOS's temp dir is a symlink, and the pool's ROOT is resolved, so a
+// symlinked repo path would key the cache '../../var/…' instead of 'tools/…'.
+const box = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-pass-cache-')));
 const repo = path.join(box, 'repo');
 const tmp = path.join(box, 'tmp');
 fs.mkdirSync(path.join(repo, 'tools'), { recursive: true });
@@ -32,6 +35,14 @@ const files = fs.readdirSync(new URL('../data/', import.meta.url)).length;
 const flag = fs.existsSync(new URL('../flags/off.flag', import.meta.url));
 console.log('price ' + price + ' files ' + files + ' flag ' + flag);
 process.exit(price === 'broken' ? 1 : 0);
+`);
+// Exits 0 but says it skipped, the way a browser suite does when Chromium did
+// not start under load. Replaying that "pass" kept a suite green that never ran.
+write('tools/skip-test.mjs', `import fs from 'node:fs';
+const up = fs.existsSync(new URL('../flags/browser.up', import.meta.url));
+console.log(up ? '  ✓ browser assertions ran' : '○ skip: puppeteer-core or axe-core unavailable');
+`);
+write('tools/notrun-test.mjs', `console.log('○ simulator part not run: no booted device');
 `);
 write('tools/git-test.mjs', `import { execFileSync } from 'node:child_process';
 try { execFileSync('git', ['--version'], { stdio: 'ignore' }); } catch (_) {}
@@ -93,8 +104,30 @@ try {
   pool(['git-test.mjs']);
   ok(!cached(pool(['git-test.mjs']), 'git-test.mjs'), 'a test that starts git (it reads history, not traced files) is never reused');
 
+  pool(['skip-test.mjs']);
+  res = pool(['skip-test.mjs']);
+  ok(!cached(res, 'skip-test.mjs') && /○ skip/.test(res['skip-test.mjs'].stdout), 'a run that printed "○ skip" is never reused as a pass');
+  fs.writeFileSync(path.join(repo, 'flags', 'browser.up'), '1');
+  res = pool(['skip-test.mjs']);
+  ok(/browser assertions ran/.test(res['skip-test.mjs'].stdout), 'so the next run executes once the browser is back');
+  fs.rmSync(path.join(repo, 'flags', 'browser.up'));
+  pool(['notrun-test.mjs']);
+  ok(!cached(pool(['notrun-test.mjs']), 'notrun-test.mjs'), 'a run that printed "○ … not run" is never reused either');
+
+  // A skip stored by an older pool (before this rule) is refused when read.
+  const cacheFile = path.join(tmp, 'kiwi-pass-cache.json');
+  write('flags/browser.up', '1');
+  pool(['skip-test.mjs']); pool(['skip-test.mjs']);
+  const stale = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+  ok(!!stale['tools/skip-test.mjs'], 'a real pass of the same suite is cached');
+  stale['tools/skip-test.mjs'].stdout = '○ skip: puppeteer-core or axe-core unavailable\n';
+  fs.writeFileSync(cacheFile, JSON.stringify(stale));
+  res = pool(['skip-test.mjs']);
+  ok(!cached(res, 'skip-test.mjs') && /browser assertions ran/.test(res['skip-test.mjs'].stdout), 'an old cached skip is ignored and the suite runs');
+  fs.rmSync(path.join(repo, 'flags', 'browser.up'));
+
   const cache = JSON.parse(fs.readFileSync(path.join(tmp, 'kiwi-pass-cache.json'), 'utf8'));
-  ok(Object.keys(cache).every((k) => !k.startsWith('/')), 'cache entries are keyed repo-relative, never by absolute path');
+  ok(Object.keys(cache).length > 0 && Object.keys(cache).every((k) => k.startsWith('tools/')), 'cache entries are keyed repo-relative, never by absolute path');
 } finally {
   fs.rmSync(box, { recursive: true, force: true });
 }

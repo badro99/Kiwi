@@ -123,7 +123,11 @@ const t0 = Date.now();
  * settings. A later run with the same key reuses that pass and its output
  * instead of running the test. Never reused: a pass older than 24 h (date and
  * time dependent tests still run daily), a test that calls git (it reads the
- * history, not files), a test whose trace is missing. KIWI_PASS_CACHE=0 runs
+ * history, not files), a test whose trace is missing, and a run that exits 0
+ * but says it did not do its job: a "○ skip" or "○ … not run" line. Why it
+ * skipped (Chromium did not start under load, a missing device) is not a file
+ * the tracer sees, so replaying it kept a suite green that never ran (gate of
+ * 31 Oct 2026, two surface-matrix suites). KIWI_PASS_CACHE=0 runs
  * everything. Keys are content hashes, so worktrees share the cache safely. */
 const crypto = require('crypto');
 const CACHE = path.join(os.tmpdir(), 'kiwi-pass-cache.json');
@@ -168,11 +172,16 @@ function passKey(task, own, list) {
   return sha([SALT, JSON.stringify(task.args.map((a) => String(a).startsWith(ROOT) ? relOf(a) : String(a))),
     own + ':' + contentHash(own), ...list.map((r) => r + ':' + contentHash(r))].join('\n'));
 }
+/* Same words check.js warns on (`○ skip`, `○ … not run`), plus the French
+   "sauté" some suites print; any of them on a line starting with ○. */
+const SKIPPED = /^[ \t]*○[^\n]*(?:\bskip(?:ped)?\b|\bnot run\b|\bunavailable\b|\bsauté)/im;
+const saysSkipped = (stdout, stderr) => SKIPPED.test(String(stdout || '')) || SKIPPED.test(String(stderr || ''));
 let reused = 0;
 if (cacheOn) {
   for (let i = tasks.length - 1; i >= 0; i--) {
     const task = tasks[i], own = relOf(task.args[task.args.length - 1]), hit = passCache[own];
     if (!hit || Date.now() - hit.at > MAX_AGE_MS || !Array.isArray(hit.deps)) continue;
+    if (saysSkipped(hit.stdout, hit.stderr)) { delete passCache[own]; continue; }   // stored before this rule
     if (passKey(task, own, hit.deps) !== hit.key) continue;
     results[task.key] = { status: 0, signal: null, stdout: hit.stdout || '', stderr: hit.stderr || '', cpuMs: null, wallMs: 0, cached: true, cells: hit.cells };
     tasks.splice(i, 1); reused++;
@@ -181,7 +190,7 @@ if (cacheOn) {
 function remember(task, own, list, stdout, stderr, cells) {
   if (!cacheOn) return;
   const all = [own, ...list];
-  if (callsGit(all) || stdout.length + stderr.length > 512 * 1024) { delete passCache[own]; return; }
+  if (callsGit(all) || stdout.length + stderr.length > 512 * 1024 || saysSkipped(stdout, stderr)) { delete passCache[own]; return; }
   passCache[own] = { key: passKey(task, own, list), deps: list, at: Date.now(), stdout, stderr, cells };
 }
 function savePassCache() {
