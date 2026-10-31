@@ -167,6 +167,8 @@
       { ok: !!s.updatedTs, t: L('Livraison et offres réglées', 'Delivery and offers set', 'ضبط التوصيل والعروض'), d: s.updatedTs ? L('Frais', 'Fee', 'الرسوم') + ' ' + num(s.shipping?.feeMAD || 0) + ' MAD' : L('Frais de livraison, livraison offerte, packs.', 'Delivery fee, free delivery, packs.', 'رسوم التوصيل والتوصيل المجاني والعروض.'), go: s.updatedTs ? '' : 'settings' },
       { ok: !!s.whatsapp, t: L('Contact WhatsApp', 'WhatsApp contact', 'التواصل عبر واتساب'), d: s.whatsapp ? '+' + s.whatsapp : L('Les clients pourront vous écrire après la commande.', 'Customers can message you after ordering.', 'يمكن للعملاء مراسلتك بعد الطلب.'), go: s.whatsapp ? '' : 'settings' },
       { ok: online.length > 0 && withPhoto === online.length, t: L('Photos des pièces', 'Product photos', 'صور القطع'), d: num(withPhoto) + ' / ' + num(online.length) + ' ' + L('pièces en ligne ont une photo', 'online pieces have a photo', 'قطع معروضة لديها صورة'), go: withPhoto === online.length ? '' : 'products' },
+      { ok: online.length > 0 && (ctx.withText || 0) >= online.length, t: L('Texte de chaque pièce', 'Text for each piece', 'نص لكل قطعة'), d: num(ctx.withText || 0) + ' / ' + num(online.length) + ' ' + L('pièces décrites (matière, coupe, tenue)', 'pieces described (fabric, fit, wear)', 'قطع موصوفة (الخامة، القصّة)'), go: (ctx.withText || 0) >= online.length ? '' : 'products' },
+      { ok: !ctx.clashes, t: L('Noms et couleurs d’accord', 'Names match colours', 'الأسماء توافق الألوان'), d: ctx.clashes ? num(ctx.clashes) + ' ' + L('pièce(s) dont le nom contredit la couleur', 'piece(s) whose name contradicts the colour', 'قطعة اسمها يخالف لونها') : '', go: ctx.clashes ? 'products' : '' },
       { ok: (ctx.orders || []).length > 0, t: L('Première commande', 'First order', 'أول طلب'), d: (ctx.orders || []).length ? '' : L('Partagez le lien sur Instagram et WhatsApp.', 'Share the link on Instagram and WhatsApp.', 'شارك الرابط على إنستغرام وواتساب.') },
     ];
     const done = steps.filter((x) => x.ok).length;
@@ -597,7 +599,10 @@
     if (W) W.css();
     let main = '';
     if (state.tab === 'overview') {
-      main = W ? W.overview({ orders: state.orders, enabled: state.enabled, settings: state.settings || {}, products: productsList() }) : '';
+      const list = productsList(), C = CAT(), texts = (state.settings && state.settings.pieces) || {};
+      const live = list.filter((p) => p.online !== false);
+      main = W ? W.overview({ orders: state.orders, enabled: state.enabled, settings: state.settings || {}, products: list,
+        withText: live.filter((p) => texts[p.id]).length, clashes: live.filter((p) => colourClash(p, C)).length }) : '';
     } else if (state.tab === 'settings') {
       main = W && state.draft ? W.settings({ draft: state.draft, shopName: shopName() }) : `<p class="wo-note">${esc(L('Chargement des réglages…', 'Loading settings…', 'جارٍ تحميل الإعدادات…'))}</p>`;
     } else if (state.tab === 'orders') {

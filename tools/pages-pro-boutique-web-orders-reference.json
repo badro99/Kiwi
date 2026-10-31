@@ -1,4 +1,4 @@
 {
   "description": "SHA-256 of the appPage options rendered by the Boutique en ligne page (assets/pages-pro/boutique-web-orders.js) on first open, before any order is read: no merchant, default French locale. Sealed 31 October 2026 when the page was born lazy; resealed the same day when it became the shop admin (Aperçu, Commandes, Articles, Réglages) and opens on Aperçu.",
-  "sha": "e0aca923a908c54eeffd0d1023556765548a097d1f20d619e6b888e14c76d514"
+  "sha": "dd6597cc9b6c8ee98ff17843904967c80e8e16a4972b88609ff7ae1a217e64c1"
 }
