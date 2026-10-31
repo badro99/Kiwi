@@ -3357,6 +3357,10 @@
     .jr-search input:focus, .jr-search input:focus-visible { outline: none; box-shadow: none; }
     .jr-search input::-webkit-search-decoration, .jr-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
     .jr-filters { display: flex; gap: 6px; }
+    /* Le rapport cache la recherche et les filtres là où ils n'agissent pas
+       (Résumé, Ventes par article) : sans ceci, display:flex l'emportait sur
+       [hidden] et les puces restaient affichées sans effet. */
+    .jr-search[hidden], .jr-filters[hidden] { display: none; }
     .jr-chip {
       padding: 5px 13px; border-radius: 999px;
       font-size: 12px; font-weight: 500;
