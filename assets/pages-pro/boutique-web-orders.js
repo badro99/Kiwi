@@ -42,9 +42,9 @@
 
   function css() {
     if (document.getElementById('ws-css')) return;
-    const s = document.createElement('style');
-    s.id = 'ws-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'ws-css';
+    style.textContent = `
 .ws-i{width:18px;height:18px;flex:none}
 .ws-hero{display:grid;gap:14px}
 @media(min-width:1100px){.ws-hero{grid-template-columns:minmax(0,1fr) 300px}}
@@ -135,7 +135,7 @@
 .wo-page .ws-save button.kb.ghost{color:#F7F5F0;background:transparent;border:1px solid rgba(247,245,240,.4)}.wo-page .ws-save button.kb.ghost:hover{background:rgba(247,245,240,.1)}
 .ws-err{color:#a3271b;font-size:12.5px}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   /* ── Aperçu ─────────────────────────────────────────────────────── */
@@ -301,14 +301,14 @@
     if (!el) return;
     const fee = Number(d.shipping?.feeMAD) || 0;
     const free = d.shipping?.freeFromMAD;
-    const ann = d.announcement || (L('Paiement à la livraison, partout au Maroc', 'Cash on delivery, all over Morocco', 'الدفع عند الاستلام في كل المغرب') + (free != null && free > 0 ? '. ' + L('Livraison offerte dès', 'Free delivery from', 'توصيل مجاني ابتداءً من') + ' ' + num(free) + ' MAD.' : '.'));
+    const ann = d.announcement || (L('Paiement à la livraison, partout au Maroc', 'Cash on delivery, all over Morocco', 'الدفع عند الاستلام في كل المغرب') + (free != null && free > 0 ? '. ' + L('Livraison offerte dès', 'Free delivery from', 'توصيل مجاني ابتداءً من') + ' ' + mad(free * 100) + '.' : '.'));
     const a = /^#[0-9a-f]{6}$/i.test(d.accent || '') ? d.accent : '#000000';
     const b2 = Number(d.bundles?.[2]) || 0;
     el.innerHTML = `<div class="ws-pv-ann">${esc(ann)}</div><div class="ws-pv-body">
       <div class="ws-pv-name">${esc(d.name || shopName || '')}</div>
       ${d.tagline ? `<div class="ws-pv-tag">${esc(d.tagline)}</div>` : ''}
       <div class="ws-pv-tiles">${(tiles.length ? tiles : ['#1A1A1A', '#FFFFFF', '#1F5FA8']).slice(0, 3).map((c) => `<i style="--c:${esc(c)}"></i>`).join('')}</div>
-      <div class="ws-pv-tot"><div><span>${esc(L('Livraison', 'Delivery', 'التوصيل'))}</span><span>${fee ? esc(num(fee)) + ' MAD' : esc(L('Offerte', 'Free', 'مجانية'))}</span></div>${b2 ? `<div><span>${esc(L('2 pièces', '2 pieces', 'قطعتان'))}</span><span>−${esc(b2)} %</span></div>` : ''}</div>
+      <div class="ws-pv-tot"><div><span>${esc(L('Livraison', 'Delivery', 'التوصيل'))}</span><span>${fee ? esc(mad(fee * 100)) : esc(L('Offerte', 'Free', 'مجانية'))}</span></div>${b2 ? `<div><span>${esc(L('2 pièces', '2 pieces', 'قطعتان'))}</span><span>−${esc(b2)} %</span></div>` : ''}</div>
       <div class="ws-pv-btn" style="--a:${esc(a)};--o:${esc(inkOn(a))}">${esc(L('Commander, je paie à la livraison', 'Order, I pay on delivery', 'اطلب، أدفع عند الاستلام'))}</div></div>`;
   }
 

@@ -271,6 +271,16 @@ export function noteReceipt(pid, got) {
   return storeReceipt(pid, { at: Date.now(), printed: false, got: sum });
 }
 export function markReceiptPrinted(pid) { const r = lastReceipt(pid); if (r && !r.printed) storeReceipt(pid, Object.assign({}, r, { printed: true })); }
+/* Étiquettes par taille : les pièces reçues (got) quand une réception est
+   donnée, sinon le stock de chaque taille. La fiche et la ligne d'inventaire
+   (pos-boutique/inventory.js) comptent avec cette même règle. */
+export const labelCounts = (variants, got) => (variants || []).map((v) => [v, got ? (got[v.id] || 0) : Math.max(0, Math.floor(+v.stock || 0))]);
+/* « Imprimer N étiquettes », le nombre mis à part ; « · nouvelles pièces » pour une réception. */
+export function printLabelHtml(t, n, fresh) {
+  if (!n) return esc(t.print(0));
+  const [verb, noun] = t.printN(n);
+  return `${esc(verb)} <b class="kbs-n">${n}</b> ${esc(noun)}${fresh ? ` · ${esc(t.fresh)}` : ''}`;
+}
 
 export function mount(host, o) {
   if (!host || !o || !o.cat) return null;
@@ -444,15 +454,10 @@ export function mount(host, o) {
     const d = cat.getProduct(pid);
     if (!d) return [];
     const rec = all ? null : lastReceipt(pid);
-    const plan = [];
-    d.variants.forEach((v) => {
-      const n = rec ? (rec.got[v.id] || 0) : Math.max(0, Math.floor(+v.stock || 0));
-      if (n > 0 && o.primary(v)) plan.push([v, n]);
-    });
-    return plan;
+    return labelCounts(d.variants, rec && rec.got).filter(([v, n]) => n > 0 && o.primary(v));
   };
   function printCount(all) { return labelPlan(all).reduce((s, [, n]) => s + n, 0); }
-  const printHtml = (n, fresh) => { if (!n) return esc(t.print(0)); const [verb, noun] = t.printN(n); return `${esc(verb)} <b class="kbs-n">${n}</b> ${esc(noun)}${fresh ? ` · ${esc(t.fresh)}` : ''}`; };
+  const printHtml = (n, fresh) => printLabelHtml(t, n, fresh);
 
   const read = () => {
     const out = []; let sum = 0; let bad = false;

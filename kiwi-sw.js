@@ -20,13 +20,13 @@ var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/pos-boutique/ozon.js?v=9',
   '/assets/lock-till.js?v=3',
-  '/assets/boutique-sizes.js?v=19',
+  '/assets/boutique-sizes.js?v=20',
   '/assets/boutique-size-split.js?v=4',
   '/assets/boutique-size-codes.js?v=3',
   '/assets/boutique-size-colors.js?v=6',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=2',
-  '/assets/pos-boutique/drawer.js?v=61',
+  '/assets/pos-boutique/drawer.js?v=62',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=10',
@@ -99,7 +99,7 @@ var SHELL = [
   '/assets/growth-crm.js?v=7',
   '/assets/channel-link.js?v=202608272312',
   '/assets/marketing-suite-tease.js?v=1',
-  '/assets/pages-pro.js?v=2204',
+  '/assets/pages-pro.js?v=2205',
   '/assets/pages-pro-spa-starter.js?v=5',
   '/assets/cash-sessions.js?v=8',
   '/assets/simple-food-cost.js?v=18',
@@ -127,7 +127,7 @@ var SHELL = [
   '/assets/caisse/returns.js?v=2',
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=4',
-  '/assets/caisse/offline.js?v=7',
+  '/assets/caisse/offline.js?v=10',
   '/assets/caisse-app.js?v=32',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
@@ -139,7 +139,7 @@ var SHELL = [
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/service.js?v=12',
-  '/assets/serveur-app.js?v=26',
+  '/assets/serveur-app.js?v=27',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -183,14 +183,14 @@ var SHELL = [
   '/assets/hotel-folio.js?v=1',
   '/assets/hotel-channels.js?v=1',
   '/assets/pages-pro-office.js?v=3',
-  '/assets/pages-pro-boutique.js?v=36',
+  '/assets/pages-pro-boutique.js?v=37',
   '/assets/menu-nutrition.js?v=4',
   '/assets/kiwi-select.js?v=4',
   '/assets/food-trade-settings.js?v=2',
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2099',
-  '/assets/pages/dashboard-startup.js?v=119',
+  '/assets/pages/dashboard-startup.js?v=121',
   '/assets/pages/dashboard-loader.js?v=35',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -470,7 +470,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=26',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=22',
-  '/assets/pos-dispatch.js?v=326',
+  '/assets/pos-dispatch.js?v=327',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -541,8 +541,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=245',
-  '/assets/pos-boutique/sales.js?v=143',
+  '/assets/pos-boutique.css?v=246',
+  '/assets/pos-boutique/sales.js?v=144',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=3',
@@ -557,9 +557,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=5',
   '/assets/pos-maison/inv-moves.js?v=1',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=143',
-  '/assets/pos-boutique/inventory.js?v=143',
-  '/assets/pos-boutique.js?v=245',
+  '/assets/pos-boutique/checkout.js?v=144',
+  '/assets/pos-boutique/inventory.js?v=144',
+  '/assets/pos-boutique.js?v=246',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

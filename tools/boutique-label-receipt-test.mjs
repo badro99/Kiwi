@@ -34,26 +34,42 @@ ok('after printing, the next receipt starts from zero', () => {
 });
 ok('another article is untouched', () => { assert.equal(Z.lastReceipt('p2'), null); });
 
-const src = fs.readFileSync(path.join(root, 'assets/boutique-sizes.js'), 'utf8');
-ok('the sheet prints from lastReceipt, not a per-mount variable', () => {
-  assert.doesNotMatch(src, /let last = null/);
-  assert.match(src, /const rec = all \? null : lastReceipt\(pid\)/);
-  assert.match(src, /noteReceipt\(pid, got\)/);
+const V = [{ id: 'v1', stock: 80 }, { id: 'v2', stock: 20.7 }, { id: 'v3', stock: -2 }];
+const count = (got) => Z.labelCounts(V, got).map(([v, n]) => v.id + ':' + n).join(' ');
+ok('with a receipt, labels follow the pieces received, not the stock', () => {
+  assert.equal(count({ v1: 50 }), 'v1:50 v2:0 v3:0');
 });
-ok('the count on the button is set apart, and the whole stock stays one tap away', () => {
-  assert.match(src, /<b class="kbs-n">\$\{n\}<\/b>/);
-  assert.match(src, /data-kbs-print-all/);
-  assert.match(src, /lastIn: \(n\) => `Dernière réception/);
+ok('without a receipt (or "whole stock"), each size prints its stock, never a negative or a fraction', () => {
+  assert.equal(count(null), 'v1:80 v2:20 v3:0');
 });
-const inv = fs.readFileSync(path.join(root, 'assets/pos-boutique/inventory.js'), 'utf8');
-ok('the inventory row printer prints an unprinted receipt only', () => {
-  assert.match(inv, /SZ\.lastReceipt\(pid\)/);
-  assert.match(inv, /SZ\.markReceiptPrinted\(pid\)/);
-  assert.doesNotMatch(inv, /Imprimer toutes les étiquettes/);
+ok('the sheet and the inventory row count with that one rule', () => {
+  const src = fs.readFileSync(path.join(root, 'assets/boutique-sizes.js'), 'utf8');
+  const inv = fs.readFileSync(path.join(root, 'assets/pos-boutique/inventory.js'), 'utf8');
+  assert.match(src, /labelCounts\(d\.variants, rec && rec\.got\)/);
+  assert.match(inv, /SZ\.labelCounts\(d\.variants, fresh\)/);
+});
+ok('the count on the button is set apart, and a receipt says "new pieces"', () => {
+  const t = Z.words('fr');
+  assert.equal(Z.printLabelHtml(t, 50, true), 'Imprimer <b class="kbs-n">50</b> étiquettes · nouvelles pièces');
+  assert.equal(Z.printLabelHtml(t, 1, false), 'Imprimer <b class="kbs-n">1</b> étiquette');
+  assert.equal(Z.printLabelHtml(t, 0, false), t.print(0));
+});
+ok('the last receipt and the whole stock are named in every language', () => {
+  assert.equal(Z.words('fr').lastIn(50), 'Dernière réception : +50 pièces');
+  assert.equal(Z.words('en').printAll(130), 'Whole stock · 130');
+  assert.ok(Z.words('ar').lastIn(3).includes('3'));
 });
 ok('no em dash in the new words', () => {
-  const words = src.slice(src.indexOf('printN:'), src.indexOf('printN:') + 400);
-  assert.doesNotMatch(words, /—/);
+  for (const lang of ['fr', 'en', 'ar']) {
+    const t = Z.words(lang);
+    const said = [t.printN(1).join(' '), t.printN(5).join(' '), t.fresh, t.printAll(9), t.lastIn(1), t.lastIn(9)].join(' ');
+    assert.doesNotMatch(said, /—/, lang);
+  }
+});
+ok('the inventory row prints an unprinted receipt only, then marks it printed', () => {
+  const inv = fs.readFileSync(path.join(root, 'assets/pos-boutique/inventory.js'), 'utf8');
+  assert.match(inv, /const fresh = rec && !rec\.printed \? rec\.got : null/);
+  assert.match(inv, /SZ\.markReceiptPrinted\(pid\)/);
 });
 console.log(`\nboutique-label-receipt: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

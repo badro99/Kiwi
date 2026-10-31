@@ -108,29 +108,31 @@
       fresh.forEach((e) => {
         if (seen.includes(e.id)) return;
         seen.push(e.id);
-        const label = 'Table ' + String(e.table || '');
+        const L = (fr, en, ar) => { const l = carteLang(); return l === 'en' ? en : l === 'ar' ? ar : fr; };   // carteLang : caisse/catalogue.js
+        const ticket = 'Table ' + String(e.table || ''), label = L('Table ', 'Table ', 'طاولة ') + String(e.table || '');   // le ticket imprimé reste comme avant
+        const by = e.actor ? L(' par ', ' by ', ' من طرف ') + e.actor : '', paren = e.actor ? ' (' + e.actor + ')' : '';
         /* Paiement pris au téléphone serveur : la table est déjà libre ici, le
            reçu se compose des lignes que la vente a enregistrées. */
         const receipt = e.type === 'receipt-print';
         const notify = receipt
-          ? () => toast(label + ' · réglée' + (e.actor ? ' par ' + e.actor : ''))
-          : () => toast(label + ' · addition demandée' + (e.actor ? ' par ' + e.actor : ''));
+          ? () => toast(label + L(' · réglée', ' · paid', ' · دُفعت') + by)
+          : () => toast(label + L(' · addition demandée', ' · bill requested', ' · طُلب الحساب') + by);
         const print = receipt ? () => {
           const out = (Array.isArray(e.lines) ? e.lines : []).map((l) => ({ qty: String(l.qty || 1), name: String(l.name || 'Article'), price: fmtMAD(Number(l.total) || 0) }));
           const method = { card: 'Carte', cash: 'Espèces' }[e.method] || e.method || '';
-          toast(label + ' · impression du reçu' + (e.actor ? ' (' + e.actor + ')' : ''));
-          printHardwareTicket({ title: 'Reçu · ' + label, lines: out, total: fmtMAD((Number(e.totalCents) || 0) / 100), method });
+          toast(label + L(' · impression du reçu', ' · printing the receipt', ' · جارٍ طبع الإيصال') + paren);
+          printHardwareTicket({ title: 'Reçu · ' + ticket, lines: out, total: fmtMAD((Number(e.totalCents) || 0) / 100), method });
         } : () => {
           const id = caisseTableId(e.table);
           const t = id && tables[id];
           const lines = t ? generateOrder(id, t) : [];
-          if (!lines.length) { toast(label + ' · addition demandée, aucune ligne à imprimer'); return; }
+          if (!lines.length) { toast(label + L(' · addition demandée, aucune ligne à imprimer', ' · bill requested, nothing to print', ' · طُلب الحساب، لا توجد أسطر للطباعة')); return; }
           const gross = lines.reduce((sum, l) => sum + (Number(l.total) || 0), 0);
           const disc = discountAmountFor(id, gross);
-          const out = lines.map((l) => ({ qty: String(l.qty), name: lineName(l), price: fmtMAD(l.total) }));
-          if (disc > 0) out.push({ qty: '', name: 'Remise', price: '−' + fmtMAD(disc) });
-          toast(label + ' · impression de l’addition' + (e.actor ? ' (' + e.actor + ')' : ''));
-          printHardwareTicket({ title: label, lines: out, total: fmtMAD(Math.max(0, gross - disc)) });
+          const out = lines.map((l) => ({ qty: String(l.qty), name: lineName(l), price: fmtMAD(l.total) }))
+            .concat(disc > 0 ? [{ qty: '', name: 'Remise', price: '−' + fmtMAD(disc) }] : []);
+          toast(label + L(' · impression de l’addition', ' · printing the bill', ' · جارٍ طبع الحساب') + paren);
+          printHardwareTicket({ title: ticket, lines: out, total: fmtMAD(Math.max(0, gross - disc)) });
         };
         /* La file d'impression (kitchen-print-queue.js) sait si CETTE caisse
            est le hub : elle imprime ou prévient. Sans file, seule caisse : on imprime. */

@@ -46,6 +46,9 @@ export function scan(source, filename = 'fixture.js') {
   function raw(n, html, seen = new Set()) {
     if (!n) return false;
     if (ts.isStringLiteralLike(n)) return words(n.text, html);
+    // In HTML, read the template whole (each ${…} as \u0001): a ${…} inside a tag
+    // (« <i style="--c:${c}"> ») must not leave half a tag to read as words.
+    if (ts.isTemplateExpression(n) && html) return words([n.head.text, ...n.templateSpans.map(s => s.literal.text)].join('\u0001'), html) || n.templateSpans.some(s => raw(s.expression, html, seen));
     if (ts.isTemplateExpression(n)) return words(n.head.text, html) || n.templateSpans.some(s => words(s.literal.text, html) || raw(s.expression, html, seen));
     if (ts.isIdentifier(n)) {
       if (seen.has(n.text)) return false;
@@ -85,8 +88,8 @@ export function scan(source, filename = 'fixture.js') {
   visit(tree); return hits;
 }
 // Cas de non-régression : attributs, gabarits, alias et mélange traduit/brut.
-for (const code of ["x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'"]) assert.equal(scan(code).length, 1, code);
-for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'"]) assert.equal(scan(code).length, 0, code);
+for (const code of ["x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'", "x.innerHTML=`<b title=\"Bonjour ${n}\">${t('x')}</b>`", "x.innerHTML=`<i data-c=\"${c}\">Bonjour</i>`"]) assert.equal(scan(code).length, 1, code);
+for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'", "x.innerHTML=`<i style=\"--c:${c}\"></i>${t('x')}`", "x.innerHTML=`<input value=\"${v}\" placeholder=\"${t('p')}\">`"]) assert.equal(scan(code).length, 0, code);
 function walk(dir) {
   return fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(e => {
     const rel = path.posix.join(dir, e.name);

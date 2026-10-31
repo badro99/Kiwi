@@ -2149,13 +2149,13 @@
         toast(`Addition demandée pour ${id}`);
       } else if (action === 'pay') {
         if (!(liveEmployeeState?.store?.serverPayments !== false)) {
-          toast(`Table ${activeTableId} · l'encaissement se fait à la caisse`, 4800);
+          toast(employeePick(`Table ${activeTableId} · l'encaissement se fait à la caisse`, `Table ${activeTableId} · payment is taken at the till`, `الطاولة ${activeTableId} · الدفع يتم في الصندوق`), 4800);
           return;
         }
         const pending = (tableOrders[activeTableId] || []).some((line) =>
           Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
         if (pending || dirtyOrders.has(activeTableId)) {
-          toast(`Table ${activeTableId} · envoyez d'abord la commande en cuisine`, 4800);
+          toast(employeePick(`Table ${activeTableId} · envoyez d'abord la commande en cuisine`, `Table ${activeTableId} · send the order to the kitchen first`, `الطاولة ${activeTableId} · أرسل الطلب إلى المطبخ أولاً`), 4800);
           return;
         }
         openPayChoice(activeTableId);
@@ -2164,14 +2164,14 @@
            d'impression de sortir l'addition de cette table. Ce bouton
            affichait « Impression… » sans rien envoyer nulle part. */
         const id = activeTableId;
-        if (SV_DEMO) { toast(`Table ${id} · addition envoyée à la caisse`); return; }
+        if (SV_DEMO) { toast(employeePick(`Table ${id} · addition envoyée à la caisse`, `Table ${id} · bill sent to the till`, `الطاولة ${id} · أُرسل الحساب إلى الصندوق`)); return; }
         const unsent = (tableOrders[id] || []).some((line) =>
           Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
         if (unsent || dirtyOrders.has(id)) {
-          toast(`Table ${id} · envoyez d'abord la commande en cuisine`, 4800);
+          toast(employeePick(`Table ${id} · envoyez d'abord la commande en cuisine`, `Table ${id} · send the order to the kitchen first`, `الطاولة ${id} · أرسل الطلب إلى المطبخ أولاً`), 4800);
           return;
         }
-        if (svKnownOffline()) { toast("Pas de réseau. L'addition n'est pas imprimée, réessayez.", 5200); return; }
+        if (svKnownOffline()) { toast(employeePick("Pas de réseau. L'addition n'est pas imprimée, réessayez.", 'No network. The bill was not printed, try again.', 'لا توجد شبكة. لم يُطبع الحساب، أعد المحاولة.'), 5200); return; }
         btn.disabled = true;
         let sent = null;
         try {
@@ -2183,8 +2183,8 @@
         } catch (_) { sent = null; }
         btn.disabled = false;
         toast(sent && sent.ok && sent.data && sent.data.ok
-          ? `Table ${id} · addition envoyée à l'imprimante de la caisse`
-          : `Table ${id} · impression non transmise, réessayez`, 4200);
+          ? employeePick(`Table ${id} · addition envoyée à l'imprimante de la caisse`, `Table ${id} · bill sent to the till's printer`, `الطاولة ${id} · أُرسل الحساب إلى طابعة الصندوق`)
+          : employeePick(`Table ${id} · impression non transmise, réessayez`, `Table ${id} · print not sent, try again`, `الطاولة ${id} · لم تُرسل الطباعة، أعد المحاولة`), 4200);
       } else if (action === 'cancel-table') {
         const id = activeTableId;
         const expectedSession = serviceTableSessions.get(id) || '';
