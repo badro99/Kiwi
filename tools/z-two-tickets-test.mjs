@@ -56,6 +56,31 @@ const report = (net) => ({ day: '2026-10-30', net, txns: 1, sales: [], categorie
   assert.doesNotMatch(r.printed[1], /HORS LIVRAISONS/, 'pas de reste du tirage précédent');
 }
 
+/* Santos, 31 oct. : une imprimante réglée (Windows via le pont) mais injoignable.
+ * Chaque ticket tentait le pont, échouait plus tard, puis retombait seul sur la
+ * boîte d'impression : le second n'y arrivait plus. zPrintPair les envoie
+ * maintenant en un seul travail. */
+{
+  const r = realm();
+  r.ctx.localStorage.setItem('kiwiPrinterCfg', JSON.stringify({ osPrinter: 'POS-80' }));
+  let sent = 0;
+  r.ctx.KiwiEscPos = { dayReport: (o) => { const b = new Uint8Array([1, 2, 3]); b.title = o.title; return b; }, toB64: () => '', unsupportedLines: () => 0 };
+  r.ctx.fetch = () => { sent++; return new Promise((_, no) => r.timers.push(() => no(new Error('bridge down')))); };
+  const P = r.ctx.KiwiPrinter;
+  const src = fs.readFileSync('assets/pos-boutique/z-split.js', 'utf8').replace(/^export \{[^}]*\};?\s*$/m, '');
+  vm.runInContext(src + ';globalThis.zPrintPairT = zPrintPair;', r.ctx);
+  const print = (rep, copy, only) => P.printDayReport({ report: rep, title: only === 'delivery' ? 'RAPPORT Z · LIVRAISONS' : 'RAPPORT Z · HORS LIVRAISONS' });
+  const done = r.ctx.zPrintPairT(print, { store: report(13150), delivery: report(0) }, '');
+  for (let i = 0; i < 40; i++) { r.run(); await new Promise((ok) => setImmediate(ok)); }
+  const res = await done;
+  assert.ok(res.ok, 'le Z répond imprimé');
+  assert.ok(sent >= 1, 'le pont a bien été tenté');
+  assert.equal(r.printed.length, 1, 'une seule boîte Windows');
+  assert.match(r.printed[0], /HORS LIVRAISONS/);
+  assert.match(r.printed[0], /RAPPORT Z · LIVRAISONS/, 'le ticket livraisons sort aussi quand le pont est réglé mais injoignable');
+  assert.match(r.printed[0], /kpr-break/);
+}
+
 /* L'écran : les lignes et les deux chiffres d'après-clôture. */
 {
   const src = fs.readFileSync('assets/pos-boutique/z-split.js', 'utf8').replace(/^export \{[^}]*\};?\s*$/m, '');

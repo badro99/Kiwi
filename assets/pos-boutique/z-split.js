@@ -40,8 +40,13 @@ const zPair = (build, counted, closedAt, saved) => {
 };
 /* Le magasin d'abord, puis les livraisons, l'un après l'autre : deux travaux
  * lancés ensemble se croisent sur une imprimante Bluetooth. */
-const zPrintPair = (print, pair, copy) => !pair ? Promise.resolve({ ok: false })
-  : print(pair.store, copy, 'store').then((first) => (first && first.ok) ? print(pair.delivery, copy, 'delivery') : (first || { ok: false }));
+const zPrintPair = (print, pair, copy) => {
+  if (!pair) return Promise.resolve({ ok: false });
+  /* Les deux tickets en UN travail (printDayReportBatch) : jamais l'un sans l'autre, quelle que soit la voie (thermique ou boîte Windows). */
+  const P = globalThis.window && window.KiwiPrinter;
+  if (P && typeof P.printDayReportBatch === 'function') return P.printDayReportBatch(() => [print(pair.store, copy, 'store'), print(pair.delivery, copy, 'delivery')]).then((res) => res[0] || { ok: false });
+  return print(pair.store, copy, 'store').then((first) => (first && first.ok) ? print(pair.delivery, copy, 'delivery') : (first || { ok: false }));
+};
 /* L'écran de clôture dit la même chose que le papier (propriétaire, 30
  * octobre) : le chiffre de la caisse hors livraisons, puis celui des
  * livraisons. Ses phrases anglaises et arabes vivent ici, caisse-lang.js est

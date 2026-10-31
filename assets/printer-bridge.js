@@ -841,14 +841,44 @@
    * l'imprimante » qui n'engage rien. */
   function printDayReport(o) {
     o = withPaper(o || {});
-    if (!window.KiwiEscPos || !window.KiwiEscPos.dayReport) {
-      return Promise.resolve(browserDayReport(o));
-    }
-    if (!isConnected()) return Promise.resolve(browserDayReport(o));
-    return printBytes(window.KiwiEscPos.dayReport(o)).then(function (res) {
+    if (dayBatch) { dayBatch.items.push(o); return dayBatch.done; }
+    return printDayReportList([o]);
+  }
+  /* Plusieurs rapports, UN seul travail (le Z de la boutique : magasin puis
+   * livraisons). Imprimés un par un, chacun choisissait sa voie : chez Santos
+   * (imprimante réglée mais injoignable) le premier retombait sur la boîte
+   * Windows, le second arrivait trop tard pour la rejoindre et se perdait.
+   * Ici les deux partent ensemble : un seul envoi ESC/POS, sinon une seule
+   * boîte d'impression avec un saut de page entre les deux. */
+  function printDayReportList(list) {
+    var enc = window.KiwiEscPos && window.KiwiEscPos.dayReport;
+    if (!enc || !isConnected()) return Promise.resolve(browserDayReports(list));
+    var parts = list.map(function (o) { return enc(o); });
+    var size = parts.reduce(function (n, b) { return n + b.length; }, 0);
+    var all = new Uint8Array(size), at = 0, lost = 0;
+    parts.forEach(function (b) { all.set(b, at); at += b.length; lost += +b.unsupportedLines || 0; });
+    if (lost) all.unsupportedLines = lost;
+    return printBytes(all).then(function (res) {
       if (res && res.ok) return res;
-      return browserDayReport(o);
-    }, function () { return browserDayReport(o); });
+      return browserDayReports(list);
+    }, function () { return browserDayReports(list); });
+  }
+  function browserDayReports(list) {
+    if (list.length === 1) return browserDayReport(list[0]);
+    return browserPrintHTML(list.map(function (o) { return dayReportHTML(o); }).join('<div class="kpr-break"></div>'),
+      list[0].paper, 'Rapport journalier' + (list[0].date ? ' ' + list[0].date : ''));
+  }
+  /* fn() appelle printDayReport autant de fois qu'il faut ; rien ne part avant
+   * la fin de fn, puis tout part en un travail. Chaque appel reçoit le même
+   * résultat. */
+  var dayBatch = null;
+  function printDayReportBatch(fn) {
+    var resolveDone, batch = { items: [], done: new Promise(function (r) { resolveDone = r; }) };
+    var out;
+    dayBatch = batch;
+    try { out = fn(); } finally { dayBatch = null; }
+    resolveDone(batch.items.length ? printDayReportList(batch.items) : { ok: false });
+    return Promise.all(Array.isArray(out) ? out : [out]);
   }
 
   // One in-flight load, shared by idle warming and every public UI entry.
@@ -973,7 +1003,7 @@
     discoverNativePrinter: maybeDiscoverNativePrinter,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
     // son propre repli : une journée doit pouvoir se clôturer sans thermique.
-    printDayReport: printDayReport, dayReportHTML: dayReportHTML,
+    printDayReport: printDayReport, printDayReportBatch: printDayReportBatch, dayReportHTML: dayReportHTML,
     // Le repli « pilote du système » · même objet reçu que printReceipt.
     browserReceipt: browserReceipt, browserDayReport: browserDayReport,
     /* Le repli brut, pour un module qui peint SON propre ticket : le reçu de
