@@ -15,6 +15,8 @@ import { onRequestGet as orderStatus } from '../functions/api/shop/status.js';
 import { onRequestPost as channelOrder } from '../functions/api/channel/order.js';
 import { takeHeldStock } from '../functions/api/_delivery-stock.js';
 import { saleLines } from '../functions/api/shop/_lib.js';
+import { cleanStorefront } from '../functions/api/shop/_settings.js';
+import { onRequestPost as storePost, onRequestGet as storeGet } from '../functions/api/store.js';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 
 const SHOP = 'web-orders-test';
@@ -178,6 +180,55 @@ const liveRobe = live.body.shop && live.body.shop.variants.find((v) => v.id === 
 ok(live.status === 200 && live.body.shop.products.length === 3 && liveRobe && liveRobe.size === 'M', 'catalogue : les articles et leurs tailles, tels que la caisse les connaît');
 ok(live.body.shop.products.find((p) => p.id === 'prod_x').online === false, 'catalogue : une pièce retirée de la boutique en ligne le dit (la vitrine la cache)');
 ok(!JSON.stringify(live.body).includes('"cost'), 'catalogue : aucun prix d’achat ne sort');
+
+console.log('\nweb-orders · les réglages de la boutique en ligne (store doc storefront)');
+const messy = cleanStorefront({
+  name: '  Santos   Store ' + 'x'.repeat(80), tagline: 't'.repeat(300), announcement: 'Livraison\n offerte ' + 'a'.repeat(200),
+  whatsapp: '+212 6 12-34-56-78', instagram: '@santos.store_ma', accent: '#0b6e4f',
+  shipping: { feeMAD: 900, freeFromMAD: '500', extra: 1 }, bundles: { 2: 10, 3: 75, 4: 20 },
+  coupons: { bienvenue: 10, 'ab': 5, 'BAD CODE': 10, ZERO: 0, TROP: 95, ['X'.repeat(21)]: 10 },
+  password: 'jamais', owner: { id: 1 },
+}, 1234);
+ok(messy.name.length === 60 && messy.name.startsWith('Santos Store x') && messy.tagline.length === 140 && messy.announcement.length === 120 && !messy.announcement.includes('\n'),
+  'réglages : les textes sont nettoyés et coupés (60 / 140 / 120)');
+ok(messy.whatsapp === '212612345678' && messy.instagram === 'santos.store_ma' && messy.accent === '#0B6E4F', 'réglages : WhatsApp en chiffres, Instagram sans @, couleur #RRGGBB');
+ok(messy.shipping.feeMAD === 500 && messy.shipping.freeFromMAD === 500, 'réglages : livraison bornée à 500 MAD, seuil de gratuité lu comme un entier');
+ok(messy.bundles[2] === 10 && messy.bundles[3] === 50 && Object.keys(messy.bundles).join() === '2,3', 'réglages : packs 2 et 3 pièces seulement, remise bornée à 50 %');
+ok(JSON.stringify(messy.coupons) === JSON.stringify({ BIENVENUE: 10, TROP: 90 }), 'réglages : codes promo en majuscules, 3 à 20 caractères, 1 à 90 %');
+ok(Object.keys(messy).sort().join() === 'accent,announcement,bundles,coupons,instagram,name,shipping,tagline,updatedTs,whatsapp' && Object.keys(messy.shipping).join() === 'feeMAD,freeFromMAD' && messy.updatedTs === 1234,
+  'réglages : toute clé inconnue est jetée, l’heure est celle du serveur');
+const bad = cleanStorefront({ whatsapp: '1234', instagram: 'a b', accent: 'red', shipping: { feeMAD: -3, freeFromMAD: null }, bundles: { 2: 'x' }, coupons: ['CODE1'] }, 0);
+ok(bad.whatsapp === '' && bad.instagram === '' && bad.accent === '' && bad.shipping.feeMAD === 0 && bad.shipping.freeFromMAD === null && bad.bundles[2] === 0 && Object.keys(bad.coupons).length === 0,
+  'réglages : valeurs illisibles ramenées à vide, 0 ou null');
+const many = cleanStorefront({ coupons: Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['CODE' + i, 5])) }, 0);
+ok(Object.keys(many.coupons).length === 20, 'réglages : 20 codes promo au plus');
+
+const storeCall = async (cookie, body) => {
+  const r = await storePost({ request: new Request('https://kiwi.test/api/store', {
+    method: 'POST', headers: { cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant: SHOP, feature: 'storefront', ...body }),
+  }), env, waitUntil: () => {} });
+  return { status: r.status, body: await r.json() };
+};
+const settingsOf = async () => (await shopGet(liveCatalog, 'https://kiwi.test/api/shop/catalog', STORE)).body;
+const before = await settingsOf();
+ok(before.ok && before.settings === null && before.shop.products.length === 3, 'catalogue : settings vaut null tant que le commerçant n’a rien enregistré');
+const fromTill = await storeCall(till, { baseRev: 0, data: { name: 'Caisse', shipping: { feeMAD: 0 } } });
+ok(fromTill.status === 403 && fromTill.body.error === 'forbidden-feature', 'réglages : la caisse appairée ne les écrit pas');
+ok(sqlite.prepare("SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ? AND feature = 'storefront'").get(SHOP).n === 0, 'réglages : rien n’est écrit après le refus');
+const saved = await storeCall(owner, { baseRev: 0, data: { name: 'Santos', whatsapp: '0612345678', shipping: { feeMAD: 35, freeFromMAD: 600 }, bundles: { 2: 10, 3: 15 }, coupons: { kiwi10: 10 }, secret: 'x' } });
+ok(saved.status === 200 && saved.body.ok, 'réglages : le propriétaire les enregistre');
+const stored = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'storefront'").get(SHOP).data);
+ok(stored.secret === undefined && stored.coupons.KIWI10 === 10 && stored.updatedTs > 0, 'réglages : la base garde la forme nettoyée, heure du serveur comprise');
+const tillRead = await storeGet({ request: new Request(`https://kiwi.test/api/store?feature=storefront&merchant=${SHOP}`, { headers: { cookie: till } }), env });
+ok(tillRead.status === 200 && (await tillRead.json()).data.shipping.feeMAD === 35, 'réglages : la caisse appairée les lit');
+sqlite.prepare("UPDATE store_docs SET data = json_set(data, '$.leak', 'x', '$.shipping.feeMAD', 9999) WHERE merchant = ? AND feature = 'storefront'").run(SHOP);
+const after = await settingsOf();
+ok(after.settings && after.settings.name === 'Santos' && after.settings.shipping.freeFromMAD === 600 && after.settings.bundles[3] === 15 && after.settings.coupons.KIWI10 === 10,
+  'catalogue : settings rend les réglages du commerçant');
+ok(after.settings.leak === undefined && after.settings.shipping.feeMAD === 500, 'catalogue : settings est rebordé à la lecture (clé inconnue jetée, livraison ≤ 500)');
+ok(Object.keys(after).sort().join() === 'ok,settings,shop', 'catalogue : rien d’autre des documents du magasin ne sort');
+const offSettings = await storeCall(`${SESS_COOKIE}=${await makeSession('acc-off', SECRET)}`, { baseRev: 0, data: { name: 'Intrus' } });
+ok(offSettings.status === 401 || offSettings.status === 403, 'réglages : un autre commerçant ne les écrit pas');
 
 console.log('\nweb-orders · « Suivre ma commande »');
 ok(/^[a-f0-9]{32}$/.test(first.body.statusToken || '') && again.body.statusToken === first.body.statusToken, 'la commande rend sa clé de suivi, la même au renvoi');

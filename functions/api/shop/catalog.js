@@ -1,7 +1,12 @@
 // /api/shop/catalog — the online shop's catalogue, as the till knows it now.
 //
 //   GET  Authorization: Bearer kwc.<id>.<secret>   (a `storefront` channel key)
-//     →  { ok, shop: { categories, products, variants, colors } }
+//     →  { ok, shop: { categories, products, variants, colors }, settings }
+//
+// `settings` is the merchant's `storefront` store doc (delivery fee, free-
+// delivery threshold, bundles, coupons, contact), re-sanitised by
+// shop/_settings.js, or null when the merchant never saved one. The
+// storefront lays it over its stores.json defaults.
 //
 // /api/menu serves the copy the dashboard publishes, and only a browser with
 // the dashboard open publishes it: a price changed at the till, or a size
@@ -13,6 +18,7 @@
 import { json } from '../../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { storefrontLink, commerceEnabled, readCatalog, str } from './_lib.js';
+import { readStorefrontSettings } from './_settings.js';
 
 const media = (v) => { const s = str(v, 300); return s.indexOf('/api/media/') === 0 ? s : ''; };
 
@@ -67,5 +73,6 @@ export async function onRequestGet({ request, env }) {
     const row = await env.DB.prepare('SELECT data FROM menus WHERE merchant = ?').bind(merchant).first();
     published = row && row.data ? JSON.parse(row.data) : null;
   } catch (_) { published = null; }
-  return json({ ok: true, shop: liveShop(catalog, published) });
+  const settings = await readStorefrontSettings(env, merchant);
+  return json({ ok: true, shop: liveShop(catalog, published), settings });
 }

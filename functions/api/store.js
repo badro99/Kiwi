@@ -41,6 +41,7 @@ import { hideReservations, keepReservations } from './_reservations-view.js';
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
 
 import { cleanGuestDoc } from './order/_guest.js';
+import { cleanStorefront, STOREFRONT_FEATURE } from './shop/_settings.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
 import { storeEtag, storeTag } from './_store-etag.js';
@@ -128,6 +129,10 @@ const FEATURES = {
    * enregistrement passe par cleanGuestDoc, la forme que lit la route
    * publique functions/api/order/guest.js. */
   guestpage:    { keys: ['wifi', 'review', 'socials', 'games', 'ramadan'], max: 200000 },
+  /* Les réglages de la boutique en ligne (Kiwi Commerce) : livraison, packs, codes promo, contact.
+   * Le propriétaire écrit (OWNER_EDIT_FEATURES), forme fixée par cleanStorefront (shop/_settings.js),
+   * la vitrine les relit par GET /api/shop/catalog. */
+  [STOREFRONT_FEATURE]: { keys: ['name', 'tagline', 'announcement', 'whatsapp', 'instagram', 'accent', 'shipping', 'bundles', 'coupons'], max: 20000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
   /* Private cost truth.  assets/cost.js deliberately keeps purchase prices,
    * ingredients, recipes and fixed charges out of the public menu document.
@@ -569,7 +574,7 @@ const PENDING_SETUP_FEATURES = new Set([
   'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds',
   'foodtrade', 'discountpolicy', 'fidelity', 'recipes', 'costs', 'promotions', 'suppliers',
 ]);
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade', 'guestpage']);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
@@ -858,7 +863,8 @@ export async function onRequestPost(context) {
    * chez le propriétaire : ids et couleurs ramenés à ce qu'un attribut peut
    * porter sans danger (functions/api/_rules-floorplan-clean.js). */
   if (feature === 'floorplan') cleanFloorplan(raw);
-  const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw) : raw, FEATURES[feature].maxStr);
+  const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw)
+    : feature === STOREFRONT_FEATURE ? cleanStorefront(raw, Date.now()) : raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);

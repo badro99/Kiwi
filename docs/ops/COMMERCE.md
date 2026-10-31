@@ -60,12 +60,42 @@ Dans l'ordre :
    `TEST-…`, envoyées à personne.
 6. Passer une commande test (nom `TEST KIWI`), la voir arriver, la refuser.
 
-## Ce qui est volontairement hors de Kiwi
+## Les réglages de la boutique (document `storefront`)
 
-Les offres (packs multi-pièces, codes promo, frais et seuil de livraison
-gratuite) vivent dans `stores.json` de la vitrine. Kiwi vérifie
-l'arithmétique et les bornes (remise ≤ articles, livraison ≤ 500 MAD), pas
-le marketing.
+Le commerçant règle sa boutique depuis le tableau de bord. Les réglages sont
+un document de magasin, `store_docs` feature `storefront`
+(`POST /api/store`), nettoyé par `functions/api/shop/_settings.js`
+(`cleanStorefront`) : tout champ inconnu est jeté, chaque valeur est bornée.
+
+| Champ | Forme |
+|---|---|
+| `name` | nom affiché, 60 caractères au plus (peut être vide) |
+| `tagline` | 140 caractères |
+| `announcement` | une ligne en haut de la boutique, 120 caractères |
+| `whatsapp` | chiffres seulement, 8 à 15, ou vide |
+| `instagram` | identifiant `[A-Za-z0-9._]{1,30}` (le `@` est retiré), ou vide |
+| `accent` | `#RRGGBB`, ou vide |
+| `shipping` | `{ feeMAD: 0..500, freeFromMAD: 0..100000 ou null }` |
+| `bundles` | `{ "2": 0..50, "3": 0..50 }`, % de remise pour 2 ou 3 pièces (0 = aucune) |
+| `coupons` | `{ "CODE": 1..90 }`, codes `[A-Z0-9]{3,20}` en majuscules, 20 au plus |
+| `updatedTs` | posé par le serveur |
+
+Écriture : la session du propriétaire ou un opérateur nommé
+(`OWNER_EDIT_FEATURES`, vérifié par `editsRoster`). Une caisse appairée ou
+un employé reçoit `403 forbidden-feature`. Lecture : comme les autres
+documents (la caisse appairée lit, rien de secret dedans).
+
+La vitrine reçoit ces réglages dans `GET /api/shop/catalog`, champ
+`settings` (rebordé à la lecture, `null` si le commerçant n'a jamais
+enregistré). Elle les pose par-dessus les valeurs de son `stores.json`,
+qui restent les valeurs par défaut. Comme pour tout document, un envoi
+entièrement vide (aucun texte, aucun code) ne remplace pas un document
+rempli (`409 refused-empty`).
+
+## Ce qui reste vérifié par Kiwi
+
+Kiwi vérifie l'arithmétique et les bornes des commandes (remise ≤ articles,
+livraison ≤ 500 MAD), pas le marketing.
 
 ## Limites
 
