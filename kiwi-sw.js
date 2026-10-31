@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/booking.css?v=16',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=2',
-  '/assets/kiwi-env.js?v=10',
+  '/assets/kiwi-env.js?v=11',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
   '/cuisine.webmanifest',

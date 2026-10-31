@@ -244,7 +244,15 @@
       /* `whoami` is a role probe: a server phone signed in with a staff code
          is legitimately unknown to it (401) and must not pause the device. */
       var probe = url.pathname === '/api/operations' && url.searchParams.get('view') === 'whoami';
-      if (response.status === 401 && !probe && !/^\/api\/(?:me|employee|auth|config)(?:\/|$)/.test(url.pathname)) refusedUntil = Date.now() + 1800000;
+      /* The server phone signs in with a staff code alone, and the gate opens
+         only its own routes to it: any other background read (dish pairs,
+         feed) answers 401 by design. Pausing there froze the floor for thirty
+         minutes, and only a clock-out/in (a successful write) brought it back.
+         That app checks its own session through /api/employee. */
+      var staffApp = /kiwi-serveur/.test(location.pathname);
+      if (response.status === 401 && !probe && !staffApp && !/^\/api\/(?:me|employee|auth|config)(?:\/|$)/.test(url.pathname)) refusedUntil = Date.now() + 1800000;
+      // A confirmed identity proves the session works: lift any pause.
+      if (response.ok && url.pathname === '/api/employee') refusedUntil = 0;
       if (response.ok && (url.pathname === '/api/config' || url.pathname === '/api/me')) {
         response.clone().json().then(function (data) {
           if (!ticket || ticket === configTicket) hint(data.pollMode);

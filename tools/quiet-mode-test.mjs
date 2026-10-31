@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { pollMode } from '../functions/api/_poll-mode.js';
 const source = fs.readFileSync('assets/kiwi-env.js', 'utf8').split('/* Shared read admission.')[1];
-function device(real = true, status = 200) {
+function device(real = true, status = 200, page = 'dashboard.html') {
   let now = 0, hits = 0, seq = 0;
   const timers = new Map(), handlers = new Map();
   const listen = (type, fn) => handlers.set(type, [...(handlers.get(type) || []), fn]);
@@ -11,7 +11,7 @@ function device(real = true, status = 200) {
   const window = { KiwiEnv: { isReal: () => real }, addEventListener: listen,
     fetch: async () => { hits++; return new Response('{}', { status }); } };
   vm.runInNewContext('/* Shared read admission.' + source, {
-    window, document, location: new URL('https://kiwi.test/dashboard.html'), URL, URLSearchParams,
+    window, document, location: new URL('https://kiwi.test/' + page), URL, URLSearchParams,
     Promise, Map, Error, CustomEvent: class { constructor(type) { this.type = type; } }, Date: { now: () => now },
     setTimeout(fn, ms) { timers.set(++seq, { fn, at: now + ms }); return seq; },
     clearTimeout(id) { timers.delete(id); }
@@ -122,6 +122,12 @@ assert.equal(hour.hits(), 6, 'quiet resource including moving cursor: six reques
   await probe.window.fetch('/api/operations?view=whoami&merchant=shop'); await probe.settle();
   await probe.window.fetch('/api/order/queue?merchant=shop');
   assert.equal(probe.hits(), 2, 'whoami 401 does not pause the server phone'); }
+// The server phone's staff session is refused by the gate on every route but
+// its own: a 401 there must never freeze its table reads.
+{ const phone = device(true, 401, 'kiwi-serveur.html');
+  await phone.window.fetch('/api/pairs?merchant=shop'); await phone.settle();
+  await phone.window.fetch('/api/service/events?merchant=shop');
+  assert.equal(phone.hits(), 2, 'a staff-app 401 does not pause the server phone'); }
 console.log('quiet budget: 6 HTTP/device-hour per read resource');
 
 // The hint says whether a business has been inactive: only callers allowed to
